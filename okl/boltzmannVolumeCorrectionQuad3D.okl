@@ -1,5 +1,6 @@
 
 kernel void boltzmannVolumeCorrectionQuad3D(const iint Nelements,
+					    const iint * restrict elementIDs,
 					    const iint saved,
 					    const iint shift,
 					    const dfloat * restrict q,
@@ -12,11 +13,12 @@ kernel void boltzmannVolumeCorrectionQuad3D(const iint Nelements,
       for(iint j=0;j<p_Nq;++j;inner1){    
 	for(iint i=0;i<p_Nq;++i;inner0){
 	  
-	  const iint e = eo+es; // element in block
+	  const iint eT = eo+es; // element in block
+	  const iint e = elementIDs[eT];
 	  
 	  const iint n=j*p_Nq+i;
 	  
-	  if(e<Nelements){
+	  if(eT<Nelements){
 	    iint base = n + p_Nfields*p_Np*e;
 	    
 	    const dfloat q1  = q[base+0*p_Np];
@@ -30,7 +32,7 @@ kernel void boltzmannVolumeCorrectionQuad3D(const iint Nelements,
 	    const dfloat q9  = q[base+8*p_Np];
 	    const dfloat q10 = q[base+9*p_Np];
 	    
-	    const dfloat sw = 0;
+	    dfloat sw = 1;
 	    const dfloat invq1 = 1.f/q1;
 
 	    prerhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
@@ -42,6 +44,7 @@ kernel void boltzmannVolumeCorrectionQuad3D(const iint Nelements,
 
 	    if (saved) {
 	      base = e*p_Np*p_Nfields*p_nrhs+shift*p_Np*p_Nfields+n;
+	      sw = 0;
 	      
 	      rhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
 	      rhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);

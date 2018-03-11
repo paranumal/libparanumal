@@ -415,6 +415,7 @@ typedef struct {
   occa::memory o_qCorr;
   occa::memory o_qlserk;
   occa::memory o_qPreCorr;
+  occa::memory o_qpre;
 
   iint * lev_updates;
 
@@ -456,6 +457,7 @@ typedef struct {
   occa::kernel surfacePreKernel;
   occa::kernel volumeCorrPreKernel;
   occa::kernel updatePreKernel;
+  occa::kernel traceUpdatePreKernel;
   occa::kernel filterKernelH;
   occa::kernel filterKernelV;
   occa::kernel filterKernelq0H;

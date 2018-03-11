@@ -22,7 +22,7 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 			mesh->o_x,
 			mesh->o_y,
 			mesh->o_z,
-			mesh->o_q,
+			mesh->o_qpre,
 			mesh->o_qFilter);
   
   mesh->filterKernelq0V(mesh->Nelements,
@@ -34,18 +34,23 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 			mesh->o_y,
 			mesh->o_z,
 			mesh->o_qFilter,
-			mesh->o_q);
+			mesh->o_qpre);
   
   for(iint tstep=0;tstep<mesh->Nrhs;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
-      for (iint rk = 0; rk < mesh->Nrk; ++rk) {
-
-	iint lev;
+      
+      	iint lev;
 	for (lev=0;lev<mesh->MRABNlevels;lev++)
 	  if (Ntick % (1<<lev) !=0) break; //find the max lev to add to rhsq
+
+	iint levS;
+	for (levS=0;levS<mesh->MRABNlevels;levS++)
+	  if ((Ntick+1) % (1<<levS) !=0) break; //find the max lev to add to rhsq
+	
+      for (iint rk = 0; rk < mesh->Nrk; ++rk) {
 	
 	//synthesize actual stage time
-	iint t = tstep*pow(2,mesh->MRABNlevels-1) + Ntick;
+	dfloat t = tstep*pow(2,mesh->MRABNlevels-1) + Ntick;
       
 	if(mesh->totalHaloPairs>0){
 	  // extract halo on DEVICE
@@ -54,7 +59,7 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 	  mesh->haloExtractKernel(mesh->totalHaloPairs,
 				  Nentries,
 				  mesh->o_haloElementList,
-				  mesh->o_q,
+				  mesh->o_qpre,
 				  mesh->o_haloBuffer);
 
 	  // copy extracted halo to HOST 
@@ -73,7 +78,7 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 			      mesh->o_x,
 			      mesh->o_y,
 			      mesh->o_z,
-			      mesh->o_q,
+			      mesh->o_qpre,
 			      mesh->o_qlserk);
 
 	if(mesh->totalHaloPairs>0){
@@ -95,7 +100,7 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 			       mesh->o_x,
 			       mesh->o_y,
 			       mesh->o_z,
-			       mesh->o_q,
+			       mesh->o_qpre,
 			       mesh->o_qlserk);
 
 	mesh->filterKernelq0H(mesh->Nelements,
@@ -119,19 +124,18 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 			      mesh->o_z,
 			      mesh->o_qFilter,
 			      mesh->o_qlserk);
-
+	
 	for (iint l = 0; l < mesh->MRABNlevels; l++) {
 	  iint saved = (l < lev)&&(rk == 0);
-	  mesh->volumeCorrPreKernel(mesh->Nelements,
+	  mesh->volumeCorrPreKernel(mesh->MRABNelements[l],
+				    mesh->o_MRABelementIds[l],
 				    saved,
 				    mesh->MRABshiftIndex[l],
-				    mesh->o_q,
+				    mesh->o_qpre,
 				    mesh->o_qCorr,
 				    mesh->o_qPreCorr);
-	}
+				    }
 	for (iint l = 0; l < mesh->MRABNlevels; l++) {
-	  for (lev=0;lev<mesh->MRABNlevels;lev++)
-	    if (Ntick % (1<<lev) !=0) break; //find the max lev to add to rhsq
 	  iint saved = (l < lev)&&(rk == 0);
 	  
 	  if (mesh->MRABNelements[l]) {
@@ -142,22 +146,29 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 				  mesh->rka[rk],
 				  mesh->rkb[rk],
 				  mesh->MRABshiftIndex[l],
-				  mesh->o_vmapM,
 				  mesh->o_qlserk,
 				  mesh->o_rhsq,
 				  mesh->o_qPreCorr,
-				  mesh->o_fQM,
 				  mesh->o_resq,
-				  mesh->o_q);
-	  
-	    //we *must* use 2 here (n - 1), so rk coefficients point the right direction in time
+				  mesh->o_qpre);
+	    
+	    saved = (l < levS)&&(rk == mesh->Nrk-1);
 	    if (saved)
 	      mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+2)%mesh->Nrhs;
 	  }
 	}
       }
-      
+      //runs after all rk iterations complete
+      for (iint l = 0; l < levS; ++l) {
+	mesh->traceUpdatePreKernel(mesh->MRABNelements[l],
+				   mesh->o_MRABelementIds[l],
+				   mesh->o_vmapM,
+				   mesh->o_fQM,
+				   mesh->o_qpre,
+				   mesh->o_q);
+      }
     }
+
     mesh->o_q.copyTo(mesh->q);
     boltzmannPlotNorms(mesh,"start",tstep,mesh->q);
   }

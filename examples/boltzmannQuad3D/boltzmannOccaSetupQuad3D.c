@@ -23,6 +23,9 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
   mesh->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
 
+    mesh->o_qpre =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+
   mesh->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nrhs*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
   mesh->o_resq =
@@ -151,7 +154,6 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
     kernelInfo.addCompilerFlag("--prec-sqrt=false");
     kernelInfo.addCompilerFlag("--use_fast_math");
     kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
-    kernelInfo.addCompilerFlag("-g");
   }
   
   kernelInfo.addDefine("p_RXID", RXID);

@@ -8,10 +8,10 @@ int main() {
   char *ref_string = (char *) calloc(300,sizeof(char));
   char *out_string = (char *) calloc(300,sizeof(char));
   
-  for(int i = 0; i < 1; ++i) {
+  for(int i = 0; i < 5; ++i) {
     
-    sprintf(test_string,"/scratch/stimmel/short_filter/start_0000_%04d.vtu",i);
-    sprintf(ref_string,"/scratch/stimmel/short_mrab/start_0000_%04d.vtu",2*(i+1) - 1);
+    sprintf(test_string,"/scratch/stimmel/short_filter/norms_0000_%04d.vtu",i);
+    sprintf(ref_string,"/scratch/stimmel/short_mrab/norms_0000_%04d.vtu",4*(i+1) - 1);
     
     parse_vtu(ref_string,ref);
     parse_vtu(test_string,test);
@@ -21,7 +21,7 @@ int main() {
     printf("mismatch at test frame %d: %.10lf\n",i,mismatch);
     fflush(stdout);
 
-    sprintf(out_string,"/scratch/stimmel/short_diff/sdiff_0000_%04d.vtu",i);
+    sprintf(out_string,"/scratch/stimmel/short_diff/diff_0000_%04d.vtu",i);
     
     send_vtu(out_string,test);
     //free most egregious memory offenders

@@ -33,7 +33,6 @@ void boundaryCondition(dfloat *qP,const dfloat qM, int fld) {
      if ((fld >= 1) && (fld <= 3)) *qP = -qM;
      else *qP = qM;
 }
-
 // pointwise SEM-DG lift
 kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 				   const dfloat * restrict sgeo,
