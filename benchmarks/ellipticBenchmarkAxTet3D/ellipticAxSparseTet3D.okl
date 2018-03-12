@@ -59,15 +59,18 @@ kernel void ellipticAxSparseTet3D_v0(const int Nelements,
 
 	occaUnroll(p_maxNnzPerRow/4)
 	  for (int k=0;k<p_maxNnzPerRow/4;k++) {
-	    const char4 Indn = IndT[n + p_Np*k]; 
-	    const char *pt_Indn = (char*) &Indn;
-
+	    const char4 Indn = IndT[n + p_Np*k];
+	    int Inds[4];
+	    Inds[0] = Indn.x;
+	    Inds[1] = Indn.y;
+	    Inds[2] = Indn.z;
+	    Inds[3] = Indn.w;
 	    int idk;
 
 	    occaUnroll(4) //seems inefficient
 	      for (int k2=0; k2<4; k2++){
-		idk = pt_Indn[k2];
-
+		idk = Inds[k2];
+		
 		if(!idk) break;
 
 		--idk;
@@ -98,7 +101,7 @@ kernel void ellipticAxSparseTet3D_v0(const int Nelements,
 		    r_qst[et] += Sst_nk*r_qk;
 
 		    r_qtt[et] += Stt_nk*r_qk;
-
+		    
 		    r_Mq[et] += MM_nk*r_qk;
 		  }
 	      }
@@ -201,13 +204,17 @@ kernel void ellipticPartialAxSparseTet3D_v0(const int Nelements,
 	  }
 
 	occaUnroll(p_maxNnzPerRow)
-	  for (int k=0;k<p_maxNnzPerRow;k++) {
-	    const char4 Indn = IndT[n + p_Np*k]; 
-	    const char *pt_Indn = (char*) &Indn;
+	  for (int k=0;k<p_maxNnzPerRow/4;k++) {
+	    const char4 Indn = IndT[n + p_Np*k];
+	    int Inds[4];
+	    Inds[0] = Indn.x;
+	    Inds[1] = Indn.y;
+	    Inds[2] = Indn.z;
+	    Inds[3] = Indn.w;
 
 	    occaUnroll(4) //seems inefficient
 	      for (int k2=0; k2<4; k2++){
-		int idk = pt_Indn[k2];
+		int idk = Inds[k2];
 
 		//printf("thread %d, idk = %d\n", n,idk);
 
@@ -230,9 +237,6 @@ kernel void ellipticPartialAxSparseTet3D_v0(const int Nelements,
 
 		occaUnroll(p_NnodesV)
 		  for(int et=0;et<p_NnodesV;++et){
-		    const int e = eo + es + et*p_NblockV;
-		    // fetch from shared (for reuse three times)
-		    // 6 flops per 8 bytes
 		    const dfloat r_qk = s_q[et][es][idk];
 
 		    r_qrr[et] += Srr_nk*r_qk;
@@ -354,12 +358,16 @@ kernel void ellipticPartialAxSparseTet3D_v1(const int Nelements,
 
 	occaUnroll(p_maxNnzPerRow/4)
 	  for (int k=0;k<( ((int)p_maxNnzPerRow/4));k++) {
-	    const char4 Indn = IndT[n + p_Np*k]; 
-	    const char *pt_Indn = (char*) &Indn;
+	    const char4 Indn = IndT[n + p_Np*k];
+	    int Inds[4];
+	    Inds[0] = Indn.x;
+	    Inds[1] = Indn.y;
+	    Inds[2] = Indn.z;
+	    Inds[3] = Indn.w;
 
 	    occaUnroll(4) //seems inefficient
 	      for (int k2=0; k2<4; k2++){
-		int idk = pt_Indn[k2];
+		int idk = Inds[k2];
 
 		if (idk){     
 		  --idk;
@@ -487,11 +495,10 @@ kernel void ellipticPartialAxSparseTet3D_v2(const int Nelements,
 	    Inds[1] = Indn.y;
 	    Inds[2] = Indn.z;
 	    Inds[3] = Indn.w;
-	    //	    const char *pt_Indn = (char*) &Indn;
 
 	    occaUnroll(4) //seems inefficient
 	      for (int k2=0; k2<4; k2++){
-		int idk = Inds[k2]; // pt_Indn[k2];
+		int idk = Inds[k2]; 
 
 		if (idk){     
 		  --idk;

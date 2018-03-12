@@ -130,6 +130,7 @@ solver_t *ellipticSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
     kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
   }
+  //  kernelInfo.addCompilerFlag("-G");
 
   kernelInfo.addDefine("p_blockSize", blockSize);
 

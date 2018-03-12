@@ -37,6 +37,7 @@ void loadElementStiffnessMatricesTet3D(mesh_t *mesh, const char *options, int N)
   mesh->Sss =  (dfloat*) calloc(paddedRowSize*mesh->Np, sizeof(dfloat));
   mesh->Sst =  (dfloat*) calloc(paddedRowSize*mesh->Np, sizeof(dfloat));
   mesh->Stt =  (dfloat*) calloc(paddedRowSize*mesh->Np, sizeof(dfloat));
+  mesh->MM =  (dfloat*) calloc(paddedRowSize*mesh->Np, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp);
   for(int r=0;r<mesh->maxNnzPerRow;++r){
     for(int n=0;n<mesh->Np;++n){                                           
@@ -81,6 +82,14 @@ void loadElementStiffnessMatricesTet3D(mesh_t *mesh, const char *options, int N)
   }
   fgets(buf, BUFSIZ, fp);
   
+  for(int r=0;r<mesh->maxNnzPerRow;++r){
+    for(int n=0;n<mesh->Np;++n){                                           
+      int count = n + r*mesh->Np;
+      int aa = fscanf(fp,  "%lf ", mesh->MM+count); 
+    }
+  }
+  fgets(buf, BUFSIZ, fp);
+  
   /*char4 packing*/
   char4 * IndTchar = (char4*) calloc((paddedRowSize*mesh->Np)/4,sizeof(char4));
   for (int m=0;m<paddedRowSize;m+=4) {  
@@ -114,6 +123,8 @@ void loadElementStiffnessMatricesTet3D(mesh_t *mesh, const char *options, int N)
   mesh->o_Sss = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), mesh->Sss);
   mesh->o_Sst = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), mesh->Sst);
   mesh->o_Stt = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), mesh->Stt);
+
+  mesh->o_MM = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), mesh->MM);
 
   mesh->o_IndTchar = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(char), IndTchar);
   
