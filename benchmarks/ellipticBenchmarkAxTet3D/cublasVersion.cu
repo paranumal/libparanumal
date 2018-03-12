@@ -358,7 +358,7 @@ int main(int argc, char **argv){
   float  elapsedCublas =0.0f;
 
   cudaEventElapsedTime(&elapsedCublas, start, stop);
-  printf("time (before) %17.17f \n", elapsedCublas); 
+  printf("DOFS %d  %17.17f \n",p_Np*E,  elapsedCublas); 
   elapsedCublas /= (1000.*Niter);
 
   //full version
