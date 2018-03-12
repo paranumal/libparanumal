@@ -48,79 +48,22 @@ fname = sprintf('hexN%02d.dat', N);
 
 fid = fopen(fname, 'w');
 
-fprintf(fid, '%% degree N\n');
-fprintf(fid, '%d\n', N);
-fprintf(fid, '%% number of nodes\n');
-fprintf(fid, '%d\n', Np);
-fprintf(fid, '%% node coordinates\n');
-for n=1:Np
-  fprintf(fid, '%17.15E %17.15E %17.15E\n', r(n), s(n), t(n));
+writeFloatMatrix(fid, r, 'Nodal r-coordinates');
+writeFloatMatrix(fid, s, 'Nodal s-coordinates');
+writeFloatMatrix(fid, t, 'Nodal t-coordinates');
+
+if (0) 
+writeFloatMatrix(fid, full(Dr), 'Nodal Dr differentiation matrix');
+writeFloatMatrix(fid, full(Ds), 'Nodal Ds differentiation matrix');
+writeFloatMatrix(fid, full(Dt), 'Nodal Dt differentiation matrix');
+writeFloatMatrix(fid, full(LIFT), 'Nodal Lift Matrix');
 end
 
-if(0)
+writeIntMatrix(fid, faceNodes'-1, 'Nodal Face nodes');
 
-fprintf(fid, '%% r collocation differentation matrix\n');
-for n=1:Np
-  for m=1:Np
-    fprintf(fid, '%17.15E ', Dr(n,m));
-  end
-  fprintf(fid, '\n');
-end
-
-fprintf(fid, '%% s collocation differentation matrix\n');
-for n=1:Np
-  for m=1:Np
-    fprintf(fid, '%17.15E ', Ds(n,m));
-  end
-  fprintf(fid, '\n');
-end
-
-fprintf(fid, '%% t collocation differentation matrix\n');
-for n=1:Np
-  for m=1:Np
-    fprintf(fid, '%17.15E ', Dt(n,m));
-  end
-  fprintf(fid, '\n');
-end
-end
-
-fprintf(fid, '%% faceNodes\n');
-for f=1:Nfaces
-  for m=1:Nfp
-    fprintf(fid, '%d ', faceNodes(m,f)-1); %% adjust for 0-indexing
-  end
-  fprintf(fid, '\n');
-end
-
-if(0)
-fprintf(fid, '%% LIFT matrix\n');
-for n=1:Np
-  for m=1:Nfp*Nfaces
-    fprintf(fid, '%17.15E ', LIFT(n,m));
-  end
-  fprintf(fid, '\n');
-end
-
-end
-
-fprintf(fid, '%% D (1D) matrix\n');
-for n=1:N+1
-  for m=1:N+1
-    fprintf(fid, '%17.15E ', D1d(n,m));
-  end
-  fprintf(fid, '\n');
-end
-
-fprintf(fid, '%% r (1D) gll nodes\n');
-for n=1:N+1
-fprintf(fid, '%17.15E \n', r1d(n));
-end
-
-fprintf(fid, '%% w (1D) gll node weights\n');
-for n=1:N+1
-fprintf(fid, '%17.15E \n', w1d(n));
-end
-
+writeFloatMatrix(fid, r1d, 'Nodal 1D GLL Nodes');
+writeFloatMatrix(fid, w1d', 'Nodal 1D GLL Weights');
+writeFloatMatrix(fid, D1d, 'Nodal 1D differentiation matrix');
 
 %% compute equispaced nodes on equilateral triangle
 [plotR,plotS,plotT] = meshgrid(linspace(-1,1,2)); %% hacked
@@ -130,7 +73,7 @@ plotR = plotR(:); plotS = plotS(:); plotT = plotT(:);
 plotNp = length(plotR);
 
 %% triangulate equilateral element nodes
-plotEToV = delaunay(plotR,plotS,plotT)-1; 
+plotEToV = delaunayFixVolume(plotR,plotS,plotT)-1; 
 
 %% count triangles in plot node triangulation
 plotNelements = size(plotEToV,1); 
@@ -138,37 +81,11 @@ plotNelements = size(plotEToV,1);
 %% create interpolation matrix from warp & blend to plot nodes
 plotInterp = VandermondeHex3D(N, plotR,plotS,plotT)/V; 
 
-%% output plot nodes
-fprintf(fid, '%% number of plot nodes\n');
-fprintf(fid, '%d\n', plotNp);
-fprintf(fid, '%% plot node coordinates\n');
-for n=1:plotNp
-  fprintf(fid, '%17.15E %17.15E %17.15E\n', plotR(n), plotS(n), plotT(n));
-end
-
-%% output plot interpolation matrix
-fprintf(fid, '%% plot node interpolation matrix\n');
-for n=1:plotNp
-  for m=1:Np
-    fprintf(fid, '%17.15E ', plotInterp(n,m));
-  end
-  fprintf(fid, '\n');
-end
-
-%% output plot triangulation
-fprintf(fid, '%% number of plot elements\n');
-fprintf(fid, '%d\n', plotNelements);
-
-fprintf(fid, '%% number of vertices per plot elements\n');
-fprintf(fid, '%d\n', size(plotEToV,2));
-
-fprintf(fid, '%% triangulation of plot nodes\n');
-for n=1:plotNelements
-  fprintf(fid, '%d %d %d %d\n' ,...
- 	plotEToV(n,1),plotEToV(n,2),plotEToV(n,3),plotEToV(n,4));
-end
-
-%%%% ---
+writeFloatMatrix(fid, plotR, 'Plotting r-coordinates');
+writeFloatMatrix(fid, plotS, 'Plotting s-coordinates');
+writeFloatMatrix(fid, plotT, 'Plotting t-coordinates');
+writeFloatMatrix(fid, plotInterp, 'Plotting Interpolation Matrix');
+writeIntMatrix(fid, plotEToV, 'Plotting triangulation');
 
 %% 1D 
 gllS = transpose(D1d)*diag(w1d)*D1d;
@@ -202,7 +119,7 @@ end
 
 overlap = 1;
 ids = N+1-overlap:2*N+1+overlap;
-subA = A(ids,ids)
+subA = A(ids,ids);
 
 SP = zeros(NqP,NqP); %% one point overlap
 SP(2:NqP-1,2:NqP-1) = gllS;
@@ -226,27 +143,9 @@ P = vSP;
 invP = inv(gllwP*vSP);
 diagOp = diag(dSP); % need to divide to get inverse
 
-fprintf(fid, '%% stencil size for OAS NqP\n');
-fprintf(fid, '%d\n', NqP);
-fprintf(fid, '%% invP [ change of basis for OAS precon ]\n');
-for n=1:NqP
-  for m=1:NqP
-    fprintf(fid, '%17.15E ', invP(n,m));
-  end
-  fprintf(fid, '\n');
-end
-fprintf(fid, '%% diagOp [ weight so that inv(inv(W)*(trans(D)*W*D)) = P*inv(diagOp)*invP ]\n');
-for n=1:NqP
-    fprintf(fid, '%17.15E ', diagOp(n));
-  fprintf(fid, '\n');
-end
-fprintf(fid, '%% P [ reverse change of basis for OAS precon ]\n');
-for n=1:NqP
-  for m=1:NqP
-    fprintf(fid, '%17.15E ', P(n,m));
-  end
-  fprintf(fid, '\n');
-end
+writeFloatMatrix(fid, invP, 'C0 overlapping patch forward matrix');
+writeFloatMatrix(fid, diagOp, 'C0 overlapping patch diagonal scaling');
+writeFloatMatrix(fid, P, 'C0 overlapping patch backward matrix');
 
 
 %%ids 
@@ -287,8 +186,8 @@ for e=2:Nelements-1
 end
 
 ids = 4*Nq:5*Nq+1;
-BDG = ADG(ids,ids)
-MDG = MDG(ids,ids)
+BDG = ADG(ids,ids);
+MDG = MDG(ids,ids);
 
 gllwP = diag([w1d(1),w1d,w1d(1)]);
 
@@ -300,27 +199,9 @@ P = vSP;
 invP = inv(gllwP*vSP);
 diagOp = diag(dSP); % need to divide to get inverse
 
-fprintf(fid, '%% stencil size for DG OAS NqP\n');
-fprintf(fid, '%d\n', NqP);
-fprintf(fid, '%% forwardDG [ change of basis for DG OAS precon ]\n');
-for n=1:NqP
-  for m=1:NqP
-    fprintf(fid, '%17.15E ', invP(n,m));
-  end
-  fprintf(fid, '\n');
-end
-fprintf(fid, '%% diagOpDG [ weight so that inv(inv(W)*(trans(D)*W*D)) = P*inv(diagOp)*invP ]\n');
-for n=1:NqP
-    fprintf(fid, '%17.15E ', diagOp(n));
-  fprintf(fid, '\n');
-end
-fprintf(fid, '%% backwardDG [ reverse change of basis forr H0 OAS precon ]\n');
-for n=1:NqP
-  for m=1:NqP
-    fprintf(fid, '%17.15E ', P(n,m));
-  end
-  fprintf(fid, '\n');
-end
+writeFloatMatrix(fid, invP, 'IPDG overlapping patch forward matrix');
+writeFloatMatrix(fid, diagOp, 'IPDG overlapping patch diagonal scaling');
+writeFloatMatrix(fid, P, 'IPDG overlapping patch backward matrix');
 
 
 [gr,gw] = JacobiGQ(0,0,N+1);
@@ -330,45 +211,18 @@ gNq = length(gr);
 gV2 = Vandermonde1D(N+1, gr);
 gD2 = Dmatrix1D(N+1, gr, gV2);
 
-fprintf(fid, '%% gNq (gauss quadrature count)\n');
-fprintf(fid, '%d\n', gNq);
-fprintf(fid, '%% gjr,gjw Gauss Jacobi nodes and weights\n');
-for n=1:gNq
-  fprintf(fid, '%17.15E %17.15E \n', gr(n), gw(n));
-end
-fprintf(fid, '%% gjI [ 1D interpolation from GLL to Gauss nodes  ]\n');
-for n=1:gNq
-  for m=1:N+1
-    fprintf(fid, '%17.15E ', gI(n,m));
-  end
-  fprintf(fid, '\n');
-end
-fprintf(fid, '%% gjD [ 1D differentiation from GLL to Gauss nodes  ]\n');
-for n=1:gNq
-  for m=1:N+1
-    fprintf(fid, '%17.15E ', gD(n,m));
-  end
-  fprintf(fid, '\n');
-end
-
-fprintf(fid, '%% gjD2 [ 1D differentiation from GJ to GJ nodes  ]\n');
-for n=1:gNq
-  for m=1:gNq
-    fprintf(fid, '%17.15E ', gD2(n,m));
-  end
-  fprintf(fid, '\n');
-end
-
-gD2*gr
-
-
-fclose(fid);
-if(0)
+writeFloatMatrix(fid, gr, 'Gauss Legendre 1D quadrature nodes');
+writeFloatMatrix(fid, gw, 'Gauss Legendre 1D quadrature weights');
+writeFloatMatrix(fid, gI, 'GLL to Gauss Legendre interpolation matrix');
+writeFloatMatrix(fid, gD, 'GLL to Gauss Legendre differentiation matrix');
+writeFloatMatrix(fid, gD2, 'Gauss Legendre to Gauss Legendre differentiation matrix');
 
 
 %% volume cubature
+if(0)
+
 [z,w] = JacobiGQ(0,0,ceil(3*N/2));
-Nz = length(z)
+Nz = length(z);
 sk = 1;
 cubr = zeros(Nz*Nz*Nz,1);
 cubs = zeros(Nz*Nz*Nz,1);
@@ -389,16 +243,6 @@ end
 cInterp = VandermondeHex3D(N, cubr, cubs, cubt)/V;
 Ncub = length(cubr);
 
-fprintf(fid, '%% number of volume cubature nodes\n');
-fprintf(fid, '%d\n', length(cubr));
-fprintf(fid, '%% cubature interpolation matrix\n');
-for n=1:Ncub
-  for m=1:Np
-    fprintf(fid, '%17.15E ', cInterp(n,m));
-  end
-  fprintf(fid, '\n');
-end
-
 cV = VandermondeHex3D(N, cubr, cubs, cubt);
 cV'*diag(cubw)*cV;
 
@@ -408,39 +252,56 @@ cubDsT = V*transpose(cVs)*diag(cubw);
 cubDtT = V*transpose(cVt)*diag(cubw);
 cubProject = V*cV'*diag(cubw); %% relies on (transpose(cV)*diag(cubw)*cV being the identity)
 
-fprintf(fid, '%% cubature r weak differentiation matrix\n');
-for n=1:Np
-  for m=1:Ncub
-    fprintf(fid, '%17.15E ', cubDrT(n,m));
-  end
-  fprintf(fid, '\n');
+writeFloatMatrix(fid, cubr, 'Cubature r-coordinates');
+writeFloatMatrix(fid, cubs, 'Cubature s-coordinates');
+writeFloatMatrix(fid, cubt, 'Cubature t-coordinates');
+writeFloatMatrix(fid, cubw, 'Cubature weights');
+
+writeFloatMatrix(fid, cInterp, 'Cubature Interpolation Matrix');
+writeFloatMatrix(fid, cubDrT, 'Cubature Weak Dr Differentiation Matrix');
+writeFloatMatrix(fid, cubDsT, 'Cubature Weak Ds Differentiation Matrix');
+writeFloatMatrix(fid, cubDtT, 'Cubature Weak Dt Differentiation Matrix');
+writeFloatMatrix(fid, cubProject, 'Cubature Projection Matrix');
+
 end
 
-fprintf(fid, '%% cubature s weak differentiation matrix\n');
-for n=1:Np
-  for m=1:Ncub
-    fprintf(fid, '%17.15E ', cubDsT(n,m));
-  end
-  fprintf(fid, '\n');
+%degree raising interpolation
+rP1 = JacobiGL(0,0,N+1);
+VP1 = Vandermonde1D(N, rP1);
+
+IP1 = VP1/V1d;
+NpP1 = length(rP1);
+
+%degree lowering interpolation
+if(N>1)
+  rM1 = JacobiGL(0,0,N-1);
+else %hard code degree 0
+  rM1 = 0;
 end
 
-fprintf(fid, '%% cubature t weak differentiation matrix\n');
-for n=1:Np
-  for m=1:Ncub
-    fprintf(fid, '%17.15E ', cubDtT(n,m));
+VM1 = Vandermonde1D(N, rM1);
+IM1 = VM1/V1d;
+NpM1 = length(rM1);
+
+writeFloatMatrix(fid, IP1, '1D degree raise matrix');
+writeFloatMatrix(fid, IM1, '1D degree lower matrix');
+
+
+%%SEMFEM data
+%manually build quad grid for FEM problem
+FEMEToV = zeros(N*N*N,8);
+cnt =1;
+for k=0:N-1
+  for j=0:N-1
+    for i=0:N-1
+      id = i+(j)*(N+1)+k*(N+1)*(N+1);
+      FEMEToV(cnt,:) = [id, id+1, id+1+(N+1), id+(N+1), id+(N+1)*(N+1), id+1+(N+1)*(N+1), id+1+(N+1)+(N+1)*(N+1), id+(N+1)+(N+1)*(N+1)];
+      cnt = cnt+1;
+    end
   end
-  fprintf(fid, '\n');
 end
 
-fprintf(fid, '%% cubature projection matrix\n');
-for n=1:Np
-  for m=1:Ncub
-    fprintf(fid, '%17.15E ', cubProject(n,m));
-  end
-  fprintf(fid, '\n');
-end
-cubProject;
-testIdentity = cubProject*cInterp;
+writeIntMatrix(fid, FEMEToV, 'SEMFEM reference mesh');
 
 fclose(fid);
-end
+

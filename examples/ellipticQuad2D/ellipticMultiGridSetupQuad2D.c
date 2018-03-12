@@ -369,7 +369,6 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
   free(meshLevels);
 }
 
-//TODO this needs attention for quads
 void buildCoarsenerQuad2D(solver_t* solver, mesh2D **meshLevels, int Nf, int Nc, const char* options) {
 
   int NqFine   = Nf+1;

@@ -67,11 +67,11 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
       mesh->ggeo);
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
       mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
       mesh->vmapP);
 
 
@@ -305,8 +305,8 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
 
   int NpFine   = (Nf+1)*(Nf+1);
   int NpCoarse = (Nc+1)*(Nc+1);
-  int NqFine   = (Nf+1)*(Nf+1);
-  int NqCoarse = (Nc+1)*(Nc+1);
+  int NqFine   = (Nf+1);
+  int NqCoarse = (Nc+1);
   kernelInfo.addDefine("p_NpFine", NpFine);
   kernelInfo.addDefine("p_NpCoarse", NpCoarse);
   kernelInfo.addDefine("p_NqFine", Nf+1);
