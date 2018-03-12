@@ -1,8 +1,8 @@
-#include "ellipticQuad2D.h"
+#include "ellipticHex3D.h"
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
+void ellipticSEMFEMSetupHex3D(solver_t *solver, precon_t* precon,
                               dfloat tau, dfloat lambda, int *BCType,
                               const char *options, const char *parAlmondOptions) {
 
@@ -15,12 +15,12 @@ void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  mesh2D* mesh = solver->mesh; //original mesh
+  mesh3D* mesh = solver->mesh; //original mesh
 
-  precon->femMesh = (mesh2D*) calloc (1,sizeof(mesh2D)); //full fem mesh
-  mesh2D *femMesh = precon->femMesh;
+  precon->femMesh = (mesh3D*) calloc (1,sizeof(mesh3D)); //full fem mesh
+  mesh3D *femMesh = precon->femMesh;
 
-  memcpy(femMesh,mesh,sizeof(mesh2D));
+  memcpy(femMesh,mesh,sizeof(mesh3D));
 
   //now build the full degree 1 fem mesh
   int femN = 1; //degree of fem approximation
@@ -30,6 +30,7 @@ void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
   femMesh->EToV = (hlong*) calloc(femMesh->Nelements*femMesh->Nverts, sizeof(hlong));
   femMesh->EX = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
   femMesh->EY = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
+  femMesh->EZ = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
 
   dlong *localIds = (dlong *) calloc(femMesh->Nverts*femMesh->Nelements,sizeof(dlong));
 
@@ -41,6 +42,10 @@ void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
       dlong id2 = e*mesh->Np + mesh->FEMEToV[n*mesh->Nverts+1];
       dlong id3 = e*mesh->Np + mesh->FEMEToV[n*mesh->Nverts+2];
       dlong id4 = e*mesh->Np + mesh->FEMEToV[n*mesh->Nverts+3];
+      dlong id5 = e*mesh->Np + mesh->FEMEToV[n*mesh->Nverts+4];
+      dlong id6 = e*mesh->Np + mesh->FEMEToV[n*mesh->Nverts+5];
+      dlong id7 = e*mesh->Np + mesh->FEMEToV[n*mesh->Nverts+6];
+      dlong id8 = e*mesh->Np + mesh->FEMEToV[n*mesh->Nverts+7];
 
       /* read vertex quadruplet for quad */
       dlong femId = e*mesh->NelFEM*mesh->Nverts + n*mesh->Nverts;
@@ -48,21 +53,46 @@ void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
       femMesh->EToV[femId+1] = mesh->globalIds[id2];
       femMesh->EToV[femId+2] = mesh->globalIds[id3];
       femMesh->EToV[femId+3] = mesh->globalIds[id4];
+      femMesh->EToV[femId+4] = mesh->globalIds[id5];
+      femMesh->EToV[femId+5] = mesh->globalIds[id6];
+      femMesh->EToV[femId+6] = mesh->globalIds[id7];
+      femMesh->EToV[femId+7] = mesh->globalIds[id8];
 
       femMesh->EX[femId+0] = mesh->x[id1];
       femMesh->EX[femId+1] = mesh->x[id2];
       femMesh->EX[femId+2] = mesh->x[id3];
       femMesh->EX[femId+3] = mesh->x[id4];
+      femMesh->EX[femId+4] = mesh->x[id5];
+      femMesh->EX[femId+5] = mesh->x[id6];
+      femMesh->EX[femId+6] = mesh->x[id7];
+      femMesh->EX[femId+7] = mesh->x[id8];
 
       femMesh->EY[femId+0] = mesh->y[id1];
       femMesh->EY[femId+1] = mesh->y[id2];
       femMesh->EY[femId+2] = mesh->y[id3];
       femMesh->EY[femId+3] = mesh->y[id4];
+      femMesh->EY[femId+4] = mesh->y[id5];
+      femMesh->EY[femId+5] = mesh->y[id6];
+      femMesh->EY[femId+6] = mesh->y[id7];
+      femMesh->EY[femId+7] = mesh->y[id8];
+
+      femMesh->EZ[femId+0] = mesh->z[id1];
+      femMesh->EZ[femId+1] = mesh->z[id2];
+      femMesh->EZ[femId+2] = mesh->z[id3];
+      femMesh->EZ[femId+3] = mesh->z[id4];
+      femMesh->EZ[femId+4] = mesh->z[id5];
+      femMesh->EZ[femId+5] = mesh->z[id6];
+      femMesh->EZ[femId+6] = mesh->z[id7];
+      femMesh->EZ[femId+7] = mesh->z[id8];
 
       localIds[femId+0] = id1;
       localIds[femId+1] = id2;
-      localIds[femId+2] = id4;  //need to swap this as the Np nodes are ordered [0,1,3,2] in a degree 1 element
+      localIds[femId+2] = id4;  //need to swap this as the Np nodes are ordered [0,1,3,2,4,5,7,6] in a degree 1 element
       localIds[femId+3] = id3;
+      localIds[femId+4] = id5;
+      localIds[femId+5] = id6;
+      localIds[femId+6] = id8;
+      localIds[femId+7] = id7;
     }
   }
 
@@ -70,22 +100,22 @@ void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
   meshParallelConnect(femMesh);
 
   // load reference (r,s) element nodes
-  meshLoadReferenceNodesQuad2D(femMesh, femN);
+  meshLoadReferenceNodesHex3D(femMesh, femN);
 
   // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesQuad2D(femMesh);
+  meshPhysicalNodesHex3D(femMesh);
 
   // compute geometric factors
-  meshGeometricFactorsQuad2D(femMesh);
+  meshGeometricFactorsHex3D(femMesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup(femMesh);
 
   // connect face nodes (find trace indices)
-  meshConnectFaceNodes2D(femMesh);
+  meshConnectFaceNodes3D(femMesh);
 
   // compute surface geofacs
-  meshSurfaceGeometricFactorsQuad2D(femMesh);
+  meshSurfaceGeometricFactorsHex3D(femMesh);
 
   // global nodes
   meshParallelConnectNodes(femMesh);
@@ -129,68 +159,103 @@ void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
   dlong cnt =0;
   #pragma omp parallel for
   for (dlong e=0;e<femMesh->Nelements;e++) {
+    for (int nz=0;nz<femMesh->Nq;nz++) {
     for (int ny=0;ny<femMesh->Nq;ny++) {
-      for (int nx=0;nx<femMesh->Nq;nx++) {
+    for (int nx=0;nx<femMesh->Nq;nx++) {
+      dlong nn = nx+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+      dlong idn = localIds[e*femMesh->Np + nn];
+      if (globalNumbering[idn]<0) continue; //skip masked nodes
+      
+      for (int mz=0;mz<femMesh->Nq;mz++) {
+      for (int my=0;my<femMesh->Nq;my++) {
+      for (int mx=0;mx<femMesh->Nq;mx++) {
+        dlong mm = mx+my*femMesh->Nq+mz*femMesh->Nq*femMesh->Nq;
+        dlong idm = localIds[e*femMesh->Np + mm];
+        if (globalNumbering[idm]<0) continue; //skip masked nodes
+      
+        int id;
+        dfloat val = 0.;
+        
+        if ((ny==my)&&(nz==mz)) {
+          for (int k=0;k<femMesh->Nq;k++) {
+            id = k+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+            dfloat Grr = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G00ID*femMesh->Np];
 
-        dlong idn = localIds[e*femMesh->Np + nx+ny*femMesh->Nq];
-        if (globalNumbering[idn]<0) continue; //skip masked nodes
+            val += Grr*femMesh->D[nx+k*femMesh->Nq]*femMesh->D[mx+k*femMesh->Nq];
+          }
+        }
 
-        for (int my=0;my<femMesh->Nq;my++) {
-          for (int mx=0;mx<femMesh->Nq;mx++) {
+        if (nz==mz) {
+          id = mx+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+          dfloat Grs = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G01ID*femMesh->Np];
+          val += Grs*femMesh->D[nx+mx*femMesh->Nq]*femMesh->D[my+ny*femMesh->Nq];
 
-            dlong idm = localIds[e*femMesh->Np + mx+my*femMesh->Nq];
-            if (globalNumbering[idm]<0) continue; //skip masked nodes
+          id = nx+my*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+          dfloat Gsr = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G01ID*femMesh->Np];
+          val += Gsr*femMesh->D[mx+nx*femMesh->Nq]*femMesh->D[ny+my*femMesh->Nq];
+        }
 
-            int id;
-            dfloat val = 0.;
+        if (ny==my) {
+          id = mx+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+          dfloat Grt = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G02ID*femMesh->Np];
+          val += Grt*femMesh->D[nx+mx*femMesh->Nq]*femMesh->D[mz+nz*femMesh->Nq];
 
-            if (ny==my) {
-              for (int k=0;k<femMesh->Nq;k++) {
-                id = k+ny*femMesh->Nq;
-                dfloat Grr = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G00ID*femMesh->Np];
+          id = nx+ny*femMesh->Nq+mz*femMesh->Nq*femMesh->Nq;
+          dfloat Gst = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G02ID*femMesh->Np];
+          val += Gst*femMesh->D[mx+nx*femMesh->Nq]*femMesh->D[nz+mz*femMesh->Nq];
+        }
 
-                val += Grr*femMesh->D[nx+k*femMesh->Nq]*femMesh->D[mx+k*femMesh->Nq];
-              }
-            }
+        if ((nx==mx)&&(nz==mz)) {
+          for (int k=0;k<femMesh->Nq;k++) {
+            id = nx+k*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+            dfloat Gss = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G11ID*femMesh->Np];
 
-            id = mx+ny*femMesh->Nq;
-            dfloat Grs = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G01ID*femMesh->Np];
-            val += Grs*femMesh->D[nx+mx*femMesh->Nq]*femMesh->D[my+ny*femMesh->Nq];
+            val += Gss*femMesh->D[ny+k*femMesh->Nq]*femMesh->D[my+k*femMesh->Nq];
+          }
+        }
+        
+        if (nx==mx) {
+          id = nx+my*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+          dfloat Gst = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G12ID*femMesh->Np];
+          val += Gst*femMesh->D[ny+my*femMesh->Nq]*femMesh->D[mz+nz*femMesh->Nq];
 
-            id = nx+my*femMesh->Nq;
-            dfloat Gsr = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G01ID*femMesh->Np];
-            val += Gsr*femMesh->D[mx+nx*femMesh->Nq]*femMesh->D[ny+my*femMesh->Nq];
+          id = nx+ny*femMesh->Nq+mz*femMesh->Nq*femMesh->Nq;
+          dfloat Gts = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G12ID*femMesh->Np];
+          val += Gts*femMesh->D[my+ny*femMesh->Nq]*femMesh->D[nz+mz*femMesh->Nq];
+        }
 
-            if (nx==mx) {
-              for (int k=0;k<femMesh->Nq;k++) {
-                id = nx+k*femMesh->Nq;
-                dfloat Gss = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G11ID*femMesh->Np];
+        if ((nx==mx)&&(ny==my)) {
+          for (int k=0;k<femMesh->Nq;k++) {
+            id = nx+ny*femMesh->Nq+k*femMesh->Nq*femMesh->Nq;
+            dfloat Gtt = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G22ID*femMesh->Np];
 
-                val += Gss*femMesh->D[ny+k*femMesh->Nq]*femMesh->D[my+k*femMesh->Nq];
-              }
-            }
-
-            if ((nx==mx)&&(ny==my)) {
-              id = nx + ny*femMesh->Nq;
-              dfloat JW = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + GWJID*femMesh->Np];
-              val += JW*lambda;
-            }
-
-            dfloat nonZeroThreshold = 1e-7;
-            if (fabs(val)>nonZeroThreshold) {
-              #pragma omp critical
-              {
-                // pack non-zero
-                sendNonZeros[cnt].val = val;
-                sendNonZeros[cnt].row = globalNumbering[idn];
-                sendNonZeros[cnt].col = globalNumbering[idm];
-                sendNonZeros[cnt].ownerRank = mesh->globalOwners[idn];
-                cnt++;
-              }
-            }
+            val += Gtt*femMesh->D[nz+k*femMesh->Nq]*femMesh->D[mz+k*femMesh->Nq];
+          }
+        }
+        
+        if ((nx==mx)&&(ny==my)&&(nz==mz)) {
+          id = nx + ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+          dfloat JW = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + GWJID*femMesh->Np];
+          val += JW*lambda;
+        }
+        
+        // pack non-zero
+        dfloat nonZeroThreshold = 1e-7;
+        if (fabs(val) >= nonZeroThreshold) {
+          #pragma omp critical
+          {
+            sendNonZeros[cnt].val = val;
+            sendNonZeros[cnt].row = globalNumbering[idn];
+            sendNonZeros[cnt].col = globalNumbering[idm];
+            sendNonZeros[cnt].ownerRank = mesh->globalOwners[idn];
+            cnt++;
           }
         }
       }
+      }
+      }
+    }
+    }
     }
   }
 

@@ -331,14 +331,24 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*
                "ellipticFooQuad2D",
                kernelInfo);
 
+  // solver->precon->coarsenKernel =
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
+  //              "ellipticPreconCoarsen",
+  //              kernelInfo);
+
+  // solver->precon->prolongateKernel =
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
+  //              "ellipticPreconProlongate",
+  //              kernelInfo);
+
   solver->precon->coarsenKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
-               "ellipticPreconCoarsen",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsenQuad2D.okl",
+               "ellipticPreconCoarsenQuad2D",
                kernelInfo);
 
   solver->precon->prolongateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
-               "ellipticPreconProlongate",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongateQuad2D.okl",
+               "ellipticPreconProlongateQuad2D",
                kernelInfo);
 
   solver->precon->approxPatchSolverKernel =
