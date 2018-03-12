@@ -1,27 +1,27 @@
-#include "ellipticQuad2D.h"
+#include "ellipticHex3D.h"
 
 void matrixInverse(int N, dfloat *A);
 
 // create solver and mesh structs for multigrid levels
-solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf, int *BCType, const char *options){
+solver_t *ellipticBuildMultigridLevelHex3D(solver_t *baseSolver, int Nc, int Nf, int *BCType, const char *options){
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
   memcpy(solver,baseSolver,sizeof(solver_t));
 
   //populate the mini-mesh using the mesh struct
-  mesh2D *mesh = (mesh2D*) calloc(1,sizeof(mesh2D));
-  memcpy(mesh,baseSolver->mesh,sizeof(mesh2D));
+  mesh3D *mesh = (mesh3D*) calloc(1,sizeof(mesh3D));
+  memcpy(mesh,baseSolver->mesh,sizeof(mesh3D));
 
   solver->mesh = mesh;
 
   // load reference (r,s) element nodes
-  meshLoadReferenceNodesQuad2D(mesh, Nc);
+  meshLoadReferenceNodesHex3D(mesh, Nc);
 
   // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesQuad2D(mesh);
+  meshPhysicalNodesHex3D(mesh);
 
   // compute geometric factors
-  meshGeometricFactorsQuad2D(mesh);
+  meshGeometricFactorsHex3D(mesh);
 
   // create halo extension for x,y arrays
   dlong totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
@@ -32,14 +32,16 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
   // extend x,y arrays to hold coordinates of node coordinates of elements in halo
   mesh->x = (dfloat*) realloc(mesh->x, (localNodes+totalHaloNodes)*sizeof(dfloat));
   mesh->y = (dfloat*) realloc(mesh->y, (localNodes+totalHaloNodes)*sizeof(dfloat));
+  mesh->z = (dfloat*) realloc(mesh->z, (localNodes+totalHaloNodes)*sizeof(dfloat));
   meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->x, sendBuffer, mesh->x + localNodes);
   meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->y, sendBuffer, mesh->y + localNodes);
+  meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->z, sendBuffer, mesh->z + localNodes);
 
   // connect face nodes (find trace indices)
-  meshConnectFaceNodes2D(mesh);
+  meshConnectFaceNodes3D(mesh);
 
   // compute surface geofacs
-  meshSurfaceGeometricFactorsQuad2D(mesh);
+  meshSurfaceGeometricFactorsHex3D(mesh);
 
   // global nodes
   meshParallelConnectNodes(mesh);
@@ -47,6 +49,7 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
   //dont need these once vmap is made
   free(mesh->x);
   free(mesh->y);
+  free(mesh->z);
   free(sendBuffer);
 
   dlong Ntotal = mesh->Np*mesh->Nelements;
@@ -118,6 +121,7 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
 
   kernelInfo.addDefine("p_NXID", NXID);
   kernelInfo.addDefine("p_NYID", NYID);
+  kernelInfo.addDefine("p_NZID", NZID);
   kernelInfo.addDefine("p_SJID", SJID);
   kernelInfo.addDefine("p_IJID", IJID);
   kernelInfo.addDefine("p_WSJID", WSJID);
@@ -158,15 +162,24 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
 
   kernelInfo.addDefine("p_G00ID", G00ID);
   kernelInfo.addDefine("p_G01ID", G01ID);
+  kernelInfo.addDefine("p_G02ID", G02ID);
   kernelInfo.addDefine("p_G11ID", G11ID);
+  kernelInfo.addDefine("p_G12ID", G12ID);
+  kernelInfo.addDefine("p_G22ID", G22ID);
   kernelInfo.addDefine("p_GWJID", GWJID);
 
 
   kernelInfo.addDefine("p_RXID", RXID);
   kernelInfo.addDefine("p_SXID", SXID);
+  kernelInfo.addDefine("p_TXID", TXID);
 
   kernelInfo.addDefine("p_RYID", RYID);
   kernelInfo.addDefine("p_SYID", SYID);
+  kernelInfo.addDefine("p_TYID", TYID);
+
+  kernelInfo.addDefine("p_RZID", RZID);
+  kernelInfo.addDefine("p_SZID", SZID);
+  kernelInfo.addDefine("p_TZID", TZID);
 
   kernelInfo.addDefine("p_JID", JID);
   kernelInfo.addDefine("p_JWID", JWID);
@@ -174,7 +187,7 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
 
   //add standard boundary functions
   char *boundaryHeaderFileName;
-  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticQuad2D/ellipticBoundary2D.h");
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticHex3D/ellipticBoundary3D.h");
   kernelInfo.addInclude(boundaryHeaderFileName);
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
@@ -183,7 +196,7 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
 
   // add custom defines
   kernelInfo.addDefine("p_NqP", (mesh->Nq+2));
-  kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP));
+  kernelInfo.addDefine("p_NpP", (mesh->NqP*mesh->NqP*mesh->NqP));
   kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
 
@@ -202,7 +215,7 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
   int NblockS = 256/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-  int NblockP = mymax(256/(5*mesh->Np),1); // get close to 256 threads
+  int NblockP = mymax(256/(7*mesh->Np),1); // get close to 256 threads
   kernelInfo.addDefine("p_NblockP", NblockP);
 
   int NblockG;
@@ -221,90 +234,90 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
            kernelInfo);
 
   solver->AxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxQuad2D.okl",
-               "ellipticAxQuad2D_e0",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D_base.okl",
+               "ellipticAxHex3D_e0",
                kernelInfo);
 
   solver->partialAxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxQuad2D.okl",
-               "ellipticPartialAxQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D_base.okl",
+               "ellipticAxHex3D_e0a",
                kernelInfo);
 
   solver->gradientKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientQuad2D.okl",
-               "ellipticGradientQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientHex3D.okl",
+               "ellipticGradientHex3D",
            kernelInfo);
 
   solver->partialGradientKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientQuad2D.okl",
-               "ellipticPartialGradientQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientHex3D.okl",
+               "ellipticPartialGradientHex3D",
                 kernelInfo);
 
   solver->ipdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgQuad2D.okl",
-               "ellipticAxIpdgQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
+               "ellipticAxIpdgHex3D",
                kernelInfo);
 
   solver->partialIpdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgQuad2D.okl",
-               "ellipticPartialAxIpdgQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
+               "ellipticPartialAxIpdgHex3D",
                kernelInfo);
 
   //new precon struct
   solver->precon = (precon_t *) calloc(1,sizeof(precon_t));
 
   solver->precon->overlappingPatchKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconQuad2D.okl",
-               "ellipticOasPreconQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconHex3D.okl",
+               "ellipticOasPreconHex3D",
                kernelInfo);
 
   solver->precon->restrictKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictQuad2D.okl",
-               "ellipticFooQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictHex3D.okl",
+               "ellipticFooHex3D",
                kernelInfo);
 
-  solver->precon->approxPatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticApproxPatchSolver2D",
-               kernelInfo);
+  // solver->precon->approxPatchSolverKernel =
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+  //              "ellipticApproxPatchSolver3D",
+  //              kernelInfo);
 
-  solver->precon->exactPatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticExactPatchSolver2D",
-               kernelInfo);
+  // solver->precon->exactPatchSolverKernel =
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+  //              "ellipticExactPatchSolver3D",
+  //              kernelInfo);
 
-  solver->precon->patchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
-               "ellipticPatchGather",
-               kernelInfo);
+  // solver->precon->patchGatherKernel =
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
+  //              "ellipticPatchGather",
+  //              kernelInfo);
 
-  solver->precon->approxFacePatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticApproxFacePatchSolver2D",
-               kernelInfo);
+  // solver->precon->approxFacePatchSolverKernel =
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+  //              "ellipticApproxFacePatchSolver3D",
+  //              kernelInfo);
 
-  solver->precon->exactFacePatchSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticExactFacePatchSolver2D",
-               kernelInfo);
+  // solver->precon->exactFacePatchSolverKernel =
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+  //              "ellipticExactFacePatchSolver3D",
+  //              kernelInfo);
 
-  solver->precon->facePatchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
-               "ellipticFacePatchGather",
-               kernelInfo);
+  // solver->precon->facePatchGatherKernel =
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
+  //              "ellipticFacePatchGather",
+  //              kernelInfo);
 
-  solver->precon->approxBlockJacobiSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticApproxBlockJacobiSolver2D",
-               kernelInfo);
+  // solver->precon->approxBlockJacobiSolverKernel =
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+  //              "ellipticApproxBlockJacobiSolver3D",
+  //              kernelInfo);
 
-  solver->precon->exactBlockJacobiSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticExactBlockJacobiSolver2D",
-               kernelInfo);
+  // solver->precon->exactBlockJacobiSolverKernel =
+  //   mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver3D.okl",
+  //              "ellipticExactBlockJacobiSolver3D",
+  //              kernelInfo);
 
-  int NpFine   = (Nf+1)*(Nf+1);
-  int NpCoarse = (Nc+1)*(Nc+1);
+  int NpFine   = (Nf+1)*(Nf+1)*(Nf+1);
+  int NpCoarse = (Nc+1)*(Nc+1)*(Nc+1);
   int NqFine   = (Nf+1);
   int NqCoarse = (Nc+1);
   kernelInfo.addDefine("p_NpFine", NpFine);
@@ -313,13 +326,13 @@ solver_t *ellipticBuildMultigridLevelQuad2D(solver_t *baseSolver, int Nc, int Nf
   kernelInfo.addDefine("p_NqCoarse", Nc+1);
   
   solver->precon->coarsenKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsenQuad2D.okl",
-               "ellipticPreconCoarsenQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsenHex3D.okl",
+               "ellipticPreconCoarsenHex3D",
                kernelInfo);
 
   solver->precon->prolongateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongateQuad2D.okl",
-               "ellipticPreconProlongateQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongateHex3D.okl",
+               "ellipticPreconProlongateHex3D",
                kernelInfo);
 
   //on host gather-scatter

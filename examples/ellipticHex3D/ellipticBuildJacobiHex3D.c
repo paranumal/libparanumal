@@ -1,16 +1,16 @@
-#include "ellipticQuad2D.h"
+#include "ellipticHex3D.h"
 
-void BuildLocalIpdgPatchAx(mesh2D *mesh, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *B, dfloat *Br, dfloat* Bs, dlong eM, dfloat *A);
+void BuildLocalIpdgPatchAx(mesh3D *mesh, dfloat tau, dfloat lambda, int* BCType,
+                        dfloat *B, dfloat *Br, dfloat* Bs, dfloat* Bt, dlong eM, dfloat *A);
 
 void BuildLocalContinuousPatchAx(solver_t* solver, dfloat lambda,
-                                  dlong eM, dfloat *B, dfloat *Br, dfloat* Bs, dfloat *A);
+                                  dlong eM, dfloat *B, dfloat *Br, dfloat* Bs, dfloat* Bt, dfloat *A);
 
-void ellipticBuildJacobiQuad2D(solver_t* solver, dfloat tau, dfloat lambda,
+void ellipticBuildJacobiHex3D(solver_t* solver, dfloat tau, dfloat lambda,
                                    int *BCType, dfloat **invDiagA,
                                    const char *options){
 
-  mesh2D *mesh = solver->mesh;
+  mesh3D *mesh = solver->mesh;
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
@@ -19,27 +19,35 @@ void ellipticBuildJacobiQuad2D(solver_t* solver, dfloat tau, dfloat lambda,
   dfloat *B  = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *Br = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *Bs = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  dfloat *Bt = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
 
   int mode = 0;
-  for(int nj=0;nj<mesh->N+1;++nj){
-    for(int ni=0;ni<mesh->N+1;++ni){
+  for(int nk=0;nk<mesh->N+1;++nk){
+    for(int nj=0;nj<mesh->N+1;++nj){
+      for(int ni=0;ni<mesh->N+1;++ni){
 
-      int node = 0;
+        int node = 0;
 
-      for(int j=0;j<mesh->N+1;++j){
-        for(int i=0;i<mesh->N+1;++i){
+        for(int k=0;k<mesh->N+1;++k){
+          for(int j=0;j<mesh->N+1;++j){
+            for(int i=0;i<mesh->N+1;++i){
 
-          if(nj==j && ni==i)
-            B[mode*mesh->Np+node] = 1;
-          if(nj==j)
-            Br[mode*mesh->Np+node] = mesh->D[ni+mesh->Nq*i]; 
-          if(ni==i)
-            Bs[mode*mesh->Np+node] = mesh->D[nj+mesh->Nq*j]; 
-          
-          ++node;
+              if(nk==k && nj==j && ni==i)
+                B[mode*mesh->Np+node] = 1;
+              if(nj==j && nk==k)
+                Br[mode*mesh->Np+node] = mesh->D[ni+mesh->Nq*i]; 
+              if(ni==i && nk==k)
+                Bs[mode*mesh->Np+node] = mesh->D[nj+mesh->Nq*j]; 
+              if(ni==i && nj==j)
+                Bt[mode*mesh->Np+node] = mesh->D[nk+mesh->Nq*k]; 
+              
+              ++node;
+            }
+          }
         }
+        
+        ++mode;
       }
-      ++mode;
     }
   }
 
@@ -59,9 +67,9 @@ void ellipticBuildJacobiQuad2D(solver_t* solver, dfloat tau, dfloat lambda,
     for(dlong eM=0;eM<mesh->Nelements;++eM){
       //build the patch A matrix for this element
       if (strstr(options,"IPDG")) {
-        BuildLocalIpdgPatchAx(mesh, tau, lambda, BCType, B, Br, Bs, eM, patchA);
+        BuildLocalIpdgPatchAx(mesh, tau, lambda, BCType, B, Br, Bs, Bt, eM, patchA);
       } else if (strstr(options,"CONTINUOUS")) {
-        BuildLocalContinuousPatchAx(solver, lambda, eM, B, Br, Bs, patchA);
+        BuildLocalContinuousPatchAx(solver, lambda, eM, B, Br, Bs, Bt, patchA);
       }
 
       // compute the diagonal entries
@@ -83,6 +91,6 @@ void ellipticBuildJacobiQuad2D(solver_t* solver, dfloat tau, dfloat lambda,
 
   if(rank==0) printf("done.\n");
 
-  free(B); free(Br); free(Bs);
+  free(B); free(Br); free(Bs); free(Bt);
   free(diagA);
 }

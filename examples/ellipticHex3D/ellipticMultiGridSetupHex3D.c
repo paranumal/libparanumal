@@ -1,15 +1,15 @@
-#include "ellipticQuad2D.h"
+#include "ellipticHex3D.h"
 
-void AxQuad2D(void **args, occa::memory &o_x, occa::memory &o_Ax) {
+void AxHex3D(void **args, occa::memory &o_x, occa::memory &o_Ax) {
 
   solver_t *solver = (solver_t *) args[0];
   dfloat *lambda = (dfloat *) args[1];
   char *options = (char *) args[2];
 
-  ellipticOperator2D(solver,*lambda,o_x,o_Ax,options);
+  ellipticOperator3D(solver,*lambda,o_x,o_Ax,options);
 }
 
-void coarsenQuad2D(void **args, occa::memory &o_x, occa::memory &o_Rx) {
+void coarsenHex3D(void **args, occa::memory &o_x, occa::memory &o_Rx) {
 
   solver_t *solver = (solver_t *) args[0];
   char *options    = (char *) args[1];
@@ -27,12 +27,12 @@ void coarsenQuad2D(void **args, occa::memory &o_x, occa::memory &o_Rx) {
 
   if (strstr(options,"CONTINUOUS")) {
     //solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, o_Rx, o_Rx);
-    ellipticParallelGatherScatterQuad2D(mesh, mesh->ogs, o_Rx, dfloatString, "add");  
+    ellipticParallelGatherScatterHex3D(mesh, mesh->ogs, o_Rx, dfloatString, "add");  
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Rx);
   }
 }
 
-void prolongateQuad2D(void **args, occa::memory &o_x, occa::memory &o_Px) {
+void prolongateHex3D(void **args, occa::memory &o_x, occa::memory &o_Px) {
 
   solver_t *solver = (solver_t *) args[0];
   char *options    = (char *) args[1];
@@ -42,7 +42,7 @@ void prolongateQuad2D(void **args, occa::memory &o_x, occa::memory &o_Px) {
 
   // if (strstr(options,"CONTINUOUS")) {
   //   if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_x);
-  //   ellipticParallelGatherScatterQuad2D(mesh, mesh->ogs, o_x, dfloatString, "add");  
+  //   ellipticParallelGatherScatterHex3D(mesh, mesh->ogs, o_x, dfloatString, "add");  
   //   solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, o_x, o_x);
   // }
 
@@ -72,9 +72,9 @@ void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx) {
   meshParallelScatter(mesh, ogs, o_x, o_Sx);  
 }
 
-void buildCoarsenerQuad2D(solver_t* solver, mesh2D **meshLevels, int Nf, int Nc, const char* options);
+void buildCoarsenerHex3D(solver_t* solver, mesh3D **meshLevels, int Nf, int Nc, const char* options);
 
-void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
+void ellipticMultiGridSetupHex3D(solver_t *solver, precon_t* precon,
                                 dfloat tau, dfloat lambda, int *BCType,
                                 const char *options, const char *parAlmondOptions) {
 
@@ -82,15 +82,15 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  mesh2D *mesh = solver->mesh;
+  mesh3D *mesh = solver->mesh;
 
   //read all the nodes files and load them in a dummy mesh array
-  mesh2D **meshLevels = (mesh2D**) calloc(mesh->N+1,sizeof(mesh2D*));
+  mesh3D **meshLevels = (mesh3D**) calloc(mesh->N+1,sizeof(mesh3D*));
   for (int n=1;n<mesh->N+1;n++) {
-    meshLevels[n] = (mesh2D *) calloc(1,sizeof(mesh2D));
+    meshLevels[n] = (mesh3D *) calloc(1,sizeof(mesh3D));
     meshLevels[n]->Nverts = mesh->Nverts;
     meshLevels[n]->Nfaces = mesh->Nfaces;
-    meshLoadReferenceNodesQuad2D(meshLevels[n], n);
+    meshLoadReferenceNodesHex3D(meshLevels[n], n);
   }
 
   //set the number of MG levels and their degree
@@ -112,7 +112,7 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
     numLevels = 1;
     int degree = mesh->N;
     int dofs = meshLevels[degree]->Np;
-    while (dofs>4) {
+    while (dofs>8) {
       numLevels++;
       for (;degree>0;degree--)
         if (meshLevels[degree]->Np<=dofs/2)
@@ -124,7 +124,7 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
     numLevels = 1;
     levelDegree[0] = degree;
     dofs = meshLevels[degree]->Np;
-    while (dofs>4) {
+    while (dofs>8) {
       for (;degree>0;degree--)
         if (meshLevels[degree]->Np<=dofs/2)
           break;
@@ -153,7 +153,7 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
     int Nf = levelDegree[n-1];
     int Nc = levelDegree[n];
     printf("=============BUIDLING MULTIGRID LEVEL OF DEGREE %d==================\n", Nc);
-    solversN[Nc] = ellipticBuildMultigridLevelQuad2D(solver,Nc,Nf,BCType,options);
+    solversN[Nc] = ellipticBuildMultigridLevelHex3D(solver,Nc,Nf,BCType,options);
   }
 
   // set multigrid operators for fine levels
@@ -176,7 +176,7 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
     levels[n]->AxArgs[0] = (void *) solverL;
     levels[n]->AxArgs[1] = (void *) vlambda;
     levels[n]->AxArgs[2] = (void *) options;
-    levels[n]->device_Ax = AxQuad2D;
+    levels[n]->device_Ax = AxHex3D;
 
     levels[n]->smoothArgs = (void **) calloc(2,sizeof(void*));
     levels[n]->smoothArgs[0] = (void *) solverL;
@@ -186,7 +186,7 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
     levels[n]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*solverL->mesh->Np;
 
     if (strstr(options,"CHEBYSHEV")) {
-      levels[n]->device_smooth = smoothChebyshevQuad2D;
+      levels[n]->device_smooth = smoothChebyshevHex3D;
 
       levels[n]->smootherResidual = (dfloat *) calloc(levels[n]->Ncols,sizeof(dfloat));
 
@@ -195,7 +195,7 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
       levels[n]->o_smootherResidual2 = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
       levels[n]->o_smootherUpdate = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
     } else {
-      levels[n]->device_smooth = smoothQuad2D;
+      levels[n]->device_smooth = smoothHex3D;
 
       // extra storage for smoothing op
       levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat));
@@ -216,10 +216,6 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
     //set up the fine problem smoothing
     if(strstr(options, "OVERLAPPINGPATCH")){
       ellipticSetupSmootherOverlappingPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-    } else if(strstr(options, "FULLPATCH")){
-      ellipticSetupSmootherFullPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-    } else if(strstr(options, "FACEPATCH")){
-      ellipticSetupSmootherFacePatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
     } else if(strstr(options, "LOCALPATCH")){
       ellipticSetupSmootherLocalPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
     } else { //default to damped jacobi
@@ -256,10 +252,6 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
       char *smootherString;
       if(strstr(options, "OVERLAPPINGPATCH")){
         smootherString = strdup("OVERLAPPINGPATCH");
-      } else if(strstr(options, "FULLPATCH")){
-        smootherString = strdup("FULLPATCH");
-      } else if(strstr(options, "FACEPATCH")){
-        smootherString = strdup("FACEPATCH");
       } else if(strstr(options, "LOCALPATCH")){
         smootherString = strdup("LOCALPATCH");
       } else { //default to damped jacobi
@@ -296,9 +288,9 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
   hlong *coarseGlobalStarts = (hlong*) calloc(size+1, sizeof(hlong));
 
   if (strstr(options,"IPDG")) {
-    ellipticBuildIpdgQuad2D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
+    ellipticBuildIpdgHex3D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
   } else if (strstr(options,"CONTINUOUS")) {
-    ellipticBuildContinuousQuad2D(solverL,lambda,&coarseA,&nnzCoarseA,&coarseogs,coarseGlobalStarts,options);
+    ellipticBuildContinuousHex3D(solverL,lambda,&coarseA,&nnzCoarseA,&coarseogs,coarseGlobalStarts,options);
   }
 
   hlong *Rows = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
@@ -352,7 +344,7 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
 
     solver_t *solverL = solversN[Nc];
     solver_t *solverF = solversN[Nf];
-    buildCoarsenerQuad2D(solverL, meshLevels, Nf, Nc, options);
+    buildCoarsenerHex3D(solverL, meshLevels, Nf, Nc, options);
     
     levels[n]->coarsenArgs = (void **) calloc(3,sizeof(void*));
     levels[n]->coarsenArgs[0] = (void *) solverL;
@@ -361,15 +353,15 @@ void ellipticMultiGridSetupQuad2D(solver_t *solver, precon_t* precon,
 
     levels[n]->prolongateArgs = levels[n]->coarsenArgs;
     
-    levels[n]->device_coarsen = coarsenQuad2D;
-    levels[n]->device_prolongate = prolongateQuad2D;
+    levels[n]->device_coarsen = coarsenHex3D;
+    levels[n]->device_prolongate = prolongateHex3D;
   }
 
   for (int n=1;n<mesh->N+1;n++) free(meshLevels[n]);
   free(meshLevels);
 }
 
-void buildCoarsenerQuad2D(solver_t* solver, mesh2D **meshLevels, int Nf, int Nc, const char* options) {
+void buildCoarsenerHex3D(solver_t* solver, mesh3D **meshLevels, int Nf, int Nc, const char* options) {
 
   int NqFine   = Nf+1;
   int NqCoarse = Nc+1;

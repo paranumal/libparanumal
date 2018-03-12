@@ -1,39 +1,56 @@
-
 #include "ellipticHex3D.h"
 
-typedef struct{
+int parallelCompareRowColumn(const void *a, const void *b);
 
-  int row;
-  int col;
-  int ownerRank;
-  dfloat val;
-
-} nonZero_t;
-
-void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, int *nnzA, const char *options){
+void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType, 
+                      nonZero_t **A, dlong *nnzA, hlong *globalStarts, const char *options){
 
   int size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankM);
 
-  /* find number of elements on each rank */
-  int *rankNelements = (int*) calloc(size, sizeof(int));
-  int *rankStarts = (int*) calloc(size+1, sizeof(int));
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_INT,
-		rankNelements, 1, MPI_INT, MPI_COMM_WORLD);
+  int Np = mesh->Np;
+  int Nfp = mesh->Nfp;
+  int Nfaces = mesh->Nfaces;
+  dlong Nelements = mesh->Nelements;
+
+  hlong Nnum = mesh->Np*mesh->Nelements;
+
+  // create a global numbering system
+  hlong *globalIds = (hlong *) calloc((Nelements+mesh->totalHaloPairs)*Np,sizeof(hlong));
+
+  // every degree of freedom has its own global id
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, MPI_COMM_WORLD);
+  for(int r=0;r<size;++r)
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+
+  /* so find number of elements on each rank */
+  dlong *rankNelements = (dlong*) calloc(size, sizeof(dlong));
+  hlong *rankStarts = (hlong*) calloc(size+1, sizeof(hlong));
+  MPI_Allgather(&Nelements, 1, MPI_DLONG,
+    rankNelements, 1, MPI_DLONG, MPI_COMM_WORLD);
+  //find offsets
   for(int r=0;r<size;++r){
-    rankStarts[r+1] = rankStarts[r]+(rankNelements[r])*mesh->Np;
+    rankStarts[r+1] = rankStarts[r]+rankNelements[r];
   }
-  
-  /* do a halo exchange of local node numbers */
+  //use the offsets to set a global id
+  for (dlong e =0;e<Nelements;e++) {
+    for (int n=0;n<Np;n++) {
+      globalIds[e*Np +n] = n + (e + rankStarts[rankM])*Np;
+    }
+  }
 
-  int nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
+  /* do a halo exchange of global node numbers */
+  if (mesh->totalHaloPairs) {
+    hlong *idSendBuffer = (hlong *) calloc(Np*mesh->totalHaloPairs,sizeof(hlong));
+    meshHaloExchange(mesh, Np*sizeof(hlong), globalIds, idSendBuffer, globalIds + Nelements*Np);
+    free(idSendBuffer);
+  }
 
-  *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
+  dlong nnzLocalBound = Np*Np*(1+Nfaces)*Nelements;
 
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-8;
-  dfloat tau = 2; // hackery
 
   // build some monolithic basis arrays (use Dr,Ds,Dt and insert MM instead of weights for tet version)
   dfloat *B  = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -70,13 +87,18 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, int *nnz
       }
     }
   }
+
+  *A = (nonZero_t*) calloc(nnzLocalBound,sizeof(nonZero_t));
+  
+  if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
+
+  // reset non-zero counter
+  dlong nnz = 0;
 	
   // loop over all elements
-#pragma omp parallel for
-  for(int eM=0;eM<mesh->Nelements;++eM){
+  #pragma omp parallel for
+  for(dlong eM=0;eM<mesh->Nelements;++eM){
 
-    int cnt = eM*mesh->Np*mesh->Np*(mesh->Nfaces+1);
-    
     /* build Dx,Dy,Dz (forget the TP for the moment) */
     for(int n=0;n<mesh->Np;++n){
       for(int m=0;m<mesh->Np;++m){ // m will be the sub-block index for negative and positive trace
@@ -84,7 +106,7 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, int *nnz
 
       	// (grad phi_n, grad phi_m)_{D^e}
       	for(int i=0;i<mesh->Np;++i){
-      	  int base = eM*mesh->Np*mesh->Nvgeo + i;
+      	  dlong base = eM*mesh->Np*mesh->Nvgeo + i;
       	  dfloat drdx = mesh->vgeo[base+mesh->Np*RXID];
       	  dfloat drdy = mesh->vgeo[base+mesh->Np*RYID];
       	  dfloat drdz = mesh->vgeo[base+mesh->Np*RZID];
@@ -116,7 +138,7 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, int *nnz
       	    int vidM = mesh->faceNodes[i+fM*mesh->Nfp];
 
       	    // grab vol geofacs at surface nodes
-      	    int baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
+      	    dlong baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
       	    dfloat drdxM = mesh->vgeo[baseM+mesh->Np*RXID];
       	    dfloat drdyM = mesh->vgeo[baseM+mesh->Np*RYID];
       	    dfloat drdzM = mesh->vgeo[baseM+mesh->Np*RZID];
@@ -128,10 +150,10 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, int *nnz
       	    dfloat dtdzM = mesh->vgeo[baseM+mesh->Np*TZID];
 
       	    // double check vol geometric factors are in halo storage of vgeo
-      	    int idM     = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
-      	    int vidP    = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
-      	    int localEP = mesh->vmapP[idM]/mesh->Np;
-      	    int baseP   = localEP*mesh->Np*mesh->Nvgeo + vidP; // use local offset for vgeo in halo
+      	    dlong idM     = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
+      	    int vidP    = (int) (mesh->vmapP[idM]%mesh->Np); // only use this to identify location of positive trace vgeo
+      	    dlong localEP = mesh->vmapP[idM]/mesh->Np;
+      	    dlong baseP   = localEP*mesh->Np*mesh->Nvgeo + vidP; // use local offset for vgeo in halo
       	    dfloat drdxP = mesh->vgeo[baseP+mesh->Np*RXID];
       	    dfloat drdyP = mesh->vgeo[baseP+mesh->Np*RYID];
       	    dfloat drdzP = mesh->vgeo[baseP+mesh->Np*RZID];
@@ -143,7 +165,7 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, int *nnz
       	    dfloat dtdzP = mesh->vgeo[baseP+mesh->Np*TZID];
       	    
       	    // grab surface geometric factors
-      	    int base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
+      	    dlong base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
       	    dfloat nx = mesh->sgeo[base+NXID];
       	    dfloat ny = mesh->sgeo[base+NYID];
       	    dfloat nz = mesh->sgeo[base+NZID];
@@ -173,57 +195,72 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, int *nnz
       	    dfloat ndotgradlmP = nx*dlmdxP+ny*dlmdyP+nz*dlmdzP;
       	    dfloat lmP = B[idmP];
       	    
-      	    dfloat penalty = tau*(mesh->N+1)*(mesh->N+1)*hinv;	   
+      	    dfloat penalty = tau*hinv;	   
 
       	    Anm += -0.5*wsJ*lnM*ndotgradlmM;  // -(ln^-, N.grad lm^-)
       	    Anm += -0.5*wsJ*ndotgradlnM*lmM;  // -(N.grad ln^-, lm^-)
       	    Anm += +0.5*wsJ*penalty*lnM*lmM; // +((tau/h)*ln^-,lm^-)
 
-      	    int eP    = mesh->EToE[eM*mesh->Nfaces+fM];
+      	    dlong eP    = mesh->EToE[eM*mesh->Nfaces+fM];
             if (eP<0) {
-             Anm += +0.5*wsJ*lnM*ndotgradlmM;  // -(ln^-, -N.grad lm^-)
-             Anm += +0.5*wsJ*ndotgradlnM*lmM;  // +(N.grad ln^-, lm^-)
-             Anm += -0.5*wsJ*penalty*lnM*lmM; // -((tau/h)*ln^-,lm^-) 
+              int qSgn, gradqSgn;
+              int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
+              int bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
+              if(bcType==1){ // Dirichlet
+                qSgn     = -1;
+                gradqSgn =  1;
+              } else if (bcType==2){ // Neumann
+                qSgn     =  1;
+                gradqSgn = -1;
+              } else { // Neumann for now
+                qSgn     =  1;
+                gradqSgn = -1;
+              }
+
+              Anm += -0.5*gradqSgn*wsJ*lnM*ndotgradlmM;  // -(ln^-, -N.grad lm^-)
+              Anm += +0.5*qSgn*wsJ*ndotgradlnM*lmM;  // +(N.grad ln^-, lm^-)
+              Anm += -0.5*qSgn*wsJ*penalty*lnM*lmM; // -((tau/h)*ln^-,lm^-) 
             } else {
-      	     AnmP += -0.5*wsJ*lnM*ndotgradlmP;  // -(ln^-, N.grad lm^+)
-      	     AnmP += +0.5*wsJ*ndotgradlnM*lmP;  // +(N.grad ln^-, lm^+)
-      	     AnmP += -0.5*wsJ*penalty*lnM*lmP; // -((tau/h)*ln^-,lm^+)
+      	      AnmP += -0.5*wsJ*lnM*ndotgradlmP;  // -(ln^-, N.grad lm^+)
+      	      AnmP += +0.5*wsJ*ndotgradlnM*lmP;  // +(N.grad ln^-, lm^+)
+      	      AnmP += -0.5*wsJ*penalty*lnM*lmP; // -((tau/h)*ln^-,lm^+)
             }
       	  }
-      	  
-	  // remote info
-	  int eP    = mesh->EToE[eM*mesh->Nfaces+fM];
-	  int rankP = mesh->EToP[eM*mesh->Nfaces+fM]; 
-	  if (eP <0) eP = eM;
-	  if (rankP<0) rankP = rankM;
-	  (*A)[cnt].row = n + eM*mesh->Np + rankStarts[rankM];
-	  (*A)[cnt].col = m + eP*mesh->Np + rankStarts[rankP]; // this is wrong
-	  (*A)[cnt].val = AnmP;
-	  (*A)[cnt].ownerRank = rankM;
-	  ++cnt;
-      	}
-      	
-	// local block
-	(*A)[cnt].row = n + eM*mesh->Np + rankStarts[rankM];
-	(*A)[cnt].col = m + eM*mesh->Np + rankStarts[rankM];
-	(*A)[cnt].val = Anm;
-	(*A)[cnt].ownerRank = rankM;
-	++cnt;
-      }
+      	  if(fabs(AnmP)>tol){
+            #pragma omp critical
+            {
+              // remote info
+              dlong eP    = mesh->EToE[eM*mesh->Nfaces+fM];
+              (*A)[nnz].row = globalIds[eM*mesh->Np + n];
+              (*A)[nnz].col = globalIds[eP*mesh->Np + m];
+              (*A)[nnz].val = AnmP;
+              (*A)[nnz].ownerRank = rankM;
+              ++nnz;
+            }
+          } 
+        }
+        if(fabs(Anm)>tol){
+          #pragma omp critical
+          {
+            // local block
+            (*A)[nnz].row = globalIds[eM*mesh->Np+n];
+            (*A)[nnz].col = globalIds[eM*mesh->Np+m];
+            (*A)[nnz].val = Anm;
+            (*A)[nnz].ownerRank = rankM;
+            ++nnz;
+          }
+        }
+     	}
     }
   }
 
-  // non-zero counter
-  int nnz = 0;
-  for(int n=0;n<mesh->Np*mesh->Np*(mesh->Nfaces+1)*mesh->Nelements;++n)
-    if(fabs((*A)[n].val)>tol)
-      (*A)[nnz++] = (*A)[n];
-  
-  // free up unused storage
-  *A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
-  
+  // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
+  qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+  //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
   *nnzA = nnz;
-  
+
+  if(rankM==0) printf("done.\n");
+
+  free(globalIds);
   free(B);  free(Br); free(Bs); free(Bt);
-  free(rankNelements); free(rankStarts);
 }

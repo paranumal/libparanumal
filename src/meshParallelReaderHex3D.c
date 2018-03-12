@@ -15,7 +15,8 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   FILE *fp = fopen(fileName, "r");
-  int n;
+  
+  char *status;
 
   mesh3D *mesh = (mesh3D*) calloc(1, sizeof(mesh3D));
 
@@ -39,12 +40,12 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
 
   char buf[BUFSIZ];
   do{
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
   }while(!strstr(buf, "$Nodes"));
 
   /* read number of nodes in mesh */
-  fgets(buf, BUFSIZ, fp);
-  sscanf(buf, "%d", &(mesh->Nnodes));
+  status = fgets(buf, BUFSIZ, fp);
+  sscanf(buf, hlongFormat, &(mesh->Nnodes));
 
   /* allocate space for node coordinates */
   dfloat *VX = (dfloat*) calloc(mesh->Nnodes, sizeof(dfloat));
@@ -52,29 +53,31 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
   dfloat *VZ = (dfloat*) calloc(mesh->Nnodes, sizeof(dfloat));
 
   /* load nodes */
-  for(n=0;n<mesh->Nnodes;++n){
-    fgets(buf, BUFSIZ, fp);
+  for(hlong n=0;n<mesh->Nnodes;++n){
+    status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
-	   VX+n, VY+n, VZ+n);
+           VX+n, VY+n, VZ+n);
 
   }
   
   /* look for section with Element node data */
   do{
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
   }while(!strstr(buf, "$Elements"));
 
   /* read number of nodes in mesh */
-  fgets(buf, BUFSIZ, fp);
-  sscanf(buf, "%d", &(mesh->Nelements));
+  hlong Nelements;
+  status = fgets(buf, BUFSIZ, fp);
+  sscanf(buf, hlongFormat, &Nelements);
 
   /* find # of hexes */
   fpos_t fpos;
   fgetpos(fp, &fpos);
-  int Nhexes = 0, NboundaryFaces = 0;
-  for(n=0;n<mesh->Nelements;++n){
+  hlong Nhexes = 0, NboundaryFaces = 0;
+
+  for(hlong n=0;n<Nelements;++n){
     int elementType;
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==5) ++Nhexes; // hex code is 5
     if(elementType==3) ++NboundaryFaces; // quad codes is 3
@@ -82,60 +85,65 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
   // rewind to start of elements
   fsetpos(fp, &fpos);
 
-  int chunk = Nhexes/size;
-  int remainder = Nhexes - chunk*size;
+  hlong chunk = (hlong) Nhexes/size;
+  int remainder = (int) (Nhexes - chunk*size);
 
-  int NhexesLocal = chunk + (rank<remainder);
+  hlong NhexesLocal = chunk + (rank<remainder);
 
   /* where do these elements start ? */
-  int start = rank*chunk + mymin(rank, remainder); 
-  int end = start + NhexesLocal-1;
+  hlong start = rank*chunk + mymin(rank, remainder); 
+  hlong end = start + NhexesLocal-1;
   
   /* allocate space for Element node index data */
 
   mesh->EToV 
-    = (int*) calloc(NhexesLocal*mesh->Nverts, sizeof(int));
+    = (hlong*) calloc(NhexesLocal*mesh->Nverts, sizeof(hlong));
+
+  mesh->elementInfo
+    = (int*) calloc(NhexesLocal,sizeof(int));
 
   /* scan through file looking for hexrahedra elements */
-  int cnt=0, bcnt = 0;
+  hlong cnt=0, bcnt=0;
   Nhexes = 0;
 
-  mesh->boundaryInfo = (int*) calloc(NboundaryFaces*(mesh->NfaceVertices+1), sizeof(int));
-  for(n=0;n<mesh->Nelements;++n){
-    int elementType, v1, v2, v3, v4, v5, v6, v7, v8;
-    fgets(buf, BUFSIZ, fp);
+  mesh->boundaryInfo = (hlong*) calloc(NboundaryFaces*(mesh->NfaceVertices+1), sizeof(hlong));
+  for(hlong n=0;n<Nelements;++n){
+    int elementType; 
+    hlong v1, v2, v3, v4, v5, v6, v7, v8;
+    status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
-    if(elementType==3){ // quad boundary face
-      int base = (mesh->NfaceVertices+1)*bcnt;
-      sscanf(buf, "%*d%*d %*d%d%*d %d%d%d%d", 
-	     mesh->boundaryInfo+base, &v1, &v2, &v3, &v4);
 
-      mesh->boundaryInfo[base+1] = v1-1;
-      mesh->boundaryInfo[base+2] = v2-1;
-      mesh->boundaryInfo[base+3] = v3-1;
-      mesh->boundaryInfo[base+4] = v4-1;
+    if(elementType==3){ // quad boundary face
+      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d "hlongFormat hlongFormat hlongFormat hlongFormat, 
+             mesh->boundaryInfo+bcnt*5, &v1, &v2, &v3, &v4);
+
+      mesh->boundaryInfo[bcnt*5+1] = v1-1;
+      mesh->boundaryInfo[bcnt*5+2] = v2-1;
+      mesh->boundaryInfo[bcnt*5+3] = v3-1;
+      mesh->boundaryInfo[bcnt*5+4] = v4-1;
       ++bcnt;
     }
 
     if(elementType==5){  // hex code is 5
       if(start<=Nhexes && Nhexes<=end){
-	sscanf(buf,
-	       "%*d%*d%*d%*d%*d"
-	       "%d" "%d" "%d" "%d" "%d" "%d" "%d" "%d",
-	       &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8);
+        sscanf(buf,
+               "%*d%*d%*d %d %*d"
+               hlongFormat hlongFormat hlongFormat hlongFormat hlongFormat hlongFormat hlongFormat hlongFormat,
+               mesh->elementInfo+cnt,
+               &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8);
 
-	mesh->EToV[cnt*mesh->Nverts+0] = v1-1;
-	mesh->EToV[cnt*mesh->Nverts+1] = v2-1;
-	mesh->EToV[cnt*mesh->Nverts+2] = v3-1;
-	mesh->EToV[cnt*mesh->Nverts+3] = v4-1;
-	mesh->EToV[cnt*mesh->Nverts+4] = v5-1;
-	mesh->EToV[cnt*mesh->Nverts+5] = v6-1;
-	mesh->EToV[cnt*mesh->Nverts+6] = v7-1;
-	mesh->EToV[cnt*mesh->Nverts+7] = v8-1;
+        mesh->EToV[cnt*mesh->Nverts+0] = v1-1;
+        mesh->EToV[cnt*mesh->Nverts+1] = v2-1;
+        mesh->EToV[cnt*mesh->Nverts+2] = v3-1;
+        mesh->EToV[cnt*mesh->Nverts+3] = v4-1;
+        mesh->EToV[cnt*mesh->Nverts+4] = v5-1;
+        mesh->EToV[cnt*mesh->Nverts+5] = v6-1;
+        mesh->EToV[cnt*mesh->Nverts+6] = v7-1;
+        mesh->EToV[cnt*mesh->Nverts+7] = v8-1;
 
-	//	printf("%d: %d,%d,%d,%d %d,%d,%d,%d", cnt, v1-1, v2-1,v3-1,v4-1,v5-1,v6-1,v7-1,v8-1);
-	
-	++cnt;
+        //      printf("%d: %d,%d,%d,%d %d,%d,%d,%d", cnt, v1-1, v2-1,v3-1,v4-1,v5-1,v6-1,v7-1,v8-1);
+        
+        ++cnt;
       }
       ++Nhexes;
     }
@@ -146,15 +154,15 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
   mesh->NboundaryFaces = bcnt;
   
   /* record number of found hexes */
-  mesh->Nelements = NhexesLocal;
+  mesh->Nelements = (dlong) NhexesLocal;
 
   /* collect vertices for each element */
   mesh->EX = (dfloat*) calloc(mesh->Nverts*mesh->Nelements, sizeof(dfloat));
   mesh->EY = (dfloat*) calloc(mesh->Nverts*mesh->Nelements, sizeof(dfloat));
   mesh->EZ = (dfloat*) calloc(mesh->Nverts*mesh->Nelements, sizeof(dfloat));
-  for(int e=0;e<mesh->Nelements;++e){
-    for(n=0;n<mesh->Nverts;++n){
-      int vid = mesh->EToV[e*mesh->Nverts+n];
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Nverts;++n){
+      hlong vid = mesh->EToV[e*mesh->Nverts+n];
       mesh->EX[e*mesh->Nverts+n] = VX[vid];
       mesh->EY[e*mesh->Nverts+n] = VY[vid];
       mesh->EZ[e*mesh->Nverts+n] = VZ[vid];
