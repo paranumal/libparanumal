@@ -63,7 +63,7 @@ mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius){
 
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;
-
+  
   dfloat rka[5] = {0.0,
 		   -567301805773.0/1357537059087.0 ,
 		   -2404267990393.0/2016746695238.0 ,
@@ -80,7 +80,7 @@ mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius){
 		   2006345519317.0/3224310063776.0 ,
 		   2802321613138.0/2924317926251.0,
 		   1.}; 
-
+  
   mesh->Nrk = Nrk;
   memcpy(mesh->rka, rka, Nrk*sizeof(dfloat));
   memcpy(mesh->rkb, rkb, Nrk*sizeof(dfloat));
