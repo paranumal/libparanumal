@@ -487,7 +487,7 @@ kernel void ellipticPartialAxSparseTet3D_v2(const int Nelements,
 	  }
 
 
-	occaUnroll(p_maxNnzPerRow/4)
+	//	occaUnroll(p_maxNnzPerRow/4)
 	  for (int k=0;k<( ((int)p_maxNnzPerRow/4));k++) {
 	    const char4 Indn = IndT[n + p_Np*k];
 	    int Inds[4];
