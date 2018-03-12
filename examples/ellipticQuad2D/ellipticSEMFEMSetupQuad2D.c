@@ -61,7 +61,7 @@ void ellipticSEMFEMSetupQuad2D(solver_t *solver, precon_t* precon,
 
       localIds[femId+0] = id1;
       localIds[femId+1] = id2;
-      localIds[femId+2] = id4;  //need to swap this as the Np nodes are ordered [0,1,4,3] in a degree 1 element
+      localIds[femId+2] = id4;  //need to swap this as the Np nodes are ordered [0,1,3,2] in a degree 1 element
       localIds[femId+3] = id3;
     }
   }

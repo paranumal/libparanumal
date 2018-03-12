@@ -10,7 +10,7 @@ kernel void ellipticRhsBCQuad2D(const dlong Nelements,
                               const int    * restrict mapB,
                               dfloat  * restrict rhs){
   
-  for(int e=0;e<Nelements;e++;outer0){
+  for(dlong e=0;e<Nelements;e++;outer0){
     shared dfloat s_q[p_Nq][p_Nq];
     shared dfloat s_ndq[p_Nq][p_Nq];
     shared dfloat s_D[p_Nq][p_Nq];

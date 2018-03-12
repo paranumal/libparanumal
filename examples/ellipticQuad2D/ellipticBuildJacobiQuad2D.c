@@ -1,7 +1,7 @@
 #include "ellipticQuad2D.h"
 
 void BuildLocalIpdgPatchAx(mesh2D *mesh, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *B, dfloat *Br, dfloat* Bs, int eM, dfloat *A);
+                        dfloat *B, dfloat *Br, dfloat* Bs, dlong eM, dfloat *A);
 
 void BuildLocalContinuousPatchAx(solver_t* solver, dfloat lambda,
                                   dlong eM, dfloat *B, dfloat *Br, dfloat* Bs, dfloat *A);

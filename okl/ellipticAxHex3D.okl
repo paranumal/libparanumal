@@ -1,4 +1,4 @@
-f
+
 #if 0
 __constant__ dfloat c_D[10][9] = {
                                    {.1, .2, .3, .4, .5, .6, .7, .8, .9},
@@ -29,20 +29,20 @@ __constant__ dfloat c_I[10][9] = {
 
 // hex kernel for screened coulomb potential mat-vec
 #define cubeThreads                             \
-	for(iint k=0; k<p_Nq; ++k; inner2)            \
-		for(iint j=0; j<p_Nq; ++j; inner1)          \
-			for(iint i=0; i<p_Nq; ++i; inner0)
+	for(int k=0; k<p_Nq; ++k; inner2)            \
+		for(int j=0; j<p_Nq; ++j; inner1)          \
+			for(int i=0; i<p_Nq; ++i; inner0)
 
 
 // cube thread version
-kernel void ellipticAxHex3D_e0(const iint Nelements,
+kernel void ellipticAxHex3D_e0(const dlong Nelements,
                                const dfloat * restrict ggeo,
                                const dfloat * restrict D,
                                const dfloat lambda,
                                const dfloat * restrict q,
                                dfloat * restrict Aq){
 
-	for(iint e=0; e<Nelements; ++e; outer0) {
+	for(dlong e=0; e<Nelements; ++e; outer0) {
 
 		shared dfloat s_q[p_Nq][p_Nq][p_Nq];
 		shared dfloat s_D[p_Nq][p_Nq];
@@ -52,7 +52,7 @@ kernel void ellipticAxHex3D_e0(const iint Nelements,
 
 		// prefetch q(:,:,:,e) to shared
 		cubeThreads {
-		  const iint base = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np;
+		  const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np;
 
 		  s_q[k][j][i] = q[base];
 
@@ -64,7 +64,7 @@ kernel void ellipticAxHex3D_e0(const iint Nelements,
 
 		cubeThreads {
 
-		  const iint base = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+		  const dlong base = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
 		  // assumes w*J built into G entries
 		  r_GwJ = ggeo[base+p_GWJID*p_Np];
@@ -79,7 +79,7 @@ kernel void ellipticAxHex3D_e0(const iint Nelements,
 
 		  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
 
-		  for(iint n=0; n<p_Nq; ++n) {
+		  for(int n=0; n<p_Nq; ++n) {
 		  qr += s_D[i][n]*s_q[k][j][n];
 			  qs += s_D[j][n]*s_q[k][n][i];
 			  qt += s_D[k][n]*s_q[n][j][i];
@@ -101,7 +101,7 @@ kernel void ellipticAxHex3D_e0(const iint Nelements,
 
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  for(iint n=0; n<p_Nq; ++n)
+		  for(int n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][i]*s_q[k][j][n];
 
 		  r_Aq += tmp;
@@ -118,7 +118,7 @@ kernel void ellipticAxHex3D_e0(const iint Nelements,
 
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  for(iint n=0; n<p_Nq; ++n)
+		  for(int n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][j]*s_q[k][n][i];
 
 		  r_Aq += tmp;
@@ -135,27 +135,27 @@ kernel void ellipticAxHex3D_e0(const iint Nelements,
 
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  for(iint n=0; n<p_Nq; ++n)
+		  for(int n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][k]*s_q[n][j][i];
 
 		  r_Aq += tmp;
 
-		  iint base = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+		  dlong base = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 		  Aq[base] = r_Aq;
 		}
 	}
 }
 
 //e0a - element list
-kernel void ellipticAxHex3D_e0a(const iint Nelements,
-                                const iint * restrict elementList,
+kernel void ellipticAxHex3D_e0a(const dlong Nelements,
+                                const dlong * restrict elementList,
                                 const dfloat * restrict ggeo,
                                 const dfloat * restrict D,
                                 const dfloat lambda,
                                 const dfloat * restrict q,
                                 dfloat * restrict Aq){
 
-	for(iint e=0; e<Nelements; ++e; outer0) {
+	for(dlong e=0; e<Nelements; ++e; outer0) {
 
 		shared dfloat s_q[p_Nq][p_Nq][p_Nq];
 		shared dfloat s_D[p_Nq][p_Nq];
@@ -165,7 +165,7 @@ kernel void ellipticAxHex3D_e0a(const iint Nelements,
 
 		// prefetch q(:,:,:,e) to shared
 		cubeThreads {
-		  const iint base = i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np;
+		  const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np;
 
 		  s_q[k][j][i] = q[base];
 
@@ -177,7 +177,7 @@ kernel void ellipticAxHex3D_e0a(const iint Nelements,
 
 		cubeThreads {
 
-		  const iint base = elementList[e]*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+		  const dlong base = elementList[e]*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
 		  // assumes w*J built into G entries
 		  r_GwJ = ggeo[base+p_GWJID*p_Np];
@@ -192,7 +192,7 @@ kernel void ellipticAxHex3D_e0a(const iint Nelements,
 
 		  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
 
-		  for(iint n=0; n<p_Nq; ++n) {
+		  for(int n=0; n<p_Nq; ++n) {
 		  qr += s_D[i][n]*s_q[k][j][n];
 			  qs += s_D[j][n]*s_q[k][n][i];
 			  qt += s_D[k][n]*s_q[n][j][i];
@@ -214,7 +214,7 @@ kernel void ellipticAxHex3D_e0a(const iint Nelements,
 
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  for(iint n=0; n<p_Nq; ++n)
+		  for(int n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][i]*s_q[k][j][n];
 
 		  r_Aq += tmp;
@@ -231,7 +231,7 @@ kernel void ellipticAxHex3D_e0a(const iint Nelements,
 
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  for(iint n=0; n<p_Nq; ++n)
+		  for(int n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][j]*s_q[k][n][i];
 
 		  r_Aq += tmp;
@@ -248,12 +248,12 @@ kernel void ellipticAxHex3D_e0a(const iint Nelements,
 
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  for(iint n=0; n<p_Nq; ++n)
+		  for(int n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][k]*s_q[n][j][i];
 
 		  r_Aq += tmp;
 
-		  iint base =  elementList[e]*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+		  dlong base =  elementList[e]*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 		  Aq[base] = r_Aq;
 		}
 	}
@@ -261,16 +261,18 @@ kernel void ellipticAxHex3D_e0a(const iint Nelements,
 
 //e0b - optimized e0a
 
+#if 0
+
 //e0c - less registers
-kernel void ellipticAxHex3D_e0b(const iint Nelements,
-                                const iint * restrict elementList,
+kernel void ellipticAxHex3D_e0b(const int Nelements,
+                                const int * restrict elementList,
                                 const dfloat * restrict ggeo,
                                 const dfloat * restrict D,
                                 const dfloat lambda,
                                 const dfloat * restrict q,
                                 dfloat * restrict Aq){
 
-	for(iint e=0; e<Nelements; ++e; outer0) {
+	for(int e=0; e<Nelements; ++e; outer0) {
 
 		shared dfloat s_q[p_Nq][p_Nq][p_Nq];
 		shared dfloat s_qr[p_Nq][p_Nq][p_Nq];
@@ -287,7 +289,7 @@ kernel void ellipticAxHex3D_e0b(const iint Nelements,
 		// prefetch q(:,:,:,e) to shared
 		cubeThreads {
 		  emap = elementList[e];
-		  const iint base = i + j*p_Nq + k*p_Nq*p_Nq + emap*p_Np;
+		  const int base = i + j*p_Nq + k*p_Nq*p_Nq + emap*p_Np;
 
 		  s_q[k][j][i] = q[base];
 
@@ -301,12 +303,12 @@ kernel void ellipticAxHex3D_e0b(const iint Nelements,
 
 		cubeThreads {
 
-		  //  const iint base = elementList[e]*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+		  //  const int base = elementList[e]*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
 		  // assumes w*J built into G entries
 
 
-		  const iint base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+		  const int base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
 		  r_GwJ = ggeo[base+p_GWJID*p_Np];
 
@@ -323,7 +325,7 @@ kernel void ellipticAxHex3D_e0b(const iint Nelements,
 		  dfloat qs = 0.f, qt = 0.f;
 
 		  occaUnroll(p_Nq)
-		  for(iint n=0; n<p_Nq; ++n) {
+		  for(int n=0; n<p_Nq; ++n) {
 		  qr += s_D[i][n]*s_q[k][j][n];
 			  qs += s_D[j][n]*s_q[k][n][i];
 			  qt += s_D[k][n]*s_q[n][j][i];
@@ -348,7 +350,7 @@ kernel void ellipticAxHex3D_e0b(const iint Nelements,
 		  dfloat tmp = 0.0f;
 
 		  occaUnroll(p_Nq)
-		  for(iint n=0; n<p_Nq; ++n){
+		  for(int n=0; n<p_Nq; ++n){
 		    tmp += s_D[n][i]*s_qr[k][j][n];
 			  tmp += s_D[n][j]*s_qs[k][n][i];
 			  tmp += s_D[n][k]*s_qt[n][j][i];
@@ -357,7 +359,7 @@ kernel void ellipticAxHex3D_e0b(const iint Nelements,
 		  //  r_Aq += tmp;
 		  //  s_Aq[k][j][i] +=tmp;
 		  r_Aq += tmp;
-		  iint base =  emap*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+		  int base =  emap*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
 		  Aq[base] = r_Aq;
 		  //r_Aq;
@@ -372,14 +374,14 @@ kernel void ellipticAxHex3D_e0b(const iint Nelements,
 
 
 // i-j sliced version
-kernel void ellipticAxHex3D_e1(const iint Nelements,
+kernel void ellipticAxHex3D_e1(const int Nelements,
                                const dfloat * restrict ggeo,
                                const dfloat * restrict D,
                                const dfloat lambda,
                                const dfloat * restrict q,
                                dfloat * restrict Aq){
 
-	for(iint eo=0; eo<Nelements; eo+=p_NblockV; outer0) {
+	for(int eo=0; eo<Nelements; eo+=p_NblockV; outer0) {
 
 		shared dfloat s_tmpr[p_NblockV][p_Nq][p_Nq];
 		shared dfloat s_tmps[p_NblockV][p_Nq][p_Nq];
@@ -389,15 +391,15 @@ kernel void ellipticAxHex3D_e1(const iint Nelements,
 		exclusive dfloat r_q[p_Nq], r_Aq[p_Nq], r_qt, r_tmpt;
 
 		// prefetch q(i,j,:,e) to register array
-		for(iint es=0; es<p_NblockV; ++es; inner2) {
-			for(iint j=0; j<p_Nq; ++j; inner1) {
-				for(iint i=0; i<p_Nq; ++i; inner0) {
-					const iint e = eo + es;
+		for(int es=0; es<p_NblockV; ++es; inner2) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
+					const int e = eo + es;
 
 					if(e<Nelements) {
-						const iint base = i + j*p_Nq + e*p_Np;
+						const int base = i + j*p_Nq + e*p_Np;
 
-						for(iint k=0; k<p_Nq; ++k) {
+						for(int k=0; k<p_Nq; ++k) {
 							r_q[k] = q[base + k*p_Nq*p_Nq];
 							r_Aq[k] = 0.f;
 						}
@@ -412,12 +414,12 @@ kernel void ellipticAxHex3D_e1(const iint Nelements,
 
 		barrier(localMemFence);
 
-		for(iint k=0; k<p_Nq; ++k) {
+		for(int k=0; k<p_Nq; ++k) {
 
-			for(iint es=0; es<p_NblockV; ++es; inner2) {
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
-						const iint e = eo + es;
+			for(int es=0; es<p_NblockV; ++es; inner2) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
+						const int e = eo + es;
 						if(e<Nelements) {
 
 							// share k-slice of q
@@ -425,7 +427,7 @@ kernel void ellipticAxHex3D_e1(const iint Nelements,
 
 							// hide shared latency behind t-derivative
 							dfloat qtk = 0.f;
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								qtk += s_D[k][n]*r_q[n];
 							}
 							r_qt = qtk;
@@ -438,12 +440,12 @@ kernel void ellipticAxHex3D_e1(const iint Nelements,
 			barrier(localMemFence);
 
 			// process k-slice (first r- and s-derivatives)
-			for(iint es=0; es<p_NblockV; ++es; inner2) {
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
-						const iint e = eo + es;
+			for(int es=0; es<p_NblockV; ++es; inner2) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
+						const int e = eo + es;
 						if(e<Nelements) {
-							const iint base = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+							const int base = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
 							const dfloat G00 = ggeo[base+p_G00ID*p_Np];
 							const dfloat G01 = ggeo[base+p_G01ID*p_Np];
@@ -454,7 +456,7 @@ kernel void ellipticAxHex3D_e1(const iint Nelements,
 							const dfloat GwJ = ggeo[base+p_GWJID*p_Np];
 
 							dfloat qr = 0.f, qs = 0.f;
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								qr += s_D[i][n]*s_q[es][j][n];
 								qs += s_D[j][n]*s_q[es][n][i];
 							}
@@ -467,7 +469,7 @@ kernel void ellipticAxHex3D_e1(const iint Nelements,
 							r_Aq[k] += GwJ*lambda*r_q[k];
 
 #if 1
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								r_Aq[n] += s_D[k][n]*r_tmpt;
 							}
 #endif
@@ -479,15 +481,15 @@ kernel void ellipticAxHex3D_e1(const iint Nelements,
 			barrier(localMemFence);
 
 			// second derivatives
-			for(iint es=0; es<p_NblockV; ++es; inner2) {
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
-						const iint e = eo + es;
+			for(int es=0; es<p_NblockV; ++es; inner2) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
+						const int e = eo + es;
 						if(e<Nelements) {
 
 							dfloat Aq1 = 0.0f, Aq2 = 0.0f;
 
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								Aq1 += s_D[n][i]*s_tmpr[es][j][n];
 								Aq2 += s_D[n][j]*s_tmps[es][n][i];
 							}
@@ -501,13 +503,13 @@ kernel void ellipticAxHex3D_e1(const iint Nelements,
 		}
 
 		// write result out (local node storage)
-		for(iint es=0; es<p_NblockV; ++es; inner2) {
-			for(iint j=0; j<p_Nq; ++j; inner1) {
-				for(iint i=0; i<p_Nq; ++i; inner0) {
-					const iint e = eo + es;
+		for(int es=0; es<p_NblockV; ++es; inner2) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
+					const int e = eo + es;
 					if(e<Nelements) {
-						iint base = e*p_Np + j*p_Nq + i;
-						for(iint k=0; k<p_Nq; ++k) {
+						int base = e*p_Np + j*p_Nq + i;
+						for(int k=0; k<p_Nq; ++k) {
 							Aq[base] = r_Aq[k];
 							base+=p_Nq*p_Nq;
 						}
@@ -519,15 +521,15 @@ kernel void ellipticAxHex3D_e1(const iint Nelements,
 }
 
 //e1a (with elementList)
-kernel void ellipticAxHex3D_e1a(const iint Nelements,
-                                const iint * restrict elementList,
+kernel void ellipticAxHex3D_e1a(const int Nelements,
+                                const int * restrict elementList,
                                 const dfloat * restrict ggeo,
                                 const dfloat * restrict D,
                                 const dfloat lambda,
                                 const dfloat * restrict q,
                                 dfloat * restrict Aq){
 
-	for(iint eo=0; eo<Nelements; eo+=p_NblockV; outer0) {
+	for(int eo=0; eo<Nelements; eo+=p_NblockV; outer0) {
 
 		shared dfloat s_tmpr[p_NblockV][p_Nq][p_Nq];
 		shared dfloat s_tmps[p_NblockV][p_Nq][p_Nq];
@@ -537,15 +539,15 @@ kernel void ellipticAxHex3D_e1a(const iint Nelements,
 		exclusive dfloat r_q[p_Nq], r_Aq[p_Nq], r_qt, r_tmpt;
 
 		// prefetch q(i,j,:,e) to register array
-		for(iint es=0; es<p_NblockV; ++es; inner2) {
-			for(iint j=0; j<p_Nq; ++j; inner1) {
-				for(iint i=0; i<p_Nq; ++i; inner0) {
-					const iint e = eo + es;
+		for(int es=0; es<p_NblockV; ++es; inner2) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
+					const int e = eo + es;
 
 					if(e<Nelements) {
-						const iint base = i + j*p_Nq + elementList[e]*p_Np;
+						const int base = i + j*p_Nq + elementList[e]*p_Np;
 
-						for(iint k=0; k<p_Nq; ++k) {
+						for(int k=0; k<p_Nq; ++k) {
 							r_q[k] = q[base + k*p_Nq*p_Nq];
 							r_Aq[k] = 0.f;
 						}
@@ -560,12 +562,12 @@ kernel void ellipticAxHex3D_e1a(const iint Nelements,
 
 		barrier(localMemFence);
 
-		for(iint k=0; k<p_Nq; ++k) {
+		for(int k=0; k<p_Nq; ++k) {
 
-			for(iint es=0; es<p_NblockV; ++es; inner2) {
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
-						const iint e = eo + es;
+			for(int es=0; es<p_NblockV; ++es; inner2) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
+						const int e = eo + es;
 						if(e<Nelements) {
 
 							// share k-slice of q
@@ -573,7 +575,7 @@ kernel void ellipticAxHex3D_e1a(const iint Nelements,
 
 							// hide shared latency behind t-derivative
 							dfloat qtk = 0.f;
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								qtk += s_D[k][n]*r_q[n];
 							}
 							r_qt = qtk;
@@ -586,12 +588,12 @@ kernel void ellipticAxHex3D_e1a(const iint Nelements,
 			barrier(localMemFence);
 
 			// process k-slice (first r- and s-derivatives)
-			for(iint es=0; es<p_NblockV; ++es; inner2) {
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
-						const iint e = eo + es;
+			for(int es=0; es<p_NblockV; ++es; inner2) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
+						const int e = eo + es;
 						if(e<Nelements) {
-							const iint base = elementList[e]*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+							const int base = elementList[e]*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
 							const dfloat G00 = ggeo[base+p_G00ID*p_Np];
 							const dfloat G01 = ggeo[base+p_G01ID*p_Np];
@@ -602,7 +604,7 @@ kernel void ellipticAxHex3D_e1a(const iint Nelements,
 							const dfloat GwJ = ggeo[base+p_GWJID*p_Np];
 
 							dfloat qr = 0.f, qs = 0.f;
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								qr += s_D[i][n]*s_q[es][j][n];
 								qs += s_D[j][n]*s_q[es][n][i];
 							}
@@ -615,7 +617,7 @@ kernel void ellipticAxHex3D_e1a(const iint Nelements,
 							r_Aq[k] += GwJ*lambda*r_q[k];
 
 #if 1
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								r_Aq[n] += s_D[k][n]*r_tmpt;
 							}
 #endif
@@ -627,15 +629,15 @@ kernel void ellipticAxHex3D_e1a(const iint Nelements,
 			barrier(localMemFence);
 
 			// second derivatives
-			for(iint es=0; es<p_NblockV; ++es; inner2) {
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
-						const iint e = eo + es;
+			for(int es=0; es<p_NblockV; ++es; inner2) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
+						const int e = eo + es;
 						if(e<Nelements) {
 
 							dfloat Aq1 = 0.0f, Aq2 = 0.0f;
 
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								Aq1 += s_D[n][i]*s_tmpr[es][j][n];
 								Aq2 += s_D[n][j]*s_tmps[es][n][i];
 							}
@@ -649,13 +651,13 @@ kernel void ellipticAxHex3D_e1a(const iint Nelements,
 		}
 
 		// write result out (local node storage)
-		for(iint es=0; es<p_NblockV; ++es; inner2) {
-			for(iint j=0; j<p_Nq; ++j; inner1) {
-				for(iint i=0; i<p_Nq; ++i; inner0) {
-					const iint e = eo + es;
+		for(int es=0; es<p_NblockV; ++es; inner2) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
+					const int e = eo + es;
 					if(e<Nelements) {
-						iint base = elementList[e]*p_Np + j*p_Nq + i;
-						for(iint k=0; k<p_Nq; ++k) {
+						int base = elementList[e]*p_Np + j*p_Nq + i;
+						for(int k=0; k<p_Nq; ++k) {
 							Aq[base] = r_Aq[k];
 							base+=p_Nq*p_Nq;
 						}
@@ -668,15 +670,15 @@ kernel void ellipticAxHex3D_e1a(const iint Nelements,
 
 
 //e1b (4d shared)
-kernel void ellipticAxHex3D_e1b(const iint Nelements,
-                                const iint * restrict elementList,
+kernel void ellipticAxHex3D_e1b(const int Nelements,
+                                const int * restrict elementList,
                                 const dfloat * restrict ggeo,
                                 const dfloat * restrict D,
                                 const dfloat lambda,
                                 const dfloat * restrict q,
                                 dfloat * restrict Aq){
 
-	for(iint eo=0; eo<Nelements; eo+=p_NblockV; outer0) {
+	for(int eo=0; eo<Nelements; eo+=p_NblockV; outer0) {
 
 		shared dfloat s_tmpr[p_NblockV][p_Nq][p_Nq];
 		shared dfloat s_tmps[p_NblockV][p_Nq][p_Nq];
@@ -692,15 +694,15 @@ kernel void ellipticAxHex3D_e1b(const iint Nelements,
 //r_q[p_Nq], r_Aq[p_Nq],
 		// prefetch q(i,j,:,e) to register array
 		
-		for(iint es=0; es<p_NblockV; ++es; inner2) {
-			for(iint j=0; j<p_Nq; ++j; inner1) {
-				for(iint i=0; i<p_Nq; ++i; inner0) {
-					const iint e = eo + es;
+		for(int es=0; es<p_NblockV; ++es; inner2) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
+					const int e = eo + es;
 					emap = elementList[e];
 
 					if(emap<Nelements) {
-						const iint base = i + j*p_Nq + emap*p_Np;
-						for (iint k=0; k<p_Nq; k++){
+						const int base = i + j*p_Nq + emap*p_Np;
+						for (int k=0; k<p_Nq; k++){
 							
 	            s_q[es][k][j][i] = q[base + k*p_Nq*p_Nq];
 							s_Aq[es][k][j][i] = 0.f;
@@ -718,12 +720,12 @@ kernel void ellipticAxHex3D_e1b(const iint Nelements,
 
 		barrier(localMemFence);
 
-		for(iint k=0; k<p_Nq; ++k) {
+		for(int k=0; k<p_Nq; ++k) {
 
-			for(iint es=0; es<p_NblockV; ++es; inner2) {
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
-						const iint e = eo + es;
+			for(int es=0; es<p_NblockV; ++es; inner2) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
+						const int e = eo + es;
 						emap = elementList[e];
 						if(emap<Nelements) {
 
@@ -732,7 +734,7 @@ kernel void ellipticAxHex3D_e1b(const iint Nelements,
 
 							// hide shared latency behind t-derivative
 							dfloat qtk = 0.f;
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								qtk += s_D[k][n]*s_q[es][n][j][i];
 							}
 							r_qt = qtk;
@@ -745,13 +747,13 @@ kernel void ellipticAxHex3D_e1b(const iint Nelements,
 			barrier(localMemFence);
 
 			// process k-slice (first r- and s-derivatives)
-			for(iint es=0; es<p_NblockV; ++es; inner2) {
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
-						const iint e = eo + es;
+			for(int es=0; es<p_NblockV; ++es; inner2) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
+						const int e = eo + es;
 						emap = elementList[e];
 						if(emap<Nelements) {
-							const iint base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+							const int base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
 							const dfloat G00 = ggeo[base+p_G00ID*p_Np];
 							const dfloat G01 = ggeo[base+p_G01ID*p_Np];
@@ -762,7 +764,7 @@ kernel void ellipticAxHex3D_e1b(const iint Nelements,
 							const dfloat GwJ = ggeo[base+p_GWJID*p_Np];
 
 							dfloat qr = 0.f, qs = 0.f;
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								qr += s_D[i][n]*s_q[es][k][j][n];
 								qs += s_D[j][n]*s_q[es][k][n][i];
 							}
@@ -775,7 +777,7 @@ kernel void ellipticAxHex3D_e1b(const iint Nelements,
 							s_Aq[es][k][j][i] += GwJ*lambda*s_q[es][k][j][i];
 
 #if 1
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								s_Aq[es][n][j][i] += s_D[k][n]*r_tmpt;
 							}
 #endif
@@ -787,16 +789,16 @@ kernel void ellipticAxHex3D_e1b(const iint Nelements,
 			barrier(localMemFence);
 
 			// second derivatives
-			for(iint es=0; es<p_NblockV; ++es; inner2) {
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
-						const iint e = eo + es;
+			for(int es=0; es<p_NblockV; ++es; inner2) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
+						const int e = eo + es;
 						emap = elementList[e];
 						if(emap<Nelements) {
 
 							dfloat Aq1 = 0.0f, Aq2 = 0.0f;
 
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								Aq1 += s_D[n][i]*s_tmpr[es][j][n];
 								Aq2 += s_D[n][j]*s_tmps[es][n][i];
 							}
@@ -812,14 +814,14 @@ kernel void ellipticAxHex3D_e1b(const iint Nelements,
 barrier(localMemFence);
 		// write result out (local node storage)
 	
-		for(iint es=0; es<p_NblockV; ++es; inner2) {
-			for(iint j=0; j<p_Nq; ++j; inner1) {
-				for(iint i=0; i<p_Nq; ++i; inner0) {
-					const iint e = eo + es;
+		for(int es=0; es<p_NblockV; ++es; inner2) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
+					const int e = eo + es;
 					emap = elementList[e];
 					if(emap<Nelements) {
-						iint base;
-							for (iint k=0; k<p_Nq; k++){
+						int base;
+							for (int k=0; k<p_Nq; k++){
 							base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
 							Aq[base] = s_Aq[es][k][j][i];
 						//	base+=p_Nq*p_Nq;
@@ -835,15 +837,15 @@ barrier(localMemFence);
 
 // e1c - like e6, just no interpolation. 2d i-j "slabs". 
 /*
-kernel void ellipticAxHex3D_e1c(const iint Nelements,
-                                const iint * restrict elementList,
+kernel void ellipticAxHex3D_e1c(const int Nelements,
+                                const int * restrict elementList,
                                 const dfloat * restrict ggeo,
                                 const dfloat * restrict D,
                                 const dfloat lambda,
                                const dfloat * restrict q,
                                dfloat * restrict Aq){
 
-for(iint e=0; e<Nelements; ++e; outer0){
+for(int e=0; e<Nelements; ++e; outer0){
 
 		shared dfloat s_tmpr[p_Nq][p_Nq];
 		shared dfloat s_tmps[p_Nq][p_Nq];
@@ -856,13 +858,13 @@ for(iint e=0; e<Nelements; ++e; outer0){
 //r_q[p_Nq], r_Aq[p_Nq],
 		// prefetch q(i,j,:,e) to register array
 		
-			for(iint j=0; j<p_Nq; ++j; inner1) {
-				for(iint i=0; i<p_Nq; ++i; inner0) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
 			emap = elementList[e];
 
 					if(emap<Nelements) {
-						const iint base = i + j*p_Nq + emap*p_Np;
-						for (iint k=0; k<p_Nq; k++){
+						const int base = i + j*p_Nq + emap*p_Np;
+						for (int k=0; k<p_Nq; k++){
 							
 	            s_q[k][j][i] = q[base + k*p_Nq*p_Nq];
 							s_Aq[k][j][i] = 0.f;
@@ -880,16 +882,16 @@ for(iint e=0; e<Nelements; ++e; outer0){
 
 		barrier(localMemFence);
 
-		for(iint k=0; k<p_Nq; ++k) {
+		for(int k=0; k<p_Nq; ++k) {
 
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
 					
 						emap = elementList[e];
 						if(emap<Nelements) {
 
 							dfloat qtk = 0.f;
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								qtk += s_D[k][n]*s_q[n][j][i];
 							}
 							r_qt = qtk;
@@ -902,12 +904,12 @@ for(iint e=0; e<Nelements; ++e; outer0){
 			barrier(localMemFence);
 
 			// process k-slice (first r- and s-derivatives)
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
 						
 						emap = elementList[e];
 						if(emap<Nelements) {
-							const iint base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+							const int base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
 							const dfloat G00 = ggeo[base+p_G00ID*p_Np];
 							const dfloat G01 = ggeo[base+p_G01ID*p_Np];
@@ -918,7 +920,7 @@ for(iint e=0; e<Nelements; ++e; outer0){
 							const dfloat GwJ = ggeo[base+p_GWJID*p_Np];
 
 							dfloat qr = 0.f, qs = 0.f;
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								
 								qr += s_D[i][n]*s_q[k][j][n];
 								qs += s_D[j][n]*s_q[k][n][i];
@@ -932,7 +934,7 @@ for(iint e=0; e<Nelements; ++e; outer0){
 							s_Aq[k][j][i] += GwJ*lambda*s_q[k][j][i];
 
 #if 1
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								s_Aq[n][j][i] += s_D[k][n]*r_tmpt;
 							}
 #endif
@@ -945,15 +947,15 @@ for(iint e=0; e<Nelements; ++e; outer0){
 
 			// second derivatives
 		
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
 				
 						emap = elementList[e];
 						if(emap<Nelements) {
 
 							dfloat Aq1 = 0.0f, Aq2 = 0.0f;
 
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								Aq1 += s_D[n][i]*s_tmpr[j][n];
 								Aq2 += s_D[n][j]*s_tmps[n][i];
 							}
@@ -970,13 +972,13 @@ barrier(localMemFence);
 		// write result out (local node storage)
 	
 	
-			for(iint j=0; j<p_Nq; ++j; inner1) {
-				for(iint i=0; i<p_Nq; ++i; inner0) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
 				
 					emap = elementList[e];
 					if(emap<Nelements) {
-						iint base;
-							for (iint k=0; k<p_Nq; k++){
+						int base;
+							for (int k=0; k<p_Nq; k++){
 							base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
 							Aq[base] = s_Aq[k][j][i];
 						//	base+=p_Nq*p_Nq;
@@ -993,15 +995,15 @@ barrier(localMemFence);
 
 // e1c - like e6, just no interpolation. 2d i-j "slabs". 
 
-kernel void ellipticAxHex3D_e1c(const iint Nelements,
-                                const iint * restrict elementList,
+kernel void ellipticAxHex3D_e1c(const int Nelements,
+                                const int * restrict elementList,
                                 const dfloat * restrict ggeo,
                                 const dfloat * restrict D,
                                 const dfloat lambda,
 				const dfloat * restrict q,
 				dfloat * restrict Aq){
 
-  for(iint e=0; e<Nelements; ++e; outer0){
+  for(int e=0; e<Nelements; ++e; outer0){
 
     shared dfloat s_tmpr[p_Nq][p_Nq];
     shared dfloat s_tmps[p_Nq][p_Nq];
@@ -1014,12 +1016,12 @@ kernel void ellipticAxHex3D_e1c(const iint Nelements,
     exclusive int emap;
     
     // prefetch q(i,j,:,e) to register array
-    for(iint j=0; j<p_Nq; ++j; inner1) {
-      for(iint i=0; i<p_Nq; ++i; inner0) {
+    for(int j=0; j<p_Nq; ++j; inner1) {
+      for(int i=0; i<p_Nq; ++i; inner0) {
 	emap = elementList[e];
 
-	const iint base = i + j*p_Nq + emap*p_Np;
-	for (iint k=0; k<p_Nq; k++){
+	const int base = i + j*p_Nq + emap*p_Np;
+	for (int k=0; k<p_Nq; k++){
 	  
 	  s_q[k][j][i] = q[base + k*p_Nq*p_Nq];
 	  s_Aq[k][j][i] = 0.f;
@@ -1031,13 +1033,13 @@ kernel void ellipticAxHex3D_e1c(const iint Nelements,
     
     barrier(localMemFence);
     
-    for(iint k=0; k<p_Nq; ++k) {
+    for(int k=0; k<p_Nq; ++k) {
       
-      for(iint j=0; j<p_Nq; ++j; inner1) {
-	for(iint i=0; i<p_Nq; ++i; inner0) {
+      for(int j=0; j<p_Nq; ++j; inner1) {
+	for(int i=0; i<p_Nq; ++i; inner0) {
 	  
 	  dfloat qtk = 0.f;
-	  for(iint n=0; n<p_Nq; ++n) {
+	  for(int n=0; n<p_Nq; ++n) {
 	    qtk += s_D[k][n]*s_q[n][j][i];
 	  }
 	  r_qt = qtk;
@@ -1047,10 +1049,10 @@ kernel void ellipticAxHex3D_e1c(const iint Nelements,
       barrier(localMemFence);
 
       // process k-slice (first r- and s-derivatives)
-      for(iint j=0; j<p_Nq; ++j; inner1) {
-	for(iint i=0; i<p_Nq; ++i; inner0) {
+      for(int j=0; j<p_Nq; ++j; inner1) {
+	for(int i=0; i<p_Nq; ++i; inner0) {
 						
-	  const iint base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+	  const int base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 	  
 	  const dfloat G00 = ggeo[base+p_G00ID*p_Np];
 	  const dfloat G01 = ggeo[base+p_G01ID*p_Np];
@@ -1061,7 +1063,7 @@ kernel void ellipticAxHex3D_e1c(const iint Nelements,
 	  const dfloat GwJ = ggeo[base+p_GWJID*p_Np];
 	  
 	  dfloat qr = 0.f, qs = 0.f;
-	  for(iint n=0; n<p_Nq; ++n) {
+	  for(int n=0; n<p_Nq; ++n) {
 	    
 	    qr += s_D[i][n]*s_q[k][j][n];
 	    qs += s_D[j][n]*s_q[k][n][i];
@@ -1074,7 +1076,7 @@ kernel void ellipticAxHex3D_e1c(const iint Nelements,
 	  
 	  s_Aq[k][j][i] += GwJ*lambda*s_q[k][j][i];
 	  
-	  for(iint n=0; n<p_Nq; ++n) {
+	  for(int n=0; n<p_Nq; ++n) {
 	    s_Aq[n][j][i] += s_D[k][n]*r_tmpt;
 	  }
 	}
@@ -1085,12 +1087,12 @@ kernel void ellipticAxHex3D_e1c(const iint Nelements,
       
       // second derivatives
 		
-      for(iint j=0; j<p_Nq; ++j; inner1) {
-	for(iint i=0; i<p_Nq; ++i; inner0) {
+      for(int j=0; j<p_Nq; ++j; inner1) {
+	for(int i=0; i<p_Nq; ++i; inner0) {
 
 	  dfloat Aq1 = 0.0f, Aq2 = 0.0f;
 	  
-	  for(iint n=0; n<p_Nq; ++n) {
+	  for(int n=0; n<p_Nq; ++n) {
 	    Aq1 += s_D[n][i]*s_tmpr[j][n];
 	    Aq2 += s_D[n][j]*s_tmps[n][i];
 	  }
@@ -1103,10 +1105,10 @@ kernel void ellipticAxHex3D_e1c(const iint Nelements,
     barrier(localMemFence);
 
     // write result out (local node storage)
-    for(iint j=0; j<p_Nq; ++j; inner1) {
-      for(iint i=0; i<p_Nq; ++i; inner0) {
+    for(int j=0; j<p_Nq; ++j; inner1) {
+      for(int i=0; i<p_Nq; ++i; inner0) {
 				
-	for (iint k=0; k<p_Nq; k++){
+	for (int k=0; k<p_Nq; k++){
 	  int base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
 	  Aq[base] = s_Aq[k][j][i];
 	}
@@ -1119,15 +1121,15 @@ kernel void ellipticAxHex3D_e1c(const iint Nelements,
 
 //e1c0 - loop with k internal not external
 
-kernel void ellipticAxHex3D_e1c0(const iint Nelements,
-                                const iint * restrict elementList,
+kernel void ellipticAxHex3D_e1c0(const int Nelements,
+                                const int * restrict elementList,
                                 const dfloat * restrict ggeo,
                                 const dfloat * restrict D,
                                 const dfloat lambda,
                                const dfloat * restrict q,
                                dfloat * restrict Aq){
 
-for(iint e=0; e<Nelements; ++e; outer0){
+for(int e=0; e<Nelements; ++e; outer0){
 
 		shared dfloat s_tmpr[p_Nq][p_Nq];
 		shared dfloat s_tmps[p_Nq][p_Nq];
@@ -1140,13 +1142,13 @@ for(iint e=0; e<Nelements; ++e; outer0){
 //r_q[p_Nq], r_Aq[p_Nq],
 		// prefetch q(i,j,:,e) to register array
 		
-			for(iint j=0; j<p_Nq; ++j; inner1) {
-				for(iint i=0; i<p_Nq; ++i; inner0) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
 			emap = elementList[e];
 
 					if(emap<Nelements) {
-						const iint base = i + j*p_Nq + emap*p_Np;
-						for (iint k=0; k<p_Nq; k++){
+						const int base = i + j*p_Nq + emap*p_Np;
+						for (int k=0; k<p_Nq; k++){
 							
 	            s_q[k][j][i] = q[base + k*p_Nq*p_Nq];
 						//	s_Aq[k][j][i] = 0.f;
@@ -1166,14 +1168,14 @@ for(iint e=0; e<Nelements; ++e; outer0){
 
 		
 
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
-					for(iint k=0; k<p_Nq; ++k) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
+					for(int k=0; k<p_Nq; ++k) {
 						emap = elementList[e];
 						if(emap<Nelements) {
 
 							dfloat qtk = 0.f;
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								qtk += s_D[k][n]*s_q[n][j][i];
 							}
 							r_qt = qtk;
@@ -1186,12 +1188,12 @@ for(iint e=0; e<Nelements; ++e; outer0){
 			barrier(localMemFence);
 
 			// process k-slice (first r- and s-derivatives)
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
-						for(iint k=0; k<p_Nq; ++k) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
+						for(int k=0; k<p_Nq; ++k) {
 						emap = elementList[e];
 						if(emap<Nelements) {
-							const iint base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+							const int base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
 							const dfloat G00 = ggeo[base+p_G00ID*p_Np];
 							const dfloat G01 = ggeo[base+p_G01ID*p_Np];
@@ -1202,7 +1204,7 @@ for(iint e=0; e<Nelements; ++e; outer0){
 							const dfloat GwJ = ggeo[base+p_GWJID*p_Np];
 
 							dfloat qr = 0.f, qs = 0.f;
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								
 								qr += s_D[i][n]*s_q[k][j][n];
 								qs += s_D[j][n]*s_q[k][n][i];
@@ -1216,7 +1218,7 @@ for(iint e=0; e<Nelements; ++e; outer0){
 							s_Aq[k][j][i] += GwJ*lambda*s_q[k][j][i];
 
 #if 1
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								s_Aq[n][j][i] += s_D[k][n]*r_tmpt;
 							}
 #endif
@@ -1230,15 +1232,15 @@ for(iint e=0; e<Nelements; ++e; outer0){
 
 			// second derivatives
 		
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
-				for(iint k=0; k<p_Nq; ++k) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
+				for(int k=0; k<p_Nq; ++k) {
 						emap = elementList[e];
 						if(emap<Nelements) {
 
 							dfloat Aq1 = 0.0f, Aq2 = 0.0f;
 
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								Aq1 += s_D[n][i]*s_tmpr[j][n];
 								Aq2 += s_D[n][j]*s_tmps[n][i];
 							}
@@ -1257,13 +1259,13 @@ barrier(localMemFence);
 		// write result out (local node storage)
 	
 	
-			for(iint j=0; j<p_Nq; ++j; inner1) {
-				for(iint i=0; i<p_Nq; ++i; inner0) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
 				
 					emap = elementList[e];
 					if(emap<Nelements) {
-						iint base;
-							for (iint k=0; k<p_Nq; k++){
+						int base;
+							for (int k=0; k<p_Nq; k++){
 							base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
 							Aq[base] = s_Aq[k][j][i];
 						//	base+=p_Nq*p_Nq;
@@ -1281,15 +1283,15 @@ barrier(localMemFence);
 // e1d - thicker slices -> this works for N=9, in theory of course
 
 #define p_sliceThickness 4
-kernel void ellipticAxHex3D_e1d(const iint Nelements,
-                                const iint * restrict elementList,
+kernel void ellipticAxHex3D_e1d(const int Nelements,
+                                const int * restrict elementList,
                                 const dfloat * restrict ggeo,
                                 const dfloat * restrict D,
                                 const dfloat lambda,
                                 const dfloat * restrict q,
                                 dfloat * restrict Aq){
 
-for(iint e=0; e<Nelements; ++e; outer0){
+for(int e=0; e<Nelements; ++e; outer0){
 
 		shared dfloat s_tmpr[p_Nq][p_Nq];
 		shared dfloat s_tmps[p_Nq][p_Nq];
@@ -1302,13 +1304,13 @@ for(iint e=0; e<Nelements; ++e; outer0){
 //r_q[p_Nq], r_Aq[p_Nq],
 		// prefetch q(i,j,:,e) to register array
 		
-			for(iint j=0; j<p_Nq; ++j; inner1) {
-				for(iint i=0; i<p_Nq; ++i; inner0) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
 					emap = elementList[e];
 
 					if(emap<Nelements) {
-						const iint base = i + j*p_Nq + emap*p_Np;
-						for (iint k=0; k<p_Nq; k+=p_sliceThickness){
+						const int base = i + j*p_Nq + emap*p_Np;
+						for (int k=0; k<p_Nq; k+=p_sliceThickness){
 							if (k<p_Nq)
 							{
 	            s_q[k][j][i] = q[base + k*p_Nq*p_Nq];
@@ -1328,16 +1330,16 @@ for(iint e=0; e<Nelements; ++e; outer0){
 
 		barrier(localMemFence);
 
-		for(iint k=0; k<p_Nq; k+=p_sliceThickness) {
+		for(int k=0; k<p_Nq; k+=p_sliceThickness) {
 
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
 					if (k<p_Nq){
 						emap = elementList[e];
 						if(emap<Nelements) {
 
 							dfloat qtk = 0.f;
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								qtk += s_D[k][n]*s_q[n][j][i];
 							}
 							r_qt = qtk;
@@ -1351,12 +1353,12 @@ for(iint e=0; e<Nelements; ++e; outer0){
 			barrier(localMemFence);
 
 			// process k-slice (first r- and s-derivatives)
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
 						
 						emap = elementList[e];
 						if(emap<Nelements) {
-							const iint base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+							const int base = emap*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
 							const dfloat G00 = ggeo[base+p_G00ID*p_Np];
 							const dfloat G01 = ggeo[base+p_G01ID*p_Np];
@@ -1367,7 +1369,7 @@ for(iint e=0; e<Nelements; ++e; outer0){
 							const dfloat GwJ = ggeo[base+p_GWJID*p_Np];
 
 							dfloat qr = 0.f, qs = 0.f;
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								
 								qr += s_D[i][n]*s_q[k][j][n];
 								qs += s_D[j][n]*s_q[k][n][i];
@@ -1381,7 +1383,7 @@ for(iint e=0; e<Nelements; ++e; outer0){
 							s_Aq[k][j][i] += GwJ*lambda*s_q[k][j][i];
 
 #if 1
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								s_Aq[n][j][i] += s_D[k][n]*r_tmpt;
 							}
 #endif
@@ -1394,15 +1396,15 @@ for(iint e=0; e<Nelements; ++e; outer0){
 
 			// second derivatives
 		
-				for(iint j=0; j<p_Nq; ++j; inner1) {
-					for(iint i=0; i<p_Nq; ++i; inner0) {
+				for(int j=0; j<p_Nq; ++j; inner1) {
+					for(int i=0; i<p_Nq; ++i; inner0) {
 				
 						emap = elementList[e];
 						if(emap<Nelements) {
 
 							dfloat Aq1 = 0.0f, Aq2 = 0.0f;
 
-							for(iint n=0; n<p_Nq; ++n) {
+							for(int n=0; n<p_Nq; ++n) {
 								Aq1 += s_D[n][i]*s_tmpr[j][n];
 								Aq2 += s_D[n][j]*s_tmps[n][i];
 							}
@@ -1419,13 +1421,13 @@ barrier(localMemFence);
 		// write result out (local node storage)
 	
 	
-			for(iint j=0; j<p_Nq; ++j; inner1) {
-				for(iint i=0; i<p_Nq; ++i; inner0) {
+			for(int j=0; j<p_Nq; ++j; inner1) {
+				for(int i=0; i<p_Nq; ++i; inner0) {
 				
 					emap = elementList[e];
 					if(emap<Nelements) {
-						iint base;
-							for (iint k=0; k<p_Nq; k++){
+						int base;
+							for (int k=0; k<p_Nq; k++){
 							base = emap*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
 							Aq[base] = s_Aq[k][j][i];
 						//	base+=p_Nq*p_Nq;
@@ -1574,7 +1576,7 @@ kernel void ellipticAxHex3D_e2(const int Nelements,
 			for(int j=0; j<p_gjNq; ++j; inner1) {
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 
-					const iint base = e*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = e*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 
 					// assumes w*J built into G entries
 					//	  const dfloat r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
@@ -1796,7 +1798,7 @@ kernel void ellipticAxHex3D_e3(const int Nelements,
 								qt += s_I[j][n]*s_DxIq[es][n][i];
 							}
 
-							const iint base = e*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+							const int base = e*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 
 							// assumes w*J built into G entries
 							//	      dfloat r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
@@ -1915,8 +1917,8 @@ kernel void ellipticAxHex3D_e3(const int Nelements,
 #define p_gjPad 0
 
 /* note that the gjGeo must be the geometric factors at the p_gjNp integration nodes */
-kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
-                                      const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_e3(const int Nelements,
+                                      const int * restrict elementList,
                                       const dfloat * restrict gjGeo,
                                       const dfloat * restrict gjD,
                                       const dfloat * restrict gjI,
@@ -1958,7 +1960,7 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
 
 		shared dfloat s_qI[p_NblockG][p_gjNq][p_gjNq+p_gjPad];
 
-		exclusive iint emap;
+		exclusive int emap;
 		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 
 		// prefetch D and I matrices and zero register storage
@@ -1968,8 +1970,8 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
 					int t = a + b*p_gjNq + es*p_gjNq*p_gjNq;
 
 					if(t<p_gjNq*p_Nq) {
-						const iint tb = t/p_Nq;
-						const iint ta = t%p_Nq;
+						const int tb = t/p_Nq;
+						const int ta = t%p_Nq;
 #if 1
 						s_D[tb][ta] = gjD[t];
 						s_I[tb][ta] = gjI[t];
@@ -2017,7 +2019,7 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
 
 						if(eo+es<Nelements) {
 
-							const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
+							const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
 
 							r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
 							r_G00 = gjGeo[base+p_G00ID*p_gjNp];
@@ -2123,7 +2125,7 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
 #endif
 							}
 
-							const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+							const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 
 							r_G11 = gjGeo[base+p_G11ID*p_gjNp];
 							r_G12 = gjGeo[base+p_G12ID*p_gjNp];
@@ -2234,7 +2236,7 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
 						if(eo+es<Nelements) {
 							occaUnroll(p_Nq)
 							for(int c=0; c<p_Nq; ++c) {
-								const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+								const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 								Aq[id] = r_lapq[c];
 							}
 						}
@@ -2247,8 +2249,8 @@ kernel void ellipticPartialAxHex3D_e3(const iint Nelements,
 
 
 /* note that the gjGeo must be the geometric factors at the p_gjNp integration nodes */
-kernel void ellipticPartialAxReductionHex3D_e3(const iint Nelements,
-    const iint * restrict elementList,
+kernel void ellipticPartialAxReductionHex3D_e3(const int Nelements,
+    const int * restrict elementList,
     const dfloat * restrict gjGeo,
     const dfloat * restrict gjD,
     const dfloat * restrict gjI,
@@ -2292,7 +2294,7 @@ kernel void ellipticPartialAxReductionHex3D_e3(const iint Nelements,
 
 #endif
 
-		exclusive iint emap, thread;
+		exclusive int emap, thread;
 		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 
 		// prefetch D and I matrices and zero register storage
@@ -2302,8 +2304,8 @@ kernel void ellipticPartialAxReductionHex3D_e3(const iint Nelements,
 					int t = a + b*p_gjNq + es*p_gjNq*p_gjNq;
 
 					if(t<p_gjNq*p_Nq) {
-						const iint tb = t/p_Nq;
-						const iint ta = t%p_Nq;
+						const int tb = t/p_Nq;
+						const int ta = t%p_Nq;
 						s_D[tb][ta] = gjD[t];
 						s_I[tb][ta] = gjI[t];
 #if 0
@@ -2350,7 +2352,7 @@ kernel void ellipticPartialAxReductionHex3D_e3(const iint Nelements,
 
 							// assumes w*J built into G entries
 							//dfloat	 r_G00, r_G01, r_G02, r_G11, r_G12, r_G22;
-							const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
+							const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
 
 							r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
 
@@ -2547,7 +2549,7 @@ kernel void ellipticPartialAxReductionHex3D_e3(const iint Nelements,
 					if(a<p_Nq && b<p_Nq) {
 						if(eo+es<Nelements) {
 							for(int c=0; c<p_Nq; ++c) {
-								const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+								const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 								Aq[id] = r_lapq[c];
 		#if 0
 								r_qAq += r_q[c]*r_lapq[c]; // should buffer q ?
@@ -2644,8 +2646,8 @@ kernel void ellipticPartialAxReductionHex3D_e3(const iint Nelements,
 
 
 /* note that the gjGeo must be the geometric factors at the p_gjNp integration nodes */
-kernel void ellipticPartialAxHex3D_e5(const iint Nelements,
-                                      const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_e5(const int Nelements,
+                                      const int * restrict elementList,
                                       const dfloat * restrict gjGeo,
                                       const dfloat * restrict gjD,
                                       const dfloat * restrict gjI,
@@ -2681,7 +2683,7 @@ kernel void ellipticPartialAxHex3D_e5(const iint Nelements,
 
 		volatile shared dfloat s_qI[p_NblockG][p_gjNq][p_gjNq+p_gjPad];
 
-		exclusive iint emap;
+		exclusive int emap;
 		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 
 		// prefetch D and I matrices and zero register storage
@@ -2691,8 +2693,8 @@ kernel void ellipticPartialAxHex3D_e5(const iint Nelements,
 					int t = a + b*p_gjNq + es*p_gjNq*p_gjNq;
 
 					if(t<p_gjNq*p_Nq) {
-						const iint tb = t/p_Nq;
-						const iint ta = t%p_Nq;
+						const int tb = t/p_Nq;
+						const int ta = t%p_Nq;
 #if 1
 						s_D[tb][ta] = gjD[t];
 						s_I[tb][ta] = gjI[t];
@@ -2740,7 +2742,7 @@ kernel void ellipticPartialAxHex3D_e5(const iint Nelements,
 
 							// assumes w*J built into G entries
 							//dfloat	 r_G00, r_G01, r_G02, r_G11, r_G12, r_G22;
-							const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
+							const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
 
 							r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
 
@@ -2900,7 +2902,7 @@ kernel void ellipticPartialAxHex3D_e5(const iint Nelements,
 						if(eo+es<Nelements) {
 							occaUnroll(p_Nq)
 							for(int c=0; c<p_Nq; ++c) {
-								const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+								const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 								Aq[id] = r_lapq[c];
 							}
 						}
@@ -2912,8 +2914,8 @@ kernel void ellipticPartialAxHex3D_e5(const iint Nelements,
 }
 
 
-kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
-                                      const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_e6(const int Nelements,
+                                      const int * restrict elementList,
                                       const dfloat * restrict gjGeo,
                                       const dfloat * restrict gjD,
                                       const dfloat * restrict gjI,
@@ -2952,7 +2954,7 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
 
 		shared dfloat s_qI[p_gjNq][p_gjNq+p_gjPad];
 
-		exclusive iint emap, ta, tb;
+		exclusive int emap, ta, tb;
 		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 		// less registers (by half) or less shared (ny half)
 		// get rid of one of the register arrryas
@@ -3000,7 +3002,7 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
 			for(int b=0; b<p_gjNq; ++b; inner1) {
 				for(int a=0; a<p_gjNq; ++a; inner0) {
 
-					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
+					const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
 					r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
 					r_G00 = gjGeo[base+p_G00ID*p_gjNp];
 					r_G01 = gjGeo[base+p_G01ID*p_gjNp];
@@ -3167,7 +3169,7 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
 				if(a<p_Nq && b<p_Nq) {
 					occaUnroll(p_Nq)
 					for(int c=0; c<p_Nq; ++c) {
-						const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+						const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 						Aq[id] = r_lapq[c];
 					}
 				}
@@ -3178,8 +3180,8 @@ kernel void ellipticPartialAxHex3D_e6(const iint Nelements,
 
 
 
-kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
-                                       const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_e6a(const int Nelements,
+                                       const int * restrict elementList,
                                        const dfloat * restrict gjGeo,
                                        const dfloat * restrict gjD,
                                        const dfloat * restrict gjI,
@@ -3201,7 +3203,7 @@ kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
 
 		shared dfloat s_tmpq[p_gjNq][p_gjNq][p_gjNq];
 
-		exclusive iint emap;
+		exclusive int emap;
 		exclusive dfloat r_qt;
 
 		// prefetch D and I matrices and zero register storage
@@ -3299,7 +3301,7 @@ kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
 			for(int j=0;j<p_gjNq;++j;inner1){
 				for(int i=0;i<p_gjNq;++i;inner0){
 
-					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					const dfloat r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
 					const dfloat r_G00 = gjGeo[base+p_G00ID*p_gjNp];
 					const dfloat r_G01 = gjGeo[base+p_G01ID*p_gjNp];
@@ -3400,7 +3402,7 @@ kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
 							tmp += s_I[i][ta]*s_qr[tb][i];
 						}
 
-						const iint id = emap*p_Np + c*p_Nq2 + tb*p_Nq + ta;
+						const int id = emap*p_Np + c*p_Nq2 + tb*p_Nq + ta;
 						Aq[id] = tmp;
 					}
 				}
@@ -3411,8 +3413,8 @@ kernel void ellipticPartialAxHex3D_e6a(const iint Nelements,
 
 
 
-kernel void ellipticPartialAxHex3D_e6b(const iint Nelements,
-                                       const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_e6b(const int Nelements,
+                                       const int * restrict elementList,
                                        const dfloat * restrict gjGeo,
                                        const dfloat * restrict gjD,
                                        const dfloat * restrict gjI,
@@ -3435,7 +3437,7 @@ kernel void ellipticPartialAxHex3D_e6b(const iint Nelements,
 		shared dfloat s_qr[p_gjNq][p_gjNq+p_gjPad];
 		shared dfloat s_qs[p_gjNq][p_gjNq+p_gjPad];
 
-		exclusive iint emap;
+		exclusive int emap;
 		exclusive dfloat r_qt;
 
 		// prefetch D and I matrices and zero register storage
@@ -3538,7 +3540,7 @@ kernel void ellipticPartialAxHex3D_e6b(const iint Nelements,
 			for(int j=0;j<p_gjNq;++j;inner1){
 				for(int i=0;i<p_gjNq;++i;inner0){
 
-					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					const dfloat r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
 					const dfloat r_G00 = gjGeo[base+p_G00ID*p_gjNp];
 					const dfloat r_G01 = gjGeo[base+p_G01ID*p_gjNp];
@@ -3639,7 +3641,7 @@ kernel void ellipticPartialAxHex3D_e6b(const iint Nelements,
 							tmp += s_I[i][ta]*s_qr[tb][i];
 						}
 
-						const iint id = emap*p_Np + c*p_Nq2 + tb*p_Nq + ta;
+						const int id = emap*p_Np + c*p_Nq2 + tb*p_Nq + ta;
 						Aq[id] = tmp;
 					}
 				}
@@ -3650,8 +3652,8 @@ kernel void ellipticPartialAxHex3D_e6b(const iint Nelements,
 
 
 
-kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
-                                      const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_e7(const int Nelements,
+                                      const int * restrict elementList,
                                       const dfloat * restrict gjGeo,
                                       const dfloat * restrict gjD,
                                       const dfloat * restrict gjI,
@@ -3677,7 +3679,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
 		shared dfloat s_IxIq[p_Nq][p_gjNq+p_gjPad];
 		shared dfloat s_DxIq[p_Nq][p_gjNq+p_gjPad];
 
-		exclusive iint emap;
+		exclusive int emap;
 		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 
 		// prefetch D and I matrices and zero register storage
@@ -3712,7 +3714,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
 			for(int b=0; b<p_gjNq; ++b; inner1) {
 				for(int a=0; a<p_gjNq; ++a; inner0) {
 
-					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
+					const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
 					r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
 					r_G00 = gjGeo[base+p_G00ID*p_gjNp];
 					r_G01 = gjGeo[base+p_G01ID*p_gjNp];
@@ -3786,7 +3788,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
 
 					// apply chain rule (notice the swtich of indices in i,j)
 					// should bundle these
-					const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					gradq[base+0*p_gjNq2] = r_G00*qr + r_G01*qs + r_G02*qt;
 					gradq[base+1*p_gjNq2] = r_G01*qr + r_G11*qs + r_G12*qt;
 					gradq[base+2*p_gjNq2] = r_G02*qr + r_G12*qs + r_G22*qt;
@@ -3810,7 +3812,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
 		shared dfloat s_Iqs[p_gjNq][p_Nq+p_gllPad];
 		shared dfloat s_Iqt[p_gjNq][p_Nq+p_gllPad];
 
-		exclusive iint emap;
+		exclusive int emap;
 
 		for(int b=0; b<p_gjNq; ++b; inner1) {
 			for(int a=0; a<p_gjNq; ++a; inner0) {
@@ -3835,7 +3837,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
 			for(int j=0; j<p_gjNq; ++j; inner1) {
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					// should bundle these
-					const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					s_qtmp[i][j] = gradq[base+0*p_gjNq2];
 				}
 			}
@@ -3863,7 +3865,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
 			for(int j=0; j<p_gjNq; ++j; inner1) {
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					// should bundle these
-					const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					s_qtmp[i][j] = gradq[base+1*p_gjNq2];
 				}
 			}
@@ -3893,7 +3895,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
 			for(int j=0; j<p_gjNq; ++j; inner1) {
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					// should bundle these
-					const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					s_qtmp[i][j] = gradq[base+2*p_gjNq2];
 				}
 			}
@@ -3924,7 +3926,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
 			for(int j=0; j<p_gjNq; ++j; inner1) {
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					// should bundle these
-					const iint base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = e*p_gjNp*4 + 4*k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					s_qtmp[i][j] = gradq[base+3*p_gjNq2];
 				}
 			}
@@ -3987,7 +3989,7 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
 				if(a<p_Nq && b<p_Nq) {
 					occaUnroll(p_Nq)
 					for(int c=0; c<p_Nq; ++c) {
-						const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+						const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 						Aq[id] = r_lapq[c];
 					}
 				}
@@ -3998,8 +4000,8 @@ kernel void ellipticPartialAxHex3D_e7(const iint Nelements,
 
 // ONLY CPU
 
-kernel void ellipticPartialAxHex3D_e8(const iint Nelements,
-                                      const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_e8(const int Nelements,
+                                      const int * restrict elementList,
                                       const dfloat * restrict gjGeo,
                                       const dfloat * restrict gjD,
                                       const dfloat * restrict gjI,
@@ -4040,7 +4042,7 @@ kernel void ellipticPartialAxHex3D_e8(const iint Nelements,
 
 	for(int e=0; e<Nelements; ++e) {
 
-		const iint emap = elementList[e];
+		const int emap = elementList[e];
 
 		// prefetch D and I matrices and zero register storage
 		for(int c=0; c<p_Nq; ++c) {
@@ -4118,7 +4120,7 @@ kernel void ellipticPartialAxHex3D_e8(const iint Nelements,
 						qs += Djn*s_IxIq[b][i];
 					}
 
-					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					const dfloat r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
 					const dfloat r_G00 = gjGeo[base+p_G00ID*p_gjNp];
 					const dfloat r_G01 = gjGeo[base+p_G01ID*p_gjNp];
@@ -4192,7 +4194,7 @@ kernel void ellipticPartialAxHex3D_e8(const iint Nelements,
 		for(int c=0; c<p_Nq; ++c) {
 			for(int b=0; b<p_Nq; ++b) {
 				for(int a=0; a<p_Nq; ++a) {
-					const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+					const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 					Aq[id] = r_lapq[c][b][a];
 				}
 			}
@@ -4206,8 +4208,8 @@ kernel void ellipticPartialAxHex3D_e8(const iint Nelements,
 // Note: gjD is gjNq x gjNq
 
 
-kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
-                                      const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_e9(const int Nelements,
+                                      const int * restrict elementList,
                                       const dfloat * restrict gjGeo,
                                       const dfloat * restrict gllD,
                                       const dfloat * restrict gjI,
@@ -4221,7 +4223,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 	// load q into shared first
 	//kernel 1 - interpolate to gj hex
 	for(int e=0; e<Nelements; ++e; outer0) {
-		exclusive iint emap;
+		exclusive int emap;
 		exclusive dfloat r_res;
 		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 		shared dfloat s_gsI[p_gjNq][p_Nq];
@@ -4234,11 +4236,11 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 						s_gsI[b][a] = gjI[b*p_Nq+a];
 					}
 					emap = elementList[e];
-					iint t = a + b*p_gjNq + c*p_gjNq2;
+					int t = a + b*p_gjNq + c*p_gjNq2;
 					if (t<p_Np) {
-						iint ta = t%p_Nq;
-						iint tb = (t/p_Nq)%p_Nq;
-						iint tc = t/p_Nq2;
+						int ta = t%p_Nq;
+						int tb = (t/p_Nq)%p_Nq;
+						int tc = t/p_Nq2;
 						s_q[tc][tb][ta] = q[emap*p_Np+t];
 					}//if
 				}//for a
@@ -4315,7 +4317,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 					//	r_res = Iq;
 					//		s_q[k][j][i] = Iq;
 					emap = elementList[e];
-					const iint id = emap*p_gjNp + k*p_gjNq*p_gjNq+ j*p_gjNq + i;
+					const int id = emap*p_gjNp + k*p_gjNq*p_gjNq+ j*p_gjNq + i;
 					Ixq[id] = Iq;
 					//s_q[k][j][i];
 				}
@@ -4333,7 +4335,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 		exclusive dfloat r_qr, r_qs, r_qt, r_tmp;
 		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
-		exclusive iint emap;
+		exclusive int emap;
 
 		for(int k=0; k<p_gjNq; ++k; inner2) {
 			for(int j=0; j<p_gjNq; ++j; inner1) {
@@ -4343,7 +4345,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 						s_gjD[j][i] = gllD[j*p_gjNq+i];
 					}
 					emap = elementList[e];
-					iint t = i + j*p_gjNq + k*p_gjNq2;
+					int t = i + j*p_gjNq + k*p_gjNq2;
 					s_q[k][j][i] = Ixq[emap*p_gjNp+t];
 				}//for i
 			}//for j
@@ -4355,7 +4357,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					//load geofactors for my (k,j,i)
 					//		emap = elementList[e];
-					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					//geofactors for k j i thread
 					r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
 					r_G00 = gjGeo[base+p_G00ID*p_gjNp];
@@ -4403,7 +4405,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					dfloat tmp = 0.f;
 					occaUnroll(p_gjNq)
-					for(iint m=0; m<p_gjNq; ++m) {
+					for(int m=0; m<p_gjNq; ++m) {
 						tmp += s_gjD[m][i]*s_q[k][j][m];
 					}
 					r_tmp +=tmp;
@@ -4427,7 +4429,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					dfloat tmp = 0.f;
 					occaUnroll(p_gjNq)
-					for(iint m=0; m<p_gjNq; ++m) {
+					for(int m=0; m<p_gjNq; ++m) {
 						tmp += s_gjD[m][j]*s_q[k][m][i];
 					}
 					r_tmp +=tmp;
@@ -4450,11 +4452,11 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					dfloat tmp = 0.f;
 					occaUnroll(p_gjNq)
-					for(iint m=0; m<p_gjNq; ++m) {
+					for(int m=0; m<p_gjNq; ++m) {
 						tmp += s_gjD[m][k]*s_q[m][j][i];
 					}
 					r_tmp +=tmp;
-					iint base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					int base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					Ixq[base] = r_tmp;
 				}
 			}
@@ -4469,12 +4471,12 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 		shared dfloat s_I[p_gjNq][p_Nq];
 		exclusive dfloat r_res = 0.0f, r_Aq=0.0f;
-		iint emap;
+		int emap;
 		for(int k=0; k<p_gjNq; ++k; inner2) {
 			for(int j=0; j<p_gjNq; ++j; inner1) {
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 
-					iint base = k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					int base = k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					emap =elementList[e];
 					s_q[k][j][i] = Ixq[emap*p_gjNp+base];
 					if(i<p_Nq &&  k == 0 && j<p_gjNq) {
@@ -4554,7 +4556,7 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 							Iq += s_I[m][a]*s_q[c][b][m];
 						}
 						emap = elementList[e];
-						iint base = emap*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
+						int base = emap*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
 						Aq[base] = Iq;
 					}
 				}
@@ -4572,8 +4574,8 @@ kernel void ellipticPartialAxHex3D_e9(const iint Nelements,
 
 
 // e10 is the same as e9, just less barriers
-kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
-                                       const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_e10(const int Nelements,
+                                       const int * restrict elementList,
                                        const dfloat * restrict gjGeo,
                                        const dfloat * restrict gllD,
                                        const dfloat * restrict gjI,
@@ -4587,7 +4589,7 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 	// load q into shared first
 	//kernel 1 - interpolate to gj hex
 	for(int e=0; e<Nelements; ++e; outer0) {
-		exclusive iint emap;
+		exclusive int emap;
 		//	exclusive dfloat r_res;
 		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 		shared dfloat s_q2[p_gjNq][p_gjNq][p_gjNq];
@@ -4601,11 +4603,11 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 						s_gsI[b][a] = gjI[b*p_Nq+a];
 					}
 					emap = elementList[e];
-					iint t = a + b*p_gjNq + c*p_gjNq2;
+					int t = a + b*p_gjNq + c*p_gjNq2;
 					if (t<p_Np) {
-						iint ta = t%p_Nq;
-						iint tb = (t/p_Nq)%p_Nq;
-						iint tc = t/p_Nq2;
+						int ta = t%p_Nq;
+						int tb = (t/p_Nq)%p_Nq;
+						int tc = t/p_Nq2;
 						s_q[tc][tb][ta] = q[emap*p_Np+t];
 					}//if
 				}//for a
@@ -4670,7 +4672,7 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 					//	r_res = Iq;
 					//		s_q[k][j][i] = Iq;
 					emap = elementList[e];
-					const iint id = emap*p_gjNp + k*p_gjNq*p_gjNq+ j*p_gjNq + i;
+					const int id = emap*p_gjNp + k*p_gjNq*p_gjNq+ j*p_gjNq + i;
 					Ixq[id] = s_q2[k][j][i];
 					//s_q[k][j][i];
 				}
@@ -4690,7 +4692,7 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 		shared dfloat s_q3[p_gjNq][p_gjNq][p_gjNq];
 		exclusive dfloat r_qr, r_qs, r_qt, r_tmp;
 		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
-		exclusive iint emap;
+		exclusive int emap;
 
 		for(int k=0; k<p_gjNq; ++k; inner2) {
 			for(int j=0; j<p_gjNq; ++j; inner1) {
@@ -4700,7 +4702,7 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 						s_gjD[j][i] = gllD[j*p_gjNq+i];
 					}
 					emap = elementList[e];
-					iint t = i + j*p_gjNq + k*p_gjNq2;
+					int t = i + j*p_gjNq + k*p_gjNq2;
 					s_q[k][j][i] = Ixq[emap*p_gjNp+t];
 
 				}//for i
@@ -4713,7 +4715,7 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					//load geofactors for my (k,j,i)
 					//		emap = elementList[e];
-					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					//geofactors for k j i thread
 					r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
 					r_G00 = gjGeo[base+p_G00ID*p_gjNp];
@@ -4740,7 +4742,7 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 
 					r_tmp = r_GwJ*s_q[k][j][i]*lambda;
 
-					//iint base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					//int base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					//		Ixq[base] = s_q[i][j][k];
 					//		s_q2[k][j][i] = ds;
 				}
@@ -4769,13 +4771,13 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					dfloat tmp = 0.f;
 					occaUnroll(p_gjNq)
-					for(iint m=0; m<p_gjNq; ++m) {
+					for(int m=0; m<p_gjNq; ++m) {
 						tmp += s_gjD[m][i]*s_q[k][j][m];
 						tmp += s_gjD[m][j]*s_q2[k][m][i];
 						tmp += s_gjD[m][k]*s_q3[m][j][i];
 					}
 					r_tmp +=tmp;
-					iint base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					int base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					Ixq[base] = r_tmp;
 				}
 			}
@@ -4790,12 +4792,12 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 		shared dfloat s_I[p_gjNq][p_Nq];
 		exclusive dfloat r_res = 0.0f, r_Aq=0.0f;
-		iint emap;
+		int emap;
 		for(int k=0; k<p_gjNq; ++k; inner2) {
 			for(int j=0; j<p_gjNq; ++j; inner1) {
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 
-					iint base = k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					int base = k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					emap =elementList[e];
 					s_q[k][j][i] = Ixq[emap*p_gjNp+base];
 					if(i<p_Nq &&  k == 0 && j<p_gjNq) {
@@ -4875,7 +4877,7 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 							Iq += s_I[m][a]*s_q[c][b][m];
 						}
 						emap = elementList[e];
-						iint base = emap*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
+						int base = emap*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
 						Aq[base] = Iq;
 					}
 				}
@@ -4888,8 +4890,8 @@ kernel void ellipticPartialAxHex3D_e10(const iint Nelements,
 
 
 // e10 is the same as e9, just less barriers
-kernel void ellipticPartialAxHex3D_e11(const iint Nelements,
-                                       const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_e11(const int Nelements,
+                                       const int * restrict elementList,
                                        const dfloat * restrict gjGeo,
                                        const dfloat * restrict gllD,
                                        const dfloat * restrict gjI,
@@ -4903,7 +4905,7 @@ kernel void ellipticPartialAxHex3D_e11(const iint Nelements,
 	// load q into shared first
 	//kernel 1 - interpolate to gj hex
 	for(int e=0; e<Nelements; ++e; outer0) {
-		//	exclusive iint emap;
+		//	exclusive int emap;
 		//	exclusive dfloat r_res;
 		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 		shared dfloat s_q2[p_gjNq][p_gjNq][p_gjNq];
@@ -4916,12 +4918,12 @@ kernel void ellipticPartialAxHex3D_e11(const iint Nelements,
 					if (c == 0 && a<p_Nq && b<p_gjNq) {
 						s_gsI[b][a] = gjI[b*p_Nq+a];
 					}
-					iint emap = elementList[e];
-					iint t = a + b*p_gjNq + c*p_gjNq2;
+					int emap = elementList[e];
+					int t = a + b*p_gjNq + c*p_gjNq2;
 					if (t<p_Np) {
-						iint ta = t%p_Nq;
-						iint tb = (t/p_Nq)%p_Nq;
-						iint tc = t/p_Nq2;
+						int ta = t%p_Nq;
+						int tb = (t/p_Nq)%p_Nq;
+						int tc = t/p_Nq2;
 						s_q[tc][tb][ta] = q[emap*p_Np+t];
 					}//if
 				}//for a
@@ -4983,8 +4985,8 @@ kernel void ellipticPartialAxHex3D_e11(const iint Nelements,
 					}
 					//	r_res = Iq;
 					//		s_q[k][j][i] = Iq;
-					iint emap = elementList[e];
-					const iint id = emap*p_gjNp + k*p_gjNq*p_gjNq+ j*p_gjNq + i;
+					int emap = elementList[e];
+					const int id = emap*p_gjNp + k*p_gjNq*p_gjNq+ j*p_gjNq + i;
 					Ixq[id] = s_q2[k][j][i];
 					//s_q[k][j][i];
 				}
@@ -5006,7 +5008,7 @@ kernel void ellipticPartialAxHex3D_e11(const iint Nelements,
 		shared dfloat s_i4[p_gjNq][p_gjNq][p_gjNq];
 		//	exclusive dfloat r_qr, r_qs, r_qt, r_tmp;
 		//		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
-		//		exclusive iint emap;
+		//		exclusive int emap;
 
 		for(int k=0; k<p_gjNq; ++k; inner2) {
 			for(int j=0; j<p_gjNq; ++j; inner1) {
@@ -5015,8 +5017,8 @@ kernel void ellipticPartialAxHex3D_e11(const iint Nelements,
 					if (k==0 ) {
 						s_gjD[j][i] = gllD[j*p_gjNq+i];
 					}
-					iint emap = elementList[e];
-					iint t = i + j*p_gjNq + k*p_gjNq2;
+					int emap = elementList[e];
+					int t = i + j*p_gjNq + k*p_gjNq2;
 					s_q[k][j][i] = Ixq[emap*p_gjNp+t];
 
 				}//for i
@@ -5030,9 +5032,9 @@ kernel void ellipticPartialAxHex3D_e11(const iint Nelements,
 					//load geofactors for my (k,j,i)
 					dfloat qr, qs, qt, tmp;
 					dfloat G00, G01, G02, G11, G12, G22, GwJ;
-					iint emap;
+					int emap;
 
-					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					//geofactors for k j i thread
 					GwJ = gjGeo[base+p_GWJID*p_gjNp];
 					G00 = gjGeo[base+p_G00ID*p_gjNp];
@@ -5080,14 +5082,14 @@ kernel void ellipticPartialAxHex3D_e11(const iint Nelements,
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					dfloat tmp = 0.f;
 					occaUnroll(p_gjNq)
-					for(iint m=0; m<p_gjNq; ++m) {
+					for(int m=0; m<p_gjNq; ++m) {
 						tmp += s_gjD[m][i]*s_q1[k][j][m];
 						tmp += s_gjD[m][j]*s_q2[k][m][i];
 						tmp += s_gjD[m][k]*s_q3[m][j][i];
 					}
 					s_i4[k][j][i]+=tmp;
-					iint emap = elementList[e];
-					iint base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					int emap = elementList[e];
+					int base = emap*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					Ixq[base] =	s_i4[k][j][i];
 				}
 			}
@@ -5103,13 +5105,13 @@ kernel void ellipticPartialAxHex3D_e11(const iint Nelements,
 		shared dfloat s_q2[p_gjNq][p_gjNq][p_gjNq];
 		shared dfloat s_I[p_gjNq][p_Nq];
 		//	exclusive dfloat r_res = 0.0f, r_Aq=0.0f;
-		//	iint emap;
+		//	int emap;
 		for(int k=0; k<p_gjNq; ++k; inner2) {
 			for(int j=0; j<p_gjNq; ++j; inner1) {
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 
-					iint base = k*p_gjNq*p_gjNq + j*p_gjNq + i;
-					iint emap =elementList[e];
+					int base = k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					int emap =elementList[e];
 					s_q[k][j][i] = Ixq[emap*p_gjNp+base];
 					if(i<p_Nq &&  k == 0 && j<p_gjNq) {
 						s_I[j][i] = gjI[j*p_Nq+i];
@@ -5176,8 +5178,8 @@ kernel void ellipticPartialAxHex3D_e11(const iint Nelements,
 						for(int m=0; m<p_gjNq; ++m) {
 							Iq += s_I[m][a]*s_q[c][b][m];
 						}
-						iint emap = elementList[e];
-						iint base = emap*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
+						int emap = elementList[e];
+						int base = emap*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
 						Aq[base] = Iq;
 					}
 				}
@@ -5188,8 +5190,8 @@ kernel void ellipticPartialAxHex3D_e11(const iint Nelements,
 
 // kernel e12 is a ONE KERNEL version of e11
 
-kernel void ellipticPartialAxHex3D_e12(const iint Nelements,
-                                       const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_e12(const int Nelements,
+                                       const int * restrict elementList,
                                        const dfloat * restrict gjGeo,
                                        const dfloat * restrict gllD,
                                        const dfloat * restrict gjI,
@@ -5203,7 +5205,7 @@ kernel void ellipticPartialAxHex3D_e12(const iint Nelements,
 	// load q into shared first
 	//kernel 1 - interpolate to gj hex
 	for(int e=0; e<Nelements; ++e; outer0) {
-		//	exclusive iint emap;
+		//	exclusive int emap;
 		//	exclusive dfloat r_res;
 		shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 
@@ -5226,12 +5228,12 @@ kernel void ellipticPartialAxHex3D_e12(const iint Nelements,
 						s_gjD[b][a] = gllD[b*p_gjNq+a];
 					}
 
-					iint emap = elementList[e];
-					iint t = a + b*p_gjNq + c*p_gjNq2;
+					int emap = elementList[e];
+					int t = a + b*p_gjNq + c*p_gjNq2;
 					if (t<p_Np) {
-						iint ta = t%p_Nq;
-						iint tb = (t/p_Nq)%p_Nq;
-						iint tc = t/p_Nq2;
+						int ta = t%p_Nq;
+						int tb = (t/p_Nq)%p_Nq;
+						int tc = t/p_Nq2;
 						s_q2[tc][tb][ta] = q[emap*p_Np+t];
 					}//if
 				}//for a
@@ -5307,9 +5309,9 @@ kernel void ellipticPartialAxHex3D_e12(const iint Nelements,
 					//load geofactors for my (k,j,i)
 					dfloat qr, qs, qt, tmp;
 					dfloat G00, G01, G02, G11, G12, G22, GwJ;
-					iint emap;
+					int emap;
 
-					const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+					const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
 					//geofactors for k j i thread
 					GwJ = gjGeo[base+p_GWJID*p_gjNp];
 					G00 = gjGeo[base+p_G00ID*p_gjNp];
@@ -5357,7 +5359,7 @@ kernel void ellipticPartialAxHex3D_e12(const iint Nelements,
 				for(int i=0; i<p_gjNq; ++i; inner0) {
 					dfloat tmp = 0.f;
 					occaUnroll(p_gjNq)
-					for(iint m=0; m<p_gjNq; ++m) {
+					for(int m=0; m<p_gjNq; ++m) {
 						tmp += s_gjD[m][i]*s_q1[k][j][m];
 						tmp += s_gjD[m][j]*s_q2[k][m][i];
 						tmp += s_gjD[m][k]*s_q3[m][j][i];
@@ -5428,8 +5430,8 @@ kernel void ellipticPartialAxHex3D_e12(const iint Nelements,
 						for(int m=0; m<p_gjNq; ++m) {
 							Iq += s_gsI[m][a]*s_q[c][b][m];
 						}
-						iint emap = elementList[e];
-						iint base = emap*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
+						int emap = elementList[e];
+						int base = emap*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
 						Aq[base] = Iq;
 					}
 				}
@@ -5442,8 +5444,8 @@ kernel void ellipticPartialAxHex3D_e12(const iint Nelements,
 
 //e6c is a version of e6 just no exclusive variables
 
-kernel void ellipticPartialAxHex3D_e6c(const iint Nelements,
-                                       const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_e6c(const int Nelements,
+                                       const int * restrict elementList,
                                        const dfloat * restrict gjGeo,
                                        const dfloat * restrict gjD,
                                        const dfloat * restrict gjI,
@@ -5482,7 +5484,7 @@ kernel void ellipticPartialAxHex3D_e6c(const iint Nelements,
 
 		shared dfloat s_qI[p_gjNq][p_gjNq+p_gjPad];
 
-		//	exclusive iint emap, ta, tb;
+		//	exclusive int emap, ta, tb;
 		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 		// less registers (by half) or less shared (ny half)
 		// get rid of one of the register arrryas
@@ -5508,7 +5510,7 @@ kernel void ellipticPartialAxHex3D_e6c(const iint Nelements,
 					s_lapq[b][a][c] = 0;
 				}
 
-				iint emap = elementList[e];
+				int emap = elementList[e];
 				//Nq2 = Nq*Nq
 				if(a<p_Nq && b<p_Nq) {
 
@@ -5529,8 +5531,8 @@ kernel void ellipticPartialAxHex3D_e6c(const iint Nelements,
 			// prefetch slice
 			for(int b=0; b<p_gjNq; ++b; inner1) {
 				for(int a=0; a<p_gjNq; ++a; inner0) {
-					iint emap = elementList[e];
-					iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
+					int emap = elementList[e];
+					int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
 					r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
 					r_G00 = gjGeo[base+p_G00ID*p_gjNp];
 					r_G01 = gjGeo[base+p_G01ID*p_gjNp];
@@ -5702,8 +5704,8 @@ kernel void ellipticPartialAxHex3D_e6c(const iint Nelements,
 				if(a<p_Nq && b<p_Nq) {
 					occaUnroll(p_Nq)
 					for(int c=0; c<p_Nq; ++c) {
-						iint emap = elementList[e];
-						const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+						int emap = elementList[e];
+						const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 						Aq[id] = s_lapq[b][a][c];
 					}
 				}
@@ -5720,8 +5722,8 @@ kernel void ellipticPartialAxHex3D_e6c(const iint Nelements,
 // e10 is an optimized version of e9 - WITH as little memFences as possible.
 // written by Kasia, Aug 10 2017
 /*
-kernel void ellipticPartialAxHex3D_10( const iint Nelements,
-                                      const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_10( const int Nelements,
+                                      const int * restrict elementList,
                                       const dfloat * restrict gjGeo,
                                       const dfloat * restrict gjD,
                                       const dfloat * restrict gjI,
@@ -5739,7 +5741,7 @@ kernel void ellipticPartialAxHex3D_10( const iint Nelements,
 
 //load to shared first
 for(int e=0; e<Nelements; ++e; outer0) {
-	exclusive iint emap;
+	exclusive int emap;
 	exclusive dfloat r_res;
 	shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 	shared dfloat s_I[p_gjNq][p_Nq];
@@ -5755,8 +5757,8 @@ for(int e=0; e<Nelements; ++e; outer0) {
 
 
 
-kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
-					 const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_cube1(const int Nelements,
+					 const int * restrict elementList,
 					 const dfloat * restrict gjGeo,
 					 const dfloat * restrict gjD,
 					 const dfloat * restrict gjI,
@@ -5773,7 +5775,7 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
 
     shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 
-    exclusive iint emap;
+    exclusive int emap;
     exclusive dfloat r_resr, r_ress, r_rest, r_resI;
 
     // prefetch D and I matrices and zero register storage
@@ -5833,7 +5835,7 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
       s_q[k][j][i] = r_rest;
 
     gjCubeThreads(k,j,i){
-      const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+      const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
       const dfloat r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
       const dfloat r_G00 = gjGeo[base+p_G00ID*p_gjNp];
       const dfloat r_G01 = gjGeo[base+p_G01ID*p_gjNp];
@@ -5846,7 +5848,7 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
       dfloat qr = 0, qs = 0, qt = 0;
 
       occaUnroll(p_gjNq)
-	for(iint n=0;n<p_gjNq;++n){
+	for(int n=0;n<p_gjNq;++n){
 	  qr += s_gjD[i][n]*s_q[k][j][n];
 	  qs += s_gjD[j][n]*s_q[k][n][i];
 	  qt += s_gjD[k][n]*s_q[n][j][i];
@@ -5934,19 +5936,18 @@ kernel void ellipticPartialAxHex3D_cube1(const iint Nelements,
 	  for(int n=0;n<p_gjNq;++n)
 	    tmp += s_I[n][a]*s_q[c][b][n];
 	// could store in s_q again
-	const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+	const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 	Aq[id] = tmp;
       }
     }
   }
 }
-#endif
 
 
 
 // Version of Kasia kernel
-kernel void ellipticPartialAxHex3D_cube2(const iint Nelements,
-					 const iint * restrict elementList,
+kernel void ellipticPartialAxHex3D_cube2(const int Nelements,
+					 const int * restrict elementList,
 					 const dfloat * restrict gjGeo,
 					 const dfloat * restrict gjD,
 					 const dfloat * restrict gjI,
@@ -5962,7 +5963,7 @@ kernel void ellipticPartialAxHex3D_cube2(const iint Nelements,
     shared dfloat s_I[p_gjNq][p_Nq];
     shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 
-    exclusive iint emap;
+    exclusive int emap;
     exclusive dfloat r_resr, r_ress, r_rest, r_resI;
 
     // prefetch D and I matrices and zero register storage
@@ -6024,7 +6025,7 @@ kernel void ellipticPartialAxHex3D_cube2(const iint Nelements,
     shared dfloat s_gjD[p_gjNq][p_gjNq];
     shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 
-    exclusive iint emap;
+    exclusive int emap;
     exclusive dfloat r_resr, r_ress, r_rest, r_resI;
 
     // prefetch D and I matrices and zero register storage
@@ -6040,7 +6041,7 @@ kernel void ellipticPartialAxHex3D_cube2(const iint Nelements,
     }
 
     gjCubeThreads(k,j,i){
-      const iint base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
+      const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + j*p_gjNq + i;
       const dfloat r_GwJ = gjGeo[base+p_GWJID*p_gjNp];
       const dfloat r_G00 = gjGeo[base+p_G00ID*p_gjNp];
       const dfloat r_G01 = gjGeo[base+p_G01ID*p_gjNp];
@@ -6053,7 +6054,7 @@ kernel void ellipticPartialAxHex3D_cube2(const iint Nelements,
       dfloat qr = 0, qs = 0, qt = 0;
 
       occaUnroll(p_gjNq)
-	for(iint n=0;n<p_gjNq;++n){
+	for(int n=0;n<p_gjNq;++n){
 	  qr += s_gjD[i][n]*s_q[k][j][n];
 	  qs += s_gjD[j][n]*s_q[k][n][i];
 	  qt += s_gjD[k][n]*s_q[n][j][i];
@@ -6111,7 +6112,7 @@ kernel void ellipticPartialAxHex3D_cube2(const iint Nelements,
     shared dfloat s_I[p_gjNq][p_Nq];
     shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq];
 
-    exclusive iint emap;
+    exclusive int emap;
     exclusive dfloat r_ress, r_rest, r_resI;
 
     // NOW REVERSE: transform back in 't'
@@ -6158,10 +6159,11 @@ kernel void ellipticPartialAxHex3D_cube2(const iint Nelements,
 	  for(int n=0;n<p_gjNq;++n)
 	    tmp += s_I[n][a]*s_q[c][b][n];
 	// could store in s_q again
-	const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+	const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 	Aq[id] = tmp;
       }
     }
   }
 }*/
 
+#endif

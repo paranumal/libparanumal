@@ -2,8 +2,8 @@
 
 typedef struct{
 
-  int localId;
-  int baseId;
+  dlong localId;
+  hlong baseId;
   int haloFlag;
 
 } preconGatherInfo_t;
