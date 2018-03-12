@@ -160,17 +160,38 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
       }
       //runs after all rk iterations complete
       for (iint l = 0; l < levS; ++l) {
-	mesh->traceUpdatePreKernel(mesh->MRABNelements[l],
-				   mesh->o_MRABelementIds[l],
-				   mesh->o_vmapM,
-				   mesh->o_fQM,
-				   mesh->o_qpre,
-				   mesh->o_q);
+	  mesh->traceUpdatePreKernel(mesh->MRABNelements[l],
+				     mesh->o_MRABelementIds[l],
+				     mesh->o_vmapM,
+				     mesh->o_fQM,
+				     mesh->o_qpre,
+				     mesh->o_q);
       }
     }
 
-    mesh->o_q.copyTo(mesh->q);
-    boltzmannPlotNorms(mesh,"start",tstep,mesh->q);
+    // estimate maximum error
+    /*    if(((tstep+1)%mesh->errorStep)==0){
+      //	dfloat t = (tstep+1)*mesh->dt;
+      dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
+	
+      printf("tstep = %d, t = %g\n", tstep, t);
+      fflush(stdout);
+      // copy data back to host
+      mesh->o_q.copyTo(mesh->q);
+
+      // check for nans
+      for(int n=0;n<mesh->Nfields*mesh->Nelements*mesh->Np;++n){
+	if(isnan(mesh->q[n])){
+	  printf("found nan\n");
+	  exit(-1);
+	}
+      }
+
+      boltzmannPlotNorms(mesh,"norms",tstep/mesh->errorStep,mesh->q);
+      }*/
+    
+    //    mesh->o_q.copyTo(mesh->q);
+    //boltzmannPlotNorms(mesh,"start",tstep,mesh->q);
   }
   
   free(recvBuffer);

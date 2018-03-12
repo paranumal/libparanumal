@@ -26,15 +26,16 @@ void brownMinion(dfloat bmRho, dfloat bmDelta, dfloat sphereRadius,
 
 }
 
+
 void rk_coeffs(mesh_t *mesh) {
 
   iint Nlevels = mesh->MRABNlevels;
-  
-  const iint Nr = 32; 
-  dfloat complex R[Nr]; 
+
+  const iint Nr = 32;
+  dfloat complex R[Nr];
 
   for(iint ind =1; ind <= Nr; ++ind){
-    const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr; 
+    const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr;
     R[ind-1] = cexp(I*M_PI* theta);
   }
 
@@ -45,49 +46,119 @@ void rk_coeffs(mesh_t *mesh) {
   mesh->MRAB_B   = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
   mesh->MRAB_C   = (dfloat *) calloc(    Nlevels,sizeof(dfloat));
 
-  iint MRABorder = mesh->Nrhs; 
+  iint MRABorder = mesh->Nrhs;
 
   for(iint l = 0; l<Nlevels; ++l){
     // MRSAAB coefficients
     dfloat alpha = -mesh->tauInv*mesh->dt*pow(2,l);
-    dfloat h  = mesh->dt * pow(2,l); 
+    dfloat h  = mesh->dt * pow(2,l);
     //
-    const iint id = l*3;
-    double complex a1 = 0. + 0.* I; 
-    double complex b1 = 0. + 0.* I; 
-    double complex a2 = 0. + 0.* I; 
-    double complex b2 = 0. + 0.* I; 
-    double complex a3 = 0. + 0.* I; 
-    double complex b3 = 0. + 0.* I; 
-    
-    for(iint i = 0; i<Nr; ++i ){
-      double complex lr = alpha  + R[i];
-      a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
-      a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
-      a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
-      b1 += h*(cexp(lr/2.)- 2.*lr - (15.*cpow(lr,2))/8.f + cpow(lr,2)*cexp(lr/2.) + 3.*lr*cexp(lr/2.)/2. - 1.)/cpow(lr,3);
-      b2 += h*(3.*lr - 2.*cexp(lr/2.0) + 1.25*cpow(lr,2) - 2.*lr*cexp(lr/2.) + 2.)/cpow(lr,3);
-      b3 +=-h*(lr - cexp(lr/2.) + 0.375*cpow(lr,2) - 0.5*lr*cexp(lr/2.) + 1.)/cpow(lr,3);
-    }
+    for (iint order=0; order<3; ++order){
+      // computation of coefficients based on magnitude
+      const iint id = order*Nlevels*3 + l*3;
+      if(order==0){
 
-    
-    // Full dt coeeficients
-    mesh->MRSAAB_A[id+0] = creal(a1)/Nr;
-    mesh->MRSAAB_A[id+1] = creal(a2)/Nr;
-    mesh->MRSAAB_A[id+2] = creal(a3)/Nr;
-    // Half coefficients
-    mesh->MRSAAB_B[id+0] = creal(b1)/Nr;
-    mesh->MRSAAB_B[id+1] = creal(b2)/Nr;
-    mesh->MRSAAB_B[id+2] = creal(b3)/Nr;
-    
-    // MRAB coefficients
-    mesh->MRAB_A[id+0]   =  23.*h/12. ;
-    mesh->MRAB_A[id+1]   = -16.*h/12. ;
-    mesh->MRAB_A[id+2]   =  5. *h/12. ;
-    
-    mesh->MRAB_B[id+0]   =  17.*h/24. ;
-    mesh->MRAB_B[id+1]   = - 7.*h/24. ;
-    mesh->MRAB_B[id+2]   =   2.*h/24. ;	    
+	double complex a1 = 0. + 0.* I;
+	double complex b1 = 0. + 0.* I;
+
+	for(iint i = 0; i<Nr; ++i ){
+	  double complex lr = alpha  + R[i];
+	  a1 +=  h*(cexp(lr) - 1.)/lr;
+	  b1 +=  h*(cexp(lr/2.) - 1.)/lr;
+	}
+	// Full dt coeeficients
+	mesh->MRSAAB_A[id + 0] = creal(a1)/Nr;
+	mesh->MRSAAB_A[id + 1] = 0.f;
+	mesh->MRSAAB_A[id + 2] = 0.f;
+	// Half coefficients
+	mesh->MRSAAB_B[id + 0] = creal(b1)/Nr;
+	mesh->MRSAAB_B[id + 1] = 0.f;
+	mesh->MRSAAB_B[id + 2] = 0.f;
+
+	// MRAB coefficients
+	mesh->MRAB_A[id + 0]   =  h ;
+	mesh->MRAB_A[id + 1]   =  0.f ;
+	mesh->MRAB_A[id + 2]   =  0.f ;
+
+	mesh->MRAB_B[id+0]     =  h/2. ;
+	mesh->MRAB_B[id+1]     =  0.f ;
+	mesh->MRAB_B[id+2]     =  0.f ;
+      }
+
+      else if(order==1){
+
+	double complex a1 = 0. + 0.* I;
+	double complex b1 = 0. + 0.* I;
+	double complex a2 = 0. + 0.* I;
+	double complex b2 = 0. + 0.* I;
+
+	for(iint i = 0; i<Nr; ++i ){
+	  double complex lr = alpha  + R[i];
+	  a1 +=  h*(-2.*lr + (1.+lr)*cexp(lr) - 1.)/cpow(lr,2);
+	  a2 +=  h*(lr - cexp(lr) + 1.)/cpow(lr,2);
+	  b1 +=  h*(-1.5*lr + (1.+lr)*cexp(lr/2.) - 1.)/cpow(lr,2);
+	  b2 +=  h*(0.5*lr - cexp(lr/2.) + 1.)/cpow(lr,2);
+	}
+	// Full dt coeeficients
+	mesh->MRSAAB_A[id + 0] = creal(a1)/Nr;
+	mesh->MRSAAB_A[id + 1] = creal(a2)/Nr;
+	mesh->MRSAAB_A[id + 2] = 0.f;
+	// Half coefficients
+	mesh->MRSAAB_B[id + 0] = creal(b1)/Nr;
+	mesh->MRSAAB_B[id + 1] = creal(b2)/Nr;
+	mesh->MRSAAB_B[id + 2] = 0.f;
+
+
+	// MRAB coefficients
+	mesh->MRAB_A[id + 0]   =  3.*h/2. ;
+	mesh->MRAB_A[id + 1]   = -1.*h/2. ;
+	mesh->MRAB_A[id + 2]   =  0.f ;
+
+	mesh->MRAB_B[id + 0]   =  5.*h/8. ;
+	mesh->MRAB_B[id + 1]   = -1.*h/8. ;
+	mesh->MRAB_B[id + 2]   =   0.f ;
+      }
+
+      else{
+	double complex a1 = 0. + 0.* I;
+	double complex b1 = 0. + 0.* I;
+	double complex a2 = 0. + 0.* I;
+	double complex b2 = 0. + 0.* I;
+	double complex a3 = 0. + 0.* I;
+	double complex b3 = 0. + 0.* I;
+
+	for(iint i = 0; i<Nr; ++i ){
+	  double complex lr = alpha  + R[i];
+	  a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
+	  a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
+	  a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
+	  b1 += h*(cexp(lr/2.)- 2.*lr - (15.*cpow(lr,2))/8.f + cpow(lr,2)*cexp(lr/2.) + 3.*lr*cexp(lr/2.)/2. - 1.)/cpow(lr,3);
+	  b2 += h*(3.*lr - 2.*cexp(lr/2.0) + 1.25*cpow(lr,2) - 2.*lr*cexp(lr/2.) + 2.)/cpow(lr,3);
+	  b3 +=-h*(lr - cexp(lr/2.) + 0.375*cpow(lr,2) - 0.5*lr*cexp(lr/2.) + 1.)/cpow(lr,3);
+	}
+
+
+	// Full dt coeeficients
+	mesh->MRSAAB_A[id+0] = creal(a1)/Nr;
+	mesh->MRSAAB_A[id+1] = creal(a2)/Nr;
+	mesh->MRSAAB_A[id+2] = creal(a3)/Nr;
+	// Half coefficients
+	mesh->MRSAAB_B[id+0] = creal(b1)/Nr;
+	mesh->MRSAAB_B[id+1] = creal(b2)/Nr;
+	mesh->MRSAAB_B[id+2] = creal(b3)/Nr;
+
+	// MRAB coefficients
+	mesh->MRAB_A[id+0]   =  23.*h/12. ;
+	mesh->MRAB_A[id+1]   = -16.*h/12. ;
+	mesh->MRAB_A[id+2]   =  5. *h/12. ;
+
+	mesh->MRAB_B[id+0]   =  17.*h/24. ;
+	mesh->MRAB_B[id+1]   = - 7.*h/24. ;
+	mesh->MRAB_B[id+2]   =   2.*h/24. ;
+
+
+      }
+    }
 
     // Exponential part
     mesh->MRSAAB_C[l]    = exp(alpha);
@@ -228,7 +299,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
   dfloat cfl_small = 0.2; // depends on the stability region size (was .4, then 2)
-  dfloat cfl_large = 4*cfl_small;
+  dfloat cfl_large = cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   

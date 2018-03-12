@@ -25,6 +25,11 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   
   for(iint tstep=mesh->Nrhs;tstep<mesh->NtimeSteps;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
+
+      iint mrab_order;
+      if((tstep - mesh->Nrhs) == 0) mrab_order = 0;
+      else if ((tstep - mesh->Nrhs) ==1) mrab_order = 1;
+      else mrab_order = 2;
       
       //synthesize actual stage time
       iint t = tstep*pow(2,mesh->MRABNlevels-1) + Ntick;
@@ -158,8 +163,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
       
       for (iint l = 0; l < lev; l++) {
-	const iint id = l*mesh->Nrhs;
-
+	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + l*mesh->Nrhs;
 	occa::tic("updateKernel");
 	
 	if (mesh->MRABNelements[l]) {
@@ -187,8 +191,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
       occa::toc("updateKernel");
       
       if (lev<mesh->MRABNlevels) {
-	
-	const iint id = lev*mesh->Nrhs;
+	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + lev*mesh->Nrhs;
 	
 	if (mesh->MRABNhaloElements[lev]) {
 	  //trace update using same kernel
