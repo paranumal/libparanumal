@@ -455,7 +455,7 @@ int main(int argc, char **argv){
   printf("]\n\n");
 
 
-  printf("\n\nResults(%d,%d,%d,:)  = [", p_N,p_Ne,p_Nb);
+  printf("\n\nResults(%d,%d,%d,:)  = [", p_N, p_Ne, p_Nb);
   for (int k=kMin; k<=kMax; k++){
 
     printf(" %16.17f ", results3D[k]);
@@ -463,6 +463,15 @@ int main(int argc, char **argv){
 
   printf("];\n\n");
 
+  printf("\n\nDOFSvFLOPS(%d,:)  = [", p_N);
+  for (int k=kMin; k<=kMax; k++){
+
+    printf(" %d %16.17f ", p_Np*E, results3D[k]);
+  }
+
+  printf("];\n\n");
+
+  
   printf("\n\ntimeData(:, %d) = [",p_N);
   for (int k=kMin; k<=kMax; k++){
 
