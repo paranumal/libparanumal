@@ -4,7 +4,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 
   mesh3D *mesh = solver->mesh;
 
-  int Ntrials = 10;
+  int Ntrials = 20;
 
   size_t L1CacheSize = 24576; //L1 cache size of test device in bytes (24KB for P100)
 
