@@ -1,0 +1,27 @@
+
+
+<<<<<<< HEAD
+for N in `seq 7 8`; # polynomial degree
+=======
+for N in `seq 1 8`; # polynomial degree
+>>>>>>> 9969b2dadca2a1aeeb06960203d30f8d145d3aab
+do
+    for Ne in `seq 1 8`; # number of outputs per thread 
+    do
+<<<<<<< HEAD
+	for Nb in `seq 1 8`; # number of elements per block
+=======
+	for Nb in `seq 1 3`; # number of elements per block
+>>>>>>> 9969b2dadca2a1aeeb06960203d30f8d145d3aab
+	do
+#	    echo [N=$N,Ne=$Ne,Nb=$Nb];
+
+	    #	    nvprof --kernels ellipticPartialAxTet3D_Ref30 --metrics flop_dp_efficiency,dram_read_throughput,dram_write_throughput,shared_load_throughput,shared_store_throughput,achieved_occupancy ./kernelTest 50000 $N 1 $Ne $Nb   ;
+<<<<<<< HEAD
+	    ./kernelTest 10 $N 1 $Ne $Nb 9 10   |& grep GFL;
+=======
+	    ./kernelTest 320000 $N 1 $Ne $Nb 0 10  ; # |& grep Res;
+>>>>>>> 9969b2dadca2a1aeeb06960203d30f8d145d3aab
+	done;
+    done;
+done
