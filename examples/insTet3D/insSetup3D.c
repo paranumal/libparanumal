@@ -177,30 +177,28 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
-  if (rank==0) {
-    printf("hmin = %g\n", hmin);
-    printf("hmax = %g\n", hmax);
-    printf("cfl = %g\n", cfl);
-    printf("dt = %g\n", dt);
-  }
-
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(ins->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
-   if(strstr(options,"SUBCYCLING")){
+  if(strstr(options,"SUBCYCLING")){
     ins->dt         = ins->Nsubsteps*ins->dt;
     ins->NtimeSteps = ins->finalTime/ins->dt;
     ins->dt         = ins->finalTime/ins->NtimeSteps;
     ins->sdt        = ins->dt/ins->Nsubsteps;
-
-    if (rank==0) printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", ins->dt, ins->sdt, ins->dt/ins->sdt);
-  }
-  else{
+  } else{
     ins->NtimeSteps = ins->finalTime/ins->dt;
     ins->dt         = ins->finalTime/ins->NtimeSteps;
   }
 
- 
+  if (rank==0) {
+    printf("hmin = %g\n", hmin);
+    printf("hmax = %g\n", hmax);
+    printf("cfl = %g\n",  cfl);
+    printf("dt = %g\n",   ins->dt);
+  }
+  
+  if (strstr(options,"SUBCYCLING")&&rank==0) printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", ins->dt, ins->sdt, ins->dt/ins->sdt);
+  
 
   // Hold some inverses for kernels
   ins->inu = 1.0/ins->nu; 
