@@ -358,8 +358,10 @@ int main(int argc, char **argv){
   float  elapsedCublas =0.0f;
 
   cudaEventElapsedTime(&elapsedCublas, start, stop);
-  printf("time (before) %17.17f \n", elapsedCublas); 
   elapsedCublas /= (1000.*Niter);
+
+  printf("DOFSvGFLOPSvGNODES %d  %17.15f %17.15f \n", p_Np*E,  gflops*E/(elapsedCublas*1.e9), p_Np*E/(elapsedCublas*1.e9)); 
+
 
   //full version
   printf("TIME %17.16f flops = %llu  GFLOPS: %17.17f \n",elapsedCublas,gflops, (((dfloat)gflops*(dfloat)E/10e8)/elapsedCublas));
