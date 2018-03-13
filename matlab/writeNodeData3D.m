@@ -110,6 +110,7 @@ tol=1e-6;
 invVB = inv(VB);
 
 [D0ids,D0vals,D1ids,D1vals,D2ids,D2vals,D3ids,D3vals] = bern_basis_diff3D(N,V,VB,V0,V1,V2,V3);
+[D0Tids,D0Tvals,D1Tids,D1Tvals,D2Tids,D2Tvals,D3Tids,D3Tvals] = bern_basis_transposediff3D(N,V,VB,V0,V1,V2,V3);
 [L0ids,L0vals,ELids,ELvals] = bern_basis_lift3D(N,V,VB,r,s,t);
 
 %write out the BB operators
@@ -120,6 +121,12 @@ writeIntMatrix(fid, D1ids, 'Bernstein-Bezier sparse D1 differentiation ids');
 writeIntMatrix(fid, D2ids, 'Bernstein-Bezier sparse D2 differentiation ids');
 writeIntMatrix(fid, D3ids, 'Bernstein-Bezier sparse D3 differentiation ids');
 writeFloatMatrix(fid, D0vals, 'Bernstein-Bezier sparse D differentiation values');
+
+writeIntMatrix(fid, D0Tids, 'Bernstein-Bezier sparse D0T transpose differentiation ids');
+writeIntMatrix(fid, D1Tids, 'Bernstein-Bezier sparse D1T transpose differentiation ids');
+writeIntMatrix(fid, D2Tids, 'Bernstein-Bezier sparse D2T transpose differentiation ids');
+writeIntMatrix(fid, D3Tids, 'Bernstein-Bezier sparse D3T transpose differentiation ids');
+writeFloatMatrix(fid, D0Tvals, 'Bernstein-Bezier sparse DT transpose differentiation values');
 
 writeIntMatrix(fid, L0ids, 'Bernstein-Bezier L0 Matrix ids');
 writeFloatMatrix(fid, L0vals, 'Bernstein-Bezier L0 Matrix values');

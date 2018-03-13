@@ -85,6 +85,13 @@ void meshLoadReferenceNodesTet3D(mesh3D *mesh, int N){
   readIntArray   (fp, "Bernstein-Bezier sparse D2 differentiation ids", &(mesh->D2ids), &Nrows, &Ncols);  //Ncols should be 4
   readIntArray   (fp, "Bernstein-Bezier sparse D3 differentiation ids", &(mesh->D3ids), &Nrows, &Ncols);  //Ncols should be 4
   readDfloatArray(fp, "Bernstein-Bezier sparse D differentiation values", &(mesh->Dvals), &Nrows, &Ncols);//Ncols should be 4
+
+  readIntArray   (fp, "Bernstein-Bezier sparse D0T transpose differentiation ids", &(mesh->D0Tids), &Nrows, &Ncols);  //Ncols should be 4
+  readIntArray   (fp, "Bernstein-Bezier sparse D1T transpose differentiation ids", &(mesh->D1Tids), &Nrows, &Ncols);  //Ncols should be 4
+  readIntArray   (fp, "Bernstein-Bezier sparse D2T transpose differentiation ids", &(mesh->D2Tids), &Nrows, &Ncols);  //Ncols should be 4
+  readIntArray   (fp, "Bernstein-Bezier sparse D3T transpose differentiation ids", &(mesh->D3Tids), &Nrows, &Ncols);  //Ncols should be 4
+  readDfloatArray(fp, "Bernstein-Bezier sparse DT transpose differentiation values", &(mesh->DTvals), &Nrows, &Ncols);//Ncols should be 4
+
   readIntArray   (fp, "Bernstein-Bezier L0 Matrix ids", &(mesh->L0ids), &Nrows, &Ncols);  
   readDfloatArray(fp, "Bernstein-Bezier L0 Matrix values", &(mesh->L0vals), &Nrows, &Ncols); //Ncols should be 7
   readIntArray   (fp, "Bernstein-Bezier EL lift ids", &(mesh->ELids), &Nrows, &Ncols);  

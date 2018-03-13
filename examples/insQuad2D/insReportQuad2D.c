@@ -1,6 +1,6 @@
-#include "ins2D.h"
+#include "insQuad2D.h"
 
-void insReport2D(ins_t *ins, int tstep, char *options){
+void insReportQuad2D(ins_t *ins, int tstep, char *options){
 
   dfloat t = (tstep+1)*ins->dt;
   
@@ -14,8 +14,7 @@ void insReport2D(ins_t *ins, int tstep, char *options){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   
   // do error stuff on host
-  insError2D(ins, t, options);
-
+  insErrorQuad2D(ins, t, options);
 
  
   if(strstr(options, "VTU")){ 
@@ -23,8 +22,10 @@ void insReport2D(ins_t *ins, int tstep, char *options){
     //insComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
     // output field files
     char fname[BUFSIZ];
-    sprintf(fname, "fooT_%04d", tstep/ins->errorStep);
-    printf("FILE = %s\n", fname);
-    insPlotVTU2D(ins, fname);
-  }
+    // sprintf(fname, "/u0/outputs/ins2D/foo_%04d_%04d.vtu",rank, tstep/ins->errorStep);
+    sprintf(fname, "foo_%04d_%04d.vtu",rank, tstep/ins->errorStep);
+
+    insPlotVTUQuad2D(ins, fname);
+  } 
 }
+

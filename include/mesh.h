@@ -163,6 +163,8 @@ typedef struct {
   dfloat *invVB1D, *invVB2D;
   int *D0ids, *D1ids, *D2ids, *D3ids; // Bernstein deriv matrix indices
   dfloat *Dvals; // Bernstein deriv matrix values
+  int *D0Tids, *D1Tids, *D2Tids, *D3Tids; // Bernstein transpose deriv matrix indices
+  dfloat *DTvals; // Bernstein transpose deriv matrix values
   dfloat *VBq, *PBq; // cubature interpolation/projection matrices
   int *L0ids; // L0 matrix ids
   dfloat *L0vals; // L0 values (L0 tridiagonal in 2D)

@@ -1,0 +1,174 @@
+// Compute Gradient in Strong Form
+kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
+                                      const dfloat * restrict vgeo,
+                                      const dfloat * restrict D,
+                                      const dlong offset,
+                                      const dfloat * restrict U,
+                                      const dfloat * restrict V,
+                                            dfloat * restrict divU){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+    shared dfloat s_Ur[p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_Us[p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_D[p_Nq][p_Nq];
+
+    for(dlong es=0;es<p_NblockV;++es;inner2){   
+      for(int j=0;j<p_Nq;++j;inner1){ 
+        for(int i=0;i<p_Nq;++i;inner0){    
+          const dlong e = eo+es; // element in block
+          if(e<Nelements){ 
+            const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+            const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+            const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+            const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+            const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+
+            const dlong id = (e+offset)*p_Np + j*p_Nq+i;
+            
+            const dfloat Un = U[id];
+            const dfloat Vn = V[id];
+
+            s_Ur[es][j][i] = drdx*Un+drdy*Vn;
+            s_Us[es][j][i] = dsdx*Un+dsdy*Vn;
+
+            if (es==0)
+              s_D[j][i] = D[j*p_Nq+i];
+          }
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(dlong es=0;es<p_NblockV;++es;inner2){ 
+      for(int j=0;j<p_Nq;++j;inner1){ 
+        for(int i=0;i<p_Nq;++i;inner0){  
+          const dlong e = eo+es; 
+          if(e<Nelements){ 
+            
+            dfloat dUdr  = 0.f, dUds  = 0.f;
+
+            occaUnroll(p_Nq)
+              for(int n=0;n<p_Nq;++n){
+                const dfloat Dr = s_D[n][i];
+                const dfloat Ds = s_D[n][j];
+
+                dUdr += Dr*s_Ur[es][j][n]
+                dUds += Ds*s_Us[es][n][i]
+              }
+
+            const dlong id = e*p_Np + j*p_Nq + i;
+            divU[id] = dUdr + dUds;
+          }
+        }
+      }
+    }
+  }  
+}
+
+
+#define surfaceTerms(sk,face,i, j)                                      \
+  {                                                                     \
+  const dlong idM = vmapM[sk]+p_Np*offset;                              \
+  const dlong idP = vmapP[sk]+p_Np*offset;                              \
+                                                                        \
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_IJID];                         \
+                                                                        \
+  const dfloat uM = U[idM], vM = V[idM];                                \
+        dfloat uP = U[idP], vP = V[idP];                                \
+                                                                        \
+  int bc = EToB[face+p_Nfaces*e];                                       \
+  if(bc>0) {                                                            \
+    idM = vmapM[sk];                                                    \
+    insDivergenceBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM,&uP, &vP);\
+    uP = 2.f*uP-uM;                                                     \
+    vP = 2.f*vP-vM;                                                     \
+  }                                                                     \
+                                                                        \
+  const dfloat sc = invWJ * WsJ;                                        \
+  s_fluxU[es][n] = 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM));                   \
+  }
+
+kernel void insDivergenceSurfaceQuad2D(const dlong Nelements,
+                                       const dfloat * restrict sgeo,
+                                       const dlong  * restrict vmapM,
+                                       const dlong  * restrict vmapP,
+                                       const int    * restrict EToB,
+                                       const dfloat time,
+                                       const dfloat * restrict x,
+                                       const dfloat * restrict y,
+                                       const int offset,
+                                       const dfloat * restrict U,
+                                       const dfloat * restrict V,
+                                             dfloat * restrict divU){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+    // shared storage for flux terms
+    shared dfloat s_fluxU[p_NblockS][p_Nq][p_Nq];
+
+    for(int j=0;j<p_Nq;++j){
+      for(int es=0;es<p_NblockS;++es;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          s_fluxU[es][j][i] = 0.;
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // for all face nodes of all elements
+    // face 0 & 2
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
+          dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
+
+          surfaceTerms(sk0,0,i,0     );
+          surfaceTerms(sk2,2,i,p_Nq-1);
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // face 1 & 3
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int j=0;j<p_Nq;++j;inner0){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+          dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+
+          surfaceTerms(sk1,1,p_Nq-1,j);
+          surfaceTerms(sk3,3,0     ,j);
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // for each node in the element
+    for(int j=0;j<p_Nq;++j){
+      for(int es=0;es<p_NblockS;++es;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          const dlong e = eo + es;
+          if(e<Nelements){
+            if(n<p_Np){
+              const dlong id = e*p_Np + j*p_Nq + i;
+              divU[id] += s_fluxU[es][j][i];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
