@@ -36,7 +36,7 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
         for(int i=0;i<p_Nq;++i;inner0){  
           const dlong e = eo+es; 
           if(e<Nelements){ 
-            const dlong gid = (e+offset)*p_Np*p_Nvgeo+ j*p_Nq +i;
+            const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
             const dfloat drdx = vgeo[gid + p_RXID*p_Np];
             const dfloat drdy = vgeo[gid + p_RYID*p_Np];
             const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
@@ -85,8 +85,8 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
                                                                         \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_IJID];                         \
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
                                                                         \
   const dfloat  PM = P[idM];                                            \
         dfloat  PP = P[idP];                                            \
@@ -101,7 +101,7 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
     PP = 2.f*PP - PM;                                                   \
   }                                                                     \
                                                                         \
-  const dfloat sc = invWJ * WsJ;                                        \
+  const dfloat sc = invWJ * sJ;                                         \
   s_fluxPx[es][j][i]  = sc*(.5f*nx*(PP-PM));                               \
   s_fluxPy[es][j][i]  = sc*(.5f*ny*(PP-PM));                               \
   }

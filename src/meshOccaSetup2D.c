@@ -400,8 +400,9 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_NYID", NYID);
   kernelInfo.addDefine("p_SJID", SJID);
   kernelInfo.addDefine("p_IJID", IJID);
-  kernelInfo.addDefine("p_WSJID", WSJID);
   kernelInfo.addDefine("p_IHID", IHID);
+  kernelInfo.addDefine("p_WIJID", WIJID);
+  kernelInfo.addDefine("p_WSJID", WSJID);
 
   kernelInfo.addDefine("p_max_EL_nnz", mesh->max_EL_nnz); // for Bernstein Bezier lift
 

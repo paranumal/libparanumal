@@ -9,8 +9,8 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
-    shared dfloat s_Ur[p_NblockV][p_Nq][p_Nq];
-    shared dfloat s_Us[p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_U[p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_V[p_NblockV][p_Nq][p_Nq];
     shared dfloat s_D[p_Nq][p_Nq];
 
     for(dlong es=0;es<p_NblockV;++es;inner2){   
@@ -18,20 +18,11 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
         for(int i=0;i<p_Nq;++i;inner0){    
           const dlong e = eo+es; // element in block
           if(e<Nelements){ 
-            const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
-            const dfloat drdx = vgeo[gid + p_RXID*p_Np];
-            const dfloat drdy = vgeo[gid + p_RYID*p_Np];
-            const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
-            const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
-
             const dlong id = (e+offset)*p_Np + j*p_Nq+i;
             
-            const dfloat Un = U[id];
-            const dfloat Vn = V[id];
-
-            s_Ur[es][j][i] = drdx*Un+drdy*Vn;
-            s_Us[es][j][i] = dsdx*Un+dsdy*Vn;
-
+            s_U[es][j][i] = U[id];
+            s_V[es][j][i] = V[id];
+      
             if (es==0)
               s_D[j][i] = D[j*p_Nq+i];
           }
@@ -47,20 +38,31 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
         for(int i=0;i<p_Nq;++i;inner0){  
           const dlong e = eo+es; 
           if(e<Nelements){ 
-            
+            const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+            const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+            const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+            const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+            const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+
             dfloat dUdr  = 0.f, dUds  = 0.f;
+            dfloat dVdr  = 0.f, dVds  = 0.f;
 
             occaUnroll(p_Nq)
               for(int n=0;n<p_Nq;++n){
                 const dfloat Dr = s_D[i][n];
                 const dfloat Ds = s_D[j][n];
 
-                dUdr += Dr*s_Ur[es][j][n];
-                dUds += Ds*s_Us[es][n][i];
+                dUdr += Dr*s_U[es][j][n];
+                dUds += Ds*s_U[es][n][i];
+                dVdr += Dr*s_V[es][j][n];
+                dVds += Ds*s_V[es][n][i];
               }
 
             const dlong id = e*p_Np + j*p_Nq + i;
-            divU[id] = dUdr + dUds;
+            const dfloat dUdx = drdx*dUdr + dsdx*dUds;
+            const dfloat dVdy = drdy*dVdr + dsdy*dVds;
+
+            divU[id] = dUdx + dVdy;
           }
         }
       }
@@ -76,8 +78,8 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
                                                                         \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_IJID];                         \
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
                                                                         \
   const dfloat uM = U[idM], vM = V[idM];                                \
         dfloat uP = U[idP], vP = V[idP];                                \
@@ -90,7 +92,7 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
     vP = 2.f*vP-vM;                                                     \
   }                                                                     \
                                                                         \
-  const dfloat sc = invWJ * WsJ;                                        \
+  const dfloat sc = invWJ * sJ;                                         \
   s_fluxU[es][j][i] = 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM));                \
   }
 

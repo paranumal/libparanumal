@@ -293,7 +293,7 @@ kernel void insPoissonRhsBCQuad2D(const dlong Nelements,
             tmp += s_D[n][i]*s_p[j][n];
           }
 
-        r_rhsp[j] += tmp;
+        r_rhsp[j] = tmp;
       }
     }
 
