@@ -32,11 +32,11 @@ int main(int argc, char **argv){
   // default to 512 elements if no arg is given
   int E = (argc>=2) ? atoi(argv[1]):512;
   int p_N = (argc>=3) ? atoi(argv[2]):5;
-  int p_Ne = (argc>=5) ? atoi(argv[4]):1;
-  int p_Nb = (argc>=6) ? atoi(argv[5]):1;
+  int p_Ne = (argc>=4) ? atoi(argv[3]):1;
+  int p_Nb = (argc>=5) ? atoi(argv[4]):1;
 
-  int kMin = (argc>=7) ? atoi(argv[6]):0;
-  int kMax = (argc>=8) ? atoi(argv[7]):8;
+  int kMin = (argc>=6) ? atoi(argv[5]):0;
+  int kMax = (argc>=7) ? atoi(argv[6]):8;
 
 
   int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
@@ -137,27 +137,27 @@ int main(int argc, char **argv){
   for (int i =kMin; i<kMax+1; i++){
     printf("compiling preassembled matrix Tet kernel %d ...\n", i);
     sprintf(buf, "ellipticPartialPreassembledAxTet3D_Ref%d", i); 
-    Tet3Dkernel[i] = device.buildKernelFromSource("ellipticAxTet3D.okl", buf, kernelInfo);
+    Tet3Dkernel[i] = device.buildKernelFromSource("ellipticPreassembledAxTet3D.okl", buf, kernelInfo);
   }
   int elementOffset = 0;
   occa::initTimer(device);
-
+ occa::streamTag startTag, stopTag;
+ startTag = device.tagStream();
   // queue Ax kernels
   for (int i =kMin;i<=kMax; i++){
     datafloat lambda = 1.;
-    occa::streamTag startTag = device.tagStream();
     // launch kernel
     for(it=0;it<Niter;++it){
       Tet3Dkernel[i](E,
           elementOffset,
           o_ggeo,
           o_SS,
-          o_q,       
+          o_q,
           o_Aq);
-    }
-  }
+    }//for
+  
 
-  occa::streamTag stopTag = device.tagStream();
+  stopTag = device.tagStream();
   double elapsed = device.timeBetween(startTag, stopTag);
   printf("\n\nKERNEL %d  ================================================== \n\n", i);
 

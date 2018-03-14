@@ -77,7 +77,7 @@ void ellipticPartialPreassembledAxTet3D_Ref1(const int Nelements,
 	  // 2 flops per 2 loads => max throughput of 1.6 TFLOPS/s
 	  occaUnroll(p_Np)
 	    for (int m=0;m<p_Np;m++) {
-	      r_Aq += SSe[n+m*p_Np]*s_q[m];
+	      r_Aq += SSe[n+m*p_Np]*s_q[b][m];
 	    }
 	  
 	  const int id = n + (element+elementOffset)*p_Np;
@@ -87,3 +87,4 @@ void ellipticPartialPreassembledAxTet3D_Ref1(const int Nelements,
     }
   }
 }
+
