@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda.h>
@@ -7,7 +6,7 @@
 #include <curand.h>
 
 
-#if 1
+#if 0
 #define dfloat double
 #define dfloatString "double"
 #else
@@ -360,7 +359,7 @@ int main(int argc, char **argv){
   cudaEventElapsedTime(&elapsedCublas, start, stop);
   elapsedCublas /= (1000.*Niter);
 
-  printf("DOFSvGFLOPSvGNODES %d  %17.15f %17.15f \n", p_Np*E,  gflops*E/(elapsedCublas*1.e9), p_Np*E/(elapsedCublas*1.e9)); 
+  printf("[ DDD %d  %17.15f %17.15f ]\n", p_Np*E,  gflops*E/(elapsedCublas*1.e9), p_Np*E/(elapsedCublas*1.e9)); 
 
 
   //full version

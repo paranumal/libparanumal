@@ -3,7 +3,7 @@
 #include "occa.hpp"
 #include <math.h>
 
-#if 0
+#if 1
 #define datafloat double
 #define datafloatString "double"
 #else
@@ -341,7 +341,12 @@ int main(int argc, char **argv){
       //adjust GFLOPS for Ref2 and Ref3
       occa::streamTag stopTag = device.tagStream();
       double elapsed = device.timeBetween(startTag, stopTag);
+<<<<<<< HEAD
+
+ if (i>5){
+=======
       if (i>5){
+>>>>>>> 9969b2dadca2a1aeeb06960203d30f8d145d3aab
         // old: gflops = p_Np*20*(1+p_Np)
         gflops = p_Np*(p_Np*14 +14);
 	gflops *=Niter;      
@@ -352,8 +357,15 @@ int main(int argc, char **argv){
       printf("OCCA elapsed time = %g\n", elapsed);
       timeData[i] = elapsed/Niter;
       printf("number of flops = %f time = %f \n", gflops, elapsed);
+<<<<<<< HEAD
+printf("DOFS %lu  %17.17f \n",p_Np*E,  elapsed);    
+
+      results3D[i] =E*gflops/(elapsed*1000*1000*1000); 
+//elapsed/Niter;
+=======
       results3D[i] =E*gflops/(elapsed*1.e9); 
       //elapsed/Niter;
+>>>>>>> 9969b2dadca2a1aeeb06960203d30f8d145d3aab
       //
       printf("OCCA: estimated time = %17.15f gflops = %17.17f\n", results3D[i], E*gflops/(elapsed*1.e9));
       printf("GFL %17.17f \n",E*gflops/(elapsed*1.e9) );      
@@ -455,7 +467,7 @@ int main(int argc, char **argv){
   printf("]\n\n");
 
 
-  printf("\n\nResults(%d,%d,%d,:)  = [", p_N, p_Ne, p_Nb);
+  printf("\n\nResults(%d,%d,%d,:)  = [", p_N,p_Ne,p_Nb);
   for (int k=kMin; k<=kMax; k++){
 
     printf(" %16.17f ", results3D[k]);
@@ -463,14 +475,6 @@ int main(int argc, char **argv){
 
   printf("];\n\n");
 
-  printf("\n\nDOFSvGFLOPSvGDOFS(%d,:)  = [", p_N);
-  for (int k=kMin; k<=kMax; k++){
-    printf(" %d %16.17f %16.17f ", p_Np*E, results3D[k], (p_Np*E/1.e9)/timeData[k]);
-  }
-
-  printf("];\n\n");
-
-  
   printf("\n\ntimeData(:, %d) = [",p_N);
   for (int k=kMin; k<=kMax; k++){
 
