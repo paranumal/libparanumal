@@ -188,8 +188,8 @@ kernel void ellipticPartialAxQuad2D(const dlong Nelements,
     squareThreads{
       dfloat tmp = 0.f;
 
-      occaUnroll(p_Nq) {
-        for(int n=0;n<p_Nq;++n)
+      occaUnroll(p_Nq)
+        for(int n=0;n<p_Nq;++n){
           tmp += s_D[n][j]*s_q[n][i];
       }
 
