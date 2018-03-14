@@ -141,7 +141,6 @@ void insPoissonStepQuad2D(ins_t *ins, int tstep, char   * options){
     ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                   pressure_solve,
                                   mesh->o_vmapM,
-                                  mesh->o_vmapP,
                                   ins->tau,
                                   t,
                                   ins->dt,

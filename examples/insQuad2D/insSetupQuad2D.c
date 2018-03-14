@@ -23,8 +23,7 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
 
   // use rank to choose DEVICE
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", deviceID);
-  //  sprintf(deviceConfig, "mode = CUDA, deviceID = 0");
-  //printf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
+  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");  
 
@@ -163,7 +162,7 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   umax = sqrt(umax);
 
  
-  dfloat cfl = 1.0; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.1; // pretty good estimate (at least for subcycling LSERK4)
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt     = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -197,9 +196,9 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   if(strstr(options,"SUBCYCLING"))
     // ins->errorStep =100*32/ins->Nsubsteps;
     //ins->errorStep =800/ins->Nsubsteps;
-    ins->errorStep = 100;
+    ins->errorStep = 1;
   else
-    ins->errorStep = 800;
+    ins->errorStep = 1;
 
   if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 

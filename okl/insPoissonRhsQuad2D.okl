@@ -8,8 +8,6 @@ kernel void insPoissonRhsForcingQuad2D(const dlong Nelements,
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
-    shared dfloat s_rhs[p_NblockV][p_Np];
-
     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
         const dlong e = eo+es; // element in block
@@ -18,7 +16,7 @@ kernel void insPoissonRhsForcingQuad2D(const dlong Nelements,
           const dfloat JW = vgeo[gid + p_JWID*p_Np];
 
           const dlong id = e*p_Np+n;
-          s_rhs[es][n] = -JW*g0*rhs[id]/dt;
+          rhs[id] = -JW*g0*rhs[id]/dt;
         }
       }
     }
@@ -67,12 +65,12 @@ kernel void insPoissonUpdateQuad2D(const dlong Nelements,
     }                                                                   \
   }                                                                     \
                                                                         \
-  const dfloat dq = pP;                                                 \
+  const dfloat dp = pP;                                                 \
                                                                         \
-  s_dqdx[j][i] += WsJ*nx*dq;                                            \
-  s_dqdy[j][i] += WsJ*ny*dq;                                            \
+  s_dpdx[j][i] += WsJ*nx*dp;                                            \
+  s_dpdy[j][i] += WsJ*ny*dp;                                            \
                                                                         \
-  s_rhsq[j][i] -= WsJ*(nx*dpdxP + ny*dpdyP+ tau*dq*hinv);               \
+  s_rhsp[j][i] -= WsJ*(nx*dpdxP + ny*dpdyP+ tau*dp*hinv);               \
   }
 
 // Actually solves for Pr increamnet not presssure
@@ -145,8 +143,8 @@ kernel void insPoissonRhsIpdgBCQuad2D(const dlong Nelements,
         const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
 
         // chain rule (need to scale by wei
-        const dfloat dqdx = s_dpdx[j][i];
-        const dfloat dqdy = s_dpdy[j][i];
+        const dfloat dpdx = s_dpdx[j][i];
+        const dfloat dpdy = s_dpdy[j][i];
 
         s_dpdx[j][i] = (drdx*dpdx + drdy*dpdy);
         s_dpdy[j][i] = (dsdx*dpdx + dsdy*dpdy);
@@ -179,7 +177,7 @@ kernel void insPoissonRhsIpdgBCQuad2D(const dlong Nelements,
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
   const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
                                                                         \
-  dfloat dpdxP=0.f; dpdyP=0.f; pP=0.f;                                  \
+  dfloat dpdxP=0.f, dpdyP=0.f, pP=0.f;                                  \
                                                                         \
   const int bc = mapB[idM];                                             \
   if(bc>0) {                                                            \
@@ -222,8 +220,8 @@ kernel void insPoissonRhsBCQuad2D(const dlong Nelements,
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;inner0){
-        s_q  [j][i] = 0.;
-        s_ndq[j][i] = 0.;
+        s_p  [j][i] = 0.;
+        s_ndp[j][i] = 0.;
 
         s_D[j][i] = D[j*p_Nq+i];
       }
@@ -268,8 +266,8 @@ kernel void insPoissonRhsBCQuad2D(const dlong Nelements,
         
         occaUnroll(p_Nq)
           for(int n=0; n<p_Nq; ++n){
-            pr += s_D[i][n]*s_q[j][n];
-            ps += s_D[j][n]*s_q[n][i];
+            pr += s_D[i][n]*s_p[j][n];
+            ps += s_D[j][n]*s_p[n][i];
           }
         
         r_pr[j] = pr; r_ps[j] = ps; 
@@ -322,7 +320,7 @@ kernel void insPoissonRhsBCQuad2D(const dlong Nelements,
         r_rhsp[j] += tmp;
 
         const dlong id = e*p_Np + j*p_Nq + i;
-        rhsP[id] -= r_rhsp[j] + s_ndq[j][i];
+        rhsP[id] -= r_rhsp[j] + s_ndp[j][i];
       }
     }
   }
