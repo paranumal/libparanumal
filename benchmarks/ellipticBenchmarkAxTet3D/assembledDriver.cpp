@@ -27,7 +27,7 @@ void randCalloc(occa::device &device, int sz, datafloat **pt, occa::memory &o_pt
 
 int main(int argc, char **argv){
 
-  int NKernels = 9;
+  int NKernels = 2;
 
   // default to 512 elements if no arg is given
   int E = (argc>=2) ? atoi(argv[1]):512;
@@ -36,7 +36,7 @@ int main(int argc, char **argv){
   int p_Nb = (argc>=5) ? atoi(argv[4]):1;
 
   int kMin = (argc>=6) ? atoi(argv[5]):0;
-  int kMax = (argc>=7) ? atoi(argv[6]):8;
+  int kMax = (argc>=7) ? atoi(argv[6]):1;
 
 
   int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
@@ -50,8 +50,8 @@ int main(int argc, char **argv){
   printf("Number of elements : %d\n", E);
   printf("Polynomial degree  : %d\n", p_N);
   printf("Nodes per element  : %d\n", p_Np);
-  printf("Elements per block : %d\n", p_Ne);
-  printf("Outputs per thread : %d\n", p_Nb);
+  printf("Elements per block : %d\n", p_Nb);
+  printf("Outputs per thread : %d\n", p_Ne);
   printf("Running kernels    : %d to %d \n", kMin, kMax);
   printf("==============================================================\n");
   printf("==============================================================\n");
@@ -141,130 +141,133 @@ int main(int argc, char **argv){
   }
   int elementOffset = 0;
   occa::initTimer(device);
- occa::streamTag startTag, stopTag;
- startTag = device.tagStream();
+  occa::streamTag startTag, stopTag;
+
   // queue Ax kernels
   for (int i =kMin;i<=kMax; i++){
-    datafloat lambda = 1.;
+
+    device.finish();
+    startTag = device.tagStream();
+    
     // launch kernel
     for(it=0;it<Niter;++it){
       Tet3Dkernel[i](E,
-          elementOffset,
-          o_ggeo,
-          o_SS,
-          o_q,
-          o_Aq);
+		     elementOffset,
+		     o_SS,
+		     o_q,
+		     o_Aq);
     }//for
   
 
-  stopTag = device.tagStream();
-  double elapsed = device.timeBetween(startTag, stopTag);
-  printf("\n\nKERNEL %d  ================================================== \n\n", i);
+    stopTag = device.tagStream();
+    device.finish();
+    double elapsed = device.timeBetween(startTag, stopTag);
+    printf("\n\nKERNEL %d  ================================================== \n\n", i);
 
-  printf("OCCA elapsed time = %g\n", elapsed);
-  timeData[i] = elapsed/Niter;
-  results3D[i] =E*gflops/(elapsed*1.e9); 
+    printf("OCCA elapsed time = %g\n", elapsed);
+    timeData[i] = elapsed/Niter;
+    results3D[i] =E*gflops/(elapsed*1.e9); 
 
-  printf("OCCA: estimated time = %17.15f gflops = %17.17f\n", results3D[i], E*gflops/(elapsed*1.e9));
-  printf("GFL %17.17f \n",E*gflops/(elapsed*1.e9) );      
-  // compute l2 of data
-  o_Aq.copyTo(Aq);
-  datafloat normAq = 0;
+    printf("OCCA: estimated time = %17.15f gflops = %17.17f\n", results3D[i], E*gflops/(elapsed*1.e9));
+    printf("GFL %17.17f \n",E*gflops/(elapsed*1.e9) );      
+    // compute l2 of data
+    o_Aq.copyTo(Aq);
+    datafloat normAq = 0;
 
-  for(int n=0;n<E*BSIZE;++n)
-    normAq += Aq[n]*Aq[n];
-  normAq = sqrt(normAq);
+    for(int n=0;n<E*BSIZE;++n)
+      normAq += Aq[n]*Aq[n];
+    normAq = sqrt(normAq);
 
-  printf("OCCA: normAq = %17.15lf\n", normAq);
+    printf("OCCA: normAq = %17.15lf\n", normAq);
 
-  for(int n=0;n<E*BSIZE;++n){
-    Aq[n] = 0.0f;
+    for(int n=0;n<E*BSIZE;++n){
+      Aq[n] = 0.0f;
+    }
+
+    o_Aq.copyFrom(Aq);
+
+  }//fore
+
+
+  //printf("\n\nBWfromCopy%d = [", E);
+  for (int k=kMin; k<=kMax; k++){
+    printf("==== this is kernel %d \n", k);
+    int p_Nq = k+1;
+    int p_gjNq = k+2;
+    int Niter = 10;
+    double gflops;
+    long long int Nbytes;
+
+    Nbytes =  7*p_Np*p_Np*sizeof(datafloat) + E*p_Np*p_Np*sizeof(datafloat);
+
+    Nbytes /= 2;
+
+    occa::memory o_foo = device.malloc(Nbytes);
+    occa::memory o_bah = device.malloc(Nbytes);
+
+    occa::streamTag startCopy = device.tagStream();
+    for(int it=0;it<Niter;++it){
+      o_bah.copyTo(o_foo);
+    }
+    occa::streamTag endCopy = device.tagStream();
+    double copyElapsed = device.timeBetween(startCopy, endCopy);
+    double copyBandwidth = ((Nbytes*Niter*2.)/(1.e9*copyElapsed));
+    printf("copytime = %16.17f \n", copyElapsed);
+    printf("pNp = %d p_Nfp = %d Nbytes = %d \n", p_Np, p_Nfp, Nbytes);    
+    printf("copy BW = %f gflops = %f bytes = %d \n", copyBandwidth, gflops, Nbytes);
+
+    roofline[k] = (copyBandwidth*gflops*E)/(2.*Nbytes);
+
+    o_foo.free();
+    o_bah.free();
+
   }
 
-  o_Aq.copyFrom(Aq);
+  //printf("];\n\n");
 
-}//fore
+  printf("\n\nROOFLINE(%d,%d,%d,:)  = [", p_N,p_Ne,p_Nb);
+  for (int k=kMin; k<=kMax; k++){
 
-
-//printf("\n\nBWfromCopy%d = [", E);
-for (int k=kMin; k<=kMax; k++){
-  printf("==== this is kernel %d \n", k);
-  int p_Nq = k+1;
-  int p_gjNq = k+2;
-  int Niter = 10;
-  double gflops;
-  long long int Nbytes;
-
-  Nbytes =  7*p_Np*p_Np*sizeof(datafloat) + E*p_Np*p_Np*sizeof(datafloat);
-
-  Nbytes /= 2;
-
-  occa::memory o_foo = device.malloc(Nbytes);
-  occa::memory o_bah = device.malloc(Nbytes);
-
-  occa::streamTag startCopy = device.tagStream();
-  for(int it=0;it<Niter;++it){
-    o_bah.copyTo(o_foo);
+    printf(" %16.17f ", roofline[k]);
   }
-  occa::streamTag endCopy = device.tagStream();
-  double copyElapsed = device.timeBetween(startCopy, endCopy);
-  double copyBandwidth = ((Nbytes*Niter*2.)/(1.e9*copyElapsed));
-  printf("copytime = %16.17f \n", copyElapsed);
-  printf("pNp = %d p_Nfp = %d Nbytes = %d \n", p_Np, p_Nfp, Nbytes);    
-  printf("copy BW = %f gflops = %f bytes = %d \n", copyBandwidth, gflops, Nbytes);
 
-  roofline[k] = (copyBandwidth*gflops*E)/(2.*Nbytes);
-
-  o_foo.free();
-  o_bah.free();
-
-}
-
-//printf("];\n\n");
-
-printf("\n\nROOFLINE(%d,%d,%d,:)  = [", p_N,p_Ne,p_Nb);
-for (int k=kMin; k<=kMax; k++){
-
-  printf(" %16.17f ", roofline[k]);
-}
-
-printf("]\n\n");
+  printf("]\n\n");
 
 
-printf("\n\nResults(%d,%d,%d,:)  = [", p_N, p_Ne, p_Nb);
-for (int k=kMin; k<=kMax; k++){
+  printf("\n\nResults(%d,%d,%d,:)  = [", p_N, p_Ne, p_Nb);
+  for (int k=kMin; k<=kMax; k++){
 
-  printf(" %16.17f ", results3D[k]);
-}
+    printf(" %16.17f ", results3D[k]);
+  }
 
-printf("];\n\n");
+  printf("];\n\n");
 
-printf("\n\nDOFSvGFLOPSvGDOFS(%d,:)  = [", p_N);
-for (int k=kMin; k<=kMax; k++){
-  printf(" %d %16.17f %16.17f ", p_Np*E, results3D[k], (p_Np*E/1.e9)/timeData[k]);
-}
+  printf("\n\nDOFSvGFLOPSvGDOFS(%d,:)  = [", p_N);
+  for (int k=kMin; k<=kMax; k++){
+    printf(" %d %16.17f %16.17f ", p_Np*E, results3D[k], (p_Np*E/1.e9)/timeData[k]);
+  }
 
-printf("];\n\n");
-
-
-printf("\n\ntimeData(:, %d) = [",p_N);
-for (int k=kMin; k<=kMax; k++){
-
-  printf(" %16.17f ", timeData[k]);
-}
-
-printf("];\n\n");
-
-printf("\n\n giganodes(%d,%d,%d,:)  = [", p_N,p_Ne,p_Nb);
-for (int k=kMin; k<=kMax; k++){
-
-  printf(" %16.17f ", (p_Np*E/1.e9)/timeData[k]);
-}
-
-printf("];\n\n");
+  printf("];\n\n");
 
 
-exit(0);
-return 0;
+  printf("\n\ntimeData(:, %d) = [",p_N);
+  for (int k=kMin; k<=kMax; k++){
+
+    printf(" %16.17f ", timeData[k]);
+  }
+
+  printf("];\n\n");
+
+  printf("\n\n giganodes(%d,%d,%d,:)  = [", p_N,p_Ne,p_Nb);
+  for (int k=kMin; k<=kMax; k++){
+
+    printf(" %16.17f ", (p_Np*E/1.e9)/timeData[k]);
+  }
+
+  printf("];\n\n");
+
+
+  exit(0);
+  return 0;
 
 }

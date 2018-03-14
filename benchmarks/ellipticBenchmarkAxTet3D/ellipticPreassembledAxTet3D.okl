@@ -1,7 +1,6 @@
 // v0: basic
 void ellipticPartialPreassembledAxTet3D_Ref0(const int Nelements,
 					     const int elementOffset,
-					     const datafloat * restrict ggeo,
 					     const datafloat * restrict SS,
 					     const datafloat  * restrict q,
 					     datafloat * restrict Sq){
@@ -38,7 +37,6 @@ void ellipticPartialPreassembledAxTet3D_Ref0(const int Nelements,
 // v1: SIMD cramming
 void ellipticPartialPreassembledAxTet3D_Ref1(const int Nelements,
 					     const int elementOffset,
-					     const datafloat * restrict ggeo,
 					     const datafloat * restrict SS,
 					     const datafloat  * restrict q,
 					     datafloat * restrict Sq){
@@ -87,4 +85,59 @@ void ellipticPartialPreassembledAxTet3D_Ref1(const int Nelements,
     }
   }
 }
+
+
+// v2: adjust matrix access for SIMD cramming
+void ellipticPartialPreassembledAxTet3D_Ref2(const int Nelements,
+					     const int elementOffset,
+					     const datafloat * restrict SS,
+					     const datafloat  * restrict q,
+					     datafloat * restrict Sq){
+  
+  for(int eo=0;eo<Nelements;eo+=p_Nb;outer0){
+    
+    shared datafloat s_q[p_Nb][p_Np];
+
+    // prefetch
+    for(int b=0;b<p_Nb;++b;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+	
+	const int element = eo + b;
+	
+	if(element<Nelements){
+	  s_q[b][n] = q[n+element*p_Np];
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+    
+    
+    for(int b=0;b<p_Nb;++b;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+	
+	const int element = eo + b;
+	
+	if(element<Nelements){
+
+	  const datafloat * restrict SSeb = SS + eo*p_Np*p_Np + b*p_Np;
+	  
+	  // accumulator
+	  datafloat r_Aq = 0.;
+	
+	  // 2 flops per 2 loads => max throughput of 1.6 TFLOPS/s
+	  occaUnroll(p_Np)
+	    for (int m=0;m<p_Np;m++) {
+	      r_Aq += SSeb[n + m*p_Nb*p_Np]*s_q[b][m]; // notice the grouping of columns
+	    }
+	  
+	  const int id = n + (element+elementOffset)*p_Np;
+	  Sq[id] = r_Aq;
+	}
+      }
+    }
+  }
+}
+
+
 
