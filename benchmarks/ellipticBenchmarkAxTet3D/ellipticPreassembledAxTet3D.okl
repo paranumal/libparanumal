@@ -17,7 +17,7 @@ void ellipticPartialPreassembledAxTet3D_Ref0(const int Nelements,
     barrier(localMemFence);
 
     for(int n=0;n<p_Np;++n;inner0){
-      const datafloat * restrict SSe = SS + (e+elementOffset)*p_Np*p_Np;
+      const datafloat * restrict SSe = SS + (e+elementOffset)*(long long int)(p_Np*p_Np);
       
       // accumulator
       datafloat r_Aq = 0.;
@@ -67,7 +67,7 @@ void ellipticPartialPreassembledAxTet3D_Ref1(const int Nelements,
 	
 	if(element<Nelements){
 	  
-	  const datafloat * restrict SSe = SS + (element+elementOffset)*p_Np*p_Np;
+	  const datafloat * restrict SSe = SS + (element+elementOffset)*(long long int)(p_Np*p_Np);
 	  
 	  // accumulator
 	  datafloat r_Aq = 0.;
@@ -120,7 +120,7 @@ void ellipticPartialPreassembledAxTet3D_Ref2(const int Nelements,
 	
 	if(element<Nelements){
 
-	  const datafloat * restrict SSeb = SS + eo*p_Np*p_Np + b*p_Np;
+	  const datafloat * restrict SSeb = SS + (eo*p_Np+b)*(long long int)p_Np;
 	  
 	  // accumulator
 	  datafloat r_Aq = 0.;
