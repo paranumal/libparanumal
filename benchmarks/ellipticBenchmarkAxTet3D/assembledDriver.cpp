@@ -3,7 +3,7 @@
 #include "occa.hpp"
 #include <math.h>
 
-#if 0
+#if 1
 #define datafloat double
 #define datafloatString "double"
 #else
