@@ -14,7 +14,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   // SET SOLVER PARAMETERS
   mesh->Nfields = 6;
   
-  mesh->errorStep = 1; 
+  mesh->errorStep = 20; 
 
   dfloat RE[9];  RE[0] = 100;  RE[1] = 250; RE[2] = 500; RE[3] = 750;
                  RE[4] = 1000;  RE[5] = 1250; RE[6] = 1500; RE[7] = 1750; RE[8] = 2000;
@@ -96,7 +96,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
 
   // SET STABLE TIME STEP SIZE
-  dfloat cfl = 0.2; 
+  dfloat cfl = 0.15; 
   if(strstr(options,"LSERK") || strstr(options,"SARK") || strstr(options,"LSIMEX") )
     cfl          = 0.75; 
 

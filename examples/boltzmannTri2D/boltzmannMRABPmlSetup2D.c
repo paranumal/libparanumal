@@ -3,8 +3,8 @@
 void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
 
   //constant pml absorption coefficient
-  dfloat xsigma  = 80.0;
-  dfloat ysigma  = 80.0;
+  dfloat xsigma  = 300; //mesh->Ntscale; //150.0;
+  dfloat ysigma  = 300; //mesh->Ntscale; //150.0;
   // dfloat xsigma  = 100.*mesh->sqrtRT;
   // dfloat ysigma  = 100.*mesh->sqrtRT;
   //dfloat cxsigma = 200, cysigma = 200;
