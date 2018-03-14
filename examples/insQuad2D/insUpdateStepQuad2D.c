@@ -30,10 +30,11 @@ void insUpdateStepQuad2D(ins_t *ins, int tstep, char   * options){
   
   occaTimerTic(mesh->device,"GradientVolume");
   // Compute Volume Contribution of gradient of pressure gradient
+  dlong ioffset = 0;
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_D,
-                            0,  //no offset
+                            ioffset,  //no offset
                             ins->o_PI,
                             ins->o_PIx,
                             ins->o_PIy);
@@ -104,13 +105,13 @@ void insUpdateStepQuad2D(ins_t *ins, int tstep, char   * options){
 
   ins->index = (ins->index+1)%3; //hard coded for 3 stages
 
-  ins->o_PI.copyTo(ins->o_P,mesh->Np*mesh->Nelements*sizeof(dfloat),
-                              ins->index*mesh->Np*mesh->Nelements*sizeof(dfloat),0);
-  ins->o_PIx.copyTo(ins->o_U,mesh->Np*mesh->Nelements*sizeof(dfloat),
-                              ins->index*mesh->Np*mesh->Nelements*sizeof(dfloat),0);
-  ins->o_PIy.copyTo(ins->o_V,mesh->Np*mesh->Nelements*sizeof(dfloat),
-                              ins->index*mesh->Np*mesh->Nelements*sizeof(dfloat),0);
+  // ins->o_PI.copyTo(ins->o_P,mesh->Np*mesh->Nelements*sizeof(dfloat),
+  //                             ins->index*mesh->Np*mesh->Nelements*sizeof(dfloat),0);
+  // ins->o_PIx.copyTo(ins->o_U,mesh->Np*mesh->Nelements*sizeof(dfloat),
+  //                             ins->index*mesh->Np*mesh->Nelements*sizeof(dfloat),0);
+  // ins->o_PIy.copyTo(ins->o_V,mesh->Np*mesh->Nelements*sizeof(dfloat),
+  //                             ins->index*mesh->Np*mesh->Nelements*sizeof(dfloat),0);
   
-    insReportQuad2D(ins, tstep+1,options);
-    exit(1);
+  //   insReportQuad2D(ins, tstep+1,options);
+  //   exit(1);
 }

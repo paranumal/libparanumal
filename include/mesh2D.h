@@ -145,7 +145,8 @@ dfloat meshFactorial(int n);
 #define NYID 1  
 #define SJID 2  
 #define IJID 3  
-#define WSJID 4
-#define IHID 5
+#define IHID 4
+#define WSJID 5
+#define WIJID 6
 #endif
 
