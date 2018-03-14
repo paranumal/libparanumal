@@ -55,7 +55,7 @@ void insUpdateStepQuad2D(ins_t *ins, int tstep, char   * options){
     const int solverid =1 ;
 
     occaTimerTic(mesh->device,"GradientSurface");
-    // Compute Surface Contribution of gradient of pressure increment
+    // // Compute Surface Contribution of gradient of pressure increment
     ins->gradientSurfaceKernel(mesh->Nelements,
                                 mesh->o_sgeo,
                                 mesh->o_vmapM,
@@ -79,18 +79,17 @@ void insUpdateStepQuad2D(ins_t *ins, int tstep, char   * options){
     occaTimerToc(mesh->device,"GradientSurface");
   }
 
-  
   // U <= U - dt/g0 * d(pressure increment)/dx
   // V <= V - dt/g0 * d(pressure increment)/dy
 
-  occaTimerTic(mesh->device,"UpdateUpdate");
+  // occaTimerTic(mesh->device,"UpdateUpdate");
   ins->updateUpdateKernel(mesh->Nelements,
                               ins->dt,
                               ins->ig0,
                               ins->a0,
                               ins->a1,
                               ins->a2,
-			                        ins->c0,
+                              ins->c0,
                               ins->c1,
                               ins->c2,
                               ins->o_PI,
@@ -104,4 +103,14 @@ void insUpdateStepQuad2D(ins_t *ins, int tstep, char   * options){
   occaTimerToc(mesh->device,"UpdateUpdate");
 
   ins->index = (ins->index+1)%3; //hard coded for 3 stages
+
+  ins->o_PI.copyTo(ins->o_P,mesh->Np*mesh->Nelements*sizeof(dfloat),
+                              ins->index*mesh->Np*mesh->Nelements*sizeof(dfloat),0);
+  ins->o_PIx.copyTo(ins->o_U,mesh->Np*mesh->Nelements*sizeof(dfloat),
+                              ins->index*mesh->Np*mesh->Nelements*sizeof(dfloat),0);
+  ins->o_PIy.copyTo(ins->o_V,mesh->Np*mesh->Nelements*sizeof(dfloat),
+                              ins->index*mesh->Np*mesh->Nelements*sizeof(dfloat),0);
+  
+    insReportQuad2D(ins, tstep+1,options);
+    exit(1);
 }

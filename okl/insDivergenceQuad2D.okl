@@ -52,11 +52,11 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
 
             occaUnroll(p_Nq)
               for(int n=0;n<p_Nq;++n){
-                const dfloat Dr = s_D[n][i];
-                const dfloat Ds = s_D[n][j];
+                const dfloat Dr = s_D[i][n];
+                const dfloat Ds = s_D[j][n];
 
-                dUdr += Dr*s_Ur[es][j][n]
-                dUds += Ds*s_Us[es][n][i]
+                dUdr += Dr*s_Ur[es][j][n];
+                dUds += Ds*s_Us[es][n][i];
               }
 
             const dlong id = e*p_Np + j*p_Nq + i;
@@ -84,14 +84,14 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
                                                                         \
   int bc = EToB[face+p_Nfaces*e];                                       \
   if(bc>0) {                                                            \
-    idM = vmapM[sk];                                                    \
-    insDivergenceBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM,&uP, &vP);\
+    const dlong idm = vmapM[sk];                                                    \
+    insDivergenceBoundaryConditions2D(bc, time, x[idm], y[idm], nx, ny, uM, vM,&uP, &vP);\
     uP = 2.f*uP-uM;                                                     \
     vP = 2.f*vP-vM;                                                     \
   }                                                                     \
                                                                         \
   const dfloat sc = invWJ * WsJ;                                        \
-  s_fluxU[es][n] = 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM));                   \
+  s_fluxU[es][j][i] = 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM));                \
   }
 
 kernel void insDivergenceSurfaceQuad2D(const dlong Nelements,
@@ -161,10 +161,8 @@ kernel void insDivergenceSurfaceQuad2D(const dlong Nelements,
         for(int i=0;i<p_Nq;++i;inner0){
           const dlong e = eo + es;
           if(e<Nelements){
-            if(n<p_Np){
-              const dlong id = e*p_Np + j*p_Nq + i;
-              divU[id] += s_fluxU[es][j][i];
-            }
+            const dlong id = e*p_Np + j*p_Nq + i;
+            divU[id] += s_fluxU[es][j][i];
           }
         }
       }

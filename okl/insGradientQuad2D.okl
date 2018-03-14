@@ -12,7 +12,7 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
     shared dfloat s_P[p_NblockV][p_Nq][p_Nq];
     shared dfloat s_D[p_Nq][p_Nq];
 
-    for(dlong es=0;es<p_NblockV;++es;inner2){   
+    for(int es=0;es<p_NblockV;++es;inner2){   
       for(int j=0;j<p_Nq;++j;inner1){ 
         for(int i=0;i<p_Nq;++i;inner0){    
           const dlong e = eo+es; // element in block
@@ -31,12 +31,12 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(dlong es=0;es<p_NblockV;++es;inner2){ 
+    for(int es=0;es<p_NblockV;++es;inner2){ 
       for(int j=0;j<p_Nq;++j;inner1){ 
         for(int i=0;i<p_Nq;++i;inner0){  
           const dlong e = eo+es; 
           if(e<Nelements){ 
-            const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+            const dlong gid = (e+offset)*p_Np*p_Nvgeo+ j*p_Nq +i;
             const dfloat drdx = vgeo[gid + p_RXID*p_Np];
             const dfloat drdy = vgeo[gid + p_RYID*p_Np];
             const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
@@ -47,11 +47,11 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
 
             occaUnroll(p_Nq)
               for(int n=0;n<p_Nq;++n){
-                const dfloat Dr = s_D[n][i];
-                const dfloat Ds = s_D[n][j];
+                const dfloat Dr = s_D[i][n];
+                const dfloat Ds = s_D[j][n];
 
-                dpdr += Dr*s_P[es][j][n]
-                dpds += Ds*s_P[es][n][i]
+                dpdr += Dr*s_P[es][j][n];
+                dpds += Ds*s_P[es][n][i];
               }
 
             const dlong id = (e+offset)*p_Np + j*p_Nq + i;
@@ -64,6 +64,13 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
   }  
 }
 
+// taken from the lines if(solverID==1){ ..  }
+#if 0
+   /* dfloat PPo = 0.f; */                                              \
+   /* dfloat to  = time-dt; */                                          \
+   /* insGradientBoundaryConditions2D(bc,to, x[idM], y[idM], nx, ny, PM, &PPo); */  \
+   /* PP = PP-c0*PPo; */                                                \
+#endif
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {                                                                     \
@@ -89,18 +96,14 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
     idM = vmapM[sk];                                                    \
     insGradientBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);\
     if(solverID==1){                                                    \
-   /* dfloat PPo = 0.f; */                                              \
-   /* dfloat to  = time-dt; */                                          \
-   /* insGradientBoundaryConditions2D(bc,to, x[idM], y[idM], nx, ny, PM, &PPo); */  \
-   /* PP = PP-c0*PPo; */                                                \
        PP = PM;                                                         \
       }                                                                 \
     PP = 2.f*PP - PM;                                                   \
   }                                                                     \
                                                                         \
   const dfloat sc = invWJ * WsJ;                                        \
-  s_fluxPx[es][n]  = sc*(.5f*nx*(PP-PM));                               \
-  s_fluxPy[es][n]  = sc*(.5f*ny*(PP-PM));                               \
+  s_fluxPx[es][j][i]  = sc*(.5f*nx*(PP-PM));                               \
+  s_fluxPy[es][j][i]  = sc*(.5f*ny*(PP-PM));                               \
   }
 
 kernel void insGradientSurfaceQuad2D(const dlong Nelements,
@@ -179,12 +182,15 @@ kernel void insGradientSurfaceQuad2D(const dlong Nelements,
         for(int i=0;i<p_Nq;++i;inner0){
           const dlong e = eo + es;
           if(e<Nelements){
-            if(n<p_Np){
-              const dlong id = (e+offset)*p_Np + j*p_Nq + i;
-
-              Px[id] += s_fluxPx[es][j][i];
-              Py[id] += s_fluxPy[es][j][i];
+            dlong id;
+            if (solverID==1) { //no offset
+              id = e*p_Np + j*p_Nq + i;
+            } else {
+              id = (e+offset)*p_Np + j*p_Nq + i;
             }
+
+            Px[id] += s_fluxPx[es][j][i];
+            Py[id] += s_fluxPy[es][j][i];
           }
         }
       }

@@ -62,8 +62,8 @@ kernel void insAdvectionVolumeQuad2D(const dlong Nelements,
 
             occaUnroll(p_Nq)
               for(int n=0;n<p_Nq;++n){
-                const dfloat Dr = s_D[n][i];
-                const dfloat Ds = s_D[n][j];
+                const dfloat Dr = s_D[i][n];
+                const dfloat Ds = s_D[j][n];
 
                 nu += Dr*s_F11[es][j][n]
                      +Ds*s_F12[es][n][i]; 

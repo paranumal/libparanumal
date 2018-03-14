@@ -52,7 +52,7 @@ kernel void insHelmholtzRhsForcingQuad2D(const dlong Nelements,
             const dfloat Pym1 = Py[id1];
             const dfloat Pym2 = Py[id2];
 
-            const dlong id = e*p_Np+n;
+            const dlong id = i + j*p_Nq + e*p_Np;
             if(subcycling==0){ //no subcycling
               //U
               const dfloat Um0  = U[id0];
@@ -151,9 +151,12 @@ kernel void insHelmholtzRhsIpdgBCQuad2D(const dlong Nelements,
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;inner0){
-        s_dqdx[j][i] = 0.f;
-        s_dqdy[j][i] = 0.f;
-        s_rhsq[j][i] = 0.f;
+        s_dudx[j][i] = 0.f;
+        s_dudy[j][i] = 0.f;
+        s_dvdx[j][i] = 0.f;
+        s_dvdy[j][i] = 0.f;
+        s_rhsu[j][i] = 0.f;
+        s_rhsv[j][i] = 0.f;
 
         s_D[j][i] = D[j*p_Nq+i];
       }
@@ -168,7 +171,7 @@ kernel void insHelmholtzRhsIpdgBCQuad2D(const dlong Nelements,
       const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i ;
       const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i ;
 
-      surfaceTerms(sk0,0,i,0);
+      surfaceTerms(sk0,0,i,0     );
       surfaceTerms(sk2,2,i,p_Nq-1);
     }
 
@@ -180,7 +183,7 @@ kernel void insHelmholtzRhsIpdgBCQuad2D(const dlong Nelements,
       const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
       surfaceTerms(sk1,1,p_Nq-1,j);
-      surfaceTerms(sk3,3,0,j);
+      surfaceTerms(sk3,3,0     ,j);
     }
 
     barrier(localMemFence);
