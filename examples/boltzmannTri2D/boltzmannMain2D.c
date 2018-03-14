@@ -85,11 +85,11 @@ int main(int argc, char **argv){
 
     iint SCALE[4]; 
 
-    SCALE[0] = 1; SCALE[1] = 2;  SCALE[2] = 10;   SCALE[3] = 20;   
+    SCALE[0] = 150; SCALE[1] = 300;  SCALE[2] = 10;   SCALE[3] = 20;   
     
     for(iint i=0; i<1;i++){
 
-      //mesh->Ntscale=SCALE[i];
+      // mesh->Ntscale=SCALE[i];
       mesh->Ntscale=i;
 
       printf("Setup Boltzmann Solver: \n");

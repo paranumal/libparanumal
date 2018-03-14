@@ -96,7 +96,7 @@ void boltzmannForces2D(mesh2D *mesh, dfloat time, char * options){
 
   if(rank==0){
 		char fname[BUFSIZ];
-		sprintf(fname, "ForceData_%d_%.f_%05d_%02d.dat", mesh->N, mesh->Re, mesh->Nelements, mesh->Ntscale);
+		sprintf(fname, "ForceData_%d_%.f_%05d_%03d.dat", mesh->N, mesh->Re, mesh->Nelements, mesh->Ntscale);
 
 		FILE *fp; 
 		fp = fopen(fname, "a");  
