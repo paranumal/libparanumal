@@ -98,8 +98,8 @@ kernel void insAdvectionVolumeQuad2D(const dlong Nelements,
                                                                         \
   int bc = EToB[face+p_Nfaces*e];                                       \
   if(bc>0) {                                                            \
-    idM = vmapM[sk];                                                    \
-    insAdvectionBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP); \
+    const dlong idm = vmapM[sk];                                                    \
+    insAdvectionBoundaryConditions2D(bc, time, x[idm], y[idm], nx, ny, uM, vM, &uP, &vP); \
   }                                                                     \
                                                                         \
   dfloat unM   = occaFabs(nx*uM + ny*vM);                               \
@@ -183,12 +183,10 @@ kernel void insAdvectionSurfaceQuad2D(const dlong Nelements,
         for(int i=0;i<p_Nq;++i;inner0){
           const dlong e = eo + es;
           if(e<Nelements){
-            if(n<p_Np){
-              const dlong id = (e+offset)*p_Np + j*p_Nq + i;
+            const dlong id = (e+offset)*p_Np + j*p_Nq + i;
 
-              NU[id] += s_fluxNU[es][j][i];
-              NV[id] += s_fluxNV[es][j][i];
-            }
+            NU[id] += s_fluxNU[es][j][i];
+            NV[id] += s_fluxNV[es][j][i];
           }
         }
       }

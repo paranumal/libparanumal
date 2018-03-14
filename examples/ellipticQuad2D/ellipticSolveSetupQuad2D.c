@@ -271,11 +271,6 @@ solver_t *ellipticSolveSetupQuad2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*
                "ellipticPartialAxIpdgQuad2D",
                kernelInfo);
 
-  solver->rhsBCIpdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgQuad2D.okl",
-               "ellipticRhsBCIpdgQuad2D",
-               kernelInfo);
-
   //on-host version of gather-scatter
   int verbose = strstr(options,"VERBOSE") ? 1:0;
   mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds,verbose);
