@@ -108,6 +108,12 @@ int main(int argc, char **argv){
 
   //add boundary condition contribution to rhs
   if (strstr(options,"IPDG")) {
+    solver->rhsBCIpdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgQuad2D.okl",
+               "ellipticRhsBCIpdgQuad2D",
+               kernelInfo);
+
+
     dfloat zero = 0.f;
     solver->rhsBCIpdgKernel(mesh->Nelements,
                            mesh->o_vmapM,

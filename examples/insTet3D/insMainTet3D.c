@@ -15,14 +15,14 @@ int main(int argc, char **argv){
 
   char *velSolverOptions = 
     //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID smoother=CHEBYSHEV");
-    strdup("solver=PCG method=CONTINUOUS preconditioner=MASSMATRIX");
+    strdup("solver=PCG method=IPDG preconditioner=MASSMATRIX");
     //strdup("solver=PCG,FLEXIBLE method=CONTINUOUS preconditioner=FULLALMOND");
   char *velParAlmondOptions = 
     strdup("solver=KCYCLE smoother=CHEBYSHEV partition=DISTRIBUTED");
 
   char *prSolverOptions =
-    //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID, HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE method=CONTINUOUS preconditioner=FULLALMOND");
+    strdup("solver=PCG,FLEXIBLE method=CONTINUOUS preconditioner=MULTIGRID,ALLDEGREES smoother=DAMPEDJACOBI,CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE method=CONTINUOUS preconditioner=FULLALMOND");
 
   char *prParAlmondOptions =
     strdup("solver=KCYCLE smoother=CHEBYSHEV partition=DISTRIBUTED");
