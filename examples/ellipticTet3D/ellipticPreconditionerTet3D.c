@@ -37,7 +37,7 @@ void ellipticPreconditioner3D(solver_t *solver,
 
   } else if(strstr(options, "JACOBI")){
 
-    iint Ntotal = mesh->Np*mesh->Nelements;
+    int Ntotal = mesh->Np*mesh->Nelements;
     // Jacobi preconditioner
     occaTimerTic(mesh->device,"dotDivideKernel");
     solver->dotMultiplyKernel(Ntotal, o_r, precon->o_invDiagA, o_z);

@@ -7,10 +7,10 @@ void meshPhysicalNodesTriP2D(mesh2D *mesh){
   mesh->x = (dfloat*) calloc(mesh->Nelements*mesh->NpMax,sizeof(dfloat));
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->NpMax,sizeof(dfloat));
   
-  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
-    iint N = mesh->N[e];
+  for(int e=0;e<mesh->Nelements;++e){ /* for each element */
+    int N = mesh->N[e];
 
-    iint id = e*mesh->Nverts+0;
+    int id = e*mesh->Nverts+0;
 
     dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat xe2 = mesh->EX[id+1];
@@ -20,7 +20,7 @@ void meshPhysicalNodesTriP2D(mesh2D *mesh){
     dfloat ye2 = mesh->EY[id+1];
     dfloat ye3 = mesh->EY[id+2];
     
-    for(iint n=0;n<mesh->Np[N];++n){ /* for each node */
+    for(int n=0;n<mesh->Np[N];++n){ /* for each node */
       
       /* (r,s) coordinates of interpolation nodes*/
       dfloat rn = mesh->r[N][n]; 
@@ -33,8 +33,8 @@ void meshPhysicalNodesTriP2D(mesh2D *mesh){
   }
 
   // create halo extension for x,y arrays
-  iint totalHaloNodes = mesh->totalHaloPairs*mesh->NpMax;
-  iint localNodes     = mesh->Nelements*mesh->NpMax;
+  int totalHaloNodes = mesh->totalHaloPairs*mesh->NpMax;
+  int localNodes     = mesh->Nelements*mesh->NpMax;
 
   // temporary send buffer
   dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));

@@ -2,8 +2,8 @@
 #define DENSITY_SHIFT 0
 
 
-kernel void boltzmannLSIMEXImplicitSolve2D(const iint Nelements,
-                           const iint * restrict elementIds,
+kernel void boltzmannLSIMEXImplicitSolve2D(const int Nelements,
+                           const int * restrict elementIds,
                            const dfloat dt, 
                            const dfloat akk,
                            const dfloat  * restrict cubInterpT,
@@ -11,11 +11,11 @@ kernel void boltzmannLSIMEXImplicitSolve2D(const iint Nelements,
                            const dfloat * restrict qex,
                                  dfloat * restrict qim){
 
-for(iint es=0;es<Nelements;++es;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
+for(int es=0;es<Nelements;++es;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
 
-    const iint e = elementIds[es];
-    const iint id = p_Nfields*(e*p_Np + n);
+    const int e = elementIds[es];
+    const int id = p_Nfields*(e*p_Np + n);
 
     dfloat N4=0.0,  N5 = 0.0,  N6=0.0;
 
@@ -84,8 +84,8 @@ for(iint es=0;es<Nelements;++es;outer0){
 }
 
 
-kernel void boltzmannLSIMEXImplicitSolveCub2D(const iint Nelements,
-                          const iint * restrict elementIds,
+kernel void boltzmannLSIMEXImplicitSolveCub2D(const int Nelements,
+                          const int * restrict elementIds,
                           const dfloat dt, 
                           const dfloat akk,
                           const dfloat * restrict cubInterpT,
@@ -93,7 +93,7 @@ kernel void boltzmannLSIMEXImplicitSolveCub2D(const iint Nelements,
                           const dfloat * restrict qe,
                                 dfloat * restrict q){ 
 
-  for(iint eo=0;eo<Nelements;eo+=p_NblockCub;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockCub;outer0){  // for all elements
 
     // shared memory for q at nodes
     shared dfloat s_qE[p_NblockCub][p_Nfields][p_Np];
@@ -102,7 +102,7 @@ kernel void boltzmannLSIMEXImplicitSolveCub2D(const iint Nelements,
     shared dfloat s_cubN5[p_NblockCub][p_cubNp];
     shared dfloat s_cubN6[p_NblockCub][p_cubNp];
 
-    exclusive iint   e;  
+    exclusive int   e;  
     //
     exclusive dfloat N4c, N5c, N6c;
     //
@@ -110,14 +110,14 @@ kernel void boltzmannLSIMEXImplicitSolveCub2D(const iint Nelements,
     exclusive dfloat qex4 =0.f, qex5 = 0.f, qex6=0.f ; 
 
     // prefetch q to shared
-    for(iint es=0;es<p_NblockCub;++es;inner1){
-      for(iint n=0;n<p_maxCubNodes;++n;inner0){    
-       iint et = eo+es; // element in block
+    for(int es=0;es<p_NblockCub;++es;inner1){
+      for(int n=0;n<p_maxCubNodes;++n;inner0){    
+       int et = eo+es; // element in block
         if(et<Nelements){
         e = elementIds[et];
           if(n<p_Np){   
-            const iint id = p_Nfields*(e*p_Np + n);
-            for(iint fld=0; fld<p_Nfields;++fld){
+            const int id = p_Nfields*(e*p_Np + n);
+            for(int fld=0; fld<p_Nfields;++fld){
              s_qE[es][fld][n] = qe[id+fld];
             } 
           } 
@@ -129,17 +129,17 @@ kernel void boltzmannLSIMEXImplicitSolveCub2D(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate q to cubature
-    for(iint es=0;es<p_NblockCub;++es;inner1){
-      for(iint n=0;n<p_maxCubNodes;++n;inner0){
+    for(int es=0;es<p_NblockCub;++es;inner1){
+      for(int n=0;n<p_maxCubNodes;++n;inner0){
 
-        iint et = eo+es; // element in block
+        int et = eo+es; // element in block
         if(et<Nelements){
           if(n<p_cubNp){
             dfloat qe1=0.f , qe2 =0.f , qe3 =0.f ;
             dfloat qe4=0.f , qe5 =0.f , qe6 =0.f ;
 
             occaUnroll(p_Np)
-            for(iint m=0;m<p_Np;++m){
+            for(int m=0;m<p_Np;++m){
 
               const dfloat Icn  = cubInterpT[m*p_cubNp+n];
               //
@@ -180,9 +180,9 @@ kernel void boltzmannLSIMEXImplicitSolveCub2D(const iint Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);  
       // partial projection to nodes from cubature-sub-group
-    for(iint es=0;es<p_NblockCub;++es;inner1){
-    for(iint n=0;n<p_maxCubNodes;++n;inner0){
-      iint et = eo+es; // element in block
+    for(int es=0;es<p_NblockCub;++es;inner1){
+    for(int n=0;n<p_maxCubNodes;++n;inner0){
+      int et = eo+es; // element in block
       if(et<Nelements){
         if(n<p_cubNp){
           if(akk>0){    
@@ -220,21 +220,21 @@ kernel void boltzmannLSIMEXImplicitSolveCub2D(const iint Nelements,
     barrier(localMemFence);
       
       // partial projection to nodes from cubature-sub-group
-  for(iint es=0;es<p_NblockCub;++es;inner1){
-    for(iint n=0;n<p_maxCubNodes;++n;inner0){
-      iint et = eo+es; // element in block
+  for(int es=0;es<p_NblockCub;++es;inner1){
+    for(int n=0;n<p_maxCubNodes;++n;inner0){
+      int et = eo+es; // element in block
       if(et<Nelements){
         if(n<p_Np){
       // use temporaries for part sums for N4,N5,N6 because of exclusives
         dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
-        for(iint i=0;i<p_cubNp;++i){
+        for(int i=0;i<p_cubNp;++i){
           const dfloat Pnc  = cubProjectT[i*p_Np+n];
           N4 += Pnc*s_cubN4[es][i];
           N5 += Pnc*s_cubN5[es][i];
           N6 += Pnc*s_cubN6[es][i];
         }
 
-      const iint id = p_Nfields*(e*p_Np + n);
+      const int id = p_Nfields*(e*p_Np + n);
                   
         // do not update q1 ,q2 ,q3 
         q[id+0] =  0. ;
@@ -254,9 +254,9 @@ kernel void boltzmannLSIMEXImplicitSolveCub2D(const iint Nelements,
 
 
 
-kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
-                                                  const iint * restrict pmlElementIds,
-                                                  const iint * restrict pmlIds,
+kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const int pmlNelements,
+                                                  const int * restrict pmlElementIds,
+                                                  const int * restrict pmlIds,
                                                   const dfloat dt, 
                                                   const dfloat akk,
                                                   const dfloat * restrict cubInterpT,
@@ -271,7 +271,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
                                                         dfloat * restrict rhsqy,                                                           
                                                         dfloat * restrict qZ){ 
 
-  for(iint eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
 
     // shared memory for q at nodes
     shared dfloat s_q[p_NblockCub][p_Nfields][p_Np];
@@ -285,20 +285,20 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
     shared dfloat s_cubqx[p_NblockCub][p_Nfields][p_cubNp];
     shared dfloat s_cubqy[p_NblockCub][p_Nfields][p_cubNp];
 
-    exclusive iint   e, pmlId;  
+    exclusive int   e, pmlId;  
   
-    for(iint es=0;es<p_NblockCub;++es;inner1){
-      for(iint n=0;n<p_maxCubNodes;++n;inner0){      
-        iint et = eo+es; // element in block
+    for(int es=0;es<p_NblockCub;++es;inner1){
+      for(int n=0;n<p_maxCubNodes;++n;inner0){      
+        int et = eo+es; // element in block
         if(et<pmlNelements){
             e     = pmlElementIds[et];
             pmlId = pmlIds[et];
             
             if(n<p_Np){
-              const iint id  = p_Nfields*(e*p_Np + n);
-              const iint pid = p_Nfields*(pmlId*p_Np + n);         
+              const int id  = p_Nfields*(e*p_Np + n);
+              const int pid = p_Nfields*(pmlId*p_Np + n);         
               occaUnroll(p_Nfields)
-              for(iint fld=0; fld<p_Nfields;++fld){
+              for(int fld=0; fld<p_Nfields;++fld){
                 s_q[es][fld][n]   = q[id +fld];
                 s_qx[es][fld][n]  = pmlqx[pid+fld];
                 s_qy[es][fld][n]  = pmlqy[pid+fld];
@@ -312,9 +312,9 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
     barrier(localMemFence);
 
     // interpolate q to cubature
-    for(iint es=0;es<p_NblockCub;++es;inner1){
-      for(iint n=0;n<p_maxCubNodes;++n;inner0){
-        iint et = eo+es; // element in block
+    for(int es=0;es<p_NblockCub;++es;inner1){
+      for(int n=0;n<p_maxCubNodes;++n;inner0){
+        int et = eo+es; // element in block
         if(et<pmlNelements){
           if(n<p_cubNp){
             dfloat r_q[p_Nfields];
@@ -322,17 +322,17 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
             dfloat r_qy[p_Nfields];
 
             occaUnroll(p_Nfields)
-            for(iint fld=0; fld<p_Nfields ; fld++){
+            for(int fld=0; fld<p_Nfields ; fld++){
               r_q[fld]  = 0.f;
               r_qx[fld] = 0.f;
               r_qy[fld] = 0.f;
             }
 
             occaUnroll(p_Np)
-            for(iint m=0;m<p_Np;++m){
+            for(int m=0;m<p_Np;++m){
               const dfloat Icn  = cubInterpT[m*p_cubNp+n];   
               occaUnroll(p_Nfields)
-              for(iint fld=0; fld<p_Nfields;++fld){
+              for(int fld=0; fld<p_Nfields;++fld){
                 r_q[fld]  += Icn*s_q[es][fld][m];
                 r_qx[fld] += Icn*s_qx[es][fld][m];
                 r_qy[fld] += Icn*s_qy[es][fld][m];
@@ -347,7 +347,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
             const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
 
             occaUnroll(p_Nfields)
-            for(iint fld=0; fld<p_Nfields;++fld){       
+            for(int fld=0; fld<p_Nfields;++fld){       
              s_cubqx[es][fld][n] = -msigmaxe*r_qx[fld];
              s_cubqy[es][fld][n] = -msigmaye*r_qy[fld];
             }
@@ -404,33 +404,33 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
     barrier(localMemFence);
       
     // partial projection to nodes from cubature-sub-group
-    for(iint es=0;es<p_NblockCub;++es;inner1){
-      for(iint n=0;n<p_maxCubNodes;++n;inner0){
-        iint et = eo+es; // element in block
+    for(int es=0;es<p_NblockCub;++es;inner1){
+      for(int n=0;n<p_maxCubNodes;++n;inner0){
+        int et = eo+es; // element in block
         if(et<pmlNelements){
           if(n<p_Np){
-            const iint rhsId    = p_Nfields*(p_Np*e + n)    ;
-            const iint pmlrhsId = p_Nfields*(p_Np*pmlId + n);
+            const int rhsId    = p_Nfields*(p_Np*e + n)    ;
+            const int pmlrhsId = p_Nfields*(p_Np*pmlId + n);
 
               dfloat r_rhsqx[p_Nfields];
               dfloat r_rhsqy[p_Nfields]; 
               dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
             
               occaUnroll(p_Nfields)
-              for(iint fld=0; fld<p_Nfields;++fld){
+              for(int fld=0; fld<p_Nfields;++fld){
                 r_rhsqx[fld] = 0.f;
                 r_rhsqy[fld] = 0.f;
               }
 
               // use temporaries for part sums for N4,N5,N6 because of exclusives
               occaUnroll(p_cubNp)
-              for(iint m=0;m<p_cubNp;++m){
+              for(int m=0;m<p_cubNp;++m){
                 const dfloat Pnc  = cubProjectT[m*p_Np+n];
                 N4 += Pnc*s_cubN4[es][m];
                 N5 += Pnc*s_cubN5[es][m];
                 N6 += Pnc*s_cubN6[es][m];
                 occaUnroll(p_Nfields)
-                for(iint fld=0; fld<p_Nfields; fld++){
+                for(int fld=0; fld<p_Nfields; fld++){
                  r_rhsqx[fld] += Pnc*s_cubqx[es][fld][m];
                  r_rhsqy[fld] += Pnc*s_cubqy[es][fld][m];
                 }
@@ -444,7 +444,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
               qZ[rhsId+5] =  N6 ; 
 
               occaUnroll(p_Nfields) 
-              for(iint fld=0; fld<p_Nfields;++fld){
+              for(int fld=0; fld<p_Nfields;++fld){
                 rhsqx[pmlrhsId + fld] = r_rhsqx[fld];
                 rhsqy[pmlrhsId + fld] = r_rhsqy[fld];
                 rhsq[rhsId + fld]     = r_rhsqx[fld] + r_rhsqy[fld]; 
@@ -495,9 +495,9 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 
 
 
-// kernel void boltzmannLSIMEXSplitPmlImplicitSolve2D(const iint pmlNelements,
-//                               const iint * restrict pmlElementIds,
-//                               const iint * restrict pmlIds,
+// kernel void boltzmannLSIMEXSplitPmlImplicitSolve2D(const int pmlNelements,
+//                               const int * restrict pmlElementIds,
+//                               const int * restrict pmlIds,
 //                                const dfloat dt,  
 //                                const dfloat ramp,
 //                                const dfloat akk,
@@ -509,11 +509,11 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //                                dfloat * restrict qZy,
 //                                dfloat * restrict qZ ){
 
-// for(iint es=0;es<pmlNelements;++es;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
+// for(int es=0;es<pmlNelements;++es;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
       
-//         const iint e = elementIds[es];
-//         const iint id = p_Nfields*(e*p_Np + n);
+//         const int e = elementIds[es];
+//         const int id = p_Nfields*(e*p_Np + n);
 
 //         // Initialize, combine fields
 //         dfloat q1 =  p_q1bar            + qYx[id1] + qYy[id+1];
@@ -654,8 +654,8 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 
 
 
-// kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const iint Nelements,
-//                               const iint * restrict elementIds,
+// kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const int Nelements,
+//                               const int * restrict elementIds,
 //                               const dfloat dt,  
 //                               const dfloat ramp,
 //                               const dfloat akk,
@@ -666,7 +666,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //                               dfloat * restrict qZx,
 //                               dfloat * restrict qZy,
 //                               dfloat4 *restrict qZ ){
-//   for(iint eo=0;eo<Nelements;eo+=p_NblockCub;outer0){  // for all elements
+//   for(int eo=0;eo<Nelements;eo+=p_NblockCub;outer0){  // for all elements
 
 //     // shared memory for q at nodes
 //     shared dfloat s_qxE[p_NblockV][6][p_Np];            
@@ -681,7 +681,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //     shared dfloat s_cubN6y[p_NblockV][p_cubNp];
     
     
-//     exclusive iint   element;
+//     exclusive int   element;
     
 //     exclusive dfloat N4xc =0.f, N4yc =0.f, N4c=0.f,  N5c =0.f, N6c =0.f ;
 //     exclusive dfloat qxe4 =0.f, qxe5 =0.f, qxe6=0.f ; 
@@ -691,21 +691,21 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
     
     
 //     // prefetch q to shared
-//     for(iint es=0;es<p_NblockV;++es;inner1){
-//       for(iint n=0;n<p_maxNodesVolume;++n;inner0){    
+//     for(int es=0;es<p_NblockV;++es;inner1){
+//       for(int n=0;n<p_maxNodesVolume;++n;inner0){    
     
-//     iint e = eo+es; // element in block
+//     int e = eo+es; // element in block
 //     if(e<Nelements){
 //       element = elementIds[e];
 //       if(n<p_Np){
 //         //
-//         const iint base = n + element*p_Nfields*p_Np;
-//         const iint id1 = base + 0*p_Np;
-//         const iint id2 = base + 1*p_Np;
-//         const iint id3 = base + 2*p_Np;
-//         const iint id4 = base + 3*p_Np;
-//         const iint id5 = base + 4*p_Np;
-//         const iint id6 = base + 5*p_Np;
+//         const int base = n + element*p_Nfields*p_Np;
+//         const int id1 = base + 0*p_Np;
+//         const int id2 = base + 1*p_Np;
+//         const int id3 = base + 2*p_Np;
+//         const int id4 = base + 3*p_Np;
+//         const int id5 = base + 4*p_Np;
+//         const int id6 = base + 5*p_Np;
         
 //         // PML UPDATES
 //         s_qxE[es][0][n] = qYx[id1];
@@ -732,10 +732,10 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
     
 
 //     // interpolate q to cubature
-//     for(iint es=0;es<p_NblockV;++es;inner1){
-//       for(iint n=0;n<p_maxNodesVolume;++n;inner0){
+//     for(int es=0;es<p_NblockV;++es;inner1){
+//       for(int n=0;n<p_maxNodesVolume;++n;inner0){
     
-//     iint e = eo+es; // element in block
+//     int e = eo+es; // element in block
 //     if(e<Nelements){
 //       if(n<p_cubNp){
 //         dfloat qx1=0.f, qx2=0.f, qx3=0.f;
@@ -744,7 +744,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //         dfloat qy4=0.f, qy5=0.f, qy6=0.f;
 
 //         occaUnroll(p_Np)
-//           for(iint m=0;m<p_Np;++m){
+//           for(int m=0;m<p_Np;++m){
 //         const dfloat Icn  = cubInterpT[m*p_cubNp+n];
 //         qx1 += Icn*s_qxE[es][0][m];
 //         qx2 += Icn*s_qxE[es][1][m];
@@ -813,10 +813,10 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 
     
 //       // partial projection to nodes from cubature-sub-group
-//       for(iint es=0;es<p_NblockV;++es;inner1){
-//     for(iint n=0;n<p_maxNodesVolume;++n;inner0){
+//       for(int es=0;es<p_NblockV;++es;inner1){
+//     for(int n=0;n<p_maxNodesVolume;++n;inner0){
       
-//       iint e = eo+es; // element in block
+//       int e = eo+es; // element in block
 //       if(e<Nelements){
 //         if(n<p_cubNp){
 //             if(akk>0){
@@ -900,16 +900,16 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //       barrier(localMemFence);
       
 //       // partial projection to nodes from cubature-sub-group
-//       for(iint es=0;es<p_NblockV;++es;inner1){
-//     for(iint n=0;n<p_maxNodesVolume;++n;inner0){
-//       iint e = eo+es; // element in block
+//       for(int es=0;es<p_NblockV;++es;inner1){
+//     for(int n=0;n<p_maxNodesVolume;++n;inner0){
+//       int e = eo+es; // element in block
 //       if(e<Nelements){
 //         if(n<p_Np){             
 //             // use temporaries for part sums for N4,N5,N6 because of exclusives
 //             dfloat N4x = 0.f, N4y = 0.f;
 //             dfloat N5x = 0.f, N5y = 0.f;
 //             dfloat N6x = 0.f, N6y = 0.f; 
-//             for(iint i=0;i<p_cubNp;++i){
+//             for(int i=0;i<p_cubNp;++i){
 //               const dfloat Pnc  = cubProjectT[i*p_Np+n];
 //               N4x += Pnc*s_cubN4x[es][i];
 //               N4y += Pnc*s_cubN4y[es][i];
@@ -920,7 +920,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //             }
 
 //           //
-//           const iint base = n + element*p_Nfields*p_Np;
+//           const int base = n + element*p_Nfields*p_Np;
         
 
 //         // Collect N(q) in Qx         
@@ -973,8 +973,8 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 
 
 
-// kernel void boltzmannLSIMEXImplicitSolve2D(const iint Nelements,
-//                         const iint * restrict elementIds,
+// kernel void boltzmannLSIMEXImplicitSolve2D(const int Nelements,
+//                         const int * restrict elementIds,
 //                         const dfloat dt, 
 //                         const dfloat akk,
 //                         const dfloat  * restrict cubInterpT,
@@ -982,12 +982,12 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //                         const dfloat4 * restrict qex,
 //                               dfloat4 * restrict qim){
 
-// for(iint e=0;e<Nelements;++e;outer0){
-//  for(iint n=0;n<p_Np;++n;inner0){
+// for(int e=0;e<Nelements;++e;outer0){
+//  for(int n=0;n<p_Np;++n;inner0){
 
-//  const iint element = elementIds[e];
-//  const iint id0     = 2*(element*p_Np + n);
-//  const iint id1     = id0 + 1;
+//  const int element = elementIds[e];
+//  const int id0     = 2*(element*p_Np + n);
+//  const int id1     = id0 + 1;
 
 //  dfloat N4=0.0,  N5 = 0.0,  N6=0.0;
 
@@ -1061,8 +1061,8 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 // }
 
 
-// kernel void boltzmannLSIMEXImplicitSolveCub2D(const iint Nelements,
-//                        const iint * restrict elementIds,
+// kernel void boltzmannLSIMEXImplicitSolveCub2D(const int Nelements,
+//                        const int * restrict elementIds,
 //                        const dfloat dt, 
 //                        const dfloat akk,
 //                        const dfloat * restrict cubInterpT,
@@ -1070,7 +1070,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //                        const dfloat4 * restrict qe,
 //                              dfloat4 * restrict q){ 
 
-//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+//   for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
 //     // shared memory for q at nodes
 //     shared dfloat s_qE[p_NblockV][6][p_Np];
@@ -1079,7 +1079,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //     shared dfloat s_cubN5[p_NblockV][p_cubNp];
 //     shared dfloat s_cubN6[p_NblockV][p_cubNp];
 
-//     exclusive iint   element;  
+//     exclusive int   element;  
 //     //
 //     exclusive dfloat N4c, N5c, N6c;
 //     //
@@ -1087,16 +1087,16 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //     exclusive dfloat qex4 =0.f, qex5 = 0.f, qex6=0.f ; 
 
 //     // prefetch q to shared
-//     for(iint es=0;es<p_NblockV;++es;inner1){
-//       for(iint n=0;n<p_maxNodesVolume;++n;inner0){    
+//     for(int es=0;es<p_NblockV;++es;inner1){
+//       for(int n=0;n<p_maxNodesVolume;++n;inner0){    
     
-//         iint e = eo+es; // element in block
+//         int e = eo+es; // element in block
 //         if(e<Nelements){
       
 //    element = elementIds[e];
 //    if(n<p_Np){
         
-//      const iint id = element*p_Np+n;
+//      const int id = element*p_Np+n;
 //      dfloat4 qea  = qe[2*id];
 //      dfloat4 qeb  = qe[2*id+1];
 //      //load 
@@ -1116,10 +1116,10 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //     barrier(localMemFence);
 
 //     // interpolate q to cubature
-//     for(iint es=0;es<p_NblockV;++es;inner1){
-//       for(iint n=0;n<p_maxNodesVolume;++n;inner0){
+//     for(int es=0;es<p_NblockV;++es;inner1){
+//       for(int n=0;n<p_maxNodesVolume;++n;inner0){
 
-//      iint e = eo+es; // element in block
+//      int e = eo+es; // element in block
 //      if(e<Nelements){
 
 //          if(n<p_cubNp){
@@ -1127,7 +1127,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //              dfloat qe4=0.f , qe5 =0.f , qe6 =0.f ;
 
 //              occaUnroll(p_Np)
-//              for(iint m=0;m<p_Np;++m){
+//              for(int m=0;m<p_Np;++m){
 
 //              const dfloat Icn  = cubInterpT[m*p_cubNp+n];
 //              //
@@ -1171,9 +1171,9 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 
     
 //       // partial projection to nodes from cubature-sub-group
-//       for(iint es=0;es<p_NblockV;++es;inner1){
-//  for(iint n=0;n<p_maxNodesVolume;++n;inner0){
-//    iint e = eo+es; // element in block
+//       for(int es=0;es<p_NblockV;++es;inner1){
+//  for(int n=0;n<p_maxNodesVolume;++n;inner0){
+//    int e = eo+es; // element in block
 //    if(e<Nelements){
 //      if(n<p_cubNp){
 //        if(akk>0){    
@@ -1211,22 +1211,22 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //     barrier(localMemFence);
       
 //       // partial projection to nodes from cubature-sub-group
-//       for(iint es=0;es<p_NblockV;++es;inner1){
-//  for(iint n=0;n<p_maxNodesVolume;++n;inner0){
-//    iint e = eo+es; // element in block
+//       for(int es=0;es<p_NblockV;++es;inner1){
+//  for(int n=0;n<p_maxNodesVolume;++n;inner0){
+//    int e = eo+es; // element in block
 //    if(e<Nelements){
 //      if(n<p_Np){
 
 //        // use temporaries for part sums for N4,N5,N6 because of exclusives
 //          dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
-//          for(iint i=0;i<p_cubNp;++i){
+//          for(int i=0;i<p_cubNp;++i){
 //            const dfloat Pnc  = cubProjectT[i*p_Np+n];
 //            N4 += Pnc*s_cubN4[es][i];
 //            N5 += Pnc*s_cubN5[es][i];
 //            N6 += Pnc*s_cubN6[es][i];
 //          }
 
-//      const iint id = element*p_Np+n;
+//      const int id = element*p_Np+n;
                   
 //        //  
 //        dfloat4 temp; 
@@ -1257,8 +1257,8 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 
 
 
-// kernel void boltzmannLSIMEXSplitPmlImplicitSolve2D(const iint Nelements,
-//                             const iint * restrict elementIds,
+// kernel void boltzmannLSIMEXSplitPmlImplicitSolve2D(const int Nelements,
+//                             const int * restrict elementIds,
 //                             const dfloat dt,  
 //                             const dfloat ramp,
 //                             const dfloat akk,
@@ -1270,18 +1270,18 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //                             dfloat * restrict qZy,
 //                             dfloat4 *restrict qZ ){
 
-// for(iint e=0;e<Nelements;++e;outer0){
-//  for(iint n=0;n<p_Np;++n;inner0){
+// for(int e=0;e<Nelements;++e;outer0){
+//  for(int n=0;n<p_Np;++n;inner0){
       
-//      const iint element = elementIds[e];
+//      const int element = elementIds[e];
 //      //
-//      const iint base = n + element*p_Nfields*p_Np;
-//      const iint id1 = base + 0*p_Np;
-//      const iint id2 = base + 1*p_Np;
-//      const iint id3 = base + 2*p_Np;
-//      const iint id4 = base + 3*p_Np;
-//      const iint id5 = base + 4*p_Np;
-//      const iint id6 = base + 5*p_Np;
+//      const int base = n + element*p_Nfields*p_Np;
+//      const int id1 = base + 0*p_Np;
+//      const int id2 = base + 1*p_Np;
+//      const int id3 = base + 2*p_Np;
+//      const int id4 = base + 3*p_Np;
+//      const int id5 = base + 4*p_Np;
+//      const int id6 = base + 5*p_Np;
 
 //      // Initialize, combine fields
 //      dfloat q1 =  p_q1bar            + qYx[id1] + qYy[id1];
@@ -1422,8 +1422,8 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 
 
 
-// kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const iint Nelements,
-//                            const iint * restrict elementIds,
+// kernel void boltzmannLSIMEXSplitPmlImplicitSolveCub2D(const int Nelements,
+//                            const int * restrict elementIds,
 //                            const dfloat dt,  
 //                            const dfloat ramp,
 //                            const dfloat akk,
@@ -1434,7 +1434,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //                            dfloat * restrict qZx,
 //                            dfloat * restrict qZy,
 //                            dfloat4 *restrict qZ ){
-//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+//   for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
 //     // shared memory for q at nodes
 //     shared dfloat s_qxE[p_NblockV][6][p_Np];            
@@ -1449,7 +1449,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //     shared dfloat s_cubN6y[p_NblockV][p_cubNp];
     
     
-//     exclusive iint   element;
+//     exclusive int   element;
     
 //     exclusive dfloat N4xc =0.f, N4yc =0.f, N4c=0.f,  N5c =0.f, N6c =0.f ;
 //     exclusive dfloat qxe4 =0.f, qxe5 =0.f, qxe6=0.f ; 
@@ -1459,21 +1459,21 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
     
     
 //     // prefetch q to shared
-//     for(iint es=0;es<p_NblockV;++es;inner1){
-//       for(iint n=0;n<p_maxNodesVolume;++n;inner0){    
+//     for(int es=0;es<p_NblockV;++es;inner1){
+//       for(int n=0;n<p_maxNodesVolume;++n;inner0){    
     
-//  iint e = eo+es; // element in block
+//  int e = eo+es; // element in block
 //  if(e<Nelements){
 //    element = elementIds[e];
 //    if(n<p_Np){
 //      //
-//      const iint base = n + element*p_Nfields*p_Np;
-//      const iint id1 = base + 0*p_Np;
-//      const iint id2 = base + 1*p_Np;
-//      const iint id3 = base + 2*p_Np;
-//      const iint id4 = base + 3*p_Np;
-//      const iint id5 = base + 4*p_Np;
-//      const iint id6 = base + 5*p_Np;
+//      const int base = n + element*p_Nfields*p_Np;
+//      const int id1 = base + 0*p_Np;
+//      const int id2 = base + 1*p_Np;
+//      const int id3 = base + 2*p_Np;
+//      const int id4 = base + 3*p_Np;
+//      const int id5 = base + 4*p_Np;
+//      const int id6 = base + 5*p_Np;
         
 //      // PML UPDATES
 //      s_qxE[es][0][n] = qYx[id1];
@@ -1500,10 +1500,10 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
     
 
 //     // interpolate q to cubature
-//     for(iint es=0;es<p_NblockV;++es;inner1){
-//       for(iint n=0;n<p_maxNodesVolume;++n;inner0){
+//     for(int es=0;es<p_NblockV;++es;inner1){
+//       for(int n=0;n<p_maxNodesVolume;++n;inner0){
     
-//  iint e = eo+es; // element in block
+//  int e = eo+es; // element in block
 //  if(e<Nelements){
 //    if(n<p_cubNp){
 //      dfloat qx1=0.f, qx2=0.f, qx3=0.f;
@@ -1512,7 +1512,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //      dfloat qy4=0.f, qy5=0.f, qy6=0.f;
 
 //      occaUnroll(p_Np)
-//        for(iint m=0;m<p_Np;++m){
+//        for(int m=0;m<p_Np;++m){
 //      const dfloat Icn  = cubInterpT[m*p_cubNp+n];
 //      qx1 += Icn*s_qxE[es][0][m];
 //      qx2 += Icn*s_qxE[es][1][m];
@@ -1581,10 +1581,10 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 
     
 //       // partial projection to nodes from cubature-sub-group
-//       for(iint es=0;es<p_NblockV;++es;inner1){
-//  for(iint n=0;n<p_maxNodesVolume;++n;inner0){
+//       for(int es=0;es<p_NblockV;++es;inner1){
+//  for(int n=0;n<p_maxNodesVolume;++n;inner0){
       
-//    iint e = eo+es; // element in block
+//    int e = eo+es; // element in block
 //    if(e<Nelements){
 //      if(n<p_cubNp){
 //          if(akk>0){
@@ -1668,16 +1668,16 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //       barrier(localMemFence);
       
 //       // partial projection to nodes from cubature-sub-group
-//       for(iint es=0;es<p_NblockV;++es;inner1){
-//  for(iint n=0;n<p_maxNodesVolume;++n;inner0){
-//    iint e = eo+es; // element in block
+//       for(int es=0;es<p_NblockV;++es;inner1){
+//  for(int n=0;n<p_maxNodesVolume;++n;inner0){
+//    int e = eo+es; // element in block
 //    if(e<Nelements){
 //      if(n<p_Np){             
 //              // use temporaries for part sums for N4,N5,N6 because of exclusives
 //              dfloat N4x = 0.f, N4y = 0.f;
 //              dfloat N5x = 0.f, N5y = 0.f;
 //              dfloat N6x = 0.f, N6y = 0.f; 
-//              for(iint i=0;i<p_cubNp;++i){
+//              for(int i=0;i<p_cubNp;++i){
 //                const dfloat Pnc  = cubProjectT[i*p_Np+n];
 //                N4x += Pnc*s_cubN4x[es][i];
 //                N4y += Pnc*s_cubN4y[es][i];
@@ -1688,7 +1688,7 @@ kernel void boltzmannLSIMEXPmlImplicitSolveCub2D(const iint pmlNelements,
 //              }
 
 //        //
-//        const iint base = n + element*p_Nfields*p_Np;
+//        const int base = n + element*p_Nfields*p_Np;
         
 
 //      // Collect N(q) in Qx         

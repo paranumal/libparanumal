@@ -16,24 +16,24 @@ int parallelCompareRowColumn(const void *a, const void *b){
 
 }
 
-void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                              iint *nnzA, iint *globalStarts, const char *options);
+void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
+                              int *nnzA, int *globalStarts, const char *options);
 
-void ellipticBuildCoarseContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
-                              hgs_t **hgs, iint *globalStarts, const char* options);
+void ellipticBuildCoarseContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, int *nnz,
+                              hgs_t **hgs, int *globalStarts, const char* options);
 
 void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts, const char *options){
+                                   int *BCType, dfloat **V1, nonZero_t **A, int *nnzA,
+                                   hgs_t **hgs, int *globalStarts, const char *options){
 
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  iint Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
+  int Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
 
   *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
+  for(int n=0;n<mesh->Np;++n){
     dfloat rn = mesh->r[n];
     dfloat sn = mesh->s[n];
     dfloat tn = mesh->t[n];
@@ -46,8 +46,8 @@ void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dflo
 
   //build coarse grid A
   if (strstr(options,"IPDG")) {
-    MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
-    for(iint r=0;r<size;++r)
+    MPI_Allgather(&(mesh->Nelements), 1, MPI_int, globalStarts+1, 1, MPI_int, MPI_COMM_WORLD);
+    for(int r=0;r<size;++r)
       globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Nverts;
 
     ellipticBuildCoarseIpdgTet3D(mesh,tau,lambda,BCType,A,nnzA,globalStarts,options);
@@ -57,20 +57,20 @@ void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dflo
   }
 }
 
-void ellipticBuildCoarseContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
-                              hgs_t **hgs, iint *globalStarts, const char* options) {
-  iint rank, size;
+void ellipticBuildCoarseContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, int *nnz,
+                              hgs_t **hgs, int *globalStarts, const char* options) {
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // ------------------------------------------------------------------------------------
   // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
-  iint Nnum = mesh->Nverts*mesh->Nelements;
-  iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
-  iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
+  int Nnum = mesh->Nverts*mesh->Nelements;
+  int *globalNumbering = (int*) calloc(Nnum, sizeof(int));
+  int *globalOwners = (int*) calloc(Nnum, sizeof(int));
 
   // use original vertex numbering
-  memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(iint));
+  memcpy(globalNumbering, mesh->EToV, Nnum*sizeof(int));
 
   // squeeze numbering
   meshParallelConsecutiveGlobalNumbering(Nnum, globalNumbering, globalOwners, globalStarts);
@@ -80,25 +80,25 @@ void ellipticBuildCoarseContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t *
 
   // ------------------------------------------------------------------------------------
   // 2. Build non-zeros of stiffness matrix (unassembled)
-  iint nnzLocal = mesh->Nverts*mesh->Nverts*mesh->Nelements;
-  iint   *rowsA = (iint*) calloc(nnzLocal, sizeof(iint));
-  iint   *colsA = (iint*) calloc(nnzLocal, sizeof(iint));
+  int nnzLocal = mesh->Nverts*mesh->Nverts*mesh->Nelements;
+  int   *rowsA = (int*) calloc(nnzLocal, sizeof(int));
+  int   *colsA = (int*) calloc(nnzLocal, sizeof(int));
   dfloat *valsA = (dfloat*) calloc(nnzLocal, sizeof(dfloat));
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
-  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
+  int *AsendCounts  = (int*) calloc(size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
 
-  iint cnt = 0;
+  int cnt = 0;
 
   dfloat *cV1  = (dfloat*) calloc(mesh->cubNp*mesh->Nverts, sizeof(dfloat));
   dfloat *cVr1 = (dfloat*) calloc(mesh->cubNp*mesh->Nverts, sizeof(dfloat));
   dfloat *cVs1 = (dfloat*) calloc(mesh->cubNp*mesh->Nverts, sizeof(dfloat));
   dfloat *cVt1 = (dfloat*) calloc(mesh->cubNp*mesh->Nverts, sizeof(dfloat));
 
-  for(iint n=0;n<mesh->cubNp;++n){
+  for(int n=0;n<mesh->cubNp;++n){
     dfloat rn = mesh->cubr[n];
     dfloat sn = mesh->cubs[n];
     dfloat tn = mesh->cubt[n];
@@ -128,8 +128,8 @@ void ellipticBuildCoarseContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t *
   dfloat Ssr1[4][4], Sss1[4][4], Sst1[4][4];
   dfloat Str1[4][4], Sts1[4][4], Stt1[4][4];
   dfloat MM1[4][4];
-  for(iint n=0;n<mesh->Nverts;++n){
-    for(iint m=0;m<mesh->Nverts;++m){
+  for(int n=0;n<mesh->Nverts;++n){
+    for(int m=0;m<mesh->Nverts;++m){
       Srr1[n][m] = 0;
       Srs1[n][m] = 0;
       Srt1[n][m] = 0;
@@ -141,9 +141,9 @@ void ellipticBuildCoarseContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t *
       Stt1[n][m] = 0;
       MM1[n][m] = 0;
 
-      for(iint i=0;i<mesh->cubNp;++i){
-      	iint idn = n*mesh->cubNp+i;
-      	iint idm = m*mesh->cubNp+i;
+      for(int i=0;i<mesh->cubNp;++i){
+      	int idn = n*mesh->cubNp+i;
+      	int idm = m*mesh->cubNp+i;
       	dfloat cw = mesh->cubw[i];
       	Srr1[n][m] += cw*(cVr1[idn]*cVr1[idm]);
       	Srs1[n][m] += cw*(cVr1[idn]*cVs1[idm]);
@@ -161,9 +161,9 @@ void ellipticBuildCoarseContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t *
 
 
   printf("Building coarse matrix system\n");
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Nverts;++n){
-      for(iint m=0;m<mesh->Nverts;++m){
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Nverts;++n){
+      for(int m=0;m<mesh->Nverts;++m){
       	dfloat Snm = 0;
 
       	dfloat rx = mesh->vgeo[e*mesh->Nvgeo + RXID];
@@ -207,18 +207,18 @@ void ellipticBuildCoarseContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t *
   }
 
   // count how many non-zeros to send to each process
-  for(iint n=0;n<cnt;++n)
+  for(int n=0;n<cnt;++n)
     AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_int, ArecvCounts, 1, MPI_int, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
   *nnz = 0;
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     *nnz += ArecvCounts[r]/sizeof(nonZero_t);
@@ -236,7 +236,7 @@ void ellipticBuildCoarseContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t *
 
   // compress duplicates
   cnt = 0;
-  for(iint n=1;n<*nnz;++n){
+  for(int n=1;n<*nnz;++n){
     if((*A)[n].row == (*A)[cnt].row &&
        (*A)[n].col == (*A)[cnt].col){
       (*A)[cnt].val += (*A)[n].val;
@@ -260,31 +260,31 @@ void ellipticBuildCoarseContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t *
   free(ArecvOffsets);
 }
 
-void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                                  iint *nnzA, iint *globalStarts, const char *options){
+void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
+                                  int *nnzA, int *globalStarts, const char *options){
 
-  iint size, rankM;
+  int size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankM);
 
 
-  iint Nnum = mesh->Nverts*mesh->Nelements;
+  int Nnum = mesh->Nverts*mesh->Nelements;
 
   // create a global numbering system
-  iint *globalIds = (iint *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts,sizeof(iint));
+  int *globalIds = (int *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nverts,sizeof(int));
 
   // every degree of freedom has its own global id
   /* so find number of elements on each rank */
-  iint *rankNelements = (iint*) calloc(size, sizeof(iint));
-  iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
-                rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
+  int *rankNelements = (int*) calloc(size, sizeof(int));
+  int *rankStarts = (int*) calloc(size+1, sizeof(int));
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_int,
+                rankNelements, 1, MPI_int, MPI_COMM_WORLD);
   //find offsets
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     rankStarts[r+1] = rankStarts[r]+rankNelements[r];
   }
   //use the offsets to set a global id
-  for (iint e =0;e<mesh->Nelements;e++) {
+  for (int e =0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Nverts;n++) {
       globalIds[e*mesh->Nverts +n] = n + (e + rankStarts[rankM])*mesh->Nverts;
     }
@@ -292,14 +292,14 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
 
   /* do a halo exchange of global node numbers */
   if (mesh->totalHaloPairs) {
-    iint *idSendBuffer = (iint *) calloc(mesh->Nverts*mesh->totalHaloPairs,sizeof(iint));
-    meshHaloExchange(mesh, mesh->Nverts*sizeof(iint), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Nverts);
+    int *idSendBuffer = (int *) calloc(mesh->Nverts*mesh->totalHaloPairs,sizeof(int));
+    meshHaloExchange(mesh, mesh->Nverts*sizeof(int), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Nverts);
     free(idSendBuffer);
   }
 
   // Build coarse basis restriction
   dfloat *V  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
+  for(int n=0;n<mesh->Np;++n){
     dfloat rn = mesh->r[n];
     dfloat sn = mesh->s[n];
     dfloat tn = mesh->t[n];
@@ -310,7 +310,7 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
     V[3*mesh->Np+n] = +0.5*(1.+tn);
   }
 
-  iint nnzLocalBound = mesh->Nverts*mesh->Nverts*(1+mesh->Nfaces)*mesh->Nelements;
+  int nnzLocalBound = mesh->Nverts*mesh->Nverts*(1+mesh->Nfaces)*mesh->Nelements;
 
   *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
 
@@ -327,12 +327,12 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
 
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
-  for (iint f=0;f<mesh->Nfaces;f++) {
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint m=0;m<mesh->Nfp;m++) {
+  for (int f=0;f<mesh->Nfaces;f++) {
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Nfp;m++) {
         dfloat MSnm = 0;
 
-        for (iint i=0;i<mesh->Np;i++)
+        for (int i=0;i<mesh->Np;i++)
           MSnm += mesh->MM[n+i*mesh->Np]*mesh->LIFT[i*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+m];
 
         MS[m+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]  = MSnm;
@@ -344,13 +344,13 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
   dfloat *DrTMS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
   dfloat *DsTMS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
   dfloat *DtTMS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
-  for (iint f=0;f<mesh->Nfaces;f++) {
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint i=0;i<mesh->Nfp;i++) {
+  for (int f=0;f<mesh->Nfaces;f++) {
+    for (int n=0;n<mesh->Np;n++) {
+      for (int i=0;i<mesh->Nfp;i++) {
         DrTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] = 0.;
         DsTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] = 0.;
         DtTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] = 0.;
-        for (iint m=0;m<mesh->Np;m++) {
+        for (int m=0;m<mesh->Np;m++) {
           DrTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]
             += mesh->Dr[n+m*mesh->Np]*MS[i+m*mesh->Nfp+f*mesh->Nfp*mesh->Np];
           DsTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]
@@ -363,12 +363,12 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
   }
 
   // reset non-zero counter
-  iint nnz = 0;
+  int nnz = 0;
 
   // loop over all elements
-  for(iint eM=0;eM<mesh->Nelements;++eM){
+  for(int eM=0;eM<mesh->Nelements;++eM){
 
-    iint gbase = eM*mesh->Nggeo;
+    int gbase = eM*mesh->Nggeo;
     dfloat Grr = mesh->ggeo[gbase+G00ID];
     dfloat Grs = mesh->ggeo[gbase+G01ID];
     dfloat Grt = mesh->ggeo[gbase+G02ID];
@@ -378,8 +378,8 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
     dfloat J   = mesh->ggeo[gbase+GWJID];
 
     /* start with stiffness matrix  */
-    for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Np;++m){
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
         BM[m+n*mesh->Np]  = J*lambda*mesh->MM[m+n*mesh->Np];
         BM[m+n*mesh->Np] += Grr*mesh->Srr[m+n*mesh->Np];
         BM[m+n*mesh->Np] += Grs*mesh->Srs[m+n*mesh->Np];
@@ -393,7 +393,7 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
       }
     }
 
-    iint vbase = eM*mesh->Nvgeo;
+    int vbase = eM*mesh->Nvgeo;
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
     dfloat drdz = mesh->vgeo[vbase+RZID];
@@ -405,24 +405,24 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
     dfloat dtdz = mesh->vgeo[vbase+TZID];
 
     //zero out BP
-    for (iint fM=0;fM<mesh->Nfaces;fM++)
-      for (iint n=0;n<mesh->Np;n++)
-        for (iint m=0;m<mesh->Np;m++)
+    for (int fM=0;fM<mesh->Nfaces;fM++)
+      for (int n=0;n<mesh->Np;n++)
+        for (int m=0;m<mesh->Np;m++)
           BP[m+n*mesh->Np+fM*mesh->Np*mesh->Np] = 0;
 
-    for (iint m=0;m<mesh->Np;m++) {
-      for (iint fM=0;fM<mesh->Nfaces;fM++) {
+    for (int m=0;m<mesh->Np;m++) {
+      for (int fM=0;fM<mesh->Nfaces;fM++) {
         // load surface geofactors for this face
-        iint sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+        int sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
         dfloat nx = mesh->sgeo[sid+NXID];
         dfloat ny = mesh->sgeo[sid+NYID];
         dfloat nz = mesh->sgeo[sid+NZID];
         dfloat sJ = mesh->sgeo[sid+SJID];
         dfloat hinv = mesh->sgeo[sid+IHID];
 
-        iint eP = mesh->EToE[eM*mesh->Nfaces+fM];
+        int eP = mesh->EToE[eM*mesh->Nfaces+fM];
         if (eP < 0) eP = eM;
-        iint vbaseP = eP*mesh->Nvgeo;
+        int vbaseP = eP*mesh->Nvgeo;
         dfloat drdxP = mesh->vgeo[vbaseP+RXID];
         dfloat drdyP = mesh->vgeo[vbaseP+RYID];
         dfloat drdzP = mesh->vgeo[vbaseP+RZID];
@@ -434,11 +434,11 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
         dfloat dtdzP = mesh->vgeo[vbaseP+TZID];
 
         // extract trace nodes
-        for (iint i=0;i<mesh->Nfp;i++) {
+        for (int i=0;i<mesh->Nfp;i++) {
           // double check vol geometric factors are in halo storage of vgeo
-          iint idM    = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
-          iint vidM   = mesh->faceNodes[i+fM*mesh->Nfp];
-          iint vidP   = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
+          int idM    = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
+          int vidM   = mesh->faceNodes[i+fM*mesh->Nfp];
+          int vidP   = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
 
           qmM[i] =0;
           if (vidM == m) qmM[i] =1;
@@ -455,8 +455,8 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
 
         dfloat penalty = tau*hinv; // tau*(mesh->N+1)*(mesh->N+1)*hinv;
         eP = mesh->EToE[eM*mesh->Nfaces+fM];
-        for (iint n=0;n<mesh->Np;n++) {
-          for (iint i=0;i<mesh->Nfp;i++) {
+        for (int n=0;n<mesh->Np;n++) {
+          for (int i=0;i<mesh->Nfp;i++) {
             BM[m+n*mesh->Np] += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
             BM[m+n*mesh->Np] += -0.5*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
                                 -0.5*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
@@ -468,7 +468,7 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
           if (eP < 0) {
             int qSgn, gradqSgn;
             int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
-            iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
+            int bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
             if(bcType==1){ // Dirichlet
               qSgn     = -1;
               gradqSgn =  1;
@@ -480,7 +480,7 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
               gradqSgn = -1;
             }
 
-            for (iint i=0;i<mesh->Nfp;i++) {
+            for (int i=0;i<mesh->Nfp;i++) {
               BM[m+n*mesh->Np] += +0.5*gradqSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
               BM[m+n*mesh->Np] += +0.5*qSgn*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
                                   +0.5*qSgn*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
@@ -488,7 +488,7 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
               BM[m+n*mesh->Np] += -0.5*qSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
             }
           } else {
-            for (iint i=0;i<mesh->Nfp;i++) {
+            for (int i=0;i<mesh->Nfp;i++) {
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmP[i];
               AnmP += +0.5*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
                       +0.5*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
@@ -503,14 +503,14 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
 
     //transform to coarse operator Ac = VAV^T
     for (int fM=0;fM<mesh->Nfaces;fM++) {
-      iint eP = mesh->EToE[eM*mesh->Nfaces+fM];
+      int eP = mesh->EToE[eM*mesh->Nfaces+fM];
       if (eP < 0) eP = eM;
 
       for (int j=0;j<mesh->Nverts;j++) {
         for (int i=0;i<mesh->Nverts;i++) {
           dfloat AnmP = 0;
-          for (iint m=0;m<mesh->Np;m++) {
-            for (iint n=0;n<mesh->Np;n++) {
+          for (int m=0;m<mesh->Np;m++) {
+            for (int n=0;n<mesh->Np;n++) {
               AnmP += V[n+i*mesh->Np]*BP[m+n*mesh->Np+fM*mesh->Np*mesh->Np]*V[m+j*mesh->Np];
             }
           }
@@ -528,8 +528,8 @@ void ellipticBuildCoarseIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint 
     for (int j=0;j<mesh->Nverts;j++) {
       for (int i=0;i<mesh->Nverts;i++) {
         dfloat Anm = 0;
-        for (iint m=0;m<mesh->Np;m++) {
-          for (iint n=0;n<mesh->Np;n++) {
+        for (int m=0;m<mesh->Np;m++) {
+          for (int n=0;n<mesh->Np;n++) {
             Anm += V[n+i*mesh->Np]*BM[m+n*mesh->Np]*V[m+j*mesh->Np];
           }
         }

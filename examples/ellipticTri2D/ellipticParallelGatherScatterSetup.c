@@ -9,11 +9,11 @@
 // assume nodes locally sorted by rank then global index
 // assume gather and scatter are the same sets
 void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
-                                        iint Nlocal,     // number of local nodes
-                                        iint Nbytes,     // number of bytes per node
-                                        iint *gatherLocalIds,  // local index of nodes
-                                        iint *gatherBaseIds,   // global index of their base nodes
-                                        iint *gatherHaloFlags,
+                                        int Nlocal,     // number of local nodes
+                                        int Nbytes,     // number of bytes per node
+                                        int *gatherLocalIds,  // local index of nodes
+                                        int *gatherBaseIds,   // global index of their base nodes
+                                        int *gatherHaloFlags,
                                         ogs_t **halo,
                                         ogs_t **nonHalo){   // 1 for halo node, 0 for not
 
@@ -28,7 +28,7 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
   void *allGsh = gsParallelGatherScatterSetup(Nlocal, gatherBaseIds);
 
   // compute max halo flag using global numbering
-  gsParallelGatherScatter(allGsh, gatherHaloFlags, "int", "max"); // should use iint
+  gsParallelGatherScatter(allGsh, gatherHaloFlags, "int", "max"); // should use int
 
   // tidy up
   gsParallelGatherScatterDestroy(allGsh);
@@ -44,11 +44,11 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
   (*halo)->Ngather = 0;
   (*nonHalo)->Ngather = 0;
 
-  iint nHalo = 0;
-  iint nNonHalo = 0;
+  int nHalo = 0;
+  int nNonHalo = 0;
 
-  for(iint n=0;n<Nlocal;++n){
-    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
+  for(int n=0;n<Nlocal;++n){
+    int test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
     if(gatherHaloFlags[n]==1){
       (*halo)->Ngather += test;
       ++nHalo;
@@ -56,8 +56,8 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
   }
 
 
-  for(iint n=0;n<Nlocal;++n){
-    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
+  for(int n=0;n<Nlocal;++n){
+    int test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
 
     if(gatherHaloFlags[n]!=1){
       (*nonHalo)->Ngather += test;
@@ -65,13 +65,13 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
     }
   }
 
-  (*halo)->gatherOffsets  = (iint*) calloc((*halo)->Ngather+1, sizeof(iint));
-  (*halo)->gatherLocalIds = (iint*) calloc(nHalo, sizeof(iint));
-  (*halo)->gatherBaseIds  = (iint*) calloc((*halo)->Ngather, sizeof(iint));
+  (*halo)->gatherOffsets  = (int*) calloc((*halo)->Ngather+1, sizeof(int));
+  (*halo)->gatherLocalIds = (int*) calloc(nHalo, sizeof(int));
+  (*halo)->gatherBaseIds  = (int*) calloc((*halo)->Ngather, sizeof(int));
 
-  (*nonHalo)->gatherOffsets  = (iint*) calloc((*nonHalo)->Ngather+1, sizeof(iint));
-  (*nonHalo)->gatherLocalIds = (iint*) calloc(nNonHalo, sizeof(iint));
-  (*nonHalo)->gatherBaseIds  = (iint*) calloc((*nonHalo)->Ngather, sizeof(iint));
+  (*nonHalo)->gatherOffsets  = (int*) calloc((*nonHalo)->Ngather+1, sizeof(int));
+  (*nonHalo)->gatherLocalIds = (int*) calloc(nNonHalo, sizeof(int));
+  (*nonHalo)->gatherBaseIds  = (int*) calloc((*nonHalo)->Ngather, sizeof(int));
 
   // only finds bases
   nHalo = 0;
@@ -80,13 +80,13 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
   (*nonHalo)->Ngather = 0; // reset counter
 
 #if 0
-  for(iint n=0;n<Nlocal;++n){
+  for(int n=0;n<Nlocal;++n){
     printf("rank%d: n=%d, base=%d, local=%d, halo=%d\n", rank, n, gatherBaseIds[n], gatherLocalIds[n], gatherHaloFlags[n]);
   }
 #endif
 
-  for(iint n=0;n<Nlocal;++n){
-    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
+  for(int n=0;n<Nlocal;++n){
+    int test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
 
     // increment unique base counter and record index into shuffled list of nodes
     if(gatherHaloFlags[n]==1){
@@ -100,9 +100,9 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
     }
   }
 
-  for(iint n=0;n<Nlocal;++n){
+  for(int n=0;n<Nlocal;++n){
 
-    iint test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
+    int test = (n==0) ? 1: (gatherBaseIds[n] != gatherBaseIds[n-1]);
 
     if(gatherHaloFlags[n]!=1){
       if(test){
@@ -126,8 +126,8 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
     //    (*halo)->gatherTmp = (char*) calloc((*halo)->Ngather*Nbytes, sizeof(char));
 
     (*halo)->o_gatherTmp      = mesh->device.malloc((*halo)->Ngather*Nbytes,           (*halo)->gatherTmp);
-    (*halo)->o_gatherOffsets  = mesh->device.malloc(((*halo)->Ngather+1)*sizeof(iint), (*halo)->gatherOffsets);
-    (*halo)->o_gatherLocalIds = mesh->device.malloc(nHalo*sizeof(iint),                (*halo)->gatherLocalIds);
+    (*halo)->o_gatherOffsets  = mesh->device.malloc(((*halo)->Ngather+1)*sizeof(int), (*halo)->gatherOffsets);
+    (*halo)->o_gatherLocalIds = mesh->device.malloc(nHalo*sizeof(int),                (*halo)->gatherLocalIds);
 
     // initiate gslib gather-scatter comm pattern on halo nodes only
     (*halo)->gatherGsh = gsParallelGatherScatterSetup((*halo)->Ngather, (*halo)->gatherBaseIds);
@@ -138,8 +138,8 @@ void ellipticParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
 
     (*nonHalo)->gatherGsh = NULL;
 
-    (*nonHalo)->o_gatherOffsets  = mesh->device.malloc(((*nonHalo)->Ngather+1)*sizeof(iint), (*nonHalo)->gatherOffsets);
-    (*nonHalo)->o_gatherLocalIds = mesh->device.malloc(nNonHalo*sizeof(iint),                (*nonHalo)->gatherLocalIds);
+    (*nonHalo)->o_gatherOffsets  = mesh->device.malloc(((*nonHalo)->Ngather+1)*sizeof(int), (*nonHalo)->gatherOffsets);
+    (*nonHalo)->o_gatherLocalIds = mesh->device.malloc(nNonHalo*sizeof(int),                (*nonHalo)->gatherLocalIds);
   }
   return;
 }

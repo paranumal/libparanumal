@@ -3,21 +3,21 @@
 void acousticsSplitPmlOccaRun2D(mesh2D *mesh){
 
   // MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(iint rk=0;rk<mesh->Nrk;++rk){
+    for(int rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
       
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
-	iint Nentries = mesh->Np*mesh->Nfields;
+	int Nentries = mesh->Np*mesh->Nfields;
 	
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
@@ -92,7 +92,7 @@ void acousticsSplitPmlOccaRun2D(mesh2D *mesh){
       }
 
       // update solution using Runge-Kutta
-      iint recombine = 0; (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
+      int recombine = 0; (rk==mesh->Nrk-1); // recombine at end of RK step (q/2=>qx, q/2=>qy)
       mesh->updateKernel(mesh->Nelements*mesh->Np*mesh->Nfields,
 			 recombine,
 			 mesh->dt,
@@ -121,7 +121,7 @@ void acousticsSplitPmlOccaRun2D(mesh2D *mesh){
       acousticsComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
       
       // output field files
-      iint fld = 0;
+      int fld = 0;
       char fname[BUFSIZ];
       sprintf(fname, "foo_T%04d", tstep/mesh->errorStep);
       meshPlotVTU2D(mesh, fname, fld);

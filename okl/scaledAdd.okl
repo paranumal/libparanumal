@@ -1,10 +1,10 @@
-kernel void scaledAdd(const iint N,
+kernel void scaledAdd(const int N,
 		      const dfloat alpha,
 		      const dfloat * restrict x,
 		      const dfloat beta,
 		      dfloat * restrict y){
   
-  for(iint n=0;n<N;++n;tile(256)){
+  for(int n=0;n<N;++n;tile(256)){
     if(n<N){
       y[n] = alpha*x[n] + beta*y[n];
     }

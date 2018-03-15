@@ -9,21 +9,21 @@ void insRun2D(ins_t *ins, char *options){
   // Write Initial Data
   insReport2D(ins, 0, options);
   // Allocate MPI buffer for velocity step solver
-  iint  tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
+  int  tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
   dfloat  *tSendBuffer = (dfloat*) malloc(tHaloBytes);
   dfloat  *tRecvBuffer = (dfloat*) malloc(tHaloBytes);
 
-  iint vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
+  int vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
   dfloat *vSendBuffer = (dfloat*) malloc(vHaloBytes);
   dfloat *vRecvBuffer = (dfloat*) malloc(vHaloBytes);
 
   // No need to do like this, just for consistency
-  iint pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  int pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   dfloat *pSendBuffer = (dfloat*) malloc(pHaloBytes);
   dfloat *pRecvBuffer = (dfloat*) malloc(pHaloBytes);
 
   // Set subscycling
-  iint subcycling =0;
+  int subcycling =0;
   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
   occa::initTimer(mesh->device);
@@ -43,7 +43,7 @@ void insRun2D(ins_t *ins, char *options){
 
   // MPI_Barrier(MPI_COMM_WORLD); 
   tic_tot = MPI_Wtime(); 
-  for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
    if(tstep<1){
        //advection, first order in time, increment
       ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2
@@ -154,12 +154,12 @@ void insRun2D(ins_t *ins, char *options){
     
     #if 0// For time accuracy test fed history with exact solution
         if(tstep<1){
-          iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+          int Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
           dfloat tt = (tstep+1)*ins->dt;
          // Overwrite Velocity
-         for(iint e=0;e<mesh->Nelements;++e){
-            for(iint n=0;n<mesh->Np;++n){
-              iint id = n + mesh->Np*e;
+         for(int e=0;e<mesh->Nelements;++e){
+            for(int n=0;n<mesh->Np;++n){
+              int id = n + mesh->Np*e;
               dfloat x = mesh->x[id];
               dfloat y = mesh->y[id];
 

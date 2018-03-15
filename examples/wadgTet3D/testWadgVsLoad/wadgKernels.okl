@@ -1,25 +1,25 @@
 #define dfloat float
-#define iint unsigned int
+#define int unsigned int
 
-kernel void applyWADG(const iint Nelements,
+kernel void applyWADG(const int Nelements,
                       const dfloat * restrict cubInterq,
                       const dfloat * restrict cubProject,
                       const dfloat * restrict weight,
                       dfloat * restrict q){
 
-  for(iint eo = 0; eo < Nelements; eo += p_Kblk; outer0){
+  for(int eo = 0; eo < Nelements; eo += p_Kblk; outer0){
 
     shared dfloat s_q[p_Kblk][p_cubNp];
     exclusive dfloat r_p;
 
-    for(iint es = 0; es < p_Kblk; ++es;inner1){
-      for(iint n=0; n < p_cubNp; ++n; inner0){
+    for(int es = 0; es < p_Kblk; ++es;inner1){
+      for(int n=0; n < p_cubNp; ++n; inner0){
 
         const int e = es + eo;
 
         if (n < p_Np & e < Nelements){
 
-          const iint id = e*p_Np + n;
+          const int id = e*p_Np + n;
           s_q[es][n] = q[id]; // extract field var
 
           // Initialize register variable
@@ -30,12 +30,12 @@ kernel void applyWADG(const iint Nelements,
     }
     barrier(localMemFence);
 
-    for(iint es = 0; es < p_Kblk; ++es;inner1){
+    for(int es = 0; es < p_Kblk; ++es;inner1){
 
       // Interqolate to cubature nodes
-      for(iint n=0; n < p_cubNp; ++n; inner0){
+      for(int n=0; n < p_cubNp; ++n; inner0){
 
-        const iint e = es + eo;
+        const int e = es + eo;
 
         if (e < Nelements){
 
@@ -55,9 +55,9 @@ kernel void applyWADG(const iint Nelements,
     barrier(localMemFence);
 
     // Move temporary result back to shared memory
-    for(iint es = 0; es < p_Kblk; ++es;inner1){
-      for(iint n=0;n<p_cubNp;++n;inner0){
-        const iint e = es+eo;
+    for(int es = 0; es < p_Kblk; ++es;inner1){
+      for(int n=0;n<p_cubNp;++n;inner0){
+        const int e = es+eo;
         if (e < Nelements){
           s_q[es][n] = r_p;
         }
@@ -66,9 +66,9 @@ kernel void applyWADG(const iint Nelements,
     barrier(localMemFence);
 
     // Increment solution, project result back down
-    for(iint es = 0; es < p_Kblk; ++es; inner1){
-      for(iint n=0; n<p_cubNp; ++n; inner0){
-        const iint e = es + eo;
+    for(int es = 0; es < p_Kblk; ++es; inner1){
+      for(int n=0; n<p_cubNp; ++n; inner0){
+        const int e = es + eo;
         if (n < p_Np & e < Nelements){
 
           // Project scaled rhs down
@@ -89,16 +89,16 @@ kernel void applyWADG(const iint Nelements,
 }
 
 
-kernel void applyPw(const iint Nelements,
+kernel void applyPw(const int Nelements,
                     const dfloat * restrict Pw,
                     dfloat * restrict rhs){
 
-  for(iint eo = 0; eo < Nelements; eo += p_Kblk; outer0){
+  for(int eo = 0; eo < Nelements; eo += p_Kblk; outer0){
 
     shared dfloat s_q[p_Kblk][p_Np];
 
-    for(iint es = 0; es < p_Kblk; ++es; inner1){
-      for(iint n=0; n < p_Np; ++n; inner0){
+    for(int es = 0; es < p_Kblk; ++es; inner1){
+      for(int n=0; n < p_Np; ++n; inner0){
         const int e = eo + es;
         if (e < Nelements){
           s_q[es][n] = q[n + e*p_Np];
@@ -107,12 +107,12 @@ kernel void applyPw(const iint Nelements,
     }
     barrier(localMemFence);
 
-    for(iint es = 0; es < p_Kblk; ++es; inner1){
-      for(iint n=0; n < p_Np; ++n; inner0){
-        const iint e = es+eo;
+    for(int es = 0; es < p_Kblk; ++es; inner1){
+      for(int n=0; n < p_Np; ++n; inner0){
+        const int e = es+eo;
         if (e < Nelements){
           dfloat val = 0.f;
-          for(iint m=0; m < p_Np; ++m){
+          for(int m=0; m < p_Np; ++m){
             const dfloat Pwm = Pw[n + m*p_Np + e*p_Np2];
             val += Pwm * s_q[es][m];
           }

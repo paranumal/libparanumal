@@ -7,7 +7,7 @@ void meshEllipticSolveQuad2D(mesh2D *mesh){
   dfloat lambda = 1.;
   dfloat TOL = 1e-8;
   
-  iint NnodesL = mesh->Np*mesh->Nelements;
+  int NnodesL = mesh->Np*mesh->Nelements;
 
   // storage
   dfloat *W   = (dfloat*) calloc(NnodesL, sizeof(dfloat)); // reciprocal multiplicity of local nodes
@@ -21,18 +21,18 @@ void meshEllipticSolveQuad2D(mesh2D *mesh){
   dfloat *ML  = (dfloat*) calloc(NnodesL, sizeof(dfloat));
 
   // mark gather nodes as boundary (or not) WILL break in parallel
-  iint *boundaryFlag = (iint*) calloc(NnodesL, sizeof(iint));
-  for(iint n=0;n<mesh->Nfp*mesh->Nfaces*mesh->Nelements;++n){
+  int *boundaryFlag = (int*) calloc(NnodesL, sizeof(int));
+  for(int n=0;n<mesh->Nfp*mesh->Nfaces*mesh->Nelements;++n){
     if(mesh->vmapM[n] == mesh->vmapP[n]){
-      iint id = mesh->globalNumbering[mesh->vmapM[n]];
+      int id = mesh->globalNumbering[mesh->vmapM[n]];
       boundaryFlag[id] = 1;
     }
   }
 
   // mark all boundary nodes and count WILL break in parallel
-  iint NnodesB = 0;
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
-    iint id = mesh->globalNumbering[n];
+  int NnodesB = 0;
+  for(int n=0;n<mesh->Np*mesh->Nelements;++n){
+    int id = mesh->globalNumbering[n];
     if(boundaryFlag[id]==1){
       boundaryFlag[n] = 1;
       ++NnodesB;
@@ -40,17 +40,17 @@ void meshEllipticSolveQuad2D(mesh2D *mesh){
   }
   
   // collect all boundary nodes
-  iint *nodesB = (iint*) calloc(NnodesB, sizeof(iint));
-  iint cnt = 0;
-  for(iint n=0;n<mesh->Np*mesh->Nelements;++n)
+  int *nodesB = (int*) calloc(NnodesB, sizeof(int));
+  int cnt = 0;
+  for(int n=0;n<mesh->Np*mesh->Nelements;++n)
     if(boundaryFlag[n]==1)
       nodesB[cnt++] = n;
 
   // store reciprocal multiplicity of each node
   cnt = 0;
-  for(iint n=0;n<mesh->NgatherNodes;++n){  
-    for(iint m=0;m<mesh->gatherCounts[n];++m){
-      iint id = mesh->gatherIds[cnt];
+  for(int n=0;n<mesh->NgatherNodes;++n){  
+    for(int m=0;m<mesh->gatherCounts[n];++m){
+      int id = mesh->gatherIds[cnt];
       ML[id] = (1-boundaryFlag[id]);    // mask
       W[id] = 1./mesh->gatherCounts[n]; // reciprocal multiplicity 
       ++cnt;
@@ -58,20 +58,20 @@ void meshEllipticSolveQuad2D(mesh2D *mesh){
   }
   
   // rL = ML*GS*(MML*fL - HL*ubL)
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      iint id = n + e*mesh->Np;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      int id = n + e*mesh->Np;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
-      iint  gid = mesh->Np*mesh->Nvgeo*e + n + mesh->Np*JWID;
+      int  gid = mesh->Np*mesh->Nvgeo*e + n + mesh->Np*JWID;
       dfloat Jw = mesh->vgeo[gid];
       // f = -(lambda+2*pi*pi)*cos(pi*x)*cos(pi*y)
       fL[id] = Jw*(lambda+2*M_PI*M_PI)*cos(M_PI*xn)*cos(M_PI*yn); // note this is massMatrixL
     }
   }
 
-  for(iint n=0;n<NnodesB;++n){
-    iint id = nodesB[n];
+  for(int n=0;n<NnodesB;++n){
+    int id = nodesB[n];
     dfloat xn = mesh->x[id];
     dfloat yn = mesh->y[id];
     ubL[id] = -cos(M_PI*xn)*cos(M_PI*yn); // -bc    
@@ -79,13 +79,13 @@ void meshEllipticSolveQuad2D(mesh2D *mesh){
   
   meshEllipticLocalOpQuad2D(mesh, ubL, lambda, rL);
 
-  for(iint n=0;n<NnodesL;++n)
+  for(int n=0;n<NnodesL;++n)
     rL[n] += fL[n];
   
   meshGatherScatterQuad2D(mesh, rL);
 
   dfloat rho1 = 0;
-  for(iint n=0;n<NnodesL;++n){
+  for(int n=0;n<NnodesL;++n){
     // mask boundary nodes
     rL[n] *= ML[n];
   
@@ -109,18 +109,18 @@ void meshEllipticSolveQuad2D(mesh2D *mesh){
       
       meshGatherScatterQuad2D(mesh, qL);
       
-      for(iint n=0;n<NnodesL;++n)
+      for(int n=0;n<NnodesL;++n)
 	qL[n] *= ML[n];
     }
     
     // alpha = rho1/(wL.*(W*qL)) (divide by multiplicity, compute inner product)
     wdotq = 0;
-    for(iint n=0;n<NnodesL;++n)
+    for(int n=0;n<NnodesL;++n)
       wdotq += wL[n]*W[n]*qL[n];
     alpha = rho1/wdotq;
 
     dfloat rdotr = 0;
-    for(iint n=0;n<NnodesL;++n){
+    for(int n=0;n<NnodesL;++n){
       // xL = xL + alpha*wL
       xL[n] += alpha*wL[n];
       
@@ -134,7 +134,7 @@ void meshEllipticSolveQuad2D(mesh2D *mesh){
     if(sqrt(rdotr)<TOL) break;
     
     // zL = PL\rL
-    for(iint n=0;n<NnodesL;++n)
+    for(int n=0;n<NnodesL;++n)
       zL[n] = rL[n];
     
     // rho0 = rho1
@@ -142,14 +142,14 @@ void meshEllipticSolveQuad2D(mesh2D *mesh){
 
     // rho1 = rL.(W*zL) (divide by multiplicity, compute inner-product)
     rho1 = 0;
-    for(iint n=0;n<NnodesL;++n)
+    for(int n=0;n<NnodesL;++n)
       rho1 += rL[n]*W[n]*zL[n];
 
     // beta = rho1/rho0
     beta = rho1/rho0;
     
     // wL = zL + beta*wL
-    for(iint n=0;n<NnodesL;++n)
+    for(int n=0;n<NnodesL;++n)
       wL[n] = zL[n] + beta*wL[n];
 
     printf("alpha = %g, beta = %g, rho0 = %g, rho1 = %g, rdotr = %g\n",
@@ -160,7 +160,7 @@ void meshEllipticSolveQuad2D(mesh2D *mesh){
   mesh->q = (dfloat*) calloc(mesh->Nfields*mesh->Np*mesh->Nelements, sizeof(dfloat));
   // solutionL = xL + ubL
   dfloat maxerr = 0;
-  for(iint n=0;n<NnodesL;++n){
+  for(int n=0;n<NnodesL;++n){
 
     dfloat xn = mesh->x[n];
     dfloat yn = mesh->y[n];
@@ -174,7 +174,7 @@ void meshEllipticSolveQuad2D(mesh2D *mesh){
   }
   printf("maxerr=%g\n", maxerr);
   
-  iint fld = 0;
+  int fld = 0;
   meshPlotVTU2D(mesh, "foo", fld);
   
   free(W); free(ubL); free(rL); free(zL); free(xL); free(qL); free(wL); free(ML); 

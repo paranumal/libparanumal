@@ -2,7 +2,7 @@
 // Do not use const, restrict, multiple element in a block
 // Read vector from global without shared but save to shared after interpolation
 kernel void insSubCycleCubatureVolume3D_v0(
-					    iint Nelements,
+					    int Nelements,
 					    dfloat * vgeo,
 					    dfloat * cubDrWT,
 					    dfloat * cubDsWT,
@@ -17,7 +17,7 @@ kernel void insSubCycleCubatureVolume3D_v0(
 						  dfloat * rhsU,
 						  dfloat * rhsV,
 						  dfloat * rhsW){
-  for(iint e=0;e<Nelements;++e;outer0){   
+  for(int e=0;e<Nelements;++e;outer0){   
 
     shared dfloat s_cF11[p_cubNp];
     shared dfloat s_cF12[p_cubNp];
@@ -31,14 +31,14 @@ kernel void insSubCycleCubatureVolume3D_v0(
     shared dfloat s_cF32[p_cubNp];
     shared dfloat s_cF33[p_cubNp];
 
-    for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
 			 if(e<Nelements && n<p_cubNp){
 				  dfloat cU = 0.f, cV = 0.f, cW   = 0.f;
 				  dfloat cUd = 0.f, cVd = 0.f, cWd = 0.f;
 
-			    for(iint i=0;i<p_Np;++i){
+			    for(int i=0;i<p_Np;++i){
 			      dfloat cIni = cubInterpT[n+i*p_cubNp];
-			      iint id = e*p_Np + i; 
+			      int id = e*p_Np + i; 
 			      cU  += cIni*U[id];
 			      cV  += cIni*V[id];
 			      cW  += cIni*W[id];
@@ -66,7 +66,7 @@ kernel void insSubCycleCubatureVolume3D_v0(
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
 				if(e<Nelements && n<p_Np){	  
 				  // prefetch geometric factors (constant on triangle)
 				  dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -94,7 +94,7 @@ kernel void insSubCycleCubatureVolume3D_v0(
 				  dfloat df33dr = 0.f, df33ds = 0.f, df33dt = 0.f;  
 
 
-	    for(iint i=0;i<p_cubNp;++i){
+	    for(int i=0;i<p_cubNp;++i){
 	      dfloat cDrWni = cubDrWT[n+i*p_Np];
 	      dfloat cDsWni = cubDsWT[n+i*p_Np];
 	      dfloat cDtWni = cubDtWT[n+i*p_Np];
@@ -165,7 +165,7 @@ kernel void insSubCycleCubatureVolume3D_v0(
 
 	  
 
-	  iint id = e*p_Np+n;
+	  int id = e*p_Np+n;
 
 	  rhsU[id]   = -rhsu; // note  change in sign
 	  rhsV[id]   = -rhsv;		
@@ -182,7 +182,7 @@ kernel void insSubCycleCubatureVolume3D_v0(
 
 // Add shared memory for global read of U vectors
 kernel void insSubCycleCubatureVolume3D_v1(
-					    iint Nelements,
+					    int Nelements,
 					    dfloat * vgeo,
 					    dfloat * cubDrWT,
 					    dfloat * cubDsWT,
@@ -197,7 +197,7 @@ kernel void insSubCycleCubatureVolume3D_v1(
 						  dfloat * rhsU,
 						  dfloat * rhsV,
 						  dfloat * rhsW){
-  for(iint e=0;e<Nelements;++e;outer0){   
+  for(int e=0;e<Nelements;++e;outer0){   
 
     // Too much shared memory!!!!! dont use this just for test
     shared dfloat s_U[p_Np];
@@ -220,9 +220,9 @@ kernel void insSubCycleCubatureVolume3D_v1(
     shared dfloat s_cF32[p_cubNp];
     shared dfloat s_cF33[p_cubNp];
 
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
 				if(e<Nelements && n<p_Np){ 
-				  iint id = e*p_Np+n;
+				  int id = e*p_Np+n;
 				  s_U[n]  = U[id];
 				  s_V[n]  = V[id];
 				  s_W[n]  = W[id];
@@ -236,12 +236,12 @@ kernel void insSubCycleCubatureVolume3D_v1(
 
     barrier(localMemFence);
 
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
 				if(e<Nelements && n<p_cubNp){
 				  dfloat cU = 0.f, cV = 0.f, cW   = 0.f;
 				  dfloat cUd = 0.f, cVd = 0.f, cWd = 0.f;
 
-			    for(iint i=0;i<p_Np;++i){
+			    for(int i=0;i<p_Np;++i){
 			      dfloat cIni = cubInterpT[n+i*p_cubNp];
 			      cU  += cIni*s_U[i];
 			      cV  += cIni*s_V[i];
@@ -270,7 +270,7 @@ kernel void insSubCycleCubatureVolume3D_v1(
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
 				if(e<Nelements && n<p_Np){	  
 				  // prefetch geometric factors (constant on triangle)
 				  dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -298,7 +298,7 @@ kernel void insSubCycleCubatureVolume3D_v1(
 				  dfloat df33dr = 0.f, df33ds = 0.f, df33dt = 0.f;  
 
 
-	    for(iint i=0;i<p_cubNp;++i){
+	    for(int i=0;i<p_cubNp;++i){
 	      dfloat cDrWni = cubDrWT[n+i*p_Np];
 	      dfloat cDsWni = cubDsWT[n+i*p_Np];
 	      dfloat cDtWni = cubDtWT[n+i*p_Np];
@@ -369,7 +369,7 @@ kernel void insSubCycleCubatureVolume3D_v1(
 
 	  
 
-	  iint id = e*p_Np+n;
+	  int id = e*p_Np+n;
 
 	  rhsU[id]   = -rhsu; // note  change in sign
 	  rhsV[id]   = -rhsv;		
@@ -389,7 +389,7 @@ kernel void insSubCycleCubatureVolume3D_v1(
 
 // Add constants
 kernel void insSubCycleCubatureVolume3D_v2(
-					    const iint Nelements,
+					    const int Nelements,
 					    const dfloat * restrict vgeo,
 					    const dfloat * restrict cubDrWT,
 					    const dfloat * restrict cubDsWT,
@@ -404,7 +404,7 @@ kernel void insSubCycleCubatureVolume3D_v2(
 						        dfloat * restrict rhsU,
 						        dfloat * restrict rhsV,
 						        dfloat * restrict rhsW){
-  for(iint e=0;e<Nelements;++e;outer0){   
+  for(int e=0;e<Nelements;++e;outer0){   
 
     // Too much shared memory!!!!! dont use this just for test
     shared dfloat s_U[p_Np];
@@ -427,9 +427,9 @@ kernel void insSubCycleCubatureVolume3D_v2(
     shared dfloat s_cF32[p_cubNp];
     shared dfloat s_cF33[p_cubNp];
 
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
 				if(e<Nelements && n<p_Np){ 
-				  const iint id = e*p_Np+n;
+				  const int id = e*p_Np+n;
 				  s_U[n]  = U[id];
 				  s_V[n]  = V[id];
 				  s_W[n]  = W[id];
@@ -443,12 +443,12 @@ kernel void insSubCycleCubatureVolume3D_v2(
 
     barrier(localMemFence);
 
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
 				if(e<Nelements && n<p_cubNp){
 				  dfloat cU = 0.f, cV = 0.f, cW   = 0.f;
 				  dfloat cUd = 0.f, cVd = 0.f, cWd = 0.f;
 
-			    for(iint i=0;i<p_Np;++i){
+			    for(int i=0;i<p_Np;++i){
 			      dfloat cIni = cubInterpT[n+i*p_cubNp];
 			      cU  += cIni*s_U[i];
 			      cV  += cIni*s_V[i];
@@ -477,7 +477,7 @@ kernel void insSubCycleCubatureVolume3D_v2(
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
 				if(e<Nelements && n<p_Np){	  
 				  // prefetch geometric factors (constant on triangle)
 				  const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -505,7 +505,7 @@ kernel void insSubCycleCubatureVolume3D_v2(
 				  dfloat df33dr = 0.f, df33ds = 0.f, df33dt = 0.f;  
 
 
-	    for(iint i=0;i<p_cubNp;++i){
+	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
 	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
 	      const dfloat cDtWni = cubDtWT[n+i*p_Np];
@@ -576,7 +576,7 @@ kernel void insSubCycleCubatureVolume3D_v2(
 
 	  
 
-	  const iint id = e*p_Np+n;
+	  const int id = e*p_Np+n;
 
 	  rhsU[id]   = -rhsu; // note  change in sign
 	  rhsV[id]   = -rhsv;		
@@ -596,7 +596,7 @@ kernel void insSubCycleCubatureVolume3D_v2(
 
 // Add constants
 kernel void insSubCycleCubatureVolume3D_v3(
-					    const iint Nelements,
+					    const int Nelements,
 					    const dfloat * restrict vgeo,
 					    const dfloat * restrict cubDrWT,
 					    const dfloat * restrict cubDsWT,
@@ -611,7 +611,7 @@ kernel void insSubCycleCubatureVolume3D_v3(
 						        dfloat * restrict rhsU,
 						        dfloat * restrict rhsV,
 						        dfloat * restrict rhsW){
-  for(iint e=0;e<Nelements;++e;outer0){   
+  for(int e=0;e<Nelements;++e;outer0){   
 
     // Too much shared memory!!!!! dont use this just for test
     shared dfloat s_U[p_Np];
@@ -634,9 +634,9 @@ kernel void insSubCycleCubatureVolume3D_v3(
     shared dfloat s_cF32[p_cubNp];
     shared dfloat s_cF33[p_cubNp];
 
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
 				if(e<Nelements && n<p_Np){ 
-				  const iint id = e*p_Np+n;
+				  const int id = e*p_Np+n;
 				  s_U[n]  = U[id];
 				  s_V[n]  = V[id];
 				  s_W[n]  = W[id];
@@ -650,13 +650,13 @@ kernel void insSubCycleCubatureVolume3D_v3(
 
     barrier(localMemFence);
 
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
 				if(e<Nelements && n<p_cubNp){
 				  dfloat cU = 0.f, cV = 0.f, cW   = 0.f;
 				  dfloat cUd = 0.f, cVd = 0.f, cWd = 0.f;
  					
  					occaUnroll(p_Np)
-			    for(iint i=0;i<p_Np;++i){
+			    for(int i=0;i<p_Np;++i){
 			      dfloat cIni = cubInterpT[n+i*p_cubNp];
 			      cU  += cIni*s_U[i];
 			      cV  += cIni*s_V[i];
@@ -685,7 +685,7 @@ kernel void insSubCycleCubatureVolume3D_v3(
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
 				if(e<Nelements && n<p_Np){	  
 				  // prefetch geometric factors (constant on triangle)
 				  const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -713,7 +713,7 @@ kernel void insSubCycleCubatureVolume3D_v3(
 				  dfloat df33dr = 0.f, df33ds = 0.f, df33dt = 0.f;  
 
       occaUnroll(p_cubNp)
-	    for(iint i=0;i<p_cubNp;++i){
+	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
 	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
 	      const dfloat cDtWni = cubDtWT[n+i*p_Np];
@@ -784,7 +784,7 @@ kernel void insSubCycleCubatureVolume3D_v3(
 
 	  
 
-	  const iint id = e*p_Np+n;
+	  const int id = e*p_Np+n;
 
 	  rhsU[id]   = -rhsu; // note  change in sign
 	  rhsV[id]   = -rhsv;		
@@ -801,7 +801,7 @@ kernel void insSubCycleCubatureVolume3D_v3(
 
 
 // Add multiple element per block
-kernel void insSubCycleCubatureVolume3D_v4(const iint Nelements,
+kernel void insSubCycleCubatureVolume3D_v4(const int Nelements,
 					const dfloat * restrict vgeo,
 					const dfloat * restrict cubDrWT,
 					const dfloat * restrict cubDsWT,
@@ -817,7 +817,7 @@ kernel void insSubCycleCubatureVolume3D_v4(const iint Nelements,
 						  dfloat * restrict rhsV,
 						  dfloat * restrict rhsW){
 
-  for(iint eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
 
     // Too much shared memory!!!!! dont use this just for test
     shared dfloat s_U[p_cubNblockV][p_Np];
@@ -840,11 +840,11 @@ kernel void insSubCycleCubatureVolume3D_v4(const iint Nelements,
     shared dfloat s_cF32[p_cubNblockV][p_cubNp];
     shared dfloat s_cF33[p_cubNblockV][p_cubNp];
     //
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-				iint e = eo+es; // element in block
+    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+				int e = eo+es; // element in block
 				if(e<Nelements && n<p_Np){ 
-				  const iint id = e*p_Np+n;
+				  const int id = e*p_Np+n;
 				  s_U[es][n]  = U[id];
 				  s_V[es][n]  = V[id];
 				  s_W[es][n]  = W[id];
@@ -859,16 +859,16 @@ kernel void insSubCycleCubatureVolume3D_v4(const iint Nelements,
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-			iint e = eo+es; // element in block
+    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+			int e = eo+es; // element in block
 				if(e<Nelements && n<p_cubNp){
 
 			  dfloat cU = 0.f, cV = 0.f, cW   = 0.f;
 			  dfloat cUd = 0.f, cVd = 0.f, cWd = 0.f;
 
 			  occaUnroll(p_Np)
-			    for(iint i=0;i<p_Np;++i){
+			    for(int i=0;i<p_Np;++i){
 			      dfloat cIni = cubInterpT[n+i*p_cubNp];
 			      cU  += cIni*s_U[es][i];
 			      cV  += cIni*s_V[es][i];
@@ -897,9 +897,9 @@ kernel void insSubCycleCubatureVolume3D_v4(const iint Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_cubNblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
-				iint e = eo+es;
+    for(int es=0;es<p_cubNblockV;++es;inner1){
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
+				int e = eo+es;
 
 				if(e<Nelements && n<p_Np){	  
 				  // prefetch geometric factors (constant on triangle)
@@ -928,7 +928,7 @@ kernel void insSubCycleCubatureVolume3D_v4(const iint Nelements,
 				  dfloat df33dr = 0.f, df33ds = 0.f, df33dt = 0.f;  
 
 	  occaUnroll(p_cubNp)
-	    for(iint i=0;i<p_cubNp;++i){
+	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
 	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
 	      const dfloat cDtWni = cubDtWT[n+i*p_Np];
@@ -999,7 +999,7 @@ kernel void insSubCycleCubatureVolume3D_v4(const iint Nelements,
 
 	  
 
-	  const iint id = e*p_Np+n;
+	  const int id = e*p_Np+n;
 
 	  rhsU[id]   = -rhsu; // note  change in sign
 	  rhsV[id]   = -rhsv;		
@@ -1016,7 +1016,7 @@ kernel void insSubCycleCubatureVolume3D_v4(const iint Nelements,
 
 
 // Re-use some shared memeory variable  
-kernel void insSubCycleCubatureVolume3D_v5(const iint Nelements,
+kernel void insSubCycleCubatureVolume3D_v5(const int Nelements,
 					const dfloat * restrict vgeo,
 					const dfloat * restrict cubDrWT,
 					const dfloat * restrict cubDsWT,
@@ -1032,7 +1032,7 @@ kernel void insSubCycleCubatureVolume3D_v5(const iint Nelements,
 						  dfloat * restrict rhsV,
 						  dfloat * restrict rhsW){
 
-  for(iint eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
 
     shared dfloat s_cF11[p_cubNblockV][p_cubNp];
     shared dfloat s_cF12[p_cubNblockV][p_cubNp];
@@ -1056,11 +1056,11 @@ kernel void insSubCycleCubatureVolume3D_v5(const iint Nelements,
     exclusive dfloat cU, cV, cW,  cUd,  cVd,  cWd; 
 
     //
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-				iint e = eo+es; // element in block
+    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+				int e = eo+es; // element in block
 				if(e<Nelements && n<p_Np){ 
-				  const iint id = e*p_Np+n;
+				  const int id = e*p_Np+n;
 				  s_U[es][n]  = U[id];
 				  s_V[es][n]  = V[id];
 				  s_W[es][n]  = W[id];
@@ -1075,16 +1075,16 @@ kernel void insSubCycleCubatureVolume3D_v5(const iint Nelements,
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-			iint e = eo+es; // element in block
+    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+			int e = eo+es; // element in block
 				if(e<Nelements && n<p_cubNp){
 
 			  cU = 0.f, cV = 0.f, cW   = 0.f;
 			  cUd = 0.f, cVd = 0.f, cWd = 0.f;
 
 			  occaUnroll(p_Np)
-			    for(iint i=0;i<p_Np;++i){
+			    for(int i=0;i<p_Np;++i){
 			      dfloat cIni = cubInterpT[n+i*p_cubNp];
 			      cU  += cIni*s_U[es][i];
 			      cV  += cIni*s_V[es][i];
@@ -1100,9 +1100,9 @@ kernel void insSubCycleCubatureVolume3D_v5(const iint Nelements,
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-			iint e = eo+es; // element in block
+    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+			int e = eo+es; // element in block
 				if(e<Nelements && n<p_cubNp){
 			  //
 			  s_cF11[es][n] = cU*cUd;
@@ -1123,9 +1123,9 @@ kernel void insSubCycleCubatureVolume3D_v5(const iint Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_cubNblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
-				iint e = eo+es;
+    for(int es=0;es<p_cubNblockV;++es;inner1){
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
+				int e = eo+es;
 
 				if(e<Nelements && n<p_Np){	  
 				  // prefetch geometric factors (constant on triangle)
@@ -1154,7 +1154,7 @@ kernel void insSubCycleCubatureVolume3D_v5(const iint Nelements,
 				  dfloat df33dr = 0.f, df33ds = 0.f, df33dt = 0.f;  
 
 	  occaUnroll(p_cubNp)
-	    for(iint i=0;i<p_cubNp;++i){
+	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
 	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
 	      const dfloat cDtWni = cubDtWT[n+i*p_Np];
@@ -1225,7 +1225,7 @@ kernel void insSubCycleCubatureVolume3D_v5(const iint Nelements,
 
 	  
 
-	  const iint id = e*p_Np+n;
+	  const int id = e*p_Np+n;
 
 	  rhsU[id]   = -rhsu; // note  change in sign
 	  rhsV[id]   = -rhsv;		
@@ -1252,7 +1252,7 @@ kernel void insSubCycleCubatureVolume3D_v5(const iint Nelements,
 
 
 // compute div(NU)  = div(uxu) in collocation way
-kernel void insSubCycleCubatureVolume3D(const iint Nelements,
+kernel void insSubCycleCubatureVolume3D(const int Nelements,
 					const dfloat * restrict vgeo,
 					const dfloat * restrict cubDrWT,
 					const dfloat * restrict cubDsWT,
@@ -1268,7 +1268,7 @@ kernel void insSubCycleCubatureVolume3D(const iint Nelements,
 						  dfloat * restrict rhsV,
 						  dfloat * restrict rhsW){
 
-  for(iint eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
 
     // Too much shared memory!!!!! dont use this just for test
     shared dfloat s_U[p_cubNblockV][p_Np];
@@ -1291,11 +1291,11 @@ kernel void insSubCycleCubatureVolume3D(const iint Nelements,
     shared dfloat s_cF32[p_cubNblockV][p_cubNp];
     shared dfloat s_cF33[p_cubNblockV][p_cubNp];
     //
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-				iint e = eo+es; // element in block
+    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+				int e = eo+es; // element in block
 				if(e<Nelements && n<p_Np){ 
-				  const iint id = e*p_Np+n;
+				  const int id = e*p_Np+n;
 				  s_U[es][n]  = U[id];
 				  s_V[es][n]  = V[id];
 				  s_W[es][n]  = W[id];
@@ -1310,16 +1310,16 @@ kernel void insSubCycleCubatureVolume3D(const iint Nelements,
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
-			iint e = eo+es; // element in block
+    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+			int e = eo+es; // element in block
 				if(e<Nelements && n<p_cubNp){
 
 			  dfloat cU = 0.f, cV = 0.f, cW   = 0.f;
 			  dfloat cUd = 0.f, cVd = 0.f, cWd = 0.f;
 
 			  occaUnroll(p_Np)
-			    for(iint i=0;i<p_Np;++i){
+			    for(int i=0;i<p_Np;++i){
 			      dfloat cIni = cubInterpT[n+i*p_cubNp];
 			      cU  += cIni*s_U[es][i];
 			      cV  += cIni*s_V[es][i];
@@ -1348,9 +1348,9 @@ kernel void insSubCycleCubatureVolume3D(const iint Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_cubNblockV;++es;inner1){
-      for(iint n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
-				iint e = eo+es;
+    for(int es=0;es<p_cubNblockV;++es;inner1){
+      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){    	
+				int e = eo+es;
 
 				if(e<Nelements && n<p_Np){	  
 				  // prefetch geometric factors (constant on triangle)
@@ -1379,7 +1379,7 @@ kernel void insSubCycleCubatureVolume3D(const iint Nelements,
 				  dfloat df33dr = 0.f, df33ds = 0.f, df33dt = 0.f;  
 
 	  occaUnroll(p_cubNp)
-	    for(iint i=0;i<p_cubNp;++i){
+	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
 	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
 	      const dfloat cDtWni = cubDtWT[n+i*p_Np];
@@ -1450,7 +1450,7 @@ kernel void insSubCycleCubatureVolume3D(const iint Nelements,
 
 	  
 
-	  const iint id = e*p_Np+n;
+	  const int id = e*p_Np+n;
 
 	  rhsU[id]   = -rhsu; // note  change in sign
 	  rhsV[id]   = -rhsv;		

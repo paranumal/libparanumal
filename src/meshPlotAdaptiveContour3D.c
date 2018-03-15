@@ -176,7 +176,7 @@ void PlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, df
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
-  for(iint n=0;n<plotNelements*plotNp;++n){
+  for(int n=0;n<plotNelements*plotNp;++n){
     fprintf(fp, "       ");
     fprintf(fp, "%g %g %g\n", plotx[n],ploty[n],plotz[n]);
   }
@@ -187,8 +187,8 @@ void PlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, df
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"pressure\" Format=\"ascii\">\n");
   
-  for(iint e=0;e<plotNelements;++e){
-    for(iint n=0;n<plotNp;++n){
+  for(int e=0;e<plotNelements;++e){
+    for(int n=0;n<plotNp;++n){
       fprintf(fp, "       ");
       fprintf(fp, "%g\n", plotu[e*plotNp+n]);
     }
@@ -200,7 +200,7 @@ void PlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, df
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   
-  for(iint e=0;e<plotNelements;++e){
+  for(int e=0;e<plotNelements;++e){
     fprintf(fp, "       ");
     for(int m=0;m<plotNverts;++m){
       fprintf(fp, "%d ", e*plotNp + m);
@@ -211,8 +211,8 @@ void PlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, df
   fprintf(fp, "        </DataArray>\n");
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
-  iint cnt = 0;
-  for(iint e=0;e<plotNelements;++e){
+  int cnt = 0;
+  for(int e=0;e<plotNelements;++e){
     cnt += plotNverts;
     fprintf(fp, "       ");
     fprintf(fp, "%d\n", cnt);
@@ -220,7 +220,7 @@ void PlotAdaptiveContour3D(mesh_t *mesh, char *fname, dfloat *u, int Nlevels, df
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(iint e=0;e<plotNelements;++e){
+  for(int e=0;e<plotNelements;++e){
     fprintf(fp, "10\n"); // TET code ?
   }
   fprintf(fp, "        </DataArray>\n");

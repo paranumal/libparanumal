@@ -1,4 +1,4 @@
-kernel void ellipticBRDivergenceVolume3D_v0(const iint Nelements,
+kernel void ellipticBRDivergenceVolume3D_v0(const int Nelements,
         const dfloat * restrict vgeo,
         const dfloat * restrict DrT,
         const dfloat * restrict DsT,
@@ -6,15 +6,15 @@ kernel void ellipticBRDivergenceVolume3D_v0(const iint Nelements,
         const dfloat * restrict gradq,
         dfloat * restrict Aq){
 
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
     // for all elements
     shared dfloat s_qx[p_NblockV][p_Np];
     shared dfloat s_qy[p_NblockV][p_Np];
     shared dfloat s_qz[p_NblockV][p_Np];
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-        const iint e = eo+es; // element in block
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+        const int e = eo+es; // element in block
         if(e<Nelements){
           s_qx[es][n]  = gradq[n +          e*3*p_Np];
           s_qy[es][n]  = gradq[n +   p_Np + e*3*p_Np];
@@ -26,9 +26,9 @@ kernel void ellipticBRDivergenceVolume3D_v0(const iint Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-        const iint e = eo+es; // element in block
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+        const int e = eo+es; // element in block
         if(e<Nelements){
           // prefetch geometric factors (constant on triangle)
           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -46,7 +46,7 @@ kernel void ellipticBRDivergenceVolume3D_v0(const iint Nelements,
           dfloat dqydr  = 0.f, dqyds  = 0.f, dqydt  = 0.f;
           dfloat dqzdr  = 0.f, dqzds  = 0.f, dqzdt  = 0.f;
           occaUnroll(p_Np)
-            for(iint i=0;i<p_Np;++i){
+            for(int i=0;i<p_Np;++i){
               const dfloat Drni = DrT[n+i*p_Np];
               const dfloat Dsni = DsT[n+i*p_Np];
               const dfloat Dtni = DtT[n+i*p_Np];
@@ -64,7 +64,7 @@ kernel void ellipticBRDivergenceVolume3D_v0(const iint Nelements,
               dqzdt  += Dtni*s_qz[es][i];
             }
 
-          const iint id = e*p_Np;
+          const int id = e*p_Np;
           Aq[id+n]  = drdx*dqxdr + dsdx*dqxds + dtdx*dqxdt 
                     + drdy*dqydr + dsdy*dqyds + dtdy*dqydt
                     + drdz*dqzdr + dsdz*dqzds + dtdz*dqzdt;

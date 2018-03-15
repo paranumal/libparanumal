@@ -3,10 +3,10 @@
 void acousticsErrorHex3D(mesh3D *mesh, dfloat time){
 
   dfloat maxErrorP = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
 
-      iint id = n+e*mesh->Np;
+      int id = n+e*mesh->Np;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
       dfloat z = mesh->z[id];

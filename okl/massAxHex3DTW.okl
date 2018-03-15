@@ -1,7 +1,7 @@
 
 // reference kernel; no unrolling anywhere and no padding, no const, no compiler variables
-kernel void massPartialAxHex3D_vBaseline(iint Nelements,
-					 iint *  elementList,
+kernel void massPartialAxHex3D_vBaseline(int Nelements,
+					 int *  elementList,
 					 dfloat * gjGeo,
 					 dfloat *  gjI,
 					 dfloat *  q,
@@ -19,7 +19,7 @@ kernel void massPartialAxHex3D_vBaseline(iint Nelements,
     shared dfloat s_q1[p_gjNq][p_gjNq];
     shared dfloat s_q2[p_gjNq][p_gjNq];
 		
-    exclusive iint emap;
+    exclusive int emap;
 		
     // prefetch D and I matrices and zero register storage
     for(int b=0;b<p_gjNq;++b;inner1){
@@ -32,7 +32,7 @@ kernel void massPartialAxHex3D_vBaseline(iint Nelements,
 
 	if(a<Nq && b<Nq){
 	  for(int c=0;c<Nq;++c){
-	    const iint id = emap*Np + c*Nq2 + b*Nq + a;
+	    const int id = emap*Np + c*Nq2 + b*Nq + a;
 	    Mq[id] = 0.0;
 	  }
 	}
@@ -123,7 +123,7 @@ kernel void massPartialAxHex3D_vBaseline(iint Nelements,
 	    
 	    // write straight to Mq
 	    for(int c=0;c<Nq;++c){
-	      const iint id = emap*Np + c*Nq2 + b*Nq + a;
+	      const int id = emap*Np + c*Nq2 + b*Nq + a;
 	      Mq[id] += s_I[k][c]*tmp;
 	    }
 	  }

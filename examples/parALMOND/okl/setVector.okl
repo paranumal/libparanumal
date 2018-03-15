@@ -1,9 +1,9 @@
 
-kernel void setVectorKernel(const iint N, 
+kernel void setVectorKernel(const int N, 
               const dfloat alpha, 
               dfloat *x){
 
-  for(iint n=0;n<N;++n;tile(256)){
+  for(int n=0;n<N;++n;tile(256)){
     if(n<N)
       x[n] = alpha;
   }

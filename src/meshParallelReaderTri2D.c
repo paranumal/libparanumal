@@ -27,12 +27,12 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
   mesh->NfaceVertices = 2;
 
   /* vertices on each face */
-  iint faceVertices[4][2] = {{0,1},{1,2},{2,0}};
+  int faceVertices[4][2] = {{0,1},{1,2},{2,0}};
 
   mesh->faceVertices =
-    (iint*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(iint));
+    (int*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(int));
 
-  memcpy(mesh->faceVertices, faceVertices[0], mesh->NfaceVertices*mesh->Nfaces*sizeof(iint));
+  memcpy(mesh->faceVertices, faceVertices[0], mesh->NfaceVertices*mesh->Nfaces*sizeof(int));
 
   if(fp==NULL){
     printf("meshParallelReaderTri2D: could not load file %s\n", fileName);
@@ -76,7 +76,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
   int Ntriangles = 0;
   int NboundaryFaces = 0;
   for(n=0;n<mesh->Nelements;++n){
-    iint elementType;
+    int elementType;
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==1) ++NboundaryFaces;
@@ -97,8 +97,8 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
   /* allocate space for Element node index data */
 
   mesh->EToV
-    = (iint*) calloc(NtrianglesLocal*mesh->Nverts,
-		     sizeof(iint));
+    = (int*) calloc(NtrianglesLocal*mesh->Nverts,
+		     sizeof(int));
   mesh->elementInfo
     = (int*) calloc(NtrianglesLocal,sizeof(int));
 
@@ -106,9 +106,9 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
   int cnt=0, bcnt=0;
   Ntriangles = 0;
 
-  mesh->boundaryInfo = (iint*) calloc(NboundaryFaces*3, sizeof(iint));
+  mesh->boundaryInfo = (int*) calloc(NboundaryFaces*3, sizeof(int));
   for(n=0;n<mesh->Nelements;++n){
-    iint elementType, v1, v2, v3;
+    int elementType, v1, v2, v3;
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==1){ // boundary face
@@ -128,7 +128,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
 	dfloat ye1 = VY[v1-1], ye2 = VY[v2-1], ye3 = VY[v3-1];
 	dfloat J = 0.25*((xe2-xe1)*(ye3-ye1) - (xe3-xe1)*(ye2-ye1));
 	if(J<0){
-	  iint v3tmp = v3;
+	  int v3tmp = v3;
 	  v3 = v2;
 	  v2 = v3tmp;
 	  //	  printf("unwarping element\n");

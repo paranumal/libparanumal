@@ -21,7 +21,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
   char testkernelName[BUFSIZ];
   occa::kernel testKernel;
-  for(iint i=0; i<NKernels; i++) {
+  for(int i=0; i<NKernels; i++) {
 
     sprintf(testkernelName, "%s_v%d", kernelName,  i);
     printf("%s Kernel #%02d\n", kernelFileName, i);
@@ -31,7 +31,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
     dfloat lambda = 0;
     // sync processes
 
-    iint Nbytes = sizeof(dfloat)*mesh->Np*2; // load one field, save one filed (ignore geofacs)
+    int Nbytes = sizeof(dfloat)*mesh->Np*2; // load one field, save one filed (ignore geofacs)
     Nbytes /= 2;
     printf("copying %d bytes \n", Nbytes*mesh->Nelements);
     occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
@@ -78,17 +78,17 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
     //start
     //
-    iint size;
+    int size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    iint   localDofs = mesh->Np*mesh->Nelements;
-    iint   localElements = mesh->Nelements;
-    iint   globalDofs;
-    iint   globalElements;
+    int   localDofs = mesh->Np*mesh->Nelements;
+    int   localElements = mesh->Nelements;
+    int   globalDofs;
+    int   globalElements;
     double globalCopyElapsed;
 
-    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_int,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localElements,&globalElements,1, MPI_int,   MPI_SUM, 0, MPI_COMM_WORLD );
     MPI_Reduce(&copyElapsed,&globalCopyElapsed,1, MPI_DOUBLE,   MPI_MAX, 0, MPI_COMM_WORLD );
 
 
@@ -99,7 +99,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
       // count actual number of non-zeros
       int nnzs = 0;
-      for(iint n=0;n<mesh->Np*mesh->maxNnzPerRow;++n){
+      for(int n=0;n<mesh->Np*mesh->maxNnzPerRow;++n){
 	nnzs += (fabs(mesh->Srr[n])>1e-13);
 	nnzs += (fabs(mesh->Srs[n])>1e-13);
 	nnzs += (fabs(mesh->Sss[n])>1e-13);

@@ -2,7 +2,7 @@
 
 
 
-void acousticsPmlVolume3Dbbdg(mesh3D *mesh, iint lev){
+void acousticsPmlVolume3Dbbdg(mesh3D *mesh, int lev){
 
   dfloat *cubu = (dfloat *) calloc(mesh->cubNpMax,sizeof(dfloat));
   dfloat *cubv = (dfloat *) calloc(mesh->cubNpMax,sizeof(dfloat));
@@ -13,9 +13,9 @@ void acousticsPmlVolume3Dbbdg(mesh3D *mesh, iint lev){
   dfloat *cubpz = (dfloat *) calloc(mesh->cubNpMax,sizeof(dfloat));
 
   // for all elements
-  for(iint et=0;et<mesh->MRABpmlNelements[lev];++et){
-    iint e = mesh->MRABpmlElementIds[lev][et];
-    iint pmlId = mesh->MRABpmlIds[lev][et];
+  for(int et=0;et<mesh->MRABpmlNelements[lev];++et){
+    int e = mesh->MRABpmlElementIds[lev][et];
+    int pmlId = mesh->MRABpmlIds[lev][et];
     int N = mesh->N[e];
 
     // prefetch geometric factors (constant on tet)
@@ -30,31 +30,31 @@ void acousticsPmlVolume3Dbbdg(mesh3D *mesh, iint lev){
     dfloat dtdz = mesh->vgeo[e*mesh->Nvgeo + TZID];
 
     // for all nodes in this element
-    for(iint n=0;n<mesh->Np[N];++n){
+    for(int n=0;n<mesh->Np[N];++n){
 
       // compute 'r', 's', and 't' derivatives of (q_m) at node n
-      iint D0i1 = mesh->Nfields*(e*mesh->NpMax + mesh->D0ids[N][4*n+0]);
-      iint D1i1 = mesh->Nfields*(e*mesh->NpMax + mesh->D1ids[N][4*n+0]);
-      iint D2i1 = mesh->Nfields*(e*mesh->NpMax + mesh->D2ids[N][4*n+0]);
-      iint D3i1 = mesh->Nfields*(e*mesh->NpMax + mesh->D3ids[N][4*n+0]);
+      int D0i1 = mesh->Nfields*(e*mesh->NpMax + mesh->D0ids[N][4*n+0]);
+      int D1i1 = mesh->Nfields*(e*mesh->NpMax + mesh->D1ids[N][4*n+0]);
+      int D2i1 = mesh->Nfields*(e*mesh->NpMax + mesh->D2ids[N][4*n+0]);
+      int D3i1 = mesh->Nfields*(e*mesh->NpMax + mesh->D3ids[N][4*n+0]);
       dfloat Dval1 = mesh->Dvals[N][4*n+0];
 
-      iint D0i2 = mesh->Nfields*(e*mesh->NpMax + mesh->D0ids[N][4*n+1]);
-      iint D1i2 = mesh->Nfields*(e*mesh->NpMax + mesh->D1ids[N][4*n+1]);
-      iint D2i2 = mesh->Nfields*(e*mesh->NpMax + mesh->D2ids[N][4*n+1]);
-      iint D3i2 = mesh->Nfields*(e*mesh->NpMax + mesh->D3ids[N][4*n+1]);
+      int D0i2 = mesh->Nfields*(e*mesh->NpMax + mesh->D0ids[N][4*n+1]);
+      int D1i2 = mesh->Nfields*(e*mesh->NpMax + mesh->D1ids[N][4*n+1]);
+      int D2i2 = mesh->Nfields*(e*mesh->NpMax + mesh->D2ids[N][4*n+1]);
+      int D3i2 = mesh->Nfields*(e*mesh->NpMax + mesh->D3ids[N][4*n+1]);
       dfloat Dval2 = mesh->Dvals[N][4*n+1];
 
-      iint D0i3 = mesh->Nfields*(e*mesh->NpMax + mesh->D0ids[N][4*n+2]);
-      iint D1i3 = mesh->Nfields*(e*mesh->NpMax + mesh->D1ids[N][4*n+2]);
-      iint D2i3 = mesh->Nfields*(e*mesh->NpMax + mesh->D2ids[N][4*n+2]);
-      iint D3i3 = mesh->Nfields*(e*mesh->NpMax + mesh->D3ids[N][4*n+2]);
+      int D0i3 = mesh->Nfields*(e*mesh->NpMax + mesh->D0ids[N][4*n+2]);
+      int D1i3 = mesh->Nfields*(e*mesh->NpMax + mesh->D1ids[N][4*n+2]);
+      int D2i3 = mesh->Nfields*(e*mesh->NpMax + mesh->D2ids[N][4*n+2]);
+      int D3i3 = mesh->Nfields*(e*mesh->NpMax + mesh->D3ids[N][4*n+2]);
       dfloat Dval3 = mesh->Dvals[N][4*n+2];
 
-      iint D0i4 = mesh->Nfields*(e*mesh->NpMax + mesh->D0ids[N][4*n+3]);
-      iint D1i4 = mesh->Nfields*(e*mesh->NpMax + mesh->D1ids[N][4*n+3]);
-      iint D2i4 = mesh->Nfields*(e*mesh->NpMax + mesh->D2ids[N][4*n+3]);
-      iint D3i4 = mesh->Nfields*(e*mesh->NpMax + mesh->D3ids[N][4*n+3]);
+      int D0i4 = mesh->Nfields*(e*mesh->NpMax + mesh->D0ids[N][4*n+3]);
+      int D1i4 = mesh->Nfields*(e*mesh->NpMax + mesh->D1ids[N][4*n+3]);
+      int D2i4 = mesh->Nfields*(e*mesh->NpMax + mesh->D2ids[N][4*n+3]);
+      int D3i4 = mesh->Nfields*(e*mesh->NpMax + mesh->D3ids[N][4*n+3]);
       dfloat Dval4 = mesh->Dvals[N][4*n+3];
 
       dfloat dudr = .5f*(Dval1*(mesh->q[D1i1+0] - mesh->q[D0i1+0]) +
@@ -119,8 +119,8 @@ void acousticsPmlVolume3Dbbdg(mesh3D *mesh, iint lev){
       dfloat dpdz = drdz*dpdr + dsdz*dpds + dtdz*dpdt;
 
       // indices for writing the RHS terms
-      iint rhsid = 3*mesh->Nfields*(e*mesh->NpMax + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
-      iint pmlrhsid = 3*mesh->pmlNfields*(pmlId*mesh->NpMax + n) + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
+      int rhsid = 3*mesh->Nfields*(e*mesh->NpMax + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
+      int pmlrhsid = 3*mesh->pmlNfields*(pmlId*mesh->NpMax + n) + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
 
       // store acoustics rhs contributions from collocation differentiation
       mesh->rhsq[rhsid+0] = -dpdx;
@@ -133,20 +133,20 @@ void acousticsPmlVolume3Dbbdg(mesh3D *mesh, iint lev){
     }
 
     // Interpolate to cubature nodes
-    for(iint n=0;n<mesh->cubNp[N];++n){
+    for(int n=0;n<mesh->cubNp[N];++n){
       dfloat u = 0.f;
       dfloat v = 0.f;
       dfloat w = 0.f;
       dfloat px = 0.f;
       dfloat py = 0.f;
       dfloat pz = 0.f;
-      for (iint i=0;i<mesh->Np[N];++i){
-        iint base = mesh->Nfields*(e*mesh->NpMax + i);
+      for (int i=0;i<mesh->Np[N];++i){
+        int base = mesh->Nfields*(e*mesh->NpMax + i);
         u += mesh->cubInterp[N][n*mesh->Np[N] + i] * mesh->q[base+0];
         v += mesh->cubInterp[N][n*mesh->Np[N] + i] * mesh->q[base+1];
         w += mesh->cubInterp[N][n*mesh->Np[N] + i] * mesh->q[base+2];
 
-        iint pmlBase = mesh->pmlNfields*(pmlId*mesh->NpMax+i);
+        int pmlBase = mesh->pmlNfields*(pmlId*mesh->NpMax+i);
         px += mesh->cubInterp[N][n*mesh->Np[N] + i] * mesh->pmlq[pmlBase+0];
         py += mesh->cubInterp[N][n*mesh->Np[N] + i] * mesh->pmlq[pmlBase+1];
         pz += mesh->cubInterp[N][n*mesh->Np[N] + i] * mesh->pmlq[pmlBase+2];
@@ -165,9 +165,9 @@ void acousticsPmlVolume3Dbbdg(mesh3D *mesh, iint lev){
     }
 
     //Project down and store
-    for(iint n=0;n<mesh->Np[N];++n){
-      iint rhsid = 3*mesh->Nfields*(e*mesh->NpMax + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
-      iint pmlrhsid = 3*mesh->pmlNfields*(pmlId*mesh->NpMax + n) + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
+    for(int n=0;n<mesh->Np[N];++n){
+      int rhsid = 3*mesh->Nfields*(e*mesh->NpMax + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
+      int pmlrhsid = 3*mesh->pmlNfields*(pmlId*mesh->NpMax + n) + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
 
       dfloat rhsu = mesh->rhsq[rhsid+0];
       dfloat rhsv = mesh->rhsq[rhsid+1];
@@ -175,7 +175,7 @@ void acousticsPmlVolume3Dbbdg(mesh3D *mesh, iint lev){
       dfloat rhspx = mesh->pmlrhsq[pmlrhsid+0];
       dfloat rhspy = mesh->pmlrhsq[pmlrhsid+1];
       dfloat rhspz = mesh->pmlrhsq[pmlrhsid+2];
-      for (iint i=0;i<mesh->cubNp[N];++i){
+      for (int i=0;i<mesh->cubNp[N];++i){
         rhsu += mesh->cubProject[N][n*mesh->cubNp[N] + i] * cubu[i];
         rhsv += mesh->cubProject[N][n*mesh->cubNp[N] + i] * cubv[i];
         rhsw += mesh->cubProject[N][n*mesh->cubNp[N] + i] * cubw[i];

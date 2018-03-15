@@ -6,13 +6,13 @@
 // nx,ny,nz,sJ,invJ - need WsJ
 
 kernel void ellipticAxIpdgTet3D(const int Nelements,
-        const iint * restrict vmapM,
-        const iint * restrict vmapP,
+        const int * restrict vmapM,
+        const int * restrict vmapP,
         const dfloat lambda,
         const dfloat tau,
         const dfloat * restrict vgeo,
         const dfloat * restrict sgeo,
-        const iint   * restrict EToB,
+        const int   * restrict EToB,
         const dfloat * restrict DrT,
         const dfloat * restrict DsT,
         const dfloat * restrict DtT,
@@ -33,7 +33,7 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
     shared  dfloat s_Lnxdq[p_Np];
     shared  dfloat s_Lnydq[p_Np];
     shared  dfloat s_Lnzdq[p_Np];
-    exclusive iint idM;
+    exclusive int idM;
     exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
 
     for(int n=0;n<p_Nmax;++n;inner0){
@@ -49,17 +49,17 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
       }
 
       if(n<p_NfacesNfp){
-        const iint id  = n + e*p_Nfaces*p_Nfp;
+        const int id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];
-        const iint idP = vmapP[id];
+        const int idP = vmapP[id];
         // find face that owns this node
-        const iint face = n/p_Nfp;
+        const int face = n/p_Nfp;
 
         dfloat4 gradqM = gradq[idM];// could fetch from shared after barrier
         dfloat4 gradqP = gradq[idP];
 
         // load surface geofactors for this face
-        iint sid = p_Nsgeo*(e*p_Nfaces+face);
+        int sid = p_Nsgeo*(e*p_Nfaces+face);
         nx = sgeo[sid+p_NXID];
         ny = sgeo[sid+p_NYID];
         nz = sgeo[sid+p_NZID];
@@ -67,7 +67,7 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
         invJ = sgeo[sid+p_IJID];
         hinv = sgeo[sid+p_IHID];
 
-        iint bc = EToB[face+p_Nfaces*e];
+        int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
           ellipticHomogeneousBC3D(bc, gradqM.w, gradqM.x, gradqM.y, gradqM.z, gradqP.w, gradqP.x, gradqP.y, gradqP.z);
           gradqP = 2*gradqP - gradqM;
@@ -109,7 +109,7 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
         dfloat Lnzdq = 0;
 
         occaUnroll(p_NfacesNfp)
-          for(iint i=0;i<p_NfacesNfp;++i){
+          for(int i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
             Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
             Lnzdq += LIFTT[n+i*p_Np]*s_nzdq[i];
@@ -133,7 +133,7 @@ kernel void ellipticAxIpdgTet3D(const int Nelements,
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_NfacesNfp){
-        iint id = idM%p_Np;
+        int id = idM%p_Np;
         s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]+nz*s_Lnzdq[id]);
       }
 

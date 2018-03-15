@@ -66,15 +66,15 @@ int main(int argc, char **argv){
   dfloat tau = 2.0*(mesh->N+1)*(mesh->N+3);
   solver_t *solver = ellipticSolveSetupTet3D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
 
-  iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  int Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 
   // load rhs into r
   dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       dfloat xn = mesh->x[n+e*mesh->Np];
       dfloat yn = mesh->y[n+e*mesh->Np];
       dfloat zn = mesh->z[n+e*mesh->Np];
@@ -82,12 +82,12 @@ int main(int argc, char **argv){
       nrhs[n] = -(3*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
       //x[e*mesh->Np+n] = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
     }
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       dfloat rhs = 0;
-      for(iint m=0;m<mesh->Np;++m){
+      for(int m=0;m<mesh->Np;++m){
 	      rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
       }
-      iint id = n+e*mesh->Np;
+      int id = n+e*mesh->Np;
 
       r[id] = -rhs*J;
       x[id] = 0.;
@@ -144,9 +144,9 @@ int main(int argc, char **argv){
   o_x.copyTo(mesh->q);
 
   dfloat maxError = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      iint   id = e*mesh->Np+n;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      int   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];

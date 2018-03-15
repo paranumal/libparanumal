@@ -4,7 +4,7 @@
 
 void boltzmannMRABSetup2D(mesh2D *mesh, char * options){
 
-  iint rank, size;
+  int rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
@@ -91,9 +91,9 @@ void boltzmannMRABSetup2D(mesh2D *mesh, char * options){
   dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
 
 
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
+  int cnt = 0;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
@@ -119,14 +119,14 @@ void boltzmannMRABSetup2D(mesh2D *mesh, char * options){
   dfloat *EtoDT       = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
 
   //Set time step size
-  for(iint e=0;e<mesh->Nelements;++e)
+  for(int e=0;e<mesh->Nelements;++e)
   { 
     dfloat hmin = 1e9, dtmax = 1e9;
     
     EtoDT[e] = dtmax;
 
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint sid    = mesh->Nsgeo*(mesh->Nfaces*e + f);
+    for(int f=0;f<mesh->Nfaces;++f){
+      int sid    = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
      
@@ -161,14 +161,14 @@ void boltzmannMRABSetup2D(mesh2D *mesh, char * options){
 
      
   // if(strstr(options, "MR_GROUPS")){
-  //   iint cnt1 = 0;
-  //  for (iint e=0;e<mesh->Nelements;e++){
-  //     for(iint n=0;n<mesh->Np;n++){
+  //   int cnt1 = 0;
+  //  for (int e=0;e<mesh->Nelements;e++){
+  //     for(int n=0;n<mesh->Np;n++){
   //     mesh->q[cnt1+0] = mesh->MRABlevel[e]; 
   //     cnt1 += mesh->Nfields;
   //     }
   //    }
-  //   mesh->sqrtRT = 1.0; iint zero = 0;
+  //   mesh->sqrtRT = 1.0; int zero = 0;
   //   char fname[BUFSIZ];
   //   sprintf(fname, "MR_GROUPS_%04d_%04d.vtu", rank, 0);
   //   meshPlotVTU2D(mesh, fname, zero);
@@ -200,16 +200,16 @@ void boltzmannMRABSetup2D(mesh2D *mesh, char * options){
   mesh->MRAB_B   = (dfloat *) calloc(3*3*mesh->MRABNlevels,sizeof(dfloat));
   mesh->MRAB_C   = (dfloat *) calloc(    mesh->MRABNlevels,sizeof(dfloat));
 
-  iint MRABorder = 3; 
+  int MRABorder = 3; 
 
-  for(iint l = 0; l<mesh->MRABNlevels; ++l){
+  for(int l = 0; l<mesh->MRABNlevels; ++l){
     // MRSAAB coefficients
     dfloat cc = -mesh->tauInv;
     dfloat h  = mesh->dt * pow(2,l); 
     //
-    for (iint order=0; order<3; ++order){
+    for (int order=0; order<3; ++order){
       // computation of coefficients based on magnitude
-      const iint id = order*mesh->MRABNlevels*3 + l*3;
+      const int id = order*mesh->MRABNlevels*3 + l*3;
 
       if(order==0){
         if(fabs(cc*h)>1e-2){  // Use exponentials
@@ -334,12 +334,12 @@ void boltzmannMRABSetup2D(mesh2D *mesh, char * options){
 
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-  for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
+  for (int lev=0;lev<mesh->MRABNlevels;lev++) {
     if (mesh->MRABNelements[lev])
-      mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
+      mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(int),
          mesh->MRABelementIds[lev]);
     if (mesh->MRABNhaloElements[lev])
-      mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
+      mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(int),
          mesh->MRABhaloIds[lev]);
   }
 
@@ -363,7 +363,7 @@ void boltzmannMRABSetup2D(mesh2D *mesh, char * options){
          mesh->fQM);
   mesh->o_fQP = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
          mesh->fQP);
-  mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint), 
+  mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int), 
          mesh->mapP);
 
 

@@ -1,18 +1,18 @@
 #include "agmg.h"
 
 csr *strong_graph(csr *A, dfloat threshold);
-bool customLess(iint smax, dfloat rmax, iint imax, iint s, dfloat r, iint i);
-iint *form_aggregates(agmgLevel *level, csr *C);
-void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse);
-csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullCoarseA);
-csr *transpose(agmgLevel* level, csr *A, iint *globalRowStarts, iint *globalColStarts);
+bool customLess(int smax, dfloat rmax, int imax, int s, dfloat r, int i);
+int *form_aggregates(agmgLevel *level, csr *C);
+void find_aggregate_owners(agmgLevel *level, int* FineToCoarse);
+csr *construct_interpolator(agmgLevel *level, int *FineToCoarse, dfloat **nullCoarseA);
+csr *transpose(agmgLevel* level, csr *A, int *globalRowStarts, int *globalColStarts);
 csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P);
 void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA);
 
 
-void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options){
+void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, int *globalRowStarts, const char* options){
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -59,13 +59,13 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   levels[lev]->device_smooth = device_agmgSmooth;
 
   //copy global partiton
-  levels[lev]->globalRowStarts = (iint *) calloc(size+1,sizeof(iint));
-  for (iint r=0;r<size+1;r++)
+  levels[lev]->globalRowStarts = (int *) calloc(size+1,sizeof(int));
+  for (int r=0;r<size+1;r++)
       levels[lev]->globalRowStarts[r] = globalRowStarts[r];
 
-  iint localSize = levels[lev]->A->Nrows;
-  iint globalSize = 0;
-  MPI_Allreduce(&localSize, &globalSize, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+  int localSize = levels[lev]->A->Nrows;
+  int globalSize = 0;
+  MPI_Allreduce(&localSize, &globalSize, 1, MPI_int, MPI_SUM, MPI_COMM_WORLD);
 
   //if the system if already small, dont create MG levels
   bool done = false;
@@ -121,9 +121,9 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
     levels[lev+1]->device_prolongate = device_agmgProlongate;
     levels[lev+1]->device_smooth = device_agmgSmooth;
 
-    const iint localCoarseDim = levels[lev+1]->A->Nrows;
-    iint globalCoarseSize;
-    MPI_Allreduce(&localCoarseDim, &globalCoarseSize, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+    const int localCoarseDim = levels[lev+1]->A->Nrows;
+    int globalCoarseSize;
+    MPI_Allreduce(&localCoarseDim, &globalCoarseSize, 1, MPI_int, MPI_SUM, MPI_COMM_WORLD);
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
       setupExactSolve(parAlmond, levels[lev+1],parAlmond->nullSpace,parAlmond->nullSpacePenalty);
@@ -138,8 +138,8 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
   //allocate vectors required
   occa::device device = parAlmond->device;
   for (int n=0;n<parAlmond->numLevels;n++) {
-    iint N = levels[n]->Nrows;
-    iint M = levels[n]->Ncols;
+    int N = levels[n]->Nrows;
+    int M = levels[n]->Ncols;
 
     if ((n>0)&&(n<parAlmond->numLevels)) { //kcycle vectors
       if (M) levels[n]->ckp1 = (dfloat *) calloc(M,sizeof(dfloat));
@@ -162,7 +162,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowSta
 
 void parAlmondReport(parAlmond_t *parAlmond) {
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -176,35 +176,35 @@ void parAlmondReport(parAlmond_t *parAlmond) {
 
   for(int lev=0; lev<parAlmond->numLevels; lev++){
 
-    iint Nrows = parAlmond->levels[lev]->Nrows;
+    int Nrows = parAlmond->levels[lev]->Nrows;
 
     int active = (Nrows>0) ? 1:0;
-    iint totalActive=0;
-    MPI_Allreduce(&active, &totalActive, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+    int totalActive=0;
+    MPI_Allreduce(&active, &totalActive, 1, MPI_int, MPI_SUM, MPI_COMM_WORLD);
 
-    iint minNrows=0, maxNrows=0, totalNrows=0;
+    int minNrows=0, maxNrows=0, totalNrows=0;
     dfloat avgNrows;
-    MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_int, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_int, MPI_SUM, MPI_COMM_WORLD);
     avgNrows = (dfloat) totalNrows/totalActive;
 
     if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
-    MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&Nrows, &minNrows, 1, MPI_int, MPI_MIN, MPI_COMM_WORLD);
 
 
-    iint nnz;
+    int nnz;
     if (parAlmond->levels[lev]->A)
       nnz = parAlmond->levels[lev]->A->diagNNZ+parAlmond->levels[lev]->A->offdNNZ;
     else
       nnz =0;
-    iint minNnz=0, maxNnz=0, totalNnz=0;
+    int minNnz=0, maxNnz=0, totalNnz=0;
     dfloat avgNnz;
-    MPI_Allreduce(&nnz, &maxNnz, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&nnz, &totalNnz, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&nnz, &maxNnz, 1, MPI_int, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&nnz, &totalNnz, 1, MPI_int, MPI_SUM, MPI_COMM_WORLD);
     avgNnz = (dfloat) totalNnz/totalActive;
 
     if (nnz==0) nnz = maxNnz; //set this so it's ignored for the global min
-    MPI_Allreduce(&nnz, &minNnz, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&nnz, &minNnz, 1, MPI_int, MPI_MIN, MPI_COMM_WORLD);
 
     Nrows = parAlmond->levels[lev]->Nrows;
     dfloat nnzPerRow = (Nrows==0) ? 0 : (dfloat) nnz/Nrows;
@@ -238,7 +238,7 @@ void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat 
 
   csr *C = strong_graph(level->A, level->threshold);
 
-  iint *FineToCoarse = form_aggregates(level, C);
+  int *FineToCoarse = form_aggregates(level, C);
 
   //find_aggregate_owners(level,FineToCoarse);
 
@@ -249,62 +249,62 @@ void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat 
 
 csr * strong_graph(csr *A, dfloat threshold){
 
-  const iint N = A->Nrows;
-  const iint M = A->Ncols;
+  const int N = A->Nrows;
+  const int M = A->Ncols;
 
   csr *C = (csr *) calloc(1, sizeof(csr));
 
   C->Nrows = N;
   C->Ncols = M;
 
-  C->diagRowStarts = (iint *) calloc(N+1,sizeof(iint));
-  C->offdRowStarts = (iint *) calloc(N+1,sizeof(iint));
+  C->diagRowStarts = (int *) calloc(N+1,sizeof(int));
+  C->offdRowStarts = (int *) calloc(N+1,sizeof(int));
 
   dfloat *maxOD;
   if (N) maxOD = (dfloat *) calloc(N,sizeof(dfloat));
 
   //store the diagonal of A for all needed columns
   dfloat *diagA = (dfloat *) calloc(M,sizeof(dfloat));
-  for (iint i=0;i<N;i++)
+  for (int i=0;i<N;i++)
     diagA[i] = A->diagCoefs[A->diagRowStarts[i]];
   csrHaloExchange(A, sizeof(dfloat), diagA, A->sendBuffer, diagA+A->NlocalCols);
 
-  for(iint i=0; i<N; i++){
+  for(int i=0; i<N; i++){
     dfloat sign = (diagA[i] >= 0) ? 1:-1;
     dfloat Aii = fabs(diagA[i]);
 
     //find maxOD
     //local entries
-    iint Jstart = A->diagRowStarts[i], Jend = A->diagRowStarts[i+1];
-    for(iint jj= Jstart+1; jj<Jend; jj++){
-      iint col = A->diagCols[jj];
+    int Jstart = A->diagRowStarts[i], Jend = A->diagRowStarts[i+1];
+    for(int jj= Jstart+1; jj<Jend; jj++){
+      int col = A->diagCols[jj];
       dfloat Ajj = fabs(diagA[col]);
       dfloat OD = -sign*A->diagCoefs[jj]/(sqrt(Aii)*sqrt(Ajj));
       if(OD > maxOD[i]) maxOD[i] = OD;
     }
     //non-local entries
     Jstart = A->offdRowStarts[i], Jend = A->offdRowStarts[i+1];
-    for(iint jj= Jstart; jj<Jend; jj++){
-      iint col = A->offdCols[jj];
+    for(int jj= Jstart; jj<Jend; jj++){
+      int col = A->offdCols[jj];
       dfloat Ajj = fabs(diagA[col]);
       dfloat OD = -sign*A->offdCoefs[jj]/(sqrt(Aii)*sqrt(Ajj));
       if(OD > maxOD[i]) maxOD[i] = OD;
     }
 
-    iint diag_strong_per_row = 1; // diagonal entry
+    int diag_strong_per_row = 1; // diagonal entry
     //local entries
     Jstart = A->diagRowStarts[i], Jend = A->diagRowStarts[i+1];
-    for(iint jj = Jstart+1; jj<Jend; jj++){
-      iint col = A->diagCols[jj];
+    for(int jj = Jstart+1; jj<Jend; jj++){
+      int col = A->diagCols[jj];
       dfloat Ajj = fabs(diagA[col]);
       dfloat OD = -sign*A->diagCoefs[jj]/(sqrt(Aii)*sqrt(Ajj));
       if(OD > threshold*maxOD[i]) diag_strong_per_row++;
     }
-    iint offd_strong_per_row = 0;
+    int offd_strong_per_row = 0;
     //non-local entries
     Jstart = A->offdRowStarts[i], Jend = A->offdRowStarts[i+1];
-    for(iint jj= Jstart; jj<Jend; jj++){
-      iint col = A->offdCols[jj];
+    for(int jj= Jstart; jj<Jend; jj++){
+      int col = A->offdCols[jj];
       dfloat Ajj = fabs(diagA[col]);
       dfloat OD = -sign*A->offdCoefs[jj]/(sqrt(Aii)*sqrt(Ajj));
       if(OD > threshold*maxOD[i]) offd_strong_per_row++;
@@ -315,7 +315,7 @@ csr * strong_graph(csr *A, dfloat threshold){
   }
 
   // cumulative sum
-  for(iint i=1; i<N+1 ; i++) {
+  for(int i=1; i<N+1 ; i++) {
     C->diagRowStarts[i] += C->diagRowStarts[i-1];
     C->offdRowStarts[i] += C->offdRowStarts[i-1];
   }
@@ -323,30 +323,30 @@ csr * strong_graph(csr *A, dfloat threshold){
   C->diagNNZ = C->diagRowStarts[N];
   C->offdNNZ = C->offdRowStarts[N];
 
-  if (C->diagNNZ) C->diagCols = (iint *) calloc(C->diagNNZ, sizeof(iint));
-  if (C->offdNNZ) C->offdCols = (iint *) calloc(C->offdNNZ, sizeof(iint));
+  if (C->diagNNZ) C->diagCols = (int *) calloc(C->diagNNZ, sizeof(int));
+  if (C->offdNNZ) C->offdCols = (int *) calloc(C->offdNNZ, sizeof(int));
 
   // fill in the columns for strong connections
-  for(iint i=0; i<N; i++){
+  for(int i=0; i<N; i++){
     dfloat sign = (diagA[i] >= 0) ? 1:-1;
     dfloat Aii = fabs(diagA[i]);
 
-    iint diagCounter = C->diagRowStarts[i];
-    iint offdCounter = C->offdRowStarts[i];
+    int diagCounter = C->diagRowStarts[i];
+    int offdCounter = C->offdRowStarts[i];
 
     //local entries
     C->diagCols[diagCounter++] = i;// diag entry
-    iint Jstart = A->diagRowStarts[i], Jend = A->diagRowStarts[i+1];
-    for(iint jj = Jstart+1; jj<Jend; jj++){
-      iint col = A->diagCols[jj];
+    int Jstart = A->diagRowStarts[i], Jend = A->diagRowStarts[i+1];
+    for(int jj = Jstart+1; jj<Jend; jj++){
+      int col = A->diagCols[jj];
       dfloat Ajj = fabs(diagA[col]);
       dfloat OD = -sign*A->diagCoefs[jj]/(sqrt(Aii)*sqrt(Ajj));
       if(OD > threshold*maxOD[i])
         C->diagCols[diagCounter++] = A->diagCols[jj];
     }
     Jstart = A->offdRowStarts[i], Jend = A->offdRowStarts[i+1];
-    for(iint jj = Jstart; jj<Jend; jj++){
-      iint col = A->offdCols[jj];
+    for(int jj = Jstart; jj<Jend; jj++){
+      int col = A->offdCols[jj];
       dfloat Ajj = fabs(diagA[col]);
       dfloat OD = -sign*A->offdCoefs[jj]/(sqrt(Aii)*sqrt(Ajj));
       if(OD > threshold*maxOD[i])
@@ -358,7 +358,7 @@ csr * strong_graph(csr *A, dfloat threshold){
   return C;
 }
 
-bool customLess(iint smax, dfloat rmax, iint imax, iint s, dfloat r, iint i){
+bool customLess(int smax, dfloat rmax, int imax, int s, dfloat r, int i){
 
   if(s > smax) return true;
   if(smax > s) return false;
@@ -372,68 +372,68 @@ bool customLess(iint smax, dfloat rmax, iint imax, iint s, dfloat r, iint i){
   return false;
 }
 
-iint * form_aggregates(agmgLevel *level, csr *C){
+int * form_aggregates(agmgLevel *level, csr *C){
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  const iint N   = C->Nrows;
-  const iint M   = C->Ncols;
-  const iint diagNNZ = C->diagNNZ;
-  const iint offdNNZ = C->offdNNZ;
+  const int N   = C->Nrows;
+  const int M   = C->Ncols;
+  const int diagNNZ = C->diagNNZ;
+  const int offdNNZ = C->offdNNZ;
 
-  iint *FineToCoarse = (iint *) calloc(M, sizeof(iint));
-  for (iint i =0;i<M;i++) FineToCoarse[i] = -1;
+  int *FineToCoarse = (int *) calloc(M, sizeof(int));
+  for (int i =0;i<M;i++) FineToCoarse[i] = -1;
 
   dfloat *rands  = (dfloat *) calloc(M, sizeof(dfloat));
-  iint   *states = (iint *)   calloc(M, sizeof(iint));
+  int   *states = (int *)   calloc(M, sizeof(int));
 
   dfloat *Tr = (dfloat *) calloc(M, sizeof(dfloat));
-  iint   *Ts = (iint *)   calloc(M, sizeof(iint));
-  iint   *Ti = (iint *)   calloc(M, sizeof(iint));
-  iint   *Tc = (iint *)   calloc(M, sizeof(iint));
+  int   *Ts = (int *)   calloc(M, sizeof(int));
+  int   *Ti = (int *)   calloc(M, sizeof(int));
+  int   *Tc = (int *)   calloc(M, sizeof(int));
 
   csr *A = level->A;
-  iint *globalRowStarts = level->globalRowStarts;
+  int *globalRowStarts = level->globalRowStarts;
 
-  iint *iintSendBuffer;
+  int *intSendBuffer;
   dfloat *dfloatSendBuffer;
   if (level->A->NsendTotal) {
-    iintSendBuffer = (iint *) calloc(A->NsendTotal,sizeof(iint));
+    intSendBuffer = (int *) calloc(A->NsendTotal,sizeof(int));
     dfloatSendBuffer = (dfloat *) calloc(A->NsendTotal,sizeof(dfloat));
   }
 
-  for(iint i=0; i<N; i++)
+  for(int i=0; i<N; i++)
     rands[i] = (dfloat) drand48();
 
-  for(iint i=0; i<N; i++)
+  for(int i=0; i<N; i++)
     states[i] = 0;
 
   // add the number of non-zeros in each column
   //local non-zeros
-  for(iint i=0; i<diagNNZ; i++)
+  for(int i=0; i<diagNNZ; i++)
     rands[C->diagCols[i]] += 1.;
 
-  iint *nnzCnt, *recvNnzCnt;
-  if (A->NHalo) nnzCnt = (iint *) calloc(A->NHalo,sizeof(iint));
-  if (A->NsendTotal) recvNnzCnt = (iint *) calloc(A->NsendTotal,sizeof(iint));
+  int *nnzCnt, *recvNnzCnt;
+  if (A->NHalo) nnzCnt = (int *) calloc(A->NHalo,sizeof(int));
+  if (A->NsendTotal) recvNnzCnt = (int *) calloc(A->NsendTotal,sizeof(int));
 
   //count the non-local non-zeros
-  for (iint i=0;i<offdNNZ;i++)
+  for (int i=0;i<offdNNZ;i++)
     nnzCnt[C->offdCols[i]-A->NlocalCols]++;
 
   //do a reverse halo exchange
-  iint tag = 999;
+  int tag = 999;
 
   // initiate immediate send  and receives to each other process as needed
-  iint recvOffset = 0;
-  iint sendOffset = 0;
-  iint sendMessage = 0, recvMessage = 0;
-  for(iint r=0;r<size;++r){
+  int recvOffset = 0;
+  int sendOffset = 0;
+  int sendMessage = 0, recvMessage = 0;
+  for(int r=0;r<size;++r){
     if (A->NsendTotal) {
       if(A->NsendPairs[r]) {
-        MPI_Irecv(recvNnzCnt+sendOffset, A->NsendPairs[r], MPI_IINT, r, tag,
+        MPI_Irecv(recvNnzCnt+sendOffset, A->NsendPairs[r], MPI_int, r, tag,
             MPI_COMM_WORLD, (MPI_Request*)A->haloSendRequests+sendMessage);
         sendOffset += A->NsendPairs[r];
         ++sendMessage;
@@ -441,7 +441,7 @@ iint * form_aggregates(agmgLevel *level, csr *C){
     }
     if (A->NrecvTotal) {
       if(A->NrecvPairs[r]){
-        MPI_Isend(nnzCnt+recvOffset, A->NrecvPairs[r], MPI_IINT, r, tag,
+        MPI_Isend(nnzCnt+recvOffset, A->NrecvPairs[r], MPI_int, r, tag,
             MPI_COMM_WORLD, (MPI_Request*)A->haloRecvRequests+recvMessage);
         recvOffset += A->NrecvPairs[r];
         ++recvMessage;
@@ -461,9 +461,9 @@ iint * form_aggregates(agmgLevel *level, csr *C){
     free(recvStatus);
   }
 
-  for(iint i=0;i<A->NsendTotal;++i){
+  for(int i=0;i<A->NsendTotal;++i){
     // local index of outgoing element in halo exchange
-    iint id = A->haloElementList[i];
+    int id = A->haloElementList[i];
 
     rands[id] += recvNnzCnt[i];
   }
@@ -479,16 +479,16 @@ iint * form_aggregates(agmgLevel *level, csr *C){
   int done = 0;
   while(!done){
     // first neighbours
-    for(iint i=0; i<N; i++){
+    for(int i=0; i<N; i++){
 
-      iint smax = states[i];
+      int smax = states[i];
       dfloat rmax = rands[i];
-      iint imax = i + globalRowStarts[rank];
+      int imax = i + globalRowStarts[rank];
 
       if(smax != 1){
         //local entries
-        for(iint jj=C->diagRowStarts[i]+1;jj<C->diagRowStarts[i+1];jj++){
-          const iint col = C->diagCols[jj];
+        for(int jj=C->diagRowStarts[i]+1;jj<C->diagRowStarts[i+1];jj++){
+          const int col = C->diagCols[jj];
           if(customLess(smax, rmax, imax, states[col], rands[col], col + globalRowStarts[rank])){
             smax = states[col];
             rmax = rands[col];
@@ -496,8 +496,8 @@ iint * form_aggregates(agmgLevel *level, csr *C){
           }
         }
         //nonlocal entries
-        for(iint jj=C->offdRowStarts[i];jj<C->offdRowStarts[i+1];jj++){
-          const iint col = C->offdCols[jj];
+        for(int jj=C->offdRowStarts[i];jj<C->offdRowStarts[i+1];jj++){
+          const int col = C->offdCols[jj];
           if(customLess(smax, rmax, imax, states[col], rands[col], A->colMap[col])) {
             smax = states[col];
             rmax = rands[col];
@@ -512,18 +512,18 @@ iint * form_aggregates(agmgLevel *level, csr *C){
 
     //share results
     csrHaloExchange(A, sizeof(dfloat), Tr, dfloatSendBuffer, Tr+A->NlocalCols);
-    csrHaloExchange(A, sizeof(iint), Ts, iintSendBuffer, Ts+A->NlocalCols);
-    csrHaloExchange(A, sizeof(iint), Ti, iintSendBuffer, Ti+A->NlocalCols);
+    csrHaloExchange(A, sizeof(int), Ts, intSendBuffer, Ts+A->NlocalCols);
+    csrHaloExchange(A, sizeof(int), Ti, intSendBuffer, Ti+A->NlocalCols);
 
     // second neighbours
-    for(iint i=0; i<N; i++){
-      iint   smax = Ts[i];
+    for(int i=0; i<N; i++){
+      int   smax = Ts[i];
       dfloat rmax = Tr[i];
-      iint   imax = Ti[i];
+      int   imax = Ti[i];
 
       //local entries
-      for(iint jj=C->diagRowStarts[i]+1;jj<C->diagRowStarts[i+1];jj++){
-        const iint col = C->diagCols[jj];
+      for(int jj=C->diagRowStarts[i]+1;jj<C->diagRowStarts[i+1];jj++){
+        const int col = C->diagCols[jj];
         if(customLess(smax, rmax, imax, Ts[col], Tr[col], Ti[col])){
           smax = Ts[col];
           rmax = Tr[col];
@@ -531,8 +531,8 @@ iint * form_aggregates(agmgLevel *level, csr *C){
         }
       }
       //nonlocal entries
-      for(iint jj=C->offdRowStarts[i];jj<C->offdRowStarts[i+1];jj++){
-        const iint col = C->offdCols[jj];
+      for(int jj=C->offdRowStarts[i];jj<C->offdRowStarts[i+1];jj++){
+        const int col = C->offdCols[jj];
         if(customLess(smax, rmax, imax, Ts[col], Tr[col], Ti[col])){
           smax = Ts[col];
           rmax = Tr[col];
@@ -550,45 +550,45 @@ iint * form_aggregates(agmgLevel *level, csr *C){
         states[i] = -1;
     }
 
-    csrHaloExchange(A, sizeof(iint), states, iintSendBuffer, states+A->NlocalCols);
+    csrHaloExchange(A, sizeof(int), states, intSendBuffer, states+A->NlocalCols);
 
     // if number of undecided nodes = 0, algorithm terminates
-    iint cnt = std::count(states, states+N, 0);
-    MPI_Allreduce(&cnt,&done,1,MPI_IINT, MPI_SUM,MPI_COMM_WORLD);
+    int cnt = std::count(states, states+N, 0);
+    MPI_Allreduce(&cnt,&done,1,MPI_int, MPI_SUM,MPI_COMM_WORLD);
     done = (done == 0) ? 1 : 0;
   }
 
-  iint numAggs = 0;
-  level->globalAggStarts = (iint *) calloc(size+1,sizeof(iint));
+  int numAggs = 0;
+  level->globalAggStarts = (int *) calloc(size+1,sizeof(int));
   // count the coarse nodes/aggregates
-  for(iint i=0; i<N; i++)
+  for(int i=0; i<N; i++)
     if(states[i] == 1) numAggs++;
 
-  MPI_Allgather(&numAggs,1,MPI_IINT,level->globalAggStarts+1,1,MPI_IINT,MPI_COMM_WORLD);
+  MPI_Allgather(&numAggs,1,MPI_int,level->globalAggStarts+1,1,MPI_int,MPI_COMM_WORLD);
 
-  for (iint r=0;r<size;r++)
+  for (int r=0;r<size;r++)
     level->globalAggStarts[r+1] += level->globalAggStarts[r];
 
   numAggs = 0;
   // enumerate the coarse nodes/aggregates
-  for(iint i=0; i<N; i++)
+  for(int i=0; i<N; i++)
     if(states[i] == 1)
       FineToCoarse[i] = level->globalAggStarts[rank] + numAggs++;
 
   //share the initial aggregate flags
-  csrHaloExchange(A, sizeof(iint), FineToCoarse, iintSendBuffer, FineToCoarse+A->NlocalCols);
+  csrHaloExchange(A, sizeof(int), FineToCoarse, intSendBuffer, FineToCoarse+A->NlocalCols);
 
   // form the aggregates
-  for(iint i=0; i<N; i++){
-    iint   smax = states[i];
+  for(int i=0; i<N; i++){
+    int   smax = states[i];
     dfloat rmax = rands[i];
-    iint   imax = i + globalRowStarts[rank];
-    iint   cmax = FineToCoarse[i];
+    int   imax = i + globalRowStarts[rank];
+    int   cmax = FineToCoarse[i];
 
     if(smax != 1){
       //local entries
-      for(iint jj=C->diagRowStarts[i]+1;jj<C->diagRowStarts[i+1];jj++){
-        const iint col = C->diagCols[jj];
+      for(int jj=C->diagRowStarts[i]+1;jj<C->diagRowStarts[i+1];jj++){
+        const int col = C->diagCols[jj];
         if(customLess(smax, rmax, imax, states[col], rands[col], col + globalRowStarts[rank])){
           smax = states[col];
           rmax = rands[col];
@@ -597,8 +597,8 @@ iint * form_aggregates(agmgLevel *level, csr *C){
         }
       }
       //nonlocal entries
-      for(iint jj=C->offdRowStarts[i];jj<C->offdRowStarts[i+1];jj++){
-        const iint col = C->offdCols[jj];
+      for(int jj=C->offdRowStarts[i];jj<C->offdRowStarts[i+1];jj++){
+        const int col = C->offdCols[jj];
         if(customLess(smax, rmax, imax, states[col], rands[col], A->colMap[col])){
           smax = states[col];
           rmax = rands[col];
@@ -616,22 +616,22 @@ iint * form_aggregates(agmgLevel *level, csr *C){
       FineToCoarse[i] = cmax;
   }
 
-  csrHaloExchange(A, sizeof(iint), FineToCoarse, iintSendBuffer, FineToCoarse+A->NlocalCols);
+  csrHaloExchange(A, sizeof(int), FineToCoarse, intSendBuffer, FineToCoarse+A->NlocalCols);
   csrHaloExchange(A, sizeof(dfloat), Tr, dfloatSendBuffer, Tr+A->NlocalCols);
-  csrHaloExchange(A, sizeof(iint), Ts, iintSendBuffer, Ts+A->NlocalCols);
-  csrHaloExchange(A, sizeof(iint), Ti, iintSendBuffer, Ti+A->NlocalCols);
-  csrHaloExchange(A, sizeof(iint), Tc, iintSendBuffer, Tc+A->NlocalCols);
+  csrHaloExchange(A, sizeof(int), Ts, intSendBuffer, Ts+A->NlocalCols);
+  csrHaloExchange(A, sizeof(int), Ti, intSendBuffer, Ti+A->NlocalCols);
+  csrHaloExchange(A, sizeof(int), Tc, intSendBuffer, Tc+A->NlocalCols);
 
   // second neighbours
-  for(iint i=0; i<N; i++){
-    iint   smax = Ts[i];
+  for(int i=0; i<N; i++){
+    int   smax = Ts[i];
     dfloat rmax = Tr[i];
-    iint   imax = Ti[i];
-    iint   cmax = Tc[i];
+    int   imax = Ti[i];
+    int   cmax = Tc[i];
 
     //local entries
-    for(iint jj=C->diagRowStarts[i]+1;jj<C->diagRowStarts[i+1];jj++){
-      const iint col = C->diagCols[jj];
+    for(int jj=C->diagRowStarts[i]+1;jj<C->diagRowStarts[i+1];jj++){
+      const int col = C->diagCols[jj];
       if(customLess(smax, rmax, imax, Ts[col], Tr[col], Ti[col])){
         smax = Ts[col];
         rmax = Tr[col];
@@ -640,8 +640,8 @@ iint * form_aggregates(agmgLevel *level, csr *C){
       }
     }
     //nonlocal entries
-    for(iint jj=C->offdRowStarts[i];jj<C->offdRowStarts[i+1];jj++){
-      const iint col = C->offdCols[jj];
+    for(int jj=C->offdRowStarts[i];jj<C->offdRowStarts[i+1];jj++){
+      const int col = C->offdCols[jj];
       if(customLess(smax, rmax, imax, Ts[col], Tr[col], Ti[col])){
         smax = Ts[col];
         rmax = Tr[col];
@@ -654,7 +654,7 @@ iint * form_aggregates(agmgLevel *level, csr *C){
       FineToCoarse[i] = cmax;
   }
 
-  csrHaloExchange(A, sizeof(iint), FineToCoarse, iintSendBuffer, FineToCoarse+A->NlocalCols);
+  csrHaloExchange(A, sizeof(int), FineToCoarse, intSendBuffer, FineToCoarse+A->NlocalCols);
 
   free(rands);
   free(states);
@@ -663,7 +663,7 @@ iint * form_aggregates(agmgLevel *level, csr *C){
   free(Ti);
   free(Tc);
   if (level->A->NsendTotal) {
-    free(iintSendBuffer);
+    free(intSendBuffer);
     free(dfloatSendBuffer);
   }
 
@@ -674,12 +674,12 @@ iint * form_aggregates(agmgLevel *level, csr *C){
 
 typedef struct {
 
-  iint fineId;
-  iint coarseId;
-  iint newCoarseId;
+  int fineId;
+  int coarseId;
+  int newCoarseId;
 
-  iint orginRank;
-  iint ownerRank;
+  int orginRank;
+  int ownerRank;
 
 } parallelAggregate_t;
 
@@ -706,20 +706,20 @@ int compareAgg(const void *a, const void *b){
   return 0;
 };
 
-void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
+void find_aggregate_owners(agmgLevel *level, int* FineToCoarse) {
   // MPI info
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  iint N = level->A->Nrows;
+  int N = level->A->Nrows;
 
   //Need to establish 'ownership' of aggregates
   //populate aggregate array
-  iint gNumAggs = level->globalAggStarts[size]; //total number of aggregates
+  int gNumAggs = level->globalAggStarts[size]; //total number of aggregates
   parallelAggregate_t *sendAggs;
   if (N) sendAggs = (parallelAggregate_t *) calloc(N,sizeof(parallelAggregate_t));
-  for (iint i=0;i<N;i++) {
+  for (int i=0;i<N;i++) {
     sendAggs[i].fineId = i;
     sendAggs[i].orginRank = rank;
 
@@ -731,20 +731,20 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
   //sort by owning rank for all_reduce
   qsort(sendAggs, N, sizeof(parallelAggregate_t), compareOwner);
 
-  iint *sendCounts = (iint *) calloc(size,sizeof(iint));
-  iint *recvCounts = (iint *) calloc(size,sizeof(iint));
-  iint *sendOffsets = (iint *) calloc(size+1,sizeof(iint));
-  iint *recvOffsets = (iint *) calloc(size+1,sizeof(iint));
+  int *sendCounts = (int *) calloc(size,sizeof(int));
+  int *recvCounts = (int *) calloc(size,sizeof(int));
+  int *sendOffsets = (int *) calloc(size+1,sizeof(int));
+  int *recvOffsets = (int *) calloc(size+1,sizeof(int));
 
-  for(iint i=0;i<N;++i)
+  for(int i=0;i<N;++i)
     sendCounts[sendAggs[i].ownerRank] += sizeof(parallelAggregate_t);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(sendCounts, 1, MPI_IINT, recvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(sendCounts, 1, MPI_int, recvCounts, 1, MPI_int, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
-  iint recvNtotal = 0;
-  for(iint r=0;r<size;++r){
+  int recvNtotal = 0;
+  for(int r=0;r<size;++r){
     sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
     recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
     recvNtotal += recvCounts[r]/sizeof(parallelAggregate_t);
@@ -759,17 +759,17 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
   qsort(recvAggs, recvNtotal, sizeof(parallelAggregate_t), compareAgg);
 
   //count the number of unique aggregates here
-  iint NumUniqueAggs =0;
+  int NumUniqueAggs =0;
   if (recvNtotal) NumUniqueAggs++;
-  for (iint i=1;i<recvNtotal;i++)
+  for (int i=1;i<recvNtotal;i++)
     if(recvAggs[i].coarseId!=recvAggs[i-1].coarseId) NumUniqueAggs++;
 
   //get their locations in the array
-  iint *aggStarts;
+  int *aggStarts;
   if (NumUniqueAggs)
-    aggStarts = (iint *) calloc(NumUniqueAggs+1,sizeof(iint));
-  iint cnt = 1;
-  for (iint i=1;i<recvNtotal;i++)
+    aggStarts = (int *) calloc(NumUniqueAggs+1,sizeof(int));
+  int cnt = 1;
+  for (int i=1;i<recvNtotal;i++)
     if(recvAggs[i].coarseId!=recvAggs[i-1].coarseId) aggStarts[cnt++]=i;
   aggStarts[NumUniqueAggs] = recvNtotal;
 
@@ -780,19 +780,19 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
 
   //determine the aggregates majority owner
   dfloat *rankCounts = (dfloat *) calloc(size,sizeof(dfloat));
-  for (iint n=0;n<NumUniqueAggs;n++) {
+  for (int n=0;n<NumUniqueAggs;n++) {
     //populate randomizer
-    for (iint r=0;r>size;r++)
+    for (int r=0;r>size;r++)
       rankCounts[r] = gRands[r];
 
     //count the number of contributions to the aggregate from the separate ranks
-    for (iint i=aggStarts[n];i<aggStarts[n+1];i++)
+    for (int i=aggStarts[n];i<aggStarts[n+1];i++)
       rankCounts[recvAggs[i].orginRank]++;
 
     //find which rank is contributing the most to this aggregate
-    iint ownerRank = 0;
+    int ownerRank = 0;
     dfloat maxEntries = rankCounts[0];
-    for (iint r=1;r<size;r++) {
+    for (int r=1;r<size;r++) {
       if (rankCounts[r]>maxEntries) {
         ownerRank = r;
         maxEntries = rankCounts[r];
@@ -800,7 +800,7 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
     }
 
     //set this aggregate's owner
-    for (iint i=aggStarts[n];i<aggStarts[n+1];i++)
+    for (int i=aggStarts[n];i<aggStarts[n+1];i++)
       recvAggs[i].ownerRank = ownerRank;
   }
   free(gRands); free(rankCounts);
@@ -809,20 +809,20 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
   //sort by owning rank
   qsort(recvAggs, recvNtotal, sizeof(parallelAggregate_t), compareOwner);
 
-  iint *newSendCounts = (iint *) calloc(size,sizeof(iint));
-  iint *newRecvCounts = (iint *) calloc(size,sizeof(iint));
-  iint *newSendOffsets = (iint *) calloc(size+1,sizeof(iint));
-  iint *newRecvOffsets = (iint *) calloc(size+1,sizeof(iint));
+  int *newSendCounts = (int *) calloc(size,sizeof(int));
+  int *newRecvCounts = (int *) calloc(size,sizeof(int));
+  int *newSendOffsets = (int *) calloc(size+1,sizeof(int));
+  int *newRecvOffsets = (int *) calloc(size+1,sizeof(int));
 
-  for(iint i=0;i<recvNtotal;++i)
+  for(int i=0;i<recvNtotal;++i)
     newSendCounts[recvAggs[i].ownerRank] += sizeof(parallelAggregate_t);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(newSendCounts, 1, MPI_IINT, newRecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(newSendCounts, 1, MPI_int, newRecvCounts, 1, MPI_int, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
-  iint newRecvNtotal = 0;
-  for(iint r=0;r<size;++r){
+  int newRecvNtotal = 0;
+  for(int r=0;r<size;++r){
     newSendOffsets[r+1] = newSendOffsets[r] + newSendCounts[r];
     newRecvOffsets[r+1] = newRecvOffsets[r] + newRecvCounts[r];
     newRecvNtotal += newRecvCounts[r]/sizeof(parallelAggregate_t);
@@ -837,22 +837,22 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
   qsort(newRecvAggs, newRecvNtotal, sizeof(parallelAggregate_t), compareAgg);
 
   //count the number of unique aggregates this rank owns
-  iint numAggs = 0;
+  int numAggs = 0;
   if (newRecvNtotal) numAggs++;
-  for (iint i=1;i<newRecvNtotal;i++)
+  for (int i=1;i<newRecvNtotal;i++)
     if(newRecvAggs[i].coarseId!=newRecvAggs[i-1].coarseId) numAggs++;
 
   //determine a global numbering of the aggregates
-  MPI_Allgather(&numAggs, 1, MPI_IINT, level->globalAggStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Allgather(&numAggs, 1, MPI_int, level->globalAggStarts+1, 1, MPI_int, MPI_COMM_WORLD);
 
   level->globalAggStarts[size] =0;
-  for (iint r=0;r<size;r++)
+  for (int r=0;r<size;r++)
     level->globalAggStarts[r+1] += level->globalAggStarts[r];
 
   //set the new global coarse index
   cnt = level->globalAggStarts[rank];
   if (newRecvNtotal) newRecvAggs[0].newCoarseId = cnt;
-  for (iint i=1;i<newRecvNtotal;i++) {
+  for (int i=1;i<newRecvNtotal;i++) {
     if(newRecvAggs[i].coarseId!=newRecvAggs[i-1].coarseId) cnt++;
 
     newRecvAggs[i].newCoarseId = cnt;
@@ -874,26 +874,26 @@ void find_aggregate_owners(agmgLevel *level, iint* FineToCoarse) {
   free(newSendOffsets); free(newRecvOffsets);
 
   //record the new FineToCoarse map
-  for (iint i=0;i<N;i++)
+  for (int i=0;i<N;i++)
     FineToCoarse[sendAggs[i].fineId] = sendAggs[i].newCoarseId;
 
   if (N) free(sendAggs);
 }
 
 
-csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullCoarseA){
+csr *construct_interpolator(agmgLevel *level, int *FineToCoarse, dfloat **nullCoarseA){
   // MPI info
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  const iint N = level->A->Nrows;
-  const iint M = level->A->Ncols;
+  const int N = level->A->Nrows;
+  const int M = level->A->Ncols;
 
-  iint *globalAggStarts = level->globalAggStarts;
+  int *globalAggStarts = level->globalAggStarts;
 
-  const iint globalAggOffset = level->globalAggStarts[rank];
-  const iint NCoarse = globalAggStarts[rank+1]-globalAggStarts[rank]; //local num agg
+  const int globalAggOffset = level->globalAggStarts[rank];
+  const int NCoarse = globalAggStarts[rank+1]-globalAggStarts[rank]; //local num agg
 
   csr* P = (csr *) calloc(1, sizeof(csr));
 
@@ -903,14 +903,14 @@ csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
   P->NlocalCols = NCoarse;
   P->NHalo = 0;
 
-  P->diagRowStarts = (iint *) calloc(N+1, sizeof(iint));
-  P->offdRowStarts = (iint *) calloc(N+1, sizeof(iint));
+  P->diagRowStarts = (int *) calloc(N+1, sizeof(int));
+  P->offdRowStarts = (int *) calloc(N+1, sizeof(int));
 
   // each row has exactly one nonzero per row
   P->diagNNZ =0;
   P->offdNNZ =0;
-  for(iint i=0; i<N; i++) {
-    iint col = FineToCoarse[i];
+  for(int i=0; i<N; i++) {
+    int col = FineToCoarse[i];
     if ((col>globalAggOffset-1)&&(col<globalAggOffset+NCoarse)) {
       P->diagNNZ++;
       P->diagRowStarts[i+1]++;
@@ -919,24 +919,24 @@ csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
       P->offdRowStarts[i+1]++;
     }
   }
-  for(iint i=0; i<N; i++) {
+  for(int i=0; i<N; i++) {
     P->diagRowStarts[i+1] += P->diagRowStarts[i];
     P->offdRowStarts[i+1] += P->offdRowStarts[i];
   }
 
   if (P->diagNNZ) {
-    P->diagCols  = (iint *)   calloc(P->diagNNZ, sizeof(iint));
+    P->diagCols  = (int *)   calloc(P->diagNNZ, sizeof(int));
     P->diagCoefs = (dfloat *) calloc(P->diagNNZ, sizeof(dfloat));
   }
   if (P->offdNNZ) {
-    P->offdCols  = (iint *)   calloc(P->offdNNZ, sizeof(iint));
+    P->offdCols  = (int *)   calloc(P->offdNNZ, sizeof(int));
     P->offdCoefs = (dfloat *) calloc(P->offdNNZ, sizeof(dfloat));
   }
 
-  iint diagCnt = 0;
-  iint offdCnt = 0;
-  for(iint i=0; i<N; i++) {
-    iint col = FineToCoarse[i];
+  int diagCnt = 0;
+  int offdCnt = 0;
+  for(int i=0; i<N; i++) {
+    int col = FineToCoarse[i];
     if ((col>globalAggStarts[rank]-1)&&(col<globalAggStarts[rank+1])) {
       P->diagCols[diagCnt] = col - globalAggOffset; //local index
       P->diagCoefs[diagCnt++] = level->A->null[i];
@@ -947,14 +947,14 @@ csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
   }
 
   //record global indexing of columns
-  P->colMap = (iint *)   calloc(P->Ncols, sizeof(iint));
-  for (iint i=0;i<P->Ncols;i++)
+  P->colMap = (int *)   calloc(P->Ncols, sizeof(int));
+  for (int i=0;i<P->Ncols;i++)
     P->colMap[i] = i + globalAggOffset;
 
   if (P->offdNNZ) {
     //we now need to reorder the x vector for the halo, and shift the column indices
-    iint *col = (iint *) calloc(P->offdNNZ,sizeof(iint));
-    for (iint i=0;i<P->offdNNZ;i++)
+    int *col = (int *) calloc(P->offdNNZ,sizeof(int));
+    for (int i=0;i<P->offdNNZ;i++)
       col[i] = P->offdCols[i]; //copy non-local column global ids
 
     //sort by global index
@@ -962,22 +962,22 @@ csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
 
     //count unique non-local column ids
     P->NHalo = 0;
-    for (iint i=1;i<P->offdNNZ;i++)
+    for (int i=1;i<P->offdNNZ;i++)
       if (col[i]!=col[i-1])  col[++P->NHalo] = col[i];
     P->NHalo++; //number of unique columns
 
     P->Ncols += P->NHalo;
 
     //save global column ids in colMap
-    P->colMap = (iint *) realloc(P->colMap, P->Ncols*sizeof(iint));
-    for (iint i=0; i<P->NHalo; i++)
+    P->colMap = (int *) realloc(P->colMap, P->Ncols*sizeof(int));
+    for (int i=0; i<P->NHalo; i++)
       P->colMap[i+P->NlocalCols] = col[i];
     free(col);
 
     //shift the column indices to local indexing
-    for (iint i=0;i<P->offdNNZ;i++) {
-      iint gcol = P->offdCols[i];
-      for (iint m=P->NlocalCols;m<P->Ncols;m++) {
+    for (int i=0;i<P->offdNNZ;i++) {
+      int gcol = P->offdCols[i];
+      for (int m=P->NlocalCols;m<P->Ncols;m++) {
         if (gcol == P->colMap[m])
           P->offdCols[i] = m;
       }
@@ -990,7 +990,7 @@ csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
   *nullCoarseA = (dfloat *) calloc(P->Ncols,sizeof(dfloat));
 
   //add local nonzeros
-  for(iint i=0; i<P->diagNNZ; i++)
+  for(int i=0; i<P->diagNNZ; i++)
     (*nullCoarseA)[P->diagCols[i]] += P->diagCoefs[i] * P->diagCoefs[i];
 
   dfloat *nnzSum, *recvNnzSum;
@@ -998,17 +998,17 @@ csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
   if (P->NsendTotal) recvNnzSum = (dfloat *) calloc(P->NsendTotal,sizeof(dfloat));
 
   //add the non-local non-zeros
-  for (iint i=0;i<P->offdNNZ;i++)
+  for (int i=0;i<P->offdNNZ;i++)
     nnzSum[P->offdCols[i]-P->NlocalCols] += P->offdCoefs[i] * P->offdCoefs[i];
 
   //do a reverse halo exchange
-  iint tag = 999;
+  int tag = 999;
 
   // initiate immediate send  and receives to each other process as needed
-  iint recvOffset = 0;
-  iint sendOffset = 0;
-  iint sendMessage = 0, recvMessage = 0;
-  for(iint r=0;r<size;++r){
+  int recvOffset = 0;
+  int sendOffset = 0;
+  int sendMessage = 0, recvMessage = 0;
+  for(int r=0;r<size;++r){
     if (P->NsendTotal) {
       if(P->NsendPairs[r]) {
         MPI_Irecv(recvNnzSum+sendOffset, P->NsendPairs[r], MPI_DFLOAT, r, tag,
@@ -1039,23 +1039,23 @@ csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
     free(recvStatus);
   }
 
-  for(iint i=0;i<P->NsendTotal;++i){
+  for(int i=0;i<P->NsendTotal;++i){
     // local index of outgoing element in halo exchange
-    iint id = P->haloElementList[i];
+    int id = P->haloElementList[i];
 
     (*nullCoarseA)[id] += recvNnzSum[i];
   }
 
   if (P->NHalo) free(nnzSum);
 
-  for(iint i=0; i<NCoarse; i++)
+  for(int i=0; i<NCoarse; i++)
     (*nullCoarseA)[i] = sqrt((*nullCoarseA)[i]);
 
   csrHaloExchange(P, sizeof(dfloat), *nullCoarseA, P->sendBuffer, *nullCoarseA+P->NlocalCols);
 
-  for(iint i=0; i<P->diagNNZ; i++)
+  for(int i=0; i<P->diagNNZ; i++)
     P->diagCoefs[i] /= (*nullCoarseA)[P->diagCols[i]];
-  for(iint i=0; i<P->offdNNZ; i++)
+  for(int i=0; i<P->offdNNZ; i++)
     P->offdCoefs[i] /= (*nullCoarseA)[P->offdCols[i]];
 
   if (P->NsendTotal) free(recvNnzSum);
@@ -1065,10 +1065,10 @@ csr *construct_interpolator(agmgLevel *level, iint *FineToCoarse, dfloat **nullC
 
 typedef struct {
 
-  iint row;
-  iint col;
+  int row;
+  int col;
   dfloat val;
-  iint owner;
+  int owner;
 
 } nonzero_t;
 
@@ -1089,10 +1089,10 @@ int compareNonZero(const void *a, const void *b){
 };
 
 csr * transpose(agmgLevel* level, csr *A,
-                iint *globalRowStarts, iint *globalColStarts){
+                int *globalRowStarts, int *globalColStarts){
 
   // MPI info
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -1104,34 +1104,34 @@ csr * transpose(agmgLevel* level, csr *A,
 
   At->NlocalCols = At->Ncols;
 
-  At->diagRowStarts = (iint *)   calloc(At->Nrows+1, sizeof(iint));
-  At->offdRowStarts = (iint *)   calloc(At->Nrows+1, sizeof(iint));
+  At->diagRowStarts = (int *)   calloc(At->Nrows+1, sizeof(int));
+  At->offdRowStarts = (int *)   calloc(At->Nrows+1, sizeof(int));
 
   //start with local entries
   if (A->diagNNZ) {
-    At->diagCols      = (iint *)   calloc(At->diagNNZ, sizeof(iint));
+    At->diagCols      = (int *)   calloc(At->diagNNZ, sizeof(int));
     At->diagCoefs     = (dfloat *) calloc(At->diagNNZ, sizeof(dfloat));
   }
 
   // count the num of nonzeros per row for transpose
-  for(iint i=0; i<A->diagNNZ; i++){
-    iint row = A->diagCols[i];
+  for(int i=0; i<A->diagNNZ; i++){
+    int row = A->diagCols[i];
     At->diagRowStarts[row+1]++;
   }
 
   // cumulative sum for rows
-  for(iint i=1; i<=At->Nrows; i++)
+  for(int i=1; i<=At->Nrows; i++)
     At->diagRowStarts[i] += At->diagRowStarts[i-1];
 
-  iint *counter = (iint *) calloc(At->Nrows+1,sizeof(iint));
-  for (iint i=0; i<At->Nrows+1; i++)
+  int *counter = (int *) calloc(At->Nrows+1,sizeof(int));
+  for (int i=0; i<At->Nrows+1; i++)
     counter[i] = At->diagRowStarts[i];
 
-  for(iint i=0; i<A->Nrows; i++){
-    const iint Jstart = A->diagRowStarts[i], Jend = A->diagRowStarts[i+1];
+  for(int i=0; i<A->Nrows; i++){
+    const int Jstart = A->diagRowStarts[i], Jend = A->diagRowStarts[i+1];
 
-    for(iint jj=Jstart; jj<Jend; jj++){
-      iint row = A->diagCols[jj];
+    for(int jj=Jstart; jj<Jend; jj++){
+      int row = A->diagCols[jj];
       At->diagCols[counter[row]]  = i;
       At->diagCoefs[counter[row]] = A->diagCoefs[jj];
 
@@ -1141,30 +1141,30 @@ csr * transpose(agmgLevel* level, csr *A,
   free(counter);
 
   //record global indexing of columns
-  At->colMap = (iint *)   calloc(At->Ncols, sizeof(iint));
-  for (iint i=0;i<At->Ncols;i++)
+  At->colMap = (int *)   calloc(At->Ncols, sizeof(int));
+  for (int i=0;i<At->Ncols;i++)
     At->colMap[i] = i + globalRowStarts[rank];
 
   //now the nonlocal entries. Need to reverse the halo exchange to send the nonzeros
-  iint tag = 999;
+  int tag = 999;
 
   nonzero_t *sendNonZeros;
   if (A->offdNNZ)
     sendNonZeros = (nonzero_t *) calloc(A->offdNNZ,sizeof(nonzero_t));
 
-  iint *Nsend = (iint*) calloc(size, sizeof(iint));
-  iint *Nrecv = (iint*) calloc(size, sizeof(iint));
+  int *Nsend = (int*) calloc(size, sizeof(int));
+  int *Nrecv = (int*) calloc(size, sizeof(int));
 
-  for(iint r=0;r<size;r++) {
+  for(int r=0;r<size;r++) {
     Nsend[r] =0;
     Nrecv[r] =0;
   }
 
   // copy data from nonlocal entries into send buffer
-  for(iint i=0;i<A->Nrows;++i){
-    for (iint j=A->offdRowStarts[i];j<A->offdRowStarts[i+1];j++) {
-      iint col =  A->colMap[A->offdCols[j]]; //global ids
-      for (iint r=0;r<size;r++) { //find owner's rank
+  for(int i=0;i<A->Nrows;++i){
+    for (int j=A->offdRowStarts[i];j<A->offdRowStarts[i+1];j++) {
+      int col =  A->colMap[A->offdCols[j]]; //global ids
+      for (int r=0;r<size;r++) { //find owner's rank
         if ((globalColStarts[r]-1<col) && (col < globalColStarts[r+1])) {
           Nsend[r]++;
           sendNonZeros[j].owner = r;
@@ -1180,11 +1180,11 @@ csr * transpose(agmgLevel* level, csr *A,
   if (A->offdNNZ)
     qsort(sendNonZeros, A->offdNNZ, sizeof(nonzero_t), compareNonZero);
 
-  MPI_Alltoall(Nsend, 1, MPI_IINT, Nrecv, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(Nsend, 1, MPI_int, Nrecv, 1, MPI_int, MPI_COMM_WORLD);
 
   //count incoming nonzeros
   At->offdNNZ = 0;
-  for (iint r=0;r<size;r++)
+  for (int r=0;r<size;r++)
     At->offdNNZ += Nrecv[r];
 
   nonzero_t *recvNonZeros;
@@ -1192,10 +1192,10 @@ csr * transpose(agmgLevel* level, csr *A,
     recvNonZeros = (nonzero_t *) calloc(At->offdNNZ,sizeof(nonzero_t));
 
   // initiate immediate send and receives to each other process as needed
-  iint recvOffset = 0;
-  iint sendOffset = 0;
-  iint sendMessage = 0, recvMessage = 0;
-  for(iint r=0;r<size;++r){
+  int recvOffset = 0;
+  int sendOffset = 0;
+  int sendMessage = 0, recvMessage = 0;
+  for(int r=0;r<size;++r){
     if (At->offdNNZ) {
       if(Nrecv[r]) {
         MPI_Irecv(((char*)recvNonZeros)+recvOffset, Nrecv[r]*sizeof(nonzero_t),
@@ -1235,21 +1235,21 @@ csr * transpose(agmgLevel* level, csr *A,
     //sort recieved nonzeros by row and col
     qsort(recvNonZeros, At->offdNNZ, sizeof(nonzero_t), compareNonZero);
 
-    At->offdCols  = (iint *)   calloc(At->offdNNZ,sizeof(iint));
+    At->offdCols  = (int *)   calloc(At->offdNNZ,sizeof(int));
     At->offdCoefs = (dfloat *) calloc(At->offdNNZ, sizeof(dfloat));
 
     //find row starts
-    for(iint n=0;n<At->offdNNZ;++n) {
-      iint row = recvNonZeros[n].row - globalColStarts[rank];
+    for(int n=0;n<At->offdNNZ;++n) {
+      int row = recvNonZeros[n].row - globalColStarts[rank];
       At->offdRowStarts[row+1]++;
     }
     //cumulative sum
-    for (iint i=0;i<At->Nrows;i++)
+    for (int i=0;i<At->Nrows;i++)
       At->offdRowStarts[i+1] += At->offdRowStarts[i];
 
     //fill cols and coefs
-    for (iint i=0; i<At->Nrows; i++) {
-      for (iint j=At->offdRowStarts[i]; j<At->offdRowStarts[i+1]; j++) {
+    for (int i=0; i<At->Nrows; i++) {
+      for (int j=At->offdRowStarts[i]; j<At->offdRowStarts[i+1]; j++) {
         At->offdCols[j]  = recvNonZeros[j].col;
         At->offdCoefs[j] = recvNonZeros[j].val;
       }
@@ -1257,8 +1257,8 @@ csr * transpose(agmgLevel* level, csr *A,
     free(recvNonZeros);
 
     //we now need to reorder the x vector for the halo, and shift the column indices
-    iint *col = (iint *) calloc(At->offdNNZ,sizeof(iint));
-    for (iint n=0;n<At->offdNNZ;n++)
+    int *col = (int *) calloc(At->offdNNZ,sizeof(int));
+    for (int n=0;n<At->offdNNZ;n++)
       col[n] = At->offdCols[n]; //copy non-local column global ids
 
     //sort by global index
@@ -1266,22 +1266,22 @@ csr * transpose(agmgLevel* level, csr *A,
 
     //count unique non-local column ids
     At->NHalo = 0;
-    for (iint n=1;n<At->offdNNZ;n++)
+    for (int n=1;n<At->offdNNZ;n++)
       if (col[n]!=col[n-1])  col[++At->NHalo] = col[n];
     At->NHalo++; //number of unique columns
 
     At->Ncols += At->NHalo;
 
     //save global column ids in colMap
-    At->colMap = (iint *) realloc(At->colMap,At->Ncols*sizeof(iint));
-    for (iint n=0; n<At->NHalo; n++)
+    At->colMap = (int *) realloc(At->colMap,At->Ncols*sizeof(int));
+    for (int n=0; n<At->NHalo; n++)
       At->colMap[n+At->NlocalCols] = col[n];
     free(col);
 
     //shift the column indices to local indexing
-    for (iint n=0;n<At->offdNNZ;n++) {
-      iint gcol = At->offdCols[n];
-      for (iint m=At->NlocalCols;m<At->Ncols;m++) {
+    for (int n=0;n<At->offdNNZ;n++) {
+      int gcol = At->offdCols[n];
+      for (int m=At->NlocalCols;m<At->Ncols;m++) {
         if (gcol == At->colMap[m])
           At->offdCols[n] = m;
       }
@@ -1295,15 +1295,15 @@ csr * transpose(agmgLevel* level, csr *A,
 
 typedef struct {
 
-  iint coarseId;
+  int coarseId;
   dfloat coef;
 
 } pEntry_t;
 
 typedef struct {
 
-  iint I;
-  iint J;
+  int I;
+  int J;
   dfloat coef;
 
 } rapEntry_t;
@@ -1324,14 +1324,14 @@ int compareRAPEntries(const void *a, const void *b){
 csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
 
   // MPI info
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  iint *globalAggStarts = level->globalAggStarts;
-  iint *globalRowStarts = level->globalRowStarts;
+  int *globalAggStarts = level->globalAggStarts;
+  int *globalRowStarts = level->globalRowStarts;
 
-  iint globalAggOffset = globalAggStarts[rank];
+  int globalAggOffset = globalAggStarts[rank];
 
   MPI_Datatype mpi_rapEntry_t, oldtypes[2];
   int blockcounts[2];
@@ -1340,10 +1340,10 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
 
   /* Setup description of the 4 MPI_FLOAT fields x, y, z, velocity */
   rapEntryoffsets[0] = 0;
-  oldtypes[0] = MPI_IINT;
+  oldtypes[0] = MPI_int;
   blockcounts[0] = 2;
 
-  MPI_Type_extent(MPI_IINT, &extent);
+  MPI_Type_extent(MPI_int, &extent);
   rapEntryoffsets[1] = 2 * extent;
   oldtypes[1] = MPI_DFLOAT;
   blockcounts[1] = 1;
@@ -1357,8 +1357,8 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   // Since each row of P has only one entry, we can share the ncessary
   // P entries, form the products, and send them to their destination rank
 
-  iint N = A->Nrows;
-  iint M = A->Ncols;
+  int N = A->Nrows;
+  int M = A->Ncols;
 
   //printf("Level has %d rows, and is making %d aggregates\n", N, globalAggStarts[rank+1]-globalAggStarts[rank]);
 
@@ -1366,14 +1366,14 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   if (M) PEntries = (pEntry_t *) calloc(M,sizeof(pEntry_t));
 
   //record the entries of P that this rank has
-  iint cnt =0;
-  for (iint i=0;i<N;i++) {
-    for (iint j=P->diagRowStarts[i];j<P->diagRowStarts[i+1];j++) {
+  int cnt =0;
+  for (int i=0;i<N;i++) {
+    for (int j=P->diagRowStarts[i];j<P->diagRowStarts[i+1];j++) {
       PEntries[cnt].coarseId = P->diagCols[j] + globalAggOffset; //global ID
       PEntries[cnt].coef = P->diagCoefs[j];
       cnt++;
     }
-    for (iint j=P->offdRowStarts[i];j<P->offdRowStarts[i+1];j++) {
+    for (int j=P->offdRowStarts[i];j<P->offdRowStarts[i+1];j++) {
       PEntries[cnt].coarseId = P->colMap[P->offdCols[j]]; //global ID
       PEntries[cnt].coef = P->offdCoefs[j];
       cnt++;
@@ -1389,7 +1389,7 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   if (A->NsendTotal) free(entrySendBuffer);
 
   rapEntry_t *RAPEntries;
-  iint totalNNZ = A->diagNNZ+A->offdNNZ;
+  int totalNNZ = A->diagNNZ+A->offdNNZ;
   if (totalNNZ) {
     RAPEntries = (rapEntry_t *) calloc(totalNNZ,sizeof(rapEntry_t));
   } else {
@@ -1398,9 +1398,9 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
 
   //for the RAP products
   cnt =0;
-  for (iint i=0;i<N;i++) {
-    for (iint j=A->diagRowStarts[i];j<A->diagRowStarts[i+1];j++) {
-      iint col  = A->diagCols[j];
+  for (int i=0;i<N;i++) {
+    for (int j=A->diagRowStarts[i];j<A->diagRowStarts[i+1];j++) {
+      int col  = A->diagCols[j];
       dfloat coef = A->diagCoefs[j];
 
       RAPEntries[cnt].I = PEntries[i].coarseId;
@@ -1409,9 +1409,9 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
       cnt++;
     }
   }
-  for (iint i=0;i<N;i++) {
-    for (iint j=A->offdRowStarts[i];j<A->offdRowStarts[i+1];j++) {
-      iint col  = A->offdCols[j];
+  for (int i=0;i<N;i++) {
+    for (int j=A->offdRowStarts[i];j<A->offdRowStarts[i+1];j++) {
+      int col  = A->offdCols[j];
       dfloat coef = A->offdCoefs[j];
 
       RAPEntries[cnt].I = PEntries[i].coarseId;
@@ -1424,25 +1424,25 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   //sort entries by the coarse row and col
   if (totalNNZ) qsort(RAPEntries, totalNNZ, sizeof(rapEntry_t), compareRAPEntries);
 
-  iint *sendCounts = (iint *) calloc(size,sizeof(iint));
-  iint *recvCounts = (iint *) calloc(size,sizeof(iint));
-  iint *sendOffsets = (iint *) calloc(size+1,sizeof(iint));
-  iint *recvOffsets = (iint *) calloc(size+1,sizeof(iint));
+  int *sendCounts = (int *) calloc(size,sizeof(int));
+  int *recvCounts = (int *) calloc(size,sizeof(int));
+  int *sendOffsets = (int *) calloc(size+1,sizeof(int));
+  int *recvOffsets = (int *) calloc(size+1,sizeof(int));
 
-  for(iint i=0;i<totalNNZ;++i) {
-    iint id = RAPEntries[i].I;
-    for (iint r=0;r<size;r++) {
+  for(int i=0;i<totalNNZ;++i) {
+    int id = RAPEntries[i].I;
+    for (int r=0;r<size;r++) {
       if (globalAggStarts[r]-1<id && id < globalAggStarts[r+1])
         sendCounts[r]++;
     }
   }
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(sendCounts, 1, MPI_IINT, recvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(sendCounts, 1, MPI_int, recvCounts, 1, MPI_int, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
-  iint recvNtotal = 0;
-  for(iint r=0;r<size;++r){
+  int recvNtotal = 0;
+  for(int r=0;r<size;++r){
     sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
     recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
     recvNtotal += recvCounts[r];
@@ -1462,9 +1462,9 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   if (recvNtotal) qsort(recvRAPEntries, recvNtotal, sizeof(rapEntry_t), compareRAPEntries);
 
   //count total number of nonzeros;
-  iint nnz =0;
+  int nnz =0;
   if (recvNtotal) nnz++;
-  for (iint i=1;i<recvNtotal;i++)
+  for (int i=1;i<recvNtotal;i++)
     if ((recvRAPEntries[i].I!=recvRAPEntries[i-1].I)||
           (recvRAPEntries[i].J!=recvRAPEntries[i-1].J)) nnz++;
 
@@ -1478,7 +1478,7 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   //compress nonzeros
   nnz = 0;
   if (recvNtotal) newRAPEntries[nnz++] = recvRAPEntries[0];
-  for (iint i=1;i<recvNtotal;i++) {
+  for (int i=1;i<recvNtotal;i++) {
     if ((recvRAPEntries[i].I!=recvRAPEntries[i-1].I)||
           (recvRAPEntries[i].J!=recvRAPEntries[i-1].J)) {
       newRAPEntries[nnz++] = recvRAPEntries[i];
@@ -1487,7 +1487,7 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
     }
   }
 
-  iint numAggs = globalAggStarts[rank+1]-globalAggStarts[rank]; //local number of aggregates
+  int numAggs = globalAggStarts[rank+1]-globalAggStarts[rank]; //local number of aggregates
 
   csr *RAP = (csr*) calloc(1,sizeof(csr));
 
@@ -1496,11 +1496,11 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
 
   RAP->NlocalCols = numAggs;
 
-  RAP->diagRowStarts = (iint *) calloc(numAggs+1, sizeof(iint));
-  RAP->offdRowStarts = (iint *) calloc(numAggs+1, sizeof(iint));
+  RAP->diagRowStarts = (int *) calloc(numAggs+1, sizeof(int));
+  RAP->offdRowStarts = (int *) calloc(numAggs+1, sizeof(int));
 
-  for (iint n=0;n<nnz;n++) {
-    iint row = newRAPEntries[n].I - globalAggOffset;
+  for (int n=0;n<nnz;n++) {
+    int row = newRAPEntries[n].I - globalAggOffset;
     if ((newRAPEntries[n].J > globalAggStarts[rank]-1)&&
           (newRAPEntries[n].J < globalAggStarts[rank+1])) {
       RAP->diagRowStarts[row+1]++;
@@ -1510,29 +1510,29 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   }
 
   // cumulative sum
-  for(iint i=0; i<numAggs; i++) {
+  for(int i=0; i<numAggs; i++) {
     RAP->diagRowStarts[i+1] += RAP->diagRowStarts[i];
     RAP->offdRowStarts[i+1] += RAP->offdRowStarts[i];
   }
   RAP->diagNNZ = RAP->diagRowStarts[numAggs];
   RAP->offdNNZ = RAP->offdRowStarts[numAggs];
 
-  iint *diagCols;
+  int *diagCols;
   dfloat *diagCoefs;
   if (RAP->diagNNZ) {
-    RAP->diagCols  = (iint *)   calloc(RAP->diagNNZ, sizeof(iint));
+    RAP->diagCols  = (int *)   calloc(RAP->diagNNZ, sizeof(int));
     RAP->diagCoefs = (dfloat *) calloc(RAP->diagNNZ, sizeof(dfloat));
-    diagCols  = (iint *)   calloc(RAP->diagNNZ, sizeof(iint));
+    diagCols  = (int *)   calloc(RAP->diagNNZ, sizeof(int));
     diagCoefs = (dfloat *) calloc(RAP->diagNNZ, sizeof(dfloat));
   }
   if (RAP->offdNNZ) {
-    RAP->offdCols  = (iint *)   calloc(RAP->offdNNZ,sizeof(iint));
+    RAP->offdCols  = (int *)   calloc(RAP->offdNNZ,sizeof(int));
     RAP->offdCoefs = (dfloat *) calloc(RAP->offdNNZ, sizeof(dfloat));
   }
 
-  iint diagCnt =0;
-  iint offdCnt =0;
-  for (iint n=0;n<nnz;n++) {
+  int diagCnt =0;
+  int offdCnt =0;
+  for (int n=0;n<nnz;n++) {
     if ((newRAPEntries[n].J > globalAggStarts[rank]-1)&&
           (newRAPEntries[n].J < globalAggStarts[rank+1])) {
       diagCols[diagCnt]  = newRAPEntries[n].J - globalAggOffset;
@@ -1546,10 +1546,10 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   }
 
   //move diagonal entries first
-  for (iint i=0;i<RAP->Nrows;i++) {
-    iint start = RAP->diagRowStarts[i];
-    iint cnt = 1;
-    for (iint j=RAP->diagRowStarts[i]; j<RAP->diagRowStarts[i+1]; j++) {
+  for (int i=0;i<RAP->Nrows;i++) {
+    int start = RAP->diagRowStarts[i];
+    int cnt = 1;
+    for (int j=RAP->diagRowStarts[i]; j<RAP->diagRowStarts[i+1]; j++) {
       if (diagCols[j] == i) { //move diagonal to first entry
         RAP->diagCols[start] = diagCols[j];
         RAP->diagCoefs[start] = diagCoefs[j];
@@ -1562,14 +1562,14 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   }
 
   //record global indexing of columns
-  RAP->colMap = (iint *)   calloc(RAP->Ncols, sizeof(iint));
-  for (iint i=0;i<RAP->Ncols;i++)
+  RAP->colMap = (int *)   calloc(RAP->Ncols, sizeof(int));
+  for (int i=0;i<RAP->Ncols;i++)
     RAP->colMap[i] = i + globalAggOffset;
 
   if (RAP->offdNNZ) {
     //we now need to reorder the x vector for the halo, and shift the column indices
-    iint *col = (iint *) calloc(RAP->offdNNZ,sizeof(iint));
-    for (iint n=0;n<RAP->offdNNZ;n++)
+    int *col = (int *) calloc(RAP->offdNNZ,sizeof(int));
+    for (int n=0;n<RAP->offdNNZ;n++)
       col[n] = RAP->offdCols[n]; //copy non-local column global ids
 
     //sort by global index
@@ -1577,21 +1577,21 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
 
     //count unique non-local column ids
     RAP->NHalo = 0;
-    for (iint n=1;n<RAP->offdNNZ;n++)
+    for (int n=1;n<RAP->offdNNZ;n++)
       if (col[n]!=col[n-1])  col[++RAP->NHalo] = col[n];
     RAP->NHalo++; //number of unique columns
 
     RAP->Ncols += RAP->NHalo;
 
     //save global column ids in colMap
-    RAP->colMap = (iint *) realloc(RAP->colMap,RAP->Ncols*sizeof(iint));
-    for (iint n=0; n<RAP->NHalo; n++)
+    RAP->colMap = (int *) realloc(RAP->colMap,RAP->Ncols*sizeof(int));
+    for (int n=0; n<RAP->NHalo; n++)
       RAP->colMap[n+RAP->NlocalCols] = col[n];
 
     //shift the column indices to local indexing
-    for (iint n=0;n<RAP->offdNNZ;n++) {
-      iint gcol = RAP->offdCols[n];
-      for (iint m=RAP->NlocalCols;m<RAP->Ncols;m++) {
+    for (int n=0;n<RAP->offdNNZ;n++) {
+      int gcol = RAP->offdCols[n];
+      for (int m=RAP->NlocalCols;m<RAP->Ncols;m++) {
         if (gcol == RAP->colMap[m])
           RAP->offdCols[n] = m;
       }

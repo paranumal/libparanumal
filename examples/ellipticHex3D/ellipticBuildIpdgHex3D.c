@@ -3,31 +3,31 @@
 
 typedef struct{
 
-  iint row;
-  iint col;
-  iint ownerRank;
+  int row;
+  int col;
+  int ownerRank;
   dfloat val;
 
 } nonZero_t;
 
-void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnzA, const char *options){
+void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, int *nnzA, const char *options){
 
-  iint size, rankM;
+  int size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankM);
 
   /* find number of elements on each rank */
-  iint *rankNelements = (iint*) calloc(size, sizeof(iint));
-  iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
-		rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
-  for(iint r=0;r<size;++r){
+  int *rankNelements = (int*) calloc(size, sizeof(int));
+  int *rankStarts = (int*) calloc(size+1, sizeof(int));
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_int,
+		rankNelements, 1, MPI_int, MPI_COMM_WORLD);
+  for(int r=0;r<size;++r){
     rankStarts[r+1] = rankStarts[r]+(rankNelements[r])*mesh->Np;
   }
   
   /* do a halo exchange of local node numbers */
 
-  iint nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
+  int nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
 
   *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
 
@@ -41,16 +41,16 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
   dfloat *Bs = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *Bt = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
 
-  iint mode = 0;
-  for(iint nk=0;nk<mesh->N+1;++nk){
-    for(iint nj=0;nj<mesh->N+1;++nj){
-      for(iint ni=0;ni<mesh->N+1;++ni){
+  int mode = 0;
+  for(int nk=0;nk<mesh->N+1;++nk){
+    for(int nj=0;nj<mesh->N+1;++nj){
+      for(int ni=0;ni<mesh->N+1;++ni){
 
-      	iint node = 0;
+      	int node = 0;
 
-      	for(iint k=0;k<mesh->N+1;++k){
-      	  for(iint j=0;j<mesh->N+1;++j){
-      	    for(iint i=0;i<mesh->N+1;++i){
+      	for(int k=0;k<mesh->N+1;++k){
+      	  for(int j=0;j<mesh->N+1;++j){
+      	    for(int i=0;i<mesh->N+1;++i){
 
       	      if(nk==k && nj==j && ni==i)
       		      B[mode*mesh->Np+node] = 1;
@@ -73,18 +73,18 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
 	
   // loop over all elements
 #pragma omp parallel for
-  for(iint eM=0;eM<mesh->Nelements;++eM){
+  for(int eM=0;eM<mesh->Nelements;++eM){
 
-    iint cnt = eM*mesh->Np*mesh->Np*(mesh->Nfaces+1);
+    int cnt = eM*mesh->Np*mesh->Np*(mesh->Nfaces+1);
     
     /* build Dx,Dy,Dz (forget the TP for the moment) */
-    for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Np;++m){ // m will be the sub-block index for negative and positive trace
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){ // m will be the sub-block index for negative and positive trace
       	dfloat Anm = 0;
 
       	// (grad phi_n, grad phi_m)_{D^e}
-      	for(iint i=0;i<mesh->Np;++i){
-      	  iint base = eM*mesh->Np*mesh->Nvgeo + i;
+      	for(int i=0;i<mesh->Np;++i){
+      	  int base = eM*mesh->Np*mesh->Nvgeo + i;
       	  dfloat drdx = mesh->vgeo[base+mesh->Np*RXID];
       	  dfloat drdy = mesh->vgeo[base+mesh->Np*RYID];
       	  dfloat drdz = mesh->vgeo[base+mesh->Np*RZID];
@@ -109,14 +109,14 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
       	}
 
       	// loop over all faces in this element
-      	for(iint fM=0;fM<mesh->Nfaces;++fM){
+      	for(int fM=0;fM<mesh->Nfaces;++fM){
       	  // accumulate flux terms for negative and positive traces
       	  dfloat AnmP = 0;
-      	  for(iint i=0;i<mesh->Nfp;++i){
-      	    iint vidM = mesh->faceNodes[i+fM*mesh->Nfp];
+      	  for(int i=0;i<mesh->Nfp;++i){
+      	    int vidM = mesh->faceNodes[i+fM*mesh->Nfp];
 
       	    // grab vol geofacs at surface nodes
-      	    iint baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
+      	    int baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
       	    dfloat drdxM = mesh->vgeo[baseM+mesh->Np*RXID];
       	    dfloat drdyM = mesh->vgeo[baseM+mesh->Np*RYID];
       	    dfloat drdzM = mesh->vgeo[baseM+mesh->Np*RZID];
@@ -128,10 +128,10 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
       	    dfloat dtdzM = mesh->vgeo[baseM+mesh->Np*TZID];
 
       	    // double check vol geometric factors are in halo storage of vgeo
-      	    iint idM     = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
-      	    iint vidP    = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
-      	    iint localEP = mesh->vmapP[idM]/mesh->Np;
-      	    iint baseP   = localEP*mesh->Np*mesh->Nvgeo + vidP; // use local offset for vgeo in halo
+      	    int idM     = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
+      	    int vidP    = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
+      	    int localEP = mesh->vmapP[idM]/mesh->Np;
+      	    int baseP   = localEP*mesh->Np*mesh->Nvgeo + vidP; // use local offset for vgeo in halo
       	    dfloat drdxP = mesh->vgeo[baseP+mesh->Np*RXID];
       	    dfloat drdyP = mesh->vgeo[baseP+mesh->Np*RYID];
       	    dfloat drdzP = mesh->vgeo[baseP+mesh->Np*RZID];
@@ -143,7 +143,7 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
       	    dfloat dtdzP = mesh->vgeo[baseP+mesh->Np*TZID];
       	    
       	    // grab surface geometric factors
-      	    iint base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
+      	    int base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
       	    dfloat nx = mesh->sgeo[base+NXID];
       	    dfloat ny = mesh->sgeo[base+NYID];
       	    dfloat nz = mesh->sgeo[base+NZID];
@@ -179,7 +179,7 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
       	    Anm += -0.5*wsJ*ndotgradlnM*lmM;  // -(N.grad ln^-, lm^-)
       	    Anm += +0.5*wsJ*penalty*lnM*lmM; // +((tau/h)*ln^-,lm^-)
 
-      	    iint eP    = mesh->EToE[eM*mesh->Nfaces+fM];
+      	    int eP    = mesh->EToE[eM*mesh->Nfaces+fM];
             if (eP<0) {
              Anm += +0.5*wsJ*lnM*ndotgradlmM;  // -(ln^-, -N.grad lm^-)
              Anm += +0.5*wsJ*ndotgradlnM*lmM;  // +(N.grad ln^-, lm^-)
@@ -192,8 +192,8 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
       	  }
       	  
 	  // remote info
-	  iint eP    = mesh->EToE[eM*mesh->Nfaces+fM];
-	  iint rankP = mesh->EToP[eM*mesh->Nfaces+fM]; 
+	  int eP    = mesh->EToE[eM*mesh->Nfaces+fM];
+	  int rankP = mesh->EToP[eM*mesh->Nfaces+fM]; 
 	  if (eP <0) eP = eM;
 	  if (rankP<0) rankP = rankM;
 	  (*A)[cnt].row = n + eM*mesh->Np + rankStarts[rankM];
@@ -215,7 +215,7 @@ void ellipticBuildIpdgHex3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nn
 
   // non-zero counter
   int nnz = 0;
-  for(iint n=0;n<mesh->Np*mesh->Np*(mesh->Nfaces+1)*mesh->Nelements;++n)
+  for(int n=0;n<mesh->Np*mesh->Np*(mesh->Nfaces+1)*mesh->Nelements;++n)
     if(fabs((*A)[n].val)>tol)
       (*A)[nnz++] = (*A)[n];
   

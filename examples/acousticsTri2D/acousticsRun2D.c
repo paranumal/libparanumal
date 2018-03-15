@@ -3,14 +3,14 @@
 void acousticsRun2D(mesh2D *mesh){
 
   // MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(iint rk=0;rk<mesh->Nrk;++rk){
+    for(int rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
       
@@ -57,7 +57,7 @@ void acousticsRun2D(mesh2D *mesh){
       acousticsError2D(mesh, mesh->dt*(tstep+1));
       
       // output field files
-      iint fld = 2;
+      int fld = 2;
       meshPlotVTU2D(mesh, "foo", fld);
     }
     
@@ -71,20 +71,20 @@ void acousticsRun2D(mesh2D *mesh){
 void acousticsOccaRun2D(mesh2D *mesh){
 
   // MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(iint rk=0;rk<mesh->Nrk;++rk){
+    for(int rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
-	iint Nentries = mesh->Np*mesh->Nfields;
+	int Nentries = mesh->Np*mesh->Nfields;
 	
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
@@ -153,7 +153,7 @@ void acousticsOccaRun2D(mesh2D *mesh){
       acousticsError2D(mesh, mesh->dt*(tstep+1));
 
       // output field files
-      iint fld = 2;
+      int fld = 2;
       meshPlotVTU2D(mesh, "foo", fld);
     }
   }
@@ -167,11 +167,11 @@ void acousticsOccaRun2D(mesh2D *mesh){
 void acousticsOccaAsyncRun2D(mesh2D *mesh){
 
   // MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
 
   // offset for halo data
   size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements * sizeof(dfloat);
-  iint Nentries = mesh->Np*mesh->Nfields;
+  int Nentries = mesh->Np*mesh->Nfields;
   
   // using mapped memory for host-device transfers
   occa::memory o_pinned_send_Q, o_pinned_recv_Q;
@@ -200,9 +200,9 @@ void acousticsOccaAsyncRun2D(mesh2D *mesh){
   }
 
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(iint rk=0;rk<mesh->Nrk;++rk){
+    for(int rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
@@ -300,7 +300,7 @@ void acousticsOccaAsyncRun2D(mesh2D *mesh){
       acousticsError2D(mesh, mesh->dt*(tstep+1));
 
       // output field files
-      iint fld = 2;
+      int fld = 2;
       meshPlotVTU2D(mesh, "foo", fld);
     }
   }
@@ -327,11 +327,11 @@ void acousticsOccaAsyncRun2D(mesh2D *mesh){
 void acousticsSplitSurfaceOccaAsyncRun2D(mesh2D *mesh){
 
   // MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
 
   // offset for halo data
   size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements * sizeof(dfloat);
-  iint Nentries = mesh->Np*mesh->Nfields;
+  int Nentries = mesh->Np*mesh->Nfields;
   
   // using mapped memory for host-device transfers
   occa::memory o_pinned_send_Q, o_pinned_recv_Q;
@@ -360,9 +360,9 @@ void acousticsSplitSurfaceOccaAsyncRun2D(mesh2D *mesh){
   }
 
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(iint rk=0;rk<mesh->Nrk;++rk){
+    for(int rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
@@ -496,7 +496,7 @@ void acousticsSplitSurfaceOccaAsyncRun2D(mesh2D *mesh){
       acousticsError2D(mesh, mesh->dt*(tstep+1));
 
       // output field files
-      iint fld = 2;
+      int fld = 2;
       meshPlotVTU2D(mesh, "foo", fld);
     }
   }

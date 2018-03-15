@@ -1,53 +1,53 @@
 
 //partially sum the entries of a vector using a block-wise reductions
 
-kernel void sum(const iint N,
+kernel void sum(const int N,
                 const dfloat * restrict x,
                 dfloat * restrict sx){
   
 
-  for(iint b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
+  for(int b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
     
     volatile shared dfloat s_sx[p_blockSize];
 
-    for(iint t=0;t<p_blockSize;++t;inner0){
-      const iint id = t + b*p_blockSize;
+    for(int t=0;t<p_blockSize;++t;inner0){
+      const int id = t + b*p_blockSize;
       s_sx[t] = (id<N) ? x[id] : 0.f;
     }
 
     barrier(localMemFence);
 
 #if p_blockSize>512
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<512) s_sx[t] += s_sx[t+512];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<512) s_sx[t] += s_sx[t+512];
     barrier(localMemFence);
 #endif
 
 #if p_blockSize>256
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<256) s_sx[t] += s_sx[t+256];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<256) s_sx[t] += s_sx[t+256];
     barrier(localMemFence);
 #endif
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<128) s_sx[t] += s_sx[t+128];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<128) s_sx[t] += s_sx[t+128];
     barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t< 64) s_sx[t] += s_sx[t+ 64];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t< 64) s_sx[t] += s_sx[t+ 64];
     barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t< 32) s_sx[t] += s_sx[t+ 32];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t< 32) s_sx[t] += s_sx[t+ 32];
     barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t< 16) s_sx[t] += s_sx[t+ 16];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t< 16) s_sx[t] += s_sx[t+ 16];
     //    barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  8) s_sx[t] += s_sx[t+  8];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  8) s_sx[t] += s_sx[t+  8];
     //    barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  4) s_sx[t] += s_sx[t+  4];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  4) s_sx[t] += s_sx[t+  4];
     //    barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  2) s_sx[t] += s_sx[t+  2];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  2) s_sx[t] += s_sx[t+  2];
     //    barrier(localMemFence);
 
-    for(iint t=0;t<p_blockSize;++t;inner0) if(t<  1) sx[b] = s_sx[0] + s_sx[1];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  1) sx[b] = s_sx[0] + s_sx[1];
   }
 }

@@ -82,10 +82,10 @@ dfloat *buildCoarsenerTet3D(mesh3D** meshLevels, int N, int Nc) {
 }
 
 void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
-                                dfloat tau, dfloat lambda, iint *BCType,
+                                dfloat tau, dfloat lambda, int *BCType,
                                 const char *options, const char *parAlmondOptions) {
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -164,8 +164,8 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
       solverL = ellipticBuildMultigridLevelTet3D(solver,levelDegree,n,options);
 
       //set the normalization constatnt for the allNeumann POisson problem on this coarse mesh
-      iint totalElements = 0;
-      MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+      int totalElements = 0;
+      MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_int, MPI_SUM, MPI_COMM_WORLD);
       solverL->allNeumannScale = 1.0/sqrt(solverL->mesh->Np*totalElements);
     }
 
@@ -173,11 +173,11 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
     if (n==numLevels-1) {
       // build degree 1 matrix problem
       nonZero_t *coarseA;
-      iint nnzCoarseA;
+      int nnzCoarseA;
       hgs_t *coarsehgs;
       dfloat *V1;
 
-      iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
+      int *coarseGlobalStarts = (int*) calloc(size+1, sizeof(int));
 
       ellipticCoarsePreconditionerSetupTet3D(mesh, precon, tau, lambda, BCType,
                                              &V1, &coarseA, &nnzCoarseA,
@@ -185,11 +185,11 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
 
       precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
 
-      iint *Rows = (iint *) calloc(nnzCoarseA, sizeof(iint));
-      iint *Cols = (iint *) calloc(nnzCoarseA, sizeof(iint));
+      int *Rows = (int *) calloc(nnzCoarseA, sizeof(int));
+      int *Cols = (int *) calloc(nnzCoarseA, sizeof(int));
       dfloat *Vals = (dfloat*) calloc(nnzCoarseA,sizeof(dfloat));
 
-      for (iint n=0;n<nnzCoarseA;n++) {
+      for (int n=0;n<nnzCoarseA;n++) {
         Rows[n] = coarseA[n].row;
         Cols[n] = coarseA[n].col;
         Vals[n] = coarseA[n].val;
@@ -327,16 +327,16 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
 
     for(int lev=0; lev<numLevels; lev++){
 
-      iint Nrows = levels[lev]->Nrows;
+      int Nrows = levels[lev]->Nrows;
 
-      iint minNrows=0, maxNrows=0, totalNrows=0;
+      int minNrows=0, maxNrows=0, totalNrows=0;
       dfloat avgNrows;
-      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
-      MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_int, MPI_MAX, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_int, MPI_SUM, MPI_COMM_WORLD);
       avgNrows = (dfloat) totalNrows/size;
 
       if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
-      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_int, MPI_MIN, MPI_COMM_WORLD);
 
       char *smootherString;
       if(strstr(options, "OVERLAPPINGPATCH")){

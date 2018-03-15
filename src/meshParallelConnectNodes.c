@@ -6,21 +6,21 @@
 
 typedef struct{
 
-  iint element; // local element id
-  iint node;    // local node id
-  iint rank;    // rank of original node
-  iint id;      // original id
-  iint tag;   // original bc tag
-  iint haloFlag;
+  int element; // local element id
+  int node;    // local node id
+  int rank;    // rank of original node
+  int id;      // original id
+  int tag;   // original bc tag
+  int haloFlag;
   
   // info on base node (lowest rank node)
-  iint baseElement; 
-  iint baseNode;
-  iint baseRank;
-  iint baseId;
+  int baseElement; 
+  int baseNode;
+  int baseRank;
+  int baseId;
 
   // priority tag
-  iint priorityTag;   // minimum (non-zero bc tag)
+  int priorityTag;   // minimum (non-zero bc tag)
 
 }parallelNode_t;
 
@@ -48,15 +48,15 @@ void meshParallelConnectNodes(mesh_t *mesh){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  iint localNodeCount = mesh->Np*mesh->Nelements;
-  iint *allLocalNodeCounts = (iint*) calloc(size, sizeof(iint));
+  int localNodeCount = mesh->Np*mesh->Nelements;
+  int *allLocalNodeCounts = (int*) calloc(size, sizeof(int));
 
-  MPI_Allgather(&localNodeCount, 1, MPI_IINT,
-		allLocalNodeCounts, 1, MPI_IINT,
+  MPI_Allgather(&localNodeCount, 1, MPI_int,
+		allLocalNodeCounts, 1, MPI_int,
 		MPI_COMM_WORLD);
   
-  iint gatherNodeStart = 0;
-  for(iint r=0;r<rank;++r)
+  int gatherNodeStart = 0;
+  for(int r=0;r<rank;++r)
     gatherNodeStart += allLocalNodeCounts[r];
   
   // form continuous node numbering (local=>virtual gather)
@@ -65,9 +65,9 @@ void meshParallelConnectNodes(mesh_t *mesh){
 			     sizeof(parallelNode_t));
 
   // use local numbering
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      iint id = e*mesh->Np+n;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      int id = e*mesh->Np+n;
       gatherNumbering[id].element = e;
       gatherNumbering[id].node = n;
       gatherNumbering[id].rank = rank;
@@ -81,28 +81,28 @@ void meshParallelConnectNodes(mesh_t *mesh){
     }
 
     // use vertex ids for vertex nodes to reduce iterations
-    for(iint v=0;v<mesh->Nverts;++v){
-      iint id = e*mesh->Np + mesh->vertexNodes[v];
-      iint gid = mesh->EToV[e*mesh->Nverts+v] + 1;
+    for(int v=0;v<mesh->Nverts;++v){
+      int id = e*mesh->Np + mesh->vertexNodes[v];
+      int gid = mesh->EToV[e*mesh->Nverts+v] + 1;
       gatherNumbering[id].id = gid; 
       gatherNumbering[id].baseId = gid; 
     }
 
     // label halo flags
-    for(iint f=0;f<mesh->Nfaces;++f){
+    for(int f=0;f<mesh->Nfaces;++f){
       if(mesh->EToP[e*mesh->Nfaces+f]!=-1){
-      	for(iint n=0;n<mesh->Nfp;++n){
-      	  iint id = e*mesh->Np+mesh->faceNodes[f*mesh->Nfp+n];
+      	for(int n=0;n<mesh->Nfp;++n){
+      	  int id = e*mesh->Np+mesh->faceNodes[f*mesh->Nfp+n];
       	  gatherNumbering[id].haloFlag = 1;
       	}
       }
     }
 		      
     // use element-to-boundary connectivity to create tag for local nodes
-    for(iint f=0;f<mesh->Nfaces;++f){
-      for(iint n=0;n<mesh->Nfp;++n){
-      	iint tag = mesh->EToB[e*mesh->Nfaces+f];
-      	iint id = e*mesh->Np+mesh->faceNodes[f*mesh->Nfp+n];
+    for(int f=0;f<mesh->Nfaces;++f){
+      for(int n=0;n<mesh->Nfp;++n){
+      	int tag = mesh->EToB[e*mesh->Nfaces+f];
+      	int id = e*mesh->Np+mesh->faceNodes[f*mesh->Nfp+n];
       	if(tag>0){
       	  gatherNumbering[id].tag = tag;
       	  gatherNumbering[id].priorityTag = tag;
@@ -111,7 +111,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
     }
   }
 
-  iint localChange = 0, gatherChange = 1;
+  int localChange = 0, gatherChange = 1;
 
   parallelNode_t *sendBuffer =
     (parallelNode_t*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(parallelNode_t));
@@ -127,20 +127,20 @@ void meshParallelConnectNodes(mesh_t *mesh){
 		     gatherNumbering, sendBuffer, gatherNumbering+localNodeCount);
 
     // compare trace nodes
-    for(iint e=0;e<mesh->Nelements;++e){
-      for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
-      	iint id  = e*mesh->Nfp*mesh->Nfaces + n;
-      	iint idM = mesh->vmapM[id];
-      	iint idP = mesh->vmapP[id];
-      	iint gidM = gatherNumbering[idM].baseId;
-      	iint gidP = gatherNumbering[idP].baseId;
+    for(int e=0;e<mesh->Nelements;++e){
+      for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+      	int id  = e*mesh->Nfp*mesh->Nfaces + n;
+      	int idM = mesh->vmapM[id];
+      	int idP = mesh->vmapP[id];
+      	int gidM = gatherNumbering[idM].baseId;
+      	int gidP = gatherNumbering[idP].baseId;
 
-      	iint baseRankM = gatherNumbering[idM].baseRank;
-      	iint baseRankP = gatherNumbering[idP].baseRank;
+      	int baseRankM = gatherNumbering[idM].baseRank;
+      	int baseRankP = gatherNumbering[idP].baseRank;
 
       	// use minimum of trace variables
-      	iint haloM = gatherNumbering[idM].haloFlag;
-      	iint haloP = gatherNumbering[idP].haloFlag;
+      	int haloM = gatherNumbering[idM].haloFlag;
+      	int haloP = gatherNumbering[idP].haloFlag;
       	gatherNumbering[idM].haloFlag = mymax(haloM, haloP);
       	gatherNumbering[idP].haloFlag = mymax(haloM, haloP);
       	
@@ -160,8 +160,8 @@ void meshParallelConnectNodes(mesh_t *mesh){
       	  gatherNumbering[idM].baseId      = gatherNumbering[idP].baseId;
       	}
       	
-      	iint tagM = gatherNumbering[idM].priorityTag;
-      	iint tagP = gatherNumbering[idP].priorityTag;
+      	int tagM = gatherNumbering[idM].priorityTag;
+      	int tagP = gatherNumbering[idP].priorityTag;
 
       	// use maximum non-zero tag for both nodes
       	if(tagM!=tagP){
@@ -178,7 +178,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
     }
 
     // sum up changes
-    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_int, MPI_SUM, MPI_COMM_WORLD);
 
     // report
     if(rank==0)
@@ -189,12 +189,12 @@ void meshParallelConnectNodes(mesh_t *mesh){
   qsort(gatherNumbering, localNodeCount, sizeof(parallelNode_t), parallelCompareBaseNodes);
 
   // extract base index of each node (i.e. gather numbering)
-  mesh->gatherLocalIds  = (iint*) calloc(localNodeCount, sizeof(iint));
-  mesh->gatherBaseIds   = (iint*) calloc(localNodeCount, sizeof(iint));
-  mesh->gatherBaseRanks = (iint*) calloc(localNodeCount, sizeof(iint));
-  mesh->gatherHaloFlags = (iint*) calloc(localNodeCount, sizeof(iint));
+  mesh->gatherLocalIds  = (int*) calloc(localNodeCount, sizeof(int));
+  mesh->gatherBaseIds   = (int*) calloc(localNodeCount, sizeof(int));
+  mesh->gatherBaseRanks = (int*) calloc(localNodeCount, sizeof(int));
+  mesh->gatherHaloFlags = (int*) calloc(localNodeCount, sizeof(int));
 
-  for(iint id=0;id<localNodeCount;++id){
+  for(int id=0;id<localNodeCount;++id){
     mesh->gatherLocalIds[id]  = gatherNumbering[id].element*mesh->Np+gatherNumbering[id].node;
     mesh->gatherBaseIds[id]   = gatherNumbering[id].baseId;
     mesh->gatherBaseRanks[id] = gatherNumbering[id].baseRank;

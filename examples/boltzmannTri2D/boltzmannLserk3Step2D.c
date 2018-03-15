@@ -1,18 +1,18 @@
 #include "boltzmann2D.h"
 
 // complete a time step using LSERK3
-void boltzmannLserk3Step2D(mesh2D *mesh, iint tstep, iint haloBytes,
+void boltzmannLserk3Step2D(mesh2D *mesh, int tstep, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer){
 
   // LSERK4 stages
-  for(iint rk=0;rk<3;++rk){
+  for(int rk=0;rk<3;++rk){
 
     // intermediate stage time
     dfloat t = tstep*mesh->dt + mesh->dt*mesh->lserk3c[rk];
     
     if(mesh->totalHaloPairs>0){
       // extract halo on DEVICE
-      iint Nentries = mesh->Np*mesh->Nfields;
+      int Nentries = mesh->Np*mesh->Nfields;
       
       mesh->haloExtractKernel(mesh->totalHaloPairs,
 			      Nentries,
