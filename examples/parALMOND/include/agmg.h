@@ -14,7 +14,7 @@
 #define GPU_CPU_SWITCH_SIZE 0 //host-device switch threshold
 
 
-void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, int *globalRowStarts, const char* options);
+void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, iint *globalRowStarts, const char* options);
 void parAlmondReport(parAlmond_t *parAlmond);
 void buildAlmondKernels(parAlmond_t *parAlmond);
 
@@ -24,10 +24,10 @@ void device_kcycle(parAlmond_t *parAlmond, int k);
 void vcycle(parAlmond_t *parAlmond, int k);
 void device_vcycle(parAlmond_t *parAlmond, int k);
 
-void pgmres(parAlmond_t *parAlmond, int maxIt, dfloat tol);
-void device_pgmres(parAlmond_t *parAlmond, int maxIt, dfloat tol);
+void pgmres(parAlmond_t *parAlmond, iint maxIt, dfloat tol);
+void device_pgmres(parAlmond_t *parAlmond, iint maxIt, dfloat tol);
 
-void pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol);
-void device_pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol);
+void pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol);
+void device_pcg(parAlmond_t *parAlmond, iint maxIt, dfloat tol);
 
 #endif

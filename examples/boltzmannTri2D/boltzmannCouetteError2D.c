@@ -7,16 +7,16 @@ void boltzmannCouetteError2D(mesh2D *mesh, dfloat time){
 
  dfloat maxerr = 0;
  dfloat maxQ1 = 0, minQ1 = 1e9;
- int fid = 1; //U velocity
+ iint fid = 1; //U velocity
 
 dfloat nu = mesh->sqrtRT*mesh->sqrtRT/mesh->tauInv;
 
-  for(int e=0;e<mesh->Nelements;++e)
+  for(iint e=0;e<mesh->Nelements;++e)
   {
-    for(int n=0;n<mesh->Np;++n)
+    for(iint n=0;n<mesh->Np;++n)
     {
       dfloat q1=0;
-      int id = n+e*mesh->Np;
+      iint id = n+e*mesh->Np;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
       // U = sqrt(RT)*Q2/Q1; 
@@ -25,7 +25,7 @@ dfloat nu = mesh->sqrtRT*mesh->sqrtRT/mesh->tauInv;
       
       dfloat uex = 2. * y ; 
 
-        for(int k=1; k<=100; k++)
+        for(iint k=1; k<=100; k++)
         {
 
          dfloat lamda = k*M_PI/0.5;

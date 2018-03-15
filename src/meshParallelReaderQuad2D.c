@@ -26,12 +26,12 @@ mesh2D* meshParallelReaderQuad2D(char *fileName){
   mesh->Nfaces = 4;
   mesh->NfaceVertices = 2;
      
-  int faceVertices[4][2] = {{0,1},{1,2},{2,3},{3,0}}; 
+  iint faceVertices[4][2] = {{0,1},{1,2},{2,3},{3,0}}; 
   
   mesh->faceVertices =
-    (int*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(int));
+    (iint*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(iint));
   
-  memcpy(mesh->faceVertices, faceVertices[0], mesh->NfaceVertices*mesh->Nfaces*sizeof(int));
+  memcpy(mesh->faceVertices, faceVertices[0], mesh->NfaceVertices*mesh->Nfaces*sizeof(iint));
   
   if(fp==NULL){
     printf("meshReader2D: could not load file %s\n", fileName);
@@ -73,7 +73,7 @@ mesh2D* meshParallelReaderQuad2D(char *fileName){
 
   int NboundaryFaces = 0;
   for(n=0;n<mesh->Nelements;++n){
-    int elementType;
+    iint elementType;
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==1) ++NboundaryFaces;
@@ -94,16 +94,16 @@ mesh2D* meshParallelReaderQuad2D(char *fileName){
   /* allocate space for Element node index data */
 
   mesh->EToV 
-    = (int*) calloc(NquadrilateralsLocal*mesh->Nverts, 
-		     sizeof(int));
+    = (iint*) calloc(NquadrilateralsLocal*mesh->Nverts, 
+		     sizeof(iint));
 
   /* scan through file looking for quadrilateral elements */
   int cnt=0, bcnt=0;
   Nquadrilaterals = 0;
 
-  mesh->boundaryInfo = (int*) calloc(NboundaryFaces*3, sizeof(int));
+  mesh->boundaryInfo = (iint*) calloc(NboundaryFaces*3, sizeof(iint));
   for(n=0;n<mesh->Nelements;++n){
-    int elementType, v1, v2, v3, v4;
+    iint elementType, v1, v2, v3, v4;
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
 
@@ -125,7 +125,7 @@ mesh2D* meshParallelReaderQuad2D(char *fileName){
 	dfloat ye1 = VY[v1-1], ye2 = VY[v2-1], ye4 = VY[v4-1];
 	dfloat J = 0.25*((xe2-xe1)*(ye4-ye1) - (xe4-xe1)*(ye2-ye1));
 	if(J<0){
-	  int v4tmp = v4;
+	  iint v4tmp = v4;
 	  v4 = v2;
 	  v2 = v4tmp;
 	  //	  printf("unwarping element\n");

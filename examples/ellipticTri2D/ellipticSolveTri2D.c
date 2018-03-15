@@ -1,7 +1,7 @@
 #include "ellipticTri2D.h"
 //this is bad coding practice, added for quick testing
 dfloat timeAx;
-int NAx;
+iint NAx;
 //end
 void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options){
 
@@ -15,7 +15,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   dfloat *gradRecvBuffer = solver->gradRecvBuffer;
 
   dfloat alpha = 0., alphaG =0.;
-  int Nblock = solver->Nblock;
+  iint Nblock = solver->Nblock;
   dfloat *tmp = solver->tmp;
   occa::memory &o_tmp = solver->o_tmp;
 
@@ -66,7 +66,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     if(solver->allNeumann) {
       o_tmp.copyTo(tmp);
 
-      for(int n=0;n<Nblock;++n)
+      for(iint n=0;n<Nblock;++n)
         alpha += tmp[n];
 
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
@@ -109,9 +109,9 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
 
   } else if(strstr(options, "IPDG")) {
-    int offset = 0;
+    iint offset = 0;
     dfloat alpha = 0., alphaG =0.;
-    int Nblock = solver->Nblock;
+    iint Nblock = solver->Nblock;
     dfloat *tmp = solver->tmp;
     occa::memory &o_tmp = solver->o_tmp;
 
@@ -187,7 +187,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     if(solver->allNeumann) {
       o_tmp.copyTo(tmp);
 
-      for(int n=0;n<Nblock;++n)
+      for(iint n=0;n<Nblock;++n)
         alpha += tmp[n];
 
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
@@ -264,9 +264,9 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
   } else if (strstr(options, "BRDG")){
 
-    int offset = 0;
+    iint offset = 0;
     dfloat alpha = 0., alphaG =0.;
-    int Nblock = solver->Nblock;
+    iint Nblock = solver->Nblock;
     dfloat *tmp = solver->tmp;
     occa::memory &o_tmp = solver->o_tmp;
 
@@ -322,7 +322,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
       o_tmp.copyTo(tmp);
 
-      for(int n=0;n<Nblock;++n)
+      for(iint n=0;n<Nblock;++n)
         alpha += tmp[n];
 
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
@@ -396,7 +396,7 @@ dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dflo
 
   mesh_t *mesh = solver->mesh;
 
-  int Ntotal = mesh->Nelements*mesh->Np;
+  iint Ntotal = mesh->Nelements*mesh->Np;
 
   // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
   occaTimerTic(mesh->device,"scaledAddKernel");
@@ -412,8 +412,8 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   dfloat *tmp = solver->tmp;
-  int Nblock = solver->Nblock;
-  int Ntotal = mesh->Nelements*mesh->Np;
+  iint Nblock = solver->Nblock;
+  iint Ntotal = mesh->Nelements*mesh->Np;
 
   occa::memory &o_tmp = solver->o_tmp;
 
@@ -429,7 +429,7 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
   o_tmp.copyTo(tmp);
 
   dfloat wab = 0;
-  for(int n=0;n<Nblock;++n){
+  for(iint n=0;n<Nblock;++n){
     wab += tmp[n];
   }
 
@@ -446,8 +446,8 @@ dfloat ellipticInnerProduct(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   dfloat *tmp = solver->tmp;
-  int Nblock = solver->Nblock;
-  int Ntotal = mesh->Nelements*mesh->Np;
+  iint Nblock = solver->Nblock;
+  iint Ntotal = mesh->Nelements*mesh->Np;
 
   occa::memory &o_tmp = solver->o_tmp;
 
@@ -458,7 +458,7 @@ dfloat ellipticInnerProduct(solver_t *solver,
   o_tmp.copyTo(tmp);
 
   dfloat ab = 0;
-  for(int n=0;n<Nblock;++n){
+  for(iint n=0;n<Nblock;++n){
     ab += tmp[n];
   }
 
@@ -469,21 +469,21 @@ dfloat ellipticInnerProduct(solver_t *solver,
 }
 
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
-    occa::memory &o_r, occa::memory &o_x, const char *options, int NblockV, int NnodesV){
+    occa::memory &o_r, occa::memory &o_x, const char *options, iint NblockV, iint NnodesV){
 
   mesh2D *mesh = solver->mesh;
   printf("N=%d \n", mesh->N);
   //KS for testing
-  /*  int Nbytes = mesh->Np*(6+mesh->Np*5);
+  /*  iint Nbytes = mesh->Np*(6+mesh->Np*5);
       int flops = mesh->Np* (mesh->Np *10+15); */
   //TW testing
-  //  int Nbytes = mesh->Np*(6+mesh->Np);//assume the operators are cached
-  int Nbytes = sizeof(dfloat)*mesh->Np*(6+0*mesh->Np);
+  //  iint Nbytes = mesh->Np*(6+mesh->Np);//assume the operators are cached
+  iint Nbytes = sizeof(dfloat)*mesh->Np*(6+0*mesh->Np);
   //replace with mesh->Np*(6+4*mesh->Np); if they are NOT`
   //TW v1:
-  //  int flops = mesh->Np*(mesh->Np*8+7);
+  //  iint flops = mesh->Np*(mesh->Np*8+7);
   //TW v2
-  int flops = mesh->Np*(mesh->Np*6+5);
+  iint flops = mesh->Np*(mesh->Np*6+5);
 
 
 
@@ -495,7 +495,7 @@ int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
   mesh->device.finish();
 
   occa::streamTag startCopy = mesh->device.tagStream();
-  int Ntrials = 10;        
+  iint Ntrials = 10;        
   for(int it=0;it<Ntrials;++it){
     o_bah.copyTo(o_foo);
   }
@@ -511,7 +511,7 @@ printf("copy elapsed %f ", copyElapsed);
     ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
 
   int Niter;
-  int maxIter = 500; 
+  iint maxIter = 500; 
 
   double start, end;
 
@@ -533,7 +533,7 @@ printf("copy elapsed %f ", copyElapsed);
   double kernelElapsed = timeAx/NAx;
 
 
-  int rank;
+  iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   if(strstr(options,"VERBOSE")){
@@ -545,19 +545,19 @@ printf("copy elapsed %f ", copyElapsed);
 
     printf("Solver converged in %d iters \n", Niter );
 
-    int size;
+    iint size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    int   localDofs = mesh->Np*mesh->Nelements;
-    int   localElements = mesh->Nelements;
+    iint   localDofs = mesh->Np*mesh->Nelements;
+    iint   localElements = mesh->Nelements;
     double globalElapsed;
-    int   globalDofs;
-    int   globalElements;
+    iint   globalDofs;
+    iint   globalElements;
     double globalCopyElapsed;
 
     MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_int,   MPI_SUM, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&localElements,&globalElements,1, MPI_int,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
     MPI_Reduce(&copyElapsed,&globalCopyElapsed,1, MPI_DOUBLE,   MPI_MAX, 0, MPI_COMM_WORLD );
 
 

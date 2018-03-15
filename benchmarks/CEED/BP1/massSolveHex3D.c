@@ -87,7 +87,7 @@ dfloat massScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat b
 
   mesh_t *mesh = solver->mesh;
 
-  int Ntotal = mesh->Nelements*mesh->Np;
+  iint Ntotal = mesh->Nelements*mesh->Np;
 
   occaTimerTic(mesh->device,"scaledAddKernel");
 
@@ -107,8 +107,8 @@ dfloat massWeightedInnerProduct(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   dfloat *tmp = solver->tmp;
-  int Nblock = solver->Nblock;
-  int Ntotal = mesh->Nelements*mesh->Np;
+  iint Nblock = solver->Nblock;
+  iint Ntotal = mesh->Nelements*mesh->Np;
 
   occa::memory &o_tmp = solver->o_tmp;
 
@@ -124,7 +124,7 @@ dfloat massWeightedInnerProduct(solver_t *solver,
   o_tmp.copyTo(tmp);
 
   dfloat wab = 0;
-  for(int n=0;n<Nblock;++n){
+  for(iint n=0;n<Nblock;++n){
     wab += tmp[n];
   }
 
@@ -151,7 +151,7 @@ void massPreconditioner3D(solver_t *solver,
 
   if(strstr(options, "JACOBI")){
 
-    int Ntotal = mesh->Np*mesh->Nelements;
+    iint Ntotal = mesh->Np*mesh->Nelements;
     // Jacobi preconditioner
     occaTimerTic(mesh->device,"dotDivideKernel");
     mesh->dotDivideKernel(Ntotal, o_r, precon->o_diagA, o_z);
@@ -162,11 +162,11 @@ void massPreconditioner3D(solver_t *solver,
 
 }
 
-int massSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const int maxIterations, const char *options){
+int massSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const iint maxIterations, const char *options){
 
   mesh_t *mesh = solver->mesh;
 
-  int rank;
+  iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // convergence tolerance (currently absolute)
@@ -213,7 +213,7 @@ int massSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::mem
   dfloat rdotz0 = massWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
-  int Niter = 0;
+  iint Niter = 0;
   dfloat alpha, beta, pAp;
 
   while(Niter<maxIterations && rdotr0>(tol*tol)){

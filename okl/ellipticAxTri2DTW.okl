@@ -6,7 +6,7 @@
 // We store (Nelements per block) x Np x (1) variables
 // flops: 
 kernel void ellipticPartialAxTri2D_v1(const int Nelements,
-    const int   * restrict elementList,
+    const iint   * restrict elementList,
     const dfloat * restrict ggeo,
     const dfloat * restrict SrrT,
     const dfloat * restrict SrsT,
@@ -19,20 +19,20 @@ kernel void ellipticPartialAxTri2D_v1(const int Nelements,
 
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
 
-  for(int eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
 
     shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         occaUnroll(p_NnodesV)
-          for(int et=0;et<p_NnodesV;++et){
-            const int e = eo + es + et*p_NblockV;
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
             if(e<Nelements){
               //prefetch q
-              const int element = elementList[e];
-              const int id = n + element*p_Np;
+              const iint element = elementList[e];
+              const iint id = n + element*p_Np;
               s_q[et][es][n] = q[id];
             }
           }
@@ -41,7 +41,7 @@ kernel void ellipticPartialAxTri2D_v1(const int Nelements,
 
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         // do this part irrespective of e
@@ -51,7 +51,7 @@ kernel void ellipticPartialAxTri2D_v1(const int Nelements,
         dfloat r_qss[p_NnodesV];
 
         occaUnroll(p_NnodesV)
-          for(int et=0;et<p_NnodesV;++et){
+          for(iint et=0;et<p_NnodesV;++et){
             r_qrr[et] = 0;
             r_qrs[et] = 0;
             r_qsr[et] = 0;
@@ -73,7 +73,7 @@ kernel void ellipticPartialAxTri2D_v1(const int Nelements,
             // (dphids_n, dphids_m)*(sx*sx+sy*sy)*q_m
 
             occaUnroll(p_NnodesV){
-              for(int et=0;et<p_NnodesV;++et){
+              for(iint et=0;et<p_NnodesV;++et){
                 // fetch from shared (for reuse four times)
                 const dfloat r_qk = s_q[et][es][k];
 
@@ -88,13 +88,13 @@ kernel void ellipticPartialAxTri2D_v1(const int Nelements,
 
         // this part has to check for element index validity
         occaUnroll(p_NnodesV){
-          for(int et=0;et<p_NnodesV;++et){
-            const int e = eo + es + et*p_NblockV;
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
 
             if (e<Nelements) {
-              const int element = elementList[e];
+              const iint element = elementList[e];
 
-              const int gid = element*p_Nggeo;
+              const iint gid = element*p_Nggeo;
 
               const dfloat Grr = ggeo[gid + p_G00ID];
               const dfloat Grs = ggeo[gid + p_G01ID];
@@ -106,7 +106,7 @@ kernel void ellipticPartialAxTri2D_v1(const int Nelements,
               res += Grs*r_qsr[et]; // B. should probably merge these since Grs=Gsr
               res += Gss*r_qss[et];
 
-              const int id = n + element*p_Np;
+              const iint id = n + element*p_Np;
               Aq[id] = res;
             }
           }
@@ -118,7 +118,7 @@ kernel void ellipticPartialAxTri2D_v1(const int Nelements,
 
 
 kernel void ellipticPartialAxTri2D_v2(const int Nelements,
-    const int   * restrict elementList,
+    const iint   * restrict elementList,
     const dfloat * restrict ggeo,
     const dfloat * restrict SrrT,
     const dfloat * restrict SrsT,
@@ -131,20 +131,20 @@ kernel void ellipticPartialAxTri2D_v2(const int Nelements,
 
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
 
-  for(int eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
 
     shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         occaUnroll(p_NnodesV)
-          for(int et=0;et<p_NnodesV;++et){
-            const int e = eo + es + et*p_NblockV;
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
             if(e<Nelements){
               //prefetch q
-              const int element = elementList[e];
-              const int id = n + element*p_Np;
+              const iint element = elementList[e];
+              const iint id = n + element*p_Np;
               s_q[et][es][n] = q[id];
             }
           }
@@ -153,7 +153,7 @@ kernel void ellipticPartialAxTri2D_v2(const int Nelements,
 
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         // do this part irrespective of e
@@ -162,7 +162,7 @@ kernel void ellipticPartialAxTri2D_v2(const int Nelements,
         dfloat r_qss[p_NnodesV];
 
         occaUnroll(p_NnodesV)
-          for(int et=0;et<p_NnodesV;++et){
+          for(iint et=0;et<p_NnodesV;++et){
             r_qrr[et] = 0;
             r_qrs[et] = 0;
             r_qss[et] = 0;
@@ -182,7 +182,7 @@ kernel void ellipticPartialAxTri2D_v2(const int Nelements,
             // (dphids_n, dphids_m)*(sx*sx+sy*sy)*q_m
 
             occaUnroll(p_NnodesV){
-              for(int et=0;et<p_NnodesV;++et){
+              for(iint et=0;et<p_NnodesV;++et){
                 // fetch from shared (for reuse four times)
                 const dfloat r_qk = s_q[et][es][k];
 
@@ -195,13 +195,13 @@ kernel void ellipticPartialAxTri2D_v2(const int Nelements,
 
         // this part has to check for element index validity
         occaUnroll(p_NnodesV){
-          for(int et=0;et<p_NnodesV;++et){
-            const int e = eo + es + et*p_NblockV;
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
 
             if (e<Nelements) {
-              const int element = elementList[e];
+              const iint element = elementList[e];
 
-              const int gid = element*p_Nggeo;
+              const iint gid = element*p_Nggeo;
 
               const dfloat Grr = ggeo[gid + p_G00ID];
               const dfloat Grs = ggeo[gid + p_G01ID];
@@ -212,7 +212,7 @@ kernel void ellipticPartialAxTri2D_v2(const int Nelements,
               res += Grs*r_qrs[et]; // A.
               res += Gss*r_qss[et];
 
-              const int id = n + element*p_Np;
+              const iint id = n + element*p_Np;
               Aq[id] = res;
             }
           }
@@ -224,11 +224,11 @@ kernel void ellipticPartialAxTri2D_v2(const int Nelements,
 //author: KS
 
 kernel void ellipticPartialAxTri2D_v3(const int Nelements,
-    const int   * restrict elementList,
+    const iint   * restrict elementList,
     const dfloat * restrict ggeo,
     const dfloat * restrict SrrT,
     const dfloat * restrict SrsT,
-    const int   * restrict IndT,
+    const iint   * restrict IndT,
     const dfloat * restrict SssT,
     const dfloat * restrict MM,
     const dfloat lambda,
@@ -237,20 +237,20 @@ kernel void ellipticPartialAxTri2D_v3(const int Nelements,
 
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
 
-  for(int eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
 
     shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         occaUnroll(p_NnodesV)
-          for(int et=0;et<p_NnodesV;++et){
-            const int e = eo + es + et*p_NblockV;
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
             if(e<Nelements){
               //prefetch q
-              const int element = elementList[e];
-              const int id = n + element*p_Np;
+              const iint element = elementList[e];
+              const iint id = n + element*p_Np;
               s_q[et][es][n] = q[id];
               //printf("maxNNz = %d \n", p_maxNnzPerRow);           
             }
@@ -260,7 +260,7 @@ kernel void ellipticPartialAxTri2D_v3(const int Nelements,
 
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         // do this part irrespective of e
@@ -269,7 +269,7 @@ kernel void ellipticPartialAxTri2D_v3(const int Nelements,
         dfloat r_qss[p_NnodesV];
 
         occaUnroll(p_NnodesV)
-          for(int et=0;et<p_NnodesV;++et){
+          for(iint et=0;et<p_NnodesV;++et){
             r_qrr[et] = 0;
             r_qrs[et] = 0;
             r_qss[et] = 0;
@@ -301,7 +301,7 @@ kernel void ellipticPartialAxTri2D_v3(const int Nelements,
               // (dphids_n, dphids_m)*(sx*sx+sy*sy)*q_m
 
               occaUnroll(p_NnodesV){
-                for(int et=0;et<p_NnodesV;++et){
+                for(iint et=0;et<p_NnodesV;++et){
                   // fetch from shared (for reuse four times)
                   const dfloat r_qk = s_q[et][es][k];
                   r_qrr[et] += Srr_nk*r_qk;
@@ -313,13 +313,13 @@ kernel void ellipticPartialAxTri2D_v3(const int Nelements,
           }
         // this part has to check for element index validity
         occaUnroll(p_NnodesV){
-          for(int et=0;et<p_NnodesV;++et){
-            const int e = eo + es + et*p_NblockV;
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
 
             if (e<Nelements) {
-              const int element = elementList[e];
+              const iint element = elementList[e];
 
-              const int gid = element*p_Nggeo;
+              const iint gid = element*p_Nggeo;
 
               const dfloat Grr = ggeo[gid + p_G00ID];
               const dfloat Grs = ggeo[gid + p_G01ID];
@@ -330,7 +330,7 @@ kernel void ellipticPartialAxTri2D_v3(const int Nelements,
               dfloat res2 = Grs*r_qrs[et]; // A.
               dfloat res3 = Gss*r_qss[et];
 
-              const int id = n + element*p_Np;
+              const iint id = n + element*p_Np;
               Aq[id] = res+res2+res3;
             }
           }
@@ -341,7 +341,7 @@ kernel void ellipticPartialAxTri2D_v3(const int Nelements,
 }
 //char4 version
 kernel void ellipticPartialAxTri2D_v4(const int Nelements,
-    const int   * restrict elementList,
+    const iint   * restrict elementList,
     const dfloat * restrict ggeo,
     const dfloat * restrict SrrT,
     const dfloat * restrict SrsT,
@@ -354,20 +354,20 @@ kernel void ellipticPartialAxTri2D_v4(const int Nelements,
 
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
 
-  for(int eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
 
     shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         occaUnroll(p_NnodesV)
-          for(int et=0;et<p_NnodesV;++et){
-            const int e = eo + es + et*p_NblockV;
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
             if(e<Nelements){
               //prefetch q
-              const int element = elementList[e];
-              const int id = n + element*p_Np;
+              const iint element = elementList[e];
+              const iint id = n + element*p_Np;
               s_q[et][es][n] = q[id];
               //printf("maxNNz = %d \n", p_maxNnzPerRow);           
             }
@@ -377,7 +377,7 @@ kernel void ellipticPartialAxTri2D_v4(const int Nelements,
 
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         // do this part irrespective of e
@@ -386,7 +386,7 @@ kernel void ellipticPartialAxTri2D_v4(const int Nelements,
         dfloat r_qss[p_NnodesV];
 
         occaUnroll(p_NnodesV)
-          for(int et=0;et<p_NnodesV;++et){
+          for(iint et=0;et<p_NnodesV;++et){
             r_qrr[et] = 0;
             r_qrs[et] = 0;
             r_qss[et] = 0;
@@ -428,7 +428,7 @@ kernel void ellipticPartialAxTri2D_v4(const int Nelements,
                   // (dphids_n, dphids_m)*(sx*sx+sy*sy)*q_m
 
                   occaUnroll(p_NnodesV){
-                    for(int et=0;et<p_NnodesV;++et){
+                    for(iint et=0;et<p_NnodesV;++et){
                       // fetch from shared (for reuse four times)
                       const dfloat r_qk = s_q[et][es][indicesn[k2]-1];
                       r_qrr[et] += Srr_nk*r_qk;
@@ -441,13 +441,13 @@ kernel void ellipticPartialAxTri2D_v4(const int Nelements,
           }
         // this part has to check for element index validity
         occaUnroll(p_NnodesV){
-          for(int et=0;et<p_NnodesV;++et){
-            const int e = eo + es + et*p_NblockV;
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
 
             if (e<Nelements) {
-              const int element = elementList[e];
+              const iint element = elementList[e];
 
-              const int gid = element*p_Nggeo;
+              const iint gid = element*p_Nggeo;
 
               const dfloat Grr = ggeo[gid + p_G00ID];
               const dfloat Grs = ggeo[gid + p_G01ID];
@@ -458,7 +458,7 @@ kernel void ellipticPartialAxTri2D_v4(const int Nelements,
               dfloat res2 = Grs*r_qrs[et]; // A.
               dfloat res3 = Gss*r_qss[et];
 
-              const int id = n + element*p_Np;
+              const iint id = n + element*p_Np;
               Aq[id] = res+res2+res3;
             }
           }
@@ -470,7 +470,7 @@ kernel void ellipticPartialAxTri2D_v4(const int Nelements,
 
 //char4 storage BUT the matrices Srs, Srr, Sss are accessed ROW-WISE
 kernel void ellipticPartialAxTri2D_v5(const int Nelements,
-    const int   * restrict elementList,
+    const iint   * restrict elementList,
     const dfloat * restrict ggeo,
     const dfloat * restrict Srr,
     const dfloat * restrict Srs,
@@ -483,20 +483,20 @@ kernel void ellipticPartialAxTri2D_v5(const int Nelements,
 
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
 
-  for(int eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
 
     shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         occaUnroll(p_NnodesV)
-          for(int et=0;et<p_NnodesV;++et){
-            const int e = eo + es + et*p_NblockV;
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
             if(e<Nelements){
               //prefetch q
-              const int element = elementList[e];
-              const int id = n + element*p_Np;
+              const iint element = elementList[e];
+              const iint id = n + element*p_Np;
               s_q[et][es][n] = q[id];
               //printf("maxNNz = %d \n", p_maxNnzPerRow);           
             }
@@ -506,7 +506,7 @@ kernel void ellipticPartialAxTri2D_v5(const int Nelements,
 
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         // do this part irrespective of e
@@ -515,7 +515,7 @@ kernel void ellipticPartialAxTri2D_v5(const int Nelements,
         dfloat r_qss[p_NnodesV];
 
         occaUnroll(p_NnodesV)
-          for(int et=0;et<p_NnodesV;++et){
+          for(iint et=0;et<p_NnodesV;++et){
             r_qrr[et] = 0;
             r_qrs[et] = 0;
             r_qss[et] = 0;
@@ -556,7 +556,7 @@ kernel void ellipticPartialAxTri2D_v5(const int Nelements,
                   // (dphids_n, dphids_m)*(sx*sx+sy*sy)*q_m
 
                   occaUnroll(p_NnodesV){
-                    for(int et=0;et<p_NnodesV;++et){
+                    for(iint et=0;et<p_NnodesV;++et){
                       // fetch from shared (for reuse four times)
                       const dfloat r_qk = s_q[et][es][indicesn[k2]-1];
                       r_qrr[et] += Srr_nk*r_qk;
@@ -569,13 +569,13 @@ kernel void ellipticPartialAxTri2D_v5(const int Nelements,
           }
         // this part has to check for element index validity
         occaUnroll(p_NnodesV){
-          for(int et=0;et<p_NnodesV;++et){
-            const int e = eo + es + et*p_NblockV;
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
 
             if (e<Nelements) {
-              const int element = elementList[e];
+              const iint element = elementList[e];
 
-              const int gid = element*p_Nggeo;
+              const iint gid = element*p_Nggeo;
 
               const dfloat Grr = ggeo[gid + p_G00ID];
               const dfloat Grs = ggeo[gid + p_G01ID];
@@ -586,7 +586,7 @@ kernel void ellipticPartialAxTri2D_v5(const int Nelements,
               dfloat res2 = Grs*r_qrs[et]; // A.
               dfloat res3 = Gss*r_qss[et];
 
-              const int id = n + element*p_Np;
+              const iint id = n + element*p_Np;
               Aq[id] = res+res2+res3;
             }
           }
@@ -599,7 +599,7 @@ kernel void ellipticPartialAxTri2D_v5(const int Nelements,
 
 //char4 storage BUT the COMPRESSED rectangular matrices Srs, Srr, Sss are accessed COLUMN-WISE
 kernel void ellipticPartialAxTri2D_v6(const int Nelements,
-				      const int   * restrict elementList,
+				      const iint   * restrict elementList,
 				      const dfloat * restrict ggeo,
 				      const dfloat * restrict Srr,
 				      const dfloat * restrict Srs,
@@ -612,20 +612,20 @@ kernel void ellipticPartialAxTri2D_v6(const int Nelements,
   
   // needs p_NnodesV (nodes per thread) and p_NblockV (elements per chunk) defined
   
-  for(int eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NnodesV*p_NblockV;outer0){
 
     shared dfloat s_q[p_NnodesV][p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         occaUnroll(p_NnodesV)
-          for(int et=0;et<p_NnodesV;++et){
-            const int e = eo + es + et*p_NblockV;
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
             if(e<Nelements){
               //prefetch q
-              const int element = elementList[e];
-              const int id = n + element*p_Np;
+              const iint element = elementList[e];
+              const iint id = n + element*p_Np;
               s_q[et][es][n] = q[id];
             }
           }
@@ -634,7 +634,7 @@ kernel void ellipticPartialAxTri2D_v6(const int Nelements,
 
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(iint es=0;es<p_NblockV;++es;inner1){
       for(int n=0;n<p_Np;++n;inner0){
 
         // do this part irrespective of e
@@ -643,7 +643,7 @@ kernel void ellipticPartialAxTri2D_v6(const int Nelements,
         dfloat r_qss[p_NnodesV];
 
         occaUnroll(p_NnodesV)
-          for(int et=0;et<p_NnodesV;++et){
+          for(iint et=0;et<p_NnodesV;++et){
             r_qrr[et] = 0;
             r_qrs[et] = 0;
             r_qss[et] = 0;
@@ -676,7 +676,7 @@ kernel void ellipticPartialAxTri2D_v6(const int Nelements,
                   // (dphids_n, dphids_m)*(sx*sx+sy*sy)*q_m
 
                   occaUnroll(p_NnodesV){
-                    for(int et=0;et<p_NnodesV;++et){
+                    for(iint et=0;et<p_NnodesV;++et){
                       // fetch from shared (for reuse three times)
 		      // 6 flops per 8 bytes
                       const dfloat r_qk = s_q[et][es][indicesn[k2]-1];
@@ -691,13 +691,13 @@ kernel void ellipticPartialAxTri2D_v6(const int Nelements,
 
         // this part has to check for element index validity
         occaUnroll(p_NnodesV){
-          for(int et=0;et<p_NnodesV;++et){
-            const int e = eo + es + et*p_NblockV;
+          for(iint et=0;et<p_NnodesV;++et){
+            const iint e = eo + es + et*p_NblockV;
 	    
             if (e<Nelements) {
-              const int element = elementList[e];
+              const iint element = elementList[e];
 	      
-              const int gid = element*p_Nggeo;
+              const iint gid = element*p_Nggeo;
 
               const dfloat Grr = ggeo[gid + p_G00ID];
               const dfloat Grs = ggeo[gid + p_G01ID];
@@ -708,7 +708,7 @@ kernel void ellipticPartialAxTri2D_v6(const int Nelements,
               dfloat res2 = Grs*r_qrs[et]; // A.
               dfloat res3 = Gss*r_qss[et];
 
-              const int id = n + element*p_Np;
+              const iint id = n + element*p_Np;
               Aq[id] = res+res2+res3;
             }
           }

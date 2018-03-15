@@ -3,18 +3,18 @@
 
 void meshGatherScatterQuad2D(mesh2D *mesh, dfloat *qL){
 
-  for(int n=0;n<mesh->NgatherNodes;++n){
-    const int Ngather = mesh->gatherCounts[n];
-    const int offset  = mesh->gatherOffsets[n];
+  for(iint n=0;n<mesh->NgatherNodes;++n){
+    const iint Ngather = mesh->gatherCounts[n];
+    const iint offset  = mesh->gatherOffsets[n];
 
     dfloat sumqn = 0;
-    for(int m=0;m<Ngather;++m){
-      const int id = mesh->gatherIds[offset+m];
+    for(iint m=0;m<Ngather;++m){
+      const iint id = mesh->gatherIds[offset+m];
       sumqn += qL[id];
     }
     
-    for(int m=0;m<Ngather;++m){
-      const int id = mesh->gatherIds[offset+m];
+    for(iint m=0;m<Ngather;++m){
+      const iint id = mesh->gatherIds[offset+m];
       qL[id] = sumqn;
     }
   }

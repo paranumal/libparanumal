@@ -1,20 +1,20 @@
 
-kernel void scatter(const int Nscatter,
-		   const int * restrict scatterStarts,
-		   const int * restrict scatterIds,
+kernel void scatter(const iint Nscatter,
+		   const iint * restrict scatterStarts,
+		   const iint * restrict scatterIds,
 		   const dfloat * restrict q,
 		   dfloat * restrict scatterq){
 
-  for(int s=0;s<Nscatter;++s;tile(256)){
+  for(iint s=0;s<Nscatter;++s;tile(256)){
 
     if(s<Nscatter){
       const dfloat qs = q[s];
       
-      const int start = scatterStarts[s];
-      const int end = scatterStarts[s+1];
+      const iint start = scatterStarts[s];
+      const iint end = scatterStarts[s+1];
       
-      for(int n=start;n<end;++n){
-      	const int id =	scatterIds[n];
+      for(iint n=start;n<end;++n){
+      	const iint id =	scatterIds[n];
       	scatterq[id] = qs;
       }
     }

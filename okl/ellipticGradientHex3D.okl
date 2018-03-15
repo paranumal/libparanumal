@@ -22,7 +22,7 @@ kernel void ellipticGradientHex3D(const int Nelements,
     for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j;inner1){
 	for(int i=0;i<p_Nq;++i;inner0){
-	  const int id = e*p_Np+k*p_Nq*p_Nq+j*p_Nq+i;
+	  const iint id = e*p_Np+k*p_Nq*p_Nq+j*p_Nq+i;
 	  s_q[k][j][i] = q[id];
 	}
       }
@@ -63,7 +63,7 @@ kernel void ellipticGradientHex3D(const int Nelements,
 	  gradqn.z = drdz*qr + dsdz*qs + dtdz*qt;
 	  gradqn.w = s_q[k][j][i];
 
-	  const int id = e*p_Np+k*p_Nq*p_Nq+j*p_Nq+i; 
+	  const iint id = e*p_Np+k*p_Nq*p_Nq+j*p_Nq+i; 
 	  gradq[id] = gradqn;
 	}
       }
@@ -95,7 +95,7 @@ kernel void ellipticPartialGradientHex3D(const int Nelements,
     for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j;inner1){
 	for(int i=0;i<p_Nq;++i;inner0){
-	  const int id = (e+startElement)*p_Np+k*p_Nq*p_Nq+j*p_Nq+i;
+	  const iint id = (e+startElement)*p_Np+k*p_Nq*p_Nq+j*p_Nq+i;
 	  s_q[k][j][i] = q[id];
 	}
       }
@@ -136,7 +136,7 @@ kernel void ellipticPartialGradientHex3D(const int Nelements,
 	  gradqn.z = drdz*qr + dsdz*qs + dtdz*qt;
 	  gradqn.w = s_q[k][j][i];
 
-	  const int id = (e+startElement)*p_Np+k*p_Nq*p_Nq+j*p_Nq+i; 
+	  const iint id = (e+startElement)*p_Np+k*p_Nq*p_Nq+j*p_Nq+i; 
 	  gradq[id] = gradqn;
 	}
       }

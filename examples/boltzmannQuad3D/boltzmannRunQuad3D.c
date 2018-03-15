@@ -6,19 +6,19 @@ void boltzmannRunQuad3D(solver_t *solver){
   mesh_t *mesh = solver->mesh;
   
   // MPI send buffer
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
-  int fld = 0;
+  iint fld = 0;
   boltzmannPlotVTUQuad3D(mesh, "bah.vtu", fld);
   
   occa::initTimer(mesh->device);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
     
-    for(int rk=0;rk<mesh->Nrk;++rk){
+    for(iint rk=0;rk<mesh->Nrk;++rk){
 
       //      printf("RK %d --------------------\n", rk);
       
@@ -27,7 +27,7 @@ void boltzmannRunQuad3D(solver_t *solver){
 
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
-	int Nentries = mesh->Np*mesh->Nfields;
+	iint Nentries = mesh->Np*mesh->Nfields;
 	
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
@@ -128,7 +128,7 @@ void boltzmannRunQuad3D(solver_t *solver){
       //      boltzmannComputeVorticityQuad2D(mesh, mesh->q, 0, mesh->Nfields);
       
       // output field files
-      int fld = 0;
+      iint fld = 0;
       char fname[BUFSIZ];
       //      sprintf(fname, "foo_T%04d.vtu", tstep/mesh->errorStep);
 

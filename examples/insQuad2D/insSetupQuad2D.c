@@ -78,9 +78,9 @@ ins_t *insSetupQuad2D(mesh2D *mesh, char * options, char *vSolverOptions, char *
   ins->tau       = (mesh->N)*(mesh->N+1);
 
   // Initialize
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      const int id = n + mesh->Np*e;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      const iint id = n + mesh->Np*e;
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
@@ -102,10 +102,10 @@ ins_t *insSetupQuad2D(mesh2D *mesh, char * options, char *vSolverOptions, char *
 
   // Set time step size
   dfloat hmin = 1e9, hmax = 0;
-  for(int e=0;e<mesh->Nelements;++e){  
-    for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+  for(iint e=0;e<mesh->Nelements;++e){  
+    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
 
-      int sid = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + n);
+      iint sid = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + n);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
      
@@ -118,9 +118,9 @@ ins_t *insSetupQuad2D(mesh2D *mesh, char * options, char *vSolverOptions, char *
 
   // Find maximum velocity
   dfloat umax = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      const int id = n + mesh->Np*e;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      const iint id = n + mesh->Np*e;
       dfloat t = 0;
       dfloat uxn = ins->U[id];
       dfloat uyn = ins->V[id];

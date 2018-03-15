@@ -13,25 +13,25 @@ void acousticsPml2D(mesh2D *mesh, int lev){
   dfloat *cubrhsvtilde = (dfloat *) calloc(mesh->cubNp,sizeof(dfloat));
 
   // for all elements
-  for(int m=0;m<mesh->MRABpmlNelements[lev];++m){
-    int e = mesh->MRABpmlElementIds[lev][m];
-    int pmlId = mesh->MRABpmlIds[lev][m];
+  for(iint m=0;m<mesh->MRABpmlNelements[lev];++m){
+    iint e = mesh->MRABpmlElementIds[lev][m];
+    iint pmlId = mesh->MRABpmlIds[lev][m];
     
     // Interpolate to cubature nodes
-    for(int n=0;n<mesh->cubNp;++n){
+    for(iint n=0;n<mesh->cubNp;++n){
       dfloat p = 0.f;
       dfloat u = 0.f;
       dfloat v = 0.f;
       dfloat ptilde = 0.f;
       dfloat utilde = 0.f;
       dfloat vtilde = 0.f;
-      for (int i=0;i<mesh->Np;++i){
-        int base = mesh->Nfields*(e*mesh->Np + i);
+      for (iint i=0;i<mesh->Np;++i){
+        iint base = mesh->Nfields*(e*mesh->Np + i);
         u += mesh->cubInterp[n*mesh->Np + i] * mesh->q[base+0];
         v += mesh->cubInterp[n*mesh->Np + i] * mesh->q[base+1];
         p += mesh->cubInterp[n*mesh->Np + i] * mesh->q[base+2];
 
-        int pmlBase = mesh->pmlNfields*(pmlId*mesh->Np+i);
+        iint pmlBase = mesh->pmlNfields*(pmlId*mesh->Np+i);
         utilde += mesh->cubInterp[n*mesh->Np + i] * mesh->pmlq[pmlBase+0];
         vtilde += mesh->cubInterp[n*mesh->Np + i] * mesh->pmlq[pmlBase+1];
         ptilde += mesh->cubInterp[n*mesh->Np + i] * mesh->pmlq[pmlBase+2];        
@@ -51,14 +51,14 @@ void acousticsPml2D(mesh2D *mesh, int lev){
     }
 
     //Project down and store
-    for(int n=0;n<mesh->Np;++n){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat rhsp = 0.f;
       dfloat rhsu = 0.f;
       dfloat rhsv = 0.f;
       dfloat rhsptilde = 0.f;
       dfloat rhsutilde = 0.f;
       dfloat rhsvtilde = 0.f;
-      for (int i=0;i<mesh->cubNp;++i){
+      for (iint i=0;i<mesh->cubNp;++i){
         rhsp += mesh->cubProject[n*mesh->cubNp + i] * cubrhsp[i];
         rhsu += mesh->cubProject[n*mesh->cubNp + i] * cubrhsu[i];
         rhsv += mesh->cubProject[n*mesh->cubNp + i] * cubrhsv[i];
@@ -68,13 +68,13 @@ void acousticsPml2D(mesh2D *mesh, int lev){
       }
 
       // store acoustics rhs contributions from PML
-      int rhsBase = 3*mesh->Nfields*(e*mesh->Np + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
+      iint rhsBase = 3*mesh->Nfields*(e*mesh->Np + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
       mesh->rhsq[rhsBase+0] += rhsu;
       mesh->rhsq[rhsBase+1] += rhsv;
       mesh->rhsq[rhsBase+2] += rhsp;
 
       // store PML rhs
-      int pmlrhsBase = 3*mesh->pmlNfields*(n+pmlId*mesh->Np)  + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
+      iint pmlrhsBase = 3*mesh->pmlNfields*(n+pmlId*mesh->Np)  + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
       mesh->pmlrhsq[pmlrhsBase+0] = rhsutilde;
       mesh->pmlrhsq[pmlrhsBase+1] = rhsvtilde;
       mesh->pmlrhsq[pmlrhsBase+2] = rhsptilde;
@@ -107,25 +107,25 @@ void acousticsPml2D_wadg(mesh2D *mesh, int lev){
   dfloat *cubrhsvtilde = (dfloat *) calloc(mesh->cubNp,sizeof(dfloat));
   
   // for all elements
-  for(int m=0;m<mesh->MRABpmlNelements[lev];++m){
-    int e = mesh->MRABpmlElementIds[lev][m];
-    int pmlId = mesh->MRABpmlIds[lev][m];
+  for(iint m=0;m<mesh->MRABpmlNelements[lev];++m){
+    iint e = mesh->MRABpmlElementIds[lev][m];
+    iint pmlId = mesh->MRABpmlIds[lev][m];
     
     // Interpolate to cubature nodes
-    for(int n=0;n<mesh->cubNp;++n){
+    for(iint n=0;n<mesh->cubNp;++n){
       p[n] = 0.f;
       u[n] = 0.f;
       v[n] = 0.f;
       ptilde[n] = 0.f;
       utilde[n] = 0.f;
       vtilde[n] = 0.f;
-      for (int i=0;i<mesh->Np;++i){
-        int base = mesh->Nfields*(e*mesh->Np + i);
+      for (iint i=0;i<mesh->Np;++i){
+        iint base = mesh->Nfields*(e*mesh->Np + i);
         u[n] += mesh->cubInterp[n*mesh->Np + i] * mesh->q[base+0];
         v[n] += mesh->cubInterp[n*mesh->Np + i] * mesh->q[base+1];
         p[n] += mesh->cubInterp[n*mesh->Np + i] * mesh->q[base+2];
 
-        int pmlBase = mesh->pmlNfields*(pmlId*mesh->Np+i);
+        iint pmlBase = mesh->pmlNfields*(pmlId*mesh->Np+i);
         utilde[n] += mesh->cubInterp[n*mesh->Np + i] * mesh->pmlq[pmlBase+0];
         vtilde[n] += mesh->cubInterp[n*mesh->Np + i] * mesh->pmlq[pmlBase+1];
         ptilde[n] += mesh->cubInterp[n*mesh->Np + i] * mesh->pmlq[pmlBase+2];        
@@ -146,14 +146,14 @@ void acousticsPml2D_wadg(mesh2D *mesh, int lev){
     }
 
     //Project down and store
-    for(int n=0;n<mesh->Np;++n){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat rhsp = 0.f;
       dfloat rhsu = 0.f;
       dfloat rhsv = 0.f;
       dfloat rhsptilde = 0.f;
       dfloat rhsutilde = 0.f;
       dfloat rhsvtilde = 0.f;
-      for (int i=0;i<mesh->cubNp;++i){
+      for (iint i=0;i<mesh->cubNp;++i){
         rhsp += mesh->cubProject[n*mesh->cubNp + i] * cubrhsp[i];
         rhsu += mesh->cubProject[n*mesh->cubNp + i] * cubrhsu[i];
         rhsv += mesh->cubProject[n*mesh->cubNp + i] * cubrhsv[i];
@@ -163,13 +163,13 @@ void acousticsPml2D_wadg(mesh2D *mesh, int lev){
       }
 
       // store acoustics rhs contributions from PML
-      int rhsBase = 3*mesh->Nfields*(e*mesh->Np + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
+      iint rhsBase = 3*mesh->Nfields*(e*mesh->Np + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
       mesh->rhsq[rhsBase+0] += rhsu;
       mesh->rhsq[rhsBase+1] += rhsv;
       mesh->rhsq[rhsBase+2] += rhsp;
 
       // store PML rhs
-      int pmlrhsBase = 3*mesh->pmlNfields*(n+pmlId*mesh->Np)  + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
+      iint pmlrhsBase = 3*mesh->pmlNfields*(n+pmlId*mesh->Np)  + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
       mesh->pmlrhsq[pmlrhsBase+0] = rhsutilde;
       mesh->pmlrhsq[pmlrhsBase+1] = rhsvtilde;
       mesh->pmlrhsq[pmlrhsBase+2] = rhsptilde;

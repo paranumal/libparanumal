@@ -5,15 +5,15 @@
 void meshBoltzmannRun2D(mesh2D *mesh){
 
   // MPI send buffer
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(int rk=0;rk<mesh->Nrk;++rk){
+    for(iint rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
       
@@ -55,7 +55,7 @@ void meshBoltzmannRun2D(mesh2D *mesh){
       meshBoltzmannError2D(mesh, mesh->dt*(tstep+1));
       
       // output field files
-      int fld = 0;
+      iint fld = 0;
       meshPlotVTU2D(mesh, "foo", fld);
     }
     
@@ -68,20 +68,20 @@ void meshBoltzmannRun2D(mesh2D *mesh){
 void meshBoltzmannOccaRun2D(mesh2D *mesh){
 
   // MPI send buffer
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(int rk=0;rk<mesh->Nrk;++rk){
+    for(iint rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
-	int Nentries = mesh->Np*mesh->Nfields;
+	iint Nentries = mesh->Np*mesh->Nfields;
 	
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
@@ -150,7 +150,7 @@ void meshBoltzmannOccaRun2D(mesh2D *mesh){
       meshBoltzmannError2D(mesh, mesh->dt*(tstep+1));
 
       // output field files
-      int fld = 0;
+      iint fld = 0;
       meshPlotVTU2D(mesh, "foo", fld);
     }
   }
@@ -163,20 +163,20 @@ void meshBoltzmannOccaRun2D(mesh2D *mesh){
 void meshBoltzmannPmlOccaRun2D(mesh2D *mesh){
 
   // MPI send buffer
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(int rk=0;rk<mesh->Nrk;++rk){
+    for(iint rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
-	int Nentries = mesh->Np*mesh->Nfields;
+	iint Nentries = mesh->Np*mesh->Nfields;
 	
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
@@ -258,7 +258,7 @@ void meshBoltzmannPmlOccaRun2D(mesh2D *mesh){
       meshBoltzmannError2D(mesh, mesh->dt*(tstep+1));
 
       // output field files
-      int fld = 0;
+      iint fld = 0;
       meshPlotVTU2D(mesh, "foo", fld);
     }
   }
@@ -276,11 +276,11 @@ void meshBoltzmannPmlOccaRun2D(mesh2D *mesh){
 void meshBoltzmannOccaAsyncRun2D(mesh2D *mesh){
 
   // MPI send buffer
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
 
   // offset for halo data
   size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements * sizeof(dfloat);
-  int Nentries = mesh->Np*mesh->Nfields;
+  iint Nentries = mesh->Np*mesh->Nfields;
   
   // using mapped memory for host-device transfers
   occa::memory o_pinned_send_Q, o_pinned_recv_Q;
@@ -309,9 +309,9 @@ void meshBoltzmannOccaAsyncRun2D(mesh2D *mesh){
   }
 
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(int rk=0;rk<mesh->Nrk;++rk){
+    for(iint rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
@@ -409,7 +409,7 @@ void meshBoltzmannOccaAsyncRun2D(mesh2D *mesh){
       meshBoltzmannError2D(mesh, mesh->dt*(tstep+1));
 
       // output field files
-      int fld = 0;
+      iint fld = 0;
       meshPlotVTU2D(mesh, "foo", fld);
     }
   }
@@ -436,11 +436,11 @@ void meshBoltzmannOccaAsyncRun2D(mesh2D *mesh){
 void meshBoltzmannSplitSurfaceOccaAsyncRun2D(mesh2D *mesh){
 
   // MPI send buffer
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
 
   // offset for halo data
   size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements * sizeof(dfloat);
-  int Nentries = mesh->Np*mesh->Nfields;
+  iint Nentries = mesh->Np*mesh->Nfields;
   
   // using mapped memory for host-device transfers
   occa::memory o_pinned_send_Q, o_pinned_recv_Q;
@@ -469,9 +469,9 @@ void meshBoltzmannSplitSurfaceOccaAsyncRun2D(mesh2D *mesh){
   }
 
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(int rk=0;rk<mesh->Nrk;++rk){
+    for(iint rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
@@ -584,7 +584,7 @@ void meshBoltzmannSplitSurfaceOccaAsyncRun2D(mesh2D *mesh){
       meshBoltzmannError2D(mesh, mesh->dt*(tstep+1));
 
       // output field files
-      int fld = 2;
+      iint fld = 2;
       meshPlotVTU2D(mesh, "foo", fld);
     }
   }

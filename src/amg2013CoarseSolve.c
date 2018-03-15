@@ -50,7 +50,7 @@ typedef struct {
   double *xSort;
   double *rhsSort;
 
-  char* intType;
+  char* iintType;
   char* dfloatType;
 
 } amg2013_t;
@@ -71,7 +71,7 @@ void * amg2013SetupCSR(int    Nnum,            //unassembled size (Nverts*Neleme
                        int    *sendOffsets, 
                        int    *recvCounts, 
                        int    *recvOffsets,
-                       const char* intType, 
+                       const char* iintType, 
                        const char* dfloatType) {
   //defaults
   double tol = 1.e-8;
@@ -158,7 +158,7 @@ void * amg2013SetupCSR(int    Nnum,            //unassembled size (Nverts*Neleme
     amg->offd_data[n] = offd_data[n];
   }
 
-  amg->intType = strdup(intType);
+  amg->iintType = strdup(iintType);
   amg->dfloatType = strdup(dfloatType);
 
   int Nmax =  (Nnum >amg->recvNnum)? Nnum : amg->recvNnum;
@@ -276,7 +276,7 @@ void * amg2013Setup(int    Nnum,            //unassembled size (Nverts*Nelements
                     int    *sendOffsets, 
                     int    *recvCounts, 
                     int    *recvOffsets,
-                    const char* intType, 
+                    const char* iintType, 
                     const char* dfloatType) {
 
   void *amg;
@@ -289,8 +289,8 @@ void * amg2013Setup(int    Nnum,            //unassembled size (Nverts*Nelements
   double *offd_data=NULL;
   int n;
 
-  if (!strcmp(intType,"long")) { 
-    printf("Exiting due to use of ulong in intType %s\n", intType);
+  if (!strcmp(iintType,"long")) { 
+    printf("Exiting due to use of ulong in iintType %s\n", iintType);
     exit(-1);
   }
 
@@ -358,7 +358,7 @@ void * amg2013Setup(int    Nnum,            //unassembled size (Nverts*Nelements
                         sendSortId, globalSortId, compressId,
                         sendCounts, sendOffsets, 
                         recvCounts, recvOffsets,
-                        intType, dfloatType);
+                        iintType, dfloatType);
   
   free(diag_i);
   free(offd_i);

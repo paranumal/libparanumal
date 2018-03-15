@@ -1,6 +1,6 @@
 #include "ins3D.h"
 
-void insReport3D(ins_t *ins, int tstep, char *options){
+void insReport3D(ins_t *ins, iint tstep, char *options){
 
   dfloat t = (tstep)*ins->dt;
   

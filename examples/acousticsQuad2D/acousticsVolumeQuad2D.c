@@ -5,13 +5,13 @@
 void acousticsVolumeQuad2D(mesh2D *mesh){
 
   // for all elements
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
 
     // for all nodes in this element
-    for(int m=0;m<mesh->Nq;++m){
-      for(int n=0;n<mesh->Nq;++n){
+    for(iint m=0;m<mesh->Nq;++m){
+      for(iint n=0;n<mesh->Nq;++n){
 
-	int id = n + m*mesh->Nq;
+	iint id = n + m*mesh->Nq;
 	
 	// prefetch geometric factors (constant on triangle)
 	dfloat drdx = mesh->vgeo[id+mesh->Np*(e*mesh->Nvgeo + RXID)];
@@ -25,9 +25,9 @@ void acousticsVolumeQuad2D(mesh2D *mesh){
 	dfloat dpdr = 0, dpds = 0;
 
 	// 'r' derivatives
-	for(int i=0;i<mesh->Nq;++i){
+	for(iint i=0;i<mesh->Nq;++i){
 
-	  int id = mesh->Nfields*(e*mesh->Np + i + m*mesh->Nq);
+	  iint id = mesh->Nfields*(e*mesh->Np + i + m*mesh->Nq);
 	  dfloat u = mesh->q[id+0];
 	  dfloat v = mesh->q[id+1];
 	  dfloat p = mesh->q[id+2];
@@ -40,9 +40,9 @@ void acousticsVolumeQuad2D(mesh2D *mesh){
 	}
 
 	// 's' derivatives
-	for(int i=0;i<mesh->Nq;++i){
+	for(iint i=0;i<mesh->Nq;++i){
 
-	  int id = mesh->Nfields*(e*mesh->Np + n + i*mesh->Nq);
+	  iint id = mesh->Nfields*(e*mesh->Np + n + i*mesh->Nq);
 	  dfloat u = mesh->q[id+0];
 	  dfloat v = mesh->q[id+1];
 	  dfloat p = mesh->q[id+2];

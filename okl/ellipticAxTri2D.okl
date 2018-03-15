@@ -10,15 +10,15 @@ kernel void ellipticAxTri2D(const int Nelements,
         const dfloat  * restrict q,
         dfloat  * restrict Aq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
 
     shared dfloat s_q[p_NblockV][p_Np];
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
+    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
       for(int n=0;n<p_Np;++n;inner0){
         if (e<Nelements) {
           //prefetch q
-          const int id = n + e*p_Np;
+          const iint id = n + e*p_Np;
           s_q[e-eo][n] = q[id];
         }
       }
@@ -27,11 +27,11 @@ kernel void ellipticAxTri2D(const int Nelements,
     barrier(localMemFence);
 
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
+    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
       for(int n=0;n<p_Np;++n;inner0){
         if (e<Nelements) {
-          const int es = e-eo;
-          const int gid = e*p_Nggeo;
+          const iint es = e-eo;
+          const iint gid = e*p_Nggeo;
 
           const dfloat Grr = ggeo[gid + p_G00ID];
           const dfloat Grs = ggeo[gid + p_G01ID];
@@ -54,7 +54,7 @@ kernel void ellipticAxTri2D(const int Nelements,
             }
 
 
-          const int id = n + e*p_Np;
+          const iint id = n + e*p_Np;
 
           Aq[id] = Grr*qrr+Grs*qrs+Grs*qsr+Gss*qss + J*lambda*qM;
         }
@@ -72,7 +72,7 @@ kernel void ellipticAxTri2D(const int Nelements,
 
 
 kernel void ellipticPartialAxTri2D(const int Nelements,
-        const int   * restrict elementList,
+        const iint   * restrict elementList,
         const dfloat * restrict ggeo,
         const dfloat * restrict SrrT,
         const dfloat * restrict SrsT,
@@ -83,16 +83,16 @@ kernel void ellipticPartialAxTri2D(const int Nelements,
         const dfloat  * restrict q,
         dfloat  * restrict Aq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
 
     shared dfloat s_q[p_NblockV][p_Np];
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
+    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
       for(int n=0;n<p_Np;++n;inner0){
         if (e<Nelements) {
           //prefetch q
-          const int element = elementList[e];
-          const int id = n + element*p_Np;
+          const iint element = elementList[e];
+          const iint id = n + element*p_Np;
           s_q[e-eo][n] = q[id];
         }
       }
@@ -101,11 +101,11 @@ kernel void ellipticPartialAxTri2D(const int Nelements,
     barrier(localMemFence);
 
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
+    for(iint e=eo;e<eo+p_NblockV;++e;inner1){
       for(int n=0;n<p_Np;++n;inner0){
         if (e<Nelements) {
-          const int es = e-eo;
-          const int gid = e*p_Nggeo;
+          const iint es = e-eo;
+          const iint gid = e*p_Nggeo;
 
           const dfloat Grr = ggeo[gid + p_G00ID];
           const dfloat Grs = ggeo[gid + p_G01ID];
@@ -127,8 +127,8 @@ kernel void ellipticPartialAxTri2D(const int Nelements,
               qM  += MM[n+k*p_Np]*s_q[es][k];
             }
 
-          const int element = elementList[e];
-          const int id = n + element*p_Np;
+          const iint element = elementList[e];
+          const iint id = n + element*p_Np;
 
           Aq[id] = Grr*qrr+Grs*qrs+Grs*qsr+Gss*qss + J*lambda*qM;
         }

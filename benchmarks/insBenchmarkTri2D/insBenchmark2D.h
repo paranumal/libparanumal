@@ -21,19 +21,19 @@ typedef struct {
 
   // INS SOLVER OCCA VARIABLES
   dfloat rho, nu;
-  int NVfields, NTfields, Nfields;
-  int NtotalDofs, NDofs, NtotalElements; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
-  int ExplicitOrder;
+  iint NVfields, NTfields, Nfields;
+  iint NtotalDofs, NDofs, NtotalElements; // Total DOFs for Velocity i.e. Nelements + Nelements_halo
+  iint ExplicitOrder;
 
   dfloat dt;          // time step
   dfloat lambda;      // helmhotz solver -lap(u) + lamda u
   dfloat finalTime;   // final time to run acoustics to
-  int   NtimeSteps;  // number of time steps
-  int   Nstages;     // Number of history states to store
-  int   index;       // Index of current state
-  int   errorStep;
+  iint   NtimeSteps;  // number of time steps
+  iint   Nstages;     // Number of history states to store
+  iint   index;       // Index of current state
+  iint   errorStep;
 
-  int NiterU, NiterV, NiterP;
+  iint NiterU, NiterV, NiterP;
 
 //solver tolerances
   dfloat presTOL, velTOL;
@@ -55,7 +55,7 @@ typedef struct {
 
   dfloat g[2];      // gravitational Acceleration
 
-  int Nsubsteps;
+  iint Nsubsteps;
   dfloat *Ud, *Vd, *Ue, *Ve, *resU, *resV, sdt;
   occa::memory o_Ud, o_Vd, o_Ue, o_Ve, o_resU, o_resV;
 
@@ -112,7 +112,7 @@ typedef struct {
 
 }ins_t;
 
-ins_t *insSetup2D(mesh2D *mesh, int factor, char * options,int Nblocks, int Nnodes,
+ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options,int Nblocks, int Nnodes,
                   char *vSolverOptions, char *vParAlmondOptions,
                   char *pSolverOptions, char *pParAlmondOptions,
                   char *boundaryHeaderFileName, occa::kernelInfo &kernelInfo);

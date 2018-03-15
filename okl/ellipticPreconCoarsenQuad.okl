@@ -1,13 +1,13 @@
-kernel void ellipticPreconCoarsenQuad2D(const int Nelements,
+kernel void ellipticPreconCoarsenQuad2D(const iint Nelements,
 					const dfloat * restrict invDegree,
 					const dfloat * restrict V1,
 					const dfloat * restrict qN,
 					dfloat * restrict q1){
 
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Nverts;++n;inner0){
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Nverts;++n;inner0){
       dfloat tmp = 0;
-      for(int i=0;i<p_Np;++i){
+      for(iint i=0;i<p_Np;++i){
 	tmp += V1[n*p_Np + i]*qN[e*p_Np+i];
       }
       q1[e*p_Nverts+n] = tmp; // *invDegree[e*p_Nverts+n];
@@ -16,21 +16,21 @@ kernel void ellipticPreconCoarsenQuad2D(const int Nelements,
 }
 
 #if 0
-kernel void ellipticPreconCoarsenQuad2D(const int Nelements,
+kernel void ellipticPreconCoarsenQuad2D(const iint Nelements,
 					const dfloat * restrict R,
 					const dfloat * restrict qN,
 					dfloat * restrict q1){
   
   
-  for(int e=0;e<Nelements;++e;outer0){
+  for(iint e=0;e<Nelements;++e;outer0){
     shared dfloat s_qNN[p_Nq][p_Nq];
     shared dfloat s_q1N[p_Nq1][p_Nq];
     shared dfloat s_q11[p_Nq1][p_Nq1];
 
     // prefetch to shared
     
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(iint j=0;j<p_Nq;++j;inner1){
+      for(iint i=0;i<p_Nq;++i;inner0){
 	s_qNN[j][i] = qN[i+j*p_Nq+e*p_Nq*p_Nq];
       }
     }
@@ -39,11 +39,11 @@ kernel void ellipticPreconCoarsenQuad2D(const int Nelements,
 
     // coarsen in j index
     
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(iint j=0;j<p_Nq;++j;inner1){
+      for(iint i=0;i<p_Nq;++i;inner0){
 	if(j<2){
 	  dfloat res = 0;
-	  for(int m=0;m<p_Nq;++m)
+	  for(iint m=0;m<p_Nq;++m)
 	    res += R[j*p_Nq + m]*s_qN[m][i];
 	  s_q1N[j][i] = res;
 	}
@@ -54,11 +54,11 @@ kernel void ellipticPreconCoarsenQuad2D(const int Nelements,
 
     // coarsen in i index
     
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(iint j=0;j<p_Nq;++j;inner1){
+      for(iint i=0;i<p_Nq;++i;inner0){
 	if(j<2 && i<2){
 	  dfloat rtmp = 0;
-	  for(int m=0;m<p_Nq;++m)
+	  for(iint m=0;m<p_Nq;++m)
 	    rtmp += R[i*p_Nq + m]*s_qN[j][m];
 	  s_q11[j][i] = rtmp;
 	}
@@ -68,9 +68,9 @@ kernel void ellipticPreconCoarsenQuad2D(const int Nelements,
     barrier(localMemFence);
 
     // collect writes
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-	const int id = i + j*p_Nq;
+    for(iint j=0;j<p_Nq;++j;inner1){
+      for(iint i=0;i<p_Nq;++i;inner0){
+	const iint id = i + j*p_Nq;
 	if(id<p_Nq1*p_Nq1){
 	  q1[id + p_Nq1*p_Nq1*e] = s_q11[0][id];
 	}

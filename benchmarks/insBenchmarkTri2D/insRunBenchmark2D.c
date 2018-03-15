@@ -22,7 +22,7 @@ void insRunBenchmark2D(ins_t *ins, char *options, occa::kernelInfo kernelInfo, c
 
   char testkernelName[BUFSIZ];
   occa::kernel testKernel;
-  for(int i=0; i<NKernels; i++) {
+  for(iint i=0; i<NKernels; i++) {
 
     sprintf(testkernelName, "%s_v%d", kernelName,  i);
     printf("%s Kernel #%02d\n", kernelFileName, i);
@@ -77,8 +77,8 @@ void insRunBenchmark2D(ins_t *ins, char *options, occa::kernelInfo kernelInfo, c
       NbytesGlobal  = sizeof(dfloat)*8*mesh->Nfaces*mesh->Nfp;  //trace data
       NbytesGlobal += sizeof(dfloat)*4*mesh->Nfaces;            //sgeo factors
       NbytesGlobal += sizeof(dfloat)*(2+2)*mesh->Np;            //read + write rhs
-      NbytesGlobal += sizeof(int)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
-      NbytesGlobal += sizeof(int)*mesh->Nfaces;                //EToB flag
+      NbytesGlobal += sizeof(iint)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
+      NbytesGlobal += sizeof(iint)*mesh->Nfaces;                //EToB flag
 
       NbytesCacheMiss  = sizeof(dfloat)*mesh->Nfaces*mesh->Nfp*mesh->intNfp; //interp op
       NbytesCacheMiss += sizeof(dfloat)*mesh->Np*mesh->Nfaces*mesh->intNfp; //intLIFT

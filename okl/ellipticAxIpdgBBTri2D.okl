@@ -3,19 +3,19 @@
 // nx,ny,nz,sJ,invJ - need WsJ
 
 kernel void ellipticAxIpdgBBTri2D(const int Nelements,
-                                const int * restrict vmapM,
-                                const int * restrict vmapP,
+                                const iint * restrict vmapM,
+                                const iint * restrict vmapP,
                                 const dfloat lambda,
                                 const dfloat tau,
                                 const dfloat * restrict vgeo,
                                 const dfloat * restrict sgeo,
-                                const int   * restrict EToB,
-                                const int * restrict D1ids,
-                                const int * restrict D2ids,
-                                const int * restrict D3ids,
+                                const iint   * restrict EToB,
+                                const iint * restrict D1ids,
+                                const iint * restrict D2ids,
+                                const iint * restrict D3ids,
                                 const dfloat * restrict Dvals,
                                 const dfloat * restrict L0vals,
-                                const int   * restrict ELids,
+                                const iint   * restrict ELids,
                                 const dfloat * restrict ELvals,
                                 const dfloat * restrict MM,
                                 const dfloat4 * restrict gradq,
@@ -33,7 +33,7 @@ kernel void ellipticAxIpdgBBTri2D(const int Nelements,
     shared  dfloat s_lapflux_copy[p_NfacesNfp];
     shared  dfloat s_Lnxdq[p_Np];
     shared  dfloat s_Lnydq[p_Np];
-    exclusive int idM;
+    exclusive iint idM;
     exclusive dfloat nx, ny, sJ, invJ, hinv;
 
     for(int n=0;n<p_Nmax;++n;inner0){
@@ -47,24 +47,24 @@ kernel void ellipticAxIpdgBBTri2D(const int Nelements,
       }
 
       if(n<p_NfacesNfp){
-        const int id  = n + e*p_Nfaces*p_Nfp;
+        const iint id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];
-        const int idP = vmapP[id];
+        const iint idP = vmapP[id];
         // find face that owns this node
-        const int face = n/p_Nfp;
+        const iint face = n/p_Nfp;
 
         const dfloat4 gradqM = gradq[idM];// could fetch from shared after barrier
         dfloat4 gradqP = gradq[idP];
 
         // load surface geofactors for this face
-        const int sid = p_Nsgeo*(e*p_Nfaces+face);
+        const iint sid = p_Nsgeo*(e*p_Nfaces+face);
         nx   = sgeo[sid+p_NXID];
         ny   = sgeo[sid+p_NYID];
         sJ   = sgeo[sid+p_SJID];
         invJ = sgeo[sid+p_IJID];
         hinv = sgeo[sid+p_IHID];
 
-        const int bc = EToB[face+p_Nfaces*e];
+        const iint bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
           ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
           gradqP = 2*gradqP - gradqM;
@@ -87,7 +87,7 @@ kernel void ellipticAxIpdgBBTri2D(const int Nelements,
     // dqdx += LIFT*(sJ/J)*nx*dq
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_Nfp*p_Nfaces){
-        const int id = n % p_Nfp;  
+        const iint id = n % p_Nfp;  
         
         dfloat tmpnxdq = L0vals[id+p_Nfp]*s_nxdq[n];
         dfloat tmpnydq = L0vals[id+p_Nfp]*s_nydq[n];
@@ -121,9 +121,9 @@ kernel void ellipticAxIpdgBBTri2D(const int Nelements,
 
         occaUnroll(p_max_EL_nnz)
           for (int m = 0; m < p_max_EL_nnz; ++m){
-            const int iid = n + m*p_Np;
+            const iint iid = n + m*p_Np;
             const dfloat ELval = ELvals[iid];
-            const int ELid = ELids[iid];
+            const iint ELid = ELids[iid];
             Lnxdq += ELval*s_nxdq_copy[ELid];
             Lnydq += ELval*s_nydq_copy[ELid];
           }
@@ -142,24 +142,24 @@ kernel void ellipticAxIpdgBBTri2D(const int Nelements,
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_NfacesNfp){
-        const int id = idM%p_Np;
+        const iint id = idM%p_Np;
         s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]);
       }
 
       if(n<p_Np){
-        const int D1i1 = D1ids[n];
-        const int D2i1 = D2ids[n];
-        const int D3i1 = D3ids[n];
+        const iint D1i1 = D1ids[n];
+        const iint D2i1 = D2ids[n];
+        const iint D3i1 = D3ids[n];
         const dfloat Dval1 = Dvals[n];
         
-        const int D1i2 = D1ids[n+p_Np];
-        const int D2i2 = D2ids[n+p_Np];
-        const int D3i2 = D3ids[n+p_Np];
+        const iint D1i2 = D1ids[n+p_Np];
+        const iint D2i2 = D2ids[n+p_Np];
+        const iint D3i2 = D3ids[n+p_Np];
         const dfloat Dval2 = Dvals[n+p_Np];
 
-        const int D1i3 = D1ids[n+2*p_Np];
-        const int D2i3 = D2ids[n+2*p_Np];
-        const int D3i3 = D3ids[n+2*p_Np];    
+        const iint D1i3 = D1ids[n+2*p_Np];
+        const iint D2i3 = D2ids[n+2*p_Np];
+        const iint D3i3 = D3ids[n+2*p_Np];    
         const dfloat Dval3 = Dvals[n+2*p_Np];
 
         const dfloat lapr = .5f*(Dval1*(s_dqdx[D2i1] - s_dqdx[D1i1]) +
@@ -177,7 +177,7 @@ kernel void ellipticAxIpdgBBTri2D(const int Nelements,
     // lift remaining surface terms
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_Nfp*p_Nfaces){
-        const int id = n % p_Nfp;  
+        const iint id = n % p_Nfp;  
         
         dfloat tmplapflux = L0vals[id+p_Nfp]*s_lapflux[n];
         if (id > 0)       tmplapflux += L0vals[id]*s_lapflux[n-1]; // add previous term
@@ -196,9 +196,9 @@ kernel void ellipticAxIpdgBBTri2D(const int Nelements,
 
         occaUnroll(p_max_EL_nnz)
           for (int m = 0; m < p_max_EL_nnz; ++m){
-            const int iid = n + m*p_Np;
+            const iint iid = n + m*p_Np;
             const dfloat ELval = ELvals[iid];
-            const int ELid = ELids[iid];
+            const iint ELid = ELids[iid];
             lap += ELval*s_lapflux_copy[ELid];
           }
 
@@ -226,21 +226,21 @@ kernel void ellipticAxIpdgBBTri2D(const int Nelements,
   }
 }
 
-kernel void ellipticPartialAxIpdgBBTri2D(const int Nelements,
-                                const int * restrict elementList,
-                                const int * restrict vmapM,
-                                const int * restrict vmapP,
+kernel void ellipticPartialAxIpdgBBTri2D(const iint Nelements,
+                                const iint * restrict elementList,
+                                const iint * restrict vmapM,
+                                const iint * restrict vmapP,
                                 const dfloat lambda,
                                 const dfloat tau,
                                 const dfloat * restrict vgeo,
                                 const dfloat * restrict sgeo,
-                                const int   * restrict EToB,
-                                const int * restrict D1ids,
-                                const int * restrict D2ids,
-                                const int * restrict D3ids,
+                                const iint   * restrict EToB,
+                                const iint * restrict D1ids,
+                                const iint * restrict D2ids,
+                                const iint * restrict D3ids,
                                 const dfloat * restrict Dvals,
                                 const dfloat * restrict L0vals,
-                                const int   * restrict ELids,
+                                const iint   * restrict ELids,
                                 const dfloat * restrict ELvals,
                                 const dfloat * restrict MM,
                                 const dfloat4 * restrict gradq,
@@ -258,8 +258,8 @@ kernel void ellipticPartialAxIpdgBBTri2D(const int Nelements,
     shared  dfloat s_lapflux_copy[p_NfacesNfp];
     shared  dfloat s_Lnxdq[p_Np];
     shared  dfloat s_Lnydq[p_Np];
-    exclusive int element;
-    exclusive int idM;
+    exclusive iint element;
+    exclusive iint idM;
     exclusive dfloat nx, ny, sJ, invJ, hinv;
 
     for(int n=0;n<p_Nmax;++n;inner0){
@@ -274,24 +274,24 @@ kernel void ellipticPartialAxIpdgBBTri2D(const int Nelements,
       }
 
       if(n<p_NfacesNfp){
-        const int id  = n + element*p_Nfaces*p_Nfp;
+        const iint id  = n + element*p_Nfaces*p_Nfp;
         idM = vmapM[id];
-        const int idP = vmapP[id];
+        const iint idP = vmapP[id];
         // find face that owns this node
-        const int face = n/p_Nfp;
+        const iint face = n/p_Nfp;
 
         const dfloat4 gradqM = gradq[idM];// could fetch from shared after barrier
         dfloat4 gradqP = gradq[idP];
 
         // load surface geofactors for this face
-        const int sid = p_Nsgeo*(element*p_Nfaces+face);
+        const iint sid = p_Nsgeo*(element*p_Nfaces+face);
         nx   = sgeo[sid+p_NXID];
         ny   = sgeo[sid+p_NYID];
         sJ   = sgeo[sid+p_SJID];
         invJ = sgeo[sid+p_IJID];
         hinv = sgeo[sid+p_IHID];
 
-        const int bc = EToB[face+p_Nfaces*element];
+        const iint bc = EToB[face+p_Nfaces*element];
         if(bc>0) {
           ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
           gradqP = 2*gradqP - gradqM;
@@ -337,7 +337,7 @@ kernel void ellipticPartialAxIpdgBBTri2D(const int Nelements,
     //lift reduction
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_Np){
-        const int gid = element*p_Nvgeo;
+        const iint gid = element*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
         const dfloat drdy = vgeo[gid + p_RYID];
         const dfloat dsdx = vgeo[gid + p_SXID];
@@ -369,24 +369,24 @@ kernel void ellipticPartialAxIpdgBBTri2D(const int Nelements,
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_NfacesNfp){
-        const int id = idM%p_Np;
+        const iint id = idM%p_Np;
         s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]);
       }
 
       if(n<p_Np){
-        const int D1i1 = D1ids[n];
-        const int D2i1 = D2ids[n];
-        const int D3i1 = D3ids[n];
+        const iint D1i1 = D1ids[n];
+        const iint D2i1 = D2ids[n];
+        const iint D3i1 = D3ids[n];
         const dfloat Dval1 = Dvals[n];
         
-        const int D1i2 = D1ids[n+p_Np];
-        const int D2i2 = D2ids[n+p_Np];
-        const int D3i2 = D3ids[n+p_Np];
+        const iint D1i2 = D1ids[n+p_Np];
+        const iint D2i2 = D2ids[n+p_Np];
+        const iint D3i2 = D3ids[n+p_Np];
         const dfloat Dval2 = Dvals[n+p_Np];
 
-        const int D1i3 = D1ids[n+2*p_Np];
-        const int D2i3 = D2ids[n+2*p_Np];
-        const int D3i3 = D3ids[n+2*p_Np];    
+        const iint D1i3 = D1ids[n+2*p_Np];
+        const iint D2i3 = D2ids[n+2*p_Np];
+        const iint D3i3 = D3ids[n+2*p_Np];    
         const dfloat Dval3 = Dvals[n+2*p_Np];
 
         const dfloat lapr = .5f*(Dval1*(s_dqdx[D2i1] - s_dqdx[D1i1]) +
@@ -405,7 +405,7 @@ kernel void ellipticPartialAxIpdgBBTri2D(const int Nelements,
     // lift remaining surface terms
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_Nfp*p_Nfaces){
-        const int id = n % p_Nfp;  
+        const iint id = n % p_Nfp;  
         
         dfloat tmplapflux = L0vals[id+p_Nfp]*s_lapflux[n];
         if (id > 0)       tmplapflux += L0vals[id]*s_lapflux[n-1]; // add previous term
@@ -424,9 +424,9 @@ kernel void ellipticPartialAxIpdgBBTri2D(const int Nelements,
 
         occaUnroll(p_max_EL_nnz)
           for (int m = 0; m < p_max_EL_nnz; ++m){
-            const int iid = n + m*p_Np;
+            const iint iid = n + m*p_Np;
             const dfloat ELval = ELvals[iid];
-            const int ELid = ELids[iid];
+            const iint ELid = ELids[iid];
             lap += ELval*s_lapflux_copy[ELid];
           }
 

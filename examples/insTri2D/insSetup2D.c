@@ -3,7 +3,7 @@
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS
 
-ins_t *insSetup2D(mesh2D *mesh, int factor, char * options, 
+ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, 
                   char *vSolverOptions, char *vParAlmondOptions,
                   char *pSolverOptions, char *pParAlmondOptions,
                   char *boundaryHeaderFileName){
@@ -109,9 +109,9 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options,
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
   ins->NDofs      = mesh->Nelements*mesh->Np;
   // Initialize
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      const int id = n + mesh->Np*e;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      const iint id = n + mesh->Np*e;
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
@@ -147,9 +147,9 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options,
   printf("starting parameters\n");
   // set time step
   dfloat hmin = 1e9, hmax = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int f=0;f<mesh->Nfaces;++f){
-      int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint f=0;f<mesh->Nfaces;++f){
+      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -162,9 +162,9 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options,
 
   // Find Maximum Velocity
   dfloat umax = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      const int id = n + mesh->Np*e;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      const iint id = n + mesh->Np*e;
       dfloat t = 0;
       dfloat uxn = ins->U[id];
       dfloat uyn = ins->V[id];
@@ -264,11 +264,11 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options,
   kernelInfo.addDefine("p_NblockS", NblockS);
 
 
-  int maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
+  iint maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
   kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
   int cubNblockV = mymax(1,256/maxNodesVolumeCub); 
   //
-  int maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
   kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
   int cubNblockS = mymax(1,256/maxNodesSurfaceCub); // works for CUDA
   //
@@ -295,7 +295,7 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options,
   kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
   //kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
-   // int substep = 0; 
+   // iint substep = 0; 
    // if(strstr(options,"SUBCYCLING")){ substep = 1;}
    // kernelInfo.addDefine("p_SUBSCYCLE", (int) substep);
 
@@ -648,35 +648,35 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options,
  // }   
 #if 0
   void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lambda,
-			       int *BCType, nonZero_t **A, int *nnzA,
-			       hgs_t **hgs, int *globalStarts, const char *options);
+			       iint *BCType, nonZero_t **A, iint *nnzA,
+			       hgs_t **hgs, iint *globalStarts, const char *options);
 
   nonZero_t *A;
-  int nnz;
+  iint nnz;
   hgs_t *hgs;
-  int *globalStarts = (int*) calloc(size+1, sizeof(int));
+  iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
   dfloat sigma = 100;
 
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_int, globalStarts+1, 1, MPI_int, MPI_COMM_WORLD);
-  for(int r=0;r<size;++r)
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
+  for(iint r=0;r<size;++r)
     globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np*2;
 
   insBuildVectorIpdgTri2D(mesh, ins->tau, sigma, ins->lambda, vBCType, &A, &nnz,&hgs,globalStarts, vSolverOptions);
 
   //collect global assembled matrix
-  int *globalnnz       = (int *) calloc(size  ,sizeof(int));
-  int *globalnnzOffset = (int *) calloc(size+1,sizeof(int));
-  MPI_Allgather(&nnz, 1, MPI_int,
-                globalnnz, 1, MPI_int, MPI_COMM_WORLD);
+  iint *globalnnz       = (iint *) calloc(size  ,sizeof(iint));
+  iint *globalnnzOffset = (iint *) calloc(size+1,sizeof(iint));
+  MPI_Allgather(&nnz, 1, MPI_IINT,
+                globalnnz, 1, MPI_IINT, MPI_COMM_WORLD);
   globalnnzOffset[0] = 0;
-  for (int n=0;n<size;n++)
+  for (iint n=0;n<size;n++)
     globalnnzOffset[n+1] = globalnnzOffset[n]+globalnnz[n];
 
-  int globalnnzTotal = globalnnzOffset[size];
+  iint globalnnzTotal = globalnnzOffset[size];
 
-  int *globalRecvCounts  = (int *) calloc(size,sizeof(int));
-  int *globalRecvOffsets = (int *) calloc(size,sizeof(int));
-  for (int n=0;n<size;n++){
+  iint *globalRecvCounts  = (iint *) calloc(size,sizeof(iint));
+  iint *globalRecvOffsets = (iint *) calloc(size,sizeof(iint));
+  for (iint n=0;n<size;n++){
     globalRecvCounts[n] = globalnnz[n]*sizeof(nonZero_t);
     globalRecvOffsets[n] = globalnnzOffset[n]*sizeof(nonZero_t);
   }
@@ -685,11 +685,11 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options,
   MPI_Allgatherv(A, nnz*sizeof(nonZero_t), MPI_CHAR,
                 globalNonZero, globalRecvCounts, globalRecvOffsets, MPI_CHAR, MPI_COMM_WORLD);
 
-  int *globalRows = (int *) calloc(globalnnzTotal, sizeof(int));
-  int *globalCols = (int *) calloc(globalnnzTotal, sizeof(int));
+  iint *globalRows = (iint *) calloc(globalnnzTotal, sizeof(iint));
+  iint *globalCols = (iint *) calloc(globalnnzTotal, sizeof(iint));
   dfloat *globalVals = (dfloat*) calloc(globalnnzTotal,sizeof(dfloat));
 
-  for (int n=0;n<globalnnzTotal;n++) {
+  for (iint n=0;n<globalnnzTotal;n++) {
     globalRows[n] = globalNonZero[n].row;
     globalCols[n] = globalNonZero[n].col;
     globalVals[n] = globalNonZero[n].val;

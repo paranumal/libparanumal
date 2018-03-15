@@ -3,22 +3,22 @@
 void boltzmannSplitPmlRightHandSide2D(mesh2D *mesh){
 
   // MPI send buffer
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   occa::initTimer(mesh->device);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(int rk=0;rk<mesh->Nrk;++rk){
+    for(iint rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
-	int Nentries = mesh->Np*mesh->Nfields;
+	iint Nentries = mesh->Np*mesh->Nfields;
 	
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
@@ -197,7 +197,7 @@ void boltzmannSplitPmlRightHandSide2D(mesh2D *mesh){
       boltzmannComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
       
       // output field files
-      int fld = 0;
+      iint fld = 0;
       char fname[BUFSIZ];
       sprintf(fname, "foo_T%04d", tstep/mesh->errorStep);
       meshPlotVTU2D(mesh, fname, fld);

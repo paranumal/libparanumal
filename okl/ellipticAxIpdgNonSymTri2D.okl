@@ -3,13 +3,13 @@
 // nx,ny,nz,sJ,invJ - need WsJ
 
 kernel void ellipticAxIpdgNonSymTri2D(const int Nelements,
-                                const int * restrict vmapM,
-                                const int * restrict vmapP,
+                                const iint * restrict vmapM,
+                                const iint * restrict vmapP,
                                 const dfloat lambda,
                                 const dfloat tau,
                                 const dfloat * restrict vgeo,
                                 const dfloat * restrict sgeo,
-                                const int   * restrict EToB,
+                                const iint   * restrict EToB,
                                 const dfloat * restrict DrT,
                                 const dfloat * restrict DsT,
                                 const dfloat * restrict LIFTT,
@@ -26,7 +26,7 @@ kernel void ellipticAxIpdgNonSymTri2D(const int Nelements,
     shared  dfloat s_lapflux[p_NfacesNfp];
     shared  dfloat s_Lnxdq[p_Np];
     shared  dfloat s_Lnydq[p_Np];
-    exclusive int idM;
+    exclusive iint idM;
     exclusive dfloat nx, ny, sJ, invJ, hinv;
 
     for(int n=0;n<p_Nmax;++n;inner0){
@@ -41,24 +41,24 @@ kernel void ellipticAxIpdgNonSymTri2D(const int Nelements,
       }
 
       if(n<p_NfacesNfp){
-        const int id  = n + e*p_Nfaces*p_Nfp;
+        const iint id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];
-        const int idP = vmapP[id];
+        const iint idP = vmapP[id];
         // find face that owns this node
-        const int face = n/p_Nfp;
+        const iint face = n/p_Nfp;
 
         dfloat4 gradqM = gradq[idM];// could fetch from shared after barrier
         dfloat4 gradqP = gradq[idP];
 
         // load surface geofactors for this face
-        int sid = p_Nsgeo*(e*p_Nfaces+face);
+        iint sid = p_Nsgeo*(e*p_Nfaces+face);
         nx   = sgeo[sid+p_NXID];
         ny   = sgeo[sid+p_NYID];
         sJ   = sgeo[sid+p_SJID];
         invJ = sgeo[sid+p_IJID];
         hinv = sgeo[sid+p_IHID];
 
-        int bc = EToB[face+p_Nfaces*e];
+        iint bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
           ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
           gradqP = 2*gradqP - gradqM;
@@ -92,7 +92,7 @@ kernel void ellipticAxIpdgNonSymTri2D(const int Nelements,
         dfloat Lnydq = 0;
 
         occaUnroll(p_NfacesNfp)
-          for(int i=0;i<p_NfacesNfp;++i){
+          for(iint i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
             Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
           }
@@ -111,7 +111,7 @@ kernel void ellipticAxIpdgNonSymTri2D(const int Nelements,
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_NfacesNfp){
-        int id = idM%p_Np;
+        iint id = idM%p_Np;
         s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]);
       }
 
@@ -150,14 +150,14 @@ kernel void ellipticAxIpdgNonSymTri2D(const int Nelements,
 }
 
 kernel void ellipticPartialAxIpdgNonSymTri2D(const int Nelements,
-                                const int * restrict elementList,
-                                const int * restrict vmapM,
-                                const int * restrict vmapP,
+                                const iint * restrict elementList,
+                                const iint * restrict vmapM,
+                                const iint * restrict vmapP,
                                 const dfloat lambda,
                                 const dfloat tau,
                                 const dfloat * restrict vgeo,
                                 const dfloat * restrict sgeo,
-                                const int   * restrict EToB,
+                                const iint   * restrict EToB,
                                 const dfloat * restrict DrT,
                                 const dfloat * restrict DsT,
                                 const dfloat * restrict LIFTT,
@@ -174,14 +174,14 @@ kernel void ellipticPartialAxIpdgNonSymTri2D(const int Nelements,
     shared  dfloat s_lapflux[p_NfacesNfp];
     shared  dfloat s_Lnxdq[p_Np];
     shared  dfloat s_Lnydq[p_Np];
-    exclusive int idM;
+    exclusive iint idM;
     exclusive dfloat nx, ny, sJ, invJ, hinv;
 
     for(int n=0;n<p_Nmax;++n;inner0){
 
       if(n<p_Np){
         // assume that this stores (qx, qy, qz, q) as dfloat4
-        const int element = elementList[e];
+        const iint element = elementList[e];
         const dfloat4 gradqn = gradq[element*p_Np+n];
 
         s_dqdx[n] = gradqn.x;
@@ -190,25 +190,25 @@ kernel void ellipticPartialAxIpdgNonSymTri2D(const int Nelements,
       }
 
       if(n<p_NfacesNfp){
-        const int element = elementList[e];
-        const int id  = n + element*p_Nfaces*p_Nfp;
+        const iint element = elementList[e];
+        const iint id  = n + element*p_Nfaces*p_Nfp;
         idM = vmapM[id];
-        const int idP = vmapP[id];
+        const iint idP = vmapP[id];
         // find face that owns this node
-        const int face = n/p_Nfp;
+        const iint face = n/p_Nfp;
 
         dfloat4 gradqM = gradq[idM];// could fetch from shared after barrier
         dfloat4 gradqP = gradq[idP];
 
         // load surface geofactors for this face
-        int sid = p_Nsgeo*(element*p_Nfaces+face);
+        iint sid = p_Nsgeo*(element*p_Nfaces+face);
         nx   = sgeo[sid+p_NXID];
         ny   = sgeo[sid+p_NYID];
         sJ   = sgeo[sid+p_SJID];
         invJ = sgeo[sid+p_IJID];
         hinv = sgeo[sid+p_IHID];
 
-        int bc = EToB[face+p_Nfaces*element];
+        iint bc = EToB[face+p_Nfaces*element];
         if(bc>0) {
           ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
           gradqP = 2*gradqP - gradqM;
@@ -232,7 +232,7 @@ kernel void ellipticPartialAxIpdgNonSymTri2D(const int Nelements,
     for(int n=0;n<p_Nmax;++n;inner0){
 
       if(n<p_Np){
-        const int element = elementList[e];
+        const iint element = elementList[e];
         const int gid = element*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
         const dfloat drdy = vgeo[gid + p_RYID];
@@ -243,7 +243,7 @@ kernel void ellipticPartialAxIpdgNonSymTri2D(const int Nelements,
         dfloat Lnydq = 0;
 
         occaUnroll(p_NfacesNfp)
-          for(int i=0;i<p_NfacesNfp;++i){
+          for(iint i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
             Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
           }
@@ -262,7 +262,7 @@ kernel void ellipticPartialAxIpdgNonSymTri2D(const int Nelements,
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_NfacesNfp){
-        int id = idM%p_Np;
+        iint id = idM%p_Np;
         s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]);
       }
 
@@ -284,7 +284,7 @@ kernel void ellipticPartialAxIpdgNonSymTri2D(const int Nelements,
 
     for(int n=0;n<p_Nmax;++n;inner0){
       if(n<p_Np){
-        const int element = elementList[e];
+        const iint element = elementList[e];
         const dfloat J = vgeo[element*p_Nvgeo + p_JID];
         dfloat lap = 0;
 

@@ -2,22 +2,22 @@
 #include <math.h>
 #include "mesh2D.h"
 
-void acousticsComputeVorticity2D(mesh2D *mesh, dfloat *q, int outfld, int Nfields){
+void acousticsComputeVorticity2D(mesh2D *mesh, dfloat *q, iint outfld, iint Nfields){
   
   // compute vorticity
   dfloat *u = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   dfloat *v = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
     
-    for(int n=0;n<mesh->Np;++n){
-      int base = mesh->Nfields*(n + e*mesh->Np);
+    for(iint n=0;n<mesh->Np;++n){
+      iint base = mesh->Nfields*(n + e*mesh->Np);
       dfloat rho = mesh->q[base];
       u[n] = mesh->q[1 + base]*mesh->sqrtRT/rho;
       v[n] = mesh->q[2 + base]*mesh->sqrtRT/rho;
     }
-    for(int n=0;n<mesh->Np;++n){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat dudr = 0, duds = 0, dvdr = 0, dvds = 0;
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
 	dudr += mesh->Dr[n*mesh->Np+m]*u[m];
 	duds += mesh->Ds[n*mesh->Np+m]*u[m];
 	dvdr += mesh->Dr[n*mesh->Np+m]*v[m];

@@ -28,10 +28,10 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0, plotzn = 0;
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
         plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
         plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
         plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
@@ -50,12 +50,12 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
 
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Pressure\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
-      for(int m=0;m<mesh->Np;++m){
-       const int offset = ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs); 
-	     const int id     = offset + m+e*mesh->Np;
+      for(iint m=0;m<mesh->Np;++m){
+       const iint offset = ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs); 
+	     const iint id     = offset + m+e*mesh->Np;
         dfloat pm = ins->P[id];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
@@ -72,13 +72,13 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
   // dfloat *Vz   = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   // dfloat *divU = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   
-  // for(int e=0;e<mesh->Nelements;++e){
-  //   for(int n=0;n<mesh->Np;++n){
+  // for(iint e=0;e<mesh->Nelements;++e){
+  //   for(iint n=0;n<mesh->Np;++n){
   //     dfloat dUdr = 0, dUds = 0, dUdt = 0 ;
   //     dfloat dVdr = 0, dVds = 0, dVdt = 0 ;
   //     dfloat dWdr = 0, dWds = 0, dWdt = 0 ; 
-  //     for(int m=0;m<mesh->Np;++m){
-  //     	int id = m+e*mesh->Np;
+  //     for(iint m=0;m<mesh->Np;++m){
+  //     	iint id = m+e*mesh->Np;
   //     	id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
 
   //     	dUdr += mesh->Dr[n*mesh->Np+m]*ins->U[id];
@@ -126,10 +126,10 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
   //     divU[n] = dUdx + dVdy + dWdz; 
   //   }
     
-  //   for(int n=0;n<mesh->plotNp;++n){
+  //   for(iint n=0;n<mesh->plotNp;++n){
   //     dfloat plotVxn = 0, plotVyn = 0, plotVzn = 0 ;
   //     dfloat plotDivUn = 0;
-  //     for(int m=0;m<mesh->Np;++m){
+  //     for(iint m=0;m<mesh->Np;++m){
   //       plotVxn   += mesh->plotInterp[n*mesh->Np+m]*Vx[m];
   //       plotVyn   += mesh->plotInterp[n*mesh->Np+m]*Vy[m];
   //       plotVzn   += mesh->plotInterp[n*mesh->Np+m]*Vz[m];
@@ -147,11 +147,11 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
   fprintf(fp, "       </DataArray>\n");
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotun = 0, plotvn = 0, plotwn=0;
-      for(int m=0;m<mesh->Np;++m){
-	int id = m+e*mesh->Np;
+      for(iint m=0;m<mesh->Np;++m){
+	iint id = m+e*mesh->Np;
 	id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
         dfloat um = ins->U[id];
         dfloat vm = ins->V[id];
@@ -174,8 +174,8 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "       ");
       for(int m=0;m<mesh->plotNverts;++m){
   fprintf(fp, "%d ", e*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
@@ -187,9 +187,9 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
   fprintf(fp, "        </DataArray>\n");
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       cnt += mesh->plotNverts;
       fprintf(fp, "       ");
       fprintf(fp, "%d\n", cnt);
@@ -198,8 +198,8 @@ void insPlotVTU3D(ins_t *ins, char *fileName){
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "10\n"); // TET code ?
     }
   }

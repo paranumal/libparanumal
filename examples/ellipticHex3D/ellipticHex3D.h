@@ -39,9 +39,9 @@ typedef struct {
   occa::memory o_coarseInvDegree;
   occa::memory o_ztmp;
 
-  int coarseNp;
-  int coarseTotal;
-  int *coarseOffsets;
+  iint coarseNp;
+  iint coarseTotal;
+  iint *coarseOffsets;
   dfloat *B, *tmp2;
   occa::memory *o_B, o_tmp2;
   void *xxt2;
@@ -82,7 +82,7 @@ typedef struct {
 
   ogs_t *ogsDg;
 
-  int Nblock;
+  iint Nblock;
   
   occa::memory o_p; // search direction
   occa::memory o_z; // preconditioner solution

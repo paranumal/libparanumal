@@ -79,10 +79,10 @@ int pgmresm(solver_t* solver, const char* options, dfloat lambda, occa::memory &
       }
     }
     else{
-      int Ntotal = mesh->Np*mesh->Nelements; 
-      int Nblock = (Ntotal+blockSize-1)/blockSize; 
-      int Nhalo = mesh->Np*mesh->totalHaloPairs; 
-      int Nall   = Ntotal + Nhalo; 
+      iint Ntotal = mesh->Np*mesh->Nelements; 
+      iint Nblock = (Ntotal+blockSize-1)/blockSize; 
+      iint Nhalo = mesh->Np*mesh->totalHaloPairs; 
+      iint Nall   = Ntotal + Nhalo; 
 
       dfloat * zeroVec   = (dfloat*) calloc(Nall,   sizeof(dfloat));
       o_Ax.copyFrom(zeroVec);

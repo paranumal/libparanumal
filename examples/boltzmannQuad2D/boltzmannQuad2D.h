@@ -7,7 +7,7 @@
 
 void boltzmannErrorQuad2D(mesh2D *mesh, dfloat time);
 
-void boltzmannComputeVorticityQuad2D(mesh2D *mesh, dfloat *q, int outfld, int Nfields);
+void boltzmannComputeVorticityQuad2D(mesh2D *mesh, dfloat *q, iint outfld, iint Nfields);
 
 void boltzmannSplitPmlRunQuad2D(mesh2D *mesh);
 

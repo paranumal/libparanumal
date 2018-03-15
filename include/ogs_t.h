@@ -1,13 +1,13 @@
 // OCCA+gslib gather scatter
 typedef struct {
   
-  int         Ngather;          //  number of gather nodes
+  iint         Ngather;          //  number of gather nodes
 
-  int         *gatherOffsets;
-  int         *gatherHaloFlags;
-  int         *gatherBaseRanks;
-  int         *gatherLocalIds;
-  int         *gatherBaseIds;
+  iint         *gatherOffsets;
+  iint         *gatherHaloFlags;
+  iint         *gatherBaseRanks;
+  iint         *gatherLocalIds;
+  iint         *gatherBaseIds;
 
   char * gatherTmp;
   
@@ -16,11 +16,11 @@ typedef struct {
   occa::memory o_gatherTmp;      //  DEVICE gather buffer
   void         *gatherGsh;       // gslib gather 
 
-  int         Nscatter;
+  iint         Nscatter;
   occa::memory o_scatterOffsets; //  start of local bases
   occa::memory o_scatterLocalIds;//  base connected nodes
   
-  int         Nhalo;            //  number of halo nodes
+  iint         Nhalo;            //  number of halo nodes
   occa::memory o_haloLocalIds;   //  list of halo nodes to
   occa::memory o_haloTmp;        //  temporary halo buffer
   void         *haloTmp;         //  temporary HOST halo buffer

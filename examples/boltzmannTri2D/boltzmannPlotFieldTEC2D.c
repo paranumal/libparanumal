@@ -6,7 +6,7 @@
 #include "mesh2D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void boltzmannPlotFieldTEC2D(mesh2D *mesh, char *fileName, dfloat time, int fld){
+void boltzmannPlotFieldTEC2D(mesh2D *mesh, char *fileName, dfloat time, iint fld){
 
     
   int rank;
@@ -24,23 +24,23 @@ void boltzmannPlotFieldTEC2D(mesh2D *mesh, char *fileName, dfloat time, int fld)
 
   fprintf(fp,"VARIABLES=x,y,field\n");
 
-  int TotalPoints = mesh->Nelements*mesh->plotNp;
-  int TotalCells  = mesh->Nelements*mesh->plotNelements;
+  iint TotalPoints = mesh->Nelements*mesh->plotNp;
+  iint TotalCells  = mesh->Nelements*mesh->plotNelements;
 
   fprintf(fp, "ZONE  N = %d  E = %d  F=FEPOINT , ET=TRIANGLE , STRANDID=1, SOLUTIONTIME = %.8f \n", TotalPoints,TotalCells,time);
 
   // Write data
   // compute plot node coordinates on the fly
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
     // First compute the curl and div
     
-    for(int n=0;n<mesh->plotNp;++n){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0, plotfld=0;
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
         plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
         plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
 
-        int base    = mesh->Nfields*(m + e*mesh->Np);
+        iint base    = mesh->Nfields*(m + e*mesh->Np);
         dfloat field = mesh->q[base + fld];
         plotfld     += mesh->plotInterp[n*mesh->Np+m]*field;
      }
@@ -51,8 +51,8 @@ void boltzmannPlotFieldTEC2D(mesh2D *mesh, char *fileName, dfloat time, int fld)
 
 
   // Write Connectivity
-   for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+   for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       for(int m=0;m<mesh->plotNverts;++m){
         fprintf(fp, "%9d\t ", 1 + e*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
       }

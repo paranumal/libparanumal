@@ -1,6 +1,6 @@
 
-kernel void boltzmannNonPmlUpdate2D(const int Nelements,
-				    const int * restrict elementIds,
+kernel void boltzmannNonPmlUpdate2D(const iint Nelements,
+				    const iint * restrict elementIds,
 				    const dfloat dt,	
 				    const dfloat rka,
 				    const dfloat rkb,
@@ -9,11 +9,11 @@ kernel void boltzmannNonPmlUpdate2D(const int Nelements,
 				    dfloat4 * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
-      const int element = elementIds[e];
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
 
-      const int base = 2*(n + element*p_Np);
+      const iint base = 2*(n + element*p_Np);
 
       dfloat4 resqa = resq[base+0];
       dfloat4 resqb = resq[base+1];

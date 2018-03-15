@@ -9,7 +9,7 @@ void meshParallelPrint3D(mesh3D *mesh){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  printf("rank %d: Nelements=" intFormat " Nnodes=" intFormat "\n", 
+  printf("rank %d: Nelements=" iintFormat " Nnodes=" iintFormat "\n", 
 	 rank, mesh->Nelements, mesh->Nnodes);
   
 #if 0
@@ -22,13 +22,13 @@ void meshParallelPrint3D(mesh3D *mesh){
   }
 #endif
 
-  int *otherNelements = (int*) calloc(size, sizeof(int));
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_int,
-		otherNelements, 1, MPI_int, 
+  iint *otherNelements = (iint*) calloc(size, sizeof(iint));
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
+		otherNelements, 1, MPI_IINT, 
 		MPI_COMM_WORLD);
   
-  int *elementStarts = (int*) calloc(size, sizeof(int));
-  for(int r=1;r<size;++r){
+  iint *elementStarts = (iint*) calloc(size, sizeof(iint));
+  for(iint r=1;r<size;++r){
     elementStarts[r] = elementStarts[r-1]+otherNelements[r-1];
   }
 
@@ -38,14 +38,14 @@ void meshParallelPrint3D(mesh3D *mesh){
       fflush(stdout);
       if(r1==0)
 	printf("EToE:\n");
-      for(int e1=0;e1<mesh->Nelements;++e1){
-	int id = e1*mesh->Nfaces;
-	for(int f1=0;f1<mesh->Nfaces;++f1){
-	  int e2 = mesh->EToE[id+f1];
-	  int f2 = mesh->EToF[id+f1];
-	  int r2 = mesh->EToP[id+f1];
+      for(iint e1=0;e1<mesh->Nelements;++e1){
+	iint id = e1*mesh->Nfaces;
+	for(iint f1=0;f1<mesh->Nfaces;++f1){
+	  iint e2 = mesh->EToE[id+f1];
+	  iint f2 = mesh->EToF[id+f1];
+	  iint r2 = mesh->EToP[id+f1];
 	  if(e2==-1 || f2==-1) 
-	    printf("(" intFormat " " intFormat ")=>X (" intFormat "," intFormat ")\n", 
+	    printf("(" iintFormat " " iintFormat ")=>X (" iintFormat "," iintFormat ")\n", 
 		   e1+elementStarts[r1], f1, e2, f2);
 	  else{
 	    
@@ -55,7 +55,7 @@ void meshParallelPrint3D(mesh3D *mesh){
 	      e2 += elementStarts[r1];
 	    
 	    
-	    printf("(" intFormat " " intFormat ")=>(" intFormat " " intFormat ")\n", 
+	    printf("(" iintFormat " " iintFormat ")=>(" iintFormat " " iintFormat ")\n", 
 		   e1+elementStarts[r1], f1, e2, f2);
 	  }
 	}

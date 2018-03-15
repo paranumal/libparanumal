@@ -8,10 +8,10 @@ void meshPhysicalNodesTetP3D(mesh3D *mesh){
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->NpMax,sizeof(dfloat));
   mesh->z = (dfloat*) calloc(mesh->Nelements*mesh->NpMax,sizeof(dfloat));
   
-  for(int e=0;e<mesh->Nelements;++e){ /* for each element */
-    int N = mesh->N[e];
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
+    iint N = mesh->N[e];
 
-    int id = e*mesh->Nverts;
+    iint id = e*mesh->Nverts;
 
     dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat xe2 = mesh->EX[id+1];
@@ -28,7 +28,7 @@ void meshPhysicalNodesTetP3D(mesh3D *mesh){
     dfloat ze3 = mesh->EZ[id+2];
     dfloat ze4 = mesh->EZ[id+3];
     
-    for(int n=0;n<mesh->Np[N];++n){ /* for each node */
+    for(iint n=0;n<mesh->Np[N];++n){ /* for each node */
       
       /* (r,s,t) coordinates of interpolation nodes*/
       dfloat rn = mesh->r[N][n]; 
@@ -43,8 +43,8 @@ void meshPhysicalNodesTetP3D(mesh3D *mesh){
   }
 
   // create halo extension for x,y arrays
-  int totalHaloNodes = mesh->totalHaloPairs*mesh->NpMax;
-  int localNodes     = mesh->Nelements*mesh->NpMax;
+  iint totalHaloNodes = mesh->totalHaloPairs*mesh->NpMax;
+  iint localNodes     = mesh->Nelements*mesh->NpMax;
 
   // temporary send buffer
   dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));

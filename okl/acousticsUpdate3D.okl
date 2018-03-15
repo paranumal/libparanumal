@@ -1,5 +1,5 @@
 
-kernel void acousticsUpdate3D(const int Ntotal,
+kernel void acousticsUpdate3D(const iint Ntotal,
 				  const dfloat dt,	
 				  const dfloat rka,
 				  const dfloat rkb,
@@ -8,7 +8,7 @@ kernel void acousticsUpdate3D(const int Ntotal,
 				  dfloat * restrict q){
 				  
   // Low storage Runge Kutta time step update
-  for(int n=0;n<Ntotal;++n;tile(256)){
+  for(iint n=0;n<Ntotal;++n;tile(256)){
     if(n<Ntotal){
       dfloat resqn = resq[n];
       resqn = rka*resqn + dt*rhsq[n];
@@ -18,7 +18,7 @@ kernel void acousticsUpdate3D(const int Ntotal,
   }
 }
 
-kernel void acousticsUpdate3D_o1(const int Ntotal,
+kernel void acousticsUpdate3D_o1(const iint Ntotal,
 				     const dfloat dt,	
 				     const dfloat rka,
 				     const dfloat rkb,
@@ -27,7 +27,7 @@ kernel void acousticsUpdate3D_o1(const int Ntotal,
 				     dfloat4 * restrict q){
 				  
   // Low storage Runge Kutta time step update (assume Ntotal is divisible by 4)
-  for(int n=0;n<Ntotal/4;++n;tile(256)){
+  for(iint n=0;n<Ntotal/4;++n;tile(256)){
     if(n<Ntotal/4){
       dfloat4 resqn = resq[n];
       resqn = rka*resqn + dt*rhsq[n];
@@ -38,7 +38,7 @@ kernel void acousticsUpdate3D_o1(const int Ntotal,
 }
 
 
-kernel void acousticsUpdate3D_wadg(const int Nelements,
+kernel void acousticsUpdate3D_wadg(const iint Nelements,
            const dfloat dt, 
            const dfloat rka,
            const dfloat rkb,
@@ -50,15 +50,15 @@ kernel void acousticsUpdate3D_wadg(const int Nelements,
            dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){  // for all elements
+  for(iint e=0;e<Nelements;++e;outer0){  // for all elements
 
     shared dfloat s_p[p_cubNp];
     exclusive dfloat r_p;
 
-    for(int n=0; n < p_cubNp; ++n; inner0){  
+    for(iint n=0; n < p_cubNp; ++n; inner0){  
 
       if (n < p_Np){
-        const int id = p_Nfields*(e*p_Np + n);
+        const iint id = p_Nfields*(e*p_Np + n);
         s_p[n] = rhsq[id + 3]; // extract pressure rhs
       }
 
@@ -68,7 +68,7 @@ kernel void acousticsUpdate3D_wadg(const int Nelements,
     barrier(localMemFence);
 
     // Interpolate rhs to cubature nodes
-    for(int n=0;n<p_cubNp;++n;inner0){
+    for(iint n=0;n<p_cubNp;++n;inner0){
 
       // Prefetch value of c2
       const dfloat c2n = c2[n + e*p_cubNp];
@@ -84,18 +84,18 @@ kernel void acousticsUpdate3D_wadg(const int Nelements,
     barrier(localMemFence);
 
     // Move temporary result back to shared memory
-    for(int n=0;n<p_cubNp;++n;inner0){
+    for(iint n=0;n<p_cubNp;++n;inner0){
       s_p[n] = r_p;
     }
     barrier(localMemFence);
     
     // Increment solution, project result back down
-    for(int n=0;n<p_cubNp;++n;inner0){
+    for(iint n=0;n<p_cubNp;++n;inner0){
 
       if (n < p_Np){
 
         // Extract velocity rhs
-        const int id = p_Nfields*(e*p_Np + n);
+        const iint id = p_Nfields*(e*p_Np + n);
         dfloat rhsqn[p_Nfields];
         rhsqn[0] = rhsq[id + 0];
         rhsqn[1] = rhsq[id + 1];

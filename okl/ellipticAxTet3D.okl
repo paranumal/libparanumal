@@ -15,20 +15,20 @@ kernel void ellipticAxTet3D(const int Nelements,
         const dfloat  * restrict q,
         dfloat  * restrict Aq){
   
-  for(int e=0;e<Nelements;e++;outer0){
+  for(iint e=0;e<Nelements;e++;outer0){
 
     shared dfloat s_q[p_Np];
 
     for(int n=0;n<p_Np;++n;inner0){
       //prefetch q
-      const int id = n + e*p_Np;
+      const iint id = n + e*p_Np;
       s_q[n] = q[id];
     }
 
     barrier(localMemFence);
 
     for(int n=0;n<p_Np;++n;inner0){
-      const int gid = e*p_Nggeo;
+      const iint gid = e*p_Nggeo;
 
       const dfloat Grr = ggeo[gid + p_G00ID];
       const dfloat Grs = ggeo[gid + p_G01ID];
@@ -64,7 +64,7 @@ kernel void ellipticAxTet3D(const int Nelements,
         }
 
 
-      const int id = n + e*p_Np;
+      const iint id = n + e*p_Np;
 
       Aq[id] = Grr*qrr+Grs*qrs+Grt*qrt
               +Grs*qsr+Gss*qss+Gst*qst 

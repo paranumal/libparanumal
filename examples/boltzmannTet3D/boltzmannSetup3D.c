@@ -91,9 +91,9 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
   
 
   // INITIALIZE
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
@@ -115,7 +115,7 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 
       if(strstr(options, "PML")){
       // Pml Region 
-	      int id = mesh->Np*mesh->pmlNfields*e + n;
+	      iint id = mesh->Np*mesh->pmlNfields*e + n;
 	      // No-Need to Qx7 Qx9 Qx10
 	      mesh->pmlq[id+QXID1*mesh->Np]   = 0.f*q1bar;
 	      mesh->pmlq[id+QXID2*mesh->Np]   = 0.f*q2bar;
@@ -152,13 +152,13 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
   dfloat xmin = -4., xmax = 12., ymin = -4, ymax = 4, zmin = -4, zmax = 4;
   dfloat xsigma = 80, ysigma = 80, zsigma = 80;
     
-  int *pmlElementIds = (int*) calloc(mesh->Nelements, sizeof(int));
-  int *nonPmlElementIds = (int*) calloc(mesh->Nelements, sizeof(int));
-  int pmlNelements = 0;
-  int nonPmlNelements = 0;
-  for(int e=0;e<mesh->Nelements;++e){
+  iint *pmlElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  iint *nonPmlElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  iint pmlNelements = 0;
+  iint nonPmlNelements = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
 		dfloat cx = 0, cy = 0, cz = 0;
- 		for(int n=0;n<mesh->Nverts;++n){
+ 		for(iint n=0;n<mesh->Nverts;++n){
 	      cx += mesh->EX[e*mesh->Nverts+n];
 	      cy += mesh->EY[e*mesh->Nverts+n];
 	      cz += mesh->EZ[e*mesh->Nverts+n];
@@ -167,9 +167,9 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 		cy /= mesh->Nverts;
 		cz /= mesh->Nverts;
 
-		int isPml = 0;
+		iint isPml = 0;
     
-		for(int n=0;n<mesh->Np;++n){
+		for(iint n=0;n<mesh->Np;++n){
 			dfloat x = mesh->x[n + e*mesh->Np];
 			dfloat y = mesh->y[n + e*mesh->Np];
 			dfloat z = mesh->z[n + e*mesh->Np];
@@ -225,9 +225,9 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
    // Find Minumum Element Length
     // set time step
 	dfloat hmin = 1e9, hmax = 0;
-	for(int e=0;e<mesh->Nelements;++e){ 
-		 for(int f=0;f<mesh->Nfaces;++f){
-		   int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+	for(iint e=0;e<mesh->Nelements;++e){ 
+		 for(iint f=0;f<mesh->Nfaces;++f){
+		   iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
 		   dfloat sJ   = mesh->sgeo[sid + SJID];
 		   dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -597,11 +597,11 @@ void boltzmannSetup3D(mesh3D *mesh, char * options){
 
 	if(mesh->nonPmlNelements)
 	 mesh->o_nonPmlElementIds = 
-	   mesh->device.malloc(nonPmlNelements*sizeof(int), nonPmlElementIds);
+	   mesh->device.malloc(nonPmlNelements*sizeof(iint), nonPmlElementIds);
 
 	if(mesh->pmlNelements)
 	 mesh->o_pmlElementIds = 
-	   mesh->device.malloc(pmlNelements*sizeof(int), pmlElementIds);
+	   mesh->device.malloc(pmlNelements*sizeof(iint), pmlElementIds);
 
 	// specialization for Boltzmann
   // Later change according to meshOccaSetup3D

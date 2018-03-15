@@ -13,12 +13,12 @@ void meshPartitionStatistics(mesh_t *mesh){
   
   
   /* now gather statistics on connectivity between processes */
-  int *comms = (int*) calloc(size, sizeof(int));
-  int Ncomms = 0;
+  iint *comms = (iint*) calloc(size, sizeof(iint));
+  iint Ncomms = 0;
 
   /* count elements with neighbors on each other rank ranks */
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int f=0;f<mesh->Nfaces;++f){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint f=0;f<mesh->Nfaces;++f){
       if(mesh->EToP[e*mesh->Nfaces+f]!=-1){
 	++comms[mesh->EToP[e*mesh->Nfaces+f]];
 	++Ncomms;
@@ -26,17 +26,17 @@ void meshPartitionStatistics(mesh_t *mesh){
     }
   }
 
-  int Nmessages = 0;
-  for(int r=0;r<size;++r)
+  iint Nmessages = 0;
+  for(iint r=0;r<size;++r)
     if(comms[r]>0)
       ++Nmessages;
 
-  for(int r=0;r<size;++r){
+  for(iint r=0;r<size;++r){
     MPI_Barrier(MPI_COMM_WORLD);
     if(r==rank){
       fflush(stdout);
       printf("r: %02d [", rank);
-      for(int s=0;s<size;++s){
+      for(iint s=0;s<size;++s){
 	printf(" %04d", comms[s]);
       }
       printf("] (Nmessages=%d, Ncomms=%d)\n", Nmessages, Ncomms);

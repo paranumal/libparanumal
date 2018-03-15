@@ -28,11 +28,11 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0;
 
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
         plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
         plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
       }
@@ -49,11 +49,11 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Pressure\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
-      for(int m=0;m<mesh->Np;++m){
-	        int base = mesh->Nfields*(m + e*mesh->Np);
+      for(iint m=0;m<mesh->Np;++m){
+	        iint base = mesh->Nfields*(m + e*mesh->Np);
           dfloat rho = mesh->q[base + 0];
            dfloat pm = mesh->sqrtRT*mesh->sqrtRT*rho; // need to be modified
            //dfloat pm = rho; 
@@ -69,11 +69,11 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
   
 
   //  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"v-velocity\" Format=\"ascii\">\n");
-  //  for(int e=0;e<mesh->Nelements;++e){
-  //   for(int n=0;n<mesh->plotNp;++n){
+  //  for(iint e=0;e<mesh->Nelements;++e){
+  //   for(iint n=0;n<mesh->plotNp;++n){
   //     dfloat plotun = 0, plotvn = 0;
-  //     for(int m=0;m<mesh->Np;++m){
-  //       int base = mesh->Nfields*(m + e*mesh->Np);
+  //     for(iint m=0;m<mesh->Np;++m){
+  //       iint base = mesh->Nfields*(m + e*mesh->Np);
   //       //dfloat rho = mesh->q[base];
   //       //dfloat vm = mesh->q[2 + base]*mesh->sqrtRT/rho;
   //       dfloat vm = mesh->q[1 + base];
@@ -94,11 +94,11 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
   dfloat *curlU = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   dfloat *divU  = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat dUdr = 0, dUds = 0, dVdr = 0, dVds = 0;
-      for(int m=0;m<mesh->Np;++m){
-        int base = mesh->Nfields*(m + e*mesh->Np);
+      for(iint m=0;m<mesh->Np;++m){
+        iint base = mesh->Nfields*(m + e*mesh->Np);
         dfloat rho = mesh->q[base + 0];
         dfloat u = mesh->q[1 + base]*mesh->sqrtRT/rho;
         dfloat v = mesh->q[2 + base]*mesh->sqrtRT/rho;
@@ -121,10 +121,10 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
       divU[n] = dUdx+dVdy;
     }
     
-    for(int n=0;n<mesh->plotNp;++n){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotCurlUn = 0;
       dfloat plotDivUn = 0;
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
         plotCurlUn += mesh->plotInterp[n*mesh->Np+m]*curlU[m];
         plotDivUn += mesh->plotInterp[n*mesh->Np+m]*divU[m];	
       }
@@ -140,11 +140,11 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
 
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"2\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotun = 0, plotvn = 0;
-      for(int m=0;m<mesh->Np;++m){
-        int base = mesh->Nfields*(m + e*mesh->Np);
+      for(iint m=0;m<mesh->Np;++m){
+        iint base = mesh->Nfields*(m + e*mesh->Np);
         dfloat rho = mesh->q[base];
         dfloat um = mesh->q[1 + base]*mesh->sqrtRT/rho;
         dfloat vm = mesh->q[2 + base]*mesh->sqrtRT/rho;
@@ -164,10 +164,10 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
 
 
   // fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  // for(int e=0;e<mesh->Nelements;++e){
-  //   for(int n=0;n<mesh->plotNp;++n){
+  // for(iint e=0;e<mesh->Nelements;++e){
+  //   for(iint n=0;n<mesh->plotNp;++n){
   //     dfloat plotwxn = 0, plotwyn = 0, plotvn = 0, plotwzn = 0;
-  //     for(int m=0;m<mesh->Np;++m){
+  //     for(iint m=0;m<mesh->Np;++m){
   //       dfloat wx = mesh->q[3 + mesh->Nfields*(m+e*mesh->Np)];
   //       dfloat wy = mesh->q[4 + mesh->Nfields*(m+e*mesh->Np)];
   //       dfloat wz = mesh->q[5 + mesh->Nfields*(m+e*mesh->Np)];
@@ -190,8 +190,8 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "       ");
       for(int m=0;m<mesh->plotNverts;++m){
 	fprintf(fp, "%d ", e*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
@@ -203,9 +203,9 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
   fprintf(fp, "        </DataArray>\n");
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       cnt += mesh->plotNverts;
       fprintf(fp, "       ");
       fprintf(fp, "%d\n", cnt);
@@ -214,8 +214,8 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "5\n");
     }
   }

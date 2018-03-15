@@ -28,7 +28,7 @@ typedef struct {
 
   char *type;
 
-  int Nblock;
+  iint Nblock;
 
   dfloat tau;
   dfloat lambda;
@@ -60,11 +60,11 @@ typedef struct {
   occa::memory o_EToB;
 
   // list of elements that are needed for global gather-scatter
-  int NglobalGatherElements;
+  iint NglobalGatherElements;
   occa::memory o_globalGatherElementList;
 
   // list of elements that are not needed for global gather-scatter
-  int NlocalGatherElements;
+  iint NlocalGatherElements;
   occa::memory o_localGatherElementList;
 
   occa::kernel AxKernel;
@@ -90,7 +90,7 @@ typedef struct {
 
 }solver_t;
 
-solver_t *ellipticSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions, int Nblocks, int Nnodes);
+solver_t *ellipticSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, iint *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions, int Nblocks, int Nnodes);
 
 void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo kernelInfo, char *kernelFileName, int Nblocks, int Nnodes);
 

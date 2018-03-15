@@ -1,10 +1,10 @@
 #include "acoustics2D.h"
 
-void boundaryConditions2D(int bc, dfloat t, dfloat x, dfloat y,
+void boundaryConditions2D(iint bc, dfloat t, dfloat x, dfloat y,
                           dfloat uM, dfloat vM, dfloat pM,
                           dfloat *uP, dfloat *vP, dfloat *pP);
 
-void acousticsPmlSurface2Dbbdg(mesh2D *mesh, int lev, dfloat t){
+void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
 
   // temporary storage for flux terms
   dfloat *fluxu = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
@@ -18,23 +18,23 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, int lev, dfloat t){
   dfloat *fluxpy_copy = (dfloat*) calloc(mesh->NfpMax*mesh->Nfaces,sizeof(dfloat));
 
   // for all elements
-  for(int et=0;et<mesh->MRABpmlNelements[lev];++et){
-    int e = mesh->MRABpmlElementIds[lev][et];
-    int pmlId = mesh->MRABpmlIds[lev][et];
-    int N = mesh->N[e];
+  for(iint et=0;et<mesh->MRABpmlNelements[lev];++et){
+    iint e = mesh->MRABpmlElementIds[lev][et];
+    iint pmlId = mesh->MRABpmlIds[lev][et];
+    iint N = mesh->N[e];
     // for all face nodes of all elements
-    for (int f=0;f<mesh->Nfaces;f++) {
-      for(int n=0;n<mesh->Nfp[N];++n){
+    for (iint f=0;f<mesh->Nfaces;f++) {
+      for(iint n=0;n<mesh->Nfp[N];++n){
         // load surface geofactors for this face
-        int sid = mesh->Nsgeo*(e*mesh->Nfaces+f);
+        iint sid = mesh->Nsgeo*(e*mesh->Nfaces+f);
         dfloat nx   = mesh->sgeo[sid+NXID];
         dfloat ny   = mesh->sgeo[sid+NYID];
         dfloat sJ   = mesh->sgeo[sid+SJID];
         dfloat invJ = mesh->sgeo[sid+IJID];
 
-        int id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        int idM = id*mesh->Nfields;
-        int idP = mesh->mapP[id]*mesh->Nfields;
+        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
+        iint idM = id*mesh->Nfields;
+        iint idP = mesh->mapP[id]*mesh->Nfields;
 
         // load negative trace node values of q
         dfloat uM = mesh->fQM[idM+0];
@@ -47,9 +47,9 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, int lev, dfloat t){
         dfloat pP = mesh->fQP[idP+2];
 
         // find boundary type
-        int boundaryType = mesh->EToB[e*mesh->Nfaces+f];
+        iint boundaryType = mesh->EToB[e*mesh->Nfaces+f];
         if(boundaryType>0) {
-          int idM = mesh->vmapM[id];
+          iint idM = mesh->vmapM[id];
           boundaryConditions2D(boundaryType, t, mesh->x[idM], mesh->y[idM],
                                 uM, vM, pM, &uP, &vP, &pP);
         }
@@ -68,9 +68,9 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, int lev, dfloat t){
     }
 
     // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
-    for(int n=0;n<mesh->Nfp[N]*mesh->Nfaces;++n){
+    for(iint n=0;n<mesh->Nfp[N]*mesh->Nfaces;++n){
 
-      int id = n % mesh->Nfp[N];  // warning: redundant reads
+      iint id = n % mesh->Nfp[N];  // warning: redundant reads
       dfloat L0val = mesh->L0vals[N][3*id+1];
 
       dfloat utmpflux = L0val * fluxu[n];
@@ -97,9 +97,9 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, int lev, dfloat t){
     }
 
     // apply lift reduction and accumulate RHS
-    for(int n=0;n<mesh->Np[N];++n){
-      int rhsId = 3*mesh->Nfields*(mesh->NpMax*e + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
-      int pmlrhsId = 3*mesh->pmlNfields*(mesh->NpMax*pmlId + n) + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
+    for(iint n=0;n<mesh->Np[N];++n){
+      iint rhsId = 3*mesh->Nfields*(mesh->NpMax*e + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
+      iint pmlrhsId = 3*mesh->pmlNfields*(mesh->NpMax*pmlId + n) + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
 
       // load RHS
       dfloat rhsqnu = mesh->rhsq[rhsId+0];
@@ -109,9 +109,9 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, int lev, dfloat t){
 
       // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
       for (int m = 0; m < mesh->max_EL_nnz[N]; ++m){
-        int idm = m + n*mesh->max_EL_nnz[N];
+        iint idm = m + n*mesh->max_EL_nnz[N];
         dfloat ELval = mesh->ELvals[N][idm];
-        int ELid = mesh->ELids[N][idm];
+        iint ELid = mesh->ELids[N][idm];
         rhsqnu += ELval * fluxu_copy[ELid];
         rhsqnv += ELval * fluxv_copy[ELid];
         rhsqnpx += ELval * fluxpx_copy[ELid];

@@ -3,11 +3,11 @@
 #include "mesh2D.h"
 
 typedef struct {
-  int localId;
-  int baseId;
-  int baseRank;
-  int recvIndex;
-  int index;
+  iint localId;
+  iint baseId;
+  iint baseRank;
+  iint recvIndex;
+  iint index;
 }scatterNode_t;
 
 // compare 
@@ -45,15 +45,15 @@ void meshParallelScatterSetupQuad2D(mesh2D *mesh){
   scatterNode_t *scatterNodes =
     (scatterNode_t*) calloc(mesh->Np*mesh->Nelements, sizeof(scatterNode_t));
 
-  int *scatterRecvCounts = (int*) calloc(size, sizeof(int));
+  iint *scatterRecvCounts = (iint*) calloc(size, sizeof(iint));
   
   // extract nodes that have base on other rank
-  int cnt = 0;
-  int scatterLocalCount = 0;
-  int scatterRecvCount = 0;
+  iint cnt = 0;
+  iint scatterLocalCount = 0;
+  iint scatterRecvCount = 0;
   
-  for(int n=0;n<mesh->Np*mesh->Nelements;++n){
-    int r = mesh->baseRanks[n];
+  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
+    iint r = mesh->baseRanks[n];
     scatterNodes[n].localId  = n;
     scatterNodes[n].baseId   = mesh->baseIds[n];
     scatterNodes[n].baseRank = r;
@@ -70,11 +70,11 @@ void meshParallelScatterSetupQuad2D(mesh2D *mesh){
 	sizeof(scatterNode_t), compareScatterNodes);
   
   // extract: ordered list of local node indices for scatter
-  int *scatterBaseIds  = (int*) calloc(scatterRecvCount, sizeof(int));
-  int *scatterRecvIds  = (int*) calloc(scatterRecvCount, sizeof(int));
+  iint *scatterBaseIds  = (iint*) calloc(scatterRecvCount, sizeof(iint));
+  iint *scatterRecvIds  = (iint*) calloc(scatterRecvCount, sizeof(iint));
   
   cnt = 0;
-  for(int n=0;n<mesh->Np*mesh->Nelements;++n){
+  for(iint n=0;n<mesh->Np*mesh->Nelements;++n){
     if(scatterNodes[n].baseId!=rank){
       // ids of nodes to recv
       scatterRecvIds[cnt] = scatterNodes[n].localId;
@@ -85,58 +85,58 @@ void meshParallelScatterSetupQuad2D(mesh2D *mesh){
       ++cnt;
     }
   }
-  int scatterNrecv = cnt;
+  iint scatterNrecv = cnt;
   
   // all processes tell all processes how many nodes to receive
-  int *scatterSendCounts = (int*) calloc(size,sizeof(int));
-  MPI_Alltoall(scatterRecvCounts, 1, MPI_int,
-	       scatterSendCounts, 1, MPI_int,
+  iint *scatterSendCounts = (iint*) calloc(size,sizeof(iint));
+  MPI_Alltoall(scatterRecvCounts, 1, MPI_IINT,
+	       scatterSendCounts, 1, MPI_IINT,
 	       MPI_COMM_WORLD);
   
   // form arrays for all to all (variable length)
-  int *scatterSendDispls = (int*) calloc(size,sizeof(int));
-  int *scatterRecvDispls = (int*) calloc(size,sizeof(int));
-  for(int r=1;r<size;++r){
+  iint *scatterSendDispls = (iint*) calloc(size,sizeof(iint));
+  iint *scatterRecvDispls = (iint*) calloc(size,sizeof(iint));
+  for(iint r=1;r<size;++r){
     scatterSendDispls[r] = scatterSendDispls[r-1]+scatterSendCounts[r-1];
     scatterRecvDispls[r] = scatterRecvDispls[r-1]+scatterRecvCounts[r-1];
   }
 
-  int scatterNsend = 0;
-  for(int r=0;r<size;++r)
+  iint scatterNsend = 0;
+  for(iint r=0;r<size;++r)
     scatterNsend += scatterSendCounts[r];
 
-  int *scatterSendIds = (int*) calloc(scatterNrecv, sizeof(int));
-  MPI_Alltoallv(scatterBaseIds, scatterRecvCounts, scatterRecvDispls, MPI_int,
-		scatterSendIds, scatterSendCounts, scatterSendDispls, MPI_int,
+  iint *scatterSendIds = (iint*) calloc(scatterNrecv, sizeof(iint));
+  MPI_Alltoallv(scatterBaseIds, scatterRecvCounts, scatterRecvDispls, MPI_IINT,
+		scatterSendIds, scatterSendCounts, scatterSendDispls, MPI_IINT,
 		MPI_COMM_WORLD);
 
   // now sort outgoing data
   scatterNode_t *outgoing = (scatterNode_t*) calloc(scatterNsend, sizeof(scatterNode_t));  
-  for(int n=0;n<scatterNsend;++n){
+  for(iint n=0;n<scatterNsend;++n){
     outgoing[n].baseId = scatterSendIds[n];
     outgoing[n].index = n;
   }
   qsort(outgoing, scatterNsend, sizeof(scatterNode_t), compareBaseNodes);
 
   // count degree of each base for incoming data
-  int *scatterSendStarts    = (int*) calloc(scatterNsend+1, sizeof(int));
-  int *scatterSendBaseIds   = (int*) calloc(scatterNsend,   sizeof(int));
-  int *scatterSourceDegrees = (int*) calloc(scatterNsend,   sizeof(int));
-  int *scatterSendSourceIds = (int*) calloc(scatterNsend,   sizeof(int));
+  iint *scatterSendStarts    = (iint*) calloc(scatterNsend+1, sizeof(iint));
+  iint *scatterSendBaseIds   = (iint*) calloc(scatterNsend,   sizeof(iint));
+  iint *scatterSourceDegrees = (iint*) calloc(scatterNsend,   sizeof(iint));
+  iint *scatterSendSourceIds = (iint*) calloc(scatterNsend,   sizeof(iint));
 
   // extract index relative to incoming
   cnt = 1; // at least one incoming
   scatterSendSourceIds[0] = outgoing[0].index;
   scatterSendStarts[0] = 0;
-  for(int n=1;n<scatterNsend;++n){
+  for(iint n=1;n<scatterNsend;++n){
     scatterSendSourceIds[n] = outgoing[n].index;
     if(outgoing[n].baseId!=outgoing[n-1].baseId)
       scatterSendStarts[cnt++] = n;
   }
   scatterSendStarts[cnt] = scatterNsend;
-  int scatterNbaseSend = cnt;
+  iint scatterNbaseSend = cnt;
   
-  for(int n=0;n<scatterNbaseSend;++n)
+  for(iint n=0;n<scatterNbaseSend;++n)
     scatterSendBaseIds[n] = outgoing[scatterSendStarts[n]].baseId;
 
   mesh->scatterNrecv = scatterNrecv;

@@ -17,7 +17,7 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
 
   dfloat minJ = 1e9, maxJ = -1e9, maxSkew = 0;
   
-  for(int e=0;e<mesh->Nelements;++e){ /* for each element */
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
     int id = e*mesh->Nverts;
@@ -26,11 +26,11 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
     dfloat *ye = mesh->EY + id;
     dfloat *ze = mesh->EZ + id;
 
-    for(int k=0;k<mesh->Nq;++k){
-      for(int j=0;j<mesh->Nq;++j){
-	for(int i=0;i<mesh->Nq;++i){
+    for(iint k=0;k<mesh->Nq;++k){
+      for(iint j=0;j<mesh->Nq;++j){
+	for(iint i=0;i<mesh->Nq;++i){
 	  
-	  int n = i + j*mesh->Nq + k*mesh->Nq*mesh->Nq;
+	  iint n = i + j*mesh->Nq + k*mesh->Nq*mesh->Nq;
 
 	  /* local node coordinates */
 	  dfloat rn = mesh->r[n]; 

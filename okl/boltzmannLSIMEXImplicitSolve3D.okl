@@ -1,7 +1,7 @@
 
 
-kernel void boltzmannLSIMEXImplicitSolve3D(const int Nelements,
-					       const int * restrict elementIds,
+kernel void boltzmannLSIMEXImplicitSolve3D(const iint Nelements,
+					       const iint * restrict elementIds,
 					       const dfloat dt,	
 					       const dfloat akk,
 					       const dfloat  * restrict cubInterpT,
@@ -9,11 +9,11 @@ kernel void boltzmannLSIMEXImplicitSolve3D(const int Nelements,
 					       const dfloat4 * restrict qex,
 					             dfloat4 * restrict qim){
 
-for(int e=0;e<Nelements;++e;outer0){
-	for(int n=0;n<p_Np;++n;inner0){
+for(iint e=0;e<Nelements;++e;outer0){
+	for(iint n=0;n<p_Np;++n;inner0){
 
-	const int element = elementIds[e];
-    const int base = 3*(n + element*p_Np);
+	const iint element = elementIds[e];
+    const iint base = 3*(n + element*p_Np);
 
 	dfloat N5=0.f, N6= 0.f,  N7=0.f, N8=0.f, N9=0.f, N10=0.f;
 
@@ -124,8 +124,8 @@ for(int e=0;e<Nelements;++e;outer0){
 
 
 
-kernel void boltzmannLSIMEXImplicitSolveCub3D(const int Nelements,
-						  const int * restrict elementIds,
+kernel void boltzmannLSIMEXImplicitSolveCub3D(const iint Nelements,
+						  const iint * restrict elementIds,
 						  const dfloat dt, 
 						  const dfloat akk,
 						  const dfloat * restrict cubInterpT,
@@ -133,7 +133,7 @@ kernel void boltzmannLSIMEXImplicitSolveCub3D(const int Nelements,
 						  const dfloat4 * restrict qex,
 						        dfloat4 * restrict qim){ 
 
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
      // shared memory for q at nodes
     shared dfloat s_q[p_NblockV][10][p_Np];
@@ -146,7 +146,7 @@ kernel void boltzmannLSIMEXImplicitSolveCub3D(const int Nelements,
     shared dfloat s_cubN9[p_NblockV][p_cubNp];
     shared dfloat s_cubN10[p_NblockV][p_cubNp];
 
-    exclusive int element;
+    exclusive iint element;
     //
     exclusive dfloat N5c, N6c, N7c, N8c, N9c, N10c;
     //
@@ -157,15 +157,15 @@ kernel void boltzmannLSIMEXImplicitSolveCub3D(const int Nelements,
     exclusive dfloat qex8 =0.f, qex9 = 0.f, qex10=0.f; 
 
     // prefetch q to shared
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolume;++n;inner0){    
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_maxNodesVolume;++n;inner0){    
 	
-        int e = eo+es; // element in block
+        iint e = eo+es; // element in block
         if(e<Nelements){
 	  
 	  element = elementIds[e];
 	  if(n<p_Np){
-	    const int id = 3*(element*p_Np+n);
+	    const iint id = 3*(element*p_Np+n);
 	    dfloat4 qan = qex[id+0], qbn = qex[id+1], qcn =  qex[id+2] ;    
 	    s_q[es][0][n] = qan.x;
 	    s_q[es][1][n] = qan.y;
@@ -189,10 +189,10 @@ kernel void boltzmannLSIMEXImplicitSolveCub3D(const int Nelements,
     barrier(localMemFence);
 
     // interpolate q to cubature
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolume;++n;inner0){
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_maxNodesVolume;++n;inner0){
 
-		int e = eo+es; // element in block
+		iint e = eo+es; // element in block
 		if(e<Nelements){
 
 			if(n<p_cubNp){
@@ -200,7 +200,7 @@ kernel void boltzmannLSIMEXImplicitSolveCub3D(const int Nelements,
 	            dfloat qe6 = 0.f, qe7 = 0.f, qe8 = 0.f, qe9 = 0.f, qe10 = 0.f;
 				
 				occaUnroll(p_Np)
-				for(int m=0;m<p_Np;++m){
+				for(iint m=0;m<p_Np;++m){
 
 				const dfloat Icn  = cubInterpT[m*p_cubNp+n];
 				qe1  += Icn*s_q[es][0][m];
@@ -249,9 +249,9 @@ kernel void boltzmannLSIMEXImplicitSolveCub3D(const int Nelements,
 
     
       // partial projection to nodes from cubature-sub-group
-      for(int es=0;es<p_NblockV;++es;inner1){
-	for(int n=0;n<p_maxNodesVolume;++n;inner0){
-	  int e = eo+es; // element in block
+      for(iint es=0;es<p_NblockV;++es;inner1){
+	for(iint n=0;n<p_maxNodesVolume;++n;inner0){
+	  iint e = eo+es; // element in block
 	  if(e<Nelements){
 	    if(n<p_cubNp){
 			if(akk>0){ 	
@@ -303,14 +303,14 @@ kernel void boltzmannLSIMEXImplicitSolveCub3D(const int Nelements,
     barrier(localMemFence);
       
       // partial projection to nodes from cubature-sub-group
-      for(int es=0;es<p_NblockV;++es;inner1){
-	for(int n=0;n<p_maxNodesVolume;++n;inner0){
-	  int e = eo+es; // element in block
+      for(iint es=0;es<p_NblockV;++es;inner1){
+	for(iint n=0;n<p_maxNodesVolume;++n;inner0){
+	  iint e = eo+es; // element in block
 	  if(e<Nelements){
 	    if(n<p_Np){
 	    // use temporaries for part sums for N4,N5,N6 because of exclusives
 	    dfloat N5 = 0.f, N6 = 0.f, N7 = 0.f, N8 = 0.f, N9 = 0.f, N10 = 0.f;
-	    for(int i=0;i<p_cubNp;++i){
+	    for(iint i=0;i<p_cubNp;++i){
 	      const dfloat Pnc  = cubProjectT[i*p_Np+n];
 	      N5  += Pnc*s_cubN5[es][i];
 	      N6  += Pnc*s_cubN6[es][i];
@@ -320,7 +320,7 @@ kernel void boltzmannLSIMEXImplicitSolveCub3D(const int Nelements,
 	      N10 += Pnc*s_cubN10[es][i];
 	    }
 
-	     const int base = 3*(element*p_Np+n);
+	     const iint base = 3*(element*p_Np+n);
 	      	      
 	  dfloat4 tmp;
 

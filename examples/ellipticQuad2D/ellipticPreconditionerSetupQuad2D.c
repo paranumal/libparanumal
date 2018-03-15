@@ -1,9 +1,9 @@
 #include "ellipticQuad2D.h"
 
 
-void ellipticPreconditionerSetupQuad2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, int *BCType, const char *options, const char *parAlmondOptions){
+void ellipticPreconditionerSetupQuad2D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions){
 
-  int rank, size;
+  iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -11,12 +11,12 @@ void ellipticPreconditionerSetupQuad2D(solver_t *solver, ogs_t *ogs, dfloat tau,
   precon_t *precon = solver->precon;
 
   if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond
-    int nnz;
+    iint nnz;
     nonZero_t *A;
     hgs_t *hgs;
 
-    int Nnum = mesh->Np*mesh->Nelements;
-    int *globalStarts = (int*) calloc(size+1, sizeof(int));
+    iint Nnum = mesh->Np*mesh->Nelements;
+    iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
 
     if (strstr(options,"IPDG")) {
       ellipticBuildIpdgQuad2D(mesh, tau, lambda, BCType, &A, &nnz,globalStarts, options);
@@ -25,11 +25,11 @@ void ellipticPreconditionerSetupQuad2D(solver_t *solver, ogs_t *ogs, dfloat tau,
     }
     
 
-    int *Rows = (int *) calloc(nnz, sizeof(int));
-    int *Cols = (int *) calloc(nnz, sizeof(int));
+    iint *Rows = (iint *) calloc(nnz, sizeof(iint));
+    iint *Cols = (iint *) calloc(nnz, sizeof(iint));
     dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
 
-    for (int n=0;n<nnz;n++) {
+    for (iint n=0;n<nnz;n++) {
       Rows[n] = A[n].row;
       Cols[n] = A[n].col;
       Vals[n] = A[n].val;
@@ -143,24 +143,24 @@ void ellipticPreconditionerSetupQuad2D(solver_t *solver, ogs_t *ogs, dfloat tau,
     // coarse grid preconditioner
     occaTimerTic(mesh->device,"CoarsePreconditionerSetup");
     nonZero_t *coarseA;
-    int nnzCoarseA;
+    iint nnzCoarseA;
     hgs_t *coarsehgs;
     dfloat *V1;
 
-    int *coarseGlobalStarts = (int*) calloc(size+1, sizeof(int));
+    iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
 
     ellipticCoarsePreconditionerSetupQuad2D(mesh, precon, tau, lambda, BCType,
                                            &V1, &coarseA, &nnzCoarseA,
                                            &coarsehgs, coarseGlobalStarts, options);
 
-    int Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
+    iint Nnum = mesh->Nverts*(mesh->Nelements+mesh->totalHaloPairs);
     precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
 
-    int *Rows = (int *) calloc(nnzCoarseA, sizeof(int));
-    int *Cols = (int *) calloc(nnzCoarseA, sizeof(int));
+    iint *Rows = (iint *) calloc(nnzCoarseA, sizeof(iint));
+    iint *Cols = (iint *) calloc(nnzCoarseA, sizeof(iint));
     dfloat *Vals = (dfloat*) calloc(nnzCoarseA,sizeof(dfloat));
 
-    for (int n=0;n<nnzCoarseA;n++) {
+    for (iint n=0;n<nnzCoarseA;n++) {
       Rows[n] = coarseA[n].row;
       Cols[n] = coarseA[n].col;
       Vals[n] = coarseA[n].val;

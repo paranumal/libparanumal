@@ -13,8 +13,8 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
   occa::initTimer(mesh->device);
 
   dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
+  for(iint n=0;n<mesh->Np;++n){
+    for(iint m=0;m<mesh->Nfaces*mesh->Nfp;++m){
       LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
     }
   }
@@ -45,15 +45,15 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
 			mesh->sgeo);
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
         mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
         mesh->vmapP);
 
   mesh->o_EToB =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),
         mesh->EToB);
 
   mesh->o_x =
@@ -72,7 +72,7 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
     mesh->o_haloElementList =
-      mesh->device.malloc(mesh->totalHaloPairs*sizeof(int), mesh->haloElementList);
+      mesh->device.malloc(mesh->totalHaloPairs*sizeof(iint), mesh->haloElementList);
 
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
@@ -132,11 +132,11 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
     kernelInfo.addDefine("dfloat8","double8");
   }
 
-  if(sizeof(int)==4){
-    kernelInfo.addDefine("int","int");
+  if(sizeof(iint)==4){
+    kernelInfo.addDefine("iint","int");
   }
-  if(sizeof(int)==8){
-    kernelInfo.addDefine("int","long long int");
+  if(sizeof(iint)==8){
+    kernelInfo.addDefine("iint","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA

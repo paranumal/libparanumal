@@ -1,13 +1,13 @@
 #include "boltzmann2D.h"
 
 // complete a time step using LSERK4
-void boltzmannSRABStep2D(mesh2D *mesh, int tstep, int haloBytes,
+void boltzmannSRABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                         dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
 //  //  
-//   int one = 1;
-//   int zero = 0;
+//   iint one = 1;
+//   iint zero = 0;
 //   if(tstep<3){
   
 //    dfloat *tmp;  occa::memory o_rhsqtmp; 
@@ -158,7 +158,7 @@ void boltzmannSRABStep2D(mesh2D *mesh, int tstep, int haloBytes,
 
 
 //    // LSERK4 stages
-//   for(int rk=0;rk<mesh->Nrk;++rk){
+//   for(iint rk=0;rk<mesh->Nrk;++rk){
 
 //     // intermediate stage time
 //     dfloat t = mesh->startTime + tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
@@ -169,7 +169,7 @@ void boltzmannSRABStep2D(mesh2D *mesh, int tstep, int haloBytes,
 //       mesh->device.setStream(dataStream);
 //     #endif
 
-//     int Nentries = mesh->Np*mesh->Nfields;
+//     iint Nentries = mesh->Np*mesh->Nfields;
 //     mesh->haloExtractKernel(mesh->totalHaloPairs,
 //                             Nentries,
 //                             mesh->o_haloElementList,
@@ -440,7 +440,7 @@ void boltzmannSRABStep2D(mesh2D *mesh, int tstep, int haloBytes,
 
 // else{
   // printf("Starting SRAB step \n");
-  int mrab_order = 2;  // Third order
+  iint mrab_order = 2;  // Third order
   dfloat a1, a2, a3;
   if (tstep==0) {
     mrab_order = 0;  
@@ -472,7 +472,7 @@ void boltzmannSRABStep2D(mesh2D *mesh, int tstep, int haloBytes,
       mesh->device.setStream(dataStream);
     #endif
 
-    int Nentries = mesh->Np*mesh->Nfields;
+    iint Nentries = mesh->Np*mesh->Nfields;
     mesh->haloExtractKernel(mesh->totalHaloPairs,
                             Nentries,
                             mesh->o_haloElementList,
@@ -638,7 +638,7 @@ void boltzmannSRABStep2D(mesh2D *mesh, int tstep, int haloBytes,
 // printf("Starting update step \n");
 
 
- // const int id = mrab_order*3;
+ // const iint id = mrab_order*3;
   // mesh->MRAB_C[0],
                       // mesh->MRAB_A[id+0], //
                       // mesh->MRAB_A[id+1],

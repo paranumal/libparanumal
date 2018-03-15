@@ -30,7 +30,7 @@ void acousticsPmlUpdate2D(mesh2D *mesh, dfloat rka, dfloat rkb);
 
 void acousticsError2D(mesh2D *mesh, dfloat time);
 
-void acousticsComputeVorticity2D(mesh2D *mesh, dfloat *q, int outfld, int Nfields);
+void acousticsComputeVorticity2D(mesh2D *mesh, dfloat *q, iint outfld, iint Nfields);
 
 void acousticsCavitySolution2D(dfloat x, dfloat y, dfloat t, dfloat *u, dfloat *v, dfloat *p);
 

@@ -8,26 +8,26 @@ void insRun3D(ins_t *ins, char *options){
   
   //insErrorNorms3D(ins, 0, options);
   // Allocate MPI buffer for velocity step solver!! May Change Later!!!!!!
-  int tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
+  iint tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
   dfloat *tSendBuffer = (dfloat*) malloc(tHaloBytes);
   dfloat *tRecvBuffer = (dfloat*) malloc(tHaloBytes);
 
-  int vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
+  iint vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
   dfloat *vSendBuffer = (dfloat*) malloc(vHaloBytes);
   dfloat *vRecvBuffer = (dfloat*) malloc(vHaloBytes);
 
   // No need to do like this, just for consistency
-  int pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  iint pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   dfloat *pSendBuffer = (dfloat*) malloc(pHaloBytes);
   dfloat *pRecvBuffer = (dfloat*) malloc(pHaloBytes);
 
 //   // Set subscycling
-//   int subcycling =0;
+//   iint subcycling =0;
 //   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
   occa::initTimer(mesh->device);
   //ins->NtimeSteps = 1000; // !!!!!!!!!!!!!
-  for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
   #if 0
     // ok it seems 
     if(tstep<100){
@@ -100,11 +100,11 @@ void insRun3D(ins_t *ins, char *options){
     
 #if 0 // For time accuracy test fed history with exact solution
     if(tstep<1){
-      int Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+      iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
       dfloat tt   = (tstep+1)*ins->dt;
-     for(int e=0;e<mesh->Nelements;++e){
-        for(int n=0;n<mesh->Np;++n){
-          int id = n + mesh->Np*e;
+     for(iint e=0;e<mesh->Nelements;++e){
+        for(iint n=0;n<mesh->Np;++n){
+          iint id = n + mesh->Np*e;
           dfloat x = mesh->x[id];
           dfloat y = mesh->y[id];
           dfloat z = mesh->z[id];

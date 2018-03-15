@@ -11,7 +11,7 @@
 
 
 
-// void boundaryConditions2D(const int bc,
+// void boundaryConditions2D(const iint bc,
 // 			              const dfloat  t, const dfloat  x, const dfloat  y,
 // 			              const dfloat  nx, const dfloat  ny,
 // 			              const dfloat  uxM, const dfloat  uyM, 
@@ -39,7 +39,7 @@
 
 
 
-kernel void insPressureRhsVolume2D(	const int Nelements,
+kernel void insPressureRhsVolume2D(	const iint Nelements,
 									const dfloat g0,
 									const dfloat dt,
 									const dfloat * restrict vgeo,
@@ -49,18 +49,18 @@ kernel void insPressureRhsVolume2D(	const int Nelements,
 									      dfloat * restrict rhsPr
 				          ){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
    
    // Hold Flux Vector on Shared
    shared dfloat s_UxI[p_NblockV][p_Np];
    shared dfloat s_UyI[p_NblockV][p_Np];
    //
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
-		int e = eo+es; // element in block
+		iint e = eo+es; // element in block
 		if(e<Nelements){ 
-		 const int id = e*p_Np+n;
+		 const iint id = e*p_Np+n;
 		 const dfloat uxi = UI[id + UXID*p_NtotalDofs];
 		 const dfloat uyi = UI[id + UYID*p_NtotalDofs];
 		 //
@@ -74,10 +74,10 @@ kernel void insPressureRhsVolume2D(	const int Nelements,
      barrier(localMemFence);
 
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
-	int e = eo+es; // element in block
+	iint e = eo+es; // element in block
 	if(e<Nelements){	  
 	  // prefetch geometric factors (constant on triangle)
 	  const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
@@ -89,7 +89,7 @@ kernel void insPressureRhsVolume2D(	const int Nelements,
 	  // compute 'r' and 's' derivatives of (q_m) at node n
       dfloat duxdr = 0.f, duxds = 0.f, duydr = 0.f, duyds = 0.f; 
 	  occaUnroll(p_Np)
-	  for(int i=0;i<p_Np;++i){
+	  for(iint i=0;i<p_Np;++i){
 	    const dfloat Drni = DrT[n+i*p_Np];
 	    const dfloat Dsni = DsT[n+i*p_Np];
 	    // 
@@ -99,7 +99,7 @@ kernel void insPressureRhsVolume2D(	const int Nelements,
 	    duyds += Dsni*s_UyI[es][i];
 	    
 	  }
-	  const int id = e*p_Np+n;
+	  const iint id = e*p_Np+n;
 	  rhsPr[e*p_Np+n]= -jac*(drdx*duxdr + drdy*duydr + dsdx*duxds + dsdy*duyds)*g0/dt;   
      
 	 	 
@@ -113,12 +113,12 @@ kernel void insPressureRhsVolume2D(	const int Nelements,
 
 
 
-kernel void insPressureRhsSurface2D(const int Nelements,
+kernel void insPressureRhsSurface2D(const iint Nelements,
 				     const dfloat * restrict sgeo,
 				     const dfloat * restrict LIFTT,
-				     const int   * restrict vmapM,
-				     const int   * restrict vmapP,
-				     const int   * restrict EToB,
+				     const iint   * restrict vmapM,
+				     const iint   * restrict vmapP,
+				     const iint   * restrict EToB,
 				     const dfloat time,
 				     const dfloat * restrict x,
 				     const dfloat * restrict y,
@@ -128,30 +128,30 @@ kernel void insPressureRhsSurface2D(const int Nelements,
 				           dfloat * restrict rhsPr){
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_dPdn[p_NblockS][p_Nfp*p_Nfaces]; 
      // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	   int e = eo + es;
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	   iint e = eo + es;
 	    if(e<Nelements){
 	      if(n<p_Nfp*p_Nfaces){
 			// find face that owns this node
-			int face = n/p_Nfp;
+			iint face = n/p_Nfp;
 			// load surface geofactors for this face
-			int bc = EToB[face+p_Nfaces*e];
+			iint bc = EToB[face+p_Nfaces*e];
 			//
-			int sid   = p_Nsgeo*(e*p_Nfaces+face);
+			iint sid   = p_Nsgeo*(e*p_Nfaces+face);
 			dfloat nx  = sgeo[sid+0];
 			dfloat ny  = sgeo[sid+1];
 			//
 			dfloat sJ  = sgeo[sid+2];
 			dfloat invJ= sgeo[sid+3];
 			// indices of negative and positive traces of face node
-			int id    = e*p_Nfp*p_Nfaces + n;
-			int vid   = vmapM[id]; // Volume node indexing 
+			iint id    = e*p_Nfp*p_Nfaces + n;
+			iint vid   = vmapM[id]; // Volume node indexing 
 			// load negative and positive trace node values of q
 			dfloat  ux  = U[vid + UXID*p_NtotalDofs];
 			dfloat  uy  = U[vid + UYID*p_NtotalDofs];
@@ -185,10 +185,10 @@ kernel void insPressureRhsSurface2D(const int Nelements,
     
      #if 0
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
 	         if(n<p_Nfp*p_Nfaces){
-	         	  int face = n/p_Nfp;
+	         	  iint face = n/p_Nfp;
 	         	  if(face<Nface)
 	         	    if(s_maxVel[es][0 + face*p_Nfp] < s_maxVel[es][n])
 	         	  	   s_maxVel[es][0 + face*p_Nfp] = s_maxVel[es][n];
@@ -202,12 +202,12 @@ kernel void insPressureRhsSurface2D(const int Nelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
-	      int e = eo + es;
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+	      iint e = eo + es;
 	       if(e<Nelements){
 	          if(n<p_Np){
-				     int id = e*p_Np + n;
+				     iint id = e*p_Np + n;
              dfloat rhsux = rhsU[id + UXID*p_NtotalDofs];
              dfloat rhsuy = rhsU[id + UYID*p_NtotalDofs];
 				    // Lift
@@ -231,7 +231,7 @@ kernel void insPressureRhsSurface2D(const int Nelements,
 
 
 
-// kernel void insAdvectionUpdate2D(const int Nelements,
+// kernel void insAdvectionUpdate2D(const iint Nelements,
 // 				                      const dfloat dt,	
 // 				                      const dfloat a0,
 // 				                      const dfloat a1,
@@ -245,10 +245,10 @@ kernel void insPressureRhsSurface2D(const int Nelements,
 // 				                            dfloat * restrict UI){
   
 //   // Low storage Runge Kutta time step update
-//   for(int e=0;e<Nelements;++e;outer0){
-//     for(int n=0;n<p_Np;++n;inner0){
+//   for(iint e=0;e<Nelements;++e;outer0){
+//     for(iint n=0;n<p_Np;++n;inner0){
      
-//      const int id = e*p_Np+n;
+//      const iint id = e*p_Np+n;
 //      //
 // 		 const dfloat ux  = U[id + UXID*p_NtotalDofs];
 // 		 const dfloat uy  = U[id + UYID*p_NtotalDofs];

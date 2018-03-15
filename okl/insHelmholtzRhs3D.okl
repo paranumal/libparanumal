@@ -1,7 +1,7 @@
 
 // Compute RHS Forcing i.e. 1/nu*(-grad(Pr) + sum(a_i x u_i)^(n-i) -sum(b_i x N(u)^(n-i))
-kernel void insHelmholtzRhsForcing3D(const int Nelements,
-				     const int rhsPackingMode,
+kernel void insHelmholtzRhsForcing3D(const iint Nelements,
+				     const iint rhsPackingMode,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict MM,
 				     const dfloat a0,
@@ -13,8 +13,8 @@ kernel void insHelmholtzRhsForcing3D(const int Nelements,
 				     const dfloat c0,
 				     const dfloat c1,
 				     const dfloat c2,
-             const int index,
-             const int offset,
+             const iint index,
+             const iint offset,
              const dfloat * restrict U,
              const dfloat * restrict V,
              const dfloat * restrict W,
@@ -28,25 +28,25 @@ kernel void insHelmholtzRhsForcing3D(const int Nelements,
              dfloat * restrict rhsV,
              dfloat * restrict rhsW){
 
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
 
     shared dfloat s_rhsU[p_NblockV][p_Np];
     shared dfloat s_rhsV[p_NblockV][p_Np];
     shared dfloat s_rhsW[p_NblockV][p_Np];
     exclusive dfloat Um0, Vm0, Wm0;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-      	int e = eo+es; // element in block
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+      	iint e = eo+es; // element in block
       	if(e<Nelements){
           //hard coded for 3 stages
           const int index0 = (index+0)%3;
           const int index1 = (index+2)%3; //back one step
           const int index2 = (index+1)%3; //back two steps
 
-      	  const int id0   = n + p_Np*(e+index0*offset);
-          const int id1   = n + p_Np*(e+index1*offset);
-          const int id2   = n + p_Np*(e+index2*offset);
+      	  const iint id0   = n + p_Np*(e+index0*offset);
+          const iint id1   = n + p_Np*(e+index1*offset);
+          const iint id2   = n + p_Np*(e+index2*offset);
 
       	  const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 
@@ -105,14 +105,14 @@ kernel void insHelmholtzRhsForcing3D(const int Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-      	int e = eo+es; // element in block
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+      	iint e = eo+es; // element in block
       	if(e<Nelements){
       	  // Multiplay with Mass Matrix
       	  dfloat rhsu = 0.f, rhsv = 0.f, rhsw = 0.f;
       	  occaUnroll(p_Np)
-    	    for(int i=0;i<p_Np;++i){
+    	    for(iint i=0;i<p_Np;++i){
     	      const dfloat M = MM[n+i*p_Np];
     	      rhsu  += M*s_rhsU[es][i];
             rhsv  += M*s_rhsV[es][i];
@@ -120,13 +120,13 @@ kernel void insHelmholtzRhsForcing3D(const int Nelements,
     	    }
       	  // Update
 	  if(!rhsPackingMode){
-	    const int id = e*p_Np+n;
+	    const iint id = e*p_Np+n;
 	    rhsU[id] = rhsu;
       rhsV[id] = rhsv;
       rhsW[id] = rhsw;
 	  }else{
       // !!!!!Need to be checked!!!!!!
-	    const int id = 2*(e*p_Np+n);
+	    const iint id = 2*(e*p_Np+n);
 	    rhsU[id+0] = rhsu;
       rhsU[id+1] = rhsv;
       rhsU[id+2] = rhsw;
@@ -143,9 +143,9 @@ kernel void insHelmholtzRhsForcing3D(const int Nelements,
 
 
 kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
-				    const int rhsPackingMode,
-				    const int * restrict vmapM,
-				    const int * restrict vmapP,
+				    const iint rhsPackingMode,
+				    const iint * restrict vmapM,
+				    const iint * restrict vmapP,
 				    const dfloat tau,
 				    const dfloat t,
 				    const dfloat * restrict x,
@@ -153,7 +153,7 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
             const dfloat * restrict z,
 				    const dfloat * restrict vgeo,
 				    const dfloat * restrict sgeo,
-				    const int   * restrict EToB,
+				    const iint   * restrict EToB,
 				    const dfloat * restrict DrT,
             const dfloat * restrict DsT,
             const dfloat * restrict DtT,
@@ -203,21 +203,21 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
     shared  dfloat s_Lnzdw[p_Np];
 
 
-    exclusive int idM, bcsum;
+    exclusive iint idM, bcsum;
     exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
-      	const int id  = n + e*p_Nfaces*p_Nfp;
+      	const iint id  = n + e*p_Nfaces*p_Nfp;
       	idM = vmapM[id];
 
-      	const int face = n/p_Nfp;
+      	const iint face = n/p_Nfp;
         dfloat dudxP=0.f, dudyP=0.f, dudzP=0.f, uP=0.f;
         dfloat dvdxP=0.f, dvdyP=0.f, dvdzP=0.f, vP=0.f;
         dfloat dwdxP=0.f, dwdyP=0.f, dwdzP=0.f, wP=0.f;
 
       	// load surface geofactors for this face
-      	int sid = p_Nsgeo*(e*p_Nfaces+face);
+      	iint sid = p_Nsgeo*(e*p_Nfaces+face);
       	nx    = sgeo[sid+p_NXID];
         ny    = sgeo[sid+p_NYID];
         nz    = sgeo[sid+p_NZID];
@@ -283,7 +283,7 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
         dfloat Lnzdw = 0.f;
 
       	occaUnroll(p_NfacesNfp)
-      	  for(int i=0;i<p_NfacesNfp;++i){
+      	  for(iint i=0;i<p_NfacesNfp;++i){
             dfloat liftt = LIFTT[n+i*p_Np];
       	    Lnxdu += liftt*s_nxdu[i];
             Lnydu += liftt*s_nydu[i];
@@ -340,7 +340,7 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
-      	int id = idM%p_Np;
+      	iint id = idM%p_Np;
         s_lapuflux[n] += sJ*invJ*(nx*s_Lnxdu[id]+ny*s_Lnydu[id]+nz*s_Lnzdu[id]);
         s_lapvflux[n] += sJ*invJ*(nx*s_Lnxdv[id]+ny*s_Lnydv[id]+nz*s_Lnzdv[id]);
         s_lapwflux[n] += sJ*invJ*(nx*s_Lnxdw[id]+ny*s_Lnydw[id]+nz*s_Lnzdw[id]);
@@ -413,14 +413,14 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
     	  }
 
 	if(!rhsPackingMode){
-	  const int id = e*p_Np+n;
+	  const iint id = e*p_Np+n;
     	  rhsU[id] -=  J*Mlapu;
         rhsV[id] -=  J*Mlapv;
         rhsW[id] -=  J*Mlapw;
 	}
 	else{
     // Chekc it later !!!!!!!
-	  const int id = e*p_Np+n;
+	  const iint id = e*p_Np+n;
     	  rhsU[3*id+0] -=  J*Mlapu;
         rhsU[3*id+1] -=  J*Mlapv;
         rhsU[3*id+2] -=  J*Mlapw;

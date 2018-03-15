@@ -1,7 +1,7 @@
 #include "ellipticBenchmarkTri2D.h"
 
 
-solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType,
+solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, iint*BCType,
                       occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions,
                       int Nblocks, int Nnodes){
 
@@ -22,10 +22,10 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
 
   loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
 
-  int Ntotal = mesh->Np*mesh->Nelements;
-  int Nblock = (Ntotal+blockSize-1)/blockSize;
-  int Nhalo = mesh->Np*mesh->totalHaloPairs;
-  int Nall   = Ntotal + Nhalo;
+  iint Ntotal = mesh->Np*mesh->Nelements;
+  iint Nblock = (Ntotal+blockSize-1)/blockSize;
+  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
+  iint Nall   = Ntotal + Nhalo;
 
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
@@ -58,7 +58,7 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
   solver->dataStream = mesh->device.createStream();
   mesh->device.setStream(solver->defaultStream);
 
-  int Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  iint Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   if(Nbytes>0){
     occa::memory o_sendBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
     occa::memory o_recvBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
@@ -83,8 +83,8 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
 
   //fill geometric factors in halo
   if(mesh->totalHaloPairs){
-    int Nlocal = mesh->Nelements*mesh->Np;
-    int Nhalo  = mesh->totalHaloPairs*mesh->Np;
+    iint Nlocal = mesh->Nelements*mesh->Np;
+    iint Nhalo  = mesh->totalHaloPairs*mesh->Np;
     dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
 
     // import geometric factors from halo elements
@@ -103,12 +103,12 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
   //check all the bounaries for a Dirichlet
   bool allNeumann = (lambda==0) ? true :false;
   solver->allNeumannPenalty = 1;
-  int totalElements = 0;
-  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_int, MPI_SUM, MPI_COMM_WORLD);
+  iint totalElements = 0;
+  MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
   solver->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
   solver->EToB = (int *) calloc(mesh->Nelements*mesh->Nfaces,sizeof(int));
-  for (int e=0;e<mesh->Nelements;e++) {
+  for (iint e=0;e<mesh->Nelements;e++) {
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[e*mesh->Nfaces+f];
       if (bc>0) {
@@ -159,12 +159,12 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
   kernelInfo.addDefine("p_NblockS", Nblocks);
   kernelInfo.addDefine("p_NblockP", Nblocks);
   kernelInfo.addDefine("p_NblockG", Nblocks);
-  int *globalGatherElementList    = (int*) calloc(mesh->Nelements, sizeof(int));
-  int *localGatherElementList = (int*) calloc(mesh->Nelements, sizeof(int));
+  iint *globalGatherElementList    = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  iint *localGatherElementList = (iint*) calloc(mesh->Nelements, sizeof(iint));
   int globalCount = 0;
   int localCount =0;
 
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
       globalGatherElementList[globalCount++] = e;
       localGatherElementList[localCount++] = e;
   }
@@ -173,10 +173,10 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
   solver->NlocalGatherElements = mesh->Nelements;
 
     solver->o_globalGatherElementList =
-      mesh->device.malloc(globalCount*sizeof(int), globalGatherElementList);
+      mesh->device.malloc(globalCount*sizeof(iint), globalGatherElementList);
 
     solver->o_localGatherElementList =
-      mesh->device.malloc(localCount*sizeof(int), localGatherElementList);
+      mesh->device.malloc(localCount*sizeof(iint), localGatherElementList);
 
   return solver;
 }

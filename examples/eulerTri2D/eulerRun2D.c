@@ -18,9 +18,9 @@ void eulerRanges2D(mesh2D *mesh){
   dfloat minRhsV = 1e9, maxRhsV = -1e9;
 
   
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      int id =	0+mesh->Nfields*n+mesh->Nfields*mesh->Np*e;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      iint id =	0+mesh->Nfields*n+mesh->Nfields*mesh->Np*e;
       minR = mymin(minR, mesh->q[id]);
       maxR = mymax(maxR, mesh->q[id]);
       minRhsR = mymin(minRhsR, mesh->rhsq[id]);
@@ -55,20 +55,20 @@ void eulerRanges2D(mesh2D *mesh){
 void eulerRun2D(mesh2D *mesh){
 
   // MPI send buffer
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(int rk=0;rk<mesh->Nrk;++rk){
+    for(iint rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
-	int Nentries = mesh->Np*mesh->Nfields;
+	iint Nentries = mesh->Np*mesh->Nfields;
 	
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
@@ -143,7 +143,7 @@ void eulerRun2D(mesh2D *mesh){
       eulerError2D(mesh, mesh->dt*(tstep+1));
 
       // output field files
-      int fld = 0;
+      iint fld = 0;
       char fname[BUFSIZ];
       sprintf(fname, "foo_T%04d", tstep/mesh->errorStep);
       meshPlotVTU2D(mesh, fname, fld);

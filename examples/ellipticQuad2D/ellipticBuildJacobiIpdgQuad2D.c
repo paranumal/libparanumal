@@ -1,17 +1,17 @@
 #include "ellipticQuad2D.h"
 
-void BuildLocalPatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
-                        dfloat *B, dfloat *Br, dfloat* Bs, int eM, dfloat *A);
+void BuildLocalPatchAx(mesh2D *mesh, dfloat *basis, dfloat tau, dfloat lambda, iint* BCType,
+                        dfloat *B, dfloat *Br, dfloat* Bs, iint eM, dfloat *A);
 
-void ellipticBuildJacobiIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
+void ellipticBuildJacobiIpdgQuad2D(mesh2D *mesh, iint basisNp, dfloat *basis,
                                    dfloat tau, dfloat lambda,
-                                   int *BCType, dfloat **invDiagA,
+                                   iint *BCType, dfloat **invDiagA,
                                    const char *options){
 
   if(!basis) { // default to degree N Lagrange basis
     basisNp = mesh->Np;
     basis = (dfloat*) calloc(basisNp*basisNp, sizeof(dfloat));
-    for(int n=0;n<basisNp;++n){
+    for(iint n=0;n<basisNp;++n){
       basis[n+n*basisNp] = 1;
     }
   }
@@ -44,7 +44,7 @@ void ellipticBuildJacobiIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
     }
   }
 
-  int diagNnum = basisNp*mesh->Nelements;
+  iint diagNnum = basisNp*mesh->Nelements;
 
   *invDiagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
 
@@ -52,12 +52,12 @@ void ellipticBuildJacobiIpdgQuad2D(mesh2D *mesh, int basisNp, dfloat *basis,
   dfloat *patchA = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
 
   // loop over all elements
-  for(int eM=0;eM<mesh->Nelements;++eM){
+  for(iint eM=0;eM<mesh->Nelements;++eM){
     //build the patch A matrix for this element
     BuildLocalPatchAx(mesh, basis, tau, lambda, BCType, B, Br, Bs, eM, patchA);
 
     // compute the diagonal entries
-    for(int n=0;n<mesh->Np;++n){
+    for(iint n=0;n<mesh->Np;++n){
       (*invDiagA)[eM*mesh->Np + n] = 1./patchA[n*mesh->Np+n]; //store the inverse diagonal entry
     }
   }

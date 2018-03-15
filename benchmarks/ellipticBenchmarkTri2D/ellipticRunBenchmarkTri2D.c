@@ -28,7 +28,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
   char testkernelName[BUFSIZ];
   occa::kernel testKernel;
-  for(int i=0; i<NKernels; i++) {
+  for(iint i=0; i<NKernels; i++) {
 
     sprintf(testkernelName, "%s_v%d", kernelName,  i);
     printf("%s Kernel #%02d\n", kernelFileName, i);
@@ -105,8 +105,8 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
       NbytesGlobal  = sizeof(dfloat)*2*mesh->Nfaces*mesh->Nfp;  //trace data
       NbytesGlobal += sizeof(dfloat)*4*mesh->Nfaces;            //sgeo factors
       NbytesGlobal += sizeof(dfloat)*(2+2)*mesh->Np;            //read + write rhs
-      NbytesGlobal += sizeof(int)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
-      NbytesGlobal += sizeof(int)*mesh->Nfaces;                //EToB flag
+      NbytesGlobal += sizeof(iint)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
+      NbytesGlobal += sizeof(iint)*mesh->Nfaces;                //EToB flag
 
       NbytesCacheMiss  = sizeof(dfloat)*mesh->Np*mesh->Nfaces*mesh->Nfp; //LIFT
       NbytesCacheMiss -= L1CacheSize; //L1 cache size
@@ -133,8 +133,8 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
       NbytesGlobal  = sizeof(dfloat)*6*mesh->Nfaces*mesh->Nfp;  //trace data
       NbytesGlobal += sizeof(dfloat)*4*mesh->Nfaces;            //sgeo factors
       NbytesGlobal += sizeof(dfloat)*(2+1)*mesh->Np;            //read q + Aq and write Aq
-      NbytesGlobal += sizeof(int)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
-      NbytesGlobal += sizeof(int)*mesh->Nfaces;                //EToB flag
+      NbytesGlobal += sizeof(iint)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
+      NbytesGlobal += sizeof(iint)*mesh->Nfaces;                //EToB flag
 
       NbytesCacheMiss  = sizeof(dfloat)*mesh->Np*mesh->Nfaces*mesh->Nfp; //LIFT
       NbytesCacheMiss += sizeof(dfloat)*mesh->Np*mesh->Np; // MM

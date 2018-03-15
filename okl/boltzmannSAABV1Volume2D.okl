@@ -3,8 +3,8 @@
 #define SXID 2  
 #define SYID 3
 
-kernel void boltzmannSAABV1NonPmlVolume2D(const int Nelements,
-				    const int * restrict elementIds,
+kernel void boltzmannSAABV1NonPmlVolume2D(const iint Nelements,
+				    const iint * restrict elementIds,
 				    const dfloat ramp,
 				    const dfloat drampdt,
 				    const dfloat * restrict vgeo,
@@ -13,20 +13,20 @@ kernel void boltzmannSAABV1NonPmlVolume2D(const int Nelements,
 				    const dfloat4 * restrict q,
 				          dfloat4 * restrict rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive int element;
+    exclusive iint element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
-	int e = eo+es; // element in block
+	iint e = eo+es; // element in block
 
 	if(e<Nelements){
 	  element = elementIds[e];
 
-	  const int id = element*p_Np+n;
+	  const iint id = element*p_Np+n;
 	  dfloat4 qan = q[2*id];
 	  dfloat4 qbn = q[2*id+1];
 
@@ -45,10 +45,10 @@ kernel void boltzmannSAABV1NonPmlVolume2D(const int Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
-	int e = eo+es; // element in block
+	iint e = eo+es; // element in block
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
@@ -62,7 +62,7 @@ kernel void boltzmannSAABV1NonPmlVolume2D(const int Nelements,
 	  dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
 
 	  occaUnroll(p_Np)
-	  for(int i=0;i<p_Np;++i){
+	  for(iint i=0;i<p_Np;++i){
 	    const dfloat Drni = DrT[n+i*p_Np];
 	    const dfloat Dsni = DsT[n+i*p_Np];
 	    
@@ -139,8 +139,8 @@ kernel void boltzmannSAABV1NonPmlVolume2D(const int Nelements,
 
 
 
-kernel void boltzmannSAABV1NonPmlVolumeCub2D(const int Nelements,
-				    const int * restrict elementIds,
+kernel void boltzmannSAABV1NonPmlVolumeCub2D(const iint Nelements,
+				    const iint * restrict elementIds,
 				    const dfloat ramp,
 				    const dfloat drampdt,
 				    const dfloat * restrict vgeo,
@@ -149,20 +149,20 @@ kernel void boltzmannSAABV1NonPmlVolumeCub2D(const int Nelements,
 				    const dfloat4 * restrict q,
 				          dfloat4 * restrict rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive int element;
+    exclusive iint element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
-	int e = eo+es; // element in block
+	iint e = eo+es; // element in block
 
 	if(e<Nelements){
 	  element = elementIds[e];
 
-	  const int id = element*p_Np+n;
+	  const iint id = element*p_Np+n;
 	  dfloat4 qan = q[2*id];
 	  dfloat4 qbn = q[2*id+1];
 
@@ -181,10 +181,10 @@ kernel void boltzmannSAABV1NonPmlVolumeCub2D(const int Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
-	int e = eo+es; // element in block
+	iint e = eo+es; // element in block
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
@@ -198,7 +198,7 @@ kernel void boltzmannSAABV1NonPmlVolumeCub2D(const int Nelements,
 	  dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
 
 	  occaUnroll(p_Np)
-	  for(int i=0;i<p_Np;++i){
+	  for(iint i=0;i<p_Np;++i){
 	    const dfloat Drni = DrT[n+i*p_Np];
 	    const dfloat Dsni = DsT[n+i*p_Np];
 	    
@@ -270,8 +270,8 @@ kernel void boltzmannSAABV1NonPmlVolumeCub2D(const int Nelements,
 
 
 
-kernel void boltzmannSAABV1SplitPmlVolume2D(const int Nelements,
-				      const int * restrict elementIds,
+kernel void boltzmannSAABV1SplitPmlVolume2D(const iint Nelements,
+				      const iint * restrict elementIds,
 				      const dfloat * restrict vgeo,
 				      const dfloat * restrict sigmax,
 				      const dfloat * restrict sigmay,
@@ -286,19 +286,19 @@ kernel void boltzmannSAABV1SplitPmlVolume2D(const int Nelements,
 				      dfloat * restrict rhspmlNT
 				      ){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive int element;
+    exclusive iint element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
-	int e = eo+es; // element in block
+	iint e = eo+es; // element in block
 	if(e<Nelements){
 	  element = elementIds[e];
 
-	  const int id = element*p_Np+n;
+	  const iint id = element*p_Np+n;
 	  dfloat4 qan = q[2*id];
 	  dfloat4 qbn = q[2*id+1];
 	  
@@ -316,10 +316,10 @@ kernel void boltzmannSAABV1SplitPmlVolume2D(const int Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
-	int e = eo+es; // element in block
+	iint e = eo+es; // element in block
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
@@ -334,7 +334,7 @@ kernel void boltzmannSAABV1SplitPmlVolume2D(const int Nelements,
 	  const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
 	  const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
 
-	  int base = element*p_Np*p_Nfields+n;
+	  iint base = element*p_Np*p_Nfields+n;
 	  dfloat pmlqx1 = pmlqx[base+0*p_Np];
 	  dfloat pmlqx2 = pmlqx[base+1*p_Np];
 	  dfloat pmlqx3 = pmlqx[base+2*p_Np];
@@ -358,7 +358,7 @@ kernel void boltzmannSAABV1SplitPmlVolume2D(const int Nelements,
 	  dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
 
 	  occaUnroll(p_Np)
-	  for(int i=0;i<p_Np;++i){
+	  for(iint i=0;i<p_Np;++i){
 	    const dfloat Drni = DrT[n+i*p_Np];
 	    const dfloat Dsni = DsT[n+i*p_Np];
 	    
@@ -460,8 +460,8 @@ kernel void boltzmannSAABV1SplitPmlVolume2D(const int Nelements,
 
 
 
-kernel void boltzmannSAABV1SplitPmlVolumeCub2D(const int Nelements,
-				      const int * restrict elementIds,
+kernel void boltzmannSAABV1SplitPmlVolumeCub2D(const iint Nelements,
+				      const iint * restrict elementIds,
 				      const dfloat * restrict vgeo,
 				      const dfloat * restrict sigmax,
 				      const dfloat * restrict sigmay,
@@ -476,19 +476,19 @@ kernel void boltzmannSAABV1SplitPmlVolumeCub2D(const int Nelements,
 				      dfloat * restrict rhspmlNT
 				      ){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive int element;
+    exclusive iint element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
-	int e = eo+es; // element in block
+	iint e = eo+es; // element in block
 	if(e<Nelements){
 	  element = elementIds[e];
 
-	  const int id = element*p_Np+n;
+	  const iint id = element*p_Np+n;
 	  dfloat4 qan = q[2*id];
 	  dfloat4 qbn = q[2*id+1];
 	  
@@ -506,10 +506,10 @@ kernel void boltzmannSAABV1SplitPmlVolumeCub2D(const int Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
-	int e = eo+es; // element in block
+	iint e = eo+es; // element in block
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
@@ -524,7 +524,7 @@ kernel void boltzmannSAABV1SplitPmlVolumeCub2D(const int Nelements,
 	  const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
 	  const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
 
-	  int base = element*p_Np*p_Nfields+n;
+	  iint base = element*p_Np*p_Nfields+n;
 	  dfloat pmlqx1 = pmlqx[base+0*p_Np];
 	  dfloat pmlqx2 = pmlqx[base+1*p_Np];
 	  dfloat pmlqx3 = pmlqx[base+2*p_Np];
@@ -548,7 +548,7 @@ kernel void boltzmannSAABV1SplitPmlVolumeCub2D(const int Nelements,
 	  dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
 
 	  occaUnroll(p_Np)
-	  for(int i=0;i<p_Np;++i){
+	  for(iint i=0;i<p_Np;++i){
 	    const dfloat Drni = DrT[n+i*p_Np];
 	    const dfloat Dsni = DsT[n+i*p_Np];
 	    

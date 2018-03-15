@@ -28,7 +28,7 @@ void ellipticOperator3D(solver_t *solver, dfloat lambda,
     
     ellipticEndHaloExchange3D(mesh, o_q, recvBuffer);
 
-    int allNelements = mesh->Nelements+mesh->totalHaloPairs;
+    iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
     mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
 
     dfloat tau = 2.f*(mesh->Nq)*(mesh->Nq+2)/3.;
@@ -72,7 +72,7 @@ void ellipticMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, cons
     
     ellipticEndHaloExchange3D(mesh, o_q, recvBuffer);
 
-    int allNelements = mesh->Nelements+mesh->totalHaloPairs;
+    iint allNelements = mesh->Nelements+mesh->totalHaloPairs;
     mesh->gradientKernel(allNelements, mesh->o_vgeo, mesh->o_D, o_q, solver->o_grad);
 
     dfloat tau = 2.f*(mesh->Nq)*(mesh->Nq+2)/3.;
@@ -95,7 +95,7 @@ dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dflo
 
   mesh_t *mesh = solver->mesh;
 
-  int Ntotal = mesh->Nelements*mesh->Np;
+  iint Ntotal = mesh->Nelements*mesh->Np;
 
   occaTimerTic(mesh->device,"scaledAddKernel");
   
@@ -114,8 +114,8 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   dfloat *tmp = solver->tmp;
-  int Nblock = solver->Nblock;
-  int Ntotal = mesh->Nelements*mesh->Np;
+  iint Nblock = solver->Nblock;
+  iint Ntotal = mesh->Nelements*mesh->Np;
 
   occa::memory &o_tmp = solver->o_tmp;
 
@@ -131,7 +131,7 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
   o_tmp.copyTo(tmp);
 
   dfloat wab = 0;
-  for(int n=0;n<Nblock;++n){
+  for(iint n=0;n<Nblock;++n){
     wab += tmp[n];
   }
       
@@ -241,7 +241,7 @@ void ellipticPreconditioner3D(solver_t *solver,
   
   } else if(strstr(options, "JACOBI")){
 
-    int Ntotal = mesh->Np*mesh->Nelements;
+    iint Ntotal = mesh->Np*mesh->Nelements;
     // Jacobi preconditioner
     occaTimerTic(mesh->device,"dotDivideKernel");   
     mesh->dotDivideKernel(Ntotal, o_r, precon->o_diagA, o_z);
@@ -256,7 +256,7 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
 
   mesh_t *mesh = solver->mesh;
   
-  int rank;
+  iint rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // convergence tolerance (currently absolute)
@@ -301,7 +301,7 @@ int ellipticSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa:
   dfloat rdotz0 = ellipticWeightedInnerProduct(solver, solver->o_invDegree, o_r, o_z, options);
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
-  int Niter = 0;
+  iint Niter = 0;
   dfloat alpha, beta, pAp;
     
   if(rank==0)

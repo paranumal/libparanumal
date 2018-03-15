@@ -1,6 +1,6 @@
 #include "insBenchmark2D.h"
 
-ins_t *insSetup2D(mesh2D *mesh, int factor, char * options, int Nblocks, int Nnodes,
+ins_t *insSetup2D(mesh2D *mesh, iint factor, char * options, int Nblocks, int Nnodes,
                   char *vSolverOptions, char *vParAlmondOptions,
                   char *pSolverOptions, char *pParAlmondOptions,
                   char *boundaryHeaderFileName, occa::kernelInfo &kernelInfo){
@@ -104,9 +104,9 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options, int Nblocks, int Nno
   printf("starting parameters\n");
   // set time step
   dfloat hmin = 1e9, hmax = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int f=0;f<mesh->Nfaces;++f){
-      int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint f=0;f<mesh->Nfaces;++f){
+      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -119,9 +119,9 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options, int Nblocks, int Nno
 
   // Find Maximum Velocity
   dfloat umax = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      const int id = n + mesh->Np*e;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      const iint id = n + mesh->Np*e;
       dfloat t = 0;
       dfloat uxn = ins->U[id];
       dfloat uyn = ins->V[id];
@@ -214,10 +214,10 @@ ins_t *insSetup2D(mesh2D *mesh, int factor, char * options, int Nblocks, int Nno
   kernelInfo.addDefine("p_NblockS", Nblocks);
   kernelInfo.addDefine("p_Nnodes", Nnodes);
 
-  int maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);
+  iint maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);
   kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
 
-  int maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
   kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
 
   kernelInfo.addDefine("p_cubNblockV",Nblocks);

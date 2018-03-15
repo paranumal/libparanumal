@@ -10,7 +10,7 @@
 
 // function to compute collocation differentiation
 // contributions to nodal DG rhs for acoustics
-kernel void acousticsVolume3D(const int Nelements,
+kernel void acousticsVolume3D(const iint Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
@@ -18,8 +18,8 @@ kernel void acousticsVolume3D(const int Nelements,
 				     const dfloat * restrict q,
 				     dfloat * restrict rhsq){
   
-  for(int e=0;e<Nelements;++e;outer0){  // for all elements
-    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  for(iint e=0;e<Nelements;++e;outer0){  // for all elements
+    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
@@ -38,9 +38,9 @@ kernel void acousticsVolume3D(const int Nelements,
       dfloat dwdr = 0, dwds = 0, dwdt = 0;
       dfloat dpdr = 0, dpds = 0, dpdt = 0;
       
-      for(int i=0;i<p_Np;++i){
+      for(iint i=0;i<p_Np;++i){
 				// load data at node i of element e
-				const int id = p_Nfields*(e*p_Np + i);
+				const iint id = p_Nfields*(e*p_Np + i);
 				const dfloat u = q[id+0], v = q[id+1], w = q[id+2], p = q[id+3];
 
 			 	const dfloat Drni = DrT[n+i*p_Np];
@@ -63,7 +63,7 @@ kernel void acousticsVolume3D(const int Nelements,
       const dfloat dpdz = drdz*dpdr + dsdz*dpds + dtdz*dpdt;
       
       // store acoustics rhs contributions from collocation differentiation
-      const int id = p_Nfields*(e*p_Np + n);
+      const iint id = p_Nfields*(e*p_Np + n);
       rhsq[id+0] = -dpdx;
       rhsq[id+1] = -dpdy;
       rhsq[id+2] = -dpdz;
@@ -72,30 +72,30 @@ kernel void acousticsVolume3D(const int Nelements,
   }
 }
 
-kernel void acousticsVolume3Dbbdg(const int Nelements,
+kernel void acousticsVolume3Dbbdg(const iint Nelements,
           const dfloat * restrict vgeo,
-          const int * restrict D0ids,
-          const int * restrict D1ids,
-          const int * restrict D2ids,
-          const int * restrict D3ids,
+          const iint * restrict D0ids,
+          const iint * restrict D1ids,
+          const iint * restrict D2ids,
+          const iint * restrict D3ids,
           const dfloat * restrict Dvals,    
           const dfloat * restrict q,
           dfloat * restrict rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_u[p_NblockV][p_Np];
     shared dfloat s_v[p_NblockV][p_Np];
     shared dfloat s_w[p_NblockV][p_Np];
     shared dfloat s_p[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
-        int e = eo+es; // element in block
+        iint e = eo+es; // element in block
 
         if(e<Nelements){
-          const int id = p_Nfields*(e*p_Np + n);
+          const iint id = p_Nfields*(e*p_Np + n);
           s_u[es][n] = q[id+0];
           s_v[es][n] = q[id+1];
           s_w[es][n] = q[id+2];
@@ -107,10 +107,10 @@ kernel void acousticsVolume3Dbbdg(const int Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
   
-        int e = eo+es; // element in block
+        iint e = eo+es; // element in block
         if(e<Nelements){
 
           // prefetch geometric factors (constant on triangle)
@@ -125,28 +125,28 @@ kernel void acousticsVolume3Dbbdg(const int Nelements,
           const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
 
           // compute 'r', 's',  and 't' derivatives of (q_m) at node n
-          const int D0i1 = D0ids[n];
-          const int D1i1 = D1ids[n];
-          const int D2i1 = D2ids[n];
-          const int D3i1 = D3ids[n];
+          const iint D0i1 = D0ids[n];
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
           const dfloat Dval1 = Dvals[n];
           
-          const int D0i2 = D0ids[n+p_Np];
-          const int D1i2 = D1ids[n+p_Np];
-          const int D2i2 = D2ids[n+p_Np];
-          const int D3i2 = D3ids[n+p_Np];
+          const iint D0i2 = D0ids[n+p_Np];
+          const iint D1i2 = D1ids[n+p_Np];
+          const iint D2i2 = D2ids[n+p_Np];
+          const iint D3i2 = D3ids[n+p_Np];
           const dfloat Dval2 = Dvals[n+p_Np];
 
-          const int D0i3 = D0ids[n+2*p_Np];
-          const int D1i3 = D1ids[n+2*p_Np];
-          const int D2i3 = D2ids[n+2*p_Np];
-          const int D3i3 = D3ids[n+2*p_Np];    
+          const iint D0i3 = D0ids[n+2*p_Np];
+          const iint D1i3 = D1ids[n+2*p_Np];
+          const iint D2i3 = D2ids[n+2*p_Np];
+          const iint D3i3 = D3ids[n+2*p_Np];    
           const dfloat Dval3 = Dvals[n+2*p_Np];
 
-          const int D0i4 = D0ids[n+3*p_Np];
-          const int D1i4 = D1ids[n+3*p_Np];
-          const int D2i4 = D2ids[n+3*p_Np];
-          const int D3i4 = D3ids[n+3*p_Np];    
+          const iint D0i4 = D0ids[n+3*p_Np];
+          const iint D1i4 = D1ids[n+3*p_Np];
+          const iint D2i4 = D2ids[n+3*p_Np];
+          const iint D3i4 = D3ids[n+3*p_Np];    
           const dfloat Dval4 = Dvals[n+3*p_Np];
 
           const dfloat dudr = .5f*(Dval1*(s_u[es][D1i1] - s_u[es][D0i1]) +
@@ -210,7 +210,7 @@ kernel void acousticsVolume3Dbbdg(const int Nelements,
           const dfloat dpdz = drdz*dpdr + dsdz*dpds + dtdz*dpdt;
           
           // store acoustics rhs contributions from collocation differentiation
-          const int id = p_Nfields*(e*p_Np + n);
+          const iint id = p_Nfields*(e*p_Np + n);
           rhsq[id+0] = -dpdx;
           rhsq[id+1] = -dpdy;
           rhsq[id+2] = -dpdz;

@@ -4,10 +4,10 @@
 #include "mesh.h"
 
 typedef struct {
-  int NfaceVertices;
-  int v[4]; // vertices on face
-  int element, face, rank;    // face info
-  int elementN, faceN, rankN; // N for neighbor face info
+  iint NfaceVertices;
+  iint v[4]; // vertices on face
+  iint element, face, rank;    // face info
+  iint elementN, faceN, rankN; // N for neighbor face info
 
 }parallelFace_t;
 
@@ -19,7 +19,7 @@ int parallelCompareVertices(const void *a,
   parallelFace_t *fa = (parallelFace_t*) a;
   parallelFace_t *fb = (parallelFace_t*) b;
 
-  for(int n=0;n<fa->NfaceVertices;++n){
+  for(iint n=0;n<fa->NfaceVertices;++n){
     if(fa->v[n] < fb->v[n]) return -1;
     if(fa->v[n] > fb->v[n]) return +1;
   }
@@ -51,7 +51,7 @@ int parallelCompareFaces(const void *a,
 // mesh is the local partition
 void meshParallelConnect(mesh_t *mesh){
 
-  int rank, size;
+  iint rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -61,23 +61,23 @@ void meshParallelConnect(mesh_t *mesh){
 
   // count # of elements to send to each rank based on
   // minimum {vertex id % size}
-  int *Nsend = (int*) calloc(size, sizeof(int));
-  int *Nrecv = (int*) calloc(size, sizeof(int));
-  int *sendOffsets = (int*) calloc(size, sizeof(int));
-  int *recvOffsets = (int*) calloc(size, sizeof(int));
+  iint *Nsend = (iint*) calloc(size, sizeof(iint));
+  iint *Nrecv = (iint*) calloc(size, sizeof(iint));
+  iint *sendOffsets = (iint*) calloc(size, sizeof(iint));
+  iint *recvOffsets = (iint*) calloc(size, sizeof(iint));
     
-  int allNsend = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int f=0;f<mesh->Nfaces;++f){
+  iint allNsend = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint f=0;f<mesh->Nfaces;++f){
       if(mesh->EToE[e*mesh->Nfaces+f]==-1){
         // find rank of destination for sorting based on max(face vertices)%size
-        int maxv = 0;
-        for(int n=0;n<mesh->NfaceVertices;++n){
-          int nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
-          int id = mesh->EToV[e*mesh->Nverts + nid];
+        iint maxv = 0;
+        for(iint n=0;n<mesh->NfaceVertices;++n){
+          iint nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
+          iint id = mesh->EToV[e*mesh->Nverts + nid];
           maxv = mymax(maxv, id);
         }
-        int destRank = maxv%size;
+        iint destRank = maxv%size;
 
         // increment send size for 
         ++Nsend[destRank];
@@ -87,38 +87,38 @@ void meshParallelConnect(mesh_t *mesh){
   }
   
   // find send offsets
-  for(int r=1;r<size;++r)
+  for(iint r=1;r<size;++r)
     sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
   
   // reset counters
-  for(int r=0;r<size;++r)
+  for(iint r=0;r<size;++r)
     Nsend[r] = 0;
 
   // buffer for outgoing data
   parallelFace_t *sendFaces = (parallelFace_t*) calloc(allNsend, sizeof(parallelFace_t));
 
   // pack face data
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int f=0;f<mesh->Nfaces;++f){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint f=0;f<mesh->Nfaces;++f){
       if(mesh->EToE[e*mesh->Nfaces+f]==-1){
 
       	// find rank of destination for sorting based on max(face vertices)%size
-      	int maxv = 0;
-      	for(int n=0;n<mesh->NfaceVertices;++n){
-      	  int nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
-      	  int id = mesh->EToV[e*mesh->Nverts + nid];
+      	iint maxv = 0;
+      	for(iint n=0;n<mesh->NfaceVertices;++n){
+      	  iint nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
+      	  iint id = mesh->EToV[e*mesh->Nverts + nid];
       	  maxv = mymax(maxv, id);
       	}
-      	int destRank = maxv%size;
+      	iint destRank = maxv%size;
       	
       	// populate face to send out staged in segment of sendFaces array
-      	int id = sendOffsets[destRank]+Nsend[destRank];
+      	iint id = sendOffsets[destRank]+Nsend[destRank];
 
       	
       	sendFaces[id].element = e;
       	sendFaces[id].face = f;
-      	for(int n=0;n<mesh->NfaceVertices;++n){
-      	  int nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
+      	for(iint n=0;n<mesh->NfaceVertices;++n){
+      	  iint nid = mesh->faceVertices[f*mesh->NfaceVertices+n];
       	  sendFaces[id].v[n] = mesh->EToV[e*mesh->Nverts + nid];
       	}
 
@@ -137,13 +137,13 @@ void meshParallelConnect(mesh_t *mesh){
   }
 
   // exchange byte counts 
-  MPI_Alltoall(Nsend, 1, MPI_int,
-	       Nrecv, 1, MPI_int,
+  MPI_Alltoall(Nsend, 1, MPI_IINT,
+	       Nrecv, 1, MPI_IINT,
 	       MPI_COMM_WORLD);
   
   // count incoming faces
-  int allNrecv = 0;
-  for(int r=0;r<size;++r){
+  iint allNrecv = 0;
+  for(iint r=0;r<size;++r){
     allNrecv += Nrecv[r];
     Nrecv[r] *= sizeof(parallelFace_t);
     Nsend[r] *= sizeof(parallelFace_t);
@@ -151,7 +151,7 @@ void meshParallelConnect(mesh_t *mesh){
   }
 
   // find offsets for recv data
-  for(int r=1;r<size;++r)
+  for(iint r=1;r<size;++r)
     recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1]; // byte offsets
   
   // buffer for incoming face data
@@ -166,7 +166,7 @@ void meshParallelConnect(mesh_t *mesh){
   qsort(recvFaces, allNrecv, sizeof(parallelFace_t), parallelCompareVertices);
 
   // find matches
-  for(int n=0;n<allNrecv-1;++n){
+  for(iint n=0;n<allNrecv-1;++n){
     // since vertices are ordered we just look for pairs
     if(!parallelCompareVertices(recvFaces+n, recvFaces+n+1)){
       recvFaces[n].elementN = recvFaces[n+1].element;
@@ -188,16 +188,16 @@ void meshParallelConnect(mesh_t *mesh){
 		MPI_COMM_WORLD);
   
   // extract connectivity info
-  mesh->EToP = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int));
+  mesh->EToP = (iint*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(iint));
   for(int cnt=0;cnt<mesh->Nelements*mesh->Nfaces;++cnt)
     mesh->EToP[cnt] = -1;
   
-  for(int cnt=0;cnt<allNsend;++cnt){
-    int e = sendFaces[cnt].element;
-    int f = sendFaces[cnt].face;
-    int eN = sendFaces[cnt].elementN;
-    int fN = sendFaces[cnt].faceN;
-    int rN = sendFaces[cnt].rankN;
+  for(iint cnt=0;cnt<allNsend;++cnt){
+    iint e = sendFaces[cnt].element;
+    iint f = sendFaces[cnt].face;
+    iint eN = sendFaces[cnt].elementN;
+    iint fN = sendFaces[cnt].faceN;
+    iint rN = sendFaces[cnt].rankN;
     
     if(e>=0 && f>=0 && eN>=0 && fN>=0){
       mesh->EToE[e*mesh->Nfaces+f] = eN;
