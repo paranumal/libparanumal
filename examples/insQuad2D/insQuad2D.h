@@ -46,7 +46,7 @@ typedef struct {
   dfloat *rhsU, *rhsV, *rhsP;   
   dfloat *PI,*Px,*Py;
   
-  dfloat *Vx, *Vy, *Vz, *Div;   
+  dfloat *Vort, *Div;   
 
   dfloat g[2];      // gravitational Acceleration
 
@@ -81,6 +81,7 @@ typedef struct {
 
   occa::memory o_Ut, o_Vt, o_Pt, o_WN; 
 
+  occa::memory o_Vort, o_Div; 
 
   // multiple RHS pressure projection variables
   int maxPresHistory, NpresHistory;
@@ -141,6 +142,7 @@ typedef struct {
   occa::kernel helmholtzAddBCKernel;
   
   occa::kernel updateUpdateKernel;
+  occa::kernel vorticityKernel;
 
 }ins_t;
 

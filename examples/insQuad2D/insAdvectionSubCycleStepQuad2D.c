@@ -9,7 +9,7 @@ void insAdvectionSubCycleStepQuad2D(ins_t *ins, int tstep, char   * options){
   const dlong NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
   const dlong Ntotal         =  NtotalElements*mesh->Np;  
 
-  const int voffset = 0; 
+  const dlong voffset = 0; 
   // field offset at this step
   dlong offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
   
@@ -163,8 +163,7 @@ void insAdvectionSubCycleStepQuad2D(ins_t *ins, int tstep, char   * options){
           } else{
             ins->subCycleVolumeKernel(mesh->Nelements,
                                       mesh->o_vgeo,
-                                      mesh->o_DrT,
-                                      mesh->o_DsT,
+                                      mesh->o_D,
                                       ins->o_Ue,
                                       ins->o_Ve,
                                            o_Ud,
@@ -213,10 +212,10 @@ void insAdvectionSubCycleStepQuad2D(ins_t *ins, int tstep, char   * options){
           } else{
             ins->subCycleSurfaceKernel(mesh->Nelements,
                                       mesh->o_sgeo,
-                                      mesh->o_LIFTT,
                                       mesh->o_vmapM,
                                       mesh->o_vmapP,
                                       mesh->o_EToB,
+                                      bScale,
                                       t,
                                       mesh->o_x,
                                       mesh->o_y,
@@ -253,8 +252,7 @@ void insAdvectionSubCycleStepQuad2D(ins_t *ins, int tstep, char   * options){
   occaTimerTic(mesh->device,"GradientVolume");
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
-                            mesh->o_DrT,
-                            mesh->o_DsT,
+                            mesh->o_D,
                             offset0,
                             ins->o_P,
                             ins->o_Px,
@@ -267,7 +265,6 @@ void insAdvectionSubCycleStepQuad2D(ins_t *ins, int tstep, char   * options){
     // Compute Surface Conribution
     ins->gradientSurfaceKernel(mesh->Nelements,
                                mesh->o_sgeo,
-                               mesh->o_LIFTT,
                                mesh->o_vmapM,
                                mesh->o_vmapP,
                                mesh->o_EToB,

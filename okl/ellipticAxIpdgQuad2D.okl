@@ -18,7 +18,7 @@
   const dfloat4 gradqM = gradq[idM];                                    \
   dfloat4 gradqP = gradq[idP];                                          \
                                                                         \
-  int bc = EToB[face+p_Nfaces*e];                                         \
+  int bc = EToB[face+p_Nfaces*element];                                         \
   if(bc>0) {                                                            \
     ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y,gradqP.w, gradqP.x, gradqP.y);          \
     gradqP = 2.f*gradqP - gradqM;                                         \
@@ -88,9 +88,12 @@ kernel void ellipticAxIpdgQuad2D(const dlong Nelements,
     shared dfloat s_rhsq[p_Nq][p_Nq];
     shared dfloat s_D[p_Nq][p_Nq];
 
+    exclusive dlong element;
+
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;inner0){
+        element = e;
 
         // assume that this stores (p, px, py, pz) as dfloat4
         const dfloat4 gradqn = gradq[e*p_Np+j*p_Nq+i];
