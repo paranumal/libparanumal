@@ -1,14 +1,14 @@
 
 
-kernel void ellipticFooTri2D(const iint Nelements,
+kernel void ellipticFooTri2D(const dlong Nelements,
 			      const dfloat * restrict Pq,
 			      dfloat * restrict Rq){
   
   
-  for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
-      iint idP = n + e*p_NpP;	
-      iint id  = n + e*p_Np;
+  for(dlong e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+      dlong idP = n + e*p_NpP;	
+      dlong id  = n + e*p_Np;
       Rq[id] = Pq[idP];
     }
   }

@@ -8,10 +8,10 @@ void meshPhysicalNodesHex3D(mesh3D *mesh){
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->z = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
+  dlong cnt = 0;
+  for(dlong e=0;e<mesh->Nelements;++e){ /* for each element */
 
-    iint id = e*mesh->Nverts;
+    dlong id = e*mesh->Nverts;
 
     dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat xe2 = mesh->EX[id+1];
@@ -40,7 +40,7 @@ void meshPhysicalNodesHex3D(mesh3D *mesh){
     dfloat ze7 = mesh->EZ[id+6];
     dfloat ze8 = mesh->EZ[id+7];
 
-    for(iint n=0;n<mesh->Np;++n){ /* for each node */
+    for(int n=0;n<mesh->Np;++n){ /* for each node */
       
       /* (r,s,t) coordinates of interpolation nodes*/
       dfloat rn = mesh->r[n]; 
@@ -49,34 +49,34 @@ void meshPhysicalNodesHex3D(mesh3D *mesh){
 
       /* physical coordinate of interpolation node */
       mesh->x[cnt] = 
-	+0.125*(1-rn)*(1-sn)*(1-tn)*xe1
-	+0.125*(1+rn)*(1-sn)*(1-tn)*xe2
-	+0.125*(1+rn)*(1+sn)*(1-tn)*xe3
-	+0.125*(1-rn)*(1+sn)*(1-tn)*xe4
-	+0.125*(1-rn)*(1-sn)*(1+tn)*xe5
-	+0.125*(1+rn)*(1-sn)*(1+tn)*xe6
-	+0.125*(1+rn)*(1+sn)*(1+tn)*xe7
-	+0.125*(1-rn)*(1+sn)*(1+tn)*xe8;
+        +0.125*(1-rn)*(1-sn)*(1-tn)*xe1
+        +0.125*(1+rn)*(1-sn)*(1-tn)*xe2
+        +0.125*(1+rn)*(1+sn)*(1-tn)*xe3
+        +0.125*(1-rn)*(1+sn)*(1-tn)*xe4
+        +0.125*(1-rn)*(1-sn)*(1+tn)*xe5
+        +0.125*(1+rn)*(1-sn)*(1+tn)*xe6
+        +0.125*(1+rn)*(1+sn)*(1+tn)*xe7
+        +0.125*(1-rn)*(1+sn)*(1+tn)*xe8;
 
       mesh->y[cnt] = 
-	+0.125*(1-rn)*(1-sn)*(1-tn)*ye1
-	+0.125*(1+rn)*(1-sn)*(1-tn)*ye2
-	+0.125*(1+rn)*(1+sn)*(1-tn)*ye3
-	+0.125*(1-rn)*(1+sn)*(1-tn)*ye4
-	+0.125*(1-rn)*(1-sn)*(1+tn)*ye5
-	+0.125*(1+rn)*(1-sn)*(1+tn)*ye6
-	+0.125*(1+rn)*(1+sn)*(1+tn)*ye7
-	+0.125*(1-rn)*(1+sn)*(1+tn)*ye8;
+        +0.125*(1-rn)*(1-sn)*(1-tn)*ye1
+        +0.125*(1+rn)*(1-sn)*(1-tn)*ye2
+        +0.125*(1+rn)*(1+sn)*(1-tn)*ye3
+        +0.125*(1-rn)*(1+sn)*(1-tn)*ye4
+        +0.125*(1-rn)*(1-sn)*(1+tn)*ye5
+        +0.125*(1+rn)*(1-sn)*(1+tn)*ye6
+        +0.125*(1+rn)*(1+sn)*(1+tn)*ye7
+        +0.125*(1-rn)*(1+sn)*(1+tn)*ye8;
 
       mesh->z[cnt] = 
-	+0.125*(1-rn)*(1-sn)*(1-tn)*ze1
-	+0.125*(1+rn)*(1-sn)*(1-tn)*ze2
-	+0.125*(1+rn)*(1+sn)*(1-tn)*ze3
-	+0.125*(1-rn)*(1+sn)*(1-tn)*ze4
-	+0.125*(1-rn)*(1-sn)*(1+tn)*ze5
-	+0.125*(1+rn)*(1-sn)*(1+tn)*ze6
-	+0.125*(1+rn)*(1+sn)*(1+tn)*ze7
-	+0.125*(1-rn)*(1+sn)*(1+tn)*ze8;
+        +0.125*(1-rn)*(1-sn)*(1-tn)*ze1
+        +0.125*(1+rn)*(1-sn)*(1-tn)*ze2
+        +0.125*(1+rn)*(1+sn)*(1-tn)*ze3
+        +0.125*(1-rn)*(1+sn)*(1-tn)*ze4
+        +0.125*(1-rn)*(1-sn)*(1+tn)*ze5
+        +0.125*(1+rn)*(1-sn)*(1+tn)*ze6
+        +0.125*(1+rn)*(1+sn)*(1+tn)*ze7
+        +0.125*(1-rn)*(1+sn)*(1+tn)*ze8;
 
       ++cnt;
     }

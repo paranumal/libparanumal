@@ -11,7 +11,7 @@ void boltzmannRun2D(mesh2D *mesh, char *options){
   // MPI send buffer
   dfloat *sendBuffer;
   dfloat *recvBuffer;
-  iint haloBytes;
+  int haloBytes;
 
   if(strstr(options,"MRAB") || strstr(options,"MRSAAB"))
     haloBytes = mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat);
@@ -36,7 +36,7 @@ void boltzmannRun2D(mesh2D *mesh, char *options){
 
   // Populate Trace Buffer
    dfloat zero = 0.0;
-  for (iint l=0; l<mesh->MRABNlevels; l++) {
+  for (int l=0; l<mesh->MRABNlevels; l++) {
 
     if(strstr(options,"MRAB")){
        if (mesh->MRABNelements[l])
@@ -117,9 +117,9 @@ occa::initTimer(mesh->device);
 occaTimerTic(mesh->device,"BOLTZMANN");
 
 tic_tot = MPI_Wtime();
- for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+ for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
       
-   // for(iint tstep=0;tstep<1;++tstep){
+   // for(int tstep=0;tstep<1;++tstep){
       tic_out = MPI_Wtime();
 
       if(strstr(options, "REPORT")){

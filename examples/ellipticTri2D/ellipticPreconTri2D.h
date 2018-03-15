@@ -1,8 +1,8 @@
 typedef struct{
 
-  iint row;
-  iint col;
-  iint ownerRank;
+  hlong row;
+  hlong col;
+  int ownerRank;
   dfloat val;
 
 }nonZero_t;
@@ -11,8 +11,8 @@ typedef struct {
 
   long long int preconBytes;
 
-  hgs_t *hgs;
-  hgs_t *FEMhgs;
+  ogs_t *ogs;
+  ogs_t *FEMogs;
 
   dfloat *zP;
   occa::memory o_zP;
@@ -50,7 +50,7 @@ typedef struct {
   occa::kernel approxBlockJacobiSolverKernel;
   occa::kernel patchGatherKernel;
   occa::kernel facePatchGatherKernel;
-
+  occa::kernel CGLocalPatchKernel;
 
   occa::memory o_rFEM;
   occa::memory o_zFEM;
@@ -61,7 +61,6 @@ typedef struct {
   occa::kernel SEMFEMAnterpKernel;
 
   ogs_t *ogsP, *ogsDg;
-  hgs_t *hgsP, *hgsDg;
 
   occa::memory o_diagA;
   occa::memory o_invDiagA;
@@ -78,9 +77,9 @@ typedef struct {
 
   occa::memory o_coarseInvDegree;
 
-  iint coarseNp;
-  iint coarseTotal;
-  iint *coarseOffsets;
+  int coarseNp;
+  hlong coarseTotal;
+  hlong *coarseOffsets;
   dfloat *B, *tmp2;
   occa::memory *o_B, o_tmp2;
   void *xxt2;
@@ -89,6 +88,7 @@ typedef struct {
   // block Jacobi precon
   occa::memory o_invMM;
   occa::kernel blockJacobiKernel;
+  occa::kernel partialblockJacobiKernel;
 
   //dummy almond level to store the OAS smoothing op
   agmgLevel *OASLevel;
@@ -110,25 +110,12 @@ extern "C"
                 double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
 
-void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                              dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                              iint *nnzA, iint *globalStarts, const char *options);
-
-void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                              dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                              iint *nnzA, iint *globalStarts, const char *options);
-
-void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
-                              hgs_t **hgs, iint *globalStarts, const char* options);
-
-void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts, const char *options);
-
 //Multigrid function callbacks
 void AxTri2D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
 void coarsenTri2D   (void **args, occa::memory &o_x, occa::memory &o_Rx);
 void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px);
+void ellipticGather (void **args, occa::memory &o_x, occa::memory &o_Gx);
+void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx);
 void smoothTri2D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
 void smoothChebyshevTri2D(void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
 

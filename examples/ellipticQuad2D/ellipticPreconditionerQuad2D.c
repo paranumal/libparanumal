@@ -1,12 +1,5 @@
 #include "ellipticQuad2D.h"
 
-void ellipticStartHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *sendBuffer, dfloat *recvBuffer);
-void ellipticEndHaloExchange2D(mesh2D *mesh, occa::memory &o_q, dfloat *recvBuffer);
-void ellipticParallelGatherScatterQuad2D(mesh2D *mesh, ogs_t *ogs, occa::memory &o_q, occa::memory &o_gsq, const char *type, const char *op);
-dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
-void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
-
-
 void ellipticPreconditioner2D(solver_t *solver,
             dfloat lambda,
             occa::memory &o_r,
@@ -15,12 +8,8 @@ void ellipticPreconditioner2D(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   precon_t *precon = solver->precon;
-  ogs_t    *ogs = solver->ogs; // C0 Gather ScatterTri info
 
-  dfloat *sendBuffer = solver->sendBuffer;
-  dfloat *recvBuffer = solver->recvBuffer;
-
-  if (strstr(options, "FULLALMOND")||strstr(options, "MULTIGRID")) {
+  if (strstr(options, "FULLALMOND")||strstr(options, "MULTIGRID")||strstr(options, "SEMFEM")) {
 
     occaTimerTic(mesh->device,"parALMOND");
     parAlmondPrecon(precon->parAlmond, o_z, o_r);
@@ -52,13 +41,13 @@ void ellipticPreconditioner2D(solver_t *solver,
 
   } else if(strstr(options, "JACOBI")){
 
-    iint Ntotal = mesh->Np*mesh->Nelements;
+    dlong Ntotal = mesh->Np*mesh->Nelements;
     // Jacobi preconditioner
     occaTimerTic(mesh->device,"dotDivideKernel");
     solver->dotMultiplyKernel(Ntotal, o_r, precon->o_invDiagA, o_z);
     occaTimerToc(mesh->device,"dotDivideKernel");
-  }
-  else{ // turn off preconditioner
-    o_z.copyFrom(o_r);
+  
+  }  else{ // turn off preconditioner
+    o_z.copyFrom(o_r); 
   }
 }

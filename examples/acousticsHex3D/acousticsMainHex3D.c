@@ -15,7 +15,7 @@ int main(int argc, char **argv){
   int N = atoi(argv[2]);
 
   // set up mesh stuff
-  mesh3D *meshSetupHex3D(char *, iint);
+  mesh3D *meshSetupHex3D(char *, int);
   mesh3D *mesh = meshSetupHex3D(argv[1], N);
 
   // set up acoustics stuff

@@ -56,7 +56,7 @@ void upwind3D(const dfloat nx,  const dfloat ny,  const dfloat nz,
 }
 
 
-void boundaryConditions3D(const iint bc, const dfloat  t, const dfloat  x, const dfloat  y, const dfloat  z,
+void boundaryConditions3D(const int bc, const dfloat  t, const dfloat  x, const dfloat  y, const dfloat  z,
 			  			  const dfloat  nx, const dfloat  ny, const dfloat  nz,
 			              const dfloat ramp,
 			              const dfloat  q1M, const dfloat  q2M, const dfloat  q3M, const dfloat  q4M, const dfloat  q5M, 
@@ -141,13 +141,13 @@ void boundaryConditions3D(const iint bc, const dfloat  t, const dfloat  x, const
 }
 
 
-kernel void boltzmannSurface3D(const iint Nelements,
-				     const iint * restrict elementIds,
+kernel void boltzmannSurface3D(const int Nelements,
+				     const int * restrict elementIds,
 				     const dfloat * restrict sgeo,
 				     const dfloat * restrict LIFTT,
-				     const iint   * restrict vmapM,
-				     const iint   * restrict vmapP,
-				     const iint   * restrict EToB,
+				     const int   * restrict vmapM,
+				     const int   * restrict vmapP,
+				     const int   * restrict EToB,
 				     const dfloat time,
 				     const dfloat * restrict x,
 				     const dfloat * restrict y,
@@ -157,25 +157,25 @@ kernel void boltzmannSurface3D(const iint Nelements,
 				           dfloat4 * restrict rhsq){
   
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxq[p_NblockS][10][p_Nfp*p_Nfaces];
-    exclusive iint element;
+    exclusive int element;
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	int e = eo + es;
 	if(e<Nelements){
 
 	  element = elementIds[e];
 
 	  if(n<p_Nfp*p_Nfaces){
 	    // find face that owns this node
-	    iint face = n/p_Nfp;  
+	    int face = n/p_Nfp;  
 	   // load surface geofactors for this face
-	    iint sid = p_Nsgeo*(element*p_Nfaces+face);
+	    int sid = p_Nsgeo*(element*p_Nfaces+face);
 			dfloat nx   = sgeo[sid+NXID];
 			dfloat ny   = sgeo[sid+NYID];
 			dfloat nz   = sgeo[sid+NZID];
@@ -183,9 +183,9 @@ kernel void boltzmannSurface3D(const iint Nelements,
 			dfloat invJ = sgeo[sid+IJID];
 
 	    // indices of negative and positive traces of face node
-	    iint id  = element*p_Nfp*p_Nfaces + n;
-	    iint idM = vmapM[id];
-	    iint idP = vmapP[id];
+	    int id  = element*p_Nfp*p_Nfaces + n;
+	    int idM = vmapM[id];
+	    int idP = vmapP[id];
 
 	    if(idP<0) idP = idM;
 	  
@@ -201,7 +201,7 @@ kernel void boltzmannSurface3D(const iint Nelements,
 	    dfloat q9P  = qPc.x, q10P = qPc.y;
 	    	    
 	    // apply boundary condition
-	    iint bc = EToB[face+p_Nfaces*element];
+	    int bc = EToB[face+p_Nfaces*element];
 	    if(bc>0){
 	      boundaryConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz,ramp,
 				               q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M,
@@ -252,12 +252,12 @@ kernel void boltzmannSurface3D(const iint Nelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-	iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+	int e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Np){
-	    iint id = 3*(p_Np*element + n);
+	    int id = 3*(p_Np*element + n);
 	    
 	    // load RHS
 	    dfloat4 rhsqna = rhsq[id+0], rhsqnb = rhsq[id+1], rhsqnc = rhsq[id+2];
@@ -296,13 +296,13 @@ kernel void boltzmannSurface3D(const iint Nelements,
 
 
 // For variable geometric properties hold flux unction seperately
-kernel void boltzmannPmlSurface3D(const iint Nelements,
-				       const iint * restrict elementIds,
+kernel void boltzmannPmlSurface3D(const int Nelements,
+				       const int * restrict elementIds,
 				       const dfloat * restrict sgeo,
 				       const dfloat * restrict LIFTT,
-				       const iint   * restrict vmapM,
-				       const iint   * restrict vmapP,
-				       const iint   * restrict EToB,
+				       const int   * restrict vmapM,
+				       const int   * restrict vmapP,
+				       const int   * restrict EToB,
 				       const dfloat time,
 				       const dfloat * restrict x,
 				       const dfloat * restrict y,
@@ -313,7 +313,7 @@ kernel void boltzmannPmlSurface3D(const iint Nelements,
 				             dfloat * restrict rhspmlq){
   
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
     // shared storage for flux terms
     shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
     shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
@@ -341,21 +341,21 @@ kernel void boltzmannPmlSurface3D(const iint Nelements,
     shared dfloat s_nzdq7[p_NblockS][p_maxNodes];
     shared dfloat s_nzdq10[p_NblockS][p_maxNodes];
 
-    exclusive iint element;
+    exclusive int element;
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	int e = eo + es;
 	if(e<Nelements){
 	  
 	  element = elementIds[e];
 
 	  if(n<p_NfacesNfp){
 	    // find face that owns this node
-	    const iint face = n/p_Nfp;
+	    const int face = n/p_Nfp;
 	   // load surface geofactors for this face
-	    iint sid = p_Nsgeo*(element*p_Nfaces+face);
+	    int sid = p_Nsgeo*(element*p_Nfaces+face);
 			dfloat nx   = sgeo[sid+NXID];
 			dfloat ny   = sgeo[sid+NYID];
 			dfloat nz   = sgeo[sid+NZID];
@@ -363,9 +363,9 @@ kernel void boltzmannPmlSurface3D(const iint Nelements,
 			dfloat invJ = sgeo[sid+IJID];
 
 	    // indices of negative and positive traces of face node
-	    const iint id  = element*p_Nfp*p_Nfaces + n;
-	    iint idM = vmapM[id];
-	    iint idP = vmapP[id];
+	    const int id  = element*p_Nfp*p_Nfaces + n;
+	    int idM = vmapM[id];
+	    int idP = vmapP[id];
 
 	    if(idP<0) idP = idM;
     
@@ -381,7 +381,7 @@ kernel void boltzmannPmlSurface3D(const iint Nelements,
 	    dfloat q9P = qPc.x, q10P = qPc.y;
 
 	    // apply boundary condition
-	    iint bc = EToB[face+p_Nfaces*element];
+	    int bc = EToB[face+p_Nfaces*element];
 	    if(bc>0)
 	     boundaryConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz,ramp,
 				               q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M,
@@ -430,9 +430,9 @@ kernel void boltzmannPmlSurface3D(const iint Nelements,
     // wait for all shared memory writes of the previous inner loop to complete
     barrier(localMemFence);
     // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-	const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+	const int e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Np){
 	        
@@ -470,7 +470,7 @@ kernel void boltzmannPmlSurface3D(const iint Nelements,
 	      nzdq10 += L*s_nzdq10[es][m];
 	    }
 
-	  const iint base = element*p_Np*p_pmlNfields+n;
+	  const int base = element*p_Np*p_pmlNfields+n;
 
 		dfloat Aqx1  = -p_sqrtRT*(nxdq2);
 		dfloat Aqx2  = -p_sqrtRT*(nxdq1+p_sqrt2*nxdq8);

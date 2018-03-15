@@ -1,12 +1,12 @@
 
 kernel void insSubCycleCubatureSurface2D_v0(
-              iint Nelements,
+              int Nelements,
               dfloat * sgeo,
               dfloat * intInterpT, // interpolate to integration nodes
               dfloat * intLIFTT, // lift from integration to interpolation nodes
-              iint   * vmapM,
-              iint   * vmapP,
-              iint   * EToB,
+              int   * vmapM,
+              int   * vmapP,
+              int   * EToB,
               dfloat time,
               dfloat * intx, // integration nodes
               dfloat * inty,
@@ -17,20 +17,20 @@ kernel void insSubCycleCubatureSurface2D_v0(
               dfloat * rhsU,
               dfloat * rhsV){
   // for all elements
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;outer0){
 
     shared dfloat s_iFluxU[p_intNfpNfaces];
     shared dfloat s_iFluxV[p_intNfpNfaces];
 
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
 
       if(e<Nelements){
         if(n<(p_Nfaces*p_intNfp)){
 
-          iint face = n/p_intNfp; // find face that owns this integration node
+          int face = n/p_intNfp; // find face that owns this integration node
 
           // load surface geofactors for this face
-          iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+          int sid    = p_Nsgeo*(e*p_Nfaces+face);
           dfloat nx   = sgeo[sid+p_NXID];
           dfloat ny   = sgeo[sid+p_NYID];
           dfloat sJ   = sgeo[sid+p_SJID];
@@ -43,12 +43,12 @@ kernel void insSubCycleCubatureSurface2D_v0(
 
           // local block interpolation (face nodes to integration nodes)
           //occaUnroll(p_Nfp)
-    for(iint m=0;m<p_Nfp;++m){
+    for(int m=0;m<p_Nfp;++m){
       dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
 
-      iint id  = e*p_Nfp*p_Nfaces + face*p_Nfp + m;
-      iint idM = vmapM[id];
-      iint idP = vmapP[id];
+      int id  = e*p_Nfp*p_Nfaces + face*p_Nfp + m;
+      int idM = vmapM[id];
+      int idP = vmapP[id];
       //
       iUM  += iInm*U[idM];
       iVM  += iInm*V[idM];
@@ -62,7 +62,7 @@ kernel void insSubCycleCubatureSurface2D_v0(
     }
 
           // apply boundary conditions
-          iint bc = EToB[face+p_Nfaces*e];
+          int bc = EToB[face+p_Nfaces*e];
 
           if(bc>0){
             insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
@@ -91,16 +91,16 @@ kernel void insSubCycleCubatureSurface2D_v0(
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
         if(n<p_Np){
-          iint id = n + p_Np*e;
+          int id = n + p_Np*e;
           // prefetch volume rhs
           dfloat rhsu = rhsU[id];
           dfloat rhsv = rhsV[id];
 
           //occaUnroll(p_intNfpNfaces)
-          for(iint m=0;m<p_intNfpNfaces;++m){
+          for(int m=0;m<p_intNfpNfaces;++m){
       // RefMassMatrix^{-1}*cInterp^t*cWeight
             dfloat L = intLIFTT[n+m*p_Np];
 
@@ -121,13 +121,13 @@ kernel void insSubCycleCubatureSurface2D_v0(
 
 // Add shared memory for global read
 kernel void insSubCycleCubatureSurface2D_v1(
-              iint Nelements,
+              int Nelements,
               dfloat * sgeo,
               dfloat * intInterpT, // interpolate to integration nodes
               dfloat * intLIFTT, // lift from integration to interpolation nodes
-              iint   * vmapM,
-              iint   * vmapP,
-              iint   * EToB,
+              int   * vmapM,
+              int   * vmapP,
+              int   * EToB,
               dfloat time,
               dfloat * intx, // integration nodes
               dfloat * inty,
@@ -138,7 +138,7 @@ kernel void insSubCycleCubatureSurface2D_v1(
               dfloat * rhsU,
               dfloat * rhsV){
   // for all elements
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;outer0){
 
     // shared storage for flux terms
     shared dfloat s_UM[p_NfacesNfp];
@@ -155,14 +155,14 @@ kernel void insSubCycleCubatureSurface2D_v1(
     shared dfloat s_iFluxV[p_intNfpNfaces];
 
 
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
         if(n<(p_Nfaces*p_Nfp)){
           // indices of negative and positive traces of face node
-          iint id  = e*p_Nfp*p_Nfaces + n;
+          int id  = e*p_Nfp*p_Nfaces + n;
 
-          iint idM = vmapM[id];
-          iint idP = vmapP[id];
+          int idM = vmapM[id];
+          int idP = vmapP[id];
 
           if(idP<0) idP = idM;
     // load negative and positive trace node values of velocity
@@ -183,15 +183,15 @@ kernel void insSubCycleCubatureSurface2D_v1(
     barrier(localMemFence);
 
   
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
 
       if(e<Nelements){
   if(n<(p_Nfaces*p_intNfp)){
 
-    iint face = n/p_intNfp; // find face that owns this integration node
+    int face = n/p_intNfp; // find face that owns this integration node
 
     // load surface geofactors for this face
-    iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+    int sid    = p_Nsgeo*(e*p_Nfaces+face);
     dfloat nx   = sgeo[sid+p_NXID];
     dfloat ny   = sgeo[sid+p_NYID];
     dfloat sJ   = sgeo[sid+p_SJID];
@@ -204,9 +204,9 @@ kernel void insSubCycleCubatureSurface2D_v1(
 
     // local block interpolation (face nodes to integration nodes)
     //occaUnroll(p_Nfp)
-    for(iint m=0;m<p_Nfp;++m){
+    for(int m=0;m<p_Nfp;++m){
       dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-      iint fm = face*p_Nfp+m;
+      int fm = face*p_Nfp+m;
 
       iUM  += iInm*s_UM[fm];
       iVM  += iInm*s_VM[fm];
@@ -220,7 +220,7 @@ kernel void insSubCycleCubatureSurface2D_v1(
     }
 
     // apply boundary conditions
-    iint bc = EToB[face+p_Nfaces*e];
+    int bc = EToB[face+p_Nfaces*e];
 
     if(bc>0){
       insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
@@ -249,16 +249,16 @@ kernel void insSubCycleCubatureSurface2D_v1(
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
   if(n<p_Np){
-    iint id = n + p_Np*e;
+    int id = n + p_Np*e;
     // prefetch volume rhs
     dfloat rhsu = 0.f;
     dfloat rhsv = 0.f;
 
     //occaUnroll(p_intNfpNfaces)
-    for(iint m=0;m<p_intNfpNfaces;++m){
+    for(int m=0;m<p_intNfpNfaces;++m){
             // RefMassMatrix^{-1}*cInterp^t*cWeight
       dfloat L = intLIFTT[n+m*p_Np];
 
@@ -278,13 +278,13 @@ kernel void insSubCycleCubatureSurface2D_v1(
 
 // Add const and loop unrolling
 kernel void insSubCycleCubatureSurface2D_v2(
-              const iint Nelements,
+              const int Nelements,
               const dfloat * restrict sgeo,
               const dfloat * restrict intInterpT, // interpolate to integration nodes
               const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-              const iint   * restrict vmapM,
-              const iint   * restrict vmapP,
-              const iint   * restrict EToB,
+              const int   * restrict vmapM,
+              const int   * restrict vmapP,
+              const int   * restrict EToB,
               const dfloat time,
               const dfloat * restrict intx, // integration nodes
               const dfloat * restrict inty,
@@ -295,7 +295,7 @@ kernel void insSubCycleCubatureSurface2D_v2(
               dfloat * restrict rhsU,
               dfloat * restrict rhsV){
   // for all elements
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;outer0){
 
     // shared storage for flux terms
     shared dfloat s_UM[p_NfacesNfp];
@@ -314,14 +314,14 @@ kernel void insSubCycleCubatureSurface2D_v2(
     //
 
 
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
         if(n<(p_Nfaces*p_Nfp)){
           // indices of negative and positive traces of face node
-          const iint id  = e*p_Nfp*p_Nfaces + n;
+          const int id  = e*p_Nfp*p_Nfaces + n;
 
-          iint idM = vmapM[id];
-          iint idP = vmapP[id];
+          int idM = vmapM[id];
+          int idP = vmapP[id];
 
           if(idP<0) idP = idM;
     // load negative and positive trace node values of velocity
@@ -342,15 +342,15 @@ kernel void insSubCycleCubatureSurface2D_v2(
     barrier(localMemFence);
 
   
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
 
       if(e<Nelements){
   if(n<(p_Nfaces*p_intNfp)){
 
-    const iint face = n/p_intNfp; // find face that owns this integration node
+    const int face = n/p_intNfp; // find face that owns this integration node
 
     // load surface geofactors for this face
-    const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+    const int sid    = p_Nsgeo*(e*p_Nfaces+face);
     const dfloat nx   = sgeo[sid+p_NXID];
     const dfloat ny   = sgeo[sid+p_NYID];
     const dfloat sJ   = sgeo[sid+p_SJID];
@@ -363,9 +363,9 @@ kernel void insSubCycleCubatureSurface2D_v2(
 
     // local block interpolation (face nodes to integration nodes)
     occaUnroll(p_Nfp)
-      for(iint m=0;m<p_Nfp;++m){
+      for(int m=0;m<p_Nfp;++m){
         const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-        const iint fm = face*p_Nfp+m;
+        const int fm = face*p_Nfp+m;
 
         iUM  += iInm*s_UM[fm];
         iVM  += iInm*s_VM[fm];
@@ -379,7 +379,7 @@ kernel void insSubCycleCubatureSurface2D_v2(
       }
 
     // apply boundary conditions
-    const iint bc = EToB[face+p_Nfaces*e];
+    const int bc = EToB[face+p_Nfaces*e];
 
     if(bc>0){
       insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
@@ -408,16 +408,16 @@ kernel void insSubCycleCubatureSurface2D_v2(
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
   if(n<p_Np){
-    const iint id = n + p_Np*e;
+    const int id = n + p_Np*e;
     // prefetch volume rhs
     dfloat rhsu = 0.f;
     dfloat rhsv = 0.f;
 
     occaUnroll(p_intNfpNfaces)
-            for(iint m=0;m<p_intNfpNfaces;++m){
+            for(int m=0;m<p_intNfpNfaces;++m){
         // RefMassMatrix^{-1}*cInterp^t*cWeight
               const dfloat L = intLIFTT[n+m*p_Np];
 
@@ -439,13 +439,13 @@ kernel void insSubCycleCubatureSurface2D_v2(
 
 
 // Add multiple element per threadblock 
-kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v3(const int Nelements,
               const dfloat * restrict sgeo,
               const dfloat * restrict intInterpT, // interpolate to integration nodes
               const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-              const iint   * restrict vmapM,
-              const iint   * restrict vmapP,
-              const iint   * restrict EToB,
+              const int   * restrict vmapM,
+              const int   * restrict vmapP,
+              const int   * restrict EToB,
               const dfloat time,
               const dfloat * restrict intx, // integration nodes
               const dfloat * restrict inty,
@@ -456,7 +456,7 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
               dfloat * restrict rhsU,
               dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_UM[p_cubNblockS][p_NfacesNfp];
@@ -473,18 +473,18 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
     shared dfloat s_iFluxV[p_cubNblockS][p_intNfpNfaces];
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
 
-  iint e = eo + es;
+  int e = eo + es;
 
   if(e<Nelements){
     if(n<(p_Nfaces*p_Nfp)){
       // indices of negative and positive traces of face node
-      const iint id  = e*p_Nfp*p_Nfaces + n;
+      const int id  = e*p_Nfp*p_Nfaces + n;
 
-      iint idM = vmapM[id];
-      iint idP = vmapP[id];
+      int idM = vmapM[id];
+      int idP = vmapP[id];
 
       if(idP<0) idP = idM;
       // load negative and positive trace node values of velocity
@@ -506,18 +506,18 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
 
-  iint e = eo + es;
+  int e = eo + es;
 
   if(e<Nelements){
     if(n<(p_Nfaces*p_intNfp)){
 
-      const iint face = n/p_intNfp; // find face that owns this integration node
+      const int face = n/p_intNfp; // find face that owns this integration node
 
       // load surface geofactors for this face
-      const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+      const int sid    = p_Nsgeo*(e*p_Nfaces+face);
       const dfloat nx   = sgeo[sid+p_NXID];
       const dfloat ny   = sgeo[sid+p_NYID];
       const dfloat sJ   = sgeo[sid+p_SJID];
@@ -530,9 +530,9 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
 
       // local block interpolation (face nodes to integration nodes)
       occaUnroll(p_Nfp)
-        for(iint m=0;m<p_Nfp;++m){
+        for(int m=0;m<p_Nfp;++m){
     const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-    const iint fm = face*p_Nfp+m;
+    const int fm = face*p_Nfp+m;
 
     iUM  += iInm*s_UM[es][fm];
     iVM  += iInm*s_VM[es][fm];
@@ -546,7 +546,7 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
         }
 
       // apply boundary conditions
-      iint bc = EToB[face+p_Nfaces*e];
+      int bc = EToB[face+p_Nfaces*e];
 
       if(bc>0){
         insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
@@ -576,14 +576,14 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
 
-        const iint e = eo + es;
+        const int e = eo + es;
 
         if(e<Nelements){
           if(n<p_Np){
-            iint id = n + p_Np*e;
+            int id = n + p_Np*e;
             // prefetch volume rhs
             dfloat rhsu = rhsU[id];
             dfloat rhsv = rhsV[id];
@@ -612,13 +612,13 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
 
 
 // Use less shared memory by factor 2
-kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v4(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -629,7 +629,7 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_U[p_cubNblockS][p_intNfpNfaces];
@@ -647,14 +647,14 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
 
     // Loop for minus traces //
     // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_Nfp)){
             // indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + n;
-            const iint idM = vmapM[id];
+            const int id  = e*p_Nfp*p_Nfaces + n;
+            const int idM = vmapM[id];
 
             // load negative and positive trace node values of velocity
             s_U[es][n] = U[idM];
@@ -669,12 +669,12 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_intNfp)){
-            const iint face = n/p_intNfp; // find face that owns this integration node
+            const int face = n/p_intNfp; // find face that owns this integration node
 
             r_iUM  = 0.f;
             r_iVM  = 0.f;
@@ -683,9 +683,9 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
 
             // local block interpolation (face nodes to integration nodes)
             occaUnroll(p_Nfp)
-              for(iint m=0;m<p_Nfp;++m){
+              for(int m=0;m<p_Nfp;++m){
                 const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-                const iint fm = face*p_Nfp+m;
+                const int fm = face*p_Nfp+m;
 
                 r_iUM  += iInm*s_U[es][fm];
                 r_iVM  += iInm*s_V[es][fm];
@@ -700,14 +700,14 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
 
     // Loop for positive traces 
     // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_Nfp)){
             // indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + n;
-            const iint idP = vmapP[id];
+            const int id  = e*p_Nfp*p_Nfaces + n;
+            const int idP = vmapP[id];
 
             // load negative and positive trace node values of velocity
             s_U[es][n] = U[idP];
@@ -722,12 +722,12 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_intNfp)){
-            const iint face = n/p_intNfp; // find face that owns this integration node
+            const int face = n/p_intNfp; // find face that owns this integration node
 
             r_iUP  = 0.f;
             r_iVP  = 0.f;
@@ -736,9 +736,9 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
 
             // local block interpolation (face nodes to integration nodes)
             occaUnroll(p_Nfp)
-              for(iint m=0;m<p_Nfp;++m){
+              for(int m=0;m<p_Nfp;++m){
                 const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-                const iint fm = face*p_Nfp+m;
+                const int fm = face*p_Nfp+m;
 
                 r_iUP  += iInm*s_U[es][fm];
                 r_iVP  += iInm*s_V[es][fm];
@@ -753,22 +753,22 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
 
 
     // Use traces to compuite and store flux 
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_intNfp)){
-            const iint face = n/p_intNfp; // find face that owns this integration node
+            const int face = n/p_intNfp; // find face that owns this integration node
 
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];
 
             // apply boundary conditions
-            const iint bc = EToB[face+p_Nfaces*e];
+            const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM,r_iVdM, &r_iUdP, &r_iVdP);
             }
@@ -797,12 +797,12 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            const iint id = n + p_Np*e;
+            const int id = n + p_Np*e;
             // prefetch volume rhs
             dfloat rhsu = rhsU[id];
             dfloat rhsv = rhsV[id];
@@ -832,13 +832,13 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
 
 
 // Use less shared memory by factor 4
-kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v5(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -849,7 +849,7 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_U[p_cubNblockS][p_intNfpNfaces];
@@ -863,17 +863,17 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     exclusive dfloat r_iUdM, r_iUdP;
     exclusive dfloat r_iVdM, r_iVdP;
 
-    exclusive iint idM, idP; 
+    exclusive int idM, idP; 
 
     //Loop for minus traces //
     // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_Nfp)){
             // indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + n;
+            const int id  = e*p_Nfp*p_Nfaces + n;
             idM = vmapM[id];
             // load negative and positive trace node values of velocity
             s_U[es][n] = U[idM];
@@ -886,19 +886,19 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_intNfp)){
-            const iint face = n/p_intNfp; // find face that owns this integration node
+            const int face = n/p_intNfp; // find face that owns this integration node
             r_iUM  = 0.f;
             r_iVM  = 0.f;        
             // local block interpolation (face nodes to integration nodes)
             occaUnroll(p_Nfp)
-              for(iint m=0;m<p_Nfp;++m){
+              for(int m=0;m<p_Nfp;++m){
                 const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-                const iint fm = face*p_Nfp+m;
+                const int fm = face*p_Nfp+m;
                 r_iUM  += iInm*s_U[es][fm];
                 r_iVM  += iInm*s_V[es][fm];
               }
@@ -912,9 +912,9 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
     //Loop for minus traces //
     // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_Nfp)){
             // load negative and positive trace node values of velocity
@@ -928,19 +928,19 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_intNfp)){
-            const iint face = n/p_intNfp; // find face that owns this integration node
+            const int face = n/p_intNfp; // find face that owns this integration node
             r_iUdM = 0.f;
             r_iVdM = 0.f;
             // local block interpolation (face nodes to integration nodes)
             occaUnroll(p_Nfp)
-              for(iint m=0;m<p_Nfp;++m){
+              for(int m=0;m<p_Nfp;++m){
                 const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-                const iint fm = face*p_Nfp+m;
+                const int fm = face*p_Nfp+m;
                 r_iUdM += iInm*s_U[es][fm];
                 r_iVdM += iInm*s_V[es][fm];
               }
@@ -953,13 +953,13 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
     // Loop for positive traces //
     // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_Nfp)){
             // indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + n;
+            const int id  = e*p_Nfp*p_Nfaces + n;
             idP = vmapP[id];
 
             // load negative and positive trace node values of velocity
@@ -973,21 +973,21 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_intNfp)){
-            const iint face = n/p_intNfp; // find face that owns this integration node
+            const int face = n/p_intNfp; // find face that owns this integration node
 
             r_iUP  = 0.f;
             r_iVP  = 0.f;
             
             // local block interpolation (face nodes to integration nodes)
             occaUnroll(p_Nfp)
-              for(iint m=0;m<p_Nfp;++m){
+              for(int m=0;m<p_Nfp;++m){
                 const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-                const iint fm = face*p_Nfp+m;
+                const int fm = face*p_Nfp+m;
                 r_iUP  += iInm*s_U[es][fm];
                 r_iVP  += iInm*s_V[es][fm];
               }
@@ -1000,9 +1000,9 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
     // Loop for positive traces //
     // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_Nfp)){
             s_U[es][n] = Ud[idP];
@@ -1015,20 +1015,20 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_intNfp)){
-            const iint face = n/p_intNfp; // find face that owns this integration node
+            const int face = n/p_intNfp; // find face that owns this integration node
             r_iUdP = 0.f;
             r_iVdP = 0.f;
 
             // local block interpolation (face nodes to integration nodes)
             occaUnroll(p_Nfp)
-              for(iint m=0;m<p_Nfp;++m){
+              for(int m=0;m<p_Nfp;++m){
                 const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-                const iint fm = face*p_Nfp+m;
+                const int fm = face*p_Nfp+m;
                 r_iUdP += iInm*s_U[es][fm];
                 r_iVdP += iInm*s_V[es][fm];
               }
@@ -1042,22 +1042,22 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
 
     // Use traces to compuite and store flux //
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_intNfp)){
-            const iint face = n/p_intNfp; // find face that owns this integration node
+            const int face = n/p_intNfp; // find face that owns this integration node
 
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];
 
             // apply boundary conditions
-            const iint bc = EToB[face+p_Nfaces*e];
+            const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM,r_iVdM, &r_iUdP, &r_iVdP);
             }
@@ -1086,12 +1086,12 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            const iint id = n + p_Np*e;
+            const int id = n + p_Np*e;
             // prefetch volume rhs
             dfloat rhsu = rhsU[id];
             dfloat rhsv = rhsV[id];
@@ -1121,13 +1121,13 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
 
 // Multiple nodes per thread// use less shared memory by factor 4 
-kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v6(const int Nelements,
               const dfloat * restrict sgeo,
               const dfloat * restrict intInterpT, // interpolate to integration nodes
               const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-              const iint   * restrict vmapM,
-              const iint   * restrict vmapP,
-              const iint   * restrict EToB,
+              const int   * restrict vmapM,
+              const int   * restrict vmapP,
+              const int   * restrict EToB,
               const dfloat time,
               const dfloat * restrict intx, // integration nodes
               const dfloat * restrict inty,
@@ -1138,7 +1138,7 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
               dfloat * restrict rhsU,
               dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=(p_cubNblockS*p_Nnodes);outer0){
+  for(int eo=0;eo<Nelements;eo+=(p_cubNblockS*p_Nnodes);outer0){
 
     // shared storage 
     shared dfloat s_U[p_Nnodes][p_cubNblockS][p_intNfpNfaces];
@@ -1152,20 +1152,20 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
     exclusive dfloat r_iUdM[p_Nnodes], r_iUdP[p_Nnodes];
     exclusive dfloat r_iVdM[p_Nnodes], r_iVdP[p_Nnodes];
 
-     exclusive iint idM[p_Nnodes], idP[p_Nnodes];
+     exclusive int idM[p_Nnodes], idP[p_Nnodes];
     exclusive int face;
 
     // Loop for minus traces
     // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_Nfp)){
           occaUnroll(p_Nnodes)
           for (int em=0;em<p_Nnodes;++em){
-            const iint e = em*p_cubNblockS + es + eo;
+            const int e = em*p_cubNblockS + es + eo;
             if (e<Nelements) {
               // indices of negative and positive traces of face node
-              const iint id  = e*p_Nfp*p_Nfaces + n;
+              const int id  = e*p_Nfp*p_Nfaces + n;
               idM[em] = vmapM[id];
               idP[em] = vmapP[id];
 
@@ -1181,8 +1181,8 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
         if(n<(p_Nfaces*p_intNfp)){
           face = n/p_intNfp; // find face that owns this integration node
 
@@ -1194,9 +1194,9 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
 
             occaUnroll(p_Nnodes)
             for (int em=0;em<p_Nnodes;++em){
@@ -1210,12 +1210,12 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
     barrier(localMemFence);
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_Nfp)){
           occaUnroll(p_Nnodes)
           for (int em=0;em<p_Nnodes;++em){
-            const iint e = em*p_cubNblockS + es + eo;
+            const int e = em*p_cubNblockS + es + eo;
             if (e<Nelements) {
               // load negative and positive trace node values of advection field
               s_U[em][es][n] = Ud[idM[em]];
@@ -1229,8 +1229,8 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
         if(n<(p_Nfaces*p_intNfp)){
           occaUnroll(p_Nnodes)
           for (int em=0;em<p_Nnodes;++em){
@@ -1240,9 +1240,9 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
 
             occaUnroll(p_Nnodes)
             for (int em=0;em<p_Nnodes;++em){
@@ -1257,12 +1257,12 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
 
       // Loop for positive traces
     // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_Nfp)){
           occaUnroll(p_Nnodes)
           for (int em=0;em<p_Nnodes;++em){
-            const iint e = em*p_cubNblockS + es + eo;
+            const int e = em*p_cubNblockS + es + eo;
             if (e<Nelements) {
               // load negative and positive trace node values of velocity
               s_U[em][es][n] = V[idM[em]];
@@ -1276,8 +1276,8 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
         if(n<(p_Nfaces*p_intNfp)){
           occaUnroll(p_Nnodes)
           for (int em=0;em<p_Nnodes;++em){
@@ -1287,9 +1287,9 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
 
             occaUnroll(p_Nnodes)
             for (int em=0;em<p_Nnodes;++em){
@@ -1303,12 +1303,12 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
     barrier(localMemFence);
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_Nfp)){
           occaUnroll(p_Nnodes)
           for (int em=0;em<p_Nnodes;++em){
-            const iint e = em*p_cubNblockS + es + eo;
+            const int e = em*p_cubNblockS + es + eo;
             if (e<Nelements) {
               // load negative and positive trace node values of advection field
               s_U[em][es][n] = Vd[idM[em]];
@@ -1322,8 +1322,8 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
         if(n<(p_Nfaces*p_intNfp)){
           occaUnroll(p_Nnodes)
           for (int em=0;em<p_Nnodes;++em){
@@ -1333,9 +1333,9 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
 
             occaUnroll(p_Nnodes)
             for (int em=0;em<p_Nnodes;++em){
@@ -1349,21 +1349,21 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
     barrier(localMemFence);
 
     // Use traces to compuite and store flux
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
         occaUnroll(p_Nnodes)
         for (int em=0;em<p_Nnodes;++em){
-          const iint e = em*p_cubNblockS + es + eo;
+          const int e = em*p_cubNblockS + es + eo;
           if((e<Nelements)&&(n<(p_Nfaces*p_intNfp))){
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];
 
             // apply boundary conditions
-            const iint bc = EToB[face+p_Nfaces*e];
+            const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM[em],r_iVdM[em], &(r_iUdP[em]), &(r_iVdP[em]));
             }
@@ -1392,14 +1392,14 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_cubNblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<p_Np){
           occaUnroll(p_Nnodes)
           for (int em=0;em<p_Nnodes;++em){
-            const iint e = em*p_cubNblockS + es + eo;
+            const int e = em*p_cubNblockS + es + eo;
             if(e<Nelements) {
-              const iint id = n + p_Np*e;
+              const int id = n + p_Np*e;
               // prefemch volume rhs
               r_iUM[em] = rhsU[id];
               r_iVM[em] = rhsV[id];
@@ -1419,9 +1419,9 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
 
           occaUnroll(p_Nnodes)
           for (int em=0;em<p_Nnodes;++em){
-            const iint e = em*p_cubNblockS + es + eo;
+            const int e = em*p_cubNblockS + es + eo;
             if(e<Nelements) {
-              const iint id = n + p_Np*e;
+              const int id = n + p_Np*e;
               // prefemch volume rhs
               rhsU[id] = r_iUM[em];
               rhsV[id] = r_iVM[em];
@@ -1440,13 +1440,13 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
 
 /*
 // Base implementation
-kernel void insSubCycleCubatureSurface2D_v0(iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v0(int Nelements,
                                             dfloat * sgeo,
                                             dfloat * intInterpT, // interpolate to integration nodes
                                             dfloat * intLIFTT, // lift from integration to interpolation nodes
-                                            iint   * vmapM,
-                                            iint   * vmapP,
-                                            iint   * EToB,
+                                            int   * vmapM,
+                                            int   * vmapP,
+                                            int   * EToB,
                                             dfloat time,
                                             dfloat * intx, // integration nodes
                                             dfloat * inty,
@@ -1457,20 +1457,20 @@ kernel void insSubCycleCubatureSurface2D_v0(iint Nelements,
                                             dfloat * rhsU,
                                             dfloat * rhsV){
   // for all elements
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;outer0){
 
     shared dfloat s_iFluxU[p_intNfpNfaces];
     shared dfloat s_iFluxV[p_intNfpNfaces];
 
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
 
       if(e<Nelements){
         if(n<(p_Nfaces*p_intNfp)){
 
-          iint face = n/p_intNfp; // find face that owns this integration node
+          int face = n/p_intNfp; // find face that owns this integration node
 
           // load surface geofactors for this face
-          iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+          int sid    = p_Nsgeo*(e*p_Nfaces+face);
           dfloat nx   = sgeo[sid+p_NXID];
           dfloat ny   = sgeo[sid+p_NYID];
           dfloat sJ   = sgeo[sid+p_SJID];
@@ -1482,12 +1482,12 @@ kernel void insSubCycleCubatureSurface2D_v0(iint Nelements,
           dfloat iUdP = 0.f, iVdP = 0.f;
 
           // local block interpolation (face nodes to integration nodes)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
 
-            iint id  = e*p_Nfp*p_Nfaces + face*p_Nfp + m;
-            iint idM = vmapM[id];
-            iint idP = vmapP[id];
+            int id  = e*p_Nfp*p_Nfaces + face*p_Nfp + m;
+            int idM = vmapM[id];
+            int idP = vmapP[id];
 
             iUM  += iInm*U[idM];
             iVM  += iInm*V[idM];
@@ -1501,7 +1501,7 @@ kernel void insSubCycleCubatureSurface2D_v0(iint Nelements,
           }
 
           // apply boundary conditions
-          iint bc = EToB[face+p_Nfaces*e];
+          int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
             insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
           }
@@ -1528,15 +1528,15 @@ kernel void insSubCycleCubatureSurface2D_v0(iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
         if(n<p_Np){
-          iint id = n + p_Np*e;
+          int id = n + p_Np*e;
           // prefetch volume rhs
           dfloat rhsu = rhsU[id];
           dfloat rhsv = rhsV[id];
 
-          for(iint m=0;m<p_intNfpNfaces;++m){
+          for(int m=0;m<p_intNfpNfaces;++m){
             dfloat L = intLIFTT[n+m*p_Np];
             rhsu += L*s_iFluxU[m];
             rhsv += L*s_iFluxV[m];
@@ -1552,13 +1552,13 @@ kernel void insSubCycleCubatureSurface2D_v0(iint Nelements,
 
 
 // resrict and const
-kernel void insSubCycleCubatureSurface2D_v1(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v1(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -1569,19 +1569,19 @@ kernel void insSubCycleCubatureSurface2D_v1(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;outer0){
 
     shared dfloat s_iFluxU[p_intNfpNfaces];
     shared dfloat s_iFluxV[p_intNfpNfaces];
 
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
         if(n<(p_Nfaces*p_intNfp)){
 
-          const iint face = n/p_intNfp; // find face that owns this integration node
+          const int face = n/p_intNfp; // find face that owns this integration node
 
           // load surface geofactors for this face
-          const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+          const int sid    = p_Nsgeo*(e*p_Nfaces+face);
           const dfloat nx   = sgeo[sid+p_NXID];
           const dfloat ny   = sgeo[sid+p_NYID];
           const dfloat sJ   = sgeo[sid+p_SJID];
@@ -1593,12 +1593,12 @@ kernel void insSubCycleCubatureSurface2D_v1(const iint Nelements,
           dfloat iUdP = 0.f, iVdP = 0.f;
 
           // local block interpolation (face nodes to integration nodes)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
 
-            const iint id  = e*p_Nfp*p_Nfaces + face*p_Nfp + m;
-            const iint idM = vmapM[id];
-            const iint idP = vmapP[id];
+            const int id  = e*p_Nfp*p_Nfaces + face*p_Nfp + m;
+            const int idM = vmapM[id];
+            const int idP = vmapP[id];
 
             iUM  += iInm*U[idM];
             iVM  += iInm*V[idM];
@@ -1612,7 +1612,7 @@ kernel void insSubCycleCubatureSurface2D_v1(const iint Nelements,
           }
 
           // apply boundary conditions
-          const iint bc = EToB[face+p_Nfaces*e];
+          const int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
             insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
           }
@@ -1639,15 +1639,15 @@ kernel void insSubCycleCubatureSurface2D_v1(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
         if(n<p_Np){
-          const iint id = n + p_Np*e;
+          const int id = n + p_Np*e;
           // prefetch volume rhs
           dfloat rhsu = rhsU[id];
           dfloat rhsv = rhsV[id];
 
-          for(iint m=0;m<p_intNfpNfaces;++m){
+          for(int m=0;m<p_intNfpNfaces;++m){
             const dfloat L = intLIFTT[n+m*p_Np];
             rhsu += L*s_iFluxU[m];
             rhsv += L*s_iFluxV[m];
@@ -1662,13 +1662,13 @@ kernel void insSubCycleCubatureSurface2D_v1(const iint Nelements,
 }
 
 // shared memory
-kernel void insSubCycleCubatureSurface2D_v2(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v2(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -1679,7 +1679,7 @@ kernel void insSubCycleCubatureSurface2D_v2(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;outer0){
 
     // shared storage for flux terms
     shared dfloat s_UM[p_NfacesNfp];
@@ -1695,14 +1695,14 @@ kernel void insSubCycleCubatureSurface2D_v2(const iint Nelements,
     shared dfloat s_iFluxU[p_intNfpNfaces];
     shared dfloat s_iFluxV[p_intNfpNfaces];
 
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
         if(n<(p_Nfaces*p_Nfp)){
           // indices of negative and positive traces of face node
-          const iint id  = e*p_Nfp*p_Nfaces + n;
+          const int id  = e*p_Nfp*p_Nfaces + n;
 
-          const iint idM = vmapM[id];
-          const iint idP = vmapP[id];
+          const int idM = vmapM[id];
+          const int idP = vmapP[id];
 
           // load negative and positive trace node values of velocity
           s_UM[n] = U[idM];
@@ -1722,13 +1722,13 @@ kernel void insSubCycleCubatureSurface2D_v2(const iint Nelements,
     barrier(localMemFence);
 
 
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
         if(n<(p_Nfaces*p_intNfp)){
-          const iint face = n/p_intNfp; // find face that owns this integration node
+          const int face = n/p_intNfp; // find face that owns this integration node
 
           // load surface geofactors for this face
-          const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+          const int sid    = p_Nsgeo*(e*p_Nfaces+face);
           const dfloat nx   = sgeo[sid+p_NXID];
           const dfloat ny   = sgeo[sid+p_NYID];
           const dfloat sJ   = sgeo[sid+p_SJID];
@@ -1740,9 +1740,9 @@ kernel void insSubCycleCubatureSurface2D_v2(const iint Nelements,
           dfloat iUdP = 0.f, iVdP = 0.f;
 
           // local block interpolation (face nodes to integration nodes)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
 
             iUM  += iInm*s_UM[fm];
             iVM  += iInm*s_VM[fm];
@@ -1756,7 +1756,7 @@ kernel void insSubCycleCubatureSurface2D_v2(const iint Nelements,
           }
 
           // apply boundary conditions
-          const iint bc = EToB[face+p_Nfaces*e];
+          const int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
             insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
           }
@@ -1783,15 +1783,15 @@ kernel void insSubCycleCubatureSurface2D_v2(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
         if(n<p_Np){
-          const iint id = n + p_Np*e;
+          const int id = n + p_Np*e;
           // prefetch volume rhs
           dfloat rhsu = rhsU[id];
           dfloat rhsv = rhsV[id];
 
-          for(iint m=0;m<p_intNfpNfaces;++m){
+          for(int m=0;m<p_intNfpNfaces;++m){
             const dfloat L = intLIFTT[n+m*p_Np];
             rhsu += L*s_iFluxU[m];
             rhsv += L*s_iFluxV[m];
@@ -1806,13 +1806,13 @@ kernel void insSubCycleCubatureSurface2D_v2(const iint Nelements,
 }
 
 // loop unrolling
-kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v3(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -1823,7 +1823,7 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;outer0){
 
     // shared storage for flux terms
     shared dfloat s_UM[p_NfacesNfp];
@@ -1839,14 +1839,14 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
     shared dfloat s_iFluxU[p_intNfpNfaces];
     shared dfloat s_iFluxV[p_intNfpNfaces];
 
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
         if(n<(p_Nfaces*p_Nfp)){
           // indices of negative and positive traces of face node
-          const iint id  = e*p_Nfp*p_Nfaces + n;
+          const int id  = e*p_Nfp*p_Nfaces + n;
 
-          const iint idM = vmapM[id];
-          const iint idP = vmapP[id];
+          const int idM = vmapM[id];
+          const int idP = vmapP[id];
 
           // load negative and positive trace node values of velocity
           s_UM[n] = U[idM];
@@ -1866,13 +1866,13 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
     barrier(localMemFence);
 
 
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
         if(n<(p_Nfaces*p_intNfp)){
-          const iint face = n/p_intNfp; // find face that owns this integration node
+          const int face = n/p_intNfp; // find face that owns this integration node
 
           // load surface geofactors for this face
-          const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+          const int sid    = p_Nsgeo*(e*p_Nfaces+face);
           const dfloat nx   = sgeo[sid+p_NXID];
           const dfloat ny   = sgeo[sid+p_NYID];
           const dfloat sJ   = sgeo[sid+p_SJID];
@@ -1885,9 +1885,9 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
 
             iUM  += iInm*s_UM[fm];
             iVM  += iInm*s_VM[fm];
@@ -1901,7 +1901,7 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
           }
 
           // apply boundary conditions
-          const iint bc = EToB[face+p_Nfaces*e];
+          const int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
             insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
           }
@@ -1928,16 +1928,16 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
       if(e<Nelements){
         if(n<p_Np){
-          const iint id = n + p_Np*e;
+          const int id = n + p_Np*e;
           // prefetch volume rhs
           dfloat rhsu = rhsU[id];
           dfloat rhsv = rhsV[id];
 
           occaUnroll(p_intNfpNfaces)
-          for(iint m=0;m<p_intNfpNfaces;++m){
+          for(int m=0;m<p_intNfpNfaces;++m){
             const dfloat L = intLIFTT[n+m*p_Np];
             rhsu += L*s_iFluxU[m];
             rhsv += L*s_iFluxV[m];
@@ -1953,13 +1953,13 @@ kernel void insSubCycleCubatureSurface2D_v3(const iint Nelements,
 
 
 // multiple elements per block
-kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v4(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -1970,7 +1970,7 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for fields and reused for flux terms
     shared dfloat s_U[p_NblockS][p_intNfpNfaces];
@@ -1981,17 +1981,17 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     exclusive dfloat r_iUdM, r_iUdP;
     exclusive dfloat r_iVdM, r_iVdP;
 
-    exclusive iint idM, idP;
+    exclusive int idM, idP;
     exclusive int face;
 
     // Loop for minus traces 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = es + eo;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = es + eo;
         if((n<(p_Nfaces*p_Nfp))&&(e<Nelements)) {
           // indices of negative and positive traces of face node
-          const iint id  = e*p_Nfp*p_Nfaces + n;
+          const int id  = e*p_Nfp*p_Nfaces + n;
           idM = vmapM[id];
           idP = vmapP[id];
 
@@ -2005,8 +2005,8 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_intNfp)){
           face = n/p_intNfp; // find face that owns this integration node
           r_iUM  = 0.f;
@@ -2014,9 +2014,9 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
             r_iUM  += iInm*s_U[es][fm];
             r_iUP  += iInm*s_V[es][fm];
           }
@@ -2026,9 +2026,9 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = es + eo;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = es + eo;
         if((n<(p_Nfaces*p_Nfp))&&(e<Nelements)) {
           // load negative and positive trace node values of advection field
           s_U[es][n] = Ud[idM];
@@ -2040,17 +2040,17 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_intNfp)){
           r_iUdM  = 0.f;
           r_iUdP  = 0.f;
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
             r_iUdM  += iInm*s_U[es][fm];
             r_iUdP  += iInm*s_V[es][fm];
           }
@@ -2063,9 +2063,9 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
 
     // Loop for positive traces 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = es + eo;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = es + eo;
         if((n<(p_Nfaces*p_Nfp))&&(e<Nelements)) {
           // load negative and positive trace node values of velocity
           s_U[es][n] = V[idM];
@@ -2077,17 +2077,17 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_intNfp)){
           r_iVM  = 0.f;
           r_iVP  = 0.f;
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
             r_iVM  += iInm*s_U[es][fm];
             r_iVP  += iInm*s_V[es][fm];
           }
@@ -2097,9 +2097,9 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = es + eo;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = es + eo;
         if((n<(p_Nfaces*p_Nfp))&&(e<Nelements)) {
           // load negative and positive trace node values of advection field
           s_U[es][n] = Vd[idM];
@@ -2111,17 +2111,17 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_intNfp)){
           r_iVdM  = 0.f;
           r_iVdP  = 0.f;
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
             r_iVdM  += iInm*s_U[es][fm];
             r_iVdP  += iInm*s_V[es][fm];
           }
@@ -2131,19 +2131,19 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // Use traces to compuite and store flux 
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = es + eo;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = es + eo;
         if((e<Nelements)&&(n<(p_Nfaces*p_intNfp))){
           // load surface geofactors for this face
-          const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+          const int sid    = p_Nsgeo*(e*p_Nfaces+face);
           const dfloat nx   = sgeo[sid+p_NXID];
           const dfloat ny   = sgeo[sid+p_NYID];
           const dfloat sJ   = sgeo[sid+p_SJID];
           const dfloat invJ = sgeo[sid+p_IJID];
 
           // apply boundary conditions
-          const iint bc = EToB[face+p_Nfaces*e];
+          const int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
             insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM,r_iVdM, &(r_iUdP), &(r_iVdP));
           }
@@ -2171,12 +2171,12 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<p_Np){
-          const iint e = es + eo;
+          const int e = es + eo;
           if(e<Nelements) {
-            const iint id = n + p_Np*e;
+            const int id = n + p_Np*e;
             // prefetch volume rhs
             r_iUM = rhsU[id];
             r_iVM = rhsV[id];
@@ -2200,13 +2200,13 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
 
 
 // Based on v4 multiple elements per node
-kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v5(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -2217,7 +2217,7 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS*p_Nnodes;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS*p_Nnodes;outer0){
 
     // shared storage for fields and reused for flux terms
     shared dfloat s_U[p_Nnodes][p_NblockS][p_intNfpNfaces];
@@ -2228,20 +2228,20 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     exclusive dfloat r_iUdM[p_Nnodes], r_iUdP[p_Nnodes];
     exclusive dfloat r_iVdM[p_Nnodes], r_iVdP[p_Nnodes];
 
-    exclusive iint idM[p_Nnodes], idP[p_Nnodes];
+    exclusive int idM[p_Nnodes], idP[p_Nnodes];
     exclusive int face;
 
     // Loop for minus traces 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_Nfp)){
           occaUnroll(p_Nnodes)
           for (int et=0;et<p_Nnodes;++et){
-            const iint e = et*p_NblockS + es + eo;
+            const int e = et*p_NblockS + es + eo;
             if (e<Nelements) {
               // indices of negative and positive traces of face node
-              const iint id  = e*p_Nfp*p_Nfaces + n;
+              const int id  = e*p_Nfp*p_Nfaces + n;
               idM[et] = vmapM[id];
               idP[et] = vmapP[id];
 
@@ -2257,8 +2257,8 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_intNfp)){
           face = n/p_intNfp; // find face that owns this integration node
 
@@ -2270,9 +2270,9 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
 
             occaUnroll(p_Nnodes)
             for (int et=0;et<p_Nnodes;++et){
@@ -2286,12 +2286,12 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_Nfp)){
           occaUnroll(p_Nnodes)
           for (int et=0;et<p_Nnodes;++et){
-            const iint e = et*p_NblockS + es + eo;
+            const int e = et*p_NblockS + es + eo;
             if (e<Nelements) {
               // load negative and positive trace node values of advection field
               s_U[et][es][n] = Ud[idM[et]];
@@ -2305,8 +2305,8 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_intNfp)){
           occaUnroll(p_Nnodes)
           for (int et=0;et<p_Nnodes;++et){
@@ -2316,9 +2316,9 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
 
             occaUnroll(p_Nnodes)
             for (int et=0;et<p_Nnodes;++et){
@@ -2335,12 +2335,12 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
     // Loop for positive traces 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_Nfp)){
           occaUnroll(p_Nnodes)
           for (int et=0;et<p_Nnodes;++et){
-            const iint e = et*p_NblockS + es + eo;
+            const int e = et*p_NblockS + es + eo;
             if (e<Nelements) {
               // load negative and positive trace node values of velocity
               s_U[et][es][n] = V[idM[et]];
@@ -2354,8 +2354,8 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_intNfp)){
           occaUnroll(p_Nnodes)
           for (int et=0;et<p_Nnodes;++et){
@@ -2365,9 +2365,9 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
 
             occaUnroll(p_Nnodes)
             for (int et=0;et<p_Nnodes;++et){
@@ -2381,12 +2381,12 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_Nfp)){
           occaUnroll(p_Nnodes)
           for (int et=0;et<p_Nnodes;++et){
-            const iint e = et*p_NblockS + es + eo;
+            const int e = et*p_NblockS + es + eo;
             if (e<Nelements) {
               // load negative and positive trace node values of advection field
               s_U[et][es][n] = Vd[idM[et]];
@@ -2400,8 +2400,8 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<(p_Nfaces*p_intNfp)){
           occaUnroll(p_Nnodes)
           for (int et=0;et<p_Nnodes;++et){
@@ -2411,9 +2411,9 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-          for(iint m=0;m<p_Nfp;++m){
+          for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-            const iint fm = face*p_Nfp+m;
+            const int fm = face*p_Nfp+m;
 
             occaUnroll(p_Nnodes)
             for (int et=0;et<p_Nnodes;++et){
@@ -2427,21 +2427,21 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // Use traces to compuite and store flux 
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         occaUnroll(p_Nnodes)
         for (int et=0;et<p_Nnodes;++et){
-          const iint e = et*p_NblockS + es + eo;
+          const int e = et*p_NblockS + es + eo;
           if((e<Nelements)&&(n<(p_Nfaces*p_intNfp))){
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];
 
             // apply boundary conditions
-            const iint bc = EToB[face+p_Nfaces*e];
+            const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM[et],r_iVdM[et], &(r_iUdP[et]), &(r_iVdP[et]));
             }
@@ -2470,14 +2470,14 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         if(n<p_Np){
           occaUnroll(p_Nnodes)
           for (int et=0;et<p_Nnodes;++et){
-            const iint e = et*p_NblockS + es + eo;
+            const int e = et*p_NblockS + es + eo;
             if(e<Nelements) {
-              const iint id = n + p_Np*e;
+              const int id = n + p_Np*e;
               // prefetch volume rhs
               r_iUM[et] = rhsU[id];
               r_iVM[et] = rhsV[id];
@@ -2497,9 +2497,9 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
           occaUnroll(p_Nnodes)
           for (int et=0;et<p_Nnodes;++et){
-            const iint e = et*p_NblockS + es + eo;
+            const int e = et*p_NblockS + es + eo;
             if(e<Nelements) {
-              const iint id = n + p_Np*e;
+              const int id = n + p_Np*e;
               // prefetch volume rhs
               rhsU[id] = r_iUM[et];
               rhsV[id] = r_iVM[et];
@@ -2514,13 +2514,13 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
 /*
 // Multiple element per threadblock,
-kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v4(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -2531,7 +2531,7 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_UM[p_NblockS][p_NfacesNfp];
@@ -2548,16 +2548,16 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     shared dfloat s_iFluxV[p_NblockS][p_intNfpNfaces];
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_Nfp)){
             // indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + n;
+            const int id  = e*p_Nfp*p_Nfaces + n;
 
-            const iint idM = vmapM[id];
-            const iint idP = vmapP[id];
+            const int idM = vmapM[id];
+            const int idP = vmapP[id];
 
             // load negative and positive trace node values of velocity
             s_UM[es][n] = U[idM];
@@ -2577,16 +2577,16 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_intNfp)){
 
-            const iint face = n/p_intNfp; // find face that owns this integration node
+            const int face = n/p_intNfp; // find face that owns this integration node
 
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
@@ -2599,9 +2599,9 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
 
             // local block interpolation (face nodes to integration nodes)
             occaUnroll(p_Nfp)
-              for(iint m=0;m<p_Nfp;++m){
+              for(int m=0;m<p_Nfp;++m){
                 const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-                const iint fm = face*p_Nfp+m;
+                const int fm = face*p_Nfp+m;
 
                 iUM  += iInm*s_UM[es][fm];
                 iVM  += iInm*s_VM[es][fm];
@@ -2615,7 +2615,7 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
               }
 
             // apply boundary conditions
-            const iint bc = EToB[face+p_Nfaces*e];
+            const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
             }
@@ -2644,12 +2644,12 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            const iint id = n + p_Np*e;
+            const int id = n + p_Np*e;
             // prefetch volume rhs
             dfloat rhsu = rhsU[id];
             dfloat rhsv = rhsV[id];
@@ -2673,13 +2673,13 @@ kernel void insSubCycleCubatureSurface2D_v4(const iint Nelements,
 
 
 // restict to p_Np threads
-kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v5(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -2690,7 +2690,7 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_UM[p_NblockS][p_NfacesNfp];
@@ -2707,17 +2707,17 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     shared dfloat s_iFluxV[p_NblockS][p_intNfpNfaces];
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+        const int e = eo + es;
 
         if(e<Nelements){
           for(int m=n;m<p_Nfaces*p_Nfp;m+=p_Np){
             // indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + m;
+            const int id  = e*p_Nfp*p_Nfaces + m;
 
-            const iint idM = vmapM[id];
-            const iint idP = vmapP[id];
+            const int idM = vmapM[id];
+            const int idP = vmapP[id];
 
             // load negative and positive trace node values of velocity
             s_UM[es][m] = U[idM];
@@ -2737,16 +2737,16 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+        const int e = eo + es;
 
         if(e<Nelements){
           for(int m=n;m<p_Nfaces*p_intNfp;m+=p_Np){
-            const iint face = m/p_intNfp; // find face that owns this integration node
+            const int face = m/p_intNfp; // find face that owns this integration node
 
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
@@ -2759,9 +2759,9 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 
             // local block interpolation (face nodes to integration nodes)
             occaUnroll(p_Nfp)
-              for(iint k=0;k<p_Nfp;++k){
+              for(int k=0;k<p_Nfp;++k){
                 const dfloat iInm = intInterpT[m+k*p_Nfaces*p_intNfp];
-                const iint fm = face*p_Nfp+k;
+                const int fm = face*p_Nfp+k;
 
                 iUM  += iInm*s_UM[es][fm];
                 iVM  += iInm*s_VM[es][fm];
@@ -2775,7 +2775,7 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
               }
 
             // apply boundary conditions
-            const iint bc = EToB[face+p_Nfaces*e];
+            const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               insAdvectionBoundaryConditions2D(bc,time, intx[m+e*p_Nfaces*p_intNfp], inty[m+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
             }
@@ -2803,11 +2803,11 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
-          const iint id = n + p_Np*e;
+          const int id = n + p_Np*e;
           // prefetch volume rhs
           dfloat rhsu = rhsU[id];
           dfloat rhsv = rhsV[id];
@@ -2828,13 +2828,13 @@ kernel void insSubCycleCubatureSurface2D_v5(const iint Nelements,
 }
 
 //shared geofacts
-kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v6(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -2845,7 +2845,7 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_UM[p_NblockS][p_NfacesNfp];
@@ -2872,15 +2872,15 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
           k+=p_Np*p_NblockS;
         }
 
-        const iint e = eo + es;
+        const int e = eo + es;
 
         if(e<Nelements){
           for(int m=n;m<p_Nfaces*p_Nfp;m+=p_Np){
             // indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + m;
+            const int id  = e*p_Nfp*p_Nfaces + m;
 
-            const iint idM = vmapM[id];
-            const iint idP = vmapP[id];
+            const int idM = vmapM[id];
+            const int idP = vmapP[id];
 
             // load negative and positive trace node values of velocity
             s_UM[es][m] = U[idM];
@@ -2900,13 +2900,13 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+        const int e = eo + es;
 
         if(e<Nelements){
           for(int m=n;m<p_Nfaces*p_intNfp;m+=p_Np){
-            const iint face = m/p_intNfp; // find face that owns this integration node
+            const int face = m/p_intNfp; // find face that owns this integration node
 
             // load surface geofactors for this face
             const dfloat nx   = s_sgeo[es][face][p_NXID];
@@ -2921,9 +2921,9 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
 
             // local block interpolation (face nodes to integration nodes)
             occaUnroll(p_Nfp)
-              for(iint k=0;k<p_Nfp;++k){
+              for(int k=0;k<p_Nfp;++k){
                 const dfloat iInm = intInterpT[m+k*p_Nfaces*p_intNfp];
-                const iint fm = face*p_Nfp+k;
+                const int fm = face*p_Nfp+k;
 
                 iUM  += iInm*s_UM[es][fm];
                 iVM  += iInm*s_VM[es][fm];
@@ -2937,7 +2937,7 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
               }
 
             // apply boundary conditions
-            const iint bc = EToB[face+p_Nfaces*e];
+            const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               insAdvectionBoundaryConditions2D(bc,time, intx[m+e*p_Nfaces*p_intNfp], inty[m+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
             }
@@ -2965,11 +2965,11 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
-          const iint id = n + p_Np*e;
+          const int id = n + p_Np*e;
           // prefetch volume rhs
           dfloat rhsu = rhsU[id];
           dfloat rhsv = rhsV[id];
@@ -2990,13 +2990,13 @@ kernel void insSubCycleCubatureSurface2D_v6(const iint Nelements,
 }
 
 // multiple elements per node
-kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v7(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -3007,7 +3007,7 @@ kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS*p_Nnodes;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS*p_Nnodes;outer0){
 
     // shared storage for flux terms
     shared dfloat s_UM[p_Nnodes][p_NblockS][p_NfacesNfp];
@@ -3040,10 +3040,10 @@ kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
           if(e<Nelements){
             for(int m=n;m<p_Nfaces*p_Nfp;m+=p_Np){
               // indices of negative and positive traces of face node
-              const iint id  = e*p_Nfp*p_Nfaces + m;
+              const int id  = e*p_Nfp*p_Nfaces + m;
 
-              const iint idM = vmapM[id];
-              const iint idP = vmapP[id];
+              const int idM = vmapM[id];
+              const int idP = vmapP[id];
 
               // load negative and positive trace node values of velocity
               s_UM[et][es][m] = U[idM];
@@ -3064,8 +3064,8 @@ kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
 
         dfloat iUM [p_Nnodes], iVM [p_Nnodes];
         dfloat iUP [p_Nnodes], iVP [p_Nnodes];
@@ -3082,12 +3082,12 @@ kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
             iUdP[et] = 0.f, iVdP[et] = 0.f;
           }
 
-          const iint face = m/p_intNfp; // find face that owns this integration node
+          const int face = m/p_intNfp; // find face that owns this integration node
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-            for(iint k=0;k<p_Nfp;++k){
+            for(int k=0;k<p_Nfp;++k){
               const dfloat iInm = intInterpT[m+k*p_Nfaces*p_intNfp];
-              const iint fm = face*p_Nfp+k;
+              const int fm = face*p_Nfp+k;
 
               occaUnroll(p_Nnodes)
               for (int et=0;et<p_Nnodes;++et){
@@ -3115,7 +3115,7 @@ kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
               const dfloat invJ = s_sgeo[et][es][face][p_IJID];
 
               // apply boundary conditions
-              const iint bc = EToB[face+p_Nfaces*e];
+              const int bc = EToB[face+p_Nfaces*e];
               if(bc>0){
                 insAdvectionBoundaryConditions2D(bc,time, intx[m+e*p_Nfaces*p_intNfp], inty[m+e*p_Nfaces*p_intNfp], nx, ny, iUdM[et],iVdM[et], &(iUdP[et]), &(iVdP[et]));
               }
@@ -3144,8 +3144,8 @@ kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
 
         dfloat rhsu[p_Nnodes];
         dfloat rhsv[p_Nnodes];
@@ -3170,7 +3170,7 @@ kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
         for (int et=0;et<p_Nnodes;++et){
           const int e = et*p_NblockS + es + eo;
           if(e<Nelements){
-            const iint id = n + p_Np*e;
+            const int id = n + p_Np*e;
             rhsU[id] += rhsu[et];
             rhsV[id] += rhsv[et];
           }
@@ -3181,13 +3181,13 @@ kernel void insSubCycleCubatureSurface2D_v7(const iint Nelements,
 }
 
 // interp in shared
-kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v8(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -3198,7 +3198,7 @@ kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS*p_Nnodes;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS*p_Nnodes;outer0){
 
     // shared storage for flux terms
     shared dfloat s_UM[p_Nnodes][p_NblockS][p_NfacesNfp];
@@ -3239,10 +3239,10 @@ kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
           if(e<Nelements){
             for(int m=n;m<p_Nfaces*p_Nfp;m+=p_Np){
               // indices of negative and positive traces of face node
-              const iint id  = e*p_Nfp*p_Nfaces + m;
+              const int id  = e*p_Nfp*p_Nfaces + m;
 
-              const iint idM = vmapM[id];
-              const iint idP = vmapP[id];
+              const int idM = vmapM[id];
+              const int idP = vmapP[id];
 
               // load negative and positive trace node values of velocity
               s_UM[et][es][m] = U[idM];
@@ -3263,8 +3263,8 @@ kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
 
         dfloat iUM [p_Nnodes], iVM [p_Nnodes];
         dfloat iUP [p_Nnodes], iVP [p_Nnodes];
@@ -3281,12 +3281,12 @@ kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
             iUdP[et] = 0.f, iVdP[et] = 0.f;
           }
 
-          const iint face = m/p_intNfp; // find face that owns this integration node
+          const int face = m/p_intNfp; // find face that owns this integration node
           // local block interpolation (face nodes to integration nodes)
           occaUnroll(p_Nfp)
-            for(iint k=0;k<p_Nfp;++k){
+            for(int k=0;k<p_Nfp;++k){
               const dfloat iInm = s_intInterpT[m+k*p_Nfaces*p_intNfp];
-              const iint fm = face*p_Nfp+k;
+              const int fm = face*p_Nfp+k;
 
               occaUnroll(p_Nnodes)
               for (int et=0;et<p_Nnodes;++et){
@@ -3314,7 +3314,7 @@ kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
               const dfloat invJ = s_sgeo[et][es][face][p_IJID];
 
               // apply boundary conditions
-              const iint bc = EToB[face+p_Nfaces*e];
+              const int bc = EToB[face+p_Nfaces*e];
               if(bc>0){
                 insAdvectionBoundaryConditions2D(bc,time, intx[m+e*p_Nfaces*p_intNfp], inty[m+e*p_Nfaces*p_intNfp], nx, ny, iUdM[et],iVdM[et], &(iUdP[et]), &(iVdP[et]));
               }
@@ -3343,8 +3343,8 @@ kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_Np;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
 
         dfloat rhsu[p_Nnodes];
         dfloat rhsv[p_Nnodes];
@@ -3369,7 +3369,7 @@ kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
         for (int et=0;et<p_Nnodes;++et){
           const int e = et*p_NblockS + es + eo;
           if(e<Nelements){
-            const iint id = n + p_Np*e;
+            const int id = n + p_Np*e;
             rhsU[id] += rhsu[et];
             rhsV[id] += rhsv[et];
           }
@@ -3380,13 +3380,13 @@ kernel void insSubCycleCubatureSurface2D_v8(const iint Nelements,
 }
 
 // Based on v4. Assume trace buffers are pre-built
-kernel void insSubCycleCubatureSurface2D_v2(const iint Nelements,
+kernel void insSubCycleCubatureSurface2D_v2(const int Nelements,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const iint   * restrict vmapM,
-                                            const iint   * restrict vmapP,
-                                            const iint   * restrict EToB,
+                                            const int   * restrict vmapM,
+                                            const int   * restrict vmapP,
+                                            const int   * restrict EToB,
                                             const dfloat time,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
@@ -3397,29 +3397,29 @@ kernel void insSubCycleCubatureSurface2D_v2(const iint Nelements,
                                             dfloat * restrict rhsU,
                                             dfloat * restrict rhsV){
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     shared dfloat s_iFluxU[p_NblockS][p_intNfpNfaces];
     shared dfloat s_iFluxV[p_NblockS][p_intNfpNfaces];
 
     // get surface integration nodes and compute flux
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_intNfp)){
 
-            const iint face = n/p_intNfp; // find face that owns this integration node
+            const int face = n/p_intNfp; // find face that owns this integration node
 
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];
 
-            const iint idM  = e*p_intNfp*p_Nfaces + n;
-            const iint idP  = idM;
+            const int idM  = e*p_intNfp*p_Nfaces + n;
+            const int idP  = idM;
 
             const dfloat iUM  = fU[idM];
             const dfloat iUP  = fU[idP];
@@ -3432,7 +3432,7 @@ kernel void insSubCycleCubatureSurface2D_v2(const iint Nelements,
             const dfloat iVdP = fVd[idP];
 
             // apply boundary conditions
-            const iint bc = EToB[face+p_Nfaces*e];
+            const int bc = EToB[face+p_Nfaces*e];
             //if(bc>0){
             //  insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUdM,iVdM, &iUdP, &iVdP);
             //}
@@ -3460,12 +3460,12 @@ kernel void insSubCycleCubatureSurface2D_v2(const iint Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodesSurfaceCub;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            const iint id = n + p_Np*e;
+            const int id = n + p_Np*e;
             // prefetch volume rhs
             dfloat rhsu = rhsU[id];
             dfloat rhsv = rhsV[id];

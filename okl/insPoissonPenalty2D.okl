@@ -6,9 +6,9 @@ kernel void insPoissonPenalty2D(const int Nelements,
         const dfloat * restrict DsT,
         const dfloat * restrict LIFTT,
         const dfloat * restrict MM,
-        const iint * restrict vmapM,
-        const iint * restrict vmapP,
-        const iint   * restrict EToB,
+        const int * restrict vmapM,
+        const int * restrict vmapP,
+        const int   * restrict EToB,
         const dfloat tau,
         const dfloat * restrict x,
         const dfloat * restrict y,
@@ -18,7 +18,7 @@ kernel void insPoissonPenalty2D(const int Nelements,
         const dfloat c1,
         const dfloat c2,
         const int index,
-        const iint offset,
+        const int offset,
         const dfloat * restrict P,
               dfloat * restrict rhsP){
   
@@ -29,14 +29,14 @@ kernel void insPoissonPenalty2D(const int Nelements,
     
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
-        const iint id  = n + e*p_Nfaces*p_Nfp;
-        const iint idM = vmapM[id];          
-        const iint idP = vmapP[id];         
+        const int id  = n + e*p_Nfaces*p_Nfp;
+        const int idM = vmapM[id];          
+        const int idP = vmapP[id];         
         // find face that owns this node
-        const iint face = n/p_Nfp;
+        const int face = n/p_Nfp;
 
         // load surface geofactors for this face
-        iint sid = p_Nsgeo*(e*p_Nfaces+face);
+        int sid = p_Nsgeo*(e*p_Nfaces+face);
         dfloat nx   = sgeo[sid+p_NXID];
         dfloat ny   = sgeo[sid+p_NYID];
         dfloat sJ   = sgeo[sid+p_SJID];
@@ -57,7 +57,7 @@ kernel void insPoissonPenalty2D(const int Nelements,
         PPm1 = P[idP+p_Np*index1*offset];
         PPm2 = P[idP+p_Np*index2*offset];
 
-        iint bc = EToB[face+p_Nfaces*e];
+        int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
           insGradientBoundaryConditions2D(bc, time-1*dt, x[idM], y[idM], nx, ny, PMm0, &PPm0);
           insGradientBoundaryConditions2D(bc, time-2*dt, x[idM], y[idM], nx, ny, PMm1, &PPm1);

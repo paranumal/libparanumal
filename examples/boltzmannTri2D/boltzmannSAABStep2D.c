@@ -1,12 +1,12 @@
 #include "boltzmann2D.h"
 
 // complete a time step using LSERK4
-void boltzmannSAABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
+void boltzmannSAABStep2D(mesh2D *mesh, int tstep, int haloBytes,
                         dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
 
-  iint mrab_order = 2;  // Third order
+  int mrab_order = 2;  // Third order
 
   if(tstep==0)
     mrab_order = 0; // first order
@@ -27,7 +27,7 @@ void boltzmannSAABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
       mesh->device.setStream(dataStream);
     #endif
 
-    iint Nentries = mesh->Np*mesh->Nfields;
+    int Nentries = mesh->Np*mesh->Nfields;
     mesh->haloExtractKernel(mesh->totalHaloPairs,
                             Nentries,
                             mesh->o_haloElementList,
@@ -185,7 +185,7 @@ void boltzmannSAABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
                           mesh->o_pmlrhsqx,
                           mesh->o_pmlrhsqy);
 
-  const iint id = mrab_order*3;
+  const int id = mrab_order*3;
 
   if (mesh->nonPmlNelements)
     mesh->updateKernel(mesh->nonPmlNelements,

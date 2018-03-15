@@ -1,6 +1,6 @@
 #include "acoustics2D.h"
 
-void boundaryConditions2D(iint bc, dfloat t, dfloat x, dfloat y,
+void boundaryConditions2D(int bc, dfloat t, dfloat x, dfloat y,
 			  dfloat uM, dfloat vM, dfloat pM,
 			  dfloat *uP, dfloat *vP, dfloat *pP){
   if(1){//bc==1){
@@ -33,25 +33,25 @@ void acousticsSurface2D(mesh2D *mesh, dfloat t){
   dfloat *fluxp = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
 
   // for all elements
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     // for all face nodes of all elements
-    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+    for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
       // find face that owns this node
-      iint face = n/mesh->Nfp;
+      int face = n/mesh->Nfp;
 
       // load surface geofactors for this face
-      iint sid = mesh->Nsgeo*(e*mesh->Nfaces+face);
+      int sid = mesh->Nsgeo*(e*mesh->Nfaces+face);
       dfloat nx = mesh->sgeo[sid+0];
       dfloat ny = mesh->sgeo[sid+1];
       dfloat sJ = mesh->sgeo[sid+2];
       dfloat invJ = mesh->sgeo[sid+3];
 
       // indices of negative and positive traces of face node
-      iint id  = e*mesh->Nfp*mesh->Nfaces + n;
-      iint idM = mesh->vmapM[id];
-      iint idP = mesh->vmapP[id];
+      int id  = e*mesh->Nfp*mesh->Nfaces + n;
+      int idM = mesh->vmapM[id];
+      int idP = mesh->vmapP[id];
       if(idP<0) idP=idM;
-      iint qidM = mesh->Nfields*idM, qidP = mesh->Nfields*idP;
+      int qidM = mesh->Nfields*idM, qidP = mesh->Nfields*idP;
       
       // load negative trace node values of q
       dfloat uM = mesh->q[qidM+0];
@@ -64,7 +64,7 @@ void acousticsSurface2D(mesh2D *mesh, dfloat t){
       dfloat pP = mesh->q[qidP+2];
 
       // find boundary type
-      iint boundaryType = mesh->EToB[e*mesh->Nfaces+face];
+      int boundaryType = mesh->EToB[e*mesh->Nfaces+face];
       if(boundaryType>0)
 	boundaryConditions2D(boundaryType, t, mesh->x[idM], mesh->y[idM], uM, vM, pM, &uP, &vP, &pP);
 
@@ -80,8 +80,8 @@ void acousticsSurface2D(mesh2D *mesh, dfloat t){
     }
 
     // for each node in the element 
-    for(iint n=0;n<mesh->Np;++n){
-      iint id = mesh->Nfields*(mesh->Np*e + n);
+    for(int n=0;n<mesh->Np;++n){
+      int id = mesh->Nfields*(mesh->Np*e + n);
 
       // load rhs data from volume fluxes
       dfloat rhsu = mesh->rhsq[id];

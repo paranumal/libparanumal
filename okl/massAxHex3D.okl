@@ -21,8 +21,8 @@
 // reference kernel; no unrolling anywhere and no padding, no const, no compiler variables
 //worst out of the worst
 //written by KS
-kernel void massPartialAxHex3D_baselineVeryBad(iint Nelements,
-    iint *  elementList,
+kernel void massPartialAxHex3D_baselineVeryBad(int Nelements,
+    int *  elementList,
     dfloat * gjGeo,
     dfloat *  gjI,
     dfloat *  q,
@@ -42,7 +42,7 @@ kernel void massPartialAxHex3D_baselineVeryBad(iint Nelements,
 		//	shared dfloat s_q1[p_gjNq][p_gjNq];
 		//		shared dfloat s_q2[p_gjNq][p_gjNq];
 
-		//	exclusive iint emap;
+		//	exclusive int emap;
 
 		// prefetch D and I matrices and zero register storage
 		for(int b=0;b<p_gjNq;++b;inner1){
@@ -165,7 +165,7 @@ kernel void massPartialAxHex3D_baselineVeryBad(iint Nelements,
 				int emap = elementList[e];
 				if(a<p_Nq && b<p_Nq){
 					for(int c=0;c<p_Nq;++c){
-						const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+						const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 						Mq[id] = qtmp2[emap*p_Np+c*p_Nq2+b*p_Nq+a] ;
 						//r_Mq[c];
 					}
@@ -184,8 +184,8 @@ kernel void massPartialAxHex3D_baselineVeryBad(iint Nelements,
 
 
 // reference kernel; no unrolling anywhere and no padding, no const, no compiler variables
-kernel void massPartialAxHex3D_vBaselineTW(iint Nelements,
-    iint *  elementList,
+kernel void massPartialAxHex3D_vBaselineTW(int Nelements,
+    int *  elementList,
     dfloat * gjGeo,
     dfloat *  gjI,
     dfloat *  q,
@@ -203,7 +203,7 @@ kernel void massPartialAxHex3D_vBaselineTW(iint Nelements,
 		shared dfloat s_q1[p_gjNq][p_gjNq];
 		shared dfloat s_q2[p_gjNq][p_gjNq];
 
-		exclusive iint emap;
+		exclusive int emap;
 
 		// prefetch D and I matrices and zero register storage
 		for(int b=0;b<p_gjNq;++b;inner1){
@@ -216,7 +216,7 @@ kernel void massPartialAxHex3D_vBaselineTW(iint Nelements,
 
 				if(a<Nq && b<Nq){
 					for(int c=0;c<Nq;++c){
-						const iint id = emap*Np + c*Nq2 + b*Nq + a;
+						const int id = emap*Np + c*Nq2 + b*Nq + a;
 						Mq[id] = 0.0;
 					}
 				}
@@ -307,7 +307,7 @@ kernel void massPartialAxHex3D_vBaselineTW(iint Nelements,
 
 						// write straight to Mq
 						for(int c=0;c<Nq;++c){
-							const iint id = emap*Np + c*Nq2 + b*Nq + a;
+							const int id = emap*Np + c*Nq2 + b*Nq + a;
 							Mq[id] += s_I[k][c]*tmp;
 						}
 					}
@@ -320,8 +320,8 @@ kernel void massPartialAxHex3D_vBaselineTW(iint Nelements,
 
 
 // reference kernel; no unrolling anywhere and no padding, no const, no compiler variables
-kernel void massPartialAxHex3D_vRef0(iint Nelements,
-                                     iint *  elementList,
+kernel void massPartialAxHex3D_vRef0(int Nelements,
+                                     int *  elementList,
                                      dfloat * gjGeo,
                                      dfloat *  gjI,
                                      dfloat *  q,
@@ -342,7 +342,7 @@ kernel void massPartialAxHex3D_vRef0(iint Nelements,
 		shared dfloat s_q1[p_gjNq][p_gjNq];
 		shared dfloat s_q2[p_gjNq][p_gjNq];
 
-		exclusive iint emap;
+		exclusive int emap;
 
 		// prefetch D and I matrices and zero register storage
 		for(int b=0;b<p_gjNq;++b;inner1){
@@ -478,7 +478,7 @@ kernel void massPartialAxHex3D_vRef0(iint Nelements,
 			for(int a=0;a<p_gjNq;++a;inner0){
 				if(a<p_Nq && b<p_Nq){
 					for(int c=0;c<p_Nq;++c){
-						const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+						const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 						Mq[id] = r_Mq[c];
 					}
 				}
@@ -490,8 +490,8 @@ kernel void massPartialAxHex3D_vRef0(iint Nelements,
 
 
 
-kernel void massPartialAxHex3D_v1(const iint Nelements,
-                                  const iint * restrict elementList,
+kernel void massPartialAxHex3D_v1(const int Nelements,
+                                  const int * restrict elementList,
                                   const dfloat * restrict gjGeo,
                                   const dfloat * restrict gjI,
                                   const dfloat * restrict q,
@@ -508,7 +508,7 @@ kernel void massPartialAxHex3D_v1(const iint Nelements,
 		shared dfloat s_q1[p_gjNq][p_gjNq+p_gjPad];
 		shared dfloat s_q2[p_gjNq][p_gjNq+p_gjPad];
 
-		exclusive iint emap;
+		exclusive int emap;
 
 		// prefetch D and I matrices and zero register storage
 		for(int b=0;b<p_gjNq;++b;inner1){
@@ -645,7 +645,7 @@ kernel void massPartialAxHex3D_v1(const iint Nelements,
 				if(a<p_Nq && b<p_Nq){
 					occaUnroll(p_Nq)
 					for(int c=0;c<p_Nq;++c){
-						const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+						const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 						Mq[id] = r_Mq[c];
 					}
 				}
@@ -666,8 +666,8 @@ kernel void massPartialAxHex3D_v1(const iint Nelements,
 #define NblocksT Nelements
 #endif
 
-kernel void massPartialAxHex3D_v2(const iint Nelements,
-                                  const iint * restrict elementList,
+kernel void massPartialAxHex3D_v2(const int Nelements,
+                                  const int * restrict elementList,
                                   const dfloat * restrict gjGeo,
                                   const dfloat * restrict gjI,
                                   const dfloat * restrict q,
@@ -683,7 +683,7 @@ kernel void massPartialAxHex3D_v2(const iint Nelements,
 
 			exclusive dfloat r_q[p_gjNq];
 
-			exclusive iint emap;
+			exclusive int emap;
 
 			// prefetch D and I matrices and zero register storage
 			for(int b=0;b<p_gjNq;++b;inner1){
@@ -774,7 +774,7 @@ kernel void massPartialAxHex3D_v2(const iint Nelements,
 						occaUnroll(p_gjNq)
 						for(int k=0;k<p_gjNq;++k){
 							// prefetch integration weights
-							const iint id = p_Nggeo*emap*p_gjNp
+							const int id = p_Nggeo*emap*p_gjNp
 							                +k*p_gjNq*p_gjNq+j*p_gjNq+i+p_GWJID*p_gjNp;
 							const dfloat r_GwJ = gjGeo[id];
 
@@ -873,8 +873,8 @@ kernel void massPartialAxHex3D_v2(const iint Nelements,
 
 //written by Kasia to reduce the shmem use
 
-kernel void massPartialAxHex3D_redShmem(const iint Nelements,
-                                        const iint * restrict elementList,
+kernel void massPartialAxHex3D_redShmem(const int Nelements,
+                                        const int * restrict elementList,
                                         const dfloat * restrict gjGeo,
                                         const dfloat * restrict gjI,
                                         const dfloat * restrict q,
@@ -893,7 +893,7 @@ kernel void massPartialAxHex3D_redShmem(const iint Nelements,
 
 			exclusive dfloat r_q[p_gjNq];
 
-			exclusive iint emap;
+			exclusive int emap;
 
 			// prefetch D and I matrices and zero register storage
 			for(int b=0;b<p_gjNq;++b;inner1){
@@ -995,9 +995,9 @@ kernel void massPartialAxHex3D_redShmem(const iint Nelements,
 						occaUnroll(p_gjHalfI)
 						for(int k=0;k<p_gjHalfI;++k){
 							// prefetch integration weights
-							const iint id = p_Nggeo*emap*p_gjNp
+							const int id = p_Nggeo*emap*p_gjNp
 							                +k*p_gjNq*p_gjNq+j*p_gjNq+i+p_GWJID*p_gjNp;
-							const iint id2 = p_Nggeo*emap*p_gjNp
+							const int id2 = p_Nggeo*emap*p_gjNp
 							                 +(p_gjNq-1-k)*p_gjNq*p_gjNq+j*p_gjNq+i+p_GWJID*p_gjNp;
 							const dfloat r_GwJ = gjGeo[id];
 							const dfloat r_GwJ2 = gjGeo[id2];
@@ -1111,8 +1111,8 @@ kernel void massPartialAxHex3D_redShmem(const iint Nelements,
 //v3 is the same as v1 just the loop is not unrolled --- we look at the effects of unrolling
 
 
-kernel void massPartialAxHex3D_v3(const iint Nelements,
-                                  const iint * restrict elementList,
+kernel void massPartialAxHex3D_v3(const int Nelements,
+                                  const int * restrict elementList,
                                   const dfloat * restrict gjGeo,
                                   const dfloat * restrict gjI,
                                   const dfloat * restrict q,
@@ -1129,7 +1129,7 @@ kernel void massPartialAxHex3D_v3(const iint Nelements,
 		shared dfloat s_q1[p_gjNq][p_gjNq+p_gjPad];
 		shared dfloat s_q2[p_gjNq][p_gjNq+p_gjPad];
 
-		exclusive iint emap;
+		exclusive int emap;
 
 		// prefetch D and I matrices and zero register storage
 		for(int b=0;b<p_gjNq;++b;inner1){
@@ -1267,7 +1267,7 @@ kernel void massPartialAxHex3D_v3(const iint Nelements,
 				if(a<p_Nq && b<p_Nq){
 					occaUnroll(p_Nq)
 					for(int c=0;c<p_Nq;++c){
-						const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+						const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 						Mq[id] = r_Mq[c];
 					}
 				}
@@ -1280,8 +1280,8 @@ kernel void massPartialAxHex3D_v3(const iint Nelements,
 //REF1 the same as ref0 but with const mem
 
 
-kernel void massPartialAxHex3D_vRef1(const iint Nelements,
-                                     const iint * restrict elementList,
+kernel void massPartialAxHex3D_vRef1(const int Nelements,
+                                     const int * restrict elementList,
                                      const dfloat * restrict gjGeo,
                                      const dfloat * restrict gjI,
                                      const dfloat * restrict q,
@@ -1302,7 +1302,7 @@ kernel void massPartialAxHex3D_vRef1(const iint Nelements,
 		shared dfloat s_q1[p_gjNq][p_gjNq];
 		shared dfloat s_q2[p_gjNq][p_gjNq];
 
-		exclusive iint emap;
+		exclusive int emap;
 
 		// prefetch D and I matrices and zero register storage
 		for(int b=0;b<p_gjNq;++b;inner1){
@@ -1438,7 +1438,7 @@ kernel void massPartialAxHex3D_vRef1(const iint Nelements,
 			for(int a=0;a<p_gjNq;++a;inner0){
 				if(a<p_Nq && b<p_Nq){
 					for(int c=0;c<p_Nq;++c){
-						const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+						const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 						Mq[id] = r_Mq[c];
 					}
 				}

@@ -12,8 +12,8 @@ void meshVTU2D(mesh2D *mesh, char *fileName){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   FILE *fp;
-  iint *allNelements = (iint*) calloc(size, sizeof(iint));
-  iint totalNelements = 0, maxNelements = 0;
+  int *allNelements = (int*) calloc(size, sizeof(int));
+  int totalNelements = 0, maxNelements = 0;
   dfloat *tmpEX, *tmpEY;
 
   if(rank==0){
@@ -22,8 +22,8 @@ void meshVTU2D(mesh2D *mesh, char *fileName){
   }
 
   // gather element counts to root
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, 
-		allNelements, 1, MPI_IINT, 
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_INT, 
+		allNelements, 1, MPI_INT, 
 		MPI_COMM_WORLD);
   
   if(rank==0){
@@ -47,9 +47,9 @@ void meshVTU2D(mesh2D *mesh, char *fileName){
 
     if(rank==0){  // root writes out its coordinates
       printf("printing local verts \n");
-      for(iint e=0;e<mesh->Nelements;++e){
+      for(int e=0;e<mesh->Nelements;++e){
 	fprintf(fp, "        ");
-	for(iint n=0;n<mesh->Nverts;++n)
+	for(int n=0;n<mesh->Nverts;++n)
 	  fprintf(fp, "%g %g 0.\n", mesh->EX[e*mesh->Nverts+n], mesh->EY[e*mesh->Nverts+n]);
       }
     }
@@ -71,9 +71,9 @@ void meshVTU2D(mesh2D *mesh, char *fileName){
       MPI_Recv(tmpEY, allNelements[r]*mesh->Nverts, 
 	       MPI_DFLOAT, r, 666, MPI_COMM_WORLD, &status);
       
-      for(iint e=0;e<allNelements[r];++e){
+      for(int e=0;e<allNelements[r];++e){
 	fprintf(fp, "        ");
-	for(iint n=0;n<mesh->Nverts;++n)
+	for(int n=0;n<mesh->Nverts;++n)
 	  fprintf(fp, "%g %g 0\n", tmpEX[e*mesh->Nverts+n], tmpEY[e*mesh->Nverts+n]);
       }
     }
@@ -89,8 +89,8 @@ void meshVTU2D(mesh2D *mesh, char *fileName){
     fprintf(fp, "      <CellData Scalars=\"scalars\">\n");
     fprintf(fp, "        <DataArray type=\"Int32\" Name=\"element_rank\" Format=\"ascii\">\n");
     
-    for(iint r=0;r<size;++r){
-      for(iint e=0;e<allNelements[r];++e)
+    for(int r=0;r<size;++r){
+      for(int e=0;e<allNelements[r];++e)
 	fprintf(fp, "         %d\n", r);
     }
     
@@ -100,10 +100,10 @@ void meshVTU2D(mesh2D *mesh, char *fileName){
     fprintf(fp, "    <Cells>\n");
     fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
 
-    iint cnt=0;
-    for(iint r=0;r<size;++r){
-      for(iint e=0;e<allNelements[r];++e){
-	for(iint n=0;n<mesh->Nverts;++n){
+    int cnt=0;
+    for(int r=0;r<size;++r){
+      for(int e=0;e<allNelements[r];++e){
+	for(int n=0;n<mesh->Nverts;++n){
 	  fprintf(fp, "%d ", cnt);
 	  ++cnt;
 	}
@@ -114,7 +114,7 @@ void meshVTU2D(mesh2D *mesh, char *fileName){
     fprintf(fp, "        </DataArray>\n");
     
     fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
-    for(iint e=0;e<totalNelements;++e){
+    for(int e=0;e<totalNelements;++e){
       if(e%10==0) fprintf(fp, "        ");
       fprintf(fp, "%d ", (e+1)*mesh->Nverts);
       if(((e+1)%10==0) || (e==totalNelements-1))
@@ -123,7 +123,7 @@ void meshVTU2D(mesh2D *mesh, char *fileName){
     fprintf(fp, "       </DataArray>\n");
     
     fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-    for(iint e=0;e<totalNelements;++e){
+    for(int e=0;e<totalNelements;++e){
       if(e%10==0) fprintf(fp, "        ");
       fprintf(fp, "5 ");
       if(((e+1)%10==0) || e==(totalNelements-1))

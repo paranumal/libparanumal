@@ -1,14 +1,14 @@
-kernel void ellipticBRBBDivergenceSurface3D_v0(const iint Nelements,
-                                               const iint   * restrict vmapM,
-                                               const iint   * restrict vmapP,
+kernel void ellipticBRBBDivergenceSurface3D_v0(const int Nelements,
+                                               const int   * restrict vmapM,
+                                               const int   * restrict vmapP,
                                                const dfloat lambda,
                                                const dfloat tau,
                                                const dfloat * restrict vgeo,
                                                const dfloat * restrict sgeo,
-                                               const iint   * restrict EToB,
-                                               const iint   * restrict L0ids,
+                                               const int   * restrict EToB,
+                                               const int   * restrict L0ids,
                                                const dfloat * restrict L0vals,  
-                                               const iint   * restrict ELids,
+                                               const int   * restrict ELids,
                                                const dfloat * restrict ELvals,  
                                                const dfloat * restrict MM,
                                                const dfloat * restrict q,
@@ -16,7 +16,7 @@ kernel void ellipticBRBBDivergenceSurface3D_v0(const iint Nelements,
                                                dfloat * restrict Aq){
 
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     shared dfloat s_flux[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_Aq[p_NblockS][p_Np];
@@ -24,15 +24,15 @@ kernel void ellipticBRBBDivergenceSurface3D_v0(const iint Nelements,
     exclusive dfloat r_flux;
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        const int e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
             // find face that owns this node
-            const iint face = n/p_Nfp;
+            const int face = n/p_Nfp;
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat nz   = sgeo[sid+p_NZID];
@@ -40,12 +40,12 @@ kernel void ellipticBRBBDivergenceSurface3D_v0(const iint Nelements,
             const dfloat invJ = sgeo[sid+p_IJID];
 
             // indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + n;
-            const iint idM = vmapM[id]%p_Np;
-            const iint idP = vmapP[id]%p_Np;
+            const int id  = e*p_Nfp*p_Nfaces + n;
+            const int idM = vmapM[id]%p_Np;
+            const int idP = vmapP[id]%p_Np;
 
-            const iint eM = vmapM[id]/p_Np;
-            const iint eP = vmapP[id]/p_Np;
+            const int eM = vmapM[id]/p_Np;
+            const int eP = vmapP[id]/p_Np;
 
             dfloat  qM  = q[idM+p_Np*eM], qP  = q[idP+p_Np*eP];
             dfloat  qxM = gradq[idM+       3*p_Np*eM], qxP = gradq[idP+       3*p_Np*eP];
@@ -53,7 +53,7 @@ kernel void ellipticBRBBDivergenceSurface3D_v0(const iint Nelements,
             dfloat  qzM = gradq[idM+2*p_Np+3*p_Np*eM], qzP = gradq[idP+2*p_Np+3*p_Np*eP];
 
             // apply boundary condition
-            const iint bc = EToB[face+p_Nfaces*e];
+            const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
               ellipticHomogeneousBC3D(bc, qM, qxM, qyM, qzM, qP, qxP, qyP, qzP);
               qP  = 2*qP  - qM;
@@ -75,20 +75,20 @@ kernel void ellipticBRBBDivergenceSurface3D_v0(const iint Nelements,
     barrier(localMemFence);
 
     // apply L0 to flux. use sparse format
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
-            const iint id = n%p_Nfp;  // warning: redundant reads
-            const iint f  = n/p_Nfp;
+            const int id = n%p_Nfp;  // warning: redundant reads
+            const int f  = n/p_Nfp;
 
             r_flux = 0.f;
 
             // sparse application of L0
             occaUnroll(7)
             for (int m = 0; m < 7; ++m){
-              const iint   L0id  = L0ids [id + p_Nfp*m];
+              const int   L0id  = L0ids [id + p_Nfp*m];
               const dfloat L0val = L0vals[id + p_Nfp*m];
               
               r_flux += L0val * s_flux[es][L0id+f*p_Nfp];
@@ -101,8 +101,8 @@ kernel void ellipticBRBBDivergenceSurface3D_v0(const iint Nelements,
     barrier(localMemFence);
 
     //write back to shared 
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
         if(n<p_Nfp*p_Nfaces){
           s_flux[es][n] = r_flux;
         }
@@ -112,12 +112,12 @@ kernel void ellipticBRBBDivergenceSurface3D_v0(const iint Nelements,
     barrier(localMemFence);
 
     // apply lift reduction and accumulate RHS
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            const iint id = e*p_Np;
+            const int id = e*p_Np;
 
             dfloat Aqn = Aq[id+n];
             dfloat qn  = q[id+n];
@@ -125,9 +125,9 @@ kernel void ellipticBRBBDivergenceSurface3D_v0(const iint Nelements,
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             occaUnroll(p_max_EL_nnz)
             for (int m = 0; m < p_max_EL_nnz; ++m){
-              const iint id = n + m*p_Np;
+              const int id = n + m*p_Np;
               const dfloat ELval = ELvals[id];
-              const iint   ELid  = ELids [id];
+              const int   ELid  = ELids [id];
               Aqn += ELval * s_flux[es][ELid];
             }
             
@@ -139,14 +139,14 @@ kernel void ellipticBRBBDivergenceSurface3D_v0(const iint Nelements,
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        const iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        const int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
 
             const dfloat J = vgeo[e*p_Nvgeo + p_JID];
-            const iint id = e*p_Np;
+            const int id = e*p_Np;
 
             dfloat MAqn = 0.f;
 

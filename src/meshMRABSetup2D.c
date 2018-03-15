@@ -6,7 +6,7 @@
 
 void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -14,7 +14,7 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
   dfloat dtmin, dtmax;
   dtmin = EToDT[0];
   dtmax = EToDT[0];
-  for (iint e=1;e<mesh->Nelements;e++) {
+  for (int e=1;e<mesh->Nelements;e++) {
     dtmin = mymin(dtmin,EToDT[e]);
     dtmax = mymax(dtmax,EToDT[e]);
   }
@@ -38,11 +38,11 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
   mesh->dt = dtGmin; 
 
   //compute the level of each element
-  mesh->MRABlevel = (iint *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(iint));
-  iint *MRABsendBuffer;
-  for(iint lev=0; lev<mesh->MRABNlevels; lev++){             
+  mesh->MRABlevel = (int *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(int));
+  int *MRABsendBuffer;
+  for(int lev=0; lev<mesh->MRABNlevels; lev++){             
     dfloat dtlev = dtGmin*pow(2,lev);   
-    for(iint e=0;e<mesh->Nelements;++e){
+    for(int e=0;e<mesh->Nelements;++e){
       if(EToDT[e] >=dtlev) 
         mesh->MRABlevel[e] = lev;
     }
@@ -50,15 +50,15 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
 
   //enforce one level difference between neighbours
   if (mesh->totalHaloPairs) 
-    MRABsendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
+    MRABsendBuffer = (int *) calloc(mesh->totalHaloPairs,sizeof(int));
   
-  for (iint lev=0; lev < mesh->MRABNlevels; lev++){
+  for (int lev=0; lev < mesh->MRABNlevels; lev++){
     if (mesh->totalHaloPairs) 
-      meshHaloExchange(mesh, sizeof(iint), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
-    for (iint e =0; e<mesh->Nelements;e++) {
+      meshHaloExchange(mesh, sizeof(int), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
+    for (int e =0; e<mesh->Nelements;e++) {
       if (mesh->MRABlevel[e] > lev+1) { //find elements at least 2 levels higher than lev
-        for (iint f=0;f<mesh->Nfaces;f++) { //check for a level lev neighbour
-          iint eP = mesh->EToE[mesh->Nfaces*e+f];
+        for (int f=0;f<mesh->Nfaces;f++) { //check for a level lev neighbour
+          int eP = mesh->EToE[mesh->Nfaces*e+f];
           if (eP > -1) 
             if (mesh->MRABlevel[eP] == lev)
               mesh->MRABlevel[e] = lev + 1;  //if one exists, lower the level of this element to lev-1
@@ -73,7 +73,7 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
 
   //this could change the number of MRAB levels there are, so find the new max level
   mesh->MRABNlevels = 0;
-  for (iint e=0;e<mesh->Nelements;e++)
+  for (int e=0;e<mesh->Nelements;e++)
     mesh->MRABNlevels = (mesh->MRABlevel[e]>mesh->MRABNlevels) ? mesh->MRABlevel[e] : mesh->MRABNlevels;
   mesh->MRABNlevels++;
   int localNlevels = mesh->MRABNlevels;
@@ -87,7 +87,7 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     //for the moment, just weigth the elements by the number or RHS evals per MRAB step
     // TODO: We should make this an input parameter later to handle other problems. 
     dfloat *weights = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
-    for (iint e=0; e<mesh->Nelements;e++) {
+    for (int e=0; e<mesh->Nelements;e++) {
       weights[e] = pow(2,mesh->MRABNlevels-mesh->MRABlevel[e]);
     }
     
@@ -96,16 +96,16 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
   }
 
   //construct element and halo lists
-  mesh->MRABelementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
-  mesh->MRABhaloIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
+  mesh->MRABelementIds = (int **) calloc(mesh->MRABNlevels,sizeof(int*));
+  mesh->MRABhaloIds = (int **) calloc(mesh->MRABNlevels,sizeof(int*));
   
-  mesh->MRABNelements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
-  mesh->MRABNhaloElements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
+  mesh->MRABNelements = (int *) calloc(mesh->MRABNlevels,sizeof(int));
+  mesh->MRABNhaloElements = (int *) calloc(mesh->MRABNlevels,sizeof(int));
 
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
     mesh->MRABNelements[mesh->MRABlevel[e]]++;
-    for (iint f=0;f<mesh->Nfaces;f++) { 
-      iint eP = mesh->EToE[mesh->Nfaces*e+f];
+    for (int f=0;f<mesh->Nfaces;f++) { 
+      int eP = mesh->EToE[mesh->Nfaces*e+f];
       if (eP > -1) {
         if (mesh->MRABlevel[eP] == mesh->MRABlevel[e]-1) {//check for a level lev-1 neighbour
           mesh->MRABNhaloElements[mesh->MRABlevel[e]]++;
@@ -115,17 +115,17 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     }
   }
 
-  for (iint lev =0;lev<mesh->MRABNlevels;lev++){
-    mesh->MRABelementIds[lev] = (iint *) calloc(mesh->MRABNelements[lev],sizeof(iint));
-    mesh->MRABhaloIds[lev] = (iint *) calloc(mesh->MRABNhaloElements[lev],sizeof(iint));
-    iint cnt  =0;
-    iint cnt2 =0;
-    for (iint e=0;e<mesh->Nelements;e++){
+  for (int lev =0;lev<mesh->MRABNlevels;lev++){
+    mesh->MRABelementIds[lev] = (int *) calloc(mesh->MRABNelements[lev],sizeof(int));
+    mesh->MRABhaloIds[lev] = (int *) calloc(mesh->MRABNhaloElements[lev],sizeof(int));
+    int cnt  =0;
+    int cnt2 =0;
+    for (int e=0;e<mesh->Nelements;e++){
       if (mesh->MRABlevel[e] == lev) {
         mesh->MRABelementIds[lev][cnt++] = e;
       
-        for (iint f=0;f<mesh->Nfaces;f++) { 
-          iint eP = mesh->EToE[mesh->Nfaces*e+f];
+        for (int f=0;f<mesh->Nfaces;f++) { 
+          int eP = mesh->EToE[mesh->Nfaces*e+f];
           if (eP > -1) {
             if (mesh->MRABlevel[eP] == lev-1) {//check for a level lev-1 neighbour
               mesh->MRABhaloIds[lev][cnt2++] = e;
@@ -140,16 +140,16 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
 
   
   //offset index
-  mesh->MRABshiftIndex = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
+  mesh->MRABshiftIndex = (int *) calloc(mesh->MRABNlevels,sizeof(int));
 
   if (rank==0){
     printf("| Rank | Level | Nelements | Level/Level Boundary Elements | \n");
     printf("------------------------------------------------------------\n");
   }
   MPI_Barrier(MPI_COMM_WORLD);
-  for (iint r =0;r<size;r++) {
+  for (int r =0;r<size;r++) {
     if (r==rank) {
-      for (iint lev =0; lev<mesh->MRABNlevels; lev++) 
+      for (int lev =0; lev<mesh->MRABNlevels; lev++) 
         printf("|  %d,    %d,      %d,        %d     \n", rank, lev, mesh->MRABNelements[lev], mesh->MRABNhaloElements[lev]);
       printf("------------------------------------------------------------\n");
     }

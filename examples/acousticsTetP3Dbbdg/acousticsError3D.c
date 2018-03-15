@@ -2,11 +2,11 @@
 
 void acousticsError3D(mesh3D *mesh, dfloat time){
 
-  iint NMax = mesh->NMax;
+  int NMax = mesh->NMax;
 
   dfloat maxErrorP = 0;
-  for(iint e=0;e<mesh->Nelements;++e){    
-    iint id = e*mesh->Nverts;
+  for(int e=0;e<mesh->Nelements;++e){    
+    int id = e*mesh->Nverts;
 
     dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat xe2 = mesh->EX[id+1];
@@ -23,7 +23,7 @@ void acousticsError3D(mesh3D *mesh, dfloat time){
     dfloat ze3 = mesh->EZ[id+2];
     dfloat ze4 = mesh->EZ[id+3];
 
-    for(iint n=0;n<mesh->NpMax;++n){
+    for(int n=0;n<mesh->NpMax;++n){
       /* (r,s,t) coordinates of plot nodes*/
       dfloat rn = mesh->r[NMax][n]; 
       dfloat sn = mesh->s[NMax][n];

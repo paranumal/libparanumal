@@ -1,5 +1,20 @@
 #include "ellipticTri2D.h"
 
+void applyElementMatrix(mesh_t *mesh, dfloat *A, dfloat *q, dfloat *Aq) {
+
+  dfloat *Aqn = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
+  for (dlong e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) {
+      Aqn[n] = 0;
+      for (int k=0;k<mesh->Np;k++) {
+        Aqn[n] += A[k+n*mesh->Np]*q[k+e*mesh->Np];
+      }
+    }
+    for (int n=0;n<mesh->Np;n++) Aq[n+e*mesh->Np] = Aqn[n];
+  }
+  free(Aqn);
+}
+
 int main(int argc, char **argv){
 
   // start up MPI
@@ -22,7 +37,7 @@ int main(int argc, char **argv){
   // method can be IPDG or CONTINUOUS
   //  can add NONSYM option
   // basis can be NODAL or BERN
-  // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, or MULTIGRID
+  // preconditioner can be NONE, JACOBI, OAS, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
   // OAS and MULTIGRID: smoothers can be FULLPATCH, FACEPATCH, LOCALPATCH, OVERLAPPINGPATCH, or DAMPEDJACOBI
   //                      patch smoothers can include EXACT
   // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
@@ -30,10 +45,10 @@ int main(int argc, char **argv){
   // FULLALMOND: can include MATRIXFREE option
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=OAS smoother=FULLPATCH");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=BRDG basis=BERN preconditioner=MULTIGRID,HALFDOFS smoother=CHEBYSHEV");
-    strdup("solver=PCG,FLEXIBLE,SPARSE,VERBOSE,LEFT, method=CONTINUOUS basis=NODAL preconditioner=NONE");
-  //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
-  //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=JACOBI");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=LOCALPATCH,EXACT");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS basis=NODAL preconditioner=SEMFEM");
+    //strdup("solver=PCG,VERBOSE method=IPDG basis=NODAL preconditioner=MASSMATRIX");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
   // solver can be KCYCLE, or VCYCLE
@@ -44,34 +59,28 @@ int main(int argc, char **argv){
     strdup("solver=KCYCLE,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
   //strdup("solver=EXACT,VERBOSE smoother=CHEBYSHEV partition=STRONGNODES");
 
-
   //this is strictly for testing, to do repeated runs. Will be removed later
   //  if (argc==6) {
   //   options = strdup(argv[4]);
   //   parAlmondOptions = strdup(argv[5]);
   // }
 
-  iint NblockV = 1;
-  iint NnodesV = 1;
-
-  if (argc == 5){
-    NblockV = atoi(argv[3]);
-    NnodesV = atoi(argv[4]);
-  }
-
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N);
-  ogs_t *ogs;
-  precon_t *precon;
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
   //dfloat lambda = 1;
   dfloat lambda = 0;
 
+  if (strstr(options,"SPARSE")&&(lambda!=0)) { //sanity check
+    printf("SPARSE not currently supported for screened Poisson\n");
+    exit(-1);
+  }
+
   // set up
   occa::kernelInfo kernelInfo;
-  ellipticSetupTri2D(mesh, kernelInfo);
-printf("passed elliptic setup tri\n");
+  ellipticSetupTri2D(mesh, kernelInfo, options);
+
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
 
@@ -81,74 +90,36 @@ printf("passed elliptic setup tri\n");
   } else if (strstr(options,"BRDG")) {
     tau = 1.0;
   }
-  if (strstr(options, "SPARSE")){
- 
-   loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
-  }
-  else{
-   //loadElementStiffnessMatricesTri2D(mesh, options, mesh->N);
-    buildElementStiffnessMatricesTri2D(mesh, options, mesh->N);
-  } 
 
-  solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions, NblockV, NnodesV);
-  iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
+  
+  dlong Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 
-  // load rhs into r
-  dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  dfloat *nrhstmp = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  for(iint e=0;e<mesh->Nelements;++e){
+  // load forcing into r
+  for(dlong e=0;e<mesh->Nelements;++e){
     dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
-    for(iint n=0;n<mesh->Np;++n){
-      dfloat xn = mesh->x[n+e*mesh->Np];
-      dfloat yn = mesh->y[n+e*mesh->Np];
-      nrhs[n] = -(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
-    }
-
-    if (strstr(options,"BERN")) {
-      for(iint n=0;n<mesh->Np;++n){
-        nrhstmp[n] = 0.;
-        for(iint m=0;m<mesh->Np;++m){
-          nrhstmp[n] += mesh->invVB[n*mesh->Np+m]*nrhs[m];
-        }
-      }
-      for(iint n=0;n<mesh->Np;++n){
-        dfloat rhs = 0;
-        if (strstr(options,"NONSYM")) {
-          rhs = nrhs[n];
-        } else {
-          for(iint m=0;m<mesh->Np;++m){
-            rhs += mesh->BBMM[n+m*mesh->Np]*nrhstmp[m];
-          }
-        }
-        iint id = n+e*mesh->Np;
-
-        r[id] = -rhs*J;
-        x[id] = 0;
-        mesh->q[id] = rhs;
-      }
-    } else if (strstr(options,"NODAL")) {
-      for(iint n=0;n<mesh->Np;++n){
-        dfloat rhs = 0;
-        if (strstr(options,"NONSYM")) {
-          rhs = nrhs[n];
-        } else {
-          for(iint m=0;m<mesh->Np;++m){
-            rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
-          }
-        }
-        iint id = n+e*mesh->Np;
-
-        r[id] = -rhs*J;
-        x[id] = 0;
-        mesh->q[id] = rhs;
-      }
+    for(int n=0;n<mesh->Np;++n){
+      dlong id = n+e*mesh->Np;
+      dfloat xn = mesh->x[id];
+      dfloat yn = mesh->y[id];
+      r[id] = J*(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
+      x[id] = 0;
     }
   }
-  free(nrhs);
-  free(nrhstmp);
 
+  //Apply some element matrix ops to r depending on our solver
+  if (strstr(options,"BERN"))   applyElementMatrix(mesh,mesh->invVB,r,r);
+  if (strstr(options,"SPARSE")) applyElementMatrix(mesh,mesh->invSparseV,r,r);
+
+  if (!strstr(options,"NONSYM")) {
+    if (strstr(options,"NODAL"))  applyElementMatrix(mesh,mesh->MM,r,r);
+    if (strstr(options,"BERN"))   applyElementMatrix(mesh,mesh->BBMM,r,r);
+    if (strstr(options,"SPARSE")) applyElementMatrix(mesh,mesh->sparseMM,r,r);
+  }
+
+  //copy to occa buffers
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
 
@@ -171,58 +142,97 @@ printf("passed elliptic setup tri\n");
 
     dfloat zero = 0.f;
     solver->rhsBCIpdgKernel(mesh->Nelements,
-        mesh->o_vmapM,
-        mesh->o_vmapP,
-        solver->tau,
-        zero,
-        mesh->o_x,
-        mesh->o_y,
-        mesh->o_vgeo,
-        mesh->o_sgeo,
-        solver->o_EToB,
-        mesh->o_DrT,
-        mesh->o_DsT,
-        mesh->o_LIFTT,
-        mesh->o_MM,
-        o_r);
+                            mesh->o_vmapM,
+                            mesh->o_vmapP,
+                            solver->tau,
+                            zero,
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_vgeo,
+                            mesh->o_sgeo,
+                            solver->o_EToB,
+                            mesh->o_DrT,
+                            mesh->o_DsT,
+                            mesh->o_LIFTT,
+                            mesh->o_MM,
+                            o_r);
   }
 
+  if (strstr(options,"CONTINUOUS")) {
+
+    solver->rhsBCKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCTri2D.okl",
+          "ellipticRhsBCTri2D",
+          kernelInfo);
+
+    solver->addBCKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAddBCTri2D.okl",
+          "ellipticAddBCTri2D",
+          kernelInfo);
+
+    dfloat zero = 0.f;
+    solver->rhsBCKernel(mesh->Nelements,
+                        mesh->o_ggeo,
+                        mesh->o_sgeo,
+                        mesh->o_SrrT,
+                        mesh->o_SrsT,
+                        mesh->o_SsrT,
+                        mesh->o_SssT,
+                        mesh->o_MM,
+                        mesh->o_vmapM,
+                        mesh->o_sMT,
+                        lambda,
+                        zero,
+                        mesh->o_x,
+                        mesh->o_y,
+                        solver->o_mapB,
+                        o_r);
+  }
+
+  // gather-scatter
+  if(strstr(options, "CONTINUOUS")){
+    //sign correction for gs
+    if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);
+    ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_r, dfloatString, "add");  
+    if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_r, mesh->o_mapSgn, o_r);       
+    //mask
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_r);
+  }
+
+
   // convergence tolerance
-  dfloat tol = 1e-6;
-  ellipticSolveTri2D(solver, lambda, tol, o_r, o_x, options, NblockV, NnodesV);
+  dfloat tol = 1e-8;
+  ellipticSolveTri2D(solver, lambda, tol, o_r, o_x, options);
+
+
+
+  if(strstr(options, "CONTINUOUS")){
+    dfloat zero = 0.;
+    solver->addBCKernel(mesh->Nelements,
+                       zero,
+                       mesh->o_x,
+                       mesh->o_y,
+                       solver->o_mapB,
+                       o_x);
+  }
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
 
-  if (strstr(options,"BERN")) {
-    dfloat *qtmp = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-    for (iint e =0;e<mesh->Nelements;e++){
-      iint id = e*mesh->Np;
-
-      for (iint n=0; n<mesh->Np; n++){
-        qtmp[n] = mesh->q[id+n];
-        mesh->q[id+n] = 0.0;
-      }
-      for (iint n=0;n<mesh->Np;n++){
-        for (iint m=0; m<mesh->Np; m++){
-          mesh->q[id+n] += mesh->VB[n*mesh->Np+m]*qtmp[m];
-        }
-      }
-    }
-    free(qtmp);
-  }
+  if (strstr(options,"BERN"))   applyElementMatrix(mesh,mesh->VB,mesh->q,mesh->q);
+  if (strstr(options,"SPARSE")) applyElementMatrix(mesh,mesh->sparseV,mesh->q,mesh->q);
 
   dfloat maxError = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      iint   id = e*mesh->Np+n;
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      dlong   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat exact = sin(M_PI*xn)*sin(M_PI*yn);
       dfloat error = fabs(exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
-      //mesh->q[id] -= exact;
+      mesh->q[id] -= exact;
     }
   }
 
@@ -231,7 +241,9 @@ printf("passed elliptic setup tri\n");
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
 
-  meshPlotVTU2D(mesh, "foo.vtu", 0);
+  char filename[BUFSIZ];
+  sprintf(filename, "foo_%d.vtu", rank);
+  meshPlotVTU2D(mesh, filename, 0);
 
   // close down MPI
   MPI_Finalize();

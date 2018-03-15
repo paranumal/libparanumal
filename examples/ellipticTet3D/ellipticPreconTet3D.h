@@ -1,8 +1,8 @@
 typedef struct{
 
-  iint row;
-  iint col;
-  iint ownerRank;
+  hlong row;
+  hlong col;
+  int ownerRank;
   dfloat val;
 
 }nonZero_t;
@@ -11,8 +11,15 @@ typedef struct {
 
   long long int preconBytes;
 
+  ogs_t *ogs;
+  ogs_t *FEMogs;
+
   dfloat *zP;
   occa::memory o_zP;
+
+  occa::memory o_Gr;
+  occa::memory o_Gz;
+  occa::memory o_Sr;
 
   occa::memory o_vmapPP;
   occa::memory o_faceNodesP;
@@ -44,8 +51,16 @@ typedef struct {
   occa::kernel patchGatherKernel;
   occa::kernel facePatchGatherKernel;
 
+  occa::memory o_rFEM;
+  occa::memory o_zFEM;
+  occa::memory o_GrFEM;
+  occa::memory o_GzFEM;
+
+  occa::kernel SEMFEMInterpKernel;
+  occa::kernel SEMFEMAnterpKernel;
+
+
   ogs_t *ogsP, *ogsDg;
-  hgs_t *hgsP, *hgsDg;
 
   occa::memory o_diagA;
   occa::memory o_invDiagA;
@@ -62,9 +77,9 @@ typedef struct {
 
   occa::memory o_coarseInvDegree;
 
-  iint coarseNp;
-  iint coarseTotal;
-  iint *coarseOffsets;
+  int coarseNp;
+  hlong coarseTotal;
+  hlong *coarseOffsets;
   dfloat *B, *tmp2;
   occa::memory *o_B, o_tmp2;
   void *xxt2;
@@ -73,10 +88,15 @@ typedef struct {
   // block Jacobi precon
   occa::memory o_invMM;
   occa::kernel blockJacobiKernel;
+  occa::kernel partialblockJacobiKernel;
 
   //dummy almond level to store the OAS smoothing op
   agmgLevel *OASLevel;
   void **OASsmoothArgs;
+
+  //SEMFEM variables
+  mesh3D *femMesh;
+
 
 } precon_t;
 
@@ -91,20 +111,12 @@ extern "C"
                 double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
 
-void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
-                              iint *nnzA, iint *globalStarts, const char *options);
-
-void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
-                              hgs_t **hgs, iint *globalStarts, const char* options);
-
-void ellipticCoarsePreconditionerSetupTet3D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
-                                   hgs_t **hgs, iint *globalStarts, const char *options);
-
 //Multigrid function callbacks
 void AxTet3D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
 void coarsenTet3D   (void **args, occa::memory &o_x, occa::memory &o_Rx);
 void prolongateTet3D(void **args, occa::memory &o_x, occa::memory &o_Px);
+void ellipticGather (void **args, occa::memory &o_x, occa::memory &o_Gx);
+void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx);
 void smoothTet3D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
 void smoothChebyshevTet3D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
 

@@ -40,26 +40,26 @@ void boltzmannForces2D(mesh2D *mesh, dfloat time, char * options){
 
    dfloat Fx =0. , Fy = 0. ;
   //
-   for(iint e=0;e<mesh->Nelements;++e){
-     iint flag = 0; 
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint bc = mesh->EToB[e*mesh->Nfaces+f];
+   for(int e=0;e<mesh->Nelements;++e){
+     int flag = 0; 
+    for(int f=0;f<mesh->Nfaces;++f){
+      int bc = mesh->EToB[e*mesh->Nfaces+f];
       if(bc == 1){ flag = 1; }
     }
 
     if(flag){
 
-			for(iint f=0;f<mesh->Nfaces;++f){
-				iint bc = mesh->EToB[e*mesh->Nfaces+f];
+			for(int f=0;f<mesh->Nfaces;++f){
+				int bc = mesh->EToB[e*mesh->Nfaces+f];
 				if(bc==1){
-					for(iint n=0;n<mesh->Nfp; n++){
-						iint sid  = mesh->Nsgeo*(e*mesh->Nfaces+f);
+					for(int n=0;n<mesh->Nfp; n++){
+						int sid  = mesh->Nsgeo*(e*mesh->Nfaces+f);
 						dfloat nx = mesh->sgeo[sid+NXID];
 						dfloat ny = mesh->sgeo[sid+NYID];
 						dfloat sJ = mesh->sgeo[sid+SJID];
 						//
-						iint vid  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
-            iint idM  = mesh->vmapM[vid];
+						int vid  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
+            int idM  = mesh->vmapM[vid];
 		    	 
 						dfloat q1  = mesh->q[mesh->Nfields*idM + 0];
 						dfloat q2  = mesh->q[mesh->Nfields*idM + 1];
@@ -91,7 +91,7 @@ void boltzmannForces2D(mesh2D *mesh, dfloat time, char * options){
   MPI_Allreduce(&Fy, &gFy, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
   //
-  iint rank; 
+  int rank; 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   if(rank==0){

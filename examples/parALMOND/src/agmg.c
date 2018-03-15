@@ -4,8 +4,8 @@ void kcycle(parAlmond_t *parAlmond, int k){
 
   agmgLevel **levels = parAlmond->levels;
 
-  iint m = levels[k]->Nrows;
-  iint n = levels[k]->Ncols;
+  dlong m = levels[k]->Nrows;
+  // dlong n = levels[k]->Ncols;
 
   //check for base level
   if(k==parAlmond->numLevels-1) {
@@ -22,8 +22,8 @@ void kcycle(parAlmond_t *parAlmond, int k){
   sprintf(name, "host kcycle level %d", k);
   occaTimerTic(parAlmond->device,name);
 
-  iint mCoarse = levels[k+1]->Nrows;
-  iint nCoarse = levels[k+1]->Ncols;
+  dlong mCoarse = levels[k+1]->Nrows;
+  // dlong nCoarse = levels[k+1]->Ncols;
 
   // zero out x
   //setVector(m, levels[k]->x, 0.0);
@@ -34,8 +34,13 @@ void kcycle(parAlmond_t *parAlmond, int k){
   levels[k]->Ax(levels[k]->AxArgs,levels[k]->x,levels[k]->res);
   vectorAdd(m, 1.0, levels[k]->rhs, -1.0, levels[k]->res);
 
-  // coarsen the residual to next level
-  levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->rhs);
+  // coarsen the residual to next level, checking if the residual needs to be gathered after
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->Srhs);
+    levels[k+1]->gather (levels[k+1]->gatherArgs,  levels[k+1]->Srhs, levels[k+1]->rhs);
+  } else {
+    levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->rhs);
+  }
 
   if(k>2) {
     vcycle(parAlmond,k+1);
@@ -46,6 +51,8 @@ void kcycle(parAlmond_t *parAlmond, int k){
     dfloat *wkp1 = levels[k+1]->wkp1;
     dfloat *dkp1 = levels[k+1]->x;
     dfloat *rkp1 = levels[k+1]->rhs;
+    dfloat *w = levels[k+1]->weight;
+    bool weighted = levels[k+1]->weightedInnerProds;
 
     // first inner krylov iteration
     kcycle(parAlmond, k+1);
@@ -61,10 +68,10 @@ void kcycle(parAlmond_t *parAlmond, int k){
     dfloat norm_rktilde_p, norm_rktilde_pGlobal;
 
     if(parAlmond->ktype == PCG)
-      kcycleCombinedOp1(mCoarse, rhoLocal, ckp1, rkp1, vkp1);
+      kcycleCombinedOp1(mCoarse, rhoLocal, ckp1, rkp1, vkp1, w, weighted);
 
     if(parAlmond->ktype == GMRES)
-      kcycleCombinedOp1(mCoarse, rhoLocal, vkp1, rkp1, vkp1);
+      kcycleCombinedOp1(mCoarse, rhoLocal, vkp1, rkp1, vkp1, w, weighted);
 
     MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
@@ -73,7 +80,7 @@ void kcycle(parAlmond_t *parAlmond, int k){
     norm_rkp1 = sqrt(rhoGlobal[2]);
 
     // rkp1 = rkp1 - (alpha1/rho1)*vkp1
-    norm_rktilde_p = vectorAddInnerProd(mCoarse, -alpha1/rho1, vkp1, 1.0, rkp1);
+    norm_rktilde_p = vectorAddInnerProd(mCoarse, -alpha1/rho1, vkp1, 1.0, rkp1, w, weighted);
     MPI_Allreduce(&norm_rktilde_p,&norm_rktilde_pGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
     norm_rktilde_pGlobal = sqrt(norm_rktilde_pGlobal);
 
@@ -92,10 +99,10 @@ void kcycle(parAlmond_t *parAlmond, int k){
       dfloat gamma, beta, alpha2;
 
       if(parAlmond->ktype == PCG)
-        kcycleCombinedOp2(mCoarse,rhoLocal,dkp1,vkp1,wkp1,rkp1);
+        kcycleCombinedOp2(mCoarse,rhoLocal,dkp1,vkp1,wkp1,rkp1, w, weighted);
 
       if(parAlmond->ktype == GMRES)
-        kcycleCombinedOp2(mCoarse,rhoLocal,wkp1,vkp1,wkp1,rkp1);
+        kcycleCombinedOp2(mCoarse,rhoLocal,wkp1,vkp1,wkp1,rkp1, w, weighted);
 
       MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
@@ -118,7 +125,12 @@ void kcycle(parAlmond_t *parAlmond, int k){
     }
   }
 
-  levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->x, levels[k]->x);
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->scatter(levels[k+1]->scatterArgs,  levels[k+1]->x, levels[k+1]->Sx);
+    levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->Sx, levels[k]->x);
+  } else {
+    levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->x, levels[k]->x);
+  }
 
   levels[k]->smooth(levels[k]->smoothArgs, levels[k]->rhs, levels[k]->x, false);
 
@@ -130,8 +142,15 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
 
   agmgLevel **levels = parAlmond->levels;
 
-  iint m = levels[k]->Nrows;
-  iint n = levels[k]->Ncols;
+  dlong m = levels[k]->Nrows;
+  // dlong n = levels[k]->Ncols;
+
+  if(m < GPU_CPU_SWITCH_SIZE){
+    levels[k]->o_rhs.copyTo(levels[k]->rhs, m*sizeof(dfloat));
+    kcycle(parAlmond, k);
+    levels[k]->o_x.copyFrom(levels[k]->x, m*sizeof(dfloat));
+    return;
+  }
 
   //check for base level
   if(k==parAlmond->numLevels-1) {
@@ -144,8 +163,8 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
     return;
   }
 
-  iint mCoarse = levels[k+1]->Nrows;
-  iint nCoarse = levels[k+1]->Ncols;
+  dlong mCoarse = levels[k+1]->Nrows;
+  // dlong nCoarse = levels[k+1]->Ncols;
 
   char name[BUFSIZ];
   sprintf(name, "device kcycle level %d", k);
@@ -160,9 +179,13 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
   levels[k]->device_Ax(levels[k]->AxArgs,levels[k]->o_x,levels[k]->o_res);
   vectorAdd(parAlmond, m, 1.0, levels[k]->o_rhs, -1.0, levels[k]->o_res);
 
-  // coarsen the residual to next level
-  levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
-
+  // coarsen the residual to next level, checking if the residual needs to be gathered after
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_Srhs);
+    levels[k+1]->device_gather (levels[k+1]->gatherArgs,  levels[k+1]->o_Srhs, levels[k+1]->o_rhs);
+  } else {
+    levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
+  }
 
   if(k>2) {
     device_vcycle(parAlmond,k+1);
@@ -182,17 +205,24 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
     dfloat rho1, alpha1, norm_rkp1;
     dfloat norm_rktilde_pLocal, norm_rktilde_pGlobal;
 
+    // kcycleCombinedOp1(parAlmond,N,aDotbc,a,b,c,w,bool) 
+    //    returns aDotbc[0] = a.b, aDotbc[1] = a.c, aDotbc[2] = b.b
+    //       or aDotbc[0] = w.a.b, aDotbc[1] = w.a.c, aDotbc[2] = w.b.b
     if(parAlmond->ktype == PCG)
       kcycleCombinedOp1(parAlmond, mCoarse, rhoLocal,
                         levels[k+1]->o_ckp1,
                         levels[k+1]->o_rhs,
-                        levels[k+1]->o_vkp1);
+                        levels[k+1]->o_vkp1,
+                        levels[k+1]->o_weight,
+                        levels[k+1]->weightedInnerProds);
 
     if(parAlmond->ktype == GMRES)
       kcycleCombinedOp1(parAlmond, mCoarse, rhoLocal,
                         levels[k+1]->o_vkp1,
                         levels[k+1]->o_rhs,
-                        levels[k+1]->o_vkp1);
+                        levels[k+1]->o_vkp1,
+                        levels[k+1]->o_weight,
+                        levels[k+1]->weightedInnerProds);
 
     MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
@@ -203,7 +233,9 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
     // rkp1 = rkp1 - (alpha1/rho1)*vkp1
     norm_rktilde_pLocal = vectorAddInnerProd(parAlmond, mCoarse, -alpha1/rho1,
                                               levels[k+1]->o_vkp1, 1.0,
-                                              levels[k+1]->o_rhs);
+                                              levels[k+1]->o_rhs,
+                                              levels[k+1]->o_weight,
+                                              levels[k+1]->weightedInnerProds);
     MPI_Allreduce(&norm_rktilde_pLocal,&norm_rktilde_pGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
     norm_rktilde_pGlobal = sqrt(norm_rktilde_pGlobal);
 
@@ -212,6 +244,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
       //      levels[k+1]->x = (alpha1/rho1)*x
       scaleVector(parAlmond,mCoarse, levels[k+1]->o_x, alpha1/rho1);
     } else{
+    
       device_kcycle(parAlmond,k+1);
 
       // w = A*x
@@ -219,19 +252,26 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
 
       dfloat gamma, beta, alpha2;
 
+      // kcycleCombinedOp2(parAlmond,N,aDotbc,a,b,c,d,w,bool) 
+      //   returns aDotbcd[0] = a.b, aDotbcd[1] = a.c, aDotbcd[2] = a.d,
+      //      or aDotbcd[0] = w.a.b, aDotbcd[1] = w.a.c, aDotbcd[2] = w.a.d,
       if(parAlmond->ktype == PCG)
         kcycleCombinedOp2(parAlmond,mCoarse,rhoLocal,
                           levels[k+1]->o_x,
                           levels[k+1]->o_vkp1,
                           levels[k+1]->o_wkp1,
-                          levels[k+1]->o_rhs);
+                          levels[k+1]->o_rhs,
+                          levels[k+1]->o_weight,
+                          levels[k+1]->weightedInnerProds);
 
       if(parAlmond->ktype == GMRES)
         kcycleCombinedOp2(parAlmond,mCoarse,rhoLocal,
                           levels[k+1]->o_wkp1,
                           levels[k+1]->o_vkp1,
                           levels[k+1]->o_wkp1,
-                          levels[k+1]->o_rhs);
+                          levels[k+1]->o_rhs,
+                          levels[k+1]->o_weight,
+                          levels[k+1]->weightedInnerProds);
 
       MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
 
@@ -255,7 +295,12 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
     }
   }
 
-  levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->device_scatter   (levels[k+1]->scatterArgs,  levels[k+1]->o_x, levels[k+1]->o_Sx);
+    levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_Sx, levels[k]->o_x);
+  } else {
+    levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
+  }
 
   levels[k]->device_smooth(levels[k]->smoothArgs, levels[k]->o_rhs, levels[k]->o_x, false);
 
@@ -268,7 +313,7 @@ void vcycle(parAlmond_t *parAlmond, int k) {
 
   agmgLevel **levels = parAlmond->levels;
 
-  const iint m = levels[k]->Nrows;
+  const dlong m = levels[k]->Nrows;
 
   //check for base level
   if(k==parAlmond->numLevels-1) {
@@ -285,7 +330,7 @@ void vcycle(parAlmond_t *parAlmond, int k) {
   sprintf(name, "host vcycle level %d", k);
   occaTimerTic(parAlmond->device,name);
 
-  const iint mCoarse = levels[k+1]->Nrows;
+  // const int mCoarse = levels[k+1]->Nrows;
 
   // zero out x
   //setVector(m, levels[k]->x,  0.0);
@@ -296,11 +341,22 @@ void vcycle(parAlmond_t *parAlmond, int k) {
   levels[k]->Ax(levels[k]->AxArgs,levels[k]->x,levels[k]->res);
   vectorAdd(m, 1.0, levels[k]->rhs, -1.0, levels[k]->res);
 
-  levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->rhs);
+  // coarsen the residual to next level, checking if the residual needs to be gathered after
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->Srhs);
+    levels[k+1]->gather (levels[k+1]->gatherArgs,  levels[k+1]->Srhs, levels[k+1]->rhs);
+  } else {
+    levels[k+1]->coarsen(levels[k+1]->coarsenArgs, levels[k]->res, levels[k+1]->rhs);
+  }
 
   vcycle(parAlmond,k+1);
 
-  levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->x, levels[k]->x);
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->scatter(levels[k+1]->scatterArgs,  levels[k+1]->x, levels[k+1]->Sx);
+    levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->Sx, levels[k]->x);
+  } else {
+    levels[k+1]->prolongate(levels[k+1]->prolongateArgs, levels[k+1]->x, levels[k]->x);
+  }
 
   levels[k]->smooth(levels[k]->smoothArgs, levels[k]->rhs, levels[k]->x,false);
 
@@ -312,8 +368,8 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
 
   agmgLevel **levels = parAlmond->levels;
 
-  const iint m = levels[k]->Nrows;
-  const iint mCoarse = levels[k+1]->Nrows;
+  const dlong m = levels[k]->Nrows;
+  // const dlong mCoarse = levels[k+1]->Nrows;
 
   // switch to cpu if the problem size is too small for gpu
   if(m < GPU_CPU_SWITCH_SIZE){
@@ -324,7 +380,7 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
   }
 
   //check for base level
-  if(k==parAlmond->numLevels-1) {
+  if (k==parAlmond->numLevels-1) {
     if (parAlmond->invCoarseA != NULL) {
       //use exact sovler
       device_exactCoarseSolve(parAlmond, m, levels[k]->o_rhs, levels[k]->o_x);
@@ -347,12 +403,22 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
   levels[k]->device_Ax(levels[k]->AxArgs,levels[k]->o_x,levels[k]->o_res);
   vectorAdd(parAlmond, m, 1.0, levels[k]->o_rhs, -1.0, levels[k]->o_res);
 
-  // coarsen the residual to next level
-  levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
+  // coarsen the residual to next level, checking if the residual needs to be gathered after
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_Srhs);
+    levels[k+1]->device_gather (levels[k+1]->gatherArgs,  levels[k+1]->o_Srhs, levels[k+1]->o_rhs);
+  } else {
+    levels[k+1]->device_coarsen(levels[k+1]->coarsenArgs, levels[k]->o_res, levels[k+1]->o_rhs);
+  }
 
   device_vcycle(parAlmond, k+1);
 
-  levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
+  if (levels[k+1]->gatherLevel==true) {
+    levels[k+1]->device_scatter   (levels[k+1]->scatterArgs,  levels[k+1]->o_x, levels[k+1]->o_Sx);
+    levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_Sx, levels[k]->o_x);
+  } else {
+    levels[k+1]->device_prolongate(levels[k+1]->prolongateArgs, levels[k+1]->o_x, levels[k]->o_x);
+  }
 
   levels[k]->device_smooth(levels[k]->smoothArgs, levels[k]->o_rhs, levels[k]->o_x,false);
 

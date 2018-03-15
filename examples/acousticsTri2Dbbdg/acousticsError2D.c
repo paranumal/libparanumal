@@ -4,10 +4,10 @@
 void acousticsError2D(mesh2D *mesh, dfloat time){
 
   dfloat maxErrorP = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
       dfloat u,v,p;
-      iint id = n+e*mesh->Np;
+      int id = n+e*mesh->Np;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
 

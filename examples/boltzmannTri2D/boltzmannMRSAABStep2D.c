@@ -1,15 +1,15 @@
 #include "boltzmann2D.h"
 
 // complete a time step using LSERK4
-void boltzmannMRSAABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
+void boltzmannMRSAABStep2D(mesh2D *mesh, int tstep, int haloBytes,
                          dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
-for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
+for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
   // intermediate stage time
   dfloat t = mesh->dt*(tstep*pow(2.0,mesh->MRABNlevels-1) + Ntick);
 
-  iint mrab_order = 0; 
+  int mrab_order = 0; 
 
   if(tstep==0)
     mrab_order = 0; // first order
@@ -28,7 +28,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
 
 
-  iint lev;
+  int lev;
   for (lev=0;lev<mesh->MRABNlevels;lev++)
     if (Ntick % (1<<lev) != 0) break; //find the max lev to compute rhs
   
@@ -38,7 +38,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       mesh->device.setStream(dataStream);
     #endif
 
-    iint Nentries = mesh->Nfp*mesh->Nfields*mesh->Nfaces;
+    int Nentries = mesh->Nfp*mesh->Nfields*mesh->Nfaces;
     mesh->haloExtractKernel(mesh->totalHaloPairs,
                             Nentries,
                             mesh->o_haloElementList,
@@ -56,7 +56,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
   occaTimerTic(mesh->device, "VolumeKernel");  
 
-  for (iint l=0;l<lev;l++) {
+  for (int l=0;l<lev;l++) {
 
     if (mesh->MRABNelements[l]){
       occaTimerTic(mesh->device, "NonPmlVolumeKernel"); 
@@ -104,7 +104,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
   if(strstr(options, "CUBATURE")){ 
     occaTimerTic(mesh->device, "RelaxationKernel");
-    for (iint l=0;l<lev;l++) {
+    for (int l=0;l<lev;l++) {
       if (mesh->MRABNelements[l]){
         occaTimerTic(mesh->device,"NonPmlRelaxationKernel");
         mesh->relaxationKernel(mesh->MRABNelements[l],
@@ -171,7 +171,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
 
   // SURFACE KERNELS for boltzmann Nodal DG
-  for (iint l=0;l<lev;l++) {
+  for (int l=0;l<lev;l++) {
     occaTimerTic(mesh->device,"SurfaceKernel");
     if (mesh->MRABNelements[l]){
       occaTimerTic(mesh->device,"NonPmlSurfaceKernel");
@@ -227,9 +227,9 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
       // printf(" UPDATE:\n  Ntick :%d  lev: %d", Ntick, lev);
 
-  for (iint l=0; l<lev; l++) {
+  for (int l=0; l<lev; l++) {
 
-    const iint id = mrab_order*mesh->MRABNlevels*3 + l*3;
+    const int id = mrab_order*mesh->MRABNlevels*3 + l*3;
     occaTimerTic(mesh->device,"UpdateKernel");
 
     if (mesh->MRABNelements[l]){
@@ -283,8 +283,8 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
 
   if (lev<mesh->MRABNlevels) {    
-    // const iint id = mrab_order*mesh->MRABNlevels*3 + (lev-1)*3; // !!!!!
-    const iint id = mrab_order*mesh->MRABNlevels*3 + (lev)*3;
+    // const int id = mrab_order*mesh->MRABNlevels*3 + (lev-1)*3; // !!!!!
+    const int id = mrab_order*mesh->MRABNlevels*3 + (lev)*3;
     occaTimerTic(mesh->device,"TraceUpdateKernel");
 
     if (mesh->MRABNhaloElements[lev]){

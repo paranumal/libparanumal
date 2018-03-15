@@ -3,8 +3,8 @@ function [refEToV] = FemEToV2D(N,req,seq,nodeType)
 refEToV = delaunayOriented2D(req',seq');
 if strcmp(nodeType,'EI')
     if (N==2)
-        refEToV(2,:) = [4,1,2];
-        refEToV(5,:) = [4,2,7];
+        %refEToV(2,:) = [4,1,2];
+        %refEToV(5,:) = [4,2,7];
     end
 end
 

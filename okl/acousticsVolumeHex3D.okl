@@ -10,7 +10,7 @@
 
 // function to compute collocation differentiation
 // contributions to nodal DG rhs for acoustics
-kernel void acousticsVolumeHex3D(const iint Nelements,
+kernel void acousticsVolumeHex3D(const int Nelements,
 				 const dfloat * restrict vgeo,
 				 const dfloat * restrict DrT,
 				 const dfloat * restrict DsT,
@@ -18,11 +18,11 @@ kernel void acousticsVolumeHex3D(const iint Nelements,
 				 const dfloat * restrict q,
 				 dfloat * restrict rhsq){
   
-  for(iint e=0;e<Nelements;++e;outer0){  // for all elements
-    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  for(int e=0;e<Nelements;++e;outer0){  // for all elements
+    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
       // prefetch geometric factors (constant on triangle)
-      const iint base = e*p_Np*p_Nvgeo + n;
+      const int base = e*p_Np*p_Nvgeo + n;
       const dfloat drdx = vgeo[base + RXID*p_Np];
       const dfloat drdy = vgeo[base + RYID*p_Np];
       const dfloat drdz = vgeo[base + RZID*p_Np];
@@ -39,9 +39,9 @@ kernel void acousticsVolumeHex3D(const iint Nelements,
       dfloat dwdr = 0, dwds = 0, dwdt = 0;
       dfloat dpdr = 0, dpds = 0, dpdt = 0;
       
-      for(iint i=0;i<p_Np;++i){
+      for(int i=0;i<p_Np;++i){
 	// load data at node i of element e
-	const iint id = p_Nfields*(e*p_Np + i);
+	const int id = p_Nfields*(e*p_Np + i);
 	const dfloat u = q[id+0], v = q[id+1], w = q[id+2], p = q[id+3];
 
  	const dfloat Drni = DrT[n+i*p_Np];
@@ -64,7 +64,7 @@ kernel void acousticsVolumeHex3D(const iint Nelements,
       const dfloat dpdz = drdz*dpdr + dsdz*dpds + dtdz*dpdt;
       
       // store acoustics rhs contributions from collocation differentiation
-      const iint id = p_Nfields*(e*p_Np + n);
+      const int id = p_Nfields*(e*p_Np + n);
       rhsq[id+0] = -dpdx;
       rhsq[id+1] = -dpdy;
       rhsq[id+2] = -dpdz;

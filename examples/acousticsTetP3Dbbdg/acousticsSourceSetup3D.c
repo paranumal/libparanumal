@@ -27,9 +27,9 @@ void acousticsSourceSetup3D(mesh3D *mesh, occa::kernelInfo &kernelInfo) {
   int *patchFlag = (int *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(int));
 
   dfloat mindist = 1e9;
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
     int N = mesh->N[e];
-    iint id = e*mesh->Nverts;
+    int id = e*mesh->Nverts;
 
     dfloat x1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat x2 = mesh->EX[id+1];
@@ -61,7 +61,7 @@ void acousticsSourceSetup3D(mesh3D *mesh, occa::kernelInfo &kernelInfo) {
     }
 
     //find the cubature node which is closest to the source point and use the c2 from that node
-    for(iint n=0;n<mesh->cubNp[N];++n){
+    for(int n=0;n<mesh->cubNp[N];++n){
       // cubature node coordinates
       dfloat rn = mesh->cubr[N][n];
       dfloat sn = mesh->cubs[N][n];
@@ -94,17 +94,17 @@ void acousticsSourceSetup3D(mesh3D *mesh, occa::kernelInfo &kernelInfo) {
   }
 
   //create the element list and flag interfaces
-  mesh->sourceElements = (iint*) calloc(mesh->sourceNelements,sizeof(iint));
+  mesh->sourceElements = (int*) calloc(mesh->sourceNelements,sizeof(int));
 
-  iint cnt = 0;
-  for (iint e=0;e<mesh->Nelements;e++) {
+  int cnt = 0;
+  for (int e=0;e<mesh->Nelements;e++) {
     if (patchFlag[e]==1) {
       //record this element
       mesh->sourceElements[cnt++] = e;
 
       //this element is in the patch. Check the neighbours
-      for (iint f=0;f<mesh->Nfaces;f++) {
-        iint eP = mesh->EToE[e*mesh->Nfaces + f];
+      for (int f=0;f<mesh->Nfaces;f++) {
+        int eP = mesh->EToE[e*mesh->Nfaces + f];
 
         int flagP =1;
         if (eP >-1) flagP = patchFlag[eP];
@@ -114,8 +114,8 @@ void acousticsSourceSetup3D(mesh3D *mesh, occa::kernelInfo &kernelInfo) {
       }
     } else {
       //this element isnt in the patch. Check the neighbours
-      for (iint f=0;f<mesh->Nfaces;f++) {
-        iint eP = mesh->EToE[e*mesh->Nfaces + f];
+      for (int f=0;f<mesh->Nfaces;f++) {
+        int eP = mesh->EToE[e*mesh->Nfaces + f];
 
         int flagP =0;
         if (eP >-1) flagP = patchFlag[eP];
@@ -132,7 +132,7 @@ void acousticsSourceSetup3D(mesh3D *mesh, occa::kernelInfo &kernelInfo) {
   mesh->invVB2D = (dfloat **) calloc((mesh->NMax+1), sizeof(dfloat*));
   mesh->o_invVB2DT = (occa::memory*) calloc((mesh->NMax+1), sizeof(occa::memory));
   dfloat *invVB2DT = (dfloat *) calloc(mesh->NfpMax*mesh->NfpMax, sizeof(dfloat));
-  for (iint p=1;p<=mesh->NMax;p++) {
+  for (int p=1;p<=mesh->NMax;p++) {
     mesh->invVB2D[p] = (dfloat *) calloc(mesh->Nfp[p]*mesh->Nfp[p], sizeof(dfloat));
     for (int n=0;n<mesh->Nfp[p];n++) {
       for (int m=0;m<mesh->Nfp[p];m++) {

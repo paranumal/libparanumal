@@ -2,11 +2,17 @@
 
 void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rhs) {
 
-  parAlmond->levels[0]->o_rhs.copyFrom(o_rhs);
+  agmgLevel *baseLevel = parAlmond->levels[0];
+
+  if (baseLevel->gatherLevel==true) {// gather rhs
+    baseLevel->device_gather(baseLevel->gatherArgs, o_rhs, baseLevel->o_rhs);
+  } else {
+    baseLevel->o_rhs.copyFrom(o_rhs);
+  }
 
   if (strstr(parAlmond->options,"HOST")) {
     //host versions
-    parAlmond->levels[0]->o_rhs.copyTo(parAlmond->levels[0]->rhs);
+    baseLevel->o_rhs.copyTo(baseLevel->rhs);
     if(strstr(parAlmond->options,"EXACT")) {
       if(parAlmond->ktype == PCG) {
         pcg(parAlmond,1000,1e-8);
@@ -18,7 +24,7 @@ void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rh
     } else if(strstr(parAlmond->options,"VCYCLE")) {
       vcycle(parAlmond, 0);
     }
-    parAlmond->levels[0]->o_x.copyFrom(parAlmond->levels[0]->x);
+    baseLevel->o_x.copyFrom(baseLevel->x);
   } else {
     if(strstr(parAlmond->options,"EXACT")) {
       if(parAlmond->ktype == PCG) {
@@ -33,15 +39,20 @@ void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rh
     }
   }
 
-  parAlmond->levels[0]->o_x.copyTo(o_x);
+  if (baseLevel->gatherLevel==true) {// scatter solution
+    baseLevel->device_scatter(baseLevel->scatterArgs, baseLevel->o_x, o_x);
+  } else {
+    baseLevel->o_x.copyTo(o_x,baseLevel->Nrows*sizeof(dfloat));
+  }
 }
 
 parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {
 
   parAlmond_t *parAlmond = (parAlmond_t *) calloc(1,sizeof(parAlmond_t));
 
-  parAlmond->mesh = mesh; //TODO parALmond doesnt need mesh, except for GS kernels.
   parAlmond->device = mesh->device;
+  parAlmond->defaultStream = mesh->defaultStream;
+  parAlmond->dataStream = mesh->dataStream;
   parAlmond->options = options;
 
   parAlmond->levels = (agmgLevel **) calloc(MAX_LEVELS,sizeof(agmgLevel *));
@@ -62,20 +73,22 @@ parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {
 }
 
 void parAlmondAgmgSetup(parAlmond_t *parAlmond,
-       iint* globalRowStarts,       //global partition
-       iint  nnz,                   //--
-       iint* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
-       iint* Aj,                    //--
-       dfloat* Avals,               //--
-       bool nullSpace,
-       dfloat nullSpacePenalty){                  // gs op for problem assembly (to be removed in future?)
+                         hlong* globalRowStarts,       //global partition
+                         dlong nnz,                    //--
+                         hlong* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
+                         hlong* Aj,                    //--
+                         dfloat* Avals,                //--
+                         bool nullSpace,
+                         dfloat nullSpacePenalty){   
 
-  iint size, rank;
+  int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  iint TotalRows = globalRowStarts[size];
-  iint numLocalRows = globalRowStarts[rank+1]-globalRowStarts[rank];
+  hlong TotalRows = globalRowStarts[size];
+  dlong numLocalRows = (dlong) (globalRowStarts[rank+1]-globalRowStarts[rank]);
+
+  if(rank==0) printf("Setting up AMG...");fflush(stdout);
 
   csr *A = newCSRfromCOO(numLocalRows,globalRowStarts,nnz, Ai, Aj, Avals);
 
@@ -85,11 +98,11 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
 
   //populate null space vector
   dfloat *nullA = (dfloat *) calloc(numLocalRows, sizeof(dfloat));
-  for (iint i=0;i<numLocalRows;i++) nullA[i] = 1/sqrt(TotalRows);
+  for (dlong i=0;i<numLocalRows;i++) nullA[i] = 1/sqrt(TotalRows);
 
   agmgSetup(parAlmond, A, nullA, globalRowStarts, parAlmond->options);
-
-  mesh_t *mesh = parAlmond->mesh;
+  
+  if(rank==0) printf("done.\n");
 
   if (strstr(parAlmond->options, "VERBOSE"))
     parAlmondReport(parAlmond);

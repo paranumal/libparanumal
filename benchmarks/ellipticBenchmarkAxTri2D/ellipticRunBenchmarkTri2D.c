@@ -11,66 +11,115 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
   int NKernels;
   char kernelName[BUFSIZ];
 
-  NKernels = 1;
-  sprintf(kernelName, "ellipticAxTri2D");
-  //sprintf(kernelName, "ellipticPartialAxTri2D");
+  NKernels = 4;
+  sprintf(kernelName, "ellipticAxNEWTri2D");
 
   //  kernelInfo.addCompilerFlag("-G");
 
   dfloat time = 0.;
+  printf("test 0 \n");
+
+  /*int  * test = (int *) calloc(mesh->Np+1, sizeof(int));
+    printf("test 1 \n");
+    mesh->o_India.copyTo(test);
+    printf("test 2\n");
+
+    printf("test 1 \n");
+    printf("\n");
+    for (int nn=0; nn<mesh->Np+1; ++nn){
+    printf(" %d ",  test[nn]);
+    }
+    */
 
   char testkernelName[BUFSIZ];
   occa::kernel testKernel;
-  for(iint i=0; i<NKernels; i++) {
+
+  int Nbytes = sizeof(dfloat)*mesh->Np*2; // load one field, save one filed (ignore geofacs)
+  //add the matrices (?)
+  //Nbytes += sizeof(dfloat)*(test[mesh->Np]-1)*3;
+  Nbytes /= 2;
+  occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
+  occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
+  mesh->device.finish();
+
+  occa::streamTag startCopy = mesh->device.tagStream();
+  for(int it=0;it<Ntrials;++it){
+    o_bah.copyTo(o_foo);
+  }
+  occa::streamTag endCopy = mesh->device.tagStream();
+  mesh->device.finish();
+
+  double  copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
+  printf("copied \n");
+
+
+
+  for(int i=1; i<NKernels; i++) {
 
     sprintf(testkernelName, "%s_v%d", kernelName,  i);
-    printf("%s Kernel #%02d\n", kernelFileName, i);
+    printf("%s================= Kernel #%02d================================================\n\n", testkernelName, i);
+    printf("Np = %d sizeof(dfloat) = %d Nelements = %d \n", mesh->Np, sizeof(dfloat), mesh->Nelements);
 
     testKernel = mesh->device.buildKernelFromSource(kernelFileName,testkernelName,kernelInfo);
 
     dfloat lambda = 0;
     // sync processes
 
-    iint Nbytes = sizeof(dfloat)*mesh->Np*2; // load one field, save one filed (ignore geofacs)
-    Nbytes /= 2;
-    printf("copying %d bytes \n", Nbytes*mesh->Nelements);
-    occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
-    occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
-
-    mesh->device.finish();
-
-    occa::streamTag startCopy = mesh->device.tagStream();
-    for(int it=0;it<Ntrials;++it){
-      o_bah.copyTo(o_foo);
-    }
-    occa::streamTag endCopy = mesh->device.tagStream();
-    mesh->device.finish();
-
-    double  copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
 
     // time Ax
     double timeAx = 0.0f;
     double kernelElapsed =0.0f;;
-    occa::streamTag start, end;
+
+    mesh->device.finish();
+
+    occa::streamTag start[Ntrials], end[Ntrials];
     for(int it=0;it<Ntrials;++it){
-      mesh->device.finish();
-      start = mesh->device.tagStream();
+      start[it] = mesh->device.tagStream();
+#if 0
+      testKernel(mesh->Nelements, 
+          solver->o_localGatherElementList,
+          mesh->o_ggeo, 
+          mesh->o_sparseStackedNZ, 
+          mesh->o_sparseSrrT, 
+          mesh->o_sparseSrsT, 
+          mesh->o_sparseSssT,		 
+          mesh->o_MM, 
+          lambda,
+          solver->o_p,
+          solver->o_grad);
 
       testKernel(mesh->Nelements, 
-		 solver->o_localGatherElementList,
-		 mesh->o_ggeo, 
-		 mesh->o_SrrT, 
-		 mesh->o_SrsT, 
-		 //		 mesh->o_SsrT, 
-		 mesh->o_IndTchar,
-		 mesh->o_SssT,
-		 mesh->o_MM, 
-		 lambda,
-		 solver->o_p,
-		 solver->o_grad);
+          solver->o_localGatherElementList,
+          mesh->o_ggeo, 
+          mesh->o_India,
+          mesh->o_Indja, 
+          mesh->o_Srr, 
+          mesh->o_Srs, 
+          mesh->o_Sss,              
+          mesh->o_MM, 
+          lambda,
+          solver->o_p,
+          solver->o_grad);
+#else
+      testKernel(mesh->Nelements, 
+          solver->o_localGatherElementList,
+          mesh->o_ggeo, 
+          mesh->o_rowData,          
+          mesh->o_Srr, 
+          mesh->o_Srs, 
+          mesh->o_Sss,              
+          mesh->o_MM, 
+          lambda,
+          solver->o_p,
+          solver->o_grad);
 
-      end = mesh->device.tagStream();
-      timeAx = mesh->device.timeBetween(start,end);
+#endif
+
+      end[it] = mesh->device.tagStream();
+    }
+    mesh->device.finish();
+    for(int it=0;it<Ntrials;++it){
+      timeAx = mesh->device.timeBetween(start[it],end[it]);
       kernelElapsed +=timeAx;    
     }
     mesh->device.finish();
@@ -78,17 +127,17 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
 
     //start
     //
-    iint size;
+    int size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    iint   localDofs = mesh->Np*mesh->Nelements;
-    iint   localElements = mesh->Nelements;
-    iint   globalDofs;
-    iint   globalElements;
+    int   localDofs = mesh->Np*mesh->Nelements;
+    int   localElements = mesh->Nelements;
+    int   globalDofs;
+    int   globalElements;
     double globalCopyElapsed;
 
-    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_INT,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localElements,&globalElements,1, MPI_INT,   MPI_SUM, 0, MPI_COMM_WORLD );
     MPI_Reduce(&copyElapsed,&globalCopyElapsed,1, MPI_DOUBLE,   MPI_MAX, 0, MPI_COMM_WORLD );
 
 
@@ -98,24 +147,34 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
       printf("Ntrials = %d global copy el %f local copy el %f size(dfloat) %d \n",Ntrials, globalCopyElapsed, copyElapsed, sizeof(dfloat));
 
       // count actual number of non-zeros
+#if 1
       int nnzs = 0;
-      for(iint n=0;n<mesh->Np*mesh->maxNnzPerRow;++n){
-	nnzs += (fabs(mesh->Srr[n])>1e-13);
-	nnzs += (fabs(mesh->Srs[n])>1e-13);
-	nnzs += (fabs(mesh->Sss[n])>1e-13);
+      printf("sparse nnz per row: %d \n", mesh->SparseNnzPerRow);
+      for(int n=0;n<mesh->Np*mesh->SparseNnzPerRow;++n){
+        //        nnzs += (fabs(mesh->sparseSrrT[n])>1e-13);
+        //      nnzs += (fabs(mesh->sparseSrsT[n])>1e-13);
+        //    nnzs += (fabs(mesh->sparseSssT[n])>1e-13);
+        //printf("%16.16f %16.16f %16.16f \n", mesh->sparseSrrT[n],  mesh->sparseSrsT[n],  mesh->sparseSssT[n]);
+        nnzs += (mesh->sparseStackedNZ[n]>0); 
       }
-      printf("nnzs = %d\n", nnzs);
+      //nnzs*=3;
+#else
+      nnzs = test[mesh->Np]-1;
+#endif
+      printf("\n nnzs = %d matrix size %d padded row %d \n", nnzs, mesh->Np*mesh->SparseNnzPerRow, mesh->SparseNnzPerRow);
+
 
       // 6 flops per non-zero plus chain rule
-      double flops = nnzs*2 + mesh->Np*5;
+      double flops = (double)(nnzs*6 + mesh->Np*5);
       double eqflops = mesh->Np*mesh->Np*6 + mesh->Np*5;
 
       double roofline = ((mesh->Nelements*flops*(double)Ntrials))/(1e9*globalCopyElapsed);
-      printf("Nelements = %d flops = %d Ntrials = %d copy elapsed scaled = %f \n",mesh->Nelements, flops, Ntrials,  1e9*globalCopyElapsed);
+      printf("Nelements = %d flops = %d Ntrials = %d copy elapsed scaled = %f kernelElapsed %16.16f\n",mesh->Nelements, (int) flops, Ntrials,  1e9*globalCopyElapsed, kernelElapsed);
 
       double copyBandwidth   = mesh->Nelements*((Nbytes*Ntrials*2.)/(1e9*globalCopyElapsed));
       double kernelBandwidth = mesh->Nelements*((Nbytes*2.)/(1e9*kernelElapsed));
       double kernelGFLOPS = mesh->Nelements*flops/(1e9*kernelElapsed);
+
       double kernelEquivGFLOPS = mesh->Nelements*eqflops/(1e9*kernelElapsed);
 
       printf("Copy Bw %16.17g achieved BW %16.17g\n", copyBandwidth, kernelBandwidth);
@@ -123,6 +182,7 @@ void ellipticRunBenchmark2D(solver_t *solver, char *options, occa::kernelInfo ke
       printf("GFLOPS %16.17f (%16.17f) \n", kernelGFLOPS, kernelEquivGFLOPS);
       printf("time per kernel %f \n",kernelElapsed);
       printf("PARAMETERS %d %d %16.17f \n ", Nblocks, Nnodes, kernelGFLOPS );
+
     }
   }
 }

@@ -1,8 +1,5 @@
 #include "ellipticTet3D.h"
 
-void ellipticOperator3D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
-dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
-
 void AxTet3D(void **args, occa::memory &o_x, occa::memory &o_Ax) {
 
   solver_t *solver = (solver_t *) args[0];
@@ -15,77 +12,66 @@ void AxTet3D(void **args, occa::memory &o_x, occa::memory &o_Ax) {
 void coarsenTet3D(void **args, occa::memory &o_x, occa::memory &o_Rx) {
 
   solver_t *solver = (solver_t *) args[0];
-  occa::memory *o_V = (occa::memory *) args[1];
+  char *options    = (char *) args[1];
+  solver_t *Fsolver = (solver_t *) args[2];
 
   mesh_t *mesh = solver->mesh;
+  mesh_t *Fmesh = Fsolver->mesh;
   precon_t *precon = solver->precon;
+  occa::memory o_R = solver->o_R;
 
-  precon->coarsenKernel(mesh->Nelements, *o_V, o_x, o_Rx);
+  if (strstr(options,"CONTINUOUS"))
+    Fsolver->dotMultiplyKernel(Fmesh->Nelements*Fmesh->Np, Fmesh->ogs->o_invDegree, o_x, o_x);
+
+  precon->coarsenKernel(mesh->Nelements, o_R, o_x, o_Rx);
+
+  if (strstr(options,"CONTINUOUS")) {
+    //solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, o_Rx, o_Rx);
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, o_Rx, dfloatString, "add");  
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Rx);
+  }
 }
 
 void prolongateTet3D(void **args, occa::memory &o_x, occa::memory &o_Px) {
 
   solver_t *solver = (solver_t *) args[0];
-  occa::memory *o_V = (occa::memory *) args[1];
-
   mesh_t *mesh = solver->mesh;
   precon_t *precon = solver->precon;
+  occa::memory o_R = solver->o_R;
 
-  precon->prolongateKernel(mesh->Nelements, *o_V, o_x, o_Px);
+  precon->prolongateKernel(mesh->Nelements, o_R, o_x, o_Px);
 }
 
-dfloat *buildCoarsenerTet3D(mesh3D** meshLevels, int N, int Nc) {
+void ellipticGather(void **args, occa::memory &o_x, occa::memory &o_Gx) {
 
-  //TODO We can build the coarsen matrix either from the interRaise or interpLower matrices. Need to check which is better
+  solver_t *solver = (solver_t *) args[0];
+  ogs_t *ogs       = (ogs_t *) args[1];
+  occa::memory *o_s= (occa::memory *) args[2];
+  char *options    = (char *) args[3];
+  mesh_t *mesh     = solver->mesh;
 
-  //use the Raise for now (essentally an L2 projection)
-
-  int NpFine   = meshLevels[N]->Np;
-  int NpCoarse = meshLevels[Nc]->Np;
-
-  dfloat *P    = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
-  dfloat *Ptmp = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
-
-  //initialize P as identity
-  for (int i=0;i<NpCoarse;i++) P[i*NpCoarse+i] = 1.0;
-
-  for (int n=Nc;n<N;n++) {
-
-    int Npp1 = meshLevels[n+1]->Np;
-    int Np   = meshLevels[n]->Np;
-
-    //copy P
-    for (int i=0;i<Np*NpCoarse;i++) Ptmp[i] = P[i];
-
-    //Multiply by the raise op
-    for (int i=0;i<Npp1;i++) {
-      for (int j=0;j<NpCoarse;j++) {
-        P[i*NpCoarse + j] = 0.;
-        for (int k=0;k<Np;k++) {
-          P[i*NpCoarse + j] += meshLevels[n]->interpRaise[i*Np+k]*Ptmp[k*NpCoarse + j];
-        }
-      }
-    }
-  }
-
-  //the coarsen matrix is P^T
-  dfloat *R    = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
-  for (int i=0;i<NpCoarse;i++) {
-    for (int j=0;j<NpFine;j++) {
-      R[i*NpFine+j] = P[j*NpCoarse+i];
-    }
-  }
-
-  free(P); free(Ptmp);
-
-  return R;
+  meshParallelGather(mesh, ogs, o_x, o_Gx);  
+  solver->dotMultiplyKernel(ogs->Ngather, ogs->o_gatherInvDegree, o_Gx, o_Gx);
 }
+
+void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx) {
+
+  solver_t *solver = (solver_t *) args[0];
+  ogs_t *ogs       = (ogs_t *) args[1];
+  occa::memory *o_s= (occa::memory *) args[2];
+  char *options    = (char *) args[3];
+  mesh_t *mesh     = solver->mesh;
+
+  meshParallelScatter(mesh, ogs, o_x, o_Sx);  
+}
+
+void buildCoarsenerTet3D(solver_t* solver, mesh3D **meshLevels, int Nf, int Nc, const char* options);
 
 void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
-                                dfloat tau, dfloat lambda, iint *BCType,
+                                dfloat tau, dfloat lambda, int *BCType,
                                 const char *options, const char *parAlmondOptions) {
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -113,7 +99,7 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
     levelDegree= (int *) calloc(numLevels,sizeof(int));
     for (int n=0;n<numLevels;n++) levelDegree[n] = mesh->N - 2*n; //decrease by two
     levelDegree[numLevels-1] = 1; //ensure the last level is degree 1
-  } else if (strstr(options,"HALFDOFS")) {
+  } else { // default "HALFDOFS"
     // pick the degrees so the dofs of each level halfs (roughly)
     //start by counting the number of levels neccessary
     numLevels = 1;
@@ -145,72 +131,32 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
   dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
   *vlambda = lambda;
 
-  //storage for restriction matrices
-  dfloat **R = (dfloat **) calloc(numLevels,sizeof(dfloat*));
-  occa::memory *o_R = (occa::memory *) calloc(numLevels,sizeof(occa::memory));
-
   //maually build multigrid levels
   precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
   agmgLevel **levels = precon->parAlmond->levels;
 
-  for (int n=0;n<numLevels;n++) {
-    solver_t *solverL;
+  //build a solver struct for every degree
+  solver_t **solversN = (solver_t**) calloc(mesh->N+1,sizeof(solver_t*));
+  solversN[mesh->N] = solver; //top level
+  for (int n=1;n<numLevels;n++) {  //build solver for this degree
+    int Nf = levelDegree[n-1];
+    int Nc = levelDegree[n];
+    if(rank==0) printf("=============BUIDLING MULTIGRID LEVEL OF DEGREE %d==================\n", Nc);
+    solversN[Nc] = ellipticBuildMultigridLevelTet3D(solver,Nc,Nf,BCType,options);
+  }
 
-    if (n==0) {
-      solverL = solver;
-    } else {
-      //build ops for this level
-      printf("=============BUIDLING MULTIGRID LEVEL OF DEGREE %d==================\n", levelDegree[n]);
-      solverL = ellipticBuildMultigridLevelTet3D(solver,levelDegree,n,options);
+  for (int n=0;n<numLevels-1;n++) {
+    int N = levelDegree[n];
+    solver_t *solverL = solversN[N];
 
-      //set the normalization constatnt for the allNeumann POisson problem on this coarse mesh
-      iint totalElements = 0;
-      MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
-      solverL->allNeumannScale = 1.0/sqrt(solverL->mesh->Np*totalElements);
-    }
-
-    //check if we're at the degree 1 problem
-    if (n==numLevels-1) {
-      // build degree 1 matrix problem
-      nonZero_t *coarseA;
-      iint nnzCoarseA;
-      hgs_t *coarsehgs;
-      dfloat *V1;
-
-      iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
-
-      ellipticCoarsePreconditionerSetupTet3D(mesh, precon, tau, lambda, BCType,
-                                             &V1, &coarseA, &nnzCoarseA,
-                                             &coarsehgs, coarseGlobalStarts, options);
-
-      precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
-
-      iint *Rows = (iint *) calloc(nnzCoarseA, sizeof(iint));
-      iint *Cols = (iint *) calloc(nnzCoarseA, sizeof(iint));
-      dfloat *Vals = (dfloat*) calloc(nnzCoarseA,sizeof(dfloat));
-
-      for (iint n=0;n<nnzCoarseA;n++) {
-        Rows[n] = coarseA[n].row;
-        Cols[n] = coarseA[n].col;
-        Vals[n] = coarseA[n].val;
-      }
-
-      // build amg starting at level 1
-      parAlmondAgmgSetup(precon->parAlmond,
-                         coarseGlobalStarts,
-                         nnzCoarseA,
-                         Rows,
-                         Cols,
-                         Vals,
-                         solver->allNeumann,
-                         solver->allNeumannPenalty,
-                         coarsehgs);
-
-      free(coarseA); free(Rows); free(Cols); free(Vals);
-    } else {
-      //build the level manually
-      precon->parAlmond->numLevels++;
-      levels[n] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
+    //add the level manually
+    precon->parAlmond->numLevels++;
+    levels[n] = (agmgLevel *) calloc(1,sizeof(agmgLevel));
+    levels[n]->gatherLevel = false;   //dont gather this level
+    if (strstr(options,"CONTINUOUS")) {//use weighted inner products
+      precon->parAlmond->levels[n]->weightedInnerProds = true;
+      precon->parAlmond->levels[n]->o_weight = solverL->o_invDegree;
+      precon->parAlmond->levels[n]->weight = solverL->invDegree;
     }
 
     //use the matrix free Ax
@@ -243,9 +189,10 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
       levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat));
     }
 
-    levels[n]->smootherArgs = (void **) calloc(1,sizeof(void*));
+    levels[n]->smootherArgs = (void **) calloc(3,sizeof(void*));
     levels[n]->smootherArgs[0] = (void *) solverL;
-
+    levels[n]->smootherArgs[1] = (void *) options;
+    levels[n]->smootherArgs[2] = (void *) vlambda;
 
     dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
     if(strstr(options, "EXACT")){
@@ -254,70 +201,23 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
       rateTolerance = 1.0;
     }
 
-
     //set up the fine problem smoothing
-    if (strstr(options, "IPDG")) {
-      if(strstr(options, "OVERLAPPINGPATCH")){
-        ellipticSetupSmootherOverlappingPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-      } else if(strstr(options, "FULLPATCH")){
-        ellipticSetupSmootherFullPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-      } else if(strstr(options, "FACEPATCH")){
-        ellipticSetupSmootherFacePatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-      } else if(strstr(options, "LOCALPATCH")){
-        ellipticSetupSmootherLocalPatchIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
-      } else { //default to damped jacobi
-        ellipticSetupSmootherDampedJacobiIpdg(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
-      }
+    if(strstr(options, "OVERLAPPINGPATCH")){
+      ellipticSetupSmootherOverlappingPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
+    } else if(strstr(options, "FULLPATCH")){
+      ellipticSetupSmootherFullPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+    } else if(strstr(options, "FACEPATCH")){
+      ellipticSetupSmootherFacePatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+    } else if(strstr(options, "LOCALPATCH")){
+      ellipticSetupSmootherLocalPatch(solverL, solverL->precon, levels[n], tau, lambda, BCType, rateTolerance, options);
+    } else { //default to damped jacobi
+      ellipticSetupSmootherDampedJacobi(solverL, solverL->precon, levels[n], tau, lambda, BCType, options);
     }
-
-    //reallocate vectors at N=1 since we're using the matrix free ops
-    if (n==numLevels-1) {
-      if (n>0) {//kcycle vectors
-        if (levels[n]->Ncols) levels[n]->ckp1 = (dfloat *) realloc(levels[n]->ckp1,levels[n]->Ncols*sizeof(dfloat));
-        if (levels[n]->Nrows) levels[n]->vkp1 = (dfloat *) realloc(levels[n]->vkp1,levels[n]->Nrows*sizeof(dfloat));
-        if (levels[n]->Nrows) levels[n]->wkp1 = (dfloat *) realloc(levels[n]->wkp1,levels[n]->Nrows*sizeof(dfloat));
-
-        if (levels[n]->Ncols) levels[n]->o_ckp1.free();
-        if (levels[n]->Nrows) levels[n]->o_vkp1.free();
-        if (levels[n]->Nrows) levels[n]->o_wkp1.free();
-        if (levels[n]->Ncols) levels[n]->o_ckp1 = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->ckp1);
-        if (levels[n]->Nrows) levels[n]->o_vkp1 = mesh->device.malloc(levels[n]->Nrows*sizeof(dfloat),levels[n]->vkp1);
-        if (levels[n]->Nrows) levels[n]->o_wkp1 = mesh->device.malloc(levels[n]->Nrows*sizeof(dfloat),levels[n]->wkp1);
-      }
-
-      if (levels[n]->Ncols) levels[n]->x    = (dfloat *) realloc(levels[n]->x  ,levels[n]->Ncols*sizeof(dfloat));
-      if (levels[n]->Ncols) levels[n]->res  = (dfloat *) realloc(levels[n]->res,levels[n]->Ncols*sizeof(dfloat));
-      if (levels[n]->Nrows) levels[n]->rhs  = (dfloat *) realloc(levels[n]->rhs,levels[n]->Nrows*sizeof(dfloat));
-
-      if (levels[n]->Ncols) levels[n]->o_x.free();
-      if (levels[n]->Ncols) levels[n]->o_res.free();
-      if (levels[n]->Nrows) levels[n]->o_rhs.free();
-      if (levels[n]->Ncols) levels[n]->o_x   = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->x);
-      if (levels[n]->Ncols) levels[n]->o_res = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->res);
-      if (levels[n]->Nrows) levels[n]->o_rhs = mesh->device.malloc(levels[n]->Nrows*sizeof(dfloat),levels[n]->rhs);
-    }
-
-    if (n==0) continue; //dont need restriction and prolongation ops at top level
-
-    //build coarsen and prologation ops
-    int N = levelDegree[n-1];
-    int Nc = levelDegree[n];
-
-    R[n] = buildCoarsenerTet3D(meshLevels, N, Nc);
-    o_R[n] = mesh->device.malloc(meshLevels[N]->Np*meshLevels[Nc]->Np*sizeof(dfloat), R[n]);
-
-    levels[n]->coarsenArgs = (void **) calloc(2,sizeof(void*));
-    levels[n]->coarsenArgs[0] = (void *) solverL;
-    levels[n]->coarsenArgs[1] = (void *) &(o_R[n]);
-    levels[n]->device_coarsen = coarsenTet3D;
-
-    levels[n]->prolongateArgs = levels[n]->coarsenArgs;
-    levels[n]->device_prolongate = prolongateTet3D;
   }
 
-  //report the multigrid levels
+  //report top levels
   if (strstr(options,"VERBOSE")) {
-    if(rank==0) {
+    if((rank==0)&&(numLevels>1)) { //report the upper multigrid levels
       printf("------------------Multigrid Report---------------------\n");
       printf("-------------------------------------------------------\n");
       printf("level|  Degree  |    dimension   |      Smoother       \n");
@@ -325,18 +225,21 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
       printf("-------------------------------------------------------\n");
     }
 
-    for(int lev=0; lev<numLevels; lev++){
+    for(int lev=0; lev<numLevels-1; lev++){
 
-      iint Nrows = levels[lev]->Nrows;
+      dlong Nrows = levels[lev]->Nrows;
+      hlong hNrows = (hlong) levels[lev]->Nrows;
 
-      iint minNrows=0, maxNrows=0, totalNrows=0;
+      dlong minNrows=0, maxNrows=0;
+      hlong totalNrows=0;
       dfloat avgNrows;
-      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
-      MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+
+      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_DLONG, MPI_MAX, MPI_COMM_WORLD);
+      MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
       avgNrows = (dfloat) totalNrows/size;
 
       if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
-      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_DLONG, MPI_MIN, MPI_COMM_WORLD);
 
       char *smootherString;
       if(strstr(options, "OVERLAPPINGPATCH")){
@@ -367,10 +270,132 @@ void ellipticMultiGridSetupTet3D(solver_t *solver, precon_t* precon,
         printf("     |          |    %10.2f  |   \n", avgNrows);
       }
     }
-    if(rank==0)
+    if((rank==0)&&(numLevels>1)) 
       printf("-------------------------------------------------------\n");
+  }
+
+  /* build degree 1 problem and pass to AMG */
+  nonZero_t *coarseA;
+  dlong nnzCoarseA;
+  ogs_t *coarseogs;
+
+  solver_t* solverL = solversN[1];
+  hlong *coarseGlobalStarts = (hlong*) calloc(size+1, sizeof(hlong));
+
+  if (strstr(options,"IPDG")) {
+    ellipticBuildIpdgTet3D(solverL->mesh, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
+  } else if (strstr(options,"CONTINUOUS")) {
+    ellipticBuildContinuousTet3D(solverL,lambda,&coarseA,&nnzCoarseA,&coarseogs,coarseGlobalStarts,options);
+  }
+
+  hlong *Rows = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
+  hlong *Cols = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
+  dfloat *Vals = (dfloat*) calloc(nnzCoarseA,sizeof(dfloat));
+
+  for (dlong i=0;i<nnzCoarseA;i++) {
+    Rows[i] = coarseA[i].row;
+    Cols[i] = coarseA[i].col;
+    Vals[i] = coarseA[i].val;
+  }
+
+  // build amg starting at level 1
+  parAlmondAgmgSetup(precon->parAlmond,
+                     coarseGlobalStarts,
+                     nnzCoarseA,
+                     Rows,
+                     Cols,
+                     Vals,
+                     solver->allNeumann,
+                     solver->allNeumannPenalty);
+
+  free(coarseA); free(Rows); free(Cols); free(Vals);
+
+  //tell parAlmond to gather this level
+  agmgLevel *coarseLevel = precon->parAlmond->levels[numLevels-1];
+  if (strstr(options,"CONTINUOUS")) {
+    coarseLevel->gatherLevel = true;
+    coarseLevel->weightedInnerProds = false;
+    
+    coarseLevel->Srhs = (dfloat*) calloc(solverL->mesh->Np*solverL->mesh->Nelements,sizeof(dfloat));
+    coarseLevel->Sx   = (dfloat*) calloc(solverL->mesh->Np*solverL->mesh->Nelements,sizeof(dfloat));
+    coarseLevel->o_Srhs = solverL->mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat));
+    coarseLevel->o_Sx   = solverL->mesh->device.malloc(solverL->mesh->Np*solverL->mesh->Nelements*sizeof(dfloat));
+
+    coarseLevel->gatherArgs = (void **) calloc(4,sizeof(void*));  
+    coarseLevel->gatherArgs[0] = (void *) solverL;
+    coarseLevel->gatherArgs[1] = (void *) coarseogs;
+    coarseLevel->gatherArgs[2] = (void *) &(coarseLevel->o_Sx);
+    coarseLevel->gatherArgs[3] = (void *) options;
+    coarseLevel->scatterArgs = coarseLevel->gatherArgs;
+
+    coarseLevel->device_gather  = ellipticGather;
+    coarseLevel->device_scatter = ellipticScatter;        
+  }
+
+
+  /* build coarsening and prologation operators to connect levels */
+  for(int n=1; n<numLevels; n++) {
+    //build coarsen and prologation ops
+    int Nf = levelDegree[n-1]; //higher degree
+    int Nc = levelDegree[n];  
+
+    solver_t *solverL = solversN[Nc];
+    solver_t *solverF = solversN[Nf];
+    buildCoarsenerTet3D(solverL, meshLevels, Nf, Nc, options);
+    
+    levels[n]->coarsenArgs = (void **) calloc(3,sizeof(void*));
+    levels[n]->coarsenArgs[0] = (void *) solverL;
+    levels[n]->coarsenArgs[1] = (void *) options;
+    levels[n]->coarsenArgs[2] = (void *) solverF;
+
+    levels[n]->prolongateArgs = levels[n]->coarsenArgs;
+    
+    levels[n]->device_coarsen = coarsenTet3D;
+    levels[n]->device_prolongate = prolongateTet3D;
   }
 
   for (int n=1;n<mesh->N+1;n++) free(meshLevels[n]);
   free(meshLevels);
+}
+
+
+void buildCoarsenerTet3D(solver_t* solver, mesh3D **meshLevels, int Nf, int Nc, const char* options) {
+
+  int NpFine   = meshLevels[Nf]->Np;
+  int NpCoarse = meshLevels[Nc]->Np;
+  dfloat *P    = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
+  dfloat *Ptmp = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
+
+  //initialize P as identity
+  for (int i=0;i<NpCoarse;i++) P[i*NpCoarse+i] = 1.0;
+
+  for (int n=Nc;n<Nf;n++) {
+
+    int Npp1 = meshLevels[n+1]->Np;
+    int Np   = meshLevels[n  ]->Np;
+
+    //copy P
+    for (int i=0;i<Np*NpCoarse;i++) Ptmp[i] = P[i];
+
+    //Multiply by the raise op
+    for (int i=0;i<Npp1;i++) {
+      for (int j=0;j<NpCoarse;j++) {
+        P[i*NpCoarse + j] = 0.;
+        for (int k=0;k<Np;k++) {
+          P[i*NpCoarse + j] += meshLevels[n]->interpRaise[i*Np+k]*Ptmp[k*NpCoarse + j];
+        }
+      }
+    }
+  }
+
+  //the coarsen matrix is P^T
+  solver->R = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
+  for (int i=0;i<NpCoarse;i++) {
+    for (int j=0;j<NpFine;j++) {
+      solver->R[i*NpFine+j] = P[j*NpCoarse+i];
+    }
+  }
+  solver->o_R = solver->mesh->device.malloc(NpFine*NpCoarse*sizeof(dfloat), solver->R);
+
+  free(P); free(Ptmp);
 }

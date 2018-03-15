@@ -2,8 +2,8 @@
 
 // Weakly Impose Nonlinear term BCs
 #define insAdvectionBoundaryConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
-  {	dfloat nu = 0.025;\
-    dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI);\
+  {	\
+    dfloat lambda = 1.f/(2.f * p_nu) - occaSqrt(1.f/(4.f*p_nu*p_nu) + 4.f*OCCA_PI*OCCA_PI);\
     if(bc==1){								\
       *(uB) = 0.f;							\
       *(vB) = 0.f;							\
@@ -17,8 +17,8 @@
   }
 
 #define insDivergenceBoundaryConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
-  {		dfloat nu = 0.025;\
-    dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI);\
+  {	\
+    dfloat lambda = 1.f/(2.f * p_nu) - occaSqrt(1.f/(4.f*p_nu*p_nu) + 4.f*OCCA_PI*OCCA_PI);\
     if(bc==1){								\
       *(uB)= 0.f;							\
       *(vB)= 0.f;							\
@@ -34,8 +34,8 @@
 // Gradient only applies to Pressure and Pressure Incremament
 // Boundary Conditions are implemented in strong form
 #define insGradientBoundaryConditions2D(bc,t,x,y,nx,ny,pM,pB)	\
-  {	dfloat nu = 0.025;\
-    dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI);\
+  {	\
+    dfloat lambda = 1.f/(2.f * p_nu) - occaSqrt(1.f/(4.f*p_nu*p_nu) + 4.f*OCCA_PI*OCCA_PI);\
     if(bc==1){							\
       *(pB) = pM;						\
     } else if(bc==2){						\
@@ -46,8 +46,8 @@
   }
 
 #define insHelmholtzBoundaryConditionsIpdg2D(bc, t, x, y, nx, ny, uB, uxB, uyB, vB, vxB, vyB) \
-  {	dfloat nu = 0.025;\
-    dfloat lambda = 1.f/(2.f*nu)-occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI);\
+  {	\
+    dfloat lambda = 1.f/(2.f*p_nu)-occaSqrt(1.f/(4.f*p_nu*p_nu) + 4.f*OCCA_PI*OCCA_PI);\
     if((bc==1)||(bc==4)){						\
       *(uB) = 0.f;							\
       *(vB) = 0.f;							\
@@ -78,8 +78,8 @@
 
 // Compute bcs for P increment: if c0 = 0 give Pr BCs, zero if time independent
 #define insPoissonBoundaryConditions2D(bc,t,dt,x,y,nx,ny,pB,pxB,pyB)	\
-  {	dfloat nu = 0.025;\
-    dfloat lambda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI);\
+  {	\
+    dfloat lambda = 1.f/(2.f * p_nu) - occaSqrt(1.f/(4.f*p_nu*p_nu) + 4.f*OCCA_PI*OCCA_PI);\
     if((bc==1)||(bc==4)){						\
       *(pB) = 0.f;							\
 									\
@@ -102,4 +102,13 @@
 
 
 
-
+// Compute bcs for P increment
+#define insPoissonNeumannTimeDerivative2D(bc,t,x,y,dpdt)  \
+  { \
+    if((bc==1)||(bc==4)||(bc==2) ){           \
+      *(dpdt) =0.f; \
+    }                 \
+    if(bc==3){                \
+      *(dpdt) = 0.0; \
+    }                 \
+  }

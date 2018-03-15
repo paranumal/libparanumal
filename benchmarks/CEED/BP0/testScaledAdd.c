@@ -4,9 +4,6 @@
 
 #include "occa.hpp"
 
-#define iint int
-#define iintString "int"
-
 #if 1
 #define dfloat double
 #define dfloatString "double"
@@ -48,7 +45,7 @@ int main(int argc, char **argv){
 
   /* KERNEL INFO */
   occa::kernelInfo kernelInfo;
-  kernelInfo.addDefine("iint", iintString);
+  kernelInfo.addDefine("dlong", "int");
   kernelInfo.addDefine("dfloat", dfloatString);
   
   /* KERNEL BUILD */
