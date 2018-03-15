@@ -35,9 +35,12 @@ void insReport3D(ins_t *ins, int tstep, char *options){
                        ins->o_Div);
 
   // gather-scatter
-  ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_Vx, dfloatString, "add");  
+  ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_Vx, dfloatString, "add");
   ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_Vy, dfloatString, "add");  
   ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_Vz, dfloatString, "add");  
+  ins->pSolver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, ins->o_Vx, ins->o_Vx);
+  ins->pSolver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, ins->o_Vy, ins->o_Vy);
+  ins->pSolver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, ins->o_Vz, ins->o_Vz);  
 
   // copy data back to host
   ins->o_U.copyTo(ins->U);

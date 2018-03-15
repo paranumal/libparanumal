@@ -1,18 +1,20 @@
 
 // compute div(NU)  = div(uxu) in collocation way
-kernel void insAdvectionVolumeQuad2D(const dlong Nelements,
-         const dfloat * restrict vgeo,
-         const dfloat * restrict D,
-         const dlong offset,
-         const dfloat * restrict U,
-         const dfloat * restrict V,
-         dfloat * restrict NU,
-         dfloat * restrict NV){
+kernel void insSubCycleVolumeQuad2D(const dlong Nelements,
+                                    const dfloat * restrict vgeo,
+                                    const dfloat * restrict D,
+                                    const dfloat * restrict U,
+                                    const dfloat * restrict V,
+                                    const dfloat * restrict Ud,
+                                    const dfloat * restrict Vd,
+                                          dfloat * restrict rhsU,
+                                          dfloat * restrict rhsV){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_F11[p_NblockV][p_Nq][p_Nq];
     shared dfloat s_F12[p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_F21[p_NblockV][p_Nq][p_Nq];
     shared dfloat s_F22[p_NblockV][p_Nq][p_Nq];
 
     shared dfloat s_D[p_Nq][p_Nq];
@@ -22,14 +24,17 @@ kernel void insAdvectionVolumeQuad2D(const dlong Nelements,
         for(int i=0;i<p_Nq;++i;inner0){    
           const dlong e = eo+es; // element in block
           if(e<Nelements){ 
-            const dlong id = (e+offset)*p_Np + j*p_Nq+i;
+            const dlong id = e*p_Np + j*p_Nq+i;
 
             const dfloat Un = U[id];
             const dfloat Vn = V[id];
+            const dfloat Udn = Ud[id];
+            const dfloat Vdn = Vd[id];
 
-            s_F11[es][j][i] = Un*Un;
-            s_F12[es][j][i] = Vn*Un;
-            s_F22[es][j][i] = Vn*Vn;
+            s_F11[es][j][i] = Un*Udn;
+            s_F12[es][j][i] = Vn*Udn;
+            s_F21[es][j][i] = Un*Vdn;
+            s_F22[es][j][i] = Vn*Vdn;
 
             if (es==0)
               s_D[j][i] = D[j*p_Nq+i];
@@ -55,6 +60,7 @@ kernel void insAdvectionVolumeQuad2D(const dlong Nelements,
             // compute 'r' and 's' derivatives of (q_m) at node n
             dfloat df11dr = 0.f, df11ds = 0.f;
             dfloat df12dr = 0.f, df12ds = 0.f;
+            dfloat df21dr = 0.f, df21ds = 0.f;
             dfloat df22dr = 0.f, df22ds = 0.f;
 
             occaUnroll(p_Nq)
@@ -67,19 +73,22 @@ kernel void insAdvectionVolumeQuad2D(const dlong Nelements,
                 
                 df12dr += Dr*s_F12[es][j][n];
                 df12ds += Ds*s_F12[es][n][i];
+
+                df21dr += Dr*s_F21[es][j][n];
+                df21ds += Ds*s_F21[es][n][i];
                 
                 df22dr += Dr*s_F22[es][j][n];
                 df22ds += Ds*s_F22[es][n][i];
               }
 
             const dfloat df11dx = drdx*df11dr + dsdx*df11ds;
-            const dfloat df12dx = drdx*df12dr + dsdx*df12ds;
             const dfloat df12dy = drdy*df12dr + dsdy*df12ds;
+            const dfloat df21dx = drdx*df21dr + dsdx*df21ds;
             const dfloat df22dy = drdy*df22dr + dsdy*df22ds;
 
-            const dlong id = (e+offset)*p_Np + j*p_Nq + i;
-            NU[id] = df11dx + df12dy;
-            NV[id] = df12dx + df22dy;
+            const dlong id = e*p_Np + j*p_Nq + i;
+            rhsU[id] = df11dx + df12dy;
+            rhsV[id] = df21dx + df22dy;
           }
         }
       }
@@ -177,21 +186,24 @@ kernel void insAdvectionVolumeQuad2D(const dlong Nelements,
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {                                                                     \
-  const dlong  idM = vmapM[sk]+offset*p_Np;                             \
-  const dlong  idP = vmapP[sk]+offset*p_Np;                             \
+  const dlong  idM = vmapM[sk];                                         \
+  const dlong  idP = vmapP[sk];                                         \
                                                                         \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
   const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
   const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
                                                                         \
-  const dfloat  uM = U[idM], vM = V[idM];                               \
-         dfloat uP = U[idP], vP = V[idP];                               \
+  const dfloat uM = U[idM], vM = V[idM];                                \
+  const dfloat uP = U[idP], vP = V[idP];                                \
+  const dfloat udM = Ud[idM], vdM = Vd[idM];                            \
+        dfloat udP = Ud[idP], vdP = Vd[idP];                            \
                                                                         \
   int bc = EToB[face+p_Nfaces*e];                                       \
   if(bc>0) {                                                            \
-    const dlong idm = vmapM[sk];                                                    \
-    insAdvectionBoundaryConditions2D(bc, time, x[idm], y[idm], nx, ny, uM, vM, &uP, &vP); \
+    insAdvectionBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, udM, vdM, &udP, &vdP); \
+    udP *= bScale;                                                      \
+    vdP *= bScale;                                                      \
   }                                                                     \
                                                                         \
   dfloat unM   = occaFabs(nx*uM + ny*vM);                               \
@@ -199,25 +211,27 @@ kernel void insAdvectionVolumeQuad2D(const dlong Nelements,
   dfloat unMax = (unM > unP) ? unM : unP;                               \
                                                                         \
   const dfloat sc = invWJ * sJ;                                         \
-  s_fluxNU[es][j][i] += sc*(.5f*(nx*(uP*uP - uM*uM)                     \
-                               + ny*(uP*vP - uM*vM)  + unMax*(uM-uP) ));\
-  s_fluxNV[es][j][i] += sc*(.5f*(nx*(vP*uP - vM*uM)                     \
-                               + ny*(vP*vP - vM*vM)  + unMax*(vM-vP) ));\
+  s_fluxNU[es][j][i] += sc*(.5f*(nx*(uP*udP - uM*udM)                   \
+                               + ny*(vP*udP - vM*udM)  + unMax*(udM-udP) ));\
+  s_fluxNV[es][j][i] += sc*(.5f*(nx*(uP*vdP - uM*vdM)                   \
+                               + ny*(vP*vdP - vM*vdM)  + unMax*(vdM-vdP) ));\
   }
 
-kernel void insAdvectionSurfaceQuad2D(const dlong Nelements,
-                                      const dfloat * restrict sgeo,
-                                      const dlong  * restrict vmapM,
-                                      const dlong  * restrict vmapP,
-                                      const int   * restrict EToB,
-                                      const dfloat time,
-                                      const dfloat * restrict x,
-                                      const dfloat * restrict y,
-                                      const dlong offset,
-                                      const dfloat * restrict U,
-                                      const dfloat * restrict V,
-                                      dfloat * restrict NU,
-                                      dfloat * restrict NV){
+kernel void insSubCycleSurfaceQuad2D(const dlong Nelements,
+                                    const dfloat * restrict sgeo,
+                                    const dlong  * restrict vmapM,
+                                    const dlong  * restrict vmapP,
+                                    const int   * restrict EToB,
+                                    const dfloat bScale,
+                                    const dfloat time,
+                                    const dfloat * restrict x,
+                                    const dfloat * restrict y,
+                                    const dfloat * restrict U,
+                                    const dfloat * restrict V,
+                                    const dfloat * restrict Ud,
+                                    const dfloat * restrict Vd,
+                                          dfloat * restrict rhsU,
+                                          dfloat * restrict rhsV){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -275,14 +289,15 @@ kernel void insAdvectionSurfaceQuad2D(const dlong Nelements,
         for(int i=0;i<p_Nq;++i;inner0){
           const dlong e = eo + es;
           if(e<Nelements){
-            const dlong id = (e+offset)*p_Np + j*p_Nq + i;
+            const dlong id = e*p_Np + j*p_Nq + i;
 
-            NU[id] += s_fluxNU[es][j][i];
-            NV[id] += s_fluxNV[es][j][i];
+            rhsU[id] += s_fluxNU[es][j][i];
+            rhsV[id] += s_fluxNV[es][j][i];
           }
         }
       }
     }
   }
 }
+
 

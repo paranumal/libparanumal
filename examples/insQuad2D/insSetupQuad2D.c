@@ -60,11 +60,9 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   ins->Py     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->PI     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
 
-  ins->Vx     = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-  ins->Vy     = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  ins->Vort     = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   ins->Div     = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
 
-  
   ins->Nsubsteps = Ns;
   if(strstr(options,"SUBCYCLING")){
     ins->Ud   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -162,7 +160,7 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   umax = sqrt(umax);
 
  
-  dfloat cfl = 1.0; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.5; // pretty good estimate (at least for subcycling LSERK4)
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt     = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -196,9 +194,9 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   if(strstr(options,"SUBCYCLING"))
     // ins->errorStep =100*32/ins->Nsubsteps;
     //ins->errorStep =800/ins->Nsubsteps;
-    ins->errorStep = 400;
+    ins->errorStep = 100;
   else
-    ins->errorStep = 400;
+    ins->errorStep = 100;
 
   if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -328,6 +326,8 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   ins->o_UH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
   ins->o_VH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
   
+  ins->o_Vort = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Vort);
+  ins->o_Div = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Div);
 
   if(strstr(options,"SUBCYCLING")){
     // Note that resU and resV can be replaced with already introduced buffer
@@ -341,24 +341,24 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
     for (int r=0;r<size;r++) {
       if (r==rank) {
         ins->subCycleVolumeKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-    					 "insSubCycleVolume2D",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleQuad2D.okl",
+    					 "insSubCycleVolumeQuad2D",
     					 kernelInfo);
 
         ins->subCycleSurfaceKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-    					 "insSubCycleSurface2D",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleQuad2D.okl",
+    					 "insSubCycleSurfaceQuad2D",
     					 kernelInfo);
 
-        ins->subCycleCubatureVolumeKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-    					 "insSubCycleCubatureVolume2D",
-    					 kernelInfo);
+        // ins->subCycleCubatureVolumeKernel =
+        //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+    				// 	 "insSubCycleCubatureVolume2D",
+    				// 	 kernelInfo);
 
-        ins->subCycleCubatureSurfaceKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-    					 "insSubCycleCubatureSurface2D",
-    					 kernelInfo);
+        // ins->subCycleCubatureSurfaceKernel =
+        //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
+    				// 	 "insSubCycleCubatureSurface2D",
+    				// 	 kernelInfo);
 
         ins->subCycleRKUpdateKernel =
           mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
@@ -523,6 +523,11 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insUpdate2D.okl",
     				       "insUpdateUpdate2D",
     				       kernelInfo);
+
+      ins->vorticityKernel=
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insVorticityQuad2D.okl",
+                   "insVorticityQuad2D",
+                   kernelInfo);      
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }

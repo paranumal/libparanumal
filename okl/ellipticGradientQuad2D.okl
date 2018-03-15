@@ -60,7 +60,7 @@ kernel void ellipticGradientQuad2D(const dlong Nelements,
 kernel void ellipticPartialGradientQuad2D(const dlong Nelements,
                                    const dlong offset,
                                    const dfloat * restrict vgeo,
-                                   const dfloat * restrict const D,
+                                   const dfloat * restrict D,
                                    const dfloat * restrict q,
                                    dfloat4 * restrict gradq){  
 

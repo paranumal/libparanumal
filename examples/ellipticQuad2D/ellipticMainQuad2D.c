@@ -29,9 +29,9 @@ int main(int argc, char **argv){
   // FULLALMOND: can include MATRIXFREE option
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=SEMFEM");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
-    //strdup("solver=PCG,VERBOSE method=CONTINUOUS preconditioner=NONE");
+    //strdup("solver=PCG,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,VERBOSE method=IPDG preconditioner=JACOBI");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
