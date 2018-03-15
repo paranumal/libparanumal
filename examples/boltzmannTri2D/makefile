@@ -79,7 +79,6 @@ LOBJS = \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPrint2D.o \
-../../src/meshReader2D.o \
 ../../src/meshMRABSetup2D.o \
 ../../src/meshBuildMRABClusters2D.o \
 ../../src/meshClusteredGeometricPartition2D.o \
