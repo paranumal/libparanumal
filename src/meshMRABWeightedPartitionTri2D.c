@@ -97,7 +97,7 @@ void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,
   //save this partition, and perform the mesh setup again. 
   mesh->Nelements = acceptedNelements;
 
-  mesh->EToV = (int*) realloc(mesh->EToV, mesh->Nelements*mesh->Nverts*sizeof(int));
+  mesh->EToV = (hlong*) realloc(mesh->EToV, mesh->Nelements*mesh->Nverts*sizeof(hlong));
   mesh->EX = (dfloat*) realloc(mesh->EX, mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->EY = (dfloat*) realloc(mesh->EY, mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->elementInfo = (int *) realloc(mesh->elementInfo,mesh->Nelements*sizeof(int));

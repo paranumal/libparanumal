@@ -324,44 +324,7 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
        occaTimerToc(mesh->device,"PmlTraceUpdateKernel");
     }
 
-     occaTimerToc(mesh->device,"TraceUpdateKernel");
+    occaTimerToc(mesh->device,"TraceUpdateKernel");
   }
-
 }
-
-        if (lev<mesh->MRABNlevels) {
-
-          if (mesh->MRABNhaloElements[lev])
-            mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
-                                    mesh->o_MRABhaloIds[lev],
-                                    mesh->dt*pow(2,lev-1),
-                                    b1,b2,b3,
-                                    mesh->MRABshiftIndex[lev],
-                                    mesh->o_vmapM,
-                                    mesh->o_rhsq,
-                                    mesh->o_fQM,
-                                    mesh->o_fQP,
-                                    mesh->o_q);
-
-          if (mesh->MRABpmlNhaloElements[lev])
-            mesh->pmlTraceUpdateKernel(mesh->MRABpmlNhaloElements[lev],
-                                      mesh->o_MRABpmlHaloElementIds[lev],
-                                      mesh->o_MRABpmlHaloIds[lev],
-                                      mesh->dt*pow(2,lev-1),
-                                      b1,b2,b3,
-                                      mesh->MRABshiftIndex[lev],
-                                      mesh->o_vmapM,
-                                      mesh->o_rhsq,
-                                      mesh->o_pmlrhsqx,
-                                      mesh->o_pmlrhsqy,
-                                      mesh->o_q,
-                                      mesh->o_pmlqx,
-                                      mesh->o_pmlqy,
-                                      mesh->o_fQM,
-                                      mesh->o_fQP);
-        }
-
-}
-
-  
 }
