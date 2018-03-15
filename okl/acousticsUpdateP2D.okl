@@ -1,6 +1,6 @@
 
-kernel void acousticsUpdateP2D(const int Nelements,
-            const int * restrict Elements,
+kernel void acousticsUpdateP2D(const iint Nelements,
+            const iint * restrict Elements,
 			      const dfloat dt,	
 			      const dfloat rka,
 			      const dfloat rkb,
@@ -9,10 +9,10 @@ kernel void acousticsUpdateP2D(const int Nelements,
 			      dfloat * restrict q){
 				  
   // Low storage Runge Kutta time step update
-  for(int et=0;et<Nelements;++et;outer0){
-    for (int n=0;n<p_Np;n++;inner0) {  
-      const int id = p_Nfields*(Elements[et]*p_NpMax + n);
-      for (int fld=0;fld<p_Nfields;fld++) {
+  for(iint et=0;et<Nelements;++et;outer0){
+    for (iint n=0;n<p_Np;n++;inner0) {  
+      const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
+      for (iint fld=0;fld<p_Nfields;fld++) {
         dfloat resqn = resq[id+fld];
         resqn = rka*resqn + dt*rhsq[id+fld];
         resq[id+fld] = resqn;
@@ -22,8 +22,8 @@ kernel void acousticsUpdateP2D(const int Nelements,
   }
 }
 
-kernel void acousticsUpdateP2D_wadg(const int Nelements,
-           const int * restrict Elements,
+kernel void acousticsUpdateP2D_wadg(const iint Nelements,
+           const iint * restrict Elements,
            const dfloat dt, 
            const dfloat rka,
            const dfloat rkb,
@@ -35,13 +35,13 @@ kernel void acousticsUpdateP2D_wadg(const int Nelements,
            dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(int et=0;et<Nelements;++et;outer0){  // for all elements
+  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
     shared dfloat s_p[p_cubNp];
     exclusive dfloat r_p;
 
-    for(int n=0; n < p_cubNp; ++n; inner0){  
+    for(iint n=0; n < p_cubNp; ++n; inner0){  
       if (n < p_Np){
-        const int id = p_Nfields*(Elements[et]*p_NpMax + n);
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
         s_p[n] = rhsq[id + 2]; // extract pressure rhs
       }
       // Initialize register variable
@@ -50,7 +50,7 @@ kernel void acousticsUpdateP2D_wadg(const int Nelements,
     barrier(localMemFence);
 
     // Interpolate rhs to cubature nodes
-    for(int n=0;n<p_cubNp;++n;inner0){
+    for(iint n=0;n<p_cubNp;++n;inner0){
       // Prefetch value of c2
       const dfloat c2n = c2[n + Elements[et]*p_cubNpMax];
       
@@ -65,16 +65,16 @@ kernel void acousticsUpdateP2D_wadg(const int Nelements,
     barrier(localMemFence);
 
     // Move temporary result back to shared memory
-    for(int n=0;n<p_cubNp;++n;inner0){
+    for(iint n=0;n<p_cubNp;++n;inner0){
       s_p[n] = r_p;
     }
     barrier(localMemFence);
     
     // Increment solution, project result back down
-    for(int n=0;n<p_cubNp;++n;inner0){
+    for(iint n=0;n<p_cubNp;++n;inner0){
       if (n < p_Np){
         // Extract velocity rhs
-        const int id = p_Nfields*(Elements[et]*p_NpMax + n);
+        const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
         dfloat rhsqn[p_Nfields];
         rhsqn[0] = rhsq[id + 0];
         rhsqn[1] = rhsq[id + 1];  

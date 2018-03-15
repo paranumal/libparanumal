@@ -234,27 +234,27 @@ iw = [w,w,w];
 sV = Vandermonde2D(N, ir(:), is(:));
 sInterp = sV/V;
 
-interp = [sInterp(1:Nfi,FaceNodes(:,1));sInterp(Nfi+1:2*Nfi,FaceNodes(:,2));sInterp(2*Nfi+1:3*Nfi,FaceNodes(:,3))];
+iInterp = [sInterp(1:Nfi,FaceNodes(:,1));sInterp(Nfi+1:2*Nfi,FaceNodes(:,2));sInterp(2*Nfi+1:3*Nfi,FaceNodes(:,3))];
 
 fprintf(fid, '%% number of surface integration nodes per face\n');
 fprintf(fid, '%d\n', length(z));
 fprintf(fid, '%% surface integration interpolation matrix\n');
 for n=1:Nfi*Nfaces
     for m=1:Nfp
-        fprintf(fid, '%17.15E ', interp(n,m));
+        fprintf(fid, '%17.15E ', iInterp(n,m));
     end
     fprintf(fid, '\n');
 end
 
 bInterp = [];
-bInterp(1:Nfi,1:Nfp) = interp(1:Nfi,:);
-bInterp(Nfi+1:2*Nfi,Nfp+1:2*Nfp) = interp(Nfi+1:2*Nfi,:);
-bInterp(2*Nfi+1:3*Nfi,2*Nfp+1:3*Nfp) = interp(2*Nfi+1:3*Nfi,:);
+bInterp(1:Nfi,1:Nfp) = iInterp(1:Nfi,:);
+bInterp(Nfi+1:2*Nfi,Nfp+1:2*Nfp) = iInterp(Nfi+1:2*Nfi,:);
+bInterp(2*Nfi+1:3*Nfi,2*Nfp+1:3*Nfp) = iInterp(2*Nfi+1:3*Nfi,:);
 
 %% integration node lift matrix
 iLIFT = V*V'*sInterp'*diag(iw(:));
 size(iLIFT)
-size(interp)
+size(iInterp)
 max(max(abs(iLIFT*bInterp-LIFT)))
 
 fprintf(fid, '%% surface integration lift matrix\n');

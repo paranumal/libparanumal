@@ -38,8 +38,8 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
 
   // find node indices of vertex nodes
   dfloat NODETOL = 1e-6;
-  mesh->vertexNodes = (int*) calloc(mesh->Nverts, sizeof(int));
-  for(int n=0;n<mesh->Np;++n){
+  mesh->vertexNodes = (iint*) calloc(mesh->Nverts, sizeof(iint));
+  for(iint n=0;n<mesh->Np;++n){
     if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]+1)*(mesh->s[n]+1)+(mesh->t[n]+1)*(mesh->t[n]+1)<NODETOL)
       mesh->vertexNodes[0] = n;
     if( (mesh->r[n]-1)*(mesh->r[n]-1)+(mesh->s[n]+1)*(mesh->s[n]+1)+(mesh->t[n]+1)*(mesh->t[n]+1)<NODETOL)
@@ -82,11 +82,11 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   }
   
   fgets(buf, BUFSIZ, fp); // read comment
-  mesh->faceNodes = (int*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(int));
+  mesh->faceNodes = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
   //  printf("faceNodes: \n");
   for(int f=0;f<mesh->Nfaces;++f){
     for(int n=0;n<mesh->Nfp;++n){
-      fscanf(fp, intFormat, mesh->faceNodes+n + f*mesh->Nfp);
+      fscanf(fp, iintFormat, mesh->faceNodes+n + f*mesh->Nfp);
       //      printf("%d ", mesh->faceNodes[n+f*mesh->Nfp]);
     }
     //    printf("\n");
@@ -134,7 +134,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   // read number of plot nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
-  sscanf(buf, intFormat, &(mesh->plotNp));
+  sscanf(buf, iintFormat, &(mesh->plotNp));
 
   //  printf("plotNp=%d\n", mesh->plotNp);
   
@@ -162,21 +162,21 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   // read number of elements in plot node triangulation
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
-  sscanf(buf, intFormat, &(mesh->plotNelements));
+  sscanf(buf, iintFormat, &(mesh->plotNelements));
 
   // read number of vertices per plot element
   fgets(buf, BUFSIZ, fp); // read comment
   //  printf("%s", buf);
   fgets(buf, BUFSIZ, fp);
   //  printf("%s", buf);
-  sscanf(buf, intFormat, &(mesh->plotNverts));
+  sscanf(buf, iintFormat, &(mesh->plotNverts));
   
   // build and read in plot node triangulation
-  mesh->plotEToV = (int*) calloc(mesh->plotNelements*mesh->plotNverts, sizeof(int));
+  mesh->plotEToV = (iint*) calloc(mesh->plotNelements*mesh->plotNverts, sizeof(iint));
   fgets(buf, BUFSIZ, fp); // read comment
   for(int n=0;n<mesh->plotNelements;++n){
     for(int m=0;m<mesh->plotNverts;++m){
-      fscanf(fp, intFormat, mesh->plotEToV+m + mesh->plotNverts*n);
+      fscanf(fp, iintFormat, mesh->plotEToV+m + mesh->plotNverts*n);
     }
     fgets(buf,BUFSIZ,fp); // rest of line
   }
@@ -186,7 +186,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   //  printf("comment: %s", buf);
   fgets(buf, BUFSIZ, fp);
   //  printf("%s", buf);
-  sscanf(buf, intFormat, &(mesh->NqP));
+  sscanf(buf, iintFormat, &(mesh->NqP));
 
   fgets(buf, BUFSIZ, fp);
   mesh->oasForward = (dfloat*) calloc(mesh->NqP*mesh->NqP, sizeof(dfloat));
@@ -221,7 +221,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   // projection info for OAS precon (one node overlap)
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, intFormat, &(mesh->NqP));
+  sscanf(buf, iintFormat, &(mesh->NqP));
   fgets(buf, BUFSIZ, fp);
   mesh->oasForwardDg = (dfloat*) calloc(mesh->NqP*mesh->NqP, sizeof(dfloat));
   for(int n=0;n<mesh->NqP;++n){
@@ -251,7 +251,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   // interpolation from GLL to Gauss nodes 
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, intFormat, &(mesh->gjNq));
+  sscanf(buf, iintFormat, &(mesh->gjNq));
   fgets(buf, BUFSIZ, fp);
   // interpolation matrix
   mesh->gjr = (dfloat*) calloc(mesh->gjNq, sizeof(dfloat));
@@ -293,7 +293,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   // read number of volume cubature nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
-  sscanf(buf, intFormat, &(mesh->cubNp));
+  sscanf(buf, iintFormat, &(mesh->cubNp));
 
   // read volume cubature interpolation matrix
   mesh->cubInterp = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
@@ -349,7 +349,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   // read number of surface integration nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
-  sscanf(buf, intFormat, &(mesh->intNfp));
+  sscanf(buf, iintFormat, &(mesh->intNfp));
 
   // read surface intergration node interpolation matrix
   mesh->intInterp 

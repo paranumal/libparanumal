@@ -16,19 +16,19 @@ void meshHaloExchange(mesh_t *mesh,
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // count outgoing and incoming meshes
-  int tag = 999;
+  iint tag = 999;
 
   // copy data from outgoing elements into temporary send buffer
-  for(int i=0;i<mesh->totalHaloPairs;++i){
+  for(iint i=0;i<mesh->totalHaloPairs;++i){
     // outgoing element
-    int e = mesh->haloElementList[i];
+    iint e = mesh->haloElementList[i];
     // copy element e data to sendBuffer
     memcpy(((char*)sendBuffer)+i*Nbytes, ((char*)sourceBuffer)+e*Nbytes, Nbytes);
   }
 
   // initiate immediate send  and receives to each other process as needed
   int offset = 0, message = 0;
-  for(int r=0;r<size;++r){
+  for(iint r=0;r<size;++r){
     if(r!=rank){
       size_t count = mesh->NhaloPairs[r]*Nbytes;
       if(count){
@@ -70,11 +70,11 @@ void meshHaloExchangeStart(mesh_t *mesh,
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     // count outgoing and incoming meshes
-    int tag = 999;
+    iint tag = 999;
     
     // initiate immediate send  and receives to each other process as needed
     int offset = 0, message = 0;
-    for(int r=0;r<size;++r){
+    for(iint r=0;r<size;++r){
       if(r!=rank){
 	size_t count = mesh->NhaloPairs[r]*Nbytes;
 	if(count){

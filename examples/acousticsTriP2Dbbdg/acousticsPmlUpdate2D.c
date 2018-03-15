@@ -4,7 +4,7 @@
 void acousticsMRABpmlUpdate2D(mesh2D *mesh,  
                            dfloat a1,
                            dfloat a2,
-                           dfloat a3, int lev, dfloat dt){
+                           dfloat a3, iint lev, dfloat dt){
 
   dfloat *un = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
   dfloat *vn = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
@@ -14,21 +14,21 @@ void acousticsMRABpmlUpdate2D(mesh2D *mesh,
   dfloat *vnp = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
   dfloat *pnp = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
 
-  for(int et=0;et<mesh->MRABpmlNelements[lev];et++){
-    int e = mesh->MRABpmlElementIds[lev][et];
+  for(iint et=0;et<mesh->MRABpmlNelements[lev];et++){
+    iint e = mesh->MRABpmlElementIds[lev][et];
     int N = mesh->N[e];
-    int pmlId = mesh->MRABpmlIds[lev][et];
+    iint pmlId = mesh->MRABpmlIds[lev][et];
 
-    for(int n=0;n<mesh->Np[N];++n){
-      int id = mesh->Nfields*(e*mesh->NpMax + n);
-      int pid = mesh->pmlNfields*(pmlId*mesh->NpMax + n);
+    for(iint n=0;n<mesh->Np[N];++n){
+      iint id = mesh->Nfields*(e*mesh->NpMax + n);
+      iint pid = mesh->pmlNfields*(pmlId*mesh->NpMax + n);
 
-      int rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
-      int rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
-      int rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
-      int pmlrhsId1 = 3*pid + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->pmlNfields;
-      int pmlrhsId2 = 3*pid + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->pmlNfields;
-      int pmlrhsId3 = 3*pid + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->pmlNfields;
+      iint rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
+      iint rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
+      iint rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
+      iint pmlrhsId1 = 3*pid + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->pmlNfields;
+      iint pmlrhsId2 = 3*pid + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->pmlNfields;
+      iint pmlrhsId3 = 3*pid + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->pmlNfields;
       
       mesh->pmlq[pid+0] += dt*(a1*mesh->pmlrhsq[pmlrhsId1+0] + a2*mesh->pmlrhsq[pmlrhsId2+0] + a3*mesh->pmlrhsq[pmlrhsId3+0]);
       mesh->pmlq[pid+1] += dt*(a1*mesh->pmlrhsq[pmlrhsId1+1] + a2*mesh->pmlrhsq[pmlrhsId2+1] + a3*mesh->pmlrhsq[pmlrhsId3+1]);
@@ -38,12 +38,12 @@ void acousticsMRABpmlUpdate2D(mesh2D *mesh,
     }
 
     //project traces to proper order for neighbour
-    for (int f =0;f<mesh->Nfaces;f++) {
+    for (iint f =0;f<mesh->Nfaces;f++) {
       //load local traces
-      for (int n=0;n<mesh->Nfp[N];n++) {
-        int id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        int qidM = mesh->Nfields*mesh->vmapM[id];
-        int qid = mesh->Nfields*id;
+      for (iint n=0;n<mesh->Nfp[N];n++) {
+        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
+        iint qidM = mesh->Nfields*mesh->vmapM[id];
+        iint qid = mesh->Nfields*id;
 
         un[n] = mesh->q[qidM+0];
         vn[n] = mesh->q[qidM+1];
@@ -55,37 +55,37 @@ void acousticsMRABpmlUpdate2D(mesh2D *mesh,
       }
 
       // load element neighbour
-      int eP = mesh->EToE[e*mesh->Nfaces+f];
+      iint eP = mesh->EToE[e*mesh->Nfaces+f];
       if (eP<0) eP = e; //boundary
-      int NP = mesh->N[eP]; 
+      iint NP = mesh->N[eP]; 
 
       if (NP > N) { 
-        for (int n=0;n<mesh->Nfp[NP];n++){
+        for (iint n=0;n<mesh->Nfp[NP];n++){
           unp[n] = 0.0;
           vnp[n] = 0.0;
           pnp[n] = 0.0;
-          for (int m=0;m<2;m++){ //apply raise operator sparsly
+          for (iint m=0;m<2;m++){ //apply raise operator sparsly
             dfloat BBRaiseVal = mesh->BBRaiseVals[N][2*n+m];
-            int BBRaiseid = mesh->BBRaiseids[N][2*n+m];
+            iint BBRaiseid = mesh->BBRaiseids[N][2*n+m];
             unp[n] += BBRaiseVal*un[BBRaiseid];
             vnp[n] += BBRaiseVal*vn[BBRaiseid];
             pnp[n] += BBRaiseVal*pn[BBRaiseid];
           }
         }
       } else if (NP < N) { 
-        for (int n=0;n<mesh->Nfp[NP];n++){
+        for (iint n=0;n<mesh->Nfp[NP];n++){
           unp[n] = 0.0;
           vnp[n] = 0.0;
           pnp[n] = 0.0;
-          for (int m=0;m<mesh->Nfp[N];m++){
-            int id = n*mesh->Nfp[N] + m;
+          for (iint m=0;m<mesh->Nfp[N];m++){
+            iint id = n*mesh->Nfp[N] + m;
             unp[n] += mesh->BBLower[N][id]*un[m];
             vnp[n] += mesh->BBLower[N][id]*vn[m];
             pnp[n] += mesh->BBLower[N][id]*pn[m];
           }
         }
       } else { //equal order neighbor
-        for (int n=0;n<mesh->Nfp[NP];n++){
+        for (iint n=0;n<mesh->Nfp[NP];n++){
           unp[n] = un[n];
           vnp[n] = vn[n];
           pnp[n] = pn[n];
@@ -93,9 +93,9 @@ void acousticsMRABpmlUpdate2D(mesh2D *mesh,
       }
     
       //write new traces to fQ
-      for (int n=0;n<mesh->Nfp[NP];n++) {
-        int id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        int qid = mesh->Nfields*id;
+      for (iint n=0;n<mesh->Nfp[NP];n++) {
+        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
+        iint qid = mesh->Nfields*id;
 
         mesh->fQP[qid+0] = unp[n];
         mesh->fQP[qid+1] = vnp[n];
@@ -110,7 +110,7 @@ void acousticsMRABpmlUpdate2D(mesh2D *mesh,
 void acousticsMRABpmlUpdateTrace2D(mesh2D *mesh,  
                            dfloat a1,
                            dfloat a2,
-                           dfloat a3, int lev, dfloat dt){
+                           dfloat a3, iint lev, dfloat dt){
 
   dfloat *un = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
   dfloat *vn = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
@@ -122,21 +122,21 @@ void acousticsMRABpmlUpdateTrace2D(mesh2D *mesh,
 
   dfloat *s_q = (dfloat*) calloc(mesh->NpMax*mesh->Nfields,sizeof(dfloat));
 
-  for(int et=0;et<mesh->MRABpmlNhaloElements[lev];et++){
-    int e = mesh->MRABpmlHaloElementIds[lev][et];
+  for(iint et=0;et<mesh->MRABpmlNhaloElements[lev];et++){
+    iint e = mesh->MRABpmlHaloElementIds[lev][et];
     int N = mesh->N[e];
-    int pmlId = mesh->MRABpmlHaloIds[lev][et];
+    iint pmlId = mesh->MRABpmlHaloIds[lev][et];
 
-    for(int n=0;n<mesh->Np[N];++n){
-      int id = mesh->Nfields*(e*mesh->NpMax + n);
-      int pid = mesh->pmlNfields*(pmlId*mesh->NpMax + n);
+    for(iint n=0;n<mesh->Np[N];++n){
+      iint id = mesh->Nfields*(e*mesh->NpMax + n);
+      iint pid = mesh->pmlNfields*(pmlId*mesh->NpMax + n);
 
-      int rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
-      int rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
-      int rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
-      int pmlrhsId1 = 3*pid + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->pmlNfields;
-      int pmlrhsId2 = 3*pid + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->pmlNfields;
-      int pmlrhsId3 = 3*pid + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->pmlNfields;
+      iint rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
+      iint rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
+      iint rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
+      iint pmlrhsId1 = 3*pid + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->pmlNfields;
+      iint pmlrhsId2 = 3*pid + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->pmlNfields;
+      iint pmlrhsId3 = 3*pid + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->pmlNfields;
       
       // Increment solutions
       dfloat px = mesh->pmlq[pid+0] + dt*(a1*mesh->pmlrhsq[pmlrhsId1+0] + a2*mesh->pmlrhsq[pmlrhsId2+0] + a3*mesh->pmlrhsq[pmlrhsId3+0]);
@@ -147,12 +147,12 @@ void acousticsMRABpmlUpdateTrace2D(mesh2D *mesh,
     }
 
     //project traces to proper order for neighbour
-    for (int f =0;f<mesh->Nfaces;f++) {
+    for (iint f =0;f<mesh->Nfaces;f++) {
       //load local traces
-      for (int n=0;n<mesh->Nfp[N];n++) {
-        int id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        int qidM = mesh->Nfields*(mesh->vmapM[id]-e*mesh->NpMax);
-        int qid = mesh->Nfields*id;
+      for (iint n=0;n<mesh->Nfp[N];n++) {
+        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
+        iint qidM = mesh->Nfields*(mesh->vmapM[id]-e*mesh->NpMax);
+        iint qid = mesh->Nfields*id;
 
         un[n] = s_q[qidM+0];
         vn[n] = s_q[qidM+1];
@@ -164,37 +164,37 @@ void acousticsMRABpmlUpdateTrace2D(mesh2D *mesh,
       }
 
       // load element neighbour
-      int eP = mesh->EToE[e*mesh->Nfaces+f];
+      iint eP = mesh->EToE[e*mesh->Nfaces+f];
       if (eP<0) eP = e; //boundary
-      int NP = mesh->N[eP]; 
+      iint NP = mesh->N[eP]; 
 
       if (NP > N) { 
-        for (int n=0;n<mesh->Nfp[NP];n++){
+        for (iint n=0;n<mesh->Nfp[NP];n++){
           unp[n] = 0.0;
           vnp[n] = 0.0;
           pnp[n] = 0.0;
-          for (int m=0;m<2;m++){ //apply raise operator sparsly
+          for (iint m=0;m<2;m++){ //apply raise operator sparsly
             dfloat BBRaiseVal = mesh->BBRaiseVals[N][2*n+m];
-            int BBRaiseid = mesh->BBRaiseids[N][2*n+m];
+            iint BBRaiseid = mesh->BBRaiseids[N][2*n+m];
             unp[n] += BBRaiseVal*un[BBRaiseid];
             vnp[n] += BBRaiseVal*vn[BBRaiseid];
             pnp[n] += BBRaiseVal*pn[BBRaiseid];
           }
         }
       } else if (NP < N) { 
-        for (int n=0;n<mesh->Nfp[NP];n++){
+        for (iint n=0;n<mesh->Nfp[NP];n++){
           unp[n] = 0.0;
           vnp[n] = 0.0;
           pnp[n] = 0.0;
-          for (int m=0;m<mesh->Nfp[N];m++){
-            int id = n*mesh->Nfp[N] + m;
+          for (iint m=0;m<mesh->Nfp[N];m++){
+            iint id = n*mesh->Nfp[N] + m;
             unp[n] += mesh->BBLower[N][id]*un[m];
             vnp[n] += mesh->BBLower[N][id]*vn[m];
             pnp[n] += mesh->BBLower[N][id]*pn[m];
           }
         }
       } else { //equal order neighbor
-        for (int n=0;n<mesh->Nfp[NP];n++){
+        for (iint n=0;n<mesh->Nfp[NP];n++){
           unp[n] = un[n];
           vnp[n] = vn[n];
           pnp[n] = pn[n];
@@ -202,9 +202,9 @@ void acousticsMRABpmlUpdateTrace2D(mesh2D *mesh,
       }
 
       //write new traces to fQ
-      for (int n=0;n<mesh->Nfp[NP];n++) {
-        int id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        int qid = mesh->Nfields*id;
+      for (iint n=0;n<mesh->Nfp[NP];n++) {
+        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
+        iint qid = mesh->Nfields*id;
 
         mesh->fQP[qid+0] = unp[n];
         mesh->fQP[qid+1] = vnp[n];
@@ -221,7 +221,7 @@ void acousticsMRABpmlUpdateTrace2D(mesh2D *mesh,
 void acousticsMRABpmlUpdate2D_wadg(mesh2D *mesh,  
                            dfloat a1,
                            dfloat a2,
-                           dfloat a3, int lev, dfloat dt){
+                           dfloat a3, iint lev, dfloat dt){
 
   dfloat *un = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
   dfloat *vn = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
@@ -234,21 +234,21 @@ void acousticsMRABpmlUpdate2D_wadg(mesh2D *mesh,
   dfloat *p = (dfloat*) calloc(mesh->NpMax,sizeof(dfloat));
   dfloat *cubp = (dfloat*) calloc(mesh->cubNpMax,sizeof(dfloat));
 
-  for(int et=0;et<mesh->MRABpmlNelements[lev];et++){
-    int e = mesh->MRABpmlElementIds[lev][et];
+  for(iint et=0;et<mesh->MRABpmlNelements[lev];et++){
+    iint e = mesh->MRABpmlElementIds[lev][et];
     int N = mesh->N[e];
-    int pmlId = mesh->MRABpmlIds[lev][et];
+    iint pmlId = mesh->MRABpmlIds[lev][et];
 
-    for(int n=0;n<mesh->Np[N];++n){
-      int id = mesh->Nfields*(e*mesh->NpMax + n);
-      int pid = mesh->pmlNfields*(pmlId*mesh->NpMax + n);
+    for(iint n=0;n<mesh->Np[N];++n){
+      iint id = mesh->Nfields*(e*mesh->NpMax + n);
+      iint pid = mesh->pmlNfields*(pmlId*mesh->NpMax + n);
 
-      int rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
-      int rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
-      int rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
-      int pmlrhsId1 = 3*pid + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->pmlNfields;
-      int pmlrhsId2 = 3*pid + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->pmlNfields;
-      int pmlrhsId3 = 3*pid + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->pmlNfields;
+      iint rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
+      iint rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
+      iint rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
+      iint pmlrhsId1 = 3*pid + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->pmlNfields;
+      iint pmlrhsId2 = 3*pid + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->pmlNfields;
+      iint pmlrhsId3 = 3*pid + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->pmlNfields;
       
       mesh->pmlq[pid+0] += dt*(a1*mesh->pmlrhsq[pmlrhsId1+0] + a2*mesh->pmlrhsq[pmlrhsId2+0] + a3*mesh->pmlrhsq[pmlrhsId3+0]);
       mesh->pmlq[pid+1] += dt*(a1*mesh->pmlrhsq[pmlrhsId1+1] + a2*mesh->pmlrhsq[pmlrhsId2+1] + a3*mesh->pmlrhsq[pmlrhsId3+1]);
@@ -258,9 +258,9 @@ void acousticsMRABpmlUpdate2D_wadg(mesh2D *mesh,
     }
 
     // Interpolate rhs to cubature nodes
-    for(int n=0;n<mesh->cubNp[N];++n){
+    for(iint n=0;n<mesh->cubNp[N];++n){
       cubp[n] = 0.f;
-      for (int i=0;i<mesh->Np[N];++i){
+      for (iint i=0;i<mesh->Np[N];++i){
         cubp[n] += mesh->cubInterp[N][n*mesh->Np[N] + i] * p[i];
       }
       // Multiply result by wavespeed c2 at cubature node
@@ -268,23 +268,23 @@ void acousticsMRABpmlUpdate2D_wadg(mesh2D *mesh,
     }
 
     // Increment solution, project result back down
-    for(int n=0;n<mesh->Np[N];++n){
+    for(iint n=0;n<mesh->Np[N];++n){
       // Project scaled rhs down
       dfloat c2p = 0.f;
-      for (int i=0;i<mesh->cubNp[N];++i){
+      for (iint i=0;i<mesh->cubNp[N];++i){
         c2p += mesh->cubProject[N][n*mesh->cubNp[N] + i] * cubp[i];
       }
-      int id = mesh->Nfields*(e*mesh->NpMax + n);
+      iint id = mesh->Nfields*(e*mesh->NpMax + n);
       mesh->q[id+2] = c2p;
     }
 
     //project traces to proper order for neighbour
-    for (int f=0;f<mesh->Nfaces;f++) {
+    for (iint f=0;f<mesh->Nfaces;f++) {
       //load local traces
-      for (int n=0;n<mesh->Nfp[N];n++) {
-        int id = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        int qidM = mesh->Nfields*mesh->vmapM[id];
-        int qid = mesh->Nfields*id;
+      for (iint n=0;n<mesh->Nfp[N];n++) {
+        iint id = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
+        iint qidM = mesh->Nfields*mesh->vmapM[id];
+        iint qid = mesh->Nfields*id;
 
         un[n] = mesh->q[qidM+0];
         vn[n] = mesh->q[qidM+1];
@@ -296,37 +296,37 @@ void acousticsMRABpmlUpdate2D_wadg(mesh2D *mesh,
       }
 
       // load element neighbour
-      int eP = mesh->EToE[e*mesh->Nfaces+f];
+      iint eP = mesh->EToE[e*mesh->Nfaces+f];
       if (eP<0) eP = e; //boundary
-      int NP = mesh->N[eP]; 
+      iint NP = mesh->N[eP]; 
 
       if (NP > N) { 
-        for (int n=0;n<mesh->Nfp[NP];n++){
+        for (iint n=0;n<mesh->Nfp[NP];n++){
           unp[n] = 0.0;
           vnp[n] = 0.0;
           pnp[n] = 0.0;
-          for (int m=0;m<2;m++){ //apply raise operator sparsly
+          for (iint m=0;m<2;m++){ //apply raise operator sparsly
             dfloat BBRaiseVal = mesh->BBRaiseVals[N][2*n+m];
-            int BBRaiseid = mesh->BBRaiseids[N][2*n+m];
+            iint BBRaiseid = mesh->BBRaiseids[N][2*n+m];
             unp[n] += BBRaiseVal*un[BBRaiseid];
             vnp[n] += BBRaiseVal*vn[BBRaiseid];
             pnp[n] += BBRaiseVal*pn[BBRaiseid];
           }
         }
       } else if (NP < N) { 
-        for (int n=0;n<mesh->Nfp[NP];n++){
+        for (iint n=0;n<mesh->Nfp[NP];n++){
           unp[n] = 0.0;
           vnp[n] = 0.0;
           pnp[n] = 0.0;
-          for (int m=0;m<mesh->Nfp[N];m++){
-            int id = n*mesh->Nfp[N] + m;
+          for (iint m=0;m<mesh->Nfp[N];m++){
+            iint id = n*mesh->Nfp[N] + m;
             unp[n] += mesh->BBLower[N][id]*un[m];
             vnp[n] += mesh->BBLower[N][id]*vn[m];
             pnp[n] += mesh->BBLower[N][id]*pn[m];
           }
         }
       } else { //equal order neighbor
-        for (int n=0;n<mesh->Nfp[NP];n++){
+        for (iint n=0;n<mesh->Nfp[NP];n++){
           unp[n] = un[n];
           vnp[n] = vn[n];
           pnp[n] = pn[n];
@@ -334,9 +334,9 @@ void acousticsMRABpmlUpdate2D_wadg(mesh2D *mesh,
       }
 
       //write new traces to fQ
-      for (int n=0;n<mesh->Nfp[NP];n++) {
-        int id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        int qid = mesh->Nfields*id;
+      for (iint n=0;n<mesh->Nfp[NP];n++) {
+        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
+        iint qid = mesh->Nfields*id;
 
         mesh->fQP[qid+0] = unp[n];
         mesh->fQP[qid+1] = vnp[n];
@@ -352,7 +352,7 @@ void acousticsMRABpmlUpdate2D_wadg(mesh2D *mesh,
 void acousticsMRABpmlUpdateTrace2D_wadg(mesh2D *mesh,  
                            dfloat a1,
                            dfloat a2,
-                           dfloat a3, int lev, dfloat dt){
+                           dfloat a3, iint lev, dfloat dt){
 
   dfloat *un = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
   dfloat *vn = (dfloat*) calloc(mesh->NfpMax,sizeof(dfloat));
@@ -365,21 +365,21 @@ void acousticsMRABpmlUpdateTrace2D_wadg(mesh2D *mesh,
   dfloat *s_q = (dfloat*) calloc(mesh->NpMax*mesh->Nfields,sizeof(dfloat));
   dfloat *cubp = (dfloat*) calloc(mesh->cubNpMax,sizeof(dfloat));
 
-  for(int et=0;et<mesh->MRABpmlNhaloElements[lev];et++){
-    int e = mesh->MRABpmlHaloElementIds[lev][et];
+  for(iint et=0;et<mesh->MRABpmlNhaloElements[lev];et++){
+    iint e = mesh->MRABpmlHaloElementIds[lev][et];
     int N = mesh->N[e];
-    int pmlId = mesh->MRABpmlHaloIds[lev][et];
+    iint pmlId = mesh->MRABpmlHaloIds[lev][et];
 
-    for(int n=0;n<mesh->Np[N];++n){
-      int id = mesh->Nfields*(e*mesh->NpMax + n);
-      int pid = mesh->pmlNfields*(pmlId*mesh->NpMax + n);
+    for(iint n=0;n<mesh->Np[N];++n){
+      iint id = mesh->Nfields*(e*mesh->NpMax + n);
+      iint pid = mesh->pmlNfields*(pmlId*mesh->NpMax + n);
 
-      int rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
-      int rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
-      int rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
-      int pmlrhsId1 = 3*pid + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->pmlNfields;
-      int pmlrhsId2 = 3*pid + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->pmlNfields;
-      int pmlrhsId3 = 3*pid + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->pmlNfields;
+      iint rhsId1 = 3*id + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->Nfields;
+      iint rhsId2 = 3*id + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->Nfields;
+      iint rhsId3 = 3*id + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->Nfields;
+      iint pmlrhsId1 = 3*pid + ((mesh->MRABshiftIndex[lev]+0)%3)*mesh->pmlNfields;
+      iint pmlrhsId2 = 3*pid + ((mesh->MRABshiftIndex[lev]+1)%3)*mesh->pmlNfields;
+      iint pmlrhsId3 = 3*pid + ((mesh->MRABshiftIndex[lev]+2)%3)*mesh->pmlNfields;
       
       // Increment solutions
       dfloat px = mesh->pmlq[pid+0] + dt*(a1*mesh->pmlrhsq[pmlrhsId1+0] + a2*mesh->pmlrhsq[pmlrhsId2+0] + a3*mesh->pmlrhsq[pmlrhsId3+0]);
@@ -390,9 +390,9 @@ void acousticsMRABpmlUpdateTrace2D_wadg(mesh2D *mesh,
     }
 
     // Interpolate rhs to cubature nodes
-    for(int n=0;n<mesh->cubNp[N];++n){
+    for(iint n=0;n<mesh->cubNp[N];++n){
       cubp[n] = 0.f;
-      for (int i=0;i<mesh->Np[N];++i){
+      for (iint i=0;i<mesh->Np[N];++i){
         cubp[n] += mesh->cubInterp[N][n*mesh->Np[N] + i] * s_q[i*mesh->Nfields+2];
       }
       // Multiply result by wavespeed c2 at cubature node
@@ -400,21 +400,21 @@ void acousticsMRABpmlUpdateTrace2D_wadg(mesh2D *mesh,
     }
 
     // Increment solution, project result back down
-    for(int n=0;n<mesh->Np[N];++n){
+    for(iint n=0;n<mesh->Np[N];++n){
       // Project scaled rhs down
       s_q[n*mesh->Nfields+2] = 0.f;
-      for (int i=0;i<mesh->cubNp[N];++i){
+      for (iint i=0;i<mesh->cubNp[N];++i){
         s_q[n*mesh->Nfields+2] += mesh->cubProject[N][n*mesh->cubNp[N] + i] * cubp[i];
       }
     }
 
     //project traces to proper order for neighbour
-    for (int f =0;f<mesh->Nfaces;f++) {
+    for (iint f =0;f<mesh->Nfaces;f++) {
       //load local traces
-      for (int n=0;n<mesh->Nfp[N];n++) {
-        int id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        int qidM = mesh->Nfields*(mesh->vmapM[id]-e*mesh->NpMax);
-        int qid = mesh->Nfields*id;
+      for (iint n=0;n<mesh->Nfp[N];n++) {
+        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
+        iint qidM = mesh->Nfields*(mesh->vmapM[id]-e*mesh->NpMax);
+        iint qid = mesh->Nfields*id;
 
         un[n] = s_q[qidM+0];
         vn[n] = s_q[qidM+1];
@@ -426,37 +426,37 @@ void acousticsMRABpmlUpdateTrace2D_wadg(mesh2D *mesh,
       }
 
       // load element neighbour
-      int eP = mesh->EToE[e*mesh->Nfaces+f];
+      iint eP = mesh->EToE[e*mesh->Nfaces+f];
       if (eP<0) eP = e; //boundary
-      int NP = mesh->N[eP]; 
+      iint NP = mesh->N[eP]; 
 
       if (NP > N) { 
-        for (int n=0;n<mesh->Nfp[NP];n++){
+        for (iint n=0;n<mesh->Nfp[NP];n++){
           unp[n] = 0.0;
           vnp[n] = 0.0;
           pnp[n] = 0.0;
-          for (int m=0;m<2;m++){ //apply raise operator sparsly
+          for (iint m=0;m<2;m++){ //apply raise operator sparsly
             dfloat BBRaiseVal = mesh->BBRaiseVals[N][2*n+m];
-            int BBRaiseid = mesh->BBRaiseids[N][2*n+m];
+            iint BBRaiseid = mesh->BBRaiseids[N][2*n+m];
             unp[n] += BBRaiseVal*un[BBRaiseid];
             vnp[n] += BBRaiseVal*vn[BBRaiseid];
             pnp[n] += BBRaiseVal*pn[BBRaiseid];
           }
         }
       } else if (NP < N) { 
-        for (int n=0;n<mesh->Nfp[NP];n++){
+        for (iint n=0;n<mesh->Nfp[NP];n++){
           unp[n] = 0.0;
           vnp[n] = 0.0;
           pnp[n] = 0.0;
-          for (int m=0;m<mesh->Nfp[N];m++){
-            int id = n*mesh->Nfp[N] + m;
+          for (iint m=0;m<mesh->Nfp[N];m++){
+            iint id = n*mesh->Nfp[N] + m;
             unp[n] += mesh->BBLower[N][id]*un[m];
             vnp[n] += mesh->BBLower[N][id]*vn[m];
             pnp[n] += mesh->BBLower[N][id]*pn[m];
           }
         }
       } else { //equal order neighbor
-        for (int n=0;n<mesh->Nfp[NP];n++){
+        for (iint n=0;n<mesh->Nfp[NP];n++){
           unp[n] = un[n];
           vnp[n] = vn[n];
           pnp[n] = pn[n];
@@ -464,9 +464,9 @@ void acousticsMRABpmlUpdateTrace2D_wadg(mesh2D *mesh,
       }
 
       //write new traces to fQ
-      for (int n=0;n<mesh->Nfp[NP];n++) {
-        int id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
-        int qid = mesh->Nfields*id;
+      for (iint n=0;n<mesh->Nfp[NP];n++) {
+        iint id  = e*mesh->NfpMax*mesh->Nfaces + f*mesh->NfpMax + n;
+        iint qid = mesh->Nfields*id;
 
         mesh->fQP[qid+0] = unp[n];
         mesh->fQP[qid+1] = vnp[n];

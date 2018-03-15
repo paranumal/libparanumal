@@ -5,26 +5,26 @@ void insRunQuad2D(ins_t *ins, char *options){
   // Write Initial Data
   //insReport2D(ins, 0, options);
   // Allocate MPI buffer for velocity step solver!! May Change Later!!!!!!
-  int tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
+  iint tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
   dfloat *tSendBuffer = (dfloat*) malloc(tHaloBytes);
   dfloat *tRecvBuffer = (dfloat*) malloc(tHaloBytes);
 
-  int vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
+  iint vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
   dfloat *vSendBuffer = (dfloat*) malloc(vHaloBytes);
   dfloat *vRecvBuffer = (dfloat*) malloc(vHaloBytes);
 
   // No need to do like this, just for consistency
-  int pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  iint pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   dfloat *pSendBuffer = (dfloat*) malloc(pHaloBytes);
   dfloat *pRecvBuffer = (dfloat*) malloc(pHaloBytes);
 
   // Set subscycling
-  int subcycling =0;
+  iint subcycling =0;
   if(strstr(options,"SUBCYCLING")){ subcycling = 1; }
 
   occa::initTimer(mesh->device);
 
-  for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<ins->NtimeSteps;++tstep){
    if(tstep<1){
       //advection, first order in time, no increment
      ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2

@@ -5,22 +5,22 @@
 #include "mesh2D.h"
 
 typedef struct {
-  int id;
-  int level;
+  iint id;
+  iint level;
   dfloat weight;
 
   // 4 for maximum number of vertices per element in 2D
-  int v[4];
+  iint v[4];
   dfloat EX[4], EY[4];
 
-  int cRank;
-  int cId;
+  iint cRank;
+  iint cId;
   int type;
 } cElement_t;
 
 typedef struct {
-  int Nelements;
-  int offSet;
+  iint Nelements;
+  iint offSet;
 } cluster_t;
 
 int compareCluster(const void *a, const void *b) {
@@ -37,26 +37,26 @@ int compareCluster(const void *a, const void *b) {
 }
 
 
-void meshBuildMRABClusters2D(mesh2D *mesh, int lev, dfloat *weights, int *levels,
-            int *Nclusters, cluster_t **clusters, int *Nelements, cElement_t **elements) {
+void meshBuildMRABClusters2D(mesh2D *mesh, iint lev, dfloat *weights, iint *levels,
+            iint *Nclusters, cluster_t **clusters, iint *Nelements, cElement_t **elements) {
 
-  int rank, size;
+  iint rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // minimum {vertex id % size}
-  int *Nsend = (int*) calloc(size, sizeof(int));
-  int *Nrecv = (int*) calloc(size, sizeof(int));
-  int *Ncount = (int*) calloc(size, sizeof(int));
-  int *sendOffsets = (int*) calloc(size, sizeof(int));
-  int *recvOffsets = (int*) calloc(size, sizeof(int));
-  int *sendCounts = (int*) calloc(size, sizeof(int));
+  iint *Nsend = (iint*) calloc(size, sizeof(iint));
+  iint *Nrecv = (iint*) calloc(size, sizeof(iint));
+  iint *Ncount = (iint*) calloc(size, sizeof(iint));
+  iint *sendOffsets = (iint*) calloc(size, sizeof(iint));
+  iint *recvOffsets = (iint*) calloc(size, sizeof(iint));
+  iint *sendCounts = (iint*) calloc(size, sizeof(iint));
 
 
   //build element struct
   *elements = (cElement_t *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(cElement_t));
-  for (int e=0;e<mesh->Nelements;e++) {
+  for (iint e=0;e<mesh->Nelements;e++) {
     (*elements)[e].id = e;
     (*elements)[e].level = 0.;
     if (levels) (*elements)[e].level = levels[e];
@@ -64,7 +64,7 @@ void meshBuildMRABClusters2D(mesh2D *mesh, int lev, dfloat *weights, int *levels
     (*elements)[e].weight = 1.;
     if (weights) (*elements)[e].weight = weights[e];
 
-    for(int n=0;n<mesh->Nverts;++n){
+    for(iint n=0;n<mesh->Nverts;++n){
       (*elements)[e].v[n] = mesh->EToV[e*mesh->Nverts+n];
       (*elements)[e].EX[n] = mesh->EX[e*mesh->Nverts+n];
       (*elements)[e].EY[n] = mesh->EY[e*mesh->Nverts+n];
@@ -89,9 +89,9 @@ void meshBuildMRABClusters2D(mesh2D *mesh, int lev, dfloat *weights, int *levels
     done = 0;
     while(!done) {
       done = 1;
-      for (int e=0;e<mesh->Nelements;e++) {
-        for (int f=0;f<mesh->Nfaces;f++) {
-          int eP = mesh->EToE[e*mesh->Nfaces +f];
+      for (iint e=0;e<mesh->Nelements;e++) {
+        for (iint f=0;f<mesh->Nfaces;f++) {
+          iint eP = mesh->EToE[e*mesh->Nfaces +f];
           if (eP>-1) {
             if (((*elements)[eP].level<lev+1)||((*elements)[e].level<lev+1)){
               if (compareCluster(*elements+eP,*elements+e)<0) {
@@ -116,31 +116,31 @@ void meshBuildMRABClusters2D(mesh2D *mesh, int lev, dfloat *weights, int *levels
   qsort((*elements), mesh->Nelements, sizeof(cElement_t), compareCluster);
 
   //set up exchange along MPI interfaces
-  for (int r=0;r<size;r++)
+  for (iint r=0;r<size;r++)
     Nsend[r] = 0;
 
-  for(int e=0;e<mesh->Nelements;++e)
+  for(iint e=0;e<mesh->Nelements;++e)
     ++Nsend[(*elements)[e].cRank];
 
   // find send offsets
   sendOffsets[0] = 0;
-  for(int r=1;r<size;++r)
+  for(iint r=1;r<size;++r)
     sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
   
   // exchange byte counts 
-  MPI_Alltoall(Nsend, 1, MPI_int,
-         Nrecv, 1, MPI_int,
+  MPI_Alltoall(Nsend, 1, MPI_IINT,
+         Nrecv, 1, MPI_IINT,
          MPI_COMM_WORLD);
   
   // count incoming faces
-  int allNrecv = 0;
-  for(int r=0;r<size;++r){
+  iint allNrecv = 0;
+  for(iint r=0;r<size;++r){
     allNrecv += Nrecv[r];
     Nrecv[r] *= sizeof(cElement_t);
     Nsend[r] *= sizeof(cElement_t);
     sendOffsets[r] *= sizeof(cElement_t);
   }
-  for(int r=1;r<size;++r)
+  for(iint r=1;r<size;++r)
     recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1];
 
   // buffer for recvied elements
@@ -162,17 +162,17 @@ void meshBuildMRABClusters2D(mesh2D *mesh, int lev, dfloat *weights, int *levels
   *Nclusters = 0;
   if (*Nelements) {
     (*Nclusters)++;
-    for (int e=1;e<*Nelements;e++) {
+    for (iint e=1;e<*Nelements;e++) {
       if ((*elements)[e].cId != (*elements)[e-1].cId) (*Nclusters)++;
     }
 
     *clusters = (cluster_t *) calloc(*Nclusters,sizeof(cluster_t));
 
-    int cnt  = 0;
-    int ecnt = 1;
+    iint cnt  = 0;
+    iint ecnt = 1;
     (*clusters)[0].Nelements = 1;
     (*clusters)[0].offSet = 0;
-    for (int e=1;e<*Nelements;e++) {
+    for (iint e=1;e<*Nelements;e++) {
       if ((*elements)[e].cId != (*elements)[e-1].cId) {
         cnt++;
         (*clusters)[cnt].offSet = e;

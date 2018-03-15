@@ -1,7 +1,7 @@
 
 #include "ins2D.h"
 
-int addNonZero(nonZero_t *nonZeros, int nnz, int row, int col, int owner, dfloat val){
+iint addNonZero(nonZero_t *nonZeros, iint nnz, iint row, iint col, iint owner, dfloat val){
   
   dfloat tol = 1e-12;
   
@@ -20,23 +20,23 @@ int addNonZero(nonZero_t *nonZeros, int nnz, int row, int col, int owner, dfloat
 int parallelCompareRowColumn(const void *a, const void *b);
 
 void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lambda,
-			     int *BCType, nonZero_t **A, int *nnzA,
-			     hgs_t **hgs, int *globalStarts, const char *options){
+			     iint *BCType, nonZero_t **A, iint *nnzA,
+			     hgs_t **hgs, iint *globalStarts, const char *options){
 
-  int size, rankM;
+  iint size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankM);
 
-  int Nnum = mesh->Np*mesh->Nelements;
+  iint Nnum = mesh->Np*mesh->Nelements;
 
   // create a global numbering system
-  int *globalIds = (int *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np,sizeof(int));
-  int *globalOwners = (int*) calloc(Nnum, sizeof(int));
+  iint *globalIds = (iint *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np,sizeof(iint));
+  iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
 
   if (strstr(options,"PROJECT")) {
     // Create a contiguous numbering system, starting from the element-vertex connectivity
-    for (int n=0;n<Nnum;n++) {
-      int id = mesh->gatherLocalIds[n];
+    for (iint n=0;n<Nnum;n++) {
+      iint id = mesh->gatherLocalIds[n];
       globalIds[id] = mesh->gatherBaseIds[n];
     }
 
@@ -49,16 +49,16 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
   } else {
     // every degree of freedom has its own global id
     /* so find number of elements on each rank */
-    int *rankNelements = (int*) calloc(size, sizeof(int));
-    int *rankStarts = (int*) calloc(size+1, sizeof(int));
-    MPI_Allgather(&(mesh->Nelements), 1, MPI_int,
-		  rankNelements, 1, MPI_int, MPI_COMM_WORLD);
+    iint *rankNelements = (iint*) calloc(size, sizeof(iint));
+    iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
+    MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
+		  rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
     //find offsets
-    for(int r=0;r<size;++r){
+    for(iint r=0;r<size;++r){
       rankStarts[r+1] = rankStarts[r]+rankNelements[r];
     }
     //use the offsets to set a global id
-    for (int e =0;e<mesh->Nelements;e++) {
+    for (iint e =0;e<mesh->Nelements;e++) {
       for (int n=0;n<mesh->Np;n++) {
         globalIds[e*mesh->Np +n] = n + (e + rankStarts[rankM])*mesh->Np;
         globalOwners[e*mesh->Np +n] = rankM;
@@ -67,13 +67,13 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 
     /* do a halo exchange of global node numbers */
     if (mesh->totalHaloPairs) {
-      int *idSendBuffer = (int *) calloc(mesh->Np*mesh->totalHaloPairs,sizeof(int));
-      meshHaloExchange(mesh, mesh->Np*sizeof(int), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Np);
+      iint *idSendBuffer = (iint *) calloc(mesh->Np*mesh->totalHaloPairs,sizeof(iint));
+      meshHaloExchange(mesh, mesh->Np*sizeof(iint), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Np);
       free(idSendBuffer);
     }
   }
 
-  int nnzLocalBound = 4*mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
+  iint nnzLocalBound = 4*mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
 
   // drop tolerance for entries in sparse storage
 
@@ -81,15 +81,15 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(mesh->Nfaces*mesh->Nfp*mesh->Nfp,sizeof(dfloat));
-  for (int f=0;f<mesh->Nfaces;f++) {
-    for (int n=0;n<mesh->Nfp;n++) {
-      int fn = mesh->faceNodes[f*mesh->Nfp+n];
+  for (iint f=0;f<mesh->Nfaces;f++) {
+    for (iint n=0;n<mesh->Nfp;n++) {
+      iint fn = mesh->faceNodes[f*mesh->Nfp+n];
 
-      for (int m=0;m<mesh->Nfp;m++) {
-	int fm = mesh->faceNodes[f*mesh->Nfp+m];
+      for (iint m=0;m<mesh->Nfp;m++) {
+	iint fm = mesh->faceNodes[f*mesh->Nfp+m];
 	dfloat MSnm = 0;
 
-	for (int i=0;i<mesh->Np;i++){
+	for (iint i=0;i<mesh->Np;i++){
 	  MSnm += mesh->MM[fn+i*mesh->Np]*mesh->LIFT[i*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+m];
 	}
 	
@@ -110,9 +110,9 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
   dfloat *SyyM = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
 
   // loop over all elements
-  for(int eM=0;eM<mesh->Nelements;++eM){
+  for(iint eM=0;eM<mesh->Nelements;++eM){
 
-    int vbase = eM*mesh->Nvgeo;
+    iint vbase = eM*mesh->Nvgeo;
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
     dfloat dsdx = mesh->vgeo[vbase+SXID];
@@ -120,8 +120,8 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
     dfloat J = mesh->vgeo[vbase+JID];
 
     /* start with stiffness matrix  */
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){
+    for(iint n=0;n<mesh->Np;++n){
+      for(iint m=0;m<mesh->Np;++m){
         BM[n*mesh->Np+m]  = J*lambda*mesh->MM[n*mesh->Np+m];
         SxxM[n*mesh->Np+m]  = J*drdx*drdx*mesh->Srr[n*mesh->Np+m];
         SxxM[n*mesh->Np+m] += J*drdx*dsdx*mesh->Srs[n*mesh->Np+m];
@@ -146,7 +146,7 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
     }
 
    
-    for (int fM=0;fM<mesh->Nfaces;fM++) {
+    for (iint fM=0;fM<mesh->Nfaces;fM++) {
       
       dfloat *SxxP = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
       dfloat *SxyP = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -154,17 +154,17 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
       dfloat *SyyP = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
       
       // load surface geofactors for this face
-      int sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+      iint sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
       dfloat nx = mesh->sgeo[sid+NXID];
       dfloat ny = mesh->sgeo[sid+NYID];
       dfloat sJ = mesh->sgeo[sid+SJID];
       dfloat hinv = mesh->sgeo[sid+IHID];
       dfloat penalty = tau*hinv; 
       
-      int eP = mesh->EToE[eM*mesh->Nfaces+fM];
+      iint eP = mesh->EToE[eM*mesh->Nfaces+fM];
       if (eP < 0) eP = eM;
       
-      int vbaseP = eP*mesh->Nvgeo;
+      iint vbaseP = eP*mesh->Nvgeo;
       dfloat drdxP = mesh->vgeo[vbaseP+RXID];
       dfloat drdyP = mesh->vgeo[vbaseP+RYID];
       dfloat dsdxP = mesh->vgeo[vbaseP+SXID];
@@ -172,7 +172,7 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
       
       int bcD, bcN;
       int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
-      int bcType = 0;
+      iint bcType = 0;
 
       if(bc>0) bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
 
@@ -198,10 +198,10 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
       dfloat *MSf = MS+fM*mesh->Nfp*mesh->Nfp;
 
       // penalty term just involves face nodes
-      for(int n=0;n<mesh->Nfp;++n){
-	for(int m=0;m<mesh->Nfp;++m){
-	  int nM = mesh->faceNodes[fM*mesh->Nfp+n];
-	  int mM = mesh->faceNodes[fM*mesh->Nfp+m];
+      for(iint n=0;n<mesh->Nfp;++n){
+	for(iint m=0;m<mesh->Nfp;++m){
+	  iint nM = mesh->faceNodes[fM*mesh->Nfp+n];
+	  iint mM = mesh->faceNodes[fM*mesh->Nfp+m];
 
 	  // OP11 = OP11 + 0.5*( gtau*mmE )
 	  dfloat MSfnm = sJ*MSf[n*mesh->Nfp+m];
@@ -212,8 +212,8 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 
 	  // neighbor penalty term
 	  if(eP>=0){
-	    int idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+n;
-	    int mP  = mesh->vmapP[idM]%mesh->Np; 
+	    iint idM = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+n;
+	    iint mP  = mesh->vmapP[idM]%mesh->Np; 
 
 	    // OP12(:,Fm2) = - 0.5*( gtau*mmE(:,Fm1) );
 	    SxxP[nM*mesh->Np+mP] += -0.5*nx*nx*penalty*MSfnm;
@@ -225,13 +225,13 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
       }
     
       // now add differential surface terms
-      for(int n=0;n<mesh->Nfp;++n){
-	for(int m=0;m<mesh->Np;++m){
-	  int nM = mesh->faceNodes[fM*mesh->Nfp+n];
+      for(iint n=0;n<mesh->Nfp;++n){
+	for(iint m=0;m<mesh->Np;++m){
+	  iint nM = mesh->faceNodes[fM*mesh->Nfp+n];
 	  
-	  for(int i=0;i<mesh->Nfp;++i){
-	    int iM = mesh->faceNodes[fM*mesh->Nfp+i];
-	    int iP = mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+	  for(iint i=0;i<mesh->Nfp;++i){
+	    iint iM = mesh->faceNodes[fM*mesh->Nfp+i];
+	    iint iP = mesh->vmapP[i + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
 	      
 	    dfloat MSfni = sJ*MSf[n*mesh->Nfp+i]; // surface Jacobian built in
 	    
@@ -257,13 +257,13 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	}
       }
     
-      for(int n=0;n<mesh->Np;++n){
-	for(int m=0;m<mesh->Nfp;++m){
-	  int mM = mesh->faceNodes[fM*mesh->Nfp+m];
-	  int mP = mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
+      for(iint n=0;n<mesh->Np;++n){
+	for(iint m=0;m<mesh->Nfp;++m){
+	  iint mM = mesh->faceNodes[fM*mesh->Nfp+m];
+	  iint mP = mesh->vmapP[m + fM*mesh->Nfp+eM*mesh->Nfp*mesh->Nfaces]%mesh->Np;
 	  
-	  for(int i=0;i<mesh->Nfp;++i){
-	    int iM = mesh->faceNodes[fM*mesh->Nfp+i];	
+	  for(iint i=0;i<mesh->Nfp;++i){
+	    iint iM = mesh->faceNodes[fM*mesh->Nfp+i];	
 
 	    dfloat MSfim = sJ*MSf[i*mesh->Nfp+m];
 	    
@@ -289,9 +289,9 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 
       // store non-zeros for off diagonal block
       if(eP>=0){
-	for(int n=0;n<mesh->Np;++n){
-	  for(int m=0;m<mesh->Np;++m){
-	    int id = n*mesh->Np+m;
+	for(iint n=0;n<mesh->Np;++n){
+	  for(iint m=0;m<mesh->Np;++m){
+	    iint id = n*mesh->Np+m;
 	    
 	    // completed  positive trace for this node
 	    dfloat S11nmP = SxxP[id] + SyyP[id] + sigma*(SxxP[id]);
@@ -299,9 +299,9 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 	    dfloat S21nmP = sigma*(SyxP[id]);
 	    dfloat S22nmP = SxxP[id] + SyyP[id] + sigma*(SyyP[id]);
 	    
-	    int row = 2*globalIds[n + eP*mesh->Np];
-	    int col = 2*globalIds[m + eP*mesh->Np];
-	    int owner = globalOwners[n + eP*mesh->Np];
+	    iint row = 2*globalIds[n + eP*mesh->Np];
+	    iint col = 2*globalIds[m + eP*mesh->Np];
+	    iint owner = globalOwners[n + eP*mesh->Np];
 	    
 	    nnz = addNonZero(sendNonZeros, nnz, row+0, col+0, owner, S11nmP);
 	    nnz = addNonZero(sendNonZeros, nnz, row+1, col+0, owner, S21nmP);
@@ -316,17 +316,17 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
     }
     
     // store non-zeros for diagonal block
-    for (int n=0;n<mesh->Np;n++) {
-      for (int m=0;m<mesh->Np;m++) {
-	int id = n*mesh->Np+m;
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint m=0;m<mesh->Np;m++) {
+	iint id = n*mesh->Np+m;
 	dfloat S11nm = BM[id] + SxxM[id] + SyyM[id] + sigma*SxxM[id]; // diagonal block + laplacian + penalty
 	dfloat S12nm = sigma*(SxyM[id]);
 	dfloat S21nm = sigma*(SyxM[id]);
 	dfloat S22nm = BM[id] + SxxM[id] + SyyM[id] + sigma*SyyM[id]; // diagonal block + laplacian + penalty
 	
-	int row = 2*globalIds[n + eM*mesh->Np];
-	int col = 2*globalIds[m + eM*mesh->Np];
-	int owner = globalOwners[n + eM*mesh->Np];
+	iint row = 2*globalIds[n + eM*mesh->Np];
+	iint col = 2*globalIds[m + eM*mesh->Np];
+	iint owner = globalOwners[n + eM*mesh->Np];
 	
 	nnz = addNonZero(sendNonZeros, nnz, row+0, col+0, owner, S11nm);
 	nnz = addNonZero(sendNonZeros, nnz, row+1, col+0, owner, S21nm);
@@ -336,24 +336,24 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
     }
   }
   
-  int *AsendCounts  = (int*) calloc(size, sizeof(int));
-  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
-  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
-  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
+  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
+  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
+  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
   
   // count how many non-zeros to send to each process
-  for(int n=0;n<nnz;++n)
+  for(iint n=0;n<nnz;++n)
     AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
 
   // sort by row ordering
   qsort(sendNonZeros, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_int, ArecvCounts, 1, MPI_int, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
   *nnzA = 0;
-  for(int r=0;r<size;++r){
+  for(iint r=0;r<size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     *nnzA += ArecvCounts[r]/sizeof(nonZero_t);
@@ -371,7 +371,7 @@ void insBuildVectorIpdgTri2D(mesh2D *mesh, dfloat tau, dfloat sigma, dfloat lamb
 
   // compress duplicates
   nnz = 0;
-  for(int n=1;n<*nnzA;++n){
+  for(iint n=1;n<*nnzA;++n){
     if((*A)[n].row == (*A)[nnz].row &&
        (*A)[n].col == (*A)[nnz].col){
       (*A)[nnz].val += (*A)[n].val;

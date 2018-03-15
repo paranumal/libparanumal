@@ -32,7 +32,7 @@ void meshParallelPrint3D(mesh3D *mesh);
 void meshVTU3D(mesh3D *mesh, char *fileName);
 
 // print out mesh field
-void meshPlotVTU3DP(mesh3D *mesh, char *fileNameBase, int fld);
+void meshPlotVTU3DP(mesh3D *mesh, char *fileNameBase, iint fld);
 
 // compute geometric factors for local to physical map 
 void meshGeometricFactorsTet3D(mesh3D *mesh);
@@ -98,7 +98,7 @@ void meshMRABSetupP3D(mesh3D *mesh, dfloat *EToDT, int maxLevels);
 
 //MRAB weighted mesh partitioning
 void meshMRABWeightedPartitionTetP3D(mesh3D *mesh, dfloat *weights,
-                                      int numLevels, int *levels);
+                                      iint numLevels, iint *levels);
 
 void meshSetPolynomialDegree3D(mesh3D *mesh, int N);
 

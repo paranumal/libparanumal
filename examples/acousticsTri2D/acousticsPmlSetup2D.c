@@ -9,13 +9,13 @@ void acousticsPmlSetup2D(mesh2D *mesh,
   mesh->pmlNfields = 4;
   mesh->pmlSigmaX      = (dfloat*) calloc(mesh->Nelements, sizeof(dfloat));
   mesh->pmlSigmaY      = (dfloat*) calloc(mesh->Nelements, sizeof(dfloat));
-  mesh->pmlElementList = (int*) calloc(mesh->Nelements, sizeof(int));
+  mesh->pmlElementList = (iint*) calloc(mesh->Nelements, sizeof(iint));
   
   // find elements with center inside PML zone
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
     dfloat cx = 0, cy = 0;
-    for(int n=0;n<mesh->Nverts;++n){
+    for(iint n=0;n<mesh->Nverts;++n){
       cx += mesh->EX[e*mesh->Nverts+n];
       cy += mesh->EY[e*mesh->Nverts+n];
     }
@@ -30,7 +30,7 @@ void acousticsPmlSetup2D(mesh2D *mesh,
       if(cy<xmin || cy>xmax)
 	mesh->pmlSigmaY[cnt] = ysigma;
 #if 0
-      for(int n=0;n<mesh->Np;++n){
+      for(iint n=0;n<mesh->Np;++n){
 	dfloat x = mesh->x[n + e*mesh->Np];
 	dfloat y = mesh->y[n + e*mesh->Np];
 	if(cx>xmax)
@@ -48,7 +48,7 @@ void acousticsPmlSetup2D(mesh2D *mesh,
     }
   }
   mesh->pmlNelements = cnt;
-  mesh->pmlElementList = (int*)   realloc(mesh->pmlElementList, cnt*sizeof(int));
+  mesh->pmlElementList = (iint*)   realloc(mesh->pmlElementList, cnt*sizeof(iint));
   mesh->pmlSigmaX      = (dfloat*) realloc(mesh->pmlSigmaX,      cnt*sizeof(dfloat));
   mesh->pmlSigmaY      = (dfloat*) realloc(mesh->pmlSigmaY,      cnt*sizeof(dfloat));
 
@@ -66,6 +66,6 @@ void acousticsPmlSetup2D(mesh2D *mesh,
   mesh->o_pmlresq = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->pmlNfields*sizeof(dfloat), mesh->pmlresq);
   mesh->o_pmlSigmaX = mesh->device.malloc(mesh->pmlNelements*sizeof(dfloat), mesh->pmlSigmaX);
   mesh->o_pmlSigmaY = mesh->device.malloc(mesh->pmlNelements*sizeof(dfloat), mesh->pmlSigmaY);
-  mesh->o_pmlElementList = mesh->device.malloc(mesh->pmlNelements*sizeof(int), mesh->pmlElementList);
+  mesh->o_pmlElementList = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlElementList);
 }
 

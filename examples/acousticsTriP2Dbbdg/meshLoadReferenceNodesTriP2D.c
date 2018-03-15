@@ -5,13 +5,13 @@
 
 void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
 
-  mesh->Np  = (int*) malloc((N+1)*sizeof(int));
-  mesh->Nfp = (int*) malloc((N+1)*sizeof(int));
-  mesh->plotNp = (int*) malloc((N+1)*sizeof(int));
-  mesh->plotNelements = (int*) malloc((N+1)*sizeof(int));
-  mesh->cubNp = (int*) malloc((N+1)*sizeof(int));
-  mesh->intNfp = (int*) malloc((N+1)*sizeof(int));
-  mesh->max_EL_nnz = (int*) malloc((N+1)*sizeof(int));
+  mesh->Np  = (iint*) malloc((N+1)*sizeof(iint));
+  mesh->Nfp = (iint*) malloc((N+1)*sizeof(iint));
+  mesh->plotNp = (iint*) malloc((N+1)*sizeof(iint));
+  mesh->plotNelements = (iint*) malloc((N+1)*sizeof(iint));
+  mesh->cubNp = (iint*) malloc((N+1)*sizeof(iint));
+  mesh->intNfp = (iint*) malloc((N+1)*sizeof(iint));
+  mesh->max_EL_nnz = (iint*) malloc((N+1)*sizeof(iint));
 
   mesh->r  = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
   mesh->s  = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
@@ -19,13 +19,13 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
   mesh->Ds = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
   mesh->MM = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
 
-  mesh->faceNodes = (int**) malloc((N+1)*(sizeof(int*)));  
+  mesh->faceNodes = (iint**) malloc((N+1)*(sizeof(iint*)));  
   mesh->LIFT = (dfloat**) malloc((N+1)*(sizeof(dfloat*)));
 
   mesh->plotR      = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->plotS      = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->plotInterp = (dfloat**) malloc((N+1)*sizeof(dfloat*));
-  mesh->plotEToV   = (int**)   malloc((N+1)*sizeof(int*));
+  mesh->plotEToV   = (iint**)   malloc((N+1)*sizeof(iint*));
 
   mesh->cubr      = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->cubs      = (dfloat**) malloc((N+1)*sizeof(dfloat*));
@@ -39,17 +39,17 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
 
   mesh->VB     = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->invVB  = (dfloat**) malloc((N+1)*sizeof(dfloat*));
-  mesh->D1ids  = (int**)   malloc((N+1)*sizeof(int*));
-  mesh->D2ids  = (int**)   malloc((N+1)*sizeof(int*));
-  mesh->D3ids  = (int**)   malloc((N+1)*sizeof(int*));
+  mesh->D1ids  = (iint**)   malloc((N+1)*sizeof(iint*));
+  mesh->D2ids  = (iint**)   malloc((N+1)*sizeof(iint*));
+  mesh->D3ids  = (iint**)   malloc((N+1)*sizeof(iint*));
   mesh->Dvals  = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->VBq    = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->PBq    = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->L0vals = (dfloat**) malloc((N+1)*sizeof(dfloat*));
-  mesh->ELids  = (int**)   malloc((N+1)*sizeof(int*));
+  mesh->ELids  = (iint**)   malloc((N+1)*sizeof(iint*));
   mesh->ELvals = (dfloat**) malloc((N+1)*sizeof(dfloat*));
   mesh->BBLower     = (dfloat**) malloc((N+1)*sizeof(dfloat*));
-  mesh->BBRaiseids  = (int**)   malloc((N+1)*sizeof(int*));
+  mesh->BBRaiseids  = (iint**)   malloc((N+1)*sizeof(iint*));
   mesh->BBRaiseVals = (dfloat**) malloc((N+1)*sizeof(dfloat*));
 
   for (int nn=1;nn<=N;nn++) {
@@ -106,9 +106,9 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
     fgets(buf, BUFSIZ, fp); // read comment
 
     fgets(buf, BUFSIZ, fp); // read comment
-    mesh->faceNodes[nn] = (int*) calloc(mesh->Nfp[nn]*mesh->Nfaces, sizeof(int));
+    mesh->faceNodes[nn] = (iint*) calloc(mesh->Nfp[nn]*mesh->Nfaces, sizeof(iint));
     for(int n=0;n<mesh->Nfaces*mesh->Nfp[nn];++n){
-      fscanf(fp, intFormat, mesh->faceNodes[nn]+n);
+      fscanf(fp, iintFormat, mesh->faceNodes[nn]+n);
     }
     fgets(buf, BUFSIZ, fp);
 
@@ -122,7 +122,7 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
     // read number of plot nodes
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); 
-    sscanf(buf, intFormat, mesh->plotNp+nn);
+    sscanf(buf, iintFormat, mesh->plotNp+nn);
 
     // read plot node coordinates (hard code triangles)
     mesh->plotR[nn] = (dfloat*) calloc(mesh->plotNp[nn], sizeof(dfloat));
@@ -146,19 +146,19 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
     // read number of elements in plot node triangulation
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); 
-    sscanf(buf, intFormat, mesh->plotNelements+nn);
+    sscanf(buf, iintFormat, mesh->plotNelements+nn);
 
     // read number of vertices per plot element
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp);
-    sscanf(buf, intFormat, &(mesh->plotNverts));
+    sscanf(buf, iintFormat, &(mesh->plotNverts));
     
     // build and read in plot node triangulation
-    mesh->plotEToV[nn] = (int*) calloc(mesh->plotNelements[nn]*mesh->plotNverts, sizeof(int));
+    mesh->plotEToV[nn] = (iint*) calloc(mesh->plotNelements[nn]*mesh->plotNverts, sizeof(iint));
     fgets(buf, BUFSIZ, fp); // read comment
     for(int n=0;n<mesh->plotNelements[nn];++n){
       for(int m=0;m<mesh->plotNverts;++m){
-        fscanf(fp, intFormat, mesh->plotEToV[nn]+m + mesh->plotNverts*n);
+        fscanf(fp, iintFormat, mesh->plotEToV[nn]+m + mesh->plotNverts*n);
       }
       fgets(buf,BUFSIZ,fp); // rest of line
     }
@@ -166,7 +166,7 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
     // read number of volume cubature nodes
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); 
-    sscanf(buf, intFormat, mesh->cubNp+nn);
+    sscanf(buf, iintFormat, mesh->cubNp+nn);
 
     // read cub nodes and weights
     fgets(buf, BUFSIZ, fp); // read comment
@@ -222,7 +222,7 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
     // read number of surface integration nodes
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); 
-    sscanf(buf, intFormat, mesh->intNfp+nn);
+    sscanf(buf, iintFormat, mesh->intNfp+nn);
 
     // read surface intergration node interpolation matrix
     mesh->intInterp[nn] 
@@ -265,23 +265,23 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
     // sparse barycentric differentiation matrices
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read comment
-    mesh->D1ids[nn]= (int*) calloc(mesh->Np[nn]*3, sizeof(int));
+    mesh->D1ids[nn]= (iint*) calloc(mesh->Np[nn]*3, sizeof(iint));
     for (int n=0;n<mesh->Np[nn]*3;++n){    
-      fscanf(fp, intFormat, mesh->D1ids[nn]+n);
+      fscanf(fp, iintFormat, mesh->D1ids[nn]+n);
     }
 
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read comment
-    mesh->D2ids[nn] = (int*) calloc(mesh->Np[nn]*3, sizeof(int));
+    mesh->D2ids[nn] = (iint*) calloc(mesh->Np[nn]*3, sizeof(iint));
     for (int n=0;n<mesh->Np[nn]*3;++n){
-      fscanf(fp, intFormat, mesh->D2ids[nn]+n);
+      fscanf(fp, iintFormat, mesh->D2ids[nn]+n);
     }
     
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read comment
-    mesh->D3ids[nn] = (int*) calloc(mesh->Np[nn]*3, sizeof(int));
+    mesh->D3ids[nn] = (iint*) calloc(mesh->Np[nn]*3, sizeof(iint));
     for (int n=0;n<mesh->Np[nn]*3;++n){
-      fscanf(fp, intFormat, mesh->D3ids[nn]+n);
+      fscanf(fp, iintFormat, mesh->D3ids[nn]+n);
     }
 
     fgets(buf, BUFSIZ, fp); // read comment
@@ -318,9 +318,9 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read comment
     mesh->max_EL_nnz[nn] = mesh->Nfp[nn] + 2;
-    mesh->ELids[nn] = (int*) calloc(mesh->Np[nn]*mesh->max_EL_nnz[nn], sizeof(int));
+    mesh->ELids[nn] = (iint*) calloc(mesh->Np[nn]*mesh->max_EL_nnz[nn], sizeof(iint));
     for (int n=0;n<mesh->Np[nn]*mesh->max_EL_nnz[nn];++n){
-      fscanf(fp, intFormat, mesh->ELids[nn]+n);
+      fscanf(fp, iintFormat, mesh->ELids[nn]+n);
     }
     
     fgets(buf, BUFSIZ, fp); // read comment
@@ -334,9 +334,9 @@ void meshLoadReferenceNodesTriP2D(mesh2D *mesh, int N){
     fgets(buf, BUFSIZ, fp); // read comment
     fgets(buf, BUFSIZ, fp); // read comment
     int Nfpp1 = nn+2;
-    mesh->BBRaiseids[nn] = (int*) calloc(Nfpp1*2, sizeof(int));
+    mesh->BBRaiseids[nn] = (iint*) calloc(Nfpp1*2, sizeof(iint));
     for (int n=0;n<Nfpp1*2;++n){
-      fscanf(fp, intFormat, mesh->BBRaiseids[nn]+n);
+      fscanf(fp, iintFormat, mesh->BBRaiseids[nn]+n);
     }
 
     fgets(buf, BUFSIZ, fp); // read comment

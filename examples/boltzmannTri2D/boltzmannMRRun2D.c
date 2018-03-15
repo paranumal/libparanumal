@@ -9,7 +9,7 @@ void boltzmannMRRun2D(mesh2D *mesh, char *options){
   // MPI send buffer
   dfloat *sendBuffer;
   dfloat *recvBuffer;
-  int haloBytes = mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat);
   if (haloBytes) {
     occa::memory o_sendBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
     occa::memory o_recvBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
@@ -21,7 +21,7 @@ void boltzmannMRRun2D(mesh2D *mesh, char *options){
 
   // Populate Trace Buffer
    dfloat zero = 0.0;
-  for (int l=0; l<mesh->MRABNlevels; l++) {
+  for (iint l=0; l<mesh->MRABNlevels; l++) {
 
     if(strstr(options,"MRAB")){
        if (mesh->MRABNelements[l])
@@ -99,8 +99,8 @@ occa::initTimer(mesh->device);
     mesh->device.finish();
     occa::tic("Boltzmann Solver");
 
- for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
-   // for(int tstep=0;tstep<100;++tstep){
+ for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+   // for(iint tstep=0;tstep<100;++tstep){
  
       if(strstr(options, "MRAB")){
        boltzmannMRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);

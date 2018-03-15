@@ -4,8 +4,8 @@ void kcycle(parAlmond_t *parAlmond, int k){
 
   agmgLevel **levels = parAlmond->levels;
 
-  int m = levels[k]->Nrows;
-  int n = levels[k]->Ncols;
+  iint m = levels[k]->Nrows;
+  iint n = levels[k]->Ncols;
 
   //check for base level
   if(k==parAlmond->numLevels-1) {
@@ -22,8 +22,8 @@ void kcycle(parAlmond_t *parAlmond, int k){
   sprintf(name, "host kcycle level %d", k);
   occaTimerTic(parAlmond->device,name);
 
-  int mCoarse = levels[k+1]->Nrows;
-  int nCoarse = levels[k+1]->Ncols;
+  iint mCoarse = levels[k+1]->Nrows;
+  iint nCoarse = levels[k+1]->Ncols;
 
   // zero out x
   //setVector(m, levels[k]->x, 0.0);
@@ -130,8 +130,8 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
 
   agmgLevel **levels = parAlmond->levels;
 
-  int m = levels[k]->Nrows;
-  int n = levels[k]->Ncols;
+  iint m = levels[k]->Nrows;
+  iint n = levels[k]->Ncols;
 
   //check for base level
   if(k==parAlmond->numLevels-1) {
@@ -144,8 +144,8 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
     return;
   }
 
-  int mCoarse = levels[k+1]->Nrows;
-  int nCoarse = levels[k+1]->Ncols;
+  iint mCoarse = levels[k+1]->Nrows;
+  iint nCoarse = levels[k+1]->Ncols;
 
   char name[BUFSIZ];
   sprintf(name, "device kcycle level %d", k);
@@ -268,7 +268,7 @@ void vcycle(parAlmond_t *parAlmond, int k) {
 
   agmgLevel **levels = parAlmond->levels;
 
-  const int m = levels[k]->Nrows;
+  const iint m = levels[k]->Nrows;
 
   //check for base level
   if(k==parAlmond->numLevels-1) {
@@ -285,7 +285,7 @@ void vcycle(parAlmond_t *parAlmond, int k) {
   sprintf(name, "host vcycle level %d", k);
   occaTimerTic(parAlmond->device,name);
 
-  const int mCoarse = levels[k+1]->Nrows;
+  const iint mCoarse = levels[k+1]->Nrows;
 
   // zero out x
   //setVector(m, levels[k]->x,  0.0);
@@ -312,8 +312,8 @@ void device_vcycle(parAlmond_t *parAlmond, int k){
 
   agmgLevel **levels = parAlmond->levels;
 
-  const int m = levels[k]->Nrows;
-  const int mCoarse = levels[k+1]->Nrows;
+  const iint m = levels[k]->Nrows;
+  const iint mCoarse = levels[k+1]->Nrows;
 
   // switch to cpu if the problem size is too small for gpu
   if(m < GPU_CPU_SWITCH_SIZE){

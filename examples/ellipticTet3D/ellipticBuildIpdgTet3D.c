@@ -3,34 +3,34 @@
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                            int *nnzA, int *globalStarts, const char *options){
+void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+                            iint *nnzA, iint *globalStarts, const char *options){
 
-  int size, rankM;
+  iint size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankM);
 
-  int Nnum = mesh->Np*mesh->Nelements;
+  iint Nnum = mesh->Np*mesh->Nelements;
 
   // create a global numbering system
-  int *globalIds = (int *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np,sizeof(int));
+  iint *globalIds = (iint *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np,sizeof(iint));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_int, globalStarts+1, 1, MPI_int, MPI_COMM_WORLD);
-    for(int r=0;r<size;++r)
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, globalStarts+1, 1, MPI_IINT, MPI_COMM_WORLD);
+    for(iint r=0;r<size;++r)
       globalStarts[r+1] = globalStarts[r]+globalStarts[r+1]*mesh->Np;
 
   /* so find number of elements on each rank */
-  int *rankNelements = (int*) calloc(size, sizeof(int));
-  int *rankStarts = (int*) calloc(size+1, sizeof(int));
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_int,
-    rankNelements, 1, MPI_int, MPI_COMM_WORLD);
+  iint *rankNelements = (iint*) calloc(size, sizeof(iint));
+  iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
+    rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
   //find offsets
-  for(int r=0;r<size;++r){
+  for(iint r=0;r<size;++r){
     rankStarts[r+1] = rankStarts[r]+rankNelements[r];
   }
   //use the offsets to set a global id
-  for (int e =0;e<mesh->Nelements;e++) {
+  for (iint e =0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) {
       globalIds[e*mesh->Np +n] = n + (e + rankStarts[rankM])*mesh->Np;
     }
@@ -38,12 +38,12 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
 
   /* do a halo exchange of global node numbers */
   if (mesh->totalHaloPairs) {
-    int *idSendBuffer = (int *) calloc(mesh->Np*mesh->totalHaloPairs,sizeof(int));
-    meshHaloExchange(mesh, mesh->Np*sizeof(int), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Np);
+    iint *idSendBuffer = (iint *) calloc(mesh->Np*mesh->totalHaloPairs,sizeof(iint));
+    meshHaloExchange(mesh, mesh->Np*sizeof(iint), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Np);
     free(idSendBuffer);
   }
 
-  int nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
+  iint nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
 
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-8;
@@ -57,11 +57,11 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
 
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
-  for (int f=0;f<mesh->Nfaces;f++) {
-    for (int n=0;n<mesh->Np;n++) {
-      for (int m=0;m<mesh->Nfp;m++) {
+  for (iint f=0;f<mesh->Nfaces;f++) {
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint m=0;m<mesh->Nfp;m++) {
         dfloat MSnm = 0;
-        for (int i=0;i<mesh->Np;i++)
+        for (iint i=0;i<mesh->Np;i++)
           MSnm += mesh->MM[n+i*mesh->Np]*mesh->LIFT[i*mesh->Nfp*mesh->Nfaces+f*mesh->Nfp+m];
 
         MS[m+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]  = MSnm;
@@ -73,13 +73,13 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
   dfloat *DrTMS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
   dfloat *DsTMS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
   dfloat *DtTMS = (dfloat *) calloc(mesh->Nfaces*mesh->Np*mesh->Nfp,sizeof(dfloat));
-  for (int f=0;f<mesh->Nfaces;f++) {
-    for (int n=0;n<mesh->Np;n++) {
-      for (int i=0;i<mesh->Nfp;i++) {
+  for (iint f=0;f<mesh->Nfaces;f++) {
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint i=0;i<mesh->Nfp;i++) {
         DrTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] = 0.;
         DsTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] = 0.;
         DtTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np] = 0.;
-        for (int m=0;m<mesh->Np;m++) {
+        for (iint m=0;m<mesh->Np;m++) {
           DrTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]
             += mesh->Dr[n+m*mesh->Np]*MS[i+m*mesh->Nfp+f*mesh->Nfp*mesh->Np];
           DsTMS[i+n*mesh->Nfp + f*mesh->Nfp*mesh->Np]
@@ -97,9 +97,9 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
   int nnz = 0;
 
   // loop over all elements
-  for(int eM=0;eM<mesh->Nelements;++eM){
+  for(iint eM=0;eM<mesh->Nelements;++eM){
 
-    int gbase = eM*mesh->Nggeo;
+    iint gbase = eM*mesh->Nggeo;
     dfloat Grr = mesh->ggeo[gbase+G00ID];
     dfloat Grs = mesh->ggeo[gbase+G01ID];
     dfloat Grt = mesh->ggeo[gbase+G02ID];
@@ -109,8 +109,8 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
     dfloat J   = mesh->ggeo[gbase+GWJID];
 
     /* start with stiffness matrix  */
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){
+    for(iint n=0;n<mesh->Np;++n){
+      for(iint m=0;m<mesh->Np;++m){
         BM[m+n*mesh->Np]  = J*lambda*mesh->MM[m+n*mesh->Np];
         BM[m+n*mesh->Np] += Grr*mesh->Srr[m+n*mesh->Np];
         BM[m+n*mesh->Np] += Grs*mesh->Srs[m+n*mesh->Np];
@@ -124,7 +124,7 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
       }
     }
 
-    int vbase = eM*mesh->Nvgeo;
+    iint vbase = eM*mesh->Nvgeo;
     dfloat drdx = mesh->vgeo[vbase+RXID];
     dfloat drdy = mesh->vgeo[vbase+RYID];
     dfloat drdz = mesh->vgeo[vbase+RZID];
@@ -135,19 +135,19 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
     dfloat dtdy = mesh->vgeo[vbase+TYID];
     dfloat dtdz = mesh->vgeo[vbase+TZID];
 
-    for (int m=0;m<mesh->Np;m++) {
-      for (int fM=0;fM<mesh->Nfaces;fM++) {
+    for (iint m=0;m<mesh->Np;m++) {
+      for (iint fM=0;fM<mesh->Nfaces;fM++) {
         // load surface geofactors for this face
-        int sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
+        iint sid = mesh->Nsgeo*(eM*mesh->Nfaces+fM);
         dfloat nx = mesh->sgeo[sid+NXID];
         dfloat ny = mesh->sgeo[sid+NYID];
         dfloat nz = mesh->sgeo[sid+NZID];
         dfloat sJ = mesh->sgeo[sid+SJID];
         dfloat hinv = mesh->sgeo[sid+IHID];
 
-        int eP = mesh->EToE[eM*mesh->Nfaces+fM];
+        iint eP = mesh->EToE[eM*mesh->Nfaces+fM];
         if (eP < 0) eP = eM;
-        int vbaseP = eP*mesh->Nvgeo;
+        iint vbaseP = eP*mesh->Nvgeo;
         dfloat drdxP = mesh->vgeo[vbaseP+RXID];
         dfloat drdyP = mesh->vgeo[vbaseP+RYID];
         dfloat drdzP = mesh->vgeo[vbaseP+RZID];
@@ -159,11 +159,11 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
         dfloat dtdzP = mesh->vgeo[vbaseP+TZID];
 
         // extract trace nodes
-        for (int i=0;i<mesh->Nfp;i++) {
+        for (iint i=0;i<mesh->Nfp;i++) {
           // double check vol geometric factors are in halo storage of vgeo
-          int idM    = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
-          int vidM   = mesh->faceNodes[i+fM*mesh->Nfp];
-          int vidP   = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
+          iint idM    = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
+          iint vidM   = mesh->faceNodes[i+fM*mesh->Nfp];
+          iint vidP   = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
 
           qmM[i] =0;
           if (vidM == m) qmM[i] =1;
@@ -180,8 +180,8 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
 
         dfloat penalty = tau*hinv;
         eP = mesh->EToE[eM*mesh->Nfaces+fM];
-        for (int n=0;n<mesh->Np;n++) {
-          for (int i=0;i<mesh->Nfp;i++) {
+        for (iint n=0;n<mesh->Np;n++) {
+          for (iint i=0;i<mesh->Nfp;i++) {
             BM[m+n*mesh->Np] += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
             BM[m+n*mesh->Np] += -0.5*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
                                 -0.5*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
@@ -193,7 +193,7 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
           if (eP < 0) {
             int qSgn, gradqSgn;
             int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
-            int bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
+            iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
             if(bcType==1){ // Dirichlet
               qSgn     = -1;
               gradqSgn =  1;
@@ -205,7 +205,7 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
               gradqSgn = -1;
             }
 
-            for (int i=0;i<mesh->Nfp;i++) {
+            for (iint i=0;i<mesh->Nfp;i++) {
               BM[m+n*mesh->Np] += -0.5*gradqSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmM[i];
               BM[m+n*mesh->Np] += +0.5*qSgn*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
                                   +0.5*qSgn*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmM[i]
@@ -213,7 +213,7 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
               BM[m+n*mesh->Np] += -0.5*qSgn*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*penalty*qmM[i];
             }
           } else {
-            for (int i=0;i<mesh->Nfp;i++) {
+            for (iint i=0;i<mesh->Nfp;i++) {
               AnmP += -0.5*sJ*MS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*ndotgradqmP[i];
               AnmP += +0.5*sJ*(nx*drdx+ny*drdy+nz*drdz)*DrTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
                       +0.5*sJ*(nx*dsdx+ny*dsdy+nz*dsdz)*DsTMS[i+n*mesh->Nfp+fM*mesh->Nfp*mesh->Np]*qmP[i]
@@ -234,8 +234,8 @@ void ellipticBuildIpdgTet3D(mesh3D *mesh, dfloat tau, dfloat lambda, int *BCType
       }
     }
 
-    for (int n=0;n<mesh->Np;n++) {
-      for (int m=0;m<mesh->Np;m++) {
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint m=0;m<mesh->Np;m++) {
         dfloat Anm = BM[m+n*mesh->Np];
 
         if(fabs(Anm)>tol){

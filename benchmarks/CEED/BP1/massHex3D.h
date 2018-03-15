@@ -40,9 +40,9 @@ typedef struct {
   occa::memory o_coarseInvDegree;
   occa::memory o_ztmp;
 
-  int coarseNp;
-  int coarseTotal;
-  int *coarseOffsets;
+  iint coarseNp;
+  iint coarseTotal;
+  iint *coarseOffsets;
   dfloat *B, *tmp2;
   occa::memory *o_B, o_tmp2;
   void *xxt2;
@@ -91,7 +91,7 @@ typedef struct {
   ogs_t *nonHalo;
   
   
-  int Nblock;
+  iint Nblock;
   
   occa::memory o_p; // search direction
   occa::memory o_z; // preconditioner solution
@@ -123,13 +123,13 @@ typedef struct {
   occa::memory o_gjD2;  // differentiate from GJ to GJ nodes
 
   // list of elements that are needed for global gather-scatter
-  int NglobalGatherElements;
-  int *globalGatherElementList;
+  iint NglobalGatherElements;
+  iint *globalGatherElementList;
   occa::memory o_globalGatherElementList;
 
   // list of elements that are not needed for global gather-scatter
-  int NlocalGatherElements;
-  int *localGatherElementList;
+  iint NlocalGatherElements;
+  iint *localGatherElementList;
   occa::memory o_localGatherElementList;
   
   occa::kernel AxKernel;
@@ -154,7 +154,7 @@ typedef struct {
 
 void massMatrixFreeAx(void **args, occa::memory o_q, occa::memory o_Aq, const char* options);
 
-int massSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, int maxIterations, const char *options);
+int massSolveHex3D(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory &o_x, iint maxIterations, const char *options);
 
 solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options);
 
@@ -181,10 +181,10 @@ void massNonHaloGatherScatter(solver_t *solver,
 
 
 void massParallelGatherScatterSetup(mesh_t *mesh,    // provides DEVICE
-					int Nlocal,     // number of local nodes
-					int Nbytes,     // number of bytes per node
-					int *gatherLocalIds,  // local index of nodes
-					int *gatherBaseIds,   // global index of their base nodes
-					int *gatherHaloFlags,
+					iint Nlocal,     // number of local nodes
+					iint Nbytes,     // number of bytes per node
+					iint *gatherLocalIds,  // local index of nodes
+					iint *gatherBaseIds,   // global index of their base nodes
+					iint *gatherHaloFlags,
 					ogs_t **halo,
 					ogs_t **nonHalo);   // 1 for halo node, 0 for not

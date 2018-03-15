@@ -9,9 +9,9 @@ void insError2D(ins_t *ins, dfloat time,char *options){
     dfloat maxU = 0, minU = 1e9;
     dfloat maxV = 0, minV = 1e9;
     dfloat maxP = 0, minP = 1e9; 
-    for(int e=0;e<mesh->Nelements;++e){
+    for(iint e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->Np;++n){
-        int id = n+e*mesh->Np;
+        iint id = n+e*mesh->Np;
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
 

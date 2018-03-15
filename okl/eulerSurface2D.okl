@@ -38,7 +38,7 @@ void upwind1D(const dfloat nx, const dfloat ny,
 }
 
 
-void boundaryConditions2D(const int bc,
+void boundaryConditions2D(const iint bc,
 			  const dfloat t, 
 			  const dfloat x,  const dfloat y, 
 			  const dfloat nx, const dfloat ny,
@@ -93,13 +93,13 @@ void laxFriedrichsFlux2D(const dfloat nx, const dfloat ny,
 
 // batch process elements
 // assume that the derivatives are on the test function
-kernel void eulerSurface2D(const int Nelements,
+kernel void eulerSurface2D(const iint Nelements,
 			   const dfloat * restrict sgeo,
 			   const dfloat * restrict intInterpT, // interpolate to integration nodes
 			   const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-			   const int   * restrict vmapM,
-			   const int   * restrict vmapP,
-			   const int   * restrict EToB,
+			   const iint   * restrict vmapM,
+			   const iint   * restrict vmapP,
+			   const iint   * restrict EToB,
 			   const dfloat time,
 			   const dfloat * restrict intx, // integration nodes
 			   const dfloat * restrict inty,
@@ -107,7 +107,7 @@ kernel void eulerSurface2D(const int Nelements,
 			   dfloat4 * restrict rhsq){
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_RM[p_NblockS][p_NfacesNfp];
@@ -122,18 +122,18 @@ kernel void eulerSurface2D(const int Nelements,
 
     
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxSurfaceNodes;++n;inner0){
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
 
-	int e = eo + es;
+	iint e = eo + es;
 
 	if(e<Nelements){
 	  if(n<(p_Nfaces*p_Nfp)){
 	    // indices of negative and positive traces of face node
-	    const int id  = e*p_Nfp*p_Nfaces + n;
+	    const iint id  = e*p_Nfp*p_Nfaces + n;
 
-	    int idM = vmapM[id];
-	    int idP = vmapP[id];
+	    iint idM = vmapM[id];
+	    iint idP = vmapP[id];
 
 	    if(idP<0) idP = idM;
     
@@ -159,16 +159,16 @@ kernel void eulerSurface2D(const int Nelements,
     barrier(localMemFence);
 
     // interpolate to surface integration nodes
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxSurfaceNodes;++n;inner0){ 
-	int e = eo + es;
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+	iint e = eo + es;
 	if(e<Nelements){
 	  if(n<(p_Nfaces*p_intNfp)){
 
-	    const int face = n/p_intNfp; // find face that owns this integration node
+	    const iint face = n/p_intNfp; // find face that owns this integration node
 	  
 	    // load surface geofactors for this face
-	    const int sid = p_Nsgeo*(e*p_Nfaces+face);
+	    const iint sid = p_Nsgeo*(e*p_Nfaces+face);
 	    const dfloat nx = sgeo[sid+0];
 	    const dfloat ny = sgeo[sid+1];
 	    const dfloat sJ = sgeo[sid+2];
@@ -179,9 +179,9 @@ kernel void eulerSurface2D(const int Nelements,
 
 	    // local block interpolation (face nodes to integration nodes)
 	    // [ exact to here ]
-	    for(int m=0;m<p_Nfp;++m){
+	    for(iint m=0;m<p_Nfp;++m){
 	      const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-	      const int fm = face*p_Nfp+m;
+	      const iint fm = face*p_Nfp+m;
 	      iRM += iInm*s_RM[es][fm];
 	      iUM += iInm*s_UM[es][fm];
 	      iVM += iInm*s_VM[es][fm];
@@ -194,7 +194,7 @@ kernel void eulerSurface2D(const int Nelements,
 
 	    // apply boundary condition
 	    // [ exact to here ]
-	    int bc = EToB[face+p_Nfaces*e];
+	    iint bc = EToB[face+p_Nfaces*e];
 
 	    if(bc>0){
 	      boundaryConditions2D(bc, time, 
@@ -240,9 +240,9 @@ kernel void eulerSurface2D(const int Nelements,
     barrier(localMemFence);
 
     // lift from surface integration to volume nodes
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxSurfaceNodes;++n;inner0){
-	const int e = eo + es;
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
+	const iint e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Np){
 	    // prefetch volume rhs

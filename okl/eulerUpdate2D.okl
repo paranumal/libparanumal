@@ -1,5 +1,5 @@
 
-kernel void eulerUpdate2D(const int Ntotal,
+kernel void eulerUpdate2D(const iint Ntotal,
 			  const dfloat dt,	
 			  const dfloat rka,
 			  const dfloat rkb,
@@ -8,7 +8,7 @@ kernel void eulerUpdate2D(const int Ntotal,
 			  dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(int n=0;n<Ntotal;++n;tile(256)){
+  for(iint n=0;n<Ntotal;++n;tile(256)){
     if(n<Ntotal){
 //      printf("q=%g, resq=%g, rhsq=%g\n", q[n], resq[n], rhsq[n]);
       dfloat resqn = resq[n];

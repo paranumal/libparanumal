@@ -18,7 +18,7 @@ kernel void ellipticGradientQuad2D(const int Nelements,
 	s_D[j][i] = D[i + p_Nq*j];
 	
 	// prefetch q
-	const int id = e*p_Np+j*p_Nq+i;
+	const iint id = e*p_Np+j*p_Nq+i;
 	s_q[j][i] = q[id];
 	
       }
@@ -49,7 +49,7 @@ kernel void ellipticGradientQuad2D(const int Nelements,
 	gradqn.y = drdy*qr + dsdy*qs;
 	gradqn.w = s_q[j][i];
 	
-	const int id = e*p_Np+j*p_Nq+i; 
+	const iint id = e*p_Np+j*p_Nq+i; 
 	gradq[id] = gradqn;
 	
       }

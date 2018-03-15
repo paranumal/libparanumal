@@ -49,9 +49,9 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   // initial conditions
   dfloat sR = mesh->sphereRadius;
   
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
 
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
@@ -157,11 +157,11 @@ solver_t *boltzmannSetupQuad3D(mesh_t *mesh){
   
   // set time step
   dfloat hmin = 1e9, hmax = 0;
-  for(int e=0;e<mesh->Nelements;++e){  
+  for(iint e=0;e<mesh->Nelements;++e){  
 
-    for(int f=0;f<mesh->Nfaces;++f){
-      for(int n=0;n<mesh->Nfp;++n){
-	int sid = mesh->Nsgeo*mesh->Nfp*mesh->Nfaces*e + mesh->Nsgeo*mesh->Nfp*f+n;
+    for(iint f=0;f<mesh->Nfaces;++f){
+      for(iint n=0;n<mesh->Nfp;++n){
+	iint sid = mesh->Nsgeo*mesh->Nfp*mesh->Nfaces*e + mesh->Nsgeo*mesh->Nfp*f+n;
 
 	dfloat sJ   = mesh->sgeo[sid + mesh->Nq*SJID];
 	dfloat invJ = mesh->sgeo[sid + mesh->Nq*IJID];

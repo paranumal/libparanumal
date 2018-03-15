@@ -16,7 +16,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 	double tic = MPI_Wtime();
 	double AxTime;
 	
-	int iterations = 10;
+	iint iterations = 10;
 	
 	occa::streamTag start = mesh->device.tagStream();
 	
@@ -54,7 +54,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 	
 	// time cudamemcpy for same amount of data movement
 	int gjNp = mesh->gjNq*mesh->gjNq*mesh->gjNq;
-	int Nbytes =((sizeof(dfloat)*(2*mesh->Np*2+ 7*gjNp)/2)); // use 1/2 because of load+store
+	iint Nbytes =((sizeof(dfloat)*(2*mesh->Np*2+ 7*gjNp)/2)); // use 1/2 because of load+store
 	occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
 	occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
 	
@@ -74,20 +74,20 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
 	double copyBandwidth = mesh->Nelements*((Nbytes*iterations*2.)/(1024.*1024.*1024.*copyElapsed));
 	
 	
-	int   localDofs = mesh->Np*mesh->Nelements;
-	int localElements = mesh->Nelements;
+	iint   localDofs = mesh->Np*mesh->Nelements;
+	iint localElements = mesh->Nelements;
 	double globalElapsed;
-	int   globalDofs;
-	int   globalElements;
+	iint   globalDofs;
+	iint   globalElements;
 	int    root = 0;
 	
 	MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
-	MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_int,   MPI_SUM, root, MPI_COMM_WORLD );
-	MPI_Reduce(&localElements,&globalElements,1, MPI_int,   MPI_SUM, root, MPI_COMM_WORLD );
+	MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
+	MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
 	
-	int gjNq = mesh->gjNq;
+	iint gjNq = mesh->gjNq;
 	gjNp = mesh->gjNq*mesh->gjNq*mesh->gjNq;
-	int Nq = mesh->Nq;
+	iint Nq = mesh->Nq;
 	
 	double flops;
 	double bw;
@@ -137,22 +137,22 @@ void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory
 	MPI_Barrier(MPI_COMM_WORLD);
 	
 	double tic = MPI_Wtime();
-	int maxIterations = 3000;
+	iint maxIterations = 3000;
 	double AxTime;
 	
-	int iterations = massSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);
+	iint iterations = massSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);
 	
 	mesh->device.finish();
 	double toc = MPI_Wtime();
 	
 	double localElapsed = toc-tic;
-	int   localDofs = mesh->Np*mesh->Nelements;
+	iint   localDofs = mesh->Np*mesh->Nelements;
 	double globalElapsed;
-	int   globalDofs;
+	iint   globalDofs;
 	int    root = 0;
 	
 	MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
-	MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_int,   MPI_SUM, root, MPI_COMM_WORLD );
+	MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
 	
 	if(rank==root){
 		printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) \n",
@@ -204,20 +204,20 @@ int main(int argc, char **argv){
 	massSetupHex3D(mesh, kernelInfo);
 	
 	solver_t *solver = massSolveSetupHex3D(mesh, lambda, kernelInfo, options);
-	int Nall = (mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nelements+mesh->totalHaloPairs);
-	//int Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+	iint Nall = (mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nelements+mesh->totalHaloPairs);
+	//iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 	printf("Nall = %d, mesh->Np = %d mesh->Nelements = %d mesh->totalHaloPairs = %d \n", Nall, mesh->Np, mesh->Nelements, mesh->totalHaloPairs);
 	dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 	dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 	
 	// load rhs into r
-	for(int e=0;e<mesh->Nelements;++e){
-		for(int n=0;n<mesh->Np;++n){
+	for(iint e=0;e<mesh->Nelements;++e){
+		for(iint n=0;n<mesh->Np;++n){
 		
-			int ggid = e*mesh->Np*mesh->Nggeo + n;
+			iint ggid = e*mesh->Np*mesh->Nggeo + n;
 			dfloat wJ = mesh->ggeo[ggid+mesh->Np*GWJID];
 			
-			int   id = e*mesh->Np+n;
+			iint   id = e*mesh->Np+n;
 			dfloat xn = mesh->x[id];
 			dfloat yn = mesh->y[id];
 			dfloat zn = mesh->z[id];
@@ -241,9 +241,9 @@ int main(int argc, char **argv){
 	o_x.copyTo(mesh->q);
 	
 	dfloat maxError = 0;
-	for(int e=0;e<mesh->Nelements;++e){
-		for(int n=0;n<mesh->Np;++n){
-			int   id = e*mesh->Np+n;
+	for(iint e=0;e<mesh->Nelements;++e){
+		for(iint n=0;n<mesh->Np;++n){
+			iint   id = e*mesh->Np+n;
 			dfloat xn = mesh->x[id];
 			dfloat yn = mesh->y[id];
 			dfloat zn = mesh->z[id];

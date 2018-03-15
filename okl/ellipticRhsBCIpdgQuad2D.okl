@@ -17,7 +17,7 @@
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                    \
   if(bc>0) {                                                            \
-    const int  idM = vmapM[sk];                                        \
+    const iint  idM = vmapM[sk];                                        \
     ellipticBoundaryConditions2D(bc, t, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, qP, dqdxP, dqdyP); \
   }                                                                     \
                                                                         \
@@ -30,14 +30,14 @@
   }
 
 kernel void ellipticRhsBCIpdgQuad2D(const int Nelements,
-                                 const int * restrict vmapM,
+                                 const iint * restrict vmapM,
                                  const dfloat tau,
                                  const dfloat t,
                                  const dfloat * restrict x,
                                  const dfloat * restrict y,
                                  const dfloat * restrict vgeo,
                                  const dfloat * restrict sgeo,
-                                 const int   * restrict EToB,
+                                 const iint   * restrict EToB,
                                  const dfloat * restrict D,
                                  dfloat  * restrict rhs){
 
@@ -64,9 +64,9 @@ kernel void ellipticRhsBCIpdgQuad2D(const int Nelements,
     // loop over faces to add pseudo-gradient
 
     // face 0 & 2
-    for(int i=0;i<p_Nq;++i;inner0){
-      int sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i ;
-      int sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i ;
+    for(iint i=0;i<p_Nq;++i;inner0){
+      iint sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i ;
+      iint sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i ;
 
       surfaceTerms(sk0,0,i,0);
       surfaceTerms(sk2,2,i,p_Nq-1);
@@ -76,8 +76,8 @@ kernel void ellipticRhsBCIpdgQuad2D(const int Nelements,
 
     // face 1 & 3
     for(int j=0;j<p_Nq;++j;inner0){
-      int sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
-      int sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+      iint sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+      iint sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
       surfaceTerms(sk1,1,p_Nq-1,j);
       surfaceTerms(sk3,3,0,j);
@@ -120,7 +120,7 @@ kernel void ellipticRhsBCIpdgQuad2D(const int Nelements,
           ds += s_D[n][j]*s_dqdy[n][i];
         }
 
-        int id = e*p_Np + j*p_Nq + i;
+        iint id = e*p_Np + j*p_Nq + i;
         rhs[id] -= s_rhsq[j][i]  + dr + ds;
       }
     }

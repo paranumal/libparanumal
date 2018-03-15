@@ -35,8 +35,8 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
 
   // find node indices of vertex nodes
   dfloat NODETOL = 1e-6;
-  mesh->vertexNodes = (int*) calloc(mesh->Nverts, sizeof(int));
-  for(int n=0;n<mesh->Np;++n){
+  mesh->vertexNodes = (iint*) calloc(mesh->Nverts, sizeof(iint));
+  for(iint n=0;n<mesh->Np;++n){
     if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]+1)*(mesh->s[n]+1)<NODETOL)
       mesh->vertexNodes[0] = n;
     if( (mesh->r[n]-1)*(mesh->r[n]-1)+(mesh->s[n]+1)*(mesh->s[n]+1)<NODETOL)
@@ -68,9 +68,9 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
 
 
   fgets(buf, BUFSIZ, fp); // read comment
-  mesh->faceNodes = (int*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(int));
+  mesh->faceNodes = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
   for(int n=0;n<mesh->Nfaces*mesh->Nfp;++n){
-    fscanf(fp, intFormat, mesh->faceNodes+n);
+    fscanf(fp, iintFormat, mesh->faceNodes+n);
   }
   fgets(buf, BUFSIZ, fp);
 
@@ -84,7 +84,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   // read number of plot nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, intFormat, &(mesh->plotNp));
+  sscanf(buf, iintFormat, &(mesh->plotNp));
 
   // read plot node coordinates (hard code triangles)
   mesh->plotR = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
@@ -108,19 +108,19 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   // read number of elements in plot node triangulation
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, intFormat, &(mesh->plotNelements));
+  sscanf(buf, iintFormat, &(mesh->plotNelements));
 
   // read number of vertices per plot element
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, intFormat, &(mesh->plotNverts));
+  sscanf(buf, iintFormat, &(mesh->plotNverts));
 
   // build and read in plot node triangulation
-  mesh->plotEToV = (int*) calloc(mesh->plotNelements*mesh->plotNverts, sizeof(int));
+  mesh->plotEToV = (iint*) calloc(mesh->plotNelements*mesh->plotNverts, sizeof(iint));
   fgets(buf, BUFSIZ, fp); // read comment
   for(int n=0;n<mesh->plotNelements;++n){
     for(int m=0;m<mesh->plotNverts;++m){
-      fscanf(fp, intFormat, mesh->plotEToV+m + mesh->plotNverts*n);
+      fscanf(fp, iintFormat, mesh->plotEToV+m + mesh->plotNverts*n);
     }
     fgets(buf,BUFSIZ,fp); // rest of line
   }
@@ -128,7 +128,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   // read number of volume cubature nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, intFormat, &(mesh->cubNp));
+  sscanf(buf, iintFormat, &(mesh->cubNp));
 
   // read cub nodes and weights
   fgets(buf, BUFSIZ, fp); // read comment
@@ -184,7 +184,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   // read number of surface integration nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, intFormat, &(mesh->intNfp));
+  sscanf(buf, iintFormat, &(mesh->intNfp));
 
   // read surface intergration node interpolation matrix
   mesh->intInterp
@@ -227,23 +227,23 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   // sparse barycentric differentiation matrices
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); // read comment
-  mesh->D1ids = (int*) calloc(mesh->Np*3, sizeof(int));
+  mesh->D1ids = (iint*) calloc(mesh->Np*3, sizeof(iint));
   for (int n=0;n<mesh->Np*3;++n){
-    fscanf(fp, intFormat, mesh->D1ids+n);
+    fscanf(fp, iintFormat, mesh->D1ids+n);
   }
 
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); // read comment
-  mesh->D2ids = (int*) calloc(mesh->Np*3, sizeof(int));
+  mesh->D2ids = (iint*) calloc(mesh->Np*3, sizeof(iint));
   for (int n=0;n<mesh->Np*3;++n){
-    fscanf(fp, intFormat, mesh->D2ids+n);
+    fscanf(fp, iintFormat, mesh->D2ids+n);
   }
 
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); // read comment
-  mesh->D3ids = (int*) calloc(mesh->Np*3, sizeof(int));
+  mesh->D3ids = (iint*) calloc(mesh->Np*3, sizeof(iint));
   for (int n=0;n<mesh->Np*3;++n){
-    fscanf(fp, intFormat, mesh->D3ids+n);
+    fscanf(fp, iintFormat, mesh->D3ids+n);
   }
 
   fgets(buf, BUFSIZ, fp); // read comment
@@ -280,9 +280,9 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); // read comment
   mesh->max_EL_nnz = mesh->Nfp + 2;
-  mesh->ELids = (int*) calloc(mesh->Np*mesh->max_EL_nnz, sizeof(int));
+  mesh->ELids = (iint*) calloc(mesh->Np*mesh->max_EL_nnz, sizeof(iint));
   for (int n=0;n<mesh->Np*mesh->max_EL_nnz;++n){
-    fscanf(fp, intFormat, mesh->ELids+n);
+    fscanf(fp, iintFormat, mesh->ELids+n);
   }
 
   fgets(buf, BUFSIZ, fp); // read comment
@@ -296,9 +296,9 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); // read comment
   int Nfpp1 = N+2;
-  mesh->BBRaiseids = (int*) calloc(Nfpp1*2, sizeof(int));
+  mesh->BBRaiseids = (iint*) calloc(Nfpp1*2, sizeof(iint));
   for (int n=0;n<Nfpp1*2;++n){
-    fscanf(fp, intFormat, mesh->BBRaiseids+n);
+    fscanf(fp, iintFormat, mesh->BBRaiseids+n);
   }
 
   fgets(buf, BUFSIZ, fp); // read comment
@@ -350,9 +350,9 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   fgets(buf, BUFSIZ, fp); // read comment
 
   fgets(buf, BUFSIZ, fp); // read comment
-  mesh->rmapP = (int*) calloc(mesh->Np*mesh->Nfaces, sizeof(int));
+  mesh->rmapP = (iint*) calloc(mesh->Np*mesh->Nfaces, sizeof(iint));
   for(int n=0;n<mesh->Np*mesh->Nfaces;++n){
-    fscanf(fp, intFormat, mesh->rmapP+n);
+    fscanf(fp, iintFormat, mesh->rmapP+n);
   }
   fgets(buf, BUFSIZ, fp); // read comment
 
@@ -425,7 +425,7 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   mesh->FEMEToV = (int*) calloc(mesh->NelFEM*mesh->Nverts, sizeof(int));
   for(int n=0;n<mesh->NelFEM;++n){
     for(int m=0;m<mesh->Nverts;++m){
-      fscanf(fp, intFormat, mesh->FEMEToV+m + mesh->Nverts*n);
+      fscanf(fp, iintFormat, mesh->FEMEToV+m + mesh->Nverts*n);
     }
     fgets(buf,BUFSIZ,fp); // rest of line
   }

@@ -42,9 +42,9 @@ void meshBoltzmannSetup2D(mesh2D *mesh){
   dfloat q5bar = (rho*u*u - sigma11)/(sqrt(2.)*mesh->sqrtRT*mesh->sqrtRT);
   dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*mesh->sqrtRT*mesh->sqrtRT);
 
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
@@ -86,9 +86,9 @@ void meshBoltzmannSetup2D(mesh2D *mesh){
   // find elements with center inside PML zone
   dfloat xmin = -1, xmax = 6, xsigma = 0; // TW
   
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
     dfloat cx = 0, cy = 0;
-    for(int n=0;n<mesh->Nverts;++n){
+    for(iint n=0;n<mesh->Nverts;++n){
       cx += mesh->EX[e*mesh->Nverts+n];
     }
     cx /= mesh->Nverts;
@@ -102,10 +102,10 @@ void meshBoltzmannSetup2D(mesh2D *mesh){
 
   // set time step
   dfloat hmin = 1e9;
-  for(int e=0;e<mesh->Nelements;++e){  
+  for(iint e=0;e<mesh->Nelements;++e){  
 
-    for(int f=0;f<mesh->Nfaces;++f){
-      int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+    for(iint f=0;f<mesh->Nfaces;++f){
+      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -174,13 +174,13 @@ void meshBoltzmannSetup2D(mesh2D *mesh){
   }
 
   // find elements that have all neighbors on this process
-  int *internalElementIds = (int*) calloc(mesh->Nelements, sizeof(int));
-  int *notInternalElementIds = (int*) calloc(mesh->Nelements, sizeof(int));
+  iint *internalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+  iint *notInternalElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
 
-  int Ninterior = 0, NnotInterior = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    int flag = 0;
-    for(int f=0;f<mesh->Nfaces;++f)
+  iint Ninterior = 0, NnotInterior = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    iint flag = 0;
+    for(iint f=0;f<mesh->Nfaces;++f)
       if(mesh->EToP[e*mesh->Nfaces+f]!=-1)
 	flag = 1;
     if(!flag)
@@ -194,9 +194,9 @@ void meshBoltzmannSetup2D(mesh2D *mesh){
   mesh->NinternalElements = Ninterior;
   mesh->NnotInternalElements = NnotInterior;
   if(Ninterior>0)
-    mesh->o_internalElementIds    = mesh->device.malloc(Ninterior*sizeof(int), internalElementIds);
+    mesh->o_internalElementIds    = mesh->device.malloc(Ninterior*sizeof(iint), internalElementIds);
   if(NnotInterior>0)
-    mesh->o_notInternalElementIds = mesh->device.malloc(NnotInterior*sizeof(int), notInternalElementIds);
+    mesh->o_notInternalElementIds = mesh->device.malloc(NnotInterior*sizeof(iint), notInternalElementIds);
   
   // OCCA allocate device memory (remember to go back for halo)
   mesh->o_q =
@@ -247,15 +247,15 @@ void meshBoltzmannSetup2D(mesh2D *mesh){
 			mesh->sgeo);
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
 			mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
 			mesh->vmapP);
 
   mesh->o_EToB =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),
 			mesh->EToB);
 
   mesh->o_x =
@@ -269,7 +269,7 @@ void meshBoltzmannSetup2D(mesh2D *mesh){
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
     mesh->o_haloElementList =
-      mesh->device.malloc(mesh->totalHaloPairs*sizeof(int), mesh->haloElementList);
+      mesh->device.malloc(mesh->totalHaloPairs*sizeof(iint), mesh->haloElementList);
     
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
@@ -337,11 +337,11 @@ void meshBoltzmannSetup2D(mesh2D *mesh){
     kernelInfo.addDefine("dfloat8","double8");
   }
 
-  if(sizeof(int)==4){
-    kernelInfo.addDefine("int","int");
+  if(sizeof(iint)==4){
+    kernelInfo.addDefine("iint","int");
   }
-  if(sizeof(int)==8){
-    kernelInfo.addDefine("int","long long int");
+  if(sizeof(iint)==8){
+    kernelInfo.addDefine("iint","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA

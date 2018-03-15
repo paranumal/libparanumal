@@ -8,9 +8,9 @@ void acousticsRun3D(mesh3D *mesh){
 		     sizeof(dfloat));
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(int rk=0;rk<mesh->Nrk;++rk){
+    for(iint rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat time = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
@@ -42,21 +42,21 @@ void acousticsRun3D(mesh3D *mesh){
 void acousticsOccaRun3D(mesh3D *mesh){
 
   // MPI send buffer
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(int rk=0;rk<mesh->Nrk;++rk){
+    for(iint rk=0;rk<mesh->Nrk;++rk){
       // intermediate stage time
       dfloat time = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
       //printf("mesh->totalHaloPairs = %d\n",mesh->totalHaloPairs);
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
-	int Nentries = mesh->Np*mesh->Nfields;
+	iint Nentries = mesh->Np*mesh->Nfields;
 	
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
@@ -143,7 +143,7 @@ void acousticsOccaRun3D(mesh3D *mesh){
       acousticsError3D(mesh, mesh->dt*(tstep+1));
 
       // output field files
-      int fld = 2;
+      iint fld = 2;
       meshPlotVTU3D(mesh, "foo", fld);
     }
   }
@@ -181,11 +181,11 @@ void acousticsTimeWadg3D(mesh3D *mesh){
     kernelInfo.addDefine("dfloat4","double4");
   }
 
-  if(sizeof(int)==4){
-    kernelInfo.addDefine("int","int");
+  if(sizeof(iint)==4){
+    kernelInfo.addDefine("iint","int");
   }
-  if(sizeof(int)==8){
-    kernelInfo.addDefine("int","long long int");
+  if(sizeof(iint)==8){
+    kernelInfo.addDefine("iint","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
@@ -199,7 +199,7 @@ void acousticsTimeWadg3D(mesh3D *mesh){
 
   
   dfloat * invMc = (dfloat*) calloc(mesh->Np*mesh->Np*mesh->Nelements,sizeof(dfloat));  
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
     for (int j = 0; j < mesh->Np; ++j){
       for (int i = 0; i < mesh->Np; ++i){
 	// store arbitrary values for testing
@@ -226,7 +226,7 @@ void acousticsTimeWadg3D(mesh3D *mesh){
   double wadgTime = 0.0, massInvTime = 0.0;
   
   int Nsteps = 10;
-  for(int i = 0; i < Nsteps; ++i){
+  for(iint i = 0; i < Nsteps; ++i){
 
     clock_t begin = clock();
     

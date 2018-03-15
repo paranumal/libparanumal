@@ -1,11 +1,11 @@
 #include "boltzmann3D.h"
 
 // complete a time step using LSERK4
-void boltzmannLsimexStep3D(mesh3D *mesh, int tstep, int haloBytes,
+void boltzmannLsimexStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
 				   dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
-  for(int k=0;k<mesh->Nimex;++k)
+  for(iint k=0;k<mesh->Nimex;++k)
     {
 
       // intermediate stage time
@@ -117,7 +117,7 @@ void boltzmannLsimexStep3D(mesh3D *mesh, int tstep, int haloBytes,
 
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
-	int Nentries = mesh->Np*mesh->Nfields;
+	iint Nentries = mesh->Np*mesh->Nfields;
       
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,

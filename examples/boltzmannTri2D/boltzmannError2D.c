@@ -21,13 +21,13 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
       
       fprintf(fp, "%2d %.4e %4e ", mesh->N, mesh->Re, time); 
 
-      for(int p=0; p<mesh->probeN; p++){
-         int pid  = mesh->probeIds[p];
-         int e    = mesh->probeElementIds[p];        
+      for(iint p=0; p<mesh->probeN; p++){
+         iint pid  = mesh->probeIds[p];
+         iint e    = mesh->probeElementIds[p];        
          dfloat srho = 0.0; 
          dfloat su = 0.0; 
          dfloat sv = 0.0; 
-         for(int n=0; n<mesh->Np; n++){
+         for(iint n=0; n<mesh->Np; n++){
           dfloat rho  = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0];
           dfloat um   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1]*mesh->sqrtRT/rho;
           dfloat vm   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 2]*mesh->sqrtRT/rho;
@@ -59,46 +59,46 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
 
 
 
-    int rank, size;
+    iint rank, size;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    int root = 0; // root rank
+    iint root = 0; // root rank
     
-    int probeNfields = 3; // rho, u, v
+    iint probeNfields = 3; // rho, u, v
     
     dfloat *probeData   = (dfloat *) malloc(mesh->probeN*probeNfields*sizeof(dfloat)); 
     dfloat *recvData    = (dfloat *) malloc(mesh->probeNTotal*probeNfields*sizeof(dfloat));
-    int   *recvcount   = (int   *) malloc(size*sizeof(int));
-    int   *recvdisp    = (int   *) malloc(size*sizeof(int));
-    int   *probeIds    = (int   *) malloc(mesh->probeNTotal*sizeof(int)); 
+    iint   *recvcount   = (iint   *) malloc(size*sizeof(iint));
+    iint   *recvdisp    = (iint   *) malloc(size*sizeof(iint));
+    iint   *probeIds    = (iint   *) malloc(mesh->probeNTotal*sizeof(iint)); 
     
     // Collect number of probes on the root  
-    MPI_Gather(&(mesh->probeN), 1, MPI_int, recvcount, 1, MPI_int, root, MPI_COMM_WORLD);
+    MPI_Gather(&(mesh->probeN), 1, MPI_IINT, recvcount, 1, MPI_IINT, root, MPI_COMM_WORLD);
     
     if(rank==root){
     recvdisp[0]= 0;  
-      for(int i=1; i<size; ++i){
+      for(iint i=1; i<size; ++i){
             recvdisp[i]   = recvdisp[i-1] + recvcount[i-1]; 
           //printf("%d %d \n", recvcount[i], recvdisp[i]);
       }
     }
 
     // Collect probe ids
-    MPI_Gatherv(mesh->probeIds, mesh->probeN, MPI_int, probeIds, recvcount, recvdisp, MPI_int, root, MPI_COMM_WORLD);
+    MPI_Gatherv(mesh->probeIds, mesh->probeN, MPI_IINT, probeIds, recvcount, recvdisp, MPI_IINT, root, MPI_COMM_WORLD);
 
     // if(rank==0){
-    //   for(int id=0; id<mesh->probeNTotal; id++){
+    //   for(iint id=0; id<mesh->probeNTotal; id++){
     //     printf("id: %d  ProbeId: %d \n", id, probeIds[id]);
     //   }
     // }
 
     // // Sort Probe Ids such that probes are ardered in ascending order
 
-    // int *probeIndex = (int *) malloc(2*mesh->probeNTotal*sizeof(int));
+    // iint *probeIndex = (iint *) malloc(2*mesh->probeNTotal*sizeof(iint));
 
-    // for(int id=0; id<mesh->probeNTotal; id++){
+    // for(iint id=0; id<mesh->probeNTotal; id++){
     // probeIndex
 
 
@@ -108,7 +108,7 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
     
     if(rank==root){
     recvdisp[0]= 0;  
-      for(int i=0; i<size; ++i){
+      for(iint i=0; i<size; ++i){
         recvcount[i] *=probeNfields;
           if(i>0)
             recvdisp[i]   = recvdisp[i-1] + recvcount[i-1]; 
@@ -119,13 +119,13 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
   
     // fill probe Data
     if(mesh->probeN){
-      for(int p=0; p<mesh->probeN; p++){
-        int pid  = mesh->probeIds[p];
-        int e    = mesh->probeElementIds[p];        
+      for(iint p=0; p<mesh->probeN; p++){
+        iint pid  = mesh->probeIds[p];
+        iint e    = mesh->probeElementIds[p];        
         dfloat sr = 0.0; 
         dfloat su = 0.0; 
         dfloat sv = 0.0; 
-        for(int n=0; n<mesh->Np; n++){
+        for(iint n=0; n<mesh->Np; n++){
           dfloat rho  = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0];
           dfloat um   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1]*mesh->sqrtRT/rho;
           dfloat vm   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 2]*mesh->sqrtRT/rho;
@@ -153,7 +153,7 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
       fp = fopen(fname, "a");      
 
       fprintf(fp, "%4e ", time); 
-      for(int p=0; p<mesh->probeNTotal; p++){
+      for(iint p=0; p<mesh->probeNTotal; p++){
         fprintf(fp, "%02d %.8e %.8e %.8e ", probeIds[p],recvData[p*probeNfields+0], 
                                                         recvData[p*probeNfields+1],
                                                         recvData[p*probeNfields+2]);
@@ -173,11 +173,11 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
  if(strstr(options, "PML")){
 
     dfloat maxQ1 = 0, minQ1 = 1e9;
-    int fid = 0; //  
-    for(int e=0;e<mesh->Nelements;++e){
+    iint fid = 0; //  
+    for(iint e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->Np;++n){
         dfloat q1=0;
-        int id = n+e*mesh->Np;
+        iint id = n+e*mesh->Np;
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
 
@@ -208,22 +208,22 @@ else{
     // Coutte Flow exact solution for U velocity
 
     dfloat maxerr = 0, maxQ1 = 0, minQ1 = 1e9;
-    int fid = 1; 
+    iint fid = 1; 
 
     dfloat Uref        =  mesh->Ma*mesh->sqrtRT;
     dfloat nu = mesh->sqrtRT*mesh->sqrtRT/mesh->tauInv;
 
-    for(int e=0;e<mesh->Nelements;++e){
-      for(int n=0;n<mesh->Np;++n){
+    for(iint e=0;e<mesh->Nelements;++e){
+      for(iint n=0;n<mesh->Np;++n){
         dfloat q1=0;
-        int id = n+e*mesh->Np;
+        iint id = n+e*mesh->Np;
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
         // U = sqrt(RT)*Q2/Q1; 
        dfloat u   = mesh->sqrtRT*mesh->q[id*mesh->Nfields + 1]/mesh->q[id*mesh->Nfields+0];
  
         dfloat uex = y ; 
-        for(int k=1; k<=10; k++)
+        for(iint k=1; k<=10; k++)
         {
 
          dfloat lamda = k*M_PI;
@@ -262,13 +262,13 @@ else{
       
       #if 1
 
-    int fld = 2;
-    int tstep = (time-mesh->startTime)/mesh->dt;
+    iint fld = 2;
+    iint tstep = (time-mesh->startTime)/mesh->dt;
     char errname[BUFSIZ];
     sprintf(errname, "LSERK_err_long_%04d_%04d.vtu", rank, (tstep/mesh->errorStep));
     meshPlotVTU2D(mesh, errname,fld);
       
-    int tmethod = 0; 
+    iint tmethod = 0; 
     if(strstr(options,"LSERK"))
       tmethod = 1;
     if(strstr(options,"SRAB"))

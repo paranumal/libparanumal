@@ -4,7 +4,7 @@ kernel void dotDivide(const int N,
 		      const dfloat * restrict w,
 		      dfloat * restrict viw){
   
-  for(int n=0;n<N;++n;tile(256)){
+  for(iint n=0;n<N;++n;tile(256)){
     if(n<N){
       viw [n] = v[n]/w[n];
     }

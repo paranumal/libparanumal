@@ -9,7 +9,7 @@ void meshSurfaceGeometricFactorsTriP2D(mesh2D *mesh){
   mesh->Nsgeo = 4;
   mesh->sgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nsgeo*mesh->Nfaces, sizeof(dfloat));
   
-  for(int e=0;e<mesh->Nelements;++e){ /* for each element */
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
     int id = e*mesh->Nverts;

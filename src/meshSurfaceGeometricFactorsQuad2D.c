@@ -12,20 +12,20 @@ void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
 				mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
   
-  for(int e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
+  for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
-    int id = e*mesh->Nverts;
+    iint id = e*mesh->Nverts;
 
     dfloat *xe = mesh->EX + id;
     dfloat *ye = mesh->EY + id;
     
-    for(int f=0;f<mesh->Nfaces;++f){ // for each face
+    for(iint f=0;f<mesh->Nfaces;++f){ // for each face
       
-      for(int i=0;i<mesh->Nfp;++i){  // for each node on face
+      for(iint i=0;i<mesh->Nfp;++i){  // for each node on face
 
 	/* volume index of face node */
-	int n = mesh->faceNodes[f*mesh->Nfp+i];
+	iint n = mesh->faceNodes[f*mesh->Nfp+i];
 
 	/* local node coordinates */
 	dfloat rn = mesh->r[n]; 
@@ -46,7 +46,7 @@ void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
 	dfloat  d = norm(nx,ny);
 
 	/* output index */
-	int base = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + mesh->Nfp*f + i);
+	iint base = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + mesh->Nfp*f + i);
 
 	/* store normal, surface Jacobian, and reciprocal of volume Jacobian */
 	mesh->sgeo[base+NXID] = nx/d;
@@ -59,10 +59,10 @@ void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
     }
   }
 
-  for(int e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
-    for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
-      int baseM = e*mesh->Nfp*mesh->Nfaces + n;
-      int baseP = mesh->mapP[baseM];
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
+    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+      iint baseM = e*mesh->Nfp*mesh->Nfaces + n;
+      iint baseP = mesh->mapP[baseM];
       if(baseP<0) baseP = baseM;
       
       // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)

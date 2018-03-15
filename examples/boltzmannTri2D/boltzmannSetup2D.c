@@ -6,7 +6,7 @@
 
 void boltzmannSetup2D(mesh2D *mesh, char * options){
 
-  int rank, size;
+  iint rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
@@ -109,14 +109,14 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   dfloat *EtoDT       = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
 
   //Set time step size
-  for(int e=0;e<mesh->Nelements;++e)
+  for(iint e=0;e<mesh->Nelements;++e)
   { 
     dfloat hmin = 1e9, dtmax = 1e9;
     
     EtoDT[e] = dtmax;
 
-    for(int f=0;f<mesh->Nfaces;++f){
-      int sid    = mesh->Nsgeo*(mesh->Nfaces*e + f);
+    for(iint f=0;f<mesh->Nfaces;++f){
+      iint sid    = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
      
@@ -147,7 +147,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
  
   // Set multiRate/singleRate element groups/group  
   if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
-    int maxLevels = 100;
+    iint maxLevels = 100;
     meshMRABSetup2D(mesh,EtoDT,maxLevels);
   }
   else{    
@@ -165,8 +165,8 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     mesh->nonPmlNelements = mesh->Nelements; 
     mesh->pmlNelements    = 0; 
 
-    mesh->nonPmlElementIds = (int*) calloc(mesh->Nelements, sizeof(int));
-    for(int e=0;e<mesh->Nelements;++e)
+    mesh->nonPmlElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+    for(iint e=0;e<mesh->Nelements;++e)
      mesh->nonPmlElementIds[e] = e; 
   }
    
@@ -205,9 +205,9 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
 
  // INITIALIZE PROBLEM 
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
@@ -215,7 +215,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
       // Couette Flow 
       dfloat uex = y ; 
       dfloat sex = 0.0; 
-      for(int k=1; k<=10; k++){
+      for(iint k=1; k<=10; k++){
         dfloat lamda = k*M_PI;
         // dfloat coef = -mesh->RT*mesh->tauInv/2. + sqrt(pow((mesh->RT*mesh->tauInv),2) /4.0 - (lamda*lamda*mesh->RT*mesh->RT));
         dfloat coef = -mesh->tauInv/2. + mesh->tauInv/2. * sqrt(1. - 4.*pow(1./ mesh->tauInv, 2)* mesh->RT*lamda*lamda);
@@ -315,12 +315,12 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
     mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    for (int lev=0;lev<mesh->MRABNlevels;lev++) {
+    for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
       if (mesh->MRABNelements[lev])
-        mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(int),
+        mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
         mesh->MRABelementIds[lev]);
       if (mesh->MRABNhaloElements[lev])
-        mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(int),
+        mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
         mesh->MRABhaloIds[lev]);
     }
   } 
@@ -329,7 +329,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
    boltzmannPmlSetup2D(mesh, options); 
 
     if (mesh->nonPmlNelements)
-        mesh->o_nonPmlElementIds = mesh->device.malloc(mesh->nonPmlNelements*sizeof(int), mesh->nonPmlElementIds);
+        mesh->o_nonPmlElementIds = mesh->device.malloc(mesh->nonPmlNelements*sizeof(iint), mesh->nonPmlElementIds);
 
   }
   
@@ -337,20 +337,20 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
 #if 0
 mesh2D *meshsave = mesh;
-int fld = 0; 
-  for(int lev=0; lev<mesh->MRABNlevels; lev++){
+iint fld = 0; 
+  for(iint lev=0; lev<mesh->MRABNlevels; lev++){
 
-        for(int m=0; m<mesh->MRABNelements[lev]; m++){
-          int e = mesh->MRABelementIds[lev][m];
-          for(int n=0; n<mesh->Np; n++){
+        for(iint m=0; m<mesh->MRABNelements[lev]; m++){
+          iint e = mesh->MRABelementIds[lev][m];
+          for(iint n=0; n<mesh->Np; n++){
              mesh->q[mesh->Nfields*(n + e*mesh->Np) + fld] = lev;
           }
         }
 
 
-        for(int m=0; m<mesh->MRABpmlNelements[lev]; m++){
-          int e = mesh->MRABpmlElementIds[lev][m];
-          for(int n=0; n<mesh->Np; n++){
+        for(iint m=0; m<mesh->MRABpmlNelements[lev]; m++){
+          iint e = mesh->MRABpmlElementIds[lev][m];
+          for(iint n=0; n<mesh->Np; n++){
              mesh->q[mesh->Nfields*(n + e*mesh->Np) + fld] = lev;
           }
         }
@@ -371,7 +371,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
    strstr(options,"SRAB")   || strstr(options,"SAAB") ){
 
 
-  int Nlevels = 0;
+  iint Nlevels = 0;
 
   if(mesh->MRABNlevels==0)
     Nlevels =1;
@@ -379,10 +379,10 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
     Nlevels = mesh->MRABNlevels;
 
   
-  const int Nr = 32; 
+  const iint Nr = 32; 
   dfloat complex R[Nr]; 
 
-  for(int ind =1; ind <= Nr; ++ind){
+  for(iint ind =1; ind <= Nr; ++ind){
     const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr; 
     R[ind-1] = cexp(I*M_PI* theta);
   }
@@ -395,24 +395,24 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
   mesh->MRAB_B   = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
   mesh->MRAB_C   = (dfloat *) calloc(    Nlevels,sizeof(dfloat));
 
-  int MRABorder = 3; 
+  iint MRABorder = 3; 
 
-  for(int l = 0; l<Nlevels; ++l){
+  for(iint l = 0; l<Nlevels; ++l){
     // MRSAAB coefficients
     dfloat alpha = -mesh->tauInv*mesh->dt*pow(2,l);
     //dfloat alpha=0.0;
     dfloat h  = mesh->dt * pow(2,l); 
     //
-    for (int order=0; order<3; ++order){
+    for (iint order=0; order<3; ++order){
       // computation of coefficients based on magnitude
-      const int id = order*Nlevels*3 + l*3;
+      const iint id = order*Nlevels*3 + l*3;
 
       if(order==0){
 
         double complex a1 = 0. + 0.* I; 
         double complex b1 = 0. + 0.* I; 
 
-        for(int i = 0; i<Nr; ++i ){
+        for(iint i = 0; i<Nr; ++i ){
           double complex lr = alpha  + R[i];
           a1 +=  h*(cexp(lr) - 1.)/lr;
           b1 +=  h*(cexp(lr/2.) - 1.)/lr;
@@ -443,7 +443,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
         double complex a2 = 0. + 0.* I; 
         double complex b2 = 0. + 0.* I; 
         
-        for(int i = 0; i<Nr; ++i ){
+        for(iint i = 0; i<Nr; ++i ){
         double complex lr = alpha  + R[i];
           a1 +=  h*(-2.*lr + (1.+lr)*cexp(lr) - 1.)/cpow(lr,2);
           a2 +=  h*(lr - cexp(lr) + 1.)/cpow(lr,2);
@@ -478,7 +478,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
         double complex a3 = 0. + 0.* I; 
         double complex b3 = 0. + 0.* I; 
 
-        for(int i = 0; i<Nr; ++i ){
+        for(iint i = 0; i<Nr; ++i ){
           double complex lr = alpha  + R[i];
           a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
           a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
@@ -539,7 +539,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
 
     mesh->o_fQM = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
     mesh->fQM);
-    mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int), mesh->mapP);
+    mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint), mesh->mapP);
   }
 
 
@@ -578,9 +578,9 @@ if(strstr(options, "SARK")){
 
     printf("alpha = %.16e\t h= %.16e\t coef=%.16e \n", alpha,mesh->dt, -mesh->tauInv);
 
-     const int Nr = 32;   dfloat complex R[Nr]; 
+     const iint Nr = 32;   dfloat complex R[Nr]; 
 
-    for(int ind =1; ind <= Nr; ++ind){
+    for(iint ind =1; ind <= Nr; ++ind){
       const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr; 
       R[ind-1] = cexp(I*M_PI* theta);
     }
@@ -592,7 +592,7 @@ if(strstr(options, "SARK")){
     double complex ca32 = 0. + 0.* I; 
     double complex cb3  = 0. + 0.* I; 
 
-        for(int i = 0; i<Nr; ++i ){
+        for(iint i = 0; i<Nr; ++i ){
         complex lr = alpha  + R[i];
           ca21 +=  (cexp(lr/2.) - 1.)/lr; 
           ca31 += -1.0*(cexp(lr)-1.0)/lr; 
@@ -1096,22 +1096,22 @@ else if(strstr(options, "LSIMEX")){
 //   dfloat cxsigma = 80, cysigma = 80; // For Constant  Pml Profile
 
     
-//   int *pmlElementIds = (int*) calloc(mesh->Nelements, sizeof(int));
-//   int *nonPmlElementIds = (int*) calloc(mesh->Nelements, sizeof(int));
-//   int pmlNelements = 0;
-//   int nonPmlNelements = 0;
-//   for(int e=0;e<mesh->Nelements;++e){
+//   iint *pmlElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+//   iint *nonPmlElementIds = (iint*) calloc(mesh->Nelements, sizeof(iint));
+//   iint pmlNelements = 0;
+//   iint nonPmlNelements = 0;
+//   for(iint e=0;e<mesh->Nelements;++e){
 //     dfloat cx = 0, cy = 0;
-//     for(int n=0;n<mesh->Nverts;++n){
+//     for(iint n=0;n<mesh->Nverts;++n){
 //       cx += mesh->EX[e*mesh->Nverts+n];
 //       cy += mesh->EY[e*mesh->Nverts+n];
 //     }
 //     cx /= mesh->Nverts;
 //     cy /= mesh->Nverts;
     
-//    int isPml = 0;
+//    iint isPml = 0;
     
-// for(int n=0;n<mesh->Np;++n){
+// for(iint n=0;n<mesh->Np;++n){
 //   dfloat x = mesh->x[n + e*mesh->Np];
 //   dfloat y = mesh->y[n + e*mesh->Np];
 //       //      if(cx<xmax+1 && cx>xmin-1 && cy<ymax+1 && cy>ymin-1){
@@ -1174,12 +1174,12 @@ else if(strstr(options, "LSIMEX")){
 
 //   // set time step
 //   dfloat hmin = 1e9, hmax = 0;
-//   for(int e=0;e<mesh->Nelements;++e){ 
+//   for(iint e=0;e<mesh->Nelements;++e){ 
 
 //     //printf("global index: %d  pml = %d and Nonpml= %d\n",e, pmlElementIds[e], nonPmlElementIds[e]); 
 
-//     for(int f=0;f<mesh->Nfaces;++f){
-//       int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+//     for(iint f=0;f<mesh->Nfaces;++f){
+//       iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
 //       dfloat sJ   = mesh->sgeo[sid + SJID];
 //       dfloat invJ = mesh->sgeo[sid + IJID];
      
@@ -1568,11 +1568,11 @@ else if(strstr(options, "LSIMEX")){
 
 //   if(mesh->nonPmlNelements)
 //     mesh->o_nonPmlElementIds = 
-//       mesh->device.malloc(nonPmlNelements*sizeof(int), nonPmlElementIds);
+//       mesh->device.malloc(nonPmlNelements*sizeof(iint), nonPmlElementIds);
 
 //   if(mesh->pmlNelements)
 //     mesh->o_pmlElementIds = 
-//       mesh->device.malloc(pmlNelements*sizeof(int), pmlElementIds);
+//       mesh->device.malloc(pmlNelements*sizeof(iint), pmlElementIds);
 
 //   // specialization for Boltzmann
 

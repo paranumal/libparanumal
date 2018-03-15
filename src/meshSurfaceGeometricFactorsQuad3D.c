@@ -22,7 +22,7 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 
   dfloat *J  = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   
-  for(int e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
+  for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
 
     for(int j=0;j<mesh->Nq;++j){
       for(int i=0;i<mesh->Nq;++i){

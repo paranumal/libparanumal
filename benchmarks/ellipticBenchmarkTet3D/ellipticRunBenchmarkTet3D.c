@@ -45,7 +45,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 	
   char testkernelName[BUFSIZ];
   occa::kernel testKernel;
-  for(int i=0; i<NKernels; i++) {
+  for(iint i=0; i<NKernels; i++) {
 	
     sprintf(testkernelName, "%s_v%d", kernelName,  i);
     printf("%s Kernel #%03d\n", kernelFileName, i);
@@ -181,8 +181,8 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       NbytesGlobal  = sizeof(dfloat)*2*mesh->Nfaces*mesh->Nfp;  //trace data
       NbytesGlobal += sizeof(dfloat)*5*mesh->Nfaces;            //sgeo factors
       NbytesGlobal += sizeof(dfloat)*(3+3)*mesh->Np;            //read + write rhs
-      NbytesGlobal += sizeof(int)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
-      NbytesGlobal += sizeof(int)*mesh->Nfaces;                //EToB flag
+      NbytesGlobal += sizeof(iint)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
+      NbytesGlobal += sizeof(iint)*mesh->Nfaces;                //EToB flag
 					
       NbytesCacheMiss  = sizeof(dfloat)*mesh->Np*mesh->Nfaces*mesh->Nfp; //LIFT
       NbytesCacheMiss -= L1CacheSize; //L1 cache size
@@ -209,8 +209,8 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       NbytesGlobal  = sizeof(dfloat)*8*mesh->Nfaces*mesh->Nfp;  //trace data
       NbytesGlobal += sizeof(dfloat)*5*mesh->Nfaces;            //sgeo factors
       NbytesGlobal += sizeof(dfloat)*(2+1)*mesh->Np;            //read q + Aq and write Aq
-      NbytesGlobal += sizeof(int)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
-      NbytesGlobal += sizeof(int)*mesh->Nfaces;                //EToB flag
+      NbytesGlobal += sizeof(iint)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
+      NbytesGlobal += sizeof(iint)*mesh->Nfaces;                //EToB flag
 					
       NbytesCacheMiss  = sizeof(dfloat)*mesh->Np*mesh->Nfaces*mesh->Nfp; //LIFT
       NbytesCacheMiss += sizeof(dfloat)*mesh->Np*mesh->Np; // MM
@@ -231,7 +231,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       NbytesGlobal += sizeof(dfloat)*3*mesh->Np;   //write grad
 					
       NbytesCacheMiss  = sizeof(dfloat)*4*mesh->Np; //Dvals
-      NbytesCacheMiss += sizeof(int)*4*4*mesh->Np; //D0ids D1ids D2ids D3ids
+      NbytesCacheMiss += sizeof(iint)*4*4*mesh->Np; //D0ids D1ids D2ids D3ids
       NbytesCacheMiss -= L1CacheSize; //L1 cache size
 					
       NbytesShared  = sizeof(dfloat)*1*mesh->Np;       //load of volume data to shared
@@ -246,7 +246,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 
       // TW need to revisit
       NbytesCacheMiss  = sizeof(dfloat)*4*mesh->Np; //Dvals
-      NbytesCacheMiss += sizeof(int)*4*mesh->Np;   //D0ids
+      NbytesCacheMiss += sizeof(iint)*4*mesh->Np;   //D0ids
       NbytesCacheMiss += sizeof(char)*4*3*mesh->Np;   // D1ids D2ids D3ids
       NbytesCacheMiss -= L1CacheSize; //L1 cache size
       NbytesCacheMiss = 0;
@@ -264,13 +264,13 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       NbytesGlobal  = sizeof(dfloat)*2*mesh->Nfaces*mesh->Nfp;  //trace data
       NbytesGlobal += sizeof(dfloat)*5*mesh->Nfaces;            //sgeo factors
       NbytesGlobal += sizeof(dfloat)*(3+3)*mesh->Np;            //read + write rhs
-      NbytesGlobal += sizeof(int)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
-      NbytesGlobal += sizeof(int)*mesh->Nfaces;                //EToB flag
+      NbytesGlobal += sizeof(iint)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
+      NbytesGlobal += sizeof(iint)*mesh->Nfaces;                //EToB flag
 					
       NbytesCacheMiss  = sizeof(dfloat)*mesh->Nfp*7;               //L0vals
-      NbytesCacheMiss += sizeof(int)*mesh->Nfp*7;                 //L0ids
+      NbytesCacheMiss += sizeof(iint)*mesh->Nfp*7;                 //L0ids
       NbytesCacheMiss += sizeof(dfloat)*mesh->Np*mesh->max_EL_nnz; //ELvals
-      NbytesCacheMiss += sizeof(int)*mesh->Np*mesh->max_EL_nnz;   //ELids
+      NbytesCacheMiss += sizeof(iint)*mesh->Np*mesh->max_EL_nnz;   //ELids
       NbytesCacheMiss -= L1CacheSize; //L1 cache size
 					
       NbytesShared  = sizeof(dfloat)*3*mesh->Nfp*mesh->Nfaces;     //store of fluxes
@@ -287,7 +287,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       NbytesGlobal += sizeof(dfloat)*1*mesh->Np;   //write Aq
 					
       NbytesCacheMiss  = sizeof(dfloat)*4*mesh->Np; //Dvals
-      NbytesCacheMiss += sizeof(int)*4*4*mesh->Np; //D0ids D1ids D2ids D3ids
+      NbytesCacheMiss += sizeof(iint)*4*4*mesh->Np; //D0ids D1ids D2ids D3ids
       NbytesCacheMiss -= L1CacheSize; //L1 cache size
 					
       NbytesShared  = sizeof(dfloat)*3*mesh->Np;       //load of volume data to shared
@@ -299,13 +299,13 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       NbytesGlobal  = sizeof(dfloat)*8*mesh->Nfaces*mesh->Nfp;  //trace data
       NbytesGlobal += sizeof(dfloat)*5*mesh->Nfaces;            //sgeo factors
       NbytesGlobal += sizeof(dfloat)*(2+1)*mesh->Np;            //read q + Aq and write Aq
-      NbytesGlobal += sizeof(int)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
-      NbytesGlobal += sizeof(int)*mesh->Nfaces;                //EToB flag
+      NbytesGlobal += sizeof(iint)*2*mesh->Nfaces*mesh->Nfp;    //vmapM and vmapP
+      NbytesGlobal += sizeof(iint)*mesh->Nfaces;                //EToB flag
 					
       NbytesCacheMiss  = sizeof(dfloat)*mesh->Nfp*7;               //L0vals
-      NbytesCacheMiss += sizeof(int)*mesh->Nfp*7;                 //L0ids
+      NbytesCacheMiss += sizeof(iint)*mesh->Nfp*7;                 //L0ids
       NbytesCacheMiss += sizeof(dfloat)*mesh->Np*mesh->max_EL_nnz; //ELvals
-      NbytesCacheMiss += sizeof(int)*mesh->Np*mesh->max_EL_nnz;   //ELids
+      NbytesCacheMiss += sizeof(iint)*mesh->Np*mesh->max_EL_nnz;   //ELids
       NbytesCacheMiss += sizeof(dfloat)*mesh->Np*mesh->Np; // MM
       NbytesCacheMiss -= L1CacheSize; //L1 cache size
 					

@@ -20,15 +20,15 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
 
   //find all elements within a certain distance from the source point, 
   // and find the element which contains the source point
-  int sourceId = -1;
+  iint sourceId = -1;
   mesh->sourceNelements = 0;
   mesh->MRABsourceNelements = (int *) calloc(mesh->MRABNlevels,sizeof(int));
 
   int *patchFlag = (int *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(int));
 
   dfloat mindist = 1e9;
-  for (int e=0;e<mesh->Nelements;e++) {
-    int id = e*mesh->Nverts;
+  for (iint e=0;e<mesh->Nelements;e++) {
+    iint id = e*mesh->Nverts;
 
     dfloat x1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat x2 = mesh->EX[id+1];
@@ -52,7 +52,7 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
     }
 
     //find the cubature node which is closest to the source point and use the c2 from that node
-    for(int n=0;n<mesh->cubNp;++n){
+    for(iint n=0;n<mesh->cubNp;++n){
       // cubature node coordinates
       dfloat rn = mesh->cubr[n];
       dfloat sn = mesh->cubs[n];
@@ -83,17 +83,17 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
   }
 
   //create the element list and flag interfaces 
-  mesh->sourceElements = (int*) calloc(mesh->sourceNelements,sizeof(int));
+  mesh->sourceElements = (iint*) calloc(mesh->sourceNelements,sizeof(iint));
 
-  int cnt = 0;
-  for (int e=0;e<mesh->Nelements;e++) {
+  iint cnt = 0;
+  for (iint e=0;e<mesh->Nelements;e++) {
     if (patchFlag[e]==1) {
       //record this element
       mesh->sourceElements[cnt++] = e;
 
       //this element is in the patch. Check the neighbours
-      for (int f=0;f<mesh->Nfaces;f++) {
-        int eP = mesh->EToE[e*mesh->Nfaces + f];
+      for (iint f=0;f<mesh->Nfaces;f++) {
+        iint eP = mesh->EToE[e*mesh->Nfaces + f];
 
         int flagP =1;
         if (eP >-1) flagP = patchFlag[eP];
@@ -103,8 +103,8 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
       }
     } else {
       //this element isnt in the patch. Check the neighbours
-      for (int f=0;f<mesh->Nfaces;f++) {
-        int eP = mesh->EToE[e*mesh->Nfaces + f];
+      for (iint f=0;f<mesh->Nfaces;f++) {
+        iint eP = mesh->EToE[e*mesh->Nfaces + f];
 
         int flagP =0;
         if (eP >-1) flagP = patchFlag[eP];

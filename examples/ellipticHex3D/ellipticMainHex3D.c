@@ -40,18 +40,18 @@ int main(int argc, char **argv){
 
   solver_t *solver = ellipticSolveSetupHex3D(mesh, lambda, kernelInfo, options);
 
-  int Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 
   // load rhs into r
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
 
-      int ggid = e*mesh->Np*mesh->Nggeo + n;
+      iint ggid = e*mesh->Np*mesh->Nggeo + n;
       dfloat wJ = mesh->ggeo[ggid+mesh->Np*GWJID];
 
-      int   id = e*mesh->Np+n;
+      iint   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];
@@ -74,9 +74,9 @@ int main(int argc, char **argv){
   o_x.copyTo(mesh->q);
 
   dfloat maxError = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      int   id = e*mesh->Np+n;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      iint   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];

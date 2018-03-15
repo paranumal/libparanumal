@@ -13,8 +13,8 @@
 #define p_Nq2 (p_Nq*p_Nq)
 #define p_gjNp (p_gjNq*p_gjNq*p_gjNq)
 
-kernel void massPartialAxHex3D_v1(const int Nelements,
-                                  const int * restrict elementList,
+kernel void massPartialAxHex3D_v1(const iint Nelements,
+                                  const iint * restrict elementList,
                                   const dfloat * restrict gjGeo,
                                   const dfloat * restrict gjI,
                                   const dfloat * restrict q,
@@ -31,7 +31,7 @@ kernel void massPartialAxHex3D_v1(const int Nelements,
 		shared dfloat s_q1[p_gjNq][p_gjNq+p_gjPad];
 		shared dfloat s_q2[p_gjNq][p_gjNq+p_gjPad];
 		
-		exclusive int emap;
+		exclusive iint emap;
 		
 		// prefetch D and I matrices and zero register storage
 		for(int b=0;b<p_gjNq;++b;inner1){
@@ -160,7 +160,7 @@ kernel void massPartialAxHex3D_v1(const int Nelements,
 				if(a<p_Nq && b<p_Nq){
 					occaUnroll(p_Nq)
 					for(int c=0;c<p_Nq;++c){
-						const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
+						const iint id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 						Mq[id] = r_Mq[c];
 					}
 				}
@@ -170,8 +170,8 @@ kernel void massPartialAxHex3D_v1(const int Nelements,
 }
 
 
-kernel void massPartialAxHex3D_v2(const int Nelements,
-                                  const int * restrict elementList,
+kernel void massPartialAxHex3D_v2(const iint Nelements,
+                                  const iint * restrict elementList,
                                   const dfloat * restrict gjGeo,
                                   const dfloat * restrict gjI,
                                   const dfloat * restrict q,
@@ -185,7 +185,7 @@ kernel void massPartialAxHex3D_v2(const int Nelements,
 		
 		exclusive dfloat r_q[p_gjNq];
 		
-		exclusive int emap;
+		exclusive iint emap;
 		
 		// prefetch D and I matrices and zero register storage
 		for(int b=0;b<p_gjNq;++b;inner1){
@@ -267,7 +267,7 @@ kernel void massPartialAxHex3D_v2(const int Nelements,
 				occaUnroll(p_gjNq)
 				for(int k=0;k<p_gjNq;++k){
 					// prefetch integration weights
-					const int id = p_Nggeo*emap*p_gjNp
+					const iint id = p_Nggeo*emap*p_gjNp
 					                +k*p_gjNq*p_gjNq+j*p_gjNq+i+p_GWJID*p_gjNp;
 					const dfloat r_GwJ = gjGeo[id];
 					

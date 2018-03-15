@@ -25,7 +25,7 @@ void loadElementStiffnessMatricesTri2D(mesh2D *mesh, const char *options, int N)
   int paddedRowSize = mesh->maxNnzPerRow+ (4-(mesh->maxNnzPerRow%4));
   fgets(buf, BUFSIZ, fp); // another  comment
   printf("Comment 2%s ", buf);
-  mesh->Ind = (int*) calloc(mesh->maxNnzPerRow*mesh->Np, sizeof(int));                     
+  mesh->Ind = (iint*) calloc(mesh->maxNnzPerRow*mesh->Np, sizeof(iint));                     
   for(int n=0;n<mesh->maxNnzPerRow*mesh->Np;++n){                                           
     fscanf(fp, "%d ", mesh->Ind+n);                                                
     //fscanf(fp, " %s ", buf);    
@@ -123,7 +123,7 @@ else{printf(" zero \n");}
 
   //now occa copy, transpose and stuff
   dfloat *SrrT, *SrsT, *SsrT, *SssT;
-  int *IndT;  
+  iint *IndT;  
 
   printf("before alloc \n");
 
@@ -132,13 +132,13 @@ else{printf(" zero \n");}
   SssT = (dfloat *) calloc(paddedRowSize*mesh->Np,sizeof(dfloat));
   printf("allocated Srr etc \n");
 
-  IndT = (int*)   calloc(paddedRowSize*mesh->Np,sizeof(int));
+  IndT = (iint*)   calloc(paddedRowSize*mesh->Np,sizeof(iint));
   printf("allocated Ind\n");
 
 
   printf("\nIND transose\n");
-  for (int n=0;n<mesh->Np;n++) {
-    for (int m=0;m<paddedRowSize;m++) {  
+  for (iint n=0;n<mesh->Np;n++) {
+    for (iint m=0;m<paddedRowSize;m++) {  
       SrrT[n+m*mesh->Np] = SrrAux[m+n*paddedRowSize] ;
       SrsT[n+m*mesh->Np] = SrrAux[m+n*paddedRowSize] ;
       SssT[n+m*mesh->Np] = SrrAux[m+n*paddedRowSize] ;
@@ -152,16 +152,16 @@ else{printf(" zero \n");}
   printf("before char packing \n");
 
   char * IndTchar = (char*) calloc(paddedRowSize*mesh->Np,sizeof(char));
-  for (int n=0;n<mesh->Np;n++) {
-    for (int m=0;m<paddedRowSize;m++) {  
+  for (iint n=0;n<mesh->Np;n++) {
+    for (iint m=0;m<paddedRowSize;m++) {  
       IndTchar[m+n*paddedRowSize] = (char) IndT[m+n*paddedRowSize];
       printf("IndT[%d] =  %d \n",m+n*paddedRowSize,  IndT[m+n*paddedRowSize]);   
     }
     printf("\n");
   }
   printf("\n\nSrrT: ");
-  for (int n=0;n<paddedRowSize;n++) {
-    for (int m=0;m<mesh->Np;m++) {  
+  for (iint n=0;n<paddedRowSize;n++) {
+    for (iint m=0;m<mesh->Np;m++) {  
       printf(" %f ",  SrrT[n+m*mesh->Np]);   
     }
     printf("\n");
@@ -175,7 +175,7 @@ else{printf(" zero \n");}
   mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), SrrT);
   mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), SrsT);
   mesh->o_SssT = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), SssT);
-  mesh->o_IndT = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(int), IndT);
+  mesh->o_IndT = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(iint), IndT);
 
   mesh->o_Srr= mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), mesh->Srr);
   mesh->o_Srs = mesh->device.malloc(mesh->Np*mesh->maxNnzPerRow*sizeof(dfloat), mesh->Srs);

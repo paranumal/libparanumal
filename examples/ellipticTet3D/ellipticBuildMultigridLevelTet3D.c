@@ -24,8 +24,8 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   meshPhysicalNodesTet3D(mesh);
 
   // create halo extension for x,y arrays
-  int totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
-  int localNodes     = mesh->Nelements*mesh->Np;
+  iint totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
+  iint localNodes     = mesh->Nelements*mesh->Np;
   // temporary send buffer
   dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
 
@@ -53,8 +53,8 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *DtT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Np;++m){
+  for(iint n=0;n<mesh->Np;++n){
+    for(iint m=0;m<mesh->Np;++m){
       DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
       DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
       DtT[n+m*mesh->Np] = mesh->Dt[n*mesh->Np+m];
@@ -62,8 +62,8 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   }
 
   dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
+  for(iint n=0;n<mesh->Np;++n){
+    for(iint m=0;m<mesh->Nfaces*mesh->Nfp;++m){
       LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
     }
   }
@@ -79,10 +79,10 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
     mesh->Str = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Sts = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     mesh->Stt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    for (int n=0;n<mesh->Np;n++) {
-      for (int m=0;m<mesh->Np;m++) {
-        for (int k=0;k<mesh->Np;k++) {
-          for (int l=0;l<mesh->Np;l++) {
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint m=0;m<mesh->Np;m++) {
+        for (iint k=0;k<mesh->Np;k++) {
+          for (iint l=0;l<mesh->Np;l++) {
             mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
             mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
             mesh->Srt[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
@@ -129,11 +129,11 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
       mesh->MM);
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
       mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
       mesh->vmapP);
 
   // info for kernel construction
@@ -176,11 +176,11 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
     kernelInfo.addDefine("dfloat8","double8");
   }
 
-  if(sizeof(int)==4){
-    kernelInfo.addDefine("int","int");
+  if(sizeof(iint)==4){
+    kernelInfo.addDefine("iint","int");
   }
-  if(sizeof(int)==8){
-    kernelInfo.addDefine("int","long long int");
+  if(sizeof(iint)==8){
+    kernelInfo.addDefine("iint","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
@@ -217,10 +217,10 @@ solver_t *ellipticBuildMultigridLevelTet3D(solver_t *baseSolver, int* levelDegre
   kernelInfo.addDefine("p_JWID", JWID);
 
 
-  int Ntotal = mesh->Np*mesh->Nelements;
-  int Nblock = (Ntotal+blockSize-1)/blockSize;
-  int Nhalo = mesh->Np*mesh->totalHaloPairs;
-  int Nall   = Ntotal + Nhalo;
+  iint Ntotal = mesh->Np*mesh->Nelements;
+  iint Nblock = (Ntotal+blockSize-1)/blockSize;
+  iint Nhalo = mesh->Np*mesh->totalHaloPairs;
+  iint Nall   = Ntotal + Nhalo;
 
   solver->Nblock = Nblock;
 

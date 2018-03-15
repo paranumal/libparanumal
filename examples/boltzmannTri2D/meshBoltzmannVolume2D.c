@@ -5,7 +5,7 @@
 void meshBoltzmannVolume2D(mesh2D *mesh){
 
   // for all elements
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
 
     // prefetch geometric factors (constant on triangle)
     dfloat drdx = mesh->vgeo[e*mesh->Nvgeo + RXID];
@@ -14,14 +14,14 @@ void meshBoltzmannVolume2D(mesh2D *mesh){
     dfloat dsdy = mesh->vgeo[e*mesh->Nvgeo + SYID];
 
     // for all nodes in this element
-    for(int n=0;n<mesh->Np;++n){
+    for(iint n=0;n<mesh->Np;++n){
       // compute 'r' and 's' derivatives of (q_m) at node n
       dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
       dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
       
-      for(int i=0;i<mesh->Np;++i){
+      for(iint i=0;i<mesh->Np;++i){
 	// load data at node i of element e (note Nfields==4)
-	int id = mesh->Nfields*(e*mesh->Np + i);
+	iint id = mesh->Nfields*(e*mesh->Np + i);
 	dfloat q1 = mesh->q[id+0];
 	dfloat q2 = mesh->q[id+1];
 	dfloat q3 = mesh->q[id+2];
@@ -63,7 +63,7 @@ void meshBoltzmannVolume2D(mesh2D *mesh){
       dfloat dq6dy = drdy*dq6dr + dsdy*dq6ds;
       
       // indices for writing the RHS terms
-      int id = mesh->Nfields*(e*mesh->Np + n);
+      iint id = mesh->Nfields*(e*mesh->Np + n);
 
       // constant
       dfloat sqrtRT = mesh->sqrtRT, sqrt2 = sqrt(2.);

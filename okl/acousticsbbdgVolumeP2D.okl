@@ -4,29 +4,29 @@
 #define SYID 3
 
 
-kernel void acousticsVolume2Dbbdg(const int Nelements,
-          const int * restrict Elements,
+kernel void acousticsVolume2Dbbdg(const iint Nelements,
+          const iint * restrict Elements,
           const dfloat * restrict vgeo,
-          const int * restrict D1ids,
-          const int * restrict D2ids,
-          const int * restrict D3ids,
+          const iint * restrict D1ids,
+          const iint * restrict D2ids,
+          const iint * restrict D3ids,
           const dfloat * restrict Dvals,    
           const dfloat * restrict q,
           dfloat * restrict rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_u[p_NblockV][p_Np];
     shared dfloat s_v[p_NblockV][p_Np];
     shared dfloat s_p[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
-        int et = eo+es; // element in block
+        iint et = eo+es; // element in block
 
         if(et<Nelements){
-          const int id = p_Nfields*(Elements[et]*p_NpMax + n);
+          const iint id = p_Nfields*(Elements[et]*p_NpMax + n);
           s_u[es][n] = q[id+0];
           s_v[es][n] = q[id+1];
           s_p[es][n] = q[id+2];
@@ -37,12 +37,12 @@ kernel void acousticsVolume2Dbbdg(const int Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
   
-        int et = eo+es; // element in block
+        iint et = eo+es; // element in block
         if(et<Nelements){
-          const int e = Elements[et];
+          const iint e = Elements[et];
 
           // prefetch geometric factors (constant on triangle)
           const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
@@ -51,19 +51,19 @@ kernel void acousticsVolume2Dbbdg(const int Nelements,
           const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
 
           // compute 'r' and 's' derivatives of (q_m) at node n
-          const int D1i1 = D1ids[n];
-          const int D2i1 = D2ids[n];
-          const int D3i1 = D3ids[n];
+          const iint D1i1 = D1ids[n];
+          const iint D2i1 = D2ids[n];
+          const iint D3i1 = D3ids[n];
           const dfloat Dval1 = Dvals[n];
           
-          const int D1i2 = D1ids[n+p_Np];
-          const int D2i2 = D2ids[n+p_Np];
-          const int D3i2 = D3ids[n+p_Np];
+          const iint D1i2 = D1ids[n+p_Np];
+          const iint D2i2 = D2ids[n+p_Np];
+          const iint D3i2 = D3ids[n+p_Np];
           const dfloat Dval2 = Dvals[n+p_Np];
 
-          const int D1i3 = D1ids[n+2*p_Np];
-          const int D2i3 = D2ids[n+2*p_Np];
-          const int D3i3 = D3ids[n+2*p_Np];   
+          const iint D1i3 = D1ids[n+2*p_Np];
+          const iint D2i3 = D2ids[n+2*p_Np];
+          const iint D3i3 = D3ids[n+2*p_Np];   
           const dfloat Dval3 = Dvals[n+2*p_Np];
 
           const dfloat dudr = .5f*(Dval1*(s_u[es][D2i1] - s_u[es][D1i1]) +
@@ -93,7 +93,7 @@ kernel void acousticsVolume2Dbbdg(const int Nelements,
           dfloat dpdx = drdx*dpdr + dsdx*dpds;
           dfloat dpdy = drdy*dpdr + dsdy*dpds;
           
-          const int id = p_Nfields*(e*p_NpMax + n);
+          const iint id = p_Nfields*(e*p_NpMax + n);
           rhsq[id+0] = -dpdx;
           rhsq[id+1] = -dpdy;
           rhsq[id+2] = -dudx-dvdy;

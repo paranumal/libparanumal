@@ -3,14 +3,14 @@
 void acousticsRunQuad2D(mesh2D *mesh){
 
   // MPI send buffer
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(int rk=0;rk<mesh->Nrk;++rk){
+    for(iint rk=0;rk<mesh->Nrk;++rk){
 
       if(mesh->totalHaloPairs>0){
 	// extract halo node data
@@ -55,18 +55,18 @@ void acousticsRunQuad2D(mesh2D *mesh){
 void acousticsOccaRun2D(mesh2D *mesh){
 
   // MPI send buffer
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-    for(int rk=0;rk<mesh->Nrk;++rk){
+    for(iint rk=0;rk<mesh->Nrk;++rk){
 
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
-	int Nentries = mesh->Np*mesh->Nfields;
+	iint Nentries = mesh->Np*mesh->Nfields;
 	
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
@@ -131,7 +131,7 @@ void acousticsOccaRun2D(mesh2D *mesh){
       acousticsError2D(mesh, mesh->dt*(tstep+1));
 
       // output field files
-      int fld = 2;
+      iint fld = 2;
       meshPlotVTU2D(mesh, "foo", fld);
     }
   }

@@ -51,8 +51,8 @@ int main(int argc, char **argv){
   //   parAlmondOptions = strdup(argv[5]);
   // }
 
-  int NblockV = 1;
-  int NnodesV = 1;
+  iint NblockV = 1;
+  iint NnodesV = 1;
 
   if (argc == 5){
     NblockV = atoi(argv[3]);
@@ -91,54 +91,54 @@ printf("passed elliptic setup tri\n");
   } 
 
   solver_t *solver = ellipticSolveSetupTri2D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions, NblockV, NnodesV);
-  int Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 
   // load rhs into r
   dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   dfloat *nrhstmp = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
     dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
-    for(int n=0;n<mesh->Np;++n){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat xn = mesh->x[n+e*mesh->Np];
       dfloat yn = mesh->y[n+e*mesh->Np];
       nrhs[n] = -(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
     }
 
     if (strstr(options,"BERN")) {
-      for(int n=0;n<mesh->Np;++n){
+      for(iint n=0;n<mesh->Np;++n){
         nrhstmp[n] = 0.;
-        for(int m=0;m<mesh->Np;++m){
+        for(iint m=0;m<mesh->Np;++m){
           nrhstmp[n] += mesh->invVB[n*mesh->Np+m]*nrhs[m];
         }
       }
-      for(int n=0;n<mesh->Np;++n){
+      for(iint n=0;n<mesh->Np;++n){
         dfloat rhs = 0;
         if (strstr(options,"NONSYM")) {
           rhs = nrhs[n];
         } else {
-          for(int m=0;m<mesh->Np;++m){
+          for(iint m=0;m<mesh->Np;++m){
             rhs += mesh->BBMM[n+m*mesh->Np]*nrhstmp[m];
           }
         }
-        int id = n+e*mesh->Np;
+        iint id = n+e*mesh->Np;
 
         r[id] = -rhs*J;
         x[id] = 0;
         mesh->q[id] = rhs;
       }
     } else if (strstr(options,"NODAL")) {
-      for(int n=0;n<mesh->Np;++n){
+      for(iint n=0;n<mesh->Np;++n){
         dfloat rhs = 0;
         if (strstr(options,"NONSYM")) {
           rhs = nrhs[n];
         } else {
-          for(int m=0;m<mesh->Np;++m){
+          for(iint m=0;m<mesh->Np;++m){
             rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
           }
         }
-        int id = n+e*mesh->Np;
+        iint id = n+e*mesh->Np;
 
         r[id] = -rhs*J;
         x[id] = 0;
@@ -196,15 +196,15 @@ printf("passed elliptic setup tri\n");
 
   if (strstr(options,"BERN")) {
     dfloat *qtmp = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-    for (int e =0;e<mesh->Nelements;e++){
-      int id = e*mesh->Np;
+    for (iint e =0;e<mesh->Nelements;e++){
+      iint id = e*mesh->Np;
 
-      for (int n=0; n<mesh->Np; n++){
+      for (iint n=0; n<mesh->Np; n++){
         qtmp[n] = mesh->q[id+n];
         mesh->q[id+n] = 0.0;
       }
-      for (int n=0;n<mesh->Np;n++){
-        for (int m=0; m<mesh->Np; m++){
+      for (iint n=0;n<mesh->Np;n++){
+        for (iint m=0; m<mesh->Np; m++){
           mesh->q[id+n] += mesh->VB[n*mesh->Np+m]*qtmp[m];
         }
       }
@@ -213,9 +213,9 @@ printf("passed elliptic setup tri\n");
   }
 
   dfloat maxError = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      int   id = e*mesh->Np+n;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
+      iint   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat exact = sin(M_PI*xn)*sin(M_PI*yn);

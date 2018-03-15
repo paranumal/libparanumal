@@ -1,7 +1,7 @@
 #include "boltzmann3D.h"
 
 // complete a time step using Semi-Analytic Adams-Bahforth 
-void boltzmannSaab3Step3D(mesh3D *mesh, int tstep, int haloBytes,
+void boltzmannSaab3Step3D(mesh3D *mesh, iint tstep, iint haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
@@ -9,7 +9,7 @@ void boltzmannSaab3Step3D(mesh3D *mesh, int tstep, int haloBytes,
  dfloat t = tstep*mesh->dt;
 
 if(mesh->totalHaloPairs>0){
-      int Nentries = mesh->Np*mesh->Nfields;
+      iint Nentries = mesh->Np*mesh->Nfields;
       
       mesh->haloExtractKernel(mesh->totalHaloPairs,
 			      Nentries,

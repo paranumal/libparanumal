@@ -1,7 +1,7 @@
 #include "ins2D.h"
 
 // complete a time step using LSERK4
-void insPoissonStepSS2D(ins_t *ins, int tstep, int haloBytes,
+void insPoissonStepSS2D(ins_t *ins, iint tstep, iint haloBytes,
 				               dfloat * sendBuffer, dfloat * recvBuffer,
 				                char   * options){
 
@@ -12,9 +12,9 @@ void insPoissonStepSS2D(ins_t *ins, int tstep, int haloBytes,
   dfloat t = tstep*ins->dt + ins->dt;
 
   //hard coded for 3 stages.
-  int index0 = (ins->index+0)%3; // Still in current time
-  int Ntotal = (mesh->Nelements+mesh->totalHaloPairs);
-  int offset = index0*Ntotal;
+  iint index0 = (ins->index+0)%3; // Still in current time
+  iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs);
+  iint offset = index0*Ntotal;
 
 
 // Compute Curl(Curl(U)) and store in rhsU 
@@ -54,7 +54,7 @@ void insPoissonStepSS2D(ins_t *ins, int tstep, int haloBytes,
 
 
 if(strstr(options,"BROKEN")){
-  const int voffset = 0; 
+  const iint voffset = 0; 
   // compute div(ut) and store on rhsU
   ins->divergenceVolumeKernel(mesh->Nelements,
                              mesh->o_vgeo,
@@ -81,7 +81,7 @@ if(strstr(options,"BROKEN")){
                               ins->o_rhsU, // div(Ut)
                               ins->o_rhsP);
  //
-  const int pressure_solve = 1; // Solve for Pressure
+  const iint pressure_solve = 1; // Solve for Pressure
   ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                 pressure_solve,
                                 mesh->o_vmapM,
@@ -103,7 +103,7 @@ if(strstr(options,"BROKEN")){
 
 
   ins->o_Pt.copyFrom(ins->o_P,Ntotal*mesh->Np*sizeof(dfloat),0,ins->index*Ntotal*mesh->Np*sizeof(dfloat));
-  int Niter;
+  iint Niter;
   printf("Solving for Pr: Niter= ");
   Niter= ellipticSolveTri2D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_Pt,  ins->pSolverOptions); 
   printf("%d\n", Niter); 
@@ -113,7 +113,7 @@ if(strstr(options,"BROKEN")){
 
 
 if(strstr(options,"BROKEN")){
-  const int poffset = index1*Ntotal*mesh->Np; 
+  const iint poffset = index1*Ntotal*mesh->Np; 
   // Compute Volume Contribution of gradient of pressure gradient
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,

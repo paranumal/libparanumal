@@ -1,15 +1,15 @@
 
 // compute div(NU)  = div(uxu) in collocation way
-kernel void insAdvectionVolumeQuad2D(const int Nelements,
+kernel void insAdvectionVolumeQuad2D(const iint Nelements,
          const dfloat * restrict vgeo,
          const dfloat * restrict D,
-         const int offset,
+         const iint offset,
          const dfloat * restrict U,
          const dfloat * restrict V,
          dfloat * restrict NU,
          dfloat * restrict NV){
 
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_dF1dr[p_NblockV][p_Nq][p_Nq];
     shared dfloat s_dF1ds[p_NblockV][p_Nq][p_Nq];
@@ -18,12 +18,12 @@ kernel void insAdvectionVolumeQuad2D(const int Nelements,
 
     shared dfloat s_D[p_Nq][p_Nq];
 
-    for(int j=0;j<p_Nq;++j){ // 
-      for(int es=0;es<p_NblockV;++es;inner1){   
-        for(int i=0;i<p_Nq;++i;inner0){    
-          int e = eo+es; // element in block
+    for(iint j=0;j<p_Nq;++j){ // 
+      for(iint es=0;es<p_NblockV;++es;inner1){   
+        for(iint i=0;i<p_Nq;++i;inner0){    
+          iint e = eo+es; // element in block
           if(e<Nelements){ 
-            const int id = (e+offset)*p_Np + j*p_Nq+i;
+            const iint id = (e+offset)*p_Np + j*p_Nq+i;
             const dfloat u = U[id];
             const dfloat v = V[id];
 
@@ -49,10 +49,10 @@ kernel void insAdvectionVolumeQuad2D(const int Nelements,
     // Make sure all node data is loaded into shared
     barrier(localMemFence);
 
-  for(int j=0;j<p_Nq;++j){ 
-    for(int es=0;es<p_NblockV;++es;inner1){ 
-      for(int i=0;i<p_Nq;++i;inner0){  
-        int e = eo+es; 
+  for(iint j=0;j<p_Nq;++j){ 
+    for(iint es=0;es<p_NblockV;++es;inner1){ 
+      for(iint i=0;i<p_Nq;++i;inner0){  
+        iint e = eo+es; 
         if(e<Nelements){ 
         // compute 'r' and 's' derivatives of (q_m) at node n
           dfloat f11 = 0.f, f12 = 0.f; 
@@ -69,7 +69,7 @@ kernel void insAdvectionVolumeQuad2D(const int Nelements,
             f22 += ds*s_dF2ds[es][n][i]; 
           }
 
-          int id = (e+offset)*p_Np + j*p_Nq + i;
+          iint id = (e+offset)*p_Np + j*p_Nq + i;
           NU[id] = f11 + f12;
           NV[id] = f21 + f22;
         }
@@ -82,45 +82,45 @@ kernel void insAdvectionVolumeQuad2D(const int Nelements,
 
 
 
-kernel void insAdvectionSurfaceQuad2D(const int Nelements,
+kernel void insAdvectionSurfaceQuad2D(const iint Nelements,
           const dfloat * restrict sgeo,
           const dfloat * restrict LIFTT,
-          const int   * restrict vmapM,
-          const int   * restrict vmapP,
-          const int   * restrict EToB,
+          const iint   * restrict vmapM,
+          const iint   * restrict vmapP,
+          const iint   * restrict EToB,
           const dfloat time,
           const dfloat * restrict x,
           const dfloat * restrict y,
-          const int offset,
+          const iint offset,
           const dfloat * restrict U,
           const dfloat * restrict V,
           dfloat * restrict NU,
           dfloat * restrict NV){
 
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
     // shared storage for flux terms
     shared dfloat s_fluxNx[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_fluxNy[p_NblockS][p_Nfp*p_Nfaces];
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-        int e = eo + es;
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        iint e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
             // find face that owns this node
-            int face = n/p_Nfp;
+            iint face = n/p_Nfp;
             // load surface geofactors for this face
-            int sid    = p_Nsgeo*(e*p_Nfaces+face);
+            iint sid    = p_Nsgeo*(e*p_Nfaces+face);
             dfloat nx   = sgeo[sid+p_NXID];
             dfloat ny   = sgeo[sid+p_NYID];
             dfloat sJ   = sgeo[sid+p_SJID];
             dfloat invJ = sgeo[sid+p_IJID];
 
             // indices of negative and positive traces of face node
-            int id  = e*p_Nfp*p_Nfaces + n;
-            int idM = vmapM[id]+offset*p_Np;
-            int idP = vmapP[id]+offset*p_Np;
+            iint id  = e*p_Nfp*p_Nfaces + n;
+            iint idM = vmapM[id]+offset*p_Np;
+            iint idP = vmapP[id]+offset*p_Np;
 
             if(idP<0) idP = idM; // 
             // load negative and positive trace node values of U, V, Pr
@@ -128,7 +128,7 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
             dfloat  vM = V[idM], vP = V[idP];
 
             // apply boundary condition
-            int bc = EToB[face+p_Nfaces*e];
+            iint bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               idM = vmapM[id];
               insAdvectionBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
@@ -154,12 +154,12 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
-        int e = eo + es;
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+        iint e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            int id = (e+offset)*p_Np + n;
+            iint id = (e+offset)*p_Np + n;
 
             dfloat rhsnu = NU[id];
             dfloat rhsnv = NV[id];
@@ -188,16 +188,16 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 
 
 // // compute div(NU)  = div(uxu) in collocation way
-// kernel void insAdvectionVolumeQuad2D(const int Nelements,
+// kernel void insAdvectionVolumeQuad2D(const iint Nelements,
 //          const dfloat * restrict vgeo,
 //          const dfloat * restrict D,
-//          const int offset,
+//          const iint offset,
 //          const dfloat * restrict U,
 //          const dfloat * restrict V,
 //          dfloat * restrict NU,
 //          dfloat * restrict NV){
 
-//   for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 //     // Hold Flux Vector on Shared, use symmetry f21 = f12
 //     shared dfloat s_F11[p_NblockV][p_Nq][p_Nq];
 //     shared dfloat s_F12[p_NblockV][p_Nq][p_Nq];
@@ -205,12 +205,12 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 
 //     shared dfloat s_D[p_Nq][p_Nq];
 
-//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(int j=0; j<p_Nq;++j){
-//         for(int i=0;i<p_Nq;++i;inner0){     // for all nodes in this element
-//           int e = eo+es; // element in block
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint j=0; j<p_Nq;++j){
+//         for(iint i=0;i<p_Nq;++i;inner0){     // for all nodes in this element
+//           iint e = eo+es; // element in block
 //           if(e<Nelements){ 
-//             const int id = (e+offset)*p_Np + j*p_Nq + i;
+//             const iint id = (e+offset)*p_Np + j*p_Nq + i;
 //             const dfloat u = U[id];
 //             const dfloat v = V[id];
 
@@ -227,12 +227,12 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 //     // Make sure all node data is loaded into shared
 //     barrier(localMemFence);
 
-//     for(int es=0;es<p_NblockV;++es;inner1){
-//       for(int j=0; j<p_Nq;++j){
-//         for(int i=0;i<p_Nq;++i;inner0){    
-//         int e = eo+es; 
+//     for(iint es=0;es<p_NblockV;++es;inner1){
+//       for(iint j=0; j<p_Nq;++j){
+//         for(iint i=0;i<p_Nq;++i;inner0){    
+//         iint e = eo+es; 
 //         if(e<Nelements){    
-//           const int gid = i + j*p_Nq + e*p_Np*p_Nvgeo;
+//           const iint gid = i + j*p_Nq + e*p_Np*p_Nvgeo;
 //           const dfloat drdx = vgeo[gid + p_RXID*p_Np];
 //           const dfloat drdy = vgeo[gid + p_RYID*p_Np];
 //           const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
@@ -265,7 +265,7 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 //                     + drdy*df22dr + dsdy*df22ds;
 
 //           // Update
-//           const int id = (e+offset)*p_Np + j*p_Nq + i;
+//           const iint id = (e+offset)*p_Np + j*p_Nq + i;
 //           NU[id] = nu;
 //           NV[id] = nv;     
 //         }
@@ -291,18 +291,18 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 
 
 // // compute div(NU)  = div(uxu) in collocation way
-// kernel void insAdvectionCubatureVolume2D(const int Nelements,
+// kernel void insAdvectionCubatureVolume2D(const iint Nelements,
 // 					 const dfloat * restrict vgeo,
 // 					 const dfloat * restrict cubDrWT,
 // 					 const dfloat * restrict cubDsWT,
 // 					 const dfloat * restrict cubInterpT,
-// 					 const int offset,
+// 					 const iint offset,
 // 					 const dfloat * restrict U,
 // 					 const dfloat * restrict V,
 // 					 dfloat * restrict NU,
 // 					 dfloat * restrict NV){
 
-//   for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
 //     // Hold Flux Vector on Shared, use symmetry f21 = f12
 //     shared dfloat s_U[p_NblockV][p_Np];
@@ -311,12 +311,12 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 //     shared dfloat s_cF12[p_NblockV][p_cubNp];
 //     shared dfloat s_cF22[p_NblockV][p_cubNp];
 
-//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(int n=0;n<p_maxNodesVolume;++n;inner0){      // for all nodes in this element
-//       	int e = eo+es; // element in block
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_maxNodesVolume;++n;inner0){      // for all nodes in this element
+//       	iint e = eo+es; // element in block
 //       	if(e<Nelements){
 //           if(n<p_Np){ 
-//         	  const int id = (e+offset)*p_Np+n;
+//         	  const iint id = (e+offset)*p_Np+n;
 //         	  s_U[es][n] = U[id];
 //         	  s_V[es][n] = V[id];
 //       	 }
@@ -327,13 +327,13 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 //     barrier(localMemFence);
 
 
-//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(int n=0;n<p_maxNodesVolume;++n;inner0){     // for all nodes in this element
-//       	int e = eo+es; // element in block
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_maxNodesVolume;++n;inner0){     // for all nodes in this element
+//       	iint e = eo+es; // element in block
 //       	if(e<Nelements && n<p_cubNp){
 //         	  dfloat cU = 0, cV = 0;
 //             occaUnroll(p_Np)
-//         	  for(int i=0;i<p_Np;++i){
+//         	  for(iint i=0;i<p_Np;++i){
 //         	    dfloat cIni = cubInterpT[n+i*p_cubNp];
 //         	    cU += cIni*s_U[es][i];
 //         	    cV += cIni*s_V[es][i];
@@ -349,9 +349,9 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 //     // Make sure all node data is loaded into shared
 //     barrier(localMemFence);
 
-//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(int n=0;n<p_maxNodesVolume;++n;inner0){     // for all nodes in this element
-//       	int e = eo+es; 
+//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(iint n=0;n<p_maxNodesVolume;++n;inner0){     // for all nodes in this element
+//       	iint e = eo+es; 
 //       	if(e<Nelements && n<p_Np){	  
 //       	  // prefetch geometric factors (constant on triangle)
 //       	  const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -364,7 +364,7 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 //       	  dfloat df22dr = 0.f, df22ds = 0.f; 
 
 //       	  occaUnroll(p_cubNp)
-//       	    for(int i=0;i<p_cubNp;++i){
+//       	    for(iint i=0;i<p_cubNp;++i){
 //       	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
 //       	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
 
@@ -382,7 +382,7 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 //       	  dfloat nv   = drdx*df12dr + dsdx*df12ds + drdy*df22dr + dsdy*df22ds;
 
 //       	  // Update
-//       	  const int id = (e+offset)*p_Np+n;
+//       	  const iint id = (e+offset)*p_Np+n;
 //       	  NU[id] = -nu; // note  change in sign
 //       	  NV[id] = -nv;		  
 //       	}
@@ -392,24 +392,24 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 // }
 
 
-// kernel void insAdvectionCubatureSurface2D(const int Nelements,
+// kernel void insAdvectionCubatureSurface2D(const iint Nelements,
 // 					  const dfloat * restrict sgeo,
 // 					  const dfloat * restrict intInterpT, // interpolate to integration nodes
 // 					  const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-// 					  const int   * restrict vmapM,
-// 					  const int   * restrict vmapP,
-// 					  const int   * restrict EToB,
+// 					  const iint   * restrict vmapM,
+// 					  const iint   * restrict vmapP,
+// 					  const iint   * restrict EToB,
 // 					  const dfloat time,
 // 					  const dfloat * restrict intx, // integration nodes
 // 					  const dfloat * restrict inty,
-// 					  const int offset,
+// 					  const iint offset,
 // 					  const dfloat * restrict U,
 // 					  const dfloat * restrict V,
 // 					  dfloat * restrict NU,
 // 					  dfloat * restrict NV){
 
 //   // for all elements
-//   for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+//   for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
 //     // shared storage for flux terms
 //     shared dfloat s_UM[p_NblockS][p_NfacesNfp];
@@ -420,13 +420,13 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 //     shared dfloat s_iFluxNy[p_NblockS][p_intNfpNfaces];
 
 //     // for all face nodes of all elements
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxSurfaceNodes;++n;inner0){
-//       	int e = eo + es;
+//     for(iint es=0;es<p_NblockS;++es;inner1){
+//       for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
+//       	iint e = eo + es;
 //       	if(e<Nelements && n<(p_Nfaces*p_Nfp)){
-//     	    const int id  = e*p_Nfp*p_Nfaces + n;
-//           int idM = vmapM[id]+offset*p_Np;
-//           int idP = vmapP[id]+offset*p_Np;
+//     	    const iint id  = e*p_Nfp*p_Nfaces + n;
+//           iint idM = vmapM[id]+offset*p_Np;
+//           iint idP = vmapP[id]+offset*p_Np;
 
 //     	    if(idP<0) idP = idM;
 
@@ -442,14 +442,14 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 //     barrier(localMemFence);
 
 //     // interpolate to surface integration nodes
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxSurfaceNodes;++n;inner0){ 
-//       	int e = eo + es;
+//     for(iint es=0;es<p_NblockS;++es;inner1){
+//       for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+//       	iint e = eo + es;
 //       	if(e<Nelements && n<(p_Nfaces*p_intNfp)){
-//       	    const int face = n/p_intNfp; // find face that owns this integration node
+//       	    const iint face = n/p_intNfp; // find face that owns this integration node
 
 //       	    // load surface geofactors for this face
-//       	    const int sid = p_Nsgeo*(e*p_Nfaces+face);
+//       	    const iint sid = p_Nsgeo*(e*p_Nfaces+face);
 //       	    const dfloat nx   = sgeo[sid+p_NXID];
 //       	    const dfloat ny   = sgeo[sid+p_NYID];
 //       	    const dfloat sJ   = sgeo[sid+p_SJID];
@@ -460,9 +460,9 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 
 //       	    // local block interpolation (face nodes to integration nodes)
 //             occaUnroll(p_Nfp)
-//       	    for(int m=0;m<p_Nfp;++m){
+//       	    for(iint m=0;m<p_Nfp;++m){
 //       	      const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-//       	      const int fm = face*p_Nfp+m;
+//       	      const iint fm = face*p_Nfp+m;
 //       	      iUM += iInm*s_UM[es][fm];
 //       	      iVM += iInm*s_VM[es][fm];
 
@@ -471,7 +471,7 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 //       	    }
 
 //       	    // apply boundary condition
-//       	    int bc = EToB[face+p_Nfaces*e];
+//       	    iint bc = EToB[face+p_Nfaces*e];
 
 
 //       	    if(bc>0){
@@ -501,11 +501,11 @@ kernel void insAdvectionSurfaceQuad2D(const int Nelements,
 //     barrier(localMemFence);
 
 //     // lift from surface integration to volume nodes
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxSurfaceNodes;++n;inner0){
-//       	const int e = eo + es;
+//     for(iint es=0;es<p_NblockS;++es;inner1){
+//       for(iint n=0;n<p_maxSurfaceNodes;++n;inner0){
+//       	const iint e = eo + es;
 //       	if(e<Nelements && n<p_Np ){
-//       	    int id = n + p_Np*(e+offset);
+//       	    iint id = n + p_Np*(e+offset);
 //       	    // prefetch volume rhs
 //       	    dfloat NUn = NU[id];
 //       	    dfloat NVn = NV[id];

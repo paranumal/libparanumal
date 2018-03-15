@@ -1,6 +1,6 @@
 #define p_half 0.5f
 
-void boundaryConditions3D(int bc, dfloat time, 
+void boundaryConditions3D(iint bc, dfloat time, 
 			  dfloat x, dfloat y, dfloat z, 
 			  dfloat uM, dfloat vM, dfloat wM, dfloat pM,
 			  dfloat *uP, dfloat *vP, dfloat *wP, dfloat *pP){
@@ -33,12 +33,12 @@ void boundaryConditions3D(int bc, dfloat time,
 
 // function to compute surface contributions 
 // for nodal DG acoustics right hand side
-kernel void acousticsSurfaceHex3D(const int Nelements,
+kernel void acousticsSurfaceHex3D(const iint Nelements,
 				  const dfloat * restrict sgeo,
 				  const dfloat * restrict LIFTT,
-				  const int   * restrict vmapM,
-				  const int   * restrict vmapP,
-				  const int   * restrict EToB,
+				  const iint   * restrict vmapM,
+				  const iint   * restrict vmapP,
+				  const iint   * restrict EToB,
 				  const dfloat time,
 				  const dfloat * restrict x,
 				  const dfloat * restrict y,
@@ -47,7 +47,7 @@ kernel void acousticsSurfaceHex3D(const int Nelements,
 				  dfloat       * restrict rhsq){
   
   // for all elements
-  for(int e=0;e<Nelements;++e;outer0){
+  for(iint e=0;e<Nelements;++e;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxu[p_Nfp*p_Nfaces];
@@ -56,13 +56,13 @@ kernel void acousticsSurfaceHex3D(const int Nelements,
     shared dfloat s_fluxp[p_Nfp*p_Nfaces];
     
     // for all face nodes of all elements
-    for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
       if(n<p_Nfp*p_Nfaces){
 	// find face that owns this node
-	int face = n/p_Nfp;
+	iint face = n/p_Nfp;
 
 	// load surface geofactors for this face
-	const int base = p_Nsgeo*(p_Nfaces*p_Nfp*e + n);
+	const iint base = p_Nsgeo*(p_Nfaces*p_Nfp*e + n);
 	dfloat nx = sgeo[base+0];
 	dfloat ny = sgeo[base+1];
 	dfloat nz = sgeo[base+2];
@@ -70,19 +70,19 @@ kernel void acousticsSurfaceHex3D(const int Nelements,
 	dfloat invJ = sgeo[base+4];
 
 	// indices of negative and positive traces of face node
-	int id  = e*p_Nfp*p_Nfaces + n;
-	int idM = vmapM[id];
-	int idP = vmapP[id];
+	iint id  = e*p_Nfp*p_Nfaces + n;
+	iint idM = vmapM[id];
+	iint idP = vmapP[id];
 
 	if(idP<0) idP = idM;
-	int qidM = idM*p_Nfields, qidP = idP*p_Nfields;
+	iint qidM = idM*p_Nfields, qidP = idP*p_Nfields;
 	
 	// load negative and positive trace node values of q
 	dfloat uM = q[qidM+0], vM = q[qidM+1], wM = q[qidM+2], pM = q[qidM+3];
 	dfloat uP = q[qidP+0], vP = q[qidP+1], wP = q[qidP+2], pP = q[qidP+3];
 	
 	// apply boundary condition
-	int bc = EToB[face+p_Nfaces*e];
+	iint bc = EToB[face+p_Nfaces*e];
 	if(bc>0)
 	  boundaryConditions3D(bc, time, x[idM], y[idM], z[idM], uM, vM, wM, pM, &uP, &vP, &wP, &pP);
 	
@@ -104,9 +104,9 @@ kernel void acousticsSurfaceHex3D(const int Nelements,
     barrier(localMemFence);
 
     // for each node in the element 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(iint n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
-	int id = p_Nfields*(p_Np*e + n);
+	iint id = p_Nfields*(p_Np*e + n);
 
 	// load rhs data from volume fluxes
 	dfloat rhsu = rhsq[id];

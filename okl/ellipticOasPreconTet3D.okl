@@ -28,27 +28,27 @@
 #endif
 
 
-kernel void ellipticOasPreconTet3D(const int Nelements,
-          const int   * restrict vmapPP,
+kernel void ellipticOasPreconTet3D(const iint Nelements,
+          const iint   * restrict vmapPP,
           const dfloat * restrict forwardT,
           const dfloat * restrict diagInvOp,
           const dfloat * restrict backT,
           const dfloat * restrict q,
           dfloat * restrict Pq){
   
-  for(int e=0; e<Nelements; ++e; outer0){
+  for(iint e=0; e<Nelements; ++e; outer0){
 
     shared dfloat s_q1[p_NpP];
     shared dfloat s_q2[p_NpP];
     
-    for(int n=0;n<p_NpP;++n;inner0){
+    for(iint n=0;n<p_NpP;++n;inner0){
       // load element
       if(n<p_Np)
         s_q1[n] = q[n+e*p_Np];
 
       // load overlap
       if(n>=p_Np){
-        const int id = vmapPP[n-p_Np+e*p_Nfaces*p_Nfp];
+        const iint id = vmapPP[n-p_Np+e*p_Nfaces*p_Nfp];
         s_q1[n] = q[id];
       }
     }
@@ -56,13 +56,13 @@ kernel void ellipticOasPreconTet3D(const int Nelements,
     barrier(localMemFence);
 
     // forward transform and scaling
-    for(int n=0;n<p_NpP;++n;inner0){
+    for(iint n=0;n<p_NpP;++n;inner0){
       dfloat r_diagInvOp = diagInvOp[e*p_NpP + n];
       
       dfloat res = 0;
 
       occaUnroll(p_NpP)
-        for(int i=0;i<p_NpP;++i){
+        for(iint i=0;i<p_NpP;++i){
           res += forwardT[n+i*p_NpP]*s_q1[i];
         }
 
@@ -72,11 +72,11 @@ kernel void ellipticOasPreconTet3D(const int Nelements,
     barrier(localMemFence);
 
     // backward transform
-    for(int n=0;n<p_NpP;++n;inner0){
+    for(iint n=0;n<p_NpP;++n;inner0){
       dfloat res = 0;
 
       occaUnroll(p_Np)
-        for(int i=0;i<p_NpP;++i){
+        for(iint i=0;i<p_NpP;++i){
           res += backT[n+i*p_NpP]*s_q2[i];
         }
         

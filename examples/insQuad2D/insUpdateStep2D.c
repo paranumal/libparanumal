@@ -1,7 +1,7 @@
 #include "ins2D.h"
 
 // complete a time step using LSERK4
-void insUpdateStep2D(ins_t *ins, int tstep, int haloBytes,
+void insUpdateStep2D(ins_t *ins, iint tstep, iint haloBytes,
 				       dfloat * sendBuffer, dfloat * recvBuffer, 
 				        char   * options){
 

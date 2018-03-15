@@ -41,10 +41,10 @@ void meshParallelPrint2D(mesh2D *mesh);
 void meshVTU2D(mesh2D *mesh, char *fileName);
 
 // print out solution at plot nodes 
-void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, int fld);
+void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, iint fld);
 
 // sort entries in an array in parallel
-void parallelSort(int N, void *vv, size_t sz,
+void parallelSort(iint N, void *vv, size_t sz,
 		  int (*compare)(const void *, const void *),
 		  void (*match)(void *, void *)
 		  );
@@ -124,7 +124,7 @@ void meshMRABSetupP2D(mesh2D *mesh, dfloat *EToDT, int maxLevels);
 
 //MRAB weighted mesh partitioning
 void meshMRABWeightedPartitionTriP2D(mesh2D *mesh, dfloat *weights,
-                                      int numLevels, int *levels);
+                                      iint numLevels, iint *levels);
 
 void meshSetPolynomialDegree2D(mesh2D *mesh, int N);
 

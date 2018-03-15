@@ -17,9 +17,9 @@ void acousticsSetup2D(mesh2D *mesh){
 				sizeof(dfloat));
   
   // fix this later (initial conditions)
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
@@ -41,9 +41,9 @@ void acousticsSetup2D(mesh2D *mesh){
   // set heterogeneous c^2 for WADG
   mesh->c2 = (dfloat*) calloc(mesh->Nelements*mesh->cubNp,sizeof(dfloat));
   
-  for(int e=0;e<mesh->Nelements;++e){ /* for each element */
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
     
-    int id = e*mesh->Nverts+0;
+    iint id = e*mesh->Nverts+0;
     
     dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat xe2 = mesh->EX[id+1];
@@ -53,7 +53,7 @@ void acousticsSetup2D(mesh2D *mesh){
     dfloat ye2 = mesh->EY[id+1];
     dfloat ye3 = mesh->EY[id+2];
     
-    for(int n=0;n<mesh->cubNp;++n){ /* for each node */
+    for(iint n=0;n<mesh->cubNp;++n){ /* for each node */
       
       // cubature node coordinates
       dfloat rn = mesh->cubr[n]; 
@@ -76,10 +76,10 @@ void acousticsSetup2D(mesh2D *mesh){
   
   // set time step
   dfloat hmin = 1e9;
-  for(int e=0;e<mesh->Nelements;++e){  
+  for(iint e=0;e<mesh->Nelements;++e){  
     
-    for(int f=0;f<mesh->Nfaces;++f){
-      int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+    for(iint f=0;f<mesh->Nfaces;++f){
+      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
       

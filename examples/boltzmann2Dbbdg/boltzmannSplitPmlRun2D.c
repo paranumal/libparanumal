@@ -3,14 +3,14 @@
 void boltzmannSplitPmlRun2D(mesh2D *mesh){
 
   // Allocate MPI send buffer
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
   occa::initTimer(mesh->device);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
     // perform a 5-stage LSERK4 time step
     boltzmannSplitPmlLserkStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer);

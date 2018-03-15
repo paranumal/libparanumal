@@ -1,5 +1,5 @@
 
-void boundaryConditions2D(int bc, dfloat time, dfloat x, dfloat y,
+void boundaryConditions2D(iint bc, dfloat time, dfloat x, dfloat y,
 			  dfloat uM, dfloat vM, dfloat pM,
 			  dfloat *uP, dfloat *vP, dfloat *pP){
   
@@ -27,13 +27,13 @@ void boundaryConditions2D(int bc, dfloat time, dfloat x, dfloat y,
 
 // function to compute surface contributions 
 // for nodal DG acoustics right hand side
-kernel void acousticsPartialSurface2D_s0(const int Nelements,
-					     const int   * restrict elementIds, 
+kernel void acousticsPartialSurface2D_s0(const iint Nelements,
+					     const iint   * restrict elementIds, 
 					     const dfloat * restrict sgeo,
 					     const dfloat * restrict LIFTT,
-					     const int   * restrict vmapM,
-					     const int   * restrict vmapP,
-					     const int   * restrict EToB,
+					     const iint   * restrict vmapM,
+					     const iint   * restrict vmapP,
+					     const iint   * restrict EToB,
 					     const dfloat time,
 					     const dfloat * restrict x,
 					     const dfloat * restrict y,
@@ -41,7 +41,7 @@ kernel void acousticsPartialSurface2D_s0(const int Nelements,
 					     dfloat       * restrict rhsq){
 				   
   // for element in list
-  for(int el=0;el<Nelements;++el;outer0){
+  for(iint el=0;el<Nelements;++el;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxu[p_Nfp*p_Nfaces];
@@ -49,35 +49,35 @@ kernel void acousticsPartialSurface2D_s0(const int Nelements,
     shared dfloat s_fluxp[p_Nfp*p_Nfaces];
     
     // for all face nodes of all elements
-    for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
 
-      const int e = elementIds[el];
+      const iint e = elementIds[el];
       
       if(n<p_Nfp*p_Nfaces){
 	// find face that owns this node
-	int face = n/p_Nfp;
+	iint face = n/p_Nfp;
 
 	// load surface geofactors for this face
-	int sid = p_Nsgeo*(e*p_Nfaces+face);
+	iint sid = p_Nsgeo*(e*p_Nfaces+face);
 	dfloat nx = sgeo[sid+0];
 	dfloat ny = sgeo[sid+1];
 	dfloat sJ = sgeo[sid+2];
 	dfloat invJ = sgeo[sid+3];
 
 	// indices of negative and positive traces of face node
-	int id  = e*p_Nfp*p_Nfaces + n;
-	int idM = vmapM[id];
-	int idP = vmapP[id];
+	iint id  = e*p_Nfp*p_Nfaces + n;
+	iint idM = vmapM[id];
+	iint idP = vmapP[id];
 
 	if(idP<0) idP = idM;
-	int qidM = idM*p_Nfields, qidP = idP*p_Nfields;
+	iint qidM = idM*p_Nfields, qidP = idP*p_Nfields;
 	
 	// load negative and positive trace node values of q
 	dfloat uM = q[qidM+0], vM = q[qidM+1], pM = q[qidM+2];
 	dfloat uP = q[qidP+0], vP = q[qidP+1], pP = q[qidP+2];
 	
 	// apply boundary condition
-	int bc = EToB[face+p_Nfaces*e];
+	iint bc = EToB[face+p_Nfaces*e];
 	if(bc>0)
 	  boundaryConditions2D(bc, time, x[idM], y[idM], uM, vM, pM, &uP, &vP, &pP);
 	
@@ -97,12 +97,12 @@ kernel void acousticsPartialSurface2D_s0(const int Nelements,
     barrier(localMemFence);
 
     // for each node in the element 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(iint n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
 
-	const int e = elementIds[el];
+	const iint e = elementIds[el];
 	
-	int id = p_Nfields*(p_Np*e + n);
+	iint id = p_Nfields*(p_Np*e + n);
 
 	// load rhs data from volume fluxes
 	dfloat rhsu = rhsq[id];
@@ -127,13 +127,13 @@ kernel void acousticsPartialSurface2D_s0(const int Nelements,
 }
     
 // s1: float4 for q,rhsq
-kernel void acousticsPartialSurface2D_s1(const int Nelements,
-					     const int   * restrict elementIds, 
+kernel void acousticsPartialSurface2D_s1(const iint Nelements,
+					     const iint   * restrict elementIds, 
 					     const dfloat * restrict sgeo,
 					     const dfloat * restrict LIFTT,
-					     const int   * restrict vmapM,
-					     const int   * restrict vmapP,
-					     const int   * restrict EToB,
+					     const iint   * restrict vmapM,
+					     const iint   * restrict vmapP,
+					     const iint   * restrict EToB,
 					     const dfloat time,
 					     const dfloat * restrict x,
 					     const dfloat * restrict y,
@@ -141,7 +141,7 @@ kernel void acousticsPartialSurface2D_s1(const int Nelements,
 					     dfloat4       * restrict rhsq4){
 				   
   // for elements in list
-  for(int el=0;el<Nelements;++el;outer0){
+  for(iint el=0;el<Nelements;++el;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxu[p_Nfp*p_Nfaces];
@@ -149,27 +149,27 @@ kernel void acousticsPartialSurface2D_s1(const int Nelements,
     shared dfloat s_fluxp[p_Nfp*p_Nfaces];
     
     // for all face nodes of all elements
-    for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
 
       if(n<p_Nfp*p_Nfaces){
 
 	// find element
-	const int e = elementIds[el];      
+	const iint e = elementIds[el];      
 	
 	// find face that owns this node
-	int face = n/p_Nfp;
+	iint face = n/p_Nfp;
 
 	// load surface geofactors for this face
-	int sid = p_Nsgeo*(e*p_Nfaces+face);
+	iint sid = p_Nsgeo*(e*p_Nfaces+face);
 	dfloat nx = sgeo[sid+0];
 	dfloat ny = sgeo[sid+1];
 	dfloat sJ = sgeo[sid+2];
 	dfloat invJ = sgeo[sid+3];
 
 	// indices of negative and positive traces of face node
-	int id  = e*p_Nfp*p_Nfaces + n;
-	int idM = vmapM[id];
-	int idP = vmapP[id];
+	iint id  = e*p_Nfp*p_Nfaces + n;
+	iint idM = vmapM[id];
+	iint idP = vmapP[id];
 	if(idP<0) idP = idM;
 	
 	// load negative and positive trace node values of q4
@@ -179,7 +179,7 @@ kernel void acousticsPartialSurface2D_s1(const int Nelements,
 	dfloat uP = qP.x, vP = qP.y, pP = qP.z;
 
 	// apply boundary condition
-	int bc = EToB[face+p_Nfaces*e];
+	iint bc = EToB[face+p_Nfaces*e];
 	if(bc>0)
 	  boundaryConditions2D(bc, time, x[idM], y[idM], uM, vM, pM, &uP, &vP, &pP);
 
@@ -199,13 +199,13 @@ kernel void acousticsPartialSurface2D_s1(const int Nelements,
     barrier(localMemFence);
 
     // for each node in the element 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(iint n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
 
 	// find element
-	const int e = elementIds[el];      
+	const iint e = elementIds[el];      
 	
-	int id = p_Np*e + n;
+	iint id = p_Np*e + n;
 
 	// load rhs data from volume fluxes
 	dfloat4 rhsq = rhsq4[id];
@@ -232,13 +232,13 @@ kernel void acousticsPartialSurface2D_s1(const int Nelements,
 }
 
 // s2: float4 for sgeo
-kernel void acousticsPartialSurface2D_s2(const int Nelements,
-					     const int   * restrict elementIds, 
+kernel void acousticsPartialSurface2D_s2(const iint Nelements,
+					     const iint   * restrict elementIds, 
 					     const dfloat4 * restrict sgeo,
 					     const dfloat * restrict LIFTT,
-					     const int   * restrict vmapM,
-					     const int   * restrict vmapP,
-					     const int   * restrict EToB,
+					     const iint   * restrict vmapM,
+					     const iint   * restrict vmapP,
+					     const iint   * restrict EToB,
 					     const dfloat time,
 					     const dfloat * restrict x,
 					     const dfloat * restrict y,
@@ -246,7 +246,7 @@ kernel void acousticsPartialSurface2D_s2(const int Nelements,
 					     dfloat4       * restrict rhsq4){
 				   
   // for elements in list
-  for(int el=0;el<Nelements;++el;outer0){
+  for(iint el=0;el<Nelements;++el;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxu[p_Nfp*p_Nfaces];
@@ -254,18 +254,18 @@ kernel void acousticsPartialSurface2D_s2(const int Nelements,
     shared dfloat s_fluxp[p_Nfp*p_Nfaces];
     
     // for all face nodes of all elements
-    for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
       
       if(n<p_Nfp*p_Nfaces){
 
 	// find element
-	const int e = elementIds[el];      
+	const iint e = elementIds[el];      
 	
 	// find face that owns this node
-	int face = n/p_Nfp;
+	iint face = n/p_Nfp;
 
 	// load surface geofactors for this face
-	int sid = e*p_Nfaces+face;
+	iint sid = e*p_Nfaces+face;
 	dfloat4 sgeon = sgeo[sid];
 	dfloat nx = sgeon.x;
 	dfloat ny = sgeon.y;
@@ -273,9 +273,9 @@ kernel void acousticsPartialSurface2D_s2(const int Nelements,
 	dfloat invJ = sgeon.w;
 
 	// indices of negative and positive traces of face node
-	int id  = e*p_Nfp*p_Nfaces + n;
-	int idM = vmapM[id];
-	int idP = vmapP[id];
+	iint id  = e*p_Nfp*p_Nfaces + n;
+	iint idM = vmapM[id];
+	iint idP = vmapP[id];
 
 	// load negative and positive trace node values of q4
 	dfloat4 qM = q4[idM], qP = q4[idP];
@@ -286,7 +286,7 @@ kernel void acousticsPartialSurface2D_s2(const int Nelements,
 	if(idP<0) idP = idM;		
 	
 	// apply boundary condition
-	int bc = EToB[face+p_Nfaces*e];
+	iint bc = EToB[face+p_Nfaces*e];
 	if(bc>0)
 	  boundaryConditions2D(bc, time, x[idM], y[idM], uM, vM, pM, &uP, &vP, &pP);
 
@@ -306,13 +306,13 @@ kernel void acousticsPartialSurface2D_s2(const int Nelements,
     barrier(localMemFence);
 
     // for each node in the element 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(iint n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
 
 	// find element
-	const int e = elementIds[el];      
+	const iint e = elementIds[el];      
 	
-	int id = p_Np*e + n;
+	iint id = p_Np*e + n;
 
 	// load rhs data from volume fluxes
 	dfloat4 rhsq = rhsq4[id];
@@ -339,13 +339,13 @@ kernel void acousticsPartialSurface2D_s2(const int Nelements,
 }
     
 // s3: unroll lift loop (use float for sgeo)
-kernel void acousticsPartialSurface2D_s3(const int Nelements,
-					     const int   * restrict elementIds, 
+kernel void acousticsPartialSurface2D_s3(const iint Nelements,
+					     const iint   * restrict elementIds, 
 					     const dfloat * restrict sgeo,
 					     const dfloat * restrict LIFTT,
-					     const int   * restrict vmapM,
-					     const int   * restrict vmapP,
-					     const int   * restrict EToB,
+					     const iint   * restrict vmapM,
+					     const iint   * restrict vmapP,
+					     const iint   * restrict EToB,
 					     const dfloat time,
 					     const dfloat * restrict x,
 					     const dfloat * restrict y,	     
@@ -353,7 +353,7 @@ kernel void acousticsPartialSurface2D_s3(const int Nelements,
 					     dfloat4       * restrict rhsq4){
 				   
   // for all elements
-  for(int el=0;el<Nelements;++el;outer0){
+  for(iint el=0;el<Nelements;++el;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxu[p_Nfp*p_Nfaces];
@@ -361,27 +361,27 @@ kernel void acousticsPartialSurface2D_s3(const int Nelements,
     shared dfloat s_fluxp[p_Nfp*p_Nfaces];
     
     // for all face nodes of all elements
-    for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
       
       if(n<p_Nfp*p_Nfaces){
 
 	// find element
-	const int e = elementIds[el];      
+	const iint e = elementIds[el];      
 	
 	// find face that owns this node
-	int face = n/p_Nfp;
+	iint face = n/p_Nfp;
 
 	// load surface geofactors for this face
-	int sid = p_Nsgeo*(e*p_Nfaces+face);
+	iint sid = p_Nsgeo*(e*p_Nfaces+face);
 	dfloat nx = sgeo[sid+0];
 	dfloat ny = sgeo[sid+1];
 	dfloat sJ = sgeo[sid+2];
 	dfloat invJ = sgeo[sid+3];
 
 	// indices of negative and positive traces of face node
-	int id  = e*p_Nfp*p_Nfaces + n;
-	int idM = vmapM[id];
-	int idP = vmapP[id];
+	iint id  = e*p_Nfp*p_Nfaces + n;
+	iint idM = vmapM[id];
+	iint idP = vmapP[id];
 
 	if(idP<0) idP = idM;
 	
@@ -392,7 +392,7 @@ kernel void acousticsPartialSurface2D_s3(const int Nelements,
 	dfloat uP = qP.x, vP = qP.y, pP = qP.z;
 	
 	// apply boundary condition
-	int bc = EToB[face+p_Nfaces*e];
+	iint bc = EToB[face+p_Nfaces*e];
 	if(bc>0)
 	  boundaryConditions2D(bc, time, x[idM], y[idM], uM, vM, pM, &uP, &vP, &pP);
 
@@ -412,13 +412,13 @@ kernel void acousticsPartialSurface2D_s3(const int Nelements,
     barrier(localMemFence);
 
     // for each node in the element 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(iint n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
 
 	// find element
-	const int e = elementIds[el];      
+	const iint e = elementIds[el];      
 	
-	int id = p_Np*e + n;
+	iint id = p_Np*e + n;
 
 	// load rhs data from volume fluxes
 	dfloat4 rhsq = rhsq4[id];
@@ -446,13 +446,13 @@ kernel void acousticsPartialSurface2D_s3(const int Nelements,
 }
 
 // s4: batch process elements
-kernel void acousticsPartialSurface2D_s4(const int Nelements,
-					     const int   * restrict elementIds, 
+kernel void acousticsPartialSurface2D_s4(const iint Nelements,
+					     const iint   * restrict elementIds, 
 					     const dfloat * restrict sgeo,
 					     const dfloat * restrict LIFTT,
-					     const int   * restrict vmapM,
-					     const int   * restrict vmapP,
-					     const int   * restrict EToB,
+					     const iint   * restrict vmapM,
+					     const iint   * restrict vmapP,
+					     const iint   * restrict EToB,
 					     const dfloat time,
 					     const dfloat * restrict x,
 					     const dfloat * restrict y,
@@ -460,7 +460,7 @@ kernel void acousticsPartialSurface2D_s4(const int Nelements,
 					     dfloat4       * restrict rhsq4){
 				   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
@@ -468,30 +468,30 @@ kernel void acousticsPartialSurface2D_s4(const int Nelements,
     shared dfloat s_fluxp[p_NblockS][p_Nfp*p_Nfaces];    
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	int el = eo + es;
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	iint el = eo + es;
 	if(el<Nelements){
 
 	  if(n<p_Nfp*p_Nfaces){
 
 	    // find element
-	    const int e = elementIds[el];      
+	    const iint e = elementIds[el];      
 	    
 	    // find face that owns this node
-	    int face = n/p_Nfp;
+	    iint face = n/p_Nfp;
 	  
 	    // load surface geofactors for this face
-	    int sid = p_Nsgeo*(e*p_Nfaces+face);
+	    iint sid = p_Nsgeo*(e*p_Nfaces+face);
 	    dfloat nx = sgeo[sid+0];
 	    dfloat ny = sgeo[sid+1];
 	    dfloat sJ = sgeo[sid+2];
 	    dfloat invJ = sgeo[sid+3];
 
 	    // indices of negative and positive traces of face node
-	    int id  = e*p_Nfp*p_Nfaces + n;
-	    int idM = vmapM[id];
-	    int idP = vmapP[id];
+	    iint id  = e*p_Nfp*p_Nfaces + n;
+	    iint idM = vmapM[id];
+	    iint idP = vmapP[id];
 
 	    if(idP<0) idP = idM;
 	  
@@ -502,7 +502,7 @@ kernel void acousticsPartialSurface2D_s4(const int Nelements,
 	    dfloat uP = qP.x, vP = qP.y, pP = qP.z;
 
 	    // apply boundary condition
-	    int bc = EToB[face+p_Nfaces*e];
+	    iint bc = EToB[face+p_Nfaces*e];
 	    if(bc>0)
 	      boundaryConditions2D(bc, time, x[idM], y[idM], uM, vM, pM, &uP, &vP, &pP);
 	    
@@ -524,17 +524,17 @@ kernel void acousticsPartialSurface2D_s4(const int Nelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
-	int el = eo + es;
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+	iint el = eo + es;
 	if(el<Nelements){
 	  if(n<p_Np){
 
 	    // find element
-	    const int e = elementIds[el];      
+	    const iint e = elementIds[el];      
 
 	    // find output node
-	    int id = p_Np*e + n;
+	    iint id = p_Np*e + n;
 	    
 	    // load rhs data from volume fluxes
 	    dfloat4 rhsq = rhsq4[id];
@@ -564,13 +564,13 @@ kernel void acousticsPartialSurface2D_s4(const int Nelements,
 }
 
 // s5: lift in shared
-kernel void acousticsPartialSurface2D_s5(const int Nelements,
-					     const int   * restrict elementIds, 
+kernel void acousticsPartialSurface2D_s5(const iint Nelements,
+					     const iint   * restrict elementIds, 
 					     const dfloat * restrict sgeo,
 					     const dfloat * restrict LIFTT,
-					     const int   * restrict vmapM,
-					     const int   * restrict vmapP,
-					     const int   * restrict EToB,
+					     const iint   * restrict vmapM,
+					     const iint   * restrict vmapP,
+					     const iint   * restrict EToB,
 					     const dfloat time,
 					     const dfloat * restrict x,
 					     const dfloat * restrict y,
@@ -578,7 +578,7 @@ kernel void acousticsPartialSurface2D_s5(const int Nelements,
 					     dfloat4       * restrict rhsq4){
 				   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
@@ -587,11 +587,11 @@ kernel void acousticsPartialSurface2D_s5(const int Nelements,
     shared dfloat s_LIFTT[p_Nfp*p_Nfaces][p_Np];
     
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	int el = eo + es;
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	iint el = eo + es;
 	
-	int t = n + p_maxNodes*es;
+	iint t = n + p_maxNodes*es;
 	while(t< (p_Np*p_Nfaces*p_Nfp)){
 	  s_LIFTT[0][t] = LIFTT[t];
 	  t+= p_maxNodes*p_NblockS;
@@ -601,22 +601,22 @@ kernel void acousticsPartialSurface2D_s5(const int Nelements,
 	  if(n<p_Nfp*p_Nfaces){
 
 	    // find element
-	    const int e = elementIds[el];      
+	    const iint e = elementIds[el];      
 	    
 	    // find face that owns this node
-	    int face = n/p_Nfp;
+	    iint face = n/p_Nfp;
 	  
 	    // load surface geofactors for this face
-	    int sid = p_Nsgeo*(e*p_Nfaces+face);
+	    iint sid = p_Nsgeo*(e*p_Nfaces+face);
 	    dfloat nx = sgeo[sid+0];
 	    dfloat ny = sgeo[sid+1];
 	    dfloat sJ = sgeo[sid+2];
 	    dfloat invJ = sgeo[sid+3];
 
 	    // indices of negative and positive traces of face node
-	    int id  = e*p_Nfp*p_Nfaces + n;
-	    int idM = vmapM[id];
-	    int idP = vmapP[id];
+	    iint id  = e*p_Nfp*p_Nfaces + n;
+	    iint idM = vmapM[id];
+	    iint idP = vmapP[id];
 
 	    if(idP<0) idP = idM;
 	  
@@ -627,7 +627,7 @@ kernel void acousticsPartialSurface2D_s5(const int Nelements,
 	    dfloat uP = qP.x, vP = qP.y, pP = qP.z;
 
 	    // apply boundary condition
-	    int bc = EToB[face+p_Nfaces*e];
+	    iint bc = EToB[face+p_Nfaces*e];
 	    if(bc>0)
 	      boundaryConditions2D(bc, time, x[idM], y[idM], uM, vM, pM, &uP, &vP, &pP);
 	    
@@ -649,16 +649,16 @@ kernel void acousticsPartialSurface2D_s5(const int Nelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
-	int el = eo + es;
+    for(iint es=0;es<p_NblockS;++es;inner1){
+      for(iint n=0;n<p_maxNodes;++n;inner0){
+	iint el = eo + es;
 	if(el<Nelements){
 	  if(n<p_Np){
 
 	    // find element
-	    const int e = elementIds[el];      
+	    const iint e = elementIds[el];      
 	    
-	    int id = p_Np*e + n;
+	    iint id = p_Np*e + n;
 	    
 	    // load rhs data from volume fluxes
 	    dfloat4 rhsq = rhsq4[id];

@@ -34,7 +34,7 @@ void meshParallelPrint3D(mesh3D *mesh);
 void meshVTU3D(mesh3D *mesh, char *fileName);
 
 // print out mesh field
-void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, int fld);
+void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, iint fld);
 
 // compute geometric factors for local to physical map
 void meshGeometricFactorsTri3D(mesh3D *mesh);
@@ -115,17 +115,17 @@ void meshParallelGatherScatter(mesh3D *mesh,
 			       const char *op);
 
 ogs_t *meshParallelGatherScatterSetup(mesh3D *mesh,    // provides DEVICE
-				      int Nlocal,     // number of local nodes
-				      int Nbytes,     // number of bytes per node
-				      int *localIds,  // local index of nodes
-				      int *baseIds,   // gather index of their base nodes
-				      int *haloFlags); // 1 for halo node, 0 for not
+				      iint Nlocal,     // number of local nodes
+				      iint Nbytes,     // number of bytes per node
+				      iint *localIds,  // local index of nodes
+				      iint *baseIds,   // gather index of their base nodes
+				      iint *haloFlags); // 1 for halo node, 0 for not
 
 void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels); 
 
 //MRAB weighted mesh partitioning
 void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
-                                      int numLevels, int *levels);
+                                      iint numLevels, iint *levels);
 
 #define norm(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
 

@@ -1,6 +1,6 @@
 #include "acousticsHex3D.h"
 
-void boundaryConditions3D(int bc, dfloat time, dfloat x, dfloat y, dfloat z,
+void boundaryConditions3D(iint bc, dfloat time, dfloat x, dfloat y, dfloat z,
 			  dfloat uM, dfloat vM, dfloat wM, dfloat pM,
 			  dfloat *uP, dfloat *vP, dfloat *wP, dfloat *pP){
   if(bc==1){
@@ -39,14 +39,14 @@ void acousticsSurfaceHex3D(mesh3D *mesh, dfloat time){
   dfloat *fluxp = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
 
   // for all elements
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
     // for all face nodes of all elements
-    for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
       // find face that owns this node
-      int face = n/mesh->Nfp;
+      iint face = n/mesh->Nfp;
 
       // load surface geofactors for this face
-      int  sid = mesh->Nsgeo*(e*mesh->Nfaces+face);
+      iint  sid = mesh->Nsgeo*(e*mesh->Nfaces+face);
       dfloat nx = mesh->sgeo[sid+NXID];
       dfloat ny = mesh->sgeo[sid+NYID];
       dfloat nz = mesh->sgeo[sid+NZID];
@@ -54,9 +54,9 @@ void acousticsSurfaceHex3D(mesh3D *mesh, dfloat time){
       dfloat invJ = mesh->sgeo[sid+IJID];
 
       // indices of negative and positive traces of face node
-      int id  = e*mesh->Nfp*mesh->Nfaces + n;
-      int idM = mesh->Nfields*mesh->vmapM[id];
-      int idP = mesh->Nfields*mesh->vmapP[id];
+      iint id  = e*mesh->Nfp*mesh->Nfaces + n;
+      iint idM = mesh->Nfields*mesh->vmapM[id];
+      iint idP = mesh->Nfields*mesh->vmapP[id];
 
       if(idP<0) idP = idM;
       
@@ -73,7 +73,7 @@ void acousticsSurfaceHex3D(mesh3D *mesh, dfloat time){
       dfloat pP = mesh->q[idP+3];
 
       // find boundary type
-      int boundaryType = mesh->EToB[e*mesh->Nfaces+face];
+      iint boundaryType = mesh->EToB[e*mesh->Nfaces+face];
       if(boundaryType>0)
 	boundaryConditions3D(boundaryType, time,
 			     mesh->x[idM], mesh->y[idM], mesh->z[idM],
@@ -94,8 +94,8 @@ void acousticsSurfaceHex3D(mesh3D *mesh, dfloat time){
     }
 
     // for each node in the element 
-    for(int n=0;n<mesh->Np;++n){
-      int id = mesh->Nfields*(mesh->Np*e + n);
+    for(iint n=0;n<mesh->Np;++n){
+      iint id = mesh->Nfields*(mesh->Np*e + n);
 
       // load rhs data from volume fluxes
       dfloat rhsu = mesh->rhsq[id];

@@ -62,20 +62,20 @@ parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {
 }
 
 void parAlmondAgmgSetup(parAlmond_t *parAlmond,
-       int* globalRowStarts,       //global partition
-       int  nnz,                   //--
-       int* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
-       int* Aj,                    //--
+       iint* globalRowStarts,       //global partition
+       iint  nnz,                   //--
+       iint* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
+       iint* Aj,                    //--
        dfloat* Avals,               //--
        bool nullSpace,
        dfloat nullSpacePenalty){                  // gs op for problem assembly (to be removed in future?)
 
-  int size, rank;
+  iint size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  int TotalRows = globalRowStarts[size];
-  int numLocalRows = globalRowStarts[rank+1]-globalRowStarts[rank];
+  iint TotalRows = globalRowStarts[size];
+  iint numLocalRows = globalRowStarts[rank+1]-globalRowStarts[rank];
 
   csr *A = newCSRfromCOO(numLocalRows,globalRowStarts,nnz, Ai, Aj, Avals);
 
@@ -85,7 +85,7 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
 
   //populate null space vector
   dfloat *nullA = (dfloat *) calloc(numLocalRows, sizeof(dfloat));
-  for (int i=0;i<numLocalRows;i++) nullA[i] = 1/sqrt(TotalRows);
+  for (iint i=0;i<numLocalRows;i++) nullA[i] = 1/sqrt(TotalRows);
 
   agmgSetup(parAlmond, A, nullA, globalRowStarts, parAlmond->options);
 

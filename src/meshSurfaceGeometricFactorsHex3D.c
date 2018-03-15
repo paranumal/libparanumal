@@ -12,21 +12,21 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 				mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
   
-  for(int e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
+  for(iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
-    int id = e*mesh->Nverts;
+    iint id = e*mesh->Nverts;
 
     dfloat *xe = mesh->EX + id;
     dfloat *ye = mesh->EY + id;
     dfloat *ze = mesh->EZ + id;
     
-    for(int f=0;f<mesh->Nfaces;++f){ // for each face
+    for(iint f=0;f<mesh->Nfaces;++f){ // for each face
       
-      for(int i=0;i<mesh->Nfp;++i){  // for each node on face
+      for(iint i=0;i<mesh->Nfp;++i){  // for each node on face
 
 	/* volume index of face node */
-	int n = mesh->faceNodes[f*mesh->Nfp+i];
+	iint n = mesh->faceNodes[f*mesh->Nfp+i];
 
 	/* local node coordinates */
 	dfloat rn = mesh->r[n]; 
@@ -69,7 +69,7 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 	sJ *= J;
 	
 	/* output index */
-	int base = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + mesh->Nfp*f + i);
+	iint base = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + mesh->Nfp*f + i);
 
 	/* store normal, surface Jacobian, and reciprocal of volume Jacobian */
 	mesh->sgeo[base+NXID] = nx;
@@ -82,10 +82,10 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
     }
   }
 
-  for(int e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
-    for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
-      int baseM = e*mesh->Nfp*mesh->Nfaces + n;
-      int baseP = mesh->mapP[baseM];
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
+    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+      iint baseM = e*mesh->Nfp*mesh->Nfaces + n;
+      iint baseP = mesh->mapP[baseM];
       // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
       dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
       dfloat hinvP = mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];

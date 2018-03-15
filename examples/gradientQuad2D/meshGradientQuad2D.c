@@ -8,11 +8,11 @@ void meshGradientQuad2D(mesh2D *mesh,
 			dfloat *dqdy
 			){
   
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
     
-    for(int n=0;n<mesh->Np;++n){
-      int gid = e*mesh->Nvgeo*mesh->Np + n;
+    for(iint n=0;n<mesh->Np;++n){
+      iint gid = e*mesh->Nvgeo*mesh->Np + n;
       dfloat drdx = mesh->vgeo[gid + mesh->Np*RXID];
       dfloat drdy = mesh->vgeo[gid + mesh->Np*RYID];
       dfloat dsdx = mesh->vgeo[gid + mesh->Np*SXID];
@@ -20,7 +20,7 @@ void meshGradientQuad2D(mesh2D *mesh,
 
       dfloat dqdr = 0, dqds = 0;
       
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
 	
 	dqdr += mesh->Dr[n*mesh->Np + m]*q[m + e*mesh->Np];
 	dqds += mesh->Ds[n*mesh->Np + m]*q[m + e*mesh->Np];

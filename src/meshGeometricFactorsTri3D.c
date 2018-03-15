@@ -12,7 +12,7 @@ void meshGeometricFactorsTri3D(mesh_t *mesh){
   /* note that we have volume geometric factors for each node */
   mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->Np, sizeof(dfloat));
 
-  for(int e=0;e<mesh->Nelements;++e){ /* for each element */
+  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
 
     for(int n=0;n<mesh->Np;++n){
       

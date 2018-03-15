@@ -1,8 +1,8 @@
 typedef struct{
 
-  int row;
-  int col;
-  int ownerRank;
+  iint row;
+  iint col;
+  iint ownerRank;
   dfloat val;
 
 }nonZero_t;
@@ -78,9 +78,9 @@ typedef struct {
 
   occa::memory o_coarseInvDegree;
 
-  int coarseNp;
-  int coarseTotal;
-  int *coarseOffsets;
+  iint coarseNp;
+  iint coarseTotal;
+  iint *coarseOffsets;
   dfloat *B, *tmp2;
   occa::memory *o_B, o_tmp2;
   void *xxt2;
@@ -111,19 +111,19 @@ extern "C"
 }
 
 void ellipticBuildIpdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                              dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                              int *nnzA, int *globalStarts, const char *options);
+                              dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+                              iint *nnzA, iint *globalStarts, const char *options);
 
 void ellipticBuildBRdgTri2D(mesh2D *mesh, int basisNp, dfloat *basis,
-                              dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                              int *nnzA, int *globalStarts, const char *options);
+                              dfloat tau, dfloat lambda, iint *BCType, nonZero_t **A,
+                              iint *nnzA, iint *globalStarts, const char *options);
 
-void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, int *nnz,
-                              hgs_t **hgs, int *globalStarts, const char* options);
+void ellipticBuildContinuousTri2D(mesh2D *mesh, dfloat lambda, nonZero_t **A, iint *nnz,
+                              hgs_t **hgs, iint *globalStarts, const char* options);
 
 void ellipticCoarsePreconditionerSetupTri2D(mesh_t *mesh, precon_t *precon, dfloat tau, dfloat lambda,
-                                   int *BCType, dfloat **V1, nonZero_t **A, int *nnzA,
-                                   hgs_t **hgs, int *globalStarts, const char *options);
+                                   iint *BCType, dfloat **V1, nonZero_t **A, iint *nnzA,
+                                   hgs_t **hgs, iint *globalStarts, const char *options);
 
 //Multigrid function callbacks
 void AxTri2D        (void **args, occa::memory &o_x, occa::memory &o_Ax);

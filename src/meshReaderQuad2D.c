@@ -52,12 +52,12 @@ mesh2D* meshReaderQuad2D(char *fileName){
   sscanf(buf, "%d", &(mesh->Nelements));
 
   /* allocate space for Element node index data */
-  mesh->EToV = (int*) calloc(mesh->Nelements*mesh->Nverts, sizeof(int));
+  mesh->EToV = (iint*) calloc(mesh->Nelements*mesh->Nverts, sizeof(iint));
 
   /* scan through file looking for quadrilateral elements */
   int Nquadrilaterals = 0;
   for(n=0;n<mesh->Nelements;++n){
-    int elementType, v1, v2, v3, v4;
+    iint elementType, v1, v2, v3, v4;
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==3){  // quadrilateral

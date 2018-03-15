@@ -1,25 +1,25 @@
 // y = beta*y + alpha*x
-kernel void vectorAddKernel(const int   N,
+kernel void vectorAddKernel(const iint   N,
 				  const dfloat   alpha,
 				  const dfloat   beta,
 				  const dfloat *restrict x,
 				        dfloat *restrict y){
 
-  for(int i=0;i<N;++i;tile(256)){
+  for(iint i=0;i<N;++i;tile(256)){
     if(i<N)
       y[i] = beta*y[i] + alpha*x[i];
   }
 }
 
 // z = alpha*x + beta*y
-kernel void vectorAddKernel2(const int   N,
+kernel void vectorAddKernel2(const iint   N,
 				   const dfloat   alpha,
 				   const dfloat   beta,
 				   const dfloat *restrict x,
 				   const dfloat *restrict y,
 				         dfloat *restrict z){
 
-  for(int i=0;i<N;++i;tile(256)){
+  for(iint i=0;i<N;++i;tile(256)){
     if(i<N)
       z[i] = beta*y[i] + alpha*x[i];
   }

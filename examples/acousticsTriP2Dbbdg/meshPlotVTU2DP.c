@@ -6,7 +6,7 @@
 #include "mesh2D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, int fld){
+void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, iint fld){
   
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -16,7 +16,7 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, int fld){
   //sprintf(fileName, "%s_%04d.vtu", fileNameBase, rank);
   strcpy(fileName,fileNameBase);
 
-  int NMax = mesh->NMax;
+  iint NMax = mesh->NMax;
 
   fp = fopen(fileName, "w");
 
@@ -31,8 +31,8 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, int fld){
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
-  for(int e=0;e<mesh->Nelements;++e){
-    int id = e*mesh->Nverts;
+  for(iint e=0;e<mesh->Nelements;++e){
+    iint id = e*mesh->Nverts;
 
     dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat xe2 = mesh->EX[id+1];
@@ -42,7 +42,7 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, int fld){
     dfloat ye2 = mesh->EY[id+1];
     dfloat ye3 = mesh->EY[id+2];
 
-    for(int n=0;n<mesh->plotNp[NMax];++n){
+    for(iint n=0;n<mesh->plotNp[NMax];++n){
       /* (r,s) coordinates of plot nodes*/
       dfloat rn = mesh->plotR[NMax][n]; 
       dfloat sn = mesh->plotS[NMax][n];
@@ -62,11 +62,11 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, int fld){
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"pressure\" Format=\"ascii\">\n");
   
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp[NMax];++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp[NMax];++n){
       dfloat plotpn = 0;
 
-      for(int m=0;m<mesh->NpMax;++m){
+      for(iint m=0;m<mesh->NpMax;++m){
         dfloat pm = mesh->q[fld + mesh->Nfields*(m+e*mesh->NpMax)];
         plotpn += mesh->plotInterp[NMax][n*mesh->NpMax+m]*pm;
       }
@@ -82,8 +82,8 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, int fld){
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements[NMax];++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements[NMax];++n){
       fprintf(fp, "       ");
       for(int m=0;m<mesh->plotNverts;++m){
 	       fprintf(fp, "%d ", e*mesh->plotNp[NMax] + mesh->plotEToV[NMax][n*mesh->plotNverts+m]);
@@ -95,9 +95,9 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, int fld){
   fprintf(fp, "        </DataArray>\n");
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements[NMax];++n){
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements[NMax];++n){
       cnt += mesh->plotNverts;
       fprintf(fp, "       ");
       fprintf(fp, "%d\n", cnt);
@@ -106,8 +106,8 @@ void meshPlotVTU2DP(mesh2D *mesh, char *fileNameBase, int fld){
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements[NMax];++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements[NMax];++n){
       fprintf(fp, "5\n");
     }
   }

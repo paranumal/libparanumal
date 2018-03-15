@@ -24,8 +24,8 @@ void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
 
   fprintf(fp,"VARIABLES=x,y,u,v,p,w,div\n");
 
-  int TotalPoints = mesh->Nelements*mesh->plotNp;
-  int TotalCells  = mesh->Nelements*mesh->plotNelements;
+  iint TotalPoints = mesh->Nelements*mesh->plotNp;
+  iint TotalCells  = mesh->Nelements*mesh->plotNelements;
 
   fprintf(fp, "ZONE  N = %d  E = %d  F=FEPOINT , ET=TRIANGLE , STRANDID=1, SOLUTIONTIME = %.8f \n", TotalPoints,TotalCells,time);
 
@@ -36,12 +36,12 @@ void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
   dfloat *divU    = (dfloat *) calloc(mesh->Np, sizeof(dfloat));
   // Write data
   // compute plot node coordinates on the fly
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
     // First compute the curl and div
-    for(int n=0;n<mesh->Np;++n){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat dUdr = 0, dUds = 0, dVdr = 0, dVds = 0;
-      for(int m=0;m<mesh->Np;++m){
-        int base = mesh->Nfields*(m + e*mesh->Np);
+      for(iint m=0;m<mesh->Np;++m){
+        iint base = mesh->Nfields*(m + e*mesh->Np);
         dfloat rho = mesh->q[base + 0];
         dfloat u = mesh->q[1 + base]*mesh->sqrtRT/rho;
         dfloat v = mesh->q[2 + base]*mesh->sqrtRT/rho;
@@ -65,16 +65,16 @@ void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
       divU[n]  = dUdx+dVdy;
     }   
 
-    for(int n=0;n<mesh->plotNp;++n){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0, plotun=0;
       dfloat plotvn = 0, plotpn =0,  plotwn=0, plotdn=0;
 
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
 
         plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
         plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
         //
-        int base = mesh->Nfields*(m + e*mesh->Np);
+        iint base = mesh->Nfields*(m + e*mesh->Np);
         dfloat rho = mesh->q[base];
         dfloat pm = mesh->sqrtRT*mesh->sqrtRT*rho; 
         dfloat um = mesh->q[1 + base]*mesh->sqrtRT/rho;
@@ -96,8 +96,8 @@ void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
 
 
   // Write Connectivity
-   for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+   for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       for(int m=0;m<mesh->plotNverts;++m){
         fprintf(fp, "%9d\t ", 1 + e*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
       }

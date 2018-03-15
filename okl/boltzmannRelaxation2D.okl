@@ -1,14 +1,14 @@
 // MRAB relaxation cub
-kernel void boltzmannRelaxationCub2D(const int Nelements,
-                         const int * restrict elementIds,
-                         const int nrhs, 
-                         const int shift,
+kernel void boltzmannRelaxationCub2D(const iint Nelements,
+                         const iint * restrict elementIds,
+                         const iint nrhs, 
+                         const iint shift,
                          const dfloat * restrict cubInterpT,
                          const dfloat * restrict cubProjectT,
                          const dfloat * restrict q,
                                dfloat * restrict rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockCub;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockCub;outer0){  // for all elements
 
     // shared memory for q at nodes
     shared dfloat s_q[p_NblockCub][p_Nfields][p_Np];
@@ -18,21 +18,21 @@ kernel void boltzmannRelaxationCub2D(const int Nelements,
     shared dfloat s_cubN5[p_NblockCub][p_cubNp];
     shared dfloat s_cubN6[p_NblockCub][p_cubNp];
 
-    exclusive int e;
+    exclusive iint e;
 
     // prefetch q to shared
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){    
+    for(iint es=0;es<p_NblockCub;++es;inner1){
+      for(iint n=0;n<p_maxCubNodes;++n;inner0){    
     
-    int et = eo+es; // element in block
+    iint et = eo+es; // element in block
     if(et<Nelements){
       e = elementIds[et];
 
       if(n<p_Np){
-        const int id = p_Nfields*(e*p_Np + n);
+        const iint id = p_Nfields*(e*p_Np + n);
 
         occaUnroll(p_Nfields)
-        for(int fld=0; fld<p_Nfields;++fld){
+        for(iint fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
 
@@ -45,17 +45,17 @@ kernel void boltzmannRelaxationCub2D(const int Nelements,
     barrier(localMemFence);
 
     // interpolate q to cubature
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    for(iint es=0;es<p_NblockCub;++es;inner1){
+      for(iint n=0;n<p_maxCubNodes;++n;inner0){     
     
-    int et = eo+es; // element in block
+    iint et = eo+es; // element in block
     if(et<Nelements){
       if(n<p_cubNp){
         dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
         dfloat cubq4 = 0.0f, cubq5 = 0.0f, cubq6 = 0.0f;
         
         occaUnroll(p_Np)
-        for(int m=0;m<p_Np;++m){
+        for(iint m=0;m<p_Np;++m){
           const dfloat Icn  = cubInterpT[m*p_cubNp+n];
           cubq1 += Icn*s_q[es][0][m];
           cubq2 += Icn*s_q[es][1][m];
@@ -79,22 +79,22 @@ kernel void boltzmannRelaxationCub2D(const int Nelements,
     barrier(localMemFence);
     
     // partial projection to nodes from cubature-sub-group
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    for(iint es=0;es<p_NblockCub;++es;inner1){
+      for(iint n=0;n<p_maxCubNodes;++n;inner0){     
     
-        int et = eo+es; // element in block
+        iint et = eo+es; // element in block
         if(et<Nelements){
             if(n<p_Np){
              //Update 
-                const int id = p_Nfields*(e*p_Np + n);
-                const int rhsId = nrhs*id + p_Nfields*shift;
+                const iint id = p_Nfields*(e*p_Np + n);
+                const iint rhsId = nrhs*id + p_Nfields*shift;
 
                 dfloat N4 = rhsq[rhsId + 3];
                 dfloat N5 = rhsq[rhsId + 4];
                 dfloat N6 = rhsq[rhsId + 5];
                 
                 occaUnroll(p_cubNp)
-                for(int i=0;i<p_cubNp;++i){
+                for(iint i=0;i<p_cubNp;++i){
                   const dfloat Pnc  = cubProjectT[i*p_Np+n];
                   N4 += Pnc*s_cubN4[es][i];
                   N5 += Pnc*s_cubN5[es][i];
@@ -116,11 +116,11 @@ kernel void boltzmannRelaxationCub2D(const int Nelements,
 
 
 // Fully Explicit Scheme Uses Clasical half Half Splitting
-kernel void boltzmannPmlRelaxationCub2D(const int pmlNelements,
-                                    const int * restrict pmlElementIds,
-                                    const int * restrict pmlIds,
-                                    const int nrhs,
-                                    const int shift,
+kernel void boltzmannPmlRelaxationCub2D(const iint pmlNelements,
+                                    const iint * restrict pmlElementIds,
+                                    const iint * restrict pmlIds,
+                                    const iint nrhs,
+                                    const iint shift,
                                     const dfloat * restrict cubInterpT,
                                     const dfloat * restrict cubProjectT,
                                     const dfloat * restrict pmlSigmaX,
@@ -132,7 +132,7 @@ kernel void boltzmannPmlRelaxationCub2D(const int pmlNelements,
                                           dfloat * restrict pmlrhsqx,
                                           dfloat * restrict pmlrhsqy){
 
-    for(int eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
+    for(iint eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
 
     // shared memory for q at nodes
     shared dfloat  s_q[p_NblockCub][p_Nfields][p_Np];
@@ -144,22 +144,22 @@ kernel void boltzmannPmlRelaxationCub2D(const int pmlNelements,
     shared dfloat s_cubqx[p_NblockCub][p_Nfields][p_cubNp];
     shared dfloat s_cubqy[p_NblockCub][p_Nfields][p_cubNp];
    
-    exclusive int e, pmlId;
+    exclusive iint e, pmlId;
 
     // prefetch q to shared
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){      
-        int et = eo+es; // element in block
+    for(iint es=0;es<p_NblockCub;++es;inner1){
+      for(iint n=0;n<p_maxCubNodes;++n;inner0){      
+        iint et = eo+es; // element in block
         if(et<pmlNelements){
             e     = pmlElementIds[et];
             pmlId = pmlIds[et];
             
             if(n<p_Np){
-              const int id  = p_Nfields*(e*p_Np + n);
-              const int pid = p_Nfields*(pmlId*p_Np + n);
+              const iint id  = p_Nfields*(e*p_Np + n);
+              const iint pid = p_Nfields*(pmlId*p_Np + n);
               
               occaUnroll(p_Nfields)
-              for(int fld=0; fld<p_Nfields;++fld){
+              for(iint fld=0; fld<p_Nfields;++fld){
                 s_q[es][fld][n]   = q[id +fld];
                 s_qx[es][fld][n]  = pmlqx[pid+fld];
                 s_qy[es][fld][n]  = pmlqy[pid+fld];
@@ -173,9 +173,9 @@ kernel void boltzmannPmlRelaxationCub2D(const int pmlNelements,
     barrier(localMemFence);
 
     // interpolate q to cubature
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
-        int et = eo+es; // element in block
+    for(iint es=0;es<p_NblockCub;++es;inner1){
+      for(iint n=0;n<p_maxCubNodes;++n;inner0){     
+        iint et = eo+es; // element in block
         if(et<pmlNelements){
           if(n<p_cubNp){
             dfloat r_q[p_Nfields];
@@ -183,17 +183,17 @@ kernel void boltzmannPmlRelaxationCub2D(const int pmlNelements,
             dfloat r_qy[p_Nfields];
             
             occaUnroll(p_Nfields)
-            for(int fld=0; fld<p_Nfields ; fld++){
+            for(iint fld=0; fld<p_Nfields ; fld++){
               r_q[fld]  = 0.f;
               r_qx[fld] = 0.f;
               r_qy[fld] = 0.f;
             }
             
             occaUnroll(p_Np)
-            for(int m=0;m<p_Np;++m){
+            for(iint m=0;m<p_Np;++m){
               const dfloat Icn  = cubInterpT[m*p_cubNp+n];   
               occaUnroll(p_Nfields)
-              for(int fld=0; fld<p_Nfields;++fld){
+              for(iint fld=0; fld<p_Nfields;++fld){
                 r_q[fld]  += Icn*s_q[es][fld][m];
                 r_qx[fld] += Icn*s_qx[es][fld][m];
                 r_qy[fld] += Icn*s_qy[es][fld][m];
@@ -208,7 +208,7 @@ kernel void boltzmannPmlRelaxationCub2D(const int pmlNelements,
             const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
             
             occaUnroll(p_Nfields)
-            for(int fld=0; fld<p_Nfields;++fld){       
+            for(iint fld=0; fld<p_Nfields;++fld){       
               s_cubqx[es][fld][n] = -msigmaxe*r_qx[fld];
               s_cubqy[es][fld][n] = -msigmaye*r_qy[fld];
               s_cubq [es][fld][n] = -msigmaxe*r_qx[fld]-msigmaye*r_qy[fld];
@@ -229,15 +229,15 @@ kernel void boltzmannPmlRelaxationCub2D(const int pmlNelements,
     barrier(localMemFence);
     
     // partial projection to nodes from cubature-sub-group
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    for(iint es=0;es<p_NblockCub;++es;inner1){
+      for(iint n=0;n<p_maxCubNodes;++n;inner0){     
     
-        int et = eo+es; // element in block
+        iint et = eo+es; // element in block
           if(et<pmlNelements){
             if(n<p_Np){
           // Update
-              const int rhsId    = nrhs*p_Nfields*(p_Np*e + n)     + p_Nfields*shift;
-              const int pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
+              const iint rhsId    = nrhs*p_Nfields*(p_Np*e + n)     + p_Nfields*shift;
+              const iint pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
 
               dfloat r_rhsq[p_Nfields];
               dfloat r_rhsqx[p_Nfields];
@@ -245,7 +245,7 @@ kernel void boltzmannPmlRelaxationCub2D(const int pmlNelements,
               // dfloat r_rhsqt[p_Nfields];
             
               occaUnroll(p_Nfields)
-              for(int fld=0; fld<p_Nfields;++fld){
+              for(iint fld=0; fld<p_Nfields;++fld){
                 r_rhsq[fld]  = 0.f;
                 r_rhsqx[fld] = 0.f;
                 r_rhsqy[fld] = 0.f;
@@ -253,10 +253,10 @@ kernel void boltzmannPmlRelaxationCub2D(const int pmlNelements,
 
               // use temporaries for part sums for N4,N5,N6 because of exclusives
               occaUnroll(p_cubNp)
-              for(int m=0;m<p_cubNp;++m){
+              for(iint m=0;m<p_cubNp;++m){
                 const dfloat Pnc  = cubProjectT[m*p_Np+n];                  
                  occaUnroll(p_Nfields)
-                 for(int fld=0; fld<p_Nfields; fld++){
+                 for(iint fld=0; fld<p_Nfields; fld++){
                   r_rhsq [fld] += Pnc*s_cubq[es][fld][m];
                   r_rhsqx[fld] += Pnc*s_cubqx[es][fld][m];
                   r_rhsqy[fld] += Pnc*s_cubqy[es][fld][m];
@@ -264,7 +264,7 @@ kernel void boltzmannPmlRelaxationCub2D(const int pmlNelements,
               }
                 
              occaUnroll(p_Nfields) 
-             for(int fld=0; fld<p_Nfields;++fld){
+             for(iint fld=0; fld<p_Nfields;++fld){
                 pmlrhsqx[pmlrhsId + fld] += r_rhsqx[fld];
                 pmlrhsqy[pmlrhsId + fld] += r_rhsqy[fld];
                 rhsq[rhsId + fld]        += r_rhsq[fld];
@@ -281,16 +281,16 @@ kernel void boltzmannPmlRelaxationCub2D(const int pmlNelements,
 
 
 // MRAB relaxation cub
-kernel void boltzmannSARelaxationCub2D(const int Nelements,
-                         const int * restrict elementIds,
-                         const int nrhs, 
-                         const int shift,
+kernel void boltzmannSARelaxationCub2D(const iint Nelements,
+                         const iint * restrict elementIds,
+                         const iint nrhs, 
+                         const iint shift,
                          const dfloat * restrict cubInterpT,
                          const dfloat * restrict cubProjectT,
                          const dfloat * restrict q,
                                dfloat * restrict rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockCub;outer0){  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockCub;outer0){  // for all elements
 
     // shared memory for q at nodes
     shared dfloat s_q[p_NblockCub][p_Nfields][p_Np];
@@ -300,20 +300,20 @@ kernel void boltzmannSARelaxationCub2D(const int Nelements,
     shared dfloat s_cubN5[p_NblockCub][p_cubNp];
     shared dfloat s_cubN6[p_NblockCub][p_cubNp];
 
-    exclusive int e;
+    exclusive iint e;
 
     // prefetch q to shared
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){    
+    for(iint es=0;es<p_NblockCub;++es;inner1){
+      for(iint n=0;n<p_maxCubNodes;++n;inner0){    
     
-    int et = eo+es; // element in block
+    iint et = eo+es; // element in block
     if(et<Nelements){
       e = elementIds[et];
 
       if(n<p_Np){
-        const int id = p_Nfields*(e*p_Np + n);
+        const iint id = p_Nfields*(e*p_Np + n);
         occaUnroll(p_Nfields)
-        for(int fld=0; fld<p_Nfields;++fld){
+        for(iint fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
       }
@@ -326,17 +326,17 @@ kernel void boltzmannSARelaxationCub2D(const int Nelements,
     barrier(localMemFence);
 
     // interpolate q to cubature
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    for(iint es=0;es<p_NblockCub;++es;inner1){
+      for(iint n=0;n<p_maxCubNodes;++n;inner0){     
     
-    int et = eo+es; // element in block
+    iint et = eo+es; // element in block
     if(et<Nelements){
       if(n<p_cubNp){
         dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
         dfloat cubq4 = 0.0f, cubq5 = 0.0f, cubq6 = 0.0f;
         
         occaUnroll(p_Np)  
-        for(int m=0;m<p_Np;++m){
+        for(iint m=0;m<p_Np;++m){
           const dfloat Icn  = cubInterpT[m*p_cubNp+n];
           cubq1 += Icn*s_q[es][0][m];
           cubq2 += Icn*s_q[es][1][m];
@@ -361,22 +361,22 @@ kernel void boltzmannSARelaxationCub2D(const int Nelements,
     barrier(localMemFence);
     
     // partial projection to nodes from cubature-sub-group
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    for(iint es=0;es<p_NblockCub;++es;inner1){
+      for(iint n=0;n<p_maxCubNodes;++n;inner0){     
     
-        int et = eo+es; // element in block
+        iint et = eo+es; // element in block
         if(et<Nelements){
             if(n<p_Np){
              //Update 
-                const int id = p_Nfields*(e*p_Np + n);
-                const int rhsId = nrhs*id + p_Nfields*shift;
+                const iint id = p_Nfields*(e*p_Np + n);
+                const iint rhsId = nrhs*id + p_Nfields*shift;
 
                 dfloat N4 = rhsq[rhsId + 3];
                 dfloat N5 = rhsq[rhsId + 4];
                 dfloat N6 = rhsq[rhsId + 5];
                 
                 occaUnroll(p_cubNp)
-                for(int i=0;i<p_cubNp;++i){
+                for(iint i=0;i<p_cubNp;++i){
                   const dfloat Pnc  = cubProjectT[i*p_Np+n];
                   N4 += Pnc*s_cubN4[es][i];
                   N5 += Pnc*s_cubN5[es][i];
@@ -399,11 +399,11 @@ kernel void boltzmannSARelaxationCub2D(const int Nelements,
 
 
 // 
-kernel void boltzmannSAPmlRelaxationCub2D(const int pmlNelements,
-                                    const int * restrict pmlElementIds,
-                                    const int * restrict pmlIds,
-                                    const int nrhs,
-                                    const int shift,
+kernel void boltzmannSAPmlRelaxationCub2D(const iint pmlNelements,
+                                    const iint * restrict pmlElementIds,
+                                    const iint * restrict pmlIds,
+                                    const iint nrhs,
+                                    const iint shift,
                                     const dfloat * restrict cubInterpT,
                                     const dfloat * restrict cubProjectT,
                                     const dfloat * restrict pmlSigmaX,
@@ -415,7 +415,7 @@ kernel void boltzmannSAPmlRelaxationCub2D(const int pmlNelements,
                                           dfloat * restrict pmlrhsqx,
                                           dfloat * restrict pmlrhsqy){
   
-   for(int eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
+   for(iint eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
 
     // shared memory for q at nodes
     shared dfloat  s_q[p_NblockCub][p_Nfields][p_Np];
@@ -427,22 +427,22 @@ kernel void boltzmannSAPmlRelaxationCub2D(const int pmlNelements,
     shared dfloat s_cubqx[p_NblockCub][p_Nfields][p_cubNp];
     shared dfloat s_cubqy[p_NblockCub][p_Nfields][p_cubNp];
 
-    exclusive int e, pmlId;
+    exclusive iint e, pmlId;
 
     // prefetch q to shared
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){      
-        int et = eo+es; // element in block
+    for(iint es=0;es<p_NblockCub;++es;inner1){
+      for(iint n=0;n<p_maxCubNodes;++n;inner0){      
+        iint et = eo+es; // element in block
         if(et<pmlNelements){
             e     = pmlElementIds[et];
             pmlId = pmlIds[et];
             
             if(n<p_Np){
-              const int id  = p_Nfields*(e*p_Np + n);
-              const int pid = p_Nfields*(pmlId*p_Np + n);
+              const iint id  = p_Nfields*(e*p_Np + n);
+              const iint pid = p_Nfields*(pmlId*p_Np + n);
               
               occaUnroll(p_Nfields)
-              for(int fld=0; fld<p_Nfields;++fld){
+              for(iint fld=0; fld<p_Nfields;++fld){
                 s_q[es][fld][n]   = q[id +fld];
                 s_qx[es][fld][n]  = pmlqx[pid+fld];
                 s_qy[es][fld][n]  = pmlqy[pid+fld];
@@ -456,9 +456,9 @@ kernel void boltzmannSAPmlRelaxationCub2D(const int pmlNelements,
     barrier(localMemFence);
 
     // interpolate q to cubature
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
-        int et = eo+es; // element in block
+    for(iint es=0;es<p_NblockCub;++es;inner1){
+      for(iint n=0;n<p_maxCubNodes;++n;inner0){     
+        iint et = eo+es; // element in block
         if(et<pmlNelements){
           if(n<p_cubNp){
             dfloat r_q[p_Nfields];
@@ -466,17 +466,17 @@ kernel void boltzmannSAPmlRelaxationCub2D(const int pmlNelements,
             dfloat r_qy[p_Nfields];
 
             occaUnroll(p_Nfields)
-            for(int fld=0; fld<p_Nfields ; fld++){
+            for(iint fld=0; fld<p_Nfields ; fld++){
               r_q[fld]  = 0.f;
               r_qx[fld] = 0.f;
               r_qy[fld] = 0.f;
             }
 
             occaUnroll(p_Np)
-            for(int m=0;m<p_Np;++m){
+            for(iint m=0;m<p_Np;++m){
               const dfloat Icn  = cubInterpT[m*p_cubNp+n];
               occaUnroll(p_Nfields)
-              for(int fld=0; fld<p_Nfields;++fld){
+              for(iint fld=0; fld<p_Nfields;++fld){
                 r_q[fld]  += Icn*s_q[es][fld][m];
                 r_qx[fld] += Icn*s_qx[es][fld][m];
                 r_qy[fld] += Icn*s_qy[es][fld][m];
@@ -492,7 +492,7 @@ kernel void boltzmannSAPmlRelaxationCub2D(const int pmlNelements,
             const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
             
             occaUnroll(p_Nfields)
-            for(int fld=0; fld<p_Nfields;++fld){
+            for(iint fld=0; fld<p_Nfields;++fld){
               s_cubqx[es][fld][n] = -msigmaxe*r_qx[fld];
               s_cubqy[es][fld][n] = -msigmaye*r_qy[fld];
               s_cubq[es][fld][n]  = -msigmaxe*r_qx[fld] - msigmaye*r_qy[fld];  
@@ -514,22 +514,22 @@ kernel void boltzmannSAPmlRelaxationCub2D(const int pmlNelements,
     barrier(localMemFence);
     
     // partial projection to nodes from cubature-sub-group
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    for(iint es=0;es<p_NblockCub;++es;inner1){
+      for(iint n=0;n<p_maxCubNodes;++n;inner0){     
     
-        int et = eo+es; // element in block
+        iint et = eo+es; // element in block
           if(et<pmlNelements){
             if(n<p_Np){
           // Update
-              const int rhsId    = nrhs*p_Nfields*(p_Np*e + n)     + p_Nfields*shift;
-              const int pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
+              const iint rhsId    = nrhs*p_Nfields*(p_Np*e + n)     + p_Nfields*shift;
+              const iint pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
 
               dfloat r_rhsq[p_Nfields];
               dfloat r_rhsqx[p_Nfields];
               dfloat r_rhsqy[p_Nfields];
               
               occaUnroll(p_Nfields)
-              for(int fld=0; fld<p_Nfields;++fld){
+              for(iint fld=0; fld<p_Nfields;++fld){
                 r_rhsq[fld]  = 0.f;
                 r_rhsqx[fld] = 0.f;
                 r_rhsqy[fld] = 0.f;
@@ -537,10 +537,10 @@ kernel void boltzmannSAPmlRelaxationCub2D(const int pmlNelements,
               
               // use temporaries for part sums for N4,N5,N6 because of exclusives
               occaUnroll(p_cubNp)
-              for(int m=0;m<p_cubNp;++m){
+              for(iint m=0;m<p_cubNp;++m){
                 const dfloat Pnc  = cubProjectT[m*p_Np+n];
                  occaUnroll(p_Nfields)
-                 for(int fld=0; fld<p_Nfields; fld++){
+                 for(iint fld=0; fld<p_Nfields; fld++){
                   r_rhsq[fld]  += Pnc*s_cubq[es][fld][m];
                   r_rhsqx[fld] += Pnc*s_cubqx[es][fld][m];
                   r_rhsqy[fld] += Pnc*s_cubqy[es][fld][m];
@@ -548,7 +548,7 @@ kernel void boltzmannSAPmlRelaxationCub2D(const int pmlNelements,
               }
             
              occaUnroll(p_Nfields)
-             for(int fld=0; fld<p_Nfields;++fld){
+             for(iint fld=0; fld<p_Nfields;++fld){
                 pmlrhsqx[pmlrhsId + fld] += r_rhsqx[fld];
                 pmlrhsqy[pmlrhsId + fld] += r_rhsqy[fld];
                 rhsq[rhsId + fld]        += r_rhsq[fld];

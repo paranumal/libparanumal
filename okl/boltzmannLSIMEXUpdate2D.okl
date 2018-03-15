@@ -1,7 +1,7 @@
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannIMEXResidualUpdate2D(const int Nelements,
-            const int * restrict elementIds,
+kernel void boltzmannIMEXResidualUpdate2D(const iint Nelements,
+            const iint * restrict elementIds,
             const dfloat dt, 
             const dfloat c_im,
             const dfloat c_ex, 
@@ -9,12 +9,12 @@ kernel void boltzmannIMEXResidualUpdate2D(const int Nelements,
             const dfloat4 * restrict qZ,
                   dfloat4 * restrict qY){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
-      const int element = elementIds[e];
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
 
-      const int id0 = 2*(n + element*p_Np);
-      const int id1 = id0 + 1; 
+      const iint id0 = 2*(n + element*p_Np);
+      const iint id1 = id0 + 1; 
 
       dfloat4 qima = qZ[id0];
       dfloat4 qimb = qZ[id1];
@@ -35,8 +35,8 @@ kernel void boltzmannIMEXResidualUpdate2D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannIMEXImplicitUpdate2D(const int Nelements,
-            const int * restrict elementIds,
+kernel void boltzmannIMEXImplicitUpdate2D(const iint Nelements,
+            const iint * restrict elementIds,
             const dfloat dt, 
             const dfloat akk,
             const dfloat4 * restrict qZ,
@@ -44,12 +44,12 @@ kernel void boltzmannIMEXImplicitUpdate2D(const int Nelements,
                   dfloat4 * restrict q,
                   dfloat4 * restrict qS){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
-      const int element = elementIds[e];
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
 
-      const int id0 = 2*(n + element*p_Np);
-      const int id1 = id0 + 1; 
+      const iint id0 = 2*(n + element*p_Np);
+      const iint id1 = id0 + 1; 
 
       dfloat4 qima = qZ[id0];
       dfloat4 qimb = qZ[id1];
@@ -72,8 +72,8 @@ kernel void boltzmannIMEXImplicitUpdate2D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannIMEXUpdate2D(const int Nelements,
-            const int * restrict elementIds,
+kernel void boltzmannIMEXUpdate2D(const iint Nelements,
+            const iint * restrict elementIds,
             const dfloat dt, 
             const dfloat akk,
             const dfloat4 * restrict qZ,
@@ -81,12 +81,12 @@ kernel void boltzmannIMEXUpdate2D(const int Nelements,
             const dfloat4 * restrict qS,
                   dfloat4 * restrict q){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
-      const int element = elementIds[e];
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
 
-      const int id0 = 2*(n + element*p_Np);
-      const int id1 = id0 + 1; 
+      const iint id0 = 2*(n + element*p_Np);
+      const iint id1 = id0 + 1; 
 
       dfloat4 qia = qZ[id0];
       dfloat4 qib = qZ[id1];
@@ -106,8 +106,8 @@ kernel void boltzmannIMEXUpdate2D(const int Nelements,
 }
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannIMEXSplitPmlImplicitUpdate2D(const int Nelements,
-            const int * restrict elementIds,
+kernel void boltzmannIMEXSplitPmlImplicitUpdate2D(const iint Nelements,
+            const iint * restrict elementIds,
             const dfloat dt, 
             const dfloat akk,
             const dfloat ramp,
@@ -125,18 +125,18 @@ kernel void boltzmannIMEXSplitPmlImplicitUpdate2D(const int Nelements,
                   dfloat  * restrict qSnt,
                   dfloat4 * restrict q ){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
-      const int element = elementIds[e];
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
 
       //
-      const int base = n + element*p_Nfields*p_Np;
-      const int id1 = base + 0*p_Np;
-      const int id2 = base + 1*p_Np;
-      const int id3 = base + 2*p_Np;
-      const int id4 = base + 3*p_Np;
-      const int id5 = base + 4*p_Np;
-      const int id6 = base + 5*p_Np;
+      const iint base = n + element*p_Nfields*p_Np;
+      const iint id1 = base + 0*p_Np;
+      const iint id2 = base + 1*p_Np;
+      const iint id3 = base + 2*p_Np;
+      const iint id4 = base + 3*p_Np;
+      const iint id5 = base + 4*p_Np;
+      const iint id6 = base + 5*p_Np;
 
 
       // PML UPDATES
@@ -290,8 +290,8 @@ kernel void boltzmannIMEXSplitPmlImplicitUpdate2D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannIMEXSplitPmlUpdate2D(const int Nelements,
-            const int * restrict elementIds,
+kernel void boltzmannIMEXSplitPmlUpdate2D(const iint Nelements,
+            const iint * restrict elementIds,
             const dfloat dt, 
             const dfloat akk,
             const dfloat ramp,
@@ -309,18 +309,18 @@ kernel void boltzmannIMEXSplitPmlUpdate2D(const int Nelements,
                   dfloat  * restrict pmlNT,
                   dfloat4 * restrict q ){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
-      const int element = elementIds[e];
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
 
       //
-      const int base = n + element*p_Nfields*p_Np;
-      const int id1 = base + 0*p_Np;
-      const int id2 = base + 1*p_Np;
-      const int id3 = base + 2*p_Np;
-      const int id4 = base + 3*p_Np;
-      const int id5 = base + 4*p_Np;
-      const int id6 = base + 5*p_Np;
+      const iint base = n + element*p_Nfields*p_Np;
+      const iint id1 = base + 0*p_Np;
+      const iint id2 = base + 1*p_Np;
+      const iint id3 = base + 2*p_Np;
+      const iint id4 = base + 3*p_Np;
+      const iint id5 = base + 4*p_Np;
+      const iint id6 = base + 5*p_Np;
 
 
      
@@ -457,8 +457,8 @@ kernel void boltzmannIMEXSplitPmlUpdate2D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannIMEXSplitPmlResidualUpdate2D(const int Nelements,
-            const int * restrict elementIds,
+kernel void boltzmannIMEXSplitPmlResidualUpdate2D(const iint Nelements,
+            const iint * restrict elementIds,
             const dfloat dt, 
             const dfloat c_im,
             const dfloat c_ex, 
@@ -473,18 +473,18 @@ kernel void boltzmannIMEXSplitPmlResidualUpdate2D(const int Nelements,
                   dfloat  * restrict pmlYnt
                    ){
   Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
-      const int element = elementIds[e];
+  for(iint e=0;e<Nelements;++e;outer0){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint element = elementIds[e];
 
       //
-      const int base = n + element*p_Nfields*p_Np;
-      const int id1 = base + 0*p_Np;
-      const int id2 = base + 1*p_Np;
-      const int id3 = base + 2*p_Np;
-      const int id4 = base + 3*p_Np;
-      const int id5 = base + 4*p_Np;
-      const int id6 = base + 5*p_Np;
+      const iint base = n + element*p_Nfields*p_Np;
+      const iint id1 = base + 0*p_Np;
+      const iint id2 = base + 1*p_Np;
+      const iint id3 = base + 2*p_Np;
+      const iint id4 = base + 3*p_Np;
+      const iint id5 = base + 4*p_Np;
+      const iint id6 = base + 5*p_Np;
 
 
       // PML UPDATES

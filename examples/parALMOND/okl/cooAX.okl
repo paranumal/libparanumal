@@ -1,22 +1,22 @@
 
 // y += alpha*A*x
 
-kernel void cooAXKernel(const int   numRows,
+kernel void cooAXKernel(const iint   numRows,
 			    const dfloat           alpha,
-			    const   int *restrict offsets,
-			    const   int *restrict cols,
+			    const   iint *restrict offsets,
+			    const   iint *restrict cols,
 			    const dfloat *restrict coeffs,
 			    const dfloat *restrict x,
 			          dfloat *restrict y){
   
-  for(int n=0;n<numRows;++n;tile(256)){
+  for(iint n=0;n<numRows;++n;tile(256)){
     if (n<numRows) {
-      int start = offsets[n];
-      int end = offsets[n+1];
+      iint start = offsets[n];
+      iint end = offsets[n+1];
       
       dfloat res = y[n];
       dfloat Axn = 0;
-      for(int i=start;i<end;++i){
+      for(iint i=start;i<end;++i){
         Axn += coeffs[i]*x[cols[i]];
       }
       y[n] = res + alpha*Axn;

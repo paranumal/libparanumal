@@ -5,14 +5,14 @@ kernel void ellipticSEMFEMAnterpTri2D(const int Nelements,
                                      const dfloat * restrict q,
                                      dfloat * restrict Pq){
 
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
 
     shared dfloat s_q[p_NblockV][p_NpFEM];
     shared dfloat s_P[p_Np][p_NpFEM];
 
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
-        int t = n + es*p_Np;
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        iint t = n + es*p_Np;
 
         while(t<p_NpFEM*p_NblockV){
           if(eo*p_NpFEM + t<Nelements*p_NpFEM)
@@ -31,13 +31,13 @@ kernel void ellipticSEMFEMAnterpTri2D(const int Nelements,
 
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
-        const int e = eo + es;
+    for(iint es=0;es<p_NblockV;++es;inner1){
+      for(iint n=0;n<p_Np;++n;inner0){
+        const iint e = eo + es;
         if(e<Nelements){
           dfloat tmp = 0;
           occaUnroll(p_NpFEM)
-            for(int i=0;i<p_NpFEM;++i){
+            for(iint i=0;i<p_NpFEM;++i){
               tmp += s_P[n][i]*s_q[es][i]; // bank conflict ?
             }
           Pq[e*p_Np+n] = tmp; // *invDegree[e*p_Np+n];

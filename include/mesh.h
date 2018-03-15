@@ -7,23 +7,23 @@
 #include <occa.hpp>
 
 #if 0
-#define int int
+#define iint int
 #define dfloat float
-#define MPI_int MPI_INT
+#define MPI_IINT MPI_INT
 #define MPI_DFLOAT MPI_FLOAT
-#define intFormat "%d"
+#define iintFormat "%d"
 #define dfloatFormat "%f"
 #define dfloatString "float"
-#define intString "int"
+#define iintString "int"
 #else
-#define int int
+#define iint int
 #define dfloat double
-#define MPI_int MPI_INT
+#define MPI_IINT MPI_INT
 #define MPI_DFLOAT MPI_DOUBLE
-#define intFormat "%d"
+#define iintFormat "%d"
 #define dfloatFormat "%lf"
 #define dfloatString "double"
-#define intString "int"
+#define iintString "int"
 #endif
 
 #include "ogs_t.h"
@@ -31,43 +31,43 @@
 
 typedef struct {
 
-  int dim;
-  int Nverts, Nfaces, NfaceVertices;
+  iint dim;
+  iint Nverts, Nfaces, NfaceVertices;
 
-  int Nnodes;
+  iint Nnodes;
   dfloat *EX; // coordinates of vertices for each element
   dfloat *EY;
   dfloat *EZ;
 
-  int Nelements;
-  int *EToV; // element-to-vertex connectivity
-  int *EToE; // element-to-element connectivity
-  int *EToF; // element-to-(local)face connectivity
-  int *EToP; // element-to-partition/process connectivity
-  int *EToB; // element-to-boundary condition type
+  iint Nelements;
+  iint *EToV; // element-to-vertex connectivity
+  iint *EToE; // element-to-element connectivity
+  iint *EToF; // element-to-(local)face connectivity
+  iint *EToP; // element-to-partition/process connectivity
+  iint *EToB; // element-to-boundary condition type
 
   int *elementInfo; //type of element
 
   // boundary faces
-  int NboundaryFaces; // number of boundary faces
-  int *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
+  iint NboundaryFaces; // number of boundary faces
+  iint *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
 
   // MPI halo exchange info
-  int  totalHaloPairs;  // number of elements to be sent in halo exchange
-  int *haloElementList; // sorted list of elements to be sent in halo exchange
-  int *NhaloPairs;      // number of elements worth of data to send/recv
-  int  NhaloMessages;   // number of messages to send
+  iint  totalHaloPairs;  // number of elements to be sent in halo exchange
+  iint *haloElementList; // sorted list of elements to be sent in halo exchange
+  iint *NhaloPairs;      // number of elements worth of data to send/recv
+  iint  NhaloMessages;   // number of messages to send
 
   void *haloSendRequests;
   void *haloRecvRequests;
 
-  int NinternalElements; // number of elements that can update without halo exchange
-  int NnotInternalElements; // number of elements that cannot update without halo exchange
+  iint NinternalElements; // number of elements that can update without halo exchange
+  iint NnotInternalElements; // number of elements that cannot update without halo exchange
 
   //list of fair pairs
-  int NfacePairs;
-  int *EToFPairs;
-  int *FPairsToE;
+  iint NfacePairs;
+  iint *EToFPairs;
+  iint *FPairsToE;
   int *FPairsToF;
 
   // NBN: streams / command queues
@@ -75,22 +75,22 @@ typedef struct {
 
   // volumeGeometricFactors;
   dfloat *vgeo;
-  int Nvgeo;
+  iint Nvgeo;
 
   // second order volume geometric factors
   dfloat *ggeo;
-  int Nggeo;
+  iint Nggeo;
 
   // volume node info
-  int N, Np;
+  iint N, Np;
   dfloat *r, *s, *t;    // coordinates of local nodes
   dfloat *Dr, *Ds, *Dt; // collocation differentiation matrices
   dfloat *MM, *invMM;           // reference mass matrix
   dfloat *Srr,*Srs, *Srt; //element stiffness matrices
   dfloat *Ssr,*Sss, *Sst;
   dfloat *Str,*Sts, *Stt;
-  int *Ind; // for sparse storage of Srr, Sss, Srs  
-  int maxNnzPerRow;
+  iint *Ind; // for sparse storage of Srr, Sss, Srs  
+  iint maxNnzPerRow;
   
   dfloat *x, *y, *z;    // coordinates of physical nodes
 
@@ -98,16 +98,16 @@ typedef struct {
   
 
   // indices of vertex nodes
-  int *vertexNodes;
+  iint *vertexNodes;
 
   // quad specific quantity
-  int Nq, NqP, NpP;
+  iint Nq, NqP, NpP;
 
   dfloat *D; // 1D differentiation matrix (for tensor-product)
   dfloat *gllz; // 1D GLL quadrature nodes
   dfloat *gllw; // 1D GLL quadrature weights
 
-  int gjNq;
+  iint gjNq;
   dfloat *gjr,*gjw; // 1D nodes and weights for Gauss Jacobi quadature
   dfloat *gjI,*gjD; // 1D GLL to Gauss node interpolation and differentiation matrices
   dfloat *gjD2;     // 1D GJ to GJ node differentiation
@@ -123,27 +123,27 @@ typedef struct {
   dfloat *oasDiagOpDg;
 
   //rotated node ids
-  int *rmapP;
+  iint *rmapP;
 
   //reference patch inverse (for OAS precon)
   dfloat *invAP;
 
   // face node info
-  int Nfp;        // number of nodes per face
-  int *faceNodes; // list of element reference interpolation nodes on element faces
-  int *vmapM;     // list of volume nodes that are face nodes
-  int *vmapP;     // list of volume nodes that are paired with face nodes
-  int *mapP;     // list of surface nodes that are paired with -ve surface  nodes
-  int *faceVertices; // list of mesh vertices on each face
+  iint Nfp;        // number of nodes per face
+  iint *faceNodes; // list of element reference interpolation nodes on element faces
+  iint *vmapM;     // list of volume nodes that are face nodes
+  iint *vmapP;     // list of volume nodes that are paired with face nodes
+  iint *mapP;     // list of surface nodes that are paired with -ve surface  nodes
+  iint *faceVertices; // list of mesh vertices on each face
 
   dfloat *LIFT; // lift matrix
   dfloat *FMM;  // Face Mass Matrix
 
-  int   Nsgeo;
+  iint   Nsgeo;
   dfloat *sgeo;
 
   // field info for PDE solver
-  int Nfields;
+  iint Nfields;
   dfloat *q;    // solution data array
   dfloat *fQM, *fQP; //solution trace arrays
   dfloat *rhsq, *rhsq2, *rhsq3; // right hand side data array
@@ -152,7 +152,7 @@ typedef struct {
   dfloat Lambda2; // square of penalty paramater used in constructing q^*
 
   // cubature
-  int cubNp;
+  iint cubNp;
   dfloat *cubr, *cubs, *cubt, *cubw; // coordinates and weights of local cubature nodes
   dfloat *cubx, *cuby, *cubz;    // coordinates of physical nodes
   dfloat *cubInterp; // interpolate from W&B to cubature nodes
@@ -168,11 +168,11 @@ typedef struct {
   //source injection
   dfloat *sourceq;
   dfloat sourceX0, sourceY0, sourceZ0, sourceT0, sourceC2, sourceFreq;
-  int sourceNelements, *MRABsourceNelements;
-  int *sourceElements;
+  iint sourceNelements, *MRABsourceNelements;
+  iint *sourceElements;
 
   // surface integration node info
-  int    intNfp;    // number of integration nodes on each face
+  iint    intNfp;    // number of integration nodes on each face
   dfloat *intInterp; // interp from surface node to integration nodes
   dfloat *intLIFT;   // lift from surface integration nodes to W&B volume nodes
   dfloat *intx, *inty, *intz; // coordinates of suface integration nodes
@@ -181,15 +181,15 @@ typedef struct {
   dfloat *VB, *invVB; // Bernstein Vandermonde matrices
   dfloat *BBMM;
   dfloat *invVB1D, *invVB2D;
-  int *D0ids, *D1ids, *D2ids, *D3ids; // Bernstein deriv matrix indices
+  iint *D0ids, *D1ids, *D2ids, *D3ids; // Bernstein deriv matrix indices
   dfloat *Dvals; // Bernstein deriv matrix values
   dfloat *VBq, *PBq; // cubature interpolation/projection matrices
-  int *L0ids; // L0 matrix ids
+  iint *L0ids; // L0 matrix ids
   dfloat *L0vals; // L0 values (L0 tridiagonal in 2D)
-  int *ELids; // lift reduction matrix indices
+  iint *ELids; // lift reduction matrix indices
   dfloat *ELvals; // lift reduction matrix values
-  int max_EL_nnz; // max number of non-zeros per row of EL
-  int *BBRaiseids; //Bernstein elevate matrix indices
+  iint max_EL_nnz; // max number of non-zeros per row of EL
+  iint *BBRaiseids; //Bernstein elevate matrix indices
   dfloat *BBRaiseVals; //Bernstein elevate matrix values
   dfloat *BBLower; //Berstein projection matrix.
 
@@ -201,26 +201,26 @@ typedef struct {
   dfloat dt; // time step
   dfloat startTime ; // Start Time
   dfloat finalTime; // final time to run acoustics to
-  int   NtimeSteps;// number of time steps
-  int   errorStep; // number of steps between error calculations
-  int   Nrk;
+  iint   NtimeSteps;// number of time steps
+  iint   errorStep; // number of steps between error calculations
+  iint   Nrk;
   dfloat rka[5], rkb[5], rkc[6]; // AK: deprecated
 
   // MRAB,SAAB coefficients
   dfloat mrab[3], mrabb[3], saab[3], saabexp; // AK: deprecated 
-  int MRABNlevels;
-  int *MRABlevel;
-  int *MRABNelements, *MRABNhaloElements;
-  int **MRABelementIds, **MRABhaloIds;
-  int *MRABshiftIndex;
+  iint MRABNlevels;
+  iint *MRABlevel;
+  iint *MRABNelements, *MRABNhaloElements;
+  iint **MRABelementIds, **MRABhaloIds;
+  iint *MRABshiftIndex;
 
-  int *MRABpmlNelements, *MRABpmlNhaloElements;
-  int **MRABpmlElementIds, **MRABpmlIds;
-  int **MRABpmlHaloElementIds, **MRABpmlHaloIds;
+  iint *MRABpmlNelements, *MRABpmlNhaloElements;
+  iint **MRABpmlElementIds, **MRABpmlIds;
+  iint **MRABpmlHaloElementIds, **MRABpmlHaloIds;
 
-  int pmlNelements, nonPmlNelements;
-  int *nonPmlElementIds, *pmlElementIds, *pmlIds;  
-  int shiftIndex;
+  iint pmlNelements, nonPmlNelements;
+  iint *nonPmlElementIds, *pmlElementIds, *pmlIds;  
+  iint shiftIndex;
 
   dfloat dtfactor; //Delete later for script run 
   dfloat maxErrorBoltzmann;
@@ -229,12 +229,12 @@ typedef struct {
   dfloat LSIMEX_B[4], LSIMEX_C[4], LSIMEX_ABi[4], LSIMEX_ABe[4], LSIMEX_Ad[4];
   dfloat *MRSAAB_A, *MRSAAB_B, *MRSAAB_C, *MRAB_A, *MRAB_B, *MRAB_C;
   dfloat RK_A[5][5], RK_B[5], RK_C[5], SARK_A[5][5], SARK_B[5], SARK_C[5]; 
-  int Nimex, Nrhs;
+  iint Nimex, Nrhs;
   // ploting info for generating field vtu
-  int    plotNverts;    // number of vertices for each plot element
-  int    plotNp;        // number of plot nodes per element
-  int    plotNelements; // number of "plot elements" per element
-  int   *plotEToV;      // triangulation of plot nodes
+  iint    plotNverts;    // number of vertices for each plot element
+  iint    plotNp;        // number of plot nodes per element
+  iint    plotNelements; // number of "plot elements" per element
+  iint   *plotEToV;      // triangulation of plot nodes
   dfloat *plotR, *plotS, *plotT; // coordinates of plot nodes in reference element
   dfloat *plotInterp;    // warp & blend to plot node interpolation matrix
 
@@ -251,11 +251,11 @@ typedef struct {
   dfloat RT, sqrtRT, tauInv, Ma, Re; // need to remove this to ceedling
 
   // pml stuff
-  int    pmlNfields;
-  //  int    pmlNelements; // deprecated
-  int   *pmlElementList; // deprecated
+  iint    pmlNfields;
+  //  iint    pmlNelements; // deprecated
+  iint   *pmlElementList; // deprecated
 
-  int Ntscale; // Will be removed, for time accuracy test
+  iint Ntscale; // Will be removed, for time accuracy test
   
   dfloat *pmlBetaX, *pmlBetaY; // deprecated
   dfloat *pmlSigma;
@@ -304,10 +304,10 @@ typedef struct {
   dfloat *respmlq; // residual data array (for LSERK time-stepping)
 
   // Probe Data
-  int probeN, probeNTotal; 
+  iint probeN, probeNTotal; 
   dfloat *probeR, *probeS, *probeT;
   // dfloat *probeX, *probeY, *probeZ;  
-  int *probeElementIds, *probeIds;  
+  iint *probeElementIds, *probeIds;  
   dfloat *probeI; 
 
 
@@ -427,18 +427,18 @@ typedef struct {
   // CG gather-scatter info
   void *gsh; // gslib struct pointer
 
-  int *gatherLocalIds; // local index of rank/gather id sorted list of nodes
-  int *gatherBaseIds;  // gather index of ""
-  int *gatherBaseRanks; // base rank
-  int *gatherMaxRanks;  // maximum rank connected to each sorted node
-  int *gatherHaloFlags;  // maximum rank connected to each sorted node
+  iint *gatherLocalIds; // local index of rank/gather id sorted list of nodes
+  iint *gatherBaseIds;  // gather index of ""
+  iint *gatherBaseRanks; // base rank
+  iint *gatherMaxRanks;  // maximum rank connected to each sorted node
+  iint *gatherHaloFlags;  // maximum rank connected to each sorted node
 
-  int NuniqueBases; // number of unique bases on this rank
+  iint NuniqueBases; // number of unique bases on this rank
   occa::memory o_gatherNodeOffsets; // list of offsets into gatherLocalNodes for start of base
   occa::memory o_gatherLocalNodes; // indices of local nodes collected by base node
   occa::memory o_gatherTmp; // temporary array to store base values gathered locally
 
-  int NnodeHalo; // number of halo bases on this rank
+  iint NnodeHalo; // number of halo bases on this rank
   occa::memory o_nodeHaloIds;  // indices of halo base nodes after initial local gather
   occa::memory o_subGatherTmp; // temporary DEVICE array to store halo base values prior to DEVICE>HOST copy
   dfloat        *subGatherTmp; // temporary HALO array
@@ -525,10 +525,10 @@ typedef struct {
 }mesh_t;
 
 // serial sort
-void mysort(int *data, int N, const char *order);
+void mysort(iint *data, iint N, const char *order);
 
 // sort entries in an array in parallel
-void parallelSort(int N, void *vv, size_t sz,
+void parallelSort(iint N, void *vv, size_t sz,
     int (*compare)(const void *, const void *),
     void (*match)(void *, void *)
     );
@@ -549,8 +549,8 @@ void parallelSort(int N, void *vv, size_t sz,
   void meshParallelConnectNodes(mesh_t *mesh);
 
   /* renumber global nodes to remove gaps */
-  void meshParallelConsecutiveGlobalNumbering(int Nnum, int *globalNumbering,
-      int *globalOwners, int *globalStarts);
+  void meshParallelConsecutiveGlobalNumbering(iint Nnum, iint *globalNumbering,
+      iint *globalOwners, iint *globalStarts);
 
 void meshHaloSetup(mesh_t *mesh);
 
@@ -579,9 +579,9 @@ void meshPartitionStatistics(mesh_t *mesh);
 void meshConnectBoundary(mesh_t *mesh);
 
 hgs_t *meshParallelGatherSetup(mesh_t *mesh,    // provides DEVICE
-    int Nlocal,     // number of local nodes
-    int *globalNumbering,  // global index of nodes
-    int *globalOwners);
+    iint Nlocal,     // number of local nodes
+    iint *globalNumbering,  // global index of nodes
+    iint *globalOwners);
 void meshParallelGather(mesh_t *mesh, hgs_t *hgs, occa::memory &o_v, occa::memory &o_gv);
 void meshParallelScatter(mesh_t *mesh, hgs_t *hgs, occa::memory &o_v, occa::memory &o_sv);
 

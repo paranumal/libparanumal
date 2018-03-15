@@ -30,10 +30,10 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0, plotzn = 0;
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
 	plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
 	plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
 	plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
@@ -53,10 +53,10 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Density\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
 	int id = m + 0*mesh->Np + mesh->Nfields*mesh->Np*e;
         dfloat pm = mesh->q[id];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
@@ -72,10 +72,10 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotun = 0, plotvn = 0, plotwn = 0;
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
 	int uid = m + 1*mesh->Np + mesh->Nfields*mesh->Np*e;
 	int vid = m + 2*mesh->Np + mesh->Nfields*mesh->Np*e;
 	int wid = m + 3*mesh->Np + mesh->Nfields*mesh->Np*e;
@@ -99,14 +99,14 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticit\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   dfloat *vort = (dfloat*) calloc(mesh->Np*mesh->dim, sizeof(dfloat));
   dfloat *plotVortRadial = (dfloat*) calloc(mesh->plotNp*mesh->Nelements, sizeof(dfloat));
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
 
     // compute vorticity
-    for(int j=0;j<mesh->Nq;++j){
-      for(int i=0;i<mesh->Nq;++i){
+    for(iint j=0;j<mesh->Nq;++j){
+      for(iint i=0;i<mesh->Nq;++i){
 
 	int n = i+mesh->Nq*j;
-	int gbase = e*mesh->Np*mesh->Nvgeo + n;
+	iint gbase = e*mesh->Np*mesh->Nvgeo + n;
 	dfloat rx = mesh->vgeo[gbase+mesh->Np*RXID];
 	dfloat sx = mesh->vgeo[gbase+mesh->Np*SXID];
 	dfloat tx = mesh->vgeo[gbase+mesh->Np*TXID];
@@ -123,7 +123,7 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 	dfloat dvdr = 0, dvds = 0;
 	dfloat dwdr = 0, dwds = 0;
 	
-	for(int m=0;m<mesh->Nq;++m){
+	for(iint m=0;m<mesh->Nq;++m){
 	  int basejm = m + j*mesh->Nq + mesh->Nfields*mesh->Np*e;
 	  int basemi = i + m*mesh->Nq + mesh->Nfields*mesh->Np*e;
 	  dfloat Dim = mesh->D[i*mesh->Nq+m];
@@ -156,10 +156,10 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
       }
     }
     
-    for(int n=0;n<mesh->plotNp;++n){
+    for(iint n=0;n<mesh->plotNp;++n){
       
       dfloat plotvort1n = 0, plotvort2n = 0, plotvort3n = 0;
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
 	int uid = m + 1*mesh->Np + mesh->Nfields*mesh->Np*e;
 	int vid = m + 2*mesh->Np + mesh->Nfields*mesh->Np*e;
 	int wid = m + 3*mesh->Np + mesh->Nfields*mesh->Np*e;
@@ -177,7 +177,7 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
       fprintf(fp, "%g %g %g\n", plotvort1n, plotvort2n, plotvort3n);
 
       dfloat plotxn = 0, plotyn = 0, plotzn = 0;
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
 	plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
 	plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
 	plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
@@ -194,10 +194,10 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"RadialVorticity\" NumberOfComponents=\"1\" Format=\"ascii\">\n");
 
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
 
     // compute vorticity
-    for(int n=0;n<mesh->plotNp;++n){
+    for(iint n=0;n<mesh->plotNp;++n){
       fprintf(fp, "       ");
       fprintf(fp, "%g\n", plotVortRadial[n+e*mesh->plotNp]);
     }
@@ -209,10 +209,10 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   free(plotVortRadial);
 
   // fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  // for(int e=0;e<mesh->Nelements;++e){
-  //   for(int n=0;n<mesh->plotNp;++n){
+  // for(iint e=0;e<mesh->Nelements;++e){
+  //   for(iint n=0;n<mesh->plotNp;++n){
   //     dfloat plotwxn = 0, plotwyn = 0, plotvn = 0, plotwzn = 0;
-  //     for(int m=0;m<mesh->Np;++m){
+  //     for(iint m=0;m<mesh->Np;++m){
   //       dfloat wx = mesh->q[4 + mesh->Nfields*(m+e*mesh->Np)];
   //       dfloat wy = mesh->q[5 + mesh->Nfields*(m+e*mesh->Np)];
   //       dfloat wz = mesh->q[6 + mesh->Nfields*(m+e*mesh->Np)];
@@ -235,8 +235,8 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "       ");
       for(int m=0;m<mesh->plotNverts;++m){
   fprintf(fp, "%d ", e*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
@@ -248,9 +248,9 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   fprintf(fp, "        </DataArray>\n");
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       cnt += mesh->plotNverts;
       fprintf(fp, "       ");
       fprintf(fp, "%d\n", cnt);
@@ -259,8 +259,8 @@ void boltzmannPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "5\n");
     }
   }

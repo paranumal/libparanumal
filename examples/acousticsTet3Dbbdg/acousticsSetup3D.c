@@ -1,15 +1,15 @@
 #include "acoustics3D.h"
 
-int factorial(int n) {
-  int retval = 1;
-  for (int i = n; i > 1; --i) retval *= i;
+iint factorial(iint n) {
+  iint retval = 1;
+  for (iint i = n; i > 1; --i) retval *= i;
   return retval;
 }
 
 
 void acousticsSetup3D(mesh3D *mesh){
 
-  int rank, size;
+  iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -22,11 +22,11 @@ void acousticsSetup3D(mesh3D *mesh){
 
   dfloat *EtoDT = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   dfloat hmin = 1e9;
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
     EtoDT[e] = 1e9;
 
-    for(int f=0;f<mesh->Nfaces;++f){
-      int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+    for(iint f=0;f<mesh->Nfaces;++f){
+      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -61,10 +61,10 @@ void acousticsSetup3D(mesh3D *mesh){
 				sizeof(dfloat));
 
   // fix this later (initial conditions)
-  int cnt = 0;
+  iint cnt = 0;
   dfloat time = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
       dfloat z = mesh->z[n + mesh->Np*e];
@@ -86,10 +86,10 @@ void acousticsSetup3D(mesh3D *mesh){
   //Transform to BB modal space
   #if USE_BERN
     dfloat qtmp[mesh->Nfields*mesh->Np];
-    for (int e =0;e<mesh->Nelements;e++){
+    for (iint e =0;e<mesh->Nelements;e++){
       cnt = e*mesh->Np*mesh->Nfields;
 
-      for (int n=0; n<mesh->Np; n++){
+      for (iint n=0; n<mesh->Np; n++){
         qtmp[n*mesh->Nfields + 0] = mesh->q[cnt+n*mesh->Nfields+0];
         qtmp[n*mesh->Nfields + 1] = mesh->q[cnt+n*mesh->Nfields+1];
         qtmp[n*mesh->Nfields + 2] = mesh->q[cnt+n*mesh->Nfields+2];
@@ -99,8 +99,8 @@ void acousticsSetup3D(mesh3D *mesh){
         mesh->q[cnt+n*mesh->Nfields+2] = 0.0;
         mesh->q[cnt+n*mesh->Nfields+3] = 0.0;
       }
-      for (int n=0;n<mesh->Np;n++){
-        for (int m=0; m<mesh->Np; m++){
+      for (iint n=0;n<mesh->Np;n++){
+        for (iint m=0; m<mesh->Np; m++){
           mesh->q[cnt+n*mesh->Nfields + 0] += mesh->invVB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+0];
           mesh->q[cnt+n*mesh->Nfields + 1] += mesh->invVB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+1];
           mesh->q[cnt+n*mesh->Nfields + 2] += mesh->invVB[n*mesh->Np+m]*qtmp[m*mesh->Nfields+2];
@@ -110,17 +110,17 @@ void acousticsSetup3D(mesh3D *mesh){
     }
 
     //Change cubature Interp and Project matrices
-    for (int n=0;n<mesh->cubNp;n++) {
+    for (iint n=0;n<mesh->cubNp;n++) {
       dfloat r = mesh->cubr[n];
       dfloat s = mesh->cubs[n];
       dfloat t = mesh->cubt[n];
 
       dfloat l0 = -0.5*(1.+r+s+t); dfloat l1 = 0.5*(1.+r); dfloat l2 = 0.5*(1.+s); dfloat l3 = 0.5*(1.+t);
 
-      int cnt = 0;
-      for (int i=0;i<=mesh->N;i++){
-        for (int j=0;j<=mesh->N-i;j++){
-          for (int k=0;k<=mesh->N-i-j;k++){
+      iint cnt = 0;
+      for (iint i=0;i<=mesh->N;i++){
+        for (iint j=0;j<=mesh->N-i;j++){
+          for (iint k=0;k<=mesh->N-i-j;k++){
             mesh->cubInterp[n*mesh->Np+cnt] = ((dfloat) factorial(mesh->N)/(factorial(i)*factorial(j)
                                             *factorial(k)*factorial(mesh->N-i-j-k)))
                                             *pow(l0,mesh->N-i-j-k)*pow(l1,k)*pow(l2,j)*pow(l3,i);
@@ -131,15 +131,15 @@ void acousticsSetup3D(mesh3D *mesh){
     }
 
     dfloat S[mesh->Np*mesh->cubNp];
-    for (int n=0;n<mesh->Np;n++) {
-      for (int m =0;m<mesh->cubNp;m++) {
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint m =0;m<mesh->cubNp;m++) {
         S[n*mesh->cubNp + m] = mesh->cubProject[n*mesh->cubNp + m];
       }
     }
-    for (int n=0;n<mesh->Np;n++) {
-      for (int m =0;m<mesh->cubNp;m++) {
+    for (iint n=0;n<mesh->Np;n++) {
+      for (iint m =0;m<mesh->cubNp;m++) {
         mesh->cubProject[n*mesh->cubNp + m] = 0.;
-        for (int i =0;i<mesh->Np;i++)
+        for (iint i =0;i<mesh->Np;i++)
           mesh->cubProject[n*mesh->cubNp+m]
             += mesh->invVB[n*mesh->Np + i]*S[i*mesh->cubNp+m];
       }
@@ -150,9 +150,9 @@ void acousticsSetup3D(mesh3D *mesh){
     // set heterogeneous c^2 for WADG
     mesh->c2 = (dfloat*) calloc(mesh->Nelements*mesh->cubNp,sizeof(dfloat));
 
-    for(int e=0;e<mesh->Nelements;++e){ /* for each element */
+    for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
 
-      int id = e*mesh->Nverts+0;
+      iint id = e*mesh->Nverts+0;
 
       dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
       dfloat xe2 = mesh->EX[id+1];
@@ -169,7 +169,7 @@ void acousticsSetup3D(mesh3D *mesh){
       dfloat ze3 = mesh->EZ[id+2];
       dfloat ze4 = mesh->EZ[id+3];
 
-      for(int n=0;n<mesh->cubNp;++n){ /* for each node */
+      for(iint n=0;n<mesh->cubNp;++n){ /* for each node */
 
         // cubature node coordinates
         dfloat rn = mesh->cubr[n];
@@ -241,7 +241,7 @@ void acousticsSetup3D(mesh3D *mesh){
          mesh->fQM);
   mesh->o_fQP = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),
          mesh->fQP);
-  mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+  mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
          mesh->mapP);
 
   //set up pml
@@ -252,12 +252,12 @@ void acousticsSetup3D(mesh3D *mesh){
 
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-  for (int lev=0;lev<mesh->MRABNlevels;lev++) {
+  for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
     if (mesh->MRABNelements[lev])
-      mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(int),
+      mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(iint),
          mesh->MRABelementIds[lev]);
     if (mesh->MRABNhaloElements[lev])
-      mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(int),
+      mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
          mesh->MRABhaloIds[lev]);
   }
 

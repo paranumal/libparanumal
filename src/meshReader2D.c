@@ -53,13 +53,13 @@ mesh2D* meshReader2D(char *fileName){
 
   /* allocate space for Element node index data */
   mesh->EToV 
-    = (int*) calloc(mesh->Nelements*mesh->Nverts, 
-		     sizeof(int));
+    = (iint*) calloc(mesh->Nelements*mesh->Nverts, 
+		     sizeof(iint));
 
   /* scan through file looking for triangle elements */
   int Ntriangles = 0;
   for(n=0;n<mesh->Nelements;++n){
-    int elementType, v1, v2, v3;
+    iint elementType, v1, v2, v3;
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==2){  // triangle

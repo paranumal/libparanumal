@@ -6,38 +6,38 @@ void acousticsPmlSetup2D(mesh2D *mesh){
   dfloat xsigma = 80, ysigma = 80;
 
   //construct element and halo lists
-  mesh->MRABpmlNelements     = (int *) calloc(mesh->MRABNlevels,sizeof(int));
-  mesh->MRABpmlNhaloElements = (int *) calloc(mesh->MRABNlevels,sizeof(int));
+  mesh->MRABpmlNelements     = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
+  mesh->MRABpmlNhaloElements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
   
-  mesh->MRABpmlElementIds = (int **) calloc(mesh->MRABNlevels,sizeof(int*));
-  mesh->MRABpmlIds        = (int **) calloc(mesh->MRABNlevels,sizeof(int*));
+  mesh->MRABpmlElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
+  mesh->MRABpmlIds        = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
 
-  mesh->MRABpmlHaloElementIds = (int **) calloc(mesh->MRABNlevels,sizeof(int*));
-  mesh->MRABpmlHaloIds        = (int **) calloc(mesh->MRABNlevels,sizeof(int*));
+  mesh->MRABpmlHaloElementIds = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
+  mesh->MRABpmlHaloIds        = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
 
-  mesh->MRABpmlNelP      = (int **) calloc(mesh->MRABNlevels,sizeof(int*));
-  mesh->MRABpmlNhaloEleP = (int **) calloc(mesh->MRABNlevels,sizeof(int*));
+  mesh->MRABpmlNelP      = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
+  mesh->MRABpmlNhaloEleP = (iint **) calloc(mesh->MRABNlevels,sizeof(iint*));
   
-  mesh->MRABpmlElIdsP = (int ***) calloc(mesh->MRABNlevels,sizeof(int**));
-  mesh->MRABpmlIdsP   = (int ***) calloc(mesh->MRABNlevels,sizeof(int**));  
+  mesh->MRABpmlElIdsP = (iint ***) calloc(mesh->MRABNlevels,sizeof(iint**));
+  mesh->MRABpmlIdsP   = (iint ***) calloc(mesh->MRABNlevels,sizeof(iint**));  
   
-  mesh->MRABpmlHaloEleIdsP = (int ***) calloc(mesh->MRABNlevels,sizeof(int**));
-  mesh->MRABpmlHaloIdsP    = (int ***) calloc(mesh->MRABNlevels,sizeof(int**));
+  mesh->MRABpmlHaloEleIdsP = (iint ***) calloc(mesh->MRABNlevels,sizeof(iint**));
+  mesh->MRABpmlHaloIdsP    = (iint ***) calloc(mesh->MRABNlevels,sizeof(iint**));
   
-  for (int lev=0;lev<mesh->MRABNlevels;lev++) {
-    mesh->MRABpmlNelP[lev]      = (int *) calloc(mesh->NMax+1,sizeof(int));
-    mesh->MRABpmlNhaloEleP[lev] = (int *) calloc(mesh->NMax+1,sizeof(int));
-    mesh->MRABpmlElIdsP[lev] = (int **) calloc(mesh->NMax+1,sizeof(int *));
-    mesh->MRABpmlIdsP[lev]   = (int **) calloc(mesh->NMax+1,sizeof(int *));  
-    mesh->MRABpmlHaloEleIdsP[lev] = (int **) calloc(mesh->NMax+1,sizeof(int *));
-    mesh->MRABpmlHaloIdsP[lev]    = (int **) calloc(mesh->NMax+1,sizeof(int *));
+  for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
+    mesh->MRABpmlNelP[lev]      = (iint *) calloc(mesh->NMax+1,sizeof(iint));
+    mesh->MRABpmlNhaloEleP[lev] = (iint *) calloc(mesh->NMax+1,sizeof(iint));
+    mesh->MRABpmlElIdsP[lev] = (iint **) calloc(mesh->NMax+1,sizeof(iint *));
+    mesh->MRABpmlIdsP[lev]   = (iint **) calloc(mesh->NMax+1,sizeof(iint *));  
+    mesh->MRABpmlHaloEleIdsP[lev] = (iint **) calloc(mesh->NMax+1,sizeof(iint *));
+    mesh->MRABpmlHaloIdsP[lev]    = (iint **) calloc(mesh->NMax+1,sizeof(iint *));
   }  
 
   //count the pml elements
   mesh->pmlNelements=0;
-  for (int lev =0;lev<mesh->MRABNlevels;lev++){
-    for (int m=0;m<mesh->MRABNelements[lev];m++) {
-      int e = mesh->MRABelementIds[lev][m];
+  for (iint lev =0;lev<mesh->MRABNlevels;lev++){
+    for (iint m=0;m<mesh->MRABNelements[lev];m++) {
+      iint e = mesh->MRABelementIds[lev][m];
       int type = mesh->elementInfo[e];
       if ((type==100)||(type==200)||(type==300)) {
         mesh->pmlNelements++;
@@ -45,8 +45,8 @@ void acousticsPmlSetup2D(mesh2D *mesh){
         mesh->MRABpmlNelP[lev][mesh->N[e]]++;
       }
     }
-    for (int m=0;m<mesh->MRABNhaloElements[lev];m++) {
-      int e = mesh->MRABhaloIds[lev][m];
+    for (iint m=0;m<mesh->MRABNhaloElements[lev];m++) {
+      iint e = mesh->MRABhaloIds[lev][m];
       int type = mesh->elementInfo[e];
       if ((type==100)||(type==200)||(type==300)) {
         mesh->MRABpmlNhaloElements[lev]++;
@@ -59,39 +59,39 @@ void acousticsPmlSetup2D(mesh2D *mesh){
   if (mesh->pmlNelements) {
 
     //construct a numbering of the pml elements
-    int *pmlIds = (int *) calloc(mesh->Nelements,sizeof(int));
-    int pmlcnt = 0;
-    for (int e=0;e<mesh->Nelements;e++) {
+    iint *pmlIds = (iint *) calloc(mesh->Nelements,sizeof(iint));
+    iint pmlcnt = 0;
+    for (iint e=0;e<mesh->Nelements;e++) {
       int type = mesh->elementInfo[e];
       if ((type==100)||(type==200)||(type==300))  //pml element
         pmlIds[e] = pmlcnt++;
     }
 
     //set up lists of pml elements and remove the pml elements from the nonpml MRAB lists
-    for (int lev =0;lev<mesh->MRABNlevels;lev++){
-      mesh->MRABpmlElementIds[lev] = (int *) calloc(mesh->MRABpmlNelements[lev],sizeof(int));
-      mesh->MRABpmlIds[lev]        = (int *) calloc(mesh->MRABpmlNelements[lev],sizeof(int));
-      mesh->MRABpmlHaloElementIds[lev] = (int *) calloc(mesh->MRABpmlNhaloElements[lev],sizeof(int));
-      mesh->MRABpmlHaloIds[lev]        = (int *) calloc(mesh->MRABpmlNhaloElements[lev],sizeof(int));
+    for (iint lev =0;lev<mesh->MRABNlevels;lev++){
+      mesh->MRABpmlElementIds[lev] = (iint *) calloc(mesh->MRABpmlNelements[lev],sizeof(iint));
+      mesh->MRABpmlIds[lev]        = (iint *) calloc(mesh->MRABpmlNelements[lev],sizeof(iint));
+      mesh->MRABpmlHaloElementIds[lev] = (iint *) calloc(mesh->MRABpmlNhaloElements[lev],sizeof(iint));
+      mesh->MRABpmlHaloIds[lev]        = (iint *) calloc(mesh->MRABpmlNhaloElements[lev],sizeof(iint));
 
-      for (int p=0;p<=mesh->NMax;p++) {
-        mesh->MRABpmlElIdsP[lev][p] = (int *) calloc(mesh->MRABpmlNelP[lev][p],sizeof(int));
-        mesh->MRABpmlIdsP[lev][p]   = (int *) calloc(mesh->MRABpmlNelP[lev][p],sizeof(int));
-        mesh->MRABpmlHaloEleIdsP[lev][p] = (int *) calloc(mesh->MRABpmlNhaloEleP[lev][p],sizeof(int)); 
-        mesh->MRABpmlHaloIdsP[lev][p]    = (int *) calloc(mesh->MRABpmlNhaloEleP[lev][p],sizeof(int)); 
+      for (iint p=0;p<=mesh->NMax;p++) {
+        mesh->MRABpmlElIdsP[lev][p] = (iint *) calloc(mesh->MRABpmlNelP[lev][p],sizeof(iint));
+        mesh->MRABpmlIdsP[lev][p]   = (iint *) calloc(mesh->MRABpmlNelP[lev][p],sizeof(iint));
+        mesh->MRABpmlHaloEleIdsP[lev][p] = (iint *) calloc(mesh->MRABpmlNhaloEleP[lev][p],sizeof(iint)); 
+        mesh->MRABpmlHaloIdsP[lev][p]    = (iint *) calloc(mesh->MRABpmlNhaloEleP[lev][p],sizeof(iint)); 
       }
 
       //initialize counters
-      int pmlcnt = 0;
-      int nonpmlcnt = 0;
-      int pmlPcnt[mesh->NMax+1];
-      int nonpmlPcnt[mesh->NMax+1];
-      for (int p=0;p<=mesh->NMax;p++) {
+      iint pmlcnt = 0;
+      iint nonpmlcnt = 0;
+      iint pmlPcnt[mesh->NMax+1];
+      iint nonpmlPcnt[mesh->NMax+1];
+      for (iint p=0;p<=mesh->NMax;p++) {
         pmlPcnt[p] = 0;
         nonpmlPcnt[p] = 0;
       }
-      for (int m=0;m<mesh->MRABNelements[lev];m++){
-        int e = mesh->MRABelementIds[lev][m];
+      for (iint m=0;m<mesh->MRABNelements[lev];m++){
+        iint e = mesh->MRABelementIds[lev][m];
         int N = mesh->N[e];
         int type = mesh->elementInfo[e];
 
@@ -112,12 +112,12 @@ void acousticsPmlSetup2D(mesh2D *mesh){
 
       pmlcnt = 0;
       nonpmlcnt = 0;
-      for (int p=0;p<=mesh->NMax;p++) {
+      for (iint p=0;p<=mesh->NMax;p++) {
         pmlPcnt[p] = 0;
         nonpmlPcnt[p] = 0;
       }
-      for (int m=0;m<mesh->MRABNhaloElements[lev];m++){
-        int e = mesh->MRABhaloIds[lev][m];
+      for (iint m=0;m<mesh->MRABNhaloElements[lev];m++){
+        iint e = mesh->MRABhaloIds[lev][m];
         int N = mesh->N[e];
         int type = mesh->elementInfo[e];
 
@@ -139,14 +139,14 @@ void acousticsPmlSetup2D(mesh2D *mesh){
       //resize nonpml element lists
       mesh->MRABNelements[lev]     -= mesh->MRABpmlNelements[lev];
       mesh->MRABNhaloElements[lev] -= mesh->MRABpmlNhaloElements[lev];
-      mesh->MRABelementIds[lev] = (int*) realloc(mesh->MRABelementIds[lev],mesh->MRABNelements[lev]*sizeof(int));
-      mesh->MRABhaloIds[lev]    = (int*) realloc(mesh->MRABhaloIds[lev],mesh->MRABNhaloElements[lev]*sizeof(int));
+      mesh->MRABelementIds[lev] = (iint*) realloc(mesh->MRABelementIds[lev],mesh->MRABNelements[lev]*sizeof(iint));
+      mesh->MRABhaloIds[lev]    = (iint*) realloc(mesh->MRABhaloIds[lev],mesh->MRABNhaloElements[lev]*sizeof(iint));
     
-      for (int p=0;p<=mesh->NMax;p++) {
+      for (iint p=0;p<=mesh->NMax;p++) {
         mesh->MRABNelP[lev][p]      -= mesh->MRABpmlNelP[lev][p];
         mesh->MRABNhaloEleP[lev][p] -= mesh->MRABpmlNhaloEleP[lev][p];
-        mesh->MRABelIdsP[lev][p]   = (int*) realloc(mesh->MRABelIdsP[lev][p],mesh->MRABNelP[lev][p]*sizeof(int));
-        mesh->MRABhaloIdsP[lev][p] = (int*) realloc(mesh->MRABhaloIdsP[lev][p],mesh->MRABNhaloEleP[lev][p]*sizeof(int));
+        mesh->MRABelIdsP[lev][p]   = (iint*) realloc(mesh->MRABelIdsP[lev][p],mesh->MRABNelP[lev][p]*sizeof(iint));
+        mesh->MRABhaloIdsP[lev][p] = (iint*) realloc(mesh->MRABhaloIdsP[lev][p],mesh->MRABNhaloEleP[lev][p]*sizeof(iint));
       }
     }
 
@@ -159,7 +159,7 @@ void acousticsPmlSetup2D(mesh2D *mesh){
     dfloat ymin = 1e9, ymax =-1e9;
     dfloat pmlxmin = 1e9, pmlxmax =-1e9;
     dfloat pmlymin = 1e9, pmlymax =-1e9;
-    for (int e=0;e<mesh->Nelements;e++) {
+    for (iint e=0;e<mesh->Nelements;e++) {
       for (int n=0;n<mesh->Nverts;n++) {
         dfloat x = mesh->EX[e*mesh->Nverts+n];
         dfloat y = mesh->EY[e*mesh->Nverts+n];
@@ -191,14 +191,14 @@ void acousticsPmlSetup2D(mesh2D *mesh){
     dfloat yminScale = pow(pmlymin-ymin,2);
 
     //set up the damping factor
-    for (int lev =0;lev<mesh->MRABNlevels;lev++){
-      for (int m=0;m<mesh->MRABpmlNelements[lev];m++) {
-        int e = mesh->MRABpmlElementIds[lev][m];
+    for (iint lev =0;lev<mesh->MRABNlevels;lev++){
+      for (iint m=0;m<mesh->MRABpmlNelements[lev];m++) {
+        iint e = mesh->MRABpmlElementIds[lev][m];
         int N = mesh->N[e];
-        int pmlId = mesh->MRABpmlIds[lev][m];
+        iint pmlId = mesh->MRABpmlIds[lev][m];
         int type = mesh->elementInfo[e];
 
-        int id = e*mesh->Nverts;
+        iint id = e*mesh->Nverts;
 
         dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
         dfloat xe2 = mesh->EX[id+1];
@@ -208,7 +208,7 @@ void acousticsPmlSetup2D(mesh2D *mesh){
         dfloat ye2 = mesh->EY[id+1];
         dfloat ye3 = mesh->EY[id+2];
 
-        for(int n=0;n<mesh->cubNp[N];++n){ /* for each node */
+        for(iint n=0;n<mesh->cubNp[N];++n){ /* for each node */
           // cubature node coordinates
           dfloat rn = mesh->cubr[N][n];
           dfloat sn = mesh->cubs[N][n];
@@ -264,17 +264,17 @@ void acousticsPmlSetup2D(mesh2D *mesh){
     mesh->o_MRABpmlHaloEleIdsP = (occa::memory **) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     mesh->o_MRABpmlHaloIdsP    = (occa::memory **) malloc(mesh->MRABNlevels*sizeof(occa::memory));
 
-    for (int lev=0;lev<mesh->MRABNlevels;lev++) {
+    for (iint lev=0;lev<mesh->MRABNlevels;lev++) {
       if (mesh->MRABpmlNelements[lev]) {
-        mesh->o_MRABpmlElementIds[lev] = mesh->device.malloc(mesh->MRABpmlNelements[lev]*sizeof(int),
+        mesh->o_MRABpmlElementIds[lev] = mesh->device.malloc(mesh->MRABpmlNelements[lev]*sizeof(iint),
            mesh->MRABpmlElementIds[lev]);
-        mesh->o_MRABpmlIds[lev] = mesh->device.malloc(mesh->MRABpmlNelements[lev]*sizeof(int),
+        mesh->o_MRABpmlIds[lev] = mesh->device.malloc(mesh->MRABpmlNelements[lev]*sizeof(iint),
            mesh->MRABpmlIds[lev]);
       }
       if (mesh->MRABpmlNhaloElements[lev]) {
-        mesh->o_MRABpmlHaloElementIds[lev] = mesh->device.malloc(mesh->MRABpmlNhaloElements[lev]*sizeof(int),
+        mesh->o_MRABpmlHaloElementIds[lev] = mesh->device.malloc(mesh->MRABpmlNhaloElements[lev]*sizeof(iint),
            mesh->MRABpmlHaloElementIds[lev]);
-        mesh->o_MRABpmlHaloIds[lev] = mesh->device.malloc(mesh->MRABpmlNhaloElements[lev]*sizeof(int),
+        mesh->o_MRABpmlHaloIds[lev] = mesh->device.malloc(mesh->MRABpmlNhaloElements[lev]*sizeof(iint),
            mesh->MRABpmlHaloIds[lev]);
       }
 
@@ -282,17 +282,17 @@ void acousticsPmlSetup2D(mesh2D *mesh){
       mesh->o_MRABpmlIdsP[lev]        = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
       mesh->o_MRABpmlHaloEleIdsP[lev] = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));
       mesh->o_MRABpmlHaloIdsP[lev]    = (occa::memory *) malloc((mesh->NMax+1)*sizeof(occa::memory));        
-      for (int p=0;p<=mesh->NMax;p++) {
+      for (iint p=0;p<=mesh->NMax;p++) {
         if (mesh->MRABpmlNelP[lev][p]) {
-          mesh->o_MRABpmlElIdsP[lev][p] = mesh->device.malloc(mesh->MRABpmlNelP[lev][p]*sizeof(int),
+          mesh->o_MRABpmlElIdsP[lev][p] = mesh->device.malloc(mesh->MRABpmlNelP[lev][p]*sizeof(iint),
              mesh->MRABpmlElIdsP[lev][p]);
-          mesh->o_MRABpmlIdsP[lev][p] = mesh->device.malloc(mesh->MRABpmlNelP[lev][p]*sizeof(int),
+          mesh->o_MRABpmlIdsP[lev][p] = mesh->device.malloc(mesh->MRABpmlNelP[lev][p]*sizeof(iint),
              mesh->MRABpmlIdsP[lev][p]);
         }
         if (mesh->MRABpmlNhaloEleP[lev][p]) {
-          mesh->o_MRABpmlHaloEleIdsP[lev][p] = mesh->device.malloc(mesh->MRABpmlNhaloEleP[lev][p]*sizeof(int),
+          mesh->o_MRABpmlHaloEleIdsP[lev][p] = mesh->device.malloc(mesh->MRABpmlNhaloEleP[lev][p]*sizeof(iint),
              mesh->MRABpmlHaloEleIdsP[lev][p]);
-          mesh->o_MRABpmlHaloIdsP[lev][p] = mesh->device.malloc(mesh->MRABpmlNhaloEleP[lev][p]*sizeof(int),
+          mesh->o_MRABpmlHaloIdsP[lev][p] = mesh->device.malloc(mesh->MRABpmlNhaloEleP[lev][p]*sizeof(iint),
              mesh->MRABpmlHaloIdsP[lev][p]);
         }
       }

@@ -54,18 +54,18 @@ mesh3D* meshReader3D(char *fileName){
 
   /* allocate space for Element node index data */
   mesh->EToV 
-    = (int*) calloc(mesh->Nelements*mesh->Nverts, 
-		     sizeof(int));
+    = (iint*) calloc(mesh->Nelements*mesh->Nverts, 
+		     sizeof(iint));
 
   /* scan through file looking for tetrahedra elements */
   int Ntets = 0;
   for(n=0;n<mesh->Nelements;++n){
-    int elementType, v1, v2, v3, v4;
+    iint elementType, v1, v2, v3, v4;
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==4){  // triangle
       /* not robust scanning to skip element index, element tag count, element tags */
-      sscanf(buf, "%*d%*d%*d%*d%*d" intFormat intFormat intFormat intFormat,
+      sscanf(buf, "%*d%*d%*d%*d%*d" iintFormat iintFormat iintFormat iintFormat,
 	     &v1, &v2, &v3, &v4);
       /* read vertex triplet for trianngle */
       mesh->EToV[Ntets*mesh->Nverts+0] = v1-1;

@@ -4,7 +4,7 @@
 //#define SUBSTEP_METHOD 2  // Lagrangian Subscyling of Maday, Patera, Ronquist 
 
 // complete a time step using LSERK4
-void insAdvectionSubCycleStep2D(ins_t *ins, int tstep, 
+void insAdvectionSubCycleStep2D(ins_t *ins, iint tstep, 
 				dfloat * tsendBuffer, dfloat * trecvBuffer, 
 				dfloat * vsendBuffer, dfloat *  vrecvBuffer, 
 				char   * options){
@@ -18,12 +18,12 @@ void insAdvectionSubCycleStep2D(ins_t *ins, int tstep,
 
  mesh2D *mesh = ins->mesh;
 
-const int NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
-const int Ntotal         =  NtotalElements*mesh->Np;  
+const iint NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
+const iint Ntotal         =  NtotalElements*mesh->Np;  
 
-const int voffset = 0; 
+const iint voffset = 0; 
 // field offset at this step
-  int offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+  iint offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
   
   //Exctract Halo On Device, Assumes History is already done!
   if(mesh->totalHaloPairs>0){
@@ -73,20 +73,20 @@ if(activate_advection){
 		dfloat c0 = 0.f, c1 = 0.f, c2 = 0.f;
   
 		// Solve for Each SubProblem
-		for (int torder=0; torder<ins->ExplicitOrder; torder++){
+		for (iint torder=0; torder<ins->ExplicitOrder; torder++){
 		  // Initialize SubProblem Velocity i.e. Ud = U^(t-torder*dt)
-			const int sindex = (ins->index + 3 - torder)%3; 
+			const iint sindex = (ins->index + 3 - torder)%3; 
 			ins->o_Ud.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,sindex*Ntotal*sizeof(dfloat));
 			ins->o_Vd.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,sindex*Ntotal*sizeof(dfloat));
 			
 			// SubProblem  starts from here from t^(n-torder)
 			const dfloat tsub = tstep*ins->dt - torder*ins->dt;
 			// Advance SubProblem to t^(n+1) 
-			for(int ststep = 0; ststep<ins->Nsubsteps*(torder+1);++ststep){
+			for(iint ststep = 0; ststep<ins->Nsubsteps*(torder+1);++ststep){
 
 				const dfloat tstage = tsub + ststep*ins->sdt;			
 				// LSERK4 stages
-				for(int rk=0;rk<mesh->Nrk;++rk){
+				for(iint rk=0;rk<mesh->Nrk;++rk){
 				// Extrapolate velocity to subProblem stage time
 					dfloat t = tstage +  ins->sdt*mesh->rkc[rk]; 
 
@@ -278,7 +278,7 @@ occaTimerToc(mesh->device,"GradientVolume");
 	
  
 occaTimerTic(mesh->device,"GradientSurface");
-const int solverid = 0; // Pressure Solve
+const iint solverid = 0; // Pressure Solve
   // Compute Surface Conribution
   ins->gradientSurfaceKernel(mesh->Nelements,
 												     mesh->o_sgeo,
@@ -316,13 +316,13 @@ occaTimerToc(mesh->device,"GradientSurface");
 
  mesh2D *mesh = ins->mesh;
 
-const int NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
-const int Ntotal         =  NtotalElements*mesh->Np;  
+const iint NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
+const iint Ntotal         =  NtotalElements*mesh->Np;  
 
-const int voffset = 0; 
+const iint voffset = 0; 
 
    // field offset at this step
-  int offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+  iint offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
   
   //Exctract Halo On Device, Assumes History is already done!
   if(mesh->totalHaloPairs>0){
@@ -372,20 +372,20 @@ if(activate_advection){
 		dfloat c0 = 0.f, c1 = 0.f, c2 = 0.f;
   
 		// Solve for Each SubProblem
-		for (int torder=0; torder<ins->ExplicitOrder; torder++){
+		for (iint torder=0; torder<ins->ExplicitOrder; torder++){
 		  // Initialize SubProblem Velocity i.e. Ud = U^(t-torder*dt)
-			const int sindex = (ins->index + 3 - torder)%3; 
+			const iint sindex = (ins->index + 3 - torder)%3; 
 			ins->o_Ud.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,sindex*Ntotal*sizeof(dfloat));
 			ins->o_Vd.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,sindex*Ntotal*sizeof(dfloat));
 			
 			// SubProblem  starts from here from t^(n-torder)
 			const dfloat tsub = tstep*ins->dt - torder*ins->dt;
 			// Advance SubProblem to t^(n+1) 
-			for(int ststep = 0; ststep<ins->Nsubsteps*(torder+1);++ststep){
+			for(iint ststep = 0; ststep<ins->Nsubsteps*(torder+1);++ststep){
 
 				const dfloat tstage = tsub + ststep*ins->sdt;			
 				// LSERK4 stages
-				for(int rk=0;rk<mesh->Nrk;++rk){
+				for(iint rk=0;rk<mesh->Nrk;++rk){
 				// Extrapolate velocity to subProblem stage time
 					dfloat t = tstage +  ins->sdt*mesh->rkc[rk]; 
 					//
@@ -521,7 +521,7 @@ ins->gradientVolumeKernel(mesh->Nelements,
 	
  
 
-const int solverid = 0; // Pressure Solve
+const iint solverid = 0; // Pressure Solve
   // Compute Surface Conribution
   ins->gradientSurfaceKernel(mesh->Nelements,
 												     mesh->o_sgeo,
@@ -551,7 +551,7 @@ const int solverid = 0; // Pressure Solve
 // #if SUBSTEP_METHOD==2
 
 //   // field offset at this step
-//   int offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+//   iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
 
 //   //Exctract Halo On Device
 //   if(mesh->totalHaloPairs>0){
@@ -593,19 +593,19 @@ const int solverid = 0; // Pressure Solve
 //   dfloat activate_advection = 0.f; 
 //   if(ins->a0){activate_advection  = 1.f;} 
 
-//   const int voffset = 0;  
+//   const iint voffset = 0;  
 //   // New subcycling // Initialize U^e = U^n
-//   int Ntotal =  (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+//   iint Ntotal =  (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 //   ins->o_Ue.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 //   ins->o_Ve.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
   
 
 // // Substepping 
 // 	if(activate_advection){
-//   	for(int ststep = 0; ststep<ins->Nsubsteps;++ststep){
+//   	for(iint ststep = 0; ststep<ins->Nsubsteps;++ststep){
 //     	dfloat tbase = t + ststep*ins->sdt;    
 //     	// LSERK4 stages
-//     		for(int rk=0;rk<mesh->Nrk;++rk){
+//     		for(iint rk=0;rk<mesh->Nrk;++rk){
 // 				// intermediate stage time
 // 					dfloat tstage = tbase +  ins->sdt*mesh->rkc[rk]; 
 
@@ -734,7 +734,7 @@ const int solverid = 0; // Pressure Solve
 	
  
 
-// const int solverid = 0; // Pressure Solve
+// const iint solverid = 0; // Pressure Solve
 //   // Compute Surface Conribution
 //   ins->gradientSurfaceKernel(mesh->Nelements,
 // 												     mesh->o_sgeo,
@@ -758,7 +758,7 @@ const int solverid = 0; // Pressure Solve
 // 												     ins->o_Py);
 
 
-// //int index1 = ins->index;
+// //iint index1 = ins->index;
 // // Use NU to store Ue
 // ins->o_Ue.copyTo(ins->o_NU,Ntotal*sizeof(dfloat),ins->index*Ntotal*sizeof(dfloat),0);
 // ins->o_Ve.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),ins->index*Ntotal*sizeof(dfloat),0);
@@ -773,7 +773,7 @@ const int solverid = 0; // Pressure Solve
 //  dfloat     t = tstep*ins->dt;
  
 //    // field offset at this step
-//   int offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+//   iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
 
 //   //Exctract Halo On Device
 //   if(mesh->totalHaloPairs>0){
@@ -822,9 +822,9 @@ const int solverid = 0; // Pressure Solve
 //   dfloat activate_advection = 0.f; 
 //   if(ins->a0){activate_advection  = 1.f;} 
 
-//   const int voffset = 0;  
+//   const iint voffset = 0;  
 //   //
-//   int Ntotal =  (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+//   iint Ntotal =  (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 // 	ins->o_Ue.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 // 	ins->o_Ve.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 // 	ins->o_Ud.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
@@ -833,10 +833,10 @@ const int solverid = 0; // Pressure Solve
 
 // // Substepping 
 // 	if(activate_advection){
-//   	for(int ststep = 0; ststep<ins->Nsubsteps;++ststep){
+//   	for(iint ststep = 0; ststep<ins->Nsubsteps;++ststep){
 //     	dfloat tbase = t + ststep*ins->sdt;    
 //     	// LSERK4 stages
-//     		for(int rk=0;rk<mesh->Nrk;++rk){
+//     		for(iint rk=0;rk<mesh->Nrk;++rk){
 // 				// intermediate stage time
 // 					dfloat tstage = tbase +  ins->sdt*mesh->rkc[rk]; 
 
@@ -982,9 +982,9 @@ const int solverid = 0; // Pressure Solve
 // 				c2 = (tstage-t1)*(tstage-t2)/((t3-t1)*(t3-t2));
 // 				#endif
 
-// 				int offset0 = ((ins->index+0)%3)*Ntotal;
-// 				int offset1 = ((ins->index+2)%3)*Ntotal;
-// 				int offset2 = ((ins->index+1)%3)*Ntotal;
+// 				iint offset0 = ((ins->index+0)%3)*Ntotal;
+// 				iint offset1 = ((ins->index+2)%3)*Ntotal;
+// 				iint offset2 = ((ins->index+1)%3)*Ntotal;
 
 //         printf("c0: %.5f, c1: %.5f c3: %.5f \n", c0,c1,c2);
 // 				ins->subCycleExtKernel(mesh->Nelements + mesh->totalHaloPairs,
@@ -1021,7 +1021,7 @@ const int solverid = 0; // Pressure Solve
 	
  
 
-// const int solverid = 0; // Pressure Solve
+// const iint solverid = 0; // Pressure Solve
 //   // Compute Surface Conribution
 //   ins->gradientSurfaceKernel(mesh->Nelements,
 // 												     mesh->o_sgeo,
@@ -1045,7 +1045,7 @@ const int solverid = 0; // Pressure Solve
 // 												     ins->o_Py);
 
 
-// int index1 = ins->index;
+// iint index1 = ins->index;
 // // Use NU to store Ue
 // ins->o_Ud.copyTo(ins->o_NU,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
 // ins->o_Vd.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
@@ -1058,7 +1058,7 @@ const int solverid = 0; // Pressure Solve
 
 //   mesh2D *mesh = ins->mesh; 
 //   // field offset 
-//   int offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);  
+//   iint offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);  
 
 //   // Subcycling with Burger Type, Modified
 
@@ -1137,20 +1137,20 @@ const int solverid = 0; // Pressure Solve
 //   dfloat activate_advection = 0.f; 
 //   if(ins->a0){activate_advection  = 1.f;} // rhsU = -N(U) 
 
-//   const int voffset = 0;   // Use Nelements*Np size vector for Ue
+//   const iint voffset = 0;   // Use Nelements*Np size vector for Ue
 
 
 //   //#if 1 // New subcycling
-//   int Ntotal =  (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+//   iint Ntotal =  (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 
 //   ins->o_Ue.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 //   ins->o_Ve.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 
 //   if(activate_advection){
-//     for(int ststep = 0; ststep<ins->Nsubsteps;++ststep){
+//     for(iint ststep = 0; ststep<ins->Nsubsteps;++ststep){
 //       dfloat time = tstep*ins->dt + ststep*ins->sdt;    
 //       // LSERK4 stages
-//       for(int rk=0;rk<mesh->Nrk;++rk){
+//       for(iint rk=0;rk<mesh->Nrk;++rk){
 // 	// intermediate stage time
 // 	dfloat t = time +  ins->sdt*mesh->rkc[rk]; 
 
@@ -1267,9 +1267,9 @@ const int solverid = 0; // Pressure Solve
 // 	c2 = (t-t1)*(t-t2)/((t3-t1)*(t3-t2));
 // #endif
 	
-// 	int offset0 = ((ins->index+0)%3)*Ntotal;
-// 	int offset1 = ((ins->index+2)%3)*Ntotal;
-// 	int offset2 = ((ins->index+1)%3)*Ntotal;
+// 	iint offset0 = ((ins->index+0)%3)*Ntotal;
+// 	iint offset1 = ((ins->index+2)%3)*Ntotal;
+// 	iint offset2 = ((ins->index+1)%3)*Ntotal;
 
 // 	// Update Kernel
 // 	ins->subCycleRKUpdateKernel(mesh->Nelements,
@@ -1396,7 +1396,7 @@ const int solverid = 0; // Pressure Solve
 // 				ins->o_rhsV);
 //   }
 
-//   int index1 = ins->index;
+//   iint index1 = ins->index;
 //   ins->o_rhsU.copyTo(ins->o_NU,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
 //   ins->o_rhsV.copyTo(ins->o_NV,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
 

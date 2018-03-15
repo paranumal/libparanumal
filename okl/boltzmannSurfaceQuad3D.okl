@@ -22,11 +22,11 @@ void flux(const dfloat nx, const dfloat ny, const dfloat nz,
 
 
 // pointwise SEM-DG lift
-kernel void boltzmannSurfaceQuad3D(const int Nelements,
+kernel void boltzmannSurfaceQuad3D(const iint Nelements,
 				   const dfloat * restrict sgeo,
 				   const dfloat * restrict LIFTT,
-				   const int   * restrict vmapM,
-				   const int   * restrict vmapP,
+				   const iint   * restrict vmapM,
+				   const iint   * restrict vmapP,
 				   const dfloat time,
 				   const dfloat * restrict x,
 				   const dfloat * restrict y,
@@ -38,21 +38,21 @@ kernel void boltzmannSurfaceQuad3D(const int Nelements,
 #define p_LIFT (0.5f*(p_Nq-1)*p_Nq)
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
     
     // for all faces (global barrier at end of body of this loop)
-    for(int face=0;face<p_Nfaces;++face){      
+    for(iint face=0;face<p_Nfaces;++face){      
 
       
-      for(int es=0;es<p_NblockS;++es;inner1){
-	for(int i=0;i<p_Nq;++i;inner0){ 
+      for(iint es=0;es<p_NblockS;++es;inner1){
+	for(iint i=0;i<p_Nq;++i;inner0){ 
 
-	  const int eM = eo + es;
+	  const iint eM = eo + es;
 	  
 	  if(eM<Nelements){
 	    
 	    // load surface geofactors for this face
-	    const int sid = eM*p_Nsgeo*p_Nq*p_Nfaces + face*p_Nsgeo*p_Nq + i; 
+	    const iint sid = eM*p_Nsgeo*p_Nq*p_Nfaces + face*p_Nsgeo*p_Nq + i; 
 	    const dfloat nx = sgeo[sid+0*p_Nq];
 	    const dfloat ny = sgeo[sid+1*p_Nq];
 	    const dfloat nz = sgeo[sid+2*p_Nq];
@@ -60,13 +60,13 @@ kernel void boltzmannSurfaceQuad3D(const int Nelements,
 	    const dfloat invJ = sgeo[sid+4*p_Nq];
 
 	    // indices of negative and positive traces of face node
-	    const int id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
+	    const iint id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
 	    const int idM = vmapM[id];
 	    const int idP = vmapP[id];
 	    const int eP = idP/p_Np;
 
-	    const int vidM = eM*p_Np*p_Nfields + (idM%p_Np);
-	    const int vidP = eP*p_Np*p_Nfields + (idP%p_Np);
+	    const iint vidM = eM*p_Np*p_Nfields + (idM%p_Np);
+	    const iint vidP = eP*p_Np*p_Nfields + (idP%p_Np);
 
 	    dfloat dq[p_Nfields], fluxq[p_Nfields];
 	    

@@ -3,21 +3,21 @@
 
 typedef struct csr_t {
 
-  int Nrows;
-  int Ncols;
+  iint Nrows;
+  iint Ncols;
 
-  int NlocalCols;
+  iint NlocalCols;
 
   //local
-  int diagNNZ;
-  int   *diagRowStarts;
-  int   *diagCols;
+  iint diagNNZ;
+  iint   *diagRowStarts;
+  iint   *diagCols;
   dfloat *diagCoefs;
 
   //non-local
-  int offdNNZ;
-  int   *offdRowStarts;
-  int   *offdCols;
+  iint offdNNZ;
+  iint   *offdRowStarts;
+  iint   *offdCols;
   dfloat *offdCoefs;
 
   dfloat *diagInv;
@@ -27,18 +27,18 @@ typedef struct csr_t {
   //storage for smoothing
   dfloat *scratch;
 
-  int   *colMap;
+  iint   *colMap;
 
   // MPI halo exchange info
-  int  NHalo;
-  int  NrecvTotal;  // number of elements to be sent in halo exchange
-  int  NsendTotal;
-  int  totalHaloPairs;
-  int *haloElementList; // sorted list of elements to be sent in halo exchange
-  int *NsendPairs;      // number of elements worth of data to send
-  int *NrecvPairs;      // number of elements worth of data to recv
-  int  NsendMessages;   // number of messages to send
-  int  NrecvMessages;   // number of messages to recv
+  iint  NHalo;
+  iint  NrecvTotal;  // number of elements to be sent in halo exchange
+  iint  NsendTotal;
+  iint  totalHaloPairs;
+  iint *haloElementList; // sorted list of elements to be sent in halo exchange
+  iint *NsendPairs;      // number of elements worth of data to send
+  iint *NrecvPairs;      // number of elements worth of data to recv
+  iint  NsendMessages;   // number of messages to send
+  iint  NrecvMessages;   // number of messages to recv
   dfloat *sendBuffer;
 
   void *haloSendRequests;
@@ -49,11 +49,11 @@ typedef struct csr_t {
 
 typedef struct ell_t {
 
-  int Nrows;
-  int Ncols;
-  int nnzPerRow;
-  int strideLength;
-  int actualNNZ;
+  iint Nrows;
+  iint Ncols;
+  iint nnzPerRow;
+  iint strideLength;
+  iint actualNNZ;
 
   occa::memory o_cols;
   occa::memory o_coefs;
@@ -62,9 +62,9 @@ typedef struct ell_t {
 
 typedef struct coo_t {
 
-  int Nrows;
-  int Ncols;
-  int nnz;
+  iint Nrows;
+  iint Ncols;
+  iint nnz;
 
   // device memory
   occa::memory o_offsets;
@@ -75,10 +75,10 @@ typedef struct coo_t {
 
 typedef struct hyb_t {
 
-  int Nrows;
-  int Ncols;
+  iint Nrows;
+  iint Ncols;
 
-  int NlocalCols;
+  iint NlocalCols;
 
   coo *C;
   ell *E;
@@ -88,16 +88,16 @@ typedef struct hyb_t {
   occa::memory o_null;
 
   // MPI halo exchange info
-  int  NHalo;
-  int *colMap;
-  int  NrecvTotal;  // number of elements to be sent in halo exchange
-  int  NsendTotal;
-  int *haloElementList; // sorted list of elements to be sent in halo exchange
+  iint  NHalo;
+  iint *colMap;
+  iint  NrecvTotal;  // number of elements to be sent in halo exchange
+  iint  NsendTotal;
+  iint *haloElementList; // sorted list of elements to be sent in halo exchange
   occa::memory o_haloElementList;
-  int *NsendPairs;      // number of elements worth of data to send
-  int *NrecvPairs;      // number of elements worth of data to recv
-  int  NsendMessages;   // number of messages to send
-  int  NrecvMessages;   // number of messages to recv
+  iint *NsendPairs;      // number of elements worth of data to send
+  iint *NrecvPairs;      // number of elements worth of data to recv
+  iint  NsendMessages;   // number of messages to send
+  iint  NrecvMessages;   // number of messages to recv
   dfloat   *sendBuffer;
   dfloat   *recvBuffer;
   occa::memory o_haloBuffer;
@@ -110,33 +110,33 @@ typedef struct hyb_t {
 
 typedef struct dcsr_t {
 
-  int Nrows;
-  int Ncols;
+  iint Nrows;
+  iint Ncols;
 
-  int NlocalCols;
+  iint NlocalCols;
 
   //local
-  int diagNNZ;
+  iint diagNNZ;
   occa::memory o_diagRows;
   occa::memory o_diagCols;
   occa::memory o_diagCoefs;
 
   //non-local
-  int offdNNZ;
+  iint offdNNZ;
   occa::memory o_offdRows;
   occa::memory o_offdCols;
   occa::memory o_offdCoefs;
 
   // MPI halo exchange info
-  int  NHalo;
-  int  NrecvTotal;  // number of elements to be sent in halo exchange
-  int  NsendTotal;
-  int  totalHaloPairs;
-  int *haloElementList; // sorted list of elements to be sent in halo exchange
-  int *NsendPairs;      // number of elements worth of data to send
-  int *NrecvPairs;      // number of elements worth of data to recv
-  int  NsendMessages;   // number of messages to send
-  int  NrecvMessages;   // number of messages to recv
+  iint  NHalo;
+  iint  NrecvTotal;  // number of elements to be sent in halo exchange
+  iint  NsendTotal;
+  iint  totalHaloPairs;
+  iint *haloElementList; // sorted list of elements to be sent in halo exchange
+  iint *NsendPairs;      // number of elements worth of data to send
+  iint *NrecvPairs;      // number of elements worth of data to recv
+  iint  NsendMessages;   // number of messages to send
+  iint  NrecvMessages;   // number of messages to recv
   dfloat   *sendBuffer;
   dfloat   *recvBuffer;
 
@@ -152,11 +152,11 @@ typedef enum {PCG=0,GMRES=1}KrylovType;
 typedef enum {JACOBI=0,DAMPED_JACOBI=1,CHEBYSHEV=2}SmoothType;
 
 typedef struct agmgLevel_t {
-  int Nrows;
-  int Ncols;
+  iint Nrows;
+  iint Ncols;
 
-  int *globalRowStarts; //global partitioning of fine level
-  int *globalAggStarts; //global partitioning of coarse level
+  iint *globalRowStarts; //global partitioning of fine level
+  iint *globalAggStarts; //global partitioning of coarse level
 
   void **AxArgs;
   void **smoothArgs;
@@ -204,7 +204,7 @@ typedef struct agmgLevel_t {
   int ChebyshevIterations;
 
   dfloat threshold;
-  int numAggregates;
+  iint numAggregates;
   SmoothType stype;
 
 } agmgLevel;
@@ -224,10 +224,10 @@ typedef struct {
 
   //Coarse xxt solver
   void *ExactSolve;
-  int coarseTotal;
-  int coarseOffset;
-  int *coarseOffsets;
-  int *coarseCounts;
+  iint coarseTotal;
+  iint coarseOffset;
+  iint *coarseOffsets;
+  iint *coarseCounts;
   dfloat *invCoarseA;
   dfloat *xCoarse, *rhsCoarse;
 
@@ -264,10 +264,10 @@ typedef struct {
 parAlmond_t *parAlmondInit(mesh_t *mesh, const char* parAlmondOptions);
 
 void parAlmondAgmgSetup(parAlmond_t* parAlmond,
-                       int* rowStarts,
-                       int  nnz,
-                       int* Ai,
-                       int* Aj,
+                       iint* rowStarts,
+                       iint  nnz,
+                       iint* Ai,
+                       iint* Aj,
                        dfloat* Avals,
                        bool nullSpace,
                        dfloat nullSpacePenalty);

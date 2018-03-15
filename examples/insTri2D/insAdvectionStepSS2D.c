@@ -1,15 +1,15 @@
 #include "ins2D.h"
 
 // complete a time step using LSERK4
-void insAdvectionStepSS2D(ins_t *ins, int tstep,  int haloBytes,
+void insAdvectionStepSS2D(ins_t *ins, iint tstep,  iint haloBytes,
 			dfloat * sendBuffer, dfloat * recvBuffer,
 			char   * options){
 
   mesh2D *mesh = ins->mesh;
   dfloat t = (tstep+0)*ins->dt;
   
-  const int Ntotal = (mesh->Nelements+mesh->totalHaloPairs); 
-  int offset       = ins->index*Ntotal;
+  const iint Ntotal = (mesh->Nelements+mesh->totalHaloPairs); 
+  iint offset       = ins->index*Ntotal;
 
   //Exctract Halo On Device
   if(mesh->totalHaloPairs>0){

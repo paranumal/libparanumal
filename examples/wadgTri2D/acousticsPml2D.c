@@ -5,24 +5,24 @@
 void acousticsPml2D(mesh2D *mesh){
 
   // for all elements
-  for(int m=0;m<mesh->pmlNelements;++m){
-    int e = mesh->pmlElementList[m];
+  for(iint m=0;m<mesh->pmlNelements;++m){
+    iint e = mesh->pmlElementList[m];
 
     // prefetch geometric factors (constant on triangle)
     dfloat sigmax = mesh->pmlSigmaX[m];
     dfloat sigmay = mesh->pmlSigmaY[m];
 
     // for all nodes in this element
-    for(int n=0;n<mesh->Np;++n){
+    for(iint n=0;n<mesh->Np;++n){
 
       // load state and rhs values at node
-      int   base = mesh->Nfields*(n+e*mesh->Np);
+      iint   base = mesh->Nfields*(n+e*mesh->Np);
       dfloat u = mesh->q[base+0];
       dfloat v = mesh->q[base+1];
       dfloat p = mesh->q[base+2];
 
       // load pml state at node
-      int   pmlBase = mesh->pmlNfields*(n+m*mesh->Np);
+      iint   pmlBase = mesh->pmlNfields*(n+m*mesh->Np);
       dfloat utilde = mesh->pmlq[pmlBase+0];
       dfloat vtilde = mesh->pmlq[pmlBase+1];
       dfloat ptilde = mesh->pmlq[pmlBase+2];

@@ -20,16 +20,16 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
 
   //find all elements within a certain distance from the source point, 
   // and find the element which contains the source point
-  int sourceId = -1;
+  iint sourceId = -1;
   mesh->sourceNelements = 0;
-  mesh->MRABsourceNelements = (int *) calloc(mesh->MRABNlevels,sizeof(int));
+  mesh->MRABsourceNelements = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
 
   int *patchFlag = (int *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(int));
 
   dfloat mindist = 1e9;
-  for (int e=0;e<mesh->Nelements;e++) {
+  for (iint e=0;e<mesh->Nelements;e++) {
     int N = mesh->N[e];
-    int id = e*mesh->Nverts;
+    iint id = e*mesh->Nverts;
 
 
     dfloat x1 = mesh->EX[id+0]; /* x-coordinates of vertices */
@@ -54,7 +54,7 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
     }
 
     //find the cubature node which is closest to the source point and use the c2 from that node
-    for(int n=0;n<mesh->cubNp[N];++n){
+    for(iint n=0;n<mesh->cubNp[N];++n){
       // cubature node coordinates
       dfloat rn = mesh->cubr[N][n];
       dfloat sn = mesh->cubs[N][n];
@@ -85,17 +85,17 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
   }
 
   //create the element list and flag interfaces 
-  mesh->sourceElements = (int*) calloc(mesh->sourceNelements,sizeof(int));
+  mesh->sourceElements = (iint*) calloc(mesh->sourceNelements,sizeof(iint));
 
-  int cnt = 0;
-  for (int e=0;e<mesh->Nelements;e++) {
+  iint cnt = 0;
+  for (iint e=0;e<mesh->Nelements;e++) {
     if (patchFlag[e]==1) {
       //record this element
       mesh->sourceElements[cnt++] = e;
 
       //this element is in the patch. Check the neighbours
-      for (int f=0;f<mesh->Nfaces;f++) {
-        int eP = mesh->EToE[e*mesh->Nfaces + f];
+      for (iint f=0;f<mesh->Nfaces;f++) {
+        iint eP = mesh->EToE[e*mesh->Nfaces + f];
 
         int flagP =1;
         if (eP >-1) flagP = patchFlag[eP];
@@ -105,8 +105,8 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
       }
     } else {
       //this element isnt in the patch. Check the neighbours
-      for (int f=0;f<mesh->Nfaces;f++) {
-        int eP = mesh->EToE[e*mesh->Nfaces + f];
+      for (iint f=0;f<mesh->Nfaces;f++) {
+        iint eP = mesh->EToE[e*mesh->Nfaces + f];
 
         int flagP =0;
         if (eP >-1) flagP = patchFlag[eP];
@@ -122,7 +122,7 @@ void acousticsSourceSetup2D(mesh2D *mesh, occa::kernelInfo &kernelInfo) {
   mesh->invVB1D = (dfloat **) calloc((mesh->NMax+1), sizeof(dfloat*));
   mesh->o_invVB1DT = (occa::memory*) calloc((mesh->NMax+1), sizeof(occa::memory));
   dfloat *invVB1DT = (dfloat *) calloc(mesh->NfpMax*mesh->NfpMax, sizeof(dfloat));
-  for (int p=1;p<=mesh->NMax;p++) {
+  for (iint p=1;p<=mesh->NMax;p++) {
     mesh->invVB1D[p] = (dfloat *) calloc(mesh->Nfp[p]*mesh->Nfp[p], sizeof(dfloat));
     for (int n=0;n<mesh->Nfp[p];n++) {
       for (int m=0;m<mesh->Nfp[p];m++) {

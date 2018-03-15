@@ -40,10 +40,10 @@ typedef struct {
   
   unsigned long long int index;
   
-  int element;
+  iint element;
 
   // use 8 for maximum vertices per element
-  int v[8];
+  iint v[8];
 
   dfloat EX[8], EY[8], EZ[8];
 
@@ -68,12 +68,12 @@ void bogusMatch(void *a, void *b){ }
 // geometric partition of elements in 3D mesh using Morton ordering + parallelSort
 void meshGeometricPartition3D(mesh3D *mesh){
 
-  int rank, size;
+  iint rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  int maxNelements;
-  MPI_Allreduce(&(mesh->Nelements), &maxNelements, 1, MPI_int, MPI_MAX,
+  iint maxNelements;
+  MPI_Allreduce(&(mesh->Nelements), &maxNelements, 1, MPI_IINT, MPI_MAX,
 		MPI_COMM_WORLD);
   maxNelements = 2*((maxNelements+1)/2);
   
@@ -87,7 +87,7 @@ void meshGeometricPartition3D(mesh3D *mesh){
   dfloat minvz = 1e9, maxvz = -1e9;
 
   // compute element centers on this process
-  for(int n=0;n<mesh->Nverts*mesh->Nelements;++n){
+  for(iint n=0;n<mesh->Nverts*mesh->Nelements;++n){
     minvx = mymin(minvx, mesh->EX[n]);
     maxvx = mymax(minvx, mesh->EX[n]);
     minvy = mymin(minvy, mesh->EY[n]);
@@ -109,11 +109,11 @@ void meshGeometricPartition3D(mesh3D *mesh){
   unsigned long long int Nboxes = (((unsigned long long int)1)<<(bitRange-1));
   
   // compute Morton index for each element
-  for(int e=0;e<mesh->Nelements;++e){
+  for(iint e=0;e<mesh->Nelements;++e){
 
     // element center coordinates
     dfloat cx = 0, cy = 0, cz = 0;
-    for(int n=0;n<mesh->Nverts;++n){
+    for(iint n=0;n<mesh->Nverts;++n){
       cx += mesh->EX[e*mesh->Nverts+n];
       cy += mesh->EY[e*mesh->Nverts+n];
       cz += mesh->EZ[e*mesh->Nverts+n];
@@ -124,7 +124,7 @@ void meshGeometricPartition3D(mesh3D *mesh){
 
     // encapsulate element, vertices, Morton index, vertex coordinates
     elements[e].element = e;
-    for(int n=0;n<mesh->Nverts;++n){
+    for(iint n=0;n<mesh->Nverts;++n){
       elements[e].v[n] = mesh->EToV[e*mesh->Nverts+n];
       elements[e].EX[n] = mesh->EX[e*mesh->Nverts+n];
       elements[e].EY[n] = mesh->EY[e*mesh->Nverts+n];
@@ -139,7 +139,7 @@ void meshGeometricPartition3D(mesh3D *mesh){
   }
 
   // pad element array with dummy elements
-  for(int e=mesh->Nelements;e<maxNelements;++e){
+  for(iint e=mesh->Nelements;e<maxNelements;++e){
     elements[e].element = -1;
     elements[e].index = mortonIndex3D(Nboxes+1, Nboxes+1, Nboxes+1);
   }
@@ -151,8 +151,8 @@ void meshGeometricPartition3D(mesh3D *mesh){
 
 #if 0
   // count number of elements that end up on this process
-  int cnt = 0;
-  for(int e=0;e<maxNelements;++e)
+  iint cnt = 0;
+  for(iint e=0;e<maxNelements;++e)
     cnt += (elements[e].element != -1);
 
   // reset number of elements and element-to-vertex connectivity from returned capsules
@@ -162,15 +162,15 @@ void meshGeometricPartition3D(mesh3D *mesh){
   free(mesh->EZ);
 
   mesh->Nelements = cnt;
-  mesh->EToV = (int*) calloc(cnt*mesh->Nverts, sizeof(int));
+  mesh->EToV = (iint*) calloc(cnt*mesh->Nverts, sizeof(iint));
   mesh->EX = (dfloat*) calloc(cnt*mesh->Nverts, sizeof(dfloat));
   mesh->EY = (dfloat*) calloc(cnt*mesh->Nverts, sizeof(dfloat));
   mesh->EZ = (dfloat*) calloc(cnt*mesh->Nverts, sizeof(dfloat));
 
   cnt = 0;
-  for(int e=0;e<maxNelements;++e){
+  for(iint e=0;e<maxNelements;++e){
     if(elements[e].element != -1){
-      for(int n=0;n<mesh->Nverts;++n){
+      for(iint n=0;n<mesh->Nverts;++n){
 	mesh->EToV[cnt*mesh->Nverts + n] = elements[e].v[n];
 	mesh->EX[cnt*mesh->Nverts + n]   = elements[e].EX[n];
 	mesh->EY[cnt*mesh->Nverts + n]   = elements[e].EY[n];
@@ -181,45 +181,45 @@ void meshGeometricPartition3D(mesh3D *mesh){
   }
 #else
   // compress and renumber elements
-  int sk  = 0;
-  for(int e=0;e<maxNelements;++e){
+  iint sk  = 0;
+  for(iint e=0;e<maxNelements;++e){
     if(elements[e].element != -1){
       elements[sk] = elements[e];
       ++sk;
     }
   }
 
-  int localNelements = sk;
+  iint localNelements = sk;
 
   /// redistribute elements to improve balancing
-  int *globalNelements = (int *) calloc(size,sizeof(int));
-  int *starts = (int *) calloc(size+1,sizeof(int));
+  iint *globalNelements = (iint *) calloc(size,sizeof(iint));
+  iint *starts = (iint *) calloc(size+1,sizeof(iint));
 
-  MPI_Allgather(&localNelements, 1, MPI_int, globalNelements, 1,  MPI_int, MPI_COMM_WORLD);
+  MPI_Allgather(&localNelements, 1, MPI_IINT, globalNelements, 1,  MPI_IINT, MPI_COMM_WORLD);
 
-  for(int r=0;r<size;++r)
+  for(iint r=0;r<size;++r)
     starts[r+1] = starts[r]+globalNelements[r];
 
-  int allNelements = starts[size];
+  iint allNelements = starts[size];
 
   // decide how many to keep on each process
   int chunk = allNelements/size;
   int remainder = allNelements - chunk*size;
 
-  int *Nsend = (int *) calloc(size, sizeof(int));
-  int *Nrecv = (int *) calloc(size, sizeof(int));
-  int *Ncount = (int *) calloc(size, sizeof(int));
-  int *sendOffsets = (int*) calloc(size, sizeof(int));
-  int *recvOffsets = (int*) calloc(size, sizeof(int));
+  iint *Nsend = (iint *) calloc(size, sizeof(iint));
+  iint *Nrecv = (iint *) calloc(size, sizeof(iint));
+  iint *Ncount = (iint *) calloc(size, sizeof(iint));
+  iint *sendOffsets = (iint*) calloc(size, sizeof(iint));
+  iint *recvOffsets = (iint*) calloc(size, sizeof(iint));
 
 
-  for(int e=0;e<localNelements;++e){
+  for(iint e=0;e<localNelements;++e){
 
     // global element index
     elements[e].element = starts[rank]+e;
 
     // 0, chunk+1, 2*(chunk+1) ..., remainder*(chunk+1), remainder*(chunk+1) + chunk
-    int r;
+    iint r;
     if(elements[e].element<remainder*(chunk+1))
       r = elements[e].element/(chunk+1);
     else
@@ -229,21 +229,21 @@ void meshGeometricPartition3D(mesh3D *mesh){
   }
 
   // find send offsets
-  for(int r=1;r<size;++r)
+  for(iint r=1;r<size;++r)
     sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
 
   // exchange byte counts
-  MPI_Alltoall(Nsend, 1, MPI_int, Nrecv, 1, MPI_int, MPI_COMM_WORLD);
+  MPI_Alltoall(Nsend, 1, MPI_IINT, Nrecv, 1, MPI_IINT, MPI_COMM_WORLD);
 
   // count incoming clusters
-  int newNelements = 0;
-  for(int r=0;r<size;++r){
+  iint newNelements = 0;
+  for(iint r=0;r<size;++r){
     newNelements += Nrecv[r];
     Nrecv[r] *= sizeof(element_t);
     Nsend[r] *= sizeof(element_t);
     sendOffsets[r] *= sizeof(element_t);
   }
-  for(int r=1;r<size;++r)
+  for(iint r=1;r<size;++r)
     recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1];
 
   element_t *tmpElements = (element_t *) calloc(newNelements, sizeof(element_t));
@@ -263,13 +263,13 @@ void meshGeometricPartition3D(mesh3D *mesh){
   free(mesh->EZ);
 
   mesh->Nelements = newNelements;
-  mesh->EToV = (int*) calloc(newNelements*mesh->Nverts, sizeof(int));
+  mesh->EToV = (iint*) calloc(newNelements*mesh->Nverts, sizeof(iint));
   mesh->EX = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
   mesh->EY = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
   mesh->EZ = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
 
-  for(int e=0;e<newNelements;++e){
-    for(int n=0;n<mesh->Nverts;++n){
+  for(iint e=0;e<newNelements;++e){
+    for(iint n=0;n<mesh->Nverts;++n){
       mesh->EToV[e*mesh->Nverts + n] = elements[e].v[n];
       mesh->EX[e*mesh->Nverts + n]   = elements[e].EX[n];
       mesh->EY[e*mesh->Nverts + n]   = elements[e].EY[n];

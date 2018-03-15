@@ -28,11 +28,11 @@ void boltzmannPlotVTUField2D(mesh2D *mesh, char *fileName){
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0;
 
-      for(int m=0;m<mesh->Np;++m){
+      for(iint m=0;m<mesh->Np;++m){
         plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
         plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
       }
@@ -53,11 +53,11 @@ void boltzmannPlotVTUField2D(mesh2D *mesh, char *fileName){
 
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Q\" NumberOfComponents=\"6\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotq0 = 0, plotq1 = 0, plotq2 =0, plotq3=0, plotq4 =0, plotq5=0;
-      for(int m=0;m<mesh->Np;++m){
-        int base = mesh->Nfields*(m + e*mesh->Np);
+      for(iint m=0;m<mesh->Np;++m){
+        iint base = mesh->Nfields*(m + e*mesh->Np);
         dfloat q0  = mesh->q[0 + base];
         dfloat q1  = mesh->q[1 + base];
         dfloat q2  = mesh->q[2 + base];
@@ -88,8 +88,8 @@ void boltzmannPlotVTUField2D(mesh2D *mesh, char *fileName){
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "       ");
       for(int m=0;m<mesh->plotNverts;++m){
 	fprintf(fp, "%d ", e*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
@@ -101,9 +101,9 @@ void boltzmannPlotVTUField2D(mesh2D *mesh, char *fileName){
   fprintf(fp, "        </DataArray>\n");
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+  iint cnt = 0;
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       cnt += mesh->plotNverts;
       fprintf(fp, "       ");
       fprintf(fp, "%d\n", cnt);
@@ -112,8 +112,8 @@ void boltzmannPlotVTUField2D(mesh2D *mesh, char *fileName){
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNelements;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "5\n");
     }
   }

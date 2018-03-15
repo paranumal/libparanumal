@@ -12,10 +12,10 @@ void acousticsSetupHex3D(mesh3D *mesh){
 				sizeof(dfloat));
 
   // fix this later (initial conditions)
-  int cnt = 0;
+  iint cnt = 0;
   dfloat time = 0;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->Np;++n){
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
       dfloat z = mesh->z[n + mesh->Np*e];
@@ -37,10 +37,10 @@ void acousticsSetupHex3D(mesh3D *mesh){
   
   // set time step
   dfloat hmin = 1e9;
-  for(int e=0;e<mesh->Nelements;++e){  
+  for(iint e=0;e<mesh->Nelements;++e){  
 
-    for(int n=0;n<mesh->Nfaces*mesh->Nfp;++n){
-      int sid = mesh->Nsgeo*(mesh->Nfp*mesh->Nfaces*e +  n);
+    for(iint n=0;n<mesh->Nfaces*mesh->Nfp;++n){
+      iint sid = mesh->Nsgeo*(mesh->Nfp*mesh->Nfaces*e +  n);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -139,15 +139,15 @@ void acousticsSetupHex3D(mesh3D *mesh){
 			mesh->sgeo);
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
 			mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
 			mesh->vmapP);
 
   mesh->o_EToB =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),
 			mesh->EToB);
 
   mesh->o_x =
@@ -162,7 +162,7 @@ void acousticsSetupHex3D(mesh3D *mesh){
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
     mesh->o_haloElementList =
-      mesh->device.malloc(mesh->totalHaloPairs*sizeof(int), mesh->haloElementList);
+      mesh->device.malloc(mesh->totalHaloPairs*sizeof(iint), mesh->haloElementList);
     
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
@@ -200,11 +200,11 @@ void acousticsSetupHex3D(mesh3D *mesh){
     kernelInfo.addDefine("dfloat4","double4");
   }
 
-  if(sizeof(int)==4){
-    kernelInfo.addDefine("int","int");
+  if(sizeof(iint)==4){
+    kernelInfo.addDefine("iint","int");
   }
-  if(sizeof(int)==8){
-    kernelInfo.addDefine("int","long long int");
+  if(sizeof(iint)==8){
+    kernelInfo.addDefine("iint","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA

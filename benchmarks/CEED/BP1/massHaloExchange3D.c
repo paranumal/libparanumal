@@ -5,8 +5,8 @@ void massStartHaloExchange3D(solver_t *solver, occa::memory &o_q, dfloat *sendBu
   mesh3D *mesh = solver->mesh;
   
   // count size of halo for this process
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-  int haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
   
   // extract halo on DEVICE
   if(haloBytes){
@@ -33,8 +33,8 @@ void massInterimHaloExchange3D(solver_t *solver, occa::memory &o_q, dfloat *send
   mesh3D *mesh = solver->mesh;
 
   // count size of halo for this process
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-  int haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
   
   // extract halo on DEVICE
   if(haloBytes){
@@ -62,8 +62,8 @@ void massEndHaloExchange3D(solver_t *solver, occa::memory &o_q, dfloat *recvBuff
   mesh3D *mesh = solver->mesh;
   
   // count size of halo for this process
-  int haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-  int haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+  iint haloOffset = mesh->Nelements*mesh->Np*sizeof(dfloat);
   
   // extract halo on DEVICE
   if(haloBytes){
