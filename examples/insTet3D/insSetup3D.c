@@ -3,7 +3,7 @@
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS
 
-ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options, 
+ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options, 
                   char *vSolverOptions, char *vParAlmondOptions,
                   char *pSolverOptions, char *pParAlmondOptions,
                   char *boundaryHeaderFileName){
@@ -95,9 +95,9 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
   ins->NDofs      = mesh->Nelements*mesh->Np;
   // Initialize
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      const iint id = n + mesh->Np*e;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      const int id = n + mesh->Np*e;
       dfloat u= 0.f, v= 0.f, w=0.f, p =0.f, t = 0.f;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
@@ -139,9 +139,9 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
   }
 
   dfloat hmin = 1e9, hmax = 0;
-  for(iint e=0;e<mesh->Nelements;++e){ 
-     for(iint f=0;f<mesh->Nfaces;++f){
-       iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+  for(int e=0;e<mesh->Nelements;++e){ 
+     for(int f=0;f<mesh->Nfaces;++f){
+       int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
        dfloat sJ   = mesh->sgeo[sid + SJID];
        dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -153,9 +153,9 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
 
   // Find Maximum Velocity
   dfloat umax = 0.f;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      const iint id = n + mesh->Np*e;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      const int id = n + mesh->Np*e;
       dfloat u = ins->U[id];
       dfloat v = ins->V[id];
       dfloat w = ins->W[id];
@@ -272,11 +272,11 @@ ins_t *insSetup3D(mesh3D *mesh, iint Ns, char * options,
   kernelInfo.addDefine("p_NblockS", NblockS);
 
 
-  iint maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
+  int maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
   kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
   int cubNblockV = 256/maxNodesVolumeCub; 
   //
-  iint maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  int maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
   kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
   int cubNblockS = mymax(256/maxNodesSurfaceCub,1); // works for CUDA
   //

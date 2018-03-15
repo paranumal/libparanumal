@@ -16,8 +16,8 @@ void boltzmannOccaSetupTri3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo 
   // build Dr, Ds, LIFT transposes
   dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
-    for(iint m=0;m<mesh->Np;++m){
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->Np;++m){
       DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
       DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
     }
@@ -25,8 +25,8 @@ void boltzmannOccaSetupTri3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo 
 
   dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp,
 				   sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
-    for(iint m=0;m<mesh->Nfaces*mesh->Nfp;++m){
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
       LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
     }
   }
@@ -72,11 +72,11 @@ void boltzmannOccaSetupTri3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo 
 			mesh->sgeo);
 
   mesh->o_vmapM =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
 			mesh->vmapM);
 
   mesh->o_vmapP =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
+    mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
 			mesh->vmapP);
   
   mesh->o_x =
@@ -94,7 +94,7 @@ void boltzmannOccaSetupTri3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo 
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
     mesh->o_haloElementList =
-      mesh->device.malloc(mesh->totalHaloPairs*sizeof(iint),
+      mesh->device.malloc(mesh->totalHaloPairs*sizeof(int),
 			  mesh->haloElementList);
 
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
@@ -156,11 +156,11 @@ void boltzmannOccaSetupTri3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo 
     kernelInfo.addDefine("dfloat8","double8");
   }
 
-  if(sizeof(iint)==4){
-    kernelInfo.addDefine("iint","int");
+  if(sizeof(int)==4){
+    kernelInfo.addDefine("int","int");
   }
-  if(sizeof(iint)==8){
-    kernelInfo.addDefine("iint","long long int");
+  if(sizeof(int)==8){
+    kernelInfo.addDefine("int","long long int");
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA

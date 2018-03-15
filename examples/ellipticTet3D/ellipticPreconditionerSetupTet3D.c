@@ -1,7 +1,7 @@
 #include "ellipticTet3D.h"
 
 
-void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, iint *BCType, const char *options, const char *parAlmondOptions){
+void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, dfloat lambda, int *BCType, const char *options, const char *parAlmondOptions){
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -11,12 +11,12 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
   precon_t *precon = solver->precon;
 
   if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond
-    iint nnz;
+    int nnz;
     nonZero_t *A;
     hgs_t *hgs;
 
-    iint Nnum = mesh->Np*mesh->Nelements;
-    iint *globalStarts = (iint*) calloc(size+1, sizeof(iint));
+    int Nnum = mesh->Np*mesh->Nelements;
+    int *globalStarts = (int*) calloc(size+1, sizeof(int));
 
     if (strstr(options,"IPDG")) {
       ellipticBuildIpdgTet3D(mesh, tau, lambda, BCType, &A, &nnz,globalStarts, options);
@@ -24,11 +24,11 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
       ellipticBuildContinuousTet3D(mesh,lambda,&A,&nnz,&hgs,globalStarts, options);
     }
 
-    iint *Rows = (iint *) calloc(nnz, sizeof(iint));
-    iint *Cols = (iint *) calloc(nnz, sizeof(iint));
+    int *Rows = (int *) calloc(nnz, sizeof(int));
+    int *Cols = (int *) calloc(nnz, sizeof(int));
     dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
 
-    for (iint n=0;n<nnz;n++) {
+    for (int n=0;n<nnz;n++) {
       Rows[n] = A[n].row;
       Cols[n] = A[n].col;
       Vals[n] = A[n].val;
@@ -98,11 +98,11 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     // compute inverse mass matrix
     dfloat *dfMMinv = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
     double *MMinv = (double*) calloc(mesh->Np*mesh->Np, sizeof(double));
-    iint *ipiv = (iint*) calloc(mesh->Np, sizeof(iint));
+    int *ipiv = (int*) calloc(mesh->Np, sizeof(int));
     int lwork = mesh->Np*mesh->Np;
     double *work = (double*) calloc(lwork, sizeof(double));
-    iint info;
-    for(iint n=0;n<mesh->Np*mesh->Np;++n){
+    int info;
+    for(int n=0;n<mesh->Np*mesh->Np;++n){
       MMinv[n] = mesh->MM[n];
     }
 
@@ -111,7 +111,7 @@ void ellipticPreconditionerSetupTet3D(solver_t *solver, ogs_t *ogs, dfloat tau, 
     if(info)
       printf("dgetrf/dgetri reports info = %d when inverting the reference mass matrix\n", info);
 
-    for(iint n=0;n<mesh->Np*mesh->Np;++n){
+    for(int n=0;n<mesh->Np*mesh->Np;++n){
       dfMMinv[n] = MMinv[n];
     }
 

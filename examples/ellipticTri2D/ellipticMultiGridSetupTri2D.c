@@ -70,17 +70,17 @@ dfloat *buildCoarsenerTri2D(mesh2D** meshLevels, int N, int Nc, const char* opti
 
   if (strstr(options,"BERN")) {
     dfloat* BBP = (dfloat *) calloc(NpFine*NpCoarse,sizeof(dfloat));
-    for (iint j=0;j<NpFine;j++) {
-      for (iint i=0;i<NpCoarse;i++) {
-        for (iint k=0;k<NpCoarse;k++) {
-          for (iint l=0;l<NpFine;l++) {
+    for (int j=0;j<NpFine;j++) {
+      for (int i=0;i<NpCoarse;i++) {
+        for (int k=0;k<NpCoarse;k++) {
+          for (int l=0;l<NpFine;l++) {
             BBP[i+j*NpCoarse] += meshLevels[N]->invVB[l+j*NpFine]*P[k+l*NpCoarse]*meshLevels[Nc]->VB[i+k*NpCoarse];
           }
         }
       }
     }
-    for (iint j=0;j<NpFine;j++) {
-      for (iint i=0;i<NpCoarse;i++) {
+    for (int j=0;j<NpFine;j++) {
+      for (int i=0;i<NpCoarse;i++) {
         P[i+j*NpCoarse] = BBP[i+j*NpCoarse];
       }
     }
@@ -101,10 +101,10 @@ dfloat *buildCoarsenerTri2D(mesh2D** meshLevels, int N, int Nc, const char* opti
 }
 
 void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
-                                dfloat tau, dfloat lambda, iint *BCType,
+                                dfloat tau, dfloat lambda, int *BCType,
                                 const char *options, const char *parAlmondOptions) {
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -183,8 +183,8 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       solverL = ellipticBuildMultigridLevelTri2D(solver,levelDegree,n,options);
 
       //set the normalization constatnt for the allNeumann POisson problem on this coarse mesh
-      iint totalElements = 0;
-      MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+      int totalElements = 0;
+      MPI_Allreduce(&(mesh->Nelements), &totalElements, 1, MPI_int, MPI_SUM, MPI_COMM_WORLD);
       solverL->allNeumannScale = 1.0/sqrt(solverL->mesh->Np*totalElements);
     }
 
@@ -192,7 +192,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
     if (n==numLevels-1) {
       // build degree 1 matrix problem
       nonZero_t *coarseA;
-      iint nnzCoarseA;
+      int nnzCoarseA;
       hgs_t *coarsehgs;
 
       int basisNp = solverL->mesh->Np;
@@ -200,7 +200,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
       if (strstr(options,"BERN")) basis = solverL->mesh->VB;
 
-      iint *coarseGlobalStarts = (iint*) calloc(size+1, sizeof(iint));
+      int *coarseGlobalStarts = (int*) calloc(size+1, sizeof(int));
 
       if (strstr(options,"IPDG")) {
         ellipticBuildIpdgTri2D(solverL->mesh, basisNp, basis, tau, lambda, BCType, &coarseA, &nnzCoarseA,coarseGlobalStarts, options);
@@ -212,7 +212,7 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
       // Build coarse grid element basis functions
       dfloat *V1  = (dfloat*) calloc(mesh->Np*mesh->Nverts, sizeof(dfloat));
-      for(iint n=0;n<mesh->Np;++n){
+      for(int n=0;n<mesh->Np;++n){
         dfloat rn = mesh->r[n];
         dfloat sn = mesh->s[n];
 
@@ -222,11 +222,11 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
       }
       precon->o_V1  = mesh->device.malloc(mesh->Nverts*mesh->Np*sizeof(dfloat), V1);
 
-      iint *Rows = (iint *) calloc(nnzCoarseA, sizeof(iint));
-      iint *Cols = (iint *) calloc(nnzCoarseA, sizeof(iint));
+      int *Rows = (int *) calloc(nnzCoarseA, sizeof(int));
+      int *Cols = (int *) calloc(nnzCoarseA, sizeof(int));
       dfloat *Vals = (dfloat*) calloc(nnzCoarseA,sizeof(dfloat));
 
-      for (iint n=0;n<nnzCoarseA;n++) {
+      for (int n=0;n<nnzCoarseA;n++) {
         Rows[n] = coarseA[n].row;
         Cols[n] = coarseA[n].col;
         Vals[n] = coarseA[n].val;
@@ -361,16 +361,16 @@ void ellipticMultiGridSetupTri2D(solver_t *solver, precon_t* precon,
 
     for(int lev=0; lev<numLevels; lev++){
 
-      iint Nrows = levels[lev]->Nrows;
+      int Nrows = levels[lev]->Nrows;
 
-      iint minNrows=0, maxNrows=0, totalNrows=0;
+      int minNrows=0, maxNrows=0, totalNrows=0;
       dfloat avgNrows;
-      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_IINT, MPI_MAX, MPI_COMM_WORLD);
-      MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_int, MPI_MAX, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &totalNrows, 1, MPI_int, MPI_SUM, MPI_COMM_WORLD);
       avgNrows = (dfloat) totalNrows/size;
 
       if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
-      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_IINT, MPI_MIN, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_int, MPI_MIN, MPI_COMM_WORLD);
 
       char *smootherString;
       if(strstr(options, "OVERLAPPINGPATCH")){

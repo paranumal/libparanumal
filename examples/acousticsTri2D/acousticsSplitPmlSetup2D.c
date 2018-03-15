@@ -49,9 +49,9 @@ void acousticsSplitPmlSetup2D(mesh2D *mesh){
 
   printf("%17.15lf %17.15lf %17.15lf\n", q1bar, q2bar, q3bar);
   
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
+  int cnt = 0;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
@@ -62,7 +62,7 @@ void acousticsSplitPmlSetup2D(mesh2D *mesh){
     
       cnt += mesh->Nfields;
 
-      iint id = mesh->Np*mesh->Nfields*e + n;
+      int id = mesh->Np*mesh->Nfields*e + n;
       mesh->pmlqx[id+0*mesh->Np] = 0.f*q1bar;
       mesh->pmlqx[id+1*mesh->Np] = 0.f*q2bar;
       mesh->pmlqx[id+2*mesh->Np] = 0.f*q3bar;
@@ -92,9 +92,9 @@ void acousticsSplitPmlSetup2D(mesh2D *mesh){
   dfloat xsigma = 40, ysigma = 40;
   //    dfloat xsigma = 0, ysigma = 0;
   
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     dfloat cx = 0, cy = 0;
-    for(iint n=0;n<mesh->Nverts;++n){
+    for(int n=0;n<mesh->Nverts;++n){
       cx += mesh->EX[e*mesh->Nverts+n];
       cy += mesh->EY[e*mesh->Nverts+n];
     }
@@ -102,7 +102,7 @@ void acousticsSplitPmlSetup2D(mesh2D *mesh){
     cy /= mesh->Nverts;
     
     // add element outside [xmin,xmax]x[ymin,ymax] to pml
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       dfloat x = mesh->x[n + e*mesh->Np];
       dfloat y = mesh->y[n + e*mesh->Np];
       //      if(cx<xmax+1 && cx>xmin-1 && cy<ymax+1 && cy>ymin-1){
@@ -127,10 +127,10 @@ void acousticsSplitPmlSetup2D(mesh2D *mesh){
 
   // set time step
   dfloat hmin = 1e9, hmax = 0;
-  for(iint e=0;e<mesh->Nelements;++e){  
+  for(int e=0;e<mesh->Nelements;++e){  
 
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+    for(int f=0;f<mesh->Nfaces;++f){
+      int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
 

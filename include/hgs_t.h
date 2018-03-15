@@ -1,12 +1,12 @@
 // Holmes' gather + scatter
 typedef struct {
   
-  iint         Ngather;          //  number of gather nodes
-  iint         Nlocal;           //  number of local nodes before gather      
+  int         Ngather;          //  number of gather nodes
+  int         Nlocal;           //  number of local nodes before gather      
 
-  iint         *sortIds;         
-  iint         *gatherOffsets;   
-  iint         *gatherLocalIds;
+  int         *sortIds;         
+  int         *gatherOffsets;   
+  int         *gatherLocalIds;
   dfloat       *invDegree;
 
   occa::memory o_sortIds;        //  sorting for exchagne + gather
@@ -15,11 +15,11 @@ typedef struct {
   occa::memory o_gatherTmp;      //  DEVICE gather buffer
   occa::memory o_invDegree;      //  inverse degree weighting
   
-  iint         NsendTotal;            //  number of nodes to send
-  iint         NrecvTotal;            //  number of nodes to recv
-  iint         haloOffset; 
-  iint        *Nsend;
-  iint        *Nrecv;
+  int         NsendTotal;            //  number of nodes to send
+  int         NrecvTotal;            //  number of nodes to recv
+  int         haloOffset; 
+  int        *Nsend;
+  int        *Nrecv;
   dfloat      *sendBuffer;
   dfloat      *recvBuffer;
   void        *haloSendRequests;

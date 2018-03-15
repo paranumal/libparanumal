@@ -6,26 +6,26 @@ void boltzmannRunTri3D(solver_t *solver){
   mesh_t *mesh = solver->mesh;
   
   // MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  int haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
-  iint fld = 0;
+  int fld = 0;
   //  boltzmannPlotVTUTri3D(mesh, "bah.vtu", fld);
   
   occa::initTimer(mesh->device);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
     
-    for(iint rk=0;rk<mesh->Nrk;++rk){
+    for(int rk=0;rk<mesh->Nrk;++rk){
 
       // intermediate stage time
       dfloat t = tstep*mesh->dt + mesh->dt*mesh->rkc[rk];
 
       if(mesh->totalHaloPairs>0){
 	// extract halo on DEVICE
-	iint Nentries = mesh->Np*mesh->Nfields;
+	int Nentries = mesh->Np*mesh->Nfields;
 	
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
@@ -117,7 +117,7 @@ void boltzmannRunTri3D(solver_t *solver){
       }
 	  
       // output field files
-      iint fld = 0;
+      int fld = 0;
       char fname[BUFSIZ];
       boltzmannPlotVTUTri3DV2(mesh, "foo", tstep/mesh->errorStep);
     }

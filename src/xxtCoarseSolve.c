@@ -20,7 +20,7 @@ typedef struct {
   double *x;
   double *rhs;
 
-  char* iintType;
+  char* intType;
   char* dfloatType;
 
 } crs_t;
@@ -32,7 +32,7 @@ void * xxtSetup(uint  numLocalRows,
                 void* Aj,
                 void* Avals,
                 int   nullSpace,
-                const char* iintType, 
+                const char* intType, 
                 const char* dfloatType) {
 
   int n;
@@ -54,7 +54,7 @@ void * xxtSetup(uint  numLocalRows,
     crsA->Avals = (double*) Avals;
   }
 
-  if (!strcmp(iintType,"int")) { //int
+  if (!strcmp(intType,"int")) { //int
     crsA->Ai = (uint*) calloc(nnz, sizeof(uint));
     crsA->Aj = (uint*) calloc(nnz, sizeof(uint));      
     
@@ -68,7 +68,7 @@ void * xxtSetup(uint  numLocalRows,
     }
     
   } else { //long
-    printf("Exiting due to use of ulong in iintType %s\n", iintType);
+    printf("Exiting due to use of ulong in intType %s\n", intType);
     exit(-1);
 #if 0
     crsA->Ai = (ulong*) calloc(nnz, sizeof(ulong));
@@ -83,7 +83,7 @@ void * xxtSetup(uint  numLocalRows,
 #endif
   }
 
-  crsA->iintType = strdup(iintType);
+  crsA->intType = strdup(intType);
   crsA->dfloatType = strdup(dfloatType);
 
   crsA->A = crs_setup(crsA->numLocalRows,
@@ -145,7 +145,7 @@ void xxtFree(void* A) {
     free(crsA->rhs);
   }
 
-  if (!strcmp(crsA->iintType,"int")) { 
+  if (!strcmp(crsA->intType,"int")) { 
     free(crsA->rowIds);
   }
 }

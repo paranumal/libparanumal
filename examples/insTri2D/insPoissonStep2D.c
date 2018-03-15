@@ -1,7 +1,7 @@
 #include "ins2D.h"
 
 // complete a time step using LSERK4
-void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
+void insPoissonStep2D(ins_t *ins, int tstep, int haloBytes,
 				       dfloat * sendBuffer, dfloat * recvBuffer,
 				        char   * options){
 
@@ -12,8 +12,8 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
   //hard coded for 3 stages.
   //The result of the helmholtz solve is stored in the next index
   int index1   = (ins->index+1)%3;
-  iint offset  = mesh->Nelements+mesh->totalHaloPairs;
-  iint ioffset = index1*offset;
+  int offset  = mesh->Nelements+mesh->totalHaloPairs;
+  int ioffset = index1*offset;
 
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,
@@ -119,7 +119,7 @@ void insPoissonStep2D(ins_t *ins, iint tstep, iint haloBytes,
 
   #if 1 // if time dependent BC
   //
-   const iint pressure_solve = 0; // ALGEBRAIC SPLITTING 
+   const int pressure_solve = 0; // ALGEBRAIC SPLITTING 
   occaTimerTic(mesh->device,"PoissonRhsIpdg"); 
   ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                 pressure_solve,

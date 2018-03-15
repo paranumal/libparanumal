@@ -11,11 +11,11 @@ void meshSetPolynomialDegree2D(mesh2D *mesh, int NMax) {
 
   mesh->N = (int *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(int));
 
-  for(iint e=0;e<mesh->Nelements;++e){ 
+  for(int e=0;e<mesh->Nelements;++e){ 
     //find max length scale
     dfloat hmax = 0.;  //element max
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+    for(int f=0;f<mesh->Nfaces;++f){
+      int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -27,7 +27,7 @@ void meshSetPolynomialDegree2D(mesh2D *mesh, int NMax) {
     }
 
     //find the minimun wavespeed
-    iint id = e*mesh->Nverts+0;
+    int id = e*mesh->Nverts+0;
     
     dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
     dfloat xe2 = mesh->EX[id+1];
@@ -38,7 +38,7 @@ void meshSetPolynomialDegree2D(mesh2D *mesh, int NMax) {
     dfloat ye3 = mesh->EY[id+2];
     
     dfloat c2Min = 1e9;
-    for(iint n=0;n<mesh->cubNp[NMax];++n){ /* for each node */
+    for(int n=0;n<mesh->cubNp[NMax];++n){ /* for each node */
       // cubature node coordinates
       dfloat rn = mesh->cubr[NMax][n]; 
       dfloat sn = mesh->cubs[NMax][n];
@@ -60,18 +60,18 @@ void meshSetPolynomialDegree2D(mesh2D *mesh, int NMax) {
     mesh->N[e] = mymin(mymax(ceil(0.5*(omega*hmax)/sqrt(c2Min) - 1),1),NMax);
   }
 
-  iint *sendBuffer;
+  int *sendBuffer;
   if (mesh->totalHaloPairs) 
-    sendBuffer = (iint *) calloc(mesh->totalHaloPairs,sizeof(iint));
+    sendBuffer = (int *) calloc(mesh->totalHaloPairs,sizeof(int));
 
   //shift polynomial orders so that no element is beside an element of 2 degree higher/lower
-  for (iint p=NMax-2; p > 0; p--){
+  for (int p=NMax-2; p > 0; p--){
     if (mesh->totalHaloPairs) 
       meshHaloExchange(mesh, sizeof(int), mesh->N, sendBuffer, mesh->N+mesh->Nelements);
-    for (iint e =0; e<mesh->Nelements;e++) {
+    for (int e =0; e<mesh->Nelements;e++) {
       if (mesh->N[e] == p) { //find elements of degree p 
-        for (iint f=0;f<mesh->Nfaces;f++) { //check for a degree > p+1 neighbour
-          iint eP = mesh->EToE[mesh->Nfaces*e+f];
+        for (int f=0;f<mesh->Nfaces;f++) { //check for a degree > p+1 neighbour
+          int eP = mesh->EToE[mesh->Nfaces*e+f];
           if (eP > -1) 
             if (mesh->N[eP] > p+1)
               mesh->N[e] = p+1;  //if one exists, raise the degree of the current element
@@ -85,9 +85,9 @@ void meshSetPolynomialDegree2D(mesh2D *mesh, int NMax) {
   }
 
   int N = 0;
-  iint *Ncnt = (iint *) calloc(NMax+1,sizeof(iint));
+  int *Ncnt = (int *) calloc(NMax+1,sizeof(int));
   NMax = 0;
-  for (iint e =0; e<mesh->Nelements;e++) {
+  for (int e =0; e<mesh->Nelements;e++) {
     Ncnt[mesh->N[e]]++;
     N = mymax(N,mesh->N[e]);
   }

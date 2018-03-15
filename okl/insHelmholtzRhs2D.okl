@@ -1,8 +1,8 @@
 
 // Compute RHS Forcing i.e. 1/nu*(-grad(Pr) + sum(a_i x u_i)^(n-i) -sum(b_i x N(u)^(n-i))
-kernel void insHelmholtzRhsForcing2D(const iint Nelements,
-             const iint subcycling,  
-				     const iint rhsPackingMode,
+kernel void insHelmholtzRhsForcing2D(const int Nelements,
+             const int subcycling,  
+				     const int rhsPackingMode,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict MM,
              const dfloat idt,
@@ -16,8 +16,8 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 				     const dfloat c0,
 				     const dfloat c1,
 				     const dfloat c2,
-             const iint index,
-             const iint offset,
+             const int index,
+             const int offset,
              const dfloat * restrict U,
              const dfloat * restrict V,
 				     const dfloat * restrict NU,
@@ -27,24 +27,24 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 				     dfloat * restrict rhsU,
              dfloat * restrict rhsV){
 
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
 
     shared dfloat s_rhsU[p_NblockV][p_Np];
     shared dfloat s_rhsV[p_NblockV][p_Np];
     exclusive dfloat Um0, Vm0;
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-      	iint e = eo+es; // element in block
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+      	int e = eo+es; // element in block
       	if(e<Nelements){
           //hard coded for 3 stages
           const int index0 = (index+0)%3;
           const int index1 = (index+2)%3; //back one step
           const int index2 = (index+1)%3; //back two steps
 
-      	  const iint id0   = n + p_Np*(e+index0*offset);
-          const iint id1   = n + p_Np*(e+index1*offset);
-          const iint id2   = n + p_Np*(e+index2*offset);
+      	  const int id0   = n + p_Np*(e+index0*offset);
+          const int id1   = n + p_Np*(e+index1*offset);
+          const int id2   = n + p_Np*(e+index2*offset);
 
       	  const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 
@@ -100,25 +100,25 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-      	iint e = eo+es; // element in block
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+      	int e = eo+es; // element in block
       	if(e<Nelements){
       	  // Multiplay with Mass Matrix
       	  dfloat rhsu = 0.f, rhsv = 0.f;
       	  occaUnroll(p_Np)
-    	    for(iint i=0;i<p_Np;++i){
+    	    for(int i=0;i<p_Np;++i){
     	      const dfloat M = MM[n+i*p_Np];
     	      rhsu  += M*s_rhsU[es][i];
     	      rhsv  += M*s_rhsV[es][i];
     	    }
       	  // Update
 	  if(!rhsPackingMode){
-	    const iint id = e*p_Np+n;
+	    const int id = e*p_Np+n;
 	    rhsU[id] = rhsu;
 	    rhsV[id] = rhsv;
 	  }else{
-	    const iint id = 2*(e*p_Np+n);
+	    const int id = 2*(e*p_Np+n);
 	    rhsU[id+0] = rhsu;
 	    rhsU[id+1] = rhsv;
 	    rhsV[id+0] = Um0;
@@ -133,7 +133,7 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 
 
 // // Compute RHS Forcing i.e. 1/nu*(-grad(Pr) + sum(a_i x u_i)^(n-i) -sum(b_i x N(u)^(n-i))
-// kernel void insHelmholtzRhsForcingSS2D(const iint Nelements,
+// kernel void insHelmholtzRhsForcingSS2D(const int Nelements,
 //                                        const dfloat dt,
 //                                        const dfloat g0,
 //                                        const dfloat * restrict vgeo,
@@ -143,18 +143,18 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 //                                              dfloat * restrict rhsU,
 //                                              dfloat * restrict rhsV){
 
-//   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+//   for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
 
 //     shared dfloat s_rhsU[p_NblockV][p_Np];
 //     shared dfloat s_rhsV[p_NblockV][p_Np];
     
-//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-//         iint e = eo+es; // element in block
+//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+//         int e = eo+es; // element in block
 //         if(e<Nelements){
 //           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
           
-//           const iint id0 = e*p_Np + n; 
+//           const int id0 = e*p_Np + n; 
 //           //U
 //           const dfloat utt  = Ut[id0];
 //           const dfloat vtt  = Vt[id0];
@@ -169,20 +169,20 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 //     // make sure all node data is loaded into shared
 //     barrier(localMemFence);
 
-//     for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-//         iint e = eo+es; // element in block
+//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+//       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+//         int e = eo+es; // element in block
 //         if(e<Nelements){
 //           // Multiplay with Mass Matrix
 //           dfloat rhsu = 0.f, rhsv = 0.f;
 //           occaUnroll(p_Np)
-//           for(iint i=0;i<p_Np;++i){
+//           for(int i=0;i<p_Np;++i){
 //             const dfloat M = MM[n+i*p_Np];
 //             rhsu  += M*s_rhsU[es][i];
 //             rhsv  += M*s_rhsV[es][i];
 //           }
 //           // Update
-//       const iint id = e*p_Np+n;
+//       const int id = e*p_Np+n;
 //       rhsU[id] = rhsu;
 //       rhsV[id] = rhsv;
    
@@ -205,16 +205,16 @@ kernel void insHelmholtzRhsForcing2D(const iint Nelements,
 
 
 kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
-				    const iint rhsPackingMode,
-				    const iint * restrict vmapM,
-				    const iint * restrict vmapP,
+				    const int rhsPackingMode,
+				    const int * restrict vmapM,
+				    const int * restrict vmapP,
 				    const dfloat tau,
 				    const dfloat t,
 				    const dfloat * restrict x,
 				    const dfloat * restrict y,
 				    const dfloat * restrict vgeo,
 				    const dfloat * restrict sgeo,
-				    const iint   * restrict EToB,
+				    const int   * restrict EToB,
 				    const dfloat * restrict DrT,
 				    const dfloat * restrict DsT,
 				    const dfloat * restrict LIFTT,
@@ -245,19 +245,19 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
     shared  dfloat s_Lnxdv[p_Np];
     shared  dfloat s_Lnydv[p_Np];
 
-    exclusive iint idM, bcsum;
+    exclusive int idM, bcsum;
     exclusive dfloat nx, ny, sJ, invJ, hinv;
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
-      	const iint id  = n + e*p_Nfaces*p_Nfp;
+      	const int id  = n + e*p_Nfaces*p_Nfp;
       	idM = vmapM[id];
-      	const iint face = n/p_Nfp;
+      	const int face = n/p_Nfp;
       	dfloat dudxP=0, dudyP=0, uP=0;
       	dfloat dvdxP=0, dvdyP=0, vP=0;
       	
         // load surface geofactors for this face
-      	iint sid = p_Nsgeo*(e*p_Nfaces+face);
+      	int sid = p_Nsgeo*(e*p_Nfaces+face);
       	nx = sgeo[sid+p_NXID];
       	ny = sgeo[sid+p_NYID];
       	sJ = sgeo[sid+p_SJID];
@@ -298,7 +298,7 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
       	dfloat Lnydv = 0;
 
       	occaUnroll(p_NfacesNfp)
-      	  for(iint i=0;i<p_NfacesNfp;++i){
+      	  for(int i=0;i<p_NfacesNfp;++i){
       	    Lnxdu += LIFTT[n+i*p_Np]*s_nxdu[i];
       	    Lnydu += LIFTT[n+i*p_Np]*s_nydu[i];
       	    Lnxdv += LIFTT[n+i*p_Np]*s_nxdv[i];
@@ -325,7 +325,7 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
-      	iint id = idM%p_Np;
+      	int id = idM%p_Np;
       	s_lapuflux[n] += sJ*invJ*(nx*s_Lnxdu[id]+ny*s_Lnydu[id]);
       	s_lapvflux[n] += sJ*invJ*(nx*s_Lnxdv[id]+ny*s_Lnydv[id]);
       }
@@ -384,12 +384,12 @@ kernel void insHelmholtzRhsIpdgBC2D(const int Nelements,
     	  }
 
 	if(!rhsPackingMode){
-	  const iint id = e*p_Np+n;
+	  const int id = e*p_Np+n;
     	  rhsU[id] -=  J*Mlapu;
     	  rhsV[id] -=  J*Mlapv;
 	}
 	else{
-	  const iint id = e*p_Np+n;
+	  const int id = e*p_Np+n;
     	  rhsU[2*id+0] -=  J*Mlapu;
     	  rhsU[2*id+1] -=  J*Mlapv;
 	}

@@ -5,15 +5,15 @@
 
 // function to compute collocation differentiation
 // contributions to nodal DG rhs for acoustics
-kernel void acousticsVolume2D_o0(const iint Nelements,
+kernel void acousticsVolume2D_o0(const int Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
 				     const dfloat * restrict q,
 				     dfloat * restrict rhsq){
   
-  for(iint e=0;e<Nelements;++e;outer0){  // for all elements
-    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  for(int e=0;e<Nelements;++e;outer0){  // for all elements
+    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
@@ -26,9 +26,9 @@ kernel void acousticsVolume2D_o0(const iint Nelements,
       dfloat dvdr = 0, dvds = 0;
       dfloat dpdr = 0, dpds = 0;
       
-      for(iint i=0;i<p_Np;++i){
+      for(int i=0;i<p_Np;++i){
 	// load data at node i of element e
-	const iint id = p_Nfields*(e*p_Np + i);
+	const int id = p_Nfields*(e*p_Np + i);
 	const dfloat u = q[id+0], v = q[id+1], p = q[id+2];
 
  	const dfloat Drni = DrT[n+i*p_Np];
@@ -47,7 +47,7 @@ kernel void acousticsVolume2D_o0(const iint Nelements,
       const dfloat dpdy = drdy*dpdr + dsdy*dpds;
       
       // store acoustics rhs contributions from collocation differentiation
-      const iint id = p_Nfields*(e*p_Np + n);
+      const int id = p_Nfields*(e*p_Np + n);
       rhsq[id+0] = -dpdx;
       rhsq[id+1] = -dpdy;
       rhsq[id+2] = -dudx-dvdy;
@@ -58,15 +58,15 @@ kernel void acousticsVolume2D_o0(const iint Nelements,
 
 
 // o1: float4s
-kernel void acousticsVolume2D_o1(const iint Nelements,
+kernel void acousticsVolume2D_o1(const int Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
 				     const dfloat4 * restrict q4,
 				     dfloat4 * restrict rhsq4){
   
-  for(iint e=0;e<Nelements;++e;outer0){  // for all elements
-    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  for(int e=0;e<Nelements;++e;outer0){  // for all elements
+    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
@@ -79,9 +79,9 @@ kernel void acousticsVolume2D_o1(const iint Nelements,
       dfloat dvdr = 0, dvds = 0;
       dfloat dpdr = 0, dpds = 0;
       
-      for(iint i=0;i<p_Np;++i){
+      for(int i=0;i<p_Np;++i){
 	// load data at node i of element e
-	const iint id = e*p_Np + i;
+	const int id = e*p_Np + i;
 	const dfloat4 q4i = q4[id];
 	const dfloat u = q4i.x, v = q4i.y, p = q4i.z;
 
@@ -101,7 +101,7 @@ kernel void acousticsVolume2D_o1(const iint Nelements,
       const dfloat dpdy = drdy*dpdr + dsdy*dpds;
       
       // store acoustics rhs contributions from collocation differentiation
-      const iint id = e*p_Np + n;
+      const int id = e*p_Np + n;
       dfloat4 rhsq4n;
       rhsq4n.x = -dpdx;
       rhsq4n.y = -dpdy;
@@ -114,19 +114,19 @@ kernel void acousticsVolume2D_o1(const iint Nelements,
 
 
 // o2: load q into shared
-kernel void acousticsVolume2D_o2(const iint Nelements,
+kernel void acousticsVolume2D_o2(const int Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
 				     const dfloat4 * restrict q4,
 				     dfloat4 * restrict rhsq4){
   
-  for(iint e=0;e<Nelements;++e;outer0){  // for all elements
+  for(int e=0;e<Nelements;++e;outer0){  // for all elements
 
     shared dfloat s_u[p_Np], s_v[p_Np], s_p[p_Np];
     
-    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-      const iint id = e*p_Np + n;
+    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+      const int id = e*p_Np + n;
       const dfloat4 q4n = q4[id];
       s_u[n] = q4n.x;
       s_v[n] = q4n.y;
@@ -136,7 +136,7 @@ kernel void acousticsVolume2D_o2(const iint Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
     
-    for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
@@ -149,7 +149,7 @@ kernel void acousticsVolume2D_o2(const iint Nelements,
       dfloat dvdr = 0, dvds = 0;
       dfloat dpdr = 0, dpds = 0;
       
-      for(iint i=0;i<p_Np;++i){
+      for(int i=0;i<p_Np;++i){
 	// load data at node i of element e
  	const dfloat Drni = DrT[n+i*p_Np];
 	const dfloat Dsni = DsT[n+i*p_Np];
@@ -167,7 +167,7 @@ kernel void acousticsVolume2D_o2(const iint Nelements,
       const dfloat dpdy = drdy*dpdr + dsdy*dpds;
       
       // store acoustics rhs contributions from collocation differentiation
-      const iint id = e*p_Np + n;
+      const int id = e*p_Np + n;
       dfloat4 rhsq4n;
       rhsq4n.x = -dpdx;
       rhsq4n.y = -dpdy;
@@ -178,25 +178,25 @@ kernel void acousticsVolume2D_o2(const iint Nelements,
 }
 
 // o3: multiple elements for each outer iteration
-kernel void acousticsVolume2D_o3(const iint Nelements,
+kernel void acousticsVolume2D_o3(const int Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
 				     const dfloat4 * restrict q4,
 				     dfloat4 * restrict rhsq4){
   
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_u[p_NblockV][p_Np];
     shared dfloat s_v[p_NblockV][p_Np];
     shared dfloat s_p[p_NblockV][p_Np];
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
-	  const iint id = e*p_Np + n;
+	  const int id = e*p_Np + n;
 	  const dfloat4 q4n = q4[id];
 	  s_u[es][n] = q4n.x;
 	  s_v[es][n] = q4n.y;
@@ -208,10 +208,10 @@ kernel void acousticsVolume2D_o3(const iint Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
@@ -225,7 +225,7 @@ kernel void acousticsVolume2D_o3(const iint Nelements,
 	  dfloat dvdr = 0, dvds = 0;
 	  dfloat dpdr = 0, dpds = 0;
 	  
-	  for(iint i=0;i<p_Np;++i){
+	  for(int i=0;i<p_Np;++i){
 	    // load data at node i of element e
 	    const dfloat Drni = DrT[n+i*p_Np];
 	    const dfloat Dsni = DsT[n+i*p_Np];
@@ -243,7 +243,7 @@ kernel void acousticsVolume2D_o3(const iint Nelements,
 	  const dfloat dpdy = drdy*dpdr + dsdy*dpds;
 	  
 	  // store acoustics rhs contributions from collocation differentiation
-	  const iint id = e*p_Np + n;
+	  const int id = e*p_Np + n;
 	  dfloat4 rhsq4n;
 	  rhsq4n.x = -dpdx;
 	  rhsq4n.y = -dpdy;
@@ -256,25 +256,25 @@ kernel void acousticsVolume2D_o3(const iint Nelements,
 }
 
 // o4: unroll 
-kernel void acousticsVolume2D_o4(const iint Nelements,
+kernel void acousticsVolume2D_o4(const int Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
 				     const dfloat4 * restrict q4,
 				     dfloat4 * restrict rhsq4){
   
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_u[p_NblockV][p_Np];
     shared dfloat s_v[p_NblockV][p_Np];
     shared dfloat s_p[p_NblockV][p_Np];
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
-	  const iint id = e*p_Np + n;
+	  const int id = e*p_Np + n;
 	  const dfloat4 q4n = q4[id];
 	  s_u[es][n] = q4n.x;
 	  s_v[es][n] = q4n.y;
@@ -286,10 +286,10 @@ kernel void acousticsVolume2D_o4(const iint Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
@@ -304,7 +304,7 @@ kernel void acousticsVolume2D_o4(const iint Nelements,
 	  dfloat dpdr = 0, dpds = 0;
 
 	  occaUnroll(p_Np)
-	  for(iint i=0;i<p_Np;++i){
+	  for(int i=0;i<p_Np;++i){
 	    // load data at node i of element e
 	    const dfloat Drni = DrT[n+i*p_Np];
 	    const dfloat Dsni = DsT[n+i*p_Np];
@@ -322,7 +322,7 @@ kernel void acousticsVolume2D_o4(const iint Nelements,
 	  const dfloat dpdy = drdy*dpdr + dsdy*dpds;
 	  
 	  // store acoustics rhs contributions from collocation differentiation
-	  const iint id = e*p_Np + n;
+	  const int id = e*p_Np + n;
 	  dfloat4 rhsq4n;
 	  rhsq4n.x = -dpdx;
 	  rhsq4n.y = -dpdy;
@@ -335,14 +335,14 @@ kernel void acousticsVolume2D_o4(const iint Nelements,
 }
 
 // o5: DrT,Ds into shared
-kernel void acousticsVolume2D_o5(const iint Nelements,
+kernel void acousticsVolume2D_o5(const int Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
 				     const dfloat4 * restrict q4,
 				     dfloat4 * restrict rhsq4){
   
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_u[p_NblockV][p_Np];
     shared dfloat s_v[p_NblockV][p_Np];
@@ -351,19 +351,19 @@ kernel void acousticsVolume2D_o5(const iint Nelements,
     shared dfloat s_DrT[p_Np][p_Np];
     shared dfloat s_DsT[p_Np][p_Np];
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	// prefetch DrT, Ds into shared
-	iint t = n + es*p_Np;
+	int t = n + es*p_Np;
 	while(t<p_Np*p_Np){
 	  s_DrT[0][t] = DrT[t];
 	  s_DsT[0][t] = DsT[t];
 	  t += p_Np*p_NblockV;
 	}
 	
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
-	  const iint id = e*p_Np + n;
+	  const int id = e*p_Np + n;
 	  const dfloat4 q4n = q4[id];
 	  s_u[es][n] = q4n.x;
 	  s_v[es][n] = q4n.y;
@@ -375,10 +375,10 @@ kernel void acousticsVolume2D_o5(const iint Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
@@ -393,7 +393,7 @@ kernel void acousticsVolume2D_o5(const iint Nelements,
 	  dfloat dpdr = 0, dpds = 0;
 
 	  occaUnroll(p_Np)
-	  for(iint i=0;i<p_Np;++i){
+	  for(int i=0;i<p_Np;++i){
 	    // load data at node i of element e
 	    const dfloat Drni = s_DrT[i][n];
 	    const dfloat Dsni = s_DsT[i][n];
@@ -415,7 +415,7 @@ kernel void acousticsVolume2D_o5(const iint Nelements,
 	  const dfloat dpdy = drdy*dpdr + dsdy*dpds;
 	  
 	  // store acoustics rhs contributions from collocation differentiation
-	  const iint id = e*p_Np + n;
+	  const int id = e*p_Np + n;
 	  dfloat4 rhsq4n;
 	  rhsq4n.x = -dpdx;
 	  rhsq4n.y = -dpdy;
@@ -429,14 +429,14 @@ kernel void acousticsVolume2D_o5(const iint Nelements,
 
 
 // o6: vgeo in shared
-kernel void acousticsVolume2D_o6(const iint Nelements,
+kernel void acousticsVolume2D_o6(const int Nelements,
 				     const dfloat * restrict vgeo,
 				     const dfloat * restrict DrT,
 				     const dfloat * restrict DsT,
 				     const dfloat4 * restrict q4,
 				     dfloat4 * restrict rhsq4){
   
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
     shared dfloat s_u[p_NblockV][p_Np];
     shared dfloat s_v[p_NblockV][p_Np];
@@ -447,10 +447,10 @@ kernel void acousticsVolume2D_o6(const iint Nelements,
 
     shared dfloat s_vgeo[p_NblockV][p_Nvgeo];
     
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	// prefetch DrT, Ds into shared
-	iint t = n + es*p_Np;
+	int t = n + es*p_Np;
 	while(t<p_Np*p_Np){
 	  s_DrT[0][t] = DrT[t];
 	  s_DsT[0][t] = DsT[t];
@@ -465,9 +465,9 @@ kernel void acousticsVolume2D_o6(const iint Nelements,
 	  t += p_Np*p_NblockV;
 	}
 
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
-	  const iint id = e*p_Np + n;
+	  const int id = e*p_Np + n;
 	  const dfloat4 q4n = q4[id];
 	  s_u[es][n] = q4n.x;
 	  s_v[es][n] = q4n.y;
@@ -479,10 +479,10 @@ kernel void acousticsVolume2D_o6(const iint Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(iint n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
 	
-	iint e = eo+es; // element in block
+	int e = eo+es; // element in block
 	if(e<Nelements){
 	  
 	  // prefetch geometric factors (constant on triangle)
@@ -497,7 +497,7 @@ kernel void acousticsVolume2D_o6(const iint Nelements,
 	  dfloat dpdr = 0, dpds = 0;
 
 	  occaUnroll(p_Np)
-	  for(iint i=0;i<p_Np;++i){
+	  for(int i=0;i<p_Np;++i){
 	    const dfloat Drni = s_DrT[i][n];
 	    
 	    // differentiate (u,v,p) with respect to 'r' and 's'
@@ -507,7 +507,7 @@ kernel void acousticsVolume2D_o6(const iint Nelements,
 	  }
 	  
 	  occaUnroll(p_Np)
-	    for(iint i=0;i<p_Np;++i){
+	    for(int i=0;i<p_Np;++i){
 	      
 	      const dfloat Dsni = s_DsT[i][n];
 	      
@@ -523,7 +523,7 @@ kernel void acousticsVolume2D_o6(const iint Nelements,
 	  const dfloat dpdy = drdy*dpdr + dsdy*dpds;
 	  
 	  // store acoustics rhs contributions from collocation differentiation
-	  const iint id = e*p_Np + n;
+	  const int id = e*p_Np + n;
 	  dfloat4 rhsq4n;
 	  rhsq4n.x = -dpdx;
 	  rhsq4n.y = -dpdy;

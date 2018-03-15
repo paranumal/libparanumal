@@ -11,8 +11,8 @@ void meshVTU3D(mesh3D *mesh, char *fileName){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   FILE *fp;
-  iint *allNelements = (iint*) calloc(size, sizeof(iint));
-  iint totalNelements = 0, maxNelements = 0;
+  int *allNelements = (int*) calloc(size, sizeof(int));
+  int totalNelements = 0, maxNelements = 0;
   dfloat *tmpEX, *tmpEY, *tmpEZ;
 
   if(rank==0){
@@ -21,8 +21,8 @@ void meshVTU3D(mesh3D *mesh, char *fileName){
   }
 
   // gather element counts to root
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT, 
-		allNelements, 1, MPI_IINT, 
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_int, 
+		allNelements, 1, MPI_int, 
 		MPI_COMM_WORLD);
   
   if(rank==0){
@@ -46,9 +46,9 @@ void meshVTU3D(mesh3D *mesh, char *fileName){
 
 if(rank==0){  // root writes out its coordinates
 printf("printing local verts \n");
-for(iint e=0;e<mesh->Nelements;++e){
+for(int e=0;e<mesh->Nelements;++e){
 	fprintf(fp, "        ");
-	for(iint n=0;n<mesh->Nverts;++n)
+	for(int n=0;n<mesh->Nverts;++n)
 	  fprintf(fp, "%g %g %g\n",
 		  mesh->EX[e*mesh->Nverts+n],
 		  mesh->EY[e*mesh->Nverts+n],
@@ -77,9 +77,9 @@ for(iint e=0;e<mesh->Nelements;++e){
       MPI_Recv(tmpEZ, allNelements[r]*mesh->Nverts, 
 	       MPI_DFLOAT, r, 666, MPI_COMM_WORLD, &status);
       
-for(iint e=0;e<allNelements[r];++e){
+for(int e=0;e<allNelements[r];++e){
 	fprintf(fp, "        ");
-	for(iint n=0;n<mesh->Nverts;++n)
+	for(int n=0;n<mesh->Nverts;++n)
 	  fprintf(fp, "%g %g %g\n",
 		  tmpEX[e*mesh->Nverts+n],
 		  tmpEY[e*mesh->Nverts+n],
@@ -99,8 +99,8 @@ for(iint e=0;e<allNelements[r];++e){
     fprintf(fp, "      <CellData Scalars=\"scalars\">\n");
     fprintf(fp, "        <DataArray type=\"Int32\" Name=\"element_rank\" Format=\"ascii\">\n");
     
-    for(iint r=0;r<size;++r){
-      for(iint e=0;e<allNelements[r];++e)
+    for(int r=0;r<size;++r){
+      for(int e=0;e<allNelements[r];++e)
 	      fprintf(fp, "         %d\n", r);
     }
     
@@ -110,10 +110,10 @@ for(iint e=0;e<allNelements[r];++e){
     fprintf(fp, "    <Cells>\n");
     fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
 
-    iint cnt=0;
-    for(iint r=0;r<size;++r){
-      for(iint e=0;e<allNelements[r];++e){
-	        for(iint n=0;n<mesh->Nverts;++n){
+    int cnt=0;
+    for(int r=0;r<size;++r){
+      for(int e=0;e<allNelements[r];++e){
+	        for(int n=0;n<mesh->Nverts;++n){
 	         fprintf(fp, "%d ", cnt);
 	         ++cnt;
 	        }
@@ -124,7 +124,7 @@ for(iint e=0;e<allNelements[r];++e){
     fprintf(fp, "        </DataArray>\n");
     
     fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
-    for(iint e=0;e<totalNelements;++e){
+    for(int e=0;e<totalNelements;++e){
       if(e%10==0) fprintf(fp, "        ");
       fprintf(fp, "%d ", (e+1)*mesh->Nverts);
       if(((e+1)%10==0) || (e==totalNelements-1))
@@ -133,7 +133,7 @@ for(iint e=0;e<allNelements[r];++e){
     fprintf(fp, "       </DataArray>\n");
     
     fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-    for(iint e=0;e<totalNelements;++e){
+    for(int e=0;e<totalNelements;++e){
       if(e%10==0) fprintf(fp, "        ");
       fprintf(fp, "10 "); // need to choose type here !
       if(((e+1)%10==0) || e==(totalNelements-1))

@@ -2,11 +2,11 @@
 
 
 
-void acousticsVolume3Dbbdg(mesh3D *mesh, iint lev){
+void acousticsVolume3Dbbdg(mesh3D *mesh, int lev){
 
   // for all elements
-  for(iint et=0;et<mesh->MRABNelements[lev];++et){
-    iint e = mesh->MRABelementIds[lev][et];
+  for(int et=0;et<mesh->MRABNelements[lev];++et){
+    int e = mesh->MRABelementIds[lev][et];
 
     // prefetch geometric factors (constant on tet)
     dfloat drdx = mesh->vgeo[e*mesh->Nvgeo + RXID];
@@ -20,31 +20,31 @@ void acousticsVolume3Dbbdg(mesh3D *mesh, iint lev){
     dfloat dtdz = mesh->vgeo[e*mesh->Nvgeo + TZID];
 
     // for all nodes in this element
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       
       // compute 'r', 's', and 't' derivatives of (q_m) at node n
-      iint D0i1 = mesh->Nfields*(e*mesh->Np + mesh->D0ids[4*n+0]);
-      iint D1i1 = mesh->Nfields*(e*mesh->Np + mesh->D1ids[4*n+0]);
-      iint D2i1 = mesh->Nfields*(e*mesh->Np + mesh->D2ids[4*n+0]);
-      iint D3i1 = mesh->Nfields*(e*mesh->Np + mesh->D3ids[4*n+0]);
+      int D0i1 = mesh->Nfields*(e*mesh->Np + mesh->D0ids[4*n+0]);
+      int D1i1 = mesh->Nfields*(e*mesh->Np + mesh->D1ids[4*n+0]);
+      int D2i1 = mesh->Nfields*(e*mesh->Np + mesh->D2ids[4*n+0]);
+      int D3i1 = mesh->Nfields*(e*mesh->Np + mesh->D3ids[4*n+0]);
       dfloat Dval1 = mesh->Dvals[4*n+0];
       
-      iint D0i2 = mesh->Nfields*(e*mesh->Np + mesh->D0ids[4*n+1]);
-      iint D1i2 = mesh->Nfields*(e*mesh->Np + mesh->D1ids[4*n+1]);
-      iint D2i2 = mesh->Nfields*(e*mesh->Np + mesh->D2ids[4*n+1]);
-      iint D3i2 = mesh->Nfields*(e*mesh->Np + mesh->D3ids[4*n+1]);
+      int D0i2 = mesh->Nfields*(e*mesh->Np + mesh->D0ids[4*n+1]);
+      int D1i2 = mesh->Nfields*(e*mesh->Np + mesh->D1ids[4*n+1]);
+      int D2i2 = mesh->Nfields*(e*mesh->Np + mesh->D2ids[4*n+1]);
+      int D3i2 = mesh->Nfields*(e*mesh->Np + mesh->D3ids[4*n+1]);
       dfloat Dval2 = mesh->Dvals[4*n+1];
 
-      iint D0i3 = mesh->Nfields*(e*mesh->Np + mesh->D0ids[4*n+2]);
-      iint D1i3 = mesh->Nfields*(e*mesh->Np + mesh->D1ids[4*n+2]);
-      iint D2i3 = mesh->Nfields*(e*mesh->Np + mesh->D2ids[4*n+2]);
-      iint D3i3 = mesh->Nfields*(e*mesh->Np + mesh->D3ids[4*n+2]);    
+      int D0i3 = mesh->Nfields*(e*mesh->Np + mesh->D0ids[4*n+2]);
+      int D1i3 = mesh->Nfields*(e*mesh->Np + mesh->D1ids[4*n+2]);
+      int D2i3 = mesh->Nfields*(e*mesh->Np + mesh->D2ids[4*n+2]);
+      int D3i3 = mesh->Nfields*(e*mesh->Np + mesh->D3ids[4*n+2]);    
       dfloat Dval3 = mesh->Dvals[4*n+2];
 
-      iint D0i4 = mesh->Nfields*(e*mesh->Np + mesh->D0ids[4*n+3]);
-      iint D1i4 = mesh->Nfields*(e*mesh->Np + mesh->D1ids[4*n+3]);
-      iint D2i4 = mesh->Nfields*(e*mesh->Np + mesh->D2ids[4*n+3]);
-      iint D3i4 = mesh->Nfields*(e*mesh->Np + mesh->D3ids[4*n+3]);    
+      int D0i4 = mesh->Nfields*(e*mesh->Np + mesh->D0ids[4*n+3]);
+      int D1i4 = mesh->Nfields*(e*mesh->Np + mesh->D1ids[4*n+3]);
+      int D2i4 = mesh->Nfields*(e*mesh->Np + mesh->D2ids[4*n+3]);
+      int D3i4 = mesh->Nfields*(e*mesh->Np + mesh->D3ids[4*n+3]);    
       dfloat Dval4 = mesh->Dvals[4*n+3];
 
       dfloat dudr = .5f*(Dval1*(mesh->q[D1i1+0] - mesh->q[D0i1+0]) +
@@ -109,7 +109,7 @@ void acousticsVolume3Dbbdg(mesh3D *mesh, iint lev){
       dfloat dpdz = drdz*dpdr + dsdz*dpds + dtdz*dpdt;
       
       // indices for writing the RHS terms
-      iint id = 3*mesh->Nfields*(e*mesh->Np + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
+      int id = 3*mesh->Nfields*(e*mesh->Np + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
       
       // store acoustics rhs contributions from collocation differentiation
       mesh->rhsq[id+0] = -dpdx;

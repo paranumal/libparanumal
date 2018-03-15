@@ -6,33 +6,33 @@
 #define bitRange 10
 
 typedef struct {
-  iint id;
-  iint level;
+  int id;
+  int level;
   dfloat weight;
-  iint N;
+  int N;
 
   // 8 for maximum number of vertices per element in 3D
-  iint v[8];
+  int v[8];
   dfloat EX[8], EY[8], EZ[8];
 
-  iint cRank;
-  iint cId;
+  int cRank;
+  int cId;
   int type;
 } cElement_t;
 
 typedef struct {
-  iint Nelements;
-  iint offSet;
+  int Nelements;
+  int offSet;
 } cluster_t;
 
 typedef struct {
-  iint Nelements;
-  iint offSet;
-  iint rank;
+  int Nelements;
+  int offSet;
+  int rank;
 
-  iint destId;
-  iint destOffset;
-  iint destRank;
+  int destId;
+  int destOffset;
+  int destRank;
 
   dfloat weight;
   unsigned long long int index; //morton index
@@ -42,7 +42,7 @@ typedef struct {
 unsigned long long int mortonIndex3D(unsigned int ix, unsigned int iy, unsigned int iz);
 void bogusMatch(void *a, void *b);
 
-dfloat improveClusteredPartition(iint *Nclusters, parallelCluster_t **parallelClusters);
+dfloat improveClusteredPartition(int *Nclusters, parallelCluster_t **parallelClusters);
 
 
 // compare the Morton indices for two clusters
@@ -73,16 +73,16 @@ int compareRank(const void *a, const void *b){
 }
 
 // geometric partition of clusters of elements in 2D mesh using Morton ordering + parallelSort
-dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_t *clusters, 
-                              iint *Nelements, cElement_t **elements){
+dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, int Nclusters, cluster_t *clusters, 
+                              int *Nelements, cElement_t **elements){
 
-  iint rank, size;
+  int rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  iint maxNclusters;
-  MPI_Allreduce(&Nclusters, &maxNclusters, 1, MPI_IINT, MPI_MAX,MPI_COMM_WORLD);
+  int maxNclusters;
+  MPI_Allreduce(&Nclusters, &maxNclusters, 1, MPI_int, MPI_MAX,MPI_COMM_WORLD);
   maxNclusters = 2*((maxNclusters+1)/2);
   
   // fix maxNclusters
@@ -95,11 +95,11 @@ dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_
   dfloat mincz = 1e9, maxcz = -1e9;
 
   // compute cluster centers on this process
-  for(iint cnt=0;cnt<Nclusters;++cnt){
-    iint id = clusters[cnt].offSet;
+  for(int cnt=0;cnt<Nclusters;++cnt){
+    int id = clusters[cnt].offSet;
     dfloat cx = 0, cy = 0, cz = 0;
-    for (iint e=0;e<clusters[cnt].Nelements;e++) {
-      for(iint n=0;n<mesh->Nverts;++n){
+    for (int e=0;e<clusters[cnt].Nelements;e++) {
+      for(int n=0;n<mesh->Nverts;++n){
         cx += (*elements)[id+e].EX[n];
         cy += (*elements)[id+e].EY[n];
         cz += (*elements)[id+e].EZ[n];
@@ -138,13 +138,13 @@ dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_
   unsigned long long int Nboxes = (((unsigned long long int)1)<<(bitRange-1));
   
   // compute Morton index for each cluster
-  for(iint cnt=0;cnt<Nclusters;++cnt){
+  for(int cnt=0;cnt<Nclusters;++cnt){
     // cluster center coordinates
     dfloat cx = 0, cy = 0, cz = 0;
     parallelClusters[cnt].weight = 0.;
-    iint id = clusters[cnt].offSet;
-    for (iint e=0;e<clusters[cnt].Nelements;e++) {
-      for(iint n=0;n<mesh->Nverts;++n){
+    int id = clusters[cnt].offSet;
+    for (int e=0;e<clusters[cnt].Nelements;e++) {
+      for(int n=0;n<mesh->Nverts;++n){
         cx += (*elements)[id+e].EX[n];
         cy += (*elements)[id+e].EY[n];
         cz += (*elements)[id+e].EZ[n];
@@ -167,7 +167,7 @@ dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_
   }
 
   // pad cluster array with dummy clusters
-  for(iint n=Nclusters;n<maxNclusters;++n){
+  for(int n=Nclusters;n<maxNclusters;++n){
     parallelClusters[n].Nelements = -1;
     parallelClusters[n].index = mortonIndex3D(Nboxes+1, Nboxes+1,Nboxes+1);
   }
@@ -176,13 +176,13 @@ dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_
   parallelSort(maxNclusters, parallelClusters, sizeof(parallelCluster_t),
          compareIndex, bogusMatch);
 
-  iint newNclusters =0;
-  for (iint n=0;n<maxNclusters;n++)
+  int newNclusters =0;
+  for (int n=0;n<maxNclusters;n++)
     newNclusters += (parallelClusters[n].Nelements != -1);
 
   //Do an initial partitioning
   dfloat localTotalWeight = 0.;
-  for (iint n=0; n<newNclusters; n++) 
+  for (int n=0; n<newNclusters; n++) 
     localTotalWeight += parallelClusters[n].weight;
 
   dfloat *totalWeights = (dfloat *) calloc(size,sizeof(dfloat));
@@ -190,42 +190,42 @@ dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_
   
   MPI_Allgather(&localTotalWeight, 1, MPI_DFLOAT, totalWeights, 1, MPI_DFLOAT, MPI_COMM_WORLD);
 
-  for (iint r=0; r<size; r++)
+  for (int r=0; r<size; r++)
     weightOffsets[r+1] = weightOffsets[r] + totalWeights[r];
 
   dfloat globalTotalWeight = weightOffsets[size];
   dfloat chunkSize = globalTotalWeight/((dfloat)size);
 
-  iint *Nsend = (iint *) calloc(size, sizeof(iint));
-  iint *Nrecv = (iint *) calloc(size, sizeof(iint));
-  iint *Ncount = (iint *) calloc(size, sizeof(iint));
-  iint *sendOffsets = (iint*) calloc(size, sizeof(iint));
-  iint *recvOffsets = (iint*) calloc(size, sizeof(iint));
+  int *Nsend = (int *) calloc(size, sizeof(int));
+  int *Nrecv = (int *) calloc(size, sizeof(int));
+  int *Ncount = (int *) calloc(size, sizeof(int));
+  int *sendOffsets = (int*) calloc(size, sizeof(int));
+  int *recvOffsets = (int*) calloc(size, sizeof(int));
 
   //determine the destination rank based on which chunk the cluster is in
   localTotalWeight = weightOffsets[rank];
-  for (iint n=0; n<newNclusters; n++) {
-    iint destRank = (iint) (localTotalWeight/chunkSize);
+  for (int n=0; n<newNclusters; n++) {
+    int destRank = (int) (localTotalWeight/chunkSize);
     Nsend[destRank]++; 
     localTotalWeight += parallelClusters[n].weight;
   }
 
   // find send offsets
-  for(iint r=1;r<size;++r)
+  for(int r=1;r<size;++r)
     sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
   
   // exchange byte counts 
-  MPI_Alltoall(Nsend, 1, MPI_IINT, Nrecv, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(Nsend, 1, MPI_int, Nrecv, 1, MPI_int, MPI_COMM_WORLD);
   
   // count incoming clusters
   newNclusters = 0;
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     newNclusters += Nrecv[r];
     Nrecv[r] *= sizeof(parallelCluster_t);
     Nsend[r] *= sizeof(parallelCluster_t);
     sendOffsets[r] *= sizeof(parallelCluster_t);
   }
-  for(iint r=1;r<size;++r)
+  for(int r=1;r<size;++r)
     recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1];
 
   parallelCluster_t *tmpParallelClusters = (parallelCluster_t *) calloc(newNclusters, sizeof(parallelCluster_t));
@@ -243,8 +243,8 @@ dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_
   //now that we're partitioned and (hopefully) balanced, send the elements
 
   // count number of elements that should end up on this process
-  iint newNelements = 0;
-  for(iint n=0;n<newNclusters;n++)
+  int newNelements = 0;
+  for(int n=0;n<newNclusters;n++)
     newNelements += parallelClusters[n].Nelements;
 
   //record the destination info
@@ -253,7 +253,7 @@ dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_
     parallelClusters[0].destOffset = 0;
     parallelClusters[0].destRank = rank;
   }
-  for (iint n=1; n<newNclusters; n++) {
+  for (int n=1; n<newNclusters; n++) {
     parallelClusters[n].destId = n;
     parallelClusters[n].destOffset = parallelClusters[n-1].destOffset + parallelClusters[n-1].Nelements;
     parallelClusters[n].destRank = rank;
@@ -263,24 +263,24 @@ dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_
   qsort(parallelClusters, newNclusters, sizeof(parallelCluster_t), compareRank);
 
   //reset counters
-  for(iint r=0;r<size;++r)
+  for(int r=0;r<size;++r)
     Nsend[r] =0;
 
-  for (iint n=0;n<newNclusters;n++) 
+  for (int n=0;n<newNclusters;n++) 
     Nsend[parallelClusters[n].rank]++;
 
-  for(iint r=1;r<size;++r)
+  for(int r=1;r<size;++r)
     sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
 
   // exchange byte counts 
-  MPI_Alltoall(Nsend, 1, MPI_IINT, Nrecv, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(Nsend, 1, MPI_int, Nrecv, 1, MPI_int, MPI_COMM_WORLD);
 
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     Nrecv[r] *= sizeof(parallelCluster_t);
     Nsend[r] *= sizeof(parallelCluster_t);
     sendOffsets[r] *= sizeof(parallelCluster_t);
   }
-  for(iint r=1;r<size;++r)
+  for(int r=1;r<size;++r)
     recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1];
 
   parallelCluster_t *recvParallelClusters;
@@ -299,38 +299,38 @@ dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_
   if (newNelements) recvElements = (cElement_t *) calloc(newNelements,sizeof(cElement_t));
 
   //reset send counts
-  for (iint r=0; r<size; r++)
+  for (int r=0; r<size; r++)
     Nsend[r] = 0;
 
-  for (iint n=0;n<Nclusters;n++) {
+  for (int n=0;n<Nclusters;n++) {
     Nsend[recvParallelClusters[n].destRank] += recvParallelClusters[n].Nelements;
   }
 
   // find send offsets
-  for(iint r=1;r<size;++r)
+  for(int r=1;r<size;++r)
     sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
 
   //build the array of elements to send
-  for (iint n=0;n<Nclusters;n++) {
-    iint destRank = recvParallelClusters[n].destRank;
-    iint cnt = recvParallelClusters[n].Nelements;
+  for (int n=0;n<Nclusters;n++) {
+    int destRank = recvParallelClusters[n].destRank;
+    int cnt = recvParallelClusters[n].Nelements;
 
-    iint sendId = sendOffsets[destRank] + Ncount[destRank];
-    iint id = recvParallelClusters[n].offSet;
+    int sendId = sendOffsets[destRank] + Ncount[destRank];
+    int id = recvParallelClusters[n].offSet;
     memcpy(sendElements+sendId, *elements+id, cnt*sizeof(cElement_t)); 
     Ncount[destRank] += cnt;
   }
   free(recvParallelClusters);
 
   // exchange element counts 
-  MPI_Alltoall(Nsend, 1, MPI_IINT, Nrecv, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(Nsend, 1, MPI_int, Nrecv, 1, MPI_int, MPI_COMM_WORLD);
   
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     Nrecv[r] *= sizeof(cElement_t);
     Nsend[r] *= sizeof(cElement_t);
     sendOffsets[r] *= sizeof(cElement_t);
   }
-  for(iint r=1;r<size;++r)
+  for(int r=1;r<size;++r)
     recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1];
 
   MPI_Alltoallv(sendElements, Nsend, sendOffsets, MPI_CHAR,
@@ -340,12 +340,12 @@ dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_
   //write the clusters in the proper order
   cluster_t *newClusters = (cluster_t *) calloc(newNclusters,sizeof(cluster_t));
   cElement_t *newElements = (cElement_t *) calloc(newNelements,sizeof(cElement_t));
-  iint cnt =0;
-  for (iint n=0;n<newNclusters;n++) {
-    iint id = parallelClusters[n].destId;
+  int cnt =0;
+  for (int n=0;n<newNclusters;n++) {
+    int id = parallelClusters[n].destId;
     newClusters[id].Nelements = parallelClusters[n].Nelements;
     newClusters[id].offSet = parallelClusters[n].destOffset;
-    for (iint e=0;e<parallelClusters[n].Nelements;e++) {
+    for (int e=0;e<parallelClusters[n].Nelements;e++) {
       memcpy(newElements + newClusters[id].offSet+e, recvElements+cnt++, sizeof(cElement_t));
     }
   }
@@ -363,10 +363,10 @@ dfloat meshClusteredGeometricPartitionP3D(mesh3D *mesh, iint Nclusters, cluster_
 
 
 //swap clusters between neighboring processes to try and improve the partitioning
-void balance(iint rankL, iint rankR, dfloat *weightL, dfloat *weightR, 
-              iint *Nclusters, parallelCluster_t **parallelClusters) {
+void balance(int rankL, int rankR, dfloat *weightL, dfloat *weightR, 
+              int *Nclusters, parallelCluster_t **parallelClusters) {
   
-  iint rank, size;
+  int rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -378,8 +378,8 @@ void balance(iint rankL, iint rankR, dfloat *weightL, dfloat *weightR,
   if (rank==rankL) {
     if ( *weightL > *weightR) {
       //count number of clusters to send to proc
-      iint Nsend = 0;
-      for (iint cnt=*Nclusters-1;cnt>-1;cnt--) {
+      int Nsend = 0;
+      for (int cnt=*Nclusters-1;cnt>-1;cnt--) {
         dfloat w = (*parallelClusters)[cnt].weight;
         if ((*weightL-w)>=(*weightR+w)) {
           //sending this cluster improves the balance
@@ -397,7 +397,7 @@ void balance(iint rankL, iint rankR, dfloat *weightL, dfloat *weightR,
         }
       }
 
-      MPI_Isend(&Nsend, 1, MPI_IINT,  rankR, tag, MPI_COMM_WORLD, &send);
+      MPI_Isend(&Nsend, 1, MPI_int,  rankR, tag, MPI_COMM_WORLD, &send);
       MPI_Wait(&send, &status);
 
       if (Nsend) {
@@ -407,8 +407,8 @@ void balance(iint rankL, iint rankR, dfloat *weightL, dfloat *weightR,
         MPI_Wait(&send, &status);
       }
     } else if ( *weightL < *weightR) {
-      iint Nrecv;
-      MPI_Irecv(&Nrecv, 1, MPI_IINT,  rankR, tag, MPI_COMM_WORLD, &recv);
+      int Nrecv;
+      MPI_Irecv(&Nrecv, 1, MPI_int,  rankR, tag, MPI_COMM_WORLD, &recv);
       MPI_Wait(&recv, &status);
 
       if (Nrecv) {
@@ -418,7 +418,7 @@ void balance(iint rankL, iint rankR, dfloat *weightL, dfloat *weightR,
         MPI_Irecv(newParallelClusters+*Nclusters, Nrecv*sizeof(parallelCluster_t), MPI_CHAR,  rankR, tag, MPI_COMM_WORLD, &recv);
         MPI_Wait(&recv, &status);
         
-        for (iint n=*Nclusters;n<*Nclusters+Nrecv;n++) {
+        for (int n=*Nclusters;n<*Nclusters+Nrecv;n++) {
           dfloat w = newParallelClusters[n].weight;
           *weightL += w;
           *weightR -= w;
@@ -432,8 +432,8 @@ void balance(iint rankL, iint rankR, dfloat *weightL, dfloat *weightR,
   } else if (rank==rankR) {
     if (*weightL < *weightR) {
       //count number of clusters to send to proc
-      iint Nsend = 0;
-      for (iint cnt=0;cnt<*Nclusters;cnt++) {
+      int Nsend = 0;
+      for (int cnt=0;cnt<*Nclusters;cnt++) {
         dfloat w = (*parallelClusters)[cnt].weight;
         if ((*weightR-w)>=(*weightL+w)) {
           //sending this cluster improves the balance
@@ -451,7 +451,7 @@ void balance(iint rankL, iint rankR, dfloat *weightL, dfloat *weightR,
         }
       }
 
-      MPI_Isend(&Nsend, 1, MPI_IINT,  rankL, tag, MPI_COMM_WORLD, &send);
+      MPI_Isend(&Nsend, 1, MPI_int,  rankL, tag, MPI_COMM_WORLD, &send);
       MPI_Wait(&send, &status);
 
       if (Nsend) {
@@ -466,8 +466,8 @@ void balance(iint rankL, iint rankR, dfloat *weightL, dfloat *weightR,
         *parallelClusters = newParallelClusters;
       }
     } else if (*weightL > *weightR) {
-      iint Nrecv;
-      MPI_Irecv(&Nrecv, 1, MPI_IINT,  rankL, tag, MPI_COMM_WORLD, &recv);
+      int Nrecv;
+      MPI_Irecv(&Nrecv, 1, MPI_int,  rankL, tag, MPI_COMM_WORLD, &recv);
       MPI_Wait(&recv, &status);
 
       if (Nrecv) {
@@ -476,7 +476,7 @@ void balance(iint rankL, iint rankR, dfloat *weightL, dfloat *weightR,
         MPI_Irecv(tmpParallelClusters, Nrecv*sizeof(parallelCluster_t), MPI_CHAR, rankL, tag, MPI_COMM_WORLD, &recv);
         MPI_Wait(&recv, &status);
 
-        for (iint n=0;n<Nrecv;n++) {
+        for (int n=0;n<Nrecv;n++) {
           dfloat w = tmpParallelClusters[n].weight;
           *weightR += w;
           *weightL -= w;
@@ -496,9 +496,9 @@ void balance(iint rankL, iint rankR, dfloat *weightL, dfloat *weightR,
 }
 
 
-dfloat improveClusteredPartition(iint *Nclusters, parallelCluster_t **parallelClusters){
+dfloat improveClusteredPartition(int *Nclusters, parallelCluster_t **parallelClusters){
 
-  iint rank, size;
+  int rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -513,7 +513,7 @@ dfloat improveClusteredPartition(iint *Nclusters, parallelCluster_t **parallelCl
   while (true) {
 
     dfloat localTotalWeight = 0.;
-    for (iint n=0; n<*Nclusters; n++) 
+    for (int n=0; n<*Nclusters; n++) 
       localTotalWeight += (*parallelClusters)[n].weight;
     
     MPI_Allgather(&localTotalWeight, 1, MPI_DFLOAT, totalWeights, 1, MPI_DFLOAT, MPI_COMM_WORLD);

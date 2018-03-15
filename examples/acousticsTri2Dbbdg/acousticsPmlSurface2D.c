@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include "mesh2D.h"
 
-void boundaryConditions2D(iint bc, dfloat t, dfloat x, dfloat y,
+void boundaryConditions2D(int bc, dfloat t, dfloat x, dfloat y,
                           dfloat uM, dfloat vM, dfloat pM,
                           dfloat *uP, dfloat *vP, dfloat *pP);
 
-void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
+void acousticsPmlSurface2Dbbdg(mesh2D *mesh, int lev, dfloat t){
 
   // temporary storage for flux terms
   dfloat *fluxu = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
@@ -20,24 +20,24 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
   dfloat *fluxpy_copy = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces,sizeof(dfloat));
 
   // for all elements
-  for(iint et=0;et<mesh->MRABpmlNelements[lev];++et){
-    iint e = mesh->MRABpmlElementIds[lev][et];
-    iint pmlId = mesh->MRABpmlIds[lev][et];
+  for(int et=0;et<mesh->MRABpmlNelements[lev];++et){
+    int e = mesh->MRABpmlElementIds[lev][et];
+    int pmlId = mesh->MRABpmlIds[lev][et];
     // for all face nodes of all elements
-    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+    for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
       // find face that owns this node
-      iint face = n/mesh->Nfp;
+      int face = n/mesh->Nfp;
 
       // load surface geofactors for this face
-      iint sid = mesh->Nsgeo*(e*mesh->Nfaces+face);
+      int sid = mesh->Nsgeo*(e*mesh->Nfaces+face);
       dfloat nx   = mesh->sgeo[sid+NXID];
       dfloat ny   = mesh->sgeo[sid+NYID];
       dfloat sJ   = mesh->sgeo[sid+SJID];
       dfloat invJ = mesh->sgeo[sid+IJID];
 
-      iint id = n + e*mesh->Nfaces*mesh->Nfp;
-      iint idM = id*mesh->Nfields;
-      iint idP = mesh->mapP[id]*mesh->Nfields;
+      int id = n + e*mesh->Nfaces*mesh->Nfp;
+      int idM = id*mesh->Nfields;
+      int idP = mesh->mapP[id]*mesh->Nfields;
 
       // load negative trace node values of q
       dfloat uM = mesh->fQM[idM+0];
@@ -50,9 +50,9 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
       dfloat pP = mesh->fQP[idP+2];
 
       // find boundary type
-      iint boundaryType = mesh->EToB[e*mesh->Nfaces+face];
+      int boundaryType = mesh->EToB[e*mesh->Nfaces+face];
       if(boundaryType>0) {
-        iint idM = mesh->vmapM[id];
+        int idM = mesh->vmapM[id];
         boundaryConditions2D(boundaryType, t, mesh->x[idM], mesh->y[idM],
                               uM, vM, pM, &uP, &vP, &pP);
       }
@@ -70,9 +70,9 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
     }
 
     // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
-    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+    for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
 
-      iint id = n % mesh->Nfp;  // warning: redundant reads
+      int id = n % mesh->Nfp;  // warning: redundant reads
       dfloat L0val = mesh->L0vals[3*id+1];
 
       dfloat utmpflux = L0val * fluxu[n];
@@ -99,9 +99,9 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
     }
 
     // apply lift reduction and accumulate RHS
-    for(iint n=0;n<mesh->Np;++n){
-      iint rhsId = 3*mesh->Nfields*(mesh->Np*e + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
-      iint pmlrhsId = 3*mesh->pmlNfields*(mesh->Np*pmlId + n) + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
+    for(int n=0;n<mesh->Np;++n){
+      int rhsId = 3*mesh->Nfields*(mesh->Np*e + n) + mesh->Nfields*mesh->MRABshiftIndex[lev];
+      int pmlrhsId = 3*mesh->pmlNfields*(mesh->Np*pmlId + n) + mesh->pmlNfields*mesh->MRABshiftIndex[lev];
 
       // load RHS
       dfloat rhsqnu = mesh->rhsq[rhsId+0];
@@ -111,9 +111,9 @@ void acousticsPmlSurface2Dbbdg(mesh2D *mesh, iint lev, dfloat t){
 
       // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
       for (int m = 0; m < mesh->max_EL_nnz; ++m){
-        iint idm = m + n*mesh->max_EL_nnz;
+        int idm = m + n*mesh->max_EL_nnz;
         dfloat ELval = mesh->ELvals[idm];
-        iint ELid = mesh->ELids[idm];
+        int ELid = mesh->ELids[idm];
         rhsqnu += ELval * fluxu_copy[ELid];
         rhsqnv += ELval * fluxv_copy[ELid];
         rhsqnpx += ELval * fluxpx_copy[ELid];

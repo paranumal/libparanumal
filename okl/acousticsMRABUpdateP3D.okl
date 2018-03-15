@@ -1,6 +1,6 @@
-kernel void acousticsMRABUpdateP3D(const iint Nelements,
-           const iint   * restrict elementIds,
-           const iint   * restrict N,
+kernel void acousticsMRABUpdateP3D(const int Nelements,
+           const int   * restrict elementIds,
+           const int   * restrict N,
            const dfloat dt, 
            const dfloat a1,
            const dfloat a2,
@@ -10,19 +10,19 @@ kernel void acousticsMRABUpdateP3D(const iint Nelements,
            const dfloat * restrict y,
            const dfloat * restrict z,
            const dfloat * restrict invVB2D,
-           const iint   * restrict EToB,
-           const iint   * restrict EToE,
+           const int   * restrict EToB,
+           const int   * restrict EToE,
            const dfloat * restrict BBLower,
-           const iint   * restrict BBRaiseids,
+           const int   * restrict BBRaiseids,
            const dfloat * restrict BBRaiseVals,  
-           const iint   * restrict vmapM,
+           const int   * restrict vmapM,
            dfloat * restrict rhsq,
            dfloat * restrict q,
            dfloat * restrict fQM,
            dfloat * restrict fQP,
-           const iint   rhsShift){
+           const int   rhsShift){
   
-  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+  for(int et=0;et<Nelements;++et;outer0){  // for all elements
     shared dfloat s_q[p_Np*p_Nfields];
 
     shared dfloat s_un[p_Nfaces*p_Nfp];
@@ -40,14 +40,14 @@ kernel void acousticsMRABUpdateP3D(const iint Nelements,
     shared dfloat s_sourcew[p_Nfp*p_Nfaces];
     shared dfloat s_sourcep[p_Nfp*p_Nfaces];
 
-    for(iint n=0; n < p_maxNodes; ++n; inner0){  //maxNodes = max(Np,Nfaces*Nfp)
+    for(int n=0; n < p_maxNodes; ++n; inner0){  //maxNodes = max(Np,Nfaces*Nfp)
       if (n < p_Np){
-        const iint e = elementIds[et];
-        const iint id = p_Nfields*(e*p_NpMax + n);
+        const int e = elementIds[et];
+        const int id = p_Nfields*(e*p_NpMax + n);
 
-        const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
 
         for (int fld = 0; fld < p_Nfields; ++fld) 
           s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
@@ -55,27 +55,27 @@ kernel void acousticsMRABUpdateP3D(const iint Nelements,
     }
     barrier(localMemFence);
 
-    for(iint n=0; n < p_maxNodes; ++n; inner0){  
-      const iint e = elementIds[et];
+    for(int n=0; n < p_maxNodes; ++n; inner0){  
+      const int e = elementIds[et];
 
       //write update      
       if (n < p_Np){
-        const iint id = p_Nfields*(e*p_NpMax + n);
+        const int id = p_Nfields*(e*p_NpMax + n);
 
         for (int fld = 0; fld < p_Nfields; ++fld) 
           q[id+fld] = s_q[p_Nfields*n+fld];
       }
 
       if (n<p_Nfaces*p_Nfp) {
-        const iint f = n / p_Nfp;
-        const iint iid = n % p_Nfp;
-        const iint id  = e*p_NfpMax*p_Nfaces + f*p_NfpMax + iid;
-        const iint qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
-        const iint qid   = p_Nfields*id;
+        const int f = n / p_Nfp;
+        const int iid = n % p_Nfp;
+        const int id  = e*p_NfpMax*p_Nfaces + f*p_NfpMax + iid;
+        const int qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
+        const int qid   = p_Nfields*id;
 
         int bc = EToB[e*p_Nfaces+f];
         if ((bc==-10)||(bc==-11)) { //check if this is a special source injection face
-          const iint idM = vmapM[id];
+          const int idM = vmapM[id];
 
           //get the nodal values of the incident field along the trace
           const dfloat X = x[idM];
@@ -109,9 +109,9 @@ kernel void acousticsMRABUpdateP3D(const iint Nelements,
     }
     barrier(localMemFence);
 
-    for(iint n=0; n < p_maxNodes; ++n; inner0){
+    for(int n=0; n < p_maxNodes; ++n; inner0){
       if (n < p_Nfp*p_Nfaces){
-        const iint e = elementIds[et];
+        const int e = elementIds[et];
         const int f  = n/p_Nfp; //face number
         const int id  = n%p_Nfp; //local node number
 
@@ -144,16 +144,16 @@ kernel void acousticsMRABUpdateP3D(const iint Nelements,
 
     barrier(localMemFence);    
 
-    for(iint n=0; n < p_maxNodes; ++n; inner0){  
-      const iint e = elementIds[et];      
+    for(int n=0; n < p_maxNodes; ++n; inner0){  
+      const int e = elementIds[et];      
       
       if (n < p_Nfp*p_Nfaces){
-        const iint f = n / p_Nfp;
-              iint id = n % p_Nfp;
+        const int f = n / p_Nfp;
+              int id = n % p_Nfp;
 
-        iint eP = EToE[e*p_Nfaces+f];
+        int eP = EToE[e*p_Nfaces+f];
         if (eP < 0) eP = e;
-        const iint NP = N[eP];
+        const int NP = N[eP];
 
         if (NP > p_N) { 
           while (id<p_Nfpp1) {
@@ -162,9 +162,9 @@ kernel void acousticsMRABUpdateP3D(const iint Nelements,
             s_wnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
             occaUnroll(3)
-            for (iint m=0;m<3;m++){ //apply raise operator sparsly
+            for (int m=0;m<3;m++){ //apply raise operator sparsly
               const dfloat BBRaiseVal = BBRaiseVals[3*id+m];
-              const iint BBRaiseid = BBRaiseids[3*id+m] + f*p_Nfp;
+              const int BBRaiseid = BBRaiseids[3*id+m] + f*p_Nfp;
               s_unp[f*p_Nfpp1+id] += BBRaiseVal*s_un[BBRaiseid];
               s_vnp[f*p_Nfpp1+id] += BBRaiseVal*s_vn[BBRaiseid];
               s_wnp[f*p_Nfpp1+id] += BBRaiseVal*s_wn[BBRaiseid];
@@ -172,7 +172,7 @@ kernel void acousticsMRABUpdateP3D(const iint Nelements,
             }
             
             //write positive trace
-            const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
+            const int qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
             fQP[qid+0] = s_unp[f*p_Nfpp1+id];
             fQP[qid+1] = s_vnp[f*p_Nfpp1+id];
             fQP[qid+2] = s_wnp[f*p_Nfpp1+id];
@@ -187,7 +187,7 @@ kernel void acousticsMRABUpdateP3D(const iint Nelements,
             s_wnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
             occaUnroll(p_Nfp)
-            for (iint m=0;m<p_Nfp;m++){
+            for (int m=0;m<p_Nfp;m++){
               s_unp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
               s_vnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
               s_wnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_wn[f*p_Nfp + m];
@@ -195,7 +195,7 @@ kernel void acousticsMRABUpdateP3D(const iint Nelements,
             }
 
             //write positive trace
-            const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
+            const int qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
             fQP[qid+0] = s_unp[f*p_Nfpp1+id];
             fQP[qid+1] = s_vnp[f*p_Nfpp1+id];
             fQP[qid+2] = s_wnp[f*p_Nfpp1+id];
@@ -203,7 +203,7 @@ kernel void acousticsMRABUpdateP3D(const iint Nelements,
           }
         } else { //equal order neighbor
           //write positive trace
-          const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
+          const int qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
           fQP[qid+0] = s_un[n];
           fQP[qid+1] = s_vn[n];
           fQP[qid+2] = s_wn[n];
@@ -214,9 +214,9 @@ kernel void acousticsMRABUpdateP3D(const iint Nelements,
   }
 }
 
-kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
-           const iint   * restrict elementIds,
-           const iint   * restrict N,
+kernel void acousticsMRABTraceUpdateP3D(const int Nelements,
+           const int   * restrict elementIds,
+           const int   * restrict N,
            const dfloat dt, 
            const dfloat a1,
            const dfloat a2,
@@ -226,19 +226,19 @@ kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
            const dfloat * restrict y,
            const dfloat * restrict z,
            const dfloat * restrict invVB2D,
-           const iint   * restrict EToB,
-           const iint   * restrict EToE,
+           const int   * restrict EToB,
+           const int   * restrict EToE,
            const dfloat * restrict BBLower,
-           const iint   * restrict BBRaiseids,
+           const int   * restrict BBRaiseids,
            const dfloat * restrict BBRaiseVals,  
-           const iint   * restrict vmapM,
+           const int   * restrict vmapM,
            const dfloat * restrict rhsq,
            const dfloat * restrict q,
            dfloat * restrict fQM,
            dfloat * restrict fQP,
-           const iint   rhsShift){
+           const int   rhsShift){
   
-  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+  for(int et=0;et<Nelements;++et;outer0){  // for all elements
     shared dfloat s_q[p_Np*p_Nfields];
 
     shared dfloat s_un[p_Nfaces*p_Nfp];
@@ -256,14 +256,14 @@ kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
     shared dfloat s_sourcew[p_Nfp*p_Nfaces];
     shared dfloat s_sourcep[p_Nfp*p_Nfaces];
 
-    for(iint n=0; n < p_maxNodes; ++n; inner0){  //maxNodes = max(Np,Nfaces*Nfp)
+    for(int n=0; n < p_maxNodes; ++n; inner0){  //maxNodes = max(Np,Nfaces*Nfp)
       if (n < p_Np){
-        const iint e = elementIds[et];
-        const iint id = p_Nfields*(e*p_NpMax + n);
+        const int e = elementIds[et];
+        const int id = p_Nfields*(e*p_NpMax + n);
 
-        const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
 
         for (int fld = 0; fld < p_Nfields; ++fld) 
           s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
@@ -271,19 +271,19 @@ kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
     }
     barrier(localMemFence);
 
-    for(iint n=0; n < p_maxNodes; ++n; inner0){  
-      const iint e = elementIds[et];
+    for(int n=0; n < p_maxNodes; ++n; inner0){  
+      const int e = elementIds[et];
 
       if (n<p_Nfaces*p_Nfp) {
-        const iint f = n / p_Nfp;
-        const iint iid = n % p_Nfp;
-        const iint id  = e*p_NfpMax*p_Nfaces + f*p_NfpMax + iid;
-        const iint qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
-        const iint qid   = p_Nfields*id;
+        const int f = n / p_Nfp;
+        const int iid = n % p_Nfp;
+        const int id  = e*p_NfpMax*p_Nfaces + f*p_NfpMax + iid;
+        const int qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
+        const int qid   = p_Nfields*id;
 
         int bc = EToB[e*p_Nfaces+f];
         if ((bc==-10)||(bc==-11)) { //check if this is a special source injection face
-          const iint idM = vmapM[id];
+          const int idM = vmapM[id];
 
           //get the nodal values of the incident field along the trace
           const dfloat X = x[idM];
@@ -317,9 +317,9 @@ kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
     }
     barrier(localMemFence);
 
-    for(iint n=0; n < p_maxNodes; ++n; inner0){
+    for(int n=0; n < p_maxNodes; ++n; inner0){
       if (n < p_Nfp*p_Nfaces){
-        const iint e = elementIds[et];
+        const int e = elementIds[et];
         const int f  = n/p_Nfp; //face number
         const int id  = n%p_Nfp; //local node number
 
@@ -351,16 +351,16 @@ kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
     }
     barrier(localMemFence);
 
-    for(iint n=0; n < p_maxNodes; ++n; inner0){  
-      const iint e = elementIds[et];      
+    for(int n=0; n < p_maxNodes; ++n; inner0){  
+      const int e = elementIds[et];      
       
       if (n < p_Nfp*p_Nfaces){
-        const iint f = n / p_Nfp;
-              iint id = n % p_Nfp;
+        const int f = n / p_Nfp;
+              int id = n % p_Nfp;
 
-        iint eP = EToE[e*p_Nfaces+f];
+        int eP = EToE[e*p_Nfaces+f];
         if (eP < 0) eP = e;
-        const iint NP = N[eP];
+        const int NP = N[eP];
 
         if (NP > p_N) { 
           while (id<p_Nfpp1) {
@@ -369,9 +369,9 @@ kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
             s_wnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
             occaUnroll(3)
-            for (iint m=0;m<3;m++){ //apply raise operator sparsly
+            for (int m=0;m<3;m++){ //apply raise operator sparsly
               const dfloat BBRaiseVal = BBRaiseVals[3*id+m];
-              const iint BBRaiseid = BBRaiseids[3*id+m] + f*p_Nfp;
+              const int BBRaiseid = BBRaiseids[3*id+m] + f*p_Nfp;
               s_unp[f*p_Nfpp1+id] += BBRaiseVal*s_un[BBRaiseid];
               s_vnp[f*p_Nfpp1+id] += BBRaiseVal*s_vn[BBRaiseid];
               s_wnp[f*p_Nfpp1+id] += BBRaiseVal*s_wn[BBRaiseid];
@@ -379,7 +379,7 @@ kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
             }
             
             //write positive trace
-            const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
+            const int qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
             fQP[qid+0] = s_unp[f*p_Nfpp1+id];
             fQP[qid+1] = s_vnp[f*p_Nfpp1+id];
             fQP[qid+2] = s_wnp[f*p_Nfpp1+id];
@@ -394,7 +394,7 @@ kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
             s_wnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
             occaUnroll(p_Nfp)
-            for (iint m=0;m<p_Nfp;m++){
+            for (int m=0;m<p_Nfp;m++){
               s_unp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
               s_vnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
               s_wnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_wn[f*p_Nfp + m];
@@ -402,7 +402,7 @@ kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
             }
 
             //write positive trace
-            const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
+            const int qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
             fQP[qid+0] = s_unp[f*p_Nfpp1+id];
             fQP[qid+1] = s_vnp[f*p_Nfpp1+id];
             fQP[qid+2] = s_wnp[f*p_Nfpp1+id];
@@ -410,7 +410,7 @@ kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
           }
         } else { //equal order neighbor
           //write positive trace
-          const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
+          const int qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
           fQP[qid+0] = s_un[n];
           fQP[qid+1] = s_vn[n];
           fQP[qid+2] = s_wn[n];
@@ -423,9 +423,9 @@ kernel void acousticsMRABTraceUpdateP3D(const iint Nelements,
 
 
 
-kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
-           const iint   * restrict elementIds,
-           const iint   * restrict N,
+kernel void acousticsMRABUpdateP3D_wadg(const int Nelements,
+           const int   * restrict elementIds,
+           const int   * restrict N,
            const dfloat dt, 
            const dfloat a1,
            const dfloat a2,
@@ -438,19 +438,19 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
            const dfloat * restrict y,
            const dfloat * restrict z,
            const dfloat * restrict invVB2D,
-           const iint   * restrict EToB,
-           const iint   * restrict EToE,
+           const int   * restrict EToB,
+           const int   * restrict EToE,
            const dfloat * restrict BBLower,
-           const iint   * restrict BBRaiseids,
+           const int   * restrict BBRaiseids,
            const dfloat * restrict BBRaiseVals,  
-           const iint   * restrict vmapM,
+           const int   * restrict vmapM,
            dfloat * restrict rhsq,
            dfloat * restrict q,
            dfloat * restrict fQM,
            dfloat * restrict fQP,
-           const iint   rhsShift){
+           const int   rhsShift){
   
-  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+  for(int et=0;et<Nelements;++et;outer0){  // for all elements
     shared dfloat s_q[p_Np*p_Nfields];
 
     shared dfloat s_un[p_Nfaces*p_Nfp];
@@ -471,11 +471,11 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
     shared dfloat s_p[p_cubNp];
     exclusive dfloat r_p;
 
-    for(iint n=0; n < p_maxCubNodes; ++n; inner0){  
+    for(int n=0; n < p_maxCubNodes; ++n; inner0){  
       if (n < p_Np){
-        const iint e = elementIds[et];
-        const iint id = p_Nfields*(e*p_NpMax + n);
-        const iint rhsId = 3*id + rhsShift*p_Nfields;
+        const int e = elementIds[et];
+        const int id = p_Nfields*(e*p_NpMax + n);
+        const int rhsId = 3*id + rhsShift*p_Nfields;
         s_p[n] = rhsq[rhsId + 3]; // extract pressure rhs
       }
 
@@ -485,9 +485,9 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
     barrier(localMemFence);
 
     // Interpolate rhs to cubature nodes
-    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+    for(int n=0;n<p_maxCubNodes;++n;inner0){
       if (n<p_cubNp) {
-        const iint e = elementIds[et];
+        const int e = elementIds[et];
         // Prefetch value of c2
         const dfloat c2n = c2[n + e*p_cubNpMax];
         
@@ -504,7 +504,7 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
     barrier(localMemFence);
 
     // Move temporary result back to shared memory
-    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+    for(int n=0;n<p_maxCubNodes;++n;inner0){
       if (n<p_cubNp) {
         s_p[n] = r_p;
       }
@@ -512,12 +512,12 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
     barrier(localMemFence);
     
     // Increment solution, project result back down
-    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+    for(int n=0;n<p_maxCubNodes;++n;inner0){
       if (n < p_Np){
-        const iint e = elementIds[et];
+        const int e = elementIds[et];
         // Extract velocity rhs
-        const iint id = p_Nfields*(e*p_NpMax + n);
-        const iint rhsId = 3*id + rhsShift*p_Nfields;
+        const int id = p_Nfields*(e*p_NpMax + n);
+        const int rhsId = 3*id + rhsShift*p_Nfields;
         dfloat rhsqn[p_Nfields];
         rhsqn[0] = rhsq[rhsId + 0];
         rhsqn[1] = rhsq[rhsId + 1];
@@ -531,9 +531,9 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
         }
         rhsqn[3] = rhsp;
 
-        const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
 
         // Increment solutions (saving rhs)
         for (int fld = 0; fld < p_Nfields; ++fld) {
@@ -545,27 +545,27 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
     barrier(localMemFence);
 
     //write update and negative traces
-    for(iint n=0; n < p_maxCubNodes; ++n; inner0){  
-      const iint e = elementIds[et];
+    for(int n=0; n < p_maxCubNodes; ++n; inner0){  
+      const int e = elementIds[et];
 
       //write update      
       if (n < p_Np){
-        const iint id = p_Nfields*(e*p_NpMax + n);
+        const int id = p_Nfields*(e*p_NpMax + n);
 
         for (int fld = 0; fld < p_Nfields; ++fld) 
           q[id+fld] = s_q[p_Nfields*n+fld];
       }
 
       if (n<p_Nfaces*p_Nfp) {
-        const iint f = n / p_Nfp;
-        const iint iid = n % p_Nfp;
-        const iint id  = e*p_NfpMax*p_Nfaces + f*p_NfpMax + iid;
-        const iint qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
-        const iint qid   = p_Nfields*id;
+        const int f = n / p_Nfp;
+        const int iid = n % p_Nfp;
+        const int id  = e*p_NfpMax*p_Nfaces + f*p_NfpMax + iid;
+        const int qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
+        const int qid   = p_Nfields*id;
 
         int bc = EToB[e*p_Nfaces+f];
         if ((bc==-10)||(bc==-11)) { //check if this is a special source injection face
-          const iint idM = vmapM[id];
+          const int idM = vmapM[id];
 
           //get the nodal values of the incident field along the trace
           const dfloat X = x[idM];
@@ -599,9 +599,9 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
     }
     barrier(localMemFence);
 
-    for(iint n=0; n < p_maxNodes; ++n; inner0){
+    for(int n=0; n < p_maxNodes; ++n; inner0){
       if (n < p_Nfp*p_Nfaces){
-        const iint e = elementIds[et];
+        const int e = elementIds[et];
         const int f  = n/p_Nfp; //face number
         const int id  = n%p_Nfp; //local node number
 
@@ -634,16 +634,16 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
 
     barrier(localMemFence);    
 
-    for(iint n=0; n < p_maxCubNodes; ++n; inner0){  
-      const iint e = elementIds[et];      
+    for(int n=0; n < p_maxCubNodes; ++n; inner0){  
+      const int e = elementIds[et];      
       
       if (n < p_Nfp*p_Nfaces){
-        const iint f = n / p_Nfp;
-              iint id = n % p_Nfp;
+        const int f = n / p_Nfp;
+              int id = n % p_Nfp;
 
-        iint eP = EToE[e*p_Nfaces+f];
+        int eP = EToE[e*p_Nfaces+f];
         if (eP < 0) eP = e;
-        const iint NP = N[eP];
+        const int NP = N[eP];
 
         if (NP > p_N) { 
           while (id<p_Nfpp1) {
@@ -652,9 +652,9 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
             s_wnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
             occaUnroll(3)
-            for (iint m=0;m<3;m++){ //apply raise operator sparsly
+            for (int m=0;m<3;m++){ //apply raise operator sparsly
               const dfloat BBRaiseVal = BBRaiseVals[3*id+m];
-              const iint BBRaiseid = BBRaiseids[3*id+m] + f*p_Nfp;
+              const int BBRaiseid = BBRaiseids[3*id+m] + f*p_Nfp;
               s_unp[f*p_Nfpp1+id] += BBRaiseVal*s_un[BBRaiseid];
               s_vnp[f*p_Nfpp1+id] += BBRaiseVal*s_vn[BBRaiseid];
               s_wnp[f*p_Nfpp1+id] += BBRaiseVal*s_wn[BBRaiseid];
@@ -662,7 +662,7 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
             }
             
             //write positive trace
-            const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
+            const int qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
             fQP[qid+0] = s_unp[f*p_Nfpp1+id];
             fQP[qid+1] = s_vnp[f*p_Nfpp1+id];
             fQP[qid+2] = s_wnp[f*p_Nfpp1+id];
@@ -677,7 +677,7 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
             s_wnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
             occaUnroll(p_Nfp)
-            for (iint m=0;m<p_Nfp;m++){
+            for (int m=0;m<p_Nfp;m++){
               s_unp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
               s_vnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
               s_wnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_wn[f*p_Nfp + m];
@@ -685,7 +685,7 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
             }
 
             //write positive trace
-            const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
+            const int qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
             fQP[qid+0] = s_unp[f*p_Nfpp1+id];
             fQP[qid+1] = s_vnp[f*p_Nfpp1+id];
             fQP[qid+2] = s_wnp[f*p_Nfpp1+id];
@@ -693,7 +693,7 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
           }
         } else { //equal order neighbor
           //write positive trace
-          const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
+          const int qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
           fQP[qid+0] = s_un[n];
           fQP[qid+1] = s_vn[n];
           fQP[qid+2] = s_wn[n];
@@ -704,9 +704,9 @@ kernel void acousticsMRABUpdateP3D_wadg(const iint Nelements,
   }
 }
 
-kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
-           const iint   * restrict elementIds,
-           const iint   * restrict N,
+kernel void acousticsMRABTraceUpdateP3D_wadg(const int Nelements,
+           const int   * restrict elementIds,
+           const int   * restrict N,
            const dfloat dt, 
            const dfloat a1,
            const dfloat a2,
@@ -719,19 +719,19 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
            const dfloat * restrict y,
            const dfloat * restrict z,
            const dfloat * restrict invVB2D,
-           const iint   * restrict EToB,
-           const iint   * restrict EToE,
+           const int   * restrict EToB,
+           const int   * restrict EToE,
            const dfloat * restrict BBLower,
-           const iint   * restrict BBRaiseids,
+           const int   * restrict BBRaiseids,
            const dfloat * restrict BBRaiseVals,  
-           const iint   * restrict vmapM,
+           const int   * restrict vmapM,
            const dfloat * restrict rhsq,
            const dfloat * restrict q,
            dfloat * restrict fQM,
            dfloat * restrict fQP,
-           const iint   rhsShift){
+           const int   rhsShift){
   
-  for(iint et=0;et<Nelements;++et;outer0){  // for all elements
+  for(int et=0;et<Nelements;++et;outer0){  // for all elements
     shared dfloat s_q[p_Np*p_Nfields];
 
     shared dfloat s_un[p_Nfaces*p_Nfp];
@@ -752,11 +752,11 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
     shared dfloat s_p[p_cubNp];
     exclusive dfloat r_p;
 
-    for(iint n=0; n < p_maxCubNodes; ++n; inner0){  
+    for(int n=0; n < p_maxCubNodes; ++n; inner0){  
       if (n < p_Np){
-        const iint e = elementIds[et];
-        const iint id = p_Nfields*(e*p_NpMax + n);
-        const iint rhsId = 3*id + rhsShift*p_Nfields;
+        const int e = elementIds[et];
+        const int id = p_Nfields*(e*p_NpMax + n);
+        const int rhsId = 3*id + rhsShift*p_Nfields;
         s_p[n] = rhsq[rhsId + 3]; // extract pressure rhs
       }
 
@@ -766,9 +766,9 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
     barrier(localMemFence);
 
     // Interpolate rhs to cubature nodes
-    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+    for(int n=0;n<p_maxCubNodes;++n;inner0){
       if (n<p_cubNp) {
-        const iint e = elementIds[et];
+        const int e = elementIds[et];
         // Prefetch value of c2
         const dfloat c2n = c2[n + e*p_cubNpMax];
         
@@ -785,7 +785,7 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
     barrier(localMemFence);
 
     // Move temporary result back to shared memory
-    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+    for(int n=0;n<p_maxCubNodes;++n;inner0){
       if (n<p_cubNp) {
         s_p[n] = r_p;
       }
@@ -793,12 +793,12 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
     barrier(localMemFence);
     
     // Increment solution, project result back down
-    for(iint n=0;n<p_maxCubNodes;++n;inner0){
+    for(int n=0;n<p_maxCubNodes;++n;inner0){
       if (n < p_Np){
-        const iint e = elementIds[et];
+        const int e = elementIds[et];
         // Extract velocity rhs
-        const iint id = p_Nfields*(e*p_NpMax + n);
-        const iint rhsId = 3*id + rhsShift*p_Nfields;
+        const int id = p_Nfields*(e*p_NpMax + n);
+        const int rhsId = 3*id + rhsShift*p_Nfields;
         dfloat rhsqn[p_Nfields];
         rhsqn[0] = rhsq[rhsId + 0];
         rhsqn[1] = rhsq[rhsId + 1];
@@ -812,9 +812,9 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
         }
         rhsqn[3] = rhsp;
 
-        const iint rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((rhsShift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((rhsShift+1)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((rhsShift+2)%3)*p_Nfields;
 
         // Increment solutions (saving rhs)
         for (int fld = 0; fld < p_Nfields; ++fld) {
@@ -825,19 +825,19 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
     barrier(localMemFence);
 
     //write update and negative traces
-    for(iint n=0; n < p_maxCubNodes; ++n; inner0){  
-      const iint e = elementIds[et];
+    for(int n=0; n < p_maxCubNodes; ++n; inner0){  
+      const int e = elementIds[et];
 
       if (n<p_Nfaces*p_Nfp) {
-        const iint f = n / p_Nfp;
-        const iint iid = n % p_Nfp;
-        const iint id  = e*p_NfpMax*p_Nfaces + f*p_NfpMax + iid;
-        const iint qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
-        const iint qid   = p_Nfields*id;
+        const int f = n / p_Nfp;
+        const int iid = n % p_Nfp;
+        const int id  = e*p_NfpMax*p_Nfaces + f*p_NfpMax + iid;
+        const int qidM = p_Nfields*(vmapM[id]-e*p_NpMax);
+        const int qid   = p_Nfields*id;
 
         int bc = EToB[e*p_Nfaces+f];
         if ((bc==-10)||(bc==-11)) { //check if this is a special source injection face
-          const iint idM = vmapM[id];
+          const int idM = vmapM[id];
 
           //get the nodal values of the incident field along the trace
           const dfloat X = x[idM];
@@ -871,9 +871,9 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
     }
     barrier(localMemFence);
 
-    for(iint n=0; n < p_maxNodes; ++n; inner0){
+    for(int n=0; n < p_maxNodes; ++n; inner0){
       if (n < p_Nfp*p_Nfaces){
-        const iint e = elementIds[et];
+        const int e = elementIds[et];
         const int f  = n/p_Nfp; //face number
         const int id  = n%p_Nfp; //local node number
 
@@ -906,16 +906,16 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
 
     barrier(localMemFence);    
 
-    for(iint n=0; n < p_maxCubNodes; ++n; inner0){  
-      const iint e = elementIds[et];      
+    for(int n=0; n < p_maxCubNodes; ++n; inner0){  
+      const int e = elementIds[et];      
       
       if (n < p_Nfp*p_Nfaces){
-        const iint f = n / p_Nfp;
-              iint id = n % p_Nfp;
+        const int f = n / p_Nfp;
+              int id = n % p_Nfp;
 
-        iint eP = EToE[e*p_Nfaces+f];
+        int eP = EToE[e*p_Nfaces+f];
         if (eP < 0) eP = e;
-        const iint NP = N[eP];
+        const int NP = N[eP];
 
         if (NP > p_N) { 
           while (id<p_Nfpp1) {
@@ -924,9 +924,9 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
             s_wnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
             occaUnroll(3)
-            for (iint m=0;m<3;m++){ //apply raise operator sparsly
+            for (int m=0;m<3;m++){ //apply raise operator sparsly
               const dfloat BBRaiseVal = BBRaiseVals[3*id+m];
-              const iint BBRaiseid = BBRaiseids[3*id+m] + f*p_Nfp;
+              const int BBRaiseid = BBRaiseids[3*id+m] + f*p_Nfp;
               s_unp[f*p_Nfpp1+id] += BBRaiseVal*s_un[BBRaiseid];
               s_vnp[f*p_Nfpp1+id] += BBRaiseVal*s_vn[BBRaiseid];
               s_wnp[f*p_Nfpp1+id] += BBRaiseVal*s_wn[BBRaiseid];
@@ -934,7 +934,7 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
             }
             
             //write positive trace
-            const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
+            const int qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
             fQP[qid+0] = s_unp[f*p_Nfpp1+id];
             fQP[qid+1] = s_vnp[f*p_Nfpp1+id];
             fQP[qid+2] = s_wnp[f*p_Nfpp1+id];
@@ -949,7 +949,7 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
             s_wnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
             occaUnroll(p_Nfp)
-            for (iint m=0;m<p_Nfp;m++){
+            for (int m=0;m<p_Nfp;m++){
               s_unp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
               s_vnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
               s_wnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_wn[f*p_Nfp + m];
@@ -957,7 +957,7 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
             }
 
             //write positive trace
-            const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
+            const int qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
             fQP[qid+0] = s_unp[f*p_Nfpp1+id];
             fQP[qid+1] = s_vnp[f*p_Nfpp1+id];
             fQP[qid+2] = s_wnp[f*p_Nfpp1+id];
@@ -965,7 +965,7 @@ kernel void acousticsMRABTraceUpdateP3D_wadg(const iint Nelements,
           }
         } else { //equal order neighbor
           //write positive trace
-          const iint qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
+          const int qid = p_Nfields*(e*p_NfpMax*p_Nfaces + f*p_NfpMax + id);
           fQP[qid+0] = s_un[n];
           fQP[qid+1] = s_vn[n];
           fQP[qid+2] = s_wn[n];

@@ -3,20 +3,20 @@
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, iint *nnz, hgs_t **hgs, iint *globalStarts, const char* options) {
+void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, int *nnz, hgs_t **hgs, int *globalStarts, const char* options) {
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // ------------------------------------------------------------------------------------
   // 1. Create a contiguous numbering system, starting from the element-vertex connectivity
-  iint Nnum = mesh->Np*mesh->Nelements;
-  iint *globalOwners = (iint*) calloc(Nnum, sizeof(iint));
-  iint *globalNumbering = (iint*) calloc(Nnum, sizeof(iint));
+  int Nnum = mesh->Np*mesh->Nelements;
+  int *globalOwners = (int*) calloc(Nnum, sizeof(int));
+  int *globalNumbering = (int*) calloc(Nnum, sizeof(int));
 
-  for (iint n=0;n<Nnum;n++) {
-    iint id = mesh->gatherLocalIds[n];
+  for (int n=0;n<Nnum;n++) {
+    int id = mesh->gatherLocalIds[n];
     globalNumbering[id] = mesh->gatherBaseIds[n];
   }
 
@@ -27,21 +27,21 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
   *hgs = meshParallelGatherSetup(mesh, Nnum, globalNumbering, globalOwners);
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
-  iint nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
-  iint   *rows = (iint*) calloc(nnzLocal, sizeof(iint));
-  iint   *cols = (iint*) calloc(nnzLocal, sizeof(iint));
+  int nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
+  int   *rows = (int*) calloc(nnzLocal, sizeof(int));
+  int   *cols = (int*) calloc(nnzLocal, sizeof(int));
   dfloat *vals = (dfloat*) calloc(nnzLocal, sizeof(dfloat));
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  iint *AsendCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *ArecvCounts  = (iint*) calloc(size, sizeof(iint));
-  iint *AsendOffsets = (iint*) calloc(size+1, sizeof(iint));
-  iint *ArecvOffsets = (iint*) calloc(size+1, sizeof(iint));
+  int *AsendCounts  = (int*) calloc(size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
 
   //Build unassembed non-zeros
   printf("Building full matrix system\n");
-  iint cnt =0;
-  for (iint e=0;e<mesh->Nelements;e++) {
+  int cnt =0;
+  for (int e=0;e<mesh->Nelements;e++) {
 
     dfloat Grr = mesh->ggeo[e*mesh->Nggeo + G00ID];
     dfloat Grs = mesh->ggeo[e*mesh->Nggeo + G01ID];
@@ -51,8 +51,8 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
     dfloat Gtt = mesh->ggeo[e*mesh->Nggeo + G22ID];
     dfloat J   = mesh->ggeo[e*mesh->Nggeo + GWJID];
 
-    for (iint n=0;n<mesh->Np;n++) {
-      for (iint m=0;m<mesh->Np;m++) {
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {
         dfloat val = 0.;
 
         val += Grr*mesh->Srr[m+n*mesh->Np];
@@ -85,18 +85,18 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
   }
 
   // count how many non-zeros to send to each process
-  for(iint n=0;n<cnt;++n)
+  for(int n=0;n<cnt;++n)
     AsendCounts[sendNonZeros[n].ownerRank] += sizeof(nonZero_t);
 
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_IINT, ArecvCounts, 1, MPI_IINT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_int, ArecvCounts, 1, MPI_int, MPI_COMM_WORLD);
 
   // find send and recv offsets for gather
   *nnz = 0;
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     *nnz += ArecvCounts[r]/sizeof(nonZero_t);
@@ -114,7 +114,7 @@ void ellipticBuildContinuousTet3D(mesh3D *mesh, dfloat lambda, nonZero_t **A, ii
 
   // compress duplicates
   cnt = 0;
-  for(iint n=1;n<*nnz;++n){
+  for(int n=1;n<*nnz;++n){
     if((*A)[n].row == (*A)[cnt].row &&
        (*A)[n].col == (*A)[cnt].col){
       (*A)[cnt].val += (*A)[n].val;

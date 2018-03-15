@@ -1,7 +1,7 @@
 #include "ins2D.h"
 
 // complete a time step using LSERK4
-void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
+void insHelmholtzStep2D(ins_t *ins, int tstep,  int haloBytes,
 			dfloat * sendBuffer, dfloat * recvBuffer, 
 			char   * options){
   
@@ -10,11 +10,11 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
  // dfloat t = tstep*ins->dt;
   dfloat t = tstep*ins->dt + ins->dt;
   
-  iint offset = mesh->Nelements+mesh->totalHaloPairs;
+  int offset = mesh->Nelements+mesh->totalHaloPairs;
 
-  iint rhsPackingMode = (strstr(options, "VECTORHELMHOLTZ")) ? 1:0;
+  int rhsPackingMode = (strstr(options, "VECTORHELMHOLTZ")) ? 1:0;
 
-  iint subcycling = (strstr(options,"SUBCYCLING")) ? 1:0;
+  int subcycling = (strstr(options,"SUBCYCLING")) ? 1:0;
 
    
    occaTimerTic(mesh->device,"HelmholtzRhsForcing"); 
@@ -70,7 +70,7 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
 
   //use intermediate buffer for solve storage TODO: fix this later. Should be able to pull out proper buffer in elliptic solve
   if(rhsPackingMode==0){
-    iint Ntotal = offset*mesh->Np;
+    int Ntotal = offset*mesh->Np;
     ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
     ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 
@@ -104,14 +104,14 @@ void insHelmholtzStep2D(ins_t *ins, iint tstep,  iint haloBytes,
     printf("Solving for Ux and Uy \n");
     parAlmondPrecon(ins->precon->parAlmond, ins->o_rhsV, ins->o_rhsU); // rhs in rhsU, solution in rhsV
 
-    iint Ntotal = mesh->Np*offset;
+    int Ntotal = mesh->Np*offset;
     dfloat *tmp  = (dfloat*) calloc(2*Ntotal, sizeof(dfloat));
     dfloat *tmpU = (dfloat*) calloc(Ntotal, sizeof(dfloat));
     dfloat *tmpV = (dfloat*) calloc(Ntotal, sizeof(dfloat));
     
     ins->o_rhsV.copyTo(tmp);
 
-    for(iint n=0;n<Ntotal;++n){
+    for(int n=0;n<Ntotal;++n){
       tmpU[n] = tmp[2*n+0];
       tmpV[n] = tmp[2*n+1];
     }

@@ -16,7 +16,7 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
   double tic = MPI_Wtime();
   double AxTime;
   
-  iint iterations = 10;
+  int iterations = 10;
 
   occa::streamTag start = mesh->device.tagStream();
 
@@ -52,19 +52,19 @@ void timeAxOperator(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::me
   double localElapsed = toc-tic;
   //  localElapsed = mesh->device.timeBetween(start, end);
 
-  iint   localDofs = mesh->Np*mesh->Nelements;
-  iint localElements = mesh->Nelements;
+  int   localDofs = mesh->Np*mesh->Nelements;
+  int localElements = mesh->Nelements;
   double globalElapsed;
-  iint   globalDofs;
-  iint   globalElements;
+  int   globalDofs;
+  int   globalElements;
   int    root = 0;
   
   MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
-  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
-  MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
+  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_int,   MPI_SUM, root, MPI_COMM_WORLD );
+  MPI_Reduce(&localElements,&globalElements,1, MPI_int,   MPI_SUM, root, MPI_COMM_WORLD );
 
-  iint gjNq = mesh->gjNq;
-  iint Nq = mesh->Nq;
+  int gjNq = mesh->gjNq;
+  int Nq = mesh->Nq;
 
 #if 0
   double flops = gjNq*Nq*Nq*Nq*4 +
@@ -111,22 +111,22 @@ void timeSolver(solver_t *solver, dfloat lambda, occa::memory &o_r, occa::memory
   MPI_Barrier(MPI_COMM_WORLD);
   
   double tic = MPI_Wtime();
-  iint maxIterations = 3000;
+  int maxIterations = 3000;
   double AxTime;
   
-  iint iterations = ellipticSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);
+  int iterations = ellipticSolveHex3D(solver, lambda, o_r, o_x, maxIterations, options);
 
   mesh->device.finish();
   double toc = MPI_Wtime();
 
   double localElapsed = toc-tic;
-  iint   localDofs = mesh->Np*mesh->Nelements;
+  int   localDofs = mesh->Np*mesh->Nelements;
   double globalElapsed;
-  iint   globalDofs;
+  int   globalDofs;
   int    root = 0;
   
   MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD );
-  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, root, MPI_COMM_WORLD );
+  MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_int,   MPI_SUM, root, MPI_COMM_WORLD );
 
   if(rank==root){
     printf("%02d %02d %02d %17.15lg %d %17.15E %17.15E \t [ RANKS N DOFS ELAPSEDTIME ITERATIONS (DOFS/RANKS) (DOFS/TIME/ITERATIONS/RANKS) \n",
@@ -185,18 +185,18 @@ int main(int argc, char **argv){
 
   solver_t *solver = ellipticSolveSetupHex3D(mesh, lambda, kernelInfo, options);
 
-  iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  int Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 
   // load rhs into r
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
 
-      iint ggid = e*mesh->Np*mesh->Nggeo + n;
+      int ggid = e*mesh->Np*mesh->Nggeo + n;
       dfloat wJ = mesh->ggeo[ggid+mesh->Np*GWJID];
 
-      iint   id = e*mesh->Np+n;
+      int   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];
@@ -221,9 +221,9 @@ int main(int argc, char **argv){
   o_x.copyTo(mesh->q);
   
   dfloat maxError = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      iint   id = e*mesh->Np+n;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      int   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];

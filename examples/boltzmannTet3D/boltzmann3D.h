@@ -11,24 +11,24 @@ void boltzmannSetup3D(mesh3D *mesh, char *opt);
 
 void boltzmannRun3D(mesh3D *mesh, char *opt);
 
-void boltzmannReport3D(mesh3D *mesh, iint tstep, char *options);
+void boltzmannReport3D(mesh3D *mesh, int tstep, char *options);
 
 void boltzmannError3D(mesh3D *mesh, dfloat time,char *options);
 
-void boltzmannComputeVorticity3D(mesh3D *mesh, dfloat *q, iint Nfields);
+void boltzmannComputeVorticity3D(mesh3D *mesh, dfloat *q, int Nfields);
 
 void boltzmannPlotVTU3D(mesh3D *mesh, char *fileNameBase);
 
 void boltzmannRampFunction3D(dfloat t, dfloat *ramp, dfloat *drampdt);
 
-void boltzmannLserkStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
+void boltzmannLserkStep3D(mesh3D *mesh, int tstep, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
 
-void boltzmannSark3Step3D(mesh3D *mesh, iint tstep, iint haloBytes,
+void boltzmannSark3Step3D(mesh3D *mesh, int tstep, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
 
-void boltzmannSaab3Step3D(mesh3D *mesh, iint tstep, iint haloBytes,
+void boltzmannSaab3Step3D(mesh3D *mesh, int tstep, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
 
-void boltzmannLsimexStep3D(mesh3D *mesh, iint tstep, iint haloBytes,
+void boltzmannLsimexStep3D(mesh3D *mesh, int tstep, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);

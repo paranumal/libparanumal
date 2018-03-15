@@ -1,7 +1,7 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
+void insPoissonStep3D(ins_t *ins, int tstep, int haloBytes,
 				       dfloat * sendBuffer, dfloat * recvBuffer,
 				        char   * options){
 
@@ -13,7 +13,7 @@ void insPoissonStep3D(ins_t *ins, iint tstep, iint haloBytes,
   //The result of the helmholtz solve is stored in the next index
   int index1 = (ins->index+1)%3;
 
-  iint offset = index1*(mesh->Nelements+mesh->totalHaloPairs);
+  int offset = index1*(mesh->Nelements+mesh->totalHaloPairs);
 
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,

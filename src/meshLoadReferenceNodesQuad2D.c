@@ -35,8 +35,8 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
 
   // find node indices of vertex nodes
   dfloat NODETOL = 1e-6;
-  mesh->vertexNodes = (iint*) calloc(mesh->Nverts, sizeof(iint));
-  for(iint n=0;n<mesh->Np;++n){
+  mesh->vertexNodes = (int*) calloc(mesh->Nverts, sizeof(int));
+  for(int n=0;n<mesh->Np;++n){
     if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]+1)*(mesh->s[n]+1)<NODETOL)
       mesh->vertexNodes[0] = n;
     if( (mesh->r[n]-1)*(mesh->r[n]-1)+(mesh->s[n]+1)*(mesh->s[n]+1)<NODETOL)
@@ -62,10 +62,10 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   fgets(buf, BUFSIZ, fp); // read EOL
 
   fgets(buf, BUFSIZ, fp); // read comment
-  mesh->faceNodes = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
+  mesh->faceNodes = (int*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(int));
   for(int f=0;f<mesh->Nfaces;++f){
     for(int n=0;n<mesh->Nfp;++n){
-      fscanf(fp, iintFormat, mesh->faceNodes+n + f*mesh->Nfp);
+      fscanf(fp, intFormat, mesh->faceNodes+n + f*mesh->Nfp);
     }
   }
   fgets(buf, BUFSIZ, fp); // read EOL
@@ -108,7 +108,7 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   // read number of plot nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
-  sscanf(buf, iintFormat, &(mesh->plotNp));
+  sscanf(buf, intFormat, &(mesh->plotNp));
 
   // read plot node coordinates (hard code triangles)
   mesh->plotR = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
@@ -132,19 +132,19 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   // read number of elements in plot node triangulation
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
-  sscanf(buf, iintFormat, &(mesh->plotNelements));
+  sscanf(buf, intFormat, &(mesh->plotNelements));
 
   // read number of vertices per plot element
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, iintFormat, &(mesh->plotNverts));
+  sscanf(buf, intFormat, &(mesh->plotNverts));
   
   // build and read in plot node triangulation
-  mesh->plotEToV = (iint*) calloc(mesh->plotNelements*mesh->plotNverts, sizeof(iint));
+  mesh->plotEToV = (int*) calloc(mesh->plotNelements*mesh->plotNverts, sizeof(int));
   fgets(buf, BUFSIZ, fp); // read comment
   for(int n=0;n<mesh->plotNelements;++n){
     for(int m=0;m<mesh->plotNverts;++m){
-      fscanf(fp, iintFormat, mesh->plotEToV+m + mesh->plotNverts*n);
+      fscanf(fp, intFormat, mesh->plotEToV+m + mesh->plotNverts*n);
     }
     fgets(buf,BUFSIZ,fp); // rest of line
   }
@@ -152,7 +152,7 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   // projection info for OAS precon (one node overlap)
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, iintFormat, &(mesh->NqP));
+  sscanf(buf, intFormat, &(mesh->NqP));
   fgets(buf, BUFSIZ, fp);
   mesh->oasForward = (dfloat*) calloc(mesh->NqP*mesh->NqP, sizeof(dfloat));
   for(int n=0;n<mesh->NqP;++n){
@@ -181,7 +181,7 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   // projection info for OAS precon (one node overlap)
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, iintFormat, &(mesh->NqP));
+  sscanf(buf, intFormat, &(mesh->NqP));
   fgets(buf, BUFSIZ, fp);
   mesh->oasForwardDg = (dfloat*) calloc(mesh->NqP*mesh->NqP, sizeof(dfloat));
   for(int n=0;n<mesh->NqP;++n){
@@ -211,7 +211,7 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   // read number of volume cubature nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
-  sscanf(buf, iintFormat, &(mesh->cubNp));
+  sscanf(buf, intFormat, &(mesh->cubNp));
 
   // read volume cubature interpolation matrix
   mesh->cubInterp = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
@@ -256,7 +256,7 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   // read number of surface integration nodes
   fgets(buf, BUFSIZ, fp); // read comment
   fgets(buf, BUFSIZ, fp); 
-  sscanf(buf, iintFormat, &(mesh->intNfp));
+  sscanf(buf, intFormat, &(mesh->intNfp));
 
   // read surface intergration node interpolation matrix
   mesh->intInterp 

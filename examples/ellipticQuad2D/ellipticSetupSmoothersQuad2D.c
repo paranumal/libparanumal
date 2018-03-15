@@ -2,9 +2,9 @@
 
 typedef struct{
 
-  iint localId;
-  iint baseId;
-  iint haloFlag;
+  int localId;
+  int baseId;
+  int haloFlag;
 
 } preconGatherInfo_t;
 
@@ -22,7 +22,7 @@ int parallelCompareBaseId(const void *a, const void *b){
 void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *precon, agmgLevel *level,
                                               dfloat tau, dfloat lambda, int* BCType, const char *options) {
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -30,46 +30,46 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
   precon_t *precon= solver->precon;
 
   // offsets to extract second layer
-  iint *offset = (iint*) calloc(mesh->Nfaces, sizeof(iint));
+  int *offset = (int*) calloc(mesh->Nfaces, sizeof(int));
   offset[0] = +mesh->Nq;
   offset[1] = -1;
   offset[2] = -mesh->Nq;
   offset[3] = +1;
 
   // build gather-scatter
-  iint NqP = mesh->Nq+2;
-  iint NpP = NqP*NqP;
+  int NqP = mesh->Nq+2;
+  int NpP = NqP*NqP;
 
-  iint *offsetP = (iint*) calloc(mesh->Nfaces, sizeof(iint));
+  int *offsetP = (int*) calloc(mesh->Nfaces, sizeof(int));
   offsetP[0] = +NqP;
   offsetP[1] = -1;
   offsetP[2] = -NqP;
   offsetP[3] = +1;
 
-  iint *faceNodesPrecon = (iint*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(iint));
+  int *faceNodesPrecon = (int*) calloc(mesh->Nfp*mesh->Nfaces, sizeof(int));
 
-  for(iint i=0;i<mesh->Nq;++i) faceNodesPrecon[i+0*mesh->Nfp] = i+1 + 0*NqP;
-  for(iint j=0;j<mesh->Nq;++j) faceNodesPrecon[j+1*mesh->Nfp] = NqP-1 + (j+1)*NqP;
-  for(iint i=0;i<mesh->Nq;++i) faceNodesPrecon[i+2*mesh->Nfp] = i+1 + (NqP-1)*NqP;
-  for(iint j=0;j<mesh->Nq;++j) faceNodesPrecon[j+3*mesh->Nfp] = 0 + (j+1)*NqP;
+  for(int i=0;i<mesh->Nq;++i) faceNodesPrecon[i+0*mesh->Nfp] = i+1 + 0*NqP;
+  for(int j=0;j<mesh->Nq;++j) faceNodesPrecon[j+1*mesh->Nfp] = NqP-1 + (j+1)*NqP;
+  for(int i=0;i<mesh->Nq;++i) faceNodesPrecon[i+2*mesh->Nfp] = i+1 + (NqP-1)*NqP;
+  for(int j=0;j<mesh->Nq;++j) faceNodesPrecon[j+3*mesh->Nfp] = 0 + (j+1)*NqP;
 
-  iint *vmapMP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
-  iint *vmapPP = (iint*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(iint));
+  int *vmapMP = (int*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(int));
+  int *vmapPP = (int*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements, sizeof(int));
 
   // take node info from positive trace and put in overlap region on parallel gather info
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
 
-    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
-      iint fid = e*mesh->Nfp*mesh->Nfaces + n;
+    for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+      int fid = e*mesh->Nfp*mesh->Nfaces + n;
 
       // find face index
-      iint fM = n/mesh->Nfp;
-      iint fP = mesh->EToF[e*mesh->Nfaces+fM];
+      int fM = n/mesh->Nfp;
+      int fP = mesh->EToF[e*mesh->Nfaces+fM];
       if(fP<0) fP = fM;
 
       // find location of "+" trace in regular mesh
-      iint idM = mesh->vmapM[fid] + offset[fM];
-      iint idP = mesh->vmapP[fid] + offset[fP];
+      int idM = mesh->vmapM[fid] + offset[fM];
+      int idP = mesh->vmapP[fid] + offset[fP];
 
       vmapMP[fid] = idM;
       vmapPP[fid] = idP;
@@ -83,8 +83,8 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
     (preconGatherInfo_t*) calloc(Nlocal+Nhalo, sizeof(preconGatherInfo_t));
 
   // rearrange in node order
-  for(iint n=0;n<Nlocal;++n){
-    iint id = mesh->gatherLocalIds[n];
+  for(int n=0;n<Nlocal;++n){
+    int id = mesh->gatherLocalIds[n];
     gatherInfo[id].baseId   = mesh->gatherBaseIds[n] + 1;
     gatherInfo[id].haloFlag = mesh->gatherHaloFlags[n];
   }
@@ -106,11 +106,11 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
     (preconGatherInfo_t*) calloc(NpP*mesh->Nelements, sizeof(preconGatherInfo_t));
 
   // push to non-overlap nodes
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint j=0;j<mesh->Nq;++j){
-      for(iint i=0;i<mesh->Nq;++i){
-        iint id  = i + j*mesh->Nq + e*mesh->Np;
-        iint pid = i + 1 + (j+1)*NqP + e*NpP;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int j=0;j<mesh->Nq;++j){
+      for(int i=0;i<mesh->Nq;++i){
+        int id  = i + j*mesh->Nq + e*mesh->Np;
+        int pid = i + 1 + (j+1)*NqP + e*NpP;
 
         preconGatherInfo[pid] = gatherInfo[id];
       }
@@ -118,14 +118,14 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
   }
 
   // add overlap region
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
-      iint id = n + e*mesh->Nfp*mesh->Nfaces;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+      int id = n + e*mesh->Nfp*mesh->Nfaces;
 
-      iint f = n/mesh->Nfp;
-      iint idM = mesh->vmapM[id];
-      iint idP = vmapPP[id];
-      iint idMP = e*NpP + faceNodesPrecon[n];
+      int f = n/mesh->Nfp;
+      int idM = mesh->vmapM[id];
+      int idP = vmapPP[id];
+      int idMP = e*NpP + faceNodesPrecon[n];
 
       preconGatherInfo[idMP] = gatherInfo[idP];
 
@@ -140,24 +140,24 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
   }
 
   // reset local ids
-  for(iint n=0;n<mesh->Nelements*NpP;++n)
+  for(int n=0;n<mesh->Nelements*NpP;++n)
     preconGatherInfo[n].localId = n;
 
   // sort by rank then base index
   qsort(preconGatherInfo, NpP*mesh->Nelements, sizeof(preconGatherInfo_t), parallelCompareBaseId);
 
   // do not gather-scatter nodes labelled zero
-  iint skip = 0;
+  int skip = 0;
   while(preconGatherInfo[skip].baseId==0 && skip<NpP*mesh->Nelements){
     ++skip;
   }
 
   // reset local ids
-  iint NlocalP = NpP*mesh->Nelements - skip;
-  iint *gatherLocalIdsP  = (iint*) calloc(NlocalP, sizeof(iint));
-  iint *gatherBaseIdsP   = (iint*) calloc(NlocalP, sizeof(iint));
-  iint *gatherHaloFlagsP = (iint*) calloc(NlocalP, sizeof(iint));
-  for(iint n=0;n<NlocalP;++n){
+  int NlocalP = NpP*mesh->Nelements - skip;
+  int *gatherLocalIdsP  = (int*) calloc(NlocalP, sizeof(int));
+  int *gatherBaseIdsP   = (int*) calloc(NlocalP, sizeof(int));
+  int *gatherHaloFlagsP = (int*) calloc(NlocalP, sizeof(int));
+  for(int n=0;n<NlocalP;++n){
     gatherLocalIdsP[n]  = preconGatherInfo[n+skip].localId;
     gatherBaseIdsP[n]   = preconGatherInfo[n+skip].baseId;
     gatherHaloFlagsP[n] = preconGatherInfo[n+skip].haloFlag;
@@ -172,12 +172,12 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
             gatherHaloFlagsP);
 
   // build degree vector
-  iint NtotalP = mesh->NqP*mesh->NqP*mesh->Nelements;
+  int NtotalP = mesh->NqP*mesh->NqP*mesh->Nelements;
   dfloat *invDegree = (dfloat*) calloc(NtotalP, sizeof(dfloat));
   dfloat *degree    = (dfloat*) calloc(NtotalP, sizeof(dfloat));
   precon->o_invDegreeP = mesh->device.malloc(NtotalP*sizeof(dfloat), invDegree);
 
-  for(iint n=0;n<NtotalP;++n)
+  for(int n=0;n<NtotalP;++n)
     degree[n] = 1;
 
   occa::memory o_deg = mesh->device.malloc(NtotalP*sizeof(dfloat), degree);
@@ -186,7 +186,7 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
   mesh->device.finish();
   o_deg.free();
 
-  for(iint n=0;n<NtotalP;++n){ // need to weight inner products{
+  for(int n=0;n<NtotalP;++n){ // need to weight inner products{
     if(degree[n] == 0) printf("WARNING!!!!\n");
     invDegree[n] = 1./degree[n];
   }
@@ -197,31 +197,31 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
 
   // -------------------------------------------------------------------------------------------
   // build gather-scatter for overlapping patches
-  iint *allNelements = (iint*) calloc(size, sizeof(iint));
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
-    allNelements, 1, MPI_IINT, MPI_COMM_WORLD);
+  int *allNelements = (int*) calloc(size, sizeof(int));
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_int,
+    allNelements, 1, MPI_int, MPI_COMM_WORLD);
 
   // offsets
-  iint *startElement = (iint*) calloc(size, sizeof(iint));
-  for(iint r=1;r<size;++r){
+  int *startElement = (int*) calloc(size, sizeof(int));
+  for(int r=1;r<size;++r){
     startElement[r] = startElement[r-1]+allNelements[r-1];
   }
 
   // 1-indexed numbering of nodes on this process
-  iint *localNums = (iint*) calloc((Nlocal+Nhalo), sizeof(iint));
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
+  int *localNums = (int*) calloc((Nlocal+Nhalo), sizeof(int));
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
       localNums[e*mesh->Np+n] = 1 + e*mesh->Np + n + startElement[rank]*mesh->Np;
     }
   }
 
   if(Nhalo){
     // send buffer for outgoing halo
-    iint *sendBuffer = (iint*) calloc(Nhalo, sizeof(iint));
+    int *sendBuffer = (int*) calloc(Nhalo, sizeof(int));
 
     // exchange node numbers with neighbors
     meshHaloExchange(mesh,
-         mesh->Np*sizeof(iint),
+         mesh->Np*sizeof(int),
          localNums,
          sendBuffer,
          localNums+Nlocal);
@@ -232,15 +232,15 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
          sizeof(preconGatherInfo_t));
 
   // set local ids
-  for(iint n=0;n<mesh->Nelements*NpP;++n)
+  for(int n=0;n<mesh->Nelements*NpP;++n)
     preconGatherInfoDg[n].localId = n;
 
   // numbering of patch interior nodes
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint j=0;j<mesh->Nq;++j){
-      for(iint i=0;i<mesh->Nq;++i){
-        iint id  = i + j*mesh->Nq + e*mesh->Np;
-        iint pid = (i+1) + (j+1)*NqP + e*NpP;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int j=0;j<mesh->Nq;++j){
+      for(int i=0;i<mesh->Nq;++i){
+        int id  = i + j*mesh->Nq + e*mesh->Np;
+        int pid = (i+1) + (j+1)*NqP + e*NpP;
 
         // all patch interior nodes are local
         preconGatherInfoDg[pid].baseId = localNums[id];
@@ -249,21 +249,21 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
   }
 
   // add patch boundary nodes
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint f=0;f<mesh->Nfaces;++f){
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
       // mark halo nodes
-      iint rP = mesh->EToP[e*mesh->Nfaces+f];
-      iint eP = mesh->EToE[e*mesh->Nfaces+f];
-      iint fP = mesh->EToF[e*mesh->Nfaces+f];
-      iint bc = mesh->EToB[e*mesh->Nfaces+f];
+      int rP = mesh->EToP[e*mesh->Nfaces+f];
+      int eP = mesh->EToE[e*mesh->Nfaces+f];
+      int fP = mesh->EToF[e*mesh->Nfaces+f];
+      int bc = mesh->EToB[e*mesh->Nfaces+f];
 
-      for(iint n=0;n<mesh->Nfp;++n){
-        iint id = n + f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
-        iint idP = mesh->vmapP[id];
+      for(int n=0;n<mesh->Nfp;++n){
+        int id = n + f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
+        int idP = mesh->vmapP[id];
 
         // local numbers
-        iint pidM = e*NpP + faceNodesPrecon[f*mesh->Nfp+n] + offsetP[f];
-        iint pidP = e*NpP + faceNodesPrecon[f*mesh->Nfp+n];
+        int pidM = e*NpP + faceNodesPrecon[f*mesh->Nfp+n] + offsetP[f];
+        int pidP = e*NpP + faceNodesPrecon[f*mesh->Nfp+n];
         preconGatherInfoDg[pidP].baseId = localNums[idP];
 
         if(rP!=-1){
@@ -286,11 +286,11 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
   }
 
   // reset local ids
-  iint NlocalDg = NpP*mesh->Nelements - skip;
-  iint *gatherLocalIdsDg  = (iint*) calloc(NlocalDg, sizeof(iint));
-  iint *gatherBaseIdsDg   = (iint*) calloc(NlocalDg, sizeof(iint));
-  iint *gatherHaloFlagsDg = (iint*) calloc(NlocalDg, sizeof(iint));
-  for(iint n=0;n<NlocalDg;++n){
+  int NlocalDg = NpP*mesh->Nelements - skip;
+  int *gatherLocalIdsDg  = (int*) calloc(NlocalDg, sizeof(int));
+  int *gatherBaseIdsDg   = (int*) calloc(NlocalDg, sizeof(int));
+  int *gatherHaloFlagsDg = (int*) calloc(NlocalDg, sizeof(int));
+  for(int n=0;n<NlocalDg;++n){
     gatherLocalIdsDg[n]  = preconGatherInfoDg[n+skip].localId;
     gatherBaseIdsDg[n]   = preconGatherInfoDg[n+skip].baseId;
     gatherHaloFlagsDg[n] = preconGatherInfoDg[n+skip].haloFlag;
@@ -305,12 +305,12 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
              gatherHaloFlagsDg);
 
   // build degree vector
-  iint NtotalDGP = NpP*mesh->Nelements;
+  int NtotalDGP = NpP*mesh->Nelements;
   invDegree = (dfloat*) calloc(NtotalDGP, sizeof(dfloat));
   degree    = (dfloat*) calloc(NtotalDGP, sizeof(dfloat));
   precon->o_invDegreeDGP = mesh->device.malloc(NtotalDGP*sizeof(dfloat), invDegree);
 
-  for(iint n=0;n<NtotalDGP;++n)
+  for(int n=0;n<NtotalDGP;++n)
     degree[n] = 1;
 
   o_deg = mesh->device.malloc(NtotalDGP*sizeof(dfloat), degree);
@@ -319,7 +319,7 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
   mesh->device.finish();
   o_deg.free();
 
-  for(iint n=0;n<NtotalDGP;++n){ // need to weight inner products{
+  for(int n=0;n<NtotalDGP;++n){ // need to weight inner products{
     if(degree[n] == 0) printf("WARNING!!!!\n");
     invDegree[n] = 1./degree[n];
   }
@@ -330,8 +330,8 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
 
   // -------------------------------------------------------------------------------------------
 
-  precon->o_faceNodesP = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*sizeof(iint), faceNodesPrecon);
-  precon->o_vmapPP     = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements*sizeof(iint), vmapPP);
+  precon->o_faceNodesP = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*sizeof(int), faceNodesPrecon);
+  precon->o_vmapPP     = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->Nelements*sizeof(int), vmapPP);
 
   // load prebuilt transform matrices
   precon->o_oasForward = mesh->device.malloc(NqP*NqP*sizeof(dfloat), mesh->oasForward);
@@ -346,26 +346,26 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
 
   dfloat *diagInvOp = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
   dfloat *diagInvOpDg = (dfloat*) calloc(NpP*mesh->Nelements, sizeof(dfloat));
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
 
     // S = Jabc*(wa*wb*wc*lambda + wb*wc*Da'*wa*Da + wa*wc*Db'*wb*Db + wa*wb*Dc'*wc*Dc)
     // S = Jabc*wa*wb*wc*(lambda*I+1/wa*Da'*wa*Da + 1/wb*Db'*wb*Db + 1/wc*Dc'*wc*Dc)
 
     dfloat Jhrinv2 = 0, Jhsinv2 = 0, J = 0;
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
 
       dfloat W = mesh->gllw[n%mesh->Nq]*mesh->gllw[n/mesh->Nq];
 
-      iint base = mesh->Nggeo*mesh->Np*e + n;
+      int base = mesh->Nggeo*mesh->Np*e + n;
 
       J = mymax(J, mesh->ggeo[base + mesh->Np*GWJID]/W);
       Jhrinv2 = mymax(Jhrinv2, mesh->ggeo[base + mesh->Np*G00ID]/W);
       Jhsinv2 = mymax(Jhsinv2, mesh->ggeo[base + mesh->Np*G11ID]/W);
     }
 
-    for(iint j=0;j<NqP;++j){
-      for(iint i=0;i<NqP;++i){
-        iint pid = i + j*NqP + e*NpP;
+    for(int j=0;j<NqP;++j){
+      for(int i=0;i<NqP;++i){
+        int pid = i + j*NqP + e*NpP;
 
           diagInvOp[pid] =
             1./(J*lambda +
@@ -387,13 +387,13 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
   /// ---------------------------------------------------------------------------
   // compute diagonal of stiffness matrix for Jacobi
 
-  iint Ntotal = mesh->Np*mesh->Nelements;
+  int Ntotal = mesh->Np*mesh->Nelements;
   dfloat *diagA = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 
-  for(iint e=0;e<mesh->Nelements;++e){
-    iint cnt = 0;
-    for(iint j=0;j<mesh->Nq;++j){
-      for(iint i=0;i<mesh->Nq;++i){
+  for(int e=0;e<mesh->Nelements;++e){
+    int cnt = 0;
+    for(int j=0;j<mesh->Nq;++j){
+      for(int i=0;i<mesh->Nq;++i){
 
         dfloat JW = mesh->ggeo[e*mesh->Np*mesh->Nggeo+ cnt + mesh->Np*GWJID];
         // (D_{ii}^2 + D_{jj}^2 + lambda)*w_i*w_j*w_k*J_{ijke}
@@ -412,7 +412,7 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
 
   
   //storage buffer for patches
-  iint NtotalP = mesh->NpP*mesh->Nelements;
+  int NtotalP = mesh->NpP*mesh->Nelements;
   precon->zP  = (dfloat*) calloc(NtotalP,  sizeof(dfloat));
   precon->o_zP  = mesh->device.malloc(NtotalP*sizeof(dfloat),precon->zP);
 
@@ -439,7 +439,7 @@ void ellipticSetupSmootherOverlappingPatchIpdg(solver_t *solver, precon_t *preco
 
       printf("weight = %g \n", weight);
 
-      for (iint n=0;n<NpP*mesh->Nelements;n++)
+      for (int n=0;n<NpP*mesh->Nelements;n++)
         diagInvOpDg[n] *= weight;
 
       //update diagonal with weight
@@ -452,8 +452,8 @@ void ellipticSetupSmootherFullPatchIpdg(solver_t *solver, precon_t *precon, agmg
                                               dfloat tau, dfloat lambda, int* BCType, dfloat rateTolerance, const char *options) {
 
   dfloat *invAP;
-  iint Npatches;
-  iint *patchesIndex;
+  int Npatches;
+  int *patchesIndex;
   mesh_t *mesh = solver->mesh;
 
   int NpP = mesh->Np*(mesh->Nfaces+1);
@@ -463,18 +463,18 @@ void ellipticSetupSmootherFullPatchIpdg(solver_t *solver, precon_t *precon, agmg
                                       &Npatches, &patchesIndex, &invAP, options);
 
   precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
-  precon->o_patchesIndex = mesh->device.malloc(mesh->Nelements*sizeof(iint), patchesIndex);
+  precon->o_patchesIndex = mesh->device.malloc(mesh->Nelements*sizeof(int), patchesIndex);
 
   dfloat *invDegree = (dfloat*) calloc(mesh->Nelements,sizeof(dfloat));
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
     for (int f=0;f<mesh->Nfaces;f++)
         invDegree[e] += (mesh->EToE[e*mesh->Nfaces +f]<0) ? 0 : 1; //overlap degree = # of neighbours
     invDegree[e] = 1.0/invDegree[e]; //build in weight
   }
   precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
 
-  mesh->o_EToE = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
-  mesh->o_EToF = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToF);
+  mesh->o_EToE = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int),mesh->EToE);
+  mesh->o_EToF = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int),mesh->EToF);
 
   //set storage for larger patch
   precon->zP = (dfloat*) calloc(mesh->Nelements*NpP,  sizeof(dfloat));
@@ -502,7 +502,7 @@ void ellipticSetupSmootherFullPatchIpdg(solver_t *solver, precon_t *precon, agmg
 
       printf("weight = %g \n", weight);
 
-      for (iint e=0;e<mesh->Nelements;e++)
+      for (int e=0;e<mesh->Nelements;e++)
         invDegree[e] *= weight;
 
       //update with weight
@@ -516,8 +516,8 @@ void ellipticSetupSmootherFacePatchIpdg(solver_t *solver, precon_t *precon, agmg
                                               dfloat tau, dfloat lambda, int* BCType, dfloat rateTolerance, const char *options) {
 
   dfloat *invAP;
-  iint Npatches;
-  iint *patchesIndex;
+  int Npatches;
+  int *patchesIndex;
   mesh_t *mesh = solver->mesh;
 
   //initialize the full inverse operators on each 4 element patch
@@ -527,25 +527,25 @@ void ellipticSetupSmootherFacePatchIpdg(solver_t *solver, precon_t *precon, agmg
   int NpP = 2*mesh->Np;
 
   precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
-  precon->o_patchesIndex = mesh->device.malloc(mesh->NfacePairs*sizeof(iint), patchesIndex);
+  precon->o_patchesIndex = mesh->device.malloc(mesh->NfacePairs*sizeof(int), patchesIndex);
 
   dfloat *invDegree = (dfloat*) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(dfloat));
-  for (iint face=0;face<mesh->NfacePairs;face++) {
-    iint eM = mesh->FPairsToE[2*face+0];
-    iint eP = mesh->FPairsToE[2*face+1];
+  for (int face=0;face<mesh->NfacePairs;face++) {
+    int eM = mesh->FPairsToE[2*face+0];
+    int eP = mesh->FPairsToE[2*face+1];
 
     invDegree[eM]++; //overlap degree = # of patches
     if (eP>=0) invDegree[eP]++; //overlap degree = # of patches
   }
-  for (iint e=0;e<mesh->Nelements+mesh->totalHaloPairs;e++) {
+  for (int e=0;e<mesh->Nelements+mesh->totalHaloPairs;e++) {
     invDegree[e] = 1.0/invDegree[e];
   }
 
   precon->o_invDegreeAP = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*sizeof(dfloat),invDegree);
 
-  mesh->o_FPairsToE = mesh->device.malloc(2*mesh->NfacePairs*sizeof(iint),mesh->FPairsToE);
-  mesh->o_FPairsToF = mesh->device.malloc(2*mesh->NfacePairs*sizeof(iint),mesh->FPairsToF);
-  mesh->o_EToFPairs = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToFPairs);
+  mesh->o_FPairsToE = mesh->device.malloc(2*mesh->NfacePairs*sizeof(int),mesh->FPairsToE);
+  mesh->o_FPairsToF = mesh->device.malloc(2*mesh->NfacePairs*sizeof(int),mesh->FPairsToF);
+  mesh->o_EToFPairs = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int),mesh->EToFPairs);
 
   //set storage for larger patch
   precon->zP = (dfloat*) calloc(mesh->NfacePairs*NpP,  sizeof(dfloat));
@@ -574,7 +574,7 @@ void ellipticSetupSmootherFacePatchIpdg(solver_t *solver, precon_t *precon, agmg
 
       printf("weight = %g \n", weight);
 
-      for (iint e=0;e<mesh->Nelements;e++)
+      for (int e=0;e<mesh->Nelements;e++)
         invDegree[e] *= weight;
 
       //update with weight
@@ -588,8 +588,8 @@ void ellipticSetupSmootherLocalPatchIpdg(solver_t *solver, precon_t *precon, agm
                                               dfloat tau, dfloat lambda, int* BCType, dfloat rateTolerance, const char *options) {
 
   dfloat *invAP;
-  iint Npatches;
-  iint *patchesIndex;
+  int Npatches;
+  int *patchesIndex;
   mesh_t *mesh = solver->mesh;
 
   int NpP = mesh->Np;
@@ -599,10 +599,10 @@ void ellipticSetupSmootherLocalPatchIpdg(solver_t *solver, precon_t *precon, agm
                                       &Npatches, &patchesIndex, &invAP, options);
 
   precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
-  precon->o_patchesIndex = mesh->device.malloc(mesh->Nelements*sizeof(iint), patchesIndex);
+  precon->o_patchesIndex = mesh->device.malloc(mesh->Nelements*sizeof(int), patchesIndex);
 
   dfloat *invDegree = (dfloat*) calloc(mesh->Nelements,sizeof(dfloat));
-  for (iint e=0;e<mesh->Nelements;e++) {
+  for (int e=0;e<mesh->Nelements;e++) {
     invDegree[e] = 1.0;
   }
   precon->o_invDegreeAP = mesh->device.malloc(mesh->Nelements*sizeof(dfloat),invDegree);
@@ -629,7 +629,7 @@ void ellipticSetupSmootherLocalPatchIpdg(solver_t *solver, precon_t *precon, agm
 
       printf("weight = %g \n", weight);
 
-      for (iint e=0;e<mesh->Nelements;e++)
+      for (int e=0;e<mesh->Nelements;e++)
         invDegree[e] *= weight;
 
       //update with weight
@@ -671,7 +671,7 @@ void ellipticSetupSmootherDampedJacobiIpdg(solver_t *solver, precon_t *precon, a
 
       printf("weight = %g \n", weight);
 
-      for (iint n=0;n<mesh->Np*mesh->Nelements;n++)
+      for (int n=0;n<mesh->Np*mesh->Nelements;n++)
         invDiagA[n] *= weight;
 
       //update diagonal with weight
@@ -712,17 +712,17 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level){
 
   mesh_t *mesh = solver->mesh;
 
-  const iint N = level->Nrows;
-  const iint M = level->Ncols;
+  const int N = level->Nrows;
+  const int M = level->Ncols;
 
   int k = 10;
 
-  iint rank, size;
+  int rank, size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  iint Ntotal=0;
-  MPI_Allreduce(&N, &Ntotal, 1, MPI_IINT, MPI_SUM, MPI_COMM_WORLD);
+  int Ntotal=0;
+  MPI_Allreduce(&N, &Ntotal, 1, MPI_int, MPI_SUM, MPI_COMM_WORLD);
   if(k > Ntotal)
     k = Ntotal;
 
@@ -742,26 +742,26 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level){
     V[i] = (dfloat *) calloc(N, sizeof(dfloat));
 
   // generate a random vector for initial basis vector
-  for (iint i=0;i<N;i++)
+  for (int i=0;i<N;i++)
     Vx[i] = (dfloat) drand48();
 
   dfloat norm_vo = 0.;
-  for (iint i=0;i<N;i++)
+  for (int i=0;i<N;i++)
     norm_vo += Vx[i]*Vx[i];
 
   dfloat gNorm_vo = 0;
   MPI_Allreduce(&norm_vo, &gNorm_vo, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
   gNorm_vo = sqrt(gNorm_vo);
 
-  for (iint i=0;i<N;i++)
+  for (int i=0;i<N;i++)
     Vx[i] /= gNorm_vo;
 
-  for (iint i=0;i<N;i++)
+  for (int i=0;i<N;i++)
     V[0][i] = Vx[i];
 
   for(int j=0; j<k; j++){
 
-    for (iint i=0;i<N;i++)
+    for (int i=0;i<N;i++)
       Vx[i] = V[j][i];
 
     o_Vx.copyFrom(Vx); //send to device
@@ -776,14 +776,14 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level){
     for(int i=0; i<=j; i++){
       // H(i,j) = v[i]'*A*v[j]
       dfloat hij = 0.;
-      for (iint n=0;n<N;n++)
+      for (int n=0;n<N;n++)
         hij += V[i][n]*V[j+1][n];
 
       dfloat ghij = 0;
       MPI_Allreduce(&hij, &ghij, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
       // v[j+1] = v[j+1] - hij*v[i]
-      for (iint n=0;n<N;n++)
+      for (int n=0;n<N;n++)
         V[j+1][n] -= ghij*V[i][n];
 
       H[i + j*k] = (double) ghij;
@@ -792,7 +792,7 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level){
     if(j+1 < k){
 
       dfloat norm_vj = 0.;
-      for (iint n=0;n<N;n++)
+      for (int n=0;n<N;n++)
         norm_vj += V[j+1][n]*V[j+1][n];
 
       dfloat gNorm_vj;
@@ -801,7 +801,7 @@ dfloat maxEigSmoothAx(solver_t* solver, agmgLevel *level){
 
       H[j+1+ j*k] = (double) gNorm_vj;
 
-      for (iint n=0;n<N;n++)
+      for (int n=0;n<N;n++)
         V[j+1][n] *= 1./H[j+1 + j*k];
     }
   }

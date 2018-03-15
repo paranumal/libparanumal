@@ -3,30 +3,30 @@
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCType, 
-                      nonZero_t **A, iint *nnzA, iint *globalStarts, const char *options){
+void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, int *BCType, 
+                      nonZero_t **A, int *nnzA, int *globalStarts, const char *options){
 
-  iint size, rankM;
+  int size, rankM;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankM);
 
-  iint Nnum = mesh->Np*mesh->Nelements;
+  int Nnum = mesh->Np*mesh->Nelements;
 
   // create a global numbering system
-  iint *globalIds = (iint *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np,sizeof(iint));
+  int *globalIds = (int *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np,sizeof(int));
   
   // every degree of freedom has its own global id
   /* so find number of elements on each rank */
-  iint *rankNelements = (iint*) calloc(size, sizeof(iint));
-  iint *rankStarts = (iint*) calloc(size+1, sizeof(iint));
-  MPI_Allgather(&(mesh->Nelements), 1, MPI_IINT,
-    rankNelements, 1, MPI_IINT, MPI_COMM_WORLD);
+  int *rankNelements = (int*) calloc(size, sizeof(int));
+  int *rankStarts = (int*) calloc(size+1, sizeof(int));
+  MPI_Allgather(&(mesh->Nelements), 1, MPI_int,
+    rankNelements, 1, MPI_int, MPI_COMM_WORLD);
   //find offsets
-  for(iint r=0;r<size;++r){
+  for(int r=0;r<size;++r){
     rankStarts[r+1] = rankStarts[r]+rankNelements[r];
   }
   //use the offsets to set a global id
-  for (iint e =0;e<mesh->Nelements;e++) {
+  for (int e =0;e<mesh->Nelements;e++) {
     for (int n=0;n<mesh->Np;n++) {
       globalIds[e*mesh->Np +n] = n + (e + rankStarts[rankM])*mesh->Np;
     }
@@ -34,13 +34,13 @@ void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTy
 
   /* do a halo exchange of global node numbers */
   if (mesh->totalHaloPairs) {
-    iint *idSendBuffer = (iint *) calloc(mesh->Np*mesh->totalHaloPairs,sizeof(iint));
-    meshHaloExchange(mesh, mesh->Np*sizeof(iint), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Np);
+    int *idSendBuffer = (int *) calloc(mesh->Np*mesh->totalHaloPairs,sizeof(int));
+    meshHaloExchange(mesh, mesh->Np*sizeof(int), globalIds, idSendBuffer, globalIds + mesh->Nelements*mesh->Np);
     free(idSendBuffer);
   }
 
 
-  iint nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
+  int nnzLocalBound = mesh->Np*mesh->Np*(1+mesh->Nfaces)*mesh->Nelements;
 
   // drop tolerance for entries in sparse storage
   dfloat tol = 1e-12.;
@@ -50,14 +50,14 @@ void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTy
   dfloat *Br = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   dfloat *Bs = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
 
-  iint mode = 0;
-  for(iint nj=0;nj<mesh->N+1;++nj){
-    for(iint ni=0;ni<mesh->N+1;++ni){
+  int mode = 0;
+  for(int nj=0;nj<mesh->N+1;++nj){
+    for(int ni=0;ni<mesh->N+1;++ni){
 
-      iint node = 0;
+      int node = 0;
 
-      for(iint j=0;j<mesh->N+1;++j){
-        for(iint i=0;i<mesh->N+1;++i){
+      for(int j=0;j<mesh->N+1;++j){
+        for(int i=0;i<mesh->N+1;++i){
 
           if(nj==j && ni==i)
             B[mode*mesh->Np+node] = 1;
@@ -80,16 +80,16 @@ void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTy
   int nnz = 0;
       
   // loop over all elements
-  for(iint eM=0;eM<mesh->Nelements;++eM){
+  for(int eM=0;eM<mesh->Nelements;++eM){
     
     /* build Dx,Dy (forget the TP for the moment) */
-    for(iint n=0;n<mesh->Np;++n){
-      for(iint m=0;m<mesh->Np;++m){ // m will be the sub-block index for negative and positive trace
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){ // m will be the sub-block index for negative and positive trace
         dfloat Anm = 0;
 
         // (grad phi_n, grad phi_m)_{D^e}
-        for(iint i=0;i<mesh->Np;++i){
-          iint base = eM*mesh->Np*mesh->Nvgeo + i;
+        for(int i=0;i<mesh->Np;++i){
+          int base = eM*mesh->Np*mesh->Nvgeo + i;
           dfloat drdx = mesh->vgeo[base+mesh->Np*RXID];
           dfloat drdy = mesh->vgeo[base+mesh->Np*RYID];
           dfloat dsdx = mesh->vgeo[base+mesh->Np*SXID];
@@ -107,31 +107,31 @@ void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTy
         }
 
         // loop over all faces in this element
-        for(iint fM=0;fM<mesh->Nfaces;++fM){
+        for(int fM=0;fM<mesh->Nfaces;++fM){
           // accumulate flux terms for negative and positive traces
           dfloat AnmP = 0;
-          for(iint i=0;i<mesh->Nfp;++i){
-            iint vidM = mesh->faceNodes[i+fM*mesh->Nfp];
+          for(int i=0;i<mesh->Nfp;++i){
+            int vidM = mesh->faceNodes[i+fM*mesh->Nfp];
 
             // grab vol geofacs at surface nodes
-            iint baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
+            int baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
             dfloat drdxM = mesh->vgeo[baseM+mesh->Np*RXID];
             dfloat drdyM = mesh->vgeo[baseM+mesh->Np*RYID];
             dfloat dsdxM = mesh->vgeo[baseM+mesh->Np*SXID];
             dfloat dsdyM = mesh->vgeo[baseM+mesh->Np*SYID];
 
             // double check vol geometric factors are in halo storage of vgeo
-            iint idM     = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
-            iint vidP    = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
-            iint localEP = mesh->vmapP[idM]/mesh->Np;
-            iint baseP   = localEP*mesh->Np*mesh->Nvgeo + vidP; // use local offset for vgeo in halo
+            int idM     = eM*mesh->Nfp*mesh->Nfaces+fM*mesh->Nfp+i;
+            int vidP    = mesh->vmapP[idM]%mesh->Np; // only use this to identify location of positive trace vgeo
+            int localEP = mesh->vmapP[idM]/mesh->Np;
+            int baseP   = localEP*mesh->Np*mesh->Nvgeo + vidP; // use local offset for vgeo in halo
             dfloat drdxP = mesh->vgeo[baseP+mesh->Np*RXID];
             dfloat drdyP = mesh->vgeo[baseP+mesh->Np*RYID];
             dfloat dsdxP = mesh->vgeo[baseP+mesh->Np*SXID];
             dfloat dsdyP = mesh->vgeo[baseP+mesh->Np*SYID];
             
             // grab surface geometric factors
-            iint base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
+            int base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
             dfloat nx = mesh->sgeo[base+NXID];
             dfloat ny = mesh->sgeo[base+NYID];
             dfloat wsJ = mesh->sgeo[base+WSJID];
@@ -163,11 +163,11 @@ void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTy
             Anm += -0.5*wsJ*ndotgradlnM*lmM;  // -(N.grad ln^-, lm^-)
             Anm += +0.5*wsJ*penalty*lnM*lmM; // +((tau/h)*ln^-,lm^-)
 
-            iint eP    = mesh->EToE[eM*mesh->Nfaces+fM];
+            int eP    = mesh->EToE[eM*mesh->Nfaces+fM];
             if (eP < 0) {
               int qSgn, gradqSgn;
               int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
-              iint bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
+              int bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
               if(bcType==1){ // Dirichlet
                 qSgn     = -1;
                 gradqSgn =  1;
@@ -190,7 +190,7 @@ void ellipticBuildIpdgQuad2D(mesh2D *mesh, dfloat tau, dfloat lambda, iint *BCTy
           }
           if(fabs(AnmP)>tol){
             // remote info
-            iint eP    = mesh->EToE[eM*mesh->Nfaces+fM];
+            int eP    = mesh->EToE[eM*mesh->Nfaces+fM];
             (*A)[nnz].row = globalIds[eM*mesh->Np + n];
             (*A)[nnz].col = globalIds[eP*mesh->Np + m];
             (*A)[nnz].val = AnmP;

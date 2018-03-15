@@ -1,13 +1,13 @@
-kernel void ellipticPreconCoarsen_v0(const iint Nelements,
+kernel void ellipticPreconCoarsen_v0(const int Nelements,
 				     const dfloat * restrict invDegree,
 				     const dfloat * restrict V1,
 				     const dfloat * restrict qN,
 				     dfloat * restrict q1){
 
-  for(iint e=0;e<Nelements;++e;outer0){
-    for(iint n=0;n<p_Nverts;++n;inner0){
+  for(int e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Nverts;++n;inner0){
       dfloat tmp = 0;
-      for(iint i=0;i<p_Np;++i){
+      for(int i=0;i<p_Np;++i){
 	tmp += V1[n*p_Np + i]*qN[e*p_Np+i];
       }
       q1[e*p_Nverts+n] = tmp; // *invDegree[e*p_Nverts+n];
@@ -16,19 +16,19 @@ kernel void ellipticPreconCoarsen_v0(const iint Nelements,
 }
 
 
-kernel void ellipticPreconCoarsen(const iint Nelements,
+kernel void ellipticPreconCoarsen(const int Nelements,
 				  const dfloat * restrict R,
 				  const dfloat * restrict qN,
 				  dfloat * restrict q1){
 
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
 
     shared dfloat s_qN[p_NblockV][p_NpFine];
     shared dfloat s_R[p_NpCoarse][p_NpFine];
 
-    for(iint es=0;es<p_NblockV;++es;inner1){
-      for(iint n=0;n<p_NpCoarse;++n;inner0){
-      	iint t = n + es*p_NpCoarse;
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_NpCoarse;++n;inner0){
+      	int t = n + es*p_NpCoarse;
 
       	while(t<p_NpFine*p_NblockV){
       	  if(eo*p_NpFine + t<Nelements*p_NpFine)
@@ -47,13 +47,13 @@ kernel void ellipticPreconCoarsen(const iint Nelements,
 
     barrier(localMemFence);
 
-    for(iint es=0;es<p_NblockV;++es;inner1){
-      for(iint n=0;n<p_NpCoarse;++n;inner0){
-      	const iint e = eo + es;
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_NpCoarse;++n;inner0){
+      	const int e = eo + es;
       	if(e<Nelements){
       	  dfloat tmp = 0;
       	  occaUnroll(p_NpFine)
-      	    for(iint i=0;i<p_NpFine;++i){
+      	    for(int i=0;i<p_NpFine;++i){
       	      tmp += s_R[n][i]*s_qN[es][i]; // bank conflict ?
       	    }
       	  q1[e*p_NpCoarse+n] = tmp; // *invDegree[e*p_NpCoarse+n];
@@ -65,21 +65,21 @@ kernel void ellipticPreconCoarsen(const iint Nelements,
 
 
 #if 0
-kernel void ellipticPreconCoarsenQuad2D(const iint Nelements,
+kernel void ellipticPreconCoarsenQuad2D(const int Nelements,
 					const dfloat * restrict R,
 					const dfloat * restrict qN,
 					dfloat * restrict q1){
 
 
-  for(iint e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;outer0){
     shared dfloat s_qNN[p_Nq][p_Nq];
     shared dfloat s_q1N[p_Nq1][p_Nq];
     shared dfloat s_q11[p_Nq1][p_Nq1];
 
     // prefetch to shared
 
-    for(iint j=0;j<p_Nq;++j;inner1){
-      for(iint i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
 	s_qNN[j][i] = qN[i+j*p_Nq+e*p_Nq*p_Nq];
       }
     }
@@ -88,11 +88,11 @@ kernel void ellipticPreconCoarsenQuad2D(const iint Nelements,
 
     // coarsen in j index
 
-    for(iint j=0;j<p_Nq;++j;inner1){
-      for(iint i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
 	if(j<2){
 	  dfloat res = 0;
-	  for(iint m=0;m<p_Nq;++m)
+	  for(int m=0;m<p_Nq;++m)
 	    res += R[j*p_Nq + m]*s_qN[m][i];
 	  s_q1N[j][i] = res;
 	}
@@ -103,11 +103,11 @@ kernel void ellipticPreconCoarsenQuad2D(const iint Nelements,
 
     // coarsen in i index
 
-    for(iint j=0;j<p_Nq;++j;inner1){
-      for(iint i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
 	if(j<2 && i<2){
 	  dfloat rtmp = 0;
-	  for(iint m=0;m<p_Nq;++m)
+	  for(int m=0;m<p_Nq;++m)
 	    rtmp += R[i*p_Nq + m]*s_qN[j][m];
 	  s_q11[j][i] = rtmp;
 	}
@@ -117,9 +117,9 @@ kernel void ellipticPreconCoarsenQuad2D(const iint Nelements,
     barrier(localMemFence);
 
     // collect writes
-    for(iint j=0;j<p_Nq;++j;inner1){
-      for(iint i=0;i<p_Nq;++i;inner0){
-	const iint id = i + j*p_Nq;
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
+	const int id = i + j*p_Nq;
 	if(id<p_Nq1*p_Nq1){
 	  q1[id + p_Nq1*p_Nq1*e] = s_q11[0][id];
 	}

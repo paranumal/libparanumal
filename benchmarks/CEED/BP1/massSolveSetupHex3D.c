@@ -14,13 +14,13 @@ occa::kernel saferBuildKernelFromSource(occa::device &device,
 //dfloat *massGeometricFactorsHex3D(mesh3D *mesh){
 dfloat  *massGeometricFactorsHex3D(mesh3D *mesh){
 	/* number of second order geometric factors */
-	iint NgjGeo = 7;
-	iint gjNq = mesh->gjNq;
-	iint gjNp = gjNq*gjNq*gjNq;
+	int NgjGeo = 7;
+	int gjNq = mesh->gjNq;
+	int gjNp = gjNq*gjNq*gjNq;
 	dfloat *gjGeo = (dfloat*) calloc(mesh->Nelements*NgjGeo*gjNp, sizeof(dfloat));
 	
 	//KS end
-	for(iint e=0; e<mesh->Nelements; ++e) { /* for each element */
+	for(int e=0; e<mesh->Nelements; ++e) { /* for each element */
 	
 		/* find vertex indices and physical coordinates */
 		int id = e*mesh->Nverts;
@@ -29,11 +29,11 @@ dfloat  *massGeometricFactorsHex3D(mesh3D *mesh){
 		dfloat *ye = mesh->EY + id;
 		dfloat *ze = mesh->EZ + id;
 		
-		for(iint k=0; k<gjNq; ++k) {
-			for(iint j=0; j<gjNq; ++j) {
-				for(iint i=0; i<gjNq; ++i) {
+		for(int k=0; k<gjNq; ++k) {
+			for(int j=0; j<gjNq; ++j) {
+				for(int i=0; i<gjNq; ++i) {
 				
-					iint n = i + j*gjNq + k*gjNq*gjNq;
+					int n = i + j*gjNq + k*gjNq*gjNq;
 					
 					/* local node coordinates */
 					dfloat rn = mesh->gjr[i];
@@ -82,10 +82,10 @@ dfloat  *massGeometricFactorsHex3D(mesh3D *mesh){
 }
 
 
-void massComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *deg){
+void massComputeDegreeVector(mesh3D *mesh, int Ntotal, ogs_t *ogs, dfloat *deg){
 
 	// build degree vector
-	for(iint n=0; n<Ntotal; ++n)
+	for(int n=0; n<Ntotal; ++n)
 		deg[n] = 1;
 		
 	occa::memory o_deg = mesh->device.malloc(Ntotal*sizeof(dfloat), deg);
@@ -103,7 +103,7 @@ void massComputeDegreeVector(mesh3D *mesh, iint Ntotal, ogs_t *ogs, dfloat *deg)
 
 solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, const char *options) {
 
-	iint rank, size;
+	int rank, size;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	
@@ -113,9 +113,9 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 	int NblockS = mymax(1,1024/maxNodes); // works for CUDA
 	int NblockG;
 	
-	iint gjNq = mesh->gjNq;
-	iint gjNp = gjNq*gjNq*gjNq;
-	iint gjNq2 = gjNq*gjNq;
+	int gjNq = mesh->gjNq;
+	int gjNp = gjNq*gjNq*gjNq;
+	int gjNq2 = gjNq*gjNq;
 	if(gjNq2<=32)
 		NblockG = ( 32/gjNq2 );
 	else {
@@ -127,15 +127,15 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 	}
 	//  NblockG = 512/gNq2;
 	
-	// iint Ntotal = mesh->Np*mesh->Nelements;
-	iint Ntotal = (mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*mesh->Nelements;
-	iint NtotalP = (mesh->NqP+1)*(mesh->NqP+1)*(mesh->NqP+1)*mesh->Nelements;
+	// int Ntotal = mesh->Np*mesh->Nelements;
+	int Ntotal = (mesh->Nq+1)*(mesh->Nq+1)*(mesh->Nq+1)*mesh->Nelements;
+	int NtotalP = (mesh->NqP+1)*(mesh->NqP+1)*(mesh->NqP+1)*mesh->Nelements;
 	
-	iint Nblock = (Ntotal+blockSize-1)/blockSize;
+	int Nblock = (Ntotal+blockSize-1)/blockSize;
 	printf("mesh_>NqP= %d\n", mesh->NqP);
-	iint Nhalo = mesh->Np*mesh->totalHaloPairs;
-	iint Nall   = Ntotal + Nhalo;
-	iint NallP  = NtotalP+Nhalo;
+	int Nhalo = mesh->Np*mesh->totalHaloPairs;
+	int Nall   = Ntotal + Nhalo;
+	int NallP  = NtotalP+Nhalo;
 	
 	solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 	
@@ -165,7 +165,7 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 	solver->o_w    = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
 	solver->o_s    = mesh->device.malloc(Nall*sizeof(dfloat), solver->p);
 	
-	iint Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+	int Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
 	
 #if 0
 	solver->sendBuffer = (dfloat*) calloc(Nbytes/sizeof(dfloat), sizeof(dfloat));
@@ -237,7 +237,7 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 	
 	//  occa::setVerboseCompilation(0);
 	
-	for(iint r=0;r<size;++r){
+	for(int r=0;r<size;++r){
 		MPI_Barrier(MPI_COMM_WORLD);
 		if(r==rank){
 			printf("Building kernels for rank %d\n", rank);
@@ -344,7 +344,7 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 	
 	massComputeDegreeVector(mesh, Ntotal, solver->ogs, degree);
 	
-	for(iint n=0; n<Ntotal; ++n) { // need to weight inner products{
+	for(int n=0; n<Ntotal; ++n) { // need to weight inner products{
 		if(degree[n] == 0) printf("WARNING!!!!\n");
 		invDegree[n] = 1./degree[n];
 	}
@@ -354,8 +354,8 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 	
 	//fill geometric factors in halo
 	if(mesh->totalHaloPairs) {
-		iint Nlocal = mesh->Nelements*mesh->Np;
-		iint Nhalo = mesh->totalHaloPairs*mesh->Np;
+		int Nlocal = mesh->Nelements*mesh->Np;
+		int Nhalo = mesh->totalHaloPairs*mesh->Np;
 		
 		dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
 		
@@ -375,8 +375,8 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 	// build weights for continuous SEM L2 project --->
 	dfloat *localMM = (dfloat*) calloc(Ntotal, sizeof(dfloat));
 	
-	for(iint e=0; e<mesh->Nelements; ++e) {
-		for(iint n=0; n<mesh->Np; ++n) {
+	for(int e=0; e<mesh->Nelements; ++e) {
+		for(int n=0; n<mesh->Np; ++n) {
 			dfloat wJ = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + GWJID*mesh->Np];
 			localMM[n+e*mesh->Np] = wJ;
 		}
@@ -411,17 +411,17 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 	
 	
 	// count elements that contribute to global C0 gather-scatter
-	iint globalCount = 0;
-	iint localCount = 0;
-	iint *localHaloFlags = (iint*) calloc(mesh->Np*mesh->Nelements, sizeof(int));
+	int globalCount = 0;
+	int localCount = 0;
+	int *localHaloFlags = (int*) calloc(mesh->Np*mesh->Nelements, sizeof(int));
 	
-	for(iint n=0; n<mesh->Np*mesh->Nelements; ++n) {
+	for(int n=0; n<mesh->Np*mesh->Nelements; ++n) {
 		localHaloFlags[mesh->gatherLocalIds[n]] += mesh->gatherHaloFlags[n];
 	}
 	
-	for(iint e=0; e<mesh->Nelements; ++e) {
-		iint isHalo = 0;
-		for(iint n=0; n<mesh->Np; ++n) {
+	for(int e=0; e<mesh->Nelements; ++e) {
+		int isHalo = 0;
+		for(int n=0; n<mesh->Np; ++n) {
 			if(localHaloFlags[e*mesh->Np+n]>0) {
 				isHalo = 1;
 			}
@@ -435,15 +435,15 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 	
 	//  printf("local = %d, global = %d\n", localCount, globalCount);
 	
-	solver->globalGatherElementList    = (iint*) calloc(globalCount, sizeof(iint));
-	solver->localGatherElementList = (iint*) calloc(localCount, sizeof(iint));
+	solver->globalGatherElementList    = (int*) calloc(globalCount, sizeof(int));
+	solver->localGatherElementList = (int*) calloc(localCount, sizeof(int));
 	
 	globalCount = 0;
 	localCount = 0;
 	
-	for(iint e=0; e<mesh->Nelements; ++e) {
-		iint isHalo = 0;
-		for(iint n=0; n<mesh->Np; ++n) {
+	for(int e=0; e<mesh->Nelements; ++e) {
+		int isHalo = 0;
+		for(int n=0; n<mesh->Np; ++n) {
 			if(localHaloFlags[e*mesh->Np+n]>0) {
 				isHalo = 1;
 			}
@@ -462,11 +462,11 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 	
 	if(globalCount)
 		solver->o_globalGatherElementList =
-		  mesh->device.malloc(globalCount*sizeof(iint), solver->globalGatherElementList);
+		  mesh->device.malloc(globalCount*sizeof(int), solver->globalGatherElementList);
 		  
 	if(localCount)
 		solver->o_localGatherElementList =
-		  mesh->device.malloc(localCount*sizeof(iint), solver->localGatherElementList);
+		  mesh->device.malloc(localCount*sizeof(int), solver->localGatherElementList);
 		  
 	free(localHaloFlags);
 	
