@@ -4,9 +4,6 @@
 
 #include "occa.hpp"
 
-#define iint int
-#define iintString "int"
-
 #if 1
 #define dfloat double
 #define dfloatString "double"
@@ -48,7 +45,7 @@ int main(int argc, char **argv){
   /* KERNEL INFO */
   occa::kernelInfo kernelInfo;
   kernelInfo.addDefine("p_blockSize", blockSize);
-  kernelInfo.addDefine("iint", iintString);
+  kernelInfo.addDefine("dlong", "int");
   kernelInfo.addDefine("dfloat", dfloatString);
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
   
@@ -77,7 +74,7 @@ int main(int argc, char **argv){
     
     double elapsed = device.timeBetween(startTag, stopTag)/(double)Ntests;
     dfloat BW = sizeof(dfloat)*(N*2)/(double)(1024*1024*1024*elapsed); // neglect write out
-    printf("%d %g %g %d\n", N, elapsed, BW, (iint)(h_result[0]/Ntests));
+    printf("%d %g %g %d\n", N, elapsed, BW, (int)(h_result[0]/Ntests));
     
   }
 

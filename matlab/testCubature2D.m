@@ -69,7 +69,7 @@ iw = [w,w,w];
 sV = Vandermonde2D(N, ir(:), is(:));
 sInterp = sV/V;
 
-iInterp = [sInterp(1:Nfi,FaceNodes(:,1));sInterp(Nfi+1:2*Nfi,FaceNodes(:,2));sInterp(2*Nfi+1:3*Nfi,FaceNodes(:,3))];
+interp = [sInterp(1:Nfi,FaceNodes(:,1));sInterp(Nfi+1:2*Nfi,FaceNodes(:,2));sInterp(2*Nfi+1:3*Nfi,FaceNodes(:,3))];
 
 iLIFT = V*V'*sInterp'*diag(iw(:));
 

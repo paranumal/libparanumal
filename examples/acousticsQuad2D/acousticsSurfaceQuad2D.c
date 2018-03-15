@@ -8,20 +8,20 @@ void acousticsSurfaceQuad2D(mesh2D *mesh){
   dfloat LIFT = mesh->N*(mesh->N+1.)/2.;
   
   // for all elements
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     // for all face nodes of all elements
-    for(iint n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+    for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
       // load surface geofactors for this face
-      iint sid = mesh->Nsgeo*(e*mesh->Nfaces*mesh->Nfp+n);
+      int sid = mesh->Nsgeo*(e*mesh->Nfaces*mesh->Nfp+n);
       dfloat nx = mesh->sgeo[sid+0];
       dfloat ny = mesh->sgeo[sid+1];
       dfloat sJ = mesh->sgeo[sid+2];
       dfloat invJ = mesh->sgeo[sid+3];
 
       // indices of negative and positive traces of face node
-      iint id  = e*mesh->Nfp*mesh->Nfaces + n;
-      iint idM = mesh->Nfields*mesh->vmapM[id];
-      iint idP = mesh->Nfields*mesh->vmapP[id];
+      int id  = e*mesh->Nfp*mesh->Nfaces + n;
+      int idM = mesh->Nfields*mesh->vmapM[id];
+      int idP = mesh->Nfields*mesh->vmapP[id];
       
       // load negative trace node values of q
       dfloat uM = mesh->q[idM+0];

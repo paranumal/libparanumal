@@ -1,13 +1,13 @@
 
-kernel void haloExtract(const iint NhaloElements,
-			      const iint              Nentries,
-			      const iint   *restrict haloElements,
+kernel void haloExtract(const dlong NhaloElements,
+			      const int              Nentries,
+			      const dlong   *restrict haloElements,
 			      const dfloat *restrict q,
 			            dfloat *restrict haloq){
 
-  for(iint e=0;e<NhaloElements;++e;outer0){  // for all elements
-    for(iint n=0;n<Nentries;++n;inner0){     // for all entries in this element
-      const iint id = haloElements[e];
+  for(dlong e=0;e<NhaloElements;++e;outer0){  // for all elements
+    for(int n=0;n<Nentries;++n;inner0){     // for all entries in this element
+      const dlong id = haloElements[e];
       haloq[n + Nentries*e] = q[n + Nentries*id];
     }
   }

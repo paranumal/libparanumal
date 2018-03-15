@@ -1,8 +1,5 @@
 #include "ellipticTri2D.h"
-//this is bad coding practice, added for quick testing
-dfloat timeAx;
-iint NAx;
-//end
+
 void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options){
 
   mesh_t *mesh = solver->mesh;
@@ -14,86 +11,74 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
   dfloat *gradSendBuffer = solver->gradSendBuffer;
   dfloat *gradRecvBuffer = solver->gradRecvBuffer;
 
-  dfloat alpha = 0., alphaG =0.;
-  iint Nblock = solver->Nblock;
+  dfloat alpha = 0., alphaG = 0.;
+  dlong Nblock = solver->Nblock;
   dfloat *tmp = solver->tmp;
   occa::memory &o_tmp = solver->o_tmp;
 
   if(strstr(options, "CONTINUOUS")){
-    ogs_t *nonHalo = solver->nonHalo;
-    ogs_t *halo = solver->halo;
+    ogs_t *ogs = solver->mesh->ogs;
 
     if(solver->allNeumann)
       //solver->innerProductKernel(mesh->Nelements*mesh->Np, solver->o_invDegree,o_q, o_tmp);
       mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
 
-    if(halo->Ngather) {
-      occa::streamTag startAxtime = mesh->device.tagStream();
-
+    if(ogs->NhaloGather) {
       if (strstr(options, "SPARSE")){
         solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
-            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_IndTchar,mesh->o_SssT,
+            mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
             mesh->o_MM, lambda, o_q, o_Aq);
-      }
-      else{
+      } else{
         solver->partialAxKernel(solver->NglobalGatherElements, solver->o_globalGatherElementList,
             mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
             mesh->o_MM, lambda, o_q, o_Aq);
       }
-      occa::streamTag stopAxtime = mesh->device.tagStream();
-      NAx++;
-      timeAx += mesh->device.timeBetween(startAxtime, stopAxtime);
-      mesh->gatherKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, o_Aq, halo->o_gatherTmp);
-      halo->o_gatherTmp.copyTo(halo->gatherTmp);
+      mesh->device.finish();
+      mesh->device.setStream(solver->dataStream);
+      mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, o_Aq, ogs->o_haloGatherTmp);
+      ogs->o_haloGatherTmp.asyncCopyTo(ogs->haloGatherTmp);
+      mesh->device.setStream(solver->defaultStream);
     }
-    if(nonHalo->Ngather){
-      occa::streamTag startAxtime = mesh->device.tagStream();
+    if(solver->NlocalGatherElements){
       if (strstr(options, "SPARSE")){
         solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
-            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_IndTchar,mesh->o_SssT,
+            mesh->o_ggeo, mesh->o_sparseStackedNZ, mesh->o_sparseSrrT, mesh->o_sparseSrsT, mesh->o_sparseSssT,
             mesh->o_MM, lambda, o_q, o_Aq);
-      }
-      else {
+      } else {
         solver->partialAxKernel(solver->NlocalGatherElements, solver->o_localGatherElementList,
             mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
             mesh->o_MM, lambda, o_q, o_Aq);
       }
-      occa::streamTag stopAxtime = mesh->device.tagStream();
-      NAx++;    
-      timeAx += mesh->device.timeBetween(startAxtime, stopAxtime);
-
     }
     if(solver->allNeumann) {
       o_tmp.copyTo(tmp);
 
-      for(iint n=0;n<Nblock;++n)
+      for(dlong n=0;n<Nblock;++n)
         alpha += tmp[n];
 
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
       alphaG *= solver->allNeumannPenalty*solver->allNeumannScale*solver->allNeumannScale;
     }
 
+    // finalize gather using local and global contributions
+    if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mapSgn, o_Aq);
+    if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_Aq);
+    if (strstr(options,"SPARSE")) solver->dotMultiplyKernel(mesh->Np*mesh->Nelements, o_Aq, mesh->o_mapSgn, o_Aq);
+
     // C0 halo gather-scatter (on data stream)
-    if(halo->Ngather) {
-      occa::streamTag tag;
+    if(ogs->NhaloGather) {
+      mesh->device.setStream(solver->dataStream);
+      mesh->device.finish();
 
       // MPI based gather scatter using libgs
-      gsParallelGatherScatter(halo->gatherGsh, halo->gatherTmp, dfloatString, "add");
+      gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
 
       // copy totally gather halo data back from HOST to DEVICE
-      mesh->device.setStream(solver->dataStream);
-      halo->o_gatherTmp.asyncCopyFrom(halo->gatherTmp);
-
-      // wait for async copy
-      tag = mesh->device.tagStream();
-      mesh->device.waitFor(tag);
-
+      ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
+    
       // do scatter back to local nodes
-      mesh->scatterKernel(halo->Ngather, halo->o_gatherOffsets, halo->o_gatherLocalIds, halo->o_gatherTmp, o_Aq);
-
-      // make sure the scatter has finished on the data stream
-      tag = mesh->device.tagStream();
-      mesh->device.waitFor(tag);
+      mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, ogs->o_haloGatherTmp, o_Aq);
+      mesh->device.setStream(solver->defaultStream);
     }
 
     if(solver->allNeumann) {
@@ -102,16 +87,18 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
       //solver->scaledAddKernel(mesh->Nelements*mesh->Np, alphaG, solver->o_invDegree, one, o_Aq);
     }
 
-    // finalize gather using local and global contributions
+    mesh->device.finish();    
+    mesh->device.setStream(solver->dataStream);
+    mesh->device.finish();    
     mesh->device.setStream(solver->defaultStream);
-    if(nonHalo->Ngather)
-      mesh->gatherScatterKernel(nonHalo->Ngather, nonHalo->o_gatherOffsets, nonHalo->o_gatherLocalIds, o_Aq);
 
+    //post-mask
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Aq);
 
   } else if(strstr(options, "IPDG")) {
-    iint offset = 0;
+    dlong offset = 0;
     dfloat alpha = 0., alphaG =0.;
-    iint Nblock = solver->Nblock;
+    dlong Nblock = solver->Nblock;
     dfloat *tmp = solver->tmp;
     occa::memory &o_tmp = solver->o_tmp;
 
@@ -187,7 +174,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     if(solver->allNeumann) {
       o_tmp.copyTo(tmp);
 
-      for(iint n=0;n<Nblock;++n)
+      for(dlong n=0;n<Nblock;++n)
         alpha += tmp[n];
 
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
@@ -199,7 +186,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     if(mesh->totalHaloPairs){
       offset = mesh->Nelements;
       if(strstr(options, "NODAL")) {
-        solver->partialGradientKernel(mesh->Nelements,
+        solver->partialGradientKernel(mesh->totalHaloPairs,
             offset,
             mesh->o_vgeo,
             mesh->o_DrT,
@@ -207,7 +194,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
             o_q,
             solver->o_grad);
       } else if(strstr(options, "BERN")) {
-        solver->partialGradientKernel(mesh->Nelements,
+        solver->partialGradientKernel(mesh->totalHaloPairs,
             offset,
             mesh->o_vgeo,
             mesh->o_D1ids,
@@ -264,9 +251,8 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
   } else if (strstr(options, "BRDG")){
 
-    iint offset = 0;
     dfloat alpha = 0., alphaG =0.;
-    iint Nblock = solver->Nblock;
+    dlong Nblock = solver->Nblock;
     dfloat *tmp = solver->tmp;
     occa::memory &o_tmp = solver->o_tmp;
 
@@ -322,7 +308,7 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
 
       o_tmp.copyTo(tmp);
 
-      for(iint n=0;n<Nblock;++n)
+      for(int n=0;n<Nblock;++n)
         alpha += tmp[n];
 
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
@@ -387,16 +373,15 @@ void ellipticOperator2D(solver_t *solver, dfloat lambda, occa::memory &o_q, occa
     if(solver->allNeumann)
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
   }
-  // o_Aq.copyFrom(o_q);
 
   occaTimerToc(mesh->device,"AxKernel");
 }
 
-dfloat ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
+void ellipticScaledAdd(solver_t *solver, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
 
   mesh_t *mesh = solver->mesh;
 
-  iint Ntotal = mesh->Nelements*mesh->Np;
+  dlong Ntotal = mesh->Nelements*mesh->Np;
 
   // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
   occaTimerTic(mesh->device,"scaledAddKernel");
@@ -412,8 +397,8 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   dfloat *tmp = solver->tmp;
-  iint Nblock = solver->Nblock;
-  iint Ntotal = mesh->Nelements*mesh->Np;
+  dlong Nblock = solver->Nblock;
+  dlong Ntotal = mesh->Nelements*mesh->Np;
 
   occa::memory &o_tmp = solver->o_tmp;
 
@@ -429,7 +414,7 @@ dfloat ellipticWeightedInnerProduct(solver_t *solver,
   o_tmp.copyTo(tmp);
 
   dfloat wab = 0;
-  for(iint n=0;n<Nblock;++n){
+  for(dlong n=0;n<Nblock;++n){
     wab += tmp[n];
   }
 
@@ -446,8 +431,8 @@ dfloat ellipticInnerProduct(solver_t *solver,
 
   mesh_t *mesh = solver->mesh;
   dfloat *tmp = solver->tmp;
-  iint Nblock = solver->Nblock;
-  iint Ntotal = mesh->Nelements*mesh->Np;
+  dlong Nblock = solver->Nblock;
+  dlong Ntotal = mesh->Nelements*mesh->Np;
 
   occa::memory &o_tmp = solver->o_tmp;
 
@@ -458,7 +443,7 @@ dfloat ellipticInnerProduct(solver_t *solver,
   o_tmp.copyTo(tmp);
 
   dfloat ab = 0;
-  for(iint n=0;n<Nblock;++n){
+  for(dlong n=0;n<Nblock;++n){
     ab += tmp[n];
   }
 
@@ -469,51 +454,81 @@ dfloat ellipticInnerProduct(solver_t *solver,
 }
 
 int ellipticSolveTri2D(solver_t *solver, dfloat lambda, dfloat tol,
-    occa::memory &o_r, occa::memory &o_x, const char *options, iint NblockV, iint NnodesV){
+    occa::memory &o_r, occa::memory &o_x, const char *options){
 
   mesh2D *mesh = solver->mesh;
-  printf("N=%d \n", mesh->N);
-  //KS for testing
-  /*  iint Nbytes = mesh->Np*(6+mesh->Np*5);
-      int flops = mesh->Np* (mesh->Np *10+15); */
-  //TW testing
-  //  iint Nbytes = mesh->Np*(6+mesh->Np);//assume the operators are cached
-  iint Nbytes = sizeof(dfloat)*mesh->Np*(6+0*mesh->Np);
-  //replace with mesh->Np*(6+4*mesh->Np); if they are NOT`
-  //TW v1:
-  //  iint flops = mesh->Np*(mesh->Np*8+7);
-  //TW v2
-  iint flops = mesh->Np*(mesh->Np*6+5);
+
+/*
+  dfloat *t = (dfloat *) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+  dfloat *Pt = (dfloat *) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+  occa::memory o_t = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat),t);
+  occa::memory o_Pt = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat),t);
+  
+  char fname[BUFSIZ];
+  sprintf(fname, "Precon.m");
+  FILE *fp = fopen(fname, "w");
+
+  fprintf(fp, "P = [");
+  agmgLevel **levels = solver->precon->parAlmond->levels;
+  for (int n=0;n<mesh->Np*mesh->Nelements;n++) {
+    for (int m=0;m<mesh->Np*mesh->Nelements;m++) t[m] =0;
+    o_Pt.copyFrom(t);
+
+    t[n] = 1;
+    o_t.copyFrom(t);
+    
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_t);
+    ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_t, dfloatString, "add");
+    //solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, o_t, o_t);
+
+    o_t.copyTo(t);
+    dfloat max = 0;
+    for (int n=0;n<mesh->Np*mesh->Nelements;n++) max = mymax(max,t[n]);
+
+    if (max>1E-5) ellipticPreconditioner2D(solver, lambda, o_t, o_Pt, options);
+    //levels[0]->device_smooth(levels[0]->smoothArgs, o_t, o_Pt, false);
+    //ellipticOperator2D(solver, lambda, o_t, o_Pt, options);
 
 
+    //levels[0]->device_smooth(levels[0]->smoothArgs, o_t, levels[0]->o_x, true);
 
-  Nbytes /= 2; 
-  printf("copyint %d elements \n", Nbytes*mesh->Nelements);  
-  occa::memory o_foo = mesh->device.malloc(Nbytes*mesh->Nelements);
-  occa::memory o_bah = mesh->device.malloc(Nbytes*mesh->Nelements);
+    // res = rhs - A*x
+    //levels[0]->device_Ax(levels[0]->AxArgs,levels[0]->o_x,levels[0]->o_res);
+    //dfloat one = 1.0, none = -1.0;
+    //solver->scaledAddKernel(mesh->Np*mesh->Nelements, one, o_t, none, levels[0]->o_res);
 
-  mesh->device.finish();
+    //solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, levels[0]->o_res, levels[0]->o_res);
+    //levels[1]->device_coarsen(levels[1]->coarsenArgs, levels[0]->o_res, levels[1]->o_rhs);
+    //levels[0]->device_gather (levels[0]->gatherArgs,  o_t, levels[0]->o_rhs);
+    //levels[1]->device_smooth(levels[1]->smoothArgs, levels[1]->o_rhs, levels[1]->o_x, true);
+    //levels[1]->o_x.copyFrom(levels[1]->o_rhs);
+    //levels[0]->device_scatter(levels[0]->scatterArgs,  levels[0]->o_rhs, o_Pt);
+    //levels[1]->device_prolongate(levels[1]->prolongateArgs, levels[1]->o_x, o_Pt);
+    //solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, o_Pt, o_Pt);
+    //levels[0]->device_smooth(levels[0]->smoothArgs, o_t, o_Pt, false);
 
-  occa::streamTag startCopy = mesh->device.tagStream();
-  iint Ntrials = 10;        
-  for(int it=0;it<Ntrials;++it){
-    o_bah.copyTo(o_foo);
+    //solver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, o_Pt, o_Pt);
+    //ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_Pt, dfloatString, "add");
+    //if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Pt);
+
+    //if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_Pt);
+    //o_Pt.copyFrom(o_t);
+
+    o_Pt.copyTo(Pt);
+
+    for (int m=0;m<mesh->Np*mesh->Nelements;m++) 
+      fprintf(fp, "%.10e,", Pt[m]);
+
+    fprintf(fp, "\n");
   }
-  occa::streamTag endCopy = mesh->device.tagStream();
-  double  copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
-printf("copy elapsed %f ", copyElapsed);
+  fprintf(fp, "];\n");
+  fclose(fp);
+*/
 
-  timeAx = 0.0f;
+  int Niter = 0;
+  int maxIter = 5000; 
 
-
-  // gather-scatter
-  if(strstr(options, "CONTINUOUS"))
-    ellipticParallelGatherScatterTri2D(mesh, solver->ogs, o_r, o_r, dfloatString, "add");
-
-  int Niter;
-  iint maxIter = 500; 
-
-  double start, end;
+  double start = 0.0, end =0.0;
 
   if(strstr(options,"VERBOSE")){
     mesh->device.finish();
@@ -529,11 +544,8 @@ printf("copy elapsed %f ", copyElapsed);
     Niter = pcg      (solver, options, lambda, o_r, o_x, tol, maxIter);
   }
   occaTimerToc(mesh->device,"Linear Solve");
-  printf("time per Ax kernel %16.17f (executed %d times) \n", timeAx/NAx, NAx);
-  double kernelElapsed = timeAx/NAx;
 
-
-  iint rank;
+  int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   if(strstr(options,"VERBOSE")){
@@ -543,42 +555,24 @@ printf("copy elapsed %f ", copyElapsed);
 
     occa::printTimer();
 
-    printf("Solver converged in %d iters \n", Niter );
+    if(rank==0) printf("Solver converged in %d iters \n", Niter );
 
-    iint size;
+    int size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    iint   localDofs = mesh->Np*mesh->Nelements;
-    iint   localElements = mesh->Nelements;
+    hlong   localDofs = (hlong) mesh->Np*mesh->Nelements;
+    hlong   localElements = (hlong) mesh->Nelements;
     double globalElapsed;
-    iint   globalDofs;
-    iint   globalElements;
-    double globalCopyElapsed;
+    hlong   globalDofs;
+    hlong   globalElements;
 
     MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&localElements,&globalElements,1, MPI_IINT,   MPI_SUM, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&copyElapsed,&globalCopyElapsed,1, MPI_DOUBLE,   MPI_MAX, 0, MPI_COMM_WORLD );
-
-
+    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_HLONG,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localElements,&globalElements,1, MPI_HLONG,   MPI_SUM, 0, MPI_COMM_WORLD );
 
     if (rank==0){
-
-      double copyBandwidth   = mesh->Nelements*((Nbytes*Ntrials*2.)/(1e9*globalCopyElapsed));
-      double kernelBandwidth = mesh->Nelements*((Nbytes*2)/(1e9*kernelElapsed));
-      double kernelGFLOPS = mesh->Nelements*flops/(1e9*kernelElapsed);  
-      //globalElements*flops*iterations/(1024*1024*1024.*globalElapsed);      
-      double roofline = mesh->Nelements*flops*Ntrials/(1e9*globalCopyElapsed);
-
-      // double roofline = mesh->Nelements*flops*Ntrials/(1e9*copyElapsed);
-      //( BWfromcopy512(N)*W)/(8*D);
-      // double roofline = copyBandwidth*flops/(Nbytes*2*8);
-      printf("copy BW %16.17g achieved BW %16.17g\n", copyBandwidth, kernelBandwidth);
-      printf("ROOFLINE %16.17g \n", roofline);
-      printf("GFLOPS %16.17f \n", kernelGFLOPS);
-      printf("PARAMETERS %d %d %16.17f \n ", NblockV, NnodesV, kernelGFLOPS );
-      printf("%02d %02d %d %d %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
-          size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
+      printf("%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",
+             size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, solver->precon->preconBytes/(1E9));
     }
   }
   return Niter;

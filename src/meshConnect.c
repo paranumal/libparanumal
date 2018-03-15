@@ -7,27 +7,27 @@
 // the neighbor element/face indices (if any)
 typedef struct{
 
-  iint element;
-  iint face;
+  dlong element;
+  int face;
 
-  iint elementNeighbor; // neighbor element
-  iint faceNeighbor;    // neighbor face
+  dlong elementNeighbor; // neighbor element
+  int faceNeighbor;    // neighbor face
 
-  iint NfaceVertices;
+  int NfaceVertices;
   
-  iint v[4];
+  hlong v[4];
 
 }face_t;
 
 // comparison function that orders vertices 
 // based on their combined vertex indices
 int compareVertices(const void *a, 
-		    const void *b){
+                    const void *b){
 
   face_t *fa = (face_t*) a;
   face_t *fb = (face_t*) b;
   
-  for(iint n=0;n<fa->NfaceVertices;++n){
+  for(int n=0;n<fa->NfaceVertices;++n){
     if(fa->v[n] < fb->v[n]) return -1;
     if(fa->v[n] > fb->v[n]) return +1;
   }
@@ -38,7 +38,7 @@ int compareVertices(const void *a,
 /* comparison function that orders element/face
    based on their indexes */
 int compareFaces(const void *a, 
-		 const void *b){
+                 const void *b){
 
   face_t *fa = (face_t*) a;
   face_t *fb = (face_t*) b;
@@ -61,13 +61,13 @@ void meshConnect(mesh_t *mesh){
   face_t *faces = 
     (face_t*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(face_t));
   
-  int cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint f=0;f<mesh->Nfaces;++f){
+  dlong cnt = 0;
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
       
-      for(iint n=0;n<mesh->NfaceVertices;++n){
-	iint vid = e*mesh->Nverts + mesh->faceVertices[f*mesh->NfaceVertices+n];
-	faces[cnt].v[n] = mesh->EToV[vid];
+      for(int n=0;n<mesh->NfaceVertices;++n){
+        dlong vid = e*mesh->Nverts + mesh->faceVertices[f*mesh->NfaceVertices+n];
+        faces[cnt].v[n] = mesh->EToV[vid];
       }
       
       mysort(faces[cnt].v, mesh->NfaceVertices, "descending");
@@ -87,9 +87,9 @@ void meshConnect(mesh_t *mesh){
   
   /* sort faces by their vertex number pairs */
   qsort(faces, 
-	mesh->Nelements*mesh->Nfaces,
-	sizeof(face_t),
-	compareVertices);
+        mesh->Nelements*mesh->Nfaces,
+        sizeof(face_t),
+        compareVertices);
   
   /* scan through sorted face lists looking for adjacent
      faces that have the same vertex ids */
@@ -108,17 +108,17 @@ void meshConnect(mesh_t *mesh){
 
   /* resort faces back to the original element/face ordering */
   qsort(faces, 
-	mesh->Nelements*mesh->Nfaces,
-	sizeof(face_t),
-	compareFaces);
+        mesh->Nelements*mesh->Nfaces,
+        sizeof(face_t),
+        compareFaces);
 
   /* extract the element to element and element to face connectivity */
-  mesh->EToE = (iint*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(iint));
-  mesh->EToF = (iint*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(iint));
+  mesh->EToE = (dlong*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(dlong));
+  mesh->EToF = (int*)   calloc(mesh->Nelements*mesh->Nfaces, sizeof(int  ));
 
   cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint f=0;f<mesh->Nfaces;++f){
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
       mesh->EToE[cnt] = faces[cnt].elementNeighbor;
       mesh->EToF[cnt] = faces[cnt].faceNeighbor;
 
@@ -128,12 +128,11 @@ void meshConnect(mesh_t *mesh){
     }
   }
 
-  iint Nbcs = 0;
-  for(iint e=0;e<mesh->Nelements;++e)
-    for(iint f=0;f<mesh->Nfaces;++f)
-      if(mesh->EToE[e*mesh->Nfaces+f]==-1)
-	++Nbcs;
-
+  // dlong Nbcs = 0;
+  // for(dlong e=0;e<mesh->Nelements;++e)
+  //   for(int f=0;f<mesh->Nfaces;++f)
+  //     if(mesh->EToE[e*mesh->Nfaces+f]==-1)
+  //       ++Nbcs;
   //printf("Nelements = %d, Nbcs = %d\n", mesh->Nelements, Nbcs);
 }
 

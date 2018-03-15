@@ -41,13 +41,7 @@ void meshParallelPrint2D(mesh2D *mesh);
 void meshVTU2D(mesh2D *mesh, char *fileName);
 
 // print out solution at plot nodes 
-void meshPlotVTU2D(mesh2D *mesh, char *fileNameBase, iint fld);
-
-// sort entries in an array in parallel
-void parallelSort(iint N, void *vv, size_t sz,
-		  int (*compare)(const void *, const void *),
-		  void (*match)(void *, void *)
-		  );
+void meshPlotVTU2D(mesh2D *mesh, char *fileNameBase, int fld);
 
 // compute geometric factors for local to physical map 
 void meshGeometricFactorsTri2D(mesh2D *mesh);
@@ -78,6 +72,9 @@ void occaOptimizeGradientQuad2D(mesh2D *mesh, dfloat *q, dfloat *dqdx, dfloat *d
 // serial face-node to face-node connection
 void meshConnectFaceNodes2D(mesh2D *mesh);
 
+// serial face-mode to face-mode connection
+void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V);
+
 // halo connectivity information
 void meshHaloSetup2D(mesh2D *mesh);
 
@@ -107,48 +104,23 @@ void meshBuildFaceNodesQuad2D(mesh2D *mesh);
 mesh2D *meshSetupTri2D(char *filename, int N);
 mesh2D *meshSetupQuad2D(char *filename, int N);
 
-void meshParallelGatherScatter(mesh2D *mesh,
-			       ogs_t *ogs, 
-			       occa::memory &o_v,
-			       occa::memory &o_gsv,
-			       const char *type,
-			       const char *op);
-
-
-ogs_t *meshParallelGatherScatterSetup(mesh2D *mesh,    // provides DEVICE
-				      iint Nlocal,     // number of local nodes
-				      iint Nbytes,     // number of bytes per node
-				      iint *localIds,  // local index of nodes
-				      iint *baseIds,   // gather index of their base nodes
-				      iint *haloFlags); // 1 for halo node, 0 for not
-
-
 // set up OCCA device and copy generic element info to device
 void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
-
-
-// compute solution to cavity problem
-void acousticsCavitySolution2D(dfloat x, dfloat y, dfloat time, 
-			       dfloat *u, dfloat *v, dfloat *p);
-
-// initial Gaussian pulse
-void acousticsGaussianPulse2D(dfloat x, dfloat y, dfloat t,
-			      dfloat *u, dfloat *v, dfloat *p);
 
 void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels); 
 
 //MRAB weighted mesh partitioning
 void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,
-                                      iint numLevels, iint *levels);
+                                      int numLevels, int *levels);
 
 
 // Setup probe information
 // Probe Setup : AK
 void meshProbeSetup2D(mesh2D *mesh, dfloat *pX, dfloat *pY);
-void meshVandermonde2D(iint N, iint sizeR, dfloat *r, dfloat *s, dfloat *V);
-dfloat meshSimplex2D(dfloat a, dfloat b, iint i, iint j);
-dfloat meshJacobiP(dfloat a, dfloat alpha, dfloat beta, iint N);
-dfloat meshFactorial(iint n);
+void meshVandermonde2D(int N, int sizeR, dfloat *r, dfloat *s, dfloat *V);
+dfloat meshSimplex2D(dfloat a, dfloat b, int i, int j);
+dfloat meshJacobiP(dfloat a, dfloat alpha, dfloat beta, int N);
+dfloat meshFactorial(int n);
 
 
 #define norm(a,b) ( sqrt((a)*(a)+(b)*(b)) )
@@ -173,7 +145,8 @@ dfloat meshFactorial(iint n);
 #define NYID 1  
 #define SJID 2  
 #define IJID 3  
-#define WSJID 4
-#define IHID 5
+#define IHID 4
+#define WSJID 5
+#define WIJID 6
 #endif
 

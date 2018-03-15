@@ -11,8 +11,6 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
- 
- 
   // SET OPTIONS
   // mode        = TEST, SOLVER // do not use test mode, for developing purposes
   // relaxation  = CUBATURE, COLLOCATION, 
@@ -83,11 +81,11 @@ int main(int argc, char **argv){
        exit(-1);
     }
 
-    iint SCALE[4]; 
+    int SCALE[4]; 
 
     SCALE[0] = 150; SCALE[1] = 300;  SCALE[2] = 10;   SCALE[3] = 20;   
     
-    for(iint i=0; i<1;i++){
+    for(int i=0; i<1;i++){
 
       // mesh->Ntscale=SCALE[i];
       mesh->Ntscale=i;

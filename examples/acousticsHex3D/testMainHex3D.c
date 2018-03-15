@@ -15,7 +15,7 @@ int main(int argc, char **argv){
   int N = atoi(argv[2]);
 
   // set up mesh stuff
-  mesh3D *meshSetupHex3D(char *, iint);
+  mesh3D *meshSetupHex3D(char *, int);
   mesh3D *mesh = meshSetupHex3D(argv[1], N);
 
   // set up acoustics stuff
@@ -26,18 +26,18 @@ int main(int argc, char **argv){
 
   dfloat sumError = 0;
   
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n)
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n)
       p[e*mesh->Np+n] = mesh->z[e*mesh->Np+n];
 
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       dfloat dpdr = 0, dpds = 0, dpdt = 0;
-      for(iint m=0;m<mesh->Np;++m){
+      for(int m=0;m<mesh->Np;++m){
 	dpdr += mesh->Dr[n*mesh->Np+m]*p[e*mesh->Np+m];
 	dpds += mesh->Ds[n*mesh->Np+m]*p[e*mesh->Np+m];
 	dpdt += mesh->Dt[n*mesh->Np+m]*p[e*mesh->Np+m];
       }
-      iint base = e*mesh->Np*mesh->Nvgeo + n;
+      int base = e*mesh->Np*mesh->Nvgeo + n;
       dfloat drdx = mesh->vgeo[base + RXID*mesh->Np];
       dfloat dsdx = mesh->vgeo[base + SXID*mesh->Np];
       dfloat dtdx = mesh->vgeo[base + TXID*mesh->Np];

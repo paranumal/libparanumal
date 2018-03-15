@@ -1,152 +1,135 @@
 #include "ins3D.h"
 
 // complete a time step using LSERK4
-void insHelmholtzStep3D(ins_t *ins, iint tstep,  iint haloBytes,
-			dfloat * sendBuffer, dfloat * recvBuffer, 
-			char   * options){
+void insHelmholtzStep3D(ins_t *ins, int tstep, const char* options){
   
   mesh3D *mesh = ins->mesh; 
-  
   solver_t *solver = ins->vSolver; 
   
   dfloat t = tstep*ins->dt + ins->dt;
   
-  iint offset = mesh->Nelements+mesh->totalHaloPairs;
+  int offset = mesh->Nelements+mesh->totalHaloPairs;
+  int subcycling = (strstr(options,"SUBCYCLING")) ? 1:0;
+  
+  
+   // compute all forcing i.e. f^(n+1) - grad(Pr)
+  ins->helmholtzRhsForcingKernel(mesh->Nelements,
+			                           subcycling,
+                                 mesh->o_vgeo,
+                                 mesh->o_MM,
+                                 ins->idt,
+                                 ins->inu,
+                                 ins->a0,
+                                 ins->a1,
+                                 ins->a2,
+                                 ins->b0,
+                                 ins->b1,
+                                 ins->b2,
+                                 ins->c0,
+                                 ins->c1,
+                                 ins->c2,
+                                 ins->index,
+                                 offset,
+                                 ins->o_U,
+                                 ins->o_V,
+                                 ins->o_W,
+                                 ins->o_NU,
+                                 ins->o_NV,
+                                 ins->o_NW,
+                                 ins->o_Px,
+                                 ins->o_Py,
+                                 ins->o_Pz,
+                                 ins->o_rhsU,
+                                 ins->o_rhsV,
+                                 ins->o_rhsW);
+  
+  if (strstr(ins->vSolverOptions,"CONTINUOUS")) {
+    ins->helmholtzRhsBCKernel(mesh->Nelements,
+                              mesh->o_ggeo,
+                              mesh->o_sgeo,
+                              mesh->o_SrrT,
+                              mesh->o_SrsT,
+                              mesh->o_SrtT,
+                              mesh->o_SsrT,
+                              mesh->o_SssT,
+                              mesh->o_SstT,
+                              mesh->o_StrT,
+                              mesh->o_StsT,
+                              mesh->o_SttT,
+                              mesh->o_MM,
+                              mesh->o_vmapM,
+                              mesh->o_sMT,
+                              ins->lambda,
+                              t,
+                              mesh->o_x,
+                              mesh->o_y,
+                              mesh->o_z,
+                              ins->o_VmapB,
+                              ins->o_rhsU,
+                              ins->o_rhsV,
+                              ins->o_rhsW);
 
-  iint rhsPackingMode = (strstr(options, "VECTORHELMHOLTZ")) ? 1:0;
-  
-  if(strstr(options,"SUBCYCLING")){
-     // compute all forcing i.e. f^(n+1) - grad(Pr)
-    ins->helmholtzRhsForcingKernel(mesh->Nelements,
-				                          rhsPackingMode,
-                                   mesh->o_vgeo,
-                                   mesh->o_MM,
-                                   ins->a0,
-                                   ins->a1,
-                                   ins->a2,
-                                   ins->b0,
-                                   ins->b1,
-                                   ins->b2,
-                                   ins->c0,
-                                   ins->c1,
-                                   ins->c2,
-                                   ins->index,
-                                   offset,
-                                   ins->o_U,
-                                   ins->o_V,
-                                   ins->o_W,
-                                   ins->o_NU,
-                                   ins->o_NV,
-                                   ins->o_NW,
-                                   ins->o_Px,
-                                   ins->o_Py,
-                                   ins->o_Pz,
-                                   ins->o_rhsU,
-                                   ins->o_rhsV,
-                                   ins->o_rhsW);
+    // gather-scatter
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsU, dfloatString, "add");  
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsV, dfloatString, "add");  
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsW, dfloatString, "add");  
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsU);
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsV);
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsW);
+
+  } else if (strstr(ins->vSolverOptions,"IPDG")) {
+    ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
+                                  mesh->o_vmapM,
+                                  mesh->o_vmapP,
+                                  ins->tau,
+                                  t,
+                                  mesh->o_x,
+                                  mesh->o_y,
+                                  mesh->o_z,
+                                  mesh->o_vgeo,
+                                  mesh->o_sgeo,
+                                  mesh->o_EToB,
+                                  mesh->o_DrT,
+                                  mesh->o_DsT,
+                                  mesh->o_DtT,
+                                  mesh->o_LIFTT,
+                                  mesh->o_MM,
+                                  ins->o_rhsU,
+                                  ins->o_rhsV,
+                                  ins->o_rhsW);
   }
-  else{
-       // compute all forcing i.e. f^(n+1) - grad(Pr)
-    ins->helmholtzRhsForcingKernel(mesh->Nelements,
-                                  rhsPackingMode,
-                                   mesh->o_vgeo,
-                                   mesh->o_MM,
-                                   ins->a0,
-                                   ins->a1,
-                                   ins->a2,
-                                   ins->b0,
-                                   ins->b1,
-                                   ins->b2,
-                                   ins->c0,
-                                   ins->c1,
-                                   ins->c2,
-                                   ins->index,
-                                   offset,
-                                   ins->o_U,
-                                   ins->o_V,
-                                   ins->o_W,
-                                   ins->o_NU,
-                                   ins->o_NV,
-                                   ins->o_NW,
-                                   ins->o_Px,
-                                   ins->o_Py,
-                                   ins->o_Pz,
-                                   ins->o_rhsU,
-                                   ins->o_rhsV,
-                                   ins->o_rhsW);
-  }
-  
-  ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
-				                        rhsPackingMode,
-                                mesh->o_vmapM,
-                                mesh->o_vmapP,
-                                ins->tau,
-                                t,
-                                mesh->o_x,
-                                mesh->o_y,
-                                mesh->o_z,
-                                mesh->o_vgeo,
-                                mesh->o_sgeo,
-                                mesh->o_EToB,
-                                mesh->o_DrT,
-                                mesh->o_DsT,
-                                mesh->o_DtT,
-                                mesh->o_LIFTT,
-                                mesh->o_MM,
-                                ins->o_rhsU,
-                                ins->o_rhsV,
-                                ins->o_rhsW);
 
   //use intermediate buffer for solve storage TODO: fix this later. Should be able to pull out proper buffer in elliptic solve
-  if(rhsPackingMode==0){
-    iint Ntotal = offset*mesh->Np;
-    ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
-    ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
-    ins->o_WH.copyFrom(ins->o_W,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+  int Ntotal = offset*mesh->Np;
+  ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+  ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
+  ins->o_WH.copyFrom(ins->o_W,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 
-    //printf("Solving for Ux \n");
-    ins->NiterU= ellipticSolveTet3D( solver, ins->lambda, ins->velTOL, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
-    
-    //printf("Solving for Uy \n");
-    ins->NiterV=ellipticSolveTet3D(solver, ins->lambda, ins->velTOL, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
-    
-    //printf("Solving for Uz \n");
-    ins->NiterW= ellipticSolveTet3D(solver, ins->lambda, ins->velTOL, ins->o_rhsW, ins->o_WH, ins->vSolverOptions);
-    //copy into next stage's storage
-    int index1 = (ins->index+1)%3; //hard coded for 3 stages
-    ins->o_UH.copyTo(ins->o_U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
-    ins->o_VH.copyTo(ins->o_V,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);  
-    ins->o_WH.copyTo(ins->o_W,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);  
-  }else{
-
-    printf("Solving for Ux,Uy and Uz \n");
-    parAlmondPrecon(ins->precon->parAlmond, ins->o_rhsV, ins->o_rhsU); // rhs in rhsU, solution in rhsV
-
-    iint Ntotal = mesh->Np*offset;
-    dfloat *tmp  = (dfloat*) calloc(3*Ntotal, sizeof(dfloat));
-    dfloat *tmpU = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-    dfloat *tmpV = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-    dfloat *tmpW = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-    
-    ins->o_rhsV.copyTo(tmp);
-
-    for(iint n=0;n<Ntotal;++n){
-      tmpU[n] = tmp[3*n+0];
-      tmpV[n] = tmp[3*n+1];
-      tmpW[n] = tmp[3*n+2];
-    }
-
-    //copy into next stage's storage
-    int index1 = (ins->index+1)%3; //hard coded for 3 stages
-    
-    ins->o_U.copyFrom(tmpU,Ntotal*sizeof(dfloat),index1*offset*mesh->Np*sizeof(dfloat));
-    ins->o_V.copyFrom(tmpV,Ntotal*sizeof(dfloat),index1*offset*mesh->Np*sizeof(dfloat));
-    ins->o_W.copyFrom(tmpW,Ntotal*sizeof(dfloat),index1*offset*mesh->Np*sizeof(dfloat));
-
-    free(tmp);
-    free(tmpU);
-    free(tmpV);
-    free(tmpW);
-  }
+  //printf("Solving for Ux \n");
+  ins->NiterU = ellipticSolveTet3D(solver, ins->lambda, ins->velTOL, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
   
+  //printf("Solving for Uy \n");
+  ins->NiterV = ellipticSolveTet3D(solver, ins->lambda, ins->velTOL, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
+  
+  //printf("Solving for Uz \n");
+  ins->NiterW = ellipticSolveTet3D(solver, ins->lambda, ins->velTOL, ins->o_rhsW, ins->o_WH, ins->vSolverOptions);
+  
+  if (strstr(ins->vSolverOptions,"CONTINUOUS")) {
+    ins->helmholtzAddBCKernel(mesh->Nelements,
+                            t,
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_z,
+                            mesh->o_vmapM,
+                            ins->o_VmapB,
+                            ins->o_UH,
+                            ins->o_VH,
+                            ins->o_WH);
+  }
+
+  //copy into next stage's storage
+  int index1 = (ins->index+1)%3; //hard coded for 3 stages
+  ins->o_UH.copyTo(ins->o_U,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);
+  ins->o_VH.copyTo(ins->o_V,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);  
+  ins->o_WH.copyTo(ins->o_W,Ntotal*sizeof(dfloat),index1*Ntotal*sizeof(dfloat),0);  
 }

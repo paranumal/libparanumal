@@ -31,9 +31,9 @@ void eulerSetup2D(mesh2D *mesh){
 
   printf("%17.15lf %17.15lf %17.15lf\n", Rbar, Ubar, Vbar);
   
-  iint cnt = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
+  int cnt = 0;
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
@@ -49,10 +49,10 @@ void eulerSetup2D(mesh2D *mesh){
 
   // set time step
   dfloat hmin = 1e9, hmax = 0;
-  for(iint e=0;e<mesh->Nelements;++e){  
+  for(int e=0;e<mesh->Nelements;++e){  
 
-    for(iint f=0;f<mesh->Nfaces;++f){
-      iint sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+    for(int f=0;f<mesh->Nfaces;++f){
+      int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
 

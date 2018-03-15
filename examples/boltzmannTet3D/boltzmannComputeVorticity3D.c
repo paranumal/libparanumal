@@ -1,27 +1,27 @@
 #include "boltzmann3D.h"
 
-void boltzmannComputeVorticity3D(mesh3D *mesh, dfloat *q, iint Nfields){
+void boltzmannComputeVorticity3D(mesh3D *mesh, dfloat *q, int Nfields){
   
   // compute vorticity
   dfloat *u = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   dfloat *v = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   dfloat *w = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   //
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     
-    for(iint n=0;n<mesh->Np;++n){
-      iint base = mesh->Nfields*(n + e*mesh->Np);
+    for(int n=0;n<mesh->Np;++n){
+      int base = mesh->Nfields*(n + e*mesh->Np);
       dfloat rho = mesh->q[base + 0];
       u[n] = mesh->q[1 + base]*mesh->sqrtRT/rho;
       v[n] = mesh->q[2 + base]*mesh->sqrtRT/rho;
       w[n] = mesh->q[3 + base]*mesh->sqrtRT/rho;
     }
 
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       dfloat dudr = 0, duds = 0, dudt = 0; 
       dfloat dvdr = 0, dvds = 0, dvdt =0 ;
       dfloat dwdr = 0, dwds = 0, dwdt =0 ;
-      for(iint m=0;m<mesh->Np;++m){
+      for(int m=0;m<mesh->Np;++m){
 
       	dudr += mesh->Dr[n*mesh->Np+m]*u[m];
       	duds += mesh->Ds[n*mesh->Np+m]*u[m];

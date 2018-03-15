@@ -1,13 +1,13 @@
 #include "boltzmann2D.h"
 
 // complete a time step using LSERK4
-void boltzmannMRABStep2D(mesh2D *mesh, iint tstep, iint haloBytes,
+void boltzmannMRABStep2D(mesh2D *mesh, int tstep, int haloBytes,
                          dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
 
 
-for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
+for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
   // intermediate stage time
   dfloat t = mesh->dt*(tstep*pow(2,mesh->MRABNlevels-1) + Ntick);
@@ -42,7 +42,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
   dfloat ramp, drampdt;
   boltzmannRampFunction2D(t, &ramp, &drampdt);
 
-  iint lev;
+  int lev;
   for (lev=0;lev<mesh->MRABNlevels;lev++)
     if (Ntick % (1<<lev) != 0) break; //find the max lev to compute rhs
 
@@ -52,7 +52,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       mesh->device.setStream(dataStream);
     #endif
 
-      iint Nentries = mesh->Nfp*mesh->Nfields*mesh->Nfaces;
+      int Nentries = mesh->Nfp*mesh->Nfields*mesh->Nfaces;
       mesh->haloExtractKernel(mesh->totalHaloPairs,
                 Nentries,
                 mesh->o_haloElementList,
@@ -70,7 +70,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
   occaTimerTic(mesh->device, "VolumeKernel");   
 
-  for (iint l=0;l<lev;l++) {
+  for (int l=0;l<lev;l++) {
     if (mesh->MRABNelements[l]){
       occaTimerTic(mesh->device, "NonPmlVolumeKernel");    
       mesh->volumeKernel(mesh->MRABNelements[l],
@@ -119,7 +119,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
      
   if(strstr(options, "CUBATURE")){ 
     occaTimerTic(mesh->device, "RelaxationKernel");
-    for (iint l=0;l<lev;l++) {
+    for (int l=0;l<lev;l++) {
       if (mesh->MRABNelements[l]){
         occaTimerTic(mesh->device,"NonPmlRelaxationKernel");
         mesh->relaxationKernel(mesh->MRABNelements[l],
@@ -186,7 +186,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
 
   // SURFACE KERNELS for boltzmann Nodal DG
-  for (iint l=0;l<lev;l++) {
+  for (int l=0;l<lev;l++) {
     occaTimerTic(mesh->device,"SurfaceKernel");
 
     if (mesh->MRABNelements[l]){
@@ -246,7 +246,7 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
 
 
-  for (iint l=0; l<lev; l++) {
+  for (int l=0; l<lev; l++) {
     occaTimerTic(mesh->device,"UpdateKernel");
 
     if (mesh->MRABNelements[l]){
@@ -329,6 +329,39 @@ for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
 }
 
+        if (lev<mesh->MRABNlevels) {
+
+          if (mesh->MRABNhaloElements[lev])
+            mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
+                                    mesh->o_MRABhaloIds[lev],
+                                    mesh->dt*pow(2,lev-1),
+                                    b1,b2,b3,
+                                    mesh->MRABshiftIndex[lev],
+                                    mesh->o_vmapM,
+                                    mesh->o_rhsq,
+                                    mesh->o_fQM,
+                                    mesh->o_fQP,
+                                    mesh->o_q);
+
+          if (mesh->MRABpmlNhaloElements[lev])
+            mesh->pmlTraceUpdateKernel(mesh->MRABpmlNhaloElements[lev],
+                                      mesh->o_MRABpmlHaloElementIds[lev],
+                                      mesh->o_MRABpmlHaloIds[lev],
+                                      mesh->dt*pow(2,lev-1),
+                                      b1,b2,b3,
+                                      mesh->MRABshiftIndex[lev],
+                                      mesh->o_vmapM,
+                                      mesh->o_rhsq,
+                                      mesh->o_pmlrhsqx,
+                                      mesh->o_pmlrhsqy,
+                                      mesh->o_q,
+                                      mesh->o_pmlqx,
+                                      mesh->o_pmlqy,
+                                      mesh->o_fQM,
+                                      mesh->o_fQP);
+        }
+
+}
 
   
 }

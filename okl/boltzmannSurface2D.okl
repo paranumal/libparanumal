@@ -21,7 +21,7 @@ void upwind1D(const dfloat nx, const dfloat ny,
 
 
 
-void boundaryConditions2D(const iint bc,
+void boundaryConditions2D(const int bc,
         const dfloat  t, const dfloat  x, const dfloat  y,
         const dfloat  nx, const dfloat  ny,
         const dfloat ramp,
@@ -117,49 +117,49 @@ void boundaryConditions2D(const iint bc,
 
 
 // This kernel uses Upwind flux 
-kernel void boltzmannSurface2D(const iint Nelements,
-                     const iint * restrict elementIds,
+kernel void boltzmannSurface2D(const int Nelements,
+                     const int * restrict elementIds,
                      const dfloat time,
                      const dfloat ramp,
-                     const iint   nrhs,
-                     const iint   shift,
+                     const int   nrhs,
+                     const int   shift,
                      const dfloat * restrict sgeo,
                      const dfloat * restrict LIFTT,
-                     const iint   * restrict vmapM,
-                     const iint   * restrict vmapP,
-                     const iint   * restrict EToB,
+                     const int   * restrict vmapM,
+                     const int   * restrict vmapP,
+                     const int   * restrict EToB,
                      const dfloat * restrict x,
                      const dfloat * restrict y,
                      const dfloat * restrict q,
                            dfloat * restrict rhsq){
   
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
-    exclusive iint e;
+    exclusive int e;
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-        iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        int et = eo + es;
         if(et<Nelements){
          e = elementIds[et];
           if(n<p_Nfp*p_Nfaces){
             // find face that owns this node
-            iint face = n/p_Nfp;          
+            int face = n/p_Nfp;          
             
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];   
 
-            const iint id  = e*p_Nfp*p_Nfaces + n;
-            const iint idM = vmapM[id]*p_Nfields;
-                  iint idP = vmapP[id]*p_Nfields;
+            const int id  = e*p_Nfp*p_Nfaces + n;
+            const int idM = vmapM[id]*p_Nfields;
+                  int idP = vmapP[id]*p_Nfields;
 
           if(idP<0) idP = idM;
 
@@ -171,9 +171,9 @@ kernel void boltzmannSurface2D(const iint Nelements,
           dfloat q5M = q[idM + 4], q5P = q[idP + 4];
           dfloat q6M = q[idM + 5], q6P = q[idP + 5];              
           // apply boundary condition
-          iint bc = EToB[face+p_Nfaces*e];
+          int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
-              const iint idB = vmapM[id];
+              const int idB = vmapM[id];
               boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp,
                                    q1M, q2M, q3M, q4M, q5M, q6M,
                                    &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);
@@ -212,12 +212,12 @@ kernel void boltzmannSurface2D(const iint Nelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        int et = eo + es;
         if(et<Nelements){
           if(n<p_Np){
-            const iint id = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
+            const int id = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
 
             dfloat rhsq1 = rhsq[id+0];
             dfloat rhsq2 = rhsq[id+1];
@@ -256,49 +256,49 @@ kernel void boltzmannSurface2D(const iint Nelements,
 
 
 // This kernel uses penalty flux
-kernel void boltzmannSurface2D_v0(const iint Nelements,
-                     const iint * restrict elementIds,
+kernel void boltzmannSurface2D_v0(const int Nelements,
+                     const int * restrict elementIds,
                      const dfloat time,
                      const dfloat ramp,
-                     const iint   nrhs,
-                     const iint   shift,
+                     const int   nrhs,
+                     const int   shift,
                      const dfloat * restrict sgeo,
                      const dfloat * restrict LIFTT,
-                     const iint   * restrict vmapM,
-                     const iint   * restrict vmapP,
-                     const iint   * restrict EToB,
+                     const int   * restrict vmapM,
+                     const int   * restrict vmapP,
+                     const int   * restrict EToB,
                      const dfloat * restrict x,
                      const dfloat * restrict y,
                      const dfloat * restrict q,
                            dfloat * restrict rhsq){
   
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
-    exclusive iint e;
+    exclusive int e;
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-        iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        int et = eo + es;
         if(et<Nelements){
          e = elementIds[et];
           if(n<p_Nfp*p_Nfaces){
             // find face that owns this node
-            iint face = n/p_Nfp;          
+            int face = n/p_Nfp;          
             
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];   
 
-            const iint id  = e*p_Nfp*p_Nfaces + n;
-            const iint idM = vmapM[id]*p_Nfields;
-                  iint idP = vmapP[id]*p_Nfields;
+            const int id  = e*p_Nfp*p_Nfaces + n;
+            const int idM = vmapM[id]*p_Nfields;
+                  int idP = vmapP[id]*p_Nfields;
 
           if(idP<0) idP = idM;
 
@@ -310,9 +310,9 @@ kernel void boltzmannSurface2D_v0(const iint Nelements,
           dfloat q5M = q[idM + 4], q5P = q[idP + 4];
           dfloat q6M = q[idM + 5], q6P = q[idP + 5];              
           // apply boundary condition
-          iint bc = EToB[face+p_Nfaces*e];
+          int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
-              const iint idB = vmapM[id];
+              const int idB = vmapM[id];
               boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp,
                                    q1M, q2M, q3M, q4M, q5M, q6M,
                                    &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);
@@ -355,12 +355,12 @@ kernel void boltzmannSurface2D_v0(const iint Nelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        int et = eo + es;
         if(et<Nelements){
           if(n<p_Np){
-            const iint id = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
+            const int id = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
 
             dfloat rhsq1 = rhsq[id+0];
             dfloat rhsq2 = rhsq[id+1];
@@ -396,18 +396,18 @@ kernel void boltzmannSurface2D_v0(const iint Nelements,
 
 
 // This kernel uses upwind flux
-kernel void boltzmannPmlSurface2D(const iint pmlNelements,
-                        const iint   * restrict pmlElementIds,
-                        const iint   * restrict pmlIds,
+kernel void boltzmannPmlSurface2D(const int pmlNelements,
+                        const int   * restrict pmlElementIds,
+                        const int   * restrict pmlIds,
                         const dfloat time,
                         const dfloat ramp,
-                        const iint nrhs,
-                        const iint shift,
+                        const int nrhs,
+                        const int shift,
                         const dfloat * restrict sgeo,
                         const dfloat * restrict LIFTT,
-                        const iint   * restrict vmapM,
-                        const iint   * restrict vmapP,
-                        const iint   * restrict EToB,
+                        const int   * restrict vmapM,
+                        const int   * restrict vmapP,
+                        const int   * restrict EToB,
                         const dfloat * restrict x,
                         const dfloat * restrict y,              
                         const dfloat * restrict q,
@@ -416,7 +416,7 @@ kernel void boltzmannPmlSurface2D(const iint pmlNelements,
                               dfloat * restrict pmlrhsqy){
   
   // for all elements
-  for(iint eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
     // shared storage for flux terms
     shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
     shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
@@ -432,29 +432,29 @@ kernel void boltzmannPmlSurface2D(const iint pmlNelements,
     shared dfloat s_nydq5[p_NblockS][p_maxNodes];
     shared dfloat s_nydq6[p_NblockS][p_maxNodes];
 
-    exclusive iint e;
+    exclusive int e;
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-        iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        int et = eo + es;
         if(et<pmlNelements){
             e = pmlElementIds[et];
 
             if(n<p_NfacesNfp){
         // find face that owns this node
-            iint face = n/p_Nfp;          
+            int face = n/p_Nfp;          
             
             // load surface geofactors for this face
-            const iint sid = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];     
 
-            const iint id  = e*p_Nfp*p_Nfaces + n;
-            const iint idM = vmapM[id]*p_Nfields;
-                  iint idP = vmapP[id]*p_Nfields;
+            const int id  = e*p_Nfp*p_Nfaces + n;
+            const int idM = vmapM[id]*p_Nfields;
+                  int idP = vmapP[id]*p_Nfields;
 
            if(idP<0) idP = idM;
 
@@ -468,9 +468,9 @@ kernel void boltzmannPmlSurface2D(const iint pmlNelements,
           
         
             // apply boundary condition
-            iint bc = EToB[face+p_Nfaces*e];
+            int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-                const iint idB = vmapM[id];
+                const int idB = vmapM[id];
                 boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp,
                                     q1M, q2M, q3M, q4M, q5M, q6M,
                                     &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);
@@ -506,9 +506,9 @@ kernel void boltzmannPmlSurface2D(const iint pmlNelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        const iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        const int et = eo + es;
         if(et<pmlNelements){
             if(n<p_Np){
                  // load rhs data from volume fluxes
@@ -549,10 +549,10 @@ kernel void boltzmannPmlSurface2D(const iint pmlNelements,
         dfloat Bqy5 =  0.f;
         dfloat Bqy6 = -p_sqrtRT*(p_sqrt2*Lnydq3);
 
-        // const iint e  = pmlElementIds[et];
-        const iint pmlId    = pmlIds[et];
-        const iint rhsId    = nrhs*p_Nfields*(p_Np*e + n)     + p_Nfields*shift;
-        const iint pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
+        // const int e  = pmlElementIds[et];
+        const int pmlId    = pmlIds[et];
+        const int rhsId    = nrhs*p_Nfields*(p_Np*e + n)     + p_Nfields*shift;
+        const int pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
 
         // Update 
         pmlrhsqx[pmlrhsId+0] += Aqx1; 
@@ -589,18 +589,18 @@ kernel void boltzmannPmlSurface2D(const iint pmlNelements,
 
 
 // This kernel uses penalty flux
-kernel void boltzmannPmlSurface2D_v0(const iint pmlNelements,
-                        const iint   * restrict pmlElementIds,
-                        const iint   * restrict pmlIds,
+kernel void boltzmannPmlSurface2D_v0(const int pmlNelements,
+                        const int   * restrict pmlElementIds,
+                        const int   * restrict pmlIds,
                         const dfloat time,
                         const dfloat ramp,
-                        const iint nrhs,
-                        const iint shift,
+                        const int nrhs,
+                        const int shift,
                         const dfloat * restrict sgeo,
                         const dfloat * restrict LIFTT,
-                        const iint   * restrict vmapM,
-                        const iint   * restrict vmapP,
-                        const iint   * restrict EToB,
+                        const int   * restrict vmapM,
+                        const int   * restrict vmapP,
+                        const int   * restrict EToB,
                        // const dfloat * restrict pmlBetaX,
                        // const dfloat * restrict pmlBetaY,
                         const dfloat * restrict x,
@@ -611,7 +611,7 @@ kernel void boltzmannPmlSurface2D_v0(const iint pmlNelements,
                               dfloat * restrict pmlrhsqy){
   
   // for all elements
-  for(iint eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
     // shared storage for flux terms
     shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
     shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
@@ -627,29 +627,29 @@ kernel void boltzmannPmlSurface2D_v0(const iint pmlNelements,
     shared dfloat s_nydq5[p_NblockS][p_maxNodes];
     shared dfloat s_nydq6[p_NblockS][p_maxNodes];
 
-    exclusive iint e;
+    exclusive int e;
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-        iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        int et = eo + es;
         if(et<pmlNelements){
             e = pmlElementIds[et];
 
             if(n<p_NfacesNfp){
         // find face that owns this node
-            iint face = n/p_Nfp;          
+            int face = n/p_Nfp;          
             
             // load surface geofactors for this face
-            const iint sid = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];     
 
-            const iint id  = e*p_Nfp*p_Nfaces + n;
-            const iint idM = vmapM[id]*p_Nfields;
-                  iint idP = vmapP[id]*p_Nfields;
+            const int id  = e*p_Nfp*p_Nfaces + n;
+            const int idM = vmapM[id]*p_Nfields;
+                  int idP = vmapP[id]*p_Nfields;
 
            if(idP<0) idP = idM;
            // Read trace values
@@ -662,8 +662,8 @@ kernel void boltzmannPmlSurface2D_v0(const iint pmlNelements,
           
         
             // apply boundary condition
-            iint bc        = EToB[face+p_Nfaces*e];
-            const iint idB = vmapM[id];
+            int bc        = EToB[face+p_Nfaces*e];
+            const int idB = vmapM[id];
             if(bc>0){ 
                 boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp,
                                     q1M, q2M, q3M, q4M, q5M, q6M,
@@ -714,9 +714,9 @@ kernel void boltzmannPmlSurface2D_v0(const iint pmlNelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        const iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        const int et = eo + es;
         if(et<pmlNelements){
             if(n<p_Np){
                  // load rhs data from volume fluxes
@@ -744,10 +744,10 @@ kernel void boltzmannPmlSurface2D_v0(const iint pmlNelements,
 
         
 
-        // const iint e  = pmlElementIds[et];
-        const iint pmlId    = pmlIds[et];
-        const iint rhsId    = nrhs*p_Nfields*(p_Np*e + n)     + p_Nfields*shift;
-        const iint pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
+        // const int e  = pmlElementIds[et];
+        const int pmlId    = pmlIds[et];
+        const int rhsId    = nrhs*p_Nfields*(p_Np*e + n)     + p_Nfields*shift;
+        const int pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
 
         // Update 
         pmlrhsqx[pmlrhsId+0] += rhsqx1; 
@@ -782,17 +782,17 @@ kernel void boltzmannPmlSurface2D_v0(const iint pmlNelements,
 
 
 
-kernel void boltzmannMRSurface2D(const iint Nelements,
-                     const iint * restrict elementIds,
+kernel void boltzmannMRSurface2D(const int Nelements,
+                     const int * restrict elementIds,
                      const dfloat time,
                      const dfloat ramp,
-                     const iint nrhs,
-                     const iint   shift,
+                     const int nrhs,
+                     const int   shift,
                      const dfloat * restrict sgeo,
                      const dfloat * restrict LIFTT,
-                     const iint   * restrict vmapM,
-                     const iint   * restrict mapP,
-                     const iint   * restrict EToB,
+                     const int   * restrict vmapM,
+                     const int   * restrict mapP,
+                     const int   * restrict EToB,
                      const dfloat * restrict x,
                      const dfloat * restrict y,
                      const dfloat * restrict q,
@@ -800,33 +800,33 @@ kernel void boltzmannMRSurface2D(const iint Nelements,
                            dfloat * restrict rhsq){
   
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
-    exclusive iint e;
+    exclusive int e;
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-        iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        int et = eo + es;
         if(et<Nelements){
          e = elementIds[et];
           if(n<p_Nfp*p_Nfaces){
             // find face that owns this node
-            iint face = n/p_Nfp;          
+            int face = n/p_Nfp;          
             
             // load surface geofactors for this face
-            const iint sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];   
 
             // Indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + n;
-            const iint idM = id*p_Nfields;
-            const iint idP = mapP[id]*p_Nfields;
+            const int id  = e*p_Nfp*p_Nfaces + n;
+            const int idM = id*p_Nfields;
+            const int idP = mapP[id]*p_Nfields;
    
             // Read trace values
             dfloat q1M = fQM[idM + 0], q1P = fQM[idP + 0];
@@ -837,9 +837,9 @@ kernel void boltzmannMRSurface2D(const iint Nelements,
             dfloat q6M = fQM[idM + 5], q6P = fQM[idP + 5];
         
             // apply boundary condition
-            iint bc = EToB[face+p_Nfaces*e];
+            int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-                const iint idB = vmapM[id];
+                const int idB = vmapM[id];
                 boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp,
                                      q1M, q2M, q3M, q4M, q5M, q6M,
                                      &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);
@@ -878,12 +878,12 @@ kernel void boltzmannMRSurface2D(const iint Nelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        int et = eo + es;
         if(et<Nelements){
           if(n<p_Np){
-            const iint id = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
+            const int id = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
 
             dfloat rhsq1 = rhsq[id+0];
             dfloat rhsq2 = rhsq[id+1];
@@ -922,18 +922,18 @@ kernel void boltzmannMRSurface2D(const iint Nelements,
 
 
 // batch process elements
-kernel void boltzmannMRPmlSurface2D(const iint pmlNelements,
-                        const iint   * restrict pmlElementIds,
-                        const iint   * restrict pmlIds,
+kernel void boltzmannMRPmlSurface2D(const int pmlNelements,
+                        const int   * restrict pmlElementIds,
+                        const int   * restrict pmlIds,
                         const dfloat time,
                         const dfloat ramp,
-                        const iint nrhs,
-                        const iint shift,
+                        const int nrhs,
+                        const int shift,
                         const dfloat * restrict sgeo,
                         const dfloat * restrict LIFTT,
-                        const iint   * restrict vmapM,
-                        const iint   * restrict mapP,
-                        const iint   * restrict EToB,
+                        const int   * restrict vmapM,
+                        const int   * restrict mapP,
+                        const int   * restrict EToB,
                         const dfloat * restrict x,
                         const dfloat * restrict y,              
                         const dfloat * restrict q,
@@ -943,7 +943,7 @@ kernel void boltzmannMRPmlSurface2D(const iint pmlNelements,
                               dfloat * restrict pmlrhsqy){
   
   // for all elements
-  for(iint eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
     // shared storage for flux terms
     shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
     shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
@@ -959,30 +959,30 @@ kernel void boltzmannMRPmlSurface2D(const iint pmlNelements,
     shared dfloat s_nydq5[p_NblockS][p_maxNodes];
     shared dfloat s_nydq6[p_NblockS][p_maxNodes];
 
-    exclusive iint e;
+    exclusive int e;
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-        iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        int et = eo + es;
         if(et<pmlNelements){
             e = pmlElementIds[et];
 
             if(n<p_NfacesNfp){
         // find face that owns this node
-            iint face = n/p_Nfp;          
+            int face = n/p_Nfp;          
             
             // load surface geofactors for this face
-            const iint sid = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];     
 
             // indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + n;
-            const iint idM = id*p_Nfields;
-            const iint idP = mapP[id]*p_Nfields;
+            const int id  = e*p_Nfp*p_Nfaces + n;
+            const int idM = id*p_Nfields;
+            const int idP = mapP[id]*p_Nfields;
     
             // Read trace values
             dfloat q1M = fQM[idM + 0], q1P = fQM[idP + 0];
@@ -993,9 +993,9 @@ kernel void boltzmannMRPmlSurface2D(const iint pmlNelements,
             dfloat q6M = fQM[idM + 5], q6P = fQM[idP + 5];
         
             // apply boundary condition
-            iint bc = EToB[face+p_Nfaces*e];
+            int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-                const iint idB = vmapM[id];
+                const int idB = vmapM[id];
                 boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp,
                                     q1M, q2M, q3M, q4M, q5M, q6M,
                                     &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);
@@ -1031,9 +1031,9 @@ kernel void boltzmannMRPmlSurface2D(const iint pmlNelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        const iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        const int et = eo + es;
         if(et<pmlNelements){
             if(n<p_Np){
                  // load rhs data from volume fluxes
@@ -1074,10 +1074,10 @@ kernel void boltzmannMRPmlSurface2D(const iint pmlNelements,
         dfloat Bqy5 =  0.f;
         dfloat Bqy6 = -p_sqrtRT*(p_sqrt2*Lnydq3);
 
-        // const iint e  = pmlElementIds[et];
-        const iint pmlId    = pmlIds[et];
-        const iint rhsId    = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
-        const iint pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
+        // const int e  = pmlElementIds[et];
+        const int pmlId    = pmlIds[et];
+        const int rhsId    = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
+        const int pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
 
         // Update 
         pmlrhsqx[pmlrhsId+0] += Aqx1; 

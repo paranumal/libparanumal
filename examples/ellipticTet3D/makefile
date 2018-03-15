@@ -14,9 +14,9 @@ ALMONDDIR = ../parALMOND
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-cc	= mpicc
-CC	= mpic++
-LD	= mpic++
+cc	= mpicc.openmpi
+CC	= mpic++.openmpi
+LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g -I$(GSDIR) -D DHOLMES='"${CURDIR}/../.."'  
@@ -34,7 +34,6 @@ DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh3D.h \
 $(HDRDIR)/ogs_t.h \
-$(HDRDIR)/hgs_t.h \
 $(ALMONDDIR)/parALMOND.h \
 
 # types of files we are going to construct rules for
@@ -46,22 +45,24 @@ $(ALMONDDIR)/parALMOND.h \
 
 # list of objects to be compiled
 AOBJS    = \
+PCG.o \
 ellipticSetupTet3D.o \
 ellipticPreconditionerSetupTet3D.o\
-ellipticCoarsePreconditionerSetupTet3D.o\
 ellipticPreconditionerTet3D.o\
 ellipticSolveTet3D.o\
 ellipticSolveSetupTet3D.o\
 ellipticHaloExchange3D.o\
 ellipticParallelGatherScatterTet3D.o \
+ellipticParallelGatherScatterSetup.o \
 ellipticBuildIpdgTet3D.o \
 ellipticBuildContinuousTet3D.o \
-ellipticBuildFullPatchesIpdgTet3D.o \
-ellipticBuildFacePatchesIpdgTet3D.o \
-ellipticBuildJacobiIpdgTet3D.o \
-ellipticBuildLocalPatchIpdgTet3D.o \
+ellipticBuildFullPatchesTet3D.o \
+ellipticBuildFacePatchesTet3D.o \
+ellipticBuildJacobiTet3D.o \
+ellipticBuildLocalPatchTet3D.o \
 ellipticBuildMultigridLevelTet3D.o \
 ellipticMultiGridSetupTet3D.o \
+ellipticSEMFEMSetupTet3D.o\
 ellipticSetupSmoothersTet3D.o \
 ellipticSmoothersTet3D.o
 
@@ -86,16 +87,14 @@ LOBJS = \
 ../../src/meshGeometricFactorsTet3D.o \
 ../../src/meshLoadReferenceNodesTet3D.o \
 ../../src/meshSurfaceGeometricFactorsTet3D.o \
-../../src/meshParallelGather.o \
-../../src/meshParallelScatter.o \
 ../../src/meshParallelGatherScatter.o \
-../../src/meshParallelGatherSetup.o \
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelConsecutiveGlobalNumbering.o \
 ../../src/meshOccaSetup3D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
 ../../src/hash.o\
+../../src/timer.o\
 ./diagnostic.o
 
 COBJS = \

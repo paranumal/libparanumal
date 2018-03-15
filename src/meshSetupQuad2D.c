@@ -23,11 +23,11 @@ mesh2D *meshSetupQuad2D(char *filename, int N){
   // compute physical (x,y) locations of the element nodes
   meshPhysicalNodesQuad2D(mesh);
 
-  // set up halo exchange info for MPI (do before connect face nodes)
-  meshHaloSetup(mesh);
-
   // compute geometric factors
   meshGeometricFactorsQuad2D(mesh);
+
+  // set up halo exchange info for MPI (do before connect face nodes)
+  meshHaloSetup(mesh);
   
   // connect face nodes (find trace indices)
   meshConnectFaceNodes2D(mesh);

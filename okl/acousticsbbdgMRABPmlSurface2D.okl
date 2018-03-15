@@ -1,5 +1,5 @@
 
-void boundaryConditions2D(iint bc, dfloat time, dfloat x, dfloat y,
+void boundaryConditions2D(int bc, dfloat time, dfloat x, dfloat y,
         dfloat uM, dfloat vM, dfloat pM,
         dfloat *uP, dfloat *vP, dfloat *pP){
 
@@ -25,16 +25,16 @@ void boundaryConditions2D(iint bc, dfloat time, dfloat x, dfloat y,
   }
 }
 
-kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
-           const iint   * restrict pmlElementIds,
-           const iint   * restrict pmlIds,
+kernel void acousticsbbdgMRABPmlSurface2D(const int pmlNelements,
+           const int   * restrict pmlElementIds,
+           const int   * restrict pmlIds,
            const dfloat * restrict sgeo,
            const dfloat * restrict L0vals,
-           const iint   * restrict ELids,
+           const int   * restrict ELids,
            const dfloat * restrict ELvals,
-           const iint   * restrict vmapM,
-           const iint   * restrict mapP,
-           const iint   * restrict EToB,
+           const int   * restrict vmapM,
+           const int   * restrict mapP,
+           const int   * restrict EToB,
            const dfloat time,
            const dfloat * restrict x,
            const dfloat * restrict y,
@@ -44,10 +44,10 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
            const dfloat * restrict fQP,
            dfloat       * restrict rhsq,
            dfloat       * restrict pmlrhsq,
-           const iint   rhsShift){
+           const int   rhsShift){
 
   // for all elements
-  for(iint eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
@@ -60,37 +60,37 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
     shared dfloat s_fluxpy_copy[p_NblockS][p_Nfp*p_Nfaces];
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-        const iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        const int et = eo + es;
         if(et<pmlNelements){
 
           if(n<p_Nfp*p_Nfaces){
-            const iint e = pmlElementIds[et];
+            const int e = pmlElementIds[et];
 
             // find face that owns this node
-            const iint face = n/p_Nfp;
+            const int face = n/p_Nfp;
 
             // load surface geofactors for this face
-            const iint sid = p_Nsgeo*(e*p_Nfaces+face);
+            const int sid = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];
 
             // indices of negative and positive traces of face node
-            const iint id  = e*p_Nfp*p_Nfaces + n;
-            const iint idM = id*p_Nfields;
-            const iint idP = mapP[id]*p_Nfields;
+            const int id  = e*p_Nfp*p_Nfaces + n;
+            const int idM = id*p_Nfields;
+            const int idP = mapP[id]*p_Nfields;
 
             // load negative and positive trace node values of q
             const dfloat uM = fQM[idM+0], vM = fQM[idM+1], pM = fQM[idM+2];
                   dfloat uP = fQP[idP+0], vP = fQP[idP+1], pP = fQP[idP+2];
 
             // apply boundary condition
-            const iint bc = EToB[face+p_Nfaces*e];
+            const int bc = EToB[face+p_Nfaces*e];
             if(bc>0)  {
-              const iint idB = vmapM[id];
+              const int idB = vmapM[id];
               boundaryConditions2D(bc, time, x[idB], y[idB], uM, vM, pM, &uP, &vP, &pP);
             }
 
@@ -113,12 +113,12 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
     barrier(localMemFence);
 
     // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        int et = eo + es;
         if(et<pmlNelements){
           if(n<p_Nfp*p_Nfaces){
-            const iint id = n % p_Nfp;  // warning: redundant reads
+            const int id = n % p_Nfp;  // warning: redundant reads
             const dfloat L0val = L0vals[id+p_Nfp];
 
             dfloat utmpflux = L0val * s_fluxu[es][n];
@@ -150,15 +150,15 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
     barrier(localMemFence);
 
     // apply lift reduction and accumulate RHS
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-        iint et = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        int et = eo + es;
         if(et<pmlNelements){
           if(n<p_Np){
-            const iint e  = pmlElementIds[et];
-            const iint pmlId  = pmlIds[et];
-            const iint rhsId = 3*p_Nfields*(p_Np*e + n) + p_Nfields*rhsShift;
-            const iint pmlrhsId = 3*p_pmlNfields*(p_Np*pmlId + n) + p_pmlNfields*rhsShift;
+            const int e  = pmlElementIds[et];
+            const int pmlId  = pmlIds[et];
+            const int rhsId = 3*p_Nfields*(p_Np*e + n) + p_Nfields*rhsShift;
+            const int pmlrhsId = 3*p_pmlNfields*(p_Np*pmlId + n) + p_pmlNfields*rhsShift;
 
             // load RHS
             dfloat rhsqnu = rhsq[rhsId+0];
@@ -169,9 +169,9 @@ kernel void acousticsbbdgMRABPmlSurface2D(const iint pmlNelements,
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             occaUnroll(p_max_EL_nnz)
             for (int m = 0; m < p_max_EL_nnz; ++m){
-              const iint   id    = n + m*p_Np;
+              const int   id    = n + m*p_Np;
               const dfloat ELval = ELvals[id];
-              const iint   ELid  = ELids[id];
+              const int   ELid  = ELids[id];
               rhsqnu += ELval * s_fluxu_copy[es][ELid];
               rhsqnv += ELval * s_fluxv_copy[es][ELid];
               rhsqnpx += ELval * s_fluxpx_copy[es][ELid];

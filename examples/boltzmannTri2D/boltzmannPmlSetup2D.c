@@ -37,8 +37,8 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
   mesh->pmlNelements=0;
 
 
-  for (iint m=0;m<mesh->Nelements;m++) {
-    iint e = mesh->nonPmlElementIds[m];
+  for (int m=0;m<mesh->Nelements;m++) {
+    int e = mesh->nonPmlElementIds[m];
     int type = mesh->elementInfo[e];
     if ((type==100)||(type==200)||(type==300)) {
       mesh->pmlNelements++;
@@ -49,10 +49,10 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
   if (mesh->pmlNelements) {
 
     //construct a numbering of the pml elements
-    iint *pmlIds = (iint *) calloc(mesh->Nelements,sizeof(iint));
-    iint pmlcnt  = 0;
-    iint nonpmlcnt = 0;
-    for (iint e=0;e<mesh->Nelements;e++) {
+    int *pmlIds = (int *) calloc(mesh->Nelements,sizeof(int));
+    int pmlcnt  = 0;
+    int nonpmlcnt = 0;
+    for (int e=0;e<mesh->Nelements;e++) {
       int type = mesh->elementInfo[e];
       if ((type==100)||(type==200)||(type==300))  //pml element
         pmlIds[e] = pmlcnt++;
@@ -60,14 +60,14 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
 
     //set up lists of pml elements and remove the pml elements from the nonpml element list
 
-    mesh->pmlElementIds = (iint *) calloc(mesh->pmlNelements,sizeof(iint));
-    mesh->pmlIds        = (iint *) calloc(mesh->pmlNelements,sizeof(iint));
+    mesh->pmlElementIds = (int *) calloc(mesh->pmlNelements,sizeof(int));
+    mesh->pmlIds        = (int *) calloc(mesh->pmlNelements,sizeof(int));
 
 
     pmlcnt = 0;
     nonpmlcnt = 0;
-    for (iint m=0;m<mesh->Nelements;m++){
-      iint e = mesh->nonPmlElementIds[m];
+    for (int m=0;m<mesh->Nelements;m++){
+      int e = mesh->nonPmlElementIds[m];
       int type = mesh->elementInfo[e];
 
       if ((type==100)||(type==200)||(type==300)) { //pml element
@@ -83,10 +83,10 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
 
     //resize nonpml element lists
     mesh->nonPmlNelements -= mesh->pmlNelements;
-    mesh->nonPmlElementIds = (iint*) realloc(mesh->nonPmlElementIds,mesh->nonPmlNelements*sizeof(iint));
+    mesh->nonPmlElementIds = (int*) realloc(mesh->nonPmlElementIds,mesh->nonPmlNelements*sizeof(int));
 
 
-    iint Nnodes = 0;
+    int Nnodes = 0;
     if(strstr(options,"CUBATURE")){ // !!!!!!!!!!!!!!!
       //
       printf("Setting PML Coefficient for Cubature Integration\n");
@@ -108,7 +108,7 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
     dfloat ymin = 1e9, ymax =-1e9;
     dfloat pmlxmin = 1e9, pmlxmax =-1e9;
     dfloat pmlymin = 1e9, pmlymax =-1e9;
-    for (iint e=0;e<mesh->Nelements;e++) {
+    for (int e=0;e<mesh->Nelements;e++) {
       for (int n=0;n<mesh->Nverts;n++) {
         dfloat x = mesh->EX[e*mesh->Nverts+n];
         dfloat y = mesh->EY[e*mesh->Nverts+n];
@@ -136,7 +136,7 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
 
 
 
-    iint order = 0;
+    int order = 0;
     //
     if(strstr(options,"CONSTANT"))
       order = 0; 
@@ -158,11 +158,11 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
     printf("xmaxScale = %.10e \n", xmaxScale);
 
     //set up the damping factor
-    for (iint es=0;es<mesh->pmlNelements;es++){
-        iint e     = mesh->pmlElementIds[es];
-        iint pmlId = mesh->pmlIds[es];
-        iint type  = mesh->elementInfo[e];
-        iint id    = e*mesh->Nverts;
+    for (int es=0;es<mesh->pmlNelements;es++){
+        int e     = mesh->pmlElementIds[es];
+        int pmlId = mesh->pmlIds[es];
+        int type  = mesh->elementInfo[e];
+        int id    = e*mesh->Nverts;
 
         dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
         dfloat xe2 = mesh->EX[id+1];
@@ -172,7 +172,7 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
         dfloat ye2 = mesh->EY[id+1];
         dfloat ye3 = mesh->EY[id+2];
 
-        for(iint n=0;n<Nnodes;++n){ /* for each node */
+        for(int n=0;n<Nnodes;++n){ /* for each node */
           dfloat x = 0, y = 0; 
 
           if(Nnodes==mesh->cubNp){
@@ -349,11 +349,11 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
     dfloat betaxMax = sqrt(3.0);  // was 1.0
     dfloat betayMax = sqrt(3.0); // was 1.0
    
-    for (iint es=0;es<mesh->pmlNelements;es++){
-        iint e     = mesh->pmlElementIds[es];
-        iint pmlId = mesh->pmlIds[es];
-        iint type  = mesh->elementInfo[e];
-        iint id    = e*mesh->Nverts;
+    for (int es=0;es<mesh->pmlNelements;es++){
+        int e     = mesh->pmlElementIds[es];
+        int pmlId = mesh->pmlIds[es];
+        int type  = mesh->elementInfo[e];
+        int id    = e*mesh->Nverts;
 
         dfloat xe1 = mesh->EX[id+0]; /* x-coordinates of vertices */
         dfloat xe2 = mesh->EX[id+1];
@@ -363,7 +363,7 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
         dfloat ye2 = mesh->EY[id+1];
         dfloat ye3 = mesh->EY[id+2];
 
-        for(iint n=0;n<mesh->Np;++n){ /* for each node */
+        for(int n=0;n<mesh->Np;++n){ /* for each node */
             dfloat x = mesh->x[n + e*mesh->Np];
             dfloat y = mesh->y[n + e*mesh->Np];
             //
@@ -483,8 +483,8 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
     if (mesh->pmlNelements) {
       mesh->o_pmlSigmaX     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),mesh->pmlSigmaX);
       mesh->o_pmlSigmaY     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),mesh->pmlSigmaY);
-      mesh->o_pmlElementIds = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlElementIds);
-      mesh->o_pmlIds        = mesh->device.malloc(mesh->pmlNelements*sizeof(iint), mesh->pmlIds);
+      mesh->o_pmlElementIds = mesh->device.malloc(mesh->pmlNelements*sizeof(int), mesh->pmlElementIds);
+      mesh->o_pmlIds        = mesh->device.malloc(mesh->pmlNelements*sizeof(int), mesh->pmlIds);
     }
 
 
@@ -496,11 +496,11 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
   #if 0
        //
  //    printf("Wwitting Pml profile\n" );
- //     iint fid = 0; 
- // for (iint es=0;es<mesh->pmlNelements;es++){
- //       iint e     = mesh->pmlElementIds[es];
- //       iint pmlId = mesh->pmlIds[es];   
- //    for(iint n=0;n<mesh->Np;n++){
+ //     int fid = 0; 
+ // for (int es=0;es<mesh->pmlNelements;es++){
+ //       int e     = mesh->pmlElementIds[es];
+ //       int pmlId = mesh->pmlIds[es];   
+ //    for(int n=0;n<mesh->Np;n++){
  //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = mesh->pmlBetaX[mesh->Np*e+n];
  //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = mesh->pmlBetaY[mesh->Np*e+n];
  //    }
@@ -512,11 +512,11 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
 
   //    //
  //    printf("Wwitting Pml profile\n" );
- //     iint fid = 0; 
- // for (iint es=0;es<mesh->pmlNelements;es++){
- //       iint e     = mesh->pmlElementIds[es];
- //       iint pmlId = mesh->pmlIds[es];   
- //    for(iint n=0;n<Nnodes;n++){
+ //     int fid = 0; 
+ // for (int es=0;es<mesh->pmlNelements;es++){
+ //       int e     = mesh->pmlElementIds[es];
+ //       int pmlId = mesh->pmlIds[es];   
+ //    for(int n=0;n<Nnodes;n++){
  //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = mesh->pmlSigmaX[mesh->Np*e+n];
  //      mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = mesh->pmlSigmaY[mesh->Np*e+n];
  //    }
@@ -532,14 +532,14 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
  //   dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
  //   mesh->o_cubProjectT.copyTo(cubProjectT);
  //    // free(pmlIds);
- //     iint fid = 0; 
- // for (iint es=0;es<mesh->pmlNelements;es++){
- //       iint e     = mesh->pmlElementIds[es];
- //       iint pmlId = mesh->pmlIds[es];   
- //    for(iint n=0;n<mesh->Np;n++)
+ //     int fid = 0; 
+ // for (int es=0;es<mesh->pmlNelements;es++){
+ //       int e     = mesh->pmlElementIds[es];
+ //       int pmlId = mesh->pmlIds[es];   
+ //    for(int n=0;n<mesh->Np;n++)
  //    {
  //      dfloat q1 = 0; dfloat q2 = 0; 
- //      for(iint m=0; m<mesh->cubNp;++m){
+ //      for(int m=0; m<mesh->cubNp;++m){
  //         dfloat prj = cubProjectT[m*mesh->Np+n];
  //         q1 += prj*mesh->pmlSigmaX[Nnodes*pmlId + m];
  //         q2 += prj*mesh->pmlSigmaY[Nnodes*pmlId + m];
@@ -559,9 +559,9 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
  //  printf("NonPmlElements: %d  PmlElements: %d \n", mesh->nonPmlNelements, mesh->pmlNelements);
 
   
- //  for (iint es=0;es<mesh->nonPmlNelements;es++){
- //       iint e      = mesh->nonPmlElementIds[es];
- //       iint id = e*mesh->Nverts;  
+ //  for (int es=0;es<mesh->nonPmlNelements;es++){
+ //       int e      = mesh->nonPmlElementIds[es];
+ //       int id = e*mesh->Nverts;  
  //        dfloat x1 = mesh->EX[id+0]; /* x-coordinates of vertices */
  //        dfloat x2 = mesh->EX[id+1];
  //        dfloat x3 = mesh->EX[id+2];
@@ -573,10 +573,10 @@ void boltzmannPmlSetup2D(mesh2D *mesh, char *options){
  //  }   
 
 
- //  for (iint es=0;es<mesh->pmlNelements;es++){
- //       iint e     = mesh->pmlElementIds[es];
- //       iint pmlId = mesh->pmlIds[es];
- //       iint id = e*mesh->Nverts;  
+ //  for (int es=0;es<mesh->pmlNelements;es++){
+ //       int e     = mesh->pmlElementIds[es];
+ //       int pmlId = mesh->pmlIds[es];
+ //       int id = e*mesh->Nverts;  
  //       //
  //       dfloat x1 = mesh->EX[id+0]; /* x-coordinates of vertices */
  //        dfloat x2 = mesh->EX[id+1];

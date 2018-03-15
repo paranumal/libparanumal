@@ -15,10 +15,10 @@ void meshGeometricFactorsTri2D(mesh2D *mesh){
   mesh->ggeo = (dfloat*) calloc(mesh->Nelements*mesh->Nggeo, sizeof(dfloat));
   
 
-  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
+  for(dlong e=0;e<mesh->Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
-    int id = e*mesh->Nverts+0;
+    dlong id = e*mesh->Nverts+0;
 
     dfloat xe1 = mesh->EX[id+0];
     dfloat xe2 = mesh->EX[id+1];

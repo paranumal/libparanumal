@@ -4,14 +4,11 @@
 // This code is based on Henk A. van Der Worst book "Iterative Krylov methods for large linear systems"
 int pbicgstab(solver_t* solver, const char* options, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT) {
 
-  mesh_t *mesh = solver->mesh;
-
   // aux variables
   dfloat bnorm, snorm, rnorm;
   dfloat omega, alpha, beta=0;
-  dfloat dp, dt, res;
+  dfloat res;
   dfloat rho0, rho00;
-  dfloat eps;
   dfloat aux, aux2;
 
   occa::memory &o_Ax = solver->o_Ax;

@@ -14,15 +14,15 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
   mesh->Nggeo = 4;
   mesh->ggeo = (dfloat*) calloc(mesh->Nelements*mesh->Nggeo*mesh->Np, sizeof(dfloat));
   
-  for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
+  for(dlong e=0;e<mesh->Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
-    int id = e*mesh->Nverts;
+    dlong id = e*mesh->Nverts;
 
     dfloat *xe = mesh->EX + id;
     dfloat *ye = mesh->EY + id;
 
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
 
       /* local node coordinates */
       dfloat rn = mesh->r[n]; 
@@ -43,8 +43,8 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
       dfloat sx = -yr/J;
       dfloat sy =  xr/J;
 
-      iint i = n%mesh->Nq;
-      iint j = n/mesh->Nq;
+      int i = n%mesh->Nq;
+      int j = n/mesh->Nq;
       dfloat JW = J*mesh->gllw[i]*mesh->gllw[j];
       
       /* store geometric factors */

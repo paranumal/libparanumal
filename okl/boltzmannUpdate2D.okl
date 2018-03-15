@@ -1,31 +1,31 @@
 // This kernel does not use float 4 format, 
-kernel void boltzmannSRABUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
+kernel void boltzmannSRABUpdate2D(const int Nelements,
+            const int * restrict elementIds,
             const dfloat dt,  
             const dfloat a1,
             const dfloat a2,
             const dfloat a3,
-            const iint   shift,
+            const int   shift,
             const dfloat * restrict rhsq,
                   dfloat * restrict q){
   
 // Low storage Runge Kutta time step update
-for(iint es=0;es<Nelements;++es;outer0){
+for(int es=0;es<Nelements;++es;outer0){
 
   shared dfloat s_q[p_Np*p_Nfields];
-  exclusive iint e; 
+  exclusive int e; 
 
-  for(iint n=0;n<p_maxNodes;++n;inner0){
+  for(int n=0;n<p_maxNodes;++n;inner0){
     e  = elementIds[es];
     if(n<p_Np){
-      const iint id = p_Nfields*(n + e*p_Np);
+      const int id = p_Nfields*(n + e*p_Np);
       // hard-coded for 3th order
-      const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-      const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
-      const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
+      const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+      const int rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+      const int rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
       occaUnroll(p_Nfields)
-      for(iint fld=0; fld< p_Nfields; ++fld){
+      for(int fld=0; fld< p_Nfields; ++fld){
         q[id+fld] += (a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
       }
     }
@@ -35,14 +35,14 @@ for(iint es=0;es<Nelements;++es;outer0){
 
 
 
-kernel void boltzmannSRABPmlUpdate2D(const iint pmlNelements,
-               const iint   * restrict pmlElementIds,
-               const iint   * restrict pmlIds,
+kernel void boltzmannSRABPmlUpdate2D(const int pmlNelements,
+               const int   * restrict pmlElementIds,
+               const int   * restrict pmlIds,
                const dfloat dt,  
                const dfloat a1,
                const dfloat a2,
                const dfloat a3,
-               const iint   shift,
+               const int   shift,
                const dfloat * restrict rhsq, 
                const dfloat * restrict pmlrhsqx,
                const dfloat * restrict pmlrhsqy,
@@ -50,26 +50,26 @@ kernel void boltzmannSRABPmlUpdate2D(const iint pmlNelements,
                      dfloat * restrict pmlqx,
                      dfloat * restrict pmlqy){
 // Low storage Runge Kutta time step update
-for(iint es=0;es<pmlNelements;++es;outer0){
+for(int es=0;es<pmlNelements;++es;outer0){
   shared dfloat s_q[p_Np*p_Nfields];
-  exclusive iint e;
-  for(iint n=0; n < p_maxNodes; ++n; inner0){
+  exclusive int e;
+  for(int n=0; n < p_maxNodes; ++n; inner0){
     e = pmlElementIds[es];
     if (n < p_Np){
 
-      const iint pmlId = pmlIds[es];
-      const iint id  = p_Nfields*(e*p_Np + n);
-      const iint pid = p_Nfields*(pmlId*p_Np + n);
+      const int pmlId = pmlIds[es];
+      const int id  = p_Nfields*(e*p_Np + n);
+      const int pid = p_Nfields*(pmlId*p_Np + n);
 
-      const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-      const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
-      const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
-      const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
-      const iint pmlrhsId2 = 3*pid + ((shift+2)%3)*p_Nfields;
-      const iint pmlrhsId3 = 3*pid + ((shift+1)%3)*p_Nfields;
+      const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+      const int rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+      const int rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
+      const int pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
+      const int pmlrhsId2 = 3*pid + ((shift+2)%3)*p_Nfields;
+      const int pmlrhsId3 = 3*pid + ((shift+1)%3)*p_Nfields;
 
       occaUnroll(p_Nfields)
-      for(iint fld=0; fld< p_Nfields; ++fld){
+      for(int fld=0; fld< p_Nfields; ++fld){
 
         pmlqx[pid+fld] += (a1*pmlrhsqx[pmlrhsId1+fld] + a2*pmlrhsqx[pmlrhsId2+fld] + a3*pmlrhsqx[pmlrhsId3+fld]);
         pmlqy[pid+fld] += (a1*pmlrhsqy[pmlrhsId1+fld] + a2*pmlrhsqy[pmlrhsId2+fld] + a3*pmlrhsqy[pmlrhsId3+fld]);
@@ -84,8 +84,8 @@ for(iint es=0;es<pmlNelements;++es;outer0){
 
 
 //  
-kernel void boltzmannSAABUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
+kernel void boltzmannSAABUpdate2D(const int Nelements,
+            const int * restrict elementIds,
             const dfloat expdt, 
             const dfloat ab1,
             const dfloat ab2,
@@ -93,23 +93,23 @@ kernel void boltzmannSAABUpdate2D(const iint Nelements,
             const dfloat saab1,
             const dfloat saab2,
             const dfloat saab3,
-            const iint   shift,
+            const int   shift,
             const dfloat * restrict rhsq,
                   dfloat * restrict q){
   
 // Low storage Runge Kutta time step update
-for(iint es=0;es<Nelements;++es;outer0){
+for(int es=0;es<Nelements;++es;outer0){
 
-  exclusive iint e; 
+  exclusive int e; 
 
-  for(iint n=0;n<p_maxNodes;++n;inner0){
+  for(int n=0;n<p_maxNodes;++n;inner0){
     e  = elementIds[es];
     if(n<p_Np){
-      const iint id = p_Nfields*(n + e*p_Np);
+      const int id = p_Nfields*(n + e*p_Np);
       // hard-coded for 3th order
-      const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-      const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
-      const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
+      const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+      const int rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+      const int rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
       //
       q[id+0] = q[id+0] + ab1*rhsq[rhsId1+0] + ab2*rhsq[rhsId2+0] + ab3*rhsq[rhsId3+0];
       q[id+1] = q[id+1] + ab1*rhsq[rhsId1+1] + ab2*rhsq[rhsId2+1] + ab3*rhsq[rhsId3+1];
@@ -125,9 +125,9 @@ for(iint es=0;es<Nelements;++es;outer0){
 
 
 
-kernel void boltzmannSAABPmlUpdate2D(const iint pmlNelements,
-               const iint   * restrict pmlElementIds,
-               const iint   * restrict pmlIds,
+kernel void boltzmannSAABPmlUpdate2D(const int pmlNelements,
+               const int   * restrict pmlElementIds,
+               const int   * restrict pmlIds,
                const dfloat expdt,  
                const dfloat ab1,
                const dfloat ab2,
@@ -135,7 +135,7 @@ kernel void boltzmannSAABPmlUpdate2D(const iint pmlNelements,
                const dfloat saab1,
                const dfloat saab2,
                const dfloat saab3,
-               const iint   shift,
+               const int   shift,
                const dfloat * restrict rhsq, 
                const dfloat * restrict pmlrhsqx,
                const dfloat * restrict pmlrhsqy,
@@ -143,27 +143,27 @@ kernel void boltzmannSAABPmlUpdate2D(const iint pmlNelements,
                      dfloat * restrict pmlqx,
                      dfloat * restrict pmlqy){
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<pmlNelements;++es;outer0){
+  for(int es=0;es<pmlNelements;++es;outer0){
     shared dfloat s_q[p_Np*p_Nfields];
-    exclusive iint e;
-    for(iint n=0; n < p_maxNodes; ++n; inner0){
+    exclusive int e;
+    for(int n=0; n < p_maxNodes; ++n; inner0){
      e = pmlElementIds[es];
       if (n < p_Np){
 
-        const iint pmlId = pmlIds[es];
-        const iint id  = p_Nfields*(e*p_Np + n);
-        const iint pid = p_Nfields*(pmlId*p_Np + n);
+        const int pmlId = pmlIds[es];
+        const int id  = p_Nfields*(e*p_Np + n);
+        const int pid = p_Nfields*(pmlId*p_Np + n);
 
-        const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
-        const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
-        const iint pmlrhsId2 = 3*pid + ((shift+2)%3)*p_Nfields;
-        const iint pmlrhsId3 = 3*pid + ((shift+1)%3)*p_Nfields;
+        const int pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
+        const int pmlrhsId2 = 3*pid + ((shift+2)%3)*p_Nfields;
+        const int pmlrhsId3 = 3*pid + ((shift+1)%3)*p_Nfields;
          
          occaUnroll(p_Nfields) 
-         for(iint fld=0; fld< p_Nfields; ++fld){
+         for(int fld=0; fld< p_Nfields; ++fld){
 
           pmlqx[pid+fld] += (ab1*pmlrhsqx[pmlrhsId1+fld] + ab2*pmlrhsqx[pmlrhsId2+fld] + ab3*pmlrhsqx[pmlrhsId3+fld]);
           pmlqy[pid+fld] += (ab1*pmlrhsqy[pmlrhsId1+fld] + ab2*pmlrhsqy[pmlrhsId2+fld] + ab3*pmlrhsqy[pmlrhsId3+fld]);
@@ -187,8 +187,8 @@ kernel void boltzmannSAABPmlUpdate2D(const iint pmlNelements,
 
 
 
-kernel void boltzmannLSERKUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
+kernel void boltzmannLSERKUpdate2D(const int Nelements,
+            const int * restrict elementIds,
             const dfloat dt,  
             const dfloat rka,
             const dfloat rkb,
@@ -197,15 +197,15 @@ kernel void boltzmannLSERKUpdate2D(const iint Nelements,
                   dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<Nelements;++es;outer0){
+  for(int es=0;es<Nelements;++es;outer0){
 
-    for(iint n=0;n<p_Np;++n;inner0){
-      const iint e = elementIds[es];
-      const iint id = p_Nfields*(n + e*p_Np);
+    for(int n=0;n<p_Np;++n;inner0){
+      const int e = elementIds[es];
+      const int id = p_Nfields*(n + e*p_Np);
                   
-        for(iint fld=0; fld< p_Nfields; ++fld){
+        for(int fld=0; fld< p_Nfields; ++fld){
 
-         const iint idn = id + fld;
+         const int idn = id + fld;
          dfloat r_resq = resq[idn];
          dfloat r_rhsq = rhsq[idn]; 
 
@@ -225,9 +225,9 @@ kernel void boltzmannLSERKUpdate2D(const iint Nelements,
 
 
 
-kernel void boltzmannLSERKPmlUpdate2D(const iint pmlNelements,
-              const iint   * restrict pmlElementIds,
-              const iint   * restrict pmlIds,
+kernel void boltzmannLSERKPmlUpdate2D(const int pmlNelements,
+              const int   * restrict pmlElementIds,
+              const int   * restrict pmlIds,
               const dfloat dt,  
               const dfloat rka,
               const dfloat rkb,
@@ -243,18 +243,18 @@ kernel void boltzmannLSERKPmlUpdate2D(const iint pmlNelements,
                     dfloat * restrict q){
   
 // Low storage Runge Kutta time step update
-for(iint es=0;es<pmlNelements;++es;outer0){
-  exclusive iint e;
-  for(iint n=0; n < p_Np; ++n; inner0){
+for(int es=0;es<pmlNelements;++es;outer0){
+  exclusive int e;
+  for(int n=0; n < p_Np; ++n; inner0){
     e = pmlElementIds[es];
 
     if (n < p_Np){
-      const iint pmlId = pmlIds[es];
-      const iint id  = p_Nfields*(e*p_Np + n);
-      const iint pid = p_Nfields*(pmlId*p_Np + n);
+      const int pmlId = pmlIds[es];
+      const int id  = p_Nfields*(e*p_Np + n);
+      const int pid = p_Nfields*(pmlId*p_Np + n);
       //
       occaUnroll(p_Nfields)
-      for (iint fld =0; fld<p_Nfields; ++fld){
+      for (int fld =0; fld<p_Nfields; ++fld){
         const dfloat r_q  = q [id  + fld];
         const dfloat r_qx = qx[pid + fld];
         const dfloat r_qy = qy[pid + fld];
@@ -287,28 +287,28 @@ for(iint es=0;es<pmlNelements;++es;outer0){
 
 
 // Check indexing for SARK KERNELS !!!!!!!!!!!!!
-kernel void boltzmannSARKStageUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
+kernel void boltzmannSARKStageUpdate2D(const int Nelements,
+            const int * restrict elementIds,
             const dfloat dt, 
             const dfloat expdt, 
             const dfloat rka,
             const dfloat erka,
             const dfloat rkb,
             const dfloat erkb,
-            const iint shift,
+            const int shift,
             const dfloat * restrict rhsq,
             const dfloat * restrict qs,
                   dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<Nelements;++es;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
-      const iint e = elementIds[es];
+  for(int es=0;es<Nelements;++es;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+      const int e = elementIds[es];
       
-      const iint id = p_Nfields*(n + e*p_Np);
+      const int id = p_Nfields*(n + e*p_Np);
         // hard-coded for 3th order
-        const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
       
         q[id+0] = qs[id+0] + dt*(rka*rhsq[rhsId1+0] + rkb*rhsq[rhsId2+0]);
         q[id+1] = qs[id+1] + dt*(rka*rhsq[rhsId1+1] + rkb*rhsq[rhsId2+1]);
@@ -323,8 +323,8 @@ kernel void boltzmannSARKStageUpdate2D(const iint Nelements,
 
 
 
-kernel void boltzmannSARKUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
+kernel void boltzmannSARKUpdate2D(const int Nelements,
+            const int * restrict elementIds,
             const dfloat dt, 
             const dfloat expdt, 
             const dfloat rka,
@@ -333,24 +333,24 @@ kernel void boltzmannSARKUpdate2D(const iint Nelements,
             const dfloat erkb,
             const dfloat rkc,
             const dfloat erkc,
-            const iint shift,
+            const int shift,
             const dfloat * restrict rhsq,
                   dfloat * restrict qs,
                   dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<Nelements;++es;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
-      const iint e = elementIds[es];
+  for(int es=0;es<Nelements;++es;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+      const int e = elementIds[es];
       
-      const iint id = p_Nfields*(n + e*p_Np);
+      const int id = p_Nfields*(n + e*p_Np);
         // hard-coded for 3th order
-        const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
         
         occaUnroll(p_Nfields)
-        for(iint fld=0; fld<p_Nfields; ++fld ){
+        for(int fld=0; fld<p_Nfields; ++fld ){
          dfloat r_q = 0.f; 
          if(fld<3)
            r_q = qs[id+fld] + dt*(rka*rhsq[rhsId1+fld] + rkb*rhsq[rhsId2+fld] + rkc*rhsq[rhsId3+fld]);
@@ -366,9 +366,9 @@ kernel void boltzmannSARKUpdate2D(const iint Nelements,
 
 
 
-kernel void boltzmannSARKPmlStageUpdate2D(const iint pmlNelements,
-              const iint * restrict pmlElementIds, 
-              const iint *restrict pmlIds,
+kernel void boltzmannSARKPmlStageUpdate2D(const int pmlNelements,
+              const int * restrict pmlElementIds, 
+              const int *restrict pmlIds,
               const dfloat dt,  
               const dfloat expdt, 
               const dfloat rka,
@@ -376,7 +376,7 @@ kernel void boltzmannSARKPmlStageUpdate2D(const iint pmlNelements,
               const dfloat rkb,
               const dfloat erkb,
               const dfloat ramp, 
-              const iint shift,
+              const int shift,
               const dfloat * restrict rhsq,
               const dfloat * restrict rhsqx,
               const dfloat * restrict rhsqy,
@@ -387,24 +387,24 @@ kernel void boltzmannSARKPmlStageUpdate2D(const iint pmlNelements,
                     dfloat * restrict qy,
                     dfloat * restrict q){
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<pmlNelements;++es;outer0){
-  exclusive iint e;
-    for(iint n=0; n < p_Np; ++n; inner0){
+  for(int es=0;es<pmlNelements;++es;outer0){
+  exclusive int e;
+    for(int n=0; n < p_Np; ++n; inner0){
     e = pmlElementIds[es];
 
     if (n < p_Np){
-      const iint pmlId = pmlIds[es];
-      const iint id  = p_Nfields*(e*p_Np + n);
-      const iint pid = p_Nfields*(pmlId*p_Np + n);
+      const int pmlId = pmlIds[es];
+      const int id  = p_Nfields*(e*p_Np + n);
+      const int pid = p_Nfields*(pmlId*p_Np + n);
 
-      const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-      const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
+      const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+      const int rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
       
-      const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
-      const iint pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
+      const int pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
+      const int pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
       //
       occaUnroll(p_Nfields)
-      for(iint fld=0; fld< p_Nfields; ++fld){
+      for(int fld=0; fld< p_Nfields; ++fld){
 
       qx[pid+fld] = qsx[pid+fld] + dt*( rka*rhsqx[pmlrhsId1+fld] + rkb*rhsqx[pmlrhsId2+fld]);
       qy[pid+fld] = qsy[pid+fld] + dt*( rka*rhsqy[pmlrhsId1+fld] + rkb*rhsqy[pmlrhsId2+fld]);
@@ -420,9 +420,9 @@ kernel void boltzmannSARKPmlStageUpdate2D(const iint pmlNelements,
 }
 
 
-kernel void boltzmannSARKPmlUpdate2D(const iint pmlNelements,
-              const iint * restrict pmlElementIds, 
-              const iint *restrict pmlIds,
+kernel void boltzmannSARKPmlUpdate2D(const int pmlNelements,
+              const int * restrict pmlElementIds, 
+              const int *restrict pmlIds,
               const dfloat dt,  
               const dfloat expdt, 
               const dfloat rka,
@@ -432,7 +432,7 @@ kernel void boltzmannSARKPmlUpdate2D(const iint pmlNelements,
               const dfloat rkc,
               const dfloat erkc,
               const dfloat ramp, 
-              const iint shift,
+              const int shift,
               const dfloat * restrict rhsq,
               const dfloat * restrict rhsqx,
               const dfloat * restrict rhsqy,
@@ -443,26 +443,26 @@ kernel void boltzmannSARKPmlUpdate2D(const iint pmlNelements,
                     dfloat * restrict qy,
                     dfloat * restrict q){
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<pmlNelements;++es;outer0){
-  exclusive iint e;
-    for(iint n=0; n < p_Np; ++n; inner0){
+  for(int es=0;es<pmlNelements;++es;outer0){
+  exclusive int e;
+    for(int n=0; n < p_Np; ++n; inner0){
     e = pmlElementIds[es];
 
     if (n < p_Np){
-      const iint pmlId = pmlIds[es];
-      const iint id  = p_Nfields*(e*p_Np + n);
-      const iint pid = p_Nfields*(pmlId*p_Np + n);
+      const int pmlId = pmlIds[es];
+      const int id  = p_Nfields*(e*p_Np + n);
+      const int pid = p_Nfields*(pmlId*p_Np + n);
 
-      const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-      const iint rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
-      const iint rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
+      const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+      const int rhsId2 = 3*id + ((shift+1)%3)*p_Nfields;
+      const int rhsId3 = 3*id + ((shift+2)%3)*p_Nfields;
 
-      const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
-      const iint pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
-      const iint pmlrhsId3 = 3*pid + ((shift+2)%3)*p_Nfields;
+      const int pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
+      const int pmlrhsId2 = 3*pid + ((shift+1)%3)*p_Nfields;
+      const int pmlrhsId3 = 3*pid + ((shift+2)%3)*p_Nfields;
       //
       occaUnroll(p_Nfields)
-      for(iint fld=0; fld< p_Nfields; ++fld){
+      for(int fld=0; fld< p_Nfields; ++fld){
 
         dfloat r_qx =0.f, r_qy =0.f, r_q = 0.f; 
         
@@ -492,8 +492,8 @@ kernel void boltzmannSARKPmlUpdate2D(const iint pmlNelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannLSIMEXResidualUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
+kernel void boltzmannLSIMEXResidualUpdate2D(const int Nelements,
+            const int * restrict elementIds,
             const dfloat dt, 
             const dfloat aki,
             const dfloat ake, 
@@ -502,14 +502,14 @@ kernel void boltzmannLSIMEXResidualUpdate2D(const iint Nelements,
             const dfloat * restrict rhsq,
                   dfloat * restrict qY){
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<Nelements;++es;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
-      const iint e = elementIds[es];
+  for(int es=0;es<Nelements;++es;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+      const int e = elementIds[es];
       
-      const iint id = p_Nfields*(n + e*p_Np);
+      const int id = p_Nfields*(n + e*p_Np);
       
       occaUnroll(p_Nfields)
-      for(iint fld=0; fld<p_Nfields; ++fld){
+      for(int fld=0; fld<p_Nfields; ++fld){
         qY[id +fld] = q[id+fld] + dt*( ake*rhsq[id +fld] + aki*qZ[id +fld]);
       }
     }
@@ -519,9 +519,9 @@ kernel void boltzmannLSIMEXResidualUpdate2D(const iint Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannLSIMEXPmlResidualUpdate2D(const iint pmlNelements,
-            const iint * restrict pmlElementIds, 
-            const iint *restrict pmlIds,
+kernel void boltzmannLSIMEXPmlResidualUpdate2D(const int pmlNelements,
+            const int * restrict pmlElementIds, 
+            const int *restrict pmlIds,
             const dfloat dt,
             const dfloat ramp, 
             const dfloat c_im,
@@ -537,18 +537,18 @@ kernel void boltzmannLSIMEXPmlResidualUpdate2D(const iint pmlNelements,
                   dfloat  * restrict pmlYx,
                   dfloat  * restrict pmlYy){
 
-  for(iint es=0;es<pmlNelements;++es;outer0){
-  exclusive iint e;
-    for(iint n=0; n < p_Np; ++n; inner0){
+  for(int es=0;es<pmlNelements;++es;outer0){
+  exclusive int e;
+    for(int n=0; n < p_Np; ++n; inner0){
     e = pmlElementIds[es];
 
     if (n < p_Np){
-      const iint pmlId = pmlIds[es];
-      const iint id  = p_Nfields*(e*p_Np + n);
-      const iint pid = p_Nfields*(pmlId*p_Np + n);
+      const int pmlId = pmlIds[es];
+      const int id  = p_Nfields*(e*p_Np + n);
+      const int pid = p_Nfields*(pmlId*p_Np + n);
       
       occaUnroll(p_Nfields)
-      for(iint fld=0; fld<p_Nfields; ++fld){
+      for(int fld=0; fld<p_Nfields; ++fld){
         pmlYx[pid+fld] = pmlqx[pid+fld] + c_ex*dt*rhsqx[pid+fld]; // fully explicit
         pmlYy[pid+fld] = pmlqy[pid+fld] + c_ex*dt*rhsqy[pid+fld]; // fully explicit
         qY[id+fld]     = q[id+fld]      + dt*(c_ex*rhsq[id+fld] + c_im*qZ[id+fld]); // imlicit-explicit
@@ -561,21 +561,21 @@ kernel void boltzmannLSIMEXPmlResidualUpdate2D(const iint pmlNelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannLSIMEXImplicitUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
+kernel void boltzmannLSIMEXImplicitUpdate2D(const int Nelements,
+            const int * restrict elementIds,
             const dfloat dt, 
             const dfloat akk,
             const dfloat * restrict qZ,
                   dfloat * restrict qY){
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<Nelements;++es;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
-      const iint e = elementIds[es];
+  for(int es=0;es<Nelements;++es;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+      const int e = elementIds[es];
       
-      const iint id = p_Nfields*(n + e*p_Np);
+      const int id = p_Nfields*(n + e*p_Np);
       
       occaUnroll(p_Nfields)
-      for(iint fld=0; fld<p_Nfields; ++fld){
+      for(int fld=0; fld<p_Nfields; ++fld){
        qY[id + fld] += akk*dt*qZ[id+fld];
       }
     }
@@ -586,8 +586,8 @@ kernel void boltzmannLSIMEXImplicitUpdate2D(const iint Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannLSIMEXUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
+kernel void boltzmannLSIMEXUpdate2D(const int Nelements,
+            const int * restrict elementIds,
             const dfloat dt, 
             const dfloat akk,
             const dfloat * restrict qZ,
@@ -595,13 +595,13 @@ kernel void boltzmannLSIMEXUpdate2D(const iint Nelements,
             const dfloat * restrict rhsq,
                   dfloat * restrict q){
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<Nelements;++es;outer0){
-    for(iint n=0;n<p_Np;++n;inner0){
-      const iint e = elementIds[es];
+  for(int es=0;es<Nelements;++es;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+      const int e = elementIds[es];
 
-      const iint id = p_Nfields*(n + e*p_Np);
+      const int id = p_Nfields*(n + e*p_Np);
       occaUnroll(p_Nfields)
-       for(iint fld=0; fld<p_Nfields; ++fld){
+       for(int fld=0; fld<p_Nfields; ++fld){
         q[id  +fld] += akk*dt*(rhsq[id+fld] + qZ[id+fld]);
        }
     }
@@ -611,26 +611,26 @@ kernel void boltzmannLSIMEXUpdate2D(const iint Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannLSIMEXPmlImplicitUpdate2D(const iint pmlNelements,
-            const iint * restrict pmlElementIds, 
-            const iint *restrict pmlIds,
+kernel void boltzmannLSIMEXPmlImplicitUpdate2D(const int pmlNelements,
+            const int * restrict pmlElementIds, 
+            const int *restrict pmlIds,
             const dfloat dt, 
             const dfloat ramp,
             const dfloat akk,
             const dfloat  * restrict qZ,
                   dfloat  * restrict qY){
- for(iint es=0;es<pmlNelements;++es;outer0){
-  exclusive iint e;
-    for(iint n=0; n < p_Np; ++n; inner0){
+ for(int es=0;es<pmlNelements;++es;outer0){
+  exclusive int e;
+    for(int n=0; n < p_Np; ++n; inner0){
     e = pmlElementIds[es];
 
     if (n < p_Np){
-      const iint pmlId = pmlIds[es];
-      const iint id  = p_Nfields*(e*p_Np + n);
-      const iint pid = p_Nfields*(pmlId*p_Np + n);
+      const int pmlId = pmlIds[es];
+      const int id  = p_Nfields*(e*p_Np + n);
+      const int pid = p_Nfields*(pmlId*p_Np + n);
       
       occaUnroll(p_Nfields)
-      for(iint fld=0; fld<p_Nfields; ++fld){
+      for(int fld=0; fld<p_Nfields; ++fld){
         qY[id + fld] +=  akk*dt*qZ[id+fld];
       }
     }
@@ -641,9 +641,9 @@ kernel void boltzmannLSIMEXPmlImplicitUpdate2D(const iint pmlNelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannLSIMEXPmlUpdate2D(const iint pmlNelements,
-            const iint * restrict pmlElementIds, 
-            const iint *restrict pmlIds,
+kernel void boltzmannLSIMEXPmlUpdate2D(const int pmlNelements,
+            const int * restrict pmlElementIds, 
+            const int *restrict pmlIds,
             const dfloat dt, 
             const dfloat akk,
             const dfloat ramp,
@@ -657,18 +657,18 @@ kernel void boltzmannLSIMEXPmlUpdate2D(const iint pmlNelements,
                   dfloat  * restrict pmlqx,
                   dfloat  * restrict pmlqy,
                   dfloat  * restrict q ){
-  for(iint es=0;es<pmlNelements;++es;outer0){
-  exclusive iint e;
-    for(iint n=0; n < p_Np; ++n; inner0){
+  for(int es=0;es<pmlNelements;++es;outer0){
+  exclusive int e;
+    for(int n=0; n < p_Np; ++n; inner0){
     e = pmlElementIds[es];
 
     if (n < p_Np){
-      const iint pmlId = pmlIds[es];
-      const iint id  = p_Nfields*(e*p_Np + n);
-      const iint pid = p_Nfields*(pmlId*p_Np + n);
+      const int pmlId = pmlIds[es];
+      const int id  = p_Nfields*(e*p_Np + n);
+      const int pid = p_Nfields*(pmlId*p_Np + n);
       
       occaUnroll(p_Nfields)
-      for(iint fld=0; fld<p_Nfields; ++fld){
+      for(int fld=0; fld<p_Nfields; ++fld){
         
         //update qx
         pmlqx[pid+fld] +=  akk*dt*rhsqx[pid+fld];
@@ -687,36 +687,36 @@ kernel void boltzmannLSIMEXPmlUpdate2D(const iint pmlNelements,
 
 
 // This kernel does not use float 4 format, 
-kernel void boltzmannMRABUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
+kernel void boltzmannMRABUpdate2D(const int Nelements,
+            const int * restrict elementIds,
             const dfloat dt,  
             const dfloat a1,
             const dfloat a2,
             const dfloat a3,
-            const iint   shift,
-            const iint   * restrict vmapM,
+            const int   shift,
+            const int   * restrict vmapM,
             const dfloat * restrict rhsq,
                   dfloat * restrict fQM,
                   dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<Nelements;++es;outer0){
+  for(int es=0;es<Nelements;++es;outer0){
 
     shared dfloat s_q[p_Np*p_Nfields];
-    exclusive iint e; 
+    exclusive int e; 
 
-    for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;inner0){
       e  = elementIds[es];
       if(n<p_Np){
-        const iint id = p_Nfields*(n + e*p_Np);
+        const int id = p_Nfields*(n + e*p_Np);
 
         // hard-coded for 3th order
-        const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
         
         occaUnroll(p_Nfields)
-        for(iint fld=0; fld< p_Nfields; ++fld){
+        for(int fld=0; fld< p_Nfields; ++fld){
           s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
         }
       }
@@ -725,14 +725,14 @@ kernel void boltzmannMRABUpdate2D(const iint Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;inner0){
 
       // Update q
       if(n<p_Np){
 
-        const iint id = p_Nfields*(e*p_Np + n);
+        const int id = p_Nfields*(e*p_Np + n);
         occaUnroll(p_Nfields)
-        for (iint fld = 0; fld < p_Nfields; ++fld){
+        for (int fld = 0; fld < p_Nfields; ++fld){
           q[id+fld]   = s_q[p_Nfields*n+fld];
         } 
 
@@ -740,12 +740,12 @@ kernel void boltzmannMRABUpdate2D(const iint Nelements,
 
       if(n<p_Nfaces*p_Nfp){
 
-        const iint iid  = e*p_Nfp*p_Nfaces + n;
-        const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
-        const iint qid  = p_Nfields*iid; 
+        const int iid  = e*p_Nfp*p_Nfaces + n;
+        const int qidM = p_Nfields*(vmapM[iid]-e*p_Np);
+        const int qid  = p_Nfields*iid; 
          
          occaUnroll(p_Nfields)
-         for (iint fld = 0; fld < p_Nfields; ++fld){
+         for (int fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];  
         }   
       }
@@ -758,8 +758,8 @@ kernel void boltzmannMRABUpdate2D(const iint Nelements,
 
 
 // This kernel does not use float 4 format, 
-kernel void boltzmannMRSAABUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
+kernel void boltzmannMRSAABUpdate2D(const int Nelements,
+            const int * restrict elementIds,
             const dfloat expdt, 
             const dfloat ab1,
             const dfloat ab2,
@@ -767,27 +767,27 @@ kernel void boltzmannMRSAABUpdate2D(const iint Nelements,
             const dfloat saab1,
             const dfloat saab2,
             const dfloat saab3,
-            const iint   shift,
-            const iint   * restrict vmapM,
+            const int   shift,
+            const int   * restrict vmapM,
             const dfloat * restrict rhsq,
                   dfloat * restrict fQM,
                   dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<Nelements;++es;outer0){
+  for(int es=0;es<Nelements;++es;outer0){
 
     shared dfloat s_q[p_Np*p_Nfields];
-    exclusive iint e; 
+    exclusive int e; 
 
-    for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;inner0){
       e  = elementIds[es];
       if(n<p_Np){
-        const iint id = p_Nfields*(n + e*p_Np);
+        const int id = p_Nfields*(n + e*p_Np);
 
         // hard-coded for 3th order
-        const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
         //
         s_q[p_Nfields*n+0] = q[id+0] + ab1*rhsq[rhsId1+0] + ab2*rhsq[rhsId2+0] + ab3*rhsq[rhsId3+0];
@@ -803,14 +803,14 @@ kernel void boltzmannMRSAABUpdate2D(const iint Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;inner0){
 
       // Update q
       if(n<p_Np){
 
-        const iint id = p_Nfields*(e*p_Np + n);
+        const int id = p_Nfields*(e*p_Np + n);
         occaUnroll(p_Nfields)
-        for (iint fld = 0; fld < p_Nfields; ++fld){
+        for (int fld = 0; fld < p_Nfields; ++fld){
           q[id+fld]   = s_q[p_Nfields*n+fld];
         } 
 
@@ -818,11 +818,11 @@ kernel void boltzmannMRSAABUpdate2D(const iint Nelements,
 
       if(n<p_Nfaces*p_Nfp){
 
-        const iint iid  = e*p_Nfp*p_Nfaces + n;
-        const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
-        const iint qid  = p_Nfields*iid; 
+        const int iid  = e*p_Nfp*p_Nfaces + n;
+        const int qidM = p_Nfields*(vmapM[iid]-e*p_Np);
+        const int qid  = p_Nfields*iid; 
          occaUnroll(p_Nfields)
-         for (iint fld = 0; fld < p_Nfields; ++fld){
+         for (int fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];  
         }   
       }
@@ -836,15 +836,15 @@ kernel void boltzmannMRSAABUpdate2D(const iint Nelements,
 
 
 
-kernel void boltzmannMRABPmlUpdate2D(const iint pmlNelements,
-               const iint   * restrict pmlElementIds,
-               const iint   * restrict pmlIds,
+kernel void boltzmannMRABPmlUpdate2D(const int pmlNelements,
+               const int   * restrict pmlElementIds,
+               const int   * restrict pmlIds,
                const dfloat dt,  
                const dfloat a1,
                const dfloat a2,
                const dfloat a3,
-               const iint   shift,
-               const iint   * restrict vmapM,
+               const int   shift,
+               const int   * restrict vmapM,
                const dfloat * restrict rhsq, 
                const dfloat * restrict pmlrhsqx,
                const dfloat * restrict pmlrhsqy,
@@ -853,27 +853,27 @@ kernel void boltzmannMRABPmlUpdate2D(const iint pmlNelements,
                      dfloat * restrict pmlqy,
                      dfloat * restrict fQM){
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<pmlNelements;++es;outer0){
+  for(int es=0;es<pmlNelements;++es;outer0){
     shared dfloat s_q[p_Np*p_Nfields];
-    exclusive iint e;
-    for(iint n=0; n < p_maxNodes; ++n; inner0){
+    exclusive int e;
+    for(int n=0; n < p_maxNodes; ++n; inner0){
      e = pmlElementIds[es];
       if (n < p_Np){
 
-        const iint pmlId = pmlIds[es];
-        const iint id  = p_Nfields*(e*p_Np + n);
-        const iint pid = p_Nfields*(pmlId*p_Np + n);
+        const int pmlId = pmlIds[es];
+        const int id  = p_Nfields*(e*p_Np + n);
+        const int pid = p_Nfields*(pmlId*p_Np + n);
 
-        const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
-        const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
-        const iint pmlrhsId2 = 3*pid + ((shift+2)%3)*p_Nfields;
-        const iint pmlrhsId3 = 3*pid + ((shift+1)%3)*p_Nfields;
+        const int pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
+        const int pmlrhsId2 = 3*pid + ((shift+2)%3)*p_Nfields;
+        const int pmlrhsId3 = 3*pid + ((shift+1)%3)*p_Nfields;
         //
         occaUnroll(p_Nfields)
-        for(iint fld=0; fld< p_Nfields; ++fld){
+        for(int fld=0; fld< p_Nfields; ++fld){
 
           pmlqx[pid+fld] += dt*(a1*pmlrhsqx[pmlrhsId1+fld] + a2*pmlrhsqx[pmlrhsId2+fld] + a3*pmlrhsqx[pmlrhsId3+fld]);
           pmlqy[pid+fld] += dt*(a1*pmlrhsqy[pmlrhsId1+fld] + a2*pmlrhsqy[pmlrhsId2+fld] + a3*pmlrhsqy[pmlrhsId3+fld]);
@@ -889,15 +889,15 @@ kernel void boltzmannMRABPmlUpdate2D(const iint pmlNelements,
 
     barrier(localMemFence);
 
-    for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Nfaces*p_Nfp){
 
-        const iint iid  = e*p_Nfp*p_Nfaces + n;
-        const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
-        const iint qid  = p_Nfields*iid; 
+        const int iid  = e*p_Nfp*p_Nfaces + n;
+        const int qidM = p_Nfields*(vmapM[iid]-e*p_Np);
+        const int qid  = p_Nfields*iid; 
         
         occaUnroll(p_Nfields)
-        for (iint fld = 0; fld < p_Nfields; ++fld){
+        for (int fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];
         }   
       }
@@ -908,9 +908,9 @@ kernel void boltzmannMRABPmlUpdate2D(const iint pmlNelements,
 }
 
 
-kernel void boltzmannMRSAABPmlUpdate2D(const iint pmlNelements,
-               const iint   * restrict pmlElementIds,
-               const iint   * restrict pmlIds,
+kernel void boltzmannMRSAABPmlUpdate2D(const int pmlNelements,
+               const int   * restrict pmlElementIds,
+               const int   * restrict pmlIds,
                const dfloat expdt,  
                const dfloat ab1,
                const dfloat ab2,
@@ -918,8 +918,8 @@ kernel void boltzmannMRSAABPmlUpdate2D(const iint pmlNelements,
                const dfloat saab1,
                const dfloat saab2,
                const dfloat saab3,
-               const iint   shift,
-               const iint   * restrict vmapM,
+               const int   shift,
+               const int   * restrict vmapM,
                const dfloat * restrict rhsq, 
                const dfloat * restrict pmlrhsqx,
                const dfloat * restrict pmlrhsqy,
@@ -928,27 +928,27 @@ kernel void boltzmannMRSAABPmlUpdate2D(const iint pmlNelements,
                      dfloat * restrict pmlqy,
                      dfloat * restrict fQM){
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<pmlNelements;++es;outer0){
+  for(int es=0;es<pmlNelements;++es;outer0){
     shared dfloat s_q[p_Np*p_Nfields];
-    exclusive iint e;
-    for(iint n=0; n < p_maxNodes; ++n; inner0){
+    exclusive int e;
+    for(int n=0; n < p_maxNodes; ++n; inner0){
      e = pmlElementIds[es];
       if (n < p_Np){
 
-        const iint pmlId = pmlIds[es];
-        const iint id  = p_Nfields*(e*p_Np + n);
-        const iint pid = p_Nfields*(pmlId*p_Np + n);
+        const int pmlId = pmlIds[es];
+        const int id  = p_Nfields*(e*p_Np + n);
+        const int pid = p_Nfields*(pmlId*p_Np + n);
 
-        const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
 
-        const iint pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
-        const iint pmlrhsId2 = 3*pid + ((shift+2)%3)*p_Nfields;
-        const iint pmlrhsId3 = 3*pid + ((shift+1)%3)*p_Nfields;
+        const int pmlrhsId1 = 3*pid + ((shift+0)%3)*p_Nfields;
+        const int pmlrhsId2 = 3*pid + ((shift+2)%3)*p_Nfields;
+        const int pmlrhsId3 = 3*pid + ((shift+1)%3)*p_Nfields;
         //
         occaUnroll(p_Nfields)
-         for(iint fld=0; fld<p_Nfields; ++fld){
+         for(int fld=0; fld<p_Nfields; ++fld){
 
           pmlqx[pid+fld] += ab1*pmlrhsqx[pmlrhsId1+fld] + ab2*pmlrhsqx[pmlrhsId2+fld] + ab3*pmlrhsqx[pmlrhsId3+fld];
           pmlqy[pid+fld] += ab1*pmlrhsqy[pmlrhsId1+fld] + ab2*pmlrhsqy[pmlrhsId2+fld] + ab3*pmlrhsqy[pmlrhsId3+fld];
@@ -969,14 +969,14 @@ kernel void boltzmannMRSAABPmlUpdate2D(const iint pmlNelements,
 
     barrier(localMemFence);
 
-    for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Nfaces*p_Nfp){
 
-        const iint iid  = e*p_Nfp*p_Nfaces + n;
-        const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
-        const iint qid  = p_Nfields*iid; 
+        const int iid  = e*p_Nfp*p_Nfaces + n;
+        const int qidM = p_Nfields*(vmapM[iid]-e*p_Np);
+        const int qid  = p_Nfields*iid; 
         occaUnroll(p_Nfields)
-         for (iint fld = 0; fld < p_Nfields; ++fld){
+         for (int fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];
         }   
       }
@@ -987,36 +987,36 @@ kernel void boltzmannMRSAABPmlUpdate2D(const iint pmlNelements,
 }
 
 // This kernel does not use float4 format, 
-kernel void boltzmannMRABTraceUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
+kernel void boltzmannMRABTraceUpdate2D(const int Nelements,
+            const int * restrict elementIds,
             const dfloat dt,  
             const dfloat a1,
             const dfloat a2,
             const dfloat a3,
-            const iint   shift,
-            const iint   * restrict vmapM,
+            const int   shift,
+            const int   * restrict vmapM,
             const dfloat * restrict rhsq,
                   dfloat * restrict fQM,
             const dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<Nelements;++es;outer0){
+  for(int es=0;es<Nelements;++es;outer0){
 
     shared dfloat s_q[p_Np*p_Nfields];
-    exclusive iint e; 
+    exclusive int e; 
 
-    for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;inner0){
       e  = elementIds[es];
       if(n<p_Np){
-        const iint id = p_Nfields*(n + e*p_Np);
+        const int id = p_Nfields*(n + e*p_Np);
 
         // hard-coded for 3th order
-        const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
         
         occaUnroll(p_Nfields)
-          for(iint fld=0; fld< p_Nfields; ++fld){
+          for(int fld=0; fld< p_Nfields; ++fld){
           s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
           }
       }
@@ -1025,15 +1025,15 @@ kernel void boltzmannMRABTraceUpdate2D(const iint Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Nfaces*p_Nfp){
 
-        const iint iid  = e*p_Nfp*p_Nfaces + n;
-        const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
-        const iint qid  = p_Nfields*iid; 
+        const int iid  = e*p_Nfp*p_Nfaces + n;
+        const int qidM = p_Nfields*(vmapM[iid]-e*p_Np);
+        const int qid  = p_Nfields*iid; 
         
          occaUnroll(p_Nfields)
-         for (iint fld = 0; fld < p_Nfields; ++fld){
+         for (int fld = 0; fld < p_Nfields; ++fld){
           fQM[qid+fld] = s_q[qidM+fld];  
         }   
       }
@@ -1045,8 +1045,8 @@ kernel void boltzmannMRABTraceUpdate2D(const iint Nelements,
 
 
 // This kernel does not use float4 format, 
-kernel void boltzmannMRSAABTraceUpdate2D(const iint Nelements,
-            const iint * restrict elementIds,
+kernel void boltzmannMRSAABTraceUpdate2D(const int Nelements,
+            const int * restrict elementIds,
             const dfloat expdt, 
             const dfloat ab1,
             const dfloat ab2,
@@ -1054,30 +1054,30 @@ kernel void boltzmannMRSAABTraceUpdate2D(const iint Nelements,
             const dfloat saab1,
             const dfloat saab2,
             const dfloat saab3,
-            const iint   shift,
-            const iint   * restrict vmapM,
+            const int   shift,
+            const int   * restrict vmapM,
             const dfloat * restrict rhsq,
                   dfloat * restrict fQM,
             const dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<Nelements;++es;outer0){
+  for(int es=0;es<Nelements;++es;outer0){
 
     shared dfloat s_q[p_Np*p_Nfields];
-    exclusive iint e; 
+    exclusive int e; 
 
-    for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;inner0){
       e  = elementIds[es];
       if(n<p_Np){
-        const iint id = p_Nfields*(n + e*p_Np);
+        const int id = p_Nfields*(n + e*p_Np);
 
         // hard-coded for 3th order
-        const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
        
         occaUnroll(p_Nfields)
-          for(iint fld=0; fld< p_Nfields; ++fld){
+          for(int fld=0; fld< p_Nfields; ++fld){
             if(fld<3)
               s_q[p_Nfields*n+fld] = q[id+fld]+ab1*rhsq[rhsId1+fld]+ab2*rhsq[rhsId2+fld]+ab3*rhsq[rhsId3+fld];
             else
@@ -1089,12 +1089,12 @@ kernel void boltzmannMRSAABTraceUpdate2D(const iint Nelements,
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
-    for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Nfaces*p_Nfp){
 
-        const iint iid  = e*p_Nfp*p_Nfaces + n;
-        const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
-        const iint qid  = p_Nfields*iid; 
+        const int iid  = e*p_Nfp*p_Nfaces + n;
+        const int qidM = p_Nfields*(vmapM[iid]-e*p_Np);
+        const int qid  = p_Nfields*iid; 
         
         occaUnroll(p_Nfields)
          for (int fld = 0; fld < p_Nfields; ++fld){
@@ -1107,15 +1107,15 @@ kernel void boltzmannMRSAABTraceUpdate2D(const iint Nelements,
   }
 }
 
-kernel void boltzmannMRABPmlTraceUpdate2D(const iint pmlNelements,
-               const iint   * restrict pmlElementIds,
-               const iint   * restrict pmlIds,
+kernel void boltzmannMRABPmlTraceUpdate2D(const int pmlNelements,
+               const int   * restrict pmlElementIds,
+               const int   * restrict pmlIds,
                const dfloat dt,  
                const dfloat a1,
                const dfloat a2,
                const dfloat a3,
-               const iint   shift,
-               const iint   * restrict vmapM,
+               const int   shift,
+               const int   * restrict vmapM,
                const dfloat * restrict rhsq, 
                const dfloat * restrict pmlrhsqx,
                const dfloat * restrict pmlrhsqy,
@@ -1124,22 +1124,22 @@ kernel void boltzmannMRABPmlTraceUpdate2D(const iint pmlNelements,
                const dfloat * restrict pmlqy,
                      dfloat * restrict fQM){
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<pmlNelements;++es;outer0){
+  for(int es=0;es<pmlNelements;++es;outer0){
     shared dfloat s_q[p_Np*p_Nfields];
-    exclusive iint e;
-    for(iint n=0; n < p_maxNodes; ++n; inner0){
+    exclusive int e;
+    for(int n=0; n < p_maxNodes; ++n; inner0){
      e = pmlElementIds[es];
       if (n < p_Np){
-        // const iint pmlId = pmlIds[es];
-        const iint id  = p_Nfields*(e*p_Np + n);
-        // const iint pid = p_Nfields*(pmlId*p_Np + n);
+        // const int pmlId = pmlIds[es];
+        const int id  = p_Nfields*(e*p_Np + n);
+        // const int pid = p_Nfields*(pmlId*p_Np + n);
 
-        const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
         //
         occaUnroll(p_Nfields)
-         for(iint fld=0; fld< p_Nfields; ++fld){      
+         for(int fld=0; fld< p_Nfields; ++fld){      
           s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
          }
       }
@@ -1147,12 +1147,12 @@ kernel void boltzmannMRABPmlTraceUpdate2D(const iint pmlNelements,
 
     barrier(localMemFence);
 
-    for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Nfaces*p_Nfp){
 
-        const iint iid  = e*p_Nfp*p_Nfaces + n;
-        const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
-        const iint qid  = p_Nfields*iid; 
+        const int iid  = e*p_Nfp*p_Nfaces + n;
+        const int qidM = p_Nfields*(vmapM[iid]-e*p_Np);
+        const int qid  = p_Nfields*iid; 
         
         occaUnroll(p_Nfields)
          for (int fld = 0; fld < p_Nfields; ++fld){
@@ -1169,9 +1169,9 @@ kernel void boltzmannMRABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 
-kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
-                      const iint   * restrict pmlElementIds,
-                      const iint   * restrict pmlIds,
+kernel void boltzmannMRSAABPmlTraceUpdate2D(const int pmlNelements,
+                      const int   * restrict pmlElementIds,
+                      const int   * restrict pmlIds,
                       const dfloat expdt, 
                       const dfloat ab1,
                       const dfloat ab2,
@@ -1179,8 +1179,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
                       const dfloat saab1,
                       const dfloat saab2,
                       const dfloat saab3,
-                      const iint   shift,
-                      const iint   * restrict vmapM,
+                      const int   shift,
+                      const int   * restrict vmapM,
                       const dfloat * restrict rhsq, 
                       const dfloat * restrict pmlrhsqx,
                       const dfloat * restrict pmlrhsqy,
@@ -1189,22 +1189,22 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
                       const dfloat * restrict pmlqy,
                             dfloat * restrict fQM){
   // Low storage Runge Kutta time step update
-  for(iint es=0;es<pmlNelements;++es;outer0){
+  for(int es=0;es<pmlNelements;++es;outer0){
     shared dfloat s_q[p_Np*p_Nfields];
-    exclusive iint e;
-    for(iint n=0; n < p_maxNodes; ++n; inner0){
+    exclusive int e;
+    for(int n=0; n < p_maxNodes; ++n; inner0){
      e = pmlElementIds[es];
       if (n < p_Np){
-        // const iint pmlId = pmlIds[es];
-        const iint id  = p_Nfields*(e*p_Np + n);
-        // const iint pid = p_Nfields*(pmlId*p_Np + n);
+        // const int pmlId = pmlIds[es];
+        const int id  = p_Nfields*(e*p_Np + n);
+        // const int pid = p_Nfields*(pmlId*p_Np + n);
 
-        const iint rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
-        const iint rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
-        const iint rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
+        const int rhsId1 = 3*id + ((shift+0)%3)*p_Nfields;
+        const int rhsId2 = 3*id + ((shift+2)%3)*p_Nfields;
+        const int rhsId3 = 3*id + ((shift+1)%3)*p_Nfields;
        
         occaUnroll(p_Nfields)
-          for(iint fld=0; fld< p_Nfields; ++fld){
+          for(int fld=0; fld< p_Nfields; ++fld){
             if(fld<3)
               s_q[p_Nfields*n+fld] = q[id+fld]+ab1*rhsq[rhsId1+fld]+ab2*rhsq[rhsId2+fld]+ab3*rhsq[rhsId3+fld];
             else
@@ -1215,12 +1215,12 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
     barrier(localMemFence);
 
-    for(iint n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Nfaces*p_Nfp){
 
-        const iint iid  = e*p_Nfp*p_Nfaces + n;
-        const iint qidM = p_Nfields*(vmapM[iid]-e*p_Np);
-        const iint qid  = p_Nfields*iid; 
+        const int iid  = e*p_Nfp*p_Nfaces + n;
+        const int qidM = p_Nfields*(vmapM[iid]-e*p_Np);
+        const int qid  = p_Nfields*iid; 
 
         occaUnroll(p_Nfields)
          for (int fld = 0; fld < p_Nfields; ++fld){
@@ -1235,8 +1235,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 
-// kernel void boltzmannSARK3StageUpdate2D(const iint Nelements,
-//             const iint * restrict elementIds,
+// kernel void boltzmannSARK3StageUpdate2D(const int Nelements,
+//             const int * restrict elementIds,
 //             const dfloat dt, 
 //             const dfloat expdt, 
 //             const dfloat rka,
@@ -1249,10 +1249,10 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //                   dfloat4 * restrict q){
   
 //   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
-//       const iint base = 2*(n + element*p_Np);
+//   for(int e=0;e<Nelements;++e;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
+//       const int element = elementIds[e];
+//       const int base = 2*(n + element*p_Np);
 
 //       dfloat4 rhsq1a = rhsq1[base+0];
 //       dfloat4 rhsq1b = rhsq1[base+1];
@@ -1283,8 +1283,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 // }
 
 
-// kernel void boltzmannSARK3PmlStageUpdate2D(const iint Nelements,
-//               const iint * restrict elementIds, 
+// kernel void boltzmannSARK3PmlStageUpdate2D(const int Nelements,
+//               const int * restrict elementIds, 
 //               const dfloat dt,  
 //               const dfloat expdt, 
 //               const dfloat rka,
@@ -1304,11 +1304,11 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //                     dfloat * restrict qx,
 //                     dfloat * restrict qy,
 //                     dfloat4 * restrict q){
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
+//   for(int e=0;e<Nelements;++e;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
 
-//       const iint element = elementIds[e];
-//       const iint base = n + element*p_Nfields*p_Np;
+//       const int element = elementIds[e];
+//       const int base = n + element*p_Nfields*p_Np;
 
 
 //       dfloat rhsqx11 = rhsqx1[base+0*p_Np];
@@ -1387,7 +1387,7 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //       qy[base+5*p_Np] = qy6;
 
 //       //
-//       const iint id = 2*(n + element*p_Np);
+//       const int id = 2*(n + element*p_Np);
 
 //       dfloat4 rhsq1a = rhsq1[id+0];
 //       dfloat4 rhsq1b = rhsq1[id+1];
@@ -1420,8 +1420,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 
-// kernel void boltzmannSARK3Update2D(const iint Nelements,
-//             const iint * restrict elementIds,
+// kernel void boltzmannSARK3Update2D(const int Nelements,
+//             const int * restrict elementIds,
 //             const dfloat dt, 
 //             const dfloat expdt, 
 //             const dfloat rka,
@@ -1437,10 +1437,10 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //                   dfloat4 * restrict q){
   
 //   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
-//       const iint base = 2*(n + element*p_Np);
+//   for(int e=0;e<Nelements;++e;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
+//       const int element = elementIds[e];
+//       const int base = 2*(n + element*p_Np);
 //       //
 //       dfloat4 rhsq1a = rhsq1[base+0];
 //       dfloat4 rhsq1b = rhsq1[base+1];
@@ -1476,8 +1476,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 
-// kernel void boltzmannSARK3PmlUpdate2D(const iint Nelements,
-//               const iint * restrict elementIds, 
+// kernel void boltzmannSARK3PmlUpdate2D(const int Nelements,
+//               const int * restrict elementIds, 
 //               const dfloat dt,  
 //               const dfloat expdt, 
 //               const dfloat rka,
@@ -1504,11 +1504,11 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //                     dfloat4 * restrict q){
   
 //   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
+//   for(int e=0;e<Nelements;++e;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
 
-//       const iint element = elementIds[e];
-//       const iint base = n + element*p_Nfields*p_Np;
+//       const int element = elementIds[e];
+//       const int base = n + element*p_Nfields*p_Np;
 
 
 //       dfloat rhsqx11 = rhsqx1[base+0*p_Np];
@@ -1616,7 +1616,7 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //       qyold[base+5*p_Np] = qy6;
 //       //
 
-//       const iint id = 2*(n + element*p_Np);
+//       const int id = 2*(n + element*p_Np);
 //       //
 //       dfloat4 rhsq1a = rhsq1[id+0];
 //       dfloat4 rhsq1b = rhsq1[id+1];
@@ -1661,8 +1661,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 
-// kernel void boltzmannSAAB3Update2D(const iint Nelements,
-//             const iint * restrict elementIds,
+// kernel void boltzmannSAAB3Update2D(const int Nelements,
+//             const int * restrict elementIds,
 //             const dfloat dt, 
 //             const dfloat expdt, 
 //             const dfloat ab1,
@@ -1677,11 +1677,11 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //                   dfloat4 * restrict q){
   
 //   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
+//   for(int e=0;e<Nelements;++e;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
+//       const int element = elementIds[e];
 
-//       const iint base = 2*(n + element*p_Np);
+//       const int base = 2*(n + element*p_Np);
 
 //       dfloat4 rhsq1a = rhsq1[base+0];
 //       dfloat4 rhsq1b = rhsq1[base+1];
@@ -1718,8 +1718,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 
-// kernel void boltzmannSAAB3PmlUpdate2D(const iint Nelements,
-//               const iint * restrict elementIds, 
+// kernel void boltzmannSAAB3PmlUpdate2D(const int Nelements,
+//               const int * restrict elementIds, 
 //               const dfloat dt,  
 //               const dfloat expdt, 
 //               const dfloat ramp, 
@@ -1743,17 +1743,17 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //                     dfloat4 * restrict q){
   
 //   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
+//   for(int e=0;e<Nelements;++e;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
 
-//       const iint element = elementIds[e];
-//       const iint base = n + element*p_Nfields*p_Np;
-//       const iint id1 = base + 0*p_Np;
-//       const iint id2 = base + 1*p_Np;
-//       const iint id3 = base + 2*p_Np;
-//       const iint id4 = base + 3*p_Np;
-//       const iint id5 = base + 4*p_Np;
-//       const iint id6 = base + 5*p_Np;
+//       const int element = elementIds[e];
+//       const int base = n + element*p_Nfields*p_Np;
+//       const int id1 = base + 0*p_Np;
+//       const int id2 = base + 1*p_Np;
+//       const int id3 = base + 2*p_Np;
+//       const int id4 = base + 3*p_Np;
+//       const int id5 = base + 4*p_Np;
+//       const int id6 = base + 5*p_Np;
 
 
 //       dfloat rhsqx11 = rhsqx1[id1];
@@ -1844,7 +1844,7 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //       rhsqy3[id5] = rhsqy25;
 //       rhsqy3[id6] = rhsqy26;
 //       //
-//       const iint id = 2*(n + element*p_Np);
+//       const int id = 2*(n + element*p_Np);
 
 //       dfloat4 rhsq1a = rhsq1[id+0];
 //       dfloat4 rhsq1b = rhsq1[id+1];
@@ -1889,8 +1889,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 
-// kernel void boltzmannLSERKPmlUpdate2D_0(const iint Nelements,
-//               const iint * restrict elementIds, 
+// kernel void boltzmannLSERKPmlUpdate2D_0(const int Nelements,
+//               const int * restrict elementIds, 
 //               const dfloat dt,  
 //               const dfloat rka,
 //               const dfloat rkb,
@@ -1906,13 +1906,13 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //                     dfloat4 * restrict q){
   
 //   // Low storage Runge Kutta time step update
-//   for(iint es=0;es<Nelements;++es;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
+//   for(int es=0;es<Nelements;++es;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
 
-//       const iint e  = elementIds[es];
+//       const int e  = elementIds[es];
       
-//       const iint base = n + e*p_Nfields*p_Np;
-//       const iint id   = 2*(n + e*p_Np); 
+//       const int base = n + e*p_Nfields*p_Np;
+//       const int id   = 2*(n + e*p_Np); 
 
 //       dfloat resqx1 = resqx[base+0*p_Np];
 //       dfloat resqx2 = resqx[base+1*p_Np];
@@ -2026,8 +2026,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 // // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-// kernel void boltzmannLSIMEXResidualUpdate2D(const iint Nelements,
-//             const iint * restrict elementIds,
+// kernel void boltzmannLSIMEXResidualUpdate2D(const int Nelements,
+//             const int * restrict elementIds,
 //             const dfloat dt, 
 //             const dfloat aki,
 //             const dfloat ake, 
@@ -2035,12 +2035,12 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //             const dfloat4 * restrict qZ,
 //                   dfloat4 * restrict qY){
 //   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
+//   for(int e=0;e<Nelements;++e;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
+//       const int element = elementIds[e];
 
-//       const iint id0 = 2*(n + element*p_Np);
-//       const iint id1 = id0 + 1; 
+//       const int id0 = 2*(n + element*p_Np);
+//       const int id1 = id0 + 1; 
 
 //       dfloat4 qima = qZ[id0];
 //       dfloat4 qimb = qZ[id1];
@@ -2061,8 +2061,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 // // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-// kernel void boltzmannLSIMEXImplicitUpdate2D(const iint Nelements,
-//             const iint * restrict elementIds,
+// kernel void boltzmannLSIMEXImplicitUpdate2D(const int Nelements,
+//             const int * restrict elementIds,
 //             const dfloat dt, 
 //             const dfloat akk,
 //             const dfloat4 * restrict qZ,
@@ -2070,12 +2070,12 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //                   dfloat4 * restrict q,
 //                   dfloat4 * restrict qS){
 //   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
+//   for(int e=0;e<Nelements;++e;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
 //       //
-//       const iint element = elementIds[e];
-//       const iint id0 = 2*(n + element*p_Np);
-//       const iint id1 = id0 + 1; 
+//       const int element = elementIds[e];
+//       const int id0 = 2*(n + element*p_Np);
+//       const int id1 = id0 + 1; 
 
 //       dfloat4 qima = qZ[id0];
 //       dfloat4 qimb = qZ[id1];
@@ -2098,8 +2098,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 // // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-// kernel void boltzmannLSIMEXUpdate2D(const iint Nelements,
-//             const iint * restrict elementIds,
+// kernel void boltzmannLSIMEXUpdate2D(const int Nelements,
+//             const int * restrict elementIds,
 //             const dfloat dt, 
 //             const dfloat akk,
 //             const dfloat4 * restrict qZ,
@@ -2107,12 +2107,12 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //             const dfloat4 * restrict qS,
 //                   dfloat4 * restrict q){
 //   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
+//   for(int e=0;e<Nelements;++e;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
+//       const int element = elementIds[e];
 
-//       const iint id0 = 2*(n + element*p_Np);
-//       const iint id1 = id0 + 1; 
+//       const int id0 = 2*(n + element*p_Np);
+//       const int id1 = id0 + 1; 
 
 //       dfloat4 qia = qZ[id0];
 //       dfloat4 qib = qZ[id1];
@@ -2136,8 +2136,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 // // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-// kernel void boltzmannLSIMEXPmlResidualUpdate2D(const iint Nelements,
-//             const iint * restrict elementIds,
+// kernel void boltzmannLSIMEXPmlResidualUpdate2D(const int Nelements,
+//             const int * restrict elementIds,
 //             const dfloat dt,
 //             const dfloat ramp, 
 //             const dfloat c_im,
@@ -2150,17 +2150,17 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //                   dfloat  * restrict pmlYx,
 //                   dfloat  * restrict pmlYy){
 //   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
+//   for(int e=0;e<Nelements;++e;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
+//       const int element = elementIds[e];
 //       //
-//       const iint base = n + element*p_Nfields*p_Np;
-//       const iint id1 = base + 0*p_Np;
-//       const iint id2 = base + 1*p_Np;
-//       const iint id3 = base + 2*p_Np;
-//       const iint id4 = base + 3*p_Np;
-//       const iint id5 = base + 4*p_Np;
-//       const iint id6 = base + 5*p_Np;
+//       const int base = n + element*p_Nfields*p_Np;
+//       const int id1 = base + 0*p_Np;
+//       const int id2 = base + 1*p_Np;
+//       const int id3 = base + 2*p_Np;
+//       const int id4 = base + 3*p_Np;
+//       const int id5 = base + 4*p_Np;
+//       const int id6 = base + 5*p_Np;
 //       // PML UPDATES
 //       dfloat qx1 = pmlqx[id1];
 //       dfloat qx2 = pmlqx[id2];
@@ -2207,7 +2207,7 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //       pmlYy[id6] = qy6 + c_ex*dt*qye6; 
       
 //       //
-//       const iint id = 2*(n + element*p_Np);
+//       const int id = 2*(n + element*p_Np);
 
 //       dfloat4 qima = qZ[id];
 //       dfloat4 qimb = qZ[id+1];
@@ -2232,8 +2232,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 // // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-// kernel void boltzmannLSIMEXPmlImplicitUpdate2D(const iint Nelements,
-//             const iint * restrict elementIds,
+// kernel void boltzmannLSIMEXPmlImplicitUpdate2D(const int Nelements,
+//             const int * restrict elementIds,
 //             const dfloat dt, 
 //             const dfloat ramp,
 //             const dfloat akk,
@@ -2248,17 +2248,17 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //                   dfloat4 * restrict qS,
 //                   dfloat4 * restrict q ){
 //   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
+//   for(int e=0;e<Nelements;++e;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
+//       const int element = elementIds[e];
 //       //
-//       const iint base = n + element*p_Nfields*p_Np;
-//       const iint id1 = base + 0*p_Np;
-//       const iint id2 = base + 1*p_Np;
-//       const iint id3 = base + 2*p_Np;
-//       const iint id4 = base + 3*p_Np;
-//       const iint id5 = base + 4*p_Np;
-//       const iint id6 = base + 5*p_Np;
+//       const int base = n + element*p_Nfields*p_Np;
+//       const int id1 = base + 0*p_Np;
+//       const int id2 = base + 1*p_Np;
+//       const int id3 = base + 2*p_Np;
+//       const int id4 = base + 3*p_Np;
+//       const int id5 = base + 4*p_Np;
+//       const int id6 = base + 5*p_Np;
 //       // There are many dummy operation to keep the readable update later
 //       dfloat qx1 = pmlqx[id1];
 //       dfloat qx2 = pmlqx[id2];
@@ -2320,7 +2320,7 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //       pmlqy[id6] = qye6; 
 //       //
       
-//       const iint id = 2*(n + element*p_Np);
+//       const int id = 2*(n + element*p_Np);
       
 //       dfloat4 qima = qZ[id];
 //       dfloat4 qimb = qZ[id+1];
@@ -2344,8 +2344,8 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 
 
 // // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-// kernel void boltzmannLSIMEXPmlUpdate2D(const iint Nelements,
-//             const iint * restrict elementIds,
+// kernel void boltzmannLSIMEXPmlUpdate2D(const int Nelements,
+//             const int * restrict elementIds,
 //             const dfloat dt, 
 //             const dfloat akk,
 //             const dfloat ramp,
@@ -2360,18 +2360,18 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //                   dfloat  * restrict pmlqy,
 //                   dfloat4 * restrict q ){
 //   // Low storage Runge Kutta time step update
-//   for(iint e=0;e<Nelements;++e;outer0){
-//     for(iint n=0;n<p_Np;++n;inner0){
-//       const iint element = elementIds[e];
+//   for(int e=0;e<Nelements;++e;outer0){
+//     for(int n=0;n<p_Np;++n;inner0){
+//       const int element = elementIds[e];
 
 //       //
-//       const iint base = n + element*p_Nfields*p_Np;
-//       const iint id1 = base + 0*p_Np;
-//       const iint id2 = base + 1*p_Np;
-//       const iint id3 = base + 2*p_Np;
-//       const iint id4 = base + 3*p_Np;
-//       const iint id5 = base + 4*p_Np;
-//       const iint id6 = base + 5*p_Np; 
+//       const int base = n + element*p_Nfields*p_Np;
+//       const int id1 = base + 0*p_Np;
+//       const int id2 = base + 1*p_Np;
+//       const int id3 = base + 2*p_Np;
+//       const int id4 = base + 3*p_Np;
+//       const int id5 = base + 4*p_Np;
+//       const int id6 = base + 5*p_Np; 
 //       // 
 //       dfloat qxe1 = qYx[id1];
 //       dfloat qxe2 = qYx[id2];
@@ -2415,7 +2415,7 @@ kernel void boltzmannMRSAABPmlTraceUpdate2D(const iint pmlNelements,
 //       pmlqy[id5] =qsy5 + akk*dt*qye5;
 //       pmlqy[id6] =qsy6 + akk*dt*qye6; 
 //       //
-//       const iint id = 2*(n + element*p_Np);
+//       const int id = 2*(n + element*p_Np);
       
 //       dfloat4 qia = qZ[id];
 //       dfloat4 qib = qZ[id+1];

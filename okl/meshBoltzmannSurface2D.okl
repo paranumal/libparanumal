@@ -1,6 +1,6 @@
 #define dfloat8 float8
 
-void boundaryConditions2D(iint bc, dfloat t, dfloat x, dfloat y,
+void boundaryConditions2D(int bc, dfloat t, dfloat x, dfloat y,
                           dfloat q1M, dfloat q2M, dfloat q3M,
                           dfloat q4M, dfloat q5M, dfloat q6M,
                           dfloat *q1P, dfloat *q2P, dfloat *q3P,
@@ -34,12 +34,12 @@ void boundaryConditions2D(iint bc, dfloat t, dfloat x, dfloat y,
    }
 }
 
-kernel void meshBoltzmannSurface2D(const iint Nelements,
+kernel void meshBoltzmannSurface2D(const int Nelements,
 				   const dfloat * restrict sgeo,
 				   const dfloat * restrict LIFTT,
-				   const iint   * restrict vmapM,
-				   const iint   * restrict vmapP,
-				   const iint   * restrict EToB,
+				   const int   * restrict vmapM,
+				   const int   * restrict vmapP,
+				   const int   * restrict EToB,
 				   const dfloat time,
 				   const dfloat * restrict x,
 				   const dfloat * restrict y,
@@ -47,31 +47,31 @@ kernel void meshBoltzmannSurface2D(const iint Nelements,
 				   dfloat4       * restrict rhsq){
   
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
     // shared storage for flux terms
     shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
 
     // for all face nodes of all elements
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	int e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Nfp*p_Nfaces){
 	    // find face that owns this node
-	    iint face = n/p_Nfp;
+	    int face = n/p_Nfp;
 	  
 	    // load surface geofactors for this face
-	    iint sid = p_Nsgeo*(e*p_Nfaces+face);
+	    int sid = p_Nsgeo*(e*p_Nfaces+face);
 	    dfloat nx = sgeo[sid+0];
 	    dfloat ny = sgeo[sid+1];
 	    dfloat sJ = sgeo[sid+2];
 	    dfloat invJ = sgeo[sid+3];
 
 	    // indices of negative and positive traces of face node
-	    iint id  = e*p_Nfp*p_Nfaces + n;
-	    iint idM = vmapM[id];
-	    iint idP = vmapP[id];
+	    int id  = e*p_Nfp*p_Nfaces + n;
+	    int idM = vmapM[id];
+	    int idP = vmapP[id];
 
 	    if(idP<0) idP = idM;
 	  
@@ -82,7 +82,7 @@ kernel void meshBoltzmannSurface2D(const iint Nelements,
 	    dfloat q1P = qPa.x, q2P = qPa.y, q3P = qPa.z, q4P = qPa.w, q5P = qPb.x, q6P = qPb.y;
 	    
 	    // apply boundary condition
-	    iint bc = EToB[face+p_Nfaces*e];
+	    int bc = EToB[face+p_Nfaces*e];
 	    if(bc>0)
 	      boundaryConditions2D(bc, time, x[idM], y[idM],
 				   q1M, q2M, q3M, q4M, q5M, q6M,
@@ -116,12 +116,12 @@ kernel void meshBoltzmannSurface2D(const iint Nelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(iint es=0;es<p_NblockS;++es;inner1){
-      for(iint n=0;n<p_maxNodes;++n;inner0){
-	iint e = eo + es;
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+	int e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Np){
-	    iint id = p_Np*e + n;
+	    int id = p_Np*e + n;
 	    
 	    // load RHS
 	    dfloat4 rhsqna = rhsq[2*id];

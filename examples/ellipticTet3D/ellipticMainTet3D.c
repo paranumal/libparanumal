@@ -21,17 +21,17 @@ int main(int argc, char **argv){
   // solver can be CG or PCG
   // can add FLEXIBLE and VERBOSE options
   // method can be IPDG or CONTINUOUS
-  // preconditioner can be NONE, JACOBI, MASSMATRIX, FULLALMOND, or MULTIGRID
+  // preconditioner can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
   // MULTIGRID: smoothers can be FULLPATCH, FACEPATCH, LOCALPATCH, or DAMPEDJACOBI, patch smoothers can include EXACT
   // MULTIGRID: smoothers can include CHEBYSHEV for smoother acceleration
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   // FULLALMOND: can include MATRIXFREE option
   char *options =
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=MULTIGRID,ALLDEGREES smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=NONE");
+    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=SEMFEM");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=JACOBI");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MASSMATRIX");
+    //strdup("solver=PCG,VERBOSE method=CONTINUOUS preconditioner=MASSMATRIX");
 
   //FULLALMOND, OAS, and MULTIGRID will use the parAlmondOptions in setup
   // solver can be EXACT, KCYCLE, or VCYCLE
@@ -62,19 +62,21 @@ int main(int argc, char **argv){
 
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
+  //int BCType[4] = {0,1,1,2};
+  //int BCType[4] = {0,2,2,1};
 
   dfloat tau = 2.0*(mesh->N+1)*(mesh->N+3);
   solver_t *solver = ellipticSolveSetupTet3D(mesh, tau, lambda, BCType, kernelInfo, options, parAlmondOptions);
 
-  iint Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  dlong Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   dfloat *r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   dfloat *x   = (dfloat*) calloc(Nall,   sizeof(dfloat));
 
   // load rhs into r
   dfloat *nrhs = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  for(iint e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     dfloat J = mesh->vgeo[e*mesh->Nvgeo+JID];
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       dfloat xn = mesh->x[n+e*mesh->Np];
       dfloat yn = mesh->y[n+e*mesh->Np];
       dfloat zn = mesh->z[n+e*mesh->Np];
@@ -82,12 +84,12 @@ int main(int argc, char **argv){
       nrhs[n] = -(3*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
       //x[e*mesh->Np+n] = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
     }
-    for(iint n=0;n<mesh->Np;++n){
+    for(int n=0;n<mesh->Np;++n){
       dfloat rhs = 0;
-      for(iint m=0;m<mesh->Np;++m){
+      for(int m=0;m<mesh->Np;++m){
 	      rhs += mesh->MM[n+m*mesh->Np]*nrhs[m];
       }
-      iint id = n+e*mesh->Np;
+      dlong id = n+e*mesh->Np;
 
       r[id] = -rhs*J;
       x[id] = 0.;
@@ -96,6 +98,7 @@ int main(int argc, char **argv){
     }
   }
   free(nrhs);
+
 
   occa::memory o_r   = mesh->device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x   = mesh->device.malloc(Nall*sizeof(dfloat), x);
@@ -136,17 +139,69 @@ int main(int argc, char **argv){
                            o_r);
   }
 
+  if (strstr(options,"CONTINUOUS")) {
+    solver->rhsBCKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCTet3D.okl",
+          "ellipticRhsBCTet3D",
+          kernelInfo);
+
+    solver->addBCKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAddBCTet3D.okl",
+          "ellipticAddBCTet3D",
+          kernelInfo);
+
+    dfloat zero = 0.f;
+    solver->rhsBCKernel(mesh->Nelements,
+                        mesh->o_ggeo,
+                        mesh->o_sgeo,
+                        mesh->o_SrrT, mesh->o_SrsT, mesh->o_SrtT,
+                        mesh->o_SsrT, mesh->o_SssT, mesh->o_SstT,
+                        mesh->o_StrT, mesh->o_StsT, mesh->o_SttT,
+                        mesh->o_MM,
+                        mesh->o_vmapM,
+                        mesh->o_sMT,
+                        lambda,
+                        zero,
+                        mesh->o_x,
+                        mesh->o_y,
+                        mesh->o_z,
+                        solver->o_mapB,
+                        o_r);
+  }
+
+  // gather-scatter
+  if(strstr(options, "CONTINUOUS")){
+    ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, o_r, dfloatString, "add");  
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_r);
+  }
+
   // convergence tolerance
   dfloat tol = 1e-8;
   ellipticSolveTet3D(solver, lambda, tol, o_r, o_x, options);
+  //o_x.copyFrom(o_r);
+  //o_r.copyTo(r);
+  //ellipticOperator3D(solver, lambda, o_x, solver->o_Ax, options);
+  //o_x.copyFrom(solver->o_Ax);
+
+
+  if(strstr(options, "CONTINUOUS")){
+    dfloat zero = 0.;
+    solver->addBCKernel(mesh->Nelements,
+                       zero,
+                       mesh->o_x,
+                       mesh->o_y,
+                       mesh->o_z,
+                       solver->o_mapB,
+                       o_x);
+  }
 
   // copy solution from DEVICE to HOST
   o_x.copyTo(mesh->q);
 
   dfloat maxError = 0;
-  for(iint e=0;e<mesh->Nelements;++e){
-    for(iint n=0;n<mesh->Np;++n){
-      iint   id = e*mesh->Np+n;
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      dlong   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];
@@ -154,6 +209,8 @@ int main(int argc, char **argv){
       dfloat error = fabs(exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
+
+      //mesh->q[id] -= r[id];
     }
   }
 
@@ -162,7 +219,9 @@ int main(int argc, char **argv){
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
 
-  meshPlotVTU3D(mesh, "foo.vtu", 0);
+  char filename[BUFSIZ];
+  sprintf(filename, "foo_%d.vtu", rank);
+  //meshPlotVTU3D(mesh, filename, 0);
 
   // close down MPI
   MPI_Finalize();
