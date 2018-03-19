@@ -12,7 +12,7 @@ solver_t *ellipticSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (1+rank)%2);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%2);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 1");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");
@@ -147,9 +147,8 @@ solver_t *ellipticSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
   kernelInfo.addDefine("p_JID", JID);
   kernelInfo.addDefine("p_JWID", JWID);
 
-  int Ne = 1, Nb = 1;
-  kernelInfo.addDefine("p_Ne", Ne);
-  kernelInfo.addDefine("p_Nb", Nb);
+  kernelInfo.addDefine("p_Ne", Nnodes);
+  kernelInfo.addDefine("p_Nb", Nblocks);
 
   
   kernelInfo.addDefine("p_blockSize", blockSize);
