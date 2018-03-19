@@ -13,11 +13,11 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
   int NKernels;
   char kernelName[BUFSIZ];
 
-  NKernels = 2;
-
 #ifndef BB_TESTS
+  NKernels = 0;
   sprintf(kernelName, "ellipticPartialAxSparseTet3D");
 #else
+  NKernels = 3;
   sprintf(kernelName, "ellipticPartialAxBBTet3D");
 #endif
   //  kernelInfo.addCompilerFlag("-G");
@@ -56,6 +56,9 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
     printf("%s================= Kernel #%02d================================================\n\n", testkernelName, i);
     printf("Np = %d sizeof(dfloat) = %d Nelements = %d \n", mesh->Np, sizeof(dfloat), mesh->Nelements);
 
+    //    kernelInfo.addDefine("p_Ne", Nnodes);
+    //    kernelInfo.addDefine("p_Nb", Nblocks);
+    
     testKernel = mesh->device.buildKernelFromSource(kernelFileName,testkernelName,kernelInfo);
 
     dfloat lambda = 0;
@@ -150,7 +153,11 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 
 
       // 6 flops per non-zero plus chain rule
+#ifndef BB_TESTS
       double flops = (double)(nnzs*14 + mesh->Np*13);
+#else
+      double flops = (double)(mesh->Np*(39+15+1) + mesh->Nfp*mesh->Nfaces*(6 + 2*mesh->Np) + mesh->Np*15 + (39+3)*mesh->Np + mesh->Np*mesh->Np);
+#endif
       double eqflops = mesh->Np*mesh->Np*14 + mesh->Np*13;
 
       double roofline = ((mesh->Nelements*flops*(double)Ntrials))/(1e9*globalCopyElapsed);
@@ -158,6 +165,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 
       double copyBandwidth   = mesh->Nelements*((Nbytes*Ntrials*2.)/(1e9*globalCopyElapsed));
       double kernelBandwidth = mesh->Nelements*((Nbytes*2.)/(1e9*kernelElapsed));
+
       double kernelGFLOPS = mesh->Nelements*flops/(1e9*kernelElapsed);
 
       double kernelEquivGFLOPS = mesh->Nelements*eqflops/(1e9*kernelElapsed);
