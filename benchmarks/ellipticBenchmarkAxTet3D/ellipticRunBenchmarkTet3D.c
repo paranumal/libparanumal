@@ -1,5 +1,7 @@
 #include "ellipticBenchmarkTet3D.h"
 
+#define BB_TESTS 1
+
 void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo kernelInfo, char *kernelFileName, int Nblocks, int Nnodes){
 
   mesh3D *mesh = solver->mesh;
@@ -12,8 +14,12 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
   char kernelName[BUFSIZ];
 
   NKernels = 3;
-  sprintf(kernelName, "ellipticPartialAxSparseTet3D");
 
+#ifndef BB_TESTS
+  sprintf(kernelName, "ellipticPartialAxSparseTet3D");
+#else
+  sprintf(kernelName, "ellipticPartialAxBBTet3D");
+#endif
   //  kernelInfo.addCompilerFlag("-G");
 
   dfloat time = 0.;
@@ -40,6 +46,8 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
   double  copyElapsed = mesh->device.timeBetween(startCopy, endCopy);
   printf("copied \n");
 
+  // build faceNodes array on device
+  occa::memory o_faceNodes = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*sizeof(int), mesh->faceNodes);
 
   for(int i=0; i<NKernels; i++) {
 
@@ -51,7 +59,6 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 
     dfloat lambda = 0;
     // sync processes
-
 
     // time Ax
     double timeAx = 0.0f;
@@ -65,7 +72,8 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 
       if(it==1) // tag after warm up
 	start[0] = mesh->device.tagStream();
-#if 1
+
+#ifndef BB_TESTS
       // tet sparse kernel
       testKernel(mesh->Nelements, 
 		 solver->o_localGatherElementList,
@@ -82,17 +90,20 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 		 solver->o_p,
 		 solver->o_grad);
 #else
-      testKernel(mesh->Nelements, 
-		 solver->o_localGatherElementList,
-		 mesh->o_ggeo, 
-		 mesh->o_rowData,          
-		 mesh->o_Srr, 
-		 mesh->o_Srs, 
-		 mesh->o_Srt, 
-		 mesh->o_Sss,              
-		 mesh->o_Sst,              
-		 mesh->o_Stt,              
-		 mesh->o_MM, 
+      // v0: basic version
+      int elementOffset = 0;
+      testKernel(mesh->Nelements,
+		 elementOffset,
+		 mesh->o_sgeo,   // surface geofacs
+		 o_faceNodes, // volume node indices of surface nodes
+		 mesh->o_vgeo,   // volume geofacs (drdx, ...)
+		 mesh->o_D0ids,     // sparse D matrices
+		 mesh->o_D1ids,
+		 mesh->o_D2ids,
+		 mesh->o_D3ids,
+		 mesh->o_Dvals,    
+		 mesh->o_LIFT,   // dense lift matrix
+		 mesh->o_MM,     // dense mass matrix
 		 lambda,
 		 solver->o_p,
 		 solver->o_grad);
