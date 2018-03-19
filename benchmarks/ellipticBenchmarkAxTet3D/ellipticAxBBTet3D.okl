@@ -1,6 +1,6 @@
 
 // v0: basic version
-kernel void ellipticPartialAxBBTet3D_v0(const int Nelements,
+kernel void ellipticPartialAxBBTet3D_v0(const dlong Nelements,
 					const int elementOffset,
 					const dfloat * restrict sgeo,   // surface geofacs
 					const int * restrict faceNodes, // volume node indices of surface nodes
@@ -16,7 +16,7 @@ kernel void ellipticPartialAxBBTet3D_v0(const int Nelements,
 					const dfloat * restrict q,
 					dfloat * restrict Aq){
   
-  for(dlong e=0;e<Nelements;++e){
+  for(dlong e=0;e<Nelements;++e;outer0){
     
     shared dfloat s_q[p_Np], s_qx[p_Np], s_qy[p_Np], s_qz[p_Np], s_flux[p_Nfaces*p_Nfp];
     exclusive dfloat r_Aq;
@@ -32,15 +32,15 @@ kernel void ellipticPartialAxBBTet3D_v0(const int Nelements,
     for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
       
       // prefetch geometric factors (constant on triangle)
-      const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-      const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-      const dfloat drdz = vgeo[e*p_Nvgeo + RZID];
-      const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-      const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-      const dfloat dsdz = vgeo[e*p_Nvgeo + SZID];
-      const dfloat dtdx = vgeo[e*p_Nvgeo + TXID];
-      const dfloat dtdy = vgeo[e*p_Nvgeo + TYID];
-      const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
       
       // compute 'r', 's',  and 't' derivatives of (q_m) at node n
       const int D0i1 = D0ids[n];
@@ -88,15 +88,16 @@ kernel void ellipticPartialAxBBTet3D_v0(const int Nelements,
       // mass term
       r_Aq = lambda*s_q[n];
     }
-    
+
     barrier(localMemFence);
     
     for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
       
       int m=0;
-      while(m<p_Nfp*Nfaces){
+      while(m<p_Nfp*p_Nfaces){
 	const int f = m/p_Nfp;
 	const dlong sid = e*p_Nfaces*p_Nsgeo+f*p_Nsgeo;
+	const int nid = faceNodes[m];
 	const dfloat nx = sgeo[sid + p_NXID];
 	const dfloat ny = sgeo[sid + p_NYID];
 	const dfloat nz = sgeo[sid + p_NZID];
@@ -124,15 +125,15 @@ kernel void ellipticPartialAxBBTet3D_v0(const int Nelements,
       // div
       // double check this is ok
       // prefetch geometric factors (constant on triangle)
-      const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-      const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-      const dfloat drdz = vgeo[e*p_Nvgeo + RZID];
-      const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-      const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-      const dfloat dsdz = vgeo[e*p_Nvgeo + SZID];
-      const dfloat dtdx = vgeo[e*p_Nvgeo + TXID];
-      const dfloat dtdy = vgeo[e*p_Nvgeo + TYID];
-      const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
       
       const dfloat tmpr = drdx*s_qx[n] + drdy*s_qy[n] + drdz*s_qz[n];
       const dfloat tmps = dsdx*s_qx[n] + dsdy*s_qy[n] + dsdz*s_qz[n];
@@ -196,7 +197,7 @@ kernel void ellipticPartialAxBBTet3D_v0(const int Nelements,
     for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
       
       // multiply by mass matrix
-      const dfloat J = vgeo[e*p_Nvgeo + JID];    
+      const dfloat J = vgeo[e*p_Nvgeo + p_JID];    
       dfloat res = 0;
       
       // M*(lambda*q -(laplace q) + lift*(n.grad q))
@@ -212,7 +213,7 @@ kernel void ellipticPartialAxBBTet3D_v0(const int Nelements,
 }
 
 // v1: multiple outputs
-kernel void ellipticPartialAxBBTet3D_v1(const int Nelements,
+kernel void ellipticPartialAxBBTet3D_v1(const dlong Nelements,
 					const int elementOffset,
 					const dfloat * restrict sgeo,   // surface geofacs
 					const int * restrict faceNodes, // volume node indices of surface nodes
@@ -228,7 +229,7 @@ kernel void ellipticPartialAxBBTet3D_v1(const int Nelements,
 					const dfloat * restrict q,
 					dfloat * restrict Aq){
   
-  for(dlong eo=0;eo<Nelements;eo+=p_Ne){
+  for(dlong eo=0;eo<Nelements;eo+=p_Ne;outer0){
     
     shared dfloat s_q[p_Ne][p_Np], s_qx[p_Ne][p_Np], s_qy[p_Ne][p_Np], s_qz[p_Ne][p_Np], s_flux[p_Ne][p_Nfaces*p_Nfp];
     exclusive dfloat r_Aq[p_Ne];
@@ -280,15 +281,15 @@ kernel void ellipticPartialAxBBTet3D_v1(const int Nelements,
 	  if(e<Nelements){
 
 	    // prefetch geometric factors (constant on triangle)
-	    const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-	    const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-	    const dfloat drdz = vgeo[e*p_Nvgeo + RZID];
-	    const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-	    const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-	    const dfloat dsdz = vgeo[e*p_Nvgeo + SZID];
-	    const dfloat dtdx = vgeo[e*p_Nvgeo + TXID];
-	    const dfloat dtdy = vgeo[e*p_Nvgeo + TYID];
-	    const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
+	    const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+	    const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+	    const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+	    const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+	    const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+	    const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+	    const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+	    const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+	    const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 
 	    
 	    const dfloat dqdr = .5f*(Dval1*(s_q[et][D1i1] - s_q[et][D0i1]) +
@@ -325,9 +326,10 @@ kernel void ellipticPartialAxBBTet3D_v1(const int Nelements,
 	  const int e = eo + et;
 	  if(e<Nelements){
 	    int m=0;
-	    while(m<p_Nfp*Nfaces){
+	    while(m<p_Nfp*p_Nfaces){
 	      const int f = m/p_Nfp;
 	      const dlong sid = e*p_Nfaces*p_Nsgeo+f*p_Nsgeo;
+	      const int nid = faceNodes[m];
 	      const dfloat nx = sgeo[sid + p_NXID];
 	      const dfloat ny = sgeo[sid + p_NYID];
 	      const dfloat nz = sgeo[sid + p_NZID];
@@ -367,15 +369,15 @@ kernel void ellipticPartialAxBBTet3D_v1(const int Nelements,
 	    // div
 	    // double check this is ok
 	    // prefetch geometric factors (constant on triangle)
-	    const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-	    const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-	    const dfloat drdz = vgeo[e*p_Nvgeo + RZID];
-	    const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-	    const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-	    const dfloat dsdz = vgeo[e*p_Nvgeo + SZID];
-	    const dfloat dtdx = vgeo[e*p_Nvgeo + TXID];
-	    const dfloat dtdy = vgeo[e*p_Nvgeo + TYID];
-	    const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
+	    const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+	    const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+	    const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+	    const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+	    const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+	    const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+	    const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+	    const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+	    const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 	    
 	    const dfloat tmpr = drdx*s_qx[et][n] + drdy*s_qy[et][n] + drdz*s_qz[et][n];
 	    const dfloat tmps = dsdx*s_qx[et][n] + dsdy*s_qy[et][n] + dsdz*s_qz[et][n];
@@ -467,7 +469,7 @@ kernel void ellipticPartialAxBBTet3D_v1(const int Nelements,
 	  
 	  const int e = eo + et;
 	  if(e<Nelements){
-	    const dfloat J = vgeo[e*p_Nvgeo + JID];    
+	    const dfloat J = vgeo[e*p_Nvgeo + p_JID];    
 	    
 	    Aq[n+e*p_Np] = J*r_Aq[et];
 	  }
@@ -478,7 +480,7 @@ kernel void ellipticPartialAxBBTet3D_v1(const int Nelements,
 
 
 // v2: multiple outputs & SIMD cramming
-kernel void ellipticPartialAxBBTet3D_v2(const int Nelements,
+kernel void ellipticPartialAxBBTet3D_v2(const dlong Nelements,
 					const int elementOffset,
 					const dfloat * restrict sgeo,   // surface geofacs
 					const int * restrict faceNodes, // volume node indices of surface nodes
@@ -494,7 +496,7 @@ kernel void ellipticPartialAxBBTet3D_v2(const int Nelements,
 					const dfloat * restrict q,
 					dfloat * restrict Aq){
   
-  for(dlong eo=0;eo<Nelements;eo+=p_Ne*p_Nb){
+  for(dlong eo=0;eo<Nelements;eo+=p_Ne*p_Nb;outer0){
     
     shared dfloat s_q[p_Ne][p_Nb][p_Np];
     shared dfloat s_qx[p_Ne][p_Nb][p_Np], s_qy[p_Ne][p_Nb][p_Np], s_qz[p_Ne][p_Nb][p_Np], s_flux[p_Ne][p_Nb][p_Nfaces*p_Nfp];
@@ -550,15 +552,15 @@ kernel void ellipticPartialAxBBTet3D_v2(const int Nelements,
 	    if(e<Nelements){
 	      
 	      // prefetch geometric factors (constant on triangle)
-	      const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-	      const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-	      const dfloat drdz = vgeo[e*p_Nvgeo + RZID];
-	      const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-	      const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-	      const dfloat dsdz = vgeo[e*p_Nvgeo + SZID];
-	      const dfloat dtdx = vgeo[e*p_Nvgeo + TXID];
-	      const dfloat dtdy = vgeo[e*p_Nvgeo + TYID];
-	      const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
+	      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+	      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+	      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+	      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+	      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+	      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+	      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+	      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+	      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 	      
 	      
 	      const dfloat dqdr = .5f*(Dval1*(s_q[et][b][D1i1] - s_q[et][b][D0i1]) +
@@ -597,9 +599,10 @@ kernel void ellipticPartialAxBBTet3D_v2(const int Nelements,
 	    const int e = eo + b + p_Nb*et;
 	    if(e<Nelements){
 	      int m=0;
-	      while(m<p_Nfp*Nfaces){
+	      while(m<p_Nfp*p_Nfaces){
 		const int f = m/p_Nfp;
 		const dlong sid = e*p_Nfaces*p_Nsgeo+f*p_Nsgeo;
+		const int nid = faceNodes[m];
 		const dfloat nx = sgeo[sid + p_NXID];
 		const dfloat ny = sgeo[sid + p_NYID];
 		const dfloat nz = sgeo[sid + p_NZID];
@@ -641,15 +644,15 @@ kernel void ellipticPartialAxBBTet3D_v2(const int Nelements,
 	      // div
 	      // double check this is ok
 	      // prefetch geometric factors (constant on triangle)
-	      const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
-	      const dfloat drdy = vgeo[e*p_Nvgeo + RYID];
-	      const dfloat drdz = vgeo[e*p_Nvgeo + RZID];
-	      const dfloat dsdx = vgeo[e*p_Nvgeo + SXID];
-	      const dfloat dsdy = vgeo[e*p_Nvgeo + SYID];
-	      const dfloat dsdz = vgeo[e*p_Nvgeo + SZID];
-	      const dfloat dtdx = vgeo[e*p_Nvgeo + TXID];
-	      const dfloat dtdy = vgeo[e*p_Nvgeo + TYID];
-	      const dfloat dtdz = vgeo[e*p_Nvgeo + TZID];
+	      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+	      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+	      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+	      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+	      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+	      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+	      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+	      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+	      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 	    
 	      const dfloat tmpr = drdx*s_qx[et][b][n] + drdy*s_qy[et][b][n] + drdz*s_qz[et][b][n];
 	      const dfloat tmps = dsdx*s_qx[et][b][n] + dsdy*s_qy[et][b][n] + dsdz*s_qz[et][b][n];
@@ -745,7 +748,7 @@ kernel void ellipticPartialAxBBTet3D_v2(const int Nelements,
 	    
 	    const int e = eo + b + p_Nb*et;
 	    if(e<Nelements){
-	      const dfloat J = vgeo[e*p_Nvgeo + JID];    
+	      const dfloat J = vgeo[e*p_Nvgeo + p_JID];    
 	      
 	      Aq[n+e*p_Np] = J*r_Aq[et];
 	    }
