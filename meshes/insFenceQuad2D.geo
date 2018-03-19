@@ -1,7 +1,7 @@
 //+r1 = DefineNumber[0.0125];
 //+r2 = DefineNumber[0.1];
 //+r3 = DefineNumber[0.2];
-//+r4 = DefineNumber[0.4];
+//+r4 = DefineNumber[0.3];
 
 r1 = DefineNumber[0.02];
 r2 = DefineNumber[0.05];
