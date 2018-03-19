@@ -13,7 +13,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
   int NKernels;
   char kernelName[BUFSIZ];
 
-  NKernels = 3;
+  NKernels = 2;
 
 #ifndef BB_TESTS
   sprintf(kernelName, "ellipticPartialAxSparseTet3D");
@@ -52,6 +52,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
   for(int i=0; i<NKernels; i++) {
 
     sprintf(testkernelName, "%s_v%d", kernelName,  i);
+    
     printf("%s================= Kernel #%02d================================================\n\n", testkernelName, i);
     printf("Np = %d sizeof(dfloat) = %d Nelements = %d \n", mesh->Np, sizeof(dfloat), mesh->Nelements);
 
@@ -92,6 +93,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 #else
       // v0: basic version
       int elementOffset = 0;
+
       testKernel(mesh->Nelements,
 		 elementOffset,
 		 mesh->o_sgeo,   // surface geofacs
@@ -102,7 +104,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 		 mesh->o_D2ids,
 		 mesh->o_D3ids,
 		 mesh->o_Dvals,    
-		 mesh->o_LIFT,   // dense lift matrix
+		 mesh->o_LIFTT,   // dense lift matrix
 		 mesh->o_MM,     // dense mass matrix
 		 lambda,
 		 solver->o_p,
