@@ -17,7 +17,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
   NKernels = 0;
   sprintf(kernelName, "ellipticPartialAxSparseTet3D");
 #else
-  NKernels = 4;
+  NKernels = 5;
   sprintf(kernelName, "ellipticPartialAxBBTet3D");
 #endif
   //  kernelInfo.addCompilerFlag("-G");
