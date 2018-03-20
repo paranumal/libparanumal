@@ -17,7 +17,7 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
   NKernels = 0;
   sprintf(kernelName, "ellipticPartialAxSparseTet3D");
 #else
-  NKernels = 3;
+  NKernels = 4;
   sprintf(kernelName, "ellipticPartialAxBBTet3D");
 #endif
   //  kernelInfo.addCompilerFlag("-G");
@@ -174,7 +174,8 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       printf("ROOFLINE %16.17g \n", roofline);
       printf("GFLOPS %16.17f (%16.17f) \n", kernelGFLOPS, kernelEquivGFLOPS);
       printf("time per kernel %f \n",kernelElapsed);
-      printf("PARAMETERS %d %d %d %d %16.17f %16.17f \n ", mesh->N, i, Nblocks, Nnodes, kernelGFLOPS, kernelEquivGFLOPS );
+      printf("PARAMETERS %d %d %d %d %16.17f %16.17f %16.17f\n ",
+	     mesh->N, i, Nblocks, Nnodes, kernelGFLOPS, kernelEquivGFLOPS, kernelGFLOPS/kernelEquivGFLOPS );
 
     }
   }
