@@ -166,7 +166,7 @@ void rk_coeffs(mesh_t *mesh) {
   }
 }
 
-solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
+solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh,iint cfl_scale,iint force_type,iint lserk){
   
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
@@ -275,20 +275,26 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
       q1bar = 1 + .1*exp(-20*((x-1)*(x-1)+y*y+z*z));
 #endif
 
-
-      mesh->q[base+0*mesh->Np] = q1bar; // uniform density, zero flow
-
-      mesh->q[base+1*mesh->Np] = q2bar;
-      mesh->q[base+2*mesh->Np] = q3bar;
-      mesh->q[base+3*mesh->Np] = q4bar;
-
-      mesh->q[base+4*mesh->Np] = q5bar;
-      mesh->q[base+5*mesh->Np] = q6bar;
-      mesh->q[base+6*mesh->Np] = q7bar;
-
-      mesh->q[base+7*mesh->Np] = q8bar;
-      mesh->q[base+8*mesh->Np] = q9bar;
-     mesh->q[base+9*mesh->Np] = q10bar;
+      if (force_type == 3) {
+	mesh->q[base+0*mesh->Np] = q1bar; // uniform density, zero flow
+	
+	mesh->q[base+1*mesh->Np] = q2bar;
+	mesh->q[base+2*mesh->Np] = q3bar;
+	mesh->q[base+3*mesh->Np] = q4bar;
+	
+	mesh->q[base+4*mesh->Np] = q5bar;
+	mesh->q[base+5*mesh->Np] = q6bar;
+	mesh->q[base+6*mesh->Np] = q7bar;
+	
+	mesh->q[base+7*mesh->Np] = q8bar;
+	mesh->q[base+8*mesh->Np] = q9bar;
+	mesh->q[base+9*mesh->Np] = q10bar;
+      }
+      else {
+	for (iint i = 0; i < 10; ++i) {
+	  mesh->q[base + i*mesh->Np] = 0;
+	}
+      }
     }
   }
   // set BGK collision relaxation rate
@@ -299,7 +305,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
   dfloat cfl_small = 0.2; // depends on the stability region size (was .4, then 2)
-  dfloat cfl_large = 4*cfl_small;
+  dfloat cfl_large = cfl_scale*cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   
@@ -379,9 +385,38 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   
   occa::kernelInfo kernelInfo;
 
+  if (!lserk) {
+    if (force_type == 1) {
+      for (iint i = 0; i < mesh->Np*mesh->Nrhs*mesh->Nelements*mesh->Nfields; ++i) {
+	mesh->rhsq[i] = 1;
+      }
+    }
+    else if (force_type == 2) {
+      for (iint shift = 0; shift < mesh->Nrhs; ++shift) {
+	for (iint e = 0; e < mesh->Nelements; ++e) {
+	  for (iint nf = 0; nf < mesh->Nfields*mesh->Np; ++nf) {
+	    iint tshift; //wrap so 0 is largest
+	    if (shift = 0) tshift = mesh->Nrhs;
+	    else tshift = shift;
+	    //start time minus tshift*localdt
+	    mesh->rhsq[e*mesh->Nrhs*mesh->Np*mesh->Nfields + shift*mesh->Nfields*mesh->Np + nf]\
+	      = mesh->dt*pow(2,mesh->MRABNlevels-1)*mesh->Nrhs - mesh->dt*tshift*pow(2,mesh->MRABlevel[e]);
+	  }
+	}
+      }
+    }
+    else{
+      printf("bad forcing combination.  Defaulting to 0 history\n");
+    }
+  
   // fixed to set up quad info on device too
   boltzmannOccaSetupQuad3D(mesh, deviceConfig,  kernelInfo);
 
+  //clear out forced history data
+  for (iint i = 0; i < mesh->Np*mesh->Nrhs*mesh->Nelements*mesh->Nfields; ++i) {
+    mesh->rhsq[i] = 0;
+  }
+  
   // quad stuff
 
   kernelInfo.addDefine("p_Nq", mesh->Nq);

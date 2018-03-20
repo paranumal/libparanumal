@@ -22,6 +22,14 @@ typedef struct {
   iint   index;       // Index of current state
   iint   errorStep; 
 
+  //test flags
+  iint lserk;
+  iint mrsaab;
+  iint filter;
+  iint cfl;
+  iint force_type;
+  
+  
   dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
 
 #if 0
@@ -47,7 +55,7 @@ typedef struct {
 
 
 solver_t *boltzmannSetupQuad3D(mesh_t *mesh);
-solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh);
+solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh,iint cfl_scale,iint force_type,iint lserk);
 
 void boltzmannRunMRSAABQuad3D(solver_t *solver);
 void boltzmannRunLSERKQuad3D(solver_t *solver);

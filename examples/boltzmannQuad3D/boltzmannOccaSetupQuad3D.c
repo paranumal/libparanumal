@@ -23,23 +23,24 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
   mesh->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
 
-    mesh->o_qpre =
+  mesh->o_qpre =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
-
+    
   mesh->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nrhs*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+
   mesh->o_resq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
-
+    
   mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-
+    
   mesh->o_LIFT =
     mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-        mesh->LIFT);
-
+			mesh->LIFT);
+    
   mesh->o_LIFTT =
     mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-        LIFTT);
+			LIFTT);
 
   mesh->o_vgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
@@ -50,33 +51,33 @@ void boltzmannOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
   
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
-        mesh->vmapM);
+			mesh->vmapM);
 
   mesh->o_vmapP =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
-        mesh->vmapP);
+			mesh->vmapP);
 
 
   mesh->o_mapP =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(iint),
-        mesh->mapP);
+			mesh->mapP);
 
   mesh->o_EToB =
     mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),
-        mesh->EToB);
+			mesh->EToB);
 
   mesh->o_x =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
-        mesh->x);
+			mesh->x);
 
   mesh->o_y =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
-        mesh->y);
+			mesh->y);
 
 
   mesh->o_z =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
-        mesh->z);
+			mesh->z);
 
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE

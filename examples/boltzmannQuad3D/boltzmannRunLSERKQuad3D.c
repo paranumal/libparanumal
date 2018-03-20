@@ -9,34 +9,39 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
-  dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np*mesh->Nfields*mesh->Nrhs,sizeof(dfloat));
+  dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,sizeof(dfloat));
     
   //kernel arguments
   dfloat alpha = 1./mesh->N;
+  if (solver->filter) {
+    mesh->filterKernelq0H(mesh->Nelements,
+			  alpha,
+			  mesh->o_dualProjMatrix,
+			  mesh->o_cubeFaceNumber,
+			  mesh->o_EToE,
+			  mesh->o_x,
+			  mesh->o_y,
+			  mesh->o_z,
+			  mesh->o_qpre,
+			  mesh->o_qPreFilter);
+    
+    mesh->filterKernelq0V(mesh->Nelements,
+			  alpha,
+			  mesh->o_dualProjMatrix,
+			  mesh->o_cubeFaceNumber,
+			  mesh->o_EToE,
+			  mesh->o_x,
+			  mesh->o_y,
+			  mesh->o_z,
+			  mesh->o_qPreFilter,
+			  mesh->o_qpre);
+  }
+
+  iint finalTime;
+  if (solver->mrsaab) finalTime = mesh->Nrhs;
+  else finalTime = mesh->NtimeSteps;
   
-  mesh->filterKernelq0H(mesh->Nelements,
-			alpha,
-			mesh->o_dualProjMatrix,
-			mesh->o_cubeFaceNumber,
-			mesh->o_EToE,
-			mesh->o_x,
-			mesh->o_y,
-			mesh->o_z,
-			mesh->o_qpre,
-			mesh->o_qPreFilter);
-  
-  mesh->filterKernelq0V(mesh->Nelements,
-			alpha,
-			mesh->o_dualProjMatrix,
-			mesh->o_cubeFaceNumber,
-			mesh->o_EToE,
-			mesh->o_x,
-			mesh->o_y,
-			mesh->o_z,
-			mesh->o_qPreFilter,
-			mesh->o_qpre);
-  
-  for(iint tstep=0;tstep<mesh->Nrhs;++tstep){
+  for(iint tstep=0;tstep<finalTime;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       
       	iint lev;
@@ -81,6 +86,22 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 			      mesh->o_qpre,
 			      mesh->o_prerhsq);
 
+	if (force_type == 1) {
+	  for (iint i = 0; i < mesh->Nelements*mesh->Np*mesh->Nfields; ++i) {
+	    test_q[i] = 1;
+	  }
+	  mesh->o_prerhsq.copyFrom(test_q);
+	}
+	else if (force_type == 2) {
+	  for(iint i = 0; i < mesh->Nelements*mesh->Np*mesh->Nfields; ++i) {
+	    test_q[i] = mesh->dt*mesh->pow(2,mesh->MRABNlevels-1)*tstep + mesh->dt*mesh->Ntick + mesh->dt*rkc[rk];
+	  }
+	  mesh->o_prerhsq.copyFrom(test_q);
+	}
+	else {
+	  //no forcing here
+	}
+	
 	if(mesh->totalHaloPairs>0){
 	  // wait for halo data to arrive
 	  meshHaloExchangeFinish(mesh);
@@ -103,40 +124,43 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 			       mesh->o_qpre,
 			       mesh->o_prerhsq);
 
-	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
-	  iint saved = (l < lev)&&(rk == 0);
-	  mesh->filterKernelHLSERK(mesh->MRABNelements[l],
-				   mesh->o_MRABelementIds[l],
-				   alpha,
-				   saved,
-				   mesh->MRABshiftIndex[l],
-				   mesh->o_dualProjMatrix,
-				   mesh->o_cubeFaceNumber,
-				   mesh->o_EToE,
-				   mesh->o_x,
-				   mesh->o_y,
-				   mesh->o_z,
-				   mesh->o_prerhsq,
-				   mesh->o_qPreFilter,
-				   mesh->o_rhsq);
-	}
-
-	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
-	  iint saved = (l < lev)&&(rk == 0);
-	  mesh->filterKernelVLSERK(mesh->MRABNelements[l],
-				   mesh->o_MRABelementIds[l],
-				   alpha,
-				   saved,
-				   mesh->MRABshiftIndex[l],
-				   mesh->o_dualProjMatrix,
-				   mesh->o_cubeFaceNumber,
-				   mesh->o_EToE,
-				   mesh->o_x,
-				   mesh->o_y,
-				   mesh->o_z,
-				   mesh->o_qPreFilter,
-				   mesh->o_qPreFiltered,
-				   mesh->o_qFilter);
+	if (solver->filter) {	
+	  for (iint l = 0; l < mesh->MRABNlevels; ++l) {
+	    iint saved = (l < lev)&&(rk == 0);
+	    mesh->filterKernelHLSERK(mesh->MRABNelements[l],
+				     mesh->o_MRABelementIds[l],
+				     alpha,
+				     saved,
+				     mesh->MRABshiftIndex[l],
+				     mesh->o_dualProjMatrix,
+				     mesh->o_cubeFaceNumber,
+				     mesh->o_EToE,
+				     mesh->o_x,
+				     mesh->o_y,
+				     mesh->o_z,
+				     mesh->o_prerhsq,
+				     mesh->o_qPreFilter,
+				     mesh->o_rhsq);
+	  }
+	
+	  
+	  for (iint l = 0; l < mesh->MRABNlevels; ++l) {
+	    iint saved = (l < lev)&&(rk == 0);
+	    mesh->filterKernelVLSERK(mesh->MRABNelements[l],
+				     mesh->o_MRABelementIds[l],
+				     alpha,
+				     saved,
+				     mesh->MRABshiftIndex[l],
+				     mesh->o_dualProjMatrix,
+				     mesh->o_cubeFaceNumber,
+				     mesh->o_EToE,
+				     mesh->o_x,
+				     mesh->o_y,
+				     mesh->o_z,
+				     mesh->o_qPreFilter,
+				     mesh->o_qPreFiltered,
+				     mesh->o_qFilter);
+	  }
 	}
 	
 	for (iint l = 0; l < mesh->MRABNlevels; l++) {
@@ -149,39 +173,64 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 				    mesh->o_qCorr,
 				    mesh->o_qPreCorr);
 	}
-	for (iint l = 0; l < mesh->MRABNlevels; l++) {
-	  iint saved = (l < lev)&&(rk == 0);
-	  
-	  if (mesh->MRABNelements[l]) {
-	    mesh->updatePreKernel(mesh->MRABNelements[l],
-				  mesh->o_MRABelementIds[l],
-				  saved,
-				  mesh->dt,
-				  mesh->rka[rk],
-				  mesh->rkb[rk],
-				  mesh->MRABshiftIndex[l],
-				  mesh->o_qPreFiltered,
-				  //mesh->o_prerhsq,
-				  mesh->o_qFiltered,
-				  //mesh->o_rhsq,
-				  mesh->o_qPreCorr,
-				  mesh->o_resq,
-				  mesh->o_qpre);
+
+	if (solver->filter) { //need the correct history data here
+	  for (iint l = 0; l < mesh->MRABNlevels; l++) {
+	    iint saved = (l < lev)&&(rk == 0);
 	    
-	    saved = (l < levS)&&(rk == mesh->Nrk-1);
-	    if (saved)
-	      mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+2)%mesh->Nrhs;
+	    if (mesh->MRABNelements[l]) {
+	      mesh->updatePreKernel(mesh->MRABNelements[l],
+				    mesh->o_MRABelementIds[l],
+				    saved,
+				    mesh->dt,
+				    mesh->rka[rk],
+				    mesh->rkb[rk],
+				    mesh->MRABshiftIndex[l],
+				    mesh->o_qPreFiltered,
+				    mesh->o_qFiltered,
+				    mesh->o_qPreCorr,
+				    mesh->o_resq,
+				    mesh->o_qpre);
+	      
+	      saved = (l < levS)&&(rk == mesh->Nrk-1);
+	      if (saved)
+		mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+2)%mesh->Nrhs;
+	    }
+	  }
+	}
+	else {
+	  for (iint l = 0; l < mesh->MRABNlevels; l++) {
+	    iint saved = (l < lev)&&(rk == 0);
+	    
+	    if (mesh->MRABNelements[l]) {
+	      mesh->updatePreKernel(mesh->MRABNelements[l],
+				    mesh->o_MRABelementIds[l],
+				    saved,
+				    mesh->dt,
+				    mesh->rka[rk],
+				    mesh->rkb[rk],
+				    mesh->MRABshiftIndex[l],
+				    mesh->o_prerhsq,
+				    mesh->o_rhsq,
+				    mesh->o_qPreCorr,
+				    mesh->o_resq,
+				    mesh->o_qpre);
+	      
+	      saved = (l < levS)&&(rk == mesh->Nrk-1);
+	      if (saved)
+		mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+2)%mesh->Nrhs;
+	    }
 	  }
 	}
       }
       //runs after all rk iterations complete
       for (iint l = 0; l < levS; ++l) {
-	  mesh->traceUpdatePreKernel(mesh->MRABNelements[l],
-				     mesh->o_MRABelementIds[l],
-				     mesh->o_vmapM,
-				     mesh->o_fQM,
-				     mesh->o_qpre,
-				     mesh->o_q);
+	mesh->traceUpdatePreKernel(mesh->MRABNelements[l],
+				   mesh->o_MRABelementIds[l],
+				   mesh->o_vmapM,
+				   mesh->o_fQM,
+				   mesh->o_qpre,
+				   mesh->o_q);
       }
     }
     
