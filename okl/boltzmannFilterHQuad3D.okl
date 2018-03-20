@@ -144,6 +144,105 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 }
 
 
+kernel void boltzmannFilterHLSERKQuad3D(const iint Nelements,
+					const iint * restrict elementIDs,
+					const dfloat alpha,
+					const iint saved,
+					const iint shift,
+					const dfloat * restrict F,
+					const iint * restrict cubeFaceNumber,
+					const iint * restrict EToE,
+					const dfloat * restrict x,
+					const dfloat * restrict y,
+					const dfloat * restrict z,
+					const dfloat * restrict qIn,
+					dfloat * restrict Fq,
+					dfloat * restrict qpop) {
+  
+  for (iint e = 0; e < Nelements;++e;outer0) {
+    
+    shared dfloat s_F[3][p_Nq][p_Nq];
+    shared dfloat s_q[p_Nfields][3][p_Nq][p_Nq];
+    shared iint mark_edge;
+    shared iint eo;
+    
+    for (iint j=0;j<p_Nq; ++j; inner1) {
+      for (iint i=0; i<p_Nq; ++i; inner0) {
+	eo = elementIDs[e];
+	
+	s_F[0][j][i] = F[i+0*p_Nq+j*3*p_Nq];
+	s_F[1][j][i] = F[i+1*p_Nq+j*3*p_Nq];
+	s_F[2][j][i] = F[i+2*p_Nq+j*3*p_Nq];
+
+	const iint eL = EToE[eo*p_Nfaces+3];
+	const iint eR = EToE[eo*p_Nfaces+1];
+	const iint eD = EToE[eo*p_Nfaces + 0];
+	const iint eU = EToE[eo*p_Nfaces + 2];
+	
+	const iint faceC = cubeFaceNumber[eo];
+
+	mark_edge = (faceC==cubeFaceNumber[eL])&&(faceC==cubeFaceNumber[eR]) &&(faceC==cubeFaceNumber[eD])&&(faceC==cubeFaceNumber[eU]);
+
+	occaUnroll(p_Nfields)
+  	  for(iint fld=0;fld<p_Nfields;++fld){
+	    s_q[fld][1][j][i] = qIn[eo*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	    if(mark_edge) {
+	      s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	      s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	    }
+	  }
+      }
+    }
+    barrier(localMemFence);
+    for (iint j=0;j<p_Nq; ++j; inner1) {
+      for (iint i=0; i<p_Nq; ++i; inner0) {
+	dfloat Fqij[p_Nfields];
+	if (mark_edge) {
+	  
+	  occaUnroll(p_Nfields)
+	    for(iint fld=0;fld<p_Nfields;++fld){
+	      Fqij[fld] = 0;
+	    }
+	  
+	  occaUnroll(p_Nq)
+	    for(int n=0;n<p_Nq;++n){
+	      // fetch once, use p_Nfields times
+	      const dfloat FinL = s_F[0][i][n];
+	      const dfloat FinC = s_F[1][i][n];
+	      const dfloat FinR = s_F[2][i][n];
+	      
+	      // ratio of 1 shared per 2 flops: on P100 => 2TFLOPS max
+	      occaUnroll(p_Nfields)
+		for(iint fld=0;fld<p_Nfields;++fld){
+		  Fqij[fld] += FinL*s_q[fld][0][j][n];
+		  Fqij[fld] += FinC*s_q[fld][1][j][n];
+		  Fqij[fld] += FinR*s_q[fld][2][j][n];
+		}
+	    }
+
+	    for (iint fld=0; fld<p_Nfields;++fld) {
+	      Fqij[fld] = Fqij[fld]*(1 - alpha) + s_q[fld][1][j][i]*alpha;
+	    }
+	}
+	else{
+	  
+	  occaUnroll(p_Nfields)
+	    for(iint fld=0;fld<p_Nfields;++fld){
+	      Fqij[fld] = s_q[fld][1][j][i];
+	    }
+	}
+	
+	occaUnroll(p_Nfields)
+	  for(iint fld=0;fld<p_Nfields;++fld){
+	    Fq[eo*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = Fqij[fld];
+	    if (saved)
+	      qpop[eo*p_Np*p_Nfields*p_nrhs + shift*p_Np*p_Nfields + fld*p_Np+j*p_Nq+i] = s_q[fld][1][j][i];
+	  }
+      }
+    }
+  }
+}
+
 kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 				     const dfloat alpha,
 				     const dfloat * restrict F,

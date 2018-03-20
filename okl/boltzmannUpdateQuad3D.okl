@@ -27,17 +27,15 @@ kernel void boltzmannLSERKUpdateQuad3D(const iint Nelements,
 	dfloat r_resq = resq[id];
 	dfloat r_rhsq = rhsq[id]; 
 	dfloat r_q = qpre[id];
-
+	
 	r_resq = rka*r_resq + dt*(r_rhsq + qCorr[id]);
 	r_q   += rkb*r_resq;
-
+	if (saved)
+	  qpop[es*p_Np*p_Nfields*p_nrhs + shift*p_Np*p_Nfields + fld*p_Np + n] = r_rhsq;
+	
 	resq[id] = r_resq;
 
 	qpre[id] = r_q;
-	if(saved) {
-	  const iint id2 = e*p_Np*p_Nfields*p_nrhs + shift*p_Np*p_Nfields + fld*p_Np + n;
-	  qpop[id2] = r_rhsq;
-	}
       }
     }
   }
