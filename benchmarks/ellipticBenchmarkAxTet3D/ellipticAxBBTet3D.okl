@@ -93,7 +93,7 @@ kernel void ellipticPartialAxBBTet3D_v0(const dlong Nelements,
     
     for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
       
-      int m=0;
+      int m=n;
       while(m<p_Nfp*p_Nfaces){
 	const int f = m/p_Nfp;
 	const dlong sid = e*p_Nfaces*p_Nsgeo+f*p_Nsgeo;
@@ -325,7 +325,7 @@ kernel void ellipticPartialAxBBTet3D_v1(const dlong Nelements,
 	for(int et=0;et<p_Ne;++et){
 	  const int e = eo + et;
 	  if(e<Nelements){
-	    int m=0;
+	    int m=n;
 	    while(m<p_Nfp*p_Nfaces){
 	      const int f = m/p_Nfp;
 	      const dlong sid = e*p_Nfaces*p_Nsgeo+f*p_Nsgeo;
@@ -598,7 +598,7 @@ kernel void ellipticPartialAxBBTet3D_v2(const dlong Nelements,
 	  for(int et=0;et<p_Ne;++et){
 	    const int e = eo + b + p_Nb*et;
 	    if(e<Nelements){
-	      int m=0;
+	      int m=n;
 	      while(m<p_Nfp*p_Nfaces){
 		const int f = m/p_Nfp;
 		const dlong sid = e*p_Nfaces*p_Nsgeo+f*p_Nsgeo;
@@ -885,7 +885,7 @@ kernel void ellipticPartialAxBBTet3D_v3(const dlong Nelements,
 	  for(int et=0;et<p_Ne;++et){
 	    const int e = eo + b + p_Nb*et;
 	    if(e<Nelements){
-	      int m=0;
+	      int m=n;
 	      while(m<p_Nfp*p_Nfaces){
 		const int f = m/p_Nfp;
 		const dlong sid = e*p_Nfaces*p_Nsgeo+f*p_Nsgeo;
