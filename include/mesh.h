@@ -413,9 +413,12 @@ typedef struct {
   occa::memory o_lev_updates;
   occa::memory o_shift;
   occa::memory o_qCorr;
-  occa::memory o_qlserk;
+  occa::memory o_prerhsq;
+  occa::memory o_qPreFilter;
+  occa::memory o_qPreFiltered;
   occa::memory o_qPreCorr;
   occa::memory o_qpre;
+  occa::memory o_qFiltered;
 
   iint * lev_updates;
 
@@ -460,6 +463,8 @@ typedef struct {
   occa::kernel traceUpdatePreKernel;
   occa::kernel filterKernelH;
   occa::kernel filterKernelV;
+  occa::kernel filterKernelHLSERK;
+  occa::kernel filterKernelVLSERK;
   occa::kernel filterKernelq0H;
   occa::kernel filterKernelq0V;
   occa::kernel traceUpdateKernel;

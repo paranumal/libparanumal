@@ -8,10 +8,10 @@ int main() {
   char *ref_string = (char *) calloc(300,sizeof(char));
   char *out_string = (char *) calloc(300,sizeof(char));
   
-  for(int i = 0; i < 20; ++i) {
+  for(int i = 0; i < 5; ++i) {
     
     sprintf(test_string,"/scratch/stimmel/short_filter/norms_0000_%04d.vtu",i);
-    sprintf(ref_string,"/scratch/stimmel/short_mrab/norms_0000_%04d.vtu",(i+1) - 1);
+    sprintf(ref_string,"/scratch/stimmel/short_mrab/norms_0000_%04d.vtu",4*(i+1) - 1);
     
     parse_vtu(ref_string,ref);
     parse_vtu(test_string,test);

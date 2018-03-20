@@ -299,7 +299,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
   dfloat cfl_small = 0.2; // depends on the stability region size (was .4, then 2)
-  dfloat cfl_large = cfl_small;
+  dfloat cfl_large = 4*cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   
@@ -396,13 +396,22 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
   mesh->o_qFilter =
     mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
 
+  mesh->o_qFiltered =
+    mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
+
   mesh->o_qCorr =
     mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
 
-    mesh->o_qPreCorr =
+  mesh->o_qPreCorr =
     mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->fQM);
 
-  mesh->o_qlserk =
+  mesh->o_prerhsq =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->fQM);
+
+  mesh->o_qPreFilter =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->fQM);
+
+  mesh->o_qPreFiltered =
     mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->fQM);
   
   mesh->o_sgeo =
@@ -530,6 +539,17 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
 				       "boltzmannFilterVQuad3D",
 				       kernelInfo);
+
+  mesh->filterKernelHLSERK =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+				       "boltzmannFilterHLSERKQuad3D",
+				       kernelInfo);
+  mesh->filterKernelVLSERK =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
+				       "boltzmannFilterVLSERKQuad3D",
+				       kernelInfo);
+
+  
   mesh->filterKernelq0H =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
 				       "boltzmannFilterHq0Quad3D",

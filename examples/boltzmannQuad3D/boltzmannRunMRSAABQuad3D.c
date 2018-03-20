@@ -25,11 +25,11 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
   
   for(iint tstep=mesh->Nrhs;tstep<mesh->NtimeSteps;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
-
-      iint mrab_order;
-      if((tstep - mesh->Nrhs) == 0) mrab_order = 0;
-      else if ((tstep - mesh->Nrhs) ==1) mrab_order = 1;
-      else mrab_order = 2;
+      
+      iint mrab_order=2;
+      /*      if (tstep - mesh->Nrhs == 0) mrab_order = 0;
+      else if (tstep - mesh->Nrhs == 1) mrab_order = 1;
+      else mrab_order = 2;*/
       
       //synthesize actual stage time
       iint t = tstep*pow(2,mesh->MRABNlevels-1) + Ntick;
@@ -146,9 +146,9 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_MRABlevels,
 			    l,
 			    mesh->o_qFilter,
-			    mesh->o_rhsq);	
-			    }
-      
+			    mesh->o_qFiltered);	
+      }
+                
       for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
 	  mesh->volumeCorrectionKernel(mesh->MRABNelements[l],
@@ -177,7 +177,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->MRSAAB_A[id+1],
 			     mesh->MRSAAB_A[id+2],
 			     mesh->MRABshiftIndex[l],
-			     mesh->o_rhsq,
+			     mesh->o_qFiltered,
+			     //mesh->o_rhsq,
 			     mesh->o_vmapM,
 			     mesh->o_fQM,
 			     mesh->o_qCorr,
@@ -205,7 +206,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 				  mesh->MRSAAB_B[id+1],
 				  mesh->MRSAAB_B[id+2], 
 				  mesh->MRABshiftIndex[lev],
-				  mesh->o_rhsq,
+				  mesh->o_qFiltered,
+				  //mesh->o_rhsq,
 				  mesh->o_vmapM,
 				  mesh->o_fQM,
 				  mesh->o_qCorr,
@@ -215,7 +217,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
     }
 
     // estimate maximum error
-    if(((tstep+1)%mesh->errorStep)==0){
+    if((((tstep+1)%mesh->errorStep)==0)){
       //	dfloat t = (tstep+1)*mesh->dt;
       dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
 	
