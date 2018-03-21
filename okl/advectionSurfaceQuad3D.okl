@@ -5,8 +5,11 @@ void upwindFlux(const dfloat nx, const dfloat ny, const dfloat nz,
 
   const dfloat udotn = u*nx+v*ny+w*nz;
 
-  // need to double check the sign in front of occaFabs
+  // TW: need to double check the sign in front of occaFabs (might need to switch to - occaFabs(udotn)
   fluxq[0] = 0.5f*(-udotn + occaFabs(udotn))*dq[0];
+
+  for(int n=1;n<p_Nfields;++n)
+    fluxq[n] = 0;
 
 }
 
@@ -81,7 +84,7 @@ kernel void advectionSurfaceQuad3D(const iint Nelements,
 
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
-		rhsq[vidM+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
+		rhsq[vidM+fld*p_Np] += sc*fluxq[fld]; // TW dq[fld];
 	      }
 	  }
 	}
@@ -165,22 +168,18 @@ kernel void advectionSurfaceMRQuad3D(const iint Nelements,
 		dq[fld] = qP-qM;
 	      }
 
-
+	    // upwind flux
 	    upwindFlux(nx, ny, nz, un, vn, wn, dq, fluxq);
-
-
-	    // compute D*(0.5*[q] + 0.5*D*[q])
-	    flux(nx, ny, nz, zero, one, fluxq, dq);
 	    
 	    // evaluate "flux" terms: (sJ/J)*(D+sigma*D*D)*(q^* - q^-)
 	    const dfloat sc = invJ*sJ*p_LIFT;
 
 	    //account for new layout of rhsq
 	    const iint vidNew = eM*p_nrhs*p_Np*p_Nfields + shift*p_Np*p_Nfields + vM;
-
+	    
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
-		rhsq[vidNew+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
+		rhsq[vidNew+fld*p_Np] += sc*fluxq[fld]; // TW dq[fld];
 	      }
 	  }
 	}
