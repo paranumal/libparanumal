@@ -18,7 +18,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
   iint startTime;
   if (solver->lserk) startTime = mesh->Nrhs;
-  else startTime = mesh->Nrhs; //takes forced history into account
+  else startTime = 0;
   
   for(iint tstep=startTime;tstep<mesh->NtimeSteps;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
@@ -127,8 +127,8 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	}
       }
       occa::toc("surfaceKernel");
-
-      if (solver->filter) {      
+      
+      if (solver->filter) {
 	mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
 	mesh->o_lev_updates.copyFrom(mesh->lev_updates);
 	
@@ -169,7 +169,6 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      mesh->o_qFiltered);	
 	}
       }
-
       if (solver->force_type != 1 && solver->force_type != 2) { 
 	for (iint l=0;l<lev;l++) {
 	  if (mesh->MRABNelements[l]) {
@@ -237,7 +236,7 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	  }
 	}
       }
-            if (solver->filter) {
+      else {
 	for (iint l = 0; l < lev; l++) {
 	  const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + l*mesh->Nrhs;
 	  occa::tic("updateKernel");
@@ -293,9 +292,11 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 
     mesh->o_q.copyTo(mesh->q);
     if (solver->force_type == 1) {
+      dfloat test_val;
       for (iint i = 0; i < mesh->Nelements*mesh->Np*mesh->Nfields; ++i) {
-	if (fabs(mesh->q[i] - mesh->dt*pow(2,mesh->MRABNlevels-1)*(tstep+1)) > solver->max_error)
+	if (fabs(mesh->q[i] - mesh->dt*pow(2,mesh->MRABNlevels-1)*(tstep+1)) > solver->max_error) {
 	  solver->fail_count++;
+	}
       }
     }
     if (solver->force_type == 2) {

@@ -310,7 +310,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh,iint cfl_scale,iint force_type,iin
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
 
   if (force_type == 1 || force_type == 2) {
-    mesh->tauInv = 1;
+    mesh->tauInv = 0;
   }
   else {
     mesh->tauInv = mesh->RT/nu; // TW
@@ -404,7 +404,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh,iint cfl_scale,iint force_type,iin
 	    else tshift = shift;
 	    //start time minus tshift*localdt
 	    mesh->rhsq[e*mesh->Nrhs*mesh->Np*mesh->Nfields + shift*mesh->Nfields*mesh->Np + nf]\
-	      = mesh->dt*pow(2,mesh->MRABNlevels-1)*mesh->Nrhs - mesh->dt*tshift*pow(2,mesh->MRABlevel[e]);
+	      = -1*mesh->dt*tshift*pow(2,mesh->MRABlevel[e]);
 	  }
 	}
       }
