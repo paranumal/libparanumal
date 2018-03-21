@@ -40,7 +40,6 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
   iint finalTime;
   if (solver->mrsaab) finalTime = mesh->Nrhs;
   else finalTime = mesh->NtimeSteps;
-  
   for(iint tstep=0;tstep<finalTime;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       
@@ -86,15 +85,15 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 			      mesh->o_qpre,
 			      mesh->o_prerhsq);
 
-	if (force_type == 1) {
+	if (solver->force_type == 1) {
 	  for (iint i = 0; i < mesh->Nelements*mesh->Np*mesh->Nfields; ++i) {
 	    test_q[i] = 1;
 	  }
 	  mesh->o_prerhsq.copyFrom(test_q);
 	}
-	else if (force_type == 2) {
+	else if (solver->force_type == 2) {
 	  for(iint i = 0; i < mesh->Nelements*mesh->Np*mesh->Nfields; ++i) {
-	    test_q[i] = mesh->dt*mesh->pow(2,mesh->MRABNlevels-1)*tstep + mesh->dt*mesh->Ntick + mesh->dt*rkc[rk];
+	    test_q[i] = mesh->dt*pow(2,mesh->MRABNlevels-1)*tstep + mesh->dt*Ntick + mesh->dt*mesh->rkc[rk];
 	  }
 	  mesh->o_prerhsq.copyFrom(test_q);
 	}
@@ -162,17 +161,20 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 				     mesh->o_qFilter);
 	  }
 	}
-	
-	for (iint l = 0; l < mesh->MRABNlevels; l++) {
-	  iint saved = (l < lev)&&(rk == 0);
-	  mesh->volumeCorrPreKernel(mesh->MRABNelements[l],
-				    mesh->o_MRABelementIds[l],
-				    saved,
-				    mesh->MRABshiftIndex[l],
-				    mesh->o_qpre,
-				    mesh->o_qCorr,
-				    mesh->o_qPreCorr);
+
+	if (solver->force_type != 1 && solver->force_type != 2) {
+	  for (iint l = 0; l < mesh->MRABNlevels; l++) {
+	    iint saved = (l < lev)&&(rk == 0);
+	    mesh->volumeCorrPreKernel(mesh->MRABNelements[l],
+				      mesh->o_MRABelementIds[l],
+				      saved,
+				      mesh->MRABshiftIndex[l],
+				      mesh->o_qpre,
+				      mesh->o_qCorr,
+				      mesh->o_qPreCorr);
+	  }
 	}
+	  
 
 	if (solver->filter) { //need the correct history data here
 	  for (iint l = 0; l < mesh->MRABNlevels; l++) {
@@ -231,6 +233,21 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 				   mesh->o_fQM,
 				   mesh->o_qpre,
 				   mesh->o_q);
+      }
+    }
+    
+    mesh->o_qpre.copyTo(mesh->q);
+    if (solver->force_type == 1) {
+      for (iint i = 0; i < mesh->Nelements*mesh->Np*mesh->Nfields; ++i) {
+	if (fabs(mesh->q[i] - mesh->dt*pow(2,mesh->MRABNlevels-1)*(tstep+1)) > solver->max_error) {
+	  solver->fail_count++;
+	}
+      }
+    }
+    if (solver->force_type == 2) {
+      for (iint i = 0; i < mesh->Nelements*mesh->Np*mesh->Nfields; ++i) {
+	if (fabs(mesh->q[i] - (mesh->dt*pow(2,mesh->MRABNlevels-1)*(tstep+1))*(mesh->dt*pow(2,mesh->MRABNlevels-1)*(tstep+1))/2) > solver->max_error)
+	  solver->fail_count++;
       }
     }
     

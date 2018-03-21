@@ -308,9 +308,13 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh,iint cfl_scale,iint force_type,iin
   dfloat cfl_large = cfl_scale*cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
-  
-  mesh->tauInv = mesh->RT/nu; // TW
 
+  if (force_type == 1 || force_type == 2) {
+    mesh->tauInv = 1;
+  }
+  else {
+    mesh->tauInv = mesh->RT/nu; // TW
+  }
 
   dfloat glmin = 1e9, glmax = -1e9;
   // set time step
@@ -347,7 +351,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh,iint cfl_scale,iint force_type,iin
 
   //dt = mymin(dt, cfl/mesh->tauInv);
 
-  mesh->finalTime = 10;
+  mesh->finalTime = 0.005;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   
   iint maxLevels=100;
@@ -408,7 +412,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh,iint cfl_scale,iint force_type,iin
     else{
       printf("bad forcing combination.  Defaulting to 0 history\n");
     }
-  
+  }
   // fixed to set up quad info on device too
   boltzmannOccaSetupQuad3D(mesh, deviceConfig,  kernelInfo);
 
@@ -480,7 +484,7 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh,iint cfl_scale,iint force_type,iin
 	= mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
 			      mesh->MRABhaloIds[lev]);
   }
-
+  
   //break out computation of rk coefficients
   //needs to be last so we have mrab levels
   rk_coeffs(mesh);

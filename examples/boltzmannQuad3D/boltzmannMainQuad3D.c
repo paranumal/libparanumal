@@ -20,8 +20,11 @@ int main(int argc, char **argv){
   mesh_t *mesh = meshSetupQuad3D(argv[1], N, sphereRadius);
 
   // set up boltzmann stuff
-  solver_t *solver = boltzmannSetupMRQuad3D(mesh,atoi(argv[6]),atoi(argv[7]));
+  solver_t *solver = boltzmannSetupMRQuad3D(mesh,atoi(argv[6]),atoi(argv[7]),atoi(argv[3]));
 
+  solver->max_error = 1e-12;
+  solver->fail_count = 0;
+  
   //load flags into solver
   solver->lserk = atoi(argv[3]); //0 or 1
   solver->mrsaab = atoi(argv[4]); //0 or 1
@@ -29,6 +32,13 @@ int main(int argc, char **argv){
   //these are also used in setup
   solver->cfl = atoi(argv[6]); //cfl x_
   solver->force_type = atoi(argv[7]); //1->1 2->t 3->original values 
+
+  /*  printf("lserk: %d\n",solver->lserk);
+  printf("mrsaab: %d\n",solver->mrsaab);
+  printf("filter: %d\n",solver->filter);
+  printf("cfl: %d\n",solver->cfl);
+  printf("force type %d\n",solver->force_type);
+  */
   
   // time step Boltzmann equations
   if (solver->lserk)
@@ -36,6 +46,11 @@ int main(int argc, char **argv){
   if (solver->mrsaab)
     boltzmannRunMRSAABQuad3D(solver);
 
+  if (solver->fail_count > 0)
+    printf("test failed %d times\n",solver->fail_count);
+  else
+    printf("success\n");
+  
   // close down MPI
   MPI_Finalize();
 

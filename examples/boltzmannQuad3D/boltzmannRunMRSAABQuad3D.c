@@ -66,18 +66,18 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_q,
 			     mesh->o_rhsq);
 	}
-	if (force_type == 1) {
+	if (solver->force_type == 1) {
 	  mesh->o_rhsq.copyTo(test_q);
 	  for (iint e = 0; e < mesh->Nelements; ++e) {
 	    for (iint i = 0; i < mesh->Np*mesh->Nfields; ++i) {
 	      if (mesh->MRABlevel[e] == l) {
-		test_q[e*mesh->Np*mesh->Nfields*mesh->Nrhs + i + mesh->MRABshiftIndes[l]*mesh->Np*mesh->Nfields] = 1;
+		test_q[e*mesh->Np*mesh->Nfields*mesh->Nrhs + i + mesh->MRABshiftIndex[l]*mesh->Np*mesh->Nfields] = 1;
 	      }
 	    }
 	  }
 	  mesh->o_rhsq.copyFrom(test_q);
 	}
-	else if (force_type == 2) {
+	else if (solver->force_type == 2) {
 	  mesh->o_rhsq.copyTo(test_q);
 	  for (iint e = 0; e < mesh->Nelements; ++e) {
 	    for (iint i = 0; i < mesh->Np*mesh->Nfields; ++i) {
@@ -169,14 +169,16 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 			      mesh->o_qFiltered);	
 	}
       }
-      
-      for (iint l=0;l<lev;l++) {
-	if (mesh->MRABNelements[l]) {
-	  mesh->volumeCorrectionKernel(mesh->MRABNelements[l],
-				       mesh->o_MRABelementIds[l],
-				       mesh->MRABshiftIndex[l],
-				       mesh->o_q,
-				       mesh->o_qCorr);
+
+      if (solver->force_type != 1 && solver->force_type != 2) { 
+	for (iint l=0;l<lev;l++) {
+	  if (mesh->MRABNelements[l]) {
+	    mesh->volumeCorrectionKernel(mesh->MRABNelements[l],
+					 mesh->o_MRABelementIds[l],
+					 mesh->MRABshiftIndex[l],
+					 mesh->o_q,
+					 mesh->o_qCorr);
+	  }
 	}
       }
       
@@ -288,6 +290,21 @@ void boltzmannRunMRSAABQuad3D(solver_t *solver){
 	}
       }
     }
+
+    mesh->o_q.copyTo(mesh->q);
+    if (solver->force_type == 1) {
+      for (iint i = 0; i < mesh->Nelements*mesh->Np*mesh->Nfields; ++i) {
+	if (fabs(mesh->q[i] - mesh->dt*pow(2,mesh->MRABNlevels-1)*(tstep+1)) > solver->max_error)
+	  solver->fail_count++;
+      }
+    }
+    if (solver->force_type == 2) {
+      for (iint i = 0; i < mesh->Nelements*mesh->Np*mesh->Nfields; ++i) {
+	if (fabs(mesh->q[i] - (mesh->dt*pow(2,mesh->MRABNlevels-1)*(tstep+1))*(mesh->dt*pow(2,mesh->MRABNlevels-1)*(tstep+1))/2) > solver->max_error)
+	  solver->fail_count++;
+      }
+    }
+    
     // estimate maximum error
     /*    if((((tstep+1)%mesh->errorStep)==0)){
       //	dfloat t = (tstep+1)*mesh->dt;

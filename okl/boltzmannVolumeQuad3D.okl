@@ -101,8 +101,6 @@ kernel void boltzmannVolumeQuad3D(const int Nelements,
 	    const dfloat q9  = s_q[8][es][j][i];
 	    const dfloat q10 = s_q[9][es][j][i];
 
-	    const dfloat invq1 = 1.f/q1;
-
 	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
 	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;
 	    const dfloat dq1dz = drdz*dqdr[0] + dsdz*dqds[0] + dtdz*q1;
@@ -278,8 +276,6 @@ kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
 	    const dfloat q8  = s_q[7][es][j][i];
 	    const dfloat q9  = s_q[8][es][j][i];
 	    const dfloat q10 = s_q[9][es][j][i];
-
-	    const dfloat invq1 = 1.f/q1;
 
 	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
 	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;

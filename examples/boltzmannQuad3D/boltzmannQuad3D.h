@@ -28,7 +28,8 @@ typedef struct {
   iint filter;
   iint cfl;
   iint force_type;
-  
+  dfloat max_error;
+  iint fail_count;
   
   dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
 
