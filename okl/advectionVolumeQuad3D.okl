@@ -9,7 +9,7 @@
 #define TYID 7
 #define TZID 8
 
-kernel void boltzmannVolumeQuad3D(const int Nelements,
+kernel void advectionVolumeQuad3D(const int Nelements,
 				  const dfloat * restrict vgeo,
 				  const dfloat * restrict D,
 				  const dfloat * restrict x,
@@ -118,7 +118,7 @@ kernel void boltzmannVolumeQuad3D(const int Nelements,
 }
 
 
-kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
+kernel void advectionVolumeSAQuad3D(const iint Nelements,
 				    const iint   * restrict elementIds,
 				    const iint shift,
 				    const dfloat * restrict vgeo,

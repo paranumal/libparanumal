@@ -1,0 +1,196 @@
+void upwindFlux(const dfloat nx, const dfloat ny, const dfloat nz,
+		const dfloat u, const dfloat v, const dfloat w,
+		const dfloat * restrict dq,
+		dfloat * restrict fluxq){
+
+  const dfloat udotn = u*nx+v*ny+w*nz;
+
+  // need to double check the sign in front of occaFabs
+  fluxq[0] = 0.5f*(-udotn + occaFabs(udotn))*dq[0];
+
+}
+
+// pointwise SEM-DG lift
+kernel void advectionSurfaceQuad3D(const iint Nelements,
+				   const dfloat * restrict sgeo,
+				   const dfloat * restrict LIFTT,
+				   const iint   * restrict vmapM,
+				   const iint   * restrict vmapP,
+				   const dfloat time,
+				   const dfloat * restrict x,
+				   const dfloat * restrict y,
+				   const dfloat * restrict z,
+				   const dfloat * restrict q,
+				   dfloat * restrict rhsq){
+  
+  
+#define p_LIFT (0.5f*(p_Nq-1)*p_Nq)
+  
+  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+    
+    // for all faces (global barrier at end of body of this loop)
+    for(iint face=0;face<p_Nfaces;++face){      
+
+      
+      for(iint es=0;es<p_NblockS;++es;inner1){
+	for(iint i=0;i<p_Nq;++i;inner0){ 
+
+	  const iint eM = eo + es;
+	  
+	  if(eM<Nelements){
+	    
+	    // load surface geofactors for this face
+	    const iint sid = eM*p_Nsgeo*p_Nq*p_Nfaces + face*p_Nsgeo*p_Nq + i; 
+	    const dfloat nx = sgeo[sid+0*p_Nq];
+	    const dfloat ny = sgeo[sid+1*p_Nq];
+	    const dfloat nz = sgeo[sid+2*p_Nq];
+	    const dfloat sJ = sgeo[sid+3*p_Nq];
+	    const dfloat invJ = sgeo[sid+4*p_Nq];
+
+	    // indices of negative and positive traces of face node
+	    const iint id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
+	    const int idM = vmapM[id];
+	    const int idP = vmapP[id];
+	    const int eP = idP/p_Np;
+
+	    const dfloat xn = x[idM];
+	    const dfloat yn = y[idM];
+	    const dfloat zn = z[idM];
+
+	    const dfloat un = yn;
+	    const dfloat vn = -xn;
+	    const dfloat wn = 0;
+
+	    const iint vidM = eM*p_Np*p_Nfields + (idM%p_Np);
+	    const iint vidP = eP*p_Np*p_Nfields + (idP%p_Np);
+
+	    dfloat dq[p_Nfields], fluxq[p_Nfields];
+	    
+	    occaUnroll(p_Nfields)
+	      for(int fld=0;fld<p_Nfields;++fld){
+		const dfloat qM = q[vidM+fld*p_Np];
+		dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
+
+		dq[fld] = qP-qM;
+	      }
+
+	    upwindFlux(nx, ny, nz, un, vn, wn, dq, fluxq);
+	    
+	    const dfloat sc = invJ*sJ*p_LIFT;
+
+	    occaUnroll(p_Nfields)
+	      for(int fld=0;fld<p_Nfields;++fld){
+		rhsq[vidM+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
+	      }
+	  }
+	}
+      }
+
+      // wait for all global memory writes of the previous inner loop to complete
+      barrier(globalMemFence);
+
+      
+    }
+  }
+}
+
+// pointwise SEM-DG lift
+kernel void advectionSurfaceMRQuad3D(const iint Nelements,
+				     const iint * restrict elementIds,
+				     const iint shift,
+				     const dfloat * restrict sgeo,
+				     const dfloat * restrict LIFTT,
+				     const iint   * restrict vmapM,
+				     const iint   * restrict mapP,
+				     const iint time,
+				     const dfloat * restrict x,
+				     const dfloat * restrict y,
+				     const dfloat * restrict z,
+				     const dfloat * restrict q,
+				     	   dfloat * restrict fQM,
+				           dfloat * restrict rhsq){
+  
+  
+#define p_LIFT (0.5f*(p_Nq-1)*p_Nq)
+  
+  // for all elements
+  for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+    
+    // for all faces (global barrier at end of body of this loop)
+    for(iint face=0;face<p_Nfaces;++face){      
+
+      
+      for(iint es=0;es<p_NblockS;++es;inner1){
+	for(iint i=0;i<p_Nq;++i;inner0){ 
+	  //transition from fake to real element numbering
+	  const iint e = eo + es;
+	  
+	  if(e<Nelements){
+	    const iint eM = elementIds[e];
+
+	    // load surface geofactors for this face
+	    const iint sid = eM*p_Nsgeo*p_Nq*p_Nfaces + face*p_Nsgeo*p_Nq + i; 
+	    const dfloat nx = sgeo[sid+0*p_Nq];
+	    const dfloat ny = sgeo[sid+1*p_Nq];
+	    const dfloat nz = sgeo[sid+2*p_Nq];
+	    const dfloat sJ = sgeo[sid+3*p_Nq];
+	    const dfloat invJ = sgeo[sid+4*p_Nq];
+
+	    // indices of negative and positive traces of face node
+	    const iint id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
+	    const iint idP = mapP[id];
+	    const iint eP = idP/(p_Nfaces*p_Nq);
+	    const iint idM = vmapM[id];
+	    const iint vM = vmapM[id]%p_Np;
+	    const iint vP = idP - eP*p_Nfaces*p_Nq;
+	    
+	    const dfloat xn = x[idM];
+	    const dfloat yn = y[idM];
+	    const dfloat zn = z[idM];
+
+	    const dfloat un = yn;
+	    const dfloat vn = -xn;
+	    const dfloat wn = 0;
+
+	    const iint vidM = eM*p_Nq*p_Nfaces*p_Nfields + face*p_Nq + i;
+	    const iint vidP = eP*p_Nq*p_Nfaces*p_Nfields + vP;
+
+	    dfloat dq[p_Nfields], fluxq[p_Nfields];
+	    
+	    occaUnroll(p_Nfields)
+	      for(int fld=0;fld<p_Nfields;++fld){
+		const dfloat qM = fQM[vidM+fld*p_Nfp*p_Nfaces];
+		dfloat qP = fQM[vidP+fld*p_Nfp*p_Nfaces]; 
+		dq[fld] = qP-qM;
+	      }
+
+
+	    upwindFlux(nx, ny, nz, un, vn, wn, dq, fluxq);
+
+
+	    // compute D*(0.5*[q] + 0.5*D*[q])
+	    flux(nx, ny, nz, zero, one, fluxq, dq);
+	    
+	    // evaluate "flux" terms: (sJ/J)*(D+sigma*D*D)*(q^* - q^-)
+	    const dfloat sc = invJ*sJ*p_LIFT;
+
+	    //account for new layout of rhsq
+	    const iint vidNew = eM*p_nrhs*p_Np*p_Nfields + shift*p_Np*p_Nfields + vM;
+
+	    occaUnroll(p_Nfields)
+	      for(int fld=0;fld<p_Nfields;++fld){
+		rhsq[vidNew+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
+	      }
+	  }
+	}
+      }
+
+      // wait for all global memory writes of the previous inner loop to complete
+      barrier(globalMemFence);
+
+      
+    }
+  }
+}
+
