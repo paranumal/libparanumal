@@ -36,8 +36,10 @@ void insAdvectionStepQuad2D(ins_t *ins, int tstep, char   * options){
   if(strstr(options, "CUBATURE")){
     ins->advectionCubatureVolumeKernel(mesh->Nelements,
                                        mesh->o_vgeo,
-                                       mesh->o_cubDrWT,
+                                       mesh->o_cubvgeo,
+                                       mesh->o_cubDWT,
                                        mesh->o_cubInterpT,
+                                       mesh->o_cubProjectT,
                                        ioffset,
                                        ins->o_U,
                                        ins->o_V,
@@ -87,12 +89,13 @@ void insAdvectionStepQuad2D(ins_t *ins, int tstep, char   * options){
   occaTimerTic(mesh->device,"AdvectionSurface");
   if(strstr(options, "CUBATURE")){
     ins->advectionCubatureSurfaceKernel(mesh->Nelements,
-                                        mesh->o_sgeo,
-                                        mesh->o_intInterpT,
-                                        mesh->o_intLIFTT,
+                                        mesh->o_vgeo,
+                                        mesh->o_cubsgeo,
                                         mesh->o_vmapM,
                                         mesh->o_vmapP,
                                         mesh->o_EToB,
+                                        mesh->o_cubInterpT,
+                                        mesh->o_cubProjectT,
                                         t,
                                         mesh->o_intx,
                                         mesh->o_inty,

@@ -11,6 +11,10 @@ void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
   mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
                                 mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
                                 sizeof(dfloat));
+
+  mesh->cubsgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
+                                mesh->Nsgeo*mesh->cubNq*mesh->Nfaces, 
+                                sizeof(dfloat));
   
   for(dlong e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
 
@@ -57,6 +61,47 @@ void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
         mesh->sgeo[base+WIJID] = 1./(J*mesh->gllw[0]);
         mesh->sgeo[base+WSJID] = (d/2.)*mesh->gllw[i];
       }
+
+      //geometric data for quadrature
+      for(int i=0;i<mesh->cubNq;++i){  // for each quadrature node on face
+
+        dfloat rn = 0., sn = 0.;
+
+        /* interpolate local node coordinates */
+        for (int j=0;j<mesh->Nfp;j++) {
+          /* volume index of face node */
+          int n = mesh->faceNodes[f*mesh->Nfp+j];
+
+          rn += mesh->cubInterp[i*mesh->Nfp+j]*mesh->r[n];
+          sn += mesh->cubInterp[i*mesh->Nfp+j]*mesh->s[n];
+        }
+        
+        /* Jacobian matrix */
+        dfloat xr = 0.25*( (1-sn)*(xe[1]-xe[0]) + (1+sn)*(xe[2]-xe[3]) );
+        dfloat xs = 0.25*( (1-rn)*(xe[3]-xe[0]) + (1+rn)*(xe[2]-xe[1]) );
+        dfloat yr = 0.25*( (1-sn)*(ye[1]-ye[0]) + (1+sn)*(ye[2]-ye[3]) );
+        dfloat ys = 0.25*( (1-rn)*(ye[3]-ye[0]) + (1+rn)*(ye[2]-ye[1]) );
+        
+        /* compute geometric factors for affine coordinate transform*/
+        dfloat J = xr*ys - xs*yr;
+        
+        /* face f normal and length */
+        dfloat nx =   ye[(f+1)%mesh->Nverts]-ye[f];
+        dfloat ny = -(xe[(f+1)%mesh->Nverts]-xe[f]);
+        dfloat  d = norm(nx,ny);
+
+        /* output index */
+        dlong base = mesh->Nsgeo*(mesh->Nfaces*mesh->cubNq*e + mesh->cubNq*f + i);
+
+        /* store normal, surface Jacobian, and reciprocal of volume Jacobian */
+        mesh->cubsgeo[base+NXID] = nx/d;
+        mesh->cubsgeo[base+NYID] = ny/d;
+        mesh->cubsgeo[base+SJID] = d/2.;
+        mesh->cubsgeo[base+IJID] = 1./J;
+
+        mesh->cubsgeo[base+WIJID] = 1./(J*mesh->cubw[0]);
+        mesh->cubsgeo[base+WSJID] = (d/2.)*mesh->cubw[i];
+      }
     }
   }
 
@@ -73,7 +118,5 @@ void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
       mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
       mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
     }
-  }
-
-  
+  }  
 }
