@@ -1,0 +1,230 @@
+
+#define RXID 0  
+#define RYID 1
+#define RZID 2
+#define SXID 3  
+#define SYID 4
+#define SZID 5
+#define TXID 6  
+#define TYID 7
+#define TZID 8
+
+kernel void boltzmannVolumeQuad3D(const int Nelements,
+				  const dfloat * restrict vgeo,
+				  const dfloat * restrict D,
+				  const dfloat * restrict x,
+				  const dfloat * restrict y,
+				  const dfloat * restrict z,
+				  const dfloat * restrict q,
+				  dfloat * restrict rhsq){
+
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+    shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int es=0;es<p_NblockV;++es;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+
+	  int e = eo+es; // element in block
+	  if(e<Nelements){
+	    const int base = i + j*p_Nq + p_Nfields*p_Np*e;
+	    for(int fld=0;fld<p_Nfields;++fld){
+	      s_q[fld][es][j][i] = q[base+fld*p_Np];
+	    }
+	  }
+
+	  if(es==0)
+	    s_D[j][i] = D[j*p_Nq+i];
+	}
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(int es=0;es<p_NblockV;++es;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  int e = eo+es; // element in block
+
+	  if(e<Nelements){
+
+	    const int n=j*p_Nq+i;
+
+	    // prefetch geometric factors (constant on triangle)
+	    const int gbase = e*p_Np*p_Nvgeo + n;
+	    const dfloat drdx = vgeo[gbase + p_Np*RXID];
+	    const dfloat drdy = vgeo[gbase + p_Np*RYID];
+	    const dfloat drdz = vgeo[gbase + p_Np*RZID];
+	    const dfloat dsdx = vgeo[gbase + p_Np*SXID];
+	    const dfloat dsdy = vgeo[gbase + p_Np*SYID];
+	    const dfloat dsdz = vgeo[gbase + p_Np*SZID];
+	    const dfloat dtdx = vgeo[gbase + p_Np*TXID];
+	    const dfloat dtdy = vgeo[gbase + p_Np*TYID];
+	    const dfloat dtdz = vgeo[gbase + p_Np*TZID];
+
+	    // compute 'r' and 's' derivatives of (q_m) at node n
+	    dfloat dqdr[p_Nfields], dqds[p_Nfields];
+
+	    occaUnroll(p_Nfields)
+	      for(int fld=0;fld<p_Nfields;++fld){
+		dqdr[fld] = 0;
+		dqds[fld] = 0;
+	      }
+
+	    occaUnroll(p_Nq)
+	      for(int m=0;m<p_Nq;++m){
+		const dfloat Dim = s_D[i][m]; // could L1
+		const dfloat Djm = s_D[j][m];
+
+		// differentiate q components with respect to 'r'
+		occaUnroll(p_Nfields)
+		  for(int fld=0;fld<p_Nfields;++fld)
+		    dqdr[fld] += Dim*s_q[fld][es][j][m]; // 4 bytes per flop (2TF max)
+
+		// differentiate q components with respect to 's'
+		occaUnroll(p_Nfields)
+		  for(int fld=0;fld<p_Nfields;++fld)
+		    dqds[fld] += Djm*s_q[fld][es][m][i];
+	      }
+
+	    const dfloat q1  = s_q[0][es][j][i];
+
+	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
+	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;
+	    const dfloat dq1dz = drdz*dqdr[0] + dsdz*dqds[0] + dtdz*q1;
+
+	    // hard code solid body velocity
+	    const dfloat xn = x[n+e*p_Np];
+	    const dfloat yn = y[n+e*p_Np];
+	    const dfloat zn = z[n+e*p_Np];
+
+	    const dfloat un =  yn;
+	    const dfloat vn = -xn;
+	    const dfloat wn = 0;
+
+	    const dfloat rhsq1 = un*dq1dx + vn*dq1dy + wn*dq1dz;
+
+	    const int base = e*p_Np*p_Nfields+n;
+
+	    rhsq[base+0*p_Np] = rhsq1;
+	  }
+	}
+      }
+    }
+  }
+}
+
+
+kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
+				    const iint   * restrict elementIds,
+				    const iint shift,
+				    const dfloat * restrict vgeo,
+				    const dfloat * restrict D,
+				    const dfloat * restrict x,
+				    const dfloat * restrict y,
+				    const dfloat * restrict z,
+				    const dfloat * restrict q,
+				    dfloat * restrict rhsq){
+
+  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+    shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_D[p_Nq][p_Nq];
+    exclusive iint e;
+    for(iint es=0;es<p_NblockV;++es;inner2){
+      for(iint j=0;j<p_Nq;++j;inner1){    
+	for(iint i=0;i<p_Nq;++i;inner0){    
+
+	  const iint eT = eo+es; // element in block
+	  if(eT<Nelements){
+	    e = elementIds[eT];
+	    const int base = i + j*p_Nq + p_Nfields*p_Np*e;
+	    for(int fld=0;fld<p_Nfields;++fld){
+	      s_q[fld][es][j][i] = q[base+fld*p_Np];
+	    }
+	  }
+
+	  if(es==0)
+	    s_D[j][i] = D[j*p_Nq+i];
+	}
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(iint es=0;es<p_NblockV;++es;inner2){
+      for(iint j=0;j<p_Nq;++j;inner1){    
+	for(iint i=0;i<p_Nq;++i;inner0){    
+	  iint eT = eo+es; // element in block
+
+	  const iint n=j*p_Nq+i;
+
+	  if(eT<Nelements){
+
+	    // prefetch geometric factors (constant on triangle)
+	    const int gbase = e*p_Np*p_Nvgeo + n;
+	    const dfloat drdx = vgeo[gbase + p_Np*RXID];
+	    const dfloat drdy = vgeo[gbase + p_Np*RYID];
+	    const dfloat drdz = vgeo[gbase + p_Np*RZID];
+	    const dfloat dsdx = vgeo[gbase + p_Np*SXID];
+	    const dfloat dsdy = vgeo[gbase + p_Np*SYID];
+	    const dfloat dsdz = vgeo[gbase + p_Np*SZID];
+	    const dfloat dtdx = vgeo[gbase + p_Np*TXID];
+	    const dfloat dtdy = vgeo[gbase + p_Np*TYID];
+	    const dfloat dtdz = vgeo[gbase + p_Np*TZID];
+
+	    // compute 'r' and 's' derivatives of (q_m) at node n
+	    dfloat dqdr[p_Nfields], dqds[p_Nfields];
+
+	    occaUnroll(p_Nfields)
+	      for(int fld=0;fld<p_Nfields;++fld){
+		dqdr[fld] = 0;
+		dqds[fld] = 0;
+	      }
+
+	    occaUnroll(p_Nq)
+	      for(iint m=0;m<p_Nq;++m){
+		const dfloat Dim = s_D[i][m]; // could L1
+		const dfloat Djm = s_D[j][m];
+
+		// differentiate q components with respect to 'r'
+		occaUnroll(p_Nfields)
+		  for(int fld=0;fld<p_Nfields;++fld) 
+		    dqdr[fld] += Dim*s_q[fld][es][j][m]; // 4 bytes per flop (2TF max)
+
+		// differentiate q components with respect to 's'
+		occaUnroll(p_Nfields)
+		  for(int fld=0;fld<p_Nfields;++fld)
+		    dqds[fld] += Djm*s_q[fld][es][m][i];
+	      }
+
+	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
+	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;
+	    const dfloat dq1dz = drdz*dqdr[0] + dsdz*dqds[0] + dtdz*q1;
+
+	    // hard code solid body velocity 
+	    const dfloat xij = x[n+e*p_Np];
+	    const dfloat yij = y[n+e*p_Np];
+	    const dfloat zij = z[n+e*p_Np];
+
+	    const dfloat uij =  yij;
+	    const dfloat vij = -xij;
+	    const dfloat wij = 0;
+
+	    const dfloat rhsq1 = uij*dq1dx + vij*dq1dy + wij*dq1dz;
+
+	    const iint base = e*p_Np*p_Nfields*p_nrhs+shift*p_Np*p_Nfields+n;
+
+	    rhsq[base+0*p_Np] = rhsq1;
+	  }
+	}
+      }
+    }
+  }
+}
+
+
