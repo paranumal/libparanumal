@@ -22,9 +22,7 @@ int main(int argc, char **argv){
   // set up boltzmann stuff
   solver_t *solver = boltzmannSetupMRQuad3D(mesh,atoi(argv[6]),atoi(argv[7]),atoi(argv[3]));
 
-  solver->max_error = 1e-12;
-  solver->fail_count = 0;
-  
+ 
   //load flags into solver
   solver->lserk = atoi(argv[3]); //0 or 1
   solver->mrsaab = atoi(argv[4]); //0 or 1
@@ -33,6 +31,15 @@ int main(int argc, char **argv){
   solver->cfl = atoi(argv[6]); //cfl x_
   solver->force_type = atoi(argv[7]); //1->1 2->t 3->original values 
 
+  
+  if (solver->force_type == 1)
+    solver->max_error = 1e-12;
+  if (solver->force_type == 2)
+    solver->max_error = 1e-18;
+  else
+    solver->max_error = 1e-12;
+  solver->fail_count = 0;
+  
   /*  printf("lserk: %d\n",solver->lserk);
   printf("mrsaab: %d\n",solver->mrsaab);
   printf("filter: %d\n",solver->filter);

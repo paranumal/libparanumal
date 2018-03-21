@@ -122,7 +122,7 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
 			       mesh->o_z,
 			       mesh->o_qpre,
 			       mesh->o_prerhsq);
-
+	
 	if (solver->filter) {	
 	  for (iint l = 0; l < mesh->MRABNlevels; ++l) {
 	    iint saved = (l < lev)&&(rk == 0);
@@ -240,6 +240,7 @@ void boltzmannRunLSERKQuad3D(solver_t *solver){
     if (solver->force_type == 1) {
       for (iint i = 0; i < mesh->Nelements*mesh->Np*mesh->Nfields; ++i) {
 	if (fabs(mesh->q[i] - mesh->dt*pow(2,mesh->MRABNlevels-1)*(tstep+1)) > solver->max_error) {
+	  //printf("error val: %lf %lf \n",mesh->q[i],mesh->dt*pow(2,mesh->MRABNlevels-1)*(tstep+1));
 	  solver->fail_count++;
 	}
       }

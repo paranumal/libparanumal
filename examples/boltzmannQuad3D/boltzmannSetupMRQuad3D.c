@@ -515,8 +515,13 @@ solver_t *boltzmannSetupMRQuad3D(mesh_t *mesh,iint cfl_scale,iint force_type,iin
   kernelInfo.addDefine("p_isq6", (dfloat)sqrt(1./6.));
   kernelInfo.addDefine("p_tauInv", mesh->tauInv);
 
-  kernelInfo.addDefine("p_invRadiusSq", 1./(mesh->sphereRadius*mesh->sphereRadius));
-
+  if (force_type != 1 && force_type != 2) {
+    kernelInfo.addDefine("p_invRadiusSq", 1./(mesh->sphereRadius*mesh->sphereRadius));
+  }
+  else {
+    kernelInfo.addDefine("p_invRadiusSq", 0);
+  }
+  
   kernelInfo.addDefine("p_fainv", (dfloat) 0.0); // turn off rotation
 
   mesh->volumeKernel =
