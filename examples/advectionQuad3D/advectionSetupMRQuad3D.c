@@ -276,7 +276,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 #endif
 
 
-      mesh->q[base+0*mesh->Np] = q1bar; // uniform density, zero flow
+      /*      mesh->q[base+0*mesh->Np] = q1bar; // uniform density, zero flow
 
       mesh->q[base+1*mesh->Np] = q2bar;
       mesh->q[base+2*mesh->Np] = q3bar;
@@ -288,7 +288,12 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 
       mesh->q[base+7*mesh->Np] = q8bar;
       mesh->q[base+8*mesh->Np] = q9bar;
-     mesh->q[base+9*mesh->Np] = q10bar;
+      mesh->q[base+9*mesh->Np] = q10bar;*/
+
+      mesh->q[base+0*mesh->Np] = y;
+      mesh->q[base+1*mesh->Np] = -1*x;
+      mesh->q[base+2*mesh->Np] = 0;
+      
     }
   }
   // set BGK collision relaxation rate
@@ -298,8 +303,8 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat cfl_small = 0.2; // depends on the stability region size (was .4, then 2)
-  dfloat cfl_large = 4*cfl_small;
+  dfloat cfl_small = 0.05; // depends on the stability region size (was .4, then 2)
+  dfloat cfl_large = cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   
@@ -488,7 +493,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 				       kernelInfo);
 
   mesh->volumePreKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeQuad3D.okl",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionVolumeQuad3D.okl",
 				       "advectionVolumeQuad3D",
 				       kernelInfo);
   mesh->volumeCorrectionKernel =

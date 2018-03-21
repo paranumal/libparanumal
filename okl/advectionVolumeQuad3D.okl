@@ -202,6 +202,8 @@ kernel void advectionVolumeSAQuad3D(const iint Nelements,
 		    dqds[fld] += Djm*s_q[fld][es][m][i];
 	      }
 
+	    const dfloat q1  = s_q[0][es][j][i];
+
 	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
 	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;
 	    const dfloat dq1dz = drdz*dqdr[0] + dsdz*dqds[0] + dtdz*q1;
