@@ -132,6 +132,7 @@ dfloat meshFactorial(int n);
 #define SYID 3  
 #define  JID 4
 #define JWID 5
+#define IJWID 6
 
 
 /* offsets for second order geometric factors */

@@ -49,20 +49,30 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
   mesh->plotNelements = Nrows;
   mesh->plotNverts = Ncols;
 
+  /* Quadrature data */ 
+  readDfloatArray(fp, "Quadrature r-coordinates", &(mesh->cubr),&Nrows,&Ncols);
+  readDfloatArray(fp, "Quadrature weights", &(mesh->cubw),&Nrows,&Ncols);
+  mesh->cubNq = Nrows;
+  mesh->cubNp = mesh->cubNq*mesh->cubNq;
+
+  readDfloatArray(fp, "Quadrature Interpolation Matrix", &(mesh->cubInterp),&Nrows,&Ncols);
+  readDfloatArray(fp, "Quadrature Weak D Differentiation Matrix", &(mesh->cubDW),&Nrows,&Ncols);
+  readDfloatArray(fp, "Quadrature Projection Matrix", &(mesh->cubProject),&Nrows,&Ncols);
+
   /* Cubature data */ 
-  readDfloatArray(fp, "Cubature r-coordinates", &(mesh->cubr),&Nrows,&Ncols);
-  readDfloatArray(fp, "Cubature s-coordinates", &(mesh->cubs),&Nrows,&Ncols);
-  readDfloatArray(fp, "Cubature weights", &(mesh->cubw),&Nrows,&Ncols);
-  mesh->cubNp = Nrows;
+  // readDfloatArray(fp, "Cubature r-coordinates", &(mesh->cubr),&Nrows,&Ncols);
+  // readDfloatArray(fp, "Cubature s-coordinates", &(mesh->cubs),&Nrows,&Ncols);
+  // readDfloatArray(fp, "Cubature weights", &(mesh->cubw),&Nrows,&Ncols);
+  // mesh->cubNp = Nrows;
 
-  readDfloatArray(fp, "Cubature Interpolation Matrix", &(mesh->cubInterp),&Nrows,&Ncols);
-  readDfloatArray(fp, "Cubature Weak Dr Differentiation Matrix", &(mesh->cubDrW),&Nrows,&Ncols);
-  readDfloatArray(fp, "Cubature Weak Ds Differentiation Matrix", &(mesh->cubDsW),&Nrows,&Ncols);
-  readDfloatArray(fp, "Cubature Projection Matrix", &(mesh->cubProject),&Nrows,&Ncols);
-  readDfloatArray(fp, "Cubature Surface Interpolation Matrix", &(mesh->intInterp),&Nrows,&Ncols);
-  mesh->intNfp = Nrows/mesh->Nfaces; //number of interpolation points per face
+  // readDfloatArray(fp, "Cubature Interpolation Matrix", &(mesh->cubInterp),&Nrows,&Ncols);
+  // readDfloatArray(fp, "Cubature Weak Dr Differentiation Matrix", &(mesh->cubDrW),&Nrows,&Ncols);
+  // readDfloatArray(fp, "Cubature Weak Ds Differentiation Matrix", &(mesh->cubDsW),&Nrows,&Ncols);
+  // readDfloatArray(fp, "Cubature Projection Matrix", &(mesh->cubProject),&Nrows,&Ncols);
+  // readDfloatArray(fp, "Cubature Surface Interpolation Matrix", &(mesh->intInterp),&Nrows,&Ncols);
+  // mesh->intNfp = Nrows/mesh->Nfaces; //number of interpolation points per face
 
-  readDfloatArray(fp, "Cubature Surface Lift Matrix", &(mesh->intLIFT),&Nrows,&Ncols);
+  // readDfloatArray(fp, "Cubature Surface Lift Matrix", &(mesh->intLIFT),&Nrows,&Ncols);
 
   /* C0 patch data */ 
   readDfloatArray(fp, "C0 overlapping patch forward matrix", &(mesh->oasForward), &Nrows, &Ncols);   

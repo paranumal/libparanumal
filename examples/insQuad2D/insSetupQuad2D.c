@@ -350,15 +350,15 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
     					 "insSubCycleSurfaceQuad2D",
     					 kernelInfo);
 
-        // ins->subCycleCubatureVolumeKernel =
-        //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-    				// 	 "insSubCycleCubatureVolume2D",
-    				// 	 kernelInfo);
+        ins->subCycleCubatureVolumeKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleQuad2D.okl",
+    					 "insSubCycleCubatureVolumeQuad2D",
+    					 kernelInfo);
 
-        // ins->subCycleCubatureSurfaceKernel =
-        //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-    				// 	 "insSubCycleCubatureSurface2D",
-    				// 	 kernelInfo);
+        ins->subCycleCubatureSurfaceKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleQuad2D.okl",
+    					 "insSubCycleCubatureSurfaceQuad2D",
+    					 kernelInfo);
 
         ins->subCycleRKUpdateKernel =
           mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
@@ -436,15 +436,15 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
                  kernelInfo);  
      
       // ===========================================================================
-      // ins->advectionCubatureVolumeKernel =
-      //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
-    		// 		       "insAdvectionCubatureVolume2D",
-    		// 		       kernelInfo);
+      ins->advectionCubatureVolumeKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionQuad2D.okl",
+    				       "insAdvectionCubatureVolumeQuad2D",
+    				       kernelInfo);
 
-      // ins->advectionCubatureSurfaceKernel =
-      //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection2D.okl",
-    		// 		       "insAdvectionCubatureSurface2D",
-    		// 		       kernelInfo);
+      ins->advectionCubatureSurfaceKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionQuad2D.okl",
+    				       "insAdvectionCubatureSurfaceQuad2D",
+    				       kernelInfo);
 
       ins->advectionVolumeKernel =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionQuad2D.okl",

@@ -150,16 +150,17 @@ void insAdvectionSubCycleStepQuad2D(ins_t *ins, int tstep, char   * options){
           // Compute Volume Contribution
           if(strstr(options, "CUBATURE")){
             ins->subCycleCubatureVolumeKernel(mesh->Nelements,
-                       mesh->o_vgeo,
-                       mesh->o_cubDrWT,
-                       mesh->o_cubDsWT,
-                       mesh->o_cubInterpT,
-                       ins->o_Ue,
-                       ins->o_Ve,
-                            o_Ud,
-                            o_Vd,
-                       ins->o_rhsU,
-                       ins->o_rhsV);
+                                              mesh->o_vgeo,
+                                              mesh->o_cubvgeo,
+                                              mesh->o_cubDWT,
+                                              mesh->o_cubInterpT,
+                                              mesh->o_cubProjectT,
+                                              ins->o_Ue,
+                                              ins->o_Ve,
+                                                   o_Ud,
+                                                   o_Vd,
+                                              ins->o_rhsU,
+                                              ins->o_rhsV);
           } else{
             ins->subCycleVolumeKernel(mesh->Nelements,
                                       mesh->o_vgeo,
@@ -193,12 +194,13 @@ void insAdvectionSubCycleStepQuad2D(ins_t *ins, int tstep, char   * options){
           occaTimerTic(mesh->device,"AdvectionSurface");
           if(strstr(options, "CUBATURE")){
             ins->subCycleCubatureSurfaceKernel(mesh->Nelements,
-                                                mesh->o_sgeo,
-                                                mesh->o_intInterpT,
-                                                mesh->o_intLIFTT,
+                                                mesh->o_vgeo,
+                                                mesh->o_cubsgeo,
                                                 mesh->o_vmapM,
                                                 mesh->o_vmapP,
                                                 mesh->o_EToB,
+                                                mesh->o_cubInterpT,
+                                                mesh->o_cubProjectT,
                                                 bScale,
                                                 t,
                                                 mesh->o_intx,
