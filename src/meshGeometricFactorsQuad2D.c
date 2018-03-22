@@ -95,14 +95,14 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
         dfloat JW = J*mesh->cubw[i]*mesh->cubw[j];
         
         /* store geometric factors */
-        dlong base = mesh->Nvgeo*mesh->cubNp*e + i + j*mesh->Nq;
-        mesh->cubvgeo[base + mesh->Np*RXID] = rx;
-        mesh->cubvgeo[base + mesh->Np*RYID] = ry;
-        mesh->cubvgeo[base + mesh->Np*SXID] = sx;
-        mesh->cubvgeo[base + mesh->Np*SYID] = sy;
-        mesh->cubvgeo[base + mesh->Np*JID]  = J;
-        mesh->cubvgeo[base + mesh->Np*JWID] = JW;
-        mesh->cubvgeo[base + mesh->Np*IJWID] = 1./JW;
+        dlong base = mesh->Nvgeo*mesh->cubNp*e + i + j*mesh->cubNq;
+        mesh->cubvgeo[base + mesh->cubNp*RXID] = rx;
+        mesh->cubvgeo[base + mesh->cubNp*RYID] = ry;
+        mesh->cubvgeo[base + mesh->cubNp*SXID] = sx;
+        mesh->cubvgeo[base + mesh->cubNp*SYID] = sy;
+        mesh->cubvgeo[base + mesh->cubNp*JID]  = J;
+        mesh->cubvgeo[base + mesh->cubNp*JWID] = JW;
+        mesh->cubvgeo[base + mesh->cubNp*IJWID] = 1./JW;
       }
     }
   }
