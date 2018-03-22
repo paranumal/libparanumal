@@ -17,7 +17,7 @@ void insRunQuad2D(ins_t *ins, char *options){
   // if(ins->Nsubsteps)
   // ins->NtimeSteps = 160/ins->Nsubsteps;
   // else
-  //ins->NtimeSteps=1000;
+  ins->NtimeSteps=10;
 
   for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
     if(tstep<1){
