@@ -68,14 +68,9 @@ void meshGeometricFactorsQuad2D(mesh2D *mesh){
     //geometric data for quadrature
     for(int j=0;j<mesh->cubNq;++j){
       for(int i=0;i<mesh->cubNq;++i){
-
-        dfloat rn = 0., sn = 0.;
-
-        /* interpolate local node coordinates */
-        for (int k=0;k<mesh->Nq;k++) {
-          rn += mesh->cubInterp[i*mesh->Nfp+k]*mesh->r[k         ];
-          sn += mesh->cubInterp[j*mesh->Nfp+k]*mesh->s[k*mesh->Nq];
-        }
+        
+        dfloat rn = mesh->cubr[i];
+        dfloat sn = mesh->cubr[j];
 
         /* Jacobian matrix */
         dfloat xr = 0.25*( (1-sn)*(xe[1]-xe[0]) + (1+sn)*(xe[2]-xe[3]) );

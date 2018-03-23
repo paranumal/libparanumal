@@ -218,8 +218,8 @@ writeFloatMatrix(fid, P, 'IPDG overlapping patch backward matrix');
 cV1d = Vandermonde1D(N, z);
 cVr = GradVandermonde1D(N, z);
 cInterp = cV1d/V1d;
-cubProject = V1d*cV1d'*diag(w);
-cubDT = V1d*transpose(cVr)*diag(w);
+cubProject = (cV1d/V1d)'*diag(w);
+cubDT = (cVr/V1d)'*diag(w);
 Nqc = length(z);
 
 writeFloatMatrix(fid, z, 'Quadrature r-coordinates');
