@@ -194,9 +194,9 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   if(strstr(options,"SUBCYCLING"))
     // ins->errorStep =100*32/ins->Nsubsteps;
     //ins->errorStep =800/ins->Nsubsteps;
-    ins->errorStep = 400;
+    ins->errorStep = 200;
   else
-    ins->errorStep = 400;
+    ins->errorStep = 200;
 
   if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -215,8 +215,14 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   if (rank==0) printf("==================ELLIPTIC SOLVE SETUP=========================\n");
 
   // SetUp Boundary Flags types for Elliptic Solve
-  int vBCType[4] = {0,1,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
-  int pBCType[4] = {0,2,2,1}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+  // bc = 1 -> wall
+  // bc = 2 -> inflow
+  // bc = 3 -> outflow
+  // bc = 4 -> x-aligned slip
+  // bc = 5 -> y-aligned slip
+  int uBCType[6] = {0,1,1,2,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  int vBCType[6] = {0,1,1,2,2,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  int pBCType[6] = {0,2,2,1,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
 
   //Solver tolerances 
   ins->presTOL = 1E-8;
@@ -226,7 +232,9 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   if (rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");
   // ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
   ins->lambda = (1.5f) / (ins->dt * ins->nu);
+  solver_t *uSolver   = ellipticSolveSetupQuad2D(mesh, ins->tau, ins->lambda, uBCType, kernelInfoV, vSolverOptions,vParAlmondOptions);
   solver_t *vSolver   = ellipticSolveSetupQuad2D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions,vParAlmondOptions);
+  ins->uSolver        = uSolver;
   ins->vSolver        = vSolver;
   ins->vSolverOptions = vSolverOptions;
 
@@ -415,6 +423,7 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
                  "insTotalHaloScatter2D",
                  kernelInfo);
+
       ins->velocityHaloExtractKernel=
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
                 "insVelocityHaloExtract2D",

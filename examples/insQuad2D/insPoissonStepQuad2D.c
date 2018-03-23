@@ -166,6 +166,7 @@ void insPoissonStepQuad2D(ins_t *ins, int tstep, char   * options){
                             ins->dt,
                             mesh->o_x,
                             mesh->o_y,
+                            mesh->o_vmapM,
                             ins->o_PmapB,
                             ins->o_PI);
   }

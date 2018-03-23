@@ -13,6 +13,7 @@
 typedef struct {
 
   mesh_t *mesh;
+  solver_t *uSolver;
   solver_t *vSolver;
   solver_t *pSolver;
 

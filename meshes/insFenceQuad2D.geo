@@ -89,7 +89,9 @@ Plane Surface(31) = {30};
 Line Loop(32) = {17, 20, 21, 5};
 Plane Surface(33) = {32};
 Recombine Surface {31, 33, 23, 29, 27, 25};
-Physical Line("Wall",1) = {21, 4, 3, 2, 1, 8, 9};
-Physical Line("Inflow",2) = {18, 20, 19, 15, 14};
+
+Physical Line("Wall",1) = {3, 2, 1};
+Physical Line("Inflow",2) = {18, 20};
 Physical Line("Outflow",3) = {12, 10};
+Physical Line("YSlip",5) = {21, 4, 8, 9, 19, 15, 14};
 Physical Surface("Domain",9) = {31, 29, 27, 25, 23, 33};
