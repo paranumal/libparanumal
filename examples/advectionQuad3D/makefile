@@ -40,6 +40,7 @@ advectionOccaSetupQuad3D.o \
 advectionPlotLevels.o \
 advectionPlotNorms.o \
 advectionRunLSERKQuad3D.o \
+advectionErrorNormQuad3D.o \
 ../../src/meshParallelReaderQuad3D.o \
 ../../src/meshSetupQuad3D.o \
 ../../src/meshLoadReferenceNodesQuad3D.o \
