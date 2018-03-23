@@ -5,8 +5,8 @@
 
 r1 = DefineNumber[0.02];
 r2 = DefineNumber[0.05];
-r3 = DefineNumber[0.2];
-r4 = DefineNumber[0.4];
+r3 = DefineNumber[0.1];
+r4 = DefineNumber[0.1];
 
 
 //+
@@ -89,12 +89,8 @@ Plane Surface(31) = {30};
 Line Loop(32) = {17, 20, 21, 5};
 Plane Surface(33) = {32};
 
-Coherence;
-
-Physical Line("Inflow",2) = {20, 18, 19, 15, 14};
-Physical Line("Wall",1) = {21, 4, 3, 2, 1, 8, 9};
+Physical Line("Wall",1) = {3, 2, 1};
+Physical Line("Inflow",2) = {20, 18};
 Physical Line("Outflow",3) = {12, 10};
+Physical Line("YSlip",5) = {19, 15, 14, 21, 4, 8, 9};
 Physical Surface("Domain",9) = {33, 31, 23, 29, 27, 25};
-Extrude {0, 0, 2} {
-  Surface{31, 29, 27, 25, 23, 33};
-}

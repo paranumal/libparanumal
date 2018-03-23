@@ -1,9 +1,7 @@
-#include "ins2D.h"
+#include "insTri2D.h"
 
 // complete a time step using LSERK4
-void insPoissonStep2D(ins_t *ins, int tstep, int haloBytes,
-				       dfloat * sendBuffer, dfloat * recvBuffer,
-				        char   * options){
+void insPoissonStepTri2D(ins_t *ins, int tstep, char *options){
 
   mesh2D *mesh = ins->mesh;
   solver_t *solver = ins->pSolver;
@@ -12,8 +10,8 @@ void insPoissonStep2D(ins_t *ins, int tstep, int haloBytes,
   //hard coded for 3 stages.
   //The result of the helmholtz solve is stored in the next index
   int index1   = (ins->index+1)%3;
-  int offset  = mesh->Nelements+mesh->totalHaloPairs;
-  int ioffset = index1*offset;
+  dlong offset  = mesh->Nelements+mesh->totalHaloPairs;
+  dlong ioffset = index1*offset;
 
   /* note: the surface kernel isn't needed with continuous pressure. Just the inflow boundary 
            contributions to the surface 
@@ -29,13 +27,13 @@ void insPoissonStep2D(ins_t *ins, int tstep, int haloBytes,
                                  ins->o_vHaloBuffer);
 
       // copy extracted halo to HOST 
-      ins->o_vHaloBuffer.copyTo(sendBuffer);           
+      ins->o_vHaloBuffer.copyTo(ins->vSendBuffer);           
     
       // start halo exchange
       meshHaloExchangeStart(mesh,
                            mesh->Np*(ins->NVfields)*sizeof(dfloat),
-                           sendBuffer,
-                           recvBuffer);
+                           ins->vSendBuffer,
+                           ins->vRecvBuffer);
     }
   //}
   
@@ -55,7 +53,7 @@ void insPoissonStep2D(ins_t *ins, int tstep, int haloBytes,
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
 
-      ins->o_vHaloBuffer.copyFrom(recvBuffer); 
+      ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
 
       ins->velocityHaloScatterKernel(mesh->Nelements,
                                     mesh->totalHaloPairs,
@@ -140,14 +138,13 @@ void insPoissonStep2D(ins_t *ins, int tstep, int haloBytes,
                             ins->dt,
                             mesh->o_x,
                             mesh->o_y,
-                            mesh->o_mapB,
+                            ins->o_PmapB,
                             ins->o_rhsP);
   } else if (strstr(ins->pSolverOptions,"IPDG")) {
     occaTimerTic(mesh->device,"PoissonRhsIpdg"); 
     ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                   pressure_solve,
                                   mesh->o_vmapM,
-                                  mesh->o_vmapP,
                                   ins->tau,
                                   t,
                                   ins->dt,
@@ -167,8 +164,8 @@ void insPoissonStep2D(ins_t *ins, int tstep, int haloBytes,
 
   // gather-scatter
   if(strstr(ins->pSolverOptions, "CONTINUOUS")){
-    ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, ins->o_rhsP, ins->o_rhsP, dfloatString, "add");  
-    if (mesh->Nmasked) mesh->maskKernel(mesh->Nmasked, mesh->o_maskIds, ins->o_rhsP);
+    ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, ins->o_rhsP, dfloatString, "add");  
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsP);
   }
 
 
@@ -321,7 +318,8 @@ void insPoissonStep2D(ins_t *ins, int tstep, int haloBytes,
                             ins->dt,
                             mesh->o_x,
                             mesh->o_y,
-                            mesh->o_mapB,
+                            mesh->o_vmapM,
+                            ins->o_PmapB,
                             ins->o_PI);
   }
 }

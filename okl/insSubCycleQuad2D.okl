@@ -103,7 +103,7 @@ kernel void insSubCycleVolumeQuad2D(const dlong Nelements,
   const dfloat udM = Ud[idM], vdM = Vd[idM];                            \
         dfloat udP = Ud[idP], vdP = Vd[idP];                            \
                                                                         \
-  int bc = EToB[face+p_Nfaces*e];                                       \
+  const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
     insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, udM, vdM, &udP, &vdP);\
     udP *= bScale;                                                      \

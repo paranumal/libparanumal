@@ -30,7 +30,7 @@ LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
 # libraries to be linked in
 LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
-INCLUDES = ins2D.h
+INCLUDES = insTri2D.h
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
@@ -48,22 +48,18 @@ $(ELLIPTICDIR)/ellipticPreconTri2D.h
 
 # list of objects to be compiled
 AOBJS    = \
-insSetup2D.o \
-insMakePeriodic2D.o \
-insPlotVTU2D.o \
-insError2D.o \
-insErrorNorms2D.o \
-insReport2D.o \
-insRun2D.o \
-insAdvectionStep2D.o \
-insAdvectionSubCycleStep2D.o \
-insHelmholtzStep2D.o \
-insPoissonStep2D.o \
-insUpdateStep2D.o \
-insAdvectionStepSS2D.o \
-insPoissonStepSS2D.o \
-insHelmholtzStepSS2D.o \
-insRunTimer2D.o \
+insSetupTri2D.o \
+insPlotVTUTri2D.o \
+insErrorTri2D.o \
+insErrorNormsTri2D.o \
+insReportTri2D.o \
+insRunTri2D.o \
+insAdvectionStepTri2D.o \
+insAdvectionSubCycleStepTri2D.o \
+insHelmholtzStepTri2D.o \
+insPoissonStepTri2D.o \
+insUpdateStepTri2D.o 
+
 # library objects
 LOBJS = \
 ../../src/meshConnect.o \

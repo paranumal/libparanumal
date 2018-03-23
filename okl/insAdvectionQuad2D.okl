@@ -1,13 +1,13 @@
 
 // compute div(NU)  = div(uxu) in collocation way (weak form)
 kernel void insAdvectionVolumeQuad2D(const dlong Nelements,
-         const dfloat * restrict vgeo,
-         const dfloat * restrict D,
-         const dlong offset,
-         const dfloat * restrict U,
-         const dfloat * restrict V,
-         dfloat * restrict NU,
-         dfloat * restrict NV){
+                                     const dfloat * restrict vgeo,
+                                     const dfloat * restrict D,
+                                     const dlong offset,
+                                     const dfloat * restrict U,
+                                     const dfloat * restrict V,
+                                           dfloat * restrict NU,
+                                           dfloat * restrict NV){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
@@ -104,9 +104,9 @@ kernel void insAdvectionVolumeQuad2D(const dlong Nelements,
     insVelocityDirichletConditions2D(bc, time, x[idm], y[idm], nx, ny, uM, vM, &uP, &vP); \
   }                                                                     \
                                                                         \
-  dfloat unM   = occaFabs(nx*uM + ny*vM);                               \
-  dfloat unP   = occaFabs(nx*uP + ny*vP);                               \
-  dfloat unMax = (unM > unP) ? unM : unP;                               \
+  const dfloat unM   = occaFabs(nx*uM + ny*vM);                         \
+  const dfloat unP   = occaFabs(nx*uP + ny*vP);                         \
+  const dfloat unMax = (unM > unP) ? unM : unP;                         \
                                                                         \
   const dfloat sc = invWJ * sJ;                                         \
   s_fluxNU[es][j][i] += sc*(.5f*(nx*(uP*uP + uM*uM)                     \
