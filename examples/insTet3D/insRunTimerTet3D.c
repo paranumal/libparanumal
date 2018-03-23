@@ -5,7 +5,7 @@
 // 1 Advection Volume 2 Advection Surface 3 Ax 4 Gradient
 #define KERNEL_TEST 1
 
-void insRunTimer3D(mesh3D *mesh, char *options, char *boundaryHeaderFileName){
+void insRunTimerTet3D(mesh3D *mesh, char *options, char *boundaryHeaderFileName){
 
   char deviceConfig[BUFSIZ];
   int rank, size;

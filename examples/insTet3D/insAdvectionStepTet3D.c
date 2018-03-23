@@ -1,14 +1,14 @@
-#include "ins3D.h"
+#include "insTet3D.h"
 
 // complete a time step using LSERK4
-void insAdvectionStep3D(ins_t *ins, int tstep, const char* options){
+void insAdvectionStepTet3D(ins_t *ins, int tstep, const char* options){
 
   mesh3D *mesh = ins->mesh;
   dfloat t = tstep*ins->dt; 
 
   // field offset at this step
-  int  offset  = mesh->Nelements+mesh->totalHaloPairs;  
-  int ioffset  = ins->index*offset;
+  dlong  offset  = mesh->Nelements+mesh->totalHaloPairs;  
+  dlong ioffset  = ins->index*offset;
   
   //Exctract Halo On Device
   if(mesh->totalHaloPairs>0){

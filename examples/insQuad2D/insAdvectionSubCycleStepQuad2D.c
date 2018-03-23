@@ -128,6 +128,12 @@ void insAdvectionSubCycleStepQuad2D(ins_t *ins, int tstep, char   * options){
                                  ins->o_Ve);
 
           if(mesh->totalHaloPairs>0){
+            // make sure compute device is ready to perform halo extract
+            mesh->device.finish();
+
+            // switch to data stream
+            mesh->device.setStream(mesh->dataStream);
+
             ins->velocityHaloExtractKernel(mesh->Nelements,
                                      mesh->totalHaloPairs,
                                      mesh->o_haloElementList,
@@ -137,13 +143,8 @@ void insAdvectionSubCycleStepQuad2D(ins_t *ins, int tstep, char   * options){
                                      ins->o_vHaloBuffer);
 
             // copy extracted halo to HOST 
-            ins->o_vHaloBuffer.copyTo(ins->vSendBuffer);            
-
-            // start halo exchange
-            meshHaloExchangeStart(mesh,
-                                mesh->Np*(ins->NVfields)*sizeof(dfloat), 
-                                ins->vSendBuffer,
-                                ins->vRecvBuffer);
+            ins->o_vHaloBuffer.asyncCopyTo(ins->vSendBuffer);            
+            mesh->device.setStream(mesh->defaultStream);        
           }
           occaTimerTic(mesh->device,"AdvectionVolume");
           
@@ -176,10 +177,19 @@ void insAdvectionSubCycleStepQuad2D(ins_t *ins, int tstep, char   * options){
           occaTimerToc(mesh->device,"AdvectionVolume");
 
           if(mesh->totalHaloPairs>0){
+            // make sure compute device is ready to perform halo extract
+            mesh->device.setStream(mesh->dataStream);
+            mesh->device.finish();
+
+            // start halo exchange
+            meshHaloExchangeStart(mesh,
+                                mesh->Np*(ins->NVfields)*sizeof(dfloat), 
+                                ins->vSendBuffer,
+                                ins->vRecvBuffer);
 
             meshHaloExchangeFinish(mesh);
 
-            ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
+            ins->o_vHaloBuffer.asyncCopyFrom(ins->vRecvBuffer);  
 
             ins->velocityHaloScatterKernel(mesh->Nelements,
                                       mesh->totalHaloPairs,
@@ -188,6 +198,10 @@ void insAdvectionSubCycleStepQuad2D(ins_t *ins, int tstep, char   * options){
                                          o_Ud,
                                          o_Vd,
                                       ins->o_vHaloBuffer);
+            mesh->device.finish();
+            
+            mesh->device.setStream(mesh->defaultStream);
+            mesh->device.finish();
           }
 
           //Surface Kernel

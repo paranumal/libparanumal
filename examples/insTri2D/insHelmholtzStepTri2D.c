@@ -89,7 +89,7 @@ void insHelmholtzStepTri2D(ins_t *ins, int tstep, char *options){
   }
 
   //use intermediate buffer for solve storage TODO: fix this later. Should be able to pull out proper buffer in elliptic solve
-  int Ntotal = offset*mesh->Np;
+  dlong Ntotal = offset*mesh->Np;
   ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
   ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 

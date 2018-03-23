@@ -31,7 +31,7 @@ LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
 LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 
-INCLUDES = ins3D.h
+INCLUDES = insTet3D.h
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh3D.h \
@@ -49,20 +49,20 @@ $(ELLIPTICDIR)/ellipticPreconTet3D.h
 
 # list of objects to be compiled
 AOBJS    = \
-insSetup3D.o \
-insRun3D.o \
-insError3D.o \
-insReport3D.o \
-insPlotVTU3D.o \
-insPlotSlice3D.o \
-insPlotContour3D.o \
-insAdvectionStep3D.o \
-insAdvectionSubCycleStep3D.o \
-insHelmholtzStep3D.o \
-insPoissonStep3D.o \
-insUpdateStep3D.o \
-insErrorNorms3D.o \
-insRunTimer3D.o \
+insSetupTet3D.o \
+insRunTet3D.o \
+insErrorTet3D.o \
+insReportTet3D.o \
+insPlotVTUTet3D.o \
+insPlotSliceTet3D.o \
+insPlotContourTet3D.o \
+insAdvectionStepTet3D.o \
+insAdvectionSubCycleStepTet3D.o \
+insHelmholtzStepTet3D.o \
+insPoissonStepTet3D.o \
+insUpdateStepTet3D.o \
+insErrorNormsTet3D.o \
+insRunTimerTet3D.o \
 
 LOBJS = \
 ../../src/meshConnect.o \

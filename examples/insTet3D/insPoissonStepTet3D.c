@@ -1,7 +1,7 @@
-#include "ins3D.h"
+#include "insTet3D.h"
 
 // complete a time step using LSERK4
-void insPoissonStep3D(ins_t *ins, int tstep, const char* options){
+void insPoissonStepTet3D(ins_t *ins, int tstep, const char* options){
 
   mesh3D *mesh = ins->mesh;
   solver_t *solver = ins->pSolver;
@@ -10,8 +10,8 @@ void insPoissonStep3D(ins_t *ins, int tstep, const char* options){
   //hard coded for 3 stages.
   //The result of the helmholtz solve is stored in the next index
   int index1 = (ins->index+1)%3;
-
-  int offset = index1*(mesh->Nelements+mesh->totalHaloPairs);
+  dlong offset  = mesh->Nelements+mesh->totalHaloPairs;
+  dlong ioffset = index1*offset;
 
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,
@@ -147,8 +147,8 @@ void insPoissonStep3D(ins_t *ins, int tstep, const char* options){
 
   } else if (strstr(ins->pSolverOptions,"IPDG")) {
     ins->poissonRhsIpdgBCKernel(mesh->Nelements,
+                                pressure_solve,
                                 mesh->o_vmapM,
-                                mesh->o_vmapP,
                                 ins->tau,
                                 t,
                                 ins->dt,

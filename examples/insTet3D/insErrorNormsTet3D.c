@@ -1,7 +1,7 @@
-#include "ins3D.h"
+#include "insTet3D.h"
 
 // currently maximum
-void insErrorNorms3D(ins_t *ins, dfloat time, char *options){
+void insErrorNormsTet3D(ins_t *ins, dfloat time, char *options){
 
   mesh3D *mesh = ins->mesh;
   // copy data back to host
@@ -19,10 +19,10 @@ void insErrorNorms3D(ins_t *ins, dfloat time, char *options){
   dfloat l2u=0, l2v = 0, l2w =0, l2p = 0;
   dfloat liu=0, liv = 0, liw =0, lip = 0;
 
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     
     for(int n=0;n<mesh->Np;++n){
-      int id = n+e*mesh->Np;
+      dlong id = n+e*mesh->Np;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
       dfloat z = mesh->z[id];
@@ -123,7 +123,7 @@ MPI_Allreduce(&l2p, &gl2p, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
   gl2w  = sqrt(gl2w);
   gl2p  = sqrt(gl2p);
 
-
+#if 0
 int rank;
 MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 if(rank==0){
@@ -142,7 +142,6 @@ if(rank==0){
              gliu, gliv, gliw, glip, gl2u, gl2v, gl2w, gl2p);
     fclose(fp);  
  }
-
-
+#endif 
 
 }

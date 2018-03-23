@@ -1,36 +1,36 @@
 
 // Compute RHS Forcing i.e. 1/nu*(-grad(Pr) + sum(a_i x u_i)^(n-i) -sum(b_i x N(u)^(n-i))
-kernel void insHelmholtzRhsForcing3D(const int Nelements,
-                                     const int subcycling,  
-                                     const dfloat * restrict vgeo,
-                                     const dfloat * restrict MM,
-                                     const dfloat idt,
-                                     const dfloat inu,
-                                     const dfloat a0,
-                                     const dfloat a1,
-                                     const dfloat a2,
-                                     const dfloat b0,
-                                     const dfloat b1,
-                                     const dfloat b2,
-                                     const dfloat c0,
-                                     const dfloat c1,
-                                     const dfloat c2,
-                                     const int index,
-                                     const int offset,
-                                     const dfloat * restrict U,
-                                     const dfloat * restrict V,
-                                     const dfloat * restrict W,
-                                     const dfloat * restrict NU,
-                                     const dfloat * restrict NV,
-                                     const dfloat * restrict NW,
-                                     const dfloat * restrict Px,
-                                     const dfloat * restrict Py,
-                                     const dfloat * restrict Pz,
-                                     dfloat * restrict rhsU,
-                                     dfloat * restrict rhsV,
-                                     dfloat * restrict rhsW){
+kernel void insHelmholtzRhsForcingTet3D(const dlong Nelements,
+                                        const int subcycling,  
+                                        const dfloat * restrict vgeo,
+                                        const dfloat * restrict MM,
+                                        const dfloat idt,
+                                        const dfloat inu,
+                                        const dfloat a0,
+                                        const dfloat a1,
+                                        const dfloat a2,
+                                        const dfloat b0,
+                                        const dfloat b1,
+                                        const dfloat b2,
+                                        const dfloat c0,
+                                        const dfloat c1,
+                                        const dfloat c2,
+                                        const int index,
+                                        const dlong offset,
+                                        const dfloat * restrict U,
+                                        const dfloat * restrict V,
+                                        const dfloat * restrict W,
+                                        const dfloat * restrict NU,
+                                        const dfloat * restrict NV,
+                                        const dfloat * restrict NW,
+                                        const dfloat * restrict Px,
+                                        const dfloat * restrict Py,
+                                        const dfloat * restrict Pz,
+                                              dfloat * restrict rhsU,
+                                              dfloat * restrict rhsV,
+                                              dfloat * restrict rhsW){
 
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
 
     shared dfloat s_rhsU[p_NblockV][p_Np];
     shared dfloat s_rhsV[p_NblockV][p_Np];
@@ -38,16 +38,16 @@ kernel void insHelmholtzRhsForcing3D(const int Nelements,
 
     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-        int e = eo+es; // element in block
+        const dlong e = eo+es; // element in block
         if(e<Nelements){
           //hard coded for 3 stages
           const int index0 = (index+0)%3;
           const int index1 = (index+2)%3; //back one step
           const int index2 = (index+1)%3; //back two steps
 
-          const int id0   = n + p_Np*(e+index0*offset);
-          const int id1   = n + p_Np*(e+index1*offset);
-          const int id2   = n + p_Np*(e+index2*offset);
+          const dlong id0   = n + p_Np*(e+index0*offset);
+          const dlong id1   = n + p_Np*(e+index1*offset);
+          const dlong id2   = n + p_Np*(e+index2*offset);
 
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 
@@ -104,7 +104,7 @@ kernel void insHelmholtzRhsForcing3D(const int Nelements,
                                        - (c0*Pzm0+c1*Pzm1+c2*Pzm2) 
                                        - (a0*NWm0+a1*NWm1+a2*NWm2) );
           } else{ //with subcycling
-            const int id   = n + p_Np*e;
+            const dlong id   = n + p_Np*e;
             //NU holds \hat{U} after subcycling
             const dfloat NUm0 = NU[id];
             const dfloat NVm0 = NV[id];
@@ -126,10 +126,10 @@ kernel void insHelmholtzRhsForcing3D(const int Nelements,
 
     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-        const int e = eo+es; // element in block
+        const dlong e = eo+es; // element in block
         if(e<Nelements){
           // Multiplay with Mass Matrix
-          const int id = e*p_Np+n;
+          const dlong id = e*p_Np+n;
 
           dfloat rhsu = 0.f, rhsv = 0.f, rhsw = 0.f;
           occaUnroll(p_Np)
@@ -150,27 +150,27 @@ kernel void insHelmholtzRhsForcing3D(const int Nelements,
 }
 
 
-kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
-                                    const int * restrict vmapM,
-                                    const int * restrict vmapP,
-                                    const dfloat tau,
-                                    const dfloat t,
-                                    const dfloat * restrict x,
-                                    const dfloat * restrict y,
-                                    const dfloat * restrict z,
-                                    const dfloat * restrict vgeo,
-                                    const dfloat * restrict sgeo,
-                                    const int   * restrict EToB,
-                                    const dfloat * restrict DrT,
-                                    const dfloat * restrict DsT,
-                                    const dfloat * restrict DtT,
-                                    const dfloat * restrict LIFTT,
-                                    const dfloat * restrict MM,
-                                    dfloat * restrict rhsU,
-                                    dfloat * restrict rhsV,
-                                    dfloat * restrict rhsW){
+kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
+                                       const dlong * restrict vmapM,
+                                       const dlong * restrict vmapP,
+                                       const dfloat tau,
+                                       const dfloat t,
+                                       const dfloat * restrict x,
+                                       const dfloat * restrict y,
+                                       const dfloat * restrict z,
+                                       const dfloat * restrict vgeo,
+                                       const dfloat * restrict sgeo,
+                                       const int    * restrict EToB,
+                                       const dfloat * restrict DrT,
+                                       const dfloat * restrict DsT,
+                                       const dfloat * restrict DtT,
+                                       const dfloat * restrict LIFTT,
+                                       const dfloat * restrict MM,
+                                             dfloat * restrict rhsU,
+                                             dfloat * restrict rhsV,
+                                             dfloat * restrict rhsW){
 
-  for(int e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;outer0){
     shared  dfloat s_dudx[p_Np];
     shared  dfloat s_dudy[p_Np];
     shared  dfloat s_dudz[p_Np];
@@ -210,12 +210,12 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
     shared  dfloat s_Lnzdw[p_Np];
 
 
-    exclusive int idM, bcsum;
+    exclusive dlong idM;
     exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
-        const int id  = n + e*p_Nfaces*p_Nfp;
+        const dlong id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];
 
         const int face = n/p_Nfp;
@@ -224,7 +224,7 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
         dfloat dwdxP=0.f, dwdyP=0.f, dwdzP=0.f, wP=0.f;
 
         // load surface geofactors for this face
-        int sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
         nx    = sgeo[sid+p_NXID];
         ny    = sgeo[sid+p_NYID];
         nz    = sgeo[sid+p_NZID];
@@ -232,30 +232,31 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
         invJ  = sgeo[sid+p_IJID];
         hinv  = sgeo[sid+p_IHID];
 
-        int bc = EToB[face+p_Nfaces*e];
-        if(bc>0) insHelmholtzBoundaryConditionsIpdg3D(bc,t, x[idM],y[idM],z[idM], nx,ny,nz, &uP,&dudxP,&dudyP,&dudzP, &vP,&dvdxP,&dvdyP,&dvdzP, &wP,&dwdxP,&dwdyP,&dwdzP);
+        const int bc = EToB[face+p_Nfaces*e];
+        if(bc>0) {
+          insVelocityDirichletConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
+          insVelocityNeumannConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP,&dudyP,&dudzP, &dvdxP,&dvdyP,&dvdzP, &dwdxP,&dwdyP,&dwdzP);
+        }
 
         const dfloat du = uP;
         const dfloat dv = vP;
         const dfloat dw = wP;
 
-        const dfloat hlf = 1.f;
+        s_nxdu[n] = sJ*invJ*nx*du;
+        s_nydu[n] = sJ*invJ*ny*du;
+        s_nzdu[n] = sJ*invJ*nz*du;
 
-        s_nxdu[n] = hlf*sJ*invJ*nx*du;
-        s_nydu[n] = hlf*sJ*invJ*ny*du;
-        s_nzdu[n] = hlf*sJ*invJ*nz*du;
-
-        s_nxdv[n] = hlf*sJ*invJ*nx*dv;
-        s_nydv[n] = hlf*sJ*invJ*ny*dv;
-        s_nzdv[n] = hlf*sJ*invJ*nz*dv;
+        s_nxdv[n] = sJ*invJ*nx*dv;
+        s_nydv[n] = sJ*invJ*ny*dv;
+        s_nzdv[n] = sJ*invJ*nz*dv;
         
-        s_nxdw[n] = hlf*sJ*invJ*nx*dw;
-        s_nydw[n] = hlf*sJ*invJ*ny*dw;
-        s_nzdw[n] = hlf*sJ*invJ*nz*dw;
+        s_nxdw[n] = sJ*invJ*nx*dw;
+        s_nydw[n] = sJ*invJ*ny*dw;
+        s_nzdw[n] = sJ*invJ*nz*dw;
 
-        s_lapuflux[n] = hlf*sJ*invJ*(-nx*(dudxP)-ny*(dudyP)-nz*(dudzP)-tau*hinv*du);
-        s_lapvflux[n] = hlf*sJ*invJ*(-nx*(dvdxP)-ny*(dvdyP)-nz*(dvdzP)-tau*hinv*dv);
-        s_lapwflux[n] = hlf*sJ*invJ*(-nx*(dwdxP)-ny*(dwdyP)-nz*(dwdzP)-tau*hinv*dw);
+        s_lapuflux[n] = sJ*invJ*(-nx*(dudxP)-ny*(dudyP)-nz*(dudzP)-tau*hinv*du);
+        s_lapvflux[n] = sJ*invJ*(-nx*(dvdxP)-ny*(dvdyP)-nz*(dvdzP)-tau*hinv*dv);
+        s_lapwflux[n] = sJ*invJ*(-nx*(dwdxP)-ny*(dwdyP)-nz*(dwdzP)-tau*hinv*dw);
       }
     }
 
@@ -264,7 +265,7 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
     // dqdx += LIFT*(sJ/J)*nx*dq
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
-        const int gid = e*p_Nvgeo;
+        const dlong gid = e*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
         const dfloat drdy = vgeo[gid + p_RYID];
         const dfloat drdz = vgeo[gid + p_RZID];
@@ -305,17 +306,17 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
             Lnzdw += liftt*s_nzdw[i];
           }
 
-        dfloat dudx = Lnxdu;
-        dfloat dudy = Lnydu;
-        dfloat dudz = Lnzdu;
+        const dfloat dudx = Lnxdu;
+        const dfloat dudy = Lnydu;
+        const dfloat dudz = Lnzdu;
 
-        dfloat dvdx = Lnxdv;
-        dfloat dvdy = Lnydv;
-        dfloat dvdz = Lnzdv;
+        const dfloat dvdx = Lnxdv;
+        const dfloat dvdy = Lnydv;
+        const dfloat dvdz = Lnzdv;
 
-        dfloat dwdx = Lnxdw;
-        dfloat dwdy = Lnydw;
-        dfloat dwdz = Lnzdw;
+        const dfloat dwdx = Lnxdw;
+        const dfloat dwdy = Lnydw;
+        const dfloat dwdz = Lnzdw;
 
         s_dudx[n] = drdx*dudx + drdy*dudy + drdz*dudz; // abuse of notation
         s_dudy[n] = dsdx*dudx + dsdy*dudy + dsdz*dudz;
@@ -347,7 +348,7 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
-        int id = idM%p_Np;
+        const int id = idM%p_Np;
         s_lapuflux[n] += sJ*invJ*(nx*s_Lnxdu[id]+ny*s_Lnydu[id]+nz*s_Lnzdu[id]);
         s_lapvflux[n] += sJ*invJ*(nx*s_Lnxdv[id]+ny*s_Lnydv[id]+nz*s_Lnzdv[id]);
         s_lapwflux[n] += sJ*invJ*(nx*s_Lnxdw[id]+ny*s_Lnydw[id]+nz*s_Lnzdw[id]);
@@ -405,7 +406,7 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_Np){
-        const int id = e*p_Np+n;
+        const dlong id = e*p_Np+n;
         const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 
         dfloat Mlapu = 0.f;
@@ -429,32 +430,32 @@ kernel void insHelmholtzRhsIpdgBC3D(const int Nelements,
 }
 
 //RHS contributions for continuous solver
-kernel void insHelmholtzRhsBC3D(const int Nelements,
-                              const dfloat * restrict ggeo,
-                              const dfloat * restrict sgeo,
-                              const dfloat * restrict SrrT,
-                              const dfloat * restrict SrsT,
-                              const dfloat * restrict SrtT,
-                              const dfloat * restrict SsrT,
-                              const dfloat * restrict SssT,
-                              const dfloat * restrict SstT,
-                              const dfloat * restrict StrT,
-                              const dfloat * restrict StsT,
-                              const dfloat * restrict SttT,
-                              const dfloat * restrict MM,
-                              const int   * restrict vmapM,
-                              const dfloat * restrict sMT,
-                              const dfloat lambda,
-                              const dfloat time,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const dfloat * restrict z,
-                              const int    * restrict mapB,
-                              dfloat  * restrict rhsU,
-                              dfloat  * restrict rhsV,
-                              dfloat  * restrict rhsW){
+kernel void insHelmholtzRhsBCTet3D(const dlong Nelements,
+                                   const dfloat * restrict ggeo,
+                                   const dfloat * restrict sgeo,
+                                   const dfloat * restrict SrrT,
+                                   const dfloat * restrict SrsT,
+                                   const dfloat * restrict SrtT,
+                                   const dfloat * restrict SsrT,
+                                   const dfloat * restrict SssT,
+                                   const dfloat * restrict SstT,
+                                   const dfloat * restrict StrT,
+                                   const dfloat * restrict StsT,
+                                   const dfloat * restrict SttT,
+                                   const dfloat * restrict MM,
+                                   const dlong  * restrict vmapM,
+                                   const dfloat * restrict sMT,
+                                   const dfloat lambda,
+                                   const dfloat time,
+                                   const dfloat * restrict x,
+                                   const dfloat * restrict y,
+                                   const dfloat * restrict z,
+                                   const int    * restrict mapB,
+                                         dfloat * restrict rhsU,
+                                         dfloat * restrict rhsV,
+                                         dfloat * restrict rhsW){
   
-  for(int e=0;e<Nelements;e++;outer0){
+  for(dlong e=0;e<Nelements;e++;outer0){
     shared dfloat s_u[p_Np];
     shared dfloat s_v[p_Np];
     shared dfloat s_w[p_Np];
@@ -479,8 +480,8 @@ kernel void insHelmholtzRhsBC3D(const int Nelements,
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
-        const int id  = n + e*p_Nfaces*p_Nfp;
-        const int idM = vmapM[id];          
+        const dlong id  = n + e*p_Nfaces*p_Nfp;
+        const dlong idM = vmapM[id];          
         const int nid = idM%p_Np; 
 
         const int face = n/p_Nfp;
@@ -490,14 +491,17 @@ kernel void insHelmholtzRhsBC3D(const int Nelements,
         dfloat dwdxP=0, dwdyP=0, dwdzP=0, wP=0;
         
         // load surface geofactors for this face
-        const int sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
         const dfloat nx = sgeo[sid+p_NXID];
         const dfloat ny = sgeo[sid+p_NYID];
         const dfloat nz = sgeo[sid+p_NZID];
         const dfloat sJ = sgeo[sid+p_SJID];
 
         const int bc = mapB[idM];
-        if(bc>0) insHelmholtzBoundaryConditionsIpdg3D(bc,t, x[idM],y[idM],z[idM], nx,ny,nz, &uP,&dudxP,&dudyP,&dudzP, &vP,&dvdxP,&dvdyP,&dvdzP, &wP,&dwdxP,&dwdyP,&dwdzP);
+        if(bc>0) {
+          insVelocityDirichletConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
+          insVelocityNeumannConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP,&dudyP,&dudzP, &dvdxP,&dvdyP,&dvdzP, &dwdxP,&dwdyP,&dwdzP);
+        }
 
         s_u[nid] = uP;
         s_v[nid] = vP;
@@ -513,8 +517,8 @@ kernel void insHelmholtzRhsBC3D(const int Nelements,
     for(int n=0;n<p_maxNodes;++n;inner0){ 
       if(n<p_Np){
         //volume Dirichlet data
-        const int id = n + e*p_Np;
-        const int gid = e*p_Nggeo;
+        const dlong id = n + e*p_Np;
+        const dlong gid = e*p_Nggeo;
         const dfloat Grr = ggeo[gid + p_G00ID];
         const dfloat Grs = ggeo[gid + p_G01ID];
         const dfloat Grt = ggeo[gid + p_G02ID];
@@ -596,28 +600,30 @@ kernel void insHelmholtzRhsBC3D(const int Nelements,
   }
 }
 
-kernel void insHelmholtzAddBCKernel(const int Nelements,
-                              const dfloat time,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const dfloat * restrict z,
-                              const int   * restrict vmapM,
-                              const int    * restrict mapB,
-                              dfloat  * restrict U,
-                              dfloat  * restrict V,
-                              dfloat  * restrict W){
+kernel void insHelmholtzAddBCTet3D(const dlong Nelements,
+                                   const dfloat time,
+                                   const dfloat * restrict x,
+                                   const dfloat * restrict y,
+                                   const dfloat * restrict z,
+                                   const dlong  * restrict vmapM,
+                                   const int    * restrict mapB,
+                                         dfloat * restrict U,
+                                         dfloat * restrict V,
+                                         dfloat * restrict W){
   
-  for(int e=0;e<Nelements;e++;outer0){
+  for(dlong e=0;e<Nelements;e++;outer0){
     for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
-      const int idM = vmapM[e*p_Nfp*p_Nfaces + n];
+      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
       const int bc = mapB[idM];
 
-      dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;
-      dfloat dvdxP=0, dvdyP=0, dvdzP=0, vP=0;
-      dfloat dwdxP=0, dwdyP=0, dwdzP=0, wP=0;
-
-      if(bc==1) {
-        insHelmholtzBoundaryConditionsIpdg3D(bc,t, x[idM],y[idM],z[idM], nx,ny,nz, &uP,&dudxP,&dudyP,&dudzP, &vP,&dvdxP,&dvdyP,&dvdzP, &wP,&dwdxP,&dwdyP,&dwdzP);
+      if(bc>0) {
+        const dfloat uM = U[idM];
+        const dfloat vM = V[idM];
+        const dfloat wM = W[idM];
+        dfloat uP = 0.f;
+        dfloat vP = 0.f;
+        dfloat wP = 0.f;
+        insVelocityDirichletConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
         U[idM] = uP;
         V[idM] = vP;
         W[idM] = wP;

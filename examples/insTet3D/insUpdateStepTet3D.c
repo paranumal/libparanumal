@@ -1,12 +1,12 @@
-#include "ins3D.h"
+#include "insTet3D.h"
 
 // complete a time step using LSERK4
-void insUpdateStep3D(ins_t *ins, int tstep, const char* options){
+void insUpdateStepTet3D(ins_t *ins, int tstep, const char* options){
 
   mesh3D *mesh = ins->mesh;
   dfloat t = tstep*ins->dt + ins->dt;
 
-  int offset = (mesh->Nelements+mesh->totalHaloPairs);
+  dlong offset = (mesh->Nelements+mesh->totalHaloPairs);
 
   if (strstr(ins->pSolverOptions,"IPDG")) {
     if(mesh->totalHaloPairs>0){
@@ -29,12 +29,13 @@ void insUpdateStep3D(ins_t *ins, int tstep, const char* options){
   }
 
   // Compute Volume Contribution of gradient of pressure gradient
+  dlong ioffset = 0;
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_DrT,
                             mesh->o_DsT,
                             mesh->o_DtT,
-                            0,  //no offset
+                            ioffset,  //no offset
                             ins->o_PI,
                             ins->o_PIx,
                             ins->o_PIy,

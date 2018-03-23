@@ -8,7 +8,9 @@
 typedef struct {
 
   mesh_t *mesh;
+  solver_t *uSolver;
   solver_t *vSolver;
+  solver_t *wSolver;
   solver_t *pSolver;
 
   char *pSolverOptions, *vSolverOptions; 	
@@ -82,6 +84,8 @@ typedef struct {
 
   occa::memory o_Vx, o_Vy, o_Vz, o_Div;
 
+  int Nblock;
+
   occa::memory o_vHaloBuffer, o_pHaloBuffer, o_tHaloBuffer; 
 
   occa::kernel scaledAddKernel;
@@ -117,38 +121,26 @@ typedef struct {
   occa::kernel poissonPenaltyKernel;
   
   occa::kernel updateUpdateKernel;
-
   occa::kernel vorticityKernel;
-  occa::kernel divergenceKernel;
 
 }ins_t;
 
 
-ins_t *insSetup3D(mesh3D *mesh, int Ns, char *options, 
+ins_t *insSetupTet3D(mesh3D *mesh, int Ns, char *options, 
                   char *velSolverOptions, char *velParAlmondOptions, 
                   char *prSolverOptions,  char *prParAlmondOptions,
                   char *bdryHeaderFileName);
 
-void insRun3D(ins_t *solver, char *options);
-void insReport3D(ins_t *solver, int tstep, char *options);
-void insError3D(ins_t *solver, dfloat time, char *options);
-void insPlotVTU3D(ins_t *solver, char *fileNameBase);
-void insPlotSlice3D(ins_t *ins, char *fileName, const int Nslices, const char** dim, const dfloat* c);
-void insPlotContour3D(ins_t *ins, char *fileName, const char*options);
+void insRunTet3D(ins_t *solver, char *options);
+void insReportTet3D(ins_t *solver, int tstep, char *options);
+void insErrorTet3D(ins_t *solver, dfloat time, char *options);
+void insErrorNormsTet3D(ins_t *solver, dfloat time, char *options);
+void insPlotVTUTet3D(ins_t *solver, char *fileNameBase);
+void insPlotSliceTet3D(ins_t *ins, char *fileName, const int Nslices, const char** dim, const dfloat* c);
+void insPlotContourTet3D(ins_t *ins, char *fileName, const char*options);
 
-// void insErrorNorms2D(ins_t *solver, dfloat time, char *options);
-
-void insAdvectionStep3D(ins_t *solver, int tstep, const char * options);
-void insAdvectionSubCycleStep3D(ins_t *solver, int tstep, const char * options);
-void insHelmholtzStep3D(ins_t *solver, int tstep, const char * options);
-void insPoissonStep3D(ins_t *solver, int tstep, const char * options);
-void insUpdateStep3D(ins_t *solver, int tstep, const char * options);
-
-void insErrorNorms3D(ins_t *solver, dfloat time, char *options);
-
-// void insAdvectionSubCycleStep2D(ins_t *solver, int tstep,
-//                      dfloat * tsendBuffer, dfloat *trecvBuffer, 
-//                      dfloat * sendBuffer, dfloat *recvBuffer,char * options);
-
-
-void insRunTimer3D(mesh3D *mesh, char *options, char *bdryHeaderFileName);
+void insAdvectionStepTet3D(ins_t *solver, int tstep, const char * options);
+void insAdvectionSubCycleStepTet3D(ins_t *solver, int tstep, const char * options);
+void insHelmholtzStepTet3D(ins_t *solver, int tstep, const char * options);
+void insPoissonStepTet3D(ins_t *solver, int tstep, const char * options);
+void insUpdateStepTet3D(ins_t *solver, int tstep, const char * options);

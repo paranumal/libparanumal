@@ -81,7 +81,7 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
 
       // Initialize SubProblem Velocity i.e. Ud = U^(t-torder*dt)
       const int sindex = (ins->index + 3 - torder)%3; 
-      int offset = sindex*Ntotal;
+      dlong offset = sindex*Ntotal;
       if (torder==ins->ExplicitOrder-1) { //first substep
         ins->scaledAddKernel(mesh->Nelements*mesh->Np, b, offset, ins->o_U, zero, izero, o_Ud);
         ins->scaledAddKernel(mesh->Nelements*mesh->Np, b, offset, ins->o_V, zero, izero, o_Vd);
@@ -128,6 +128,12 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
                                  ins->o_Ve);
 
           if(mesh->totalHaloPairs>0){
+            // make sure compute device is ready to perform halo extract
+            mesh->device.finish();
+
+            // switch to data stream
+            mesh->device.setStream(mesh->dataStream);
+
             ins->velocityHaloExtractKernel(mesh->Nelements,
                                      mesh->totalHaloPairs,
                                      mesh->o_haloElementList,
@@ -137,17 +143,12 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
                                      ins->o_vHaloBuffer);
 
             // copy extracted halo to HOST 
-            ins->o_vHaloBuffer.copyTo(ins->vSendBuffer);            
-
-            // start halo exchange
-            meshHaloExchangeStart(mesh,
-                                mesh->Np*(ins->NVfields)*sizeof(dfloat), 
-                                ins->vSendBuffer,
-                                ins->vRecvBuffer);
+            ins->o_vHaloBuffer.asyncCopyTo(ins->vSendBuffer);            
+            mesh->device.setStream(mesh->defaultStream);
           }
-          occaTimerTic(mesh->device,"AdvectionVolume");
-          
+
           // Compute Volume Contribution
+          occaTimerTic(mesh->device,"AdvectionVolume");        
           if(strstr(options, "CUBATURE")){
             ins->subCycleCubatureVolumeKernel(mesh->Nelements,
                        mesh->o_vgeo,
@@ -176,10 +177,20 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
           occaTimerToc(mesh->device,"AdvectionVolume");
 
           if(mesh->totalHaloPairs>0){
+            // make sure compute device is ready to perform halo extract
+            mesh->device.setStream(mesh->dataStream);
+            mesh->device.finish();
+
+            // start halo exchange
+            meshHaloExchangeStart(mesh,
+                                mesh->Np*(ins->NVfields)*sizeof(dfloat), 
+                                ins->vSendBuffer,
+                                ins->vRecvBuffer);
+          
 
             meshHaloExchangeFinish(mesh);
 
-            ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
+            ins->o_vHaloBuffer.asyncCopyFrom(ins->vRecvBuffer); 
 
             ins->velocityHaloScatterKernel(mesh->Nelements,
                                       mesh->totalHaloPairs,
@@ -188,6 +199,10 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
                                          o_Ud,
                                          o_Vd,
                                       ins->o_vHaloBuffer);
+            mesh->device.finish();
+            
+            mesh->device.setStream(mesh->defaultStream);
+            mesh->device.finish();
           }
 
           //Surface Kernel

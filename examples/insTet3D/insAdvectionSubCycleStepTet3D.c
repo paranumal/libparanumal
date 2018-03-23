@@ -1,17 +1,17 @@
-#include "ins3D.h"
+#include "insTet3D.h"
 
 // complete a time step using LSERK4
-void insAdvectionSubCycleStep3D(ins_t *ins, int tstep, const char *options){
+void insAdvectionSubCycleStepTet3D(ins_t *ins, int tstep, const char *options){
  
   //printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
   mesh3D *mesh = ins->mesh;
 
-  const int NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
-  const int Ntotal         =  NtotalElements*mesh->Np;  
+  const dlong NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
+  const dlong Ntotal         =  NtotalElements*mesh->Np;  
 
-  const int voffset = 0; 
+  const dlong voffset = 0; 
   // field offset at this step
-  int offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+  dlong offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
   
   //Exctract Halo On Device, Assumes History is already done!
   if(mesh->totalHaloPairs>0){
@@ -84,7 +84,7 @@ void insAdvectionSubCycleStep3D(ins_t *ins, int tstep, const char *options){
 
       // Initialize SubProblem Velocity i.e. Ud = U^(t-torder*dt)
       const int sindex = (ins->index + 3 - torder)%3; 
-      int offset = sindex*Ntotal;
+      dlong offset = sindex*Ntotal;
       if (torder==ins->ExplicitOrder-1) { //first substep
         ins->scaledAddKernel(mesh->Nelements*mesh->Np, b, offset, ins->o_U, zero, izero, o_Ud);
         ins->scaledAddKernel(mesh->Nelements*mesh->Np, b, offset, ins->o_V, zero, izero, o_Vd);
