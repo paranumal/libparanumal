@@ -668,7 +668,7 @@ kernel void insAdvectionCubatureVolumeQuad2D(const dlong Nelements,
             NV[id] = -invJW*nv;
           }
         }
-      }
+      }invWJ
     }
   }  
 }
@@ -713,12 +713,12 @@ kernel void insAdvectionCubatureSurfaceQuad2D(const dlong Nelements,
     shared dfloat s_NU[p_NblockS][p_Nq][p_Nq];
     shared dfloat s_NV[p_NblockS][p_Nq][p_Nq];
 
-    shared dfloat s_UM[p_NblockS][p_Nfaces][p_cubNq];
-    shared dfloat s_VM[p_NblockS][p_Nfaces][p_cubNq];
-    shared dfloat s_UP[p_NblockS][p_Nfaces][p_cubNq];
-    shared dfloat s_VP[p_NblockS][p_Nfaces][p_cubNq];
+    shared dfloat s_UM[p_NblockS][p_Nfaces][p_Nq];
+    shared dfloat s_VM[p_NblockS][p_Nfaces][p_Nq];
+    shared dfloat s_UP[p_NblockS][p_Nfaces][p_Nq];
+    shared dfloat s_VP[p_NblockS][p_Nfaces][p_Nq];
 
-    // //reuse shared memory buffers
+    //reuse shared memory buffers
     // #define s_fluxNU s_UM
     // #define s_fluxNV s_VM
 
@@ -755,14 +755,20 @@ kernel void insAdvectionCubatureSurfaceQuad2D(const dlong Nelements,
         }
       }
     }
-
+    
     //zero out resulting surface contributions
     for(int j=0;j<p_Nq;++j){
       for(int es=0;es<p_NblockS;++es;inner1){
         for(int i=0;i<p_cubNq;++i;inner0){
-          if (i<p_cubNq) {
+          if (i<p_Nq) {
             s_NU[es][j][i] = 0.;
             s_NV[es][j][i] = 0.;
+          }
+
+          const int id = i+j*p_cubNq;
+          if (es==0) {
+            s_cubInterpT[0][id] = cubInterpT[id];
+            s_cubProjectT[0][id] = cubProjectT[id];
           }
         }
       }

@@ -194,9 +194,9 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   if(strstr(options,"SUBCYCLING"))
     // ins->errorStep =100*32/ins->Nsubsteps;
     //ins->errorStep =800/ins->Nsubsteps;
-    ins->errorStep = 1;
+    ins->errorStep = 400;
   else
-    ins->errorStep = 1;
+    ins->errorStep = 400;
 
   if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
