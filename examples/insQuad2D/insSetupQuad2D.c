@@ -456,10 +456,6 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
     				       "insAdvectionSurfaceQuad2D",
     				       kernelInfo);
 
-        // ins->subCycleRKUpdateKernel =
-        //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle2D.okl",
-        //        "insSubCycleRKUpdate2D",
-        //        kernelInfo);
       // ===========================================================================
       ins->gradientVolumeKernel =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradientQuad2D.okl",
@@ -492,6 +488,16 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsQuad2D.okl",
     				       "insHelmholtzRhsIpdgBCQuad2D",
     				       kernelInfo);
+
+      ins->helmholtzRhsBCKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsQuad2D.okl",
+                   "insHelmholtzRhsBCQuad2D",
+                   kernelInfo);
+
+      ins->helmholtzAddBCKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsQuad2D.okl",
+                   "insHelmholtzAddBCQuad2D",
+                   kernelInfo);
 
       // ===========================================================================
       ins->poissonRhsForcingKernel =

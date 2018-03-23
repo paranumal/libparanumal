@@ -12,7 +12,7 @@ int main(int argc, char **argv){
   // out  = REPORT, REPORT+VTU
   // adv  = CUBATURE, COLLOCATION
   //int Ns = 0; // no-subcycling 
-  int Ns = 0; 
+  int Ns = 4; 
   if(argc==5)
    Ns = atoi(argv[4]); // Number of substeps
   char *options; 

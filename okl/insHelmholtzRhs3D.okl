@@ -616,11 +616,11 @@ kernel void insHelmholtzAddBCKernel(const int Nelements,
       dfloat dvdxP=0, dvdyP=0, dvdzP=0, vP=0;
       dfloat dwdxP=0, dwdyP=0, dwdzP=0, wP=0;
 
-      if(bc>0) {
+      if(bc==1) {
         insHelmholtzBoundaryConditionsIpdg3D(bc,t, x[idM],y[idM],z[idM], nx,ny,nz, &uP,&dudxP,&dudyP,&dudzP, &vP,&dvdxP,&dvdyP,&dvdzP, &wP,&dwdxP,&dwdyP,&dwdzP);
-        U[idM] += uP;
-        V[idM] += vP;
-        W[idM] += wP;
+        U[idM] = uP;
+        V[idM] = vP;
+        W[idM] = wP;
       }    
     }
   }
