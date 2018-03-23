@@ -145,7 +145,7 @@ ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options,
 
   // Find Maximum Velocity
   dfloat umax = 0;
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
       const int id = n + mesh->Np*e;
       dfloat t = 0;

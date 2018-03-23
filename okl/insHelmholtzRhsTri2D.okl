@@ -247,7 +247,7 @@ kernel void insHelmholtzRhsIpdgBCTri2D(const dlong Nelements,
 
     for(int n=0;n<p_maxNodes;++n;inner0){
       if(n<p_NfacesNfp){
-        const dlong id = idM%p_Np;
+        const int id = idM%p_Np;
         s_lapuflux[n] += sJ*invJ*(nx*s_Lnxdu[id]+ny*s_Lnydu[id]);
         s_lapvflux[n] += sJ*invJ*(nx*s_Lnxdv[id]+ny*s_Lnydv[id]);
       }

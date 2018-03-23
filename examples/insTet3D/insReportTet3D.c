@@ -1,6 +1,6 @@
-#include "ins3D.h"
+#include "insTet3D.h"
 
-void insReport3D(ins_t *ins, int tstep, char *options){
+void insReportTet3D(ins_t *ins, int tstep, char *options){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -9,7 +9,7 @@ void insReport3D(ins_t *ins, int tstep, char *options){
 
   dfloat t = (tstep)*ins->dt;
   
-  int offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+  dlong offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
   ins->vorticityKernel(mesh->Nelements,
                        mesh->o_vgeo,
                        mesh->o_DrT,
@@ -23,16 +23,16 @@ void insReport3D(ins_t *ins, int tstep, char *options){
                        ins->o_Vy,
                        ins->o_Vz);
 
-  ins->divergenceKernel(mesh->Nelements,
-                       mesh->o_vgeo,
-                       mesh->o_DrT,
-                       mesh->o_DsT,
-                       mesh->o_DtT,
-                       offset,
-                       ins->o_U,
-                       ins->o_V,
-                       ins->o_W,
-                       ins->o_Div);
+  ins->divergenceVolumeKernel(mesh->Nelements,
+                             mesh->o_vgeo,
+                             mesh->o_DrT,
+                             mesh->o_DsT,
+                             mesh->o_DtT,
+                             offset,
+                             ins->o_U,
+                             ins->o_V,
+                             ins->o_W,
+                             ins->o_Div);
 
   // gather-scatter
   ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_Vx, dfloatString, "add");
@@ -53,7 +53,7 @@ void insReport3D(ins_t *ins, int tstep, char *options){
   ins->o_Vz.copyTo(ins->Vz);
   ins->o_Div.copyTo(ins->Div);
   
-  insError3D(ins, t, options);
+  insErrorTet3D(ins, t, options);
   
   if (rank==0) printf("Writing output file\n");
   
@@ -63,9 +63,9 @@ void insReport3D(ins_t *ins, int tstep, char *options){
   if(strstr(options, "VTU")){   
     // sprintf(fname, "/u0/outputs/ins3D/");
     // sprintf(fname, "%sfoo_%04d", fname,rank);
-    sprintf(fname, "/scratch/foo_%04d_%04d.vtu",rank,tstep/ins->errorStep);
+    sprintf(fname, "foo_%04d_%04d.vtu",rank,tstep/ins->errorStep);
     
-    insPlotVTU3D(ins, fname);
+    insPlotVTUTet3D(ins, fname);
   } else if(strstr(options, "SLICE")){   
     //slice data (cylinders)
     // const int Nslices = 4;
@@ -90,12 +90,12 @@ void insReport3D(ins_t *ins, int tstep, char *options){
     // output field files
     sprintf(fname, "slice_%04d_%04d.vtu",rank,tstep/ins->errorStep);
     //sprintf(fname, "/scratch/foo_%04d_%04d.vtu",rank,tstep/ins->errorStep);
-    insPlotSlice3D(ins, fname,Nslices, sliceDim,sliceX);
+    insPlotSliceTet3D(ins, fname,Nslices, sliceDim,sliceX);
   } else if(strstr(options, "CONTOUR")){ 
   
     sprintf(fname, "contour_%04d_%04d.vtu",rank,tstep/ins->errorStep);
     //sprintf(fname, "/scratch/foo_%04d_%04d.vtu",rank,tstep/ins->errorStep);
-    insPlotContour3D(ins, fname, options);
+    insPlotContourTet3D(ins, fname, options);
   } 
 }
 

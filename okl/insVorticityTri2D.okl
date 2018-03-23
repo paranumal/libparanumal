@@ -22,7 +22,7 @@ kernel void insVorticityTri2D(const dlong Nelements,
         }
       }
     }
-          
+
     barrier(localMemFence);
 
     for(dlong e=eo;e<eo+p_NblockV;++e;inner1){

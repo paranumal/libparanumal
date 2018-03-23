@@ -1,7 +1,7 @@
-#include "ins3D.h"
+#include "insTet3D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void insPlotContour3D(ins_t *ins, char *fileName, const char* options){
+void insPlotContourTet3D(ins_t *ins, char *fileName, const char* options){
 
   mesh3D *mesh = ins->mesh;
 
@@ -21,10 +21,10 @@ void insPlotContour3D(ins_t *ins, char *fileName, const char* options){
   dfloat *plotvy = (dfloat *) calloc(mesh->plotNp,sizeof(dfloat));
   dfloat *plotvz = (dfloat *) calloc(mesh->plotNp,sizeof(dfloat));
 
-  int NcontourElements =0;
-  int plotElements =0;
+  dlong NcontourElements =0;
+  dlong plotElements =0;
 
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
       plotvx[n] = 0; plotvy[n] = 0; plotvz[n] = 0;
       for(int m=0;m<mesh->Np;++m){
@@ -75,7 +75,7 @@ void insPlotContour3D(ins_t *ins, char *fileName, const char* options){
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     if (plotFlag[e]==0) continue;
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0, plotzn = 0;
@@ -94,7 +94,7 @@ void insPlotContour3D(ins_t *ins, char *fileName, const char* options){
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
   
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     if (plotFlag[e]==0) continue;
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotvx = 0, plotvy = 0, plotvz = 0;
@@ -112,8 +112,8 @@ void insPlotContour3D(ins_t *ins, char *fileName, const char* options){
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
+  dlong cnt = 0;
+  for(dlong e=0;e<mesh->Nelements;++e){
     if (plotFlag[e]==0) continue;
     
     for(int k=0;k<mesh->plotNelements;++k){
@@ -131,7 +131,7 @@ void insPlotContour3D(ins_t *ins, char *fileName, const char* options){
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
   cnt=0;
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     if (plotFlag[e]==0) continue;
     for(int k=0;k<mesh->plotNelements;++k){
       if (plotSubFlag[e*mesh->plotNelements+k]==0) continue;
@@ -143,7 +143,7 @@ void insPlotContour3D(ins_t *ins, char *fileName, const char* options){
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     if (plotFlag[e]==0) continue;
     for(int k=0;k<mesh->plotNelements;++k){
       if (plotSubFlag[e*mesh->plotNelements+k]==0) continue;

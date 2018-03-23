@@ -1,9 +1,6 @@
-#include "ins3D.h"
+#include "insTet3D.h"
 
-// NBN: toggle use of 2nd stream
-#define USE_2_STREAMS
-
-ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options, 
+ins_t *insSetupTet3D(mesh3D *mesh, int Ns, char * options, 
                   char *vSolverOptions, char *vParAlmondOptions,
                   char *pSolverOptions, char *pParAlmondOptions,
                   char *boundaryHeaderFileName){
@@ -42,6 +39,10 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   mesh->Nfields = ins->Nfields; 
 
   ins->mesh = mesh;
+
+  dlong Ntotal = mesh->Np*mesh->Nelements;
+  ins->Nblock = (Ntotal+blockSize-1)/blockSize;
+
   int Nstages = 4;
   // compute samples at interpolation nodes
   ins->U     = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -86,7 +87,7 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.01 ;  // kinematic viscosity,
+  dfloat nu   = 0.001 ;  // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
@@ -101,7 +102,7 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
   ins->NDofs      = mesh->Nelements*mesh->Np;
   // Initialize
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
       const int id = n + mesh->Np*e;
       dfloat u= 0.f, v= 0.f, w=0.f, p =0.f, t = 0.f;
@@ -145,9 +146,9 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   }
 
   dfloat hmin = 1e9, hmax = 0;
-  for(int e=0;e<mesh->Nelements;++e){ 
+  for(dlong e=0;e<mesh->Nelements;++e){ 
      for(int f=0;f<mesh->Nfaces;++f){
-       int sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+       dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
        dfloat sJ   = mesh->sgeo[sid + SJID];
        dfloat invJ = mesh->sgeo[sid + IJID];
 
@@ -159,7 +160,7 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
 
   // Find Maximum Velocity
   dfloat umax = 0.f;
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
       const int id = n + mesh->Np*e;
       dfloat u = ins->U[id];
@@ -173,7 +174,7 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   }
   umax = sqrt(umax);
 
-  dfloat cfl = 1.0; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.2; // pretty good estimate (at least for subcycling LSERK4)
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -226,9 +227,17 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   if (rank==0) printf("==================ELLIPTIC SOLVE SETUP=========================\n");
 
   // SetUp Boundary Flags types for Elliptic Solve
-  int vBCType[5] = {0,1,1,2,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
-  int pBCType[5] = {0,2,2,1,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
-  
+  // bc = 1 -> wall
+  // bc = 2 -> inflow
+  // bc = 3 -> outflow
+  // bc = 4 -> x-aligned slip
+  // bc = 5 -> y-aligned slip
+  // bc = 6 -> z-aligned slip
+  int uBCType[7] = {0,1,1,2,1,2,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  int vBCType[7] = {0,1,1,2,2,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  int wBCType[7] = {0,1,1,2,2,2,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  int pBCType[7] = {0,2,2,1,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+
   //Solver tolerances 
   ins->presTOL = 1E-8;
   ins->velTOL  = 1E-8;
@@ -237,16 +246,16 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
   if (rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");
   //ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
   ins->lambda = (1.5f) / (ins->dt * ins->nu);
-  solver_t *vSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions,vParAlmondOptions);
-  ins->vSolver        = vSolver;
+  ins->uSolver = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, uBCType, kernelInfoV, vSolverOptions,vParAlmondOptions);
+  ins->vSolver = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions,vParAlmondOptions);
+  ins->wSolver = ellipticSolveSetupTet3D(mesh, ins->tau, ins->lambda, wBCType, kernelInfoV, vSolverOptions,vParAlmondOptions);
   ins->vSolverOptions = vSolverOptions;
 
   if (rank==0) printf("==================PRESSURE SOLVE SETUP========================\n");
   //SETUP PRESSURE and VELOCITY SOLVERS
-  dfloat zero =0.0;
-  solver_t *pSolver   = ellipticSolveSetupTet3D(mesh, ins->tau, zero, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
-  ins->pSolver        = pSolver;
+  ins->pSolver  = ellipticSolveSetupTet3D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
   ins->pSolverOptions = pSolverOptions;
+
 
   ins->VmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
   ins->PmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
@@ -366,25 +375,24 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
     for (int r=0;r<size;r++) {
       if (r==rank) {
         ins->subCycleVolumeKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
-               "insSubCycleVolume3D",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleTet3D.okl",
+               "insSubCycleVolumeTet3D",
                kernelInfo);
 
         ins->subCycleSurfaceKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
-               "insSubCycleSurface3D",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleTet3D.okl",
+               "insSubCycleSurfaceTet3D",
                kernelInfo);
 
         ins->subCycleCubatureVolumeKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
-               "insSubCycleCubatureVolume3D",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleTet3D.okl",
+               "insSubCycleCubatureVolumeTet3D",
                kernelInfo);
 
         ins->subCycleCubatureSurfaceKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
-               "insSubCycleCubatureSurface3D",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleTet3D.okl",
+               "insSubCycleCubatureSurfaceTet3D",
                kernelInfo);
-
 
         ins->subCycleRKUpdateKernel =
           mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycle3D.okl",
@@ -401,24 +409,22 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
     }
   }
 
-  ins->mesh = mesh;
-  
   if(mesh->totalHaloPairs){//halo setup
-    int tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
+    dlong tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
     occa::memory o_tsendBuffer = mesh->device.mappedAlloc(tHaloBytes, NULL);
     occa::memory o_trecvBuffer = mesh->device.mappedAlloc(tHaloBytes, NULL);
     ins->o_tHaloBuffer = mesh->device.malloc(tHaloBytes);
     ins->tSendBuffer = (dfloat*) o_tsendBuffer.getMappedPointer();
     ins->tRecvBuffer = (dfloat*) o_trecvBuffer.getMappedPointer();
 
-    int vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
+    dlong vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
     occa::memory o_vsendBuffer = mesh->device.mappedAlloc(vHaloBytes, NULL);
     occa::memory o_vrecvBuffer = mesh->device.mappedAlloc(vHaloBytes, NULL);
     ins->o_vHaloBuffer = mesh->device.malloc(vHaloBytes);
     ins->vSendBuffer = (dfloat*) o_vsendBuffer.getMappedPointer();
     ins->vRecvBuffer = (dfloat*) o_vrecvBuffer.getMappedPointer();
 
-    int pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+    dlong pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
     ins->o_pHaloBuffer = mesh->device.malloc(pHaloBytes);
     occa::memory o_psendBuffer = mesh->device.mappedAlloc(pHaloBytes, NULL);
     occa::memory o_precvBuffer = mesh->device.mappedAlloc(pHaloBytes, NULL);
@@ -435,67 +441,67 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
                kernelInfo);
 
       ins->advectionCubatureVolumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
-                   "insAdvectionCubatureVolume3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionTet3D.okl",
+                   "insAdvectionCubatureVolumeTet3D",
                    kernelInfo);
       
       ins->advectionCubatureSurfaceKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
-                   "insAdvectionCubatureSurface3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionTet3D.okl",
+                   "insAdvectionCubatureSurfaceTet3D",
                    kernelInfo);
       
 
       ins->advectionVolumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
-                   "insAdvectionVolume3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionTet3D.okl",
+                   "insAdvectionVolumeTet3D",
                    kernelInfo);
 
       ins->advectionSurfaceKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvection3D.okl",
-                   "insAdvectionSurface3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionTet3D.okl",
+                   "insAdvectionSurfaceTet3D",
                    kernelInfo);
 
       // ===========================================================================
       ins->gradientVolumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient3D.okl",
-                   "insGradientVolume3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradientTet3D.okl",
+                   "insGradientVolumeTet3D",
                    kernelInfo);
 
       ins->gradientSurfaceKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradient3D.okl",
-                   "insGradientSurface3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradientTet3D.okl",
+                   "insGradientSurfaceTet3D",
                    kernelInfo);
 
       // ===========================================================================
       ins->divergenceVolumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence3D.okl",
-                   "insDivergenceVolume3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergenceTet3D.okl",
+                   "insDivergenceVolumeTet3D",
                    kernelInfo);
 
       ins->divergenceSurfaceKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergence3D.okl",
-                   "insDivergenceSurface3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergenceTet3D.okl",
+                   "insDivergenceSurfaceTet3D",
                    kernelInfo);
 
       // ===========================================================================
       ins->helmholtzRhsForcingKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs3D.okl",
-                   "insHelmholtzRhsForcing3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsTet3D.okl",
+                   "insHelmholtzRhsForcingTet3D",
                    kernelInfo);
 
       ins->helmholtzRhsIpdgBCKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs3D.okl",
-                   "insHelmholtzRhsIpdgBC3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsTet3D.okl",
+                   "insHelmholtzRhsIpdgBCTet3D",
                    kernelInfo);
 
       ins->helmholtzRhsBCKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs3D.okl",
-                   "insHelmholtzRhsBC3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsTet3D.okl",
+                   "insHelmholtzRhsBCTet3D",
                    kernelInfo);
 
       ins->helmholtzAddBCKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhs3D.okl",
-                   "insHelmholtzAddBCKernel",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsTet3D.okl",
+                   "insHelmholtzAddBCTet3D",
                    kernelInfo);
 
       ins->totalHaloExtractKernel=
@@ -511,29 +517,29 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
 
       // ===========================================================================
       ins->poissonRhsForcingKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
-                   "insPoissonRhsForcing3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhsTet3D.okl",
+                   "insPoissonRhsForcingTet3D",
                    kernelInfo);
 
       ins->poissonRhsIpdgBCKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
-                   "insPoissonRhsIpdgBC3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhsTet3D.okl",
+                   "insPoissonRhsIpdgBCTet3D",
                    kernelInfo);
 
       ins->poissonRhsBCKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
-                   "insPoissonRhsBC3D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhsTet3D.okl",
+                   "insPoissonRhsBCTet3D",
                    kernelInfo);
 
       ins->poissonAddBCKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhs3D.okl",
-                   "insPoissonAddBCKernel",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhsTet3D.okl",
+                   "insPoissonAddBCTet3D",
                    kernelInfo);
 
-      ins->poissonPenaltyKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty3D.okl",
-                   "insPoissonPenalty3D",
-                   kernelInfo);
+      // ins->poissonPenaltyKernel =
+      //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty3D.okl",
+      //              "insPoissonPenalty3D",
+      //              kernelInfo);
 
       ins->velocityHaloExtractKernel=
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
@@ -566,10 +572,6 @@ ins_t *insSetup3D(mesh3D *mesh, int Ns, char * options,
                    "insVorticityTet3D",
                    kernelInfo);
 
-      ins->divergenceKernel=
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergenceTet3D.okl",
-                   "insDivergenceTet3D",
-                   kernelInfo);
       // ===========================================================================//
     }
     MPI_Barrier(MPI_COMM_WORLD);

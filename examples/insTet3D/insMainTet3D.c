@@ -1,17 +1,26 @@
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include "mpi.h"
-#include "mesh3D.h"
-#include "ins3D.h"
+#include "insTet3D.h"
 
 int main(int argc, char **argv){
+
   // start up MPI
   MPI_Init(&argc, &argv);
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+
+  // SET OPTIONS
+  // out  = VTU, SLICE, CONTOUR
+  // adv  = CUBATURE, COLLOCATION
+  //int Ns = 0; // no-subcycling 
+  int Ns = 4; 
+  if(argc==5)
+   Ns = atoi(argv[4]); // Number of substeps
+  char *options; 
+  if(Ns==0)
+      options = strdup("out=CONTOUR, adv=CUBATURE");
+  else
+      options = strdup("out=CONTOUR, adv=CUBATURE,SUBCYCLING");  //pres=PRESSURE_HISTORY
+
 
   char *velSolverOptions = 
     //strdup("solver=PCG,FLEXIBLE method=IPDG preconditioner=MULTIGRID smoother=CHEBYSHEV");
@@ -36,7 +45,6 @@ int main(int argc, char **argv){
   // int specify polynomial degree
   int N = atoi(argv[2]);
 
-
   // set up mesh stuff
   mesh3D *mesh = meshSetupTet3D(argv[1], N); 
 
@@ -47,30 +55,14 @@ int main(int argc, char **argv){
   else
     boundaryHeaderFileName = strdup(argv[3]);
 
-  //int Ns = 0; // Default no-subcycling 
-  int Ns = 4;
-  if(argc==5)
-   Ns = atoi(argv[4]); // Number of substeps
-  
-  
-  char *options; 
- if(Ns==0)
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=SLICE, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
-  else
-      options = strdup("method = ALGEBRAIC, grad-div= BROKEN, SUBCYCLING, out=SLICE, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
-
   if (rank==0) printf("Setup INS Solver: \n");
-  ins_t *ins = insSetup3D(mesh, Ns, options,
+  ins_t *ins = insSetupTet3D(mesh, Ns, options,
                           velSolverOptions,velParAlmondOptions,
                           prSolverOptions, prParAlmondOptions,
                           boundaryHeaderFileName);
 
-  if (rank==0) printf("OCCA Run: \n");
-  insRun3D(ins,options);
-
-
-   // printf("OCCA Run Timer: \n");
-   // insRunTimer3D(mesh,options,boundaryHeaderFileName);
+  if (rank==0) printf("Running INS solver\n");
+  insRunTet3D(ins,options);
 
   // close down MPI
   MPI_Finalize();

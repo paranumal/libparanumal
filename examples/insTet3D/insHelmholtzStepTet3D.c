@@ -1,14 +1,16 @@
-#include "ins3D.h"
+#include "insTet3D.h"
 
 // complete a time step using LSERK4
-void insHelmholtzStep3D(ins_t *ins, int tstep, const char* options){
+void insHelmholtzStepTet3D(ins_t *ins, int tstep, const char* options){
   
   mesh3D *mesh = ins->mesh; 
-  solver_t *solver = ins->vSolver; 
+  solver_t *usolver = ins->uSolver; 
+  solver_t *vsolver = ins->vSolver; 
+  solver_t *wsolver = ins->wSolver; 
   
   dfloat t = tstep*ins->dt + ins->dt;
   
-  int offset = mesh->Nelements+mesh->totalHaloPairs;
+  dlong offset = mesh->Nelements+mesh->totalHaloPairs;
   int subcycling = (strstr(options,"SUBCYCLING")) ? 1:0;
   
   
@@ -73,9 +75,9 @@ void insHelmholtzStep3D(ins_t *ins, int tstep, const char* options){
     ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsU, dfloatString, "add");  
     ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsV, dfloatString, "add");  
     ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsW, dfloatString, "add");  
-    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsU);
-    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsV);
-    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsW);
+    if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, ins->o_rhsU);
+    if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, ins->o_rhsV);
+    if (wsolver->Nmasked) mesh->maskKernel(wsolver->Nmasked, wsolver->o_maskIds, ins->o_rhsW);
 
   } else if (strstr(ins->vSolverOptions,"IPDG")) {
     ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
@@ -100,19 +102,19 @@ void insHelmholtzStep3D(ins_t *ins, int tstep, const char* options){
   }
 
   //use intermediate buffer for solve storage TODO: fix this later. Should be able to pull out proper buffer in elliptic solve
-  int Ntotal = offset*mesh->Np;
+  dlong Ntotal = offset*mesh->Np;
   ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
   ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
   ins->o_WH.copyFrom(ins->o_W,Ntotal*sizeof(dfloat),0,ins->index*Ntotal*sizeof(dfloat));
 
   //printf("Solving for Ux \n");
-  ins->NiterU = ellipticSolveTet3D(solver, ins->lambda, ins->velTOL, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
+  ins->NiterU = ellipticSolveTet3D(usolver, ins->lambda, ins->velTOL, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
   
   //printf("Solving for Uy \n");
-  ins->NiterV = ellipticSolveTet3D(solver, ins->lambda, ins->velTOL, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
+  ins->NiterV = ellipticSolveTet3D(vsolver, ins->lambda, ins->velTOL, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
   
   //printf("Solving for Uz \n");
-  ins->NiterW = ellipticSolveTet3D(solver, ins->lambda, ins->velTOL, ins->o_rhsW, ins->o_WH, ins->vSolverOptions);
+  ins->NiterW = ellipticSolveTet3D(wsolver, ins->lambda, ins->velTOL, ins->o_rhsW, ins->o_WH, ins->vSolverOptions);
   
   if (strstr(ins->vSolverOptions,"CONTINUOUS")) {
     ins->helmholtzAddBCKernel(mesh->Nelements,
