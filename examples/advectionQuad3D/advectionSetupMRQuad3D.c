@@ -290,9 +290,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
       mesh->q[base+8*mesh->Np] = q9bar;
       mesh->q[base+9*mesh->Np] = q10bar;*/
 
-      mesh->q[base+0*mesh->Np] = y;
-      mesh->q[base+1*mesh->Np] = -1*x;
-      mesh->q[base+2*mesh->Np] = 0;
+      mesh->q[base+0*mesh->Np] = 1 + .1*exp(-20*((x-1)*(x-1)+y*y+z*z));
       
     }
   }
@@ -303,12 +301,12 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat cfl_small = 0.05; // depends on the stability region size (was .4, then 2)
+  dfloat cfl_small = 0.2; // depends on the stability region size (was .4, then 2)
   dfloat cfl_large = cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   
-  mesh->tauInv = mesh->RT/nu; // TW
+  mesh->tauInv = 0;//mesh->RT/nu; // TW
 
 
   dfloat glmin = 1e9, glmax = -1e9;
@@ -346,7 +344,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 
   //dt = mymin(dt, cfl/mesh->tauInv);
 
-  mesh->finalTime = 10;
+  mesh->finalTime = 5;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   
   iint maxLevels=100;
@@ -481,7 +479,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   kernelInfo.addDefine("p_isq6", (dfloat)sqrt(1./6.));
   kernelInfo.addDefine("p_tauInv", mesh->tauInv);
 
-  kernelInfo.addDefine("p_invRadiusSq", 1./(mesh->sphereRadius*mesh->sphereRadius));
+  kernelInfo.addDefine("p_invRadiusSq", 0);//1./(mesh->sphereRadius*mesh->sphereRadius));
 
   kernelInfo.addDefine("p_fainv", (dfloat) 0.0); // turn off rotation
 
