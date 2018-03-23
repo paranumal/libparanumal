@@ -1,4 +1,4 @@
-#include "ins2D.h"
+#include "insTri2D.h"
 
 int main(int argc, char **argv){
 
@@ -9,13 +9,18 @@ int main(int argc, char **argv){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // SET OPTIONS
-  // method = ALGEBRAIC, STIFFLYSTABLE (default for now)
-  // grad-div   = WEAK, NODAL (default nodal)
   // out  = REPORT, REPORT+VTU
   // adv  = CUBATURE, COLLOCATION
-  // disc = DISCONT_GALERKIN, CONT_GALERKIN 
-  //char *options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
-  
+  //int Ns = 0; // no-subcycling 
+  int Ns = 4; 
+  if(argc==5)
+   Ns = atoi(argv[4]); // Number of substeps
+  char *options; 
+  if(Ns==0)
+      options = strdup("out=VTU, adv=CUBATURE");
+  else
+      options = strdup("out=VTU, adv=CUBATURE,SUBCYCLING");  //pres=PRESSURE_HISTORY
+
 
   char *velSolverOptions =
     strdup("solver=PCG method=IPDG basis=NODAL preconditioner=MASSMATRIX");
@@ -23,10 +28,8 @@ int main(int argc, char **argv){
     strdup("solver= smoother= partition=");
 
   char *prSolverOptions =
-    //strdup("solver=PCG,FLEXIBLE method=IPDG basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
-    //strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG basis=NODAL preconditioner=NONE");
-    strdup("solver=PCG,FLEXIBLE, method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
-    //strdup("solver=PCG,FLEXIBLE, method=IPDG basis=NODAL preconditioner=OMS,APPROXPATCH coarse=COARSEGRID,ALMOND");
+    strdup("solver=PCG,FLEXIBLE method=CONTINUOUS basis=NODAL preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    //strdup("solver=PCG,FLEXIBLE, method=CONTINUOUS basis=NODAL preconditioner=FULLALMOND");
 
   char *prParAlmondOptions =
     strdup("solver=KCYCLE smoother=CHEBYSHEV partition=STRONGNODES");
@@ -43,8 +46,6 @@ int main(int argc, char **argv){
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N); 
 
-  #if 1
-
   // capture header file
   char *boundaryHeaderFileName;
   if(argc==3)
@@ -52,33 +53,16 @@ int main(int argc, char **argv){
   else
     boundaryHeaderFileName = strdup(argv[3]);
 
-  //int Ns = 0; // Default no-subcycling 
-  int Ns = 8; 
-  if(argc==5)
-   Ns = atoi(argv[4]); // Number of substeps
-  
-  
-  char *options; 
-  if(Ns==0)
-      options = strdup("method=ALGEBRAIC, grad-div=BROKEN, out=VTU, adv=CUBATURE, disc = DISCONT_GALERKIN, "); // SUBCYCLING pres=PRESSURE_HISTORY
-  else
-      options = strdup("method=ALGEBRAIC, grad-div=BROKEN, out=VTU, adv=CUBATURE,SUBCYCLING disc = DISCONT_GALERKIN");  //pres=PRESSURE_HISTORY
+  if (rank==0) printf("Setup INS Solver: \n");
+  ins_t *ins = insSetupTri2D(mesh,Ns,options, velSolverOptions,   velParAlmondOptions,
+                          prSolverOptions, prParAlmondOptions, boundaryHeaderFileName);
+  if (rank==0) printf("Running INS solver\n");
 
-    #if 1
-    if (rank==0) printf("Setup INS Solver: \n");
-    ins_t *ins = insSetup2D(mesh,Ns,options, velSolverOptions,   velParAlmondOptions,
-                            prSolverOptions, prParAlmondOptions, boundaryHeaderFileName);
-    if (rank==0) printf("Running INS solver\n");
-    insRun2D(ins,options);
-    #else
-    printf("OCCA Run Timer: \n");
-    insRunTimer2D(mesh,options,boundaryHeaderFileName);
-    #endif
-    
+  insRunTri2D(ins,options);
+
   // close down MPI
   MPI_Finalize();
 
   exit(0);
   return 0;
-  #endif
 }

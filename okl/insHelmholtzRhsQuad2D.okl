@@ -414,13 +414,13 @@ kernel void insHelmholtzRhsBCQuad2D(const dlong Nelements,
 }
 
 kernel void insHelmholtzAddBCQuad2D(const dlong Nelements,
-                              const dfloat time,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const dlong  * restrict vmapM,
-                              const int    * restrict mapB,
-                                    dfloat * restrict U,
-                                    dfloat * restrict V){
+                                    const dfloat time,
+                                    const dfloat * restrict x,
+                                    const dfloat * restrict y,
+                                    const dlong  * restrict vmapM,
+                                    const int    * restrict mapB,
+                                          dfloat * restrict U,
+                                          dfloat * restrict V){
 
   for(dlong e=0;e<Nelements;e++;outer0){
     for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){

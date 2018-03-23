@@ -1,6 +1,6 @@
-#include "insQuad2D.h"
+#include "insTri2D.h"
 
-ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options, 
+ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options, 
                   char *vSolverOptions, char *vParAlmondOptions,
                   char *pSolverOptions, char *pParAlmondOptions,
                   char *boundaryHeaderFileName){
@@ -64,6 +64,7 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   ins->Div     = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
 
   ins->Nsubsteps = Ns;
+
   if(strstr(options,"SUBCYCLING")){
     ins->Ud   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
     ins->Vd   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -77,7 +78,7 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.001;   // kinematic viscosity,
+  dfloat nu   = 0.001;  // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
@@ -86,7 +87,7 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   ins->finalTime = 50.0;
   ins->nu        = nu ;
   ins->rho       = rho;
-  ins->tau       = 2.0* (mesh->N+1)*(mesh->N+2)/2.0f; 
+  ins->tau       = 2.0* (mesh->N+1)*(mesh->N+2)/2.0f; // was 3
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   ins->NtotalDofs = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
@@ -94,7 +95,7 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   // Initialize
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
-      const dlong id = n + mesh->Np*e;
+      const int id = n + mesh->Np*e;
       dfloat t = 0;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
@@ -144,9 +145,9 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
 
   // Find Maximum Velocity
   dfloat umax = 0;
-  for(dlong e=0;e<mesh->Nelements;++e){
+  for(int e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
-      const dlong id = n + mesh->Np*e;
+      const int id = n + mesh->Np*e;
       dfloat t = 0;
       dfloat uxn = ins->U[id];
       dfloat uyn = ins->V[id];
@@ -160,7 +161,7 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   umax = sqrt(umax);
 
  
-  dfloat cfl = 0.2; // pretty good estimate (at least for subcycling LSERK4)
+  dfloat cfl = 0.2; // pretty good estimate (at least for subcycling LSERK4) 
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt     = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -181,9 +182,9 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
     printf("hmin = %g\n", hmin);
     printf("hmax = %g\n", hmax);
     printf("cfl = %g\n",  cfl);
-    printf("dt = %g\n",   ins->dt);
+    printf("dt = %g\n",   dt);
   }
-  
+
   if (strstr(options,"SUBCYCLING")&&rank==0) printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", ins->dt, ins->sdt, ins->dt/ins->sdt);
   
   // Hold some inverses for kernels
@@ -232,12 +233,12 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   if (rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");
   // ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
   ins->lambda = (1.5f) / (ins->dt * ins->nu);
-  ins->uSolver = ellipticSolveSetupQuad2D(mesh, ins->tau, ins->lambda, uBCType, kernelInfoV, vSolverOptions,vParAlmondOptions);
-  ins->vSolver = ellipticSolveSetupQuad2D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions,vParAlmondOptions);
+  ins->uSolver = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, uBCType, kernelInfoV, vSolverOptions,vParAlmondOptions);
+  ins->vSolver = ellipticSolveSetupTri2D(mesh, ins->tau, ins->lambda, vBCType, kernelInfoV, vSolverOptions,vParAlmondOptions);
   ins->vSolverOptions = vSolverOptions;
 
   if (rank==0) printf("==================PRESSURE SOLVE SETUP========================\n");
-  ins->pSolver = ellipticSolveSetupQuad2D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
+  ins->pSolver  = ellipticSolveSetupTri2D(mesh, ins->tau, 0.0, pBCType,kernelInfoP, pSolverOptions,pParAlmondOptions);
   ins->pSolverOptions = pSolverOptions;
 
 
@@ -267,6 +268,7 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   ins->o_VmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), ins->VmapB);
   ins->o_PmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), ins->PmapB);
 
+  
   kernelInfo.addDefine("p_blockSize", blockSize);
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
@@ -308,8 +310,9 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   //kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
   //kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
 
-
+  
   // MEMORY ALLOCATION
+
   ins->o_U = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->U);
   ins->o_V = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->V);
   ins->o_P = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->P);
@@ -328,9 +331,10 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
   //storage for helmholtz solves. Fix this later
   ins->o_UH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
   ins->o_VH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
-  
+
   ins->o_Vort = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Vort);
   ins->o_Div = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Div);
+
 
   if(strstr(options,"SUBCYCLING")){
     // Note that resU and resV can be replaced with already introduced buffer
@@ -344,23 +348,23 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
     for (int r=0;r<size;r++) {
       if (r==rank) {
         ins->subCycleVolumeKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleQuad2D.okl",
-    					 "insSubCycleVolumeQuad2D",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleTri2D.okl",
+    					 "insSubCycleVolumeTri2D",
     					 kernelInfo);
 
         ins->subCycleSurfaceKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleQuad2D.okl",
-    					 "insSubCycleSurfaceQuad2D",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleTri2D.okl",
+    					 "insSubCycleSurfaceTri2D",
     					 kernelInfo);
 
         ins->subCycleCubatureVolumeKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleQuad2D.okl",
-    					 "insSubCycleCubatureVolumeQuad2D",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleTri2D.okl",
+    					 "insSubCycleCubatureVolumeTri2D",
     					 kernelInfo);
 
         ins->subCycleCubatureSurfaceKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleQuad2D.okl",
-    					 "insSubCycleCubatureSurfaceQuad2D",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/insSubCycleTri2D.okl",
+    					 "insSubCycleCubatureSurfaceTri2D",
     					 kernelInfo);
 
         ins->subCycleRKUpdateKernel =
@@ -400,6 +404,44 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
     ins->pRecvBuffer = (dfloat*) o_precvBuffer.getMappedPointer();
   }
 
+  ins->maxPresHistory =0;
+  if(strstr(options,"PRESSURE_HISTORY")){
+
+    ins->maxPresHistory = 20; //adjust this to hold more pressure histories (potentially reduce iteration in pressure solve)
+
+    ins->NpresHistory = 0;
+    ins->blockReduction   = (dfloat*) calloc(ins->maxPresHistory*ins->Nblock, sizeof(dfloat));
+    ins->o_blockReduction = mesh->device.malloc(ins->maxPresHistory*ins->Nblock*sizeof(dfloat), ins->blockReduction);
+
+    ins->presHistory   = (dfloat*) calloc(ins->maxPresHistory*Ntotal, sizeof(dfloat));
+    ins->o_presHistory = mesh->device.malloc(ins->maxPresHistory*Ntotal*sizeof(dfloat), ins->presHistory);    
+
+    ins->presLocalAlpha = (dfloat*) calloc(ins->maxPresHistory, sizeof(dfloat));
+    ins->presAlpha      = (dfloat*) calloc(ins->maxPresHistory, sizeof(dfloat));
+    ins->o_presAlpha    = mesh->device.malloc(ins->maxPresHistory*sizeof(dfloat), ins->presAlpha);
+
+    ins->o_PIbar  = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->PI);
+    ins->o_APIbar = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->PI);
+
+    kernelInfo.addDefine("p_maxMultiVectors", ins->maxPresHistory);
+
+    ins->multiWeightedInnerProductKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/multiWeightedInnerProduct.okl",
+           "multiWeightedInnerProduct",
+           kernelInfo);
+
+    ins->multiInnerProductKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/multiInnerProduct.okl",
+           "multiInnerProduct",
+           kernelInfo);
+
+    ins->multiScaledAddKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/multiScaledAdd.okl",
+           "multiScaledAdd",
+           kernelInfo);
+
+  }
+
 
   for (int r=0;r<size;r++) {
     if (r==rank) {
@@ -418,7 +460,6 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
                  "insTotalHaloScatter2D",
                  kernelInfo);
-
       ins->velocityHaloExtractKernel=
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insHaloExchange.okl",
                 "insVelocityHaloExtract2D",
@@ -441,92 +482,92 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
      
       // ===========================================================================
       ins->advectionCubatureVolumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionQuad2D.okl",
-    				       "insAdvectionCubatureVolumeQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionTri2D.okl",
+    				       "insAdvectionCubatureVolumeTri2D",
     				       kernelInfo);
 
       ins->advectionCubatureSurfaceKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionQuad2D.okl",
-    				       "insAdvectionCubatureSurfaceQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionTri2D.okl",
+    				       "insAdvectionCubatureSurfaceTri2D",
     				       kernelInfo);
 
       ins->advectionVolumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionQuad2D.okl",
-    				       "insAdvectionVolumeQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionTri2D.okl",
+    				       "insAdvectionVolumeTri2D",
     				       kernelInfo);
 
       ins->advectionSurfaceKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionQuad2D.okl",
-    				       "insAdvectionSurfaceQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionTri2D.okl",
+    				       "insAdvectionSurfaceTri2D",
     				       kernelInfo);
 
       // ===========================================================================
       ins->gradientVolumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradientQuad2D.okl",
-    				       "insGradientVolumeQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradientTri2D.okl",
+    				       "insGradientVolumeTri2D",
     				       kernelInfo);
 
       ins->gradientSurfaceKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradientQuad2D.okl",
-    				       "insGradientSurfaceQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insGradientTri2D.okl",
+    				       "insGradientSurfaceTri2D",
     				       kernelInfo);
 
       // ===========================================================================
       ins->divergenceVolumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergenceQuad2D.okl",
-    				       "insDivergenceVolumeQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergenceTri2D.okl",
+    				       "insDivergenceVolumeTri2D",
     				       kernelInfo);
 
       ins->divergenceSurfaceKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergenceQuad2D.okl",
-    				       "insDivergenceSurfaceQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insDivergenceTri2D.okl",
+    				       "insDivergenceSurfaceTri2D",
     				       kernelInfo);
 
       // ===========================================================================
       ins->helmholtzRhsForcingKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsQuad2D.okl",
-    				       "insHelmholtzRhsForcingQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsTri2D.okl",
+    				       "insHelmholtzRhsForcingTri2D",
     				       kernelInfo);
 
       ins->helmholtzRhsIpdgBCKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsQuad2D.okl",
-    				       "insHelmholtzRhsIpdgBCQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsTri2D.okl",
+    				       "insHelmholtzRhsIpdgBCTri2D",
     				       kernelInfo);
 
       ins->helmholtzRhsBCKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsQuad2D.okl",
-                   "insHelmholtzRhsBCQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsTri2D.okl",
+                   "insHelmholtzRhsBCTri2D",
                    kernelInfo);
 
       ins->helmholtzAddBCKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsQuad2D.okl",
-                   "insHelmholtzAddBCQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insHelmholtzRhsTri2D.okl",
+                   "insHelmholtzAddBCTri2D",
                    kernelInfo);
 
       // ===========================================================================
       ins->poissonRhsForcingKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhsQuad2D.okl",
-    				       "insPoissonRhsForcingQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhsTri2D.okl",
+    				       "insPoissonRhsForcingTri2D",
     				       kernelInfo);
 
       ins->poissonRhsIpdgBCKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhsQuad2D.okl",
-    				       "insPoissonRhsIpdgBCQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhsTri2D.okl",
+    				       "insPoissonRhsIpdgBCTri2D",
     				       kernelInfo);
 
       ins->poissonRhsBCKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhsQuad2D.okl",
-                   "insPoissonRhsBCQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhsTri2D.okl",
+                   "insPoissonRhsBCTri2D",
                    kernelInfo);
 
       ins->poissonAddBCKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhsQuad2D.okl",
-                   "insPoissonAddBCQuad2D",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonRhsTri2D.okl",
+                   "insPoissonAddBCTri2D",
                    kernelInfo);
 
       // ins->poissonPenaltyKernel =
-      //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenalty2D.okl",
-    		// 		       "insPoissonPenalty2D",
+      //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insPoissonPenaltyTri2D.okl",
+    		// 		       "insPoissonPenaltyTri2D",
     		// 		       kernelInfo);
 
       ins->updateUpdateKernel =
@@ -535,9 +576,9 @@ ins_t *insSetupQuad2D(mesh2D *mesh, int Ns, char * options,
     				       kernelInfo);
 
       ins->vorticityKernel=
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/insVorticityQuad2D.okl",
-                   "insVorticityQuad2D",
-                   kernelInfo);      
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insVorticityTri2D.okl",
+                   "insVorticityTri2D",
+                   kernelInfo);     
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }

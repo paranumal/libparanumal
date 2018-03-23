@@ -1,7 +1,7 @@
 #include "insQuad2D.h"
 
 // complete a time step using LSERK4
-void insAdvectionStepQuad2D(ins_t *ins, int tstep, char   * options){
+void insAdvectionStepQuad2D(ins_t *ins, int tstep, char *options){
 
   mesh2D *mesh = ins->mesh;
   dfloat t = (tstep+0)*ins->dt;  // to compute N(U^n) set t=tn 

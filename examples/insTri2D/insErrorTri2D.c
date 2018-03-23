@@ -1,7 +1,7 @@
-#include "insQuad2D.h"
+#include "insTri2D.h"
 
 // currently maximum
-void insErrorQuad2D(ins_t *ins, dfloat time,char *options){
+void insErrorTri2D(ins_t *ins, dfloat time, char *options){
 
   mesh2D *mesh = ins->mesh;
 

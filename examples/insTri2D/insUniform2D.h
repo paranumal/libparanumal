@@ -1,117 +1,86 @@
-/* wall 1, inflow 2, outflow 3 */
-
-// Weakly Impose Nonlinear term BCs
-#define insAdvectionBoundaryConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
-  {									\
-    if(bc==1){								\
-      *(uB) = 0.f;							\
-      *(vB) = 0.f;							\
-    } else if(bc==2){							\
-      *(uB) = 1.0f; \
-      *(vB) = 0.f;							\
-    } else if(bc==3){							\
-      *(uB) = uM;							\
-      *(vB) = vM;							\
-    }									\
-  }
-
-#define insDivergenceBoundaryConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
-  {									\
-    if(bc==1){								\
-      *(uB)= 0.f;							\
-      *(vB)= 0.f;							\
-    } else if(bc==2){							\
-      *(uB) = 1.0f;\
-      *(vB) = 0.0f;							\
-    } else if(bc==3){							\
-      *(uB) = uM;							\
-      *(vB) = vM;							\
-    }									\
-  }
-
-// Gradient only applies to Pressure and Pressure Incremament 1.5f*(22.f*22.f-y*y)/(22.f*22.f); 
-// Boundary Conditions are implemented in strong form
-#define insGradientBoundaryConditions2D(bc,t,x,y,nx,ny,pM,pB)	\
-  {								\
-								\
-    if(bc==1){							\
-      *(pB) = pM;						\
-    } else if(bc==2){						\
-      *(pB) = pM;						\
-    } else if(bc==3){						\
-      *(pB) = 0.f;						\
-    }								\
-  }
-
-#define insHelmholtzBoundaryConditionsIpdg2D(bc, t, x, y, nx, ny, uB, uxB, uyB, vB, vxB, vyB) \
-  {									\
-    if((bc==1)||(bc==4)){						\
-      *(uB) = 0.f;							\
-      *(vB) = 0.f;							\
-									\
-      *(uxB) = 0.f;							\
-      *(uyB) = 0.f;							\
-      *(vxB) = 0.f;							\
-      *(vyB) = 0.f;							\
-    } else if(bc==2){							\
-									\
-      *(uB) = 1.0f; \
-      *(vB) = 0.f;							\
-									\
-      *(uxB) = 0.f;							\
-      *(uyB) = 0.f;							\
-      *(vxB) = 0.f;							\
-      *(vyB) = 0.f;							\
-    } else if(bc==3){							\
-      *(uB) = 0.f;							\
-      *(vB) = 0.f;							\
-      *(uxB) = 0.f;							\
-      *(uyB) = 0.f;							\
-      *(vxB) = 0.f;							\
-      *(vyB) = 0.f;							\
-    }									\
-  }
-
-
-// Compute bcs for P increment   1.5f*y*(2.5f-y)/(1.25f*1.25f);
-#define insPoissonBoundaryConditions2D(bc,t,dt,x,y,nx,ny,pB,pxB,pyB)	\
-  {									\
-    if((bc==1)||(bc==4)){						\
-      *(pB) = 0.f;							\
-									\
-      *(pxB) = 0.f;							\
-      *(pyB) = 0.f;							\
-    }									\
-    if(bc==2){								\
-      *(pB)  = 0.f;							\
-									\
-      *(pxB) = 0.f;							\
-      *(pyB) = 0.f;							\
-    }									\
-    if(bc==3){								\
-      *(pB) = 0.f;							\
-									\
-      *(pxB) = 0.f;							\
-      *(pyB) = 0.f;							\
-    }									\
-  }
-
 
 // Initial conditions 
-#define insFlowField2D(t,x,y,u,v,p)		\
-  {						\
-    *(u) = 1.0f;				\
-    *(v) = 0.0f;				\
-    *(p) = 0.0f;				\
-  }		
+#define insFlowField2D(t,x,y,u,v,p)   \
+  {                                   \
+    *(u) = 1.0f;                      \
+    *(v) = 0.0f;                      \
+    *(p) = 0.0f;                      \
+  }   
 
-// Compute bcs for P increment
-#define insPoissonNeumannTimeDerivative2D(bc,t,x,y,dpdt)  \
-  { \
-    if((bc==1)||(bc==4)||(bc==2) ){           \
-      *(dpdt) = 0.f; \
-    }                 \
-    if(bc==3){                \
-      *(dpdt) = 0.f; \
-    }                 \
-  }				
+// Boundary conditions
+/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
+#define insVelocityDirichletConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
+{                                   \
+  if(bc==1){                        \
+    *(uB) = 0.f;                    \
+    *(vB) = 0.f;                    \
+  } else if(bc==2){                 \
+    *(uB) = 1.0f;                   \
+    *(vB) = 0.f;                    \
+  } else if(bc==3){                 \
+    *(uB) = uM;                     \
+    *(vB) = vM;                     \
+  } else if(bc==4){                 \
+    *(uB) = 0.f;                    \
+    *(vB) = vM;                     \
+  } else if(bc==5){                 \
+    *(uB) = uM;                     \
+    *(vB) = 0.f;                    \
+  }                                 \
+}
+
+#define insVelocityNeumannConditions2D(bc, t, x, y, nx, ny, uxM, uyM, vxM, vyM, uxB, uyB, vxB, vyB) \
+{                                          \
+  if(bc==1 || bc==2){                      \
+    *(uxB) = uxM;                          \
+    *(uyB) = uyM;                          \
+    *(vxB) = vxM;                          \
+    *(vyB) = vyM;                          \
+  } else if(bc==3){                        \
+    *(uxB) = 0.f;                          \
+    *(uyB) = 0.f;                          \
+    *(vxB) = 0.f;                          \
+    *(vyB) = 0.f;                          \
+  } else if(bc==4){                        \
+    *(uxB) = uxM;                          \
+    *(uyB) = uyM;                          \
+    *(vxB) = 0.f;                          \
+    *(vyB) = 0.f;                          \
+  } else if(bc==5){                        \
+    *(uxB) = 0.f;                          \
+    *(uyB) = 0.f;                          \
+    *(vxB) = vxM;                          \
+    *(vyB) = vyM;                          \
+  }                                        \
+}
+
+
+#define insPressureDirichletConditions2D(bc, t, x, y, nx, ny, pM, pB) \
+{                                   \
+  if(bc==1 || bc==2){               \
+    *(pB) = pM;                     \
+  } else if(bc==3){                 \
+    *(pB) = 0.f;                    \
+  } else if(bc==4){                 \
+    *(pB) = pM;                     \
+  } else if(bc==5){                 \
+    *(pB) = pM;                     \
+  }                                 \
+}
+
+#define insPressureNeumannConditions2D(bc, t, x, y, nx, ny, pxM, pyM, pxB, pyB) \
+{                                          \
+  if(bc==1 || bc==2){                      \
+    *(pxB) = 0.f;                          \
+    *(pyB) = 0.f;                          \
+  } else if(bc==3){                        \
+    *(pxB) = pxM;                          \
+    *(pyB) = pyM;                          \
+  } else if(bc==4){                        \
+    *(pxB) = 0.f;                          \
+    *(pyB) = 0.f;                          \
+  } else if(bc==5){                        \
+    *(pxB) = 0.f;                          \
+    *(pyB) = 0.f;                          \
+  }                                        \
+}

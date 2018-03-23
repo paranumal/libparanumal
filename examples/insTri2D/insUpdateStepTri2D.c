@@ -1,14 +1,11 @@
-#include "ins2D.h"
+#include "insTri2D.h"
 
-// complete a time step using LSERK4
-void insUpdateStep2D(ins_t *ins, int tstep, int haloBytes,
-				       dfloat * sendBuffer, dfloat * recvBuffer,
-				        char   * options){
+void insUpdateStepTri2D(ins_t *ins, int tstep, char *options){
 
   mesh2D *mesh = ins->mesh;
   dfloat t = tstep*ins->dt + ins->dt;
 
-  int offset = (mesh->Nelements+mesh->totalHaloPairs);
+  dlong offset = (mesh->Nelements+mesh->totalHaloPairs);
 
   if (strstr(ins->pSolverOptions,"IPDG")) {
     if(mesh->totalHaloPairs>0){
@@ -20,23 +17,24 @@ void insUpdateStep2D(ins_t *ins, int tstep, int haloBytes,
                                  ins->o_pHaloBuffer);
 
       // copy extracted halo to HOST
-      ins->o_pHaloBuffer.copyTo(sendBuffer);
+      ins->o_pHaloBuffer.copyTo(ins->pSendBuffer);
 
       // start halo exchange
       meshHaloExchangeStart(mesh,
                            mesh->Np*sizeof(dfloat),
-                           sendBuffer,
-                           recvBuffer);
+                           ins->pSendBuffer,
+                           ins->pRecvBuffer);
     }
   }
   
   occaTimerTic(mesh->device,"GradientVolume");
   // Compute Volume Contribution of gradient of pressure gradient
+  dlong ioffset = 0;
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_DrT,
                             mesh->o_DsT,
-                            0,  //no offset
+                            ioffset,  //no offset
                             ins->o_PI,
                             ins->o_PIx,
                             ins->o_PIy);
@@ -46,7 +44,7 @@ void insUpdateStep2D(ins_t *ins, int tstep, int haloBytes,
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
 
-      ins->o_pHaloBuffer.copyFrom(recvBuffer);
+      ins->o_pHaloBuffer.copyFrom(ins->pRecvBuffer);
 
       ins->pressureHaloScatterKernel(mesh->Nelements,
                                       mesh->totalHaloPairs,

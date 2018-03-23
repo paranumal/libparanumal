@@ -1,12 +1,7 @@
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include "mpi.h"
-
-#include "ins2D.h"
+#include "insTri2D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void insPlotVTU2D(ins_t *ins, char *fileName){
+void insPlotVTUTri2D(ins_t *ins, char *fileName){
 
   mesh2D *mesh = ins->mesh;
   
@@ -20,21 +15,21 @@ void insPlotVTU2D(ins_t *ins, char *fileName){
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
   fprintf(fp, "  <UnstructuredGrid>\n");
   fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", 
-	  mesh->Nelements*mesh->plotNp, 
-	  mesh->Nelements*mesh->plotNelements);
+                  mesh->Nelements*mesh->plotNp, 
+                  mesh->Nelements*mesh->plotNelements);
   
   // write out nodes
   fprintf(fp, "      <Points>\n");
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   
   // compute plot node coordinates on the fly
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0;
 
       for(int m=0;m<mesh->Np;++m){
-	plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
-	plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
+        plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
+        plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
       }
 
       fprintf(fp, "       ");
@@ -47,15 +42,13 @@ void insPlotVTU2D(ins_t *ins, char *fileName){
 
   // write out pressure
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
-
-
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Pressure\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
       for(int m=0;m<mesh->Np;++m){
-	int id = m+e*mesh->Np;
-	id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
+        int id = m+e*mesh->Np;
+        id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
         dfloat pm = ins->P[id];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
@@ -66,58 +59,48 @@ void insPlotVTU2D(ins_t *ins, char *fileName){
   }
   fprintf(fp, "       </DataArray>\n");
 
-  // calculate plot vorticity
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"VorticityDivergence\" NumberOfComponents=\"2\" Format=\"ascii\">\n");
-  dfloat *curlU = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  dfloat *divU = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      dfloat dUdr = 0, dUds = 0, dVdr = 0, dVds = 0;
-      for(int m=0;m<mesh->Np;++m){
-	int id = m+e*mesh->Np;
-	id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
-	dUdr += mesh->Dr[n*mesh->Np+m]*ins->U[id];
-	dUds += mesh->Ds[n*mesh->Np+m]*ins->U[id];
-	dVdr += mesh->Dr[n*mesh->Np+m]*ins->V[id];
-	dVds += mesh->Ds[n*mesh->Np+m]*ins->V[id];
-      }
-      dfloat rx = mesh->vgeo[e*mesh->Nvgeo+RXID];
-      dfloat ry = mesh->vgeo[e*mesh->Nvgeo+RYID];
-      dfloat sx = mesh->vgeo[e*mesh->Nvgeo+SXID];
-      dfloat sy = mesh->vgeo[e*mesh->Nvgeo+SYID];
-
-      dfloat dUdx = rx*dUdr + sx*dUds;
-      dfloat dUdy = ry*dUdr + sy*dUds;
-      dfloat dVdx = rx*dVdr + sx*dVds;
-      dfloat dVdy = ry*dVdr + sy*dVds;
-      
-      curlU[n] = dVdx-dUdy;
-      divU[n] = dUdx+dVdy;
-    }
-    
+  // write out divergence
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Divergence\" Format=\"ascii\">\n");
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
-      dfloat plotCurlUn = 0;
-      dfloat plotDivUn = 0;
+      dfloat plotDiv = 0;
       for(int m=0;m<mesh->Np;++m){
-        plotCurlUn += mesh->plotInterp[n*mesh->Np+m]*curlU[m];
-        plotDivUn += mesh->plotInterp[n*mesh->Np+m]*divU[m];	
+        dlong id = m+e*mesh->Np;
+        dfloat div = ins->Div[id];
+        plotDiv += mesh->plotInterp[n*mesh->Np+m]*div;
       }
+
       fprintf(fp, "       ");
-      fprintf(fp, "%g %g\n", plotCurlUn, plotDivUn);
+      fprintf(fp, "%g\n", plotDiv);
     }
   }
   fprintf(fp, "       </DataArray>\n");
-  free(curlU);
-  free(divU);
+
+  // write out vorticity
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->plotNp;++n){
+      dfloat plotVort = 0;
+      for(int m=0;m<mesh->Np;++m){
+        dlong id = m+e*mesh->Np;
+        dfloat vort = ins->Vort[id];
+        plotVort += mesh->plotInterp[n*mesh->Np+m]*vort;
+      }
+
+      fprintf(fp, "       ");
+      fprintf(fp, "%g\n", plotVort);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
+
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"2\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotun = 0, plotvn = 0;
       for(int m=0;m<mesh->Np;++m){
-	int id = m+e*mesh->Np;
-	id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
+        int id = m+e*mesh->Np;
+        id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
         dfloat um = ins->U[id];
         dfloat vm = ins->V[id];
         //
@@ -131,40 +114,16 @@ void insPlotVTU2D(ins_t *ins, char *fileName){
     }
   }
   fprintf(fp, "       </DataArray>\n");
-
-
-  // fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  // for(int e=0;e<mesh->Nelements;++e){
-  //   for(int n=0;n<mesh->plotNp;++n){
-  //     dfloat plotwxn = 0, plotwyn = 0, plotvn = 0, plotwzn = 0;
-  //     for(int m=0;m<mesh->Np;++m){
-  //       dfloat wx = mesh->q[4 + mesh->Nfields*(m+e*mesh->Np)];
-  //       dfloat wy = mesh->q[5 + mesh->Nfields*(m+e*mesh->Np)];
-  //       dfloat wz = mesh->q[6 + mesh->Nfields*(m+e*mesh->Np)];
-  //       //
-  //       plotwxn += mesh->plotInterp[n*mesh->Np+m]*wx;
-  //       plotwyn += mesh->plotInterp[n*mesh->Np+m]*wy;
-  //       plotwzn += mesh->plotInterp[n*mesh->Np+m]*wz;
-  //     }
-      
-  //     fprintf(fp, "       ");
-  //     fprintf(fp, "%g %g %g\n", plotwxn, plotwyn,plotwzn);
-  //   }
-  // }
-  // fprintf(fp, "       </DataArray>\n");
-
-
-
   fprintf(fp, "     </PointData>\n");
   
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "       ");
       for(int m=0;m<mesh->plotNverts;++m){
-	fprintf(fp, "%d ", e*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
+        fprintf(fp, "%d ", e*mesh->plotNp + mesh->plotEToV[n*mesh->plotNverts+m]);
       }
       fprintf(fp, "\n");
     }
@@ -173,8 +132,8 @@ void insPlotVTU2D(ins_t *ins, char *fileName){
   fprintf(fp, "        </DataArray>\n");
   
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
+  dlong cnt = 0;
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNelements;++n){
       cnt += mesh->plotNverts;
       fprintf(fp, "       ");
@@ -184,7 +143,7 @@ void insPlotVTU2D(ins_t *ins, char *fileName){
   fprintf(fp, "       </DataArray>\n");
   
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "5\n");
     }

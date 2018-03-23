@@ -1,20 +1,17 @@
-#include "ins2D.h"
+#include "insTri2D.h"
 
 // complete a time step using LSERK4
-void insAdvectionSubCycleStep2D(ins_t *ins, int tstep, 
-                                dfloat * tsendBuffer, dfloat * trecvBuffer, 
-                                dfloat * vsendBuffer, dfloat *  vrecvBuffer, 
-                                char   * options){
+void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
  
   //printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
   mesh2D *mesh = ins->mesh;
 
-  const int NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
-  const int Ntotal         =  NtotalElements*mesh->Np;  
+  const dlong NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
+  const dlong Ntotal         =  NtotalElements*mesh->Np;  
 
-  const int voffset = 0; 
+  const dlong voffset = 0; 
   // field offset at this step
-  int offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+  dlong offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
   
   //Exctract Halo On Device, Assumes History is already done!
   if(mesh->totalHaloPairs>0){
@@ -28,13 +25,13 @@ void insAdvectionSubCycleStep2D(ins_t *ins, int tstep,
                                 ins->o_tHaloBuffer);
 
     // copy extracted halo to HOST
-    ins->o_tHaloBuffer.copyTo(tsendBuffer);
+    ins->o_tHaloBuffer.copyTo(ins->tSendBuffer);
 
     // start halo exchange    
     meshHaloExchangeStart(mesh,
                           mesh->Np*(ins->NTfields)*sizeof(dfloat),
-                          tsendBuffer,
-                          trecvBuffer);
+                          ins->tSendBuffer,
+                          ins->tRecvBuffer);
   }
 
   // COMPLETE HALO EXCHANGE
@@ -42,7 +39,7 @@ void insAdvectionSubCycleStep2D(ins_t *ins, int tstep,
 
     meshHaloExchangeFinish(mesh);
 
-    ins->o_tHaloBuffer.copyFrom(trecvBuffer);
+    ins->o_tHaloBuffer.copyFrom(ins->tRecvBuffer);
     ins->totalHaloScatterKernel(mesh->Nelements,
                                 mesh->totalHaloPairs,
                                 mesh->o_haloElementList,
@@ -140,13 +137,13 @@ void insAdvectionSubCycleStep2D(ins_t *ins, int tstep,
                                      ins->o_vHaloBuffer);
 
             // copy extracted halo to HOST 
-            ins->o_vHaloBuffer.copyTo(vsendBuffer);            
+            ins->o_vHaloBuffer.copyTo(ins->vSendBuffer);            
 
             // start halo exchange
             meshHaloExchangeStart(mesh,
                                 mesh->Np*(ins->NVfields)*sizeof(dfloat), 
-                                vsendBuffer,
-                                vrecvBuffer);
+                                ins->vSendBuffer,
+                                ins->vRecvBuffer);
           }
           occaTimerTic(mesh->device,"AdvectionVolume");
           
@@ -182,7 +179,7 @@ void insAdvectionSubCycleStep2D(ins_t *ins, int tstep,
 
             meshHaloExchangeFinish(mesh);
 
-            ins->o_vHaloBuffer.copyFrom(vrecvBuffer); 
+            ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
 
             ins->velocityHaloScatterKernel(mesh->Nelements,
                                       mesh->totalHaloPairs,
@@ -220,6 +217,7 @@ void insAdvectionSubCycleStep2D(ins_t *ins, int tstep,
                                       mesh->o_vmapM,
                                       mesh->o_vmapP,
                                       mesh->o_EToB,
+                                      bScale,
                                       t,
                                       mesh->o_x,
                                       mesh->o_y,

@@ -1,7 +1,7 @@
-#include "ins2D.h"
+#include "insTri2D.h"
 
 // currently maximum
-void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
+void insErrorNormsTri2D(ins_t *ins, dfloat time, char *options){
 
   mesh2D *mesh = ins->mesh;
   // copy data back to host
@@ -9,54 +9,51 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
   ins->o_V.copyTo(ins->V);  
   ins->o_P.copyTo(ins->P);
 
+#if 1
 
-  #if 1
+  dfloat *dU = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
+  dfloat *dV = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
+  dfloat *dP = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
 
-    dfloat *dU = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
-    dfloat *dV = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
-    dfloat *dP = (dfloat*) calloc(mesh->Np,sizeof(dfloat));
+  dfloat l2u = 0, l2v = 0, l2p = 0;
+  dfloat liu = 0, liv = 0, lip = 0;
 
-    dfloat l2u=0, l2v = 0, l2p = 0;
-    dfloat liu=0, liv = 0, lip = 0;
-
-    dfloat nu = ins->nu;
+  dfloat nu = ins->nu;
   
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
-      int id = n+e*mesh->Np;
+      dlong id = n+e*mesh->Np;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
 
       id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
 
       // Compute Exact Solution
-      #if 1
+    #if 1
       dfloat uex = -sin(2.0 *M_PI*y)*exp(-nu*4.0*M_PI*M_PI*time);
       dfloat vex =  sin(2.0 *M_PI*x)*exp(-nu*4.0*M_PI*M_PI*time);
-      dfloat pex = -cos(2.0 *M_PI*y)*cos(2.0*M_PI*x)*exp(-nu*8.0*M_PI*M_PI*time);
-     
-      #else
+      dfloat pex = -cos(2.0 *M_PI*y)*cos(2.0*M_PI*x)*exp(-nu*8.0*M_PI*M_PI*time); 
+    #else
       dfloat lambda = 1./(2. * ins->nu) - sqrt(1./(4.*ins->nu * ins->nu) + 4.*M_PI*M_PI) ;
       dfloat uex = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
       dfloat vex =  lambda/(2.*M_PI)*exp(lambda*x)*sin(2.*M_PI*y);
       dfloat pex = 0.5*(1.0- exp(2.*lambda*x));
-      #endif
-     // Compute Maximum Nodal Error 
+    #endif
+      // Compute Maximum Nodal Error 
       dfloat u = ins->U[id];
       dfloat v = ins->V[id];
       dfloat p = ins->P[id];
-      // 
+
       liu = mymax(liu, fabs(u-uex));
       liv = mymax(liv, fabs(v-vex));
       lip = mymax(lip, fabs(p-pex));
-      //
+
       dU[n] = fabs(u-uex);
       dV[n] = fabs(v-vex);
       dP[n] = fabs(p-pex);
-      //
     }
 
-    dfloat l2ue=0, l2ve = 0,  l2pe = 0;
+    dfloat l2ue = 0, l2ve = 0,  l2pe = 0;
 
     for(int i=0;i<mesh->Np;++i){
       dfloat uei = dU[i];
@@ -73,21 +70,18 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
         l2ve += mm*vei*vej;
         l2pe += mm*pei*pej;
       }
-    // 
     }
 
     dfloat j = mesh->vgeo[e*mesh->Nvgeo+JID];
     l2u += j*l2ue;
     l2v += j*l2ve;
     l2p += j*l2pe;
-    //
   }
 
   free(dU);
   free(dV);
   free(dP);
       
-
   // compute maximum over all processes
   dfloat giu  = 0, giv = 0 , gip = 0;
   dfloat glu  = 0, glv = 0,  glp  = 0;
@@ -104,7 +98,6 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
   glv = sqrt(glv);
   glp = sqrt(glp);
 
-
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if(rank==0){
@@ -119,19 +112,18 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
     fprintf(fp,"%d %.5e %d %d %d %d %.5e %.5e %.5e %.5e %.5e %.5e\n", 
              mesh->N, time, ins->Nsubsteps, ins->NiterU, ins->NiterV, ins->NiterP, giu, giv, gip, glu, glv, glp);
     fclose(fp);
-
   }
 
- #else
+#else
 
- const int offset =  ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
-  //
+  const dlong offset =  ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
+
   dfloat *dUdx = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   dfloat *dUdy = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   dfloat *dVdx = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   dfloat *dVdy = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
-  //
-   for(int e=0;e<mesh->Nelements;++e){
+  
+  for(int e=0;e<mesh->Nelements;++e){
     //  int flag = 0; 
     // for(int f=0;f<mesh->Nfaces;++f){
     //   int bc = mesh->EToB[e*mesh->Nfaces+f];
@@ -159,15 +151,14 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
           duds += Dsni*u;
           dvdr += Drni*v;
           dvds += Dsni*v;   
+        }
+        dUdx[e*mesh->Np + n] = drdx*dudr + dsdx*duds;
+        dUdy[e*mesh->Np + n] = drdy*dudr + dsdy*duds;
+        dVdx[e*mesh->Np + n] = drdx*dvdr + dsdx*dvds;
+        dVdy[e*mesh->Np + n] = drdy*dvdr + dsdy*dvds;
       }
-      dUdx[e*mesh->Np + n] = drdx*dudr + dsdx*duds;
-      dUdy[e*mesh->Np + n] = drdy*dudr + dsdy*duds;
-      dVdx[e*mesh->Np + n] = drdx*dvdr + dsdx*dvds;
-      dVdy[e*mesh->Np + n] = drdy*dvdr + dsdy*dvds;
     // }
   }
-
- }
  
 
   dfloat W[mesh->Nfp];
@@ -201,66 +192,65 @@ void insErrorNorms2D(ins_t *ins, dfloat time, char *options){
     W[4] = 0.431745381209863; W[5] = 0.276826047361566;
     W[6] = 0.047619047619047;
   }
-//
-dfloat cd = 0.0, cl = 0.0; 
-int sk=0;
-for(int e=0;e<mesh->Nelements;++e){
-   int flag = 0; 
-   int bc = 0; 
-  for(int f=0;f<mesh->Nfaces;++f){
-    bc = mesh->EToB[e*mesh->Nfaces+f];
-    if(bc == 1){ flag = 1; }
-  }
 
-  if(flag){
+  dfloat cd = 0.0, cl = 0.0; 
+  int sk=0;
+  for(int e=0;e<mesh->Nelements;++e){
+    int flag = 0; 
+    int bc = 0; 
     for(int f=0;f<mesh->Nfaces;++f){
       bc = mesh->EToB[e*mesh->Nfaces+f];
-      if(bc==1){
-       for(int n=0;n<mesh->Nfp; n++){
-        // load surface geofactors for this face
-        int sid = mesh->Nsgeo*(e*mesh->Nfaces+f);
-        dfloat nx = mesh->sgeo[sid+0];
-        dfloat ny = mesh->sgeo[sid+1];
-        dfloat sJ = mesh->sgeo[sid+2];
-        
-        int vid  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
-        int idM = mesh->vmapM[vid];
-        //
-        dfloat dudx = dUdx[idM]; 
-        dfloat dudy = dUdy[idM]; 
-        dfloat dvdx = dVdx[idM]; 
-        dfloat dvdy = dVdy[idM];
-        //
-        dfloat p = ins->P[idM + offset];
+      if(bc == 1){ flag = 1; }
+    }
 
-        cd += W[n]*(sJ*(-p*nx + ins->nu*(nx*2.0*dudx + ny*(dvdx + dudy))));
-        cl += W[n]*(sJ*(-p*ny + ins->nu*(nx*(dvdx + dudy) + ny*2.0*dvdy)));
+    if(flag){
+      for(int f=0;f<mesh->Nfaces;++f){
+        bc = mesh->EToB[e*mesh->Nfaces+f];
+        if(bc==1){
+          for(int n=0;n<mesh->Nfp; n++){
+            // load surface geofactors for this face
+            int sid = mesh->Nsgeo*(e*mesh->Nfaces+f);
+            dfloat nx = mesh->sgeo[sid+0];
+            dfloat ny = mesh->sgeo[sid+1];
+            dfloat sJ = mesh->sgeo[sid+2];
+            
+            int vid  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
+            int idM = mesh->vmapM[vid];
+            //
+            dfloat dudx = dUdx[idM]; 
+            dfloat dudy = dUdy[idM]; 
+            dfloat dvdx = dVdx[idM]; 
+            dfloat dvdy = dVdy[idM];
+            //
+            dfloat p = ins->P[idM + offset];
+
+            cd += W[n]*(sJ*(-p*nx + ins->nu*(nx*2.0*dudx + ny*(dvdx + dudy))));
+            cl += W[n]*(sJ*(-p*ny + ins->nu*(nx*(dvdx + dudy) + ny*2.0*dvdy)));
+          }
+        // printf("%d %.5e \n",sk,cl);
+        //sk++;
+        }
       }
-      // printf("%d %.5e \n",sk,cl);
-      //sk++;
     }
   }
-}
-}
 
-int rank;
-MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-if(rank==0){
-  // Do not Use mpi for Now!!!!!!!!!!!!!!!!!!!!!!1
-  char fname[BUFSIZ];
-  //sprintf(fname, "/u0/outputs/ins2D/Report.dat");
-  sprintf(fname, "report_Ns%d_N%d.dat",ins->Nsubsteps, mesh->N);
-  FILE *fp;
-  fp = fopen(fname, "a");
-  fprintf(fp,"%d %.5e %d %d %d %d %.5e %.5e\n", mesh->N, time, ins->Nsubsteps, ins->NiterU, ins->NiterV, ins->NiterP, cd, cl);
-  fclose(fp);
-}
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if(rank==0){
+    // Do not Use mpi for Now!!!!!!!!!!!!!!!!!!!!!!1
+    char fname[BUFSIZ];
+    //sprintf(fname, "/u0/outputs/ins2D/Report.dat");
+    sprintf(fname, "report_Ns%d_N%d.dat",ins->Nsubsteps, mesh->N);
+    FILE *fp;
+    fp = fopen(fname, "a");
+    fprintf(fp,"%d %.5e %d %d %d %d %.5e %.5e\n", mesh->N, time, ins->Nsubsteps, ins->NiterU, ins->NiterV, ins->NiterP, cd, cl);
+    fclose(fp);
+  }
 
-free(dUdx);
-free(dVdx);
-free(dUdy);
-free(dVdy);
-
- #endif
+  free(dUdx);
+  free(dVdx);
+  free(dUdy);
+  free(dVdy);
+#endif
   
 }

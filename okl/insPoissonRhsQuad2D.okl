@@ -76,18 +76,18 @@ kernel void insPoissonUpdateQuad2D(const dlong Nelements,
 
 // Actually solves for Pr increamnet not presssure
 kernel void insPoissonRhsIpdgBCQuad2D(const dlong Nelements,
-                                  const int pressure_solve,
-                                  const dlong  * restrict vmapM,
-                                  const dfloat tau,
-                                  const dfloat time,
-                                  const dfloat dt,
-                                  const dfloat * restrict x,
-                                  const dfloat * restrict y,
-                                  const dfloat * restrict vgeo,
-                                  const dfloat * restrict sgeo,
-                                  const int    * restrict EToB,
-                                  const dfloat * restrict D,
-                                        dfloat * restrict rhsP){
+                                      const int pressure_solve,
+                                      const dlong  * restrict vmapM,
+                                      const dfloat tau,
+                                      const dfloat time,
+                                      const dfloat dt,
+                                      const dfloat * restrict x,
+                                      const dfloat * restrict y,
+                                      const dfloat * restrict vgeo,
+                                      const dfloat * restrict sgeo,
+                                      const int    * restrict EToB,
+                                      const dfloat * restrict D,
+                                            dfloat * restrict rhsP){
   
   for(dlong e=0;e<Nelements;++e;outer0){
 

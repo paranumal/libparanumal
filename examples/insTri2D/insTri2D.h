@@ -13,6 +13,7 @@
 typedef struct {
 
   mesh_t *mesh;
+  solver_t *uSolver;
   solver_t *vSolver;
   solver_t *pSolver;
 
@@ -35,7 +36,7 @@ typedef struct {
   
   int NiterU, NiterV, NiterP;
 
-//solver tolerances
+  //solver tolerances
   dfloat presTOL, velTOL;
 
 
@@ -46,14 +47,20 @@ typedef struct {
   dfloat *rhsU, *rhsV, *rhsP;   
   dfloat *PI,*Px,*Py;
   
-
-
-  dfloat *Ut, *Vt, *Pt, *WN; // For stiffly stable scheme
-  dfloat dtfactor;
-
-  
+  dfloat *Vort, *Div;
 
   dfloat g[2];      // gravitational Acceleration
+
+  int *VmapB, *PmapB;
+  occa::memory o_VmapB, o_PmapB;
+
+  //halo data
+  dfloat *tSendBuffer;
+  dfloat *tRecvBuffer;
+  dfloat *vSendBuffer;
+  dfloat *vRecvBuffer;
+  dfloat *pSendBuffer;
+  dfloat *pRecvBuffer;
 
   int Nsubsteps;  
   dfloat *Ud, *Vd, *Ue, *Ve, *resU, *resV, sdt;
@@ -75,6 +82,7 @@ typedef struct {
 
   occa::memory o_Ut, o_Vt, o_Pt, o_WN; 
 
+  occa::memory o_Vort, o_Div;
 
   // multiple RHS pressure projection variables
   int maxPresHistory, NpresHistory;
@@ -131,60 +139,28 @@ typedef struct {
   //
   occa::kernel helmholtzRhsForcingKernel;
   occa::kernel helmholtzRhsIpdgBCKernel;
+  occa::kernel helmholtzRhsBCKernel;
+  occa::kernel helmholtzAddBCKernel;
   
   occa::kernel updateUpdateKernel;
+  occa::kernel vorticityKernel;
 
 }ins_t;
 
-ins_t *insSetup2D(mesh2D *mesh, int i, char *options, 
+ins_t *insSetupTri2D(mesh2D *mesh, int i, char *options, 
                   char *velSolverOptions, char *velParAlmondOptions,
                   char *prSolverOptions,  char *prParAlmondOptions,
                   char *bdryHeaderFileName);
 
-void insMakePeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);
+void insRunTri2D(ins_t *solver, char *options);
+void insPlotVTUTri2D(ins_t *solver, char *fileNameBase);
+void insReportTri2D(ins_t *solver, int tstep, char *options);
+void insErrorTri2D(ins_t *solver, dfloat time, char *options);
+void insErrorNormsTri2D(ins_t *solver, dfloat time, char *options);
+void insRunTimerTri2D(mesh2D *mesh, char *options, char *bdryHeaderFileName);
 
-void insRun2D(ins_t *solver, char *options);
-void insPlotVTU2D(ins_t *solver, char *fileNameBase);
-void insReport2D(ins_t *solver, int tstep, char *options);
-void insError2D(ins_t *solver, dfloat time, char *options);
-void insErrorNorms2D(ins_t *solver, dfloat time, char *options);
-
-
-void insRunTimer2D(mesh2D *mesh, char *options, char *bdryHeaderFileName);
-
-
-void insRun2D(ins_t *solver, char *options);
-
-
-void insAdvectionStep2D(ins_t *solver, int tstep, int haloBytes,
-                     dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-void insAdvectionStepSS2D(ins_t *solver, int tstep, int haloBytes,
-                     dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-
-void insHelmholtzStep2D(ins_t *solver, int tstep, int haloBytes,
-                     dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-void insHelmholtzStepSS2D(ins_t *solver, int tstep, int haloBytes,
-                     dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-void insPoissonStep2D(ins_t *solver, int tstep, int haloBytes,
-                     dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-void insPoissonStepSS2D(ins_t *solver, int tstep, int haloBytes,
-                     dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-
-void insUpdateStep2D(ins_t *solver, int tstep, int haloBytes,
-                     dfloat * sendBuffer, dfloat *recvBuffer, char * options);
-
-
-
-void insAdvectionSubCycleStep2D(ins_t *solver, int tstep,
-                     dfloat * tsendBuffer, dfloat *trecvBuffer, 
-                     dfloat * sendBuffer, dfloat *recvBuffer,char * options);
-
-
-
-
+void insAdvectionStepTri2D(ins_t *solver, int tstep, char * options);
+void insAdvectionSubCycleStepTri2D(ins_t *solver, int tstep, char * options);
+void insHelmholtzStepTri2D(ins_t *solver, int tstep, char * options);
+void insPoissonStepTri2D(ins_t *solver, int tstep, char * options);
+void insUpdateStepTri2D(ins_t *solver, int tstep, char * options);

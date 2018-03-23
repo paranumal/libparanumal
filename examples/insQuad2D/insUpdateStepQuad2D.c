@@ -1,6 +1,5 @@
 #include "insQuad2D.h"
 
-// complete a time step using LSERK4
 void insUpdateStepQuad2D(ins_t *ins, int tstep, char   * options){
 
   mesh2D *mesh = ins->mesh;
@@ -104,14 +103,4 @@ void insUpdateStepQuad2D(ins_t *ins, int tstep, char   * options){
   occaTimerToc(mesh->device,"UpdateUpdate");
 
   ins->index = (ins->index+1)%3; //hard coded for 3 stages
-
-  // ins->o_PI.copyTo(ins->o_P,mesh->Np*mesh->Nelements*sizeof(dfloat),
-  //                             ins->index*mesh->Np*mesh->Nelements*sizeof(dfloat),0);
-  // ins->o_PIx.copyTo(ins->o_U,mesh->Np*mesh->Nelements*sizeof(dfloat),
-  //                             ins->index*mesh->Np*mesh->Nelements*sizeof(dfloat),0);
-  // ins->o_PIy.copyTo(ins->o_V,mesh->Np*mesh->Nelements*sizeof(dfloat),
-  //                             ins->index*mesh->Np*mesh->Nelements*sizeof(dfloat),0);
-  
-  //   insReportQuad2D(ins, tstep+1,options);
-  //   exit(1);
 }

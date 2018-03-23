@@ -84,9 +84,9 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
   const dfloat uM = U[idM], vM = V[idM];                                \
         dfloat uP = U[idP], vP = V[idP];                                \
                                                                         \
-  int bc = EToB[face+p_Nfaces*e];                                       \
+  const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
-    const dlong idm = vmapM[sk];                                                    \
+    const dlong idm = vmapM[sk];                                        \
     insVelocityDirichletConditions2D(bc, time, x[idm], y[idm], nx, ny, uM, vM, &uP, &vP);\
     uP = 2.f*uP-uM;                                                     \
     vP = 2.f*vP-vM;                                                     \
@@ -104,7 +104,7 @@ kernel void insDivergenceSurfaceQuad2D(const dlong Nelements,
                                        const dfloat time,
                                        const dfloat * restrict x,
                                        const dfloat * restrict y,
-                                       const int offset,
+                                       const dlong offset,
                                        const dfloat * restrict U,
                                        const dfloat * restrict V,
                                              dfloat * restrict divU){

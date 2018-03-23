@@ -1,11 +1,11 @@
 // Compute Gradient in Strong Form
 kernel void insGradientVolumeQuad2D(const dlong Nelements,
-         const dfloat * restrict vgeo,
-         const dfloat * restrict D,
-         const dlong offset,
-         const dfloat * restrict P,
-        dfloat * restrict Px,
-        dfloat * restrict Py){
+                                    const dfloat * restrict vgeo,
+                                    const dfloat * restrict D,
+                                    const dlong offset,
+                                    const dfloat * restrict P,
+                                          dfloat * restrict Px,
+                                          dfloat * restrict Py){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
@@ -73,7 +73,7 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
 #endif
 
 #define surfaceTerms(sk,face,i, j)                                      \
-  {                                                                     \
+{                                                                       \
   dlong idM, idP;                                                       \
   if(solverID == 1){                                                    \
     idM = vmapM[sk];                                                    \
@@ -96,15 +96,15 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
     idM = vmapM[sk];                                                    \
     insPressureDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);\
     if(solverID==1){                                                    \
-       PP = PM;                                                         \
-      }                                                                 \
+      PP = PM;                                                          \
+    }                                                                   \
     PP = 2.f*PP - PM;                                                   \
   }                                                                     \
                                                                         \
   const dfloat sc = invWJ * sJ;                                         \
-  s_fluxPx[es][j][i]  = sc*(.5f*nx*(PP-PM));                               \
-  s_fluxPy[es][j][i]  = sc*(.5f*ny*(PP-PM));                               \
-  }
+  s_fluxPx[es][j][i]  = sc*(.5f*nx*(PP-PM));                            \
+  s_fluxPy[es][j][i]  = sc*(.5f*ny*(PP-PM));                            \
+}
 
 kernel void insGradientSurfaceQuad2D(const dlong Nelements,
                                      const dfloat * restrict sgeo,
@@ -123,8 +123,8 @@ kernel void insGradientSurfaceQuad2D(const dlong Nelements,
                                      const int solverID,
                                      const dfloat * restrict POld,
                                      const dfloat * restrict P,
-                                     dfloat * restrict Px,
-                                     dfloat * restrict Py){
+                                           dfloat * restrict Px,
+                                           dfloat * restrict Py){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -186,7 +186,7 @@ kernel void insGradientSurfaceQuad2D(const dlong Nelements,
             if (solverID==1) { //no offset
               id = e*p_Np + j*p_Nq + i;
             } else {
-              id = (e+offset)*p_Np + j*p_Nq + i;
+              id = (e+index*offset)*p_Np + j*p_Nq + i;
             }
 
             Px[id] += s_fluxPx[es][j][i];
