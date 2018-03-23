@@ -87,7 +87,7 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
   int bc = EToB[face+p_Nfaces*e];                                       \
   if(bc>0) {                                                            \
     const dlong idm = vmapM[sk];                                                    \
-    insDivergenceBoundaryConditions2D(bc, time, x[idm], y[idm], nx, ny, uM, vM,&uP, &vP);\
+    insVelocityDirichletConditions2D(bc, time, x[idm], y[idm], nx, ny, uM, vM, &uP, &vP);\
     uP = 2.f*uP-uM;                                                     \
     vP = 2.f*vP-vM;                                                     \
   }                                                                     \

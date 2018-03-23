@@ -43,22 +43,23 @@ kernel void insPoissonUpdateQuad2D(const dlong Nelements,
 
 
 #define surfaceTermsIpdg(sk,face,i, j)                                  \
-  {                                                                     \
+{                                                                       \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
   const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
   const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           \
                                                                         \
-  dfloat dpdxP, dpdyP, pP;                                              \
-  dpdxP=0.f; dpdyP=0.f; pP=0.f;                                         \
+  dfloat dpdxP=0.f, dpdyP=0.f, pP=0.f;                                  \
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
     const dlong idM = vmapM[sk];                                        \
-    insPoissonBoundaryConditions2D(bc,time, dt, x[idM], y[idM], nx, ny, &pP, &dpdxP, &dpdyP);\
+    insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);\
+    insPressureNeumannConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);\
     if(pressure_solve==0){                                              \
       dfloat pPm1, dpdxPm1, dpdyPm1;                                    \
-      insPoissonBoundaryConditions2D(bc,time-dt, dt, x[idM], y[idM], nx, ny, &pPm1, &dpdxPm1, &dpdyPm1);\
+      insPressureDirichletConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, &pPm1);\
+      insPressureNeumannConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm1, &dpdyPm1);\
       pP = pP - pPm1;                                                   \
       dpdxP = dpdxP - dpdxPm1;                                          \
       dpdyP = dpdyP - dpdyPm1;                                          \
@@ -71,7 +72,7 @@ kernel void insPoissonUpdateQuad2D(const dlong Nelements,
   s_dpdy[j][i] += WsJ*ny*dp;                                            \
                                                                         \
   s_rhsp[j][i] -= WsJ*(nx*dpdxP + ny*dpdyP+ tau*dp*hinv);               \
-  }
+}
 
 // Actually solves for Pr increamnet not presssure
 kernel void insPoissonRhsIpdgBCQuad2D(const dlong Nelements,
@@ -171,7 +172,7 @@ kernel void insPoissonRhsIpdgBCQuad2D(const dlong Nelements,
 }
 
 #define surfaceTerms(sk,face,i, j)                                      \
-  {                                                                     \
+{                                                                       \
   const dlong idM = vmapM[sk];                                          \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
@@ -181,10 +182,12 @@ kernel void insPoissonRhsIpdgBCQuad2D(const dlong Nelements,
                                                                         \
   const int bc = mapB[idM];                                             \
   if(bc>0) {                                                            \
-    insPoissonBoundaryConditions2D(bc,time, dt, x[idM], y[idM], nx, ny, &pP, &dpdxP, &dpdyP);\
+    insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);\
+    insPressureNeumannConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);\
     if(pressure_solve==0){                                              \
       dfloat pPm1, dpdxPm1, dpdyPm1;                                    \
-      insPoissonBoundaryConditions2D(bc,time-dt, dt, x[idM], y[idM], nx, ny, &pPm1, &dpdxPm1, &dpdyPm1);\
+      insPressureDirichletConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, &pPm1);\
+      insPressureNeumannConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm1, &dpdyPm1);\
       pP = pP - pPm1;                                                   \
       dpdxP = dpdxP - dpdxPm1;                                          \
       dpdyP = dpdyP - dpdyPm1;                                          \
@@ -193,7 +196,7 @@ kernel void insPoissonRhsIpdgBCQuad2D(const dlong Nelements,
                                                                         \
   s_p  [j][i]  = pP;                                                    \
   s_ndp[j][i] -= WsJ*(nx*dpdxP + ny*dpdyP);                             \
-  }
+}
 
 //RHS contributions for continuous solver
 kernel void insPoissonRhsBCQuad2D(const dlong Nelements,
@@ -332,26 +335,25 @@ kernel void insPoissonAddBCQuad2D(const dlong Nelements,
                                   const dfloat dt,
                                   const dfloat * restrict x,
                                   const dfloat * restrict y,
+                                  const dlong  * restrict vmapM,
                                   const int    * restrict mapB,
-                                        dfloat * restrict p){
+                                        dfloat * restrict P){
   
   for(dlong e=0;e<Nelements;e++;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
-      const dlong id = n+e*p_Np;
-      const int bc = mapB[n+e*p_Np];
-
-      dfloat dpdxP=0, dpdyP=0, pP=0;
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
+      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+      const int bc = mapB[idM];
 
       if(bc>0) {
-        insPoissonBoundaryConditions2D(bc,time, dt, x[idM], y[idM], nx, ny, &pP, &dpdxP, &dpdyP);
-        if(pressure_solve==0){ // if the pressure increment is in use
-          dfloat pPm1, dpdxPm1, dpdyPm1;
-          insPoissonBoundaryConditions2D(bc,time-dt, dt, x[idM], y[idM], nx, ny, &pPm1, &dpdxPm1, &dpdyPm1);
+        const dfloat pM = P[idM];
+        dfloat pP = 0.f;
+        insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, pM, &pP);
+        if(pressure_solve==0 && bc==3){ // if on an outflow BC and the pressure increment is in use
+          dfloat pPm1 = 0.f;
+          insPressureDirichletConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, pM, &pPm1);
           pP = pP - pPm1;
-          dpdxP = dpdxP - dpdxPm1;
-          dpdyP = dpdyP - dpdyPm1;
         }
-        p[id] += pP;
+        P[idM] = pP;
       }    
     }
   }

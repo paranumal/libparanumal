@@ -3,7 +3,8 @@
 void insHelmholtzStepQuad2D(ins_t *ins, int tstep, char   * options){
   
   mesh2D *mesh = ins->mesh; 
-  solver_t *solver = ins->vSolver; 
+  solver_t *usolver = ins->uSolver; 
+  solver_t *vsolver = ins->vSolver; 
   
   dfloat t = tstep*ins->dt + ins->dt;
 
@@ -55,8 +56,8 @@ void insHelmholtzStepQuad2D(ins_t *ins, int tstep, char   * options){
     // gather-scatter
     ellipticParallelGatherScatterQuad2D(mesh, mesh->ogs, ins->o_rhsU, dfloatString, "add");  
     ellipticParallelGatherScatterQuad2D(mesh, mesh->ogs, ins->o_rhsV, dfloatString, "add");  
-    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsU);
-    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsV);
+    if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, ins->o_rhsU);
+    if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, ins->o_rhsV);
 
   } else if (strstr(ins->vSolverOptions,"IPDG")) {
     occaTimerTic(mesh->device,"HelmholtzRhsIpdg");   
@@ -82,11 +83,11 @@ void insHelmholtzStepQuad2D(ins_t *ins, int tstep, char   * options){
 
 
   occaTimerToc(mesh->device,"Ux-Solve");
-  ins->NiterU = ellipticSolveQuad2D( solver, ins->lambda, ins->velTOL, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
+  ins->NiterU = ellipticSolveQuad2D( usolver, ins->lambda, ins->velTOL, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
   occaTimerToc(mesh->device,"Ux-Solve"); 
 
   occaTimerToc(mesh->device,"Uy-Solve");
-  ins->NiterV = ellipticSolveQuad2D(solver, ins->lambda, ins->velTOL, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
+  ins->NiterV = ellipticSolveQuad2D(vsolver, ins->lambda, ins->velTOL, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
   occaTimerToc(mesh->device,"Uy-Solve");
 
   if (strstr(ins->vSolverOptions,"CONTINUOUS")) {

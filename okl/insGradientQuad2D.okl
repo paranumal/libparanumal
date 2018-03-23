@@ -94,7 +94,7 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
   int bc = EToB[face+p_Nfaces*e];                                       \
   if(bc>0) {                                                            \
     idM = vmapM[sk];                                                    \
-    insGradientBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);\
+    insPressureDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);\
     if(solverID==1){                                                    \
        PP = PM;                                                         \
       }                                                                 \
