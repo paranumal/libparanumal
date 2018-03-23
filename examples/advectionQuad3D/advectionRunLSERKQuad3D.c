@@ -186,7 +186,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
     }
     
     // estimate maximum error
-    if(((tstep+1)%mesh->errorStep)==0){
+    /*    if(((tstep+1)%mesh->errorStep)==0){
       //	dfloat t = (tstep+1)*mesh->dt;
       dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
 	
@@ -205,7 +205,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 
       advectionPlotNorms(mesh,"norms",tstep/mesh->errorStep,mesh->q);
       }
-    
+    */
     //    mesh->o_q.copyTo(mesh->q);
     //advectionPlotNorms(mesh,"start",tstep,mesh->q);
   }
