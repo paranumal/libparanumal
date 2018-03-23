@@ -48,10 +48,13 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 	  if ((Ntick+1) % (1<<levS) !=0) break; //find the max lev to add to rhsq
 	
       for (iint rk = 0; rk < mesh->Nrk; ++rk) {
-	
+	       
 	//synthesize actual stage time
-	dfloat t = tstep*pow(2,mesh->MRABNlevels-1) + Ntick;
-      
+	dfloat t = mesh->dt*(tstep*pow(2,mesh->MRABNlevels-1) + Ntick) + mesh->dt*mesh->rkc[rk];
+
+	//	printf("t = %lf tstep = %d Ntick = %d RK=%d\n", t, tstep, Ntick, rk);
+	       
+	
 	if(mesh->totalHaloPairs>0){
 	  // extract halo on DEVICE
 	  iint Nentries = mesh->Np*mesh->Nfields;
@@ -186,28 +189,12 @@ void advectionRunLSERKQuad3D(solver_t *solver){
     }
     
     // estimate maximum error
-    /*    if(((tstep+1)%mesh->errorStep)==0){
-      //	dfloat t = (tstep+1)*mesh->dt;
+    if(((tstep+1)%mesh->errorStep)==0){
       dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
-	
-      printf("tstep = %d, t = %g\n", tstep, t);
-      fflush(stdout);
-      // copy data back to host
+      
       mesh->o_q.copyTo(mesh->q);
-
-      // check for nans
-      for(int n=0;n<mesh->Nfields*mesh->Nelements*mesh->Np;++n){
-	if(isnan(mesh->q[n])){
-	  printf("found nan\n");
-	  exit(-1);
-	}
-      }
-
-      advectionPlotNorms(mesh,"norms",tstep/mesh->errorStep,mesh->q);
-      }
-    */
-    //    mesh->o_q.copyTo(mesh->q);
-    //advectionPlotNorms(mesh,"start",tstep,mesh->q);
+      advectionErrorNormQuad3D(mesh,t);
+    }
   }
   
   free(recvBuffer);
