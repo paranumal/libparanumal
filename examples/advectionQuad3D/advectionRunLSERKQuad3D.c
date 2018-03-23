@@ -14,7 +14,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
   //kernel arguments
   dfloat alpha = 1./mesh->N;
   
-  mesh->filterKernelq0H(mesh->Nelements,
+  /*  mesh->filterKernelq0H(mesh->Nelements,
 			alpha,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
@@ -35,8 +35,8 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			mesh->o_z,
 			mesh->o_qPreFilter,
 			mesh->o_qpre);
-  
-  for(iint tstep=0;tstep<mesh->Nrhs;++tstep){
+  */
+  for(iint tstep=0;tstep<mesh->NtimeSteps;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       
       	iint lev;
@@ -103,7 +103,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			       mesh->o_qpre,
 			       mesh->o_prerhsq);
 
-	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
+	/*	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
 	  iint saved = (l < lev)&&(rk == 0);
 	  mesh->filterKernelHLSERK(mesh->MRABNelements[l],
 				   mesh->o_MRABelementIds[l],
@@ -138,7 +138,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				   mesh->o_qPreFiltered,
 				   mesh->o_qFilter);
 	}
-	
+	*/
 	for (iint l = 0; l < mesh->MRABNlevels; l++) {
 	  iint saved = (l < lev)&&(rk == 0);
 	  mesh->volumeCorrPreKernel(mesh->MRABNelements[l],
@@ -160,10 +160,10 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				  mesh->rka[rk],
 				  mesh->rkb[rk],
 				  mesh->MRABshiftIndex[l],
-				  mesh->o_qPreFiltered,
-				  //mesh->o_prerhsq,
-				  mesh->o_qFiltered,
-				  //mesh->o_rhsq,
+				  //mesh->o_qPreFiltered,
+				  mesh->o_prerhsq,
+				  //mesh->o_qFiltered,
+				  mesh->o_rhsq,
 				  mesh->o_qPreCorr,
 				  mesh->o_resq,
 				  mesh->o_qpre);
@@ -186,7 +186,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
     }
     
     // estimate maximum error
-    /*    if(((tstep+1)%mesh->errorStep)==0){
+    if(((tstep+1)%mesh->errorStep)==0){
       //	dfloat t = (tstep+1)*mesh->dt;
       dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
 	
@@ -204,7 +204,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
       }
 
       advectionPlotNorms(mesh,"norms",tstep/mesh->errorStep,mesh->q);
-      }*/
+      }
     
     //    mesh->o_q.copyTo(mesh->q);
     //advectionPlotNorms(mesh,"start",tstep,mesh->q);

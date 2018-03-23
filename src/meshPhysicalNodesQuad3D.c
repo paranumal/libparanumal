@@ -73,7 +73,7 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
 
   //constants used in conversions
   const dfloat R = 1;
-  const dfloat a = 1/sqrt(3);
+  const dfloat a = 1./sqrt(3.);
   
   mesh->x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
