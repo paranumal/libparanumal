@@ -13,18 +13,18 @@ using namespace std;
 
 struct v3
 {
-  v3(float x, float y, float z)
+  v3(double x, double y, double z)
   {
     data[0]=x;
     data[1]=y;
     data[2]=z;
   }
 
-  v3(float v=0.f) : v3(v,v,v)
+  v3(double v=0.f) : v3(v,v,v)
   {
   }
 
-  operator const float*() const
+  operator const double*() const
   {
     return data;
   }
@@ -43,22 +43,22 @@ struct v3
     return *this;
   }
 
-  v3& operator*=(float rhs)
+  v3& operator*=(double rhs)
   {
     for (int i=0; i<3; ++i)
       data[i]*=rhs;
     return *this;
   }
 
-  float squared() const
+  double squared() const
   {
-    float result=0.f;
+    double result=0.f;
     for (int i=0; i<3; ++i)
       result+=data[i]*data[i];
     return result;
   }
 
-  float data[3];
+  double data[3];
 };
 
 v3 operator+(v3 lhs, v3 const& rhs)
@@ -71,12 +71,12 @@ v3 operator-(v3 lhs, v3 const& rhs)
   return lhs-=rhs;
 }
 
-v3 operator*(v3 lhs, float rhs)
+v3 operator*(v3 lhs, double rhs)
 {
   return lhs*=rhs;
 }
 
-v3 operator/(v3 lhs, float rhs)
+v3 operator/(v3 lhs, double rhs)
 {
   return lhs*=(1.f/rhs);
 }
@@ -108,9 +108,9 @@ using ColorVertexList=std::vector<ColorPosition>;
 
 namespace prism
 {
-  const float Z=0.5773502691896f;
-  const float X=0.5773502691896f;
-  const float N=0.5773502691896f;
+  const double Z=0.5773502691896f;
+  const double X=0.5773502691896f;
+  const double N=0.5773502691896f;
   
   static const VertexList vertices=
     {
@@ -213,13 +213,13 @@ QuadList subdivide_4(VertexList& vertices,
 
 int longest_edge(ColorVertexList& vertices, Quad const& quad)
 {
-  float best=0.f;
+  double best=0.f;
   int result=0;
   for (int i=0; i<4; ++i)
     {
       auto a=vertices[quad.vertex[i]].position;
       auto b=vertices[quad.vertex[(i+1)%4]].position;
-      float contest =(a-b).squared();
+      double contest =(a-b).squared();
       if (contest>best)
 	{
 	  best=contest;
