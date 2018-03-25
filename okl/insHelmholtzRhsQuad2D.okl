@@ -346,7 +346,7 @@ kernel void insHelmholtzRhsBCQuad2D(const dlong Nelements,
           }
         
         r_ur[j] = ur; r_us[j] = us; 
-        r_vr[j] = ur; r_vs[j] = vs; 
+        r_vr[j] = vr; r_vs[j] = vs; 
         r_rhsu[j] = r_GwJ[j]*lambda*s_u[j][i];
         r_rhsv[j] = r_GwJ[j]*lambda*s_v[j][i];
       }

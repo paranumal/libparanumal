@@ -1,4 +1,4 @@
-#include "insTri2D.h"
+#include "insHex3D.h"
 
 int main(int argc, char **argv){
 
@@ -9,21 +9,21 @@ int main(int argc, char **argv){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // SET OPTIONS
-  // out  = REPORT, REPORT+VTU
+  // out  = VTU, SLICE, CONTOUR
   // adv  = CUBATURE, COLLOCATION
   //int Ns = 0; // no-subcycling 
-  int Ns = 4; 
+  int Ns = 0; 
   if(argc==5)
     Ns = atoi(argv[4]); // Number of substeps
   char *options; 
   if(Ns==0)
-    options = strdup("out=VTU, adv=CUBATURE");
+    options = strdup("out=CONTOUR, adv=COLLOCATION");
   else
-    options = strdup("out=VTU, adv=CUBATURE,SUBCYCLING");  //pres=PRESSURE_HISTORY
+    options = strdup("out=CONTOUR, adv=COLLOCATION,SUBCYCLING");  //pres=PRESSURE_HISTORY
 
 
   char *velSolverOptions =
-    strdup("solver=PCG method=IPDG basis=NODAL preconditioner=MASSMATRIX");
+    strdup("solver=PCG method=IPDG basis=NODAL preconditioner=JACOBI");
   char *velParAlmondOptions =
     strdup("solver= smoother= partition=");
 
@@ -44,22 +44,22 @@ int main(int argc, char **argv){
   int N = atoi(argv[2]);
 
   // set up mesh stuff
-  mesh2D *mesh = meshSetupTri2D(argv[1], N); 
+  mesh3D *mesh = meshSetupHex3D(argv[1], N); 
 
   // capture header file
   char *boundaryHeaderFileName;
   if(argc==3)
-    boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insUniform2D.h"); // default
+    boundaryHeaderFileName = strdup(DHOLMES "/examples/insHex3D/insUniform3D.h"); // default
   else
     boundaryHeaderFileName = strdup(argv[3]);
 
   if (rank==0) printf("Setup INS Solver: \n");
-  ins_t *ins = insSetupTri2D(mesh,Ns,options, velSolverOptions,   velParAlmondOptions,
+  ins_t *ins = insSetupHex3D(mesh,Ns,options, velSolverOptions,   velParAlmondOptions,
                           prSolverOptions, prParAlmondOptions, boundaryHeaderFileName);
+  
   if (rank==0) printf("Running INS solver\n");
-
-  insRunTri2D(ins,options);
-
+  insRunHex3D(ins,options);
+    
   // close down MPI
   MPI_Finalize();
 

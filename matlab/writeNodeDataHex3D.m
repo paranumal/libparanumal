@@ -218,8 +218,25 @@ writeFloatMatrix(fid, gD, 'GLL to Gauss Legendre differentiation matrix');
 writeFloatMatrix(fid, gD2, 'Gauss Legendre to Gauss Legendre differentiation matrix');
 
 
+%% 1D quadrature
+[z,w] = JacobiGQ(0,0,ceil(3*N/2));
+cV1d = Vandermonde1D(N, z);
+cVr = GradVandermonde1D(N, z);
+cInterp = cV1d/V1d;
+cubProject = (cV1d/V1d)'*diag(w);
+cubDT = (cVr/V1d)'*diag(w);
+Nqc = length(z);
+
+writeFloatMatrix(fid, z, 'Quadrature r-coordinates');
+writeFloatMatrix(fid, w, 'Quadrature weights');
+
+writeFloatMatrix(fid, cInterp, 'Quadrature Interpolation Matrix');
+writeFloatMatrix(fid, cubDT, 'Quadrature Weak D Differentiation Matrix');
+writeFloatMatrix(fid, cubProject, 'Quadrature Projection Matrix');
+
+
 %% volume cubature
-if(0)
+%{
 
 [z,w] = JacobiGQ(0,0,ceil(3*N/2));
 Nz = length(z);
@@ -264,6 +281,7 @@ writeFloatMatrix(fid, cubDtT, 'Cubature Weak Dt Differentiation Matrix');
 writeFloatMatrix(fid, cubProject, 'Cubature Projection Matrix');
 
 end
+%}
 
 %degree raising interpolation
 rP1 = JacobiGL(0,0,N+1);
