@@ -179,6 +179,10 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
+  dfloat *q_zero = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
+				sizeof(dfloat));
+  mesh->fQM = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfp*mesh->Nfaces*mesh->Nfields,
+				sizeof(dfloat));
   mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Nrhs*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
   mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
@@ -301,7 +305,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat cfl_small = 2; // depends on the stability region size (was .4, then 2)
+  dfloat cfl_small = 1; // depends on the stability region size (was .4, then 2)
   dfloat cfl_large = cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
@@ -331,10 +335,10 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
       }
     }
     if (mesh->cubeDistance[e] == 0) {
-      mesh->localdt[e]  = cfl_small*lmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+      mesh->localdt[e]  = cfl_small*lmin/((mesh->N+1.)*(mesh->N+1.));
     }
     else {
-      mesh->localdt[e]  = cfl_large*lmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*mesh->sqrtRT);
+      mesh->localdt[e]  = cfl_large*lmin/((mesh->N+1.)*(mesh->N+1.));
     }
 
     glmin = mymin(glmin, lmin);
@@ -406,16 +410,16 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
     mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
 
   mesh->o_qPreCorr =
-    mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->fQM);
+    mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),q_zero);
 
   mesh->o_prerhsq =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->fQM);
+    mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),q_zero);
 
   mesh->o_qPreFilter =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->fQM);
+    mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),q_zero);
 
   mesh->o_qPreFiltered =
-    mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->fQM);
+    mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),q_zero);
   
   mesh->o_sgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),

@@ -15,7 +15,7 @@ iint findBestMatch(dfloat x1, dfloat y1, dfloat z1,
     const iint i2 = nodeList[n];
 
     /* distance between target and next node */
-    const dfloat dist2 = pow(x1-x2[i2],2) + pow(y1-y2[i2],2) + pow(z1-z2[i2],2);
+    const dfloat dist2 = sqrt(pow(x1-x2[i2],2) + pow(y1-y2[i2],2) + pow(z1-z2[i2],2));
     
     /* if next node is closer to target update match */
     if(n==0 || dist2<mindist2){
@@ -24,7 +24,7 @@ iint findBestMatch(dfloat x1, dfloat y1, dfloat z1,
       *nP = n;
     }
   }
-  if(mindist2>1e-8) printf("arggh - bad match: x,y,z=%g,%g,%g,   %d,%d\n", x1,y1,z1,face,faceP);
+  if(mindist2>1e-10) printf("arggh - bad match: x,y,z=%.15g,%.15g,%.15g, x1,y1,z1=%.15g,%.15g,%.15g   %d,%d\n", x1,y1,z1,x2[matchIndex],y2[matchIndex],z2[matchIndex],face,faceP);
 
   return matchIndex;
 }

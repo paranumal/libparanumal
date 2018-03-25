@@ -21,6 +21,18 @@ int main(int argc, char **argv){
   // set up boltzmann stuff
   solver_t *solver = advectionSetupMRQuad3D(mesh);
 
+  /*  for(int e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
+      for(int n=0;n<mesh->Nq;++n){
+	int vidM = mesh->vmapM[e*mesh->Nfaces*mesh->Nq + f*mesh->Nq + n];
+	int vidP = mesh->vmapP[e*mesh->Nfaces*mesh->Nq + f*mesh->Nq + n];
+	if (mesh->x[vidM]-mesh->x[vidP] > 1e-12) printf("x mismatch = %lg\n", mesh->x[vidM]-mesh->x[vidP]);
+	if (mesh->y[vidM]-mesh->y[vidP]) printf("y mismatch = %lg\n", mesh->y[vidM]-mesh->y[vidP]);
+	if (mesh->z[vidM]-mesh->z[vidP]) printf("z mismatch = %lg\n", mesh->z[vidM]-mesh->z[vidP]);
+      }
+    }
+    }*/
+  
   // time step Boltzmann equations
   advectionRunLSERKQuad3D(solver);
   //advectionRunMRSAABQuad3D(solver);
@@ -48,7 +60,8 @@ int main(int argc, char **argv){
     //else printf("success %.15lf %.15lf\n", qref, mesh->q[e*mesh->Np*mesh->Nfields + n]);
     }
   }
-  printf("norm %.15lf\n",sqrt(l2));
+  
+  printf("norm %.5e\n",sqrt(l2));
   
   // close down MPI
   MPI_Finalize();
