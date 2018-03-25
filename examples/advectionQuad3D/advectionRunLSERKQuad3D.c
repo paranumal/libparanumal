@@ -36,7 +36,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			mesh->o_qPreFilter,
 			mesh->o_qpre);
   */
-  for(iint tstep=0;tstep < mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep < mesh->Nrhs;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       
       	iint lev;
