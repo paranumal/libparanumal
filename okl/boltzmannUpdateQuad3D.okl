@@ -90,7 +90,7 @@ kernel void boltzmannMRSAABUpdateQuad3D(const iint Nelements,
     
     shared dfloat s_q[p_Np*p_Nfields];
     shared iint e;
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
+    for(iint n=0;n<p_Np;++n;inner0){
       e  = elementIds[es];
       if(n<p_Np){
 	const iint id = n + e*p_Np*p_Nfields;
@@ -113,7 +113,7 @@ kernel void boltzmannMRSAABUpdateQuad3D(const iint Nelements,
     }
     // make sure all node data is loaded into shared
     barrier(localMemFence);
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
+    for(iint n=0;n<p_Np;++n;inner0){
       // Update q
       if(n<p_Np){
 
@@ -162,7 +162,7 @@ kernel void boltzmannMRSAABTraceUpdateQuad3D(const iint Nelements,
     
     shared dfloat s_q[p_Np*p_Nfields];
     shared iint e;
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
+    for(iint n=0;n<p_Np;++n;inner0){
       e  = elementIds[es];
       if(n<p_Np){
 	const iint id = n + e*p_Np*p_Nfields;
@@ -185,7 +185,7 @@ kernel void boltzmannMRSAABTraceUpdateQuad3D(const iint Nelements,
     }
     // make sure all node data is loaded into shared
     barrier(localMemFence);
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
+    for(iint n=0;n<p_Np;++n;inner0){
       if(n<p_Nfaces*p_Nfp){
 
         const iint iid  = e*p_Nfp*p_Nfaces + n;
