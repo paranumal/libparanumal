@@ -35,7 +35,7 @@ int main(int argc, char **argv){
   
   // time step Boltzmann equations
   advectionRunLSERKQuad3D(solver);
-  //advectionRunMRSAABQuad3D(solver);
+  advectionRunMRSAABQuad3D(solver);
 
   mesh->o_q.copyTo(mesh->q);
   dfloat l2 = 0;
