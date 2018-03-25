@@ -14,12 +14,12 @@ int main(int argc, char **argv){
   //int Ns = 0; // no-subcycling 
   int Ns = 4; 
   if(argc==5)
-   Ns = atoi(argv[4]); // Number of substeps
+    Ns = atoi(argv[4]); // Number of substeps
   char *options; 
   if(Ns==0)
-      options = strdup("out=CONTOUR, adv=CUBATURE");
+    options = strdup("out=CONTOUR, adv=CUBATURE");
   else
-      options = strdup("out=CONTOUR, adv=CUBATURE,SUBCYCLING");  //pres=PRESSURE_HISTORY
+    options = strdup("out=CONTOUR, adv=CUBATURE,SUBCYCLING");  //pres=PRESSURE_HISTORY
 
 
   char *velSolverOptions = 

@@ -52,9 +52,6 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->o_resq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
 
-  if(mesh->Nfaces!=4){
-    mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-  }
 
   if(mesh->Nfaces==4){
 
@@ -115,22 +112,6 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       }
     }
     // =============== end BB stuff =============================
-
-    mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), mesh->Dr);
-    mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), mesh->Ds);
-    mesh->o_Dt = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), mesh->Dt);
-
-    mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), DrT);
-    mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), DsT);
-    mesh->o_DtT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), DtT);
-
-    mesh->o_LIFT =
-      mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-                          mesh->LIFT);
-
-    mesh->o_LIFTT =
-      mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-                          LIFTT);
 
     if(mesh->cubNp){
       dfloat *cubDrWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
@@ -194,6 +175,45 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
         mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
                             intLIFTT);
 
+      // printf("Integration number of points: %d \n",mesh->intNfp);
+      mesh->intx = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+      mesh->inty = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+      mesh->intz = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
+
+      for(dlong e=0;e<mesh->Nelements;++e){
+        for(int f=0;f<mesh->Nfaces;++f){
+          for(int n=0;n<mesh->intNfp;++n){
+            dfloat ix = 0, iy = 0, iz=0;
+            for(int m=0;m<mesh->Nfp;++m){
+              dlong vid = mesh->vmapM[m+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces];
+              dfloat xm = mesh->x[vid];
+              dfloat ym = mesh->y[vid];
+              dfloat zm = mesh->z[vid];
+              dfloat Inm = mesh->intInterp[m+n*mesh->Nfp+f*mesh->intNfp*mesh->Nfp]; // Fixed
+              ix += Inm*xm;
+              iy += Inm*ym;
+              iz += Inm*zm;
+            }
+            dlong id = n + f*mesh->intNfp + e*mesh->Nfaces*mesh->intNfp;
+            mesh->intx[id] = ix;
+            mesh->inty[id] = iy;
+            mesh->intz[id] = iz;
+          }
+        }
+      }
+
+      mesh->o_intx =
+        mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+                            mesh->intx);
+
+      mesh->o_inty =
+        mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+                            mesh->inty);
+
+      mesh->o_intz =
+        mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+                            mesh->intz);
+
     }
 
     // =============== Bernstein-Bezier allocations [added by NC] ============
@@ -239,121 +259,90 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_ELids  = mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(int),ELids);
     mesh->o_ELvals = mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(dfloat),ELvals);
     // =============== end Bernstein-Bezier section [added by NC] ============
-  }
-
-  //build element stiffness matrices
-  dfloat *SrrT, *SrsT, *SrtT;
-  dfloat *SsrT, *SssT, *SstT;
-  dfloat *StrT, *StsT, *SttT;
-  if (mesh->Nverts==4) {
-    mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Srt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Sst = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Str = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Sts = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    mesh->Stt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    for (int n=0;n<mesh->Np;n++) {
-      for (int m=0;m<mesh->Np;m++) {
-        for (int k=0;k<mesh->Np;k++) {
-          for (int l=0;l<mesh->Np;l++) {
-            mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-            mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-            mesh->Srt[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
-            mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-            mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-            mesh->Sst[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
-            mesh->Str[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-            mesh->Sts[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-            mesh->Stt[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
+  
+    //build element stiffness matrices
+    dfloat *SrrT, *SrsT, *SrtT;
+    dfloat *SsrT, *SssT, *SstT;
+    dfloat *StrT, *StsT, *SttT;
+    if (mesh->Nverts==4) {
+      mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      mesh->Srt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      mesh->Sst = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      mesh->Str = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      mesh->Sts = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      mesh->Stt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      for (int n=0;n<mesh->Np;n++) {
+        for (int m=0;m<mesh->Np;m++) {
+          for (int k=0;k<mesh->Np;k++) {
+            for (int l=0;l<mesh->Np;l++) {
+              mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+              mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+              mesh->Srt[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
+              mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+              mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+              mesh->Sst[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
+              mesh->Str[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+              mesh->Sts[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+              mesh->Stt[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
+            }
           }
         }
       }
-    }
-    SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    SrtT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    SstT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    StrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    StsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    SttT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-    for (int n=0;n<mesh->Np;n++) {
-      for (int m=0;m<mesh->Np;m++) {
-        #if 0
-        SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
-        SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
-        SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np];
-        SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
-        SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
-        SstT[m+n*mesh->Np] = mesh->Sst[n+m*mesh->Np];
-        StrT[m+n*mesh->Np] = mesh->Str[n+m*mesh->Np];
-        StsT[m+n*mesh->Np] = mesh->Sts[n+m*mesh->Np];
-        SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
-        #else
-        SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
-        SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np]+mesh->Ssr[n+m*mesh->Np];
-        SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np]+mesh->Str[n+m*mesh->Np];
-        SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
-        SstT[m+n*mesh->Np] = mesh->Sst[n+m*mesh->Np]+mesh->Sts[n+m*mesh->Np];
-        SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
-        #endif
-      }
-    }
-  }
-
- #if 1
-  // printf("Integration number of points: %d \n",mesh->intNfp);
-  mesh->intx = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
-  mesh->inty = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
-  mesh->intz = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
-
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int f=0;f<mesh->Nfaces;++f){
-      for(int n=0;n<mesh->intNfp;++n){
-        dfloat ix = 0, iy = 0, iz=0;
-        for(int m=0;m<mesh->Nfp;++m){
-          dlong vid = mesh->vmapM[m+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces];
-          dfloat xm = mesh->x[vid];
-          dfloat ym = mesh->y[vid];
-          dfloat zm = mesh->z[vid];
-          dfloat Inm = mesh->intInterp[m+n*mesh->Nfp+f*mesh->intNfp*mesh->Nfp]; // Fixed
-          ix += Inm*xm;
-          iy += Inm*ym;
-          iz += Inm*zm;
+      SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      SrtT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      SstT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      StrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      StsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      SttT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+      for (int n=0;n<mesh->Np;n++) {
+        for (int m=0;m<mesh->Np;m++) {
+          #if 0
+          SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
+          SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
+          SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np];
+          SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
+          SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+          SstT[m+n*mesh->Np] = mesh->Sst[n+m*mesh->Np];
+          StrT[m+n*mesh->Np] = mesh->Str[n+m*mesh->Np];
+          StsT[m+n*mesh->Np] = mesh->Sts[n+m*mesh->Np];
+          SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
+          #else
+          SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
+          SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np]+mesh->Ssr[n+m*mesh->Np];
+          SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np]+mesh->Str[n+m*mesh->Np];
+          SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+          SstT[m+n*mesh->Np] = mesh->Sst[n+m*mesh->Np]+mesh->Sts[n+m*mesh->Np];
+          SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
+          #endif
         }
-        dlong id = n + f*mesh->intNfp + e*mesh->Nfaces*mesh->intNfp;
-        mesh->intx[id] = ix;
-        mesh->inty[id] = iy;
-        mesh->intz[id] = iz;
       }
     }
-  }
+
+    
 
 
+    mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), mesh->Dr);
+    mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), mesh->Ds);
+    mesh->o_Dt = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), mesh->Dt);
 
+    mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), DrT);
+    mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), DsT);
+    mesh->o_DtT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), DtT);
 
-  #endif
+    mesh->o_LIFT =
+      mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
+                          mesh->LIFT);
 
-  //  printf("Nverts = %d, Nfaces = %d\n",mesh->Nverts,mesh->Nfaces);
-  if (mesh->Nverts==8){     // hardcoded for hexes
+    mesh->o_LIFTT =
+      mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
+                          LIFTT);
 
-    mesh->o_vgeo =
-      mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
-                          mesh->vgeo);
-
-    mesh->o_sgeo =
-      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
-                          mesh->sgeo);
-
-    mesh->o_ggeo =
-      mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
-        mesh->ggeo);
-
-  }else if (mesh->Nverts==4){     // for tets
     mesh->o_MM =
       mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
         mesh->MM);
@@ -380,7 +369,125 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_StsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), StsT);
     mesh->o_SttT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SttT);
 
-  }else{
+    
+
+  } else if (mesh->Nverts==8){     // hardcoded for hexes
+
+    dfloat *cubDWT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
+    dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
+    dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
+    for(int n=0;n<mesh->Nq;++n){
+      for(int m=0;m<mesh->cubNq;++m){
+        cubDWT[n+m*mesh->Nq] = mesh->cubDW[n*mesh->cubNq+m];
+        cubProjectT[n+m*mesh->Nq] = mesh->cubProject[n*mesh->cubNq+m];
+        cubInterpT[m+n*mesh->cubNq] = mesh->cubInterp[m*mesh->Nq+n];
+      }
+    }
+
+    mesh->intx = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp, sizeof(dfloat));
+    mesh->inty = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp, sizeof(dfloat));
+    mesh->intz = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp, sizeof(dfloat));
+    
+    dfloat *ix = (dfloat *) calloc(mesh->cubNq*mesh->Nq,sizeof(dfloat));
+    dfloat *iy = (dfloat *) calloc(mesh->cubNq*mesh->Nq,sizeof(dfloat));
+    dfloat *iz = (dfloat *) calloc(mesh->cubNq*mesh->Nq,sizeof(dfloat));
+    for(dlong e=0;e<mesh->Nelements;++e){
+      for(int f=0;f<mesh->Nfaces;++f){
+        //interpolate in i
+        for(int ny=0;ny<mesh->Nq;++ny){
+          for(int nx=0;nx<mesh->cubNq;++nx){
+            ix[nx+mesh->cubNq*ny] = 0;
+            iy[nx+mesh->cubNq*ny] = 0;
+            iz[nx+mesh->cubNq*ny] = 0;
+
+            for(int m=0;m<mesh->Nq;++m){
+              dlong vid = m+ny*mesh->Nq+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
+              dlong idM = mesh->vmapM[vid];
+
+              dfloat xm = mesh->x[idM];
+              dfloat ym = mesh->y[idM];
+              dfloat zm = mesh->z[idM];
+
+              dfloat Inm = mesh->cubInterp[m+nx*mesh->Nq];
+              ix[nx+mesh->cubNq*ny] += Inm*xm;
+              iy[nx+mesh->cubNq*ny] += Inm*ym;
+              iz[nx+mesh->cubNq*ny] += Inm*zm;
+            }
+          }
+        }
+
+        //interpolate in j and store
+        for(int ny=0;ny<mesh->cubNq;++ny){
+          for(int nx=0;nx<mesh->cubNq;++nx){
+            dfloat x=0.0, y=0.0, z=0.0;
+
+            for(int m=0;m<mesh->Nq;++m){
+              dfloat xm = ix[nx + m*mesh->cubNq];
+              dfloat ym = iy[nx + m*mesh->cubNq];
+              dfloat zm = iz[nx + m*mesh->cubNq];
+
+              dfloat Inm = mesh->cubInterp[m+ny*mesh->Nq];
+              x += Inm*xm;
+              y += Inm*ym;
+              z += Inm*zm;
+            }
+
+            dlong id = nx + ny*mesh->cubNq + f*mesh->cubNfp + e*mesh->Nfaces*mesh->cubNfp;
+            mesh->intx[id] = x;
+            mesh->inty[id] = y;
+            mesh->intz[id] = z;
+          }
+        }
+      }
+    }
+    free(ix); free(iy); free(iz);
+
+    mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+
+    mesh->o_vgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
+                          mesh->vgeo);
+
+    mesh->o_sgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
+                          mesh->sgeo);
+
+    mesh->o_ggeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
+        mesh->ggeo);
+  
+    mesh->o_cubvgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->cubNp*sizeof(dfloat),
+          mesh->cubvgeo);
+    mesh->o_cubsgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp*mesh->Nsgeo*sizeof(dfloat),
+          mesh->cubsgeo);
+
+    mesh->o_cubInterpT =
+      mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
+          cubInterpT);
+
+    mesh->o_cubProjectT =
+      mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
+          cubProjectT);
+
+    mesh->o_cubDWT =
+      mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
+          cubDWT);
+
+    mesh->o_intx =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp*sizeof(dfloat),
+          mesh->intx);
+
+    mesh->o_inty =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp*sizeof(dfloat),
+          mesh->inty);
+
+    mesh->o_intz =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp*sizeof(dfloat),
+          mesh->intz);
+
+  } else {
     printf("Nverts = %d: unknown element type!\n",mesh->Nverts);
   }
 
@@ -405,20 +512,6 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->o_z =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), mesh->z);
 
-
-  if(mesh->intNfp){
-    mesh->o_intx =
-      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
-                          mesh->intx);
-
-    mesh->o_inty =
-      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
-                          mesh->inty);
-
-    mesh->o_intz =
-      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
-                          mesh->intz);
-  }
 
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
@@ -448,8 +541,9 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_NZID", NZID);
   kernelInfo.addDefine("p_SJID", SJID);
   kernelInfo.addDefine("p_IJID", IJID);
-  kernelInfo.addDefine("p_WSJID", WSJID);
   kernelInfo.addDefine("p_IHID", IHID);
+  kernelInfo.addDefine("p_WSJID", WSJID);
+  kernelInfo.addDefine("p_WIJID", WIJID);
 
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -466,6 +560,8 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
 
+  kernelInfo.addDefine("p_cubNq", mesh->cubNq);
+  kernelInfo.addDefine("p_cubNfp", mesh->cubNp);
   kernelInfo.addDefine("p_cubNp", mesh->cubNp);
   kernelInfo.addDefine("p_intNfp", mesh->intNfp);
   kernelInfo.addDefine("p_intNfpNfaces", mesh->intNfp*mesh->Nfaces);
@@ -519,4 +615,5 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   kernelInfo.addDefine("p_JID", JID);
   kernelInfo.addDefine("p_JWID", JWID);
+  kernelInfo.addDefine("p_IJWID", IJWID);
 }

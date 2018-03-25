@@ -57,6 +57,18 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   mesh->plotNelements = Nrows;
   mesh->plotNverts = Ncols;
 
+  /* Quadrature data */ 
+  readDfloatArray(fp, "Quadrature r-coordinates", &(mesh->cubr),&Nrows,&Ncols);
+  readDfloatArray(fp, "Quadrature weights", &(mesh->cubw),&Nrows,&Ncols);
+  mesh->cubNq = Nrows;
+  mesh->cubNfp = mesh->cubNq*mesh->cubNq;
+  mesh->cubNp = mesh->cubNq*mesh->cubNq*mesh->cubNq;
+
+  readDfloatArray(fp, "Quadrature Interpolation Matrix", &(mesh->cubInterp),&Nrows,&Ncols);
+  readDfloatArray(fp, "Quadrature Weak D Differentiation Matrix", &(mesh->cubDW),&Nrows,&Ncols);
+  readDfloatArray(fp, "Quadrature Projection Matrix", &(mesh->cubProject),&Nrows,&Ncols);
+
+
   if (0) { //may not be present in the node file
     readDfloatArray(fp, "Cubature r-coordinates", &(mesh->cubr),&Nrows,&Ncols);
     readDfloatArray(fp, "Cubature s-coordinates", &(mesh->cubs),&Nrows,&Ncols);

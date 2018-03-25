@@ -127,6 +127,7 @@ void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
 #define TZID 8  
 #define  JID 9
 #define JWID 10
+#define IJWID 11
 
 /* offsets for second order geometric factors */
 #define G00ID 0  
@@ -145,6 +146,7 @@ void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
 #define IJID 4
 #define IHID 5
 #define WSJID 6
+#define WIJID 7
 //
 //offsets for boltzmann PML variables
 #define QXID1 0  

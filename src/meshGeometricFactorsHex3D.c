@@ -6,10 +6,12 @@
 void meshGeometricFactorsHex3D(mesh3D *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nvgeo = 11;
+  mesh->Nvgeo = 12;
   
   /* note that we have volume geometric factors for each node */
   mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->Np, sizeof(dfloat));
+
+  mesh->cubvgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->cubNp, sizeof(dfloat));
 
   /* number of second order geometric factors */
   mesh->Nggeo = 7;
@@ -88,6 +90,7 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
           
           mesh->vgeo[mesh->Nvgeo*mesh->Np*e + n + mesh->Np*JID]  = J;
           mesh->vgeo[mesh->Nvgeo*mesh->Np*e + n + mesh->Np*JWID] = JW;
+          mesh->vgeo[mesh->Nvgeo*mesh->Np*e + n + mesh->Np*IJWID] = 1./JW;
 
           /* store second order geometric factors */
           mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
@@ -97,7 +100,58 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
           mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
           mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
           mesh->ggeo[mesh->Nggeo*mesh->Np*e + n + mesh->Np*GWJID] = JW;
+        }
+      }
+    }
+
+    //geometric data for quadrature
+    for(int k=0;k<mesh->cubNq;++k){
+      for(int j=0;j<mesh->cubNq;++j){
+        for(int i=0;i<mesh->cubNq;++i){
           
+          dfloat rn = mesh->cubr[i];
+          dfloat sn = mesh->cubr[j];
+          dfloat tn = mesh->cubr[k];
+
+          /* Jacobian matrix */
+          dfloat xr = 0.125*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
+          dfloat xs = 0.125*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
+          dfloat xt = 0.125*( (1-rn)*(1-sn)*(xe[4]-xe[0]) + (1+rn)*(1-sn)*(xe[5]-xe[1]) + (1+rn)*(1+sn)*(xe[6]-xe[2]) + (1-rn)*(1+sn)*(xe[7]-xe[3]) );
+          
+          dfloat yr = 0.125*( (1-tn)*(1-sn)*(ye[1]-ye[0]) + (1-tn)*(1+sn)*(ye[2]-ye[3]) + (1+tn)*(1-sn)*(ye[5]-ye[4]) + (1+tn)*(1+sn)*(ye[6]-ye[7]) );
+          dfloat ys = 0.125*( (1-tn)*(1-rn)*(ye[3]-ye[0]) + (1-tn)*(1+rn)*(ye[2]-ye[1]) + (1+tn)*(1-rn)*(ye[7]-ye[4]) + (1+tn)*(1+rn)*(ye[6]-ye[5]) );
+          dfloat yt = 0.125*( (1-rn)*(1-sn)*(ye[4]-ye[0]) + (1+rn)*(1-sn)*(ye[5]-ye[1]) + (1+rn)*(1+sn)*(ye[6]-ye[2]) + (1-rn)*(1+sn)*(ye[7]-ye[3]) );
+          
+          dfloat zr = 0.125*( (1-tn)*(1-sn)*(ze[1]-ze[0]) + (1-tn)*(1+sn)*(ze[2]-ze[3]) + (1+tn)*(1-sn)*(ze[5]-ze[4]) + (1+tn)*(1+sn)*(ze[6]-ze[7]) );
+          dfloat zs = 0.125*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
+          dfloat zt = 0.125*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
+          
+          /* compute geometric factors for affine coordinate transform*/
+          dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
+          
+          dfloat rx =  (ys*zt - zs*yt)/J, ry = -(xs*zt - zs*xt)/J, rz =  (xs*yt - ys*xt)/J;
+          dfloat sx = -(yr*zt - zr*yt)/J, sy =  (xr*zt - zr*xt)/J, sz = -(xr*yt - yr*xt)/J;
+          dfloat tx =  (yr*zs - zr*ys)/J, ty = -(xr*zs - zr*xs)/J, tz =  (xr*ys - yr*xs)/J;
+          
+          dfloat JW = J*mesh->cubw[i]*mesh->cubw[j]*mesh->cubw[k];
+          
+          /* store geometric factors */
+          dlong base = mesh->Nvgeo*mesh->cubNp*e + i + j*mesh->cubNq + k*mesh->cubNq*mesh->cubNq;
+          mesh->cubvgeo[base + mesh->cubNp*RXID] = rx;
+          mesh->cubvgeo[base + mesh->cubNp*RYID] = ry;
+          mesh->cubvgeo[base + mesh->cubNp*RZID] = rz;
+          
+          mesh->cubvgeo[base + mesh->cubNp*SXID] = sx;
+          mesh->cubvgeo[base + mesh->cubNp*SYID] = sy;
+          mesh->cubvgeo[base + mesh->cubNp*SZID] = sz;
+          
+          mesh->cubvgeo[base + mesh->cubNp*TXID] = tx;
+          mesh->cubvgeo[base + mesh->cubNp*TYID] = ty;
+          mesh->cubvgeo[base + mesh->cubNp*TZID] = tz;
+          
+          mesh->cubvgeo[base + mesh->cubNp*JID]  = J;
+          mesh->cubvgeo[base + mesh->cubNp*JWID] = JW;
+          mesh->cubvgeo[base + mesh->cubNp*IJWID] = 1./JW;
         }
       }
     }

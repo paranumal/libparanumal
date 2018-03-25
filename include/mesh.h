@@ -131,7 +131,7 @@ typedef struct {
   dfloat Lambda2; // square of penalty paramater used in constructing q^*
 
   // cubature
-  int cubNp, cubNq;
+  int cubNp, cubNfp, cubNq;
   dfloat *cubr, *cubs, *cubt, *cubw; // coordinates and weights of local cubature nodes
   dfloat *cubx, *cuby, *cubz;    // coordinates of physical nodes
   dfloat *cubInterp; // interpolate from W&B to cubature nodes

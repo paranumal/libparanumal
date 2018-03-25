@@ -113,7 +113,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat tau, dfloat lambda, int* 
 
   //add standard boundary functions
   char *boundaryHeaderFileName;
-  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticQuad2D/ellipticBoundary2D.h");
+  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticHex3D/ellipticBoundary3D.h");
   kernelInfo.addInclude(boundaryHeaderFileName);
 
 
@@ -272,12 +272,6 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat tau, dfloat lambda, int* 
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
                "ellipticPartialAxIpdgHex3D",
                kernelInfo);
-
-  solver->rhsBCIpdgKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgHex3D.okl",
-               "ellipticRhsBCIpdgHex3D",
-               kernelInfo);
-  
   
   //on-host version of gather-scatter
   int verbose = strstr(options,"VERBOSE") ? 1:0;
