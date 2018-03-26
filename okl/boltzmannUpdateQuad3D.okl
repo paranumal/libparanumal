@@ -50,12 +50,14 @@ kernel void boltzmannLSERKTraceUpdateQuad3D(const iint Nelements,
 					    dfloat * restrict q){
 
   for (iint es = 0; es < Nelements; ++es; outer0) {
-    for(iint n=0;n<p_Np;++n;inner0){
+    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
       const iint e = elementIDs[es];
 
       for (iint fld = 0; fld < p_Nfields; ++fld) {
-	const iint id = e*p_Np*p_Nfields + fld*p_Np + n;
-	q[id] = qpre[id];
+	if (n < p_Np) {
+	  const iint id = e*p_Np*p_Nfields + fld*p_Np + n;
+	  q[id] = qpre[id];
+	}
 	if (n < p_Nfaces*p_Nfp) {
 	  const iint iid  = e*p_Nfp*p_Nfaces + n;
 	  const iint qidM = vmapM[iid] - e*p_Np;
