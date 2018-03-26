@@ -290,31 +290,21 @@ ins_t *insSetupHex3D(mesh3D *mesh, int Ns, char * options,
   kernelInfo.addDefine("p_blockSize", blockSize);
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
-
-  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
-
-  int NblockV = 256/mesh->Np; // works for CUDA
+  int NblockV = mymax(1,256/(mesh->Nq*mesh->Nq)); // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 256/maxNodes; // works for CUDA
+  int NblockS = mymax(1,256/(mesh->Nq*mesh->Nq)); // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
-
-  int maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
-  kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
-  int cubNblockV = mymax(1,256/maxNodesVolumeCub);
-  //
-  int maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
-  kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
-  int cubNblockS = mymax(256/maxNodesSurfaceCub,1); // works for CUDA
+  int cubNblockV = mymax(1,256/(9*mesh->cubNq*mesh->cubNq));
+  int cubNblockS = mymax(1,256/(9*mesh->cubNq*mesh->cubNq)); // works for CUDA
   //
   kernelInfo.addDefine("p_cubNblockV",cubNblockV);
   kernelInfo.addDefine("p_cubNblockS",cubNblockS);
 
   if (rank==0) {
-    printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
-    printf("maxNodesVolCub: %d \t maxNodesSurCub: %d \t NblockVCub: %d \t NblockSCub: %d  \n", maxNodesVolumeCub,maxNodesSurfaceCub, cubNblockV, cubNblockS);
+    printf("NblockV: %d \t NblockS: %d  \n", NblockV, NblockS);
+    printf("NblockVCub: %d \t NblockSCub: %d  \n", cubNblockV, cubNblockS);
 
     printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
   }
