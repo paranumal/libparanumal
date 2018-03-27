@@ -26,8 +26,7 @@ void brownMinion(dfloat bmRho, dfloat bmDelta, dfloat sphereRadius,
 
 }
 
-
-void rk_coeffs(mesh_t *mesh) {
+void mrab3_coeffs(mesh_t *mesh) {
 
   iint Nlevels = mesh->MRABNlevels;
 
@@ -166,13 +165,206 @@ void rk_coeffs(mesh_t *mesh) {
   }
 }
 
+void mrab4_coeffs(mesh_t *mesh) {
+
+  iint Nlevels = mesh->MRABNlevels;
+
+  const iint Nr = 32;
+  dfloat complex R[Nr];
+
+  for(iint ind =1; ind <= Nr; ++ind){
+    const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr;
+    R[ind-1] = cexp(I*M_PI* theta);
+  }
+
+  mesh->MRSAAB_A = (dfloat *) calloc(4*4*Nlevels,sizeof(dfloat));
+  mesh->MRSAAB_B = (dfloat *) calloc(4*4*Nlevels,sizeof(dfloat));
+  mesh->MRSAAB_C = (dfloat *) calloc(    Nlevels,sizeof(dfloat));
+  mesh->MRAB_A   = (dfloat *) calloc(4*4*Nlevels,sizeof(dfloat));
+  mesh->MRAB_B   = (dfloat *) calloc(4*4*Nlevels,sizeof(dfloat));
+  mesh->MRAB_C   = (dfloat *) calloc(    Nlevels,sizeof(dfloat));
+
+  iint MRABorder = mesh->Nrhs;
+
+  for(iint l = 0; l<Nlevels; ++l){
+    // MRSAAB coefficients
+    dfloat alpha = -mesh->tauInv*mesh->dt*pow(2,l);
+    dfloat h  = mesh->dt * pow(2,l);
+    //
+    for (iint order=0; order<4; ++order){
+      // computation of coefficients based on magnitude
+      const iint id = order*Nlevels*4 + l*4;
+      if(order==0){
+
+	double complex a1 = 0. + 0.* I;
+	double complex b1 = 0. + 0.* I;
+
+	for(iint i = 0; i<Nr; ++i ){
+	  double complex lr = alpha  + R[i];
+	  a1 +=  h*(cexp(lr) - 1.)/lr;
+	  b1 +=  h*(cexp(lr/2.) - 1.)/lr;
+	}
+	// Full dt coeeficients
+	mesh->MRSAAB_A[id + 0] = creal(a1)/Nr;
+	mesh->MRSAAB_A[id + 1] = 0.f;
+	mesh->MRSAAB_A[id + 2] = 0.f;
+	mesh->MRSAAB_A[id + 3] = 0.f;
+	// Half coefficients
+	mesh->MRSAAB_B[id + 0] = creal(b1)/Nr;
+	mesh->MRSAAB_B[id + 1] = 0.f;
+	mesh->MRSAAB_B[id + 2] = 0.f;
+	mesh->MRSAAB_B[id + 3] = 0.f;
+
+	// MRAB coefficients
+	mesh->MRAB_A[id + 0]   =  h ;
+	mesh->MRAB_A[id + 1]   =  0.f ;
+	mesh->MRAB_A[id + 2]   =  0.f ;
+	mesh->MRAB_A[id + 3]   =  0.f;
+
+	mesh->MRAB_B[id+0]     =  h/2. ;
+	mesh->MRAB_B[id+1]     =  0.f ;
+	mesh->MRAB_B[id+2]     =  0.f ;
+	mesh->MRAB_B[id+3]     =  0.f ;
+      }
+
+      else if(order==1){
+
+	double complex a1 = 0. + 0.* I;
+	double complex b1 = 0. + 0.* I;
+	double complex a2 = 0. + 0.* I;
+	double complex b2 = 0. + 0.* I;
+
+	for(iint i = 0; i<Nr; ++i ){
+	  double complex lr = alpha  + R[i];
+	  a1 +=  h*(-2.*lr + (1.+lr)*cexp(lr) - 1.)/cpow(lr,2);
+	  a2 +=  h*(lr - cexp(lr) + 1.)/cpow(lr,2);
+	  b1 +=  h*(-1.5*lr + (1.+lr)*cexp(lr/2.) - 1.)/cpow(lr,2);
+	  b2 +=  h*(0.5*lr - cexp(lr/2.) + 1.)/cpow(lr,2);
+	}
+	// Full dt coeeficients
+	mesh->MRSAAB_A[id + 0] = creal(a1)/Nr;
+	mesh->MRSAAB_A[id + 1] = creal(a2)/Nr;
+	mesh->MRSAAB_A[id + 2] = 0.f;
+	mesh->MRSAAB_A[id + 3] = 0.f;
+	// Half coefficients
+	mesh->MRSAAB_B[id + 0] = creal(b1)/Nr;
+	mesh->MRSAAB_B[id + 1] = creal(b2)/Nr;
+	mesh->MRSAAB_B[id + 2] = 0.f;
+	mesh->MRSAAB_B[id + 3] = 0.f;
+
+	// MRAB coefficients
+	mesh->MRAB_A[id + 0]   =  3.*h/2. ;
+	mesh->MRAB_A[id + 1]   = -1.*h/2. ;
+	mesh->MRAB_A[id + 2]   =  0.f ;
+	mesh->MRAB_B[id + 3]   =  0.f ;
+
+	mesh->MRAB_B[id + 0]   =  5.*h/8. ;
+	mesh->MRAB_B[id + 1]   = -1.*h/8. ;
+	mesh->MRAB_B[id + 2]   =  0.f ;
+	mesh->MRAB_B[id + 3]   =  0.f ;
+      }
+      else if (order == 2) {
+	double complex a1 = 0. + 0.* I;
+	double complex b1 = 0. + 0.* I;
+	double complex a2 = 0. + 0.* I;
+	double complex b2 = 0. + 0.* I;
+	double complex a3 = 0. + 0.* I;
+	double complex b3 = 0. + 0.* I;
+
+	for(iint i = 0; i<Nr; ++i ){
+	  double complex lr = alpha  + R[i];
+	  a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
+	  a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
+	  a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
+	  b1 += h*(cexp(lr/2.)- 2.*lr - (15.*cpow(lr,2))/8.f + cpow(lr,2)*cexp(lr/2.) + 3.*lr*cexp(lr/2.)/2. - 1.)/cpow(lr,3);
+	  b2 += h*(3.*lr - 2.*cexp(lr/2.0) + 1.25*cpow(lr,2) - 2.*lr*cexp(lr/2.) + 2.)/cpow(lr,3);
+	  b3 +=-h*(lr - cexp(lr/2.) + 0.375*cpow(lr,2) - 0.5*lr*cexp(lr/2.) + 1.)/cpow(lr,3);
+	}
+
+
+	// Full dt coeeficients
+	mesh->MRSAAB_A[id+0] = creal(a1)/Nr;
+	mesh->MRSAAB_A[id+1] = creal(a2)/Nr;
+	mesh->MRSAAB_A[id+2] = creal(a3)/Nr;
+	mesh->MRSAAB_A[id+3] = 0.f;
+	// Half coefficients
+	mesh->MRSAAB_B[id+0] = creal(b1)/Nr;
+	mesh->MRSAAB_B[id+1] = creal(b2)/Nr;
+	mesh->MRSAAB_B[id+2] = creal(b3)/Nr;
+	mesh->MRSAAB_B[id+3] = 0.f;
+
+	// MRAB coefficients
+	mesh->MRAB_A[id+0]   =  23.*h/12. ;
+	mesh->MRAB_A[id+1]   = -16.*h/12. ;
+	mesh->MRAB_A[id+2]   =  5. *h/12. ;
+	mesh->MRAB_A[id+3]   =  0.f;
+
+	mesh->MRAB_B[id+0]   =  17.*h/24. ;
+	mesh->MRAB_B[id+1]   = - 7.*h/24. ;
+	mesh->MRAB_B[id+2]   =   2.*h/24. ;
+	mesh->MRAB_B[id+3]   =   0.f;
+      }
+      else {
+	double complex a1 = 0. + 0.* I;
+	double complex b1 = 0. + 0.* I;
+	double complex a2 = 0. + 0.* I;
+	double complex b2 = 0. + 0.* I;
+	double complex a3 = 0. + 0.* I;
+	double complex b3 = 0. + 0.* I;
+	double complex a4 = 0. + 0.* I;
+	double complex b4 = 0. + 0.* I;
+
+	for(iint i = 0; i<Nr; ++i ){
+	  double complex lr = alpha  + R[i];
+	  a1 += h*(cexp(lr) - 3.*lr - (13.*cpow(lr,2))/3. - 4.*cpow(lr,3) + (11.*cpow(lr,2)*cexp(lr))/6. + cpow(lr,3)*cexp(lr) + 2.*lr*cexp(lr) - 1.)/cpow(lr,4);
+	  a2 += h*(8.*lr - 3.*cexp(lr) + (19.*cpow(lr,2))/2. + 6.*cpow(lr,3) - 3.*cpow(lr,2)*cexp(lr) - 5.*lr*cexp(lr) + 3.)/cpow(lr,4);
+	  a3 +=-h*(7.*lr - 3.*cexp(lr) + 7.*cpow(lr,2) + 4.*cpow(lr,3) - (3.*cpow(lr,2)*cexp(lr))/2. - 4.*lr*cexp(lr) + 3.)/cpow(lr,4);
+	  a4 += h*(2.*lr - cexp(lr) + (11.*cpow(lr,2))/6. + cpow(lr,3) - (cpow(lr,2)*cexp(lr))/3. - lr*cexp(lr) + 1.)/cpow(lr,4);
+	  b1 += h*(cexp((lr)/2.) - (5.*lr)/2. - (71.*cpow(lr,2))/24. - (35.*cpow(lr,3))/16. + (11.*cpow(lr,2)*cexp((lr)/2.))/6. + cpow(lr,3)*cexp((lr)/2.) + 2.*lr*cexp((lr)/2.) - 1.)/cpow(lr,4);
+	  b2 += h*((13.*lr)/2. - 3.*cexp((lr)/2.) + (47.*cpow(lr,2))/8. + (35.*cpow(lr,3))/16. - 3.*cpow(lr,2)*cexp((lr)/2.) - 5.*lr*cexp((lr)/2.) + 3.)/cpow(lr,4);
+	  b3 +=-h*((11.*lr)/2. - 3.*cexp((lr)/2.) + (31.*cpow(lr,2))/8. + (21.*cpow(lr,3))/16. - (3.*cpow(lr,2)*cexp((lr)/2.))/2. - 4.*lr*cexp((lr)/2.) + 3.)/cpow(lr,4);
+	  b4 +=h*((3.*lr)/2. - cexp((lr)/2.) + (23.*cpow(lr,2))/24. + (5.*cpow(lr,3))/16. - (cpow(lr,2)*cexp((lr)/2.))/3. - lr*cexp((lr)/2.) + 1)/cpow(lr,4);
+	    
+	}
+
+
+	// Full dt coeeficients
+	mesh->MRSAAB_A[id+0] = creal(a1)/Nr;
+	mesh->MRSAAB_A[id+1] = creal(a2)/Nr;
+	mesh->MRSAAB_A[id+2] = creal(a3)/Nr;
+	mesh->MRSAAB_A[id+3] = creal(a4)/Nr;
+	// Half coefficients
+	mesh->MRSAAB_B[id+0] = creal(b1)/Nr;
+	mesh->MRSAAB_B[id+1] = creal(b2)/Nr;
+	mesh->MRSAAB_B[id+2] = creal(b3)/Nr;
+	mesh->MRSAAB_B[id+3] = creal(a4)/Nr;
+
+	// MRAB coefficients
+	mesh->MRAB_A[id+0]   =  55.*h/24. ;
+	mesh->MRAB_A[id+1]   = -59.*h/24. ;
+	mesh->MRAB_A[id+2]   =  37. *h/24. ;
+	mesh->MRAB_A[id+3]   =  -3.*h/8;
+
+	mesh->MRAB_B[id+0]   =  99.*h/128. ;
+	mesh->MRAB_B[id+1]   = - 187.*h/384. ;
+	mesh->MRAB_B[id+2]   =   107.*h/384. ;
+	mesh->MRAB_B[id+3]   =   -25*h/384. ;
+      }
+    }
+
+    // Exponential part
+    mesh->MRSAAB_C[l]    = exp(alpha);
+    mesh->MRAB_C[l]      =   h ;
+  }
+}
+
 solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
   solver->mesh = mesh;
-  
-  mesh->Nrhs = 3; //hardcoded order of multirate solver  
+
+  mesh->Nrhs = 4; //hardcoded order of multirate solver  
   
   mesh->Nfields = 10;
   
@@ -305,7 +497,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat cfl_small = 0.2; // depends on the stability region size (was .4, then 2)
+  dfloat cfl_small = 1; // depends on the stability region size (was .4, then 2)
   dfloat cfl_large = cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
@@ -385,10 +577,8 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   advectionPlotVTUQuad3D(mesh, "bah.vtu", 0);
   
   occa::kernelInfo kernelInfo;
-
   // fixed to set up quad info on device too
   advectionOccaSetupQuad3D(mesh, deviceConfig,  kernelInfo);
-
   // quad stuff
 
   kernelInfo.addDefine("p_Nq", mesh->Nq);
@@ -398,19 +588,17 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   mesh->o_vgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
 			mesh->vgeo);
-  
   //initialization isn't strictly necessary here.
   mesh->o_qFilter =
     mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
 
   mesh->o_qFiltered =
     mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
-
   mesh->o_qCorr =
     mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
 
   mesh->o_qPreCorr =
-    mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),q_zero);
+    mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),q_zero);
 
   mesh->o_prerhsq =
     mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),q_zero);
@@ -453,10 +641,9 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 			      mesh->MRABhaloIds[lev]);
   }
 
-  //break out computation of rk coefficients
+  //break out computation of ab coefficients
   //needs to be last so we have mrab levels
-  rk_coeffs(mesh);
-
+  mrab4_coeffs(mesh);
       
   // specialization for Advection
 
@@ -518,12 +705,12 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   
   mesh->traceUpdateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
-				       "boltzmannMRSAABTraceUpdateQuad3D",
+				       "boltzmannMRSAAB4TraceUpdateQuad3D",
 				       kernelInfo);
   
   mesh->updateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
-				       "boltzmannMRSAABUpdateQuad3D",
+				       "boltzmannMRSAAB4UpdateQuad3D",
 				       kernelInfo);
 
   mesh->updatePreKernel =
