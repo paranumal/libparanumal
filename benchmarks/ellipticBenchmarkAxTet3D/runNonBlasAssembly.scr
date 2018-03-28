@@ -5,7 +5,7 @@ echo [;
      
 for Nel in [ 1000 2000 4000 8000 16000 32000 64000 128000 256000 512000 ];
     do
-           ./kernelTest $Nel 1 1 8 1 1   |& grep DOFS;
+           ./kernelTestDriver $Nel 1 1 8 1 1   |& grep DOFS;
 done;
 
 echo ];
@@ -15,7 +15,7 @@ echo [;
 
 for Nel in [ 1000 2000 4000 8000 16000 32000 64000 128000 256000 512000 ];
     do
-             ./kernelTest $Nel 2 1 3 1 1   |& grep DOFS;
+             ./kernelTestDriver $Nel 2 1 3 1 1   |& grep DOFS;
 done;
 echo ];
 
@@ -26,7 +26,7 @@ do
 	  
 	  for Nel in [ 1000 2000 4000 8000 16000 32000 64000 128000 256000 512000 ];
 	  do
-              ./kernelTest $Nel $N 1 1 1 1   |& grep DOFS;
+              ./kernelTestDriver $Nel $N 1 1 1 1   |& grep DOFS;
 	  done;
 	  echo ];
 done
