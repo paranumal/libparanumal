@@ -97,6 +97,7 @@ int main(int argc, char **argv){
 
   // compiler variables to be passed to backend compiler by OCCA
   kernelInfo.addDefine("datafloat", datafloatString);
+  kernelInfo.addDefine("dfloat", datafloatString);
   kernelInfo.addDefine("p_N", p_N);
   kernelInfo.addDefine("p_Np", p_Np);
   kernelInfo.addDefine("p_Nfp", p_Nfp);
