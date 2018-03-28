@@ -108,7 +108,7 @@ kernel void insDivergenceVolumeHex3D(const dlong Nelements,
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
     const dlong idm = vmapM[sk];                                        \
-    insVelocityDirichletConditions2D(bc, time, x[idm], y[idm], z[idm], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);\
+    insVelocityDirichletConditions3D(bc, time, x[idm], y[idm], z[idm], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);\
     uP = 2.f*uP-uM;                                                     \
     vP = 2.f*vP-vM;                                                     \
     wP = 2.f*wP-wM;                                                     \
