@@ -1,0 +1,139 @@
+
+void ellipticPartialAxCurvedTet3D_Ref0(const int Nelements,
+				       const int       * restrict elementList,
+				       const datafloat * restrict ggeo,
+				       const datafloat * restrict cDr,
+				       const datafloat * restrict cDs,
+				       const datafloat * restrict cDt,
+				       const datafloat * restrict cI,
+				       const datafloat * restrict cDrT,
+				       const datafloat * restrict cDsT,
+				       const datafloat * restrict cDtT,
+				       const datafloat * restrict cIT,
+				       const datafloat lambda,
+				       const datafloat  * restrict q,
+				       datafloat  * restrict Aq){
+
+  for(int e=0;e<Nelements;e++;outer0){
+
+    shared datafloat s_q[p_Np], s_Gq[p_cubNp];
+
+    exclusive datafloat r_cGqr, r_cGqs, r_cGqt, r_cq, r_Aq;
+    
+    for(int n=0;n<p_cubNp;++n;inner0){
+      int element = elementList[e];
+      if(n<p_Np)
+	s_q[n] = q[n+element*p_Np];
+    }
+
+    barrier(localMemFence);
+
+    //loop 1
+    for(int n=0;n<p_cubNp;++n;inner0){
+      int element = elementList[e];
+      int gid = element*p_Nggeo*p_cubNp + n;
+
+      datafloat Grr = ggeo[gid + p_G00ID*p_cubNp];
+      datafloat Grs = ggeo[gid + p_G01ID*p_cubNp];
+      datafloat Grt = ggeo[gid + p_G02ID*p_cubNp];
+      datafloat Gss = ggeo[gid + p_G11ID*p_cubNp];
+      datafloat Gst = ggeo[gid + p_G12ID*p_cubNp];
+      datafloat Gtt = ggeo[gid + p_G22ID*p_cubNp];
+      datafloat J   = ggeo[gid + p_GWJID*p_cubNp];
+
+      datafloat cqr  = 0, cqs = 0, cqt = 0, cq = 0;
+
+      // 5 L1+shared loads per 8 flops (13.4*8/(5*8) TFLOPS)
+      occaUnroll(p_Np)
+	for (int k=0;k<p_Np;k++) {
+	  const dfloat qk = s_q[k];
+	  const int id = n+k*p_cubNp;
+	  cqr += cDrT[id]*qk;
+	  cqs += cDsT[id]*qk;
+	  cqt += cDtT[id]*qk;
+	  cq  += cIT[id]*qk;
+	}
+      
+      // assume includes Jacobian
+      s_Gq[n] = Grr*cqr + Grs*cqs + Grt*cqt;
+
+      r_cGqs = Grs*cqr + Gss*cqs + Gst*cqt;
+      r_cGqt = Grt*cqr + Gst*cqs + Gtt*cqt;
+      r_cq *= lambda*J;
+      r_Aq = 0;
+    }
+
+    barrier(localMemFence);
+
+    for(int k=0;k<p_cubNp;++k;inner0){
+      if(k<p_Np){
+	dfloat res = 0;
+	
+	occaUnroll(p_cubNp)
+	  for (int n=0;n<p_cubNp;n++) {
+	    const int id = n+k*p_cubNp;
+	    res += cDrT[id]*s_qr[n];
+	  }
+
+	r_Aq = res;
+      }
+      // reload
+      s_q[k] = r_cGqs;
+    }
+    
+    barrier(localMemFence);
+    
+    for(int k=0;k<p_cubNp;++k;inner0){
+      if(k<p_Np){
+	dfloat res = 0;
+	
+	occaUnroll(p_cubNp)
+	  for (int n=0;n<p_cubNp;n++) {
+	    const int id = n+k*p_cubNp;
+	    res += cDsT[id]*s_q[n];
+	  }
+	
+	r_Aq += res;
+	s_Gq[n] = r_cGqt;
+      }
+    }
+
+    barrier(localMemFence);
+    
+    for(int k=0;k<p_cubNp;++k;inner0){
+      if(k<p_Np){
+	dfloat res = 0;
+	
+	occaUnroll(p_cubNp)
+	  for (int n=0;n<p_cubNp;n++) {
+	    const int id = n+k*p_cubNp;
+	    res += cDtT[id]*s_Gq[n];
+	  }
+	
+	r_Aq += res;
+	s_q[n] = r_cq;
+      }
+    }
+
+    barrier(localMemFence);
+    
+    for(int k=0;k<p_cubNp;++k;inner0){
+      if(k<p_Np){
+	dfloat res = 0;
+	
+	occaUnroll(p_cubNp)
+	  for (int n=0;n<p_cubNp;n++) {
+	    const int id = n+k*p_cubNp;
+	    res += cIT[id]*s_q[n];
+	  }
+	
+	r_Aq += res;
+
+	const int id = n + element*p_Np;
+	Aq[id] = r_Aq;
+      }
+    }
+  }
+}
+
+
