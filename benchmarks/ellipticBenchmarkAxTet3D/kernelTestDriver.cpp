@@ -612,7 +612,7 @@ void testLocalAxTet3D(int argc, char **argv){
 
 void testLocalAxCurvedTet3D(int argc, char **argv){
     
-  int NKernels = 2;
+  int NKernels = 7;
 
   // default to 512 elements if no arg is given
   int E = (argc>=2) ? atoi(argv[1]):512;
@@ -690,12 +690,12 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   datafloat *ggeo;
   datafloat *cDrT, *cDsT, *cDtT, *cIT;
   datafloat *cDr, *cDs, *cDt, *cI;
-  datafloat *q, *Aq;
+  datafloat *q, *Aq, *tmp;
   int  *elementList;
   occa::memory o_elementList, o_ggeo;
   occa::memory o_cDrT, o_cDsT, o_cDtT, o_cIT;
   occa::memory o_cDr, o_cDs, o_cDt, o_cI;
-  occa::memory o_q, o_Aq; 
+  occa::memory o_q, o_Aq, o_tmp; 
   
 
   kernelInfo.addDefine("p_G00ID", 0);
@@ -736,6 +736,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   
   randCalloc(device, BSIZE*E, &q, o_q);
   randCalloc(device, BSIZE*E, &Aq, o_Aq);
+  randCalloc(device, CSIZE*4*E, &tmp, o_tmp);
 
   elementList = (int *) calloc(E, sizeof(int));
 
@@ -771,7 +772,8 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
 		     o_cDtT,
 		     o_cIT,
 		     lambda,
-		     o_q,       
+		     o_q,
+		     o_tmp,
 		     o_Aq);
     }
     
@@ -815,7 +817,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
     double gflops;
     long long int Nbytes;
     
-    Nbytes =  p_Nggeo*p_cubNp*p_Np*sizeof(datafloat) +
+    Nbytes =  2*4*p_cubNp*p_Np*sizeof(datafloat) +
       E*p_cubNp*p_Nggeo*sizeof(datafloat)+
       E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
     
