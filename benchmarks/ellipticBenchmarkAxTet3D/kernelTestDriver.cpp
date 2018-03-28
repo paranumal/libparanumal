@@ -52,7 +52,8 @@ void testIpdgAxTet3D(int argc, char **argv){
   int p_Nfp = ((p_N+1)*(p_N+2))/2;
   int p_Nfaces = 4;
   int p_NfacesNfp = p_Nfaces*p_Nfp;
-
+  int p_Nggeo = 7, p_Nvgeo = 11, p_Nsgeo = 7;
+  
   printf("==============================================================\n");
   printf("===================== BASIC INFO =============================\n");
   printf("==============================================================\n");
@@ -68,11 +69,6 @@ void testIpdgAxTet3D(int argc, char **argv){
   printf("==============================================================\n");
   printf("\n\n");
   int BSIZE  = p_Np;
-
-
-  // number of geometric factors
-  int Nvgeo =  10;
-  int Nsgeo = 6;
 
   int Niter = 10, it;
   double gflops;
@@ -106,9 +102,9 @@ void testIpdgAxTet3D(int argc, char **argv){
   kernelInfo.addDefine("p_Nfaces", p_Nfaces);
   kernelInfo.addDefine("p_NfacesNfp", p_Nfaces*p_Nfp);
   kernelInfo.addDefine("BSIZE", (int)BSIZE);
-  kernelInfo.addDefine("p_Nvgeo", 11);
-  kernelInfo.addDefine("p_Nsgeo", 7);
-  kernelInfo.addDefine("p_Nggeo", 7);
+  kernelInfo.addDefine("p_Nvgeo", p_Nvgeo);
+  kernelInfo.addDefine("p_Nsgeo", p_Nsgeo);
+  kernelInfo.addDefine("p_Nggeo", p_Nggeo);
   kernelInfo.addDefine("p_Ne", p_Ne);
   kernelInfo.addDefine("p_Nb", p_Nb);
   
@@ -152,7 +148,7 @@ void testIpdgAxTet3D(int argc, char **argv){
   
  
   randCalloc(device, E*BSIZE*11, &vgeo, o_vgeo);
-  randCalloc(device, E*BSIZE*p_Nfaces*p_Nfp*7, &sgeo, o_sgeo);
+  randCalloc(device, E*BSIZE*p_Nfaces*p_Nfp*p_Nsgeo, &sgeo, o_sgeo);
   randCalloc(device, BSIZE*BSIZE, &DrT, o_DrT);
   randCalloc(device, BSIZE*BSIZE, &DsT, o_DsT);
   randCalloc(device, BSIZE*BSIZE, &DtT, o_DtT);
@@ -346,6 +342,8 @@ void testLocalAxTet3D(int argc, char **argv){
 
   int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
 
+  int p_Nggeo = 7, p_Nvgeo = 11, p_Nsgeo = 7;
+  
   printf("==============================================================\n");
   printf("===================== BASIC INFO =============================\n");
   printf("==============================================================\n");
@@ -364,8 +362,6 @@ void testLocalAxTet3D(int argc, char **argv){
   int BSIZE  = p_Np;
 
   // number of geometric factors
-  int Nvgeo =  10;
-
   int Niter = 10, it;
   double gflops;
   gflops = p_Np*20*(1+p_Np);
@@ -397,8 +393,8 @@ void testLocalAxTet3D(int argc, char **argv){
   kernelInfo.addDefine("p_N", p_N);
   kernelInfo.addDefine("p_Np", p_Np);
   kernelInfo.addDefine("BSIZE", (int)BSIZE);
-  kernelInfo.addDefine("p_Nvgeo", 11);
-  kernelInfo.addDefine("p_Nggeo", 7);
+  kernelInfo.addDefine("p_Nvgeo", p_Nvgeo);
+  kernelInfo.addDefine("p_Nggeo", p_Nggeo);
   kernelInfo.addDefine("p_Ne", p_Ne);
   kernelInfo.addDefine("p_Nb", p_Nb);
   
@@ -414,7 +410,7 @@ void testLocalAxTet3D(int argc, char **argv){
   kernelInfo.addDefine("p_G12ID", 4);
   kernelInfo.addDefine("p_G22ID", 5);
   kernelInfo.addDefine("p_GWJID", 6);
-  randCalloc(device, E*7, &ggeo, o_ggeo);
+  randCalloc(device, E*p_Nggeo, &ggeo, o_ggeo);
   randCalloc(device, BSIZE*BSIZE, &SrrT, o_SrrT);
   randCalloc(device, BSIZE*BSIZE, &SrsT, o_SrsT);
   randCalloc(device, BSIZE*BSIZE, &SrtT, o_SrtT);
@@ -538,9 +534,9 @@ void testLocalAxTet3D(int argc, char **argv){
     long long int Nbytes;
     
     if (k<=5)
-      Nbytes = 10*p_Np*p_Np*sizeof(datafloat) + E*7*sizeof(datafloat)+E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
+      Nbytes = 10*p_Np*p_Np*sizeof(datafloat) + E*p_Nggeo*sizeof(datafloat)+E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
     else {
-      Nbytes =  7*p_Np*p_Np*sizeof(datafloat) + E*7*sizeof(datafloat)+E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
+      Nbytes =  p_Nggeo*p_Np*p_Np*sizeof(datafloat) + E*p_Nggeo*sizeof(datafloat)+E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
     }
     
     Nbytes /= 2;
@@ -616,7 +612,7 @@ void testLocalAxTet3D(int argc, char **argv){
 
 void testLocalAxCurvedTet3D(int argc, char **argv){
     
-  int NKernels = 9;
+  int NKernels = 4;
 
   // default to 512 elements if no arg is given
   int E = (argc>=2) ? atoi(argv[1]):512;
@@ -625,10 +621,13 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   int p_Nb = (argc>=6) ? atoi(argv[5]):1;
 
   int kMin = (argc>=7) ? atoi(argv[6]):0;
-  int kMax = (argc>=8) ? atoi(argv[7]):8;
+  int kMax = (argc>=8) ? atoi(argv[7]):(NKernels-1);
 
   int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
+  int p_cubNp = 2*p_Np; // hard code for moment
 
+  int p_Nggeo = 7, p_Nvgeo = 11, p_Nsgeo = 7;
+  
   printf("==============================================================\n");
   printf("===================== BASIC INFO =============================\n");
   printf("==============================================================\n");
@@ -636,6 +635,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   printf("Number of elements : %d\n", E);
   printf("Polynomial degree  : %d\n", p_N);
   printf("Nodes per element  : %d\n", p_Np);
+  printf("Cubature per elmt  : %d\n", p_cubNp);
   printf("Elements per block : %d\n", p_Ne);
   printf("Outputs per thread : %d\n", p_Nb);
   printf("Running kernels    : %d to %d \n", kMin, kMax);
@@ -644,14 +644,12 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   printf("==============================================================\n");
   printf("\n\n");
 
-  int BSIZE  = p_Np;
-
-  // number of geometric factors
-  int Nvgeo =  10;
+  int BSIZE = p_Np;
+  int CSIZE = p_cubNp;
 
   int Niter = 10, it;
   double gflops;
-  gflops = p_Np*20*(1+p_Np);
+  gflops = p_Np*( (8+8)*p_cubNp + 5*3+2);
   gflops *= Niter;
 
   // build some dummy storage & parameters
@@ -679,15 +677,25 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   kernelInfo.addDefine("dfloat", datafloatString);
   kernelInfo.addDefine("p_N", p_N);
   kernelInfo.addDefine("p_Np", p_Np);
+  kernelInfo.addDefine("p_cubNp", p_cubNp);
   kernelInfo.addDefine("BSIZE", (int)BSIZE);
-  kernelInfo.addDefine("p_Nvgeo", 11);
-  kernelInfo.addDefine("p_Nggeo", 7);
+  kernelInfo.addDefine("CSIZE", (int)CSIZE);
+  kernelInfo.addDefine("p_Nvgeo", p_Nvgeo);
+  kernelInfo.addDefine("p_Nggeo", p_Nggeo);
   kernelInfo.addDefine("p_Ne", p_Ne);
   kernelInfo.addDefine("p_Nb", p_Nb);
+
+  printf("p_Ne = %d\n", p_Ne);
   
-  datafloat  *ggeo, *SrrT,  *SrsT,  *SrtT,  *SssT,  *SsrT, *SstT,  *StsT, *StrT,  *SttT,  *MM, *q, *Aq;
+  datafloat *ggeo;
+  datafloat *cDrT, *cDsT, *cDtT, *cIT;
+  datafloat *cDr, *cDs, *cDt, *cI;
+  datafloat *q, *Aq;
   int  *elementList;
-  occa::memory o_elementList, o_ggeo, o_SrrT, o_SrsT, o_SrtT, o_SsrT,o_SssT,o_SstT, o_StrT, o_StsT, o_SttT, o_MM, o_q, o_Aq; 
+  occa::memory o_elementList, o_ggeo;
+  occa::memory o_cDrT, o_cDsT, o_cDtT, o_cIT;
+  occa::memory o_cDr, o_cDs, o_cDt, o_cI;
+  occa::memory o_q, o_Aq; 
   
 
   kernelInfo.addDefine("p_G00ID", 0);
@@ -697,19 +705,34 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   kernelInfo.addDefine("p_G12ID", 4);
   kernelInfo.addDefine("p_G22ID", 5);
   kernelInfo.addDefine("p_GWJID", 6);
-  randCalloc(device, E*7, &ggeo, o_ggeo);
-  randCalloc(device, BSIZE*BSIZE, &SrrT, o_SrrT);
-  randCalloc(device, BSIZE*BSIZE, &SrsT, o_SrsT);
-  randCalloc(device, BSIZE*BSIZE, &SrtT, o_SrtT);
-  randCalloc(device, BSIZE*BSIZE, &SsrT, o_SsrT);
-  randCalloc(device, BSIZE*BSIZE, &SssT, o_SssT);
-  randCalloc(device, BSIZE*BSIZE, &SstT, o_SstT);
-  randCalloc(device, BSIZE*BSIZE, &StrT, o_StrT);
-  randCalloc(device, BSIZE*BSIZE, &StsT, o_StsT);
-  randCalloc(device, BSIZE*BSIZE, &SttT, o_SttT);
+
+  randCalloc(device, E*p_Nggeo*CSIZE, &ggeo, o_ggeo);
+
+  randCalloc(device, BSIZE*CSIZE, &cDrT, o_cDrT);
+  randCalloc(device, BSIZE*CSIZE, &cDsT, o_cDsT);
+  randCalloc(device, BSIZE*CSIZE, &cDtT, o_cDtT);
+  randCalloc(device, BSIZE*CSIZE, &cIT, o_cIT);
+
+  randCalloc(device, BSIZE*CSIZE, &cDr, o_cDr);
+  randCalloc(device, BSIZE*CSIZE, &cDs, o_cDs);
+  randCalloc(device, BSIZE*CSIZE, &cDt, o_cDt);
+  randCalloc(device, BSIZE*CSIZE, &cI, o_cI);
+
+  for(int n=0;n<p_cubNp;++n){
+    for(int m=0;m<p_Np;++m){
+      cDrT[n+m*p_cubNp] = cDr[m+n*p_Np];
+      cDsT[n+m*p_cubNp] = cDs[m+n*p_Np];
+      cDtT[n+m*p_cubNp] = cDt[m+n*p_Np];
+      cIT[n+m*p_cubNp] = cI[m+n*p_Np];
+    }
+  }
+  o_cDrT.copyFrom(cDrT);
+  o_cDsT.copyFrom(cDsT);
+  o_cDtT.copyFrom(cDtT);
+  o_cIT.copyFrom(cIT);
+  
   randCalloc(device, BSIZE*E, &q, o_q);
   randCalloc(device, BSIZE*E, &Aq, o_Aq);
-  randCalloc(device, BSIZE*BSIZE, &MM, o_MM);
 
   elementList = (int *) calloc(E, sizeof(int));
 
@@ -720,8 +743,8 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   char buf[200];
   for (int i =kMin; i<kMax+1; i++){
     printf("compiling 3D kernel %d ...\n", i);
-    sprintf(buf, "ellipticPartialAxTet3D_Ref%d", i); 
-    Tet3Dkernel[i] = device.buildKernelFromSource("ellipticAxTet3D.okl", buf, kernelInfo);
+    sprintf(buf, "ellipticPartialAxCurvedTet3D_Ref%d", i); 
+    Tet3Dkernel[i] = device.buildKernelFromSource("ellipticAxCurvedTet3D.okl", buf, kernelInfo);
   }
   int elementOffset = 0;
   occa::initTimer(device);
@@ -730,60 +753,29 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   for (int i =kMin;i<=kMax; i++){
     datafloat lambda = 1.;
     occa::streamTag startTag = device.tagStream();
-    if (i<9){
-      // launch kernel
-      for(it=0;it<Niter;++it){
-	Tet3Dkernel[i](E,
-		       o_elementList,
-		       o_ggeo,
-		       o_SrrT,
-		       o_SrsT,
-		       o_SrtT,
-		       o_SsrT,
-		       o_SssT,
-		       o_SstT,
-		       o_StrT,
-		       o_StsT,
-		       o_SttT,
-		       o_MM,
-		       lambda,
-		       o_q,       
-		       o_Aq);
-      }
+
+    // launch kernel
+    for(it=0;it<Niter;++it){
+      Tet3Dkernel[i](E,
+		     o_elementList,
+		     o_ggeo,
+		     o_cDr,
+		     o_cDs,
+		     o_cDt,
+		     o_cI,
+		     o_cDrT,
+		     o_cDsT,
+		     o_cDtT,
+		     o_cIT,
+		     lambda,
+		     o_q,       
+		     o_Aq);
     }
-    else{
-      for(it=0;it<Niter;++it){
-	Tet3Dkernel[i](E,
-		       elementOffset,
-		       o_ggeo,
-		       o_SrrT,
-		       o_SrsT,
-		       o_SrtT,
-		       o_SsrT,
-		       o_SssT,
-		       o_SstT,
-		       o_StrT,
-		       o_StsT,
-		       o_SttT,
-		       o_MM,
-		       lambda,
-		       o_q,       
-		       o_Aq);
-      }
-
-
-    }
-
+    
     //adjust GFLOPS for Ref2 and Ref3
     occa::streamTag stopTag = device.tagStream();
     double elapsed = device.timeBetween(startTag, stopTag);
-    if (i>5){
-      // old: gflops = p_Np*20*(1+p_Np)
-      gflops = p_Np*(p_Np*14 +14);
-      gflops *=Niter;      
 
-
-    } 
     printf("\n\nKERNEL %d  ================================================== \n\n", i);
     printf("OCCA elapsed time = %g\n", elapsed);
     timeData[i] = elapsed/Niter;
@@ -791,7 +783,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
     results3D[i] =E*gflops/(elapsed*1.e9); 
     //elapsed/Niter;
     //
-    printf("OCCA: estimated time = %17.15f gflops = %17.17f\n", results3D[i], E*gflops/(elapsed*1.e9));
+    printf("OCCA: estimated time = %17.15f gflops = %17.17f\n", elapsed, E*gflops/(elapsed*1.e9));
     printf("GFL %17.17f \n",E*gflops/(elapsed*1.e9) );      
     // compute l2 of data
     o_Aq.copyTo(Aq);
@@ -820,18 +812,12 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
     double gflops;
     long long int Nbytes;
     
-    if (k<=5)
-      Nbytes = 10*p_Np*p_Np*sizeof(datafloat) + E*7*sizeof(datafloat)+E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
-    else {
-      Nbytes =  7*p_Np*p_Np*sizeof(datafloat) + E*7*sizeof(datafloat)+E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
-    }
+    Nbytes =  p_Nggeo*p_cubNp*p_Np*sizeof(datafloat) +
+      E*p_cubNp*p_Nggeo*sizeof(datafloat)+
+      E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
     
     Nbytes /= 2;
-    gflops = p_Np*20*(1+p_Np); 
-    if (k>5){
-      // old: gflops = p_Np*20*(1+p_Np)
-      gflops = p_Np*(p_Np*14 +14);
-    }    
+    gflops = p_Np*( (8+8)*p_cubNp + 5*3+2);
     
     occa::memory o_foo = device.malloc(Nbytes);
     occa::memory o_bah = device.malloc(Nbytes);
