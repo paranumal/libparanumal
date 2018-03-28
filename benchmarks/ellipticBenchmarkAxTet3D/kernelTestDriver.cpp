@@ -89,7 +89,7 @@ void testIpdgAxTet3D(int argc, char **argv){
   // device.setup("mode = Serial");
   // device.setup("mode = OpenMP  , schedule = compact, chunk = 10");
   // device.setup("mode = OpenCL  , platformID = 0, deviceID = 0");
-  device.setup("mode = CUDA    , deviceID = 0");
+  device.setup("mode = CUDA    , deviceID = 1");
   // device.setup("mode = Pthreads, threadCount = 4, schedule = compact, pinnedCores = [0, 0, 1, 1]");
   // device.setup("mode = COI     , deviceID = 0");
 
@@ -612,7 +612,7 @@ void testLocalAxTet3D(int argc, char **argv){
 
 void testLocalAxCurvedTet3D(int argc, char **argv){
     
-  int NKernels = 4;
+  int NKernels = 2;
 
   // default to 512 elements if no arg is given
   int E = (argc>=2) ? atoi(argv[1]):512;
@@ -708,6 +708,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
 
   randCalloc(device, E*p_Nggeo*CSIZE, &ggeo, o_ggeo);
 
+ 
   randCalloc(device, BSIZE*CSIZE, &cDrT, o_cDrT);
   randCalloc(device, BSIZE*CSIZE, &cDsT, o_cDsT);
   randCalloc(device, BSIZE*CSIZE, &cDtT, o_cDtT);
@@ -718,6 +719,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   randCalloc(device, BSIZE*CSIZE, &cDt, o_cDt);
   randCalloc(device, BSIZE*CSIZE, &cI, o_cI);
 
+
   for(int n=0;n<p_cubNp;++n){
     for(int m=0;m<p_Np;++m){
       cDrT[n+m*p_cubNp] = cDr[m+n*p_Np];
@@ -726,6 +728,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
       cIT[n+m*p_cubNp] = cI[m+n*p_Np];
     }
   }
+  
   o_cDrT.copyFrom(cDrT);
   o_cDsT.copyFrom(cDsT);
   o_cDtT.copyFrom(cDtT);
