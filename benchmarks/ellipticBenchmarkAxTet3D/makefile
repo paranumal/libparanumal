@@ -12,8 +12,11 @@ sources = $(wildcard $(sPath)/*.cpp)
 objects = $(subst $(sPath)/,$(oPath)/,$(sources:.cpp=.o))
 
 # turn off HOST optimization
-${PROJ_DIR}/BP30: $(objects) $(headers) ${PROJ_DIR}/assembledDriver.cpp 
-	$(compiler) $(compilerFlags) -o ${PROJ_DIR}/kernelTest $(flags) $(objects) ${PROJ_DIR}/assembledDriver.cpp  $(paths) $(links)
+assembled: $(objects) $(headers) ${PROJ_DIR}/assembledDriver.cpp 
+	$(compiler) $(compilerFlags) -o ${PROJ_DIR}/assembledKernelTest $(flags) $(objects) ${PROJ_DIR}/assembledDriver.cpp  $(paths) $(links)
+
+unassembled: $(objects) $(headers) ${PROJ_DIR}/kernelTestDriver.cpp 
+	$(compiler) $(compilerFlags) -o ${PROJ_DIR}/kernelTestDriver $(flags) $(objects) ${PROJ_DIR}/kernelTestDriver.cpp  $(paths) $(links)
 
 
 $(oPath)/%.o:$(sPath)/%.cpp $(wildcard $(subst $(sPath)/,$(iPath)/,$(<:.cpp=.hpp))) $(wildcard $(subst $(sPath)/,$(iPath)/,$(<:.cpp=.tpp)))

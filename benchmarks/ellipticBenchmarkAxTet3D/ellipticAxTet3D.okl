@@ -1,4 +1,7 @@
-void ellipticPartialAxTet3D_Ref0(int Nelements,
+
+#define datafloat dfloat
+
+kernel void ellipticPartialAxTet3D_Ref0(int Nelements,
     int   * restrict elementList,
     datafloat * restrict ggeo,
     datafloat * restrict SrrT,
@@ -68,7 +71,7 @@ void ellipticPartialAxTet3D_Ref0(int Nelements,
 }
 
 // Ref0+const
-void ellipticPartialAxTet3D_Ref1(const int Nelements,
+kernel void ellipticPartialAxTet3D_Ref1(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
@@ -138,7 +141,7 @@ void ellipticPartialAxTet3D_Ref1(const int Nelements,
   }
 }
 //Ref2 = Ref1 + main loop unrolled
-void ellipticPartialAxTet3D_Ref2(const int Nelements,
+kernel void ellipticPartialAxTet3D_Ref2(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
@@ -209,7 +212,7 @@ void ellipticPartialAxTet3D_Ref2(const int Nelements,
   }
 }
 //Ref3 = Ref2 read q once
-void ellipticPartialAxTet3D_Ref3(const int Nelements,
+kernel void ellipticPartialAxTet3D_Ref3(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
@@ -285,7 +288,7 @@ void ellipticPartialAxTet3D_Ref3(const int Nelements,
 
 //Ref4 = Ref3 + q in shared
 // (former Ref 1)
-void ellipticPartialAxTet3D_Ref4(const int Nelements,
+kernel void ellipticPartialAxTet3D_Ref4(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
@@ -368,7 +371,7 @@ void ellipticPartialAxTet3D_Ref4(const int Nelements,
 
 
 //Ref5 = Ref4+ geofactors in shared
-void ellipticPartialAxTet3D_Ref5(const int Nelements,
+kernel void ellipticPartialAxTet3D_Ref5(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,
@@ -463,7 +466,7 @@ void ellipticPartialAxTet3D_Ref5(const int Nelements,
 
 
 
-void ellipticPartialAxTet3D_Ref6(const int Nelements,
+kernel void ellipticPartialAxTet3D_Ref6(const int Nelements,
     const int   * restrict elementList,
     const datafloat * restrict ggeo,
     const datafloat * restrict SrrT,

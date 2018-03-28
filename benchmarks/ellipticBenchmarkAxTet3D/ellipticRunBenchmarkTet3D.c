@@ -1,6 +1,6 @@
 #include "ellipticBenchmarkTet3D.h"
 
-#define BB_TESTS 1
+//#define BB_TESTS 1
 
 void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo kernelInfo, char *kernelFileName, int Nblocks, int Nnodes){
 
@@ -14,10 +14,10 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
   char kernelName[BUFSIZ];
 
 #ifndef BB_TESTS
-  NKernels = 0;
-  sprintf(kernelName, "ellipticPartialAxSparseTet3D");
+  NKernels = 1;
+  sprintf(kernelName, "ellipticPartialAxTet3D");
 #else
-  NKernels = 5;
+  NKernels = 6;
   sprintf(kernelName, "ellipticPartialAxBBTet3D");
 #endif
   //  kernelInfo.addCompilerFlag("-G");
@@ -58,6 +58,9 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 
     //    kernelInfo.addDefine("p_Ne", Nnodes);
     //    kernelInfo.addDefine("p_Nb", Nblocks);
+
+    int halfNp = (mesh->Np+1)/2;
+    kernelInfo.addDefine("p_halfNp", halfNp);
     
     testKernel = mesh->device.buildKernelFromSource(kernelFileName,testkernelName,kernelInfo);
 
@@ -82,7 +85,6 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
       testKernel(mesh->Nelements, 
 		 solver->o_localGatherElementList,
 		 mesh->o_ggeo, 
-		 mesh->o_IndTchar,
 		 mesh->o_SrrT, 
 		 mesh->o_SrsT, 
 		 mesh->o_SrtT, 
@@ -156,12 +158,17 @@ void ellipticRunBenchmark3D(solver_t *solver, char *options, occa::kernelInfo ke
 #ifndef BB_TESTS
       double flops = (double)(nnzs*14 + mesh->Np*13);
 #else
-      double flops = (double)(mesh->Np*(39+15+1) + mesh->Nfp*mesh->Nfaces*(6 + 2*mesh->Np) + mesh->Np*15 + (39+3)*mesh->Np + mesh->Np*mesh->Np);
+      double flops = (double)(mesh->Np*(39+15+1) +
+			      mesh->Nfp*mesh->Nfaces*(6 + 2*mesh->Np) +
+			      mesh->Np*15 +
+			      (39+3)*mesh->Np + 2.*mesh->Np*mesh->Np);
 #endif
       double eqflops = mesh->Np*mesh->Np*14 + mesh->Np*13;
 
       double roofline = ((mesh->Nelements*flops*(double)Ntrials))/(1e9*globalCopyElapsed);
-      printf("Nelements = %d flops = %d Ntrials = %d copy elapsed scaled = %f kernelElapsed %16.16f\n",mesh->Nelements, (int) flops, Ntrials,  1e9*globalCopyElapsed, kernelElapsed);
+      printf("Nelements = %d flops = %d Ntrials = %d "
+	     "copy elapsed scaled = %f kernelElapsed %16.16f\n",
+	     mesh->Nelements, (int) flops, Ntrials,  1e9*globalCopyElapsed, kernelElapsed);
 
       double copyBandwidth   = mesh->Nelements*((Nbytes*Ntrials*2.)/(1e9*globalCopyElapsed));
       double kernelBandwidth = mesh->Nelements*((Nbytes*2.)/(1e9*kernelElapsed));
