@@ -9,12 +9,12 @@ void advectionRunLSERKQuad3D(solver_t *solver){
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
-  dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np*mesh->Nfields*mesh->Nrhs,sizeof(dfloat));
-    
+  dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,sizeof(dfloat));
+  
   //kernel arguments
   dfloat alpha = 1./mesh->N;
   
-  /*  mesh->filterKernelq0H(mesh->Nelements,
+  mesh->filterKernelq0H(mesh->Nelements,
 			alpha,
 			mesh->o_dualProjMatrix,
 			mesh->o_cubeFaceNumber,
@@ -35,8 +35,8 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			mesh->o_z,
 			mesh->o_qPreFilter,
 			mesh->o_qpre);
-  */
-  for(iint tstep=0;tstep < mesh->Nrhs;++tstep){
+  
+  for(iint tstep=0;tstep < mesh->NtimeSteps;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       
       	iint lev;
@@ -50,7 +50,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
       for (iint rk = 0; rk < mesh->Nrk; ++rk) {
 	
 	//synthesize actual stage time
-	dfloat t = tstep*pow(2,mesh->MRABNlevels-1) + Ntick;
+	dfloat t = mesh->dt*tstep*pow(2,mesh->MRABNlevels-1) + mesh->dt*Ntick + mesh->dt*mesh->rkc[rk];
       
 	if(mesh->totalHaloPairs>0){
 	  // extract halo on DEVICE
@@ -80,7 +80,8 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			      mesh->o_z,
 			      mesh->o_qpre,
 			      mesh->o_prerhsq);
-
+		
+	
 	if(mesh->totalHaloPairs>0){
 	  // wait for halo data to arrive
 	  meshHaloExchangeFinish(mesh);
@@ -102,7 +103,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			       mesh->o_z,
 			       mesh->o_qpre,
 			       mesh->o_prerhsq);
-
+	
 	/*	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
 	  iint saved = (l < lev)&&(rk == 0);
 	  mesh->filterKernelHLSERK(mesh->MRABNelements[l],
@@ -137,8 +138,29 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				   mesh->o_qPreFilter,
 				   mesh->o_qPreFiltered,
 				   mesh->o_qFilter);
-	}
-	*/
+				   }*/
+	mesh->filterKernelq0H(mesh->Nelements,
+			alpha,
+			mesh->o_dualProjMatrix,
+			mesh->o_cubeFaceNumber,
+			mesh->o_EToE,
+			mesh->o_x,
+			mesh->o_y,
+			mesh->o_z,
+			mesh->o_prerhsq,
+			mesh->o_qPreFilter);
+  
+	mesh->filterKernelq0V(mesh->Nelements,
+			alpha,
+			mesh->o_dualProjMatrix,
+			mesh->o_cubeFaceNumber,
+			mesh->o_EToE,
+			mesh->o_x,
+			mesh->o_y,
+			mesh->o_z,
+			mesh->o_qPreFilter,
+			mesh->o_prerhsq);
+	/*
 	for (iint l = 0; l < mesh->MRABNlevels; l++) {
 	  iint saved = (l < lev)&&(rk == 0);
 	  mesh->volumeCorrPreKernel(mesh->MRABNelements[l],
@@ -148,7 +170,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				    mesh->o_qpre,
 				    mesh->o_qCorr,
 				    mesh->o_qPreCorr);
-	}
+				    }*/
 	for (iint l = 0; l < mesh->MRABNlevels; l++) {
 	  iint saved = (l < lev)&&(rk == 0);
 	  
@@ -162,15 +184,15 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				  mesh->MRABshiftIndex[l],
 				  //mesh->o_qPreFiltered,
 				  mesh->o_prerhsq,
-				  //mesh->o_qFiltered,
-				  mesh->o_rhsq,
+				  mesh->o_qFiltered,
+				  //mesh->o_rhsq,
 				  mesh->o_qPreCorr,
 				  mesh->o_resq,
 				  mesh->o_qpre);
 	    
 	    saved = (l < levS)&&(rk == mesh->Nrk-1);
 	    if (saved)
-	      mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+2)%mesh->Nrhs;
+	      mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+mesh->Nrhs-1)%mesh->Nrhs;
 	  }
 	}
       }
@@ -205,11 +227,12 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 
       advectionPlotNorms(mesh,"norms",tstep/mesh->errorStep,mesh->q);
       }
-    
-    //    mesh->o_q.copyTo(mesh->q);
-    //advectionPlotNorms(mesh,"start",tstep,mesh->q);*/
-  }
-  
+    */
+    if (tstep == mesh->NtimeSteps-1) {
+      mesh->o_qpre.copyTo(mesh->q);
+      advectionPlotNorms(mesh,"end",0,mesh->q);
+    }
+  }  
   free(recvBuffer);
   free(sendBuffer);
 }

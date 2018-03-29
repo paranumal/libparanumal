@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cd /scratch/stimmel/convergence
-for N in `seq 2 7`;
+for N in `seq 5 7`;
 do  
     for meshnum in `seq 4 4 32`;
     do

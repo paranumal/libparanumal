@@ -128,14 +128,14 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
 
       dfloat xsph, ysph, zsph, cubRad;
 
-      cubRad = sqrt(xlin*xlin + ylin*ylin + zlin*zlin);
+      /*      cubRad = sqrt(xlin*xlin + ylin*ylin + zlin*zlin);
       xsph = R/cubRad * xlin;
       ysph = R/cubRad * ylin;
       zsph = R/cubRad * zlin;
-
-      if (sqrt(xsph*xsph + ysph*ysph + zsph*zsph) - 1 > 1e-12) printf("error\n");
       
-      /*      switch(faceNumber) {
+      if (fabs(sqrt(xsph*xsph + ysph*ysph + zsph*zsph) - 1) > 1e-12) printf("error\n");
+      */
+      switch(faceNumber) {
       case 1: //positive constant x
 	cubRad = sqrt(ylin*ylin + zlin*zlin + a*a);
 	xsph = R/cubRad * a;
@@ -172,7 +172,7 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
 	ysph = R/cubRad * ylin;
 	zsph = -1*R/cubRad * a;
 	break;
-	}*/
+	}
       //Apply coordinate shift to vertex arrays
       /*if (rn == mesh->r[0] && sn == mesh->s[0]) {
 	mesh->EX[id + 0] = xsph;
