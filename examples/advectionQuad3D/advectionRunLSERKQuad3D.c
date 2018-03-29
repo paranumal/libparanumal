@@ -139,7 +139,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				   mesh->o_qFilter);
 	}
 	*/
-	for (iint l = 0; l < mesh->MRABNlevels; l++) {
+	/*	for (iint l = 0; l < mesh->MRABNlevels; l++) {
 	  iint saved = (l < lev)&&(rk == 0);
 	  mesh->volumeCorrPreKernel(mesh->MRABNelements[l],
 				    mesh->o_MRABelementIds[l],
@@ -148,7 +148,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				    mesh->o_qpre,
 				    mesh->o_qCorr,
 				    mesh->o_qPreCorr);
-	}
+				    }*/
 	for (iint l = 0; l < mesh->MRABNlevels; l++) {
 	  iint saved = (l < lev)&&(rk == 0);
 	  
@@ -170,7 +170,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 	    
 	    saved = (l < levS)&&(rk == mesh->Nrk-1);
 	    if (saved)
-	      mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+2)%mesh->Nrhs;
+	      mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+mesh->Nrhs-1)%mesh->Nrhs;
 	  }
 	}
       }
