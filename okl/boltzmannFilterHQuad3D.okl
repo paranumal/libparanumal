@@ -39,7 +39,7 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 	
 	const iint faceC = cubeFaceNumber[eC];
 
-	mark_edge = (faceC != 0);//(faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) && (faceC==cubeFaceNumber[eD]) && (faceC==cubeFaceNumber[eU]);
+	mark_edge = (faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) && (faceC==cubeFaceNumber[eD]) && (faceC==cubeFaceNumber[eU]);
 
 	occaUnroll(p_Nfields)	  
 	  for(iint fld=0;fld<p_Nfields;++fld){
@@ -181,7 +181,7 @@ kernel void boltzmannFilterHLSERKQuad3D(const iint Nelements,
 	
 	const iint faceC = cubeFaceNumber[eo];
 
-	mark_edge = (faceC != 0);//(faceC==cubeFaceNumber[eL])&&(faceC==cubeFaceNumber[eR]) &&(faceC==cubeFaceNumber[eD])&&(faceC==cubeFaceNumber[eU]);
+	mark_edge = (faceC==cubeFaceNumber[eL])&&(faceC==cubeFaceNumber[eR]) &&(faceC==cubeFaceNumber[eD])&&(faceC==cubeFaceNumber[eU]);
 
 	occaUnroll(p_Nfields)
   	  for(iint fld=0;fld<p_Nfields;++fld){
@@ -273,7 +273,7 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 	
 	const iint faceC = cubeFaceNumber[eo];
 
-	mark_edge = (faceC != 0);//(faceC==cubeFaceNumber[eL])&&(faceC==cubeFaceNumber[eR]) &&(faceC==cubeFaceNumber[eD])&&(faceC==cubeFaceNumber[eU]);
+	mark_edge = (faceC==cubeFaceNumber[eL])&&(faceC==cubeFaceNumber[eR]) &&(faceC==cubeFaceNumber[eD])&&(faceC==cubeFaceNumber[eU]);
 
 	occaUnroll(p_Nfields)
   	  for(iint fld=0;fld<p_Nfields;++fld){
@@ -323,6 +323,7 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 	      Fqij[fld] = s_q[fld][1][j][i];
 	    }
 	}
+	
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
 	    Fq[eo*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = Fqij[fld];

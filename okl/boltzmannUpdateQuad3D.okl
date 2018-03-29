@@ -231,7 +231,7 @@ kernel void boltzmannMRSAAB4UpdateQuad3D(const iint Nelements,
       e  = elementIds[es];
       if(n<p_Np){
 	const iint id = n + e*p_Np*p_Nfields;
-	const iint rid = n + e*p_Np*p_Nfields*4;
+	const iint rid = n + e*p_Np*p_Nfields*3;
 
         // hard-coded for 3th order
 	const iint rhsId1 = rid + ((shift+0)%4)*p_Nfields*p_Np;
@@ -306,13 +306,13 @@ kernel void boltzmannMRSAAB4TraceUpdateQuad3D(const iint Nelements,
       e  = elementIds[es];
       if(n<p_Np){
 	const iint id = n + e*p_Np*p_Nfields;
-	const iint rid = n + e*p_Np*p_Nfields*4;
+	const iint rid = n + e*p_Np*p_Nfields*3;
 
         // hard-coded for 3th order
-	const iint rhsId1 = rid + ((shift+0)%4)*p_Nfields*p_Np;
-	const iint rhsId2 = rid + ((shift+1)%4)*p_Nfields*p_Np;
-	const iint rhsId3 = rid + ((shift+2)%4)*p_Nfields*p_Np;
-	const iint rhsId4 = rid + ((shift+3)%4)*p_Nfields*p_Np;
+	const iint rhsId1 = rid + ((shift+0)%3)*p_Nfields*p_Np;
+	const iint rhsId2 = rid + ((shift+1)%3)*p_Nfields*p_Np;
+	const iint rhsId3 = rid + ((shift+2)%3)*p_Nfields*p_Np;
+	const iint rhsId4 = rid + ((shift+3)%3)*p_Nfields*p_Np;
 
 	for(iint fld=0; fld< p_Nfields; ++fld){
 	  

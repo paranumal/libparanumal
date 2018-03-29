@@ -25,7 +25,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
   
   for(iint tstep=mesh->Nrhs;tstep<mesh->NtimeSteps;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
-      iint mrab_order=mesh->Nrhs-1;
+      iint mrab_order=3;
       /*      if (tstep - mesh->Nrhs == 0) mrab_order = 0;
       else if (tstep - mesh->Nrhs == 1) mrab_order = 1;
       else mrab_order = 2;*/
@@ -108,7 +108,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
       }
       occa::toc("surfaceKernel");
 
-      mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
+      /*      mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
       mesh->o_lev_updates.copyFrom(mesh->lev_updates);
 
       for (iint l = 0; l < lev; l++) {
@@ -147,8 +147,8 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_qFilter,
 			    mesh->o_qFiltered);	
 			    }
-            
-      /*      for (iint l=0;l<lev;l++) {
+      */        
+      for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
 	  mesh->volumeCorrectionKernel(mesh->MRABNelements[l],
 				       mesh->o_MRABelementIds[l],
@@ -156,7 +156,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 				       mesh->o_q,
 				       mesh->o_qCorr);
 	}
-	}*/
+      }
       
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
@@ -178,15 +178,15 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			     mesh->MRSAAB_A[id+2],
 			     mesh->MRSAAB_A[id+3],
 			     mesh->MRABshiftIndex[l],
-			     mesh->o_qFiltered,
-			     //mesh->o_rhsq,
+			     //mesh->o_qFiltered,
+			     mesh->o_rhsq,
 			     mesh->o_vmapM,
 			     mesh->o_fQM,
 			     mesh->o_qCorr,
 			     mesh->o_q);
 
-	  //we *must* step backwards here, so rk coefficients point the right direction in time
-	  mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+mesh->Nrhs-1)%mesh->Nrhs;
+	  //we *must* use 2 here (n - 1), so rk coefficients point the right direction in time
+	  mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+2)%mesh->Nrhs;
 	}
       }
       
@@ -209,8 +209,8 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 				  mesh->MRSAAB_B[id+2],
 				  mesh->MRSAAB_B[id+3],
 				  mesh->MRABshiftIndex[lev],
-				  mesh->o_qFiltered,
-				  //mesh->o_rhsq,
+				  //mesh->o_qFiltered,
+				  mesh->o_rhsq,
 				  mesh->o_vmapM,
 				  mesh->o_fQM,
 				  mesh->o_qCorr,
@@ -219,8 +219,8 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
       }
     }
     
-    //estimate maximum error
-    if((((tstep+1)%mesh->errorStep)==0)){
+    // estimate maximum error
+    /*    if((((tstep+1)%mesh->errorStep)==0)){
       //	dfloat t = (tstep+1)*mesh->dt;
       dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
 	
@@ -244,7 +244,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
       char fname[BUFSIZ];
 
       //advectionPlotVTUQuad3DV2(mesh, "foo", tstep/mesh->errorStep);
-      } 
+      } */       
     occa::printTimer();
   }
   
