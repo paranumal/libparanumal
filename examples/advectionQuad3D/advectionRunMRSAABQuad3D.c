@@ -25,7 +25,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
   
   for(iint tstep=mesh->Nrhs;tstep<mesh->NtimeSteps;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
-      iint mrab_order=3;
+      iint mrab_order=mesh->Nrhs-1;
       /*      if (tstep - mesh->Nrhs == 0) mrab_order = 0;
       else if (tstep - mesh->Nrhs == 1) mrab_order = 1;
       else mrab_order = 2;*/
@@ -148,7 +148,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_qFiltered);	
 			    }
       */        
-      for (iint l=0;l<lev;l++) {
+      /*     for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
 	  mesh->volumeCorrectionKernel(mesh->MRABNelements[l],
 				       mesh->o_MRABelementIds[l],
@@ -156,7 +156,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 				       mesh->o_q,
 				       mesh->o_qCorr);
 	}
-      }
+	}*/
       
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
@@ -186,7 +186,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_q);
 
 	  //we *must* use 2 here (n - 1), so rk coefficients point the right direction in time
-	  mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+2)%mesh->Nrhs;
+	  mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+mesh->Nrhs-1)%mesh->Nrhs;
 	}
       }
       
