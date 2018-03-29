@@ -612,7 +612,7 @@ void testLocalAxTet3D(int argc, char **argv){
 
 void testLocalAxCurvedTet3D(int argc, char **argv){
     
-  int NKernels = 7;
+  int NKernels = 8;
 
   // default to 512 elements if no arg is given
   int E = (argc>=2) ? atoi(argv[1]):512;
@@ -624,7 +624,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   int kMax = (argc>=8) ? atoi(argv[7]):(NKernels-1);
 
   int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
-  int p_cubNp = 2*p_Np; // hard code for moment
+  int p_cubNp = 3*p_Np; // hard code for moment
 
   int p_Nggeo = 7, p_Nvgeo = 11, p_Nsgeo = 7;
   
