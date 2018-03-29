@@ -14,7 +14,7 @@ kernel void boltzmannLSERKUpdateQuad3D(const iint Nelements,
   // Low storage Runge Kutta time step update
   for(iint es=0;es<Nelements;++es;outer0){
 
-    shared iint e;
+    exclusive iint e;
     
     for(iint n=0;n<p_Np;++n;inner0){
 
@@ -91,7 +91,7 @@ kernel void boltzmannMRSAAB3UpdateQuad3D(const iint Nelements,
   for(iint es=0;es<Nelements;++es;outer0){
     
     shared dfloat s_q[p_Np*p_Nfields];
-    shared iint e;
+    exclusive iint e;
     for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
       e  = elementIds[es];
       if(n<p_Np){
@@ -163,7 +163,7 @@ kernel void boltzmannMRSAAB3TraceUpdateQuad3D(const iint Nelements,
   for(iint es=0;es<Nelements;++es;outer0){
     
     shared dfloat s_q[p_Np*p_Nfields];
-    shared iint e;
+    exclusive iint e;
     for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
       e  = elementIds[es];
       if(n<p_Np){
@@ -226,7 +226,7 @@ kernel void boltzmannMRSAAB4UpdateQuad3D(const iint Nelements,
   for(iint es=0;es<Nelements;++es;outer0){
     
     shared dfloat s_q[p_Np*p_Nfields];
-    shared iint e;
+    exclusive iint e;
     for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
       e  = elementIds[es];
       if(n<p_Np){
@@ -301,7 +301,7 @@ kernel void boltzmannMRSAAB4TraceUpdateQuad3D(const iint Nelements,
   for(iint es=0;es<Nelements;++es;outer0){
     
     shared dfloat s_q[p_Np*p_Nfields];
-    shared iint e;
+    exclusive iint e;
     for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
       e  = elementIds[es];
       if(n<p_Np){

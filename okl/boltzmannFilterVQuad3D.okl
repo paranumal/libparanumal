@@ -18,9 +18,9 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
     
     shared dfloat s_F[3][p_Nq][p_Nq];
     shared dfloat s_q[p_Nfields][3][p_Nq][p_Nq];
-    shared iint eC;
-    shared iint mark_edge;
-    shared iint shiftl;
+    exclusive iint eC;
+    exclusive iint mark_edge;
+    exclusive iint shiftl;
     
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
@@ -173,8 +173,8 @@ kernel void boltzmannFilterVLSERKQuad3D(const iint Nelements,
     
     shared dfloat s_F[3][p_Nq][p_Nq];
     shared dfloat s_q[p_Nfields][3][p_Nq][p_Nq];
-    shared iint mark_edge;
-    shared iint eo;
+    exclusive iint mark_edge;
+    exclusive iint eo;
     
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
@@ -281,7 +281,7 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
     
     shared dfloat s_F[3][p_Nq][p_Nq];
     shared dfloat s_q[p_Nfields][3][p_Nq][p_Nq];
-    shared iint mark_edge;
+    exclusive iint mark_edge;
     
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
