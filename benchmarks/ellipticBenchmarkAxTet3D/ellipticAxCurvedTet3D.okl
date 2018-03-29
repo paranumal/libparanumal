@@ -1117,7 +1117,7 @@ void ellipticPartialAxCurvedTet3D_Ref8(const int Nelements,
 }
 
 
-// multiple outputs per thread
+// multiple outputs per thread (Ref10 - should try shared q again)
 void ellipticPartialAxCurvedTet3D_Ref9(const int Nelements,
 				       const int       * restrict elementList,
 				       const datafloat * restrict ggeo,
