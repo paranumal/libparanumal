@@ -35,7 +35,7 @@ int main(int argc, char **argv){
   
   // time step Boltzmann equations
   advectionRunLSERKQuad3D(solver);
-  //advectionRunMRSAABQuad3D(solver);
+  advectionRunMRSAABQuad3D(solver);
 
   mesh->o_q.copyTo(mesh->q);
   dfloat l2 = 0;
@@ -52,7 +52,7 @@ int main(int argc, char **argv){
       dfloat zrot = z;
 
       //current q0 is a gaussian pulse
-      dfloat qref = 1+.1*exp(-20*((xrot-1)*(xrot-1)+yrot*yrot+zrot*zrot));
+      dfloat qref = 1 + .1*exp(-20*((xrot-1)*(xrot-1)+yrot*yrot+zrot*zrot));
 
       dfloat J = mesh->vgeo[mesh->Nvgeo*mesh->Np*e + JWID*mesh->Np + n];
       

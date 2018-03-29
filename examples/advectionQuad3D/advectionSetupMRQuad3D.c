@@ -323,7 +323,7 @@ void mrab4_coeffs(mesh_t *mesh) {
 	  b1 += h*(cexp((lr)/2.) - (5.*lr)/2. - (71.*cpow(lr,2))/24. - (35.*cpow(lr,3))/16. + (11.*cpow(lr,2)*cexp((lr)/2.))/6. + cpow(lr,3)*cexp((lr)/2.) + 2.*lr*cexp((lr)/2.) - 1.)/cpow(lr,4);
 	  b2 += h*((13.*lr)/2. - 3.*cexp((lr)/2.) + (47.*cpow(lr,2))/8. + (35.*cpow(lr,3))/16. - 3.*cpow(lr,2)*cexp((lr)/2.) - 5.*lr*cexp((lr)/2.) + 3.)/cpow(lr,4);
 	  b3 +=-h*((11.*lr)/2. - 3.*cexp((lr)/2.) + (31.*cpow(lr,2))/8. + (21.*cpow(lr,3))/16. - (3.*cpow(lr,2)*cexp((lr)/2.))/2. - 4.*lr*cexp((lr)/2.) + 3.)/cpow(lr,4);
-	  b4 +=h*((3.*lr)/2. - cexp((lr)/2.) + (23.*cpow(lr,2))/24. + (5.*cpow(lr,3))/16. - (cpow(lr,2)*cexp((lr)/2.))/3. - lr*cexp((lr)/2.) + 1.)/cpow(lr,4);
+	  b4 +=h*((3.*lr)/2. - cexp((lr)/2.) + (23.*cpow(lr,2))/24. + (5.*cpow(lr,3))/16. - (cpow(lr,2)*cexp((lr)/2.))/3. - lr*cexp((lr)/2.) + 1)/cpow(lr,4);
 	    
 	}
 
@@ -486,7 +486,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
       mesh->q[base+8*mesh->Np] = q9bar;
       mesh->q[base+9*mesh->Np] = q10bar;*/
 
-      mesh->q[base+0*mesh->Np] = 1+.1*exp(-20*((x-1)*(x-1)+y*y+z*z));
+      mesh->q[base+0*mesh->Np] = 1 + .1*exp(-20*((x-1)*(x-1)+y*y+z*z));
       
     }
   }
@@ -497,7 +497,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat cfl_small = 0.5; // depends on the stability region size (was .4, then 2)
+  dfloat cfl_small = 1; // depends on the stability region size (was .4, then 2)
   dfloat cfl_large = cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
@@ -625,7 +625,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
     mesh->device.malloc(mesh->Nq*mesh->Nq*3*sizeof(dfloat),mesh->dualProjMatrix);
 
   mesh->o_cubeFaceNumber =
-    mesh->device.malloc(mesh->Nelements*sizeof(iint),mesh->cubeDistance);
+    mesh->device.malloc(mesh->Nelements*sizeof(iint),mesh->cubeFaceNumber);
 
   mesh->o_EToE =
     mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
