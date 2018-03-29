@@ -89,7 +89,7 @@ void testIpdgAxTet3D(int argc, char **argv){
   // device.setup("mode = Serial");
   // device.setup("mode = OpenMP  , schedule = compact, chunk = 10");
   // device.setup("mode = OpenCL  , platformID = 0, deviceID = 0");
-  device.setup("mode = CUDA    , deviceID = 0");
+  device.setup("mode = CUDA    , deviceID = 1");
   // device.setup("mode = Pthreads, threadCount = 4, schedule = compact, pinnedCores = [0, 0, 1, 1]");
   // device.setup("mode = COI     , deviceID = 0");
 
@@ -612,7 +612,7 @@ void testLocalAxTet3D(int argc, char **argv){
 
 void testLocalAxCurvedTet3D(int argc, char **argv){
     
-  int NKernels = 4;
+  int NKernels = 10;
 
   // default to 512 elements if no arg is given
   int E = (argc>=2) ? atoi(argv[1]):512;
@@ -624,7 +624,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   int kMax = (argc>=8) ? atoi(argv[7]):(NKernels-1);
 
   int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
-  int p_cubNp = 2*p_Np; // hard code for moment
+  int p_cubNp = p_Np; // hard code for moment
 
   int p_Nggeo = 7, p_Nvgeo = 11, p_Nsgeo = 7;
   
@@ -672,6 +672,8 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   // device.setup("mode = Pthreads, threadCount = 4, schedule = compact, pinnedCores = [0, 0, 1, 1]");
   // device.setup("mode = COI     , deviceID = 0");
 
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  
   // compiler variables to be passed to backend compiler by OCCA
   kernelInfo.addDefine("datafloat", datafloatString);
   kernelInfo.addDefine("dfloat", datafloatString);
@@ -690,12 +692,12 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   datafloat *ggeo;
   datafloat *cDrT, *cDsT, *cDtT, *cIT;
   datafloat *cDr, *cDs, *cDt, *cI;
-  datafloat *q, *Aq;
+  datafloat *q, *Aq, *tmp;
   int  *elementList;
   occa::memory o_elementList, o_ggeo;
   occa::memory o_cDrT, o_cDsT, o_cDtT, o_cIT;
   occa::memory o_cDr, o_cDs, o_cDt, o_cI;
-  occa::memory o_q, o_Aq; 
+  occa::memory o_q, o_Aq, o_tmp; 
   
 
   kernelInfo.addDefine("p_G00ID", 0);
@@ -708,6 +710,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
 
   randCalloc(device, E*p_Nggeo*CSIZE, &ggeo, o_ggeo);
 
+ 
   randCalloc(device, BSIZE*CSIZE, &cDrT, o_cDrT);
   randCalloc(device, BSIZE*CSIZE, &cDsT, o_cDsT);
   randCalloc(device, BSIZE*CSIZE, &cDtT, o_cDtT);
@@ -718,6 +721,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   randCalloc(device, BSIZE*CSIZE, &cDt, o_cDt);
   randCalloc(device, BSIZE*CSIZE, &cI, o_cI);
 
+
   for(int n=0;n<p_cubNp;++n){
     for(int m=0;m<p_Np;++m){
       cDrT[n+m*p_cubNp] = cDr[m+n*p_Np];
@@ -726,6 +730,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
       cIT[n+m*p_cubNp] = cI[m+n*p_Np];
     }
   }
+  
   o_cDrT.copyFrom(cDrT);
   o_cDsT.copyFrom(cDsT);
   o_cDtT.copyFrom(cDtT);
@@ -733,6 +738,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
   
   randCalloc(device, BSIZE*E, &q, o_q);
   randCalloc(device, BSIZE*E, &Aq, o_Aq);
+  randCalloc(device, CSIZE*4*E, &tmp, o_tmp);
 
   elementList = (int *) calloc(E, sizeof(int));
 
@@ -768,7 +774,8 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
 		     o_cDtT,
 		     o_cIT,
 		     lambda,
-		     o_q,       
+		     o_q,
+		     o_tmp,
 		     o_Aq);
     }
     
@@ -812,7 +819,7 @@ void testLocalAxCurvedTet3D(int argc, char **argv){
     double gflops;
     long long int Nbytes;
     
-    Nbytes =  p_Nggeo*p_cubNp*p_Np*sizeof(datafloat) +
+    Nbytes =  2*4*p_cubNp*p_Np*sizeof(datafloat) +
       E*p_cubNp*p_Nggeo*sizeof(datafloat)+
       E*sizeof(int)+E*p_Np*2*sizeof(datafloat);
     
