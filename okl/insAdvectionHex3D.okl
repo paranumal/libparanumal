@@ -60,16 +60,16 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
           const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
           const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
           const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
-          const dfloat J    = vgeo[gid + p_JID*p_Np];
+          const dfloat JW   = vgeo[gid + p_JWID*p_Np];
 
           const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           const dfloat Un = U[id];
           const dfloat Vn = V[id];
           const dfloat Wn = W[id];
 
-          const dfloat cUn = J*(drdx*Un+drdy*Vn+drdz*Wn);
-          const dfloat cVn = J*(dsdx*Un+dsdy*Vn+dsdz*Wn);
-          const dfloat cWn = J*(dtdx*Un+dtdy*Vn+dtdz*Wn);
+          const dfloat cUn = JW*(drdx*Un+drdy*Vn+drdz*Wn);
+          const dfloat cVn = JW*(dsdx*Un+dsdy*Vn+dsdz*Wn);
+          const dfloat cWn = JW*(dtdx*Un+dtdy*Vn+dtdz*Wn);
 
           s_F11[j][i] = cUn*Un;
           s_F12[j][i] = cVn*Un;
@@ -91,7 +91,7 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
             for (int n=0;n<p_Nq;n++) {
               const dfloat Dr = s_D[n][i];
               const dfloat Ds = s_D[n][j];
-              const dfloat Dk = s_D[k][n];
+              const dfloat Dt = s_D[k][n];
               r_NU[k] += Dr*s_F11[j][n];
               r_NV[k] += Dr*s_F21[j][n];
               r_NW[k] += Dr*s_F31[j][n];
@@ -100,9 +100,9 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
               r_NV[k] += Ds*s_F22[n][i];
               r_NW[k] += Ds*s_F32[n][i];
 
-              r_NU[n] += Dk*s_F13[j][i];
-              r_NV[n] += Dk*s_F23[j][i];
-              r_NW[n] += Dk*s_F33[j][i];
+              r_NU[n] += Dt*s_F13[j][i];
+              r_NV[n] += Dt*s_F23[j][i];
+              r_NW[n] += Dt*s_F33[j][i];
             }
         }
       }
@@ -115,10 +115,13 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
       for(int i=0;i<p_Nq;++i;inner0){
         occaUnroll(p_Nq)
           for(int k=0;k<p_Nq;++k){
+            const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
+            const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+
             const dlong id =(e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-            NU[id] = r_NU[k];
-            NV[id] = r_NV[k];
-            NW[id] = r_NW[k];
+            NU[id] = -invJW*r_NU[k];
+            NV[id] = -invJW*r_NV[k];
+            NW[id] = -invJW*r_NW[k];
           }
       }
     }
@@ -142,8 +145,7 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
-    const dlong idm = vmapM[sk];                                        \
-    insVelocityDirichletConditions3D(bc, time, x[idm], y[idm], z[idm], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
+    insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
   }                                                                     \
                                                                         \
   const dfloat unM   = occaFabs(nx*uM + ny*vM + nz*wM);                 \
@@ -175,9 +177,9 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
                                       const dfloat * restrict U,
                                       const dfloat * restrict V,
                                       const dfloat * restrict W,
-                                      dfloat * restrict NU,
-                                      dfloat * restrict NV,
-                                      dfloat * restrict NW){
+                                            dfloat * restrict NU,
+                                            dfloat * restrict NV,
+                                            dfloat * restrict NW){
 
   // for all elements
   for(dlong e=0;e<Nelements;e++;outer0){
@@ -188,6 +190,8 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
 
     exclusive dfloat r_NU[p_Nq], r_NV[p_Nq], r_NW[p_Nq];
 
+    // for all face nodes of all elements
+    // face 0 & 5
     for(int j=0;j<p_Nq;++j;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
         occaUnroll(p_Nq)
@@ -196,15 +200,7 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
           r_NV[k] = 0.;
           r_NW[k] = 0.;
         }
-      }
-    }
 
-    barrier(localMemFence);
-
-    // for all face nodes of all elements
-    // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
         const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i + j*p_Nq;
         const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i + j*p_Nq;
 
@@ -219,14 +215,14 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
     for(int j=0;j<p_Nq;++j;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
         //face 0
-        r_NU[0] += s_fluxNU[0][i][j];
-        r_NV[0] += s_fluxNV[0][i][j];
-        r_NW[0] += s_fluxNW[0][i][j];
+        r_NU[0] += s_fluxNU[0][j][i];
+        r_NV[0] += s_fluxNV[0][j][i];
+        r_NW[0] += s_fluxNW[0][j][i];
 
         //face 5
-        r_NU[p_Nq-1] += s_fluxNU[1][i][j];
-        r_NV[p_Nq-1] += s_fluxNV[1][i][j];
-        r_NW[p_Nq-1] += s_fluxNW[1][i][j];
+        r_NU[p_Nq-1] += s_fluxNU[1][j][i];
+        r_NV[p_Nq-1] += s_fluxNV[1][j][i];
+        r_NW[p_Nq-1] += s_fluxNW[1][j][i];
       }
     }
 
@@ -251,17 +247,17 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
         if (j==0) {//face 1
           occaUnroll(p_Nq)
           for (int n=0;n<p_Nq;n++) {
-            r_NU[n] += s_fluxNU[0][i][n];
-            r_NV[n] += s_fluxNV[0][i][n];
-            r_NW[n] += s_fluxNW[0][i][n];
+            r_NU[n] += s_fluxNU[0][n][i];
+            r_NV[n] += s_fluxNV[0][n][i];
+            r_NW[n] += s_fluxNW[0][n][i];
           }
         }
         if (j==p_Nq-1) {//face 3
           occaUnroll(p_Nq)
           for (int n=0;n<p_Nq;n++) {
-            r_NU[n] += s_fluxNU[1][i][n];
-            r_NV[n] += s_fluxNV[1][i][n];
-            r_NW[n] += s_fluxNW[1][i][n];
+            r_NU[n] += s_fluxNU[1][n][i];
+            r_NV[n] += s_fluxNV[1][n][i];
+            r_NW[n] += s_fluxNW[1][n][i];
           }
         }
       }
@@ -288,17 +284,17 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
         if (i==p_Nq-1) {//face 2
           occaUnroll(p_Nq)
           for (int n=0;n<p_Nq;n++) {
-            r_NU[n] += s_fluxNU[0][j][n];
-            r_NV[n] += s_fluxNV[0][j][n];
-            r_NW[n] += s_fluxNW[0][j][n];
+            r_NU[n] += s_fluxNU[0][n][j];
+            r_NV[n] += s_fluxNV[0][n][j];
+            r_NW[n] += s_fluxNW[0][n][j];
           }
         }
         if (i==0) {//face 4
           occaUnroll(p_Nq)
           for (int n=0;n<p_Nq;n++) {
-            r_NU[n] += s_fluxNU[1][j][n];
-            r_NV[n] += s_fluxNV[1][j][n];
-            r_NW[n] += s_fluxNW[1][j][n];
+            r_NU[n] += s_fluxNU[1][n][j];
+            r_NV[n] += s_fluxNV[1][n][j];
+            r_NW[n] += s_fluxNW[1][n][j];
           }
         }
       }
@@ -327,7 +323,7 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
 kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
                                              const dfloat * restrict vgeo,
                                              const dfloat * restrict cubvgeo,
-                                             const dfloat * restrict cubDWT,
+                                             const dfloat * restrict cubD,
                                              const dfloat * restrict cubInterpT,
                                              const dfloat * restrict cubProjectT,
                                              const dlong offset,
@@ -474,14 +470,14 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     shared dfloat s_F32[p_cubNq][p_cubNq];
     shared dfloat s_F33[p_cubNq][p_cubNq];
 
-    shared dfloat s_cubDWT[p_cubNq][p_Nq];
+    shared dfloat s_cubD[p_cubNq][p_cubNq];
 
     exclusive dfloat r_NU[p_cubNq], r_NV[p_cubNq], r_NW[p_cubNq];
 
     for(int j=0;j<p_cubNq;++j;inner1){ 
       for(int i=0;i<p_cubNq;++i;inner0){
         const int id = i+j*p_cubNq;
-        s_cubDWT[0][id] = cubDWT[id];
+        s_cubD[0][id] = cubD[id];
 
         occaUnroll(p_cubNq)
           for(int k=0;k<p_cubNq;++k){         
@@ -510,16 +506,16 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
           const dfloat dtdx = cubvgeo[gid + p_TXID*p_cubNp];
           const dfloat dtdy = cubvgeo[gid + p_TYID*p_cubNp];
           const dfloat dtdz = cubvgeo[gid + p_TZID*p_cubNp];
-          const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
+          const dfloat JW = cubvgeo[gid + p_JWID*p_cubNp];
 
           const dlong id =e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
           const dfloat Un = cU[id];
           const dfloat Vn = cV[id];
           const dfloat Wn = cW[id];
 
-          const dfloat cUn = J*(drdx*Un+drdy*Vn+drdz*Wn);
-          const dfloat cVn = J*(dsdx*Un+dsdy*Vn+dsdz*Wn);
-          const dfloat cWn = J*(dtdx*Un+dtdy*Vn+dtdz*Wn);
+          const dfloat cUn = JW*(drdx*Un+drdy*Vn+drdz*Wn);
+          const dfloat cVn = JW*(dsdx*Un+dsdy*Vn+dsdz*Wn);
+          const dfloat cWn = JW*(dtdx*Un+dtdy*Vn+dtdz*Wn);
 
           s_F11[j][i] = cUn*Un;
           s_F12[j][i] = cVn*Un;
@@ -539,9 +535,9 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         for(int i=0;i<p_cubNq;++i;inner0){
           occaUnroll(p_cubNq)
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Dr = s_cubDWT[n][i];
-              const dfloat Ds = s_cubDWT[n][j];
-              const dfloat Dk = s_cubDWT[k][n];
+              const dfloat Dr = s_cubD[n][i];
+              const dfloat Ds = s_cubD[n][j];
+              const dfloat Dt = s_cubD[k][n];
               r_NU[k] += Dr*s_F11[j][n];
               r_NV[k] += Dr*s_F21[j][n];
               r_NW[k] += Dr*s_F31[j][n];
@@ -550,9 +546,9 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
               r_NV[k] += Ds*s_F22[n][i];
               r_NW[k] += Ds*s_F32[n][i];
 
-              r_NU[n] += Dk*s_F13[j][i];
-              r_NV[n] += Dk*s_F23[j][i];
-              r_NW[n] += Dk*s_F33[j][i];
+              r_NU[n] += Dt*s_F13[j][i];
+              r_NV[n] += Dt*s_F23[j][i];
+              r_NW[n] += Dt*s_F33[j][i];
             }
         }
       }
@@ -782,8 +778,9 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
 \
       const int bc = EToB[face+p_Nfaces*e];\
       if(bc>0) {\
-        const dlong idm = e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i;\
-        insVelocityDirichletConditions3D(bc, time, intx[idm], inty[idm], intz[idm], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);\
+        insVelocityDirichletConditions3D(bc, time, intx[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i],\
+                                                   inty[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i],\
+                                                   intz[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);\
       }\
 \
       const dfloat unM   = occaFabs(nx*uM + ny*vM + nz*wM);\
@@ -926,7 +923,7 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
         }
       }
     }
-#if 1
+
     barrier(localMemFence);
 
     quadSurfaceTerms(0) //face 0
@@ -937,9 +934,9 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
     for(int j=0;j<p_cubNq;++j;inner1){
       for(int i=0;i<p_cubNq;++i;inner0){
         if (j<p_Nq && i<p_Nq) {
-          r_NU[0] += s_fluxNU[i][j];
-          r_NV[0] += s_fluxNV[i][j];
-          r_NW[0] += s_fluxNW[i][j];
+          r_NU[0] += s_fluxNU[j][i];
+          r_NV[0] += s_fluxNV[j][i];
+          r_NW[0] += s_fluxNW[j][i];
         }
       }
     }
@@ -954,9 +951,9 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
     for(int j=0;j<p_cubNq;++j;inner1){
       for(int i=0;i<p_cubNq;++i;inner0){
         if (j<p_Nq && i<p_Nq) {
-          r_NU[p_Nq-1] += s_fluxNU[i][j];
-          r_NV[p_Nq-1] += s_fluxNV[i][j];
-          r_NW[p_Nq-1] += s_fluxNW[i][j];
+          r_NU[p_Nq-1] += s_fluxNU[j][i];
+          r_NV[p_Nq-1] += s_fluxNV[j][i];
+          r_NW[p_Nq-1] += s_fluxNW[j][i];
         }
       }
     }
@@ -973,9 +970,9 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
         if (j==0 && i<p_Nq) {//face 1
           occaUnroll(p_Nq)
           for (int n=0;n<p_Nq;n++) {
-            r_NU[n] += s_fluxNU[i][n];
-            r_NV[n] += s_fluxNV[i][n];
-            r_NW[n] += s_fluxNW[i][n];
+            r_NU[n] += s_fluxNU[n][i];
+            r_NV[n] += s_fluxNV[n][i];
+            r_NW[n] += s_fluxNW[n][i];
           }
         }
       }
@@ -993,9 +990,9 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
         if (j==p_Nq-1 && i<p_Nq) {//face 3
           occaUnroll(p_Nq)
           for (int n=0;n<p_Nq;n++) {
-            r_NU[n] += s_fluxNU[i][n];
-            r_NV[n] += s_fluxNV[i][n];
-            r_NW[n] += s_fluxNW[i][n];
+            r_NU[n] += s_fluxNU[n][i];
+            r_NV[n] += s_fluxNV[n][i];
+            r_NW[n] += s_fluxNW[n][i];
           }
         }
       }
@@ -1013,9 +1010,9 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
         if (j<p_Nq && i==p_Nq-1) {//face 2
           occaUnroll(p_Nq)
           for (int n=0;n<p_Nq;n++) {
-            r_NU[n] += s_fluxNU[j][n];
-            r_NV[n] += s_fluxNV[j][n];
-            r_NW[n] += s_fluxNW[j][n];
+            r_NU[n] += s_fluxNU[n][j];
+            r_NV[n] += s_fluxNV[n][j];
+            r_NW[n] += s_fluxNW[n][j];
           }
         }
       }
@@ -1033,9 +1030,9 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
         if (j<p_Nq && i==0) {//face 4
           occaUnroll(p_Nq)
           for (int n=0;n<p_Nq;n++) {
-            r_NU[n] += s_fluxNU[j][n];
-            r_NV[n] += s_fluxNV[j][n];
-            r_NW[n] += s_fluxNW[j][n];
+            r_NU[n] += s_fluxNU[n][j];
+            r_NV[n] += s_fluxNV[n][j];
+            r_NW[n] += s_fluxNW[n][j];
           }
         }
       }
@@ -1060,7 +1057,6 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
         }
       }
     }
-    #endif
   }
 }
 #undef quadSurfaceTerms

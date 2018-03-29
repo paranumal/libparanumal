@@ -17,13 +17,13 @@ int main(int argc, char **argv){
     Ns = atoi(argv[4]); // Number of substeps
   char *options; 
   if(Ns==0)
-    options = strdup("out=CONTOUR, adv=COLLOCATION");
+    options = strdup("out=VTU, adv=COLLOCATION");
   else
-    options = strdup("out=CONTOUR, adv=COLLOCATION,SUBCYCLING");  //pres=PRESSURE_HISTORY
+    options = strdup("out=VTU, adv=COLLOCATION,SUBCYCLING");  //pres=PRESSURE_HISTORY
 
 
   char *velSolverOptions =
-    strdup("solver=PCG method=IPDG basis=NODAL preconditioner=JACOBI");
+    strdup("solver=PCG method=CONTINUOUS basis=NODAL preconditioner=JACOBI");
   char *velParAlmondOptions =
     strdup("solver= smoother= partition=");
 

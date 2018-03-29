@@ -30,12 +30,13 @@ kernel void insHelmholtzRhsForcingHex3D(const dlong Nelements,
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
 
-    for(int es=0;es<p_NblockV;++es;inner3){   
-      for(int k=0;k<p_Nq;++k;inner2){ 
-        for(int j=0;j<p_Nq;++j;inner1){ 
-          for(int i=0;i<p_Nq;++i;inner0){ 
-            const dlong e = eo+es; // element in block
-            if(e<Nelements){
+    for(int es=0;es<p_NblockV;++es;inner2){   
+      for(int j=0;j<p_Nq;++j;inner1){ 
+        for(int i=0;i<p_Nq;++i;inner0){ 
+          const dlong e = eo+es; // element in block
+          if(e<Nelements){
+            occaUnroll(p_Nq)
+            for(int k=0;k<p_Nq;++k){ 
               //hard coded for 3 stages
               const int index0 = (index+0)%3;
               const int index1 = (index+2)%3; //back one step
@@ -135,9 +136,8 @@ kernel void insHelmholtzRhsForcingHex3D(const dlong Nelements,
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
-    const dlong idM = vmapM[sk];                                        \
-    insVelocityDirichletConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);\
-    insVelocityNeumannConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP);\
+    insVelocityDirichletConditions3D(bc, t, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);\
+    insVelocityNeumannConditions3D(bc, t, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP);\
   }                                                                     \
                                                                         \
   const dfloat du = uP;                                                 \
@@ -165,12 +165,14 @@ kernel void insHelmholtzRhsIpdgBCHex3D(const dlong Nelements,
                                         const dfloat t,
                                         const dfloat * restrict x,
                                         const dfloat * restrict y,
+                                        const dfloat * restrict z,
                                         const dfloat * restrict vgeo,
                                         const dfloat * restrict sgeo,
                                         const int    * restrict EToB,
                                         const dfloat * restrict D,
                                               dfloat * restrict rhsU,
-                                              dfloat * restrict rhsV){
+                                              dfloat * restrict rhsV,
+                                              dfloat * restrict rhsW){
 
   for(dlong e=0;e<Nelements;++e;outer0){
 
@@ -217,14 +219,11 @@ kernel void insHelmholtzRhsIpdgBCHex3D(const dlong Nelements,
     // face 0 & 5
     for(int j=0;j<p_Nq;++j;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
-          const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
+        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
+        const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
 
-          surfaceTerms(sk0,0,i,j,0     );
-          surfaceTerms(sk5,5,i,j,p_Nq-1);
-        }
+        surfaceTerms(sk0,0,i,j,0     );
+        surfaceTerms(sk5,5,i,j,p_Nq-1);
       }
     }
 
@@ -235,14 +234,11 @@ kernel void insHelmholtzRhsIpdgBCHex3D(const dlong Nelements,
     // face 1 & 3
     for(int k=0;k<p_Nq;++k;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
-          const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
+        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
+        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
 
-          surfaceTerms(sk1,1,i,0     ,k);
-          surfaceTerms(sk3,3,i,p_Nq-1,k);
-        }
+        surfaceTerms(sk1,1,i,0     ,k);
+        surfaceTerms(sk3,3,i,p_Nq-1,k);
       }
     }
 
@@ -252,14 +248,11 @@ kernel void insHelmholtzRhsIpdgBCHex3D(const dlong Nelements,
     // face 2 & 4
     for(int k=0;k<p_Nq;++k;inner1){
       for(int j=0;j<p_Nq;++j;inner0){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
-          const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
+        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
+        const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
 
-          surfaceTerms(sk2,2,p_Nq-1,j,k);
-          surfaceTerms(sk4,4,0     ,j,k);
-        }
+        surfaceTerms(sk2,2,p_Nq-1,j,k);
+        surfaceTerms(sk4,4,0     ,j,k);
       }
     }
 
@@ -318,9 +311,9 @@ kernel void insHelmholtzRhsIpdgBCHex3D(const dlong Nelements,
 
           occaUnroll(p_Nq)
           for(int n=0;n<p_Nq;++n){
-            const dfloat Dr = s_D[i][n];
-            const dfloat Ds = s_D[j][n];
-            const dfloat Dt = s_D[k][n];
+            const dfloat Dr = s_D[n][i];
+            const dfloat Ds = s_D[n][j];
+            const dfloat Dt = s_D[n][k];
 
             dur += Dr*s_dudx[k][j][n];
             dus += Ds*s_dudy[k][n][i];
@@ -427,14 +420,11 @@ kernel void insHelmholtzRhsBCHex3D(const dlong Nelements,
     // face 0 & 5
     for(int j=0;j<p_Nq;++j;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
-          const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
+        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
+        const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
 
-          surfaceTerms(sk0,0,i,j,0     );
-          surfaceTerms(sk5,5,i,j,p_Nq-1);
-        }
+        surfaceTerms(sk0,0,i,j,0     );
+        surfaceTerms(sk5,5,i,j,p_Nq-1);
       }
     }
 
@@ -445,14 +435,11 @@ kernel void insHelmholtzRhsBCHex3D(const dlong Nelements,
     // face 1 & 3
     for(int k=0;k<p_Nq;++k;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
-          const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
+        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
+        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
 
-          surfaceTerms(sk1,1,i,0     ,k);
-          surfaceTerms(sk3,3,i,p_Nq-1,k);
-        }
+        surfaceTerms(sk1,1,i,0     ,k);
+        surfaceTerms(sk3,3,i,p_Nq-1,k);
       }
     }
 
@@ -462,14 +449,11 @@ kernel void insHelmholtzRhsBCHex3D(const dlong Nelements,
     // face 2 & 4
     for(int k=0;k<p_Nq;++k;inner1){
       for(int j=0;j<p_Nq;++j;inner0){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
-          const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
+        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
+        const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
 
-          surfaceTerms(sk2,2,p_Nq-1,j,k);
-          surfaceTerms(sk4,4,0     ,j,k);
-        }
+        surfaceTerms(sk2,2,p_Nq-1,j,k);
+        surfaceTerms(sk4,4,0     ,j,k);
       }
     }
 

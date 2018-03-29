@@ -86,6 +86,8 @@ typedef struct {
 
   occa::memory o_Vx, o_Vy, o_Vz, o_Div;
 
+  occa::memory o_cU, o_cV, o_cW; //quadrature field storage
+
   int Nblock;
 
 
@@ -136,6 +138,8 @@ ins_t *insSetupHex3D(mesh3D *mesh, int i, char *options,
 
 void insRunHex3D(ins_t *solver, char *options);
 void insPlotVTUHex3D(ins_t *solver, char *fileNameBase);
+void insPlotSliceHex3D(ins_t *ins, char *fileName, const int Nslices, const char** dim, const dfloat* c);
+void insPlotContourHex3D(ins_t *ins, char *fileName, const char*options);
 void insReportHex3D(ins_t *solver, int tstep, char *options);
 void insErrorHex3D(ins_t *solver, dfloat time, char *options);
 

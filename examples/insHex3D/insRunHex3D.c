@@ -17,7 +17,7 @@ void insRunHex3D(ins_t *ins, char *options){
   // if(ins->Nsubsteps)
   // ins->NtimeSteps = 160/ins->Nsubsteps;
   // else
-  //ins->NtimeSteps=10;
+  ins->NtimeSteps=100000;
 
   for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
     if(tstep<1){
@@ -81,12 +81,12 @@ void insRunHex3D(ins_t *ins, char *options){
     occaTimerTic(mesh->device,"Report");
     if(strstr(options, "VTU")){
       if(((tstep+1)%(ins->errorStep))==0){
-        if (rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
+        if (rank==0) printf("\rtstep = %d, time = %3.2E, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, (tstep+1)*ins->dt, ins->NiterU, ins->NiterV, ins->NiterW,  ins->NiterP);
         insReportHex3D(ins, tstep+1,options);
       }
     }
 
-    if (rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
+    if (rank==0) printf("\rtstep = %d, time = %3.2E, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, (tstep+1)*ins->dt, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
     
     occaTimerToc(mesh->device,"Report");
   }

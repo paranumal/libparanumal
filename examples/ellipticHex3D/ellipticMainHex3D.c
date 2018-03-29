@@ -28,7 +28,7 @@ int main(int argc, char **argv){
   // MULTIGRID: levels can be ALLDEGREES, HALFDEGREES, HALFDOFS
   char *options =
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=SEMFEM");
-    strdup("solver=PCG,FLEXIBLE,VERBOSE method=IPDG preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
+    strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=MULTIGRID,HALFDOFS smoother=DAMPEDJACOBI,CHEBYSHEV");
     //strdup("solver=PCG,FLEXIBLE,VERBOSE method=CONTINUOUS preconditioner=FULLALMOND");
     //strdup("solver=PCG,VERBOSE method=IPDG preconditioner=NONE");
     //strdup("solver=PCG,VERBOSE method=CONTINUOUS preconditioner=JACOBI");
@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   precon_t *precon;
   
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda = 0;
+  dfloat lambda = 1;
   
   // set up
   occa::kernelInfo kernelInfo;
@@ -109,6 +109,11 @@ int main(int argc, char **argv){
 
   //add boundary condition contribution to rhs
   if (strstr(options,"IPDG")) {
+    solver->rhsBCIpdgKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticRhsBCIpdgHex3D.okl",
+               "ellipticRhsBCIpdgHex3D",
+               kernelInfo);
+
     dfloat zero = 0.f;
     solver->rhsBCIpdgKernel(mesh->Nelements,
                            mesh->o_vmapM,
