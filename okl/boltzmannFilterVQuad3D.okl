@@ -38,7 +38,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 
 	const iint faceC = cubeFaceNumber[eC];
 
-	mark_edge = (faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
+	mark_edge = (faceC != 0);//(faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
 	
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
@@ -125,7 +125,7 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 	    Fqij[fld] = Fqij[fld]*(1 - alpha) + s_q[fld][1][j][i]*alpha;
 	  }
 
-	  	// constrain momentum changes to lie on sphere
+          // constrain momentum changes to lie on sphere
 	  const dfloat xij = x[i+j*p_Nq+eC*p_Np];
 	  const dfloat yij = y[i+j*p_Nq+eC*p_Np];
 	  const dfloat zij = z[i+j*p_Nq+eC*p_Np];
@@ -191,7 +191,7 @@ kernel void boltzmannFilterVLSERKQuad3D(const iint Nelements,
 
 	const iint faceC = cubeFaceNumber[eo];
 
-	mark_edge = (faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
+	mark_edge = (faceC != 0);//(faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
 
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
@@ -296,7 +296,7 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 
 	const iint faceC = cubeFaceNumber[eo];
 
-	mark_edge = (faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
+	mark_edge = (faceC != 0);//(faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
 
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
@@ -359,7 +359,6 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 	      Fqij[fld] = s_q[fld][1][j][i];
 	    }
 	}
-	
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
 	    Fq[eo*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = Fqij[fld];
