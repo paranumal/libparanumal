@@ -192,7 +192,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
       dfloat x = mesh->x[e*mesh->Np + n];
       dfloat y = mesh->y[e*mesh->Np + n];
       dfloat z = mesh->z[e*mesh->Np + n];
-      dfloat t = mesh->finalTime;
+      dfloat t = mesh->dt*(tstep+1)*pow(2,mesh->MRABNlevels-1);
 
       //rotate reference frame back to original
       dfloat xrot = x*cos(t) + y*sin(t);

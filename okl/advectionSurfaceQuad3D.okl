@@ -6,7 +6,7 @@ void upwindFlux(const dfloat nx, const dfloat ny, const dfloat nz,
   const dfloat udotn = u*nx+v*ny+w*nz;
 
   // TW: need to double check the sign in front of occaFabs (might need to switch to - occaFabs(udotn)
-  fluxq[0] = 0.5f*(udotn + 0*occaFabs(udotn))*dq[0];
+  fluxq[0] = 0.5f*(udotn + occaFabs(udotn))*dq[0];
 
   for(int n=1;n<p_Nfields;++n)
     fluxq[n] = 0;
