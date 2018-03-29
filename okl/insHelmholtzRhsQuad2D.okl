@@ -374,8 +374,8 @@ kernel void insHelmholtzRhsBCQuad2D(const dlong Nelements,
             vtmp += s_D[n][i]*s_v[j][n];
           }
 
-        r_rhsu[j] += utmp;
-        r_rhsv[j] += vtmp;
+        // r_rhsu[j] += utmp;
+        // r_rhsv[j] += vtmp;
       }
     }
 
@@ -402,8 +402,8 @@ kernel void insHelmholtzRhsBCQuad2D(const dlong Nelements,
             vtmp += s_D[n][j]*s_v[n][i];
           }
         
-        r_rhsu[j] += utmp;
-        r_rhsv[j] += vtmp;
+        // r_rhsu[j] += utmp;
+        // r_rhsv[j] += vtmp;
 
         const dlong id = e*p_Np + j*p_Nq + i;
         rhsU[id] -= r_rhsu[j] + s_ndu[j][i];

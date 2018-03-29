@@ -86,7 +86,7 @@ ins_t *insSetupHex3D(mesh3D *mesh, int Ns, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 0.001;   // kinematic viscosity,
+  dfloat nu   = 0.01;   // kinematic viscosity,
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;   // No gravitational acceleration
@@ -211,9 +211,9 @@ ins_t *insSetupHex3D(mesh3D *mesh, int Ns, char * options,
   if(strstr(options,"SUBCYCLING"))
     // ins->errorStep =100*32/ins->Nsubsteps;
     //ins->errorStep =800/ins->Nsubsteps;
-    ins->errorStep = 50;
+    ins->errorStep = 1000;
   else
-    ins->errorStep = 50;
+    ins->errorStep = 1000;
 
   if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -465,15 +465,15 @@ ins_t *insSetupHex3D(mesh3D *mesh, int Ns, char * options,
                  kernelInfo);  
      
       // ===========================================================================
-      // ins->advectionCubatureVolumeKernel =
-      //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionHex3D.okl",
-    		// 		       "insAdvectionCubatureVolumeHex3D",
-    		// 		       kernelInfo);
+      ins->advectionCubatureVolumeKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionHex3D.okl",
+    				       "insAdvectionCubatureVolumeHex3D",
+    				       kernelInfo);
 
-      // ins->advectionCubatureSurfaceKernel =
-      //   mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionHex3D.okl",
-    		// 		       "insAdvectionCubatureSurfaceHex3D",
-    		// 		       kernelInfo);
+      ins->advectionCubatureSurfaceKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionHex3D.okl",
+    				       "insAdvectionCubatureSurfaceHex3D",
+    				       kernelInfo);
 
       ins->advectionVolumeKernel =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insAdvectionHex3D.okl",

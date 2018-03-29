@@ -45,6 +45,9 @@ void insAdvectionStepHex3D(ins_t *ins, int tstep, char *options){
                                        ins->o_U,
                                        ins->o_V,
                                        ins->o_W,
+                                       ins->o_cU,
+                                       ins->o_cV,
+                                       ins->o_cW,
                                        ins->o_NU,
                                        ins->o_NV,
                                        ins->o_NW);

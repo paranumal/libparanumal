@@ -7,7 +7,6 @@ kernel void insPoissonRhsForcingHex3D(const dlong Nelements,
                                     dfloat * restrict rhs){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-
     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
         const dlong e = eo+es; // element in block
@@ -103,14 +102,11 @@ kernel void insPoissonRhsIpdgBCHex3D(const dlong Nelements,
     // face 0 & 5
     for(int j=0;j<p_Nq;++j;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
-          const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
+        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
+        const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
 
-          surfaceTerms(sk0,0,i,j,0     );
-          surfaceTerms(sk5,5,i,j,p_Nq-1);
-        }
+        surfaceTermsIpdg(sk0,0,i,j,0     );
+        surfaceTermsIpdg(sk5,5,i,j,p_Nq-1);
       }
     }
 
@@ -121,14 +117,11 @@ kernel void insPoissonRhsIpdgBCHex3D(const dlong Nelements,
     // face 1 & 3
     for(int k=0;k<p_Nq;++k;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
-          const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
+        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
+        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
 
-          surfaceTerms(sk1,1,i,0     ,k);
-          surfaceTerms(sk3,3,i,p_Nq-1,k);
-        }
+        surfaceTermsIpdg(sk1,1,i,0     ,k);
+        surfaceTermsIpdg(sk3,3,i,p_Nq-1,k);
       }
     }
 
@@ -138,14 +131,11 @@ kernel void insPoissonRhsIpdgBCHex3D(const dlong Nelements,
     // face 2 & 4
     for(int k=0;k<p_Nq;++k;inner1){
       for(int j=0;j<p_Nq;++j;inner0){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
-          const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
+        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
+        const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
 
-          surfaceTerms(sk2,2,p_Nq-1,j,k);
-          surfaceTerms(sk4,4,0     ,j,k);
-        }
+        surfaceTermsIpdg(sk2,2,p_Nq-1,j,k);
+        surfaceTermsIpdg(sk4,4,0     ,j,k);
       }
     }
 
@@ -279,14 +269,11 @@ kernel void insPoissonRhsBCHex3D(const dlong Nelements,
     // face 0 & 5
     for(int j=0;j<p_Nq;++j;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
-          const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
+        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
+        const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
 
-          surfaceTerms(sk0,0,i,j,0     );
-          surfaceTerms(sk5,5,i,j,p_Nq-1);
-        }
+        surfaceTerms(sk0,0,i,j,0     );
+        surfaceTerms(sk5,5,i,j,p_Nq-1);
       }
     }
 
@@ -297,14 +284,11 @@ kernel void insPoissonRhsBCHex3D(const dlong Nelements,
     // face 1 & 3
     for(int k=0;k<p_Nq;++k;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
-          const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
+        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
+        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
 
-          surfaceTerms(sk1,1,i,0     ,k);
-          surfaceTerms(sk3,3,i,p_Nq-1,k);
-        }
+        surfaceTerms(sk1,1,i,0     ,k);
+        surfaceTerms(sk3,3,i,p_Nq-1,k);
       }
     }
 
@@ -314,14 +298,11 @@ kernel void insPoissonRhsBCHex3D(const dlong Nelements,
     // face 2 & 4
     for(int k=0;k<p_Nq;++k;inner1){
       for(int j=0;j<p_Nq;++j;inner0){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
-          const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
+        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
+        const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
 
-          surfaceTerms(sk2,2,p_Nq-1,j,k);
-          surfaceTerms(sk4,4,0     ,j,k);
-        }
+        surfaceTerms(sk2,2,p_Nq-1,j,k);
+        surfaceTerms(sk4,4,0     ,j,k);
       }
     }
 
