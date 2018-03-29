@@ -612,7 +612,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   mesh->o_sgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
 			mesh->sgeo);
-
+  
   mesh->o_MRABlevels = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint),mesh->MRABlevel);
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));

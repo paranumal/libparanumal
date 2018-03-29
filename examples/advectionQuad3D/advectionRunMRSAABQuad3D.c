@@ -108,7 +108,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
       }
       occa::toc("surfaceKernel");
 
-      /*      mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
+      mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
       mesh->o_lev_updates.copyFrom(mesh->lev_updates);
 
       for (iint l = 0; l < lev; l++) {
@@ -147,7 +147,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_qFilter,
 			    mesh->o_qFiltered);	
 			    }
-      */        
+              
       /*     for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
 	  mesh->volumeCorrectionKernel(mesh->MRABNelements[l],
@@ -178,8 +178,8 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			     mesh->MRSAAB_A[id+2],
 			     mesh->MRSAAB_A[id+3],
 			     mesh->MRABshiftIndex[l],
-			     //mesh->o_qFiltered,
-			     mesh->o_rhsq,
+			     mesh->o_qFiltered,
+			     //mesh->o_rhsq,
 			     mesh->o_vmapM,
 			     mesh->o_fQM,
 			     mesh->o_qCorr,
@@ -209,8 +209,8 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 				  mesh->MRSAAB_B[id+2],
 				  mesh->MRSAAB_B[id+3],
 				  mesh->MRABshiftIndex[lev],
-				  //mesh->o_qFiltered,
-				  mesh->o_rhsq,
+				  mesh->o_qFiltered,
+				  //mesh->o_rhsq,
 				  mesh->o_vmapM,
 				  mesh->o_fQM,
 				  mesh->o_qCorr,

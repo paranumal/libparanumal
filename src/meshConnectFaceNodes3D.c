@@ -66,6 +66,7 @@ void meshConnectFaceNodes3D(mesh3D *mesh){
 	mesh->vmapM[id] = idM;
 	mesh->vmapP[id] = idP + eP*mesh->Np;
 	mesh->mapP[id] = eP*mesh->Nfaces*mesh->Nfp + fP*mesh->Nfp + nP;
+	if ((abs(fP-f) != 2) && (mesh->cubeFaceNumber[e] == mesh->cubeFaceNumber[eP])) printf("rotational flaw %d %d\n",mesh->cubeFaceNumber[e],mesh->cubeFaceNumber[eP]);
       }
     }
   }

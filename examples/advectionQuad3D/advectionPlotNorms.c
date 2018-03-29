@@ -23,7 +23,7 @@ void advectionPlotNorms(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
   fprintf(fp, "  <UnstructuredGrid>\n");
   fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", 
 	  mesh->Nelements*mesh->Np,
-	  mesh->Nelements);
+	  mesh->Nelements*mesh->Np);
 
   
   // write out nodes
@@ -60,7 +60,7 @@ void advectionPlotNorms(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"q_1\" Format=\"ascii\">\n");
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->Np;++n){
-      dfloat plotpn = q[n+e*mesh->Np*mesh->Nfields];
+      dfloat plotpn = q[n+e*mesh->Np];
       fprintf(fp, "       ");
       fprintf(fp, "%g\n", plotpn);
     }
@@ -84,8 +84,8 @@ void advectionPlotNorms(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
   
   for(iint e=0;e<mesh->Nelements;++e){
-    fprintf(fp, "       ");
-    fprintf(fp, "%d %d %d %d\n", e*mesh->Np + 0,e*mesh->Np + mesh->Nq - 1,(e+1)*mesh->Np-1,(e+1)*mesh->Np - mesh->Nq);
+	fprintf(fp, "       ");
+	fprintf(fp, "%d %d %d %d\n", e*mesh->Np + 0,e*mesh->Np + mesh->Nq - 1,(e+1)*mesh->Np-1,(e+1)*mesh->Np - mesh->Nq);
   }
   
   fprintf(fp, "        </DataArray>\n");

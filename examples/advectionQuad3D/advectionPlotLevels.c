@@ -22,7 +22,7 @@ void advectionPlotLevels(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
   fprintf(fp, "  <UnstructuredGrid>\n");
   fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n", 
-	  mesh->Nelements*mesh->plotNp, 
+	  mesh->Nelements*mesh->plotNp,
 	  mesh->Nelements*mesh->plotNelements);
 
   
@@ -49,7 +49,7 @@ void advectionPlotLevels(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
 
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"mrab_levels\" Format=\"ascii\">\n");
+  /*  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"mrab_levels\" Format=\"ascii\">\n");
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotpn = mesh->MRABlevel[e];
@@ -57,26 +57,26 @@ void advectionPlotLevels(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
       fprintf(fp, "       ");
       fprintf(fp, "%g\n", plotpn);
     }
-  }
+    }*/
 
   fprintf(fp, "       </DataArray>\n");
 
-  /*fprintf(fp, "        <DataArray type=\"Float32\" Name=\"q_value\" Format=\"ascii\">\n");
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"q_value\" Format=\"ascii\">\n");
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->plotNp;++n){
 
       dfloat plotpn = 0;
       for(iint m=0;m<mesh->Np;++m){
-	plotpn += mesh->plotInterp[n*mesh->Np+m]*q[m+1*mesh->Np+e*mesh->Nrhs*mesh->Np*mesh->Nfields];
+	plotpn += mesh->plotInterp[n*mesh->Np+m]*q[m+e*mesh->Np];
       }
       
       fprintf(fp, "       ");
       fprintf(fp, "%g\n", plotpn);
     }
   }
-  fprintf(fp, "       </DataArray>\n");*/
+  fprintf(fp, "       </DataArray>\n");
 
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"cube_faces\" Format=\"ascii\">\n");
+  /*  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"cube_faces\" Format=\"ascii\">\n");
   for(iint e=0;e<mesh->Nelements;++e){
     for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotpn = mesh->cubeFaceNumber[e];
@@ -120,7 +120,7 @@ void advectionPlotLevels(mesh_t *mesh, char *fileNameBase, int tstep,dfloat *q){
     }
   }
   fprintf(fp, "       </DataArray>\n");
-  
+  */
   fprintf(fp, "     </PointData>\n");
   
   fprintf(fp, "    <Cells>\n");
