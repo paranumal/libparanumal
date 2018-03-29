@@ -12,7 +12,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
   dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
     
   //kernel arguments
-  dfloat alpha = 0;//1./mesh->N;
+  dfloat alpha = 1./mesh->N;
   
   mesh->filterKernelq0H(mesh->Nelements,
 			alpha,
@@ -102,7 +102,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			       mesh->o_z,
 			       mesh->o_qpre,
 			       mesh->o_prerhsq);
-
+	
 	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
 	  iint saved = (l < lev)&&(rk == 0);
 	  mesh->filterKernelHLSERK(mesh->MRABNelements[l],
@@ -184,6 +184,33 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				   mesh->o_q);
       }
     }
+    if ((tstep+1) % 1000 == 0) {
+  mesh->o_q.copyTo(mesh->q);
+  dfloat l2 = 0;
+  for (iint e = 0; e < mesh->Nelements; ++e) {
+    for (iint n = 0; n < mesh->Np; ++n) {
+      dfloat x = mesh->x[e*mesh->Np + n];
+      dfloat y = mesh->y[e*mesh->Np + n];
+      dfloat z = mesh->z[e*mesh->Np + n];
+      dfloat t = mesh->finalTime;
+
+      //rotate reference frame back to original
+      dfloat xrot = x*cos(t) + y*sin(t);
+      dfloat yrot = -1*x*sin(t) + y*cos(t);
+      dfloat zrot = z;
+
+      //current q0 is a gaussian pulse
+      dfloat qref = 1 + .1*exp(-20*((xrot-1)*(xrot-1)+yrot*yrot+zrot*zrot));
+
+      dfloat J = mesh->vgeo[mesh->Nvgeo*mesh->Np*e + JWID*mesh->Np + n];
+      
+      l2 += J*(qref - mesh->q[e*mesh->Np*mesh->Nfields + n])*(qref - mesh->q[e*mesh->Np*mesh->Nfields + n]);
+    //else printf("success %.15lf %.15lf\n", qref, mesh->q[e*mesh->Np*mesh->Nfields + n]);
+    }
+  }
+  
+  printf("norm %.5e\n",sqrt(l2));
+  }
     
     // estimate maximum error
     /*    if((tstep)==0){
