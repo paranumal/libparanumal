@@ -62,7 +62,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
   dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
     
   //kernel arguments
-  dfloat alpha = 0; 1./mesh->N;
+  dfloat alpha = 1./mesh->N;
 
   printf("alpha=%g\n", alpha);
 
@@ -111,33 +111,10 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 	if ((Ntick+1) % (1<<levS) !=0) break; //find the max lev to add to rhsq
 
       // TW: I am not sure why this pre-filter fixes the stability issue
-      
-      mesh->filterKernelq0H(mesh->Nelements,
-			    alpha,
-			    mesh->o_dualProjMatrix,
-			    mesh->o_cubeFaceNumber,
-			    mesh->o_EToE,
-			    mesh->o_x,
-			    mesh->o_y,
-			    mesh->o_z,
-			    mesh->o_qpre,
-			    o_qOrig,
-			    mesh->o_qPreFilter);
 
-      mesh->filterKernelq0V(mesh->Nelements,
-			    alpha,
-			    mesh->o_dualProjMatrix,
-			    mesh->o_cubeFaceNumber,
-			    mesh->o_EToE,
-			    mesh->o_x,
-			    mesh->o_y,
-			    mesh->o_z,
-			    mesh->o_qPreFilter,
-			    o_qOrig,
-			    mesh->o_qpre);
-      
       for (iint rk = 0; rk < mesh->Nrk; ++rk) {
 	
+
 	//synthesize actual stage time
 	dfloat t = tstep*pow(2,mesh->MRABNlevels-1) + Ntick;
 
@@ -197,6 +174,31 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			      mesh->o_qpre);
       }
     }
+
+      
+    mesh->filterKernelq0H(mesh->Nelements,
+			  alpha,
+			  mesh->o_dualProjMatrix,
+			  mesh->o_cubeFaceNumber,
+			  mesh->o_EToE,
+			  mesh->o_x,
+			  mesh->o_y,
+			  mesh->o_z,
+			  mesh->o_qpre,
+			  o_qOrig,
+			  mesh->o_qPreFilter);
+    
+    mesh->filterKernelq0V(mesh->Nelements,
+			  alpha,
+			  mesh->o_dualProjMatrix,
+			  mesh->o_cubeFaceNumber,
+			  mesh->o_EToE,
+			  mesh->o_x,
+			  mesh->o_y,
+			  mesh->o_z,
+			  mesh->o_qPreFilter,
+			  o_qOrig,
+			  mesh->o_qpre);
     
     if (tstep==0 || (tstep+1) % mesh->errorStep == 0) {
       mesh->o_qpre.copyTo(mesh->q);
