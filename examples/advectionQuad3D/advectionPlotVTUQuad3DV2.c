@@ -96,7 +96,7 @@ void advectionPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   }
   fprintf(fp, "       </DataArray>\n");
 
-  
+#if 0
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticit\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   dfloat *vort = (dfloat*) calloc(mesh->Np*mesh->dim, sizeof(dfloat));
   dfloat *plotVortRadial = (dfloat*) calloc(mesh->plotNp*mesh->Nelements, sizeof(dfloat));
@@ -208,29 +208,8 @@ void advectionPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   
   free(vort);
   free(plotVortRadial);
-
-  // fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  // for(iint e=0;e<mesh->Nelements;++e){
-  //   for(iint n=0;n<mesh->plotNp;++n){
-  //     dfloat plotwxn = 0, plotwyn = 0, plotvn = 0, plotwzn = 0;
-  //     for(iint m=0;m<mesh->Np;++m){
-  //       dfloat wx = mesh->q[4 + mesh->Nfields*(m+e*mesh->Np)];
-  //       dfloat wy = mesh->q[5 + mesh->Nfields*(m+e*mesh->Np)];
-  //       dfloat wz = mesh->q[6 + mesh->Nfields*(m+e*mesh->Np)];
-  //       //
-  //       plotwxn += mesh->plotInterp[n*mesh->Np+m]*wx;
-  //       plotwyn += mesh->plotInterp[n*mesh->Np+m]*wy;
-  //       plotwzn += mesh->plotInterp[n*mesh->Np+m]*wz;
-  //     }
-      
-  //     fprintf(fp, "       ");
-  //     fprintf(fp, "%g %g %g\n", plotwxn, plotwyn,plotwzn);
-  //   }
-  // }
-  // fprintf(fp, "       </DataArray>\n");
-
-
-
+#endif
+  
   fprintf(fp, "     </PointData>\n");
   
   fprintf(fp, "    <Cells>\n");

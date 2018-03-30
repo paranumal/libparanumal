@@ -13,6 +13,9 @@ void advectionRunLSERKQuad3D(solver_t *solver){
     
   //kernel arguments
   dfloat alpha = 1./mesh->N;
+
+  mesh->o_qpre.copyTo(mesh->q);
+  advectionErrorNormQuad3D(mesh, 0, "icPreFilter", 0);
   
   mesh->filterKernelq0H(mesh->Nelements,
 			alpha,
@@ -35,6 +38,9 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			mesh->o_z,
 			mesh->o_qPreFilter,
 			mesh->o_qpre);
+
+  mesh->o_qpre.copyTo(mesh->q);
+  advectionErrorNormQuad3D(mesh, 0, "icPostFilter", 0);
   
   for(iint tstep=0;tstep < mesh->NtimeSteps;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
@@ -71,6 +77,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				sendBuffer,
 				recvBuffer);
 	}
+
 	// compute volume contribution to DG advection RHS
 	mesh->volumePreKernel(mesh->Nelements,
 			      mesh->o_vgeo,
@@ -184,81 +191,14 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				   mesh->o_q);
       }
     }
-    if ((tstep+1) % 1000 == 0) {
-  mesh->o_q.copyTo(mesh->q);
-  dfloat l2 = 0;
-  for (iint e = 0; e < mesh->Nelements; ++e) {
-    for (iint n = 0; n < mesh->Np; ++n) {
-      dfloat x = mesh->x[e*mesh->Np + n];
-      dfloat y = mesh->y[e*mesh->Np + n];
-      dfloat z = mesh->z[e*mesh->Np + n];
+    if (tstep==0 || (tstep+1) % mesh->errorStep == 0) {
+      mesh->o_qpre.copyTo(mesh->q);
       dfloat t = mesh->dt*(tstep+1)*pow(2,mesh->MRABNlevels-1);
-
-      //rotate reference frame back to original
-      dfloat xrot = x*cos(t) + y*sin(t);
-      dfloat yrot = -1*x*sin(t) + y*cos(t);
-      dfloat zrot = z;
-
-      //current q0 is a gaussian pulse
-      dfloat qref = 1 + .1*exp(-20*((xrot-1)*(xrot-1)+yrot*yrot+zrot*zrot));
-
-      dfloat J = mesh->vgeo[mesh->Nvgeo*mesh->Np*e + JWID*mesh->Np + n];
-      
-      l2 += J*(qref - mesh->q[e*mesh->Np*mesh->Nfields + n])*(qref - mesh->q[e*mesh->Np*mesh->Nfields + n]);
-    //else printf("success %.15lf %.15lf\n", qref, mesh->q[e*mesh->Np*mesh->Nfields + n]);
+      advectionErrorNormQuad3D(mesh, t, "foo", (tstep+1)/mesh->errorStep);
     }
+
   }
-  
-  printf("norm %.5e\n",sqrt(l2));
-  }
-    
-    // estimate maximum error
-    /*    if((tstep)==0){
-      mesh->o_q.copyTo(mesh->q);
-      dfloat l2 = 0;
-      for (iint e = 0; e < mesh->Nelements; ++e) {
-	for (iint n = 0; n < mesh->Np; ++n) {
-	  dfloat x = mesh->x[e*mesh->Np + n];
-	  dfloat y = mesh->y[e*mesh->Np + n];
-	  dfloat z = mesh->z[e*mesh->Np + n];
-	  dfloat t = mesh->dt*pow(2,mesh->MRABNlevels-1);
 
-	  //rotate reference frame back to original
-	  dfloat xrot = x*cos(t) + y*sin(t);
-	  dfloat yrot = -1*x*sin(t) + y*cos(t);
-	  dfloat zrot = z;
-
-	  //current q0 is a gaussian pulse
-	  dfloat qref = 1 + .1*exp(-20*((xrot-1)*(xrot-1)+yrot*yrot+zrot*zrot));
-
-	  dfloat J = mesh->vgeo[mesh->Nvgeo*mesh->Np*e + JWID*mesh->Np + n];
-      
-	  test_q[e*mesh->Np + n] = J*(qref - mesh->q[e*mesh->Np*mesh->Nfields + n])*(qref - mesh->q[e*mesh->Np*mesh->Nfields + n]);
-	  //else printf("success %.15lf %.15lf\n", qref, mesh->q[e*mesh->Np*mesh->Nfields + n]);
-	}
-      }
-      //	dfloat t = (tstep+1)*mesh->dt;
-      dfloat t = mesh->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
-	
-      printf("tstep = %d, t = %g\n", tstep, t);
-      fflush(stdout);
-      // copy data back to host
-      //mesh->o_q.copyTo(mesh->q);
-
-      // check for nans
-      for(int n=0;n<mesh->Nfields*mesh->Nelements*mesh->Np;++n){
-	if(isnan(mesh->q[n])){
-	  printf("found nan\n");
-	  exit(-1);
-	}
-      }
-
-      advectionPlotLevels(mesh,"error",tstep,test_q);
-    }*/
-    
-    //    mesh->o_q.copyTo(mesh->q);
-    //advectionPlotNorms(mesh,"start",tstep,mesh->q);
-  }
   
   free(recvBuffer);
   free(sendBuffer);
