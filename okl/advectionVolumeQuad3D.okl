@@ -91,10 +91,15 @@ kernel void advectionVolumeQuad3D(const int Nelements,
 	      }
 
 	    const dfloat q1  = s_q[0][es][j][i];
+	    const dfloat q2  = s_q[1][es][j][i];
 
 	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
 	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;
 	    const dfloat dq1dz = drdz*dqdr[0] + dsdz*dqds[0] + dtdz*q1;
+
+	    const dfloat dq2dx = drdx*dqdr[1] + dsdx*dqds[1] + dtdx*q2;
+	    const dfloat dq2dy = drdy*dqdr[1] + dsdy*dqds[1] + dtdy*q2;
+	    const dfloat dq2dz = drdz*dqdr[1] + dsdz*dqds[1] + dtdz*q2;	
 
 	    // hard code solid body velocity
 	    const dfloat xn = x[n+e*p_Np];
@@ -105,11 +110,13 @@ kernel void advectionVolumeQuad3D(const int Nelements,
 	    const dfloat vn = -xn;
 	    const dfloat wn = 0;
 
-	    const dfloat rhsq1 = un*dq1dx + vn*dq1dy + wn*dq1dz;
+	    const dfloat rhsq1 = un*dq2dx + vn*dq2dy + wn*dq2dz;
+	    const dfloat rhsq2 = un*dq1dx + vn*dq1dy + wn*dq1dz;
 
 	    const int base = e*p_Np*p_Nfields+n;
 
 	    rhsq[base+0*p_Np] = rhsq1;
+	    rhsq[base+1*p_Np] = rhsq2;
 	  }
 	}
       }

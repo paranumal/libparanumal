@@ -252,6 +252,7 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 				     const dfloat * restrict y,
 				     const dfloat * restrict z,
 				     const dfloat * restrict qIn,
+				     dfloat * restrict qOrig,
 				     dfloat * restrict Fq) {
   
   for (iint eo = 0; eo < Nelements;++eo;outer0) {
@@ -274,17 +275,20 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 	const iint faceC = cubeFaceNumber[eo];
 
 	mark_edge = ((faceC==cubeFaceNumber[eL])&&
-		     (faceC==cubeFaceNumber[eR])&&
-		     (faceC==cubeFaceNumber[eD])&&
-		     (faceC==cubeFaceNumber[eU]));
+		     (faceC==cubeFaceNumber[eR]));
+
+		     // && (faceC==cubeFaceNumber[eD])&& (faceC==cubeFaceNumber[eU]));
 
 	occaUnroll(p_Nfields)
   	  for(iint fld=0;fld<p_Nfields;++fld){
-	    s_q[fld][1][j][i] = qIn[eo*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	    int id = eo*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i;
+	    dfloat qin = qIn[id];
+	    s_q[fld][1][j][i] = qin;
 	    if(mark_edge) {
 	      s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	      s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	    }
+	    qOrig[id] = qin;
 	  }
       }
     }
@@ -317,9 +321,6 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 		}
 	    }
 
-	    for (iint fld=0; fld<p_Nfields;++fld) {
-	      Fqij[fld] = Fqij[fld]*(1. - alpha) + s_q[fld][1][j][i]*alpha;
-	    }
 	}
 	else{
 	  

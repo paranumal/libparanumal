@@ -487,6 +487,10 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
       mesh->q[base+9*mesh->Np] = q10bar;*/
 
       mesh->q[base+0*mesh->Np] = 1 + .1*exp(-20*((x-1)*(x-1)+y*y+z*z));
+      mesh->q[base+1*mesh->Np] = 1 ;
+
+
+      
       
     }
   }
@@ -540,7 +544,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 
   //dt = mymin(dt, cfl/mesh->tauInv);
 
-  mesh->finalTime = 5;
+  mesh->finalTime = 20;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   
   iint maxLevels=100;

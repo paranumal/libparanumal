@@ -11,12 +11,19 @@ void advectionErrorNormQuad3D(mesh_t *mesh, dfloat t, char *fileBase, int slice)
       dfloat z = mesh->z[e*mesh->Np + n];
 
       //rotate reference frame back to original
-      dfloat xrot = x*cos(t) + y*sin(t);
-      dfloat yrot = -1*x*sin(t) + y*cos(t);
-      dfloat zrot = z;
+      dfloat xrotP = x*cos(t) + y*sin(t);
+      dfloat yrotP = -1*x*sin(t) + y*cos(t);
+      dfloat zrotP = z;
+
+      dfloat xrotM = x*cos(-t) + y*sin(-t);
+      dfloat yrotM = -1*x*sin(-t) + y*cos(-t);
+      dfloat zrotM = z;
       
       //current q0 is a gaussian pulse
-      dfloat qref = 1 + .1*exp(-20*((xrot-1)*(xrot-1)+yrot*yrot+zrot*zrot));
+      dfloat qrefM = 1 + .1*exp(-20*((xrotM-1)*(xrotM-1)+yrotM*yrotM+zrotM*zrotM));
+      dfloat qrefP = 1 + .1*exp(-20*((xrotP-1)*(xrotP-1)+yrotP*yrotP+zrotP*zrotP));
+
+      dfloat qref = 0.5*(qrefM+qrefP);
       
       dfloat JW = mesh->vgeo[mesh->Nvgeo*mesh->Np*e + JWID*mesh->Np + n];
 
