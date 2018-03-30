@@ -559,10 +559,15 @@ ins_t *insSetupHex3D(mesh3D *mesh, int Ns, char * options,
     				       "insUpdateUpdate3D",
     				       kernelInfo);
 
-      ins->vorticityKernel=
+      ins->vorticityVolumeKernel=
         mesh->device.buildKernelFromSource(DHOLMES "/okl/insVorticityHex3D.okl",
-                   "insVorticityHex3D",
+                   "insVorticityVolumeHex3D",
                    kernelInfo);      
+
+      ins->vorticitySurfaceKernel=
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/insVorticityHex3D.okl",
+                   "insVorticitySurfaceHex3D",
+                   kernelInfo);
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }

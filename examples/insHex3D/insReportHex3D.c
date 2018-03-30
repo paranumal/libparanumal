@@ -10,16 +10,67 @@ void insReportHex3D(ins_t *ins, int tstep, char *options){
   dfloat t = (tstep)*ins->dt;
   
   dlong offset = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
-  ins->vorticityKernel(mesh->Nelements,
-                       mesh->o_vgeo,
-                       mesh->o_D,
-                       offset,
-                       ins->o_U,
-                       ins->o_V,
-                       ins->o_W,
-                       ins->o_Vx,
-                       ins->o_Vy,
-                       ins->o_Vz);
+
+  if(mesh->totalHaloPairs>0){
+    ins->velocityHaloExtractKernel(mesh->Nelements,
+                                   mesh->totalHaloPairs,
+                                   mesh->o_haloElementList,
+                                   offset,
+                                   ins->o_U,
+                                   ins->o_V,
+                                   ins->o_W,
+                                   ins->o_vHaloBuffer);
+
+    // copy extracted halo to HOST 
+    ins->o_vHaloBuffer.copyTo(ins->vSendBuffer);           
+  
+    // start halo exchange
+    meshHaloExchangeStart(mesh,
+                         mesh->Np*(ins->NVfields)*sizeof(dfloat),
+                         ins->vSendBuffer,
+                         ins->vRecvBuffer);
+
+    meshHaloExchangeFinish(mesh);
+
+    ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
+
+    ins->velocityHaloScatterKernel(mesh->Nelements,
+                                  mesh->totalHaloPairs,
+                                  mesh->o_haloElementList,
+                                  offset,
+                                  ins->o_U,
+                                  ins->o_V,
+                                  ins->o_W,
+                                  ins->o_vHaloBuffer);
+  }
+
+  ins->vorticityVolumeKernel(mesh->Nelements,
+                             mesh->o_vgeo,
+                             mesh->o_D,
+                             offset,
+                             ins->o_U,
+                             ins->o_V,
+                             ins->o_W,
+                             ins->o_Vx,
+                             ins->o_Vy,
+                             ins->o_Vz);
+
+  ins->vorticitySurfaceKernel(mesh->Nelements,
+                              mesh->o_sgeo,
+                              mesh->o_vmapM,
+                              mesh->o_vmapP,
+                              mesh->o_EToB,
+                              t,
+                              mesh->o_x,
+                              mesh->o_y,
+                              mesh->o_z,
+                              offset,
+                              ins->o_U,
+                              ins->o_V,
+                              ins->o_W,
+                              ins->o_Vx,
+                              ins->o_Vy,
+                              ins->o_Vz);
 
   ins->divergenceVolumeKernel(mesh->Nelements,
                              mesh->o_vgeo,
@@ -31,19 +82,19 @@ void insReportHex3D(ins_t *ins, int tstep, char *options){
                              ins->o_Div);
 
   ins->divergenceSurfaceKernel(mesh->Nelements,
-                                mesh->o_sgeo,
-                                mesh->o_vmapM,
-                                mesh->o_vmapP,
-                                mesh->o_EToB,
-                                t,
-                                mesh->o_x,
-                                mesh->o_y,
-                                mesh->o_z,
-                                offset,
-                                ins->o_U,
-                                ins->o_V,
-                                ins->o_W,
-                                ins->o_Div);
+                              mesh->o_sgeo,
+                              mesh->o_vmapM,
+                              mesh->o_vmapP,
+                              mesh->o_EToB,
+                              t,
+                              mesh->o_x,
+                              mesh->o_y,
+                              mesh->o_z,
+                              offset,
+                              ins->o_U,
+                              ins->o_V,
+                              ins->o_W,
+                              ins->o_Div);
 
   // gather-scatter
   ellipticParallelGatherScatterHex3D(mesh, mesh->ogs, ins->o_Vx, dfloatString, "add");
