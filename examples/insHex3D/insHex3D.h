@@ -127,7 +127,8 @@ typedef struct {
   occa::kernel helmholtzAddBCKernel;
   
   occa::kernel updateUpdateKernel;
-  occa::kernel vorticityKernel;
+  occa::kernel vorticityVolumeKernel;
+  occa::kernel vorticitySurfaceKernel;
 
 }ins_t;
 

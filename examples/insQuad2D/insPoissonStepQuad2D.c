@@ -135,6 +135,7 @@ void insPoissonStepQuad2D(ins_t *ins, int tstep, char   * options){
     // gather-scatter
     ellipticParallelGatherScatterQuad2D(mesh, mesh->ogs, ins->o_rhsP, dfloatString, "add");  
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsP);
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_PI);
 
   } else if (strstr(ins->pSolverOptions,"IPDG")) {
     occaTimerTic(mesh->device,"PoissonRhsIpdg"); 

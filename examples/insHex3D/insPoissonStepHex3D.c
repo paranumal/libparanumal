@@ -141,6 +141,7 @@ void insPoissonStepHex3D(ins_t *ins, int tstep, char   * options){
     // gather-scatter
     ellipticParallelGatherScatterHex3D(mesh, mesh->ogs, ins->o_rhsP, dfloatString, "add");  
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsP);
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_PI);
 
   } else if (strstr(ins->pSolverOptions,"IPDG")) {
     occaTimerTic(mesh->device,"PoissonRhsIpdg"); 

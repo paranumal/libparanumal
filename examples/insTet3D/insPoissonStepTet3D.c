@@ -144,6 +144,7 @@ void insPoissonStepTet3D(ins_t *ins, int tstep, const char* options){
     // gather-scatter
     ellipticParallelGatherScatterTet3D(mesh, mesh->ogs, ins->o_rhsP, dfloatString, "add");  
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsP);
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_PI);
 
   } else if (strstr(ins->pSolverOptions,"IPDG")) {
     ins->poissonRhsIpdgBCKernel(mesh->Nelements,
