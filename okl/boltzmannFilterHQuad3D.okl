@@ -273,7 +273,10 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 	
 	const iint faceC = cubeFaceNumber[eo];
 
-	mark_edge = (faceC==cubeFaceNumber[eL])&&(faceC==cubeFaceNumber[eR]) &&(faceC==cubeFaceNumber[eD])&&(faceC==cubeFaceNumber[eU]);
+	mark_edge = ((faceC==cubeFaceNumber[eL])&&
+		     (faceC==cubeFaceNumber[eR])&&
+		     (faceC==cubeFaceNumber[eD])&&
+		     (faceC==cubeFaceNumber[eU]));
 
 	occaUnroll(p_Nfields)
   	  for(iint fld=0;fld<p_Nfields;++fld){
@@ -315,7 +318,7 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 	    }
 
 	    for (iint fld=0; fld<p_Nfields;++fld) {
-	      Fqij[fld] = Fqij[fld]*(1 - alpha) + s_q[fld][1][j][i]*alpha;
+	      Fqij[fld] = Fqij[fld]*(1. - alpha) + s_q[fld][1][j][i]*alpha;
 	    }
 	}
 	else{

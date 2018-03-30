@@ -296,7 +296,10 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 
 	const iint faceC = cubeFaceNumber[eo];
 
-	mark_edge = (faceC==cubeFaceNumber[eL]) && (faceC==cubeFaceNumber[eR]) && (faceC==cubeFaceNumber[eU]) && (faceC==cubeFaceNumber[eD]);
+	mark_edge = ((faceC==cubeFaceNumber[eL]) &&
+		     (faceC==cubeFaceNumber[eR]) &&
+		     (faceC==cubeFaceNumber[eU]) &&
+		     (faceC==cubeFaceNumber[eD]));
 
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
@@ -337,9 +340,10 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 	    }
 
 	  for (iint fld=0; fld<p_Nfields;++fld) {
-	    Fqij[fld] = Fqij[fld]*(1 - alpha) + s_q[fld][1][j][i]*alpha;
+	    Fqij[fld] = Fqij[fld]*(1. - alpha) + s_q[fld][1][j][i]*alpha;
 	  }
 
+#if 0
 	  // constrain momentum changes to lie on sphere
 	  const dfloat xij = x[i+j*p_Nq+eo*p_Np];
 	  const dfloat yij = y[i+j*p_Nq+eo*p_Np];
@@ -351,6 +355,7 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 	  Fqij[1] -= xij*xdotrhsq; 
 	  Fqij[2] -= yij*xdotrhsq;
 	  Fqij[3] -= zij*xdotrhsq;
+#endif
 	}
 	else{
 	  

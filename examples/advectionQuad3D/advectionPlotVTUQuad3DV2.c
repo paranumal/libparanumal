@@ -96,6 +96,15 @@ void advectionPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
   }
   fprintf(fp, "       </DataArray>\n");
 
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"CubeFaceNumber\" NumberOfComponents=\"1\" Format=\"ascii\">\n");
+  for(iint e=0;e<mesh->Nelements;++e){
+    for(iint n=0;n<mesh->plotNp;++n){
+      fprintf(fp, "       ");
+      fprintf(fp, "%g \n", (double)mesh->cubeFaceNumber[e]);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
+
 #if 0
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticit\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   dfloat *vort = (dfloat*) calloc(mesh->Np*mesh->dim, sizeof(dfloat));
