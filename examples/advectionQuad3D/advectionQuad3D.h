@@ -63,4 +63,4 @@ void advectionPlotLevels(mesh_t *mesh, char *fileNameBase, iint tstep,dfloat *q)
 
 void advectionPlotNorms(mesh_t *mesh, char *fileNameBase, iint tstep,dfloat *q);
 
-void advectionErrorNormQuad3D(mesh_t *mesh, dfloat t);
+void advectionErrorNormQuad3D(mesh_t *mesh, dfloat t, char *fileBase, int slice);
