@@ -3,7 +3,35 @@
 void advectionRunLSERKQuad3D(solver_t *solver){
 
   mesh_t *mesh = solver->mesh;
+
+  // some sanity checks
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      dfloat J = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + JID*mesh->Np + n];
+      if(J<1e-10)
+	printf("J = %\g", J);
+    }
+
+    int isInternal = 1;
+    int cubeFace = mesh->cubeFaceNumber[e];
+
+    for(int f=0;f<mesh->Nfaces;++f){
+      int cubeFaceNeighbor = mesh->cubeFaceNumber[mesh->EToE[mesh->Nfaces*e+f]];
+      if(cubeFace!=cubeFaceNeighbor)
+	isInternal = 0;
+    }
     
+    if(isInternal){
+      printf("EToF[%d,*] = [", e);
+      for(int f=0;f<mesh->Nfaces;++f){
+	printf("%d ", mesh->EToF[mesh->Nfaces*e+f]);
+      }
+      printf("]\n");
+    }
+  }
+  
+
+  
   // MPI send buffer
   iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
@@ -27,6 +55,9 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			mesh->o_z,
 			mesh->o_qpre,
 			mesh->o_qPreFilter);
+
+  mesh->o_qPreFilter.copyTo(mesh->q);
+  advectionErrorNormQuad3D(mesh, 0, "icMiddleFilter", 0);
   
   mesh->filterKernelq0V(mesh->Nelements,
 			alpha,

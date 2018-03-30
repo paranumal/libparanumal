@@ -266,8 +266,8 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 	s_F[1][j][i] = F[i+1*p_Nq+j*3*p_Nq];
 	s_F[2][j][i] = F[i+2*p_Nq+j*3*p_Nq];
 
-	const iint eL = EToE[eo*p_Nfaces+3];
-	const iint eR = EToE[eo*p_Nfaces+1];
+	const iint eL = EToE[eo*p_Nfaces + 3];
+	const iint eR = EToE[eo*p_Nfaces + 1];
 	const iint eD = EToE[eo*p_Nfaces + 0];
 	const iint eU = EToE[eo*p_Nfaces + 2];
 	
@@ -285,7 +285,9 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 	  }
       }
     }
+    
     barrier(localMemFence);
+
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
 	dfloat Fqij[p_Nfields];
