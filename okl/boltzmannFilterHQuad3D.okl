@@ -2,13 +2,9 @@
 kernel void boltzmannFilterHQuad3D(const iint Nelements,
 				   const iint * restrict elementIds,
 				   const iint * restrict shift,
-				   const dfloat alpha,
 				   const dfloat * restrict F,
 				   const iint * restrict cubeFaceNumber,
 				   const iint * restrict EToE,
-				   const dfloat * restrict x,
-				   const dfloat * restrict y,
-				   const dfloat * restrict z,
 				   const iint * restrict lev_updates,
 				   const iint * restrict lev_numbers,
 				   const iint l,
@@ -120,11 +116,6 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 		  Fqij[fld] += FinR*s_q[fld][2][j][n];
 		}
 	    }
-
-	    for (iint fld=0; fld<p_Nfields;++fld) {
-	      Fqij[fld] = Fqij[fld]*(1 - alpha) + s_q[fld][1][j][i]*alpha;
-	    }
-
 	}
 	else{
 	  
@@ -146,15 +137,11 @@ kernel void boltzmannFilterHQuad3D(const iint Nelements,
 
 kernel void boltzmannFilterHLSERKQuad3D(const iint Nelements,
 					const iint * restrict elementIDs,
-					const dfloat alpha,
 					const iint saved,
 					const iint shift,
 					const dfloat * restrict F,
 					const iint * restrict cubeFaceNumber,
 					const iint * restrict EToE,
-					const dfloat * restrict x,
-					const dfloat * restrict y,
-					const dfloat * restrict z,
 					const dfloat * restrict qIn,
 					dfloat * restrict Fq,
 					dfloat * restrict qpop) {
@@ -219,10 +206,6 @@ kernel void boltzmannFilterHLSERKQuad3D(const iint Nelements,
 		  Fqij[fld] += FinR*s_q[fld][2][j][n];
 		}
 	    }
-
-	    for (iint fld=0; fld<p_Nfields;++fld) {
-	      Fqij[fld] = Fqij[fld]*(1 - alpha) + s_q[fld][1][j][i]*alpha;
-	    }
 	}
 	else{
 	  
@@ -244,15 +227,10 @@ kernel void boltzmannFilterHLSERKQuad3D(const iint Nelements,
 }
 
 kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
-				     const dfloat alpha,
 				     const dfloat * restrict F,
 				     const iint * restrict cubeFaceNumber,
 				     const iint * restrict EToE,
-				     const dfloat * restrict x,
-				     const dfloat * restrict y,
-				     const dfloat * restrict z,
 				     const dfloat * restrict qIn,
-				     dfloat * restrict qOrig,
 				     dfloat * restrict Fq) {
   
   for (iint eo = 0; eo < Nelements;++eo;outer0) {
@@ -288,7 +266,6 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 	      s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	      s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	    }
-	    qOrig[id] = qin;
 	  }
       }
     }

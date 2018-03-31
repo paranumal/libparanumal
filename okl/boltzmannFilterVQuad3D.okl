@@ -121,11 +121,12 @@ kernel void boltzmannFilterVQuad3D(const iint Nelements,
 		}
 	    }
 
-	  for (iint fld=0; fld<p_Nfields;++fld) {
-	    Fqij[fld] = Fqij[fld]*(1 - alpha) + s_q[fld][1][j][i]*alpha;
+    	  for (iint fld=0; fld<p_Nfields;++fld) {
+	    int id = eC*p_Nfields*p_Np*p_nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i;		
+	    Fqij[fld] = Fqij[fld]*(1. - alpha) + alpha*Fq[id];
 	  }
 
-	  	// constrain momentum changes to lie on sphere
+	  // constrain momentum changes to lie on sphere
 	  const dfloat xij = x[i+j*p_Nq+eC*p_Np];
 	  const dfloat yij = y[i+j*p_Nq+eC*p_Np];
 	  const dfloat zij = z[i+j*p_Nq+eC*p_Np];
@@ -234,10 +235,6 @@ kernel void boltzmannFilterVLSERKQuad3D(const iint Nelements,
 		}
 	    }
 
-	  for (iint fld=0; fld<p_Nfields;++fld) {
-	    Fqij[fld] = Fqij[fld]*(1 - alpha) + s_q[fld][1][j][i]*alpha;
-	  }
-
 	  // constrain momentum changes to lie on sphere
 	  const dfloat xij = x[i+j*p_Nq+eo*p_Np];
 	  const dfloat yij = y[i+j*p_Nq+eo*p_Np];
@@ -249,6 +246,11 @@ kernel void boltzmannFilterVLSERKQuad3D(const iint Nelements,
 	  Fqij[1] -= xij*xdotrhsq; 
 	  Fqij[2] -= yij*xdotrhsq;
 	  Fqij[3] -= zij*xdotrhsq;
+
+	  for (iint fld=0; fld<p_Nfields;++fld) {
+	    int id = eo*p_Nfields*p_Np+fld*p_Np + j*p_Nq + i;		
+	    Fqij[fld] = Fqij[fld]*(1. - alpha) + alpha*Fq[id];
+	  }
 	}
 	else{
 	  
@@ -278,7 +280,6 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 				     const dfloat * restrict y,
 				     const dfloat * restrict z,
 				     const dfloat * restrict qIn,
-				     dfloat * restrict qOrig,
 				     dfloat * restrict Fq) {
   
   for (iint eo = 0; eo < Nelements;++eo;outer0) {
@@ -346,10 +347,9 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 	  // use saved data for blend
     	  for (iint fld=0; fld<p_Nfields;++fld) {
 	    int id = eo*p_Nfields*p_Np+fld*p_Np + j*p_Nq + i;		
-	    Fqij[fld] = Fqij[fld]*(1. - alpha) + alpha*qOrig[id];
+	    Fqij[fld] = Fqij[fld]*(1. - alpha) + alpha*Fq[id];
 	  }
 
-#if 0
 	  // constrain momentum changes to lie on sphere
 	  const dfloat xij = x[i+j*p_Nq+eo*p_Np];
 	  const dfloat yij = y[i+j*p_Nq+eo*p_Np];
@@ -361,22 +361,19 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 	  Fqij[1] -= xij*xdotrhsq; 
 	  Fqij[2] -= yij*xdotrhsq;
 	  Fqij[3] -= zij*xdotrhsq;
-#endif
-
-	  for(iint fld=0;fld<p_Nfields;++fld){
-	    int id = eo*p_Nfields*p_Np+fld*p_Np + j*p_Nq + i;	    
-	    Fq[id] = Fqij[fld];
-	  }
-	  
 	}
-	else{
-	  // overwrite boundary faces
+	else { //copy boundary elements directly
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
-	      int id = eo*p_Nfields*p_Np+fld*p_Np + j*p_Nq + i;
-	      Fq[id] = qOrig[id];
+	      Fqij[fld] = s_q[fld][1][j][i];
 	    }
 	}
+	
+	for(iint fld=0;fld<p_Nfields;++fld){
+	  int id = eo*p_Nfields*p_Np+fld*p_Np + j*p_Nq + i;	    
+	  Fq[id] = Fqij[fld];
+	}
+	
       }
     }
   }

@@ -4,8 +4,8 @@ kernel void boltzmannVolumeCorrectionQuad3D(const iint Nelements,
 					    const iint saved,
 					    const iint shift,
 					    const dfloat * restrict q,
-					    dfloat * restrict rhsq,
-					    dfloat * restrict prerhsq){
+					    dfloat * restrict prerhsq,
+					    dfloat * restrict rhsq){
   
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
     
