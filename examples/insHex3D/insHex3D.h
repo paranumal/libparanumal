@@ -52,6 +52,9 @@ typedef struct {
   
   dfloat *Vx, *Vy, *Vz, *Div;  
 
+  dfloat *cU, *cV, *cW; //quadrature field storage
+  dfloat *cUd, *cVd, *cWd; //quadrature field storage
+
   dfloat g[2];      // gravitational Acceleration
 
   int *VmapB, *PmapB;
@@ -87,6 +90,7 @@ typedef struct {
   occa::memory o_Vx, o_Vy, o_Vz, o_Div;
 
   occa::memory o_cU, o_cV, o_cW; //quadrature field storage
+  occa::memory o_cUd, o_cVd, o_cWd; //quadrature field storage
 
   int Nblock;
 

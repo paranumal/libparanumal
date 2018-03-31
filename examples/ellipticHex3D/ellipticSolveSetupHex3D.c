@@ -213,12 +213,12 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat tau, dfloat lambda, int* 
 
   solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D_base.okl",
-               "ellipticAxHex3D_e0",
+               "ellipticAxHex3D_Ref2D10",
                kernelInfo);
 
   solver->partialAxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D_base.okl",
-               "ellipticAxHex3D_e0a",
+               "ellipticPartialAxHex3D_Ref2D10",
                kernelInfo);
 
   solver->weightedInnerProduct1Kernel =

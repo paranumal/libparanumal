@@ -1,75 +1,105 @@
-// increments gradients of pressure with pseudo-gradients at faces and
-// increments rhs with pseudo-gradient/penalty terms at faces (need to double check scaling with tau)
-
-// sgeo stores dfloat4s with nx,ny,nz,(sJ/J)*(w1*w2*w3/(ws1*ws2))
-
-// nx,ny,nz,sJ,invJ - need WsJ
-
-#define surfaceTerms(sk,face,i, j, k)                                   \
+#define surfaceTerms(sk, face,m, i, j)                                  \
   {                                                                     \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
-  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           \
+    const dfloat nx  = sgeo[sk*p_Nsgeo+p_NXID];                         \
+    const dfloat ny  = sgeo[sk*p_Nsgeo+p_NYID];                         \
+    const dfloat nz  = sgeo[sk*p_Nsgeo+p_NZID];                         \
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                        \
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                         \
                                                                         \
-  dfloat dqdxP, dqdyP, dqdzP, qP;                                       \
-  dqdxP=0.f; dqdyP=0.f; dqdzP=0.f; qP=0.f;                              \
+    dfloat dqdxP=0.f, dqdyP=0.f, dqdzP=0.f, qP=0.f;                     \
                                                                         \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc>0) {                                                            \
-    const dlong  idM = vmapM[sk];                                       \
-    ellipticBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, qP, dqdxP, dqdyP, dqdzP);  \
-  }                                                                     \
+    const int bc = EToB[face+p_Nfaces*e];                               \
+    if(bc>0) {                                                          \
+      ellipticBoundaryConditions3D(bc, t, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, qP, dqdxP, dqdyP, dqdzP);  \
+    }                                                                   \
                                                                         \
-  dfloat dq = qP;                                                       \
+    const dfloat dq = qP;                                               \
                                                                         \
-  s_dqdx[k][j][i] += WsJ*nx*dq;                                         \
-  s_dqdy[k][j][i] += WsJ*ny*dq;                                         \
-  s_dqdz[k][j][i] += WsJ*nz*dq;                                         \
+    s_dqdx[m][j][i] = WsJ*nx*dq;                                        \
+    s_dqdy[m][j][i] = WsJ*ny*dq;                                        \
+    s_dqdz[m][j][i] = WsJ*nz*dq;                                        \
                                                                         \
-  s_rhsq[k][j][i] -= WsJ*(nx*dqdxP + ny*dqdyP + nz*dqdzP+ tau*dq*hinv); \
+    s_rhs[m][j][i] = -WsJ*(nx*dqdxP + ny*dqdyP + nz*dqdzP + tau*hinv*dq);\                            \
   }
 
+// (grad phi, grad q) + ([phi], n.{grad q}) + ({grad phi}, n[u]) + (tau[phi],[u])
+
 kernel void ellipticRhsBCIpdgHex3D(const dlong Nelements,
-                                 const dlong * restrict vmapM,
-                                 const dfloat tau,
-                                 const dfloat t,
-                                 const dfloat * restrict x,
-                                 const dfloat * restrict y,
-                                 const dfloat * restrict z,
-                                 const dfloat * restrict vgeo,
-                                 const dfloat * restrict sgeo,
-                                 const int   * restrict EToB,
-                                 const dfloat * restrict D,
-                                 dfloat  * restrict rhs){
+                                  const dlong  * restrict vmapM,
+                                  const dfloat tau,
+                                  const dfloat t,
+                                  const dfloat * restrict x,
+                                  const dfloat * restrict y,
+                                  const dfloat * restrict z,
+                                  const dfloat * restrict vgeo,
+                                  const dfloat * restrict sgeo,
+                                  const int    * restrict EToB,
+                                  const dfloat * restrict D,
+                                        dfloat * restrict rhs){
+  
+#if 0
+  // assume the following are precomputed:
+  // p, px, py at SEM nodes
+  // +/- traces of p, px, py at SEM surface nodes
+
+  0<=i,j,k,m<=N AND 0<=e<Nelements
+
+    (phix, px)_e
+    + (phiy, py)_e 
+    + (phix, nx*(p+ - p-)/2)_de
+    + (phiy, ny*(p+ - p-)/2)_de
+    - (phi-, nx*(px+ + px-)/2)_de
+    - (phi-, ny*(py+ + py-)/2)_de
+    - (phi-, tau*(p+ - p-)/2)_de
+    
+    // here w is one component of the product TP quadrature weights
+    (phir, rx*(px + Fsc*nx*dp) + ry*(py + Fsc*ny*dp) + rz*(pz + Fsc*nz*dp)) )_e
++   (phir, sx*(px + Fsc*nx*dp) + sy*(py + Fsc*ny*dp) + sz*(pz + Fsc*nz*dp)) )_e
++   (phir, tx*(px + Fsc*nx*dp) + ty*(py + Fsc*ny*dp) + tz*(pz + Fsc*nz*dp)) )_e
+    (phi-, Fsc*(nx*(px+ + px-) + ny*(py+ + py-) + nz*(pz+ + pz-) - tau*(p+ - p-))/2)_e
+
+    px => px + Fsc*nx*dp (i.e. add pseudo-gradient at end points 
+    py => py + Fsc*ny*dp
+    pz => pz + Fsc*nz*dp
+    Fsc = delta*(Js/J)*(1/w)
+    dp = (p+ - p-)/2;
+
+    // simplify
+    (phir, rx*px+ ry*py + rz*pz) )_e
++   (phir, sx*px+ sy*py + sz*pz) )_e
++   (phir, tx*px+ ty*py + tz*pz) )_e
++   (phi-, Fsc*(nx*(px+ + px-) + ny*(py+ + py-) + nz*(pz+ + pz-) - tau*(p+ - p-))/2)_e
+
+#endif
 
   for(dlong e=0;e<Nelements;++e;outer0){
+    
+    shared dfloat s_dqdx[2][p_Nq][p_Nq];
+    shared dfloat s_dqdy[2][p_Nq][p_Nq];
+    shared dfloat s_dqdz[2][p_Nq][p_Nq];
+    shared dfloat s_rhs[2][p_Nq][p_Nq];
 
-    shared dfloat s_dqdx[p_Nq][p_Nq][p_Nq];
-    shared dfloat s_dqdy[p_Nq][p_Nq][p_Nq];
-    shared dfloat s_dqdz[p_Nq][p_Nq][p_Nq];
-    shared dfloat s_rhsq[p_Nq][p_Nq][p_Nq];
     shared dfloat s_D[p_Nq][p_Nq];
+    
+    exclusive dfloat r_dqdx[p_Nq], r_dqdy[p_Nq], r_dqdz[p_Nq], r_rhs[p_Nq];
+    exclusive dfloat r_dqdt;
 
     // loop over slabs
-    for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
-          s_dqdx[k][j][i] = 0.f;
-          s_dqdy[k][j][i] = 0.f;
-          s_dqdz[k][j][i] = 0.f;
-          s_rhsq[k][j][i] = 0.f;
-
-          if(k==0)
-            s_D[j][i] = D[j*p_Nq+i];
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
+        occaUnroll(p_Nq)
+        for(int k=0;k<p_Nq;++k){
+          r_dqdx[k] = 0.f;
+          r_dqdy[k] = 0.f;
+          r_dqdz[k] = 0.f;
+          r_rhs [k] = 0.f;
         }
+          
+        s_D[j][i] = D[j*p_Nq+i];
       }
     }
-
+    
     barrier(localMemFence);
-
-    // loop over faces to add pseudo-gradient
 
     // face 0 & 5
     for(int j=0;j<p_Nq;++j;inner1){
@@ -77,8 +107,27 @@ kernel void ellipticRhsBCIpdgHex3D(const dlong Nelements,
         const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i ;
         const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i ;             
 
-        surfaceTerms(sk0,0,i,j,     0);
-        surfaceTerms(sk5,5,i,j,p_Nq-1); 
+        surfaceTerms(sk0,0,0,i,j);
+        surfaceTerms(sk5,5,1,i,j); 
+      }
+    }
+
+    barrier(localMemFence);
+
+    // face 0 & 5
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
+        //face 0
+        r_dqdx[0] += s_dqdx[0][j][i];
+        r_dqdy[0] += s_dqdy[0][j][i];
+        r_dqdz[0] += s_dqdz[0][j][i];
+        r_rhs [0] += s_rhs [0][j][i];
+
+        //face 5
+        r_dqdx[p_Nq-1] += s_dqdx[1][j][i];
+        r_dqdy[p_Nq-1] += s_dqdy[1][j][i];
+        r_dqdz[p_Nq-1] += s_dqdz[1][j][i];
+        r_rhs [p_Nq-1] += s_rhs [1][j][i];
       }
     }
 
@@ -90,12 +139,38 @@ kernel void ellipticRhsBCIpdgHex3D(const dlong Nelements,
         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i ;
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i ;
 
-        surfaceTerms(sk1,1,i,     0,k);
-        surfaceTerms(sk3,3,i,p_Nq-1,k); 
+        surfaceTerms(sk1,1,0,i,k);
+        surfaceTerms(sk3,3,1,i,k); 
       }
     }
 
     barrier(localMemFence);
+
+    // face 1 & 3
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
+        if (j==0) {//face 1
+          occaUnroll(p_Nq)
+          for (int k=0;k<p_Nq;k++) {
+            r_dqdx[k] += s_dqdx[0][k][i];
+            r_dqdy[k] += s_dqdy[0][k][i];
+            r_dqdz[k] += s_dqdz[0][k][i];
+            r_rhs [k] += s_rhs [0][k][i];
+          }
+        }
+        if (j==p_Nq-1) {//face 3
+          occaUnroll(p_Nq)
+          for (int k=0;k<p_Nq;k++) {
+            r_dqdx[k] += s_dqdx[1][k][i];
+            r_dqdy[k] += s_dqdy[1][k][i];
+            r_dqdz[k] += s_dqdz[1][k][i];
+            r_rhs [k] += s_rhs [1][k][i];
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);    
 
     // face 2 & 4
     for(int k=0;k<p_Nq;++k;inner1){
@@ -104,13 +179,41 @@ kernel void ellipticRhsBCIpdgHex3D(const dlong Nelements,
         const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j ;
         const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j ;
         
-        surfaceTerms(sk2,2,p_Nq-1,j,k);
-        surfaceTerms(sk4,4,     0,j,k); 
+        surfaceTerms(sk2,2,0,j,k);
+        surfaceTerms(sk4,4,1,j,k); 
       }
     }
 
     barrier(localMemFence);
 
+    // face 2 & 4
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
+        if (i==p_Nq-1) {//face 2
+          occaUnroll(p_Nq)
+          for (int k=0;k<p_Nq;k++) {
+            r_dqdx[k] += s_dqdx[0][k][j];
+            r_dqdy[k] += s_dqdy[0][k][j];
+            r_dqdz[k] += s_dqdz[0][k][j];
+            r_rhs [k] += s_rhs [0][k][j];
+          }
+        }
+        if (i==0) {//face 4
+          occaUnroll(p_Nq)
+          for (int k=0;k<p_Nq;k++) {
+            r_dqdx[k] += s_dqdx[1][k][j];
+            r_dqdy[k] += s_dqdy[1][k][j];
+            r_dqdz[k] += s_dqdz[1][k][j];
+            r_rhs [k] += s_rhs [1][k][j];
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    //layer by layer
+    occaUnroll(p_Nq)
     for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j;inner1){
         for(int i=0;i<p_Nq;++i;inner0){
@@ -128,37 +231,47 @@ kernel void ellipticRhsBCIpdgHex3D(const dlong Nelements,
           const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
           const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
           const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
-
-          const dfloat JW   = vgeo[gid + p_JWID*p_Np];
           
-          const dfloat dqdx = s_dqdx[k][j][i];
-          const dfloat dqdy = s_dqdy[k][j][i];
-          const dfloat dqdz = s_dqdz[k][j][i];
+          const dfloat dqdx = r_dqdx[k];
+          const dfloat dqdy = r_dqdy[k];
+          const dfloat dqdz = r_dqdz[k];
           
-          s_dqdx[k][j][i] = (drdx*dqdx + drdy*dqdy + drdz*dqdz);
-          s_dqdy[k][j][i] = (dsdx*dqdx + dsdy*dqdy + dsdz*dqdz);
-          s_dqdz[k][j][i] = (dtdx*dqdx + dtdy*dqdy + dtdz*dqdz);
+          s_dqdx[0][j][i] = (drdx*dqdx + drdy*dqdy + drdz*dqdz);
+          s_dqdy[0][j][i] = (dsdx*dqdx + dsdy*dqdy + dsdz*dqdz);
+          r_dqdt = (dtdx*dqdx + dtdy*dqdy + dtdz*dqdz);
         }
       }
-    }
 
-    barrier(localMemFence);
+      barrier(localMemFence);
 
-    for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j;inner1){
         for(int i=0;i<p_Nq;++i;inner0){
-          dfloat dr = 0, ds = 0, dt = 0;
+          dfloat dr = 0, ds = 0;
 
+          occaUnroll(p_Nq)
           for(int n=0;n<p_Nq;++n){
-            dr += s_D[n][i]*s_dqdx[k][j][n];
-            ds += s_D[n][j]*s_dqdy[k][n][i];
-            dt += s_D[n][k]*s_dqdz[n][j][i];
+            dr += s_D[n][i]*s_dqdx[0][j][n];
+            r_rhs[n] += s_D[k][n]*r_dqdt; // DT(m,k)*ut(i,j,k,e)
+            ds += s_D[n][j]*s_dqdy[0][n][i];
           }
           
+          r_rhs[k] += dr + ds;
+        }
+      }
+
+      barrier(localMemFence);
+    }
+
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
+        
+        occaUnroll(p_Nq)
+        for(int k=0;k<p_Nq;++k){
           const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          rhs[id] -= s_rhsq[k][j][i]  + dr + ds + dt;
+          rhs[id] -= r_rhs[k];
         }
       }
     }
   }
 }
+

@@ -318,7 +318,7 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
 }
 #undef surfaceTerms
 
-
+#if 0
 /* ------------------Quadrature kernels ----------------------------------*/
 kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
                                              const dfloat * restrict vgeo,
@@ -447,15 +447,17 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
             r_W[k] += Ij*s_W[n][i];
           }
 
-          const dlong id =e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
+          const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
           cU[id] = r_U[k];
           cV[id] = r_V[k];
           cW[id] = r_W[k];
         }
       }
+      barrier(localMemFence);
     }
   }
 
+  barrier(globalMemFence);
 
   //-----------------------------kernel 2 do the reference divergence
   for(dlong e=0; e<Nelements; ++e; outer0) {
@@ -506,9 +508,9 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
           const dfloat dtdx = cubvgeo[gid + p_TXID*p_cubNp];
           const dfloat dtdy = cubvgeo[gid + p_TYID*p_cubNp];
           const dfloat dtdz = cubvgeo[gid + p_TZID*p_cubNp];
-          const dfloat JW = cubvgeo[gid + p_JWID*p_cubNp];
+          const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
 
-          const dlong id =e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
+          const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
           const dfloat Un = cU[id];
           const dfloat Vn = cV[id];
           const dfloat Wn = cW[id];
@@ -561,7 +563,7 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
       for(int i=0;i<p_cubNq;++i;inner0){
         occaUnroll(p_cubNq)
           for(int k=0;k<p_cubNq;++k){
-            const dlong id =e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
+            const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
             cU[id] = r_NU[k];
             cV[id] = r_NV[k];
             cW[id] = r_NW[k];
@@ -570,11 +572,13 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     }
   }
 
+  barrier(globalMemFence);
+
   //---------------------------kernel 3 project fluxes back to GLL grid
   for(dlong e=0; e<Nelements; ++e; outer0) {
-    shared dfloat s_NU[p_Nq][p_cubNq];
-    shared dfloat s_NV[p_Nq][p_cubNq];
-    shared dfloat s_NW[p_Nq][p_cubNq];
+    shared dfloat s_NU[p_cubNq][p_cubNq];
+    shared dfloat s_NV[p_cubNq][p_cubNq];
+    shared dfloat s_NW[p_cubNq][p_cubNq];
     shared dfloat s_cubProjectT[p_cubNq][p_Nq];
 
     exclusive dfloat r_NU[p_Nq], r_NV[p_Nq], r_NW[p_Nq];
@@ -635,15 +639,15 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
 
       for(int j=0;j<p_cubNq;++j;inner1){ 
         for(int i=0;i<p_cubNq;++i;inner0){
-          if(i<p_Nq){
+          if(j<p_Nq){
             r_NU[k] = 0; r_NV[k] = 0; r_NW[k] = 0;
 
             occaUnroll(p_cubNq)
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pi = s_cubProjectT[n][i];
-              r_NU[k] += Pi*s_NU[j][n];
-              r_NV[k] += Pi*s_NV[j][n];
-              r_NW[k] += Pi*s_NW[j][n];
+              const dfloat Pj = s_cubProjectT[n][j];
+              r_NU[k] += Pj*s_NU[n][i];
+              r_NV[k] += Pj*s_NV[n][i];
+              r_NW[k] += Pj*s_NW[n][i];
             }
           }
         }
@@ -653,7 +657,7 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
 
       for(int j=0;j<p_cubNq;++j;inner1){ 
         for(int i=0;i<p_cubNq;++i;inner0){
-          if(i<p_Nq){
+          if(j<p_Nq){
             s_NU[j][i] = r_NU[k];
             s_NV[j][i] = r_NV[k];
             s_NW[j][i] = r_NW[k];
@@ -673,10 +677,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
 
             occaUnroll(p_cubNq)
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pj = s_cubProjectT[n][j];
-              r_NU[k] += Pj*s_NU[n][i];
-              r_NV[k] += Pj*s_NV[n][i];
-              r_NW[k] += Pj*s_NW[n][i];
+              const dfloat Pi = s_cubProjectT[n][i];
+              r_NU[k] += Pi*s_NU[j][n];
+              r_NV[k] += Pi*s_NV[j][n];
+              r_NW[k] += Pi*s_NW[j][n];
             }
 
             const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
@@ -686,10 +690,326 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
           }
         }
       }
+      barrier(localMemFence);
     }
   }
 }
+#else
 
+//unified kernel, but might use too much memory
+kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
+                                             const dfloat * restrict vgeo,
+                                             const dfloat * restrict cubvgeo,
+                                             const dfloat * restrict cubD,
+                                             const dfloat * restrict cubInterpT,
+                                             const dfloat * restrict cubProjectT,
+                                             const dlong offset,
+                                             const dfloat * restrict U,
+                                             const dfloat * restrict V,
+                                             const dfloat * restrict W,
+                                                   dfloat * restrict cU, //storage for interpolated fields
+                                                   dfloat * restrict cV, //storage for interpolated fields
+                                                   dfloat * restrict cW, //storage for interpolated fields
+                                                   dfloat * restrict NU,
+                                                   dfloat * restrict NV,
+                                                   dfloat * restrict NW){
+
+  //----------------------------kernel 1 interpolate velocity fields to quadrature points
+  for(dlong e=0; e<Nelements; ++e; outer0) {
+
+    shared dfloat s_cubD[p_cubNq][p_cubNq];
+    shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+
+
+    shared dfloat s_F11[p_cubNq][p_cubNq];
+    shared dfloat s_F12[p_cubNq][p_cubNq];
+    shared dfloat s_F13[p_cubNq][p_cubNq];
+    shared dfloat s_F21[p_cubNq][p_cubNq];
+    shared dfloat s_F22[p_cubNq][p_cubNq];
+    shared dfloat s_F23[p_cubNq][p_cubNq];
+    shared dfloat s_F31[p_cubNq][p_cubNq];
+    shared dfloat s_F32[p_cubNq][p_cubNq];
+    shared dfloat s_F33[p_cubNq][p_cubNq];
+
+    #define s_U s_F11
+    #define s_V s_F12
+    #define s_W s_F13
+
+    #define s_NU s_F11
+    #define s_NV s_F12
+    #define s_NW s_F13
+
+    exclusive dfloat r_cU[p_cubNq], r_cV[p_cubNq], r_cW[p_cubNq];
+    exclusive dfloat r_NU[p_cubNq], r_NV[p_cubNq], r_NW[p_cubNq];
+
+    for(int j=0;j<p_cubNq;++j;inner1){
+      for(int i=0;i<p_cubNq;++i;inner0){
+        const int id = i+j*p_cubNq;
+        if (id<p_Nq*p_cubNq) {
+          s_cubInterpT[0][id] = cubInterpT[id];
+          s_cubProjectT[0][id] = cubProjectT[id];
+        }
+        s_cubD[0][id] = cubD[id];
+
+        occaUnroll(p_cubNq)
+          for(int k=0;k<p_cubNq;++k){         
+            r_cU[k] = 0.;
+            r_cV[k] = 0.;
+            r_cW[k] = 0.;
+            r_NU[k] = 0.;
+            r_NV[k] = 0.;
+            r_NW[k] = 0.;
+          }
+      }
+    }
+
+    barrier(localMemFence);
+
+    //read in and interpolate in k
+    for(int j=0;j<p_cubNq;++j;inner1){
+      for(int i=0;i<p_cubNq;++i;inner0){
+        if (i<p_Nq && j<p_Nq) {
+          occaUnroll(p_Nq)
+          for(int k=0;k<p_Nq;++k){
+            const dlong id =(e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            const dfloat uc = U[id];
+            const dfloat vc = V[id];
+            const dfloat wc = W[id];
+
+            occaUnroll(p_cubNq)
+            for(int n=0;n<p_cubNq;++n){
+              const dfloat Ik = s_cubInterpT[k][n];
+              r_cU[n] += Ik*uc;
+              r_cV[n] += Ik*vc;
+              r_cW[n] += Ik*wc;
+            }
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    occaUnroll(p_cubNq)
+    for(int k=0;k<p_cubNq;++k){ 
+      //load slice to shared
+      for(int j=0;j<p_cubNq;++j;inner1){ 
+        for(int i=0;i<p_cubNq;++i;inner0){
+          if (i<p_Nq && j<p_Nq) {
+            s_U[j][i] = r_cU[k];
+            s_V[j][i] = r_cV[k];
+            s_W[j][i] = r_cW[k];
+          }
+        }
+      }
+
+      barrier(localMemFence);
+
+      for(int j=0;j<p_cubNq;++j;inner1){ 
+        for(int i=0;i<p_cubNq;++i;inner0){
+          if(j<p_Nq){
+            r_cU[k] = 0; r_cV[k] = 0; r_cW[k] = 0;
+
+            occaUnroll(p_Nq)
+            for (int n=0;n<p_Nq;n++) {
+              const dfloat Ii = s_cubInterpT[n][i];
+              r_cU[k] += Ii*s_U[j][n];
+              r_cV[k] += Ii*s_V[j][n];
+              r_cW[k] += Ii*s_W[j][n];
+            }
+          }
+        }
+      }
+
+      barrier(localMemFence);
+
+      for(int j=0;j<p_cubNq;++j;inner1){ 
+        for(int i=0;i<p_cubNq;++i;inner0){
+          if(j<p_Nq){
+            s_U[j][i] = r_cU[k];
+            s_V[j][i] = r_cV[k];
+            s_W[j][i] = r_cW[k];
+          }
+        }
+      }
+
+      barrier(localMemFence);
+
+      for(int j=0;j<p_cubNq;++j;inner1){ 
+        for(int i=0;i<p_cubNq;++i;inner0){
+          r_cU[k] = 0; r_cV[k] = 0; r_cW[k] = 0;
+
+          occaUnroll(p_Nq)
+          for (int n=0;n<p_Nq;n++) {
+            const dfloat Ij = s_cubInterpT[n][j];
+            r_cU[k] += Ij*s_U[n][i];
+            r_cV[k] += Ij*s_V[n][i];
+            r_cW[k] += Ij*s_W[n][i];
+          }
+        }
+      }
+
+      barrier(localMemFence);      
+    }
+
+    occaUnroll(p_cubNq)
+    for(int k=0;k<p_cubNq;++k){ 
+
+      //fetch slice
+      for(int j=0;j<p_cubNq;++j;inner1){ 
+        for(int i=0;i<p_cubNq;++i;inner0){
+          const dlong gid = e*p_cubNp*p_Nvgeo+ k*p_cubNq*p_cubNq + j*p_cubNq +i;
+          const dfloat drdx = cubvgeo[gid + p_RXID*p_cubNp];
+          const dfloat drdy = cubvgeo[gid + p_RYID*p_cubNp];
+          const dfloat drdz = cubvgeo[gid + p_RZID*p_cubNp];
+          const dfloat dsdx = cubvgeo[gid + p_SXID*p_cubNp];
+          const dfloat dsdy = cubvgeo[gid + p_SYID*p_cubNp];
+          const dfloat dsdz = cubvgeo[gid + p_SZID*p_cubNp];
+          const dfloat dtdx = cubvgeo[gid + p_TXID*p_cubNp];
+          const dfloat dtdy = cubvgeo[gid + p_TYID*p_cubNp];
+          const dfloat dtdz = cubvgeo[gid + p_TZID*p_cubNp];
+          const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
+
+          const dfloat Un = r_cU[k];
+          const dfloat Vn = r_cV[k];
+          const dfloat Wn = r_cW[k];
+
+          const dfloat cUn = JW*(drdx*Un+drdy*Vn+drdz*Wn);
+          const dfloat cVn = JW*(dsdx*Un+dsdy*Vn+dsdz*Wn);
+          const dfloat cWn = JW*(dtdx*Un+dtdy*Vn+dtdz*Wn);
+
+          s_F11[j][i] = cUn*Un;
+          s_F12[j][i] = cVn*Un;
+          s_F13[j][i] = cWn*Un;
+          s_F21[j][i] = cUn*Vn;
+          s_F22[j][i] = cVn*Vn;
+          s_F23[j][i] = cWn*Vn;
+          s_F31[j][i] = cUn*Wn;
+          s_F32[j][i] = cVn*Wn;
+          s_F33[j][i] = cWn*Wn;
+        }
+      }
+
+      barrier(localMemFence);
+
+      for(int j=0;j<p_cubNq;++j;inner1){ 
+        for(int i=0;i<p_cubNq;++i;inner0){
+          occaUnroll(p_cubNq)
+            for (int n=0;n<p_cubNq;n++) {
+              const dfloat Dr = s_cubD[n][i];
+              const dfloat Ds = s_cubD[n][j];
+              const dfloat Dt = s_cubD[k][n];
+              r_NU[k] += Dr*s_F11[j][n];
+              r_NV[k] += Dr*s_F21[j][n];
+              r_NW[k] += Dr*s_F31[j][n];
+
+              r_NU[k] += Ds*s_F12[n][i];
+              r_NV[k] += Ds*s_F22[n][i];
+              r_NW[k] += Ds*s_F32[n][i];
+
+              r_NU[n] += Dt*s_F13[j][i];
+              r_NV[n] += Dt*s_F23[j][i];
+              r_NW[n] += Dt*s_F33[j][i];
+            }
+        }
+      }
+
+      barrier(localMemFence);
+    } //k loop
+
+    occaUnroll(p_cubNq)
+    for(int k=0;k<p_cubNq;++k){ 
+      //load slice to shared
+      for(int j=0;j<p_cubNq;++j;inner1){ 
+        for(int i=0;i<p_cubNq;++i;inner0){
+          s_NU[j][i] = r_NU[k];
+          s_NV[j][i] = r_NV[k];
+          s_NW[j][i] = r_NW[k];
+        }
+      }
+
+      barrier(localMemFence);
+
+      for(int j=0;j<p_cubNq;++j;inner1){ 
+        for(int i=0;i<p_cubNq;++i;inner0){
+          if(j<p_Nq){
+            r_NU[k] = 0; r_NV[k] = 0; r_NW[k] = 0;
+
+            occaUnroll(p_cubNq)
+            for (int n=0;n<p_cubNq;n++) {
+              const dfloat Pj = s_cubProjectT[n][j];
+              r_NU[k] += Pj*s_NU[n][i];
+              r_NV[k] += Pj*s_NV[n][i];
+              r_NW[k] += Pj*s_NW[n][i];
+            }
+          }
+        }
+      }
+
+      barrier(localMemFence);
+
+      for(int j=0;j<p_cubNq;++j;inner1){ 
+        for(int i=0;i<p_cubNq;++i;inner0){
+          if(j<p_Nq){
+            s_NU[j][i] = r_NU[k];
+            s_NV[j][i] = r_NV[k];
+            s_NW[j][i] = r_NW[k];
+          }
+        }
+      }
+
+      barrier(localMemFence);
+
+      for(int j=0;j<p_cubNq;++j;inner1){ 
+        for(int i=0;i<p_cubNq;++i;inner0){
+          if ((i<p_Nq) && (j<p_Nq)) {
+            r_NU[k] = 0; r_NV[k] = 0; r_NW[k] = 0;
+
+            occaUnroll(p_cubNq)
+            for (int n=0;n<p_cubNq;n++) {
+              const dfloat Pi = s_cubProjectT[n][i];
+              r_NU[k] += Pi*s_NU[j][n];
+              r_NV[k] += Pi*s_NV[j][n];
+              r_NW[k] += Pi*s_NW[j][n];
+            }
+          }
+        }
+      }
+      
+      barrier(localMemFence);
+    }
+
+    //project in k and write out
+    for(int j=0;j<p_cubNq;++j;inner1){
+      for(int i=0;i<p_cubNq;++i;inner0){
+        if ((i<p_Nq) && (j<p_Nq)) {
+          occaUnroll(p_Nq)
+          for(int k=0;k<p_Nq;++k){    
+            dfloat nu=0., nv=0., nw=0.; 
+
+            occaUnroll(p_cubNq)
+            for(int n=0;n<p_cubNq;++n){
+              const dfloat Pk = s_cubProjectT[n][k];
+              nu += Pk*r_NU[n];
+              nv += Pk*r_NV[n];
+              nw += Pk*r_NW[n];
+            }
+
+            const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
+            const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+
+            const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            NU[id] = -invJW*nu;
+            NV[id] = -invJW*nv;
+            NW[id] = -invJW*nw;
+          }
+        }
+      }
+    }
+  }
+}
+#endif
 
 #define quadSurfaceTerms(face)                           \
 {                                                                       \
@@ -772,7 +1092,7 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
       const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];\
       const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];\
       const dfloat nz = cubsgeo[sk*p_Nsgeo+p_NZID];\
-      const dfloat sJ = cubsgeo[sk*p_Nsgeo+p_SJID];\
+      const dfloat WsJ = cubsgeo[sk*p_Nsgeo+p_WSJID];\
       const dfloat uM = r_UMn, vM = r_VMn, wM = r_WMn;\
             dfloat uP = r_UPn, vP = r_VPn, wP = r_WPn;\
 \
@@ -787,15 +1107,15 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
       const dfloat unP   = occaFabs(nx*uP + ny*vP + nz*wP);\
       const dfloat unMax = (unM > unP) ? unM : unP;\
 \
-      s_fluxNU[j][i] = sJ*(.5f*(nx*(uP*uP + uM*uM)\
-                              + ny*(uP*vP + uM*vM)\
-                              + nz*(uP*wP + uM*wM)  + unMax*(uM-uP) ));\
-      s_fluxNV[j][i] = sJ*(.5f*(nx*(vP*uP + vM*uM)\
-                              + ny*(vP*vP + vM*vM)\
-                              + nz*(vP*wP + vM*wM)  + unMax*(vM-vP) ));\
-      s_fluxNW[j][i] = sJ*(.5f*(nx*(wP*uP + wM*uM)\
-                              + ny*(wP*vP + wM*vM)\
-                              + nz*(wP*wP + wM*wM)  + unMax*(wM-wP) ));\
+      s_fluxNU[j][i] = WsJ*(.5f*(nx*(uP*uP + uM*uM)\
+                               + ny*(uP*vP + uM*vM)\
+                               + nz*(uP*wP + uM*wM)  + unMax*(uM-uP) ));\
+      s_fluxNV[j][i] = WsJ*(.5f*(nx*(vP*uP + vM*uM)\
+                               + ny*(vP*vP + vM*vM)\
+                               + nz*(vP*wP + vM*wM)  + unMax*(vM-vP) ));\
+      s_fluxNW[j][i] = WsJ*(.5f*(nx*(wP*uP + wM*uM)\
+                               + ny*(wP*vP + wM*vM)\
+                               + nz*(wP*wP + wM*wM)  + unMax*(wM-wP) ));\
     }\
   }\
 \
@@ -855,7 +1175,6 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     }\
   }\
 }
-#endif
 
 kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
                                             const dfloat * restrict vgeo,

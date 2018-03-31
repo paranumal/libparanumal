@@ -15,63 +15,6 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
   mesh->cubsgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
                                 mesh->Nsgeo*mesh->cubNfp*mesh->Nfaces, 
                                 sizeof(dfloat));
-  
-
-  //interpolated reference coodinates on each face
-  dfloat *ir = (dfloat *) calloc(mesh->Nfaces*mesh->cubNfp,sizeof(dfloat));
-  dfloat *is = (dfloat *) calloc(mesh->Nfaces*mesh->cubNfp,sizeof(dfloat));
-  dfloat *it = (dfloat *) calloc(mesh->Nfaces*mesh->cubNfp,sizeof(dfloat));
-
-  dfloat *rtmp = (dfloat *) calloc(mesh->Nq*mesh->cubNq,sizeof(dfloat));
-  dfloat *stmp = (dfloat *) calloc(mesh->Nq*mesh->cubNq,sizeof(dfloat));
-  dfloat *ttmp = (dfloat *) calloc(mesh->Nq*mesh->cubNq,sizeof(dfloat));
-
-  for(int f=0;f<mesh->Nfaces;++f){
-    //interpolate in i
-    for(int ny=0;ny<mesh->Nq;++ny){
-      for(int nx=0;nx<mesh->cubNq;++nx){
-        rtmp[nx+mesh->cubNq*ny] = 0;
-        stmp[nx+mesh->cubNq*ny] = 0;
-        ttmp[nx+mesh->cubNq*ny] = 0;
-
-        for(int m=0;m<mesh->Nq;++m){
-          int n = mesh->faceNodes[f*mesh->Nfp+m+ny*mesh->Nq];
-          
-          dfloat rm = mesh->r[n];
-          dfloat sm = mesh->s[n];
-          dfloat tm = mesh->t[n];
-
-          dfloat Inm = mesh->cubInterp[m+nx*mesh->Nq];
-          rtmp[nx+mesh->cubNq*ny] += Inm*rm;
-          stmp[nx+mesh->cubNq*ny] += Inm*sm;
-          ttmp[nx+mesh->cubNq*ny] += Inm*tm;
-        }
-      }
-    }
-
-    //interpolate in j and store
-    for(int ny=0;ny<mesh->cubNq;++ny){
-      for(int nx=0;nx<mesh->cubNq;++nx){
-        int id = nx+ny*mesh->cubNq + f*mesh->cubNfp;
-        ir[id] = 0.0;
-        is[id] = 0.0;
-        it[id] = 0.0;
-
-        for(int m=0;m<mesh->Nq;++m){
-          dfloat rm = rtmp[nx + m*mesh->cubNq];
-          dfloat sm = stmp[nx + m*mesh->cubNq];
-          dfloat tm = ttmp[nx + m*mesh->cubNq];
-
-          dfloat Inm = mesh->cubInterp[m+ny*mesh->Nq];
-          ir[id] += Inm*rm;
-          is[id] += Inm*sm;
-          it[id] += Inm*tm;
-        }
-      }
-    }
-  }
-  free(rtmp); free(stmp); free(ttmp);
-
 
   for(dlong e=0;e<mesh->Nelements+mesh->totalHaloPairs;++e){ /* for each element */
 
@@ -146,10 +89,15 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
       //geometric data for quadrature
       for(int i=0;i<mesh->cubNfp;++i){  // for each quadrature node on face
 
-        int id = i + f*mesh->cubNfp;
-        dfloat rn = ir[id];
-        dfloat sn = is[id];
-        dfloat tn = it[id];
+        dfloat rn, sn, tn;
+        switch(f){
+        case 0: rn = mesh->cubr[i%mesh->cubNq]; sn = mesh->cubr[i/mesh->cubNq]; tn = -1.0;                      break;
+        case 1: rn = mesh->cubr[i%mesh->cubNq]; sn = -1.0;                      tn = mesh->cubr[i/mesh->cubNq]; break;
+        case 2: rn = 1.0;                       sn = mesh->cubr[i%mesh->cubNq]; tn = mesh->cubr[i/mesh->cubNq]; break;
+        case 3: rn = mesh->cubr[i%mesh->cubNq]; sn = 1.0;                       tn = mesh->cubr[i/mesh->cubNq]; break;
+        case 4: rn = -1.0;                      sn = mesh->cubr[i%mesh->cubNq]; tn = mesh->cubr[i/mesh->cubNq]; break;
+        case 5: rn = mesh->cubr[i%mesh->cubNq]; sn = mesh->cubr[i/mesh->cubNq]; tn = 1.0;                       break;
+        }
 
         /* Jacobian matrix */
         dfloat xr = 0.125*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
@@ -214,6 +162,4 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
       mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
     }
   }
-
-  free(ir); free(is); free(it);
 }
