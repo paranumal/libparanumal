@@ -33,14 +33,11 @@ void advectionErrorNormQuad3D(mesh_t *mesh, dfloat t, char *fileBase, int slice)
 
       if(fileBase!=NULL)
 	mesh->q[e*mesh->Np*mesh->Nfields+n] = err;
-      
-    //else printf("success %.15lf %.15lf\n", qref, mesh->q[e*mesh->Np*mesh->Nfields + n]);
     }
   }
 
   printf("%7.5lg %7.5lg (t,L2 norm err)\n", t, sqrt(l2));
 
   if(fileBase!=NULL)
-    advectionPlotVTUQuad3DV2(mesh, fileBase, slice);
-  
+    advectionPlotVTUQuad3DV2(mesh, fileBase, slice);  
 }
