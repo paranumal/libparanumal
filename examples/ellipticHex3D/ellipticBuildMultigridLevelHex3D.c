@@ -235,12 +235,12 @@ solver_t *ellipticBuildMultigridLevelHex3D(solver_t *baseSolver, int Nc, int Nf,
 
   solver->AxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D_base.okl",
-               "ellipticAxHex3D_e0",
+               "ellipticAxHex3D_Ref2D10",
                kernelInfo);
 
   solver->partialAxKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxHex3D_base.okl",
-               "ellipticAxHex3D_e0a",
+               "ellipticPartialAxHex3D_Ref2D10",
                kernelInfo);
 
   solver->gradientKernel =

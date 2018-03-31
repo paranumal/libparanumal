@@ -107,7 +107,7 @@ void insReportHex3D(ins_t *ins, int tstep, char *options){
   // copy data back to host
   ins->o_U.copyTo(ins->U);
   ins->o_V.copyTo(ins->V); 
-  ins->o_V.copyTo(ins->W); 
+  ins->o_W.copyTo(ins->W); 
   ins->o_P.copyTo(ins->P);
 
   ins->o_Vx.copyTo(ins->Vx);

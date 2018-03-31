@@ -170,6 +170,12 @@ void insAdvectionSubCycleStepHex3D(ins_t *ins, int tstep, char   * options){
                                                    o_Ud,
                                                    o_Vd,
                                                    o_Wd,
+                                              ins->o_cU,
+                                              ins->o_cV,
+                                              ins->o_cW,
+                                              ins->o_cUd,
+                                              ins->o_cVd,
+                                              ins->o_cWd,
                                               ins->o_rhsU,
                                               ins->o_rhsV,
                                               ins->o_rhsW);

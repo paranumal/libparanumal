@@ -69,6 +69,12 @@ ins_t *insSetupHex3D(mesh3D *mesh, int Ns, char * options,
   ins->Vz     = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   ins->Div     = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
 
+  if(strstr(options,"CUBATURE")){
+    ins->cU     = (dfloat*) calloc(mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+    ins->cV     = (dfloat*) calloc(mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+    ins->cW     = (dfloat*) calloc(mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+  } 
+
   ins->Nsubsteps = Ns; 
   if(strstr(options,"SUBCYCLING")){
     ins->Ud   = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -80,6 +86,12 @@ ins_t *insSetupHex3D(mesh3D *mesh, int Ns, char * options,
     ins->resU = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
     ins->resV = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
     ins->resW = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+
+    if(strstr(options,"CUBATURE")){
+      ins->cUd     = (dfloat*) calloc(mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+      ins->cVd     = (dfloat*) calloc(mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+      ins->cWd     = (dfloat*) calloc(mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+    } 
   }
 
   // SET SOLVER OPTIONS
@@ -211,9 +223,9 @@ ins_t *insSetupHex3D(mesh3D *mesh, int Ns, char * options,
   if(strstr(options,"SUBCYCLING"))
     // ins->errorStep =100*32/ins->Nsubsteps;
     //ins->errorStep =800/ins->Nsubsteps;
-    ins->errorStep = 1000;
+    ins->errorStep = 10;
   else
-    ins->errorStep = 1000;
+    ins->errorStep = 10;
 
   if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
@@ -354,6 +366,12 @@ ins_t *insSetupHex3D(mesh3D *mesh, int Ns, char * options,
   ins->o_Vz = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), ins->Vz);
   ins->o_Div = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), ins->Div);
 
+  if (strstr(options,"CUBATURE")) {
+    ins->o_cU = mesh->device.malloc(mesh->cubNp*mesh->Nelements*sizeof(dfloat), ins->cU);
+    ins->o_cV = mesh->device.malloc(mesh->cubNp*mesh->Nelements*sizeof(dfloat), ins->cV);
+    ins->o_cW = mesh->device.malloc(mesh->cubNp*mesh->Nelements*sizeof(dfloat), ins->cW);
+  }
+  
   if(strstr(options,"SUBCYCLING")){
     // Note that resU and resV can be replaced with already introduced buffer
     ins->o_Ue   = mesh->device.malloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ue);
@@ -365,6 +383,12 @@ ins_t *insSetupHex3D(mesh3D *mesh, int Ns, char * options,
     ins->o_resU = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resU);
     ins->o_resV = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resV);
     ins->o_resW = mesh->device.malloc((mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resW);
+
+    if (strstr(options,"CUBATURE")) {
+      ins->o_cUd = mesh->device.malloc(mesh->cubNp*mesh->Nelements*sizeof(dfloat), ins->cUd);
+      ins->o_cVd = mesh->device.malloc(mesh->cubNp*mesh->Nelements*sizeof(dfloat), ins->cVd);
+      ins->o_cWd = mesh->device.malloc(mesh->cubNp*mesh->Nelements*sizeof(dfloat), ins->cWd);
+    }
 
     for (int r=0;r<size;r++) {
       if (r==rank) {
@@ -401,6 +425,7 @@ ins_t *insSetupHex3D(mesh3D *mesh, int Ns, char * options,
       MPI_Barrier(MPI_COMM_WORLD);
     }
   }
+
 
   if(mesh->totalHaloPairs){//halo setup
     dlong tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);

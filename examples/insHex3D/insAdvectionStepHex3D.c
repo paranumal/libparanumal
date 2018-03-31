@@ -33,7 +33,7 @@ void insAdvectionStepHex3D(ins_t *ins, int tstep, char *options){
   }
 
   occaTimerTic(mesh->device,"AdvectionVolume");
-  // Compute Volume Contribution
+  //Compute Volume Contribution
   if(strstr(options, "CUBATURE")){
     ins->advectionCubatureVolumeKernel(mesh->Nelements,
                                        mesh->o_vgeo,

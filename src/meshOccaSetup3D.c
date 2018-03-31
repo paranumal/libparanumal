@@ -264,67 +264,66 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     dfloat *SrrT, *SrsT, *SrtT;
     dfloat *SsrT, *SssT, *SstT;
     dfloat *StrT, *StsT, *SttT;
-    if (mesh->Nverts==4) {
-      mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      mesh->Srt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      mesh->Sst = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      mesh->Str = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      mesh->Sts = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      mesh->Stt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      for (int n=0;n<mesh->Np;n++) {
-        for (int m=0;m<mesh->Np;m++) {
-          for (int k=0;k<mesh->Np;k++) {
-            for (int l=0;l<mesh->Np;l++) {
-              mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-              mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-              mesh->Srt[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
-              mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-              mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-              mesh->Sst[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
-              mesh->Str[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-              mesh->Sts[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-              mesh->Stt[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
-            }
+
+    mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Srt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Sst = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Str = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Sts = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Stt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {
+        for (int k=0;k<mesh->Np;k++) {
+          for (int l=0;l<mesh->Np;l++) {
+            mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+            mesh->Srt[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
+            mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+            mesh->Sst[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
+            mesh->Str[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Sts[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+            mesh->Stt[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
           }
         }
       }
-      SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      SrtT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      SstT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      StrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      StsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      SttT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-      for (int n=0;n<mesh->Np;n++) {
-        for (int m=0;m<mesh->Np;m++) {
-          #if 0
-          SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
-          SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
-          SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np];
-          SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
-          SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
-          SstT[m+n*mesh->Np] = mesh->Sst[n+m*mesh->Np];
-          StrT[m+n*mesh->Np] = mesh->Str[n+m*mesh->Np];
-          StsT[m+n*mesh->Np] = mesh->Sts[n+m*mesh->Np];
-          SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
-          #else
-          SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
-          SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np]+mesh->Ssr[n+m*mesh->Np];
-          SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np]+mesh->Str[n+m*mesh->Np];
-          SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
-          SstT[m+n*mesh->Np] = mesh->Sst[n+m*mesh->Np]+mesh->Sts[n+m*mesh->Np];
-          SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
-          #endif
-        }
+    }
+    SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SrtT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SstT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    StrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    StsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SttT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {
+        #if 0
+        SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
+        SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
+        SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np];
+        SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
+        SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+        SstT[m+n*mesh->Np] = mesh->Sst[n+m*mesh->Np];
+        StrT[m+n*mesh->Np] = mesh->Str[n+m*mesh->Np];
+        StsT[m+n*mesh->Np] = mesh->Sts[n+m*mesh->Np];
+        SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
+        #else
+        SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
+        SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np]+mesh->Ssr[n+m*mesh->Np];
+        SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np]+mesh->Str[n+m*mesh->Np];
+        SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+        SstT[m+n*mesh->Np] = mesh->Sst[n+m*mesh->Np]+mesh->Sts[n+m*mesh->Np];
+        SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
+        #endif
       }
     }
 
-    
+
 
 
     mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), mesh->Dr);
@@ -373,14 +372,18 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   } else if (mesh->Nverts==8){     // hardcoded for hexes
 
-    dfloat *cubDWT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
+    dfloat *cubDWT = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
     dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
     dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
     for(int n=0;n<mesh->Nq;++n){
-      for(int m=0;m<mesh->cubNq;++m){
-        cubDWT[n+m*mesh->Nq] = mesh->cubDW[n*mesh->cubNq+m];
+      for(int m=0;m<mesh->cubNq;++m){        
         cubProjectT[n+m*mesh->Nq] = mesh->cubProject[n*mesh->cubNq+m];
         cubInterpT[m+n*mesh->cubNq] = mesh->cubInterp[m*mesh->Nq+n];
+      }
+    }
+    for(int n=0;n<mesh->cubNq;++n){
+      for(int m=0;m<mesh->cubNq;++m){        
+        cubDWT[n+m*mesh->cubNq] = mesh->cubDW[n*mesh->cubNq+m];
       }
     }
 
@@ -472,7 +475,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
           cubProjectT);
 
     mesh->o_cubDWT =
-      mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
+      mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat),
           cubDWT);
 
     mesh->o_intx =
@@ -561,7 +564,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_Lambda2", 0.5f);
 
   kernelInfo.addDefine("p_cubNq", mesh->cubNq);
-  kernelInfo.addDefine("p_cubNfp", mesh->cubNp);
+  kernelInfo.addDefine("p_cubNfp", mesh->cubNfp);
   kernelInfo.addDefine("p_cubNp", mesh->cubNp);
   kernelInfo.addDefine("p_intNfp", mesh->intNfp);
   kernelInfo.addDefine("p_intNfpNfaces", mesh->intNfp*mesh->Nfaces);

@@ -219,12 +219,11 @@ writeFloatMatrix(fid, gD2, 'Gauss Legendre to Gauss Legendre differentiation mat
 
 
 %% 1D quadrature
-[z,w] = JacobiGQ(0,0,ceil(3*N/2));
-cV1d = Vandermonde1D(N, z);
-cVr = GradVandermonde1D(N, z);
-cInterp = cV1d/V1d;
-cubProject = (cV1d/V1d)'*diag(w);
-cubDT = (cVr/V1d)'*diag(w);
+Nc = ceil(3*N/2)-1;
+[z,w] = JacobiGQ(0,0,Nc+1);
+cInterp = Vandermonde1D(N, z)/Vandermonde1D(N, r1d);
+cubProject = (cInterp)';
+cubDT = (Dmatrix1D(Nc+1, z, Vandermonde1D(Nc+1,z)))';
 Nqc = length(z);
 
 writeFloatMatrix(fid, z, 'Quadrature r-coordinates');
