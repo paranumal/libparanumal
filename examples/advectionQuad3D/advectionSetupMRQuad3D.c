@@ -501,7 +501,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat cfl_small = 2; // depends on the stability region size (was .4, then 2)
+  dfloat cfl_small = 0.05; // depends on the stability region size (was .4, then 2)
   dfloat cfl_large = cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
@@ -544,7 +544,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 
   //dt = mymin(dt, cfl/mesh->tauInv);
 
-  mesh->finalTime = 20;
+  mesh->finalTime = 5;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   
   iint maxLevels=100;
@@ -573,7 +573,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank)%2);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");
@@ -718,8 +718,8 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 				       kernelInfo);
 
   mesh->updatePreKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionUpdateQuad3D.okl",
-				       "advectionLSERKUpdateQuad3D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
+				       "boltzmannLSERKUpdateQuad3D",
 				       kernelInfo);
 
   mesh->traceUpdatePreKernel =

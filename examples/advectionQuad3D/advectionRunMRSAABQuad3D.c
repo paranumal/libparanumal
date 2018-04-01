@@ -24,6 +24,24 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
   dfloat alpha = 1./mesh->N;
   
   for(iint tstep=mesh->Nrhs;tstep<mesh->NtimeSteps;++tstep){
+    mesh->filterKernelq0H(mesh->Nelements,
+			  mesh->o_dualProjMatrix,
+			  mesh->o_cubeFaceNumber,
+			  mesh->o_EToE,
+			  mesh->o_q,
+			  mesh->o_qPreFilter);
+    
+    mesh->filterKernelq0V(mesh->Nelements,
+			  alpha,
+			  mesh->o_dualProjMatrix,
+			  mesh->o_cubeFaceNumber,
+			  mesh->o_EToE,
+			  mesh->o_x,
+			  mesh->o_y,
+			  mesh->o_z,
+			  mesh->o_qPreFilter,
+			  mesh->o_q);
+    
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       iint mrab_order=mesh->Nrhs-1;
       /*      if (tstep - mesh->Nrhs == 0) mrab_order = 0;
@@ -116,13 +134,9 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
       	mesh->filterKernelH(mesh->MRABNelements[l],
 			    mesh->o_MRABelementIds[l],
 			    mesh->o_shift,
-			    alpha,
 			    mesh->o_dualProjMatrix,
 			    mesh->o_cubeFaceNumber,
 			    mesh->o_EToE,
-			    mesh->o_x,
-			    mesh->o_y,
-			    mesh->o_z,
 			    mesh->o_lev_updates,
 			    mesh->o_MRABlevels,
 			    l,
@@ -144,11 +158,12 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_lev_updates,
 			    mesh->o_MRABlevels,
 			    l,
+			    mesh->o_rhsq,
 			    mesh->o_qFilter,
 			    mesh->o_qFiltered);	
 			    }
-              
-      /*     for (iint l=0;l<lev;l++) {
+           
+      for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
 	  mesh->volumeCorrectionKernel(mesh->MRABNelements[l],
 				       mesh->o_MRABelementIds[l],
@@ -156,7 +171,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 				       mesh->o_q,
 				       mesh->o_qCorr);
 	}
-	}*/
+      }
       
       for (lev=0;lev<mesh->MRABNlevels;lev++)
         if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
