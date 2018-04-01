@@ -58,28 +58,29 @@ void advectionRunLSERKQuad3D(solver_t *solver){
   //kernel arguments
   dfloat alpha = 1./mesh->N;
   
-  for(iint tstep=0;tstep < mesh->NtimeSteps;++tstep){
+  for(iint tstep=0;tstep < mesh->Nrhs;++tstep){
     // TW: I am not sure why this pre-filter fixes the stability issue
-    mesh->filterKernelq0H(mesh->Nelements,
-			  mesh->o_dualProjMatrix,
-			  mesh->o_cubeFaceNumber,
-			  mesh->o_EToE,
-			  mesh->o_qpre,
-			  mesh->o_qPreFilter);
-    
-    mesh->filterKernelq0V(mesh->Nelements,
-			  alpha,
-			  mesh->o_dualProjMatrix,
-			  mesh->o_cubeFaceNumber,
-			  mesh->o_EToE,
-			  mesh->o_x,
-			  mesh->o_y,
-			  mesh->o_z,
-			  mesh->o_qPreFilter,
-			  mesh->o_qpre);
+
+      mesh->filterKernelq0H(mesh->Nelements,
+			    mesh->o_dualProjMatrix,
+			    mesh->o_cubeFaceNumber,
+			    mesh->o_EToE,
+			    mesh->o_qpre,
+			    mesh->o_qPreFilter);
+      
+      mesh->filterKernelq0V(mesh->Nelements,
+			    alpha,
+			    mesh->o_dualProjMatrix,
+			    mesh->o_cubeFaceNumber,
+			    mesh->o_EToE,
+			    mesh->o_x,
+			    mesh->o_y,
+			    mesh->o_z,
+			    mesh->o_qPreFilter,
+			    mesh->o_qpre);
     
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
-
+      
       iint lev;
       for (lev=0;lev<mesh->MRABNlevels;lev++)
 	if (Ntick % (1<<lev) !=0) break; //find the max lev to add to rhsq
@@ -87,7 +88,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
       iint levS;
       for (levS=0;levS<mesh->MRABNlevels;levS++)
 	if ((Ntick+1) % (1<<levS) !=0) break; //find the max lev to add to rhsq
-
+      
       for (iint rk = 0; rk < mesh->Nrk; ++rk) {
 	
 	//synthesize actual stage time
@@ -114,11 +115,11 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			       mesh->o_z,
 			       mesh->o_qpre,
 			       mesh->o_prerhsq);
-
+	
 	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
-	  iint saved = (l < lev) && (rk == 0);
+	   iint saved = (l < lev) && (rk == 0);
 	  mesh->filterKernelHLSERK(mesh->MRABNelements[l],
-				   mesh->o_elementIDs[l],
+				   mesh->o_MRABelementIds[l],
 				   saved,
 				   mesh->MRABshiftIndex[l],
 				   mesh->o_dualProjMatrix,
@@ -132,7 +133,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
 	  iint saved = (l < lev) && (rk == 0);
 	  mesh->filterKernelVLSERK(mesh->MRABNelements[l],
-				   mesh->o_MRABelementIDs[l],
+				   mesh->o_MRABelementIds[l],
 				   alpha,
 				   saved,
 				   mesh->MRABshiftIndex[l],
@@ -146,22 +147,22 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				   mesh->o_prerhsq,
 				   mesh->o_qFilter);
 	}
-
+    
 	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
 	  iint saved = (l < lev) && (rk == 0);
-	  mesh->volumeCorrectionKernel(mesh->MRABNelements[l],
-				       mesh->o_MRABelementIDs[l],
+	  mesh->volumeCorrPreKernel(mesh->MRABNelements[l],
+				       mesh->o_MRABelementIds[l],
 				       saved,
 				       mesh->MRABshiftIndex[l],
 				       mesh->o_qpre,
 				       mesh->o_qPreCorr,
 				       mesh->o_qCorr);
-	}
+				       }
 	
 	for (iint l = 0; l < mesh->MRABNlevels;++l) {
 	  iint saved = (l < levS) && (rk == mesh->Nrk-1);
 	  mesh->updatePreKernel(mesh->MRABNelements[l],
-				mesh->o_MRABelementIDs[l],
+				mesh->o_MRABelementIds[l],
 				saved,
 				mesh->dt,
 				mesh->rka[rk],
@@ -169,11 +170,14 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				mesh->MRABshiftIndex[l],
 				mesh->o_prerhsq,
 				mesh->o_qFiltered,
-				mesh->o_qCorr,
+				mesh->o_qPreCorr,
 				mesh->o_resq,
 				mesh->o_qpre);
+	  if (saved) 
+	    mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+mesh->Nrhs-1)%mesh->Nrhs;
 	}
       }
+
     }
     
     /*    if (tstep==0 || (tstep+1) % mesh->errorStep == 0) {
@@ -183,13 +187,12 @@ void advectionRunLSERKQuad3D(solver_t *solver){
       }*/
 
   }
-
-  mesh->traceUpdatePreKernel(mesh->Nelements,
+ 
+    mesh->traceUpdatePreKernel(mesh->Nelements,
 			     mesh->o_vmapM,
 			     mesh->o_fQM,
 			     mesh->o_qpre,
 			     mesh->o_q);
-  
   free(recvBuffer);
   free(sendBuffer);
 }
