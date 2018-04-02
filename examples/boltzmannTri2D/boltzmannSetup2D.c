@@ -14,7 +14,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   // SET SOLVER PARAMETERS
   mesh->Nfields = 6;
   
-  mesh->errorStep = 20; 
+  mesh->errorStep = 100; 
 
   dfloat RE[9];  RE[0] = 100;  RE[1] = 250; RE[2] = 500; RE[3] = 750;
                  RE[4] = 1000;  RE[5] = 1250; RE[6] = 1500; RE[7] = 1750; RE[8] = 2000;
@@ -27,15 +27,15 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   dfloat Ma      = 0.f,   Re      = 0.f;
   dfloat rho     = 1.f,   u       = 0.f;
   dfloat v       = 0.f,   nu      = 0.f;
-  dfloat Uref    = 1.f,   Lref    = 1.f; 
+  dfloat Uref    = 0.2f,  Lref    = 1.f; 
   dfloat sigma11 = 0.f ,  sigma12 = 0.f, sigma22 = 0.f;  
 
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    mesh->Ma = 0.2; //MA[mesh->Ntscale]; // Set Mach number
-    mesh->Re = 150.; //RE[mesh->Ntscale]; 
+    mesh->Ma = 0.17; //MA[mesh->Ntscale]; // Set Mach number
+    mesh->Re = 1000.; //RE[mesh->Ntscale]; 
     //
-    Uref = 1.0;  // Set Uref was 0.5
+    Uref = 0.2;  // Set Uref was 0.5
     Lref = 1.0;   // set Lref
     //
     mesh->RT      = Uref*Uref/(mesh->Ma*mesh->Ma);
@@ -96,7 +96,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*mesh->RT);
 
   // SET STABLE TIME STEP SIZE
-  dfloat cfl = 0.15; 
+  dfloat cfl = 0.1; 
   if(strstr(options,"LSERK") || strstr(options,"SARK") || strstr(options,"LSIMEX") )
     cfl          = 0.75; 
 
