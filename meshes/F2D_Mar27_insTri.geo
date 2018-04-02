@@ -55,7 +55,7 @@ Physical Surface("Domian",9) = {PSDomain};
 Physical    Line("Wall", 1) = {2,3,4,5,6};
 Physical    Line("Inflow",2) = {17};
 Physical    Line("Outflow",3) = {19};
-Physical    Line("Slip",4) = {22};
+Physical    Line("YSlip",5) = {22};
 
 //---------------------------------------------------------
 // use Fields to tune wake density
