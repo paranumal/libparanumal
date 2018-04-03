@@ -1,6 +1,6 @@
 #include "cnsQuad2D.h"
 
-void cnsOccaRun2D(cns_t *cns){
+void cnsRunQuad2D(cns_t *cns){
 
   mesh_t *mesh = cns->mesh;
 

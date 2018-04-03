@@ -58,6 +58,8 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
       hmin = mymin(hmin, hest);
     }
   }
+
+  // need to change cfl and defn of dt
   dfloat cfl = .1; // depends on the stability region size
 
   dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*mesh->Lambda2);
@@ -103,7 +105,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
 
   cns->o_LIFTT =
     mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			mesh->LIFTT);
+			cns->LIFTT);
   
   mesh->o_vgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
@@ -136,6 +138,9 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   // generic occa device set up
   meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
+  //  p_RT, p_rbar, p_ubar, p_vbar, p_RXID, p_SXID, p_RYID, p_SYID
+  // p_half, p_two, p_third, p_Nstresses
+  
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));

@@ -23,7 +23,8 @@ typedef struct{
   occa::kernel stressesSurfaceKernel;
 
   dfloat *viscousStresses;
-
+  dfloat *LIFTT;
+  
   occa::memory o_LIFTT;
   
   occa::memory o_q;
