@@ -66,7 +66,7 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
 	  const dfloat S11 = p_half*(2.f*dudx) - p_third*divU;
 	  const dfloat S12 = p_half*(dudy+dvdx);
 	  
-	  // F1 = ru^2+p, G1 = rvu
+	  // F1 = 2*mu*S11 - (ru^2+p), G1 = 2*mu*S12 - (rvu)
 	  const dfloat f = p_two*muij*S11-ru*u-p;
 	  const dfloat g = p_two*muij*S12-rv*u;
 	  s_F[1][j][i] = J*(rx*f + ry*g);
@@ -77,7 +77,7 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
 	  const dfloat S21 = p_half*(dudy+dvdx);
 	  const dfloat S22 = p_half*(2.f*dvdy) - p_third*divU;
 
-	  // F2 = ruv, G2 = rv^2+p
+	  // F2 = 2*mu*S21 - (ruv), G2 = 2*mu*S22 - (rv^2+p)
 	  const dfloat f = p_two*muij*S21-rv*u;
 	  const dfloat g = p_two*muij*S22-rv*v-p;
 	  s_F[2][j][i] = J*(rx*f + ry*g);
@@ -114,6 +114,63 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
 	rhsq[base+1*p_Np] = rhsq1/J;
 	rhsq[base+2*p_Np] = rhsq2/J;
 	
+      }
+    }
+  }
+}
+
+
+kernel void cnsGradVolumeQuad2D(const dlong Nelements,
+				const dfloat * restrict vgeo,
+				const dfloat * restrict D,
+				const dfloat * restrict q,
+				dfloat * restrict gradq){
+  
+  for(dlong e=0;e<Nelements;++e;outer0){
+
+    shared dfloat s_D[p_Nq][p_Nq];
+    shared dfloat s_u[p_Nq][p_Nq];
+    shared dfloat s_v[p_Nq][p_Nq];
+    
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
+	
+	s_D[j][i] = D[j*p_Nq+i];
+	
+	s_u[j][i] = q[e*p_Nfields*p_Np + p_Np + j*p_Nq + i];
+	s_v[j][i] = q[e*p_Nfields*p_Np + 2*p_Np + j*p_Nq + i];
+	
+      }
+    }
+    
+    barrier(localMemFence);
+    
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
+	
+	dfloat dudr = 0, duds = 0, dvdr = 0, dvds = 0;
+
+	for(int n=0;n<p_Nq;++n){
+	  const dfloat Din = s_D[i][n];
+	  const dfloat Djn = s_D[j][n];
+	  dudr += Din*s_u[j][n];
+	  dvdr += Din*s_v[j][n];
+	  duds += Djn*s_u[n][i];
+	  dvds += Djn*s_v[n][i];
+	}
+
+	const dlong gbase = e*p_Np*p_Nvgeo + j*p_Nq + i;
+	const dfloat rx = vgeo[gbase+p_Np*p_RXID];
+	const dfloat ry = vgeo[gbase+p_Np*p_RYID];
+	const dfloat sx = vgeo[gbase+p_Np*p_SXID];
+	const dfloat sy = vgeo[gbase+p_Np*p_SYID];
+	const dfloat  J = vgeo[gbase+p_Np*p_JID];
+
+	const dlong base = e*p_Ngrads*p_Np + j*p_Nq + i;
+	gradq[base + 0*p_Np] = rx*dudr + sx*duds;
+	gradq[base + 1*p_Np] = ry*dudr + sy*duds;
+	gradq[base + 2*p_Np] = rx*dvdr + sx*dvds;
+	gradq[base + 3*p_Np] = ry*dvdr + sy*dvds;
       }
     }
   }
