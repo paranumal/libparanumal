@@ -97,7 +97,9 @@ void cnsRunQuad2D(cns_t *cns){
       // output field files
       int fld = 0;
       char fname[BUFSIZ];
-      sprintf(fname, "foo_%05d.vtu", tstep/mesh->errorStep);
+      int rank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      sprintf(fname, "foo_%05d_%05d.vtu", rank, tstep/mesh->errorStep);
       cnsPlotVTUQuad2D(cns, fname);
     }
   }
