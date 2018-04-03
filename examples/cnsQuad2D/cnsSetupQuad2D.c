@@ -16,11 +16,11 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   cns->RT = 10;
 
   // viscosity
-  cns->mu = 1e-3;
+  cns->mu = 2e-4;
 
   // mean flow
   cns->rbar = 1;
-  cns->ubar = 0;
+  cns->ubar = 1;
   cns->vbar = 0;
   
   // compute samples of q at interpolation nodes
@@ -42,11 +42,19 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
       dfloat y = mesh->y[n + mesh->Np*e];
 
       dlong qbase = e*mesh->Np*mesh->Nfields + n;
-      
+
+#if 0
       cnsGaussianPulse2D(x, y, t,
 			 mesh->q+qbase,
 			 mesh->q+qbase+mesh->Np,
 			 mesh->q+qbase+2*mesh->Np);
+#else
+      mesh->q[qbase+0*mesh->Np] = cns->rbar;
+      //      mesh->q[qbase+1*mesh->Np] = cns->rbar*cns->ubar*y*(6-y)/9.;
+      const dfloat alpha = 20;
+      mesh->q[qbase+1*mesh->Np] = cns->rbar*cns->ubar*tanh(alpha*y)*tanh(alpha*(6-y));
+      mesh->q[qbase+2*mesh->Np] = cns->rbar*cns->vbar;
+#endif
     }
   }
 
@@ -74,7 +82,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   }
 
   // need to change cfl and defn of dt
-  dfloat cfl = .1; // depends on the stability region size
+  dfloat cfl = 1; // depends on the stability region size
 
   dfloat dtAdv  = hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(cns->RT));
   dfloat dtVisc = pow(hmin, 2)/(pow(mesh->N+1,4)*cns->mu);
@@ -82,11 +90,14 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   dfloat dt = cfl*mymin(dtAdv, dtVisc);
   dt = cfl*dtAdv;
   
+  printf("dtAdv = %lg (before cfl), dtVisc = %lg (before cfl), dt = %lg\n",
+	 dtAdv, dtVisc, dt);
+  
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
   //
-  mesh->finalTime = 1;
+  mesh->finalTime = 70;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
@@ -188,12 +199,13 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   kernelInfo.addDefine("p_SYID", SYID);
   kernelInfo.addDefine("p_JID", JID);
 
-  const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3.;
+  const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3., p_zero = 0;
 
   kernelInfo.addDefine("p_two", p_two);
   kernelInfo.addDefine("p_one", p_one);
   kernelInfo.addDefine("p_half", p_half);
   kernelInfo.addDefine("p_third", p_third);
+  kernelInfo.addDefine("p_zero", p_zero);
   
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);

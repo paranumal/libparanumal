@@ -3,7 +3,7 @@ ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
-CXXFLAGS = -g
+CXXFLAGS = -O3
 
 include ${OCCA_DIR}/scripts/makefile
 
