@@ -57,7 +57,7 @@ void cnsPlotVTUQuad2D(cns_t *cns, char *fileName){
   }
   fprintf(fp, "       </DataArray>\n");
 
-
+  // write out velocity
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"2\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
@@ -76,6 +76,51 @@ void cnsPlotVTUQuad2D(cns_t *cns, char *fileName){
     }
   }
   fprintf(fp, "       </DataArray>\n");
+
+  // write out vorticity
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
+  dfloat vort[mesh->plotNp];
+  for(dlong e=0;e<mesh->Nelements;++e){
+
+    for(int n=0;n<mesh->Np;++n){
+      dfloat ur = 0, us = 0, vr = 0, vs = 0;
+
+      for(int m=0;m<mesh->Np;++m){
+
+	int qbase = e*mesh->Np*mesh->Nfields + m;
+
+	dfloat rm = mesh->q[qbase+0*mesh->Np];
+	dfloat um = mesh->q[qbase+1*mesh->Np]/rm;
+	dfloat vm = mesh->q[qbase+2*mesh->Np]/rm;
+	
+	ur += mesh->Dr[n*mesh->Np+m]*um;
+	us += mesh->Ds[n*mesh->Np+m]*um;
+	vr += mesh->Dr[n*mesh->Np+m]*vm;
+	vs += mesh->Ds[n*mesh->Np+m]*vm;
+      }
+
+      dfloat rx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + n + RXID*mesh->Np];
+      dfloat sx = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + n + SXID*mesh->Np];
+      dfloat ry = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + n + RYID*mesh->Np];
+      dfloat sy = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + n + SYID*mesh->Np];
+      
+      vort[n] =rx*vr + sx*vs - ry*ur - sy*us;
+    }
+    
+    for(int n=0;n<mesh->plotNp;++n){
+
+      dfloat plotvort = 0;
+      for(int m=0;m<mesh->Np;++m){
+        plotvort += mesh->plotInterp[n*mesh->Np+m]*vort[m];
+      }
+      
+      fprintf(fp, "       ");
+      fprintf(fp, "%g\n", plotvort);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
+  
+  
   fprintf(fp, "     </PointData>\n");
   
   fprintf(fp, "    <Cells>\n");

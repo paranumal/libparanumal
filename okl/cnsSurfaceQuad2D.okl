@@ -1,4 +1,5 @@
 
+#if 1
 void boundaryConditions2D(const int bc,
 			  const dfloat  t, const dfloat  x, const dfloat  y, const dfloat  nx, const dfloat  ny,
 			  const dfloat ramp,
@@ -11,23 +12,149 @@ void boundaryConditions2D(const int bc,
     *uB = -uM;
     *vB = -vM;
   }
-  if(bc>1){ // inflow
-    *rB = p_two*p_rbar - rM; 
-    *uB = p_two*ramp*p_ubar - uM; 
-    *vB = p_two*ramp*p_vbar - vM; 
+  if(bc==2){ // inflow
+    *rB = p_rbar;
+//    *uB = ramp*p_ubar*y*(6-y)/9.;
+    const dfloat alpha = 20;
+    *uB = p_ubar*occaTanh(alpha*y)*occaTanh(alpha*(6-y));
+    *vB = ramp*p_vbar;
   }
-  if(bc==2){ // slip
+  if(bc==4){ // slip
     // specify reversed normal velocity (no-penetration/slip boundary)
     *rB = rM;
-    *uB = uM - p_two*(nx*uM+ny*vM)*nx;
-    *vB = vM - p_two*(nx*uM+ny*vM)*ny;
+    *uB = uM - (nx*uM+ny*vM)*nx;
+    *vB = vM - (nx*uM+ny*vM)*ny;
   }
-  if(bc==4){ // outflow
+  if(bc==3){ // outflow
     // only specify density (specifies pressure since p = rho*RT)
     *rB = p_rbar;
     *uB = uM;
     *vB = vM;
   }
+}
+#else
+void boundaryConditions2D(const int bc,
+			  const dfloat  t, const dfloat  x, const dfloat  y, const dfloat  nx, const dfloat  ny,
+			  const dfloat ramp,
+			  const dfloat rM, const dfloat  uM, const dfloat  vM, 
+			  dfloat * restrict rB, dfloat * restrict uB, dfloat * restrict vB){
+
+  // check these
+  if(bc==1){ // wall 
+    *rB = rM; 
+    *uB = 0;
+    *vB = 0;
+  }
+  if(bc==2){ // inflow
+    *rB = p_rbar;
+    *uB = ramp*p_ubar;
+    *vB = ramp*p_vbar;
+  }
+  if(bc==5){ // slip
+    // specify reversed normal velocity (no-penetration/slip boundary)
+    *rB = rM;
+    *uB = uM - (nx*uM+ny*vM)*nx;
+    *vB = vM - (nx*uM+ny*vM)*ny;
+  }
+  if(bc==3){ // outflow
+    // only specify density (specifies pressure since p = rho*RT)
+    *rB = p_rbar;
+    *uB = uM;
+    *vB = vM;
+  }
+}
+#endif
+
+// Roe averaged Riemann solver
+
+void upwindRoeAveraged(const dfloat nx,
+		       const dfloat ny,
+		       const dfloat rM,
+		       const dfloat ruM,
+		       const dfloat rvM,
+		       const dfloat rP,
+		       const dfloat ruP,
+		       const dfloat rvP,
+		       dfloat *rflux,
+		       dfloat *ruflux,
+		       dfloat *rvflux
+		       ){
+
+  // Rotate "-" trace momentum to face normal-tangent coordinates
+
+  dfloat rMrot = rM;
+  dfloat rProt = rP;
+  
+  dfloat ruMrot = nx*ruM + ny*rvM;
+  dfloat rvMrot =-ny*ruM + nx*rvM;
+
+  dfloat ruProt = nx*ruP + ny*rvP;
+  dfloat rvProt =-ny*ruP + nx*rvP;
+  
+  dfloat uMrot = ruMrot/rM;
+  dfloat vMrot = rvMrot/rM;
+
+  dfloat uProt = ruProt/rP;
+  dfloat vProt = rvProt/rP;
+
+  dfloat pM = p_RT*rM;
+  dfloat pP = p_RT*rP;
+  
+  // Compute fluxes and primitive variables in rotated coordinates
+  dfloat frMrot = ruMrot;
+  dfloat grMrot = rvMrot;
+
+  dfloat fruMrot = uMrot*ruMrot + pM;
+  dfloat gruMrot = uMrot*rvMrot;
+
+  dfloat frvMrot = vMrot*ruMrot;
+  dfloat grvMrot = vMrot*rvMrot + pM;
+
+
+  dfloat frProt = ruProt;
+  dfloat grProt = rvProt;
+
+  dfloat fruProt = uProt*ruProt + pP;
+  dfloat gruProt = uProt*rvProt;
+
+  dfloat frvProt = vProt*ruProt;
+  dfloat grvProt = vProt*rvProt + pP;
+
+  // Compute Roe average variables
+  dfloat rMsqr = occaSqrt(rM);
+  dfloat rPsqr = occaSqrt(rP); 
+
+  dfloat r = rMsqr*rPsqr;
+  dfloat urot = (rMsqr*uMrot + rPsqr*uProt)/(rMsqr + rPsqr);
+  dfloat vrot = (rMsqr*vMrot + rPsqr*vProt)/(rMsqr + rPsqr);
+  
+  dfloat c2  = p_RT;
+  dfloat c   = p_sqrtRT;
+
+  // Riemann fluxes
+  dfloat dW1 = -p_half*r*(uProt-uMrot)/c + p_half*(pP-pM)/c2;  
+  dfloat dW2 = r*(vProt-vMrot);
+  dfloat dW3 =  p_half*r*(uProt-uMrot)/c + p_half*(pP-pM)/c2;  
+
+
+  dW1 *= occaFabs(urot-c);
+  dW2 *= occaFabs(urot);
+  dW3 *= occaFabs(urot+c); 
+
+  // Form Roe fluxes
+  *rflux = p_half*(frProt-frMrot);
+  dfloat rufluxRot = p_half*(fruProt-fruMrot);
+  dfloat rvfluxRot = p_half*(frvProt-frvMrot);
+
+  
+  *rflux    -= p_half*(dW1*p_one    + dW2*p_zero  + dW3*p_one);
+  rufluxRot -= p_half*(dW1*(urot-c) + dW2*p_zero  + dW3*(urot+c));
+  rvfluxRot -= p_half*(dW1*vrot     + dW2*p_one   + dW3*vrot);
+
+  // rotate back to Cartesian
+  *ruflux = nx*rufluxRot - ny*rvfluxRot;
+  *rvflux = ny*rufluxRot + nx*rvfluxRot;
+
 }
 
 
@@ -128,6 +255,30 @@ kernel void cnsSurfaceQuad2D(const int Nelements,
 	    // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
 	    const dfloat sc = invJ*sJ;
 
+#if 0
+	    dfloat rflux, ruflux, rvflux;
+	    
+	    upwindRoeAveraged(nx, ny, rM, ruM, rvM, rP, ruP, rvP, &rflux, &ruflux, &rvflux);
+	    
+	    // simple Lax Friedrichs flux to get started (change later)
+	    {
+	      s_rflux[es][n] = sc*(-rflux);
+	    }
+
+	    const dfloat hinv = sgeo[sid + p_IHID];
+	    dfloat penalty = p_Nq*p_Nq*hinv*mu;	      
+
+	    {
+	      ruflux -= p_half*(nx*(T11P-T11M) + ny*(T12P-T12M) + penalty*(uP-uM)); // should add viscous penalty
+	      s_ruflux[es][n] = sc*(-ruflux);
+	    }
+
+	    {
+	      rvflux -= p_half*(nx*(T12P-T12M) + ny*(T22P-T22M) + penalty*(vP-vM)); // should add viscous penalty
+	      s_rvflux[es][n] = sc*(-rvflux);
+	    }
+	    
+#else
 	    const dfloat lambdaM = occaSqrt(uM*uM+vM*vM) + p_sqrtRT;
 	    const dfloat lambdaP = occaSqrt(uP*uP+vP*vP) + p_sqrtRT;
 
@@ -142,7 +293,7 @@ kernel void cnsSurfaceQuad2D(const int Nelements,
 	      s_rflux[es][n] = p_half*sc*(rflux);
 	    }
 
-	    const dfloat hinv = sgeo[eM*p_Nsgeo*p_Nfp + p_IHID];
+	    const dfloat hinv = sgeo[sid + p_IHID];
 	    dfloat penalty = p_Nq*p_Nq*hinv*mu;	      
 
 	    {
@@ -161,6 +312,7 @@ kernel void cnsSurfaceQuad2D(const int Nelements,
 	      const dfloat rvflux = nx*(fP-fM) + ny*(gP-gM) + lambda*(rvP-rvM) + penalty*(vP-vM); // should add viscous penalty
 	      s_rvflux[es][n] = p_half*sc*(rvflux);
 	    }
+#endif
 	  }
 	}
       }
@@ -254,9 +406,6 @@ kernel void cnsStressesSurfaceQuad2D(const int Nelements,
 	    const dlong baseM = eM*p_Np*p_Nfields + vidM;
 	    const dlong baseP = eP*p_Np*p_Nfields + vidP;
 
-	    const dlong sbaseM = eM*p_Np*p_Nstresses + vidM;
-	    const dlong sbaseP = eP*p_Np*p_Nstresses + vidP;
-	    
 	    const dfloat rM  = q[baseM + 0*p_Np];
 	    const dfloat ruM = q[baseM + 1*p_Np];
 	    const dfloat rvM = q[baseM + 2*p_Np];
