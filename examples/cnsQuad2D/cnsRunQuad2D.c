@@ -81,7 +81,7 @@ void cnsRunQuad2D(cns_t *cns){
 			 currentTime, mesh->o_x, mesh->o_y, ramp, cns->o_q, cns->o_viscousStresses, cns->o_rhsq);
       
       // update solution using Runge-Kutta
-      cns->updateKernel(mesh->Nelements*mesh->Np*cns->Nfields, mesh->dt, mesh->rka[rk], mesh->rkb[rk], cns->o_rhsq, cns->o_resq, cns->o_q);
+      cns->updateKernel(mesh->Nelements, mesh->dt, mesh->rka[rk], mesh->rkb[rk], cns->o_rhsq, cns->o_resq, cns->o_q);
       
     }
     
@@ -96,7 +96,9 @@ void cnsRunQuad2D(cns_t *cns){
 
       // output field files
       int fld = 0;
-      meshPlotVTU2D(mesh, "foo", fld);
+      char fname[BUFSIZ];
+      sprintf(fname, "foo_%05d.vtu", tstep/mesh->errorStep);
+      cnsPlotVTUQuad2D(cns, fname);
     }
   }
 

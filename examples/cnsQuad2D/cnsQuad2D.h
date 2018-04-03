@@ -53,3 +53,5 @@ void cnsCavitySolution2D(dfloat x, dfloat y, dfloat t,
 
 void cnsGaussianPulse2D(dfloat x, dfloat y, dfloat t,
 			 dfloat *u, dfloat *v, dfloat *p);
+
+void cnsPlotVTUQuad2D(cns_t *cns, char *fileName);

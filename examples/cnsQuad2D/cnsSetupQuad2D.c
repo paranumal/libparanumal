@@ -6,9 +6,9 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
 
   cns_t *cns = (cns_t*) calloc(1, sizeof(cns_t));
 
-  mesh->Nfields = 4;
-
+  mesh->Nfields = 3;
   cns->Nfields = mesh->Nfields;
+  
   cns->Nstresses = 3;
   cns->mesh = mesh;
   
@@ -16,7 +16,12 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   cns->RT = 10;
 
   // viscosity
-  cns->mu = 1e-2;
+  cns->mu = 0;
+
+  // mean flow
+  cns->rbar = 1;
+  cns->ubar = 0;
+  cns->vbar = 0;
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
@@ -71,8 +76,12 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   // need to change cfl and defn of dt
   dfloat cfl = .1; // depends on the stability region size
 
-  dfloat dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*mesh->Lambda2);
+  dfloat dtAdv  = hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(cns->RT));
+  dfloat dtVisc = pow(hmin, 2)/(pow(mesh->N+1,4)*cns->mu);
 
+  dfloat dt = cfl*mymin(dtAdv, dtVisc);
+  dt = cfl*dtAdv;
+  
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
@@ -92,7 +101,8 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%3);
+  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%3);
+  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", rank%3);
   mesh->device.setup(deviceConfig);
 
  
@@ -100,7 +110,8 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
   
   cns->o_viscousStresses =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*cns->Nstresses*sizeof(dfloat), mesh->q);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*cns->Nstresses*sizeof(dfloat),
+			cns->viscousStresses);
   
   cns->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
