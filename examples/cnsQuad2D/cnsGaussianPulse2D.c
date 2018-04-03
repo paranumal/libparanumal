@@ -2,18 +2,10 @@
 #include "mesh2D.h"
 
 void cnsGaussianPulse2D(dfloat x, dfloat y, dfloat t,
-			dfloat *u, dfloat *v, dfloat *p){
+			dfloat *r, dfloat *u, dfloat *v){
 
-  // dudt = -dpdx
-  // dvdt = -dpdy
-  // dpdt = -dudx -dvdy
-
-  // boundary conditions
-  // dpdn = 0
-  // u.n = 0
-
+  *r = 5 + exp(-30*(x*x+y*y));
   *u = 0;
   *v = 0;
-  *p = exp(-30*(x*x+y*y));
 
 }

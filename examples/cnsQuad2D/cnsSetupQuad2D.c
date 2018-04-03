@@ -30,17 +30,18 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
 					   sizeof(dfloat));
   
   // fix this later (initial conditions)
-  int cnt = 0;
   for(int e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
 
-      cnsCavitySolution2D(x, y, t,
-				mesh->q+cnt, mesh->q+cnt+1, mesh->q+cnt+2);
+      dlong qbase = e*mesh->Np*mesh->Nfields + n;
       
-      cnt += mesh->Nfields;
+      cnsGaussianPulse2D(x, y, t,
+			 mesh->q+qbase,
+			 mesh->q+qbase+mesh->Np,
+			 mesh->q+qbase+2*mesh->Np);
     }
   }
 

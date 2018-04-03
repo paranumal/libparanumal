@@ -14,12 +14,12 @@ void cnsError2D(mesh2D *mesh, dfloat time){
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
 
-      //      cnsCavitySolution2D(x, y, time, &u, &v, &p);
+      int qbase = n+e*mesh->Np*mesh->Nfields;
       u = 0;
       v = 0;
       p = 0;
 
-      maxErrorP = mymax(maxErrorP, fabs(p-mesh->q[id*mesh->Nfields+2]));
+      maxErrorP = mymax(maxErrorP, fabs(p-mesh->q[qbase]));
     }
   }
 
