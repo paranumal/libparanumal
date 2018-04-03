@@ -24,25 +24,9 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
   dfloat alpha = 1./mesh->N;
   
   for(iint tstep=mesh->Nrhs;tstep<mesh->NtimeSteps;++tstep){
-    mesh->filterKernelq0H(mesh->Nelements,
-			  mesh->o_dualProjMatrix,
-			  mesh->o_cubeFaceNumber,
-			  mesh->o_EToE,
-			  mesh->o_q,
-			  mesh->o_qPreFilter);
-    
-    mesh->filterKernelq0V(mesh->Nelements,
-			  alpha,
-			  mesh->o_dualProjMatrix,
-			  mesh->o_cubeFaceNumber,
-			  mesh->o_EToE,
-			  mesh->o_x,
-			  mesh->o_y,
-			  mesh->o_z,
-			  mesh->o_qPreFilter,
-			  mesh->o_q);
     
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
+      
       iint mrab_order=mesh->Nrhs-1;
       /*      if (tstep - mesh->Nrhs == 0) mrab_order = 0;
       else if (tstep - mesh->Nrhs == 1) mrab_order = 1;
@@ -54,26 +38,6 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
       iint lev;
       for (lev=0;lev<mesh->MRABNlevels;lev++)
 	if (Ntick % (1<<lev) != 0) break;
-
-      if(mesh->totalHaloPairs>0){
-	// extract halo on DEVICE
-	iint Nentries = mesh->Np*mesh->Nfields;
-	
-	mesh->haloExtractKernel(mesh->totalHaloPairs,
-				Nentries,
-				mesh->o_haloElementList,
-				mesh->o_q,
-				mesh->o_haloBuffer);
-
-	// copy extracted halo to HOST 
-	mesh->o_haloBuffer.copyTo(sendBuffer);      
-	
-	// start halo exchange
-	meshHaloExchangeStart(mesh,
-			      mesh->Np*mesh->Nfields*sizeof(dfloat),
-			      sendBuffer,
-			      recvBuffer);
-			      }
       
       for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
@@ -90,17 +54,6 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_rhsq);
 	}
       }
-
-      if(mesh->totalHaloPairs>0){
-	// wait for halo data to arrive
-	meshHaloExchangeFinish(mesh);
-	
-	// copy halo data to DEVICE
-	size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-	mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
-	}
-    
-	mesh->device.finish();
       
       occa::tic("surfaceKernel");
       
@@ -125,7 +78,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 	}
       }
       occa::toc("surfaceKernel");
-
+      
       mesh->o_shift.copyFrom(mesh->MRABshiftIndex);
       mesh->o_lev_updates.copyFrom(mesh->lev_updates);
 
@@ -162,7 +115,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			    mesh->o_qFilter,
 			    mesh->o_qFiltered);	
 			    }
-           
+       
       for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
 	  mesh->volumeCorrectionKernel(mesh->MRABNelements[l],
@@ -232,6 +185,23 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 				  mesh->o_q);
       	}
       }
+      mesh->filterKernelq0H(mesh->Nelements,
+			  mesh->o_dualProjMatrix,
+			  mesh->o_cubeFaceNumber,
+			  mesh->o_EToE,
+			  mesh->o_q,
+			  mesh->o_qPreFilter);
+      
+      mesh->filterKernelq0V(mesh->Nelements,
+			    alpha,
+			    mesh->o_dualProjMatrix,
+			    mesh->o_cubeFaceNumber,
+			    mesh->o_EToE,
+			    mesh->o_x,
+			    mesh->o_y,
+			    mesh->o_z,
+			    mesh->o_qPreFilter,
+			    mesh->o_q);
     }
     
     // estimate maximum error
