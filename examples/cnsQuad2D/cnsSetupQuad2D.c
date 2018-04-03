@@ -7,8 +7,16 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   cns_t *cns = (cns_t*) calloc(1, sizeof(cns_t));
 
   mesh->Nfields = 4;
+
   cns->Nfields = mesh->Nfields;
   cns->Nstresses = 3;
+  cns->mesh = mesh;
+  
+  // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
+  cns->RT = 10;
+
+  // viscosity
+  cns->mu = 1e-2;
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
@@ -86,6 +94,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%3);
   mesh->device.setup(deviceConfig);
 
+ 
   cns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
   
@@ -94,6 +103,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   
   cns->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+
   cns->o_resq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
   
@@ -103,6 +113,13 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
     mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
 			mesh->LIFT);
 
+  cns->LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
+  for(int n=0;n<mesh->Np;++n){
+    for(int m=0;m<mesh->Nfp*mesh->Nfaces;++m){
+      cns->LIFTT[n + m*mesh->Np] = mesh->LIFT[n*mesh->Nfaces*mesh->Nfp+m];
+    }
+  }
+  
   cns->o_LIFTT =
     mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
 			cns->LIFTT);
@@ -142,6 +159,29 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   // p_half, p_two, p_third, p_Nstresses
   
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
+  kernelInfo.addDefine("p_Nstresses", cns->Nstresses);
+
+  kernelInfo.addDefine("p_RT", cns->RT);
+
+  dfloat sqrtRT = sqrt(cns->RT);
+  kernelInfo.addDefine("p_sqrtRT", sqrtRT);
+  
+  kernelInfo.addDefine("p_rbar", cns->rbar);
+  kernelInfo.addDefine("p_ubar", cns->ubar);
+  kernelInfo.addDefine("p_vbar", cns->vbar);
+  
+  kernelInfo.addDefine("p_RXID", RXID);
+  kernelInfo.addDefine("p_RYID", RYID);
+  kernelInfo.addDefine("p_SXID", SXID);
+  kernelInfo.addDefine("p_SYID", SYID);
+  kernelInfo.addDefine("p_JID", JID);
+
+  const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3.;
+
+  kernelInfo.addDefine("p_two", p_two);
+  kernelInfo.addDefine("p_one", p_one);
+  kernelInfo.addDefine("p_half", p_half);
+  kernelInfo.addDefine("p_third", p_third);
   
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
@@ -175,7 +215,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
 				       kernelInfo);
   
 
-  mesh->updateKernel =
+  cns->updateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdateQuad2D.okl",
 				       "cnsUpdateQuad2D",
 				       kernelInfo);
@@ -184,5 +224,6 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
-  
+
+  return cns;
 }

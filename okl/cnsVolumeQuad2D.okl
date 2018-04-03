@@ -1,5 +1,5 @@
 
-// isothermal CNS
+// isothermal Compressible Navier-Stokes
 kernel void cnsVolumeQuad2D(const dlong Nelements,
 			    const dfloat * restrict vgeo,
 			    const dfloat * restrict D,
@@ -26,6 +26,7 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
     for(int j=0;j<p_Nq;++j;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
 
+	// geometric factors
 	const dlong gbase = e*p_Np*p_Nvgeo + j*p_Nq + i;
 	const dfloat rx = vgeo[gbase+p_Np*p_RXID];
 	const dfloat ry = vgeo[gbase+p_Np*p_RYID];
@@ -33,19 +34,21 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
 	const dfloat sy = vgeo[gbase+p_Np*p_SYID];
 	const dfloat  J = vgeo[gbase+p_Np*p_JID];
 
-	const dfloat qbase = e*p_Np*p_Nfields + j*p_Nq + i;
-	
+	// conserved variables
+	const dlong  qbase = e*p_Np*p_Nfields + j*p_Nq + i;
 	const dfloat r  = q[qbase+0*p_Np];
 	const dfloat ru = q[qbase+1*p_Np];
 	const dfloat rv = q[qbase+2*p_Np];
 	const dfloat p  = r*p_RT;
-	
+
+	// primitive variables (velocity)
 	const dfloat u = ru/r, v = rv/r;
 
-	const dfloat id = e*p_Np*p_Nstresses + j*p_Nq + i;
-	const dfloat T11 = viscousStress[id+0*p_Np];
-	const dfloat T12 = viscousStress[id+1*p_Np];
-	const dfloat T22 = viscousStress[id+2*p_Np];
+	// viscous stresses (precomputed by cnsStressesVolumeQuad2D)
+	const dlong id = e*p_Np*p_Nstresses + j*p_Nq + i;
+	const dfloat T11 = viscousStresses[id+0*p_Np];
+	const dfloat T12 = viscousStresses[id+1*p_Np];
+	const dfloat T22 = viscousStresses[id+2*p_Np];
 	
 	// (1/J) \hat{div} (G*[F;G])
 
@@ -126,9 +129,14 @@ kernel void cnsStressesVolumeQuad2D(const dlong Nelements,
       for(int i=0;i<p_Nq;++i;inner0){
 	
 	s_D[j][i] = D[j*p_Nq+i];
+
+	const dlong qbase = e*p_Nfields*p_Np + j*p_Nq + i;
+	const dfloat r  = q[qbase + 0*p_Nq];
+	const dfloat ru = q[qbase + 1*p_Nq];
+	const dfloat rv = q[qbase + 2*p_Nq];
 	
-	s_u[j][i] = q[e*p_Nfields*p_Np + p_Np + j*p_Nq + i];
-	s_v[j][i] = q[e*p_Nfields*p_Np + 2*p_Np + j*p_Nq + i];
+	s_u[j][i] = ru/r;
+	s_v[j][i] = rv/r;
 	
       }
     }
@@ -145,8 +153,9 @@ kernel void cnsStressesVolumeQuad2D(const dlong Nelements,
 	  const dfloat Djn = s_D[j][n];
 
 	  dudr += Din*s_u[j][n];
-	  dvdr += Din*s_v[j][n];
 	  duds += Djn*s_u[n][i];
+
+	  dvdr += Din*s_v[j][n];
 	  dvds += Djn*s_v[n][i];
 	}
 
@@ -162,15 +171,15 @@ kernel void cnsStressesVolumeQuad2D(const dlong Nelements,
 	const dfloat dvdx = rx*dvdr + sx*dvds;
 	const dfloat dvdy = ry*dvdr + sy*dvds;
 	
-	const dlong base = e*p_Nstresses*p_Np + j*p_Nq + i;
+	const dlong sbase = e*p_Nstresses*p_Np + j*p_Nq + i;
 
 	const dfloat S11 = p_half*(dudx+dudx) - p_third*(dudx+dvdy);
 	const dfloat S12 = p_half*(dudy+dvdx);
 	const dfloat S22 = p_half*(dvdy+dvdy) - p_third*(dudx+dvdy);
 	
-	viscousStresses[base + 0*p_Np] = p_two*mu*S11;
-	viscousStresses[base + 1*p_Np] = p_two*mu*S12;
-	viscousStresses[base + 2*p_Np] = p_two*mu*S22;
+	viscousStresses[sbase + 0*p_Np] = p_two*mu*S11;
+	viscousStresses[sbase + 1*p_Np] = p_two*mu*S12;
+	viscousStresses[sbase + 2*p_Np] = p_two*mu*S22;
       }
     }
   }

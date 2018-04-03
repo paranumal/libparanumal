@@ -2,7 +2,7 @@
 void boundaryConditions2D(const int bc,
 			  const dfloat  t, const dfloat  x, const dfloat  y, const dfloat  nx, const dfloat  ny,
 			  const dfloat ramp,
-			  const dflot rM, const dfloat  uM, const dfloat  vM, 
+			  const dfloat rM, const dfloat  uM, const dfloat  vM, 
 			  dfloat * restrict rB, dfloat * restrict uB, dfloat * restrict vB){
 
   // check these
@@ -50,9 +50,9 @@ kernel void cnsSurfaceQuad2D(const int Nelements,
   for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
     
     // shared storage for flux terms
-    shared dfloat s_Lrflux[p_NblockS][p_maxNodes];
-    shared dfloat s_Lruflux[p_NblockS][p_maxNodes];
-    shared dfloat s_Lrvflux[p_NblockS][p_maxNodes];
+    shared dfloat s_rflux[p_NblockS][p_maxNodes];
+    shared dfloat s_ruflux[p_NblockS][p_maxNodes];
+    shared dfloat s_rvflux[p_NblockS][p_maxNodes];
 
     // for all face nodes of all elements
     for(int es=0;es<p_NblockS;++es;inner1){
@@ -83,23 +83,23 @@ kernel void cnsSurfaceQuad2D(const int Nelements,
 	    const int vidM = idM%p_Np;
 	    const int vidP = idP%p_Np;
 
-	    const dlong baseM = eM*p_Np*p_Nfields + vidM;
-	    const dlong baseP = eP*p_Np*p_Nfields + vidP;
+	    const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+	    const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
 
 	    const dlong sbaseM = eM*p_Np*p_Nstresses + vidM;
 	    const dlong sbaseP = eP*p_Np*p_Nstresses + vidP;
 	    
-	    const dfloat rM  = q[baseM + 0*p_Np];
-	    const dfloat ruM = q[baseM + 1*p_Np];
-	    const dfloat rvM = q[baseM + 2*p_Np];
+	    const dfloat rM  = q[qbaseM + 0*p_Np];
+	    const dfloat ruM = q[qbaseM + 1*p_Np];
+	    const dfloat rvM = q[qbaseM + 2*p_Np];
 
 	    const dfloat T11M = viscousStresses[sbaseM+0*p_Np];
 	    const dfloat T12M = viscousStresses[sbaseM+1*p_Np];
 	    const dfloat T22M = viscousStresses[sbaseM+2*p_Np];
 	    
-	    const dfloat rP  = q[baseP + 0*p_Np];
-	    const dfloat ruP = q[baseP + 1*p_Np];
-	    const dfloat rvP = q[baseP + 2*p_Np];
+	    dfloat rP  = q[qbaseP + 0*p_Np];
+	    dfloat ruP = q[qbaseP + 1*p_Np];
+	    dfloat rvP = q[qbaseP + 2*p_Np];
 
 	    const dfloat T11P = viscousStresses[sbaseP+0*p_Np];
 	    const dfloat T12P = viscousStresses[sbaseP+1*p_Np];
@@ -109,18 +109,28 @@ kernel void cnsSurfaceQuad2D(const int Nelements,
 	    const dfloat vM = rvM/rM;
 	    const dfloat pM = p_RT*rM;
 
-	    const dfloat uP = ruP/rP;
-	    const dfloat vP = rvP/rP;
-	    const dfloat pP = p_RT*rP;
+	    dfloat uP = ruP/rP;
+	    dfloat vP = rvP/rP;
+	    dfloat pP = p_RT*rP;
 	    
 	    // apply boundary condition
 	    int bc = EToB[face+p_Nfaces*e];
-	    if(bc>0)
+	    if(bc>0){
 	      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, ramp,
 				   rM, uM, vM, &rP, &uP, &vP);
 
+	      ruP = rP*uP;
+	      rvP = rP*vP;
+	      pP = p_RT*rP;
+	    }
+	    
 	    // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
 	    const dfloat sc = invJ*sJ;
+
+	    const dfloat lambdaM = occaSqrt(uM*uM+vM*vM) + p_sqrtRT;
+	    const dfloat lambdaP = occaSqrt(uP*uP+vP*vP) + p_sqrtRT;
+
+	    const dfloat lambda = (lambdaM>lambdaP) ? lambdaM:lambdaP;
 	    
 	    // simple Lax Friedrichs flux to get started (change later)
 	    {
@@ -246,10 +256,22 @@ kernel void cnsStressesSurfaceQuad2D(const int Nelements,
 	    const dfloat ruM = q[baseM + 1*p_Np];
 	    const dfloat rvM = q[baseM + 2*p_Np];
 
-	    const dfloat rP  = q[baseP + 0*p_Np];
-	    const dfloat ruP = q[baseP + 1*p_Np];
-	    const dfloat rvP = q[baseP + 2*p_Np];
+	    dfloat uM = ruM/rM;
+	    dfloat vM = rvM/rM;
+	    
+	    dfloat rP  = q[baseP + 0*p_Np];
+	    dfloat ruP = q[baseP + 1*p_Np];
+	    dfloat rvP = q[baseP + 2*p_Np];
+	    
+	    dfloat uP = ruP/rP;
+	    dfloat vP = rvP/rP;
 
+	    // apply boundary condition
+	    int bc = EToB[face+p_Nfaces*e];
+	    if(bc>0)
+	      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, ramp,
+				   rM, uM, vM, &rP, &uP, &vP);
+	    
 	    const dfloat dS11 = p_half*(nx*(p_two*(uP-uM))) - p_third*(nx*(uP-uM)+ny*(vP-vM));
 	    const dfloat dS12 = p_half*(ny*(uP-uM) + nx*(vP-vM));
 	    const dfloat dS22 = p_half*(ny*(p_two*(vP-vM))) - p_third*(nx*(uP-uM)+ny*(vP-vM));
