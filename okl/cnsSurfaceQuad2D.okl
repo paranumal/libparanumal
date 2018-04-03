@@ -42,6 +42,7 @@ kernel void cnsSurfaceQuad2D(const int Nelements,
 			     const dfloat * restrict x,
 			     const dfloat * restrict y,
 			     const dfloat ramp,
+			     const dfloat mu,
 			     const dfloat * restrict q,
 			     const dfloat * restrict viscousStresses,
 			     dfloat       * restrict rhsq){
@@ -130,7 +131,7 @@ kernel void cnsSurfaceQuad2D(const int Nelements,
 	    const dfloat lambdaM = occaSqrt(uM*uM+vM*vM) + p_sqrtRT;
 	    const dfloat lambdaP = occaSqrt(uP*uP+vP*vP) + p_sqrtRT;
 
-	    const dfloat lambda = (lambdaM>lambdaP) ? lambdaM:lambdaP;
+	    dfloat lambda = (lambdaM>lambdaP) ? lambdaM:lambdaP;
 	    
 	    // simple Lax Friedrichs flux to get started (change later)
 	    {
@@ -141,11 +142,15 @@ kernel void cnsSurfaceQuad2D(const int Nelements,
 	      s_rflux[es][n] = p_half*sc*(rflux);
 	    }
 
+	    const dfloat hinv = sgeo[eM*p_Nsgeo*p_Nfp + p_IHID];
+	    dfloat penalty = p_Nq*p_Nq*hinv*mu;	      
+
 	    {
+	      
 	      const dfloat fM = T11M - ruM*uM - pM, gM = T12M - ruM*vM;
 	      const dfloat fP = T11P - ruP*uP - pP, gP = T12P - ruP*vP;
 
-	      const dfloat ruflux = nx*(fP-fM) + ny*(gP-gM) + lambda*(ruP-ruM); // should add viscous penalty
+	      const dfloat ruflux = nx*(fP-fM) + ny*(gP-gM) + lambda*(ruP-ruM) + penalty*(uP-uM); // should add viscous penalty
 	      s_ruflux[es][n] = p_half*sc*(ruflux);
 	    }
 
@@ -153,7 +158,7 @@ kernel void cnsSurfaceQuad2D(const int Nelements,
 	      const dfloat fM = T12M - rvM*uM, gM = T22M - rvM*vM - pM;
 	      const dfloat fP = T12P - rvP*uP, gP = T22P - rvP*vP - pP;
 
-	      const dfloat rvflux = nx*(fP-fM) + ny*(gP-gM) + lambda*(rvP-rvM); // should add viscous penalty
+	      const dfloat rvflux = nx*(fP-fM) + ny*(gP-gM) + lambda*(rvP-rvM) + penalty*(vP-vM); // should add viscous penalty
 	      s_rvflux[es][n] = p_half*sc*(rvflux);
 	    }
 	  }

@@ -131,9 +131,9 @@ kernel void cnsStressesVolumeQuad2D(const dlong Nelements,
 	s_D[j][i] = D[j*p_Nq+i];
 
 	const dlong qbase = e*p_Nfields*p_Np + j*p_Nq + i;
-	const dfloat r  = q[qbase + 0*p_Nq];
-	const dfloat ru = q[qbase + 1*p_Nq];
-	const dfloat rv = q[qbase + 2*p_Nq];
+	const dfloat r  = q[qbase + 0*p_Np];
+	const dfloat ru = q[qbase + 1*p_Np];
+	const dfloat rv = q[qbase + 2*p_Np];
 	
 	s_u[j][i] = ru/r;
 	s_v[j][i] = rv/r;
