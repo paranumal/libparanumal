@@ -18,10 +18,10 @@ int main(int argc, char **argv){
   mesh2D *mesh = meshSetupQuad2D(argv[1], N);
 
   // set up cns stuff
-  cnsSetupQuad2D(mesh);
+  cns_t *cns = cnsSetupQuad2D(mesh);
 
   // run
-  cnsRunQuad2D(mesh);
+  cnsRunQuad2D(cns);
 
   // close down MPI
   MPI_Finalize();

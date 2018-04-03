@@ -285,9 +285,9 @@ kernel void cnsStressesSurfaceQuad2D(const int Nelements,
 	      }
 	    
 	    const int base = e*p_Np*p_Nstresses+n;
-	    rhsq[base+0*p_Np] += LT11flux;
-	    rhsq[base+1*p_Np] += LT12flux;
-	    rhsq[base+2*p_Np] += LT22flux;
+	    viscousStresses[base+0*p_Np] += LT11flux;
+	    viscousStresses[base+1*p_Np] += LT12flux;
+	    viscousStresses[base+2*p_Np] += LT22flux;
 	  }
 	}
       }

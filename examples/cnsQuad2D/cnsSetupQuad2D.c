@@ -2,9 +2,13 @@
 #include <math.h>
 #include "cnsQuad2D.h"
 
-void cnsSetupQuad2D(mesh2D *mesh){
+cns_t *cnsSetupQuad2D(mesh2D *mesh){
+
+  cns_t *cns = (cns_t*) calloc(1, sizeof(cns_t));
 
   mesh->Nfields = 4;
+  cns->Nfields = mesh->Nfields;
+  cns->Nstresses = 3;
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
@@ -14,6 +18,9 @@ void cnsSetupQuad2D(mesh2D *mesh){
   mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
 
+  cns->viscousStresses = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*cns->Nstresses,
+					   sizeof(dfloat));
+  
   // fix this later (initial conditions)
   int cnt = 0;
   for(int e=0;e<mesh->Nelements;++e){
@@ -77,43 +84,27 @@ void cnsSetupQuad2D(mesh2D *mesh){
   sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%3);
   mesh->device.setup(deviceConfig);
 
-  // build Dr, Ds transposes
-  dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Np;++m){
-      DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
-      DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
-    }
-  }
-
-#if 0
-  // OCCA allocate device memory (remember to go back for halo)
-  mesh->o_q =
+  cns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
-  mesh->o_rhsq =
+  
+  cns->o_viscousStresses =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*cns->Nstresses*sizeof(dfloat), mesh->q);
+  
+  cns->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-  mesh->o_resq =
+  cns->o_resq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
-
-  mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				   mesh->Dr);
-
-  mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				   mesh->Ds);
-
-  mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				    DrT);
-
-  mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				    DsT);
-
+  
   mesh->o_D  = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
   
   mesh->o_LIFT =
     mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
 			mesh->LIFT);
 
+  cns->o_LIFTT =
+    mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
+			mesh->LIFTT);
+  
   mesh->o_vgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
 			mesh->vgeo);
@@ -139,7 +130,7 @@ void cnsSetupQuad2D(mesh2D *mesh){
     mesh->o_haloBuffer =
       mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat));
   }
-#endif  
+
   occa::kernelInfo kernelInfo;
 
   // generic occa device set up
@@ -158,59 +149,35 @@ void cnsSetupQuad2D(mesh2D *mesh){
 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   
-  mesh->volumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVolume2D.okl",
-				       "cnsVolume2D_o0",
+  cns->volumeKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVolumeQuad2D.okl",
+				       "cnsVolumeQuad2D",
 				       kernelInfo);
 
-  mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsSurface2D.okl",
-				       "cnsSurface2D_s0",
+  cns->surfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsSurfaceQuad2D.okl",
+				       "cnsSurfaceQuad2D",
 				       kernelInfo);
+
+  cns->stressesVolumeKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVolumeQuad2D.okl",
+				       "cnsStressesVolumeQuad2D",
+				       kernelInfo);
+
+  cns->stressesSurfaceKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsSurfaceQuad2D.okl",
+				       "cnsStressesSurfaceQuad2D",
+				       kernelInfo);
+  
 
   mesh->updateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
-				       "cnsUpdate2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdateQuad2D.okl",
+				       "cnsUpdateQuad2D",
 				       kernelInfo);
-
+  
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
 				       kernelInfo);
-
-  int Ntests = 10;
-#define maxNkernels 100
-
-  int NvolumeKernels = 6;
-  occa::kernel *cnsVolumeKernels = new occa::kernel[maxNkernels];
-  char kernelNames[maxNkernels][BUFSIZ];
-  double bestElapsed = 1e9;
   
-  for(int ker=0;ker<NvolumeKernels;++ker){
-    sprintf(kernelNames[ker], "cnsVolume2D_o%d", ker);
-    
-    cnsVolumeKernels[ker] =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVolume2D.okl", kernelNames[ker], kernelInfo);
-    
-    mesh->device.finish();
-    occa::tic(kernelNames[ker]);
-    for(int test=0;test<Ntests;++test)
-      cnsVolumeKernels[ker](mesh->Nelements,
-				      mesh->o_vgeo,
-				      mesh->o_DrT,
-				      mesh->o_DsT,
-				      mesh->o_q,
-				      mesh->o_rhsq);
-    mesh->device.finish();
-    double elapsed = occa::toc(kernelNames[ker]);
-    if(elapsed<bestElapsed){
-      mesh->volumeKernel = cnsVolumeKernels[ker];
-      printf("promoting kernel: %d (time %g)\n", ker, elapsed);
-      bestElapsed = elapsed;
-    }
-    else{
-      printf("not promoting kernel: %d (time %g)\n", ker, elapsed);
-    }
-  }
-
 }

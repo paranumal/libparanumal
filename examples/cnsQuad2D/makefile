@@ -58,7 +58,6 @@ cnsGaussianPulse2D.o \
 ../../src/meshPhysicalNodesQuad2D.o \
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPrint2D.o \
-../../src/meshReader2D.o \
 ../../src/meshSetupQuad2D.o \
 ../../src/meshSurfaceGeometricFactorsQuad2D.o \
 ../../src/meshVTU2D.o \
