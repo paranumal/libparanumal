@@ -501,7 +501,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat cfl_small = 0.05; // depends on the stability region size (was .4, then 2)
+  dfloat cfl_small = 0.4; // depends on the stability region size (was .4, then 2)
   dfloat cfl_large = cfl_small;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
@@ -547,7 +547,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   mesh->finalTime = 5;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   
-  iint maxLevels=100;
+  iint maxLevels=1;
   meshMRABSetupQuad3D(mesh,mesh->localdt,maxLevels);
 
   dfloat dt = mesh->dt;
@@ -758,5 +758,6 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
 				       "boltzmannFilterVq0Quad3D",
 				       kernelInfo);
+
   return solver;
 }

@@ -40,7 +40,7 @@ int main(int argc, char **argv){
   mesh->o_q.copyTo(mesh->q);
   advectionErrorNormQuad3D(mesh,mesh->finalTime,NULL,0);
   
-  /*  mesh->o_q.copyTo(mesh->q);
+  /*    mesh->o_q.copyTo(mesh->q);
   dfloat l2 = 0;
   for (iint e = 0; e < mesh->Nelements; ++e) {
     for (iint n = 0; n < mesh->Np; ++n) {
