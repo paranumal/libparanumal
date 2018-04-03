@@ -1,0 +1,120 @@
+
+// isothermal CNS
+kernel void cnsVolumeQuad2D(const dlong Nelements,
+			    const dfloat * restrict vgeo,
+			    const dfloat * restrict D,
+			    const dfloat * restrict mu,
+			    const dfloat * restrict gradq,
+			    const dfloat * restrict q,
+			    dfloat * restrict rhsq){
+  
+  for(dlong e=0;e<Nelements;++e;outer0){
+
+    shared dfloat s_D[p_Nq][p_Nq];
+    shared dfloat s_F[p_Nfields][p_Nq][p_Nq];
+    shared dfloat s_G[p_Nfields][p_Nq][p_Nq];
+    
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
+
+	s_D[j][i] = D[j*p_Nq+i];
+
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){
+
+	const dlong gbase = e*p_Np*p_Nvgeo + j*p_Nq + i;
+	const dfloat rx = vgeo[gbase+p_Np*p_RXID];
+	const dfloat ry = vgeo[gbase+p_Np*p_RYID];
+	const dfloat sx = vgeo[gbase+p_Np*p_SXID];
+	const dfloat sy = vgeo[gbase+p_Np*p_SYID];
+	const dfloat  J = vgeo[gbase+p_Np*p_JID];
+
+	const dfloat muij = mu[e*p_Np+j*p_Nq+i];
+
+	const dfloat qbase = e*p_Np*p_Nfields + j*p_Nq + i;
+	
+	const dfloat r  = q[qbase+0*p_Np];
+	const dfloat ru = q[qbase+1*p_Np];
+	const dfloat rv = q[qbase+2*p_Np];
+	const dfloat p  = r*p_RT;
+	
+	const dfloat u = ru/r, v = rv/r;
+
+	const dfloat id = e*p_Np*p_Ngrads + j*p_Nq + i;
+	const dfloat dudx = gradq[id+0*p_Np];
+	const dfloat dudy = gradq[id+1*p_Np];
+	const dfloat dvdx = gradq[id+2*p_Np];
+	const dfloat dvdy = gradq[id+3*p_Np];
+	const dfloat divU = dudx+dvdy;
+	
+	// (1/J) \hat{div} (G*[F;G])
+
+	{
+	  // F0 = ru, G0 = rv
+	  const dfloat f = -ru;
+	  const dfloat g = -rv;
+	  s_F[0][j][i] = J*(rx*f + ry*g);
+	  s_G[0][j][i] = J*(sx*f + sy*g);
+	}
+
+	{
+	  const dfloat S11 = p_half*(2.f*dudx) - p_third*divU;
+	  const dfloat S12 = p_half*(dudy+dvdx);
+	  
+	  // F1 = ru^2+p, G1 = rvu
+	  const dfloat f = p_two*muij*S11-ru*u-p;
+	  const dfloat g = p_two*muij*S12-rv*u;
+	  s_F[1][j][i] = J*(rx*f + ry*g);
+	  s_G[1][j][i] = J*(sx*f + sy*g);
+	}
+
+	{
+	  const dfloat S21 = p_half*(dudy+dvdx);
+	  const dfloat S22 = p_half*(2.f*dvdy) - p_third*divU;
+
+	  // F2 = ruv, G2 = rv^2+p
+	  const dfloat f = p_two*muij*S21-rv*u;
+	  const dfloat g = p_two*muij*S22-rv*v-p;
+	  s_F[2][j][i] = J*(rx*f + ry*g);
+	  s_G[2][j][i] = J*(sx*f + sy*g);
+	}
+      }
+    }
+
+    barrier(localMemFence);
+    
+    for(int j=0;j<p_Nq;++j;inner1){
+      for(int i=0;i<p_Nq;++i;inner0){    
+
+	const dlong gbase = e*p_Np*p_Nvgeo + j*p_Nq + i;
+	const dfloat  J = vgeo[gbase+p_Np*p_JID];
+
+	dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0;
+
+	for(int n=0;n<p_Nq;++n){
+	  const dfloat Din = s_D[i][n];
+	  const dfloat Djn = s_D[j][n];
+	  rhsq0 += Din*s_F[0][j][n];
+	  rhsq0 += Djn*s_G[0][n][i];
+	  rhsq1 += Din*s_F[1][j][n];
+	  rhsq1 += Djn*s_G[1][n][i];
+	  rhsq2 += Din*s_F[2][j][n];
+	  rhsq2 += Djn*s_G[2][n][i];
+	}
+	
+	const dlong base = e*p_Np*p_Nfields + j*p_Nq + i;
+	
+	// move to rhs
+	rhsq[base+0*p_Np] = rhsq0/J;
+	rhsq[base+1*p_Np] = rhsq1/J;
+	rhsq[base+2*p_Np] = rhsq2/J;
+	
+      }
+    }
+  }
+}
