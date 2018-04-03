@@ -3,8 +3,7 @@
 kernel void cnsVolumeQuad2D(const dlong Nelements,
 			    const dfloat * restrict vgeo,
 			    const dfloat * restrict D,
-			    const dfloat * restrict mu,
-			    const dfloat * restrict gradq,
+			    const dfloat * restrict viscousStresses,
 			    const dfloat * restrict q,
 			    dfloat * restrict rhsq){
   
@@ -34,8 +33,6 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
 	const dfloat sy = vgeo[gbase+p_Np*p_SYID];
 	const dfloat  J = vgeo[gbase+p_Np*p_JID];
 
-	const dfloat muij = mu[e*p_Np+j*p_Nq+i];
-
 	const dfloat qbase = e*p_Np*p_Nfields + j*p_Nq + i;
 	
 	const dfloat r  = q[qbase+0*p_Np];
@@ -45,12 +42,10 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
 	
 	const dfloat u = ru/r, v = rv/r;
 
-	const dfloat id = e*p_Np*p_Ngrads + j*p_Nq + i;
-	const dfloat dudx = gradq[id+0*p_Np];
-	const dfloat dudy = gradq[id+1*p_Np];
-	const dfloat dvdx = gradq[id+2*p_Np];
-	const dfloat dvdy = gradq[id+3*p_Np];
-	const dfloat divU = dudx+dvdy;
+	const dfloat id = e*p_Np*p_Nstresses + j*p_Nq + i;
+	const dfloat T11 = viscousStress[id+0*p_Np];
+	const dfloat T12 = viscousStress[id+1*p_Np];
+	const dfloat T22 = viscousStress[id+2*p_Np];
 	
 	// (1/J) \hat{div} (G*[F;G])
 
@@ -63,23 +58,17 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
 	}
 
 	{
-	  const dfloat S11 = p_half*(2.f*dudx) - p_third*divU;
-	  const dfloat S12 = p_half*(dudy+dvdx);
-	  
 	  // F1 = 2*mu*S11 - (ru^2+p), G1 = 2*mu*S12 - (rvu)
-	  const dfloat f = p_two*muij*S11-ru*u-p;
-	  const dfloat g = p_two*muij*S12-rv*u;
+	  const dfloat f = T11-ru*u-p;
+	  const dfloat g = T12-rv*u;
 	  s_F[1][j][i] = J*(rx*f + ry*g);
 	  s_G[1][j][i] = J*(sx*f + sy*g);
 	}
 
 	{
-	  const dfloat S21 = p_half*(dudy+dvdx);
-	  const dfloat S22 = p_half*(2.f*dvdy) - p_third*divU;
-
 	  // F2 = 2*mu*S21 - (ruv), G2 = 2*mu*S22 - (rv^2+p)
-	  const dfloat f = p_two*muij*S21-rv*u;
-	  const dfloat g = p_two*muij*S22-rv*v-p;
+	  const dfloat f = T12-rv*u;
+	  const dfloat g = T22-rv*v-p;
 	  s_F[2][j][i] = J*(rx*f + ry*g);
 	  s_G[2][j][i] = J*(sx*f + sy*g);
 	}
@@ -120,11 +109,12 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
 }
 
 
-kernel void cnsGradVolumeQuad2D(const dlong Nelements,
-				const dfloat * restrict vgeo,
-				const dfloat * restrict D,
-				const dfloat * restrict q,
-				dfloat * restrict gradq){
+kernel void cnsStressesVolumeQuad2D(const dlong Nelements,
+				    const dfloat * restrict vgeo,
+				    const dfloat * restrict D,
+				    const dfloat mu,
+				    const dfloat * restrict q,
+				    dfloat * restrict viscousStresses){
   
   for(dlong e=0;e<Nelements;++e;outer0){
 
@@ -153,6 +143,7 @@ kernel void cnsGradVolumeQuad2D(const dlong Nelements,
 	for(int n=0;n<p_Nq;++n){
 	  const dfloat Din = s_D[i][n];
 	  const dfloat Djn = s_D[j][n];
+
 	  dudr += Din*s_u[j][n];
 	  dvdr += Din*s_v[j][n];
 	  duds += Djn*s_u[n][i];
@@ -166,11 +157,20 @@ kernel void cnsGradVolumeQuad2D(const dlong Nelements,
 	const dfloat sy = vgeo[gbase+p_Np*p_SYID];
 	const dfloat  J = vgeo[gbase+p_Np*p_JID];
 
-	const dlong base = e*p_Ngrads*p_Np + j*p_Nq + i;
-	gradq[base + 0*p_Np] = rx*dudr + sx*duds;
-	gradq[base + 1*p_Np] = ry*dudr + sy*duds;
-	gradq[base + 2*p_Np] = rx*dvdr + sx*dvds;
-	gradq[base + 3*p_Np] = ry*dvdr + sy*dvds;
+	const dfloat dudx = rx*dudr + sx*duds;
+	const dfloat dudy = ry*dudr + sy*duds;
+	const dfloat dvdx = rx*dvdr + sx*dvds;
+	const dfloat dvdy = ry*dvdr + sy*dvds;
+	
+	const dlong base = e*p_Nstresses*p_Np + j*p_Nq + i;
+
+	const dfloat S11 = p_half*(dudx+dudx) - p_third*(dudx+dvdy);
+	const dfloat S12 = p_half*(dudy+dvdx);
+	const dfloat S22 = p_half*(dvdy+dvdy) - p_third*(dudx+dvdy);
+	
+	viscousStresses[base + 0*p_Np] = p_two*mu*S11;
+	viscousStresses[base + 1*p_Np] = p_two*mu*S12;
+	viscousStresses[base + 2*p_Np] = p_two*mu*S22;
       }
     }
   }
