@@ -171,6 +171,9 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
       mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat));
+
+    cns->o_haloStressesBuffer =
+      mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*cns->Nstresses*sizeof(dfloat));
   }
 
   occa::kernelInfo kernelInfo;
