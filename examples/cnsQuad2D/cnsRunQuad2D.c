@@ -47,7 +47,8 @@ void cnsRunQuad2D(cns_t *cns){
 	cns->o_q.copyFrom(recvBuffer, haloBytes, offset);
       }
       
-      cns->stressesSurfaceKernel(mesh->Nelements, mesh->o_sgeo, cns->o_LIFTT, mesh->o_vmapM, mesh->o_vmapP, mesh->o_EToB, currentTime,
+      cns->stressesSurfaceKernel(mesh->Nelements, mesh->o_sgeo, cns->o_LIFTT,
+				 mesh->o_vmapM, mesh->o_vmapP, mesh->o_EToB, currentTime,
 				 mesh->o_x, mesh->o_y, ramp, cns->mu, cns->o_q, cns->o_viscousStresses);
       
       // extract stresses halo on DEVICE
@@ -76,7 +77,7 @@ void cnsRunQuad2D(cns_t *cns){
       }
       
       // compute surface contribution to DG cns RHS (LIFTT ?)
-      cns->surfaceKernel(mesh->Nelements, mesh->o_sgeo, mesh->o_LIFTT, mesh->o_vmapM, mesh->o_vmapP, mesh->o_EToB,
+      cns->surfaceKernel(mesh->Nelements, mesh->o_sgeo, cns->o_LIFTT, mesh->o_vmapM, mesh->o_vmapP, mesh->o_EToB,
 			 currentTime, mesh->o_x, mesh->o_y, ramp, cns->o_q, cns->o_viscousStresses, cns->o_rhsq);
       
       // update solution using Runge-Kutta

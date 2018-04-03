@@ -12,6 +12,11 @@ typedef struct{
   int Nfields;
 
   dfloat mu;
+  dfloat RT;
+  dfloat rbar;
+  dfloat ubar;
+  dfloat vbar;
+      
   
   mesh_t *mesh;
 
