@@ -16,7 +16,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   cns->RT = 10;
 
   // viscosity
-  cns->mu = 0;
+  cns->mu = 1e-3;
 
   // mean flow
   cns->rbar = 1;
@@ -91,7 +91,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 100;
+  mesh->errorStep = 1000;
 
   printf("dt = %g\n", mesh->dt);
 
@@ -101,8 +101,8 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // use rank to choose DEVICE
-  //  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%3);
-  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", rank%3);
+  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%3);
+  //  sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", rank%3);
   mesh->device.setup(deviceConfig);
 
  

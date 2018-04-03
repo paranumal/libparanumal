@@ -78,7 +78,7 @@ void cnsRunQuad2D(cns_t *cns){
       
       // compute surface contribution to DG cns RHS (LIFTT ?)
       cns->surfaceKernel(mesh->Nelements, mesh->o_sgeo, cns->o_LIFTT, mesh->o_vmapM, mesh->o_vmapP, mesh->o_EToB,
-			 currentTime, mesh->o_x, mesh->o_y, ramp, cns->o_q, cns->o_viscousStresses, cns->o_rhsq);
+			 currentTime, mesh->o_x, mesh->o_y, ramp, cns->mu, cns->o_q, cns->o_viscousStresses, cns->o_rhsq);
       
       // update solution using Runge-Kutta
       cns->updateKernel(mesh->Nelements, mesh->dt, mesh->rka[rk], mesh->rkb[rk], cns->o_rhsq, cns->o_resq, cns->o_q);

@@ -3,6 +3,8 @@ ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
+CXXFLAGS = -g
+
 include ${OCCA_DIR}/scripts/makefile
 
 # define variables
@@ -40,6 +42,7 @@ cnsSurfaceQuad2D.o \
 cnsVolumeQuad2D.o \
 cnsCavitySolution2D.o \
 cnsGaussianPulse2D.o \
+cnsPlotVTUQuad2D.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
