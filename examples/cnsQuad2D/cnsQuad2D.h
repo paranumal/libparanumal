@@ -6,17 +6,40 @@
 
 #include "mesh2D.h"
 
-void cnsRunQuad2D(mesh2D *mesh);
+typedef struct{
 
-void cnsSetupQuad2D(mesh2D *mesh);
+  int Nstresses;
+  int Nfields;
 
-void cnsVolumeQuad2D(mesh2D *mesh);
+  dfloat mu;
+  
+  mesh_t *mesh;
 
-void cnsSurfaceQuad2D(mesh2D *mesh);
+  occa::kernel volumeKernel;
+  occa::kernel surfaceKernel;
+  occa::kernel updateKernel;
 
-void cnsUpdate2D(mesh2D *mesh, dfloat rka, dfloat rkb);
+  occa::kernel stressesVolumeKernel;
+  occa::kernel stressesSurfaceKernel;
 
-void cnsError2D(mesh2D *mesh, dfloat time);
+  dfloat *viscousStresses;
+
+  occa::memory o_LIFTT;
+  
+  occa::memory o_q;
+  occa::memory o_rhsq;
+  occa::memory o_resq;
+  occa::memory o_viscousStresses;
+
+  occa::memory o_haloStressesBuffer;
+  
+}cns_t;
+
+void cnsRunQuad2D(cns_t *cns);
+
+cns_t *cnsSetupQuad2D(mesh2D *mesh);
+
+void cnsError2D(mesh_t *mesh, dfloat time);
 
 void cnsCavitySolution2D(dfloat x, dfloat y, dfloat t,
 			 dfloat *u, dfloat *v, dfloat *p);
