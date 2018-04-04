@@ -18,6 +18,8 @@ void cnsRunQuad2D(cns_t *cns){
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
+    int advSwitch = (tstep>100);
+    
     for(int rk=0;rk<mesh->Nrk;++rk){
 
       dfloat currentTime = tstep*mesh->dt + mesh->rkc[rk]*mesh->dt;
@@ -65,7 +67,7 @@ void cnsRunQuad2D(cns_t *cns){
       }
       
       // compute volume contribution to DG cns RHS
-      cns->volumeKernel(mesh->Nelements, mesh->o_vgeo, mesh->o_D, cns->o_viscousStresses, cns->o_q, cns->o_rhsq);
+      cns->volumeKernel(mesh->Nelements, advSwitch, mesh->o_vgeo, mesh->o_D, cns->o_viscousStresses, cns->o_q, cns->o_rhsq);
 
       // wait for halo stresses data to arrive
       if(mesh->totalHaloPairs>0){
@@ -77,7 +79,7 @@ void cnsRunQuad2D(cns_t *cns){
       }
       
       // compute surface contribution to DG cns RHS (LIFTT ?)
-      cns->surfaceKernel(mesh->Nelements, mesh->o_sgeo, cns->o_LIFTT, mesh->o_vmapM, mesh->o_vmapP, mesh->o_EToB,
+      cns->surfaceKernel(mesh->Nelements, advSwitch, mesh->o_sgeo, cns->o_LIFTT, mesh->o_vmapM, mesh->o_vmapP, mesh->o_EToB,
 			 currentTime, mesh->o_x, mesh->o_y, ramp, cns->mu, cns->o_q, cns->o_viscousStresses, cns->o_rhsq);
       
       // update solution using Runge-Kutta

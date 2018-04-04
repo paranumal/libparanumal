@@ -162,6 +162,7 @@ void upwindRoeAveraged(const dfloat nx,
 
 // batch process elements
 kernel void cnsSurfaceQuad2D(const int Nelements,
+			     const int advSwitch,
 			     const dfloat * restrict sgeo,
 			     const dfloat * restrict LIFTT,
 			     const int   * restrict vmapM,
@@ -261,6 +262,10 @@ kernel void cnsSurfaceQuad2D(const int Nelements,
 	    dfloat rflux, ruflux, rvflux;
 	    
 	    upwindRoeAveraged(nx, ny, rM, ruM, rvM, rP, ruP, rvP, &rflux, &ruflux, &rvflux);
+
+	    rflux *= advSwitch;
+	    ruflux *= advSwitch;
+	    rvflux *= advSwitch;
 	    
 	    // simple Lax Friedrichs flux to get started (change later)
 	    {
