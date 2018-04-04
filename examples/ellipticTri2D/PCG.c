@@ -30,7 +30,7 @@ int pcg(solver_t* solver, const char* options, dfloat lambda,
   int Niter = 0;
 
   //sanity check
-  if (rdotr0<=(TOL)) {
+  if (rdotr0<1E-20) {
     if (strstr(options, "VERBOSE")&&(rank==0)){
       printf("converged in ZERO iterations. Stopping.\n");}
     return 0;
@@ -52,7 +52,7 @@ int pcg(solver_t* solver, const char* options, dfloat lambda,
 
   dfloat alpha, beta, pAp = 0;
 
-  while((rdotr0>TOL) && (Niter <MAXIT)) {
+  while((Niter <MAXIT)) {
 
     // A*p
     ellipticOperator2D(solver, lambda, o_p, o_Ap, options);

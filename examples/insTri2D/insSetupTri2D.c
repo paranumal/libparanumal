@@ -84,7 +84,7 @@ ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options,
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 50.0;
+  ins->finalTime = 100.0;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 2.0* (mesh->N+1)*(mesh->N+2)/2.0f; // was 3
@@ -161,7 +161,7 @@ ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options,
   umax = sqrt(umax);
 
  
-  dfloat cfl = 0.2; // pretty good estimate (at least for subcycling LSERK4) 
+  dfloat cfl = 0.4; // pretty good estimate (at least for subcycling LSERK4) 
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt     = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
