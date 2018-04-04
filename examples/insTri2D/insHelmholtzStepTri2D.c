@@ -49,7 +49,6 @@ void insHelmholtzStepTri2D(ins_t *ins, int tstep, char *options){
                               mesh->o_SrsT,
                               mesh->o_SsrT,
                               mesh->o_SssT,
-                              mesh->o_SstT,
                               mesh->o_MM,
                               mesh->o_vmapM,
                               mesh->o_sMT,
