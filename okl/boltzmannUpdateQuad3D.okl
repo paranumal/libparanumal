@@ -49,18 +49,11 @@ kernel void boltzmannLSERKTraceUpdateQuad3D(const iint Nelements,
 					    dfloat * restrict q){
 
   for (iint e = 0; e < Nelements; ++e; outer0) {
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
+    for(iint n=0;n<p_Np;++n;inner0){
       for (iint fld = 0; fld < p_Nfields; ++fld) {
-	if (n < p_Np) {
-	  const iint id = e*p_Np*p_Nfields + fld*p_Np + n;
-	  q[id] = qpre[id];
-	}
-	if (n < p_Nfaces*p_Nfp) {
-	  const iint iid  = e*p_Nfp*p_Nfaces + n;
-	  const iint qidM = vmapM[iid] - e*p_Np;
-	  const iint qid  = e*p_Nfp*p_Nfaces*p_Nfields + n;
-	  fQM[qid+fld*p_Nfp*p_Nfaces] = qpre[qidM+fld*p_Np+e*p_Np*p_Nfields];
-	}
+	const iint id = e*p_Np*p_Nfields + fld*p_Np + n;
+	q[id] = qpre[id];
+	fQM[id] = qpre[id];
       }
     }
   }
@@ -79,7 +72,6 @@ kernel void boltzmannMRSAAB3UpdateQuad3D(const iint Nelements,
 					const dfloat saab3,
 					const iint   shift,
 					const dfloat * restrict rhsq,
-					const iint   * restrict vmapM,
 					dfloat * restrict fQM,
 					dfloat * restrict qCorr,
 					dfloat * restrict q){
@@ -89,51 +81,36 @@ kernel void boltzmannMRSAAB3UpdateQuad3D(const iint Nelements,
     
     shared dfloat s_q[p_Np*p_Nfields];
     exclusive iint e;
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
+    for(iint n=0;n<p_Np;++n;inner0){
       e  = elementIds[es];
-      if(n<p_Np){
-	const iint id = n + e*p_Np*p_Nfields;
-	const iint rid = n + e*p_Np*p_Nfields*3;
-
-        // hard-coded for 3th order
-	const iint rhsId1 = rid + ((shift+0)%3)*p_Nfields*p_Np;
-	const iint rhsId2 = rid + ((shift+1)%3)*p_Nfields*p_Np;
-	const iint rhsId3 = rid + ((shift+2)%3)*p_Nfields*p_Np;
-
-	for(iint fld=0; fld< p_Nfields; ++fld){
-	  
-	  //load q and update
-	  if(fld<4)
-	    s_q[n+fld*p_Np] = q[id+fld*p_Np] + ab1*rhsq[rhsId1+fld*p_Np]+ab2*rhsq[rhsId2+fld*p_Np]+ab3*rhsq[rhsId3+fld*p_Np];
-	  else
-	    s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*(rhsq[rhsId1+fld*p_Np] + qCorr[rhsId1+fld*p_Np]) + saab2*(rhsq[rhsId2+fld*p_Np] + qCorr[rhsId2+fld*p_Np]) + saab3*(rhsq[rhsId3+fld*p_Np] + qCorr[rhsId3+fld*p_Np]);
-	}
+      
+      const iint id = n + e*p_Np*p_Nfields;
+      const iint rid = n + e*p_Np*p_Nfields*3;
+      
+      // hard-coded for 3th order
+      const iint rhsId1 = rid + ((shift+0)%3)*p_Nfields*p_Np;
+      const iint rhsId2 = rid + ((shift+1)%3)*p_Nfields*p_Np;
+      const iint rhsId3 = rid + ((shift+2)%3)*p_Nfields*p_Np;
+      
+      for(iint fld=0; fld< p_Nfields; ++fld){
+	
+	//load q and update
+	if(fld<4)
+	  s_q[n+fld*p_Np] = q[id+fld*p_Np] + ab1*rhsq[rhsId1+fld*p_Np]+ab2*rhsq[rhsId2+fld*p_Np]+ab3*rhsq[rhsId3+fld*p_Np];
+	else
+	  s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*(rhsq[rhsId1+fld*p_Np] + qCorr[rhsId1+fld*p_Np]) + saab2*(rhsq[rhsId2+fld*p_Np] + qCorr[rhsId2+fld*p_Np]) + saab3*(rhsq[rhsId3+fld*p_Np] + qCorr[rhsId3+fld*p_Np]);
       }
     }
     // make sure all node data is loaded into shared
     barrier(localMemFence);
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
-      // Update q
-      if(n<p_Np){
+    for(iint n=0;n<p_Np;++n;inner0){
 
         const iint id = p_Nfields*e*p_Np + n;
 
         for (iint fld = 0; fld < p_Nfields; ++fld){
-	  q[id+fld*p_Np]   = s_q[n+fld*p_Np];
+	  q[id+fld*p_Np]     = s_q[n+fld*p_Np];
+	  fQM[id+fld*p_Np]   = s_q[n+fld*p_Np];
 	}
-
-      }
-      if(n<p_Nfaces*p_Nfp){
-
-        const iint iid  = e*p_Nfp*p_Nfaces + n;
-	const iint qidM = vmapM[iid] - e*p_Np;
-	const iint qid  = e*p_Nfp*p_Nfaces*p_Nfields + n;
-
-	for (iint fld = 0; fld < p_Nfields; ++fld){
-	  fQM[qid+fld*p_Nfp*p_Nfaces] = s_q[qidM+fld*p_Np];
-	}
-      }
-
     }
 
   }
@@ -151,7 +128,6 @@ kernel void boltzmannMRSAAB3TraceUpdateQuad3D(const iint Nelements,
 					     const dfloat saab3,
 					     const iint   shift,
 					     const dfloat * restrict rhsq,
-					     const iint   * restrict vmapM,
 					     dfloat * restrict fQM,
 					     dfloat * restrict qCorr,
 					     dfloat * restrict q){
@@ -161,43 +137,35 @@ kernel void boltzmannMRSAAB3TraceUpdateQuad3D(const iint Nelements,
     
     shared dfloat s_q[p_Np*p_Nfields];
     exclusive iint e;
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
+    for(iint n=0;n<p_Np;++n;inner0){
       e  = elementIds[es];
-      if(n<p_Np){
-	const iint id = n + e*p_Np*p_Nfields;
-	const iint rid = n + e*p_Np*p_Nfields*3;
 
-        // hard-coded for 3th order
-	const iint rhsId1 = rid + ((shift+0)%3)*p_Nfields*p_Np;
-	const iint rhsId2 = rid + ((shift+1)%3)*p_Nfields*p_Np;
-	const iint rhsId3 = rid + ((shift+2)%3)*p_Nfields*p_Np;
-
-	for(iint fld=0; fld< p_Nfields; ++fld){
-	  
-	  //load q and update
-	  if(fld<4)
-	    s_q[n+fld*p_Np] = q[id+fld*p_Np] + ab1*rhsq[rhsId1+fld*p_Np]+ab2*rhsq[rhsId2+fld*p_Np]+ab3*rhsq[rhsId3+fld*p_Np];
-	  else
-	    s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*(rhsq[rhsId1+fld*p_Np] + qCorr[rhsId1+fld*p_Np]) + saab2*(rhsq[rhsId2+fld*p_Np] + qCorr[rhsId2+fld*p_Np]) + saab3*(rhsq[rhsId3+fld*p_Np] + qCorr[rhsId3+fld*p_Np]);
-	}
+      const iint id = n + e*p_Np*p_Nfields;
+      const iint rid = n + e*p_Np*p_Nfields*3;
+      
+      // hard-coded for 3th order
+      const iint rhsId1 = rid + ((shift+0)%3)*p_Nfields*p_Np;
+      const iint rhsId2 = rid + ((shift+1)%3)*p_Nfields*p_Np;
+      const iint rhsId3 = rid + ((shift+2)%3)*p_Nfields*p_Np;
+      
+      for(iint fld=0; fld< p_Nfields; ++fld){
+	
+	//load q and update
+	if(fld<4)
+	  s_q[n+fld*p_Np] = q[id+fld*p_Np] + ab1*rhsq[rhsId1+fld*p_Np]+ab2*rhsq[rhsId2+fld*p_Np]+ab3*rhsq[rhsId3+fld*p_Np];
+	else
+	  s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*(rhsq[rhsId1+fld*p_Np] + qCorr[rhsId1+fld*p_Np]) + saab2*(rhsq[rhsId2+fld*p_Np] + qCorr[rhsId2+fld*p_Np]) + saab3*(rhsq[rhsId3+fld*p_Np] + qCorr[rhsId3+fld*p_Np]);
       }
     }
     // make sure all node data is loaded into shared
     barrier(localMemFence);
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
-      if(n<p_Nfaces*p_Nfp){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint id = p_Nfields*e*p_Np + n;
 
-        const iint iid  = e*p_Nfp*p_Nfaces + n;
-	const iint qidM = vmapM[iid] - e*p_Np;
-	const iint qid  = e*p_Nfp*p_Nfaces*p_Nfields + n;
-
-	for (iint fld = 0; fld < p_Nfields; ++fld){
-	  fQM[qid+fld*p_Nfp*p_Nfaces] = s_q[qidM+fld*p_Np];
-	}
+      for (iint fld = 0; fld < p_Nfields; ++fld){
+	fQM[id+fld*p_Np]   = s_q[n+fld*p_Np];
       }
-
     }
-
   }
 }
 
@@ -214,62 +182,43 @@ kernel void boltzmannMRSAAB4UpdateQuad3D(const iint Nelements,
 					 const dfloat saab4,
 					 const iint   shift,
 					 const dfloat * restrict rhsq,
-					 const iint   * restrict vmapM,
 					 dfloat * restrict fQM,
-					 dfloat * restrict qCorr,
-					 dfloat * restrict q){
+					 dfloat * restrict qCorr){
   
   // Low storage Runge Kutta time step update
   for(iint es=0;es<Nelements;++es;outer0){
     
     shared dfloat s_q[p_Np*p_Nfields];
     exclusive iint e;
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
+    for(iint n=0;n<p_Np;++n;inner0){
       e  = elementIds[es];
-      if(n<p_Np){
-	const iint id = n + e*p_Np*p_Nfields;
-	const iint rid = n + e*p_Np*p_Nfields*4;
 
-        // hard-coded for 3th order
-	const iint rhsId1 = rid + ((shift+0)%4)*p_Nfields*p_Np;
-	const iint rhsId2 = rid + ((shift+1)%4)*p_Nfields*p_Np;
-	const iint rhsId3 = rid + ((shift+2)%4)*p_Nfields*p_Np;
-	const iint rhsId4 = rid + ((shift+3)%4)*p_Nfields*p_Np;
-
-	for(iint fld=0; fld< p_Nfields; ++fld){
-	  
-	  //load q and update
-	  if(fld<4)
-	    s_q[n+fld*p_Np] = q[id+fld*p_Np] + ab1*rhsq[rhsId1+fld*p_Np]+ab2*rhsq[rhsId2+fld*p_Np]+ab3*rhsq[rhsId3+fld*p_Np] + ab4*rhsq[rhsId4+fld*p_Np];
-	  else
-	    s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*(rhsq[rhsId1+fld*p_Np] + qCorr[rhsId1+fld*p_Np]) + saab2*(rhsq[rhsId2+fld*p_Np] + qCorr[rhsId2+fld*p_Np]) + saab3*(rhsq[rhsId3+fld*p_Np] + qCorr[rhsId3+fld*p_Np]) + saab4*(rhsq[rhsId4+fld*p_Np] + qCorr[rhsId4 + fld*p_Np]);
-	}
+      const iint id = n + e*p_Np*p_Nfields;
+      const iint rid = n + e*p_Np*p_Nfields*4;
+      
+      // hard-coded for 3th order
+      const iint rhsId1 = rid + ((shift+0)%4)*p_Nfields*p_Np;
+      const iint rhsId2 = rid + ((shift+1)%4)*p_Nfields*p_Np;
+      const iint rhsId3 = rid + ((shift+2)%4)*p_Nfields*p_Np;
+      const iint rhsId4 = rid + ((shift+3)%4)*p_Nfields*p_Np;
+      
+      for(iint fld=0; fld< p_Nfields; ++fld){
+	
+	//load q and update
+	if(fld<4)
+	  s_q[n+fld*p_Np] = q[id+fld*p_Np] + ab1*rhsq[rhsId1+fld*p_Np]+ab2*rhsq[rhsId2+fld*p_Np]+ab3*rhsq[rhsId3+fld*p_Np] + ab4*rhsq[rhsId4+fld*p_Np];
+	else
+	  s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*(rhsq[rhsId1+fld*p_Np] + qCorr[rhsId1+fld*p_Np]) + saab2*(rhsq[rhsId2+fld*p_Np] + qCorr[rhsId2+fld*p_Np]) + saab3*(rhsq[rhsId3+fld*p_Np] + qCorr[rhsId3+fld*p_Np]) + saab4*(rhsq[rhsId4+fld*p_Np] + qCorr[rhsId4 + fld*p_Np]);
       }
     }
     // make sure all node data is loaded into shared
     barrier(localMemFence);
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
-      // Update q
-      if(n<p_Np){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint id = p_Nfields*e*p_Np + n;
 
-        const iint id = p_Nfields*e*p_Np + n;
-
-        for (iint fld = 0; fld < p_Nfields; ++fld){
-	  q[id+fld*p_Np]   = s_q[n+fld*p_Np];
-	}
-
+      for (iint fld = 0; fld < p_Nfields; ++fld){
+	fQM[id+fld*p_Np]     = s_q[n+fld*p_Np];
       }
-      if(n<p_Nfaces*p_Nfp){
-
-        const iint iid  = e*p_Nfp*p_Nfaces + n;
-	const iint qidM = vmapM[iid] - e*p_Np;
-	const iint qid  = e*p_Nfp*p_Nfaces*p_Nfields + n;
-
-	for (iint fld = 0; fld < p_Nfields; ++fld){
-	  fQM[qid+fld*p_Nfp*p_Nfaces] = s_q[qidM+fld*p_Np];
-	}
-      }
-
     }
 
   }
@@ -289,7 +238,6 @@ kernel void boltzmannMRSAAB4TraceUpdateQuad3D(const iint Nelements,
 					      const dfloat saab4,
 					     const iint   shift,
 					     const dfloat * restrict rhsq,
-					     const iint   * restrict vmapM,
 					     dfloat * restrict fQM,
 					     dfloat * restrict qCorr,
 					     dfloat * restrict q){
@@ -299,43 +247,52 @@ kernel void boltzmannMRSAAB4TraceUpdateQuad3D(const iint Nelements,
     
     shared dfloat s_q[p_Np*p_Nfields];
     exclusive iint e;
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
+    for(iint n=0;n<p_Np;++n;inner0){
       e  = elementIds[es];
-      if(n<p_Np){
-	const iint id = n + e*p_Np*p_Nfields;
-	const iint rid = n + e*p_Np*p_Nfields*4;
 
-        // hard-coded for 4th order
-	const iint rhsId1 = rid + ((shift+0)%4)*p_Nfields*p_Np;
-	const iint rhsId2 = rid + ((shift+1)%4)*p_Nfields*p_Np;
-	const iint rhsId3 = rid + ((shift+2)%4)*p_Nfields*p_Np;
-	const iint rhsId4 = rid + ((shift+3)%4)*p_Nfields*p_Np;
-
-	for(iint fld=0; fld< p_Nfields; ++fld){
-	  
-	  //load q and update
-	  if(fld<4)
-	    s_q[n+fld*p_Np] = q[id+fld*p_Np] + ab1*rhsq[rhsId1+fld*p_Np]+ab2*rhsq[rhsId2+fld*p_Np]+ab3*rhsq[rhsId3+fld*p_Np] + ab4*rhsq[rhsId4+fld*p_Np];
-	  else
-	    s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*(rhsq[rhsId1+fld*p_Np] + qCorr[rhsId1+fld*p_Np]) + saab2*(rhsq[rhsId2+fld*p_Np] + qCorr[rhsId2+fld*p_Np]) + saab3*(rhsq[rhsId3+fld*p_Np] + qCorr[rhsId3+fld*p_Np]) + saab4*(rhsq[rhsId4+fld*p_Np] + qCorr[rhsId4+fld*p_Np]);
-	}
+      const iint id = n + e*p_Np*p_Nfields;
+      const iint rid = n + e*p_Np*p_Nfields*4;
+      
+      // hard-coded for 4th order
+      const iint rhsId1 = rid + ((shift+0)%4)*p_Nfields*p_Np;
+      const iint rhsId2 = rid + ((shift+1)%4)*p_Nfields*p_Np;
+      const iint rhsId3 = rid + ((shift+2)%4)*p_Nfields*p_Np;
+      const iint rhsId4 = rid + ((shift+3)%4)*p_Nfields*p_Np;
+      
+      for(iint fld=0; fld< p_Nfields; ++fld){
+	
+	//load q and update
+	if(fld<4)
+	  s_q[n+fld*p_Np] = q[id+fld*p_Np] + ab1*rhsq[rhsId1+fld*p_Np]+ab2*rhsq[rhsId2+fld*p_Np]+ab3*rhsq[rhsId3+fld*p_Np] + ab4*rhsq[rhsId4+fld*p_Np];
+	else
+	  s_q[n+fld*p_Np] = expdt*q[id+fld*p_Np] + saab1*(rhsq[rhsId1+fld*p_Np] + qCorr[rhsId1+fld*p_Np]) + saab2*(rhsq[rhsId2+fld*p_Np] + qCorr[rhsId2+fld*p_Np]) + saab3*(rhsq[rhsId3+fld*p_Np] + qCorr[rhsId3+fld*p_Np]) + saab4*(rhsq[rhsId4+fld*p_Np] + qCorr[rhsId4+fld*p_Np]);
       }
     }
     // make sure all node data is loaded into shared
     barrier(localMemFence);
-    for(iint n=0;n<p_StoVmaxNodes;++n;inner0){
-      if(n<p_Nfaces*p_Nfp){
+    for(iint n=0;n<p_Np;++n;inner0){
+      const iint id = p_Nfields*e*p_Np + n;
 
-        const iint iid  = e*p_Nfp*p_Nfaces + n;
-	const iint qidM = vmapM[iid] - e*p_Np;
-	const iint qid  = e*p_Nfp*p_Nfaces*p_Nfields + n;
-
-	for (iint fld = 0; fld < p_Nfields; ++fld){
-	  fQM[qid+fld*p_Nfp*p_Nfaces] = s_q[qidM+fld*p_Np];
-	}
+      for (iint fld = 0; fld < p_Nfields; ++fld){
+	fQM[id+fld*p_Np]   = s_q[n+fld*p_Np];
       }
-
     }
+  }
+}
 
+kernel void boltzmannMRSAABTraceDeleteQuad3D(const iint Nelements,
+					      const iint * restrict elementIds,
+					      const iint * restrict q,
+					      const iint * restrict fQM)
+
+{
+  for (iint eo = 0; eo < Nelements; ++eo; outer0) {
+    for (iint n = 0; n < p_Np; ++n; inner0) {
+      const iint e = elementIds[eo];
+      for (iint fld = 0; fld < p_Nfields; ++fld) {
+	const iint id = e*p_Np*p_Nfields+fld*p_Np+n;
+	fQM[id] = q[id];
+      }
+    }
   }
 }

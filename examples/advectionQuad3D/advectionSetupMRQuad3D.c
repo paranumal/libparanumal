@@ -373,7 +373,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 				sizeof(dfloat));
   dfloat *q_zero = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
-  mesh->fQM = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfp*mesh->Nfaces*mesh->Nfields,
+  mesh->fQM = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
   mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Nrhs*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
@@ -620,7 +620,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   mesh->o_MRABlevels = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint),mesh->MRABlevel);
   mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
   mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-  mesh->o_fQM  = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*mesh->Nfields*sizeof(dfloat),mesh->fQM);
+  mesh->o_fQM  = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*mesh->Nfields*sizeof(dfloat),mesh->fQM);
   mesh->o_lev_updates = mesh->device.malloc(mesh->MRABNlevels*sizeof(iint),mesh->lev_updates);
   mesh->o_shift = mesh->device.malloc(mesh->MRABNlevels*sizeof(iint),mesh->MRABshiftIndex);
   
@@ -711,6 +711,11 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
 				       "boltzmannMRSAAB4TraceUpdateQuad3D",
 				       kernelInfo);
+
+  mesh->traceDeleteKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
+				       "boltzmannMRSAABTraceDeleteQuad3D",
+				       kernelInfo);
   
   mesh->updateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
@@ -759,5 +764,23 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 				       "boltzmannFilterVq0Quad3D",
 				       kernelInfo);
 
+  mesh->filterKernelHaloH =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+				       "boltzmannFilterHaloHQuad3D",
+				       kernelInfo);
+  mesh->filterKernelHaloV =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
+				       "boltzmannFilterHaloVQuad3D",
+				       kernelInfo);
+
+  mesh->filterKernelLevelsH =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+				       "boltzmannFilterLevelsHQuad3D",
+				       kernelInfo);
+  mesh->filterKernelLevelsV =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
+				       "boltzmannFilterLevelsVQuad3D",
+				       kernelInfo);
+  
   return solver;
 }
