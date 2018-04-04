@@ -1,6 +1,7 @@
 
 // isothermal Compressible Navier-Stokes
 kernel void cnsVolumeQuad2D(const dlong Nelements,
+			    const int advSwitch,
 			    const dfloat * restrict vgeo,
 			    const dfloat * restrict D,
 			    const dfloat * restrict viscousStresses,
@@ -54,24 +55,24 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
 
 	{
 	  // F0 = ru, G0 = rv
-	  const dfloat f = -ru;
-	  const dfloat g = -rv;
+	  const dfloat f = -advSwitch*ru;
+	  const dfloat g = -advSwitch*rv;
 	  s_F[0][j][i] = J*(rx*f + ry*g);
 	  s_G[0][j][i] = J*(sx*f + sy*g);
 	}
 
 	{
 	  // F1 = 2*mu*S11 - (ru^2+p), G1 = 2*mu*S12 - (rvu)
-	  const dfloat f = T11-ru*u-p;
-	  const dfloat g = T12-rv*u;
+	  const dfloat f = T11-advSwitch*(ru*u+p);
+	  const dfloat g = T12-advSwitch*(rv*u);
 	  s_F[1][j][i] = J*(rx*f + ry*g);
 	  s_G[1][j][i] = J*(sx*f + sy*g);
 	}
 
 	{
 	  // F2 = 2*mu*S21 - (ruv), G2 = 2*mu*S22 - (rv^2+p)
-	  const dfloat f = T12-rv*u;
-	  const dfloat g = T22-rv*v-p;
+	  const dfloat f = T12-advSwitch*(rv*u);
+	  const dfloat g = T22-advSwitch*(rv*v+p);
 	  s_F[2][j][i] = J*(rx*f + ry*g);
 	  s_G[2][j][i] = J*(sx*f + sy*g);
 	}

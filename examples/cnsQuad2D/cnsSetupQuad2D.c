@@ -102,7 +102,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh){
   mesh->dt = mesh->finalTime/mesh->NtimeSteps;
 
   // errorStep
-  mesh->errorStep = 1000;
+  mesh->errorStep = 10000;
 
   printf("dt = %g\n", mesh->dt);
 
