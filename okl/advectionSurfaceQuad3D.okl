@@ -106,7 +106,7 @@ kernel void advectionSurfaceMRQuad3D(const iint Nelements,
 				     const dfloat * restrict sgeo,
 				     const dfloat * restrict LIFTT,
 				     const iint   * restrict vmapM,
-				     const iint   * restrict mapP,
+				     const iint   * restrict vmapP,
 				     const iint time,
 				     const dfloat * restrict x,
 				     const dfloat * restrict y,
@@ -143,12 +143,12 @@ kernel void advectionSurfaceMRQuad3D(const iint Nelements,
 
 	    // indices of negative and positive traces of face node
 	    const iint id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
-	    const iint idP = mapP[id];
-	    const iint eP = idP/(p_Nfaces*p_Nq);
-	    const iint idM = vmapM[id];
-	    const iint vM = vmapM[id]%p_Np;
-	    const iint vP = idP - eP*p_Nfaces*p_Nq;
-	    
+	    const int idM = vmapM[id];
+	    const int idP = vmapP[id];
+	    const int eP = idP/p_Np;
+	    const int vM = idM%p_Np;
+	    const iint vP = idP%p_Np;
+
 	    const dfloat xn = x[idM];
 	    const dfloat yn = y[idM];
 	    const dfloat zn = z[idM];
@@ -157,15 +157,16 @@ kernel void advectionSurfaceMRQuad3D(const iint Nelements,
 	    const dfloat vn = -xn;
 	    const dfloat wn = 0;
 
-	    const iint vidM = eM*p_Nq*p_Nfaces*p_Nfields + face*p_Nq + i;
-	    const iint vidP = eP*p_Nq*p_Nfaces*p_Nfields + vP;
+	    const iint vidM = eM*p_Np*p_Nfields + vM;
+	    const iint vidP = eP*p_Np*p_Nfields + vP;
 
 	    dfloat dq[p_Nfields], fluxq[p_Nfields];
 	    
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
-		const dfloat qM = fQM[vidM+fld*p_Nfp*p_Nfaces];
-		dfloat qP = fQM[vidP+fld*p_Nfp*p_Nfaces]; 
+		const dfloat qM = fQM[vidM+fld*p_Np];
+		dfloat qP = fQM[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
+
 		dq[fld] = qP-qM;
 	      }
 
