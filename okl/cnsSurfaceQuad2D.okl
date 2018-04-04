@@ -1,5 +1,5 @@
 
-#if 1
+#if 0
 void boundaryConditions2D(const int bc,
 			  const dfloat  t, const dfloat  x, const dfloat  y, const dfloat  nx, const dfloat  ny,
 			  const dfloat ramp,
@@ -47,10 +47,12 @@ void boundaryConditions2D(const int bc,
   }
   if(bc==2){ // inflow
     *rB = p_rbar;
-    *uB = ramp*p_ubar;
+//    *uB = ramp*p_ubar;
+    const dfloat alpha = 20;
+    *uB = p_ubar*occaTanh(alpha*y)*occaTanh(alpha*(6-y));
     *vB = ramp*p_vbar;
   }
-  if(bc==5){ // slip
+  if(bc==4){ // slip
     // specify reversed normal velocity (no-penetration/slip boundary)
     *rB = rM;
     *uB = uM - (nx*uM+ny*vM)*nx;
@@ -255,7 +257,7 @@ kernel void cnsSurfaceQuad2D(const int Nelements,
 	    // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
 	    const dfloat sc = invJ*sJ;
 
-#if 0
+#if 1
 	    dfloat rflux, ruflux, rvflux;
 	    
 	    upwindRoeAveraged(nx, ny, rM, ruM, rvM, rP, ruP, rvP, &rflux, &ruflux, &rvflux);
