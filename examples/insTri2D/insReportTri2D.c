@@ -47,7 +47,8 @@ void insReportTri2D(ins_t *ins, int tstep, char *options){
     // output field files
     char fname[BUFSIZ];
     // sprintf(fname, "/u0/outputs/ins2D/foo_%04d_%04d.vtu",rank, tstep/ins->errorStep);
-    sprintf(fname, "foo_%04d_%04d.vtu",rank, tstep/ins->errorStep);
+    //sprintf(fname, "foo_%04d_%04d.vtu",rank, tstep/ins->errorStep);
+    sprintf(fname, "/scratch/foo_%04d_%04d.vtu",rank, tstep/ins->errorStep);
 
     insPlotVTUTri2D(ins, fname);
   } 
