@@ -12,8 +12,8 @@ HDRDIR  = ../../include
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-CC	= mpic++
-LD	= mpic++
+CC	= mpic++.openmpi
+LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g  -D DHOLMES='"${CURDIR}/../.."'

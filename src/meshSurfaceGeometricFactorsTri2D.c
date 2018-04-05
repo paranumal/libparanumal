@@ -63,6 +63,19 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
   }
 
   
+  dfloat href = 0.;
+  dfloat tol  = 1.;
+  for(dlong e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
+    for(int f=0;f<mesh->Nfaces;++f){
+      dlong baseM = e*mesh->Nfaces + f;
+    
+      // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)  A = L*h/2 => (J*2) = (sJ*2)*h/2 => h  = 2*J/sJ
+      dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
+    
+      href = mymax(hinvM,href);
+    }
+  }
+
   for(dlong e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
     for(int f=0;f<mesh->Nfaces;++f){
       dlong baseM = e*mesh->Nfaces + f;
@@ -80,8 +93,8 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
       dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
       dfloat hinvP = mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
       
-      mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
-      mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
+      mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(mymax(hinvM,hinvP),tol*href);
+      mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(mymax(hinvM,hinvP),tol*href);
 #if 0
       printf("e=%d f=%d (eP=%d,fP=%d) nx=%5.4f, ny=%5.4f, sJ=%5.4f, invJ=%5.4f, hinv=%f\n"
 	     ,e,f,eP,fP,

@@ -23,7 +23,7 @@ void cnsRunTri2D(cns_t *cns, char *options){
         mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, cns->o_q, cns->o_haloBuffer);
         
         // copy extracted halo to HOST 
-        mesh->o_haloBuffer.copyTo(cns->sendBuffer);      
+        cns->o_haloBuffer.copyTo(cns->sendBuffer);      
         
         // start halo exchange
         meshHaloExchangeStart(mesh, mesh->Np*cns->Nfields*sizeof(dfloat), cns->sendBuffer, cns->recvBuffer);
@@ -67,7 +67,7 @@ void cnsRunTri2D(cns_t *cns, char *options){
         mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, cns->o_viscousStresses, cns->o_haloStressesBuffer);
         
         // copy extracted halo to HOST 
-        mesh->o_haloBuffer.copyTo(cns->sendStressesBuffer);      
+        cns->o_haloStressesBuffer.copyTo(cns->sendStressesBuffer);      
         
         // start halo exchange
         meshHaloExchangeStart(mesh, mesh->Np*cns->Nstresses*sizeof(dfloat), cns->sendStressesBuffer, cns->recvStressesBuffer);
