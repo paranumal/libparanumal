@@ -32,16 +32,19 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   cns->Nstresses = 3;
   cns->mesh = mesh;
   
-  // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
-  cns->RT = 1.3;
-
-  // viscosity
-  cns->mu = 2e-5;
-
   // mean flow
   cns->rbar = 1;
   cns->ubar = 0.2;
   cns->vbar = 0;
+
+  // viscosity
+  dfloat Re = 5000;
+  cns->mu = cns->ubar/Re; // assumes reference length 1
+
+  // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
+  dfloat mach = 0.17;
+  cns->RT = cns->ubar*cns->ubar/(mach*mach);
+  
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
