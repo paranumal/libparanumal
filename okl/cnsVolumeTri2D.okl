@@ -1,0 +1,162 @@
+
+// isothermal Compressible Navier-Stokes
+kernel void cnsVolumeTri2D(const dlong Nelements,
+                            const int advSwitch,
+                            const dfloat * restrict vgeo,
+                            const dfloat * restrict DrT,
+                            const dfloat * restrict DsT,
+                            const dfloat * restrict viscousStresses,
+                            const dfloat * restrict q,
+                                  dfloat * restrict rhsq){
+  
+  for(dlong e=0;e<Nelements;++e;outer0){
+
+    shared dfloat s_F[p_Nfields][p_Np];
+    shared dfloat s_G[p_Nfields][p_Np];
+    
+    
+    for(int n=0;n<p_Np;++n;inner0){
+
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      // conserved variables
+      const dlong  qbase = e*p_Np*p_Nfields + n;
+      const dfloat r  = q[qbase+0*p_Np];
+      const dfloat ru = q[qbase+1*p_Np];
+      const dfloat rv = q[qbase+2*p_Np];
+      const dfloat p  = r*p_RT;
+
+      // primitive variables (velocity)
+      const dfloat u = ru/r, v = rv/r;
+
+      // viscous stresses (precomputed by cnsStressesVolumeTri2D)
+      const dlong id = e*p_Np*p_Nstresses + n;
+      const dfloat T11 = viscousStresses[id+0*p_Np];
+      const dfloat T12 = viscousStresses[id+1*p_Np];
+      const dfloat T22 = viscousStresses[id+2*p_Np];
+      
+      //  \hat{div} (G*[F;G])
+
+      {
+        // F0 = ru, G0 = rv
+        const dfloat f = -advSwitch*ru;
+        const dfloat g = -advSwitch*rv;
+        s_F[0][n] = drdx*f + drdy*g;
+        s_G[0][n] = dsdx*f + dsdy*g;
+      }
+
+      {
+        // F1 = 2*mu*S11 - (ru^2+p), G1 = 2*mu*S12 - (rvu)
+        const dfloat f = T11-advSwitch*(ru*u+p);
+        const dfloat g = T12-advSwitch*(rv*u);
+        s_F[1][n] = drdx*f + drdy*g;
+        s_G[1][n] = dsdx*f + dsdy*g;
+      }
+
+      {
+        // F2 = 2*mu*S21 - (ruv), G2 = 2*mu*S22 - (rv^2+p)
+        const dfloat f = T12-advSwitch*(rv*u);
+        const dfloat g = T22-advSwitch*(rv*v+p);
+        s_F[2][n] = drdx*f + drdy*g;
+        s_G[2][n] = dsdx*f + dsdy*g;
+      }
+    }
+
+    barrier(localMemFence);
+    
+    for(int n=0;n<p_Np;++n;inner0){    
+
+      dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0;
+
+      for(int i=0;i<p_Np;++i){
+        const dfloat Drni = DrT[n+i*p_Np];
+        const dfloat Dsni = DsT[n+i*p_Np];
+
+        rhsq0 += Drni*s_F[0][i]
+                +Dsni*s_G[0][i];
+        rhsq1 += Drni*s_F[1][i]
+                +Dsni*s_G[1][i];
+        rhsq2 += Drni*s_F[2][i]
+                +Dsni*s_G[2][i];
+      }
+      
+      const dlong base = e*p_Np*p_Nfields + n;
+      
+      // move to rhs
+      rhsq[base+0*p_Np] = rhsq0;
+      rhsq[base+1*p_Np] = rhsq1;
+      rhsq[base+2*p_Np] = rhsq2;
+    }
+  }
+}
+
+
+kernel void cnsStressesVolumeTri2D(const dlong Nelements,
+                                    const dfloat * restrict vgeo,
+                                    const dfloat * restrict DrT,
+                                    const dfloat * restrict DsT,
+                                    const dfloat mu,
+                                    const dfloat * restrict q,
+                                          dfloat * restrict viscousStresses){
+  
+  for(dlong e=0;e<Nelements;++e;outer0){
+
+    shared dfloat s_u[p_Np];
+    shared dfloat s_v[p_Np];
+    
+    for(int n=0;n<p_Np;++n;inner0){
+      const dlong qbase = e*p_Nfields*p_Np + n;
+      const dfloat r  = q[qbase + 0*p_Np];
+      const dfloat ru = q[qbase + 1*p_Np];
+      const dfloat rv = q[qbase + 2*p_Np];
+      
+      s_u[n] = ru/r;
+      s_v[n] = rv/r;        
+    }
+    
+    barrier(localMemFence);
+    
+    for(int n=0;n<p_Np;++n;inner0){
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      dfloat dudr = 0, duds = 0, dvdr = 0, dvds = 0;
+
+      for(int i=0;i<p_Np;++i){
+        const dfloat Drni = DrT[n+i*p_Np];
+        const dfloat Dsni = DsT[n+i*p_Np];
+        
+        const dfloat u = s_u[i];
+        const dfloat v = s_v[i];
+
+        dudr += Drni*u;
+        duds += Dsni*u;
+
+        dvdr += Drni*v;
+        dvds += Dsni*v;
+      }
+
+      const dfloat dudx = drdx*dudr + dsdx*duds;
+      const dfloat dudy = drdy*dudr + dsdy*duds;
+      const dfloat dvdx = drdx*dvdr + dsdx*dvds;
+      const dfloat dvdy = drdy*dvdr + dsdy*dvds;
+      
+      const dlong sbase = e*p_Nstresses*p_Np + n;
+
+      const dfloat S11 = p_half*(dudx+dudx) - p_third*(dudx+dvdy);
+      const dfloat S12 = p_half*(dudy+dvdx);
+      const dfloat S22 = p_half*(dvdy+dvdy) - p_third*(dudx+dvdy);
+      
+      viscousStresses[sbase + 0*p_Np] = p_two*mu*S11;
+      viscousStresses[sbase + 1*p_Np] = p_two*mu*S12;
+      viscousStresses[sbase + 2*p_Np] = p_two*mu*S22;
+    }
+  }
+}
