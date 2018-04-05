@@ -14,14 +14,21 @@ int main(int argc, char **argv){
   // int specify polynomial degree 
   int N = atoi(argv[2]);
 
+  // SET OPTIONS
+  // out  = REPORT, REPORT+VTU
+  // adv  = CUBATURE, COLLOCATION
+  char *options = strdup("out=VTU, adv=CUBATURE"); 
+
   // set up mesh stuff
   mesh2D *mesh = meshSetupQuad2D(argv[1], N);
 
+  char *boundaryHeaderFileName = strdup(DHOLMES "/examples/cnsQuad2D/cnsUniform2D.h"); // default
+
   // set up cns stuff
-  cns_t *cns = cnsSetupQuad2D(mesh);
+  cns_t *cns = cnsSetupQuad2D(mesh, options, boundaryHeaderFileName);
 
   // run
-  cnsRunQuad2D(cns);
+  cnsRunQuad2D(cns, options);
 
   // close down MPI
   MPI_Finalize();

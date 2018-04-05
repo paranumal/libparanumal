@@ -16,31 +16,37 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR)  -D DHOLMES='"${CURDIR}/../.."'
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g  -D DHOLMES='"${CURDIR}/../.."'
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags)
+LDFLAGS	= $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
 LIBS	=  $(links)
+
+INCLUDES = cnsTri2D.h
+
+DEPS = $(INCLUDES) \
+$(HDRDIR)/mesh.h \
+$(HDRDIR)/mesh2D.h
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c 
 
 # rule for .c files
-.c.o:
+.c.o: $(DEPS)
 	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths) 
 
 # list of objects to be compiled
 OBJS    = \
 cnsMainTri2D.o \
 cnsError2D.o \
-cnsUpdate2D.o \
 cnsRunTri2D.o \
 cnsSetupTri2D.o \
 cnsCavitySolution2D.o \
 cnsGaussianPulse2D.o \
 cnsPlotVTUTri2D.o \
+cnsReportTri2D.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
@@ -70,6 +76,6 @@ cnsMainTri2D:$(OBJS)
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(OBJS)
+	rm -r $(OBJS) cnsMainTri2D
 
 

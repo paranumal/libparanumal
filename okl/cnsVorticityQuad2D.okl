@@ -1,0 +1,71 @@
+kernel void cnsVorticityQuad2D(const dlong Nelements,
+                              const dfloat * restrict vgeo,
+                              const dfloat * restrict D,
+                              const dfloat * restrict q,
+                                    dfloat * restrict Vort){  
+  
+  // block partition of elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+    
+    shared dfloat s_u[p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_v[p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int es=0;es<p_NblockV;++es;inner2){   
+      for(int j=0;j<p_Nq;++j;inner1){ 
+        for(int i=0;i<p_Nq;++i;inner0){    
+          const dlong e = eo+es; // element in block
+          if(e<Nelements){ 
+            const dlong qbase = e*p_Nfields*p_Np + j*p_Nq +i;
+            const dfloat r  = q[qbase + 0*p_Np];
+            const dfloat ru = q[qbase + 1*p_Np];
+            const dfloat rv = q[qbase + 2*p_Np];
+            
+            s_u[es][j][i] = ru/r;
+            s_v[es][j][i] = rv/r;
+
+            if (es==0)
+              s_D[j][i] = D[j*p_Nq+i];
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(int es=0;es<p_NblockV;++es;inner2){   
+      for(int j=0;j<p_Nq;++j;inner1){ 
+        for(int i=0;i<p_Nq;++i;inner0){    
+          const dlong e = eo+es; // element in block
+          if(e<Nelements){ 
+            const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+            const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+            const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+            const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+            const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+
+            // compute 1D derivatives
+            dfloat ur = 0, vr = 0;
+            dfloat us = 0, vs = 0;
+
+            occaUnroll(p_Nq)
+              for(int n=0;n<p_Nq;++n) {
+                const dfloat Dr = s_D[i][n];
+                const dfloat Ds = s_D[j][n];
+                ur += Dr*s_u[es][j][n];
+                us += Ds*s_u[es][n][i];
+                vr += Dr*s_v[es][j][n];
+                vs += Ds*s_v[es][n][i];
+              }
+
+            const dfloat uy = drdy*ur + dsdy*us;
+            const dfloat vx = drdx*vr + dsdx*vs;
+
+            const dlong id = e*p_Np+j*p_Nq+i; 
+            Vort[id] = vx-uy;
+          }
+        }
+      }
+    }
+  }
+}
