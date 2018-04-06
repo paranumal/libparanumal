@@ -1,5 +1,5 @@
 #### insAnimation.py
-####   usage: pvbatch pvbatch insAnimation.py 1 ../examples/cnsTri2D/foo ./ foo
+####   usage: pvbatch pvbatch insAnimation.py 1 ../examples/cnsTri2D/foo foo
 
 
 #### import the simple module from the paraview
@@ -10,27 +10,28 @@ paraview.simple._DisableFirstRenderCameraReset()
 
 Ndatasets = int(sys.argv[1])
 datasetIn = sys.argv[2]
-directoryOut = sys.argv[3]
-imageFilesOut = sys.argv[4]
+imageFilesOut = sys.argv[3]
 
 dataset = range(0,Ndatasets)
 datasetDisplay = range(0,Ndatasets)
 for n in range(0,Ndatasets):
-	files = glob.glob(datasetIn+'_%04d_*.vtu' % n)
+	Nfiles = len(glob.glob(datasetIn+'_%04d_*.vtu' % n))
+	files = range(0,Nfiles)
+	for m in range(0,Nfiles):
+		files[m] = glob.glob(datasetIn+'_%04d_%04d.vtu' % (n,m))[0]
 
 	# create a new 'XML Unstructured Grid Reader'
 	dataset[n] = XMLUnstructuredGridReader(FileName=files)
 	dataset[n].PointArrayStatus = ['Pressure', 'Divergence', 'Vorticity', 'Velocity']
 
-	# get animation scene
-	animationScene1 = GetAnimationScene()
-
-	# update animation scene based on data timesteps
-	animationScene1.UpdateAnimationUsingDataTimeSteps()
-
 	# set active source
-	SetActiveSource(dataset[n])
+	#SetActiveSource(dataset[n])
 
+# get animation scene
+animationScene1 = GetAnimationScene()
+
+# update animation scene based on data timesteps
+animationScene1.UpdateAnimationUsingDataTimeSteps()
 
 # create a new 'Group Datasets'
 groupDatasets1 = GroupDatasets(Input=dataset)
@@ -94,25 +95,31 @@ groupDatasets1Display.RescaleTransferFunctionToDataRange(True, False)
 vorticityLUT = GetColorTransferFunction('Vorticity')
 
 # Rescale transfer function
-vorticityLUT.RescaleTransferFunction(-10.0, 10.0)
+vorticityLUT.RescaleTransferFunction(-4.0, 4.0)
 
 # get opacity transfer function/opacity map for 'Vorticity'
 vorticityPWF = GetOpacityTransferFunction('Vorticity')
 
 # Rescale transfer function
-vorticityPWF.RescaleTransferFunction(-10.0, 10.0)
+vorticityPWF.RescaleTransferFunction(-4.0, 4.0)
+
+# Hide orientation axes
+renderView1.OrientationAxesVisibility = 0
+groupDatasets1Display.SetScalarBarVisibility(renderView1, False)
 
 # current camera placement for renderView1
 renderView1.InteractionMode = '2D'
-renderView1.CameraPosition = [2.742803327974873, 0.05383143533708823, 8.0]
-renderView1.CameraFocalPoint = [2.742803327974873, 0.05383143533708823, 0.0]
-renderView1.CameraParallelScale = 2.409167061817433
+renderView1.CameraPosition = [3.8648142362157496, -0.12321016819782263, 25.0]
+renderView1.CameraFocalPoint = [3.8648142362157496, -0.12321016819782263, 0.0]
+renderView1.CameraParallelScale = 6.210760565455133
 
 # save animation
-SaveAnimation(imageFilesOut+'.avi', renderView1, ImageResolution=[1596, 800], FrameRate=15, FrameWindow=[0, len(files)])
+#SaveAnimation(imageFilesOut+'.avi', renderView1, ImageResolution=[1596, 800], FrameRate=15, FrameWindow=[0, len(files)])
+SaveAnimation(imageFilesOut+'.png', renderView1, ImageResolution=[1855, 1163],
+    FrameWindow=[0, 10])
 
 #### uncomment the following to render all views
-RenderAllViews()
+#RenderAllViews()
 # alternatively, if you want to write images, you can use SaveScreenshot(...).
 
 # save screenshot
