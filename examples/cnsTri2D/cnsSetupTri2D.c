@@ -31,7 +31,13 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   
   cns->Nstresses = 3;
   cns->mesh = mesh;
+
+  dlong Ntotal = mesh->Nelements*mesh->Np*mesh->Nfields;
+  cns->Nblock = (Ntotal+blockSize-1)/blockSize;
   
+  hlong localElements = (hlong) mesh->Nelements;
+  MPI_Allreduce(&localElements, &(cns->totalElements), 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+
   // mean flow
   cns->rbar = 1;
   cns->ubar = 0.2;
@@ -49,10 +55,25 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
-  mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
+  cns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
-  mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+  
+  if (strstr(options,"LSERK")) {
+    cns->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
+		  		sizeof(dfloat));
+  }
+
+  if (strstr(options,"DOPRI5")) {
+    int NrkStages = 7;
+    cns->rkq  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
+          sizeof(dfloat));
+    cns->rkrhsq = (dfloat*) calloc(NrkStages*mesh->Nelements*mesh->Np*mesh->Nfields,
+          sizeof(dfloat));
+    cns->rkerr  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
+          sizeof(dfloat));
+
+    cns->errtmp = (dfloat*) calloc(cns->Nblock, sizeof(dfloat));
+  }
 
   cns->viscousStresses = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*cns->Nstresses,
 					   sizeof(dfloat));
@@ -107,7 +128,7 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   }
 
   // need to change cfl and defn of dt
-  dfloat cfl = 1; // depends on the stability region size
+  dfloat cfl = 0.5; // depends on the stability region size
 
   dfloat dtAdv  = hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(cns->RT));
   dfloat dtVisc = pow(hmin, 2)/(pow(mesh->N+1,4)*cns->mu);
@@ -126,8 +147,9 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   if (rank ==0) printf("dtAdv = %lg (before cfl), dtVisc = %lg (before cfl), dt = %lg\n",
    dtAdv, dtVisc, dt);
 
+  cns->frame = 0;
   // errorStep
-  mesh->errorStep = 1000;
+  mesh->errorStep = 100;
 
   if (rank ==0) printf("dt = %g\n", mesh->dt);
 
@@ -147,10 +169,25 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
 			cns->viscousStresses);
   
   cns->o_rhsq =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->rhsq);
 
-  cns->o_resq =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
+  if (strstr(options,"LSERK")) {
+    cns->o_resq =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->resq);
+  }
+
+  if (strstr(options,"DOPRI5")) {
+    int NrkStages = 7;
+    cns->o_rkq =
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), cns->rkq);
+    cns->o_rkrhsq =
+      mesh->device.malloc(NrkStages*mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->rkrhsq);
+    cns->o_rkerr =
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), cns->rkerr);
+  
+    cns->o_errtmp = mesh->device.malloc(cns->Nblock*sizeof(dfloat), cns->errtmp);
+  }
+
   
   cns->o_Vort = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), cns->Vort);
   
@@ -216,6 +253,11 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   kernelInfo.addDefine("p_cubMaxNodes", cubMaxNodes);
 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
+
+  kernelInfo.addDefine("p_blockSize", blockSize);
+
+
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
   
   cns->volumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVolumeTri2D.okl",
@@ -257,7 +299,20 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
 				       "cnsUpdate2D",
 				       kernelInfo);
-  
+
+  cns->rkUpdateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
+               "cnsRkUpdate2D",
+               kernelInfo);
+  cns->rkStageKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
+               "cnsRkStage2D",
+               kernelInfo);
+  cns->rkErrorEstimateKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
+               "cnsErrorEstimate2D",
+               kernelInfo);
+
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
 				       "meshHaloExtract2D",
