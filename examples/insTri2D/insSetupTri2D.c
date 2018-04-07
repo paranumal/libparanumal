@@ -78,7 +78,11 @@ ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options,
   dfloat ux   = 0.0  ;
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
-  dfloat nu   = 2E-5;  // kinematic viscosity,
+
+  dfloat Re = 5000;
+  dfloat ubar = 0.2;
+
+  dfloat nu = ubar/Re;
   dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
 
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
@@ -121,7 +125,7 @@ ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options,
 
 
       #if 1 // Zero flow
-            ins->U[id] = 0.2;
+            ins->U[id] = ubar;
             ins->V[id] = 0.0;
             ins->P[id] = 0.0;
       #endif
