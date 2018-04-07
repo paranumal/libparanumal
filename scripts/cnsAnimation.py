@@ -1,5 +1,5 @@
-#### insAnimation.py
-####   usage: pvbatch pvbatch insAnimation.py 1 ../examples/cnsTri2D/foo foo
+#### cnsAnimation.py
+####   usage: pvbatch pvbatch cnsAnimation.py 1 ../examples/cnsTri2D/foo foo
 
 
 #### import the simple module from the paraview
@@ -15,17 +15,17 @@ imageFilesOut = sys.argv[3]
 dataset = range(0,Ndatasets)
 datasetDisplay = range(0,Ndatasets)
 for n in range(0,Ndatasets):
-	Nfiles = len(glob.glob(datasetIn+'_%04d_*.vtu' % n))
-	files = range(0,Nfiles)
-	for m in range(0,Nfiles):
-		files[m] = glob.glob(datasetIn+'_%04d_%04d.vtu' % (n,m))[0]
+  Nfiles = len(glob.glob(datasetIn+'_%04d_*.vtu' % n))
+  files = range(0,Nfiles)
+  for m in range(0,Nfiles):
+    files[m] = glob.glob(datasetIn+'_%04d_%04d.vtu' % (n,m))[0]
 
-	# create a new 'XML Unstructured Grid Reader'
-	dataset[n] = XMLUnstructuredGridReader(FileName=files)
-	dataset[n].PointArrayStatus = ['Pressure', 'Divergence', 'Vorticity', 'Velocity']
+  # create a new 'XML Unstructured Grid Reader'
+  dataset[n] = XMLUnstructuredGridReader(FileName=files)
+  dataset[n].PointArrayStatus = ['Density', 'Velocity', 'Vorticity']
 
-	# set active source
-	#SetActiveSource(dataset[n])
+  # set active source
+  #SetActiveSource(dataset[n])
 
 # get animation scene
 animationScene1 = GetAnimationScene()
@@ -54,20 +54,20 @@ groupDatasets1Display = Show(groupDatasets1, renderView1)
 # trace defaults for the display properties.
 groupDatasets1Display.Representation = 'Surface'
 groupDatasets1Display.ColorArrayName = [None, '']
-groupDatasets1Display.OSPRayScaleArray = 'Divergence'
+groupDatasets1Display.OSPRayScaleArray = 'Density'
 groupDatasets1Display.OSPRayScaleFunction = 'PiecewiseFunction'
-groupDatasets1Display.SelectOrientationVectors = 'Divergence'
-groupDatasets1Display.ScaleFactor = 1.8
-groupDatasets1Display.SelectScaleArray = 'Divergence'
+groupDatasets1Display.SelectOrientationVectors = 'Density'
+groupDatasets1Display.ScaleFactor = 1.0527610063552857
+groupDatasets1Display.SelectScaleArray = 'Density'
 groupDatasets1Display.GlyphType = 'Arrow'
-groupDatasets1Display.GlyphTableIndexArray = 'Divergence'
+groupDatasets1Display.GlyphTableIndexArray = 'Density'
 groupDatasets1Display.DataAxesGrid = 'GridAxesRepresentation'
 groupDatasets1Display.PolarAxes = 'PolarAxesRepresentation'
-groupDatasets1Display.ScalarOpacityUnitDistance = 0.1199621937768176
-groupDatasets1Display.GaussianRadius = 0.9
-groupDatasets1Display.SetScaleArray = ['POINTS', 'Divergence']
+groupDatasets1Display.ScalarOpacityUnitDistance = 0.09258228982369943
+groupDatasets1Display.GaussianRadius = 0.5263805031776428
+groupDatasets1Display.SetScaleArray = ['POINTS', 'Density']
 groupDatasets1Display.ScaleTransferFunction = 'PiecewiseFunction'
-groupDatasets1Display.OpacityArray = ['POINTS', 'Divergence']
+groupDatasets1Display.OpacityArray = ['POINTS', 'Density']
 groupDatasets1Display.OpacityTransferFunction = 'PiecewiseFunction'
 
 # # hide data in view
