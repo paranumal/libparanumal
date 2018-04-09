@@ -35,7 +35,7 @@ void meshMRABSetupQuad3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
   mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
   dtGmin = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*mesh->NtimeSteps);
 
-  mesh->dt = dtGmin; 
+  mesh->dt = dtGmin;
 
   //compute the level of each element
   mesh->MRABlevel = (iint *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(iint));
@@ -74,6 +74,13 @@ void meshMRABSetupQuad3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
   MPI_Allreduce(&localNlevels, &(mesh->MRABNlevels), 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);    
   mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
 
+  //hack added to fix rounding error in preceding code (suggested by NC)
+  //TODO: ntimesteps is sometimes decremented by 1 in the preceding 7 lines
+  mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
+  dtGmin = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*mesh->NtimeSteps);
+
+  mesh->dt = dtGmin;
+  
   //now we need to perform a weighted repartitioning of the mesh to optimize MRAB
   if (size>1) {
     //for the moment, just weigth the elements by the number or RHS evals per MRAB step
@@ -128,7 +135,7 @@ void meshMRABSetupQuad3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
       }
     }
   }
-
+  
   //offset index
   mesh->MRABshiftIndex = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
 

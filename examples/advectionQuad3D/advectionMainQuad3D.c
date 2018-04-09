@@ -37,6 +37,7 @@ int main(int argc, char **argv){
   advectionRunLSERKQuad3D(solver);
   advectionRunMRSAABQuad3D(solver);
 
+  
   mesh->o_q.copyTo(mesh->q);
   advectionErrorNormQuad3D(mesh,mesh->finalTime,NULL,0);
   

@@ -75,7 +75,6 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			      mesh->o_x,
 			      mesh->o_y,
 			      mesh->o_z,
-			      mesh->o_q,
 			      mesh->o_fQM,
 			      mesh->o_rhsq);
 	  mesh->lev_updates[l] = Ntick;
@@ -150,7 +149,8 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			     mesh->o_qFiltered,
 			     //mesh->o_rhsq,
 			     mesh->o_fQM,
-			     mesh->o_qCorr);
+			     mesh->o_qCorr,
+			     mesh->o_q);
 	
 	  //we *must* use 2 here (n - 1), so rk coefficients point the right direction in time
 	  mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+mesh->Nrhs-1)%mesh->Nrhs;
@@ -158,15 +158,6 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
       }
       
       occa::toc("updateKernel");
-
-      if (lev < mesh->MRABNlevels) {
-	if (mesh->MRABNhaloElements[lev]) {
-	  mesh->traceDeleteKernel(mesh->MRABNhaloElements[lev],
-				  mesh->o_MRABhaloIds[lev],
-				  mesh->o_q,
-				  mesh->o_fQM);
-	}
-      }
       
       if (levS<mesh->MRABNlevels) {
 	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + levS*mesh->Nrhs;
@@ -188,51 +179,48 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 				  mesh->o_qFiltered,
 				  //mesh->o_rhsq,
 				  mesh->o_fQM,
+				  mesh->o_qPreFilter,
 				  mesh->o_qCorr,
 				  mesh->o_q);
       	}
       }
+
       for (iint l = 0; l < levS; ++l) {
 	if (mesh->MRABNelements[l]) {
-	  mesh->filterKernelq0H(mesh->MRABNelements[l],
+	  mesh->filterKernelLevelsH(mesh->MRABNelements[l],
 				mesh->o_MRABelementIds[l],
 				mesh->o_dualProjMatrix,
 				mesh->o_cubeFaceNumber,
 				mesh->o_EToE,
-				mesh->o_q,
+				mesh->o_fQM,
 				mesh->o_qPreFilter);
 	}
-      }
-
-      if (mesh->MRABNhaloElements[levS]) {
-	mesh->filterKernelHaloH(mesh->MRABNhaloElements[levS],
-				mesh->o_MRABhaloIds[levS],
-				mesh->o_shift,
-				mesh->o_dualProjMatrix,
-				mesh->o_cubeFaceNumber,
-				mesh->o_EToE,
-				mesh->o_lev_updates,
-				mesh->o_MRABlevels,
-				l,
-				mesh->o_rhsq,
-				mesh->o_qFilter);      
       }
 	
       for (iint l = 0; l < levS; ++l) {
 	if (mesh->MRABNelements[l]) {
-	  mesh->filterKernelq0V(mesh->MRABNelements[l],
-				mesh->o_MRABelementIds[l],
-				alpha,
-				mesh->o_dualProjMatrix,
-				mesh->o_cubeFaceNumber,
-				mesh->o_EToE,
-				mesh->o_x,
-				mesh->o_y,
-				mesh->o_z,
-				mesh->o_qPreFilter,
-				mesh->o_q);
+	  mesh->filterKernelLevelsV(mesh->MRABNelements[l],
+				    mesh->o_MRABelementIds[l],
+				    alpha,
+				    mesh->o_dualProjMatrix,
+				    mesh->o_cubeFaceNumber,
+				    mesh->o_EToE,
+				    mesh->o_x,
+				    mesh->o_y,
+				    mesh->o_z,
+				    mesh->o_qPreFilter,
+				    mesh->o_fQM,
+				    mesh->o_q);
 	}
       }
+    }
+
+    /*    if (mesh->NtimeSteps - (tstep + 1) < 20) {
+      mesh->o_q.copyTo(mesh->q);
+      dfloat t = mesh->dt*(tstep+1)*pow(2,mesh->MRABNlevels-1);
+      advectionErrorNormQuad3D(mesh,t,NULL,0);
+      }*/
+      
     
     // estimate maximum error
     /*    if((((tstep+1)%mesh->errorStep)==0)){

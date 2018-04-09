@@ -36,7 +36,7 @@ void advectionErrorNormQuad3D(mesh_t *mesh, dfloat t, char *fileBase, int slice)
     }
   }
 
-  printf("%7.5lg %.2e (t,L2 norm err)\n", t, sqrt(l2));
+  printf("%7.5lg %.2e %d (t,L2 norm err,Nlevels)\n", t, sqrt(l2),mesh->MRABNlevels);
 
   if(fileBase!=NULL)
     advectionPlotVTUQuad3DV2(mesh, fileBase, slice);  
