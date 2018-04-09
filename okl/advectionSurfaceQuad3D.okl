@@ -111,8 +111,7 @@ kernel void advectionSurfaceMRQuad3D(const iint Nelements,
 				     const dfloat * restrict x,
 				     const dfloat * restrict y,
 				     const dfloat * restrict z,
-				     const dfloat * restrict q,
-				     	   dfloat * restrict fQM,
+				     const dfloat * restrict fQM,
 				           dfloat * restrict rhsq){
   
   

@@ -501,8 +501,8 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat cfl_small = 0.4; // depends on the stability region size (was .4, then 2)
-  dfloat cfl_large = cfl_small;
+  dfloat cfl_small = 0.5; // depends on the stability region size (was .4, then 2)
+  dfloat cfl_large = cfl_small;//((mesh->N)*cfl_small)/2;
   
   mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   
@@ -547,7 +547,7 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   mesh->finalTime = 5;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   
-  iint maxLevels=1;
+  iint maxLevels=100;
   meshMRABSetupQuad3D(mesh,mesh->localdt,maxLevels);
 
   dfloat dt = mesh->dt;
@@ -679,7 +679,6 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   kernelInfo.addDefine("p_fainv", (dfloat) 0.0); // turn off rotation
 
   //kernels are mostly from boltzmann code
-  
   mesh->volumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionVolumeQuad3D.okl",
 				       "advectionVolumeSAQuad3D",
@@ -712,11 +711,6 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 				       "boltzmannMRSAAB4TraceUpdateQuad3D",
 				       kernelInfo);
 
-  mesh->traceDeleteKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
-				       "boltzmannMRSAABTraceDeleteQuad3D",
-				       kernelInfo);
-  
   mesh->updateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
 				       "boltzmannMRSAAB4UpdateQuad3D",
@@ -731,48 +725,33 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
 				       "boltzmannLSERKTraceUpdateQuad3D",
 				       kernelInfo);
-  
-  mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
-				       "meshHaloExtract2D",
-				       kernelInfo);
-  mesh->filterKernelH =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+    mesh->filterKernelH =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
 				       "boltzmannFilterHQuad3D",
 				       kernelInfo);
-  mesh->filterKernelV =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
-				       "boltzmannFilterVQuad3D",
-				       kernelInfo);
-
-  mesh->filterKernelHLSERK =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
-				       "boltzmannFilterHLSERKQuad3D",
-				       kernelInfo);
-  mesh->filterKernelVLSERK =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
-				       "boltzmannFilterVLSERKQuad3D",
-				       kernelInfo);
-
-  
-  mesh->filterKernelq0H =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
-				       "boltzmannFilterHq0Quad3D",
-				       kernelInfo);
+    mesh->filterKernelV =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
+					 "boltzmannFilterVQuad3D",
+					 kernelInfo);
+    
+    mesh->filterKernelHLSERK =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+					 "boltzmannFilterHLSERKQuad3D",
+					 kernelInfo);
+    mesh->filterKernelVLSERK =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
+					 "boltzmannFilterVLSERKQuad3D",
+					 kernelInfo);
+    
+  				       
+    mesh->filterKernelq0H =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+					 "boltzmannFilterHq0Quad3D",
+					 kernelInfo);
   mesh->filterKernelq0V =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
 				       "boltzmannFilterVq0Quad3D",
 				       kernelInfo);
-
-  mesh->filterKernelHaloH =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
-				       "boltzmannFilterHaloHQuad3D",
-				       kernelInfo);
-  mesh->filterKernelHaloV =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
-				       "boltzmannFilterHaloVQuad3D",
-				       kernelInfo);
-
   mesh->filterKernelLevelsH =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
 				       "boltzmannFilterLevelsHQuad3D",
@@ -781,6 +760,5 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
 				       "boltzmannFilterLevelsVQuad3D",
 				       kernelInfo);
-  
   return solver;
 }

@@ -183,7 +183,8 @@ kernel void boltzmannMRSAAB4UpdateQuad3D(const iint Nelements,
 					 const iint   shift,
 					 const dfloat * restrict rhsq,
 					 dfloat * restrict fQM,
-					 dfloat * restrict qCorr){
+					 dfloat * restrict qCorr,
+					 dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
   for(iint es=0;es<Nelements;++es;outer0){
@@ -217,6 +218,7 @@ kernel void boltzmannMRSAAB4UpdateQuad3D(const iint Nelements,
       const iint id = p_Nfields*e*p_Np + n;
 
       for (iint fld = 0; fld < p_Nfields; ++fld){
+	q[id+fld*p_Np]     = s_q[n+fld*p_Np];
 	fQM[id+fld*p_Np]     = s_q[n+fld*p_Np];
       }
     }
@@ -239,6 +241,7 @@ kernel void boltzmannMRSAAB4TraceUpdateQuad3D(const iint Nelements,
 					     const iint   shift,
 					     const dfloat * restrict rhsq,
 					     dfloat * restrict fQM,
+					      dfloat * restrict filterCopy,
 					     dfloat * restrict qCorr,
 					     dfloat * restrict q){
   
@@ -275,23 +278,8 @@ kernel void boltzmannMRSAAB4TraceUpdateQuad3D(const iint Nelements,
 
       for (iint fld = 0; fld < p_Nfields; ++fld){
 	fQM[id+fld*p_Np]   = s_q[n+fld*p_Np];
-      }
-    }
-  }
-}
-
-kernel void boltzmannMRSAABTraceDeleteQuad3D(const iint Nelements,
-					      const iint * restrict elementIds,
-					      const iint * restrict q,
-					      const iint * restrict fQM)
-
-{
-  for (iint eo = 0; eo < Nelements; ++eo; outer0) {
-    for (iint n = 0; n < p_Np; ++n; inner0) {
-      const iint e = elementIds[eo];
-      for (iint fld = 0; fld < p_Nfields; ++fld) {
-	const iint id = e*p_Np*p_Nfields+fld*p_Np+n;
-	fQM[id] = q[id];
+	//make sure boundary data is available in second filter step
+	filterCopy[id+fld*p_Np]   = s_q[n+fld*p_Np]; 
       }
     }
   }

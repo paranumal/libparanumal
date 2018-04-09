@@ -380,8 +380,8 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
   }
 }
 
-kernel void boltzmannFilterVLevelsQuad3D(const iint Nelements,
-					 const iint elementIDs,
+kernel void boltzmannFilterLevelsVQuad3D(const iint Nelements,
+					 const iint * restrict elementIDs,
 					 const dfloat alpha,
 					 const dfloat * restrict F,
 					 const iint * restrict cubeFaceNumber,
@@ -390,8 +390,8 @@ kernel void boltzmannFilterVLevelsQuad3D(const iint Nelements,
 					 const dfloat * restrict y,
 					 const dfloat * restrict z,
 					 const dfloat * restrict qIn,
-					 dfloat * restrict Fq1,
-					 dfloat * restrict Fq2) {
+					 dfloat * restrict Fq,
+					 dfloat * restrict FqM) {
   
   for (iint e = 0; e < Nelements;++e;outer0) {
     
@@ -485,149 +485,9 @@ kernel void boltzmannFilterVLevelsQuad3D(const iint Nelements,
 	
 	for(iint fld=0;fld<p_Nfields;++fld){
 	  int id = eo*p_Nfields*p_Np+fld*p_Np + j*p_Nq + i;	    
-	  Fq1[id] = Fqij[fld];
-	  Fq2[id] = Fqij[fld];
+	  Fq[id] = Fqij[fld];
+	  FqM[id] = Fqij[fld];
 	}
-	
-      }
-    }
-  }
-}
-
-kernel void boltzmannFilterHaloVQuad3D(const iint Nelements,
-				       const iint * restrict elementIds,
-				       const iint * restrict shift,
-				       const dfloat alpha,
-				       const dfloat * restrict F,
-				       const iint * restrict EToE,
-				       const dfloat * restrict x,
-				       const dfloat * restrict y,
-				       const dfloat * restrict z,
-				       const iint * restrict lev_updates,
-				       const iint * restrict lev_numbers,
-				       const iint l,
-				       const dfloat * restrict qOrig,
-				       const dfloat * restrict qIn,
-				       dfloat * restrict Fq) {
-  
-  for (iint eo = 0; eo < Nelements;++eo;outer0) {
-    
-    shared dfloat s_F[3][p_Nq][p_Nq];
-    shared dfloat s_q[p_Nfields][3][p_Nq][p_Nq];
-    exclusive iint eC;
-    exclusive iint shiftl;
-    
-    for (iint j=0;j<p_Nq; ++j; inner1) {
-      for (iint i=0; i<p_Nq; ++i; inner0) {
-	s_F[0][j][i] = F[i+0*p_Nq+j*3*p_Nq];
-	s_F[1][j][i] = F[i+1*p_Nq+j*3*p_Nq];
-	s_F[2][j][i] = F[i+2*p_Nq+j*3*p_Nq];
-
-	shiftl = shift[l];
-	
-	eC = elementIds[eo];
-	const iint eL = EToE[eC*p_Nfaces+0];
-	const iint eR = EToE[eC*p_Nfaces+2];
-
-	occaUnroll(p_Nfields)
-	  for(iint fld=0;fld<p_Nfields;++fld){
-	    s_q[fld][1][j][i] = qIn[eC*p_Np*p_Nfields*p_nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
-
-	    const iint levL = lev_numbers[eL];
-	    const iint levR = lev_numbers[eR];
-	    const dfloat stepC = lev_updates[l];
-	    const dfloat stepL = lev_updates[levL];
-	    const dfloat stepR = lev_updates[levR];
-	    const iint shiftL = shift[levL];
-	    const iint shiftR = shift[levR];
-	    const dfloat sizeL = 1 << levL;
-	    const dfloat sizeR = 1 << levR;
-	    
-	    if (stepL != stepC) {
-	      dfloat q_sum = 0;		
-	      for (iint li=0; li<p_nrhs; ++li) {		  
-		const iint rhsNum = (shiftL + li) % p_nrhs;
-		dfloat q_prod = qIn[eL*p_Np*p_Nfields*p_nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];
-		for (iint lj = 0; lj < p_nrhs; ++lj) {
-		  if (lj != li) {
-		    q_prod *= (stepC - stepL + lj*sizeL)/(lj*sizeL - li*sizeL);
-		  }
-		}
-		q_sum += q_prod;
-	      }
-	      s_q[fld][0][j][i] = q_sum;
-	    }
-	    else {
-	      s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields*p_nrhs + shiftL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
-	    }
-	    if (stepR != stepC) {
-	      dfloat q_sum = 0;	
-	      for (iint li=0; li<p_nrhs; ++li) {
-		const iint rhsNum = (shiftR + li) % p_nrhs;
-		dfloat q_prod = qIn[eR*p_Np*p_Nfields*p_nrhs + rhsNum*p_Np*p_Nfields + fld*p_Np+ j*p_Nq + i];		  
-		for (iint lj = 0; lj < p_nrhs; ++lj) {
-		  if (lj != li) {
-		    q_prod *= (stepC - stepR + lj*sizeR)/(lj*sizeR - li*sizeR);
-		  }
-		}
-		q_sum += q_prod;
-	      }
-	      s_q[fld][2][j][i] = q_sum;
-	    }
-	    else {
-	      s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields*p_nrhs + shiftR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
-	    }
-	  }
-      }
-    }
-    barrier(localMemFence);
-
-    for (iint j=0;j<p_Nq; ++j; inner1) {
-      for (iint i=0; i<p_Nq; ++i; inner0) {
-	dfloat Fqij[p_Nfields];
-
-	occaUnroll(p_Nfields)
-	  for(iint fld=0;fld<p_Nfields;++fld){
-	    Fqij[fld] = 0;
-	  }
-	
-	occaUnroll(p_Nq)
-	  for(int n=0;n<p_Nq;++n){
-	    // fetch once, use p_Nfields times
-	    const dfloat FinL = s_F[0][j][n];
-	    const dfloat FinC = s_F[1][j][n];
-	    const dfloat FinR = s_F[2][j][n];
-	    
-	    // ratio of 1 shared per 2 flops: on P100 => 2TFLOPS max
-	    occaUnroll(p_Nfields)
-	      for(iint fld=0;fld<p_Nfields;++fld){
-		Fqij[fld] += FinL*s_q[fld][0][n][i];
-		Fqij[fld] += FinC*s_q[fld][1][n][i];
-		Fqij[fld] += FinR*s_q[fld][2][n][i];
-		}
-	  }
-	
-	for (iint fld=0; fld<p_Nfields;++fld) {
-	  int id = eC*p_Nfields*p_Np*p_nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i;		
-	  Fqij[fld] = Fqij[fld]*(1. - alpha) + alpha*qOrig[id];
-	}
-
-	// constrain momentum changes to lie on sphere
-	const dfloat xij = x[i+j*p_Nq+eC*p_Np];
-	const dfloat yij = y[i+j*p_Nq+eC*p_Np];
-	const dfloat zij = z[i+j*p_Nq+eC*p_Np];
-	
-	// remove radial component of momentum change
-	const dfloat xdotrhsq = (Fqij[1]*xij + Fqij[2]*yij + Fqij[3]*zij)*p_invRadiusSq;
-	
-	Fqij[1] -= xij*xdotrhsq; 
-	Fqij[2] -= yij*xdotrhsq;
-	Fqij[3] -= zij*xdotrhsq;
-	
-	occaUnroll(p_Nfields)
-	  for(iint fld=0;fld<p_Nfields;++fld){
-	    Fq[eC*p_Nfields*p_Np*p_nrhs + shiftl*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i] = Fqij[fld];
-	  }
       }
     }
   }
