@@ -49,7 +49,7 @@ void cnsRunTri2D(cns_t *cns, char *options){
 
       int advSwitch = 1;
       
-      if (mesh->dt<dtMIN) {
+      if (mesh->dt<dtMIN){
         printf("ERROR: Time step became too small at time step=%d\n", tstep);
         exit (-1);
       }
@@ -59,7 +59,10 @@ void cnsRunTri2D(cns_t *cns, char *options){
       }
 
       //check for final timestep
-      if (time+mesh->dt > mesh->finalTime) mesh->dt = mesh->finalTime-time;
+      if (time+mesh->dt > mesh->finalTime){
+	mesh->dt = mesh->finalTime-time;
+	done = 1;
+      }
 
       //RK step
       for(int rk=0;rk<7;++rk){
@@ -253,12 +256,16 @@ void cnsRunTri2D(cns_t *cns, char *options){
 
         if(((tstep+1)%mesh->errorStep)==0){
           cnsReportTri2D(cns, time, options);
+
         }
         tstep++;
       } else {
         dtnew = mesh->dt/(mymax(invfactor1,fac1/safe));
+	printf("dt = %g rejected, trying %g\n", mesh->dt, dtnew);
+	done = 0;
       }
       mesh->dt = dtnew;
+
     }
 
     o_rkA.free();
