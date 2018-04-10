@@ -40,6 +40,11 @@ void cnsRunTri2D(cns_t *cns, char *options){
     dfloat invfactor2 = 1.0/factor2;
     dfloat facold = 1E-4;
 
+    // hard code this for the moment
+    dfloat outputInterval = .1;
+    dfloat nextOutputTime = outputInterval;
+    dfloat outputNumber = 0;
+    
     //initial time
     dfloat time = 0.0;
     int tstep=0;
@@ -58,12 +63,23 @@ void cnsRunTri2D(cns_t *cns, char *options){
         exit (-1);
       }
 
+      // check for next output
+      int isOutput = 0;
+      if((time+mesh->dt > nextOutputTime) &&
+	 (time<nextOutputTime)){
+	isOutput = 1;
+	mesh->dt = nextOutputTime-time;
+	
+      }
+
       //check for final timestep
       if (time+mesh->dt > mesh->finalTime){
 	mesh->dt = mesh->finalTime-time;
 	done = 1;
+	isOutput = 0;
       }
 
+      
       //RK step
       for(int rk=0;rk<7;++rk){
 
@@ -254,14 +270,17 @@ void cnsRunTri2D(cns_t *cns, char *options){
 
         cns->o_q.copyFrom(cns->o_rkq);
 
-        if(((tstep+1)%mesh->errorStep)==0){
+        if(isOutput==1){
+
+	  nextOutputTime += outputInterval;
+	  
           cnsReportTri2D(cns, time, options);
 
         }
         tstep++;
       } else {
         dtnew = mesh->dt/(mymax(invfactor1,fac1/safe));
-	printf("dt = %g rejected, trying %g\n", mesh->dt, dtnew);
+	//	printf("dt = %g rejected, trying %g\n", mesh->dt, dtnew);
 	done = 0;
       }
       mesh->dt = dtnew;
