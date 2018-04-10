@@ -273,14 +273,15 @@ void cnsRunTri2D(cns_t *cns, char *options){
         if(isOutput==1){
 
 	  nextOutputTime += outputInterval;
-	  
+	  printf("\r");
           cnsReportTri2D(cns, time, options);
 
         }
+	printf("\r dt = %g accepted                      ", mesh->dt);
         tstep++;
       } else {
         dtnew = mesh->dt/(mymax(invfactor1,fac1/safe));
-	//	printf("dt = %g rejected, trying %g\n", mesh->dt, dtnew);
+	printf("\r dt = %g rejected, trying %g", mesh->dt, dtnew);
 	done = 0;
       }
       mesh->dt = dtnew;
