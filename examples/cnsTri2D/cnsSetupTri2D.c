@@ -140,16 +140,18 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
   
   //
-  mesh->finalTime = 70;
+  mesh->finalTime = 20;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
-  mesh->dt = mesh->finalTime/mesh->NtimeSteps;
+  if(strstr(options,"LSERK")) {
+    mesh->dt = mesh->finalTime/mesh->NtimeSteps;
+  }
 
   if (rank ==0) printf("dtAdv = %lg (before cfl), dtVisc = %lg (before cfl), dt = %lg\n",
    dtAdv, dtVisc, dt);
 
   cns->frame = 0;
   // errorStep
-  mesh->errorStep = 100;
+  mesh->errorStep = 1000;
 
   if (rank ==0) printf("dt = %g\n", mesh->dt);
 

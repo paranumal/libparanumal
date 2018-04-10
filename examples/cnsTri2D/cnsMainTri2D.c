@@ -18,7 +18,8 @@ int main(int argc, char **argv){
   // integrator = LSERK, DOPRI5
   // out  = REPORT, REPORT+VTU
   // adv  = CUBATURE, COLLOCATION
-  char *options = strdup("integrator = DOPRI5, out=VTU, adv=CUBATURE"); 
+  char *options = strdup("integrator = DOPRI5, out=VTU, adv=CUBATURE");
+  //    char *options = strdup("integrator = LSERK, out=VTU, adv=CUBATURE"); 
 
   // set up mesh stuff
   mesh2D *mesh = meshSetupTri2D(argv[1], N);
