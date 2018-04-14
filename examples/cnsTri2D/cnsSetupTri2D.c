@@ -140,7 +140,7 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
   
   //
-  mesh->finalTime = 20;
+  mesh->finalTime = 2;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   if(strstr(options,"LSERK")) {
     mesh->dt = mesh->finalTime/mesh->NtimeSteps;
