@@ -125,8 +125,9 @@ void meshMRABWeightedPartitionQuad3D(mesh3D *mesh, dfloat *weights,
   meshConnectBoundary(mesh);
 
   // compute physical (x,y) locations of the element nodes
-  meshSphericalNodesQuad3D(mesh);
-
+  //meshSphericalNodesQuad3D(mesh);
+  meshEquiSphericalNodesQuad3D(mesh);
+  
   // compute geometric factors
   meshGeometricFactorsQuad3D(mesh);
 

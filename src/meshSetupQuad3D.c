@@ -37,7 +37,8 @@ mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius){
 
   // compute physical (x,y,z) locations of the element nodes
   //meshPhysicalNodesQuad3D(mesh);
-  meshSphericalNodesQuad3D(mesh);
+  //meshSphericalNodesQuad3D(mesh);
+  meshEquiSphericalNodesQuad3D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup(mesh);
