@@ -133,67 +133,7 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
       ysph = R/cubRad * ylin;
       zsph = R/cubRad * zlin;
 
-      if (sqrt(xsph*xsph + ysph*ysph + zsph*zsph) - 1 > 1e-12) printf("error\n");
-      
-      /*      switch(faceNumber) {
-      case 1: //positive constant x
-	cubRad = sqrt(ylin*ylin + zlin*zlin + a*a);
-	xsph = R/cubRad * a;
-	ysph = R/cubRad * ylin;
-	zsph = R/cubRad * zlin;
-	break;
-      case 2: //positive constant y
-	cubRad = sqrt(xlin*xlin + zlin*zlin + a*a);
-	xsph = R/cubRad * xlin;
-	ysph = R/cubRad * a;
-	zsph = R/cubRad * zlin;
-	break;
-      case 3: //negative constant x
-	cubRad = sqrt(ylin*ylin + zlin*zlin + a*a);
-	xsph =  -1 * R/cubRad * a;
-	ysph =  R/cubRad * ylin;
-	zsph =  R/cubRad * zlin;
-	break;
-      case 4: //negative constant y
-	cubRad = sqrt(xlin*xlin + zlin*zlin + a*a);
-	xsph = R/cubRad * xlin;
-	ysph = -1*R/cubRad * a;
-	zsph = R/cubRad * zlin;
-	break;
-      case 5: //positive constant z
-	cubRad = sqrt(xlin*xlin + ylin*ylin + a*a);
-	xsph = R/cubRad*xlin;
-	ysph = R/cubRad*ylin;
-	zsph = R/cubRad*a;
-	break;
-      case 6: //negative constant z
-	cubRad = sqrt(xlin*xlin + ylin*ylin + a*a);
-	xsph = R/cubRad * xlin;
-	ysph = R/cubRad * ylin;
-	zsph = -1*R/cubRad * a;
-	break;
-	}*/
-      //Apply coordinate shift to vertex arrays
-      /*if (rn == mesh->r[0] && sn == mesh->s[0]) {
-	mesh->EX[id + 0] = xsph;
-	mesh->EY[id + 0] = ysph;
-	mesh->EZ[id + 0] = zsph;
-      }
-      else if (rn == mesh->r[0] && sn == mesh->s[mesh->Np - 1]) {
-	mesh->EX[id + 1] = xsph;
-	mesh->EY[id + 1] = ysph;
-	mesh->EZ[id + 1] = zsph;
-      }
-      else if (rn == mesh->r[mesh->Np - 1] && sn == mesh->s[mesh->Np - 1]) {
-	mesh->EX[id + 2] = xsph;
-	mesh->EY[id + 2] = ysph;
-	mesh->EZ[id + 2] = zsph;
-      }
-      else if (rn == mesh->r[0]&& sn == mesh->s[mesh->Np - 1]) {
-	mesh->EX[id + 3] = xsph;
-	mesh->EY[id + 3] = ysph;
-	mesh->EZ[id + 3] = zsph;
-	}*/
+      if (fabs(xsph*xsph + ysph*ysph + zsph*zsph - 1) > 1e-12) printf("error\n");
 	  
       // project to sphere
       mesh->x[cnt] = xsph; 
@@ -205,9 +145,12 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
   }
 }
 
-//untested effort to place spherical nodes on predetermined mesh
-//Does not currently handle the poles (everything else should be present)
-void meshSphericalNodesQuad3D_exp(mesh_t *mesh){
+//original mapping (r,s) -> (x,y)
+void meshEquiSphericalNodesQuad3D(mesh_t *mesh){
+
+  //constants used in conversions
+  const dfloat R = 1;
+  const dfloat a = 1./sqrt(3.);
   
   mesh->x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
@@ -233,48 +176,7 @@ void meshSphericalNodesQuad3D_exp(mesh_t *mesh){
     dfloat ze3 = mesh->EZ[id+2];
     dfloat ze4 = mesh->EZ[id+3];
 
-    //phi equatorial in the (x,y) plane, theta on the z axis
-    //TODO: make sure acos doesn't break
-    dfloat theta1 = acos(ze1/mesh->sphereRadius);
-    dfloat theta2 = acos(ze2/mesh->sphereRadius);
-    dfloat theta3 = acos(ze3/mesh->sphereRadius);
-    dfloat theta4 = acos(ze4/mesh->sphereRadius);
-    
-    dfloat phi1 = atan2(ye1,xe1);
-    dfloat phi2 = atan2(ye2,xe2);
-    dfloat phi3 = atan2(ye3,xe3);
-    dfloat phi4 = atan2(ye4,xe4);
-
-    //correct azimuthal branch on nodes that straddle -M_PI
-
-    //first go in a loop and make sure we take the short way around
-    if (abs(phi2 - phi1) > M_PI) {
-      if (phi2 > phi1) phi1 += M_PI;
-      else phi2 += M_PI;
-    }
-    if (abs(phi3 - phi2) > M_PI) {
-      if (phi3 > phi2) phi2 += M_PI;
-      else phi3 += M_PI;
-    }
-    if (abs(phi4 - phi3) > M_PI) {
-      if (phi4 > phi3) phi3 += M_PI;
-      else phi4 += M_PI;
-    }
-    if (abs(phi1 - phi4) > M_PI) {
-      if (phi1 > phi4) phi4 += M_PI;
-      else phi1 += M_PI;
-    }
-
-    //some elements might have been stranded before, so check diagonals
-    if (abs(phi1 - phi3) > M_PI) {
-      if (phi1 > phi3) phi3 += M_PI;
-      else phi1 += M_PI;
-    }
-    if (abs(phi2 - phi4) > M_PI) {
-      if (phi2 > phi4) phi4 += M_PI;
-      else phi2 += M_PI;
-    }    
-
+    int faceNumber = mesh->cubeFaceNumber[e];
     
     for(iint n=0;n<mesh->Np;++n){ /* for each node */
       
@@ -282,26 +184,93 @@ void meshSphericalNodesQuad3D_exp(mesh_t *mesh){
       dfloat rn = mesh->r[n]; 
       dfloat sn = mesh->s[n];
 
-      /* physical coordinate of interpolation node */
-      dfloat thetalin = 
-	+0.25*(1-rn)*(1-sn)*theta1
-	+0.25*(1+rn)*(1-sn)*theta2
-	+0.25*(1+rn)*(1+sn)*theta3
-	+0.25*(1-rn)*(1+sn)*theta4;
+      /* physical coordinate of node on cube */
+      dfloat xlin = 
+	+0.25*(1-rn)*(1-sn)*xe1
+	+0.25*(1+rn)*(1-sn)*xe2
+	+0.25*(1+rn)*(1+sn)*xe3
+	+0.25*(1-rn)*(1+sn)*xe4;
 
-      dfloat philin =
-	+0.25*(1-rn)*(1-sn)*phi1
-	+0.25*(1+rn)*(1-sn)*phi2
-	+0.25*(1+rn)*(1+sn)*phi3
-	+0.25*(1-rn)*(1+sn)*phi4;
+      dfloat ylin =
+	+0.25*(1-rn)*(1-sn)*ye1
+	+0.25*(1+rn)*(1-sn)*ye2
+	+0.25*(1+rn)*(1+sn)*ye3
+	+0.25*(1-rn)*(1+sn)*ye4;
+
+      dfloat zlin =
+	+0.25*(1-rn)*(1-sn)*ze1
+	+0.25*(1+rn)*(1-sn)*ze2
+	+0.25*(1+rn)*(1+sn)*ze3
+	+0.25*(1-rn)*(1+sn)*ze4;
+
+      dfloat xsph, ysph, zsph, norm;
+
+      dfloat faceScale = sqrt(3)*M_PI/4;
       
-      //      printf("xlin=%g, ylin=%g, zlin=%g\n", xlin, ylin, zlin);
-      
+      switch(faceNumber) {
+      case 1: //positive constant x
+	xsph = cos(faceScale*ylin)*cos(faceScale*zlin);
+	ysph = sin(faceScale*ylin)*cos(faceScale*zlin);
+	zsph = sin(faceScale*zlin)*cos(faceScale*ylin);
+	norm = sqrt(xsph*xsph+ysph*ysph+zsph*zsph);
+	xsph /= norm;
+	ysph /= norm;
+	zsph /= norm;
+	break;
+      case 2: //positive constant y
+	xsph = sin(faceScale*xlin)*cos(faceScale*zlin);
+	ysph = cos(faceScale*xlin)*cos(faceScale*zlin);
+	zsph = sin(faceScale*zlin)*cos(faceScale*xlin);
+	norm = sqrt(xsph*xsph+ysph*ysph+zsph*zsph);
+	xsph /= norm;
+	ysph /= norm;
+	zsph /= norm;
+	break;
+      case 3: //negative constant x
+	xsph = -1*cos(faceScale*ylin)*cos(faceScale*zlin);
+	ysph = sin(faceScale*ylin)*cos(faceScale*zlin);
+	zsph = sin(faceScale*zlin)*cos(faceScale*ylin);
+	norm = sqrt(xsph*xsph+ysph*ysph+zsph*zsph);
+	xsph /= norm;
+	ysph /= norm;
+	zsph /= norm;
+	break;
+      case 4: //negative constant y
+	xsph = sin(faceScale*xlin)*cos(faceScale*zlin);
+	ysph = -1*cos(faceScale*xlin)*cos(faceScale*zlin);
+	zsph = sin(faceScale*zlin)*cos(faceScale*xlin);
+	norm = sqrt(xsph*xsph+ysph*ysph+zsph*zsph);
+	xsph /= norm;
+	ysph /= norm;
+	zsph /= norm;
+	break;
+      case 5: //positive constant z
+	xsph = sin(faceScale*xlin)*cos(faceScale*ylin);
+	ysph = sin(faceScale*ylin)*cos(faceScale*xlin);
+	zsph = cos(faceScale*xlin)*cos(faceScale*ylin);
+	norm = sqrt(xsph*xsph+ysph*ysph+zsph*zsph);
+	xsph /= norm;
+	ysph /= norm;
+	zsph /= norm;
+	break;
+      case 6: //negative constant z
+	xsph =  sin(faceScale*xlin)*cos(faceScale*ylin);
+	ysph =  sin(faceScale*ylin)*cos(faceScale*xlin);
+	zsph = -1*cos(faceScale*xlin)*cos(faceScale*ylin);
+	norm = sqrt(xsph*xsph+ysph*ysph+zsph*zsph);
+	xsph /= norm;
+	ysph /= norm;
+	zsph /= norm;
+	break;
+      }
+
+      if (fabs(xsph*xsph + ysph*ysph + zsph*zsph - 1) > 1e-12) printf("error %d\n",mesh->cubeFaceNumber[e]);
+	  
       // project to sphere
-      mesh->x[cnt] = mesh->sphereRadius * cos(philin) * sin(thetalin); 
-      mesh->y[cnt] = mesh->sphereRadius * sin(philin) * sin(thetalin); 
-      mesh->z[cnt] = mesh->sphereRadius * cos(thetalin); 
-	
+      mesh->x[cnt] = xsph; 
+      mesh->y[cnt] = ysph; 
+      mesh->z[cnt] = zsph;
+      
       ++cnt;
     }
   }
