@@ -8,6 +8,12 @@ void cnsRunTri2D(cns_t *cns, char *options){
   mesh_t *mesh = cns->mesh;
 
   cnsReportTri2D(cns, 0, options);
+
+  occa::timer timer;
+  
+  timer.initTimer(mesh->device);
+
+  timer.tic("Run");
   
   if (strstr(options,"DOPRI5")) {
     // Dormand Prince -order (4) 5 with PID timestep control
@@ -40,16 +46,21 @@ void cnsRunTri2D(cns_t *cns, char *options){
     dfloat invfactor2 = 1.0/factor2;
     dfloat facold = 1E-4;
 
+    // hard code this for the moment
+    dfloat outputInterval = .5;
+    dfloat nextOutputTime = outputInterval;
+    dfloat outputNumber = 0;
+    
     //initial time
     dfloat time = 0.0;
-    int tstep=0;
+    int tstep=0, allStep = 0;
 
     int done =0;
     while (!done) {
 
       int advSwitch = 1;
       
-      if (mesh->dt<dtMIN) {
+      if (mesh->dt<dtMIN){
         printf("ERROR: Time step became too small at time step=%d\n", tstep);
         exit (-1);
       }
@@ -58,9 +69,23 @@ void cnsRunTri2D(cns_t *cns, char *options){
         exit (-1);
       }
 
-      //check for final timestep
-      if (time+mesh->dt > mesh->finalTime) mesh->dt = mesh->finalTime-time;
+      // check for next output
+      int isOutput = 0;
+      if((time+mesh->dt > nextOutputTime) &&
+	 (time<=nextOutputTime)){
+	isOutput = 1;
+	mesh->dt = nextOutputTime-time;
+	
+      }
 
+      //check for final timestep
+      if (time+mesh->dt > mesh->finalTime){
+	mesh->dt = mesh->finalTime-time;
+	done = 1;
+	isOutput = 0;
+      }
+
+      
       //RK step
       for(int rk=0;rk<7;++rk){
 
@@ -251,19 +276,34 @@ void cnsRunTri2D(cns_t *cns, char *options){
 
         cns->o_q.copyFrom(cns->o_rkq);
 
-        if(((tstep+1)%mesh->errorStep)==0){
+        if(isOutput==1){
+
+	  nextOutputTime += outputInterval;
+	  printf("\r");
           cnsReportTri2D(cns, time, options);
+
         }
+	//	printf("\r dt = %g accepted                      ", mesh->dt);
         tstep++;
       } else {
         dtnew = mesh->dt/(mymax(invfactor1,fac1/safe));
+	//	printf("\r dt = %g rejected, trying %g", mesh->dt, dtnew);
+	done = 0;
       }
       mesh->dt = dtnew;
+      allStep++;
+
     }
 
     o_rkA.free();
     o_rkE.free();
 
+    mesh->device.finish();
+    
+    double elapsed  = timer.toc("Run");
+
+    printf("run took %lg seconds for %d accepted steps and %d total steps\n", elapsed, tstep, allStep);
+    
   } else if (strstr(options,"LSERK")) {
     // Low storage explicit Runge Kutta (5 stages, 4th order)
     for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
@@ -412,4 +452,5 @@ void cnsRunTri2D(cns_t *cns, char *options){
       }
     }
   }
+
 }
