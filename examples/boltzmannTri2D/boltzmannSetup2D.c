@@ -14,7 +14,7 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
   // SET SOLVER PARAMETERS
   mesh->Nfields = 6;
   
-  mesh->errorStep = 100; 
+  mesh->errorStep = 500; 
 
   dfloat RE[9];  RE[0] = 100;  RE[1] = 250; RE[2] = 500; RE[3] = 750;
                  RE[4] = 1000;  RE[5] = 1250; RE[6] = 1500; RE[7] = 1750; RE[8] = 2000;
@@ -32,10 +32,10 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
 
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    mesh->Ma = 0.17; //MA[mesh->Ntscale]; // Set Mach number
-    mesh->Re = 1000.; //RE[mesh->Ntscale]; 
+    mesh->Ma = 0.2;   // 0.17; //MA[mesh->Ntscale]; // Set Mach number
+    mesh->Re = 150.;  //1000.; //RE[mesh->Ntscale]; 
     //
-    Uref = 0.2;  // Set Uref was 0.5
+    Uref = 1.0; //  0.2;
     Lref = 1.0;   // set Lref
     //
     mesh->RT      = Uref*Uref/(mesh->Ma*mesh->Ma);
@@ -45,11 +45,11 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
     mesh->tauInv  = mesh->RT/nu;
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1.0; u = Uref; v = 0.; sigma11 = 0; sigma12 = 0; sigma22 = 0;
+    rho = 1.0; u = Uref*cos(M_PI/6.0); v = Uref*sin(M_PI/6.0); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     mesh->startTime = 0.0; 
-    mesh->finalTime = 300.; // Was 200  
+    mesh->finalTime = 100.; // Was 200  
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -281,12 +281,12 @@ void boltzmannSetup2D(mesh2D *mesh, char * options){
  
   // SET PROBE DATA
   if(strstr(options, "PROBE")){
-    mesh->probeNTotal = 1; 
+    mesh->probeNTotal = 3; 
     dfloat *pX   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
     dfloat *pY   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
     // Fill probe coordinates
-     pX[0] = 8.00;  //pX[1] = 8.00;  pX[2] = 5.00; pX[3] = 5;
-     pY[0] = 0.00;  //pY[1] = 0.00;  pY[2] = 0.00; pY[3] = 5*tan(M_PI/6.);
+     pX[0] = 9.00;  pX[1] = 10.00;  pX[2] = 10.50; //pX[3] = 5;
+     pY[0] = 5.00;  pY[1] =  6.00;  pY[2] =  6.50; //pY[3] = 5*tan(M_PI/6.);
 
     meshProbeSetup2D(mesh, pX, pY);
 
@@ -705,7 +705,7 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (dfloat).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.1f); // 0.05
+  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.2f); // 0.05
 
 
 
