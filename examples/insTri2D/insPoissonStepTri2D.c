@@ -171,10 +171,14 @@ void insPoissonStepTri2D(ins_t *ins, int tstep, char *options){
 
 
   if(!ins->maxPresHistory) { //if not storing successive pressure fields just solve
-
+    
+    dfloat pr_start = MPI_Wtime();
     occaTimerTic(mesh->device,"Pr Solve");
     ins->NiterP = ellipticSolveTri2D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
     occaTimerToc(mesh->device,"Pr Solve"); 
+    dfloat pr_end = MPI_Wtime();
+
+    ins->pr_time += (pr_end-pr_start);
   
   } else {
     int izero = 0;
@@ -214,18 +218,25 @@ void insPoissonStepTri2D(ins_t *ins, int tstep, char *options){
       ellipticScaledAdd(solver, -1.f, ins->o_APIbar, 1.f, ins->o_rhsP);
 
       //solve
+      dfloat pr_start = MPI_Wtime();
       occaTimerTic(mesh->device,"Pr Solve");
       ins->NiterP = ellipticSolveTri2D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
       occaTimerToc(mesh->device,"Pr Solve"); 
+      dfloat pr_end = MPI_Wtime();
+
+      ins->pr_time += (pr_end -pr_start); 
 
       // PI += PIbar
       ellipticScaledAdd(solver, 1.f, ins->o_PIbar, 1.f, ins->o_PI);
     } else { //just solve
 
       //solve
+      dfloat pr_start = MPI_Wtime();
       occaTimerTic(mesh->device,"Pr Solve");
       ins->NiterP = ellipticSolveTri2D(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI,  ins->pSolverOptions); 
       occaTimerToc(mesh->device,"Pr Solve"); 
+      dfloat pr_end = MPI_Wtime();
+      ins->pr_time += (pr_end -pr_start); 
 
     }
 

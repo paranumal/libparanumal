@@ -1,22 +1,36 @@
 
-cd ../examples/insTet3D;
+cd ../examples/insTri2D;
 make -j; 
 
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 1  insUniform2D.h 0
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 2  insUniform2D.h 0
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 3  insUniform2D.h 0
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 4  insUniform2D.h 0
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 5  insUniform2D.h 0
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 6  insUniform2D.h 0
 
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 1  insBeltrami3D.h 0
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 2  insBeltrami3D.h 0
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 3  insBeltrami3D.h 0
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 4  insBeltrami3D.h 0
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 5  insBeltrami3D.h 0
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h1.msh 6  insBeltrami3D.h 0
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 1  insUniform2D.h 4
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 2  insUniform2D.h 4
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 3  insUniform2D.h 4
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 4  insUniform2D.h 4
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 5  insUniform2D.h 4
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 6  insUniform2D.h 4
 
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 1  insBeltrami3D.h 0
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 2  insBeltrami3D.h 0
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 3  insBeltrami3D.h 0
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 4  insBeltrami3D.h 0
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 5  insBeltrami3D.h 0
-mpiexec -np 2 -npernode 2 ./insMainTet3D ../../meshes/insBeltrami3D_h2.msh 6  insBeltrami3D.h 0
 
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 1  insUniform2D.h 8
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 2  insUniform2D.h 8
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 3  insUniform2D.h 8
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 4  insUniform2D.h 8
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 5  insUniform2D.h 8
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 6  insUniform2D.h 8
+
+
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 1  insUniform2D.h 16
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 2  insUniform2D.h 16
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 3  insUniform2D.h 16
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 4  insUniform2D.h 16
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 5  insUniform2D.h 16
+./insMainTri2D ../../meshes/insSquareCylinder2D_c0.msh 6  insUniform2D.h 16
 
 
 

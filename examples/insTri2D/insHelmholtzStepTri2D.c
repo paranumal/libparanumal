@@ -96,14 +96,25 @@ void insHelmholtzStepTri2D(ins_t *ins, int tstep, char *options){
     if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, ins->o_UH);
     if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, ins->o_VH);
   }
+  
 
+  dfloat velx_start = MPI_Wtime();
   occaTimerTic(mesh->device,"Ux-Solve");
   ins->NiterU = ellipticSolveTri2D(usolver, ins->lambda, ins->velTOL, ins->o_rhsU, ins->o_UH, ins->vSolverOptions);
   occaTimerToc(mesh->device,"Ux-Solve"); 
+  dfloat velx_end = MPI_Wtime();
 
+  ins->velx_time +=(velx_end -velx_start); 
+
+
+  dfloat vely_start = MPI_Wtime();
   occaTimerTic(mesh->device,"Uy-Solve");
   ins->NiterV = ellipticSolveTri2D(vsolver, ins->lambda, ins->velTOL, ins->o_rhsV, ins->o_VH, ins->vSolverOptions);
   occaTimerToc(mesh->device,"Uy-Solve");
+  dfloat vely_end = MPI_Wtime();
+
+  ins->vely_time +=(vely_end -vely_start);
+
 
   if (strstr(ins->vSolverOptions,"CONTINUOUS")) {
     ins->helmholtzAddBCKernel(mesh->Nelements,

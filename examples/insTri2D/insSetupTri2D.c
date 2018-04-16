@@ -79,7 +79,7 @@ ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options,
   dfloat uy   = 0.0  ;
   dfloat pr   = 0.0  ;
 
-  dfloat Re = 5000;
+  dfloat Re = 100;
   dfloat ubar = 0.2;
 
   dfloat nu = ubar/Re;
@@ -88,7 +88,7 @@ ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options,
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   // Fill up required fileds
-  ins->finalTime = 100.0;
+  ins->finalTime = 300;
   ins->nu        = nu ;
   ins->rho       = rho;
   ins->tau       = 2.0* (mesh->N+1)*(mesh->N+2)/2.0f; // was 3
@@ -165,7 +165,7 @@ ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options,
   umax = sqrt(umax);
 
  
-  dfloat cfl = 0.4; // pretty good estimate (at least for subcycling LSERK4) 
+  dfloat cfl = 0.3; // pretty good estimate (at least for subcycling LSERK4) 
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
   dfloat dt     = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
 
@@ -199,9 +199,9 @@ ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options,
   if(strstr(options,"SUBCYCLING"))
     // ins->errorStep =100*32/ins->Nsubsteps;
     //ins->errorStep =800/ins->Nsubsteps;
-    ins->errorStep = 300;
+    ins->errorStep = 200;
   else
-    ins->errorStep = 300;
+    ins->errorStep = 200;
 
   if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->errorStep, ins->dt);
 
