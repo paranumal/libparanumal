@@ -1,11 +1,12 @@
 #include "boltzmann2D.h"
 
 // complete a time step using LSERK4
-void boltzmannSAABStep2D(mesh2D *mesh, int tstep, int haloBytes,
+void boltzmannSAABStep2D(bns_t *bns, int tstep, int haloBytes,
                         dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
-
+mesh2D *mesh = bns->mesh;
+  
   int mrab_order = 2;  // Third order
 
   if(tstep==0)
@@ -14,7 +15,7 @@ void boltzmannSAABStep2D(mesh2D *mesh, int tstep, int haloBytes,
     mrab_order = 1; // second order
 
   // intermediate stage time
-  dfloat t = mesh->startTime + (tstep+1)*mesh->dt;
+  dfloat t = bns->startTime + (tstep+1)*bns->dt;
 
   // COMPUTE RAMP FUNCTION 
   dfloat ramp, drampdt;
@@ -27,11 +28,11 @@ void boltzmannSAABStep2D(mesh2D *mesh, int tstep, int haloBytes,
       mesh->device.setStream(dataStream);
     #endif
 
-    int Nentries = mesh->Np*mesh->Nfields;
+    int Nentries = mesh->Np*bns->Nfields;
     mesh->haloExtractKernel(mesh->totalHaloPairs,
                             Nentries,
                             mesh->o_haloElementList,
-                            mesh->o_q,
+                            bns->o_q,
                             mesh->o_haloBuffer);
 
     // copy extracted halo to HOST
@@ -44,77 +45,67 @@ void boltzmannSAABStep2D(mesh2D *mesh, int tstep, int haloBytes,
 
 
   if (mesh->nonPmlNelements)
-    mesh->volumeKernel(mesh->nonPmlNelements,
+    bns->volumeKernel(mesh->nonPmlNelements,
                       mesh->o_nonPmlElementIds,
                       ramp, 
                       drampdt,
-                      mesh->Nrhs,
-                      mesh->shiftIndex,
+                      bns->Nrhs,
+                      bns->shiftIndex,
                       mesh->o_vgeo,
                       mesh->o_DrT,
                       mesh->o_DsT,
-                      mesh->o_q,
-                      mesh->o_rhsq);
+                      bns->o_q,
+                      bns->o_rhsq);
 
   if (mesh->pmlNelements)
-    mesh->pmlVolumeKernel(mesh->pmlNelements,
+    bns->pmlVolumeKernel(mesh->pmlNelements,
                           mesh->o_pmlElementIds,
                           mesh->o_pmlIds,
                           ramp, 
                           drampdt,
-                          mesh->Nrhs,
-                          mesh->shiftIndex,
+                          bns->Nrhs,
+                          bns->shiftIndex,
                           mesh->o_vgeo,
-                          mesh->o_pmlSigmaX,
-                          mesh->o_pmlSigmaY,
+                          bns->o_pmlSigmaX,
+                          bns->o_pmlSigmaY,
                           mesh->o_DrT,
                           mesh->o_DsT,
-                          mesh->o_q,
-                          mesh->o_pmlqx,
-                          mesh->o_pmlqy,
-                          mesh->o_rhsq,
-                          mesh->o_pmlrhsqx,
-                          mesh->o_pmlrhsqy);
+                          bns->o_q,
+                          bns->o_pmlqx,
+                          bns->o_pmlqy,
+                          bns->o_rhsq,
+                          bns->o_pmlrhsqx,
+                          bns->o_pmlrhsqy);
 
 
   if(strstr(options, "CUBATURE")){ 
 
     if (mesh->nonPmlNelements)
-      mesh->relaxationKernel(mesh->nonPmlNelements,
+      bns->relaxationKernel(mesh->nonPmlNelements,
                             mesh->o_nonPmlElementIds,
-                            mesh->Nrhs,
-                            mesh->shiftIndex,
+                            bns->Nrhs,
+                            bns->shiftIndex,
                             mesh->o_cubInterpT,
                             mesh->o_cubProjectT,
-                            mesh->o_q,
-                            mesh->o_rhsq);  
+                            bns->o_q,
+                            bns->o_rhsq);  
 
     if (mesh->pmlNelements)  
-      mesh->pmlRelaxationKernel(mesh->pmlNelements,
+      bns->pmlRelaxationKernel(mesh->pmlNelements,
                                 mesh->o_pmlElementIds,
                                 mesh->o_pmlIds,
-                                mesh->Nrhs,
-                                mesh->shiftIndex,
+                                bns->Nrhs,
+                                bns->shiftIndex,
                                 mesh->o_cubInterpT,
                                 mesh->o_cubProjectT,
-                                mesh->o_pmlSigmaX,
-                                mesh->o_pmlSigmaY,
-                                mesh->o_q,
-                                mesh->o_pmlqx,
-                                mesh->o_pmlqy,
-                                mesh->o_rhsq,
-                                mesh->o_pmlrhsqx,
-                                mesh->o_pmlrhsqy);
-
-      // mesh->pmlRelaxationKernel(mesh->pmlNelements,
-      //                           mesh->o_pmlElementIds,
-      //                           mesh->o_pmlIds,
-      //                           mesh->Nrhs,
-      //                           mesh->shiftIndex,
-      //                           mesh->o_cubInterpT,
-      //                           mesh->o_cubProjectT,
-      //                           mesh->o_q,
-      //                           mesh->o_rhsq);
+                                bns->o_pmlSigmaX,
+                                bns->o_pmlSigmaY,
+                                bns->o_q,
+                                bns->o_pmlqx,
+                                bns->o_pmlqy,
+                                bns->o_rhsq,
+                                bns->o_pmlrhsqx,
+                                bns->o_pmlrhsqy);
   }
 
 
@@ -129,7 +120,7 @@ void boltzmannSAABStep2D(mesh2D *mesh, int tstep, int haloBytes,
 
     // start halo exchange
     meshHaloExchangeStart(mesh,
-                          mesh->Nfields*mesh->Np*sizeof(dfloat),
+                          bns->Nfields*mesh->Np*sizeof(dfloat),
                           sendBuffer,
                           recvBuffer);
 
@@ -138,8 +129,8 @@ void boltzmannSAABStep2D(mesh2D *mesh, int tstep, int haloBytes,
 
 
     // copy halo data to DEVICE
-    size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    mesh->o_q.asyncCopyFrom(recvBuffer, haloBytes, offset);
+    size_t offset = mesh->Np*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+    bns->o_q.asyncCopyFrom(recvBuffer, haloBytes, offset);
     mesh->device.finish();        
 
     #if ASYNC 
@@ -149,12 +140,12 @@ void boltzmannSAABStep2D(mesh2D *mesh, int tstep, int haloBytes,
 
 
   if (mesh->nonPmlNelements)
-    mesh->surfaceKernel(mesh->nonPmlNelements,
+    bns->surfaceKernel(mesh->nonPmlNelements,
                         mesh->o_nonPmlElementIds,
                         t,
                         ramp,
-                        mesh->Nrhs,
-                        mesh->shiftIndex,
+                        bns->Nrhs,
+                        bns->shiftIndex,
                         mesh->o_sgeo,
                         mesh->o_LIFTT,
                         mesh->o_vmapM,
@@ -162,17 +153,17 @@ void boltzmannSAABStep2D(mesh2D *mesh, int tstep, int haloBytes,
                         mesh->o_EToB,
                         mesh->o_x,
                         mesh->o_y,
-                        mesh->o_q,
-                        mesh->o_rhsq);
+                        bns->o_q,
+                        bns->o_rhsq);
 
   if (mesh->pmlNelements)
-    mesh->pmlSurfaceKernel(mesh->pmlNelements,
+    bns->pmlSurfaceKernel(mesh->pmlNelements,
                           mesh->o_pmlElementIds,
                           mesh->o_pmlIds,
                           t,
                           ramp,
-                          mesh->Nrhs,
-                          mesh->shiftIndex,
+                          bns->Nrhs,
+                          bns->shiftIndex,
                           mesh->o_sgeo,
                           mesh->o_LIFTT,
                           mesh->o_vmapM,
@@ -180,46 +171,46 @@ void boltzmannSAABStep2D(mesh2D *mesh, int tstep, int haloBytes,
                           mesh->o_EToB,
                           mesh->o_x,
                           mesh->o_y,
-                          mesh->o_q,
-                          mesh->o_rhsq,
-                          mesh->o_pmlrhsqx,
-                          mesh->o_pmlrhsqy);
+                          bns->o_q,
+                          bns->o_rhsq,
+                          bns->o_pmlrhsqx,
+                          bns->o_pmlrhsqy);
 
   const int id = mrab_order*3;
 
   if (mesh->nonPmlNelements)
-    mesh->updateKernel(mesh->nonPmlNelements,
+    bns->updateKernel(mesh->nonPmlNelements,
                       mesh->o_nonPmlElementIds,
-                      mesh->MRSAAB_C[0], //
-                      mesh->MRAB_A[id+0], //
-                      mesh->MRAB_A[id+1],
-                      mesh->MRAB_A[id+2], //
-                      mesh->MRSAAB_A[id+0], //
-                      mesh->MRSAAB_A[id+1],
-                      mesh->MRSAAB_A[id+2], 
-                      mesh->shiftIndex,
-                      mesh->o_rhsq,
-                      mesh->o_q);
+                      bns->MRSAAB_C[0], //
+                      bns->MRAB_A[id+0], //
+                      bns->MRAB_A[id+1],
+                      bns->MRAB_A[id+2], //
+                      bns->MRSAAB_A[id+0], //
+                      bns->MRSAAB_A[id+1],
+                      bns->MRSAAB_A[id+2], 
+                      bns->shiftIndex,
+                      bns->o_rhsq,
+                      bns->o_q);
 
   if (mesh->pmlNelements)
-    mesh->pmlUpdateKernel(mesh->pmlNelements,
+    bns->pmlUpdateKernel(mesh->pmlNelements,
                           mesh->o_pmlElementIds,
                           mesh->o_pmlIds,
-                          mesh->MRSAAB_C[0], //
-                          mesh->MRAB_A[id+0], //
-                          mesh->MRAB_A[id+1],
-                          mesh->MRAB_A[id+2], //
-                          mesh->MRSAAB_A[id+0], //
-                          mesh->MRSAAB_A[id+1],
-                          mesh->MRSAAB_A[id+2], 
-                          mesh->shiftIndex,
-                          mesh->o_rhsq,
-                          mesh->o_pmlrhsqx,
-                          mesh->o_pmlrhsqy,
-                          mesh->o_q,
-                          mesh->o_pmlqx,
-                          mesh->o_pmlqy);
+                          bns->MRSAAB_C[0], //
+                          bns->MRAB_A[id+0], //
+                          bns->MRAB_A[id+1],
+                          bns->MRAB_A[id+2], //
+                          bns->MRSAAB_A[id+0], //
+                          bns->MRSAAB_A[id+1],
+                          bns->MRSAAB_A[id+2], 
+                          bns->shiftIndex,
+                          bns->o_rhsq,
+                          bns->o_pmlrhsqx,
+                          bns->o_pmlrhsqy,
+                          bns->o_q,
+                          bns->o_pmlqx,
+                          bns->o_pmlqy);
 
   //rotate index
-  mesh->shiftIndex = (mesh->shiftIndex+1)%3;
+  bns->shiftIndex = (bns->shiftIndex+1)%3;
 }
