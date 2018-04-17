@@ -1,7 +1,10 @@
 #include "boltzmann2D.h"
 
 
-void boltzmannForces2D(mesh2D *mesh, dfloat time, char * options){
+void boltzmannForces2D(bns_t *bns, dfloat time, char * options){
+
+
+  mesh2D *mesh = bns->mesh; 
 	
 	// Hard coded weights i.e. sum(MM1D,1), MM1D = inv(V1)' * inv(V1)
   dfloat W[mesh->Nfp];
@@ -61,20 +64,20 @@ void boltzmannForces2D(mesh2D *mesh, dfloat time, char * options){
 						int vid  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
             int idM  = mesh->vmapM[vid];
 		    	 
-						dfloat q1  = mesh->q[mesh->Nfields*idM + 0];
-						dfloat q2  = mesh->q[mesh->Nfields*idM + 1];
-						dfloat q3  = mesh->q[mesh->Nfields*idM + 2];
-						dfloat q4  = mesh->q[mesh->Nfields*idM + 3];
-						dfloat q5  = mesh->q[mesh->Nfields*idM + 4];
-						dfloat q6  = mesh->q[mesh->Nfields*idM + 5];
+						dfloat q1  = bns->q[mesh->Nfields*idM + 0];
+						dfloat q2  = bns->q[mesh->Nfields*idM + 1];
+						dfloat q3  = bns->q[mesh->Nfields*idM + 2];
+						dfloat q4  = bns->q[mesh->Nfields*idM + 3];
+						dfloat q5  = bns->q[mesh->Nfields*idM + 4];
+						dfloat q6  = bns->q[mesh->Nfields*idM + 5];
 
 						
     	      // Compute Stress Tensor
-    	      dfloat s11 = -mesh->RT*(sqrt(2.0)*q5 - q2*q2/q1);
-    	      dfloat s12 = -mesh->RT*(          q4 - q2*q3/q1);
-    	      dfloat s22 = -mesh->RT*(sqrt(2.0)*q6 - q3*q3/q1);
+    	      dfloat s11 = -bns->RT*(sqrt(2.0)*q5 - q2*q2/q1);
+    	      dfloat s12 = -bns->RT*(          q4 - q2*q3/q1);
+    	      dfloat s22 = -bns->RT*(sqrt(2.0)*q6 - q3*q3/q1);
 
-    	      dfloat P   = q1*mesh->RT; // rho*RT 
+    	      dfloat P   = q1*bns->RT; // rho*RT 
 
             Fx  += W[n]*sJ*(P*nx  - (s11*nx + s12*ny) );
             Fy  += W[n]*sJ*(P*ny  - (s12*nx + s22*ny) );
@@ -96,7 +99,7 @@ void boltzmannForces2D(mesh2D *mesh, dfloat time, char * options){
 
   if(rank==0){
 		char fname[BUFSIZ];
-		sprintf(fname, "ForceData_%d_%.f_%05d_%03d.dat", mesh->N, mesh->Re, mesh->Nelements, mesh->Ntscale);
+		sprintf(fname, "ForceData_%d_%.f_%05d_%03d.dat", mesh->N, bns->Re, mesh->Nelements, bns->Ntscale);
 
 		FILE *fp; 
 		fp = fopen(fname, "a");  

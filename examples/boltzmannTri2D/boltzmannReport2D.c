@@ -1,16 +1,18 @@
 #include "boltzmann2D.h"
 
-void boltzmannReport2D(mesh2D *mesh, int tstep, char *options){
+void boltzmannReport2D(bns_t *bns,  int tstep, char *options){
+
+  mesh2D *mesh = bns->mesh; 
   
   dfloat t = 0.f; 
 
   if(strstr(options,"MRAB") || strstr(options, "MRSAAB"))
-   t = mesh->startTime + mesh->dt*tstep*pow(2,(mesh->MRABNlevels-1));
+   t = bns->startTime + bns->dt*tstep*pow(2,(mesh->MRABNlevels-1));
   else
-   t = mesh->startTime+ tstep*mesh->dt;
+   t = bns->startTime + tstep*bns->dt;
   
   // copy data back to host
-  mesh->o_q.copyTo(mesh->q);
+  bns->o_q.copyTo(bns->q);
 
 
   // report ramp function
@@ -26,12 +28,12 @@ void boltzmannReport2D(mesh2D *mesh, int tstep, char *options){
   
   //
   #if 1
-  boltzmannForces2D(mesh,t,options);
+  boltzmannForces2D(bns,t,options);
   #endif
 
 
   // do error stuff on host
-  boltzmannError2D(mesh, t, options);
+  boltzmannError2D(bns, t, options);
 
 
 
@@ -47,8 +49,9 @@ void boltzmannReport2D(mesh2D *mesh, int tstep, char *options){
     #endif
       
     char fname[BUFSIZ];
-    sprintf(fname, "/scratch/boltzmannInclined/foo_pml_%.0f_%04d_%04d.vtu", mesh->Re, rank, tstep/mesh->errorStep);
-    boltzmannPlotVTU2D(mesh, fname);
+    // sprintf(fname, "/scratch/boltzmannInclined/foo_pml_%.0f_%04d_%04d.vtu", bns->Re, rank, tstep/bns->errorStep);
+    sprintf(fname, "foo_pml_%.0f_%04d_%04d.vtu", bns->Re, rank, tstep/bns->errorStep);
+    boltzmannPlotVTU2D(bns, fname);
    }
 
 
@@ -57,7 +60,7 @@ void boltzmannReport2D(mesh2D *mesh, int tstep, char *options){
     char fname[BUFSIZ];
     sprintf(fname, "foo_v2_%04d.dat",rank);
     // boltzmannPlotTEC2D(mesh, fname, tstep/mesh->errorStep);
-    boltzmannPlotTEC2D(mesh, fname, t);
+    boltzmannPlotTEC2D(bns, fname, t);
   }
 
 
@@ -71,15 +74,15 @@ void boltzmannReport2D(mesh2D *mesh, int tstep, char *options){
     // output field files
     // int fld = 1;
     char fname[BUFSIZ];
-    sprintf(fname, "foo2_%04d_%04d.vtu",rank, tstep/mesh->errorStep);
-    boltzmannPlotVTU2D(mesh, fname);
+    sprintf(fname, "foo2_%04d_%04d.vtu",rank, tstep/bns->errorStep);
+    boltzmannPlotVTU2D(bns, fname);
   }
 
   
   if(strstr(options, "TEC")){ 
     char fname[BUFSIZ];
     sprintf(fname, "foo_%04d.vtu",rank);
-    boltzmannPlotTEC2D(mesh, fname, tstep/mesh->errorStep);
+    boltzmannPlotTEC2D(bns, fname, tstep/bns->errorStep);
   }    
   }
   

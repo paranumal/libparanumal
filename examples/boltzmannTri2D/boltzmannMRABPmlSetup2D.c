@@ -1,6 +1,9 @@
 #include "boltzmann2D.h"
 
-void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
+void boltzmannMRABPmlSetup2D(bns_t *bns, char *options){
+
+
+  mesh2D *mesh = bns->mesh; 
 
   //constant pml absorption coefficient
   dfloat xsigma  = 100; //mesh->Ntscale; //150.0;
@@ -122,15 +125,15 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
       //
       printf("Setting PML Coefficient for Cubature Integration\n");
       //set up damping parameter
-      mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
-      mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));  
+      bns->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
+      bns->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));  
       Nnodes = mesh->cubNp;    
     }
      else{
       printf("Setting PML Coefficients for Nodal Collocation Integration\n");
       //set up damping parameter
-      mesh->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
-      mesh->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
+      bns->pmlSigmaX = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
+      bns->pmlSigmaY = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
       Nnodes = mesh->Np; 
     }
 
@@ -223,45 +226,45 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
         if(!strstr(options,"SMOOTHPOLYNOMIAL")){
           if (type==100) { //X Pml
             if(x>xmax)
-              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
+              bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
             if(x<xmin)
-              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
+              bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
           } else if (type==200) { //Y Pml
             if(y>ymax)
-              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
+              bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
             if(y<ymin)
-              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
+              bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
           } else if (type==300) { //XY Pml
             if(x>xmax)
-              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
+              bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
             if(x<xmin)
-              mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
+              bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
             if(y>ymax)
-              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
+              bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
             if(y<ymin)
-              mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
+              bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
           }
 #if 0
 
            if (type==100) { //X Pml
             if(x>xmax)
-              mesh->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmax,order)/xmaxScale*mesh->pmlSigmaY[Nnodes*pmlId + n];
+              bns->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmax,order)/xmaxScale*bns->pmlSigmaY[Nnodes*pmlId + n];
             if(x<xmin)
-              mesh->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmin,order)/xminScale*mesh->pmlSigmaY[Nnodes*pmlId + n];
+              bns->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmin,order)/xminScale*bns->pmlSigmaY[Nnodes*pmlId + n];
           } else if (type==200) { //Y Pml
             if(y>ymax)
-              mesh->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymax,order)/ymaxScale*mesh->pmlSigmaX[Nnodes*pmlId + n];
+              bns->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymax,order)/ymaxScale*bns->pmlSigmaX[Nnodes*pmlId + n];
             if(y<ymin)
-              mesh->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymin,order)/yminScale*mesh->pmlSigmaX[Nnodes*pmlId + n];
+              bns->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymin,order)/yminScale*bns->pmlSigmaX[Nnodes*pmlId + n];
           } else if (type==300) { //XY Pml
             if(x>xmax)
-              mesh->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmax,order)/xmaxScale*mesh->pmlSigmaY[Nnodes*pmlId + n];
+              bns->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmax,order)/xmaxScale*bns->pmlSigmaY[Nnodes*pmlId + n];
             if(x<xmin)
-              mesh->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmin,order)/xminScale*mesh->pmlSigmaY[Nnodes*pmlId + n];
+              bns->pmlSigmaX[Nnodes*pmlId + n] += 0.5*pow(x-xmin,order)/xminScale*bns->pmlSigmaY[Nnodes*pmlId + n];
             if(y>ymax)
-              mesh->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymax,order)/ymaxScale*mesh->pmlSigmaX[Nnodes*pmlId + n];
+              bns->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymax,order)/ymaxScale*bns->pmlSigmaX[Nnodes*pmlId + n];
             if(y<ymin)
-              mesh->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymin,order)/yminScale*mesh->pmlSigmaX[Nnodes*pmlId + n];
+              bns->pmlSigmaY[Nnodes*pmlId + n] += 0.5*pow(y-ymin,order)/yminScale*bns->pmlSigmaX[Nnodes*pmlId + n];
           }
 
 #endif
@@ -313,16 +316,16 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
           polyy = qy<=q1 ? 0. : polyy;  polyy = qy>=q2 ? 1. : polyy;
            
           if (type==100) { //X Pml
-             mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(qx,2);
-             mesh->pmlSigmaY[Nnodes*pmlId + n] = tsigma*polyx;
+             bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(qx,2);
+             bns->pmlSigmaY[Nnodes*pmlId + n] = tsigma*polyx;
           } else if (type==200) { //Y Pml
-             mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(qy,2);
-             mesh->pmlSigmaX[Nnodes*pmlId + n] = tsigma*polyy;
+             bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(qy,2);
+             bns->pmlSigmaX[Nnodes*pmlId + n] = tsigma*polyy;
           } else if (type==300) { //XY Pml
             if(x>xmax || x<xmin)
-             mesh->pmlSigmaX[Nnodes*pmlId + n] = tsigma*polyx;;
+             bns->pmlSigmaX[Nnodes*pmlId + n] = tsigma*polyx;;
             if(y>ymax || y<ymin)
-             mesh->pmlSigmaY[Nnodes*pmlId + n] = tsigma*polyy;
+             bns->pmlSigmaY[Nnodes*pmlId + n] = tsigma*polyy;
           }
 
           //printf("%.5e \n", qx);
@@ -367,12 +370,12 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
         //   polyy = qy<=q1 ? 0. : polyy;  polyy = qy>=q2 ? 1. : polyy;
            
         //   if (type==100) { //X Pml
-        //      mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+        //      bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
         //   } else if (type==200) { //Y Pml
-        //      mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+        //      bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
         //   } else if (type==300) { //XY Pml
         //     if(x>xmax || x<xmin)
-        //      mesh->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+        //      bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
         //     if(y>ymax || y<ymin)
         //      mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
         //   }
@@ -386,23 +389,23 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
     printf("PML: found %d elements inside absorbing layers and %d elements outside\n",
     mesh->pmlNelements, mesh->Nelements-mesh->pmlNelements);
 
-    mesh->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
-    mesh->pmlrhsqx = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+    bns->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->pmlrhsqx = (dfloat*) calloc(bns->Nrhs*mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
 
-    mesh->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
-    mesh->pmlrhsqy = (dfloat*) calloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
+    bns->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->pmlrhsqy = (dfloat*) calloc(bns->Nrhs*mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
 
 
     // set up PML on DEVICE    
-    mesh->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqx);
-    mesh->o_pmlrhsqx  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlrhsqx);
+    bns->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlqx);
+    bns->o_pmlrhsqx  = mesh->device.malloc(bns->Nrhs*mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlrhsqx);
 
-    mesh->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlqy);
-    mesh->o_pmlrhsqy  = mesh->device.malloc(mesh->Nrhs*mesh->pmlNelements*mesh->Np*mesh->Nfields*sizeof(dfloat), mesh->pmlrhsqy);
+    bns->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlqy);
+    bns->o_pmlrhsqy  = mesh->device.malloc(bns->Nrhs*mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlrhsqy);
 
 
-     mesh->o_pmlSigmaX     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),mesh->pmlSigmaX);
-     mesh->o_pmlSigmaY     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),mesh->pmlSigmaY);
+    bns->o_pmlSigmaX     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),bns->pmlSigmaX);
+    bns->o_pmlSigmaY     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),bns->pmlSigmaY);
 
 
 
@@ -425,8 +428,11 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
       }
     }
 
-    free(pmlIds);
-  
+    free(pmlIds);  
+}
+}
+
+
 
 
 
@@ -445,8 +451,8 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
 //            q1  += prj*mesh->pmlSigmaX[mesh->cubNp*pmlId + l];
 //            q2  += prj*mesh->pmlSigmaY[mesh->cubNp*pmlId + l];
 //         }
-//     mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0] = q1;
-//     mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1] = q2;
+//     mesh->q[bns->Nfields*(n + e*mesh->Np) + 0] = q1;
+//     mesh->q[bns->Nfields*(n + e*mesh->Np) + 1] = q2;
 //   }
 // }
 // }
@@ -457,8 +463,3 @@ void boltzmannMRABPmlSetup2D(mesh2D *mesh, char *options){
 //  char fname[BUFSIZ];
 //  sprintf(fname, "pmlProfile11.vtu");
 // boltzmannPlotVTU2D(mesh, fname);
-
-
-
-}
-}

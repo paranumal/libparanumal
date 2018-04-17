@@ -230,7 +230,16 @@ typedef struct {
   dfloat LSIMEX_B[4], LSIMEX_C[4], LSIMEX_ABi[4], LSIMEX_ABe[4], LSIMEX_Ad[4];
   dfloat *MRSAAB_A, *MRSAAB_B, *MRSAAB_C, *MRAB_A, *MRAB_B, *MRAB_C;
   dfloat RK_A[5][5], RK_B[5], RK_C[5], SARK_A[5][5], SARK_B[5], SARK_C[5]; 
-  int Nimex, Nrhs;
+  int Nimex, Nrhs; // deprecated
+  
+  dfloat *rkq, *rkrhsq, *rkerr; // deprecated, AK. 
+  dfloat *errtmp;
+  dfloat rkC[7], rkA[7*7], rkE[7];
+
+  occa::memory o_rkq, o_rkrhsq, o_rkerr; // deprecated, AK.
+  occa::memory o_errtmp;
+  occa::memory o_rkA, o_rkE;
+
   // ploting info for generating field vtu
   int    plotNverts;    // number of vertices for each plot element
   int    plotNp;        // number of plot nodes per element
@@ -253,7 +262,7 @@ typedef struct {
   occa::memory o_SEMFEMAnterp;
 
   // Boltzmann specific stuff
-  dfloat RT, sqrtRT, tauInv, Ma, Re; // need to remove this to ceedling
+  dfloat RT, sqrtRT, tauInv, Ma, Re; // Deprecated: AK
 
   // pml stuff
   int    pmlNfields;
@@ -285,7 +294,7 @@ typedef struct {
 
 
 
-  dfloat *invTau;
+  dfloat *invTau; // deprecated in Boltzmann
 
 
   // AK: Remove the below definition after fixing MRAB, only single rate uses 
@@ -402,7 +411,8 @@ typedef struct {
   occa::memory o_pmlIds;
 
   occa::memory o_pmlElementList;
-
+  
+  // Deprecated in Boltzmann
   occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
   occa::memory o_pmlBetaX, o_pmlBetaY; // deprecated
   occa::memory o_pmlq, o_pmlrhsq, o_pmlresq ; 
@@ -425,7 +435,7 @@ typedef struct {
   occa::memory o_rhspmlqx2, o_rhspmlqx3; // deprecated
   occa::memory o_rhspmlqy2, o_rhspmlqy3; // deprecated
   occa::memory o_rhspmlNT2, o_rhspmlNT3; // deprecated
-  // LS Imex vars
+  // Deprecated
   occa::memory o_qY,   o_qZ,   o_qS;
   occa::memory o_qYx,  o_qZx,  o_qSx;
   occa::memory o_qYy,  o_qZy,  o_qSy;

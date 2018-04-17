@@ -3,10 +3,12 @@
 #include <stdio.h>
 #include "mpi.h"
 
-#include "mesh2D.h"
+#include "boltzmann2D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
+void boltzmannPlotTEC2D(bns_t *bns, char *fileName, dfloat time){
+
+  mesh2D *mesh = bns->mesh; 
 
     
   int rank;
@@ -20,7 +22,7 @@ void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
   fprintf(fp,"#SOLUTION ORDER        =%d\n",mesh->N);
   fprintf(fp,"#POSTPROCESS NODES     =%d\n",mesh->plotNp);
   fprintf(fp,"#POSTPROCESS Elements  =%d\n",mesh->plotNelements);
-  fprintf(fp,"#SPEED of SOUND        =%f\n",mesh->sqrtRT);
+  fprintf(fp,"#SPEED of SOUND        =%f\n",bns->sqrtRT);
 
   fprintf(fp,"VARIABLES=x,y,u,v,p,w,div\n");
 
@@ -41,10 +43,10 @@ void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
     for(int n=0;n<mesh->Np;++n){
       dfloat dUdr = 0, dUds = 0, dVdr = 0, dVds = 0;
       for(int m=0;m<mesh->Np;++m){
-        int base = mesh->Nfields*(m + e*mesh->Np);
-        dfloat rho = mesh->q[base + 0];
-        dfloat u = mesh->q[1 + base]*mesh->sqrtRT/rho;
-        dfloat v = mesh->q[2 + base]*mesh->sqrtRT/rho;
+        int base = bns->Nfields*(m + e*mesh->Np);
+        dfloat rho = bns->q[base + 0];
+        dfloat u = bns->q[1 + base]*bns->sqrtRT/rho;
+        dfloat v = bns->q[2 + base]*bns->sqrtRT/rho;
         dUdr += mesh->Dr[n*mesh->Np+m]*u;
         dUds += mesh->Ds[n*mesh->Np+m]*u;
         dVdr += mesh->Dr[n*mesh->Np+m]*v;
@@ -74,11 +76,11 @@ void boltzmannPlotTEC2D(mesh2D *mesh, char *fileName, dfloat time){
         plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
         plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
         //
-        int base = mesh->Nfields*(m + e*mesh->Np);
-        dfloat rho = mesh->q[base];
-        dfloat pm = mesh->sqrtRT*mesh->sqrtRT*rho; 
-        dfloat um = mesh->q[1 + base]*mesh->sqrtRT/rho;
-        dfloat vm = mesh->q[2 + base]*mesh->sqrtRT/rho;
+        int base = bns->Nfields*(m + e*mesh->Np);
+        dfloat rho = bns->q[base];
+        dfloat pm = bns->sqrtRT*bns->sqrtRT*rho; 
+        dfloat um = bns->q[1 + base]*bns->sqrtRT/rho;
+        dfloat vm = bns->q[2 + base]*bns->sqrtRT/rho;
         //
         dfloat wz = curlU[m];
         dfloat du = divU[m];
