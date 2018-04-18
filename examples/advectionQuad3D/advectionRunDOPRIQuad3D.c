@@ -9,7 +9,7 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
-  dfloat * test_q = (dfloat *) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  dfloat * test_q = (dfloat *) calloc(mesh->Nfields*mesh->Nelements*mesh->Np,sizeof(dfloat));
     
   //kernel arguments
   dfloat alpha = 1./mesh->N;
@@ -38,7 +38,6 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
 			mesh->o_qPreFilter,
 			mesh->o_qpre);
   
-  int outputStep = 0;
   int lastStep = 0;
   
   while (1) {
@@ -50,6 +49,8 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
       printf("ERROR: Solution became unstable at time step=%d\n", solver->tstep);
       exit (-1);
     }
+
+    int outputStep = 0;
 
     // check for next output
     if((solver->time+mesh->dt > solver->nextOutputTime) && (solver->time<=solver->nextOutputTime)) {
@@ -73,6 +74,7 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
 			  mesh->o_q,
 			  mesh->o_resq,
 			  mesh->o_rkq);
+
       // compute volume contribution to DG advection RHS
       mesh->volumeKernel(mesh->Nelements,
 			 mesh->o_vgeo,
@@ -80,9 +82,9 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
 			 mesh->o_x,
 			 mesh->o_y,
 			 mesh->o_z,
-			 mesh->o_q,
+			 mesh->o_rkq,
 			 mesh->o_prerhsq);
-      
+
       mesh->surfaceKernel(mesh->Nelements,
 			  mesh->o_sgeo,
 			  mesh->o_LIFTT,
@@ -92,14 +94,14 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
 			  mesh->o_x,
 			  mesh->o_y,
 			  mesh->o_z,
-			  mesh->o_q,
+			  mesh->o_rkq,
 			  mesh->o_prerhsq);
-      
+
       mesh->filterKernelq0H(mesh->Nelements,
 			    mesh->o_dualProjMatrix,
 			    mesh->o_cubeFaceNumber,
 			    mesh->o_EToE,
-			    mesh->o_q,
+			    mesh->o_rkq,
 			    mesh->o_qPreFilter);
       
       mesh->filterKernelq0V(mesh->Nelements,
@@ -111,10 +113,10 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
 			    mesh->o_y,
 			    mesh->o_z,
 			    mesh->o_qPreFilter,
-			    mesh->o_q);
+			    mesh->o_rkq);
       
       mesh->volumeCorrectionKernel(mesh->Nelements,
-				   mesh->o_q,
+				   mesh->o_rkq,
 				   mesh->o_qPreCorr);
 
       mesh->updateKernel(mesh->Nelements, 
@@ -128,6 +130,7 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
                           mesh->o_resq, 
                           mesh->o_rkq,
                           mesh->o_rkerr);
+
     }
     mesh->rkErrorEstimateKernel(solver->Ntotal, 
 			       solver->absTol,
@@ -136,6 +139,7 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
 			       mesh->o_rkq,
 			       mesh->o_rkerr,
 			       mesh->o_errtmp);
+    
     mesh->o_errtmp.copyTo(solver->errtmp);
     dfloat localerr = 0;
     dfloat err = 0;
@@ -144,10 +148,9 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
     }
     
     err = sqrt(localerr/mesh->Nelements);
-
     dfloat fac1 = pow(err,solver->exp1);
     dfloat fac = fac1/pow(solver->oldFactor,solver->beta);
-
+    
     fac = mymax(solver->invfactor2, mymin(solver->invfactor1,fac/solver->safety));
     dfloat dtnew = mesh->dt/fac;
 
@@ -157,7 +160,7 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
       solver->oldFactor = mymax(err,1E-4);
 
       mesh->o_q.copyFrom(mesh->o_rkq);
-
+      //printf("dt = %g accepted\n", mesh->dt);
       if(outputStep){
 	outputStep = 0;
 	solver->nextOutputTime += solver->outputInterval;
@@ -175,6 +178,8 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
     }
     else {
       dtnew = mesh->dt/(mymax(solver->invfactor1,fac1/solver->safety));
+      //printf("dtnew factors = %lf %lf %lf\n",solver->invfactor1,fac1,solver->safety);
+      //printf("dt = %g rejected, trying %g\n", mesh->dt, dtnew);
     }
     mesh->dt = dtnew;
     solver->allStep++;

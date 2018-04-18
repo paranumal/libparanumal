@@ -63,7 +63,6 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
   do{
     fgets(buf, BUFSIZ, fp);
   }while(!strstr(buf, "$Elements"));
-
   /* read number of nodes in mesh */
   fgets(buf, BUFSIZ, fp);
   sscanf(buf, "%d", &(mesh->Nelements));
