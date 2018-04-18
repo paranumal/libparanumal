@@ -614,7 +614,7 @@ solver_t *advectionSetupQuad3D(mesh_t *mesh,char *mode){
     
     //dt = mymin(dt, cfl/mesh->tauInv);
     
-    mesh->finalTime = 5;
+    mesh->finalTime = 20;
     mesh->NtimeSteps = mesh->finalTime/mesh->dt;
     
     iint maxLevels=100;
@@ -683,8 +683,8 @@ solver_t *advectionSetupQuad3D(mesh_t *mesh,char *mode){
     solver->errtmp = (dfloat *) calloc(solver->Nblock,sizeof(dfloat));
       
     solver->dtmin = 1E-7; 
-    solver->absTol = 1E-5;
-    solver->relTol = 1E-3;
+    solver->absTol = 1E-12;//1E-5;
+    solver->relTol = 1E-10;//1E-3;
     solver->safety = 0.9;
 
     //error control parameters
@@ -698,7 +698,7 @@ solver_t *advectionSetupQuad3D(mesh_t *mesh,char *mode){
     solver->oldFactor = 1E-4;
 
     // hard code this for the moment
-    solver->outputInterval = .5;
+    solver->outputInterval = 2.5;
     solver->nextOutputTime = solver->outputInterval;
     solver->outputNumber = 0;
     
@@ -789,7 +789,7 @@ solver_t *advectionSetupQuad3D(mesh_t *mesh,char *mode){
     mesh->o_rkb = mesh->device.malloc(mesh->Nrk*sizeof(dfloat), solver->rkb);
 
     mesh->o_rkq =
-      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat),q_zero);
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat),mesh->q);
     mesh->o_rkerr =
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat),q_zero);
   
