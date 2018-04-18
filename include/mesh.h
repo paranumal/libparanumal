@@ -419,7 +419,12 @@ typedef struct {
   occa::memory o_qPreCorr;
   occa::memory o_qpre;
   occa::memory o_qFiltered;
-
+  occa::memory o_rkq;
+  occa::memory o_rkerr;
+  occa::memory o_errtmp;
+  occa::memory o_rka;
+  occa::memory o_rkb;
+  
   iint * lev_updates;
 
   // AK: Remove this stuff, rename single rate files
@@ -473,6 +478,9 @@ typedef struct {
   occa::kernel haloExtractKernel;
   occa::kernel partialSurfaceKernel;
 
+  occa::kernel rkStageKernel;
+  occa::kernel rkErrorEstimateKernel;
+  
   occa::kernel gatherKernel;
   occa::kernel scatterKernel;
   occa::kernel gatherScatterKernel;

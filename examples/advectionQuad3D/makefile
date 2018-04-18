@@ -14,7 +14,7 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -D DHOLMES='"${CURDIR}/../.."' -O3
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -D DHOLMES='"${CURDIR}/../.."' -O3 -g
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -O3
@@ -33,7 +33,8 @@ LIBS	=  $(links)
 OBJS    = \
 advectionMainQuad3D.o \
 advectionRunMRSAABQuad3D.o \
-advectionSetupMRQuad3D.o \
+advectionRunDOPRIQuad3D.o \
+advectionSetupQuad3D.o \
 advectionPlotVTUQuad3D.o \
 advectionPlotVTUQuad3DV2.o \
 advectionOccaSetupQuad3D.o \

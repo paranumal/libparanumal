@@ -9,14 +9,14 @@
 #define TYID 7
 #define TZID 8
 
-kernel void boltzmannVolumeQuad3D(const int Nelements,
-				  const dfloat * restrict vgeo,
-				  const dfloat * restrict D,
-				  const dfloat * restrict x,
-				  const dfloat * restrict y,
-				  const dfloat * restrict z,
-				  const dfloat * restrict q,
-				  dfloat * restrict rhsq){
+kernel void boltzmannVolumeLSERKQuad3D(const int Nelements,
+				       const dfloat * restrict vgeo,
+				       const dfloat * restrict D,
+				       const dfloat * restrict x,
+				       const dfloat * restrict y,
+				       const dfloat * restrict z,
+				       const dfloat * restrict q,
+				       dfloat * restrict rhsq){
 
   for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
@@ -184,16 +184,16 @@ kernel void boltzmannVolumeQuad3D(const int Nelements,
 }
 
 
-kernel void boltzmannVolumeSAQuad3D(const iint Nelements,
-				    const iint   * restrict elementIds,
-				    const iint shift,
-				    const dfloat * restrict vgeo,
-				    const dfloat * restrict D,
-				    const dfloat * restrict x,
-				    const dfloat * restrict y,
-				    const dfloat * restrict z,
-				    const dfloat * restrict q,
-				    dfloat * restrict rhsq){
+kernel void boltzmannVolumeMRSAABQuad3D(const iint Nelements,
+					const iint   * restrict elementIds,
+					const iint shift,
+					const dfloat * restrict vgeo,
+					const dfloat * restrict D,
+					const dfloat * restrict x,
+					const dfloat * restrict y,
+					const dfloat * restrict z,
+					const dfloat * restrict q,
+					dfloat * restrict rhsq){
 
   for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 

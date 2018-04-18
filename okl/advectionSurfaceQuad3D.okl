@@ -15,7 +15,7 @@ void upwindFlux(const dfloat nx, const dfloat ny, const dfloat nz,
 }
 
 // pointwise SEM-DG lift
-kernel void advectionSurfaceQuad3D(const iint Nelements,
+kernel void advectionSurfaceLSERKQuad3D(const iint Nelements,
 				   const dfloat * restrict sgeo,
 				   const dfloat * restrict LIFTT,
 				   const iint   * restrict vmapM,
@@ -100,7 +100,7 @@ kernel void advectionSurfaceQuad3D(const iint Nelements,
 }
 
 // pointwise SEM-DG lift
-kernel void advectionSurfaceMRQuad3D(const iint Nelements,
+kernel void advectionSurfaceMRSAABQuad3D(const iint Nelements,
 				     const iint * restrict elementIds,
 				     const iint shift,
 				     const dfloat * restrict sgeo,

@@ -358,7 +358,7 @@ void mrab4_coeffs(mesh_t *mesh) {
   }
 }
 
-solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
+solver_t *advectionSetupQuad3D(mesh_t *mesh,char *mode){
   
   solver_t *solver = (solver_t*) calloc(1, sizeof(solver_t));
 
@@ -372,12 +372,10 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
   dfloat *q_zero = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+				    sizeof(dfloat));
   mesh->fQM = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+			       sizeof(dfloat));
   mesh->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Nrhs*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
-  mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
 
   mesh->MRABshiftIndex = (iint*) calloc(mesh->MRABNlevels,sizeof(iint));
@@ -474,17 +472,17 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 
       /*      mesh->q[base+0*mesh->Np] = q1bar; // uniform density, zero flow
 
-      mesh->q[base+1*mesh->Np] = q2bar;
-      mesh->q[base+2*mesh->Np] = q3bar;
-      mesh->q[base+3*mesh->Np] = q4bar;
+	      mesh->q[base+1*mesh->Np] = q2bar;
+	      mesh->q[base+2*mesh->Np] = q3bar;
+	      mesh->q[base+3*mesh->Np] = q4bar;
 
-      mesh->q[base+4*mesh->Np] = q5bar;
-      mesh->q[base+5*mesh->Np] = q6bar;
-      mesh->q[base+6*mesh->Np] = q7bar;
+	      mesh->q[base+4*mesh->Np] = q5bar;
+	      mesh->q[base+5*mesh->Np] = q6bar;
+	      mesh->q[base+6*mesh->Np] = q7bar;
 
-      mesh->q[base+7*mesh->Np] = q8bar;
-      mesh->q[base+8*mesh->Np] = q9bar;
-      mesh->q[base+9*mesh->Np] = q10bar;*/
+	      mesh->q[base+7*mesh->Np] = q8bar;
+	      mesh->q[base+8*mesh->Np] = q9bar;
+	      mesh->q[base+9*mesh->Np] = q10bar;*/
 
       mesh->q[base+0*mesh->Np] = 1 + .1*exp(-20*((x-1)*(x-1)+y*y+z*z));
       mesh->q[base+1*mesh->Np] = 1 ;
@@ -501,71 +499,215 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   //  dfloat nu = 1.e-3/.5;
   //  dfloat nu = 5.e-4;
   //    dfloat nu = 1.e-2; TW works for start up fence
-  dfloat cfl_small = 0.5; // depends on the stability region size (was .4, then 2)
-  dfloat cfl_large = cfl_small;//((mesh->N)*cfl_small)/2;
-  
-  mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
   
   mesh->tauInv = 0;//mesh->RT/nu; // TW
 
-
-  dfloat glmin = 1e9, glmax = -1e9;
-  // set time step
-  for(iint e=0;e<mesh->Nelements;++e){
-    dfloat lmin = 1e9, lmax = 0;
-    for(iint f=0;f<mesh->Nfaces;++f){
-      for(iint n=0;n<mesh->Nfp;++n){
-	iint sid = mesh->Nsgeo*mesh->Nfp*mesh->Nfaces*e + mesh->Nsgeo*mesh->Nfp*f+n;
-
-	dfloat sJ   = mesh->sgeo[sid + mesh->Nq*SJID];
-	dfloat invJ = mesh->sgeo[sid + mesh->Nq*IJID];
-
-	// A = 0.5*h*L
-	// => J*2 = 0.5*h*sJ*2
-	// => h = 2*J/sJ
-
-        dfloat hest = 2./(sJ*invJ);
-
-	lmin = mymin(lmin, hest);
-	lmax = mymax(lmax, hest);
-      }
-    }
-    if (mesh->cubeDistance[e] == 0) {
-      mesh->localdt[e]  = cfl_small*lmin/((mesh->N+1.)*(mesh->N+1.));
-    }
-    else {
-      mesh->localdt[e]  = cfl_large*lmin/((mesh->N+1.)*(mesh->N+1.));
-    }
-
-    glmin = mymin(glmin, lmin);
-    glmax = mymax(glmax, lmax);
+  //lserk coefficients
+  if (strstr(mode,"MRSAAB")) {
+    // initialize LSERK4 time stepping coefficients
     
+    int Nrk = 5;
+
+    solver->rka = (dfloat *) calloc(Nrk,sizeof(dfloat));
+    solver->rkb = (dfloat *) calloc(Nrk,sizeof(dfloat));
+    solver->rkc = (dfloat *) calloc(Nrk,sizeof(dfloat));
+    
+    dfloat rka[5] = {0.0,
+		     -567301805773.0/1357537059087.0 ,
+		     -2404267990393.0/2016746695238.0 ,
+		     -3550918686646.0/2091501179385.0  ,
+		     -1275806237668.0/842570457699.0};
+    dfloat rkb[5] = { 1432997174477.0/9575080441755.0 ,
+		      5161836677717.0/13612068292357.0 ,
+		      1720146321549.0/2090206949498.0  ,
+		      3134564353537.0/4481467310338.0  ,
+		      2277821191437.0/14882151754819.0};
+    dfloat rkc[6] = {0.0  ,
+		     1432997174477.0/9575080441755.0 ,
+		     2526269341429.0/6820363962896.0 ,
+		     2006345519317.0/3224310063776.0 ,
+		     2802321613138.0/2924317926251.0,
+		     1.};
+    mesh->Nrk = Nrk;
+    memcpy(solver->rka, rka, Nrk*sizeof(dfloat));
+    memcpy(solver->rkb, rkb, Nrk*sizeof(dfloat));
+    memcpy(solver->rkc, rkc, (Nrk+1)*sizeof(dfloat));
+  }
+  if (strstr(mode,"DOPRI")) {
+    int Nrk = 7;
+
+    solver->rka = (dfloat *) calloc(Nrk*Nrk,sizeof(dfloat));
+    solver->rkb = (dfloat *) calloc(Nrk,sizeof(dfloat));
+    solver->rkc = (dfloat *) calloc(Nrk,sizeof(dfloat));    
+    
+    dfloat rkc[7] = {0.0,
+		     0.2,
+		     0.3,
+		     0.8,
+		     8.0/9.0,
+		     1.0,
+		     1.0};
+    dfloat rka[7*7] ={
+                           0.0,             0.0,            0.0,          0.0,             0.0,       0.0, 0.0,
+                           0.2,             0.0,            0.0,          0.0,             0.0,       0.0, 0.0,
+                      3.0/40.0,        9.0/40.0,            0.0,          0.0,             0.0,       0.0, 0.0,
+                     44.0/45.0,      -56.0/15.0,       32.0/9.0,          0.0,             0.0,       0.0, 0.0,
+                19372.0/6561.0, -25360.0/2187.0, 64448.0/6561.0, -212.0/729.0,             0.0,       0.0, 0.0,
+                 9017.0/3168.0,     -355.0/33.0, 46732.0/5247.0,   49.0/176.0, -5103.0/18656.0,       0.0, 0.0, 
+                    35.0/384.0,             0.0,   500.0/1113.0,  125.0/192.0,  -2187.0/6784.0, 11.0/84.0, 0.0};
+
+    //originally rkE
+    dfloat rkb[7] = {     71.0/57600.0,
+		                   0.0,
+		         -71.0/16695.0,
+		           71.0/1920.0,
+		     -17253.0/339200.0,
+		            22.0/525.0,
+			     -1.0/40.0};
+    mesh->Nrk = Nrk;
+    memcpy(solver->rka, rka, Nrk*Nrk*sizeof(dfloat));
+    memcpy(solver->rkb, rkb, Nrk*sizeof(dfloat));
+    memcpy(solver->rkc, rkc, Nrk*sizeof(dfloat));
+  }
+  
+  if (strstr(mode,"MRSAAB")) {
+    dfloat cfl_small = 0.5; // depends on the stability region size (was .4, then 2)
+    dfloat cfl_large = cfl_small;//((mesh->N)*cfl_small)/2;
+
+    mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
+				  sizeof(dfloat));
+    
+    mesh->localdt = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));    
+    
+    dfloat glmin = 1e9, glmax = -1e9;
+    // set time step
+    for(iint e=0;e<mesh->Nelements;++e){
+      dfloat lmin = 1e9, lmax = 0;
+      for(iint f=0;f<mesh->Nfaces;++f){
+	for(iint n=0;n<mesh->Nfp;++n){
+	  iint sid = mesh->Nsgeo*mesh->Nfp*mesh->Nfaces*e + mesh->Nsgeo*mesh->Nfp*f+n;
+	  
+	  dfloat sJ   = mesh->sgeo[sid + mesh->Nq*SJID];
+	  dfloat invJ = mesh->sgeo[sid + mesh->Nq*IJID];
+	  
+	  // A = 0.5*h*L
+	  // => J*2 = 0.5*h*sJ*2
+	  // => h = 2*J/sJ
+	  
+	  dfloat hest = 2./(sJ*invJ);
+	  
+	  lmin = mymin(lmin, hest);
+	  lmax = mymax(lmax, hest);
+	}
+      }
+      if (mesh->cubeDistance[e] == 0) {
+	mesh->localdt[e]  = cfl_small*lmin/((mesh->N+1.)*(mesh->N+1.));
+      }
+      else {
+	mesh->localdt[e]  = cfl_large*lmin/((mesh->N+1.)*(mesh->N+1.));
+      }
+      
+      glmin = mymin(glmin, lmin);
+      glmax = mymax(glmax, lmax);
+      
+    }
+    
+    //dt = mymin(dt, cfl/mesh->tauInv);
+    
+    mesh->finalTime = 5;
+    mesh->NtimeSteps = mesh->finalTime/mesh->dt;
+    
+    iint maxLevels=100;
+    meshMRABSetupQuad3D(mesh,mesh->localdt,maxLevels);
+    
+    dfloat dt = mesh->dt;
+    
+    mesh->shiftIndex=0;
+    
+    mesh->lev_updates = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
+    
+    printf("cfl = %g %g\n", cfl_small,cfl_large);
+    printf("dt = %g\n", dt);
+    printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
+    printf("global h in [%g,%g]\n", glmin, glmax);
+    
+    // errorStep
+    mesh->errorStep = 10*mesh->Nq;
+    
+    printf("dt = %g\n", mesh->dt);
+    
+    //break out computation of ab coefficients
+    //needs to be last so we have mrab levels
+    mrab4_coeffs(mesh);
   }
 
-  //dt = mymin(dt, cfl/mesh->tauInv);
+  else if (strstr(mode,"DOPRI")) {
+    mesh->Nrhs = 1;//used for array initialization
 
-  mesh->finalTime = 5;
-  mesh->NtimeSteps = mesh->finalTime/mesh->dt;
+    mesh->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields*mesh->Nrk,
+				  sizeof(dfloat));
+    
+    dfloat hmin = 1e9;
+    for(iint e=0;e<mesh->Nelements;++e){
+      dfloat lmin = 1e9, lmax = 0;
+      for(iint f=0;f<mesh->Nfaces;++f){
+	for(iint n=0;n<mesh->Nfp;++n){
+	  iint sid = mesh->Nsgeo*mesh->Nfp*mesh->Nfaces*e + mesh->Nsgeo*mesh->Nfp*f+n;
+	  
+	  dfloat sJ   = mesh->sgeo[sid + mesh->Nq*SJID];
+	  dfloat invJ = mesh->sgeo[sid + mesh->Nq*IJID];
+	  
+	  // A = 0.5*h*L
+	  // => J*2 = 0.5*h*sJ*2
+	  // => h = 2*J/sJ
+	  
+	  dfloat hest = 2./(sJ*invJ);
+	  
+	  hmin = mymin(hmin, hest);
+	}
+      }
+    }
+
+    // need to change cfl and defn of dt
+    dfloat cfl = 0.5; // depends on the stability region size
+
+    mesh->dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*mesh->sqrtRT);
+    //
+    solver->finalTime = 5;
+    
+    //create dopri blocks
+    solver->blockSize = 256;
+    solver->Ntotal = mesh->Nelements*mesh->Np*mesh->Nfields;
+    solver->Nblock = (solver->Ntotal+solver->blockSize-1)/solver->blockSize;
+
+    solver->errtmp = (dfloat *) calloc(solver->Nblock,sizeof(dfloat));
+      
+    solver->dtmin = 1E-7; 
+    solver->absTol = 1E-5;
+    solver->relTol = 1E-3;
+    solver->safety = 0.9;
+
+    //error control parameters
+    solver->beta = 0.05;
+    solver->factor1 = 0.2;
+    solver->factor2 = 10.0;
+
+    solver->exp1 = 0.2 - 0.75*solver->beta;
+    solver->invfactor1 = 1.0/solver->factor1;
+    solver->invfactor2 = 1.0/solver->factor2;
+    solver->oldFactor = 1E-4;
+
+    // hard code this for the moment
+    solver->outputInterval = .5;
+    solver->nextOutputTime = solver->outputInterval;
+    solver->outputNumber = 0;
+    
+    //initial time
+    solver->time = 0.0;
+    solver->tstep = 0;
+    solver->allStep = 0;
+  }
   
-  iint maxLevels=100;
-  meshMRABSetupQuad3D(mesh,mesh->localdt,maxLevels);
-
-  dfloat dt = mesh->dt;
-
-  mesh->shiftIndex=0;
-
-  mesh->lev_updates = (iint *) calloc(mesh->MRABNlevels,sizeof(iint));
-
-  printf("cfl = %g %g\n", cfl_small,cfl_large);
-  printf("dt = %g\n", dt);
-  printf("max wave speed = %g\n", sqrt(3.)*mesh->sqrtRT);
-  printf("global h in [%g,%g]\n", glmin, glmax);
-  
-  // errorStep
-  mesh->errorStep = 10*mesh->Nq;
-
-  printf("dt = %g\n", mesh->dt);
-
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
   int rank, size;
@@ -592,15 +734,6 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   mesh->o_vgeo =
     mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
 			mesh->vgeo);
-  //initialization isn't strictly necessary here.
-  mesh->o_qFilter =
-    mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
-
-  mesh->o_qFiltered =
-    mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
-  mesh->o_qCorr =
-    mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
-
   mesh->o_qPreCorr =
     mesh->device.malloc(mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),q_zero);
 
@@ -617,14 +750,6 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
 			mesh->sgeo);
   
-  mesh->o_MRABlevels = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint),mesh->MRABlevel);
-  mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-  mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-  mesh->o_fQM  = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*mesh->Nfields*sizeof(dfloat),mesh->fQM);
-  mesh->o_lev_updates = mesh->device.malloc(mesh->MRABNlevels*sizeof(iint),mesh->lev_updates);
-  mesh->o_shift = mesh->device.malloc(mesh->MRABNlevels*sizeof(iint),mesh->MRABshiftIndex);
-  
-  printf("start\n");
   mesh->o_dualProjMatrix =
     mesh->device.malloc(mesh->Nq*mesh->Nq*3*sizeof(dfloat),mesh->dualProjMatrix);
 
@@ -633,7 +758,44 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 
   mesh->o_EToE =
     mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);
-  printf("end\n");
+
+  if (strstr(mode,"MRSAAB")) {
+    mesh->o_MRABlevels = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*sizeof(iint),mesh->MRABlevel);
+    mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+    mesh->o_MRABhaloIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+    mesh->o_fQM  = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np*mesh->Nfields*sizeof(dfloat),mesh->fQM);
+    mesh->o_lev_updates = mesh->device.malloc(mesh->MRABNlevels*sizeof(iint),mesh->lev_updates);
+    mesh->o_shift = mesh->device.malloc(mesh->MRABNlevels*sizeof(iint),mesh->MRABshiftIndex);
+    mesh->o_qFilter =
+      mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
+      
+    mesh->o_qFiltered =
+      mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
+    mesh->o_qCorr =
+      mesh->device.malloc(mesh->Nrhs*mesh->Nelements*mesh->Nfields*mesh->Np*sizeof(dfloat),mesh->rhsq);
+    mesh->o_resq =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
+
+  }
+  
+  if (strstr(mode,"DOPRI")) {
+    kernelInfo.addDefine("p_blockSize", solver->blockSize);
+
+    mesh->o_resq =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*mesh->Nrk*sizeof(dfloat), mesh->resq);
+
+    
+    mesh->o_rka = mesh->device.malloc(mesh->Nrk*mesh->Nrk*sizeof(dfloat), solver->rka);
+    mesh->o_rkb = mesh->device.malloc(mesh->Nrk*sizeof(dfloat), solver->rkb);
+
+    mesh->o_rkq =
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat),q_zero);
+    mesh->o_rkerr =
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat),q_zero);
+  
+    mesh->o_errtmp = mesh->device.malloc(solver->Nblock*sizeof(dfloat), solver->errtmp);
+  }
+  
   for (iint lev = 0; lev < mesh->MRABNlevels;lev++) {
     if (mesh->MRABNelements[lev])
       mesh->o_MRABelementIds[lev]
@@ -644,10 +806,6 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
 	= mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(iint),
 			      mesh->MRABhaloIds[lev]);
   }
-
-  //break out computation of ab coefficients
-  //needs to be last so we have mrab levels
-  mrab4_coeffs(mesh);
       
   // specialization for Advection
 
@@ -679,75 +837,105 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
   kernelInfo.addDefine("p_fainv", (dfloat) 0.0); // turn off rotation
 
   //kernels are mostly from boltzmann code
-  mesh->volumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionVolumeQuad3D.okl",
-				       "advectionVolumeSAQuad3D",
-				       kernelInfo);
+  if (strstr(mode,"MRSAAB")) {
+    mesh->volumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionVolumeQuad3D.okl",
+					 "advectionVolumeMRSAABQuad3D",
+					 kernelInfo);
+    
+    mesh->volumePreKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionVolumeQuad3D.okl",
+					 "advectionVolumeLSERKQuad3D",
+					 kernelInfo);
+    mesh->volumeCorrectionKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeCorrectionQuad3D.okl",
+					 "boltzmannVolumeCorrectionMRSAABQuad3D",
+					 kernelInfo);
+    mesh->volumeCorrPreKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeCorrectionQuad3D.okl",
+					 "boltzmannVolumeCorrectionLSERKQuad3D",
+					 kernelInfo);
+    mesh->surfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionSurfaceQuad3D.okl",
+					 "advectionSurfaceMRSAABQuad3D",
+					 kernelInfo);
 
-  mesh->volumePreKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionVolumeQuad3D.okl",
-				       "advectionVolumeQuad3D",
-				       kernelInfo);
-  mesh->volumeCorrectionKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeCorrectionQuad3D.okl",
-				       "boltzmannVolumeCorrectionSAQuad3D",
-				       kernelInfo);
-  mesh->volumeCorrPreKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeCorrectionQuad3D.okl",
-				       "boltzmannVolumeCorrectionQuad3D",
-				       kernelInfo);
-  mesh->surfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionSurfaceQuad3D.okl",
-				       "advectionSurfaceMRQuad3D",
-				       kernelInfo);
-
-  mesh->surfacePreKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionSurfaceQuad3D.okl",
-				       "advectionSurfaceQuad3D",
-				       kernelInfo);
+    mesh->surfacePreKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionSurfaceQuad3D.okl",
+					 "advectionSurfaceLSERKQuad3D",
+					 kernelInfo);
   
-  mesh->traceUpdateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
-				       "boltzmannMRSAAB4TraceUpdateQuad3D",
-				       kernelInfo);
+    mesh->traceUpdateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
+					 "boltzmannMRSAAB4TraceUpdateQuad3D",
+					 kernelInfo);
 
-  mesh->updateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
-				       "boltzmannMRSAAB4UpdateQuad3D",
-				       kernelInfo);
+    mesh->updateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
+					 "boltzmannMRSAAB4UpdateQuad3D",
+					 kernelInfo);
 
-  mesh->updatePreKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
-				       "boltzmannLSERKUpdateQuad3D",
-				       kernelInfo);
+    mesh->updatePreKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
+					 "boltzmannLSERKUpdateQuad3D",
+					 kernelInfo);
+  }
+  
+  else if (strstr(mode,"DOPRI")) {
+    mesh->volumeKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionVolumeQuad3D.okl",
+					 "advectionVolumeLSERKQuad3D",
+					 kernelInfo);
+    mesh->volumeCorrectionKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeCorrectionQuad3D.okl",
+					 "boltzmannVolumeCorrectionDOPRIQuad3D",
+					 kernelInfo);
+    mesh->surfaceKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/advectionSurfaceQuad3D.okl",
+					 "advectionSurfaceLSERKQuad3D",
+					 kernelInfo);
+    mesh->updateKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
+					 "boltzmannDOPRIUpdateQuad3D",
+					 kernelInfo);
+    mesh->rkStageKernel =
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
+					 "boltzmannDOPRIrkStageQuad3D",
+					 kernelInfo);
+    mesh->rkErrorEstimateKernel = 
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
+					 "boltzmannDOPRIerrorEstimateQuad3D",
+					 kernelInfo);
+
+  }
 
   mesh->traceUpdatePreKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
 				       "boltzmannLSERKTraceUpdateQuad3D",
 				       kernelInfo);
-    mesh->filterKernelH =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+  mesh->filterKernelH =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
 				       "boltzmannFilterHQuad3D",
 				       kernelInfo);
-    mesh->filterKernelV =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
-					 "boltzmannFilterVQuad3D",
-					 kernelInfo);
+  mesh->filterKernelV =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
+				       "boltzmannFilterVQuad3D",
+				       kernelInfo);
     
-    mesh->filterKernelHLSERK =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
-					 "boltzmannFilterHLSERKQuad3D",
-					 kernelInfo);
-    mesh->filterKernelVLSERK =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
-					 "boltzmannFilterVLSERKQuad3D",
-					 kernelInfo);
+  mesh->filterKernelHLSERK =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+				       "boltzmannFilterHLSERKQuad3D",
+				       kernelInfo);
+  mesh->filterKernelVLSERK =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
+				       "boltzmannFilterVLSERKQuad3D",
+				       kernelInfo);
     
   				       
-    mesh->filterKernelq0H =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
-					 "boltzmannFilterHq0Quad3D",
-					 kernelInfo);
+  mesh->filterKernelq0H =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+				       "boltzmannFilterHq0Quad3D",
+				       kernelInfo);
   mesh->filterKernelq0V =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
 				       "boltzmannFilterVq0Quad3D",
@@ -760,5 +948,6 @@ solver_t *advectionSetupMRQuad3D(mesh_t *mesh){
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
 				       "boltzmannFilterLevelsVQuad3D",
 				       kernelInfo);
+  
   return solver;
 }

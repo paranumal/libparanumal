@@ -1,0 +1,64 @@
+kernel void cnsVorticityTri2D(const dlong Nelements,
+                              const dfloat * restrict vgeo,
+                              const dfloat * restrict const DrT,
+                              const dfloat * restrict const DsT,
+                              const dfloat * restrict q,
+                                    dfloat * restrict Vort){  
+  
+  // block partition of elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+    
+    shared dfloat s_u[p_NblockV][p_Np];
+    shared dfloat s_v[p_NblockV][p_Np];
+
+    for(int e=eo;e<eo+p_NblockV;++e;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+        if (e<Nelements) {
+          const dlong qbase = e*p_Nfields*p_Np + n;
+          const dfloat r  = q[qbase + 0*p_Np];
+          const dfloat ru = q[qbase + 1*p_Np];
+          const dfloat rv = q[qbase + 2*p_Np];
+          
+          s_u[e-eo][n] = ru/r;
+          s_v[e-eo][n] = rv/r;        
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(dlong e=eo;e<eo+p_NblockV;++e;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+        if(e<Nelements){
+          const int es = e-eo;
+          const dlong gid = e*p_Nvgeo;
+
+          const dfloat drdx = vgeo[gid + p_RXID];
+          const dfloat drdy = vgeo[gid + p_RYID];
+          const dfloat dsdx = vgeo[gid + p_SXID];
+          const dfloat dsdy = vgeo[gid + p_SYID];
+
+          // compute 1D derivatives
+          dfloat ur = 0, vr = 0;
+          dfloat us = 0, vs = 0;
+
+          occaUnroll(p_Np)
+            for(int i=0;i<p_Np;++i) {
+              const dfloat Drn = DrT[n + i*p_Np];
+              const dfloat Dsn = DsT[n + i*p_Np];
+              ur += Drn*s_u[es][i];
+              us += Dsn*s_u[es][i];
+              vr += Drn*s_v[es][i];
+              vs += Dsn*s_v[es][i];
+            }
+
+          const dfloat uy = drdy*ur + dsdy*us;
+          const dfloat vx = drdx*vr + dsdx*vs;
+
+          const dlong id = e*p_Np+n; 
+          Vort[id] = vx-uy;
+        }
+      }
+    }
+  }
+}

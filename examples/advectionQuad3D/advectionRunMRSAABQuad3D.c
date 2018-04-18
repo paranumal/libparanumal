@@ -163,7 +163,6 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 	const iint id = mrab_order*mesh->MRABNlevels*mesh->Nrhs + levS*mesh->Nrhs;
 	
 	if (mesh->MRABNhaloElements[levS]) {
-	  //trace update using same kernel
 	  mesh->traceUpdateKernel(mesh->MRABNhaloElements[levS],
 				  mesh->o_MRABhaloIds[levS],
 				  mesh->MRSAAB_C[levS-1], //
