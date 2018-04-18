@@ -11,15 +11,19 @@ int main(int argc, char **argv){
     exit(-1);
   }
 
+  //changes solver mode.
+  //options are: DOPRI MRSAAB
+  char *mode = "DOPRI";
+  
   // int specify polynomial degree 
   int N = atoi(argv[2]);
 
   // set up mesh stuff
   dfloat sphereRadius = 1;
-  mesh_t *mesh = meshSetupQuad3D(argv[1], N, sphereRadius);
+  mesh_t *mesh = meshSetupQuad3D(argv[1], N, sphereRadius,mode);
 
   // set up boltzmann stuff
-  solver_t *solver = advectionSetupMRQuad3D(mesh);
+  solver_t *solver = advectionSetupQuad3D(mesh,mode);
 
   /*  for(int e=0;e<mesh->Nelements;++e){
     for(int f=0;f<mesh->Nfaces;++f){
@@ -34,9 +38,13 @@ int main(int argc, char **argv){
     }*/
   
   // time step Boltzmann equations
-  advectionRunLSERKQuad3D(solver);
-  advectionRunMRSAABQuad3D(solver);
-
+  if (strstr(mode,"MRSAAB")) {
+    advectionRunLSERKQuad3D(solver);
+    advectionRunMRSAABQuad3D(solver);
+  }
+  else if (strstr(mode,"DOPRI")) {
+    advectionRunDOPRIQuad3D(solver);
+  }
   
   mesh->o_q.copyTo(mesh->q);
   advectionErrorNormQuad3D(mesh,mesh->finalTime,NULL,0);

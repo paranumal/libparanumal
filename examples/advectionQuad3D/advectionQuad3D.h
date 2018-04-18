@@ -31,7 +31,9 @@ typedef struct {
 #endif
   
   iint Nsubsteps;  
-
+  dfloat *rka;
+  dfloat *rkb;
+  dfloat *rkc;
   //  occa::memory o_Q, o_resQ, o_rhsQ;
   
   occa::kernel volumeKernel;
@@ -43,14 +45,35 @@ typedef struct {
   occa::kernel haloExtractKernel;
   occa::kernel haloScatterKernel;
 
+  //DOPRI parameters
+  dfloat dtmin; //minumum allowed timestep
+  dfloat absTol; //absolute error tolerance
+  dfloat relTol; //relative error tolerance
+  dfloat safety; //safety factor
+  dfloat beta;     //error control parameters
+  dfloat factor1;
+  dfloat factor2;
+  dfloat exp1;
+  dfloat invfactor1;
+  dfloat invfactor2;
+  dfloat oldFactor;
+  dfloat outputInterval;
+  dfloat nextOutputTime;
+  dfloat outputNumber;
+  dfloat time;
+  iint tstep;
+  iint allStep;
+  iint Nblock;
+  iint blockSize;
+  iint Ntotal;
+  dfloat *errtmp;
 }solver_t;
 
-
-solver_t *advectionSetupQuad3D(mesh_t *mesh);
-solver_t *advectionSetupMRQuad3D(mesh_t *mesh);
+solver_t *advectionSetupQuad3D(mesh_t *mesh,char* mode);
 
 void advectionRunMRSAABQuad3D(solver_t *solver);
 void advectionRunLSERKQuad3D(solver_t *solver);
+void advectionRunDOPRIQuad3D(solver_t *solver);
 
 void advectionPlotVTUQuad3D(mesh_t *mesh, char *fileNameBase, iint fld);
 void advectionPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, iint tstep);
