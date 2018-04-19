@@ -57,6 +57,9 @@ boltzmannMRABPmlSetup2D.o \
 boltzmannPmlSetup2D.o \
 boltzmannForces2D.o \
 boltzmannPlotFieldTEC2D.o \
+boltzmannRunDOPRI2D.o \
+boltzmannDOPRIStep2D.o \
+boltzmannReportAddaptive2D.o \
 # library objects
 LOBJS = \
 ../../src/meshParallelReaderTri2D.o \

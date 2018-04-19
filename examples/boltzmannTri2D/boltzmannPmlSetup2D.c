@@ -5,7 +5,7 @@ void boltzmannPmlSetup2D(bns_t *bns, char *options){
   mesh2D *mesh = bns->mesh; 
 
   
-  dfloat xsigma    = 50., ysigma  = 50.;
+  dfloat xsigma    = 100., ysigma  = 100.;
   
   dfloat xsmin    = -2.0, xsmax = 2.0; // map x to this range to control erf profile 
   dfloat ysmin    = -2.0, ysmax = 2.0; // map y to this range to control erf profile 
@@ -435,6 +435,35 @@ void boltzmannPmlSetup2D(bns_t *bns, char *options){
       bns->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlqy);
       bns->o_pmlrhsqy  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlrhsqy);
       bns->o_pmlresqy  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlresqy);
+    }
+
+    if(strstr(options,"DOPRI5")){
+      int NrkStages = 7; 
+      bns->pmlqx     = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+      bns->pmlrhsqx  = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+      
+      bns->pmlqy     = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+      bns->pmlrhsqy  = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+
+      bns->rkqx      = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+      bns->rkqy      = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+
+      bns->rkrhsqx   = (dfloat*) calloc(NrkStages*mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+      bns->rkrhsqy   = (dfloat*) calloc(NrkStages*mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+    
+      // set up PML on DEVICE    
+      bns->o_pmlqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlqx);
+      bns->o_pmlrhsqx  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlrhsqx);
+
+      bns->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlqy);
+      bns->o_pmlrhsqy  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlrhsqy);
+      
+      bns->o_rkqx     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->rkqx);
+      bns->o_rkqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->rkqy);
+      
+      bns->o_rkrhsqx  = mesh->device.malloc(NrkStages*mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->rkrhsqx);
+      bns->o_rkrhsqy  = mesh->device.malloc(NrkStages*mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->rkrhsqy);
+
     }
 
 
