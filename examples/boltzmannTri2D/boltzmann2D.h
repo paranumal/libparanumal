@@ -19,8 +19,10 @@ typedef struct{
 	int Ntscale; // Dummy remove later!!!
 	dfloat maxError; 
 
-	int totalElement; 
+	int totalElements; 
 	int Nblock;
+	int NrkStages; 
+	int frame; 
 
 	dfloat dt;         // time step
 	dfloat startTime ; // Start Time
@@ -51,15 +53,19 @@ typedef struct{
 	// SARK and RK3 Coefficients
 	dfloat RK_A[5][5], RK_B[5], RK_C[5], SARK_A[5][5], SARK_B[5], SARK_C[5]; 
 	// DOPRI45
-	dfloat rkC[7];
+	dfloat rkC[7], rkA[7*7], rkE[7];
 	dfloat *rkq, *rkrhsq, *rkerr, *errtmp;
+	dfloat *rkqx, *rkrhsqx;
+	dfloat *rkqy, *rkrhsqy;
 
- 
+	occa::memory o_rkq, o_rkrhsq, o_rkerr;
+	occa::memory o_errtmp;
 
 
 	dfloat *fQM; 
 	occa::memory o_q, o_rhsq, o_resq, o_fQM;
 	occa::memory o_rkA, o_rkE; 
+	occa::memory o_rkqx, o_rkqy, o_rkrhsqx, o_rkrhsqy; 
 
 	// LS Imex vars
 	occa::memory o_qY,   o_qZ,   o_qS;
@@ -95,6 +101,8 @@ typedef struct{
 	occa::kernel updateStageKernel;
 	occa::kernel pmlUpdateStageKernel;
 
+	occa::kernel errorEstimateKernel;
+
 
 
 //Boltzmann DOPRI5, later move to boltzmann class
@@ -117,6 +125,9 @@ void boltzmannRun2D(bns_t *bns, char *options);
 void boltzmannError2D(bns_t *bns, dfloat time, char *opt);
 void boltzmannForces2D(bns_t *bns, dfloat time, char *opt);
 void boltzmannReport2D(bns_t *bns, int tstep, char *opt);
+
+
+void boltzmannReportAddaptive2D(bns_t *bns, dfloat time, char *opt);
 
 
 
@@ -150,7 +161,12 @@ void boltzmannMRABStep2D(bns_t *bns, int tstep, int haloBytes,
 void boltzmannMRSAABStep2D(bns_t *bns, int tstep, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
 
-
+// DOPRI Run
+void boltzmannRunDOPRI2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, 
+	              dfloat *recvBuffer, char * options);
+// DOPRI Step
+void boltzmannDOPRIStep2D(bns_t *bns, dfloat time, int haloBytes, dfloat * sendBuffer, 
+	              dfloat *recvBuffer, char * options);
 
 // Needs to be changed if in use
 void boltzmannPeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);

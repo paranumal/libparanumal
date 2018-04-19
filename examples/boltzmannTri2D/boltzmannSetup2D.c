@@ -18,7 +18,7 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
 
   bns->mesh = mesh; 
 
-  bns->errorStep = 500; 
+  bns->errorStep = 1000; 
 
   // dfloat RE[9];  RE[0] = 100;  RE[1] = 250; RE[2] = 500; RE[3] = 750;
   //                RE[4] = 1000;  RE[5] = 1250; RE[6] = 1500; RE[7] = 1750; RE[8] = 2000;
@@ -36,8 +36,8 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
 
   if(strstr(options, "PML")){
     printf("Starting initial conditions for PML\n");
-    bns->Ma = 0.2;   // 0.17; //MA[mesh->Ntscale]; // Set Mach number
-    bns->Re = 150.;  //1000.; //RE[mesh->Ntscale]; 
+    bns->Ma = 0.1;   // 0.17; //MA[mesh->Ntscale]; // Set Mach number
+    bns->Re = 1000.;  //1000.; //RE[mesh->Ntscale]; 
     //
     Uref = 1.0; //  0.2;
     Lref = 1.0;   // set Lref
@@ -49,7 +49,8 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
     bns->tauInv   = bns->RT/nu;
 
     //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1.0; u = Uref*cos(M_PI/6.0); v = Uref*sin(M_PI/6.0); sigma11 = 0; sigma12 = 0; sigma22 = 0;
+    // rho = 1.0; u = Uref*cos(M_PI/6.0); v = Uref*sin(M_PI/6.0); sigma11 = 0; sigma12 = 0; sigma22 = 0;
+    rho = 1.0; u = 1.0; v = 0.0; sigma11 = 0; sigma12 = 0; sigma22 = 0;
     // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     bns->startTime = 0.0; 
@@ -57,8 +58,8 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
   }
   else{
     printf("Starting initial conditions for NONPML\n");
-    bns->Ma = 0.2;     //Set Mach number
-    bns->Re = 200.;   // Set Reynolds number
+    bns->Ma = 0.1;     //Set Mach number
+    bns->Re = 1000.;   // Set Reynolds number
     
     Uref = 1.;   // Set Uref
     Lref = 1.;   // set Lref
@@ -136,8 +137,7 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
     
     if(strstr(options,"MRAB") || strstr(options,"LSERK") || strstr(options,"SRAB") || strstr(options,"DOPRI5") )
       dtest  = mymin(dtex,dtim); // For fully expliciy schemes
-    else if(strstr(options,"MRSAAB") || strstr(options,"SARK") || 
-            strstr(options,"SAAB") || strstr(options,"LSIMEX"))
+    else if(strstr(options,"MRSAAB") || strstr(options,"SARK") || strstr(options,"SAAB") || strstr(options,"LSIMEX"))
       dtest  = dtex; // For semi analytic  and IMEX
     else
       printf("time discretization method should be choosen\n");
@@ -212,17 +212,23 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
 
   else if (strstr(options,"DOPRI5")){ // LSERK, SARK etc.
     bns->Nrhs = 1; 
+
+    int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
+    bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
+
+    int localElements =  mesh->Nelements;
+    MPI_Allreduce(&localElements, &(bns->totalElements), 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
     // compute samples of q at interpolation nodes
     bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
     //
-    int NrkStages = 7;
-    int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
-    int Nblock    = (Ntotal+blockSize-1)/blockSize;
+    bns->NrkStages = 7;
+    
     bns->rkq      = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->rkrhsq   = (dfloat*) calloc(NrkStages*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->rkrhsq   = (dfloat*) calloc(bns->NrkStages*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rkerr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->errtmp  =  (dfloat*) calloc(Nblock, sizeof(dfloat)); 
+    bns->errtmp  =  (dfloat*) calloc(bns->Nblock, sizeof(dfloat)); 
   }
 
 
@@ -331,7 +337,9 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
  
 
   occa::kernelInfo kernelInfo;
-  meshOccaSetup2D(mesh, deviceConfig,  kernelInfo);     
+  meshOccaSetup2D(mesh, deviceConfig,  kernelInfo);  
+
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");   
 
   // Setup MRAB PML
   if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
@@ -439,18 +447,21 @@ if(strstr(options,"DOPRI5")){
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
   bns->o_rhsq = 
     mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq); 
-  //
-  int NrkStages = 7;
+  
   int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
-  int Nblock    = (Ntotal+blockSize-1)/blockSize;
-
-  mesh->o_rkq =
+  
+  bns->o_rkq =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkq);
-  mesh->o_rkrhsq =
-    mesh->device.malloc(NrkStages*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rkrhsq);
-  mesh->o_rkerr =
+  bns->o_rkrhsq =
+    mesh->device.malloc(bns->NrkStages*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rkrhsq);
+  bns->o_rkerr =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkerr);
-  mesh->o_errtmp = mesh->device.malloc(Nblock*sizeof(dfloat), mesh->errtmp);
+  bns->o_errtmp = mesh->device.malloc(bns->Nblock*sizeof(dfloat), bns->errtmp);
+
+  bns->o_rkA = mesh->device.malloc(7*7*sizeof(dfloat), bns->rkA);
+  bns->o_rkE = mesh->device.malloc(  7*sizeof(dfloat), bns->rkE);
+
+
 }
 
 if(strstr(options, "SARK")){
@@ -522,8 +533,8 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
   kernelInfo.addDefine("p_alpha0", (dfloat).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.2f); // 0.05
-
+  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.1f);
+  kernelInfo.addDefine("p_blockSize", blockSize);
 
 
  // Volume and Relaxation Kernels
@@ -757,10 +768,32 @@ else if(strstr(options, "LSIMEX")){
     // DOPRI5 Update Kernels
     else if(strstr(options,"DOPRI5")){
 
+    bns->updateStageKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+        "boltzmannDOPRIRKStage2D",
+          kernelInfo); 
+
+    bns->pmlUpdateStageKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+        "boltzmannDOPRIRKPmlStage2D",
+          kernelInfo); 
 
 
+    bns->updateKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+        "boltzmannDOPRIRKUpdate2D",
+          kernelInfo); 
+
+    bns->pmlUpdateKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+        "boltzmannDOPRIRKPmlUpdate2D",
+          kernelInfo); 
 
 
+    bns->errorEstimateKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+        "boltzmannErrorEstimate2D",
+          kernelInfo); 
 
 
     }

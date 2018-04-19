@@ -113,6 +113,10 @@ occa::initTimer(mesh->device);
 occaTimerTic(mesh->device,"BOLTZMANN");
 
 tic_tot = MPI_Wtime();
+
+
+if(!strstr(options,"DOPRI5")){
+
  for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
       
    // for(int tstep=0;tstep<1;++tstep){
@@ -174,6 +178,13 @@ tic_tot = MPI_Wtime();
       elp_sol += (MPI_Wtime() - tic_sol);
 
   }
+}else{
+
+
+  boltzmannRunDOPRI2D(bns, haloBytes, sendBuffer, recvBuffer, options);
+
+
+}
 
   elp_tot += (MPI_Wtime() - tic_tot);    
   occaTimerToc(mesh->device, "BOLTZMANN");
@@ -205,7 +216,7 @@ tic_tot = MPI_Wtime();
  
 printf("writing Final data\n");  
 // For Final Time
-boltzmannReport2D(bns, bns->NtimeSteps,options);
+//boltzmannReport2D(bns, bns->NtimeSteps,options);
 
 occa::printTimer();
 }

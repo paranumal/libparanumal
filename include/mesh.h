@@ -524,7 +524,9 @@ typedef struct {
   occa::kernel relaxationKernel;
   occa::kernel pmlRelaxationKernel;
   // //Boltzmann Imex Kernels
+  
 
+  //Deprecated
   occa::kernel implicitUpdateKernel;
   occa::kernel pmlImplicitUpdateKernel;
   occa::kernel implicitSolveKernel;

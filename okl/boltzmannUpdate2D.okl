@@ -12,7 +12,7 @@ kernel void boltzmannSRABUpdate2D(const int Nelements,
 // Low storage Runge Kutta time step update
 for(int es=0;es<Nelements;++es;outer0){
 
-  shared dfloat s_q[p_Np*p_Nfields];
+  // shared dfloat s_q[p_Np*p_Nfields];
   exclusive int e; 
 
   for(int n=0;n<p_maxNodes;++n;inner0){
@@ -51,7 +51,7 @@ kernel void boltzmannSRABPmlUpdate2D(const int pmlNelements,
                      dfloat * restrict pmlqy){
 // Low storage Runge Kutta time step update
 for(int es=0;es<pmlNelements;++es;outer0){
-  shared dfloat s_q[p_Np*p_Nfields];
+  // shared dfloat s_q[p_Np*p_Nfields];
   exclusive int e;
   for(int n=0; n < p_maxNodes; ++n; inner0){
     e = pmlElementIds[es];
@@ -144,7 +144,7 @@ kernel void boltzmannSAABPmlUpdate2D(const int pmlNelements,
                      dfloat * restrict pmlqy){
   // Low storage Runge Kutta time step update
   for(int es=0;es<pmlNelements;++es;outer0){
-    shared dfloat s_q[p_Np*p_Nfields];
+    // shared dfloat s_q[p_Np*p_Nfields];
     exclusive int e;
     for(int n=0; n < p_maxNodes; ++n; inner0){
      e = pmlElementIds[es];
@@ -179,6 +179,268 @@ kernel void boltzmannSAABPmlUpdate2D(const int pmlNelements,
 }
 
 
+
+kernel void boltzmannDOPRIRKStage2D(const int Nelements,
+                         const int * restrict elementIds,
+                         const int NtotalElements,
+                         const int rk,
+                         const dfloat dt,  
+                         const dfloat * restrict rkA,
+                         const dfloat * restrict q,
+                         const dfloat * restrict rkrhsq,
+                               dfloat * restrict rkq){
+  
+  // Runge Kutta intermediate stage
+  for(int es=0;es<Nelements;++es;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+
+      const int e = elementIds[es];
+      const int id = p_Nfields*(n + e*p_Np);
+
+      for(int fld=0; fld< p_Nfields; ++fld){
+
+        // const int idn = id + fld;        
+        dfloat r_q = q[id +fld];
+
+        for (int i=0;i<rk;i++) {
+          const int offset = NtotalElements*p_Nfields*p_Np;
+          r_q += dt*rkA[7*rk + i]*rkrhsq[id + fld +i*offset];
+        }
+        rkq[id + fld] = r_q;
+      }
+    }
+  }
+}
+
+
+kernel void boltzmannDOPRIRKUpdate2D(const int Nelements,
+                                    const int * restrict elementIds,
+                                    const int NtotalElements,
+                                    const int rk,
+                                    const dfloat dt,  
+                                    const dfloat * restrict rkA,
+                                    const dfloat * restrict rkE,
+                                    const dfloat * restrict q,
+                                    const dfloat * restrict rhsq,
+                                          dfloat * restrict rkrhsq,
+                                          dfloat * restrict rkq,
+                                          dfloat * restrict rkerr){
+  
+  // Runge Kutta intermediate stage
+  for(int es=0;es<Nelements;++es;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+
+      const int e = elementIds[es];
+      const int id = p_Nfields*(n + e*p_Np);
+
+      for(int fld=0; fld< p_Nfields; ++fld){
+        // const int idn = id + fld; 
+        const int offset = NtotalElements*p_Nfields*p_Np;
+  
+        dfloat r_rhsq = rhsq[id + fld];
+
+        if (rk==6) { //last stage
+
+          dfloat r_q = q[id +fld];
+          dfloat r_rkerr = 0.f;
+          for (int i=0;i<6;i++) {
+            r_q     += dt*rkA[7*rk + i]*rkrhsq[id + fld + i*offset];
+            r_rkerr += dt*rkE[       i]*rkrhsq[id + fld + i*offset];
+          }
+          r_q     += dt*rkA[7*rk + 6]*r_rhsq;
+          r_rkerr += dt*rkE[       6]*r_rhsq;
+
+          rkq[id   +fld] = r_q;
+          rkerr[id +fld] = r_rkerr;
+        }
+
+        rkrhsq[id+fld+rk*offset] = r_rhsq;
+      }
+    }
+  }
+}
+
+
+kernel void boltzmannDOPRIRKPmlStage2D(const int pmlNelements,
+                                        const int   * restrict pmlElementIds,
+                                        const int   * restrict pmlIds,
+                                        const int NtotalElements,
+                                        const int rk,
+                                        const dfloat dt,  
+                                        const dfloat * restrict rkA,
+                                        const dfloat * restrict q,
+                                        const dfloat * restrict qx,
+                                        const dfloat * restrict qy,
+                                        const dfloat * restrict rkrhsq,
+                                        const dfloat * restrict rkrhsqx,
+                                        const dfloat * restrict rkrhsqy,
+                                              dfloat * restrict rkq,
+                                              dfloat * restrict rkqx,
+                                              dfloat * restrict rkqy){
+  
+  // Runge Kutta intermediate stage
+  for(int es=0;es<pmlNelements;++es;outer0){
+    exclusive int e;
+    for(int n=0; n < p_Np; ++n; inner0){
+      e = pmlElementIds[es];
+      if (n < p_Np){
+        const int pmlId = pmlIds[es];
+        const int id  = p_Nfields*(e*p_Np + n);
+        const int pid = p_Nfields*(pmlId*p_Np + n);
+
+        for(int fld=0; fld< p_Nfields; ++fld){
+          // const int idn = id + fld;        
+          dfloat r_q  = q[id  + fld];
+          dfloat r_qx = qx[pid+ fld];
+          dfloat r_qy = qy[pid+ fld];
+
+          for (int i=0;i<rk;i++) {
+            const int offset    = NtotalElements*p_Nfields*p_Np;
+            const int offsetpml = pmlNelements*p_Nfields*p_Np;
+            r_q  += dt*rkA[7*rk+i]*rkrhsq[id+fld+i*offset];
+            r_qx += dt*rkA[7*rk+i]*rkrhsqx[pid+fld+i*offsetpml];
+            r_qy += dt*rkA[7*rk+i]*rkrhsqy[pid+fld+i*offsetpml];
+          }
+        rkq [id  +fld] = r_q;
+        rkqx[pid +fld] = r_qx;
+        rkqy[pid +fld] = r_qy;
+      }
+    }
+  }
+}
+
+}
+
+
+kernel void boltzmannDOPRIRKPmlUpdate2D(const int pmlNelements,
+                                        const int   * restrict pmlElementIds,
+                                        const int   * restrict pmlIds,
+                                        const int NtotalElements,
+                                        const int rk,
+                                        const dfloat dt,  
+                                        const dfloat * restrict rkA,
+                                        const dfloat * restrict rkE,
+                                        const dfloat * restrict q,
+                                        const dfloat * restrict qx,
+                                        const dfloat * restrict qy,
+                                        const dfloat * restrict rhsq,
+                                        const dfloat * restrict rhsqx,
+                                        const dfloat * restrict rhsqy,
+                                              dfloat * restrict rkrhsq,
+                                              dfloat * restrict rkrhsqx,
+                                              dfloat * restrict rkrhsqy,
+                                              dfloat * restrict rkq,
+                                              dfloat * restrict rkqx,
+                                              dfloat * restrict rkqy,
+                                              dfloat * restrict rkerr){
+  // Runge Kutta intermediate stage
+  for(int es=0;es<pmlNelements;++es;outer0){
+    exclusive int e;
+    for(int n=0; n < p_Np; ++n; inner0){
+      e = pmlElementIds[es];
+      if (n < p_Np){
+        const int pmlId = pmlIds[es];
+        const int id  = p_Nfields*(e*p_Np + n);
+        const int pid = p_Nfields*(pmlId*p_Np + n);
+
+        for(int fld=0; fld< p_Nfields; ++fld){
+
+          const int offset    = NtotalElements*p_Nfields*p_Np;
+          const int offsetpml = pmlNelements*p_Nfields*p_Np;
+
+          dfloat r_rhsq  = rhsq [id  + fld];
+          dfloat r_rhsqx = rhsqx[pid + fld];
+          dfloat r_rhsqy = rhsqy[pid + fld];
+
+          if (rk==6) { //last stage
+
+            dfloat r_q  = q [id  +fld];
+            dfloat r_qx = qx[pid +fld];
+            dfloat r_qy = qy[pid +fld];
+
+            dfloat r_rkerr = 0.f;
+
+            for (int i=0;i<6;i++){
+              r_q     += dt*rkA[7*rk + i]*rkrhsq[  id + fld + i*offset];
+              r_qx    += dt*rkA[7*rk + i]*rkrhsqx[pid + fld + i*offsetpml];
+              r_qy    += dt*rkA[7*rk + i]*rkrhsqy[pid + fld + i*offsetpml];
+
+              r_rkerr += dt*rkE[       i]*rkrhsq[id + fld + i*offset];
+            }
+
+            r_q     += dt*rkA[7*rk + 6]*r_rhsq;
+            r_qx    += dt*rkA[7*rk + 6]*r_rhsqx;
+            r_qy    += dt*rkA[7*rk + 6]*r_rhsqy;
+
+            r_rkerr += dt*rkE[       6]*r_rhsq;
+
+            rkq[  id  +fld] = r_q;
+            rkqx[pid  +fld] = r_qx;
+            rkqy[pid  +fld] = r_qy;
+
+            rkerr[id +fld] = r_rkerr;
+          }
+
+        rkrhsq[id+fld+rk*offset]      = r_rhsq;
+        rkrhsqx[pid+fld+rk*offsetpml] = r_rhsqx;
+        rkrhsqy[pid+fld+rk*offsetpml] = r_rhsqy;
+        }
+      }
+    }
+  }
+}
+
+kernel void boltzmannErrorEstimate2D(const int N,
+                               const dfloat ATOL,
+                               const dfloat RTOL,
+                               const dfloat * restrict q,
+                               const dfloat * restrict rkq,
+                               const dfloat * restrict rkerr,
+                                     dfloat * restrict errtmp){
+  
+  for(int b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
+    
+    volatile shared dfloat s_err[p_blockSize];
+
+    for(int t=0;t<p_blockSize;++t;inner0){
+      const int id = t + p_blockSize*b;
+      if (id<N) {
+        const dfloat   qn =   q[id];
+        const dfloat rkqn = rkq[id];
+        const dfloat qmax = (qn>rkqn) ? qn : rkqn;
+        dfloat sk = ATOL + RTOL*qmax;
+
+        s_err[t] = (rkerr[id]/sk)*(rkerr[id]/sk);
+      } else {
+        s_err[t] = 0.f;  
+      }
+    }
+
+    barrier(localMemFence);
+#if p_blockSize>512
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<512) s_err[t] += s_err[t+512];
+    barrier(localMemFence);
+#endif
+#if p_blockSize>256
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<256) s_err[t] += s_err[t+256];
+    barrier(localMemFence);
+#endif
+
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<128) s_err[t] += s_err[t+128];
+    barrier(localMemFence);
+
+    for(int t=0;t<p_blockSize;++t;inner0) if(t< 64) s_err[t] += s_err[t+64];
+    barrier(localMemFence);
+
+    for(int t=0;t<p_blockSize;++t;inner0) if(t< 32) s_err[t] += s_err[t+32];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t< 16) s_err[t] += s_err[t+16];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  8) s_err[t] += s_err[t+8];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  4) s_err[t] += s_err[t+4];
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  2) s_err[t] += s_err[t+2];
+
+    for(int t=0;t<p_blockSize;++t;inner0) if(t<  1) errtmp[b] = s_err[0] + s_err[1];
+  }
+}
 
 
 
@@ -627,7 +889,7 @@ kernel void boltzmannLSIMEXPmlImplicitUpdate2D(const int pmlNelements,
     if (n < p_Np){
       const int pmlId = pmlIds[es];
       const int id  = p_Nfields*(e*p_Np + n);
-      const int pid = p_Nfields*(pmlId*p_Np + n);
+      // const int pid = p_Nfields*(pmlId*p_Np + n);
       
       occaUnroll(p_Nfields)
       for(int fld=0; fld<p_Nfields; ++fld){
