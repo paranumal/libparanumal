@@ -32,10 +32,10 @@ void advectionErrorNormQuad3D(mesh_t *mesh, dfloat t, char *fileBase, int slice)
       l2 += JW*err*err;
 
       if(fileBase!=NULL)
-	mesh->q[e*mesh->Np*mesh->Nfields+n] = err;
+	mesh->q[e*mesh->Np*mesh->Nfields+n] = l2;
     }
   }
-
+  
   printf("%7.5lg %.2e %d (t,L2 norm err,Nlevels)\n", t, sqrt(l2),mesh->MRABNlevels);
 
   if(fileBase!=NULL)

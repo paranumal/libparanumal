@@ -136,9 +136,9 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
       if (fabs(xsph*xsph + ysph*ysph + zsph*zsph - 1) > 1e-12) printf("error\n");
 	  
       // project to sphere
-      mesh->x[cnt] = xsph; 
+      mesh->x[cnt] = zsph; 
       mesh->y[cnt] = ysph; 
-      mesh->z[cnt] = zsph;
+      mesh->z[cnt] = -xsph;
       
       ++cnt;
     }

@@ -45,9 +45,9 @@ int main(int argc, char **argv){
   else if (strstr(mode,"DOPRI")) {
     advectionRunDOPRIQuad3D(solver);
   }
-  
+
   mesh->o_q.copyTo(mesh->q);
-  advectionErrorNormQuad3D(mesh,mesh->finalTime,NULL,0);
+  advectionErrorNormQuad3D(mesh,solver->finalTime,"end",0);
   
   /*    mesh->o_q.copyTo(mesh->q);
   dfloat l2 = 0;
@@ -72,6 +72,7 @@ int main(int argc, char **argv){
     }
   }
   
+
   printf("norm %.5e\n",sqrt(l2));
   */
   // close down MPI

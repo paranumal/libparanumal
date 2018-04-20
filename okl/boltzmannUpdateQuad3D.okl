@@ -7,7 +7,7 @@ kernel void boltzmannDOPRIrkStageQuad3D(const iint Nelements,
 					      dfloat * restrict rkq){
   
   // Runge Kutta intermediate stage
-  for(iint e=0;e<1000;++e;outer0){
+  for(iint e=0;e<Nelements;++e;outer0){
     for(iint n=0;n<p_Np;++n;inner0){
 
       for(int fld=0; fld< p_Nfields; ++fld){
@@ -71,6 +71,7 @@ kernel void boltzmannDOPRIUpdateQuad3D(const iint Nelements,
 kernel void boltzmannDOPRIerrorEstimateQuad3D(const iint N,
 					      const dfloat absTol,
 					      const dfloat relTol,
+					      const dfloat * restrict vgeo,
 					      const dfloat * restrict q,
 					      const dfloat * restrict rkq,
 					      const dfloat * restrict rkerr,
@@ -82,15 +83,22 @@ kernel void boltzmannDOPRIerrorEstimateQuad3D(const iint N,
 
     for(int t=0;t<p_blockSize;++t;inner0){
       const iint id = t + p_blockSize*b;
+
+      //construct Jacobian ID
+      const iint e = id/(p_Nfields*p_Np);
+      const iint n = id%p_Np;
+      const iint jid = e*p_Nvgeo*p_Np + 10*p_Np + n;
+      
       if (id<N) {
+	const dfloat    J = vgeo[jid];
         const dfloat   qn =   q[id];
         const dfloat rkqn = rkq[id];
         const dfloat qmax = (qn>rkqn) ? qn : rkqn;
         dfloat sk = absTol + relTol*qmax;
 
-        s_err[t] = (rkerr[id]/sk)*(rkerr[id]/sk);
+        s_err[t] = J*(rkerr[id]/sk)*(rkerr[id]/sk);
       } else {
-        s_err[t] = 0.f;  
+        s_err[t] = 0.f;
       }
     }
 
