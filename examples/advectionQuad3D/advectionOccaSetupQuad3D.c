@@ -11,6 +11,9 @@ void advectionOccaSetupQuad3D(mesh_t *mesh, char *deviceConfig, occa::kernelInfo
 
   mesh->device.setup(deviceConfig);
 
+  //used in dopri reduce kernels
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  
   occa::initTimer(mesh->device);
 
   dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));

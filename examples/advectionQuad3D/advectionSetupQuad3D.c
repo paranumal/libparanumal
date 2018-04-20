@@ -682,9 +682,9 @@ solver_t *advectionSetupQuad3D(mesh_t *mesh,char *mode){
 
     solver->errtmp = (dfloat *) calloc(solver->Nblock,sizeof(dfloat));
       
-    solver->dtmin = 1E-7; 
-    solver->absTol = 1E-12;//1E-5;
-    solver->relTol = 1E-10;//1E-3;
+    solver->dtmin = 1E-12; 
+    solver->absTol = 1E-5;
+    solver->relTol = 1E-3;
     solver->safety = 0.9;
 
     //error control parameters
@@ -719,7 +719,7 @@ solver_t *advectionSetupQuad3D(mesh_t *mesh,char *mode){
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");
-
+  
   advectionPlotVTUQuad3D(mesh, "bah.vtu", 0);
   
   occa::kernelInfo kernelInfo;
@@ -784,12 +784,12 @@ solver_t *advectionSetupQuad3D(mesh_t *mesh,char *mode){
     mesh->o_resq =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*mesh->Nrk*sizeof(dfloat), mesh->resq);
 
-    
     mesh->o_rka = mesh->device.malloc(mesh->Nrk*mesh->Nrk*sizeof(dfloat), solver->rka);
     mesh->o_rkb = mesh->device.malloc(mesh->Nrk*sizeof(dfloat), solver->rkb);
 
     mesh->o_rkq =
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat),mesh->q);
+
     mesh->o_rkerr =
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat),q_zero);
   
