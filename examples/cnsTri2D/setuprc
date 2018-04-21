@@ -1,0 +1,58 @@
+[FORMAT]
+1.0
+
+[MESH NAME]
+../../meshes/T2D_Mar27_boltzPML.msh
+
+[POLYNOMIAL DEGREE]
+4
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+# 0: None
+# 1: dam break
+# 2: circular dam break
+# 3: isentropic vortex (has exact solution available)
+# 4: Coutte flow (has exact solution available)
+# 5: sinusoidal bump
+# 6: oscillating 2D lake
+# 7:
+[TEST CASE FLAG]
+3
+
+[COMPUTE ERROR FLAG]
+1
+
+[TSTEPS FOR ERROR COMPUTE]
+1000
+
+[TSTEPS FOR SOLUTION OUTPUT]
+1000
+
+[REPORT FREQUENCY]
+100
+
+[START TIME]
+0
+
+[FINAL TIME]
+10
+
+[MAX MRAB LEVELS]
+1
+
+[CFL]
+0.1
+
+[RESTART FROM FILE]
+0
+
+[OUTPUT FILE NAME]
+vtkOut/tshape

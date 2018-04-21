@@ -1,13 +1,11 @@
 #ifndef __MATRIX
 #define __MATRIX
 
-#include "mesh.h"
 #include <iostream>
 #include <cstdlib>
 #include <fstream>
 #include <string>
 #include <execinfo.h>
-//#include "blaslapack.hpp"
 
 static int clarrayrequest = 0;
 
@@ -99,8 +97,6 @@ public:
 
   T minentry() const;
 
-  occa::memory occaCopy(occa::device &helper);
-
   matrix <T> inverse();
 
 };
@@ -123,30 +119,10 @@ matrix <T> operator- (const matrix <T> & A, const matrix <T> &B);
 template <class T>
 matrix <T> operator| (const matrix <T> & A, const matrix <T> &B);
 
-// general left matrix inverse not implemented
-//template <>
-//matrix <double> operator| (const matrix <double> & A, const matrix <double> &B);
-
-// general left matrix inverse not implemented
-//template <>
-//matrix <float> operator| (const matrix <float> & A, const matrix <float> &B);
-
-
-
 // use #define to create a "compiler substitution rule"
 #define imatrix matrix<int>
 #define dmatrix matrix<double>
 
-//int get_clarrayrequest();
-
-template<class T>
-void occadebug(const char *mess, matrix<T> &a, occa::memory &c_a);
-
-template<class T>
-void occadebugsum(const char *mess, matrix<T> &a, occa::memory &c_a);
-
-template<class T>
-void occadebug(const char *mess, matrix<T> &a, occa::memory &c_a, int rmin, int rmax, int cmin, int cmax);
 
 #include "matrix.tpp"
 

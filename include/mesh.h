@@ -9,6 +9,8 @@
 #include "types.h"
 #include "ogs_t.h"
 
+#include "setupAide.hpp"
+
 typedef struct {
 
   int dim;
