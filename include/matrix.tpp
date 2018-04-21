@@ -1,6 +1,5 @@
 #include<assert.h>
 
-#include "mesh.h"
 #include "trace.hpp"
 #include "matrix.hpp"
 
@@ -428,19 +427,6 @@ T matrix<T>::minentry() const{
   return minval;
 }
 
-template<class T> occa::memory
-matrix<T>::occaCopy(occa::device &helper){
-
-  clarrayrequest += byteCount();
-
-  if(byteCount())
-    return helper.malloc(byteCount(), c_array());
-  else {
-    double d = 0;
-    return helper.malloc(sizeof(double), &d);
-  }
-}
-
 template<class T> matrix <T>
 matrix<T>::inverse(){
 
@@ -526,55 +512,3 @@ matrix <T> operator- (const matrix <T> & A, const matrix <T> &B){
 }
 
 
-
-// // general left matrix inverse not implemented
-// template <class T>
-// matrix <T> operator| (const matrix <T> & A, const matrix <T> &B){
-
-//   matrix <T> C(A.nrows(), B.ncolumns());
-//   cout << "matrix<T> operator| not implemented for general case" << endl;
-
-//   return C;
-// }
-
-
-// int get_clarrayrequest(){
-
-//   return clarrayrequest;
-// }
-
-
-
-template<class T>
-void occadebug(const char *mess, matrix<T> &a, occa::memory &c_a){
-  // c_a.toHost(a.byteCount(), a.c_array());
-  c_a.copyTo(a.c_array(), a.byteCount());
-  std::cout << " max " << std::string(mess) << "= " << a.maxentry() << std::endl;
-  std::cout << " min " << std::string(mess) << "= " << a.minentry() << std::endl;
-}
-
-template<class T>
-void occadebugsum(const char *mess, matrix<T> &a, occa::memory &c_a){
-  if(a.byteCount()){
-    c_a.copyTo(a.c_array(), a.byteCount());
-  }
-  std::cout << " fro: " << std::string(mess) << "= " << a.frobenius() << std::endl;
-}
-
-template<class T>
-void occadebug(const char *mess, matrix<T> &a, occa::memory &c_a, int rmin, int rmax, int cmin, int cmax){
-
-  // c_a.toHost(a.byteCount(), a.c_array());
-  c_a.copyTo(a.c_array(), a.byteCount());
-
-  dfloat amin = 1e9, amax = -1e9;
-  for(int r=rmin;r<=rmax;++r){
-    for(int c=cmin;c<=cmax;++c){
-      amin = mymin(amin, a(r,c));
-      amax = mymax(amax, a(r,c));
-    }
-  }
-
-  std::cout << " max " << std::string(mess) << "= " << amax << std::endl;
-  std::cout << " min " << std::string(mess) << "= " << amin << std::endl;
-}
