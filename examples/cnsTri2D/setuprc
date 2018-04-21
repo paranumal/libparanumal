@@ -16,16 +16,11 @@ CUDA
 [DEVICE NUMBER]
 0
 
-# 0: None
-# 1: dam break
-# 2: circular dam break
-# 3: isentropic vortex (has exact solution available)
-# 4: Coutte flow (has exact solution available)
-# 5: sinusoidal bump
-# 6: oscillating 2D lake
-# 7:
-[TEST CASE FLAG]
-3
+[TIME INTEGRATOR]
+DOPRI5
+
+[ADVECTION TYPE]
+CUBATURE
 
 [COMPUTE ERROR FLAG]
 1
