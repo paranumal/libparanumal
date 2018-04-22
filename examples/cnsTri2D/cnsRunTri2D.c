@@ -1,13 +1,13 @@
 #include "cnsTri2D.h"
 
-void cnsRunTri2D(cns_t *cns, char *options){
+void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   mesh_t *mesh = cns->mesh;
 
-  cnsReportTri2D(cns, 0, options);
+  cnsReportTri2D(cns, 0, newOptions);
 
   occa::timer timer;
   
@@ -15,8 +15,8 @@ void cnsRunTri2D(cns_t *cns, char *options){
 
   timer.tic("Run");
   
-  if (strstr(options,"DOPRI5")) {
-
+  if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
+    
     // hard code this for the moment
     dfloat outputInterval = .5;
     dfloat nextOutputTime = outputInterval;
@@ -47,7 +47,7 @@ void cnsRunTri2D(cns_t *cns, char *options){
       }
 
       // try a step with the current time step
-      cnsDopriStepTri2D(cns, options, time);
+      cnsDopriStepTri2D(cns, newOptions, time);
 
       // compute Dopri estimator
       dfloat err = cnsDopriEstimateTri2D(cns);
@@ -67,7 +67,7 @@ void cnsRunTri2D(cns_t *cns, char *options){
         cns->o_q.copyFrom(cns->o_rkq);
 
 	if(time-mesh->dt<nextOutputTime && time>nextOutputTime){
-	  cnsReportTri2D(cns, time, options);
+	  cnsReportTri2D(cns, time, newOptions);
 	  nextOutputTime += outputInterval;
 	}
 	
@@ -95,17 +95,17 @@ void cnsRunTri2D(cns_t *cns, char *options){
 
     printf("run took %lg seconds for %d accepted steps and %d total steps\n", elapsed, tstep, allStep);
     
-  } else if (strstr(options,"LSERK")) {
+  } else if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")) {
 
     for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
       dfloat time = tstep*mesh->dt;
 
-      cnsLserkStepTri2D(cns, options, time);
+      cnsLserkStepTri2D(cns, newOptions, time);
       
       if(((tstep+1)%mesh->errorStep)==0){
 	time += mesh->dt;
-        cnsReportTri2D(cns, time, options);
+        cnsReportTri2D(cns, time, newOptions);
       }
     }
   }
