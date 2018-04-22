@@ -58,12 +58,12 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   cns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
   
-  if (newOptions.getArgs("TIME INTEGRATOR")=="LSERK4"){
+  if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     cns->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 		  		sizeof(dfloat));
   }
 
-  if (newOptions.getArgs("TIME INTEGRATOR")=="DOPRI5"){
+  if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")){
     int NrkStages = 7;
     cns->rkq  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
           sizeof(dfloat));
@@ -180,7 +180,7 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   //
   mesh->finalTime = 20;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
-  if (newOptions.getArgs("TIME INTEGRATOR")=="LSERK4"){
+  if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     mesh->dt = mesh->finalTime/mesh->NtimeSteps;
   }
 
@@ -213,12 +213,12 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
 
   cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
   
-  if (newOptions.getArgs("TIME INTEGRATOR")=="LSERK4"){
+  if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     cns->o_resq =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->resq);
   }
 
-  if (newOptions.getArgs("TIME INTEGRATOR")=="DOPRI5"){
+  if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")){
     printf("setting up DOPRI5\n");
     int NrkStages = 7;
     cns->o_rkq =
