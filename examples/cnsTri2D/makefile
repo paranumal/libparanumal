@@ -39,6 +39,7 @@ $(HDRDIR)/mesh2D.h
 
 # list of objects to be compiled
 OBJS    = \
+cnsStepTri2D.o \
 cnsMainTri2D.o \
 cnsError2D.o \
 cnsRunTri2D.o \
