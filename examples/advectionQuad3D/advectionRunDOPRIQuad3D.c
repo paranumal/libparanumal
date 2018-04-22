@@ -135,7 +135,15 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
 	
     }
 
-
+    /*    solver->o_rkerr.copyTo(test_q);
+    for (iint e = 0; e < mesh->Nelements; ++e) {
+      for (iint f = 0; f < solver->Nfields; ++f) {
+	for (iint n = 0; n < mesh->Np; ++n) {
+	  if (mesh->vgeo[e*mesh->Nvgeo*mesh->Np + 10*mesh->Np + n]*test_q[e*solver->Nfields*mesh->Np + f*mesh->Np + n]*test_q[e*solver->Nfields*mesh->Np + f*mesh->Np + n] > 0.00000000001) printf("outlier %d\n",mesh->cubeDistance[e]);
+	}
+      }
+      }*/
+    
     solver->rkErrorEstimateKernel(solver->Ntotal, 
 				solver->absTol,
 				solver->relTol,
@@ -166,7 +174,7 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
       solver->oldFactor = mymax(err,1E-4);
 
       solver->o_q.copyFrom(solver->o_rkq);
-      printf("\r dt = %g accepted                                      ", solver->dt);
+      //printf("\r dt = %g accepted                                      ", solver->dt);
       /*if(outputStep){
 	outputStep = 0;
 	solver->nextOutputTime += solver->outputInterval;
@@ -185,7 +193,7 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
     else {
       dtnew = solver->dt/(mymax(solver->invfactor1,fac1/solver->safety));
       //printf("dtnew factors = %lf %lf %lf\n",solver->invfactor1,fac1,solver->safety);
-      printf("\r dt = %g rejected, trying %g                              ", solver->dt, dtnew);
+      //printf("\r dt = %g rejected, trying %g                              ", solver->dt, dtnew);
     }
     solver->dt = dtnew;
     solver->allStep++;
