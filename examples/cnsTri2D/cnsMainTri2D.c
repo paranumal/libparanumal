@@ -19,7 +19,7 @@ int main(int argc, char **argv){
   // out  = REPORT, REPORT+VTU
   // adv  = CUBATURE, COLLOCATION
   char *options = strdup("integrator = DOPRI5, out=VTU, adv=CUBATURE");
-  //    char *options = strdup("integrator = LSERK, out=VTU, adv=CUBATURE"); 
+  //  char *options = strdup("integrator = LSERK, out=VTU, adv=CUBATURE"); 
 
   // if argv > 2 then should load from argv
   setupAide newOptions("setuprc");
