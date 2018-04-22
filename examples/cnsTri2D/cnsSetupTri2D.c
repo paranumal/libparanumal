@@ -96,8 +96,8 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
     memcpy(cns->rkA, rkA, cns->Nrk*cns->Nrk*sizeof(dfloat));
     
     cns->dtMIN = 1E-7; //minumum allowed timestep
-    cns->ATOL = 1E-5;  //absolute error tolerance
-    cns->RTOL = 1E-3;  //relative error tolerance
+    cns->ATOL = 1E-7;  //absolute error tolerance
+    cns->RTOL = 1E-5;  //relative error tolerance
     cns->safe = 0.9;   //safety factor
 
     //error control parameters
