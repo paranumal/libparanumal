@@ -1,6 +1,6 @@
 #include "cnsTri2D.h"
 
-void cnsStepTri2D(cns_t *cns, const char *options, const dfloat time){
+void cnsDopriStepTri2D(cns_t *cns, const char *options, const dfloat time){
 
   mesh_t *mesh = cns->mesh;
   
