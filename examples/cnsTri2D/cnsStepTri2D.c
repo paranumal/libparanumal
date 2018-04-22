@@ -233,6 +233,7 @@ void cnsLserkStepTri2D(cns_t *cns, setupAide &newOptions, const dfloat time){
       
     // compute volume contribution to DG cns RHS
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
+
       cns->cubatureVolumeKernel(mesh->Nelements, 
 				advSwitch, 
 				mesh->o_vgeo, 
