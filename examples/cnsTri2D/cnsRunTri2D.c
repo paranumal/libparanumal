@@ -18,9 +18,13 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
   if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
     
     // hard code this for the moment
-    dfloat outputInterval = .5;
+    dfloat outputInterval;
+    newOptions.getArgs("OUTPUT INTERVAL", outputInterval);
+    
     dfloat nextOutputTime = outputInterval;
     dfloat outputNumber = 0;
+
+    
     
     //initial time
     dfloat time = 0.0;

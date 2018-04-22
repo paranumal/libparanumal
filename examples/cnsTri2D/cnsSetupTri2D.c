@@ -191,7 +191,8 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
   
   //
-  mesh->finalTime = 20;
+  newOptions.getArgs("FINAL TIME", mesh->finalTime);
+
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
   if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     mesh->dt = mesh->finalTime/mesh->NtimeSteps;
