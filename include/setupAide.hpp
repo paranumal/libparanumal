@@ -46,6 +46,9 @@ public:
   int getArgs(string, matrix<T>&);
 
   int getArgs(string, matrix<string>&, string);
+
+
+  int compareArgs(string key, string token);
 };
 
 #include<setupAide.tpp>

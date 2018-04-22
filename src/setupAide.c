@@ -123,8 +123,9 @@ void setupAide::read(string setupFile){
     }
 
     // Else add the character
-    else
-      current += c;
+    else 
+      if(!isspace(c)) // new check to remove whitespace
+	current += c;
 
     if(i >= (size-1) && current.length())
       data2.push_back(current);
@@ -188,4 +189,14 @@ int setupAide::getArgs(string key, matrix<string>& m, string delimeter){
 }
 
 
-// Combined header/source needs explicit instantiation
+int setupAide::compareArgs(string key, string token){
+
+  string foundToken;
+  if(getArgs(key,foundToken)){
+    if(foundToken==token)
+      return 1;
+  }
+
+  return 0;
+  
+}
