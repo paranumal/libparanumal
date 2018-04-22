@@ -18,12 +18,25 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
     if (hostIds[r]==hostId) deviceID++;
   }
 
-  // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", deviceID);
-  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
-  //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  //sprintf(deviceConfig, "mode = Serial");  
-
+  // read thread model/device/platform from newOptions
+  if(newOptions.compareArgs("THREAD MODEL", "CUDA")){
+    int dev;
+    newOptions.getArgs("DEVICE NUMBER" ,dev);
+    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",dev);
+  }
+  else if(newOptions.compareArgs("THREAD MODEL", "OpenCL")){
+    int dev, plat;
+    newOptions.getArgs("DEVICE NUMBER", dev);
+    newOptions.getArgs("PLATFORM NUMBER", plat);
+    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", dev, plat);
+  }
+  else if(newOptions.compareArgs("THREAD MODEL", "OpenMP")){
+    sprintf(deviceConfig, "mode = OpenMP");
+  }
+  else{
+    sprintf(deviceConfig, "mode = Serial");
+  }
+	
   cns_t *cns = (cns_t*) calloc(1, sizeof(cns_t));
 
   mesh->Nfields = 3;
