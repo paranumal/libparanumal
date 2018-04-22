@@ -69,6 +69,16 @@ typedef struct{
   dfloat *sendStressesBuffer;
   dfloat *recvStressesBuffer;
   occa::memory o_haloStressesBuffer;
+
+  // DOPRI5 RK data
+  int advSwitch;
+  int Nrk;
+  dfloat ATOL, RTOL;
+  dfloat factor1, invfactor1;
+  dfloat factor2, invfactor2;
+  dfloat exp1, facold,  dtMIN, safe, beta;
+  dfloat *rkA, *rkC, *rkE;
+  occa::memory o_rkA, o_rkC, o_rkE;
   
 }cns_t;
 
@@ -88,3 +98,5 @@ void cnsGaussianPulse2D(dfloat x, dfloat y, dfloat t,
 void cnsReportTri2D(cns_t *cns, dfloat time, char *options);
 
 void cnsPlotVTUTri2D(cns_t *cns, char *fileName);
+
+void cnsStepTri2D(cns_t *cns, const char *options, const dfloat time);
