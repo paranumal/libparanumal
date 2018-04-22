@@ -1,8 +1,10 @@
 
 #include "advectionQuad3D.h"
 
-void advectionErrorNormQuad3D(mesh_t *mesh, dfloat t, char *fileBase, int slice){
+void advectionErrorNormQuad3D(solver_t *solver, dfloat t, char *fileBase, int slice){
 
+  mesh_t *mesh = solver->mesh;
+  
   dfloat l2 = 0;
   for (iint e = 0; e < mesh->Nelements; ++e) {
     for (iint n = 0; n < mesh->Np; ++n) {
@@ -27,17 +29,17 @@ void advectionErrorNormQuad3D(mesh_t *mesh, dfloat t, char *fileBase, int slice)
       
       dfloat JW = mesh->vgeo[mesh->Nvgeo*mesh->Np*e + JWID*mesh->Np + n];
 
-      dfloat err = qref - mesh->q[e*mesh->Np*mesh->Nfields + n];
+      dfloat err = qref - solver->q[e*mesh->Np*solver->Nfields + n];
       
       l2 += JW*err*err;
 
       if(fileBase!=NULL)
-	mesh->q[e*mesh->Np*mesh->Nfields+n] = l2;
+	solver->q[e*mesh->Np*solver->Nfields+n] = l2;
     }
   }
   
   printf("%7.5lg %.2e %d (t,L2 norm err,Nlevels)\n", t, sqrt(l2),mesh->MRABNlevels);
 
   if(fileBase!=NULL)
-    advectionPlotVTUQuad3DV2(mesh, fileBase, slice);  
+    advectionPlotVTUQuad3DV2(solver, fileBase, slice);  
 }

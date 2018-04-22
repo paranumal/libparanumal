@@ -34,12 +34,12 @@ OBJS    = \
 advectionMainQuad3D.o \
 advectionRunMRSAABQuad3D.o \
 advectionRunDOPRIQuad3D.o \
-advectionSetupQuad3D.o \
+advectionSetupPhysicsQuad3D.o \
 advectionPlotVTUQuad3D.o \
 advectionPlotVTUQuad3DV2.o \
-advectionOccaSetupQuad3D.o \
-advectionPlotLevels.o \
-advectionPlotNorms.o \
+advectionSetupOccaQuad3D.o \
+advectionSetupMRSAABQuad3D.o \
+advectionSetupDOPRIQuad3D.o \
 advectionRunLSERKQuad3D.o \
 advectionErrorNormQuad3D.o \
 ../../src/meshParallelReaderQuad3D.o \
