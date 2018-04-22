@@ -380,7 +380,7 @@ void advectionSetupMRSAABQuad3D (solver_t *solver) {
 
     rk4_coeffs(solver);
 
-    dfloat cfl_small = 0.5; // depends on the stability region size (was .4, then 2)
+    dfloat cfl_small = 0.03; // depends on the stability region size (was .4, then 2)
     dfloat cfl_large = cfl_small;//((mesh->N)*cfl_small)/2;
 
     solver->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*solver->Nfields,
