@@ -48,28 +48,11 @@ void cnsRunTri2D(cns_t *cns, char *options){
 
       // try a step with the current time step
       cnsDopriStepTri2D(cns, options, time);
-      
-      //Error estimation 
-      //E. HAIRER, S.P. NORSETT AND G. WANNER, SOLVING ORDINARY
-      //      DIFFERENTIAL EQUATIONS I. NONSTIFF PROBLEMS. 2ND EDITION.
-      dlong Ntotal = mesh->Nelements*mesh->Np*mesh->Nfields;
-      cns->rkErrorEstimateKernel(Ntotal, 
-				 cns->ATOL,
-				 cns->RTOL,
-				 cns->o_q,
-				 cns->o_rkq,
-				 cns->o_rkerr,
-				 cns->o_errtmp);
 
-      cns->o_errtmp.copyTo(cns->errtmp);
-      dfloat localerr = 0;
-      dfloat err = 0;
-      for(dlong n=0;n<cns->Nblock;++n){
-        localerr += cns->errtmp[n];
-      }
-      MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-      err = sqrt(err/cns->totalElements);
+      // compute Dopri estimator
+      dfloat err = cnsDopriEstimateTri2D(cns);
 
+      // build controller
       dfloat fac1 = pow(err,cns->exp1);
       dfloat fac = fac1/pow(cns->facold,cns->beta);
 
