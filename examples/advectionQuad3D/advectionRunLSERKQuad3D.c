@@ -5,7 +5,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
   mesh_t *mesh = solver->mesh;
     
   // MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*solver->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
@@ -14,25 +14,25 @@ void advectionRunLSERKQuad3D(solver_t *solver){
   //kernel arguments
   dfloat alpha = 1./mesh->N;
 
-  mesh->filterKernelq0H(mesh->Nelements,
-			mesh->o_dualProjMatrix,
-			mesh->o_cubeFaceNumber,
-			mesh->o_EToE,
-			mesh->o_qpre,
-			mesh->o_qPreFilter);
+  solver->filterKernelq0H(mesh->Nelements,
+			solver->o_dualProjMatrix,
+			solver->o_cubeFaceNumber,
+			solver->o_EToE,
+			solver->o_qpre,
+			solver->o_qPreFilter);
   
-  mesh->filterKernelq0V(mesh->Nelements,
+  solver->filterKernelq0V(mesh->Nelements,
 			alpha,
-			mesh->o_dualProjMatrix,
-			mesh->o_cubeFaceNumber,
-			mesh->o_EToE,
-			mesh->o_x,
-			mesh->o_y,
-			mesh->o_z,
-			mesh->o_qPreFilter,
-			mesh->o_qpre);
+			solver->o_dualProjMatrix,
+			solver->o_cubeFaceNumber,
+			solver->o_EToE,
+			solver->o_x,
+			solver->o_y,
+			solver->o_z,
+			solver->o_qPreFilter,
+			solver->o_qpre);
   
-  for(iint tstep=0;tstep < mesh->Nrhs;++tstep){
+  for(iint tstep=0;tstep < solver->Nrhs;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {      
       
       iint lev;
@@ -43,23 +43,23 @@ void advectionRunLSERKQuad3D(solver_t *solver){
       for (levS=0;levS<mesh->MRABNlevels;levS++)
 	if ((Ntick+1) % (1<<levS) !=0) break; //find the max lev to add to rhsq
 	
-      for (iint rk = 0; rk < mesh->Nrk; ++rk) {
+      for (iint rk = 0; rk < solver->Nrk; ++rk) {
 	
 	//synthesize actual stage time
 	dfloat t = tstep*pow(2,mesh->MRABNlevels-1) + Ntick;
       
 	if(mesh->totalHaloPairs>0){
 	  // extract halo on DEVICE
-	  iint Nentries = mesh->Np*mesh->Nfields;
+	  iint Nentries = mesh->Np*solver->Nfields;
 	  
-	  mesh->haloExtractKernel(mesh->totalHaloPairs,
+	  solver->haloExtractKernel(mesh->totalHaloPairs,
 				  Nentries,
-				  mesh->o_haloElementList,
-				  mesh->o_qpre,
-				  mesh->o_haloBuffer);
+				  solver->o_haloElementList,
+				  solver->o_qpre,
+				  solver->o_haloBuffer);
 
 	  // copy extracted halo to HOST 
-	  mesh->o_haloBuffer.copyTo(sendBuffer);      
+	  solver->o_haloBuffer.copyTo(sendBuffer);      
 	
 	  // start halo exchange
 	  meshHaloExchangeStart(mesh,
@@ -68,14 +68,14 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				recvBuffer);
 	}
 	// compute volume contribution to DG advection RHS
-	mesh->volumePreKernel(mesh->Nelements,
-			      mesh->o_vgeo,
-			      mesh->o_D,
-			      mesh->o_x,
-			      mesh->o_y,
-			      mesh->o_z,
-			      mesh->o_qpre,
-			      mesh->o_prerhsq);
+	solver->volumePreKernel(mesh->Nelements,
+			      solver->o_vgeo,
+			      solver->o_D,
+			      solver->o_x,
+			      solver->o_y,
+			      solver->o_z,
+			      solver->o_qpre,
+			      solver->o_prerhsq);
 
 	if(mesh->totalHaloPairs>0){
 	  // wait for halo data to arrive
@@ -83,115 +83,115 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 	
 	  // copy halo data to DEVICE
 	  size_t offset = mesh->Np*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-	  mesh->o_q.copyFrom(recvBuffer, haloBytes, offset);
-	  mesh->device.finish();
+	  solver->o_q.copyFrom(recvBuffer, haloBytes, offset);
+	  solver->device.finish();
 	}
 	
-	mesh->surfacePreKernel(mesh->Nelements,
-			       mesh->o_sgeo,
-			       mesh->o_LIFTT,
-			       mesh->o_vmapM,
-			       mesh->o_vmapP,
+	solver->surfacePreKernel(mesh->Nelements,
+			       solver->o_sgeo,
+			       solver->o_LIFTT,
+			       solver->o_vmapM,
+			       solver->o_vmapP,
 			       t,
-			       mesh->o_x,
-			       mesh->o_y,
-			       mesh->o_z,
-			       mesh->o_qpre,
-			       mesh->o_prerhsq);
+			       solver->o_x,
+			       solver->o_y,
+			       solver->o_z,
+			       solver->o_qpre,
+			       solver->o_prerhsq);
 	
 	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
 	  iint saved = (l < lev)&&(rk == 0);
-	  mesh->filterKernelHLSERK(mesh->MRABNelements[l],
-				   mesh->o_MRABelementIds[l],
+	  solver->filterKernelHLSERK(mesh->MRABNelements[l],
+				   solver->o_MRABelementIds[l],
 				   saved,
 				   mesh->MRABshiftIndex[l],
-				   mesh->o_dualProjMatrix,
-				   mesh->o_cubeFaceNumber,
-				   mesh->o_EToE,
-				   mesh->o_prerhsq,
-				   mesh->o_qPreFilter,
-				   mesh->o_rhsq);
+				   solver->o_dualProjMatrix,
+				   solver->o_cubeFaceNumber,
+				   solver->o_EToE,
+				   solver->o_prerhsq,
+				   solver->o_qPreFilter,
+				   solver->o_rhsq);
 	}
 
 	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
 	  iint saved = (l < lev)&&(rk == 0);
-	  mesh->filterKernelVLSERK(mesh->MRABNelements[l],
-				   mesh->o_MRABelementIds[l],
+	  solver->filterKernelVLSERK(mesh->MRABNelements[l],
+				   solver->o_MRABelementIds[l],
 				   alpha,
 				   saved,
-				   mesh->MRABshiftIndex[l],
-				   mesh->o_dualProjMatrix,
-				   mesh->o_cubeFaceNumber,
-				   mesh->o_EToE,
-				   mesh->o_x,
-				   mesh->o_y,
-				   mesh->o_z,
-				   mesh->o_qPreFilter,
-				   mesh->o_prerhsq,
-				   mesh->o_qFilter);
+				   solver->MRABshiftIndex[l],
+				   solver->o_dualProjMatrix,
+				   solver->o_cubeFaceNumber,
+				   solver->o_EToE,
+				   solver->o_x,
+				   solver->o_y,
+				   solver->o_z,
+				   solver->o_qPreFilter,
+				   solver->o_prerhsq,
+				   solver->o_qFilter);
 				   }
 	
 	for (iint l = 0; l < mesh->MRABNlevels; l++) {
 	  iint saved = (l < lev)&&(rk == 0);
-	  mesh->volumeCorrPreKernel(mesh->MRABNelements[l],
-				    mesh->o_MRABelementIds[l],
+	  solver->volumeCorrPreKernel(mesh->MRABNelements[l],
+				    solver->o_MRABelementIds[l],
 				    saved,
-				    mesh->MRABshiftIndex[l],
-				    mesh->o_qpre,
-				    mesh->o_qPreCorr,
-				    mesh->o_qCorr);
+				    solver->MRABshiftIndex[l],
+				    solver->o_qpre,
+				    solver->o_qPreCorr,
+				    solver->o_qCorr);
 	}
 	
 	for (iint l = 0; l < mesh->MRABNlevels; l++) {
 	  iint saved = (l < lev)&&(rk == 0);
 	  
 	  if (mesh->MRABNelements[l]) {
-	    mesh->updatePreKernel(mesh->MRABNelements[l],
-				  mesh->o_MRABelementIds[l],
+	    solver->updatePreKernel(mesh->MRABNelements[l],
+				  solver->o_MRABelementIds[l],
 				  saved,
 				  mesh->dt,
 				  solver->rka[rk],
 				  solver->rkb[rk],
-				  mesh->MRABshiftIndex[l],
-				  mesh->o_prerhsq,
-				  mesh->o_qFiltered,
-				  //mesh->o_rhsq,
-				  mesh->o_qPreCorr,
-				  mesh->o_resq,
-				  mesh->o_qpre);
+				  solver->MRABshiftIndex[l],
+				  solver->o_prerhsq,
+				  solver->o_qFiltered,
+				  //solver->o_rhsq,
+				  solver->o_qPreCorr,
+				  solver->o_resq,
+				  solver->o_qpre);
 	    
-	    saved = (l < levS)&&(rk == mesh->Nrk-1);
+	    saved = (l < levS)&&(rk == solver->Nrk-1);
 	    if (saved)
-	      mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+mesh->Nrhs-1)%mesh->Nrhs;
+	      solver->MRABshiftIndex[l] = (solver->MRABshiftIndex[l]+solver->Nrhs-1)%solver->Nrhs;
 	  }
 	}
       }
-      mesh->filterKernelq0H(mesh->Nelements,
-			    mesh->o_dualProjMatrix,
-			    mesh->o_cubeFaceNumber,
-			    mesh->o_EToE,
-			    mesh->o_qpre,
-			    mesh->o_qPreFilter);
+      solver->filterKernelq0H(mesh->Nelements,
+			    solver->o_dualProjMatrix,
+			    solver->o_cubeFaceNumber,
+			    solver->o_EToE,
+			    solver->o_qpre,
+			    solver->o_qPreFilter);
       
-      mesh->filterKernelq0V(mesh->Nelements,
+      solver->filterKernelq0V(mesh->Nelements,
 			    alpha,
-			    mesh->o_dualProjMatrix,
-			    mesh->o_cubeFaceNumber,
-			    mesh->o_EToE,
-			    mesh->o_x,
-			    mesh->o_y,
-			    mesh->o_z,
-			    mesh->o_qPreFilter,
-			    mesh->o_qpre);
+			    solver->o_dualProjMatrix,
+			    solver->o_cubeFaceNumber,
+			    solver->o_EToE,
+			    solver->o_x,
+			    solver->o_y,
+			    solver->o_z,
+			    solver->o_qPreFilter,
+			    solver->o_qpre);
 
     }
   }
   
-  mesh->traceUpdatePreKernel(mesh->Nelements,
-			     mesh->o_vmapM,
-			     mesh->o_fQM,
-			     mesh->o_qpre,
-			     mesh->o_q);
+  solver->traceUpdatePreKernel(mesh->Nelements,
+			     solver->o_vmapM,
+			     solver->o_fQ,
+			     solver->o_qpre,
+			     solver->o_q);
 
   
   free(recvBuffer);

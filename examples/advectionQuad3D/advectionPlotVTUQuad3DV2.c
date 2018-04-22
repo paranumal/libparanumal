@@ -6,8 +6,10 @@
 #include "advectionQuad3D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void advectionPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
+void advectionPlotVTUQuad3DV2(solver_t *solver, char *fileNameBase, int tstep){
 
+  mesh_t *mesh = solver->mesh;
+  
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   
@@ -59,7 +61,7 @@ void advectionPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
       dfloat plotpn = 0;
       for(iint m=0;m<mesh->Np;++m){
 	int id = m + 0*mesh->Np + mesh->Nfields*mesh->Np*e;
-        dfloat pm = mesh->q[id];
+        dfloat pm = solver->q[id];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
       //
@@ -80,9 +82,9 @@ void advectionPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 	int vid = m + 2*mesh->Np + mesh->Nfields*mesh->Np*e;
 	int wid = m + 3*mesh->Np + mesh->Nfields*mesh->Np*e;
 		
-        dfloat um = mesh->q[uid];
-        dfloat vm = mesh->q[vid];
-	dfloat wm = mesh->q[wid];
+        dfloat um = solver->q[uid];
+        dfloat vm = solver->q[vid];
+	dfloat wm = solver->q[wid];
         //
         plotun += mesh->plotInterp[n*mesh->Np+m]*um;
         plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
@@ -138,25 +140,25 @@ void advectionPlotVTUQuad3DV2(mesh_t *mesh, char *fileNameBase, int tstep){
 	  int basemi = i + m*mesh->Nq + mesh->Nfields*mesh->Np*e;
 	  dfloat Dim = mesh->D[i*mesh->Nq+m];
 	  dfloat Djm = mesh->D[j*mesh->Nq+m];
-	  dudr += Dim*mesh->q[basejm + 1*mesh->Np]/mesh->q[basejm];
-	  duds += Djm*mesh->q[basemi + 1*mesh->Np]/mesh->q[basemi];
-	  dvdr += Dim*mesh->q[basejm + 2*mesh->Np]/mesh->q[basejm];
-	  dvds += Djm*mesh->q[basemi + 2*mesh->Np]/mesh->q[basemi];
-	  dwdr += Dim*mesh->q[basejm + 3*mesh->Np]/mesh->q[basejm];
-	  dwds += Djm*mesh->q[basemi + 3*mesh->Np]/mesh->q[basemi];
+	  dudr += Dim*solver->q[basejm + 1*mesh->Np]/solver->q[basejm];
+	  duds += Djm*solver->q[basemi + 1*mesh->Np]/solver->q[basemi];
+	  dvdr += Dim*solver->q[basejm + 2*mesh->Np]/solver->q[basejm];
+	  dvds += Djm*solver->q[basemi + 2*mesh->Np]/solver->q[basemi];
+	  dwdr += Dim*solver->q[basejm + 3*mesh->Np]/solver->q[basejm];
+	  dwds += Djm*solver->q[basemi + 3*mesh->Np]/solver->q[basemi];
 	}
 	int base = i + j*mesh->Nq + e*mesh->Np*mesh->Nfields;
-	dfloat dudx = rx*dudr + sx*duds + tx*mesh->q[base + 1*mesh->Np]/mesh->q[base];
-	dfloat dudy = ry*dudr + sy*duds + ty*mesh->q[base + 1*mesh->Np]/mesh->q[base];
-	dfloat dudz = rz*dudr + sz*duds + tz*mesh->q[base + 1*mesh->Np]/mesh->q[base];
+	dfloat dudx = rx*dudr + sx*duds + tx*solver->q[base + 1*mesh->Np]/solver->q[base];
+	dfloat dudy = ry*dudr + sy*duds + ty*solver->q[base + 1*mesh->Np]/solver->q[base];
+	dfloat dudz = rz*dudr + sz*duds + tz*solver->q[base + 1*mesh->Np]/solver->q[base];
 
-	dfloat dvdx = rx*dvdr + sx*dvds + tx*mesh->q[base + 2*mesh->Np]/mesh->q[base];
-	dfloat dvdy = ry*dvdr + sy*dvds + ty*mesh->q[base + 2*mesh->Np]/mesh->q[base];
-	dfloat dvdz = rz*dvdr + sz*dvds + tz*mesh->q[base + 2*mesh->Np]/mesh->q[base];
+	dfloat dvdx = rx*dvdr + sx*dvds + tx*solver->q[base + 2*mesh->Np]/solver->q[base];
+	dfloat dvdy = ry*dvdr + sy*dvds + ty*solver->q[base + 2*mesh->Np]/solver->q[base];
+	dfloat dvdz = rz*dvdr + sz*dvds + tz*solver->q[base + 2*mesh->Np]/solver->q[base];
 
-	dfloat dwdx = rx*dwdr + sx*dwds + tx*mesh->q[base + 3*mesh->Np]/mesh->q[base];
-	dfloat dwdy = ry*dwdr + sy*dwds + ty*mesh->q[base + 3*mesh->Np]/mesh->q[base];
-	dfloat dwdz = rz*dwdr + sz*dwds + tz*mesh->q[base + 3*mesh->Np]/mesh->q[base];
+	dfloat dwdx = rx*dwdr + sx*dwds + tx*solver->q[base + 3*mesh->Np]/solver->q[base];
+	dfloat dwdy = ry*dwdr + sy*dwds + ty*solver->q[base + 3*mesh->Np]/solver->q[base];
+	dfloat dwdz = rz*dwdr + sz*dwds + tz*solver->q[base + 3*mesh->Np]/solver->q[base];
 
 	base = i + j*mesh->Nq;
 	vort[base+0*mesh->Np] = dwdy - dvdz;

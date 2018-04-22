@@ -13,7 +13,7 @@ int main(int argc, char **argv){
 
   //changes solver mode.
   //options are: DOPRI MRSAAB
-  char *mode = "DOPRI";
+  char *mode = "MRSAAB";
   
   // int specify polynomial degree 
   int N = atoi(argv[2]);
@@ -23,19 +23,13 @@ int main(int argc, char **argv){
   mesh_t *mesh = meshSetupQuad3D(argv[1], N, sphereRadius,mode);
 
   // set up boltzmann stuff
-  solver_t *solver = advectionSetupQuad3D(mesh,mode);
-
-  /*  for(int e=0;e<mesh->Nelements;++e){
-    for(int f=0;f<mesh->Nfaces;++f){
-      for(int n=0;n<mesh->Nq;++n){
-	int vidM = mesh->vmapM[e*mesh->Nfaces*mesh->Nq + f*mesh->Nq + n];
-	int vidP = mesh->vmapP[e*mesh->Nfaces*mesh->Nq + f*mesh->Nq + n];
-	if (mesh->x[vidM]-mesh->x[vidP] > 1e-12) printf("x mismatch = %lg\n", mesh->x[vidM]-mesh->x[vidP]);
-	if (mesh->y[vidM]-mesh->y[vidP]) printf("y mismatch = %lg\n", mesh->y[vidM]-mesh->y[vidP]);
-	if (mesh->z[vidM]-mesh->z[vidP]) printf("z mismatch = %lg\n", mesh->z[vidM]-mesh->z[vidP]);
-      }
-    }
-    }*/
+  solver_t *solver = advectionSetupPhysicsQuad3D(mesh);
+  if (strstr(mode,"MRSAAB")) {
+    advectionSetupMRSAABQuad3D(solver);
+  }
+  else if (strstr(mode,"DOPRI")) {
+    advectionSetupDOPRIQuad3D(solver);
+  }
   
   // time step Boltzmann equations
   if (strstr(mode,"MRSAAB")) {
@@ -46,8 +40,8 @@ int main(int argc, char **argv){
     advectionRunDOPRIQuad3D(solver);
   }
 
-  mesh->o_q.copyTo(mesh->q);
-  advectionErrorNormQuad3D(mesh,solver->finalTime,"end",0);
+  solver->o_q.copyTo(solver->q);
+  advectionErrorNormQuad3D(solver,solver->finalTime,"end",0);
   
   /*    mesh->o_q.copyTo(mesh->q);
   dfloat l2 = 0;

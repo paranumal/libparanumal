@@ -5,47 +5,47 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
   mesh_t *mesh = solver->mesh;
     
   // MPI send buffer
-  iint haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+  iint haloBytes = mesh->totalHaloPairs*mesh->Np*solver->Nfields*sizeof(dfloat);
   dfloat *sendBuffer = (dfloat*) malloc(haloBytes);
   dfloat *recvBuffer = (dfloat*) malloc(haloBytes);
 
-  dfloat * test_q = (dfloat *) calloc(mesh->Nfields*mesh->Nelements*mesh->Np,sizeof(dfloat));
+  dfloat * test_q = (dfloat *) calloc(solver->Nfields*mesh->Nelements*mesh->Np,sizeof(dfloat));
     
   //kernel arguments
   dfloat alpha = 1./mesh->N;
 
   occa::timer timer;
   
-  timer.initTimer(mesh->device);
+  timer.initTimer(solver->device);
 
   timer.tic("Run");
   
-  /*  mesh->filterKernelq0H(mesh->Nelements,
-			mesh->o_dualProjMatrix,
-			mesh->o_cubeFaceNumber,
-			mesh->o_EToE,
-			mesh->o_qpre,
-			mesh->o_qPreFilter);
+  solver->filterKernelH(mesh->Nelements,
+		      solver->o_dualProjMatrix,
+		      solver->o_cubeFaceNumber,
+		      solver->o_EToE,
+		      solver->o_q,
+		      solver->o_qFilter);
   
-  mesh->filterKernelq0V(mesh->Nelements,
-			alpha,
-			mesh->o_dualProjMatrix,
-			mesh->o_cubeFaceNumber,
-			mesh->o_EToE,
-			mesh->o_x,
-			mesh->o_y,
-			mesh->o_z,
-			mesh->o_qPreFilter,
-			mesh->o_qpre);
-  */
+  solver->filterKernelV(mesh->Nelements,
+		      alpha,
+		      solver->o_dualProjMatrix,
+		      solver->o_cubeFaceNumber,
+		      solver->o_EToE,
+		      solver->o_x,
+		      solver->o_y,
+		      solver->o_z,
+		      solver->o_qFilter,
+		      solver->o_q);
+  
   int lastStep = 0;
   
   while (1) {
-    if (mesh->dt<solver->dtmin){
+    if (solver->dt<solver->dtmin){
       printf("ERROR: Time step became too small at time step=%d\n", solver->tstep);
       exit (-1);
     }
-    if (isnan(mesh->dt)) {
+    if (isnan(solver->dt)) {
       printf("ERROR: Solution became unstable at time step=%d\n", solver->tstep);
       exit (-1);
     }
@@ -53,97 +53,99 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
     int outputStep = 0;
 
     // check for next output
-    /*    if((solver->time+mesh->dt > solver->nextOutputTime) && (solver->time<=solver->nextOutputTime)) {
-      mesh->dt = solver->nextOutputTime-solver->time;
+    /*    if((solver->time+solver->dt > solver->nextOutputTime) && (solver->time<=solver->nextOutputTime)) {
+      solver->dt = solver->nextOutputTime-solver->time;
       outputStep = 1;
       }*/
 
     //check for final timestep
-    if (solver->time+mesh->dt > solver->finalTime) {
-      mesh->dt = solver->finalTime-solver->time;
+    if (solver->time+solver->dt > solver->finalTime) {
+      solver->dt = solver->finalTime-solver->time;
       lastStep = 1;
     }
     
-    for (iint rk = 0; rk < mesh->Nrk; ++rk) {
+    for (iint rk = 0; rk < solver->Nrk; ++rk) {
 
-      dfloat t = solver->time + solver->rkc[rk]*mesh->dt;
-      mesh->rkStageKernel(mesh->Nelements,
+      dfloat t = solver->time + solver->rkC[rk]*solver->dt;
+      solver->rkStageKernel(mesh->Nelements,
 			  rk,
-			  mesh->dt,
-			  mesh->o_rka,
-			  mesh->o_q,
-			  mesh->o_resq,
-			  mesh->o_rkq);
+			  solver->dt,
+			  solver->o_rkA,
+			  solver->o_q,
+			  solver->o_resq,
+			  solver->o_rkq);
 
-      // compute volume contribution to DG advection RHS
-      mesh->volumeKernel(mesh->Nelements,
-			 mesh->o_vgeo,
-			 mesh->o_D,
-			 mesh->o_x,
-			 mesh->o_y,
-			 mesh->o_z,
-			 mesh->o_rkq,
-			 mesh->o_prerhsq);
-
-      mesh->surfaceKernel(mesh->Nelements,
-			  mesh->o_sgeo,
-			  mesh->o_LIFTT,
-			  mesh->o_vmapM,
-			  mesh->o_vmapP,
-			  solver->tstep,
-			  mesh->o_x,
-			  mesh->o_y,
-			  mesh->o_z,
-			  mesh->o_rkq,
-			  mesh->o_prerhsq);
-      /*      mesh->filterKernelq0H(mesh->Nelements,
-			    mesh->o_dualProjMatrix,
-			    mesh->o_cubeFaceNumber,
-			    mesh->o_EToE,
-			    mesh->o_prerhsq,
-			    mesh->o_qPreFilter);
       
-      mesh->filterKernelq0V(mesh->Nelements,
+      // compute volume contribution to DG advection RHS
+      solver->volumeKernel(mesh->Nelements,
+			 solver->o_vgeo,
+			 solver->o_D,
+			 solver->o_x,
+			 solver->o_y,
+			 solver->o_z,
+			 solver->o_rkq,
+			 solver->o_rhsq);
+
+      solver->surfaceKernel(mesh->Nelements,
+			  solver->o_sgeo,
+			  solver->o_LIFTT,
+			  solver->o_vmapM,
+			  solver->o_vmapP,
+			  solver->tstep,
+			  solver->o_x,
+			  solver->o_y,
+			  solver->o_z,
+			  solver->o_rkq,
+			  solver->o_rhsq);
+
+      solver->filterKernelH(mesh->Nelements,
+			    solver->o_dualProjMatrix,
+			    solver->o_cubeFaceNumber,
+			    solver->o_EToE,
+			    solver->o_rhsq,
+			    solver->o_qFilter);
+      
+      solver->filterKernelV(mesh->Nelements,
 			    alpha,
-			    mesh->o_dualProjMatrix,
-			    mesh->o_cubeFaceNumber,
-			    mesh->o_EToE,
-			    mesh->o_x,
-			    mesh->o_y,
-			    mesh->o_z,
-			    mesh->o_qPreFilter,
-			    mesh->o_prerhsq);
-      */
-      mesh->volumeCorrectionKernel(mesh->Nelements,
-				   mesh->o_rkq,
-				   mesh->o_qPreCorr);
+			    solver->o_dualProjMatrix,
+			    solver->o_cubeFaceNumber,
+			    solver->o_EToE,
+			    solver->o_x,
+			    solver->o_y,
+			    solver->o_z,
+			    solver->o_qFilter,
+			    solver->o_rhsq);
+      
+      solver->volumeCorrectionKernel(mesh->Nelements,
+				     solver->o_rkq,
+				     solver->o_qCorr);
 	 
             
-      mesh->updateKernel(mesh->Nelements, 
+      solver->updateKernel(mesh->Nelements, 
                           rk,
-                          mesh->dt,
-                          mesh->o_rka,
-                          mesh->o_rkb,
-                          mesh->o_q,
-                          mesh->o_prerhsq,
-			  mesh->o_qPreCorr,
-                          mesh->o_resq, 
-                          mesh->o_rkq,
-                          mesh->o_rkerr);
-      
+                          solver->dt,
+                          solver->o_rkA,
+                          solver->o_rkE,
+                          solver->o_q,
+                          solver->o_rhsq,
+			  solver->o_qCorr,
+                          solver->o_resq, 
+                          solver->o_rkq,
+                          solver->o_rkerr);
+	
     }
 
 
-    mesh->rkErrorEstimateKernel(solver->Ntotal, 
+    solver->rkErrorEstimateKernel(solver->Ntotal, 
 				solver->absTol,
 				solver->relTol,
-				mesh->o_vgeo,
-				mesh->o_q,
-				mesh->o_rkq,
-				mesh->o_rkerr,
-				mesh->o_errtmp);
+				solver->o_vgeo,
+				solver->o_q,
+				solver->o_rkq,
+				solver->o_rkerr,
+				solver->o_errtmp);
     
-    mesh->o_errtmp.copyTo(solver->errtmp);
+    solver->o_errtmp.copyTo(solver->errtmp);
     dfloat localerr = 0;
     dfloat err = 0;
 
@@ -156,15 +158,15 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
     dfloat fac = fac1/pow(solver->oldFactor,solver->beta);
     
     fac = mymax(solver->invfactor2, mymin(solver->invfactor1,fac/solver->safety));
-    dfloat dtnew = mesh->dt/fac;
+    dfloat dtnew = solver->dt/fac;
 
     if (err<1.0) { //dt is accepted
-      solver->time += mesh->dt;
+      solver->time += solver->dt;
 
       solver->oldFactor = mymax(err,1E-4);
 
-      mesh->o_q.copyFrom(mesh->o_rkq);
-      //printf("dt = %g accepted\n", mesh->dt);
+      solver->o_q.copyFrom(solver->o_rkq);
+      printf("\r dt = %g accepted                                      ", solver->dt);
       /*if(outputStep){
 	outputStep = 0;
 	solver->nextOutputTime += solver->outputInterval;
@@ -172,7 +174,7 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
 	printf("tstep = %d, t = %g\n", solver->tstep, solver->time);
 	fflush(stdout);
 
-	mesh->o_q.copyTo(mesh->q);
+	solver->o_q.copyTo(mesh->q);
 	advectionPlotVTUQuad3DV2(mesh, "foo", solver->time/solver->outputInterval);
 	}*/
 
@@ -181,29 +183,29 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
       if (lastStep) break;
     }
     else {
-      dtnew = mesh->dt/(mymax(solver->invfactor1,fac1/solver->safety));
+      dtnew = solver->dt/(mymax(solver->invfactor1,fac1/solver->safety));
       //printf("dtnew factors = %lf %lf %lf\n",solver->invfactor1,fac1,solver->safety);
-      //printf("dt = %g rejected, trying %g\n", mesh->dt, dtnew);
+      printf("\r dt = %g rejected, trying %g                              ", solver->dt, dtnew);
     }
-    mesh->dt = dtnew;
+    solver->dt = dtnew;
     solver->allStep++;
-    /*    mesh->filterKernelq0H(mesh->Nelements,
-			  mesh->o_dualProjMatrix,
-			  mesh->o_cubeFaceNumber,
-			  mesh->o_EToE,
-			  mesh->o_q,
-			  mesh->o_qPreFilter);
+    solver->filterKernelH(mesh->Nelements,
+			  solver->o_dualProjMatrix,
+			  solver->o_cubeFaceNumber,
+			  solver->o_EToE,
+			  solver->o_q,
+			  solver->o_qFilter);
       
-    mesh->filterKernelq0V(mesh->Nelements,
+    solver->filterKernelV(mesh->Nelements,
 			  alpha,
-			  mesh->o_dualProjMatrix,
-			  mesh->o_cubeFaceNumber,
-			  mesh->o_EToE,
-			  mesh->o_x,
-			  mesh->o_y,
-			  mesh->o_z,
-			  mesh->o_qPreFilter,
-			  mesh->o_q);*/
+			  solver->o_dualProjMatrix,
+			  solver->o_cubeFaceNumber,
+			  solver->o_EToE,
+			  solver->o_x,
+			  solver->o_y,
+			  solver->o_z,
+			  solver->o_qFilter,
+			  solver->o_q);
   }
 
   double elapsed  = timer.toc("Run");
@@ -211,5 +213,5 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
   //mesh->device.finish();
   
   
-  printf("run took %lg seconds for %d accepted steps and %d total steps\n", elapsed, solver->tstep, solver->allStep);
+  printf("\n run took %lg seconds for %d accepted steps and %d total steps\n", elapsed, solver->tstep, solver->allStep);
 }
