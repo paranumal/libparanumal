@@ -47,7 +47,7 @@ void cnsRunTri2D(cns_t *cns, char *options){
       }
 
       // try a step with the current time step
-      cnsStepTri2D(cns, options, time);
+      cnsDopriStepTri2D(cns, options, time);
       
       //Error estimation 
       //E. HAIRER, S.P. NORSETT AND G. WANNER, SOLVING ORDINARY

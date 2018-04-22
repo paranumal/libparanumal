@@ -99,4 +99,4 @@ void cnsReportTri2D(cns_t *cns, dfloat time, char *options);
 
 void cnsPlotVTUTri2D(cns_t *cns, char *fileName);
 
-void cnsStepTri2D(cns_t *cns, const char *options, const dfloat time);
+void cnsDopriStepTri2D(cns_t *cns, const char *options, const dfloat time);
