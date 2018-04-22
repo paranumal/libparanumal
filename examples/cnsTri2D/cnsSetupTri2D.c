@@ -1,6 +1,6 @@
 #include "cnsTri2D.h"
 
-cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
+cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFileName){
 
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
@@ -58,12 +58,12 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   cns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
   
-  if (strstr(options,"LSERK")) {
+  if (newOptions.getArgs("TIME INTEGRATOR")=="LSERK4"){
     cns->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 		  		sizeof(dfloat));
   }
 
-  if (strstr(options,"DOPRI5")) {
+  if (newOptions.getArgs("TIME INTEGRATOR")=="DOPRI5"){
     int NrkStages = 7;
     cns->rkq  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
           sizeof(dfloat));
@@ -180,7 +180,7 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   //
   mesh->finalTime = 20;
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
-  if(strstr(options,"LSERK")) {
+  if (newOptions.getArgs("TIME INTEGRATOR")=="LSERK4"){
     mesh->dt = mesh->finalTime/mesh->NtimeSteps;
   }
 
@@ -211,12 +211,15 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   cns->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->rhsq);
 
-  if (strstr(options,"LSERK")) {
+  cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
+  
+  if (newOptions.getArgs("TIME INTEGRATOR")=="LSERK4"){
     cns->o_resq =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->resq);
   }
 
-  if (strstr(options,"DOPRI5")) {
+  if (newOptions.getArgs("TIME INTEGRATOR")=="DOPRI5"){
+    printf("setting up DOPRI5\n");
     int NrkStages = 7;
     cns->o_rkq =
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), cns->rkq);

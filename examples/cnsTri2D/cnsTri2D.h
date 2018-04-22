@@ -82,9 +82,9 @@ typedef struct{
   
 }cns_t;
 
-void cnsRunTri2D(cns_t *cns, char *options);
+void cnsRunTri2D(cns_t *cns, setupAide &newOptions);
 
-cns_t *cnsSetupTri2D(mesh2D *mesh, char* options, char* boundaryHeaderFileName);
+cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFileName);
 
 void cnsError2D(mesh2D *mesh, dfloat time);
 
@@ -95,12 +95,12 @@ void cnsCavitySolution2D(dfloat x, dfloat y, dfloat t,
 void cnsGaussianPulse2D(dfloat x, dfloat y, dfloat t,
 			 dfloat *u, dfloat *v, dfloat *p);
 
-void cnsReportTri2D(cns_t *cns, dfloat time, char *options);
+void cnsReportTri2D(cns_t *cns, dfloat time, setupAide &newOptions);
 
 void cnsPlotVTUTri2D(cns_t *cns, char *fileName);
 
-void cnsDopriStepTri2D(cns_t *cns, const char *options, const dfloat time);
+void cnsDopriStepTri2D(cns_t *cns, setupAide &newOptions, const dfloat time);
 
-void cnsLserkStepTri2D(cns_t *cns, const char *options, const dfloat time);
+void cnsLserkStepTri2D(cns_t *cns, setupAide &newOoptions, const dfloat time);
 
 dfloat cnsDopriEstimateTri2D(cns_t *cns);

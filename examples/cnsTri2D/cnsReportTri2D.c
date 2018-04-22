@@ -1,6 +1,6 @@
 #include "cnsTri2D.h"
 
-void cnsReportTri2D(cns_t *cns, dfloat time, char* options){
+void cnsReportTri2D(cns_t *cns, dfloat time, setupAide &newOptions){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
