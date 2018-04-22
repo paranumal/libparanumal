@@ -100,3 +100,5 @@ void cnsReportTri2D(cns_t *cns, dfloat time, char *options);
 void cnsPlotVTUTri2D(cns_t *cns, char *fileName);
 
 void cnsDopriStepTri2D(cns_t *cns, const char *options, const dfloat time);
+
+void cnsLserkStepTri2D(cns_t *cns, const char *options, const dfloat time);
