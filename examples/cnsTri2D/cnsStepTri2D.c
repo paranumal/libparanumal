@@ -1,6 +1,6 @@
 #include "cnsTri2D.h"
 
-void cnsDopriStepTri2D(cns_t *cns, const char *options, const dfloat time){
+void cnsDopriStepTri2D(cns_t *cns, setupAide &newOptions, const dfloat time){
 
   mesh_t *mesh = cns->mesh;
   
@@ -80,7 +80,7 @@ void cnsDopriStepTri2D(cns_t *cns, const char *options, const dfloat time){
     }
     
     // compute volume contribution to DG cns RHS
-    if (strstr(options,"CUBATURE")) {
+    if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureVolumeKernel(mesh->Nelements, 
 				cns->advSwitch, 
 				mesh->o_vgeo, 
@@ -111,7 +111,7 @@ void cnsDopriStepTri2D(cns_t *cns, const char *options, const dfloat time){
     }
     
     // compute surface contribution to DG cns RHS (LIFTT ?)
-    if (strstr(options,"CUBATURE")) {
+    if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureSurfaceKernel(mesh->Nelements, 
 				 cns->advSwitch, 
 				 mesh->o_sgeo, 
@@ -163,7 +163,7 @@ void cnsDopriStepTri2D(cns_t *cns, const char *options, const dfloat time){
 }
 
 
-void cnsLserkStepTri2D(cns_t *cns, const char *options, const dfloat time){
+void cnsLserkStepTri2D(cns_t *cns, setupAide &newOptions, const dfloat time){
 
   mesh_t *mesh = cns->mesh;
   
@@ -232,7 +232,7 @@ void cnsLserkStepTri2D(cns_t *cns, const char *options, const dfloat time){
     }
       
     // compute volume contribution to DG cns RHS
-    if (strstr(options,"CUBATURE")) {
+    if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureVolumeKernel(mesh->Nelements, 
 				advSwitch, 
 				mesh->o_vgeo, 
@@ -263,7 +263,7 @@ void cnsLserkStepTri2D(cns_t *cns, const char *options, const dfloat time){
     }
       
     // compute surface contribution to DG cns RHS (LIFTT ?)
-    if (strstr(options,"CUBATURE")) {
+    if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureSurfaceKernel(mesh->Nelements, 
 				 advSwitch, 
 				 mesh->o_sgeo, 
