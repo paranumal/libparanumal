@@ -55,7 +55,8 @@ typedef struct{
   occa::memory o_resq;
   occa::memory o_Vort;
   occa::memory o_viscousStresses;
-
+  occa::memory o_saveq;
+  
   occa::memory o_rkq, o_rkrhsq, o_rkerr;
   occa::memory o_errtmp;
 

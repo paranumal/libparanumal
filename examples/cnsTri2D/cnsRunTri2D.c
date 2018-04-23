@@ -23,8 +23,6 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
     
     dfloat nextOutputTime = outputInterval;
     dfloat outputNumber = 0;
-
-    
     
     //initial time
     dfloat time = 0.0;
@@ -52,10 +50,10 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
 
       // try a step with the current time step
       cnsDopriStepTri2D(cns, newOptions, time);
-
+      
       // compute Dopri estimator
       dfloat err = cnsDopriEstimateTri2D(cns);
-
+					 
       // build controller
       dfloat fac1 = pow(err,cns->exp1);
       dfloat fac = fac1/pow(cns->facold,cns->beta);
@@ -63,18 +61,47 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
       fac = mymax(cns->invfactor2, mymin(cns->invfactor1,fac/cns->safe));
       dfloat dtnew = mesh->dt/fac;
 
-      if (err<1.0) { //dt is accepted 
+      if (err<1.0) { //dt is accepted
+
+	// check for output during this step and do a mini-step
+	if(time<nextOutputTime && time+mesh->dt>nextOutputTime){
+	  dfloat savedt = mesh->dt;
+	  
+	  // save rkq
+	  cns->o_saveq.copyFrom(cns->o_rkq);
+
+	  // change dt to match output
+	  mesh->dt = nextOutputTime-time;
+
+	  // print
+	  printf("Taking output mini step: %g\n", mesh->dt);
+	  
+	  // time step to output
+	  cnsDopriStepTri2D(cns, newOptions, time);	  
+
+	  // shift for output
+	  cns->o_rkq.copyTo(cns->o_q);
+	  
+	  // output  (print from rkq)
+	  cnsReportTri2D(cns, nextOutputTime, newOptions);
+
+	  // restore rkq
+	  cns->o_q.copyFrom(cns->o_saveq);
+	  
+	  // restore time step
+	  mesh->dt = savedt;
+
+	  // increment next output time
+	  nextOutputTime += outputInterval;
+	}
+	else{
+	  cns->o_q.copyFrom(cns->o_rkq);
+	}
+
         time += mesh->dt;
 
         cns->facold = mymax(err,1E-4); // hard coded factor ?
 
-        cns->o_q.copyFrom(cns->o_rkq);
-
-	if(time-mesh->dt<nextOutputTime && time>nextOutputTime){
-	  cnsReportTri2D(cns, time, newOptions);
-	  nextOutputTime += outputInterval;
-	}
-	
 	printf("\r time = %g, dt = %g accepted                      ", time, mesh->dt);
         tstep++;
       } else {
