@@ -86,9 +86,9 @@ kernel void cnsVolumeTet3D(const dlong Nelements,
 
       {
         // F3 = ...
-        const dfloat f = T12-advSwitch*(rw*u);
-        const dfloat g = T22-advSwitch*(rw*v);
-	const dfloat h = T23-advSwitch*(rw*w+p);
+        const dfloat f = T13-advSwitch*(rw*u);
+        const dfloat g = T23-advSwitch*(rw*v);
+	const dfloat h = T33-advSwitch*(rw*w+p);
 	
         s_F[3][n] = drdx*f + drdy*g + drdz*h;
         s_G[3][n] = dsdx*f + dsdy*g + dsdz*h;
@@ -209,7 +209,7 @@ kernel void cnsStressesVolumeTet3D(const dlong Nelements,
 
       const dfloat S11 = p_half*(dudx+dudx) - p_third*(dudx+dvdy+dwdz);
       const dfloat S12 = p_half*(dudy+dvdx);
-      const dfloat S13 = p_half*(dudz+dzdx);
+      const dfloat S13 = p_half*(dudz+dwdx);
 
       const dfloat S22 = p_half*(dvdy+dvdy) - p_third*(dudx+dvdy+dwdz);
       const dfloat S23 = p_half*(dvdz+dwdy);
