@@ -85,16 +85,17 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
 	  // output  (print from rkq)
 	  cnsReportTri2D(cns, nextOutputTime, newOptions);
 
-	  // restore rkq
-	  cns->o_q.copyFrom(cns->o_saveq);
-	  
 	  // restore time step
 	  mesh->dt = savedt;
 
 	  // increment next output time
 	  nextOutputTime += outputInterval;
+
+	  // accept saved rkq
+	  cns->o_q.copyFrom(cns->o_saveq);
 	}
 	else{
+	  // accept rkq
 	  cns->o_q.copyFrom(cns->o_rkq);
 	}
 
