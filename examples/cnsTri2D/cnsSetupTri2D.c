@@ -217,6 +217,10 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
  
   cns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+
+  cns->o_saveq =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+
   
   cns->o_viscousStresses =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*cns->Nstresses*sizeof(dfloat),
