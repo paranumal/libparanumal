@@ -222,10 +222,10 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
       
     
     // estimate maximum error
-    /*    if((((tstep+1)%mesh->errorStep)==0)){
+    if((((tstep+1)%solver->errorStep)==0)){
       //	dfloat t = (tstep+1)*solver->dt;
       dfloat t = solver->dt*((tstep+1)*pow(2,mesh->MRABNlevels-1));
-	
+      
       printf("tstep = %d, t = %g\n", tstep, t);
       fflush(stdout);
       // copy data back to host
@@ -238,15 +238,15 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 	  exit(-1);
 	}
       }
-
+      /*
       advectionPlotNorms(mesh,"norms",tstep/solver->errorStep,solver->q);
 
       // output field files
       iint fld = 0;
       char fname[BUFSIZ];
-
+      */
       //advectionPlotVTUQuad3DV2(mesh, "foo", tstep/solver->errorStep);
-      } */       
+    }        
     occa::printTimer();
   }
   

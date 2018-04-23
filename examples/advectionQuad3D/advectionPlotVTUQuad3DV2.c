@@ -60,7 +60,7 @@ void advectionPlotVTUQuad3DV2(solver_t *solver, char *fileNameBase, int tstep){
     for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
       for(iint m=0;m<mesh->Np;++m){
-	int id = m + 0*mesh->Np + mesh->Nfields*mesh->Np*e;
+	int id = m + 0*mesh->Np + solver->Nfields*mesh->Np*e;
         dfloat pm = solver->q[id];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
@@ -78,9 +78,9 @@ void advectionPlotVTUQuad3DV2(solver_t *solver, char *fileNameBase, int tstep){
     for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotun = 0, plotvn = 0, plotwn = 0;
       for(iint m=0;m<mesh->Np;++m){
-	int uid = m + 1*mesh->Np + mesh->Nfields*mesh->Np*e;
-	int vid = m + 2*mesh->Np + mesh->Nfields*mesh->Np*e;
-	int wid = m + 3*mesh->Np + mesh->Nfields*mesh->Np*e;
+	int uid = m + 1*mesh->Np + solver->Nfields*mesh->Np*e;
+	int vid = m + 2*mesh->Np + solver->Nfields*mesh->Np*e;
+	int wid = m + 3*mesh->Np + solver->Nfields*mesh->Np*e;
 		
         dfloat um = solver->q[uid];
         dfloat vm = solver->q[vid];
@@ -136,8 +136,8 @@ void advectionPlotVTUQuad3DV2(solver_t *solver, char *fileNameBase, int tstep){
 	dfloat dwdr = 0, dwds = 0;
 	
 	for(iint m=0;m<mesh->Nq;++m){
-	  int basejm = m + j*mesh->Nq + mesh->Nfields*mesh->Np*e;
-	  int basemi = i + m*mesh->Nq + mesh->Nfields*mesh->Np*e;
+	  int basejm = m + j*mesh->Nq + solver->Nfields*mesh->Np*e;
+	  int basemi = i + m*mesh->Nq + solver->Nfields*mesh->Np*e;
 	  dfloat Dim = mesh->D[i*mesh->Nq+m];
 	  dfloat Djm = mesh->D[j*mesh->Nq+m];
 	  dudr += Dim*solver->q[basejm + 1*mesh->Np]/solver->q[basejm];
@@ -147,7 +147,7 @@ void advectionPlotVTUQuad3DV2(solver_t *solver, char *fileNameBase, int tstep){
 	  dwdr += Dim*solver->q[basejm + 3*mesh->Np]/solver->q[basejm];
 	  dwds += Djm*solver->q[basemi + 3*mesh->Np]/solver->q[basemi];
 	}
-	int base = i + j*mesh->Nq + e*mesh->Np*mesh->Nfields;
+	int base = i + j*mesh->Nq + e*mesh->Np*solver->Nfields;
 	dfloat dudx = rx*dudr + sx*duds + tx*solver->q[base + 1*mesh->Np]/solver->q[base];
 	dfloat dudy = ry*dudr + sy*duds + ty*solver->q[base + 1*mesh->Np]/solver->q[base];
 	dfloat dudz = rz*dudr + sz*duds + tz*solver->q[base + 1*mesh->Np]/solver->q[base];
@@ -172,9 +172,9 @@ void advectionPlotVTUQuad3DV2(solver_t *solver, char *fileNameBase, int tstep){
       
       dfloat plotvort1n = 0, plotvort2n = 0, plotvort3n = 0;
       for(iint m=0;m<mesh->Np;++m){
-	int uid = m + 1*mesh->Np + mesh->Nfields*mesh->Np*e;
-	int vid = m + 2*mesh->Np + mesh->Nfields*mesh->Np*e;
-	int wid = m + 3*mesh->Np + mesh->Nfields*mesh->Np*e;
+	int uid = m + 1*mesh->Np + solver->Nfields*mesh->Np*e;
+	int vid = m + 2*mesh->Np + solver->Nfields*mesh->Np*e;
+	int wid = m + 3*mesh->Np + solver->Nfields*mesh->Np*e;
 		
         dfloat vort1m = vort[m+0*mesh->Np];
 	dfloat vort2m = vort[m+1*mesh->Np];

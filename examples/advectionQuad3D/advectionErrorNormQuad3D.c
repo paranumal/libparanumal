@@ -1,4 +1,3 @@
-
 #include "advectionQuad3D.h"
 
 void advectionErrorNormQuad3D(solver_t *solver, dfloat t, char *fileBase, int slice){
@@ -34,11 +33,11 @@ void advectionErrorNormQuad3D(solver_t *solver, dfloat t, char *fileBase, int sl
       l2 += JW*err*err;
 
       if(fileBase!=NULL)
-	solver->q[e*mesh->Np*solver->Nfields+n] = l2;
+	solver->q[e*mesh->Np*solver->Nfields+n] = JW*err*err;
     }
   }
   
-  printf("%7.5lg %.2e %d (t,L2 norm err,Nlevels)\n", t, sqrt(l2),mesh->MRABNlevels);
+  printf("%7.5lg %.2e %d (t,L2 norm err,Nlevels)\n", t, l2,mesh->MRABNlevels);
 
   if(fileBase!=NULL)
     advectionPlotVTUQuad3DV2(solver, fileBase, slice);  

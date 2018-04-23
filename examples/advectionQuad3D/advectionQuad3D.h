@@ -99,7 +99,7 @@ typedef struct {
   iint *lev_updates;
   dfloat *localdt;
   iint *shift;
-  dfloat errorStep;
+  iint errorStep;
   dfloat *MRSAAB_A;
   dfloat *MRSAAB_B;
   dfloat *MRSAAB_C;
@@ -140,6 +140,7 @@ typedef struct {
 void advectionRunMRSAABQuad3D(solver_t *solver);
 void advectionRunLSERKQuad3D(solver_t *solver);
 void advectionRunDOPRIQuad3D(solver_t *solver);
+void advectionRunLSERKbasicQuad3D(solver_t *solver);
 
 void advectionPlotVTUQuad3D(mesh_t *mesh, char *fileNameBase, iint fld);
 void advectionPlotVTUQuad3DV2(solver_t *solver, char *fileNameBase, iint tstep);
@@ -148,6 +149,7 @@ void advectionSetupOccaQuad3D(solver_t *solver, occa::kernelInfo *kernelInfo);
 solver_t *advectionSetupPhysicsQuad3D(mesh_t *mesh);
 void advectionSetupMRSAABQuad3D(solver_t *solver);
 void advectionSetupDOPRIQuad3D(solver_t *solver);
+void advectionSetupLSERKQuad3D(solver_t *solver);
 
 void meshMRABSetupQuad3D(mesh3D *mesh, dfloat *EToDT, int maxLevels);
 

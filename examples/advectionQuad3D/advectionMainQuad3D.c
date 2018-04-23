@@ -13,7 +13,7 @@ int main(int argc, char **argv){
 
   //changes solver mode.
   //options are: DOPRI MRSAAB
-  char *mode = "MRSAAB";
+  char *mode = "LSERK";
   
   // int specify polynomial degree 
   int N = atoi(argv[2]);
@@ -30,6 +30,9 @@ int main(int argc, char **argv){
   else if (strstr(mode,"DOPRI")) {
     advectionSetupDOPRIQuad3D(solver);
   }
+  else if (strstr(mode,"LSERK")) {
+    advectionSetupLSERKQuad3D(solver);
+  }
   
   // time step Boltzmann equations
   if (strstr(mode,"MRSAAB")) {
@@ -39,7 +42,10 @@ int main(int argc, char **argv){
   else if (strstr(mode,"DOPRI")) {
     advectionRunDOPRIQuad3D(solver);
   }
-
+  else if (strstr(mode,"LSERK")) {
+    advectionRunLSERKbasicQuad3D(solver);
+  }
+  
   solver->o_q.copyTo(solver->q);
   advectionErrorNormQuad3D(solver,solver->finalTime,"end",0);
   
