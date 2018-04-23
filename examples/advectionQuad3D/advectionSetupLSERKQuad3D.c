@@ -66,7 +66,7 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
       }
     }
     
-    dfloat cfl = 0.5; // depends on the stability region size
+    dfloat cfl = 2; // depends on the stability region size
 
     // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
     solver->dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.));
@@ -91,6 +91,9 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
     advectionSetupOccaQuad3D(solver,&kernelInfo);
        
     solver->o_q =
+      solver->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*solver->Nfields*sizeof(dfloat), solver->q);
+
+    solver->o_qpre =
       solver->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*solver->Nfields*sizeof(dfloat), solver->q);
 
     solver->o_rhsq =
