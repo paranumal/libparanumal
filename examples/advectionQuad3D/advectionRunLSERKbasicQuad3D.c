@@ -27,6 +27,8 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver){
 			solver->o_z,
 			solver->o_qFilter,
 			solver->o_q);
+
+  solver->o_q.copyTo(solver->o_qpre);
   
   for(iint tstep=0;tstep < solver->NtimeSteps;++tstep){
 	
@@ -42,7 +44,7 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver){
 			     solver->o_x,
 			     solver->o_y,
 			     solver->o_z,
-			     solver->o_q,
+			     solver->o_qpre,
 			     solver->o_rhsq);
 	
 	solver->surfaceKernel(mesh->Nelements,
@@ -54,7 +56,7 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver){
 			       solver->o_x,
 			       solver->o_y,
 			       solver->o_z,
-			       solver->o_q,
+			       solver->o_qpre,
 			       solver->o_rhsq);
 	
 	solver->filterKernelH(mesh->Nelements,
@@ -76,7 +78,7 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver){
 			      solver->o_rhsq);
 	
 	solver->volumeCorrectionKernel(mesh->Nelements,
-				       solver->o_q,
+				       solver->o_qpre,
 				       solver->o_qCorr);
 	
 	solver->updateKernel(mesh->Nelements,
@@ -86,13 +88,14 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver){
 			     solver->o_rhsq,
 			     solver->o_qCorr,
 			     solver->o_resq,
-			     solver->o_q);
+			     solver->o_q,
+			     solver->o_qpre);
       }
       solver->filterKernelH(mesh->Nelements,
 			      solver->o_dualProjMatrix,
 			      solver->o_cubeFaceNumber,
 			      solver->o_EToE,
-			      solver->o_q,
+			      solver->o_qpre,
 			      solver->o_qFilter);
       
       solver->filterKernelV(mesh->Nelements,
@@ -104,6 +107,7 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver){
 			      solver->o_y,
 			      solver->o_z,
 			      solver->o_qFilter,
-			      solver->o_q);   
+			      solver->o_qpre);
+      solver->o_q.copyFrom(solver->o_qpre);
   }
 }
