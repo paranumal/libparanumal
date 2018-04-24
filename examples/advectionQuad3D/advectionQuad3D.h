@@ -140,7 +140,7 @@ typedef struct {
 void advectionRunMRSAABQuad3D(solver_t *solver);
 void advectionRunLSERKQuad3D(solver_t *solver);
 void advectionRunDOPRIQuad3D(solver_t *solver);
-void advectionRunLSERKbasicQuad3D(solver_t *solver);
+void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale);
 
 void advectionPlotVTUQuad3D(mesh_t *mesh, char *fileNameBase, iint fld);
 void advectionPlotVTUQuad3DV2(solver_t *solver, char *fileNameBase, iint tstep);
