@@ -103,11 +103,11 @@ void cnsRunTet3D(cns_t *cns, setupAide &newOptions){
 
         cns->facold = mymax(err,1E-4); // hard coded factor ?
 
-	printf("\r time = %g, dt = %g accepted                      ", time, mesh->dt);
+	printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  mesh->dt);
         tstep++;
       } else {
         dtnew = mesh->dt/(mymax(cns->invfactor1,fac1/cns->safe));
-	printf("\r time = %g, dt = %g rejected, trying %g", time, mesh->dt, dtnew);
+	printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, mesh->dt, dtnew);
 
 	done = 0;
       }
