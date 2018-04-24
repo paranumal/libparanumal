@@ -24,7 +24,7 @@ void boltzmannSAADRKRun2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, dfloat
 	dfloat invfactor2 = 1.0/factor2;
 	dfloat facold     = 1E-4;
 	
-	#else // PID control
+	#else // PI control
 	dfloat dtMIN = 1E-10; //minumum allowed timestep
 	dfloat ATOL  = 1E-5;  //absolute error tolerance
 	dfloat RTOL  = 1E-4;  //relative error tolerance
@@ -82,7 +82,7 @@ void boltzmannSAADRKRun2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, dfloat
 
     
     
-			boltzmannSAADRKStep2D(bns, time, haloBytes, sendBuffer, recvBuffer, options);
+		boltzmannSAADRKStep2D(bns, time, haloBytes, sendBuffer, recvBuffer, options);
 
 
 		//Error estimation 

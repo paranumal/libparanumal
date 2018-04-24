@@ -61,7 +61,7 @@ boltzmannRunDOPRI2D.o \
 boltzmannDOPRIStep2D.o \
 boltzmannXDOPRIStep2D.o \
 boltzmannReportAddaptive2D.o \
-oltzmannSAADRKCoefficients.o \
+boltzmannSAADRKCoefficients.o \
 boltzmannSAADRKStep2D.o \
 boltzmannSAADRKRun2D.o \
 # library objects
