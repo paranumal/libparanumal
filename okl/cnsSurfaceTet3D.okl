@@ -105,9 +105,9 @@ void upwindRoeAveraged(const dfloat nx,
   dfloat wM = rwM/rM;
   
   *rflux  = nx*(ruS-ruM) + ny*(rvS-rvM) + nz*(rwS-rwM);
-  *ruflux = nx*(ruS*uS-ruM*uM) + ny*(ruS*rvS-ruM*rvM) + nz*(ruS*rwS-ruM*rwM);
-  *rvflux = nx*(rvS*uS-rvM*uM) + ny*(rvS*rvS-rvM*rvM) + nz*(rvS*rwS-rvM*rwM);
-  *rwflux = nx*(rwS*uS-rwM*uM) + ny*(rwS*rvS-rwM*rvM) + nz*(rwS*rwS-rwM*rwM);
+  *ruflux = nx*(ruS*uS-ruM*uM) + ny*(ruS*vS-ruM*vM) + nz*(ruS*wS-ruM*wM);
+  *rvflux = nx*(rvS*uS-rvM*uM) + ny*(rvS*vS-rvM*vM) + nz*(rvS*wS-rvM*wM);
+  *rwflux = nx*(rwS*uS-rwM*uM) + ny*(rwS*vS-rwM*vM) + nz*(rwS*wS-rwM*wM);
 
   *ruflux += nx*(pS-pM);
   *rvflux += ny*(pS-pM);
