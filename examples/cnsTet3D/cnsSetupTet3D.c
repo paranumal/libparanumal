@@ -59,7 +59,26 @@ cns_t *cnsSetupTet3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
 
   // viscosity
   dfloat Re = 5000;
-  cns->mu = cns->ubar/Re; // assumes reference length 1
+  dfloat mu = 1;
+
+  int check;
+
+  check = newOptions.getArgs("RBAR", cns->rbar);
+  if(!check) printf("WARNING setup file does not include RBAR\n");
+  
+  check = newOptions.getArgs("UBAR", cns->ubar);
+  if(!check) printf("WARNING setup file does not include UBAR\n");
+
+  check = newOptions.getArgs("VBAR", cns->vbar);
+  if(!check) printf("WARNING setup file does not include VBAR\n");
+
+  check = newOptions.getArgs("WBAR", cns->wbar);
+  if(!check) printf("WARNING setup file does not include WBAR\n");
+  
+  check = newOptions.getArgs("VISCOSITY", cns->mu);
+  if(!check) printf("WARNING setup file does not include VISCOSITY\n");
+
+  //  cns->mu = cns->ubar/Re; // assumes reference length 1
 
   // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
   dfloat mach = 0.17;
