@@ -53,7 +53,13 @@ typedef struct{
 	// SARK and RK3 Coefficients
 	dfloat RK_A[5][5], RK_B[5], RK_C[5], SARK_A[5][5], SARK_B[5], SARK_C[5]; 
 	// DOPRI45
-	dfloat rkC[7], rkA[7*7], rkE[7];
+	// Change this later this shouldnt be hard-coded
+	// dfloat rkC[7], rkA[7*7], rkE[7];
+	dfloat rkC[5], rkA[5*5], rkE[5];
+
+    // dfloat sarkC[5], sarkA[5*5], sarkE[5];
+
+
 	dfloat *rkq, *rkrhsq, *rkerr, *errtmp;
 	dfloat *rkqx, *rkrhsqx;
 	dfloat *rkqy, *rkrhsqy;
@@ -64,7 +70,7 @@ typedef struct{
 
 	dfloat *fQM; 
 	occa::memory o_q, o_rhsq, o_resq, o_fQM;
-	occa::memory o_rkA, o_rkE; 
+	occa::memory o_rkA, o_rkE, o_sarkC, o_sarkA, o_sarkE; 
 	occa::memory o_rkqx, o_rkqy, o_rkrhsqx, o_rkrhsqy; 
 
 	// LS Imex vars
@@ -135,6 +141,8 @@ void boltzmannMRABPmlSetup2D(bns_t *bns, char *options);
 void boltzmannPmlSetup2D(bns_t *bns, char *options);
 void boltzmannTimeStepperCoefficients(bns_t *bns, char *options);
 
+void boltzmannSAADRKCoefficients(bns_t *bns, char *options);
+
 void boltzmannPlotVTU2D(bns_t *bns, char * FileName);
 void boltzmannPlotTEC2D(bns_t *bns, char * FileName, dfloat solutionTime);
 
@@ -164,9 +172,21 @@ void boltzmannMRSAABStep2D(bns_t *bns, int tstep, int haloBytes,
 // DOPRI Run
 void boltzmannRunDOPRI2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, 
 	              dfloat *recvBuffer, char * options);
+
+// DOPRI Run
+void boltzmannSAADRKRun2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, 
+	              dfloat *recvBuffer, char * options);
 // DOPRI Step
 void boltzmannDOPRIStep2D(bns_t *bns, dfloat time, int haloBytes, dfloat * sendBuffer, 
 	              dfloat *recvBuffer, char * options);
+
+// XDOPRI Step
+void boltzmannXDOPRIStep2D(bns_t *bns, dfloat time, int haloBytes, dfloat * sendBuffer, 
+	              dfloat *recvBuffer, char * options);
+
+
+void boltzmannSAADRKStep2D(bns_t *bns, dfloat time, int haloBytes,
+				                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
 // Needs to be changed if in use
 void boltzmannPeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);

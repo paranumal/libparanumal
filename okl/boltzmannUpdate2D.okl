@@ -312,6 +312,93 @@ kernel void boltzmannDOPRIRKPmlStage2D(const int pmlNelements,
 }
 
 
+kernel void boltzmannXDOPRIRKStage2D(const int Nelements,
+                         const int * restrict elementIds,
+                         const int NtotalElements,
+                         const int rk,
+                         const dfloat dt, 
+                         const dfloat expmca, 
+                         const dfloat * restrict rkA,
+                         const dfloat * restrict q,
+                         const dfloat * restrict rkrhsq,
+                               dfloat * restrict rkq){
+  
+  // Runge Kutta intermediate stage
+  for(int es=0;es<Nelements;++es;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+
+      const int e = elementIds[es];
+      const int id = p_Nfields*(n + e*p_Np);
+
+      for(int fld=0; fld< p_Nfields; ++fld){
+
+        // const int idn = id + fld;        
+        dfloat r_q = q[id +fld];
+
+        for (int i=0;i<rk;i++) {
+          const int offset = NtotalElements*p_Nfields*p_Np;
+          r_q += dt*rkA[7*rk + i]*rkrhsq[id + fld +i*offset];
+        }
+
+        if(fld>2){
+          r_q = expmca * r_q ; 
+        }
+
+        rkq[id + fld] = r_q;
+      }
+    }
+  }
+}
+
+
+
+kernel void boltzmannSAADRKStage2D(const int Nelements,
+                         const int * restrict elementIds,
+                         const int NtotalElements,
+                         const int rk,
+                         const dfloat dt,
+                         const dfloat * restrict sarkC, 
+                         const dfloat * restrict rkA,
+                         const dfloat * restrict sarkA,
+                         const dfloat * restrict q,
+                         const dfloat * restrict rkrhsq,
+                               dfloat * restrict rkq){
+  
+  // Runge Kutta intermediate stage
+  for(int es=0;es<Nelements;++es;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+
+      const int e      = elementIds[es];
+      const int id     = p_Nfields*(n + e*p_Np);
+      const int offset = NtotalElements*p_Nfields*p_Np;
+
+      for(int fld=0; fld< p_Nfields; ++fld){
+
+        dfloat r_q = 0.f; 
+
+        if(fld<3){
+          r_q = q[id +fld];
+          for (int i=0;i<rk;i++){
+            r_q += dt*rkA[p_NrkStages*rk + i]*rkrhsq[id + fld +i*offset];
+          }
+        }
+        else{
+          r_q = sarkC[rk]*q[id +fld];
+          for (int i=0;i<rk;i++){
+            r_q += dt*sarkA[p_NrkStages*rk + i]*rkrhsq[id + fld +i*offset];
+          }
+        }
+        rkq[id + fld] = r_q;
+      }
+    }
+  }
+}
+
+
+
+
+
+
 kernel void boltzmannDOPRIRKPmlUpdate2D(const int pmlNelements,
                                         const int   * restrict pmlElementIds,
                                         const int   * restrict pmlIds,
@@ -390,6 +477,475 @@ kernel void boltzmannDOPRIRKPmlUpdate2D(const int pmlNelements,
   }
 }
 
+
+
+
+
+kernel void boltzmannXDOPRIRKPmlStage2D(const int pmlNelements,
+                                        const int   * restrict pmlElementIds,
+                                        const int   * restrict pmlIds,
+                                        const int NtotalElements,
+                                        const int rk,
+                                        const dfloat dt,
+                                        const dfloat expmca,  
+                                        const dfloat * restrict rkA,
+                                        const dfloat * restrict q,
+                                        const dfloat * restrict qx,
+                                        const dfloat * restrict qy,
+                                        const dfloat * restrict rkrhsq,
+                                        const dfloat * restrict rkrhsqx,
+                                        const dfloat * restrict rkrhsqy,
+                                              dfloat * restrict rkq,
+                                              dfloat * restrict rkqx,
+                                              dfloat * restrict rkqy){
+  
+  // Runge Kutta intermediate stage
+  for(int es=0;es<pmlNelements;++es;outer0){
+    exclusive int e;
+    for(int n=0; n < p_Np; ++n; inner0){
+      e = pmlElementIds[es];
+      if (n < p_Np){
+        const int pmlId = pmlIds[es];
+        const int id  = p_Nfields*(e*p_Np + n);
+        const int pid = p_Nfields*(pmlId*p_Np + n);
+
+        for(int fld=0; fld< p_Nfields; ++fld){
+          // const int idn = id + fld;        
+          dfloat r_q  = q[id  + fld];
+          dfloat r_qx = qx[pid+ fld];
+          dfloat r_qy = qy[pid+ fld];
+
+          for (int i=0;i<rk;i++) {
+            const int offset    = NtotalElements*p_Nfields*p_Np;
+            const int offsetpml = pmlNelements*p_Nfields*p_Np;
+            r_q  += dt*rkA[7*rk+i]*rkrhsq[id+fld+i*offset];
+            r_qx += dt*rkA[7*rk+i]*rkrhsqx[pid+fld+i*offsetpml];
+            r_qy += dt*rkA[7*rk+i]*rkrhsqy[pid+fld+i*offsetpml];
+          }
+
+          if(fld>2){
+            r_q = expmca * r_q ; 
+          }
+
+          rkq [id  +fld] = r_q;
+          rkqx[pid +fld] = r_qx;
+          rkqy[pid +fld] = r_qy;
+      }
+    }
+  }
+}
+
+}
+
+
+
+
+kernel void boltzmannSAADRKPmlStage2D(const int pmlNelements,
+                                        const int   * restrict pmlElementIds,
+                                        const int   * restrict pmlIds,
+                                        const int NtotalElements,
+                                        const int rk,
+                                        const dfloat dt,
+                                        const dfloat * restrict sarkC,  
+                                        const dfloat * restrict rkA,
+                                        const dfloat * restrict sarkA,                                        
+                                        const dfloat * restrict q,
+                                        const dfloat * restrict qx,
+                                        const dfloat * restrict qy,
+                                        const dfloat * restrict rkrhsq,
+                                        const dfloat * restrict rkrhsqx,
+                                        const dfloat * restrict rkrhsqy,
+                                              dfloat * restrict rkq,
+                                              dfloat * restrict rkqx,
+                                              dfloat * restrict rkqy){
+  
+  // Runge Kutta intermediate stage
+  for(int es=0;es<pmlNelements;++es;outer0){
+    exclusive int e;
+    for(int n=0; n < p_Np; ++n; inner0){
+      e = pmlElementIds[es];
+      if (n < p_Np){
+        const int pmlId     = pmlIds[es];
+        const int id        = p_Nfields*(e*p_Np + n);
+        const int pid       = p_Nfields*(pmlId*p_Np + n);
+        const int offset    = NtotalElements*p_Nfields*p_Np;
+        const int offsetpml = pmlNelements*p_Nfields*p_Np;
+
+        for(int fld=0; fld< p_Nfields; ++fld){
+          // const int idn = id + fld;        
+          dfloat r_q  = 0.f;
+          dfloat r_qx = 0.f;
+          dfloat r_qy = 0.f;
+
+          if(fld<3){
+            r_q  = q[id  + fld];
+            r_qx = qx[pid+ fld];
+            r_qy = qy[pid+ fld];
+
+            for (int i=0;i<rk;i++){
+              r_q  += dt*rkA[p_NrkStages*rk+i]*rkrhsq[id+fld+i*offset];
+              r_qx += dt*rkA[p_NrkStages*rk+i]*rkrhsqx[pid+fld+i*offsetpml];
+              r_qy += dt*rkA[p_NrkStages*rk+i]*rkrhsqy[pid+fld+i*offsetpml];
+            }
+          }
+          else{
+            r_q  = sarkC[rk]*q[id  + fld];
+            r_qx = qx[pid+ fld];
+            r_qy = qy[pid+ fld];
+
+            for (int i=0;i<rk;i++){
+              r_q  += dt*sarkA[p_NrkStages*rk+i]*rkrhsq[id+fld+i*offset];
+              r_qx += dt*rkA[p_NrkStages*rk+i]*rkrhsqx[pid+fld+i*offsetpml];
+              r_qy += dt*rkA[p_NrkStages*rk+i]*rkrhsqy[pid+fld+i*offsetpml];
+            }
+          }
+
+          rkq [id  +fld] = r_q;
+          rkqx[pid +fld] = r_qx;
+          rkqy[pid +fld] = r_qy;
+      }
+    }
+  }
+}
+
+}
+
+kernel void boltzmannXDOPRIRKUpdate2D(const int Nelements,
+                                    const int * restrict elementIds,
+                                    const int NtotalElements,
+                                    const int rk,
+                                    const dfloat dt,
+                                    const dfloat expca,
+                                    const dfloat expma,  
+                                    const dfloat * restrict rkA,
+                                    const dfloat * restrict rkE,
+                                    const dfloat * restrict q,
+                                    const dfloat * restrict rhsq,
+                                          dfloat * restrict rkrhsq,
+                                          dfloat * restrict rkq,
+                                          dfloat * restrict rkerr){
+  
+  // Runge Kutta intermediate stage
+  for(int es=0;es<Nelements;++es;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+
+      const int e = elementIds[es];
+      const int id = p_Nfields*(n + e*p_Np);
+
+      for(int fld=0; fld< p_Nfields; ++fld){
+        // const int idn = id + fld; 
+        const int offset = NtotalElements*p_Nfields*p_Np;
+         dfloat r_rhsq = rhsq[id + fld]; 
+        
+        // multiply rhs with exp(c_i*invtau*dt)
+        if(fld>2){
+          r_rhsq = expca*r_rhsq;
+        }
+
+        if (rk==6) { //last stage
+
+          dfloat r_q = q[id +fld];
+          dfloat r_rkerr = 0.f;
+          for (int i=0;i<6;i++) {
+            r_q     += dt*rkA[7*rk + i]*rkrhsq[id + fld + i*offset];
+            r_rkerr += dt*rkE[       i]*rkrhsq[id + fld + i*offset];
+          }
+          r_q     += dt*rkA[7*rk + 6]*r_rhsq;
+          r_rkerr += dt*rkE[       6]*r_rhsq;
+          
+          // multply with exp(-invtau*dt)
+          if(fld>2){
+            r_q     = expma * r_q;
+            // r_rkerr =  r_rkerr;
+            r_rkerr = r_rkerr * expma;
+          }
+          
+          rkq[id   +fld] = r_q;
+          rkerr[id +fld] = r_rkerr;
+        }
+
+        rkrhsq[id+fld+rk*offset] = r_rhsq;
+      }
+    }
+  }
+}
+
+
+
+kernel void boltzmannSAADRKUpdate2D(const int Nelements,
+                                    const int * restrict elementIds,
+                                    const int NtotalElements,
+                                    const int rk,
+                                    const dfloat dt,
+                                    const dfloat *restrict sarkC, 
+                                    const dfloat * restrict rkA,
+                                    const dfloat * restrict rkE,
+                                    const dfloat * restrict sarkA,
+                                    const dfloat * restrict sarkE,
+                                    const dfloat * restrict q,
+                                    const dfloat * restrict rhsq,
+                                          dfloat * restrict rkrhsq,
+                                          dfloat * restrict rkq,
+                                          dfloat * restrict rkerr){
+  
+  // Runge Kutta intermediate stage
+  for(int es=0;es<Nelements;++es;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+
+      const int e = elementIds[es];
+      const int id = p_Nfields*(n + e*p_Np);
+
+      for(int fld=0; fld< p_Nfields; ++fld){
+        // const int idn = id + fld; 
+        const int offset = NtotalElements*p_Nfields*p_Np;
+
+        dfloat r_rhsq  = rhsq[id + fld];
+        dfloat r_q     = 0.f;
+        dfloat r_rkerr = 0.f;
+
+        if(rk==(p_NrkStages-1)){
+
+          if(fld<3){
+
+            r_q = q[id +fld];
+
+            for (int i=0;i<(p_NrkStages-1);i++) {
+              r_q     += dt*rkA[p_NrkStages*rk + i]*rkrhsq[id + fld + i*offset];
+              r_rkerr += dt*rkE[       i]*rkrhsq[id + fld + i*offset];
+            }
+            r_q     += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsq;
+            r_rkerr += dt*rkE[                 p_NrkStages-1]*r_rhsq;
+          }
+          else{
+
+            r_q = sarkC[rk]*q[id +fld];
+
+             for (int i=0;i<(p_NrkStages-1);i++) {
+              r_q     += dt*sarkA[p_NrkStages*rk + i]*rkrhsq[id + fld + i*offset];
+              r_rkerr += dt*sarkE[                 i]*rkrhsq[id + fld + i*offset];
+            }
+            r_q     += dt*sarkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsq;
+            r_rkerr += dt*sarkE[                   p_NrkStages-1]*r_rhsq;
+          }
+
+          rkq[id   +fld] = r_q;
+          rkerr[id +fld] = r_rkerr;
+        }
+
+        rkrhsq[id+fld+rk*offset] = r_rhsq;
+      }
+    }
+  }
+}
+
+
+
+kernel void boltzmannXDOPRIRKPmlUpdate2D(const int pmlNelements,
+                                        const int   * restrict pmlElementIds,
+                                        const int   * restrict pmlIds,
+                                        const int NtotalElements,
+                                        const int rk,
+                                        const dfloat dt,
+                                        const dfloat expca,
+                                        const dfloat expma,   
+                                        const dfloat * restrict rkA,
+                                        const dfloat * restrict rkE,
+                                        const dfloat * restrict q,
+                                        const dfloat * restrict qx,
+                                        const dfloat * restrict qy,
+                                        const dfloat * restrict rhsq,
+                                        const dfloat * restrict rhsqx,
+                                        const dfloat * restrict rhsqy,
+                                              dfloat * restrict rkrhsq,
+                                              dfloat * restrict rkrhsqx,
+                                              dfloat * restrict rkrhsqy,
+                                              dfloat * restrict rkq,
+                                              dfloat * restrict rkqx,
+                                              dfloat * restrict rkqy,
+                                              dfloat * restrict rkerr){
+  // Runge Kutta intermediate stage
+  for(int es=0;es<pmlNelements;++es;outer0){
+    exclusive int e;
+    for(int n=0; n < p_Np; ++n; inner0){
+      e = pmlElementIds[es];
+      if (n < p_Np){
+        const int pmlId = pmlIds[es];
+        const int id  = p_Nfields*(e*p_Np + n);
+        const int pid = p_Nfields*(pmlId*p_Np + n);
+
+        for(int fld=0; fld< p_Nfields; ++fld){
+
+          const int offset    = NtotalElements*p_Nfields*p_Np;
+          const int offsetpml = pmlNelements*p_Nfields*p_Np;
+
+          dfloat r_rhsq  = rhsq [id  + fld];
+          dfloat r_rhsqx = rhsqx[pid + fld];
+          dfloat r_rhsqy = rhsqy[pid + fld];
+
+          if(fld>2){
+            r_rhsq = expca*r_rhsq;
+          }
+
+
+
+          if (rk==6) { //last stage
+
+            dfloat r_q  = q [id  +fld];
+            dfloat r_qx = qx[pid +fld];
+            dfloat r_qy = qy[pid +fld];
+
+            dfloat r_rkerr = 0.f;
+
+            for (int i=0;i<6;i++){
+              r_q     += dt*rkA[7*rk + i]*rkrhsq[  id + fld + i*offset];
+              r_qx    += dt*rkA[7*rk + i]*rkrhsqx[pid + fld + i*offsetpml];
+              r_qy    += dt*rkA[7*rk + i]*rkrhsqy[pid + fld + i*offsetpml];
+
+              r_rkerr += dt*rkE[       i]*rkrhsq[id + fld + i*offset];
+            }
+
+            r_q     += dt*rkA[7*rk + 6]*r_rhsq;
+            r_qx    += dt*rkA[7*rk + 6]*r_rhsqx;
+            r_qy    += dt*rkA[7*rk + 6]*r_rhsqy;
+
+            r_rkerr += dt*rkE[       6]*r_rhsq;
+
+
+            if(fld>2){
+              r_q     = expma * r_q;
+              // r_rkerr = expma * r_rkerr;
+              // r_rkerr = r_rkerr;
+              r_rkerr = r_rkerr*expma;
+           }
+
+            rkq[  id  +fld] = r_q;
+            rkqx[pid  +fld] = r_qx;
+            rkqy[pid  +fld] = r_qy;
+
+            rkerr[id +fld] = r_rkerr;
+          }
+
+        rkrhsq[id+fld+rk*offset]      = r_rhsq;
+        rkrhsqx[pid+fld+rk*offsetpml] = r_rhsqx;
+        rkrhsqy[pid+fld+rk*offsetpml] = r_rhsqy;
+        }
+      }
+    }
+  }
+}
+
+
+
+kernel void boltzmannSAADRKPmlUpdate2D(const int pmlNelements,
+                                        const int   * restrict pmlElementIds,
+                                        const int   * restrict pmlIds,
+                                        const int NtotalElements,
+                                        const int rk,
+                                        const dfloat dt,
+                                        const dfloat *restrict sarkC, 
+                                        const dfloat * restrict rkA,
+                                        const dfloat * restrict rkE,
+                                        const dfloat * restrict sarkA,
+                                        const dfloat * restrict sarkE,
+                                        const dfloat * restrict q,
+                                        const dfloat * restrict qx,
+                                        const dfloat * restrict qy,
+                                        const dfloat * restrict rhsq,
+                                        const dfloat * restrict rhsqx,
+                                        const dfloat * restrict rhsqy,
+                                              dfloat * restrict rkrhsq,
+                                              dfloat * restrict rkrhsqx,
+                                              dfloat * restrict rkrhsqy,
+                                              dfloat * restrict rkq,
+                                              dfloat * restrict rkqx,
+                                              dfloat * restrict rkqy,
+                                              dfloat * restrict rkerr){
+  // Runge Kutta intermediate stage
+  for(int es=0;es<pmlNelements;++es;outer0){
+    exclusive int e;
+    for(int n=0; n < p_Np; ++n; inner0){
+      e = pmlElementIds[es];
+      if (n < p_Np){
+        const int pmlId = pmlIds[es];
+        const int id  = p_Nfields*(e*p_Np + n);
+        const int pid = p_Nfields*(pmlId*p_Np + n);
+
+        for(int fld=0; fld< p_Nfields; ++fld){
+
+          const int offset    = NtotalElements*p_Nfields*p_Np;
+          const int offsetpml = pmlNelements*p_Nfields*p_Np;
+
+          dfloat r_rhsq  = rhsq [id  + fld];
+          dfloat r_rhsqx = rhsqx[pid + fld];
+          dfloat r_rhsqy = rhsqy[pid + fld];
+
+          if(rk==(p_NrkStages-1)){
+            //
+            dfloat r_q     = 0.f;
+            dfloat r_qx    = 0.f;
+            dfloat r_qy    = 0.f;
+            dfloat r_rkerr = 0.f;
+
+            if(fld<3){
+              r_q  = q [id  +fld];
+              r_qx = qx[pid +fld];
+              r_qy = qy[pid +fld];
+
+              dfloat r_rkerr = 0.f;
+
+              for (int i=0;i<(p_NrkStages-1);i++) {
+                r_q     += dt*rkA[p_NrkStages*rk + i]*rkrhsq[  id + fld + i*offset];
+                r_qx    += dt*rkA[p_NrkStages*rk + i]*rkrhsqx[pid + fld + i*offsetpml];
+                r_qy    += dt*rkA[p_NrkStages*rk + i]*rkrhsqy[pid + fld + i*offsetpml];
+                r_rkerr += dt*rkE[       i]*rkrhsq[id + fld + i*offset];
+              }
+
+              r_q     += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsq;
+              r_qx    += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsqx;
+              r_qy    += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsqy;
+
+              r_rkerr += dt*rkE[p_NrkStages-1]*r_rhsq;
+            }
+            else{
+
+              r_q  = sarkC[rk]*q [id  +fld];
+              r_qx = qx[pid +fld];
+              r_qy = qy[pid +fld];
+
+              dfloat r_rkerr = 0.f;
+
+              for (int i=0;i<(p_NrkStages-1);i++) {
+                r_q     += dt*sarkA[p_NrkStages*rk + i]*rkrhsq[  id + fld + i*offset];
+                r_qx    += dt*rkA[p_NrkStages*rk + i]*rkrhsqx[pid + fld + i*offsetpml];
+                r_qy    += dt*rkA[p_NrkStages*rk + i]*rkrhsqy[pid + fld + i*offsetpml];
+
+                r_rkerr += dt*sarkE[       i]*rkrhsq[id + fld + i*offset];
+              }
+
+              r_q     += dt*sarkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsq;
+              r_qx    += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsqx;
+              r_qy    += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsqy;
+
+              r_rkerr += dt*sarkE[p_NrkStages-1]*r_rhsq;
+            }
+          }
+
+        rkrhsq[id+fld+rk*offset]      = r_rhsq;
+        rkrhsqx[pid+fld+rk*offsetpml] = r_rhsqx;
+        rkrhsqy[pid+fld+rk*offsetpml] = r_rhsqy;
+        }     
+      }
+    }
+  }
+}
+
+
+
+
+
+
+
+
 kernel void boltzmannErrorEstimate2D(const int N,
                                const dfloat ATOL,
                                const dfloat RTOL,
@@ -408,6 +964,7 @@ kernel void boltzmannErrorEstimate2D(const int N,
         const dfloat   qn =   q[id];
         const dfloat rkqn = rkq[id];
         const dfloat qmax = (qn>rkqn) ? qn : rkqn;
+        // const dfloat qmax = rkqn;
         dfloat sk = ATOL + RTOL*qmax;
 
         s_err[t] = (rkerr[id]/sk)*(rkerr[id]/sk);
