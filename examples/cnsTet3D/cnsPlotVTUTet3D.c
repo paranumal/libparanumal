@@ -78,21 +78,27 @@ void cnsPlotVTUTet3D(cns_t *cns, char *fileName){
   fprintf(fp, "       </DataArray>\n");
 
   // write out vorticity (need to fix for 3D vorticity)
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
-      dfloat plotVort = 0;
+      dfloat plotVortx = 0, plotVorty = 0, plotVortz = 0;
       for(int m=0;m<mesh->Np;++m){
-        dlong id = m+e*mesh->Np;
-        dfloat vort = cns->Vort[id];
-        plotVort += mesh->plotInterp[n*mesh->Np+m]*vort;
+        dlong id = m+e*mesh->Np*3;
+        dfloat vortx = cns->Vort[id];
+	dfloat vorty = cns->Vort[id+mesh->Np];
+	dfloat vortz = cns->Vort[id+2*mesh->Np];
+        plotVortx += mesh->plotInterp[n*mesh->Np+m]*vortx;
+	plotVorty += mesh->plotInterp[n*mesh->Np+m]*vorty;
+	plotVortz += mesh->plotInterp[n*mesh->Np+m]*vortz;
       }
 
       fprintf(fp, "       ");
-      fprintf(fp, "%g\n", plotVort);
+      fprintf(fp, "%g %g %g\n", plotVortx, plotVorty, plotVortz);
     }
   }
   fprintf(fp, "       </DataArray>\n");
+
+  
   fprintf(fp, "     </PointData>\n");
   
   fprintf(fp, "    <Cells>\n");
