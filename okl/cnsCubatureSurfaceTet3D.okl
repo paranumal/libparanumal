@@ -1,7 +1,5 @@
 
 
-
-
 // Roe averaged Riemann solver
 void upwindRoeAveraged(const dfloat nx,
                        const dfloat ny,
@@ -61,7 +59,10 @@ void upwindRoeAveraged(const dfloat nx,
   /* 
      Riemann fluxes
 
-  V = [0 0 1 1; 0 0 u+c u-c; 0 1 v v; 1 0 w w];
+  V = [0 0 1   1; 
+       0 0 u+c u-c; 
+       0 1 v   v;
+       1 0 w   w];
   >> inv(V)
 
        ans =
@@ -103,9 +104,9 @@ void upwindRoeAveraged(const dfloat nx,
   dfloat pS = p_RT*rS;
 
   *rflux  = nx*(ruS) + ny*(rvS) + nz*(rwS);
-  *ruflux = nx*(ruS*uS) + ny*(ruS*rvS) + nz*(ruS*rwS);
-  *rvflux = nx*(rvS*uS) + ny*(rvS*rvS) + nz*(rvS*rwS);
-  *rwflux = nx*(rwS*uS) + ny*(rwS*rvS) + nz*(rwS*rwS);
+  *ruflux = nx*(ruS*uS) + ny*(ruS*vS) + nz*(ruS*wS);
+  *rvflux = nx*(rvS*uS) + ny*(rvS*vS) + nz*(rvS*wS);
+  *rwflux = nx*(rwS*uS) + ny*(rwS*vS) + nz*(rwS*wS);
 
   *ruflux += nx*(pS);
   *rvflux += ny*(pS);
