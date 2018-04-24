@@ -83,8 +83,8 @@ kernel void cnsVorticityTet3D(const dlong Nelements,
 
           const dlong id = e*p_Np*3+n; 
           Vort[id+0*p_Np] = wy-vz;
-	  Vort[id+1*p_np] = uz-wx;
-	  Vort[id+2*p_np] = vx-uy;
+	  Vort[id+1*p_Np] = uz-wx;
+	  Vort[id+2*p_Np] = vx-uy;
         }
       }
     }

@@ -1,6 +1,6 @@
 
 // Initial conditions 
-#define cnsFlowField2D(t,x,y,z,u,v,w,p)		\
+#define cnsFlowField3D(t,x,y,z,u,v,w,p)		\
   {                                   \
     *(r) = p_rbar;                    \
     *(u) = p_ubar;                    \
@@ -10,7 +10,7 @@
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define cnsDirichletConditions2D(bc, t, x, y, z, nx, ny, nz, rM, uM, vM, wM, rB, uB, vB, wB) \
+#define cnsDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, rM, uM, vM, wM, rB, uB, vB, wB) \
 {                                   \
   if(bc==1){                        \
     *(rB) = rM;                     \
@@ -35,7 +35,7 @@
   }                                 \
 }
 
-#define cnsNeumannConditions2D(bc, t, x, y, z, nx, ny, nz, uxM, uyM, uzM, vxM, vyM, vzM, uxB, uyB, uzB, vxB, vyB, vzB) \
+#define cnsNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, uxM, uyM, uzM, vxM, vyM, vzM, uxB, uyB, uzB, vxB, vyB, vzB) \
 {                                          \
   if(bc==1 || bc==2){                      \
     *(uxB) = uxM;                          \
