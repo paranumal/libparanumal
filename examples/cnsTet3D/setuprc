@@ -26,7 +26,7 @@ DOPRI5
 CUBATURE
 
 [VISCOSITY]
-1.e-2
+5.e-3
 
 [RBAR]
 1.0
