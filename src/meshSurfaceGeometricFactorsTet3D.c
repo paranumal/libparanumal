@@ -3,10 +3,47 @@
 #include <stdlib.h>
 #include "mesh3D.h"
 
+void computeFrame(dfloat nx, dfloat ny, dfloat nz,
+		  dfloat &tanx, dfloat &tany, dfloat &tanz,
+		  dfloat &binx, dfloat &biny, dfloat &binz){
+
+  dfloat ranx = drand48();
+  dfloat rany = drand48();
+  dfloat ranz = drand48();
+
+  dfloat magran = sqrt(ranx*ranx+rany*rany+ranz*ranz);
+
+  ranx /= magran;
+  rany /= magran;
+  ranz /= magran;
+
+  tanx = ny*ranz - nz*rany;
+  tany = nz*ranx - nx*ranz;
+  tanz = nx*rany - ny*ranx;
+
+  dfloat magtan = sqrt(tanx*tanx+tany*tany+tanz*tanz);
+
+  tanx /= magtan;
+  tany /= magtan;
+  tanz /= magtan;
+
+  binx = ny*tanz - nz*tany;
+  biny = nz*tanx - nx*tanz;
+  binz = nx*tany - ny*tanx;
+
+  dfloat magbin = sqrt(binx*binx+biny*biny+binz*binz);
+
+  binx /= magbin;
+  biny /= magbin;
+  binz /= magbin;
+  
+
+}
+
 void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nsgeo = 6;
+  mesh->Nsgeo = 14;
   mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
                             mesh->Nsgeo*mesh->Nfaces, sizeof(dfloat));
   
@@ -45,6 +82,11 @@ void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh){
     mesh->sgeo[base+SJID] = sJ1*J;
     mesh->sgeo[base+IJID] = 1./J;
 
+    // generate local tangent and binormal using random vector
+    computeFrame(nx1/sJ1, ny1/sJ1, nz1/sJ1,
+		 mesh->sgeo[base+STXID], mesh->sgeo[base+STYID], mesh->sgeo[base+STZID],
+		 mesh->sgeo[base+SBXID], mesh->sgeo[base+SBYID], mesh->sgeo[base+SBZID]);
+    
     /* face 2 */
     base += mesh->Nsgeo;
     dfloat nx2 = -sx;
@@ -58,6 +100,11 @@ void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh){
     mesh->sgeo[base+SJID] = sJ2*J;
     mesh->sgeo[base+IJID] = 1./J;
 
+    // generate local tangent and binormal using random vector
+    computeFrame(nx2/sJ2, ny2/sJ2, nz2/sJ2,
+		 mesh->sgeo[base+STXID], mesh->sgeo[base+STYID], mesh->sgeo[base+STZID],
+		 mesh->sgeo[base+SBXID], mesh->sgeo[base+SBYID], mesh->sgeo[base+SBZID]);
+    
     /* face 3 */
     base += mesh->Nsgeo;
     dfloat nx3 = rx+sx+tx;
@@ -71,6 +118,11 @@ void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh){
     mesh->sgeo[base+SJID] = sJ3*J;
     mesh->sgeo[base+IJID] = 1./J;
 
+    // generate local tangent and binormal using random vector
+    computeFrame(nx3/sJ3, ny3/sJ3, nz3/sJ3,
+		 mesh->sgeo[base+STXID], mesh->sgeo[base+STYID], mesh->sgeo[base+STZID],
+		 mesh->sgeo[base+SBXID], mesh->sgeo[base+SBYID], mesh->sgeo[base+SBZID]);
+    
     /* face 4 */
     base += mesh->Nsgeo;
     dfloat nx4 = -rx;
@@ -83,6 +135,12 @@ void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh){
     mesh->sgeo[base+NZID] = nz4/sJ4;
     mesh->sgeo[base+SJID] = sJ4*J;
     mesh->sgeo[base+IJID] = 1./J;
+
+    // generate local tangent and binormal using random vector
+    computeFrame(nx4/sJ4, ny4/sJ4, nz4/sJ4,
+		 mesh->sgeo[base+STXID], mesh->sgeo[base+STYID], mesh->sgeo[base+STZID],
+		 mesh->sgeo[base+SBXID], mesh->sgeo[base+SBYID], mesh->sgeo[base+SBZID]);
+    
 #if 0
     printf("N1=(%g,%g,%g),sJ1=%g\n", nx1/sJ1,ny1/sJ1,nz1/sJ1,sJ1*J);
     printf("N2=(%g,%g,%g),sJ2=%g\n", nx2/sJ2,ny2/sJ2,nz2/sJ2,sJ2*J);

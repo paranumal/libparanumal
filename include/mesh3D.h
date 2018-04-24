@@ -141,12 +141,18 @@ void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
 /* offsets for nx, ny, sJ, 1/J */
 #define NXID 0  
 #define NYID 1  
-#define NZID 2 
-#define SJID 3  
+#define NZID 2
+#define SJID 3
 #define IJID 4
 #define IHID 5
 #define WSJID 6
 #define WIJID 7
+#define STXID 8
+#define STYID 9  
+#define STZID 10 
+#define SBXID 11 
+#define SBYID 12 
+#define SBZID 13 
 //
 //offsets for boltzmann PML variables
 #define QXID1 0  

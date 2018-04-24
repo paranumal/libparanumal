@@ -3,86 +3,116 @@
 // Roe averaged Riemann solver
 void upwindRoeAveraged(const dfloat nx,
                        const dfloat ny,
+                       const dfloat nz,
+		       const dfloat tx,
+                       const dfloat ty,
+                       const dfloat tz,
+		       const dfloat bx,
+                       const dfloat by,
+                       const dfloat bz,	
                        const dfloat rM,
                        const dfloat ruM,
                        const dfloat rvM,
+                       const dfloat rwM,
                        const dfloat rP,
                        const dfloat ruP,
                        const dfloat rvP,
+                       const dfloat rwP,
                        dfloat *rflux,
                        dfloat *ruflux,
-                       dfloat *rvflux){
+                       dfloat *rvflux,
+		       dfloat *rwflux
+		       	      ){
 
   // Rotate "-" trace momentum to face normal-tangent coordinates
-  dfloat ruMrot = nx*ruM + ny*rvM;
-  dfloat rvMrot =-ny*ruM + nx*rvM;
+  dfloat runM = nx*ruM + ny*rvM + nz*rwM;
+  dfloat rutM = tx*ruM + ty*rvM + tz*rwM;
+  dfloat rubM = bx*ruM + by*rvM + bz*rwM;
 
-  dfloat ruProt = nx*ruP + ny*rvP;
-  dfloat rvProt =-ny*ruP + nx*rvP;
+  dfloat runP = nx*ruP + ny*rvP + nz*rwP;
+  dfloat rutP = tx*ruP + ty*rvP + tz*rwP;
+  dfloat rubP = bx*ruP + by*rvP + bz*rwP;
   
-  dfloat uMrot = ruMrot/rM;
-  dfloat vMrot = rvMrot/rM;
+  dfloat unM = runM/rM;
+  dfloat utM = rutM/rM;
+  dfloat ubM = rubM/rM;
 
-  dfloat uProt = ruProt/rP;
-  dfloat vProt = rvProt/rP;
+  dfloat unP = runP/rP;
+  dfloat utP = rutP/rP;
+  dfloat ubP = rubP/rP;
 
   dfloat pM = p_RT*rM;
   dfloat pP = p_RT*rP;
   
-  // Compute fluxes and primitive variables in rotated coordinates
-  dfloat frMrot = ruMrot;
-  dfloat grMrot = rvMrot;
-
-  dfloat fruMrot = uMrot*ruMrot + pM;
-  dfloat gruMrot = uMrot*rvMrot;
-
-  dfloat frvMrot = vMrot*ruMrot;
-  dfloat grvMrot = vMrot*rvMrot + pM;
-
-
-  dfloat frProt = ruProt;
-  dfloat grProt = rvProt;
-
-  dfloat fruProt = uProt*ruProt + pP;
-  dfloat gruProt = uProt*rvProt;
-
-  dfloat frvProt = vProt*ruProt;
-  dfloat grvProt = vProt*rvProt + pP;
-
   // Compute Roe average variables
   dfloat rMsqr = occaSqrt(rM);
   dfloat rPsqr = occaSqrt(rP); 
 
   dfloat r = rMsqr*rPsqr;
-  dfloat urot = (rMsqr*uMrot + rPsqr*uProt)/(rMsqr + rPsqr);
-  dfloat vrot = (rMsqr*vMrot + rPsqr*vProt)/(rMsqr + rPsqr);
+  dfloat un = (rMsqr*unM + rPsqr*unP)/(rMsqr + rPsqr);
+  dfloat ut = (rMsqr*utM + rPsqr*utP)/(rMsqr + rPsqr);
+  dfloat ub = (rMsqr*ubM + rPsqr*ubP)/(rMsqr + rPsqr);
   
   dfloat c2  = p_RT;
   dfloat c   = p_sqrtRT;
 
-  // Riemann fluxes
-  dfloat dW1 = -p_half*r*(uProt-uMrot)/c + p_half*(pP-pM)/c2;  
-  dfloat dW2 = r*(vProt-vMrot);
-  dfloat dW3 =  p_half*r*(uProt-uMrot)/c + p_half*(pP-pM)/c2;  
+  /* 
+     Riemann fluxes
 
+  V = [0 0 1 1; 0 0 u+c u-c; 0 1 v v; 1 0 w w];
+  >> inv(V)
 
-  dW1 *= occaFabs(urot-c);
-  dW2 *= occaFabs(urot);
-  dW3 *= occaFabs(urot+c); 
+       ans =
 
-  // Form Roe fluxes
-  *rflux = p_half*(frProt-frMrot);
-  dfloat rufluxRot = p_half*(fruProt-fruMrot);
-  dfloat rvfluxRot = p_half*(frvProt-frvMrot);
-
+       [            -w,        0, 0, 1]
+       [            -v,        0, 1, 0]
+       [ (c - u)/(2*c),  1/(2*c), 0, 0]
+       [ (c + u)/(2*c), -1/(2*c), 0, 0]
+  */
   
-  *rflux    -= p_half*(dW1*p_one    + dW2*p_zero  + dW3*p_one);
-  rufluxRot -= p_half*(dW1*(urot-c) + dW2*p_zero  + dW3*(urot+c));
-  rvfluxRot -= p_half*(dW1*vrot     + dW2*p_one   + dW3*vrot);
+  dfloat W1M = rubM - ub*rM;
+  dfloat W2M = rutM - ut*rM;
+  dfloat W3M = p_half*((c-un)*rM + runM)/c;
+  dfloat W4M = p_half*((c+un)*rM - runM)/c;
 
-  // rotate back to Cartesian
-  *ruflux = nx*rufluxRot - ny*rvfluxRot;
-  *rvflux = ny*rufluxRot + nx*rvfluxRot;
+  dfloat W1P = rubP - ub*rP;
+  dfloat W2P = rutP - ut*rP;
+  dfloat W3P = p_half*((c-un)*rP + runP)/c;
+  dfloat W4P = p_half*((c+un)*rP - runP)/c;
+
+  // check inequalities
+  dfloat W1 = (un>0) ? W1M:W1P;
+  dfloat W2 = (un>0) ? W2M:W2P;
+  dfloat W3 = (un+c>0) ? W3M:W3P;
+  dfloat W4 = (un-c>0) ? W4M:W4P;
+
+  dfloat rS   = W3+W4;
+  dfloat runS = (c+un)*W3 + (un-c)*W4;
+  dfloat rutS = W2 + ut*(W3+W4);
+  dfloat rubS = W1 + ub*(W3+W4);
+
+  dfloat ruS = nx*runS + bx*rutS + tx*rubS;
+  dfloat rvS = ny*runS + by*rutS + ty*rubS;
+  dfloat rwS = nz*runS + bz*rutS + tz*rubS;
+
+  dfloat uS = ruS/rS;
+  dfloat vS = rvS/rS;
+  dfloat wS = rwS/rS;
+  dfloat pS = p_RT*rS;
+
+  dfloat uM = ruM/rM;
+  dfloat vM = rvM/rM;
+  dfloat wM = rwM/rM;
+  
+  *rflux  = nx*(ruS-ruM) + ny*(rvS-rvM) + nz*(rwS-rwM);
+  *ruflux = nx*(ruS*uS-ruM*uM) + ny*(ruS*rvS-ruM*rvM) + nz*(ruS*rwS-ruM*rwM);
+  *rvflux = nx*(rvS*uS-rvM*uM) + ny*(rvS*rvS-rvM*rvM) + nz*(rvS*rwS-rvM*rwM);
+  *rwflux = nx*(rwS*uS-rwM*uM) + ny*(rwS*rvS-rwM*rvM) + nz*(rwS*rwS-rwM*rwM);
+
+  *ruflux += nx*(pS-pM);
+  *rvflux += ny*(pS-pM);
+  *rwflux += nz*(pS-pM);
+  
 }
 
 
@@ -125,7 +155,13 @@ kernel void cnsSurfaceTet3D(const dlong Nelements,
             const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
-	    const dfloat nz   = sgeo[sid+p_NYID];
+	    const dfloat nz   = sgeo[sid+p_NZID];
+	    const dfloat tx   = sgeo[sid+p_STXID];
+            const dfloat ty   = sgeo[sid+p_STYID];
+	    const dfloat tz   = sgeo[sid+p_STZID];
+	    const dfloat bx   = sgeo[sid+p_SBXID];
+            const dfloat by   = sgeo[sid+p_SBYID];
+	    const dfloat bz   = sgeo[sid+p_SBZID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];
 
@@ -197,7 +233,7 @@ kernel void cnsSurfaceTet3D(const dlong Nelements,
 #if 1
             dfloat rflux, ruflux, rvflux, rwflux;
             
-            upwindRoeAveraged(nx, ny, nz, rM, ruM, rvM, rwM, rP, ruP, rvP, rwP, &rflux, &ruflux, &rvflux, &rwflux);
+            upwindRoeAveraged(nx, ny, nz, bx, by, bz, tx, ty, tz, rM, ruM, rvM, rwM, rP, ruP, rvP, rwP, &rflux, &ruflux, &rvflux, &rwflux);
 
             rflux  *= advSwitch;
             ruflux *= advSwitch;
