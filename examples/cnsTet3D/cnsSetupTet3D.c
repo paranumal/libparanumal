@@ -130,7 +130,7 @@ cns_t *cnsSetupTet3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   cns->viscousStresses = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*cns->Nstresses,
 					   sizeof(dfloat));
 
-  cns->Vort = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  cns->Vort = (dfloat*) calloc(3*mesh->Nelements*mesh->Np,sizeof(dfloat)); // 3 components
   
   // fix this later (initial conditions)
   for(dlong e=0;e<mesh->Nelements;++e){
@@ -257,7 +257,7 @@ cns_t *cnsSetupTet3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   }
 
   
-  cns->o_Vort = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), cns->Vort);
+  cns->o_Vort = mesh->device.malloc(3*mesh->Np*mesh->Nelements*sizeof(dfloat), cns->Vort); // 3 components
   
 
   if(mesh->totalHaloPairs>0){
