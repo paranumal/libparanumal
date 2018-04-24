@@ -135,8 +135,7 @@ kernel void boltzmannLSERKbasicUpdateQuad3D(const iint Nelements,
 					   const dfloat * restrict rhsq,
 					   const dfloat * restrict qCorr,
 					   dfloat * restrict resq,
-					   dfloat * restrict q,
-					   dfloat * restrict q2){
+					   dfloat * restrict q){
   
   // Low storage Runge Kutta time step update
   for(iint e=0;e<Nelements;++e;outer0){
@@ -157,7 +156,6 @@ kernel void boltzmannLSERKbasicUpdateQuad3D(const iint Nelements,
 	resq[id] = r_resq;
 
 	q[id] = r_q;
-	q2[id] = r_q;
       }
     }
   }

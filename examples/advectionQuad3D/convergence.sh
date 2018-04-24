@@ -1,11 +1,11 @@
 #!/bin/bash
 
 cd /scratch/stimmel/convergence
-for N in `seq 2 7`;
-do  
-    for meshnum in `seq 4 4 32`;
+for N in `seq 2 9`;
+do
+    for alpha in `seq 0 1 10`;
     do
-	echo mesh=$meshnum N=$N;
-	~/holmes/examples/advectionQuad3D/advectionMainQuad3D ~/holmes/meshes/cubed_grid_${meshnum}.msh $N | grep norm ;
+	echo N=$N alpha=$alpha;
+	~/holmes/examples/advectionQuad3D/advectionMainQuad3D ~/holmes/meshes/cubed_grid_28.msh $N $alpha | grep norm ;
     done;
 done

@@ -5,11 +5,11 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
-  if(argc!=3){
+  /*  if(argc!=3){
     // to run cavity test case with degree N elements
     printf("usage: ./main meshes/cavityH005.msh N\n");
     exit(-1);
-  }
+    }*/
 
   //changes solver mode.
   //options are: DOPRI MRSAAB
@@ -43,10 +43,10 @@ int main(int argc, char **argv){
     advectionRunDOPRIQuad3D(solver);
   }
   else if (strstr(mode,"LSERK")) {
-    advectionRunLSERKbasicQuad3D(solver);
+    advectionRunLSERKbasicQuad3D(solver,atoi(argv[3])/10.);
   }
   
-  solver->o_q.copyTo(solver->q);
+  solver->o_qpre.copyTo(solver->q);
   advectionErrorNormQuad3D(solver,solver->finalTime,"end",0);
   
   /*    mesh->o_q.copyTo(mesh->q);
