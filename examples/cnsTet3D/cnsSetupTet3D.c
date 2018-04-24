@@ -142,7 +142,7 @@ cns_t *cnsSetupTet3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
 
       dlong qbase = e*mesh->Np*mesh->Nfields + n;
 
-#if 1
+#if 0
       cnsGaussianPulse3D(x, y, z, t,
 			 mesh->q+qbase,
 			 mesh->q+qbase+mesh->Np,

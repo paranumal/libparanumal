@@ -48,8 +48,12 @@ void cnsRunTet3D(cns_t *cns, setupAide &newOptions){
 	done = 1;
       }
 
+      printf("starting dt\n");
+      
       // try a step with the current time step
       cnsDopriStepTet3D(cns, newOptions, time);
+
+      printf("done dt\n");
       
       // compute Dopri estimator
       dfloat err = cnsDopriEstimateTet3D(cns);
