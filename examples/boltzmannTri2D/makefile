@@ -59,7 +59,11 @@ boltzmannForces2D.o \
 boltzmannPlotFieldTEC2D.o \
 boltzmannRunDOPRI2D.o \
 boltzmannDOPRIStep2D.o \
+boltzmannXDOPRIStep2D.o \
 boltzmannReportAddaptive2D.o \
+oltzmannSAADRKCoefficients.o \
+boltzmannSAADRKStep2D.o \
+boltzmannSAADRKRun2D.o \
 # library objects
 LOBJS = \
 ../../src/meshParallelReaderTri2D.o \
