@@ -1,10 +1,10 @@
 #include <math.h>
-#include "mesh2D.h"
+#include "mesh3D.h"
 
-void cnsGaussianPulse2D(dfloat x, dfloat y, dfloat z, dfloat t,
+void cnsGaussianPulse3D(dfloat x, dfloat y, dfloat z, dfloat t,
 			dfloat *r, dfloat *u, dfloat *v, dfloat *w){
 
-  *r = 1 + exp(-30*(x*x+y*y+z*z));
+  *r = 1 + exp(-3*(x*x+y*y+z*z));
   *u = 0;
   *v = 0;
   *w = 0;
