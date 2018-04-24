@@ -23,8 +23,6 @@ void cnsDopriStepTet3D(cns_t *cns, setupAide &newOptions, const dfloat time){
     //compute RHS
     // rhsq = F(currentTIme, rkq)
 
-    printf("starting initial halo\n");
-    
     // extract q halo on DEVICE
     if(mesh->totalHaloPairs>0){
       int Nentries = mesh->Np*cns->Nfields;          
@@ -37,8 +35,6 @@ void cnsDopriStepTet3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       meshHaloExchangeStart(mesh, mesh->Np*cns->Nfields*sizeof(dfloat), cns->sendBuffer, cns->recvBuffer);
     }
 
-    printf("done initial halo\n");
-    
     // now compute viscous stresses
     cns->stressesVolumeKernel(mesh->Nelements, 
 			      mesh->o_vgeo, 
@@ -49,8 +45,6 @@ void cnsDopriStepTet3D(cns_t *cns, setupAide &newOptions, const dfloat time){
 			      cns->o_rkq, 
 			      cns->o_viscousStresses);
 
-    printf("finalizing initial halo\n");
-    
     // wait for q halo data to arrive
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
@@ -60,8 +54,6 @@ void cnsDopriStepTet3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       cns->o_rkq.copyFrom(cns->recvBuffer, cns->haloBytes, offset);
     }
 
-    printf("done finalizing initial halo\n");
-    
     cns->stressesSurfaceKernel(mesh->Nelements, 
 			       mesh->o_sgeo, 
 			       mesh->o_LIFTT,
@@ -76,8 +68,6 @@ void cnsDopriStepTet3D(cns_t *cns, setupAide &newOptions, const dfloat time){
 			       cns->o_rkq, 
 			       cns->o_viscousStresses);
 
-    printf("starting stress\n");
-    
     // extract stresses halo on DEVICE
     if(mesh->totalHaloPairs>0){
       int Nentries = mesh->Np*cns->Nstresses;
@@ -91,8 +81,6 @@ void cnsDopriStepTet3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       meshHaloExchangeStart(mesh, mesh->Np*cns->Nstresses*sizeof(dfloat), cns->sendStressesBuffer, cns->recvStressesBuffer);
     }
 
-    printf("done starting stress\n");
-    
     // compute volume contribution to DG cns RHS
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureVolumeKernel(mesh->Nelements, 
@@ -117,8 +105,6 @@ void cnsDopriStepTet3D(cns_t *cns, setupAide &newOptions, const dfloat time){
 			cns->o_rhsq);
     }
 
-    printf("starting finalizing stress\n");
-    
     // wait for halo stresses data to arrive
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
@@ -128,8 +114,6 @@ void cnsDopriStepTet3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       cns->o_viscousStresses.copyFrom(cns->recvStressesBuffer, cns->haloStressesBytes, offset);
     }
 
-    printf("done finalizing stress\n");
-    
     // compute surface contribution to DG cns RHS (LIFTT ?)
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureSurfaceKernel(mesh->Nelements, 
