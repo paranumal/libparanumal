@@ -129,7 +129,7 @@ void cnsPlotVTUTet3D(cns_t *cns, char *fileName){
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNelements;++n){
-      fprintf(fp, "5\n");
+      fprintf(fp, "10\n");
     }
   }
   fprintf(fp, "        </DataArray>\n");
