@@ -5,30 +5,29 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
-  if(argc!=3){
-    // to run cavity test case with degree N elements
-    printf("usage: ./main meshes/cavityH005.msh N\n");
+  if(argc!=2){
+    printf("usage2: ./cnsMainQuad2D setupfile\n");
     exit(-1);
   }
 
-  // int specify polynomial degree 
-  int N = atoi(argv[2]);
-
-  // SET OPTIONS
-  // out  = REPORT, REPORT+VTU
-  // adv  = CUBATURE, COLLOCATION
-  char *options = strdup("out=VTU, adv=CUBATURE"); 
+  // if argv > 2 then should load input data from argv
+  setupAide newOptions(argv[1]);
 
   // set up mesh stuff
-  mesh2D *mesh = meshSetupQuad2D(argv[1], N);
+  string fileName;
+  int N;
+
+  newOptions.getArgs("MESH FILE", fileName);
+  newOptions.getArgs("POLYNOMIAL DEGREE", N);
+  mesh2D *mesh = meshSetupQuad2D((char*)fileName.c_str(), N);
 
   char *boundaryHeaderFileName = strdup(DHOLMES "/examples/cnsQuad2D/cnsUniform2D.h"); // default
 
   // set up cns stuff
-  cns_t *cns = cnsSetupQuad2D(mesh, options, boundaryHeaderFileName);
+  cns_t *cns = cnsSetupQuad2D(mesh, newOptions, boundaryHeaderFileName);
 
   // run
-  cnsRunQuad2D(cns, options);
+  cnsRunQuad2D(cns, newOptions);
 
   // close down MPI
   MPI_Finalize();

@@ -30,7 +30,6 @@ kernel void cnsUpdate2D(const dlong Nelements,
   }
 }
 
-
 kernel void cnsRkStage2D(const dlong Nelements,
                          const int rk,
                          const dfloat dt,  
@@ -71,7 +70,7 @@ kernel void cnsRkUpdate2D(const dlong Nelements,
                                 dfloat * restrict rkerr){
   
   // Runge Kutta intermediate stage
-  for(dlong e=0;e<Nelements;++e;outer0){\
+  for(dlong e=0;e<Nelements;++e;outer0){
     for(int n=0;n<p_Np;++n;inner0){
 
       for(int fld=0; fld< p_Nfields; ++fld){

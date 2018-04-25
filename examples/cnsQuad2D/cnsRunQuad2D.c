@@ -1,150 +1,162 @@
 #include "cnsQuad2D.h"
 
-void cnsRunQuad2D(cns_t *cns, char *options){
+void cnsRunQuad2D(cns_t *cns, setupAide &newOptions){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   mesh_t *mesh = cns->mesh;
+
+  cnsReportQuad2D(cns, 0, newOptions);
+
+  occa::timer timer;
   
-  // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  timer.initTimer(mesh->device);
 
-    int advSwitch = 1;//(tstep>100);
-    
-    for(int rk=0;rk<mesh->Nrk;++rk){
+  timer.tic("Run");
+  
+  if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
 
-      dfloat currentTime = tstep*mesh->dt + mesh->rkc[rk]*mesh->dt;
+    dfloat hmin = 1e9;
+    for(dlong e=0;e<mesh->Nelements;++e){  
       
-      // extract q halo on DEVICE
-      if(mesh->totalHaloPairs>0){
-        int Nentries = mesh->Np*cns->Nfields;
-        
-        mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, cns->o_q, cns->o_haloBuffer);
-        
-        // copy extracted halo to HOST 
-        cns->o_haloBuffer.copyTo(cns->sendBuffer);      
-        
-        // start halo exchange
-        meshHaloExchangeStart(mesh, mesh->Np*cns->Nfields*sizeof(dfloat), cns->sendBuffer, cns->recvBuffer);
+      for(int f=0;f<mesh->Nfaces;++f){
+	dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+	dfloat sJ   = mesh->sgeo[sid + SJID];
+	dfloat invJ = mesh->sgeo[sid + IJID];
+	dfloat hest = .5/(sJ*invJ);
+	
+	hmin = mymin(hmin, hest);
       }
-
-      // now compute viscous stresses
-      cns->stressesVolumeKernel(mesh->Nelements, 
-                                mesh->o_vgeo, 
-                                mesh->o_D, 
-                                cns->mu, 
-                                cns->o_q, 
-                                cns->o_viscousStresses);
-
-      // wait for q halo data to arrive
-      if(mesh->totalHaloPairs>0){
-        meshHaloExchangeFinish(mesh);
-        
-        // copy halo data to DEVICE
-        size_t offset = mesh->Np*cns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-        cns->o_q.copyFrom(cns->recvBuffer, cns->haloBytes, offset);
-      }
-      
-      cns->stressesSurfaceKernel(mesh->Nelements, 
-                                 mesh->o_sgeo, 
-                                 cns->o_LIFTT,
-                                 mesh->o_vmapM, 
-                                 mesh->o_vmapP, 
-                                 mesh->o_EToB, 
-                                 currentTime,
-                                 mesh->o_x, 
-                                 mesh->o_y, 
-                                 cns->mu, 
-                                 cns->o_q, 
-                                 cns->o_viscousStresses);
-      
-      // extract stresses halo on DEVICE
-      if(mesh->totalHaloPairs>0){
-        int Nentries = mesh->Np*cns->Nstresses;
-        
-        mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, cns->o_viscousStresses, cns->o_haloStressesBuffer);
-        
-        // copy extracted halo to HOST 
-        cns->o_haloStressesBuffer.copyTo(cns->sendStressesBuffer);      
-        
-        // start halo exchange
-        meshHaloExchangeStart(mesh, mesh->Np*cns->Nstresses*sizeof(dfloat), cns->sendStressesBuffer, cns->recvStressesBuffer);
-      }
-      
-      // compute volume contribution to DG cns RHS
-      if (strstr(options,"CUBATURE")) {
-        cns->cubatureVolumeKernel(mesh->Nelements, 
-                                  advSwitch, 
-                                  mesh->o_vgeo, 
-                                  mesh->o_cubvgeo,
-                                  mesh->o_cubDWT,
-                                  mesh->o_cubInterpT,
-                                  mesh->o_cubProjectT,
-                                  cns->o_viscousStresses, 
-                                  cns->o_q, 
-                                  cns->o_rhsq);
-      } else {
-        cns->volumeKernel(mesh->Nelements, 
-                          advSwitch, 
-                          mesh->o_vgeo, 
-                          mesh->o_D, 
-                          cns->o_viscousStresses, 
-                          cns->o_q, 
-                          cns->o_rhsq);
-      }
-
-      // wait for halo stresses data to arrive
-      if(mesh->totalHaloPairs>0){
-        meshHaloExchangeFinish(mesh);
-        
-        // copy halo data to DEVICE
-        size_t offset = mesh->Np*cns->Nstresses*mesh->Nelements*sizeof(dfloat); // offset for halo data
-        cns->o_viscousStresses.copyFrom(cns->recvStressesBuffer, cns->haloStressesBytes, offset);
-      }
-      
-      // compute surface contribution to DG cns RHS (LIFTT ?)
-      if (strstr(options,"CUBATURE")) {
-        cns->cubatureSurfaceKernel(mesh->Nelements, 
-                                   advSwitch, 
-                                   mesh->o_vgeo, 
-                                   mesh->o_cubsgeo, 
-                                   mesh->o_vmapM, 
-                                   mesh->o_vmapP, 
-                                   mesh->o_EToB,
-                                   mesh->o_cubInterpT,
-                                   mesh->o_cubProjectT,
-                                   currentTime, 
-                                   mesh->o_intx, 
-                                   mesh->o_inty, 
-                                   cns->mu, 
-                                   cns->o_q, 
-                                   cns->o_viscousStresses, 
-                                   cns->o_rhsq);
-      } else {
-        cns->surfaceKernel(mesh->Nelements, 
-                           advSwitch, 
-                           mesh->o_sgeo, 
-                           cns->o_LIFTT, 
-                           mesh->o_vmapM, 
-                           mesh->o_vmapP, 
-                           mesh->o_EToB,
-                           currentTime, 
-                           mesh->o_x, 
-                           mesh->o_y, 
-                           cns->mu, 
-                           cns->o_q, 
-                           cns->o_viscousStresses, 
-                           cns->o_rhsq);
-      }
-      
-      // update solution using Runge-Kutta
-      cns->updateKernel(mesh->Nelements, mesh->dt, mesh->rka[rk], mesh->rkb[rk], cns->o_rhsq, cns->o_resq, cns->o_q);
-      
     }
     
-    if(((tstep+1)%mesh->errorStep)==0){
-      cnsReportQuad2D(cns, tstep+1, options);
+    // hard code this for the moment
+    dfloat outputInterval;
+    newOptions.getArgs("OUTPUT INTERVAL", outputInterval);
+    
+    dfloat nextOutputTime = outputInterval;
+    dfloat outputNumber = 0;
+    
+    //initial time
+    dfloat time = 0.0;
+    int tstep=0, allStep = 0;
+
+    int done =0;
+    while (!done) {
+
+      cns->advSwitch = 1;
+      
+      if (mesh->dt<cns->dtMIN){
+        printf("ERROR: Time step became too small at time step=%d\n", tstep);
+        exit (-1);
+      }
+      if (isnan(mesh->dt)) {
+        printf("ERROR: Solution became unstable at time step=%d\n", tstep);
+        exit (-1);
+      }
+
+      //check for final timestep
+      if (time+mesh->dt > mesh->finalTime){
+	mesh->dt = mesh->finalTime-time;
+	done = 1;
+      }
+
+      // try a step with the current time step
+      cnsDopriStepQuad2D(cns, newOptions, time);
+      
+      // compute Dopri estimator
+      dfloat err = cnsDopriEstimateQuad2D(cns);
+					 
+      // build controller
+      dfloat fac1 = pow(err,cns->exp1);
+      dfloat fac = fac1/pow(cns->facold,cns->beta);
+
+      fac = mymax(cns->invfactor2, mymin(cns->invfactor1,fac/cns->safe));
+      dfloat dtnew = mesh->dt/fac;
+
+      if (err<1.0) { //dt is accepted
+
+	// check for output during this step and do a mini-step
+	if(time<nextOutputTime && time+mesh->dt>nextOutputTime){
+	  dfloat savedt = mesh->dt;
+	  
+	  // save rkq
+	  cns->o_saveq.copyFrom(cns->o_rkq);
+
+	  // change dt to match output
+	  mesh->dt = nextOutputTime-time;
+
+	  // print
+	  printf("Taking output mini step: %g\n", mesh->dt);
+	  
+	  // time step to output
+	  cnsDopriStepQuad2D(cns, newOptions, time);	  
+
+	  // shift for output
+	  cns->o_rkq.copyTo(cns->o_q);
+	  
+	  // output  (print from rkq)
+	  cnsReportQuad2D(cns, nextOutputTime, newOptions);
+
+	  // restore time step
+	  mesh->dt = savedt;
+
+	  // increment next output time
+	  nextOutputTime += outputInterval;
+
+	  // accept saved rkq
+	  cns->o_q.copyFrom(cns->o_saveq);
+	}
+	else{
+	  // accept rkq
+	  cns->o_q.copyFrom(cns->o_rkq);
+	}
+
+        time += mesh->dt;
+
+        cns->facold = mymax(err,1E-4); // hard coded factor ?
+
+	printf("\r time = %g (%d), dt = %g accepted (ratio dt/hmin = %g)               ", time, allStep, mesh->dt, mesh->dt/hmin);
+        tstep++;
+      } else {
+        dtnew = mesh->dt/(mymax(cns->invfactor1,fac1/cns->safe));
+	printf("\r time = %g (%d), dt = %g rejected (ratio dt/min = %g), trying %g", time, allStep, mesh->dt, mesh->dt/hmin, dtnew);
+
+	done = 0;
+      }
+      mesh->dt = dtnew;
+      
+      
+      allStep++;
+
+    }
+
+#if 0
+    cns->o_rkA.free();
+    cns->o_rkE.free();
+#endif
+    
+    mesh->device.finish();
+    
+    double elapsed  = timer.toc("Run");
+
+    printf("run took %lg seconds for %d accepted steps and %d total steps\n", elapsed, tstep, allStep);
+    
+  } else if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")) {
+
+    for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+
+      dfloat time = tstep*mesh->dt;
+
+      cnsLserkStepQuad2D(cns, newOptions, time);
+      
+      if(((tstep+1)%mesh->errorStep)==0){
+	time += mesh->dt;
+        cnsReportQuad2D(cns, time, newOptions);
+      }
     }
   }
+  
 }
+
+      
