@@ -20,15 +20,13 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
 
   // read thread model/device/platform from newOptions
   if(newOptions.compareArgs("THREAD MODEL", "CUDA")){
-    int dev;
-    newOptions.getArgs("DEVICE NUMBER" ,dev);
-    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",dev);
+    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
   }
   else if(newOptions.compareArgs("THREAD MODEL", "OpenCL")){
-    int dev, plat;
-    newOptions.getArgs("DEVICE NUMBER", dev);
+    int plat;
     newOptions.getArgs("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", dev, plat);
+    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d",
+	    deviceID, plat);
   }
   else if(newOptions.compareArgs("THREAD MODEL", "OpenMP")){
     sprintf(deviceConfig, "mode = OpenMP");
@@ -78,10 +76,9 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   cns->RT = cns->ubar*cns->ubar/(mach*mach);
   
   // compute samples of q at interpolation nodes
-  mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+  mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
   cns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+			       sizeof(dfloat));
   
   if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     cns->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
@@ -210,8 +207,9 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
     mesh->dt = mesh->finalTime/mesh->NtimeSteps;
   }
 
-  if (rank ==0) printf("dtAdv = %lg (before cfl), dtVisc = %lg (before cfl), dt = %lg\n",
-   dtAdv, dtVisc, dt);
+  if (rank ==0)
+    printf("dtAdv = %lg (before cfl), dtVisc = %lg (before cfl), dt = %lg\n",
+	   dtAdv, dtVisc, dt);
 
   cns->frame = 0;
   // errorStep
@@ -241,7 +239,8 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   cns->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->rhsq);
 
-  cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
+  cout << "TIME INTEGRATOR (" <<
+    newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
   
   if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     cns->o_resq =
@@ -367,27 +366,29 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   
   cns->vorticityKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVorticityTri2D.okl",
-               "cnsVorticityTri2D",
-               kernelInfo);
-
-
+				       "cnsVorticityTri2D",
+				       kernelInfo);
+  
+  
   cns->updateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
 				       "cnsUpdate2D",
 				       kernelInfo);
-
+  
   cns->rkUpdateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
-               "cnsRkUpdate2D",
-               kernelInfo);
+				       "cnsRkUpdate2D",
+				       kernelInfo);
+  
   cns->rkStageKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
-               "cnsRkStage2D",
-               kernelInfo);
+				       "cnsRkStage2D",
+				       kernelInfo);
+
   cns->rkErrorEstimateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
-               "cnsErrorEstimate2D",
-               kernelInfo);
+				       "cnsErrorEstimate2D",
+				       kernelInfo);
 
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",

@@ -6,7 +6,7 @@ int main(int argc, char **argv){
   MPI_Init(&argc, &argv);
 
   if(argc!=2){
-    printf("usage2: ./main setupfile\n");
+    printf("usage2: ./cnsMainTri2D setupfile\n");
     exit(-1);
   }
 
