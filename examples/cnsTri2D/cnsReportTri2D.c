@@ -21,12 +21,11 @@ void cnsReportTri2D(cns_t *cns, dfloat time, setupAide &newOptions){
   // do error stuff on host
   cnsError2D(mesh, time);
 
-
   // output field files
   char fname[BUFSIZ];
-  // sprintf(fname, "/u0/outputs/cns2D/foo_%04d_%04d.vtu",rank, tstep/cns->errorStep);
+
   sprintf(fname, "foo_%04d_%04d.vtu",rank, cns->frame++);
-  //sprintf(fname, "/scratch/foo_%04d_%04d.vtu",rank, tstep/cns->errorStep);
+
   cnsPlotVTUTri2D(cns, fname);
 
 }
