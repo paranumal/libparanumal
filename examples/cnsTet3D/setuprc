@@ -28,6 +28,9 @@ CUBATURE
 [VISCOSITY]
 5.e-3
 
+[MACH NUMBER]
+.2
+
 [RBAR]
 1.0
 
