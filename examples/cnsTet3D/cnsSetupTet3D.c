@@ -78,12 +78,12 @@ cns_t *cnsSetupTet3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   check = newOptions.getArgs("VISCOSITY", cns->mu);
   if(!check) printf("WARNING setup file does not include VISCOSITY\n");
 
-  //  cns->mu = cns->ubar/Re; // assumes reference length 1
+  dfloat mach = 0.17;
+  check = newOptions.getArgs("MACH NUMBER", mach);
+  if(!check) printf("WARNING setup file does not include MACH\n");
 
   // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
-  dfloat mach = 0.17;
   cns->RT = cns->ubar*cns->ubar/(mach*mach);
-  
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,

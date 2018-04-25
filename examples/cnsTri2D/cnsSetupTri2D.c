@@ -36,7 +36,9 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   else{
     sprintf(deviceConfig, "mode = Serial");
   }
-	
+
+  int check;
+
   cns_t *cns = (cns_t*) calloc(1, sizeof(cns_t));
 
   mesh->Nfields = 3;
@@ -56,14 +58,24 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   cns->ubar = 0.2;
   cns->vbar = 0;
 
-  // viscosity
-  dfloat Re = 5000;
-  cns->mu = cns->ubar/Re; // assumes reference length 1
+  check = newOptions.getArgs("RBAR", cns->rbar);
+  if(!check) printf("WARNING setup file does not include RBAR\n");
+  
+  check = newOptions.getArgs("UBAR", cns->ubar);
+  if(!check) printf("WARNING setup file does not include UBAR\n");
+
+  check = newOptions.getArgs("VBAR", cns->vbar);
+  if(!check) printf("WARNING setup file does not include VBAR\n");
+
+  check = newOptions.getArgs("VISCOSITY", cns->mu);
+  if(!check) printf("WARNING setup file does not include VISCOSITY\n");
+
+  dfloat mach = 0.17;
+  check = newOptions.getArgs("MACH NUMBER", mach);
+  if(!check) printf("WARNING setup file does not include MACH\n");
 
   // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
-  dfloat mach = 0.17;
   cns->RT = cns->ubar*cns->ubar/(mach*mach);
-  
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,

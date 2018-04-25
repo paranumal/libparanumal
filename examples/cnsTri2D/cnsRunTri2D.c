@@ -16,6 +16,19 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
   timer.tic("Run");
   
   if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
+
+    dfloat hmin = 1e9;
+    for(dlong e=0;e<mesh->Nelements;++e){  
+      
+      for(int f=0;f<mesh->Nfaces;++f){
+	dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+	dfloat sJ   = mesh->sgeo[sid + SJID];
+	dfloat invJ = mesh->sgeo[sid + IJID];
+	dfloat hest = .5/(sJ*invJ);
+	
+	hmin = mymin(hmin, hest);
+      }
+    }
     
     // hard code this for the moment
     dfloat outputInterval;
@@ -103,15 +116,17 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
 
         cns->facold = mymax(err,1E-4); // hard coded factor ?
 
-	printf("\r time = %g, dt = %g accepted                      ", time, mesh->dt);
+	printf("\r time = %g (%d), dt = %g accepted (ratio dt/hmin = %g)               ", time, allStep, mesh->dt, mesh->dt/hmin);
         tstep++;
       } else {
         dtnew = mesh->dt/(mymax(cns->invfactor1,fac1/cns->safe));
-	printf("\r time = %g, dt = %g rejected, trying %g", time, mesh->dt, dtnew);
+	printf("\r time = %g (%d), dt = %g rejected (ratio dt/min = %g), trying %g", time, allStep, mesh->dt, mesh->dt/hmin, dtnew);
 
 	done = 0;
       }
       mesh->dt = dtnew;
+      
+      
       allStep++;
 
     }
