@@ -40,6 +40,8 @@ $(HDRDIR)/mesh2D.h
 # list of objects to be compiled
 OBJS    = \
 cnsMainQuad2D.o \
+cnsEstimateQuad2D.o \
+cnsStepQuad2D.o \
 cnsError2D.o \
 cnsRunQuad2D.o \
 cnsSetupQuad2D.o \
@@ -69,7 +71,10 @@ cnsReportQuad2D.o \
 ../../src/meshSurfaceGeometricFactorsQuad2D.o \
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
-../../src/parallelSort.o
+../../src/parallelSort.o \
+../../src/matrix.o \
+../../src/setupAide.o \
+../../src/trace.o
 
 cnsMainQuad2D:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o cnsMainQuad2D $(OBJS) $(paths) $(LIBS) 
