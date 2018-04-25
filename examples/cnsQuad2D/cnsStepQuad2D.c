@@ -203,7 +203,6 @@ void cnsLserkStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
       
     cns->stressesSurfaceKernel(mesh->Nelements, 
 			       mesh->o_sgeo, 
-			       mesh->o_LIFTT,
 			       mesh->o_vmapM, 
 			       mesh->o_vmapP, 
 			       mesh->o_EToB, 
