@@ -149,7 +149,7 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   cns->viscousStresses = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*cns->Nstresses,
 					   sizeof(dfloat));
   
-  cns->Vort = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  cns->Vort = (dfloat*) calloc(3*mesh->Nelements*mesh->Np,sizeof(dfloat));
   
   // fix this later (initial conditions)
   for(int e=0;e<mesh->Nelements;++e){
@@ -280,7 +280,7 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
     cns->o_rkE = mesh->device.malloc(  cns->Nrk*sizeof(dfloat), cns->rkE);
   }
   
-  cns->o_Vort = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), cns->Vort);
+  cns->o_Vort = mesh->device.malloc(3*mesh->Np*mesh->Nelements*sizeof(dfloat), cns->Vort);
   
   if(mesh->totalHaloPairs>0){
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
@@ -354,6 +354,7 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
 				       "cnsSurfaceHex3D",
 				       kernelInfo);
 
+#if 0
   cns->cubatureVolumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsCubatureVolumeHex3D.okl",
                "cnsCubatureVolumeHex3D",
@@ -363,7 +364,8 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsCubatureSurfaceHex3D.okl",
                "cnsCubatureSurfaceHex3D",
                kernelInfo);
-
+#endif
+  
   cns->stressesVolumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVolumeHex3D.okl",
 				       "cnsStressesVolumeHex3D",
