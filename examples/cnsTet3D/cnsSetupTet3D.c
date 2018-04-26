@@ -339,6 +339,8 @@ cns_t *cnsSetupTet3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
 
   int cubMaxNodes = mymax(mesh->Np, (mesh->intNfp*mesh->Nfaces));
   kernelInfo.addDefine("p_cubMaxNodes", cubMaxNodes);
+  int cubMaxNodes1 = mymax(mesh->Np, (mesh->intNfp));
+  kernelInfo.addDefine("p_cubMaxNodes1", cubMaxNodes1);
 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
 
