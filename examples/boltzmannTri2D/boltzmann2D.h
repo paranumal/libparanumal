@@ -55,7 +55,9 @@ typedef struct{
 	// DOPRI45
 	// Change this later this shouldnt be hard-coded
 	// dfloat rkC[7], rkA[7*7], rkE[7];
-	dfloat rkC[5], rkA[5*5], rkE[5];
+	// dfloat rkC[5], rkA[5*5], rkE[5];
+
+	dfloat *rkC, *rkA, *rkE; 
 
     // dfloat sarkC[5], sarkA[5*5], sarkE[5];
 

@@ -161,6 +161,7 @@ printf("Relying the fact that  LSERK set on mesh structure\n");
 
 if(strstr(options,"DOPRI5") || strstr(options,"XDOPRI")){
 
+
   dfloat rkC[bns->NrkStages]          = {0.0, 0.2, 0.3, 0.8, 8.0/9.0, 1.0, 1.0};
   dfloat rkA[bns->NrkStages*bns->NrkStages]   ={             0.0,             0.0,            0.0,          0.0,             0.0,       0.0, 0.0,
                                    0.2,             0.0,            0.0,          0.0,             0.0,       0.0, 0.0,
@@ -171,6 +172,11 @@ if(strstr(options,"DOPRI5") || strstr(options,"XDOPRI")){
                             35.0/384.0,             0.0,   500.0/1113.0,  125.0/192.0,  -2187.0/6784.0, 11.0/84.0, 0.0 };
   dfloat rkE[bns->NrkStages]= {71.0/57600.0,  0.0, -71.0/16695.0, 71.0/1920.0, -17253.0/339200.0, 22.0/525.0, -1.0/40.0 }; 
 
+  
+  bns->rkC    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+  bns->rkA    = (dfloat*) calloc(bns->NrkStages*bns->NrkStages, sizeof(dfloat));
+  bns->rkE    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+
 
   memcpy(bns->rkC, rkC, bns->NrkStages*sizeof(dfloat)); 
   memcpy(bns->rkA, rkA, bns->NrkStages*bns->NrkStages*sizeof(dfloat));
@@ -179,33 +185,62 @@ if(strstr(options,"DOPRI5") || strstr(options,"XDOPRI")){
 
 
 if(strstr(options,"SAADRK")){
+
+	// dfloat rkC[bns->NrkStages], rkA[bns->NrkStages*bns->NrkStages], rkE[bns->NrkStages]; 
 	if(bns->NrkStages==5){ // SAARK43
 
 		// first set non-semianalytic part of the integrator 
 		dfloat rkC[bns->NrkStages]  = {0.0, 0.5, 0.5, 1.0, 1.0};
-		dfloat rkA[bns->NrkStages*bns->NrkStages]
-		                ={             0.0,             0.0,            0.0,          0.0,             0.0,
-		                               0.5,             0.0,            0.0,          0.0,             0.0,
-		                               0.0,             0.5,            0.0,          0.0,             0.0,
-		                               0.0,             0.0,            1.0,          0.0,             0.0,
-		                             1.0/6.0,         1.0/3.0,        1.0/3.0,       1.0/6.0,          0.0}; 
+		dfloat rkA[bns->NrkStages*bns->NrkStages]  
+		   = {             0.0,             0.0,            0.0,          0.0,             0.0,
+                           0.5,             0.0,            0.0,          0.0,             0.0,
+                           0.0,             0.5,            0.0,          0.0,             0.0,
+                           0.0,             0.0,            1.0,          0.0,             0.0,
+                         1.0/6.0,         1.0/3.0,        1.0/3.0,       1.0/6.0,          0.0}; 
 		dfloat rkE[bns->NrkStages]= {  0.0,             0.0,            0.0,        -1.0/6.0,        1.0/6.0}; 
 
+	bns->rkC    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+	bns->rkA    = (dfloat*) calloc(bns->NrkStages*bns->NrkStages, sizeof(dfloat));
+	bns->rkE    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+	
 
-		memcpy(bns->rkC, rkC, bns->NrkStages*sizeof(dfloat)); 
-		memcpy(bns->rkA, rkA, bns->NrkStages*bns->NrkStages*sizeof(dfloat));
-		memcpy(bns->rkE, rkE, bns->NrkStages*sizeof(dfloat));
-    // Compute semi-analytic part of the integrator
-
-    boltzmannSAADRKCoefficients(bns, options);
-
+	memcpy(bns->rkC, rkC, bns->NrkStages*sizeof(dfloat)); 
+	memcpy(bns->rkA, rkA, bns->NrkStages*bns->NrkStages*sizeof(dfloat));
+	memcpy(bns->rkE, rkE, bns->NrkStages*sizeof(dfloat));
+	// Compute semi-analytic part of the integrator
 
 	}
+	else if(bns->NrkStages==7){	
 
+      printf("Numbe of stages in SAADRK is 7\n");
 
+		dfloat rkC[bns->NrkStages]   = {0.0, 0.25, 0.25, 0.5, 0.75, 1.0, 1.0};
+		dfloat rkA[bns->NrkStages*bns->NrkStages]  
+		   =  {  0,    0,        0,     0,     0,    0,   0,
+		         1/4,   0,        0,     0,     0,    0,   0,
+                 1/8,  1/8,       0,     0,     0,    0,   0,
+                  0,    0,        1/2,     0,     0,    0,   0,
+               3./16., -3./8.,   3./8.,  9./16.,     0,    0, 0,
+               -3./7.,  8./7.,   6./7., -12./7.,   8./7.,    0, 0,
+               7./90.,    0.,    16./45.,  2./15., 16./45., 7./90., 0}; 
 
+		dfloat rkE[bns->NrkStages]=  {-4./45., 0, 16./45., -8./15., 16./45., -4./45., 0.}; 
+	
+    bns->rkC    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+	bns->rkA    = (dfloat*) calloc(bns->NrkStages*bns->NrkStages, sizeof(dfloat));
+	bns->rkE    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+	
 
+	memcpy(bns->rkC, rkC, bns->NrkStages*sizeof(dfloat)); 
+	memcpy(bns->rkA, rkA, bns->NrkStages*bns->NrkStages*sizeof(dfloat));
+	memcpy(bns->rkE, rkE, bns->NrkStages*sizeof(dfloat));
+	// Compute semi-analytic part of the integrator
+	
+	}
 
+	
+
+	boltzmannSAADRKCoefficients(bns, options);
 }
 
 if(strstr(options, "SARK")){

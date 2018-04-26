@@ -68,10 +68,10 @@ void boltzmannSAADRKRun2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, dfloat
 
 		// check for next output
 		int isOutput = 0;
-		if((time+bns->dt > nextOutputTime) && (time<=nextOutputTime)){
-			isOutput = 1;
-			bns->dt = nextOutputTime-time;
-		}
+		// if((time+bns->dt > nextOutputTime) && (time<=nextOutputTime)){
+		// 	isOutput = 1;
+		// 	bns->dt = nextOutputTime-time;
+		// }
 
 		//check for final timestep
 		if (time+bns->dt > bns->finalTime){
@@ -132,12 +132,12 @@ void boltzmannSAADRKRun2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, dfloat
 			boltzmannReportAddaptive2D(bns, time, options);
 
 		}
-			printf("\r dt = %g  %g  %d                       ", bns->dt, time, tstep+1);
+			printf("\r dt = %g  time: %g  Nstep:%d Nrejected: %d", bns->dt, time, tstep, allStep-tstep);
 			tstep++;
 		} else {
 			dtnew = bns->dt/(mymax(invfactor1,fac1/safe));
 
-			printf(" \r dt = %g rejected, trying %g at step %d", bns->dt, dtnew, tstep);
+		printf(" \r dt = %g rejected, trying %g at step %d  with rejected: %d", bns->dt, dtnew, tstep, allStep-tstep );
 			done = 0;
 		}
 		bns->dt = dtnew;
@@ -155,9 +155,6 @@ void boltzmannSAADRKRun2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, dfloat
 
 		if (err<1.0) { //dt is accepted 
 			time += bns->dt;
-
-			facold = mymax(err,1E-4);
-
 			bns->o_q.copyFrom(bns->o_rkq);
 			bns->o_pmlqx.copyFrom(bns->o_rkqx);
 			bns->o_pmlqy.copyFrom(bns->o_rkqy);
@@ -168,13 +165,13 @@ void boltzmannSAADRKRun2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, dfloat
 				boltzmannReportAddaptive2D(bns, time, options);
 
 			}
-		printf("\r dt = %g  %g  %d                       ", bns->dt, time, tstep+1);
+		printf("\r dt = %g  time: %g  Nstep:%d Nrejected: %d", bns->dt, time, tstep, allStep-tstep);
 		tstep++;
 		} else {
 
 		dtnew = bns->dt*mymin(1.0, mymax(facmin,safe*fac1));
 		
-		printf(" \r dt = %g rejected, trying %g at step %d", bns->dt, dtnew, tstep);
+		printf(" \r dt = %g rejected, trying %g at step %d  with rejected: %d", bns->dt, dtnew, tstep, allStep-tstep );
 		done = 0;
 		}
 

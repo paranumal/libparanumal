@@ -47,7 +47,7 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
     // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
     //
     bns->startTime = 0.0; 
-    bns->finalTime = 100.; // Was 200  
+    bns->finalTime = 20.; // Was 200  
   }
   else{
     printf("Starting initial conditions for NONPML\n");
@@ -240,7 +240,7 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
     bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
     //
-    bns->NrkStages = 5; // 5 or 7 // SAADRK methods 43 or 53 respectively
+    bns->NrkStages = 7; // 5 or 7 // SAADRK methods 43 or 53 respectively
     
     bns->rkq      = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rkrhsq   = (dfloat*) calloc(bns->NrkStages*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
@@ -552,7 +552,6 @@ else if(strstr(options, "LSIMEX")){
   kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.1f);
   kernelInfo.addDefine("p_blockSize", blockSize);
 
-  if(strstr(options,"SAADRK"))
   kernelInfo.addDefine("p_NrkStages", bns->NrkStages);
 
 
