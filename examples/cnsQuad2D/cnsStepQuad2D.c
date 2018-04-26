@@ -6,7 +6,7 @@ void cnsDopriStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
   
   //RK step
   for(int rk=0;rk<cns->Nrk;++rk){
-    
+
     // t_rk = t + C_rk*dt
     dfloat currentTime = time + cns->rkC[rk]*mesh->dt;
     
@@ -63,6 +63,8 @@ void cnsDopriStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
 			       cns->mu, 
 			       cns->o_rkq, 
 			       cns->o_viscousStresses);
+
+    mesh->device.finish();
     
     // extract stresses halo on DEVICE
     if(mesh->totalHaloPairs>0){
@@ -80,8 +82,9 @@ void cnsDopriStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
     // compute volume contribution to DG cns RHS
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureVolumeKernel(mesh->Nelements, 
-				cns->advSwitch, 
+				cns->advSwitch,
 				mesh->o_vgeo, 
+				mesh->o_cubvgeo, 
 				mesh->o_cubDWT,
 				mesh->o_cubInterpT,
 				mesh->o_cubProjectT,
@@ -97,6 +100,15 @@ void cnsDopriStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
 			cns->o_rkq, 
 			cns->o_rhsq);
     }
+
+#if 0
+    cns->o_rhsq.copyTo(cns->rhsq);
+    dfloat res = 0;
+    for(int n=0;n<mesh->Np*mesh->Nelements;++n){
+      res += cns->rhsq[n]*cns->rhsq[n];
+    }
+    printf("res = %g\n", res);
+#endif
     
     // wait for halo stresses data to arrive
     if(mesh->totalHaloPairs>0){
@@ -140,6 +152,8 @@ void cnsDopriStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
 			 cns->o_viscousStresses, 
 			 cns->o_rhsq);
     }
+
+    mesh->device.finish();
     
     // update solution using Runge-Kutta
     // rkrhsq_rk = rhsq
@@ -189,7 +203,7 @@ void cnsLserkStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
 			      mesh->o_vgeo, 
 			      mesh->o_D, 
 			      cns->mu, 
-			      cns->o_rkq, 
+			      cns->o_q, 
 			      cns->o_viscousStresses);
       
     // wait for q halo data to arrive
@@ -198,7 +212,7 @@ void cnsLserkStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
         
       // copy halo data to DEVICE
       size_t offset = mesh->Np*cns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-      cns->o_rkq.copyFrom(cns->recvBuffer, cns->haloBytes, offset);
+      cns->o_q.copyFrom(cns->recvBuffer, cns->haloBytes, offset);
     }
       
     cns->stressesSurfaceKernel(mesh->Nelements, 
@@ -210,7 +224,7 @@ void cnsLserkStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
 			       mesh->o_x, 
 			       mesh->o_y, 
 			       cns->mu, 
-			       cns->o_rkq, 
+			       cns->o_q, 
 			       cns->o_viscousStresses);
       
     // extract stresses halo on DEVICE
@@ -236,7 +250,7 @@ void cnsLserkStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
 				mesh->o_cubInterpT,
 				mesh->o_cubProjectT,
 				cns->o_viscousStresses, 
-				cns->o_rkq, 
+				cns->o_q, 
 				cns->o_rhsq);
     } else {
       cns->volumeKernel(mesh->Nelements, 
@@ -244,7 +258,7 @@ void cnsLserkStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
 			mesh->o_vgeo, 
 			mesh->o_D,
 			cns->o_viscousStresses, 
-			cns->o_rkq, 
+			cns->o_q, 
 			cns->o_rhsq);
     }
 
@@ -272,7 +286,7 @@ void cnsLserkStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
 				 mesh->o_intx, 
 				 mesh->o_inty, 
 				 cns->mu, 
-				 cns->o_rkq, 
+				 cns->o_q, 
 				 cns->o_viscousStresses, 
 				 cns->o_rhsq);
     } else {
@@ -286,7 +300,7 @@ void cnsLserkStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
 			 mesh->o_x, 
 			 mesh->o_y, 
 			 cns->mu, 
-			 cns->o_rkq, 
+			 cns->o_q, 
 			 cns->o_viscousStresses, 
 			 cns->o_rhsq);
     }
@@ -298,6 +312,6 @@ void cnsLserkStepQuad2D(cns_t *cns, setupAide &newOptions, const dfloat time){
 		      mesh->rkb[rk], 
 		      cns->o_rhsq, 
 		      cns->o_resq, 
-		      cns->o_rkq);
+		      cns->o_q);
   }
 }
