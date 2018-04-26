@@ -122,6 +122,12 @@ void upwindRoeAveraged(const dfloat nx,
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
   const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
+  const dfloat tx = sgeo[sk*p_Nsgeo+p_STXID];                            \
+  const dfloat ty = sgeo[sk*p_Nsgeo+p_STYID];                            \
+  const dfloat tz = sgeo[sk*p_Nsgeo+p_STZID];                            \
+  const dfloat bx = sgeo[sk*p_Nsgeo+p_SBXID];                            \
+  const dfloat by = sgeo[sk*p_Nsgeo+p_SBYID];                            \
+  const dfloat bz = sgeo[sk*p_Nsgeo+p_SBZID];                            \
   const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
   const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
 									\
@@ -165,7 +171,7 @@ void upwindRoeAveraged(const dfloat nx,
 									\
   const dfloat uM = ruM/rM;						\
   const dfloat vM = rvM/rM;						\
-  const dfloat vM = rwM/rM;						\
+  const dfloat wM = rwM/rM;						\
   const dfloat pM = p_RT*rM;						\
 									\
   dfloat uP = ruP/rP;							\
@@ -184,7 +190,7 @@ void upwindRoeAveraged(const dfloat nx,
 									\
   const dfloat sc = invWJ*sJ;						\
 									\
-  dfloat rflux, ruflux, rvflux;						\
+  dfloat rflux, ruflux, rvflux, rwflux;					\
   upwindRoeAveraged (nx, ny, nz, tx, ty, tz, bx, by, bz, rM, ruM, rvM, rwM, rP, ruP, rvP, rwP, &rflux, &ruflux, &rvflux, &rwflux); \
   rflux *= advSwitch;							\
   ruflux *= advSwitch;							\
@@ -393,12 +399,12 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
     // shared storage for flux terms
-    shared dfloat s_T11flux[p_NblockS][p_Nq][p_Nq];
-    shared dfloat s_T12flux[p_NblockS][p_Nq][p_Nq];
-    shared dfloat s_T13flux[p_NblockS][p_Nq][p_Nq];
-    shared dfloat s_T22flux[p_NblockS][p_Nq][p_Nq];    
-    shared dfloat s_T23flux[p_NblockS][p_Nq][p_Nq];
-    shared dfloat s_T33flux[p_NblockS][p_Nq][p_Nq];
+    shared dfloat s_T11flux[p_NblockS][p_Nq][p_Nq][p_Nq];
+    shared dfloat s_T12flux[p_NblockS][p_Nq][p_Nq][p_Nq];
+    shared dfloat s_T13flux[p_NblockS][p_Nq][p_Nq][p_Nq];
+    shared dfloat s_T22flux[p_NblockS][p_Nq][p_Nq][p_Nq];    
+    shared dfloat s_T23flux[p_NblockS][p_Nq][p_Nq][p_Nq];
+    shared dfloat s_T33flux[p_NblockS][p_Nq][p_Nq][p_Nq];
 
     for(int es=0;es<p_NblockS;++es;inner2){
 

@@ -172,9 +172,9 @@ kernel void cnsStressesVolumeHex3D(const dlong Nelements,
 	  const dfloat rv = q[qbase + 2*p_Np];
 	  const dfloat rw = q[qbase + 3*p_Np];
 	  
-	  s_u[j][i] = ru/r;
-	  s_v[j][i] = rv/r;
-	  s_w[j][i] = rw/r;
+	  s_u[k][j][i] = ru/r;
+	  s_v[k][j][i] = rv/r;
+	  s_w[k][j][i] = rw/r;
 	  
 	}
       }
