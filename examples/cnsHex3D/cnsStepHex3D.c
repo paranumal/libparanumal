@@ -182,7 +182,7 @@ void cnsLserkStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
   mesh_t *mesh = cns->mesh;
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
-  int advSwitch = 1;//(tstep>100);
+  int advSwitch = cns->advSwitch;//(tstep>100);
     
   for(int rk=0;rk<mesh->Nrk;++rk){
       

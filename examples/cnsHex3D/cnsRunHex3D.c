@@ -44,7 +44,7 @@ void cnsRunHex3D(cns_t *cns, setupAide &newOptions){
     int done =0;
     while (!done) {
 
-      cns->advSwitch = 1;
+      cns->advSwitch = 0;
       
       if (mesh->dt<cns->dtMIN){
         printf("ERROR: Time step became too small at time step=%d\n", tstep);
