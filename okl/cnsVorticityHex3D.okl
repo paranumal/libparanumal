@@ -1,0 +1,102 @@
+kernel void cnsVorticityHex3D(const dlong Nelements,
+                              const dfloat * restrict vgeo,
+                              const dfloat * restrict D,
+                              const dfloat * restrict q,
+                                    dfloat * restrict Vort){  
+  
+  // block partition of elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+    
+    shared dfloat s_u[p_NblockV][p_Nq][p_Nq][p_Nq];
+    shared dfloat s_v[p_NblockV][p_Nq][p_Nq][p_Nq];
+    shared dfloat s_w[p_NblockV][p_Nq][p_Nq][p_Nq];
+    shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int es=0;es<p_NblockV;++es;inner2){
+      
+      for(int j=0;j<p_Nq;++j;inner1){ 
+        for(int i=0;i<p_Nq;++i;inner0){    
+          const dlong e = eo+es; // element in block
+          if(e<Nelements){
+	    for(int k=0;k<p_Nq;++k){
+	      const dlong qbase = e*p_Nfields*p_Np + k*p_Nq*p_Nq + j*p_Nq +i;
+	      const dfloat r  = q[qbase + 0*p_Np];
+	      const dfloat ru = q[qbase + 1*p_Np];
+	      const dfloat rv = q[qbase + 2*p_Np];
+	      const dfloat rw = q[qbase + 3*p_Np];
+	      
+	      s_u[es][k][j][i] = ru/r;
+	      s_v[es][k][j][i] = rv/r;
+	      s_w[es][k][j][i] = rw/r;
+	    }
+	  }
+	  
+	  if (es==0)
+	    s_D[j][i] = D[j*p_Nq+i];
+        }
+      }
+    }
+    
+    barrier(localMemFence);
+    
+    for(int es=0;es<p_NblockV;++es;inner2){   
+      for(int j=0;j<p_Nq;++j;inner1){ 
+        for(int i=0;i<p_Nq;++i;inner0){    
+          const dlong e = eo+es; // element in block
+          if(e<Nelements){
+
+	    for(int k=0;k<p_Nq;++k){
+	      
+	      const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
+	      const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+	      const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+	      const dfloat drdz = vgeo[gid + p_RZID*p_Np];	    
+	      const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+	      const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+	      const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
+	      const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+	      const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+	      const dfloat dtdz = vgeo[gid + p_TZID*p_Np];	    
+	      
+	      // compute 1D derivatives
+	      dfloat ur = 0, vr = 0, wr = 0;
+	      dfloat us = 0, vs = 0, ws = 0;
+	      dfloat ut = 0, vt = 0, wt = 0;
+	      
+	      occaUnroll(p_Nq)
+		for(int n=0;n<p_Nq;++n) {
+		  const dfloat Dr = s_D[i][n];
+		  const dfloat Ds = s_D[j][n];
+		  const dfloat Dt = s_D[k][n];
+		  ur += Dr*s_u[es][k][j][n];
+		  us += Ds*s_u[es][k][n][i];
+		  ut += Dt*s_u[es][n][j][i];
+		  vr += Dr*s_v[es][k][j][n];
+		  vs += Ds*s_v[es][k][n][i];
+		  vt += Dt*s_v[es][n][j][i];
+		  wr += Dr*s_w[es][k][j][n];
+		  ws += Ds*s_w[es][k][n][i];
+		  wt += Dt*s_w[es][n][j][i];
+		}
+	      
+	      const dfloat uy = drdy*ur + dsdy*us + dtdy*ut;
+	      const dfloat uz = drdz*ur + dsdz*us + dtdz*ut;
+
+	      const dfloat vx = drdx*vr + dsdx*vs + dtdx*vt;
+	      const dfloat vz = drdz*vr + dsdz*vs + dtdz*vt;
+
+	      const dfloat wx = drdx*wr + dsdx*ws + dtdx*wt;
+	      const dfloat wy = drdy*wr + dsdy*ws + dtdy*wt;
+	      
+	      const dlong id = 3*e*p_Np+k*p_Nq*p_Nq + j*p_Nq+i; 
+	      
+	      Vort[id+0*p_Np] = wy-vz;
+	      Vort[id+1*p_Np] = uz-wx;
+	      Vort[id+2*p_Np] = vx-uy;
+	    }
+	  }
+	}
+      }
+    }
+  }
+}
