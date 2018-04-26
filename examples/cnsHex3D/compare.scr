@@ -1,0 +1,21 @@
+diff cnsCavitySolution2D.c	 ../cnsTri2D/cnsCavitySolution2D.c
+diff cnsError2D.c		 ../cnsTri2D/cnsError2D.c
+diff cnsEstimateQuad2D.c	 ../cnsTri2D/cnsEstimateTri2D.c
+diff cnsGaussianPulse2D.c	 ../cnsTri2D/cnsGaussianPulse2D.c
+diff cnsMainQuad2D.c		 ../cnsTri2D/cnsMainTri2D.c
+diff cnsPlotVTUQuad2D.c		 ../cnsTri2D/cnsPlotVTUTri2D.c
+diff cnsReportQuad2D.c		 ../cnsTri2D/cnsReportTri2D.c
+diff cnsRunQuad2D.c		 ../cnsTri2D/cnsRunTri2D.c
+diff cnsSetupQuad2D.c	 	 ../cnsTri2D/cnsSetupTri2D.c
+diff cnsStepQuad2D.c         	 ../cnsTri2D/cnsStepTri2D.c
+
+
+
+
+
+
+
+
+
+
+
