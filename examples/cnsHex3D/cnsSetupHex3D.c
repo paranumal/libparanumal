@@ -61,6 +61,7 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   cns->rbar = 1;
   cns->ubar = 0.2;
   cns->vbar = 0;
+  cns->wbar = 0;
 
   check = newOptions.getArgs("RBAR", cns->rbar);
   if(!check) printf("WARNING setup file does not include RBAR\n");
@@ -71,6 +72,10 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   check = newOptions.getArgs("VBAR", cns->vbar);
   if(!check) printf("WARNING setup file does not include VBAR\n");
 
+  check = newOptions.getArgs("WBAR", cns->wbar);
+  if(!check) printf("WARNING setup file does not include WBAR\n");
+
+  
   check = newOptions.getArgs("VISCOSITY", cns->mu);
   if(!check) printf("WARNING setup file does not include VISCOSITY\n");
 
@@ -277,22 +282,6 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   
   cns->o_Vort = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), cns->Vort);
   
-  mesh->o_LIFT =
-    mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			mesh->LIFT);
-
-  cns->LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Nfp*mesh->Nfaces;++m){
-      cns->LIFTT[n + m*mesh->Np] = mesh->LIFT[n*mesh->Nfaces*mesh->Nfp+m];
-    }
-  }
-  
-  cns->o_LIFTT =
-    mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			cns->LIFTT);
-  
-
   if(mesh->totalHaloPairs>0){
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
@@ -331,6 +320,7 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   kernelInfo.addDefine("p_rbar", cns->rbar);
   kernelInfo.addDefine("p_ubar", cns->ubar);
   kernelInfo.addDefine("p_vbar", cns->vbar);
+  kernelInfo.addDefine("p_wbar", cns->wbar);
   
 
   const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3., p_zero = 0;

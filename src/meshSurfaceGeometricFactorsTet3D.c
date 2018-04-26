@@ -36,8 +36,8 @@ void computeFrame(dfloat nx, dfloat ny, dfloat nz,
   binx /= magbin;
   biny /= magbin;
   binz /= magbin;
-  
 
+  //  printf("nor = %g,%g,%g; tan = %g,%g,%g; bin = %g,%g,%g\n", nx, ny, nz, tanx, tany, tanz, binx, biny, binz);
 }
 
 void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh){

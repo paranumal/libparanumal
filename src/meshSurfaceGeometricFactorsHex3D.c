@@ -3,11 +3,49 @@
 #include <stdlib.h>
 #include "mesh3D.h"
 
+void computeFrame(dfloat nx, dfloat ny, dfloat nz,
+		  dfloat &tanx, dfloat &tany, dfloat &tanz,
+		  dfloat &binx, dfloat &biny, dfloat &binz){
+
+  dfloat ranx = drand48();
+  dfloat rany = drand48();
+  dfloat ranz = drand48();
+
+  dfloat magran = sqrt(ranx*ranx+rany*rany+ranz*ranz);
+
+  ranx /= magran;
+  rany /= magran;
+  ranz /= magran;
+
+  tanx = ny*ranz - nz*rany;
+  tany = nz*ranx - nx*ranz;
+  tanz = nx*rany - ny*ranx;
+
+  dfloat magtan = sqrt(tanx*tanx+tany*tany+tanz*tanz);
+
+  tanx /= magtan;
+  tany /= magtan;
+  tanz /= magtan;
+
+  binx = ny*tanz - nz*tany;
+  biny = nz*tanx - nx*tanz;
+  binz = nx*tany - ny*tanx;
+
+  dfloat magbin = sqrt(binx*binx+biny*biny+binz*binz);
+
+  binx /= magbin;
+  biny /= magbin;
+  binz /= magbin;
+
+  //  printf("nor = %g,%g,%g; tan = %g,%g,%g; bin = %g,%g,%g\n", nx, ny, nz, tanx, tany, tanz, binx, biny, binz);
+}
+
+
 /* compute outwards facing normals, surface Jacobian, and volume Jacobian for all face nodes */
 void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nsgeo = 8;
+  mesh->Nsgeo = 14;
   mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
                                 mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
                                 sizeof(dfloat));
@@ -84,6 +122,10 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 
         mesh->sgeo[base+WIJID] = 1./(J*mesh->gllw[0]);
         mesh->sgeo[base+WSJID] = sJ*mesh->gllw[i%mesh->Nq]*mesh->gllw[i/mesh->Nq];
+
+	computeFrame(nx, ny, nz,
+		     mesh->sgeo[base+STXID], mesh->sgeo[base+STYID], mesh->sgeo[base+STZID],
+		     mesh->sgeo[base+SBXID], mesh->sgeo[base+SBYID], mesh->sgeo[base+SBZID]);
       }
 
       //geometric data for quadrature
@@ -147,6 +189,12 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 
         mesh->cubsgeo[base+WIJID] = 1./(J*mesh->cubw[0]);
         mesh->cubsgeo[base+WSJID] = sJ*mesh->cubw[i%mesh->cubNq]*mesh->cubw[i/mesh->cubNq];
+
+	computeFrame(nx, ny, nz,
+		     mesh->cubsgeo[base+STXID], mesh->cubsgeo[base+STYID], mesh->cubsgeo[base+STZID],
+		     mesh->cubsgeo[base+SBXID], mesh->cubsgeo[base+SBYID], mesh->cubsgeo[base+SBZID]);
+	
+	
       }
     }
   }
