@@ -204,7 +204,7 @@ kernel void boltzmannDOPRIRKStage2D(const int Nelements,
 
         for (int i=0;i<rk;i++) {
           const int offset = NtotalElements*p_Nfields*p_Np;
-          r_q += dt*rkA[7*rk + i]*rkrhsq[id + fld +i*offset];
+          r_q += dt*rkA[p_NrkStages*rk + i]*rkrhsq[id + fld +i*offset];
         }
         rkq[id + fld] = r_q;
       }
@@ -239,16 +239,16 @@ kernel void boltzmannDOPRIRKUpdate2D(const int Nelements,
   
         dfloat r_rhsq = rhsq[id + fld];
 
-        if (rk==6) { //last stage
+        if (rk==(p_NrkStages-1)) { //last stage
 
           dfloat r_q = q[id +fld];
           dfloat r_rkerr = 0.f;
-          for (int i=0;i<6;i++) {
-            r_q     += dt*rkA[7*rk + i]*rkrhsq[id + fld + i*offset];
+          for (int i=0;i<(p_NrkStages-1);i++) {
+            r_q     += dt*rkA[p_NrkStages*rk + i]*rkrhsq[id + fld + i*offset];
             r_rkerr += dt*rkE[       i]*rkrhsq[id + fld + i*offset];
           }
-          r_q     += dt*rkA[7*rk + 6]*r_rhsq;
-          r_rkerr += dt*rkE[       6]*r_rhsq;
+          r_q     += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsq;
+          r_rkerr += dt*rkE[       p_NrkStages-1]*r_rhsq;
 
           rkq[id   +fld] = r_q;
           rkerr[id +fld] = r_rkerr;
@@ -297,9 +297,9 @@ kernel void boltzmannDOPRIRKPmlStage2D(const int pmlNelements,
           for (int i=0;i<rk;i++) {
             const int offset    = NtotalElements*p_Nfields*p_Np;
             const int offsetpml = pmlNelements*p_Nfields*p_Np;
-            r_q  += dt*rkA[7*rk+i]*rkrhsq[id+fld+i*offset];
-            r_qx += dt*rkA[7*rk+i]*rkrhsqx[pid+fld+i*offsetpml];
-            r_qy += dt*rkA[7*rk+i]*rkrhsqy[pid+fld+i*offsetpml];
+            r_q  += dt*rkA[p_NrkStages*rk+i]*rkrhsq[id+fld+i*offset];
+            r_qx += dt*rkA[p_NrkStages*rk+i]*rkrhsqx[pid+fld+i*offsetpml];
+            r_qy += dt*rkA[p_NrkStages*rk+i]*rkrhsqy[pid+fld+i*offsetpml];
           }
         rkq [id  +fld] = r_q;
         rkqx[pid +fld] = r_qx;
@@ -337,7 +337,7 @@ kernel void boltzmannXDOPRIRKStage2D(const int Nelements,
 
         for (int i=0;i<rk;i++) {
           const int offset = NtotalElements*p_Nfields*p_Np;
-          r_q += dt*rkA[7*rk + i]*rkrhsq[id + fld +i*offset];
+          r_q += dt*rkA[p_NrkStages*rk + i]*rkrhsq[id + fld +i*offset];
         }
 
         if(fld>2){
@@ -447,19 +447,19 @@ kernel void boltzmannDOPRIRKPmlUpdate2D(const int pmlNelements,
 
             dfloat r_rkerr = 0.f;
 
-            for (int i=0;i<6;i++){
-              r_q     += dt*rkA[7*rk + i]*rkrhsq[  id + fld + i*offset];
-              r_qx    += dt*rkA[7*rk + i]*rkrhsqx[pid + fld + i*offsetpml];
-              r_qy    += dt*rkA[7*rk + i]*rkrhsqy[pid + fld + i*offsetpml];
+            for (int i=0;i<(p_NrkStages-1);i++) {
+              r_q     += dt*rkA[p_NrkStages*rk + i]*rkrhsq[  id + fld + i*offset];
+              r_qx    += dt*rkA[p_NrkStages*rk + i]*rkrhsqx[pid + fld + i*offsetpml];
+              r_qy    += dt*rkA[p_NrkStages*rk + i]*rkrhsqy[pid + fld + i*offsetpml];
 
               r_rkerr += dt*rkE[       i]*rkrhsq[id + fld + i*offset];
             }
 
-            r_q     += dt*rkA[7*rk + 6]*r_rhsq;
-            r_qx    += dt*rkA[7*rk + 6]*r_rhsqx;
-            r_qy    += dt*rkA[7*rk + 6]*r_rhsqy;
+            r_q     += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsq;
+            r_qx    += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsqx;
+            r_qy    += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsqy;
 
-            r_rkerr += dt*rkE[       6]*r_rhsq;
+            r_rkerr += dt*rkE[       p_NrkStages-1]*r_rhsq;
 
             rkq[  id  +fld] = r_q;
             rkqx[pid  +fld] = r_qx;
@@ -518,9 +518,9 @@ kernel void boltzmannXDOPRIRKPmlStage2D(const int pmlNelements,
           for (int i=0;i<rk;i++) {
             const int offset    = NtotalElements*p_Nfields*p_Np;
             const int offsetpml = pmlNelements*p_Nfields*p_Np;
-            r_q  += dt*rkA[7*rk+i]*rkrhsq[id+fld+i*offset];
-            r_qx += dt*rkA[7*rk+i]*rkrhsqx[pid+fld+i*offsetpml];
-            r_qy += dt*rkA[7*rk+i]*rkrhsqy[pid+fld+i*offsetpml];
+            r_q  += dt*rkA[p_NrkStages*rk+i]*rkrhsq[id+fld+i*offset];
+            r_qx += dt*rkA[p_NrkStages*rk+i]*rkrhsqx[pid+fld+i*offsetpml];
+            r_qy += dt*rkA[p_NrkStages*rk+i]*rkrhsqy[pid+fld+i*offsetpml];
           }
 
           if(fld>2){
@@ -642,16 +642,16 @@ kernel void boltzmannXDOPRIRKUpdate2D(const int Nelements,
           r_rhsq = expca*r_rhsq;
         }
 
-        if (rk==6) { //last stage
+        if (rk==(p_NrkStages-1)) { //last stage
 
           dfloat r_q = q[id +fld];
           dfloat r_rkerr = 0.f;
-          for (int i=0;i<6;i++) {
-            r_q     += dt*rkA[7*rk + i]*rkrhsq[id + fld + i*offset];
+          for (int i=0;i<(p_NrkStages-1);i++) {
+            r_q     += dt*rkA[p_NrkStages*rk + i]*rkrhsq[id + fld + i*offset];
             r_rkerr += dt*rkE[       i]*rkrhsq[id + fld + i*offset];
           }
-          r_q     += dt*rkA[7*rk + 6]*r_rhsq;
-          r_rkerr += dt*rkE[       6]*r_rhsq;
+          r_q     += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsq;
+          r_rkerr += dt*rkE[p_NrkStages-1]*r_rhsq;
           
           // multply with exp(-invtau*dt)
           if(fld>2){
@@ -725,7 +725,7 @@ kernel void boltzmannSAADRKUpdate2D(const int Nelements,
               r_rkerr += dt*sarkE[                 i]*rkrhsq[id + fld + i*offset];
             }
             r_q     += dt*sarkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsq;
-            r_rkerr += dt*sarkE[                   p_NrkStages-1]*r_rhsq;
+            r_rkerr += dt*sarkE[                 p_NrkStages-1]*r_rhsq;
           }
 
           rkq[id   +fld] = r_q;
@@ -788,7 +788,7 @@ kernel void boltzmannXDOPRIRKPmlUpdate2D(const int pmlNelements,
 
 
 
-          if (rk==6) { //last stage
+          if (rk==(p_NrkStages-1)) { //last stage
 
             dfloat r_q  = q [id  +fld];
             dfloat r_qx = qx[pid +fld];
@@ -796,19 +796,19 @@ kernel void boltzmannXDOPRIRKPmlUpdate2D(const int pmlNelements,
 
             dfloat r_rkerr = 0.f;
 
-            for (int i=0;i<6;i++){
-              r_q     += dt*rkA[7*rk + i]*rkrhsq[  id + fld + i*offset];
-              r_qx    += dt*rkA[7*rk + i]*rkrhsqx[pid + fld + i*offsetpml];
-              r_qy    += dt*rkA[7*rk + i]*rkrhsqy[pid + fld + i*offsetpml];
+            for (int i=0;i<(p_NrkStages-1);i++){
+              r_q     += dt*rkA[p_NrkStages*rk + i]*rkrhsq[  id + fld + i*offset];
+              r_qx    += dt*rkA[p_NrkStages*rk + i]*rkrhsqx[pid + fld + i*offsetpml];
+              r_qy    += dt*rkA[p_NrkStages*rk + i]*rkrhsqy[pid + fld + i*offsetpml];
 
               r_rkerr += dt*rkE[       i]*rkrhsq[id + fld + i*offset];
             }
 
-            r_q     += dt*rkA[7*rk + 6]*r_rhsq;
-            r_qx    += dt*rkA[7*rk + 6]*r_rhsqx;
-            r_qy    += dt*rkA[7*rk + 6]*r_rhsqy;
+            r_q     += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsq;
+            r_qx    += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsqx;
+            r_qy    += dt*rkA[p_NrkStages*rk + p_NrkStages-1]*r_rhsqy;
 
-            r_rkerr += dt*rkE[       6]*r_rhsq;
+            r_rkerr += dt*rkE[       p_NrkStages-1]*r_rhsq;
 
 
             if(fld>2){
