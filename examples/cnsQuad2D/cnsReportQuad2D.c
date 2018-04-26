@@ -24,7 +24,7 @@ void cnsReportQuad2D(cns_t *cns, dfloat time, setupAide &newOptions){
   char fname[BUFSIZ];
 
   sprintf(fname, "foo_%04d_%04d.vtu",rank, cns->frame++);
-
+  
   cnsPlotVTUQuad2D(cns, fname);
 
 }

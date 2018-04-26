@@ -20,7 +20,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
 
   // read thread model/device/platform from newOptions
   if(newOptions.compareArgs("THREAD MODEL", "CUDA")){
-    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
+    sprintf(deviceConfig, "mode = CUDA, deviceID = %d", deviceID);
   }
   else if(newOptions.compareArgs("THREAD MODEL", "OpenCL")){
     int plat;
@@ -50,7 +50,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
   
   hlong localElements = (hlong) mesh->Nelements;
   MPI_Allreduce(&localElements, &(cns->totalElements), 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
-  
+
   // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
   cns->RT = 1.3;
 
@@ -132,7 +132,6 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
     cns->beta = 0.05;
     cns->factor1 = 0.2;
     cns->factor2 = 10.0;
-
 
     cns->exp1 = 0.2 - 0.75*cns->beta;
     cns->invfactor1 = 1.0/cns->factor1;

@@ -14,7 +14,7 @@ void cnsRunQuad2D(cns_t *cns, setupAide &newOptions){
   timer.initTimer(mesh->device);
 
   timer.tic("Run");
-  
+
   if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
 
     dfloat hmin = 1e9;
@@ -66,12 +66,13 @@ void cnsRunQuad2D(cns_t *cns, setupAide &newOptions){
       
       // compute Dopri estimator
       dfloat err = cnsDopriEstimateQuad2D(cns);
-					 
+      
       // build controller
       dfloat fac1 = pow(err,cns->exp1);
       dfloat fac = fac1/pow(cns->facold,cns->beta);
 
       fac = mymax(cns->invfactor2, mymin(cns->invfactor1,fac/cns->safe));
+
       dfloat dtnew = mesh->dt/fac;
 
       if (err<1.0) { //dt is accepted
