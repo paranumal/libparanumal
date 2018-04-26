@@ -304,7 +304,7 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
     barrier(localMemFence);
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
+    for(int es=0;es<p_NblockS;++es;inner2){
       for(int j=0;j<p_Nq;++j;inner1){
 	for(int i=0;i<p_Nq;++i;inner0){
 	  const dlong e = eo + es;
@@ -407,7 +407,6 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
     shared dfloat s_T33flux[p_NblockS][p_Nq][p_Nq][p_Nq];
 
     for(int es=0;es<p_NblockS;++es;inner2){
-
       for(int j=0;j<p_Nq;++j;inner1){
 	for(int i=0;i<p_Nq;++i;inner0){
 	  occaUnroll(p_Nq)
@@ -432,8 +431,8 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
 	for(int i=0;i<p_Nq;++i;inner0){
 	  const dlong e = eo + es;
 	  if(e<Nelements){
-	    const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
-	    const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i;
+	    const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
+	    const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
 	    
 	    stressSurfaceTerms(sk0,0,i,j,0     );
 	    stressSurfaceTerms(sk5,5,i,j,p_Nq-1);
