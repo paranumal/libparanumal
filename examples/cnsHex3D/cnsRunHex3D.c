@@ -15,6 +15,8 @@ void cnsRunHex3D(cns_t *cns, setupAide &newOptions){
 
   timer.tic("Run");
 
+  cns->advSwitch = 1;
+  
   if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
 
     dfloat hmin = 1e9;
@@ -44,8 +46,6 @@ void cnsRunHex3D(cns_t *cns, setupAide &newOptions){
     int done =0;
     while (!done) {
 
-      cns->advSwitch = 0;
-      
       if (mesh->dt<cns->dtMIN){
         printf("ERROR: Time step became too small at time step=%d\n", tstep);
         exit (-1);
