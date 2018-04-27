@@ -15,7 +15,7 @@ kernel void cnsVolumeHex3D(const dlong Nelements,
     shared dfloat s_G[p_Nfields][p_Nq][p_Nq][p_Nq];
     shared dfloat s_H[p_Nfields][p_Nq][p_Nq][p_Nq];
 
-    for(int k=0;k<p_Nq;++j;inner2){
+    for(int k=0;k<p_Nq;++k;inner2){
       for(int j=0;j<p_Nq;++j;inner1){
 	for(int i=0;i<p_Nq;++i;inner0){
 	  if(k==0)
@@ -113,6 +113,7 @@ kernel void cnsVolumeHex3D(const dlong Nelements,
 	    const dfloat Din = s_D[n][i];
 	    const dfloat Djn = s_D[n][j];
 	    const dfloat Dkn = s_D[n][k];
+
 	    rhsq0 += Din*s_F[0][k][j][n];
 	    rhsq0 += Djn*s_G[0][k][n][i];
 	    rhsq0 += Dkn*s_H[0][n][j][i];
