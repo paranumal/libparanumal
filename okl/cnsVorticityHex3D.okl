@@ -48,6 +48,7 @@ kernel void cnsVorticityHex3D(const dlong Nelements,
 	    for(int k=0;k<p_Nq;++k){
 	      
 	      const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
+
 	      const dfloat drdx = vgeo[gid + p_RXID*p_Np];
 	      const dfloat drdy = vgeo[gid + p_RYID*p_Np];
 	      const dfloat drdz = vgeo[gid + p_RZID*p_Np];	    
