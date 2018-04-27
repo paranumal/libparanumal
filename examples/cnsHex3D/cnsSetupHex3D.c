@@ -308,6 +308,8 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
 
   //  p_RT, p_rbar, p_ubar, p_vbar
   // p_half, p_two, p_third, p_Nstresses
+
+  kernelInfo.addCompilerFlag("-g");
   
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   kernelInfo.addDefine("p_Nstresses", cns->Nstresses);
