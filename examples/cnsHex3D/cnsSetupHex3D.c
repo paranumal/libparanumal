@@ -79,17 +79,16 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   check = newOptions.getArgs("VISCOSITY", cns->mu);
   if(!check) printf("WARNING setup file does not include VISCOSITY\n");
 
-  dfloat mach = 0.17;
-  check = newOptions.getArgs("MACH NUMBER", mach);
-  if(!check) printf("WARNING setup file does not include MACH\n");
+  cns->RT = 10;
+  check = newOptions.getArgs("RT", cns->RT);
+  if(!check) printf("WARNING setup file does not include RT\n");
 
-  // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
-  cns->RT = cns->ubar*cns->ubar/(mach*mach);
-  
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
-  cns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+
+  cns->saveq = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
+  
+  cns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
   if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     cns->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
@@ -161,7 +160,7 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
 
       dlong qbase = e*mesh->Np*mesh->Nfields + n;
 
-#if 1
+#if 0
       cnsGaussianPulse3D(x, y, z, t,
 			 mesh->q+qbase,
 			 mesh->q+qbase+mesh->Np,
@@ -169,12 +168,12 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
 			 mesh->q+qbase+3*mesh->Np
 			 );
 #else
-      mesh->q[qbase+0*mesh->Np] = cns->rbar;
-      //      mesh->q[qbase+1*mesh->Np] = cns->rbar*cns->ubar*y*(6-y)/9.;
       const dfloat alpha = 20;
+      mesh->q[qbase+0*mesh->Np] = cns->rbar;
       mesh->q[qbase+1*mesh->Np] = cns->rbar*cns->ubar;//*tanh(alpha*y)*tanh(alpha*(6-y));
       mesh->q[qbase+2*mesh->Np] = cns->rbar*cns->vbar;
       mesh->q[qbase+3*mesh->Np] = cns->rbar*cns->wbar;
+      
 #endif
     }
   }
@@ -210,7 +209,7 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
 
   dfloat dt = cfl*mymin(dtAdv, dtVisc);
   dt = cfl*dtAdv;
-  
+
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
@@ -227,6 +226,10 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
     printf("dtAdv = %lg (before cfl), dtVisc = %lg (before cfl), dt = %lg\n",
 	   dtAdv, dtVisc, dt);
 
+  // turn on/off advection
+  cns->advSwitch = 1;
+  
+  // frame index for vtu output
   cns->frame = 0;
   
   // errorStep
@@ -306,6 +309,12 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
     cns->recvStressesBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
   }
 
+  dfloat sqrtRT = sqrt(cns->RT);
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  int NblockV = 512/mesh->Np; // works for CUDA
+  int NblockS = 512/maxNodes; // works for CUDA
+  const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3., p_zero = 0;
+  
   //  p_RT, p_rbar, p_ubar, p_vbar
   // p_half, p_two, p_third, p_Nstresses
 
@@ -315,35 +324,21 @@ cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   kernelInfo.addDefine("p_Nstresses", cns->Nstresses);
 
   kernelInfo.addDefine("p_RT", cns->RT);
-
-  dfloat sqrtRT = sqrt(cns->RT);
   kernelInfo.addDefine("p_sqrtRT", sqrtRT);
   
   kernelInfo.addDefine("p_rbar", cns->rbar);
   kernelInfo.addDefine("p_ubar", cns->ubar);
   kernelInfo.addDefine("p_vbar", cns->vbar);
-  kernelInfo.addDefine("p_wbar", cns->wbar);
-  
-
-  const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3., p_zero = 0;
-
+  kernelInfo.addDefine("p_wbar", cns->wbar); 
   kernelInfo.addDefine("p_two", p_two);
   kernelInfo.addDefine("p_one", p_one);
   kernelInfo.addDefine("p_half", p_half);
   kernelInfo.addDefine("p_third", p_third);
-  kernelInfo.addDefine("p_zero", p_zero);
-  
-  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_zero", p_zero); 
   kernelInfo.addDefine("p_maxNodes", maxNodes);
-
-  int NblockV = 512/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
-
-  int NblockS = 512/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
-
   kernelInfo.addDefine("p_Lambda2", 0.5f);
-
   kernelInfo.addDefine("p_blockSize", blockSize);
   
   cns->volumeKernel =

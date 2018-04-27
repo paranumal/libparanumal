@@ -15,8 +15,6 @@ void cnsRunHex3D(cns_t *cns, setupAide &newOptions){
 
   timer.tic("Run");
 
-  cns->advSwitch = 1;
-  
   if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
 
     dfloat hmin = 1e9;

@@ -17,7 +17,7 @@ typedef struct{
   hlong totalElements;
   dlong Nblock;
   
-  dfloat *q, *rhsq, *resq;
+  dfloat *q, *rhsq, *resq, *saveq;
   
   dfloat *viscousStresses;
   dfloat *Vort;
