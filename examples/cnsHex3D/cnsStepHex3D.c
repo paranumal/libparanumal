@@ -19,7 +19,7 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
 		       cns->o_q,
 		       cns->o_rkrhsq,
 		       cns->o_rkq);
-    
+
     //compute RHS
     // rhsq = F(currentTIme, rkq)
     
@@ -34,6 +34,8 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       // start halo exchange
       meshHaloExchangeStart(mesh, mesh->Np*cns->Nfields*sizeof(dfloat), cns->sendBuffer, cns->recvBuffer);
     }
+
+#if 0
     
     // now compute viscous stresses
     cns->stressesVolumeKernel(mesh->Nelements, 
@@ -79,6 +81,7 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       // start halo exchange
       meshHaloExchangeStart(mesh, mesh->Np*cns->Nstresses*sizeof(dfloat), cns->sendStressesBuffer, cns->recvStressesBuffer);
     }
+#endif
     
     // compute volume contribution to DG cns RHS
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
@@ -102,15 +105,6 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
 			cns->o_rhsq);
     }
 
-#if 0
-    cns->o_rhsq.copyTo(cns->rhsq);
-    dfloat res = 0;
-    for(int n=0;n<mesh->Np*mesh->Nelements;++n){
-      res += cns->rhsq[n]*cns->rhsq[n];
-    }
-    printf("res = %g\n", res);
-#endif
-    
     // wait for halo stresses data to arrive
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
@@ -118,6 +112,16 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       // copy halo data to DEVICE
       size_t offset = mesh->Np*cns->Nstresses*mesh->Nelements*sizeof(dfloat); // offset for halo data
       cns->o_viscousStresses.copyFrom(cns->recvStressesBuffer, cns->haloStressesBytes, offset);
+    }
+
+    {
+      cns->o_rhsq.copyTo(cns->saveq);
+      dfloat res = 0;
+      for(int n=0;n<cns->Nfields*mesh->Np*mesh->Nelements;++n){
+	res += cns->saveq[n]*cns->saveq[n];
+      }
+      printf("post vol: res = %g\n", res);
+
     }
     
     // compute surface contribution to DG cns RHS (LIFTT ?)
@@ -156,6 +160,18 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
 			 cns->o_rhsq);
     }
 
+    {
+      cns->o_rhsq.copyTo(cns->saveq);
+      dfloat res = 0;
+      for(int n=0;n<cns->Nfields*mesh->Np*mesh->Nelements;++n){
+	res += cns->saveq[n]*cns->saveq[n];
+      }
+      printf("post sur: res = %g\n", res);
+
+    }
+    
+
+    
     mesh->device.finish();
     
     // update solution using Runge-Kutta

@@ -111,7 +111,7 @@ void upwindRoeAveraged(const dfloat nx,
   *ruflux += nx*(pS-pM);
   *rvflux += ny*(pS-pM);
   *rwflux += nz*(pS-pM);
-  
+
 }
 
 
