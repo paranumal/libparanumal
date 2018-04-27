@@ -51,7 +51,7 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       size_t offset = mesh->Np*cns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
       cns->o_rkq.copyFrom(cns->recvBuffer, cns->haloBytes, offset);
     }
-    
+
     cns->stressesSurfaceKernel(mesh->Nelements, 
 			       mesh->o_sgeo, 
 			       mesh->o_vmapM, 
