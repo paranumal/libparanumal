@@ -238,7 +238,7 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
 	    const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
 	    
 	    surfaceTerms(sk0,0,i,j,0     );
-	    surfaceTerms(sk5,5,i,j,p_Nq-1);
+	    surfaceTerms(sk5,5,i,j,(p_Nq-1));
 	  }
 	}
       }
@@ -256,7 +256,7 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
 	    const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
 	    
 	    surfaceTerms(sk1,1,i,0     ,k);
-	    surfaceTerms(sk3,3,i,p_Nq-1,k);
+	    surfaceTerms(sk3,3,i,(p_Nq-1),k);
 	  }
 	}
       }
@@ -273,7 +273,7 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
 	    const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
 	    const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
 	    
-	    surfaceTerms(sk2,2,p_Nq-1,j,k);
+	    surfaceTerms(sk2,2,(p_Nq-1),j,k);
 	    surfaceTerms(sk4,4,0     ,j,k);
 	  }
 	}
@@ -368,7 +368,7 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
 	    const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
 	    
 	    stressSurfaceTerms(sk0,0,i,j,0     );
-	    stressSurfaceTerms(sk5,5,i,j,p_Nq-1);
+	    stressSurfaceTerms(sk5,5,i,j,(p_Nq-1));
 	  }
 	}
       }
@@ -386,7 +386,7 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
 	    const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
 	    
 	    stressSurfaceTerms(sk1,1,i,0     ,k);
-	    stressSurfaceTerms(sk3,3,i,p_Nq-1,k);
+	    stressSurfaceTerms(sk3,3,i,(p_Nq-1),k);
 	  }
 	}
       }
@@ -403,7 +403,7 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
 	    const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
 	    const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
 	    
-	    stressSurfaceTerms(sk2,2,p_Nq-1,j ,k);
+	    stressSurfaceTerms(sk2,2,(p_Nq-1),j ,k);
 	    stressSurfaceTerms(sk4,4,0,     j, k);
 	  }
 	}
