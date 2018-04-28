@@ -41,6 +41,10 @@ typedef struct{
 
 	dfloat *q, *rhsq, *resq;
 
+	// IMEXRK - Kennedy-Carpanter
+	dfloat *rhsqim, *rhsqex, *rkrhsqim, *rkrhsqex; 
+
+
 	dfloat *pmlSigma, *pmlSigmaX, *pmlSigmaY; 
 	dfloat *pmlqx, *pmlqy;
 	dfloat *pmlrhsqx, *pmlrhsqy;
@@ -58,6 +62,15 @@ typedef struct{
 	// dfloat rkC[5], rkA[5*5], rkE[5];
 
 	dfloat *rkC, *rkA, *rkE; 
+    
+    // IMEXRK
+	dfloat *rkCex, *rkAex, *rkBex, *rkEex;
+	dfloat *rkCim, *rkAim, *rkBim, *rkEim;
+
+	int emethod; 
+	int tstep, atstep, rtstep, eflag, rkp;
+	dfloat ATOL, RTOL, time; 
+	dfloat *ehist, *dthist;     
 
     // dfloat sarkC[5], sarkA[5*5], sarkE[5];
 
@@ -68,6 +81,14 @@ typedef struct{
 
 	occa::memory o_rkq, o_rkrhsq, o_rkerr;
 	occa::memory o_errtmp;
+
+	// IMEXRK 
+	occa::memory o_rhsqim, o_rhsqex, o_rkrhsqim, o_rkrhsqex;
+	occa::memory o_rkAex, o_rkEex, o_rkBex;  
+	occa::memory o_rkAim, o_rkEim, o_rkBim;  
+
+
+
 
 
 	dfloat *fQM; 
@@ -110,6 +131,9 @@ typedef struct{
 	occa::kernel pmlUpdateStageKernel;
 
 	occa::kernel errorEstimateKernel;
+
+	// IMEXRK Damping Terms
+	occa::kernel pmlDampingKernel; 
 
 
 
@@ -171,13 +195,20 @@ void boltzmannMRABStep2D(bns_t *bns, int tstep, int haloBytes,
 void boltzmannMRSAABStep2D(bns_t *bns, int tstep, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
 
-// DOPRI Run
-void boltzmannRunDOPRI2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, 
-	              dfloat *recvBuffer, char * options);
+void boltzmannErrorControl2D(bns_t *bns, char *options);
+
+// // DOPRI Run
+// void boltzmannRunDOPRI2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, 
+// 	              dfloat *recvBuffer, char * options);
 
 // DOPRI Run
-void boltzmannSAADRKRun2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, 
+void boltzmannRunEmbedded2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, 
 	              dfloat *recvBuffer, char * options);
+
+
+// // DOPRI Run
+// void boltzmannSAADRKRun2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, 
+// 	              dfloat *recvBuffer, char * options);
 // DOPRI Step
 void boltzmannDOPRIStep2D(bns_t *bns, dfloat time, int haloBytes, dfloat * sendBuffer, 
 	              dfloat *recvBuffer, char * options);
@@ -188,6 +219,9 @@ void boltzmannXDOPRIStep2D(bns_t *bns, dfloat time, int haloBytes, dfloat * send
 
 
 void boltzmannSAADRKStep2D(bns_t *bns, dfloat time, int haloBytes,
+				                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
+
+void boltzmannIMEXRKStep2D(bns_t *bns, dfloat time, int haloBytes,
 				                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
 
 // Needs to be changed if in use

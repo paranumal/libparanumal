@@ -115,7 +115,8 @@ occaTimerTic(mesh->device,"BOLTZMANN");
 tic_tot = MPI_Wtime();
 
 
-if(!( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") )){
+if(!( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") || strstr(options,"IMEXRK") )){
+// if(!( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") )){
 
 
  for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
@@ -146,6 +147,17 @@ if(!( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SA
 
 
        // }
+
+      if(strstr(options,"IMEXRK")){
+
+        dfloat time = tstep*bns->dt; 
+
+        boltzmannIMEXRKStep2D(bns, time, haloBytes, sendBuffer, recvBuffer, options);
+
+        bns->o_q.copyFrom(bns->o_rkq);
+        bns->o_pmlqx.copyFrom(bns->o_rkqx);
+        bns->o_pmlqy.copyFrom(bns->o_rkqy);
+       }
 
       if(strstr(options, "MRAB")){
        occaTimerTic(mesh->device, "MRAB"); 
@@ -194,16 +206,11 @@ if(!( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SA
   }
 }
 
-  else if(strstr(options,"SAADRK")){
+  else {
 
-  printf("====================Running SAADRK==========================\n");
-  boltzmannSAADRKRun2D(bns, haloBytes, sendBuffer, recvBuffer, options);
+  printf("====================Running Embedded Scahemes==========================\n");
+  boltzmannRunEmbedded2D(bns, haloBytes, sendBuffer, recvBuffer, options);
 
-  }
-  else if(strstr(options,"DOPRI5") || strstr(options,"XDOPRI")){
-
-  printf("====================Running DOPRI==========================\n");
-  boltzmannRunDOPRI2D(bns, haloBytes, sendBuffer, recvBuffer, options);
 
   }
 
