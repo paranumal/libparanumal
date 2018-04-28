@@ -1,0 +1,263 @@
+
+// isothermal Compressible Navier-Stokes
+kernel void cnsCubatureVolumeTet3D(const dlong Nelements,
+				   const int advSwitch,
+				   const dfloat * restrict vgeo,
+				   const dfloat * restrict cubDrWT,
+				   const dfloat * restrict cubDsWT,
+				   const dfloat * restrict cubDtWT,
+				   const dfloat * restrict cubInterpT,
+				   const dfloat * restrict viscousStresses,
+				   const dfloat * restrict q,
+				   dfloat * restrict rhsq){
+  
+  for(dlong e=0;e<Nelements;++e;outer0){
+
+    shared dfloat s_q[p_Nfields][p_Np];
+    shared dfloat s_vS[p_Nstresses][p_Np];
+
+    shared dfloat s_F[p_Nfields][p_cubNp];
+    shared dfloat s_G[p_Nfields][p_cubNp];
+    shared dfloat s_H[p_Nfields][p_cubNp];
+
+    for(int n=0;n<p_cubNp;++n;inner0){      // for all nodes in this element
+      if(n<p_Np){ 
+        const dlong  qbase = e*p_Np*p_Nfields + n;
+        const dlong id = e*p_Np*p_Nstresses + n;
+        
+        s_q[0][n] = q[qbase+0*p_Np];
+        s_q[1][n] = q[qbase+1*p_Np];
+        s_q[2][n] = q[qbase+2*p_Np];
+	s_q[3][n] = q[qbase+3*p_Np];
+        
+        s_vS[0][n] = viscousStresses[id+0*p_Np];
+        s_vS[1][n] = viscousStresses[id+1*p_Np];
+        s_vS[2][n] = viscousStresses[id+2*p_Np];
+
+	s_vS[3][n] = viscousStresses[id+3*p_Np];
+        s_vS[4][n] = viscousStresses[id+4*p_Np];
+        s_vS[5][n] = viscousStresses[id+5*p_Np];
+      }   
+    }
+
+    barrier(localMemFence);
+
+    for(int n=0;n<p_cubNp;++n;inner0){
+      //interpolate to cubature
+      dfloat r = 0., ru = 0., rv = 0., rw = 0;
+      dfloat T11 = 0., T12 = 0., T13 = 0., T22 = 0., T23 = 0., T33 = 0.;
+
+      occaUnroll(p_Np)
+	for(int i=0;i<p_Np;++i){
+	  const dfloat cIni = cubInterpT[n+i*p_cubNp];
+	  r  += cIni*s_q[0][i];
+	  ru += cIni*s_q[1][i];
+	  rv += cIni*s_q[2][i];
+	  rw += cIni*s_q[3][i];
+	  T11 += cIni*s_vS[0][i];
+	  T12 += cIni*s_vS[1][i];
+	  T13 += cIni*s_vS[2][i];
+	  T22 += cIni*s_vS[3][i];
+	  T23 += cIni*s_vS[4][i];
+	  T33 += cIni*s_vS[5][i];
+	}
+      
+      // primitive variables
+      const dfloat p  = r*p_RT;
+      const dfloat u = ru/r, v = rv/r, w = rw/r;
+
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+      
+      // F0 = ru, G0 = rv
+      dfloat F0 = -advSwitch*ru;
+      dfloat G0 = -advSwitch*rv;
+      dfloat H0 = -advSwitch*rw;
+
+      // F1 = 2*mu*S11 - (ru^2+p), G1 = 2*mu*S12 - (rvu)
+      dfloat F1 = T11-advSwitch*(ru*u+p);
+      dfloat G1 = T12-advSwitch*(rv*u);
+      dfloat H1 = T13-advSwitch*(rw*u);
+    
+      // F2 = 2*mu*S21 - (ruv), G2 = 2*mu*S22 - (rv^2+p)
+      dfloat F2 = T12-advSwitch*(ru*v);
+      dfloat G2 = T22-advSwitch*(rv*v+p);
+      dfloat H2 = T23-advSwitch*(rw*v);
+
+      dfloat F3 = T13-advSwitch*(ru*w);
+      dfloat G3 = T23-advSwitch*(rv*w);
+      dfloat H3 = T33-advSwitch*(rw*w+p);
+
+      s_F[0][n] = drdx*F0 + drdy*G0 + drdz*H0;
+      s_G[0][n] = dsdx*F0 + dsdy*G0 + dsdz*H0;
+      s_H[0][n] = dtdx*F0 + dtdy*G0 + dtdz*H0;
+
+      s_F[1][n] = drdx*F1 + drdy*G1 + drdz*H1;
+      s_G[1][n] = dsdx*F1 + dsdy*G1 + dsdz*H1;
+      s_H[1][n] = dtdx*F1 + dtdy*G1 + dtdz*H1;
+
+      s_F[2][n] = drdx*F2 + drdy*G2 + drdz*H2;
+      s_G[2][n] = dsdx*F2 + dsdy*G2 + dsdz*H2;
+      s_H[2][n] = dtdx*F2 + dtdy*G2 + dtdz*H2;
+
+      s_F[3][n] = drdx*F3 + drdy*G3 + drdz*H3;
+      s_G[3][n] = dsdx*F3 + dsdy*G3 + dsdz*H3;
+      s_H[3][n] = dtdx*F3 + dtdy*G3 + dtdz*H3;
+
+      
+    }
+
+    barrier(localMemFence);
+    
+    for(int n=0;n<p_cubNp;++n;inner0){ 
+      if (n<p_Np) {   
+
+        dfloat df0dr = 0.f, dg0ds = 0.f, dh0dt = 0.f;
+	dfloat df1dr = 0.f, dg1ds = 0.f, dh1dt = 0.f;
+	dfloat df2dr = 0.f, dg2ds = 0.f, dh2dt = 0.f;
+	dfloat df3dr = 0.f, dg3ds = 0.f, dh3dt = 0.f;
+
+        occaUnroll(p_cubNp)
+	  for(int i=0;i<p_cubNp;++i){
+	    const dfloat cDrni = cubDrWT[n+i*p_Np];
+	    const dfloat cDsni = cubDsWT[n+i*p_Np];
+	    const dfloat cDtni = cubDtWT[n+i*p_Np];
+
+	    df0dr += cDrni*s_F[0][i];
+	    df1dr += cDrni*s_F[1][i];
+	    df2dr += cDrni*s_F[2][i];
+	    df3dr += cDrni*s_F[3][i];
+
+	    dg0ds += cDsni*s_G[0][i];
+	    dg1ds += cDsni*s_G[1][i];
+	    dg2ds += cDsni*s_G[2][i];
+	    dg3ds += cDsni*s_G[3][i];
+	    
+	    dh0dt += cDtni*s_H[0][i];
+	    dh1dt += cDtni*s_H[1][i];
+	    dh2dt += cDtni*s_H[2][i];
+	    dh3dt += cDtni*s_H[3][i];
+	  }
+	
+        
+        const dlong base = e*p_Np*p_Nfields + n;
+        
+        // move to rhs
+        rhsq[base+0*p_Np] = -(df0dr+dg0ds+dh0dt);
+        rhsq[base+1*p_Np] = -(df1dr+dg1ds+dh1dt);
+        rhsq[base+2*p_Np] = -(df2dr+dg2ds+dh2dt);
+	rhsq[base+3*p_Np] = -(df3dr+dg3ds+dh3dt);
+      }
+    }
+  }
+}
+
+
+kernel void cnsStressesVolumeTet3D(const dlong Nelements,
+				   const dfloat * restrict vgeo,
+				   const dfloat * restrict DrT,
+				   const dfloat * restrict DsT,
+				   const dfloat * restrict DtT,
+				   const dfloat mu,
+				   const dfloat * restrict q,
+				   dfloat * restrict viscousStresses){
+  
+  for(dlong e=0;e<Nelements;++e;outer0){
+
+    shared dfloat s_u[p_Np];
+    shared dfloat s_v[p_Np];
+    shared dfloat s_w[p_Np];
+    
+    for(int n=0;n<p_Np;++n;inner0){
+      const dlong qbase = e*p_Nfields*p_Np + n;
+      const dfloat r  = q[qbase + 0*p_Np];
+      const dfloat ru = q[qbase + 1*p_Np];
+      const dfloat rv = q[qbase + 2*p_Np];
+      const dfloat rw = q[qbase + 3*p_Np];
+      
+      s_u[n] = ru/r;
+      s_v[n] = rv/r;
+      s_w[n] = rw/r;        
+    }
+    
+    barrier(localMemFence);
+    
+    for(int n=0;n<p_Np;++n;inner0){
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+
+      dfloat dudr = 0, duds = 0, dudt = 0;
+      dfloat dvdr = 0, dvds = 0, dvdt = 0;
+      dfloat dwdr = 0, dwds = 0, dwdt = 0;
+
+      for(int i=0;i<p_Np;++i){
+        const dfloat Drni = DrT[n+i*p_Np];
+        const dfloat Dsni = DsT[n+i*p_Np];
+	const dfloat Dtni = DtT[n+i*p_Np];
+        
+        const dfloat u = s_u[i];
+        const dfloat v = s_v[i];
+	const dfloat w = s_w[i];
+
+        dudr += Drni*u;
+        duds += Dsni*u;
+	dudt += Dtni*u;
+
+	dvdr += Drni*v;
+        dvds += Dsni*v;
+	dvdt += Dtni*v;
+
+	dwdr += Drni*w;
+        dwds += Dsni*w;
+	dwdt += Dtni*w;
+      }
+
+      const dfloat dudx = drdx*dudr + dsdx*duds + dtdx*dudt;
+      const dfloat dudy = drdy*dudr + dsdy*duds + dtdy*dudt;
+      const dfloat dudz = drdz*dudr + dsdz*duds + dtdz*dudt;
+
+      const dfloat dvdx = drdx*dvdr + dsdx*dvds + dtdx*dvdt;
+      const dfloat dvdy = drdy*dvdr + dsdy*dvds + dtdy*dvdt;
+      const dfloat dvdz = drdz*dvdr + dsdz*dvds + dtdz*dvdt;
+
+      const dfloat dwdx = drdx*dwdr + dsdx*dwds + dtdx*dwdt;
+      const dfloat dwdy = drdy*dwdr + dsdy*dwds + dtdy*dwdt;
+      const dfloat dwdz = drdz*dwdr + dsdz*dwds + dtdz*dwdt;
+
+      
+      const dlong sbase = e*p_Nstresses*p_Np + n;
+
+      const dfloat S11 = p_half*(dudx+dudx) - p_third*(dudx+dvdy+dwdz);
+      const dfloat S12 = p_half*(dudy+dvdx);
+      const dfloat S13 = p_half*(dudz+dwdx);
+
+      const dfloat S22 = p_half*(dvdy+dvdy) - p_third*(dudx+dvdy+dwdz);
+      const dfloat S23 = p_half*(dvdz+dwdy);
+
+      const dfloat S33 = p_half*(dwdz+dwdz) - p_third*(dudx+dvdy+dwdz);
+      
+      viscousStresses[sbase + 0*p_Np] = p_two*mu*S11;
+      viscousStresses[sbase + 1*p_Np] = p_two*mu*S12;
+      viscousStresses[sbase + 2*p_Np] = p_two*mu*S13;
+      viscousStresses[sbase + 3*p_Np] = p_two*mu*S22;
+      viscousStresses[sbase + 4*p_Np] = p_two*mu*S23;
+      viscousStresses[sbase + 5*p_Np] = p_two*mu*S33;
+    }
+  }
+}

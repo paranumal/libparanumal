@@ -1,20 +1,20 @@
-#include "cnsTri2D.h"
+#include "cnsHex3D.h"
 
-void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
+void cnsRunHex3D(cns_t *cns, setupAide &newOptions){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   mesh_t *mesh = cns->mesh;
 
-  cnsReportTri2D(cns, 0, newOptions);
+  cnsReportHex3D(cns, 0, newOptions);
 
   occa::timer timer;
   
   timer.initTimer(mesh->device);
 
   timer.tic("Run");
-  
+
   if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
 
     dfloat hmin = 1e9;
@@ -44,8 +44,6 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
     int done =0;
     while (!done) {
 
-      cns->advSwitch = 1;
-      
       if (mesh->dt<cns->dtMIN){
         printf("ERROR: Time step became too small at time step=%d\n", tstep);
         exit (-1);
@@ -62,16 +60,17 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
       }
 
       // try a step with the current time step
-      cnsDopriStepTri2D(cns, newOptions, time);
+      cnsDopriStepHex3D(cns, newOptions, time);
       
       // compute Dopri estimator
-      dfloat err = cnsDopriEstimateTri2D(cns);
-					 
+      dfloat err = cnsDopriEstimateHex3D(cns);
+      
       // build controller
       dfloat fac1 = pow(err,cns->exp1);
       dfloat fac = fac1/pow(cns->facold,cns->beta);
 
       fac = mymax(cns->invfactor2, mymin(cns->invfactor1,fac/cns->safe));
+
       dfloat dtnew = mesh->dt/fac;
 
       if (err<1.0) { //dt is accepted
@@ -90,13 +89,13 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
 	  printf("Taking output mini step: %g\n", mesh->dt);
 	  
 	  // time step to output
-	  cnsDopriStepTri2D(cns, newOptions, time);	  
+	  cnsDopriStepHex3D(cns, newOptions, time);	  
 
 	  // shift for output
 	  cns->o_rkq.copyTo(cns->o_q);
 	  
 	  // output  (print from rkq)
-	  cnsReportTri2D(cns, nextOutputTime, newOptions);
+	  cnsReportHex3D(cns, nextOutputTime, newOptions);
 
 	  // restore time step
 	  mesh->dt = savedt;
@@ -148,13 +147,15 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
 
       dfloat time = tstep*mesh->dt;
 
-      cnsLserkStepTri2D(cns, newOptions, time);
+      cnsLserkStepHex3D(cns, newOptions, time);
       
       if(((tstep+1)%mesh->errorStep)==0){
 	time += mesh->dt;
-        cnsReportTri2D(cns, time, newOptions);
+        cnsReportHex3D(cns, time, newOptions);
       }
     }
   }
   
 }
+
+      

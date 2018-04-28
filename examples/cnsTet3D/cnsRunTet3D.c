@@ -1,13 +1,13 @@
-#include "cnsTri2D.h"
+#include "cnsTet3D.h"
 
-void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
+void cnsRunTet3D(cns_t *cns, setupAide &newOptions){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   mesh_t *mesh = cns->mesh;
 
-  cnsReportTri2D(cns, 0, newOptions);
+  cnsReportTet3D(cns, 0, newOptions);
 
   occa::timer timer;
   
@@ -16,19 +16,6 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
   timer.tic("Run");
   
   if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
-
-    dfloat hmin = 1e9;
-    for(dlong e=0;e<mesh->Nelements;++e){  
-      
-      for(int f=0;f<mesh->Nfaces;++f){
-	dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
-	dfloat sJ   = mesh->sgeo[sid + SJID];
-	dfloat invJ = mesh->sgeo[sid + IJID];
-	dfloat hest = .5/(sJ*invJ);
-	
-	hmin = mymin(hmin, hest);
-      }
-    }
     
     // hard code this for the moment
     dfloat outputInterval;
@@ -62,10 +49,10 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
       }
 
       // try a step with the current time step
-      cnsDopriStepTri2D(cns, newOptions, time);
-      
+      cnsDopriStepTet3D(cns, newOptions, time);
+
       // compute Dopri estimator
-      dfloat err = cnsDopriEstimateTri2D(cns);
+      dfloat err = cnsDopriEstimateTet3D(cns);
 					 
       // build controller
       dfloat fac1 = pow(err,cns->exp1);
@@ -90,13 +77,13 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
 	  printf("Taking output mini step: %g\n", mesh->dt);
 	  
 	  // time step to output
-	  cnsDopriStepTri2D(cns, newOptions, time);	  
+	  cnsDopriStepTet3D(cns, newOptions, time);	  
 
 	  // shift for output
 	  cns->o_rkq.copyTo(cns->o_q);
 	  
 	  // output  (print from rkq)
-	  cnsReportTri2D(cns, nextOutputTime, newOptions);
+	  cnsReportTet3D(cns, nextOutputTime, newOptions);
 
 	  // restore time step
 	  mesh->dt = savedt;
@@ -116,17 +103,15 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
 
         cns->facold = mymax(err,1E-4); // hard coded factor ?
 
-	printf("\r time = %g (%d), dt = %g accepted (ratio dt/hmin = %g)               ", time, allStep, mesh->dt, mesh->dt/hmin);
+	printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  mesh->dt);
         tstep++;
       } else {
         dtnew = mesh->dt/(mymax(cns->invfactor1,fac1/cns->safe));
-	printf("\r time = %g (%d), dt = %g rejected (ratio dt/min = %g), trying %g", time, allStep, mesh->dt, mesh->dt/hmin, dtnew);
+	printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, mesh->dt, dtnew);
 
 	done = 0;
       }
       mesh->dt = dtnew;
-      
-      
       allStep++;
 
     }
@@ -148,11 +133,11 @@ void cnsRunTri2D(cns_t *cns, setupAide &newOptions){
 
       dfloat time = tstep*mesh->dt;
 
-      cnsLserkStepTri2D(cns, newOptions, time);
+      cnsLserkStepTet3D(cns, newOptions, time);
       
       if(((tstep+1)%mesh->errorStep)==0){
 	time += mesh->dt;
-        cnsReportTri2D(cns, time, newOptions);
+        cnsReportTet3D(cns, time, newOptions);
       }
     }
   }

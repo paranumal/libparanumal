@@ -1,6 +1,6 @@
 #include "cnsTri2D.h"
 
-cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
+cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFileName){
 
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
@@ -18,11 +18,24 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
     if (hostIds[r]==hostId) deviceID++;
   }
 
-  // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", deviceID);
-  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
-  //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  //sprintf(deviceConfig, "mode = Serial");  
+  // read thread model/device/platform from newOptions
+  if(newOptions.compareArgs("THREAD MODEL", "CUDA")){
+    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
+  }
+  else if(newOptions.compareArgs("THREAD MODEL", "OpenCL")){
+    int plat;
+    newOptions.getArgs("PLATFORM NUMBER", plat);
+    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d",
+	    deviceID, plat);
+  }
+  else if(newOptions.compareArgs("THREAD MODEL", "OpenMP")){
+    sprintf(deviceConfig, "mode = OpenMP");
+  }
+  else{
+    sprintf(deviceConfig, "mode = Serial");
+  }
+
+  int check;
 
   cns_t *cns = (cns_t*) calloc(1, sizeof(cns_t));
 
@@ -43,27 +56,36 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   cns->ubar = 0.2;
   cns->vbar = 0;
 
-  // viscosity
-  dfloat Re = 5000;
-  cns->mu = cns->ubar/Re; // assumes reference length 1
+  check = newOptions.getArgs("RBAR", cns->rbar);
+  if(!check) printf("WARNING setup file does not include RBAR\n");
+  
+  check = newOptions.getArgs("UBAR", cns->ubar);
+  if(!check) printf("WARNING setup file does not include UBAR\n");
+
+  check = newOptions.getArgs("VBAR", cns->vbar);
+  if(!check) printf("WARNING setup file does not include VBAR\n");
+
+  check = newOptions.getArgs("VISCOSITY", cns->mu);
+  if(!check) printf("WARNING setup file does not include VISCOSITY\n");
+
+  dfloat mach = 0.17;
+  check = newOptions.getArgs("MACH NUMBER", mach);
+  if(!check) printf("WARNING setup file does not include MACH\n");
 
   // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
-  dfloat mach = 0.17;
   cns->RT = cns->ubar*cns->ubar/(mach*mach);
   
-  
   // compute samples of q at interpolation nodes
-  mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+  mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
   cns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+			       sizeof(dfloat));
   
-  if (strstr(options,"LSERK")) {
+  if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     cns->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 		  		sizeof(dfloat));
   }
 
-  if (strstr(options,"DOPRI5")) {
+  if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")){
     int NrkStages = 7;
     cns->rkq  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
           sizeof(dfloat));
@@ -73,6 +95,44 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
           sizeof(dfloat));
 
     cns->errtmp = (dfloat*) calloc(cns->Nblock, sizeof(dfloat));
+
+    // Dormand Prince -order (4) 5 with PID timestep control
+    int Nrk = 7;
+    dfloat rkC[7] = {0.0, 0.2, 0.3, 0.8, 8.0/9.0, 1.0, 1.0};
+    dfloat rkA[7*7] ={             0.0,             0.0,            0.0,          0.0,             0.0,       0.0, 0.0,
+                                   0.2,             0.0,            0.0,          0.0,             0.0,       0.0, 0.0,
+                              3.0/40.0,        9.0/40.0,            0.0,          0.0,             0.0,       0.0, 0.0,
+                             44.0/45.0,      -56.0/15.0,       32.0/9.0,          0.0,             0.0,       0.0, 0.0,
+                        19372.0/6561.0, -25360.0/2187.0, 64448.0/6561.0, -212.0/729.0,             0.0,       0.0, 0.0,
+                         9017.0/3168.0,     -355.0/33.0, 46732.0/5247.0,   49.0/176.0, -5103.0/18656.0,       0.0, 0.0, 
+                            35.0/384.0,             0.0,   500.0/1113.0,  125.0/192.0,  -2187.0/6784.0, 11.0/84.0, 0.0 };
+    dfloat rkE[7] = {71.0/57600.0,  0.0, -71.0/16695.0, 71.0/1920.0, -17253.0/339200.0, 22.0/525.0, -1.0/40.0 }; 
+
+    cns->Nrk = Nrk;
+    cns->rkC = (dfloat*) calloc(cns->Nrk, sizeof(dfloat));
+    cns->rkE = (dfloat*) calloc(cns->Nrk, sizeof(dfloat));
+    cns->rkA = (dfloat*) calloc(cns->Nrk*cns->Nrk, sizeof(dfloat));
+
+    memcpy(cns->rkC, rkC, cns->Nrk*sizeof(dfloat));
+    memcpy(cns->rkE, rkE, cns->Nrk*sizeof(dfloat));
+    memcpy(cns->rkA, rkA, cns->Nrk*cns->Nrk*sizeof(dfloat));
+    
+    cns->dtMIN = 1E-7; //minumum allowed timestep
+    cns->ATOL = 1E-7;  //absolute error tolerance
+    cns->RTOL = 1E-5;  //relative error tolerance
+    cns->safe = 0.9;   //safety factor
+
+    //error control parameters
+    cns->beta = 0.05;
+    cns->factor1 = 0.2;
+    cns->factor2 = 10.0;
+
+
+    cns->exp1 = 0.2 - 0.75*cns->beta;
+    cns->invfactor1 = 1.0/cns->factor1;
+    cns->invfactor2 = 1.0/cns->factor2;
+    cns->facold = 1E-4;
+    
   }
 
   cns->viscousStresses = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*cns->Nstresses,
@@ -140,14 +200,16 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
   
   //
-  mesh->finalTime = 2;
+  newOptions.getArgs("FINAL TIME", mesh->finalTime);
+
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
-  if(strstr(options,"LSERK")) {
+  if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     mesh->dt = mesh->finalTime/mesh->NtimeSteps;
   }
 
-  if (rank ==0) printf("dtAdv = %lg (before cfl), dtVisc = %lg (before cfl), dt = %lg\n",
-   dtAdv, dtVisc, dt);
+  if (rank ==0)
+    printf("dtAdv = %lg (before cfl), dtVisc = %lg (before cfl), dt = %lg\n",
+	   dtAdv, dtVisc, dt);
 
   cns->frame = 0;
   // errorStep
@@ -165,6 +227,10 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
  
   cns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+
+  cns->o_saveq =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+
   
   cns->o_viscousStresses =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*cns->Nstresses*sizeof(dfloat),
@@ -173,12 +239,16 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   cns->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->rhsq);
 
-  if (strstr(options,"LSERK")) {
+  cout << "TIME INTEGRATOR (" <<
+    newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
+  
+  if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     cns->o_resq =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->resq);
   }
 
-  if (strstr(options,"DOPRI5")) {
+  if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")){
+    printf("setting up DOPRI5\n");
     int NrkStages = 7;
     cns->o_rkq =
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), cns->rkq);
@@ -188,6 +258,9 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), cns->rkerr);
   
     cns->o_errtmp = mesh->device.malloc(cns->Nblock*sizeof(dfloat), cns->errtmp);
+
+    cns->o_rkA = mesh->device.malloc(cns->Nrk*cns->Nrk*sizeof(dfloat), cns->rkA);
+    cns->o_rkE = mesh->device.malloc(  cns->Nrk*sizeof(dfloat), cns->rkE);
   }
 
   
@@ -293,27 +366,29 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, char *options, char* boundaryHeaderFileName){
   
   cns->vorticityKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVorticityTri2D.okl",
-               "cnsVorticityTri2D",
-               kernelInfo);
-
-
+				       "cnsVorticityTri2D",
+				       kernelInfo);
+  
+  
   cns->updateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
 				       "cnsUpdate2D",
 				       kernelInfo);
-
+  
   cns->rkUpdateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
-               "cnsRkUpdate2D",
-               kernelInfo);
+				       "cnsRkUpdate2D",
+				       kernelInfo);
+  
   cns->rkStageKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
-               "cnsRkStage2D",
-               kernelInfo);
+				       "cnsRkStage2D",
+				       kernelInfo);
+
   cns->rkErrorEstimateKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
-               "cnsErrorEstimate2D",
-               kernelInfo);
+				       "cnsErrorEstimate2D",
+				       kernelInfo);
 
   mesh->haloExtractKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",

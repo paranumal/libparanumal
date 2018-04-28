@@ -1,6 +1,6 @@
-#include "cnsQuad2D.h"
+#include "cnsHex3D.h"
 
-cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFileName){
+cns_t *cnsSetupHex3D(mesh3D *mesh, setupAide &newOptions, char* boundaryHeaderFileName){
 
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
@@ -39,10 +39,10 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
   
   cns_t *cns = (cns_t*) calloc(1, sizeof(cns_t));
 
-  mesh->Nfields = 3;
+  mesh->Nfields = 4;
   cns->Nfields = mesh->Nfields;
   
-  cns->Nstresses = 3;
+  cns->Nstresses = 6;
   cns->mesh = mesh;
 
   dlong Ntotal = mesh->Nelements*mesh->Np*mesh->Nfields;
@@ -61,6 +61,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
   cns->rbar = 1;
   cns->ubar = 0.2;
   cns->vbar = 0;
+  cns->wbar = 0;
 
   check = newOptions.getArgs("RBAR", cns->rbar);
   if(!check) printf("WARNING setup file does not include RBAR\n");
@@ -71,20 +72,23 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
   check = newOptions.getArgs("VBAR", cns->vbar);
   if(!check) printf("WARNING setup file does not include VBAR\n");
 
+  check = newOptions.getArgs("WBAR", cns->wbar);
+  if(!check) printf("WARNING setup file does not include WBAR\n");
+
+  
   check = newOptions.getArgs("VISCOSITY", cns->mu);
   if(!check) printf("WARNING setup file does not include VISCOSITY\n");
 
-  dfloat mach = 0.17;
-  check = newOptions.getArgs("MACH NUMBER", mach);
-  if(!check) printf("WARNING setup file does not include MACH\n");
+  cns->RT = 10;
+  check = newOptions.getArgs("RT", cns->RT);
+  if(!check) printf("WARNING setup file does not include RT\n");
 
-  // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
-  cns->RT = cns->ubar*cns->ubar/(mach*mach);
-  
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
-  cns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+
+  cns->saveq = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
+  
+  cns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
   if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     cns->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
@@ -144,7 +148,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
   cns->viscousStresses = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*cns->Nstresses,
 					   sizeof(dfloat));
   
-  cns->Vort = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  cns->Vort = (dfloat*) calloc(3*mesh->Nelements*mesh->Np,sizeof(dfloat));
   
   // fix this later (initial conditions)
   for(int e=0;e<mesh->Nelements;++e){
@@ -152,20 +156,24 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
+      dfloat z = mesh->z[n + mesh->Np*e];
 
       dlong qbase = e*mesh->Np*mesh->Nfields + n;
 
 #if 0
-      cnsGaussianPulse2D(x, y, t,
+      cnsGaussianPulse3D(x, y, z, t,
 			 mesh->q+qbase,
 			 mesh->q+qbase+mesh->Np,
-			 mesh->q+qbase+2*mesh->Np);
+			 mesh->q+qbase+2*mesh->Np,
+			 mesh->q+qbase+3*mesh->Np
+			 );
 #else
-      mesh->q[qbase+0*mesh->Np] = cns->rbar;
-      //      mesh->q[qbase+1*mesh->Np] = cns->rbar*cns->ubar*y*(6-y)/9.;
       const dfloat alpha = 20;
+      mesh->q[qbase+0*mesh->Np] = cns->rbar;
       mesh->q[qbase+1*mesh->Np] = cns->rbar*cns->ubar;//*tanh(alpha*y)*tanh(alpha*(6-y));
       mesh->q[qbase+2*mesh->Np] = cns->rbar*cns->vbar;
+      mesh->q[qbase+3*mesh->Np] = cns->rbar*cns->wbar;
+      
 #endif
     }
   }
@@ -201,7 +209,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
 
   dfloat dt = cfl*mymin(dtAdv, dtVisc);
   dt = cfl*dtAdv;
-  
+
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
@@ -218,6 +226,10 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
     printf("dtAdv = %lg (before cfl), dtVisc = %lg (before cfl), dt = %lg\n",
 	   dtAdv, dtVisc, dt);
 
+  // turn on/off advection
+  cns->advSwitch = 1;
+  
+  // frame index for vtu output
   cns->frame = 0;
   
   // errorStep
@@ -229,7 +241,7 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
   // OCCA build stuff
   
   occa::kernelInfo kernelInfo;
-  meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
+  meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
 
   //add boundary data to kernel info
   kernelInfo.addInclude(boundaryHeaderFileName);
@@ -271,24 +283,8 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
     cns->o_rkE = mesh->device.malloc(  cns->Nrk*sizeof(dfloat), cns->rkE);
   }
   
-  cns->o_Vort = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), cns->Vort);
+  cns->o_Vort = mesh->device.malloc(3*mesh->Np*mesh->Nelements*sizeof(dfloat), cns->Vort);
   
-  mesh->o_LIFT =
-    mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			mesh->LIFT);
-
-  cns->LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Nfp*mesh->Nfaces;++m){
-      cns->LIFTT[n + m*mesh->Np] = mesh->LIFT[n*mesh->Nfaces*mesh->Nfp+m];
-    }
-  }
-  
-  cns->o_LIFTT =
-    mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			cns->LIFTT);
-  
-
   if(mesh->totalHaloPairs>0){
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
@@ -313,101 +309,98 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
     cns->recvStressesBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
   }
 
+  dfloat sqrtRT = sqrt(cns->RT);
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  int NblockV = 512/mesh->Np; // works for CUDA
+  int NblockS = 512/maxNodes; // works for CUDA
+  const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3., p_zero = 0;
+  
   //  p_RT, p_rbar, p_ubar, p_vbar
   // p_half, p_two, p_third, p_Nstresses
+
+  kernelInfo.addCompilerFlag("-g");
   
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   kernelInfo.addDefine("p_Nstresses", cns->Nstresses);
 
   kernelInfo.addDefine("p_RT", cns->RT);
-
-  dfloat sqrtRT = sqrt(cns->RT);
   kernelInfo.addDefine("p_sqrtRT", sqrtRT);
   
   kernelInfo.addDefine("p_rbar", cns->rbar);
   kernelInfo.addDefine("p_ubar", cns->ubar);
   kernelInfo.addDefine("p_vbar", cns->vbar);
-  
-
-  const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3., p_zero = 0;
-
+  kernelInfo.addDefine("p_wbar", cns->wbar); 
   kernelInfo.addDefine("p_two", p_two);
   kernelInfo.addDefine("p_one", p_one);
   kernelInfo.addDefine("p_half", p_half);
   kernelInfo.addDefine("p_third", p_third);
-  kernelInfo.addDefine("p_zero", p_zero);
-  
-  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  kernelInfo.addDefine("p_zero", p_zero); 
   kernelInfo.addDefine("p_maxNodes", maxNodes);
-
-  int NblockV = 512/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
-
-  int NblockS = 512/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
-
   kernelInfo.addDefine("p_Lambda2", 0.5f);
-
   kernelInfo.addDefine("p_blockSize", blockSize);
   
   cns->volumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVolumeQuad2D.okl",
-				       "cnsVolumeQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVolumeHex3D.okl",
+				       "cnsVolumeHex3D",
 				       kernelInfo);
 
   cns->surfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsSurfaceQuad2D.okl",
-				       "cnsSurfaceQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsSurfaceHex3D.okl",
+				       "cnsSurfaceHex3D",
 				       kernelInfo);
 
+#if 0
   cns->cubatureVolumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsCubatureVolumeQuad2D.okl",
-               "cnsCubatureVolumeQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsCubatureVolumeHex3D.okl",
+               "cnsCubatureVolumeHex3D",
                kernelInfo);
 
   cns->cubatureSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsCubatureSurfaceQuad2D.okl",
-               "cnsCubatureSurfaceQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsCubatureSurfaceHex3D.okl",
+               "cnsCubatureSurfaceHex3D",
                kernelInfo);
-
+#endif
+  
   cns->stressesVolumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVolumeQuad2D.okl",
-				       "cnsStressesVolumeQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVolumeHex3D.okl",
+				       "cnsStressesVolumeHex3D",
 				       kernelInfo);
 
   cns->stressesSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsSurfaceQuad2D.okl",
-				       "cnsStressesSurfaceQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsSurfaceHex3D.okl",
+				       "cnsStressesSurfaceHex3D",
 				       kernelInfo);
   
   cns->vorticityKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVorticityQuad2D.okl",
-				       "cnsVorticityQuad2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVorticityHex3D.okl",
+				       "cnsVorticityHex3D",
 				       kernelInfo);  
   
   cns->updateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
-				       "cnsUpdate2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate3D.okl",
+				       "cnsUpdate3D",
 				       kernelInfo);
 
   cns->rkUpdateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
-				       "cnsRkUpdate2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate3D.okl",
+				       "cnsRkUpdate3D",
 				       kernelInfo);
   
   cns->rkStageKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
-				       "cnsRkStage2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate3D.okl",
+				       "cnsRkStage3D",
 				       kernelInfo);
   
   cns->rkErrorEstimateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate2D.okl",
-				       "cnsErrorEstimate2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate3D.okl",
+				       "cnsErrorEstimate3D",
 				       kernelInfo);
    
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
-				       "meshHaloExtract2D",
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
+				       "meshHaloExtract3D",
 				       kernelInfo);
   
   return cns;

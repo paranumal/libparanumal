@@ -1,15 +1,17 @@
-#include "cnsQuad2D.h"
+#include "cnsTet3D.h"
 
-void cnsReportQuad2D(cns_t *cns, dfloat time, setupAide &newOptions){
+void cnsReportTet3D(cns_t *cns, dfloat time, setupAide &newOptions){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  mesh2D *mesh = cns->mesh;
+  mesh3D *mesh = cns->mesh;
 
   cns->vorticityKernel(mesh->Nelements,
                        mesh->o_vgeo,
-                       mesh->o_D,
+                       mesh->o_DrT,
+                       mesh->o_DsT,
+		       mesh->o_DtT,
                        cns->o_q,
                        cns->o_Vort);
 
@@ -18,13 +20,14 @@ void cnsReportQuad2D(cns_t *cns, dfloat time, setupAide &newOptions){
   cns->o_Vort.copyTo(cns->Vort);
 
   // do error stuff on host
-  cnsError2D(mesh, time);
+  cnsError3D(mesh, time);
+
 
   // output field files
   char fname[BUFSIZ];
 
   sprintf(fname, "foo_%04d_%04d.vtu",rank, cns->frame++);
-  
-  cnsPlotVTUQuad2D(cns, fname);
+
+  cnsPlotVTUTet3D(cns, fname);
 
 }
