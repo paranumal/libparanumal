@@ -1,7 +1,9 @@
 #include "boltzmann2D.h"
 
 // currently maximum
-void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
+void boltzmannError2D(bns_t *bns, dfloat time, char *options){
+
+  mesh2D *mesh = bns->mesh; 
 
 
 #if 1
@@ -14,12 +16,12 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
       if(mesh->probeN){
 
       char fname[BUFSIZ];
-      sprintf(fname, "ProbeData_%d_%.f_%05d_%04d_%02d.dat", mesh->N, mesh->Re, mesh->Nelements, rank, mesh->Ntscale);
+      sprintf(fname, "ProbeData_%d_%.f_%05d_%04d_%02d.dat", mesh->N, bns->Re, mesh->Nelements, rank, bns->Ntscale);
 
       FILE *fp; 
       fp = fopen(fname, "a");      
       
-      fprintf(fp, "%2d %.4e %4e ", mesh->N, mesh->Re, time); 
+      fprintf(fp, "%2d %.4e %4e ", mesh->N, bns->Re, time); 
 
       for(int p=0; p<mesh->probeN; p++){
          int pid  = mesh->probeIds[p];
@@ -28,10 +30,10 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
          dfloat su = 0.0; 
          dfloat sv = 0.0; 
          for(int n=0; n<mesh->Np; n++){
-          dfloat rho  = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0];
-          dfloat um   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1]*mesh->sqrtRT/rho;
-          dfloat vm   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 2]*mesh->sqrtRT/rho;
-          // srho        += mesh->probeI[p*mesh->Np+n]*rho*mesh->RT;
+          dfloat rho  = bns->q[bns->Nfields*(n + e*mesh->Np) + 0];
+          dfloat um   = bns->q[bns->Nfields*(n + e*mesh->Np) + 1]*bns->sqrtRT/rho;
+          dfloat vm   = bns->q[bns->Nfields*(n + e*mesh->Np) + 2]*bns->sqrtRT/rho;
+          // srho        += mesh->probeI[p*mesh->Np+n]*rho*bns->RT;
           srho        += mesh->probeI[p*mesh->Np+n]*rho;
           su          += mesh->probeI[p*mesh->Np+n]*um;
           sv          += mesh->probeI[p*mesh->Np+n]*vm;
@@ -126,9 +128,9 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
         dfloat su = 0.0; 
         dfloat sv = 0.0; 
         for(int n=0; n<mesh->Np; n++){
-          dfloat rho  = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 0];
-          dfloat um   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 1]*mesh->sqrtRT/rho;
-          dfloat vm   = mesh->q[mesh->Nfields*(n + e*mesh->Np) + 2]*mesh->sqrtRT/rho;
+          dfloat rho  = bns->q[bns->Nfields*(n + e*mesh->Np) + 0];
+          dfloat um   = bns->q[bns->Nfields*(n + e*mesh->Np) + 1]*bns->sqrtRT/rho;
+          dfloat vm   = bns->q[bns->Nfields*(n + e*mesh->Np) + 2]*bns->sqrtRT/rho;
           //
           sr += mesh->probeI[p*mesh->Np+n]*rho;
           su += mesh->probeI[p*mesh->Np+n]*um;
@@ -181,8 +183,8 @@ void boltzmannError2D(mesh2D *mesh, dfloat time, char *options){
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
 
-        maxQ1 = mymax(maxQ1, fabs(mesh->q[id*mesh->Nfields + fid]));
-        minQ1 = mymin(minQ1, fabs(mesh->q[id*mesh->Nfields + fid]));
+        maxQ1 = mymax(maxQ1, fabs(bns->q[id*bns->Nfields + fid]));
+        minQ1 = mymin(minQ1, fabs(bns->q[id*bns->Nfields + fid]));
       }
     }
 
@@ -210,8 +212,8 @@ else{
     dfloat maxerr = 0, maxQ1 = 0, minQ1 = 1e9;
     int fid = 1; 
 
-    dfloat Uref        =  mesh->Ma*mesh->sqrtRT;
-    dfloat nu = mesh->sqrtRT*mesh->sqrtRT/mesh->tauInv;
+    dfloat Uref        =  bns->Ma*bns->sqrtRT;
+    dfloat nu = bns->sqrtRT*bns->sqrtRT/bns->tauInv;
 
     for(int e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->Np;++n){
@@ -220,15 +222,15 @@ else{
         dfloat x = mesh->x[id];
         dfloat y = mesh->y[id];
         // U = sqrt(RT)*Q2/Q1; 
-       dfloat u   = mesh->sqrtRT*mesh->q[id*mesh->Nfields + 1]/mesh->q[id*mesh->Nfields+0];
+       dfloat u   = bns->sqrtRT*bns->q[id*bns->Nfields + 1]/bns->q[id*bns->Nfields+0];
  
         dfloat uex = y ; 
         for(int k=1; k<=10; k++)
         {
 
          dfloat lamda = k*M_PI;
-         // dfloat coef = -mesh->RT*mesh->tauInv/2. + sqrt(pow((mesh->RT*mesh->tauInv),2) /4.0 - (lamda*lamda*mesh->RT*mesh->RT));
-         dfloat coef = -mesh->tauInv/2. + mesh->tauInv/2* sqrt(1.- 4.*pow(1./ mesh->tauInv, 2)* mesh->RT* lamda*lamda);
+         // dfloat coef = -bns->RT*bns->tauInv/2. + sqrt(pow((bns->RT*bns->tauInv),2) /4.0 - (lamda*lamda*bns->RT*bns->RT));
+         dfloat coef = -bns->tauInv/2. + bns->tauInv/2* sqrt(1.- 4.*pow(1./ bns->tauInv, 2)* bns->RT* lamda*lamda);
          uex += 2.*pow(-1,k)/(lamda)*exp(coef*time)*sin(lamda*y); //
          
          // uex += 2.*pow(-1,k)/(lamda)*exp(-nu*lamda*lamda*time)*sin(lamda*y); // !!!!!
@@ -236,10 +238,10 @@ else{
 
         maxerr = mymax(maxerr, fabs(u-uex));
 
-        mesh->q[id*mesh->Nfields+2] = fabs(u-uex);
+        bns->q[id*bns->Nfields+2] = fabs(u-uex);
 
-        maxQ1 = mymax(maxQ1, fabs(mesh->q[id*mesh->Nfields]));
-        minQ1 = mymin(minQ1, fabs(mesh->q[id*mesh->Nfields]));
+        maxQ1 = mymax(maxQ1, fabs(bns->q[id*bns->Nfields]));
+        minQ1 = mymin(minQ1, fabs(bns->q[id*bns->Nfields]));
         
       }
     }
@@ -263,7 +265,7 @@ else{
       #if 1
 
     int fld = 2;
-    int tstep = (time-mesh->startTime)/mesh->dt;
+    int tstep = (time-bns->startTime)/bns->dt;
     char errname[BUFSIZ];
     sprintf(errname, "LSERK_err_long_%04d_%04d.vtu", rank, (tstep/mesh->errorStep));
     meshPlotVTU2D(mesh, errname,fld);
@@ -284,10 +286,10 @@ else{
       sprintf(fname, "boltzmannTemporalError.dat");
       FILE *fp; 
       fp = fopen(fname, "a");
-      fprintf(fp, "%2d %2d %.8e %.8e %.8e %.8e %.8e\n", mesh->N, tmethod, mesh->dt, time,  globalMinQ1, globalMaxQ1, globalMaxErr); 
+      fprintf(fp, "%2d %2d %.8e %.8e %.8e %.8e %.8e\n", mesh->N, tmethod, bns->dt, time,  globalMinQ1, globalMaxQ1, globalMaxErr); 
       fclose(fp); 
 
-      mesh->maxErrorBoltzmann = globalMaxErr; 
+      bns->maxError = globalMaxErr; 
       #endif
     }
 

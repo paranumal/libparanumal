@@ -1,21 +1,13 @@
 #include "boltzmann2D.h"
 
 // complete a time step using LSERK4
-void boltzmannMRABStep2D(mesh2D *mesh, int tstep, int haloBytes,
+void boltzmannMRABStep2D(bns_t *bns, int tstep, int haloBytes,
                          dfloat * sendBuffer, dfloat *recvBuffer, char * options){
 
 
-
-
-for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
-
-  // intermediate stage time
-  dfloat t = mesh->dt*(tstep*pow(2,mesh->MRABNlevels-1) + Ntick);
-
-  dfloat a1, a2, a3;
-  dfloat b1, b2, b3;
-
-  if (tstep==0){
+dfloat a1, a2, a3;
+dfloat b1, b2, b3;
+if (tstep==0){
     a1 = 1.0;
     a2 = 0.0;
     a3 = 0.0;
@@ -38,6 +30,18 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
     b3 =   2./24.;
   }
 
+mesh2D *mesh = bns->mesh; 
+
+
+for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
+
+  // intermediate stage time
+  dfloat t = bns->dt*(tstep*pow(2,mesh->MRABNlevels-1) + Ntick);
+
+  
+
+  
+
   // COMPUTE RAMP FUNCTION 
   dfloat ramp, drampdt;
   boltzmannRampFunction2D(t, &ramp, &drampdt);
@@ -52,11 +56,11 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       mesh->device.setStream(dataStream);
     #endif
 
-      int Nentries = mesh->Nfp*mesh->Nfields*mesh->Nfaces;
+      int Nentries = mesh->Nfp*bns->Nfields*mesh->Nfaces;
       mesh->haloExtractKernel(mesh->totalHaloPairs,
                 Nentries,
                 mesh->o_haloElementList,
-                mesh->o_fQM,
+                bns->o_fQM,
                 mesh->o_haloBuffer);
 
       // copy extracted halo to HOST
@@ -73,41 +77,41 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
   for (int l=0;l<lev;l++) {
     if (mesh->MRABNelements[l]){
       occaTimerTic(mesh->device, "NonPmlVolumeKernel");    
-      mesh->volumeKernel(mesh->MRABNelements[l],
+      bns->volumeKernel(mesh->MRABNelements[l],
                         mesh->o_MRABelementIds[l],
                         ramp, 
                         drampdt,
-                        mesh->Nrhs,
+                        bns->Nrhs,
                         mesh->MRABshiftIndex[l],
                         mesh->o_vgeo,
                         mesh->o_DrT,
                         mesh->o_DsT,
-                        mesh->o_q,
-                        mesh->o_rhsq);
+                        bns->o_q,
+                        bns->o_rhsq);
       occaTimerToc(mesh->device, "NonPmlVolumeKernel");    
 
     }
 
     if (mesh->MRABpmlNelements[l]){
       occaTimerTic(mesh->device, "PmlVolumeKernel");    
-      mesh->pmlVolumeKernel(mesh->MRABpmlNelements[l],
-                        mesh->o_MRABpmlElementIds[l],
-                        mesh->o_MRABpmlIds[l],
-                        ramp, 
-                        drampdt,
-                        mesh->Nrhs,
-                        mesh->MRABshiftIndex[l],
-                        mesh->o_vgeo,
-                        mesh->o_pmlSigmaX,
-                        mesh->o_pmlSigmaY,
-                        mesh->o_DrT,
-                        mesh->o_DsT,
-                        mesh->o_q,
-                        mesh->o_pmlqx,
-                        mesh->o_pmlqy,
-                        mesh->o_rhsq,
-                        mesh->o_pmlrhsqx,
-                        mesh->o_pmlrhsqy);
+      bns->pmlVolumeKernel(mesh->MRABpmlNelements[l],
+                          mesh->o_MRABpmlElementIds[l],
+                          mesh->o_MRABpmlIds[l],
+                          ramp, 
+                          drampdt,
+                          bns->Nrhs,
+                          mesh->MRABshiftIndex[l],
+                          mesh->o_vgeo,
+                          bns->o_pmlSigmaX,
+                          bns->o_pmlSigmaY,
+                          mesh->o_DrT,
+                          mesh->o_DsT,
+                          bns->o_q,
+                          bns->o_pmlqx,
+                          bns->o_pmlqy,
+                          bns->o_rhsq,
+                          bns->o_pmlrhsqx,
+                          bns->o_pmlrhsqy);
       occaTimerToc(mesh->device, "PmlVolumeKernel");    
 
     }
@@ -122,34 +126,34 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
     for (int l=0;l<lev;l++) {
       if (mesh->MRABNelements[l]){
         occaTimerTic(mesh->device,"NonPmlRelaxationKernel");
-        mesh->relaxationKernel(mesh->MRABNelements[l],
+        bns->relaxationKernel(mesh->MRABNelements[l],
                       mesh->o_MRABelementIds[l],
-                      mesh->Nrhs,
+                      bns->Nrhs,
                       mesh->MRABshiftIndex[l],
                       mesh->o_cubInterpT,
                       mesh->o_cubProjectT,
-                      mesh->o_q,
-                      mesh->o_rhsq);
+                      bns->o_q,
+                      bns->o_rhsq);
         occaTimerToc(mesh->device,"NonPmlRelaxationKernel");
       }  
 
       if (mesh->MRABpmlNelements[l]){
       occaTimerTic(mesh->device,"PmlRelaxationKernel");
-      mesh->pmlRelaxationKernel(mesh->MRABpmlNelements[l],
+      bns->pmlRelaxationKernel(mesh->MRABpmlNelements[l],
                       mesh->o_MRABpmlElementIds[l],
                       mesh->o_MRABpmlIds[l],
-                      mesh->Nrhs,
+                      bns->Nrhs,
                       mesh->MRABshiftIndex[l],
                       mesh->o_cubInterpT,
                       mesh->o_cubProjectT,
-                      mesh->o_pmlSigmaX,
-                      mesh->o_pmlSigmaY,
-                      mesh->o_q,
-                      mesh->o_pmlqx,
-                      mesh->o_pmlqy,
-                      mesh->o_rhsq,
-                      mesh->o_pmlrhsqx,
-                      mesh->o_pmlrhsqy);
+                      bns->o_pmlSigmaX,
+                      bns->o_pmlSigmaY,
+                      bns->o_q,
+                      bns->o_pmlqx,
+                      bns->o_pmlqy,
+                      bns->o_rhsq,
+                      bns->o_pmlrhsqx,
+                      bns->o_pmlrhsqy);
       occaTimerToc(mesh->device,"PmlRelaxationKernel");
       }
     }
@@ -167,7 +171,7 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
     // start halo exchange
     meshHaloExchangeStart(mesh,
-          mesh->Nfields*mesh->Nfp*mesh->Nfaces*sizeof(dfloat),
+          bns->Nfields*mesh->Nfp*mesh->Nfaces*sizeof(dfloat),
           sendBuffer,
           recvBuffer);
 
@@ -175,8 +179,8 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
     meshHaloExchangeFinish(mesh);
 
     // copy halo data to DEVICE
-    size_t offset = mesh->Nfaces*mesh->Nfp*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    mesh->o_fQM.asyncCopyFrom(recvBuffer, haloBytes, offset);
+    size_t offset = mesh->Nfaces*mesh->Nfp*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+    bns->o_fQM.asyncCopyFrom(recvBuffer, haloBytes, offset);
     mesh->device.finish();        
 
     #if ASYNC 
@@ -191,11 +195,11 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
     if (mesh->MRABNelements[l]){
       occaTimerTic(mesh->device,"NonPmlSurfaceKernel");
-      mesh->surfaceKernel(mesh->MRABNelements[l],
+      bns->surfaceKernel(mesh->MRABNelements[l],
                           mesh->o_MRABelementIds[l],
                           t,
                           ramp,
-                          mesh->Nrhs,
+                          bns->Nrhs,
                           mesh->MRABshiftIndex[l],
                           mesh->o_sgeo,
                           mesh->o_LIFTT,
@@ -204,21 +208,21 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                           mesh->o_EToB,
                           mesh->o_x,
                           mesh->o_y,
-                          mesh->o_q,
-                          mesh->o_fQM,
-                          mesh->o_rhsq);
+                          bns->o_q,
+                          bns->o_fQM,
+                          bns->o_rhsq);
       occaTimerToc(mesh->device,"NonPmlSurfaceKernel");
     }
 
     if (mesh->MRABpmlNelements[l]){
       occaTimerTic(mesh->device,"PmlSurfaceKernel");
 
-      mesh->pmlSurfaceKernel(mesh->MRABpmlNelements[l],
+      bns->pmlSurfaceKernel(mesh->MRABpmlNelements[l],
                           mesh->o_MRABpmlElementIds[l],
                           mesh->o_MRABpmlIds[l],
                           t,
                           ramp,
-                          mesh->Nrhs,
+                          bns->Nrhs,
                           mesh->MRABshiftIndex[l],
                           mesh->o_sgeo,
                           mesh->o_LIFTT,
@@ -227,11 +231,11 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
                           mesh->o_EToB,
                           mesh->o_x,
                           mesh->o_y,
-                          mesh->o_q,
-                          mesh->o_fQM,
-                          mesh->o_rhsq,
-                          mesh->o_pmlrhsqx,
-                          mesh->o_pmlrhsqy);
+                          bns->o_q,
+                          bns->o_fQM,
+                          bns->o_rhsq,
+                          bns->o_pmlrhsqx,
+                          bns->o_pmlrhsqy);
 
       occaTimerToc(mesh->device,"PmlSurfaceKernel");
     }
@@ -251,34 +255,34 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
     if (mesh->MRABNelements[l]){
       occaTimerTic(mesh->device,"NonPmlUpdateKernel");
-      mesh->updateKernel(mesh->MRABNelements[l],
+      bns->updateKernel(mesh->MRABNelements[l],
                         mesh->o_MRABelementIds[l],
-                        mesh->dt*pow(2,l),
+                        bns->dt*pow(2,l),
                         a1,a2,a3,
                         mesh->MRABshiftIndex[l],
                         mesh->o_vmapM,
-                        mesh->o_rhsq,
-                        mesh->o_fQM,
-                        mesh->o_q);
+                        bns->o_rhsq,
+                        bns->o_fQM,
+                        bns->o_q);
       occaTimerToc(mesh->device,"NonPmlUpdateKernel");
     }
 
     if (mesh->MRABpmlNelements[l]){
       occaTimerTic(mesh->device,"PmlUpdateKernel");
-      mesh->pmlUpdateKernel(mesh->MRABpmlNelements[l],
+      bns->pmlUpdateKernel(mesh->MRABpmlNelements[l],
                             mesh->o_MRABpmlElementIds[l],
                             mesh->o_MRABpmlIds[l],
-                            mesh->dt*pow(2,l),
+                            bns->dt*pow(2,l),
                             a1,a2,a3,
                             mesh->MRABshiftIndex[l],
                             mesh->o_vmapM,
-                            mesh->o_rhsq,
-                            mesh->o_pmlrhsqx,
-                            mesh->o_pmlrhsqy,
-                            mesh->o_q,
-                            mesh->o_pmlqx,
-                            mesh->o_pmlqy,
-                            mesh->o_fQM);
+                            bns->o_rhsq,
+                            bns->o_pmlrhsqx,
+                            bns->o_pmlrhsqy,
+                            bns->o_q,
+                            bns->o_pmlqx,
+                            bns->o_pmlqy,
+                            bns->o_fQM);
       occaTimerToc(mesh->device,"PmlUpdateKernel");
     }
 
@@ -293,34 +297,34 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
     if (mesh->MRABNhaloElements[lev]){
       occaTimerTic(mesh->device,"NonPmlTraceUpdateKernel");
-      mesh->traceUpdateKernel(mesh->MRABNhaloElements[lev],
+      bns->traceUpdateKernel(mesh->MRABNhaloElements[lev],
                               mesh->o_MRABhaloIds[lev],
-                              mesh->dt*pow(2,lev-1),
+                              bns->dt*pow(2,lev-1),
                               b1,b2,b3,
                               mesh->MRABshiftIndex[lev],
                               mesh->o_vmapM,
-                              mesh->o_rhsq,
-                              mesh->o_fQM,
-                              mesh->o_q);
+                              bns->o_rhsq,
+                              bns->o_fQM,
+                              bns->o_q);
        occaTimerToc(mesh->device,"NonPmlTraceUpdateKernel");
     }
 
     if (mesh->MRABpmlNhaloElements[lev]){
       occaTimerTic(mesh->device,"PmlTraceUpdateKernel");
-      mesh->pmlTraceUpdateKernel(mesh->MRABpmlNhaloElements[lev],
+      bns->pmlTraceUpdateKernel(mesh->MRABpmlNhaloElements[lev],
                                 mesh->o_MRABpmlHaloElementIds[lev],
                                 mesh->o_MRABpmlHaloIds[lev],
-                                mesh->dt*pow(2,lev-1),
+                                bns->dt*pow(2,lev-1),
                                 b1,b2,b3,
                                 mesh->MRABshiftIndex[lev],
                                 mesh->o_vmapM,
-                                mesh->o_rhsq,
-                                mesh->o_pmlrhsqx,
-                                mesh->o_pmlrhsqy,
-                                mesh->o_q,
-                                mesh->o_pmlqx,
-                                mesh->o_pmlqy,
-                                mesh->o_fQM);
+                                bns->o_rhsq,
+                                bns->o_pmlrhsqx,
+                                bns->o_pmlrhsqy,
+                                bns->o_q,
+                                bns->o_pmlqx,
+                                bns->o_pmlqy,
+                                bns->o_fQM);
        occaTimerToc(mesh->device,"PmlTraceUpdateKernel");
     }
 

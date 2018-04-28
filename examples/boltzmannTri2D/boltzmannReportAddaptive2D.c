@@ -1,15 +1,8 @@
 #include "boltzmann2D.h"
 
-void boltzmannReport2D(bns_t *bns,  int tstep, char *options){
+void boltzmannReportAddaptive2D(bns_t *bns, dfloat t, char *options){
 
   mesh2D *mesh = bns->mesh; 
-  
-  dfloat t = 0.f; 
-
-  if(strstr(options,"MRAB") || strstr(options, "MRSAAB"))
-   t = bns->startTime + bns->dt*tstep*pow(2,(mesh->MRABNlevels-1));
-  else
-   t = bns->startTime + tstep*bns->dt;
   
   // copy data back to host
   bns->o_q.copyTo(bns->q);
@@ -50,7 +43,7 @@ void boltzmannReport2D(bns_t *bns,  int tstep, char *options){
       
     char fname[BUFSIZ];
     // sprintf(fname, "/scratch/boltzmannInclined/foo_pml_%.0f_%04d_%04d.vtu", bns->Re, rank, tstep/bns->errorStep);
-    sprintf(fname, "foo_pml_%.0f_%04d_%04d.vtu", bns->Re, rank, tstep/bns->errorStep);
+    sprintf(fname, "foo_pml_%.0f_%04d_%04d.vtu", bns->Re, rank, bns->frame++);
     boltzmannPlotVTU2D(bns, fname);
    }
 
@@ -74,7 +67,7 @@ void boltzmannReport2D(bns_t *bns,  int tstep, char *options){
     // output field files
     // int fld = 1;
     char fname[BUFSIZ];
-    sprintf(fname, "foo2_%04d_%04d.vtu",rank, tstep/bns->errorStep);
+    sprintf(fname, "foo2_%04d_%04d.vtu",rank, bns->frame++);
     boltzmannPlotVTU2D(bns, fname);
   }
 
@@ -82,7 +75,7 @@ void boltzmannReport2D(bns_t *bns,  int tstep, char *options){
   if(strstr(options, "TEC")){ 
     char fname[BUFSIZ];
     sprintf(fname, "foo_%04d.vtu",rank);
-    boltzmannPlotTEC2D(bns, fname, tstep/bns->errorStep);
+    boltzmannPlotTEC2D(bns, fname, bns->frame++);
   }    
   }
   
