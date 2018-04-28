@@ -439,7 +439,7 @@ kernel void boltzmannDOPRIRKPmlUpdate2D(const int pmlNelements,
           dfloat r_rhsqx = rhsqx[pid + fld];
           dfloat r_rhsqy = rhsqy[pid + fld];
 
-          if (rk==6) { //last stage
+         if (rk==(p_NrkStages-1)) { //last stage
 
             dfloat r_q  = q [id  +fld];
             dfloat r_qx = qx[pid +fld];

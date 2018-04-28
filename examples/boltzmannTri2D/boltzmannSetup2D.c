@@ -95,8 +95,9 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
 
   // SET STABLE TIME STEP SIZE
   dfloat cfl = 0.25; 
-  if(strstr(options,"LSERK") || strstr(options,"SARK") || strstr(options,"LSIMEX") || 
-     strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") )
+  if(strstr(options,"LSERK")  || strstr(options,"SARK")   || strstr(options,"LSIMEX") || 
+     strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") || 
+     strstr(options,"IMEXRK") )
     cfl          = 0.75; 
 
 
@@ -132,7 +133,8 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
     if(strstr(options,"MRAB") || strstr(options,"LSERK") || strstr(options,"SRAB") || strstr(options,"DOPRI5") )
       dtest  = mymin(dtex,dtim); // For fully expliciy schemes
     else if(strstr(options,"MRSAAB") || strstr(options,"SARK")   || strstr(options,"SAAB") || 
-            strstr(options,"LSIMEX") || strstr(options,"XDOPRI") || strstr(options,"SAADRK"))
+            strstr(options,"LSIMEX") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") ||
+            strstr(options,"IMEXRK"))
       dtest  = dtex; // For semi analytic  and IMEX
     else
       printf("time discretization method should be choosen\n");
@@ -206,7 +208,11 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
 
 
   else if (strstr(options,"DOPRI5") || strstr(options,"XDOPRI")){ // LSERK, SARK etc.
-    bns->Nrhs = 1; 
+    bns->Nrhs = 1;
+
+    bns->ATOL = 1E-5; 
+    bns->RTOL = 1E-4; 
+     bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I    
 
     int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
     bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
@@ -230,6 +236,10 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
   else if (strstr(options,"SAADRK")){ 
     bns->Nrhs = 1; 
 
+    bns->ATOL = 1E-5; 
+    bns->RTOL = 1E-4; 
+     bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I   
+
     int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
     bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
 
@@ -247,6 +257,41 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
     bns->rkerr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->errtmp  =  (dfloat*) calloc(bns->Nblock, sizeof(dfloat)); 
   }
+  else if (strstr(options,"IMEXRK")){
+    bns->Nrhs = 1;
+    bns->ATOL = 1E-7; 
+    bns->RTOL = 1E-5;
+    bns->emethod = 0; // 0 PID / 1 PI / 2 I 
+    bns->rkp     = 4;  
+
+    int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
+    bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
+
+    int localElements =  mesh->Nelements;
+    MPI_Allreduce(&localElements, &(bns->totalElements), 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+    // compute samples of q at interpolation nodes
+    bns->q      = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->rhsqim = (dfloat*) calloc(mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->rhsqex = (dfloat*) calloc(mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+    //
+    bns->NrkStages = 8; // 6 for ARK34 8 for ARK 54
+    bns->rkp       = 4; // order of embedded scheme 
+
+    bns->rkq      = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
+    
+    bns->rkrhsqim = (dfloat*) calloc(bns->NrkStages*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->rkrhsqex = (dfloat*) calloc(bns->NrkStages*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+
+    bns->rkerr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->errtmp   = (dfloat*) calloc(bns->Nblock, sizeof(dfloat)); 
+
+    bns->ehist      = (dfloat*) calloc(3, sizeof(dfloat));
+    bns->dthist     = (dfloat*) calloc(3, sizeof(dfloat));
+    dfloat ehist[3] = {1.0, 1.0, 1.0};
+
+    memcpy(bns->ehist, ehist, 3*sizeof(dfloat)); 
+  }
 
 
 
@@ -259,6 +304,7 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
       dfloat t = 0;
       dfloat x = mesh->x[n + mesh->Np*e];
       dfloat y = mesh->y[n + mesh->Np*e];
+
 #if 0
       // Couette Flow 
       dfloat uex = y ; 
@@ -480,6 +526,48 @@ if(strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADR
 
 }
 
+
+if(strstr(options,"IMEXRK")){
+  
+  int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
+
+  bns->o_q =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
+  
+  bns->o_rhsqex = 
+    mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsqex); 
+
+   bns->o_rhsqim = 
+    mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsqim);
+  
+  
+  bns->o_rkq =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
+  
+  bns->o_rkrhsqex =
+    mesh->device.malloc(bns->NrkStages*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rkrhsqex);
+
+  bns->o_rkrhsqim =
+    mesh->device.malloc(bns->NrkStages*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rkrhsqim);
+
+  bns->o_rkerr =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkerr);
+  
+  bns->o_errtmp = mesh->device.malloc(bns->Nblock*sizeof(dfloat), bns->errtmp);
+
+  bns->o_rkAex = mesh->device.malloc(bns->NrkStages*bns->NrkStages*sizeof(dfloat), bns->rkAex);
+  bns->o_rkAim = mesh->device.malloc(bns->NrkStages*bns->NrkStages*sizeof(dfloat), bns->rkAim);
+
+  bns->o_rkEex = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), bns->rkEex);
+  bns->o_rkEim = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), bns->rkEim);
+
+  bns->o_rkBex = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), bns->rkBex);
+  bns->o_rkBim = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), bns->rkBim);
+
+
+
+}
+
 if(strstr(options, "SARK")){
   bns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
@@ -557,7 +645,7 @@ else if(strstr(options, "LSIMEX")){
 
 
  // Volume and Relaxation Kernels
-  if(strstr(options, "CUBATURE") && !strstr(options,"LSIMEX")){ 
+  if(strstr(options, "CUBATURE") && !(strstr(options,"LSIMEX") || strstr(options,"IMEXRK"))){ 
           
     printf("Compiling volume kernel for cubature integration\n");
       bns->volumeKernel =
@@ -608,7 +696,7 @@ else if(strstr(options, "LSIMEX")){
 
 
 
-  if(strstr(options, "COLLOCATION")  && !strstr(options,"LSIMEX")){ 
+  if(strstr(options, "COLLOCATION")  && !(strstr(options,"LSIMEX") || strstr(options,"IMEXRK"))){ 
 
      if(strstr(options, "MRAB") || strstr(options, "LSERK") || strstr(options,"SRAB") || strstr(options,"DOPRI5")){ 
 
@@ -1021,6 +1109,78 @@ else if(strstr(options, "LSIMEX")){
        "boltzmannLSIMEXPmlUpdate2D",
        kernelInfo);
   }
+
+
+  if(strstr(options, "IMEXRK")){
+
+    printf("compiling IMEXRK Update kernels\n");
+      bns->updateStageKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
+        "boltzmannIMEXRKStageUpdate2D",
+          kernelInfo); 
+
+    printf("compiling IMEXRK Pml Update kernels\n");
+     bns->pmlUpdateStageKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
+        "boltzmannIMEXRKPmlStageUpdate2D",
+          kernelInfo); 
+
+
+     printf("compiling IMEXRK Implicit Solve\n");
+     bns->implicitSolveKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
+        "boltzmannIMEXRKImplicitSolveCub2D",
+          kernelInfo); 
+
+
+    printf("Compiling volume kernel for cubature integration\n");
+      bns->volumeKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+         "boltzmannVolumeCub2D",
+          kernelInfo);
+
+    printf("Compiling PML volume kernel for cubature integration\n");
+      bns->pmlVolumeKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
+        "boltzmannPmlVolumeCub2D",
+          kernelInfo);
+
+    printf("Compiling IMEXRK update kernel\n");
+     bns->updateKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
+        "boltzmannIMEXRKUpdate2D",
+          kernelInfo); 
+    
+    printf("Compiling IMEXRK Pml update kernel\n");
+       bns->pmlUpdateKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
+        "boltzmannIMEXRKPmlUpdate2D",
+          kernelInfo); 
+
+
+    printf("Compiling IMEXRK Pml damping kernel\n");
+       bns->pmlUpdateKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
+        "boltzmannIMEXRKPmlUpdate2D",
+          kernelInfo); 
+
+
+     printf("Compiling IMEXRK error kernel\n");
+       bns->pmlDampingKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
+        "boltzmannIMEXRKPmlDampingCub2D",
+          kernelInfo); 
+
+
+       bns->errorEstimateKernel =
+       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
+        "boltzmannErrorEstimate2D",
+          kernelInfo); 
+
+  }
+
+
+
 
       
 

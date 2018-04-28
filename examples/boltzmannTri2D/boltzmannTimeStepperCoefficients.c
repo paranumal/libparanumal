@@ -159,6 +159,358 @@ printf("Relying the fact that  LSERK set on mesh structure\n");
 
 }
 
+
+if(strstr(options,"IMEXRK")){
+
+	if(bns->NrkStages==6){ // Kennedy-Carpanter RK34
+
+		dfloat rkCex[bns->NrkStages] ={0.0, 1.0/2.0, 83.0/250.0, 31.0/50.0, 17.0/20.0, 1.0};
+		dfloat rkCim[bns->NrkStages] ={0.0, 1.0/2.0, 83.0/250.0, 31.0/50.0, 17.0/20.0, 1.0};
+       
+        // First fill the explicit part; 
+        dfloat a11 = 0.0;
+
+        dfloat a21 = 1.0/2.0; 
+        dfloat a22 = 0.0; 
+
+        dfloat a31 = 13861./62500.; 
+        dfloat a32 = 6889./62500.; 
+        dfloat a33 = 0.0; 
+        
+        dfloat a41 = -116923316275./2393684061468.; 
+        dfloat a42 = -2731218467317./15368042101831.; 
+        dfloat a43 = 9408046702089./11113171139209.; 
+        dfloat a44 = 0.0; 
+
+        dfloat a51 = -451086348788./2902428689909.; 
+        dfloat a52 = -2682348792572./7519795681897.; 
+        dfloat a53 = 12662868775082./11960479115383.; 
+        dfloat a54 = 3355817975965./11060851509271.; 
+        dfloat a55 = 0.0; 
+
+        dfloat a61 = 647845179188./3216320057751.; 
+        dfloat a62 = 73281519250./8382639484533.; 
+        dfloat a63 = 552539513391./3454668386233.; 
+        dfloat a64 = 3354512671639./8306763924573.;
+        dfloat a65 = 4040./17871.; 
+        dfloat a66 = 0.0; 
+
+
+        dfloat b1  = 82889/524892;
+        dfloat b2  = 0.0;
+        dfloat b3  = 15625./83664.;
+        dfloat b4  = 69875./102672.;
+        dfloat b5  = -2260./8211.;
+        dfloat b6  = 1.0/4.0;
+
+        dfloat be1 = 4586570599./29645900160.;
+        dfloat be2 = 0.0;
+        dfloat be3 = 178811875.0/945068544.0;
+        dfloat be4 = 814220225./1159782912.;
+        dfloat be5 = -3700637./11593932.;
+        dfloat be6 = 61727./225920.;
+
+
+
+				dfloat rkAex[bns->NrkStages*bns->NrkStages] = {a11 ,  0., 0.,  0.,  0.,  0., 
+		                                               a21,  a22, 0.,  0.,  0.,  0., 
+		                                               a31,  a32, a33, 0.,  0.,  0.,
+		                                               a41,  a42, a43, a44, 0.,  0., 
+		                                               a51,  a52, a53, a54, a55, 0., 
+		                                               a61,  a62, a63, a64, a65, a66 };
+
+				dfloat rkBex[bns->NrkStages] = {b1, b2, b3, b4, b5, b6};
+
+				dfloat rkEex[bns->NrkStages] = {b1-be1, b2-be2, b3-be3, b4-be4, b5-be5, b6-be6};
+
+
+
+		// First fill the explicit part; 
+        a11 = 0.0;
+
+        a21 = 1.0/4.0; 
+        a22 = 1.0/4.0; 
+        
+        a31 = 8611./62500.; 
+        a32 = -1743./31250.; 
+        a33 = 1.0/4.0; 
+        
+        a41 = 5012029./34652500.; 
+        a42 = -654441./2922500.; 
+        a43 = 174375./388108.; 
+        a44 = 1.0/4.0;
+        
+        a51 = 15267082809./155376265600.; 
+        a52 = -71443401./120774400.; 
+        a53 = 730878875./902184768.; 
+        a54 = 2285395./8070912.; 
+        a55 = 1.0/4.0; 
+        
+        a61 = 82889./524892.; 
+        a62 = 0.0; 
+        a63 = 15625./83664.; 
+        a64 = 69875./102672.;
+        a65 = -2260./8211; 
+        a66 = 1.0/4.0; 
+        
+        b1  = a61;
+        b2  = a62;
+        b3  = a63;
+        b4  = a64;
+        b5  = a65;
+        b6  = a66;
+        
+        be1 = 4586570599./29645900160.0;
+        be2 = 0.0;
+        be3 = 178811875./945068544.;
+        be4 = 814220225./1159782912.;
+        be5 = -3700637./11593932.;
+        be6 = 61727./225920.0;
+
+
+
+        dfloat rkAim[bns->NrkStages*bns->NrkStages] = {a11 ,  0., 0.,  0.,  0.,  0., 
+		                                               a21,  a22, 0.,  0.,  0.,  0., 
+		                                               a31,  a32, a33, 0.,  0.,  0.,
+		                                               a41,  a42, a43, a44, 0.,  0., 
+		                                               a51,  a52, a53, a54, a55, 0., 
+		                                               a61,  a62, a63, a64, a65, a66 };
+
+		dfloat rkBim[bns->NrkStages] = {b1, b2, b3, b4, b5, b6};
+
+		dfloat rkEim[bns->NrkStages] = {b1-be1, b2-be2, b3-be3, b4-be4, b5-be5, b6-be6};
+
+
+		bns->rkCex    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+		bns->rkBex    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+		bns->rkAex    = (dfloat*) calloc(bns->NrkStages*bns->NrkStages, sizeof(dfloat));
+		bns->rkEex    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+
+		bns->rkCim    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+		bns->rkBim    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+		bns->rkAim    = (dfloat*) calloc(bns->NrkStages*bns->NrkStages, sizeof(dfloat));
+		bns->rkEim    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+
+
+
+		memcpy(bns->rkCex, rkCex, bns->NrkStages*sizeof(dfloat)); 
+		memcpy(bns->rkBex, rkBex, bns->NrkStages*sizeof(dfloat)); 
+		memcpy(bns->rkAex, rkAex, bns->NrkStages*bns->NrkStages*sizeof(dfloat));
+		memcpy(bns->rkEex, rkEex, bns->NrkStages*sizeof(dfloat));
+
+
+		memcpy(bns->rkCim, rkCim, bns->NrkStages*sizeof(dfloat)); 
+		memcpy(bns->rkBim, rkBim, bns->NrkStages*sizeof(dfloat)); 
+		memcpy(bns->rkAim, rkAim, bns->NrkStages*bns->NrkStages*sizeof(dfloat));
+		memcpy(bns->rkEim, rkEim, bns->NrkStages*sizeof(dfloat));
+
+	}
+
+
+
+
+ 	else if(bns->NrkStages==8){
+
+ 		printf("setting order 8 \n");
+		dfloat c0 = 0.0; 	
+		dfloat c1 = 41.0/100.0;
+		dfloat c2 = 2935347310677.0/11292855782101.0;
+		dfloat c3 = 1426016391358.0/7196633302097.0;
+		dfloat c4 = 92.0/100.0;
+		dfloat c5 = 24.0/100.0;
+		dfloat c6 = 3.0/5.0;
+		dfloat c7 = 1.0; 
+
+		dfloat rkCex[bns->NrkStages] ={c0, c1, c2, c3, c4, c5, c6, c7};
+		dfloat rkCim[bns->NrkStages] ={c0, c1, c2, c3, c4, c5, c6, c7};
+       
+		// First fill the explicit part; 
+		dfloat a00 = 0.0; 
+
+		dfloat a10 = 41.0/100.0;
+		dfloat a11 = 0.0;
+
+		dfloat a20 = 367902744464.0  /2072280473677.0;
+		dfloat a21 = 677623207551.0  /8224143866563.0;
+		dfloat a22 = 0.0;
+
+		dfloat a30 = 1268023523408.0 /10340822734521.0;
+		dfloat a31 = 0.0;
+		dfloat a32 = 1029933939417.0 /13636558850479.0;
+		dfloat a33 = 0.0;
+
+		dfloat a40 = 14463281900351.0/6315353703477.0;
+		dfloat a41 = 0.0;
+		dfloat a42 = 66114435211212.0/5879490589093.0;
+		dfloat a43 = -54053170152839.0/4284798021562.0;
+		dfloat a44 = 0.0;
+
+		dfloat a50 = 14090043504691.0/34967701212078.0;
+		dfloat a51 = 0.0;
+		dfloat a52 = 15191511035443.0/11219624916014.0;
+		dfloat a53 = -18461159152457.0/12425892160975.0;
+		dfloat a54 = -281667163811.0/9011619295870.0;
+		dfloat a55 = 0.0;
+
+		dfloat a60 = 19230459214898.0/13134317526959.0;
+		dfloat a61 = 0.0;
+		dfloat a62 = 21275331358303.0/2942455364971.0;
+		dfloat a63 = -38145345988419.0/4862620318723.0;
+		dfloat a64 = -1.0/8.0;
+		dfloat a65 = -1.0/8.0;
+		dfloat a66 = 0.0;
+
+		dfloat a70 = -19977161125411.0/11928030595625.0;
+		dfloat a71 = 0.0;
+		dfloat a72 = -40795976796054.0/6384907823539.0;
+		dfloat a73 = 177454434618887.0/12078138498510.0;
+		dfloat a74 = 782672205425.0/8267701900261.0;
+		dfloat a75 = -69563011059811.0/9646580694205.0;
+		dfloat a76 = 7356628210526.0/4942186776405.0;
+		dfloat a77 = 0.0;
+
+		dfloat b0 = -872700587467.0/9133579230613.0;
+		dfloat b1 = 0.0;
+		dfloat b2 = 0.0;
+		dfloat b3 = 22348218063261.0/9555858737531.0;
+		dfloat b4 = -1143369518992.0/8141816002931.0;
+		dfloat b5 = -39379526789629.0/19018526304540.0;
+		dfloat b6 = 32727382324388.0/42900044865799.0;
+		dfloat b7 = 41.0/200.0;
+
+		dfloat be0 = -975461918565.0/9796059967033.0;
+		dfloat be1 = 0.0;
+		dfloat be2 = 0.0;
+		dfloat be3 = 78070527104295.0/32432590147079.0;
+		dfloat be4 = -548382580838.0/3424219808633.0;
+		dfloat be5 = -33438840321285.0/15594753105479.0;
+		dfloat be6 = 3629800801594.0/4656183773603.0;
+		dfloat be7 = 4035322873751.0/18575991585200.0;
+
+
+		dfloat rkAex[bns->NrkStages*bns->NrkStages] = {a00,  0.,  0.,  0.,  0.,  0.,  0., 0., 
+		                                               a10,  a11, 0.,  0.,  0.,  0.,  0., 0., 
+		                                               a20,  a21, a22, 0.,  0.,  0.,  0., 0., 
+		                                               a30,  a31, a32, a33, 0.,  0.,  0., 0., 
+		                                               a40,  a41, a42, a43, a44, 0.,  0., 0., 
+		                                               a50,  a51, a52, a53, a54, a55, 0., 0., 
+		                                               a60,  a61, a62, a63, a64, a65, a66, 0., 
+		                                               a70,  a71, a72, a73, a74, a75, a76, a77};
+
+		dfloat rkBex[bns->NrkStages] = {b0, b1, b2, b3, b4, b5, b6, b7};
+
+		dfloat rkEex[bns->NrkStages] = {b0-be0, b1-be1, b2-be2, b3-be3, b4-be4, b5-be5, b6-be6, b7-be7};
+
+
+		a00 = 0.0;
+
+		a10 = 41.0/200.0;
+		a11 = 41.0/200.0;
+
+		a20 = 41.0/400.0;
+		a21 = -567603406766.0/11931857230679.0;
+		a22 = 41.0/200.0;
+
+		a30 = 683785636431.0/9252920307686.0;
+		a31 = 0.0; 
+		a32 = -110385047103.0/1367015193373.0;
+		a33 = 41.0/200.0;
+
+		a40 = 3016520224154.0/10081342136671.0;
+		a41 = 0.0; 
+		a42 = 30586259806659.0/12414158314087.0;
+		a43 = -22760509404356.0/11113319521817.0;
+		a44 = 41.0/200.0;
+
+		a50 = 218866479029.0/1489978393911.0;
+		a51 = 0.0; 
+		a52 = 638256894668.0/5436446318841.0;
+		a53 = -1179710474555.0/5321154724896.0;
+		a54 = -60928119172.0/8023461067671.0;
+		a55 = 41.0/200.0;
+
+		a60 = 1020004230633.0/5715676835656.0;
+		a61 = 0.0; 
+		a62 = 25762820946817.0/25263940353407.0;
+		a63 = -2161375909145.0/9755907335909.0;
+		a64 = -211217309593.0/5846859502534.0;
+		a65 = -4269925059573.0/7827059040749.0;
+		a66 = 41.0/200.0;
+
+		a70 = -872700587467.0/9133579230613.0;
+		a71 = 0.0;
+		a72 = 0.0;  
+		a73 = 22348218063261.0/9555858737531.0;
+		a74 = -1143369518992.0/8141816002931.0;
+		a75 = -39379526789629.0/19018526304540.0;
+		a76 = 32727382324388.0/42900044865799.0;
+		a77 = 41.0/200.0;
+
+
+		b0 = -872700587467.0/9133579230613.0;
+		b1 = 0.0;
+		b2 = 0.0;  
+		b3 = 22348218063261.0/9555858737531.0;
+		b4 = -1143369518992.0/8141816002931.0;
+		b5 = -39379526789629.0/19018526304540.0;
+		b6 = 32727382324388.0/42900044865799.0;
+		b7 = 41.0/200.0;
+
+		be0 = -975461918565.0/9796059967033.0;
+		be1 = 0.0; 
+		be2 = 0.0; 
+		be3 = 78070527104295.0/32432590147079.0;
+		be4 = -548382580838.0/3424219808633.0;
+		be5 = -33438840321285.0/15594753105479.0;
+		be6 = 3629800801594.0/4656183773603.0;
+		be7 = 4035322873751.0/18575991585200.0;
+
+
+		dfloat rkAim[bns->NrkStages*bns->NrkStages] = {a00 ,  0., 0.,  0.,  0.,  0., 0., 0., 
+		                                           a10,  a11, 0.,  0.,  0.,  0., 0., 0., 
+		                                           a20,  a21, a22, 0.,  0.,  0., 0., 0., 
+		                                           a30,  a31, a32, a33, 0.,  0., 0., 0., 
+		                                           a40,  a41, a42, a43, a44, 0., 0., 0., 
+		                                           a50,  a51, a52, a53, a54, a55, 0., 0., 
+		                                           a60,  a61, a62, a63, a64, a65, a66, 0., 
+		                                           a70,  a71, a72, a73, a74, a75, a76, a77};
+
+		dfloat rkBim[bns->NrkStages] = {b0, b1, b2, b3, b4, b5, b6, b7};
+
+		dfloat rkEim[bns->NrkStages] = {b0-be0, b1-be1, b2-be2, b3-be3, b4-be4, b5-be5, b6-be6, b7-be7};
+
+
+		bns->rkCex    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+		bns->rkBex    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+		bns->rkAex    = (dfloat*) calloc(bns->NrkStages*bns->NrkStages, sizeof(dfloat));
+		bns->rkEex    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+
+		bns->rkCim    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+		bns->rkBim    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+		bns->rkAim    = (dfloat*) calloc(bns->NrkStages*bns->NrkStages, sizeof(dfloat));
+		bns->rkEim    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
+
+
+
+		memcpy(bns->rkCex, rkCex, bns->NrkStages*sizeof(dfloat)); 
+		memcpy(bns->rkBex, rkBex, bns->NrkStages*sizeof(dfloat)); 
+		memcpy(bns->rkAex, rkAex, bns->NrkStages*bns->NrkStages*sizeof(dfloat));
+		memcpy(bns->rkEex, rkEex, bns->NrkStages*sizeof(dfloat));
+
+
+		memcpy(bns->rkCim, rkCim, bns->NrkStages*sizeof(dfloat)); 
+		memcpy(bns->rkBim, rkBim, bns->NrkStages*sizeof(dfloat)); 
+		memcpy(bns->rkAim, rkAim, bns->NrkStages*bns->NrkStages*sizeof(dfloat));
+		memcpy(bns->rkEim, rkEim, bns->NrkStages*sizeof(dfloat));
+ 	}
+
+
+
+
+}
+
+
+
 if(strstr(options,"DOPRI5") || strstr(options,"XDOPRI")){
 
 
@@ -225,7 +577,7 @@ if(strstr(options,"SAADRK")){
                7./90.,    0.,    16./45.,  2./15., 16./45., 7./90., 0}; 
 
 		dfloat rkE[bns->NrkStages]=  {-4./45., 0, 16./45., -8./15., 16./45., -4./45., 0.}; 
-	
+
     bns->rkC    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
 	bns->rkA    = (dfloat*) calloc(bns->NrkStages*bns->NrkStages, sizeof(dfloat));
 	bns->rkE    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
@@ -234,8 +586,7 @@ if(strstr(options,"SAADRK")){
 	memcpy(bns->rkC, rkC, bns->NrkStages*sizeof(dfloat)); 
 	memcpy(bns->rkA, rkA, bns->NrkStages*bns->NrkStages*sizeof(dfloat));
 	memcpy(bns->rkE, rkE, bns->NrkStages*sizeof(dfloat));
-	// Compute semi-analytic part of the integrator
-	
+		
 	}
 
 	
