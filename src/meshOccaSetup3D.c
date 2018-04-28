@@ -547,7 +547,12 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   kernelInfo.addDefine("p_IHID", IHID);
   kernelInfo.addDefine("p_WSJID", WSJID);
   kernelInfo.addDefine("p_WIJID", WIJID);
-
+  kernelInfo.addDefine("p_STXID", STXID);
+  kernelInfo.addDefine("p_STYID", STYID);
+  kernelInfo.addDefine("p_STZID", STZID);
+  kernelInfo.addDefine("p_SBXID", SBXID);
+  kernelInfo.addDefine("p_SBYID", SBYID);
+  kernelInfo.addDefine("p_SBZID", SBZID);
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);

@@ -1,5 +1,5 @@
 
-kernel void cnsUpdate2D(const dlong Nelements,
+kernel void cnsUpdate3D(const dlong Nelements,
                             const dfloat dt,  
                             const dfloat rka,
                             const dfloat rkb,
@@ -30,7 +30,7 @@ kernel void cnsUpdate2D(const dlong Nelements,
   }
 }
 
-kernel void cnsRkStage2D(const dlong Nelements,
+kernel void cnsRkStage3D(const dlong Nelements,
                          const int rk,
                          const dfloat dt,  
                          const dfloat * restrict rkA,
@@ -58,7 +58,7 @@ kernel void cnsRkStage2D(const dlong Nelements,
   }
 }
 
-kernel void cnsRkUpdate2D(const dlong Nelements,
+kernel void cnsRkUpdate3D(const dlong Nelements,
                           const int rk,
                           const dfloat dt,  
                           const dfloat * restrict rkA,
@@ -99,7 +99,7 @@ kernel void cnsRkUpdate2D(const dlong Nelements,
   }
 }
 
-kernel void cnsErrorEstimate2D(const dlong N,
+kernel void cnsErrorEstimate3D(const dlong N,
                                const dfloat ATOL,
                                const dfloat RTOL,
                                const dfloat * restrict q,

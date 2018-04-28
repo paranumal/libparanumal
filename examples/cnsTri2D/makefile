@@ -39,6 +39,8 @@ $(HDRDIR)/mesh2D.h
 
 # list of objects to be compiled
 OBJS    = \
+cnsEstimateTri2D.o \
+cnsStepTri2D.o \
 cnsMainTri2D.o \
 cnsError2D.o \
 cnsRunTri2D.o \
@@ -69,7 +71,10 @@ cnsReportTri2D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
-../../src/parallelSort.o
+../../src/parallelSort.o \
+../../src/matrix.o \
+../../src/setupAide.o \
+../../src/trace.o
 
 cnsMainTri2D:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o cnsMainTri2D $(OBJS) $(paths) $(LIBS) 
