@@ -1,22 +1,18 @@
 #include "boltzmann2D.h"
 
-void boltzmannRun2D(mesh2D *mesh, char *options){
-  
+void boltzmannRun2D(bns_t *bns, char *options){
 
-  // occa::stream defaultStream = mesh->device.getStream();
-  // occa::stream dataStream    = mesh->device.createStream();
-  // mesh->device.setStream(defaultStream);
-
-  
+  mesh2D *mesh = bns->mesh; 
+    
   // MPI send buffer
   dfloat *sendBuffer;
   dfloat *recvBuffer;
   int haloBytes;
 
   if(strstr(options,"MRAB") || strstr(options,"MRSAAB"))
-    haloBytes = mesh->totalHaloPairs*mesh->Nfp*mesh->Nfields*mesh->Nfaces*sizeof(dfloat);
+    haloBytes = mesh->totalHaloPairs*mesh->Nfp*bns->Nfields*mesh->Nfaces*sizeof(dfloat);
   else
-    haloBytes = mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat);
+    haloBytes = mesh->totalHaloPairs*mesh->Np*bns->Nfields*sizeof(dfloat);
   
    
 
@@ -40,49 +36,49 @@ void boltzmannRun2D(mesh2D *mesh, char *options){
 
     if(strstr(options,"MRAB")){
        if (mesh->MRABNelements[l])
-      mesh->updateKernel(mesh->MRABNelements[l],
+      bns->updateKernel(mesh->MRABNelements[l],
                         mesh->o_MRABelementIds[l],
                         zero,
                         zero, zero, zero,
                         mesh->MRABshiftIndex[l],
                         mesh->o_vmapM,
-                        mesh->o_rhsq,
-                        mesh->o_fQM,
-                        mesh->o_q);
+                        bns->o_rhsq,
+                        bns->o_fQM,
+                        bns->o_q);
 
     if (mesh->MRABpmlNelements[l])
-      mesh->pmlUpdateKernel(mesh->MRABpmlNelements[l],
+      bns->pmlUpdateKernel(mesh->MRABpmlNelements[l],
                             mesh->o_MRABpmlElementIds[l],
                             mesh->o_MRABpmlIds[l],
                             zero,
                             zero, zero, zero,
                             mesh->MRABshiftIndex[l],
                             mesh->o_vmapM,
-                            mesh->o_rhsq,
-                            mesh->o_pmlrhsqx,
-                            mesh->o_pmlrhsqy,
-                            mesh->o_q,
-                            mesh->o_pmlqx,
-                            mesh->o_pmlqy,
-                            mesh->o_fQM);
+                            bns->o_rhsq,
+                            bns->o_pmlrhsqx,
+                            bns->o_pmlrhsqy,
+                            bns->o_q,
+                            bns->o_pmlqx,
+                            bns->o_pmlqy,
+                            bns->o_fQM);
     }
 
     else if(strstr(options,"MRSAAB")){
     
     if (mesh->MRABNelements[l])
-      mesh->updateKernel(mesh->MRABNelements[l],
+      bns->updateKernel(mesh->MRABNelements[l],
                         mesh->o_MRABelementIds[l],
                         zero,
                         zero, zero, zero,
                         zero, zero, zero,
                         mesh->MRABshiftIndex[l],
                         mesh->o_vmapM,
-                        mesh->o_rhsq,
-                        mesh->o_fQM,
-                        mesh->o_q);
+                        bns->o_rhsq,
+                        bns->o_fQM,
+                        bns->o_q);
 
     if (mesh->MRABpmlNelements[l])
-      mesh->pmlUpdateKernel(mesh->MRABpmlNelements[l],
+      bns->pmlUpdateKernel(mesh->MRABpmlNelements[l],
                             mesh->o_MRABpmlElementIds[l],
                             mesh->o_MRABpmlIds[l],
                             zero,
@@ -90,19 +86,19 @@ void boltzmannRun2D(mesh2D *mesh, char *options){
                             zero, zero, zero,
                             mesh->MRABshiftIndex[l],
                             mesh->o_vmapM,
-                            mesh->o_rhsq,
-                            mesh->o_pmlrhsqx,
-                            mesh->o_pmlrhsqy,
-                            mesh->o_q,
-                            mesh->o_pmlqx,
-                            mesh->o_pmlqy,
-                            mesh->o_fQM);
+                            bns->o_rhsq,
+                            bns->o_pmlrhsqx,
+                            bns->o_pmlrhsqy,
+                            bns->o_q,
+                            bns->o_pmlqx,
+                            bns->o_pmlqy,
+                            bns->o_fQM);
     }
 
    
   }
 
-printf("N: %d Nsteps: %d dt: %.5e \n", mesh->N, mesh->NtimeSteps, mesh->dt);
+printf("N: %d Nsteps: %d dt: %.5e \n", mesh->N, bns->NtimeSteps, bns->dt);
 
 
 
@@ -117,14 +113,20 @@ occa::initTimer(mesh->device);
 occaTimerTic(mesh->device,"BOLTZMANN");
 
 tic_tot = MPI_Wtime();
- for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+
+
+if(!( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") || strstr(options,"IMEXRK") )){
+// if(!( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") )){
+
+
+ for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
       
    // for(int tstep=0;tstep<1;++tstep){
       tic_out = MPI_Wtime();
 
       if(strstr(options, "REPORT")){
-        if((tstep%mesh->errorStep)==0){
-          boltzmannReport2D(mesh, tstep, options);
+        if((tstep%bns->errorStep)==0){
+          boltzmannReport2D(bns, tstep, options);
         }
       }
 
@@ -133,51 +135,91 @@ tic_tot = MPI_Wtime();
       
       tic_sol = MPI_Wtime();
 
+       // if(strstr(options,"SAADRK")){
+
+       //  dfloat time = tstep*bns->dt; 
+
+       //  boltzmannSAADRKStep2D(bns, time, haloBytes, sendBuffer, recvBuffer, options);
+
+       //  bns->o_q.copyFrom(bns->o_rkq);
+       //  bns->o_pmlqx.copyFrom(bns->o_rkqx);
+       //  bns->o_pmlqy.copyFrom(bns->o_rkqy);
+
+
+       // }
+
+      if(strstr(options,"IMEXRK")){
+
+        dfloat time = tstep*bns->dt; 
+
+        boltzmannIMEXRKStep2D(bns, time, haloBytes, sendBuffer, recvBuffer, options);
+
+        bns->o_q.copyFrom(bns->o_rkq);
+        bns->o_pmlqx.copyFrom(bns->o_rkqx);
+        bns->o_pmlqy.copyFrom(bns->o_rkqy);
+       }
+
       if(strstr(options, "MRAB")){
        occaTimerTic(mesh->device, "MRAB"); 
-       boltzmannMRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+       boltzmannMRABStep2D(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
        occaTimerToc(mesh->device, "MRAB"); 
       }
 
       if(strstr(options, "MRSAAB")){
         occaTimerTic(mesh->device, "MRSAAB"); 
-        boltzmannMRSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        boltzmannMRSAABStep2D(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
         occaTimerToc(mesh->device, "MRSAAB"); 
       }
 
       if(strstr(options, "SRAB")){
         occaTimerTic(mesh->device, "SRAB"); 
-        boltzmannSRABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        boltzmannSRABStep2D(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
         occaTimerToc(mesh->device, "SRAB"); 
       }
 
       if(strstr(options, "SRSAAB")){
         occaTimerTic(mesh->device, "SRSAAB"); 
-        boltzmannSAABStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        boltzmannSAABStep2D(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
         occaTimerToc(mesh->device, "SRSAAB"); 
       }
 
       if(strstr(options, "LSERK")){
         occaTimerTic(mesh->device, "LSERK");  
-        boltzmannLSERKStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        boltzmannLSERKStep2D(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
         occaTimerToc(mesh->device, "LSERK");  
       }
 
        if(strstr(options, "SARK")){
         occaTimerTic(mesh->device, "SARK");  
-        boltzmannSARKStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        boltzmannSARKStep2D(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
         occaTimerToc(mesh->device, "SARK");  
       }
 
       if(strstr(options, "LSIMEX")){
         occaTimerTic(mesh->device, "LSIMEX");  
-        boltzmannLSIMEXStep2D(mesh, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        boltzmannLSIMEXStep2D(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
         occaTimerToc(mesh->device, "LSIMEX");  
       } 
 
       elp_sol += (MPI_Wtime() - tic_sol);
 
   }
+}
+
+  else {
+
+  printf("====================Running Embedded Scahemes==========================\n");
+  boltzmannRunEmbedded2D(bns, haloBytes, sendBuffer, recvBuffer, options);
+
+
+  }
+
+// else{
+
+//   printf("====================Running DOPRI==========================\n");
+//   boltzmannRunDOPRI2D(bns, haloBytes, sendBuffer, recvBuffer, options);
+
+//   }
 
   elp_tot += (MPI_Wtime() - tic_tot);    
   occaTimerToc(mesh->device, "BOLTZMANN");
@@ -209,16 +251,9 @@ tic_tot = MPI_Wtime();
  
 printf("writing Final data\n");  
 // For Final Time
-boltzmannReport2D(mesh, mesh->NtimeSteps,options);
+//boltzmannReport2D(bns, bns->NtimeSteps,options);
 
 occa::printTimer();
-
-
-  // if (haloBytes) {
-  // //Deallocate Halo MPI storage
-  // free(recvBuffer);
-  // free(sendBuffer);
-  // }
 }
 
 

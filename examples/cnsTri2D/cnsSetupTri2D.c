@@ -73,7 +73,9 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   if(!check) printf("WARNING setup file does not include MACH\n");
 
   // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
+  dfloat mach = 0.17;
   cns->RT = cns->ubar*cns->ubar/(mach*mach);
+  
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));

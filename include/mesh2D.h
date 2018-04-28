@@ -107,7 +107,9 @@ mesh2D *meshSetupQuad2D(char *filename, int N);
 // set up OCCA device and copy generic element info to device
 void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo);
 
-void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels); 
+// void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels); 
+dfloat meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels, dfloat finalTime); 
+
 
 //MRAB weighted mesh partitioning
 void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,

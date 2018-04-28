@@ -3,12 +3,12 @@
 #include <stdio.h>
 #include "mpi.h"
 
-#include "mesh2D.h"
+#include "boltzmann2D.h"
 
 // interpolate data to plot nodes and save to file (one per process
-void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
+void boltzmannPlotVTU2D(bns_t *bns, char *fileName){
 
-  //mesh2D *mesh = ins->mesh;
+  mesh2D *mesh = bns->mesh;
   
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -53,9 +53,9 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
       for(int m=0;m<mesh->Np;++m){
-	        int base = mesh->Nfields*(m + e*mesh->Np);
-          dfloat rho = mesh->q[base + 0];
-           dfloat pm = mesh->sqrtRT*mesh->sqrtRT*rho; // need to be modified
+	        int base = bns->Nfields*(m + e*mesh->Np);
+          dfloat rho = bns->q[base + 0];
+           dfloat pm = bns->sqrtRT*bns->sqrtRT*rho; // need to be modified
            //dfloat pm = rho; 
           plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
@@ -73,10 +73,10 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
   //   for(int n=0;n<mesh->plotNp;++n){
   //     dfloat plotun = 0, plotvn = 0;
   //     for(int m=0;m<mesh->Np;++m){
-  //       int base = mesh->Nfields*(m + e*mesh->Np);
-  //       //dfloat rho = mesh->q[base];
-  //       //dfloat vm = mesh->q[2 + base]*mesh->sqrtRT/rho;
-  //       dfloat vm = mesh->q[1 + base];
+  //       int base = bns->Nfields*(m + e*mesh->Np);
+  //       //dfloat rho = bns->q[base];
+  //       //dfloat vm = bns->q[2 + base]*bns->sqrtRT/rho;
+  //       dfloat vm = bns->q[1 + base];
   //       plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
         
   //     }
@@ -98,10 +98,10 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
     for(int n=0;n<mesh->Np;++n){
       dfloat dUdr = 0, dUds = 0, dVdr = 0, dVds = 0;
       for(int m=0;m<mesh->Np;++m){
-        int base = mesh->Nfields*(m + e*mesh->Np);
-        dfloat rho = mesh->q[base + 0];
-        dfloat u = mesh->q[1 + base]*mesh->sqrtRT/rho;
-        dfloat v = mesh->q[2 + base]*mesh->sqrtRT/rho;
+        int base = bns->Nfields*(m + e*mesh->Np);
+        dfloat rho = bns->q[base + 0];
+        dfloat u = bns->q[1 + base]*bns->sqrtRT/rho;
+        dfloat v = bns->q[2 + base]*bns->sqrtRT/rho;
       	dUdr += mesh->Dr[n*mesh->Np+m]*u;
       	dUds += mesh->Ds[n*mesh->Np+m]*u;
       	dVdr += mesh->Dr[n*mesh->Np+m]*v;
@@ -144,10 +144,10 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotun = 0, plotvn = 0;
       for(int m=0;m<mesh->Np;++m){
-        int base = mesh->Nfields*(m + e*mesh->Np);
-        dfloat rho = mesh->q[base];
-        dfloat um = mesh->q[1 + base]*mesh->sqrtRT/rho;
-        dfloat vm = mesh->q[2 + base]*mesh->sqrtRT/rho;
+        int base = bns->Nfields*(m + e*mesh->Np);
+        dfloat rho = bns->q[base];
+        dfloat um = bns->q[1 + base]*bns->sqrtRT/rho;
+        dfloat vm = bns->q[2 + base]*bns->sqrtRT/rho;
         //
         plotun += mesh->plotInterp[n*mesh->Np+m]*um;
         plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
@@ -168,9 +168,9 @@ void boltzmannPlotVTU2D(mesh2D *mesh, char *fileName){
   //   for(int n=0;n<mesh->plotNp;++n){
   //     dfloat plotwxn = 0, plotwyn = 0, plotvn = 0, plotwzn = 0;
   //     for(int m=0;m<mesh->Np;++m){
-  //       dfloat wx = mesh->q[3 + mesh->Nfields*(m+e*mesh->Np)];
-  //       dfloat wy = mesh->q[4 + mesh->Nfields*(m+e*mesh->Np)];
-  //       dfloat wz = mesh->q[5 + mesh->Nfields*(m+e*mesh->Np)];
+  //       dfloat wx = bns->q[3 + bns->Nfields*(m+e*mesh->Np)];
+  //       dfloat wy = bns->q[4 + bns->Nfields*(m+e*mesh->Np)];
+  //       dfloat wz = bns->q[5 + bns->Nfields*(m+e*mesh->Np)];
   //       //
   //       plotwxn += mesh->plotInterp[n*mesh->Np+m]*wx;
   //       plotwyn += mesh->plotInterp[n*mesh->Np+m]*wy;
