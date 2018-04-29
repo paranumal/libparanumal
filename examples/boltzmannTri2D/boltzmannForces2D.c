@@ -1,7 +1,7 @@
 #include "boltzmann2D.h"
 
 
-void boltzmannForces2D(bns_t *bns, dfloat time, char * options){
+void boltzmannForces2D(bns_t *bns, dfloat time, setupAide &options){
 
 
   mesh2D *mesh = bns->mesh; 

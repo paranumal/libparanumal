@@ -1,6 +1,6 @@
 #include "boltzmann2D.h"
 
-void boltzmannReportAddaptive2D(bns_t *bns, dfloat t, char *options){
+void boltzmannReportAddaptive2D(bns_t *bns, dfloat t, setupAide &options){
 
   mesh2D *mesh = bns->mesh; 
   
@@ -25,21 +25,11 @@ void boltzmannReportAddaptive2D(bns_t *bns, dfloat t, char *options){
   #endif
 
 
-  // do error stuff on host
-  boltzmannError2D(bns, t, options);
+ 
+  if(options.compareArgs("ABSORBING LAYER","PML")){ 
 
-
-
-
-  if(strstr(options, "PML")){ 
-
-    if(strstr(options, "VTU")){ 
+    if(options.compareArgs("OUTPUT FILE FORMAT","VTU")){ 
     
-    #if 0
-    char fname[BUFSIZ];
-    sprintf(fname, "Allfields_Obl_mpml__t3_%04d_%04d.vtu", rank, tstep/mesh->errorStep);
-    boltzmannPlotVTUField2D(mesh, fname);
-    #endif
       
     char fname[BUFSIZ];
     // sprintf(fname, "/scratch/boltzmannInclined/foo_pml_%.0f_%04d_%04d.vtu", bns->Re, rank, tstep/bns->errorStep);
@@ -48,7 +38,7 @@ void boltzmannReportAddaptive2D(bns_t *bns, dfloat t, char *options){
    }
 
 
-  if(strstr(options, "TEC")){ 
+  if(options.compareArgs("OUTPUT FILE FORMAT","TEC")){ 
     //boltzmannComputeVorticity2D(mesh, mesh->q,5, mesh->Nfields);
     char fname[BUFSIZ];
     sprintf(fname, "foo_v2_%04d.dat",rank);
@@ -60,7 +50,7 @@ void boltzmannReportAddaptive2D(bns_t *bns, dfloat t, char *options){
   }
   else{
 
-   if(strstr(options, "VTU")){ 
+   if(options.compareArgs("OUTPUT FILE FORMAT","VTU")){ 
     //boltzmannCouetteError2D(mesh, t);
     // compute vorticity
     //boltzmannComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
@@ -72,10 +62,10 @@ void boltzmannReportAddaptive2D(bns_t *bns, dfloat t, char *options){
   }
 
   
-  if(strstr(options, "TEC")){ 
+  if(options.compareArgs("OUTPUT FILE FORMAT","TEC")){ 
     char fname[BUFSIZ];
     sprintf(fname, "foo_%04d.vtu",rank);
-    boltzmannPlotTEC2D(bns, fname, bns->frame++);
+    boltzmannPlotTEC2D(bns, fname, t);
   }    
   }
   

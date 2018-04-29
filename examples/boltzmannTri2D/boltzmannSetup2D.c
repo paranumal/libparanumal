@@ -3,7 +3,7 @@
 // NBN: toggle use of 2nd stream
 #define USE_2_STREAMS
 
-bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
+bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
 
   int rank, size;
 
@@ -18,74 +18,72 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
 
   bns->mesh = mesh; 
 
-  bns->errorStep = 1000; 
-
-    // Initialize
-  dfloat Ma      = 0.f,   Re      = 0.f;
-  dfloat rho     = 1.f,   u       = 0.f;
-  dfloat v       = 0.f,   nu      = 0.f;
-  dfloat Uref    = 0.2f,  Lref    = 1.f; 
-  dfloat sigma11 = 0.f ,  sigma12 = 0.f, sigma22 = 0.f;  
-
-  if(strstr(options, "PML")){
-    printf("Starting initial conditions for PML\n");
-    bns->Ma = 0.1;   // 0.17; //MA[mesh->Ntscale]; // Set Mach number
-    bns->Re = 1000.;  //1000.; //RE[mesh->Ntscale]; 
-    //
-    Uref = 1.0; //  0.2;
-    Lref = 1.0;   // set Lref
-    //
-    bns->RT       = Uref*Uref/(bns->Ma*bns->Ma);
-    bns->sqrtRT   = sqrt(bns->RT);  
-    //
-    nu            = Uref*Lref/bns->Re; 
-    bns->tauInv   = bns->RT/nu;
-
-    //printf("starting initial conditions\n"); //Zero Flow Conditions
-    // rho = 1.0; u = Uref*cos(M_PI/6.0); v = Uref*sin(M_PI/6.0); sigma11 = 0; sigma12 = 0; sigma22 = 0;
-    rho = 1.0; u = 1.0; v = 0.0; sigma11 = 0; sigma12 = 0; sigma22 = 0;
-    // rho = 1.0; u = Uref*cos(M_PI/6); v = Uref*sin(M_PI/6); sigma11 = 0; sigma12 = 0; sigma22 = 0;
-    //
-    bns->startTime = 0.0; 
-    bns->finalTime = 20.; // Was 200  
-  }
-  else{
-    printf("Starting initial conditions for NONPML\n");
-    bns->Ma = 0.1;     //Set Mach number
-    bns->Re = 1000.;   // Set Reynolds number
     
-    Uref = 1.;   // Set Uref
-    Lref = 1.;   // set Lref
-    //
-    bns->RT  = Uref*Uref/(bns->Ma*bns->Ma);
-    bns->sqrtRT = sqrt(bns->RT);  
-    //
-    nu = Uref*Lref/bns->Re; 
-    bns->tauInv = bns->RT/nu;
-    
-    #if 0
-    // Create Periodic Boundaries
-    printf("Creating periodic connections if exist \n");
-    dfloat xper = 1.0;   dfloat yper = 0.0;
-    boltzmannPeriodic2D(mesh,xper,yper);
-    #endif
+  // Defaulting Input Parameters
+  bns->Ma         = 0.1;
+  bns->Re         = 1000; 
+  bns->startTime  = 0.0;
+  bns->finalTime  = 1.0;
+  bns->cfl        = 0.2; 
+  //
+  bns->probeFlag  = 0; 
+  bns->errorFlag  = 0;
+  bns->reportFlag = 0;
+  bns->errorStep  = 1; 
+  bns->reportStep  = 1;
+  
 
-    //printf("starting initial conditions\n"); //Zero Flow Conditions
-    rho = 1.0, u = Uref, v = 0.; sigma11 = 0, sigma12 = 0, sigma22 = 0;
-    //
-    bns->startTime = 0.0; 
-    bns->finalTime = 100.;
-  }
+  int check; 
 
+  check = options.getArgs("REYNOLDS NUMBER", bns->Re);
+  if(!check) printf("WARNING setup file does not include REYNOLDS NUMBER\n");
+
+  check = options.getArgs("MACH NUMBER", bns->Ma);
+  if(!check) printf("WARNING setup file does not include MACH NUMBER\n");
+
+  check = options.getArgs("START TIME", bns->startTime);
+  if(!check) printf("WARNING setup file does not include START TIME\n");
+
+  check = options.getArgs("FINAL TIME", bns->finalTime);
+  if(!check) printf("WARNING setup file does not include FINAL TIME\n");
+
+  check = options.getArgs("CFL", bns->cfl);
+  if(!check) printf("WARNING setup file does not include CFL\n");
+
+  check = options.getArgs("PROBE FLAG", bns->probeFlag);
+  if(!check) printf("WARNING setup file does not include PROBE FLAG\n");
+
+  check = options.getArgs("ERROR FLAG", bns->errorFlag);
+  if(!check) printf("WARNING setup file does not include ERROR FLAG\n");
+
+  check = options.getArgs("REPORT FLAG", bns->reportFlag);
+  if(!check) printf("WARNING setup file does not include REPORT FLAG\n");
+
+  
+  options.getArgs("TSTEPS FOR SOLUTION OUTPUT", bns->reportStep);
+  options.getArgs("TSTEPS FOR ERROR COMPUTE", bns->errorStep);
+  
+
+  printf("Starting initial conditions\n");
+  // Set characteristic length, should be one
+  dfloat Uref = 1.0;   
+  dfloat Lref = 1.0;   
+  //
+  bns->RT       = Uref*Uref/(bns->Ma*bns->Ma);
+  bns->sqrtRT   = sqrt(bns->RT);  
+  //
+  dfloat nu            = Uref*Lref/bns->Re; 
+  bns->tauInv   = bns->RT/nu;
   // set penalty parameter
   bns->Lambda2 = 0.5/(bns->sqrtRT);
 
-
-  dfloat time = bns->startTime + 0.0; 
-  // Define Initial Mean Velocity
-  dfloat ramp, drampdt;
-  boltzmannRampFunction2D(time, &ramp, &drampdt);
+  //printf("starting initial conditions\n"); //Zero Flow Conditions
+  // rho = 1.0; u = Uref*cos(M_PI/6.0); v = Uref*sin(M_PI/6.0); sigma11 = 0; sigma12 = 0; sigma22 = 0;
+  dfloat rho = 1.0; dfloat u = 1.0; dfloat v = 0.0; 
+  dfloat sigma11 = 0; dfloat sigma12 = 0; dfloat sigma22 = 0;
   
+
+  // SET TIME-STEP SIZE
   dfloat q1bar = rho;
   dfloat q2bar = rho*u/bns->sqrtRT;
   dfloat q3bar = rho*v/bns->sqrtRT;
@@ -93,14 +91,7 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
   dfloat q5bar = (rho*u*u - sigma11)/(sqrt(2.)*bns->RT);
   dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*bns->RT);
 
-  // SET STABLE TIME STEP SIZE
-  dfloat cfl = 0.25; 
-  if(strstr(options,"LSERK")  || strstr(options,"SARK")   || strstr(options,"LSIMEX") || 
-     strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") || 
-     strstr(options,"IMEXRK") )
-    cfl          = 0.75; 
-
-
+ 
   dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/bns->sqrtRT);
   magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
 
@@ -126,32 +117,29 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
 
     ghmin = mymin(ghmin, hmin);
 
-    dfloat dtex   = cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT);
-    dfloat dtim   = cfl*1.f/(bns->tauInv);
+    dfloat dtex   = bns->cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT);
+    dfloat dtim   = bns->cfl*1.f/(bns->tauInv);
     dfloat dtest = 1e9;
     
-    if(strstr(options,"MRAB") || strstr(options,"LSERK") || strstr(options,"SRAB") || strstr(options,"DOPRI5") )
-      dtest  = mymin(dtex,dtim); // For fully expliciy schemes
-    else if(strstr(options,"MRSAAB") || strstr(options,"SARK")   || strstr(options,"SAAB") || 
-            strstr(options,"LSIMEX") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") ||
-            strstr(options,"IMEXRK"))
-      dtest  = dtex; // For semi analytic  and IMEX
-    else
-      printf("time discretization method should be choosen\n");
+    if( options.compareArgs("TIME INTEGRATOR", "MRAB")   || options.compareArgs("TIME INTEGRATOR", "LSERK") ||
+        options.compareArgs("TIME INTEGRATOR", "DOPRI5") || options.compareArgs("TIME INTEGRATOR", "SRAB") ) // fully explicit schemes
+      dtest  = mymin(dtex,dtim); 
+    else    // implicit-explicit or semi-analytic schemes
+      dtest  = dtex;
       
       dt            = mymin(dt, dtest);      // For SR 
       EtoDT[e]      = mymin(EtoDT[e],dtest); // For MR
   }
 
-   printf("dtex = %.5e dtim = %.5e \n", cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), cfl*1.f/(bns->tauInv));
+   printf("dtex = %.5e dtim = %.5e \n", bns->cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), bns->cfl*1.f/(bns->tauInv));
 
  
   // Set multiRate/singleRate element groups/group  
-  if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
+  if(options.compareArgs("TIME INTEGRATOR", "MRAB") ||
+     options.compareArgs("TIME INTEGRATOR", "MRSAAB") ){
     int maxLevels = 100;
-    bns->dt = meshMRABSetup2D(mesh,EtoDT,maxLevels, bns->finalTime- bns->startTime);
+    bns->dt = meshMRABSetup2D(mesh,EtoDT,maxLevels, bns->finalTime-bns->startTime);
     bns->NtimeSteps =  (bns->finalTime-bns->startTime)/(pow(2,mesh->MRABNlevels-1)*bns->dt);
-
   }
   else{    
     //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
@@ -175,7 +163,7 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
 
 
  // INITIALIZE FIELD VARIABLES 
- if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
+ if(options.compareArgs("TIME INTEGRATOR","MRAB") || options.compareArgs("TIME INTEGRATOR","MRSAAB")){
     bns->Nrhs = 3;
     // compute samples of q at interpolation nodes
     bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
@@ -183,14 +171,15 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
     bns->fQM  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*bns->Nfields, sizeof(dfloat));
   }
 
-  else if(strstr(options,"SRSAAB") || strstr(options,"SRAB") || strstr(options,"SARK")){ //SRAB and SAAB Single rate versions of above
+  else if(options.compareArgs("TIME INTEGRATOR","SRSAAB") ||options.compareArgs("TIME INTEGRATOR","SRAB") || 
+          options.compareArgs("TIME INTEGRATOR","SARK")){ //SRAB and SAAB Single rate versions of above
     bns->Nrhs = 3;
     // compute samples of q at interpolation nodes
     bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rhsq = (dfloat*) calloc(bns->Nrhs*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
   }
 
-  else if (strstr(options,"LSERK")){ // LSERK, SARK etc.
+  else if (options.compareArgs("TIME INTEGRATOR","LSERK")){ // LSERK, SARK etc.
     bns->Nrhs = 1; 
     // compute samples of q at interpolation nodes
     bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
@@ -199,7 +188,7 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
   }
 
 
-  else if (strstr(options,"LSIMEX")){ // LSERK, SARK etc.
+  else if (options.compareArgs("TIME INTEGRATOR","LSIMEX")){ // LSERK, SARK etc.
     bns->Nrhs = 1; 
     // compute samples of q at interpolation nodes
     bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
@@ -207,11 +196,12 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
   }
 
 
-  else if (strstr(options,"DOPRI5") || strstr(options,"XDOPRI")){ // LSERK, SARK etc.
+  else if (options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TIME INTEGRATOR","XDOPRI")){ // LSERK, SARK etc.
     bns->Nrhs = 1;
 
     bns->ATOL = 1E-5; 
-    bns->RTOL = 1E-4; 
+    bns->RTOL = 1E-4;
+    bns->dtMIN = 1E-10;  
      bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I    
 
     int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
@@ -229,16 +219,16 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
     bns->rkq      = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rkrhsq   = (dfloat*) calloc(bns->NrkStages*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rkerr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->errtmp  =  (dfloat*) calloc(bns->Nblock, sizeof(dfloat)); 
+    bns->errtmp   = (dfloat*) calloc(bns->Nblock, sizeof(dfloat)); 
   }
 
 
-  else if (strstr(options,"SAADRK")){ 
-    bns->Nrhs = 1; 
-
-    bns->ATOL = 1E-5; 
-    bns->RTOL = 1E-4; 
-     bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I   
+  else if (options.compareArgs("TIME INTEGRATOR","SAADRK")){ 
+    bns->Nrhs  = 1;
+    bns->ATOL  = 1E-7; 
+    bns->RTOL  = 1E-5;
+    bns->dtMIN = 1E-10; 
+    bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I   
 
     int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
     bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
@@ -257,10 +247,12 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
     bns->rkerr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->errtmp  =  (dfloat*) calloc(bns->Nblock, sizeof(dfloat)); 
   }
-  else if (strstr(options,"IMEXRK")){
-    bns->Nrhs = 1;
-    bns->ATOL = 1E-7; 
-    bns->RTOL = 1E-5;
+  else if (options.compareArgs("TIME INTEGRATOR","IMEXRK")){
+    bns->Nrhs  = 1;
+    bns->ATOL  = 1E-7; 
+    bns->RTOL  = 1E-5;
+    bns->dtMIN = 1E-10; 
+
     bns->emethod = 0; // 0 PID / 1 PI / 2 I 
     bns->rkp     = 4;  
 
@@ -295,6 +287,11 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
 
 
 
+
+  dfloat time = bns->startTime + 0.0; 
+  // Define Initial Mean Velocity
+  dfloat ramp, drampdt;
+  boltzmannRampFunction2D(time, &ramp, &drampdt);
 
 
  // INITIALIZE PROBLEM 
@@ -374,7 +371,7 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
  
  
   // SET PROBE DATA
-  if(strstr(options, "PROBE")){
+  if(bns->probeFlag){
     mesh->probeNTotal = 3; 
     dfloat *pX   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
     dfloat *pY   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
@@ -388,15 +385,47 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
 
   }
   
+  
 
-
-  //OCCCA SETUP
   char deviceConfig[BUFSIZ];
-  // use rank to choose DEVICE
-  sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
-  //sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
-  //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  //sprintf(deviceConfig, "mode = Serial");  
+
+  long int hostId = gethostid();
+
+  int* hostIds = (int*) calloc(size,sizeof(int));
+  MPI_Allgather(&hostId,1,MPI_INT,hostIds,1,MPI_INT,MPI_COMM_WORLD);
+
+  int deviceID = 0;
+  for (int r=0;r<rank;r++) {
+    if (hostIds[r]==hostId) deviceID++;
+  }
+
+  // read thread model/device/platform from options
+  if(options.compareArgs("THREAD MODEL", "CUDA")){
+    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
+  }
+  else if(options.compareArgs("THREAD MODEL", "OpenCL")){
+    int plat;
+    options.getArgs("PLATFORM NUMBER", plat);
+    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d",
+      deviceID, plat);
+  }
+  else if(options.compareArgs("THREAD MODEL", "OpenMP")){
+    sprintf(deviceConfig, "mode = OpenMP");
+  }
+  else{
+    sprintf(deviceConfig, "mode = Serial");
+  }
+
+
+
+
+  // //OCCCA SETUP
+  // char deviceConfig[BUFSIZ];
+  // // use rank to choose DEVICE
+  // sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
+  // //sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
+  // //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  // //sprintf(deviceConfig, "mode = Serial");  
  
 
   occa::kernelInfo kernelInfo;
@@ -405,8 +434,9 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, char * options){
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");   
 
   // Setup MRAB PML
-  if(strstr(options, "MRAB") || strstr(options,"MRSAAB")){
+  if(options.compareArgs("TIME INTEGRATOR", "MRAB") || options.compareArgs("TIME INTEGRATOR","MRSAAB")){
      printf("Preparing Pml for multirate rate\n");
+    
     boltzmannMRABPmlSetup2D(bns, options);
 
     mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
@@ -471,15 +501,15 @@ mesh = meshsave;
 boltzmannTimeStepperCoefficients(bns, options);
 
 
-if(strstr(options,"MRSAAB") || strstr(options,"MRAB") || 
-   strstr(options,"SRAB")   || strstr(options,"SAAB") ){
+if(options.compareArgs("TIME INTEGRATOR","MRSAAB") || options.compareArgs("TIME INTEGRATOR","MRAB") || 
+   options.compareArgs("TIME INTEGRATOR","SRAB")   || options.compareArgs("TIME INTEGRATOR","SAAB") ){
 
   //printf("Setting Rhs for AB\n");
   // bns->o_rhsq.free();
   bns->o_q     = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat),bns->q);
   bns->o_rhsq  = mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq);
 
-  if(strstr(options,"MRSAAB") || strstr(options, "MRAB")){
+  if(options.compareArgs("TIME INTEGRATOR","MRSAAB") || options.compareArgs("TIME INTEGRATOR", "MRAB")){
 
     if (mesh->totalHaloPairs) {
       //reallocate halo buffer for trace exchange
@@ -494,7 +524,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
 }
 
 
-if(strstr(options, "LSERK")){
+if(options.compareArgs("TIME INTEGRATOR", "LSERK")){
   // 
   bns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
@@ -504,7 +534,7 @@ if(strstr(options, "LSERK")){
     mesh->device.malloc(mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->resq);
 }
 
-if(strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK")){
+if(options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TIME INTEGRATOR","XDOPRI") ||options.compareArgs("TIME INTEGRATOR","SAADRK")){
 
   bns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
@@ -515,6 +545,10 @@ if(strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADR
   
   bns->o_rkq =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkq);
+
+  bns->o_saveq =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkq);
+
   bns->o_rkrhsq =
     mesh->device.malloc(bns->NrkStages*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rkrhsq);
   bns->o_rkerr =
@@ -527,7 +561,7 @@ if(strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADR
 }
 
 
-if(strstr(options,"IMEXRK")){
+if(options.compareArgs("TIME INTEGRATOR","IMEXRK")){
   
   int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
 
@@ -542,6 +576,9 @@ if(strstr(options,"IMEXRK")){
   
   
   bns->o_rkq =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
+
+  bns->o_saveq =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
   
   bns->o_rkrhsqex =
@@ -568,7 +605,7 @@ if(strstr(options,"IMEXRK")){
 
 }
 
-if(strstr(options, "SARK")){
+if(options.compareArgs("TIME INTEGRATOR", "SARK")){
   bns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
   bns->o_rhsq = 
@@ -582,7 +619,7 @@ if(strstr(options, "SARK")){
   
 
 
-else if(strstr(options, "LSIMEX")){ 
+else if(options.compareArgs("TIME INTEGRATOR", "LSIMEX")){ 
   bns->Nimex = 4;
   bns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
@@ -645,7 +682,8 @@ else if(strstr(options, "LSIMEX")){
 
 
  // Volume and Relaxation Kernels
-  if(strstr(options, "CUBATURE") && !(strstr(options,"LSIMEX") || strstr(options,"IMEXRK"))){ 
+  if(options.compareArgs("RELAXATION TYPE","CUBATURE") && 
+     !(options.compareArgs("TIME INTEGRATOR","LSIMEX") || options.compareArgs("TIME INTEGRATOR","IMEXRK"))){ 
           
     printf("Compiling volume kernel for cubature integration\n");
       bns->volumeKernel =
@@ -659,8 +697,8 @@ else if(strstr(options, "LSIMEX")){
         "boltzmannPmlVolumeCub2D",
           kernelInfo);
 
-    if(strstr(options, "MRAB") || strstr(options, "LSERK") || 
-       strstr(options,"SRAB")  || strstr(options,"DOPRI5") ){ 
+    if(options.compareArgs("TIME INTEGRATOR","MRAB") || options.compareArgs("TIME INTEGRATOR","LSERK") || 
+       options.compareArgs("TIME INTEGRATOR","SRAB") || options.compareArgs("TIME INTEGRATOR","DOPRI5") ){ 
 
       printf("Compiling relaxation kernel with cubature integration\n");
        bns->relaxationKernel =
@@ -675,8 +713,9 @@ else if(strstr(options, "LSIMEX")){
           "boltzmannPmlRelaxationCub2D",
             kernelInfo);  
     }
-    else if(strstr(options, "MRSAAB")||strstr(options, "SAAB") || 
-            strstr(options,"SARK")   || strstr(options,"XDOPRI") || strstr(options,"SAADRK")){
+    else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")||options.compareArgs("TIME INTEGRATOR","SAAB") || 
+            options.compareArgs("TIME INTEGRATOR","SARK")   || options.compareArgs("TIME INTEGRATOR","XDOPRI") ||
+            options.compareArgs("TIME INTEGRATOR","SAADRK")){
 
     printf("Compiling relaxation kernel with cubature integration\n");
      bns->relaxationKernel =
@@ -696,9 +735,11 @@ else if(strstr(options, "LSIMEX")){
 
 
 
-  if(strstr(options, "COLLOCATION")  && !(strstr(options,"LSIMEX") || strstr(options,"IMEXRK"))){ 
+  if(options.compareArgs("RELAXATION TYPE","COLLOCATION")  && 
+    !(options.compareArgs("TIME INTEGRATOR","LSIMEX") || options.compareArgs("TIME INTEGRATOR","IMEXRK"))){ 
 
-     if(strstr(options, "MRAB") || strstr(options, "LSERK") || strstr(options,"SRAB") || strstr(options,"DOPRI5")){ 
+     if(options.compareArgs("TIME INTEGRATOR", "MRAB") || options.compareArgs("TIME INTEGRATOR","LSERK") || 
+        options.compareArgs("TIME INTEGRATOR","SRAB") || options.compareArgs("TIME INTEGRATOR","DOPRI5")){ 
 
       printf("Compiling volume kernel with nodal collocation for nonlinear term\n");
       bns->volumeKernel =
@@ -713,8 +754,9 @@ else if(strstr(options, "LSIMEX")){
            kernelInfo); 
     }
 
-    else if(strstr(options, "MRSAAB") || strstr(options, "SAAB") || 
-            strstr(options,"SARK") || strstr(options,"XDOPRI") || strstr(options,"SAADRK")){
+    else if(options.compareArgs("TIME INTEGRATOR","MRSAAB") || options.compareArgs("TIME INTEGRATOR","SAAB") || 
+            options.compareArgs("TIME INTEGRATOR","SARK") || options.compareArgs("TIME INTEGRATOR","XDOPRI") || 
+            options.compareArgs("TIME INTEGRATOR","SAADRK")){
       printf("Compiling SA volume kernel with nodal collocation for nonlinear term\n");
       bns->volumeKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
@@ -734,7 +776,7 @@ else if(strstr(options, "LSIMEX")){
  
 
    // UPDATE Kernels
-  if(strstr(options, "MRAB")){ 
+  if(options.compareArgs("TIME INTEGRATOR","MRAB")){ 
     printf("Compiling MRAB update kernel\n");
     bns->updateKernel =
      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
@@ -760,7 +802,7 @@ else if(strstr(options, "LSIMEX")){
                  kernelInfo);
     }
 
-    else if(strstr(options, "MRSAAB")){
+    else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
 
     printf("Compiling MRSAAB update kernel\n");
     bns->updateKernel =
@@ -787,7 +829,7 @@ else if(strstr(options, "LSIMEX")){
                  kernelInfo);
      }
 
-     else if(strstr(options,"SRAB")){
+     else if(options.compareArgs("TIME INTEGRATOR","SRAB")){
      printf("Compiling SRAB update kernel\n");
      bns->updateKernel =
      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
@@ -816,7 +858,7 @@ else if(strstr(options, "LSIMEX")){
      }
 
 
-     else if(strstr(options,"SRSAAB")){
+     else if(options.compareArgs("TIME INTEGRATOR","SRSAAB")){
      printf("Compiling SAAB update kernel\n");
      bns->updateKernel =
      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
@@ -830,7 +872,7 @@ else if(strstr(options, "LSIMEX")){
             kernelInfo);
      }
 
-     else if(strstr(options,"LSERK")){
+     else if(options.compareArgs("TIME INTEGRATOR","LSERK")){
      printf("Compiling LSERK update kernel\n");
      bns->updateKernel =
      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
@@ -846,7 +888,7 @@ else if(strstr(options, "LSIMEX")){
 
 
 
-    else if(strstr(options,"SARK")){
+    else if(options.compareArgs("TIME INTEGRATOR","SARK")){
     //SARK STAGE UPDATE
     printf("compiling SARK non-pml  update kernel\n");
     bns->updateKernel =
@@ -876,7 +918,7 @@ else if(strstr(options, "LSIMEX")){
     }
 
     // DOPRI5 Update Kernels
-    else if(strstr(options,"DOPRI5")){
+    else if(options.compareArgs("TIME INTEGRATOR","DOPRI5")){
 
     bns->updateStageKernel =
        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
@@ -909,7 +951,7 @@ else if(strstr(options, "LSIMEX")){
     }
 
 
-    else if(strstr(options,"XDOPRI")){
+    else if(options.compareArgs("TIME INTEGRATOR","XDOPRI")){
     printf("compiling XDOPRI Update kernels\n");
     bns->updateStageKernel =
      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
@@ -940,7 +982,7 @@ else if(strstr(options, "LSIMEX")){
      }
 
 
-     else if(strstr(options,"SAADRK")){
+     else if(options.compareArgs("TIME INTEGRATOR","SAADRK")){
 
       printf("compiling SAADRK Update kernels\n");
       bns->updateStageKernel =
@@ -980,7 +1022,7 @@ else if(strstr(options, "LSIMEX")){
 
 
     // Surface Kernels
-    if(strstr(options,"MRAB") || strstr(options,"MRSAAB")){  
+    if(options.compareArgs("TIME INTEGRATOR","MRAB") || options.compareArgs("TIME INTEGRATOR","MRSAAB")){  
     printf("Compiling surface kernel\n");
     bns->surfaceKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
@@ -1015,7 +1057,7 @@ else if(strstr(options, "LSIMEX")){
 
 
     // IMEX Kernels
-    if(strstr(options, "LSIMEX")){ 
+    if(options.compareArgs("TIME INTEGRATOR","LSIMEX")){ 
     // RESIDUAL UPDATE KERNELS
     printf("Compiling LSIMEX non-pml residual update kernel\n");
     bns->residualUpdateKernel =
@@ -1042,7 +1084,7 @@ else if(strstr(options, "LSIMEX")){
           kernelInfo);
       
      
-    if(strstr(options, "CUBATURE")){ 
+    if(options.compareArgs("RELAXATION TYPE","CUBATURE")){ 
       printf("Compiling LSIMEX non-pml Implicit Iteration Cubature  kernel\n");
 
       bns->implicitSolveKernel = 
@@ -1056,7 +1098,7 @@ else if(strstr(options, "LSIMEX")){
              "boltzmannLSIMEXPmlImplicitSolveCub2D",
              kernelInfo); 
     }
-    else if(strstr(options, "COLLOCATION")){ 
+    else if(options.compareArgs("RELAXATION TYPE","COLLOCATION")){ 
       //
       printf("Compiling LSIMEX non-pml Implicit Iteration kernel\n");
       bns->implicitSolveKernel = 
@@ -1111,7 +1153,7 @@ else if(strstr(options, "LSIMEX")){
   }
 
 
-  if(strstr(options, "IMEXRK")){
+  if(options.compareArgs("TIME INTEGRATOR","IMEXRK")){
 
     printf("compiling IMEXRK Update kernels\n");
       bns->updateStageKernel =

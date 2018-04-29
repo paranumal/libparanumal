@@ -2,7 +2,7 @@
 
 // complete a time step using LSERK4
 void boltzmannSRABStep2D(bns_t *bns, int tstep, int haloBytes,
-                        dfloat * sendBuffer, dfloat *recvBuffer, char * options){
+                        dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options){
 
 
   int mrab_order = 2;  // Third order
@@ -88,7 +88,7 @@ void boltzmannSRABStep2D(bns_t *bns, int tstep, int haloBytes,
                           bns->o_pmlrhsqy);
 
 
-  if(strstr(options, "CUBATURE")){ 
+  if(options.compareArgs("RELAXATION TYPE","CUBATURE")){ 
 
     if (mesh->nonPmlNelements)
         bns->relaxationKernel(mesh->nonPmlNelements,
@@ -116,17 +116,6 @@ void boltzmannSRABStep2D(bns_t *bns, int tstep, int haloBytes,
                                 bns->o_rhsq,
                                 bns->o_pmlrhsqx,
                                 bns->o_pmlrhsqy);
-    
-     // mesh->pmlRelaxationKernel(mesh->pmlNelements,
-     //                            mesh->o_pmlElementIds,
-     //                            mesh->o_pmlIds,
-     //                            bns->Nrhs,
-     //                            bns->shiftIndex,
-     //                            mesh->o_cubInterpT,
-     //                            mesh->o_cubProjectT,
-     //                            bns->o_q,
-     //                            bns->o_rhsq);
-
   }
 
 

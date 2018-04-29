@@ -1,6 +1,6 @@
 #include "boltzmann2D.h"
 
-void boltzmannSAADRKCoefficients(bns_t *bns, char *options){
+void boltzmannSAADRKCoefficients(bns_t *bns, setupAide &options){
 
 mesh2D * mesh = bns->mesh; 
 

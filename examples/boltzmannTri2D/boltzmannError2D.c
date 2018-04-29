@@ -1,13 +1,18 @@
 #include "boltzmann2D.h"
 
 // currently maximum
-void boltzmannError2D(bns_t *bns, dfloat time, char *options){
+void boltzmannError2D(bns_t *bns, int tstep, setupAide &options){
 
   mesh2D *mesh = bns->mesh; 
 
+  dfloat time = 0.0; 
 
-#if 1
- if(strstr(options,"PROBE")){
+  if(options.compareArgs("TIME INTEGRATOR","MRAB") || options.compareArgs("TIME INTEGRATOR","MRSAAB"))
+   time = bns->startTime + bns->dt*tstep*pow(2,(mesh->MRABNlevels-1));
+  else
+   time = bns->startTime + tstep*bns->dt;
+
+ if(bns->probeFlag){
       int rank;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -51,128 +56,7 @@ void boltzmannError2D(bns_t *bns, dfloat time, char *options){
 
 
 
-
-
-
-#else 
-  if(strstr(options,"PROBE")){
-    
-    // Move this routine to probe setup
-
-
-
-    int rank, size;
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-    int root = 0; // root rank
-    
-    int probeNfields = 3; // rho, u, v
-    
-    dfloat *probeData   = (dfloat *) malloc(mesh->probeN*probeNfields*sizeof(dfloat)); 
-    dfloat *recvData    = (dfloat *) malloc(mesh->probeNTotal*probeNfields*sizeof(dfloat));
-    int   *recvcount   = (int   *) malloc(size*sizeof(int));
-    int   *recvdisp    = (int   *) malloc(size*sizeof(int));
-    int   *probeIds    = (int   *) malloc(mesh->probeNTotal*sizeof(int)); 
-    
-    // Collect number of probes on the root  
-    MPI_Gather(&(mesh->probeN), 1, MPI_int, recvcount, 1, MPI_int, root, MPI_COMM_WORLD);
-    
-    if(rank==root){
-    recvdisp[0]= 0;  
-      for(int i=1; i<size; ++i){
-            recvdisp[i]   = recvdisp[i-1] + recvcount[i-1]; 
-          //printf("%d %d \n", recvcount[i], recvdisp[i]);
-      }
-    }
-
-    // Collect probe ids
-    MPI_Gatherv(mesh->probeIds, mesh->probeN, MPI_int, probeIds, recvcount, recvdisp, MPI_int, root, MPI_COMM_WORLD);
-
-    // if(rank==0){
-    //   for(int id=0; id<mesh->probeNTotal; id++){
-    //     printf("id: %d  ProbeId: %d \n", id, probeIds[id]);
-    //   }
-    // }
-
-    // // Sort Probe Ids such that probes are ardered in ascending order
-
-    // int *probeIndex = (int *) malloc(2*mesh->probeNTotal*sizeof(int));
-
-    // for(int id=0; id<mesh->probeNTotal; id++){
-    // probeIndex
-
-
-
-    // }
-
-    
-    if(rank==root){
-    recvdisp[0]= 0;  
-      for(int i=0; i<size; ++i){
-        recvcount[i] *=probeNfields;
-          if(i>0)
-            recvdisp[i]   = recvdisp[i-1] + recvcount[i-1]; 
-          printf("%d %d \n", recvcount[i], recvdisp[i]);
-      }
-    }
-    
-  
-    // fill probe Data
-    if(mesh->probeN){
-      for(int p=0; p<mesh->probeN; p++){
-        int pid  = mesh->probeIds[p];
-        int e    = mesh->probeElementIds[p];        
-        dfloat sr = 0.0; 
-        dfloat su = 0.0; 
-        dfloat sv = 0.0; 
-        for(int n=0; n<mesh->Np; n++){
-          dfloat rho  = bns->q[bns->Nfields*(n + e*mesh->Np) + 0];
-          dfloat um   = bns->q[bns->Nfields*(n + e*mesh->Np) + 1]*bns->sqrtRT/rho;
-          dfloat vm   = bns->q[bns->Nfields*(n + e*mesh->Np) + 2]*bns->sqrtRT/rho;
-          //
-          sr += mesh->probeI[p*mesh->Np+n]*rho;
-          su += mesh->probeI[p*mesh->Np+n]*um;
-          sv += mesh->probeI[p*mesh->Np+n]*vm;
-        }
-        probeData[p*probeNfields + 0] = sr;
-        probeData[p*probeNfields + 1] = su;
-        probeData[p*probeNfields + 2] = sv;
-      }
-    }
-
-
-
-    
-    MPI_Gatherv(probeData, mesh->probeN*probeNfields, MPI_DFLOAT, recvData, recvcount, recvdisp, MPI_DFLOAT, root, MPI_COMM_WORLD);
-
-    if(rank==root){     
-       char fname[BUFSIZ];
-      sprintf(fname, "ProbeData_%d_%.f_%05d.dat", mesh->N, mesh->Re, mesh->Nelements);
-
-      FILE *fp; 
-      fp = fopen(fname, "a");      
-
-      fprintf(fp, "%4e ", time); 
-      for(int p=0; p<mesh->probeNTotal; p++){
-        fprintf(fp, "%02d %.8e %.8e %.8e ", probeIds[p],recvData[p*probeNfields+0], 
-                                                        recvData[p*probeNfields+1],
-                                                        recvData[p*probeNfields+2]);
-      }
-      fprintf(fp, "\n"); 
-      fclose(fp);
-    }
-  }
-
-
-
-#endif
-
-
-
-
- if(strstr(options, "PML")){
+ if(options.compareArgs("ABSORBING LAYER","PML")){
 
     dfloat maxQ1 = 0, minQ1 = 1e9;
     int fid = 0; //  
@@ -190,10 +74,8 @@ void boltzmannError2D(bns_t *bns, dfloat time, char *options){
 
     // compute maximum over all processes
     dfloat globalMaxQ1, globalMinQ1;
-    MPI_Allreduce(&maxQ1, &globalMaxQ1, 1,
-       MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&minQ1, &globalMinQ1, 1,
-      MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&maxQ1, &globalMaxQ1, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&minQ1, &globalMinQ1, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -260,27 +142,25 @@ else{
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if(rank==0){
       printf("%g %g %g %g (time,min(density),max(density),max(error)\n", time, globalMinQ1, globalMaxQ1, globalMaxErr);
+#if 0
 
-      
-      #if 1
+      int fld = 2;
+      int tstep = (time-bns->startTime)/bns->dt;
+      char errname[BUFSIZ];
+      sprintf(errname, "LSERK_err_long_%04d_%04d.vtu", rank, (tstep/mesh->errorStep));
+      meshPlotVTU2D(mesh, errname,fld);
 
-    int fld = 2;
-    int tstep = (time-bns->startTime)/bns->dt;
-    char errname[BUFSIZ];
-    sprintf(errname, "LSERK_err_long_%04d_%04d.vtu", rank, (tstep/mesh->errorStep));
-    meshPlotVTU2D(mesh, errname,fld);
-      
-    int tmethod = 0; 
-    if(strstr(options,"LSERK"))
+      int tmethod = 0; 
+      if(options.compareArgs("TIME INTEGRATOR","LSERK"))
       tmethod = 1;
-    if(strstr(options,"SRAB"))
-       tmethod = 2;
-    if(strstr(options,"SAAB"))
-       tmethod = 3;
-    if(strstr(options,"SARK"))
-       tmethod = 4;
-    if(strstr(options,"LSIMEX"))
-       tmethod = 5;
+      if(options.compareArgs("TIME INTEGRATOR","SRAB"))
+      tmethod = 2;
+      if(options.compareArgs("TIME INTEGRATOR","SAAB"))
+      tmethod = 3;
+      if(options.compareArgs("TIME INTEGRATOR","SARK"))
+      tmethod = 4;
+      if(options.compareArgs("TIME INTEGRATOR","LSIMEX"))
+      tmethod = 5;
 
       char fname[BUFSIZ]; 
       sprintf(fname, "boltzmannTemporalError.dat");
@@ -290,7 +170,7 @@ else{
       fclose(fp); 
 
       bns->maxError = globalMaxErr; 
-      #endif
+#endif
     }
 
 

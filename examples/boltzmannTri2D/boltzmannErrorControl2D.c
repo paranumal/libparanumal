@@ -1,6 +1,6 @@
 #include "boltzmann2D.h"
 
-void boltzmannErrorControl2D(bns_t *bns, char * options){
+void boltzmannErrorControl2D(bns_t *bns, setupAide &options){
 
 	mesh2D *mesh = bns->mesh;
 
@@ -212,7 +212,7 @@ void boltzmannErrorControl2D(bns_t *bns, char * options){
 
     if(bns->eflag){
 			bns->o_q.copyFrom(bns->o_rkq);
-			if(strstr(options,"PML")){
+			if(options.compareArgs("ABSORBING LAYER","PML")){
 			bns->o_pmlqx.copyFrom(bns->o_rkqx);
 			bns->o_pmlqy.copyFrom(bns->o_rkqy);
 		}

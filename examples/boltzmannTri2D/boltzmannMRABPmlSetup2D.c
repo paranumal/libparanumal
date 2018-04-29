@@ -1,6 +1,6 @@
 #include "boltzmann2D.h"
 
-void boltzmannMRABPmlSetup2D(bns_t *bns, char *options){
+void boltzmannMRABPmlSetup2D(bns_t *bns, setupAide &options){
 
 
   mesh2D *mesh = bns->mesh; 
@@ -121,7 +121,7 @@ void boltzmannMRABPmlSetup2D(bns_t *bns, char *options){
 
 
     int Nnodes = 0;
-    if(strstr(options,"CUBATURE")){ // !!!!!!!!!!!!!!!
+    if(options.compareArgs("RELAXATION TYPE","CUBATURE")){ // !!!!!!!!!!!!!!!
       //
       printf("Setting PML Coefficient for Cubature Integration\n");
       //set up damping parameter
@@ -173,15 +173,15 @@ void boltzmannMRABPmlSetup2D(bns_t *bns, char *options){
 
     int order = 2; 
     //
-    if(strstr(options,"CONSTANT"))
+    if(options.compareArgs("PML PROFILE","CONSTANT"))
       order = 0; 
-    if(strstr(options,"LINEAR"))
+    if(options.compareArgs("PML PROFILE","LINEAR"))
       order = 1; 
-    if(strstr(options,"QUADRATIC"))
+    if(options.compareArgs("PML PROFILE","QUADRATIC"))
       order = 2;
-    if(strstr(options,"FORTHORDER"))
+    if(options.compareArgs("PML PROFILE","FORTHORDER"))
       order = 4;
-    if(strstr(options, "ERFFUNCTION"))
+    if(options.compareArgs("PML PROFILE","ERFFUNCTION"))
       order =1;
 
 
@@ -223,7 +223,7 @@ void boltzmannMRABPmlSetup2D(bns_t *bns, char *options){
 
 
 
-        if(!strstr(options,"SMOOTHPOLYNOMIAL")){
+        // if(!strstr(options,"SMOOTHPOLYNOMIAL")){
           if (type==100) { //X Pml
             if(x>xmax)
               bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
@@ -272,68 +272,14 @@ void boltzmannMRABPmlSetup2D(bns_t *bns, char *options){
 
 
 
-        }
+        // }
 
 
-         else if(strstr(options,"SMOOTHPOLYNOMIAL")){
-
-
-
-          dfloat tsigma = 0.5*xsigma;
-
-          dfloat qx=0,      qy = 0;
-          dfloat taux = 0,  tauy = 0;
-          dfloat polyx = 0, polyy = 0;
-
-          if (type==100) { //X Pml
-            if(x>xmax)
-              qx   = (x-xmax)/(pmlxmax-xmax);
-            if(x<xmin)
-              qx    = (x-xmin)/(pmlxmin-xmin);
-          } else if (type==200) { //Y Pml
-            if(y>ymax)
-              qy    = (y-ymax)/(pmlymax-ymax);
-            if(y<ymin)
-              qy    = (y-ymin)/(pmlymin-ymin);
-          } else if (type==300) { //XY Pml
-            if(x>xmax)
-             qx   = (x-xmax)/(pmlxmax-xmax);
-            if(x<xmin)
-             qx    = (x-xmin)/(pmlxmin-xmin);
-            if(y>ymax)
-             qy    = (y-ymax)/(pmlymax-ymax);
-            if(y<ymin)
-             qy    = (y-ymin)/(pmlymin-ymin);
-          }
-          // Third Order
-          taux  =  (qx-q1)/(q2-q1);
-          tauy  =  (qy-q1)/(q2-q1);
-          // Fifth Order
-          polyx = pow(taux,2); //c5*pow(taux,5) + c4*pow(taux,4) +c3*pow(taux,3) + c2*pow(taux,2) + c1*taux + c0;
-          polyy = pow(tauy,2); //c5*pow(tauy,5) + c4*pow(tauy,4) +c3*pow(tauy,3) + c2*pow(tauy,2) + c1*tauy + c0;
-
-          polyx = qx<=q1 ? 0. : polyx;  polyx = qx>=q2 ? 1. : polyx;
-          polyy = qy<=q1 ? 0. : polyy;  polyy = qy>=q2 ? 1. : polyy;
-           
-          if (type==100) { //X Pml
-             bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(qx,2);
-             bns->pmlSigmaY[Nnodes*pmlId + n] = tsigma*polyx;
-          } else if (type==200) { //Y Pml
-             bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(qy,2);
-             bns->pmlSigmaX[Nnodes*pmlId + n] = tsigma*polyy;
-          } else if (type==300) { //XY Pml
-            if(x>xmax || x<xmin)
-             bns->pmlSigmaX[Nnodes*pmlId + n] = tsigma*polyx;;
-            if(y>ymax || y<ymin)
-             bns->pmlSigmaY[Nnodes*pmlId + n] = tsigma*polyy;
-          }
-
-          //printf("%.5e \n", qx);
-        }
+        //  else if(strstr(options,"SMOOTHPOLYNOMIAL")){
 
 
 
-        // else if(strstr(options,"SMOOTHPOLYNOMIAL")){
+        //   dfloat tsigma = 0.5*xsigma;
 
         //   dfloat qx=0,      qy = 0;
         //   dfloat taux = 0,  tauy = 0;
@@ -370,17 +316,20 @@ void boltzmannMRABPmlSetup2D(bns_t *bns, char *options){
         //   polyy = qy<=q1 ? 0. : polyy;  polyy = qy>=q2 ? 1. : polyy;
            
         //   if (type==100) { //X Pml
-        //      bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+        //      bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(qx,2);
+        //      bns->pmlSigmaY[Nnodes*pmlId + n] = tsigma*polyx;
         //   } else if (type==200) { //Y Pml
-        //      bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+        //      bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(qy,2);
+        //      bns->pmlSigmaX[Nnodes*pmlId + n] = tsigma*polyy;
         //   } else if (type==300) { //XY Pml
         //     if(x>xmax || x<xmin)
-        //      bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+        //      bns->pmlSigmaX[Nnodes*pmlId + n] = tsigma*polyx;;
         //     if(y>ymax || y<ymin)
-        //      mesh->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+        //      bns->pmlSigmaY[Nnodes*pmlId + n] = tsigma*polyy;
         //   }
-        // }
 
+        //   //printf("%.5e \n", qx);
+        // }
 
         }
       }

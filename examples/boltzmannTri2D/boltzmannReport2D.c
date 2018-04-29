@@ -1,12 +1,12 @@
 #include "boltzmann2D.h"
 
-void boltzmannReport2D(bns_t *bns,  int tstep, char *options){
+void boltzmannReport2D(bns_t *bns,  int tstep, setupAide &options){
 
   mesh2D *mesh = bns->mesh; 
   
   dfloat t = 0.f; 
 
-  if(strstr(options,"MRAB") || strstr(options, "MRSAAB"))
+  if(options.compareArgs("TIME INTEGRATOR","MRAB") || options.compareArgs("TIME INTEGRATOR","MRSAAB"))
    t = bns->startTime + bns->dt*tstep*pow(2,(mesh->MRABNlevels-1));
   else
    t = bns->startTime + tstep*bns->dt;
@@ -32,21 +32,10 @@ void boltzmannReport2D(bns_t *bns,  int tstep, char *options){
   #endif
 
 
-  // do error stuff on host
-  boltzmannError2D(bns, t, options);
+  if(options.compareArgs("ABSORBING LAYER","PML")){ 
 
-
-
-
-  if(strstr(options, "PML")){ 
-
-    if(strstr(options, "VTU")){ 
+    if(options.compareArgs("OUTPUT FILE FORMAT","VTU")){ 
     
-    #if 0
-    char fname[BUFSIZ];
-    sprintf(fname, "Allfields_Obl_mpml__t3_%04d_%04d.vtu", rank, tstep/mesh->errorStep);
-    boltzmannPlotVTUField2D(mesh, fname);
-    #endif
       
     char fname[BUFSIZ];
     // sprintf(fname, "/scratch/boltzmannInclined/foo_pml_%.0f_%04d_%04d.vtu", bns->Re, rank, tstep/bns->errorStep);
@@ -55,7 +44,7 @@ void boltzmannReport2D(bns_t *bns,  int tstep, char *options){
    }
 
 
-  if(strstr(options, "TEC")){ 
+  if(options.compareArgs("OUTPUT FILE FORMAT","TEC")){ 
     //boltzmannComputeVorticity2D(mesh, mesh->q,5, mesh->Nfields);
     char fname[BUFSIZ];
     sprintf(fname, "foo_v2_%04d.dat",rank);
@@ -67,7 +56,7 @@ void boltzmannReport2D(bns_t *bns,  int tstep, char *options){
   }
   else{
 
-   if(strstr(options, "VTU")){ 
+   if(options.compareArgs("OUTPUT FILE FORMAT","VTU")){ 
     //boltzmannCouetteError2D(mesh, t);
     // compute vorticity
     //boltzmannComputeVorticity2D(mesh, mesh->q, 0, mesh->Nfields);
@@ -79,7 +68,7 @@ void boltzmannReport2D(bns_t *bns,  int tstep, char *options){
   }
 
   
-  if(strstr(options, "TEC")){ 
+  if(options.compareArgs("OUTPUT FILE FORMAT","TEC")){ 
     char fname[BUFSIZ];
     sprintf(fname, "foo_%04d.vtu",rank);
     boltzmannPlotTEC2D(bns, fname, tstep/bns->errorStep);

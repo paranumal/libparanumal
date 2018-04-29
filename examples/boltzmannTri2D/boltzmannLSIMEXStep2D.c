@@ -2,7 +2,7 @@
 
 // complete a time step using LSERK4
 void boltzmannLSIMEXStep2D(bns_t *bns, int tstep, int haloBytes,
-				   dfloat * sendBuffer, dfloat *recvBuffer, char * options){
+				   dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options){
 
 
 bns->shiftIndex =0;

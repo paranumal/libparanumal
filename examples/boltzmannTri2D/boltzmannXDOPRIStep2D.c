@@ -2,7 +2,7 @@
 
 // complete a time step using LSERK4
 void boltzmannXDOPRIStep2D(bns_t *bns, dfloat time, int haloBytes,
-				  dfloat * sendBuffer, dfloat *recvBuffer, char * options){
+				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options){
 
 
  bns->shiftIndex = 0; 
@@ -138,7 +138,7 @@ for(int rk=0;rk<7;++rk){
   occaTimerToc(mesh->device, "VolumeKernel");    
     
 
-	if(strstr(options, "CUBATURE")){ 
+	if(options.compareArgs("RELAXATION TYPE", "CUBATURE")){ 
     occaTimerTic(mesh->device, "RelaxationKernel");
 		if(mesh->pmlNelements){
       occaTimerTic(mesh->device, "PmlRelaxationKernel");

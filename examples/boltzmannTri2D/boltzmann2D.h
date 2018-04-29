@@ -24,15 +24,20 @@ typedef struct{
 	int NrkStages; 
 	int frame; 
 
-	dfloat dt;         // time step
+	dfloat dt, cdt, dtMIN;    // time step
 	dfloat startTime ; // Start Time
 	dfloat finalTime;  // final time 
-	dfloat Lambda2;    // Penalty flux 
+	dfloat Lambda2;    // Penalty flux
+	dfloat cfl; 
 
 	int NtimeSteps;  // number of time steps
-	int errorStep;   // number of steps between error calculations
 	int Nrk;
 	int shiftIndex;    // Rhs index shifting for time steppers
+	int probeFlag; 
+	int errorFlag;
+	int reportFlag;
+	int errorStep;   // number of steps between error calculations
+	int reportStep;   // number of steps between error calculations
 
 	dfloat RT, sqrtRT, tauInv, Ma, Re; // Flow parameters
 
@@ -40,6 +45,7 @@ typedef struct{
 	mesh_t *mesh; 
 
 	dfloat *q, *rhsq, *resq;
+
 
 	// IMEXRK - Kennedy-Carpanter
 	dfloat *rhsqim, *rhsqex, *rkrhsqim, *rkrhsqex; 
@@ -92,7 +98,7 @@ typedef struct{
 
 
 	dfloat *fQM; 
-	occa::memory o_q, o_rhsq, o_resq, o_fQM;
+	occa::memory o_q, o_saveq, o_rhsq, o_resq, o_fQM;
 	occa::memory o_rkA, o_rkE, o_sarkC, o_sarkA, o_sarkE; 
 	occa::memory o_rkqx, o_rkqy, o_rkrhsqx, o_rkrhsqy; 
 
@@ -151,23 +157,24 @@ typedef struct{
 }bns_t;
 
 
-bns_t *boltzmannSetup2D(mesh2D *mesh, char *options);
-void boltzmannRun2D(bns_t *bns, char *options);
-
-void boltzmannError2D(bns_t *bns, dfloat time, char *opt);
-void boltzmannForces2D(bns_t *bns, dfloat time, char *opt);
-void boltzmannReport2D(bns_t *bns, int tstep, char *opt);
+bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options);
 
 
-void boltzmannReportAddaptive2D(bns_t *bns, dfloat time, char *opt);
+void boltzmannRun2D(bns_t *bns, setupAide &options);
+void boltzmannReport2D(bns_t *bns, int tstep, setupAide &options);
+void boltzmannError2D(bns_t *bns, int tstep, setupAide &options);
+void boltzmannForces2D(bns_t *bns, dfloat time, setupAide &options);
+
+void boltzmannMRABPmlSetup2D(bns_t *bns, setupAide &options);
+void boltzmannPmlSetup2D(bns_t *bns, setupAide &options);
+void boltzmannTimeStepperCoefficients(bns_t *bns, setupAide &options);
+void boltzmannSAADRKCoefficients(bns_t *bns, setupAide &options);
+
+
+void boltzmannReportAddaptive2D(bns_t *bns, dfloat time, setupAide &options);
 
 
 
-void boltzmannMRABPmlSetup2D(bns_t *bns, char *options);
-void boltzmannPmlSetup2D(bns_t *bns, char *options);
-void boltzmannTimeStepperCoefficients(bns_t *bns, char *options);
-
-void boltzmannSAADRKCoefficients(bns_t *bns, char *options);
 
 void boltzmannPlotVTU2D(bns_t *bns, char * FileName);
 void boltzmannPlotTEC2D(bns_t *bns, char * FileName, dfloat solutionTime);
@@ -175,54 +182,45 @@ void boltzmannPlotTEC2D(bns_t *bns, char * FileName, dfloat solutionTime);
 
 // Time Discretizations one step LSERK
 void boltzmannLSERKStep2D(bns_t *bns, int tstep, int haloBytes,
-				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
+				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
 // Time Discretizations one step 
 void boltzmannSAABStep2D(bns_t *bns, int tstep, int haloBytes,
-				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
+				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
 // Execute one Boltzmann time step using LSIMEX
 void boltzmannLSIMEXStep2D(bns_t *bns, int tstep, int haloBytes,
-				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
+				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
 //Execute one Boltzmann time step using SARK
 void boltzmannSARKStep2D(bns_t *bns, int tstep, int haloBytes,
-				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
+				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
 // Time Discretizations one step LSERK
 void boltzmannSRABStep2D(bns_t *bns, int tstep, int haloBytes,
-				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
+				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
 // Execute one Boltzmann time step using MRAB
 void boltzmannMRABStep2D(bns_t *bns, int tstep, int haloBytes,
-				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
+				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
 // Execute one Boltzmann time step using MRSAAB
 void boltzmannMRSAABStep2D(bns_t *bns, int tstep, int haloBytes,
-				  dfloat * sendBuffer, dfloat *recvBuffer, char *opt);
-
-void boltzmannErrorControl2D(bns_t *bns, char *options);
-
-// // DOPRI Run
-// void boltzmannRunDOPRI2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, 
-// 	              dfloat *recvBuffer, char * options);
-
-// DOPRI Run
-void boltzmannRunEmbedded2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, 
-	              dfloat *recvBuffer, char * options);
-
-
-// // DOPRI Run
-// void boltzmannSAADRKRun2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, 
-// 	              dfloat *recvBuffer, char * options);
+				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
 // DOPRI Step
-void boltzmannDOPRIStep2D(bns_t *bns, dfloat time, int haloBytes, dfloat * sendBuffer, 
-	              dfloat *recvBuffer, char * options);
-
+void boltzmannDOPRIStep2D(bns_t *bns, dfloat time, int haloBytes, 
+					dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
 // XDOPRI Step
-void boltzmannXDOPRIStep2D(bns_t *bns, dfloat time, int haloBytes, dfloat * sendBuffer, 
-	              dfloat *recvBuffer, char * options);
-
+void boltzmannXDOPRIStep2D(bns_t *bns, dfloat time, int haloBytes, 
+					dfloat *sendBuffer, dfloat *recvBuffer, setupAide &options);
 
 void boltzmannSAADRKStep2D(bns_t *bns, dfloat time, int haloBytes,
-				                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
+					dfloat *sendBuffer, dfloat *recvBuffer, setupAide &options);
 
 void boltzmannIMEXRKStep2D(bns_t *bns, dfloat time, int haloBytes,
-				                   dfloat * sendBuffer, dfloat *recvBuffer, char * options);
+					dfloat *sendBuffer, dfloat *recvBuffer, setupAide &options);
+
+// Embedded Run
+void boltzmannRunEmbedded2D(bns_t *bns, int haloBytes, dfloat * sendBuffer, 
+	              dfloat *recvBuffer, setupAide &options);
+
+
+void boltzmannErrorControl2D(bns_t *bns, setupAide &options);
+
 
 // Needs to be changed if in use
 void boltzmannPeriodic2D(mesh2D *mesh, dfloat xper, dfloat yper);
