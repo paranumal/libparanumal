@@ -2,7 +2,7 @@
 
 // complete a time step using LSERK4
 void boltzmannMRSAABStep2D(bns_t *bns, int tstep, int haloBytes,
-                         dfloat * sendBuffer, dfloat *recvBuffer, char * options){
+                         dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options){
 
 
   mesh2D *mesh = bns->mesh; 
@@ -105,7 +105,7 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
      
 
-  if(strstr(options, "CUBATURE")){ 
+  if(options.compareArgs("RELAXATION TYPE","CUBATURE")){ 
     occaTimerTic(mesh->device, "RelaxationKernel");
     for (int l=0;l<lev;l++) {
       if (mesh->MRABNelements[l]){

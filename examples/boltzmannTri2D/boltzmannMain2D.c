@@ -18,7 +18,30 @@ int main(int argc, char **argv){
   // out         = REPORT, REPORT-VTU, NO  
   // bc          = UNSPLITPML, SPLITPML, NONE
   // pmlprofile  = CONSTANT, QUADRATIC
-  
+
+  if(argc!=2){
+    printf("usage2: ./cnsMainTri2D setupfile\n");
+    exit(-1);
+  }
+
+  setupAide options(argv[1]);
+
+  string fileName;
+  int N;
+
+  options.getArgs("MESH FILE", fileName);
+  options.getArgs("POLYNOMIAL DEGREE", N);
+  mesh2D *mesh = meshSetupTri2D((char*)fileName.c_str(), N);
+
+
+  bns_t *bns = boltzmannSetup2D(mesh,options); 
+
+
+  boltzmannRun2D(bns,options);
+
+
+
+  #if 0
   char options[BUFSIZ];
   strcpy(options,"out = REPORT+ VTU+PROBE, MR_GROUPS, relaxation = CUBATURE, bc=PML, pmlprofile=FORTHORDER");
   
@@ -95,7 +118,9 @@ int main(int argc, char **argv){
 
       printf("Boltzmann Run: \n");
       boltzmannRun2D(bns,options);  
-    }      
+    } 
+
+  #endif     
     
   // close down MPI
   MPI_Finalize();

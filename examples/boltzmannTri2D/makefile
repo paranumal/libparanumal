@@ -96,6 +96,9 @@ LOBJS = \
 ../../src/parallelSort.o \
 ../../src/meshProbeSetup2D.o \
 ../../src/timer.o \
+../../src/matrix.o \
+../../src/setupAide.o \
+../../src/trace.o
 
 boltzmannMain2D:$(AOBJS) $(LOBJS) 
 	$(LD)  $(LDFLAGS)  -o boltzmannMain2D $(AOBJS) $(LOBJS) $(paths) $(LIBS) 

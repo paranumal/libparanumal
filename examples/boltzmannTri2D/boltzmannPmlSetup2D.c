@@ -1,6 +1,6 @@
 #include "boltzmann2D.h"
 
-void boltzmannPmlSetup2D(bns_t *bns, char *options){
+void boltzmannPmlSetup2D(bns_t *bns, setupAide &options){
 
   mesh2D *mesh = bns->mesh; 
 
@@ -82,7 +82,7 @@ void boltzmannPmlSetup2D(bns_t *bns, char *options){
 
 
     int Nnodes = 0;
-    if(strstr(options,"CUBATURE")){ // !!!!!!!!!!!!!!!
+    if(options.compareArgs("RELAXATION TYPE","CUBATURE")){ // !!!!!!!!!!!!!!!
       //
       printf("Setting PML Coefficient for Cubature Integration\n");
       //set up damping parameter
@@ -131,17 +131,17 @@ void boltzmannPmlSetup2D(bns_t *bns, char *options){
 
 
 
-    int order = 0;
+    int order = 2; 
     //
-    if(strstr(options,"CONSTANT"))
+    if(options.compareArgs("PML PROFILE","CONSTANT"))
       order = 0; 
-    if(strstr(options,"LINEAR"))
+    if(options.compareArgs("PML PROFILE","LINEAR"))
       order = 1; 
-    if(strstr(options,"QUADRATIC"))
+    if(options.compareArgs("PML PROFILE","QUADRATIC"))
       order = 2;
-    if(strstr(options,"FORTHORDER"))
+    if(options.compareArgs("PML PROFILE","FORTHORDER"))
       order = 4;
-    if(strstr(options, "ERFFUNCTION"))
+    if(options.compareArgs("PML PROFILE","ERFFUNCTION"))
       order =1;
 
     dfloat xmaxScale = pow(pmlxmax-xmax,order);
@@ -181,7 +181,7 @@ void boltzmannPmlSetup2D(bns_t *bns, char *options){
             y = mesh->y[n + e*mesh->Np];
           }
           
-          if(!strstr(options,"ERFUNCTION") && !strstr(options,"RAMPFUNCTION") && !strstr(options,"SMOOTHPOLYNOMIAL")){
+          // if(!strstr(options,"ERFUNCTION") && !strstr(options,"RAMPFUNCTION") && !strstr(options,"SMOOTHPOLYNOMIAL")){
           if (type==100) { //X Pml
             if(x>xmax)
               bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
@@ -202,131 +202,131 @@ void boltzmannPmlSetup2D(bns_t *bns, char *options){
             if(y<ymin)
               bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
           }
-        }
+        // }
 
-        else if(strstr(options,"ERFUNCTION")){
-          if (type==100) { //X Pml
-            if(x>xmax)
-             bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*0.5*(1.0+erf(xsmin + (x-xmax)/xmaxScale * (xsmax-xsmin)));
-            if(x<xmin)
-             bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*0.5*(1.0+erf(xsmin + (x-xmin)/xminScale * (xsmax-xsmin)));
-          } else if (type==200) { //Y Pml
-            if(y>ymax)
-              bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*0.5*(1.0+erf(ysmin + (y-ymax)/ymaxScale * (ysmax-ysmin)));
-            if(y<ymin)
-              bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*0.5*(1.0+erf(ysmin + (y-ymin)/yminScale * (ysmax-ysmin)));
-          } else if (type==300) { //XY Pml
-            if(x>xmax)
-             bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*0.5*(1.0+erf(xsmin + (x-xmax)/xmaxScale * (xsmax-xsmin)));
-            if(x<xmin)
-              bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*0.5*(1.0+erf(xsmin + (x-xmin)/xminScale * (xsmax-xsmin)));
-            if(y>ymax)
-              bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*0.5*(1.0+erf(ysmin + (y-ymax)/ymaxScale * (ysmax-ysmin)));
-            if(y<ymin)
-              bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*0.5*(1.0+erf(ysmin + (y-ymin)/yminScale * (ysmax-ysmin)));
-          }
-        }
+        // else if(strstr(options,"ERFUNCTION")){
+        //   if (type==100) { //X Pml
+        //     if(x>xmax)
+        //      bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*0.5*(1.0+erf(xsmin + (x-xmax)/xmaxScale * (xsmax-xsmin)));
+        //     if(x<xmin)
+        //      bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*0.5*(1.0+erf(xsmin + (x-xmin)/xminScale * (xsmax-xsmin)));
+        //   } else if (type==200) { //Y Pml
+        //     if(y>ymax)
+        //       bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*0.5*(1.0+erf(ysmin + (y-ymax)/ymaxScale * (ysmax-ysmin)));
+        //     if(y<ymin)
+        //       bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*0.5*(1.0+erf(ysmin + (y-ymin)/yminScale * (ysmax-ysmin)));
+        //   } else if (type==300) { //XY Pml
+        //     if(x>xmax)
+        //      bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*0.5*(1.0+erf(xsmin + (x-xmax)/xmaxScale * (xsmax-xsmin)));
+        //     if(x<xmin)
+        //       bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*0.5*(1.0+erf(xsmin + (x-xmin)/xminScale * (xsmax-xsmin)));
+        //     if(y>ymax)
+        //       bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*0.5*(1.0+erf(ysmin + (y-ymax)/ymaxScale * (ysmax-ysmin)));
+        //     if(y<ymin)
+        //       bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*0.5*(1.0+erf(ysmin + (y-ymin)/yminScale * (ysmax-ysmin)));
+        //   }
+        // }
 
-        else if(strstr(options,"RAMPFUNCTION")){
+        // else if(strstr(options,"RAMPFUNCTION")){
 
-          dfloat qx=0,      qy = 0;
-          dfloat taux = 0,  tauy = 0;
-          dfloat rampx = 0, rampy = 0;
+        //   dfloat qx=0,      qy = 0;
+        //   dfloat taux = 0,  tauy = 0;
+        //   dfloat rampx = 0, rampy = 0;
           
-          // stretch x to [0 1] interval
-          if (type==100) { //X Pml
-            if(x>xmax)
-              qx   = (x-xmax)/(pmlxmax-xmax);
-            if(x<xmin)
-              qx    = (x-xmin)/(pmlxmin-xmin);
-          } else if (type==200) { //Y Pml
-            if(y>ymax)
-              qy    = (y-ymax)/(pmlymax-ymax);
-            if(y<ymin)
-              qy    = (y-ymin)/(pmlymin-ymin);
-          } else if (type==300) { //XY Pml
-            if(x>xmax)
-             qx   = (x-xmax)/(pmlxmax-xmax);
-            if(x<xmin)
-             qx    = (x-xmin)/(pmlxmin-xmin);
-            if(y>ymax)
-             qy    = (y-ymax)/(pmlymax-ymax);
-            if(y<ymin)
-             qy    = (y-ymin)/(pmlymin-ymin);
-          }
+        //   // stretch x to [0 1] interval
+        //   if (type==100) { //X Pml
+        //     if(x>xmax)
+        //       qx   = (x-xmax)/(pmlxmax-xmax);
+        //     if(x<xmin)
+        //       qx    = (x-xmin)/(pmlxmin-xmin);
+        //   } else if (type==200) { //Y Pml
+        //     if(y>ymax)
+        //       qy    = (y-ymax)/(pmlymax-ymax);
+        //     if(y<ymin)
+        //       qy    = (y-ymin)/(pmlymin-ymin);
+        //   } else if (type==300) { //XY Pml
+        //     if(x>xmax)
+        //      qx   = (x-xmax)/(pmlxmax-xmax);
+        //     if(x<xmin)
+        //      qx    = (x-xmin)/(pmlxmin-xmin);
+        //     if(y>ymax)
+        //      qy    = (y-ymax)/(pmlymax-ymax);
+        //     if(y<ymin)
+        //      qy    = (y-ymin)/(pmlymin-ymin);
+        //   }
           
-          // Renormalize for ramp profile i.e. tau = [0,1]
-          taux  =  (qx-q1)/(q2-q1);
-          tauy  =  (qy-q1)/(q2-q1);
+        //   // Renormalize for ramp profile i.e. tau = [0,1]
+        //   taux  =  (qx-q1)/(q2-q1);
+        //   tauy  =  (qy-q1)/(q2-q1);
 
-          rampx = 1.0 -exp(2.*pow(exp(1.0),(-1. /taux))/(taux-1.0));
-          rampy = 1.0 -exp(2.*pow(exp(1.0),(-1. /tauy))/(tauy-1.0));
-          rampx = qx<=q1 ? 0. : rampx;  rampx = qx>=q2 ? 1. : rampx;
-          rampy = qy<=q1 ? 0. : rampy;  rampy = qy>=q2 ? 1. : rampy;
+        //   rampx = 1.0 -exp(2.*pow(exp(1.0),(-1. /taux))/(taux-1.0));
+        //   rampy = 1.0 -exp(2.*pow(exp(1.0),(-1. /tauy))/(tauy-1.0));
+        //   rampx = qx<=q1 ? 0. : rampx;  rampx = qx>=q2 ? 1. : rampx;
+        //   rampy = qy<=q1 ? 0. : rampy;  rampy = qy>=q2 ? 1. : rampy;
            
-          if (type==100) { //X Pml
-             bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*rampx;
-          } else if (type==200) { //Y Pml
-             bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*rampy;
-          } else if (type==300) { //XY Pml
-            if(x>xmax || x<xmin)
-             bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*rampx;
-            if(y>ymax || y<ymin)
-             bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*rampy;
-          }
-        }
+        //   if (type==100) { //X Pml
+        //      bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*rampx;
+        //   } else if (type==200) { //Y Pml
+        //      bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*rampy;
+        //   } else if (type==300) { //XY Pml
+        //     if(x>xmax || x<xmin)
+        //      bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*rampx;
+        //     if(y>ymax || y<ymin)
+        //      bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*rampy;
+        //   }
+        // }
 
-        else if(strstr(options,"SMOOTHPOLYNOMIAL")){
+        // else if(strstr(options,"SMOOTHPOLYNOMIAL")){
 
-          dfloat qx=0,      qy = 0;
-          dfloat taux = 0,  tauy = 0;
-          dfloat polyx = 0, polyy = 0;
+        //   dfloat qx=0,      qy = 0;
+        //   dfloat taux = 0,  tauy = 0;
+        //   dfloat polyx = 0, polyy = 0;
 
-          if (type==100) { //X Pml
-            if(x>xmax)
-              qx   = (x-xmax)/(pmlxmax-xmax);
-            if(x<xmin)
-              qx    = (x-xmin)/(pmlxmin-xmin);
-          } else if (type==200) { //Y Pml
-            if(y>ymax)
-              qy    = (y-ymax)/(pmlymax-ymax);
-            if(y<ymin)
-              qy    = (y-ymin)/(pmlymin-ymin);
-          } else if (type==300) { //XY Pml
-            if(x>xmax)
-             qx   = (x-xmax)/(pmlxmax-xmax);
-            if(x<xmin)
-             qx    = (x-xmin)/(pmlxmin-xmin);
-            if(y>ymax)
-             qy    = (y-ymax)/(pmlymax-ymax);
-            if(y<ymin)
-             qy    = (y-ymin)/(pmlymin-ymin);
-          }
-          // Third Order
-          taux  =  (qx-q1)/(q2-q1);
-          tauy  =  (qy-q1)/(q2-q1);
-          // polyx = c3*pow(taux,3) + c2*pow(taux,2) +c1*taux +c0;
-          // polyy = c3*pow(tauy,3) + c2*pow(tauy,2) +c1*tauy +c0;
-          // // Fifth Order
-          polyx = c5*pow(taux,5) + c4*pow(taux,4) +c3*pow(taux,3) + c2*pow(taux,2) + c1*taux + c0;
-          polyy = c5*pow(tauy,5) + c4*pow(tauy,4) +c3*pow(tauy,3) + c2*pow(tauy,2) + c1*tauy + c0;
+        //   if (type==100) { //X Pml
+        //     if(x>xmax)
+        //       qx   = (x-xmax)/(pmlxmax-xmax);
+        //     if(x<xmin)
+        //       qx    = (x-xmin)/(pmlxmin-xmin);
+        //   } else if (type==200) { //Y Pml
+        //     if(y>ymax)
+        //       qy    = (y-ymax)/(pmlymax-ymax);
+        //     if(y<ymin)
+        //       qy    = (y-ymin)/(pmlymin-ymin);
+        //   } else if (type==300) { //XY Pml
+        //     if(x>xmax)
+        //      qx   = (x-xmax)/(pmlxmax-xmax);
+        //     if(x<xmin)
+        //      qx    = (x-xmin)/(pmlxmin-xmin);
+        //     if(y>ymax)
+        //      qy    = (y-ymax)/(pmlymax-ymax);
+        //     if(y<ymin)
+        //      qy    = (y-ymin)/(pmlymin-ymin);
+        //   }
+        //   // Third Order
+        //   taux  =  (qx-q1)/(q2-q1);
+        //   tauy  =  (qy-q1)/(q2-q1);
+        //   // polyx = c3*pow(taux,3) + c2*pow(taux,2) +c1*taux +c0;
+        //   // polyy = c3*pow(tauy,3) + c2*pow(tauy,2) +c1*tauy +c0;
+        //   // // Fifth Order
+        //   polyx = c5*pow(taux,5) + c4*pow(taux,4) +c3*pow(taux,3) + c2*pow(taux,2) + c1*taux + c0;
+        //   polyy = c5*pow(tauy,5) + c4*pow(tauy,4) +c3*pow(tauy,3) + c2*pow(tauy,2) + c1*tauy + c0;
 
-          polyx = qx<=q1 ? 0. : polyx;  polyx = qx>=q2 ? 1. : polyx;
-          polyy = qy<=q1 ? 0. : polyy;  polyy = qy>=q2 ? 1. : polyy;
+        //   polyx = qx<=q1 ? 0. : polyx;  polyx = qx>=q2 ? 1. : polyx;
+        //   polyy = qy<=q1 ? 0. : polyy;  polyy = qy>=q2 ? 1. : polyy;
            
-          if (type==100) { //X Pml
-             bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
-          } else if (type==200) { //Y Pml
-             bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
-          } else if (type==300) { //XY Pml
-            if(x>xmax || x<xmin)
-             bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
-            if(y>ymax || y<ymin)
-             bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
-          }
+        //   if (type==100) { //X Pml
+        //      bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+        //   } else if (type==200) { //Y Pml
+        //      bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+        //   } else if (type==300) { //XY Pml
+        //     if(x>xmax || x<xmin)
+        //      bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*polyx;
+        //     if(y>ymax || y<ymin)
+        //      bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*polyy;
+        //   }
 
 
-        }
+        // }
 
       }
 
@@ -399,7 +399,7 @@ void boltzmannPmlSetup2D(bns_t *bns, char *options){
 
     //bns->Nfields = 6;
 
-    if(strstr(options,"SRSAAB")  || strstr(options,"SRAB") ){
+    if(options.compareArgs("TIME INTEGRATOR","SRSAAB")  || options.compareArgs("TIME INTEGRATOR","SRAB") ){
       bns->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
       bns->pmlrhsqx = (dfloat*) calloc(bns->Nrhs*mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
 
@@ -417,7 +417,7 @@ void boltzmannPmlSetup2D(bns_t *bns, char *options){
 
 
 
-    if(strstr(options,"LSERK")){
+    if(options.compareArgs("TIME INTEGRATOR","LSERK")){
       bns->pmlqx     = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
       bns->pmlrhsqx  = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
       bns->pmlresqx  = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
@@ -437,7 +437,8 @@ void boltzmannPmlSetup2D(bns_t *bns, char *options){
       bns->o_pmlresqy  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlresqy);
     }
 
-    if( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") ){
+    if(options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TIME INTEGRATOR","XDOPRI") || 
+       options.compareArgs("TIME INTEGRATOR","SAADRK") ){
       bns->pmlqx     = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
       bns->pmlrhsqx  = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
       
@@ -466,7 +467,7 @@ void boltzmannPmlSetup2D(bns_t *bns, char *options){
     }
 
 
-    if(strstr(options,"SARK")){
+    if(options.compareArgs("TIME INTEGRATOR","SARK")){
       bns->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
       bns->pmlrhsqx = (dfloat*) calloc(bns->Nrhs*mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
 
@@ -485,7 +486,7 @@ void boltzmannPmlSetup2D(bns_t *bns, char *options){
     }
 
 
-    if(strstr(options,"LSIMEX")){
+    if(options.compareArgs("TIME INTEGRATOR","LSIMEX")){
       bns->pmlqx    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
       bns->pmlqy    = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
       bns->pmlrhsqx = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
@@ -503,7 +504,7 @@ void boltzmannPmlSetup2D(bns_t *bns, char *options){
       // mesh->o_qZy       = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlqy);
     }
 
-    if(strstr(options,"IMEXRK")){
+    if(options.compareArgs("TIME INTEGRATOR","IMEXRK")){
 
       // printf("Here initializing IMEXRK PML\n");
 

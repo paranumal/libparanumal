@@ -2,7 +2,7 @@
 
 // complete a time step using LSERK4
 void boltzmannSAABStep2D(bns_t *bns, int tstep, int haloBytes,
-                        dfloat * sendBuffer, dfloat *recvBuffer, char * options){
+                        dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options){
 
 
 mesh2D *mesh = bns->mesh;
@@ -78,7 +78,7 @@ mesh2D *mesh = bns->mesh;
                           bns->o_pmlrhsqy);
 
 
-  if(strstr(options, "CUBATURE")){ 
+  if(options.compareArgs("RELAXATION TYPE","CUBATURE")){ 
 
     if (mesh->nonPmlNelements)
       bns->relaxationKernel(mesh->nonPmlNelements,

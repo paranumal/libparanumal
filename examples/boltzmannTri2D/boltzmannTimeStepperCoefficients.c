@@ -1,12 +1,12 @@
 #include "boltzmann2D.h"
 
-void boltzmannTimeStepperCoefficients(bns_t *bns, char *options){
+void boltzmannTimeStepperCoefficients(bns_t *bns, setupAide &options){
 
 
 mesh2D *mesh = bns->mesh; 
 
-if(strstr(options,"MRSAAB") || strstr(options,"MRAB") || 
-   strstr(options,"SRAB")   || strstr(options,"SAAB") ){
+if(options.compareArgs("TIME INTEGRATOR","MRSAAB") || options.compareArgs("TIME INTEGRATOR","MRAB") || 
+   options.compareArgs("TIME INTEGRATOR","SRAB")   || options.compareArgs("TIME INTEGRATOR","SAAB") ){
 
 	int Nlevels = 0;
 
@@ -152,7 +152,7 @@ if(strstr(options,"MRSAAB") || strstr(options,"MRAB") ||
 }
 
 
-if(strstr(options, "LSERK")){
+if(options.compareArgs("TIME INTEGRATOR", "LSERK")){
 // 
 printf("Relying the fact that  LSERK set on mesh structure\n");
 
@@ -160,7 +160,7 @@ printf("Relying the fact that  LSERK set on mesh structure\n");
 }
 
 
-if(strstr(options,"IMEXRK")){
+if(options.compareArgs("TIME INTEGRATOR","IMEXRK")){
 
 	if(bns->NrkStages==6){ // Kennedy-Carpanter RK34
 
@@ -511,7 +511,7 @@ if(strstr(options,"IMEXRK")){
 
 
 
-if(strstr(options,"DOPRI5") || strstr(options,"XDOPRI")){
+if(options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TIME INTEGRATOR","XDOPRI")){
 
 
   dfloat rkC[bns->NrkStages]          = {0.0, 0.2, 0.3, 0.8, 8.0/9.0, 1.0, 1.0};
@@ -536,7 +536,7 @@ if(strstr(options,"DOPRI5") || strstr(options,"XDOPRI")){
 }
 
 
-if(strstr(options,"SAADRK")){
+if(options.compareArgs("TIME INTEGRATOR","SAADRK")){
 
 	// dfloat rkC[bns->NrkStages], rkA[bns->NrkStages*bns->NrkStages], rkE[bns->NrkStages]; 
 	if(bns->NrkStages==5){ // SAARK43
@@ -594,7 +594,7 @@ if(strstr(options,"SAADRK")){
 	boltzmannSAADRKCoefficients(bns, options);
 }
 
-if(strstr(options, "SARK")){
+if(options.compareArgs("TIME INTEGRATOR", "SARK")){
 	//
 	for(int i=0; i<5; i++){
 		for(int j=0; j<5; j++){
@@ -665,7 +665,7 @@ if(strstr(options, "SARK")){
 
 
 
-else if(strstr(options, "LSIMEX")){ 
+else if(options.compareArgs("TIME INTEGRATOR","LSIMEX")){ 
 	int Nimex = 4;
 	dfloat ImB[4]   ={0.0, 673488652607.0 /2334033219546.0, 493801219040.0/853653026979.0, 184814777513.0/1389668723319.0 };
 	dfloat ImC[4]   = { 0.0, 3375509829940.0/4525919076317.0, 272778623835.0/1039454778728.0, 1.0};
