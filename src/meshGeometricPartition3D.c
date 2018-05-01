@@ -65,7 +65,7 @@ int compareElements(const void *a, const void *b){
 }
 
 // stub for the match function needed by parallelSort
-void bogusMatch(void *a, void *b){ }
+void bogusMatch3D(void *a, void *b){ }
 
 // geometric partition of elements in 3D mesh using Morton ordering + parallelSort
 void meshGeometricPartition3D(mesh3D *mesh){
@@ -135,9 +135,12 @@ void meshGeometricPartition3D(mesh3D *mesh){
 
     elements[e].type = mesh->elementInfo[e];
 
-    unsigned long long int ix = (cx-gminvx)*Nboxes/(gmaxvx-gminvx);
-    unsigned long long int iy = (cy-gminvy)*Nboxes/(gmaxvy-gminvy);
-    unsigned long long int iz = (cz-gminvz)*Nboxes/(gmaxvz-gminvz);
+    dfloat maxlength = max(gmaxvx-gminvx, max(gmaxvy-gminvy, gmaxvz-gminvz));
+
+    // avoid stretching axes
+    unsigned long long int ix = (cx-gminvx)*Nboxes/maxlength;
+    unsigned long long int iy = (cy-gminvy)*Nboxes/maxlength;
+    unsigned long long int iz = (cz-gminvz)*Nboxes/maxlength;
 			
     elements[e].index = mortonIndex3D(ix, iy, iz);
   }
@@ -151,7 +154,7 @@ void meshGeometricPartition3D(mesh3D *mesh){
   // odd-even parallel sort of element capsules based on their Morton index
   parallelSort(maxNelements, elements, sizeof(element_t),
 	       compareElements, 
-	       bogusMatch);
+	       bogusMatch3D);
 
 #if 0
   // count number of elements that end up on this process
