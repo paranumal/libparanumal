@@ -93,7 +93,8 @@ LOBJS = \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
 ../../src/hash.o \
-../../src/timer.o
+../../src/timer.o \
+../../src/readArray.o
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\
