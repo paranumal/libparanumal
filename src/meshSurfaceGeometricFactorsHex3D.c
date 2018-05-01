@@ -7,16 +7,21 @@ void computeFrame(dfloat nx, dfloat ny, dfloat nz,
 		  dfloat &tanx, dfloat &tany, dfloat &tanz,
 		  dfloat &binx, dfloat &biny, dfloat &binz){
 
-  dfloat ranx = drand48();
-  dfloat rany = drand48();
-  dfloat ranz = drand48();
-
-  dfloat magran = sqrt(ranx*ranx+rany*rany+ranz*ranz);
-
-  ranx /= magran;
-  rany /= magran;
-  ranz /= magran;
-
+  dfloat rdotn, ranx, rany, ranz;
+  do{
+    ranx = drand48();
+    rany = drand48();
+    ranz = drand48();
+    
+    dfloat magran = sqrt(ranx*ranx+rany*rany+ranz*ranz);
+    
+    ranx /= magran;
+    rany /= magran;
+    ranz /= magran;
+    
+    rdotn = nx*ranx+ny*rany+nz*ranz;
+  }while(fabs(rdotn)<1e-4);
+  
   tanx = ny*ranz - nz*rany;
   tany = nz*ranx - nx*ranz;
   tanz = nx*rany - ny*ranx;
