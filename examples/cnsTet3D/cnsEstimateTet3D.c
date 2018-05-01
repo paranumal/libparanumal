@@ -26,7 +26,7 @@ dfloat cnsDopriEstimateTet3D(cns_t *cns){
   MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
   // bad normalization
-  err = sqrt(err/cns->totalElements);
+  err = sqrt(err/(cns->totalElements*mesh->Np*mesh->Nfields));
   
   return err;
 }

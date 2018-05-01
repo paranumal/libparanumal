@@ -73,7 +73,6 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
   if(!check) printf("WARNING setup file does not include MACH\n");
 
   // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
-  dfloat mach = 0.17;
   cns->RT = cns->ubar*cns->ubar/(mach*mach);
   
   
@@ -120,8 +119,8 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
     memcpy(cns->rkA, rkA, cns->Nrk*cns->Nrk*sizeof(dfloat));
     
     cns->dtMIN = 1E-7; //minumum allowed timestep
-    cns->ATOL = 1E-7;  //absolute error tolerance
-    cns->RTOL = 1E-5;  //relative error tolerance
+    cns->ATOL = 1E-5;  //absolute error tolerance
+    cns->RTOL = 1E-4;  //relative error tolerance
     cns->safe = 0.9;   //safety factor
 
     //error control parameters
@@ -289,8 +288,8 @@ cns_t *cnsSetupTri2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderFi
     occa::memory o_sendStressesBuffer = mesh->device.mappedAlloc(cns->haloStressesBytes, NULL);
     occa::memory o_recvStressesBuffer = mesh->device.mappedAlloc(cns->haloStressesBytes, NULL);
     cns->o_haloStressesBuffer = mesh->device.malloc(cns->haloStressesBytes);
-    cns->sendStressesBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
-    cns->recvStressesBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
+    cns->sendStressesBuffer = (dfloat*) o_sendStressesBuffer.getMappedPointer();
+    cns->recvStressesBuffer = (dfloat*) o_recvStressesBuffer.getMappedPointer();
   }
 
   //  p_RT, p_rbar, p_ubar, p_vbar
