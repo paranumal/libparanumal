@@ -80,7 +80,8 @@ LOBJS = \
 ../../src/meshOccaSetup2D.o\
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
-../../src/parallelSort.o
+../../src/parallelSort.o\
+../../src/readArray.o
 
 acousticsMain2D:$(AOBJS) $(LOBJS)
 	$(LD)  $(LDFLAGS)  -o acousticsMain2D $(AOBJS) $(LOBJS) $(paths) $(LIBS)
