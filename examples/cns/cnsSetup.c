@@ -306,8 +306,8 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
     occa::memory o_sendStressesBuffer = mesh->device.mappedAlloc(cns->haloStressesBytes, NULL);
     occa::memory o_recvStressesBuffer = mesh->device.mappedAlloc(cns->haloStressesBytes, NULL);
     cns->o_haloStressesBuffer = mesh->device.malloc(cns->haloStressesBytes);
-    cns->sendStressesBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
-    cns->recvStressesBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
+    cns->sendStressesBuffer = (dfloat*) o_sendStressesBuffer.getMappedPointer();
+    cns->recvStressesBuffer = (dfloat*) o_recvStressesBuffer.getMappedPointer();
   }
 
   //  p_RT, p_rbar, p_ubar, p_vbar
@@ -356,13 +356,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
-  // set kernel names
-  char volumeKernelName[BUFSIZ];
-  char surfaceKernelName[BUFSIZ];
-  char cubatureVolumeKernelName[BUFSIZ];
-  char cubatureSurfaceKernelName[BUFSIZ];
-  char updateKernelName[BUFSIZ];
-
+  // set kernel name suffix
   char *suffix;
   
   if(cns->elementType==TRIANGLES)

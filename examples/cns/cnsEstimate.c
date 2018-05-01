@@ -25,8 +25,7 @@ dfloat cnsDopriEstimate(cns_t *cns){
   }
   MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
-  // bad normalization
-  err = sqrt(err/(mesh->Np*cns->totalElements));
+  err = sqrt(err/(mesh->Np*cns->totalElements*cns->Nfields));
   
   return err;
 }
