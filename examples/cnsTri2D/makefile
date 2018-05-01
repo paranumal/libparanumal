@@ -74,7 +74,8 @@ cnsReportTri2D.o \
 ../../src/parallelSort.o \
 ../../src/matrix.o \
 ../../src/setupAide.o \
-../../src/trace.o
+../../src/trace.o\
+../../src/readArray.o
 
 cnsMainTri2D:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o cnsMainTri2D $(OBJS) $(paths) $(LIBS) 

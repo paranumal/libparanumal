@@ -227,6 +227,9 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
         DsT);
 
+    mesh->o_DtT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+				      DsT); // note: dummy allocated with DsT
+
     mesh->o_LIFT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
           mesh->LIFT);
@@ -289,6 +292,10 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
           cubDsWT);
 
+    mesh->o_cubDtWT =
+      mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
+			  cubDsWT); // dummy to align with 3d
+
     mesh->o_intInterpT =
       mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
           intInterpT);
@@ -305,6 +312,11 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
           mesh->inty);
 
+    mesh->o_intz =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
+			  mesh->intz); // dummy to align with 3d
+
+    
   } else if (mesh->Nverts==4) {//quads
 
     dfloat *cubDWT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
@@ -378,6 +390,10 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_inty =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*sizeof(dfloat),
           mesh->inty);
+
+    mesh->o_intz =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*sizeof(dfloat),
+          mesh->intz);
   }
 
 
@@ -405,10 +421,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   mesh->o_z =
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
         mesh->y);
-
-  mesh->o_intz =
-    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
-        mesh->inty);
 
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE

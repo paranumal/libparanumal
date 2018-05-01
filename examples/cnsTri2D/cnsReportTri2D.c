@@ -11,6 +11,7 @@ void cnsReportTri2D(cns_t *cns, dfloat time, setupAide &newOptions){
                        mesh->o_vgeo,
                        mesh->o_DrT,
                        mesh->o_DsT,
+		       mesh->o_DtT,
                        cns->o_q,
                        cns->o_Vort);
 
