@@ -372,37 +372,40 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
 
   // kernels from volume file
   sprintf(fileName, DHOLMES "/okl/cnsVolume%s.okl", suffix);
-  sprintf(kernelName, DHOLMES "cnsVolume%s", suffix);
+  sprintf(kernelName, "cnsVolume%s", suffix);
+
+  printf("fileName=[ %s ] \n", fileName);
+  printf("kernelName=[ %s ] \n", kernelName);
   
   cns->volumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-  sprintf(kernelName, DHOLMES "cnsStressesVolume%s", suffix);
+  sprintf(kernelName, "cnsStressesVolume%s", suffix);
   cns->stressesVolumeKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
   // kernels from surface file
   sprintf(fileName, DHOLMES "/okl/cnsSurface%s.okl", suffix);
-  sprintf(kernelName, DHOLMES "cnsSurface%s", suffix);
+  sprintf(kernelName, "cnsSurface%s", suffix);
   
   cns->surfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-  sprintf(kernelName, DHOLMES "cnsStressesSurface%s", suffix);
+  sprintf(kernelName, "cnsStressesSurface%s", suffix);
   cns->stressesSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
   // kernels from cubature volume file
   sprintf(fileName, DHOLMES "/okl/cnsCubatureVolume%s.okl", suffix);
-  sprintf(kernelName, DHOLMES "cnsCubatureVolume%s", suffix);
+  sprintf(kernelName, "cnsCubatureVolume%s", suffix);
   
   cns->cubatureVolumeKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
   // kernels from cubature surface file
   sprintf(fileName, DHOLMES "/okl/cnsCubatureSurface%s.okl", suffix);
-  sprintf(kernelName, DHOLMES "cnsCubatureSurface%s", suffix);
+  sprintf(kernelName, "cnsCubatureSurface%s", suffix);
 
   cns->cubatureSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
   // kernels from vorticity file
   sprintf(fileName, DHOLMES "/okl/cnsVorticity%s.okl", suffix);
-  sprintf(kernelName, DHOLMES "cnsVorticity%s", suffix);
+  sprintf(kernelName, "cnsVorticity%s", suffix);
   
   cns->vorticityKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
