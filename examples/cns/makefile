@@ -101,8 +101,8 @@ cnsReport.o \
 ../../src/readArray.o
 
 
-cnsMainTet3D:$(OBJS) 
-	$(LD)  $(LDFLAGS)  -o cnsMainTet3D $(OBJS) $(paths) $(LIBS) 
+cnsMain:$(OBJS) 
+	$(LD)  $(LDFLAGS)  -o cnsMain $(OBJS) $(paths) $(LIBS) 
 
 # what to do if user types "make clean"
 clean :
