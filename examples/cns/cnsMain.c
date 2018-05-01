@@ -20,7 +20,8 @@ int main(int argc, char **argv){
   newOptions.getArgs("MESH FILE", fileName);
   newOptions.getArgs("POLYNOMIAL DEGREE", N);
   newOptions.getArgs("ELEMENT TYPE", elementType);
-
+  newOptions.getArgs("MESH DIMENSION", dim);
+  
   // set up mesh
   mesh_t *mesh;
   switch(elementType){
