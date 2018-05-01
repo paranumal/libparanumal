@@ -10,10 +10,8 @@ HDRDIR  = ../../include
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-#CC	= mpic++
-#LD	= mpic++
-CC	= mpic++-mpich-mp
-LD	= mpic++-mpich-mp
+CC	= mpic++
+LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR)
@@ -73,6 +71,7 @@ LOBJS = \
 ../../src/meshHaloExtract.o \
 ../../src/meshHaloSetup.o \
 ../../src/meshParallelConnectOpt.o \
+../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPlotVTU2D.o \
@@ -80,7 +79,8 @@ LOBJS = \
 ../../src/meshOccaSetup2D.o\
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
-../../src/parallelSort.o
+../../src/parallelSort.o \
+../../src/readArray.o
 
 acousticsMain2D:$(AOBJS) $(LOBJS)
 	$(LD)  $(LDFLAGS)  -o acousticsMain2D $(AOBJS) $(LOBJS) $(paths) $(LIBS)
