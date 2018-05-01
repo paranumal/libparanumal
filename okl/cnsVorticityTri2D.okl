@@ -2,6 +2,7 @@ kernel void cnsVorticityTri2D(const dlong Nelements,
                               const dfloat * restrict vgeo,
                               const dfloat * restrict const DrT,
                               const dfloat * restrict const DsT,
+			      const dfloat * restrict const DtT,	
                               const dfloat * restrict q,
                                     dfloat * restrict Vort){  
   

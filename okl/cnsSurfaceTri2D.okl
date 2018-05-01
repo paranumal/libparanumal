@@ -88,19 +88,20 @@ void upwindRoeAveraged(const dfloat nx,
 
 // batch process elements
 kernel void cnsSurfaceTri2D(const dlong Nelements,
-                             const int advSwitch,
-                             const dfloat * restrict sgeo,
-                             const dfloat * restrict LIFTT,
-                             const dlong  * restrict vmapM,
-                             const dlong  * restrict vmapP,
-                             const int    * restrict EToB,
-                             const dfloat time,
-                             const dfloat * restrict x,
-                             const dfloat * restrict y,
-                             const dfloat mu,
-                             const dfloat * restrict q,
-                             const dfloat * restrict viscousStresses,
-                                   dfloat * restrict rhsq){
+			    const int advSwitch,
+			    const dfloat * restrict sgeo,
+			    const dfloat * restrict LIFTT,
+			    const dlong  * restrict vmapM,
+			    const dlong  * restrict vmapP,
+			    const int    * restrict EToB,
+			    const dfloat time,
+			    const dfloat * restrict x,
+			    const dfloat * restrict y,
+			    const dfloat * restrict z,
+			    const dfloat mu,
+			    const dfloat * restrict q,
+			    const dfloat * restrict viscousStresses,
+			    dfloat * restrict rhsq){
   
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -281,6 +282,7 @@ kernel void cnsStressesSurfaceTri2D(const dlong Nelements,
                                      const dfloat time,
                                      const dfloat * restrict x,
                                      const dfloat * restrict y,
+				    const dfloat * restrict z,
                                      const dfloat mu,
                                      const dfloat * restrict q,
                                            dfloat * restrict viscousStresses){
