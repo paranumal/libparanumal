@@ -103,7 +103,7 @@ typedef struct {
 }element_t;
 
 // compare the Morton indices for two element capsules
-int compareElements(const void *a, const void *b){
+int compareElements2D(const void *a, const void *b){
 
   element_t *ea = (element_t*) a;
   element_t *eb = (element_t*) b;
@@ -209,7 +209,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
 
   // odd-even parallel sort of element capsules based on their Morton index
   parallelSort(maxNelements, elements, sizeof(element_t),
-	       compareElements,
+	       compareElements2D,
 	       bogusMatch);
 
 

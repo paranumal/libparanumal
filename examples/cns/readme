@@ -6,3 +6,4 @@ To do:
 4. add Dt related variables where appropriate and tweak for versions that use D
 5. create a setup file for each element type and dimension
 6. tweak cnsPlotVTU to be dimension aware
+7. look for hard coded surface geofac offsets

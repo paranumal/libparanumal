@@ -7,7 +7,7 @@
 #define bitRange 20
 
 // spread bits of i by introducing zeros between binary bits
-unsigned long long int bitSplitter(unsigned int i){
+unsigned long long int bitSplitter3D(unsigned int i){
   
   unsigned long long int mask = 1;
   unsigned long long int li = i;
@@ -25,9 +25,9 @@ unsigned long long int bitSplitter(unsigned int i){
 unsigned long long int mortonIndex3D(unsigned int ix, unsigned int iy, unsigned int iz){
   
   // spread bits of ix apart (introduce zeros)
-  unsigned long long int sx = bitSplitter(ix);
-  unsigned long long int sy = bitSplitter(iy);
-  unsigned long long int sz = bitSplitter(iz);
+  unsigned long long int sx = bitSplitter3D(ix);
+  unsigned long long int sy = bitSplitter3D(iy);
+  unsigned long long int sz = bitSplitter3D(iz);
   
   // interleave bits of ix and iy
   unsigned long long int mi = sx | (sy<<1) | (sz<<2); 

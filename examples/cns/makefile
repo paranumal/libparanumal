@@ -97,7 +97,9 @@ cnsReport.o \
 ../../src/parallelSort.o \
 ../../src/matrix.o \
 ../../src/setupAide.o \
-../../src/trace.o
+../../src/trace.o \
+../../src/readArray.o
+
 
 cnsMainTet3D:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o cnsMainTet3D $(OBJS) $(paths) $(LIBS) 

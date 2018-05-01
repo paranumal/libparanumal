@@ -401,6 +401,15 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
         mesh->y);
 
+  // dummy z variables (note used y)
+  mesh->o_z =
+    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
+        mesh->y);
+
+  mesh->o_intz =
+    mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
+        mesh->inty);
+
   if(mesh->totalHaloPairs>0){
     // copy halo element list to DEVICE
     mesh->o_haloElementList =
