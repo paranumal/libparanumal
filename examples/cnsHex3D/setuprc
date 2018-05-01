@@ -2,7 +2,7 @@
 1.0
 
 [MESH FILE]
-../../meshes/cavityHex3DV2.msh
+../../meshes/insFenceHex3D.msh
 
 [POLYNOMIAL DEGREE]
 4
@@ -24,7 +24,7 @@ DOPRI5
 NODAL
 
 [VISCOSITY]
-1e-2
+1e-4
 
 [RT]
 # speed of sound = sqrt(RT)

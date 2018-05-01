@@ -2,7 +2,7 @@
 1.0
 
 [MESH FILE]
-../../meshes/T2D_Mar27_boltzPML.msh
+../../meshes/T2D_Mar27_ins.msh
 
 [POLYNOMIAL DEGREE]
 4
@@ -23,7 +23,7 @@ DOPRI5
 CUBATURE
 
 [VISCOSITY]
-5.e-3
+5.e-4
 
 [MACH NUMBER]
 .2
