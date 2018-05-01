@@ -1,5 +1,4 @@
 
-
 // Roe averaged Riemann solver
 void upwindRoeAveraged(const dfloat nx,
                        const dfloat ny,
@@ -89,7 +88,6 @@ void upwindRoeAveraged(const dfloat nx,
   *rvflux = ny*rufluxRot + nx*rvfluxRot;
 
 }
-
 
 #define quadSurfaceTerms(face,m, i, j)                                  \
 {                                                                       \
