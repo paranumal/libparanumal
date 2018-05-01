@@ -677,4 +677,8 @@ void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, i
 
 }
 
+void readDfloatArray(FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
+void readIntArray   (FILE *fp, const char *label, int **A   , int *Nrows, int* Ncols);
+
 #endif
+
