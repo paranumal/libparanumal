@@ -22,7 +22,7 @@ LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -I$(ELLIPTICDIR) -g  -D DHOLMES='"${CURDIR}/../.."' 
-		
+
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
 			-L$(ELLIPTICDIR) -lellipticQuad2D -L$(ALMONDDIR) -lparALMOND 
@@ -88,6 +88,7 @@ LOBJS = \
 ../../src/parallelSort.o\
 ../../src/hash.o\
 ../../src/timer.o\
+../../src/readArray.o
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\
