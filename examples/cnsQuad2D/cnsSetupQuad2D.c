@@ -124,8 +124,8 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
     memcpy(cns->rkA, rkA, cns->Nrk*cns->Nrk*sizeof(dfloat));
     
     cns->dtMIN = 1E-7; //minumum allowed timestep
-    cns->ATOL = 1E-7;  //absolute error tolerance
-    cns->RTOL = 1E-5;  //relative error tolerance
+    cns->ATOL = 1E-5;  //absolute error tolerance
+    cns->RTOL = 1E-4;  //relative error tolerance
     cns->safe = 0.9;   //safety factor
 
     //error control parameters
@@ -309,8 +309,8 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
     occa::memory o_sendStressesBuffer = mesh->device.mappedAlloc(cns->haloStressesBytes, NULL);
     occa::memory o_recvStressesBuffer = mesh->device.mappedAlloc(cns->haloStressesBytes, NULL);
     cns->o_haloStressesBuffer = mesh->device.malloc(cns->haloStressesBytes);
-    cns->sendStressesBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
-    cns->recvStressesBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
+    cns->sendStressesBuffer = (dfloat*) o_sendStressesBuffer.getMappedPointer();
+    cns->recvStressesBuffer = (dfloat*) o_recvStressesBuffer.getMappedPointer();
   }
 
   //  p_RT, p_rbar, p_ubar, p_vbar
@@ -350,6 +350,9 @@ cns_t *cnsSetupQuad2D(mesh2D *mesh, setupAide &newOptions, char* boundaryHeaderF
 
   kernelInfo.addDefine("p_blockSize", blockSize);
   
+
+  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+
   cns->volumeKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsVolumeQuad2D.okl",
 				       "cnsVolumeQuad2D",

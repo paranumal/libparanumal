@@ -13,12 +13,23 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
     //compute RK stage 
     // rkq = q + dt sum_{i=0}^{rk-1} a_{rk,i}*rhsq_i
     cns->rkStageKernel(mesh->Nelements,
-		       rk,
-		       mesh->dt,
-		       cns->o_rkA,
-		       cns->o_q,
-		       cns->o_rkrhsq,
-		       cns->o_rkq);
+                       rk,
+                       mesh->dt,
+                       cns->o_rkA,
+                       cns->o_q,
+                       cns->o_rkrhsq,
+                       cns->o_rkq);
+
+    {
+      cns->o_rkq.copyTo(cns->saveq);
+      dfloat res = 0;
+      for(int n=0;n<cns->Nfields*mesh->Np*mesh->Nelements;++n){
+        res += cns->saveq[n]*cns->saveq[n];
+      }
+      printf("rkq: res = %g\n", res);
+
+    }
+
 
     //compute RHS
     // rhsq = F(currentTIme, rkq)
@@ -34,17 +45,15 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       // start halo exchange
       meshHaloExchangeStart(mesh, mesh->Np*cns->Nfields*sizeof(dfloat), cns->sendBuffer, cns->recvBuffer);
     }
-
-#if 0
     
     // now compute viscous stresses
     cns->stressesVolumeKernel(mesh->Nelements, 
-			      mesh->o_vgeo, 
-			      mesh->o_D, 
-			      cns->mu, 
-			      cns->o_rkq, 
-			      cns->o_viscousStresses);
-    
+                              mesh->o_vgeo, 
+                              mesh->o_D, 
+                              cns->mu, 
+                              cns->o_rkq, 
+                              cns->o_viscousStresses);
+
     // wait for q halo data to arrive
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
@@ -55,17 +64,17 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
     }
 
     cns->stressesSurfaceKernel(mesh->Nelements, 
-			       mesh->o_sgeo, 
-			       mesh->o_vmapM, 
-			       mesh->o_vmapP, 
-			       mesh->o_EToB, 
-			       currentTime,
-			       mesh->o_x, 
-			       mesh->o_y,
-			       mesh->o_z, 
-			       cns->mu, 
-			       cns->o_rkq, 
-			       cns->o_viscousStresses);
+                               mesh->o_sgeo, 
+                               mesh->o_vmapM, 
+                               mesh->o_vmapP, 
+                               mesh->o_EToB, 
+                               currentTime,
+                               mesh->o_x, 
+                               mesh->o_y,
+                               mesh->o_z, 
+                               cns->mu, 
+                               cns->o_rkq, 
+                               cns->o_viscousStresses);
 
     mesh->device.finish();
     
@@ -81,28 +90,37 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       // start halo exchange
       meshHaloExchangeStart(mesh, mesh->Np*cns->Nstresses*sizeof(dfloat), cns->sendStressesBuffer, cns->recvStressesBuffer);
     }
-#endif
     
     // compute volume contribution to DG cns RHS
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureVolumeKernel(mesh->Nelements, 
-				cns->advSwitch,
-				mesh->o_vgeo, 
-				mesh->o_cubvgeo, 
-				mesh->o_cubDWT,
-				mesh->o_cubInterpT,
-				mesh->o_cubProjectT,
-				cns->o_viscousStresses, 
-				cns->o_rkq, 
-				cns->o_rhsq);
+                                cns->advSwitch,
+                                mesh->o_vgeo, 
+                                mesh->o_cubvgeo, 
+                                mesh->o_cubDWT,
+                                mesh->o_cubInterpT,
+                                mesh->o_cubProjectT,
+                                cns->o_viscousStresses, 
+                                cns->o_rkq, 
+                                cns->o_rhsq);
     } else {
       cns->volumeKernel(mesh->Nelements, 
-			cns->advSwitch, 
-			mesh->o_vgeo, 
-			mesh->o_D,
-			cns->o_viscousStresses, 
-			cns->o_rkq, 
-			cns->o_rhsq);
+                        cns->advSwitch, 
+                        mesh->o_vgeo, 
+                        mesh->o_D,
+                        cns->o_viscousStresses, 
+                        cns->o_rkq, 
+                        cns->o_rhsq);
+    }
+
+    {
+      cns->o_rhsq.copyTo(cns->saveq);
+      dfloat res = 0;
+      for(int n=0;n<cns->Nfields*mesh->Np*mesh->Nelements;++n){
+        res += cns->saveq[n]*cns->saveq[n];
+      }
+      printf("o_rhsq: res = %g\n", res);
+
     }
 
     // wait for halo stresses data to arrive
@@ -118,7 +136,7 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       cns->o_rhsq.copyTo(cns->saveq);
       dfloat res = 0;
       for(int n=0;n<cns->Nfields*mesh->Np*mesh->Nelements;++n){
-	res += cns->saveq[n]*cns->saveq[n];
+        res += cns->saveq[n]*cns->saveq[n];
       }
       printf("post vol: res = %g\n", res);
 
@@ -127,50 +145,48 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
     // compute surface contribution to DG cns RHS (LIFTT ?)
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureSurfaceKernel(mesh->Nelements, 
-				 cns->advSwitch, 
-				 mesh->o_vgeo,
-				 mesh->o_cubsgeo, 
-				 mesh->o_vmapM, 
-				 mesh->o_vmapP, 
-				 mesh->o_EToB,
-				 mesh->o_cubInterpT,
-				 mesh->o_cubProjectT,
-				 currentTime, 
-				 mesh->o_intx, 
-				 mesh->o_inty,
-				 mesh->o_intz, 
-				 cns->mu, 
-				 cns->o_rkq, 
-				 cns->o_viscousStresses, 
-				 cns->o_rhsq);
+                                 cns->advSwitch, 
+                                 mesh->o_vgeo,
+                                 mesh->o_cubsgeo, 
+                                 mesh->o_vmapM, 
+                                 mesh->o_vmapP, 
+                                 mesh->o_EToB,
+                                 mesh->o_cubInterpT,
+                                 mesh->o_cubProjectT,
+                                 currentTime, 
+                                 mesh->o_intx, 
+                                 mesh->o_inty,
+                                 mesh->o_intz, 
+                                 cns->mu, 
+                                 cns->o_rkq, 
+                                 cns->o_viscousStresses, 
+                                 cns->o_rhsq);
     } else {
-      cns->surfaceKernel(mesh->Nelements, 
-			 cns->advSwitch, 
-			 mesh->o_sgeo, 
-			 mesh->o_vmapM, 
-			 mesh->o_vmapP, 
-			 mesh->o_EToB,
-			 currentTime, 
-			 mesh->o_x, 
-			 mesh->o_y,
-			 mesh->o_z, 
-			 cns->mu, 
-			 cns->o_rkq, 
-			 cns->o_viscousStresses, 
-			 cns->o_rhsq);
+      // cns->surfaceKernel(mesh->Nelements, 
+      //                    cns->advSwitch, 
+      //                    mesh->o_sgeo, 
+      //                    mesh->o_vmapM, 
+      //                    mesh->o_vmapP, 
+      //                    mesh->o_EToB,
+      //                    currentTime, 
+      //                    mesh->o_x, 
+      //                    mesh->o_y,
+      //                    mesh->o_z, 
+      //                    cns->mu, 
+      //                    cns->o_rkq, 
+      //                    cns->o_viscousStresses, 
+      //                    cns->o_rhsq);
     }
 
     {
       cns->o_rhsq.copyTo(cns->saveq);
       dfloat res = 0;
       for(int n=0;n<cns->Nfields*mesh->Np*mesh->Nelements;++n){
-	res += cns->saveq[n]*cns->saveq[n];
+        res += cns->saveq[n]*cns->saveq[n];
       }
       printf("post sur: res = %g\n", res);
 
     }
-    
-
     
     mesh->device.finish();
     
@@ -180,15 +196,15 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
     //   q = q + dt*sum_{i=0}^{rk} rkA_{rk,i}*rkrhs_i
     //   rkerr = dt*sum_{i=0}^{rk} rkE_{rk,i}*rkrhs_i
     cns->rkUpdateKernel(mesh->Nelements, 
-			rk,
-			mesh->dt, 
-			cns->o_rkA, 
-			cns->o_rkE, 
-			cns->o_q,
-			cns->o_rhsq, 
-			cns->o_rkrhsq, 
-			cns->o_rkq,
-			cns->o_rkerr);
+                        rk,
+                        mesh->dt, 
+                        cns->o_rkA, 
+                        cns->o_rkE, 
+                        cns->o_q,
+                        cns->o_rhsq, 
+                        cns->o_rkrhsq, 
+                        cns->o_rkq,
+                        cns->o_rkerr);
   }
 }
 
@@ -219,11 +235,11 @@ void cnsLserkStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       
     // now compute viscous stresses
     cns->stressesVolumeKernel(mesh->Nelements, 
-			      mesh->o_vgeo, 
-			      mesh->o_D, 
-			      cns->mu, 
-			      cns->o_q, 
-			      cns->o_viscousStresses);
+                              mesh->o_vgeo, 
+                              mesh->o_D, 
+                              cns->mu, 
+                              cns->o_q, 
+                              cns->o_viscousStresses);
       
     // wait for q halo data to arrive
     if(mesh->totalHaloPairs>0){
@@ -235,17 +251,17 @@ void cnsLserkStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
     }
       
     cns->stressesSurfaceKernel(mesh->Nelements, 
-			       mesh->o_sgeo, 
-			       mesh->o_vmapM, 
-			       mesh->o_vmapP, 
-			       mesh->o_EToB, 
-			       currentTime,
-			       mesh->o_x, 
-			       mesh->o_y,
-			       mesh->o_z, 
-			       cns->mu, 
-			       cns->o_q, 
-			       cns->o_viscousStresses);
+                               mesh->o_sgeo, 
+                               mesh->o_vmapM, 
+                               mesh->o_vmapP, 
+                               mesh->o_EToB, 
+                               currentTime,
+                               mesh->o_x, 
+                               mesh->o_y,
+                               mesh->o_z, 
+                               cns->mu, 
+                               cns->o_q, 
+                               cns->o_viscousStresses);
       
     // extract stresses halo on DEVICE
     if(mesh->totalHaloPairs>0){
@@ -264,22 +280,22 @@ void cnsLserkStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
 
       cns->cubatureVolumeKernel(mesh->Nelements, 
-				advSwitch, 
-				mesh->o_vgeo, 
-				mesh->o_cubDWT,
-				mesh->o_cubInterpT,
-				mesh->o_cubProjectT,
-				cns->o_viscousStresses, 
-				cns->o_q, 
-				cns->o_rhsq);
+                                advSwitch, 
+                                mesh->o_vgeo, 
+                                mesh->o_cubDWT,
+                                mesh->o_cubInterpT,
+                                mesh->o_cubProjectT,
+                                cns->o_viscousStresses, 
+                                cns->o_q, 
+                                cns->o_rhsq);
     } else {
       cns->volumeKernel(mesh->Nelements, 
-			advSwitch, 
-			mesh->o_vgeo, 
-			mesh->o_D,
-			cns->o_viscousStresses, 
-			cns->o_q, 
-			cns->o_rhsq);
+                        advSwitch, 
+                        mesh->o_vgeo, 
+                        mesh->o_D,
+                        cns->o_viscousStresses, 
+                        cns->o_q, 
+                        cns->o_rhsq);
     }
 
     // wait for halo stresses data to arrive
@@ -294,46 +310,46 @@ void cnsLserkStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
     // compute surface contribution to DG cns RHS (LIFTT ?)
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureSurfaceKernel(mesh->Nelements, 
-				 advSwitch,
-				 mesh->o_vgeo, 
-				 mesh->o_cubsgeo, 
-				 mesh->o_vmapM, 
-				 mesh->o_vmapP, 
-				 mesh->o_EToB,
-				 mesh->o_cubInterpT,
-				 mesh->o_cubProjectT,
-				 currentTime, 
-				 mesh->o_intx, 
-				 mesh->o_inty,
-				 mesh->o_intz, 
-				 cns->mu, 
-				 cns->o_q, 
-				 cns->o_viscousStresses, 
-				 cns->o_rhsq);
+                                 advSwitch,
+                                 mesh->o_vgeo, 
+                                 mesh->o_cubsgeo, 
+                                 mesh->o_vmapM, 
+                                 mesh->o_vmapP, 
+                                 mesh->o_EToB,
+                                 mesh->o_cubInterpT,
+                                 mesh->o_cubProjectT,
+                                 currentTime, 
+                                 mesh->o_intx, 
+                                 mesh->o_inty,
+                                 mesh->o_intz, 
+                                 cns->mu, 
+                                 cns->o_q, 
+                                 cns->o_viscousStresses, 
+                                 cns->o_rhsq);
     } else {
       cns->surfaceKernel(mesh->Nelements, 
-			 advSwitch, 
-			 mesh->o_sgeo, 
-			 mesh->o_vmapM, 
-			 mesh->o_vmapP, 
-			 mesh->o_EToB,
-			 currentTime, 
-			 mesh->o_x, 
-			 mesh->o_y,
-			 mesh->o_z, 
-			 cns->mu, 
-			 cns->o_q, 
-			 cns->o_viscousStresses, 
-			 cns->o_rhsq);
+                         advSwitch, 
+                         mesh->o_sgeo, 
+                         mesh->o_vmapM, 
+                         mesh->o_vmapP, 
+                         mesh->o_EToB,
+                         currentTime, 
+                         mesh->o_x, 
+                         mesh->o_y,
+                         mesh->o_z, 
+                         cns->mu, 
+                         cns->o_q, 
+                         cns->o_viscousStresses, 
+                         cns->o_rhsq);
     }
         
     // update solution using Runge-Kutta
     cns->updateKernel(mesh->Nelements, 
-		      mesh->dt, 
-		      mesh->rka[rk], 
-		      mesh->rkb[rk], 
-		      cns->o_rhsq, 
-		      cns->o_resq, 
-		      cns->o_q);
+                      mesh->dt, 
+                      mesh->rka[rk], 
+                      mesh->rkb[rk], 
+                      cns->o_rhsq, 
+                      cns->o_resq, 
+                      cns->o_q);
   }
 }

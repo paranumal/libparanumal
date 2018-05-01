@@ -21,12 +21,12 @@ void cnsRunHex3D(cns_t *cns, setupAide &newOptions){
     for(dlong e=0;e<mesh->Nelements;++e){  
       
       for(int f=0;f<mesh->Nfaces;++f){
-	dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
-	dfloat sJ   = mesh->sgeo[sid + SJID];
-	dfloat invJ = mesh->sgeo[sid + IJID];
-	dfloat hest = .5/(sJ*invJ);
-	
-	hmin = mymin(hmin, hest);
+        dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+        dfloat sJ   = mesh->sgeo[sid + SJID];
+        dfloat invJ = mesh->sgeo[sid + IJID];
+        dfloat hest = .5/(sJ*invJ);
+        
+        hmin = mymin(hmin, hest);
       }
     }
     
@@ -55,8 +55,8 @@ void cnsRunHex3D(cns_t *cns, setupAide &newOptions){
 
       //check for final timestep
       if (time+mesh->dt > mesh->finalTime){
-	mesh->dt = mesh->finalTime-time;
-	done = 1;
+        mesh->dt = mesh->finalTime-time;
+        done = 1;
       }
 
       // try a step with the current time step
@@ -74,54 +74,56 @@ void cnsRunHex3D(cns_t *cns, setupAide &newOptions){
       dfloat dtnew = mesh->dt/fac;
 
       if (err<1.0) { //dt is accepted
+        // output  (print from rkq)
+          cnsReportHex3D(cns, nextOutputTime, newOptions);
+          
+        // check for output during this step and do a mini-step
+        if(time<nextOutputTime && time+mesh->dt>nextOutputTime){
+          dfloat savedt = mesh->dt;
+          
+          // save rkq
+          cns->o_saveq.copyFrom(cns->o_rkq);
 
-	// check for output during this step and do a mini-step
-	if(time<nextOutputTime && time+mesh->dt>nextOutputTime){
-	  dfloat savedt = mesh->dt;
-	  
-	  // save rkq
-	  cns->o_saveq.copyFrom(cns->o_rkq);
+          // change dt to match output
+          mesh->dt = nextOutputTime-time;
 
-	  // change dt to match output
-	  mesh->dt = nextOutputTime-time;
+          // print
+          printf("Taking output mini step: %g\n", mesh->dt);
+          
+          // time step to output
+          cnsDopriStepHex3D(cns, newOptions, time);       
 
-	  // print
-	  printf("Taking output mini step: %g\n", mesh->dt);
-	  
-	  // time step to output
-	  cnsDopriStepHex3D(cns, newOptions, time);	  
+          // shift for output
+          cns->o_rkq.copyTo(cns->o_q);
+          
+          // output  (print from rkq)
+          cnsReportHex3D(cns, nextOutputTime, newOptions);
 
-	  // shift for output
-	  cns->o_rkq.copyTo(cns->o_q);
-	  
-	  // output  (print from rkq)
-	  cnsReportHex3D(cns, nextOutputTime, newOptions);
+          // restore time step
+          mesh->dt = savedt;
 
-	  // restore time step
-	  mesh->dt = savedt;
+          // increment next output time
+          nextOutputTime += outputInterval;
 
-	  // increment next output time
-	  nextOutputTime += outputInterval;
-
-	  // accept saved rkq
-	  cns->o_q.copyFrom(cns->o_saveq);
-	}
-	else{
-	  // accept rkq
-	  cns->o_q.copyFrom(cns->o_rkq);
-	}
+          // accept saved rkq
+          cns->o_q.copyFrom(cns->o_saveq);
+        }
+        else{
+          // accept rkq
+          cns->o_q.copyFrom(cns->o_rkq);
+        }
 
         time += mesh->dt;
 
         cns->facold = mymax(err,1E-4); // hard coded factor ?
 
-	printf("\r time = %g (%d), dt = %g accepted (ratio dt/hmin = %g)               ", time, allStep, mesh->dt, mesh->dt/hmin);
+        printf("\r time = %g (%d), dt = %g accepted (ratio dt/hmin = %g)               ", time, allStep, mesh->dt, mesh->dt/hmin);
         tstep++;
       } else {
         dtnew = mesh->dt/(mymax(cns->invfactor1,fac1/cns->safe));
-	printf("\r time = %g (%d), dt = %g rejected (ratio dt/min = %g), trying %g", time, allStep, mesh->dt, mesh->dt/hmin, dtnew);
+        printf("\r time = %g (%d), dt = %g rejected (ratio dt/min = %g), trying %g", time, allStep, mesh->dt, mesh->dt/hmin, dtnew);
 
-	done = 0;
+        done = 0;
       }
       mesh->dt = dtnew;
       
@@ -150,7 +152,7 @@ void cnsRunHex3D(cns_t *cns, setupAide &newOptions){
       cnsLserkStepHex3D(cns, newOptions, time);
       
       if(((tstep+1)%mesh->errorStep)==0){
-	time += mesh->dt;
+        time += mesh->dt;
         cnsReportHex3D(cns, time, newOptions);
       }
     }
