@@ -32,7 +32,7 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
     dlong base = mesh->Nsgeo*mesh->Nfaces*e;
     dfloat nx1 = ye2-ye1;
     dfloat ny1 = -(xe2-xe1);
-    dfloat  d1 = norm(nx1,ny1);
+    dfloat  d1 = norm2(nx1,ny1);
 
     mesh->sgeo[base+NXID] = nx1/d1;
     mesh->sgeo[base+NYID] = ny1/d1;
@@ -43,7 +43,7 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
     base += mesh->Nsgeo;
     dfloat nx2 = ye3-ye2;
     dfloat ny2 = -(xe3-xe2);
-    dfloat  d2 = norm(nx2,ny2);
+    dfloat  d2 = norm2(nx2,ny2);
 
     mesh->sgeo[base+NXID] = nx2/d2;
     mesh->sgeo[base+NYID] = ny2/d2;
@@ -54,7 +54,7 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
     base += mesh->Nsgeo;
     dfloat nx3 = ye1-ye3;
     dfloat ny3 = -(xe1-xe3);
-    dfloat  d3 = norm(nx3,ny3);
+    dfloat  d3 = norm2(nx3,ny3);
 
     mesh->sgeo[base+NXID] = nx3/d3;
     mesh->sgeo[base+NYID] = ny3/d3;
