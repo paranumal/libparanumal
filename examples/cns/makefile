@@ -106,6 +106,6 @@ cnsMain:$(OBJS)
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(OBJS) cnsMainTet3D
+	rm -r $(OBJS) cnsMain
 
 

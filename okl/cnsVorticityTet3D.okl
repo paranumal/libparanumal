@@ -1,8 +1,6 @@
 kernel void cnsVorticityTet3D(const dlong Nelements,
                               const dfloat * restrict vgeo,
-                              const dfloat * restrict const DrT,
-                              const dfloat * restrict const DsT,
-			      const dfloat * restrict const DtT,
+                              const dfloat * restrict const DT,
                               const dfloat * restrict q,
                                     dfloat * restrict Vort){  
   
@@ -57,9 +55,9 @@ kernel void cnsVorticityTet3D(const dlong Nelements,
 	      const dfloat ui = s_u[es][i];
 	      const dfloat vi = s_v[es][i];
 	      const dfloat wi = s_w[es][i];
-              const dfloat Drni = DrT[n + i*p_Np];
-              const dfloat Dsni = DsT[n + i*p_Np];
-	      const dfloat Dtni = DtT[n + i*p_Np];
+              const dfloat Drni = DT[n + i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = DT[n + i*p_Np+1*p_Np*p_Np];
+	      const dfloat Dtni = DT[n + i*p_Np+2*p_Np*p_Np];
               ur += Drni*ui;
               us += Dsni*ui;
 	      ut += Dtni*ui;

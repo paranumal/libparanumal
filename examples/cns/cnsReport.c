@@ -9,9 +9,7 @@ void cnsReport(cns_t *cns, dfloat time, setupAide &newOptions){
 
   cns->vorticityKernel(mesh->Nelements,
                        mesh->o_vgeo,
-                       mesh->o_DrT,
-                       mesh->o_DsT,
-		       mesh->o_DtT,
+                       cns->o_Dmatrices,
                        cns->o_q,
                        cns->o_Vort);
 
@@ -27,6 +25,6 @@ void cnsReport(cns_t *cns, dfloat time, setupAide &newOptions){
 
   sprintf(fname, "foo_%04d_%04d.vtu",rank, cns->frame++);
 
-  cnsPlotVTU(cns, fname);
+  //  cnsPlotVTU(cns, fname);
 
 }
