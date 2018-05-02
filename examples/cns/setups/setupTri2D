@@ -1,10 +1,11 @@
 [FORMAT]
 1.0
 
-[MESH FILE]
-../../meshes/T2D_Mar27_boltzPML.msh
+[DATA FILE]
+data/cnsUniform2D.h
 
-#../../meshes/insChannel3D.msh
+[MESH FILE]
+../../meshes/T2D_Mar27_ins.msh
 
 [MESH DIMENSION]
 2
@@ -32,7 +33,7 @@ DOPRI5
 CUBATURE
 
 [VISCOSITY]
-5.e-3
+1.e-4
 
 [MACH NUMBER]
 .2
@@ -80,4 +81,4 @@ CUBATURE
 0
 
 [OUTPUT FILE NAME]
-vtkOut/tshape
+T2D
