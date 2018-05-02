@@ -389,6 +389,11 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       }
     }
 
+    dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
+
+    mesh->o_LIFTT =
+      mesh->device.malloc(1*sizeof(dfloat)); // dummy
+    
     mesh->intx = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp, sizeof(dfloat));
     mesh->inty = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp, sizeof(dfloat));
     mesh->intz = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp, sizeof(dfloat));

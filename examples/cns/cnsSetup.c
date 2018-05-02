@@ -466,6 +466,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
   sprintf(kernelName, "cnsStressesSurface%s", suffix);
   cns->stressesSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
+  if(cns->elementType != HEXAHEDRA){
   // kernels from cubature volume file
   sprintf(fileName, DHOLMES "/okl/cnsCubatureVolume%s.okl", suffix);
   sprintf(kernelName, "cnsCubatureVolume%s", suffix);
@@ -477,7 +478,8 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
   sprintf(kernelName, "cnsCubatureSurface%s", suffix);
 
   cns->cubatureSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
-
+  }
+  
   // kernels from vorticity file
   sprintf(fileName, DHOLMES "/okl/cnsVorticity%s.okl", suffix);
   sprintf(kernelName, "cnsVorticity%s", suffix);
