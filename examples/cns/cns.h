@@ -57,6 +57,11 @@ typedef struct{
 
   occa::memory o_Dmatrices;
   occa::memory o_cubDWmatrices;
+  occa::memory o_intLIFTT;
+  occa::memory o_intInterpT;
+
+  occa::memory o_intsgeo;
+
   
   occa::memory o_q;
   occa::memory o_rhsq;
@@ -68,6 +73,7 @@ typedef struct{
   occa::memory o_rkq, o_rkrhsq, o_rkerr;
   occa::memory o_errtmp;
 
+  
   //halo data
   dlong haloBytes;
   dfloat *sendBuffer;
