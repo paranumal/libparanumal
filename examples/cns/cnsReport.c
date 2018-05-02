@@ -25,6 +25,6 @@ void cnsReport(cns_t *cns, dfloat time, setupAide &newOptions){
 
   sprintf(fname, "foo_%04d_%04d.vtu",rank, cns->frame++);
 
-  //  cnsPlotVTU(cns, fname);
+  cnsPlotVTU(cns, fname);
 
 }
