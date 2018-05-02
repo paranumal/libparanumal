@@ -10,12 +10,12 @@ dfloat acousticsDopriEstimate(acoustics_t *acoustics){
   //      DIFFERENTIAL EQUATIONS I. NONSTIFF PROBLEMS. 2ND EDITION.
   dlong Ntotal = mesh->Nelements*mesh->Np*mesh->Nfields;
   acoustics->rkErrorEstimateKernel(Ntotal, 
-			     acoustics->ATOL,
-			     acoustics->RTOL,
-			     acoustics->o_q,
-			     acoustics->o_rkq,
-			     acoustics->o_rkerr,
-			     acoustics->o_errtmp);
+				   acoustics->ATOL,
+				   acoustics->RTOL,
+				   acoustics->o_q,
+				   acoustics->o_rkq,
+				   acoustics->o_rkerr,
+				   acoustics->o_errtmp);
   
   acoustics->o_errtmp.copyTo(acoustics->errtmp);
   dfloat localerr = 0;
