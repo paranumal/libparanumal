@@ -1,13 +1,13 @@
 #include "cns.h"
 
-void cnsRun(cns_t *cns, setupAide &newOptions){
+void cnsRun(cns_t *cns, setupAide &options){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   mesh_t *mesh = cns->mesh;
 
-  cnsReport(cns, 0, newOptions);
+  cnsReport(cns, 0, options);
 
   occa::timer timer;
   
@@ -15,11 +15,12 @@ void cnsRun(cns_t *cns, setupAide &newOptions){
 
   timer.tic("Run");
   
-  if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
-    
+  if (options.compareArgs("TIME INTEGRATOR","DOPRI5")) {
+    int Nregect = 0;
+
     // hard code this for the moment
     dfloat outputInterval;
-    newOptions.getArgs("OUTPUT INTERVAL", outputInterval);
+    options.getArgs("OUTPUT INTERVAL", outputInterval);
     
     dfloat nextOutputTime = outputInterval;
     dfloat outputNumber = 0;
@@ -44,16 +45,16 @@ void cnsRun(cns_t *cns, setupAide &newOptions){
 
       //check for final timestep
       if (time+mesh->dt > mesh->finalTime){
-	mesh->dt = mesh->finalTime-time;
-	done = 1;
+        mesh->dt = mesh->finalTime-time;
+        done = 1;
       }
 
       // try a step with the current time step
-      cnsDopriStep(cns, newOptions, time);
+      cnsDopriStep(cns, options, time);
 
       // compute Dopri estimator
       dfloat err = cnsDopriEstimate(cns);
-					 
+                                         
       // build controller
       dfloat fac1 = pow(err,cns->exp1);
       dfloat fac = fac1/pow(cns->facold,cns->beta);
@@ -63,76 +64,76 @@ void cnsRun(cns_t *cns, setupAide &newOptions){
 
       if (err<1.0) { //dt is accepted
 
-	// check for output during this step and do a mini-step
-	if(time<nextOutputTime && time+mesh->dt>nextOutputTime){
-	  dfloat savedt = mesh->dt;
-	  
-	  // save rkq
-	  cns->o_saveq.copyFrom(cns->o_rkq);
+        // check for output during this step and do a mini-step
+        if(time<nextOutputTime && time+mesh->dt>nextOutputTime){
+          dfloat savedt = mesh->dt;
+          
+          // save rkq
+          cns->o_saveq.copyFrom(cns->o_rkq);
 
-	  // change dt to match output
-	  mesh->dt = nextOutputTime-time;
+          // change dt to match output
+          mesh->dt = nextOutputTime-time;
 
-	  // print
-	  printf("Taking output mini step: %g\n", mesh->dt);
-	  
-	  // time step to output
-	  cnsDopriStep(cns, newOptions, time);	  
+          // print
+          printf("Taking output mini step: %g\n", mesh->dt);
+          
+          // time step to output
+          cnsDopriStep(cns, options, time);    
 
-	  // shift for output
-	  cns->o_rkq.copyTo(cns->o_q);
-	  
-	  // output  (print from rkq)
-	  cnsReport(cns, nextOutputTime, newOptions);
+          // shift for output
+          cns->o_rkq.copyTo(cns->o_q);
+          
+          // output  (print from rkq)
+          cnsReport(cns, nextOutputTime, options);
 
-	  // restore time step
-	  mesh->dt = savedt;
+          // restore time step
+          mesh->dt = savedt;
 
-	  // increment next output time
-	  nextOutputTime += outputInterval;
+          // increment next output time
+          nextOutputTime += outputInterval;
 
-	  // accept saved rkq
-	  cns->o_q.copyFrom(cns->o_saveq);
-	}
-	else{
-	  // accept rkq
-	  cns->o_q.copyFrom(cns->o_rkq);
-	}
+          // accept saved rkq
+          cns->o_q.copyFrom(cns->o_saveq);
+        }
+        else{
+          // accept rkq
+          cns->o_q.copyFrom(cns->o_rkq);
+        }
 
         time += mesh->dt;
+        tstep++;
 
         cns->facold = mymax(err,1E-4); // hard coded factor ?
-
-	printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  mesh->dt);
-        tstep++;
       } else {
         dtnew = mesh->dt/(mymax(cns->invfactor1,fac1/cns->safe));
-	printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, mesh->dt, dtnew);
+        Nregect++;
 
-	done = 0;
+        done = 0;
       }
+
       mesh->dt = dtnew;
       allStep++;
 
+      printf("\rTime = %.4e (%d). Average Dt = %.4e, Rejection rate = %.2g   ", time, tstep, time/(dfloat)tstep, Nregect/(dfloat) tstep); fflush(stdout);
     }
     
     mesh->device.finish();
     
     double elapsed  = timer.toc("Run");
 
-    printf("run took %lg seconds for %d accepted steps and %d total steps\n", elapsed, tstep, allStep);
+    printf("\nRun took %lg seconds for %d accepted steps and %d total steps\n", elapsed, tstep, allStep);
     
-  } else if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")) {
+  } else if (options.compareArgs("TIME INTEGRATOR","LSERK4")) {
 
     for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
       dfloat time = tstep*mesh->dt;
 
-      cnsLserkStep(cns, newOptions, time);
+      cnsLserkStep(cns, options, time);
       
       if(((tstep+1)%mesh->errorStep)==0){
-	time += mesh->dt;
-        cnsReport(cns, time, newOptions);
+        time += mesh->dt;
+        cnsReport(cns, time, options);
       }
     }
   }

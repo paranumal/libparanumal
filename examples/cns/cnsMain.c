@@ -11,16 +11,16 @@ int main(int argc, char **argv){
   }
 
   // if argv > 2 then should load input data from argv
-  setupAide newOptions(argv[1]);
+  setupAide options(argv[1]);
   
   // set up mesh stuff
   string fileName;
   int N, dim, elementType;
 
-  newOptions.getArgs("MESH FILE", fileName);
-  newOptions.getArgs("POLYNOMIAL DEGREE", N);
-  newOptions.getArgs("ELEMENT TYPE", elementType);
-  newOptions.getArgs("MESH DIMENSION", dim);
+  options.getArgs("MESH FILE", fileName);
+  options.getArgs("POLYNOMIAL DEGREE", N);
+  options.getArgs("ELEMENT TYPE", elementType);
+  options.getArgs("MESH DIMENSION", dim);
   
   // set up mesh
   mesh_t *mesh;
@@ -35,17 +35,11 @@ int main(int argc, char **argv){
     mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
   }
 
-  char *boundaryHeaderFileName; // could sprintf
-  if(dim==2)
-    boundaryHeaderFileName = strdup(DHOLMES "/examples/cns/cnsUniform2D.h"); // default
-  if(dim==3)
-    boundaryHeaderFileName = strdup(DHOLMES "/examples/cns/cnsUniform3D.h"); // default
-
   // set up cns stuff
-  cns_t *cns = cnsSetup(mesh, newOptions, boundaryHeaderFileName);
+  cns_t *cns = cnsSetup(mesh, options);
 
   // run
-  cnsRun(cns, newOptions);
+  cnsRun(cns, options);
 
   // close down MPI
   MPI_Finalize();
