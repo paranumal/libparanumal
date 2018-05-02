@@ -27,7 +27,7 @@
     *(uB) = uM;                     \
     *(vB) = vM;                     \
     *(wB) = wM;                     \
-  } else if(bc==4||bc==5){          \
+  } else if(bc==4||bc==5||bc==6){   \
     *(rB) = rM;                     \
     *(uB) = uM - (nx*uM+ny*vM+nz*wM)*nx;  \
     *(vB) = vM - (nx*uM+ny*vM+nz*wM)*ny;  \

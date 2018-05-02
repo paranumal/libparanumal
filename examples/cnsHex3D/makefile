@@ -74,6 +74,7 @@ cnsReportHex3D.o \
 ../../src/parallelSort.o \
 ../../src/matrix.o \
 ../../src/setupAide.o \
+../../src/readArray.o \
 ../../src/trace.o
 
 cnsMainHex3D:$(OBJS) 

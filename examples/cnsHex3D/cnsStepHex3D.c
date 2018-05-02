@@ -20,17 +20,6 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
                        cns->o_rkrhsq,
                        cns->o_rkq);
 
-    {
-      cns->o_rkq.copyTo(cns->saveq);
-      dfloat res = 0;
-      for(int n=0;n<cns->Nfields*mesh->Np*mesh->Nelements;++n){
-        res += cns->saveq[n]*cns->saveq[n];
-      }
-      printf("rkq: res = %g\n", res);
-
-    }
-
-
     //compute RHS
     // rhsq = F(currentTIme, rkq)
     
@@ -113,16 +102,6 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
                         cns->o_rhsq);
     }
 
-    {
-      cns->o_rhsq.copyTo(cns->saveq);
-      dfloat res = 0;
-      for(int n=0;n<cns->Nfields*mesh->Np*mesh->Nelements;++n){
-        res += cns->saveq[n]*cns->saveq[n];
-      }
-      printf("o_rhsq: res = %g\n", res);
-
-    }
-
     // wait for halo stresses data to arrive
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
@@ -132,15 +111,6 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
       cns->o_viscousStresses.copyFrom(cns->recvStressesBuffer, cns->haloStressesBytes, offset);
     }
 
-    {
-      cns->o_rhsq.copyTo(cns->saveq);
-      dfloat res = 0;
-      for(int n=0;n<cns->Nfields*mesh->Np*mesh->Nelements;++n){
-        res += cns->saveq[n]*cns->saveq[n];
-      }
-      printf("post vol: res = %g\n", res);
-
-    }
     
     // compute surface contribution to DG cns RHS (LIFTT ?)
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
@@ -162,30 +132,20 @@ void cnsDopriStepHex3D(cns_t *cns, setupAide &newOptions, const dfloat time){
                                  cns->o_viscousStresses, 
                                  cns->o_rhsq);
     } else {
-      // cns->surfaceKernel(mesh->Nelements, 
-      //                    cns->advSwitch, 
-      //                    mesh->o_sgeo, 
-      //                    mesh->o_vmapM, 
-      //                    mesh->o_vmapP, 
-      //                    mesh->o_EToB,
-      //                    currentTime, 
-      //                    mesh->o_x, 
-      //                    mesh->o_y,
-      //                    mesh->o_z, 
-      //                    cns->mu, 
-      //                    cns->o_rkq, 
-      //                    cns->o_viscousStresses, 
-      //                    cns->o_rhsq);
-    }
-
-    {
-      cns->o_rhsq.copyTo(cns->saveq);
-      dfloat res = 0;
-      for(int n=0;n<cns->Nfields*mesh->Np*mesh->Nelements;++n){
-        res += cns->saveq[n]*cns->saveq[n];
-      }
-      printf("post sur: res = %g\n", res);
-
+      cns->surfaceKernel(mesh->Nelements, 
+                         cns->advSwitch, 
+                         mesh->o_sgeo, 
+                         mesh->o_vmapM, 
+                         mesh->o_vmapP, 
+                         mesh->o_EToB,
+                         currentTime, 
+                         mesh->o_x, 
+                         mesh->o_y,
+                         mesh->o_z, 
+                         cns->mu, 
+                         cns->o_rkq, 
+                         cns->o_viscousStresses, 
+                         cns->o_rhsq);
     }
     
     mesh->device.finish();

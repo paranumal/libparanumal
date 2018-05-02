@@ -75,9 +75,9 @@ void upwindRoeAveraged(const dfloat nx,
   dW3 *= occaFabs(urot+c); 
 
   // Form Roe fluxes
-  *rflux = p_half*(frProt+frMrot);
-  dfloat rufluxRot = p_half*(fruProt+fruMrot);
-  dfloat rvfluxRot = p_half*(frvProt+frvMrot);
+  *rflux = p_half*(frProt-frMrot);
+  dfloat rufluxRot = p_half*(fruProt-fruMrot);
+  dfloat rvfluxRot = p_half*(frvProt-frvMrot);
 
   
   *rflux    -= p_half*(dW1*p_one    + dW2*p_zero  + dW3*p_one);
@@ -88,6 +88,10 @@ void upwindRoeAveraged(const dfloat nx,
   *ruflux = nx*rufluxRot - ny*rvfluxRot;
   *rvflux = ny*rufluxRot + nx*rvfluxRot;
 
+  //subtract F(qM)
+  *rflux  -= -nx*ruM               - ny*rvM;
+  *ruflux -= -nx*(ruM*ruM/rM + pM) - ny*(ruM*rvM/rM);
+  *rvflux -= -nx*(ruM*rvM/rM)      - ny*(rvM*rvM/rM+pM);
 }
 
 
