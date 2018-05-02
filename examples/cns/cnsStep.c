@@ -113,13 +113,14 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     // compute surface contribution to DG cns RHS (LIFTT ?)
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureSurfaceKernel(mesh->Nelements, 
-				 cns->advSwitch, 
+				 cns->advSwitch,
+				 mesh->o_vgeo, 
 				 mesh->o_sgeo, 
-				 mesh->o_intInterpT,
-				 mesh->o_intLIFTT, 
 				 mesh->o_vmapM, 
 				 mesh->o_vmapP, 
 				 mesh->o_EToB,
+				 mesh->o_intInterpT,
+				 mesh->o_intLIFTT, 
 				 currentTime, 
 				 mesh->o_intx, 
 				 mesh->o_inty,
