@@ -2,9 +2,7 @@
 1.0
 
 [MESH FILE]
-../../meshes/insFenceQuad2D.msh
-
-#../../meshes/insChannel3D.msh
+../../meshes/cavityQuadH005.msh
 
 [MESH DIMENSION]
 2
@@ -69,7 +67,7 @@ CUBATURE
 10
 
 [OUTPUT INTERVAL]
-.5
+.31
 
 [MAX MRAB LEVELS]
 1

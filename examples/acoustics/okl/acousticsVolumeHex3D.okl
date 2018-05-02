@@ -9,6 +9,7 @@ kernel void acousticsVolumeHex3D(const dlong Nelements,
   for(dlong e=0;e<Nelements;++e;outer0){
 
     shared dfloat s_D[p_Nq][p_Nq];
+
     shared dfloat s_F[p_Nfields][p_Nq][p_Nq][p_Nq];
     shared dfloat s_G[p_Nfields][p_Nq][p_Nq][p_Nq];
     shared dfloat s_H[p_Nfields][p_Nq][p_Nq][p_Nq];
