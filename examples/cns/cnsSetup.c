@@ -315,8 +315,17 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
 
   if(cns->elementType == HEXAHEDRA || cns->elementType == QUADRILATERALS){
     cns->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+
     cns->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
     cns->o_cubDWmatrices.copyFrom(mesh->o_cubDWT);
+
+    cns->o_intInterpT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
+    cns->o_intInterpT.copyFrom(mesh->o_cubInterpT);
+
+    cns->o_intLIFTT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
+    cns->o_intLIFTT.copyFrom(mesh->o_cubProjectT);
+
+    cns->o_intsgeo = mesh->o_cubsgeo;// ok ?
   }
   else if(cns->elementType == TRIANGLES){
 
@@ -334,8 +343,17 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
         DrsT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
       }
     }
+   
     cns->o_Dmatrices = mesh->device.malloc(2*mesh->Np*mesh->Np*sizeof(dfloat), DrsT);
     cns->o_cubDWmatrices = mesh->device.malloc(2*mesh->cubNp*mesh->Np*sizeof(dfloat), cubDrsWT);
+
+    cns->o_intInterpT = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp*sizeof(dfloat));
+    cns->o_intInterpT.copyFrom(mesh->o_intInterpT);
+
+    cns->o_intLIFTT = mesh->device.malloc(mesh->Np*mesh->intNfp*mesh->Nfaces*sizeof(dfloat));
+    cns->o_intLIFTT.copyFrom(mesh->o_intLIFTT);
+
+    cns->o_intsgeo = mesh->o_sgeo;// ok ?
   }
   else{
     printf("BUILDING TET DMATRICES\n");
@@ -357,6 +375,14 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
     }
     cns->o_Dmatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), DrstT);
     cns->o_cubDWmatrices = mesh->device.malloc(3*mesh->cubNp*mesh->Np*sizeof(dfloat), cubDrstWT);
+
+    cns->o_intInterpT = mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp*sizeof(dfloat));
+    cns->o_intInterpT.copyFrom(mesh->o_intInterpT);
+    
+    cns->o_intLIFTT = mesh->device.malloc(mesh->Np*mesh->intNfp*mesh->Nfaces*sizeof(dfloat));
+    cns->o_intLIFTT.copyFrom(mesh->o_intLIFTT);
+
+    cns->o_intsgeo = mesh->o_sgeo;// ok ?
   }
   
   //  p_RT, p_rbar, p_ubar, p_vbar
