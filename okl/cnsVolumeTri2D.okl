@@ -3,9 +3,7 @@
 kernel void cnsVolumeTri2D(const dlong Nelements,
                             const int advSwitch,
                             const dfloat * restrict vgeo,
-                            const dfloat * restrict DrT,
-                            const dfloat * restrict DsT,
-			   const dfloat * restrict DtT,	
+                            const dfloat * restrict DT,
                             const dfloat * restrict viscousStresses,
                             const dfloat * restrict q,
                                   dfloat * restrict rhsq){
@@ -74,8 +72,8 @@ kernel void cnsVolumeTri2D(const dlong Nelements,
       dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0;
 
       for(int i=0;i<p_Np;++i){
-        const dfloat Drni = DrT[n+i*p_Np];
-        const dfloat Dsni = DsT[n+i*p_Np];
+        const dfloat Drni = DT[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = DT[n+i*p_Np+1*p_Np*p_Np];
 
         rhsq0 += Drni*s_F[0][i]
                 +Dsni*s_G[0][i];
@@ -98,9 +96,7 @@ kernel void cnsVolumeTri2D(const dlong Nelements,
 
 kernel void cnsStressesVolumeTri2D(const dlong Nelements,
                                     const dfloat * restrict vgeo,
-                                    const dfloat * restrict DrT,
-                                    const dfloat * restrict DsT,
-				   const dfloat * restrict DtT,
+                                    const dfloat * restrict DT,
                                     const dfloat mu,
                                     const dfloat * restrict q,
                                           dfloat * restrict viscousStresses){
@@ -132,8 +128,8 @@ kernel void cnsStressesVolumeTri2D(const dlong Nelements,
       dfloat dudr = 0, duds = 0, dvdr = 0, dvds = 0;
 
       for(int i=0;i<p_Np;++i){
-        const dfloat Drni = DrT[n+i*p_Np];
-        const dfloat Dsni = DsT[n+i*p_Np];
+        const dfloat Drni = DT[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = DT[n+i*p_Np+1*p_Np*p_Np];
         
         const dfloat u = s_u[i];
         const dfloat v = s_v[i];

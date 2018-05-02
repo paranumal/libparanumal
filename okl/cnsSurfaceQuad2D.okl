@@ -97,6 +97,7 @@ void upwindRoeAveraged(const dfloat nx,
 
 
 
+
 #define surfaceTerms(sk,face,i, j)                                      \
 {                                                                       \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
@@ -170,12 +171,14 @@ void upwindRoeAveraged(const dfloat nx,
 kernel void cnsSurfaceQuad2D(const dlong Nelements,
                              const int advSwitch,
                              const dfloat * restrict sgeo,
+     			    const dfloat * restrict LIFTT,
                              const dlong  * restrict vmapM,
                              const dlong  * restrict vmapP,
                              const int    * restrict EToB,
                              const dfloat time,
                              const dfloat * restrict x,
                              const dfloat * restrict y,
+			     const dfloat * restrict z,	
                              const dfloat mu,
                              const dfloat * restrict q,
                              const dfloat * restrict viscousStresses,
@@ -302,12 +305,14 @@ kernel void cnsSurfaceQuad2D(const dlong Nelements,
 
 kernel void cnsStressesSurfaceQuad2D(const int Nelements,
                                      const dfloat * restrict sgeo,
+				     const dfloat * restrict LIFTT,
                                      const int   * restrict vmapM,
                                      const int   * restrict vmapP,
                                      const int   * restrict EToB,
                                      const dfloat time,
                                      const dfloat * restrict x,
                                      const dfloat * restrict y,
+				     const dfloat * restrict z,
                                      const dfloat mu,
                                      const dfloat * restrict q,
                                      dfloat * restrict viscousStresses){
