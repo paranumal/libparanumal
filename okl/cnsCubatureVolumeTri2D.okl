@@ -3,8 +3,10 @@
 kernel void cnsCubatureVolumeTri2D(const dlong Nelements,
                                   const int advSwitch,
                                   const dfloat * restrict vgeo,
+                                  const dfloat * restrict cubvgeo,
                                   const dfloat * restrict cubDWmatrices,
                                   const dfloat * restrict cubInterpT,
+                                  const dfloat * restrict cubProjectT,	
                                   const dfloat * restrict viscousStresses,
                                   const dfloat * restrict q,
                                         dfloat * restrict rhsq){
