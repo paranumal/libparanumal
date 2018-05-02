@@ -15,9 +15,9 @@ void upwind(const dfloat nx,
   //subtract F(qM)
   dfloat ndotUM = nx*uM + ny*vM;
   dfloat ndotUP = nx*uP + ny*vP;
-  *rflux  = p_half*(ndotUM+ndotUP-(rP-rM));
-  *uflux  = p_half*nx*(rP+rM - (ndotUP-ndotUM));
-  *vflux  = p_half*ny*(rP+rM - (ndotUP-ndotUM));
+  *rflux  = p_half*   ((ndotUP-ndotUM)- (rP-rM));
+  *uflux  = p_half*nx*((rP-rM)        - (ndotUP-ndotUM));
+  *vflux  = p_half*ny*((rP-rM)        - (ndotUP-ndotUM));
   
 }
 
