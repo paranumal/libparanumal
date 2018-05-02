@@ -113,40 +113,43 @@ void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels);
 void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
                                       int numLevels, int *levels);
 
-#define norm(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
+#define norm3(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
 
 /* offsets for geometric factors */
 #define RXID 0  
 #define RYID 1  
-#define RZID 2
-#define SXID 3  
-#define SYID 4  
-#define SZID 5  
-#define TXID 6  
-#define TYID 7  
-#define TZID 8  
-#define  JID 9
-#define JWID 10
-#define IJWID 11
+#define SXID 2  
+#define SYID 3
+#define  JID 4
+#define JWID 5
+#define IJWID 6
+#define RZID 7
+#define SZID 8  
+#define TXID 9  
+#define TYID 10  
+#define TZID 11  
+
+
 
 /* offsets for second order geometric factors */
 #define G00ID 0  
 #define G01ID 1  
-#define G02ID 2
-#define G11ID 3  
-#define G12ID 4  
-#define G22ID 5  
-#define GWJID 6  
+#define G11ID 2
+#define GWJID 3  
+#define G12ID 4
+#define G02ID 5
+#define G22ID 6  
+
 
 /* offsets for nx, ny, sJ, 1/J */
 #define NXID 0  
 #define NYID 1  
-#define NZID 2
-#define SJID 3
-#define IJID 4
-#define IHID 5
-#define WSJID 6
-#define WIJID 7
+#define SJID 2
+#define IJID 3
+#define IHID 4
+#define WSJID 5
+#define WIJID 6
+#define NZID 7
 #define STXID 8
 #define STYID 9  
 #define STZID 10 
