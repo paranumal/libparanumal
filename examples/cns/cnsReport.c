@@ -1,6 +1,6 @@
 #include "cns.h"
 
-void cnsReport(cns_t *cns, dfloat time, setupAide &newOptions){
+void cnsReport(cns_t *cns, dfloat time, setupAide &options){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -22,8 +22,9 @@ void cnsReport(cns_t *cns, dfloat time, setupAide &newOptions){
 
   // output field files
   char fname[BUFSIZ];
-
-  sprintf(fname, "foo_%04d_%04d.vtu",rank, cns->frame++);
+  string outName;
+  options.getArgs("OUTPUT FILE NAME", outName);
+  sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), rank, cns->frame++);
 
   cnsPlotVTU(cns, fname);
 

@@ -1,6 +1,6 @@
 #include "cns.h"
 
-cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileName){
+cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
@@ -18,29 +18,29 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
     if (hostIds[r]==hostId) deviceID++;
   }
 
-  // read thread model/device/platform from newOptions
-  if(newOptions.compareArgs("THREAD MODEL", "CUDA")){
+  // read thread model/device/platform from options
+  if(options.compareArgs("THREAD MODEL", "CUDA")){
     int dev;
-    newOptions.getArgs("DEVICE NUMBER" ,dev);
+    options.getArgs("DEVICE NUMBER" ,dev);
     sprintf(deviceConfig, "mode = CUDA, deviceID = %d",dev);
   }
-  else if(newOptions.compareArgs("THREAD MODEL", "OpenCL")){
+  else if(options.compareArgs("THREAD MODEL", "OpenCL")){
     int dev, plat;
-    newOptions.getArgs("DEVICE NUMBER", dev);
-    newOptions.getArgs("PLATFORM NUMBER", plat);
+    options.getArgs("DEVICE NUMBER", dev);
+    options.getArgs("PLATFORM NUMBER", plat);
     sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", dev, plat);
   }
-  else if(newOptions.compareArgs("THREAD MODEL", "OpenMP")){
+  else if(options.compareArgs("THREAD MODEL", "OpenMP")){
     sprintf(deviceConfig, "mode = OpenMP");
   }
   else{
     sprintf(deviceConfig, "mode = Serial");
   }
-	
+        
   cns_t *cns = (cns_t*) calloc(1, sizeof(cns_t));
 
-  newOptions.getArgs("MESH DIMENSION", cns->dim);
-  newOptions.getArgs("ELEMENT TYPE", cns->elementType);
+  options.getArgs("MESH DIMENSION", cns->dim);
+  options.getArgs("ELEMENT TYPE", cns->elementType);
   
   mesh->Nfields = (cns->dim==3) ? 4:3;
   cns->Nfields = mesh->Nfields;
@@ -66,23 +66,23 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
 
   int check;
 
-  check = newOptions.getArgs("RBAR", cns->rbar);
+  check = options.getArgs("RBAR", cns->rbar);
   if(!check) printf("WARNING setup file does not include RBAR\n");
   
-  check = newOptions.getArgs("UBAR", cns->ubar);
+  check = options.getArgs("UBAR", cns->ubar);
   if(!check) printf("WARNING setup file does not include UBAR\n");
 
-  check = newOptions.getArgs("VBAR", cns->vbar);
+  check = options.getArgs("VBAR", cns->vbar);
   if(!check) printf("WARNING setup file does not include VBAR\n");
 
-  check = newOptions.getArgs("WBAR", cns->wbar);
+  check = options.getArgs("WBAR", cns->wbar);
   if(!check) printf("WARNING setup file does not include WBAR\n");
   
-  check = newOptions.getArgs("VISCOSITY", cns->mu);
+  check = options.getArgs("VISCOSITY", cns->mu);
   if(!check) printf("WARNING setup file does not include VISCOSITY\n");
 
   dfloat mach = 0.17;
-  check = newOptions.getArgs("MACH NUMBER", mach);
+  check = options.getArgs("MACH NUMBER", mach);
   if(!check) printf("WARNING setup file does not include MACH\n");
 
   // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
@@ -90,16 +90,16 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+                                sizeof(dfloat));
   cns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+                                sizeof(dfloat));
   
-  if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
+  if (options.compareArgs("TIME INTEGRATOR","LSERK4")){
     cns->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
-		  		sizeof(dfloat));
+                                sizeof(dfloat));
   }
 
-  if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")){
+  if (options.compareArgs("TIME INTEGRATOR","DOPRI5")){
     int NrkStages = 7;
     cns->rkq  = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
           sizeof(dfloat));
@@ -150,7 +150,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
   }
 
   cns->viscousStresses = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*cns->Nstresses,
-					   sizeof(dfloat));
+                                           sizeof(dfloat));
 
   cns->Vort = (dfloat*) calloc(3*mesh->Nelements*mesh->Np,sizeof(dfloat)); // 3 components (hard coded)
   
@@ -166,10 +166,10 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
 
 #if 0
       cnsGaussianPulse(x, y, z, t,
-		       mesh->q+qbase,
-		       mesh->q+qbase+mesh->Np,
-		       mesh->q+qbase+2*mesh->Np,
-		       mesh->q+qbase+3*mesh->Np);
+                       mesh->q+qbase,
+                       mesh->q+qbase+mesh->Np,
+                       mesh->q+qbase+2*mesh->Np,
+                       mesh->q+qbase+3*mesh->Np);
 #else
       mesh->q[qbase+0*mesh->Np] = cns->rbar;
       //      mesh->q[qbase+1*mesh->Np] = cns->rbar*cns->ubar*y*(6-y)/9.;
@@ -177,7 +177,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
       mesh->q[qbase+1*mesh->Np] = cns->rbar*cns->ubar; //*tanh(alpha*y)*tanh(alpha*(6-y));
       mesh->q[qbase+2*mesh->Np] = cns->rbar*cns->vbar;
       if(cns->dim==3)
-	mesh->q[qbase+3*mesh->Np] = cns->rbar*cns->wbar;
+        mesh->q[qbase+3*mesh->Np] = cns->rbar*cns->wbar;
 #endif
     }
   }
@@ -218,10 +218,10 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
   
   //
-  newOptions.getArgs("FINAL TIME", mesh->finalTime);
+  options.getArgs("FINAL TIME", mesh->finalTime);
 
   mesh->NtimeSteps = mesh->finalTime/mesh->dt;
-  if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
+  if (options.compareArgs("TIME INTEGRATOR","LSERK4")){
     mesh->dt = mesh->finalTime/mesh->NtimeSteps;
   }
 
@@ -242,8 +242,10 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
   else
     meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
-  //add boundary data to kernel info
-  kernelInfo.addInclude(boundaryHeaderFileName);
+  //add boundary data to kernel info  
+  string boundaryHeaderFileName; 
+  options.getArgs("DATA FILE", boundaryHeaderFileName);
+  kernelInfo.addInclude((char*)boundaryHeaderFileName.c_str());
  
   cns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
@@ -254,20 +256,20 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
   
   cns->o_viscousStresses =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*cns->Nstresses*sizeof(dfloat),
-			cns->viscousStresses);
+                        cns->viscousStresses);
   
   cns->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->rhsq);
 
-  cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
+  if (rank==0)
+    cout << "TIME INTEGRATOR (" << options.getArgs("TIME INTEGRATOR") << ")" << endl;
   
-  if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
+  if (options.compareArgs("TIME INTEGRATOR","LSERK4")){
     cns->o_resq =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->resq);
   }
 
-  if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")){
-    printf("setting up DOPRI5\n");
+  if (options.compareArgs("TIME INTEGRATOR","DOPRI5")){
     int NrkStages = 7;
     cns->o_rkq =
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), cns->rkq);
@@ -356,7 +358,6 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
     cns->o_intsgeo = mesh->o_sgeo;// ok ?
   }
   else{
-    printf("BUILDING TET DMATRICES\n");
     // build Dr, Ds transposes
     dfloat *DrstT = (dfloat*) calloc(3*mesh->Np*mesh->Np, sizeof(dfloat));
     dfloat *cubDrstWT = (dfloat*) calloc(3*mesh->cubNp*mesh->Np, sizeof(dfloat));
@@ -364,13 +365,13 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
       for(int m=0;m<mesh->cubNp;++m){
         cubDrstWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
         cubDrstWT[n+m*mesh->Np+mesh->cubNp*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
-	cubDrstWT[n+m*mesh->Np+2*mesh->cubNp*mesh->Np] = mesh->cubDtW[n*mesh->cubNp+m];
+        cubDrstWT[n+m*mesh->Np+2*mesh->cubNp*mesh->Np] = mesh->cubDtW[n*mesh->cubNp+m];
       }
 
       for(int m=0;m<mesh->Np;++m){
         DrstT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
         DrstT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
-	DrstT[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Dt[n*mesh->Np+m];
+        DrstT[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Dt[n*mesh->Np+m];
       }
     }
     cns->o_Dmatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), DrstT);
@@ -385,6 +386,10 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
     cns->o_intsgeo = mesh->o_sgeo;// ok ?
   }
   
+
+  //if (rank!=0) 
+    occa::setVerboseCompilation(false);
+
   //  p_RT, p_rbar, p_ubar, p_vbar
   // p_half, p_two, p_third, p_Nstresses
   
@@ -445,73 +450,75 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
-  // kernels from volume file
-  sprintf(fileName, DHOLMES "/okl/cnsVolume%s.okl", suffix);
-  sprintf(kernelName, "cnsVolume%s", suffix);
+  for (int r=0;r<size;r++) {
+    if (r==rank) {
 
-  printf("fileName=[ %s ] \n", fileName);
-  printf("kernelName=[ %s ] \n", kernelName);
-  
-  cns->volumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      // kernels from volume file
+      sprintf(fileName, "okl/cnsVolume%s.okl", suffix);
+      sprintf(kernelName, "cnsVolume%s", suffix);
 
-  sprintf(kernelName, "cnsStressesVolume%s", suffix);
-  cns->stressesVolumeKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      cns->volumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-  // kernels from surface file
-  sprintf(fileName, DHOLMES "/okl/cnsSurface%s.okl", suffix);
-  sprintf(kernelName, "cnsSurface%s", suffix);
-  
-  cns->surfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "cnsStressesVolume%s", suffix);
+      cns->stressesVolumeKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-  sprintf(kernelName, "cnsStressesSurface%s", suffix);
-  cns->stressesSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      // kernels from surface file
+      sprintf(fileName, "okl/cnsSurface%s.okl", suffix);
+      sprintf(kernelName, "cnsSurface%s", suffix);
+      
+      cns->surfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-  if(cns->elementType != HEXAHEDRA){
-  // kernels from cubature volume file
-  sprintf(fileName, DHOLMES "/okl/cnsCubatureVolume%s.okl", suffix);
-  sprintf(kernelName, "cnsCubatureVolume%s", suffix);
-  
-  cns->cubatureVolumeKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "cnsStressesSurface%s", suffix);
+      cns->stressesSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-  // kernels from cubature surface file
-  sprintf(fileName, DHOLMES "/okl/cnsCubatureSurface%s.okl", suffix);
-  sprintf(kernelName, "cnsCubatureSurface%s", suffix);
+      if(cns->elementType != HEXAHEDRA){ //remove later
+      // kernels from cubature volume file
+      sprintf(fileName, "okl/cnsCubatureVolume%s.okl", suffix);
+      sprintf(kernelName, "cnsCubatureVolume%s", suffix);
+      
+      cns->cubatureVolumeKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-  cns->cubatureSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      // kernels from cubature surface file
+      sprintf(fileName, "okl/cnsCubatureSurface%s.okl", suffix);
+      sprintf(kernelName, "cnsCubatureSurface%s", suffix);
+
+      cns->cubatureSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      }
+      
+      // kernels from vorticity file
+      sprintf(fileName, "okl/cnsVorticity%s.okl", suffix);
+      sprintf(kernelName, "cnsVorticity%s", suffix);
+      
+      cns->vorticityKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+
+
+      // kernels from update file
+      cns->updateKernel =
+        mesh->device.buildKernelFromSource("okl/cnsUpdate.okl",
+                                           "cnsUpdate",
+                                           kernelInfo);
+
+      cns->rkUpdateKernel =
+        mesh->device.buildKernelFromSource("okl/cnsUpdate.okl",
+                                           "cnsRkUpdate",
+                                           kernelInfo);
+      cns->rkStageKernel =
+        mesh->device.buildKernelFromSource("okl/cnsUpdate.okl",
+                                           "cnsRkStage",
+                                           kernelInfo);
+
+      cns->rkErrorEstimateKernel =
+        mesh->device.buildKernelFromSource("okl/cnsUpdate.okl",
+                                           "cnsErrorEstimate",
+                                           kernelInfo);
+
+      // fix this later
+      mesh->haloExtractKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
+                                           "meshHaloExtract3D",
+                                           kernelInfo);
+    }
   }
-  
-  // kernels from vorticity file
-  sprintf(fileName, DHOLMES "/okl/cnsVorticity%s.okl", suffix);
-  sprintf(kernelName, "cnsVorticity%s", suffix);
-  
-  cns->vorticityKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
-
-
-  // kernels from update file
-  cns->updateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate.okl",
-				       "cnsUpdate",
-				       kernelInfo);
-
-  cns->rkUpdateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate.okl",
-				       "cnsRkUpdate",
-				       kernelInfo);
-  cns->rkStageKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate.okl",
-				       "cnsRkStage",
-				       kernelInfo);
-
-  cns->rkErrorEstimateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/cnsUpdate.okl",
-				       "cnsErrorEstimate",
-				       kernelInfo);
-
-  // fix this later
-  mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
-				       "meshHaloExtract3D",
-				       kernelInfo);
 
   return cns;
 }
