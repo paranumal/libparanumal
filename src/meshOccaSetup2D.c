@@ -246,6 +246,8 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
           mesh->vgeo);
 
+    mesh->o_cubvgeo =   mesh->device.malloc(sizeof(dfloat));// dummy
+    
     mesh->o_sgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
           mesh->sgeo);
@@ -367,6 +369,7 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_cubvgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->cubNp*sizeof(dfloat),
           mesh->cubvgeo);
+
     mesh->o_cubsgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*mesh->Nsgeo*sizeof(dfloat),
           mesh->cubsgeo);
@@ -382,6 +385,11 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_cubDWT =
       mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
           cubDWT);
+
+    dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
+
+    mesh->o_LIFTT =
+      mesh->device.malloc(1*sizeof(dfloat)); // dummy
 
     mesh->o_intx =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*sizeof(dfloat),

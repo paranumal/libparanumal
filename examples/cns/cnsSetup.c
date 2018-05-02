@@ -315,6 +315,8 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
 
   if(cns->elementType == HEXAHEDRA || cns->elementType == QUADRILATERALS){
     cns->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+    cns->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
+    cns->o_cubDWmatrices.copyFrom(mesh->o_cubDWT);
   }
   else if(cns->elementType == TRIANGLES){
 
