@@ -195,6 +195,8 @@ int setupAide::compareArgs(string key, string token){
   if(getArgs(key,foundToken)){
     if(foundToken==token)
       return 1;
+    if(foundToken.find(token) != string::npos)
+      return 2;
   }
 
   return 0;
