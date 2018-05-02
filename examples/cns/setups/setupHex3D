@@ -1,10 +1,11 @@
 [FORMAT]
 1.0
 
+[DATA FILE]
+data/cnsUniform3D.h
+
 [MESH FILE]
 ../../meshes/insFenceHex3D.msh
-
-#../../meshes/insChannel3D.msh
 
 [MESH DIMENSION]
 3
@@ -80,4 +81,4 @@ NODAL
 0
 
 [OUTPUT FILE NAME]
-vtkOut/tshape
+fence3D

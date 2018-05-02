@@ -97,9 +97,9 @@ typedef struct{
   
 }cns_t;
 
-void cnsRun(cns_t *cns, setupAide &newOptions);
+void cnsRun(cns_t *cns, setupAide &options);
 
-cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileName);
+cns_t *cnsSetup(mesh_t *mesh, setupAide &options);
 
 void cnsError(mesh_t *mesh, dfloat time);
 
@@ -110,11 +110,11 @@ void cnsCavitySolution(dfloat x, dfloat y, dfloat z, dfloat t,
 void cnsGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t,
 		      dfloat *u, dfloat *v, dfloat *w, dfloat *p);
 
-void cnsReport(cns_t *cns, dfloat time, setupAide &newOptions);
+void cnsReport(cns_t *cns, dfloat time, setupAide &options);
 
 void cnsPlotVTU(cns_t *cns, char *fileName);
 
-void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time);
+void cnsDopriStep(cns_t *cns, setupAide &options, const dfloat time);
 
 void cnsLserkStep(cns_t *cns, setupAide &newOoptions, const dfloat time);
 

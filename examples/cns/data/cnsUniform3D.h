@@ -27,7 +27,7 @@
     *(uB) = uM;                     \
     *(vB) = vM;                     \
     *(wB) = wM;                     \
-  } else if(bc==4||bc==5){          \
+  } else if(bc==4||bc==5||bc==6){   \
     *(rB) = rM;                     \
     *(uB) = uM - (nx*uM+ny*vM+nz*wM)*nx;  \
     *(vB) = vM - (nx*uM+ny*vM+nz*wM)*ny;  \
@@ -35,6 +35,7 @@
   }                                 \
 }
 
+//needs updating for 3D
 #define cnsNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, uxM, uyM, uzM, vxM, vyM, vzM, uxB, uyB, uzB, vxB, vyB, vzB) \
 {                                          \
   if(bc==1 || bc==2){                      \

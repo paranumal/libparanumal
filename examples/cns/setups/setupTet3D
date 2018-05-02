@@ -1,10 +1,11 @@
 [FORMAT]
 1.0
 
+[DATA FILE]
+data/cnsUniform3D.h
+
 [MESH FILE]
 ../../meshes/boltzmannSquareCylinder3D.msh
-
-#../../meshes/insChannel3D.msh
 
 [MESH DIMENSION]
 3
@@ -80,4 +81,4 @@ CUBATURE
 0
 
 [OUTPUT FILE NAME]
-vtkOut/tshape
+cube
