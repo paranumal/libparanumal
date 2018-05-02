@@ -45,7 +45,7 @@ kernel void acousticsVolumeTet3D(const dlong Nelements,
       }
 
       {
-        const dfloat f = -p;
+        const dfloat f = -r;
         const dfloat g = 0;
 	const dfloat h = 0;
 
@@ -57,7 +57,7 @@ kernel void acousticsVolumeTet3D(const dlong Nelements,
 
       {
         const dfloat f = 0;
-        const dfloat g = -p;
+        const dfloat g = -r;
 	const dfloat h = 0;
 
         s_F[2][n] = drdx*f + drdy*g + drdz*h;
@@ -68,7 +68,7 @@ kernel void acousticsVolumeTet3D(const dlong Nelements,
       {
         const dfloat f = 0;
         const dfloat g = 0;
-	const dfloat h = -p;
+	const dfloat h = -r;
 	
         s_F[3][n] = drdx*f + drdy*g + drdz*h;
         s_G[3][n] = dsdx*f + dsdy*g + dsdz*h;

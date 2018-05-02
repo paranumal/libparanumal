@@ -64,11 +64,15 @@ void acousticsPlotVTU(acoustics_t *acoustics, char *fileName){
         dfloat rm = mesh->q[e*mesh->Np*mesh->Nfields+m           ];
         dfloat um = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ];
         dfloat vm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2];
-	dfloat wm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*3];
         //
         plotun += mesh->plotInterp[n*mesh->Np+m]*um;
         plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
-	plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
+
+	if(acoustics->dim==3){
+	  dfloat wm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*3];
+	  
+	  plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
+	}
       }
     
       fprintf(fp, "       ");
