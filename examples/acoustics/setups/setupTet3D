@@ -2,7 +2,7 @@
 1.0
 
 [MESH FILE]
-../../meshes/boltzmannSquareCylinder3D.msh
+../../meshes/cubeTetH025.msh
 
 #../../meshes/insChannel3D.msh
 
@@ -68,7 +68,7 @@ CUBATURE
 10
 
 [OUTPUT INTERVAL]
-.5
+.14
 
 [MAX MRAB LEVELS]
 1

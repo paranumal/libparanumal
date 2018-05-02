@@ -9,10 +9,10 @@
       *(uB) = 0.f;							\
       *(vB) = 0.f;							\
       *(wB) = 0.f;							\
-    } else if(bc==1){							\
+    } if(bc>0){								\
       *(rB) = rM;							\
-      *(uB) = uM - (nx*uM+ny*vM+nz*wM)*nx;				\
-      *(vB) = vM - (nx*uM+ny*vM+nz*wM)*ny;				\
-      *(wB) = wM - (nx*uM+ny*vM+nz*wM)*nz;				\
+      *(uB) = uM - p_two*(nx*uM+ny*vM+nz*wM)*nx;			\
+      *(vB) = vM - p_two*(nx*uM+ny*vM+nz*wM)*ny;			\
+      *(wB) = wM - p_two*(nx*uM+ny*vM+nz*wM)*nz;			\
     }									\
   }

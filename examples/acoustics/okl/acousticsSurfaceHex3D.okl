@@ -16,13 +16,13 @@ void upwind(const dfloat nx,
 	    dfloat *vflux,
 	    dfloat *wflux){
 
-  //subtract F(qM)
   dfloat ndotUM = nx*uM + ny*vM + nz*wM;
   dfloat ndotUP = nx*uP + ny*vP + nz*wP;
-  *rflux   = p_half*(ndotUM+ndotUP-(rP-rM));
-  *uflux  = p_half*nx*(rP+rM - (ndotUP-ndotUM));
-  *vflux  = p_half*ny*(rP+rM - (ndotUP-ndotUM));
-  *wflux  = p_half*nz*(rP+rM - (ndotUP-ndotUM));
+
+  *rflux  = p_half*   (ndotUM+ndotUP-(rP-rM));
+  *uflux  = p_half*nx*(rP+rM        -(ndotUP-ndotUM));
+  *vflux  = p_half*ny*(rP+rM        -(ndotUP-ndotUM));
+  *wflux  = p_half*nz*(rP+rM        -(ndotUP-ndotUM));
   
 }
 
@@ -45,12 +45,12 @@ void upwind(const dfloat nx,
     const dlong qbaseM = eM*p_Np*p_Nfields + vidM;			\
     const dlong qbaseP = eP*p_Np*p_Nfields + vidP;			\
 									\
-    const dfloat rM  = q[qbaseM + 0*p_Np];				\
+    const dfloat rM = q[qbaseM + 0*p_Np];				\
     const dfloat uM = q[qbaseM + 1*p_Np];				\
     const dfloat vM = q[qbaseM + 2*p_Np];				\
     const dfloat wM = q[qbaseM + 3*p_Np];				\
 									\
-    dfloat rP  = q[qbaseP + 0*p_Np];					\
+    dfloat rP = q[qbaseP + 0*p_Np];					\
     dfloat uP = q[qbaseP + 1*p_Np];					\
     dfloat vP = q[qbaseP + 2*p_Np];					\
     dfloat wP = q[qbaseP + 3*p_Np];					\
@@ -62,10 +62,10 @@ void upwind(const dfloat nx,
     									\
     const dfloat sc = invWJ*sJ;						\
     									\
-    dfloat rflux, uflux, vflux, wflux;				\
+    dfloat rflux, uflux, vflux, wflux;					\
     upwind(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux); \
-									\
-									\
+    									\
+    									\
     const dlong base = e*p_Np*p_Nfields+k*p_Nq*p_Nq + j*p_Nq+i;		\
     rhsq[base+0*p_Np] += sc*(-rflux);					\
     rhsq[base+1*p_Np] += sc*(-uflux);					\
