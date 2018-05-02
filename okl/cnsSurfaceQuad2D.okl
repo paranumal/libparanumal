@@ -93,6 +93,7 @@ void upwindRoeAveraged(const dfloat nx,
 
 
 
+
 #define surfaceTerms(sk,face,i, j)                                      \
 {                                                                       \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \

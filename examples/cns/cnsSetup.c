@@ -310,6 +310,53 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileNam
     cns->recvStressesBuffer = (dfloat*) o_recvStressesBuffer.getMappedPointer();
   }
 
+  // allocate unified derivative matrices
+  dfloat *DT;
+
+  if(cns->elementType == HEXAHEDRA || cns->elementType == QUADRILATERALS){
+    cns->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+  }
+  else if(cns->elementType == TRIANGLES){
+
+    // build Dr, Ds transposes
+    dfloat *DrsT = (dfloat*) calloc(2*mesh->Np*mesh->Np, sizeof(dfloat));
+    dfloat *cubDrsWT = (dfloat*) calloc(2*mesh->cubNp*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->cubNp;++m){
+        cubDrsWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
+        cubDrsWT[n+m*mesh->Np+mesh->cubNp*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
+      }
+      
+      for(int m=0;m<mesh->Np;++m){
+        DrsT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
+        DrsT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
+      }
+    }
+    cns->o_Dmatrices = mesh->device.malloc(2*mesh->Np*mesh->Np*sizeof(dfloat), DrsT);
+    cns->o_cubDWmatrices = mesh->device.malloc(2*mesh->cubNp*mesh->Np*sizeof(dfloat), cubDrsWT);
+  }
+  else{
+    printf("BUILDING TET DMATRICES\n");
+    // build Dr, Ds transposes
+    dfloat *DrstT = (dfloat*) calloc(3*mesh->Np*mesh->Np, sizeof(dfloat));
+    dfloat *cubDrstWT = (dfloat*) calloc(3*mesh->cubNp*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->cubNp;++m){
+        cubDrstWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
+        cubDrstWT[n+m*mesh->Np+mesh->cubNp*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
+	cubDrstWT[n+m*mesh->Np+2*mesh->cubNp*mesh->Np] = mesh->cubDtW[n*mesh->cubNp+m];
+      }
+
+      for(int m=0;m<mesh->Np;++m){
+        DrstT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
+        DrstT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
+	DrstT[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Dt[n*mesh->Np+m];
+      }
+    }
+    cns->o_Dmatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), DrstT);
+    cns->o_cubDWmatrices = mesh->device.malloc(3*mesh->cubNp*mesh->Np*sizeof(dfloat), cubDrstWT);
+  }
+  
   //  p_RT, p_rbar, p_ubar, p_vbar
   // p_half, p_two, p_third, p_Nstresses
   
