@@ -74,6 +74,7 @@ cnsReportQuad2D.o \
 ../../src/parallelSort.o \
 ../../src/matrix.o \
 ../../src/setupAide.o \
+../../src/readArray.o \
 ../../src/trace.o
 
 cnsMainQuad2D:$(OBJS) 
