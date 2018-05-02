@@ -4,13 +4,13 @@
 #define acousticsDirichletConditions2D(bc, t, x, y, nx, ny, rM, uM, vM, rB, uB, vB) \
 {                                   \
   if(bc==2){                        \
-    *(rB) = rM;                     \
-    *(uB) = 0.f;                    \
-    *(vB) = 0.f;                    \
+    *(rB) = -rM;                     \
+    *(uB) = uM;                    \
+    *(vB) = vM;                    \
   } else if(bc==1){          \
     *(rB) = rM;                     \
-    *(uB) = uM - (nx*uM+ny*vM)*nx;  \
-    *(vB) = vM - (nx*uM+ny*vM)*ny;  \
+    *(uB) = uM - p_two*(nx*uM+ny*vM)*nx;  \
+    *(vB) = vM - p_two*(nx*uM+ny*vM)*ny;  \
   }                                 \
 }
 

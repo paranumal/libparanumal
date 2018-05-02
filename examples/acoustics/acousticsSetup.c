@@ -99,10 +99,10 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     memcpy(acoustics->rkE, rkE, acoustics->Nrk*sizeof(dfloat));
     memcpy(acoustics->rkA, rkA, acoustics->Nrk*acoustics->Nrk*sizeof(dfloat));
     
-    acoustics->dtMIN = 1E-7; //minumum allowed timestep
-    acoustics->ATOL = 1E-5;  //absolute error tolerance
-    acoustics->RTOL = 1E-4;  //relative error tolerance
-    acoustics->safe = 0.9;   //safety factor
+    acoustics->dtMIN = 1E-9; //minumum allowed timestep
+    acoustics->ATOL = 1E-6;  //absolute error tolerance
+    acoustics->RTOL = 1E-6;  //relative error tolerance
+    acoustics->safe = 0.8;   //safety factor
 
     //error control parameters
     acoustics->beta = 0.05;
@@ -293,10 +293,10 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockV = 512/mesh->Np; // works for CUDA
+  int NblockV = 1; 1024/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 512/maxNodes; // works for CUDA
+  int NblockS = 1; 1024/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   int cubMaxNodes = mymax(mesh->Np, (mesh->intNfp*mesh->Nfaces));
