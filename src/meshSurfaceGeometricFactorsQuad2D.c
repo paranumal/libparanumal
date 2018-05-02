@@ -47,7 +47,7 @@ void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
         /* face f normal and length */
         dfloat nx =   ye[(f+1)%mesh->Nverts]-ye[f];
         dfloat ny = -(xe[(f+1)%mesh->Nverts]-xe[f]);
-        dfloat  d = norm(nx,ny);
+        dfloat  d = norm2(nx,ny);
 
         /* output index */
         dlong base = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + mesh->Nfp*f + i);
@@ -88,7 +88,7 @@ void meshSurfaceGeometricFactorsQuad2D(mesh2D *mesh){
         /* face f normal and length */
         dfloat nx =   ye[(f+1)%mesh->Nverts]-ye[f];
         dfloat ny = -(xe[(f+1)%mesh->Nverts]-xe[f]);
-        dfloat  d = norm(nx,ny);
+        dfloat  d = norm2(nx,ny);
 
         /* output index */
         dlong base = mesh->Nsgeo*(mesh->Nfaces*mesh->cubNq*e + mesh->cubNq*f + i);

@@ -125,7 +125,8 @@ dfloat meshJacobiP(dfloat a, dfloat alpha, dfloat beta, int N);
 dfloat meshFactorial(int n);
 
 
-#define norm(a,b) ( sqrt((a)*(a)+(b)*(b)) )
+#define norm2(a,b) ( sqrt((a)*(a)+(b)*(b)) )
+
 
 /* offsets for geometric factors */
 #define RXID 0  
@@ -151,5 +152,6 @@ dfloat meshFactorial(int n);
 #define IHID 4
 #define WSJID 5
 #define WIJID 6
+
 #endif
 

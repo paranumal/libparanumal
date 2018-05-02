@@ -5,7 +5,7 @@
 void meshGeometricFactorsTet3D(mesh3D *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nvgeo = 10;
+  mesh->Nvgeo = 12;
   mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo, 
         sizeof(dfloat));
 

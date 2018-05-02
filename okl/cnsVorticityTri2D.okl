@@ -1,8 +1,6 @@
 kernel void cnsVorticityTri2D(const dlong Nelements,
                               const dfloat * restrict vgeo,
-                              const dfloat * restrict const DrT,
-                              const dfloat * restrict const DsT,
-			      const dfloat * restrict const DtT,	
+                              const dfloat * restrict const DT,
                               const dfloat * restrict q,
                                     dfloat * restrict Vort){  
   
@@ -45,8 +43,8 @@ kernel void cnsVorticityTri2D(const dlong Nelements,
 
           occaUnroll(p_Np)
             for(int i=0;i<p_Np;++i) {
-              const dfloat Drn = DrT[n + i*p_Np];
-              const dfloat Dsn = DsT[n + i*p_Np];
+              const dfloat Drn = DT[n + i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsn = DT[n + i*p_Np+1*p_Np*p_Np];
               ur += Drn*s_u[es][i];
               us += Dsn*s_u[es][i];
               vr += Drn*s_v[es][i];

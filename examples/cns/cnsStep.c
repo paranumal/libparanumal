@@ -38,9 +38,7 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     // now compute viscous stresses
     cns->stressesVolumeKernel(mesh->Nelements, 
 			      mesh->o_vgeo, 
-			      mesh->o_DrT, 
-			      mesh->o_DsT,
-			      mesh->o_DtT, 
+			      cns->o_Dmatrices,
 			      cns->mu, 
 			      cns->o_rkq, 
 			      cns->o_viscousStresses);
@@ -85,11 +83,11 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureVolumeKernel(mesh->Nelements, 
 				cns->advSwitch, 
-				mesh->o_vgeo, 
-				mesh->o_cubDrWT,
-				mesh->o_cubDsWT,
-				mesh->o_cubDtWT,
+				mesh->o_vgeo,
+				mesh->o_cubvgeo, 
+				cns->o_cubDWmatrices,
 				mesh->o_cubInterpT,
+				mesh->o_cubProjectT,
 				cns->o_viscousStresses, 
 				cns->o_rkq, 
 				cns->o_rhsq);
@@ -97,9 +95,7 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
       cns->volumeKernel(mesh->Nelements, 
 			cns->advSwitch, 
 			mesh->o_vgeo, 
-			mesh->o_DrT,
-			mesh->o_DsT,
-			mesh->o_DtT,
+			cns->o_Dmatrices,
 			cns->o_viscousStresses, 
 			cns->o_rkq, 
 			cns->o_rhsq);
@@ -117,13 +113,14 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     // compute surface contribution to DG cns RHS (LIFTT ?)
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureSurfaceKernel(mesh->Nelements, 
-				 cns->advSwitch, 
+				 cns->advSwitch,
+				 mesh->o_vgeo, 
 				 mesh->o_sgeo, 
-				 mesh->o_intInterpT,
-				 mesh->o_intLIFTT, 
 				 mesh->o_vmapM, 
 				 mesh->o_vmapP, 
 				 mesh->o_EToB,
+				 mesh->o_intInterpT,
+				 mesh->o_intLIFTT, 
 				 currentTime, 
 				 mesh->o_intx, 
 				 mesh->o_inty,
@@ -196,9 +193,7 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     // now compute viscous stresses
     cns->stressesVolumeKernel(mesh->Nelements, 
 			      mesh->o_vgeo, 
-			      mesh->o_DrT, 
-			      mesh->o_DsT,
-			      mesh->o_DtT, 
+			      cns->o_Dmatrices, 
 			      cns->mu, 
 			      cns->o_q, 
 			      cns->o_viscousStresses);
@@ -244,11 +239,11 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
 
       cns->cubatureVolumeKernel(mesh->Nelements, 
 				advSwitch, 
-				mesh->o_vgeo, 
-				mesh->o_cubDrWT,
-				mesh->o_cubDsWT,
-				mesh->o_cubDtWT,
+				mesh->o_vgeo,
+				mesh->o_cubvgeo, 
+				cns->o_cubDWmatrices,
 				mesh->o_cubInterpT,
+				mesh->o_cubProjectT,
 				cns->o_viscousStresses, 
 				cns->o_q, 
 				cns->o_rhsq);
@@ -256,9 +251,7 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
       cns->volumeKernel(mesh->Nelements, 
 			advSwitch, 
 			mesh->o_vgeo, 
-			mesh->o_DrT,
-			mesh->o_DsT,
-			mesh->o_DtT,
+			cns->o_Dmatrices,
 			cns->o_viscousStresses, 
 			cns->o_q, 
 			cns->o_rhsq);

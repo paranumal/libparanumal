@@ -54,6 +54,9 @@ typedef struct{
   occa::kernel stressesSurfaceKernel;
   
   occa::kernel vorticityKernel;
+
+  occa::memory o_Dmatrices;
+  occa::memory o_cubDWmatrices;
   
   occa::memory o_q;
   occa::memory o_rhsq;
