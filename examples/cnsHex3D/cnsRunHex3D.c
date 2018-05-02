@@ -74,9 +74,6 @@ void cnsRunHex3D(cns_t *cns, setupAide &newOptions){
       dfloat dtnew = mesh->dt/fac;
 
       if (err<1.0) { //dt is accepted
-        // output  (print from rkq)
-          cnsReportHex3D(cns, nextOutputTime, newOptions);
-          
         // check for output during this step and do a mini-step
         if(time<nextOutputTime && time+mesh->dt>nextOutputTime){
           dfloat savedt = mesh->dt;
