@@ -125,7 +125,7 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
   } else if(options.compareArgs("PRECONDITIONER", "JACOBI")) {
 
     dfloat *invDiagA;
-    ellipticBuildJacobi(elliptic,mesh->Np,NULL,lambda,&invDiagA);
+    ellipticBuildJacobi(elliptic,lambda,&invDiagA);
     precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
     free(invDiagA);
   }

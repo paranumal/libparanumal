@@ -266,7 +266,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
     }
   }
 
-  printf("Building full SEMFEM matrix..."); fflush(stdout);
+  if (rank==0) printf("Building full SEMFEM matrix..."); fflush(stdout);
 
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = femMesh->Np*femMesh->Np*femMesh->Nelements;

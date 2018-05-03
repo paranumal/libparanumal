@@ -65,9 +65,8 @@ void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx) {
   meshParallelScatter(mesh, ogs, o_x, o_Sx);  
 }
 
-void buildCoarsenerTri2D(elliptic_t* elliptic, mesh_t **meshLevels, int Nf, int Nc);
-
-
+void buildCoarsenerTriTet(elliptic_t* elliptic, mesh_t **meshLevels, int Nf, int Nc);
+void buildCoarsenerQuadHex(elliptic_t* elliptic, mesh_t **meshLevels, int Nf, int Nc);
 
 void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) {
 
@@ -116,7 +115,8 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     numLevels = 1;
     int degree = mesh->N;
     int dofs = meshLevels[degree]->Np;
-    while (dofs>3) {
+    int basedofs = mesh->Nverts;
+    while (dofs>basedofs) {
       numLevels++;
       for (;degree>0;degree--)
         if (meshLevels[degree]->Np<=dofs/2)
@@ -128,7 +128,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     numLevels = 1;
     levelDegree[0] = degree;
     dofs = meshLevels[degree]->Np;
-    while (dofs>3) {
+    while (dofs>basedofs) {
       for (;degree>0;degree--)
         if (meshLevels[degree]->Np<=dofs/2)
           break;
@@ -221,7 +221,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 
   //report top levels
   if (options.compareArgs("VERBOSE","TRUE")) {
-    if((rank==0)&&(numLevels>1)) { //report the upper multigrid levels
+    if((rank==0)&&(numLevels>0)) { //report the upper multigrid levels
       printf("------------------Multigrid Report---------------------\n");
       printf("-------------------------------------------------------\n");
       printf("level|  Degree  |    dimension   |      Smoother       \n");
@@ -229,10 +229,10 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
       printf("-------------------------------------------------------\n");
     }
 
-    for(int lev=0; lev<numLevels-1; lev++){
+    for(int lev=0; lev<numLevels; lev++){
 
-      dlong Nrows = levels[lev]->Nrows;
-      hlong hNrows = (hlong) levels[lev]->Nrows;
+      dlong Nrows = (lev==numLevels-1) ? mesh->Nverts*mesh->Nelements: levels[lev]->Nrows;
+      hlong hNrows = (hlong) Nrows;
 
       dlong minNrows=0, maxNrows=0;
       hlong totalNrows=0;
@@ -245,7 +245,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
       if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
       MPI_Allreduce(&Nrows, &minNrows, 1, MPI_DLONG, MPI_MIN, MPI_COMM_WORLD);
 
-      char *smootherString;
+      char smootherString[BUFSIZ];
       strcpy(smootherString, (char*) (options.getArgs("MULTIGRID SMOOTHER")).c_str());
 
       if (rank==0){
@@ -255,7 +255,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
         printf("     |          |    %10.2f  |   \n", avgNrows);
       }
     }
-    if((rank==0)&&(numLevels>1)) 
+    if((rank==0)&&(numLevels>0)) 
       printf("-------------------------------------------------------\n");
   }
 
@@ -288,7 +288,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     Vals[i] = coarseA[i].val;
   }
 
-  // build amg starting at level 1
+  // build amg starting at level N=1
   parAlmondAgmgSetup(precon->parAlmond,
                      coarseGlobalStarts,
                      nnzCoarseA,
@@ -328,7 +328,12 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 
     elliptic_t *ellipticL = ellipticsN[Nc];
     elliptic_t *ellipticF = ellipticsN[Nf];
-    buildCoarsenerTri2D(ellipticL, meshLevels, Nf, Nc);
+
+    if (elliptic->elementType==TRIANGLES||elliptic->elementType==TETRAHEDRA){
+      buildCoarsenerTriTet(ellipticL, meshLevels, Nf, Nc);
+    } else {
+      buildCoarsenerQuadHex(ellipticL, meshLevels, Nf, Nc);
+    }
     
     levels[n]->coarsenArgs = (void **) calloc(2,sizeof(void*));
     levels[n]->coarsenArgs[0] = (void *) ellipticL;
@@ -346,7 +351,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 
 
 
-void buildCoarsenerTri2D(elliptic_t* elliptic, mesh_t **meshLevels, int Nf, int Nc) {
+void buildCoarsenerTriTet(elliptic_t* elliptic, mesh_t **meshLevels, int Nf, int Nc) {
 
   int NpFine   = meshLevels[Nf]->Np;
   int NpCoarse = meshLevels[Nc]->Np;
@@ -403,6 +408,47 @@ void buildCoarsenerTri2D(elliptic_t* elliptic, mesh_t **meshLevels, int Nf, int 
     }
   }
   elliptic->o_R = elliptic->mesh->device.malloc(NpFine*NpCoarse*sizeof(dfloat), elliptic->R);
+
+  free(P); free(Ptmp);
+}
+
+void buildCoarsenerQuadHex(elliptic_t* elliptic, mesh_t **meshLevels, int Nf, int Nc) {
+
+  int NqFine   = Nf+1;
+  int NqCoarse = Nc+1;
+  dfloat *P    = (dfloat *) calloc(NqFine*NqCoarse,sizeof(dfloat));
+  dfloat *Ptmp = (dfloat *) calloc(NqFine*NqCoarse,sizeof(dfloat));
+
+  //initialize P as identity
+  for (int i=0;i<NqCoarse;i++) P[i*NqCoarse+i] = 1.0;
+
+  for (int n=Nc;n<Nf;n++) {
+
+    int Nqp1 = n+2;
+    int Nq   = n+1;
+
+    //copy P
+    for (int i=0;i<Nq*NqCoarse;i++) Ptmp[i] = P[i];
+
+    //Multiply by the raise op
+    for (int i=0;i<Nqp1;i++) {
+      for (int j=0;j<NqCoarse;j++) {
+        P[i*NqCoarse + j] = 0.;
+        for (int k=0;k<Nq;k++) {
+          P[i*NqCoarse + j] += meshLevels[n]->interpRaise[i*Nq+k]*Ptmp[k*NqCoarse + j];
+        }
+      }
+    }
+  }
+
+  //the coarsen matrix is P^T
+  elliptic->R = (dfloat *) calloc(NqFine*NqCoarse,sizeof(dfloat));
+  for (int i=0;i<NqCoarse;i++) {
+    for (int j=0;j<NqFine;j++) {
+      elliptic->R[i*NqFine+j] = P[j*NqCoarse+i];
+    }
+  }
+  elliptic->o_R = elliptic->mesh->device.malloc(NqFine*NqCoarse*sizeof(dfloat), elliptic->R);
 
   free(P); free(Ptmp);
 }

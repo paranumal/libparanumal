@@ -3,22 +3,42 @@
 // create elliptic and mesh structs for multigrid levels
 elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf){
 
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
   elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
   memcpy(elliptic,baseElliptic,sizeof(elliptic_t));
 
   //populate the mini-mesh using the mesh struct
-  mesh2D *mesh = (mesh2D*) calloc(1,sizeof(mesh2D));
-  memcpy(mesh,baseElliptic->mesh,sizeof(mesh2D));
+  mesh_t *mesh = (mesh_t*) calloc(1,sizeof(mesh_t));
+  memcpy(mesh,baseElliptic->mesh,sizeof(mesh_t));
 
   elliptic->mesh = mesh;
 
   setupAide options = elliptic->options;
 
-  // load reference (r,s) element nodes
-  meshLoadReferenceNodesTri2D(mesh, Nc);
+  switch(elliptic->elementType){
+    case TRIANGLES:
+      meshLoadReferenceNodesTri2D(mesh, Nc);
+      meshPhysicalNodesTri2D(mesh);
+      break;
+    case QUADRILATERALS:
+      meshLoadReferenceNodesQuad2D(mesh, Nc);
+      meshPhysicalNodesQuad2D(mesh);
+      meshGeometricFactorsQuad2D(mesh);
+      break;
+    case TETRAHEDRA:
+      meshLoadReferenceNodesTet3D(mesh, Nc);
+      meshPhysicalNodesTet3D(mesh);
+      break;
+    case HEXAHEDRA:
+      meshLoadReferenceNodesHex3D(mesh, Nc);
+      meshPhysicalNodesHex3D(mesh);
+      meshGeometricFactorsHex3D(mesh);
+      break;
+  }
 
-  // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesTri2D(mesh);
 
   // create halo extension for x,y arrays
   dlong totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
@@ -32,8 +52,22 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->x, sendBuffer, mesh->x + localNodes);
   meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->y, sendBuffer, mesh->y + localNodes);
 
-  // connect face nodes (find trace indices)
-  meshConnectFaceNodes2D(mesh);
+  switch(elliptic->elementType){
+    case TRIANGLES:
+      meshConnectFaceNodes2D(mesh);
+      break;
+    case QUADRILATERALS:
+      meshConnectFaceNodes2D(mesh);
+      meshSurfaceGeometricFactorsQuad2D(mesh);
+      break;
+    case TETRAHEDRA:
+      meshConnectFaceNodes3D(mesh);
+      break;
+    case HEXAHEDRA:
+      meshConnectFaceNodes3D(mesh);
+      meshSurfaceGeometricFactorsHex3D(mesh);
+      break;
+  }
 
   // global nodes
   meshParallelConnectNodes(mesh);
@@ -48,138 +82,355 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   elliptic->Nblock = Nblock;
 
-  // build Dr, Ds, LIFT transposes
-  dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Np;++m){
-      DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
-      DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
+  if (elliptic->elementType==TRIANGLES) {
+
+    // build Dr, Ds, LIFT transposes
+    dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
+        DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
+      }
     }
-  }
 
-  dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-  for(int n=0;n<mesh->Np;++n){
-    for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
-      LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
+    dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
+        LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
+      }
     }
-  }
 
-  //build element stiffness matrices
-  dfloat *SrrT, *SrsT, *SsrT, *SssT;
-  mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  for (int n=0;n<mesh->Np;n++) {
-    for (int m=0;m<mesh->Np;m++) {
-      for (int k=0;k<mesh->Np;k++) {
-        for (int l=0;l<mesh->Np;l++) {
-          mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-          mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-          mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
-          mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
-        }
-      } 
+    //build element stiffness matrices
+    dfloat *SrrT, *SrsT, *SsrT, *SssT;
+    mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {
+        for (int k=0;k<mesh->Np;k++) {
+          for (int l=0;l<mesh->Np;l++) {
+            mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+            mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+          }
+        } 
+      }
     }
-  }
-  SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  for (int n=0;n<mesh->Np;n++) {
-    for (int m=0;m<mesh->Np;m++) {  
-      SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
-      SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
-      SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
-      SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+    SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {  
+        SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
+        SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
+        SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
+        SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+      }
     }
-  }
 
-  // deriv operators: transpose from row major to column major
-  int *D1ids = (int*) calloc(mesh->Np*3,sizeof(int));
-  int *D2ids = (int*) calloc(mesh->Np*3,sizeof(int));
-  int *D3ids = (int*) calloc(mesh->Np*3,sizeof(int));
-  dfloat *Dvals = (dfloat*) calloc(mesh->Np*3,sizeof(dfloat));
+    // deriv operators: transpose from row major to column major
+    int *D1ids = (int*) calloc(mesh->Np*3,sizeof(int));
+    int *D2ids = (int*) calloc(mesh->Np*3,sizeof(int));
+    int *D3ids = (int*) calloc(mesh->Np*3,sizeof(int));
+    dfloat *Dvals = (dfloat*) calloc(mesh->Np*3,sizeof(dfloat));
 
-  dfloat *VBq = (dfloat*) calloc(mesh->Np*mesh->cubNp,sizeof(dfloat));
-  dfloat *PBq = (dfloat*) calloc(mesh->Np*mesh->cubNp,sizeof(dfloat));
+    dfloat *VBq = (dfloat*) calloc(mesh->Np*mesh->cubNp,sizeof(dfloat));
+    dfloat *PBq = (dfloat*) calloc(mesh->Np*mesh->cubNp,sizeof(dfloat));
 
-  dfloat *L0vals = (dfloat*) calloc(mesh->Nfp*3,sizeof(dfloat)); // tridiag
-  int *ELids = (int*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(int));
-  dfloat *ELvals = (dfloat*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(dfloat));
+    dfloat *L0vals = (dfloat*) calloc(mesh->Nfp*3,sizeof(dfloat)); // tridiag
+    int *ELids = (int*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(int));
+    dfloat *ELvals = (dfloat*) calloc(1+mesh->Np*mesh->max_EL_nnz,sizeof(dfloat));
 
 
-  for (int i = 0; i < mesh->Np; ++i){
-    for (int j = 0; j < 3; ++j){
-      D1ids[i+j*mesh->Np] = mesh->D1ids[j+i*3];
-      D2ids[i+j*mesh->Np] = mesh->D2ids[j+i*3];
-      D3ids[i+j*mesh->Np] = mesh->D3ids[j+i*3];
-      Dvals[i+j*mesh->Np] = mesh->Dvals[j+i*3];
+    for (int i = 0; i < mesh->Np; ++i){
+      for (int j = 0; j < 3; ++j){
+        D1ids[i+j*mesh->Np] = mesh->D1ids[j+i*3];
+        D2ids[i+j*mesh->Np] = mesh->D2ids[j+i*3];
+        D3ids[i+j*mesh->Np] = mesh->D3ids[j+i*3];
+        Dvals[i+j*mesh->Np] = mesh->Dvals[j+i*3];
+      }
     }
-  }
 
-  for (int i = 0; i < mesh->cubNp; ++i){
-    for (int j = 0; j < mesh->Np; ++j){
-      VBq[i+j*mesh->cubNp] = mesh->VBq[j+i*mesh->Np];
-      PBq[j+i*mesh->Np] = mesh->PBq[i+j*mesh->cubNp];
+    for (int i = 0; i < mesh->cubNp; ++i){
+      for (int j = 0; j < mesh->Np; ++j){
+        VBq[i+j*mesh->cubNp] = mesh->VBq[j+i*mesh->Np];
+        PBq[j+i*mesh->Np] = mesh->PBq[i+j*mesh->cubNp];
+      }
     }
-  }
 
 
-  for (int i = 0; i < mesh->Nfp; ++i){
-    for (int j = 0; j < 3; ++j){
-      L0vals[i+j*mesh->Nfp] = mesh->L0vals[j+i*3];
+    for (int i = 0; i < mesh->Nfp; ++i){
+      for (int j = 0; j < 3; ++j){
+        L0vals[i+j*mesh->Nfp] = mesh->L0vals[j+i*3];
+      }
     }
-  }
 
-  for (int i = 0; i < mesh->Np; ++i){
-    for (int j = 0; j < mesh->max_EL_nnz; ++j){
-      ELids[i + j*mesh->Np] = mesh->ELids[j+i*mesh->max_EL_nnz];
-      ELvals[i + j*mesh->Np] = mesh->ELvals[j+i*mesh->max_EL_nnz];
+    for (int i = 0; i < mesh->Np; ++i){
+      for (int j = 0; j < mesh->max_EL_nnz; ++j){
+        ELids[i + j*mesh->Np] = mesh->ELids[j+i*mesh->max_EL_nnz];
+        ELvals[i + j*mesh->Np] = mesh->ELvals[j+i*mesh->max_EL_nnz];
+      }
     }
-  }
 
-  //BB mass matrix
-  mesh->BBMM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  for (int n = 0; n < mesh->Np; ++n){
-    for (int m = 0; m < mesh->Np; ++m){
-      for (int i = 0; i < mesh->Np; ++i){
-        for (int j = 0; j < mesh->Np; ++j){
-          mesh->BBMM[n+m*mesh->Np] += mesh->VB[m+j*mesh->Np]*mesh->MM[i+j*mesh->Np]*mesh->VB[n+i*mesh->Np];
+    //BB mass matrix
+    mesh->BBMM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    for (int n = 0; n < mesh->Np; ++n){
+      for (int m = 0; m < mesh->Np; ++m){
+        for (int i = 0; i < mesh->Np; ++i){
+          for (int j = 0; j < mesh->Np; ++j){
+            mesh->BBMM[n+m*mesh->Np] += mesh->VB[m+j*mesh->Np]*mesh->MM[i+j*mesh->Np]*mesh->VB[n+i*mesh->Np];
+          }
         }
       }
     }
+
+    mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+             mesh->Dr);
+
+    mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+             mesh->Ds);
+
+    mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+              DrT);
+
+    mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+              DsT);
+
+    mesh->o_LIFT =
+      mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
+        mesh->LIFT);
+
+    mesh->o_LIFTT =
+      mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
+        LIFTT);
+
+    
+
+    mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrrT);
+    mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrsT);
+    mesh->o_SsrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SsrT);
+    mesh->o_SssT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SssT);
+
+    
+
+    mesh->o_D1ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D1ids);
+    mesh->o_D2ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D2ids);
+    mesh->o_D3ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D3ids);
+    mesh->o_Dvals = mesh->device.malloc(mesh->Np*3*sizeof(dfloat),Dvals);
+
+    mesh->o_BBMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),mesh->BBMM);
+
+    mesh->o_VBq = mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),VBq);
+    mesh->o_PBq = mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),PBq);
+
+    mesh->o_L0vals = mesh->device.malloc(mesh->Nfp*3*sizeof(dfloat),L0vals);
+    mesh->o_ELids =
+      mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(int),ELids);
+    mesh->o_ELvals =
+      mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(dfloat),ELvals);
+
+    free(DrT); free(DsT); free(LIFTT);
+    free(SrrT); free(SrsT); free(SsrT); free(SssT);
+    free(D1ids); free(D2ids); free(D3ids); free(Dvals);
+
+    free(VBq); free(PBq);
+    free(L0vals); free(ELids ); free(ELvals);
+
+  } else if (elliptic->elementType==QUADRILATERALS) {
+
+    //lumped mass matrix
+    mesh->MM = (dfloat *) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    for (int j=0;j<mesh->Nq;j++) {
+      for (int i=0;i<mesh->Nq;i++) {
+        int n = i+j*mesh->Nq;
+        mesh->MM[n+n*mesh->Np] = mesh->gllw[i]*mesh->gllw[j];
+      }
+    }
+
+    mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+    
+    mesh->o_vgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+        mesh->vgeo);
+    mesh->o_sgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
+        mesh->sgeo);
+    mesh->o_ggeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
+        mesh->ggeo);
+  
+  } else if (elliptic->elementType==TETRAHEDRA) {
+
+    // build Dr, Ds, LIFT transposes
+    dfloat *DrT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    dfloat *DsT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    dfloat *DtT = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
+        DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
+        DtT[n+m*mesh->Np] = mesh->Dt[n*mesh->Np+m];
+      }
+    }
+
+    dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
+        LIFTT[n+m*mesh->Np] = mesh->LIFT[n*mesh->Nfp*mesh->Nfaces+m];
+      }
+    }
+
+    //build element stiffness matrices
+    mesh->Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Srt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Ssr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Sss = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Sst = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Str = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Sts = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    mesh->Stt = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {
+        for (int k=0;k<mesh->Np;k++) {
+          for (int l=0;l<mesh->Np;l++) {
+            mesh->Srr[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Srs[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+            mesh->Srt[m+n*mesh->Np] += mesh->Dr[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
+            mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+            mesh->Sst[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
+            mesh->Str[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
+            mesh->Sts[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
+            mesh->Stt[m+n*mesh->Np] += mesh->Dt[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dt[m+k*mesh->Np];
+          }
+        }
+      }
+    }
+    dfloat *SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    dfloat *SrsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    dfloat *SrtT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    dfloat *SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    dfloat *SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    dfloat *SstT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    dfloat *StrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    dfloat *StsT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    dfloat *SttT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
+    for (int n=0;n<mesh->Np;n++) {
+      for (int m=0;m<mesh->Np;m++) {
+        SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
+        SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np]+mesh->Ssr[n+m*mesh->Np];
+        SrtT[m+n*mesh->Np] = mesh->Srt[n+m*mesh->Np]+mesh->Str[n+m*mesh->Np];
+        SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+        SstT[m+n*mesh->Np] = mesh->Sst[n+m*mesh->Np]+mesh->Sts[n+m*mesh->Np];
+        SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
+      }
+    }
+
+    mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+             mesh->Dr);
+
+    mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+             mesh->Ds);
+
+    mesh->o_Dt = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+             mesh->Dt);
+
+    mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+              DrT);
+
+    mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+              DsT);
+
+    mesh->o_DtT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+              DtT);
+
+    mesh->o_LIFT =
+      mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
+        mesh->LIFT);
+
+    mesh->o_LIFTT =
+      mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
+        LIFTT);
+
+    mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrrT);
+    mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrsT);
+    mesh->o_SrtT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrtT);
+    mesh->o_SsrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SsrT);
+    mesh->o_SssT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SssT);
+    mesh->o_SstT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SstT);
+    mesh->o_StrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), StrT);
+    mesh->o_StsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), StsT);
+    mesh->o_SttT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SttT);
+
+    free(DrT); free(DsT); free(DtT); free(LIFTT);
+    free(SrrT); free(SrsT); free(SrtT); 
+    free(SsrT); free(SssT); free(SstT);
+    free(StrT); free(StsT); free(SttT);
+
+  } else if (elliptic->elementType==HEXAHEDRA) {
+
+    //lumped mass matrix
+    mesh->MM = (dfloat *) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    for (int k=0;k<mesh->Nq;k++) {
+      for (int j=0;j<mesh->Nq;j++) {
+        for (int i=0;i<mesh->Nq;i++) {
+          int n = i+j*mesh->Nq+k*mesh->Nq*mesh->Nq;
+          mesh->MM[n+n*mesh->Np] = mesh->gllw[i]*mesh->gllw[j]*mesh->gllw[k];
+        }
+      }
+    }
+
+    mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+    
+    mesh->o_vgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+        mesh->vgeo);
+    mesh->o_sgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
+        mesh->sgeo);
+    mesh->o_ggeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
+        mesh->ggeo);
+
+    mesh->o_vmapM =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
+        mesh->vmapM);
+
+    mesh->o_vmapP =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
+        mesh->vmapP);
+
   }
 
-  mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-           mesh->Dr);
 
-  mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-           mesh->Ds);
+  //fill geometric factors in halo
+  if(mesh->totalHaloPairs && (elliptic->elementType==QUADRILATERALS || elliptic->elementType==HEXAHEDRA)){
+    dlong Nlocal = mesh->Np*mesh->Nelements;
+    dlong Nhalo = mesh->totalHaloPairs*mesh->Np;
+    dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
 
-  mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-            DrT);
+    // import geometric factors from halo elements
+    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
 
-  mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-            DsT);
+    meshHaloExchange(mesh,
+         mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+         mesh->vgeo,
+         vgeoSendBuffer,
+         mesh->vgeo + Nlocal*mesh->Nvgeo);
 
-  mesh->o_LIFT =
-    mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-      mesh->LIFT);
-
-  mesh->o_LIFTT =
-    mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-      LIFTT);
+    mesh->o_vgeo =
+      mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+    free(vgeoSendBuffer);
+  }
 
   mesh->o_MM =
-    mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-      mesh->MM);
-
-  mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrrT);
-  mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrsT);
-  mesh->o_SsrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SsrT);
-  mesh->o_SssT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SssT);
+      mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+        mesh->MM);
 
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
@@ -189,51 +440,60 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
       mesh->vmapP);
 
-  mesh->o_D1ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D1ids);
-  mesh->o_D2ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D2ids);
-  mesh->o_D3ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D3ids);
-  mesh->o_Dvals = mesh->device.malloc(mesh->Np*3*sizeof(dfloat),Dvals);
 
-  mesh->o_BBMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),mesh->BBMM);
-
-  mesh->o_VBq = mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),VBq);
-  mesh->o_PBq = mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),PBq);
-
-  mesh->o_L0vals = mesh->device.malloc(mesh->Nfp*3*sizeof(dfloat),L0vals);
-  mesh->o_ELids =
-    mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(int),ELids);
-  mesh->o_ELvals =
-    mesh->device.malloc(mesh->Np*mesh->max_EL_nnz*sizeof(dfloat),ELvals);
-
-  /* sparse basis setup */
-  //build inverse vandermonde matrix
-  mesh->invSparseV = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  for (int n=0;n<mesh->Np*mesh->Np;n++)
-    mesh->invSparseV[n] = mesh->sparseV[n];
-  matrixInverse(mesh->Np,mesh->invSparseV);
-
-  int paddedRowSize = 4*((mesh->SparseNnzPerRow+3)/4); //make the nnz per row a multiple of 4
-
-  char* IndTchar = (char*) calloc(paddedRowSize*mesh->Np,sizeof(char));
-  for (int m=0;m<paddedRowSize/4;m++) {
-    for (int n=0;n<mesh->Np;n++) {
-      for (int k=0;k<4;k++) {
-        if (k+4*m < mesh->SparseNnzPerRow) {
-          IndTchar[k+4*n+m*4*mesh->Np] = mesh->sparseStackedNZ[n+(k+4*m)*mesh->Np];        
-        } else {
-          IndTchar[k+4*n+m*4*mesh->Np] = 0;
-        }
+  // allocate unified derivative matrices
+  if(elliptic->elementType == HEXAHEDRA || elliptic->elementType == QUADRILATERALS){
+    elliptic->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+    elliptic->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
+  } else if(elliptic->elementType == TRIANGLES){
+    // build Dr, Ds transposes
+    dfloat *DrsT = (dfloat*) calloc(2*mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        DrsT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
+        DrsT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
       }
     }
-  }
-  
-  mesh->o_sparseSrrT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrrT);
-  mesh->o_sparseSrsT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrsT);
-  mesh->o_sparseSssT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSssT);
-  
-  mesh->o_sparseStackedNZ = mesh->device.malloc(mesh->Np*paddedRowSize*sizeof(char), IndTchar);
-  free(IndTchar);
 
+    dfloat *ST = (dfloat*) calloc(3*mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        ST[n+m*mesh->Np+0*mesh->Np*mesh->Np] = mesh->Srr[n*mesh->Np+m];
+        ST[n+m*mesh->Np+1*mesh->Np*mesh->Np] = mesh->Srs[n*mesh->Np+m]+mesh->Ssr[n*mesh->Np+m];
+        ST[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Sss[n*mesh->Np+m];
+      }
+    }
+   
+    elliptic->o_Dmatrices = mesh->device.malloc(2*mesh->Np*mesh->Np*sizeof(dfloat), DrsT);
+    elliptic->o_Smatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), ST);
+    free(DrsT); free(ST);
+  } else {
+    // build Dr, Ds transposes
+    dfloat *DrstT = (dfloat*) calloc(3*mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        DrstT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
+        DrstT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
+        DrstT[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Dt[n*mesh->Np+m];
+      }
+    }
+
+    dfloat *ST = (dfloat*) calloc(6*mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        ST[n+m*mesh->Np+0*mesh->Np*mesh->Np] = mesh->Srr[n*mesh->Np+m];
+        ST[n+m*mesh->Np+1*mesh->Np*mesh->Np] = mesh->Srs[n*mesh->Np+m]+mesh->Ssr[n*mesh->Np+m];
+        ST[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Srt[n*mesh->Np+m]+mesh->Str[n*mesh->Np+m];
+        ST[n+m*mesh->Np+3*mesh->Np*mesh->Np] = mesh->Sss[n*mesh->Np+m];
+        ST[n+m*mesh->Np+4*mesh->Np*mesh->Np] = mesh->Sst[n*mesh->Np+m]+mesh->Sts[n*mesh->Np+m];
+        ST[n+m*mesh->Np+5*mesh->Np*mesh->Np] = mesh->Stt[n*mesh->Np+m];
+      }
+    }
+
+    elliptic->o_Dmatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), DrstT);
+    elliptic->o_Smatrices = mesh->device.malloc(6*mesh->Np*mesh->Np*sizeof(dfloat), ST);
+    free(DrstT); free(ST);
+  }
   
   //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
   hlong localElements = (hlong) mesh->Nelements;
@@ -295,6 +555,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
   }
 
+  if(mesh->device.mode()=="Serial")
+    kernelInfo.addCompilerFlag("-g");
+
   kernelInfo.addDefine("p_G00ID", G00ID);
   kernelInfo.addDefine("p_G01ID", G01ID);
   kernelInfo.addDefine("p_G11ID", G11ID);
@@ -310,189 +573,157 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   kernelInfo.addDefine("p_JID", JID);
   kernelInfo.addDefine("p_JWID", JWID);
 
-  //add standard boundary functions
-  char *boundaryHeaderFileName;
-  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
-  kernelInfo.addInclude(boundaryHeaderFileName);
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
-  kernelInfo.addDefine("p_blockSize", blockSize);
+  // set kernel name suffix
+  char *suffix;
+  
+  if(elliptic->elementType==TRIANGLES)
+    suffix = strdup("Tri2D");
+  if(elliptic->elementType==QUADRILATERALS)
+    suffix = strdup("Quad2D");
+  if(elliptic->elementType==TETRAHEDRA)
+    suffix = strdup("Tet3D");
+  if(elliptic->elementType==HEXAHEDRA)
+    suffix = strdup("Hex3D");
 
-  // add custom defines
-  kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_Nverts", mesh->Nverts);
-  kernelInfo.addDefine("p_SparseNnzPerRow", paddedRowSize);
+  char fileName[BUFSIZ], kernelName[BUFSIZ];
 
-  int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
-  kernelInfo.addDefine("p_Nmax", Nmax);
+  for (int r=0;r<size;r++) {
+    if (r==rank) {
+      kernelInfo.addDefine("p_blockSize", blockSize);
 
-  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
+      // add custom defines
+      kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
+      kernelInfo.addDefine("p_Nverts", mesh->Nverts);
 
-  int NblockV = 256/mesh->Np; // works for CUDA
-  kernelInfo.addDefine("p_NblockV", NblockV);
+      int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
+      kernelInfo.addDefine("p_Nmax", Nmax);
 
-  int one = 1; //set to one for now. TODO: try optimizing over these
-  kernelInfo.addDefine("p_NnodesV", one);
+      int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+      kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockS = 256/maxNodes; // works for CUDA
-  kernelInfo.addDefine("p_NblockS", NblockS);
+      int NblockV = 256/mesh->Np; // works for CUDA
+      kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockP = 256/(4*mesh->Np); // get close to 256 threads
-  kernelInfo.addDefine("p_NblockP", NblockP);
+      int one = 1; //set to one for now. TODO: try optimizing over these
+      kernelInfo.addDefine("p_NnodesV", one);
 
-  int NblockG;
-  if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
-  else NblockG = 256/mesh->Np;
-  kernelInfo.addDefine("p_NblockG", NblockG);
+      int NblockS = 256/maxNodes; // works for CUDA
+      kernelInfo.addDefine("p_NblockS", NblockS);
 
-  mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
-               "meshHaloExtract2D",
-               kernelInfo);
+      int NblockP = 256/(4*mesh->Np); // get close to 256 threads
+      kernelInfo.addDefine("p_NblockP", NblockP);
 
-  mesh->gatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
-               "gather",
-               kernelInfo);
+      int NblockG;
+      if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
+      else NblockG = 256/mesh->Np;
+      kernelInfo.addDefine("p_NblockG", NblockG);
 
-  mesh->scatterKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
-               "scatter",
-               kernelInfo);
+      //add standard boundary functions
+      char *boundaryHeaderFileName;
+      boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
+      kernelInfo.addInclude(boundaryHeaderFileName);
 
-  mesh->gatherScatterKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
-               "gatherScatter",
-               kernelInfo);
+      sprintf(fileName, "okl/ellipticAx%s.okl", suffix);
+      sprintf(kernelName, "ellipticAx%s", suffix);
+      elliptic->AxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-  mesh->getKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
-               "get",
-               kernelInfo);
-
-  mesh->putKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
-               "put",
-               kernelInfo);
-
-  mesh->sumKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/sum.okl",
-               "sum",
-               kernelInfo);
-
-  mesh->addScalarKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/addScalar.okl",
-               "addScalar",
-               kernelInfo);
-
-  elliptic->scaledAddKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
-           "scaledAdd",
-           kernelInfo);
-
-  elliptic->dotMultiplyKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
-           "dotMultiply",
-           kernelInfo);
+      sprintf(kernelName, "ellipticPartialAx%s", suffix);
+      elliptic->partialAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
 
-  elliptic->AxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticAxTri2D",
-               kernelInfo);
+      if (options.compareArgs("BASIS", "BERN")) {
 
-  elliptic->partialAxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticPartialAxTri2D",
-               kernelInfo);
+        sprintf(fileName, "okl/ellipticGradientBB%s.okl", suffix);
+        sprintf(kernelName, "ellipticGradientBB%s", suffix);
 
-  if (options.compareArgs("BASIS", "BERN")) {
+        elliptic->gradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-    elliptic->gradientKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientBBTri2D.okl",
-               "ellipticGradientBBTri2D",
-           kernelInfo);
+        sprintf(kernelName, "ellipticPartialGradientBB%s", suffix);
+        elliptic->partialGradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      
+        sprintf(fileName, "okl/ellipticAxIpdgBB%s.okl", suffix);
+        sprintf(kernelName, "ellipticAxIpdgBB%s", suffix);
+        elliptic->ipdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-    elliptic->partialGradientKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientBBTri2D.okl",
-                 "ellipticPartialGradientBBTri2D",
-                  kernelInfo);
+        sprintf(kernelName, "ellipticPartialAxIpdgBB%s", suffix);
+        elliptic->partialIpdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+          
+      } else if (options.compareArgs("BASIS", "NODAL")) {
 
-    elliptic->ipdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
-                 "ellipticAxIpdgBBTri2D",
-                 kernelInfo);
+        sprintf(fileName, "okl/ellipticGradient%s.okl", suffix);
+        sprintf(kernelName, "ellipticGradient%s", suffix);
 
-    elliptic->partialIpdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
-                 "ellipticPartialAxIpdgBBTri2D",
-                 kernelInfo);
+        elliptic->gradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-  } else if (options.compareArgs("BASIS", "NODAL")) {
+        sprintf(kernelName, "ellipticPartialGradient%s", suffix);
+        elliptic->partialGradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-    elliptic->gradientKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-               "ellipticGradientTri2D_v0",
-           kernelInfo);
+        sprintf(fileName, "okl/ellipticAxIpdg%s.okl", suffix);
+        sprintf(kernelName, "ellipticAxIpdg%s", suffix);
+        elliptic->ipdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-    elliptic->partialGradientKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-                 "ellipticPartialGradientTri2D_v0",
-                  kernelInfo);
-
-    elliptic->ipdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-                 "ellipticAxIpdgTri2D",
-                 kernelInfo);
-
-    elliptic->partialIpdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-                 "ellipticPartialAxIpdgTri2D",
-                 kernelInfo);
+        sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
+        elliptic->partialIpdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      }
+    }
   }
 
   //new precon struct
   elliptic->precon = (precon_t *) calloc(1,sizeof(precon_t));
 
-#if 0
-  elliptic->precon->overlappingPatchKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTri2D.okl",
-               "ellipticOasPreconTri2D",
-               kernelInfo);
-#endif
+  for (int r=0;r<size;r++) {
+    if (r==rank) {
+      sprintf(fileName, "okl/ellipticBlockJacobiPrecon.okl");
+      sprintf(kernelName, "ellipticBlockJacobiPrecon");
+      elliptic->precon->blockJacobiKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-  elliptic->precon->blockJacobiKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTri2D.okl",
-               "ellipticBlockJacobiPreconTri2D",
-               kernelInfo);
+      sprintf(kernelName, "ellipticPartialBlockJacobiPrecon");
+      elliptic->precon->partialblockJacobiKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-  elliptic->precon->approxBlockJacobiSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticApproxBlockJacobiSolver2D",
-               kernelInfo);
+      sprintf(fileName, "okl/ellipticPatchSolver.okl");
+      sprintf(kernelName, "ellipticApproxBlockJacobiSolver");
+      elliptic->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-  elliptic->precon->exactBlockJacobiSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticExactBlockJacobiSolver2D",
-               kernelInfo);
+      //sizes for the coarsen and prolongation kernels. degree NFine to degree N
+      int NqFine   = (Nf+1);
+      int NqCoarse = (Nc+1);
+      kernelInfo.addDefine("p_NqFine", Nf+1);
+      kernelInfo.addDefine("p_NqCoarse", Nc+1);
 
-  //sizes for the coarsen and prolongation kernels. degree NFine to degree N
-  int NpFine   = (Nf+1)*(Nf+2)/2;
-  int NpCoarse = (Nc+1)*(Nc+2)/2;
-  kernelInfo.addDefine("p_NpFine", NpFine);
-  kernelInfo.addDefine("p_NpCoarse", NpCoarse);
+      int NpFine, NpCoarse;
+      switch(elliptic->elementType){
+        case TRIANGLES:
+          NpFine   = (Nf+1)*(Nf+2)/2;
+          NpCoarse = (Nc+1)*(Nc+2)/2;
+          break;
+        case QUADRILATERALS:
+          NpFine   = (Nf+1)*(Nf+1);
+          NpCoarse = (Nc+1)*(Nc+1);
+          break;
+        case TETRAHEDRA:
+          NpFine   = (Nf+1)*(Nf+2)*(Nf+3)/6;
+          NpCoarse = (Nc+1)*(Nc+2)*(Nc+3)/6;
+          break;
+        case HEXAHEDRA:
+          NpFine   = (Nf+1)*(Nf+1)*(Nf+1);
+          NpCoarse = (Nc+1)*(Nc+1)*(Nc+1);
+          break;
+      }
+      kernelInfo.addDefine("p_NpFine", NpFine);
+      kernelInfo.addDefine("p_NpCoarse", NpCoarse);
 
-  elliptic->precon->coarsenKernel =
-    elliptic->mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
-             "ellipticPreconCoarsen",
-             kernelInfo);
+      sprintf(fileName, "okl/ellipticPreconCoarsen%s.okl", suffix);
+      sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
+      elliptic->precon->coarsenKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-  elliptic->precon->prolongateKernel =
-    elliptic->mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
-             "ellipticPreconProlongate",
-             kernelInfo);
+      sprintf(fileName, "okl/ellipticPreconProlongate%s.okl", suffix);
+      sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
+      elliptic->precon->prolongateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+    }
+  }
 
   //on host gather-scatter
   int verbose = options.compareArgs("VERBOSE", "TRUE") ? 1:0;
@@ -535,13 +766,6 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     if (elliptic->mapB[n] == 1) elliptic->maskIds[elliptic->Nmasked++] = n;
   }
   if (elliptic->Nmasked) elliptic->o_maskIds = mesh->device.malloc(elliptic->Nmasked*sizeof(dlong), elliptic->maskIds);
-
-  free(DrT); free(DsT); free(LIFTT);
-  free(SrrT); free(SrsT); free(SsrT); free(SssT);
-  free(D1ids); free(D2ids); free(D3ids); free(Dvals);
-
-  free(VBq); free(PBq);
-  free(L0vals); free(ELids ); free(ELvals);
 
   return elliptic;
 }

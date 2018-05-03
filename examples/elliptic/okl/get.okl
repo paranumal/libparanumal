@@ -1,0 +1,17 @@
+
+kernel void get(const dlong N,
+		const dfloat * restrict v,
+		const dlong   * restrict ids,
+		dfloat * restrict subv){
+
+  for(dlong n=0;n<N;++n;tile(256)){
+    if(n<N){
+      const dlong id = ids[n];
+      if (id >-1) {
+        subv[n] = v[id];
+      } else {
+        subv[n] = 0.;
+      }
+    }
+  }
+}

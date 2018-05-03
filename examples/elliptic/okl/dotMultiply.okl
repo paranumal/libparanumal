@@ -1,0 +1,13 @@
+
+kernel void dotMultiply(const dlong N,
+			const dfloat * restrict w,
+			const dfloat * restrict v,
+			dfloat * restrict wv){
+
+  for(dlong n=0;n<N;++n;tile(256)){
+    if(n<N){
+      wv [n] = w[n]*v[n];
+    }
+  }
+
+}

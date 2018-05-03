@@ -238,10 +238,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
           LIFTT);
 
-    mesh->o_MM =
-      mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-          mesh->MM);
-
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
           mesh->vgeo);
@@ -320,6 +316,15 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
     
   } else if (mesh->Nverts==4) {//quads
+
+    //lumped mass matrix
+    mesh->MM = (dfloat *) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    for (int j=0;j<mesh->Nq;j++) {
+      for (int i=0;i<mesh->Nq;i++) {
+        int n = i+j*mesh->Nq;
+        mesh->MM[n+n*mesh->Np] = mesh->gllw[i]*mesh->gllw[j];
+      }
+    }
 
     dfloat *cubDWT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
     dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
@@ -404,6 +409,10 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
           mesh->intz);
   }
 
+
+  mesh->o_MM =
+      mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+          mesh->MM);
 
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),

@@ -374,6 +374,17 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
   } else if (mesh->Nverts==8){     // hardcoded for hexes
 
+    //lumped mass matrix
+    mesh->MM = (dfloat *) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    for (int k=0;k<mesh->Nq;k++) {
+      for (int j=0;j<mesh->Nq;j++) {
+        for (int i=0;i<mesh->Nq;i++) {
+          int n = i+j*mesh->Nq+k*mesh->Nq*mesh->Nq;
+          mesh->MM[n+n*mesh->Np] = mesh->gllw[i]*mesh->gllw[j]*mesh->gllw[k];
+        }
+      }
+    }
+
     dfloat *cubDWT = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
     dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
     dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
