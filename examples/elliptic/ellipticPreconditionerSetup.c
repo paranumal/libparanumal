@@ -1,6 +1,6 @@
 #include "elliptic.h"
 
-void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat tau, dfloat lambda, int *BCType, const char *options, const char *parAlmondOptions){
+void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda){
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -8,8 +8,9 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat tau, d
 
   mesh2D *mesh = elliptic->mesh;
   precon_t *precon = elliptic->precon;
+  setupAide options = elliptic->options;
 
-  if(strstr(options, "FULLALMOND")){ //build full A matrix and pass to Almond
+  if(options.compareArgs("PRECONDITIONER", "FULLALMOND")){ //build full A matrix and pass to Almond
     dlong nnz;
     nonZero_t *A;
 
@@ -18,12 +19,12 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat tau, d
     int basisNp = mesh->Np;
     dfloat *basis = NULL;
 
-    if (strstr(options,"BERN")) basis = mesh->VB;
+    if (options.compareArgs("BASIS", "BERN")) basis = mesh->VB;
 
-    if (strstr(options,"IPDG")) {
-      ellipticBuildIpdgTri2D(mesh, basisNp, basis, tau, lambda, BCType, &A, &nnz, globalStarts, options);
-    } else if (strstr(options,"CONTINUOUS")) {
-      ellipticBuildContinuousTri2D(elliptic,lambda,&A,&nnz, &(precon->ogs), globalStarts, options);
+    if (options.compareArgs("DISCRETIZATION", "IPDG")) {
+      ellipticBuildIpdg(elliptic, basisNp, basis, lambda, &A, &nnz, globalStarts);
+    } else if (options.compareArgs("DISCRETIZATION", "CONTINUOUS")) {
+      ellipticBuildContinuous(elliptic,lambda,&A,&nnz, &(precon->ogs), globalStarts);
     }
 
     hlong *Rows = (hlong *) calloc(nnz, sizeof(hlong));
@@ -36,7 +37,7 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat tau, d
       Vals[n] = A[n].val;
     }
 
-    precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
+    precon->parAlmond = parAlmondInit(mesh, options);
     parAlmondAgmgSetup(precon->parAlmond,
                        globalStarts,
                        nnz,
@@ -47,7 +48,7 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat tau, d
                        elliptic->allNeumannPenalty);
     free(A); free(Rows); free(Cols); free(Vals);
 
-    if (strstr(options,"CONTINUOUS")) {//tell parAlmond to gather this level
+    if (options.compareArgs("DISCRETIZATION", "CONTINUOUS")) {//tell parAlmond to gather this level
       agmgLevel *baseLevel = precon->parAlmond->levels[0];
 
       baseLevel->gatherLevel = true;
@@ -58,17 +59,17 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat tau, d
 
       baseLevel->weightedInnerProds = false;
 
-      baseLevel->gatherArgs = (void **) calloc(4,sizeof(void*));  
+      baseLevel->gatherArgs = (void **) calloc(3,sizeof(void*));  
       baseLevel->gatherArgs[0] = (void *) elliptic;
       baseLevel->gatherArgs[1] = (void *) precon->ogs;
       baseLevel->gatherArgs[2] = (void *) &(baseLevel->o_Sx);
-      baseLevel->gatherArgs[3] = (void *) options;
       baseLevel->scatterArgs = baseLevel->gatherArgs;
 
       baseLevel->device_gather  = ellipticGather;
       baseLevel->device_scatter = ellipticScatter;        
     }
 
+/*
     if (strstr(options,"MATRIXFREE")&&strstr(options,"IPDG")) { //swap the top AMG level ops for matrix free versions
       agmgLevel *baseLevel = precon->parAlmond->levels[0];
 
@@ -108,49 +109,24 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat tau, d
         ellipticSetupSmootherDampedJacobi(elliptic, precon, baseLevel, tau, lambda, BCType, options);
       }
     }
+*/
+  } else if (options.compareArgs("PRECONDITIONER", "MASSMATRIX")){
 
-  } else if (strstr(options, "MASSMATRIX")){
+    precon->o_invMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), mesh->invMM);
 
-    // compute inverse mass matrix
-    dfloat *dfMMinv = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
-    double *MMinv = (double*) calloc(mesh->Np*mesh->Np, sizeof(double));
-    int *ipiv = (int*) calloc(mesh->Np, sizeof(int));
-    int lwork = mesh->Np*mesh->Np;
-    double *work = (double*) calloc(lwork, sizeof(double));
-    int info;
-    for(int n=0;n<mesh->Np*mesh->Np;++n){
-      MMinv[n] = mesh->MM[n];
-    }
+  } else if(options.compareArgs("PRECONDITIONER", "MULTIGRID")){
 
-    dgetrf_ (&(mesh->Np), &(mesh->Np), MMinv, &(mesh->Np), ipiv, &info);
-    dgetri_ (&(mesh->Np), MMinv, &(mesh->Np), ipiv, work, &lwork, &info);
-    if(info)
-      printf("dgetrf/dgetri reports info = %d when inverting the reference mass matrix\n", info);
+    ellipticMultiGridSetup(elliptic,precon,lambda);
 
-    for(int n=0;n<mesh->Np*mesh->Np;++n){
-      dfMMinv[n] = MMinv[n];
-    }
+  } else if(options.compareArgs("PRECONDITIONER", "SEMFEM")) {
 
-    precon->o_invMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), dfMMinv);
+    ellipticSEMFEMSetup(elliptic,precon,lambda);
 
-    free(MMinv); free(ipiv); free(work); free(dfMMinv);
-
-  } else if(strstr(options, "MULTIGRID")){
-
-    ellipticMultiGridSetupTri2D(elliptic,precon,tau,lambda,BCType,options,parAlmondOptions);
-
-  } else if(strstr(options, "SEMFEM")) {
-
-    ellipticSEMFEMSetupTri2D(elliptic,precon,tau,lambda,BCType,options,parAlmondOptions);
-
-  } else if(strstr(options,"JACOBI")) {
+  } else if(options.compareArgs("PRECONDITIONER", "JACOBI")) {
 
     dfloat *invDiagA;
-
-    ellipticBuildJacobiTri2D(elliptic,mesh,mesh->Np,NULL,tau, lambda, BCType, &invDiagA,options);
-
+    ellipticBuildJacobi(elliptic,mesh->Np,NULL,lambda,&invDiagA);
     precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
-
     free(invDiagA);
   }
 }

@@ -119,8 +119,3 @@ void cnsDopriStep(cns_t *cns, setupAide &options, const dfloat time);
 void cnsLserkStep(cns_t *cns, setupAide &newOoptions, const dfloat time);
 
 dfloat cnsDopriEstimate(cns_t *cns);
-
-#define TRIANGLES 3
-#define QUADRILATERALS 4
-#define TETRAHEDRA 6
-#define HEXAHEDRA 12

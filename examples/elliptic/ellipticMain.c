@@ -5,6 +5,9 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
   if(argc!=2){
     printf("usage: ./ellipticMain setupfile\n");
     exit(-1);
@@ -36,17 +39,16 @@ int main(int argc, char **argv){
   }
 
   // parameter for elliptic problem (-laplacian + lambda)*q = f
-  //dfloat lambda = 1;
   dfloat lambda;
   options.getArgs("LAMBDA", lambda);
 
   // set up
   occa::kernelInfo kernelInfo;
-  elliptic_t *elliptic = ellipticSetup(mesh, kernelInfo, options);
+  elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
   // convergence tolerance
   dfloat tol = 1e-8;
-  ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x, options);
+  ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
 
 
   if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
@@ -61,9 +63,9 @@ int main(int argc, char **argv){
   }
 
   // copy solution from DEVICE to HOST
-  o_x.copyTo(mesh->q);
+  elliptic->o_x.copyTo(mesh->q);
 
-  if (options.compareArgs("BASIS","BERN"))   applyElementMatrix(mesh,mesh->VB,mesh->q,mesh->q);
+  if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->VB,mesh->q,mesh->q);
 
   dfloat maxError = 0;
   for(dlong e=0;e<mesh->Nelements;++e){

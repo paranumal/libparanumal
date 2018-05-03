@@ -7,7 +7,7 @@ void ellipticParallelGatherScatterSetup(elliptic_t* elliptic){
   mesh_t *mesh = elliptic->mesh;
 
   // setup occa gather scatter
-  int verbose = elliptic->options.compareAgrs("VERBOSE","TRUE") ? 1:0;
+  int verbose = elliptic->options.compareArgs("VERBOSE","TRUE") ? 1:0;
   mesh->ogs = meshParallelGatherScatterSetup(mesh,mesh->Np*mesh->Nelements,
                                              mesh->gatherLocalIds,
                                              mesh->gatherBaseIds,

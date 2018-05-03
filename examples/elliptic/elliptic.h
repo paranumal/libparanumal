@@ -25,6 +25,8 @@ typedef struct {
 
   ogs_t *ogs;
 
+  setupAide options;
+
   char *type;
 
   dlong Nblock;
@@ -38,7 +40,7 @@ typedef struct {
   dfloat allNeumannScale;
 
   // HOST shadow copies
-  dfloat *Ax, *p, *r, *z, *Ap, *tmp, *grad;
+  dfloat *x, *Ax, *p, *r, *z, *Ap, *tmp, *grad;
   dfloat *invDegree;
 
   dfloat *Ry, *R; //multigrid restriction matrix
@@ -59,6 +61,8 @@ typedef struct {
   occa::stream defaultStream;
   occa::stream dataStream;
 
+  occa::memory o_x;
+  occa::memory o_r;
   occa::memory o_p; // search direction
   occa::memory o_z; // preconditioner solution
   occa::memory o_res;
@@ -100,16 +104,16 @@ typedef struct {
 
 }elliptic_t;
 
-void ellipticSetup(mesh2D *mesh, occa::kernelInfo &kernelInfo, const char *options);
+elliptic_t *ellipticSetup(mesh2D *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, setupAide options);
 
 void ellipticParallelGatherScatter(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, const char *type, const char *op);
-void ellipticParallelGatherScatterSetup(elliptic_t *elliptic,const char *options);
+void ellipticParallelGatherScatterSetup(elliptic_t *elliptic);
 
-void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda, occa::memory &o_r,occa::memory &o_z,const char *options);
-void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat tau, dfloat lambda, int *BCType, const char *options, const char *parAlmondOptions);
+void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_z);
+void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda);
 
-int  ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x, const char *options);
-void ellipticSolveSetup(elliptic_t *elliptic, dfloat tau, dfloat lambda, int *BCType, occa::kernelInfo &kernelInfo, const char *options, const char *parAlmondOptions);
+int  ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x);
+void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &kernelInfo, setupAide options);
 
 
 void ellipticStartHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);
@@ -117,49 +121,37 @@ void ellipticInterimHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Ne
 void ellipticEndHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentries, dfloat *recvBuffer);
 
 //Linear solvers
-int pcg      (elliptic_t* elliptic, const char* options, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
+int pcg      (elliptic_t* elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
 
 void ellipticScaledAdd(elliptic_t *elliptic, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
 dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b);
 
-void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *options);
+void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq);
 
 
-void ellipticBuildIpdg(mesh2D *mesh, int basisNp, dfloat *basis,
-                              dfloat tau, dfloat lambda, int *BCType, nonZero_t **A,
-                              dlong *nnzA, hlong *globalStarts, const char *options);
+void ellipticBuildIpdg(elliptic_t* elliptic, int basisNp, dfloat *basis, dfloat lambda, 
+                        nonZero_t **A, dlong *nnzA, hlong *globalStarts);
 
 void ellipticBuildContinuous(elliptic_t* elliptic, dfloat lambda, nonZero_t **A, 
-                                  dlong *nnz, ogs_t **ogs, hlong *globalStarts, 
-                                  const char* options);
+                                  dlong *nnz, ogs_t **ogs, hlong *globalStarts);
 
-void ellipticBuildJacobi(elliptic_t *elliptic, mesh2D *mesh, int basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda,
-                                   int *BCType, dfloat **invDiagA,
-                                   const char *options);
+void ellipticBuildJacobi(elliptic_t *elliptic, int basisNp, dfloat *basis, 
+                         dfloat lambda, dfloat **invDiagA);
 
-void ellipticBuildLocalPatches(elliptic_t *elliptic, mesh2D *mesh, int basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA,
-                                   const char *options);
+void ellipticBuildLocalPatches(elliptic_t *elliptic, int basisNp, dfloat *basis,
+                               dfloat lambda, dfloat rateTolerance,
+                               dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA);
 
 //smoother setups
-void ellipticSetupSmoother(elliptic_t *elliptic, precon_t *precon,
-                                dfloat tau, dfloat lambda, int* BCType,
-                                const char *options);
-void ellipticSetupSmootherDampedJacobi    (elliptic_t *elliptic, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int* BCType, const char *options);
-void ellipticSetupSmootherLocalPatch(elliptic_t *elliptic, precon_t *precon, agmgLevel *level, dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance, const char *options);
+void ellipticSetupSmoother(elliptic_t *elliptic, precon_t *precon, dfloat lambda);
+void ellipticSetupSmootherDampedJacobi    (elliptic_t *elliptic, precon_t *precon, agmgLevel *level, dfloat lambda);
+void ellipticSetupSmootherLocalPatch(elliptic_t *elliptic, precon_t *precon, agmgLevel *level, dfloat lambda, dfloat rateTolerance);
 
-void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat tau, dfloat lambda, int *BCType, const char *options, const char *parAlmondOptions);
-elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseelliptic, int Nc, int Nf, int* BCType, const char *options);
+void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda);
+elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf);
 
+void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda);
 
-void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon,
-                              dfloat tau, dfloat lambda, int *BCType,
-                              const char *options, const char *parAlmondOptions);
-
-void matrixInverse(int N, dfloat *A);
-dfloat matrixConditionNumber(int N, dfloat *A);
-dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level, const char* options);
+dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level);
 
 #endif

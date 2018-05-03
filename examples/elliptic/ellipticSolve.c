@@ -11,19 +11,19 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
 
   double start = 0.0, end =0.0;
 
-  if(strstr(options,"VERBOSE")){
+  if(options.compareArgs("VERBOSE","TRUE")){
     mesh->device.finish();
     start = MPI_Wtime(); 
   }
 
   occaTimerTic(mesh->device,"Linear Solve");
-  Niter = pcg      (elliptic, options, lambda, o_r, o_x, tol, maxIter);
+  Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter);
   occaTimerToc(mesh->device,"Linear Solve");
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  if(strstr(options,"VERBOSE")){
+  if(options.compareArgs("VERBOSE","TRUE")){
     mesh->device.finish();
     end = MPI_Wtime();
     double localElapsed = end-start;

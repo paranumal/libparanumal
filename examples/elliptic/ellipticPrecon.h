@@ -95,20 +95,10 @@ typedef struct {
   void **OASsmoothArgs;
 
   //SEMFEM variables
-  mesh2D *femMesh;
+  mesh_t *femMesh;
 
 } precon_t;
 
-extern "C"
-{
-  void dgetrf_ (int *, int *, double *, int *, int *, int *);
-  void dgetri_ (int *, double *, int *, int *, double *, int *, int *);
-  void dgeev_(char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI,
-              double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
-  double dlange_(char *NORM, int *M, int *N, double *A, int *LDA, double *WORK);
-  void dgecon_(char *NORM, int *N, double *A, int *LDA, double *ANORM,
-                double *RCOND, double *WORK, int *IWORK, int *INFO );
-}
 
 //Multigrid function callbacks
 void AxTri2D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
@@ -116,12 +106,9 @@ void coarsenTri2D   (void **args, occa::memory &o_x, occa::memory &o_Rx);
 void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px);
 void ellipticGather (void **args, occa::memory &o_x, occa::memory &o_Gx);
 void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx);
-void smoothTri2D    (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
-void smoothChebyshevTri2D(void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
+void ellipticMultigridSmooth         (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
+void ellipticMultigridSmoothChebyshev(void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
 
 //smoother ops
-void overlappingPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr);
-void FullPatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void FacePatchIpdg (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void LocalPatchIpdg(void **args, occa::memory &o_r, occa::memory &o_Sr);
-void dampedJacobi  (void **args, occa::memory &o_r, occa::memory &o_Sr);
+void LocalPatch  (void **args, occa::memory &o_r, occa::memory &o_Sr);
+void dampedJacobi(void **args, occa::memory &o_r, occa::memory &o_Sr);

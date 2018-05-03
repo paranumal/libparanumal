@@ -1,6 +1,6 @@
 #include "elliptic.h"
 
-elliptic_t *ellipticSetup(mesh_t *mesh, occa::kernelInfo &kernelInfo, setupAide options){
+elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, setupAide options){
 
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
@@ -42,6 +42,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, occa::kernelInfo &kernelInfo, setupAide 
   options.getArgs("MESH DIMENSION", elliptic->dim);
   options.getArgs("ELEMENT TYPE", elliptic->elementType);
 
+  elliptic->mesh = mesh;
   elliptic->options = options;
 
   mesh->Nfields = 1;
@@ -56,11 +57,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, occa::kernelInfo &kernelInfo, setupAide 
 
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
-  elliptic->BCType = (int*) calloc(3*sizeof(int));
+  elliptic->BCType = (int*) calloc(3,sizeof(int));
   memcpy(elliptic->BCType,BCType,3*sizeof(int));
-
-  //tau
-  elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
   
   dlong Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   elliptic->r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -79,16 +77,16 @@ elliptic_t *ellipticSetup(mesh_t *mesh, occa::kernelInfo &kernelInfo, setupAide 
   }
 
   //Apply some element matrix ops to r depending on our solver
-  if (options.compareArgs("BASIS","BERN"))   applyElementMatrix(mesh,mesh->invVB,elliptic->r,elliptic->r);
-  if (options.compareArgs("BASIS","BERN"))   applyElementMatrix(mesh,mesh->BBMM,elliptic->r,elliptic->r);
-  if (options.compareArgs("BASIS","NODAL"))  applyElementMatrix(mesh,mesh->MM,elliptic->r,elliptic->r);
+  if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->invVB,elliptic->r,elliptic->r);
+  if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->BBMM,elliptic->r,elliptic->r);
+  if (options.compareArgs("BASIS","NODAL"))  meshApplyElementMatrix(mesh,mesh->MM,elliptic->r,elliptic->r);
 
   //copy to occa buffers
   elliptic->o_r   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->r);
   elliptic->o_x   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->x);
 
 
-  ellipticSolveSetupTri2D(elliptic, kernelInfo, options);
+  ellipticSolveSetup(elliptic, lambda, kernelInfo, options);
 
   string boundaryHeaderFileName; 
   options.getArgs("DATA FILE", boundaryHeaderFileName);
@@ -97,13 +95,13 @@ elliptic_t *ellipticSetup(mesh_t *mesh, occa::kernelInfo &kernelInfo, setupAide 
   // set kernel name suffix
   char *suffix;
   
-  if(cns->elementType==TRIANGLES)
+  if(elliptic->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
-  if(cns->elementType==QUADRILATERALS)
+  if(elliptic->elementType==QUADRILATERALS)
     suffix = strdup("Quad2D");
-  if(cns->elementType==TETRAHEDRA)
+  if(elliptic->elementType==TETRAHEDRA)
     suffix = strdup("Tet3D");
-  if(cns->elementType==HEXAHEDRA)
+  if(elliptic->elementType==HEXAHEDRA)
     suffix = strdup("Hex3D");
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
@@ -170,7 +168,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, occa::kernelInfo &kernelInfo, setupAide 
 
   // gather-scatter
   if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
-    ellipticParallelGatherScatterTri2D(mesh, mesh->ogs, o_r, dfloatString, "add");  
+    ellipticParallelGatherScatter(mesh, mesh->ogs, elliptic->o_r, dfloatString, "add");  
     if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, elliptic->o_r);
   }
 

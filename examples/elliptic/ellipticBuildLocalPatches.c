@@ -1,19 +1,46 @@
-#include "ellipticTri2D.h"
+#include "elliptic.h"
 
 
 //returns the ipdg patch A matrix for element eM
-void BuildLocalIpdgPatchAxTri2D(elliptic_t* elliptic, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
+void BuildLocalIpdgPatchAxTri2D(elliptic_t* elliptic, mesh_t *mesh, int basisNp, dfloat *basis, dfloat lambda,
                         dfloat *MS, dlong eM, dfloat *A);
 
 //returns the C0FEM patch A matrix for element eM
-void BuildLocalContinuousPatchAxTri2D(elliptic_t* elliptic, mesh2D* mesh, dfloat lambda,
+void BuildLocalContinuousPatchAxTri2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda,
                                   dlong eM, dfloat *Srr, dfloat *Srs, 
                                   dfloat *Sss, dfloat *MM, dfloat *A);
 
-void ellipticBuildLocalPatchesTri2D(elliptic_t* elliptic, mesh2D* mesh, int basisNp, dfloat *basis,
-                                   dfloat tau, dfloat lambda, int *BCType, dfloat rateTolerance,
-                                   dlong *Npatches, dlong **patchesIndex, dfloat **patchesInvA,
-                                   setupAide options){
+void ellipticBuildLocalPatchesTri2D(elliptic_t* elliptic, int basisNp, dfloat *basis,
+                                   dfloat lambda, dfloat rateTolerance,
+                                   dlong *Npatches, dlong **patchesIndex, dfloat **patchesInvA);
+
+void ellipticBuildLocalPatches(elliptic_t* elliptic, int basisNp, dfloat *basis,
+                                   dfloat lambda, dfloat rateTolerance,
+                                   dlong *Npatches, dlong **patchesIndex, dfloat **patchesInvA) {
+
+  switch(elliptic->elementType){
+  case TRIANGLES:
+    ellipticBuildLocalPatchesTri2D(elliptic, basisNp, basis, lambda, rateTolerance,
+                                   Npatches, patchesIndex, patchesInvA); break;
+  case QUADRILATERALS:
+    //ellipticBuildIpdgQuad2D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts); 
+  break;
+  case TETRAHEDRA:
+    //ellipticBuildIpdgTet3D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts); 
+  break;
+  case HEXAHEDRA:
+    //ellipticBuildIpdgHex3D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts); 
+  break;
+  }
+
+}
+
+void ellipticBuildLocalPatchesTri2D(elliptic_t* elliptic, int basisNp, dfloat *basis,
+                                   dfloat lambda, dfloat rateTolerance,
+                                   dlong *Npatches, dlong **patchesIndex, dfloat **patchesInvA){
+
+  mesh_t * mesh = elliptic->mesh;
+  setupAide options = elliptic->options;
 
   if(!basis) { // default to degree N Lagrange basis
     basisNp = mesh->Np;
@@ -54,8 +81,8 @@ void ellipticBuildLocalPatchesTri2D(elliptic_t* elliptic, mesh2D* mesh, int basi
 
 
   //build a mini mesh struct for the reference patch
-  mesh2D *refMesh = (mesh2D*) calloc(1,sizeof(mesh2D));
-  memcpy(refMesh,mesh,sizeof(mesh2D));
+  mesh_t *refMesh = (mesh_t*) calloc(1,sizeof(mesh_t));
+  memcpy(refMesh,mesh,sizeof(mesh_t));
 
   //vertices of reference patch
   dfloat V1x = -1., V2x = 1., V3x =        0.;
@@ -88,8 +115,8 @@ void ellipticBuildLocalPatchesTri2D(elliptic_t* elliptic, mesh2D* mesh, int basi
 
   //start with reference patch
   dfloat *refPatchInvA = *patchesInvA;
-  if (strstr((options.getArgs("DISCRETIZATION")).c_str(),"IPDG")) {
-    BuildLocalIpdgPatchAxTri2D(elliptic, refMesh, basisNp, basis, tau, lambda, BCType, MS, 0, refPatchInvA);
+  if (options.compareArgs("DISCRETIZATION","IPDG")) {
+    BuildLocalIpdgPatchAxTri2D(elliptic, refMesh, basisNp, basis, lambda, MS, 0, refPatchInvA);
   }
 #if 0
   for (int n=0;n<mesh->Np;n++) {
@@ -106,8 +133,8 @@ void ellipticBuildLocalPatchesTri2D(elliptic_t* elliptic, mesh2D* mesh, int basi
   for(dlong eM=0;eM<mesh->Nelements;++eM){
 
     //build the patch A matrix for this element
-    if (strstr((options.getArgs("DISCRETIZATION")).c_str(),"IPDG")) {
-      BuildLocalIpdgPatchAxTri2D(elliptic, mesh, basisNp, basis, tau, lambda, BCType, MS, eM, patchA);
+    if (options.compareArgs("DISCRETIZATION","IPDG")) {
+      BuildLocalIpdgPatchAxTri2D(elliptic, mesh, basisNp, basis, lambda, MS, eM, patchA);
     }
 #if 0
     for (int n=0;n<mesh->Np;n++) {
@@ -173,7 +200,7 @@ void ellipticBuildLocalPatchesTri2D(elliptic_t* elliptic, mesh2D* mesh, int basi
 
 
 //returns the ipdg patch A matrix for element eM
-void BuildLocalIpdgPatchAxTri2D(elliptic_t* elliptic, mesh2D* mesh, int basisNp, dfloat *basis, dfloat tau, dfloat lambda, int* BCType,
+void BuildLocalIpdgPatchAxTri2D(elliptic_t* elliptic, mesh_t* mesh, int basisNp, dfloat *basis, dfloat lambda,
                         dfloat *MS, dlong eM, dfloat *A) {
 
   dlong vbase = eM*mesh->Nvgeo;
@@ -220,12 +247,12 @@ void BuildLocalIpdgPatchAxTri2D(elliptic_t* elliptic, mesh2D* mesh, int basisNp,
 
     int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
 
-    dfloat penalty = tau*hinv;
+    dfloat penalty = elliptic->tau*hinv;
 
     int bcD = 0, bcN =0;
     int bcType = 0;
 
-    if(bc>0) bcType = BCType[bc];          //find its type (Dirichlet/Neumann)
+    if(bc>0) bcType = elliptic->BCType[bc];          //find its type (Dirichlet/Neumann)
 
     // this needs to be double checked (and the code where these are used)
     if(bcType==1){ // Dirichlet
@@ -308,7 +335,7 @@ void BuildLocalIpdgPatchAxTri2D(elliptic_t* elliptic, mesh2D* mesh, int basisNp,
 }
 
 //returns the continuous C0 patch A matrix for element eM
-void BuildLocalContinuousPatchAxTri2D(elliptic_t* elliptic, mesh2D* mesh, dfloat lambda,
+void BuildLocalContinuousPatchAxTri2D(elliptic_t* elliptic, mesh_t* mesh, dfloat lambda,
                                   dlong eM, dfloat *Srr, dfloat *Srs, 
                                   dfloat *Sss, dfloat *MM, dfloat *A) {
 
