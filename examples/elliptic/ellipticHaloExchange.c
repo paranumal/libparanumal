@@ -1,8 +1,8 @@
 #include "elliptic.h"
 
-void ellipticStartHaloExchange(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer){
+void ellipticStartHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer){
 
-  mesh_t *mesh = solver->mesh;
+  mesh_t *mesh = elliptic->mesh;
   
   // count size of halo for this process
   dlong haloBytes = mesh->totalHaloPairs*Nentries*sizeof(dfloat);
@@ -14,7 +14,7 @@ void ellipticStartHaloExchange(solver_t *solver, occa::memory &o_q, int Nentries
     mesh->device.finish();
 
     // switch to data stream
-    mesh->device.setStream(solver->dataStream);
+    mesh->device.setStream(elliptic->dataStream);
 
     // extract halo on data stream
     mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList,
@@ -23,13 +23,13 @@ void ellipticStartHaloExchange(solver_t *solver, occa::memory &o_q, int Nentries
     // queue up async copy of halo on data stream
     mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
 
-    mesh->device.setStream(solver->defaultStream);
+    mesh->device.setStream(elliptic->defaultStream);
   }
 }
 
-void ellipticInterimHaloExchange(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer){
+void ellipticInterimHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer){
 
-  mesh_t *mesh = solver->mesh;
+  mesh_t *mesh = elliptic->mesh;
 
   // count size of halo for this process
   dlong haloBytes = mesh->totalHaloPairs*Nentries*sizeof(dfloat);
@@ -38,7 +38,7 @@ void ellipticInterimHaloExchange(solver_t *solver, occa::memory &o_q, int Nentri
   if(haloBytes){
     
     // copy extracted halo to HOST
-    mesh->device.setStream(solver->dataStream);
+    mesh->device.setStream(elliptic->dataStream);
 
     // make sure async copy finished
     mesh->device.finish(); 
@@ -49,15 +49,15 @@ void ellipticInterimHaloExchange(solver_t *solver, occa::memory &o_q, int Nentri
         sendBuffer,
         recvBuffer);
     
-    mesh->device.setStream(solver->defaultStream);
+    mesh->device.setStream(elliptic->defaultStream);
 
   }
 }
     
 
-void ellipticEndHaloExchange(solver_t *solver, occa::memory &o_q, int Nentries, dfloat *recvBuffer){
+void ellipticEndHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentries, dfloat *recvBuffer){
 
-  mesh_t *mesh = solver->mesh;
+  mesh_t *mesh = elliptic->mesh;
   
   // count size of halo for this process
   dlong haloBytes = mesh->totalHaloPairs*Nentries*sizeof(dfloat);
@@ -69,11 +69,11 @@ void ellipticEndHaloExchange(solver_t *solver, occa::memory &o_q, int Nentries, 
     meshHaloExchangeFinish(mesh);
     
     // copy into halo zone of o_r  HOST>DEVICE
-    mesh->device.setStream(solver->dataStream);
+    mesh->device.setStream(elliptic->dataStream);
     o_q.asyncCopyFrom(recvBuffer, haloBytes, haloOffset);
     mesh->device.finish();
     
-    mesh->device.setStream(solver->defaultStream);
+    mesh->device.setStream(elliptic->defaultStream);
     mesh->device.finish();
   }
 }

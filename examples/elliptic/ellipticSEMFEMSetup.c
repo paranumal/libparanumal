@@ -1,4 +1,4 @@
-#include "ellipticTri2D.h"
+#include "elliptic.h"
 
 typedef struct{
 
@@ -54,11 +54,11 @@ int parallelCompareFEMvertsLocalId(const void *a, const void *b){
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
-                              dfloat tau, dfloat lambda, int *BCType,
-                              const char *options, const char *parAlmondOptions) {
+void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) {
 
-  if (!strstr(options, "CONTINUOUS")) {
+  setupAide options = elliptic->options;
+
+  if (!(options.compareArgs("DISCRETIZATION", "CONTINUOUS"))) {
     printf("SEMFEM is supported for CONTINUOUS only\n");
     exit(-1);
   }
@@ -67,15 +67,15 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  mesh2D* mesh = solver->mesh; //original mesh
+  mesh_t* mesh = elliptic->mesh; //original mesh
 
-  mesh2D* pmesh = (mesh2D*) calloc (1,sizeof(mesh2D)); //partially assembled fem mesh (result of projecting sem element to larger space)
+  mesh_t* pmesh = (mesh_t*) calloc (1,sizeof(mesh_t)); //partially assembled fem mesh (result of projecting sem element to larger space)
 
-  precon->femMesh = (mesh2D*) calloc (1,sizeof(mesh2D)); //full fem mesh
-  mesh2D *femMesh = precon->femMesh;
+  precon->femMesh = (mesh_t*) calloc (1,sizeof(mesh_t)); //full fem mesh
+  mesh_t *femMesh = precon->femMesh;
 
-  memcpy(pmesh  ,mesh,sizeof(mesh2D));
-  memcpy(femMesh,mesh,sizeof(mesh2D));
+  memcpy(pmesh  ,mesh,sizeof(mesh_t));
+  memcpy(femMesh,mesh,sizeof(mesh_t));
 
   //set semfem nodes as the grid points
   pmesh->Np = mesh->NpFEM;
@@ -199,7 +199,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
 
 
   //on-host version of gather-scatter
-  int verbose = strstr(options,"VERBOSE") ? 1:0;
+  int verbose = options.compareArgs("VERBOSE","TRUE") ? 1:0;
   pmesh->hostGsh = gsParallelGatherScatterSetup(pmesh->Nelements*pmesh->Np, pmesh->globalIds,verbose);
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
@@ -210,7 +210,7 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
       int bc = pmesh->EToB[f+e*pmesh->Nfaces];
       if (bc>0) {
         for (int n=0;n<pmesh->Nfp;n++) {
-          int BCFlag = BCType[bc];
+          int BCFlag = elliptic->BCType[bc];
           int fid = pmesh->faceNodes[n+f*pmesh->Nfp];
           mapB[fid+e*pmesh->Np] = mymin(BCFlag,mapB[fid+e*pmesh->Np]);
         }
@@ -389,15 +389,15 @@ void ellipticSEMFEMSetupTri2D(solver_t *solver, precon_t* precon,
     Vals[n] = A[n].val;
   }
 
-  precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
+  precon->parAlmond = parAlmondInit(mesh, options);
   parAlmondAgmgSetup(precon->parAlmond,
                      globalStarts,
                      nnz,
                      Rows,
                      Cols,
                      Vals,
-                     solver->allNeumann,
-                     solver->allNeumannPenalty);
+                     elliptic->allNeumann,
+                     elliptic->allNeumannPenalty);
   free(A); free(Rows); free(Cols); free(Vals);
 
   //tell parAlmond not to gather this level (its done manually)

@@ -11,6 +11,11 @@
 
 #include "setupAide.hpp"
 
+#define TRIANGLES 3
+#define QUADRILATERALS 4
+#define TETRAHEDRA 6
+#define HEXAHEDRA 12
+
 typedef struct {
 
   int dim;
@@ -663,22 +668,32 @@ extern "C"
 
 extern "C"
 {
- void dgesv_ ( int     *N, int     *NRHS, double  *A,
+  void dgesv_ ( int     *N, int     *NRHS, double  *A,
                 int     *LDA,
                 int     *IPIV, 
                 double  *B,
                 int     *LDB,
                 int     *INFO );
 
-void sgesv_(int *N, int *NRHS,float  *A, int *LDA, int *IPIV, float  *B, int *LDB,int *INFO);
+  void sgesv_(int *N, int *NRHS,float  *A, int *LDA, int *IPIV, float  *B, int *LDB,int *INFO);
 
-void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
-void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
-
+  void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
+  void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
+  void dgeev_(char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI,
+              double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
+  
+  double dlange_(char *NORM, int *M, int *N, double *A, int *LDA, double *WORK);
+  void dgecon_(char *NORM, int *N, double *A, int *LDA, double *ANORM,
+                double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
 
 void readDfloatArray(FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
 void readIntArray   (FILE *fp, const char *label, int **A   , int *Nrows, int* Ncols);
+
+void meshApplyElementMatrix(mesh_t *mesh, dfloat *A, dfloat *q, dfloat *Aq);
+
+void matrixInverse(int N, dfloat *A);
+dfloat matrixConditionNumber(int N, dfloat *A);
 
 #endif
 

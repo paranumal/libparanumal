@@ -54,7 +54,7 @@ ellipticBuildIpdg.o \
 ellipticBuildJacobi.o \
 ellipticBuildLocalPatches.o \
 ellipticBuildMultigridLevel.o \
-ellipticHaloExchange2D.o\
+ellipticHaloExchange.o\
 ellipticMultiGridSetup.o \
 ellipticOperator.o \
 ellipticParallelGatherScatter.o \
@@ -119,6 +119,8 @@ LOBJS = \
 ../../src/meshSurfaceGeometricFactorsHex3D.o \
 ../../src/meshVTU2D.o \
 ../../src/meshVTU3D.o \
+../../src/matrixInverse.o \
+../../src/matrixConditionNumber.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o \
 ../../src/matrix.o \
@@ -133,32 +135,32 @@ COBJS = \
 ../../src/xxtCoarseSolve.o
 
 
-ellipticMainTri2D:$(AOBJS) $(LOBJS) ellipticMainTri2D.o gslibInterface
-	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../examples/ellipticTri2D
-	cd ../parALMOND; make -j lib; cd ../ellipticTri2D
-	$(LD)  $(LDFLAGS)  -o ellipticMainTri2D ellipticMainTri2D.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+ellipticMain:$(AOBJS) $(LOBJS) ellipticMain.o gslibInterface
+	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../examples/elliptic
+	cd ../parALMOND; make -j lib; cd ../elliptic
+	$(LD)  $(LDFLAGS)  -o ellipticMain ellipticMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
-	ar -cr libellipticTri2D.a $(AOBJS)
+	ar -cr libelliptic.a $(AOBJS)
 
 gslibInterface:
-	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../examples/ellipticTri2D
+	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../examples/elliptic
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths)
 	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
 
-all: lib ellipticMainTri2D
+all: lib ellipticMain
 
 # what to do if user types "make clean"
 clean:
-	cd ../parALMOND; make clean; cd ../ellipticTri2D
-	cd ../../src; rm *.o; cd ../examples/ellipticTri2D
-	rm *.o ellipticMainTri2D libellipticTri2D.a
+	cd ../parALMOND; make clean; cd ../elliptic
+	cd ../../src; rm *.o; cd ../examples/elliptic
+	rm *.o ellipticMain libelliptic.a
 
 realclean:
-	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/ellipticTri2D
-	cd ../../3rdParty/BlasLapack; make clean; cd ../../examples/ellipticTri2D
-	cd ../parALMOND; make clean; cd ../ellipticTri2D
-	cd ../../src; rm *.o; cd ../examples/ellipticTri2D
-	rm *.o ellipticMainTri2D libellipticTri2D.a
+	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/elliptic
+	cd ../../3rdParty/BlasLapack; make clean; cd ../../examples/elliptic
+	cd ../parALMOND; make clean; cd ../elliptic
+	cd ../../src; rm *.o; cd ../examples/elliptic
+	rm *.o ellipticMain libelliptic.a
 

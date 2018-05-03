@@ -5,7 +5,7 @@ void ellipticMultigridAx(void **args, occa::memory &o_x, occa::memory &o_Ax) {
   elliptic_t *elliptic = (elliptic_t *) args[0];
   dfloat *lambda = (dfloat *) args[1];
 
-  ellipticOperator2D(elliptic,*lambda,o_x,o_Ax);
+  ellipticOperator(elliptic,*lambda,o_x,o_Ax);
 }
 
 void ellipticMultigridCoarsen(void **args, occa::memory &o_x, occa::memory &o_Rx) {
@@ -65,7 +65,7 @@ void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx) {
   meshParallelScatter(mesh, ogs, o_x, o_Sx);  
 }
 
-void buildCoarsenerTri2D(elliptic_t* elliptic, mesh_t **meshLevels, int Nf, int Nc, const char* options);
+void buildCoarsenerTri2D(elliptic_t* elliptic, mesh_t **meshLevels, int Nf, int Nc);
 
 
 
@@ -143,7 +143,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   *vlambda = lambda;
 
   //initialize parAlmond
-  precon->parAlmond = parAlmondInit(mesh, parAlmondOptions);
+  precon->parAlmond = parAlmondInit(mesh, elliptic->options);
   agmgLevel **levels = precon->parAlmond->levels;
 
   //build a elliptic struct for every degree
@@ -153,7 +153,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     int Nf = levelDegree[n-1];
     int Nc = levelDegree[n];
     printf("=============BUIDLING MULTIGRID LEVEL OF DEGREE %d==================\n", Nc);
-    ellipticsN[Nc] = ellipticBuildMultigridLevel(elliptic,Nc,Nf,BCType,options);
+    ellipticsN[Nc] = ellipticBuildMultigridLevel(elliptic,Nc,Nf);
   }
 
   // set multigrid operators for fine levels
@@ -185,7 +185,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     levels[n]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*ellipticL->mesh->Np;
 
     if (options.compareArgs("MULTIGRID SMOOTHER","CHEBYSHEV")) {
-      levels[n]->device_smooth = smoothChebyshevTri2D;
+      levels[n]->device_smooth = ellipticMultigridSmoothChebyshev;
 
       levels[n]->smootherResidual = (dfloat *) calloc(levels[n]->Ncols,sizeof(dfloat));
 
@@ -194,7 +194,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
       levels[n]->o_smootherResidual2 = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
       levels[n]->o_smootherUpdate = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat),levels[n]->smootherResidual);
     } else {
-      levels[n]->device_smooth = smoothTri2D;
+      levels[n]->device_smooth = ellipticMultigridSmooth;
 
       // extra storage for smoothing op
       levels[n]->o_smootherResidual = mesh->device.malloc(levels[n]->Ncols*sizeof(dfloat));
@@ -205,14 +205,14 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     levels[n]->smootherArgs[1] = (void *) vlambda;
 
     dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
-    if(strstr(options, "EXACT")){
+    if(options.compareArgs("MULTIGRID SMOOTHER","EXACT")){
       rateTolerance = 0.0;
     } else {
       rateTolerance = 1.0;
     }
 
     //set up the fine problem smoothing
-    if(strstr(options, "LOCALPATCH")){
+    if(options.compareArgs("MULTIGRID SMOOTHER","LOCALPATCH")){
       ellipticSetupSmootherLocalPatch(ellipticL, ellipticL->precon, levels[n], lambda, rateTolerance);
     } else { //default to damped jacobi
       ellipticSetupSmootherDampedJacobi(ellipticL, ellipticL->precon, levels[n], lambda);
@@ -220,7 +220,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   }
 
   //report top levels
-  if (strstr(options,"VERBOSE")) {
+  if (options.compareArgs("VERBOSE","TRUE")) {
     if((rank==0)&&(numLevels>1)) { //report the upper multigrid levels
       printf("------------------Multigrid Report---------------------\n");
       printf("-------------------------------------------------------\n");

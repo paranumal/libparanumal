@@ -1,7 +1,7 @@
 #include "elliptic.h"
 
 // create elliptic and mesh structs for multigrid levels
-elliptic_t *ellipticBuildMultigridLevelTri2D(elliptic_t *baseElliptic, int Nc, int Nf, int* BCType, const char *options){
+elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf){
 
   elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
   memcpy(elliptic,baseElliptic,sizeof(elliptic_t));
@@ -11,6 +11,8 @@ elliptic_t *ellipticBuildMultigridLevelTri2D(elliptic_t *baseElliptic, int Nc, i
   memcpy(mesh,baseElliptic->mesh,sizeof(mesh2D));
 
   elliptic->mesh = mesh;
+
+  setupAide options = elliptic->options;
 
   // load reference (r,s) element nodes
   meshLoadReferenceNodesTri2D(mesh, Nc);
@@ -395,27 +397,16 @@ elliptic_t *ellipticBuildMultigridLevelTri2D(elliptic_t *baseElliptic, int Nc, i
            "dotMultiply",
            kernelInfo);
 
-  if (options.compareArgs("BASIS", "SPARSE")) {
-    elliptic->AxKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxSparseTri2D.okl",
-                 "ellipticAxTri2D_v0",
-                 kernelInfo);
 
-    elliptic->partialAxKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxSparseTri2D.okl",
-                 "ellipticPartialAxTri2D_v0",
-                 kernelInfo);
-  } else {
-    elliptic->AxKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-                 "ellipticAxTri2D",
-                 kernelInfo);
+  elliptic->AxKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
+               "ellipticAxTri2D",
+               kernelInfo);
 
-    elliptic->partialAxKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-                 "ellipticPartialAxTri2D",
-                 kernelInfo);
-  }
+  elliptic->partialAxKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
+               "ellipticPartialAxTri2D",
+               kernelInfo);
 
   if (options.compareArgs("BASIS", "BERN")) {
 
@@ -439,26 +430,6 @@ elliptic_t *ellipticBuildMultigridLevelTri2D(elliptic_t *baseElliptic, int Nc, i
                  "ellipticPartialAxIpdgBBTri2D",
                  kernelInfo);
 
-    elliptic->BRGradientVolumeKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
-                 "ellipticBBBRGradientVolume2D",
-                 kernelInfo);
-
-    elliptic->BRGradientSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
-                 "ellipticBBBRGradientSurface2D",
-                 kernelInfo);
-
-    elliptic->BRDivergenceVolumeKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
-                 "ellipticBBBRDivergenceVolume2D",
-                 kernelInfo);
-
-    elliptic->BRDivergenceSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayBBTri2D.okl",
-                 "ellipticBBBRDivergenceSurface2D",
-                 kernelInfo);
-
   } else if (options.compareArgs("BASIS", "NODAL")) {
 
     elliptic->gradientKernel =
@@ -480,26 +451,6 @@ elliptic_t *ellipticBuildMultigridLevelTri2D(elliptic_t *baseElliptic, int Nc, i
       mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
                  "ellipticPartialAxIpdgTri2D",
                  kernelInfo);
-
-    elliptic->BRGradientVolumeKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
-                 "ellipticBRGradientVolume2D",
-                 kernelInfo);
-
-    elliptic->BRGradientSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
-                 "ellipticBRGradientSurface2D",
-                 kernelInfo);
-
-    elliptic->BRDivergenceVolumeKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
-                 "ellipticBRDivergenceVolume2D",
-                 kernelInfo);
-
-    elliptic->BRDivergenceSurfaceKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBassiRebayTri2D.okl",
-                 "ellipticBRDivergenceSurface2D",
-                 kernelInfo);
   }
 
   //new precon struct
@@ -512,61 +463,20 @@ elliptic_t *ellipticBuildMultigridLevelTri2D(elliptic_t *baseElliptic, int Nc, i
                kernelInfo);
 #endif
 
-  elliptic->precon->restrictKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconRestrictTri2D.okl",
-               "ellipticFooTri2D",
-               kernelInfo);
-
   elliptic->precon->blockJacobiKernel =
     mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTri2D.okl",
                "ellipticBlockJacobiPreconTri2D",
                kernelInfo);
 
-  elliptic->precon->approxPatchellipticKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchelliptic2D.okl",
-               "ellipticApproxPatchelliptic2D",
+  elliptic->precon->approxBlockJacobiSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticApproxBlockJacobiSolver2D",
                kernelInfo);
 
-  elliptic->precon->exactPatchellipticKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchelliptic2D.okl",
-               "ellipticExactPatchelliptic2D",
+  elliptic->precon->exactBlockJacobiSolverKernel =
+    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
+               "ellipticExactBlockJacobiSolver2D",
                kernelInfo);
-
-  elliptic->precon->patchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
-               "ellipticPatchGather",
-               kernelInfo);
-
-  elliptic->precon->approxFacePatchellipticKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchelliptic2D.okl",
-               "ellipticApproxFacePatchelliptic2D",
-               kernelInfo);
-
-  elliptic->precon->exactFacePatchellipticKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchelliptic2D.okl",
-               "ellipticExactFacePatchelliptic2D",
-               kernelInfo);
-
-  elliptic->precon->facePatchGatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchGather.okl",
-               "ellipticFacePatchGather",
-               kernelInfo);
-
-  elliptic->precon->approxBlockJacobiellipticKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchelliptic2D.okl",
-               "ellipticApproxBlockJacobielliptic2D",
-               kernelInfo);
-
-  elliptic->precon->exactBlockJacobiellipticKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchelliptic2D.okl",
-               "ellipticExactBlockJacobielliptic2D",
-               kernelInfo);
-
-  elliptic->precon->CGLocalPatchKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticCGLocalPatchTri2D.okl",
-               "ellipticCGLocalPatchTri2D",
-               kernelInfo);
-
 
   //sizes for the coarsen and prolongation kernels. degree NFine to degree N
   int NpFine   = (Nf+1)*(Nf+2)/2;
@@ -589,7 +499,7 @@ elliptic_t *ellipticBuildMultigridLevelTri2D(elliptic_t *baseElliptic, int Nc, i
   mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds, verbose);
 
   // set up separate gather scatter infrastructure for halo and non halo nodes
-  ellipticParallelGatherScatterSetup(elliptic,options);
+  ellipticParallelGatherScatterSetup(elliptic);
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   elliptic->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
@@ -599,7 +509,7 @@ elliptic_t *ellipticBuildMultigridLevelTri2D(elliptic_t *baseElliptic, int Nc, i
       int bc = mesh->EToB[f+e*mesh->Nfaces];
       if (bc>0) {
         for (int n=0;n<mesh->Nfp;n++) {
-          int BCFlag = BCType[bc];
+          int BCFlag = elliptic->BCType[bc];
           int fid = mesh->faceNodes[n+f*mesh->Nfp];
           elliptic->mapB[fid+e*mesh->Np] = mymin(BCFlag,elliptic->mapB[fid+e*mesh->Np]);
         }
