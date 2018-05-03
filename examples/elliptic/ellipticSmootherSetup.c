@@ -32,14 +32,8 @@ void ellipticSetupSmootherLocalPatch(elliptic_t *elliptic, precon_t *precon,
 
   int NpP = mesh->Np;
 
-  int basisNp = mesh->Np;
-  dfloat *basis = NULL;
-
-  if (options.compareArgs("BASIS","BERN")) basis = mesh->VB;
-
   //initialize the full inverse operators on each 4 element patch
-  ellipticBuildLocalPatches(elliptic, basisNp, basis, lambda, rateTolerance,
-                            &Npatches, &patchesIndex, &invAP);
+  ellipticBuildLocalPatches(elliptic, lambda, rateTolerance, &Npatches, &patchesIndex, &invAP);
 
   precon->o_invAP = mesh->device.malloc(Npatches*NpP*NpP*sizeof(dfloat),invAP);
   precon->o_patchesIndex = mesh->device.malloc(mesh->Nelements*sizeof(dlong), patchesIndex);
@@ -84,17 +78,11 @@ void ellipticSetupSmootherDampedJacobi(elliptic_t *elliptic, precon_t *precon,
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
-  int basisNp = mesh->Np;
-  dfloat *basis = NULL;
-
-  if (options.compareArgs("BASIS","BERN")) basis = mesh->VB;
-
-  ellipticBuildJacobi(elliptic,basisNp,basis,lambda, &invDiagA);
+  ellipticBuildJacobi(elliptic,lambda, &invDiagA);
 
   precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
     
   level->device_smoother = dampedJacobi;
-
 
   //estimate the max eigenvalue of S*A
   dfloat rho = maxEigSmoothAx(elliptic, level);

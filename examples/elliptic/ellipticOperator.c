@@ -26,8 +26,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 
     if(ogs->NhaloGather) {
       elliptic->partialAxKernel(elliptic->NglobalGatherElements, elliptic->o_globalGatherElementList,
-          mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
-          mesh->o_MM, lambda, o_q, o_Aq);
+          mesh->o_ggeo, elliptic->o_Dmatrices, elliptic->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
       mesh->device.finish();
       mesh->device.setStream(elliptic->dataStream);
       mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, o_Aq, ogs->o_haloGatherTmp);
@@ -36,8 +35,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     }
     if(elliptic->NlocalGatherElements){
         elliptic->partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
-            mesh->o_ggeo, mesh->o_SrrT, mesh->o_SrsT, mesh->o_SsrT, mesh->o_SssT,
-            mesh->o_MM, lambda, o_q, o_Aq);
+            mesh->o_ggeo, elliptic->o_Dmatrices, elliptic->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
     }
     if(elliptic->allNeumann) {
       o_tmp.copyTo(tmp);
@@ -95,8 +93,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       elliptic->partialGradientKernel(mesh->Nelements,
           offset,
           mesh->o_vgeo,
-          mesh->o_DrT,
-          mesh->o_DsT,
+          elliptic->o_Dmatrices,
           o_q,
           elliptic->o_grad);
     } else if(options.compareArgs("BASIS", "BERN")) {
@@ -129,8 +126,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
             mesh->o_vgeo,
             mesh->o_sgeo,
             elliptic->o_EToB,
-            mesh->o_DrT,
-            mesh->o_DsT,
+            elliptic->o_Dmatrices,
             mesh->o_LIFTT,
             mesh->o_MM,
             elliptic->o_grad,
@@ -176,8 +172,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
         elliptic->partialGradientKernel(mesh->totalHaloPairs,
             offset,
             mesh->o_vgeo,
-            mesh->o_DrT,
-            mesh->o_DsT,
+            elliptic->o_Dmatrices,
             o_q,
             elliptic->o_grad);
       } else if(options.compareArgs("BASIS", "BERN")) {
@@ -204,8 +199,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
             mesh->o_vgeo,
             mesh->o_sgeo,
             elliptic->o_EToB,
-            mesh->o_DrT,
-            mesh->o_DsT,
+            elliptic->o_Dmatrices,
             mesh->o_LIFTT,
             mesh->o_MM,
             elliptic->o_grad,

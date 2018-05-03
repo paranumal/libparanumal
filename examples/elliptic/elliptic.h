@@ -77,6 +77,9 @@ typedef struct {
   occa::memory o_R;
   occa::memory o_Ry;
 
+  occa::memory o_Dmatrices;
+  occa::memory o_Smatrices;
+
   // list of elements that are needed for global gather-scatter
   dlong NglobalGatherElements;
   occa::memory o_globalGatherElementList;
@@ -113,7 +116,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda, occa::memory &o
 void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda);
 
 int  ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x);
-void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &kernelInfo, setupAide options);
+void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &kernelInfo);
 
 
 void ellipticStartHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);
@@ -135,11 +138,9 @@ void ellipticBuildIpdg(elliptic_t* elliptic, int basisNp, dfloat *basis, dfloat 
 void ellipticBuildContinuous(elliptic_t* elliptic, dfloat lambda, nonZero_t **A, 
                                   dlong *nnz, ogs_t **ogs, hlong *globalStarts);
 
-void ellipticBuildJacobi(elliptic_t *elliptic, int basisNp, dfloat *basis, 
-                         dfloat lambda, dfloat **invDiagA);
+void ellipticBuildJacobi(elliptic_t *elliptic, dfloat lambda, dfloat **invDiagA);
 
-void ellipticBuildLocalPatches(elliptic_t *elliptic, int basisNp, dfloat *basis,
-                               dfloat lambda, dfloat rateTolerance,
+void ellipticBuildLocalPatches(elliptic_t *elliptic, dfloat lambda, dfloat rateTolerance,
                                dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA);
 
 //smoother setups

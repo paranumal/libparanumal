@@ -1,0 +1,70 @@
+kernel void ellipticPreconCoarsenQuad2D(const dlong Nelements,
+                                        const dfloat * restrict R,
+                                        const dfloat * restrict qf,
+                                              dfloat * restrict qc){
+  
+  
+  for(dlong e=0;e<Nelements;++e;outer0){
+    shared dfloat s_qff[p_NqFine][p_NqFine];
+    shared dfloat s_qcf[p_NqCoarse][p_NqFine];
+    shared dfloat s_qcc[p_NqCoarse][p_NqCoarse];
+
+    shared dfloat s_R[p_NqCoarse][p_NqFine];
+
+    // prefetch to shared
+    
+    for(int j=0;j<p_NqFine;++j;inner1){
+      for(int i=0;i<p_NqFine;++i;inner0){
+        const dlong id = i+j*p_NqFine+e*p_NpFine;
+        s_qff[j][i] = qf[id];
+
+        if (j<p_NqCoarse)
+          s_R[j][i] = R[j*p_NqFine + i];
+      }
+    }
+
+    barrier(localMemFence);
+
+    // coarsen in j index
+    for(int j=0;j<p_NqFine;++j;inner1){
+      for(int i=0;i<p_NqFine;++i;inner0){
+        if(j<p_NqCoarse){
+          dfloat res = 0;
+          occaUnroll(p_NqFine)
+            for(int m=0;m<p_NqFine;++m) {
+              res += s_R[j][m]*s_qff[m][i];
+            }
+          s_qcf[j][i] = res;
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // coarsen in i index
+    for(int j=0;j<p_NqFine;++j;inner1){
+      for(int i=0;i<p_NqFine;++i;inner0){
+        if(j<p_NqCoarse && i<p_NqCoarse){
+          dfloat rtmp = 0;
+          occaUnroll(p_NqFine)
+            for(int m=0;m<p_NqFine;++m) {
+              rtmp += s_R[i][m]*s_qcf[j][m];
+            }
+          s_qcc[j][i] = rtmp;
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // collect writes
+    for(int j=0;j<p_NqFine;++j;inner1){
+      for(int i=0;i<p_NqFine;++i;inner0){
+        const int id = i + j*p_NqFine;
+        if(id<p_NpCoarse){
+          qc[id + p_NpCoarse*e] = s_qcc[0][id];
+        }
+      }
+    }
+  }
+}

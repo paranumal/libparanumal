@@ -1,11 +1,25 @@
 #include "elliptic.h"
 
-void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &kernelInfo, setupAide options){
+void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &kernelInfo){
 
-  int rank;
+  int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   mesh_t *mesh = elliptic->mesh;
+  setupAide options = elliptic->options;
+
+  //sanity checking
+  if (options.compareArgs("BASIS","BERN") && elliptic->elementType!=TRIANGLES) {
+    printf("ERROR: BERN basis is only available for triangular elements\n");
+    exit(-1);
+  }
+  if (options.compareArgs("PRECONDITIONER","MASSMATRIX") && elliptic->elementType!=TRIANGLES 
+                                                         && elliptic->elementType!=TETRAHEDRA ) {
+    printf("ERROR: MASSMATRIX preconditioner is only available for triangle and tetrhedra elements. Use JACOBI instead.\n");
+    exit(-1);
+  }
+
 
   dlong Ntotal = mesh->Np*mesh->Nelements;
   dlong Nblock = (Ntotal+blockSize-1)/blockSize;
@@ -13,7 +27,10 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   dlong Nall   = Ntotal + Nhalo;
 
   //tau
-  elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
+  if (elliptic->elementType==TRIANGLES || elliptic->elementType==QUADRILATERALS)
+    elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
+  else 
+    elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+3);
 
   elliptic->p   = (dfloat*) calloc(Nall,   sizeof(dfloat));
   elliptic->z   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -64,19 +81,29 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
 
   //fill geometric factors in halo
   if(mesh->totalHaloPairs){
-    dfloat *vgeoSendBuffer = (dfloat*) calloc(mesh->totalHaloPairs*mesh->Nvgeo, sizeof(dfloat));
+    dlong Nlocal = mesh->Nelements;
+    dlong Nhalo = mesh->totalHaloPairs;
+    size_t Nbytes = mesh->Nvgeo*sizeof(dfloat);
+
+    if (elliptic->elementType==QUADRILATERALS || elliptic->elementType==HEXAHEDRA) {
+      Nlocal *= mesh->Np;
+      Nhalo *= mesh->Np;
+      Nbytes *= mesh->Np;
+    }
+
+    dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
 
     // import geometric factors from halo elements
-    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (mesh->Nelements+mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat));
+    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
 
     meshHaloExchange(mesh,
-         mesh->Nvgeo*sizeof(dfloat),
+         Nbytes,
          mesh->vgeo,
          vgeoSendBuffer,
-         mesh->vgeo + mesh->Nelements*mesh->Nvgeo);
+         mesh->vgeo + Nlocal*mesh->Nvgeo);
 
     mesh->o_vgeo =
-      mesh->device.malloc((mesh->Nelements + mesh->totalHaloPairs)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
+      mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
     free(vgeoSendBuffer);
   }
 
@@ -123,35 +150,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   }
   mesh->o_sMT = mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat), mesh->sMT);
 
-  /* sparse basis setup */
-  //build inverse vandermonde matrix
-  mesh->invSparseV = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  for (int n=0;n<mesh->Np*mesh->Np;n++)
-    mesh->invSparseV[n] = mesh->sparseV[n];
-  matrixInverse(mesh->Np,mesh->invSparseV);
-
-  int paddedRowSize = 4*((mesh->SparseNnzPerRow+3)/4); //make the nnz per row a multiple of 4
-
-  char* IndTchar = (char*) calloc(paddedRowSize*mesh->Np,sizeof(char));
-  for (int m=0;m<paddedRowSize/4;m++) {
-    for (int n=0;n<mesh->Np;n++) {
-      for (int k=0;k<4;k++) {
-        if (k+4*m < mesh->SparseNnzPerRow) {
-          IndTchar[k+4*n+m*4*mesh->Np] = mesh->sparseStackedNZ[n+(k+4*m)*mesh->Np];        
-        } else {
-          IndTchar[k+4*n+m*4*mesh->Np] = 0;
-        }
-      }
-    }
-  }
-  
-  mesh->o_sparseSrrT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrrT);
-  mesh->o_sparseSrsT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSrsT);
-  mesh->o_sparseSssT = mesh->device.malloc(mesh->Np*mesh->SparseNnzPerRow*sizeof(dfloat), mesh->sparseSssT);
-  
-  mesh->o_sparseStackedNZ = mesh->device.malloc(mesh->Np*paddedRowSize*sizeof(char), IndTchar);
-  free(IndTchar);
-
   //copy boundary flags
   elliptic->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), elliptic->EToB);
 
@@ -159,11 +157,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
     occa::setVerboseCompilation(true);
   else 
     occa::setVerboseCompilation(false);
-
-  //add standard boundary functions
-  char *boundaryHeaderFileName;
-  boundaryHeaderFileName = strdup(DHOLMES "/examples/elliptic/data/ellipticBoundary2D.h");
-  kernelInfo.addInclude(boundaryHeaderFileName);
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
@@ -174,173 +167,191 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   if(mesh->device.mode()=="Serial")
     kernelInfo.addCompilerFlag("-g");
 
-  kernelInfo.addDefine("p_blockSize", blockSize);
-
-  // add custom defines
-  kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_Nverts", mesh->Nverts);
-  kernelInfo.addDefine("p_SparseNnzPerRow", paddedRowSize);
-
-
-  //sizes for the coarsen and prolongation kernels. degree N to degree 1
-  kernelInfo.addDefine("p_NpFine", mesh->Np);
-  kernelInfo.addDefine("p_NpCoarse", mesh->Nverts);
-
-  kernelInfo.addDefine("p_NpFEM", mesh->NpFEM);
-
-  int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
-  kernelInfo.addDefine("p_Nmax", Nmax);
-
-  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
-
-  int NblockV = 256/mesh->Np; // works for CUDA
-  int NnodesV = 1; //hard coded for now
-  kernelInfo.addDefine("p_NblockV", NblockV);
-  kernelInfo.addDefine("p_NnodesV", NnodesV);
-
-  int NblockS = 256/maxNodes; // works for CUDA
-  kernelInfo.addDefine("p_NblockS", NblockS);
-
-  int NblockP = 256/(4*mesh->Np); // get close to 256 threads
-  kernelInfo.addDefine("p_NblockP", NblockP);
-
-  int NblockG;
-  if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
-  else NblockG = 256/mesh->Np;
-  kernelInfo.addDefine("p_NblockG", NblockG);
-
-  mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
-				       "meshHaloExtract2D",
-				       kernelInfo);
-
-  mesh->gatherKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
-				       "gather",
-				       kernelInfo);
-
-  mesh->scatterKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
-				       "scatter",
-				       kernelInfo);
-
-  mesh->gatherScatterKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
-               "gatherScatter",
-               kernelInfo);
-
-  mesh->getKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
-				       "get",
-				       kernelInfo);
-
-  mesh->putKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
-				       "put",
-				       kernelInfo);
-
-  mesh->sumKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/sum.okl",
-               "sum",
-               kernelInfo);
-
-  mesh->addScalarKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/addScalar.okl",
-               "addScalar",
-               kernelInfo);
-
-  mesh->maskKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/mask.okl",
-               "mask",
-               kernelInfo);
-
+  // set kernel name suffix
+  char *suffix;
   
-  elliptic->AxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticAxTri2D",
-               kernelInfo);
+  if(elliptic->elementType==TRIANGLES)
+    suffix = strdup("Tri2D");
+  if(elliptic->elementType==QUADRILATERALS)
+    suffix = strdup("Quad2D");
+  if(elliptic->elementType==TETRAHEDRA)
+    suffix = strdup("Tet3D");
+  if(elliptic->elementType==HEXAHEDRA)
+    suffix = strdup("Hex3D");
 
-  elliptic->partialAxKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxTri2D.okl",
-               "ellipticPartialAxTri2D",
-               kernelInfo);
+  char fileName[BUFSIZ], kernelName[BUFSIZ];
 
-  elliptic->weightedInnerProduct1Kernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
-				       "weightedInnerProduct1",
-				       kernelInfo);
 
-  elliptic->weightedInnerProduct2Kernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
-				       "weightedInnerProduct2",
-				       kernelInfo);
+  for (int r=0;r<size;r++) {
+    if (r==rank) {
 
-  elliptic->innerProductKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
-				       "innerProduct",
-				       kernelInfo);
+      //mesh kernels 
+      mesh->haloExtractKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
+    				       "meshHaloExtract2D",
+    				       kernelInfo);
 
-  elliptic->scaledAddKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
-					 "scaledAdd",
-					 kernelInfo);
+      mesh->gatherKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
+    				       "gather",
+    				       kernelInfo);
 
-  elliptic->dotMultiplyKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
-					 "dotMultiply",
-					 kernelInfo);
+      mesh->scatterKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
+    				       "scatter",
+    				       kernelInfo);
 
-  elliptic->dotDivideKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
-					 "dotDivide",
-					 kernelInfo);
+      mesh->gatherScatterKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
+                   "gatherScatter",
+                   kernelInfo);
 
-  if (options.compareArgs("BASIS","BERN")) {
+      mesh->getKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
+    				       "get",
+    				       kernelInfo);
 
-    elliptic->gradientKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientBBTri2D.okl",
-               "ellipticGradientBBTri2D",
-           kernelInfo);
+      mesh->putKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
+    				       "put",
+    				       kernelInfo);
 
-    elliptic->partialGradientKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientBBTri2D.okl",
-                 "ellipticPartialGradientBBTri2D",
-                  kernelInfo);
-  
-    elliptic->ipdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
-                 "ellipticAxIpdgBBTri2D",
-                 kernelInfo);
 
-    elliptic->partialIpdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgBBTri2D.okl",
-                 "ellipticPartialAxIpdgBBTri2D",
-                 kernelInfo);
+      mesh->addScalarKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/addScalar.okl",
+                   "addScalar",
+                   kernelInfo);
+
+      mesh->maskKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/mask.okl",
+                   "mask",
+                   kernelInfo);
+
+
+      kernelInfo.addDefine("p_blockSize", blockSize);
       
-  } else if (options.compareArgs("BASIS","NODAL")) {
 
-    elliptic->gradientKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-               "ellipticGradientTri2D_v0",
-           kernelInfo);
+      mesh->sumKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/sum.okl",
+                   "sum",
+                   kernelInfo);
 
-    elliptic->partialGradientKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticGradientTri2D.okl",
-             "ellipticPartialGradientTri2D_v0",
-           kernelInfo);
- 
-    elliptic->ipdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-                 "ellipticAxIpdgTri2D",
-                 kernelInfo);
+      elliptic->weightedInnerProduct1Kernel =
+        mesh->device.buildKernelFromSource("okl/weightedInnerProduct1.okl",
+    				       "weightedInnerProduct1",
+    				       kernelInfo);
 
-    elliptic->partialIpdgKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticAxIpdgTri2D.okl",
-                 "ellipticPartialAxIpdgTri2D",
-                 kernelInfo);
+      elliptic->weightedInnerProduct2Kernel =
+        mesh->device.buildKernelFromSource("okl/weightedInnerProduct2.okl",
+    				       "weightedInnerProduct2",
+    				       kernelInfo);
+
+      elliptic->innerProductKernel =
+        mesh->device.buildKernelFromSource("okl/innerProduct.okl",
+    				       "innerProduct",
+    				       kernelInfo);
+
+      elliptic->scaledAddKernel =
+          mesh->device.buildKernelFromSource("okl/scaledAdd.okl",
+    					 "scaledAdd",
+    					 kernelInfo);
+
+      elliptic->dotMultiplyKernel =
+          mesh->device.buildKernelFromSource("okl/dotMultiply.okl",
+    					 "dotMultiply",
+    					 kernelInfo);
+
+      elliptic->dotDivideKernel =
+          mesh->device.buildKernelFromSource("okl/dotDivide.okl",
+    					 "dotDivide",
+    					 kernelInfo);
+      
+      // add custom defines
+      kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
+      kernelInfo.addDefine("p_Nverts", mesh->Nverts);
+
+      //sizes for the coarsen and prolongation kernels. degree N to degree 1
+      kernelInfo.addDefine("p_NpFine", mesh->Np);
+      kernelInfo.addDefine("p_NpCoarse", mesh->Nverts);
+
+      if (elliptic->elementType==QUADRILATERALS || elliptic->elementType==HEXAHEDRA) {
+        kernelInfo.addDefine("p_NqFine", mesh->N+1);
+        kernelInfo.addDefine("p_NqCoarse", 2);
+      }
+
+      kernelInfo.addDefine("p_NpFEM", mesh->NpFEM);
+
+      int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
+      kernelInfo.addDefine("p_Nmax", Nmax);
+
+      int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+      kernelInfo.addDefine("p_maxNodes", maxNodes);
+
+      int NblockV = 256/mesh->Np; // works for CUDA
+      int NnodesV = 1; //hard coded for now
+      kernelInfo.addDefine("p_NblockV", NblockV);
+      kernelInfo.addDefine("p_NnodesV", NnodesV);
+
+      int NblockS = 256/maxNodes; // works for CUDA
+      kernelInfo.addDefine("p_NblockS", NblockS);
+
+      int NblockP = 256/(4*mesh->Np); // get close to 256 threads
+      kernelInfo.addDefine("p_NblockP", NblockP);
+
+      int NblockG;
+      if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
+      else NblockG = 256/mesh->Np;
+      kernelInfo.addDefine("p_NblockG", NblockG);
+
+      //add standard boundary functions
+      char *boundaryHeaderFileName;
+      boundaryHeaderFileName = strdup(DHOLMES "/examples/elliptic/data/ellipticBoundary2D.h");
+      kernelInfo.addInclude(boundaryHeaderFileName);
+
+      sprintf(fileName, "okl/ellipticAx%s.okl", suffix);
+      sprintf(kernelName, "ellipticAx%s", suffix);
+      elliptic->AxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+      sprintf(kernelName, "ellipticPartialAx%s", suffix);
+      elliptic->partialAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+
+      if (options.compareArgs("BASIS","BERN")) {
+
+        sprintf(fileName, "okl/ellipticGradientBB%s.okl", suffix);
+        sprintf(kernelName, "ellipticGradientBB%s", suffix);
+
+        elliptic->gradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+        sprintf(kernelName, "ellipticPartialGradientBB%s", suffix);
+        elliptic->partialGradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      
+        sprintf(fileName, "okl/ellipticAxIpdgBB%s.okl", suffix);
+        sprintf(kernelName, "ellipticAxIpdgBB%s", suffix);
+        elliptic->ipdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+        sprintf(kernelName, "ellipticPartialAxIpdgBB%s", suffix);
+        elliptic->partialIpdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+          
+      } else if (options.compareArgs("BASIS","NODAL")) {
+
+        sprintf(fileName, "okl/ellipticGradient%s.okl", suffix);
+        sprintf(kernelName, "ellipticGradient%s", suffix);
+
+        elliptic->gradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+        sprintf(kernelName, "ellipticPartialGradient%s", suffix);
+        elliptic->partialGradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+        sprintf(fileName, "okl/ellipticAxIpdg%s.okl", suffix);
+        sprintf(kernelName, "ellipticAxIpdg%s", suffix);
+        elliptic->ipdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+        sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
+        elliptic->partialIpdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      }
+    }
   }
-
 
   //on-host version of gather-scatter
   int verbose = options.compareArgs("VERBOSE","TRUE") ? 1:0;
@@ -366,6 +377,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   }
   gsParallelGatherScatter(mesh->hostGsh, elliptic->mapB, "int", "min"); 
 
+
   //use the bc flags to find masked ids
   elliptic->Nmasked = 0;
   for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
@@ -387,53 +399,43 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   /*preconditioner setup */
   elliptic->precon = (precon_t*) calloc(1, sizeof(precon_t));
 
-  #if 0
-  elliptic->precon->overlappingPatchKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticOasPreconTri2D.okl",
-               "ellipticOasPreconTri2D",
-               kernelInfo);
-  #endif
 
-  elliptic->precon->coarsenKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconCoarsen.okl",
-				       "ellipticPreconCoarsen",
-				       kernelInfo);
+  for (int r=0;r<size;r++) {
+    if (r==rank) {
 
-  elliptic->precon->prolongateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPreconProlongate.okl",
-				       "ellipticPreconProlongate",
-				       kernelInfo);
+      sprintf(fileName, "okl/ellipticPreconCoarsen%s.okl", suffix);
+      sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
+      elliptic->precon->coarsenKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
+      sprintf(fileName, "okl/ellipticPreconProlongate%s.okl", suffix);
+      sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
+      elliptic->precon->prolongateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-  elliptic->precon->blockJacobiKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTri2D.okl",
-				       "ellipticBlockJacobiPreconTri2D",
-				       kernelInfo);
+      sprintf(fileName, "okl/ellipticBlockJacobiPrecon.okl");
+      sprintf(kernelName, "ellipticBlockJacobiPrecon");
+      elliptic->precon->blockJacobiKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-  elliptic->precon->partialblockJacobiKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticBlockJacobiPreconTri2D.okl",
-               "ellipticPartialBlockJacobiPreconTri2D",
-               kernelInfo);
+      sprintf(kernelName, "ellipticPartialBlockJacobiPrecon");
+      elliptic->precon->partialblockJacobiKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-  elliptic->precon->approxBlockJacobiSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticApproxBlockJacobiSolver2D",
-               kernelInfo);
+      sprintf(fileName, "okl/ellipticPatchSolver.okl");
+      sprintf(kernelName, "ellipticApproxBlockJacobiSolver");
+      elliptic->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-  elliptic->precon->exactBlockJacobiSolverKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticPatchSolver2D.okl",
-               "ellipticExactBlockJacobiSolver2D",
-               kernelInfo);
+      if (   elliptic->elementType == TRIANGLES 
+          || elliptic->elementType == TETRAHEDRA) {
+        elliptic->precon->SEMFEMInterpKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMInterp.okl",
+                     "ellipticSEMFEMInterp",
+                     kernelInfo);
 
-  elliptic->precon->SEMFEMInterpKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMInterp.okl",
-               "ellipticSEMFEMInterp",
-               kernelInfo);
-
-  elliptic->precon->SEMFEMAnterpKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMAnterp.okl",
-               "ellipticSEMFEMAnterp",
-               kernelInfo);
+        elliptic->precon->SEMFEMAnterpKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMAnterp.okl",
+                     "ellipticSEMFEMAnterp",
+                     kernelInfo);
+      }
+    }
+  }
 
   long long int pre = mesh->device.memoryAllocated();
 
