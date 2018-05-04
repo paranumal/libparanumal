@@ -12,11 +12,13 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   //sanity checking
   if (options.compareArgs("BASIS","BERN") && elliptic->elementType!=TRIANGLES) {
     printf("ERROR: BERN basis is only available for triangular elements\n");
+    MPI_Finalize();
     exit(-1);
   }
   if (options.compareArgs("PRECONDITIONER","MASSMATRIX") && elliptic->elementType!=TRIANGLES 
                                                          && elliptic->elementType!=TETRAHEDRA ) {
     printf("ERROR: MASSMATRIX preconditioner is only available for triangle and tetrhedra elements. Use JACOBI instead.\n");
+    MPI_Finalize();
     exit(-1);
   }
   if (options.compareArgs("PRECONDITIONER","MASSMATRIX") && lambda==0) {
