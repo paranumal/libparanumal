@@ -19,7 +19,10 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
     printf("ERROR: MASSMATRIX preconditioner is only available for triangle and tetrhedra elements. Use JACOBI instead.\n");
     exit(-1);
   }
-
+  if (options.compareArgs("PRECONDITIONER","MASSMATRIX") && lambda==0) {
+    printf("ERROR: MASSMATRIX preconditioner is unavailble when lambda=0. \n");
+    exit(-1);
+  }
 
   dlong Ntotal = mesh->Np*mesh->Nelements;
   dlong Nblock = (Ntotal+blockSize-1)/blockSize;
