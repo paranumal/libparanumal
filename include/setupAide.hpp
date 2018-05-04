@@ -49,6 +49,9 @@ public:
 
 
   int compareArgs(string key, string token);
+
+  matrix<string> &getData(){ return data; }
+  matrix<string> &getKeyword() { return keyword; }
 };
 
 #include<setupAide.tpp>

@@ -140,8 +140,8 @@ ellipticMain:$(AOBJS) $(LOBJS) ellipticMain.o gslibInterface
 	cd ../parALMOND; make -j lib; cd ../elliptic
 	$(LD)  $(LDFLAGS)  -o ellipticMain ellipticMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
-lib:$(AOBJS)
-	ar -cr libelliptic.a $(AOBJS)
+testTemplate:../../src/matrix.o  ../../src/setupAide.o ../../src/trace.o testTemplate.o
+	$(LD) $(LDFLAGS) -o testTemplate testTemplate.o ../../src/matrix.o  ../../src/trace.o ../../src/setupAide.o $(paths) $(LIBS)
 
 gslibInterface:
 	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../examples/elliptic
