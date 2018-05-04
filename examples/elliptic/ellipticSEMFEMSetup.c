@@ -67,6 +67,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
   if (!(options.compareArgs("DISCRETIZATION", "CONTINUOUS"))) {
     printf("SEMFEM is supported for CONTINUOUS only\n");
+    MPI_Finalize();
     exit(-1);
   }
 
