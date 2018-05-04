@@ -1,15 +1,8 @@
  
 kernel void ellipticAxTet3D(const dlong Nelements,
         const dfloat * restrict ggeo,
-        const dfloat * restrict SrrT,
-        const dfloat * restrict SrsT,
-        const dfloat * restrict SrtT,
-        const dfloat * restrict SsrT,
-        const dfloat * restrict SssT,
-        const dfloat * restrict SstT,
-        const dfloat * restrict StrT,
-        const dfloat * restrict StsT,
-        const dfloat * restrict SttT,
+        const dfloat * restrict Dmatrices,
+        const dfloat * restrict Smatrices,
         const dfloat * restrict MM,
         const dfloat lambda,
         const dfloat  * restrict q,
@@ -41,25 +34,19 @@ kernel void ellipticAxTet3D(const dlong Nelements,
       dfloat qrr = 0.;
       dfloat qrs = 0.;
       dfloat qrt = 0.;
-      dfloat qsr = 0.;
       dfloat qss = 0.;
       dfloat qst = 0.;
-      dfloat qtr = 0.;
-      dfloat qts = 0.;
       dfloat qtt = 0.;
       dfloat qM = 0.;
 
       occaUnroll(p_Np)
         for (int k=0;k<p_Np;k++) {
-          qrr += SrrT[n+k*p_Np]*s_q[k];
-          qrs += SrsT[n+k*p_Np]*s_q[k];
-          qrt += SrtT[n+k*p_Np]*s_q[k];
-          qsr += SsrT[n+k*p_Np]*s_q[k];
-          qss += SssT[n+k*p_Np]*s_q[k];
-          qst += SstT[n+k*p_Np]*s_q[k];
-          qtr += StrT[n+k*p_Np]*s_q[k];
-          qts += StsT[n+k*p_Np]*s_q[k];
-          qtt += SttT[n+k*p_Np]*s_q[k];
+          qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*s_q[k];
+          qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*s_q[k];
+          qrt += Smatrices[n+k*p_Np+2*p_Np*p_Np]*s_q[k];
+          qss += Smatrices[n+k*p_Np+3*p_Np*p_Np]*s_q[k];
+          qst += Smatrices[n+k*p_Np+4*p_Np*p_Np]*s_q[k];
+          qtt += Smatrices[n+k*p_Np+5*p_Np*p_Np]*s_q[k];
           qM  += MM[n+k*p_Np]*s_q[k];
         }
 
@@ -67,8 +54,7 @@ kernel void ellipticAxTet3D(const dlong Nelements,
       const dlong id = n + e*p_Np;
 
       Aq[id] = Grr*qrr+Grs*qrs+Grt*qrt
-              +Grs*qsr+Gss*qss+Gst*qst 
-              +Grt*qtr+Gst*qts+Gtt*qtt 
+              +Gss*qss+Gst*qst+Gtt*qtt 
               +J*lambda*qM;
     }
   }
@@ -78,15 +64,8 @@ kernel void ellipticAxTet3D(const dlong Nelements,
 kernel void ellipticPartialAxTet3D_v0(const dlong Nelements,
                                   const dlong   * restrict elementList,
                                   const dfloat * restrict ggeo,
-                                  const dfloat * restrict SrrT,
-                                  const dfloat * restrict SrsT,
-                                  const dfloat * restrict SrtT,
-                                  const dfloat * restrict SsrT,
-                                  const dfloat * restrict SssT,
-                                  const dfloat * restrict SstT,
-                                  const dfloat * restrict StrT,
-                                  const dfloat * restrict StsT,
-                                  const dfloat * restrict SttT,
+                                  const dfloat * restrict Dmatrices,
+                                  const dfloat * restrict Smatrices,
                                   const dfloat * restrict MM,
                                   const dfloat lambda,
                                   const dfloat  * restrict q,
@@ -120,25 +99,19 @@ kernel void ellipticPartialAxTet3D_v0(const dlong Nelements,
       dfloat qrr = 0.;
       dfloat qrs = 0.;
       dfloat qrt = 0.;
-      dfloat qsr = 0.;
       dfloat qss = 0.;
       dfloat qst = 0.;
-      dfloat qtr = 0.;
-      dfloat qts = 0.;
       dfloat qtt = 0.;
       dfloat qM = 0.;
 
       occaUnroll(p_Np)
         for (int k=0;k<p_Np;k++) {
-          qrr += SrrT[n+k*p_Np]*s_q[k];
-          qrs += SrsT[n+k*p_Np]*s_q[k];
-          qrt += SrtT[n+k*p_Np]*s_q[k];
-          qsr += SsrT[n+k*p_Np]*s_q[k];
-          qss += SssT[n+k*p_Np]*s_q[k];
-          qst += SstT[n+k*p_Np]*s_q[k];
-          qtr += StrT[n+k*p_Np]*s_q[k];
-          qts += StsT[n+k*p_Np]*s_q[k];
-          qtt += SttT[n+k*p_Np]*s_q[k];
+          qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*s_q[k];
+          qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*s_q[k];
+          qrt += Smatrices[n+k*p_Np+2*p_Np*p_Np]*s_q[k];
+          qss += Smatrices[n+k*p_Np+3*p_Np*p_Np]*s_q[k];
+          qst += Smatrices[n+k*p_Np+4*p_Np*p_Np]*s_q[k];
+          qtt += Smatrices[n+k*p_Np+5*p_Np*p_Np]*s_q[k];
           qM  += MM[n+k*p_Np]*s_q[k];
         }
 
@@ -146,8 +119,7 @@ kernel void ellipticPartialAxTet3D_v0(const dlong Nelements,
       const dlong id = n + element*p_Np;
 
       Aq[id] = Grr*qrr+Grs*qrs+Grt*qrt
-              +Grs*qsr+Gss*qss+Gst*qst 
-              +Grt*qtr+Gst*qts+Gtt*qtt 
+              +Gss*qss+Gst*qst+Gtt*qtt 
               +J*lambda*qM;
     }
   }
@@ -161,15 +133,8 @@ kernel void ellipticPartialAxTet3D_v0(const dlong Nelements,
 kernel void ellipticPartialAxTet3D(const dlong Nelements,
                                   const dlong   * restrict elementList,
                                   const dfloat * restrict ggeo,
-                                  const dfloat * restrict SrrT,
-                                  const dfloat * restrict SrsT,
-                                  const dfloat * restrict SrtT,
-                                  const dfloat * restrict SsrT,
-                                  const dfloat * restrict SssT,
-                                  const dfloat * restrict SstT,
-                                  const dfloat * restrict StrT,
-                                  const dfloat * restrict StsT,
-                                  const dfloat * restrict SttT,
+                                  const dfloat * restrict Dmatrices,
+                                  const dfloat * restrict Smatrices,
                                   const dfloat * restrict MM,
                                   const dfloat lambda,
                                   const dfloat  * restrict q,
@@ -228,12 +193,12 @@ kernel void ellipticPartialAxTet3D(const dlong Nelements,
       occaUnroll(p_Np)
         for (int k=0;k<p_Np;k++) {
           
-          const dfloat Srr_nk = SrrT[n+k*p_Np];
-          const dfloat Srs_nk = SrsT[n+k*p_Np];
-          const dfloat Srt_nk = SrtT[n+k*p_Np];
-          const dfloat Sss_nk = SssT[n+k*p_Np];
-          const dfloat Sst_nk = SstT[n+k*p_Np];
-          const dfloat Stt_nk = SttT[n+k*p_Np];
+          const dfloat Srr_nk = Smatrices[n+k*p_Np+0*p_Np*p_Np];
+          const dfloat Srs_nk = Smatrices[n+k*p_Np+1*p_Np*p_Np];
+          const dfloat Srt_nk = Smatrices[n+k*p_Np+2*p_Np*p_Np];
+          const dfloat Sss_nk = Smatrices[n+k*p_Np+3*p_Np*p_Np];
+          const dfloat Sst_nk = Smatrices[n+k*p_Np+4*p_Np*p_Np];
+          const dfloat Stt_nk = Smatrices[n+k*p_Np+5*p_Np*p_Np];
           const dfloat   MM_nk =    MM[n+k*p_Np];
           
           occaUnroll(p_Ne)

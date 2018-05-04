@@ -148,7 +148,12 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelI
       dlong id = n+e*mesh->Np;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
-      elliptic->r[id] = J*(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
+      dfloat zn = mesh->z[id];
+
+      if(elliptic->dim==2)
+        elliptic->r[id] = J*(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
+      else 
+        elliptic->r[id] = J*(3*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
       elliptic->x[id] = 0;
     }
   }

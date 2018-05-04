@@ -385,6 +385,8 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       }
     }
 
+    mesh->LIFT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
+
     dfloat *cubDWT = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
     dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
     dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
@@ -462,6 +464,10 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       }
     }
     free(ix); free(iy); free(iz);
+
+    mesh->o_MM =
+      mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+        mesh->MM); //dummy
 
     mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
 

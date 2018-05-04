@@ -2,16 +2,16 @@
 1.0
 
 [DATA FILE]
-data/ellipticHomogeneous2D.h
+data/ellipticHomogeneous3D.h
 
 [MESH FILE]
-../../meshes/cavityQuadH00125.msh
+../../meshes/cavityTetH025.msh
 
 [MESH DIMENSION]
-2
+3
 
 [ELEMENT TYPE] # number of edges
-4
+6
 
 [POLYNOMIAL DEGREE]
 4
@@ -49,7 +49,7 @@ MULTIGRID
 
 # can be ALLDEGREES, HALFDEGREES, HALFDOFS
 [MULTIGRID COARSENING]
-HALFDOFS
+ALLDEGREES
 
 # can be LOCALPATCH, or DAMPEDJACOBI
 # LOCALPATCH smoother can include EXACT

@@ -13,9 +13,7 @@ kernel void ellipticAxIpdgTet3D(const dlong Nelements,
         const dfloat * restrict vgeo,
         const dfloat * restrict sgeo,
         const int   * restrict EToB,
-        const dfloat * restrict DrT,
-        const dfloat * restrict DsT,
-        const dfloat * restrict DtT,
+        const dfloat * restrict Dmatrices,
         const dfloat * restrict LIFTT,
         const dfloat * restrict MM,
         const dfloat4 * restrict gradq,
@@ -142,9 +140,9 @@ kernel void ellipticAxIpdgTet3D(const dlong Nelements,
 
         occaUnroll(p_Np)
           for(int i=0;i<p_Np;++i){
-            lapr += DrT[n+i*p_Np]*s_dqdx[i];
-            laps += DsT[n+i*p_Np]*s_dqdy[i];
-            lapt += DtT[n+i*p_Np]*s_dqdz[i];
+            lapr += Dmatrices[n+i*p_Np+0*p_Np*p_Np]*s_dqdx[i];
+            laps += Dmatrices[n+i*p_Np+1*p_Np*p_Np]*s_dqdy[i];
+            lapt += Dmatrices[n+i*p_Np+2*p_Np*p_Np]*s_dqdz[i];
           }
 
         s_lapq[n] -= (lapr+laps+lapt);
@@ -197,9 +195,7 @@ kernel void ellipticPartialAxIpdgTet3D(const dlong Nelements,
                                       const dfloat * restrict vgeo,
                                       const dfloat * restrict sgeo,
                                       const int   * restrict EToB,
-                                      const dfloat * restrict DrT,
-                                      const dfloat * restrict DsT,
-                                      const dfloat * restrict DtT,
+                                      const dfloat * restrict Dmatrices,
                                       const dfloat * restrict LIFTT,
                                       const dfloat * restrict MM,
                                       const dfloat4 * restrict gradq,
@@ -327,9 +323,9 @@ kernel void ellipticPartialAxIpdgTet3D(const dlong Nelements,
 
         occaUnroll(p_Np)
           for(int i=0;i<p_Np;++i){
-            lapr += DrT[n+i*p_Np]*s_dqdx[i];
-            laps += DsT[n+i*p_Np]*s_dqdy[i];
-            lapt += DtT[n+i*p_Np]*s_dqdz[i];
+            lapr += Dmatrices[n+i*p_Np+0*p_Np*p_Np]*s_dqdx[i];
+            laps += Dmatrices[n+i*p_Np+1*p_Np*p_Np]*s_dqdy[i];
+            lapt += Dmatrices[n+i*p_Np+2*p_Np*p_Np]*s_dqdz[i];
           }
 
         s_lapq[n] -= (lapr+laps+lapt);
