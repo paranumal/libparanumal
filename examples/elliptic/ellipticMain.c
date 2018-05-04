@@ -92,7 +92,7 @@ int main(int argc, char **argv){
   dfloat globalMaxError = 0;
   MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
   if(rank==0)
-    printf("globalMaxError = %g\n", globalMaxError);
+    fprintf(stderr,"globalMaxError = %g\n", globalMaxError);
 
 #if 0
   char fname[BUFSIZ];
