@@ -73,11 +73,17 @@ int main(int argc, char **argv){
       dlong   id = e*mesh->Np+n;
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
-      dfloat exact = sin(M_PI*xn)*sin(M_PI*yn);
+      dfloat zn = mesh->z[id];
+      
+      dfloat exact;
+      if (elliptic->dim==2)
+        exact = sin(M_PI*xn)*sin(M_PI*yn);
+      else 
+        exact = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
       dfloat error = fabs(exact-mesh->q[id]);
 
       maxError = mymax(maxError, error);
-      mesh->q[id] -= exact;
+      //mesh->q[id] -= exact;
     }
   }
 

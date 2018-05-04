@@ -437,8 +437,6 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
     BuildFEMMatrixHex3D(femMesh,pmesh,lambda, localIds, globalNumbering,&cnt,sendNonZeros); break;
   }  
   
-  printf("cnt = %d\n", cnt);
-
   // Make the MPI_NONZERO_T data type
   MPI_Datatype MPI_NONZERO_T;
   MPI_Datatype dtype[4] = {MPI_HLONG, MPI_HLONG, MPI_INT, MPI_DFLOAT};

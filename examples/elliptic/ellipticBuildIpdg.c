@@ -931,7 +931,7 @@ void ellipticBuildIpdgHex3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
   dlong nnz = 0;
   
   // loop over all elements
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for(dlong eM=0;eM<mesh->Nelements;++eM){
 
     /* build Dx,Dy,Dz (forget the TP for the moment) */
@@ -1062,7 +1062,7 @@ void ellipticBuildIpdgHex3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
             }
           }
           if(fabs(AnmP)>tol){
-            #pragma omp critical
+            //#pragma omp critical
             {
               // remote info
               dlong eP    = mesh->EToE[eM*mesh->Nfaces+fM];
@@ -1075,7 +1075,7 @@ void ellipticBuildIpdgHex3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
           } 
         }
         if(fabs(Anm)>tol){
-          #pragma omp critical
+          //#pragma omp critical
           {
             // local block
             (*A)[nnz].row = globalIds[eM*mesh->Np+n];

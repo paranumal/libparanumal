@@ -517,6 +517,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   kernelInfo.addDefine("p_NXID", NXID);
   kernelInfo.addDefine("p_NYID", NYID);
+  kernelInfo.addDefine("p_NZID", NZID);
   kernelInfo.addDefine("p_SJID", SJID);
   kernelInfo.addDefine("p_IJID", IJID);
   kernelInfo.addDefine("p_WSJID", WSJID);
@@ -560,15 +561,24 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   kernelInfo.addDefine("p_G00ID", G00ID);
   kernelInfo.addDefine("p_G01ID", G01ID);
+  kernelInfo.addDefine("p_G02ID", G02ID);
   kernelInfo.addDefine("p_G11ID", G11ID);
+  kernelInfo.addDefine("p_G12ID", G12ID);
+  kernelInfo.addDefine("p_G22ID", G22ID);
   kernelInfo.addDefine("p_GWJID", GWJID);
 
 
   kernelInfo.addDefine("p_RXID", RXID);
   kernelInfo.addDefine("p_SXID", SXID);
+  kernelInfo.addDefine("p_TXID", TXID);
 
   kernelInfo.addDefine("p_RYID", RYID);
   kernelInfo.addDefine("p_SYID", SYID);
+  kernelInfo.addDefine("p_TYID", TYID);
+
+  kernelInfo.addDefine("p_RZID", RZID);
+  kernelInfo.addDefine("p_SZID", SZID);
+  kernelInfo.addDefine("p_TZID", TZID);
 
   kernelInfo.addDefine("p_JID", JID);
   kernelInfo.addDefine("p_JWID", JWID);
@@ -623,7 +633,10 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
       //add standard boundary functions
       char *boundaryHeaderFileName;
-      boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
+      if (elliptic->dim==2)
+        boundaryHeaderFileName = strdup(DHOLMES "/examples/elliptic/data/ellipticBoundary2D.h");
+      else if (elliptic->dim==3)
+        boundaryHeaderFileName = strdup(DHOLMES "/examples/elliptic/data/ellipticBoundary3D.h");
       kernelInfo.addInclude(boundaryHeaderFileName);
 
       sprintf(fileName, "okl/ellipticAx%s.okl", suffix);

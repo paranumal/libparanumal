@@ -121,9 +121,9 @@ kernel void ellipticRhsBCIpdgTet3D(const dlong Nelements,
 
         occaUnroll(p_Np)
           for(int i=0;i<p_Np;++i){
-            lapr += DrT[n+i*p_Np]*s_dqdx[i];
-            laps += DsT[n+i*p_Np]*s_dqdy[i];
-            lapt += DtT[n+i*p_Np]*s_dqdz[i];
+            lapr += Dmatrices[n+i*p_Np+0*p_Np*p_Np]*s_dqdx[i];
+            laps += Dmatrices[n+i*p_Np+1*p_Np*p_Np]*s_dqdy[i];
+            lapt += Dmatrices[n+i*p_Np+2*p_Np*p_Np]*s_dqdz[i];
           }
 
         s_lapq[n] = -(lapr+laps+lapt);

@@ -237,32 +237,32 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
                    kernelInfo);
 
       elliptic->weightedInnerProduct1Kernel =
-        mesh->device.buildKernelFromSource("okl/weightedInnerProduct1.okl",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
     				       "weightedInnerProduct1",
     				       kernelInfo);
 
       elliptic->weightedInnerProduct2Kernel =
-        mesh->device.buildKernelFromSource("okl/weightedInnerProduct2.okl",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
     				       "weightedInnerProduct2",
     				       kernelInfo);
 
       elliptic->innerProductKernel =
-        mesh->device.buildKernelFromSource("okl/innerProduct.okl",
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
     				       "innerProduct",
     				       kernelInfo);
 
       elliptic->scaledAddKernel =
-          mesh->device.buildKernelFromSource("okl/scaledAdd.okl",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
     					 "scaledAdd",
     					 kernelInfo);
 
       elliptic->dotMultiplyKernel =
-          mesh->device.buildKernelFromSource("okl/dotMultiply.okl",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
     					 "dotMultiply",
     					 kernelInfo);
 
       elliptic->dotDivideKernel =
-          mesh->device.buildKernelFromSource("okl/dotDivide.okl",
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
     					 "dotDivide",
     					 kernelInfo);
       
@@ -305,7 +305,10 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
 
       //add standard boundary functions
       char *boundaryHeaderFileName;
-      boundaryHeaderFileName = strdup(DHOLMES "/examples/elliptic/data/ellipticBoundary2D.h");
+      if (elliptic->dim==2)
+        boundaryHeaderFileName = strdup(DHOLMES "/examples/elliptic/data/ellipticBoundary2D.h");
+      else if (elliptic->dim==3)
+        boundaryHeaderFileName = strdup(DHOLMES "/examples/elliptic/data/ellipticBoundary3D.h");
       kernelInfo.addInclude(boundaryHeaderFileName);
 
       sprintf(fileName, "okl/ellipticAx%s.okl", suffix);
