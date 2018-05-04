@@ -76,7 +76,7 @@ int main(int argc, char **argv){
     }
     fclose(setupFile);
     
-    system("./ellipticMain setup.rc");
+    system("mpiexec -n 2 ./ellipticMain setup.rc");
     
   }
   

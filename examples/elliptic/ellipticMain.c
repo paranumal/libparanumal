@@ -10,6 +10,8 @@ int main(int argc, char **argv){
 
   if(argc!=2){
     printf("usage: ./ellipticMain setupfile\n");
+
+    MPI_Finalize();
     exit(-1);
   }
 
@@ -92,6 +94,7 @@ int main(int argc, char **argv){
   if(rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
 
+#if 0
   char fname[BUFSIZ];
   string outName;
   options.getArgs("OUTPUT FILE NAME", outName);
@@ -100,7 +103,8 @@ int main(int argc, char **argv){
     meshPlotVTU3D(mesh, fname, 0);
   else 
     meshPlotVTU2D(mesh, fname, 0);
-
+#endif
+  
   // close down MPI
   MPI_Finalize();
 
