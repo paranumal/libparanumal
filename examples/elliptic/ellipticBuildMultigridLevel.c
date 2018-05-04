@@ -52,6 +52,11 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->x, sendBuffer, mesh->x + localNodes);
   meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->y, sendBuffer, mesh->y + localNodes);
 
+  if (elliptic->dim==3) {
+    mesh->z = (dfloat*) realloc(mesh->z, (localNodes+totalHaloNodes)*sizeof(dfloat));
+    meshHaloExchange(mesh, mesh->Np*sizeof(dfloat), mesh->z, sendBuffer, mesh->z + localNodes);
+  }
+
   switch(elliptic->elementType){
     case TRIANGLES:
       meshConnectFaceNodes2D(mesh);
@@ -75,6 +80,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   //dont need these once vmap is made
   free(mesh->x);
   free(mesh->y);
+  if (elliptic->dim==3) {
+    free(mesh->z);
+  }
   free(sendBuffer);
 
   dlong Ntotal = mesh->Np*mesh->Nelements;
