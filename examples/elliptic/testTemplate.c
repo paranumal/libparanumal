@@ -63,10 +63,11 @@ int main(int argc, char **argv){
 	++signature[id+1];
       ++id;
     }
+    fprintf(stderr, "global: ");
     for(id=0;id<Nkeywords;++id){
-      printf("%s,", options[id][signature[id]]);
+      fprintf(stderr,"%s,", options[id][signature[id]]);
     }
-    printf("\n");
+    fprintf(stderr,"\n");
 
     FILE *setupFile = fopen("setup.rc", "w");
 
@@ -75,7 +76,11 @@ int main(int argc, char **argv){
       fprintf(setupFile, "%s\n", options[id][signature[id]]);
     }
     fclose(setupFile);
-    
+
+    fprintf(stderr,"MPI(1): \n");
+    system("mpiexec -n 1 ./ellipticMain setup.rc");
+
+    fprintf(stderr,"MPI(2): \n");
     system("mpiexec -n 2 ./ellipticMain setup.rc");
     
   }

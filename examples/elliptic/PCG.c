@@ -91,7 +91,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
 
     // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
-    if(options.compareArgs("KRYLOV SOLVER", "FLEXIBLE PCG")) {
+    if(options.compareArgs("KRYLOV SOLVER", "PCG+FLEXIBLE") ||
+       options.compareArgs("KRYLOV SOLVER", "PCG,FLEXIBLE")) {
       dfloat zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
       beta = -alpha*zdotAp/rdotz0;
     } else {
