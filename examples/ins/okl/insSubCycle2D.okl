@@ -1,0 +1,70 @@
+
+kernel void insSubCycleRKUpdate2D(const dlong Nelements,
+                                  const dfloat dt,  
+                                  const dfloat rka,
+                                  const dfloat rkb,
+                                  const dlong offset,
+                                  const dfloat * restrict rhsU,
+                                  dfloat  * restrict resU,
+                                  dfloat  * restrict U){
+
+  // Low storage Runge Kutta time step update
+  for(dlong e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+
+      const dlong id = n + e*p_Np;
+
+      dfloat resu =  resU[id+0*offset];
+      dfloat resv =  resU[id+1*offset];
+      dfloat rhsu = -rhsU[id+0*offset];// -Nu
+      dfloat rhsv = -rhsU[id+1*offset];// -Nu
+      
+      dfloat u = U[id+0*offset];
+      dfloat v = U[id+1*offset];
+
+      resu = rka*resu + dt*rhsu;
+      resv = rka*resv + dt*rhsv;
+
+      u += rkb*resu;
+      v += rkb*resv;
+
+      resU[id+0*offset] = resu;
+      resU[id+1*offset] = resv;
+
+      U[id+0*offset] = u;
+      U[id+1*offset] = v;
+    }
+  }
+}
+
+
+kernel void insSubCycleExt2D(const dlong Nelements,
+                             const dlong offset,
+                             const dfloat c0,
+                             const dfloat c1,
+                             const dfloat c2, 
+                             const dfloat * restrict U,
+                             dfloat * restrict Ue){
+
+  // Low storage Runge Kutta time step update
+  for(dlong e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+      const dlong id0   = n + p_Np*e +0*p_NVfields*offset;
+      const dlong id1   = n + p_Np*e +1*p_NVfields*offset;
+      const dlong id2   = n + p_Np*e +2*p_NVfields*offset;
+
+      //U 
+      const dfloat Um0  = U[id0+0*offset];
+      const dfloat Um1  = U[id1+0*offset];
+      const dfloat Um2  = U[id2+0*offset];
+
+      const dfloat Vm0  = V[id0+1*offset];
+      const dfloat Vm1  = V[id1+1*offset];
+      const dfloat Vm2  = V[id2+1*offset];
+      
+      const dlong id = n+e*p_Np;
+      Ue[id+0*offset] = c0*Um0 + c1*Um1 + c2*Um2;
+      Ve[id+1*offset] = c0*Vm0 + c1*Vm1 + c2*Vm2;
+    }
+  }
+}

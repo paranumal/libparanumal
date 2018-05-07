@@ -23,6 +23,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   }
   if (options.compareArgs("PRECONDITIONER","MASSMATRIX") && lambda==0) {
     printf("ERROR: MASSMATRIX preconditioner is unavailble when lambda=0. \n");
+    MPI_Finalize();
     exit(-1);
   }
 

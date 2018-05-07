@@ -73,13 +73,13 @@ void setupAide::read(string setupFile){
       i++;
 
       while(i < size && args[i] != c)
-	current += args[i++];
+        current += args[i++];
 
       if(i >= size)
-	break;
+        break;
 
       if( i < (size-1) )
-	current += args[i];
+        current += args[i];
     }
 
     // Batch comments
@@ -87,10 +87,10 @@ void setupAide::read(string setupFile){
       i += 2;
 
       while( args[i] != '*' || (i < size && args[i+1] != '/') )
-	i++;
+        i++;
 
       if(i >= size)
-	break;
+        break;
 
       i++;
     }
@@ -100,7 +100,7 @@ void setupAide::read(string setupFile){
       i++;
 
       while(i < size && args[i] != '\n')
-	i++;
+        i++;
     }
 
     // Change \[\] to []
@@ -116,7 +116,7 @@ void setupAide::read(string setupFile){
       i++;
 
       while(i < size && args[i] != ']')
-	current += args[i++];
+        current += args[i++];
 
       keyword2.push_back(current);
       current = "";
@@ -125,7 +125,7 @@ void setupAide::read(string setupFile){
     // Else add the character
     else 
       if(!isspace(c)) // new check to remove whitespace
-	current += c;
+        current += c;
 
     if(i >= (size-1) && current.length())
       data2.push_back(current);
@@ -148,9 +148,22 @@ string setupAide::getArgs(string key){
     if(!( keyword[i].compare(key) ))
       return data[i];
 
+  printf("Warning: Failed to find [%s].\n", key.c_str());
   return "";
 }
 
+void setupAide::setArgs(string key, string value){
+  for(int i=1; i<=keyword.size(); i++)
+    if(!( keyword[i].compare(key) )) {
+      data[i] = value;
+      return;
+    }
+
+  //add the key value pair
+  keyword.push_back(key);
+  data.push_back(value);
+  return;
+}
 
 int setupAide::getArgs(string key, matrix<string>& m, string delimeter){
   string args, current;
@@ -176,7 +189,7 @@ int setupAide::getArgs(string key, matrix<string>& m, string delimeter){
   argc = argv.size();
 
   if(!argc){
-    printf("Failed to find [%s].\n", key.c_str());
+    printf("Warning: Failed to find [%s].\n", key.c_str());
     return 0;
   }
 
