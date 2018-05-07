@@ -189,7 +189,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelI
   //add boundary condition contribution to rhs
   if (options.compareArgs("DISCRETIZATION","IPDG")) {
 
-    sprintf(fileName, "okl/ellipticRhsBCIpdg%s.okl", suffix);
+    sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
     sprintf(kernelName, "ellipticRhsBCIpdg%s", suffix);
 
     elliptic->rhsBCIpdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
@@ -213,12 +213,12 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelI
 
   if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
 
-    sprintf(fileName, "okl/ellipticRhsBC%s.okl", suffix);
+    sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
     sprintf(kernelName, "ellipticRhsBC%s", suffix);
 
     elliptic->rhsBCKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
 
-    sprintf(fileName, "okl/ellipticAddBC%s.okl", suffix);
+    sprintf(fileName, DELLIPTIC "/okl/ellipticAddBC%s.okl", suffix);
     sprintf(kernelName, "ellipticAddBC%s", suffix);
 
     elliptic->addBCKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
