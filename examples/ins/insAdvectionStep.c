@@ -1,12 +1,11 @@
 #include "ins.h"
 
 // complete a time step using LSERK4
-void insAdvectionStep(ins_t *ins, int tstep){
+void insAdvectionStep(ins_t *ins, dfloat time){
 
   mesh_t *mesh = ins->mesh;
-  dfloat t = (tstep+0)*ins->dt;  // to compute N(U^n) set t=tn 
   
-  // field ioffset at this step
+  // field offset
   dlong  offset  = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;  
 
   //Exctract Halo On Device, all fields
@@ -36,14 +35,15 @@ void insAdvectionStep(ins_t *ins, int tstep){
                                        mesh->o_vgeo,
                                        mesh->o_cubDmatrices,
                                        mesh->o_cubInterpT,
-                                       ioffset,
+                                       mesh->o_cubProjectT,
+                                       offset,
                                        ins->o_U,
                                        ins->o_NU);
   } else {
     ins->advectionVolumeKernel(mesh->Nelements,
                                mesh->o_vgeo,
                                mesh->o_Dmatrices,
-                               ioffset,
+                               offset,
                                ins->o_U,
                                ins->o_NU);
   }
@@ -56,7 +56,7 @@ void insAdvectionStep(ins_t *ins, int tstep){
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_Dmatrices,
-                            ioffset,
+                            offset,
                             ins->o_P,
                             ins->o_gradP);
   occaTimerToc(mesh->device,"GradientVolume");
@@ -70,7 +70,7 @@ void insAdvectionStep(ins_t *ins, int tstep){
     ins->totalHaloScatterKernel(mesh->Nelements,
                                 mesh->totalHaloPairs,
                                 mesh->o_haloElementList,
-                                ioffset,
+                                offset,
                                 ins->o_U,
                                 ins->o_P,
                                 ins->o_tHaloBuffer);
@@ -80,16 +80,19 @@ void insAdvectionStep(ins_t *ins, int tstep){
   if(strstr(options, "CUBATURE")){
     ins->advectionCubatureSurfaceKernel(mesh->Nelements,
                                         mesh->o_sgeo,
+                                        mesh->o_cubsgeo,
                                         mesh->o_intInterpT,
                                         mesh->o_intLIFTT,
+                                        mesh->o_cubInterpT,
+                                        mesh->o_cubProjectT,
                                         mesh->o_vmapM,
                                         mesh->o_vmapP,
                                         mesh->o_EToB,
-                                        t,
+                                        time,
                                         mesh->o_intx,
                                         mesh->o_inty,
                                         mesh->o_intz,
-                                        ioffset,
+                                        offset,
                                         ins->o_U,
                                         ins->o_NU);
   } else {
@@ -99,18 +102,18 @@ void insAdvectionStep(ins_t *ins, int tstep){
                                 mesh->o_vmapM,
                                 mesh->o_vmapP,
                                 mesh->o_EToB,
-                                t,
+                                time,
                                 mesh->o_x,
                                 mesh->o_y,
-                                mesh->o_y,
-                                ioffset,
+                                mesh->o_z,
+                                offset,
                                 ins->o_U,
                                 ins->o_NU);
   }
 
   occaTimerToc(mesh->device,"AdvectionSurface");
-  // Solve pressure gradient for t^(n+1) grad(p^(n+1))
-   t += ins->dt;
+  // Solve pressure gradient for time^(n+1) grad(p^(n+1))
+   time += ins->dt;
   
 
   if (strstr(ins->pSolverOptions,"IPDG")) {
@@ -127,13 +130,9 @@ void insAdvectionStep(ins_t *ins, int tstep){
                                mesh->o_x,
                                mesh->o_y,
                                mesh->o_z,
-                               t,
-                               ins->dt,
-                               ins->c0, ins->c1, ins->c2,
-                               ins->index,
+                               time,
                                offset,
                                solverid, // pressure BCs
-                               ins->o_PI, //not used
                                ins->o_P,
                                ins->o_gradP);
     occaTimerToc(mesh->device,"GradientSurface");

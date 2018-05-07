@@ -15,7 +15,6 @@ kernel void insHelmholtzRhsForcingTri2D(const dlong Nelements,
                                         const dfloat c0,
                                         const dfloat c1,
                                         const dfloat c2,
-                                        const int index,
                                         const dlong offset,
                                         const dfloat * restrict U,
                                         const dfloat * restrict NU,
@@ -39,7 +38,6 @@ kernel void insHelmholtzRhsForcingTri2D(const dlong Nelements,
           const dlong id0   = id + 0*offset*p_NVfields;
           const dlong id1   = id + 1*offset*p_NVfields;
           const dlong id2   = id + 2*offset*p_NVfields;
-
 
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
           
@@ -123,7 +121,6 @@ kernel void insHelmholtzRhsForcingTri2D(const dlong Nelements,
 
 kernel void insHelmholtzRhsIpdgBCTri2D(const dlong Nelements,
                                        const dlong * restrict vmapM,
-                                       const dlong * restrict vmapP,
                                        const dfloat tau,
                                        const dfloat t,
                                        const dfloat * restrict x,
@@ -131,7 +128,7 @@ kernel void insHelmholtzRhsIpdgBCTri2D(const dlong Nelements,
                                        const dfloat * restrict z,
                                        const dfloat * restrict vgeo,
                                        const dfloat * restrict sgeo,
-                                       const int   * restrict EToB,
+                                       const int    * restrict EToB,
                                        const dfloat * restrict Dmatrices,
                                        const dfloat * restrict LIFTT,
                                        const dfloat * restrict MM,
