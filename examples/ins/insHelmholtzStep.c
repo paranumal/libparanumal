@@ -43,7 +43,7 @@ void insHelmholtzStep(ins_t *ins, dfloat time){
                               mesh->o_vmapM,
                               mesh->o_sMT,
                               ins->lambda,
-                              t,
+                              time,
                               mesh->o_x,
                               mesh->o_y,
                               mesh->o_z,
@@ -67,7 +67,7 @@ void insHelmholtzStep(ins_t *ins, dfloat time){
     ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
                                   mesh->o_vmapM,
                                   ins->tau,
-                                  t,
+                                  time,
                                   mesh->o_x,
                                   mesh->o_y,
                                   mesh->o_z,
@@ -114,7 +114,7 @@ void insHelmholtzStep(ins_t *ins, dfloat time){
 
   if (strstr(ins->vSolverOptions,"CONTINUOUS")) {
     ins->helmholtzAddBCKernel(mesh->Nelements,
-                            t,
+                            time,
                             mesh->o_x,
                             mesh->o_y,
                             mesh->o_z,
