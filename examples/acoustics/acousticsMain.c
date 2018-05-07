@@ -37,9 +37,9 @@ int main(int argc, char **argv){
 
   char *boundaryHeaderFileName; // could sprintf
   if(dim==2)
-    boundaryHeaderFileName = strdup(DHOLMES "/examples/acoustics/acousticsUniform2D.h"); // default
+    boundaryHeaderFileName = strdup(DACOUSTICS "/acousticsUniform2D.h"); // default
   if(dim==3)
-    boundaryHeaderFileName = strdup(DHOLMES "/examples/acoustics/acousticsUniform3D.h"); // default
+    boundaryHeaderFileName = strdup(DACOUSTICS "/acousticsUniform3D.h"); // default
 
   // set up acoustics stuff
   acoustics_t *acoustics = acousticsSetup(mesh, newOptions, boundaryHeaderFileName);
