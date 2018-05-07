@@ -262,7 +262,10 @@ kernel void insHelmholtzRhsBCQuad2D(const dlong Nelements,
                               const dfloat * restrict ggeo,
                               const dfloat * restrict sgeo,
                               const dfloat * restrict D,
+                              const dfloat * restrict S,
+                              const dfloat * restrict MM,
                               const dlong  * restrict vmapM,
+                              const dfloat * restrict sMT,
                               const dfloat lambda,
                               const dfloat time,
                               const dfloat * restrict x,
@@ -420,7 +423,9 @@ kernel void insHelmholtzAddBCQuad2D(const dlong Nelements,
                                     const dfloat * restrict z,
                                     const dlong  * restrict vmapM,
                                     const int    * restrict mapB,
-                                          dfloat * restrict U){
+                                          dfloat * restrict U,
+                                          dfloat * restrict V,
+                                          dfloat * restrict W){
 
   for(dlong e=0;e<Nelements;e++;outer0){
     for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
@@ -428,13 +433,13 @@ kernel void insHelmholtzAddBCQuad2D(const dlong Nelements,
       const int bc = mapB[idM];
 
       if(bc>0) {
-        const dfloat uM = U[idM+0*offset];
-        const dfloat vM = U[idM+1*offset];
+        const dfloat uM = U[idM];
+        const dfloat vM = V[idM];
         dfloat uP = 0.f;
         dfloat vP = 0.f;
         insVelocityDirichletConditions2D(bc, t, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
-        U[idM+0*offset] = uP;
-        U[idM+1*offset] = vP;
+        U[idM] = uP;
+        V[idM] = vP;
       }    
     }
   }

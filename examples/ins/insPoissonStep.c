@@ -1,14 +1,12 @@
 #include "ins.h"
 
 // complete a time step using LSERK4
-void insPoissonStep(ins_t *ins, int tstep){
+void insPoissonStep(ins_t *ins, dfloat time){
 
   mesh2D *mesh = ins->mesh;
   solver_t *solver = ins->pSolver;
-  dfloat t = tstep*ins->dt + ins->dt;
+  dfloat time = tstep*ins->dt + ins->dt;
 
-  //hard coded for 3 stages.
-  //The result of the helmholtz solve is stored in the next index
   dlong offset  = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 
   /* note: the surface kernel isn't needed with continuous pressure. Just the inflow boundary 
@@ -52,7 +50,6 @@ void insPoissonStep(ins_t *ins, int tstep){
 
       ins->velocityHaloScatterKernel(mesh->Nelements,
                                     mesh->totalHaloPairs,
-                                    mesh->o_haloElementList,
                                     offset,
                                     ins->o_U,
                                     ins->o_vHaloBuffer);
