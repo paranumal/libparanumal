@@ -317,7 +317,7 @@ kernel void acousticsVolumeTet3D(const dlong Nelements,
 				 dfloat * restrict rhsq){
   
 #define p_Nvol 1
-#define p_NblockV 3
+#define p_NblockV 4
   
   for(dlong eo=0;eo<Nelements;eo+=(p_Nvol*p_NblockV);outer0){
     
@@ -398,7 +398,7 @@ kernel void acousticsVolumeTet3D(const dlong Nelements,
 	      }
 	  }
       	
-	//occaUnroll(p_Nvol)
+	occaUnroll(p_Nvol)
 	  for(int es=0;es<p_Nvol;++es){
 	    
 	    const dlong e = es*p_NblockV + et + eo;
