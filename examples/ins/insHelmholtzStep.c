@@ -1,14 +1,14 @@
 #include "ins.h"
 
 // complete a time step using LSERK4
-void insHelmholtzStep(ins_t *ins, int tstep){
+void insHelmholtzStep(ins_t *ins, dfloat time){
   
   mesh_t *mesh = ins->mesh; 
   solver_t *usolver = ins->uSolver; 
   solver_t *vsolver = ins->vSolver; 
   solver_t *wsolver = ins->wSolver; 
   
-  dfloat t = tstep*ins->dt + ins->dt;
+  //dfloat t = tstep*ins->dt + ins->dt;
 
   dlong offset = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
   int subcycling = (strstr(options,"SUBCYCLING")) ? 1:0;
@@ -24,7 +24,6 @@ void insHelmholtzStep(ins_t *ins, int tstep){
                                  ins->a0, ins->a1, ins->a2,
                                  ins->b0, ins->b1, ins->b2,
                                  ins->c0, ins->c1, ins->c2,
-                                 ins->index,
                                  offset,
                                  ins->o_U,
                                  ins->o_NU,
@@ -38,6 +37,7 @@ void insHelmholtzStep(ins_t *ins, int tstep){
     ins->helmholtzRhsBCKernel(mesh->Nelements,
                               mesh->o_ggeo,
                               mesh->o_sgeo,
+                              mesh->o_Dmatrices,
                               mesh->o_Smatrices,
                               mesh->o_MM,
                               mesh->o_vmapM,
@@ -66,7 +66,6 @@ void insHelmholtzStep(ins_t *ins, int tstep){
     occaTimerTic(mesh->device,"HelmholtzRhsIpdg");   
     ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
                                   mesh->o_vmapM,
-                                  mesh->o_vmapP,
                                   ins->tau,
                                   t,
                                   mesh->o_x,

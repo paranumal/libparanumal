@@ -1,115 +1,112 @@
 
-kernel void insTotalHaloExtract(const int Nelements,
-                                const int NhaloElements,
-		                            const int   * restrict haloElements,
-                                const int offset,
+kernel void insTotalHaloExtract(const dlong Nelements,
+                                const dlong NhaloElements,
+		                            const dlong   * restrict haloElements,
+                                const dlong offset,
                                 const dfloat * restrict U,
                                 const dfloat * restrict P,
 		                                  dfloat *haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
+  for(dlong e=0;e<NhaloElements;++e;outer0){ // for all elements
     for(int n=0;n<p_Np;++n;inner0){     // for all entries in this element
-      const int id   = haloElements[e];
-      const int base = p_NTfields*p_Np*e;
+      const dlong id   = n + p_Np*haloElements[e];
+      const dlong base = n + p_NTfields*p_Np*e;
 
       occaUnroll(p_NVfields)
       for (int i=0;i<p_NVfields;i++) {
-        haloq[n + i*p_Np + base] = U[n + p_Np*id + i*offset];
+        haloq[base +  i*p_Np] = U[id + i*offset];
       }
-      haloq[n + p_NVfields*p_Np + base] = P[n + p_Np*id];
+      haloq[base + p_NVfields*p_Np] = P[id];
     }
   }
 }
 
-kernel void insTotalHaloScatter(const int Nelements,
-                                const int NhaloElements,
-                                const int   * restrict haloElements,
-                                const int offset,
+kernel void insTotalHaloScatter(const dlong Nelements,
+                                const dlong NhaloElements,
+                                const dlong offset,
                                       dfloat * restrict U,
                                       dfloat * restrict P,
                                 const dfloat * restrict haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
+  for(dlong e=0;e<NhaloElements;++e;outer0){ // for all elements
     for(int n=0;n<p_Np;++n;inner0){ 
-      const int id   = Nelements;
-      const int base = p_NTfields*p_Np*e;
+      const dlong id = n + (e+Nelements)*p_Np;
+      const dlong base = n + p_NTfields*p_Np*e;
 
       occaUnroll(p_NVfields)
       for (int i=0;i<p_NVfields;i++) {
-        U[n + p_Np*(e+id) + i*offset] = haloq[n + base + i*p_Np];
+        U[id + i*offset] = haloq[base + i*p_Np];
       }
-      P[n + p_Np*(e+id)] = haloq[n + base + p_NVfields*p_Np];
+      P[id] = haloq[base + p_NVfields*p_Np];
     }
   }
 }
 
-kernel void insVelocityHaloExtract(const int Nelements,
-                                   const int NhaloElements,
-                                   const int   * restrict haloElements,
-                                   const int offset,
+kernel void insVelocityHaloExtract(const dlong Nelements,
+                                   const dlong NhaloElements,
+                                   const dlong   * restrict haloElements,
+                                   const dlong offset,
                                    const dfloat * restrict U,
                                          dfloat * restrict haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
+  for(dlong e=0;e<NhaloElements;++e;outer0){ // for all elements
     for(int n=0;n<p_Np;++n;inner0){     // for all entries in this element
-      const int id   = haloElements[e];
-      const int base = p_NVfields*p_Np*e;
+      const dlong id   = n + p_Np*haloElements[e];
+      const dlong base = n + p_NVfields*p_Np*e;
 
       occaUnroll(p_NVfields)
       for (int i=0;i<p_NVfields;i++) {
-        haloq[n + i*p_Np + base] = U[n + p_Np*id +i*offset];
+        haloq[base + i*p_Np] = U[id +i*offset];
       }
     }
   }
 }
 
-kernel void insVelocityHaloScatter(const int Nelements,
-                                   const int NhaloElements,
-                                   const int   * restrict haloElements,
-                                   const int offset,
+kernel void insVelocityHaloScatter(const dlong Nelements,
+                                   const dlong NhaloElements,
+                                   const dlong offset,
                                          dfloat * restrict U,
                                    const dfloat * restrict haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
+  for(dlong e=0;e<NhaloElements;++e;outer0){ // for all elements
     for(int n=0;n<p_Np;++n;inner0){ 
-      const int id    = Nelements;
-      const int base = p_NVfields*p_Np*e;
+      const dlong id   = n + p_Np*(e+Nelements);
+      const dlong base = n + p_NVfields*p_Np*e;
 
       occaUnroll(p_NVfields)
       for (int i=0;i<p_NVfields;i++) {
-        U[n + p_Np*(e+id)+i*offset] = haloq[n + i*p_Np + base];
+        U[id + i*offset] = haloq[base + i*p_Np];
       }
     }
   }
 }
 
-kernel void insPressureHaloExtract(const int Nelements,
-                                   const int NhaloElements,
-                                   const int   * restrict haloElements,
+kernel void insPressureHaloExtract(const dlong Nelements,
+                                   const dlong NhaloElements,
+                                   const dlong   * restrict haloElements,
                                    const dfloat * restrict P,
                                          dfloat * restrict haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
+  for(dlong e=0;e<NhaloElements;++e;outer0){ // for all elements
     for(int n=0;n<p_Np;++n;inner0){     // for all entries in this element
-      const int id   = haloElements[e];
-      const int base = p_Np*e;
+      const dlong id   = n + p_Np*haloElements[e];
+      const dlong base = n + p_Np*e;
 
-      haloq[n + base + 0*p_Np] = P[n + p_Np*id];
+      haloq[base] = P[id];
     }
   }
 }
 
-kernel void insPressureHaloScatter(const int Nelements,
-                                   const int NhaloElements,
-                                   const int   * restrict haloElements,
+kernel void insPressureHaloScatter(const dlong Nelements,
+                                   const dlong NhaloElements,
                                          dfloat * restrict P,
                                    const dfloat * restrict haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
+  for(dlong e=0;e<NhaloElements;++e;outer0){ // for all elements
     for(int n=0;n<p_Np;++n;inner0){ 
-      const int id   = haloElements[e];
-      const int base = p_Np*e;
-      P[n + p_Np*(Nelements+e)] = haloq[n + base + 0*p_Np];
+      const dlong id   = n + p_Np*(e+Nelements);
+      const dlong base = n + p_Np*e;
+      P[id] = haloq[base];
     }
   }
 }
