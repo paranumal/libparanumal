@@ -293,10 +293,10 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-  int NblockV = 1; 1024/mesh->Np; // works for CUDA
+  int NblockV = 1024/mesh->Np; // works for CUDA
   kernelInfo.addDefine("p_NblockV", NblockV);
 
-  int NblockS = 1; 1024/maxNodes; // works for CUDA
+  int NblockS = 1024/maxNodes; // works for CUDA
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   int cubMaxNodes = mymax(mesh->Np, (mesh->intNfp*mesh->Nfaces));
