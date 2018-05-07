@@ -39,6 +39,8 @@ public:
 
   string getArgs(string);
 
+  void setArgs(string key, string value);
+
   template <class T>
   int getArgs(string, T&);
 
