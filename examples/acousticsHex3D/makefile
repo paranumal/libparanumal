@@ -66,7 +66,8 @@ LOBJS = \
 ../../src/meshSurfaceGeometricFactorsHex3D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
-../../src/hash.o
+../../src/hash.o\
+../../src/readArray.o
 
 
 acousticsMain3D:$(AOBJS) $(LOBJS) acousticsMainHex3D.o 

@@ -1,4 +1,6 @@
 #include "insTri2D.h"
+#include "omp.h"
+#include <unistd.h>
 
 ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options, 
                   char *vSolverOptions, char *vParAlmondOptions,
@@ -17,8 +19,12 @@ ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options,
   MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,MPI_COMM_WORLD);
 
   int deviceID = 0;
+  int totalDevices = 0;
   for (int r=0;r<rank;r++) {
     if (hostIds[r]==hostId) deviceID++;
+  }
+  for (int r=0;r<size;r++) {
+    if (hostIds[r]==hostId) totalDevices++;
   }
 
   // use rank to choose DEVICE
@@ -26,6 +32,12 @@ ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options,
   //sprintf(deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
   //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(deviceConfig, "mode = Serial");  
+
+  //set number of omp threads to use
+  int Ncores = sysconf(_SC_NPROCESSORS_ONLN);
+  int Nthreads = Ncores/totalDevices;
+  omp_set_num_threads(Nthreads);
+  printf("Rank %d: Ncores = %d, Nthreads = %d\n", rank, Ncores, Nthreads);
 
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
 
@@ -336,8 +348,8 @@ ins_t *insSetupTri2D(mesh2D *mesh, int Ns, char * options,
   ins->o_UH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
   ins->o_VH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
 
-  ins->o_Vort = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Vort);
-  ins->o_Div = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->Div);
+  ins->o_Vort = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), ins->Vort);
+  ins->o_Div = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), ins->Div);
 
 
   if(strstr(options,"SUBCYCLING")){

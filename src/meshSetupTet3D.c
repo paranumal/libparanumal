@@ -82,7 +82,7 @@ mesh3D *meshSetupTet3D(char *filename, int N){
 	dfloat aveny = mesh->sgeo[baseM+NYID] + sc*mesh->sgeo[baseP+NYID];
 	dfloat avenz = mesh->sgeo[baseM+NZID] + sc*mesh->sgeo[baseP+NZID];
 	dfloat dsJ   = mesh->sgeo[baseM+SJID] - mesh->sgeo[baseP+SJID];
-	dfloat aven  = norm(avenx,aveny,avenz);
+	dfloat aven  = norm3(avenx,aveny,avenz);
 
 	if(aven>1e-4)
 	  printf("(%d,%d=>%d,%d) aven = %g,%g,%g", eM,fM, eP,fP, avenx,aveny,avenz);
@@ -95,7 +95,7 @@ mesh3D *meshSetupTet3D(char *filename, int N){
 	  int idM = mesh->vmapM[id];
 	  int idP = mesh->vmapP[id];
 
-	  dfloat d = norm(mesh->x[idM]-mesh->x[idP],mesh->y[idM]-mesh->y[idP],mesh->z[idM]-mesh->z[idP]);
+	  dfloat d = norm3(mesh->x[idM]-mesh->x[idP],mesh->y[idM]-mesh->y[idP],mesh->z[idM]-mesh->z[idP]);
 
 	  if(d>1e-4)
 	    printf(", %g\n", d);

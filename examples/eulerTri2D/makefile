@@ -57,7 +57,8 @@ eulerSetup2D.o \
 ../../src/meshOccaSetup2D.o\
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
-../../src/parallelSort.o
+../../src/parallelSort.o\
+../../src/readArray.o
 
 eulerMain2D:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o eulerMain2D $(OBJS) $(paths) $(LIBS) 

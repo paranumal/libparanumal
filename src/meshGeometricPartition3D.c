@@ -7,7 +7,7 @@
 #define bitRange 20
 
 // spread bits of i by introducing zeros between binary bits
-unsigned long long int bitSplitter(unsigned int i){
+unsigned long long int bitSplitter3D(unsigned int i){
   
   unsigned long long int mask = 1;
   unsigned long long int li = i;
@@ -25,9 +25,9 @@ unsigned long long int bitSplitter(unsigned int i){
 unsigned long long int mortonIndex3D(unsigned int ix, unsigned int iy, unsigned int iz){
   
   // spread bits of ix apart (introduce zeros)
-  unsigned long long int sx = bitSplitter(ix);
-  unsigned long long int sy = bitSplitter(iy);
-  unsigned long long int sz = bitSplitter(iz);
+  unsigned long long int sx = bitSplitter3D(ix);
+  unsigned long long int sy = bitSplitter3D(iy);
+  unsigned long long int sz = bitSplitter3D(iz);
   
   // interleave bits of ix and iy
   unsigned long long int mi = sx | (sy<<1) | (sz<<2); 
@@ -65,7 +65,7 @@ int compareElements(const void *a, const void *b){
 }
 
 // stub for the match function needed by parallelSort
-void bogusMatch(void *a, void *b){ }
+void bogusMatch3D(void *a, void *b){ }
 
 // geometric partition of elements in 3D mesh using Morton ordering + parallelSort
 void meshGeometricPartition3D(mesh3D *mesh){
@@ -135,9 +135,12 @@ void meshGeometricPartition3D(mesh3D *mesh){
 
     elements[e].type = mesh->elementInfo[e];
 
-    unsigned long long int ix = (cx-gminvx)*Nboxes/(gmaxvx-gminvx);
-    unsigned long long int iy = (cy-gminvy)*Nboxes/(gmaxvy-gminvy);
-    unsigned long long int iz = (cz-gminvz)*Nboxes/(gmaxvz-gminvz);
+    dfloat maxlength = max(gmaxvx-gminvx, max(gmaxvy-gminvy, gmaxvz-gminvz));
+
+    // avoid stretching axes
+    unsigned long long int ix = (cx-gminvx)*Nboxes/maxlength;
+    unsigned long long int iy = (cy-gminvy)*Nboxes/maxlength;
+    unsigned long long int iz = (cz-gminvz)*Nboxes/maxlength;
 			
     elements[e].index = mortonIndex3D(ix, iy, iz);
   }
@@ -151,7 +154,7 @@ void meshGeometricPartition3D(mesh3D *mesh){
   // odd-even parallel sort of element capsules based on their Morton index
   parallelSort(maxNelements, elements, sizeof(element_t),
 	       compareElements, 
-	       bogusMatch);
+	       bogusMatch3D);
 
 #if 0
   // count number of elements that end up on this process

@@ -103,7 +103,7 @@ typedef struct {
 }element_t;
 
 // compare the Morton indices for two element capsules
-int compareElements(const void *a, const void *b){
+int compareElements2D(const void *a, const void *b){
 
   element_t *ea = (element_t*) a;
   element_t *eb = (element_t*) b;
@@ -166,6 +166,8 @@ void meshGeometricPartition2D(mesh2D *mesh){
   MPI_Allreduce(&maxcx, &gmaxcx, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&maxcy, &gmaxcy, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
 
+  dfloat maxlength = max(maxcx-mincx, maxcy-mincy);
+  
   // choose sub-range of Morton lattice coordinates to embed element centers in
   unsigned int Nboxes = (((unsigned int)1)<<(bitRange-1));
 
@@ -191,8 +193,8 @@ void meshGeometricPartition2D(mesh2D *mesh){
 
     elements[e].type = mesh->elementInfo[e];
 
-    unsigned int ix = (cx-gmincx)*Nboxes/(gmaxcx-gmincx);
-    unsigned int iy = (cy-gmincy)*Nboxes/(gmaxcy-gmincy);
+    unsigned int ix = (cx-gmincx)*Nboxes/maxlength;
+    unsigned int iy = (cy-gmincy)*Nboxes/maxlength;
 
     //elements[e].index = mortonIndex2D(ix, iy);
     elements[e].index = hilbert2D(ix, iy);
@@ -207,7 +209,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
 
   // odd-even parallel sort of element capsules based on their Morton index
   parallelSort(maxNelements, elements, sizeof(element_t),
-	       compareElements,
+	       compareElements2D,
 	       bogusMatch);
 
 

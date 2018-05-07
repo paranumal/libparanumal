@@ -98,6 +98,7 @@ LOBJS = \
 ../../src/parallelSort.o\
 ../../src/hash.o\
 ../../src/timer.o\
+../../src/readArray.o\
 ./diagnostic.o\
 
 

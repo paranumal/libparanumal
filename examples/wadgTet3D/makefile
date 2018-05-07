@@ -66,7 +66,8 @@ LOBJS = \
 ../../src/meshPrint3D.o \
 ../../src/meshVTU3D.o \
 ../../src/mysort.o \
-../../src/parallelSort.o
+../../src/parallelSort.o\
+../../src/readArray.o
 
 acousticsMain3D:$(AOBJS) $(LOBJS)
 	$(LD)  $(LDFLAGS)  -o acousticsMain3D $(AOBJS) $(LOBJS) $(paths) $(LIBS)

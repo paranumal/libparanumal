@@ -6,6 +6,7 @@ void meshPhysicalNodesTri2D(mesh2D *mesh){
   
   mesh->x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  mesh->z = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat)); // dummy
   
   dlong cnt = 0;
   for(dlong e=0;e<mesh->Nelements;++e){ /* for each element */
