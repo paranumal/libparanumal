@@ -91,11 +91,19 @@ kernel void acousticsSurfaceTet3D(const dlong Nelements,
 	    dfloat wP = q[qbaseP + 3*p_Np];
             
             // apply boundary condition
+#if 0    
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               acousticsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP);
             }
-            
+#else
+	    if(idP==idM){ // breaks for parallel
+	      dfloat ndotU = nx*uM+ny*vM+nz*wM;
+	      uP -= 2*ndotU*nx;
+	      vP -= 2*ndotU*ny;
+	      wP -= 2*ndotU*nz;
+	    }
+#endif
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
             const dfloat sc = invJ*sJ;
 
