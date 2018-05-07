@@ -1,10 +1,10 @@
 
 // isothermal Compressible Navier-Stokes
-kernel void acousticsVolumeTet3D(const dlong Nelements,
-				 const dfloat * restrict vgeo,
-				 const dfloat * restrict DT,
-				 const dfloat * restrict q,
-				 dfloat * restrict rhsq){
+kernel void acousticsVolumeTet3D_v0(const dlong Nelements,
+				    const dfloat * restrict vgeo,
+				    const dfloat * restrict DT,
+				    const dfloat * restrict q,
+				    dfloat * restrict rhsq){
   
   for(dlong e=0;e<Nelements;++e;outer0){
     
@@ -101,6 +101,85 @@ kernel void acousticsVolumeTet3D(const dlong Nelements,
       rhsq[base+1*p_Np] = rhsq1;
       rhsq[base+2*p_Np] = rhsq2;
       rhsq[base+3*p_Np] = rhsq3;
+    }
+  }
+}
+
+
+// 
+kernel void acousticsVolumeTet3D(const dlong Nelements,
+				 const dfloat * restrict vgeo,
+				 const dfloat * restrict DT,
+				 const dfloat * restrict q,
+				 dfloat * restrict rhsq){
+  
+  for(dlong e=0;e<Nelements;++e;outer0){
+
+    shared dfloat s_rho[p_Np];
+    shared dfloat s_u[p_Np];
+    shared dfloat s_v[p_Np];
+    shared dfloat s_w[p_Np];
+
+    for(int n=0;n<p_Np;++n;inner0){
+
+      const dlong  qbase = e*p_Np*p_Nfields + n;
+      s_rho[n] = q[qbase+0*p_Np];
+      s_u[n] = q[qbase+1*p_Np];
+      s_v[n] = q[qbase+2*p_Np];
+      s_w[n] = q[qbase+3*p_Np];
+    }
+
+    barrier(localMemFence);
+    
+    for(int n=0;n<p_Np;++n;inner0){
+
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+
+      
+      dfloat drhodx = 0, drhody = 0, drhodz = 0;
+      dfloat dudx = 0, dvdy = 0, dwdz = 0;
+
+      occaUnroll(p_Np)
+	for(int m=0;m<p_Np;++m){
+	  // 3 loads from L1, 4 loads from shared, 15+6+6 flops => 0.48 flops/(L1+sh byte) FP64)
+	  const dfloat Drnm = DT[n+m*p_Np];
+	  const dfloat Dsnm = DT[n+m*p_Np+1*p_Np*p_Np];
+	  const dfloat Dtnm = DT[n+m*p_Np+2*p_Np*p_Np];
+
+	  const dfloat rm = s_r[m];
+	  const dfloat um = s_u[m];
+	  const dfloat vm = s_v[m];
+	  const dfloat wm = s_w[m];
+
+	  const dfloat Dxnm = drdx*Drnm + dsdx*Dsnm + dtdx*Dtnm;
+	  const dfloat Dynm = drdy*Drnm + dsdy*Dsnm + dtdy*Dtnm;
+	  const dfloat Dznm = drdz*Drnm + dsdz*Dsnm + dtdz*Dtnm;
+
+	  drhodx += Dxnm*rhom;
+	  drhody += Dynm*rhom;
+	  drhodz += Dznm*rhom;
+
+	  dudx += Dxnm*um;
+	  dvdy += Dynm*vm;
+	  dwdz += Dznm*wm;
+	}
+      
+      const dlong base = e*p_Np*p_Nfields + n;
+      
+      // move to rhs
+      rhsq[base+0*p_Np] = -dudx-dvdy-dwdz
+	rhsq[base+1*p_Np] = -drhodx;
+      rhsq[base+2*p_Np] = -drhody;
+      rhsq[base+3*p_Np] = -drhodz;
     }
   }
 }
