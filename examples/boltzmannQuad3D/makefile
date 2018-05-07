@@ -58,7 +58,8 @@ boltzmannOccaSetupQuad3D.o \
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o \
-../../src/hash.o
+../../src/hash.o\
+../../src/readArray.o
 
 boltzmannMainQuad3D:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o boltzmannMainQuad3D $(OBJS) $(paths) $(LIBS) 

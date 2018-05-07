@@ -1,7 +1,7 @@
 *
 !/**/
 !*.*
-
+!*/*/makefile
 
 *.o
 *.a
@@ -9,6 +9,14 @@
 *.vtu
 *.dat
 *.txt
+*.eps
+*.png
+*.pdf
+*.log
+*.bmp
+*.swp
+*.orig
+*.out
 
 **/*.o
 **/*.c~

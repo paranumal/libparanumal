@@ -63,7 +63,8 @@ acousticsGaussianPulse2D.o \
 ../../src/meshSurfaceGeometricFactorsQuad2D.o \
 ../../src/meshVTU2D.o \
 ../../src/mysort.o \
-../../src/parallelSort.o
+../../src/parallelSort.o\
+../../src/readArray.o
 
 acousticsMainQuad2D:$(OBJS) 
 	$(LD)  $(LDFLAGS)  -o acousticsMainQuad2D $(OBJS) $(paths) $(LIBS) 
