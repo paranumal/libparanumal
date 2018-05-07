@@ -26,11 +26,12 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
   bns->finalTime  = 1.0;
   bns->cfl        = 0.2; 
   //
+  bns->pmlFlag    = 0; 
   bns->probeFlag  = 0; 
   bns->errorFlag  = 0;
   bns->reportFlag = 0;
   bns->errorStep  = 1; 
-  bns->reportStep  = 1;
+  bns->reportStep = 1;
   
 
   int check; 
@@ -59,21 +60,31 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
   check = options.getArgs("REPORT FLAG", bns->reportFlag);
   if(!check) printf("WARNING setup file does not include REPORT FLAG\n");
 
+  if(options.compareArgs("ABSORBING LAYER", "PML"))
+    bns->pmlFlag = 1; 
+  // check = options.getArgs("ABSORBING LAYER", bns->pmlFlag);
+  // if(!check) printf("WARNING setup file does not include ABSORBING LAYER\n");
+
   
   options.getArgs("TSTEPS FOR SOLUTION OUTPUT", bns->reportStep);
-  options.getArgs("TSTEPS FOR ERROR COMPUTE", bns->errorStep);
-  
+  options.getArgs("TSTEPS FOR ERROR COMPUTE",   bns->errorStep);
+
+  // Output Interval for addaptive time stepping
+  options.getArgs("OUTPUT INTERVAL",   bns->outputInterval);
+    
 
   printf("Starting initial conditions\n");
-  // Set characteristic length, should be one
+  // Set characteristic length, should be one in a proper problem setting
   dfloat Uref = 1.0;   
   dfloat Lref = 1.0;   
   //
   bns->RT       = Uref*Uref/(bns->Ma*bns->Ma);
   bns->sqrtRT   = sqrt(bns->RT);  
   //
-  dfloat nu            = Uref*Lref/bns->Re; 
+  dfloat nu     = Uref*Lref/bns->Re; 
   bns->tauInv   = bns->RT/nu;
+
+  printf("tauInv: %.4e \n",bns->tauInv);
   // set penalty parameter
   bns->Lambda2 = 0.5/(bns->sqrtRT);
 
@@ -137,7 +148,7 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
   // Set multiRate/singleRate element groups/group  
   if(options.compareArgs("TIME INTEGRATOR", "MRAB") ||
      options.compareArgs("TIME INTEGRATOR", "MRSAAB") ){
-    int maxLevels = 100;
+    int maxLevels =0; options.getArgs("MAX MRAB LEVELS", maxLevels);
     bns->dt = meshMRABSetup2D(mesh,EtoDT,maxLevels, bns->finalTime-bns->startTime);
     bns->NtimeSteps =  (bns->finalTime-bns->startTime)/(pow(2,mesh->MRABNlevels-1)*bns->dt);
   }
@@ -198,11 +209,12 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
 
   else if (options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TIME INTEGRATOR","XDOPRI")){ // LSERK, SARK etc.
     bns->Nrhs = 1;
-
-    bns->ATOL = 1E-5; 
-    bns->RTOL = 1E-4;
-    bns->dtMIN = 1E-10;  
-     bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I    
+    bns->ATOL    = 0.0; options.getArgs("ABSOLUTE TOLERANCE",   bns->ATOL); 
+    bns->RTOL    = 0.0; options.getArgs("RELATIVE TOLERANCE",   bns->RTOL);
+    bns->dtMIN   = 0.0; options.getArgs("MINUMUM TIME STEP SIZE",   bns->dtMIN); 
+    bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I    
+    bns->rkp     = 5; // order of embedded scheme + 1 
+    // printf(" ATOL: %.2e RTOL:%.2e dtMIN: %.2e \n", bns->ATOL, bns->RTOL, bns->dtMIN);
 
     int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
     bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
@@ -225,11 +237,13 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
 
   else if (options.compareArgs("TIME INTEGRATOR","SAADRK")){ 
     bns->Nrhs  = 1;
-    bns->ATOL  = 1E-7; 
-    bns->RTOL  = 1E-5;
-    bns->dtMIN = 1E-10; 
-    bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I   
+    bns->ATOL    = 0.0; options.getArgs("ABSOLUTE TOLERANCE",   bns->ATOL); 
+    bns->RTOL    = 0.0; options.getArgs("RELATIVE TOLERANCE",   bns->RTOL);
+    bns->dtMIN   = 0.0; options.getArgs("MINUMUM TIME STEP SIZE",   bns->dtMIN); 
+    bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I    
+    bns->rkp     = 4; // order of embedded scheme + 1 
 
+    
     int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
     bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
 
@@ -249,12 +263,13 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
   }
   else if (options.compareArgs("TIME INTEGRATOR","IMEXRK")){
     bns->Nrhs  = 1;
-    bns->ATOL  = 1E-7; 
-    bns->RTOL  = 1E-5;
-    bns->dtMIN = 1E-10; 
-
+    bns->ATOL    = 0.0; options.getArgs("ABSOLUTE TOLERANCE",   bns->ATOL); 
+    bns->RTOL    = 0.0; options.getArgs("RELATIVE TOLERANCE",   bns->RTOL);
+    bns->dtMIN   = 0.0; options.getArgs("MINUMUM TIME STEP SIZE",   bns->dtMIN); 
     bns->emethod = 0; // 0 PID / 1 PI / 2 I 
-    bns->rkp     = 4;  
+    
+    bns->rkp     = 5; // order of embedded scheme + 1 
+ 
 
     int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
     bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
@@ -285,8 +300,17 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
     memcpy(bns->ehist, ehist, 3*sizeof(dfloat)); 
   }
 
-
-
+  #if 0
+  int fdt = 0; options.getArgs("FIXED TIME STEP",fdt);
+  if(options.compareArgs("TIME INTEGRATOR","LSERK"))
+    bns->tmethod = 0; 
+  if(options.compareArgs("TIME INTEGRATOR","DOPRI5") && (fdt==1))
+    bns->tmethod = 1; 
+   if(options.compareArgs("TIME INTEGRATOR","DOPRI5") && (fdt==0))
+    bns->tmethod = 2;
+  if(options.compareArgs("TIME INTEGRATOR","SAADRK"))
+    bns->tmethod = 3;
+  #endif
 
   dfloat time = bns->startTime + 0.0; 
   // Define Initial Mean Velocity
@@ -432,6 +456,8 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
   meshOccaSetup2D(mesh, deviceConfig,  kernelInfo);  
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");   
+
+
 
   // Setup MRAB PML
   if(options.compareArgs("TIME INTEGRATOR", "MRAB") || options.compareArgs("TIME INTEGRATOR","MRSAAB")){
@@ -952,7 +978,7 @@ else if(options.compareArgs("TIME INTEGRATOR", "LSIMEX")){
 
 
     else if(options.compareArgs("TIME INTEGRATOR","XDOPRI")){
-    printf("compiling XDOPRI Update kernels\n");
+    // printf("compiling XDOPRI Update kernels\n");
     bns->updateStageKernel =
      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
       "boltzmannXDOPRIRKStage2D",
@@ -1220,11 +1246,6 @@ else if(options.compareArgs("TIME INTEGRATOR", "LSIMEX")){
           kernelInfo); 
 
   }
-
-
-
-
-      
 
     mesh->haloExtractKernel =
       mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
