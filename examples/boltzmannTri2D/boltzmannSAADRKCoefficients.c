@@ -109,7 +109,7 @@ else if(bns->NrkStages==7){
 	double complex ca76 = 0. + 0.* I;
 
 
-  double complex cb1 = 0. + 0.* I; 
+    double complex cb1 = 0. + 0.* I; 
 	// double complex cb2 = 0. + 0.* I; 
 	double complex cb3 = 0. + 0.* I; 
 	double complex cb4 = 0. + 0.* I; 

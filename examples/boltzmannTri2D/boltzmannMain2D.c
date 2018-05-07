@@ -20,7 +20,7 @@ int main(int argc, char **argv){
   // pmlprofile  = CONSTANT, QUADRATIC
 
   if(argc!=2){
-    printf("usage2: ./cnsMainTri2D setupfile\n");
+    printf("usage2: ./boltzmannMainTri2D setupfile\n");
     exit(-1);
   }
 
