@@ -19,5 +19,5 @@ void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions)
   sprintf(fname, "foo_%04d_%04d.vtu",rank, acoustics->frame++);
 
   acousticsPlotVTU(acoustics, fname);
-
+  
 }
