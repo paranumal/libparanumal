@@ -19,7 +19,7 @@ CC	= mpic++.openmpi
 LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."'
+CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"'
 
 
 # link flags to be used

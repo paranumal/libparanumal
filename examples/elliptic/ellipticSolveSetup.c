@@ -317,7 +317,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
         boundaryHeaderFileName = strdup(DHOLMES "/examples/elliptic/data/ellipticBoundary3D.h");
       kernelInfo.addInclude(boundaryHeaderFileName);
 
-      sprintf(fileName, "okl/ellipticAx%s.okl", suffix);
+      sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
       sprintf(kernelName, "ellipticAx%s", suffix);
       elliptic->AxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
@@ -327,7 +327,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
 
       if (options.compareArgs("BASIS","BERN")) {
 
-        sprintf(fileName, "okl/ellipticGradientBB%s.okl", suffix);
+        sprintf(fileName, DELLIPTIC "/okl/ellipticGradientBB%s.okl", suffix);
         sprintf(kernelName, "ellipticGradientBB%s", suffix);
 
         elliptic->gradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
@@ -335,7 +335,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
         sprintf(kernelName, "ellipticPartialGradientBB%s", suffix);
         elliptic->partialGradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
       
-        sprintf(fileName, "okl/ellipticAxIpdgBB%s.okl", suffix);
+        sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdgBB%s.okl", suffix);
         sprintf(kernelName, "ellipticAxIpdgBB%s", suffix);
         elliptic->ipdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
@@ -344,7 +344,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
           
       } else if (options.compareArgs("BASIS","NODAL")) {
 
-        sprintf(fileName, "okl/ellipticGradient%s.okl", suffix);
+        sprintf(fileName, DELLIPTIC "/okl/ellipticGradient%s.okl", suffix);
         sprintf(kernelName, "ellipticGradient%s", suffix);
 
         elliptic->gradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
@@ -352,7 +352,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
         sprintf(kernelName, "ellipticPartialGradient%s", suffix);
         elliptic->partialGradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-        sprintf(fileName, "okl/ellipticAxIpdg%s.okl", suffix);
+        sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdg%s.okl", suffix);
         sprintf(kernelName, "ellipticAxIpdg%s", suffix);
         elliptic->ipdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
@@ -412,22 +412,22 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   for (int r=0;r<size;r++) {
     if (r==rank) {
 
-      sprintf(fileName, "okl/ellipticPreconCoarsen%s.okl", suffix);
+      sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
       elliptic->precon->coarsenKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-      sprintf(fileName, "okl/ellipticPreconProlongate%s.okl", suffix);
+      sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
       elliptic->precon->prolongateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-      sprintf(fileName, "okl/ellipticBlockJacobiPrecon.okl");
+      sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");
       sprintf(kernelName, "ellipticBlockJacobiPrecon");
       elliptic->precon->blockJacobiKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
       sprintf(kernelName, "ellipticPartialBlockJacobiPrecon");
       elliptic->precon->partialblockJacobiKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-      sprintf(fileName, "okl/ellipticPatchSolver.okl");
+      sprintf(fileName, DELLIPTIC "/okl/ellipticPatchSolver.okl");
       sprintf(kernelName, "ellipticApproxBlockJacobiSolver");
       elliptic->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
