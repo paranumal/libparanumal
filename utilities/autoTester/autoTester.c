@@ -19,8 +19,8 @@ int main(int argc, char **argv){
   sprintf(cmd1, "mpiexec -n 1 %s setup.rc", executable);
   sprintf(cmd2, "mpiexec -n 2 %s setup.rc", executable);
   
-  matrix <string> &keyword = setup.getKeyword();
-  matrix <string> &data = setup.getData();
+  vector <string> &keyword = setup.getKeyword();
+  vector <string> &data = setup.getData();
 
   int Nkeywords = data.size();
 
@@ -28,11 +28,11 @@ int main(int argc, char **argv){
 
   int maxNoptions = 100;
   char ***options = (char***) calloc(Nkeywords, sizeof(char**));
-  for(int key=1;key<=Nkeywords;++key){
-    options[key-1] = (char**) calloc(maxNoptions, sizeof(char*));
+  for(int key=0;key<Nkeywords;++key){
+    options[key] = (char**) calloc(maxNoptions, sizeof(char*));
   }
   
-  for(int key=1;key<=Nkeywords;++key){
+  for(int key=0;key<Nkeywords;++key){
     printf("%s: %s\n", keyword[key].c_str(), data[key].c_str());
 
     char *keyStr = strdup(keyword[key].c_str());
@@ -40,14 +40,16 @@ int main(int argc, char **argv){
     // count number of entries
     char *valStr = strdup(data[key].c_str());
     char *scanStr = strtok(valStr, ",");
+
+    printf("scanStr %s\n", scanStr);
     
     while(scanStr != NULL){
 
       printf("%s\n", scanStr);
 
-      options[key-1][counts[key-1]] = strdup(scanStr);
+      options[key][counts[key]] = strdup(scanStr);
       
-      ++counts[key-1];
+      ++counts[key];
       
       scanStr = strtok(NULL, ",");
     }
@@ -56,8 +58,8 @@ int main(int argc, char **argv){
 
   int Ntests = 1;
 
-  for(int key=1;key<=Nkeywords;++key){
-    Ntests *= counts[key-1];
+  for(int key=0;key<Nkeywords;++key){
+    Ntests *= counts[key];
   }
 
   printf("Ntests = %d\n", Ntests);
@@ -84,7 +86,7 @@ int main(int argc, char **argv){
     FILE *setupFile = fopen("setup.rc", "w");
 
     for(id=0;id<Nkeywords;++id){
-      fprintf(setupFile, "[%s]\n", keyword[id+1].c_str());
+      fprintf(setupFile, "[%s]\n", keyword[id].c_str());
       fprintf(setupFile, "%s\n", options[id][signature[id]]);
     }
     fclose(setupFile);
