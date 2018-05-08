@@ -379,7 +379,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     if (r==rank) {
 
       // kernels from volume file
-      sprintf(fileName, "okl/cnsVolume%s.okl", suffix);
+      sprintf(fileName, DCNS "/okl/cnsVolume%s.okl", suffix);
       sprintf(kernelName, "cnsVolume%s", suffix);
 
       cns->volumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
@@ -388,7 +388,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
       cns->stressesVolumeKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
       // kernels from surface file
-      sprintf(fileName, "okl/cnsSurface%s.okl", suffix);
+      sprintf(fileName, DCNS "/okl/cnsSurface%s.okl", suffix);
       sprintf(kernelName, "cnsSurface%s", suffix);
       
       cns->surfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
@@ -398,20 +398,20 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
       if(cns->elementType != HEXAHEDRA){ //remove later
       // kernels from cubature volume file
-      sprintf(fileName, "okl/cnsCubatureVolume%s.okl", suffix);
+      sprintf(fileName, DCNS "/okl/cnsCubatureVolume%s.okl", suffix);
       sprintf(kernelName, "cnsCubatureVolume%s", suffix);
       
       cns->cubatureVolumeKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
       // kernels from cubature surface file
-      sprintf(fileName, "okl/cnsCubatureSurface%s.okl", suffix);
+      sprintf(fileName, DCNS "/okl/cnsCubatureSurface%s.okl", suffix);
       sprintf(kernelName, "cnsCubatureSurface%s", suffix);
 
       cns->cubatureSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
       }
       
       // kernels from vorticity file
-      sprintf(fileName, "okl/cnsVorticity%s.okl", suffix);
+      sprintf(fileName, DCNS "/okl/cnsVorticity%s.okl", suffix);
       sprintf(kernelName, "cnsVorticity%s", suffix);
       
       cns->vorticityKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
@@ -419,21 +419,21 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
       // kernels from update file
       cns->updateKernel =
-        mesh->device.buildKernelFromSource("okl/cnsUpdate.okl",
+        mesh->device.buildKernelFromSource(DCNS "/okl/cnsUpdate.okl",
                                            "cnsUpdate",
                                            kernelInfo);
 
       cns->rkUpdateKernel =
-        mesh->device.buildKernelFromSource("okl/cnsUpdate.okl",
+        mesh->device.buildKernelFromSource(DCNS "/okl/cnsUpdate.okl",
                                            "cnsRkUpdate",
                                            kernelInfo);
       cns->rkStageKernel =
-        mesh->device.buildKernelFromSource("okl/cnsUpdate.okl",
+        mesh->device.buildKernelFromSource(DCNS "/okl/cnsUpdate.okl",
                                            "cnsRkStage",
                                            kernelInfo);
 
       cns->rkErrorEstimateKernel =
-        mesh->device.buildKernelFromSource("okl/cnsUpdate.okl",
+        mesh->device.buildKernelFromSource(DCNS "/okl/cnsUpdate.okl",
                                            "cnsErrorEstimate",
                                            kernelInfo);
 
