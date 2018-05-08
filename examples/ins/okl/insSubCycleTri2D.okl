@@ -4,6 +4,7 @@
 kernel void insSubCycleVolumeTri2D(const dlong Nelements,
                                 const dfloat * restrict vgeo,
                                 const dfloat * restrict Dmatrices,
+                                const dlong offset,
                                 const dfloat * restrict U,
                                 const dfloat * restrict Ud,
                                       dfloat * restrict rhsU){
@@ -98,6 +99,7 @@ kernel void insSubCycleSurfaceTri2D(const dlong Nelements,
                                     const dfloat * restrict x,
                                     const dfloat * restrict y,
                                     const dfloat * restrict z,
+                                    const dlong offset,
                                     const dfloat * restrict U,
                                     const dfloat * restrict Ud,
                                           dfloat * restrict rhsU){
@@ -131,8 +133,8 @@ kernel void insSubCycleSurfaceTri2D(const dlong Nelements,
           const dfloat  uxM = U[idM+0*offset], uxP = U[idP+0*offset];
           const dfloat  uyM = U[idM+1*offset], uyP = U[idP+1*offset];
 
-          const dfloat  pxM = Ud[idM+0*offset], pyM = Vd[idM+1*offset];
-                dfloat  pxP = Ud[idP+0*offset], pyP = Vd[idP+1*offset];
+          const dfloat  pxM = Ud[idM+0*offset], pyM = Ud[idM+1*offset];
+                dfloat  pxP = Ud[idP+0*offset], pyP = Ud[idP+1*offset];
 
           // apply boundary condition
           const int bc = EToB[face+p_Nfaces*e];
@@ -167,7 +169,7 @@ kernel void insSubCycleSurfaceTri2D(const dlong Nelements,
         if(e<Nelements && n<p_Np){
           const dlong id = e*p_Np + n;
           dfloat rhsux = rhsU[id+0*offset];
-          dfloat rhsuy = rhsV[id+1*offset];
+          dfloat rhsuy = rhsU[id+1*offset];
           // Lift
           occaUnroll(p_NfacesNfp)
             for(int m=0;m<p_Nfaces*p_Nfp;++m){
@@ -243,6 +245,7 @@ kernel void insSubCycleCubatureVolumeTri2D(const dlong Nelements,
                                            const dfloat * restrict vgeo,
                                            const dfloat * restrict cubDmatrices,
                                            const dfloat * restrict cubInterpT,
+                                           const dlong offset,
                                            const dfloat * restrict U,
                                            const dfloat * restrict Ud,
                                                  dfloat * restrict rhsU){
@@ -291,19 +294,13 @@ kernel void insSubCycleCubatureVolumeTri2D(const dlong Nelements,
               s_U[em][es][n] = 0.;
               s_V[em][es][n] = 0.;
             }
-          } 
-      }
-    }
+          }
 
-    barrier(localMemFence);
-      
-    for(int es=0;es<p_NbV;++es;inner1){// for all elements in block
-      for(int ns=0;ns<p_Np;++ns;inner0){     // for all nodes in this element
         occaUnroll(p_Nmt)
           for(int em=0;em<p_Nmt;++em){
             fluxU[em] = 0;
             fluxV[em] = 0;
-          }
+          } 
       }
     }
 
@@ -453,8 +450,11 @@ kernel void insSubCycleCubatureVolumeTri2D(const dlong Nelements,
 // Multiple nodes per thread// use less shared memory by factor 4 
 kernel void insSubCycleCubatureSurfaceTri2D(const dlong Nelements,
                                             const dfloat * restrict sgeo,
+                                            const dfloat * restrict cubsgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+                                            const dfloat * restrict cubInterpT,
+                                            const dfloat * restrict cubProjectT,
                                             const dlong  * restrict vmapM,
                                             const dlong  * restrict vmapP,
                                             const int    * restrict EToB,
@@ -463,6 +463,7 @@ kernel void insSubCycleCubatureSurfaceTri2D(const dlong Nelements,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
                                             const dfloat * restrict intz,
+                                            const dlong offset,
                                             const dfloat * restrict U,
                                             const dfloat * restrict Ud,
                                                   dfloat * restrict rhsU){

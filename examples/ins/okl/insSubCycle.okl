@@ -42,7 +42,7 @@ kernel void insSubCycleExt(const dlong Nelements,
   // Low storage Runge Kutta time step update
   for(dlong e=0;e<Nelements;++e;outer0){
     for(int n=0;n<p_Np;++n;inner0){
-      const dlond id = n+p_Np*e;
+      const dlong id = n+p_Np*e;
       const dlong id0   = id + 0*p_NVfields*offset;
       const dlong id1   = id + 1*p_NVfields*offset;
       const dlong id2   = id + 2*p_NVfields*offset;

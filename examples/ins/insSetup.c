@@ -92,10 +92,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   if(ins->Nsubsteps){
     ins->Ud   = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
     ins->Ue   = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
-    ins->resU = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+    ins->resU  = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+    ins->rhsUd = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   }
 
-  dfloat rho  = 1.0  ;  // Give density for getting actual pressure in nondimensional solve
+  dfloat rho  = 1.0 ;  // Give density for getting actual pressure in nondimensional solve
   dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
 
   options.getArgs("UBAR", ins->ubar);
@@ -385,6 +386,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   }
 
   // ADD-DEFINES
+  kernelInfo.addDefine("p_pbar", ins->pbar);
+  kernelInfo.addDefine("p_ubar", ins->ubar);
+  kernelInfo.addDefine("p_vbar", ins->vbar);
+  kernelInfo.addDefine("p_wbar", ins->wbar);
+
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_NTfields", ins->NTfields);
   kernelInfo.addDefine("p_NVfields", ins->NVfields);
@@ -560,7 +566,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         // Note that resU and resV can be replaced with already introduced buffer
         ins->o_Ue   = mesh->device.malloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ue);
         ins->o_Ud   = mesh->device.malloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ud);
-        ins->o_resU = mesh->device.malloc(ins->NVfields*(mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resU);
+        ins->o_resU  = mesh->device.malloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resU);
+        ins->o_rhsUd = mesh->device.malloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->rhsUd);
 
         sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
         sprintf(kernelName, "scaledAddwOffset");

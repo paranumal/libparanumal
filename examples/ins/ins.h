@@ -48,7 +48,6 @@ typedef struct {
   dfloat *PI, *gradPI, *Uhat;
   
   dfloat *Vort, *Div;
-  dfloat *Vx,*Vy,*Vz;
 
   dfloat g[3];      // gravitational Acceleration
 
@@ -64,8 +63,8 @@ typedef struct {
   dfloat *pRecvBuffer;
 
   int Nsubsteps;  
-  dfloat *Ud, *Ue, *resU, sdt;
-  occa::memory o_Ud, o_Ue, o_resU;
+  dfloat *Ud, *Ue, *resU, *rhsUd, sdt;
+  occa::memory o_Ud, o_Ue, o_resU, o_rhsUd;
 
   occa::kernel scaledAddKernel;
   occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
@@ -84,7 +83,6 @@ typedef struct {
   occa::memory o_PI, o_gradPI, o_Uhat;
 
   occa::memory o_Vort, o_Div;
-  occa::memory o_Vx, o_Vy, o_Vz;
 
   int Nblock;
 

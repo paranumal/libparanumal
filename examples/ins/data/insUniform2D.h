@@ -2,9 +2,9 @@
 // Initial conditions 
 #define insFlowField2D(t,x,y,u,v,p)   \
   {                                   \
-    *(u) = 0.2f;                      \
-    *(v) = 0.0f;                      \
-    *(p) = 0.0f;                      \
+    *(u) = p_ubar;                    \
+    *(v) = p_vbar;                    \
+    *(p) = p_pbar;                    \
   }   
 
 // Boundary conditions
@@ -15,8 +15,8 @@
     *(uB) = 0.f;                    \
     *(vB) = 0.f;                    \
   } else if(bc==2){                 \
-    *(uB) = 0.2f;                   \
-    *(vB) = 0.f;                    \
+    *(uB) = p_ubar;                 \
+    *(vB) = p_vbar;                 \
   } else if(bc==3){                 \
     *(uB) = uM;                     \
     *(vB) = vM;                     \
@@ -60,7 +60,7 @@
   if(bc==1 || bc==2){               \
     *(pB) = pM;                     \
   } else if(bc==3){                 \
-    *(pB) = 0.f;                    \
+    *(pB) = p_pbar;                 \
   } else if(bc==4){                 \
     *(pB) = pM;                     \
   } else if(bc==5){                 \
