@@ -88,9 +88,9 @@ void pgmres(parAlmond_t *parAlmond,
   }
 
   // M r = b - A*x0
-  if(strstr(parAlmond->options,"KCYCLE")) {
+  if(parAlmond->options.compareArgs("PARALMOND CYCLE", "KCYCLE")) {
     kcycle(parAlmond, 0);
-  } else if(strstr(parAlmond->options,"VCYCLE")) {
+  } else if(parAlmond->options.compareArgs("PARALMOND CYCLE", "VCYCLE")) {
     vcycle(parAlmond, 0);
   } else {
     for (dlong k=0;k<m;k++)
@@ -131,9 +131,9 @@ void pgmres(parAlmond_t *parAlmond,
     // M w = A vi
     for (dlong k=0;k<m;k++)
       r[k] = Av[k];
-    if(strstr(parAlmond->options,"KCYCLE")) {
+    if(parAlmond->options.compareArgs("PARALMOND CYCLE", "KCYCLE")) {
       kcycle(parAlmond, 0);
-    } else if(strstr(parAlmond->options,"VCYCLE")) {
+    } else if(parAlmond->options.compareArgs("PARALMOND CYCLE", "VCYCLE")) {
       vcycle(parAlmond, 0);
     } else {
       for (dlong k=0;k<m;k++)
@@ -249,9 +249,9 @@ void device_pgmres(parAlmond_t *parAlmond,
   }
 
   // M r = b - A*x0
-  if(strstr(parAlmond->options,"KCYCLE")) {
+  if(parAlmond->options.compareArgs("PARALMOND CYCLE", "KCYCLE")) {
     device_kcycle(parAlmond, 0);
-  } else if(strstr(parAlmond->options,"VCYCLE")) {
+  } else if(parAlmond->options.compareArgs("PARALMOND CYCLE", "VCYCLE")) {
     device_vcycle(parAlmond, 0);
   } else {
     o_z.copyFrom(o_r);
@@ -289,9 +289,9 @@ void device_pgmres(parAlmond_t *parAlmond,
     axpy(parAlmond, A, 1.0, o_V[i], 0.0, o_r,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
     // M w = A vi
-    if(strstr(parAlmond->options,"KCYCLE")) {
+    if(parAlmond->options.compareArgs("PARALMOND CYCLE", "KCYCLE")) {
       device_kcycle(parAlmond, 0);
-    } else if(strstr(parAlmond->options,"VCYCLE")) {
+    } else if(parAlmond->options.compareArgs("PARALMOND CYCLE", "VCYCLE")) {
       device_vcycle(parAlmond, 0);
     } else {
       o_z.copyFrom(o_r);

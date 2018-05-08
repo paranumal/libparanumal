@@ -1,0 +1,60 @@
+
+kernel void insSubCycleRKUpdate(const dlong Nelements,
+                                const dfloat dt,  
+                                const dfloat rka,
+                                const dfloat rkb,
+                                const dlong offset,
+                                const dfloat * restrict rhsU,
+                                dfloat  * restrict resU,
+                                dfloat  * restrict U){
+
+  // Low storage Runge Kutta time step update
+  for(dlong e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+
+      const dlong id = n + e*p_Np;
+
+      occaUnroll(p_NVfields)
+      for (int i=0;i<p_NVfields;i++) {
+        dfloat resu =  resU[id+i*offset];
+        dfloat rhsu = -rhsU[id+i*offset];// -Nu
+        dfloat u    =     U[id+i*offset];
+
+        resu = rka*resu + dt*rhsu;
+        u += rkb*resu;
+
+        resU[id+i*offset] = resu;
+        U[id+i*offset] = u;
+      }
+    }
+  }
+}
+
+
+kernel void insSubCycleExt(const dlong Nelements,
+                           const dlong offset,
+                           const dfloat c0,
+                           const dfloat c1,
+                           const dfloat c2, 
+                           const dfloat * restrict U,
+                           dfloat * restrict Ue){
+
+  // Low storage Runge Kutta time step update
+  for(dlong e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+      const dlond id = n+p_Np*e;
+      const dlong id0   = id + 0*p_NVfields*offset;
+      const dlong id1   = id + 1*p_NVfields*offset;
+      const dlong id2   = id + 2*p_NVfields*offset;
+
+      occaUnroll(p_NVfields)
+      for (int i=0;i<p_NVfields;i++) {
+        const dfloat Um0  = U[id0+i*offset];
+        const dfloat Um1  = U[id1+i*offset];
+        const dfloat Um2  = U[id2+i*offset];
+         
+        Ue[id+i*offset] = c0*Um0 + c1*Um1 + c2*Um2;
+      }
+    }
+  }
+}

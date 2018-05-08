@@ -1,11 +1,11 @@
 template <class T>
 int setupAide::getArgs(string key, T& t){
-  matrix<T> m;
+  vector<T> m;
 
   getArgs(key,m);
 
   if(m.size()){
-    t = m[1];
+    t = m[0]; // TW
 
     return 1;
   }
@@ -15,7 +15,7 @@ int setupAide::getArgs(string key, T& t){
 }
 
 template <class T>
-int setupAide::getArgs(string key, matrix<T>& m){
+int setupAide::getArgs(string key, vector<T>& m){
   stringstream args;
   vector<T> argv;
   int argc;
@@ -33,10 +33,10 @@ int setupAide::getArgs(string key, matrix<T>& m){
     return 0;
   }
 
-  m.resize(argc,1);
+  m.resize(argc);
 
-  for(int i=1; i<=argc; i++)
-    m[i] = argv[i-1];
+  for(int i=0; i<argc; i++) // TW
+    m[i] = argv[i];
 
   return 1;
 }

@@ -63,6 +63,15 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       }
     }
 
+    // build Dr, Ds transposes
+    dfloat *DrsT = (dfloat*) calloc(2*mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        DrsT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
+        DrsT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
+      }
+    }
+
     dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
     for(int n=0;n<mesh->Np;++n){
       for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
@@ -74,12 +83,16 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     int cubNpBlocked = mesh->Np*((mesh->cubNp+mesh->Np-1)/mesh->Np);
     dfloat *cubDrWT = (dfloat*) calloc(cubNpBlocked*mesh->Np, sizeof(dfloat));
     dfloat *cubDsWT = (dfloat*) calloc(cubNpBlocked*mesh->Np, sizeof(dfloat));
+    dfloat *cubDrsWT = (dfloat*) calloc(2*mesh->cubNp*mesh->Np, sizeof(dfloat));
     dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
     dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
     for(int n=0;n<mesh->Np;++n){
       for(int m=0;m<mesh->cubNp;++m){
         cubDrWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
         cubDsWT[n+m*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
+
+        cubDrsWT[n+m*mesh->Np] = mesh->cubDrW[n*mesh->cubNp+m];
+        cubDrsWT[n+m*mesh->Np+mesh->cubNp*mesh->Np] = mesh->cubDsW[n*mesh->cubNp+m];
 
         cubProjectT[n+m*mesh->Np] = mesh->cubProject[n*mesh->cubNp+m];
         cubInterpT[m+n*mesh->cubNp] = mesh->cubInterp[m*mesh->Np+n];
@@ -192,6 +205,15 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
         }
       }
     }
+
+    dfloat *ST = (dfloat*) calloc(3*mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        ST[n+m*mesh->Np+0*mesh->Np*mesh->Np] = mesh->Srr[n*mesh->Np+m];
+        ST[n+m*mesh->Np+1*mesh->Np*mesh->Np] = mesh->Srs[n*mesh->Np+m]+mesh->Ssr[n*mesh->Np+m];
+        ST[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Sss[n*mesh->Np+m];
+      }
+    }
     
     mesh->intx = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
     mesh->inty = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp, sizeof(dfloat));
@@ -230,6 +252,8 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_DtT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
 				      DsT); // note: dummy allocated with DsT
 
+    mesh->o_Dmatrices = mesh->device.malloc(2*mesh->Np*mesh->Np*sizeof(dfloat), DrsT);
+
     mesh->o_LIFT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
           mesh->LIFT);
@@ -237,10 +261,6 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_LIFTT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
           LIFTT);
-
-    mesh->o_MM =
-      mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-          mesh->MM);
 
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
@@ -256,10 +276,13 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->Nelements*mesh->Nggeo*sizeof(dfloat),
           mesh->ggeo);
 
+    mesh->o_cubsgeo = mesh->o_sgeo; //dummy cubature geo factors
+
     mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrrT);
     mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrsT);
     mesh->o_SsrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SsrT);
     mesh->o_SssT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SssT);
+    mesh->o_Smatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), ST);
 
     mesh->o_D1ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D1ids);
     mesh->o_D2ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D2ids);
@@ -298,6 +321,8 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->Np*mesh->cubNp*sizeof(dfloat),
 			  cubDsWT); // dummy to align with 3d
 
+    mesh->o_cubDWmatrices = mesh->device.malloc(2*mesh->cubNp*mesh->Np*sizeof(dfloat), cubDrsWT);
+
     mesh->o_intInterpT =
       mesh->device.malloc(mesh->Nfp*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
           intInterpT);
@@ -316,10 +341,20 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
     mesh->o_intz =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
-			  mesh->intz); // dummy to align with 3d
+			  mesh->inty); // dummy to align with 3d
 
+    free(DrsT); free(ST);
     
   } else if (mesh->Nverts==4) {//quads
+
+    //lumped mass matrix
+    mesh->MM = (dfloat *) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    for (int j=0;j<mesh->Nq;j++) {
+      for (int i=0;i<mesh->Nq;i++) {
+        int n = i+j*mesh->Nq;
+        mesh->MM[n+n*mesh->Np] = mesh->gllw[i]*mesh->gllw[j];
+      }
+    }
 
     dfloat *cubDWT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
     dfloat *cubProjectT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
@@ -356,6 +391,9 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
     mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
 
+    mesh->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+    mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
+
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
           mesh->vgeo);
@@ -386,6 +424,8 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
           cubDWT);
 
+    mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat), cubDWT);
+
     dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
 
     mesh->o_LIFTT =
@@ -402,8 +442,19 @@ void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_intz =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*sizeof(dfloat),
           mesh->intz);
+
+    //dummy quadrature lifter operators
+    mesh->o_intInterpT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
+    mesh->o_intInterpT.copyFrom(mesh->o_cubInterpT);
+
+    mesh->o_intLIFTT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
+    mesh->o_intLIFTT.copyFrom(mesh->o_cubProjectT);
   }
 
+
+  mesh->o_MM =
+      mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+          mesh->MM);
 
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),

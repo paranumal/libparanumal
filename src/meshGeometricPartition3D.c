@@ -135,7 +135,7 @@ void meshGeometricPartition3D(mesh3D *mesh){
 
     elements[e].type = mesh->elementInfo[e];
 
-    dfloat maxlength = max(gmaxvx-gminvx, max(gmaxvy-gminvy, gmaxvz-gminvz));
+    dfloat maxlength = mymax(gmaxvx-gminvx, mymax(gmaxvy-gminvy, gmaxvz-gminvz));
 
     // avoid stretching axes
     unsigned long long int ix = (cx-gminvx)*Nboxes/maxlength;
