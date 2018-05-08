@@ -37,7 +37,7 @@ void acousticsDopriStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
 
     acoustics->volumeKernel(mesh->Nelements, 
 		      mesh->o_vgeo, 
-		      acoustics->o_Dmatrices,
+		      mesh->o_Dmatrices,
 		      acoustics->o_rkq, 
 		      acoustics->o_rhsq);
 
@@ -106,7 +106,7 @@ void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOptions, const dfl
 
     acoustics->volumeKernel(mesh->Nelements, 
 		      mesh->o_vgeo, 
-		      acoustics->o_Dmatrices,
+		      mesh->o_Dmatrices,
 		      acoustics->o_q, 
 		      acoustics->o_rhsq);
     

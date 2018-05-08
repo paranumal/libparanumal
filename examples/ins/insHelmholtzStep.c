@@ -4,19 +4,18 @@
 void insHelmholtzStep(ins_t *ins, dfloat time){
   
   mesh_t *mesh = ins->mesh; 
-  solver_t *usolver = ins->uSolver; 
-  solver_t *vsolver = ins->vSolver; 
-  solver_t *wsolver = ins->wSolver; 
+  elliptic_t *usolver = ins->uSolver; 
+  elliptic_t *vsolver = ins->vSolver; 
+  elliptic_t *wsolver = ins->wSolver; 
   
   //dfloat t = tstep*ins->dt + ins->dt;
 
   dlong offset = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
-  int subcycling = (strstr(options,"SUBCYCLING")) ? 1:0;
 
   occaTimerTic(mesh->device,"HelmholtzRhsForcing"); 
   // compute all forcing i.e. f^(n+1) - grad(Pr)
   ins->helmholtzRhsForcingKernel(mesh->Nelements,
-                                 subcycling,
+                                 ins->Nsubsteps,
                                  mesh->o_vgeo,
                                  mesh->o_MM,
                                  ins->idt,
@@ -33,7 +32,7 @@ void insHelmholtzStep(ins_t *ins, dfloat time){
                                  ins->o_rhsW);
   occaTimerToc(mesh->device,"HelmholtzRhsForcing"); 
 
-  if (strstr(ins->vSolverOptions,"CONTINUOUS")) {
+  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ins->helmholtzRhsBCKernel(mesh->Nelements,
                               mesh->o_ggeo,
                               mesh->o_sgeo,
@@ -61,7 +60,7 @@ void insHelmholtzStep(ins_t *ins, dfloat time){
     if (ins->dim==3)
       if (wsolver->Nmasked) mesh->maskKernel(wsolver->Nmasked, wsolver->o_maskIds, ins->o_rhsW);
 
-  } else if (strstr(ins->vSolverOptions,"IPDG")) {
+  } else if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
 
     occaTimerTic(mesh->device,"HelmholtzRhsIpdg");   
     ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
@@ -85,12 +84,12 @@ void insHelmholtzStep(ins_t *ins, dfloat time){
 
   //copy current velocity fields as initial guess
   dlong Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
-  ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat));
-  ins->o_VH.copyFrom(ins->o_V,Ntotal*sizeof(dfloat));
+  ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,0*offset*sizeof(dfloat));
+  ins->o_VH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,1*offset*sizeof(dfloat));
   if (ins->dim==3)
-    ins->o_WH.copyFrom(ins->o_W,Ntotal*sizeof(dfloat));
+    ins->o_WH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,2*offset*sizeof(dfloat));
 
-  if (strstr (ins->vSolverOptions,"CONTINUOUS")) {
+  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, ins->o_UH);
     if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, ins->o_VH);
     if (ins->dim==3)
@@ -112,7 +111,7 @@ void insHelmholtzStep(ins_t *ins, dfloat time){
     occaTimerToc(mesh->device,"Uz-Solve");
   }
 
-  if (strstr(ins->vSolverOptions,"CONTINUOUS")) {
+  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ins->helmholtzAddBCKernel(mesh->Nelements,
                             time,
                             mesh->o_x,

@@ -7,7 +7,7 @@ int main(int argc, char **argv){
 
   if(argc!=2){
     printf("usage: ./insMain setupfile\n");
-    MPI_Finalize()
+    MPI_Finalize();
     exit(-1);
   }
 

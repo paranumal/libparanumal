@@ -382,6 +382,8 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nsgeo*sizeof(dfloat),
                           mesh->sgeo);
 
+    mesh->o_cubsgeo = mesh->o_sgeo; //dummy cubature geo factors
+
     mesh->o_ggeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nggeo*sizeof(dfloat),
         mesh->ggeo);
@@ -535,8 +537,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat),
           cubDWT);
 
-    mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
-    mesh->o_cubDWmatrices.copyFrom(mesh->o_cubDWT);
+    mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat), cubDWT);
 
     mesh->o_intx =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp*sizeof(dfloat),
@@ -550,6 +551,12 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp*sizeof(dfloat),
           mesh->intz);
 
+    mesh->o_intInterpT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
+    mesh->o_intInterpT.copyFrom(mesh->o_cubInterpT);
+
+    mesh->o_intLIFTT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
+    mesh->o_intLIFTT.copyFrom(mesh->o_cubProjectT);
+    
   } else {
     printf("Nverts = %d: unknown element type!\n",mesh->Nverts);
   }

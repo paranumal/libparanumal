@@ -7,7 +7,7 @@ void insUpdateStep(ins_t *ins, dfloat time){
 
   dlong offset = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 
-  if (strstr(ins->pSolverOptions,"IPDG")) {
+  if (ins->pOptions.compareArgs("DISCRETIZATION","IPDG")) {
     if(mesh->totalHaloPairs>0){
 
       ins->pressureHaloExtractKernel(mesh->Nelements,
@@ -38,7 +38,7 @@ void insUpdateStep(ins_t *ins, dfloat time){
                             ins->o_gradPI);
   occaTimerToc(mesh->device,"GradientVolume");
 
-  if (strstr(ins->pSolverOptions,"IPDG")) {
+  if (ins->pOptions.compareArgs("DISCRETIZATION","IPDG")) {
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
 
@@ -85,12 +85,12 @@ void insUpdateStep(ins_t *ins, dfloat time){
                               ins->c1,
                               ins->c2,
                               offset,
-                              ins->Uhat,
+                              ins->o_Uhat,
                               ins->o_PI,
                               ins->o_gradPI,
                               ins->o_U,
                               ins->o_NU,
                               ins->o_P,
-                              ins->gradP);
+                              ins->o_gradP);
   occaTimerToc(mesh->device,"UpdateUpdate");
 }

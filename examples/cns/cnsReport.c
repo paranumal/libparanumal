@@ -9,7 +9,7 @@ void cnsReport(cns_t *cns, dfloat time, setupAide &options){
 
   cns->vorticityKernel(mesh->Nelements,
                        mesh->o_vgeo,
-                       cns->o_Dmatrices,
+                       mesh->o_Dmatrices,
                        cns->o_q,
                        cns->o_Vort);
 
