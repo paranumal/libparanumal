@@ -293,7 +293,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
   // kernels from volume file
-  sprintf(fileName, DHOLMES "/examples/acoustics/okl/acousticsVolume%s.okl", suffix);
+  sprintf(fileName, DACOUSTICS "/okl/acousticsVolume%s.okl", suffix);
   sprintf(kernelName, "acousticsVolume%s", suffix);
 
   printf("fileName=[ %s ] \n", fileName);
@@ -302,28 +302,28 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   acoustics->volumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
   // kernels from surface file
-  sprintf(fileName, DHOLMES "/examples/acoustics/okl/acousticsSurface%s.okl", suffix);
+  sprintf(fileName, DACOUSTICS "/okl/acousticsSurface%s.okl", suffix);
   sprintf(kernelName, "acousticsSurface%s", suffix);
   
   acoustics->surfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
   // kernels from update file
   acoustics->updateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/examples/acoustics/okl/acousticsUpdate.okl",
+    mesh->device.buildKernelFromSource(DACOUSTICS "/okl/acousticsUpdate.okl",
 				       "acousticsUpdate",
 				       kernelInfo);
 
   acoustics->rkUpdateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/examples/acoustics/okl/acousticsUpdate.okl",
+    mesh->device.buildKernelFromSource(DACOUSTICS "/okl/acousticsUpdate.okl",
 				       "acousticsRkUpdate",
 				       kernelInfo);
   acoustics->rkStageKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/examples/acoustics/okl/acousticsUpdate.okl",
+    mesh->device.buildKernelFromSource(DACOUSTICS "/okl/acousticsUpdate.okl",
 				       "acousticsRkStage",
 				       kernelInfo);
 
   acoustics->rkErrorEstimateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/examples/acoustics/okl/acousticsUpdate.okl",
+    mesh->device.buildKernelFromSource(DACOUSTICS "/okl/acousticsUpdate.okl",
 				       "acousticsErrorEstimate",
 				       kernelInfo);
 
