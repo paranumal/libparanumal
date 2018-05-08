@@ -72,10 +72,12 @@ typedef struct {
   int N, Np;
   dfloat *r, *s, *t;    // coordinates of local nodes
   dfloat *Dr, *Ds, *Dt; // collocation differentiation matrices
+  dfloat *Dmatrices;
   dfloat *MM, *invMM;           // reference mass matrix
   dfloat *Srr,*Srs, *Srt; //element stiffness matrices
   dfloat *Ssr,*Sss, *Sst;
   dfloat *Str,*Sts, *Stt;
+  dfloat *Smatrices;
   int maxNnzPerRow;
   dfloat *x, *y, *z;    // coordinates of physical nodes
   
@@ -147,6 +149,7 @@ typedef struct {
   dfloat *cubDrW;    // 'r' weak differentiation matrix
   dfloat *cubDsW;    // 's' weak differentiation matrix
   dfloat *cubDtW;    // 't' weak differentiation matrix
+  dfloat *cubDWmatrices;
 
   dfloat *cubvgeo;  //volume geometric data at cubature points
   dfloat *cubsgeo;  //surface geometric data at cubature points
@@ -345,6 +348,7 @@ typedef struct {
 
   occa::memory o_Dr, o_Ds, o_Dt, o_LIFT, o_MM;
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
+  occa::memory o_Dmatrices;
   occa::memory o_FMMT;
   occa::memory o_sMT;
 
@@ -352,6 +356,7 @@ typedef struct {
   occa::memory o_SrrT, o_SrsT, o_SrtT; //element stiffness matrices
   occa::memory o_SsrT, o_SssT, o_SstT;
   occa::memory o_Srr, o_Srs, o_Srt, o_Sss, o_Sst, o_Stt; // for char4-based kernels
+  occa::memory o_Smatrices;
   occa::memory o_IndT, o_IndTchar;
   occa::memory o_India, o_Indja;
   occa::memory o_StrT, o_StsT, o_SttT;
@@ -370,6 +375,7 @@ typedef struct {
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty, o_intz;
   occa::memory o_cubDWT;
   occa::memory o_cubDrWT, o_cubDsWT, o_cubDtWT;
+  occa::memory o_cubDWmatrices;
   occa::memory o_cubInterpT, o_cubProjectT;
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
 

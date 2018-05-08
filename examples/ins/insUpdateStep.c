@@ -1,9 +1,9 @@
-#include "insTri2D.h"
+#include "ins.h"
 
-void insUpdateStepTri2D(ins_t *ins, int tstep, char *options){
+void insUpdateStep(ins_t *ins, dfloat time){
 
-  mesh2D *mesh = ins->mesh;
-  dfloat t = tstep*ins->dt + ins->dt;
+  mesh_t *mesh = ins->mesh;
+  //dfloat t = tstep*ins->dt + ins->dt;
 
   dlong offset = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 
@@ -46,7 +46,6 @@ void insUpdateStepTri2D(ins_t *ins, int tstep, char *options){
 
       ins->pressureHaloScatterKernel(mesh->Nelements,
                                       mesh->totalHaloPairs,
-                                      mesh->o_haloElementList,
                                       ins->o_PI,
                                       ins->o_pHaloBuffer);
     }
@@ -64,15 +63,9 @@ void insUpdateStepTri2D(ins_t *ins, int tstep, char *options){
                                 mesh->o_x,
                                 mesh->o_y,
                                 mesh->o_z,
-                                t,
-                                ins->dt,
-                                ins->c0,
-                                ins->c1,
-                                ins->c2,
-                                ins->index,
+                                time,
                                 offset,
                                 solverid, // pressure increment BCs
-                                ins->o_P,
                                 ins->o_PI,
                                 ins->o_gradPI);
     
@@ -80,9 +73,7 @@ void insUpdateStepTri2D(ins_t *ins, int tstep, char *options){
   }
 
   
-  // U <= U - dt/g0 * d(pressure increment)/dx
-  // V <= V - dt/g0 * d(pressure increment)/dy
-
+  // U <= U - dt/g0 * grad(pressure increment)
   occaTimerTic(mesh->device,"UpdateUpdate");
   ins->updateUpdateKernel(mesh->Nelements,
                               ins->dt,
@@ -102,6 +93,4 @@ void insUpdateStepTri2D(ins_t *ins, int tstep, char *options){
                               ins->o_P,
                               ins->gradP);
   occaTimerToc(mesh->device,"UpdateUpdate");
-
-  ins->index = (ins->index+1)%3; //hard coded for 3 stages
 }

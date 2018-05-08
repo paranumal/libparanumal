@@ -5,6 +5,8 @@ void insError(ins_t *ins, dfloat time){
 
   mesh_t *mesh = ins->mesh;
 
+  dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+
   dfloat maxU = 0, minU = 1e9;
   dfloat maxV = 0, minV = 1e9;
   dfloat maxW = 0, minW = 1e9;
@@ -16,16 +18,17 @@ void insError(ins_t *ins, dfloat time){
       dfloat y = mesh->y[id];
       dfloat z = mesh->z[id];
 
-      id += ins->index*(mesh->Np)*(mesh->Nelements+mesh->totalHaloPairs);
-      maxU = mymax(maxU, fabs(ins->U[id]));
-      minU = mymin(minU, fabs(ins->U[id]));
+      maxU = mymax(maxU, fabs(ins->U[id+0*offset]));
+      minU = mymin(minU, fabs(ins->U[id+0*offset]));
       
-      maxV = mymax(maxV, fabs(ins->V[id]));
-      minV = mymin(minV, fabs(ins->V[id]));
+      maxV = mymax(maxV, fabs(ins->U[id+1*offset]));
+      minV = mymin(minV, fabs(ins->U[id+1*offset]));
       
-      maxW = mymax(maxW, fabs(ins->W[id]));
-      minW = mymin(minW, fabs(ins->W[id]));  
-      //
+      if (ins->dim==3) {
+        maxW = mymax(maxW, fabs(ins->U[id+3*offset]));
+        minW = mymin(minW, fabs(ins->U[id+3*offset]));  
+      }
+
       maxP = mymax(maxP, fabs(ins->P[id]));
       minP = mymin(minP, fabs(ins->P[id]));
     }
@@ -51,8 +54,13 @@ void insError(ins_t *ins, dfloat time){
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if(rank==0)
-    printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minW: %g maxW: %g minP: %g maxP: %g\n", 
+    if (ins->dim==3) {
+      printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minW: %g maxW: %g minP: %g maxP: %g\n", 
          (int)(time/ins->dt), time, gMinU, gMaxU, gMinV, gMaxV, gMinW, gMaxW, gMinP, gMaxP );
+    } else {
+      printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minP: %g maxP: %g\n", 
+         (int)(time/ins->dt), time, gMinU, gMaxU, gMinV, gMaxV, gMinP, gMaxP );
+    }
 
   if( isnan(gMinU) || isnan(gMaxU) || 
       isnan(gMinV) || isnan(gMaxV) || 

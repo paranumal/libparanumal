@@ -38,7 +38,7 @@ int main(int argc, char **argv){
 
   ins_t *ins = insSetup(mesh,options);
   
-  insRunTri2D(ins);
+  insRun(ins);
 
   // close down MPI
   MPI_Finalize();

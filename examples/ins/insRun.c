@@ -1,28 +1,16 @@
-#include "insTri2D.h"
+#include "ins.h"
 
-void insRunTri2D(ins_t *ins, char *options){
+void insRun(ins_t *ins){
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  mesh2D *mesh = ins->mesh;
+  mesh_t *mesh = ins->mesh;
   
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"INS");
 
-
-  ins->adv_time  = 0.f;
-  ins->velx_time = 0.f;
-  ins->vely_time = 0.f;
-  ins->pr_time   = 0.f;
-  ins->ins_time  = 0.f;
-
-  // if(ins->Nsubsteps)
-  // ins->NtimeSteps = 160/ins->Nsubsteps;
-  // else
-  //ins->NtimeSteps=32000;
-  
   int NstokesSteps = 0;
   dfloat oldDt = ins->dt;
   ins->dt *= 100;
@@ -64,27 +52,26 @@ void insRunTri2D(ins_t *ins, char *options){
     //   ins->ig0 = 1.0/ins->g0; 
     }
 
-    // if(strstr(options,"ALGEBRAIC")){
-    if(strstr(options,"SUBCYCLING")) {
+    if(ins->Nsubsteps) {
       occaTimerTic(mesh->device,"AdvectionSubStep");
-      insAdvectionSubCycleStepTri2D(ins, 0, options);
+      insAdvectionSubCycleStep(ins, 0.0);
       occaTimerToc(mesh->device,"AdvectionSubStep");
     } else {
       occaTimerTic(mesh->device,"AdvectionStep");
-      insAdvectionStepTri2D(ins, 0, options);
+      insAdvectionStep(ins, 0.0);
       occaTimerToc(mesh->device,"AdvectionStep");
     }
 
     occaTimerTic(mesh->device,"HelmholtzStep");
-    insHelmholtzStepTri2D(ins, 0, options); 
+    insHelmholtzStep(ins, 0.0); 
     occaTimerToc(mesh->device,"HelmholtzStep");
 
     occaTimerTic(mesh->device,"PoissonStep");
-    insPoissonStepTri2D(ins, 0, options);
+    insPoissonStep(ins, 0.0);
     occaTimerToc(mesh->device,"PoissonStep");
 
     occaTimerTic(mesh->device,"UpdateStep");
-    insUpdateStepTri2D(ins, 0, options);
+    insUpdateStep(ins, 0.0);
     occaTimerToc(mesh->device,"UpdateStep"); 
 
     if (rank==0) printf("\rSstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
@@ -94,10 +81,7 @@ void insRunTri2D(ins_t *ins, char *options){
 
   ins->dt = oldDt;
   // Write Initial Data
-  insReportTri2D(ins, 0, options);
-
-
-  dfloat ins_start = MPI_Wtime();
+  insReport(ins, 0);
 
   for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
     if(tstep<1){
@@ -135,93 +119,49 @@ void insRunTri2D(ins_t *ins, char *options){
     //   ins->ig0 = 1.0/ins->g0; 
     }
     
-    dfloat adv_start = MPI_Wtime();
+    dfloat time = tstep*ins->dt;
+
     // if(strstr(options,"ALGEBRAIC")){
-    if(strstr(options,"SUBCYCLING")) {
+    if(ins->Nsubsteps) {
       occaTimerTic(mesh->device,"AdvectionSubStep");
-      insAdvectionSubCycleStepTri2D(ins, tstep, options);
+      insAdvectionSubCycleStep(ins, time);
       occaTimerToc(mesh->device,"AdvectionSubStep");
     } else {
       occaTimerTic(mesh->device,"AdvectionStep");
-      insAdvectionStepTri2D(ins, tstep, options);
+      insAdvectionStep(ins, time);
       occaTimerToc(mesh->device,"AdvectionStep");
     } 
-    dfloat adv_end = MPI_Wtime();
-    ins->adv_time    += (adv_end - adv_start); 
-
-
-
 
     occaTimerTic(mesh->device,"HelmholtzStep");
-    insHelmholtzStepTri2D(ins, tstep, options); 
+    insHelmholtzStep(ins, time+ins->dt); 
     occaTimerToc(mesh->device,"HelmholtzStep");
 
     occaTimerTic(mesh->device,"PoissonStep");
-    insPoissonStepTri2D(ins, tstep, options);
+    insPoissonStep(ins, time+ins->dt);
     occaTimerToc(mesh->device,"PoissonStep");
 
     occaTimerTic(mesh->device,"UpdateStep");
-    insUpdateStepTri2D(ins, tstep, options);
+    insUpdateStep(ins, time+ins->dt);
     occaTimerToc(mesh->device,"UpdateStep"); 
 
     occaTimerTic(mesh->device,"Report");
-    if(strstr(options, "VTU")){
-      if(((tstep+1)%(ins->errorStep))==0){
-        if (rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
-        insReportTri2D(ins, tstep+1,options);
-      }
+    if(((tstep+1)%(ins->outputStep))==0){
+      if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
+      if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
+      insReport(ins, tstep+1);
     }
 
-    if(((tstep+1)%(ins->errorStep))==0){
-      int Ns = 0;
-
-      if(strstr(options,"SUBCYCLING"))
-        Ns = 0;
-      else
-      Ns = ins->Nsubsteps;
-
-       char fname[BUFSIZ];
-       sprintf(fname, "IterationNumbers_%04d_%04d.dat",mesh->N, Ns);
-
-       FILE *fp; fp = fopen(fname, "a");
-       fprintf(fp, "%.4e %2d %2d %2d\n", (tstep+1)*ins->dt, ins->NiterU, ins->NiterV, ins->NiterP);
-       fclose(fp);
-      }
-
-
-    if (rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
+    if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
+    if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
     
     occaTimerToc(mesh->device,"Report");
   }
-  
-  dfloat ins_end = MPI_Wtime();
-  ins->ins_time = ins_end -ins_start; 
-
   occaTimerToc(mesh->device,"INS");
-
-
-  char fname[BUFSIZ];
-  sprintf(fname, "TimerResult.dat");
-  
-
-  int Ns = 0;
-   if(strstr(options,"SUBCYCLING"))
-      Ns = 0;
-   else
-     Ns = ins->Nsubsteps;
-  FILE *fp; fp = fopen(fname, "a");
-  fprintf(fp, "%2d %2d %.4e %.4e %.4e %.4e %.4e\n", mesh->N,Ns,ins->adv_time, ins->velx_time, 
-                                   ins->vely_time, ins->pr_time,ins->ins_time);
-  fclose(fp);
-
-
-
 
 
   dfloat finalTime = ins->NtimeSteps*ins->dt;
   printf("\n");
-  insReportTri2D(ins, ins->NtimeSteps,options);
-  //insErrorNorms2D(ins, finalTime, options);
+  insReport(ins, ins->NtimeSteps);
   
   if(rank==0) occa::printTimer();
 }
