@@ -396,9 +396,9 @@ kernel void insHelmholtzRhsBCTri2D(const dlong Nelements,
         occaUnroll(p_Np)
           for (int k=0;k<p_Np;k++) {
             const dfloat MMn = MM[n+k*p_Np];
-            const dfloat Srr = Smatrices[n+k*p_Np+0*p_Np*p_Np]
-            const dfloat Srs = Smatrices[n+k*p_Np+1*p_Np*p_Np]
-            const dfloat Sss = Smatrices[n+k*p_Np+2*p_Np*p_Np]
+            const dfloat Srr = Smatrices[n+k*p_Np+0*p_Np*p_Np];
+            const dfloat Srs = Smatrices[n+k*p_Np+1*p_Np*p_Np];
+            const dfloat Sss = Smatrices[n+k*p_Np+2*p_Np*p_Np];
             MMu += MMn*s_u[k];
             urr += Srr*s_u[k];
             urs += Srs*s_u[k];

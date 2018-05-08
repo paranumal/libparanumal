@@ -245,39 +245,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     acoustics->recvBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
   }
 
-  // allocate unified derivative matrices
-  dfloat *DT;
-
-  if(acoustics->elementType == HEXAHEDRA || acoustics->elementType == QUADRILATERALS){
-    acoustics->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-  }
-  else if(acoustics->elementType == TRIANGLES){
-
-    // build Dr, Ds transposes
-    dfloat *DrsT = (dfloat*) calloc(2*mesh->Np*mesh->Np, sizeof(dfloat));
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){
-        DrsT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
-        DrsT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
-      }
-    }
-   
-    acoustics->o_Dmatrices = mesh->device.malloc(2*mesh->Np*mesh->Np*sizeof(dfloat), DrsT);
-  }
-  else{
-    printf("BUILDING TET DMATRICES\n");
-    // build Dr, Ds transposes
-    dfloat *DrstT = (dfloat*) calloc(3*mesh->Np*mesh->Np, sizeof(dfloat));
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){
-        DrstT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
-        DrstT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
-	DrstT[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Dt[n*mesh->Np+m];
-      }
-    }
-    acoustics->o_Dmatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), DrstT);
-  }
-  
   //  p_RT, p_rbar, p_ubar, p_vbar
   // p_half, p_two, p_third, p_Nstresses
   

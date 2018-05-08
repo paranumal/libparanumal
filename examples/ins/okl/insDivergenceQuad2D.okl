@@ -80,8 +80,8 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
   const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
   const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
                                                                         \
-  const dfloat uM = U[idM+0*offset], vM = V[idM+1*offset];              \
-        dfloat uP = U[idP+0*offset], vP = V[idP+1*offset];              \
+  const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset];              \
+        dfloat uP = U[idP+0*offset], vP = U[idP+1*offset];              \
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \

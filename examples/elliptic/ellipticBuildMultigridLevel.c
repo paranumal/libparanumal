@@ -102,6 +102,15 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       }
     }
 
+    // build Dr, Ds transposes
+    dfloat *DrsT = (dfloat*) calloc(2*mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        DrsT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
+        DrsT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
+      }
+    }
+
     dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
     for(int n=0;n<mesh->Np;++n){
       for(int m=0;m<mesh->Nfaces*mesh->Nfp;++m){
@@ -137,6 +146,15 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
         SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
         SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
         SssT[m+n*mesh->Np] = mesh->Sss[n+m*mesh->Np];
+      }
+    }
+
+    dfloat *ST = (dfloat*) calloc(3*mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        ST[n+m*mesh->Np+0*mesh->Np*mesh->Np] = mesh->Srr[n*mesh->Np+m];
+        ST[n+m*mesh->Np+1*mesh->Np*mesh->Np] = mesh->Srs[n*mesh->Np+m]+mesh->Ssr[n*mesh->Np+m];
+        ST[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Sss[n*mesh->Np+m];
       }
     }
 
@@ -208,6 +226,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
               DsT);
 
+    mesh->o_Dmatrices = mesh->device.malloc(2*mesh->Np*mesh->Np*sizeof(dfloat), DrsT);
+
     mesh->o_LIFT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
         mesh->LIFT);
@@ -223,7 +243,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->o_SsrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SsrT);
     mesh->o_SssT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SssT);
 
-    
+    mesh->o_Smatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), ST);
 
     mesh->o_D1ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D1ids);
     mesh->o_D2ids = mesh->device.malloc(mesh->Np*3*sizeof(int),D2ids);
@@ -260,7 +280,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     }
 
     mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-    
+    mesh->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+    mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
+
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
         mesh->vgeo);
@@ -282,6 +304,16 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
         DrT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
         DsT[n+m*mesh->Np] = mesh->Ds[n*mesh->Np+m];
         DtT[n+m*mesh->Np] = mesh->Dt[n*mesh->Np+m];
+      }
+    }
+
+    // build Dr, Ds transposes
+    dfloat *DrstT = (dfloat*) calloc(3*mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        DrstT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
+        DrstT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
+        DrstT[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Dt[n*mesh->Np+m];
       }
     }
 
@@ -338,6 +370,17 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
         SttT[m+n*mesh->Np] = mesh->Stt[n+m*mesh->Np];
       }
     }
+    dfloat *ST = (dfloat*) calloc(6*mesh->Np*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->Np;++n){
+      for(int m=0;m<mesh->Np;++m){
+        ST[n+m*mesh->Np+0*mesh->Np*mesh->Np] = mesh->Srr[n*mesh->Np+m];
+        ST[n+m*mesh->Np+1*mesh->Np*mesh->Np] = mesh->Srs[n*mesh->Np+m]+mesh->Ssr[n*mesh->Np+m];
+        ST[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Srt[n*mesh->Np+m]+mesh->Str[n*mesh->Np+m];
+        ST[n+m*mesh->Np+3*mesh->Np*mesh->Np] = mesh->Sss[n*mesh->Np+m];
+        ST[n+m*mesh->Np+4*mesh->Np*mesh->Np] = mesh->Sst[n*mesh->Np+m]+mesh->Sts[n*mesh->Np+m];
+        ST[n+m*mesh->Np+5*mesh->Np*mesh->Np] = mesh->Stt[n*mesh->Np+m];
+      }
+    }
 
     mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
              mesh->Dr);
@@ -357,6 +400,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->o_DtT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
               DtT);
 
+    mesh->o_Dmatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), DrstT);
+
     mesh->o_LIFT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
         mesh->LIFT);
@@ -374,6 +419,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->o_StrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), StrT);
     mesh->o_StsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), StsT);
     mesh->o_SttT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SttT);
+
+    mesh->o_Smatrices = mesh->device.malloc(6*mesh->Np*mesh->Np*sizeof(dfloat), ST);
 
     free(DrT); free(DsT); free(DtT); free(LIFTT);
     free(SrrT); free(SrsT); free(SrtT); 
@@ -394,7 +441,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     }
 
     mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-    
+    mesh->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+    mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
+
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
         mesh->vgeo);
@@ -448,60 +497,6 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
       mesh->vmapP);
 
-
-  // allocate unified derivative matrices
-  if(elliptic->elementType == HEXAHEDRA || elliptic->elementType == QUADRILATERALS){
-    elliptic->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-    elliptic->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
-  } else if(elliptic->elementType == TRIANGLES){
-    // build Dr, Ds transposes
-    dfloat *DrsT = (dfloat*) calloc(2*mesh->Np*mesh->Np, sizeof(dfloat));
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){
-        DrsT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
-        DrsT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
-      }
-    }
-
-    dfloat *ST = (dfloat*) calloc(3*mesh->Np*mesh->Np, sizeof(dfloat));
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){
-        ST[n+m*mesh->Np+0*mesh->Np*mesh->Np] = mesh->Srr[n*mesh->Np+m];
-        ST[n+m*mesh->Np+1*mesh->Np*mesh->Np] = mesh->Srs[n*mesh->Np+m]+mesh->Ssr[n*mesh->Np+m];
-        ST[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Sss[n*mesh->Np+m];
-      }
-    }
-   
-    elliptic->o_Dmatrices = mesh->device.malloc(2*mesh->Np*mesh->Np*sizeof(dfloat), DrsT);
-    elliptic->o_Smatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), ST);
-    free(DrsT); free(ST);
-  } else {
-    // build Dr, Ds transposes
-    dfloat *DrstT = (dfloat*) calloc(3*mesh->Np*mesh->Np, sizeof(dfloat));
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){
-        DrstT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
-        DrstT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
-        DrstT[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Dt[n*mesh->Np+m];
-      }
-    }
-
-    dfloat *ST = (dfloat*) calloc(6*mesh->Np*mesh->Np, sizeof(dfloat));
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){
-        ST[n+m*mesh->Np+0*mesh->Np*mesh->Np] = mesh->Srr[n*mesh->Np+m];
-        ST[n+m*mesh->Np+1*mesh->Np*mesh->Np] = mesh->Srs[n*mesh->Np+m]+mesh->Ssr[n*mesh->Np+m];
-        ST[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Srt[n*mesh->Np+m]+mesh->Str[n*mesh->Np+m];
-        ST[n+m*mesh->Np+3*mesh->Np*mesh->Np] = mesh->Sss[n*mesh->Np+m];
-        ST[n+m*mesh->Np+4*mesh->Np*mesh->Np] = mesh->Sst[n*mesh->Np+m]+mesh->Sts[n*mesh->Np+m];
-        ST[n+m*mesh->Np+5*mesh->Np*mesh->Np] = mesh->Stt[n*mesh->Np+m];
-      }
-    }
-
-    elliptic->o_Dmatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), DrstT);
-    elliptic->o_Smatrices = mesh->device.malloc(6*mesh->Np*mesh->Np*sizeof(dfloat), ST);
-    free(DrstT); free(ST);
-  }
   
   //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
   hlong localElements = (hlong) mesh->Nelements;

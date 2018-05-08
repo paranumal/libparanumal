@@ -32,6 +32,16 @@ void insAdvectionSubCycleStep(ins_t *ins, dfloat time){
                           ins->tRecvBuffer);
   }
 
+  // Compute Volume Contribution for Pressure
+  occaTimerTic(mesh->device,"GradientVolume");
+  ins->gradientVolumeKernel(mesh->Nelements,
+                            mesh->o_vgeo,
+                            mesh->o_Dmatrices,
+                            offset,
+                            ins->o_P,
+                            ins->o_gradP);
+  occaTimerToc(mesh->device,"GradientVolume");
+
   // COMPLETE HALO EXCHANGE
   if(mesh->totalHaloPairs>0){
 
@@ -187,8 +197,11 @@ void insAdvectionSubCycleStep(ins_t *ins, dfloat time){
           if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
             ins->subCycleCubatureSurfaceKernel(mesh->Nelements,
                                                 mesh->o_sgeo,
+                                                mesh->o_cubsgeo,
                                                 mesh->o_intInterpT,
                                                 mesh->o_intLIFTT,
+                                                mesh->o_cubInterpT,
+                                                mesh->o_cubProjectT,
                                                 mesh->o_vmapM,
                                                 mesh->o_vmapP,
                                                 mesh->o_EToB,
@@ -233,20 +246,11 @@ void insAdvectionSubCycleStep(ins_t *ins, dfloat time){
     }
   }
 
-  dfloat tp1 = (tstep+1)*ins->dt;
-
-  // Compute Volume Contribution for Pressure
-  occaTimerTic(mesh->device,"GradientVolume");
-  ins->gradientVolumeKernel(mesh->Nelements,
-                            mesh->o_vgeo,
-                            mesh->o_Dmatrices,
-                            offset,
-                            ins->o_P,
-                            ins->o_gradP);
-  occaTimerToc(mesh->device,"GradientVolume");
+  time += ins->dt;
  
-  if (strstr(ins->pSolverOptions,"IPDG")) {
+  if (ins->pOptions.compareArgs("DISCRETIZATION","IPDG")) {
     const int solverid = 0; // Pressure Solve
+
     occaTimerTic(mesh->device,"GradientSurface");
     // Compute Surface Conribution
     ins->gradientSurfaceKernel(mesh->Nelements,
@@ -258,13 +262,9 @@ void insAdvectionSubCycleStep(ins_t *ins, dfloat time){
                                mesh->o_x,
                                mesh->o_y,
                                mesh->o_z,
-                               tp1,
-                               ins->dt,
-                               ins->c0, ins->c1, ins->c2,
-                               ins->index,
-                               mesh->Nelements+mesh->totalHaloPairs,
+                               time,
+                               offset,
                                solverid, // pressure BCs
-                               ins->o_PI, //not used
                                ins->o_P,
                                ins->o_gradP);
     occaTimerToc(mesh->device,"GradientSurface");

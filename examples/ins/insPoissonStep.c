@@ -3,9 +3,10 @@
 // complete a time step using LSERK4
 void insPoissonStep(ins_t *ins, dfloat time){
 
-  mesh2D *mesh = ins->mesh;
-  solver_t *solver = ins->pSolver;
-  dfloat time = tstep*ins->dt + ins->dt;
+  mesh_t *mesh = ins->mesh;
+  elliptic_t *solver = ins->pSolver;
+  
+  //dfloat time = tstep*ins->dt + ins->dt;
 
   dlong offset  = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
 
@@ -113,7 +114,7 @@ void insPoissonStep(ins_t *ins, dfloat time){
   #if 1 // if time dependent BC
   //
   const int pressure_solve = 0; // ALGEBRAIC SPLITTING 
-  if (strstr(ins->pSolverOptions,"CONTINUOUS")) {
+  if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ins->poissonRhsBCKernel(mesh->Nelements,
                             pressure_solve,
                             mesh->o_ggeo,
@@ -130,7 +131,7 @@ void insPoissonStep(ins_t *ins, dfloat time){
                             mesh->o_z,
                             ins->o_PmapB,
                             ins->o_rhsP);
-  } else if (strstr(ins->pSolverOptions,"IPDG")) {
+  } else if (ins->pOptions.compareArgs("DISCRETIZATION","IPDG")) {
     occaTimerTic(mesh->device,"PoissonRhsIpdg"); 
     ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                   pressure_solve,
@@ -155,7 +156,7 @@ void insPoissonStep(ins_t *ins, dfloat time){
   //keep current PI as the initial guess?
 
   // gather-scatter
-  if(strstr(ins->pSolverOptions, "CONTINUOUS")){
+  if(ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
     ellipticParallelGatherScatter(mesh, mesh->ogs, ins->o_rhsP, dfloatString, "add");  
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsP);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_PI);
@@ -165,7 +166,7 @@ void insPoissonStep(ins_t *ins, dfloat time){
   ins->NiterP = ellipticSolve(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI); 
   occaTimerToc(mesh->device,"Pr Solve"); 
 
-  if (strstr(ins->pSolverOptions,"CONTINUOUS")) {
+  if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ins->poissonAddBCKernel(mesh->Nelements,
                             pressure_solve,
                             time,

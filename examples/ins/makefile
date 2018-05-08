@@ -109,9 +109,12 @@ LOBJS = \
 ../../src/meshSurfaceGeometricFactorsHex3D.o \
 ../../src/meshVTU2D.o \
 ../../src/meshVTU3D.o \
+../../src/matrixInverse.o \
+../../src/matrixConditionNumber.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o\
 ../../src/hash.o\
+../../src/setupAide.o \
 ../../src/timer.o\
 ../../src/readArray.o
 

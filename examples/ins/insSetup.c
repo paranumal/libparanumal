@@ -79,15 +79,15 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->rhsP  = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
 
   //additional field storage
-  ins->Uhat     = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->Uhat   = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->NU     = (dfloat*) calloc(ins->NVfields*Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->gradP  = (dfloat*) calloc(Nstages*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->PI     = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
 
-  ins->Vort     = (dfloat*) calloc(ins->dim*mesh->Nelements*mesh->Np,sizeof(dfloat));
-  ins->Div     = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+  ins->Vort = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+  ins->Div  = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
 
-  options.getArgs("SUCYCLING STEPS",ins->Nsubsteps);
+  options.getArgs("SUBCYCLING STEPS",ins->Nsubsteps);
 
   if(ins->Nsubsteps){
     ins->Ud   = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
@@ -169,7 +169,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       dfloat t = 0;
       dfloat uxn = ins->U[id+0*offset];
       dfloat uyn = ins->U[id+1*offset];
-      dfloat uzn;
+      dfloat uzn = 0.0;
       if (ins->dim==3) uzn = ins->U[id+2*offset];
 
 
@@ -194,10 +194,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(ins->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
-  options.getArgs("FINAL TIME", mesh->finalTime);
-  mesh->NtimeSteps = mesh->finalTime/mesh->dt;
+  options.getArgs("FINAL TIME", ins->finalTime);
+  ins->NtimeSteps = ins->finalTime/ins->dt;
   if (options.compareArgs("TIME INTEGRATOR","LSERK4")){
-    mesh->dt = mesh->finalTime/mesh->NtimeSteps;
+    ins->dt = ins->finalTime/ins->NtimeSteps;
   }
 
   if(ins->Nsubsteps){
@@ -310,15 +310,15 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ellipticSolveSetup(ins->wSolver, ins->lambda, kernelInfoV);  
   }
   
-  if (rank==0) printf("==================PRESSURE SOLVE SETUP========================\n");
+  if (rank==0) printf("==================PRESSURE SOLVE SETUP=========================\n");
   ins->pSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
   ins->pSolver->mesh = mesh;
-  ins->pSolver->options = ins->vOptions;
+  ins->pSolver->options = ins->pOptions;
   ins->pSolver->dim = ins->dim;
   ins->pSolver->elementType = ins->elementType;
   ins->pSolver->BCType = (int*) calloc(7,sizeof(int));
   memcpy(ins->pSolver->BCType,pBCType,7*sizeof(int));
-  ellipticSolveSetup(ins->pSolver, 0.0, kernelInfoV);
+  ellipticSolveSetup(ins->pSolver, 0.0, kernelInfoP);
 
 
   //make node-wise boundary flags

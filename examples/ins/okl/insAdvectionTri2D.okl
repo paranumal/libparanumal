@@ -265,7 +265,7 @@ kernel void insAdvectionCubatureVolumeTri2D(const dlong Nelements,
           const dfloat nv = drdx*df12dr + dsdx*df12ds + drdy*df22dr + dsdy*df22ds;
 
           // Update
-          const dlong id = (e+offset)*p_Np+n;
+          const dlong id = e*p_Np+n;
           NU[id+0*offset] = -nu; // note  change in sign
           NU[id+1*offset] = -nv;           
         }
@@ -317,7 +317,7 @@ kernel void insAdvectionCubatureSurfaceTri2D(const dlong Nelements,
           s_UM[es][n] = U[idM+0*offset];
           s_VM[es][n] = U[idM+1*offset];
           s_UP[es][n] = U[idP+0*offset];
-          s_VP[es][n] = V[idP+1*offset];
+          s_VP[es][n] = U[idP+1*offset];
         }
       }
     }
@@ -382,7 +382,7 @@ kernel void insAdvectionCubatureSurfaceTri2D(const dlong Nelements,
       for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
         const dlong e = eo + es;
         if(e<Nelements && n<p_Np ){
-          const dlong id = n + p_Np*(e+offset);
+          const dlong id = n + p_Np*e;
           // prefetch volume rhs
           dfloat NUn = NU[id+0*offset];
           dfloat NVn = NU[id+1*offset];
