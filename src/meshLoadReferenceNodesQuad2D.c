@@ -83,6 +83,7 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
 
   readIntArray   (fp, "SEMFEM reference mesh", &(mesh->FEMEToV), &Nrows, &Ncols);
   mesh->NelFEM = Nrows;
+  mesh->NpFEM = mesh->Np;
 
   fclose(fp);
 

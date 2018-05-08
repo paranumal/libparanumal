@@ -3,14 +3,14 @@
 csr *strong_graph(csr *A, dfloat threshold);
 bool customLess(int smax, dfloat rmax, hlong imax, int s, dfloat r, hlong i);
 hlong *form_aggregates(agmgLevel *level, csr *C);
-void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, const char *options);
+void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, setupAide options);
 csr *construct_interpolator(agmgLevel *level, hlong *FineToCoarse, dfloat **nullCoarseA);
 csr *transpose(agmgLevel* level, csr *A, hlong *globalRowStarts, hlong *globalColStarts);
 csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P);
-void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA, const char *options);
+void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA, setupAide options);
 
 
-void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, hlong *globalRowStarts, const char* options){
+void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, hlong *globalRowStarts, setupAide options){
 
   int rank, size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -40,7 +40,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, hlong *globalRowSt
 
   
   SmoothType smoothType;
-  if (strstr(options,"CHEBYSHEV")) {
+  if (options.compareArgs("PARALMOND SMOOTHER", "CHEBYSHEV")) {
     smoothType = CHEBYSHEV;
   } else { //default to DAMPED_JACOBI
     smoothType = DAMPED_JACOBI;
@@ -235,7 +235,7 @@ void parAlmondReport(parAlmond_t *parAlmond) {
 
 
 //create coarsened problem
-void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA, const char* options){
+void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat **nullCoarseA, setupAide options){
 
   // establish the graph of strong connections
   level->threshold = 0.5;
@@ -731,7 +731,7 @@ int compareOrigin(const void *a, const void *b){
   return 0;
 };
 
-void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, const char* options) {
+void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, setupAide options) {
   // MPI info
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -743,7 +743,7 @@ void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, const char* op
   
   //Keep the current partitioning for STRONGNODES. 
   // The rank that had the strong node for each aggregate owns the aggregate
-  if (strstr(options,"STRONGNODES")) return;
+  if (options.compareArgs("PARALMOND PARTITION", "STRONGNODES")) return;
 
   //populate aggregate array
   hlong gNumAggs = level->globalAggStarts[size]; //total number of aggregates
@@ -828,7 +828,7 @@ void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, const char* op
   aggStarts[NumUniqueAggs] = recvNtotal;
 
 
-  if (strstr(options,"DISTRIBUTED")) { //rank that contributes most to the aggregate ownes it
+  if (options.compareArgs("PARALMOND PARTITION", "DISTRIBUTED")) { //rank that contributes most to the aggregate ownes it
     //use a random dfloat for each rank to break ties.
     dfloat rand = (dfloat) drand48();
     dfloat *gRands = (dfloat *) calloc(size,sizeof(dfloat));
