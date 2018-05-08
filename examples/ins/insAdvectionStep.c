@@ -30,10 +30,10 @@ void insAdvectionStep(ins_t *ins, dfloat time){
 
   occaTimerTic(mesh->device,"AdvectionVolume");
   // Compute Volume Contribution
-  if(strstr(options, "CUBATURE")){
+  if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
     ins->advectionCubatureVolumeKernel(mesh->Nelements,
                                        mesh->o_vgeo,
-                                       mesh->o_cubDmatrices,
+                                       mesh->o_cubDWmatrices,
                                        mesh->o_cubInterpT,
                                        mesh->o_cubProjectT,
                                        offset,
@@ -77,7 +77,7 @@ void insAdvectionStep(ins_t *ins, dfloat time){
   }
 
   occaTimerTic(mesh->device,"AdvectionSurface");
-  if(strstr(options, "CUBATURE")){
+  if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
     ins->advectionCubatureSurfaceKernel(mesh->Nelements,
                                         mesh->o_sgeo,
                                         mesh->o_cubsgeo,
@@ -116,7 +116,7 @@ void insAdvectionStep(ins_t *ins, dfloat time){
    time += ins->dt;
   
 
-  if (strstr(ins->pSolverOptions,"IPDG")) {
+  if (ins->pOptions.compareArgs("DISCRETIZATION","IPDG")) {
     const int solverid = 0; // Pressure Solve, use BCs for pressure
 
     occaTimerTic(mesh->device,"GradientSurface");

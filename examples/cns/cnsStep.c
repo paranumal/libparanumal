@@ -38,7 +38,7 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     // now compute viscous stresses
     cns->stressesVolumeKernel(mesh->Nelements, 
 			      mesh->o_vgeo, 
-			      cns->o_Dmatrices,
+			      mesh->o_Dmatrices,
 			      cns->mu, 
 			      cns->o_rkq, 
 			      cns->o_viscousStresses);
@@ -85,7 +85,7 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
 				cns->advSwitch, 
 				mesh->o_vgeo,
 				mesh->o_cubvgeo, 
-				cns->o_cubDWmatrices,
+				mesh->o_cubDWmatrices,
 				mesh->o_cubInterpT,
 				mesh->o_cubProjectT,
 				cns->o_viscousStresses, 
@@ -95,7 +95,7 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
       cns->volumeKernel(mesh->Nelements, 
 			cns->advSwitch, 
 			mesh->o_vgeo, 
-			cns->o_Dmatrices,
+			mesh->o_Dmatrices,
 			cns->o_viscousStresses, 
 			cns->o_rkq, 
 			cns->o_rhsq);
@@ -193,7 +193,7 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     // now compute viscous stresses
     cns->stressesVolumeKernel(mesh->Nelements, 
 			      mesh->o_vgeo, 
-			      cns->o_Dmatrices, 
+			      mesh->o_Dmatrices, 
 			      cns->mu, 
 			      cns->o_q, 
 			      cns->o_viscousStresses);
@@ -241,7 +241,7 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
 				advSwitch, 
 				mesh->o_vgeo,
 				mesh->o_cubvgeo, 
-				cns->o_cubDWmatrices,
+				mesh->o_cubDWmatrices,
 				mesh->o_cubInterpT,
 				mesh->o_cubProjectT,
 				cns->o_viscousStresses, 
@@ -251,7 +251,7 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
       cns->volumeKernel(mesh->Nelements, 
 			advSwitch, 
 			mesh->o_vgeo, 
-			cns->o_Dmatrices,
+			mesh->o_Dmatrices,
 			cns->o_viscousStresses, 
 			cns->o_q, 
 			cns->o_rhsq);

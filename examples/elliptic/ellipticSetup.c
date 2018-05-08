@@ -69,60 +69,6 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelI
   else
     meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
-  // allocate unified derivative matrices
-  if(elliptic->elementType == HEXAHEDRA || elliptic->elementType == QUADRILATERALS){
-    elliptic->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-    elliptic->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
-  } else if(elliptic->elementType == TRIANGLES){
-    // build Dr, Ds transposes
-    dfloat *DrsT = (dfloat*) calloc(2*mesh->Np*mesh->Np, sizeof(dfloat));
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){
-        DrsT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
-        DrsT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
-      }
-    }
-
-    dfloat *ST = (dfloat*) calloc(3*mesh->Np*mesh->Np, sizeof(dfloat));
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){
-        ST[n+m*mesh->Np+0*mesh->Np*mesh->Np] = mesh->Srr[n*mesh->Np+m];
-        ST[n+m*mesh->Np+1*mesh->Np*mesh->Np] = mesh->Srs[n*mesh->Np+m]+mesh->Ssr[n*mesh->Np+m];
-        ST[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Sss[n*mesh->Np+m];
-      }
-    }
-   
-    elliptic->o_Dmatrices = mesh->device.malloc(2*mesh->Np*mesh->Np*sizeof(dfloat), DrsT);
-    elliptic->o_Smatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), ST);
-    free(DrsT); free(ST);
-  } else {
-    // build Dr, Ds transposes
-    dfloat *DrstT = (dfloat*) calloc(3*mesh->Np*mesh->Np, sizeof(dfloat));
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){
-        DrstT[n+m*mesh->Np] = mesh->Dr[n*mesh->Np+m];
-        DrstT[n+m*mesh->Np+mesh->Np*mesh->Np] = mesh->Ds[n*mesh->Np+m];
-        DrstT[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Dt[n*mesh->Np+m];
-      }
-    }
-
-    dfloat *ST = (dfloat*) calloc(6*mesh->Np*mesh->Np, sizeof(dfloat));
-    for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){
-        ST[n+m*mesh->Np+0*mesh->Np*mesh->Np] = mesh->Srr[n*mesh->Np+m];
-        ST[n+m*mesh->Np+1*mesh->Np*mesh->Np] = mesh->Srs[n*mesh->Np+m]+mesh->Ssr[n*mesh->Np+m];
-        ST[n+m*mesh->Np+2*mesh->Np*mesh->Np] = mesh->Srt[n*mesh->Np+m]+mesh->Str[n*mesh->Np+m];
-        ST[n+m*mesh->Np+3*mesh->Np*mesh->Np] = mesh->Sss[n*mesh->Np+m];
-        ST[n+m*mesh->Np+4*mesh->Np*mesh->Np] = mesh->Sst[n*mesh->Np+m]+mesh->Sts[n*mesh->Np+m];
-        ST[n+m*mesh->Np+5*mesh->Np*mesh->Np] = mesh->Stt[n*mesh->Np+m];
-      }
-    }
-
-    elliptic->o_Dmatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), DrstT);
-    elliptic->o_Smatrices = mesh->device.malloc(6*mesh->Np*mesh->Np*sizeof(dfloat), ST);
-    free(DrstT); free(ST);
-  }
-
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
   elliptic->BCType = (int*) calloc(3,sizeof(int));

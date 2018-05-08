@@ -27,7 +27,7 @@ void cnsPlotVTU(cns_t *cns, char *fileName){
       for(int m=0;m<mesh->Np;++m){
         plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
         plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
-	plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
+        plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
       }
 
       fprintf(fp, "       ");
@@ -64,11 +64,11 @@ void cnsPlotVTU(cns_t *cns, char *fileName){
         dfloat rm = mesh->q[e*mesh->Np*mesh->Nfields+m           ];
         dfloat um = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ]/rm;
         dfloat vm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2]/rm;
-	dfloat wm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*3]/rm;
+        dfloat wm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*3]/rm;
         //
         plotun += mesh->plotInterp[n*mesh->Np+m]*um;
         plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
-	plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
+        plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
       }
     
       fprintf(fp, "       ");
@@ -85,11 +85,11 @@ void cnsPlotVTU(cns_t *cns, char *fileName){
       for(int m=0;m<mesh->Np;++m){
         dlong id = m+e*mesh->Np*3;
         dfloat vortx = cns->Vort[id];
-	dfloat vorty = cns->Vort[id+mesh->Np];
-	dfloat vortz = cns->Vort[id+2*mesh->Np];
+        dfloat vorty = cns->Vort[id+mesh->Np];
+        dfloat vortz = cns->Vort[id+2*mesh->Np];
         plotVortx += mesh->plotInterp[n*mesh->Np+m]*vortx;
-	plotVorty += mesh->plotInterp[n*mesh->Np+m]*vorty;
-	plotVortz += mesh->plotInterp[n*mesh->Np+m]*vortz;
+        plotVorty += mesh->plotInterp[n*mesh->Np+m]*vorty;
+        plotVortz += mesh->plotInterp[n*mesh->Np+m]*vortz;
       }
 
       fprintf(fp, "       ");
@@ -130,9 +130,9 @@ void cnsPlotVTU(cns_t *cns, char *fileName){
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNelements;++n){
       if(cns->dim==2)
-	fprintf(fp, "5\n");
+        fprintf(fp, "5\n");
       else
-	fprintf(fp, "10\n");
+        fprintf(fp, "10\n");
     }
   }
   fprintf(fp, "        </DataArray>\n");

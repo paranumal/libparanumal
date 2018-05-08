@@ -1,7 +1,7 @@
-#include "insTri2D.h"
+#include "ins.h"
 
 // complete a time step using LSERK4
-void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
+void insAdvectionSubCycleStep(ins_t *ins, dfloat time){
  
   //printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
   mesh_t *mesh = ins->mesh;
@@ -9,16 +9,15 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
   const dlong NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);
   const dlong Ntotal         =  NtotalElements*mesh->Np;  
 
-  const dlong voffset = 0; 
   // field offset at this step
-  dlong offset0 = ins->index*(mesh->Nelements+mesh->totalHaloPairs);
+  dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   
   //Exctract Halo On Device, Assumes History is already done!
   if(mesh->totalHaloPairs>0){
     ins->totalHaloExtractKernel(mesh->Nelements,
                                 mesh->totalHaloPairs,
                                 mesh->o_haloElementList,
-                                offset0,
+                                offset,
                                 ins->o_U,
                                 ins->o_P,
                                 ins->o_tHaloBuffer);
@@ -41,8 +40,7 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
     ins->o_tHaloBuffer.copyFrom(ins->tRecvBuffer);
     ins->totalHaloScatterKernel(mesh->Nelements,
                                 mesh->totalHaloPairs,
-                                mesh->o_haloElementList,
-                                offset0,
+                                offset,
                                 ins->o_U,
                                 ins->o_P,
                                 ins->o_tHaloBuffer);
@@ -51,9 +49,9 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
 
 
   if (ins->a0) {// skip if nonlinear term is deactivated (Stokes solves)
-    const dfloat tn0 = (tstep-0)*ins->dt;
-    const dfloat tn1 = (tstep-1)*ins->dt;
-    const dfloat tn2 = (tstep-2)*ins->dt;
+    const dfloat tn0 = time - 0*ins->dt;
+    const dfloat tn1 = time - 1*ins->dt;
+    const dfloat tn2 = time - 2*ins->dt;
 
     //storage for subcycled velocity fields
     // use NU and NV 
@@ -77,16 +75,16 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
       bScale += b;
 
       // Initialize SubProblem Velocity i.e. Ud = U^(t-torder*dt)
-      const int sindex = (ins->index + 3 - torder)%3; 
-      dlong offset = sindex*Ntotal;
+      dlong toffset = torder*ins->NVfields*Ntotal;
+
       if (torder==ins->ExplicitOrder-1) { //first substep
-        ins->scaledAddKernel(mesh->Nelements*mesh->Np, b, offset, ins->o_U, zero, izero, o_Ud);
+        ins->scaledAddKernel(ins->NVfields*Ntotal, b, toffset, ins->o_U, zero, izero, o_Ud);
       } else { //add the next field
-        ins->scaledAddKernel(mesh->Nelements*mesh->Np, b, offset, ins->o_U,  one, izero, o_Ud);
+        ins->scaledAddKernel(ins->NVfields*Ntotal, b, toffset, ins->o_U,  one, izero, o_Ud);
       }     
 
       // SubProblem  starts from here from t^(n-torder)
-      const dfloat tsub = tstep*ins->dt - torder*ins->dt;
+      const dfloat tsub = time - torder*ins->dt;
       // Advance SubProblem to t^(n-torder+1) 
       for(int ststep = 0; ststep<ins->Nsubsteps;++ststep){
         const dfloat tstage = tsub + ststep*ins->sdt;     
@@ -112,8 +110,7 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
 
           //compute advective velocity fields at time t
           ins->subCycleExtKernel(NtotalElements,
-                                 ins->index,
-                                 NtotalElements,
+                                 offset,
                                  c0, c1, c2,
                                  ins->o_U,
                                  ins->o_Ue);
@@ -128,7 +125,7 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
             ins->velocityHaloExtractKernel(mesh->Nelements,
                                      mesh->totalHaloPairs,
                                      mesh->o_haloElementList,
-                                     voffset, // 0 offset
+                                     offset, 
                                      o_Ud,
                                      ins->o_vHaloBuffer);
 
@@ -139,10 +136,10 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
 
           // Compute Volume Contribution
           occaTimerTic(mesh->device,"AdvectionVolume");        
-          if(strstr(options, "CUBATURE")){
+          if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
             ins->subCycleCubatureVolumeKernel(mesh->Nelements,
                        mesh->o_vgeo,
-                       mesh->o_cubDmatries,
+                       mesh->o_cubDWmatrices,
                        mesh->o_cubInterpT,
                        ins->o_Ue,
                             o_Ud,
@@ -150,7 +147,7 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
           } else{
             ins->subCycleVolumeKernel(mesh->Nelements,
                                       mesh->o_vgeo,
-                                      mesh->o_Dmatries,
+                                      mesh->o_Dmatrices,
                                       ins->o_Ue,
                                            o_Ud,
                                       ins->o_rhsU);
@@ -176,9 +173,8 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
 
             ins->velocityHaloScatterKernel(mesh->Nelements,
                                       mesh->totalHaloPairs,
-                                      mesh->o_haloElementList,
-                                      voffset, //0 offset
-                                         o_Ud,
+                                      offset, //0 offset
+                                      o_Ud,
                                       ins->o_vHaloBuffer);
             mesh->device.finish();
             
@@ -188,7 +184,7 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
 
           //Surface Kernel
           occaTimerTic(mesh->device,"AdvectionSurface");
-          if(strstr(options, "CUBATURE")){
+          if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
             ins->subCycleCubatureSurfaceKernel(mesh->Nelements,
                                                 mesh->o_sgeo,
                                                 mesh->o_intInterpT,
@@ -243,8 +239,8 @@ void insAdvectionSubCycleStepTri2D(ins_t *ins, int tstep, char *options){
   occaTimerTic(mesh->device,"GradientVolume");
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
-                            mesh->o_Dmatries,
-                            offset0,
+                            mesh->o_Dmatrices,
+                            offset,
                             ins->o_P,
                             ins->o_gradP);
   occaTimerToc(mesh->device,"GradientVolume");

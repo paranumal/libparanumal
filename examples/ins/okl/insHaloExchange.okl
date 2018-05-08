@@ -83,7 +83,7 @@ kernel void insVelocityHaloScatter(const dlong Nelements,
 
 kernel void insPressureHaloExtract(const dlong Nelements,
                                    const dlong NhaloElements,
-                                   const dlong   * restrict haloElements,
+                                   const dlong  * restrict haloElements,
                                    const dfloat * restrict P,
                                          dfloat * restrict haloq){
 
