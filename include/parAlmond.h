@@ -231,7 +231,7 @@ typedef struct {
 
   KrylovType ktype;
 
-  const char* options;
+  setupAide options;
 
   //Matrix Free args
   void (*MatFreeAx)(void **args, occa::memory o_q, occa::memory o_Aq,const char* options);
@@ -281,7 +281,7 @@ typedef struct {
 
 } parAlmond_t;
 
-parAlmond_t *parAlmondInit(mesh_t *mesh, const char* parAlmondOptions);
+parAlmond_t *parAlmondInit(mesh_t *mesh, setupAide options);
 
 void parAlmondAgmgSetup(parAlmond_t* parAlmond,
                        hlong* rowStarts,

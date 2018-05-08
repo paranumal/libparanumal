@@ -1,0 +1,82 @@
+kernel void ellipticPreconProlongateHex3D(const dlong Nelements,
+                                           const dfloat * restrict R,
+                                           const dfloat * restrict qc,
+                                                 dfloat * restrict qN){
+  
+  
+  for(dlong e=0;e<Nelements;++e;outer0){
+    shared dfloat s_qcff[p_NqCoarse][p_NqFine][p_NqFine];
+    shared dfloat s_qccf[p_NqCoarse][p_NqCoarse][p_NqFine];
+    shared dfloat s_qccc[p_NqCoarse][p_NqCoarse][p_NqCoarse];
+    shared dfloat s_R[p_NqCoarse][p_NqFine];
+    
+    // prefetch to shared
+    for(int k=0;k<p_NqFine;++k;inner2){
+      for(int j=0;j<p_NqFine;++j;inner1){
+        for(int i=0;i<p_NqFine;++i;inner0){
+          const int id = i+j*p_NqFine+k*p_NqFine*p_NqFine;
+          if(id<p_NpCoarse){
+            s_qccc[0][0][id] = qc[id+e*p_NpCoarse];
+          }
+          if(id<p_NqCoarse*p_NqFine){
+            s_R[0][id] = R[id];
+          }
+        }
+      }
+    }
+    
+    barrier(localMemFence);
+
+    // prolongate in i index
+    for(int k=0;k<p_NqFine;++k;inner2){
+      for(int j=0;j<p_NqFine;++j;inner1){
+        for(int i=0;i<p_NqFine;++i;inner0){
+          if((k<p_NqCoarse) && (j<p_NqCoarse)){
+            dfloat res = 0;
+            occaUnroll(p_NqCoarse)
+              for(int m=0;m<p_NqCoarse;++m) {
+                res += s_R[m][i]*s_qccc[k][j][m];
+              }
+            s_qccf[k][j][i] = res;
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // prolongate in j index
+    for(int k=0;k<p_NqFine;++k;inner2){
+      for(int j=0;j<p_NqFine;++j;inner1){
+        for(int i=0;i<p_NqFine;++i;inner0){
+          if((k<p_NqCoarse)){
+            dfloat res = 0;
+            occaUnroll(p_NqCoarse)
+              for(int m=0;m<p_NqCoarse;++m) {
+                res += s_R[m][j]*s_qccf[k][m][i];
+              }
+            s_qcff[k][j][i] = res;
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    // coarsen in i index
+    for(int k=0;k<p_NqFine;++k;inner2){
+      for(int j=0;j<p_NqFine;++j;inner1){
+        for(int i=0;i<p_NqFine;++i;inner0){
+          dfloat res = 0;
+          occaUnroll(p_NqCoarse)
+            for(int m=0;m<p_NqCoarse;++m) {
+              res += s_R[m][k]*s_qcff[m][j][i];
+            }
+
+          const dlong id = i+j*p_NqFine+k*p_NqFine*p_NqFine+e*p_NpFine;
+          qN[id] = res;
+        }
+      }
+    }
+  }
+}
