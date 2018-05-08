@@ -54,14 +54,6 @@ typedef struct{
   occa::kernel stressesSurfaceKernel;
   
   occa::kernel vorticityKernel;
-
-  occa::memory o_Dmatrices;
-  occa::memory o_cubDWmatrices;
-  occa::memory o_intLIFTT;
-  occa::memory o_intInterpT;
-
-  occa::memory o_intsgeo;
-
   
   occa::memory o_q;
   occa::memory o_rhsq;
@@ -119,8 +111,3 @@ void cnsDopriStep(cns_t *cns, setupAide &options, const dfloat time);
 void cnsLserkStep(cns_t *cns, setupAide &newOoptions, const dfloat time);
 
 dfloat cnsDopriEstimate(cns_t *cns);
-
-#define TRIANGLES 3
-#define QUADRILATERALS 4
-#define TETRAHEDRA 6
-#define HEXAHEDRA 12

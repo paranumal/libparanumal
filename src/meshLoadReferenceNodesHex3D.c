@@ -99,6 +99,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
 
   readIntArray   (fp, "SEMFEM reference mesh", &(mesh->FEMEToV), &Nrows, &Ncols);
   mesh->NelFEM = Nrows;
+  mesh->NpFEM = mesh->Np;
 
   readDfloatArray(fp, "Gauss Legendre 1D quadrature nodes", &(mesh->gjr), &Nrows, &Ncols);   
   readDfloatArray(fp, "Gauss Legendre 1D quadrature weights", &(mesh->gjw), &Nrows, &Ncols);   

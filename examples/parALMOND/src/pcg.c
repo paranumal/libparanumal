@@ -40,9 +40,9 @@ void pcg(parAlmond_t *parAlmond,
   }
 
   // Precondition, z = M^{-1}*r
-  if(strstr(parAlmond->options,"KCYCLE")) {
+  if(parAlmond->options.compareArgs("PARALMOND CYCLE", "KCYCLE")) {
     kcycle(parAlmond, 0);
-  } else if(strstr(parAlmond->options,"VCYCLE")) {
+  } else if(parAlmond->options.compareArgs("PARALMOND CYCLE", "VCYCLE")) {
     vcycle(parAlmond, 0);
   }
   for (dlong i=0;i<m;i++)
@@ -86,9 +86,9 @@ void pcg(parAlmond_t *parAlmond,
     }
 
     // Precondition, z = M^{-1}*r
-    if(strstr(parAlmond->options,"KCYCLE")) {
+    if(parAlmond->options.compareArgs("PARALMOND CYCLE", "KCYCLE")) {
       kcycle(parAlmond, 0);
-    } else if(strstr(parAlmond->options,"VCYCLE")) {
+    } else if(parAlmond->options.compareArgs("PARALMOND CYCLE", "VCYCLE")) {
       vcycle(parAlmond, 0);
     }
 
@@ -165,9 +165,9 @@ void device_pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol){
   }
 
   // Precondition, z = M^{-1}*r
-  if(strstr(parAlmond->options,"KCYCLE")) {
+  if(parAlmond->options.compareArgs("PARALMOND CYCLE", "KCYCLE")) {
     device_kcycle(parAlmond, 0);
-  } else if(strstr(parAlmond->options,"VCYCLE")) {
+  } else if(parAlmond->options.compareArgs("PARALMOND CYCLE", "VCYCLE")) {
     device_vcycle(parAlmond, 0);
   }
   o_p.copyFrom(o_z);
@@ -210,9 +210,9 @@ void device_pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol){
     }
 
     // Precondition, z = M^{-1}*r
-    if(strstr(parAlmond->options,"KCYCLE")) {
+    if(parAlmond->options.compareArgs("PARALMOND CYCLE", "KCYCLE")) {
       device_kcycle(parAlmond, 0);
-    } else if(strstr(parAlmond->options,"VCYCLE")) {
+    } else if(parAlmond->options.compareArgs("PARALMOND CYCLE", "VCYCLE")) {
       device_vcycle(parAlmond, 0);
     }
 

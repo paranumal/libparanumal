@@ -93,8 +93,13 @@ void meshSurfaceGeometricFactorsTri2D(mesh2D *mesh){
       dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
       dfloat hinvP = mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
       
-      mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(mymax(hinvM,hinvP),tol*href);
-      mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(mymax(hinvM,hinvP),tol*href);
+      mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
+      mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
+
+      if (mesh->EToB[f+e*mesh->Nfaces] > 0) { //enforce a stronger penalty on boundaries
+        mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(mesh->sgeo[baseM*mesh->Nsgeo+IHID],tol*href);
+        mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(mesh->sgeo[baseP*mesh->Nsgeo+IHID],tol*href);
+      }
 #if 0
       printf("e=%d f=%d (eP=%d,fP=%d) nx=%5.4f, ny=%5.4f, sJ=%5.4f, invJ=%5.4f, hinv=%f\n"
 	     ,e,f,eP,fP,

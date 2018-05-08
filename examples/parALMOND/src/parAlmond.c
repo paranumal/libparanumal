@@ -3,6 +3,7 @@
 void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rhs) {
 
   agmgLevel *baseLevel = parAlmond->levels[0];
+  setupAide options = parAlmond->options;
 
   if (baseLevel->gatherLevel==true) {// gather rhs
     baseLevel->device_gather(baseLevel->gatherArgs, o_rhs, baseLevel->o_rhs);
@@ -10,31 +11,31 @@ void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rh
     baseLevel->o_rhs.copyFrom(o_rhs);
   }
 
-  if (strstr(parAlmond->options,"HOST")) {
+  if (options.compareArgs("PARALMOND CYCLE", "HOST")) {
     //host versions
     baseLevel->o_rhs.copyTo(baseLevel->rhs);
-    if(strstr(parAlmond->options,"EXACT")) {
+    if(options.compareArgs("PARALMOND CYCLE", "EXACT")) {
       if(parAlmond->ktype == PCG) {
         pcg(parAlmond,1000,1e-8);
       } else if(parAlmond->ktype == GMRES) {
         pgmres(parAlmond,1000,1e-8);
       }
-    } else if(strstr(parAlmond->options,"KCYCLE")) {
+    } else if(options.compareArgs("PARALMOND CYCLE", "KCYCLE")) {
       kcycle(parAlmond, 0);
-    } else if(strstr(parAlmond->options,"VCYCLE")) {
+    } else if(options.compareArgs("PARALMOND CYCLE", "VCYCLE")) {
       vcycle(parAlmond, 0);
     }
     baseLevel->o_x.copyFrom(baseLevel->x);
   } else {
-    if(strstr(parAlmond->options,"EXACT")) {
+    if(options.compareArgs("PARALMOND CYCLE", "EXACT")){
       if(parAlmond->ktype == PCG) {
         device_pcg(parAlmond,1000,1e-8);
       } else if(parAlmond->ktype == GMRES) {
         device_pgmres(parAlmond,1000,1e-8);
       }
-    } else if(strstr(parAlmond->options,"KCYCLE")) {
+    } else if(options.compareArgs("PARALMOND CYCLE", "KCYCLE")) {
       device_kcycle(parAlmond, 0);
-    } else if(strstr(parAlmond->options,"VCYCLE")) {
+    } else if(options.compareArgs("PARALMOND CYCLE", "VCYCLE")) {
       device_vcycle(parAlmond, 0);
     }
   }
@@ -46,7 +47,7 @@ void parAlmondPrecon(parAlmond_t *parAlmond, occa::memory o_x, occa::memory o_rh
   }
 }
 
-parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {
+parAlmond_t *parAlmondInit(mesh_t *mesh, setupAide options) {
 
   parAlmond_t *parAlmond = (parAlmond_t *) calloc(1,sizeof(parAlmond_t));
 
@@ -58,7 +59,7 @@ parAlmond_t *parAlmondInit(mesh_t *mesh, const char* options) {
   parAlmond->levels = (agmgLevel **) calloc(MAX_LEVELS,sizeof(agmgLevel *));
   parAlmond->numLevels = 0;
   
-  if (strstr(options,"NONSYM")) {
+  if (options.compareArgs("PARALMOND CYCLE", "NONSYM")) {
     parAlmond->ktype = GMRES;  
   } else {
     parAlmond->ktype = PCG;
@@ -104,7 +105,7 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
   
   if(rank==0) printf("done.\n");
 
-  if (strstr(parAlmond->options, "VERBOSE"))
+  if (parAlmond->options.compareArgs("VERBOSE","TRUE"))
     parAlmondReport(parAlmond);
 }
 
