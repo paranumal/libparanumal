@@ -19,7 +19,7 @@ void insPoissonStep(ins_t *ins, dfloat time){
                                  mesh->totalHaloPairs,
                                  mesh->o_haloElementList,
                                  offset,
-                                 ins->o_U,
+                                 ins->o_Uhat,
                                  ins->o_vHaloBuffer);
 
       // copy extracted halo to HOST 
@@ -39,7 +39,7 @@ void insPoissonStep(ins_t *ins, dfloat time){
                              mesh->o_vgeo,
                              mesh->o_Dmatrices,
                              offset,
-                             ins->o_U,
+                             ins->o_Uhat,
                              ins->o_rhsP);
    occaTimerToc(mesh->device,"DivergenceVolume");
 
@@ -52,7 +52,7 @@ void insPoissonStep(ins_t *ins, dfloat time){
       ins->velocityHaloScatterKernel(mesh->Nelements,
                                     mesh->totalHaloPairs,
                                     offset,
-                                    ins->o_U,
+                                    ins->o_Uhat,
                                     ins->o_vHaloBuffer);
     }
 
@@ -69,7 +69,7 @@ void insPoissonStep(ins_t *ins, dfloat time){
                                 mesh->o_y,
                                 mesh->o_z,
                                 offset,
-                                ins->o_U,
+                                ins->o_Uhat,
                                 ins->o_rhsP);
     occaTimerToc(mesh->device,"DivergenceSurface");
   //}
@@ -136,7 +136,7 @@ void insPoissonStep(ins_t *ins, dfloat time){
     ins->poissonRhsIpdgBCKernel(mesh->Nelements,
                                   pressure_solve,
                                   mesh->o_vmapM,
-                                  ins->tau,
+                                  solver->tau,
                                   time,
                                   ins->dt,
                                   mesh->o_x,

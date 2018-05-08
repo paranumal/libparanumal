@@ -151,16 +151,18 @@ void insAdvectionSubCycleStep(ins_t *ins, dfloat time){
                        mesh->o_vgeo,
                        mesh->o_cubDWmatrices,
                        mesh->o_cubInterpT,
+                       offset,
                        ins->o_Ue,
                             o_Ud,
-                       ins->o_rhsU);
+                       ins->o_rhsUd);
           } else{
             ins->subCycleVolumeKernel(mesh->Nelements,
                                       mesh->o_vgeo,
                                       mesh->o_Dmatrices,
+                                      offset,
                                       ins->o_Ue,
                                            o_Ud,
-                                      ins->o_rhsU);
+                                      ins->o_rhsUd);
 
           }
           occaTimerToc(mesh->device,"AdvectionVolume");
@@ -210,9 +212,10 @@ void insAdvectionSubCycleStep(ins_t *ins, dfloat time){
                                                 mesh->o_intx,
                                                 mesh->o_inty,
                                                 mesh->o_intz,
+                                                offset,
                                                 ins->o_Ue,
                                                      o_Ud,
-                                                ins->o_rhsU);
+                                                ins->o_rhsUd);
           } else{
             ins->subCycleSurfaceKernel(mesh->Nelements,
                                       mesh->o_sgeo,
@@ -225,9 +228,10 @@ void insAdvectionSubCycleStep(ins_t *ins, dfloat time){
                                       mesh->o_x,
                                       mesh->o_y,
                                       mesh->o_z,
+                                      offset,
                                       ins->o_Ue,
                                            o_Ud,
-                                      ins->o_rhsU);
+                                      ins->o_rhsUd);
           }
           occaTimerToc(mesh->device,"AdvectionSurface");
             
@@ -237,7 +241,8 @@ void insAdvectionSubCycleStep(ins_t *ins, dfloat time){
                                 ins->sdt,
                                 mesh->rka[rk],
                                 mesh->rkb[rk],
-                                ins->o_rhsU,
+                                offset,
+                                ins->o_rhsUd,
                                 ins->o_resU, 
                                      o_Ud);
           occaTimerToc(mesh->device,"AdvectionUpdate");

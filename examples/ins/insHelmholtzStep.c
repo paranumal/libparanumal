@@ -62,10 +62,10 @@ void insHelmholtzStep(ins_t *ins, dfloat time){
 
   } else if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
 
-    occaTimerTic(mesh->device,"HelmholtzRhsIpdg");   
+    occaTimerTic(mesh->device,"HelmholtzRhsIpdg");    
     ins->helmholtzRhsIpdgBCKernel(mesh->Nelements,
                                   mesh->o_vmapM,
-                                  ins->tau,
+                                  usolver->tau,
                                   time,
                                   mesh->o_x,
                                   mesh->o_y,
@@ -125,8 +125,8 @@ void insHelmholtzStep(ins_t *ins, dfloat time){
   }
 
   //copy into intermediate stage storage
-  ins->o_UH.copyTo(ins->o_Uhat,Ntotal*sizeof(dfloat),0*Ntotal*sizeof(dfloat),0);
-  ins->o_VH.copyTo(ins->o_Uhat,Ntotal*sizeof(dfloat),1*Ntotal*sizeof(dfloat),0);    
+  ins->o_UH.copyTo(ins->o_Uhat,Ntotal*sizeof(dfloat),0*offset*sizeof(dfloat),0);
+  ins->o_VH.copyTo(ins->o_Uhat,Ntotal*sizeof(dfloat),1*offset*sizeof(dfloat),0);    
   if (ins->dim==3)
-    ins->o_WH.copyTo(ins->o_Uhat,Ntotal*sizeof(dfloat),2*Ntotal*sizeof(dfloat),0);    
+    ins->o_WH.copyTo(ins->o_Uhat,Ntotal*sizeof(dfloat),2*offset*sizeof(dfloat),0);    
 }

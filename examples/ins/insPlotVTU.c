@@ -101,10 +101,10 @@ void insPlotVTU(ins_t *ins, char *fileName){
       for(int n=0;n<mesh->plotNp;++n){
         dfloat plotVortx = 0, plotVorty = 0, plotVortz = 0;
         for(int m=0;m<mesh->Np;++m){
-          dlong id = m+e*mesh->Np*3;
-          dfloat vortx = ins->Vort[id+0*mesh->Np];
-          dfloat vorty = ins->Vort[id+1*mesh->Np];
-          dfloat vortz = ins->Vort[id+2*mesh->Np];
+          dlong id = m+e*mesh->Np;
+          dfloat vortx = ins->Vort[id+0*offset];
+          dfloat vorty = ins->Vort[id+1*offset];
+          dfloat vortz = ins->Vort[id+2*offset];
           plotVortx += mesh->plotInterp[n*mesh->Np+m]*vortx;
           plotVorty += mesh->plotInterp[n*mesh->Np+m]*vorty;
           plotVortz += mesh->plotInterp[n*mesh->Np+m]*vortz;
