@@ -166,7 +166,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
   MPI_Allreduce(&maxcx, &gmaxcx, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&maxcy, &gmaxcy, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
 
-  dfloat maxlength = max(maxcx-mincx, maxcy-mincy);
+  dfloat maxlength = mymax(maxcx-mincx, maxcy-mincy);
   
   // choose sub-range of Morton lattice coordinates to embed element centers in
   unsigned int Nboxes = (((unsigned int)1)<<(bitRange-1));

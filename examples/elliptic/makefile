@@ -123,10 +123,8 @@ LOBJS = \
 ../../src/matrixConditionNumber.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o \
-../../src/matrix.o \
 ../../src/setupAide.o \
 ../../src/timer.o\
-../../src/trace.o \
 ../../src/readArray.o
 
 COBJS = \

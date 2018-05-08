@@ -11,9 +11,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "matrix.hpp"
-//#include "matrix.tpp"
-
 using std::stringstream;
 using std::fstream;
 using std::string;
@@ -24,8 +21,8 @@ using std::endl;
 
 class setupAide {
 private:
-  matrix<string> data;
-  matrix<string> keyword;
+  vector<string> data;
+  vector<string> keyword;
 
 public:
   setupAide();
@@ -45,15 +42,15 @@ public:
   int getArgs(string, T&);
 
   template <class T>
-  int getArgs(string, matrix<T>&);
+  int getArgs(string, vector<T>&);
 
-  int getArgs(string, matrix<string>&, string);
+  int getArgs(string, vector<string>&, string);
 
 
   int compareArgs(string key, string token);
 
-  matrix<string> &getData(){ return data; }
-  matrix<string> &getKeyword() { return keyword; }
+  vector<string> &getData(){ return data; }
+  vector<string> &getKeyword() { return keyword; }
 };
 
 #include<setupAide.tpp>
