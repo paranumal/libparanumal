@@ -4,9 +4,7 @@ kernel void insGradientVolumeHex3D(const dlong Nelements,
                                     const dfloat * restrict D,
                                     const dlong offset,
                                     const dfloat * restrict P,
-                                          dfloat * restrict Px,
-                                          dfloat * restrict Py,
-                                          dfloat * restrict Pz){
+                                          dfloat * restrict gradP){
 
   for(dlong e=0;e<Nelements;e++;outer0){  // for all elements
 
@@ -16,7 +14,7 @@ kernel void insGradientVolumeHex3D(const dlong Nelements,
     for(int k=0;k<p_Nq;++k;inner2){ 
       for(int j=0;j<p_Nq;++j;inner1){ 
         for(int i=0;i<p_Nq;++i;inner0){    
-          const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq+i;
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq+i;
 
           s_P[k][j][i]  = P[id];
 
@@ -57,10 +55,10 @@ kernel void insGradientVolumeHex3D(const dlong Nelements,
               dpdt += Dt*s_P[n][j][i];
             }
 
-          const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          Px[id] = drdx*dpdr + dsdx*dpds + dtdx*dpdt;
-          Py[id] = drdy*dpdr + dsdy*dpds + dtdy*dpdt;
-          Pz[id] = drdz*dpdr + dsdz*dpds + dtdz*dpdt;
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          gradP[id+0*offset] = drdx*dpdr + dsdx*dpds + dtdx*dpdt;
+          gradP[id+1*offset] = drdy*dpdr + dsdy*dpds + dtdy*dpdt;
+          gradP[id+2*offset] = drdz*dpdr + dsdz*dpds + dtdz*dpdt;
         }
       }
     }
@@ -77,14 +75,8 @@ kernel void insGradientVolumeHex3D(const dlong Nelements,
 
 #define surfaceTerms(sk,face,m, i, j)                                   \
 {                                                                       \
-  dlong idM, idP;                                                       \
-  if(solverID == 1){                                                    \
-    idM = vmapM[sk];                                                    \
-    idP = vmapP[sk];                                                    \
-  } else {                                                              \
-    idM = vmapM[sk]+p_Np*index*offset;                                  \
-    idP = vmapP[sk]+p_Np*index*offset;                                  \
-  }                                                                     \
+  const dlong idM = vmapM[sk];                                          \
+  const dlong idP = vmapP[sk];                                          \
                                                                         \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
@@ -97,7 +89,6 @@ kernel void insGradientVolumeHex3D(const dlong Nelements,
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
-    idM = vmapM[sk];                                                    \
     insPressureDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, PM, &PP);\
     if(solverID==1){                                                    \
       PP = PM;                                                          \
@@ -113,6 +104,7 @@ kernel void insGradientVolumeHex3D(const dlong Nelements,
 
 kernel void insGradientSurfaceHex3D(const dlong Nelements,
                                      const dfloat * restrict sgeo,
+                                     const dfloat * restrict LIFTT,
                                      const dlong  * restrict vmapM,
                                      const dlong  * restrict vmapP,
                                      const int    * restrict EToB,
@@ -120,18 +112,10 @@ kernel void insGradientSurfaceHex3D(const dlong Nelements,
                                      const dfloat * restrict y,
                                      const dfloat * restrict z,
                                      const dfloat time,
-                                     const dfloat dt,
-                                     const dfloat c0,
-                                     const dfloat c1,
-                                     const dfloat c2,
-                                     const int index,
                                      const dlong offset,
                                      const int solverID,
-                                     const dfloat * restrict POld,
                                      const dfloat * restrict P,
-                                           dfloat * restrict Px,
-                                           dfloat * restrict Py,
-                                           dfloat * restrict Pz){
+                                           dfloat * restrict gradP){
 
   // for all elements
   for(dlong e=0;e<Nelements;e++;outer0){
@@ -264,16 +248,11 @@ kernel void insGradientSurfaceHex3D(const dlong Nelements,
       for(int i=0;i<p_Nq;++i;inner0){
         occaUnroll(p_Nq)
         for(int k=0;k<p_Nq;++k){
-          dlong id;
-          if (solverID==1) { //no offset
-            id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          } else {
-            id = (e+index*offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          }
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-          Px[id] += r_Px[k];
-          Py[id] += r_Py[k];
-          Pz[id] += r_Pz[k];
+          gradP[id+0*offset] += r_Px[k];
+          gradP[id+1*offset] += r_Py[k];
+          gradP[id+2*offset] += r_Pz[k];
         }
       }
     }

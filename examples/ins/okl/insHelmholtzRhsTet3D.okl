@@ -43,7 +43,6 @@ kernel void insHelmholtzRhsForcingTet3D(const dlong Nelements,
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 
           // gradP
-          // gradP
           const dfloat Pxm0 = gradP[id0+0*offset];
           const dfloat Pxm1 = gradP[id1+0*offset];
           const dfloat Pxm2 = gradP[id2+0*offset];

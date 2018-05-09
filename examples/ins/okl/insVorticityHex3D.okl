@@ -1,15 +1,11 @@
 
 // compute div(NU)  = div(uxu) in collocation way (weak form)
-kernel void insVorticityVolumeHex3D(const dlong Nelements,
+kernel void insVorticityHex3D(const dlong Nelements,
                                      const dfloat * restrict vgeo,
                                      const dfloat * restrict D,
                                      const dlong offset,
                                      const dfloat * restrict U,
-                                     const dfloat * restrict V,
-                                     const dfloat * restrict W,
-                                           dfloat * restrict Vx,
-                                           dfloat * restrict Vy,
-                                           dfloat * restrict Vz){
+                                           dfloat * restrict Vort){
 
   for(dlong e=0; e<Nelements; ++e; outer0) {
 
@@ -61,10 +57,10 @@ kernel void insVorticityVolumeHex3D(const dlong Nelements,
           const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
           const dfloat JW   = vgeo[gid + p_JWID*p_Np];
 
-          const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          const dfloat Un = U[id];
-          const dfloat Vn = V[id];
-          const dfloat Wn = W[id];
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          const dfloat Un = U[id+0*offset];
+          const dfloat Vn = U[id+1*offset];
+          const dfloat Wn = U[id+2*offset];
 
           s_F11[j][i] = JW*( drdy*Wn-drdz*Vn);
           s_F12[j][i] = JW*( dsdy*Wn-dsdz*Vn);
@@ -114,9 +110,9 @@ kernel void insVorticityVolumeHex3D(const dlong Nelements,
             const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 
             const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-            Vx[id] = -invJW*r_Vx[k];
-            Vy[id] = -invJW*r_Vy[k];
-            Vz[id] = -invJW*r_Vz[k];
+            Vort[id+0*offset] = -invJW*r_Vx[k];
+            Vort[id+1*offset] = -invJW*r_Vy[k];
+            Vort[id+2*offset] = -invJW*r_Vz[k];
           }
       }
     }
@@ -126,8 +122,8 @@ kernel void insVorticityVolumeHex3D(const dlong Nelements,
 
 #define surfaceTerms(sk,face,m, i, j)                                   \
 {                                                                       \
-  const dlong  idM = vmapM[sk]+offset*p_Np;                             \
-  const dlong  idP = vmapP[sk]+offset*p_Np;                             \
+  const dlong  idM = vmapM[sk];                                         \
+  const dlong  idP = vmapP[sk];                                         \
                                                                         \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
@@ -135,8 +131,8 @@ kernel void insVorticityVolumeHex3D(const dlong Nelements,
   const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
   const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
                                                                         \
-  const dfloat uM = U[idM], vM = V[idM], wM = W[idM];                   \
-        dfloat uP = U[idP], vP = V[idP], wP = W[idP];                   \
+  const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset];\
+        dfloat uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset];\
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
@@ -163,11 +159,7 @@ kernel void insVorticitySurfaceHex3D(const dlong Nelements,
                                       const dfloat * restrict z,
                                       const dlong offset,
                                       const dfloat * restrict U,
-                                      const dfloat * restrict V,
-                                      const dfloat * restrict W,
-                                            dfloat * restrict Vx,
-                                            dfloat * restrict Vy,
-                                            dfloat * restrict Vz){
+                                            dfloat * restrict Vort){
 
   // for all elements
   for(dlong e=0;e<Nelements;e++;outer0){
@@ -296,9 +288,9 @@ kernel void insVorticitySurfaceHex3D(const dlong Nelements,
         for(int k=0;k<p_Nq;++k){
           const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-          Vx[id] += r_Vx[k];
-          Vy[id] += r_Vy[k];
-          Vz[id] += r_Vz[k];
+          Vort[id+0*offset] += r_Vx[k];
+          Vort[id+1*offset] += r_Vy[k];
+          Vort[id+2*offset] += r_Vz[k];
         }
       }
     }

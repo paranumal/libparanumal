@@ -216,6 +216,8 @@ kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
                                             const dlong offset,
                                             const dfloat * restrict U,
                                             const dfloat * restrict Ud,
+                                                  dfloat * restrict cU, //storage for interpolated fields
+                                                  dfloat * restrict cUd, //storage for interpolated fields
                                                   dfloat * restrict rhsU){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
