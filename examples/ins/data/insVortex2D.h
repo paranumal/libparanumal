@@ -1,107 +1,85 @@
-/* wall 1, inflow 2, outflow 3 */
+// Initial conditions 
+#define insFlowField2D(t,x,y,u,v,p)   \
+  {                                   \
+    *(u) = -occaSin(2.f*OCCA_PI*y)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);\
+    *(v) =  occaSin(2.f*OCCA_PI*x)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);\
+    *(p) = -occaCos(2.f*OCCA_PI*y)*occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t);   \
+  }   
 
-// Weakly Impose Nonlinear term BCs
-#define insAdvectionBoundaryConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
-  {	\
-    if(bc==1){								\
-      *(uB) = 0.f;							\
-      *(vB) = 0.f;							\
-    } else if(bc==2){							\
-      *(uB) = -occaSin(2.f*OCCA_PI*y)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);   \
-      *(vB) =  occaSin(2.f*OCCA_PI*x)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);  	\
-    } else if(bc==3){							\
-      *(uB) = uM;							\
-      *(vB) = vM;							\
-    }									\
-  }
+// Boundary conditions
+/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
+#define insVelocityDirichletConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
+{                                   \
+  if(bc==1){                        \
+    *(uB) = 0.f;                    \
+    *(vB) = 0.f;                    \
+  } else if(bc==2){                 \
+    *(uB) = -occaSin(2.f*OCCA_PI*y)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);\
+    *(vB) =  occaSin(2.f*OCCA_PI*x)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);\
+  } else if(bc==3){                 \
+    *(uB) = uM;                     \
+    *(vB) = vM;                     \
+  } else if(bc==4){                 \
+    *(uB) = 0.f;                    \
+    *(vB) = vM;                     \
+  } else if(bc==5){                 \
+    *(uB) = uM;                     \
+    *(vB) = 0.f;                    \
+  }                                 \
+}
 
-#define insDivergenceBoundaryConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
-  {	\
-    if(bc==1){								\
-      *(uB)= 0.f;							\
-      *(vB)= 0.f;							\
-    } else if(bc==2){							\
-      *(uB) = -occaSin(2.f*OCCA_PI*y)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);   		\
-      *(vB) =  occaSin(2.f*OCCA_PI*x)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);   		\
-    } else if(bc==3){							\
-      *(uB) = uM;							\
-      *(vB) = vM;							\
-    }									\
-  }
-
-// Gradient only applies to Pressure and Pressure Incremament
-// Boundary Conditions are implemented in strong form
-#define insGradientBoundaryConditions2D(bc,t,x,y,nx,ny,pM,pB)	\
-  {								\
-    if(bc==1){							\
-      *(pB) = pM;						\
-    } else if(bc==2){						\
-      *(pB) = pM;						\
-    } else if(bc==3){						\
-      *(pB) = -occaCos(2.f*OCCA_PI*y)*occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t); 	\
-    }								\
-  }
-
-#define insHelmholtzBoundaryConditionsIpdg2D(bc, t, x, y, nx, ny, uB, uxB, uyB, vB, vxB, vyB) \
-  {		\
-    if((bc==1)||(bc==4)){						\
-      *(uB) = 0.f;							\
-      *(vB) = 0.f;							\
-									\
-      *(uxB) = 0.f;							\
-      *(uyB) = 0.f;							\
-      *(vxB) = 0.f;							\
-      *(vyB) = 0.f;							\
-    } else if(bc==2){							\
-									\
-      *(uB) = -occaSin(2.f*OCCA_PI*y)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t); 	\
-      *(vB) =  occaSin(2.f*OCCA_PI*x)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);		\
-									\
-      *(uxB) = 0.f;							\
-      *(uyB) = 0.f;							\
-      *(vxB) = 0.f;							\
-      *(vyB) = 0.f;							\
-    } else if(bc==3){							\
-      *(uB) = 0.f;							\
-      *(vB) = 0.f;							\
-      *(uxB) = 0.f;							\
-      *(uyB) =-2.f*OCCA_PI*occaCos(2.f*OCCA_PI*y)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);  \
-      *(vxB) = 2.f*OCCA_PI*occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);   \
-      *(vyB) = 0.f;							\
-    }									\
-  }
+#define insVelocityNeumannConditions2D(bc, t, x, y, nx, ny, uxM, uyM, vxM, vyM, uxB, uyB, vxB, vyB) \
+{                                          \
+  if(bc==1 || bc==2){                      \
+    *(uxB) = uxM;                          \
+    *(uyB) = -occaCos(2.f*OCCA_PI*y)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);\
+    *(vxB) =  occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);\
+    *(vyB) = vyM;                          \
+  } else if(bc==3){                        \
+    *(uxB) = 0.f;                          \
+    *(uyB) = 0.f;                          \
+    *(vxB) = 0.f;                          \
+    *(vyB) = 0.f;                          \
+  } else if(bc==4){                        \
+    *(uxB) = uxM;                          \
+    *(uyB) = uyM;                          \
+    *(vxB) = 0.f;                          \
+    *(vyB) = 0.f;                          \
+  } else if(bc==5){                        \
+    *(uxB) = 0.f;                          \
+    *(uyB) = 0.f;                          \
+    *(vxB) = vxM;                          \
+    *(vyB) = vyM;                          \
+  }                                        \
+}
 
 
-// Compute bcs for P increment
-#define insPoissonBoundaryConditions2D(bc,t,dt,x,y,nx,ny,pB,pxB,pyB)	\
-  {	\
-    if((bc==1)||(bc==4)){						\
-      *(pB) = 0.f;							\
-									\
-      *(pxB) = 0.f;\
-      *(pyB) = 0.f; \
-    }									\
-    if(bc==2){								\
-      *(pB)  = 0.f;							\
-									\
-      *(pxB) = 0.f;\
-      *(pyB) = 0.f;\
-    }									\
-    if(bc==3){								\
-      *(pB) = -occaCos(2.f*OCCA_PI*y)*occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t); \
-									\
-      *(pxB) = 0.f;							\
-      *(pyB) = 0.f;							\
-    }									\
-  }
+#define insPressureDirichletConditions2D(bc, t, x, y, nx, ny, pM, pB) \
+{                                   \
+  if(bc==1 || bc==2){               \
+    *(pB) = pM;                     \
+  } else if(bc==3){                 \
+    *(pB) = -occaCos(2.f*OCCA_PI*y)*occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t);\
+  } else if(bc==4){                 \
+    *(pB) = pM;                     \
+  } else if(bc==5){                 \
+    *(pB) = pM;                     \
+  }                                 \
+}
 
-// Compute bcs for P increment
-#define insPoissonNeumannTimeDerivative2D(bc,t,x,y,dpdt)  \
-  { \
-    if((bc==1)||(bc==4)||(bc==2) ){           \
-      *(dpdt) = p_nu*8.f*OCCA_PI*OCCA_PI*occaCos(2.f*OCCA_PI*y)*occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t); \
-    }                 \
-    if(bc==3){                \
-      *(dpdt) = 0.f; \
-    }                 \
-  }
+#define insPressureNeumannConditions2D(bc, t, x, y, nx, ny, pxM, pyM, pxB, pyB) \
+{                                          \
+  if(bc==1 || bc==2){                      \
+    *(pxB) = 2.f*OCCA_PI*occaCos(2.f*OCCA_PI*y)*occaSin(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t);\
+    *(pyB) = 2.f*OCCA_PI*occaSin(2.f*OCCA_PI*y)*occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*8.f*OCCA_PI*OCCA_PI*t);\
+  } else if(bc==3){                        \
+    *(pxB) = pxM;                          \
+    *(pyB) = pyM;                          \
+  } else if(bc==4){                        \
+    *(pxB) = 0.f;                          \
+    *(pyB) = 0.f;                          \
+  } else if(bc==5){                        \
+    *(pxB) = 0.f;                          \
+    *(pyB) = 0.f;                          \
+  }                                        \
+}

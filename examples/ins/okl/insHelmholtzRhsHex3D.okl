@@ -126,8 +126,8 @@ kernel void insHelmholtzRhsForcingHex3D(const dlong Nelements,
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
-    insVelocityDirichletConditions3D(bc, t, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);\
-    insVelocityNeumannConditions3D(bc, t, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP);\
+    insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);\
+    insVelocityNeumannConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP);\
   }                                                                     \
                                                                         \
   const dfloat du = uP;                                                 \
@@ -152,7 +152,7 @@ kernel void insHelmholtzRhsForcingHex3D(const dlong Nelements,
 kernel void insHelmholtzRhsIpdgBCHex3D(const dlong Nelements,
                                         const dlong  * restrict vmapM,
                                         const dfloat tau,
-                                        const dfloat t,
+                                        const dfloat time,
                                         const dfloat * restrict x,
                                         const dfloat * restrict y,
                                         const dfloat * restrict z,
@@ -521,8 +521,8 @@ kernel void insHelmholtzRhsIpdgBCHex3D(const dlong Nelements,
                                                                         \
   const int bc = mapB[idM];                                             \
   if(bc>0) {                                                            \
-    insVelocityDirichletConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);\
-    insVelocityNeumannConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP);\
+    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);\
+    insVelocityNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP);\
   }                                                                     \
                                                                         \
   s_U  [j][i] =  uP;                                                    \
@@ -912,7 +912,7 @@ kernel void insHelmholtzAddBCHex3D(const dlong Nelements,
         dfloat uP = 0.f;
         dfloat vP = 0.f;
         dfloat wP = 0.f;
-        insVelocityDirichletConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
+        insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
         U[idM] = uP;
         V[idM] = vP;
         W[idM] = wP;

@@ -98,6 +98,8 @@ typedef struct {
   occa::kernel pressureHaloExtractKernel;
   occa::kernel pressureHaloScatterKernel;
 
+  occa::kernel setFlowFieldKernel;
+
   occa::kernel advectionVolumeKernel;
   occa::kernel advectionSurfaceKernel;
   

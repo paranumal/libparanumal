@@ -116,7 +116,7 @@ void insAdvectionStep(ins_t *ins, dfloat time){
 
   occaTimerToc(mesh->device,"AdvectionSurface");
   // Solve pressure gradient for time^(n+1) grad(p^(n+1))
-  time += ins->dt;
+  //time += ins->dt;
   
 
   if (ins->pOptions.compareArgs("DISCRETIZATION","IPDG")) {

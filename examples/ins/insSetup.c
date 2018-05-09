@@ -122,45 +122,57 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   // Define total DOF per field for INS i.e. (Nelelemts + Nelements_halo)*Np
   dlong offset = (mesh->totalHaloPairs+mesh->Nelements)*mesh->Np ;
-  
-  // Initialize
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      const int id = n + mesh->Np*e;
-      dfloat t = 0;
-      dfloat x = mesh->x[id];
-      dfloat y = mesh->y[id];
-      dfloat z = mesh->z[id];
-      #if 0
-        dfloat lambda = 1./(2.*ins->nu)-sqrt(1./(4.*ins->nu*ins->nu) + 4.*M_PI*M_PI) ;
-        //
-        ins->U[id] = 1.0 - exp(lambda*x)*cos(2.*M_PI*y);
-        ins->V[id] = lambda/(2.*M_PI)*exp(lambda*x)*sin(2.*M_PI*y);
-        ins->P[id] = 0.5*(1.0- exp(2.*lambda*x));
-      #endif
 
-      #if 0
-        ins->U[id] = y*(4.5f-y)/(2.25f*2.25f);
-        ins->V[id] = 0;
-        ins->P[id] = (nu*(-2.)/(2.25*2.25))*(x-4.5) ;
-      #endif
+  occa::kernelInfo kernelInfo;
+  if(ins->dim==3)
+    meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
+  else
+    meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
-      #if 0
-        ins->U[id] = -sin(2.0 *M_PI*y)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); ;
-        ins->V[id] =  sin(2.0 *M_PI*x)*exp(-ins->nu*4.0*M_PI*M_PI*0.0); 
-        ins->P[id] = -cos(2.0 *M_PI*y)*cos(2.f*M_PI*x)*exp(-ins->nu*8.f*M_PI*M_PI*0.0);
-      #endif
+  occa::kernelInfo kernelInfoV  = kernelInfo;
+  occa::kernelInfo kernelInfoP  = kernelInfo;
 
-      #if 1 // mean flow
-        ins->U[id+0*offset] = ins->ubar;
-        ins->U[id+1*offset] = ins->vbar;
-        if (ins->dim==3)
-          ins->U[id+2*offset] = ins->wbar;
+  // ADD-DEFINES
+  kernelInfo.addDefine("p_pbar", ins->pbar);
+  kernelInfo.addDefine("p_ubar", ins->ubar);
+  kernelInfo.addDefine("p_vbar", ins->vbar);
+  kernelInfo.addDefine("p_wbar", ins->wbar);
+  kernelInfo.addDefine("p_nu",   ins->nu);
 
-        ins->P[id] = ins->pbar;
-      #endif
+  kernelInfo.addDefine("p_NTfields", ins->NTfields);
+  kernelInfo.addDefine("p_NVfields", ins->NVfields);
+  kernelInfo.addDefine("p_NfacesNfp",  mesh->Nfaces*mesh->Nfp);
+  //kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
+  //kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
+
+  //add boundary data to kernel info
+  string boundaryHeaderFileName; 
+  options.getArgs("DATA FILE", boundaryHeaderFileName);
+  kernelInfo.addInclude((char*)boundaryHeaderFileName.c_str());
+
+  ins->o_U = mesh->device.malloc(ins->NVfields*Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->U);
+  ins->o_P = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->P);
+
+  for (int r=0;r<size;r++) {
+    if (r==rank) {
+      if (ins->dim==2) 
+        ins->setFlowFieldKernel =  mesh->device.buildKernelFromSource("okl/insSetFlowField2D.okl", "insSetFlowField2D", kernelInfo);  
+      else
+        ins->setFlowFieldKernel =  mesh->device.buildKernelFromSource("okl/insSetFlowField3D.okl", "insSetFlowField3D", kernelInfo);  
     }
   }
+
+  dfloat startTime =0.0;
+  options.getArgs("START TIME", startTime);
+  ins->setFlowFieldKernel(mesh->Nelements,
+                          startTime,
+                          mesh->o_x,
+                          mesh->o_y,
+                          mesh->o_z,
+                          offset,
+                          ins->o_U,
+                          ins->o_P);
+  ins->o_U.copyTo(ins->U);
 
   // set time step
   dfloat hmin = 1e9, hmax = 0;
@@ -198,7 +210,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   // Maximum Velocity
   umax = sqrt(umax);
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
- 
+  
   dfloat cfl; 
   options.getArgs("CFL", cfl);
   dfloat dt     = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
@@ -238,11 +250,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   options.getArgs("TSTEPS FOR SOLUTION OUTPUT", ins->outputStep);
   if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->outputStep, ins->dt);
 
-  occa::kernelInfo kernelInfo;
-  if(ins->dim==3)
-    meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
-  else
-    meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
   //make option objects for elliptc solvers
   ins->vOptions = options;
@@ -266,9 +273,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->pOptions.setArgs("PARALMOND CYCLE",      options.getArgs("PRESSURE PARALMOND CYCLE"));
   ins->pOptions.setArgs("PARALMOND SMOOTHER",   options.getArgs("PRESSURE PARALMOND SMOOTHER"));
   ins->pOptions.setArgs("PARALMOND PARTITION",  options.getArgs("PRESSURE PARALMOND PARTITION"));
-
-  occa::kernelInfo kernelInfoV  = kernelInfo;
-  occa::kernelInfo kernelInfoP  = kernelInfo;
 
   if (rank==0) printf("==================ELLIPTIC SOLVE SETUP=========================\n");
 
@@ -389,37 +393,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   kernelInfo.addDefine("p_cubNblockV",cubNblockV);
   kernelInfo.addDefine("p_cubNblockS",cubNblockS);
 
-  if (rank==0) {
-    printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
-    printf("maxNodesVolCub: %d \t maxNodesSurCub: %d \t NblockVCub: %d \t NblockSCub: %d  \n", maxNodesVolumeCub,maxNodesSurfaceCub, cubNblockV, cubNblockS);
+  // if (rank==0) {
+  //   printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
+  //   printf("maxNodesVolCub: %d \t maxNodesSurCub: %d \t NblockVCub: %d \t NblockSCub: %d  \n", maxNodesVolumeCub,maxNodesSurfaceCub, cubNblockV, cubNblockS);
 
-    printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
-  }
-
-  // ADD-DEFINES
-  kernelInfo.addDefine("p_pbar", ins->pbar);
-  kernelInfo.addDefine("p_ubar", ins->ubar);
-  kernelInfo.addDefine("p_vbar", ins->vbar);
-  kernelInfo.addDefine("p_wbar", ins->wbar);
-
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
-  kernelInfo.addDefine("p_NTfields", ins->NTfields);
-  kernelInfo.addDefine("p_NVfields", ins->NVfields);
-  kernelInfo.addDefine("p_NfacesNfp",  mesh->Nfaces*mesh->Nfp);
-  kernelInfo.addDefine("p_nu",      (float) ins->nu);
-  //kernelInfo.addDefine("p_inu",      (float) 1.f/ins->nu);
-  //kernelInfo.addDefine("p_idt",      (float) 1.f/ins->dt);
-
-  //add boundary data to kernel info
-  string boundaryHeaderFileName; 
-  options.getArgs("DATA FILE", boundaryHeaderFileName);
-  kernelInfo.addInclude((char*)boundaryHeaderFileName.c_str());
-
+  //   printf("Np: %d \t Ncub: %d \n", mesh->Np, mesh->cubNp);
+  // }
   
   // MEMORY ALLOCATION
-  ins->o_U = mesh->device.malloc(ins->NVfields*Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->U);
-  ins->o_P = mesh->device.malloc(Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->P);
-
   ins->o_rhsU  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsU);
   ins->o_rhsV  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsV);
   ins->o_rhsW  = mesh->device.malloc(mesh->Np*mesh->Nelements*ins->Nfields*sizeof(dfloat), ins->rhsW);
