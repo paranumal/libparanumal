@@ -33,6 +33,7 @@ void insAdvectionStep(ins_t *ins, dfloat time){
   if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
     ins->advectionCubatureVolumeKernel(mesh->Nelements,
                                        mesh->o_vgeo,
+                                       mesh->o_cubvgeo,
                                        mesh->o_cubDWmatrices,
                                        mesh->o_cubInterpT,
                                        mesh->o_cubProjectT,
@@ -79,6 +80,7 @@ void insAdvectionStep(ins_t *ins, dfloat time){
   occaTimerTic(mesh->device,"AdvectionSurface");
   if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
     ins->advectionCubatureSurfaceKernel(mesh->Nelements,
+                                        mesh->o_vgeo,
                                         mesh->o_sgeo,
                                         mesh->o_cubsgeo,
                                         mesh->o_intInterpT,

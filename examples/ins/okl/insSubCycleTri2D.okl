@@ -243,8 +243,10 @@ kernel void insSubCycleSurfaceTri2D(const dlong Nelements,
 
 kernel void insSubCycleCubatureVolumeTri2D(const dlong Nelements,
                                            const dfloat * restrict vgeo,
+                                           const dfloat * restrict cubvgeo,
                                            const dfloat * restrict cubDmatrices,
                                            const dfloat * restrict cubInterpT,
+                                           const dfloat * restrict cubProjectT,
                                            const dlong offset,
                                            const dfloat * restrict U,
                                            const dfloat * restrict Ud,
@@ -449,6 +451,7 @@ kernel void insSubCycleCubatureVolumeTri2D(const dlong Nelements,
 
 // Multiple nodes per thread// use less shared memory by factor 4 
 kernel void insSubCycleCubatureSurfaceTri2D(const dlong Nelements,
+                                            const dfloat * restrict vgeo,
                                             const dfloat * restrict sgeo,
                                             const dfloat * restrict cubsgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes

@@ -2,6 +2,7 @@
 kernel void insHelmholtzRhsForcingQuad2D(const dlong Nelements,
                                          const int subcycling,  
                                          const dfloat * restrict vgeo,
+                                         const dfloat * restrict MM,
                                          const dfloat idt,
                                          const dfloat inu,
                                          const dfloat a0,
@@ -46,7 +47,6 @@ kernel void insHelmholtzRhsForcingQuad2D(const dlong Nelements,
             const dfloat Pym1 = gradP[id1+1*offset];
             const dfloat Pym2 = gradP[id2+1*offset];
 
-            const dlong id = i + j*p_Nq + e*p_Np;
             if(subcycling==0){ //no subcycling
               //U
               const dfloat Um0  = U[id0+0*offset];

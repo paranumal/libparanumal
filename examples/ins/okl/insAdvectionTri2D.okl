@@ -179,6 +179,7 @@ kernel void insAdvectionSurfaceTri2D(const dlong Nelements,
 // compute div(NU)  = div(uxu) in collocation way
 kernel void insAdvectionCubatureVolumeTri2D(const dlong Nelements,
                                             const dfloat * restrict vgeo,
+                                            const dfloat * restrict cubvgeo,
                                             const dfloat * restrict cubDmatrices,
                                             const dfloat * restrict cubInterpT,
                                             const dfloat * restrict cubProjectT,
@@ -276,6 +277,7 @@ kernel void insAdvectionCubatureVolumeTri2D(const dlong Nelements,
 
 
 kernel void insAdvectionCubatureSurfaceTri2D(const dlong Nelements,
+                                             const dfloat * restrict vgeo,
                                              const dfloat * restrict sgeo,
                                              const dfloat * restrict cubsgeo,
                                              const dfloat * restrict intInterpT, // interpolate to integration nodes
