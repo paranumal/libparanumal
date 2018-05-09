@@ -97,7 +97,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   }
 
   dfloat rho  = 1.0 ;  // Give density for getting actual pressure in nondimensional solve
-  dfloat g[2]; g[0] = 0.0; g[1] = 0.0;  // No gravitational acceleration
+  dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;  // No gravitational acceleration
 
   options.getArgs("UBAR", ins->ubar);
   options.getArgs("VBAR", ins->vbar);

@@ -1,14 +1,10 @@
 // Compute Gradient in Strong Form
 kernel void insGradientVolumeTet3D(const dlong Nelements,
                                    const dfloat * restrict vgeo,
-                                   const dfloat * restrict DrT,
-                                   const dfloat * restrict DsT,
-                                   const dfloat * restrict DtT,
+                                   const dfloat * restrict Dmatrices,
                                    const dlong  offset,
                                    const dfloat * restrict P,
-                                         dfloat * restrict Px,
-                                         dfloat * restrict Py,
-                                         dfloat * restrict Pz){
+                                         dfloat * restrict gradP){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
     // for all elements
@@ -18,7 +14,7 @@ kernel void insGradientVolumeTet3D(const dlong Nelements,
       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
-          s_P[es][n]  = P[n + (e+offset)*p_Np];
+          s_P[es][n]  = P[n + e*p_Np];
         }
       }
     }
@@ -46,19 +42,19 @@ kernel void insGradientVolumeTet3D(const dlong Nelements,
           dfloat dpdr  = 0.f,  dpds  = 0.f, dpdt = 0.f;
           occaUnroll(p_Np)
             for(int i=0;i<p_Np;++i){
-              const dfloat Drni = DrT[n+i*p_Np];
-              const dfloat Dsni = DsT[n+i*p_Np];
-              const dfloat Dtni = DtT[n+i*p_Np];
+              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+              const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
               //
               dpdr  += Drni*s_P[es][i];
               dpds  += Dsni*s_P[es][i];
               dpdt  += Dtni*s_P[es][i];
             }
 
-          const dlong id = (e+offset)*p_Np+n;
-          Px[id] = drdx*dpdr + dsdx*dpds + dtdx*dpdt;
-          Py[id] = drdy*dpdr + dsdy*dpds + dtdy*dpdt;
-          Pz[id] = drdz*dpdr + dsdz*dpds + dtdz*dpdt;
+          const dlong id = e*p_Np+n;
+          gradP[id+0*offset] = drdx*dpdr + dsdx*dpds + dtdx*dpdt;
+          gradP[id+1*offset] = drdy*dpdr + dsdy*dpds + dtdy*dpdt;
+          gradP[id+2*offset] = drdz*dpdr + dsdz*dpds + dtdz*dpdt;
         }
       }
     }
@@ -75,22 +71,13 @@ kernel void insGradientSurfaceTet3D(const dlong Nelements,
                                     const dfloat * restrict y,
                                     const dfloat * restrict z,
                                     const dfloat time,
-                                    const dfloat dt,
-                                    const dfloat c0,
-                                    const dfloat c1,
-                                    const dfloat c2,
-                                    const int index,
                                     const dlong offset,
                                     const int solverID,
-                                    const dfloat * restrict POld,
                                     const dfloat * restrict P,
-                                          dfloat * restrict Px,
-                                          dfloat * restrict Py,
-                                          dfloat * restrict Pz){
+                                          dfloat * restrict gradP){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    //
     shared dfloat s_fluxPx[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_fluxPy[p_NblockS][p_Nfp*p_Nfaces];
     shared dfloat s_fluxPz[p_NblockS][p_Nfp*p_Nfaces];
@@ -112,14 +99,8 @@ kernel void insGradientSurfaceTet3D(const dlong Nelements,
 
             // indices of negative and positive traces of face node
             const dlong id  = e*p_Nfp*p_Nfaces + n;
-            dlong idM, idP;
-            if(solverID == 1){ //no offset
-              idM = vmapM[id];
-              idP = vmapP[id];
-            } else {
-              idM = vmapM[id]+p_Np*index*offset;
-              idP = vmapP[id]+p_Np*index*offset;
-            }
+            const dlong idM = vmapM[id];
+            const dlong idP = vmapP[id];
 
             const dfloat PM = P[idM]; 
                   dfloat PP = P[idP];
@@ -127,7 +108,6 @@ kernel void insGradientSurfaceTet3D(const dlong Nelements,
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              idM = vmapM[id];
               insPressureDirichletConditions3D(bc,time, x[idM],y[idM],z[idM], nx,ny,nz, PM,&PP);
               if(solverID==1){ // Pressure Increament Gradient
                PP = PM;
@@ -156,16 +136,11 @@ kernel void insGradientSurfaceTet3D(const dlong Nelements,
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            dlong id;
-            if (solverID==1) { //no offset
-              id = e*p_Np + n;
-            } else {
-              id = (e+index*offset)*p_Np + n;
-            }
-            //
-            dfloat px  = Px[id];
-            dfloat py  = Py[id];
-            dfloat pz  = Pz[id];
+            const dlong id = e*p_Np + n;
+
+            dfloat px  = gradP[id+0*offset];
+            dfloat py  = gradP[id+1*offset];
+            dfloat pz  = gradP[id+2*offset];
             // Lift
             occaUnroll(p_NfacesNfp)
               for(int m=0;m<p_Nfaces*p_Nfp;++m){
@@ -175,9 +150,9 @@ kernel void insGradientSurfaceTet3D(const dlong Nelements,
                 pz += L*s_fluxPz[es][m];
               }
             //  rhsu = grad(p) // Note that multiplied with M^-1
-            Px[id] = px;
-            Py[id] = py;
-            Pz[id] = pz;
+            gradP[id+0*offset] = px;
+            gradP[id+1*offset] = py;
+            gradP[id+2*offset] = pz;
           }
         }
       }

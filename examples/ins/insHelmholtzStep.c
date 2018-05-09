@@ -114,6 +114,7 @@ void insHelmholtzStep(ins_t *ins, dfloat time){
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ins->helmholtzAddBCKernel(mesh->Nelements,
                             time,
+                            mesh->o_sgeo,
                             mesh->o_x,
                             mesh->o_y,
                             mesh->o_z,

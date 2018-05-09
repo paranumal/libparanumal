@@ -2,18 +2,11 @@
 // compute div(NU)  = div(uxu) in collocation way
 kernel void insSubCycleVolumeTet3D(const dlong Nelements,
                                    const dfloat * restrict vgeo,
-                                   const dfloat * restrict DrT,
-                                   const dfloat * restrict DsT,
-                                   const dfloat * restrict DtT,
+                                   const dfloat * restrict Dmatrices,
+                                   const dlong offset,
                                    const dfloat * restrict U,
-                                   const dfloat * restrict V,
-                                   const dfloat * restrict W,
                                    const dfloat * restrict Ud,
-                                   const dfloat * restrict Vd,
-                                   const dfloat * restrict Wd,
-                                         dfloat * restrict rhsU,
-                                         dfloat * restrict rhsV,
-                                         dfloat * restrict rhsW){
+                                         dfloat * restrict rhsU){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
@@ -49,13 +42,13 @@ kernel void insSubCycleVolumeTet3D(const dlong Nelements,
           const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
           const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 
-          const dfloat Un = U[id];
-          const dfloat Vn = V[id];
-          const dfloat Wn = W[id];
+          const dfloat Un = U[id+0*offset];
+          const dfloat Vn = U[id+1*offset];
+          const dfloat Wn = U[id+2*offset];
 
-          const dfloat Udn = Ud[id];
-          const dfloat Vdn = Vd[id];
-          const dfloat Wdn = Wd[id];
+          const dfloat Udn = Ud[id+0*offset];
+          const dfloat Vdn = Ud[id+1*offset];
+          const dfloat Wdn = Ud[id+2*offset];
 
           const dfloat cUn = drdx*Un + drdy*Vn + drdz*Wn;
           const dfloat cVn = dsdx*Un + dsdy*Vn + dsdz*Wn;
@@ -88,9 +81,9 @@ kernel void insSubCycleVolumeTet3D(const dlong Nelements,
          
           occaUnroll(p_Np)
             for(int i=0;i<p_Np;++i){
-              const dfloat Drni = DrT[n+i*p_Np];
-              const dfloat Dsni = DsT[n+i*p_Np];
-              const dfloat Dtni = DtT[n+i*p_Np];
+              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+              const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
 
               fluxU += Drni*s_F11[es][i]
                       +Dsni*s_F12[es][i]
@@ -105,9 +98,9 @@ kernel void insSubCycleVolumeTet3D(const dlong Nelements,
                       +Dtni*s_F33[es][i];  
             }
 
-          rhsU[id] = fluxU;
-          rhsV[id] = fluxV;
-          rhsW[id] = fluxW;
+          rhsU[id+0*offset] = fluxU;
+          rhsU[id+1*offset] = fluxV;
+          rhsU[id+2*offset] = fluxW;
         }
       }
     }
@@ -126,15 +119,10 @@ kernel void insSubCycleSurfaceTet3D(const dlong Nelements,
                                     const dfloat * restrict x,
                                     const dfloat * restrict y,
                                     const dfloat * restrict z,
+                                    const dlong offset,
                                     const dfloat * restrict U,
-                                    const dfloat * restrict V,
-                                    const dfloat * restrict W,
                                     const dfloat * restrict Ud,
-                                    const dfloat * restrict Vd,
-                                    const dfloat * restrict Wd,
-                                          dfloat * restrict rhsU,
-                                          dfloat * restrict rhsV,
-                                          dfloat * restrict rhsW){
+                                          dfloat * restrict rhsU){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -165,19 +153,19 @@ kernel void insSubCycleSurfaceTet3D(const dlong Nelements,
             const dlong idP = vmapP[id];
 
             // load negative and positive trace node values of Ux, Uy, Pr
-            const dfloat UM = U[idM];
-            const dfloat VM = V[idM];
-            const dfloat WM = W[idM];
-            const dfloat UP = U[idP];
-            const dfloat VP = V[idP];
-            const dfloat WP = W[idP];
+            const dfloat UM = U[idM+0*offset];
+            const dfloat VM = U[idM+1*offset];
+            const dfloat WM = U[idM+2*offset];
+            const dfloat UP = U[idP+0*offset];
+            const dfloat VP = U[idP+1*offset];
+            const dfloat WP = U[idP+2*offset];
 
-            const dfloat UdM = Ud[idM];
-            const dfloat VdM = Vd[idM];
-            const dfloat WdM = Wd[idM];
-                  dfloat UdP = Ud[idP];
-                  dfloat VdP = Vd[idP];
-                  dfloat WdP = Wd[idP];
+            const dfloat UdM = Ud[idM+0*offset];
+            const dfloat VdM = Ud[idM+1*offset];
+            const dfloat WdM = Ud[idM+2*offset];
+                  dfloat UdP = Ud[idP+0*offset];
+                  dfloat VdP = Ud[idP+1*offset];
+                  dfloat WdP = Ud[idP+2*offset];
 
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
@@ -225,9 +213,9 @@ kernel void insSubCycleSurfaceTet3D(const dlong Nelements,
           if(n<p_Np){
             const dlong id = e*p_Np + n;
            
-            dfloat rhsu = rhsU[id];
-            dfloat rhsv = rhsV[id];
-            dfloat rhsw = rhsW[id];
+            dfloat rhsu = rhsU[id+0*offset];
+            dfloat rhsv = rhsU[id+1*offset];
+            dfloat rhsw = rhsU[id+2*offset];
             // Lift
             occaUnroll(p_NfacesNfp)
             for(int m=0;m<p_Nfaces*p_Nfp;++m){
@@ -237,9 +225,9 @@ kernel void insSubCycleSurfaceTet3D(const dlong Nelements,
               rhsw  += L*s_fluxW[es][m];
              }
             // M^-1* (div(u*u)) + Lift*(F*-F))
-            rhsU[id] = rhsu;
-            rhsV[id] = rhsv;
-            rhsW[id] = rhsw;
+            rhsU[id+0*offset] = rhsu;
+            rhsU[id+1*offset] = rhsv;
+            rhsU[id+2*offset] = rhsw;
           }
         }
       }
@@ -253,23 +241,17 @@ kernel void insSubCycleSurfaceTet3D(const dlong Nelements,
 // compute div(NU)  = div(uxu) in collocation way
 kernel void insSubCycleCubatureVolumeTet3D(const dlong Nelements,
                                            const dfloat * restrict vgeo,
-                                           const dfloat * restrict cubDrWT,
-                                           const dfloat * restrict cubDsWT,
-                                           const dfloat * restrict cubDtWT,
+                                           const dfloat * restrict cubvgeo,
+                                           const dfloat * restrict cubDWmatrices,
                                            const dfloat * restrict cubInterpT,
+                                           const dfloat * restrict cubProjectT,
+                                           const dlong offset,
                                            const dfloat * restrict U,
-                                           const dfloat * restrict V,
-                                           const dfloat * restrict W,
                                            const dfloat * restrict Ud,
-                                           const dfloat * restrict Vd,
-                                           const dfloat * restrict Wd,
-                                                 dfloat * restrict rhsU,
-                                                 dfloat * restrict rhsV,
-                                                 dfloat * restrict rhsW){
+                                                 dfloat * restrict rhsU){
 
   for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
 
-    // Too much shared memory!!!!! dont use this just for test
     shared dfloat s_U[p_cubNblockV][p_Np];
     shared dfloat s_V[p_cubNblockV][p_Np];
     shared dfloat s_W[p_cubNblockV][p_Np];
@@ -309,17 +291,17 @@ kernel void insSubCycleCubatureVolumeTet3D(const dlong Nelements,
           const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
           const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 
-          const dfloat Un = U[id];
-          const dfloat Vn = V[id];
-          const dfloat Wn = W[id];
+          const dfloat Un = U[id+0*offset];
+          const dfloat Vn = U[id+1*offset];
+          const dfloat Wn = U[id+2*offset];
 
           s_U[es][n] = drdx*Un + drdy*Vn + drdz*Wn; 
           s_V[es][n] = dsdx*Un + dsdy*Vn + dsdz*Wn; 
           s_W[es][n] = dtdx*Un + dtdy*Vn + dtdz*Wn; 
 
-          s_Ud[es][n] = Ud[id];
-          s_Vd[es][n] = Vd[id];
-          s_Wd[es][n] = Wd[id];
+          s_Ud[es][n] = Ud[id+0*offset];
+          s_Vd[es][n] = Ud[id+1*offset];
+          s_Wd[es][n] = Ud[id+2*offset];
 
         }               
       }
@@ -376,9 +358,9 @@ kernel void insSubCycleCubatureVolumeTet3D(const dlong Nelements,
 
           occaUnroll(p_cubNp)
             for(int i=0;i<p_cubNp;++i){
-              const dfloat cDrWni = cubDrWT[n+i*p_Np];
-              const dfloat cDsWni = cubDsWT[n+i*p_Np];
-              const dfloat cDtWni = cubDtWT[n+i*p_Np];
+              const dfloat cDrWni = cubDWmatrices[n+i*p_Np+0*p_cubNp*p_Np];
+              const dfloat cDsWni = cubDWmatrices[n+i*p_Np+1*p_cubNp*p_Np];
+              const dfloat cDtWni = cubDWmatrices[n+i*p_Np+2*p_cubNp*p_Np];
   
               fluxU += cDrWni*s_cF11[es][i]
                       +cDsWni*s_cF12[es][i]
@@ -393,9 +375,9 @@ kernel void insSubCycleCubatureVolumeTet3D(const dlong Nelements,
                       +cDtWni*s_cF33[es][i];  
             }
 
-          rhsU[id] = -fluxU; // note  change in sign
-          rhsV[id] = -fluxV;           
-          rhsW[id] = -fluxW;             
+          rhsU[id+0*offset] = -fluxU; // note  change in sign
+          rhsU[id+1*offset] = -fluxV;           
+          rhsU[id+2*offset] = -fluxW;             
         }
       }
     }
@@ -404,9 +386,13 @@ kernel void insSubCycleCubatureVolumeTet3D(const dlong Nelements,
 
 
 kernel void insSubCycleCubatureSurfaceTet3D(const dlong Nelements,
+                                            const dfloat * restrict vgeo,
                                             const dfloat * restrict sgeo,
+                                            const dfloat * restrict cubsgeo,
                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+                                            const dfloat * restrict cubInterpT,
+                                            const dfloat * restrict cubProjectT,
                                             const dlong  * restrict vmapM,
                                             const dlong  * restrict vmapP,
                                             const int    * restrict EToB,
@@ -415,15 +401,10 @@ kernel void insSubCycleCubatureSurfaceTet3D(const dlong Nelements,
                                             const dfloat * restrict intx, // integration nodes
                                             const dfloat * restrict inty,
                                             const dfloat * restrict intz,
+                                            const dlong offset,
                                             const dfloat * restrict U,
-                                            const dfloat * restrict V,
-                                            const dfloat * restrict W,
                                             const dfloat * restrict Ud,
-                                            const dfloat * restrict Vd,
-                                            const dfloat * restrict Wd,
-                                                  dfloat * restrict rhsU,
-                                                  dfloat * restrict rhsV,
-                                                  dfloat * restrict rhsW){
+                                                  dfloat * restrict rhsU){
   
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
@@ -459,19 +440,19 @@ kernel void insSubCycleCubatureSurfaceTet3D(const dlong Nelements,
             const dlong idP = vmapP[id];
 
             // load negative and positive trace node values of velocity
-            s_UM[es][n] = U[idM];
-            s_VM[es][n] = V[idM];
-            s_WM[es][n] = W[idM];
-            s_UP[es][n] = U[idP];
-            s_VP[es][n] = V[idP];
-            s_WP[es][n] = W[idP];
+            s_UM[es][n] = U[idM+0*offset];
+            s_VM[es][n] = U[idM+1*offset];
+            s_WM[es][n] = U[idM+2*offset];
+            s_UP[es][n] = U[idP+0*offset];
+            s_VP[es][n] = U[idP+1*offset];
+            s_WP[es][n] = U[idP+2*offset];
 
-            s_UdM[es][n] = Ud[idM];
-            s_VdM[es][n] = Vd[idM];
-            s_WdM[es][n] = Wd[idM];
-            s_UdP[es][n] = Ud[idP];
-            s_VdP[es][n] = Vd[idP];
-            s_WdP[es][n] = Wd[idP];
+            s_UdM[es][n] = Ud[idM+0*offset];
+            s_VdM[es][n] = Ud[idM+1*offset];
+            s_WdM[es][n] = Ud[idM+2*offset];
+            s_UdP[es][n] = Ud[idP+0*offset];
+            s_VdP[es][n] = Ud[idP+1*offset];
+            s_WdP[es][n] = Ud[idP+2*offset];
           }
         }
       }
@@ -571,9 +552,9 @@ kernel void insSubCycleCubatureSurfaceTet3D(const dlong Nelements,
           if(n<p_Np){
             const dlong id = n + p_Np*e;
             // prefetch volume rhs
-            dfloat rhsu = rhsU[id];
-            dfloat rhsv = rhsV[id];
-            dfloat rhsw = rhsW[id];
+            dfloat rhsu = rhsU[id+0*offset];
+            dfloat rhsv = rhsU[id+1*offset];
+            dfloat rhsw = rhsU[id+2*offset];
 
             occaUnroll(p_intNfpNfaces)
               for(int m=0;m<p_intNfpNfaces;++m){
@@ -584,9 +565,9 @@ kernel void insSubCycleCubatureSurfaceTet3D(const dlong Nelements,
                 rhsw += L*s_iFluxW[es][m];
               }
 
-            rhsU[id] = rhsu;
-            rhsV[id] = rhsv; 
-            rhsW[id] = rhsw; 
+            rhsU[id+0*offset] = rhsu;
+            rhsU[id+1*offset] = rhsv; 
+            rhsU[id+2*offset] = rhsw; 
           }
         }
       }

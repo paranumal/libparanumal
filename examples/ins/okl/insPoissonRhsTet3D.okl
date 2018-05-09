@@ -56,9 +56,7 @@ kernel void insPoissonRhsIpdgBCTet3D(const dlong Nelements,
                                      const dfloat * restrict vgeo,
                                      const dfloat * restrict sgeo,
                                      const int    * restrict EToB,
-                                     const dfloat * restrict DrT,
-                                     const dfloat * restrict DsT,
-                                     const dfloat * restrict DtT,
+                                     const dfloat * restrict Dmatrices,
                                      const dfloat * restrict LIFTT,
                                      const dfloat * restrict MM,
                                            dfloat * restrict rhsP){
@@ -145,9 +143,10 @@ kernel void insPoissonRhsIpdgBCTet3D(const dlong Nelements,
 
         occaUnroll(p_NfacesNfp)
           for(int i=0;i<p_NfacesNfp;++i){
-            Lnxdp += LIFTT[n+i*p_Np]*s_nxdp[i];
-            Lnydp += LIFTT[n+i*p_Np]*s_nydp[i];
-            Lnzdp += LIFTT[n+i*p_Np]*s_nzdp[i];
+            const dfloat L = LIFTT[n+i*p_Np];
+            Lnxdp += L*s_nxdp[i];
+            Lnydp += L*s_nydp[i];
+            Lnzdp += L*s_nzdp[i];
           }
 
         const dfloat dpdx = Lnxdp;
@@ -176,9 +175,9 @@ kernel void insPoissonRhsIpdgBCTet3D(const dlong Nelements,
         dfloat lapr = 0.f, laps = 0.f, lapt = 0.f;
         occaUnroll(p_Np)
         for(int i=0;i<p_Np;++i) {
-          lapr += DrT[n+i*p_Np]*s_dpdx[i];
-          laps += DsT[n+i*p_Np]*s_dpdy[i];
-          lapt += DtT[n+i*p_Np]*s_dpdz[i];
+          lapr += Dmatrices[n+i*p_Np+0*p_Np*p_Np]*s_dpdx[i];
+          laps += Dmatrices[n+i*p_Np+1*p_Np*p_Np]*s_dpdy[i];
+          lapt += Dmatrices[n+i*p_Np+2*p_Np*p_Np]*s_dpdz[i];
         }
 
         s_lapp[n] = -(lapr+laps+lapt);
@@ -224,15 +223,8 @@ kernel void insPoissonRhsBCTet3D(const dlong Nelements,
                                  const int pressure_solve,
                                  const dfloat * restrict ggeo,
                                  const dfloat * restrict sgeo,
-                                 const dfloat * restrict SrrT,
-                                 const dfloat * restrict SrsT,
-                                 const dfloat * restrict SrtT,
-                                 const dfloat * restrict SsrT,
-                                 const dfloat * restrict SssT,
-                                 const dfloat * restrict SstT,
-                                 const dfloat * restrict StrT,
-                                 const dfloat * restrict StsT,
-                                 const dfloat * restrict SttT,
+                                 const dfloat * restrict Dmatrices,
+                                 const dfloat * restrict Smatrices,
                                  const dfloat * restrict MM,
                                  const dlong  * restrict vmapM,
                                  const dfloat * restrict sMT,
@@ -309,29 +301,22 @@ kernel void insPoissonRhsBCTet3D(const dlong Nelements,
         const dfloat Gss = ggeo[gid + p_G11ID];
         const dfloat Gst = ggeo[gid + p_G12ID];
         const dfloat Gtt = ggeo[gid + p_G22ID];
-        const dfloat J   = ggeo[gid + p_GWJID];
 
         dfloat qrr = 0.;
         dfloat qrs = 0.;
         dfloat qrt = 0.;
-        dfloat qsr = 0.;
         dfloat qss = 0.;
         dfloat qst = 0.;
-        dfloat qtr = 0.;
-        dfloat qts = 0.;
         dfloat qtt = 0.;
 
         occaUnroll(p_Np)
           for (int k=0;k<p_Np;k++) {
-            qrr += SrrT[n+k*p_Np]*s_q[k];
-            qrs += SrsT[n+k*p_Np]*s_q[k];
-            qrt += SrtT[n+k*p_Np]*s_q[k];
-            qsr += SsrT[n+k*p_Np]*s_q[k];
-            qss += SssT[n+k*p_Np]*s_q[k];
-            qst += SstT[n+k*p_Np]*s_q[k];
-            qtr += StrT[n+k*p_Np]*s_q[k];
-            qts += StsT[n+k*p_Np]*s_q[k];
-            qtt += SttT[n+k*p_Np]*s_q[k];
+            qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*s_q[k];
+            qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*s_q[k];
+            qrt += Smatrices[n+k*p_Np+2*p_Np*p_Np]*s_q[k];
+            qss += Smatrices[n+k*p_Np+3*p_Np*p_Np]*s_q[k];
+            qst += Smatrices[n+k*p_Np+4*p_Np*p_Np]*s_q[k];
+            qtt += Smatrices[n+k*p_Np+5*p_Np*p_Np]*s_q[k];
           }
 
         dfloat Lndq = 0;            
@@ -342,8 +327,7 @@ kernel void insPoissonRhsBCTet3D(const dlong Nelements,
           }
 
         rhsP[id] -= Grr*qrr+Grs*qrs+Grt*qrt
-                   +Grs*qsr+Gss*qss+Gst*qst 
-                   +Grt*qtr+Gst*qts+Gtt*qtt  - Lndq;
+                   +Gss*qss+Gst*qst+Gtt*qtt  - Lndq;
       }
     }
   }
