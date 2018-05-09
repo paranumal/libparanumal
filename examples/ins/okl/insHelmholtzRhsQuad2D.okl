@@ -104,8 +104,8 @@ kernel void insHelmholtzRhsForcingQuad2D(const dlong Nelements,
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
     const dlong idM = vmapM[sk];                                        \
-    insVelocityDirichletConditions2D(bc, t, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);\
-    insVelocityNeumannConditions2D(bc, t, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);\
+    insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);\
+    insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);\
   }                                                                     \
                                                                         \
   const dfloat du = uP;                                                 \
@@ -123,7 +123,7 @@ kernel void insHelmholtzRhsForcingQuad2D(const dlong Nelements,
 kernel void insHelmholtzRhsIpdgBCQuad2D(const dlong Nelements,
                                         const dlong  * restrict vmapM,
                                         const dfloat tau,
-                                        const dfloat t,
+                                        const dfloat time,
                                         const dfloat * restrict x,
                                         const dfloat * restrict y,
                                         const dfloat * restrict z,
@@ -247,8 +247,8 @@ kernel void insHelmholtzRhsIpdgBCQuad2D(const dlong Nelements,
                                                                         \
   const int bc = mapB[idM];                                             \
   if(bc>0) {                                                            \
-    insVelocityDirichletConditions2D(bc, t, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);\
-    insVelocityNeumannConditions2D(bc, t, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);\
+    insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);\
+    insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);\
   }                                                                     \
                                                                         \
   s_u  [j][i]  = uP;                                                    \
@@ -443,7 +443,7 @@ kernel void insHelmholtzAddBCQuad2D(const dlong Nelements,
 
         dfloat uP = 0.f;
         dfloat vP = 0.f;
-        insVelocityDirichletConditions2D(bc, t, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+        insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
         U[idM] = uP;
         V[idM] = vP;
       }    

@@ -20,3 +20,4 @@ Plane Surface(9) = {9};
 Physical Surface("Domain",9) = {9};
 Physical Line("Inflow",2) = {2, 4, 6, 8};
 Physical Line("Outflow",3) = {1, 3, 5, 7};
+Recombine Surface {9};

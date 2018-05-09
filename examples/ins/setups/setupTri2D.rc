@@ -2,10 +2,10 @@
 1.0
 
 [DATA FILE]
-data/insUniform2D.h
+data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insFence2D.msh
+../../meshes/insVortex2D.msh
 
 [MESH DIMENSION]
 2
@@ -25,23 +25,20 @@ CUDA
 [DEVICE NUMBER]
 0
 
-[LAMBDA]
-0
-
 # can be EXTBDF1,2, or 3
 # can add SUBCYCLING to EXTBDF
 [TIME INTEGRATOR]
 EXTBDF2
 
 [SUBCYCLING STEPS]
-4
+0
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
 CUBATURE
 
 [VISCOSITY]
-1.e-4
+0.025
 
 [MACH NUMBER]
 .2
@@ -56,16 +53,16 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+1
 
 [START TIME]
 0
 
 [FINAL TIME]
-10
+1
 
 [CFL]
-0.1
+0.9
 
 [OUTPUT TYPE]
 VTU
@@ -177,6 +174,11 @@ CHEBYSHEV
 STRONGNODES
 
 ###########################################
+
+# compare to a reference solution. Use NONE to skip comparison
+# can be VORTEX or KOVASZNAY
+[EXACT]
+VORTEX
 
 [VERBOSE]
 FALSE

@@ -1,7 +1,6 @@
 
-
 // Initial conditions 
-#define insFlowField3D(t,x,y,u,v,w,p) \
+#define insFlowField3D(t,x,y,z, u,v,w,p) \
   {                                   \
     *(u) = p_ubar;                    \
     *(v) = p_vbar;                    \
