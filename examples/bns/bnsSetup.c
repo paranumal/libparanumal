@@ -100,16 +100,24 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   bns->fexplicit = 0; 
   if(options.compareArgs("TIME INTEGRATOR", "LSERK") ) // fully explicit schemes
     bns->fexplicit = 1; 
-
-
-
-  
-  
   // Report / error time steps for fixed dt integration
   options.getArgs("TSTEPS FOR SOLUTION OUTPUT", bns->reportStep);
   options.getArgs("TSTEPS FOR ERROR COMPUTE",   bns->errorStep);
   // Output interval for variable dt integration
   options.getArgs("OUTPUT INTERVAL",   bns->outputInterval);
+
+
+
+
+
+  printf("=============WRITING INPUT PARAMETERS===================\n");
+
+  printf("REYNOLDS NUMBER\t:\t%.2e\n", bns->Re);
+  printf("MACH NUMBER\t:\t%.2e\n", bns->Ma);
+  printf("CFL NUMBER\t:\t%.2e\n", bns->cfl);
+  printf("START TIME\t:\t%.2e\n", bns->startTime);
+  printf("FINAL TIME\t:\t%.2e\n", bns->finalTime);
+
     
 
   printf("Starting initial conditions\n");
@@ -229,7 +237,6 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   bnsRampFunction(time, &ramp, &drampdt);
 
  // INITIALIZE PROBLEM 
-  dlong cnt = 0;
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
       dfloat t = 0., x = 0., y = 0., z = 0.;
@@ -238,14 +245,15 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
       if(bns->dim==3)
         z = mesh->z[n + mesh->Np*e];
 
+      const dlong id = e*bns->Nfields*mesh->Np +n; 
+
       // Uniform Flow
-      bns->q[cnt+0] = q1bar; 
-      bns->q[cnt+1] = ramp*q2bar;
-      bns->q[cnt+2] = ramp*q3bar;
-      bns->q[cnt+3] = ramp*ramp*q4bar;
-      bns->q[cnt+4] = ramp*ramp*q5bar;
-      bns->q[cnt+5] = ramp*ramp*q6bar;    
-      cnt += bns->Nfields;
+      bns->q[id+0*mesh->Np] = q1bar; 
+      bns->q[id+1*mesh->Np] = ramp*q2bar;
+      bns->q[id+2*mesh->Np] = ramp*q3bar;
+      bns->q[id+3*mesh->Np] = ramp*ramp*q4bar;
+      bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
+      bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;    
     }
   }
 

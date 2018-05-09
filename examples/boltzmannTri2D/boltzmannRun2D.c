@@ -118,11 +118,11 @@ int fixed_dt = 0; options.getArgs("FIXED TIME STEP", fixed_dt);
 
 printf(" Fixed dt: %d \n", fixed_dt);
 
-// if(  (  options.compareArgs("TIME INTEGRATOR","DOPRI5") && (fixed_dt==1) ) && 
-//     !(  options.compareArgs("TIME INTEGRATOR","XDOPRI") 
-//      || options.compareArgs("TIME INTEGRATOR","SAADRK") 
-//      || options.compareArgs("TIME INTEGRATOR","IMEXRK") )){
-if(!( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") )){
+if(  (  options.compareArgs("TIME INTEGRATOR","DOPRI5") && (fixed_dt==1) ) && 
+    !(  options.compareArgs("TIME INTEGRATOR","XDOPRI") 
+     || options.compareArgs("TIME INTEGRATOR","SAADRK") 
+     || options.compareArgs("TIME INTEGRATOR","IMEXRK") )){
+// if(!( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") )){
 
 // if( (fixed_dt==1) ){
  for(int tstep=0;tstep<bns->NtimeSteps;++tstep){

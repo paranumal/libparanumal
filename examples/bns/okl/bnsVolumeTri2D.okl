@@ -1,15 +1,12 @@
 // Only difference with boltzmannVolume2D is size of rhsq and shifting
 kernel void bnsVolumeTri2D(const dlong Nelements,
-                        const dlong * restrict elementIds,
-                        const dfloat ramp,
-                        const dfloat drampdt,
-                        const int nrhs,
-                        const int shift,
-                        const dfloat * restrict vgeo,
-                        const dfloat * restrict DrT,
-                        const dfloat * restrict DsT,
-                        const dfloat * restrict q,
-                              dfloat * restrict rhsq){
+                          const dlong * restrict elementIds,
+                          const dfloat ramp,
+                          const dfloat drampdt,
+                          const dfloat * restrict vgeo,
+                          const dfloat * restrict Dmatrices,
+                          const dfloat * restrict q,
+                                dfloat * restrict rhsq){
   
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
@@ -39,7 +36,7 @@ kernel void bnsVolumeTri2D(const dlong Nelements,
 
   for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
     for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
-      int et = eo+es; // element in block
+      dlong et = eo+es; // element in block
       if(et<Nelements){   
         // prefetch geometric factors (constant on triangle)
         const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -61,8 +58,8 @@ kernel void bnsVolumeTri2D(const dlong Nelements,
 
         occaUnroll(p_Np)
         for(int i=0;i<p_Np;++i){
-          const dfloat Drni = DrT[n+i*p_Np];
-          const dfloat Dsni = DsT[n+i*p_Np];
+          const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+          const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
           occaUnroll(p_Nfields)
           for(int fld=0; fld<p_Nfields;++fld){
            r_dqdr[fld] += Drni*s_q[es][fld][i];
@@ -118,17 +115,16 @@ kernel void bnsPmlVolumeTri2D(const dlong pmlNelements,
               const dlong * restrict pmlIds,
               const dfloat ramp,
               const dfloat drampdt,
-              const int nrhs, 
-              const int shift,
               const dfloat * restrict vgeo,
-              const dfloat * restrict DrT,
-              const dfloat * restrict DsT,
+              const dfloat * restrict Dmatrices,
               const dfloat * restrict q,
               const dfloat * restrict pmlqx,
               const dfloat * restrict pmlqy,
+              const dfloat * restrict pmlqz,
                     dfloat * restrict rhsq,
                     dfloat * restrict pmlrhsqx,
-                    dfloat * restrict pmlrhsqy){
+                    dfloat * restrict pmlrhsqy,
+                    dfloat * restrict pmlrhsqz){
   
   for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){  // for all elements
 
@@ -185,8 +181,8 @@ kernel void bnsPmlVolumeTri2D(const dlong pmlNelements,
         // Compute Derivatives
         occaUnroll(p_Np)
         for(int i=0;i<p_Np;++i){
-          const dfloat Drni = DrT[n+i*p_Np];
-          const dfloat Dsni = DsT[n+i*p_Np];
+          const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+          const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
           occaUnroll(p_Nfields)
           for(int fld=0; fld<p_Nfields; ++fld){
             r_dqdr[fld] += Drni*s_q[es][fld][i];
