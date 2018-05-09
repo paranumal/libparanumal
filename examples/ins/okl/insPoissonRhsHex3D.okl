@@ -2,6 +2,7 @@
 // Computes volume contribution of div(UI)
 kernel void insPoissonRhsForcingHex3D(const dlong Nelements,
                                    const dfloat * restrict vgeo,
+                                   const dfloat * restrict MM,
                                    const dfloat dt,
                                    const dfloat g0,
                                     dfloat * restrict rhs){
@@ -71,6 +72,8 @@ kernel void insPoissonRhsIpdgBCHex3D(const dlong Nelements,
                                       const dfloat * restrict sgeo,
                                       const int    * restrict EToB,
                                       const dfloat * restrict D,
+                                      const dfloat * restrict LIFTT,
+                                      const dfloat * restrict MM,
                                             dfloat * restrict rhsP){
   
   for(dlong e=0;e<Nelements;++e;outer0){
@@ -311,7 +314,10 @@ kernel void insPoissonRhsBCHex3D(const dlong Nelements,
                               const dfloat * restrict ggeo,
                               const dfloat * restrict sgeo,
                               const dfloat * restrict D,
+                              const dfloat * restrict S,
+                              const dfloat * restrict MM,
                               const dlong  * restrict vmapM,
+                              const dlong  * restrict sMT,
                               const dfloat time,
                               const dfloat dt,
                               const dfloat * restrict x,

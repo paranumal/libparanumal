@@ -6,11 +6,7 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
                                      const dfloat * restrict D,
                                      const dlong offset,
                                      const dfloat * restrict U,
-                                     const dfloat * restrict V,
-                                     const dfloat * restrict W,
-                                           dfloat * restrict NU,
-                                           dfloat * restrict NV,
-                                           dfloat * restrict NW){
+                                           dfloat * restrict NU){
 
   for(dlong e=0; e<Nelements; ++e; outer0) {
 
@@ -62,10 +58,10 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
           const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
           const dfloat JW   = vgeo[gid + p_JWID*p_Np];
 
-          const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          const dfloat Un = U[id];
-          const dfloat Vn = V[id];
-          const dfloat Wn = W[id];
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          const dfloat Un = U[id+0*offset];
+          const dfloat Vn = U[id+1*offset];
+          const dfloat Wn = U[id+2*offset];
 
           const dfloat cUn = JW*(drdx*Un+drdy*Vn+drdz*Wn);
           const dfloat cVn = JW*(dsdx*Un+dsdy*Vn+dsdz*Wn);
@@ -118,10 +114,10 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
             const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
             const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 
-            const dlong id =(e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-            NU[id] = -invJW*r_NU[k];
-            NV[id] = -invJW*r_NV[k];
-            NW[id] = -invJW*r_NW[k];
+            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            NU[id+0*offset] = -invJW*r_NU[k];
+            NU[id+1*offset] = -invJW*r_NV[k];
+            NU[id+2*offset] = -invJW*r_NW[k];
           }
       }
     }
@@ -131,8 +127,8 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
 
 #define surfaceTerms(sk,face,m, i, j)                                   \
 {                                                                       \
-  const dlong  idM = vmapM[sk]+offset*p_Np;                             \
-  const dlong  idP = vmapP[sk]+offset*p_Np;                             \
+  const dlong  idM = vmapM[sk];                                         \
+  const dlong  idP = vmapP[sk];                                         \
                                                                         \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
@@ -140,12 +136,12 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
   const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
   const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
                                                                         \
-  const dfloat uM = U[idM], vM = V[idM], wM = W[idM];                   \
-        dfloat uP = U[idP], vP = V[idP], wP = W[idP];                   \
+  const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset]; \
+        dfloat uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset]; \
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
-    insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
+    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
   }                                                                     \
                                                                         \
   const dfloat unM   = occaFabs(nx*uM + ny*vM + nz*wM);                 \
@@ -166,6 +162,7 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
 
 kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
                                       const dfloat * restrict sgeo,
+                                      const dfloat * restrict LIFTT,
                                       const dlong  * restrict vmapM,
                                       const dlong  * restrict vmapP,
                                       const int    * restrict EToB,
@@ -175,11 +172,7 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
                                       const dfloat * restrict z,
                                       const dlong offset,
                                       const dfloat * restrict U,
-                                      const dfloat * restrict V,
-                                      const dfloat * restrict W,
-                                            dfloat * restrict NU,
-                                            dfloat * restrict NV,
-                                            dfloat * restrict NW){
+                                            dfloat * restrict NU){
 
   // for all elements
   for(dlong e=0;e<Nelements;e++;outer0){
@@ -306,11 +299,11 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
       for(int i=0;i<p_Nq;++i;inner0){
         occaUnroll(p_Nq)
         for(int k=0;k<p_Nq;++k){
-          const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-          NU[id] += r_NU[k];
-          NV[id] += r_NV[k];
-          NW[id] += r_NW[k];
+          NU[id+0*offset] += r_NU[k];
+          NU[id+1*offset] += r_NV[k];
+          NU[id+2*offset] += r_NW[k];
         }
       }
     }
@@ -328,14 +321,8 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
                                              const dfloat * restrict cubProjectT,
                                              const dlong offset,
                                              const dfloat * restrict U,
-                                             const dfloat * restrict V,
-                                             const dfloat * restrict W,
                                                    dfloat * restrict cU, //storage for interpolated fields
-                                                   dfloat * restrict cV, //storage for interpolated fields
-                                                   dfloat * restrict cW, //storage for interpolated fields
-                                                   dfloat * restrict NU,
-                                                   dfloat * restrict NV,
-                                                   dfloat * restrict NW){
+                                                   dfloat * restrict NU){
 
   //----------------------------kernel 1 interpolate velocity fields to quadrature points
   for(dlong e=0; e<Nelements; ++e; outer0) {
@@ -371,10 +358,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         if (i<p_Nq && j<p_Nq) {
           occaUnroll(p_Nq)
           for(int k=0;k<p_Nq;++k){
-            const dlong id =(e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-            const dfloat uc = U[id];
-            const dfloat vc = V[id];
-            const dfloat wc = W[id];
+            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            const dfloat uc = U[id+0*offset];
+            const dfloat vc = U[id+1*offset];
+            const dfloat wc = U[id+2*offset];
 
             occaUnroll(p_cubNq)
             for(int n=0;n<p_cubNq;++n){
@@ -448,9 +435,9 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
           }
 
           const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
-          cU[id] = r_U[k];
-          cV[id] = r_V[k];
-          cW[id] = r_W[k];
+          cU[id+0*offset] = r_U[k];
+          cU[id+1*offset] = r_V[k];
+          cU[id+2*offset] = r_W[k];
         }
       }
       barrier(localMemFence);
@@ -511,9 +498,9 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
           const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
 
           const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
-          const dfloat Un = cU[id];
-          const dfloat Vn = cV[id];
-          const dfloat Wn = cW[id];
+          const dfloat Un = cU[id+0*offset];
+          const dfloat Vn = cU[id+1*offset];
+          const dfloat Wn = cU[id+2*offset];
 
           const dfloat cUn = JW*(drdx*Un+drdy*Vn+drdz*Wn);
           const dfloat cVn = JW*(dsdx*Un+dsdy*Vn+dsdz*Wn);
@@ -564,9 +551,9 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         occaUnroll(p_cubNq)
           for(int k=0;k<p_cubNq;++k){
             const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
-            cU[id] = r_NU[k];
-            cV[id] = r_NV[k];
-            cW[id] = r_NW[k];
+            cU[id+0*offset] = r_NU[k];
+            cU[id+1*offset] = r_NV[k];
+            cU[id+2*offset] = r_NW[k];
           }
       }
     }
@@ -607,9 +594,9 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         occaUnroll(p_cubNq)
         for(int k=0;k<p_cubNq;++k){
           const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
-          const dfloat NUn = cU[id];
-          const dfloat NVn = cV[id];
-          const dfloat NWn = cW[id];
+          const dfloat NUn = cU[id+0*offset];
+          const dfloat NVn = cU[id+1*offset];
+          const dfloat NWn = cU[id+2*offset];
 
           occaUnroll(p_Nq)
           for(int n=0;n<p_Nq;++n){
@@ -683,10 +670,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
               r_NW[k] += Pi*s_NW[j][n];
             }
 
-            const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-            NU[id] = -invJW*r_NU[k];
-            NV[id] = -invJW*r_NV[k];
-            NW[id] = -invJW*r_NW[k];
+            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            NU[id+0*offset] = -invJW*r_NU[k];
+            NU[id+1*offset] = -invJW*r_NV[k];
+            NU[id+2*offset] = -invJW*r_NW[k];
           }
         }
       }
@@ -705,14 +692,8 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
                                              const dfloat * restrict cubProjectT,
                                              const dlong offset,
                                              const dfloat * restrict U,
-                                             const dfloat * restrict V,
-                                             const dfloat * restrict W,
                                                    dfloat * restrict cU, //storage for interpolated fields
-                                                   dfloat * restrict cV, //storage for interpolated fields
-                                                   dfloat * restrict cW, //storage for interpolated fields
-                                                   dfloat * restrict NU,
-                                                   dfloat * restrict NV,
-                                                   dfloat * restrict NW){
+                                                   dfloat * restrict NU){
 
   //----------------------------kernel 1 interpolate velocity fields to quadrature points
   for(dlong e=0; e<Nelements; ++e; outer0) {
@@ -772,10 +753,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         if (i<p_Nq && j<p_Nq) {
           occaUnroll(p_Nq)
           for(int k=0;k<p_Nq;++k){
-            const dlong id =(e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-            const dfloat uc = U[id];
-            const dfloat vc = V[id];
-            const dfloat wc = W[id];
+            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            const dfloat uc = U[id+0*offset];
+            const dfloat vc = U[id+1*offset];
+            const dfloat wc = U[id+2*offset];
 
             occaUnroll(p_cubNq)
             for(int n=0;n<p_cubNq;++n){
@@ -999,10 +980,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
             const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
             const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 
-            const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-            NU[id] = -invJW*nu;
-            NV[id] = -invJW*nv;
-            NW[id] = -invJW*nw;
+            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            NU[id+0*offset] = -invJW*nu;
+            NU[id+1*offset] = -invJW*nv;
+            NU[id+2*offset] = -invJW*nw;
           }
         }
       }
@@ -1017,14 +998,14 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     for(int i=0;i<p_cubNq;++i;inner0){\
       if(i<p_Nq && j<p_Nq){\
         const dlong id  = e*p_Nfp*p_Nfaces + face*p_Nfp + j*p_Nq +i;\
-        const dlong idM = vmapM[id]+offset*p_Np;\
-        const dlong idP = vmapP[id]+offset*p_Np;\
-        s_UM[j][i] = U[idM];\
-        s_VM[j][i] = V[idM];\
-        s_WM[j][i] = W[idM];\
-        s_UP[j][i] = U[idP];\
-        s_VP[j][i] = V[idP];\
-        s_WP[j][i] = W[idP];\
+        const dlong idM = vmapM[id];\
+        const dlong idP = vmapP[id];\
+        s_UM[j][i] = U[idM+0*offset];\
+        s_VM[j][i] = U[idM+1*offset];\
+        s_WM[j][i] = U[idM+2*offset];\
+        s_UP[j][i] = U[idP+0*offset];\
+        s_VP[j][i] = U[idP+1*offset];\
+        s_WP[j][i] = U[idP+2*offset];\
       }\
     }\
   }\
@@ -1178,23 +1159,22 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
 
 kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
                                             const dfloat * restrict vgeo,
+                                            const dfloat * restrict sgeo,
                                             const dfloat * restrict cubsgeo,
+                                            const dfloat * restrict intInterpT,
+                                            const dfloat * restrict intLIFTT,
+                                            const dfloat * restrict cubInterpT,
+                                            const dfloat * restrict cubProjectT,
                                             const dlong  * restrict vmapM,
                                             const dlong  * restrict vmapP,
                                             const int    * restrict EToB,
-                                            const dfloat * restrict cubInterpT,
-                                            const dfloat * restrict cubProjectT,
                                             const dfloat time,
                                             const dfloat * restrict intx,
                                             const dfloat * restrict inty,
                                             const dfloat * restrict intz,
                                             const dlong offset,
                                             const dfloat * restrict U,
-                                            const dfloat * restrict V,
-                                            const dfloat * restrict W,
-                                                  dfloat * restrict NU,
-                                                  dfloat * restrict NV,
-                                                  dfloat * restrict NW){
+                                                  dfloat * restrict NU){
 
   // for all elements
   for(dlong e=0;e<Nelements;e++;outer0){
@@ -1367,11 +1347,11 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
             const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
             const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 
-            const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-            NU[id] += invJW*r_NU[k];
-            NV[id] += invJW*r_NV[k];
-            NW[id] += invJW*r_NW[k];
+            NU[id+0*offset] += invJW*r_NU[k];
+            NU[id+1*offset] += invJW*r_NV[k];
+            NU[id+2*offset] += invJW*r_NW[k];
           }
         }
       }

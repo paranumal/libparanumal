@@ -39,6 +39,7 @@ void insAdvectionStep(ins_t *ins, dfloat time){
                                        mesh->o_cubProjectT,
                                        offset,
                                        ins->o_U,
+                                       ins->o_cU,
                                        ins->o_NU);
   } else {
     ins->advectionVolumeKernel(mesh->Nelements,

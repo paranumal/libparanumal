@@ -87,6 +87,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->Vort = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
   ins->Div  = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
 
+  //extra storage for interpolated fields
+  if(ins->elementType==HEXAHEDRA)
+    ins->cU = (dfloat *) calloc(ins->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+  else 
+    ins->cU = ins->U;
+
   options.getArgs("SUBCYCLING STEPS",ins->Nsubsteps);
 
   if(ins->Nsubsteps){
@@ -94,6 +100,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->Ue   = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
     ins->resU  = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
     ins->rhsUd = (dfloat*) calloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np,sizeof(dfloat));
+
+    if(ins->elementType==HEXAHEDRA)
+      ins->cUd = (dfloat *) calloc(ins->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+    else 
+      ins->cUd = ins->U;
   }
 
   dfloat rho  = 1.0 ;  // Give density for getting actual pressure in nondimensional solve
@@ -428,6 +439,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->o_Vort = mesh->device.malloc(ins->dim*mesh->Np*mesh->Nelements*sizeof(dfloat), ins->Vort);
   ins->o_Div = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), ins->Div);
 
+  if(ins->elementType==HEXAHEDRA)
+    ins->o_cU = mesh->device.malloc(ins->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->cU);
+  else 
+    ins->o_cU = ins->o_U;
+
   if(mesh->totalHaloPairs){//halo setup
     dlong tHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NTfields)*sizeof(dfloat);
     occa::memory o_tsendBuffer = mesh->device.mappedAlloc(tHaloBytes, NULL);
@@ -568,6 +584,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         ins->o_Ud   = mesh->device.malloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->Ud);
         ins->o_resU  = mesh->device.malloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->resU);
         ins->o_rhsUd = mesh->device.malloc(ins->NVfields*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*sizeof(dfloat), ins->rhsUd);
+
+        if(ins->elementType==HEXAHEDRA)
+          ins->o_cUd = mesh->device.malloc(ins->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->cUd);
+        else 
+          ins->o_cUd = ins->o_Ud;
 
         sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
         sprintf(kernelName, "scaledAddwOffset");

@@ -156,6 +156,8 @@ void insAdvectionSubCycleStep(ins_t *ins, dfloat time){
                        offset,
                        ins->o_Ue,
                             o_Ud,
+                       ins->o_cU,     
+                       ins->o_cUd,     
                        ins->o_rhsUd);
           } else{
             ins->subCycleVolumeKernel(mesh->Nelements,

@@ -208,7 +208,8 @@ kernel void insAdvectionCubatureVolumeQuad2D(const dlong Nelements,
                                              const dfloat * restrict cubProjectT,
                                              const dlong offset,
                                              const dfloat * restrict U,
-                                             dfloat * restrict NU){
+                                                   dfloat * restrict cU,
+                                                   dfloat * restrict NU){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 

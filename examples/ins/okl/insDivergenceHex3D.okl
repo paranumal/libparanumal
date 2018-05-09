@@ -4,8 +4,6 @@ kernel void insDivergenceVolumeHex3D(const dlong Nelements,
                                       const dfloat * restrict D,
                                       const dlong offset,
                                       const dfloat * restrict U,
-                                      const dfloat * restrict V,
-                                      const dfloat * restrict W,
                                             dfloat * restrict divU){
 
   for(dlong e=0; e<Nelements; ++e; outer0) {
@@ -49,10 +47,10 @@ kernel void insDivergenceVolumeHex3D(const dlong Nelements,
           const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
           const dfloat JW    = vgeo[gid + p_JWID*p_Np];
 
-          const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          const dfloat Un = U[id];
-          const dfloat Vn = V[id];
-          const dfloat Wn = W[id];
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          const dfloat Un = U[id+0*offset];
+          const dfloat Vn = U[id+1*offset];
+          const dfloat Wn = U[id+2*offset];
 
           //store covarient field
           s_U[j][i] = JW*(drdx*Un+drdy*Vn+drdz*Wn);
@@ -99,8 +97,8 @@ kernel void insDivergenceVolumeHex3D(const dlong Nelements,
 
 #define surfaceTerms(sk,face,m, i, j)                                   \
 {                                                                       \
-  const dlong idM = vmapM[sk]+p_Np*offset;                              \
-  const dlong idP = vmapP[sk]+p_Np*offset;                              \
+  const dlong idM = vmapM[sk];                                          \
+  const dlong idP = vmapP[sk];                                          \
                                                                         \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
@@ -108,12 +106,12 @@ kernel void insDivergenceVolumeHex3D(const dlong Nelements,
   const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
   const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
                                                                         \
-  const dfloat uM = U[idM], vM = V[idM], wM = W[idM];                   \
-        dfloat uP = U[idP], vP = V[idP], wP = W[idP];                   \
+  const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset];\
+        dfloat uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset];\
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
-    insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);\
+    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);\
     uP = 2.f*uP-uM;                                                     \
     vP = 2.f*vP-vM;                                                     \
     wP = 2.f*wP-wM;                                                     \
@@ -125,6 +123,7 @@ kernel void insDivergenceVolumeHex3D(const dlong Nelements,
 
 kernel void insDivergenceSurfaceHex3D(const dlong Nelements,
                                        const dfloat * restrict sgeo,
+                                       const dfloat * restrict LIFTT,
                                        const dlong  * restrict vmapM,
                                        const dlong  * restrict vmapP,
                                        const int    * restrict EToB,
@@ -134,8 +133,6 @@ kernel void insDivergenceSurfaceHex3D(const dlong Nelements,
                                        const dfloat * restrict z,
                                        const dlong offset,
                                        const dfloat * restrict U,
-                                       const dfloat * restrict V,
-                                       const dfloat * restrict W,
                                              dfloat * restrict divU){
 
   // for all elements

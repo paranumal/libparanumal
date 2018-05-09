@@ -66,6 +66,9 @@ typedef struct {
   dfloat *Ud, *Ue, *resU, *rhsUd, sdt;
   occa::memory o_Ud, o_Ue, o_resU, o_rhsUd;
 
+  dfloat *cU, *cUd;
+  occa::memory o_cU, o_cUd;
+
   occa::kernel scaledAddKernel;
   occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
   occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
