@@ -352,11 +352,6 @@ if(options.compareArgs("TIME INTEGRATOR", "LSERK")){
 
 
 
- 
-
-
-
-#if 0
 
 
 
@@ -385,9 +380,6 @@ if(options.compareArgs("TIME INTEGRATOR", "LSERK")){
   kernelInfo.addDefine("p_invsqrt2", (dfloat)sqrt(1./2.));
   kernelInfo.addDefine("p_tauInv", bns->tauInv);
 
-
-
-
   kernelInfo.addDefine("p_q1bar", q1bar);
   kernelInfo.addDefine("p_q2bar", q2bar);
   kernelInfo.addDefine("p_q3bar", q3bar);
@@ -399,6 +391,97 @@ if(options.compareArgs("TIME INTEGRATOR", "LSERK")){
   kernelInfo.addDefine("p_blockSize", blockSize);
 
   kernelInfo.addDefine("p_NrkStages", bns->NrkStages);
+
+
+
+
+  // set kernel name suffix
+  char *suffix;
+  
+  if(bns->elementType==TRIANGLES)
+    suffix = strdup("Tri2D");
+  if(bns->elementType==QUADRILATERALS)
+    suffix = strdup("Quad2D");
+  if(bns->elementType==TETRAHEDRA)
+    suffix = strdup("Tet3D");
+  if(bns->elementType==HEXAHEDRA)
+    suffix = strdup("Hex3D");
+
+char fileName[BUFSIZ], kernelName[BUFSIZ];
+for (int r=0;r<size;r++){
+
+    if (r==rank) {
+
+     
+        // Volume kernels
+        sprintf(fileName, "okl/bnsVolume%s.okl", suffix);
+
+        sprintf(kernelName, "bnsVolume%s", suffix);
+        bns->volumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        sprintf(kernelName, "bnsPmlVolume%s", suffix);
+        bns->pmlVolumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+
+        // Relaxation kernels
+        sprintf(fileName, "okl/bnsRelaxation%s.okl", suffix);
+        if(options.compareArgs("TIME INTEGRATOR","LSERK")){
+          // Fully explicit
+          sprintf(kernelName, "bnsRelaxation%s", suffix);
+          bns->relaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+          sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
+          bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        }else{
+          // Semi-analytic MRSAAB or SAARK
+          sprintf(fileName, "okl/bnsRelaxation%s.okl", suffix);
+          sprintf(kernelName, "bnsSARelaxation%s", suffix);
+          bns->relaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+          sprintf(kernelName, "bnsSAPmlRelaxation%s", suffix);        
+          bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        }
+
+
+        // Surface kernels 
+        sprintf(fileName, "okl/bnsSurface%s.okl", suffix);
+
+        if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
+          sprintf(kernelName, "bnsMRSurface%s", suffix);
+          bns->surfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+
+          sprintf(kernelName, "bnsMRPmlSurface%s", suffix);
+          bns->pmlSurfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+        }else{
+          sprintf(kernelName, "bnsSurface%s", suffix);
+          bns->surfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+
+          sprintf(kernelName, "bnsPmlSurface%s", suffix);
+          bns->pmlSurfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+        }
+
+        
+        sprintf(fileName, "okl/bnsUpdate%s.okl", suffix);
+        // Update Kernels
+        if(options.compareArgs("TIME INTEGRATOR","LSERK")){
+          sprintf(kernelName, "bnsLSERKUpdate%s", suffix);
+          bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+
+          sprintf(kernelName, "bnsLSERKPmlUpdate%s", suffix);
+          bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+        }
+
+    }
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+
+
+#if 0
+
+
+
+
+
 
 
 
