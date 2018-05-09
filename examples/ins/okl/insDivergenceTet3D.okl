@@ -2,13 +2,9 @@
 // Computes volume contribution of div(UI)
 kernel void insDivergenceVolumeTet3D(const dlong Nelements,
                                      const dfloat * restrict vgeo,
-                                     const dfloat * restrict DrT,
-                                     const dfloat * restrict DsT,
-                                     const dfloat * restrict DtT,
+                                     const dfloat * restrict Dmatrices,
                                      const dlong offset,
                                      const dfloat * restrict U,
-                                     const dfloat * restrict V,
-                                     const dfloat * restrict W,
                                            dfloat * restrict divU){
   
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
@@ -21,10 +17,10 @@ kernel void insDivergenceVolumeTet3D(const dlong Nelements,
       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){ 
-          const dlong id = (e+offset)*p_Np+n;
-          s_U[es][n] = U[id];
-          s_V[es][n] = V[id];         
-          s_W[es][n] = W[id];         
+          const dlong id = e*p_Np+n;
+          s_U[es][n] = U[id+0*offset];
+          s_V[es][n] = U[id+1*offset];         
+          s_W[es][n] = U[id+2*offset];         
         }
       }
     }
@@ -56,9 +52,9 @@ kernel void insDivergenceVolumeTet3D(const dlong Nelements,
           dfloat dwdr = 0.f, dwds = 0.f, dwdt = 0.f; 
           occaUnroll(p_Np)
           for(int i=0;i<p_Np;++i){
-            const dfloat Drni = DrT[n+i*p_Np];
-            const dfloat Dsni = DsT[n+i*p_Np];
-            const dfloat Dtni = DtT[n+i*p_Np];
+            const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+            const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
             // 
             dudr += Drni*s_U[es][i];
             duds += Dsni*s_U[es][i];
@@ -98,8 +94,6 @@ kernel void insDivergenceSurfaceTet3D(const dlong Nelements,
                                       const dfloat * restrict z,
                                       const dlong offset,
                                       const dfloat * restrict U,
-                                      const dfloat * restrict V,
-                                      const dfloat * restrict W,
                                             dfloat * restrict divU){ 
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -122,18 +116,17 @@ kernel void insDivergenceSurfaceTet3D(const dlong Nelements,
 
             // indices of negative and positive traces of face node
             const dlong id  = e*p_Nfp*p_Nfaces + n;
-            const dlong idM = vmapM[id]+offset*p_Np;
-            const dlong idP = vmapP[id]+offset*p_Np;
+            const dlong idM = vmapM[id];
+            const dlong idP = vmapP[id];
 
             // load negative and positive trace node values of q
-            const dfloat  uM = U[idM], vM = V[idM], wM = W[idM];
-                  dfloat  uP = U[idP], vP = V[idP], wP = W[idP];
+            const dfloat  uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset];
+                  dfloat  uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset];
              
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-              const dlong idm = vmapM[id];
-              insVelocityDirichletConditions3D(bc,time, x[idm],y[idm],z[idm], nx,ny,nz, uM,vM,wM, &uP,&vP,&wP);
+              insVelocityDirichletConditions3D(bc,time, x[idM],y[idM],z[idM], nx,ny,nz, uM,vM,wM, &uP,&vP,&wP);
               // // Use strong form of the BCs
               uP = 2.f*uP-uM;        
               vP = 2.f*vP-vM;         

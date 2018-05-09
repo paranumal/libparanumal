@@ -429,6 +429,7 @@ kernel void insHelmholtzRhsBCTri2D(const dlong Nelements,
 
 kernel void insHelmholtzAddBCTri2D(const dlong Nelements,
                                    const dfloat time,
+                                   const dfloat * restrict sgeo,
                                    const dfloat * restrict x,
                                    const dfloat * restrict y,
                                    const dfloat * restrict z,
@@ -446,6 +447,12 @@ kernel void insHelmholtzAddBCTri2D(const dlong Nelements,
       if(bc>0) {
         const dfloat uM = U[idM];
         const dfloat vM = V[idM];
+        
+        const int face = n/p_Nfp;
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx = sgeo[sid+p_NXID];
+        const dfloat ny = sgeo[sid+p_NYID];
+
         dfloat uP = 0.f;
         dfloat vP = 0.f;
         insVelocityDirichletConditions2D(bc, t, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);

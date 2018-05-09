@@ -15,17 +15,10 @@ kernel void insHelmholtzRhsForcingTet3D(const dlong Nelements,
                                         const dfloat c0,
                                         const dfloat c1,
                                         const dfloat c2,
-                                        const int index,
                                         const dlong offset,
                                         const dfloat * restrict U,
-                                        const dfloat * restrict V,
-                                        const dfloat * restrict W,
                                         const dfloat * restrict NU,
-                                        const dfloat * restrict NV,
-                                        const dfloat * restrict NW,
-                                        const dfloat * restrict Px,
-                                        const dfloat * restrict Py,
-                                        const dfloat * restrict Pz,
+                                        const dfloat * restrict gradP,
                                               dfloat * restrict rhsU,
                                               dfloat * restrict rhsV,
                                               dfloat * restrict rhsW){
@@ -40,56 +33,55 @@ kernel void insHelmholtzRhsForcingTet3D(const dlong Nelements,
       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
-          //hard coded for 3 stages
-          const int index0 = (index+0)%3;
-          const int index1 = (index+2)%3; //back one step
-          const int index2 = (index+1)%3; //back two steps
+          const dlong id = n + p_Np*e;
 
-          const dlong id0   = n + p_Np*(e+index0*offset);
-          const dlong id1   = n + p_Np*(e+index1*offset);
-          const dlong id2   = n + p_Np*(e+index2*offset);
+          //hard coded for 3 stages       
+          const dlong id0   = id + 0*offset*p_NVfields;
+          const dlong id1   = id + 1*offset*p_NVfields;
+          const dlong id2   = id + 2*offset*p_NVfields;
 
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 
           // gradP
-          const dfloat Pxm0 = Px[id0];
-          const dfloat Pxm1 = Px[id1];
-          const dfloat Pxm2 = Px[id2];
+          // gradP
+          const dfloat Pxm0 = gradP[id0+0*offset];
+          const dfloat Pxm1 = gradP[id1+0*offset];
+          const dfloat Pxm2 = gradP[id2+0*offset];
 
-          const dfloat Pym0 = Py[id0];
-          const dfloat Pym1 = Py[id1];
-          const dfloat Pym2 = Py[id2];
+          const dfloat Pym0 = gradP[id0+1*offset];
+          const dfloat Pym1 = gradP[id1+1*offset];
+          const dfloat Pym2 = gradP[id2+1*offset];
 
-          const dfloat Pzm0 = Pz[id0];
-          const dfloat Pzm1 = Pz[id1];
-          const dfloat Pzm2 = Pz[id2];
+          const dfloat Pzm0 = gradP[id0+2*offset];
+          const dfloat Pzm1 = gradP[id1+2*offset];
+          const dfloat Pzm2 = gradP[id2+2*offset];
 
           if(subcycling==0){ //no subcycling
             //U
-            const dfloat Um0  = U[id0];
-            const dfloat Um1  = U[id1];
-            const dfloat Um2  = U[id2];
+            const dfloat Um0  = U[id0+0*offset];
+            const dfloat Um1  = U[id1+0*offset];
+            const dfloat Um2  = U[id2+0*offset];
             //V
-            const dfloat Vm0  = V[id0];
-            const dfloat Vm1  = V[id1];
-            const dfloat Vm2  = V[id2];
+            const dfloat Vm0  = U[id0+1*offset];
+            const dfloat Vm1  = U[id1+1*offset];
+            const dfloat Vm2  = U[id2+1*offset];
             //W
-            const dfloat Wm0  = W[id0];
-            const dfloat Wm1  = W[id1];
-            const dfloat Wm2  = W[id2];
+            const dfloat Wm0  = U[id0+2*offset];
+            const dfloat Wm1  = U[id1+2*offset];
+            const dfloat Wm2  = U[id2+2*offset];
 
             // NU
-            const dfloat NUm0 = NU[id0];
-            const dfloat NUm1 = NU[id1];
-            const dfloat NUm2 = NU[id2];
+            const dfloat NUm0 = NU[id0+0*offset];
+            const dfloat NUm1 = NU[id1+0*offset];
+            const dfloat NUm2 = NU[id2+0*offset];
             // NV
-            const dfloat NVm0 = NV[id0];
-            const dfloat NVm1 = NV[id1];
-            const dfloat NVm2 = NV[id2];  
+            const dfloat NVm0 = NU[id0+1*offset];
+            const dfloat NVm1 = NU[id1+1*offset];
+            const dfloat NVm2 = NU[id2+1*offset];  
             // NW
-            const dfloat NWm0 = NW[id0];
-            const dfloat NWm1 = NW[id1];
-            const dfloat NWm2 = NW[id2];  
+            const dfloat NWm0 = NU[id0+2*offset];
+            const dfloat NWm1 = NU[id1+2*offset];
+            const dfloat NWm2 = NU[id2+2*offset];
 
             // // -> (-L + gamma/dt*nu I)U = 1/nu*[sum(b_i*U_i)/dt - sum(a_i*NU_i) - sum(a_i*gradP_i)]
             s_rhsU[es][n]  = J*inu*( + (b0*Um0 +b1*Um1 +b2*Um2 )*idt 
@@ -104,11 +96,10 @@ kernel void insHelmholtzRhsForcingTet3D(const dlong Nelements,
                                        - (c0*Pzm0+c1*Pzm1+c2*Pzm2) 
                                        - (a0*NWm0+a1*NWm1+a2*NWm2) );
           } else{ //with subcycling
-            const dlong id   = n + p_Np*e;
             //NU holds \hat{U} after subcycling
-            const dfloat NUm0 = NU[id];
-            const dfloat NVm0 = NV[id];
-            const dfloat NWm0 = NW[id];
+            const dfloat NUm0 = NU[id+0*offset];
+            const dfloat NVm0 = NU[id+1*offset];
+            const dfloat NWm0 = NU[id+2*offset];
 
             // New Substeping Update
             s_rhsU[es][n]  = J*inu*(NUm0*idt - (c0*Pxm0+c1*Pxm1+c2*Pxm2)); 
@@ -152,7 +143,6 @@ kernel void insHelmholtzRhsForcingTet3D(const dlong Nelements,
 
 kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
                                        const dlong * restrict vmapM,
-                                       const dlong * restrict vmapP,
                                        const dfloat tau,
                                        const dfloat t,
                                        const dfloat * restrict x,
@@ -161,9 +151,7 @@ kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
                                        const dfloat * restrict vgeo,
                                        const dfloat * restrict sgeo,
                                        const int    * restrict EToB,
-                                       const dfloat * restrict DrT,
-                                       const dfloat * restrict DsT,
-                                       const dfloat * restrict DtT,
+                                       const dfloat * restrict Dmatrices,
                                        const dfloat * restrict LIFTT,
                                        const dfloat * restrict MM,
                                              dfloat * restrict rhsU,
@@ -360,17 +348,20 @@ kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
         dfloat lawr = 0.f, laws = 0.f, lawt=0.f;
         occaUnroll(p_Np)
           for(int i=0;i<p_Np;++i) {
-            laur += DrT[n+i*p_Np]*s_dudx[i];
-            laus += DsT[n+i*p_Np]*s_dudy[i];
-            laut += DtT[n+i*p_Np]*s_dudz[i];
+            const dfloat Drn = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsn = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+            const dfloat Dtn = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+            laur += Drn*s_dudx[i];
+            laus += Dsn*s_dudy[i];
+            laut += Dtn*s_dudz[i];
 
-            lavr += DrT[n+i*p_Np]*s_dvdx[i];
-            lavs += DsT[n+i*p_Np]*s_dvdy[i];
-            lavt += DtT[n+i*p_Np]*s_dvdz[i];
+            lavr += Drn*s_dvdx[i];
+            lavs += Dsn*s_dvdy[i];
+            lavt += Dtn*s_dvdz[i];
 
-            lawr += DrT[n+i*p_Np]*s_dwdx[i];
-            laws += DsT[n+i*p_Np]*s_dwdy[i];
-            lawt += DtT[n+i*p_Np]*s_dwdz[i];
+            lawr += Drn*s_dwdx[i];
+            laws += Dsn*s_dwdy[i];
+            lawt += Dtn*s_dwdz[i];
           }
 
         s_lapu[n] = -(laur+laus+laut);
@@ -433,15 +424,8 @@ kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
 kernel void insHelmholtzRhsBCTet3D(const dlong Nelements,
                                    const dfloat * restrict ggeo,
                                    const dfloat * restrict sgeo,
-                                   const dfloat * restrict SrrT,
-                                   const dfloat * restrict SrsT,
-                                   const dfloat * restrict SrtT,
-                                   const dfloat * restrict SsrT,
-                                   const dfloat * restrict SssT,
-                                   const dfloat * restrict SstT,
-                                   const dfloat * restrict StrT,
-                                   const dfloat * restrict StsT,
-                                   const dfloat * restrict SttT,
+                                   const dfloat * restrict Dmatrices,
+                                   const dfloat * restrict Smatrices,
                                    const dfloat * restrict MM,
                                    const dlong  * restrict vmapM,
                                    const dfloat * restrict sMT,
@@ -531,47 +515,43 @@ kernel void insHelmholtzRhsBCTet3D(const dlong Nelements,
         dfloat urr = 0., vrr = 0., wrr = 0.;
         dfloat urs = 0., vrs = 0., wrs = 0.;
         dfloat urt = 0., vrt = 0., wrt = 0.;
-        dfloat usr = 0., vsr = 0., wsr = 0.;
         dfloat uss = 0., vss = 0., wss = 0.;
         dfloat ust = 0., vst = 0., wst = 0.;
-        dfloat utr = 0., vtr = 0., wtr = 0.;
-        dfloat uts = 0., vts = 0., wts = 0.;
         dfloat utt = 0., vtt = 0., wtt = 0.;
 
         occaUnroll(p_Np)
           for (int k=0;k<p_Np;k++) {
-            MMu += MM[n+k*p_Np]*s_u[k];
-            urr += SrrT[n+k*p_Np]*s_u[k];
-            urs += SrsT[n+k*p_Np]*s_u[k];
-            urt += SrtT[n+k*p_Np]*s_u[k];
-            usr += SsrT[n+k*p_Np]*s_u[k];
-            uss += SssT[n+k*p_Np]*s_u[k];
-            ust += SstT[n+k*p_Np]*s_u[k];
-            utr += StrT[n+k*p_Np]*s_u[k];
-            uts += StsT[n+k*p_Np]*s_u[k];
-            utt += SttT[n+k*p_Np]*s_u[k];
+            const dfloat MMn = MM[n+k*p_Np];
+            const dfloat Srr = Smatrices[n+k*p_Np+0*p_Np*p_Np];
+            const dfloat Srs = Smatrices[n+k*p_Np+1*p_Np*p_Np];
+            const dfloat Srt = Smatrices[n+k*p_Np+2*p_Np*p_Np];
+            const dfloat Sss = Smatrices[n+k*p_Np+3*p_Np*p_Np];
+            const dfloat Sst = Smatrices[n+k*p_Np+4*p_Np*p_Np];
+            const dfloat Stt = Smatrices[n+k*p_Np+5*p_Np*p_Np];
 
-            MMv += MM[n+k*p_Np]*s_v[k];
-            vrr += SrrT[n+k*p_Np]*s_v[k];
-            vrs += SrsT[n+k*p_Np]*s_v[k];
-            vrt += SrtT[n+k*p_Np]*s_v[k];
-            vsr += SsrT[n+k*p_Np]*s_v[k];
-            vss += SssT[n+k*p_Np]*s_v[k];
-            vst += SstT[n+k*p_Np]*s_v[k];
-            vtr += StrT[n+k*p_Np]*s_v[k];
-            vts += StsT[n+k*p_Np]*s_v[k];
-            vtt += SttT[n+k*p_Np]*s_v[k];
+            MMu += MMn*s_u[k];
+            urr += Srr*s_u[k];
+            urs += Srs*s_u[k];
+            urt += Srt*s_u[k];
+            uss += Sss*s_u[k];
+            ust += Sst*s_u[k];
+            utt += Stt*s_u[k];
 
-            MMw += MM[n+k*p_Np]*s_w[k];
-            wrr += SrrT[n+k*p_Np]*s_w[k];
-            wrs += SrsT[n+k*p_Np]*s_w[k];
-            wrt += SrtT[n+k*p_Np]*s_w[k];
-            wsr += SsrT[n+k*p_Np]*s_w[k];
-            wss += SssT[n+k*p_Np]*s_w[k];
-            wst += SstT[n+k*p_Np]*s_w[k];
-            wtr += StrT[n+k*p_Np]*s_w[k];
-            wts += StsT[n+k*p_Np]*s_w[k];
-            wtt += SttT[n+k*p_Np]*s_w[k];
+            MMv += MMn*s_v[k];
+            vrr += Srr*s_v[k];
+            vrs += Srs*s_v[k];
+            vrt += Srt*s_v[k];
+            vss += Sss*s_v[k];
+            vst += Sst*s_v[k];
+            vtt += Stt*s_v[k];
+
+            MMw += MMn*s_w[k];
+            wrr += Srr*s_w[k];
+            wrs += Srs*s_w[k];
+            wrt += Srt*s_w[k];
+            wss += Sss*s_w[k];
+            wst += Sst*s_w[k];
+            wtt += Stt*s_w[k];
           }
 
         dfloat Lndu = 0;            
@@ -580,20 +560,18 @@ kernel void insHelmholtzRhsBCTet3D(const dlong Nelements,
         // surface mass * surface terms
         occaUnroll(p_NfacesNfp)
           for(int i=0;i<p_NfacesNfp;++i){
-            Lndu += sMT[n+i*p_Np]*s_ndu[i];
-            Lndv += sMT[n+i*p_Np]*s_ndv[i];
-            Lndw += sMT[n+i*p_Np]*s_ndw[i];
+            const dfloat sMTn = sMT[n+i*p_Np];
+            Lndu += sMTn*s_ndu[i];
+            Lndv += sMTn*s_ndv[i];
+            Lndw += sMTn*s_ndw[i];
           }
 
         rhsU[id] -= Grr*urr+Grs*urs+Grt*urt
-                   +Grs*usr+Gss*uss+Gst*ust 
-                   +Grt*utr+Gst*uts+Gtt*utt + J*lambda*MMu - Lndu;
+                   +Gss*uss+Gst*ust+Gtt*utt + J*lambda*MMu - Lndu;
         rhsV[id] -= Grr*vrr+Grs*vrs+Grt*vrt
-                   +Grs*vsr+Gss*vss+Gst*vst 
-                   +Grt*vtr+Gst*vts+Gtt*vtt + J*lambda*MMv - Lndv;
+                   +Gss*vss+Gst*vst+Gtt*vtt + J*lambda*MMv - Lndv;
         rhsW[id] -= Grr*wrr+Grs*wrs+Grt*wrt
-                   +Grs*wsr+Gss*wss+Gst*wst 
-                   +Grt*wtr+Gst*wts+Gtt*wtt + J*lambda*MMw - Lndw;
+                   +Gss*wss+Gst*wst+Gtt*wtt + J*lambda*MMw - Lndw;
 
       }
     }
@@ -602,6 +580,7 @@ kernel void insHelmholtzRhsBCTet3D(const dlong Nelements,
 
 kernel void insHelmholtzAddBCTet3D(const dlong Nelements,
                                    const dfloat time,
+                                   const dfloat * restrict sgeo,
                                    const dfloat * restrict x,
                                    const dfloat * restrict y,
                                    const dfloat * restrict z,
@@ -620,6 +599,13 @@ kernel void insHelmholtzAddBCTet3D(const dlong Nelements,
         const dfloat uM = U[idM];
         const dfloat vM = V[idM];
         const dfloat wM = W[idM];
+
+        const int face = n/p_Nfp;
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx = sgeo[sid+p_NXID];
+        const dfloat ny = sgeo[sid+p_NYID];
+        const dfloat nz = sgeo[sid+p_NZID];
+
         dfloat uP = 0.f;
         dfloat vP = 0.f;
         dfloat wP = 0.f;

@@ -1,15 +1,9 @@
 kernel void insVorticityTet3D(const dlong Nelements,
                               const dfloat * restrict vgeo,
-                              const dfloat * restrict const DrT,
-                              const dfloat * restrict const DsT,
-                              const dfloat * restrict const DtT,
+                              const dfloat * restrict const Dmatrices,
                               const dlong offset,
                               const dfloat * restrict U,
-                              const dfloat * restrict V,
-                              const dfloat * restrict W,
-                                    dfloat * restrict Vx,
-                                    dfloat * restrict Vy,
-                                    dfloat * restrict Vz){  
+                                    dfloat * restrict Vort){  
   
   // block partition of elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
@@ -22,9 +16,9 @@ kernel void insVorticityTet3D(const dlong Nelements,
       for(int n=0;n<p_Np;++n;inner0){
         if(e<Nelements){
           const dlong id = (e+offset)*p_Np+n;
-          s_u[e-eo][n] = U[id];
-          s_v[e-eo][n] = V[id];
-          s_w[e-eo][n] = W[id];
+          s_u[e-eo][n] = U[id+0*offset];
+          s_v[e-eo][n] = U[id+1*offset];
+          s_w[e-eo][n] = U[id+2*offset];
         }
       }
     }
@@ -53,9 +47,9 @@ kernel void insVorticityTet3D(const dlong Nelements,
 
           occaUnroll(p_Np)
             for(int i=0;i<p_Np;++i) {
-              const dfloat Drn = DrT[n + i*p_Np];
-              const dfloat Dsn = DsT[n + i*p_Np];
-              const dfloat Dtn = DtT[n + i*p_Np];
+              const dfloat Drn = Dmatrices[n + i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsn = Dmatrices[n + i*p_Np+1*p_Np*p_Np];
+              const dfloat Dtn = Dmatrices[n + i*p_Np+2*p_Np*p_Np];
 
               ur += Drn*s_u[es][i];
               us += Dsn*s_u[es][i];
@@ -80,9 +74,9 @@ kernel void insVorticityTet3D(const dlong Nelements,
           const dfloat wy = drdy*wr + dsdy*ws + dtdy*wt;
 
           const dlong id = e*p_Np+n; 
-          Vx[id] = wy-vz;
-          Vy[id] = uz-wx;
-          Vx[id] = vx-uy;
+          Vort[id+0*offset] = wy-vz;
+          Vort[id+1*offset] = uz-wx;
+          Vort[id+2*offset] = vx-uy;
         }
       }
     }

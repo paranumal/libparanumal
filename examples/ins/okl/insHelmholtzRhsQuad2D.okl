@@ -418,6 +418,7 @@ kernel void insHelmholtzRhsBCQuad2D(const dlong Nelements,
 
 kernel void insHelmholtzAddBCQuad2D(const dlong Nelements,
                                     const dfloat time,
+                                    const dfloat * restrict sgeo,
                                     const dfloat * restrict x,
                                     const dfloat * restrict y,
                                     const dfloat * restrict z,
@@ -435,6 +436,11 @@ kernel void insHelmholtzAddBCQuad2D(const dlong Nelements,
       if(bc>0) {
         const dfloat uM = U[idM];
         const dfloat vM = V[idM];
+
+        const dlong sk = e*p_Nfp*p_Nfaces + n;
+        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+
         dfloat uP = 0.f;
         dfloat vP = 0.f;
         insVelocityDirichletConditions2D(bc, t, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
