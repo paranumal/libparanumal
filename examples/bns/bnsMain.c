@@ -41,7 +41,7 @@ int main(int argc, char **argv){
    bns_t *bns = bnsSetup(mesh,options); 
 
 
-   // boltzmannRun2D(bns,options);
+   bnsRun(bns,options);
    
   // close down MPI
   MPI_Finalize();

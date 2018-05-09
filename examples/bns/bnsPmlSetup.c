@@ -61,28 +61,16 @@ void bnsPmlSetup(bns_t *bns, setupAide &options){
     mesh->nonPmlElementIds = (dlong*) realloc(mesh->nonPmlElementIds,mesh->nonPmlNelements*sizeof(dlong));
 
 
-    int Nnodes = 0;
-    if(options.compareArgs("RELAXATION TYPE","CUBATURE")){ // !!!!!!!!!!!!!!!
-      //
-      printf("Setting PML Coefficient for Cubature Integration\n");
-      //set up damping parameter
-      bns->pmlSigmaX   = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
-      bns->pmlSigmaY   = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat)); 
-      if(bns->dim==3)
-        bns->pmlSigmaZ = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat)); 
-
-      Nnodes = mesh->cubNp;    
-    }
-     else{
-      printf("Setting PML Coefficients for Nodal Collocation Integration\n");
-      //set up damping parameter
-      bns->pmlSigmaX    = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
-      bns->pmlSigmaY    = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
-      if(bns->dim==3)
-        bns->pmlSigmaZ  = (dfloat *) calloc(mesh->pmlNelements*mesh->Np,sizeof(dfloat));
-      Nnodes = mesh->Np; 
-    }
    
+    //
+    printf("Setting PML Coefficient for Cubature Integration\n");
+    //set up damping parameter
+    bns->pmlSigmaX   = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
+    bns->pmlSigmaY   = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat)); 
+    bns->pmlSigmaZ   = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat)); 
+
+       
+        
     //find the bounding box of the whole domain and interior domain
     dfloat xmin = 1e9, xmax =-1e9;
     dfloat ymin = 1e9, ymax =-1e9;
@@ -174,10 +162,10 @@ void bnsPmlSetup(bns_t *bns, setupAide &options){
             ze[n] = mesh->EZ[id+n];
         }
 
-        for(int n=0;n<Nnodes;++n){ /* for each node */
+        for(int n=0;n<mesh->cubNp;++n){ /* for each node */
           dfloat x = 0, y = 0, z = 0; 
 
-          if(Nnodes==mesh->cubNp){
+          if(mesh->cubNp==mesh->cubNp){
             dfloat rn =0, sn=0, tn=0;
             if(bns->elementType==TRIANGLES){
               rn = mesh->cubr[n];
@@ -204,23 +192,23 @@ void bnsPmlSetup(bns_t *bns, setupAide &options){
           
           if (type==100) { //X Pml
             if(x>xmax)
-              bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
+              bns->pmlSigmaX[mesh->cubNp*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
             if(x<xmin)
-              bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
+              bns->pmlSigmaX[mesh->cubNp*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
           } else if (type==200) { //Y Pml
             if(y>ymax)
-              bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
+              bns->pmlSigmaY[mesh->cubNp*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
             if(y<ymin)
-              bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
+              bns->pmlSigmaY[mesh->cubNp*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
           } else if (type==300) { //XY Pml
             if(x>xmax)
-              bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
+              bns->pmlSigmaX[mesh->cubNp*pmlId + n] = xsigma*pow(x-xmax,order)/xmaxScale;
             if(x<xmin)
-              bns->pmlSigmaX[Nnodes*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
+              bns->pmlSigmaX[mesh->cubNp*pmlId + n] = xsigma*pow(x-xmin,order)/xminScale;
             if(y>ymax)
-              bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
+              bns->pmlSigmaY[mesh->cubNp*pmlId + n] = ysigma*pow(y-ymax,order)/ymaxScale;
             if(y<ymin)
-              bns->pmlSigmaY[Nnodes*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
+              bns->pmlSigmaY[mesh->cubNp*pmlId + n] = ysigma*pow(y-ymin,order)/yminScale;
           }
 
           if(bns->dim==3){
@@ -281,7 +269,11 @@ void bnsPmlSetup(bns_t *bns, setupAide &options){
 
       bns->pmlqy     = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
       bns->pmlrhsqy  = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
-      bns->pmlresqy = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+      bns->pmlresqy  = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+
+      bns->pmlqz     = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+      bns->pmlrhsqz  = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+      bns->pmlresqz  = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
 
 
       // set up PML on DEVICE    
@@ -292,18 +284,11 @@ void bnsPmlSetup(bns_t *bns, setupAide &options){
       bns->o_pmlqy     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlqy);
       bns->o_pmlrhsqy  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlrhsqy);
       bns->o_pmlresqy  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlresqy);
-
-      if(bns->dim==3){
-        bns->pmlqz     = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
-        bns->pmlrhsqz  = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
-        bns->pmlresqz  = (dfloat*) calloc(mesh->pmlNelements*mesh->Np*bns->Nfields, sizeof(dfloat));
-        //
-        // set up PML on DEVICE    
-        bns->o_pmlqz     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlqz);
-        bns->o_pmlrhsqz  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlrhsqz);
-        bns->o_pmlresqz  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlresqz);
-
-      }
+      //
+      // set up PML on DEVICE    
+      bns->o_pmlqz     = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlqz);
+      bns->o_pmlrhsqz  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlrhsqz);
+      bns->o_pmlresqz  = mesh->device.malloc(mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlresqz);
     }
 
    
@@ -311,13 +296,12 @@ void bnsPmlSetup(bns_t *bns, setupAide &options){
 
 
     if (mesh->pmlNelements){
-      bns->o_pmlSigmaX     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),bns->pmlSigmaX);
-      bns->o_pmlSigmaY     = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),bns->pmlSigmaY);
-      if(bns->dim==3)
-        bns->o_pmlSigmaZ   = mesh->device.malloc(mesh->pmlNelements*Nnodes*sizeof(dfloat),bns->pmlSigmaZ);
+      bns->o_pmlSigmaX     = mesh->device.malloc(mesh->pmlNelements*mesh->cubNp*sizeof(dfloat),bns->pmlSigmaX);
+      bns->o_pmlSigmaY     = mesh->device.malloc(mesh->pmlNelements*mesh->cubNp*sizeof(dfloat),bns->pmlSigmaY);
+      bns->o_pmlSigmaZ     = mesh->device.malloc(mesh->pmlNelements*mesh->cubNp*sizeof(dfloat),bns->pmlSigmaZ);
 
-      mesh->o_pmlElementIds = mesh->device.malloc(mesh->pmlNelements*sizeof(int), mesh->pmlElementIds);
-      mesh->o_pmlIds        = mesh->device.malloc(mesh->pmlNelements*sizeof(int), mesh->pmlIds);
+      mesh->o_pmlElementIds = mesh->device.malloc(mesh->pmlNelements*sizeof(dlong), mesh->pmlElementIds);
+      mesh->o_pmlIds        = mesh->device.malloc(mesh->pmlNelements*sizeof(dlong), mesh->pmlIds);
     }
 
 
@@ -349,7 +333,7 @@ void bnsPmlSetup(bns_t *bns, setupAide &options){
  // for (int es=0;es<mesh->pmlNelements;es++){
  //       int e     = mesh->pmlElementIds[es];
  //       int pmlId = mesh->pmlIds[es];   
- //    for(int n=0;n<Nnodes;n++){
+ //    for(int n=0;n<mesh->cubNp;n++){
  //      mesh->q[bns->Nfields*(n + e*mesh->Np) + 0] = bns->pmlSigmaX[mesh->Np*e+n];
  //      mesh->q[bns->Nfields*(n + e*mesh->Np) + 1] = bns->pmlSigmaY[mesh->Np*e+n];
  //    }
@@ -374,8 +358,8 @@ void bnsPmlSetup(bns_t *bns, setupAide &options){
  //      dfloat q1 = 0; dfloat q2 = 0; 
  //      for(int m=0; m<mesh->cubNp;++m){
  //         dfloat prj = cubProjectT[m*mesh->Np+n];
- //         q1 += prj*bns->pmlSigmaX[Nnodes*pmlId + m];
- //         q2 += prj*bns->pmlSigmaY[Nnodes*pmlId + m];
+ //         q1 += prj*bns->pmlSigmaX[mesh->cubNp*pmlId + m];
+ //         q2 += prj*bns->pmlSigmaY[mesh->cubNp*pmlId + m];
  //      }
 
  //      mesh->q[bns->Nfields*(n + e*mesh->Np) + 0] = q1;

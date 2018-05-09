@@ -46,11 +46,14 @@ kernel void bnsLSERKPmlUpdateTri2D(const dlong pmlNelements,
                                    const dfloat * restrict rhsq, 
                                    const dfloat * restrict rhsqx,
                                    const dfloat * restrict rhsqy, 
+                                   const dfloat * restrict rhsqz, 
                                         dfloat * restrict resq,
                                         dfloat * restrict resqx,
                                         dfloat * restrict resqy,
+                                        dfloat * restrict resqz,
                                         dfloat * restrict qx,
                                         dfloat * restrict qy,
+                                        dfloat * restrict qz,
                                         dfloat * restrict q){
   
 // Low storage Runge Kutta time step update

@@ -118,20 +118,19 @@ void boundaryConditions2D(const int bc,
 
 // This kernel uses Upwind flux 
 kernel void bnsSurfaceTri2D(const dlong Nelements,
-                     const dlong * restrict elementIds,
-                     const dfloat time,
-                     const dfloat ramp,
-                     const int   nrhs,
-                     const int   shift,
-                     const dfloat * restrict sgeo,
-                     const dfloat * restrict LIFTT,
-                     const dlong   * restrict vmapM,
-                     const dlong   * restrict vmapP,
-                     const int   * restrict EToB,
-                     const dfloat * restrict x,
-                     const dfloat * restrict y,
-                     const dfloat * restrict q,
-                           dfloat * restrict rhsq){
+                           const dlong * restrict elementIds,
+                           const dfloat time,
+                           const dfloat ramp,
+                           const dfloat * restrict sgeo,
+                           const dfloat * restrict LIFTT,
+                           const dlong   * restrict vmapM,
+                           const dlong   * restrict vmapP,
+                           const int   * restrict EToB,
+                           const dfloat * restrict x,
+                           const dfloat * restrict y,
+                           const dfloat * restrict z,
+                           const dfloat * restrict q,
+                                 dfloat * restrict rhsq){
   
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -180,7 +179,7 @@ kernel void bnsSurfaceTri2D(const dlong Nelements,
           dfloat q5M = q[qidM + 4*p_Np], q5P = q[qidP + 4*p_Np];
           dfloat q6M = q[qidM + 5*p_Np], q6P = q[qidP + 5*p_Np];              
           // apply boundary condition
-          int bc = EToB[face+p_Nfaces*e];
+          const int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
               const int idB = vmapM[id];
               boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp,
@@ -269,19 +268,19 @@ kernel void bnsPmlSurfaceTri2D(const dlong pmlNelements,
                         const dlong   * restrict pmlIds,
                         const dfloat time,
                         const dfloat ramp,
-                        const int nrhs,
-                        const int shift,
                         const dfloat * restrict sgeo,
                         const dfloat * restrict LIFTT,
-                        const dlong   * restrict vmapM,
-                        const dlong   * restrict vmapP,
+                        const dlong  * restrict vmapM,
+                        const dlong  * restrict vmapP,
                         const int   * restrict EToB,
                         const dfloat * restrict x,
                         const dfloat * restrict y,              
+                        const dfloat * restrict z,              
                         const dfloat * restrict q,
                               dfloat * restrict rhsq,
                               dfloat * restrict pmlrhsqx,
-                              dfloat * restrict pmlrhsqy){
+                              dfloat * restrict pmlrhsqy,
+                              dfloat * restrict pmlrhsqz){
   
   // for all elements
   for(dlong eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){

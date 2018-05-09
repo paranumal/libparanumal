@@ -168,6 +168,12 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options);
 // Pml setup for single rate time discretization
 void bnsPmlSetup(bns_t *bns, setupAide &options);
 
+void bnsRun(bns_t *bns, setupAide &options);
+void bnsReport(bns_t *bns, int tstep, setupAide &options);
+void bnsError(bns_t *bns, int tstep, setupAide &options);
+// void bnsForces(bns_t *bns, dfloat time, setupAide &options);
+void bnsPlotVTU(bns_t *bns, char * FileName);
+
 // Function for ramp start
 void bnsRampFunction(dfloat t, dfloat *ramp, dfloat *drampdt);
 
@@ -176,6 +182,9 @@ void bnsTimeStepperCoefficients(bns_t *bns, setupAide &options);
 void bnsSAADRKCoefficients(bns_t *bns, setupAide &options);
 
 
+void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
+				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
+
 #define TRIANGLES 3
 #define QUADRILATERALS 4
 #define TETRAHEDRA 6
@@ -183,10 +192,7 @@ void bnsSAADRKCoefficients(bns_t *bns, setupAide &options);
 
 
 
-// void boltzmannRun2D(bns_t *bns, setupAide &options);
-// void boltzmannReport2D(bns_t *bns, int tstep, setupAide &options);
-// void boltzmannError2D(bns_t *bns, int tstep, setupAide &options);
-// void boltzmannForces2D(bns_t *bns, dfloat time, setupAide &options);
+
 
 // void boltzmannMRABPmlSetup2D(bns_t *bns, setupAide &options);
 // void boltzmannPmlSetup2D(bns_t *bns, setupAide &options);
@@ -198,7 +204,7 @@ void bnsSAADRKCoefficients(bns_t *bns, setupAide &options);
 
 
 
-// void boltzmannPlotVTU2D(bns_t *bns, char * FileName);
+
 // void boltzmannPlotTEC2D(bns_t *bns, char * FileName, dfloat solutionTime);
 
 

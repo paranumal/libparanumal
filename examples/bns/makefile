@@ -41,10 +41,15 @@ $(HDRDIR)/mesh3D.h
 AOBJS    = \
 bnsMain.o \
 bnsSetup.o \
+bnsRun.o \
 bnsRampFunction.o \
 bnsPmlSetup.o \
 bnsTimeStepperCoefficients.o \
-bnsSAADRKCoefficients.o 
+bnsSAADRKCoefficients.o \
+bnsPlotVTU.o \
+bnsReport.o \
+bnsError.o \
+bnsLSERKStep.o
 #boltzmannComputeVorticity2D.o \
 #boltzmannError2D.o \
 #boltzmannCouetteError2D.o \
@@ -124,6 +129,7 @@ LOBJS = \
 ../../src/meshVTU3D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o \
+../../src/timer.o \
 ../../src/matrix.o \
 ../../src/setupAide.o \
 ../../src/trace.o \
