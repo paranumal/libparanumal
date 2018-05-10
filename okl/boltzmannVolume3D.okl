@@ -219,7 +219,7 @@ kernel void boltzmannVolume3D(const int Nelements,
 	  // add mean flow forcing
 	  rhsq2  += drampdt*p_q2bar;
 	  rhsq3  += drampdt*p_q3bar;
-	  rhsq4  += drampdt*p_q3bar;
+	  rhsq4  += drampdt*p_q4bar;
 	  // 
 	  rhsq5  += 2.f*ramp*drampdt*p_q5bar;
 	  rhsq6  += 2.f*ramp*drampdt*p_q6bar;

@@ -6,6 +6,7 @@ void bnsPmlSetup(bns_t *bns, setupAide &options){
 
   
   dfloat xsigma    = 100., ysigma  = 100.,  zsigma  = 100.;
+  // dfloat xsigma    = 0., ysigma  = 0.,  zsigma  = 0.;
   
   //count the pml elements
   mesh->pmlNelements=0;
@@ -165,30 +166,30 @@ void bnsPmlSetup(bns_t *bns, setupAide &options){
         for(int n=0;n<mesh->cubNp;++n){ /* for each node */
           dfloat x = 0, y = 0, z = 0; 
 
-          if(mesh->cubNp==mesh->cubNp){
-            dfloat rn =0, sn=0, tn=0;
-            if(bns->elementType==TRIANGLES){
-              rn = mesh->cubr[n];
-              sn = mesh->cubs[n]; 
-              x = -0.5*(rn+sn)*xe[0] + 0.5*(1+rn)*xe[1] + 0.5*(1+sn)*xe[2];
-              y = -0.5*(rn+sn)*ye[0] + 0.5*(1+rn)*ye[1] + 0.5*(1+sn)*ye[2];
-            }
-            else if(bns->elementType==TETRAHEDRA)
-            {
-              rn = mesh->cubr[n];
-              sn = mesh->cubs[n]; 
-              tn = mesh->cubt[n];
-              x = -0.5*(rn+sn+tn+1)*xe[0] + 0.5*(1+rn)*xe[1] - 0.5*(1+sn)*xe[2] + 0.5*(tn+1)*xe[3];
-              y = -0.5*(rn+sn+tn+1)*ye[0] + 0.5*(1+rn)*ye[1] - 0.5*(1+sn)*ye[2] + 0.5*(tn+1)*ye[3];
-              z = -0.5*(rn+sn+tn+1)*ze[0] + 0.5*(1+rn)*ze[1] - 0.5*(1+sn)*ze[2] + 0.5*(tn+1)*ze[3];
-            } 
+          // if(mesh->cubNp==mesh->cubNp){
+          dfloat rn =0, sn=0, tn=0;
+          if(bns->elementType==TRIANGLES){
+            rn = mesh->cubr[n];
+            sn = mesh->cubs[n]; 
+            x = -0.5*(rn+sn)*xe[0] + 0.5*(1+rn)*xe[1] + 0.5*(1+sn)*xe[2];
+            y = -0.5*(rn+sn)*ye[0] + 0.5*(1+rn)*ye[1] + 0.5*(1+sn)*ye[2];
+          }
+          else if(bns->elementType==TETRAHEDRA)
+          {
+            rn = mesh->cubr[n];
+            sn = mesh->cubs[n]; 
+            tn = mesh->cubt[n];
+            x = -0.5*(rn+sn+tn+1)*xe[0] + 0.5*(1+rn)*xe[1] - 0.5*(1+sn)*xe[2] + 0.5*(tn+1)*xe[3];
+            y = -0.5*(rn+sn+tn+1)*ye[0] + 0.5*(1+rn)*ye[1] - 0.5*(1+sn)*ye[2] + 0.5*(tn+1)*ye[3];
+            z = -0.5*(rn+sn+tn+1)*ze[0] + 0.5*(1+rn)*ze[1] - 0.5*(1+sn)*ze[2] + 0.5*(tn+1)*ze[3];
+          } 
             
-          }
-          else{
-            x = mesh->x[n + e*mesh->Np];
-            y = mesh->y[n + e*mesh->Np];
-            z = mesh->z[n + e*mesh->Np];
-          }
+          // }
+          // else{
+          //   x = mesh->x[n + e*mesh->Np];
+          //   y = mesh->y[n + e*mesh->Np];
+          //   z = mesh->z[n + e*mesh->Np];
+          // }
           
           if (type==100) { //X Pml
             if(x>xmax)

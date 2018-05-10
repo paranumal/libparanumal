@@ -120,7 +120,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
     
 
-  printf("Starting initial conditions\n");
+  // printf("Starting initial conditions\n");
   // Set characteristic length, should be one in a proper problem setting
   dfloat Uref = 1.0;   
   dfloat Lref = 1.0;   
@@ -135,23 +135,46 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   bns->Lambda2 = 0.5/(bns->sqrtRT);
   
   // Setting initial conditions
-  dfloat rho     = 1.0;   dfloat u       = 1.0; dfloat v       = 0.0; 
-  dfloat sigma11 = 0;     dfloat sigma12 = 0;   dfloat sigma22  = 0;
+  dfloat rho     = 1.,   u       = 1.,  v       = 0.,   w  = 0.; 
+  dfloat sigma11 = 0.f , sigma12 = 0.f, sigma13 = 0.f;
+  dfloat sigma22 = 0.f , sigma23 = 0.f;
+  dfloat sigma33 = 0.f;
 
-
-    
-
+  dfloat q1bar =0., q2bar =0., q3bar =0., q4bar =0., q5bar = 0.; 
+  dfloat q6bar =0., q7bar =0., q8bar =0., q9bar =0., q10bar =0.; 
   // Set time step size
-  dfloat q1bar = rho;
-  dfloat q2bar = rho*u/bns->sqrtRT;
-  dfloat q3bar = rho*v/bns->sqrtRT;
-  dfloat q4bar = (rho*u*v - sigma12)/bns->RT;
-  dfloat q5bar = (rho*u*u - sigma11)/(sqrt(2.)*bns->RT);
-  dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*bns->RT);
+  if(bns->dim==2){
+     printf("MESH DIMENSION\t:\t%d\n", bns->dim);
+    q1bar = rho;
+    q2bar = rho*u/bns->sqrtRT;
+    q3bar = rho*v/bns->sqrtRT;
+    q4bar = (rho*u*v - sigma12)/bns->RT;
+    q5bar = (rho*u*u - sigma11)/(sqrt(2.)*bns->RT);
+    q6bar = (rho*v*v - sigma22)/(sqrt(2.)*bns->RT);    
+  } else{
+    printf("MESH DIMENSION\t:\t%d\n", bns->dim);
+    q1bar  = rho;
+    q2bar  = rho*u/bns->sqrtRT;
+    q3bar  = rho*v/bns->sqrtRT;
+    q4bar  = rho*w/bns->sqrtRT;
+    //
+    q5bar  = (rho*u*v - sigma12)/bns->RT;
+    q6bar  = (rho*u*w - sigma13)/bns->RT;
+    q7bar  = (rho*v*w - sigma23)/bns->RT;
+    //
+    q8bar  = (rho*u*u - sigma11)/(sqrt(2.)*bns->RT);
+    q9bar  = (rho*v*v - sigma22)/(sqrt(2.)*bns->RT);
+    q10bar = (rho*w*w - sigma33)/(sqrt(2.)*bns->RT);
+  }
 
- 
-  dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/bns->sqrtRT);
-  magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
+  dfloat magVelocity = 1.0; 
+  if(bns->dim==2)
+    magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/bns->sqrtRT);
+  else
+    magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar+q4bar*q4bar)/(q1bar/bns->sqrtRT);
+  
+  // Correction for initial zero velocity
+  magVelocity         = mymax(magVelocity,1.0); 
 
   dfloat ghmin        = 1e9; 
   dfloat dt           = 1e9; 
@@ -192,7 +215,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   
 
 
-   printf("dtex = %.5e dtim = %.5e \n", bns->cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), bns->cfl*1.f/(bns->tauInv));
+   // printf("dtex = %.5e dtim = %.5e \n", bns->cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), bns->cfl*1.f/(bns->tauInv));
 
   // Set multiRate element groups/group  
   if(options.compareArgs("TIME INTEGRATOR", "MRSAAB") ){
@@ -201,7 +224,8 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     // bns->dt = meshMRABSetup2D(mesh,EtoDT,maxLevels, bns->finalTime-bns->startTime);
     // bns->NtimeSteps =  (bns->finalTime-bns->startTime)/(pow(2,mesh->MRABNlevels-1)*bns->dt);
   }
-  else{    
+  else{
+    // printf("MESH DIMENSION\t:\t%d\n", bns->dt);  
     //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
     // MPI_Allreduce to get global minimum dt
     MPI_Allreduce(&dt, &(bns->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
@@ -216,6 +240,8 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     mesh->nonPmlElementIds = (dlong*) calloc(mesh->Nelements, sizeof(dlong));
     for(dlong e=0;e<mesh->Nelements;++e)
      mesh->nonPmlElementIds[e] = e; 
+
+   printf("TIME STEPSIZE\t:\t%.2e\n", bns->dt); 
   }
 
 
@@ -246,14 +272,28 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
         z = mesh->z[n + mesh->Np*e];
 
       const dlong id = e*bns->Nfields*mesh->Np +n; 
+      if(bns->dim==2){
+        // Uniform Flow
+        bns->q[id+0*mesh->Np] = q1bar; 
+        bns->q[id+1*mesh->Np] = ramp*q2bar;
+        bns->q[id+2*mesh->Np] = ramp*q3bar;
+        bns->q[id+3*mesh->Np] = ramp*ramp*q4bar;
+        bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
+        bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;   
+      }else{
+        bns->q[id+0*mesh->Np] = q1bar; 
+        bns->q[id+1*mesh->Np] = ramp*q2bar;
+        bns->q[id+2*mesh->Np] = ramp*q3bar;
+        bns->q[id+3*mesh->Np] = ramp*q4bar;
 
-      // Uniform Flow
-      bns->q[id+0*mesh->Np] = q1bar; 
-      bns->q[id+1*mesh->Np] = ramp*q2bar;
-      bns->q[id+2*mesh->Np] = ramp*q3bar;
-      bns->q[id+3*mesh->Np] = ramp*ramp*q4bar;
-      bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
-      bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;    
+        bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
+        bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;
+        bns->q[id+6*mesh->Np] = ramp*ramp*q7bar;   
+        bns->q[id+7*mesh->Np] = ramp*ramp*q8bar;   
+        bns->q[id+8*mesh->Np] = ramp*ramp*q9bar;   
+        bns->q[id+9*mesh->Np] = ramp*ramp*q10bar;   
+      }
+       
     }
   }
 
@@ -377,6 +417,9 @@ if(options.compareArgs("TIME INTEGRATOR", "LSERK")){
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   int NblockCub = 128/mesh->cubNp; // works for CUDA
+
+  NblockCub = 1; // !!!!!!!!!!!!!!!!!!!!!
+
   kernelInfo.addDefine("p_NblockCub", NblockCub);
 
   // physics 
@@ -394,10 +437,17 @@ if(options.compareArgs("TIME INTEGRATOR", "LSERK")){
   kernelInfo.addDefine("p_q4bar", q4bar);
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
+  
+  if(bns->dim==3){
+    kernelInfo.addDefine("p_q7bar", q7bar);
+    kernelInfo.addDefine("p_q8bar", q8bar);
+    kernelInfo.addDefine("p_q9bar", q9bar);
+    kernelInfo.addDefine("p_q10bar", q10bar);
+  }
+
   kernelInfo.addDefine("p_alpha0", (dfloat).01f);
   kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.1f);
   kernelInfo.addDefine("p_blockSize", blockSize);
-
   kernelInfo.addDefine("p_NrkStages", bns->NrkStages);
 
 
@@ -419,7 +469,7 @@ char fileName[BUFSIZ], kernelName[BUFSIZ];
 for (int r=0;r<size;r++){
 
     if (r==rank) {
-
+        
      
         // Volume kernels
         sprintf(fileName, "okl/bnsVolume%s.okl", suffix);
@@ -428,8 +478,7 @@ for (int r=0;r<size;r++){
         bns->volumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
         sprintf(kernelName, "bnsPmlVolume%s", suffix);
         bns->pmlVolumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-
-
+       
         // Relaxation kernels
         sprintf(fileName, "okl/bnsRelaxation%s.okl", suffix);
         if(options.compareArgs("TIME INTEGRATOR","LSERK")){
