@@ -110,13 +110,8 @@ void insPoissonStep(ins_t *ins, dfloat time){
                                 ins->o_P,
                                 ins->o_rhsP);
   #endif
-
-  #if 1 // if time dependent BC
-  //
-  const int pressure_solve = 0; // ALGEBRAIC SPLITTING 
   if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ins->poissonRhsBCKernel(mesh->Nelements,
-                            pressure_solve,
                             mesh->o_ggeo,
                             mesh->o_sgeo,
                             mesh->o_Dmatrices,
@@ -126,6 +121,7 @@ void insPoissonStep(ins_t *ins, dfloat time){
                             mesh->o_sMT,
                             time,
                             ins->dt,
+                            ins->c0, ins->c1, ins->c2,
                             mesh->o_x,
                             mesh->o_y,
                             mesh->o_z,
@@ -134,11 +130,11 @@ void insPoissonStep(ins_t *ins, dfloat time){
   } else if (ins->pOptions.compareArgs("DISCRETIZATION","IPDG")) {
     occaTimerTic(mesh->device,"PoissonRhsIpdg"); 
     ins->poissonRhsIpdgBCKernel(mesh->Nelements,
-                                  pressure_solve,
                                   mesh->o_vmapM,
                                   solver->tau,
                                   time,
                                   ins->dt,
+                                  ins->c0, ins->c1, ins->c2,
                                   mesh->o_x,
                                   mesh->o_y,
                                   mesh->o_z,
@@ -151,7 +147,6 @@ void insPoissonStep(ins_t *ins, dfloat time){
                                   ins->o_rhsP);
     occaTimerToc(mesh->device,"PoissonRhsIpdg");
   }
-  #endif
 
   //keep current PI as the initial guess?
 
@@ -168,9 +163,9 @@ void insPoissonStep(ins_t *ins, dfloat time){
 
   if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ins->poissonAddBCKernel(mesh->Nelements,
-                            pressure_solve,
                             time,
                             ins->dt,
+                            ins->c0, ins->c1, ins->c2,
                             mesh->o_x,
                             mesh->o_y,
                             mesh->o_z,

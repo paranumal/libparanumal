@@ -28,6 +28,7 @@ typedef struct {
   dfloat dt;          // time step
   dfloat lambda;      // helmhotz solver -lap(u) + lamda u
   dfloat finalTime;   // final time to run acoustics to
+  int temporalOrder;
   int ExplicitOrder; 
   int   NtimeSteps;  // number of time steps 
   int   Nstages;     // Number of history states to store

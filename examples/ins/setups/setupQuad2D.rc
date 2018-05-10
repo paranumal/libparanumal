@@ -2,10 +2,10 @@
 1.0
 
 [DATA FILE]
-data/insUniform2D.h
+data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insFenceQuad2D.msh
+../../meshes/insVortexQuad2D.msh
 
 [MESH DIMENSION]
 2
@@ -35,10 +35,10 @@ EXTBDF2
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
-CUBATURE
+COLLOCATION
 
 [VISCOSITY]
-1.e-4
+0.025
 
 [MACH NUMBER]
 .2
@@ -53,7 +53,7 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+1
 
 [START TIME]
 0
@@ -62,7 +62,7 @@ CUBATURE
 10
 
 [CFL]
-0.1
+0.9
 
 [OUTPUT TYPE]
 VTU

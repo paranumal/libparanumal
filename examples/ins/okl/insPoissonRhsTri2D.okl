@@ -48,11 +48,13 @@ kernel void insPoissonRhsForcingTri2D(const dlong Nelements,
 
 // Actually solves for Pr increamnet not presssure
 kernel void insPoissonRhsIpdgBCTri2D(const dlong Nelements,
-                                     const int pressure_solve,
                                      const dlong  * restrict vmapM,
                                      const dfloat tau,
                                      const dfloat time,
                                      const dfloat dt,
+                                     const dfloat c0,
+                                     const dfloat c1,
+                                     const dfloat c2,
                                      const dfloat * restrict x,
                                      const dfloat * restrict y,
                                      const dfloat * restrict z,
@@ -95,17 +97,24 @@ kernel void insPoissonRhsIpdgBCTri2D(const dlong Nelements,
         dfloat dpdxP=0, dpdyP=0, pP=0;        
 
         const int bc = EToB[face+p_Nfaces*e];
-        if(bc>0) {
+        if(bc==3) {
           insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);
           insPressureNeumannConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);
-          if(pressure_solve==0){
-            dfloat pPm1, dpdxPm1, dpdyPm1;
-            insPressureDirichletConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, &pPm1);
-            insPressureNeumannConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm1, &dpdyPm1);
-            pP = pP - pPm1;
-            dpdxP = dpdxP - dpdxPm1;
-            dpdyP = dpdyP - dpdyPm1;
-          }                             
+
+          dfloat pPm0, dpdxPm0, dpdyPm0;
+          insPressureDirichletConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, &pPm0);
+          insPressureNeumannConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm0, &dpdyPm0);
+          
+          dfloat pPm1, dpdxPm1, dpdyPm1;
+          insPressureDirichletConditions2D(bc,time-2*dt, x[idM], y[idM], nx, ny, 0.f, &pPm1);
+          insPressureNeumannConditions2D(bc,time-2*dt, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm1, &dpdyPm1);
+
+          dfloat pPm2, dpdxPm2, dpdyPm2;
+          insPressureDirichletConditions2D(bc,time-3*dt, x[idM], y[idM], nx, ny, 0.f, &pPm2);
+          insPressureNeumannConditions2D(bc,time-3*dt, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm2, &dpdyPm2);
+          pP = pP - c0*pPm0 - c1*pPm1 - c2*pPm2;
+          dpdxP = dpdxP - c0*dpdxPm0 - c1*dpdxPm1 - c2*dpdxPm2;
+          dpdyP = dpdyP - c0*dpdyPm0 - c1*dpdyPm1 - c2*dpdyPm2;
         }
         const dfloat dp = pP;
 
@@ -206,7 +215,6 @@ kernel void insPoissonRhsIpdgBCTri2D(const dlong Nelements,
 
 //RHS contributions for continuous solver
 kernel void insPoissonRhsBCTri2D(const dlong Nelements,
-                                 const int pressure_solve,
                                  const dfloat * restrict ggeo,
                                  const dfloat * restrict sgeo,
                                  const dfloat * restrict Dmatrices,
@@ -216,6 +224,9 @@ kernel void insPoissonRhsBCTri2D(const dlong Nelements,
                                  const dfloat * restrict sMT,
                                  const dfloat time,
                                  const dfloat dt,
+                                 const dfloat c0,
+                                 const dfloat c1,
+                                 const dfloat c2,
                                  const dfloat * restrict x,
                                  const dfloat * restrict y,
                                  const dfloat * restrict z,
@@ -254,17 +265,24 @@ kernel void insPoissonRhsBCTri2D(const dlong Nelements,
         dfloat dpdxP=0, dpdyP=0, pP=0;
 
         const int bc = mapB[idM];
-        if(bc>0) {
+        if(bc==3) {
           insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);
           insPressureNeumannConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);
-          if(pressure_solve==0){
-            dfloat pPm1, dpdxPm1, dpdyPm1;
-            insPressureDirichletConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, &pPm1);
-            insPressureNeumannConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm1, &dpdyPm1);
-            pP = pP - pPm1;
-            dpdxP = dpdxP - dpdxPm1;
-            dpdyP = dpdyP - dpdyPm1;
-          }                  
+
+          dfloat pPm0, dpdxPm0, dpdyPm0;
+          insPressureDirichletConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, &pPm0);
+          insPressureNeumannConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm0, &dpdyPm0);
+          
+          dfloat pPm1, dpdxPm1, dpdyPm1;
+          insPressureDirichletConditions2D(bc,time-2*dt, x[idM], y[idM], nx, ny, 0.f, &pPm1);
+          insPressureNeumannConditions2D(bc,time-2*dt, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm1, &dpdyPm1);
+
+          dfloat pPm2, dpdxPm2, dpdyPm2;
+          insPressureDirichletConditions2D(bc,time-3*dt, x[idM], y[idM], nx, ny, 0.f, &pPm2);
+          insPressureNeumannConditions2D(bc,time-3*dt, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm2, &dpdyPm2);
+          pP = pP - c0*pPm0 - c1*pPm1 - c2*pPm2;
+          dpdxP = dpdxP - c0*dpdxPm0 - c1*dpdxPm1 - c2*dpdxPm2;
+          dpdyP = dpdyP - c0*dpdyPm0 - c1*dpdyPm1 - c2*dpdyPm2;
         } 
 
         s_q[nid] = pP;
@@ -311,9 +329,11 @@ kernel void insPoissonRhsBCTri2D(const dlong Nelements,
 }
 
 kernel void insPoissonAddBCTri2D(const dlong Nelements,
-                                 const int pressure_solve,
                                  const dfloat time,
                                  const dfloat dt,
+                                 const dfloat c0,
+                                 const dfloat c1,
+                                 const dfloat c2,
                                  const dfloat * restrict x,
                                  const dfloat * restrict y,
                                  const dfloat * restrict z,
@@ -326,15 +346,20 @@ kernel void insPoissonAddBCTri2D(const dlong Nelements,
       const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
       const int bc = mapB[idM];
 
-      if(bc>0) {
-        const dfloat pM = P[idM];
+      if(bc==3) {
         dfloat pP = 0.f;
-        insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, pM, &pP);
-        if(pressure_solve==0 && bc==3){ // if on an outflow BC and the pressure increment is in use
-          dfloat pPm1 = 0.f;
-          insPressureDirichletConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, pM, &pPm1);
-          pP = pP - pPm1;
-        }
+        insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);
+
+        dfloat pPm0;
+        insPressureDirichletConditions2D(bc,time-dt, x[idM], y[idM], nx, ny, 0.f, &pPm0);
+        
+        dfloat pPm1;
+        insPressureDirichletConditions2D(bc,time-2*dt, x[idM], y[idM], nx, ny, 0.f, &pPm1);
+
+        dfloat pPm2;
+        insPressureDirichletConditions2D(bc,time-3*dt, x[idM], y[idM], nx, ny, 0.f, &pPm2);
+        pP = pP - c0*pPm0 - c1*pPm1 - c2*pPm2;
+
         P[idM] = pP;
       }    
     }

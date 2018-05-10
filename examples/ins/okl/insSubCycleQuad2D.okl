@@ -589,8 +589,8 @@ kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
             int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
               const dlong idm = e*p_Nfaces*p_cubNq + face*p_cubNq + i;
-              insVelocityDirichletConditions2D(bc, time, x[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
-                                                         y[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
+              insVelocityDirichletConditions2D(bc, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
+                                                         inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
                                                          nx, ny, udM, vdM, &udP, &vdP);
               udP *= bScale;
               vdP *= bScale;
