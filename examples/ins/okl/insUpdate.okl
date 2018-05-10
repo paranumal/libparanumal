@@ -31,26 +31,21 @@ kernel void insUpdateUpdate(const dlong Nelements,
       const dfloat p2 = P[pid2];
 
       //shift histories
-      NU[id2+0*offset] = NU[id1+0*offset];
-      NU[id2+1*offset] = NU[id1+1*offset];
+      for (int i=0;i<p_NVfields; i++) {
+        NU[id2+i*offset] = NU[id1+i*offset];
+        NU[id1+i*offset] = NU[id0+i*offset];
 
-      NU[id1+0*offset] = NU[id0+0*offset];
-      NU[id1+1*offset] = NU[id0+1*offset];
+        U[id2+i*offset] = U[id1+i*offset];
+        U[id1+i*offset] = U[id0+i*offset];
 
+        // Update Velocity u = u - dt/g0 * grad(Pr)
+        U[id0+i*offset] = Uhat[id+i*offset]- dt*ig0 * gradPI[id+i*offset];
+      }
       gradP[pid2] = gradP[pid1];
       gradP[pid1] = gradP[pid0];
 
-      U[id2+0*offset] = U[id1+0*offset];
-      U[id2+1*offset] = U[id1+1*offset];
       P[pid2] = p1;
-
-      U[id1+0*offset] = U[id0+0*offset];
-      U[id1+1*offset] = U[id0+1*offset];
       P[pid1] = p0;
-
-      // Update Velocity u = u - dt/g0 * grad(Pr)
-      U[id0+0*offset] = Uhat[id+0*offset] - dt*ig0 * gradPI[id+0*offset];
-      U[id0+1*offset] = Uhat[id+1*offset] - dt*ig0 * gradPI[id+1*offset];
 
       // Get Pressure from Pressure Increament
       P[pid0] = PI[id] + c0*p0 + c1*p1 + c2*p2;
