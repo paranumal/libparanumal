@@ -737,7 +737,7 @@ void smoothJacobi(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::memory
 
   occa::memory o_res = level->o_smootherResidual;
 
-  o_res.copyFrom(o_r);
+  o_res.copyFrom(o_r,A->Nrows*sizeof(dfloat));
   axpy(parAlmond, A, -1.0, o_x, 1.0, o_res,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
   // x = x + inv(D)*(r-A*x)
@@ -760,7 +760,7 @@ void smoothDampedJacobi(parAlmond_t *parAlmond, agmgLevel *level, hyb *A, occa::
 
   occa::memory o_res = level->o_smootherResidual;
 
-  o_res.copyFrom(o_r);
+  o_res.copyFrom(o_r,A->Nrows*sizeof(dfloat));
   axpy(parAlmond, A, -1.0, o_x, 1.0, o_res,parAlmond->nullSpace,parAlmond->nullSpacePenalty);
 
   // x = x + alpha*inv(D)*(r-A*x)
