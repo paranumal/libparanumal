@@ -34,8 +34,8 @@ void bnsReport(bns_t *bns,  int tstep, setupAide &options){
 
   if(options.compareArgs("OUTPUT FILE FORMAT","VTU")){ 
     char fname[BUFSIZ];
-    // sprintf(fname, "/scratch/boltzmannInclined/foo_pml_%.0f_%04d_%04d.vtu", bns->Re, rank, tstep/bns->errorStep);
-    sprintf(fname, "foo_pml_%04d_%04d.vtu",rank, tstep/bns->errorStep);
+    sprintf(fname, "/scratch/boltzmannT/foo_pml_%04d_%04d.vtu",rank, tstep/bns->errorStep);
+    // sprintf(fname, "foo_pml_%04d_%04d.vtu",rank, tstep/bns->errorStep);
     bnsPlotVTU(bns, fname);
   }
 
