@@ -91,6 +91,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
       elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_z, o_z);
 
       ellipticParallelGatherScatter(mesh, mesh->ogs, o_z, dfloatString, "add");
+      if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_z);
     } else {
       occaTimerTic(mesh->device,"parALMOND");
       parAlmondPrecon(precon->parAlmond, o_z, o_r);

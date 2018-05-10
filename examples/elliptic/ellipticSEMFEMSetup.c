@@ -67,8 +67,9 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
   if (!(options.compareArgs("DISCRETIZATION", "CONTINUOUS"))) {
     printf("SEMFEM is supported for CONTINUOUS only\n");
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
-    exit(-1);
+    exit(0);
   }
 
   int rank, size;
@@ -261,6 +262,65 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
   switch(elliptic->elementType){
   case TRIANGLES:
     meshLoadReferenceNodesTri2D(femMesh, femN);
+    break;
+  case QUADRILATERALS:
+    meshLoadReferenceNodesQuad2D(femMesh, femN);
+    break;
+  case TETRAHEDRA:
+    meshLoadReferenceNodesTet3D(femMesh, femN);
+    break;
+  case HEXAHEDRA:
+    meshLoadReferenceNodesHex3D(femMesh, femN);
+    break;
+  }
+
+  int *faceFlag = (int*) calloc(pmesh->Np*pmesh->Nfaces,sizeof(int));
+  for (int f=0;f<pmesh->Nfaces;f++) {
+    for (int n=0;n<pmesh->Nfp;n++) {
+      int id = pmesh->faceNodes[f*pmesh->Nfp+n];
+      faceFlag[f*pmesh->Np + id] = 1; //flag the nodes on this face
+    }
+  }
+
+  //map from faces of fem sub-elements to the macro element face number
+  int *femFaceMap = (int*) calloc(mesh->NelFEM*femMesh->Nfaces,sizeof(int));
+  for (int n=0;n<mesh->NelFEM*femMesh->Nfaces;n++) femFaceMap[n] = -1;
+
+  for (int n=0;n<mesh->NelFEM;n++) {
+    for (int f=0;f<femMesh->Nfaces;f++) {
+      
+      for (int face=0; face<pmesh->Nfaces;face++) {
+        
+        //count the nodes on this face which are on a macro face
+        int NvertsOnFace = 0;
+        for (int i=0;i<femMesh->Nfp;i++){
+          int id = femMesh->faceNodes[f*femMesh->Nfp+i];
+          int v  = mesh->FEMEToV[n*pmesh->Nverts+id];
+          NvertsOnFace += faceFlag[face*pmesh->Np + v];
+        }
+        if (NvertsOnFace == femMesh->Nfp)
+          femFaceMap[n*femMesh->Nfaces+f] = face; //on macro face
+      }      
+    }
+  }
+
+  //fill the boundary flag array
+  femMesh->EToB = (int*) calloc(femMesh->Nelements*femMesh->Nfaces, sizeof(int));
+  for (dlong e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->NelFEM;n++) {
+      for (int f=0;f<femMesh->Nfaces;f++) {
+        int face = femFaceMap[n*femMesh->Nfaces+f];
+        if (face>-1) {
+          femMesh->EToB[(e*mesh->NelFEM +n)*femMesh->Nfaces +f] = mesh->EToB[e*mesh->Nfaces + face];
+        }
+      }
+    }
+  }
+  free(faceFlag);
+  free(femFaceMap);
+
+  switch(elliptic->elementType){
+  case TRIANGLES:
     meshPhysicalNodesTri2D(femMesh);
     meshGeometricFactorsTri2D(femMesh);
     meshHaloSetup(femMesh);
@@ -268,8 +328,6 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
     meshSurfaceGeometricFactorsTri2D(femMesh);
     break;
   case QUADRILATERALS:
-    meshParallelConnect(femMesh);
-    meshLoadReferenceNodesQuad2D(femMesh, femN);
     meshPhysicalNodesQuad2D(femMesh);
     meshGeometricFactorsQuad2D(femMesh);
     meshHaloSetup(femMesh);
@@ -277,8 +335,6 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
     meshSurfaceGeometricFactorsQuad2D(femMesh);
     break;
   case TETRAHEDRA:
-    meshParallelConnect(femMesh);
-    meshLoadReferenceNodesTet3D(femMesh, femN);
     meshPhysicalNodesTet3D(femMesh);
     meshGeometricFactorsTet3D(femMesh);
     meshHaloSetup(femMesh);
@@ -286,8 +342,6 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
     meshSurfaceGeometricFactorsTet3D(femMesh);
     break;
   case HEXAHEDRA:
-    meshParallelConnect(femMesh);
-    meshLoadReferenceNodesHex3D(femMesh, femN);
     meshPhysicalNodesHex3D(femMesh);
     meshGeometricFactorsHex3D(femMesh);
     meshHaloSetup(femMesh);

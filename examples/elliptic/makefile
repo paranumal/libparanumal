@@ -141,9 +141,6 @@ ellipticMain:$(AOBJS) $(LOBJS) ellipticMain.o gslibInterface
 lib:$(AOBJS)
 	ar -cr libelliptic.a $(AOBJS)
 
-testTemplate:../../src/matrix.o  ../../src/setupAide.o ../../src/trace.o testTemplate.o
-	$(LD) $(LDFLAGS) -o testTemplate testTemplate.o ../../src/matrix.o  ../../src/trace.o ../../src/setupAide.o $(paths) $(LIBS)
-
 gslibInterface:
 	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../examples/elliptic
 	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
