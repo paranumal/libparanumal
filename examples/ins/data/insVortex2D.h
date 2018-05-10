@@ -32,13 +32,13 @@
 {                                          \
   if(bc==1 || bc==2){                      \
     *(uxB) = uxM;                          \
-    *(uyB) = -occaCos(2.f*OCCA_PI*y)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);\
-    *(vxB) =  occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);\
+    *(uyB) = uyM;                          \
+    *(vxB) = vxM;                          \
     *(vyB) = vyM;                          \
   } else if(bc==3){                        \
     *(uxB) = 0.f;                          \
-    *(uyB) = 0.f;                          \
-    *(vxB) = 0.f;                          \
+    *(uyB) = -occaCos(2.f*OCCA_PI*y)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);\
+    *(vxB) =  occaCos(2.f*OCCA_PI*x)*occaExp(-p_nu*4.f*OCCA_PI*OCCA_PI*t);\
     *(vyB) = 0.f;                          \
   } else if(bc==4){                        \
     *(uxB) = uxM;                          \

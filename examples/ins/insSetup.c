@@ -295,7 +295,21 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   // Use third Order Velocity Solve: full rank should converge for low orders
   if (rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");
   // ins->lambda = (11.f/6.f) / (ins->dt * ins->nu);
-  ins->lambda = (1.5f) / (ins->dt * ins->nu);
+  dfloat g0;
+  if (options.compareArgs("TIME INTEGRATOR", "EXTBDF1")) {
+    ins->temporalOrder = 1;
+    g0 = 1.0;
+  }
+  else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF2")) {
+    ins->temporalOrder = 2;
+    g0 = 1.5;
+  }
+  else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF3")) {
+    ins->temporalOrder = 3;
+    g0 = 11.f/6.f;
+  }
+
+  ins->lambda = g0 / (ins->dt * ins->nu);
 
   ins->uSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
   ins->uSolver->mesh = mesh;
@@ -409,7 +423,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->o_Uhat  = mesh->device.malloc(ins->NVfields*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->U);
   ins->o_NU    = mesh->device.malloc(ins->NVfields*Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->NU);
   ins->o_gradP = mesh->device.malloc(ins->dim*Nstages*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->U);
-  ins->o_PI = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->PI);
+  ins->o_PI    = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->PI);
   ins->o_gradPI = mesh->device.malloc(ins->dim*mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat), ins->gradP);
 
   //storage for helmholtz solves
