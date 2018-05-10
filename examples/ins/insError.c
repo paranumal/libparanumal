@@ -116,6 +116,64 @@ void insError(ins_t *ins, dfloat time){
           isnan(gMaxV) || 
           isnan(gMaxP) )
         exit(EXIT_FAILURE);
+    } else if (ins->options.compareArgs("EXACT","BELTRAMI")) { //3D Beltrami flow
+
+      for(dlong e=0;e<mesh->Nelements;++e){
+        for(int n=0;n<mesh->Np;++n){
+          dlong id = n+e*mesh->Np;
+          dfloat x = mesh->x[id];
+          dfloat y = mesh->y[id];
+          dfloat z = mesh->z[id];
+
+          dfloat a = M_PI/4.f;
+          dfloat d = M_PI/2.f;
+
+          dfloat uExact = -a*(exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y))*exp(-d*d*time);
+          dfloat vExact = -a*(exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z))*exp(-d*d*time);
+          dfloat wExact = -a*(exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x))*exp(-d*d*time);
+          dfloat pExact = -a*a*exp(-2.f*d*d*time)*(exp(2.f*a*x)+exp(2.f*a*y)+exp(2.f*a*z))
+                                                  *( sin(a*x+d*y)*cos(a*z+d*x)*exp(a*(y+z))
+                                                    +sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))
+                                                    +sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))); 
+
+          maxU = mymax(maxU, fabs(ins->U[id+0*offset]-uExact));
+          maxV = mymax(maxV, fabs(ins->U[id+1*offset]-vExact));
+          maxW = mymax(maxW, fabs(ins->U[id+2*offset]-wExact));
+          maxP = mymax(maxP, fabs(ins->P[id]-pExact));
+
+          #if 1
+            ins->U[id+0*offset] -= uExact;
+            ins->U[id+1*offset] -= vExact;
+            ins->U[id+2*offset] -= wExact;
+            ins->P[id] -= pExact;
+          #endif
+        }
+      }
+
+      // compute maximum over all processes
+      dfloat gMaxU;
+      MPI_Allreduce(&maxU, &gMaxU, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+
+      dfloat gMaxV;
+      MPI_Allreduce(&maxV, &gMaxV, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+
+      dfloat gMaxW;
+      MPI_Allreduce(&maxW, &gMaxW, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+      
+      dfloat gMaxP;
+      MPI_Allreduce(&maxP, &gMaxP, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+
+      int rank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      if(rank==0)
+        printf("Step: %d Time: %g ErrorU: %g ErrorV: %g ErrorW: %g ErrorP: %g \n", 
+           (int)(time/ins->dt), time, gMaxU, gMaxV, gMaxW, gMaxP);
+
+      if( isnan(gMaxU) || 
+          isnan(gMaxV) || 
+          isnan(gMaxW) || 
+          isnan(gMaxP) )
+        exit(EXIT_FAILURE);
     }
   }
 }

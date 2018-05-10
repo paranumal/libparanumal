@@ -34,7 +34,6 @@ Plane Surface(28) = {28};
 Surface Loop(1) = {6, 15, 19, 23, 27, 28};
 Volume(1) = {1};
 
-Physical Surface("Inflow",2) = {6,15, 19, 27, 28, 23};
-//+Physical Surface("Outflow",3) = {23};
+Physical Surface("Inflow",2) = {6,15, 19, 27, 28,23};
 Physical Volume("Domain",9) = {1};
 Coherence;

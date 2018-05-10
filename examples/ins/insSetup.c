@@ -431,7 +431,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->o_VH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
   ins->o_WH = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*sizeof(dfloat));
 
-  ins->o_Vort = mesh->device.malloc(ins->dim*mesh->Np*mesh->Nelements*sizeof(dfloat), ins->Vort);
+  ins->o_Vort = mesh->device.malloc(ins->NVfields*mesh->Np*(mesh->Nelements+mesh->totalHaloPairs)*sizeof(dfloat), ins->Vort);
   ins->o_Div = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), ins->Div);
 
   if(ins->elementType==HEXAHEDRA)

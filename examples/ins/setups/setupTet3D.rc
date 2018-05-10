@@ -2,10 +2,10 @@
 1.0
 
 [DATA FILE]
-data/insUniform3D.h
+data/insBeltrami3D.h
 
 [MESH FILE]
-../../meshes/insChannel3D.msh
+../../meshes/insBeltrami3D.msh
 
 [MESH DIMENSION]
 3
@@ -38,7 +38,7 @@ EXTBDF2
 CUBATURE
 
 [VISCOSITY]
-1.e-4
+0.025
 
 [MACH NUMBER]
 .2
@@ -56,7 +56,7 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+10
 
 [START TIME]
 0
@@ -100,7 +100,7 @@ MASSMATRIX
 
 # can be ALLDEGREES, HALFDEGREES, HALFDOFS
 [VELOCITY MULTIGRID COARSENING]
-HALFDOFS
+ALLDEGREES
 
 # can be LOCALPATCH, or DAMPEDJACOBI
 # LOCALPATCH smoother can include EXACT
@@ -179,8 +179,9 @@ STRONGNODES
 ###########################################
 
 # compare to a reference solution. Use NONE to skip comparison
+# can be BELTRAMI
 [EXACT]
-NONE
+BELTRAMI
 
 [VERBOSE]
 FALSE
