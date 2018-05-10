@@ -1,6 +1,6 @@
 #include "ins.h"
 
-void insRun(ins_t *ins){
+void insRunEXTBDF(ins_t *ins){
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
