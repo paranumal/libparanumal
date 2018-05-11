@@ -66,6 +66,29 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   dlong Ntotal = mesh->Np*mesh->Nelements;
   ins->Nblock = (Ntotal+blockSize-1)/blockSize;
 
+  if (options.compareArgs("TIME INTEGRATOR", "ARK1")) {
+    ins->NrkStages = 1;
+    int Nrk = 2;
+    dfloat rkC[2] = {0.0, 1.0};
+    dfloat erkA[2*2] ={0.0, 0.0,\
+                       1.0, 0.0};
+    dfloat irkA[2*2] ={0.0, 0.0,\
+                       0.0, 1.0};
+    dfloat prkA[2*2] ={0.0, 0.0,\
+                       1.0, 0.0};
+
+    ins->Nrk = Nrk;
+    ins->rkC = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
+    ins->erkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->irkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->prkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+
+    memcpy(ins->rkC, rkC, ins->Nrk*sizeof(dfloat));
+    memcpy(ins->erkA, erkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->irkA, irkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->prkA, prkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+  }
+
   int Nstages = 3;
 
   // compute samples of q at interpolation nodes
@@ -233,6 +256,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->NtimeSteps = ins->finalTime/ins->dt;
     ins->dt         = ins->finalTime/ins->NtimeSteps;
   }
+
+  ins->dtMIN = 1E-2*ins->dt; //minumum allowed timestep
 
   if (rank==0) {
     printf("hmin = %g\n", hmin);

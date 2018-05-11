@@ -67,26 +67,34 @@ void insRunARK(ins_t *ins){
 
     insAdvection(ins, time, ins->o_U, ins->o_NU);
     insDiffusion(ins, time, ins->o_U, ins->o_LU);
-    insGrad(ins, time, ins->o_P, ins->o_GP);
+    insGradient (ins, time, ins->o_P, ins->o_GP);
 
-    for(int stage=1;stage<ins->NrkStages;++stage){
+    for(int stage=1;stage<=ins->NrkStages;++stage){
 
       // intermediate stage time
       dfloat stageTime = time + ins->rkC[stage]*ins->dt;
 
-      insVelocityRhs(ins, time);
-      insVelocitySolve(ins, time);
+      insVelocityRhs  (ins, time, stage, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
+      insVelocitySolve(ins, time, stage, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
-      insPressureRhs(ins, time);
-      insPressureSolve(ins, time);      
+      insPressureRhs  (ins, time, stage);
+      insPressureSolve(ins, time, stage);      
 
-      insPressureUpdate(ins, ins->o_rkP);
-      insGrad(ins, time, ins->o_rkP, ins->o_rkGP);
+      insPressureUpdate(ins, time, stage, ins->o_rkP);
+      insGradient(ins, time, ins->o_rkP, ins->o_rkGP);
 
-      insVelocityUpdate(ins, ins->o_rkU);
-
+      insVelocityUpdate(ins, time, stage, ins->o_rkP, ins->o_rkGP, ins->o_rkU);
+      
+      //compute and save NU and LU
       insAdvection(ins, time, ins->o_rkU, ins->o_rkNU);
       insDiffusion(ins, time, ins->o_rkU, ins->o_rkLU); 
+      ins->o_NU.copyFrom(ins->o_rkNU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
+      ins->o_LU.copyFrom(ins->o_rkLU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
+
+      if (stage==ins->NrkStages) break; //final stage
+      ins->o_U.copyFrom(ins->o_rkU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
+      ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat), stage*ins->Ntotal*sizeof(dfloat), 0);
+      ins->o_GP.copyFrom(ins->o_rkGP, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
     } 
 
     occaTimerTic(mesh->device,"Report");
@@ -98,16 +106,26 @@ void insRunARK(ins_t *ins){
 
     if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
     if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
-    
     occaTimerToc(mesh->device,"Report");
 
-    dlong Ntotal = mesh->Nelements*mesh->Np*ins->NVfields;
-    ins->errorEstimateKernel(Ntotal, 
+
+    if (ins->embeddedRKFlag==0) {//check if an embedded rk method is being used
+      //accept the step and proceed
+      ins->o_U.copyFrom(ins->o_rkU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
+      ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat), 0);
+      continue;
+    }
+/*
+    dlong Nlocal = mesh->Nelements*mesh->Np*ins->NVfields;
+    ins->errorEstimateKernel(Nlocal, 
                             ins->ATOL,
                             ins->RTOL,
-                            ins->o_q,
-                            ins->o_rkq,
-                            ins->o_rkerr,
+                            ins->o_U,
+                            ins->o_rkU,
+                            ins->o_NU,
+                            ins->o_LU,
+                            ins->o_erkerr,
+                            ins->o_irkerr,
                             ins->o_errtmp);
 
     ins->o_errtmp.copyTo(ins->errtmp);
@@ -145,6 +163,7 @@ void insRunARK(ins_t *ins){
     ins->atstep++;
 
     printf("\rTime = %.4e (%d). Average Dt = %.4e, Rejection rate = %.2g   ", time, tstep, time/(dfloat)tstep, Nregect/(dfloat) tstep); fflush(stdout);
+  */
   }
   occaTimerToc(mesh->device,"INS");
 
