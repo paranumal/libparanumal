@@ -239,7 +239,7 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
             dfloat r_rhsq[p_Nfields];
             occaUnroll(p_Nfields)
             for(int fld=0; fld<p_Nfields; fld++){
-              r_rhsq[fld] = rhsq[id + fld*p_Np]; 
+              r_rhsq[fld] = 0.f; 
             }
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
@@ -255,7 +255,7 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
 
             occaUnroll(p_Nfields)
             for(int fld=0; fld<p_Nfields; fld++){
-              rhsq[id + fld*p_Np] = r_rhsq[fld];
+              rhsq[id + fld*p_Np] += r_rhsq[fld];
             }
          }
         }

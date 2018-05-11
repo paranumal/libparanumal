@@ -1,7 +1,7 @@
 cl__1 = 1;
 
-r_0 = DefineNumber[0.2];
-r_1 = DefineNumber[0.1];
+r_0 = DefineNumber[1.0];
+r_1 = DefineNumber[0.25];
 
 
 xmin = DefineNumber[-5.4];

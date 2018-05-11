@@ -92,8 +92,24 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   check = options.getArgs("REPORT FLAG", bns->reportFlag);
   if(!check) printf("WARNING setup file does not include REPORT FLAG\n");
 
+  check = options.getArgs("FIXED TIME STEP", bns->fixed_dt);
+  if(!check) printf("WARNING setup file does not include FIXED TIME STEP\n");
+
   if(options.compareArgs("ABSORBING LAYER", "PML"))
     bns->pmlFlag = 1; 
+
+  if(bns->pmlFlag){
+   check = options.getArgs("PML PROFILE ORDER", bns->pmlOrder);
+   if(!check) printf("WARNING setup file does not include PML ORDER\n");
+
+   check = options.getArgs("PML SIGMAX MAX", bns->sigmaXmax);
+   if(!check) printf("WARNING setup file does not include PML SIGMAX MAX\n");
+
+   check = options.getArgs("PML SIGMAY MAX", bns->sigmaYmax);
+   if(!check) printf("WARNING setup file does not include PML SIGMAY MAX\n");
+
+
+  }
  
   
   // Set time discretization scheme:fully explicit or not
@@ -106,10 +122,6 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   // Output interval for variable dt integration
   options.getArgs("OUTPUT INTERVAL",   bns->outputInterval);
 
-
-
-
-
   printf("=============WRITING INPUT PARAMETERS===================\n");
 
   printf("REYNOLDS NUMBER\t:\t%.2e\n", bns->Re);
@@ -117,6 +129,13 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   printf("CFL NUMBER\t:\t%.2e\n", bns->cfl);
   printf("START TIME\t:\t%.2e\n", bns->startTime);
   printf("FINAL TIME\t:\t%.2e\n", bns->finalTime);
+  printf("FIXED DT\t:\t%d\n", bns->fixed_dt);
+  printf("PML FORMULATION\t:\t%d\n", bns->pmlFlag);
+  if(bns->pmlFlag){
+    printf("PML PROFILE N\t:\t%d\n", bns->pmlOrder);
+    printf("PML SIGMA X\t:\t%.2e\n", bns->sigmaXmax);
+    printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
+  }
 
     
 
@@ -153,6 +172,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     q6bar = (rho*v*v - sigma22)/(sqrt(2.)*bns->RT);    
   } else{
     printf("MESH DIMENSION\t:\t%d\n", bns->dim);
+    
     q1bar  = rho;
     q2bar  = rho*u/bns->sqrtRT;
     q3bar  = rho*v/bns->sqrtRT;
@@ -255,6 +275,34 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     bns->resq = (dfloat*) calloc(bns->Nrhs*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
   }
 
+   // Initialize  
+  if (options.compareArgs("TIME INTEGRATOR","SARK")){ // SARK for fixed or adaptive time stepping,
+    bns->Nrhs  = 1;
+    bns->ATOL    = 1.0; options.getArgs("ABSOLUTE TOLERANCE",   bns->ATOL); 
+    bns->RTOL    = 1.0; options.getArgs("RELATIVE TOLERANCE",   bns->RTOL);
+    bns->dtMIN   = 1.0; options.getArgs("MINUMUM TIME STEP SIZE",   bns->dtMIN); 
+    bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I    
+    bns->rkp     = 4; // order of embedded scheme + 1 
+
+    
+    dlong Ntotal  = mesh->Nelements*mesh->Np*bns->Nfields;
+    bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
+
+    dlong localElements =  mesh->Nelements;
+    MPI_Allreduce(&localElements, &(bns->totalElements), 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+
+    // compute samples of q at interpolation nodes
+    bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+    //
+    bns->NrkStages = 7; // 7 stages order(54) or 6 stages order(43) 
+    
+    bns->rkq      = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->rkrhsq   = (dfloat*) calloc(bns->NrkStages*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->rkerr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->errtmp  =  (dfloat*) calloc(bns->Nblock, sizeof(dfloat)); 
+  }
+
  
 
   dfloat time = bns->startTime + 0.0; 
@@ -281,17 +329,39 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
         bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
         bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;   
       }else{
-        bns->q[id+0*mesh->Np] = q1bar; 
-        bns->q[id+1*mesh->Np] = ramp*q2bar;
-        bns->q[id+2*mesh->Np] = ramp*q3bar;
-        bns->q[id+3*mesh->Np] = ramp*q4bar;
 
-        bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
-        bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;
-        bns->q[id+6*mesh->Np] = ramp*ramp*q7bar;   
-        bns->q[id+7*mesh->Np] = ramp*ramp*q8bar;   
-        bns->q[id+8*mesh->Np] = ramp*ramp*q9bar;   
-        bns->q[id+9*mesh->Np] = ramp*ramp*q10bar;   
+        #if 1
+          dfloat Pmax = 0.5; 
+          dfloat U0   = 1.0; 
+          dfloat r0   = 1.0;
+          dfloat gamma= 1.4; 
+
+          dfloat rho = 1.0 + Pmax*exp(-(log(2)* (x*x + y*y + z*z)/r0));
+
+          bns->q[id+0*mesh->Np] = rho; 
+          bns->q[id+1*mesh->Np] = rho*U0/bns->sqrtRT;
+          bns->q[id+2*mesh->Np] = 0.0;
+          bns->q[id+3*mesh->Np] = 0.0;
+
+          bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
+          bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;
+          bns->q[id+6*mesh->Np] = ramp*ramp*q7bar;   
+          bns->q[id+7*mesh->Np] = ramp*ramp*q8bar;   
+          bns->q[id+8*mesh->Np] = ramp*ramp*q9bar;   
+          bns->q[id+9*mesh->Np] = ramp*ramp*q10bar; 
+        #else
+          bns->q[id+0*mesh->Np] = q1bar; 
+          bns->q[id+1*mesh->Np] = ramp*q2bar;
+          bns->q[id+2*mesh->Np] = ramp*q3bar;
+          bns->q[id+3*mesh->Np] = ramp*q4bar;
+
+          bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
+          bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;
+          bns->q[id+6*mesh->Np] = ramp*ramp*q7bar;   
+          bns->q[id+7*mesh->Np] = ramp*ramp*q8bar;   
+          bns->q[id+8*mesh->Np] = ramp*ramp*q9bar;   
+          bns->q[id+9*mesh->Np] = ramp*ramp*q10bar; 
+        #endif  
       }
        
     }
@@ -398,6 +468,32 @@ if(options.compareArgs("TIME INTEGRATOR", "LSERK")){
     mesh->device.malloc(mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->resq);
 }
 
+if(options.compareArgs("TIME INTEGRATOR","SARK")){
+
+  bns->o_q =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
+  bns->o_rhsq = 
+    mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq); 
+  
+  int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
+  
+  bns->o_rkq =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkq);
+
+  bns->o_saveq =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkq);
+
+  bns->o_rkrhsq =
+    mesh->device.malloc(bns->NrkStages*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rkrhsq);
+  bns->o_rkerr =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkerr);
+  bns->o_errtmp = mesh->device.malloc(bns->Nblock*sizeof(dfloat), bns->errtmp);
+
+  bns->o_rkA = mesh->device.malloc(bns->NrkStages*bns->NrkStages*sizeof(dfloat), bns->rkA);
+  bns->o_rkE = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), bns->rkE);
+
+}
+
 
 
 
@@ -451,6 +547,12 @@ if(options.compareArgs("TIME INTEGRATOR", "LSERK")){
   kernelInfo.addDefine("p_NrkStages", bns->NrkStages);
 
 
+  if(bns->fexplicit) // full explicit or semi-nalaytic
+    kernelInfo.addDefine("p_SEMI_ANALYTIC", (int) 0);
+  else
+    kernelInfo.addDefine("p_SEMI_ANALYTIC", (int) 1);
+
+
 
 
   // set kernel name suffix
@@ -481,24 +583,12 @@ for (int r=0;r<size;r++){
        
         // Relaxation kernels
         sprintf(fileName, "okl/bnsRelaxation%s.okl", suffix);
-        if(options.compareArgs("TIME INTEGRATOR","LSERK")){
-          // Fully explicit
-          sprintf(kernelName, "bnsRelaxation%s", suffix);
-          bns->relaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-
-          sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
-          bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-        }else{
-          // Semi-analytic MRSAAB or SAARK
-          sprintf(fileName, "okl/bnsRelaxation%s.okl", suffix);
-          sprintf(kernelName, "bnsSARelaxation%s", suffix);
-          bns->relaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-
-          sprintf(kernelName, "bnsSAPmlRelaxation%s", suffix);        
-          bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-        }
-
-
+  
+        sprintf(kernelName, "bnsRelaxation%s", suffix);
+        bns->relaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
+        bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        
         // Surface kernels 
         sprintf(fileName, "okl/bnsSurface%s.okl", suffix);
 
@@ -525,6 +615,22 @@ for (int r=0;r<size;r++){
 
           sprintf(kernelName, "bnsLSERKPmlUpdate%s", suffix);
           bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+        }
+        else if(options.compareArgs("TIME INTEGRATOR","SARK")){
+          sprintf(kernelName, "bnsSARKUpdateStage%s", suffix);
+          bns->updateStageKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+
+          sprintf(kernelName, "bnsSARKPmlUpdateStage%s", suffix);
+          bns->pmlUpdateStageKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+
+          sprintf(kernelName, "bnsSARKUpdate%s", suffix);
+          bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+
+          sprintf(kernelName, "bnsSARKPmlUpdate%s", suffix);
+          bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+
+
+
         }
 
     }

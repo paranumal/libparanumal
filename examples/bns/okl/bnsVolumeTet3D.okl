@@ -91,7 +91,6 @@ kernel void bnsVolumeTet3D(const dlong Nelements,
         r_rhsq[4] = -p_sqrtRT*(r_dqdx[2] + r_dqdy[1]);
         r_rhsq[5] = -p_sqrtRT*(r_dqdx[3] + r_dqdz[1]);
         r_rhsq[6] = -p_sqrtRT*(r_dqdy[3] + r_dqdz[2]);
-
         r_rhsq[7] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
         r_rhsq[8] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
         r_rhsq[9] = -p_sqrtRT*p_sqrt2*r_dqdz[3];        

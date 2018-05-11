@@ -3,6 +3,8 @@
 // currently maximum
 void bnsError(bns_t *bns, int tstep, setupAide &options){
 
+ bns->o_q.copyTo(bns->q);
+
   mesh_t *mesh = bns->mesh; 
 
   dfloat time = 0.0; 

@@ -86,7 +86,7 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 
           dfloat r_qN[p_Nfields-4];
           for(int fld=4; fld<p_Nfields; fld++){
-            r_qN[fld-4] = rhsq[id + fld*p_Np];
+            r_qN[fld-4] = 0.f; 
           }
 
           occaUnroll(p_cubNp)
@@ -96,9 +96,9 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
               r_qN[fld] += Pnc*s_cubN[es][fld][i];
             }
           }
-          
+
           for(int fld=4; fld<p_Nfields; fld++){
-            rhsq[id + fld*p_Np] = r_qN[fld-4];
+            rhsq[id + fld*p_Np] += r_qN[fld-4];
           }
         
         }
@@ -252,10 +252,10 @@ kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
             
               occaUnroll(p_Nfields)
               for(int fld=0; fld<p_Nfields;++fld){
-                r_rhsq[fld]  = rhsq[rhsId + fld*p_Np];
-                r_rhsqx[fld] = pmlrhsqx[pmlrhsId + fld*p_Np];
-                r_rhsqy[fld] = pmlrhsqy[pmlrhsId + fld*p_Np];
-                r_rhsqz[fld] = pmlrhsqz[pmlrhsId + fld*p_Np];
+                r_rhsq[fld]  = 0.f;
+                r_rhsqx[fld] = 0.f;
+                r_rhsqy[fld] = 0.f;
+                r_rhsqz[fld] = 0.f;
               }
 
               // use temporaries for part sums for N4,N5,N6 because of exclusives
@@ -273,10 +273,10 @@ kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
                 
              occaUnroll(p_Nfields) 
              for(int fld=0; fld<p_Nfields;++fld){
-                rhsq[rhsId + fld*p_Np]        = r_rhsq[fld];
-                pmlrhsqx[pmlrhsId + fld*p_Np] = r_rhsqx[fld];
-                pmlrhsqy[pmlrhsId + fld*p_Np] = r_rhsqy[fld];
-                pmlrhsqz[pmlrhsId + fld*p_Np] = r_rhsqz[fld];
+                rhsq[rhsId + fld*p_Np]        += r_rhsq[fld];
+                pmlrhsqx[pmlrhsId + fld*p_Np] += r_rhsqx[fld];
+                pmlrhsqy[pmlrhsId + fld*p_Np] += r_rhsqy[fld];
+                pmlrhsqz[pmlrhsId + fld*p_Np] += r_rhsqz[fld];
               }   
           }
         }
