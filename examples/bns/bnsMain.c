@@ -40,7 +40,6 @@ int main(int argc, char **argv){
 
    bns_t *bns = bnsSetup(mesh,options); 
 
-
    bnsRun(bns,options);
    
   // close down MPI
