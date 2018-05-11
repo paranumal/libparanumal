@@ -160,7 +160,7 @@ printf("Relying the fact that  LSERK set on mesh structure\n");
 
 
 
-if(options.compareArgs("TIME INTEGRATOR","SAADRK")){
+if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
 	// dfloat rkC[bns->NrkStages], rkA[bns->NrkStages*bns->NrkStages], rkE[bns->NrkStages]; 
 	if(bns->NrkStages==5){ // SAARK43

@@ -80,7 +80,7 @@ tic_tot = MPI_Wtime();
 
 // if(!( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") )){
 
-// if( (fixed_dt==1) ){
+if( bns->fixed_dt ){
  for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
       
    // for(int tstep=0;tstep<1;++tstep){
@@ -111,18 +111,28 @@ tic_tot = MPI_Wtime();
         // occaTimerToc(mesh->device, "MRSAAB"); 
       }
 
-    
       if(options.compareArgs("TIME INTEGRATOR","LSERK")){
         occaTimerTic(mesh->device, "LSERK");  
         bnsLSERKStep(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
         occaTimerToc(mesh->device, "LSERK");  
       }
 
+      if(options.compareArgs("TIME INTEGRATOR","SARK")){
+        occaTimerTic(mesh->device, "SARK");
+        dfloat time = tstep*bns->dt;  
+        bnsSARKStep(bns, time, haloBytes, sendBuffer, recvBuffer, options);
+        bns->o_q.copyFrom(bns->o_rkq);
+        bns->o_pmlqx.copyFrom(bns->o_rkqx);
+        bns->o_pmlqy.copyFrom(bns->o_rkqy);
+        if(bns->dim==3)
+          bns->o_pmlqz.copyFrom(bns->o_rkqz);
+
+        occaTimerToc(mesh->device, "SARK");  
+      }
+
       elp_sol += (MPI_Wtime() - tic_sol);
-
-    
-
   }
+}
 
  
 

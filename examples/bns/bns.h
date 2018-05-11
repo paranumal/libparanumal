@@ -24,6 +24,7 @@ typedef struct{
 	
 	int NrkStages; 
 	int frame; 
+	int fixed_dt;
 	
 
 
@@ -64,7 +65,9 @@ typedef struct{
 	// IMEXRK - Kennedy-Carpanter
 	dfloat *rhsqim, *rhsqex, *rkrhsqim, *rkrhsqex; 
 
-    // Pml 
+    // Pml
+    int pmlOrder ; 
+    dfloat  sigmaXmax, sigmaYmax, sigmaZmax; 
 	dfloat *pmlSigmaX, *pmlSigmaY, *pmlSigmaZ; 
 	dfloat *pmlqx, *pmlqy, *pmlqz;
 	dfloat *pmlrhsqx, *pmlrhsqy, *pmlrhsqz;
@@ -117,8 +120,8 @@ typedef struct{
 	dfloat *fQM; 
 	occa::memory o_q,o_rhsq, o_resq, o_fQM;
 	occa::memory o_rkA, o_rkE, o_sarkC, o_sarkA, o_sarkE; 
-	occa::memory o_rkqx, o_rkqy, o_rkrhsqx, o_rkrhsqy; 
-	occa::memory o_saveq, o_saveqx, o_saveqy; // for output minor step of addaptive RK 
+	occa::memory o_rkqx, o_rkqy, o_rkqz, o_rkrhsqx, o_rkrhsqy, o_rkrhsqz; 
+	occa::memory o_saveq, o_saveqx, o_saveqy, o_saveqz; // for output minor step of addaptive RK 
 
 	// LS Imex vars
 	occa::memory o_qY,   o_qZ,   o_qS;
@@ -183,6 +186,9 @@ void bnsSAADRKCoefficients(bns_t *bns, setupAide &options);
 
 
 void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
+				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
+
+void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
 
 #define TRIANGLES 3

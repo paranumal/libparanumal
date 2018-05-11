@@ -49,7 +49,8 @@ bnsSAADRKCoefficients.o \
 bnsPlotVTU.o \
 bnsReport.o \
 bnsError.o \
-bnsLSERKStep.o
+bnsLSERKStep.o \
+bnsSARKStep.o 
 #boltzmannComputeVorticity2D.o \
 #boltzmannError2D.o \
 #boltzmannCouetteError2D.o \

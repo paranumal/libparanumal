@@ -1,7 +1,7 @@
 // Base mesh density for outer surfaces
-r   = DefineNumber[1.0];
+r   = DefineNumber[0.75];
 // Factor for inside cylinder faces
-fac = DefineNumber[0.25];
+fac = DefineNumber[0.1];
 // pml Width
 pmlWidth = DefineNumber[1.6];
 // Define Square Cylinder and Domain boundaries
@@ -118,5 +118,7 @@ Physical Volume("XYPML",300)  = {59,62,63,65};
 Physical Volume("XZPML",500)  = {67,68,69,70};
 Physical Volume("YZPML",600)  = {60,61,64,66};
 Physical Volume("XYZPML",700)  = {75,76,77,78,71,72,73,74};
+
+
 
 Coherence;
