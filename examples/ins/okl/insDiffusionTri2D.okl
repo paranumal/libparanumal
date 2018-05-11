@@ -1,0 +1,130 @@
+kernel void insDiffusionTri2D(const dlong Nelements,
+                              const dlong  * restrict elementList,
+                              const dfloat * restrict ggeo,
+                              const dfloat * restrict Dmatrices,
+                              const dfloat * restrict Smatrices,
+                              const dfloat * restrict MM,
+                              const dlong  * restrict vmapM,
+                              const dfloat * restrict sMT,
+                              const dfloat nu,
+                              const dfloat time,
+                              const dfloat * restrict x,
+                              const dfloat * restrict y,
+                              const dfloat * restrict z,
+                              const int    * restrict mapB,
+                              const dlong fieldOffset,
+                              const dfloat  * restrict U,
+                                    dfloat  * restrict LU){
+  
+  occaUnroll(p_NVfields)
+  for (int i=0; i<p_NVfields; i++) {
+
+    for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+
+      shared dfloat s_q[p_NblockV][p_Np];
+      shared dfloat s_ndq[p_Nfp*p_Nfaces];
+
+      for(dlong e=eo;e<eo+p_NblockV;++e;inner1){
+        for(int n=0;n<p_Nmax;++n;inner0){
+          if (e<Nelements) {
+            if (n<p_Np) {
+              //prefetch q
+              const dlong element = elementList[e];
+              const dlong id = n + element*p_Np;
+              s_q[e-eo][n] = q[id+i*fieldOffset];
+            }
+          }
+          if(n<p_NfacesNfp){
+            s_ndq[n] = 0.;
+          }
+        }
+      }
+
+      barrier(localMemFence);
+
+      for(int n=0;n<p_Nmax;++n;inner0){
+        if(n<p_NfacesNfp){
+          const dlong id  = n + e*p_Nfaces*p_Nfp;
+          const dlong idM = vmapM[id];          
+          const int nid = idM%p_Np; 
+
+          const int face = n/p_Nfp;
+
+          dfloat dudxP=0, dudyP=0, uP=0;
+          
+          // load surface geofactors for this face
+          const int sid = p_Nsgeo*(e*p_Nfaces+face);
+          const dfloat nx = sgeo[sid+p_NXID];
+          const dfloat ny = sgeo[sid+p_NYID];
+          const dfloat sJ = sgeo[sid+p_SJID];
+
+          const int bc = mapB[idM];
+          if(bc>0) {
+            dfloat4 UM[p_NVfields]; 
+            dfloat4 UP[p_NVfields]; 
+
+            //set all except field i zero. This assumes velocity boundaries are uncoupled
+            for (int f=0;f<p_NVfields;f++) {
+              UM[f].x = 0.;               
+              UM[f].y = 0.;               
+              UM[f].z = 0.;               
+              UM[f].w = 0.;               
+            }
+            UM[i] = gradqM;
+
+            insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, UM[0].w, UM[1].w, &(UP[0].w), &(UP[1].w));
+            insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, UM[0].x, UM[0].y, UM[1].x, UM[1].y, &(UP[0].x), &(UP[0].y), &(UP[1].x), &(UP[1].y));
+
+            dudxP = UP[i].x;
+            dudyP = UP[i].y;
+          }  
+          s_ndq[n] = sJ*(nx*dudxP + ny*dudyP);
+        }
+      }
+
+      barrier(localMemFence);
+
+      for(dlong e=eo;e<eo+p_NblockV;++e;inner1){
+        for(int n=0;n<p_Nmax;++n;inner0){
+          if (e<Nelements) {
+            if (n<p_Np) {
+              const dlong es = e-eo;
+              const dlong element = elementList[e];
+              const dlong gid = element*p_Nggeo;
+
+              const dfloat Grr = ggeo[gid + p_G00ID];
+              const dfloat Grs = ggeo[gid + p_G01ID];
+              const dfloat Gss = ggeo[gid + p_G11ID];
+              const dfloat J   = ggeo[gid + p_GWJID];
+
+              dfloat qrr = 0.;
+              dfloat qrs = 0.;
+              dfloat qss = 0.;
+              dfloat qM = 0.;
+
+              occaUnroll(p_Np)
+                for (int k=0;k<p_Np;k++) {
+                  dfloat qn = s_q[es][k];
+                  qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*qn;
+                  qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*qn;
+                  qss += Smatrices[n+k*p_Np+2*p_Np*p_Np]*qn;
+                  qM  += MM[n+k*p_Np]*s_q[es][k];
+                }
+                
+              dfloat Lndq = 0;            
+              // surface mass * surface terms
+              occaUnroll(p_NfacesNfp)
+                for(int i=0;i<p_NfacesNfp;++i){
+                  Lndq += sMT[n+i*p_Np]*s_ndq[i];
+                }
+
+              const dlong id = n + element*p_Np;
+
+              LU[id+i*fieldOffset] = -nu*(Grr*qrr+Grs*qrs+Gss*qss - Lndq);
+            }
+          }
+        }
+      }
+    }
+  }
+}

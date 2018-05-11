@@ -29,7 +29,6 @@ void insUpdateStep(ins_t *ins, dfloat time){
   
   occaTimerTic(mesh->device,"GradientVolume");
   // Compute Volume Contribution of gradient of pressure gradient
-  dlong ioffset = 0;
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_Dmatrices,

@@ -1,0 +1,25 @@
+// U^s = Uhat - dt * GP^s + dt*\sum^s-1 pa_si GP^i
+kernel void insVelocityUpdate(const dlong Nelements,
+                              const int stage,
+                              const dfloat dt,
+                              const dlong fieldOffset,
+                              const dfloat * restrict prkA,
+                              const dfloat * restrict GP,
+                              const dfloat * restrict rkGP,
+                                    dfloat * restrict rkU){
+
+  for(dlong e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+      const dlong id  = n + e*p_Np;
+
+      for (int i=0;i<p_NVfields;i++) {
+        dfloat Un = Uhat[id+i*fieldOffset] - dt*rkGP[id+i*fieldOffset];
+
+        for (int s=0;s<stage;s++) {
+          Un += dt*prkA[stage*p_NRKstages+s]*GP[id+i*fieldOffset+s*p_NVfields*fieldOffset];
+        }
+        Uhat[id+i*fieldOffset] = Un;
+      }
+    }
+  }
+}
