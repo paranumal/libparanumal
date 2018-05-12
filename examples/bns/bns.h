@@ -170,6 +170,8 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options);
 
 // Pml setup for single rate time discretization
 void bnsPmlSetup(bns_t *bns, setupAide &options);
+// Pml setup for multi rate time discretization
+void bnsMRABPmlSetup(bns_t *bns, setupAide &options);
 
 void bnsRun(bns_t *bns, setupAide &options);
 void bnsReport(bns_t *bns, int tstep, setupAide &options);
@@ -184,12 +186,17 @@ void bnsRampFunction(dfloat t, dfloat *ramp, dfloat *drampdt);
 void bnsTimeStepperCoefficients(bns_t *bns, setupAide &options);
 void bnsSAADRKCoefficients(bns_t *bns, setupAide &options);
 
+void bnsMRSAABStep(bns_t *bns, int tstep, int haloBytes,
+				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
 
 void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
 
 void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
+
+
+
 
 #define TRIANGLES 3
 #define QUADRILATERALS 4

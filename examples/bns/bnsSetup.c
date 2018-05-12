@@ -108,7 +108,10 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
    check = options.getArgs("PML SIGMAY MAX", bns->sigmaYmax);
    if(!check) printf("WARNING setup file does not include PML SIGMAY MAX\n");
 
-
+    if(bns->dim==3){
+      check = options.getArgs("PML SIGMAZ MAX", bns->sigmaZmax);
+      if(!check) printf("WARNING setup file does not include PML SIGMAZ MAX\n");
+    }
   }
  
   
@@ -134,6 +137,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   if(bns->pmlFlag){
     printf("PML PROFILE N\t:\t%d\n", bns->pmlOrder);
     printf("PML SIGMA X\t:\t%.2e\n", bns->sigmaXmax);
+    printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
     printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
   }
 
@@ -239,10 +243,18 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
   // Set multiRate element groups/group  
   if(options.compareArgs("TIME INTEGRATOR", "MRSAAB") ){
-    // int maxLevels =0; 
-    // options.getArgs("MAX MRAB LEVELS", maxLevels);
-    // bns->dt = meshMRABSetup2D(mesh,EtoDT,maxLevels, bns->finalTime-bns->startTime);
-    // bns->NtimeSteps =  (bns->finalTime-bns->startTime)/(pow(2,mesh->MRABNlevels-1)*bns->dt);
+    int maxLevels =0; options.getArgs("MAX MRAB LEVELS", maxLevels);
+
+    printf("MR MAX LEVELS\t:\t%d\n", maxLevels);
+
+    if(bns->dim==2)
+      bns->dt = meshMRABSetup2D(mesh,EtoDT,maxLevels, (bns->finalTime-bns->startTime));
+    else
+      bns->dt = meshMRABSetup3D(mesh,EtoDT,maxLevels, (bns->finalTime-bns->startTime));
+
+    bns->NtimeSteps =  (bns->finalTime-bns->startTime)/(pow(2,mesh->MRABNlevels-1)*bns->dt);
+
+    printf("MR  LEVELS\t:\t%d\n", mesh->MRABNlevels);
   }
   else{
     // printf("MESH DIMENSION\t:\t%d\n", bns->dt);  
@@ -262,6 +274,16 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
      mesh->nonPmlElementIds[e] = e; 
 
    printf("TIME STEPSIZE\t:\t%.2e\n", bns->dt); 
+  }
+
+
+
+  if(options.compareArgs("TIME INTEGRATOR", "MRSAAB")){
+    bns->Nrhs = 3; 
+    // compute samples of q at interpolation nodes
+    bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->rhsq = (dfloat*) calloc(bns->Nrhs*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
+    bns->fQM  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*bns->Nfields, sizeof(dfloat));
   }
 
 
@@ -330,7 +352,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
         bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;   
       }else{
 
-        #if 1
+        #if 0
           dfloat Pmax = 0.5; 
           dfloat U0   = 1.0; 
           dfloat r0   = 1.0;
@@ -405,27 +427,25 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
   // Setup MRAB PML
   if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
-    // printf("Preparing Pml for multirate rate\n");
+    printf("Preparing Pml for multirate rate\n");
     
-    // boltzmannMRABPmlSetup2D(bns, options);
+    bnsMRABPmlSetup(bns, options);
 
-    // mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    // mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    // for (int lev=0;lev<mesh->MRABNlevels;lev++) {
-    //   if (mesh->MRABNelements[lev])
-    //     mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(int),
-    //     mesh->MRABelementIds[lev]);
-    //   if (mesh->MRABNhaloElements[lev])
-    //     mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(int),
-    //     mesh->MRABhaloIds[lev]);
-    // }
+    mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+    mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+    for (int lev=0;lev<mesh->MRABNlevels;lev++) {
+      if (mesh->MRABNelements[lev])
+        mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(dlong),mesh->MRABelementIds[lev]);
+      if (mesh->MRABNhaloElements[lev])
+        mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(dlong), mesh->MRABhaloIds[lev]);
+    }
   } 
   else{
    printf("Preparing Pml for single rate integrator\n");
    bnsPmlSetup(bns, options); 
 
     if (mesh->nonPmlNelements)
-        mesh->o_nonPmlElementIds = mesh->device.malloc(mesh->nonPmlNelements*sizeof(int), mesh->nonPmlElementIds);
+        mesh->o_nonPmlElementIds = mesh->device.malloc(mesh->nonPmlNelements*sizeof(dlong), mesh->nonPmlElementIds);
 
   }
   
@@ -441,8 +461,6 @@ bnsTimeStepperCoefficients(bns, options);
 
 if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
 
-  //printf("Setting Rhs for AB\n");
-  // bns->o_rhsq.free();
   bns->o_q     = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat),bns->q);
   bns->o_rhsq  = mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq);
   
@@ -514,7 +532,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
   int NblockCub = 128/mesh->cubNp; // works for CUDA
 
-  NblockCub = 1; // !!!!!!!!!!!!!!!!!!!!!
+  NblockCub = 2; // !!!!!!!!!!!!!!!!!!!!!
 
   kernelInfo.addDefine("p_NblockCub", NblockCub);
 
@@ -551,6 +569,13 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
     kernelInfo.addDefine("p_SEMI_ANALYTIC", (int) 0);
   else
     kernelInfo.addDefine("p_SEMI_ANALYTIC", (int) 1);
+
+  if(options.compareArgs("TIME INTEGRATOR", "MRSAAB"))
+    kernelInfo.addDefine("p_MRSAAB", (int) 1);
+  else
+    kernelInfo.addDefine("p_MRSAAB", (int) 0);
+
+
 
 
 
@@ -628,10 +653,25 @@ for (int r=0;r<size;r++){
 
           sprintf(kernelName, "bnsSARKPmlUpdate%s", suffix);
           bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+        }
+        else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
+        
+        sprintf(kernelName, "bnsMRSAABTraceUpdate%s", suffix);
+        bns->traceUpdateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+        sprintf(kernelName, "bnsMRSAABUpdate%s", suffix);
+        bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+
+        sprintf(kernelName, "bnsMRSAABPmlUpdate%s", suffix);
+        bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+
+
+
 
 
 
         }
+
 
     }
   MPI_Barrier(MPI_COMM_WORLD);

@@ -5,6 +5,9 @@ void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options){
 
 
+const dlong offset    = 0.0;
+const dlong pmloffset = 0.0;
+const int shift       = 0; 
  // bns->shiftIndex = 0; 
  mesh_t *mesh = bns->mesh; 	
 
@@ -46,6 +49,9 @@ for(int rk=0;rk<mesh->Nrk;++rk){
       bns->pmlVolumeKernel(mesh->pmlNelements,
                         mesh->o_pmlElementIds,
                         mesh->o_pmlIds,
+                        offset,    // 0
+                        pmloffset, // 0
+                        shift, // 0
                         ramp, 
                         drampdt,
                         mesh->o_vgeo,
@@ -67,6 +73,8 @@ for(int rk=0;rk<mesh->Nrk;++rk){
       occaTimerTic(mesh->device,"NonPmlVolumeKernel");
        bns->volumeKernel(mesh->nonPmlNelements,
                           mesh->o_nonPmlElementIds,
+                          offset, // 0
+                          shift, //0
                           ramp, 
                           drampdt,
                           mesh->o_vgeo,
@@ -86,6 +94,9 @@ for(int rk=0;rk<mesh->Nrk;++rk){
 	  bns->pmlRelaxationKernel(mesh->pmlNelements,
                               mesh->o_pmlElementIds,
                               mesh->o_pmlIds,
+                              offset,    // 0
+                              pmloffset, // 0
+                              shift, // 0
                               mesh->o_cubInterpT,
                               mesh->o_cubProjectT,
                               bns->o_pmlSigmaX,
@@ -107,6 +118,8 @@ for(int rk=0;rk<mesh->Nrk;++rk){
     occaTimerTic(mesh->device, "NonPmlRelaxationKernel");
 	  bns->relaxationKernel(mesh->nonPmlNelements,
                           mesh->o_nonPmlElementIds,
+                          offset, // 0
+                          shift, //0
                           mesh->o_cubInterpT,
                           mesh->o_cubProjectT,
                           bns->o_q,

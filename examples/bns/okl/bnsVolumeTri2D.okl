@@ -1,6 +1,8 @@
 // Only difference with boltzmannVolume2D is size of rhsq and shifting
 kernel void bnsVolumeTri2D(const dlong Nelements,
                           const dlong * restrict elementIds,
+                          const dlong offset,
+                          const int shift,
                           const dfloat ramp,
                           const dfloat drampdt,
                           const dfloat * restrict vgeo,
@@ -91,11 +93,14 @@ kernel void bnsVolumeTri2D(const dlong Nelements,
         r_rhsq[5] += 2.f*ramp*drampdt*p_q6bar;
 
          // Update 
-        const dlong id = e*p_Nfields*p_Np + n;
+        const dlong id    = e*p_Nfields*p_Np + n;
+              dlong rhsId = id;
 
-        // const int rhsId = nrhs*id + p_Nfields*shift;
-        const dlong rhsId = id; 
-       
+        if(p_MRSAAB){
+          rhsId   += shift*offset;  
+        }
+
+              
         for(int fld=0; fld<p_Nfields;++fld){
           rhsq[rhsId + fld*p_Np] = r_rhsq[fld];
         }
@@ -113,6 +118,9 @@ kernel void bnsVolumeTri2D(const dlong Nelements,
 kernel void bnsPmlVolumeTri2D(const dlong pmlNelements,
               const dlong * restrict pmlElementIds,
               const dlong * restrict pmlIds,
+              const dlong offset,
+              const dlong pmloffset,
+              const int   shift,
               const dfloat ramp,
               const dfloat drampdt,
               const dfloat * restrict vgeo,
@@ -220,14 +228,15 @@ kernel void bnsPmlVolumeTri2D(const dlong pmlNelements,
         r_N[4] = 2.f*ramp*drampdt*p_q5bar;
         r_N[5] = 2.f*ramp*drampdt*p_q6bar;
  
-        // Update
-        // const dlong id       = p_Nfields*(e*p_Np + n);
-        // const dlong rhsId    = nrhs*id + p_Nfields*shift;
-        // const dlong pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
         const dlong id       = e*p_Nfields*p_Np + n;
-        const dlong rhsId    = id;
-        const dlong pmlrhsId = p_Nfields*pmlId*p_Np + n; 
-        
+              dlong rhsId    = id;
+              dlong pmlrhsId = p_Nfields*pmlId*p_Np + n;
+
+        if(p_MRSAAB){
+          rhsId     += shift*offset;
+          pmlrhsId  += shift*pmloffset;
+        }
+          
         occaUnroll(p_Nfields)
         for(int fld=0; fld<p_Nfields; ++fld){
           pmlrhsqx[pmlrhsId + fld*p_Np] =  r_Aqx[fld];
@@ -242,5 +251,3 @@ kernel void bnsPmlVolumeTri2D(const dlong pmlNelements,
   
 }
 }
-
-

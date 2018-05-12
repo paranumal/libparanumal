@@ -25,39 +25,49 @@ void bnsRun(bns_t *bns, setupAide &options){
   }
 
   
-  if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
-  // // Populate Trace Buffer
-  // dfloat zero = 0.0;
-  // for (int l=0; l<mesh->MRABNlevels; l++) {    
-  //   if (mesh->MRABNelements[l])
-  //   bns->updateKernel(mesh->MRABNelements[l],
-  //                     mesh->o_MRABelementIds[l],
-  //                     zero,
-  //                     zero, zero, zero,
-  //                     zero, zero, zero,
-  //                     mesh->MRABshiftIndex[l],
-  //                     mesh->o_vmapM,
-  //                     bns->o_rhsq,
-  //                     bns->o_fQM,
-  //                     bns->o_q);
 
-  // if (mesh->MRABpmlNelements[l])
-  //   bns->pmlUpdateKernel(mesh->MRABpmlNelements[l],
-  //                       mesh->o_MRABpmlElementIds[l],
-  //                       mesh->o_MRABpmlIds[l],
-  //                       zero,
-  //                       zero, zero, zero,
-  //                       zero, zero, zero,
-  //                       mesh->MRABshiftIndex[l],
-  //                       mesh->o_vmapM,
-  //                       bns->o_rhsq,
-  //                       bns->o_pmlrhsqx,
-  //                       bns->o_pmlrhsqy,
-  //                       bns->o_q,
-  //                       bns->o_pmlqx,
-  //                       bns->o_pmlqy,
-  //                       bns->o_fQM);
-  // }
+
+  if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
+  printf("Populating trace values\n");
+  // Populate Trace Buffer
+  dlong offset = mesh->Np*mesh->Nelements*bns->Nfields;
+  for (int l=0; l<mesh->MRABNlevels; l++) {  
+    const int id = 3*mesh->MRABNlevels*3 + 3*l;
+    if (mesh->MRABNelements[l])
+    bns->traceUpdateKernel(mesh->MRABNelements[l],
+                      mesh->o_MRABelementIds[l],
+                      offset,
+                      mesh->MRABshiftIndex[l],
+                      bns->MRSAAB_C[l-1], //
+                      bns->MRAB_B[id+0], //
+                      bns->MRAB_B[id+1],
+                      bns->MRAB_B[id+2], //
+                      bns->MRSAAB_B[id+0], //
+                      bns->MRSAAB_B[id+1],
+                      bns->MRSAAB_B[id+2],
+                      mesh->o_vmapM,
+                      bns->o_q,
+                      bns->o_rhsq,
+                      bns->o_fQM);
+
+  if (mesh->MRABpmlNelements[l])
+    bns->traceUpdateKernel(mesh->MRABpmlNelements[l],
+                        mesh->o_MRABpmlElementIds[l],
+                        offset,
+                        mesh->MRABshiftIndex[l],
+                        bns->MRSAAB_C[l-1], //
+                        bns->MRAB_B[id+0], //
+                        bns->MRAB_B[id+1],
+                        bns->MRAB_B[id+2], //
+                        bns->MRSAAB_B[id+0], //
+                        bns->MRSAAB_B[id+1],
+                        bns->MRSAAB_B[id+2],
+                        mesh->o_vmapM,
+                        bns->o_q,
+                        bns->o_rhsq,
+                        bns->o_fQM);
+
+  }
 
   }
 
@@ -104,11 +114,11 @@ if( bns->fixed_dt ){
       
       tic_sol = MPI_Wtime();
 
+      bnsMRSAABStep(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
      
       if(options.compareArgs("TIME INTEGRATOR", "MRSAAB")){
-        // occaTimerTic(mesh->device, "MRSAAB"); 
-        // boltzmannMRSAABStep2D(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
-        // occaTimerToc(mesh->device, "MRSAAB"); 
+        occaTimerTic(mesh->device, "MRSAAB"); 
+        occaTimerToc(mesh->device, "MRSAAB"); 
       }
 
       if(options.compareArgs("TIME INTEGRATOR","LSERK")){
