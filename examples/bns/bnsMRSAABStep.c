@@ -44,7 +44,7 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       mesh->device.setStream(dataStream);
     #endif
 
-    int Nentries = mesh->Nfp*mesh->Nfields*mesh->Nfaces;
+    int Nentries = mesh->Nfp*bns->Nfields*mesh->Nfaces;
     mesh->haloExtractKernel(mesh->totalHaloPairs,
                             Nentries,
                             mesh->o_haloElementList,
@@ -107,49 +107,46 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
   occaTimerToc(mesh->device, "VolumeKernel");   
 
      
+  occaTimerTic(mesh->device, "RelaxationKernel");
+  for (int l=0;l<lev;l++) {
+    if (mesh->MRABNelements[l]){
+      occaTimerTic(mesh->device,"NonPmlRelaxationKernel");
+      bns->relaxationKernel(mesh->MRABNelements[l],
+                    mesh->o_MRABelementIds[l],
+                    offset,
+                    mesh->MRABshiftIndex[l],
+                    mesh->o_cubInterpT,
+                    mesh->o_cubProjectT,
+                    bns->o_q,
+                    bns->o_rhsq); 
+      occaTimerToc(mesh->device,"NonPmlRelaxationKernel");
+      } 
 
-  if(options.compareArgs("RELAXATION TYPE","CUBATURE")){ 
-    occaTimerTic(mesh->device, "RelaxationKernel");
-    for (int l=0;l<lev;l++) {
-      if (mesh->MRABNelements[l]){
-        occaTimerTic(mesh->device,"NonPmlRelaxationKernel");
-        bns->relaxationKernel(mesh->MRABNelements[l],
-                      mesh->o_MRABelementIds[l],
-                      offset,
-                      mesh->MRABshiftIndex[l],
-                      mesh->o_cubInterpT,
-                      mesh->o_cubProjectT,
-                      bns->o_q,
-                      bns->o_rhsq); 
-        occaTimerToc(mesh->device,"NonPmlRelaxationKernel");
-        } 
-
-      if (mesh->MRABpmlNelements[l]){
-        occaTimerTic(mesh->device,"PmlRelaxationKernel");
-        bns->pmlRelaxationKernel(mesh->MRABpmlNelements[l],
-                                mesh->o_MRABpmlElementIds[l],
-                                mesh->o_MRABpmlIds[l],
-                                offset,   
-                                pmloffset, 
-                                mesh->MRABshiftIndex[l],
-                                mesh->o_cubInterpT,
-                                mesh->o_cubProjectT,
-                                bns->o_pmlSigmaX,
-                                bns->o_pmlSigmaY,
-                                bns->o_pmlSigmaZ,
-                                bns->o_q,
-                                bns->o_pmlqx,
-                                bns->o_pmlqy,
-                                bns->o_pmlqz,
-                                bns->o_rhsq,
-                                bns->o_pmlrhsqx,
-                                bns->o_pmlrhsqy,
-                                bns->o_pmlrhsqz);
-        occaTimerToc(mesh->device,"PmlRelaxationKernel");
-      }
+    if (mesh->MRABpmlNelements[l]){
+      occaTimerTic(mesh->device,"PmlRelaxationKernel");
+      bns->pmlRelaxationKernel(mesh->MRABpmlNelements[l],
+                              mesh->o_MRABpmlElementIds[l],
+                              mesh->o_MRABpmlIds[l],
+                              offset,   
+                              pmloffset, 
+                              mesh->MRABshiftIndex[l],
+                              mesh->o_cubInterpT,
+                              mesh->o_cubProjectT,
+                              bns->o_pmlSigmaX,
+                              bns->o_pmlSigmaY,
+                              bns->o_pmlSigmaZ,
+                              bns->o_q,
+                              bns->o_pmlqx,
+                              bns->o_pmlqy,
+                              bns->o_pmlqz,
+                              bns->o_rhsq,
+                              bns->o_pmlrhsqx,
+                              bns->o_pmlrhsqy,
+                              bns->o_pmlrhsqz);
+      occaTimerToc(mesh->device,"PmlRelaxationKernel");
     }
-    occaTimerToc(mesh->device, "RelaxationKernel");
   }
+  occaTimerToc(mesh->device, "RelaxationKernel");
 
 
   if(mesh->totalHaloPairs>0){
@@ -170,8 +167,8 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
     meshHaloExchangeFinish(mesh);
 
     // copy halo data to DEVICE
-    size_t offset = mesh->Nfaces*mesh->Nfp*mesh->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    bns->o_fQM.asyncCopyFrom(recvBuffer, haloBytes, offset);
+    size_t foffset = mesh->Nfaces*mesh->Nfp*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+    bns->o_fQM.asyncCopyFrom(recvBuffer, haloBytes, foffset);
     mesh->device.finish();        
 
     #if ASYNC 
@@ -240,64 +237,64 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
     if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
 
     
-  // for (int l=0; l<lev; l++) {
+  for (int l=0; l<lev; l++) {
 
-  //   const int id = mrab_order*mesh->MRABNlevels*3 + l*3;
-  //   occaTimerTic(mesh->device,"UpdateKernel");
+    const int id = mrab_order*mesh->MRABNlevels*3 + l*3;
+    occaTimerTic(mesh->device,"UpdateKernel");
 
-  //   if (mesh->MRABNelements[l]){
-  //     occaTimerTic(mesh->device,"NonPmlUpdateKernel");
-  //     bns->updateKernel(mesh->MRABNelements[l],
-  //                       mesh->o_MRABelementIds[l],
-  //                       offset,
-  //                       mesh->MRABshiftIndex[l],
-  //                       bns->MRSAAB_C[l], //
-  //                       bns->MRAB_A[id+0], //
-  //                       bns->MRAB_A[id+1],
-  //                       bns->MRAB_A[id+2], //
-  //                       bns->MRSAAB_A[id+0], //
-  //                       bns->MRSAAB_A[id+1],
-  //                       bns->MRSAAB_A[id+2], //
-  //                       mesh->o_vmapM,
-  //                       bns->o_rhsq,
-  //                       bns->o_fQM,
-  //                       bns->o_q);
-  //     occaTimerToc(mesh->device,"NonPmlUpdateKernel");
-  //   }
+    if (mesh->MRABNelements[l]){
+      occaTimerTic(mesh->device,"NonPmlUpdateKernel");
+      bns->updateKernel(mesh->MRABNelements[l],
+                        mesh->o_MRABelementIds[l],
+                        offset,
+                        mesh->MRABshiftIndex[l],
+                        bns->MRSAAB_C[l], //
+                        bns->MRAB_A[id+0], //
+                        bns->MRAB_A[id+1],
+                        bns->MRAB_A[id+2], //
+                        bns->MRSAAB_A[id+0], //
+                        bns->MRSAAB_A[id+1],
+                        bns->MRSAAB_A[id+2], //
+                        mesh->o_vmapM,
+                        bns->o_rhsq,
+                        bns->o_fQM,
+                        bns->o_q);
+      occaTimerToc(mesh->device,"NonPmlUpdateKernel");
+    }
 
-  //   if (mesh->MRABpmlNelements[l]){
-  //     occaTimerTic(mesh->device,"PmlUpdateKernel");
-  //     bns->pmlUpdateKernel(mesh->MRABpmlNelements[l],
-  //                           mesh->o_MRABpmlElementIds[l],
-  //                           mesh->o_MRABpmlIds[l],
-  //                           offset,
-  //                           pmloffset,
-  //                           mesh->MRABshiftIndex[l],
-  //                           bns->MRSAAB_C[l], //
-  //                           bns->MRAB_A[id+0], //
-  //                           bns->MRAB_A[id+1],
-  //                           bns->MRAB_A[id+2], //
-  //                           bns->MRSAAB_A[id+0], //
-  //                           bns->MRSAAB_A[id+1],
-  //                           bns->MRSAAB_A[id+2], //
-  //                           mesh->o_vmapM,
-  //                           bns->o_rhsq,
-  //                           bns->o_pmlrhsqx,
-  //                           bns->o_pmlrhsqy,
-  //                           bns->o_pmlrhsqz,
-  //                           bns->o_q,
-  //                           bns->o_pmlqx,
-  //                           bns->o_pmlqy,
-  //                           bns->o_pmlqz,
-  //                           bns->o_fQM);
-  //     occaTimerToc(mesh->device,"PmlUpdateKernel");
-  //   }
+    if (mesh->MRABpmlNelements[l]){
+      occaTimerTic(mesh->device,"PmlUpdateKernel");
+      bns->pmlUpdateKernel(mesh->MRABpmlNelements[l],
+                            mesh->o_MRABpmlElementIds[l],
+                            mesh->o_MRABpmlIds[l],
+                            offset,
+                            pmloffset,
+                            mesh->MRABshiftIndex[l],
+                            bns->MRSAAB_C[l], //
+                            bns->MRAB_A[id+0], //
+                            bns->MRAB_A[id+1],
+                            bns->MRAB_A[id+2], //
+                            bns->MRSAAB_A[id+0], //
+                            bns->MRSAAB_A[id+1],
+                            bns->MRSAAB_A[id+2], //
+                            mesh->o_vmapM,
+                            bns->o_rhsq,
+                            bns->o_pmlrhsqx,
+                            bns->o_pmlrhsqy,
+                            bns->o_pmlrhsqz,
+                            bns->o_q,
+                            bns->o_pmlqx,
+                            bns->o_pmlqy,
+                            bns->o_pmlqz,
+                            bns->o_fQM);
+      occaTimerToc(mesh->device,"PmlUpdateKernel");
+    }
 
-  //   occaTimerToc(mesh->device,"UpdateKernel");
+    occaTimerToc(mesh->device,"UpdateKernel");
 
-  //   //rotate index
-  //   mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%3;
-  // }
+    //rotate index
+    mesh->MRABshiftIndex[l] = (mesh->MRABshiftIndex[l]+1)%3;
+  }
 
 
   if (lev<mesh->MRABNlevels) {    
