@@ -423,10 +423,6 @@ kernel void bnsPmlSurfaceTri2D(const dlong pmlNelements,
         dfloat Bqy5 =  0.f;
         dfloat Bqy6 = -p_sqrtRT*(p_sqrt2*Lnydq3);
 
-        // const int e  = pmlElementIds[et];
-        // const int pmlId    = pmlIds[et];
-        // const int rhsId    = nrhs*p_Nfields*(p_Np*e + n)     + p_Nfields*shift;
-        // const int pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
         const dlong pmlId    = pmlIds[et];
         const dlong rhsId    = e*p_Nfields*p_Np + n    ;
         const dlong pmlrhsId = pmlId*p_Nfields*p_Np + n;
@@ -508,14 +504,20 @@ kernel void bnsMRSurfaceTri2D(const dlong Nelements,
 
             const dlong id  = e*p_Nfp*p_Nfaces + n;
             const dlong idM = e*p_Nfp*p_Nfaces*p_Nfields + n;
-            const dlong idP = mapP[id];
-           // Read trace values
-            dfloat q1M = q[idM + 0*p_Np], q1P = q[idP + 0*p_Np];
-            dfloat q2M = q[idM + 1*p_Np], q2P = q[idP + 1*p_Np];
-            dfloat q3M = q[idM + 2*p_Np], q3P = q[idP + 2*p_Np];
-            dfloat q4M = q[idM + 3*p_Np], q4P = q[idP + 3*p_Np];
-            dfloat q5M = q[idM + 4*p_Np], q5P = q[idP + 4*p_Np];
-            dfloat q6M = q[idM + 5*p_Np], q6P = q[idP + 5*p_Np];              
+
+            // extract + side index
+            const dlong qidP = mapP[id];
+            const dlong eP   = qidP/(p_Nfp*p_Nfaces); 
+            const int fidP   = qidP%(p_Nfp*p_Nfaces); 
+            const dlong idP  = eP*p_Nfp*p_Nfaces*p_Nfields + fidP;
+
+             // Read trace values
+            dfloat q1M = fQM[idM + 0*p_Nfp*p_Nfaces], q1P = fQM[idP + 0*p_Nfp*p_Nfaces];
+            dfloat q2M = fQM[idM + 1*p_Nfp*p_Nfaces], q2P = fQM[idP + 1*p_Nfp*p_Nfaces];
+            dfloat q3M = fQM[idM + 2*p_Nfp*p_Nfaces], q3P = fQM[idP + 2*p_Nfp*p_Nfaces];
+            dfloat q4M = fQM[idM + 3*p_Nfp*p_Nfaces], q4P = fQM[idP + 3*p_Nfp*p_Nfaces];
+            dfloat q5M = fQM[idM + 4*p_Nfp*p_Nfaces], q5P = fQM[idP + 4*p_Nfp*p_Nfaces];
+            dfloat q6M = fQM[idM + 5*p_Nfp*p_Nfaces], q6P = fQM[idP + 5*p_Nfp*p_Nfaces];               
           // apply boundary condition
           const int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
@@ -663,15 +665,19 @@ kernel void bnsMRPmlSurfaceTri2D(const dlong pmlNelements,
 
             const dlong id  = e*p_Nfp*p_Nfaces + n;
             const dlong idM = e*p_Nfp*p_Nfaces*p_Nfields + n;
-            const dlong idP = mapP[id];
-           
-           // Read trace values
-            dfloat q1M = q[idM + 0*p_Np], q1P = q[idP + 0*p_Np];
-            dfloat q2M = q[idM + 1*p_Np], q2P = q[idP + 1*p_Np];
-            dfloat q3M = q[idM + 2*p_Np], q3P = q[idP + 2*p_Np];
-            dfloat q4M = q[idM + 3*p_Np], q4P = q[idP + 3*p_Np];
-            dfloat q5M = q[idM + 4*p_Np], q5P = q[idP + 4*p_Np];
-            dfloat q6M = q[idM + 5*p_Np], q6P = q[idP + 5*p_Np];              
+             // extract + side index
+            const dlong qidP = mapP[id];
+            const dlong eP   = qidP/(p_Nfp*p_Nfaces); 
+            const int fidP   = qidP%(p_Nfp*p_Nfaces); 
+            const dlong idP  = eP*p_Nfp*p_Nfaces*p_Nfields + fidP;
+
+             // Read trace values
+            dfloat q1M = fQM[idM + 0*p_Nfp*p_Nfaces], q1P = fQM[idP + 0*p_Nfp*p_Nfaces];
+            dfloat q2M = fQM[idM + 1*p_Nfp*p_Nfaces], q2P = fQM[idP + 1*p_Nfp*p_Nfaces];
+            dfloat q3M = fQM[idM + 2*p_Nfp*p_Nfaces], q3P = fQM[idP + 2*p_Nfp*p_Nfaces];
+            dfloat q4M = fQM[idM + 3*p_Nfp*p_Nfaces], q4P = fQM[idP + 3*p_Nfp*p_Nfaces];
+            dfloat q5M = fQM[idM + 4*p_Nfp*p_Nfaces], q5P = fQM[idP + 4*p_Nfp*p_Nfaces];
+            dfloat q6M = fQM[idM + 5*p_Nfp*p_Nfaces], q6P = fQM[idP + 5*p_Nfp*p_Nfaces];       
           
         
             // apply boundary condition

@@ -88,8 +88,6 @@ occaTimerTic(mesh->device,"BOLTZMANN");
 tic_tot = MPI_Wtime();
 
 
-// if(!( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") )){
-
 if( bns->fixed_dt ){
  for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
       
@@ -110,14 +108,12 @@ if( bns->fixed_dt ){
   
 
       elp_out += (MPI_Wtime() - tic_out);
-
-      
       tic_sol = MPI_Wtime();
 
-      bnsMRSAABStep(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
      
       if(options.compareArgs("TIME INTEGRATOR", "MRSAAB")){
         occaTimerTic(mesh->device, "MRSAAB"); 
+         bnsMRSAABStep(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
         occaTimerToc(mesh->device, "MRSAAB"); 
       }
 
