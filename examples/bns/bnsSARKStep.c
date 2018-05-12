@@ -11,6 +11,9 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
  dlong offset    = mesh->Nelements*mesh->Np*bns->Nfields;
  dlong pmloffset = mesh->pmlNelements*mesh->Np*bns->Nfields;
 
+ const dfloat fzero = 0.0; 
+ const int    izero = 0; 
+
 // LSERK4 stages
 for(int rk=0;rk<mesh->Nrk;++rk){
 
@@ -101,6 +104,9 @@ for(int rk=0;rk<mesh->Nrk;++rk){
       bns->pmlVolumeKernel(mesh->pmlNelements,
                         mesh->o_pmlElementIds,
                         mesh->o_pmlIds,
+                        fzero,
+                        fzero,
+                        izero,
                         ramp, 
                         drampdt,
                         mesh->o_vgeo,
@@ -122,6 +128,8 @@ for(int rk=0;rk<mesh->Nrk;++rk){
       occaTimerTic(mesh->device,"NonPmlVolumeKernel");
        bns->volumeKernel(mesh->nonPmlNelements,
                           mesh->o_nonPmlElementIds,
+                          fzero,
+                          izero,
                           ramp, 
                           drampdt,
                           mesh->o_vgeo,
@@ -141,6 +149,9 @@ for(int rk=0;rk<mesh->Nrk;++rk){
 	  bns->pmlRelaxationKernel(mesh->pmlNelements,
                               mesh->o_pmlElementIds,
                               mesh->o_pmlIds,
+                              fzero,
+                              fzero,
+                              izero,
                               mesh->o_cubInterpT,
                               mesh->o_cubProjectT,
                               bns->o_pmlSigmaX,
@@ -162,6 +173,8 @@ for(int rk=0;rk<mesh->Nrk;++rk){
     occaTimerTic(mesh->device, "NonPmlRelaxationKernel");
 	  bns->relaxationKernel(mesh->nonPmlNelements,
                           mesh->o_nonPmlElementIds,
+                          fzero, // 0
+                          izero, //0
                           mesh->o_cubInterpT,
                           mesh->o_cubProjectT,
                           bns->o_rkq,

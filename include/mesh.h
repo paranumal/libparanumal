@@ -646,6 +646,7 @@ void meshParallelGatherScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v);
 void meshParallelGather(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gv);
 void meshParallelScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_sv);
 
+
 void occaTimerTic(occa::device device,std::string name);
 void occaTimerToc(occa::device device,std::string name);
 

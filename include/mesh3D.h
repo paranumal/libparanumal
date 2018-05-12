@@ -107,7 +107,7 @@ void meshBuildFaceNodesHex3D(mesh3D *mesh);
 
 
 
-void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels); 
+dfloat meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels, dfloat finalTime); 
 
 //MRAB weighted mesh partitioning
 void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,

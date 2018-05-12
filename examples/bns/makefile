@@ -44,43 +44,16 @@ bnsSetup.o \
 bnsRun.o \
 bnsRampFunction.o \
 bnsPmlSetup.o \
+bnsMRABPmlSetup.o \
 bnsTimeStepperCoefficients.o \
 bnsSAADRKCoefficients.o \
 bnsPlotVTU.o \
 bnsReport.o \
 bnsError.o \
 bnsLSERKStep.o \
-bnsSARKStep.o 
-#boltzmannComputeVorticity2D.o \
-#boltzmannError2D.o \
-#boltzmannCouetteError2D.o \
-#boltzmannPeriodic2D.o\
-#boltzmannRun2D.o \
-#boltzmannSetup2D.o \
-#boltzmannSRABStep2D.o \
-#boltzmannLSERKStep2D.o \
-#boltzmannLSIMEXStep2D.o \
-#boltzmannMRABStep2D.o \
-#boltzmannMRSAABStep2D.o \
-#boltzmannSAABStep2D.o \
-#boltzmannSARKStep2D.o \
-#boltzmannRampFunction2D.o \
-#boltzmannReport2D.o \
-#boltzmannPlotVTU2D.o \
-#boltzmannPlotVTUField2D.o \
-#boltzmannPlotTEC2D.o \
-#boltzmannMRABPmlSetup2D.o \
-#boltzmannPmlSetup2D.o \
-#boltzmannForces2D.o \
-#boltzmannPlotFieldTEC2D.o \
-#boltzmannDOPRIStep2D.o \
-#boltzmannXDOPRIStep2D.o \
-#boltzmannReportAddaptive2D.o \
+bnsSARKStep.o \
+bnsMRSAABStep.o   
 
-#boltzmannSAADRKStep2D.o \
-#boltzmannRunEmbedded2D.o \
-#boltzmannIMEXRKStep2D.o \
-#boltzmannErrorControl2D.o \
 # library objects
 LOBJS = \
 ../../src/meshConnect.o \
@@ -102,6 +75,14 @@ LOBJS = \
 ../../src/meshLoadReferenceNodesHex3D.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/meshOccaSetup3D.o \
+../../src/meshMRABSetup2D.o \
+../../src/meshMRABSetup3D.o \
+../../src/meshBuildMRABClusters2D.o \
+../../src/meshBuildMRABClusters3D.o \
+../../src/meshClusteredGeometricPartition2D.o \
+../../src/meshClusteredGeometricPartition3D.o \
+../../src/meshMRABWeightedPartitionTri2D.o \
+../../src/meshMRABWeightedPartitionTet3D.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
 ../../src/meshParallelPrint2D.o \

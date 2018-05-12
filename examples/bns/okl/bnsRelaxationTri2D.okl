@@ -1,6 +1,8 @@
 // MRAB relaxation cub
 kernel void bnsRelaxationTri2D(const dlong Nelements,
                                const dlong * restrict elementIds,
+                               const dlong offset,
+                               const int   shift,
                                const dfloat * restrict cubInterpT,
                                const dfloat * restrict cubProjectT,
                                const dfloat * restrict q,
@@ -96,7 +98,12 @@ kernel void bnsRelaxationTri2D(const dlong Nelements,
                 // const dlong rhsId = nrhs*id + p_Nfields*shift;
 
                 const dlong id    = e*p_Nfields*p_Np + n;
-                const dlong rhsId = id ; 
+                      dlong rhsId = id ; 
+
+                // multi-rate index shift
+                if(p_MRSAAB){
+                  rhsId   += shift*offset;  
+                }
 
                 dfloat N4 = rhsq[rhsId + 3*p_Np];
                 dfloat N5 = rhsq[rhsId + 4*p_Np];
@@ -128,6 +135,9 @@ kernel void bnsRelaxationTri2D(const dlong Nelements,
 kernel void bnsPmlRelaxationTri2D(const dlong pmlNelements,
                                   const dlong * restrict pmlElementIds,
                                   const dlong * restrict pmlIds,
+                                  const dlong offset,
+                                  const dlong pmloffset,
+                                  const int   shift,
                                   const dfloat * restrict cubInterpT,
                                   const dfloat * restrict cubProjectT,
                                   const dfloat * restrict pmlSigmaX,
@@ -252,22 +262,16 @@ kernel void bnsPmlRelaxationTri2D(const dlong pmlNelements,
         const dlong et = eo+es; // element in block
           if(et<pmlNelements){
             if(n<p_Np){
-          // Update
-              // const int rhsId    = nrhs*p_Nfields*(p_Np*e + n)     + p_Nfields*shift;
-              // const int pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
-              const dlong rhsId    = e*p_Nfields*p_Np + n;
-              const dlong pmlrhsId = pmlId*p_Nfields*p_Np + n;
-
+          
               dfloat r_rhsq[p_Nfields];
               dfloat r_rhsqx[p_Nfields];
               dfloat r_rhsqy[p_Nfields]; 
-              // dfloat r_rhsqt[p_Nfields];
-            
+                          
               occaUnroll(p_Nfields)
               for(int fld=0; fld<p_Nfields;++fld){
-                r_rhsq[fld]  = rhsq[rhsId + fld*p_Np];
-                r_rhsqx[fld] = pmlrhsqx[pmlrhsId + fld*p_Np];
-                r_rhsqy[fld] = pmlrhsqy[pmlrhsId + fld*p_Np];
+                r_rhsq[fld]  = 0.f;
+                r_rhsqx[fld] = 0.f;
+                r_rhsqy[fld] = 0.f;
               }
 
               // use temporaries for part sums for N4,N5,N6 because of exclusives
@@ -281,12 +285,21 @@ kernel void bnsPmlRelaxationTri2D(const dlong pmlNelements,
                   r_rhsqy[fld] += Pnc*s_cubqy[es][fld][m];
                  }
               }
+
+              // Update
+              dlong rhsId    = e*p_Nfields*p_Np + n;
+              dlong pmlrhsId = pmlId*p_Nfields*p_Np + n;
+              // 
+              if(p_MRSAAB){
+                rhsId     += shift*offset;
+                pmlrhsId  += shift*pmloffset;
+              }
                 
              occaUnroll(p_Nfields) 
              for(int fld=0; fld<p_Nfields;++fld){
-                pmlrhsqx[pmlrhsId + fld*p_Np] = r_rhsqx[fld];
-                pmlrhsqy[pmlrhsId + fld*p_Np] = r_rhsqy[fld];
-                rhsq[rhsId + fld*p_Np]        = r_rhsq[fld];
+                pmlrhsqx[pmlrhsId + fld*p_Np] += r_rhsqx[fld];
+                pmlrhsqy[pmlrhsId + fld*p_Np] += r_rhsqy[fld];
+                rhsq[rhsId + fld*p_Np]        += r_rhsq[fld];
               }   
           }
         }
