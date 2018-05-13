@@ -1,0 +1,266 @@
+// Only difference with boltzmannVolume2D is size of rhsq and shifting
+kernel void bnsVolumeQuad2D(const dlong Nelements,
+                          const dlong * restrict elementIds,
+                          const dlong offset,
+                          const int shift,
+                          const dfloat ramp,
+                          const dfloat drampdt,
+                          const dfloat * restrict vgeo,
+                          const dfloat * restrict Dmatrices,
+                          const dfloat * restrict q,
+                                dfloat * restrict rhsq){
+  
+for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){   // for all elements
+
+    shared dfloat s_q[p_NblockV][p_Nfields][p_Nq][p_Nq];
+    exclusive dlong e;
+    shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int es=0;es<p_NblockV;++es;inner2{// for all elements in block
+      for(int j=0; j<p_Nq; ++j; inner1){
+        for(int i=0;i<p_Nq;++i;inner0){     // for all nodes in this element
+          const dlong et = eo+es; // element in block
+          if(et<Nelements){
+            e = elementIds[et];
+            const dlong id = e*p_Nfields*p_Np + j*p_Nq + i;
+            occaUnroll(p_Nfields)
+            for(int fld=0; fld<p_Nfields;++fld){
+              s_q[es][fld][j][i] = q[id+fld*p_Np];
+            }
+            if(es==0)
+            s_D[j][i] = Dmatrices[j*p_Nq+i];
+
+        }
+      }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+  for(int es=0;es<p_NblockV;++es;inner2){// for all elements in block
+    for(int j=0; j<p_Nq; ++j;inner1){
+     for(int i=0;i<p_Nq;++i;inner0){ 
+      const dlong et = eo+es; // element in block
+      if(et<Nelements){   
+        const dlong gid   = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+        const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+        const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+        const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+        const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+        const dfloat JW   = vgeo[gid + p_JWID*p_Np];
+        const dfloat invJW= vgeo[gid + p_JWID*p_Np];
+
+        // compute 'r' and 's' derivatives of (q_m) at node n
+        dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields]; 
+        dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
+        dfloat r_rhsq[p_Nfields];
+        
+        occaUnroll(p_Nfields)
+        for(int fld=0; fld<p_Nfields;++fld){
+          r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
+          r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
+          r_rhsq[fld] = 0.f;
+         }
+
+        occaUnroll(p_Np)
+        for(int n=0;n<p_Np;++n){
+          const dfloat Dr = s_D[n][i];
+          const dfloat Ds = s_D[n][j];
+          occaUnroll(p_Nfields)
+          for(int fld=0; fld<p_Nfields;++fld){
+             r_dqdr[fld] += Dr*s_q[es][fld][j][n];
+             r_dqds[fld] += Ds*s_q[es][fld][n][i];
+          }
+        }
+      
+        // Compute derivatives in physical coordinates 
+        occaUnroll(p_Nfields)
+        for(int fld=0; fld<p_Nfields;++fld){
+          r_dqdx[fld] = JW*(drdx*r_dqdr[fld] + dsdx*r_dqds[fld]);
+          r_dqdy[fld] = JW*(drdy*r_dqdr[fld] + dsdy*r_dqds[fld]);
+        }
+
+         // transport operator
+        r_rhsq[0] = -p_sqrtRT*(r_dqdx[1] + r_dqdy[2]);
+        r_rhsq[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4] + r_dqdy[3]); 
+        r_rhsq[2] = -p_sqrtRT*(r_dqdx[3] + r_dqdy[0] + p_sqrt2*r_dqdy[5]); 
+        r_rhsq[3] = -p_sqrtRT*(r_dqdx[2] + r_dqdy[1]);   
+        r_rhsq[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
+        r_rhsq[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
+
+        
+        // Add mean flow forcing
+        r_rhsq[1] += drampdt*p_q2bar;
+        r_rhsq[2] += drampdt*p_q3bar;
+        r_rhsq[3] += 2.f*ramp*drampdt*p_q4bar;
+        r_rhsq[4] += 2.f*ramp*drampdt*p_q5bar;
+        r_rhsq[5] += 2.f*ramp*drampdt*p_q6bar;
+
+         // Update 
+        const dlong id    = e*p_Nfields*p_Np + j*p_Nq + i;
+              dlong rhsId = id;
+
+        if(p_MRSAAB){
+          rhsId   += shift*offset;  
+        }
+
+              
+        for(int fld=0; fld<p_Nfields;++fld){
+          rhsq[rhsId + fld*p_Np] = invJW*r_rhsq[fld];
+        }
+
+
+      }
+    }
+  }
+  }
+}
+}
+
+
+
+
+kernel void bnsPmlVolumeQuad2D(const dlong pmlNelements,
+              const dlong * restrict pmlElementIds,
+              const dlong * restrict pmlIds,
+              const dlong offset,
+              const dlong pmloffset,
+              const int   shift,
+              const dfloat ramp,
+              const dfloat drampdt,
+              const dfloat * restrict vgeo,
+              const dfloat * restrict Dmatrices,
+              const dfloat * restrict q,
+              const dfloat * restrict pmlqx,
+              const dfloat * restrict pmlqy,
+              const dfloat * restrict pmlqz,
+                    dfloat * restrict rhsq,
+                    dfloat * restrict pmlrhsqx,
+                    dfloat * restrict pmlrhsqy,
+                    dfloat * restrict pmlrhsqz){
+  
+  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){  // for all elements
+
+    shared dfloat s_q[p_NblockV][p_Nfields][p_Nq][p_Nq];
+    exclusive dlong e, pmlId;
+    shared dfloat s_
+
+    for(int es=0;es<p_NblockV;++es;inner2){// for all elements in block
+      for(int j=0; j<p_Nq; j++; inner1){
+        for(int i=0; i<p_Nq; i++; inner0){
+          dlong et = eo+es; // element in block
+          if(et<pmlNelements){
+            e     = pmlElementIds[et];
+            pmlId = pmlIds[et];
+
+            const dlong id = e*p_Nfields*p_Np + j*p_Nq +i;
+            occaUnroll(p_Nfields)
+            for(int fld=0; fld<p_Nfields;++fld){
+              s_q[es][fld][j][i] = q[id+fld*p_Np];
+            }
+
+            if(es==0)
+              s_D[j][i] = Dmatrices[j*p_Nq+i];
+          }
+        }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(int es=0;es<p_NblockV;++es;inner2){// for all elements in block
+    for(int j=0; j<p_Nq; ++j;inner1){
+     for(int i=0;i<p_Nq;++i;inner0){ 
+      const dlong et = eo+es; // element in block
+      if(et<Nelements){   
+        const dlong gid   = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+        const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+        const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+        const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+        const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+        const dfloat JW   = vgeo[gid + p_JWID*p_Np];
+        const dfloat invJW= vgeo[gid + p_JWID*p_Np];
+        
+        // Pack register variables into arrays 
+        // dfloat r_pmlqx[p_Nfields], r_pmlqy[p_Nfields];
+        dfloat r_dqdr[p_Nfields],  r_dqds[p_Nfields];
+        dfloat r_dqdx[p_Nfields],  r_dqdy[p_Nfields];
+        dfloat r_Aqx[p_Nfields],   r_Bqy[p_Nfields];
+        dfloat r_N[p_Nfields];
+        
+        // Initialize
+        occaUnroll(p_Nfields)
+        for(int fld=0; fld<p_Nfields; ++fld){
+          //r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
+          r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
+          r_dqdx[fld]  = 0.f, r_dqdy[fld]  = 0.f; 
+          r_N[fld]     = 0.f; 
+        }
+    
+        // Compute Derivatives
+        occaUnroll(p_Np)
+        for(int n=0;n<p_Np;++n){
+          const dfloat Dr = s_D[n][i]; 
+          const dfloat Ds = s_D[n][j]; 
+          occaUnroll(p_Nfields)
+          for(int fld=0; fld<p_Nfields; ++fld){
+            r_dqdr[fld] += Dr*s_q[es][fld][j][n];
+            r_dqds[fld] += Ds*s_q[es][fld][n][i];
+          }
+        }
+        
+        occaUnroll(p_Nfields)
+        for(int fld=0; fld<p_Nfields; ++fld){
+          r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
+          r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
+        }
+  
+        // Compute volume flux for q, qx and qy
+        // A*dQ/dx
+        r_Aqx[0] = -p_sqrtRT*(r_dqdx[1]);
+        r_Aqx[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4]);  
+        r_Aqx[2] = -p_sqrtRT*(r_dqdx[3]);
+        r_Aqx[3] = -p_sqrtRT*(r_dqdx[2]);
+        r_Aqx[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];      
+        r_Aqx[5] =  0.f;
+        // B*dQ/dy
+        r_Bqy[0] = -p_sqrtRT*(r_dqdy[2]);
+        r_Bqy[1] = -p_sqrtRT*(r_dqdy[3]);  
+        r_Bqy[2] = -p_sqrtRT*(r_dqdy[0] + p_sqrt2*r_dqdy[5]);  
+        r_Bqy[3] = -p_sqrtRT*(r_dqdy[1]);    
+        r_Bqy[4] =  0.f;
+        r_Bqy[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];  
+
+        // mean flow forcing 
+        r_N[0] = 0.f;
+        r_N[1] = drampdt*p_q2bar;
+        r_N[2] = drampdt*p_q3bar;
+        r_N[3] = 2.f*ramp*drampdt*p_q4bar;
+        r_N[4] = 2.f*ramp*drampdt*p_q5bar;
+        r_N[5] = 2.f*ramp*drampdt*p_q6bar;
+ 
+        const dlong id       = e*p_Nfields*p_Np + n;
+              dlong rhsId    = id;
+              dlong pmlrhsId = p_Nfields*pmlId*p_Np + n;
+
+        if(p_MRSAAB){
+          rhsId     += shift*offset;
+          pmlrhsId  += shift*pmloffset;
+        }
+          
+        occaUnroll(p_Nfields)
+        for(int fld=0; fld<p_Nfields; ++fld){
+          pmlrhsqx[pmlrhsId + fld*p_Np] =  r_Aqx[fld];
+          pmlrhsqy[pmlrhsId + fld*p_Np] =  r_Bqy[fld];
+          rhsq[rhsId +fld*p_Np]         =  r_Aqx[fld] + r_Bqy[fld] + r_N[fld];
+         
+        }
+
+      }
+    }
+  }
+  
+}
+}
