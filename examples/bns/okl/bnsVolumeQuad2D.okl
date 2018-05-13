@@ -199,22 +199,22 @@ kernel void bnsPmlVolumeQuad2D(const dlong pmlNelements,
           r_N[fld]     = 0.f; 
         }
     
-        // Compute Derivatives
         occaUnroll(p_Np)
         for(int n=0;n<p_Np;++n){
-          const dfloat Dr = s_D[n][i]; 
-          const dfloat Ds = s_D[n][j]; 
+          const dfloat Dr = s_D[n][i];
+          const dfloat Ds = s_D[n][j];
           occaUnroll(p_Nfields)
-          for(int fld=0; fld<p_Nfields; ++fld){
-            r_dqdr[fld] += Dr*s_q[es][fld][j][n];
-            r_dqds[fld] += Ds*s_q[es][fld][n][i];
+          for(int fld=0; fld<p_Nfields;++fld){
+             r_dqdr[fld] += Dr*s_q[es][fld][j][n];
+             r_dqds[fld] += Ds*s_q[es][fld][n][i];
           }
         }
         
+        // Compute derivatives in physical coordinates 
         occaUnroll(p_Nfields)
-        for(int fld=0; fld<p_Nfields; ++fld){
-          r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
-          r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
+        for(int fld=0; fld<p_Nfields;++fld){
+          r_dqdx[fld] = JW*(drdx*r_dqdr[fld] + dsdx*r_dqds[fld]);
+          r_dqdy[fld] = JW*(drdy*r_dqdr[fld] + dsdy*r_dqds[fld]);
         }
   
         // Compute volume flux for q, qx and qy
@@ -241,9 +241,9 @@ kernel void bnsPmlVolumeQuad2D(const dlong pmlNelements,
         r_N[4] = 2.f*ramp*drampdt*p_q5bar;
         r_N[5] = 2.f*ramp*drampdt*p_q6bar;
  
-        const dlong id       = e*p_Nfields*p_Np + n;
+        const dlong id       = e*p_Nfields*p_Np + j*p_Nq + i;
               dlong rhsId    = id;
-              dlong pmlrhsId = p_Nfields*pmlId*p_Np + n;
+              dlong pmlrhsId = pmlId*p_Nfields*p_Np + j*p_Nq + i;
 
         if(p_MRSAAB){
           rhsId     += shift*offset;
@@ -252,9 +252,9 @@ kernel void bnsPmlVolumeQuad2D(const dlong pmlNelements,
           
         occaUnroll(p_Nfields)
         for(int fld=0; fld<p_Nfields; ++fld){
-          pmlrhsqx[pmlrhsId + fld*p_Np] =  r_Aqx[fld];
-          pmlrhsqy[pmlrhsId + fld*p_Np] =  r_Bqy[fld];
-          rhsq[rhsId +fld*p_Np]         =  r_Aqx[fld] + r_Bqy[fld] + r_N[fld];
+          pmlrhsqx[pmlrhsId + fld*p_Np] =  invJW*r_Aqx[fld];
+          pmlrhsqy[pmlrhsId + fld*p_Np] =  invJW*r_Bqy[fld];
+          rhsq[rhsId +fld*p_Np]         =  invJW*(r_Aqx[fld] + r_Bqy[fld] + r_N[fld]);
          
         }
 
