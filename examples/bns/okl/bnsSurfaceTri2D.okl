@@ -521,7 +521,7 @@ kernel void bnsMRSurfaceTri2D(const dlong Nelements,
           // apply boundary condition
           const int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
-              const int dlong = vmapM[id];
+              const dlong idB = vmapM[id];
               boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp,
                                    q1M, q2M, q3M, q4M, q5M, q6M,
                                    &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);
@@ -683,7 +683,7 @@ kernel void bnsMRPmlSurfaceTri2D(const dlong pmlNelements,
             // apply boundary condition
             int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-                const int dlong = vmapM[id];
+                const dlong idB = vmapM[id];
                 boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp,
                                     q1M, q2M, q3M, q4M, q5M, q6M,
                                     &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);

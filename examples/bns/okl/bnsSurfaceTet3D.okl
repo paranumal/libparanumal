@@ -26,9 +26,9 @@ void upwind1D(const dfloat nx,  const dfloat ny,  const dfloat nz,
    dfloat beta = 0.5f; 
 
   *q1P  = 0.5f*(q1B  - q1M)  - beta*p_sqrtRT*( nx*(q2B-q2M) + ny*(q3B-q3M) + nz*(q4B-q4M) );
-  *q2P  = 0.5f*(q2B  - q2M)  - beta*p_sqrtRT*( nx*(q1B-q1M) + p_sqrt2*nx*(q8B-q8M) +  ny*(q5B-q5M) + nz*(q6B-q6M) );
-  *q3P  = 0.5f*(q3B  - q3M)  - beta*p_sqrtRT*( nx*(q5B-q5M) + ny*(q1B-q1M) + p_sqrt2*ny*(q9B-q9M)  + nz*(q7B-q7M) );
-  *q4P  = 0.5f*(q4B  - q4M)  - beta*p_sqrtRT*( nx*(q6B-q6M) + ny*(q7B-q7M) + p_sqrt2*nz*(q10B-q10M) + p_isq12*nz*(q1B-q1M) );
+  *q2P  = 0.5f*(q2B  - q2M)  - beta*p_sqrtRT*( nx*(q1B-q1M) + p_sqrt2*nx*(q8B-q8M) +  ny*(q5B-q5M)  + nz*(q6B-q6M) );
+  *q3P  = 0.5f*(q3B  - q3M)  - beta*p_sqrtRT*( nx*(q5B-q5M) + ny*(q1B-q1M) + p_sqrt2*ny*(q9B-q9M)   + nz*(q7B-q7M) );
+  *q4P  = 0.5f*(q4B  - q4M)  - beta*p_sqrtRT*( nx*(q6B-q6M) + ny*(q7B-q7M) + p_sqrt2*nz*(q10B-q10M) + nz*(q1B-q1M) );
 
   *q5P  = 0.5f*(q5B  - q5M)  - beta*p_sqrtRT*( nx*(q3B-q3M)  + ny*(q2B-q2M) );
   *q6P  = 0.5f*(q6B  - q6M)  - beta*p_sqrtRT*( nx*(q4B-q4M)  + nz*(q2B-q2M) );
