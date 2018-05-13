@@ -109,7 +109,7 @@ void insRunEXTBDF(ins_t *ins){
     ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat)); 
 
     //update velocity
-    insVelocityUpdate(ins, time+ins->dt, 0, ins->o_rkGP, ins->o_rkU);
+    insVelocityUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkGP, ins->o_rkU);
 
     //copy updated pressure
     ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
@@ -154,7 +154,7 @@ void extbdfCoefficents(ins_t *ins, int order) {
     ins->g0 =  1.0f; 
     dfloat extbdfB[3] = {1.0f, 0.0f, 0.0f};
     dfloat extbdfA[3] = {1.0f, 0.0f, 0.0f};
-    dfloat extbdfC[3] = {0.0f, 0.0f, 0.0f};
+    dfloat extbdfC[3] = {1.0f, 0.0f, 0.0f};
     
     memcpy(ins->extbdfB, extbdfB, 3*sizeof(dfloat));
     memcpy(ins->extbdfA, extbdfA, 3*sizeof(dfloat));

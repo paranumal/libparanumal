@@ -62,6 +62,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   mesh->Nfields = 1; 
 
+  ins->g0 =  1.0;
+
   if (options.compareArgs("TIME INTEGRATOR", "ARK1")) {
     ins->Nstages = 1;
     int Nrk = 2;
@@ -71,7 +73,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     dfloat irkA[2*2] ={0.0, 0.0,\
                        0.0, 1.0};
     dfloat prkA[2*2] ={0.0, 0.0,\
-                       0.0, 0.0};
+                       1.0, 0.0};
 
     ins->Nrk = Nrk;
     ins->rkC = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
@@ -85,8 +87,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     memcpy(ins->prkA, prkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
 
     ins->embeddedRKFlag = 0; //no embedded method
-    ins->g0 =  1.0;
-  }
+  } 
+
 
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
     ins->extbdfA = (dfloat*) calloc(3, sizeof(dfloat));

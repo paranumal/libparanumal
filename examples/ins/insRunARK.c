@@ -80,11 +80,19 @@ void insRunARK(ins_t *ins){
       ins->o_GP.copyFrom(ins->o_rkGP, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
     } 
 
+    if (ins->embeddedRKFlag==0) {//check if an embedded rk method is being used
+      //accept the step and proceed
+      ins->o_U.copyFrom(ins->o_rkU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
+      ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat), 0);
+      ins->tstep++;
+      ins->time += ins->dt;
+    }
+
     occaTimerTic(mesh->device,"Report");
-    if(((ins->tstep+1)%(ins->outputStep))==0){
+    if(((ins->tstep)%(ins->outputStep))==0){
       if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
       if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
-      insReport(ins, ins->tstep+1);
+      insReport(ins, ins->tstep);
     }
 
     if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
@@ -92,14 +100,6 @@ void insRunARK(ins_t *ins){
     occaTimerToc(mesh->device,"Report");
 
 
-    if (ins->embeddedRKFlag==0) {//check if an embedded rk method is being used
-      //accept the step and proceed
-      ins->o_U.copyFrom(ins->o_rkU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
-      ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat), 0);
-      ins->tstep++;
-      ins->time += ins->dt;
-      continue;
-    }
 /*
     dlong Nlocal = mesh->Nelements*mesh->Np*ins->NVfields;
     ins->errorEstimateKernel(Nlocal, 

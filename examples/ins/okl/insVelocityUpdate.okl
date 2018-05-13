@@ -16,7 +16,13 @@ kernel void insVelocityUpdate(const dlong Nelements,
         dfloat Un = rkU[id+i*fieldOffset] - dt*rkGP[id+i*fieldOffset];
 
         for (int s=0;s<stage;s++) {
-          Un += dt*prkA[stage*(p_Nstages+1)+s]*GP[id+i*fieldOffset+s*p_NVfields*fieldOffset];
+          #if ARKSWITCH
+          dfloat prkAn = prkA[stage*(p_Nstages+1)+s];
+          #else
+          dfloat prkAn = prkA[s];
+          #endif
+          
+          Un += dt*prkAn*GP[id+i*fieldOffset+s*p_NVfields*fieldOffset];
         }
         rkU[id+i*fieldOffset] = Un;
       }
