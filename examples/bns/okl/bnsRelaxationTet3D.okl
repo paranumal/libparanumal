@@ -1,6 +1,8 @@
 // MRAB relaxation cub
 kernel void bnsRelaxationTet3D(const dlong Nelements,
                                const dlong * restrict elementIds,
+                               const dlong offset,
+                               const int   shift,
                                const dfloat * restrict cubInterpT,
                                const dfloat * restrict cubProjectT,
                                const dfloat * restrict q,
@@ -62,6 +64,16 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
           }
 
         dfloat icubq1 = 1.f/r_cubq[0];
+
+        if(p_SEMI_ANALYTIC){
+          // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
+        s_cubN[es][0][n]  = p_tauInv*(r_cubq[1]*r_cubq[2]*icubq1);
+        s_cubN[es][1][n]  = p_tauInv*(r_cubq[1]*r_cubq[3]*icubq1);
+        s_cubN[es][2][n]  = p_tauInv*(r_cubq[2]*r_cubq[3]*icubq1);
+        s_cubN[es][3][n]  = p_tauInv*(p_invsqrt2*r_cubq[1]*r_cubq[1]*icubq1);
+        s_cubN[es][4][n]  = p_tauInv*(p_invsqrt2*r_cubq[2]*r_cubq[2]*icubq1);
+        s_cubN[es][5][n]  = p_tauInv*(p_invsqrt2*r_cubq[3]*r_cubq[3]*icubq1);
+        }else{
         // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
         s_cubN[es][0][n]  = -p_tauInv*(r_cubq[4] -(r_cubq[1]*r_cubq[2]*icubq1));
         s_cubN[es][1][n]  = -p_tauInv*(r_cubq[5] -(r_cubq[1]*r_cubq[3]*icubq1));
@@ -69,6 +81,7 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
         s_cubN[es][3][n]  = -p_tauInv*(r_cubq[7] -(p_invsqrt2*r_cubq[1]*r_cubq[1]*icubq1));
         s_cubN[es][4][n]  = -p_tauInv*(r_cubq[8] -(p_invsqrt2*r_cubq[2]*r_cubq[2]*icubq1));
         s_cubN[es][5][n]  = -p_tauInv*(r_cubq[9] -(p_invsqrt2*r_cubq[3]*r_cubq[3]*icubq1));
+       }
       }
     }
     }
@@ -83,6 +96,12 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
       dlong et = eo+es; // element in block
       if(et<Nelements && n<p_Np ){
           const dlong id    = e*p_Nfields*p_Np + n;
+                dlong rhsId = id ; 
+
+          // multi-rate index shift
+          if(p_MRSAAB){
+            rhsId   += shift*offset;  
+          }
 
           dfloat r_qN[p_Nfields-4];
           for(int fld=4; fld<p_Nfields; fld++){
@@ -98,7 +117,7 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
           }
 
           for(int fld=4; fld<p_Nfields; fld++){
-            rhsq[id + fld*p_Np] += r_qN[fld-4];
+            rhsq[rhsId + fld*p_Np] += r_qN[fld-4];
           }
         
         }
@@ -115,6 +134,9 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
                                   const dlong * restrict pmlElementIds,
                                   const dlong * restrict pmlIds,
+                                  const dlong offset,
+                                  const dlong pmloffset,
+                                  const int   shift,
                                   const dfloat * restrict cubInterpT,
                                   const dfloat * restrict cubProjectT,
                                   const dfloat * restrict pmlSigmaX,
@@ -219,13 +241,25 @@ kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
             }
             
             dfloat icubq1 = 1.f/r_q[0];
-            // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
-            s_cubq[es][4][n]  -= p_tauInv*(r_q[4] -(r_q[1]*r_q[2]*icubq1));
-            s_cubq[es][5][n]  -= p_tauInv*(r_q[5] -(r_q[1]*r_q[3]*icubq1));
-            s_cubq[es][6][n]  -= p_tauInv*(r_q[6] -(r_q[2]*r_q[3]*icubq1));
-            s_cubq[es][7][n]  -= p_tauInv*(r_q[7] -(p_invsqrt2*r_q[1]*r_q[1]*icubq1));
-            s_cubq[es][8][n]  -= p_tauInv*(r_q[8] -(p_invsqrt2*r_q[2]*r_q[2]*icubq1));
-            s_cubq[es][9][n]  -= p_tauInv*(r_q[9] -(p_invsqrt2*r_q[3]*r_q[3]*icubq1));
+
+            if(p_SEMI_ANALYTIC){
+              // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
+              s_cubq[es][4][n]  += p_tauInv*(r_q[1]*r_q[2]*icubq1);
+              s_cubq[es][5][n]  += p_tauInv*(r_q[1]*r_q[3]*icubq1);
+              s_cubq[es][6][n]  += p_tauInv*(r_q[2]*r_q[3]*icubq1);
+              s_cubq[es][7][n]  += p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
+              s_cubq[es][8][n]  += p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1);
+              s_cubq[es][9][n]  += p_tauInv*(p_invsqrt2*r_q[3]*r_q[3]*icubq1);
+            }else{
+              // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
+              s_cubq[es][4][n]  -= p_tauInv*(r_q[4] -(r_q[1]*r_q[2]*icubq1));
+              s_cubq[es][5][n]  -= p_tauInv*(r_q[5] -(r_q[1]*r_q[3]*icubq1));
+              s_cubq[es][6][n]  -= p_tauInv*(r_q[6] -(r_q[2]*r_q[3]*icubq1));
+              s_cubq[es][7][n]  -= p_tauInv*(r_q[7] -(p_invsqrt2*r_q[1]*r_q[1]*icubq1));
+              s_cubq[es][8][n]  -= p_tauInv*(r_q[8] -(p_invsqrt2*r_q[2]*r_q[2]*icubq1));
+              s_cubq[es][9][n]  -= p_tauInv*(r_q[9] -(p_invsqrt2*r_q[3]*r_q[3]*icubq1));
+            }
+            
           }
         }
       }
@@ -242,8 +276,14 @@ kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
           if(et<pmlNelements){
             if(n<p_Np){
          
-              const dlong rhsId    = e*p_Nfields*p_Np + n;
-              const dlong pmlrhsId = pmlId*p_Nfields*p_Np + n;
+              dlong rhsId    = e*p_Nfields*p_Np + n;
+              dlong pmlrhsId = pmlId*p_Nfields*p_Np + n;
+              // 
+              if(p_MRSAAB){
+                rhsId     += shift*offset;
+                pmlrhsId  += shift*pmloffset;
+              }
+
 
               dfloat r_rhsq[p_Nfields];
               dfloat r_rhsqx[p_Nfields];

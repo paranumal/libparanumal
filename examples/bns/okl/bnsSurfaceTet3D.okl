@@ -2,7 +2,7 @@
 #define p_isq6 (1.f/occaSqrt(6.f))
 #define PML_ENABLED 1 
 
-void upwind3D(const dfloat nx,  const dfloat ny,  const dfloat nz,
+void upwind1D(const dfloat nx,  const dfloat ny,  const dfloat nz,
               const dfloat q1M, const dfloat q2M, const dfloat q3M, const dfloat q4M, const dfloat q5M,
               const dfloat q6M, const dfloat q7M, const dfloat q8M, const dfloat q9M, const dfloat q10M,
               const dfloat q1B, const dfloat q2B, const dfloat q3B, const dfloat q4B, const dfloat q5B, 
@@ -19,8 +19,7 @@ void upwind3D(const dfloat nx,  const dfloat ny,  const dfloat nz,
   *q7P  = 0.5f*(q7B  + q7M)  - 0.5f*ny*(q4B-q4M) - 0.5f*nz*(q3B-q3M);
   *q8P  = 0.5f*(q8B  + q8M)  - p_isq6*nx*(q2B-q2M);
   *q9P  = 0.5f*(q9B  + q9M)  - p_isq6*ny*(q3B-q3M);
-  *q10P = 0.5f*(q10B + q10M) - p_isq6*nz*(q4B-q4M);
-  
+  *q10P = 0.5f*(q10B + q10M) - p_isq6*nz*(q4B-q4M);  
 }
 
 
@@ -162,31 +161,34 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
             const dlong qidM = eM*p_Np*p_Nfields + vidM;
             const dlong qidP = eP*p_Np*p_Nfields + vidP;
 
-            // if(idP<0) idP = idM;
 
-           // Read trace values
-            dfloat q1M  = q[qidM + 0*p_Np], q1P  = q[qidP + 0*p_Np];
-            dfloat q2M  = q[qidM + 1*p_Np], q2P  = q[qidP + 1*p_Np];
-            dfloat q3M  = q[qidM + 2*p_Np], q3P  = q[qidP + 2*p_Np];
-            dfloat q4M  = q[qidM + 3*p_Np], q4P  = q[qidP + 3*p_Np];
-            dfloat q5M  = q[qidM + 4*p_Np], q5P  = q[qidP + 4*p_Np];
-            dfloat q6M  = q[qidM + 5*p_Np], q6P  = q[qidP + 5*p_Np];              
-            dfloat q7M  = q[qidM + 6*p_Np], q7P  = q[qidP + 6*p_Np];              
-            dfloat q8M  = q[qidM + 7*p_Np], q8P  = q[qidP + 7*p_Np];              
-            dfloat q9M  = q[qidM + 8*p_Np], q9P  = q[qidP + 8*p_Np];              
-            dfloat q10M = q[qidM + 9*p_Np], q10P = q[qidP + 9*p_Np];              
+            // Read trace values
+            dfloat q1M  = q[qidM + 0*p_Np], q1P = q[qidP + 0*p_Np];
+            dfloat q2M  = q[qidM + 1*p_Np], q2P = q[qidP + 1*p_Np];
+            dfloat q3M  = q[qidM + 2*p_Np], q3P = q[qidP + 2*p_Np];
+            dfloat q4M  = q[qidM + 3*p_Np], q4P = q[qidP + 3*p_Np];
+            dfloat q5M  = q[qidM + 4*p_Np], q5P = q[qidP + 4*p_Np];
+            dfloat q6M  = q[qidM + 5*p_Np], q6P = q[qidP + 5*p_Np];
+            dfloat q7M  = q[qidM + 6*p_Np], q7P = q[qidP + 6*p_Np];
+            dfloat q8M  = q[qidM + 7*p_Np], q8P = q[qidP + 7*p_Np];
+            dfloat q9M  = q[qidM + 8*p_Np], q9P = q[qidP + 8*p_Np];
+            dfloat q10M = q[qidM + 9*p_Np], q10P = q[qidP + 9*p_Np];
+                      
           // apply boundary condition
           const int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
-              boundaryConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, ramp,
-                                   q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M,
-                                   &q1P, &q2P, &q3P, &q4P, &q5P, &q6P, &q7P, &q8P, &q9P, &q10P);
+              const dlong idB = vmapM[id];
+              boundaryConditions3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,
+                                   q1M, q2M, q3M, q4M, q5M,
+                                   q6M, q7M, q8M, q9M, q10M,
+                                   &q1P, &q2P, &q3P, &q4P, &q5P,
+                                   &q6P, &q7P, &q8P, &q9P, &q10P);
           }
       
-          // compute (q^*)
-          dfloat q1U, q2U, q3U, q4U, q5U, q6U, q7U, q8U, q9U, q10U;       
+           // compute (q^*)
+          dfloat q1U, q2U, q3U, q4U, q5U, q6U, q7U, q8U, q9U, q10U;               
 
-         upwind3D(nx, ny, nz, 
+          upwind1D(nx, ny, nz, 
              q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M, 
              q1P, q2P, q3P, q4P, q5P, q6P, q7P, q8P, q9P, q10P, 
              &q1U, &q2U, &q3U, &q4U, &q5U, &q6U, &q7U, &q8U, &q9U, &q10U);
@@ -208,17 +210,17 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
           dq10 = q10U- q10M;
 
           // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny+C*nz)*(q^* - q^-)
-          s_fluxq[es][0][n] = sc*p_sqrtRT*(-nx*dq2-ny*dq3-nz*dq4);
-          s_fluxq[es][1][n] = sc*p_sqrtRT*(-nx*(dq1+p_sqrt2*dq8)-ny*dq5-nz*dq6);
-          s_fluxq[es][2][n] = sc*p_sqrtRT*(-nx*dq5-ny*(dq1+p_sqrt2*dq9)-nz*dq7);
-          s_fluxq[es][3][n] = sc*p_sqrtRT*(-nx*dq6-ny*dq7-nz*(dq1+p_sqrt2*dq10));
-          s_fluxq[es][4][n] = sc*p_sqrtRT*(-nx*dq3-ny*dq2);
-          s_fluxq[es][5][n] = sc*p_sqrtRT*(-nx*dq4-nz*dq2);
-          s_fluxq[es][6][n] = sc*p_sqrtRT*(-ny*dq4-nz*dq3);
-          s_fluxq[es][7][n] = sc*p_sqrtRT*p_sqrt2*(-nx*dq2);
-          s_fluxq[es][8][n] = sc*p_sqrtRT*p_sqrt2*(-ny*dq3);
-          s_fluxq[es][9][n] = sc*p_sqrtRT*p_sqrt2*(-nz*dq4);
-      
+          s_fluxq[es][0][n] = -sc*p_sqrtRT*(nx*dq2 + ny*dq3 + nz*dq4);
+          s_fluxq[es][1][n] = -sc*p_sqrtRT*(nx*(dq1+p_sqrt2*dq8) + ny*dq5 + nz*dq6);
+          s_fluxq[es][2][n] = -sc*p_sqrtRT*(nx*dq5 + ny*(dq1+p_sqrt2*dq9) + nz*dq7);
+          s_fluxq[es][3][n] = -sc*p_sqrtRT*(nx*dq6 + ny*dq7 + nz*(dq1+p_sqrt2*dq10));
+          s_fluxq[es][4][n] = -sc*p_sqrtRT*(nx*dq3 + ny*dq2);
+          s_fluxq[es][5][n] = -sc*p_sqrtRT*(nx*dq4 + nz*dq2);
+          s_fluxq[es][6][n] = -sc*p_sqrtRT*(ny*dq4 + nz*dq3);
+          s_fluxq[es][7][n] = -sc*p_sqrtRT*p_sqrt2*(nx*dq2);
+          s_fluxq[es][8][n] = -sc*p_sqrtRT*p_sqrt2*(ny*dq3);
+          s_fluxq[es][9][n] = -sc*p_sqrtRT*p_sqrt2*(nz*dq4);
+
         }
        }
       }
@@ -233,7 +235,7 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
         const dlong et = eo + es;
         if(et<Nelements){
           if(n<p_Np){
-            // const int id = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
+
             const dlong id = e*p_Nfields*p_Np + n ;
 
             dfloat r_rhsq[p_Nfields];
@@ -242,7 +244,7 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
               r_rhsq[fld] = 0.f; 
             }
 
-            // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             occaUnroll(p_NfacesNfp)
               for(int m=0;m<p_NfacesNfp;++m){
                 dfloat L = LIFTT[n+m*p_Np];
@@ -251,9 +253,8 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
                   r_rhsq[fld] +=L*s_fluxq[es][fld][m]; 
                 }
               }
-
-
-            occaUnroll(p_Nfields)
+          
+           occaUnroll(p_Nfields)
             for(int fld=0; fld<p_Nfields; fld++){
               rhsq[id + fld*p_Np] += r_rhsq[fld];
             }
@@ -263,6 +264,7 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
     }
   }
 }
+
 
 
 
@@ -292,8 +294,7 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
     shared dfloat s_nxdq[p_NblockS][p_Nfields][p_maxNodes];
     shared dfloat s_nydq[p_NblockS][p_Nfields][p_maxNodes];
     shared dfloat s_nzdq[p_NblockS][p_Nfields][p_maxNodes];
-    
-
+   
     exclusive dlong e;
 
     // for all face nodes of all elements
@@ -305,7 +306,6 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
             if(n<p_NfacesNfp){
               // find face that owns this node
               int face = n/p_Nfp;          
-              
               // load surface geofactors for this face
               const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
               const dfloat nx   = sgeo[sid+p_NXID];
@@ -318,26 +318,24 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
               const dlong idM = vmapM[id];
               const dlong idP = vmapP[id];
 
-              // load traces
               const dlong eM = e;
-              const dlong eP = idP/p_Np;
+              const dlong eP = idP/p_Np; 
               const int vidM = idM%p_Np;
-              const int vidP = idP%p_Np;
-              //
-              const dlong qidM = eM*p_Np*p_Nfields + vidM;
-              const dlong qidP = eP*p_Np*p_Nfields + vidP;
+              const int vidP = idP%p_Np; 
 
-             // Read trace values
-            dfloat q1M  = q[qidM + 0*p_Np], q1P  = q[qidP + 0*p_Np];
-            dfloat q2M  = q[qidM + 1*p_Np], q2P  = q[qidP + 1*p_Np];
-            dfloat q3M  = q[qidM + 2*p_Np], q3P  = q[qidP + 2*p_Np];
-            dfloat q4M  = q[qidM + 3*p_Np], q4P  = q[qidP + 3*p_Np];
-            dfloat q5M  = q[qidM + 4*p_Np], q5P  = q[qidP + 4*p_Np];
-            dfloat q6M  = q[qidM + 5*p_Np], q6P  = q[qidP + 5*p_Np];              
-            dfloat q7M  = q[qidM + 6*p_Np], q7P  = q[qidP + 6*p_Np];              
-            dfloat q8M  = q[qidM + 7*p_Np], q8P  = q[qidP + 7*p_Np];              
-            dfloat q9M  = q[qidM + 8*p_Np], q9P  = q[qidP + 8*p_Np];              
-            dfloat q10M = q[qidM + 9*p_Np], q10P = q[qidP + 9*p_Np];              
+              const dlong qidM = eM*p_Nfields*p_Np + vidM;
+              const dlong qidP = eP*p_Nfields*p_Np + vidP;
+               // Read trace values
+              dfloat q1M  = q[qidM + 0*p_Np], q1P  = q[qidP + 0*p_Np];
+              dfloat q2M  = q[qidM + 1*p_Np], q2P  = q[qidP + 1*p_Np];
+              dfloat q3M  = q[qidM + 2*p_Np], q3P  = q[qidP + 2*p_Np];
+              dfloat q4M  = q[qidM + 3*p_Np], q4P  = q[qidP + 3*p_Np];
+              dfloat q5M  = q[qidM + 4*p_Np], q5P  = q[qidP + 4*p_Np];
+              dfloat q6M  = q[qidM + 5*p_Np], q6P  = q[qidP + 5*p_Np];              
+              dfloat q7M  = q[qidM + 6*p_Np], q7P  = q[qidP + 6*p_Np];              
+              dfloat q8M  = q[qidM + 7*p_Np], q8P  = q[qidP + 7*p_Np];              
+              dfloat q9M  = q[qidM + 8*p_Np], q9P  = q[qidP + 8*p_Np];              
+              dfloat q10M = q[qidM + 9*p_Np], q10P = q[qidP + 9*p_Np];              
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
@@ -350,60 +348,32 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
            //  // compute (q^*)
             dfloat q1U, q2U, q3U, q4U, q5U, q6U, q7U, q8U, q9U, q10U;       
 
-           upwind3D(nx, ny, nz, 
+           upwind1D(nx, ny, nz, 
                q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M, 
                q1P, q2P, q3P, q4P, q5P, q6P, q7P, q8P, q9P, q10P, 
                &q1U, &q2U, &q3U, &q4U, &q5U, &q6U, &q7U, &q8U, &q9U, &q10U);
 
-           // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)      
-            dfloat dq1  = q1U - q1M;
-            dfloat dq2  = q2U - q2M;
-            dfloat dq3  = q3U - q3M;
-            dfloat dq4  = q4U - q4M;
-            dfloat dq5  = q5U - q5M;
-            dfloat dq6  = q6U - q6M;
-            dfloat dq7  = q7U - q7M;
-            dfloat dq8  = q8U - q8M;
-            dfloat dq9  = q9U - q9M;
-            dfloat dq10 = q10U- q10M;
+           // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-) 
+            dfloat r_dq[p_Nfields];      
+            r_dq[0] = q1U - q1M;
+            r_dq[1] = q2U - q2M;
+            r_dq[2] = q3U - q3M;
+            r_dq[3] = q4U - q4M;
+            r_dq[4] = q5U - q5M;
+            r_dq[5] = q6U - q6M;
+            r_dq[6] = q7U - q7M;
+            r_dq[7] = q8U - q8M;
+            r_dq[8] = q9U - q9M;
+            r_dq[9] = q10U- q10M;
 
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
             const dfloat sc = invJ*sJ;
 
-            s_nxdq[es][0][n] = sc*(nx*dq1);
-            s_nxdq[es][1][n] = sc*(nx*dq2);
-            s_nxdq[es][2][n] = sc*(nx*dq3);
-            s_nxdq[es][3][n] = sc*(nx*dq4);
-            s_nxdq[es][4][n] = sc*(nx*dq5);
-            s_nxdq[es][5][n] = sc*(nx*dq6);
-            s_nxdq[es][6][n] = 0.f;
-            s_nxdq[es][7][n] = sc*(nx*dq8);
-            s_nxdq[es][8][n] = 0.f;
-            s_nxdq[es][9][n] = 0.f;
-
-            s_nydq[es][0][n] = sc*(ny*dq1);
-            s_nydq[es][1][n] = sc*(ny*dq2);
-            s_nydq[es][2][n] = sc*(ny*dq3);
-            s_nydq[es][3][n] = sc*(ny*dq4);
-            s_nydq[es][4][n] = sc*(ny*dq5);
-            s_nydq[es][5][n] = 0.f;
-            s_nydq[es][6][n] = sc*(ny*dq7);
-            s_nydq[es][7][n] = 0.f;
-            s_nydq[es][8][n] = sc*(ny*dq9);
-            s_nydq[es][9][n] = 0.f;
-
-
-            s_nzdq[es][0][n] = sc*(nz*dq1);
-            s_nzdq[es][1][n] = sc*(nz*dq2);
-            s_nzdq[es][2][n] = sc*(nz*dq3);
-            s_nzdq[es][3][n] = sc*(nz*dq4);
-            s_nzdq[es][4][n] = 0.f;
-            s_nzdq[es][5][n] = sc*(nz*dq6);
-            s_nzdq[es][6][n] = sc*(nz*dq7);
-            s_nzdq[es][7][n] = 0.f;
-            s_nzdq[es][8][n] = 0.f;
-            s_nzdq[es][9][n] = sc*(nz*dq10);
-            
+            for(int fld=0; fld<p_Nfields; fld++){
+              s_nxdq[es][fld][n] = sc*nx*r_dq[fld];
+              s_nydq[es][fld][n] = sc*ny*r_dq[fld];
+              s_nzdq[es][fld][n] = sc*nz*r_dq[fld];
+            }            
           }
         }
       }
@@ -495,332 +465,362 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
 
 
 
-
-
-
-
-// kernel void boltzmannMRSurfaceTri2D(const int Nelements,
-//                      const int * restrict elementIds,
-//                      const dfloat time,
-//                      const dfloat ramp,
-//                      const int nrhs,
-//                      const int   shift,
-//                      const dfloat * restrict sgeo,
-//                      const dfloat * restrict LIFTT,
-//                      const int   * restrict vmapM,
-//                      const int   * restrict mapP,
-//                      const int   * restrict EToB,
-//                      const dfloat * restrict x,
-//                      const dfloat * restrict y,
-//                      const dfloat * restrict q,
-//                      const dfloat * restrict fQM,
-//                            dfloat * restrict rhsq){
+// This kernel uses Upwind flux 
+kernel void bnsMRSurfaceTet3D(const dlong Nelements,
+                           const dlong * restrict elementIds,
+                           const dlong offset,
+                           const int shift,
+                           const dfloat time,
+                           const dfloat ramp,
+                           const dfloat * restrict sgeo,
+                           const dfloat * restrict LIFTT,
+                           const dlong   * restrict vmapM,
+                           const dlong   * restrict mapP,
+                           const int   * restrict EToB,
+                           const dfloat * restrict x,
+                           const dfloat * restrict y,
+                           const dfloat * restrict z,
+                           const dfloat * restrict q,
+                           const dfloat * restrict fQM,
+                                 dfloat * restrict rhsq){
   
-//   // for all elements
-//   for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
 
-//     // shared storage for flux terms
-//     shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
-//     exclusive int e;
+    // shared storage for flux terms
+    shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
+    exclusive dlong e;
 
-//     // for all face nodes of all elements
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-//         int et = eo + es;
-//         if(et<Nelements){
-//          e = elementIds[et];
-//           if(n<p_Nfp*p_Nfaces){
-//             // find face that owns this node
-//             int face = n/p_Nfp;          
+    // for all face nodes of all elements
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        const dlong et = eo + es;
+        if(et<Nelements){
+         e = elementIds[et];
+          if(n<p_Nfp*p_Nfaces){
+            // find face that owns this node
+            int face = n/p_Nfp;          
             
-//             // load surface geofactors for this face
-//             const int sid    = p_Nsgeo*(e*p_Nfaces+face);
-//             const dfloat nx   = sgeo[sid+p_NXID];
-//             const dfloat ny   = sgeo[sid+p_NYID];
-//             const dfloat sJ   = sgeo[sid+p_SJID];
-//             const dfloat invJ = sgeo[sid+p_IJID];   
+            // load surface geofactors for this face
+            const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+            const dfloat nx   = sgeo[sid+p_NXID];
+            const dfloat ny   = sgeo[sid+p_NYID];
+            const dfloat nz   = sgeo[sid+p_NZID];
+            const dfloat sJ   = sgeo[sid+p_SJID];
+            const dfloat invJ = sgeo[sid+p_IJID];   
 
-//             // Indices of negative and positive traces of face node
-//             const int id  = e*p_Nfp*p_Nfaces + n;
-//             const int idM = id*p_Nfields;
-//             const int idP = mapP[id]*p_Nfields;
+            const dlong id  = e*p_Nfp*p_Nfaces + n;
+            const dlong idM = e*p_Nfp*p_Nfaces*p_Nfields + n;
+
+            // extract + side index
+            const dlong qidP = mapP[id];
+            const dlong eP   = qidP/(p_Nfp*p_Nfaces); 
+            const int fidP   = qidP%(p_Nfp*p_Nfaces); 
+            const dlong idP  = eP*p_Nfp*p_Nfaces*p_Nfields + fidP;
+
+
+            // Read trace values
+            dfloat q1M  = fQM[idM + 0*p_Nfp*p_Nfaces], q1P = fQM[idP  + 0*p_Nfp*p_Nfaces];
+            dfloat q2M  = fQM[idM + 1*p_Nfp*p_Nfaces], q2P = fQM[idP  + 1*p_Nfp*p_Nfaces];
+            dfloat q3M  = fQM[idM + 2*p_Nfp*p_Nfaces], q3P = fQM[idP  + 2*p_Nfp*p_Nfaces];
+            dfloat q4M  = fQM[idM + 3*p_Nfp*p_Nfaces], q4P = fQM[idP  + 3*p_Nfp*p_Nfaces];
+            dfloat q5M  = fQM[idM + 4*p_Nfp*p_Nfaces], q5P = fQM[idP  + 4*p_Nfp*p_Nfaces];
+            dfloat q6M  = fQM[idM + 5*p_Nfp*p_Nfaces], q6P = fQM[idP  + 5*p_Nfp*p_Nfaces];
+            dfloat q7M  = fQM[idM + 6*p_Nfp*p_Nfaces], q7P = fQM[idP  + 6*p_Nfp*p_Nfaces];
+            dfloat q8M  = fQM[idM + 7*p_Nfp*p_Nfaces], q8P = fQM[idP  + 7*p_Nfp*p_Nfaces];
+            dfloat q9M  = fQM[idM + 8*p_Nfp*p_Nfaces], q9P = fQM[idP  + 8*p_Nfp*p_Nfaces];
+            dfloat q10M = fQM[idM + 9*p_Nfp*p_Nfaces], q10P = fQM[idP + 9*p_Nfp*p_Nfaces];
+                      
+          // apply boundary condition
+          const int bc = EToB[face+p_Nfaces*e];
+          if(bc>0){
+              const dlong idB = vmapM[id];
+              boundaryConditions3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,
+                                   q1M, q2M, q3M, q4M, q5M,
+                                   q6M, q7M, q8M, q9M, q10M,
+                                   &q1P, &q2P, &q3P, &q4P, &q5P,
+                                   &q6P, &q7P, &q8P, &q9P, &q10P);
+          }
+      
+           // compute (q^*)
+          dfloat q1U, q2U, q3U, q4U, q5U, q6U, q7U, q8U, q9U, q10U;               
+
+          upwind1D(nx, ny, nz, 
+             q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M, 
+             q1P, q2P, q3P, q4P, q5P, q6P, q7P, q8P, q9P, q10P, 
+             &q1U, &q2U, &q3U, &q4U, &q5U, &q6U, &q7U, &q8U, &q9U, &q10U);
+
+         // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
+          const dfloat sc = invJ*sJ;
+
+          dfloat dq1, dq2, dq3, dq4, dq5, dq6, dq7, dq8, dq9, dq10;
+          //        
+          dq1  = q1U - q1M;
+          dq2  = q2U - q2M;
+          dq3  = q3U - q3M;
+          dq4  = q4U - q4M;
+          dq5  = q5U - q5M;
+          dq6  = q6U - q6M;
+          dq7  = q7U - q7M;
+          dq8  = q8U - q8M;
+          dq9  = q9U - q9M;
+          dq10 = q10U- q10M;
+
+          // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny+C*nz)*(q^* - q^-)
+          s_fluxq[es][0][n] = -sc*p_sqrtRT*(nx*dq2 + ny*dq3 + nz*dq4);
+          s_fluxq[es][1][n] = -sc*p_sqrtRT*(nx*(dq1+p_sqrt2*dq8) + ny*dq5 + nz*dq6);
+          s_fluxq[es][2][n] = -sc*p_sqrtRT*(nx*dq5 + ny*(dq1+p_sqrt2*dq9) + nz*dq7);
+          s_fluxq[es][3][n] = -sc*p_sqrtRT*(nx*dq6 + ny*dq7 + nz*(dq1+p_sqrt2*dq10));
+          s_fluxq[es][4][n] = -sc*p_sqrtRT*(nx*dq3 + ny*dq2);
+          s_fluxq[es][5][n] = -sc*p_sqrtRT*(nx*dq4 + nz*dq2);
+          s_fluxq[es][6][n] = -sc*p_sqrtRT*(ny*dq4 + nz*dq3);
+          s_fluxq[es][7][n] = -sc*p_sqrtRT*p_sqrt2*(nx*dq2);
+          s_fluxq[es][8][n] = -sc*p_sqrtRT*p_sqrt2*(ny*dq3);
+          s_fluxq[es][9][n] = -sc*p_sqrtRT*p_sqrt2*(nz*dq4);
+
+        }
+       }
+      }
+    }
+    
+    // wait for all shared memory writes of the previous inner loop to complete
+    barrier(localMemFence);
+
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        const dlong et = eo + es;
+        if(et<Nelements){
+          if(n<p_Np){
+
+            
+
+            dfloat r_rhsq[p_Nfields];
+            occaUnroll(p_Nfields)
+            for(int fld=0; fld<p_Nfields; fld++){
+              r_rhsq[fld] = 0.f; 
+            }
+
+             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+            occaUnroll(p_NfacesNfp)
+              for(int m=0;m<p_NfacesNfp;++m){
+                dfloat L = LIFTT[n+m*p_Np];
+                occaUnroll(p_Nfields)
+                for(int fld=0; fld<p_Nfields; fld++){
+                  r_rhsq[fld] +=L*s_fluxq[es][fld][m]; 
+                }
+              }
+
+              const dlong id = e*p_Nfields*p_Np + n  + shift*offset;
+          
+           occaUnroll(p_Nfields)
+            for(int fld=0; fld<p_Nfields; fld++){
+              rhsq[id + fld*p_Np] += r_rhsq[fld];
+            }
+         }
+        }
+      }
+    }
+  }
+}
+
+
+
+
+kernel void bnsMRPmlSurfaceTet3D(const dlong pmlNelements,
+                        const dlong   * restrict pmlElementIds,
+                        const dlong   * restrict pmlIds,
+                        const dlong offset,
+                        const dlong pmloffset,
+                        const int   shift,
+                        const dfloat time,
+                        const dfloat ramp,
+                        const dfloat * restrict sgeo,
+                        const dfloat * restrict LIFTT,
+                        const dlong  * restrict vmapM,
+                        const dlong  * restrict mapP,
+                        const int   * restrict EToB,
+                        const dfloat * restrict x,
+                        const dfloat * restrict y,              
+                        const dfloat * restrict z,              
+                        const dfloat * restrict q,
+                        const dfloat * restrict fQM,
+                              dfloat * restrict rhsq,
+                              dfloat * restrict pmlrhsqx,
+                              dfloat * restrict pmlrhsqy,
+                              dfloat * restrict pmlrhsqz){
+  
+  // for all elements
+  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
+    // shared storage for flux terms
+    shared dfloat s_nxdq[p_NblockS][p_Nfields][p_maxNodes];
+    shared dfloat s_nydq[p_NblockS][p_Nfields][p_maxNodes];
+    shared dfloat s_nzdq[p_NblockS][p_Nfields][p_maxNodes];
    
-//             // Read trace values
-//             dfloat q1M = fQM[idM + 0], q1P = fQM[idP + 0];
-//             dfloat q2M = fQM[idM + 1], q2P = fQM[idP + 1];
-//             dfloat q3M = fQM[idM + 2], q3P = fQM[idP + 2];
-//             dfloat q4M = fQM[idM + 3], q4P = fQM[idP + 3];
-//             dfloat q5M = fQM[idM + 4], q5P = fQM[idP + 4];
-//             dfloat q6M = fQM[idM + 5], q6P = fQM[idP + 5];
+    exclusive dlong e;
+
+    // for all face nodes of all elements
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+        const dlong et = eo + es;
+        if(et<pmlNelements){
+            e = pmlElementIds[et];
+            if(n<p_NfacesNfp){
+              // find face that owns this node
+              int face = n/p_Nfp;          
+              // load surface geofactors for this face
+              const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+              const dfloat nx   = sgeo[sid+p_NXID];
+              const dfloat ny   = sgeo[sid+p_NYID];
+              const dfloat nz   = sgeo[sid+p_NZID];
+              const dfloat sJ   = sgeo[sid+p_SJID];
+              const dfloat invJ = sgeo[sid+p_IJID];   
+
+              const dlong id  = e*p_Nfp*p_Nfaces + n;
+              const dlong idM = e*p_Nfp*p_Nfaces*p_Nfields + n;
+
+              // extract + side index
+              const dlong qidP = mapP[id];
+              const dlong eP   = qidP/(p_Nfp*p_Nfaces); 
+              const int fidP   = qidP%(p_Nfp*p_Nfaces); 
+              const dlong idP  = eP*p_Nfp*p_Nfaces*p_Nfields + fidP;
+
+
+              // Read trace values
+              dfloat q1M  = fQM[idM + 0*p_Nfp*p_Nfaces], q1P = fQM[idP + 0*p_Nfp*p_Nfaces];
+              dfloat q2M  = fQM[idM + 1*p_Nfp*p_Nfaces], q2P = fQM[idP + 1*p_Nfp*p_Nfaces];
+              dfloat q3M  = fQM[idM + 2*p_Nfp*p_Nfaces], q3P = fQM[idP + 2*p_Nfp*p_Nfaces];
+              dfloat q4M  = fQM[idM + 3*p_Nfp*p_Nfaces], q4P = fQM[idP + 3*p_Nfp*p_Nfaces];
+              dfloat q5M  = fQM[idM + 4*p_Nfp*p_Nfaces], q5P = fQM[idP + 4*p_Nfp*p_Nfaces];
+              dfloat q6M  = fQM[idM + 5*p_Nfp*p_Nfaces], q6P = fQM[idP + 5*p_Nfp*p_Nfaces];
+              dfloat q7M  = fQM[idM + 6*p_Nfp*p_Nfaces], q7P = fQM[idP + 6*p_Nfp*p_Nfaces];
+              dfloat q8M  = fQM[idM + 7*p_Nfp*p_Nfaces], q8P = fQM[idP + 7*p_Nfp*p_Nfaces];
+              dfloat q9M  = fQM[idM + 8*p_Nfp*p_Nfaces], q9P = fQM[idP + 8*p_Nfp*p_Nfaces];
+              dfloat q10M = fQM[idM + 9*p_Nfp*p_Nfaces], q10P= fQM[idP + 9*p_Nfp*p_Nfaces];   
+            // apply boundary condition
+            const int bc = EToB[face+p_Nfaces*e];
+            if(bc>0){
+                const dlong idB = vmapM[id];
+                boundaryConditions3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,
+                                     q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M,
+                                     &q1P, &q2P, &q3P, &q4P, &q5P, &q6P, &q7P, &q8P, &q9P, &q10P);
+            }
         
-//             // apply boundary condition
-//             int bc = EToB[face+p_Nfaces*e];
-//             if(bc>0){
-//                 const int idB = vmapM[id];
-//                 boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp,
-//                                      q1M, q2M, q3M, q4M, q5M, q6M,
-//                                      &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);
-//             }
-        
-//             // compute (q^*)
-//             dfloat q1U, q2U, q3U, q4U, q5U, q6U;            
+           //  // compute (q^*)
+            dfloat q1U, q2U, q3U, q4U, q5U, q6U, q7U, q8U, q9U, q10U;       
 
-//             upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, 
-//                                                       &q1U, &q2U, &q3U, &q4U, &q5U, &q6U);
+           upwind1D(nx, ny, nz, 
+               q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M, 
+               q1P, q2P, q3P, q4P, q5P, q6P, q7P, q8P, q9P, q10P, 
+               &q1U, &q2U, &q3U, &q4U, &q5U, &q6U, &q7U, &q8U, &q9U, &q10U);
 
-//            // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
-//             const dfloat sc = invJ*sJ;
+           // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-) 
+            dfloat r_dq[p_Nfields];      
+            r_dq[0] = q1U - q1M;
+            r_dq[1] = q2U - q2M;
+            r_dq[2] = q3U - q3M;
+            r_dq[3] = q4U - q4M;
+            r_dq[4] = q5U - q5M;
+            r_dq[5] = q6U - q6M;
+            r_dq[6] = q7U - q7M;
+            r_dq[7] = q8U - q8M;
+            r_dq[8] = q9U - q9M;
+            r_dq[9] = q10U- q10M;
 
-//             dfloat dq1, dq2, dq3, dq4, dq5, dq6;            
-//             dq1 = q1U-q1M;
-//             dq2 = q2U-q2M;
-//             dq3 = q3U-q3M;
-//             dq4 = q4U-q4M;
-//             dq5 = q5U-q5M;
-//             dq6 = q6U-q6M;
+            // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
+            const dfloat sc = invJ*sJ;
 
-//             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
-//             s_fluxq[es][0][n] = sc*p_sqrtRT*(-nx*dq2-ny*dq3);
-//             s_fluxq[es][1][n] = sc*p_sqrtRT*(-nx*(dq1+p_sqrt2*dq5)-ny*dq4);
-//             s_fluxq[es][2][n] = sc*p_sqrtRT*(-nx*dq4-ny*(dq1+p_sqrt2*dq6));
-//             s_fluxq[es][3][n] = sc*p_sqrtRT*(-nx*dq3-ny*dq2);
-//             s_fluxq[es][4][n] = sc*p_sqrtRT*(-nx*p_sqrt2*dq2);
-//             s_fluxq[es][5][n] = sc*p_sqrtRT*(-ny*p_sqrt2*dq3);  
-//         }
-//        }
-//       }
-//     }
+            for(int fld=0; fld<p_Nfields; fld++){
+              s_nxdq[es][fld][n] = sc*nx*r_dq[fld];
+              s_nydq[es][fld][n] = sc*ny*r_dq[fld];
+              s_nzdq[es][fld][n] = sc*nz*r_dq[fld];
+            }            
+          }
+        }
+      }
+    }
     
-//     // wait for all shared memory writes of the previous inner loop to complete
-//     barrier(localMemFence);
+    // wait for all shared memory writes of the previous inner loop to complete
+    barrier(localMemFence);
 
-//     // for each node in the element
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxNodes;++n;inner0){
-//         int et = eo + es;
-//         if(et<Nelements){
-//           if(n<p_Np){
-//             const int id = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;inner1){
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        const dlong et = eo + es;
+        if(et<pmlNelements){
+            if(n<p_Np){
+              // load rhs data from volume fluxes
 
-//             dfloat rhsq1 = rhsq[id+0];
-//             dfloat rhsq2 = rhsq[id+1];
-//             dfloat rhsq3 = rhsq[id+2];
-//             dfloat rhsq4 = rhsq[id+3];
-//             dfloat rhsq5 = rhsq[id+4];
-//             dfloat rhsq6 = rhsq[id+5];
+              dfloat r_lnxdq[p_Nfields], r_lnydq[p_Nfields], r_lnzdq[p_Nfields];
 
-//             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-//             occaUnroll(p_NfacesNfp)
-//               for(int m=0;m<p_NfacesNfp;++m){
-//                 dfloat L = LIFTT[n+m*p_Np];
-//                 rhsq1 += L*s_fluxq[es][0][m];
-//                 rhsq2 += L*s_fluxq[es][1][m];
-//                 rhsq3 += L*s_fluxq[es][2][m];
-//                 rhsq4 += L*s_fluxq[es][3][m];
-//                 rhsq5 += L*s_fluxq[es][4][m];
-//                 rhsq6 += L*s_fluxq[es][5][m];
-//               }
+              occaUnroll(p_Nfields)
+              for(int fld=0; fld<p_Nfields; fld++){
+                r_lnxdq[fld] = 0.f; 
+                r_lnydq[fld] = 0.f; 
+                r_lnzdq[fld] = 0.f; 
+              }
+             
+            // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+            occaUnroll(p_NfacesNfp)
+            for(int m=0;m<p_NfacesNfp;++m){
+              const dfloat L = LIFTT[n+m*p_Np];
+              occaUnroll(p_Nfields)
+              for(int fld=0; fld<p_Nfields; fld++){
+                r_lnxdq[fld] = L*s_nxdq[es][fld][m];
+                r_lnydq[fld] = L*s_nydq[es][fld][m];
+                r_lnzdq[fld] = L*s_nzdq[es][fld][m];
+              }
+            }
+
+            const dlong pmlId    = pmlIds[et];
+            const dlong rhsId    = e*p_Nfields*p_Np + n     + shift*offset ;
+            const dlong pmlrhsId = pmlId*p_Nfields*p_Np + n + shift*pmloffset;
           
-//             rhsq[id+0] = rhsq1;
-//             rhsq[id+1] = rhsq2;
-//             rhsq[id+2] = rhsq3;
-//             rhsq[id+3] = rhsq4;
-//             rhsq[id+4] = rhsq5;
-//             rhsq[id+5] = rhsq6;
-//          }
-//         }
-//       }
-//     }
-//   }
-// }
+            dfloat r_Aqx[p_Nfields],r_Bqy[p_Nfields],r_Cqz[p_Nfields]; 
+            occaUnroll(p_Nfields)
+            for(int fld=0; fld<p_Nfields; fld++){
+              r_Aqx[fld] = 0.f; 
+              r_Bqy[fld] = 0.f;  
+              r_Cqz[fld] = 0.f; 
+            }
 
+            r_Aqx[0]  = -p_sqrtRT*(r_lnxdq[1]);
+            r_Aqx[1]  = -p_sqrtRT*(r_lnxdq[0]+p_sqrt2*r_lnxdq[7]);
+            r_Aqx[2]  = -p_sqrtRT*(r_lnxdq[4]);
+            r_Aqx[3]  = -p_sqrtRT*(r_lnxdq[5]);
+            r_Aqx[4]  = -p_sqrtRT*(r_lnxdq[2]);
+            r_Aqx[5]  = -p_sqrtRT*(r_lnxdq[3]);
+            r_Aqx[7]  = -p_sqrtRT*p_sqrt2*(r_lnxdq[1]);
 
+            r_Bqy[0]  = -p_sqrtRT*(r_lnydq[2]);
+            r_Bqy[1]  = -p_sqrtRT*(r_lnydq[4]);  
+            r_Bqy[2]  = -p_sqrtRT*(r_lnydq[0] + p_sqrt2*r_lnydq[8]);  
+            r_Bqy[3]  = -p_sqrtRT*(r_lnydq[6]);
+            r_Bqy[4]  = -p_sqrtRT*(r_lnydq[1]);  
+            r_Bqy[6]  = -p_sqrtRT*(r_lnydq[3]);  
+            r_Bqy[8]  = -p_sqrtRT*(p_sqrt2*r_lnydq[2]);
 
+            r_Cqz[0]  = -p_sqrtRT*(r_lnzdq[3]);
+            r_Cqz[1]  = -p_sqrtRT*(r_lnzdq[5]); 
+            r_Cqz[2]  = -p_sqrtRT*(r_lnzdq[6]); 
+            r_Cqz[3]  = -p_sqrtRT*(r_lnzdq[0] + p_sqrt2*r_lnzdq[9]);
+            r_Cqz[5]  = -p_sqrtRT*(r_lnzdq[1]);
+            r_Cqz[6]  = -p_sqrtRT*(r_lnzdq[2]);
+            r_Cqz[9]  = -p_sqrtRT*(p_sqrt2*r_lnzdq[3]);
 
-
-// // batch process elements
-// kernel void boltzmannMRPmlSurfaceTri2D(const int pmlNelements,
-//                         const int   * restrict pmlElementIds,
-//                         const int   * restrict pmlIds,
-//                         const dfloat time,
-//                         const dfloat ramp,
-//                         const int nrhs,
-//                         const int shift,
-//                         const dfloat * restrict sgeo,
-//                         const dfloat * restrict LIFTT,
-//                         const int   * restrict vmapM,
-//                         const int   * restrict mapP,
-//                         const int   * restrict EToB,
-//                         const dfloat * restrict x,
-//                         const dfloat * restrict y,              
-//                         const dfloat * restrict q,
-//                         const dfloat * restrict fQM,
-//                               dfloat * restrict rhsq,
-//                               dfloat * restrict pmlrhsqx,
-//                               dfloat * restrict pmlrhsqy){
-  
-//   // for all elements
-//   for(int eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
-//     // shared storage for flux terms
-//     shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
-//     shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
-//     shared dfloat s_nxdq3[p_NblockS][p_maxNodes];
-//     shared dfloat s_nxdq4[p_NblockS][p_maxNodes];
-//     shared dfloat s_nxdq5[p_NblockS][p_maxNodes];
-//     shared dfloat s_nxdq6[p_NblockS][p_maxNodes];
-
-//     shared dfloat s_nydq1[p_NblockS][p_maxNodes];
-//     shared dfloat s_nydq2[p_NblockS][p_maxNodes];
-//     shared dfloat s_nydq3[p_NblockS][p_maxNodes];
-//     shared dfloat s_nydq4[p_NblockS][p_maxNodes];
-//     shared dfloat s_nydq5[p_NblockS][p_maxNodes];
-//     shared dfloat s_nydq6[p_NblockS][p_maxNodes];
-
-//     exclusive int e;
-
-//     // for all face nodes of all elements
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-//         int et = eo + es;
-//         if(et<pmlNelements){
-//             e = pmlElementIds[et];
-
-//             if(n<p_NfacesNfp){
-//         // find face that owns this node
-//             int face = n/p_Nfp;          
-            
-//             // load surface geofactors for this face
-//             const int sid = p_Nsgeo*(e*p_Nfaces+face);
-//             const dfloat nx   = sgeo[sid+p_NXID];
-//             const dfloat ny   = sgeo[sid+p_NYID];
-//             const dfloat sJ   = sgeo[sid+p_SJID];
-//             const dfloat invJ = sgeo[sid+p_IJID];     
-
-//             // indices of negative and positive traces of face node
-//             const int id  = e*p_Nfp*p_Nfaces + n;
-//             const int idM = id*p_Nfields;
-//             const int idP = mapP[id]*p_Nfields;
-    
-//             // Read trace values
-//             dfloat q1M = fQM[idM + 0], q1P = fQM[idP + 0];
-//             dfloat q2M = fQM[idM + 1], q2P = fQM[idP + 1];
-//             dfloat q3M = fQM[idM + 2], q3P = fQM[idP + 2];
-//             dfloat q4M = fQM[idM + 3], q4P = fQM[idP + 3];
-//             dfloat q5M = fQM[idM + 4], q5P = fQM[idP + 4];
-//             dfloat q6M = fQM[idM + 5], q6P = fQM[idP + 5];
-        
-//             // apply boundary condition
-//             int bc = EToB[face+p_Nfaces*e];
-//             if(bc>0){
-//                 const int idB = vmapM[id];
-//                 boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp,
-//                                     q1M, q2M, q3M, q4M, q5M, q6M,
-//                                     &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);
-//             }
-        
-//             // compute (q^*)
-//             dfloat q1U, q2U, q3U, q4U, q5U, q6U;            
-
-//             upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, &q1U, &q2U, &q3U, &q4U, &q5U, &q6U);
-
-//               // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
-//             const dfloat sc = invJ*sJ;
-
-//             s_nxdq1[es][n] = sc*(nx*(q1U-q1M));
-//             s_nxdq2[es][n] = sc*(nx*(q2U-q2M));
-//             s_nxdq3[es][n] = sc*(nx*(q3U-q3M));
-//             s_nxdq4[es][n] = sc*(nx*(q4U-q4M));
-//             s_nxdq5[es][n] = sc*(nx*(q5U-q5M));
-//             s_nxdq6[es][n] = sc*(nx*(q6U-q6M));
-            
-//             s_nydq1[es][n] = sc*(ny*(q1U-q1M));
-//             s_nydq2[es][n] = sc*(ny*(q2U-q2M));
-//             s_nydq3[es][n] = sc*(ny*(q3U-q3M));
-//             s_nydq4[es][n] = sc*(ny*(q4U-q4M));
-//             s_nydq5[es][n] = sc*(ny*(q5U-q5M));
-//             s_nydq6[es][n] = sc*(ny*(q6U-q6M));
-//           }
-//         }
-//       }
-//     }
-    
-//     // wait for all shared memory writes of the previous inner loop to complete
-//     barrier(localMemFence);
-
-//     // for each node in the element
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxNodes;++n;inner0){
-//         const int et = eo + es;
-//         if(et<pmlNelements){
-//             if(n<p_Np){
-//                  // load rhs data from volume fluxes
-//         dfloat Lnxdq1 = 0.f, Lnxdq2 = 0.f, Lnxdq3 = 0.f, Lnxdq4 = 0.f, Lnxdq5 = 0.f, Lnxdq6 = 0.f;
-//         dfloat Lnydq1 = 0.f, Lnydq2 = 0.f, Lnydq3 = 0.f, Lnydq4 = 0.f, Lnydq5 = 0.f, Lnydq6 = 0.f;
-        
-//         // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-//         occaUnroll(p_NfacesNfp)
-//         for(int m=0;m<p_NfacesNfp;++m){
-//           const dfloat L = LIFTT[n+m*p_Np];
-//           Lnxdq1 += L*s_nxdq1[es][m];
-//           Lnxdq2 += L*s_nxdq2[es][m];
-//           Lnxdq3 += L*s_nxdq3[es][m];
-//           Lnxdq4 += L*s_nxdq4[es][m];
-//           Lnxdq5 += L*s_nxdq5[es][m];
-//           Lnxdq6 += L*s_nxdq6[es][m];
-          
-//           Lnydq1 += L*s_nydq1[es][m];
-//           Lnydq2 += L*s_nydq2[es][m];
-//           Lnydq3 += L*s_nydq3[es][m];
-//           Lnydq4 += L*s_nydq4[es][m];
-//           Lnydq5 += L*s_nydq5[es][m];
-//           Lnydq6 += L*s_nydq6[es][m];
-//         }
+            occaUnroll(p_Nfields)
+            for(int fld=0; fld<p_Nfields; fld++){
+              pmlrhsqx[pmlrhsId + fld*p_Np] += r_Aqx[fld];
+              pmlrhsqy[pmlrhsId + fld*p_Np] += r_Bqy[fld];
+              pmlrhsqz[pmlrhsId + fld*p_Np] += r_Cqz[fld];
+              rhsq[rhsId+fld*p_Np]          += (r_Aqx[fld] + r_Bqy[fld] + r_Cqz[fld]); 
+            }
 
         
-//         dfloat Aqx1 = -p_sqrtRT*(Lnxdq2);
-//         dfloat Aqx2 = -p_sqrtRT*(Lnxdq1+p_sqrt2*Lnxdq5);
-//         dfloat Aqx3 = -p_sqrtRT*(Lnxdq4);
-//         dfloat Aqx4 = -p_sqrtRT*(Lnxdq3);
-//         dfloat Aqx5 = -p_sqrtRT*(p_sqrt2*Lnxdq2);
-//         dfloat Aqx6 =  0.f;
+        }
+      }
+      }
+    }
+  }
+}
 
-//         dfloat Bqy1 = -p_sqrtRT*(Lnydq3);
-//         dfloat Bqy2 = -p_sqrtRT*(Lnydq4);
-//         dfloat Bqy3 = -p_sqrtRT*(Lnydq1+p_sqrt2*Lnydq6);
-//         dfloat Bqy4 = -p_sqrtRT*(Lnydq2);
-//         dfloat Bqy5 =  0.f;
-//         dfloat Bqy6 = -p_sqrtRT*(p_sqrt2*Lnydq3);
-
-//         // const int e  = pmlElementIds[et];
-//         const int pmlId    = pmlIds[et];
-//         const int rhsId    = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
-//         const int pmlrhsId = nrhs*p_Nfields*(p_Np*pmlId + n) + p_Nfields*shift;
-
-//         // Update 
-//         pmlrhsqx[pmlrhsId+0] += Aqx1; 
-//         pmlrhsqx[pmlrhsId+1] += Aqx2; 
-//         pmlrhsqx[pmlrhsId+2] += Aqx3; 
-//         pmlrhsqx[pmlrhsId+3] += Aqx4; 
-//         pmlrhsqx[pmlrhsId+4] += Aqx5; 
-//         pmlrhsqx[pmlrhsId+5] += Aqx6; 
-
-//         pmlrhsqy[pmlrhsId+0] += Bqy1; 
-//         pmlrhsqy[pmlrhsId+1] += Bqy2; 
-//         pmlrhsqy[pmlrhsId+2] += Bqy3; 
-//         pmlrhsqy[pmlrhsId+3] += Bqy4; 
-//         pmlrhsqy[pmlrhsId+4] += Bqy5; 
-//         pmlrhsqy[pmlrhsId+5] += Bqy6; 
-
-//         rhsq[rhsId+0] += (Aqx1 + Bqy1); 
-//         rhsq[rhsId+1] += (Aqx2 + Bqy2); 
-//         rhsq[rhsId+2] += (Aqx3 + Bqy3); 
-//         rhsq[rhsId+3] += (Aqx4 + Bqy4); 
-//         rhsq[rhsId+4] += (Aqx5 + Bqy5); 
-//         rhsq[rhsId+5] += (Aqx6 + Bqy6); 
-//         //
-//       }
-//     }
-//       }
-//     }
-//   }
-// }
