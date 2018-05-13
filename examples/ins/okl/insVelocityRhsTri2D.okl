@@ -1,5 +1,5 @@
 // rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
-kernel void insVelocityRhsTri2D(const dlong Nelements,
+kernel void insVelocityRhsARKTri2D(const dlong Nelements,
                                 const int stage,  
                                 const dfloat * restrict vgeo,
                                 const dfloat * restrict MM,
@@ -11,6 +11,7 @@ kernel void insVelocityRhsTri2D(const dlong Nelements,
                                 const dlong fieldOffset,
                                 const dfloat * restrict U,
                                 const dfloat * restrict NU,
+                                const dfloat * restrict LU,
                                 const dfloat * restrict GP,
                                       dfloat * restrict rhsU,
                                       dfloat * restrict rhsV,
@@ -33,20 +34,118 @@ kernel void insVelocityRhsTri2D(const dlong Nelements,
 
           for (int s=0;s<stage;s++) {
             // NU
-            s_rhsU[es][n] -= erkA[stage*p_NRKstages+s]*NU[id+0*fieldOffset + s*p_NVfields*fieldOffset];
-            s_rhsV[es][n] -= erkA[stage*p_NRKstages+s]*NU[id+1*fieldOffset + s*p_NVfields*fieldOffset];
+            s_rhsU[es][n] -= erkA[stage*(p_Nstages+1)+s]*NU[id+0*fieldOffset + s*p_NVfields*fieldOffset];
+            s_rhsV[es][n] -= erkA[stage*(p_Nstages+1)+s]*NU[id+1*fieldOffset + s*p_NVfields*fieldOffset];
 
             // LU
-            s_rhsU[es][n] += irkA[stage*p_NRKstages+s]*LU[id+0*fieldOffset + s*p_NVfields*fieldOffset];
-            s_rhsV[es][n] += irkA[stage*p_NRKstages+s]*LU[id+1*fieldOffset + s*p_NVfields*fieldOffset];
+            s_rhsU[es][n] += irkA[stage*(p_Nstages+1)+s]*LU[id+0*fieldOffset + s*p_NVfields*fieldOffset];
+            s_rhsV[es][n] += irkA[stage*(p_Nstages+1)+s]*LU[id+1*fieldOffset + s*p_NVfields*fieldOffset];
 
             // GP
-            s_rhsU[es][n] -= prkA[stage*p_NRKstages+s]*GP[id+0*fieldOffset + s*p_NVfields*fieldOffset];
-            s_rhsV[es][n] -= prkA[stage*p_NRKstages+s]*GP[id+1*fieldOffset + s*p_NVfields*fieldOffset];
+            s_rhsU[es][n] -= prkA[stage*(p_Nstages+1)+s]*GP[id+0*fieldOffset + s*p_NVfields*fieldOffset];
+            s_rhsV[es][n] -= prkA[stage*(p_Nstages+1)+s]*GP[id+1*fieldOffset + s*p_NVfields*fieldOffset];
           }
 
-          s_rhsU[es][n] *= J*inu/irkA[stage*p_NRKstages+stage];
-          s_rhsV[es][n] *= J*inu/irkA[stage*p_NRKstages+stage];
+          s_rhsU[es][n] *= J*inu/irkA[stage*(p_Nstages+1)+stage];
+          s_rhsV[es][n] *= J*inu/irkA[stage*(p_Nstages+1)+stage];
+        }
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          // Multiplay with Mass Matrix
+          const dlong id = e*p_Np+n;
+
+          dfloat rhsu = 0.f, rhsv = 0.f;
+          occaUnroll(p_Np)
+            for(int i=0;i<p_Np;++i){
+              const dfloat M = MM[n+i*p_Np];
+              rhsu  += M*s_rhsU[es][i];
+              rhsv  += M*s_rhsV[es][i];
+            }
+          // Update
+          rhsU[id] = rhsu;
+          rhsV[id] = rhsv;
+        }
+      }
+    }
+  }
+}
+
+
+// rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
+kernel void insVelocityRhsEXTBDFTri2D(const dlong Nelements,
+                                const dfloat * restrict vgeo,
+                                const dfloat * restrict MM,
+                                const dfloat idt,
+                                const dfloat inu,
+                                const dfloat * restrict extbdfA,
+                                const dfloat * restrict extbdfB,
+                                const dfloat * restrict extbdfC,
+                                const dlong fieldOffset,
+                                const dfloat * restrict U,
+                                const dfloat * restrict NU,
+                                const dfloat * restrict GP,
+                                      dfloat * restrict rhsU,
+                                      dfloat * restrict rhsV,
+                                      dfloat * restrict rhsW){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+
+    shared dfloat s_rhsU[p_NblockV][p_Np];
+    shared dfloat s_rhsV[p_NblockV][p_Np];
+
+    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
+      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          const dlong id = n + p_Np*e;
+          const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+
+          if (p_SUBCYCLING) {
+            //NU holds \hat{U} after subcycling
+            const dfloat NUm = NU[id+0*fieldOffset];
+            const dfloat NVm = NU[id+1*fieldOffset];
+
+            s_rhsU[es][n] = J*inu*idt*NUm;
+            s_rhsV[es][n] = J*inu*idt*NVm;
+
+            for (int s=0;s<p_Nstages;s++) {
+              // GP
+              const dfloat GPx  = GP[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+
+              s_rhsU[es][n] -= J*inu*extbdfC[s]*GPx;
+              s_rhsV[es][n] -= J*inu*extbdfC[s]*GPy;
+            }
+
+          } else {
+            s_rhsU[es][n] = 0.;
+            s_rhsV[es][n] = 0.;
+
+            for (int s=0;s<p_Nstages;s++) {
+              //U 
+              const dfloat Um  = U[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat Vm  = U[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+
+              // NU
+              const dfloat NUm  = NU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat NVm  = NU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+
+              // GP
+              const dfloat GPx  = GP[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+
+              s_rhsU[es][n] += J*inu*(idt*extbdfB[s]*Um - extbdfA[s]*NUm - extbdfC[s]*GPx);
+              s_rhsV[es][n] += J*inu*(idt*extbdfB[s]*Vm - extbdfA[s]*NVm - extbdfC[s]*GPy);
+            }
+          }
         }
       }
     }

@@ -53,12 +53,19 @@ insSetup.o \
 insPlotVTU.o \
 insError.o \
 insReport.o \
-insRun.o \
-insAdvectionStep.o \
-insAdvectionSubCycleStep.o \
-insHelmholtzStep.o \
-insPoissonStep.o \
-insUpdateStep.o 
+insRunARK.o \
+insRunEXTBDF.o \
+insAdvection.o \
+insDiffusion.o \
+insGradient.o \
+insDivergence.o \
+insSubCycle.o \
+insVelocityRhs.o \
+insVelocitySolve.o \
+insVelocityUpdate.o \
+insPressureRhs.o \
+insPressureSolve.o \
+insPressureUpdate.o 
 
 # library objects
 LOBJS = \

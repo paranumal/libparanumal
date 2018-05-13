@@ -653,6 +653,7 @@ extern "C"
 {
   void *gsParallelGatherScatterSetup(dlong Ngather, hlong *gatherIds, int verbose);
   void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
+  void gsVecParallelGatherScatter(void *gsh, void *v, int k, const char *type, const char *op);
   void gsParallelGatherScatterDestroy(void *gsh);
 
   void * xxtSetup(uint num_local_rows,

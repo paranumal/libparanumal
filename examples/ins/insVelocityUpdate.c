@@ -1,7 +1,6 @@
 #include "ins.h"
 
 void insVelocityUpdate(ins_t *ins, dfloat time, int stage, 
-                        occa::memory o_rkP,
                         occa::memory o_rkGP,
                         occa::memory o_rkU){
 
@@ -14,9 +13,7 @@ void insVelocityUpdate(ins_t *ins, dfloat time, int stage,
                               ins->dt,
                               ins->fieldOffset,
                               ins->o_prkA,
-                              o_rkP,
                               o_rkGP,
-                              ins->o_P,
                               ins->o_GP,
                               o_rkU);
   occaTimerToc(mesh->device,"VelocityUpdate");

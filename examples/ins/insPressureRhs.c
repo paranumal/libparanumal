@@ -1,20 +1,20 @@
 #include "ins.h"
 
-void insPressureRhs(ins_t *ins, dfloat time, stage){
+void insPressureRhs(ins_t *ins, dfloat time, int stage){
 
   mesh_t *mesh = ins->mesh;
 
   // rhsP = Div Uhat
-  insDivergence(ins, time, ins->o_Uhat, ins->o_rhsP);
+  insDivergence(ins, time, ins->o_rkU, ins->o_rhsP);
   
   // rhsP = -MM*Div Uhat/pa_ss dt
-  dfloat g0 = 1.0/ins->prk[stage->ins->Nstages+stage];
+  //dfloat g0 = 1.0/ins->prkA[stage->ins->Nstages+stage];
   occaTimerTic(mesh->device,"PoissonRhsForcing");
   ins->pressureRhsKernel(mesh->Nelements,
                               mesh->o_vgeo,
                               mesh->o_MM,
                               ins->idt,  
-                              g0,
+                              ins->g0,
                               ins->o_rhsP);
   occaTimerToc(mesh->device,"PoissonRhsForcing");
 

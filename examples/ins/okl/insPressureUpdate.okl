@@ -14,7 +14,13 @@ kernel void insPressureUpdate(const dlong Nelements,
       dfloat rkPn = PI[id];
 
       for (int s=0;s<stage;s++) {
-        rkPn += prkA[stage*p_NRKstages+s]*P[id+s*fieldOffset];
+        #if ARKSWITCH
+        dfloat prkAn = prkA[stage*(p_Nstages+1)+s];
+        #else
+        dfloat prkAn = prkA[s];
+        #endif
+        
+        rkPn += prkAn*P[id+s*fieldOffset];
       }
 
       rkP[id] = rkPn;      

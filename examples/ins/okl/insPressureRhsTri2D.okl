@@ -4,6 +4,7 @@ kernel void insPressureRhsTri2D(const dlong Nelements,
                                 const dfloat * restrict vgeo,
                                 const dfloat * restrict MM,
                                 const dfloat idt,
+                                const dfloat g0,
                                       dfloat * restrict rhsP){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
@@ -38,7 +39,7 @@ kernel void insPressureRhsTri2D(const dlong Nelements,
             }
 
           const dlong id = e*p_Np+n;
-          rhsP[id] = -J*rhsn*idt;
+          rhsP[id] = -J*g0*rhsn*idt;
         }
       }
     }

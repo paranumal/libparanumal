@@ -1,23 +1,24 @@
 #include "ins.h"
 
 // solve Ap = rhsP
-void insPressureSolve(ins_t *ins, dfloat time){
+void insPressureSolve(ins_t *ins, dfloat time, int stage){
 
   mesh_t *mesh = ins->mesh;
   elliptic_t *solver = ins->pSolver;
-  
+
   if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-    ins->poissonRhsBCKernel(mesh->Nelements,
+    ins->pressureRhsBCKernel(mesh->Nelements,
                             mesh->o_ggeo,
                             mesh->o_sgeo,
                             mesh->o_Dmatrices,
                             mesh->o_Smatrices,
-                            mesh->o_MM,
                             mesh->o_vmapM,
                             mesh->o_sMT,
                             time,
                             ins->dt,
-                            ins->c0, ins->c1, ins->c2,
+                            stage,
+                            ins->o_rkC,
+                            ins->o_prkA,
                             mesh->o_x,
                             mesh->o_y,
                             mesh->o_z,
@@ -25,12 +26,14 @@ void insPressureSolve(ins_t *ins, dfloat time){
                             ins->o_rhsP);
   } else if (ins->pOptions.compareArgs("DISCRETIZATION","IPDG")) {
     occaTimerTic(mesh->device,"PoissonRhsIpdg"); 
-    ins->poissonRhsIpdgBCKernel(mesh->Nelements,
+    ins->pressureRhsIpdgBCKernel(mesh->Nelements,
                                   mesh->o_vmapM,
                                   solver->tau,
                                   time,
                                   ins->dt,
-                                  ins->c0, ins->c1, ins->c2,
+                                  stage,
+                                  ins->o_rkC,
+                                  ins->o_prkA,
                                   mesh->o_x,
                                   mesh->o_y,
                                   mesh->o_z,
@@ -58,10 +61,12 @@ void insPressureSolve(ins_t *ins, dfloat time){
   occaTimerToc(mesh->device,"Pr Solve"); 
 
   if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-    ins->poissonAddBCKernel(mesh->Nelements,
+    ins->pressureAddBCKernel(mesh->Nelements,
                             time,
                             ins->dt,
-                            ins->c0, ins->c1, ins->c2,
+                            stage,
+                            ins->o_rkC,
+                            ins->o_prkA,
                             mesh->o_x,
                             mesh->o_y,
                             mesh->o_z,

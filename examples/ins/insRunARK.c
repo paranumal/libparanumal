@@ -21,25 +21,8 @@ void insRunARK(ins_t *ins){
   dfloat facold     = 1E-4;
 
 
-
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"INS");
-
-  // int NstokesSteps = 0;
-  // dfloat oldDt = ins->dt;
-  // ins->dt *= 100;
-
-  // if (rank ==0) printf("Running Initial Stokes Solve:\n");
-  // for(int tstep=0;tstep<NstokesSteps;++tstep){
-    
-
-  //   if (rank==0) printf("\rSstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
-  // }
-
-  // if (rank==0) printf("\n");
-
-  // ins->dt = oldDt;
-
 
   // Write Initial Data
   insReport(ins, 0);
@@ -47,7 +30,7 @@ void insRunARK(ins_t *ins){
 
   ins->tstep = 0;
   int done = 0;
-  dfloat time = ins->startTime;
+  ins->time = ins->startTime;
   while (!done) {
 
     if (ins->dt<ins->dtMIN){
@@ -65,47 +48,47 @@ void insRunARK(ins_t *ins){
       done = 1;
     }
 
-    insAdvection(ins, time, ins->o_U, ins->o_NU);
-    insDiffusion(ins, time, ins->o_U, ins->o_LU);
-    insGradient (ins, time, ins->o_P, ins->o_GP);
+    insAdvection(ins, ins->time, ins->o_U, ins->o_NU);
+    insDiffusion(ins, ins->time, ins->o_U, ins->o_LU);
+    insGradient (ins, ins->time, ins->o_P, ins->o_GP);
 
-    for(int stage=1;stage<=ins->NrkStages;++stage){
+    for(int stage=1;stage<=ins->Nstages;++stage){
 
       // intermediate stage time
-      dfloat stageTime = time + ins->rkC[stage]*ins->dt;
+      dfloat stageTime = ins->time + ins->rkC[stage]*ins->dt;
 
-      insVelocityRhs  (ins, time, stage, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
-      insVelocitySolve(ins, time, stage, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
+      insVelocityRhs  (ins, stageTime, stage, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
+      insVelocitySolve(ins, stageTime, stage, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
-      insPressureRhs  (ins, time, stage);
-      insPressureSolve(ins, time, stage);      
+      insPressureRhs  (ins, stageTime, stage);
+      insPressureSolve(ins, stageTime, stage);      
 
-      insPressureUpdate(ins, time, stage, ins->o_rkP);
-      insGradient(ins, time, ins->o_rkP, ins->o_rkGP);
+      insPressureUpdate(ins, stageTime, stage, ins->o_rkP);
+      insGradient(ins, stageTime, ins->o_rkP, ins->o_rkGP);
 
-      insVelocityUpdate(ins, time, stage, ins->o_rkP, ins->o_rkGP, ins->o_rkU);
+      insVelocityUpdate(ins, stageTime, stage, ins->o_rkGP, ins->o_rkU);
       
       //compute and save NU and LU
-      insAdvection(ins, time, ins->o_rkU, ins->o_rkNU);
-      insDiffusion(ins, time, ins->o_rkU, ins->o_rkLU); 
+      insAdvection(ins, stageTime, ins->o_rkU, ins->o_rkNU);
+      insDiffusion(ins, stageTime, ins->o_rkU, ins->o_rkLU); 
       ins->o_NU.copyFrom(ins->o_rkNU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
       ins->o_LU.copyFrom(ins->o_rkLU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
 
-      if (stage==ins->NrkStages) break; //final stage
+      if (stage==ins->Nstages) break; //final stage
       ins->o_U.copyFrom(ins->o_rkU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
       ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat), stage*ins->Ntotal*sizeof(dfloat), 0);
       ins->o_GP.copyFrom(ins->o_rkGP, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
     } 
 
     occaTimerTic(mesh->device,"Report");
-    if(((tstep+1)%(ins->outputStep))==0){
-      if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
-      if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
-      insReport(ins, tstep+1);
+    if(((ins->tstep+1)%(ins->outputStep))==0){
+      if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
+      if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
+      insReport(ins, ins->tstep+1);
     }
 
-    if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
-    if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
+    if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
+    if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
     occaTimerToc(mesh->device,"Report");
 
 
@@ -113,6 +96,8 @@ void insRunARK(ins_t *ins){
       //accept the step and proceed
       ins->o_U.copyFrom(ins->o_rkU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
       ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat), 0);
+      ins->tstep++;
+      ins->time += ins->dt;
       continue;
     }
 /*
@@ -152,7 +137,7 @@ void insRunARK(ins_t *ins){
       facold = mymax(err,1E-4);
       ins->time += ins->dt;
 
-      ins->tstep++;
+      ins->ins->tstep++;
     }else{
       ins->rtstep++; 
       dtnew = ins->dt/(mymax(invfactor1,fac1/safe));
@@ -162,7 +147,7 @@ void insRunARK(ins_t *ins){
     ins->dt = dtnew;
     ins->atstep++;
 
-    printf("\rTime = %.4e (%d). Average Dt = %.4e, Rejection rate = %.2g   ", time, tstep, time/(dfloat)tstep, Nregect/(dfloat) tstep); fflush(stdout);
+    printf("\rTime = %.4e (%d). Average Dt = %.4e, Rejection rate = %.2g   ", time, ins->tstep, time/(dfloat)ins->tstep, Nregect/(dfloat) ins->tstep); fflush(stdout);
   */
   }
   occaTimerToc(mesh->device,"INS");
