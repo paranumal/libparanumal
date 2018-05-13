@@ -1,6 +1,8 @@
 // Only difference with boltzmannVolume2D is size of rhsq and shifting
 kernel void bnsVolumeTet3D(const dlong Nelements,
                           const dlong * restrict elementIds,
+                          const dlong offset,
+                          const int shift,
                           const dfloat ramp,
                           const dfloat drampdt,
                           const dfloat * restrict vgeo,
@@ -91,6 +93,7 @@ kernel void bnsVolumeTet3D(const dlong Nelements,
         r_rhsq[4] = -p_sqrtRT*(r_dqdx[2] + r_dqdy[1]);
         r_rhsq[5] = -p_sqrtRT*(r_dqdx[3] + r_dqdz[1]);
         r_rhsq[6] = -p_sqrtRT*(r_dqdy[3] + r_dqdz[2]);
+        
         r_rhsq[7] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
         r_rhsq[8] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
         r_rhsq[9] = -p_sqrtRT*p_sqrt2*r_dqdz[3];        
@@ -106,12 +109,19 @@ kernel void bnsVolumeTet3D(const dlong Nelements,
         r_rhsq[8] += 2.f*ramp*drampdt*p_q9bar;
         r_rhsq[9] += 2.f*ramp*drampdt*p_q10bar;
 
-         // Update 
-        const dlong id = e*p_Nfields*p_Np + n;
-       
-        for(int fld=0; fld<p_Nfields;++fld){
-          rhsq[id + fld*p_Np] = r_rhsq[fld];
+        // Update 
+        const dlong id    = e*p_Nfields*p_Np + n;
+              dlong rhsId = id;
+
+        if(p_MRSAAB){
+          rhsId   += shift*offset;  
         }
+
+        for(int fld=0; fld<p_Nfields;++fld){
+          rhsq[rhsId + fld*p_Np] = r_rhsq[fld];
+        }
+
+
       }
     }
   }
@@ -124,6 +134,9 @@ kernel void bnsVolumeTet3D(const dlong Nelements,
 kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
               const dlong * restrict pmlElementIds,
               const dlong * restrict pmlIds,
+              const dlong offset,
+              const dlong pmloffset,
+              const int   shift,
               const dfloat ramp,
               const dfloat drampdt,
               const dfloat * restrict vgeo,
@@ -177,14 +190,14 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
         const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
         const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
         const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
-
+        
         // compute 'r' and 's' derivatives of (q_m) at node n
         dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields], r_dqdt[p_Nfields]; 
         dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields], r_dqdz[p_Nfields];
         dfloat r_Aqx[p_Nfields],  r_Bqy[p_Nfields],  r_Cqz[p_Nfields];
         dfloat r_N[p_Nfields];
         
-        // Initialize
+       // Initialize
         occaUnroll(p_Nfields)
         for(int fld=0; fld<p_Nfields;++fld){
           r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f, r_dqdt[fld] = 0.f;
@@ -192,8 +205,7 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
           r_Aqx[fld]  = 0.f, r_Bqy[fld]  = 0.f, r_Cqz[fld]  = 0.f;
           r_N[fld]    = 0.f;
          }
-        
-            
+    
         // Compute local derivatives
         occaUnroll(p_Np)
         for(int i=0;i<p_Np;++i){
@@ -207,7 +219,7 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
            r_dqdt[fld] += Dtni*s_q[es][fld][i];
          }
         }
-      
+        
         // Compute derivatives in physical coordinates 
         occaUnroll(p_Nfields)
         for(int fld=0; fld<p_Nfields;++fld){
@@ -216,8 +228,8 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
           r_dqdz[fld] = drdz*r_dqdr[fld] + dsdz*r_dqds[fld] + dtdz*r_dqdt[fld];
         }
   
-        // Compute volume flux for q, qx, qy and qz
-        // A*dQ/dx transport operator
+        // Compute volume flux for q, qx and qy
+        // A*dQ/dx
         r_Aqx[0] = -p_sqrtRT*(r_dqdx[1]);
         r_Aqx[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[7]); 
         r_Aqx[2] = -p_sqrtRT*(r_dqdx[4]); 
@@ -227,9 +239,8 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
         r_Aqx[6] =  0.f;
         r_Aqx[7] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
         r_Aqx[8] =  0.f;        
-        r_Aqx[9] =  0.f;        
-
-        // B*dQ/dy transport operator
+        r_Aqx[9] =  0.f;       
+        // B*dQ/dy
         r_Bqy[0] = -p_sqrtRT*(r_dqdy[2]);
         r_Bqy[1] = -p_sqrtRT*(r_dqdy[4]); 
         r_Bqy[2] = -p_sqrtRT*(r_dqdy[0] + p_sqrt2*r_dqdy[8]); 
@@ -239,20 +250,20 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
         r_Bqy[6] = -p_sqrtRT*(r_dqdy[3]);
         r_Bqy[7] =  0.f;     
         r_Bqy[8] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
-        r_Bqy[9] =  0.f; 
+        r_Bqy[9] =  0.f;
 
-        // B*dQ/dy transport operator
+        // C*dq/dz
         r_Cqz[0] = -p_sqrtRT*(r_dqdz[3]);
         r_Cqz[1] = -p_sqrtRT*(r_dqdz[5]); 
         r_Cqz[2] = -p_sqrtRT*(r_dqdz[6]); 
         r_Cqz[3] = -p_sqrtRT*(r_dqdz[0] + p_sqrt2*r_dqdz[9]); 
         r_Cqz[4] =  0.f;
         r_Cqz[5] = -p_sqrtRT*(r_dqdz[1]);
-        r_Cqz[6] = -p_sqrtRT*(r_dqdz[2]);
+        r_Cqz[6] = -p_sqrtRT*(r_dqdz[2]);       
         r_Cqz[7] =  0.f;     
         r_Cqz[8] =  0.f;        
-        r_Cqz[9] = -p_sqrtRT*p_sqrt2*r_dqdz[3];               
-        
+        r_Cqz[9] = -p_sqrtRT*p_sqrt2*r_dqdz[3];              
+
         // mean flow forcing 
         r_N[0] = 0.f;
         r_N[1] = drampdt*p_q2bar;
@@ -264,17 +275,23 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
         r_N[7] = 2.f*ramp*drampdt*p_q8bar;
         r_N[8] = 2.f*ramp*drampdt*p_q9bar;
         r_N[9] = 2.f*ramp*drampdt*p_q10bar;
+ 
+        const dlong id       = e*p_Nfields*p_Np + n;
+              dlong rhsId    = id;
+              dlong pmlrhsId = p_Nfields*pmlId*p_Np + n;
 
-       
-        const dlong ids      = e*p_Nfields*p_Np + n;
-        const dlong pmlIds   = p_Nfields*pmlId*p_Np + n; 
-        
+        if(p_MRSAAB){
+          rhsId     += shift*offset;
+          pmlrhsId  += shift*pmloffset;
+        }
+          
         occaUnroll(p_Nfields)
         for(int fld=0; fld<p_Nfields; ++fld){
-          pmlrhsqx[pmlIds + fld*p_Np] =  r_Aqx[fld];
-          pmlrhsqy[pmlIds + fld*p_Np] =  r_Bqy[fld];
-          pmlrhsqz[pmlIds + fld*p_Np] =  r_Cqz[fld];
-          rhsq[ids +fld*p_Np]         =  r_Aqx[fld] + r_Bqy[fld] + r_Cqz[fld] + r_N[fld];  
+          pmlrhsqx[pmlrhsId + fld*p_Np] =  r_Aqx[fld];
+          pmlrhsqy[pmlrhsId + fld*p_Np] =  r_Bqy[fld];
+          pmlrhsqz[pmlrhsId + fld*p_Np] =  r_Cqz[fld];
+          rhsq[rhsId +fld*p_Np]         =  r_Aqx[fld] + r_Bqy[fld] + r_Cqz[fld] + r_N[fld];
+         
         }
 
       }
