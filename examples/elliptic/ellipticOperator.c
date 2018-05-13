@@ -17,6 +17,9 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   dfloat *tmp = elliptic->tmp;
   occa::memory &o_tmp = elliptic->o_tmp;
 
+  int one = 1;
+  dlong dOne = 1;
+
   if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
     ogs_t *ogs = elliptic->mesh->ogs;
 
@@ -29,7 +32,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
           mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
       mesh->device.finish();
       mesh->device.setStream(elliptic->dataStream);
-      mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, o_Aq, ogs->o_haloGatherTmp);
+      mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, o_Aq, ogs->o_haloGatherTmp);
       ogs->o_haloGatherTmp.asyncCopyTo(ogs->haloGatherTmp);
       mesh->device.setStream(elliptic->defaultStream);
     }
@@ -48,7 +51,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     }
 
     // finalize gather using local and global contributions
-    if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_Aq);
+    if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, one, dOne, o_Aq);
 
     // C0 halo gather-scatter (on data stream)
     if(ogs->NhaloGather) {
@@ -62,7 +65,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
     
       // do scatter back to local nodes
-      mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, ogs->o_haloGatherTmp, o_Aq);
+      mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, ogs->o_haloGatherTmp, o_Aq);
       mesh->device.setStream(elliptic->defaultStream);
     }
 

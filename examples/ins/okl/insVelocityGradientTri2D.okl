@@ -56,16 +56,15 @@ kernel void insVelocityGradientTri2D(const dlong Nelements,
                                      const dfloat * restrict vgeo,
                                      const dfloat * restrict Dmatrices, 
                                      const dlong fieldOffset,
-                                     const dfloat * restrict q,
-                                          dfloat4 * restrict gradq){
+                                     const dfloat * restrict U,
+                                          dfloat4 * restrict GU){
   
-  occaUnroll(p_NVfields)
-  for (int i=0; i<p_NVfields; i++) {
-
-    for(dlong eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);outer0){
-
-      shared dfloat s_q[p_Nmt][p_NbV][p_Np];
-
+  for(dlong eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);outer0){
+  
+  shared dfloat s_q[p_Nmt][p_NbV][p_Np];
+  
+    occaUnroll(p_NVfields)
+    for (int i=0; i<p_NVfields; i++) {
       for(int es=0; es<p_NbV;++es;inner1){
         for(int n=0;n<p_Np;++n;inner0){
           occaUnroll(p_Nmt)
@@ -73,7 +72,7 @@ kernel void insVelocityGradientTri2D(const dlong Nelements,
             const dlong e = eo+es*p_Nmt + em; 
               if(e<Nelements){
                 const dlong id = n + (e+offset)*p_Np;
-                s_q[em][es][n] = q[id+i*fieldOffset];
+                s_q[em][es][n] = U[id+i*fieldOffset];
               }
             }  
           }
@@ -102,13 +101,13 @@ kernel void insVelocityGradientTri2D(const dlong Nelements,
           }
 
           occaUnroll(p_Np)
-          for(int i=0;i<p_Np;++i){
-            dfloat drt = Dmatrices[n + i*p_Np +0*p_Np*p_Np];
-            dfloat dst = Dmatrices[n + i*p_Np +1*p_Np*p_Np];
+          for(int k=0;k<p_Np;++k){
+            dfloat drt = Dmatrices[n + k*p_Np +0*p_Np*p_Np];
+            dfloat dst = Dmatrices[n + k*p_Np +1*p_Np*p_Np];
 
             occaUnroll(p_Nmt)
             for(int em=0;em<p_Nmt;++em){ 
-              dfloat qn = s_q[em][es][i];
+              dfloat qn = s_q[em][es][k];
 
               qr[em] += drt*qn;
               qs[em] += dst*qn;
@@ -126,7 +125,7 @@ kernel void insVelocityGradientTri2D(const dlong Nelements,
              gradqn.y = drdy2[em]*qr[em] + dsdy2[em]*qs[em];
              gradqn.w = s_q[em][es][n];
 
-             gradq[id+i*fieldOffset] = gradqn;
+             GU[id+i*fieldOffset] = gradqn;
             }
           }
         }

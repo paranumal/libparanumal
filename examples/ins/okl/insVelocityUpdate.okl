@@ -4,8 +4,8 @@ kernel void insVelocityUpdate(const dlong Nelements,
                               const dfloat dt,
                               const dlong fieldOffset,
                               const dfloat * restrict prkA,
-                              const dfloat * restrict GP,
                               const dfloat * restrict rkGP,
+                              const dfloat * restrict GP,
                                     dfloat * restrict rkU){
 
   for(dlong e=0;e<Nelements;++e;outer0){
@@ -13,12 +13,12 @@ kernel void insVelocityUpdate(const dlong Nelements,
       const dlong id  = n + e*p_Np;
 
       for (int i=0;i<p_NVfields;i++) {
-        dfloat Un = Uhat[id+i*fieldOffset] - dt*rkGP[id+i*fieldOffset];
+        dfloat Un = rkU[id+i*fieldOffset] - dt*rkGP[id+i*fieldOffset];
 
         for (int s=0;s<stage;s++) {
-          Un += dt*prkA[stage*p_NRKstages+s]*GP[id+i*fieldOffset+s*p_NVfields*fieldOffset];
+          Un += dt*prkA[stage*(p_Nstages+1)+s]*GP[id+i*fieldOffset+s*p_NVfields*fieldOffset];
         }
-        Uhat[id+i*fieldOffset] = Un;
+        rkU[id+i*fieldOffset] = Un;
       }
     }
   }

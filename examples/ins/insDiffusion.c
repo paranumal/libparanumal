@@ -4,7 +4,7 @@
 void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
 
   mesh_t *mesh = ins->mesh;
-  elliptic_t *usolver = ins->uSolver; //borrow the uSolver for the gather lists
+  elliptic_t *uSolver = ins->uSolver; //borrow the uSolver for the gather lists
   setupAide options = ins->vOptions;
 
   if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
@@ -14,9 +14,9 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
       ins->diffusionKernel(uSolver->NglobalGatherElements, 
                            uSolver->o_globalGatherElementList,
                            mesh->o_ggeo, 
+                           mesh->o_sgeo, 
                            mesh->o_Dmatrices, 
                            mesh->o_Smatrices, 
-                           mesh->o_MM, 
                            mesh->o_vmapM,
                            mesh->o_sMT,
                            ins->nu,
@@ -45,9 +45,9 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
         ins->diffusionKernel(uSolver->NlocalGatherElements, 
                              uSolver->o_localGatherElementList,
                              mesh->o_ggeo, 
+                             mesh->o_sgeo, 
                              mesh->o_Dmatrices, 
                              mesh->o_Smatrices, 
-                             mesh->o_MM, 
                              mesh->o_vmapM,
                              mesh->o_sMT,
                              ins->nu,
@@ -122,6 +122,7 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
                                 offset,
                                 mesh->o_vgeo,
                                 mesh->o_Dmatrices,
+                                ins->fieldOffset,
                                 o_U,
                                 ins->o_GU);
 
@@ -134,7 +135,7 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
                                uSolver->tau,
                                mesh->o_vgeo,
                                mesh->o_sgeo,
-                               ins->o_EToB,
+                               mesh->o_EToB,
                                time,
                                mesh->o_x,
                                mesh->o_y,
@@ -142,7 +143,6 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
                                ins->fieldOffset,
                                mesh->o_Dmatrices,
                                mesh->o_LIFTT,
-                               mesh->o_MM,
                                ins->o_GU,
                                o_LU);
     }
@@ -166,6 +166,7 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
                                   offset,
                                   mesh->o_vgeo,
                                   mesh->o_Dmatrices,
+                                  ins->fieldOffset,
                                   o_U,
                                   ins->o_GU);
     }
@@ -179,7 +180,7 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
                               uSolver->tau,
                               mesh->o_vgeo,
                               mesh->o_sgeo,
-                              ins->o_EToB,
+                              mesh->o_EToB,
                               time,
                               mesh->o_x,
                               mesh->o_y,
@@ -187,7 +188,6 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
                               ins->fieldOffset,
                               mesh->o_Dmatrices,
                               mesh->o_LIFTT,
-                              mesh->o_MM,
                               ins->o_GU,
                               o_LU);
     }

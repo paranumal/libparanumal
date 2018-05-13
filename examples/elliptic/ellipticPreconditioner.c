@@ -24,6 +24,8 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
       occaTimerToc(mesh->device,"blockJacobiKernel");
     } else if (options.compareArgs("DISCRETIZATION", "CONTINUOUS")) {
       ogs_t *ogs = elliptic->mesh->ogs;
+      int one = 1;
+      dlong dOne = 1;
 
       elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, ogs->o_invDegree, o_r, elliptic->o_rtmp);
 
@@ -36,7 +38,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
                                 invLambda, mesh->o_vgeo, precon->o_invMM, elliptic->o_rtmp, o_z);
         mesh->device.finish();
         mesh->device.setStream(elliptic->dataStream);
-        mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, o_z, ogs->o_haloGatherTmp);
+        mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, o_z, ogs->o_haloGatherTmp);
         ogs->o_haloGatherTmp.asyncCopyTo(ogs->haloGatherTmp);
         mesh->device.setStream(elliptic->defaultStream);
       }
@@ -47,7 +49,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
       }
 
       // finalize gather using local and global contributions
-      if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, o_z);
+      if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, one, dOne, o_z);
 
       // C0 halo gather-scatter (on data stream)
       if(ogs->NhaloGather) {
@@ -61,7 +63,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
         ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
 
         // do scatter back to local nodes
-        mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, ogs->o_haloGatherTmp, o_z);
+        mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, ogs->o_haloGatherTmp, o_z);
         mesh->device.setStream(elliptic->defaultStream);
       }
 

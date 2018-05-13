@@ -1,10 +1,10 @@
 #include "ins.h"
 
 // solve lambda*U + A*U = rhsU
-void insVelocitySolve(ins_t *ins, dfloat time, occa::memory o_rhsU, 
-                                               occa::memory o_rhsV, 
-                                               occa::memory o_rhsW, 
-                                               occa::memory o_Uhat){
+void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU, 
+                                                           occa::memory o_rhsV, 
+                                                           occa::memory o_rhsW, 
+                                                           occa::memory o_Uhat){
   
   mesh_t *mesh = ins->mesh; 
   elliptic_t *usolver = ins->uSolver; 
@@ -64,10 +64,10 @@ void insVelocitySolve(ins_t *ins, dfloat time, occa::memory o_rhsU,
 
   //copy current velocity fields as initial guess? (could use Uhat or beter guess)
   dlong Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
-  ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,0*offset*sizeof(dfloat));
-  ins->o_VH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,1*offset*sizeof(dfloat));
+  ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,0*ins->fieldOffset*sizeof(dfloat));
+  ins->o_VH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,1*ins->fieldOffset*sizeof(dfloat));
   if (ins->dim==3)
-    ins->o_WH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,2*offset*sizeof(dfloat));
+    ins->o_WH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,2*ins->fieldOffset*sizeof(dfloat));
 
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, ins->o_UH);
@@ -106,8 +106,8 @@ void insVelocitySolve(ins_t *ins, dfloat time, occa::memory o_rhsU,
   }
 
   //copy into intermediate stage storage
-  ins->o_UH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),0*offset*sizeof(dfloat),0);
-  ins->o_VH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),1*offset*sizeof(dfloat),0);    
+  ins->o_UH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),0*ins->fieldOffset*sizeof(dfloat),0);
+  ins->o_VH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),1*ins->fieldOffset*sizeof(dfloat),0);    
   if (ins->dim==3)
-    ins->o_WH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),2*offset*sizeof(dfloat),0);    
+    ins->o_WH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),2*ins->fieldOffset*sizeof(dfloat),0);    
 }

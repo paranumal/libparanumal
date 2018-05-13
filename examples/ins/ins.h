@@ -23,16 +23,24 @@ typedef struct {
   // INS SOLVER OCCA VARIABLES
   dfloat rho, nu, Re;
   dfloat ubar, vbar, wbar, pbar;
-  int NVfields, NTfields, Nfields;
+  int NVfields, NTfields;
+  dlong fieldOffset;
+  dlong Ntotal;
+
+  int Nblock;
 
   dfloat dt;          // time step
-  dfloat lambda;      // helmhotz solver -lap(u) + lamda u
-  dfloat finalTime;   // final time to run acoustics to
+  dfloat dtMIN;         
+  dfloat time;
+  int tstep;
+  dfloat g0, ig0, lambda;      // helmhotz solver -lap(u) + lamda u
+  dfloat startTime;   
+  dfloat finalTime;   
+
   int temporalOrder;
   int ExplicitOrder; 
   int   NtimeSteps;  // number of time steps 
-  int   Nstages;     // Number of history states to store
-  int   index;       // Index of current state
+  int   Nstages;     
   int   outputStep; 
   
   int NiterU, NiterV, NiterW, NiterP;
@@ -41,27 +49,41 @@ typedef struct {
   //solver tolerances
   dfloat presTOL, velTOL;
 
-  dfloat a0, a1, a2, b0, b1, b2, c0, c1, c2, g0, tau; 
-  dfloat idt, ig0, inu; // hold some inverses
+  dfloat idt, inu; // hold some inverses
   
-  dfloat *U, *P, *NU, *gradP;   
+  dfloat *U, *P;
+  dfloat *NU, *LU, *GP;
+  dfloat *GU;   
   dfloat *rhsU, *rhsV, *rhsW, *rhsP;   
-  dfloat *PI, *gradPI, *Uhat;
+  dfloat *rkU, *rkP, *PI;
+  dfloat *rkNU, *rkLU, *rkGP;
   
   dfloat *Vort, *Div;
 
   dfloat g[3];      // gravitational Acceleration
 
+
+  //ARK data
+  int Nrk;
+  dfloat *rkC;
+  dfloat *erkA, *irkA, *prkA;
+  dfloat *erkB, *irkB, *prkB;
+  dfloat *erkE, *irkE, *prkE;
+  int embeddedRKFlag;
+
+  //EXTBDF data
+  dfloat *extbdfA, *extbdfB, *extbdfC;
+
   int *VmapB, *PmapB;
   occa::memory o_VmapB, o_PmapB;
 
   //halo data
-  dfloat *tSendBuffer;
-  dfloat *tRecvBuffer;
   dfloat *vSendBuffer;
   dfloat *vRecvBuffer;
   dfloat *pSendBuffer;
   dfloat *pRecvBuffer;
+  dfloat * velocityHaloGatherTmp;
+
 
   int Nsubsteps;  
   dfloat *Ud, *Ue, *resU, *rhsUd, sdt;
@@ -80,20 +102,27 @@ typedef struct {
   occa::memory o_U, o_P;
   occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP; 
 
-  occa::memory o_NU;
-  occa::memory o_gradP;
+  occa::memory o_NU, o_LU, o_GP;
+  occa::memory o_GU;
 
   occa::memory o_UH, o_VH, o_WH;
-  occa::memory o_PI, o_gradPI, o_Uhat;
+  occa::memory o_rkU, o_rkP, o_PI;
+  occa::memory o_rkNU, o_rkLU, o_rkGP;
 
   occa::memory o_Vort, o_Div;
 
-  int Nblock;
+  occa::memory o_vHaloBuffer, o_pHaloBuffer; 
+  occa::memory o_velocityHaloGatherTmp;
 
-  occa::memory o_vHaloBuffer, o_pHaloBuffer, o_tHaloBuffer; 
+  //ARK data
+  occa::memory o_rkC;
+  occa::memory o_erkA, o_irkA, o_prkA;
+  occa::memory o_erkB, o_irkB, o_prkB;
+  occa::memory o_erkE, o_irkE, o_prkE;
 
-  occa::kernel totalHaloExtractKernel;
-  occa::kernel totalHaloScatterKernel;
+  //EXTBDF data
+  occa::memory o_extbdfA, o_extbdfB, o_extbdfC;
+
   occa::kernel velocityHaloExtractKernel;
   occa::kernel velocityHaloScatterKernel;
   occa::kernel pressureHaloExtractKernel;
@@ -103,41 +132,56 @@ typedef struct {
 
   occa::kernel advectionVolumeKernel;
   occa::kernel advectionSurfaceKernel;
-  
-  occa::kernel poissonRhsForcingKernel;
-  occa::kernel poissonRhsIpdgBCKernel;
-  occa::kernel poissonRhsBCKernel;
-  occa::kernel poissonAddBCKernel;
-  occa::kernel poissonPenaltyKernel;
-
   occa::kernel advectionCubatureVolumeKernel;
   occa::kernel advectionCubatureSurfaceKernel;
-  //
+
+  occa::kernel diffusionKernel;
+  occa::kernel diffusionIpdgKernel;
+  occa::kernel velocityGradientKernel;
+
   occa::kernel gradientVolumeKernel;
   occa::kernel gradientSurfaceKernel;
 
   occa::kernel divergenceVolumeKernel;
   occa::kernel divergenceSurfaceKernel;
-  //
-  occa::kernel helmholtzRhsForcingKernel;
-  occa::kernel helmholtzRhsIpdgBCKernel;
-  occa::kernel helmholtzRhsBCKernel;
-  occa::kernel helmholtzAddBCKernel;
   
-  occa::kernel updateUpdateKernel;
+  
+  occa::kernel pressureRhsKernel;
+  occa::kernel pressureRhsIpdgBCKernel;
+  occa::kernel pressureRhsBCKernel;
+  occa::kernel pressureAddBCKernel;
+  occa::kernel pressurePenaltyKernel;
+  occa::kernel pressureUpdateKernel;
+
+  occa::kernel velocityRhsKernel;
+  occa::kernel velocityRhsIpdgBCKernel;
+  occa::kernel velocityRhsBCKernel;
+  occa::kernel velocityAddBCKernel;
+  occa::kernel velocityUpdateKernel;  
+  
   occa::kernel vorticityKernel;
 
 }ins_t;
 
 ins_t *insSetup(mesh_t *mesh, setupAide options);
 
-void insRun(ins_t *ins);
+void insRunARK(ins_t *ins);
+void insRunEXTBDF(ins_t *ins);
+
 void insPlotVTU(ins_t *ins, char *fileNameBase);
 void insReport(ins_t *ins, int tstep);
 void insError(ins_t *ins, dfloat time);
 
-void insAdvectionStep(ins_t *ins, dfloat time);
-void insAdvectionSubCycleStep(ins_t *ins, dfloat time);
-void insHelmholtzStep(ins_t *ins, dfloat time);
-void insPoissonStep(ins_t *ins, dfloat time);
-void insUpdateStep(ins_t *ins, dfloat time);
+void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU);
+void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);
+void insGradient (ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP);
+void insDivergence(ins_t *ins,dfloat time, occa::memory o_U, occa::memory o_DU);
+void insSubCycle(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU);
+
+void insVelocityRhs  (ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW);
+void insVelocitySolve(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW, occa::memory o_rkU);
+void insVelocityUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkGP, occa::memory o_rkU);
+
+void insPressureRhs  (ins_t *ins, dfloat time, int stage);
+void insPressureSolve(ins_t *ins, dfloat time, int stage);
+void insPressureUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkP);

@@ -11,10 +11,10 @@ void insGradient(ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP){
                                  mesh->totalHaloPairs,
                                  mesh->o_haloElementList,
                                  o_P,
-                                 o_pHaloBuffer);
+                                 ins->o_pHaloBuffer);
 
       // copy extracted halo to HOST
-      o_pHaloBuffer.copyTo(ins->pSendBuffer);
+      ins->o_pHaloBuffer.copyTo(ins->pSendBuffer);
 
       // start halo exchange
       meshHaloExchangeStart(mesh,

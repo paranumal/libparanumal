@@ -1,5 +1,7 @@
 #include "ins.h"
 
+void extbdfCoefficents(ins_t *ins, int order);
+
 void insRunEXTBDF(ins_t *ins){
 
   int rank, size;
@@ -17,62 +19,46 @@ void insRunEXTBDF(ins_t *ins){
 
   if (rank ==0) printf("Running Initial Stokes Solve:\n");
   for(int tstep=0;tstep<NstokesSteps;++tstep){
-    if(tstep<1){
-       //advection, first order in time, increment
-      ins->b0 =  1.f,  ins->a0 =  0.0f, ins->c0 = 1.0f;  // 2
-      ins->b1 =  0.f,  ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
-      ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
-      ins->g0 =  1.f; 
-      ins->ExplicitOrder = 1;    
-      
-      ins->lambda = ins->g0 / (ins->dt * ins->nu);
-      ins->idt = 1.0/ins->dt; 
-      ins->ig0 = 1.0/ins->g0; 
-    } else if(tstep<2 && ins->temporalOrder>=2) {
-      //advection, second order in time, increment
-      ins->b0 =  2.f,  ins->a0 =  0.0f, ins->c0 = 1.0f;  // 2
-      ins->b1 = -0.5f, ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
-      ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
-      ins->g0 =  1.5f;
-      ins->ExplicitOrder=2;
+    if(tstep<1) 
+      extbdfCoefficents(ins,tstep+1);
+    else if(tstep<2 && ins->temporalOrder>=2) 
+      extbdfCoefficents(ins,tstep+1);
+    else if(tstep<3 && ins->temporalOrder>=3) 
+      extbdfCoefficents(ins,tstep+1);
 
-      ins->lambda = ins->g0 / (ins->dt * ins->nu);
-      ins->idt = 1.0/ins->dt; 
-      ins->ig0 = 1.0/ins->g0; 
-    } else {
-      //advection, third order in time, increment
-      ins->b0 =  3.f,       ins->a0  =  0.0f, ins->c0 = 1.0f;
-      ins->b1 = -1.5f,      ins->a1  =  0.0f, ins->c1 = 0.0f;
-      ins->b2 =  1.f/3.f,   ins->a2  =  0.0f, ins->c2 =  0.0f;
-      ins->g0 =  11.f/6.f;
-      ins->ExplicitOrder=3;
+    insGradient (ins, 0, ins->o_P, ins->o_GP);
 
-      ins->lambda = ins->g0 / (ins->dt * ins->nu);
-      ins->idt = 1.0/ins->dt; 
-      ins->ig0 = 1.0/ins->g0; 
+    insVelocityRhs  (ins, 0, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
+    insVelocitySolve(ins, 0, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
+
+    insPressureRhs  (ins, 0, ins->Nstages);
+    insPressureSolve(ins, 0, ins->Nstages); 
+
+    insPressureUpdate(ins, 0, ins->Nstages, ins->o_rkP);
+    insGradient(ins, 0, ins->o_rkP, ins->o_rkGP);
+
+    //cycle history
+    for (int s=ins->Nstages;s>1;s--) {
+      ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+      ins->o_P.copyFrom(ins->o_P, ins->Ntotal*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*sizeof(dfloat));
     }
 
-    if(ins->Nsubsteps) {
-      occaTimerTic(mesh->device,"AdvectionSubStep");
-      insAdvectionSubCycleStep(ins, 0.0);
-      occaTimerToc(mesh->device,"AdvectionSubStep");
-    } else {
-      occaTimerTic(mesh->device,"AdvectionStep");
-      insAdvectionStep(ins, 0.0);
-      occaTimerToc(mesh->device,"AdvectionStep");
+    //copy updated pressure
+    ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat)); 
+
+    //update velocity
+    insVelocityUpdate(ins, 0, ins->Nstages, ins->o_rkGP, ins->o_U);
+
+    //cycle rhs history
+    for (int s=ins->Nstages;s>1;s--) {
+      ins->o_GP.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
-
-    occaTimerTic(mesh->device,"HelmholtzStep");
-    insHelmholtzStep(ins, 0.0); 
-    occaTimerToc(mesh->device,"HelmholtzStep");
-
-    occaTimerTic(mesh->device,"PoissonStep");
-    insPoissonStep(ins, 0.0);
-    occaTimerToc(mesh->device,"PoissonStep");
-
-    occaTimerTic(mesh->device,"UpdateStep");
-    insUpdateStep(ins, 0.0);
-    occaTimerToc(mesh->device,"UpdateStep"); 
 
     if (rank==0) printf("\rSstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
   }
@@ -84,64 +70,59 @@ void insRunEXTBDF(ins_t *ins){
   insReport(ins, 0);
 
   for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
-    if(tstep<1){
-       //advection, first order in time, increment
-      ins->b0 =  1.f,  ins->a0 =  1.0f, ins->c0 = 1.0f;  // 2
-      ins->b1 =  0.f,  ins->a1 =  0.0f, ins->c1 = 0.0f; // -1
-      ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
-      ins->g0 =  1.f; 
-      ins->ExplicitOrder = 1;    
-      
-      ins->lambda = ins->g0 / (ins->dt * ins->nu);
-      ins->idt = 1.0/ins->dt; 
-      ins->ig0 = 1.0/ins->g0; 
-    } else if(tstep<2 && ins->temporalOrder>=2) {
-      //advection, second order in time, increment
-      ins->b0 =  2.f,  ins->a0 =  2.0f, ins->c0 = 1.0f;  // 2
-      ins->b1 = -0.5f, ins->a1 = -1.0f, ins->c1 = 0.0f; // -1
-      ins->b2 =  0.f,  ins->a2 =  0.f,  ins->c2 = 0.0f;
-      ins->g0 =  1.5f;
-      ins->ExplicitOrder=2;
-
-      ins->lambda = ins->g0 / (ins->dt * ins->nu);
-      ins->idt = 1.0/ins->dt; 
-      ins->ig0 = 1.0/ins->g0; 
-    } else {
-      //advection, third order in time, increment
-      ins->b0 =  3.f,       ins->a0  =  3.0f, ins->c0 = 1.0f;
-      ins->b1 = -1.5f,      ins->a1  = -3.0f, ins->c1 = 0.0f;
-      ins->b2 =  1.f/3.f,   ins->a2  =  1.0f, ins->c2 =  0.0f;
-      ins->g0 =  11.f/6.f;
-      ins->ExplicitOrder=3;
-
-      ins->lambda = ins->g0 / (ins->dt * ins->nu);
-      ins->idt = 1.0/ins->dt; 
-      ins->ig0 = 1.0/ins->g0; 
-    }
+    if(tstep<1) 
+      extbdfCoefficents(ins,tstep+1);
+    else if(tstep<2 && ins->temporalOrder>=2) 
+      extbdfCoefficents(ins,tstep+1);
+    else if(tstep<3 && ins->temporalOrder>=3) 
+      extbdfCoefficents(ins,tstep+1);
     
     dfloat time = tstep*ins->dt;
 
     if(ins->Nsubsteps) {
-      occaTimerTic(mesh->device,"AdvectionSubStep");
-      insAdvectionSubCycleStep(ins, time);
-      occaTimerToc(mesh->device,"AdvectionSubStep");
+      insSubCycle(ins, time, ins->o_U, ins->o_NU);
     } else {
-      occaTimerTic(mesh->device,"AdvectionStep");
-      insAdvectionStep(ins, time);
-      occaTimerToc(mesh->device,"AdvectionStep");
+      insAdvection(ins, time, ins->o_U, ins->o_NU);
     } 
+    insGradient (ins, time, ins->o_P, ins->o_GP);
 
-    occaTimerTic(mesh->device,"HelmholtzStep");
-    insHelmholtzStep(ins, time+ins->dt); 
-    occaTimerToc(mesh->device,"HelmholtzStep");
+    insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
+    insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
-    occaTimerTic(mesh->device,"PoissonStep");
-    insPoissonStep(ins, time+ins->dt);
-    occaTimerToc(mesh->device,"PoissonStep");
+    insPressureRhs  (ins, time+ins->dt, ins->Nstages);
+    insPressureSolve(ins, time+ins->dt, ins->Nstages); 
 
-    occaTimerTic(mesh->device,"UpdateStep");
-    insUpdateStep(ins, time+ins->dt);
-    occaTimerToc(mesh->device,"UpdateStep"); 
+    insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
+    insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
+
+    //cycle history
+    for (int s=ins->Nstages;s>1;s--) {
+      ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+      ins->o_P.copyFrom(ins->o_P, ins->Ntotal*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*sizeof(dfloat));
+    }
+
+    //copy updated pressure
+    ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat)); 
+
+    //update velocity
+    insVelocityUpdate(ins, time+ins->dt, 0, ins->o_rkGP, ins->o_rkU);
+
+    //copy updated pressure
+    ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
+
+    //cycle rhs history
+    for (int s=ins->Nstages;s>1;s--) {
+      ins->o_NU.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+      ins->o_GP.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+    }
 
     occaTimerTic(mesh->device,"Report");
     if(((tstep+1)%(ins->outputStep))==0){
@@ -163,4 +144,67 @@ void insRunEXTBDF(ins_t *ins){
   insReport(ins, ins->NtimeSteps);
   
   if(rank==0) occa::printTimer();
+}
+
+
+void extbdfCoefficents(ins_t *ins, int order) {
+
+  if(order==1) {
+     //advection, first order in time, increment
+    ins->g0 =  1.0f; 
+    dfloat extbdfB[3] = {1.0f, 0.0f, 0.0f};
+    dfloat extbdfA[3] = {1.0f, 0.0f, 0.0f};
+    dfloat extbdfC[3] = {0.0f, 0.0f, 0.0f};
+    
+    memcpy(ins->extbdfB, extbdfB, 3*sizeof(dfloat));
+    memcpy(ins->extbdfA, extbdfA, 3*sizeof(dfloat));
+    memcpy(ins->extbdfC, extbdfC, 3*sizeof(dfloat));
+
+    ins->o_extbdfB.copyFrom(extbdfB);
+    ins->o_extbdfA.copyFrom(extbdfA);
+    ins->o_extbdfC.copyFrom(extbdfC);
+
+    ins->ExplicitOrder = 1;    
+    
+    ins->lambda = ins->g0 / (ins->dt * ins->nu);
+    ins->ig0 = 1.0/ins->g0; 
+  } else if(order==2) {
+    //advection, second order in time, increment
+    ins->g0 =  1.5f;
+    dfloat extbdfB[3] = {2.0f,-0.5f, 0.0f};
+    dfloat extbdfA[3] = {2.0f,-1.0f, 0.0f};
+    dfloat extbdfC[3] = {1.0f, 0.0f, 0.0f};
+
+    memcpy(ins->extbdfB, extbdfB, 3*sizeof(dfloat));
+    memcpy(ins->extbdfA, extbdfA, 3*sizeof(dfloat));
+    memcpy(ins->extbdfC, extbdfC, 3*sizeof(dfloat));
+
+    ins->o_extbdfB.copyFrom(extbdfB);
+    ins->o_extbdfA.copyFrom(extbdfA);
+    ins->o_extbdfC.copyFrom(extbdfC);
+
+    ins->ExplicitOrder=2;
+
+    ins->lambda = ins->g0 / (ins->dt * ins->nu);
+    ins->ig0 = 1.0/ins->g0; 
+  } else if(order==3) {
+    //advection, third order in time, increment
+    ins->g0 =  11.f/6.f;
+    dfloat extbdfB[3] = {3.0f,-1.5f, 1.0f/3.0f};
+    dfloat extbdfA[3] = {3.0f,-3.0f, 1.0f};
+    dfloat extbdfC[3] = {2.0f,-1.0f, 0.0f};
+    
+    memcpy(ins->extbdfB, extbdfB, 3*sizeof(dfloat));
+    memcpy(ins->extbdfA, extbdfA, 3*sizeof(dfloat));
+    memcpy(ins->extbdfC, extbdfC, 3*sizeof(dfloat));
+
+    ins->o_extbdfB.copyFrom(extbdfB);
+    ins->o_extbdfA.copyFrom(extbdfA);
+    ins->o_extbdfC.copyFrom(extbdfC);
+
+    ins->ExplicitOrder=3;
+
+    ins->lambda = ins->g0 / (ins->dt * ins->nu);
+    ins->ig0 = 1.0/ins->g0; 
+  }
 }

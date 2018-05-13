@@ -9,18 +9,17 @@ void insReport(ins_t *ins, int tstep){
 
   dfloat t = (tstep)*ins->dt;
   
-  dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   ins->vorticityKernel(mesh->Nelements,
                        mesh->o_vgeo,
                        mesh->o_Dmatrices,
-                       offset,
+                       ins->fieldOffset,
                        ins->o_U,
                        ins->o_Vort);
 
   ins->divergenceVolumeKernel(mesh->Nelements,
                              mesh->o_vgeo,
                              mesh->o_Dmatrices,
-                             offset,
+                             ins->fieldOffset,
                              ins->o_U,
                              ins->o_Div);
 
