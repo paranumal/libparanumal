@@ -10,10 +10,14 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
   
   for(dlong eo=0;eo<Nelements;eo+=p_NblockCub;outer0){  // for all elements
 
-    // shared memory for q at nodes
-    shared dfloat s_q[p_NblockCub][p_Nfields][p_Np];
+#define p_Nvars 4
+#define p_Nrelax 6
+
+    // subgroup of density and momentum shared memory for q at nodes
+    shared dfloat s_q[p_NblockCub][p_Nvars][p_Np];
+
     // sub-group of p_Np cubature node interpolants of N5...N10
-    shared dfloat s_cubN[p_NblockCub][p_Nfields-4][p_cubNp];
+    shared dfloat s_cubN[p_NblockCub][p_Nrelax][p_cubNp];
     exclusive dlong e;
 
     // prefetch q to shared
@@ -28,7 +32,7 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 	    const dlong id = e*p_Nfields*p_Np + n;
 
 	    occaUnroll(p_Nfields)
-	      for(int fld=0; fld<p_Nfields;++fld){
+	      for(int fld=0; fld<p_Nvars;++fld){
 		s_q[es][fld][n] = q[id+fld*p_Np];
 	      }
 
@@ -49,8 +53,8 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 	  if(n<p_cubNp){
 
 	    dfloat r_cubq[p_Nfields];
-	    occaUnroll(p_Nfields)
-	      for(int fld=0; fld<p_Nfields;++fld){
+	    occaUnroll(p_Nvars)
+	      for(int fld=0; fld<p_Nvars;++fld){
 		r_cubq[fld] = 0.f;
 	      }
 
@@ -58,30 +62,32 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 	      for(int m=0;m<p_Np;++m){
 		const dfloat Icn  = cubInterpT[m*p_cubNp+n];
 		occaUnroll(p_Nfields)
-		  for(int fld=0; fld<p_Nfields; fld++){
+		  for(int fld=0; fld<p_Nvars; fld++){
 		    r_cubq[fld] += Icn*s_q[es][fld][m];
 		  }
 	      }
 
 	    dfloat icubq1 = 1.f/r_cubq[0];
 
-	    if(p_SEMI_ANALYTIC){
-	      // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
-	      s_cubN[es][0][n]  = p_tauInv*(r_cubq[1]*r_cubq[2]*icubq1);
-	      s_cubN[es][1][n]  = p_tauInv*(r_cubq[1]*r_cubq[3]*icubq1);
-	      s_cubN[es][2][n]  = p_tauInv*(r_cubq[2]*r_cubq[3]*icubq1);
-	      s_cubN[es][3][n]  = p_tauInv*(p_invsqrt2*r_cubq[1]*r_cubq[1]*icubq1);
-	      s_cubN[es][4][n]  = p_tauInv*(p_invsqrt2*r_cubq[2]*r_cubq[2]*icubq1);
-	      s_cubN[es][5][n]  = p_tauInv*(p_invsqrt2*r_cubq[3]*r_cubq[3]*icubq1);
-	    }else{
-	      // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
-	      s_cubN[es][0][n]  = -p_tauInv*(r_cubq[4] -(r_cubq[1]*r_cubq[2]*icubq1));
+	    //	    if(p_SEMI_ANALYTIC){
+	    // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
+	    s_cubN[es][0][n]  = p_tauInv*(r_cubq[1]*r_cubq[2]*icubq1);
+	    s_cubN[es][1][n]  = p_tauInv*(r_cubq[1]*r_cubq[3]*icubq1);
+	    s_cubN[es][2][n]  = p_tauInv*(r_cubq[2]*r_cubq[3]*icubq1);
+	    s_cubN[es][3][n]  = p_tauInv*(p_invsqrt2*r_cubq[1]*r_cubq[1]*icubq1);
+	    s_cubN[es][4][n]  = p_tauInv*(p_invsqrt2*r_cubq[2]*r_cubq[2]*icubq1);
+	    s_cubN[es][5][n]  = p_tauInv*(p_invsqrt2*r_cubq[3]*r_cubq[3]*icubq1);
+#if 0
+	  }else{
+	    // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
+	    s_cubN[es][0][n]  = -p_tauInv*(r_cubq[4] -(r_cubq[1]*r_cubq[2]*icubq1));
 	      s_cubN[es][1][n]  = -p_tauInv*(r_cubq[5] -(r_cubq[1]*r_cubq[3]*icubq1));
 	      s_cubN[es][2][n]  = -p_tauInv*(r_cubq[6] -(r_cubq[2]*r_cubq[3]*icubq1));
 	      s_cubN[es][3][n]  = -p_tauInv*(r_cubq[7] -(p_invsqrt2*r_cubq[1]*r_cubq[1]*icubq1));
 	      s_cubN[es][4][n]  = -p_tauInv*(r_cubq[8] -(p_invsqrt2*r_cubq[2]*r_cubq[2]*icubq1));
 	      s_cubN[es][5][n]  = -p_tauInv*(r_cubq[9] -(p_invsqrt2*r_cubq[3]*r_cubq[3]*icubq1));
-	    }
+	  }
+#endif
 	  }
 	}
       }
@@ -103,21 +109,24 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
             rhsId   += shift*offset;  
           }
 
-          dfloat r_qN[p_Nfields-4];
-          for(int fld=4; fld<p_Nfields; fld++){
-            r_qN[fld-4] = 0.f; 
+          dfloat r_qN[p_Nrelax];
+          for(int fld=0; fld<p_Nrelax; fld++){
+	    const dlong id = e*p_Nfields*p_Np + n + (fld+p_Nvars)*p_Np;
+            r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*q[id]; 
           }
-
+	  
           occaUnroll(p_cubNp)
 	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat Pnc  = cubProjectT[i*p_Np+n];
-	      for(int fld=0; fld<(p_Nfields-4); fld++){
+	      for(int fld=0; fld<p_Nrelax; fld++){
 		r_qN[fld] += Pnc*s_cubN[es][fld][i];
 	      }
 	    }
 
-          for(int fld=4; fld<p_Nfields; fld++){
-            rhsq[rhsId + fld*p_Np] += r_qN[fld-4];
+	  
+	  
+          for(int fld=0; fld<p_Nrelax; fld++){
+            rhsq[rhsId + (fld+p_Nvars)*p_Np] += r_qN[fld];
           }
         
         }
