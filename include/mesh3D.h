@@ -78,7 +78,7 @@ void meshConnectFaceNodes3D(mesh3D *mesh);
 
 //
 mesh3D *meshSetupTri3D(char *filename, int N, dfloat sphereRadius);
-mesh3D *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius, char *mode);
+mesh3D *meshSetupQuad3D(int mesh_size, int N, dfloat sphereRadius, char *mode);
 mesh3D *meshSetupTet3D(char *filename, int N);
 mesh3D *meshSetupHex3D(char *filename, int N);
 
