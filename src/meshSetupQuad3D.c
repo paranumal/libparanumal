@@ -3,9 +3,10 @@
 mesh_t *meshSetupQuad3D(int mesh_size, int N, dfloat sphereRadius,char *mode){
 
   // read chunk of elements
-  char filename[18];
-  sprintf(filename,"../../cubed_grid_.2%d.msh",mesh_size);
+  char filename[40];
+  sprintf(filename,"../../meshes/cubed_grid_%d.msh",mesh_size);
   mesh_t *mesh = meshParallelReaderQuad3D(filename);
+  mesh->edgeLength = mesh_size;
 
   // set sphere radius (will be used later in building physical nodes)
   mesh->sphereRadius = sphereRadius;
@@ -16,7 +17,8 @@ mesh_t *meshSetupQuad3D(int mesh_size, int N, dfloat sphereRadius,char *mode){
   // connect elements using parallel sort
   meshParallelConnect(mesh);
 
-
+  meshExtendGridQuad3D(mesh);
+  //meshPreserveGridQuad3D(mesh);
   
   // print out connectivity statistics
   meshPartitionStatistics(mesh);
