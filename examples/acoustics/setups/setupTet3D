@@ -2,9 +2,7 @@
 1.0
 
 [MESH FILE]
-../../meshes/cubeTetH025.msh
-
-#../../meshes/insChannel3D.msh
+../../meshes/cubeTetH00625.msh
 
 [MESH DIMENSION]
 3
@@ -13,7 +11,7 @@
 6
 
 [POLYNOMIAL DEGREE]
-4
+6
 
 [THREAD MODEL]
 CUDA
@@ -29,7 +27,7 @@ DOPRI5
 #LSERK4
 
 [ADVECTION TYPE]
-CUBATURE
+NODAL
 
 [VISCOSITY]
 5.e-3
@@ -65,7 +63,7 @@ CUBATURE
 0
 
 [FINAL TIME]
-10
+100
 
 [OUTPUT INTERVAL]
 .14
