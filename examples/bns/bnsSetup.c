@@ -140,6 +140,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
     printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
   }
+  printf("ERROR STEP\t:\t%d\n", bns->errorStep);
 
     
 
@@ -525,14 +526,17 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
 
   int NblockV = 128/mesh->Np; // works for CUDA
+  NblockV = 1; //!!!!!
   kernelInfo.addDefine("p_NblockV", NblockV);
 
   int NblockS = 128/maxNodes; // works for CUDA
+
+  NblockS = 1; // !!!!!
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   int NblockCub = 128/mesh->cubNp; // works for CUDA
 
-  NblockCub = 2; // !!!!!!!!!!!!!!!!!!!!!
+  NblockCub = 1; // !!!!!!!!!!!!!!!!!!!!!
 
   kernelInfo.addDefine("p_NblockCub", NblockCub);
 
@@ -578,10 +582,11 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
 
 
+        
 
 
   // set kernel name suffix
-  char *suffix;
+  char *suffix, *suffixUpdate;
   
   if(bns->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
@@ -592,12 +597,19 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   if(bns->elementType==HEXAHEDRA)
     suffix = strdup("Hex3D");
 
+  if(bns->elementType==TRIANGLES || bns->elementType==QUADRILATERALS)
+    suffixUpdate = strdup("2D");
+  if(bns->elementType==TETRAHEDRA || bns->elementType==HEXAHEDRA)
+    suffixUpdate = strdup("3D");
+  
+
+
+
 char fileName[BUFSIZ], kernelName[BUFSIZ];
 for (int r=0;r<size;r++){
 
     if (r==rank) {
-        
-     
+
         // Volume kernels
         sprintf(fileName, "okl/bnsVolume%s.okl", suffix);
 
@@ -632,44 +644,38 @@ for (int r=0;r<size;r++){
         }
 
         
-        sprintf(fileName, "okl/bnsUpdate%s.okl", suffix);
+        sprintf(fileName, "okl/bnsUpdate%s.okl", suffixUpdate);
         // Update Kernels
         if(options.compareArgs("TIME INTEGRATOR","LSERK")){
-          sprintf(kernelName, "bnsLSERKUpdate%s", suffix);
+          sprintf(kernelName, "bnsLSERKUpdate%s", suffixUpdate);
           bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
 
-          sprintf(kernelName, "bnsLSERKPmlUpdate%s", suffix);
+          sprintf(kernelName, "bnsLSERKPmlUpdate%s", suffixUpdate);
           bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
         }
         else if(options.compareArgs("TIME INTEGRATOR","SARK")){
-          sprintf(kernelName, "bnsSARKUpdateStage%s", suffix);
+          sprintf(kernelName, "bnsSARKUpdateStage%s", suffixUpdate);
           bns->updateStageKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
 
-          sprintf(kernelName, "bnsSARKPmlUpdateStage%s", suffix);
+          sprintf(kernelName, "bnsSARKPmlUpdateStage%s", suffixUpdate);
           bns->pmlUpdateStageKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
 
-          sprintf(kernelName, "bnsSARKUpdate%s", suffix);
+          sprintf(kernelName, "bnsSARKUpdate%s", suffixUpdate);
           bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
 
-          sprintf(kernelName, "bnsSARKPmlUpdate%s", suffix);
+          sprintf(kernelName, "bnsSARKPmlUpdate%s", suffixUpdate);
           bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
         }
         else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
         
-        sprintf(kernelName, "bnsMRSAABTraceUpdate%s", suffix);
+        sprintf(kernelName, "bnsMRSAABTraceUpdate%s", suffixUpdate);
         bns->traceUpdateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-        sprintf(kernelName, "bnsMRSAABUpdate%s", suffix);
+        sprintf(kernelName, "bnsMRSAABUpdate%s", suffixUpdate);
         bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
 
-        sprintf(kernelName, "bnsMRSAABPmlUpdate%s", suffix);
+        sprintf(kernelName, "bnsMRSAABPmlUpdate%s", suffixUpdate);
         bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
-
-
-
-
-
-
         }
 
 

@@ -11,7 +11,7 @@ void upwind1D(const dfloat nx,  const dfloat ny,  const dfloat nz,
               dfloat * restrict q6P, dfloat * restrict q7P, dfloat * restrict q8P, dfloat * restrict q9P, dfloat * restrict q10P){ 
 
 
-  #if 0
+  #if 1
   *q1P  = 0.5f*(q1B  + q1M)  - p_isq12*(nx*(q2B-q2M) + ny*(q3B-q3M) + nz*(q4B-q4M));
   *q2P  = 0.5f*(q2B  + q2M)  - p_isq12*nx*(q1B-q1M) - p_isq6*nx*(q8B-q8M) - 0.5f*ny*(q5B-q5M) - 0.5f*nz*(q6B-q6M);
   *q3P  = 0.5f*(q3B  + q3M)  - 0.5f*nx*(q5B-q5M) - p_isq12*ny*(q1B-q1M) - p_isq6*ny*(q9B-q9M) - 0.5f*nz*(q7B-q7M);
@@ -219,7 +219,7 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
           const dfloat sc = invJ*sJ;
 
           dfloat dq1, dq2, dq3, dq4, dq5, dq6, dq7, dq8, dq9, dq10;
-          #if 0
+          #if 1
           //        
           dq1  = q1U - q1M;
           dq2  = q2U - q2M;
@@ -388,7 +388,7 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
                &q1U, &q2U, &q3U, &q4U, &q5U, &q6U, &q7U, &q8U, &q9U, &q10U);
 
            // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-) 
-           #if 0
+           #if 1
           //        
           dfloat r_dq[p_Nfields];      
             r_dq[0] = q1U - q1M;

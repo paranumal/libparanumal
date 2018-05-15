@@ -1,7 +1,7 @@
 // Base mesh density for outer surfaces
 r   = DefineNumber[0.75];
 // Factor for inside cylinder faces
-fac = DefineNumber[0.1];
+fac = DefineNumber[0.25];
 // pml Width
 pmlWidth = DefineNumber[1.6];
 // Define Square Cylinder and Domain boundaries
