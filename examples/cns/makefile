@@ -39,15 +39,15 @@ $(HDRDIR)/mesh3D.h
 
 # list of objects to be compiled
 OBJS    = \
-cnsEstimate.o \
-cnsStep.o \
-cnsMain.o \
-cnsError.o \
-cnsRun.o \
-cnsSetup.o \
-cnsGaussianPulse.o \
-cnsPlotVTU.o \
-cnsReport.o \
+./src/cnsEstimate.o \
+./src/cnsStep.o \
+./src/cnsMain.o \
+./src/cnsError.o \
+./src/cnsRun.o \
+./src/cnsSetup.o \
+./src/cnsGaussianPulse.o \
+./src/cnsPlotVTU.o \
+./src/cnsReport.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
