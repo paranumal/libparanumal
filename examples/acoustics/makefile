@@ -16,7 +16,7 @@ CC	= mpic++.openmpi
 LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DACOUSTICS='"${CURDIR}"'
+CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DACOUSTICS='"${CURDIR}"'
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -g
@@ -39,15 +39,15 @@ $(HDRDIR)/mesh3D.h
 
 # list of objects to be compiled
 OBJS    = \
-acousticsEstimate.o \
-acousticsStep.o \
-acousticsMain.o \
-acousticsError.o \
-acousticsRun.o \
-acousticsSetup.o \
-acousticsGaussianPulse.o \
-acousticsPlotVTU.o \
-acousticsReport.o \
+./src/acousticsEstimate.o \
+./src/acousticsStep.o \
+./src/acousticsMain.o \
+./src/acousticsError.o \
+./src/acousticsRun.o \
+./src/acousticsSetup.o \
+./src/acousticsGaussianPulse.o \
+./src/acousticsPlotVTU.o \
+./src/acousticsReport.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
