@@ -310,6 +310,15 @@ typedef struct {
   iint *cubeDistance;     //    distance between element and edge of cube face
   dfloat *localdt;        
   iint *shift_init;       //    shift data for lserk
+  iint edgeLength;
+  iint NgridElements;
+  iint *overlap;
+  iint *eInterp;
+  iint *r;
+  iint *s;
+  iint *rlocal;
+  iint *slocal;
+  char *overlapDirection;
   
   // occa stuff
   occa::device device;

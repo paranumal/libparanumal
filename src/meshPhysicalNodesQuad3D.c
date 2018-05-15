@@ -155,6 +155,12 @@ void meshEquiSphericalNodesQuad3D(mesh_t *mesh){
   mesh->x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->z = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+
+  mesh->r = (dfloat*) calloc(mesh->NgridElements*mesh->Np,sizeof(dfloat));
+  mesh->s = (dfloat*) calloc(mesh->NgridElements*mesh->Np,sizeof(dfloat));
+
+  mesh->rlocal = (dfloat*) calloc(mesh->NgridElements*mesh->Np,sizeof(dfloat));
+  mesh->slocal = (dfloat*) calloc(mesh->NgridElements*mesh->Np,sizeof(dfloat));
   
   iint cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
@@ -203,7 +209,7 @@ void meshEquiSphericalNodesQuad3D(mesh_t *mesh){
 	+0.25*(1+rn)*(1+sn)*ze3
 	+0.25*(1-rn)*(1+sn)*ze4;
 
-      dfloat xsph, ysph, zsph, norm;
+      dfloat xsph, ysph, zsph, norm, rlin, slin;
 
       dfloat faceScale = sqrt(3)*M_PI/4;
       
@@ -212,55 +218,91 @@ void meshEquiSphericalNodesQuad3D(mesh_t *mesh){
 	xsph = cos(faceScale*ylin)*cos(faceScale*zlin);
 	ysph = sin(faceScale*ylin)*cos(faceScale*zlin);
 	zsph = sin(faceScale*zlin)*cos(faceScale*ylin);
+
 	norm = sqrt(xsph*xsph+ysph*ysph+zsph*zsph);
+
 	xsph /= norm;
 	ysph /= norm;
 	zsph /= norm;
+	
+	rlin = faceScale*ylin;
+        slin = faceScale*zlin;
+	
 	break;
       case 2: //positive constant y
 	xsph = sin(faceScale*xlin)*cos(faceScale*zlin);
 	ysph = cos(faceScale*xlin)*cos(faceScale*zlin);
 	zsph = sin(faceScale*zlin)*cos(faceScale*xlin);
+
 	norm = sqrt(xsph*xsph+ysph*ysph+zsph*zsph);
+
 	xsph /= norm;
 	ysph /= norm;
 	zsph /= norm;
+
+	rlin = faceScale*xlin;
+	slin = faceScale*zlin;
+	
 	break;
       case 3: //negative constant x
 	xsph = -1*cos(faceScale*ylin)*cos(faceScale*zlin);
 	ysph = sin(faceScale*ylin)*cos(faceScale*zlin);
 	zsph = sin(faceScale*zlin)*cos(faceScale*ylin);
+
 	norm = sqrt(xsph*xsph+ysph*ysph+zsph*zsph);
+
 	xsph /= norm;
 	ysph /= norm;
 	zsph /= norm;
+
+	rlin = faceScale*ylin;
+	slin = faceScale*zlin;
+	
 	break;
       case 4: //negative constant y
 	xsph = sin(faceScale*xlin)*cos(faceScale*zlin);
 	ysph = -1*cos(faceScale*xlin)*cos(faceScale*zlin);
 	zsph = sin(faceScale*zlin)*cos(faceScale*xlin);
+
 	norm = sqrt(xsph*xsph+ysph*ysph+zsph*zsph);
+
 	xsph /= norm;
 	ysph /= norm;
 	zsph /= norm;
+
+	rlin = faceScale*xlin;
+	slin = faceScale*zlin;
+	
 	break;
       case 5: //positive constant z
 	xsph = sin(faceScale*xlin)*cos(faceScale*ylin);
 	ysph = sin(faceScale*ylin)*cos(faceScale*xlin);
 	zsph = cos(faceScale*xlin)*cos(faceScale*ylin);
+
 	norm = sqrt(xsph*xsph+ysph*ysph+zsph*zsph);
+
 	xsph /= norm;
 	ysph /= norm;
 	zsph /= norm;
+
+	rlin = faceScale*xlin;
+	slin = faceScale*ylin;
+	
 	break;
       case 6: //negative constant z
 	xsph =  sin(faceScale*xlin)*cos(faceScale*ylin);
 	ysph =  sin(faceScale*ylin)*cos(faceScale*xlin);
 	zsph = -1*cos(faceScale*xlin)*cos(faceScale*ylin);
+
 	norm = sqrt(xsph*xsph+ysph*ysph+zsph*zsph);
+
 	xsph /= norm;
 	ysph /= norm;
 	zsph /= norm;
+
+        rlin = faceScale*xlin;
+	slin = faceScale*ylin;
+	
 	break;
       }
 
@@ -270,8 +312,200 @@ void meshEquiSphericalNodesQuad3D(mesh_t *mesh){
       mesh->x[cnt] = xsph; 
       mesh->y[cnt] = ysph; 
       mesh->z[cnt] = zsph;
+
+      mesh->rlocal[cnt] = n%mesh->Nq;
+      mesh->slocal[cnt] = n/mesh->Nq;
+
+      mesh->r[cnt] = rlin;
+      mesh->s[cnt] = slin;
       
       ++cnt;
+    }
+  }
+}
+
+void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
+
+  mesh->eInterp = (iint *) calloc((mesh->NgridElements - mesh->Nelements);
+  
+  for (iint i = 0; i < mesh->NgridElements - mesh->Nelements; ++i) {
+    iint eOverlap = mesh->overlap[i];
+
+    iint eAdj;
+    for (iint f = 0; f < mesh->Nfaces; ++f) {
+      if (mesh->cubeFaceNumber[eOverlap] != mesh->cubeFaceNumber[mesh->EToE[eOverlap*mesh->Nfaces + f]]) {
+	eAdj = mesh->EToE[eOverlap*mesh->Nfaces + f];
+	break;
+      }
+    }
+
+    iint e = mesh->Nelements + i;
+
+    iint face1 = mesh->cubeFaceNumber[eOverlap] - 1;
+    iint face2 = mesh->cubeFaceNumber[eAdj] - 1;
+
+    for (iint n = 0; n < mesh->Np; ++n) {
+      mesh->rlocal[e*mesh->Np + n] = n%mesh->Nq;
+      mesh->slocal[e*mesh->Np + n] = n/mesh->Nq;
+
+      offset = M_PI/(2*mesh->edgeLength);
+      
+      iint faceHash = 6*face1 + face2;
+
+      dfloat rold, sold, rnew, snew, rloc, sloc, rmin, smin, rmax, smax;
+      iint rsdir;
+      iint rdir = 0;
+      iint sdir = 1;
+      
+      switch (faceHash)
+	{
+	case 6:
+	case 13:
+	case 20:
+	case 3:
+	  rold = mesh->r[eAdj*mesh->Np + n] + offset;
+	  sold = mesh->s[eAdj*mesh->Np + n];
+
+	  rnew = rold - M_PI/2;
+	  snew = atan(tan(sold)/tan(rold));
+
+	  smin = mesh->s[eOverlap*mesh->Np];
+	  smax = mesh->s[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  else eInterp = eOverlap;
+
+	  rloc = mesh->rlocal[eInterp*mesh->Np + n];
+	  sloc = (snew - smin)/(smax - smin);
+	  
+	  rsdir = sdir;
+
+	  break;
+	case 1:
+	case 8:
+	case 15:
+	case 18:
+	  rold = mesh->r[eAdj*mesh->Np + n] - offset;
+	  sold = mesh->s[eAdj*mesh->Np + n];
+
+	  rnew = rold + M_PI/2;
+	  snew = atan(tan(sold)/tan(rold));
+
+	  smin = mesh->s[eOverlap*mesh->Np];
+	  smax = mesh->s[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  else eInterp = eOverlap;
+
+	  rloc = mesh->rlocal[eInterp*mesh->Np + n];
+	  sloc = (snew - smin)/(smax - smin);
+	  
+	  rsdir = sdir;
+
+	  break;
+	case 4:
+	case 30:
+	  rold = mesh->r[eAdj*mesh->Np + n];
+	  sold = mesh->s[eAdj*mesh->Np + n] - offset;
+
+	  rnew = atan(tan(rold)/tan(sold));
+	  snew = sold + M_PI/2;
+
+	  rmin = mesh->r[eOverlap*mesh->Np];
+	  rmax = mesh->r[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else eInterp = eOverlap;
+
+	  rloc = (rnew - rmin)/(rmax - rmin);
+	  sloc = mesh->slocal[eInterp*mesh->Np + n];
+	  
+	  rsdir = rdir;
+
+	  break;	  
+	case 5:
+	case 24:
+	  rold = mesh->r[eAdj*mesh->Np + n];
+	  sold = mesh->s[eAdj*mesh->Np + n] + offset;
+
+	  rnew = atan(tan(rold)/tan(sold));
+	  snew = sold - M_PI/2;
+
+	  rmin = mesh->r[eOverlap*mesh->Np];
+	  rmax = mesh->r[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else eInterp = eOverlap;
+
+	  rloc = (rnew - rmin)/(rmax - rmin);
+	  sloc = mesh->slocal[eInterp*mesh->Np + n];
+	  
+	  rsdir = rdir;
+
+	  break;
+	case 16:
+	case 32:
+	  rold = mesh->r[eAdj*mesh->Np + n];
+	  sold = mesh->s[(eAdj+1)*mesh->Np - n - 1] + offset;
+
+	  rnew = atan(tan(rold)/tan(sold));
+	  snew = sold - offset;
+
+	  rmin = mesh->s[eOverlap*mesh->Np];
+	  rmax = mesh->s[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else eInterp = eOverlap;
+
+	  rloc = (rnew - rmin)/(rmax - rmin);
+	  sloc = mesh->slocal[(eInterp+1)*mesh->Np - n - 1];
+	  
+	  rsdir = rdir;
+
+	  break;
+	case 17:
+	case 26:
+	  rold = mesh->r[eAdj*mesh->Np + n];
+	  sold = mesh->s[(eAdj+1)*mesh->Np - n - 1] - offset;
+
+	  rnew = atan(tan(rold)/tan(sold));
+	  snew = sold + M_PI/2;
+
+	  rmin = mesh->s[eOverlap*mesh->Np];
+	  rmax = mesh->s[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else eInterp = eOverlap;
+
+	  rloc = (rnew - rmin)/(rmax - rmin);
+	  sloc = mesh->slocal[(eInterp+1)*mesh->Np - n - 1];
+	  
+	  rsdir = rdir;
+
+	  break;
+	case 25:
+
+	case 10:
+
+	case 22:
+
+	case 27:
+
+	case 11:
+
+	case 31:
+
+	case 23:
+
+	case 33:
+	  
+	}
     }
   }
 }
