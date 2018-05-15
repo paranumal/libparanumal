@@ -305,18 +305,12 @@ kernel void bnsRelaxationQuad2D(const dlong Nelements,
           dfloat icubq1 = 1.f/r_q[0];
           if(p_SEMI_ANALYTIC){
             // BGK relaxation approximation to the Boltzmann collision operator
-            // s_q[es][0][j][i] = 0.f;
-            // s_q[es][1][j][i] = 0.f;
-            // s_q[es][2][j][i] = 0.f;
             s_q[es][3][j][i] =  p_tauInv*(           r_q[1]*r_q[2]*icubq1);
             s_q[es][4][j][i] =  p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
             s_q[es][5][j][i] =  p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1); 
           }else{
             // BGK relaxation approximation to the Boltzmann collision operator
             // can be simplified by seperating linear part
-            // s_q[es][0][j][i] = 0.f;
-            // s_q[es][1][j][i] = 0.f;
-            // s_q[es][2][j][i] = 0.f;
             s_q[es][3][j][i] = -p_tauInv*(r_q[3] -            r_q[1]*r_q[2]*icubq1);
             s_q[es][4][j][i] = -p_tauInv*(r_q[4] - p_invsqrt2*r_q[1]*r_q[1]*icubq1);
             s_q[es][5][j][i] = -p_tauInv*(r_q[5] - p_invsqrt2*r_q[2]*r_q[2]*icubq1);
@@ -384,7 +378,7 @@ kernel void bnsRelaxationQuad2D(const dlong Nelements,
               }
             }
 
-            const dlong rhsId = e*p_Np + j*p_Nq + i;
+            const dlong rhsId = e*p_Np*p_Nfields + j*p_Nq + i;
             for(int fld=p_qNs; fld<p_Nfields; fld++){
               rhsq[rhsId + fld*p_Np]  += r_q[fld];
             }
@@ -654,8 +648,8 @@ kernel void bnsPmlRelaxationQuad2D(const dlong pmlNelements,
               }
             }
 
-            const dlong rhsId    = e*p_Np + j*p_Nq + i;
-            const dlong pmlRhsId = pmlId*p_Np + j*p_Nq + i;
+            const dlong rhsId    = e*p_Np*p_Nfields + j*p_Nq + i;
+            const dlong pmlRhsId = pmlId*p_Np*p_Nfields + j*p_Nq + i;
 
             for(int fld=0; fld<p_Nfields; fld++){
               pmlrhsqx[pmlRhsId + fld*p_Np] += r_qx[fld];
