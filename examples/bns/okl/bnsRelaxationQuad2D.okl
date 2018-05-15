@@ -1,0 +1,369 @@
+
+#define p_Nvars 3
+#define p_Nrelax 3
+
+// MRAB relaxation cub
+kernel void bnsRelaxationQuad2D(const dlong Nelements,
+                               const dlong * restrict elementIds,
+                               const dlong offset,
+                               const int   shift,
+                               const dfloat * restrict cubInterpT,
+                               const dfloat * restrict cubProjectT,
+                               const dfloat * restrict q,
+			       dfloat * restrict rhsq){
+  
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockCub;outer0){  // for all elements
+
+    // shared memory for q at nodes
+    shared dfloat s_q[p_NblockCub][p_Nvars][p_Nq][p_Nq];
+    shared dfloat s_Iq[p_NblockCub][p_Nvars][p_Nq][p_cubNq];
+
+    // sub-group of p_Np cubature node interpolants of N4,N5,N6
+    shared dfloat s_cubN4[p_NblockCub][p_cubNq][p_cubNq];
+    shared dfloat s_cubN5[p_NblockCub][p_cubNq][p_cubNq];
+    shared dfloat s_cubN6[p_NblockCub][p_cubNq][p_cubNq];
+
+    // storage for interpolation and projection matrices
+    shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    
+    exclusive dlong e;
+    
+    // prefetch q to shared
+    for(int es=0;es<p_NblockCub;++es;inner2){
+      for(int j=0;j<p_cubNq;++j;inner1){
+	for(int i=0;i<p_cubNq;++i;inner0){
+	  
+	  dlong et = eo+es; // element in block
+	  if(et<Nelements){
+	    e = elementIds[et];
+	    
+	    int n=i+cubNq*j;
+	    while(n<p_Np*p_Nvars){ // chunk loading of q1,q2,q3
+	      const dlong id = e*p_Nfields*p_Np + n;
+	      s_q[es][0][0][n] = q[id];
+	      n+=p_cubNq*p_cubNq;
+	    }
+	  }
+	  
+	  int n = i + j*cubNq;
+	  if(n<p_cubNq*p_Nq && es==0){
+	    s_cubInterpT[0][n] = cubInterpT[n]; // rely on column major
+	    s_cubProjecT[0][n] = cubProjectT[n]; 
+	  }
+	}
+      }
+    }
+    
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+    
+    // interpolate q to cubature in 'r'
+    for(int es=0;es<p_NblockCub;++es;inner2){
+      for(int j=0;j<p_cubNq;++j;inner1){
+	for(int i=0;i<p_cubNq;++i;inner0){
+	  
+	  if(j<p_Nq){
+	    dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
+	    
+	    occaUnroll(p_Nq)
+	      for(int m=0;m<p_Nq;++m){
+		const dfloat Iim  = cubInterpT[m][i]; // check this;
+		cubq1 += Iim*s_q[es][0][j][m];
+		cubq2 += Iim*s_q[es][1][j][m];
+		cubq3 += Iim*s_q[es][2][j][m];
+	      }
+	    
+	    s_Iq[es][0][j][i] = cubq1;
+	    s_Iq[es][1][j][i] = cubq2;
+	    s_Iq[es][2][j][i] = cubq3;
+	  }
+	}
+      }
+    }
+
+    barrier(localMemFence);
+
+    // interpolate q to cubature in 's' and form nonlinear relaxation terms
+    for(int es=0;es<p_NblockCub;++es;inner2){
+      for(int j=0;j<p_cubNq;++j;inner1){
+	for(int i=0;i<p_cubNq;++i;inner0){
+	  dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
+	  
+	  occaUnroll(p_Nq)
+	    for(int m=0;m<p_Nq;++m){
+	      const dfloat Ijm  = cubInterpT[m][j]; // check this;
+	      cubq1 += Ijm*s_Iq[es][0][m][i];
+	      cubq2 += Ijm*s_Iq[es][1][m][i];
+	      cubq3 += Ijm*s_Iq[es][2][m][i];
+	    }
+	  
+	  dfloat icubq1		= 1.f/cubq1;
+	  // BGK relaxation approximation to the Boltzmann collision operator
+	  s_cubN4[es][j][i] =  p_tauInv*(           cubq2*cubq3*icubq1);
+	  s_cubN5[es][j][i] =  p_tauInv*(p_invsqrt2*cubq2*cubq2*icubq1);
+	  s_cubN6[es][j][i] =  p_tauInv*(p_invsqrt2*cubq3*cubq3*icubq1);
+	}
+      }
+    }
+    
+    //make sure all cubature node data is loaded into shared
+    barrier(localMemFence);
+
+    // project back in 's'
+    for(int es=0;es<p_NblockCub;++es;inner2){
+      for(int j=0;j<p_cubNq;++j;inner1){
+	for(int i=0;i<p_cubNq;++i;inner0){
+	  dfloat cubN4 = 0.0f, cubN5 = 0.0f, cubN6 = 0.0f;
+
+	  if(j<p_Nq){
+	    
+	    occaUnroll(p_Nq)
+	      for(int m=0;m<p_cubNq;++m){
+		const dfloat Pjm  = cubProjectT[m][j]; // check this;
+		cubN4 += Pjm*s_cubN4[es][0][m][i];
+		cubN5 += Pjm*s_cubN5[es][1][m][i];
+		cubN6 += Pjm*s_cubN6[es][2][m][i];
+	      }
+	    
+	    s_Iq[es][0][j][i] = cubN4;
+	    s_Iq[es][1][j][i] = cubN5;
+	    s_Iq[es][2][j][i] = cubN6;
+	  }
+	}
+      }
+    }
+    
+    barrier(localMemFence);
+
+    // project back in 's'
+    for(int es=0;es<p_NblockCub;++es;inner2){
+      for(int j=0;j<p_cubNq;++j;inner1){
+	for(int i=0;i<p_cubNq;++i;inner0){
+	  	    
+	  dlong et = eo+es; // element in block
+	  if(et<Nelements){
+	    if(i<p_Nq && j<p_Nq){
+	      int n = i + j*p_Nq;
+	      
+	      const dlong id    = e*p_Nfields*p_Np + n;
+	      dlong rhsId = id ; 
+	      
+	      // multi-rate index shift
+	      if(p_MRSAAB){
+		rhsId   += shift*offset;  
+	      }
+
+	      dfloat N4 = 0.0f, N5 = 0.0f, N6 = 0.0f;
+
+	      dfloat N4 = rhsq[rhsId + 3*p_Np];
+	      dfloat N5 = rhsq[rhsId + 4*p_Np];
+	      dfloat N6 = rhsq[rhsId + 5*p_Np];
+	      
+	      occaUnroll(p_Nq)
+		for(int m=0;m<p_cubNq;++m){
+		  const dfloat Pim  = cubProjectT[m][i]; // check this;
+		  N4 += Pim*s_Iq[es][0][j][m];
+		  N5 += Pim*s_Iq[es][1][j][m];
+		  N6 += Pim*s_Iq[es][2][j][m];
+		}
+	      
+	      if(!p_SEMI_ANALYTIC){
+		N4 -= p_tauInv*q[id + 3*p_Np];
+		N5 -= p_tauInv*q[id + 4*p_Np];
+		N6 -= p_tauInv*q[id + 5*p_Np];
+	      }
+	      
+	      // Update  
+	      rhsq[rhsId + 3*p_Np] = N4;
+	      rhsq[rhsId + 4*p_Np] = N5;
+	      rhsq[rhsId + 5*p_Np] = N6;
+	      
+	    }
+	  }
+	}
+      }
+    }
+  }
+}
+
+
+TW - the following is not converted to quad2d yet
+
+// Fully Explicit Scheme Uses Clasical half Half Splitting
+kernel void bnsPmlRelaxationTri2D(const dlong pmlNelements,
+                                  const dlong * restrict pmlElementIds,
+                                  const dlong * restrict pmlIds,
+                                  const dlong offset,
+                                  const dlong pmloffset,
+                                  const int   shift,
+                                  const dfloat * restrict cubInterpT,
+                                  const dfloat * restrict cubProjectT,
+                                  const dfloat * restrict pmlSigmaX,
+                                  const dfloat * restrict pmlSigmaY, 
+                                  const dfloat * restrict pmlSigmaZ, 
+                                  const dfloat * restrict q,
+                                  const dfloat * restrict pmlqx,
+                                  const dfloat * restrict pmlqy,
+                                  const dfloat * restrict pmlqz,
+				  dfloat * restrict rhsq,
+				  dfloat * restrict pmlrhsqx,
+				  dfloat * restrict pmlrhsqy,
+				  dfloat * restrict pmlrhsqz){
+
+  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
+
+    // shared memory for q at nodes
+    shared dfloat  s_q[p_NblockCub][p_Nfields][p_Np];
+    shared dfloat s_qx[p_NblockCub][p_Nfields][p_Np];
+    shared dfloat s_qy[p_NblockCub][p_Nfields][p_Np];
+
+    // sub-group of p_Np cubature node interpolants of N4,N5,N6
+    shared dfloat s_cubq[p_NblockCub][p_Nfields][p_cubNp];
+    shared dfloat s_cubqx[p_NblockCub][p_Nfields][p_cubNp];
+    shared dfloat s_cubqy[p_NblockCub][p_Nfields][p_cubNp];
+   
+    exclusive dlong e, pmlId;
+
+    // prefetch q to shared
+    for(int es=0;es<p_NblockCub;++es;inner1){
+      for(int n=0;n<p_maxCubNodes;++n;inner0){      
+        const dlong et = eo+es; // element in block
+        if(et<pmlNelements){
+	  e     = pmlElementIds[et];
+	  pmlId = pmlIds[et];
+            
+	  if(n<p_Np){
+
+	    const dlong id  = e*p_Nfields*p_Np + n;
+	    const dlong pid = pmlId*p_Nfields*p_Np + n;
+              
+	    occaUnroll(p_Nfields)
+              for(int fld=0; fld<p_Nfields;++fld){
+                s_q[es][fld][n]   = q[id +fld*p_Np];
+                s_qx[es][fld][n]  = pmlqx[pid+fld*p_Np];
+                s_qy[es][fld][n]  = pmlqy[pid+fld*p_Np];
+              }
+	  }
+	}
+      }
+    }
+    
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    // interpolate q to cubature
+    for(int es=0;es<p_NblockCub;++es;inner1){
+      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+        const dlong et = eo+es; // element in block
+        if(et<pmlNelements){
+          if(n<p_cubNp){
+            dfloat r_q[p_Nfields];
+            dfloat r_qx[p_Nfields];
+            dfloat r_qy[p_Nfields];
+            
+            occaUnroll(p_Nfields)
+	      for(int fld=0; fld<p_Nfields ; fld++){
+		r_q[fld]  = 0.f;
+		r_qx[fld] = 0.f;
+		r_qy[fld] = 0.f;
+	      }
+            
+            occaUnroll(p_Np)
+	      for(int m=0;m<p_Np;++m){
+		const dfloat Icn  = cubInterpT[m*p_cubNp+n];   
+		occaUnroll(p_Nfields)
+		  for(int fld=0; fld<p_Nfields;++fld){
+		    r_q[fld]  += Icn*s_q[es][fld][m];
+		    r_qx[fld] += Icn*s_qx[es][fld][m];
+		    r_qy[fld] += Icn*s_qy[es][fld][m];
+		  }
+	      }
+            
+            // Prefetch sigma
+            const dfloat sigmaxe = pmlSigmaX[pmlId*p_cubNp+n];
+            const dfloat sigmaye = pmlSigmaY[pmlId*p_cubNp+n];
+            // M-PML sigma midification
+            const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
+            const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
+            
+            occaUnroll(p_Nfields)
+	      for(int fld=0; fld<p_Nfields ; fld++){
+		s_cubqx[es][fld][n]= -msigmaxe*r_qx[fld];
+		s_cubqy[es][fld][n]= -msigmaye*r_qy[fld];
+		s_cubq[es][fld][n] = -msigmaxe*r_qx[fld]-msigmaye*r_qy[fld];
+	      }
+
+            dfloat icubq1 = 1.f/r_q[0];
+            if(p_SEMI_ANALYTIC){
+              // BGK relaxation approximation to the Boltzmann collision operator
+              s_cubq[es][3][n] += p_tauInv*(           r_q[1]*r_q[2]*icubq1);
+              s_cubq[es][4][n] += p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
+              s_cubq[es][5][n] += p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1);  
+            }else{
+              // BGK relaxation approximation to the Boltzmann collision operator
+              s_cubq[es][3][n] -= p_tauInv*(r_q[3]-(           r_q[1]*r_q[2]*icubq1));
+              s_cubq[es][4][n] -= p_tauInv*(r_q[4]-(p_invsqrt2*r_q[1]*r_q[1]*icubq1));
+              s_cubq[es][5][n] -= p_tauInv*(r_q[5]-(p_invsqrt2*r_q[2]*r_q[2]*icubq1));
+            }
+          }
+        }
+      }
+    }
+
+    // make sure all cubature node data is loaded into shared
+    barrier(localMemFence);
+    
+    // partial projection to nodes from cubature-sub-group
+    for(int es=0;es<p_NblockCub;++es;inner1){
+      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    
+        const dlong et = eo+es; // element in block
+	if(et<pmlNelements){
+	  if(n<p_Np){
+          
+	    dfloat r_rhsq[p_Nfields];
+	    dfloat r_rhsqx[p_Nfields];
+	    dfloat r_rhsqy[p_Nfields]; 
+                          
+	    occaUnroll(p_Nfields)
+              for(int fld=0; fld<p_Nfields;++fld){
+                r_rhsq[fld]  = 0.f;
+                r_rhsqx[fld] = 0.f;
+                r_rhsqy[fld] = 0.f;
+              }
+
+	    // use temporaries for part sums for N4,N5,N6 because of exclusives
+	    occaUnroll(p_cubNp)
+              for(int m=0;m<p_cubNp;++m){
+                const dfloat Pnc  = cubProjectT[m*p_Np+n];                  
+		occaUnroll(p_Nfields)
+		  for(int fld=0; fld<p_Nfields; fld++){
+		    r_rhsq [fld] += Pnc*s_cubq[es][fld][m];
+		    r_rhsqx[fld] += Pnc*s_cubqx[es][fld][m];
+		    r_rhsqy[fld] += Pnc*s_cubqy[es][fld][m];
+		  }
+              }
+
+	    // Update
+	    dlong rhsId    = e*p_Nfields*p_Np + n;
+	    dlong pmlrhsId = pmlId*p_Nfields*p_Np + n;
+	    // 
+	    if(p_MRSAAB){
+	      rhsId     += shift*offset;
+	      pmlrhsId  += shift*pmloffset;
+	    }
+                
+	    occaUnroll(p_Nfields) 
+	      for(int fld=0; fld<p_Nfields;++fld){
+                pmlrhsqx[pmlrhsId + fld*p_Np] += r_rhsqx[fld];
+                pmlrhsqy[pmlrhsId + fld*p_Np] += r_rhsqy[fld];
+                rhsq[rhsId + fld*p_Np]        += r_rhsq[fld];
+              }   
+          }
+        }
+      }
+    }
+
+  }
+}
