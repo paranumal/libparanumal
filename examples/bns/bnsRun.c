@@ -91,7 +91,7 @@ tic_tot = MPI_Wtime();
 if( bns->fixed_dt ){
  for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
       
-   // for(int tstep=0;tstep<1;++tstep){
+   // for(int tstep=0;tstep<10;++tstep){
       tic_out = MPI_Wtime();
 
       if(bns->reportFlag){
@@ -144,7 +144,7 @@ if( bns->fixed_dt ){
 
 
   elp_tot += (MPI_Wtime() - tic_tot);    
-  occaTimerToc(mesh->device, "BOLTZMANN");
+  // occaTimerToc(mesh->device, "BOLTZMANN");
 
   // compute maximum over all processes
   double gelp_tot  = 0.f, gelp_sol = 0.f, gelp_out = 0.f;

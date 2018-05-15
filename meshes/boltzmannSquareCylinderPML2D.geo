@@ -78,6 +78,8 @@ Line(28) = {16, 10};
 
 
 
+
+
 Line Loop(29) = {5, 6, 7, 8};
 Line Loop(30) = {1, 2, 3, 4};
 Plane Surface(31) = {29, 30};
@@ -97,6 +99,8 @@ Line Loop(44) = {25, 26, 27, -24};
 Plane Surface(45) = {44};
 Line Loop(46) = {28, -11, -8, -27};
 Plane Surface(47) = {46};
+
+
 
 
 Physical Line("Wall",1) = {1, 2, 3, 4};

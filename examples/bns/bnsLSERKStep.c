@@ -73,8 +73,8 @@ for(int rk=0;rk<mesh->Nrk;++rk){
       occaTimerTic(mesh->device,"NonPmlVolumeKernel");
        bns->volumeKernel(mesh->nonPmlNelements,
                           mesh->o_nonPmlElementIds,
-                          offset, // 0
-                          shift, //0
+                          offset, 
+                          shift, 
                           ramp, 
                           drampdt,
                           mesh->o_vgeo,
