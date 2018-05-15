@@ -1,8 +1,10 @@
 #include "mesh3D.h"
 
-mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius,char *mode){
+mesh_t *meshSetupQuad3D(int mesh_size, int N, dfloat sphereRadius,char *mode){
 
   // read chunk of elements
+  char filename[18];
+  sprintf(filename,"../../cubed_grid_.2%d.msh",mesh_size);
   mesh_t *mesh = meshParallelReaderQuad3D(filename);
 
   // set sphere radius (will be used later in building physical nodes)

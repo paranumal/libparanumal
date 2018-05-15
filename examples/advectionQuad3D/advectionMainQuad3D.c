@@ -20,7 +20,7 @@ int main(int argc, char **argv){
 
   // set up mesh stuff
   dfloat sphereRadius = 1;
-  mesh_t *mesh = meshSetupQuad3D(argv[1], N, sphereRadius,mode);
+  mesh_t *mesh = meshSetupQuad3D(atoi(argv[1]), N, sphereRadius,mode);
 
   // set up boltzmann stuff
   solver_t *solver = advectionSetupPhysicsQuad3D(mesh);
