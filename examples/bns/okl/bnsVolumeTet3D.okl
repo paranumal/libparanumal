@@ -32,7 +32,6 @@ kernel void bnsVolumeTet3D(const dlong Nelements,
       }
     }
   }
-
     // make sure all node data is loaded into shared
     barrier(localMemFence);
 
