@@ -1,4 +1,4 @@
-kernel void bnsLSERKUpdateTet3D(const dlong Nelements,
+kernel void bnsLSERKUpdate3D(const dlong Nelements,
                                 const dlong * restrict elementIds,
                                 const dfloat dt,  
                                 const dfloat rka,
@@ -33,7 +33,7 @@ kernel void bnsLSERKUpdateTet3D(const dlong Nelements,
 
 
 
-kernel void bnsLSERKPmlUpdateTet3D(const dlong pmlNelements,
+kernel void bnsLSERKPmlUpdate3D(const dlong pmlNelements,
                                    const dlong   * restrict pmlElementIds,
                                    const dlong   * restrict pmlIds,
                                    const dfloat dt,  
@@ -107,7 +107,7 @@ for(dlong es=0;es<pmlNelements;++es;outer0){
 
 
 
-kernel void bnsSARKUpdateStageTet3D(const dlong Nelements,
+kernel void bnsSARKUpdateStage3D(const dlong Nelements,
                          const dlong * restrict elementIds,
                          const dlong offset,
                          const int stage,
@@ -153,7 +153,7 @@ kernel void bnsSARKUpdateStageTet3D(const dlong Nelements,
 
 
 
-kernel void bnsSARKPmlUpdateStageTet3D( const dlong pmlNelements,
+kernel void bnsSARKPmlUpdateStage3D( const dlong pmlNelements,
                                         const dlong   * restrict pmlElementIds,
                                         const dlong   * restrict pmlIds,
                                         const dlong offset,
@@ -234,7 +234,7 @@ kernel void bnsSARKPmlUpdateStageTet3D( const dlong pmlNelements,
 
 
 
-kernel void bnsSARKUpdateTet3D(const dlong Nelements,
+kernel void bnsSARKUpdate3D(const dlong Nelements,
                                 const dlong * restrict elementIds,
                                 const dlong offset,
                                 const int stage,
@@ -301,7 +301,7 @@ kernel void bnsSARKUpdateTet3D(const dlong Nelements,
 
 
 
-kernel void bnsSARKPmlUpdateTet3D(const dlong pmlNelements,
+kernel void bnsSARKPmlUpdate3D(const dlong pmlNelements,
                                   const dlong   * restrict pmlElementIds,
                                   const dlong   * restrict pmlIds,
                                   const dlong offset,
@@ -426,7 +426,7 @@ kernel void bnsSARKPmlUpdateTet3D(const dlong pmlNelements,
 
 
 // This kernel is used in both pml and non-pml regions
-kernel void bnsMRSAABTraceUpdateTet3D(const dlong Nelements,
+kernel void bnsMRSAABTraceUpdate3D(const dlong Nelements,
                                           const dlong * restrict elementIds,
                                           const dlong offset,
                                           const int shift,
@@ -492,7 +492,7 @@ kernel void bnsMRSAABTraceUpdateTet3D(const dlong Nelements,
 
 
 // This kernel does not use float 4 format, 
-kernel void bnsMRSAABUpdateTet3D( const dlong Nelements,
+kernel void bnsMRSAABUpdate3D( const dlong Nelements,
                                   const dlong * restrict elementIds,
                                   const dlong offset,
                                   const int shift,
@@ -569,7 +569,7 @@ kernel void bnsMRSAABUpdateTet3D( const dlong Nelements,
 }
 
 
-kernel void bnsMRSAABPmlUpdateTet3D(const dlong pmlNelements,
+kernel void bnsMRSAABPmlUpdate3D(const dlong pmlNelements,
                                     const dlong   * restrict pmlElementIds,
                                     const dlong   * restrict pmlIds,
                                     const dlong offset,

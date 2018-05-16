@@ -36,10 +36,6 @@ void upwind1D(const dfloat nx,  const dfloat ny,  const dfloat nz,
   *q8P  = 0.5f*(q8B  - q8M)  - beta*p_sqrtRT*nx*(q2B-q2M);
   *q9P  = 0.5f*(q9B  - q9M)  - beta*p_sqrtRT*ny*(q3B-q3M);
   *q10P = 0.5f*(q10B - q10M) - beta*p_sqrtRT*nz*(q4B-q4M);  
-
-
-
-
   #endif
 
 }
@@ -185,15 +181,15 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
 
 
             // Read trace values
-            dfloat q1M  = q[qidM + 0*p_Np], q1P = q[qidP + 0*p_Np];
-            dfloat q2M  = q[qidM + 1*p_Np], q2P = q[qidP + 1*p_Np];
-            dfloat q3M  = q[qidM + 2*p_Np], q3P = q[qidP + 2*p_Np];
-            dfloat q4M  = q[qidM + 3*p_Np], q4P = q[qidP + 3*p_Np];
-            dfloat q5M  = q[qidM + 4*p_Np], q5P = q[qidP + 4*p_Np];
-            dfloat q6M  = q[qidM + 5*p_Np], q6P = q[qidP + 5*p_Np];
-            dfloat q7M  = q[qidM + 6*p_Np], q7P = q[qidP + 6*p_Np];
-            dfloat q8M  = q[qidM + 7*p_Np], q8P = q[qidP + 7*p_Np];
-            dfloat q9M  = q[qidM + 8*p_Np], q9P = q[qidP + 8*p_Np];
+            dfloat q1M  = q[qidM + 0*p_Np], q1P = q[qidP  + 0*p_Np];
+            dfloat q2M  = q[qidM + 1*p_Np], q2P = q[qidP  + 1*p_Np];
+            dfloat q3M  = q[qidM + 2*p_Np], q3P = q[qidP  + 2*p_Np];
+            dfloat q4M  = q[qidM + 3*p_Np], q4P = q[qidP  + 3*p_Np];
+            dfloat q5M  = q[qidM + 4*p_Np], q5P = q[qidP  + 4*p_Np];
+            dfloat q6M  = q[qidM + 5*p_Np], q6P = q[qidP  + 5*p_Np];
+            dfloat q7M  = q[qidM + 6*p_Np], q7P = q[qidP  + 6*p_Np];
+            dfloat q8M  = q[qidM + 7*p_Np], q8P = q[qidP  + 7*p_Np];
+            dfloat q9M  = q[qidM + 8*p_Np], q9P = q[qidP  + 8*p_Np];
             dfloat q10M = q[qidM + 9*p_Np], q10P = q[qidP + 9*p_Np];
                       
           // apply boundary condition
@@ -455,9 +451,9 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
               const dfloat L = LIFTT[n+m*p_Np];
               occaUnroll(p_Nfields)
               for(int fld=0; fld<p_Nfields; fld++){
-                r_lnxdq[fld] = L*s_nxdq[es][fld][m];
-                r_lnydq[fld] = L*s_nydq[es][fld][m];
-                r_lnzdq[fld] = L*s_nzdq[es][fld][m];
+                r_lnxdq[fld] += L*s_nxdq[es][fld][m];
+                r_lnydq[fld] += L*s_nydq[es][fld][m];
+                r_lnzdq[fld] += L*s_nzdq[es][fld][m];
               }
             }
 
