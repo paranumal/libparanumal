@@ -10,6 +10,7 @@ void insVelocityUpdate(ins_t *ins, dfloat time, int stage,
   occaTimerTic(mesh->device,"VelocityUpdate");
   ins->velocityUpdateKernel(mesh->Nelements,
                               stage,
+                              ins->ARKswitch,
                               ins->dt,
                               ins->fieldOffset,
                               ins->o_prkA,

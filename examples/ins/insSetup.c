@@ -94,6 +94,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->extbdfA = (dfloat*) calloc(3, sizeof(dfloat));
     ins->extbdfB = (dfloat*) calloc(3, sizeof(dfloat));
     ins->extbdfC = (dfloat*) calloc(3, sizeof(dfloat));
+
+    ins->extC = (dfloat*) calloc(3, sizeof(dfloat));
   }
 
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF1")) {
@@ -204,9 +206,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   kernelInfo.addDefine("p_SUBCYCLING",  ins->Nsubsteps);
 
   if (options.compareArgs("TIME INTEGRATOR", "ARK")) 
-    kernelInfo.addDefine("ARKSWITCH", 1);    
+    ins->ARKswitch = 1;   
   else 
-    kernelInfo.addDefine("ARKSWITCH", 0);    
+    ins->ARKswitch = 0;
 
   //add boundary data to kernel info
   string boundaryHeaderFileName; 
@@ -479,6 +481,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->o_extbdfA = mesh->device.malloc(3*sizeof(dfloat));
     ins->o_extbdfB = mesh->device.malloc(3*sizeof(dfloat));
     ins->o_extbdfC = mesh->device.malloc(3*sizeof(dfloat)); 
+
+    ins->o_extC = mesh->device.malloc(3*sizeof(dfloat)); 
 
     ins->o_prkA = ins->o_extbdfC;
   }

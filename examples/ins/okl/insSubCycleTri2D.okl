@@ -151,10 +151,10 @@ kernel void insSubCycleSurfaceTri2D(const dlong Nelements,
 
           // evaluate "flux" terms: LLF
           const dfloat sc = invJ * sJ ; 
-          s_fluxUx[es][n] = sc*(.5f*( nx*(uxP*pxP - uxM*pxM) 
-                                    + ny*(uyP*pxP - uyM*pxM) + unMax*(pxM-pxP) ));
-          s_fluxUy[es][n] = sc*(.5f*( nx*(uxP*pyP - uxM*pyP) 
-                                    + ny*(uyP*pyP - uyM*pyM) + unMax*(pyM-pyP) ));
+          s_fluxUx[es][n] = sc*(.5f*( nx*(uxP*pxP + uxM*pxM) 
+                                    + ny*(uyP*pxP + uyM*pxM) + unMax*(pxM-pxP) ));
+          s_fluxUy[es][n] = sc*(.5f*( nx*(uxP*pyP + uxM*pyP) 
+                                    + ny*(uyP*pyP + uyM*pyM) + unMax*(pyM-pyP) ));
         }
       }
     }
