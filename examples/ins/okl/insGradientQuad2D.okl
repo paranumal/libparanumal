@@ -2,9 +2,9 @@
 kernel void insGradientVolumeQuad2D(const dlong Nelements,
                                     const dfloat * restrict vgeo,
                                     const dfloat * restrict D,
-                                    const dlong offset,
+                                    const dlong fieldOffset,
                                     const dfloat * restrict P,
-                                          dfloat * restrict gradP){
+                                          dfloat * restrict GP){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
@@ -54,22 +54,14 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
               }
 
             const dlong id = e*p_Np + j*p_Nq + i;
-            gradP[id+0*offset] = drdx*dpdr + dsdx*dpds;
-            gradP[id+1*offset] = drdy*dpdr + dsdy*dpds;
+            GP[id+0*fieldOffset] = drdx*dpdr + dsdx*dpds;
+            GP[id+1*fieldOffset] = drdy*dpdr + dsdy*dpds;
           }
         }
       }
     }
   }  
 }
-
-// taken from the lines if(solverID==1){ ..  }
-#if 0
-   /* dfloat PPo = 0.f; */                                              \
-   /* dfloat to  = time-dt; */                                          \
-   /* insGradientBoundaryConditions2D(bc,to, x[idM], y[idM], nx, ny, PM, &PPo); */  \
-   /* PP = PP-c0*PPo; */                                                \
-#endif
 
 #define surfaceTerms(sk,face,i, j)                                      \
 {                                                                       \
@@ -87,9 +79,6 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
     insPressureDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);\
-    if(solverID==1){                                                    \
-      PP = PM;                                                          \
-    }                                                                   \
     PP = 2.f*PP - PM;                                                   \
   }                                                                     \
                                                                         \
@@ -108,10 +97,9 @@ kernel void insGradientSurfaceQuad2D(const dlong Nelements,
                                      const dfloat * restrict y,
                                      const dfloat * restrict z,
                                      const dfloat time,
-                                     const dlong offset,
-                                     const int solverID,
+                                     const dlong fieldOffset,
                                      const dfloat * restrict P,
-                                           dfloat * restrict gradP){
+                                           dfloat * restrict GP){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -171,8 +159,8 @@ kernel void insGradientSurfaceQuad2D(const dlong Nelements,
           if(e<Nelements){
             const dlong id = e*p_Np + j*p_Nq + i;
 
-            gradP[id+0*offset] += s_fluxPx[es][j][i];
-            gradP[id+1*offset] += s_fluxPy[es][j][i];
+            GP[id+0*fieldOffset] += s_fluxPx[es][j][i];
+            GP[id+1*fieldOffset] += s_fluxPy[es][j][i];
           }
         }
       }

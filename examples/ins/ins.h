@@ -42,6 +42,8 @@ typedef struct {
   int   NtimeSteps;  // number of time steps 
   int   Nstages;     
   int   outputStep; 
+
+  int ARKswitch;
   
   int NiterU, NiterV, NiterW, NiterP;
 
@@ -73,6 +75,7 @@ typedef struct {
 
   //EXTBDF data
   dfloat *extbdfA, *extbdfB, *extbdfC;
+  dfloat *extC;
 
   int *VmapB, *PmapB;
   occa::memory o_VmapB, o_PmapB;
@@ -122,6 +125,7 @@ typedef struct {
 
   //EXTBDF data
   occa::memory o_extbdfA, o_extbdfB, o_extbdfC;
+  occa::memory o_extC;
 
   occa::kernel velocityHaloExtractKernel;
   occa::kernel velocityHaloScatterKernel;
@@ -176,7 +180,7 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU);
 void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);
 void insGradient (ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP);
 void insDivergence(ins_t *ins,dfloat time, occa::memory o_U, occa::memory o_DU);
-void insSubCycle(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU);
+void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_NU);
 
 void insVelocityRhs  (ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW);
 void insVelocitySolve(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW, occa::memory o_rkU);

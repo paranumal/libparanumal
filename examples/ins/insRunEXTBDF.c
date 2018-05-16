@@ -80,7 +80,7 @@ void insRunEXTBDF(ins_t *ins){
     dfloat time = tstep*ins->dt;
 
     if(ins->Nsubsteps) {
-      insSubCycle(ins, time, ins->o_U, ins->o_NU);
+      insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
       insAdvection(ins, time, ins->o_U, ins->o_NU);
     } 

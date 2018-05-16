@@ -32,28 +32,28 @@ kernel void insSubCycleRKUpdate(const dlong Nelements,
 
 
 kernel void insSubCycleExt(const dlong Nelements,
-                           const dlong offset,
-                           const dfloat c0,
-                           const dfloat c1,
-                           const dfloat c2, 
+                           const int Nstages,
+                           const dlong fieldOffset,
+                           const dfloat * restrict c,
                            const dfloat * restrict U,
-                           dfloat * restrict Ue){
+                                 dfloat * restrict Ue){
 
   // Low storage Runge Kutta time step update
   for(dlong e=0;e<Nelements;++e;outer0){
     for(int n=0;n<p_Np;++n;inner0){
       const dlong id = n+p_Np*e;
-      const dlong id0   = id + 0*p_NVfields*offset;
-      const dlong id1   = id + 1*p_NVfields*offset;
-      const dlong id2   = id + 2*p_NVfields*offset;
-
+      
       occaUnroll(p_NVfields)
       for (int i=0;i<p_NVfields;i++) {
-        const dfloat Um0  = U[id0+i*offset];
-        const dfloat Um1  = U[id1+i*offset];
-        const dfloat Um2  = U[id2+i*offset];
-         
-        Ue[id+i*offset] = c0*Um0 + c1*Um1 + c2*Um2;
+        dfloat Un = 0.;
+
+        for (int s=0;s<Nstages;s++) {
+          const dlong idm = id+i*fieldOffset+s*p_NVfields*fieldOffset;
+          const dfloat Um = U[idm];
+          Un += c[s]*Um;
+        }
+
+        Ue[id+i*fieldOffset] = Un;
       }
     }
   }

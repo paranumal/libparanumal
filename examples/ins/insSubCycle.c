@@ -1,7 +1,7 @@
 #include "ins.h"
 
 // complete a time step using LSERK4
-void insSubCycle(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_Ud){
+void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_Ud){
  
   //printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
   mesh_t *mesh = ins->mesh;
@@ -42,9 +42,6 @@ void insSubCycle(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_Ud){
   const dfloat tn1 = time - 1*ins->dt;
   const dfloat tn2 = time - 2*ins->dt;
 
-  // construct interpolating lagrange polynomial
-  dfloat c0 = 0.f, c1 = 0.f, c2 = 0.f;
-  
   dfloat zero = 0.0, one = 1.0;
   int izero = 0;
 
@@ -76,24 +73,26 @@ void insSubCycle(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_Ud){
 
         switch(ins->ExplicitOrder){
           case 1:
-            c0 = 1.f; c1 = 0.f; c2 = 0.f;
+            ins->extC[0] = 1.f; ins->extC[1] = 0.f; ins->extC[2] = 0.f;
             break;
           case 2:
-            c0 = (t-tn1)/(tn0-tn1);
-            c1 = (t-tn0)/(tn1-tn0);
-            c2 = 0.f; 
+            ins->extC[0] = (t-tn1)/(tn0-tn1);
+            ins->extC[1] = (t-tn0)/(tn1-tn0);
+            ins->extC[2] = 0.f; 
             break;
           case 3:
-            c0 = (t-tn1)*(t-tn2)/((tn0-tn1)*(tn0-tn2)); 
-            c1 = (t-tn0)*(t-tn2)/((tn1-tn0)*(tn1-tn2));
-            c2 = (t-tn0)*(t-tn1)/((tn2-tn0)*(tn2-tn1));
+            ins->extC[0] = (t-tn1)*(t-tn2)/((tn0-tn1)*(tn0-tn2)); 
+            ins->extC[1] = (t-tn0)*(t-tn2)/((tn1-tn0)*(tn1-tn2));
+            ins->extC[2] = (t-tn0)*(t-tn1)/((tn2-tn0)*(tn2-tn1));
             break;
         }
+        ins->o_extC.copyFrom(ins->extC);
 
         //compute advective velocity fields at time t
         ins->subCycleExtKernel(NtotalElements,
+                               Nstages,
                                ins->fieldOffset,
-                               c0, c1, c2,
+                               ins->o_extC,
                                o_U,
                                ins->o_Ue);
 
