@@ -33,15 +33,13 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
   
   mesh_t *mesh = solver->mesh;
   
-    dfloat *q_zero = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*solver->Nfields,
-				      sizeof(dfloat));
-    solver->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*solver->Nfields,
-				    sizeof(dfloat));
-
-    rk4_lserk_coeffs(solver);
-
-    solver->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*solver->Nfields,
-				    sizeof(dfloat));
+  solver->rhsq = (dfloat*) calloc(mesh->NgridElements*mesh->Np*solver->Nfields,
+				  sizeof(dfloat));
+  
+  rk4_lserk_coeffs(solver);
+  
+  solver->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*solver->Nfields,
+				  sizeof(dfloat));
 
     // set time step
     dfloat hmin = 1e9, hmax = 0;
@@ -97,10 +95,22 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
       solver->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*solver->Nfields*sizeof(dfloat), solver->q);
 
     solver->o_rhsq =
-      solver->device.malloc(mesh->Np*mesh->Nelements*solver->Nfields*sizeof(dfloat), solver->rhsq);
-        
+      solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat), solver->rhsq);
+
+    solver->o_eInterp =
+      solver->device.malloc(mesh->Np*(mesh->NgridElements-mesh->Nelements)*sizeof(iint),mesh->eInterp);
+
+    solver->o_overlapDirection =
+      solver->device.malloc((mesh->NgridElements - mesh->Nelements)*sizeof(char),mesh->overlapDirection);
+
+    solver->o_rlocal =
+      solver->device.malloc(mesh->NgridElements*mesh->Np*sizeof(dfloat),mesh->rlocal);
+
+    solver->o_slocal =
+      solver->device.malloc(mesh->NgridElements*mesh->Np*sizeof(dfloat),mesh->slocal);
+    
     solver->o_qFilter =
-      solver->device.malloc(mesh->Nelements*solver->Nfields*mesh->Np*sizeof(dfloat),solver->rhsq);
+      solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat),solver->rhsq);
       
     solver->o_qCorr =
       solver->device.malloc(mesh->Nelements*solver->Nfields*mesh->Np*sizeof(dfloat),solver->rhsq);
@@ -119,6 +129,12 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
       solver->device.buildKernelFromSource(DHOLMES "/okl/advectionSurfaceQuad3D.okl",
 					 "advectionSurfaceLSERKQuad3D",
 					 kernelInfo);
+    
+    solver->loadFilterGridKernel =
+      solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLoadFilterGridQuad3D.okl",
+					   "boltzmannLoadFilterGridQuad3D",
+					   kernelInfo);
+    
     solver->updateKernel =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
 					   "boltzmannLSERKbasicUpdateQuad3D",
