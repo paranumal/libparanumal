@@ -44,6 +44,8 @@ mesh_t *meshSetupQuad3D(int mesh_size, int N, dfloat sphereRadius,char *mode){
   //meshSphericalNodesQuad3D(mesh);
   meshEquiSphericalNodesQuad3D(mesh);
 
+  meshEquiSphericalExtensionQuad3D(mesh);
+  
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup(mesh);
 

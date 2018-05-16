@@ -110,7 +110,7 @@ void advectionSetupOccaQuad3D(solver_t *solver,occa::kernelInfo *kernelInfo) {
   kernelInfo->addDefine("p_Nfaces", mesh->Nfaces);
   kernelInfo->addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo->addDefine("p_Nsgeo", mesh->Nsgeo);
-
+  
   int maxNodes = mesh->Nfp;
   kernelInfo->addDefine("p_maxNodes", maxNodes);
 

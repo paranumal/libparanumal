@@ -326,11 +326,12 @@ void meshEquiSphericalNodesQuad3D(mesh_t *mesh){
 
 void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 
-  mesh->eInterp = (iint *) calloc((mesh->NgridElements - mesh->Nelements);
+  mesh->eInterp = (iint *) calloc((mesh->NgridElements - mesh->Nelements)*mesh->Np,sizeof(iint));
+  mesh->overlapDirection = (char *) calloc(mesh->NgridElements - mesh->Nelements,sizeof(char));
   
   for (iint i = 0; i < mesh->NgridElements - mesh->Nelements; ++i) {
     iint eOverlap = mesh->overlap[i];
-
+    
     iint eAdj;
     for (iint f = 0; f < mesh->Nfaces; ++f) {
       if (mesh->cubeFaceNumber[eOverlap] != mesh->cubeFaceNumber[mesh->EToE[eOverlap*mesh->Nfaces + f]]) {
@@ -338,22 +339,22 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	break;
       }
     }
-
+    
     iint e = mesh->Nelements + i;
-
+    
     iint face1 = mesh->cubeFaceNumber[eOverlap] - 1;
     iint face2 = mesh->cubeFaceNumber[eAdj] - 1;
-
+    
     for (iint n = 0; n < mesh->Np; ++n) {
       mesh->rlocal[e*mesh->Np + n] = n%mesh->Nq;
       mesh->slocal[e*mesh->Np + n] = n/mesh->Nq;
-
+      
       offset = M_PI/(2*mesh->edgeLength);
       
       iint faceHash = 6*face1 + face2;
-
+      
       dfloat rold, sold, rnew, snew, rloc, sloc, rmin, smin, rmax, smax;
-      iint rsdir;
+      iint rsdir, eInterp;
       iint rdir = 0;
       iint sdir = 1;
       
@@ -425,7 +426,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  
 	  rsdir = rdir;
 
-	  break;	  
+	  break;
 	case 5:
 	case 24:
 	  rold = mesh->r[eAdj*mesh->Np + n];
@@ -448,15 +449,15 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 
 	  break;
 	case 16:
-	case 32:
+	case 26:
 	  rold = mesh->r[eAdj*mesh->Np + n];
-	  sold = mesh->s[(eAdj+1)*mesh->Np - n - 1] + offset;
+	  sold = mesh->s[eAdj*mesh->Np + n] + offset;
 
-	  rnew = atan(tan(rold)/tan(sold));
-	  snew = sold - offset;
+	  rnew = -atan(tan(rold)/tan(sold));
+	  snew = M_PI/2. - sold;
 
-	  rmin = mesh->s[eOverlap*mesh->Np];
-	  rmax = mesh->s[eOverlap*mesh->Np + mesh->Np - 1];
+	  rmin = mesh->r[eOverlap*mesh->Np];
+	  rmax = mesh->r[eOverlap*mesh->Np + mesh->Np - 1];
 	  
 	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
 	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
@@ -469,15 +470,15 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 
 	  break;
 	case 17:
-	case 26:
+	case 32:
 	  rold = mesh->r[eAdj*mesh->Np + n];
-	  sold = mesh->s[(eAdj+1)*mesh->Np - n - 1] - offset;
+	  sold = mesh->s[eAdj*mesh->Np + n] - offset;
 
-	  rnew = atan(tan(rold)/tan(sold));
-	  snew = sold + M_PI/2;
+	  rnew = -1*atan(tan(rold)/tan(sold));
+	  snew = -1*(M_PI/2. + sold);
 
-	  rmin = mesh->s[eOverlap*mesh->Np];
-	  rmax = mesh->s[eOverlap*mesh->Np + mesh->Np - 1];
+	  rmin = mesh->r[eOverlap*mesh->Np];
+	  rmax = mesh->r[eOverlap*mesh->Np + mesh->Np - 1];
 	  
 	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
 	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
@@ -490,22 +491,182 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 
 	  break;
 	case 25:
+	  rold = mesh->r[eAdj*mesh->Np + n];
+	  sold = mesh->s[eAdj*mesh->Np + n] + offset;
 
-	case 10:
+	  rnew = M_PI/2. - sold;
+	  snew = atan(tan(rold)/tan(sold));
 
-	case 22:
-
-	case 27:
-
-	case 11:
-
-	case 31:
-
-	case 23:
-
-	case 33:
+	  smin = mesh->s[eOverlap*mesh->Np];
+	  smax = mesh->s[eOverlap*mesh->Np + mesh->Np - 1];
 	  
+	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  else eInterp = eOverlap;
+
+	  sloc = (snew - smin)/(smax - smin);
+	  rloc = mesh->slocal[(eInterp+1)*mesh->Np - n - 1];
+	  
+	  rsdir = sdir;
+
+	  break;
+	case 10:
+	  rold = mesh->r[eAdj*mesh->Np + n] + offset;
+	  sold = mesh->s[eAdj*mesh->Np + n];
+
+	  snew = M_PI/2. - rold;
+	  rnew = atan(tan(sold)/tan(rold));
+
+	  rmin = mesh->r[eOverlap*mesh->Np];
+	  rmax = mesh->r[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else eInterp = eOverlap;
+
+	  rloc = (rnew - rmin)/(rmax - rmin);
+	  sloc = mesh->rlocal[(eInterp+1)*mesh->Np - n - 1];
+	  
+	  rsdir = rdir;
+
+	  break;
+	case 22:
+	  rold = mesh->r[eAdj*mesh->Np + n] - offset;
+	  sold = mesh->s[eAdj*mesh->Np + n];
+
+	  snew = rold + M_PI/2.;
+	  rnew = -1*atan(tan(sold)/tan(rold));
+
+	  rmin = mesh->r[eOverlap*mesh->Np];
+	  rmax = mesh->r[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else eInterp = eOverlap;
+
+	  rloc = (rnew - rmin)/(rmax - rmin);
+	  sloc = mesh->rlocal[eInterp*mesh->Np + n];
+	  
+	  rsdir = sdir;
+
+	  break; 
+	case 27:
+	  rold = mesh->r[eAdj*mesh->Np + n];
+	  sold = mesh->s[eAdj*mesh->Np + n] + offset;
+
+	  rnew = sold - M_PI/2.;
+	  snew = -1*atan(tan(rold)/tan(sold));
+
+	  smin = mesh->s[eOverlap*mesh->Np];
+	  smax = mesh->s[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  else eInterp = eOverlap;
+
+	  sloc = (snew - smin)/(smax - smin);
+	  rloc = mesh->slocal[eInterp*mesh->Np + n];
+	  
+	  rsdir = sdir;
+
+	  break;
+	case 11:
+	  rold = mesh->r[eAdj*mesh->Np + n] + offset;
+	  sold = mesh->s[eAdj*mesh->Np + n];
+
+	  snew = -1*M_PI/2. + rold;
+	  rnew = -1*atan(tan(sold)/tan(rold));
+
+	  rmin = mesh->r[eOverlap*mesh->Np];
+	  rmax = mesh->r[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else eInterp = eOverlap;
+
+	  rloc = (rnew - rmin)/(rmax - rmin);
+	  sloc = mesh->rlocal[(eInterp+1)*mesh->Np - n - 1];
+	  
+	  rsdir = rdir;
+
+	  break;
+	case 31:
+	  rold = mesh->r[eAdj*mesh->Np + n];
+	  sold = mesh->s[eAdj*mesh->Np + n] - offset;
+
+	  rnew = M_PI/2. + sold;
+	  snew = -1*atan(tan(rold)/tan(sold));
+
+	  smin = mesh->s[eOverlap*mesh->Np];
+	  smax = mesh->s[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  else eInterp = eOverlap;
+
+	  sloc = (snew - smin)/(smax - smin);
+	  rloc = mesh->slocal[eInterp*mesh->Np + n];
+	  
+	  rsdir = sdir;
+
+	  break;
+	case 23:
+	  rold = mesh->r[eAdj*mesh->Np + n] - offset;
+	  sold = mesh->s[eAdj*mesh->Np + n];
+
+	  snew = -1*(rold + M_PI/2.);
+	  rnew = atan(tan(sold)/tan(rold));
+
+	  rmin = mesh->r[eOverlap*mesh->Np];
+	  rmax = mesh->r[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else eInterp = eOverlap;
+
+	  rloc = (rnew - rmin)/(rmax - rmin);
+	  sloc = mesh->rlocal[(eInterp+1)*mesh->Np - n - 1];
+	  
+	  rsdir = sdir;
+
+	  break;
+	case 33:
+	  rold = mesh->r[eAdj*mesh->Np + n];
+	  sold = mesh->s[eAdj*mesh->Np + n] - offset;
+
+	  rnew = -1*(sold + M_PI/2.);
+	  snew = atan(tan(rold)/tan(sold));
+
+	  smin = mesh->s[eOverlap*mesh->Np];
+	  smax = mesh->s[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  else eInterp = eOverlap;
+
+	  sloc = (snew - smin)/(smax - smin);
+	  rloc = mesh->slocal[(eInterp+1)*mesh->Np - n - 1];
+	  
+	  rsdir = sdir;
+
+	  break;	  
 	}
+
+      if (rsdir == sdir && (((sloc - 1) > 1e-10) || (sloc < -1e-10))) {
+	printf("placement error with sloc %lf and hash %d\n",sloc,faceHash);
+      }
+      if (rsdir == rdir && (((rloc - 1) > 1e-10) || (rloc < -1e-10))) {
+	printf("placement error with rloc %lf and hash %d\n",rloc,faceHash);
+      }
+      
+      mesh->r[e*mesh->Np + n] = rnew;
+      mesh->s[e*mesh->Np + n] = snew;
+
+      mesh->rlocal[e*mesh->Np + n] = rloc;
+      mesh->slocal[e*mesh->Np + n] = sloc;
+
+      mesh->overlapDirection[i] = rsdir;
+      mesh->eInterp[i*mesh->Np + n] = eInterp;
     }
   }
 }

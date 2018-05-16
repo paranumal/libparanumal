@@ -39,11 +39,16 @@ typedef struct {
   occa::memory o_qCorr;
   occa::memory o_qFilter;
   occa::memory o_resq;
+  occa::memory o_eInterp;
+  occa::memory o_overlapDirection;
+  occa::memory o_rlocal;
+  occa::memory o_slocal;
   occa::kernel haloExtractKernel;
   occa::kernel haloScatterKernel;
   occa::kernel volumeKernel;
   occa::kernel volumeCorrectionKernel;
   occa::kernel surfaceKernel;
+  occa::kernel loadFilterGridKernel;
   occa::kernel updateKernel;
   occa::kernel filterKernelH;
   occa::kernel filterKernelV;

@@ -1,0 +1,40 @@
+kernel void boltzmannLoadFilterGridQuad3D(const iint Ngrid,
+					  const iint Nelements,
+					  const dfloat * restrict rlocal,
+					  const dfloat * restrict slocal,
+					  const iint * restrict eInterp,
+					  const char * restrict overlapDirection,
+					  dfloat * restrict rhsq) {
+  for(iint e = 0; e < Ngrid; ++e; outer0) {
+    for(iint s = 0; s < p_Nq; ++s; inner1) {
+      for(iint r = 0; r < p_Nq; ++r; inner0) {
+	char overlapDir = overlapDirection[e];
+	iint eRef = eInterp[i*p_Np + n];
+	for (iint fld = 0; fld < p_Nfields; ++fld) {
+	  dfloat q_sum = 0;
+	  for (iint li = 0; li < p_Nq; ++li) {
+	    dfloat q_prod = 1;
+	    if (overlapDir) {
+	      q_prod *= rhsq[eRef*p_Nfields*p_Np + fld*p_Np + li*p_Nq + r];
+	    }
+	    else {
+	      q_prod *= rhsq[eRef*p_Nfields*p_Np + fld*p_Np + s*p_Nq + li];
+	    }
+	    for (iint lj = 0; lj < p_Nq; ++lj) {
+	      if (li != lj) {
+		if (overlapDir) {
+		  q_prod *= (slocal[(Nelements + e)*p_Np + n] - slocal[eRef*p_Np + lj*p_Nq + r])/(slocal[eRef*p_Np + li*p_Nq + r] - slocal[eRef*p_Np + lj*p_Nq + r]);
+		}
+		else {
+		  q_prod *= (slocal[(Nelements + e)*p_Np + n] - slocal[eRef*p_Np + s*p_Nq + lj])/(slocal[eRef*p_Np + s*p_Nq + li] - slocal[eRef*p_Np + s*p_Nq + lj]);
+		}
+	      }
+	    }
+	    q_sum += q_prod;
+	  }
+	  rhsq[(e+Nelements)*p_Nfields*p_Np + fld*p_Np + s*p_Nq + r] = q_sum;
+	}
+      }
+    }
+  }
+}
