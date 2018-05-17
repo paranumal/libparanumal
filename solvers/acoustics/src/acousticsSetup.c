@@ -18,17 +18,16 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     if (hostIds[r]==hostId) deviceID++;
   }
 
+  if (size==1) options.getArgs("DEVICE NUMBER" ,deviceID);
+
   // read thread model/device/platform from newOptions
   if(newOptions.compareArgs("THREAD MODEL", "CUDA")){
-    int dev;
-    newOptions.getArgs("DEVICE NUMBER" ,dev);
-    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",dev);
+    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
   }
   else if(newOptions.compareArgs("THREAD MODEL", "OpenCL")){
-    int dev, plat;
-    newOptions.getArgs("DEVICE NUMBER", dev);
+    int plat;
     newOptions.getArgs("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", dev, plat);
+    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", deviceID, plat);
   }
   else if(newOptions.compareArgs("THREAD MODEL", "OpenMP")){
     sprintf(deviceConfig, "mode = OpenMP");
