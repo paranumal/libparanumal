@@ -637,9 +637,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       //add standard boundary functions
       char *boundaryHeaderFileName;
       if (elliptic->dim==2)
-        boundaryHeaderFileName = strdup(DHOLMES "/examples/elliptic/data/ellipticBoundary2D.h");
+        boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary2D.h");
       else if (elliptic->dim==3)
-        boundaryHeaderFileName = strdup(DHOLMES "/examples/elliptic/data/ellipticBoundary3D.h");
+        boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
       kernelInfo.addInclude(boundaryHeaderFileName);
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
