@@ -100,6 +100,9 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
     solver->o_eInterp =
       solver->device.malloc(mesh->Np*(mesh->NgridElements-mesh->Nelements)*sizeof(iint),mesh->eInterp);
 
+    solver->o_gridToE =
+      solver->device.malloc(mesh->Nfaces*mesh->NgridElements*sizeof(iint),mesh->gridToE);
+    
     solver->o_overlapDirection =
       solver->device.malloc((mesh->NgridElements - mesh->Nelements)*sizeof(char),mesh->overlapDirection);
 
@@ -142,10 +145,10 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
     
     solver->filterKernelH =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
-					 "boltzmannFilterHq0Quad3D",
+					 "boltzmannFilterHglobalQuad3D",
 					 kernelInfo);
     solver->filterKernelV =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
-					 "boltzmannFilterVq0Quad3D",
+					 "boltzmannFilterVglobalQuad3D",
 					 kernelInfo);
 }

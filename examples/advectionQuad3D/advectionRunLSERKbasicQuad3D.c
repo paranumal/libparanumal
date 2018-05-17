@@ -59,13 +59,13 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			       solver->o_qpre,
 			       solver->o_rhsq);
 
-	solver->loadFilterGrid(Nboundary,
-			       mesh->Nelements,
-			       solver->o_rlocal,
-			       solver->o_slocal,
-			       solver->o_eInterp,
-			       solver->o_overlapDirection,
-			       solver->o_rhsq);
+	solver->loadFilterGridKernel(Nboundary,
+				     mesh->Nelements,
+				     solver->o_rlocal,
+				     solver->o_slocal,
+				     solver->o_eInterp,
+				     solver->o_overlapDirection,
+				     solver->o_rhsq);
 	
 	solver->filterKernelH(mesh->NgridElements,
 			      solver->o_dualProjMatrix,

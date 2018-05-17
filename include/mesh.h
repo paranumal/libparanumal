@@ -314,11 +314,12 @@ typedef struct {
   iint NgridElements;
   iint *overlap;
   iint *eInterp;
-  iint *r;
-  iint *s;
-  iint *rlocal;
-  iint *slocal;
+  dfloat *rphysical;
+  dfloat *sphysical;
+  dfloat *rlocal;
+  dfloat *slocal;
   char *overlapDirection;
+  iint *gridToE;
   
   // occa stuff
   occa::device device;
