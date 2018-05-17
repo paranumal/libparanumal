@@ -89,6 +89,7 @@ tic_tot = MPI_Wtime();
 
 
 if( bns->fixed_dt ){
+
  for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
       
    // for(int tstep=0;tstep<10;++tstep){
@@ -96,7 +97,14 @@ if( bns->fixed_dt ){
 
       if(bns->reportFlag){
         if((tstep%bns->reportStep)==0){
-          bnsReport(bns, tstep, options);
+          dfloat time =0; 
+
+          if(options.compareArgs("TIME INTEGRATOR", "MRSAAB"))
+            time = bns->startTime + bns->dt*tstep*pow(2,(mesh->MRABNlevels-1));     
+          else
+          dfloat time = bns->startTime + tstep*bns->dt;
+
+          bnsReport(bns, time, options);
         }
       }
 
@@ -138,13 +146,19 @@ if( bns->fixed_dt ){
 
       elp_sol += (MPI_Wtime() - tic_sol);
   }
+}else{
+
+    occaTimerTic(mesh->device, "SARK_TOTAL");
+    bnsRunEmbedded(bns, haloBytes, sendBuffer, recvBuffer, options);
+    occaTimerToc(mesh->device, "SARK_TOTAL");
+
 }
 
  
 
 
   elp_tot += (MPI_Wtime() - tic_tot);    
-  // occaTimerToc(mesh->device, "BOLTZMANN");
+  occaTimerToc(mesh->device, "BOLTZMANN");
 
   // compute maximum over all processes
   double gelp_tot  = 0.f, gelp_sol = 0.f, gelp_out = 0.f;

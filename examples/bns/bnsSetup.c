@@ -206,8 +206,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   dfloat *EtoDT       = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
 
   //Set time step size
-  for(dlong e=0;e<mesh->Nelements;++e)
-  { 
+  for(dlong e=0;e<mesh->Nelements;++e){ 
     dfloat hmin = 1e9, dtmax = 1e9;
     
     EtoDT[e] = dtmax;
@@ -305,7 +304,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     bns->RTOL    = 1.0; options.getArgs("RELATIVE TOLERANCE",   bns->RTOL);
     bns->dtMIN   = 1.0; options.getArgs("MINUMUM TIME STEP SIZE",   bns->dtMIN); 
     bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I    
-    bns->rkp     = 4; // order of embedded scheme + 1 
+    bns->rkp     = 5; // order of embedded scheme + 1 
 
     
     dlong Ntotal  = mesh->Nelements*mesh->Np*bns->Nfields;
@@ -353,38 +352,17 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
         bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;   
       }else{
 
-        #if 0
-          dfloat Pmax = 0.5; 
-          dfloat U0   = 1.0; 
-          dfloat r0   = 1.0;
-          dfloat gamma= 1.4; 
+        bns->q[id+0*mesh->Np] = q1bar; 
+        bns->q[id+1*mesh->Np] = ramp*q2bar;
+        bns->q[id+2*mesh->Np] = ramp*q3bar;
+        bns->q[id+3*mesh->Np] = ramp*q4bar;
 
-          dfloat rho = 1.0 + Pmax*exp(-(log(2)* (x*x + y*y + z*z)/r0));
-
-          bns->q[id+0*mesh->Np] = rho; 
-          bns->q[id+1*mesh->Np] = rho*U0/bns->sqrtRT;
-          bns->q[id+2*mesh->Np] = 0.0;
-          bns->q[id+3*mesh->Np] = 0.0;
-
-          bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
-          bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;
-          bns->q[id+6*mesh->Np] = ramp*ramp*q7bar;   
-          bns->q[id+7*mesh->Np] = ramp*ramp*q8bar;   
-          bns->q[id+8*mesh->Np] = ramp*ramp*q9bar;   
-          bns->q[id+9*mesh->Np] = ramp*ramp*q10bar; 
-        #else
-          bns->q[id+0*mesh->Np] = q1bar; 
-          bns->q[id+1*mesh->Np] = ramp*q2bar;
-          bns->q[id+2*mesh->Np] = ramp*q3bar;
-          bns->q[id+3*mesh->Np] = ramp*q4bar;
-
-          bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
-          bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;
-          bns->q[id+6*mesh->Np] = ramp*ramp*q7bar;   
-          bns->q[id+7*mesh->Np] = ramp*ramp*q8bar;   
-          bns->q[id+8*mesh->Np] = ramp*ramp*q9bar;   
-          bns->q[id+9*mesh->Np] = ramp*ramp*q10bar; 
-        #endif  
+        bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
+        bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;
+        bns->q[id+6*mesh->Np] = ramp*ramp*q7bar;   
+        bns->q[id+7*mesh->Np] = ramp*ramp*q8bar;   
+        bns->q[id+8*mesh->Np] = ramp*ramp*q9bar;   
+        bns->q[id+9*mesh->Np] = ramp*ramp*q10bar; 
       }
        
     }
@@ -440,8 +418,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
       if (mesh->MRABNhaloElements[lev])
         mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(dlong), mesh->MRABhaloIds[lev]);
     }
-  } 
-  else{
+  } else{
    printf("Preparing Pml for single rate integrator\n");
    bnsPmlSetup(bns, options); 
 
@@ -665,7 +642,14 @@ for (int r=0;r<size;r++){
 
           sprintf(kernelName, "bnsSARKPmlUpdate%s", suffixUpdate);
           bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+          
+          if(bns->fixed_dt==0){
+            sprintf(fileName, "okl/bnsErrorEstimate.okl");
+            sprintf(kernelName, "bnsErrorEstimate");
+            bns->errorEstimateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+          }
         }
+
         else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
         
         sprintf(kernelName, "bnsMRSAABTraceUpdate%s", suffixUpdate);
@@ -677,573 +661,9 @@ for (int r=0;r<size;r++){
         sprintf(kernelName, "bnsMRSAABPmlUpdate%s", suffixUpdate);
         bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
         }
-
-
     }
   MPI_Barrier(MPI_COMM_WORLD);
 }
-
-
-
-#if 0
-
-
-
-
-
-
-
-
- // Volume and Relaxation Kernels
-  if(options.compareArgs("RELAXATION TYPE","CUBATURE") && 
-     !(options.compareArgs("TIME INTEGRATOR","LSIMEX") || options.compareArgs("TIME INTEGRATOR","IMEXRK"))){ 
-          
-    printf("Compiling volume kernel for cubature integration\n");
-      bns->volumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-         "boltzmannVolumeCub2D",
-          kernelInfo);
-
-    printf("Compiling PML volume kernel for cubature integration\n");
-      bns->pmlVolumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-        "boltzmannPmlVolumeCub2D",
-          kernelInfo);
-
-    if(options.compareArgs("TIME INTEGRATOR","MRAB") || options.compareArgs("TIME INTEGRATOR","LSERK") || 
-       options.compareArgs("TIME INTEGRATOR","SRAB") || options.compareArgs("TIME INTEGRATOR","DOPRI5") ){ 
-
-      printf("Compiling relaxation kernel with cubature integration\n");
-       bns->relaxationKernel =
-         mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
-          "boltzmannRelaxationCub2D",
-           kernelInfo); 
-    
-      //
-      printf("Compiling PML relaxation kernel with cubature integration\n");
-        bns->pmlRelaxationKernel =
-         mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
-          "boltzmannPmlRelaxationCub2D",
-            kernelInfo);  
-    }
-    else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")||options.compareArgs("TIME INTEGRATOR","SAAB") || 
-            options.compareArgs("TIME INTEGRATOR","SARK")   || options.compareArgs("TIME INTEGRATOR","XDOPRI") ||
-            options.compareArgs("TIME INTEGRATOR","SAADRK")){
-
-    printf("Compiling relaxation kernel with cubature integration\n");
-     bns->relaxationKernel =
-     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
-        "boltzmannSARelaxationCub2D",
-        kernelInfo); 
-
-      //
-    printf("Compiling PML relaxation kernel with cubature integration\n");
-    bns->pmlRelaxationKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannRelaxation2D.okl",
-      "boltzmannSAPmlRelaxationCub2D",
-       kernelInfo);  
-    }
-
-  }
-
-
-
-  if(options.compareArgs("RELAXATION TYPE","COLLOCATION")  && 
-    !(options.compareArgs("TIME INTEGRATOR","LSIMEX") || options.compareArgs("TIME INTEGRATOR","IMEXRK"))){ 
-
-     if(options.compareArgs("TIME INTEGRATOR", "MRAB") || options.compareArgs("TIME INTEGRATOR","LSERK") || 
-        options.compareArgs("TIME INTEGRATOR","SRAB") || options.compareArgs("TIME INTEGRATOR","DOPRI5")){ 
-
-      printf("Compiling volume kernel with nodal collocation for nonlinear term\n");
-      bns->volumeKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-             "boltzmannVolume2D",
-             kernelInfo);
-
-      printf("Compiling PML volume kernel with nodal collocation for nonlinear term\n");
-      bns->pmlVolumeKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-           "boltzmannPmlVolume2D",
-           kernelInfo); 
-    }
-
-    else if(options.compareArgs("TIME INTEGRATOR","MRSAAB") || options.compareArgs("TIME INTEGRATOR","SAAB") || 
-            options.compareArgs("TIME INTEGRATOR","SARK") || options.compareArgs("TIME INTEGRATOR","XDOPRI") || 
-            options.compareArgs("TIME INTEGRATOR","SAADRK")){
-      printf("Compiling SA volume kernel with nodal collocation for nonlinear term\n");
-      bns->volumeKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-             "boltzmannSAVolume2D",
-             kernelInfo);
-
-      printf("Compiling SA PML volume kernel with nodal collocation for nonlinear term\n");
-      bns->pmlVolumeKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-           "boltzmannSAPmlVolume2D",
-           kernelInfo); 
-      }
-
-
-  }
-
- 
-
-   // UPDATE Kernels
-  if(options.compareArgs("TIME INTEGRATOR","MRAB")){ 
-    printf("Compiling MRAB update kernel\n");
-    bns->updateKernel =
-     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannMRABUpdate2D",
-            kernelInfo);
-    
-    printf("Compiling MRAB trace update kernel\n");
-    bns->traceUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-               "boltzmannMRABTraceUpdate2D",
-               kernelInfo);
-    
-    printf("Compiling MRAB PML update kernel\n");
-    bns->pmlUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannMRABPmlUpdate2D",
-            kernelInfo);
-   
-    printf("Compiling MRAB PML trace update kernel\n");
-    bns->pmlTraceUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-               "boltzmannMRABPmlTraceUpdate2D",
-                 kernelInfo);
-    }
-
-    else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
-
-    printf("Compiling MRSAAB update kernel\n");
-    bns->updateKernel =
-     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannMRSAABUpdate2D",
-            kernelInfo);
-
-    printf("Compiling MRSAAB trace update kernel\n");
-    bns->traceUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-               "boltzmannMRSAABTraceUpdate2D",
-               kernelInfo);
-    
-     printf("Compiling MRSAAB PML update kernel\n");
-    bns->pmlUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannMRSAABPmlUpdate2D",
-            kernelInfo);
-    
-    printf("Compiling MRSAAB PML trace update kernel\n");
-    bns->pmlTraceUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-               "boltzmannMRSAABPmlTraceUpdate2D",
-                 kernelInfo);
-     }
-
-     else if(options.compareArgs("TIME INTEGRATOR","SRAB")){
-     printf("Compiling SRAB update kernel\n");
-     bns->updateKernel =
-     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannSRABUpdate2D",
-            kernelInfo);
-
-      printf("Compiling SRAB PML update kernel\n");
-      bns->pmlUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannSRABPmlUpdate2D",
-            kernelInfo);
-
-     //   printf("Compiling LSERK update kernel\n");
-     // bns->RKupdateKernel =
-     // mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-     //     "boltzmannLSERKUpdate2D",
-     //        kernelInfo);
-
-     //  printf("Compiling LSERK PML update kernel\n");
-     //  bns->RKpmlUpdateKernel =
-     //  mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-     //     "boltzmannLSERKPmlUpdate2D",
-     //        kernelInfo);
-
-
-     }
-
-
-     else if(options.compareArgs("TIME INTEGRATOR","SRSAAB")){
-     printf("Compiling SAAB update kernel\n");
-     bns->updateKernel =
-     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannSAABUpdate2D",
-            kernelInfo);
-
-      printf("Compiling SAAB PML update kernel\n");
-      bns->pmlUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannSAABPmlUpdate2D",
-            kernelInfo);
-     }
-
-     else if(options.compareArgs("TIME INTEGRATOR","LSERK")){
-     printf("Compiling LSERK update kernel\n");
-     bns->updateKernel =
-     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannLSERKUpdate2D",
-            kernelInfo);
-
-      printf("Compiling LSERK PML update kernel\n");
-      bns->pmlUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannLSERKPmlUpdate2D",
-            kernelInfo);
-     }
-
-
-
-    else if(options.compareArgs("TIME INTEGRATOR","SARK")){
-    //SARK STAGE UPDATE
-    printf("compiling SARK non-pml  update kernel\n");
-    bns->updateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannSARKUpdate2D",
-         kernelInfo); 
-
-
-    printf("compiling SARK non-pml  stage update kernel\n");
-    mesh->updateStageKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-         "boltzmannSARKStageUpdate2D",
-         kernelInfo); 
-
-    //
-    printf("compiling SARK Unsplit pml  update kernel\n");
-    bns->pmlUpdateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-       "boltzmannSARKPmlUpdate2D",
-       kernelInfo); 
-
-    printf("compiling SARK Unsplit pml stage update kernel\n");
-    bns->pmlUpdateStageKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-    "boltzmannSARKPmlStageUpdate2D",
-    kernelInfo); 
-    }
-
-    // DOPRI5 Update Kernels
-    else if(options.compareArgs("TIME INTEGRATOR","DOPRI5")){
-
-    bns->updateStageKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannDOPRIRKStage2D",
-          kernelInfo); 
-
-    bns->pmlUpdateStageKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannDOPRIRKPmlStage2D",
-          kernelInfo); 
-
-
-    bns->updateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannDOPRIRKUpdate2D",
-          kernelInfo); 
-
-    bns->pmlUpdateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannDOPRIRKPmlUpdate2D",
-          kernelInfo); 
-
-
-    bns->errorEstimateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannErrorEstimate2D",
-          kernelInfo); 
-
-
-    }
-
-
-    else if(options.compareArgs("TIME INTEGRATOR","XDOPRI")){
-    // printf("compiling XDOPRI Update kernels\n");
-    bns->updateStageKernel =
-     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-      "boltzmannXDOPRIRKStage2D",
-        kernelInfo); 
-
-    bns->pmlUpdateStageKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannXDOPRIRKPmlStage2D",
-          kernelInfo);
-
-    bns->updateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannXDOPRIRKUpdate2D",
-          kernelInfo); 
-
-    bns->pmlUpdateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannXDOPRIRKPmlUpdate2D",
-          kernelInfo); 
-
-
-    bns->errorEstimateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannErrorEstimate2D",
-          kernelInfo);  
-
-     }
-
-
-     else if(options.compareArgs("TIME INTEGRATOR","SAADRK")){
-
-      printf("compiling SAADRK Update kernels\n");
-      bns->updateStageKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannSAADRKStage2D",
-          kernelInfo); 
-
-       bns->pmlUpdateStageKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannSAADRKPmlStage2D",
-          kernelInfo);
-
-       bns->updateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannSAADRKUpdate2D",
-          kernelInfo); 
-
-       bns->pmlUpdateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannSAADRKPmlUpdate2D",
-          kernelInfo); 
-
-     
-       bns->errorEstimateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannErrorEstimate2D",
-          kernelInfo); 
-
-
-
-
-
-     }
-
-    
-
-
-
-    // Surface Kernels
-    if(options.compareArgs("TIME INTEGRATOR","MRAB") || options.compareArgs("TIME INTEGRATOR","MRSAAB")){  
-    printf("Compiling surface kernel\n");
-    bns->surfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
-         "boltzmannMRSurface2D",
-         kernelInfo);
-
-    printf("Compiling PML surface kernel\n");
-    bns->pmlSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
-       "boltzmannMRPmlSurface2D",
-       kernelInfo);
-    }
-
-    else { 
-    printf("Compiling surface kernel\n");
-    bns->surfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
-         "boltzmannSurface2D",
-         kernelInfo);
-
-    printf("Compiling PML surface kernel\n");
-    bns->pmlSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
-       "boltzmannPmlSurface2D",
-       kernelInfo);
-    }
-
-
-
-
-
-
-
-    // IMEX Kernels
-    if(options.compareArgs("TIME INTEGRATOR","LSIMEX")){ 
-    // RESIDUAL UPDATE KERNELS
-    printf("Compiling LSIMEX non-pml residual update kernel\n");
-    bns->residualUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-           "boltzmannLSIMEXResidualUpdate2D",
-           kernelInfo);
-    
-    printf("Compiling LSIMEX non-pml implicit update kernel\n");
-    bns->implicitUpdateKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-           "boltzmannLSIMEXImplicitUpdate2D",
-           kernelInfo);
-
-    printf("Compiling LSIMEX Unsplit pml residual update kernel\n");
-   bns->pmlResidualUpdateKernel =
-     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-          "boltzmannLSIMEXPmlResidualUpdate2D",
-          kernelInfo);
-     //
-   printf("Compiling LSIMEX Unsplit pml implicit update kernel\n");
-   bns->pmlImplicitUpdateKernel =
-     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-          "boltzmannLSIMEXPmlImplicitUpdate2D",
-          kernelInfo);
-      
-     
-    if(options.compareArgs("RELAXATION TYPE","CUBATURE")){ 
-      printf("Compiling LSIMEX non-pml Implicit Iteration Cubature  kernel\n");
-
-      bns->implicitSolveKernel = 
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
-             "boltzmannLSIMEXImplicitSolveCub2D",
-             kernelInfo); 
-
-          printf("Compiling LSIMEX pml Implicit Iteration Cubature  kernel\n");
-      bns->pmlImplicitSolveKernel = 
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
-             "boltzmannLSIMEXPmlImplicitSolveCub2D",
-             kernelInfo); 
-    }
-    else if(options.compareArgs("RELAXATION TYPE","COLLOCATION")){ 
-      //
-      printf("Compiling LSIMEX non-pml Implicit Iteration kernel\n");
-      bns->implicitSolveKernel = 
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
-        "boltzmannLSIMEXImplicitSolve2D",
-        kernelInfo); 
-        
-     printf("Compiling LSIMEX Unsplit pml Implicit Iteration  kernel\n");
-     bns->pmlImplicitSolveKernel = 
-     mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLSIMEXImplicitSolve2D.okl",
-     "boltzmannLSIMEXImplicitSolve2D",
-     kernelInfo);      
-      
-    }
-
-  printf("Compiling LSIMEX volume kernel integration\n");
-    bns->volumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-         "boltzmannVolumeCub2D",
-         kernelInfo);
-
-       
-    printf("Compiling LSERK Unsplit pml volume kernel with cubature integration\n");
-    bns->pmlVolumeKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-        "boltzmannIMEXPmlVolumeCub2D",
-        kernelInfo);
-       
-   printf("Compiling surface kernel\n");
-    bns->surfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
-         "boltzmannSurface2D",
-         kernelInfo);
-        
-    printf("Compiling Unsplit  pml surface kernel\n");
-    bns->pmlSurfaceKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannSurface2D.okl",
-       "boltzmannPmlSurface2D",
-       kernelInfo);
-
-    printf("Compiling LSIMEX non-pml update kernel\n");
-    bns->updateKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-      "boltzmannLSIMEXUpdate2D",
-      kernelInfo);
-  //
-    printf("Compiling LSIMEX Unsplit pml update kernel\n");
-       bns->pmlUpdateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-       "boltzmannLSIMEXPmlUpdate2D",
-       kernelInfo);
-  }
-
-
-  if(options.compareArgs("TIME INTEGRATOR","IMEXRK")){
-
-    printf("compiling IMEXRK Update kernels\n");
-      bns->updateStageKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
-        "boltzmannIMEXRKStageUpdate2D",
-          kernelInfo); 
-
-    printf("compiling IMEXRK Pml Update kernels\n");
-     bns->pmlUpdateStageKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
-        "boltzmannIMEXRKPmlStageUpdate2D",
-          kernelInfo); 
-
-
-     printf("compiling IMEXRK Implicit Solve\n");
-     bns->implicitSolveKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
-        "boltzmannIMEXRKImplicitSolveCub2D",
-          kernelInfo); 
-
-
-    printf("Compiling volume kernel for cubature integration\n");
-      bns->volumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-         "boltzmannVolumeCub2D",
-          kernelInfo);
-
-    printf("Compiling PML volume kernel for cubature integration\n");
-      bns->pmlVolumeKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolume2D.okl",
-        "boltzmannPmlVolumeCub2D",
-          kernelInfo);
-
-    printf("Compiling IMEXRK update kernel\n");
-     bns->updateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
-        "boltzmannIMEXRKUpdate2D",
-          kernelInfo); 
-    
-    printf("Compiling IMEXRK Pml update kernel\n");
-       bns->pmlUpdateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
-        "boltzmannIMEXRKPmlUpdate2D",
-          kernelInfo); 
-
-
-    printf("Compiling IMEXRK Pml damping kernel\n");
-       bns->pmlUpdateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
-        "boltzmannIMEXRKPmlUpdate2D",
-          kernelInfo); 
-
-
-     printf("Compiling IMEXRK error kernel\n");
-       bns->pmlDampingKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannIMEXRK2D.okl",
-        "boltzmannIMEXRKPmlDampingCub2D",
-          kernelInfo); 
-
-
-       bns->errorEstimateKernel =
-       mesh->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdate2D.okl",
-        "boltzmannErrorEstimate2D",
-          kernelInfo); 
-
-  }
-
-    mesh->haloExtractKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
-          "meshHaloExtract2D",
-             kernelInfo);
-
-
-
-
-#endif
-
 
 return bns; 
   
