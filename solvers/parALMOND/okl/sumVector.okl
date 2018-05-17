@@ -1,0 +1,27 @@
+// alpha = sum x 
+kernel void sumVectorKernel(const dlong Nblocks,
+          const dlong   N,
+          const dfloat *restrict x,
+                dfloat *restrict ip){
+
+  for(dlong b=0;b<Nblocks;++b;outer0){
+
+    shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
+    shared volatile dfloat s_res[p_RDIMY];
+    exclusive dfloat res;
+    
+    for(int ty=0;ty<p_RDIMY;++ty;inner1){
+      for(int tx=0;tx<p_RDIMX;++tx;inner0){
+        dlong i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
+        
+        res = 0;
+        while(i<N){ // scan through whole array
+          res += x[i];
+          i += Nblocks*p_RDIMX*p_RDIMY; 
+        }
+      }
+    }
+    
+    twoPhaseReduction(res, s_ip, s_res, ip);
+  }
+}
