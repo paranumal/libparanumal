@@ -1,3 +1,6 @@
+
+#define p_Nvars 3
+
 kernel void bnsLSERKUpdate2D(const dlong Nelements,
                                 const dlong * restrict elementIds,
                                 const dfloat dt,  
@@ -125,7 +128,7 @@ kernel void bnsSARKUpdateStage2D(const dlong Nelements,
       for(int fld=0; fld< p_Nfields; ++fld){
 
         dfloat r_q = 0.f; 
-        if(fld<3){
+        if(fld<p_Nvars){
           r_q = q[id +fld*p_Np];
           for (int i=0;i<stage;i++){
             r_q += dt*rkA[p_NrkStages*stage + i]*rkrhsq[id + fld*p_Np +i*offset];
@@ -189,7 +192,7 @@ kernel void bnsSARKPmlUpdateStage2D( const dlong pmlNelements,
           dfloat r_qx = 0.f;
           dfloat r_qy = 0.f;
 
-          if(fld<3){
+          if(fld<p_Nvars){
             r_q  = q[id  + fld*p_Np];
             r_qx = qx[pid+ fld*p_Np];
             r_qy = qy[pid+ fld*p_Np];
@@ -255,7 +258,7 @@ kernel void bnsSARKUpdate2D(const dlong Nelements,
 
         if(stage==(p_NrkStages-1)){
 
-          if(fld<3){
+          if(fld<p_Nvars){
 
             r_q = q[id +fld*p_Np];
 
@@ -278,10 +281,9 @@ kernel void bnsSARKUpdate2D(const dlong Nelements,
             r_rkerr += dt*sarkE[                    p_NrkStages-1]*r_rhsq;
           }
 
-          rkq[id   +fld*p_Np] = r_q;
-          rkerr[id +fld*p_Np] = r_rkerr;
+          rkq[id     + fld*p_Np] = r_q;
+          rkerr[id   + fld*p_Np] = r_rkerr;
         }
-
         rkrhsq[id+fld*p_Np+stage*offset] = r_rhsq;
       }
     }
@@ -343,7 +345,7 @@ kernel void bnsSARKPmlUpdate2D(const dlong pmlNelements,
             dfloat r_qy    = 0.f;
             dfloat r_rkerr = 0.f;
 
-            if(fld<3){
+            if(fld<p_Nvars){
               r_q  = q [id  +fld*p_Np];
               r_qx = qx[pid +fld*p_Np];
               r_qy = qy[pid +fld*p_Np];
@@ -440,7 +442,7 @@ kernel void bnsMRSAABTraceUpdate2D(const dlong Nelements,
         occaUnroll(p_Nfields)
           for(int fld=0; fld< p_Nfields; ++fld){
             const int fid = fld*p_Np; 
-            if(fld<3)
+            if(fld<p_Nvars)
               s_q[n+fid] = q[id+fid]+ab1*rhsq[rhsId1+fid]+ab2*rhsq[rhsId2+fid]+ab3*rhsq[rhsId3+fid];
             else
               s_q[n+fid] = expdt*q[id+fid] + saab1*rhsq[rhsId1+fid] + saab2*rhsq[rhsId2+fid] + saab3*rhsq[rhsId3+fid];
@@ -507,7 +509,7 @@ kernel void bnsMRSAABUpdate2D( const dlong Nelements,
         occaUnroll(p_Nfields)
         for(int fld=0; fld< p_Nfields; ++fld){
           const int fid = fld*p_Np; 
-            if(fld<3)
+            if(fld<p_Nvars)
               s_q[n+fid] = q[id+fid]+ab1*rhsq[rhsId1+fid]+ab2*rhsq[rhsId2+fid]+ab3*rhsq[rhsId3+fid];
             else
               s_q[n+fid] = expdt*q[id+fid] + saab1*rhsq[rhsId1+fid] + saab2*rhsq[rhsId2+fid] + saab3*rhsq[rhsId3+fid];
@@ -602,7 +604,7 @@ kernel void bnsMRSAABPmlUpdate2D(const dlong pmlNelements,
 
           dfloat n_q = 0.f; 
 
-          if(fld<3)
+          if(fld<p_Nvars)
             n_q      = q[id+fid]+ab1*rhsq[rhsId1+fid]+ab2*rhsq[rhsId2+fid]+ab3*rhsq[rhsId3+fid];
           else
             n_q      = expdt*q[id+fid]+saab1*rhsq[rhsId1+fid] + saab2*rhsq[rhsId2+fid] + saab3*rhsq[rhsId3+fid];
@@ -633,3 +635,5 @@ kernel void bnsMRSAABPmlUpdate2D(const dlong pmlNelements,
       
   }
 }
+
+

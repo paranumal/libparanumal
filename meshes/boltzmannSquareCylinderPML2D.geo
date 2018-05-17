@@ -1,7 +1,7 @@
 cl__1 = 1;
 
-r_0 = DefineNumber[0.25];
-r_1 = DefineNumber[0.05];
+r_0 = DefineNumber[0.5];
+r_1 = DefineNumber[0.1];
 
 
 xmin = DefineNumber[-5.4];
@@ -115,4 +115,4 @@ Physical Surface("YPML",200) = {35,43};
 Physical Surface("XYPML",300) = {33, 37, 41, 45};
 
 Coherence;
-Recombine Surface {31, 43, 45, 47, 33, 35, 37, 39, 41};
+// Recombine Surface {31, 43, 45, 47, 33, 35, 37, 39, 41};

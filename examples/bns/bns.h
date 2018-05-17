@@ -174,7 +174,7 @@ void bnsPmlSetup(bns_t *bns, setupAide &options);
 void bnsMRABPmlSetup(bns_t *bns, setupAide &options);
 
 void bnsRun(bns_t *bns, setupAide &options);
-void bnsReport(bns_t *bns, int tstep, setupAide &options);
+void bnsReport(bns_t *bns, dfloat time, setupAide &options);
 void bnsError(bns_t *bns, int tstep, setupAide &options);
 // void bnsForces(bns_t *bns, dfloat time, setupAide &options);
 void bnsPlotVTU(bns_t *bns, char * FileName);
@@ -194,6 +194,9 @@ void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
 
 void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options);
+
+void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
+	                                     dfloat *recvBuffer, setupAide &options);
 
 
 

@@ -52,7 +52,8 @@ bnsReport.o \
 bnsError.o \
 bnsLSERKStep.o \
 bnsSARKStep.o \
-bnsMRSAABStep.o   
+bnsMRSAABStep.o \
+bnsRunEmbedded.o    
 
 # library objects
 LOBJS = \

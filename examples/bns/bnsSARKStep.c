@@ -15,7 +15,7 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
  const int    izero = 0; 
 
 // LSERK4 stages
-for(int rk=0;rk<mesh->Nrk;++rk){
+for(int rk=0;rk<bns->NrkStages;++rk){
 
   // intermediate stage time
   dfloat currentTime = time + bns->rkC[rk]*bns->dt;
