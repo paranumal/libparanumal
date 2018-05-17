@@ -2,10 +2,10 @@
 1.0
 
 [DATA FILE]
-data/insVortex2D.h
+data/insUniform2D.h
 
 [MESH FILE]
-../../meshes/insVortex2D.msh
+../../meshes/T2D_Mar27_ins.msh
 
 [MESH DIMENSION]
 2
@@ -38,7 +38,7 @@ EXTBDF2
 CUBATURE
 
 [VISCOSITY]
-0.025
+1e-3
 
 [MACH NUMBER]
 .2
@@ -53,7 +53,7 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-1
+100
 
 [START TIME]
 0
@@ -62,7 +62,7 @@ CUBATURE
 10
 
 [CFL]
-0.9
+0.1
 
 [OUTPUT TYPE]
 VTU
@@ -178,7 +178,7 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-VORTEX
+NONE
 
 [VERBOSE]
 FALSE

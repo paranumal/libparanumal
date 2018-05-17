@@ -33,7 +33,7 @@ void meshParallelGatherScatter(mesh_t *mesh,
     mesh->device.finish();
 
     // do scatter back to local nodes
-    mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, ogs->o_haloGatherTmp, one, dOne, o_v);
+    mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, ogs->o_haloGatherTmp, o_v);
     mesh->device.finish();
     mesh->device.setStream(mesh->defaultStream);
   }
