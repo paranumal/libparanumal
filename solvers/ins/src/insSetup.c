@@ -28,7 +28,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   // read thread model/device/platform from options
   if(options.compareArgs("THREAD MODEL", "CUDA")){
-    
     sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
   }
   else if(options.compareArgs("THREAD MODEL", "OpenCL")){
