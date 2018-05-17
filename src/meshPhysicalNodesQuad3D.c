@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include "mesh.h"
 #include <math.h>
@@ -345,8 +344,6 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
     
     iint face1 = mesh->cubeFaceNumber[eOverlap] - 1;
     iint face2 = mesh->cubeFaceNumber[eAdj] - 1;
-
-    printf("found %d %d\n",face1,face2);
     
     for (iint n = 0; n < mesh->Np; ++n) {
       
@@ -358,7 +355,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
       iint rsdir, eInterp;
       iint rdir = 0;
       iint sdir = 1;
-      iint tol = 1e-12;
+      dfloat tol = 1e-10;
       
       switch (faceHash)
 	{
@@ -373,8 +370,8 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smin = mesh->sphysical[eOverlap*mesh->Np];
 	  smax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
-	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  if (smin - snew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (snew - smax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
 	  else eInterp = eOverlap;
 
 	  smin = mesh->sphysical[eInterp*mesh->Np];
@@ -397,8 +394,8 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smin = mesh->sphysical[eOverlap*mesh->Np];
 	  smax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
-	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  if (smin - snew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (snew - smax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
 	  else eInterp = eOverlap;
 
 	  smin = mesh->sphysical[eInterp*mesh->Np];
@@ -421,8 +418,8 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smin = mesh->sphysical[eOverlap*mesh->Np];
 	  smax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
-	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  if (smin - snew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (snew - smax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
 	  else eInterp = eOverlap;
 
 	  smin = mesh->sphysical[eInterp*mesh->Np];
@@ -445,10 +442,11 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smin = mesh->sphysical[eOverlap*mesh->Np];
 	  smax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
-	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
-	  else eInterp = eOverlap;
+	  if (smin - snew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (snew - smax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
 
+	  else eInterp = eOverlap;
+	  
 	  smin = mesh->sphysical[eInterp*mesh->Np];
 	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
@@ -459,7 +457,6 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 
 	  break;
 	case 4:
-	case 30:
 	  rold = mesh->rphysical[eAdj*mesh->Np + n] + offset;
 	  sold = mesh->sphysical[eAdj*mesh->Np + n];
 
@@ -469,8 +466,8 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmin = mesh->rphysical[eOverlap*mesh->Np];
 	  rmax = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
-	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
 	  else eInterp = eOverlap;
 
 	  rmin = mesh->rphysical[eInterp*mesh->Np];
@@ -480,6 +477,29 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  sloc = mesh->slocal[eInterp*mesh->Np + n];
 	  
 	  rsdir = rdir;
+
+	  break;
+	case 30:
+	  rold = mesh->rphysical[eAdj*mesh->Np + n];
+	  sold = mesh->sphysical[eAdj*mesh->Np + n] - offset;
+
+	  snew = -1*atan(tan(rold)/tan(sold));
+	  rnew = sold - M_PI/2;
+
+	  smin = mesh->sphysical[eOverlap*mesh->Np];
+	  smax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (smin - snew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (snew - smax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else eInterp = eOverlap;
+
+	  smin = mesh->sphysical[eInterp*mesh->Np];
+	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
+	  
+	  sloc = (snew - smin)/(smax - smin);
+	  rloc = mesh->rlocal[eInterp*mesh->Np + n];
+	  
+	  rsdir = sdir;
 
 	  break;
 	case 5:
@@ -492,8 +512,8 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmin = mesh->rphysical[eOverlap*mesh->Np];
 	  rmax = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
-	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
 	  else eInterp = eOverlap;
 
 	  rmin = mesh->rphysical[eInterp*mesh->Np];
@@ -515,8 +535,8 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smax = mesh->sphysical[eOverlap*mesh->Np];
 	  smin = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
-	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  if (smin - snew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (snew - smax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
 	  else eInterp = eOverlap;
 
 	  smax = mesh->rphysical[eInterp*mesh->Np];
@@ -529,18 +549,17 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 
 	  break;
 	case 16:
-	case 26:
-	  rold = mesh->rphysical[eAdj*mesh->Np + n];
-	  sold = mesh->sphysical[eAdj*mesh->Np + n] + offset;
+	  rold = mesh->rphysical[eAdj*mesh->Np + n] - offset;
+	  sold = mesh->sphysical[eAdj*mesh->Np + n];
 
-	  rnew = -atan(tan(rold)/tan(sold));
-	  snew = M_PI/2. - sold;
+	  rnew = -1*atan(tan(sold)/tan(rold));
+	  snew = M_PI/2. + rold;
 
 	  rmax = mesh->rphysical[eOverlap*mesh->Np];
 	  rmin = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
-	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
 	  else eInterp = eOverlap;
 
 	  rmax = mesh->rphysical[eInterp*mesh->Np];
@@ -552,18 +571,41 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rsdir = rdir;
 
 	  break;
+	case 26:
+	  rold = mesh->rphysical[eAdj*mesh->Np + n];
+	  sold = mesh->sphysical[eAdj*mesh->Np + n] + offset;
+
+	  snew = atan(tan(rold)/tan(sold));
+	  rnew = M_PI/2. - rold;
+
+	  smin = mesh->sphysical[eOverlap*mesh->Np];
+	  smax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (smin - snew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (snew - smax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else eInterp = eOverlap;
+
+	  smin = mesh->sphysical[eInterp*mesh->Np];
+	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
+	  
+	  sloc = (snew - smin)/(smax - smin);
+	  rloc = mesh->rlocal[(eInterp+1)*mesh->Np - n - 1];
+	  
+	  rsdir = sdir;
+
+	  break;
 	case 17:
 	  rold = mesh->rphysical[eAdj*mesh->Np + n] - offset;
 	  sold = mesh->sphysical[eAdj*mesh->Np + n];
 
 	  rnew = -1*atan(tan(sold)/tan(rold));
-	  snew = rold - M_PI/2.;
+	  snew = rold + M_PI/2.;
 
 	  rmax = mesh->rphysical[eOverlap*mesh->Np];
 	  rmin = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
-	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
 	  else eInterp = eOverlap;
 
 	  rmax = mesh->rphysical[eInterp*mesh->Np];
@@ -602,21 +644,21 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rold = mesh->rphysical[eAdj*mesh->Np + n];
 	  sold = mesh->sphysical[eAdj*mesh->Np + n] + offset;
 
-	  rnew = M_PI/2. - sold;
-	  snew = atan(tan(rold)/tan(sold));
+	  snew = M_PI/2. - sold;
+	  rnew = atan(tan(rold)/tan(sold));
 
-	  smin = mesh->sphysical[eOverlap*mesh->Np];
-	  smax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
+	  rmin = mesh->sphysical[eOverlap*mesh->Np];
+	  rmax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
-	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
 	  else eInterp = eOverlap;
 
-	  smin = mesh->sphysical[eInterp*mesh->Np];
-	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
+	  rmin = mesh->rphysical[eInterp*mesh->Np];
+	  rmax = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  sloc = (snew - smin)/(smax - smin);
-	  rloc = mesh->slocal[(eInterp+1)*mesh->Np - n - 1];
+	  rloc = (rnew - rmin)/(rmax - rmin);
+	  sloc = mesh->slocal[(eInterp+1)*mesh->Np - n - 1];
 	  
 	  rsdir = sdir;
 
@@ -631,8 +673,8 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmax = mesh->rphysical[eOverlap*mesh->Np];
 	  rmin = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
-	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
 	  else eInterp = eOverlap;
 	  
 	  rmax = mesh->rphysical[eInterp*mesh->Np];
@@ -654,8 +696,8 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmin = mesh->rphysical[eOverlap*mesh->Np];
 	  rmax = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
-	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
 	  else eInterp = eOverlap;
 
 	  rmin = mesh->rphysical[eInterp*mesh->Np];
@@ -671,23 +713,23 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rold = mesh->rphysical[eAdj*mesh->Np + n];
 	  sold = mesh->sphysical[eAdj*mesh->Np + n] + offset;
 
-	  rnew = sold - M_PI/2.;
-	  snew = -1*atan(tan(rold)/tan(sold));
+	  snew = sold - M_PI/2.;
+	  rnew = atan(tan(rold)/tan(sold));
 
-	  smin = mesh->sphysical[eOverlap*mesh->Np];
-	  smax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
+	  rmax = mesh->rphysical[eOverlap*mesh->Np];
+	  rmin = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
-	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
 	  else eInterp = eOverlap;
 
-	  smin = mesh->sphysical[eInterp*mesh->Np];
-	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
+	  rmax = mesh->rphysical[eInterp*mesh->Np];
+	  rmin = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  sloc = (snew - smin)/(smax - smin);
-	  rloc = mesh->slocal[eInterp*mesh->Np + n];
+	  rloc = (rnew - rmin)/(rmax - rmin);
+	  sloc = mesh->slocal[eInterp*mesh->Np + n];
 	  
-	  rsdir = sdir;
+	  rsdir = rdir;
 
 	  break;
 	case 11:
@@ -700,8 +742,8 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmax = mesh->rphysical[eOverlap*mesh->Np];
 	  rmin = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (rnew < rmin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
-	  else if (rnew > rmax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
+	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
 	  else eInterp = eOverlap;
 
 	  rmax = mesh->rphysical[eInterp*mesh->Np];
@@ -717,23 +759,23 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rold = mesh->rphysical[eAdj*mesh->Np + n];
 	  sold = mesh->sphysical[eAdj*mesh->Np + n] - offset;
 
-	  rnew = M_PI/2. + sold;
-	  snew = -1*atan(tan(rold)/tan(sold));
+	  snew = M_PI/2. + sold;
+	  rnew = -1*atan(tan(rold)/tan(sold));
 
-	  smin = mesh->sphysical[eOverlap*mesh->Np];
-	  smax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
+	  rmin = mesh->rphysical[eOverlap*mesh->Np];
+	  rmax = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
-	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
 	  else eInterp = eOverlap;
-
-	  smin = mesh->sphysical[eInterp*mesh->Np];
-	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  sloc = (snew - smin)/(smax - smin);
-	  rloc = mesh->slocal[eInterp*mesh->Np + n];
+	  rmin = mesh->rphysical[eInterp*mesh->Np];
+	  rmax = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  rsdir = sdir;
+	  rloc = (rnew - rmin)/(rmax - rmin);
+	  sloc = mesh->slocal[eInterp*mesh->Np + n];
+	  
+	  rsdir = rdir;
 
 	  break;
 	case 23:
@@ -763,29 +805,28 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rold = mesh->rphysical[eAdj*mesh->Np + n];
 	  sold = mesh->sphysical[eAdj*mesh->Np + n] - offset;
 
-	  rnew = -1*(sold + M_PI/2.);
-	  snew = -1*atan(tan(rold)/tan(sold));
+	  snew = -1*(sold + M_PI/2.);
+	  rnew = -1*atan(tan(rold)/tan(sold));
 
-	  smin = mesh->sphysical[eOverlap*mesh->Np];
-	  smax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
+	  rmin = mesh->sphysical[eOverlap*mesh->Np];
+	  rmax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (snew < smin) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
-	  else if (snew > smax) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
 	  else eInterp = eOverlap;
 
-	  smin = mesh->sphysical[eInterp*mesh->Np];
-	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
+	  rmin = mesh->rphysical[eInterp*mesh->Np];
+	  rmax = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  sloc = (snew - smin)/(smax - smin);
-	  rloc = mesh->slocal[(eInterp+1)*mesh->Np - n - 1];
+	  rloc = (rnew - rmin)/(rmax - rmin);
+	  sloc = mesh->slocal[(eInterp+1)*mesh->Np - n - 1];
 	  
 	  rsdir = sdir;
 
 	  break;	  
 	}
 
-      printf("processed %d\n",faceHash);
-      if (eInterp != eOverlap) printf("element shift %d\n",faceHash);
+      if (mesh->cubeFaceNumber[eInterp] != mesh->cubeFaceNumber[eOverlap]) printf("indexing error %d\n",faceHash);
       if (mesh->cubeDistance[eInterp] != 0) printf("interior element detected %d\n",faceHash);
       if (rsdir == sdir && smin >= smax) printf("element orientation mistake %d\n",faceHash);
       if (rsdir == rdir && rmin >= rmax) printf("element orientation mistake %d\n",faceHash);
