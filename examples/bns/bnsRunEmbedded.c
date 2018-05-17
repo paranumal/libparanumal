@@ -103,7 +103,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
 		MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
    
     // printf("Error\t:\t%.5e\t%.5e\t\n", err, bns->dt);
-		err = sqrt(err/(bns->totalElements*mesh->Np));
+		err = sqrt(err/(bns->totalElements*mesh->Np*bns->Nfields));
 		
     occaTimerToc(mesh->device, "SARK_ERROR"); 
 
