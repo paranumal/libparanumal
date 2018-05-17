@@ -221,9 +221,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   for (int r=0;r<size;r++) {
     if (r==rank) {
       if (ins->dim==2) 
-        ins->setFlowFieldKernel =  mesh->device.buildKernelFromSource("okl/insSetFlowField2D.okl", "insSetFlowField2D", kernelInfo);  
+        ins->setFlowFieldKernel =  mesh->device.buildKernelFromSource(DINS "/okl/insSetFlowField2D.okl", "insSetFlowField2D", kernelInfo);  
       else
-        ins->setFlowFieldKernel =  mesh->device.buildKernelFromSource("okl/insSetFlowField3D.okl", "insSetFlowField3D", kernelInfo);  
+        ins->setFlowFieldKernel =  mesh->device.buildKernelFromSource(DINS "/okl/insSetFlowField3D.okl", "insSetFlowField3D", kernelInfo);  
     }
   }
 
@@ -557,7 +557,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   for (int r=0;r<size;r++) {
     if (r==rank) {
-      sprintf(fileName, "okl/insHaloExchange.okl");
+      sprintf(fileName, DINS "/okl/insHaloExchange.okl");
       sprintf(kernelName, "insVelocityHaloExtract");
       ins->velocityHaloExtractKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
@@ -572,7 +572,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       // ===========================================================================
 
-      sprintf(fileName, "okl/insAdvection%s.okl", suffix);
+      sprintf(fileName, DINS "/okl/insAdvection%s.okl", suffix);
       sprintf(kernelName, "insAdvectionCubatureVolume%s", suffix);
       ins->advectionCubatureVolumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
@@ -587,21 +587,21 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       // ===========================================================================
       
-      sprintf(fileName, "okl/insDiffusion%s.okl", suffix);
+      sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
       sprintf(kernelName, "insDiffusion%s", suffix);
       ins->diffusionKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, "okl/insDiffusionIpdg%s.okl", suffix);
+      sprintf(fileName, DINS "/okl/insDiffusionIpdg%s.okl", suffix);
       sprintf(kernelName, "insDiffusionIpdg%s", suffix);
       ins->diffusionIpdgKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, "okl/insVelocityGradient%s.okl", suffix);
+      sprintf(fileName, DINS "/okl/insVelocityGradient%s.okl", suffix);
       sprintf(kernelName, "insVelocityGradient%s", suffix);
       ins->velocityGradientKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
 
-      sprintf(fileName, "okl/insGradient%s.okl", suffix);
+      sprintf(fileName, DINS "/okl/insGradient%s.okl", suffix);
       sprintf(kernelName, "insGradientVolume%s", suffix);
       ins->gradientVolumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
@@ -610,7 +610,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       // ===========================================================================
       
-      sprintf(fileName, "okl/insDivergence%s.okl", suffix);
+      sprintf(fileName, DINS "/okl/insDivergence%s.okl", suffix);
       sprintf(kernelName, "insDivergenceVolume%s", suffix);
       ins->divergenceVolumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
@@ -619,14 +619,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       // ===========================================================================
       
-      sprintf(fileName, "okl/insVelocityRhs%s.okl", suffix);
+      sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
       if (options.compareArgs("TIME INTEGRATOR", "ARK")) 
         sprintf(kernelName, "insVelocityRhsARK%s", suffix);
       else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) 
         sprintf(kernelName, "insVelocityRhsEXTBDF%s", suffix);
       ins->velocityRhsKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, "okl/insVelocityBC%s.okl", suffix);
+      sprintf(fileName, DINS "/okl/insVelocityBC%s.okl", suffix);
       sprintf(kernelName, "insVelocityIpdgBC%s", suffix);
       ins->velocityRhsIpdgBCKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
@@ -638,11 +638,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       // ===========================================================================
       
-      sprintf(fileName, "okl/insPressureRhs%s.okl", suffix);
+      sprintf(fileName, DINS "/okl/insPressureRhs%s.okl", suffix);
       sprintf(kernelName, "insPressureRhs%s", suffix);
       ins->pressureRhsKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, "okl/insPressureBC%s.okl", suffix);
+      sprintf(fileName, DINS "/okl/insPressureBC%s.okl", suffix);
       sprintf(kernelName, "insPressureIpdgBC%s", suffix);
       ins->pressureRhsIpdgBCKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
@@ -654,17 +654,17 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       // ===========================================================================
 
-      sprintf(fileName, "okl/insPressureUpdate.okl");
+      sprintf(fileName, DINS "/okl/insPressureUpdate.okl");
       sprintf(kernelName, "insPressureUpdate");
       ins->pressureUpdateKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, "okl/insVelocityUpdate.okl");
+      sprintf(fileName, DINS "/okl/insVelocityUpdate.okl");
       sprintf(kernelName, "insVelocityUpdate");
       ins->velocityUpdateKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);      
 
       // ===========================================================================
 
-      sprintf(fileName, "okl/insVorticity%s.okl", suffix);
+      sprintf(fileName, DINS "/okl/insVorticity%s.okl", suffix);
       sprintf(kernelName, "insVorticity%s", suffix);
       ins->vorticityKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
     
@@ -685,7 +685,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         sprintf(kernelName, "scaledAddwOffset");
         ins->scaledAddKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-        sprintf(fileName, "okl/insSubCycle%s.okl", suffix);
+        sprintf(fileName, DINS "/okl/insSubCycle%s.okl", suffix);
         sprintf(kernelName, "insSubCycleVolume%s", suffix);
         ins->subCycleVolumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
@@ -698,7 +698,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
         ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-        sprintf(fileName, "okl/insSubCycle.okl");
+        sprintf(fileName, DINS "/okl/insSubCycle.okl");
         sprintf(kernelName, "insSubCycleRKUpdate");
         ins->subCycleRKUpdateKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
