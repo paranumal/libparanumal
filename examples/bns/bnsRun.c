@@ -97,12 +97,12 @@ if( bns->fixed_dt ){
 
       if(bns->reportFlag){
         if((tstep%bns->reportStep)==0){
+          
           dfloat time =0; 
-
           if(options.compareArgs("TIME INTEGRATOR", "MRSAAB"))
             time = bns->startTime + bns->dt*tstep*pow(2,(mesh->MRABNlevels-1));     
           else
-          dfloat time = bns->startTime + tstep*bns->dt;
+            time = bns->startTime + tstep*bns->dt;
 
           bnsReport(bns, time, options);
         }

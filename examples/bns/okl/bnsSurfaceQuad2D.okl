@@ -115,7 +115,6 @@ void boundaryConditions2D(const int bc,
   
 }
 
-
 #define surfaceTerms(sk,face,i, j)                                      \
   {                                                                     \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
@@ -428,7 +427,11 @@ kernel void bnsPmlSurfaceQuad2D(const dlong pmlNelements,
 
    
 
-    
+
+
+
+
+
 
 
 

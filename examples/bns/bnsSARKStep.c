@@ -149,6 +149,8 @@ for(int rk=0;rk<bns->NrkStages;++rk){
 	  bns->pmlRelaxationKernel(mesh->pmlNelements,
                               mesh->o_pmlElementIds,
                               mesh->o_pmlIds,
+                              mesh->o_vgeo,
+                              mesh->o_cubvgeo,
                               fzero,
                               fzero,
                               izero,
@@ -173,6 +175,8 @@ for(int rk=0;rk<bns->NrkStages;++rk){
     occaTimerTic(mesh->device, "NonPmlRelaxationKernel");
 	  bns->relaxationKernel(mesh->nonPmlNelements,
                           mesh->o_nonPmlElementIds,
+                          mesh->o_vgeo,
+                          mesh->o_cubvgeo,
                           fzero, // 0
                           izero, //0
                           mesh->o_cubInterpT,
