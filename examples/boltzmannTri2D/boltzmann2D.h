@@ -33,11 +33,13 @@ typedef struct{
 	int NtimeSteps;  // number of time steps
 	int Nrk;
 	int shiftIndex;    // Rhs index shifting for time steppers
+
 	int probeFlag; 
 	int errorFlag;
 	int reportFlag;
+	int pmlFlag;
 	int errorStep;   // number of steps between error calculations
-	int reportStep;   // number of steps between error calculations
+	int reportStep;  // number of steps between error calculations
 
 	dfloat RT, sqrtRT, tauInv, Ma, Re; // Flow parameters
 
@@ -45,7 +47,8 @@ typedef struct{
 	mesh_t *mesh; 
 
 	dfloat *q, *rhsq, *resq;
-
+   
+    int tmethod; 
 
 	// IMEXRK - Kennedy-Carpanter
 	dfloat *rhsqim, *rhsqex, *rkrhsqim, *rkrhsqex; 
@@ -74,9 +77,11 @@ typedef struct{
 	dfloat *rkCim, *rkAim, *rkBim, *rkEim;
 
 	int emethod; 
-	int tstep, atstep, rtstep, eflag, rkp;
+	int tstep, atstep, rtstep, tstepAccepted, rkp;
 	dfloat ATOL, RTOL, time; 
-	dfloat *ehist, *dthist;     
+	dfloat *ehist, *dthist; 
+
+	dfloat outputInterval, nextOutputTime;      
 
     // dfloat sarkC[5], sarkA[5*5], sarkE[5];
 
@@ -98,9 +103,10 @@ typedef struct{
 
 
 	dfloat *fQM; 
-	occa::memory o_q, o_saveq, o_rhsq, o_resq, o_fQM;
+	occa::memory o_q,o_rhsq, o_resq, o_fQM;
 	occa::memory o_rkA, o_rkE, o_sarkC, o_sarkA, o_sarkE; 
 	occa::memory o_rkqx, o_rkqy, o_rkrhsqx, o_rkrhsqy; 
+	occa::memory o_saveq, o_saveqx, o_saveqy; // for output minor step of addaptive RK 
 
 	// LS Imex vars
 	occa::memory o_qY,   o_qZ,   o_qS;
@@ -116,9 +122,9 @@ typedef struct{
 	occa::kernel surfaceKernel;
 	occa::kernel updateKernel;
 	occa::kernel traceUpdateKernel;
-    occa::kernel relaxationKernel;
+  occa::kernel relaxationKernel;
 
-    occa::kernel pmlVolumeKernel;
+  occa::kernel pmlVolumeKernel;
 	occa::kernel pmlSurfaceKernel;
 	occa::kernel pmlRelaxationKernel;
 	occa::kernel pmlUpdateKernel;

@@ -41,10 +41,10 @@ typedef struct {
 unsigned int hilbert2D(unsigned int index1, unsigned int index2);
 void bogusMatch(void *a, void *b);
 
-dfloat improveClusteredPartition(int *Nclusters, parallelCluster_t **parallelClusters);
+dfloat improveClusteredPartition2D(int *Nclusters, parallelCluster_t **parallelClusters);
 
 // compare the Morton indices for two clusters
-int compareIndex(const void *a, const void *b){
+int compareIndex2D(const void *a, const void *b){
 
   parallelCluster_t *ca = (parallelCluster_t*) a;
   parallelCluster_t *cb = (parallelCluster_t*) b;
@@ -56,7 +56,7 @@ int compareIndex(const void *a, const void *b){
 }
 
 // compare the Morton indices for two clusters
-int compareRank(const void *a, const void *b){
+int compareRank2D(const void *a, const void *b){
 
   parallelCluster_t *ca = (parallelCluster_t*) a;
   parallelCluster_t *cb = (parallelCluster_t*) b;
@@ -160,7 +160,7 @@ dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, int Nclusters, cluster_t 
 
   // odd-even parallel sort of cluster capsules based on their Morton index
   parallelSort(maxNclusters, parallelClusters, sizeof(parallelCluster_t),
-         compareIndex, bogusMatch);
+         compareIndex2D, bogusMatch);
 
   int newNclusters =0;
   for (int n=0;n<maxNclusters;n++)
@@ -224,9 +224,9 @@ dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, int Nclusters, cluster_t 
   parallelClusters = tmpParallelClusters;
 
   //improve the partitioning by exchanging elements between neighboring prcesses
-  dfloat partQuality = improveClusteredPartition(&newNclusters, &parallelClusters);
+  dfloat partQuality = improveClusteredPartition2D(&newNclusters, &parallelClusters);
 
-  //now that we're partitioned and (hopefully) balanced, send the elements
+  //now that we're partitioned and (hopefully) balance2Dd, send the elements
 
   // count number of elements that should end up on this process
   int newNelements = 0;
@@ -246,7 +246,7 @@ dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, int Nclusters, cluster_t 
   }
 
   //sort by original rank and offset
-  qsort(parallelClusters, newNclusters, sizeof(parallelCluster_t), compareRank);
+  qsort(parallelClusters, newNclusters, sizeof(parallelCluster_t), compareRank2D);
 
   //reset counters
   for(int r=0;r<size;++r)
@@ -349,7 +349,7 @@ dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, int Nclusters, cluster_t 
 
 
 //swap clusters between neighboring processes to try and improve the partitioning
-void balance(int rankL, int rankR, dfloat *weightL, dfloat *weightR, 
+void balance2D(int rankL, int rankR, dfloat *weightL, dfloat *weightR, 
               int *Nclusters, parallelCluster_t **parallelClusters) {
   
   int rank, size;
@@ -368,12 +368,12 @@ void balance(int rankL, int rankR, dfloat *weightL, dfloat *weightR,
       for (int cnt=*Nclusters-1;cnt>-1;cnt--) {
         dfloat w = (*parallelClusters)[cnt].weight;
         if ((*weightL-w)>=(*weightR+w)) {
-          //sending this cluster improves the balance
+          //sending this cluster improves the balance2D
           *weightL -= w;
           *weightR += w;
           Nsend++; 
         } else if((*weightL-w) > *weightR) { 
-          //sending makes the neighbor have a higher weight, but it improves the balance
+          //sending makes the neighbor have a higher weight, but it improves the balance2D
           *weightL -= w;
           *weightR += w;
           Nsend++; 
@@ -422,12 +422,12 @@ void balance(int rankL, int rankR, dfloat *weightL, dfloat *weightR,
       for (int cnt=0;cnt<*Nclusters;cnt++) {
         dfloat w = (*parallelClusters)[cnt].weight;
         if ((*weightR-w)>=(*weightL+w)) {
-          //sending this cluster improves the balance
+          //sending this cluster improves the balance2D
           *weightR -= w;
           *weightL += w;
           Nsend++; 
         } else if((*weightR-w) > *weightL) { 
-          //sending makes the neighbor have a higher weight, but it improves the balance
+          //sending makes the neighbor have a higher weight, but it improves the balance2D
           *weightR -= w;
           *weightL += w;
           Nsend++; 
@@ -482,7 +482,7 @@ void balance(int rankL, int rankR, dfloat *weightL, dfloat *weightR,
 }
 
 
-dfloat improveClusteredPartition(int *Nclusters, parallelCluster_t **parallelClusters){
+dfloat improveClusteredPartition2D(int *Nclusters, parallelCluster_t **parallelClusters){
 
   int rank, size;
 
@@ -512,7 +512,7 @@ dfloat improveClusteredPartition(int *Nclusters, parallelCluster_t **parallelClu
 
     //ends
     if ((rank==0)||(rank==size-1)) 
-      balance(size-1,0,totalWeights+size-1, totalWeights+0, Nclusters,parallelClusters);
+      balance2D(size-1,0,totalWeights+size-1, totalWeights+0, Nclusters,parallelClusters);
 
     //resync
     localTotalWeight = totalWeights[rank];
@@ -520,9 +520,9 @@ dfloat improveClusteredPartition(int *Nclusters, parallelCluster_t **parallelClu
 
     //evens
     if (( (rank%2) == 0)&&(rank+1 < size))
-      balance(rank,rank+1,totalWeights+rank, totalWeights+rank+1, Nclusters,parallelClusters);
+      balance2D(rank,rank+1,totalWeights+rank, totalWeights+rank+1, Nclusters,parallelClusters);
     if (( (rank%2) == 1)&&(rank-1 > -1))
-      balance(rank-1,rank,totalWeights+rank-1, totalWeights+rank, Nclusters,parallelClusters);
+      balance2D(rank-1,rank,totalWeights+rank-1, totalWeights+rank, Nclusters,parallelClusters);
 
     //resync
     localTotalWeight = totalWeights[rank];
@@ -530,9 +530,9 @@ dfloat improveClusteredPartition(int *Nclusters, parallelCluster_t **parallelClu
 
     //odds
     if (((rank%2) == 0)&&(rank-1 > -1))
-      balance(rank-1,rank,totalWeights+rank-1, totalWeights+rank, Nclusters,parallelClusters);
+      balance2D(rank-1,rank,totalWeights+rank-1, totalWeights+rank, Nclusters,parallelClusters);
     if (((rank%2) == 1)&&(rank+1 < size))
-      balance(rank,rank+1,totalWeights+rank, totalWeights+rank+1, Nclusters,parallelClusters);
+      balance2D(rank,rank+1,totalWeights+rank, totalWeights+rank+1, Nclusters,parallelClusters);
 
     //resync
     localTotalWeight = totalWeights[rank];

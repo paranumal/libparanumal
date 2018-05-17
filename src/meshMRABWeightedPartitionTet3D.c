@@ -97,14 +97,14 @@ void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
   //save this partition, and perform the mesh setup again.  
   mesh->Nelements = acceptedNelements;
 
-  mesh->EToV = (int*) realloc(mesh->EToV,mesh->Nelements*mesh->Nverts*sizeof(int));
+  mesh->EToV = (hlong*) realloc(mesh->EToV,mesh->Nelements*mesh->Nverts*sizeof(hlong));
   mesh->EX = (dfloat*) realloc(mesh->EX,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->EY = (dfloat*) realloc(mesh->EY,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->EZ = (dfloat*) realloc(mesh->EZ,mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->elementInfo = (int *) realloc(mesh->elementInfo,mesh->Nelements*sizeof(int));
   mesh->MRABlevel = (int *) realloc(mesh->MRABlevel,mesh->Nelements*sizeof(int));
 
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Nverts;++n){
       mesh->EToV[e*mesh->Nverts + n] = acceptedPartition[e].v[n];
       mesh->EX  [e*mesh->Nverts + n] = acceptedPartition[e].EX[n];

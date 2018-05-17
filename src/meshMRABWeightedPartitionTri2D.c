@@ -103,7 +103,7 @@ void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,
   mesh->elementInfo = (int *) realloc(mesh->elementInfo,mesh->Nelements*sizeof(int));
   mesh->MRABlevel = (int *) realloc(mesh->MRABlevel,mesh->Nelements*sizeof(int));
 
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Nverts;++n){
       mesh->EToV[e*mesh->Nverts + n] = acceptedPartition[e].v[n];
       mesh->EX  [e*mesh->Nverts + n] = acceptedPartition[e].EX[n];

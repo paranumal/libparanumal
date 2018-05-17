@@ -114,12 +114,17 @@ occaTimerTic(mesh->device,"BOLTZMANN");
 
 tic_tot = MPI_Wtime();
 
+int fixed_dt = 0; options.getArgs("FIXED TIME STEP", fixed_dt);
 
-if(!( options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TIME INTEGRATOR","XDOPRI") || 
-      options.compareArgs("TIME INTEGRATOR","SAADRK") || options.compareArgs("TIME INTEGRATOR","IMEXRK") )){
+printf(" Fixed dt: %d \n", fixed_dt);
+
+if(  (  options.compareArgs("TIME INTEGRATOR","DOPRI5") && (fixed_dt==1) ) && 
+    !(  options.compareArgs("TIME INTEGRATOR","XDOPRI") 
+     || options.compareArgs("TIME INTEGRATOR","SAADRK") 
+     || options.compareArgs("TIME INTEGRATOR","IMEXRK") )){
 // if(!( strstr(options,"DOPRI5") || strstr(options,"XDOPRI") || strstr(options,"SAADRK") )){
 
-
+// if( (fixed_dt==1) ){
  for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
       
    // for(int tstep=0;tstep<1;++tstep){
@@ -143,12 +148,12 @@ if(!( options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TI
       
       tic_sol = MPI_Wtime();
 
-      if(options.compareArgs("TIME INTEGRATOR","IMEXRK")){
-
+      if(options.compareArgs("TIME INTEGRATOR","DOPRI5")){
+        
         dfloat time = tstep*bns->dt; 
 
-        boltzmannIMEXRKStep2D(bns, time, haloBytes, sendBuffer, recvBuffer, options);
-
+        // boltzmannIMEXRKStep2D(bns, time, haloBytes, sendBuffer, recvBuffer, options);
+        boltzmannDOPRIStep2D(bns,bns->time, haloBytes,sendBuffer, recvBuffer, options);
         bns->o_q.copyFrom(bns->o_rkq);
         bns->o_pmlqx.copyFrom(bns->o_rkqx);
         bns->o_pmlqy.copyFrom(bns->o_rkqy);
@@ -198,7 +203,15 @@ if(!( options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TI
 
       elp_sol += (MPI_Wtime() - tic_sol);
 
+    
+
   }
+
+// char fname[BUFSIZ]; sprintf(fname, "boltzmannAddaptiveDt2D_M_%1d_iTau_%.f_Re_%.0f_Ma_%.0f.dat", bns->tmethod, bns->tauInv, bns->Re, bns->Ma);
+//   FILE *fp; fp = fopen(fname, "a");
+//   fprintf(fp, "%.5e %.5e\n", bns->time, bns->dt); 
+//   fclose(fp);
+
 }
 
   else {
@@ -208,6 +221,9 @@ if(!( options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TI
 
 
   }
+
+
+  
 
 
   elp_tot += (MPI_Wtime() - tic_tot);    
@@ -229,10 +245,10 @@ if(!( options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TI
     printf("ORDER\tSIZE\tTOTAL_TIME\tSOLVER_TIME\tOUTPUT TIME\n");
     printf("%2d %2d %.5e %.5e %.5e\n", mesh->N, size, gelp_tot, gelp_sol, gelp_out); 
 
-    char fname[BUFSIZ]; sprintf(fname, "boltzmannScaling2D.dat");
-    FILE *fp; fp = fopen(fname, "a");
-    fprintf(fp, "%2d %2d %.5e %.5e %.5e\n", mesh->N,size,gelp_tot, gelp_sol, gelp_out); 
-    fclose(fp);
+    // char fname[BUFSIZ]; sprintf(fname, "boltzmannTotalTime2D_M_%1d_iTau_%.f_Re_%.0f_Ma_%.0f.dat", bns->tmethod, bns->tauInv, bns->Re, bns->Ma);
+    // FILE *fp; fp = fopen(fname, "a");
+    // fprintf(fp, "%2d %2d %.5e %.5e %.5e %d %d %d %d\n", mesh->N,size,gelp_tot, gelp_sol, gelp_out, bns->NtimeSteps, bns->atstep, bns->tstep, bns->rtstep); 
+    // fclose(fp);
   }
 
 
