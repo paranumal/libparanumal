@@ -4,7 +4,7 @@
 #include "mpi.h"
 #include "mesh3D.h"
 
-void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
+dfloat meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels, dfloat finalTime) {
 
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -14,7 +14,7 @@ void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
   dfloat dtmin, dtmax;
   dtmin = EToDT[0];
   dtmax = EToDT[0];
-  for (int e=1;e<mesh->Nelements;e++) {
+  for (dlong e=1;e<mesh->Nelements;e++) {
     dtmin = mymin(dtmin,EToDT[e]);
     dtmax = mymax(dtmax,EToDT[e]);
   }
@@ -32,17 +32,17 @@ void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
   mesh->MRABNlevels = mymin(floor(log2(dtGmax/dtGmin))+1,maxLevels);
 
   //shift dtGmin so that we have an integer number of steps
-  mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
-  dtGmin = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*mesh->NtimeSteps);
+  mesh->NtimeSteps = finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
+  dtGmin = finalTime/(pow(2,mesh->MRABNlevels-1)*mesh->NtimeSteps);
 
-  mesh->dt = dtGmin; 
+ 
 
   //compute the level of each element
-  mesh->MRABlevel = (int *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(int));
+  mesh->MRABlevel = (dlong *) calloc(mesh->Nelements+mesh->totalHaloPairs,sizeof(int));
   int *MRABsendBuffer = (int *) calloc(mesh->totalHaloPairs,sizeof(int));
   for(int lev=0; lev<mesh->MRABNlevels; lev++){             
     dfloat dtlev = dtGmin*pow(2,lev);   
-    for(int e=0;e<mesh->Nelements;++e){
+    for(dlong e=0;e<mesh->Nelements;++e){
       if(EToDT[e] >=dtlev) 
         mesh->MRABlevel[e] = lev;
     }
@@ -52,10 +52,10 @@ void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
   for (int lev=0; lev < mesh->MRABNlevels; lev++){
     if (mesh->totalHaloPairs) 
       meshHaloExchange(mesh, sizeof(int), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
-    for (int e =0; e<mesh->Nelements;e++) {
+    for (dlong e =0; e<mesh->Nelements;e++) {
       if (mesh->MRABlevel[e] > lev+1) { //find elements at least 2 levels higher than lev
         for (int f=0;f<mesh->Nfaces;f++) { //check for a level lev neighbour
-          int eP = mesh->EToE[mesh->Nfaces*e+f];
+          dlong eP = mesh->EToE[mesh->Nfaces*e+f];
           if (eP > -1) 
             if (mesh->MRABlevel[eP] == lev)
               mesh->MRABlevel[e] = lev + 1;  //if one exists, lower the level of this element to lev-1
@@ -67,7 +67,7 @@ void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
 
   //this could change the number of MRAB levels there are, so find the new max level
   mesh->MRABNlevels = 0;
-  for (int e=0;e<mesh->Nelements;e++)
+  for (dlong e=0;e<mesh->Nelements;e++)
     mesh->MRABNlevels = (mesh->MRABlevel[e]>mesh->MRABNlevels) ? mesh->MRABlevel[e] : mesh->MRABNlevels;
   mesh->MRABNlevels++;
   int localNlevels = mesh->MRABNlevels;
@@ -79,7 +79,7 @@ void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
     //for the moment, just weigth the elements by the number or RHS evals per MRAB step
     // TODO: We should make this an input parameter later to handle other problems. 
     dfloat *weights = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
-    for (int e=0; e<mesh->Nelements;e++) {
+    for (dlong e=0; e<mesh->Nelements;e++) {
       weights[e] = pow(2,mesh->MRABNlevels-mesh->MRABlevel[e]);
     }
     
@@ -94,10 +94,10 @@ void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
   mesh->MRABNelements = (int *) calloc(mesh->MRABNlevels,sizeof(int));
   mesh->MRABNhaloElements = (int *) calloc(mesh->MRABNlevels,sizeof(int));
 
-  for (int e=0;e<mesh->Nelements;e++) {
+  for (dlong e=0;e<mesh->Nelements;e++) {
     mesh->MRABNelements[mesh->MRABlevel[e]]++;
     for (int f=0;f<mesh->Nfaces;f++) { 
-      int eP = mesh->EToE[mesh->Nfaces*e+f];
+      dlong eP = mesh->EToE[mesh->Nfaces*e+f];
       if (eP > -1) {
         if (mesh->MRABlevel[eP] == mesh->MRABlevel[e]-1) {//check for a level lev-1 neighbour
           mesh->MRABNhaloElements[mesh->MRABlevel[e]]++;
@@ -112,12 +112,12 @@ void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
     mesh->MRABhaloIds[lev] = (int *) calloc(mesh->MRABNhaloElements[lev],sizeof(int));
     int cnt  =0;
     int cnt2 =0;
-    for (int e=0;e<mesh->Nelements;e++){
+    for (dlong e=0;e<mesh->Nelements;e++){
       if (mesh->MRABlevel[e] == lev) {
         mesh->MRABelementIds[lev][cnt++] = e;
       
         for (int f=0;f<mesh->Nfaces;f++) { 
-          int eP = mesh->EToE[mesh->Nfaces*e+f];
+          dlong eP = mesh->EToE[mesh->Nfaces*e+f];
           if (eP > -1) {
             if (mesh->MRABlevel[eP] == lev-1) {//check for a level lev-1 neighbour
               mesh->MRABhaloIds[lev][cnt2++] = e;
@@ -146,4 +146,6 @@ void meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels) {
     MPI_Barrier(MPI_COMM_WORLD);
   }
   MPI_Barrier(MPI_COMM_WORLD);
+
+  return dtGmin;
 }

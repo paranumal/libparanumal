@@ -26,7 +26,7 @@ kernel void insAdvectionVolumeQuad2D(const dlong Nelements,
             const dfloat drdy = vgeo[gid + p_RYID*p_Np];
             const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
             const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
-            const dfloat JW = vgeo[gid + p_JWID*p_Np];
+            const dfloat JW   = vgeo[gid + p_JWID*p_Np];
 
             const dlong id = e*p_Np + j*p_Nq+i;
 

@@ -1,7 +1,7 @@
 cd ../examples/boltzmannTri2D;
-make -j; 
+make clean; make -j;  
 
-rm *.vtu; 
+#rm *.vtu; rm *.dat; 
 
 #
 #for N in `seq 1 6 `;do
@@ -16,9 +16,14 @@ rm *.vtu;
 #./boltzmannMain2D ../../meshes/boltzmannFencePML2D.msh 3 MRAB
 #./boltzmannMain2D ../../meshes/boltzmannFencePML2D.msh 3 MRSAAB
 
-./boltzmannMain2D ../../meshes/boltzmannSquareCylinderPML2D_W1.msh  3  MRSAAB
-./boltzmannMain2D ../../meshes/boltzmannSquareCylinderPML2D_W2.msh  3  MRSAAB
-./boltzmannMain2D ../../meshes/boltzmannSquareCylinderPML2D_W3.msh  3  MRSAAB
+./boltzmannMain2D  setuprc;
+./boltzmannMain2D  setuprc1;
+./boltzmannMain2D  setuprc2;
+./boltzmannMain2D  setuprc3;
+
+
+#./boltzmannMain2D ../../meshes/boltzmannSquareCylinderPML2D.msh  3  MRSAAB
+#./boltzmannMain2D ../../meshes/boltzmannSquareCylinderPML2D.msh  3  MRSAAB
 
 
 

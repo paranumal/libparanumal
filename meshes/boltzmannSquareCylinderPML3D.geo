@@ -1,16 +1,16 @@
 // Base mesh density for outer surfaces
-r   = DefineNumber[1.0];
+r   = DefineNumber[0.75];
 // Factor for inside cylinder faces
 fac = DefineNumber[0.25];
 // pml Width
-pmlWidth = DefineNumber[1.0];
+pmlWidth = DefineNumber[1.6];
 // Define Square Cylinder and Domain boundaries
-xmax   = DefineNumber[8];
-xmin   = DefineNumber[-4];
-ymax   = DefineNumber[4];
-ymin   = DefineNumber[-4];
-zmax   = DefineNumber[4];
-zmin   = DefineNumber[-4];
+xmax   = DefineNumber[9.4];
+xmin   = DefineNumber[-5.4];
+ymax   = DefineNumber[5.4];
+ymin   = DefineNumber[-5.4];
+zmax   = DefineNumber[5.4];
+zmin   = DefineNumber[-5.4];
 //
 xcmax   = DefineNumber[ 0.5];
 xcmin   = DefineNumber[-0.5];
@@ -41,14 +41,14 @@ Line(10) = {4, 9};
 Line(11) = {3, 8};
 Line(12) = {2, 7};
 //
-Point(10) = {xcmin, ycmin, zcmin, fac*r};
-Point(11) = {xcmax, ycmin, zcmin, fac*r};
-Point(12) = {xcmax, ycmax, zcmin, fac*r};
-Point(13) = {xcmin, ycmax, zcmin, fac*r};
-Point(14) = {xcmin, ycmin, zcmax, fac*r};
-Point(15) = {xcmax, ycmin, zcmax, fac*r};
-Point(16) = {xcmax, ycmax, zcmax, fac*r};
-Point(17) = {xcmin, ycmax, zcmax, fac*r};
+Point(10) = {xcmin, ycmin, zcmin, fac};
+Point(11) = {xcmax, ycmin, zcmin, fac};
+Point(12) = {xcmax, ycmax, zcmin, fac};
+Point(13) = {xcmin, ycmax, zcmin, fac};
+Point(14) = {xcmin, ycmin, zcmax, fac};
+Point(15) = {xcmax, ycmin, zcmax, fac};
+Point(16) = {xcmax, ycmax, zcmax, fac};
+Point(17) = {xcmin, ycmax, zcmax, fac};
 Line(13) = {14, 15};
 Line(14) = {15, 16};
 Line(15) = {16, 17};
@@ -90,8 +90,7 @@ Surface Loop(49) = {40, 42, 46, 44, 48, 38};
 
  Surface Loop(51) = {34, 28, 26, 30, 32, 36};
  Volume(52) = {51,-49};
-// Volume(52) = {51};
-//
+
 Extrude {0, pmlWidth, 0} {Surface{34};}
 Extrude {0, 0, -pmlWidth}{Surface{36};}
 Extrude {-pmlWidth, 0, 0} {Surface{26};}
@@ -105,10 +104,21 @@ Extrude {0, 0, -pmlWidth} {Surface{161, 113};}
 Extrude {0, 0, pmlWidth} {Surface{153, 105};}
 Extrude {0, -pmlWidth, 0} {Surface{373, 439, 403, 425};}
 Extrude {0, pmlWidth, 0} {Surface{381, 395, 417, 447};}
-//
-// Coherence;
+
 Physical Surface("Wall", 1) = {40, 44, 48, 46, 42, 38};
+
 Physical Surface("Outflow", 3) = {404,294,487, 448, 619, 245, 597, 140, 426, 355, 531, 118, 267, 571, 399, 513, 289, 443, 483, 623, 536, 338, 184, 360, 514, 316, 470, 492, 557, 377, 461, 333, 535, 421, 593, 201, 162, 228, 558, 206, 602, 250, 624, 272, 74, 580, 553, 223, 96, 382, 311, 575, 509, 465};
-Physical Volume("Domain") = {76, 60, 75, 59, 77, 61, 62, 78, 67, 53, 57, 69, 74, 66, 65, 56, 52, 71, 58, 64, 55, 54, 68, 73, 63, 72, 70};
 
 
+Physical Volume("Interior",9) = {52};
+Physical Volume("XPML",100)   = {55,57};
+Physical Volume("YPML",200)   = {53,58};
+Physical Volume("ZPML",400)   = {56,54};
+Physical Volume("XYPML",300)  = {59,62,63,65};
+Physical Volume("XZPML",500)  = {67,68,69,70};
+Physical Volume("YZPML",600)  = {60,61,64,66};
+Physical Volume("XYZPML",700)  = {75,76,77,78,71,72,73,74};
+
+
+
+Coherence;

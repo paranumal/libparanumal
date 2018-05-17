@@ -1,8 +1,8 @@
-#include "boltzmann2D.h"
+#include "bns.h"
 
-void boltzmannSAADRKCoefficients(bns_t *bns, setupAide &options){
+void bnsSAADRKCoefficients(bns_t *bns, setupAide &options){
 
-mesh2D * mesh = bns->mesh; 
+mesh_t * mesh = bns->mesh; 
 
 dfloat alpha = -bns->tauInv*bns->dt, coef = -bns->tauInv, h   = bns->dt; 
 
@@ -203,10 +203,10 @@ else if(bns->NrkStages==7){
 	dfloat rkE[bns->NrkStages]= {b1, 0, b3, b4, a75, b6, 0}; 
 
 
-// move data to device
+	// move data to device
 	bns->o_sarkC = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), rkC);
 	bns->o_sarkA = mesh->device.malloc(bns->NrkStages*bns->NrkStages*sizeof(dfloat), rkA);
-  bns->o_sarkE = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), rkE);
+	bns->o_sarkE = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), rkE);
 
 
 }

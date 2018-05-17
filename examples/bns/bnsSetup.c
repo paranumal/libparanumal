@@ -1,30 +1,62 @@
-#include "boltzmann2D.h"
+#include "bns.h"
 
-// NBN: toggle use of 2nd stream
-#define USE_2_STREAMS
-
-bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
-
+bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
+  
+  // OCCA build 
+  char deviceConfig[BUFSIZ];
   int rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
+
+  long int hostId = gethostid();
+
+  long int* hostIds = (long int*) calloc(size,sizeof(long int));
+  MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,MPI_COMM_WORLD);
+
+  int deviceID = 0;
+  for (int r=0;r<rank;r++) {
+    if (hostIds[r]==hostId) deviceID++;
+  }
+
+  // read thread model/device/platform from options
+  if(options.compareArgs("THREAD MODEL", "CUDA")){
+    int dev; 
+    options.getArgs("DEVICE NUMBER" ,dev);
+    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",dev);
+  }
+  else if(options.compareArgs("THREAD MODEL", "OpenCL")){
+    int dev, plat;
+    options.getArgs("DEVICE NUMBER", dev);
+    options.getArgs("PLATFORM NUMBER", plat);
+    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", dev, plat);
+  }
+  else if(options.compareArgs("THREAD MODEL", "OpenMP")){
+    sprintf(deviceConfig, "mode = OpenMP");
+  }
+  else{
+    sprintf(deviceConfig, "mode = Serial");
+  }
   
-  // SET SOLVER PARAMETERS
+  // BNS build
   bns_t *bns = (bns_t*) calloc(1, sizeof(bns_t));
+
+  options.getArgs("MESH DIMENSION", bns->dim);
+  options.getArgs("ELEMENT TYPE", bns->elementType);
   
-  mesh->Nfields = 6;
+
+  mesh->Nfields = (bns->dim==3) ? 10:6;
   bns->Nfields = mesh->Nfields; 
 
   bns->mesh = mesh; 
 
     
-  // Defaulting Input Parameters
+  // Defaulting BNS Input Parameters
   bns->Ma         = 0.1;
-  bns->Re         = 1000; 
+  bns->Re         = 100; 
   bns->startTime  = 0.0;
   bns->finalTime  = 1.0;
-  bns->cfl        = 0.2; 
+  bns->cfl        = 0.5; 
   //
   bns->pmlFlag    = 0; 
   bns->probeFlag  = 0; 
@@ -33,7 +65,7 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
   bns->errorStep  = 1; 
   bns->reportStep = 1;
   
-
+  // Load input parameters
   int check; 
 
   check = options.getArgs("REYNOLDS NUMBER", bns->Re);
@@ -60,20 +92,59 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
   check = options.getArgs("REPORT FLAG", bns->reportFlag);
   if(!check) printf("WARNING setup file does not include REPORT FLAG\n");
 
+  check = options.getArgs("FIXED TIME STEP", bns->fixed_dt);
+  if(!check) printf("WARNING setup file does not include FIXED TIME STEP\n");
+
   if(options.compareArgs("ABSORBING LAYER", "PML"))
     bns->pmlFlag = 1; 
-  // check = options.getArgs("ABSORBING LAYER", bns->pmlFlag);
-  // if(!check) printf("WARNING setup file does not include ABSORBING LAYER\n");
 
+  if(bns->pmlFlag){
+   check = options.getArgs("PML PROFILE ORDER", bns->pmlOrder);
+   if(!check) printf("WARNING setup file does not include PML ORDER\n");
+
+   check = options.getArgs("PML SIGMAX MAX", bns->sigmaXmax);
+   if(!check) printf("WARNING setup file does not include PML SIGMAX MAX\n");
+
+   check = options.getArgs("PML SIGMAY MAX", bns->sigmaYmax);
+   if(!check) printf("WARNING setup file does not include PML SIGMAY MAX\n");
+
+    if(bns->dim==3){
+      check = options.getArgs("PML SIGMAZ MAX", bns->sigmaZmax);
+      if(!check) printf("WARNING setup file does not include PML SIGMAZ MAX\n");
+    }
+  }
+ 
   
+  // Set time discretization scheme:fully explicit or not
+  bns->fexplicit = 0; 
+  if(options.compareArgs("TIME INTEGRATOR", "LSERK") ) // fully explicit schemes
+    bns->fexplicit = 1; 
+  // Report / error time steps for fixed dt integration
   options.getArgs("TSTEPS FOR SOLUTION OUTPUT", bns->reportStep);
   options.getArgs("TSTEPS FOR ERROR COMPUTE",   bns->errorStep);
-
-  // Output Interval for addaptive time stepping
+  // Output interval for variable dt integration
   options.getArgs("OUTPUT INTERVAL",   bns->outputInterval);
+
+  printf("=============WRITING INPUT PARAMETERS===================\n");
+
+  printf("REYNOLDS NUMBER\t:\t%.2e\n", bns->Re);
+  printf("MACH NUMBER\t:\t%.2e\n", bns->Ma);
+  printf("CFL NUMBER\t:\t%.2e\n", bns->cfl);
+  printf("START TIME\t:\t%.2e\n", bns->startTime);
+  printf("FINAL TIME\t:\t%.2e\n", bns->finalTime);
+  printf("FIXED DT\t:\t%d\n", bns->fixed_dt);
+  printf("PML FORMULATION\t:\t%d\n", bns->pmlFlag);
+  if(bns->pmlFlag){
+    printf("PML PROFILE N\t:\t%d\n", bns->pmlOrder);
+    printf("PML SIGMA X\t:\t%.2e\n", bns->sigmaXmax);
+    printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
+    printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
+  }
+  printf("ERROR STEP\t:\t%d\n", bns->errorStep);
+
     
 
-  printf("Starting initial conditions\n");
+  // printf("Starting initial conditions\n");
   // Set characteristic length, should be one in a proper problem setting
   dfloat Uref = 1.0;   
   dfloat Lref = 1.0;   
@@ -84,41 +155,65 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
   dfloat nu     = Uref*Lref/bns->Re; 
   bns->tauInv   = bns->RT/nu;
 
-  printf("tauInv: %.4e \n",bns->tauInv);
-  // set penalty parameter
+  // Set penalty parameter for flux setting
   bns->Lambda2 = 0.5/(bns->sqrtRT);
-
-  //printf("starting initial conditions\n"); //Zero Flow Conditions
-  // rho = 1.0; u = Uref*cos(M_PI/6.0); v = Uref*sin(M_PI/6.0); sigma11 = 0; sigma12 = 0; sigma22 = 0;
-  dfloat rho = 1.0; dfloat u = 1.0; dfloat v = 0.0; 
-  dfloat sigma11 = 0; dfloat sigma12 = 0; dfloat sigma22 = 0;
   
+  // Setting initial conditions
+  dfloat rho     = 1.,   u       = 1.,  v       = 0.,   w  = 0.; 
+  dfloat sigma11 = 0.f , sigma12 = 0.f, sigma13 = 0.f;
+  dfloat sigma22 = 0.f , sigma23 = 0.f;
+  dfloat sigma33 = 0.f;
 
-  // SET TIME-STEP SIZE
-  dfloat q1bar = rho;
-  dfloat q2bar = rho*u/bns->sqrtRT;
-  dfloat q3bar = rho*v/bns->sqrtRT;
-  dfloat q4bar = (rho*u*v - sigma12)/bns->RT;
-  dfloat q5bar = (rho*u*u - sigma11)/(sqrt(2.)*bns->RT);
-  dfloat q6bar = (rho*v*v - sigma22)/(sqrt(2.)*bns->RT);
+  dfloat q1bar =0., q2bar =0., q3bar =0., q4bar =0., q5bar = 0.; 
+  dfloat q6bar =0., q7bar =0., q8bar =0., q9bar =0., q10bar =0.; 
+  // Set time step size
+  if(bns->dim==2){
+     printf("MESH DIMENSION\t:\t%d\n", bns->dim);
+    q1bar = rho;
+    q2bar = rho*u/bns->sqrtRT;
+    q3bar = rho*v/bns->sqrtRT;
+    q4bar = (rho*u*v - sigma12)/bns->RT;
+    q5bar = (rho*u*u - sigma11)/(sqrt(2.)*bns->RT);
+    q6bar = (rho*v*v - sigma22)/(sqrt(2.)*bns->RT);    
+  } else{
+    printf("MESH DIMENSION\t:\t%d\n", bns->dim);
+    
+    q1bar  = rho;
+    q2bar  = rho*u/bns->sqrtRT;
+    q3bar  = rho*v/bns->sqrtRT;
+    q4bar  = rho*w/bns->sqrtRT;
+    //
+    q5bar  = (rho*u*v - sigma12)/bns->RT;
+    q6bar  = (rho*u*w - sigma13)/bns->RT;
+    q7bar  = (rho*v*w - sigma23)/bns->RT;
+    //
+    q8bar  = (rho*u*u - sigma11)/(sqrt(2.)*bns->RT);
+    q9bar  = (rho*v*v - sigma22)/(sqrt(2.)*bns->RT);
+    q10bar = (rho*w*w - sigma33)/(sqrt(2.)*bns->RT);
+  }
 
- 
-  dfloat magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/bns->sqrtRT);
-  magVelocity         = mymax(magVelocity,1.0); // Correction for initial zero velocity
+  dfloat magVelocity = 1.0; 
+  if(bns->dim==2)
+    magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar)/(q1bar/bns->sqrtRT);
+  else
+    magVelocity  = sqrt(q2bar*q2bar+q3bar*q3bar+q4bar*q4bar)/(q1bar/bns->sqrtRT);
+  
+  // Correction for initial zero velocity
+  magVelocity         = mymax(magVelocity,1.0); 
 
   dfloat ghmin        = 1e9; 
   dfloat dt           = 1e9; 
   dfloat *EtoDT       = (dfloat *) calloc(mesh->Nelements,sizeof(dfloat));
 
   //Set time step size
-  for(int e=0;e<mesh->Nelements;++e)
+  for(dlong e=0;e<mesh->Nelements;++e)
   { 
     dfloat hmin = 1e9, dtmax = 1e9;
     
     EtoDT[e] = dtmax;
 
     for(int f=0;f<mesh->Nfaces;++f){
-      int sid    = mesh->Nsgeo*(mesh->Nfaces*e + f);
+      dlong sid   = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
      
@@ -130,67 +225,72 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
 
     dfloat dtex   = bns->cfl*hmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT);
     dfloat dtim   = bns->cfl*1.f/(bns->tauInv);
-    dfloat dtest = 1e9;
+    dfloat dtest  = 1e9;
     
-    if( options.compareArgs("TIME INTEGRATOR", "MRAB")   || options.compareArgs("TIME INTEGRATOR", "LSERK") ||
-        options.compareArgs("TIME INTEGRATOR", "DOPRI5") || options.compareArgs("TIME INTEGRATOR", "SRAB") ) // fully explicit schemes
+    if(bns->fexplicit) // fully explicit schemes
       dtest  = mymin(dtex,dtim); 
-    else    // implicit-explicit or semi-analytic schemes
+    else              // implicit-explicit or semi-analytic schemes
       dtest  = dtex;
       
       dt            = mymin(dt, dtest);      // For SR 
       EtoDT[e]      = mymin(EtoDT[e],dtest); // For MR
   }
 
-   printf("dtex = %.5e dtim = %.5e \n", bns->cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), bns->cfl*1.f/(bns->tauInv));
 
- 
-  // Set multiRate/singleRate element groups/group  
-  if(options.compareArgs("TIME INTEGRATOR", "MRAB") ||
-     options.compareArgs("TIME INTEGRATOR", "MRSAAB") ){
+  
+
+
+   // printf("dtex = %.5e dtim = %.5e \n", bns->cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), bns->cfl*1.f/(bns->tauInv));
+
+  // Set multiRate element groups/group  
+  if(options.compareArgs("TIME INTEGRATOR", "MRSAAB") ){
     int maxLevels =0; options.getArgs("MAX MRAB LEVELS", maxLevels);
-    bns->dt = meshMRABSetup2D(mesh,EtoDT,maxLevels, bns->finalTime-bns->startTime);
+
+    printf("MR MAX LEVELS\t:\t%d\n", maxLevels);
+
+    if(bns->dim==2)
+      bns->dt = meshMRABSetup2D(mesh,EtoDT,maxLevels, (bns->finalTime-bns->startTime));
+    else
+      bns->dt = meshMRABSetup3D(mesh,EtoDT,maxLevels, (bns->finalTime-bns->startTime));
+
     bns->NtimeSteps =  (bns->finalTime-bns->startTime)/(pow(2,mesh->MRABNlevels-1)*bns->dt);
+
+    printf("MR  LEVELS\t:\t%d\n", mesh->MRABNlevels);
   }
-  else{    
+  else{
+    // printf("MESH DIMENSION\t:\t%d\n", bns->dt);  
     //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
-    // dt = 100e-6; // !!!!!!!!!!!!!!!!
     // MPI_Allreduce to get global minimum dt
     MPI_Allreduce(&dt, &(bns->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
     bns->NtimeSteps = (bns->finalTime-bns->startTime)/bns->dt;
     bns->dt         = (bns->finalTime-bns->startTime)/bns->NtimeSteps;
-
     //offset index
     bns->shiftIndex = 0;
-
     // Set element ids for nonPml region, will be modified if PML exists
     mesh->nonPmlNelements = mesh->Nelements; 
     mesh->pmlNelements    = 0; 
 
-    mesh->nonPmlElementIds = (int*) calloc(mesh->Nelements, sizeof(int));
-    for(int e=0;e<mesh->Nelements;++e)
+    mesh->nonPmlElementIds = (dlong*) calloc(mesh->Nelements, sizeof(dlong));
+    for(dlong e=0;e<mesh->Nelements;++e)
      mesh->nonPmlElementIds[e] = e; 
+
+   printf("TIME STEPSIZE\t:\t%.2e\n", bns->dt); 
   }
 
 
- // INITIALIZE FIELD VARIABLES 
- if(options.compareArgs("TIME INTEGRATOR","MRAB") || options.compareArgs("TIME INTEGRATOR","MRSAAB")){
-    bns->Nrhs = 3;
+
+  if(options.compareArgs("TIME INTEGRATOR", "MRSAAB")){
+    bns->Nrhs = 3; 
     // compute samples of q at interpolation nodes
     bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rhsq = (dfloat*) calloc(bns->Nrhs*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->fQM  = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*bns->Nfields, sizeof(dfloat));
   }
 
-  else if(options.compareArgs("TIME INTEGRATOR","SRSAAB") ||options.compareArgs("TIME INTEGRATOR","SRAB") || 
-          options.compareArgs("TIME INTEGRATOR","SARK")){ //SRAB and SAAB Single rate versions of above
-    bns->Nrhs = 3;
-    // compute samples of q at interpolation nodes
-    bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->rhsq = (dfloat*) calloc(bns->Nrhs*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
-  }
 
-  else if (options.compareArgs("TIME INTEGRATOR","LSERK")){ // LSERK, SARK etc.
+
+  // Initialize  
+  if (options.compareArgs("TIME INTEGRATOR","LSERK")){ // LSERK,
     bns->Nrhs = 1; 
     // compute samples of q at interpolation nodes
     bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
@@ -198,195 +298,102 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
     bns->resq = (dfloat*) calloc(bns->Nrhs*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
   }
 
-
-  else if (options.compareArgs("TIME INTEGRATOR","LSIMEX")){ // LSERK, SARK etc.
-    bns->Nrhs = 1; 
-    // compute samples of q at interpolation nodes
-    bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->rhsq = (dfloat*) calloc(bns->Nrhs*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
-  }
-
-
-  else if (options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TIME INTEGRATOR","XDOPRI")){ // LSERK, SARK etc.
-    bns->Nrhs = 1;
-    bns->ATOL    = 0.0; options.getArgs("ABSOLUTE TOLERANCE",   bns->ATOL); 
-    bns->RTOL    = 0.0; options.getArgs("RELATIVE TOLERANCE",   bns->RTOL);
-    bns->dtMIN   = 0.0; options.getArgs("MINUMUM TIME STEP SIZE",   bns->dtMIN); 
-    bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I    
-    bns->rkp     = 5; // order of embedded scheme + 1 
-    // printf(" ATOL: %.2e RTOL:%.2e dtMIN: %.2e \n", bns->ATOL, bns->RTOL, bns->dtMIN);
-
-    int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
-    bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
-
-    int localElements =  mesh->Nelements;
-    MPI_Allreduce(&localElements, &(bns->totalElements), 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
-    // compute samples of q at interpolation nodes
-    bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
-    //
-    bns->NrkStages = 7;
-    
-    bns->rkq      = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->rkrhsq   = (dfloat*) calloc(bns->NrkStages*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->rkerr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->errtmp   = (dfloat*) calloc(bns->Nblock, sizeof(dfloat)); 
-  }
-
-
-  else if (options.compareArgs("TIME INTEGRATOR","SAADRK")){ 
+   // Initialize  
+  if (options.compareArgs("TIME INTEGRATOR","SARK")){ // SARK for fixed or adaptive time stepping,
     bns->Nrhs  = 1;
-    bns->ATOL    = 0.0; options.getArgs("ABSOLUTE TOLERANCE",   bns->ATOL); 
-    bns->RTOL    = 0.0; options.getArgs("RELATIVE TOLERANCE",   bns->RTOL);
-    bns->dtMIN   = 0.0; options.getArgs("MINUMUM TIME STEP SIZE",   bns->dtMIN); 
+    bns->ATOL    = 1.0; options.getArgs("ABSOLUTE TOLERANCE",   bns->ATOL); 
+    bns->RTOL    = 1.0; options.getArgs("RELATIVE TOLERANCE",   bns->RTOL);
+    bns->dtMIN   = 1.0; options.getArgs("MINUMUM TIME STEP SIZE",   bns->dtMIN); 
     bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I    
     bns->rkp     = 4; // order of embedded scheme + 1 
 
     
-    int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
+    dlong Ntotal  = mesh->Nelements*mesh->Np*bns->Nfields;
     bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
 
-    int localElements =  mesh->Nelements;
-    MPI_Allreduce(&localElements, &(bns->totalElements), 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    dlong localElements =  mesh->Nelements;
+    MPI_Allreduce(&localElements, &(bns->totalElements), 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 
     // compute samples of q at interpolation nodes
     bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
     //
-    bns->NrkStages = 7; // 5 or 7 // SAADRK methods 43 or 53 respectively
+    bns->NrkStages = 7; // 7 stages order(54) or 6 stages order(43) 
     
     bns->rkq      = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rkrhsq   = (dfloat*) calloc(bns->NrkStages*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rkerr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->errtmp  =  (dfloat*) calloc(bns->Nblock, sizeof(dfloat)); 
   }
-  else if (options.compareArgs("TIME INTEGRATOR","IMEXRK")){
-    bns->Nrhs  = 1;
-    bns->ATOL    = 0.0; options.getArgs("ABSOLUTE TOLERANCE",   bns->ATOL); 
-    bns->RTOL    = 0.0; options.getArgs("RELATIVE TOLERANCE",   bns->RTOL);
-    bns->dtMIN   = 0.0; options.getArgs("MINUMUM TIME STEP SIZE",   bns->dtMIN); 
-    bns->emethod = 0; // 0 PID / 1 PI / 2 I 
-    
-    bns->rkp     = 5; // order of embedded scheme + 1 
+
  
-
-    int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
-    bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
-
-    int localElements =  mesh->Nelements;
-    MPI_Allreduce(&localElements, &(bns->totalElements), 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
-    // compute samples of q at interpolation nodes
-    bns->q      = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->rhsqim = (dfloat*) calloc(mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->rhsqex = (dfloat*) calloc(mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
-    //
-    bns->NrkStages = 8; // 6 for ARK34 8 for ARK 54
-    bns->rkp       = 4; // order of embedded scheme 
-
-    bns->rkq      = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
-    
-    bns->rkrhsqim = (dfloat*) calloc(bns->NrkStages*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->rkrhsqex = (dfloat*) calloc(bns->NrkStages*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
-
-    bns->rkerr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
-    bns->errtmp   = (dfloat*) calloc(bns->Nblock, sizeof(dfloat)); 
-
-    bns->ehist      = (dfloat*) calloc(3, sizeof(dfloat));
-    bns->dthist     = (dfloat*) calloc(3, sizeof(dfloat));
-    dfloat ehist[3] = {1.0, 1.0, 1.0};
-
-    memcpy(bns->ehist, ehist, 3*sizeof(dfloat)); 
-  }
-
-  #if 0
-  int fdt = 0; options.getArgs("FIXED TIME STEP",fdt);
-  if(options.compareArgs("TIME INTEGRATOR","LSERK"))
-    bns->tmethod = 0; 
-  if(options.compareArgs("TIME INTEGRATOR","DOPRI5") && (fdt==1))
-    bns->tmethod = 1; 
-   if(options.compareArgs("TIME INTEGRATOR","DOPRI5") && (fdt==0))
-    bns->tmethod = 2;
-  if(options.compareArgs("TIME INTEGRATOR","SAADRK"))
-    bns->tmethod = 3;
-  #endif
 
   dfloat time = bns->startTime + 0.0; 
   // Define Initial Mean Velocity
   dfloat ramp, drampdt;
-  boltzmannRampFunction2D(time, &ramp, &drampdt);
-
+  bnsRampFunction(time, &ramp, &drampdt);
 
  // INITIALIZE PROBLEM 
-  int cnt = 0;
-  for(int e=0;e<mesh->Nelements;++e){
+  for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
-      dfloat t = 0;
-      dfloat x = mesh->x[n + mesh->Np*e];
-      dfloat y = mesh->y[n + mesh->Np*e];
+      dfloat t = 0., x = 0., y = 0., z = 0.;
+      x = mesh->x[n + mesh->Np*e];
+      y = mesh->y[n + mesh->Np*e];
+      if(bns->dim==3)
+        z = mesh->z[n + mesh->Np*e];
 
-#if 0
-      // Couette Flow 
-      dfloat uex = y ; 
-      dfloat sex = 0.0; 
-      for(int k=1; k<=10; k++){
-        dfloat lamda = k*M_PI;
-        // dfloat coef = -bns->RT*bns->tauInv/2. + sqrt(pow((bns->RT*bns->tauInv),2) /4.0 - (lamda*lamda*bns->RT*bns->RT));
-        dfloat coef = -bns->tauInv/2. + bns->tauInv/2. * sqrt(1. - 4.*pow(1./ bns->tauInv, 2)* bns->RT*lamda*lamda);
-        uex += 2.*pow(-1,k)/(lamda)*exp(coef*time)*sin(lamda*y); //
-        sex  += 2.*pow(-1,k)*coef/(lamda*lamda)*exp(coef*time)*cos(lamda*y); 
+      const dlong id = e*bns->Nfields*mesh->Np +n; 
+      if(bns->dim==2){
+        // Uniform Flow
+        bns->q[id+0*mesh->Np] = q1bar; 
+        bns->q[id+1*mesh->Np] = ramp*q2bar;
+        bns->q[id+2*mesh->Np] = ramp*q3bar;
+        bns->q[id+3*mesh->Np] = ramp*ramp*q4bar;
+        bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
+        bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;   
+      }else{
+
+        #if 0
+          dfloat Pmax = 0.5; 
+          dfloat U0   = 1.0; 
+          dfloat r0   = 1.0;
+          dfloat gamma= 1.4; 
+
+          dfloat rho = 1.0 + Pmax*exp(-(log(2)* (x*x + y*y + z*z)/r0));
+
+          bns->q[id+0*mesh->Np] = rho; 
+          bns->q[id+1*mesh->Np] = rho*U0/bns->sqrtRT;
+          bns->q[id+2*mesh->Np] = 0.0;
+          bns->q[id+3*mesh->Np] = 0.0;
+
+          bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
+          bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;
+          bns->q[id+6*mesh->Np] = ramp*ramp*q7bar;   
+          bns->q[id+7*mesh->Np] = ramp*ramp*q8bar;   
+          bns->q[id+8*mesh->Np] = ramp*ramp*q9bar;   
+          bns->q[id+9*mesh->Np] = ramp*ramp*q10bar; 
+        #else
+          bns->q[id+0*mesh->Np] = q1bar; 
+          bns->q[id+1*mesh->Np] = ramp*q2bar;
+          bns->q[id+2*mesh->Np] = ramp*q3bar;
+          bns->q[id+3*mesh->Np] = ramp*q4bar;
+
+          bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
+          bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;
+          bns->q[id+6*mesh->Np] = ramp*ramp*q7bar;   
+          bns->q[id+7*mesh->Np] = ramp*ramp*q8bar;   
+          bns->q[id+8*mesh->Np] = ramp*ramp*q9bar;   
+          bns->q[id+9*mesh->Np] = ramp*ramp*q10bar; 
+        #endif  
       }
-
-      bns->q[cnt+0] = rho; // uniform density, zero flow
-      bns->q[cnt+1] = rho*uex/bns->sqrtRT;
-      bns->q[cnt+2] = 0.0;
-      bns->q[cnt+3] = sex/bns->RT;
-      bns->q[cnt+4] = 0.0;
-      bns->q[cnt+5] = 0.0;  
-#endif
-
-
-#if 0
-      // Vortex Problem
-      dfloat r     = sqrt(pow((x-u*time),2) + pow( (y-v*time),2) );
-      dfloat Umax  = 0.5*u; 
-      dfloat b     = 0.2;
-
-      dfloat Ur    = Umax/b*r*exp(0.5*(1.0-pow(r/b,2)));
-
-      dfloat rhor  = rho*exp(-Umax*Umax/(2. * bns->RT) *exp(1.0-r*r/(b*b)));
-
-      dfloat theta = atan2(y,x);
-
-      bns->q[cnt+0] = rhor; 
-      bns->q[cnt+1] = rhor*(-Ur*sin(theta) +u)/bns->sqrtRT;
-      bns->q[cnt+2] = rhor*( Ur*cos(theta) +v)/bns->sqrtRT;
-      bns->q[cnt+3] = q4bar;
-      bns->q[cnt+4] = q5bar;
-      bns->q[cnt+5] = q6bar;  
-    
-#endif
-
-#if 1
-      // Uniform Flow
-      bns->q[cnt+0] = q1bar; 
-      bns->q[cnt+1] = ramp*q2bar;
-      bns->q[cnt+2] = ramp*q3bar;
-      bns->q[cnt+3] = ramp*ramp*q4bar;
-      bns->q[cnt+4] = ramp*ramp*q5bar;
-      bns->q[cnt+5] = ramp*ramp*q6bar;  
-#endif
-
-      cnt += bns->Nfields;
+       
     }
   }
 
   
   // Write Problem Info 
   if(rank==0){
-    printf("dt   = %g ",   bns->dt);
-    printf("max wave speed = %g\n", sqrt(3.)*bns->sqrtRT);
+    printf("dt   = %g max wave speed = %g",   bns->dt, sqrt(3.)*bns->sqrtRT);
     if(mesh->MRABNlevels)
       printf("Nsteps = %d dt = %.8e MRAB Level: %d  Final Time:%.5e\n", bns->NtimeSteps, bns->dt, mesh->MRABNlevels, bns->startTime+pow(2, mesh->MRABNlevels-1)*(bns->dt*(bns->NtimeSteps+1)));   
     else
@@ -396,157 +403,77 @@ bns_t *boltzmannSetup2D(mesh2D *mesh, setupAide &options){
  
   // SET PROBE DATA
   if(bns->probeFlag){
-    mesh->probeNTotal = 3; 
-    dfloat *pX   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
-    dfloat *pY   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
-    // Fill probe coordinates
-     pX[0] = 9.00;  pX[1] = 10.00;  pX[2] = 10.50; //pX[3] = 5;
-     pY[0] = 5.00;  pY[1] =  6.00;  pY[2] =  6.50; //pY[3] = 5*tan(M_PI/6.);
-
-    meshProbeSetup2D(mesh, pX, pY);
-
-    free(pX); free(pY);
+    // mesh->probeNTotal = 3; 
+    // dfloat *pX   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
+    // dfloat *pY   = (dfloat *) calloc (mesh->probeNTotal, sizeof(dfloat));
+    // // Fill probe coordinates
+    //  pX[0] = 9.00;  pX[1] = 10.00;  pX[2] = 10.50; //pX[3] = 5;
+    //  pY[0] = 5.00;  pY[1] =  6.00;  pY[2] =  6.50; //pY[3] = 5*tan(M_PI/6.);
+    // meshProbeSetup2D(mesh, pX, pY);
+    // free(pX); free(pY);
 
   }
   
-  
-
-  char deviceConfig[BUFSIZ];
-
-  long int hostId = gethostid();
-
-  int* hostIds = (int*) calloc(size,sizeof(int));
-  MPI_Allgather(&hostId,1,MPI_INT,hostIds,1,MPI_INT,MPI_COMM_WORLD);
-
-  int deviceID = 0;
-  for (int r=0;r<rank;r++) {
-    if (hostIds[r]==hostId) deviceID++;
-  }
-
-  // read thread model/device/platform from options
-  if(options.compareArgs("THREAD MODEL", "CUDA")){
-    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
-  }
-  else if(options.compareArgs("THREAD MODEL", "OpenCL")){
-    int plat;
-    options.getArgs("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d",
-      deviceID, plat);
-  }
-  else if(options.compareArgs("THREAD MODEL", "OpenMP")){
-    sprintf(deviceConfig, "mode = OpenMP");
-  }
-  else{
-    sprintf(deviceConfig, "mode = Serial");
-  }
-
-
-
-
-  // //OCCCA SETUP
-  // char deviceConfig[BUFSIZ];
-  // // use rank to choose DEVICE
-  // sprintf(deviceConfig, "mode = CUDA, deviceID = %d", rank%2);
-  // //sprintf(deviceConfig, "mode = OpenCL, deviceID = 1, platformID = 0");
-  // //sprintf(deviceConfig, "mode = OpenMP, deviceID = %d", 1);
-  // //sprintf(deviceConfig, "mode = Serial");  
- 
+   
 
   occa::kernelInfo kernelInfo;
-  meshOccaSetup2D(mesh, deviceConfig,  kernelInfo);  
+  if(bns->dim==3)
+    meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
+  else
+    meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");   
 
-
+ 
 
   // Setup MRAB PML
-  if(options.compareArgs("TIME INTEGRATOR", "MRAB") || options.compareArgs("TIME INTEGRATOR","MRSAAB")){
-     printf("Preparing Pml for multirate rate\n");
+  if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
+    printf("Preparing Pml for multirate rate\n");
     
-    boltzmannMRABPmlSetup2D(bns, options);
+    bnsMRABPmlSetup(bns, options);
 
     mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     for (int lev=0;lev<mesh->MRABNlevels;lev++) {
       if (mesh->MRABNelements[lev])
-        mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(int),
-        mesh->MRABelementIds[lev]);
+        mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(dlong),mesh->MRABelementIds[lev]);
       if (mesh->MRABNhaloElements[lev])
-        mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(int),
-        mesh->MRABhaloIds[lev]);
+        mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(dlong), mesh->MRABhaloIds[lev]);
     }
   } 
   else{
-   printf("Preparing Pml for single rate\n");
-   boltzmannPmlSetup2D(bns, options); 
+   printf("Preparing Pml for single rate integrator\n");
+   bnsPmlSetup(bns, options); 
 
     if (mesh->nonPmlNelements)
-        mesh->o_nonPmlElementIds = mesh->device.malloc(mesh->nonPmlNelements*sizeof(int), mesh->nonPmlElementIds);
+        mesh->o_nonPmlElementIds = mesh->device.malloc(mesh->nonPmlNelements*sizeof(dlong), mesh->nonPmlElementIds);
 
   }
   
 
 
-#if 0
-mesh2D *meshsave = mesh;
-int fld = 0; 
-  for(int lev=0; lev<mesh->MRABNlevels; lev++){
-
-        for(int m=0; m<mesh->MRABNelements[lev]; m++){
-          int e = mesh->MRABelementIds[lev][m];
-          for(int n=0; n<mesh->Np; n++){
-             bns->q[bns->Nfields*(n + e*mesh->Np) + fld] = lev;
-          }
-        }
 
 
-        for(int m=0; m<mesh->MRABpmlNelements[lev]; m++){
-          int e = mesh->MRABpmlElementIds[lev][m];
-          for(int n=0; n<mesh->Np; n++){
-             bns->q[bns->Nfields*(n + e*mesh->Np) + fld] = lev;
-          }
-        }
-  }
-
- char fname[BUFSIZ];
- sprintf(fname, "ElementGroupsMRSAAB.dat");
- // meshPlotVTU2D(mesh, fname,fld);
- boltzmannPlotFieldTEC2D(mesh, fname,0, fld);
-
-
-mesh = meshsave; 
-
-#endif
-
-
-
-#if 1
 
 // Compute Time Stepper Coefficcients
 
-boltzmannTimeStepperCoefficients(bns, options);
+bnsTimeStepperCoefficients(bns, options);
 
 
-if(options.compareArgs("TIME INTEGRATOR","MRSAAB") || options.compareArgs("TIME INTEGRATOR","MRAB") || 
-   options.compareArgs("TIME INTEGRATOR","SRAB")   || options.compareArgs("TIME INTEGRATOR","SAAB") ){
+if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
 
-  //printf("Setting Rhs for AB\n");
-  // bns->o_rhsq.free();
   bns->o_q     = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat),bns->q);
   bns->o_rhsq  = mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq);
-
-  if(options.compareArgs("TIME INTEGRATOR","MRSAAB") || options.compareArgs("TIME INTEGRATOR", "MRAB")){
-
-    if (mesh->totalHaloPairs) {
-      //reallocate halo buffer for trace exchange
-      mesh->o_haloBuffer.free();
-      mesh->o_haloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Nfp*bns->Nfields*mesh->Nfaces*sizeof(dfloat));
-    }
+  
+  //reallocate halo buffer for trace exchange
+  if (mesh->totalHaloPairs) {
+    mesh->o_haloBuffer.free();
+    mesh->o_haloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Nfp*bns->Nfields*mesh->Nfaces*sizeof(dfloat));
+  }
 
   bns->o_fQM = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*bns->Nfields*sizeof(dfloat),
-                                  bns->fQM);
+                          bns->fQM);
   mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int), mesh->mapP);
-  }
 }
 
 
@@ -560,7 +487,7 @@ if(options.compareArgs("TIME INTEGRATOR", "LSERK")){
     mesh->device.malloc(mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->resq);
 }
 
-if(options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TIME INTEGRATOR","XDOPRI") ||options.compareArgs("TIME INTEGRATOR","SAADRK")){
+if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
   bns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
@@ -587,82 +514,8 @@ if(options.compareArgs("TIME INTEGRATOR","DOPRI5") || options.compareArgs("TIME 
 }
 
 
-if(options.compareArgs("TIME INTEGRATOR","IMEXRK")){
-  
-  int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
-
-  bns->o_q =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
-  
-  bns->o_rhsqex = 
-    mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsqex); 
-
-   bns->o_rhsqim = 
-    mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsqim);
-  
-  
-  bns->o_rkq =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
-
-  bns->o_saveq =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
-  
-  bns->o_rkrhsqex =
-    mesh->device.malloc(bns->NrkStages*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rkrhsqex);
-
-  bns->o_rkrhsqim =
-    mesh->device.malloc(bns->NrkStages*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rkrhsqim);
-
-  bns->o_rkerr =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkerr);
-  
-  bns->o_errtmp = mesh->device.malloc(bns->Nblock*sizeof(dfloat), bns->errtmp);
-
-  bns->o_rkAex = mesh->device.malloc(bns->NrkStages*bns->NrkStages*sizeof(dfloat), bns->rkAex);
-  bns->o_rkAim = mesh->device.malloc(bns->NrkStages*bns->NrkStages*sizeof(dfloat), bns->rkAim);
-
-  bns->o_rkEex = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), bns->rkEex);
-  bns->o_rkEim = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), bns->rkEim);
-
-  bns->o_rkBex = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), bns->rkBex);
-  bns->o_rkBim = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), bns->rkBim);
 
 
-
-}
-
-if(options.compareArgs("TIME INTEGRATOR", "SARK")){
-  bns->o_q =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
-  bns->o_rhsq = 
-    mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq); 
-  bns->o_resq =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->resq);
-  bns->o_qS =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat),bns->q);
-  }
- 
-  
-
-
-else if(options.compareArgs("TIME INTEGRATOR", "LSIMEX")){ 
-  bns->Nimex = 4;
-  bns->o_q =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
-  bns->o_rhsq =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq);
-  // bns->o_resq =
-  //   mesh->device.malloc(mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->resq);
-  bns->o_qY =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
-
-  bns->o_qZ =    
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
-}  
-
-
-
-#endif 
 
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -673,12 +526,18 @@ else if(options.compareArgs("TIME INTEGRATOR", "LSIMEX")){
 
 
   int NblockV = 128/mesh->Np; // works for CUDA
+  NblockV = 1; //!!!!!
   kernelInfo.addDefine("p_NblockV", NblockV);
 
   int NblockS = 128/maxNodes; // works for CUDA
+
+  NblockS = 1; // !!!!!
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   int NblockCub = 128/mesh->cubNp; // works for CUDA
+
+  NblockCub = 1; // !!!!!!!!!!!!!!!!!!!!!
+
   kernelInfo.addDefine("p_NblockCub", NblockCub);
 
   // physics 
@@ -690,20 +549,148 @@ else if(options.compareArgs("TIME INTEGRATOR", "LSIMEX")){
   kernelInfo.addDefine("p_invsqrt2", (dfloat)sqrt(1./2.));
   kernelInfo.addDefine("p_tauInv", bns->tauInv);
 
-
-
-
   kernelInfo.addDefine("p_q1bar", q1bar);
   kernelInfo.addDefine("p_q2bar", q2bar);
   kernelInfo.addDefine("p_q3bar", q3bar);
   kernelInfo.addDefine("p_q4bar", q4bar);
   kernelInfo.addDefine("p_q5bar", q5bar);
   kernelInfo.addDefine("p_q6bar", q6bar);
+  
+  if(bns->dim==3){
+    kernelInfo.addDefine("p_q7bar", q7bar);
+    kernelInfo.addDefine("p_q8bar", q8bar);
+    kernelInfo.addDefine("p_q9bar", q9bar);
+    kernelInfo.addDefine("p_q10bar", q10bar);
+  }
+
   kernelInfo.addDefine("p_alpha0", (dfloat).01f);
   kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.1f);
   kernelInfo.addDefine("p_blockSize", blockSize);
-
   kernelInfo.addDefine("p_NrkStages", bns->NrkStages);
+
+
+  if(bns->fexplicit) // full explicit or semi-nalaytic
+    kernelInfo.addDefine("p_SEMI_ANALYTIC", (int) 0);
+  else
+    kernelInfo.addDefine("p_SEMI_ANALYTIC", (int) 1);
+
+  if(options.compareArgs("TIME INTEGRATOR", "MRSAAB"))
+    kernelInfo.addDefine("p_MRSAAB", (int) 1);
+  else
+    kernelInfo.addDefine("p_MRSAAB", (int) 0);
+
+
+
+
+        
+
+
+  // set kernel name suffix
+  char *suffix, *suffixUpdate;
+  
+  if(bns->elementType==TRIANGLES)
+    suffix = strdup("Tri2D");
+  if(bns->elementType==QUADRILATERALS)
+    suffix = strdup("Quad2D");
+  if(bns->elementType==TETRAHEDRA)
+    suffix = strdup("Tet3D");
+  if(bns->elementType==HEXAHEDRA)
+    suffix = strdup("Hex3D");
+
+  if(bns->elementType==TRIANGLES || bns->elementType==QUADRILATERALS)
+    suffixUpdate = strdup("2D");
+  if(bns->elementType==TETRAHEDRA || bns->elementType==HEXAHEDRA)
+    suffixUpdate = strdup("3D");
+  
+
+
+
+char fileName[BUFSIZ], kernelName[BUFSIZ];
+for (int r=0;r<size;r++){
+
+    if (r==rank) {
+
+        // Volume kernels
+        sprintf(fileName, "okl/bnsVolume%s.okl", suffix);
+
+        sprintf(kernelName, "bnsVolume%s", suffix);
+        bns->volumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        sprintf(kernelName, "bnsPmlVolume%s", suffix);
+        bns->pmlVolumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+       
+        // Relaxation kernels
+        sprintf(fileName, "okl/bnsRelaxation%s.okl", suffix);
+  
+        sprintf(kernelName, "bnsRelaxation%s", suffix);
+        bns->relaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
+        bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        
+        // Surface kernels 
+        sprintf(fileName, "okl/bnsSurface%s.okl", suffix);
+
+        if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
+          sprintf(kernelName, "bnsMRSurface%s", suffix);
+          bns->surfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+
+          sprintf(kernelName, "bnsMRPmlSurface%s", suffix);
+          bns->pmlSurfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+        }else{
+          sprintf(kernelName, "bnsSurface%s", suffix);
+          bns->surfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+
+          sprintf(kernelName, "bnsPmlSurface%s", suffix);
+          bns->pmlSurfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+        }
+
+        
+        sprintf(fileName, "okl/bnsUpdate%s.okl", suffixUpdate);
+        // Update Kernels
+        if(options.compareArgs("TIME INTEGRATOR","LSERK")){
+          sprintf(kernelName, "bnsLSERKUpdate%s", suffixUpdate);
+          bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+
+          sprintf(kernelName, "bnsLSERKPmlUpdate%s", suffixUpdate);
+          bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+        }
+        else if(options.compareArgs("TIME INTEGRATOR","SARK")){
+          sprintf(kernelName, "bnsSARKUpdateStage%s", suffixUpdate);
+          bns->updateStageKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+
+          sprintf(kernelName, "bnsSARKPmlUpdateStage%s", suffixUpdate);
+          bns->pmlUpdateStageKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+
+          sprintf(kernelName, "bnsSARKUpdate%s", suffixUpdate);
+          bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+
+          sprintf(kernelName, "bnsSARKPmlUpdate%s", suffixUpdate);
+          bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+        }
+        else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
+        
+        sprintf(kernelName, "bnsMRSAABTraceUpdate%s", suffixUpdate);
+        bns->traceUpdateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+        sprintf(kernelName, "bnsMRSAABUpdate%s", suffixUpdate);
+        bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+
+        sprintf(kernelName, "bnsMRSAABPmlUpdate%s", suffixUpdate);
+        bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+        }
+
+
+    }
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+
+
+#if 0
+
+
+
+
+
 
 
 
@@ -1251,6 +1238,11 @@ else if(options.compareArgs("TIME INTEGRATOR", "LSIMEX")){
       mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
           "meshHaloExtract2D",
              kernelInfo);
+
+
+
+
+#endif
 
 
 return bns; 

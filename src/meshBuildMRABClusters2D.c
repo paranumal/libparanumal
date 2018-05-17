@@ -23,7 +23,7 @@ typedef struct {
   int offSet;
 } cluster_t;
 
-int compareCluster(const void *a, const void *b) {
+int compareCluster2D(const void *a, const void *b) {
   cElement_t *na = (cElement_t *) a;
   cElement_t *nb = (cElement_t *) b;
 
@@ -94,7 +94,7 @@ void meshBuildMRABClusters2D(mesh2D *mesh, int lev, dfloat *weights, int *levels
           int eP = mesh->EToE[e*mesh->Nfaces +f];
           if (eP>-1) {
             if (((*elements)[eP].level<lev+1)||((*elements)[e].level<lev+1)){
-              if (compareCluster(*elements+eP,*elements+e)<0) {
+              if (compareCluster2D(*elements+eP,*elements+e)<0) {
                 (*elements)[e].cRank = (*elements)[eP].cRank;
                 (*elements)[e].cId   = (*elements)[eP].cId;
                 done = 0;
@@ -113,7 +113,7 @@ void meshBuildMRABClusters2D(mesh2D *mesh, int lev, dfloat *weights, int *levels
   //clusters have been built
   //transfer them to their owning rank
 
-  qsort((*elements), mesh->Nelements, sizeof(cElement_t), compareCluster);
+  qsort((*elements), mesh->Nelements, sizeof(cElement_t), compareCluster2D);
 
   //set up exchange along MPI interfaces
   for (int r=0;r<size;r++)
@@ -155,7 +155,7 @@ void meshBuildMRABClusters2D(mesh2D *mesh, int lev, dfloat *weights, int *levels
   *elements = recvElements;
   *Nelements = allNrecv;
 
-  qsort((*elements), *Nelements, sizeof(cElement_t), compareCluster);
+  qsort((*elements), *Nelements, sizeof(cElement_t), compareCluster2D);
 
   //build cluster lists
   // the lists are already sorted by cluster, so we just scan for different indices
