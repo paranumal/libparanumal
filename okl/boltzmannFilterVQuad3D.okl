@@ -380,6 +380,98 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
   }
 }
 
+kernel void boltzmannFilterVglobalQuad3D(const iint Nelements,
+					 const dfloat alpha,
+					 const dfloat * restrict F,
+					 const iint * restrict cubeFaceNumber,
+					 const iint * restrict EToE,
+					 const dfloat * restrict x,
+					 const dfloat * restrict y,
+					 const dfloat * restrict z,
+					 const dfloat * restrict qIn,
+					 dfloat * restrict Fq) {
+  
+  for (iint eo = 0; eo < Nelements;++eo;outer0) {
+    
+    shared dfloat s_F[3][p_Nq][p_Nq];
+    shared dfloat s_q[p_Nfields][3][p_Nq][p_Nq];
+    
+    for (iint j=0;j<p_Nq; ++j; inner1) {
+      for (iint i=0; i<p_Nq; ++i; inner0) {
+	s_F[0][j][i] = F[i+0*p_Nq+j*3*p_Nq];
+	s_F[1][j][i] = F[i+1*p_Nq+j*3*p_Nq];
+	s_F[2][j][i] = F[i+2*p_Nq+j*3*p_Nq];
+	
+	const iint eL = EToE[eo*p_Nfaces+0];
+	const iint eR = EToE[eo*p_Nfaces+2];
+	const iint eD = EToE[eo*p_Nfaces+1];
+	const iint eU = EToE[eo*p_Nfaces+3];
+
+	const iint faceC = cubeFaceNumber[eo];
+
+	occaUnroll(p_Nfields)
+	  for(iint fld=0;fld<p_Nfields;++fld){
+	    s_q[fld][1][j][i] = qIn[eo*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	    s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	    s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	  }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for (iint j=0;j<p_Nq; ++j; inner1) {
+      for (iint i=0; i<p_Nq; ++i; inner0) {
+	dfloat Fqij[p_Nfields];
+	occaUnroll(p_Nfields)
+	  for(iint fld=0;fld<p_Nfields;++fld){
+	    Fqij[fld] = 0;
+	  }
+	
+	occaUnroll(p_Nq)
+	  for(int n=0;n<p_Nq;++n){
+	    // fetch once, use p_Nfields times
+	    const dfloat FinL = s_F[0][j][n];
+	    const dfloat FinC = s_F[1][j][n];
+	    const dfloat FinR = s_F[2][j][n];
+	    
+	    // ratio of 1 shared per 2 flops: on P100 => 2TFLOPS max
+	    occaUnroll(p_Nfields)
+	      for(iint fld=0;fld<p_Nfields;++fld){
+		Fqij[fld] += FinL*s_q[fld][0][n][i];
+		Fqij[fld] += FinC*s_q[fld][1][n][i];
+		Fqij[fld] += FinR*s_q[fld][2][n][i];
+	      }
+	  }
+	
+	// use saved data for blend
+	for (iint fld=0; fld<p_Nfields;++fld) {
+	  int id = eo*p_Nfields*p_Np+fld*p_Np + j*p_Nq + i;
+	  Fqij[fld] = Fqij[fld]*(1. - alpha) + alpha*Fq[id];
+	}
+	
+	// constrain momentum changes to lie on sphere
+	const dfloat xij = x[i+j*p_Nq+eo*p_Np];
+	const dfloat yij = y[i+j*p_Nq+eo*p_Np];
+	const dfloat zij = z[i+j*p_Nq+eo*p_Np];
+	
+	// remove radial component of momentum change
+	const dfloat xdotrhsq = (Fqij[1]*xij + Fqij[2]*yij + Fqij[3]*zij)*p_invRadiusSq;
+	
+	Fqij[1] -= xij*xdotrhsq; 
+	Fqij[2] -= yij*xdotrhsq;
+	Fqij[3] -= zij*xdotrhsq;
+	
+	for(iint fld=0;fld<p_Nfields;++fld){
+	  int id = eo*p_Nfields*p_Np+fld*p_Np + j*p_Nq + i;	    
+	  Fq[id] = Fqij[fld];
+	}
+	
+      }
+    }
+  }
+}
+
 kernel void boltzmannFilterLevelsVQuad3D(const iint Nelements,
 					 const iint * restrict elementIDs,
 					 const dfloat alpha,
