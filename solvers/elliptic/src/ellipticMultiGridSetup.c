@@ -152,7 +152,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   for (int n=1;n<numLevels;n++) {  //build elliptic for this degree
     int Nf = levelDegree[n-1];
     int Nc = levelDegree[n];
-    printf("=============BUIDLING MULTIGRID LEVEL OF DEGREE %d==================\n", Nc);
+    printf("=============BUILDING MULTIGRID LEVEL OF DEGREE %d==================\n", Nc);
     ellipticsN[Nc] = ellipticBuildMultigridLevel(elliptic,Nc,Nf);
   }
 
