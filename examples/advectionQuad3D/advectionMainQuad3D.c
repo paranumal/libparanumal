@@ -46,8 +46,8 @@ int main(int argc, char **argv){
     advectionRunLSERKbasicQuad3D(solver,1./N);
   }
   
-  solver->o_qpre.copyTo(solver->q);
-  advectionErrorNormQuad3D(solver,solver->finalTime,"end",0);
+  //solver->o_qpre.copyTo(solver->q);
+  //advectionErrorNormQuad3D(solver,solver->finalTime,"end",0);
   
   /*    mesh->o_q.copyTo(mesh->q);
   dfloat l2 = 0;

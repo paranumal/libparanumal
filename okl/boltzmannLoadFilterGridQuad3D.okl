@@ -9,7 +9,8 @@ kernel void boltzmannLoadFilterGridQuad3D(const iint Ngrid,
     for(iint s = 0; s < p_Nq; ++s; inner1) {
       for(iint r = 0; r < p_Nq; ++r; inner0) {
 	char overlapDir = overlapDirection[e];
-	iint eRef = eInterp[i*p_Np + n];
+	iint n = s*p_Np + r;
+	iint eRef = eInterp[e*p_Np + n];
 	for (iint fld = 0; fld < p_Nfields; ++fld) {
 	  dfloat q_sum = 0;
 	  for (iint li = 0; li < p_Nq; ++li) {
@@ -26,7 +27,7 @@ kernel void boltzmannLoadFilterGridQuad3D(const iint Ngrid,
 		  q_prod *= (slocal[(Nelements + e)*p_Np + n] - slocal[eRef*p_Np + lj*p_Nq + r])/(slocal[eRef*p_Np + li*p_Nq + r] - slocal[eRef*p_Np + lj*p_Nq + r]);
 		}
 		else {
-		  q_prod *= (slocal[(Nelements + e)*p_Np + n] - slocal[eRef*p_Np + s*p_Nq + lj])/(slocal[eRef*p_Np + s*p_Nq + li] - slocal[eRef*p_Np + s*p_Nq + lj]);
+		  q_prod *= (rlocal[(Nelements + e)*p_Np + n] - rlocal[eRef*p_Np + s*p_Nq + lj])/(rlocal[eRef*p_Np + s*p_Nq + li] - rlocal[eRef*p_Np + s*p_Nq + lj]);
 		}
 	      }
 	    }
