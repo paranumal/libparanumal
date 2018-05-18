@@ -1,9 +1,9 @@
 
 #define p_Ne 4
-#define p_Nb 2
 kernel void insDiffusionTet3D(const dlong Nelements,
                               const dlong  * restrict elementList,
                               const dfloat * restrict ggeo,
+                              const dfloat * restrict vgeo,
                               const dfloat * restrict sgeo,
                               const dfloat * restrict Dmatrices,
                               const dfloat * restrict Smatrices,
@@ -22,41 +22,39 @@ kernel void insDiffusionTet3D(const dlong Nelements,
   // p_Ne nodes per thread
   // p_Nb elements worth of threads per block
   
-  for(dlong eo=0;eo<Nelements;eo+=p_Ne*p_Nb;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_Ne;outer0){
 
-    shared dfloat s_q[p_Ne][p_Nb][p_Np];
-    shared dfloat s_ggeo[p_Ne][p_Nb][p_Nggeo];
-    shared dfloat s_ndq[p_Ne][p_Nb][p_NfacesNfp];
+    shared dfloat s_q[p_Ne][p_Np];
+    shared dfloat s_ggeo[p_Ne][p_Nggeo];
+    shared dfloat s_ndq[p_Ne][p_NfacesNfp];
 
     exclusive dlong element[p_Ne];
 
-    occaUnroll(p_NVfields)
+    ////occaUnroll(p_NVfields)
     for (int fld=0; fld<p_NVfields; fld++) {
 
-      for(int b=0;b<p_Nb;++b;inner1){
-        for(int n=0;n<p_maxNodes;++n;inner0){
+      for(int n=0;n<p_maxNodes;++n;inner0){
     
-        occaUnroll(p_Ne)
-          for(int et=0;et<p_Ne;++et){
-            const dlong e = eo + b + p_Nb*et;
+        //occaUnroll(p_Ne)
+        for(int et=0;et<p_Ne;++et){
+          const dlong e = eo + et;
 
-            if(e<Nelements){
-              element[et] = elementList[e];
-              
-              if (n<p_Np) {
-                const dlong id = n + element[et]*p_Np;
-                s_q[et][b][n] = U[id + fld*fieldOffset];
-              }
-              
-              int m=n;
-              while(m<p_Nggeo){
-                s_ggeo[et][b][m] = ggeo[element[et]*p_Nggeo+m];
-                m += p_maxNodes;
-              }
+          if(e<Nelements){
+            element[et] = elementList[e];
+            
+            if (n<p_Np) {
+              const dlong id = n + element[et]*p_Np;
+              s_q[et][n] = U[id + fld*fieldOffset];
+            }
+            
+            int m=n;
+            while(m<p_Nggeo){
+              s_ggeo[et][m] = ggeo[element[et]*p_Nggeo+m];
+              m += p_maxNodes;
+            }
 
-              if (n<p_NfacesNfp) {
-                s_ndq[et][b][n] = 0.;
-              }
+            if (n<p_NfacesNfp) {
+              s_ndq[et][n] = 0.;
             }
           }
         }
@@ -64,135 +62,133 @@ kernel void insDiffusionTet3D(const dlong Nelements,
 
       barrier(localMemFence);
 
-      for(int b=0;b<p_Nb;++b;inner1){
-        for(int n=0;n<p_maxNodes;++n;inner0){
-          occaUnroll(p_Ne)
-            for(int et=0;et<p_Ne;++et){
-              const dlong e = eo + b + p_Nb*et;
+      for(int n=0;n<p_maxNodes;++n;inner0){
+        //occaUnroll(p_Ne)
+        for(int et=0;et<p_Ne;++et){
+          const dlong e = eo + et;
 
-              if(e<Nelements){
-                if(n<p_NfacesNfp){
-                  const dlong id  = n + element[et]*p_Nfaces*p_Nfp;
-                  const dlong idM = vmapM[id];          
+          if(e<Nelements){
+            if(n<p_NfacesNfp){
+              const dlong id  = n + element[et]*p_Nfaces*p_Nfp;
+              const dlong idM = vmapM[id];          
 
-                  const int face = n/p_Nfp;
+              const int face = n/p_Nfp;
 
-                  dfloat dudxP=0, dudyP=0, dudzP=0;
-                  
-                  // load surface geofactors for this face
-                  const int sid = p_Nsgeo*(element[et]*p_Nfaces+face);
-                  const dfloat nx = sgeo[sid+p_NXID];
-                  const dfloat ny = sgeo[sid+p_NYID];
-                  const dfloat nz = sgeo[sid+p_NZID];
-                  const dfloat sJ = sgeo[sid+p_SJID];
+              dfloat dudxP=0, dudyP=0, dudzP=0;
+              
+              // load surface geofactors for this face
+              const int sid = p_Nsgeo*(element[et]*p_Nfaces+face);
+              const dfloat nx = sgeo[sid+p_NXID];
+              const dfloat ny = sgeo[sid+p_NYID];
+              const dfloat nz = sgeo[sid+p_NZID];
+              const dfloat sJ = sgeo[sid+p_SJID];
 
-                  const int bc = mapB[idM];
-                  if(bc>0) {
-                    dfloat4 UM[p_NVfields]; 
-                    dfloat4 UP[p_NVfields]; 
+              const int bc = mapB[idM];
+              if(bc>0) {
+                dfloat4 UM[p_NVfields]; 
+                dfloat4 UP[p_NVfields]; 
 
-                    //set all except field i zero. This assumes velocity boundaries are uncoupled
-                    for (int f=0;f<p_NVfields;f++) {
-                      UM[f].x = 0.;               
-                      UM[f].y = 0.;               
-                      UM[f].z = 0.;               
-                      UM[f].w = 0.;               
-                    }
-
-                    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, UM[0].w, UM[1].w, &(UP[0].w), &(UP[1].w));
-                    insVelocityNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, UM[0].x, UM[0].y, UM[0].z, UM[1].x, UM[1].y, UM[1].z, UM[2].x, UM[2].y, UM[2].z, &(UP[0].x), &(UP[0].y), &(UP[0].z), &(UP[1].x), &(UP[1].y), &(UP[1].z), &(UP[2].x), &(UP[2].y), &(UP[2].z));
-
-                    dudxP = UP[i].x;
-                    dudyP = UP[i].y;
-                    dudzP = UP[i].z;
-                  }  
-                  s_ndq[et][b][n] = sJ*(nx*dudxP + ny*dudyP + nz*dudzP);
+                //set all except field i zero. This assumes velocity boundaries are uncoupled
+                for (int f=0;f<p_NVfields;f++) {
+                  UM[f].x = 0.;               
+                  UM[f].y = 0.;               
+                  UM[f].z = 0.;               
+                  UM[f].w = 0.;               
                 }
-              }
+
+                insVelocityNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, UM[0].x, UM[0].y, UM[0].z, \\
+                                                                                             UM[1].x, UM[1].y, UM[1].z, \\
+                                                                                             UM[2].x, UM[2].y, UM[2].z, \\
+                                                                                             &(UP[0].x), &(UP[0].y), &(UP[0].z), \\
+                                                                                             &(UP[1].x), &(UP[1].y), &(UP[1].z), \\
+                                                                                             &(UP[2].x), &(UP[2].y), &(UP[2].z));
+
+                dudxP = UP[fld].x;
+                dudyP = UP[fld].y;
+                dudzP = UP[fld].z;
+              }  
+              s_ndq[et][n] = sJ*(nx*dudxP + ny*dudyP + nz*dudzP);
             }
           }
         }
       }
-
+      
       barrier(localMemFence);
 
-      for(int b=0;b<p_Nb;++b;inner1){
-        for(int n=0;n<p_maxNodes;++n;inner0){
-    
+      for(int n=0;n<p_maxNodes;++n;inner0){
+  
         dfloat qrr[p_Ne], qrs[p_Ne], qrt[p_Ne], qss[p_Ne], qst[p_Ne], qtt[p_Ne];
         dfloat Lndq[p_Ne];
 
-        occaUnroll(p_Ne)
-          for(int et=0;et<p_Ne;++et){
-            qrr[et] = 0;    qrs[et] = 0;    qrt[et] = 0;
-            qss[et] = 0;    qst[et] = 0;
-            qtt[et] = 0;
-            Lndq[et] = 0;
-          }
+        //occaUnroll(p_Ne)
+        for(int et=0;et<p_Ne;++et){
+          qrr[et] = 0;    qrs[et] = 0;    qrt[et] = 0;
+          qss[et] = 0;    qst[et] = 0;
+          qtt[et] = 0;
+          Lndq[et] = 0;
+        }
         
         if (n<p_Np) {
           // overall this does p_Ne*14 flops for  (7+p_Ne)*|dfloat| L1+shared accesse
           // arithmetic intensity is  (p_Ne*14/((7+p_Ne)*8)) flops per byte
-          occaUnroll(p_Np)
-            for (int k=0;k<p_Np;k++) {
-              
-              const dfloat Srr_nk = Smatrices[n+k*p_Np+0*p_Np*p_Np];
-              const dfloat Srs_nk = Smatrices[n+k*p_Np+1*p_Np*p_Np];
-              const dfloat Srt_nk = Smatrices[n+k*p_Np+2*p_Np*p_Np];
-              const dfloat Sss_nk = Smatrices[n+k*p_Np+3*p_Np*p_Np];
-              const dfloat Sst_nk = Smatrices[n+k*p_Np+4*p_Np*p_Np];
-              const dfloat Stt_nk = Smatrices[n+k*p_Np+5*p_Np*p_Np];
-              
-              occaUnroll(p_Ne)
-                for(int et=0;et<p_Ne;++et){
-                  const dfloat qk = s_q[et][b][k];
-                  qrr[et] += Srr_nk*qk;  
-                  qrs[et] += Srs_nk*qk; // assume (Srs stores Srs+Ssr)
-                  qrt[et] += Srt_nk*qk; // assume (Srt stores Srt+Str)
-                  qss[et] += Sss_nk*qk;
-                  qst[et] += Sst_nk*qk; // assume (Sst stores Sst+Sts)
-                  qtt[et] += Stt_nk*qk;
-                }
+          //occaUnroll(p_Np)
+          for (int k=0;k<p_Np;k++) {
+            
+            const dfloat Srr_nk = Smatrices[n+k*p_Np+0*p_Np*p_Np];
+            const dfloat Srs_nk = Smatrices[n+k*p_Np+1*p_Np*p_Np];
+            const dfloat Srt_nk = Smatrices[n+k*p_Np+2*p_Np*p_Np];
+            const dfloat Sss_nk = Smatrices[n+k*p_Np+3*p_Np*p_Np];
+            const dfloat Sst_nk = Smatrices[n+k*p_Np+4*p_Np*p_Np];
+            const dfloat Stt_nk = Smatrices[n+k*p_Np+5*p_Np*p_Np];
+            
+            //occaUnroll(p_Ne)
+            for(int et=0;et<p_Ne;++et){
+              const dfloat qk = s_q[et][k];
+              qrr[et] += Srr_nk*qk;  
+              qrs[et] += Srs_nk*qk; // assume (Srs stores Srs+Ssr)
+              qrt[et] += Srt_nk*qk; // assume (Srt stores Srt+Str)
+              qss[et] += Sss_nk*qk;
+              qst[et] += Sst_nk*qk; // assume (Sst stores Sst+Sts)
+              qtt[et] += Stt_nk*qk;
             }
+          }
 
           // surface mass * surface terms
-          occaUnroll(p_NfacesNfp)
-            for(int k=0;k<p_NfacesNfp;++k){
-              const dfloat sMTn = sMT[n+k*p_Np];
-            
-              occaUnroll(p_Ne)
-              for(int et=0;et<p_Ne;++et){
-                const dfloat ndqk = s_ndq[et][b][k];
-                Lndq[et] += sMTn*ndqk;
-              }
-            }
-              
-          occaUnroll(p_Ne)
-            for(int et=0;et<p_Ne;++et){
-              const dlong e = eo + b + p_Nb*et;
-              if(e<Nelements){
-                const dfloat Grr = s_ggeo[et][b][p_G00ID];
-                const dfloat Grs = s_ggeo[et][b][p_G01ID];
-                const dfloat Grt = s_ggeo[et][b][p_G02ID];
-                const dfloat Gss = s_ggeo[et][b][p_G11ID];
-                const dfloat Gst = s_ggeo[et][b][p_G12ID];
-                const dfloat Gtt = s_ggeo[et][b][p_G22ID];
-                
-                const dlong id = n + element[et]*p_Np;
-                
-                LU[id+fld*fieldOffset] = -nu*(Grr*qrr[et]+
-                                             Grs*qrs[et]+
-                                             Grt*qrt[et]+
-                                             Gss*qss[et]+
-                                             Gst*qst[et]+
-                                             Gtt*qtt[et] - Lndq[et]);
-              }
-            }
+          //occaUnroll(p_NfacesNfp)
+          for(int k=0;k<p_NfacesNfp;++k){
+            const dfloat sMTn = sMT[n+k*p_Np];
           
+            //occaUnroll(p_Ne)
+            for(int et=0;et<p_Ne;++et){
+              const dfloat ndqk = s_ndq[et][k];
+              Lndq[et] += sMTn*ndqk;
+            }
+          }
+              
+          //occaUnroll(p_Ne)
+          for(int et=0;et<p_Ne;++et){
+            const dlong e = eo + et;
+            if(e<Nelements){
+              const dfloat Grr = s_ggeo[et][p_G00ID];
+              const dfloat Grs = s_ggeo[et][p_G01ID];
+              const dfloat Grt = s_ggeo[et][p_G02ID];
+              const dfloat Gss = s_ggeo[et][p_G11ID];
+              const dfloat Gst = s_ggeo[et][p_G12ID];
+              const dfloat Gtt = s_ggeo[et][p_G22ID];
+              
+              const dlong id = n + element[et]*p_Np;
+              
+              LU[id+fld*fieldOffset] = -nu*(Grr*qrr[et]+
+                                           Grs*qrs[et]+
+                                           Grt*qrt[et]+
+                                           Gss*qss[et]+
+                                           Gst*qst[et]+
+                                           Gtt*qtt[et] - Lndq[et]);
+            }
+          }
         }
       }
     }
   }
 }
 #undef p_Ne
-#undef p_Nb

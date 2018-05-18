@@ -1,0 +1,308 @@
+
+#define surfaceTerms(sk,face,i, j)                                      \
+{                                                                       \
+  const dlong idM = vmapM[sk];                                          \
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
+                                                                        \
+  dfloat dudxP=0.f, dudyP=0.f, dudzP=0.f;                               \
+  const int bc = mapB[idM];                                             \
+  if(bc>0) {                                                            \
+    dfloat4 UM[p_NVfields]; \
+    dfloat4 UP[p_NVfields]; \
+\
+    for (int f=0;f<p_NVfields;f++) {\
+      UM[f].x = 0.;               \
+      UM[f].y = 0.;               \
+      UM[f].z = 0.;               \
+      UM[f].w = 0.;               \
+    }\
+    insVelocityNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, UM[0].x, UM[0].y, UM[0].z, UM[1].x, UM[1].y, UM[1].z, UM[2].x, UM[2].y, UM[2].z, &(UP[0].x), &(UP[0].y), &(UP[0].z), &(UP[1].x), &(UP[1].y), &(UP[1].z), &(UP[2].x), &(UP[2].y), &(UP[2].z));\
+    dudxP = UP[fld].x;\
+    dudyP = UP[fld].y;\
+    dudzP = UP[fld].z;\
+  }                                                                     \
+                                                                        \
+  s_ndq[j][i] -= WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);                  \
+}
+
+kernel void insDiffusionHex3D(const dlong Nelements,
+                              const dlong  * restrict elementList,
+                              const dfloat * restrict ggeo,
+                              const dfloat * restrict vgeo,
+                              const dfloat * restrict sgeo,
+                              const dfloat * restrict D,
+                              const dfloat * restrict S,
+                              const dlong  * restrict vmapM,
+                              const dfloat * restrict sMT,
+                              const dfloat nu,
+                              const dfloat time,
+                              const dfloat * restrict x,
+                              const dfloat * restrict y,
+                              const dfloat * restrict z,
+                              const int    * restrict mapB,
+                              const dlong fieldOffset,
+                              const dfloat  * restrict U,
+                                    dfloat  * restrict LU){
+
+  for(dlong e=0; e<Nelements; ++e; outer0){
+
+    shared dfloat s_D[p_Nq][p_Nq];
+    shared dfloat s_q[p_Nq][p_Nq];
+    shared dfloat s_ndq[p_Nq][p_Nq];
+
+    shared dfloat s_Gqr[p_Nq][p_Nq];
+    shared dfloat s_Gqs[p_Nq][p_Nq];
+
+    exclusive dfloat r_qt, r_Gqt, r_Luk;
+    exclusive dfloat r_q[p_Nq]; // register array to hold u(i,j,0:N) private to thread
+    exclusive dfloat r_Lq[p_Nq];// array for results Au(i,j,0:N)
+
+    exclusive dlong element;
+
+    dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22;
+
+    occaUnroll(p_NVfields)
+    for (int fld=0; fld<p_NVfields; fld++) {
+
+      // array of threads
+      for(int j=0;j<p_Nq;++j;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          //load D into local memory
+          // s_D[i][j] = d \phi_i at node j
+          s_D[j][i] = D[p_Nq*j+i]; // D is column major
+
+          // load pencil of u into register
+          element = elementList[e];
+          const dlong base = i + j*p_Nq + element*p_Np;
+          for(int k = 0; k < p_Nq; k++) {
+            r_q[k] = U[base + k*p_Nq*p_Nq +fld*fieldOffset]; // prefetch operation
+            r_Lq[k] = 0.f; // zero the accumulator
+          }
+        }
+      }
+
+      barrier(localMemFence);
+
+      // face 0
+      for(int j=0;j<p_Nq;++j;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          //face 0
+          r_Lq[0] += s_ndq[j][i];
+        }
+      }
+
+      barrier(localMemFence);    
+
+      // face 5
+      for(int j=0;j<p_Nq;++j;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i + j*p_Nq;
+          surfaceTerms(sk5,5,i,j);
+        }
+      }
+
+      barrier(localMemFence);
+
+      // face 5
+      for(int j=0;j<p_Nq;++j;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          //face 5
+          r_Lq[p_Nq-1] += s_ndq[j][i];
+        }
+      }
+
+      barrier(localMemFence);    
+
+      // face 1
+      for(int k=0;k<p_Nq;++k;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i + k*p_Nq;
+          surfaceTerms(sk1,1,i,k);
+        }
+      }
+
+      barrier(localMemFence);
+
+      // face 1
+      for(int j=0;j<p_Nq;++j;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          if (j==0) {//face 1
+            occaUnroll(p_Nq)
+            for (int k=0;k<p_Nq;k++) {
+              r_Lq[k] += s_ndq[k][i];
+            }
+          }
+        }
+      }
+
+      barrier(localMemFence);    
+
+      // face 3
+      for(int k=0;k<p_Nq;++k;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
+          surfaceTerms(sk3,3,i,k);
+        }
+      }
+
+      barrier(localMemFence);
+
+      // face 3
+      for(int j=0;j<p_Nq;++j;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          if (j==p_Nq-1) {//face 3
+            occaUnroll(p_Nq)
+            for (int k=0;k<p_Nq;k++) {
+              r_Lq[k] += s_ndq[k][i];
+            }
+          }
+        }
+      }
+
+      barrier(localMemFence);    
+
+      // face 2
+      for(int k=0;k<p_Nq;++k;inner1){
+        for(int j=0;j<p_Nq;++j;inner0){
+          const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + j + k*p_Nq;
+          surfaceTerms(sk2,2,j,k);
+        }
+      }
+
+      barrier(localMemFence);
+
+      // face 2 
+      for(int j=0;j<p_Nq;++j;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          if (i==p_Nq-1) {//face 2
+            occaUnroll(p_Nq)
+            for (int k=0;k<p_Nq;k++) {
+              r_Lq[k] += s_ndq[k][j];
+            }
+          }
+        }
+      }
+
+      barrier(localMemFence); 
+
+      // face 4
+      for(int k=0;k<p_Nq;++k;inner1){
+        for(int j=0;j<p_Nq;++j;inner0){
+          const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
+          surfaceTerms(sk4,4,j,k);
+        }
+      }
+
+      barrier(localMemFence);
+
+      // face 4
+      for(int j=0;j<p_Nq;++j;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          if (i==0) {//face 4
+            occaUnroll(p_Nq)
+            for (int k=0;k<p_Nq;k++) {
+              r_Lq[k] += s_ndq[k][j];
+            }
+          }
+        }
+      }
+
+      barrier(localMemFence);
+
+      // Layer by layer
+      occaUnroll(p_Nq)
+        for(int k = 0;k < p_Nq; k++){
+          for(int j=0;j<p_Nq;++j;inner1){
+            for(int i=0;i<p_Nq;++i;inner0){
+
+              // prefetch geometric factors
+              const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+              r_G00 = ggeo[gbase+p_G00ID*p_Np];
+              r_G01 = ggeo[gbase+p_G01ID*p_Np];
+              r_G02 = ggeo[gbase+p_G02ID*p_Np];
+
+              r_G11 = ggeo[gbase+p_G11ID*p_Np];
+              r_G12 = ggeo[gbase+p_G12ID*p_Np];
+              r_G22 = ggeo[gbase+p_G22ID*p_Np];
+            }
+          }
+
+          barrier(localMemFence);
+
+          for(int j=0;j<p_Nq;++j;inner1){
+            for(int i=0;i<p_Nq;++i;inner0){
+
+              // share u(:,:,k)
+              s_q[j][i] = r_q[k];
+
+              r_qt = 0;
+
+              occaUnroll(p_Nq)
+                for(int m = 0; m < p_Nq; m++) {
+                  r_qt += s_D[k][m]*r_q[m];
+                }
+            }
+          }
+
+          barrier(localMemFence);
+
+          for(int j=0;j<p_Nq;++j;inner1){
+            for(int i=0;i<p_Nq;++i;inner0){
+
+              dfloat qr = 0.f;
+              dfloat qs = 0.f;
+
+              occaUnroll(p_Nq)
+                for(int m = 0; m < p_Nq; m++) {
+                  qr += s_D[i][m]*s_q[j][m];
+                  qs += s_D[j][m]*s_q[m][i];
+                }
+
+              s_Gqs[j][i] = (r_G01*qr + r_G11*qs + r_G12*r_qt);
+              s_Gqr[j][i] = (r_G00*qr + r_G01*qs + r_G02*r_qt);
+
+              // put this here for a performance bump
+              r_Gqt = (r_G02*qr + r_G12*qs + r_G22*r_qt);
+              r_Luk = 0.;
+            }
+          }
+
+          barrier(localMemFence);
+
+          for(int j=0;j<p_Nq;++j;inner1){
+            for(int i=0;i<p_Nq;++i;inner0){
+
+              occaUnroll(p_Nq)
+                for(int m = 0; m < p_Nq; m++){
+                  r_Luk   += s_D[m][j]*s_Gqs[m][i];
+                  r_Lq[m] += s_D[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
+                  r_Luk   += s_D[m][i]*s_Gqr[j][m];
+                }
+
+              r_Lq[k] += r_Luk;
+            }
+          }
+        }
+
+      // write out
+
+      for(int j=0;j<p_Nq;++j;inner1){
+        for(int i=0;i<p_Nq;++i;inner0){
+          occaUnroll(p_Nq)
+            for(int k = 0; k < p_Nq; k++){
+              const dlong gid = element*p_Np*p_Nvgeo+ j*p_Nq +i;
+              const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+
+              const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+              LU[id+fld*fieldOffset] = -nu*invJW*r_Lq[k];
+            }
+        }
+      }
+    }
+  }
+}
+
