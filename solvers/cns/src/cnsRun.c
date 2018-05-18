@@ -20,11 +20,15 @@ void cnsRun(cns_t *cns, setupAide &options){
 
     // hard code this for the moment
     dfloat outputInterval;
-    options.getArgs("OUTPUT INTERVAL", outputInterval);
-    
+    options.getArgs("TIME OUTPUT INTERVAL", outputInterval);
+    bool timeIntervalFlag = (outputInterval > 0.);
+
     dfloat nextOutputTime = outputInterval;
-    dfloat outputNumber = 0;
     
+    int outputTstepInterval;
+    options.getArgs("TSTEP OUTPUT INTERVAL", outputTstepInterval);
+    bool tstepIntervalFlag = (outputTstepInterval > 0);
+
     //initial time
     dfloat time = 0.0;
     int tstep=0, allStep = 0;
@@ -64,46 +68,37 @@ void cnsRun(cns_t *cns, setupAide &options){
 
       if (err<1.0) { //dt is accepted
 
-        // check for output during this step and do a mini-step
-        if(time<nextOutputTime && time+mesh->dt>nextOutputTime){
-          dfloat savedt = mesh->dt;
-          
-          // save rkq
-          cns->o_saveq.copyFrom(cns->o_rkq);
+        // check for time interval output during this step
+        if(timeIntervalFlag && time<nextOutputTime && time+mesh->dt>=nextOutputTime){
+          cnsDopriOutputStep(cns, time,mesh->dt,nextOutputTime, cns->o_saveq);
 
-          // change dt to match output
-          mesh->dt = nextOutputTime-time;
-
-          // print
-          printf("Taking output mini step: %g\n", mesh->dt);
-          
-          // time step to output
-          cnsDopriStep(cns, options, time);    
-
-          // shift for output
-          cns->o_rkq.copyTo(cns->o_q);
+          cns->o_saveq.copyTo(cns->o_q);
           
           // output  (print from rkq)
           cnsReport(cns, nextOutputTime, options);
 
-          // restore time step
-          mesh->dt = savedt;
+          // increment next output time
+          nextOutputTime += outputInterval;
+        }
+        
+        // accept rkq
+        cns->o_q.copyFrom(cns->o_rkq);
+        
+        time += mesh->dt;
+        tstep++;
+        
+        cns->facold = mymax(err,1E-4); // hard coded factor ?
+
+        // check for time step interval output during this step
+        if(tstepIntervalFlag && (tstep%outputTstepInterval==0)){
+          cns->o_q.copyTo(cns->o_q);
+          
+          // output  (print from rkq)
+          cnsReport(cns, nextOutputTime, options);
 
           // increment next output time
           nextOutputTime += outputInterval;
-
-          // accept saved rkq
-          cns->o_q.copyFrom(cns->o_saveq);
         }
-        else{
-          // accept rkq
-          cns->o_q.copyFrom(cns->o_rkq);
-        }
-
-        time += mesh->dt;
-        tstep++;
-
-        cns->facold = mymax(err,1E-4); // hard coded factor ?
       } else {
         dtnew = mesh->dt/(mymax(cns->invfactor1,fac1/cns->safe));
         Nregect++;

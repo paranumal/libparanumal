@@ -41,7 +41,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   else{
     sprintf(deviceConfig, "mode = Serial");
   }
-        
+  
   //set number of omp threads to use
   int Ncores = sysconf(_SC_NPROCESSORS_ONLN);
   int Nthreads = Ncores/totalDevices;

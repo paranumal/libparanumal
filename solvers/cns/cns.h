@@ -48,6 +48,7 @@ typedef struct{
   occa::kernel updateKernel;
   occa::kernel rkStageKernel;
   occa::kernel rkUpdateKernel;
+  occa::kernel rkOutputKernel;
   occa::kernel rkErrorEstimateKernel;
 
   occa::kernel stressesVolumeKernel;
@@ -84,8 +85,8 @@ typedef struct{
   dfloat factor1, invfactor1;
   dfloat factor2, invfactor2;
   dfloat exp1, facold,  dtMIN, safe, beta;
-  dfloat *rkA, *rkC, *rkE;
-  occa::memory o_rkA, o_rkC, o_rkE;
+  dfloat *rkA, *rkC, *rkE, *rkoutB;
+  occa::memory o_rkA, o_rkC, o_rkE, o_rkoutB;
   
 }cns_t;
 
@@ -107,6 +108,7 @@ void cnsReport(cns_t *cns, dfloat time, setupAide &options);
 void cnsPlotVTU(cns_t *cns, char *fileName);
 
 void cnsDopriStep(cns_t *cns, setupAide &options, const dfloat time);
+void cnsDopriOutputStep(cns_t *cns, const dfloat time, const dfloat dt, const dfloat outTime, occa::memory o_outq);
 
 void cnsLserkStep(cns_t *cns, setupAide &newOoptions, const dfloat time);
 

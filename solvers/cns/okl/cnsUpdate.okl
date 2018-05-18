@@ -150,3 +150,31 @@ kernel void cnsErrorEstimate(const dlong N,
     for(int t=0;t<p_blockSize;++t;inner0) if(t<  1) errtmp[b] = s_err[0] + s_err[1];
   }
 }
+
+//construct an output field using the continuous output rk coefficents rkoutB
+kernel void cnsRkOutput(const dlong Nelements,
+                        const int rk,
+                        const dfloat dt,  
+                        const dfloat * restrict rkoutB,
+                        const dfloat * restrict q,
+                        const dfloat * restrict rkrhsq,
+                        dfloat * restrict rkoutq){
+  
+  // Runge Kutta intermediate stage
+  for(dlong e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+
+      for(int fld=0; fld< p_Nfields; ++fld){
+        const dlong id = e*p_Np*p_Nfields + fld*p_Np + n;
+        const dlong offset = Nelements*p_Nfields*p_Np;
+  
+        dfloat r_q = q[id];
+        for (int i=0;i<7;i++) {        
+          r_q += dt*rkoutB[i]*rkrhsq[id+i*offset];
+        }
+
+        rkoutq[id] = r_q;
+      }
+    }
+  }
+}

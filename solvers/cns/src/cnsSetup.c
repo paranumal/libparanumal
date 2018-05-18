@@ -126,6 +126,8 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     cns->rkE = (dfloat*) calloc(cns->Nrk, sizeof(dfloat));
     cns->rkA = (dfloat*) calloc(cns->Nrk*cns->Nrk, sizeof(dfloat));
 
+    cns->rkoutB = (dfloat*) calloc(cns->Nrk, sizeof(dfloat));
+
     memcpy(cns->rkC, rkC, cns->Nrk*sizeof(dfloat));
     memcpy(cns->rkE, rkE, cns->Nrk*sizeof(dfloat));
     memcpy(cns->rkA, rkA, cns->Nrk*cns->Nrk*sizeof(dfloat));
@@ -281,6 +283,8 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
     cns->o_rkA = mesh->device.malloc(cns->Nrk*cns->Nrk*sizeof(dfloat), cns->rkA);
     cns->o_rkE = mesh->device.malloc(  cns->Nrk*sizeof(dfloat), cns->rkE);
+
+    cns->o_rkoutB = mesh->device.malloc(cns->Nrk*sizeof(dfloat), cns->rkoutB);
   }
 
   
@@ -429,6 +433,11 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
       cns->rkStageKernel =
         mesh->device.buildKernelFromSource(DCNS "/okl/cnsUpdate.okl",
                                            "cnsRkStage",
+                                           kernelInfo);
+
+      cns->rkOutputKernel =
+        mesh->device.buildKernelFromSource(DCNS "/okl/cnsUpdate.okl",
+                                           "cnsRkOutput",
                                            kernelInfo);
 
       cns->rkErrorEstimateKernel =

@@ -32,6 +32,6 @@ void cnsError(mesh_t *mesh, dfloat time){
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if(rank==0)
-    printf("%g, %g, %g ( time, min density, max density)\n", time, globalMinR, globalMaxR);
+    printf("\n%g, %g, %g ( time, min density, max density)\n", time, globalMinR, globalMaxR);
   
 }
