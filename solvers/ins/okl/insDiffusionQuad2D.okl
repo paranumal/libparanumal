@@ -29,6 +29,7 @@
 kernel void insDiffusionQuad2D(const dlong Nelements,
                               const dlong  * restrict elementList,
                               const dfloat * restrict ggeo,
+                              const dfloat * restrict vgeo,
                               const dfloat * restrict sgeo,
                               const dfloat * restrict D,
                               const dfloat * restrict S,
@@ -164,6 +165,9 @@ kernel void insDiffusionQuad2D(const dlong Nelements,
 
       for(int j=0; j<p_Nq; ++j; inner1) {
         for(int i=0; i<p_Nq; ++i; inner0) {
+          const dlong gid = element*p_Np*p_Nvgeo+ j*p_Nq +i;
+          const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+
           dfloat tmp = 0.f;
 
           occaUnroll(p_Nq)
@@ -174,7 +178,7 @@ kernel void insDiffusionQuad2D(const dlong Nelements,
           r_Aq += tmp;
 
           const dlong id = element*p_Np + j*p_Nq + i;
-          LU[id + fld*fieldOffset] = -nu*(r_Aq + s_ndq[j][i]);
+          LU[id + fld*fieldOffset] = -nu*invJW*(r_Aq + s_ndq[j][i]);
         }
       }
     }

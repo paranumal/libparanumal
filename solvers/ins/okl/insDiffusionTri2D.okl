@@ -1,6 +1,7 @@
 kernel void insDiffusionTri2D(const dlong Nelements,
                               const dlong  * restrict elementList,
                               const dfloat * restrict ggeo,
+                              const dfloat * restrict vgeo,
                               const dfloat * restrict sgeo,
                               const dfloat * restrict Dmatrices,
                               const dfloat * restrict Smatrices,
@@ -66,8 +67,6 @@ kernel void insDiffusionTri2D(const dlong Nelements,
               UM[f].z = 0.;               
               UM[f].w = 0.;               
             }
-
-            insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, UM[0].w, UM[1].w, &(UP[0].w), &(UP[1].w));
             insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, UM[0].x, UM[0].y, UM[1].x, UM[1].y, &(UP[0].x), &(UP[0].y), &(UP[1].x), &(UP[1].y));
 
             dudxP = UP[i].x;
