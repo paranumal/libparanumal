@@ -562,7 +562,6 @@ kernel void insPressureAddBCHex3D(const dlong Nelements,
       const int bc = mapB[idM];
 
       if(bc==3) {
-        const dfloat pM = P[idM];
         dfloat pP = 0.f;
         insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP);
         

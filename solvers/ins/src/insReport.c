@@ -40,9 +40,9 @@ void insReport(ins_t *ins, int tstep){
   if(ins->options.compareArgs("OUTPUT TYPE","VTU")){ 
     // output field files
     char fname[BUFSIZ];
-    // sprintf(fname, "/u0/outputs/ins2D/foo_%04d_%04d.vtu",rank, tstep/ins->errorStep);
-    sprintf(fname, "foo_%04d_%04d.vtu",rank, tstep/ins->outputStep);
-    //sprintf(fname, "/scratch/foo_%04d_%04d.vtu",rank, tstep/ins->errorStep);
+    string outName;
+    ins->options.getArgs("OUTPUT FILE NAME", outName);
+    sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(),rank, tstep/ins->outputStep);
 
     insPlotVTU(ins, fname);
   } 
