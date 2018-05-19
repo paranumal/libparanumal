@@ -1353,6 +1353,7 @@ kernel void insSubCycleCubatureVolumeHex3D(const dlong Nelements,
       }\
     }\
   }\
+  barrier(localMemFence);\
 \
   for(int j=0;j<p_cubNq;++j;inner1){\
     for(int i=0;i<p_cubNq;++i;inner0){\

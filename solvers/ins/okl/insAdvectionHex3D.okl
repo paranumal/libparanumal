@@ -1128,6 +1128,7 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
       }\
     }\
   }\
+  barrier(localMemFence);\
 \
   for(int j=0;j<p_cubNq;++j;inner1){\
     for(int i=0;i<p_cubNq;++i;inner0){\
@@ -1192,7 +1193,7 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
     #define s_fluxNU s_UM
     #define s_fluxNV s_VM
     #define s_fluxNW s_WM
-
+    
     exclusive dfloat r_UMn, r_VMn, r_WMn;
     exclusive dfloat r_UPn, r_VPn, r_WPn;
 

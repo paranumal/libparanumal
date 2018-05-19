@@ -51,7 +51,10 @@ void insRunEXTBDF(ins_t *ins){
     ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat)); 
 
     //update velocity
-    insVelocityUpdate(ins, 0, ins->Nstages, ins->o_rkGP, ins->o_U);
+    insVelocityUpdate(ins, 0, ins->Nstages, ins->o_rkGP, ins->o_rkU);
+
+    //copy updated pressure
+    ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
 
     //cycle rhs history
     for (int s=ins->Nstages;s>1;s--) {

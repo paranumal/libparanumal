@@ -72,7 +72,6 @@ kernel void insGradientSurfaceTet3D(const dlong Nelements,
                                     const dfloat * restrict z,
                                     const dfloat time,
                                     const dlong offset,
-                                    const int solverID,
                                     const dfloat * restrict P,
                                           dfloat * restrict gradP){
 
@@ -109,9 +108,6 @@ kernel void insGradientSurfaceTet3D(const dlong Nelements,
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               insPressureDirichletConditions3D(bc,time, x[idM],y[idM],z[idM], nx,ny,nz, PM,&PP);
-              if(solverID==1){ // Pressure Increament Gradient
-               PP = PM;
-              }
               PP = 2.f*PP - PM; //Strong form BCs
             }
 
