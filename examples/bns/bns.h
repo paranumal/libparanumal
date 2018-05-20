@@ -97,7 +97,9 @@ typedef struct{
 
 	dfloat outputInterval, nextOutputTime;      
 
-    // dfloat sarkC[5], sarkA[5*5], sarkE[5];
+    dfloat *Vort; 
+
+    occa::memory o_Vort;
 
 
 	dfloat *rkq, *rkrhsq, *rkerr, *errtmp;
@@ -144,6 +146,8 @@ typedef struct{
 	occa::kernel pmlRelaxationKernel;
 	occa::kernel pmlUpdateKernel;
 	occa::kernel pmlTraceUpdateKernel;
+
+	occa::kernel vorticityKernel;
 
 	// Boltzmann Imex Kernels
 	occa::kernel implicitUpdateKernel;
