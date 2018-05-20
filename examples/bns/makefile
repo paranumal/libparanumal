@@ -82,7 +82,7 @@ LOBJS = \
 ../../src/meshBuildMRABClusters3D.o \
 ../../src/meshClusteredGeometricPartition2D.o \
 ../../src/meshClusteredGeometricPartition3D.o \
-../../src/meshMRABWeightedPartitionTri2D.o \
+../../src/meshMRABWeightedPartition2D.o \
 ../../src/meshMRABWeightedPartitionTet3D.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \

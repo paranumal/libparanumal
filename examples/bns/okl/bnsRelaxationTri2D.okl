@@ -1,6 +1,8 @@
 // MRAB relaxation cub
 kernel void bnsRelaxationTri2D(const dlong Nelements,
                                const dlong * restrict elementIds,
+                               const dfloat * restrict vgeo, // only quad kernels
+                               const dfloat * restrict cubvgeo, // only quad kernels
                                const dlong offset,
                                const int   shift,
                                const dfloat * restrict cubInterpT,
@@ -135,6 +137,8 @@ kernel void bnsRelaxationTri2D(const dlong Nelements,
 kernel void bnsPmlRelaxationTri2D(const dlong pmlNelements,
                                   const dlong * restrict pmlElementIds,
                                   const dlong * restrict pmlIds,
+                                  const dfloat * restrict vgeo,
+                                  const dfloat * restrict cubvgeo,
                                   const dlong offset,
                                   const dlong pmloffset,
                                   const int   shift,

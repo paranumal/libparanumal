@@ -209,7 +209,11 @@ kernel void bnsRelaxationQuad2D(const dlong Nelements,
               }
             }
 
-            const dlong rhsId = e*p_Np*p_Nfields + j*p_Nq + i;
+            dlong rhsId = e*p_Np*p_Nfields + j*p_Nq + i;
+             // 
+              if(p_MRSAAB)
+                rhsId     += shift*offset;
+              
             for(int fld=p_qNs; fld<p_Nfields; fld++){
               rhsq[rhsId + fld*p_Np]  += invJW*r_q[fld];
             }
@@ -482,8 +486,13 @@ kernel void bnsPmlRelaxationQuad2D(const dlong pmlNelements,
               }
             }
 
-            const dlong rhsId    = e*p_Np*p_Nfields + j*p_Nq + i;
-            const dlong pmlRhsId = pmlId*p_Np*p_Nfields + j*p_Nq + i;
+            dlong rhsId    = e*p_Np*p_Nfields + j*p_Nq + i;
+            dlong pmlRhsId = pmlId*p_Np*p_Nfields + j*p_Nq + i;
+            // 
+            if(p_MRSAAB){
+              rhsId     += shift*offset;
+              pmlRhsId  += shift*pmloffset;
+            }
 
             for(int fld=0; fld<p_Nfields; fld++){
               pmlrhsqx[pmlRhsId + fld*p_Np] += invJW*r_qx[fld];
