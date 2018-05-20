@@ -1246,9 +1246,10 @@ else if(options.compareArgs("TIME INTEGRATOR", "LSIMEX")){
           kernelInfo); 
 
   }
+     
 
     mesh->haloExtractKernel =
-      mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
+      mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
           "meshHaloExtract2D",
              kernelInfo);
 

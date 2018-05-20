@@ -667,7 +667,7 @@ for (int r=0;r<size;r++){
 
 
          // Surface kernels 
-        sprintf(fileName, "okl/bnsVorticity.okl");
+        sprintf(fileName, "okl/bnsVorticity%s.okl",suffix);
         sprintf(kernelName, "bnsVorticity%s", suffix);
         bns->vorticityKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
