@@ -320,6 +320,8 @@ typedef struct {
   dfloat *slocal;
   char *overlapDirection;
   iint *gridToE;
+  iint *perp_index;
+  dfloat *par_loc;
   
   // occa stuff
   occa::device device;

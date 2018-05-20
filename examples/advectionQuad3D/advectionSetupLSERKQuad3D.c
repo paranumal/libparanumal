@@ -107,10 +107,15 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
       solver->device.malloc((mesh->NgridElements - mesh->Nelements)*sizeof(char),mesh->overlapDirection);
 
     solver->o_rlocal =
-      solver->device.malloc(mesh->NgridElements*mesh->Np*sizeof(dfloat),mesh->rlocal);
+      solver->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),mesh->rlocal);
 
     solver->o_slocal =
-      solver->device.malloc(mesh->NgridElements*mesh->Np*sizeof(dfloat),mesh->slocal);
+      solver->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),mesh->slocal);
+
+    solver->o_par_loc =
+      solver->device.malloc((mesh->NgridElements - mesh->Nelements)*mesh->Np*sizeof(dfloat),mesh->par_loc);
+
+    solver->o_perp_index = solver->device.malloc((mesh->NgridElements - mesh->Nelements)*mesh->Np*sizeof(iint),mesh->perp_index);
     
     solver->o_qFilter =
       solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat),solver->rhsq);
