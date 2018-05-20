@@ -25,6 +25,7 @@ kernel void insDiffusionTri2D(const dlong Nelements,
     occaUnroll(p_NVfields)
     for (int i=0; i<p_NVfields; i++) {
 
+      barrier(localMemFence);
       for(int n=0;n<p_maxNodes;++n;inner0){
         if (n<p_Np) {
           //prefetch q
@@ -67,6 +68,7 @@ kernel void insDiffusionTri2D(const dlong Nelements,
               UM[f].z = 0.;               
               UM[f].w = 0.;               
             }
+            //UP[i] = UM[i];
             insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, UM[0].x, UM[0].y, UM[1].x, UM[1].y, &(UP[0].x), &(UP[0].y), &(UP[1].x), &(UP[1].y));
 
             dudxP = UP[i].x;

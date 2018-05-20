@@ -82,6 +82,8 @@ kernel void insDiffusionIpdgHex3D(const dlong Nelements,
     occaUnroll(p_NVfields)
     for (int fld=0; fld<p_NVfields; fld++) {
 
+      barrier(localMemFence);
+
       // loop over slabs
       for(int j=0;j<p_Nq;++j;inner1){
         for(int i=0;i<p_Nq;++i;inner0){

@@ -33,6 +33,8 @@ kernel void insDiffusionTet3D(const dlong Nelements,
     ////occaUnroll(p_NVfields)
     for (int fld=0; fld<p_NVfields; fld++) {
 
+      barrier(localMemFence);
+
       for(int n=0;n<p_maxNodes;++n;inner0){
     
         //occaUnroll(p_Ne)

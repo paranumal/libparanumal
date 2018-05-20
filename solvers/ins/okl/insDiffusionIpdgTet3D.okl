@@ -37,6 +37,8 @@ kernel void insDiffusionIpdgTet3D(const dlong Nelements,
     //occaUnroll(p_NVfields)
     for (int fld=0; fld<p_NVfields; fld++) {
 
+      barrier(localMemFence);
+
       for(int n=0;n<p_maxNodes;++n;inner0){
         element = elementList[e];
         if(n<p_Np){

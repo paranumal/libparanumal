@@ -59,7 +59,7 @@ kernel void insPressureIpdgBCTri2D(const dlong Nelements,
           for (int s=0;s<stage;s++) {
             dfloat prkAn, ctime;
             if (ARKswitch) {
-              prkAn = prkA[stage*(p_Nstages+1)+s];
+              prkAn = (s==0) ? 1.0 :0.0;//prkA[stage*(p_Nstages+1)+s];
               ctime = time-(c[stage]-c[s])*dt;
             } else {
               prkAn = prkA[s];
@@ -232,7 +232,7 @@ kernel void insPressureBCTri2D(const dlong Nelements,
           for (int s=0;s<stage;s++) {
             dfloat prkAn, ctime;
             if (ARKswitch) {
-              prkAn = prkA[stage*(p_Nstages+1)+s];
+              prkAn = (s==0) ? 1.0 :0.0;//prkA[stage*(p_Nstages+1)+s];
               ctime = time-(c[stage]-c[s])*dt;
             } else {
               prkAn = prkA[s];
@@ -315,7 +315,7 @@ kernel void insPressureAddBCTri2D(const dlong Nelements,
         for (int s=0;s<stage;s++) {
           dfloat prkAn, ctime;
           if (ARKswitch) {
-            prkAn = prkA[stage*(p_Nstages+1)+s];
+            prkAn = (s==0) ? 1.0 :0.0;//prkA[stage*(p_Nstages+1)+s];
             ctime = time-(c[stage]-c[s])*dt;
           } else {
             prkAn = prkA[s];

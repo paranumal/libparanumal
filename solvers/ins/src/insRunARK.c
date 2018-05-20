@@ -25,7 +25,7 @@ void insRunARK(ins_t *ins){
   occaTimerTic(mesh->device,"INS");
 
   // Write Initial Data
-  insReport(ins, 0);
+  insReport(ins, 0.0, 0);
 
 
   ins->tstep = 0;
@@ -60,6 +60,7 @@ void insRunARK(ins_t *ins){
       insVelocityRhs  (ins, stageTime, stage, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
       insVelocitySolve(ins, stageTime, stage, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
+
       insPressureRhs  (ins, stageTime, stage);
       insPressureSolve(ins, stageTime, stage);      
 
@@ -71,6 +72,8 @@ void insRunARK(ins_t *ins){
       //compute and save NU and LU
       insAdvection(ins, stageTime, ins->o_rkU, ins->o_rkNU);
       insDiffusion(ins, stageTime, ins->o_rkU, ins->o_rkLU); 
+
+
       ins->o_NU.copyFrom(ins->o_rkNU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
       ins->o_LU.copyFrom(ins->o_rkLU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
 
@@ -92,7 +95,7 @@ void insRunARK(ins_t *ins){
     if(((ins->tstep)%(ins->outputStep))==0){
       if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
       if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
-      insReport(ins, ins->tstep);
+      insReport(ins, ins->time, ins->tstep);
     }
 
     if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
@@ -155,7 +158,7 @@ void insRunARK(ins_t *ins){
 
   dfloat finalTime = ins->NtimeSteps*ins->dt;
   printf("\n");
-  insReport(ins, ins->NtimeSteps);
+  insReport(ins, finalTime, ins->NtimeSteps);
   
   if(rank==0) occa::printTimer();
 }
