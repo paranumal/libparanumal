@@ -666,6 +666,16 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
       sprintf(kernelName, "bnsVorticity%s", suffix);
       bns->vorticityKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
+
+      // This needs to be unified
+      mesh->haloExtractKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
+                                           "meshHaloExtract3D",
+                                           kernelInfo);
+
+
+
+
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }
