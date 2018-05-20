@@ -1,0 +1,477 @@
+
+kernel void insVelocityIpdgBCTet3D(const dlong Nelements,
+                                   const dlong * restrict vmapM,
+                                   const dfloat tau,
+                                   const dfloat time,
+                                   const dfloat * restrict x,
+                                   const dfloat * restrict y,
+                                   const dfloat * restrict z,
+                                   const dfloat * restrict vgeo,
+                                   const dfloat * restrict sgeo,
+                                   const int    * restrict EToB,
+                                   const dfloat * restrict Dmatrices,
+                                   const dfloat * restrict LIFTT,
+                                   const dfloat * restrict MM,
+                                         dfloat * restrict rhsU,
+                                         dfloat * restrict rhsV,
+                                         dfloat * restrict rhsW){
+
+  for(dlong e=0;e<Nelements;++e;outer0){
+    shared  dfloat s_dudx[p_Np];
+    shared  dfloat s_dudy[p_Np];
+    shared  dfloat s_dudz[p_Np];
+    shared  dfloat s_dvdx[p_Np];
+    shared  dfloat s_dvdy[p_Np];
+    shared  dfloat s_dvdz[p_Np];
+    shared  dfloat s_dwdx[p_Np];
+    shared  dfloat s_dwdy[p_Np];
+    shared  dfloat s_dwdz[p_Np];
+    //
+    shared  dfloat s_lapu[p_Np];
+    shared  dfloat s_lapv[p_Np];
+    shared  dfloat s_lapw[p_Np];
+    //
+    shared  dfloat s_nxdu[p_NfacesNfp];
+    shared  dfloat s_nydu[p_NfacesNfp];
+    shared  dfloat s_nzdu[p_NfacesNfp];
+    shared  dfloat s_nxdv[p_NfacesNfp];
+    shared  dfloat s_nydv[p_NfacesNfp];
+    shared  dfloat s_nzdv[p_NfacesNfp];
+    shared  dfloat s_nxdw[p_NfacesNfp];
+    shared  dfloat s_nydw[p_NfacesNfp];
+    shared  dfloat s_nzdw[p_NfacesNfp];
+    //
+    shared  dfloat s_lapuflux[p_NfacesNfp];
+    shared  dfloat s_lapvflux[p_NfacesNfp];
+    shared  dfloat s_lapwflux[p_NfacesNfp];
+    //
+    shared  dfloat s_Lnxdu[p_Np];
+    shared  dfloat s_Lnydu[p_Np];
+    shared  dfloat s_Lnzdu[p_Np];
+    shared  dfloat s_Lnxdv[p_Np];
+    shared  dfloat s_Lnydv[p_Np];
+    shared  dfloat s_Lnzdv[p_Np];
+    shared  dfloat s_Lnxdw[p_Np];
+    shared  dfloat s_Lnydw[p_Np];
+    shared  dfloat s_Lnzdw[p_Np];
+
+
+    exclusive dlong idM;
+    exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
+
+    for(int n=0;n<p_maxNodes;++n;inner0){
+      if(n<p_NfacesNfp){
+        const dlong id  = n + e*p_Nfaces*p_Nfp;
+        idM = vmapM[id];
+
+        const int face = n/p_Nfp;
+        dfloat dudxP=0.f, dudyP=0.f, dudzP=0.f, uP=0.f;
+        dfloat dvdxP=0.f, dvdyP=0.f, dvdzP=0.f, vP=0.f;
+        dfloat dwdxP=0.f, dwdyP=0.f, dwdzP=0.f, wP=0.f;
+
+        // load surface geofactors for this face
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+        nx    = sgeo[sid+p_NXID];
+        ny    = sgeo[sid+p_NYID];
+        nz    = sgeo[sid+p_NZID];
+        sJ    = sgeo[sid+p_SJID];
+        invJ  = sgeo[sid+p_IJID];
+        hinv  = sgeo[sid+p_IHID];
+
+        const int bc = EToB[face+p_Nfaces*e];
+        if(bc>0) {
+          insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
+          insVelocityNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP,&dudyP,&dudzP, &dvdxP,&dvdyP,&dvdzP, &dwdxP,&dwdyP,&dwdzP);
+        }
+
+        const dfloat du = uP;
+        const dfloat dv = vP;
+        const dfloat dw = wP;
+
+        s_nxdu[n] = sJ*invJ*nx*du;
+        s_nydu[n] = sJ*invJ*ny*du;
+        s_nzdu[n] = sJ*invJ*nz*du;
+
+        s_nxdv[n] = sJ*invJ*nx*dv;
+        s_nydv[n] = sJ*invJ*ny*dv;
+        s_nzdv[n] = sJ*invJ*nz*dv;
+        
+        s_nxdw[n] = sJ*invJ*nx*dw;
+        s_nydw[n] = sJ*invJ*ny*dw;
+        s_nzdw[n] = sJ*invJ*nz*dw;
+
+        s_lapuflux[n] = sJ*invJ*(-nx*(dudxP)-ny*(dudyP)-nz*(dudzP)-tau*hinv*du);
+        s_lapvflux[n] = sJ*invJ*(-nx*(dvdxP)-ny*(dvdyP)-nz*(dvdzP)-tau*hinv*dv);
+        s_lapwflux[n] = sJ*invJ*(-nx*(dwdxP)-ny*(dwdyP)-nz*(dwdzP)-tau*hinv*dw);
+      }
+    }
+
+    barrier(localMemFence);
+
+    // dqdx += LIFT*(sJ/J)*nx*dq
+    for(int n=0;n<p_maxNodes;++n;inner0){
+      if(n<p_Np){
+        const dlong gid = e*p_Nvgeo;
+        const dfloat drdx = vgeo[gid + p_RXID];
+        const dfloat drdy = vgeo[gid + p_RYID];
+        const dfloat drdz = vgeo[gid + p_RZID];
+
+        const dfloat dsdx = vgeo[gid + p_SXID];
+        const dfloat dsdy = vgeo[gid + p_SYID];
+        const dfloat dsdz = vgeo[gid + p_SZID];
+
+        const dfloat dtdx = vgeo[gid + p_TXID];
+        const dfloat dtdy = vgeo[gid + p_TYID];
+        const dfloat dtdz = vgeo[gid + p_TZID];
+
+        dfloat Lnxdu = 0.f;
+        dfloat Lnydu = 0.f;
+        dfloat Lnzdu = 0.f;
+
+        dfloat Lnxdv = 0.f;
+        dfloat Lnydv = 0.f;
+        dfloat Lnzdv = 0.f;
+
+        dfloat Lnxdw = 0.f;
+        dfloat Lnydw = 0.f;
+        dfloat Lnzdw = 0.f;
+
+        occaUnroll(p_NfacesNfp)
+          for(int i=0;i<p_NfacesNfp;++i){
+            dfloat liftt = LIFTT[n+i*p_Np];
+            Lnxdu += liftt*s_nxdu[i];
+            Lnydu += liftt*s_nydu[i];
+            Lnzdu += liftt*s_nzdu[i];
+           
+            Lnxdv += liftt*s_nxdv[i];
+            Lnydv += liftt*s_nydv[i];
+            Lnzdv += liftt*s_nzdv[i];
+
+            Lnxdw += liftt*s_nxdw[i];
+            Lnydw += liftt*s_nydw[i];
+            Lnzdw += liftt*s_nzdw[i];
+          }
+
+        const dfloat dudx = Lnxdu;
+        const dfloat dudy = Lnydu;
+        const dfloat dudz = Lnzdu;
+
+        const dfloat dvdx = Lnxdv;
+        const dfloat dvdy = Lnydv;
+        const dfloat dvdz = Lnzdv;
+
+        const dfloat dwdx = Lnxdw;
+        const dfloat dwdy = Lnydw;
+        const dfloat dwdz = Lnzdw;
+
+        s_dudx[n] = drdx*dudx + drdy*dudy + drdz*dudz; // abuse of notation
+        s_dudy[n] = dsdx*dudx + dsdy*dudy + dsdz*dudz;
+        s_dudz[n] = dtdx*dudx + dtdy*dudy + dtdz*dudz;
+        
+        s_dvdx[n] = drdx*dvdx + drdy*dvdy + drdz*dvdz; // abuse of notation
+        s_dvdy[n] = dsdx*dvdx + dsdy*dvdy + dsdz*dvdz;
+        s_dvdz[n] = dtdx*dvdx + dtdy*dvdy + dtdz*dvdz;
+
+        s_dwdx[n] = drdx*dwdx + drdy*dwdy + drdz*dwdz; // abuse of notation
+        s_dwdy[n] = dsdx*dwdx + dsdy*dwdy + dsdz*dwdz;
+        s_dwdz[n] = dtdx*dwdx + dtdy*dwdy + dtdz*dwdz;
+
+        s_Lnxdu[n] = Lnxdu;
+        s_Lnydu[n] = Lnydu;
+        s_Lnzdu[n] = Lnzdu;
+
+        s_Lnxdv[n] = Lnxdv;
+        s_Lnydv[n] = Lnydv;
+        s_Lnzdv[n] = Lnzdv;
+
+        s_Lnxdw[n] = Lnxdw;
+        s_Lnydw[n] = Lnydw;
+        s_Lnzdw[n] = Lnzdw;
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(int n=0;n<p_maxNodes;++n;inner0){
+      if(n<p_NfacesNfp){
+        const int id = idM%p_Np;
+        s_lapuflux[n] += sJ*invJ*(nx*s_Lnxdu[id]+ny*s_Lnydu[id]+nz*s_Lnzdu[id]);
+        s_lapvflux[n] += sJ*invJ*(nx*s_Lnxdv[id]+ny*s_Lnydv[id]+nz*s_Lnzdv[id]);
+        s_lapwflux[n] += sJ*invJ*(nx*s_Lnxdw[id]+ny*s_Lnydw[id]+nz*s_Lnzdw[id]);
+      }
+
+      if(n<p_Np){
+        dfloat laur = 0.f, laus = 0.f, laut=0.f;
+        dfloat lavr = 0.f, lavs = 0.f, lavt=0.f;
+        dfloat lawr = 0.f, laws = 0.f, lawt=0.f;
+        occaUnroll(p_Np)
+          for(int i=0;i<p_Np;++i) {
+            const dfloat Drn = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsn = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+            const dfloat Dtn = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+            laur += Drn*s_dudx[i];
+            laus += Dsn*s_dudy[i];
+            laut += Dtn*s_dudz[i];
+
+            lavr += Drn*s_dvdx[i];
+            lavs += Dsn*s_dvdy[i];
+            lavt += Dtn*s_dvdz[i];
+
+            lawr += Drn*s_dwdx[i];
+            laws += Dsn*s_dwdy[i];
+            lawt += Dtn*s_dwdz[i];
+          }
+
+        s_lapu[n] = -(laur+laus+laut);
+        s_lapv[n] = -(lavr+lavs+lavt);
+        s_lapw[n] = -(lawr+laws+lawt);
+      }
+
+    }
+
+    barrier(localMemFence);
+
+    for(int n=0;n<p_maxNodes;++n;inner0){
+      if(n<p_Np){
+        dfloat lau = 0.f;
+        dfloat lav = 0.f;
+        dfloat law = 0.f;
+
+        // lift remaining surface terms
+        occaUnroll(p_NfacesNfp)
+          for(int i=0;i<p_NfacesNfp;++i){
+            lau += LIFTT[n+i*p_Np]*s_lapuflux[i];
+            lav += LIFTT[n+i*p_Np]*s_lapvflux[i];
+            law += LIFTT[n+i*p_Np]*s_lapwflux[i];
+          }
+
+        s_lapu[n] += lau;
+        s_lapv[n] += lav;
+        s_lapw[n] += law;
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(int n=0;n<p_maxNodes;++n;inner0){
+      if(n<p_Np){
+        const dlong id = e*p_Np+n;
+        const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+
+        dfloat Mlapu = 0.f;
+        dfloat Mlapv = 0.f;
+        dfloat Mlapw = 0.f;
+
+        // multiply by mass matrix
+        occaUnroll(p_Np)
+          for(int i=0;i<p_Np;++i){
+            Mlapu += MM[n+i*p_Np]*s_lapu[i];
+            Mlapv += MM[n+i*p_Np]*s_lapv[i];
+            Mlapw += MM[n+i*p_Np]*s_lapw[i];
+          }
+
+        rhsU[id] -=  J*Mlapu;
+        rhsV[id] -=  J*Mlapv;
+        rhsW[id] -=  J*Mlapw;
+      }
+    }
+  }
+}
+
+//RHS contributions for continuous solver
+kernel void insVelocityBCTet3D(const dlong Nelements,
+                               const dfloat * restrict ggeo,
+                               const dfloat * restrict sgeo,
+                               const dfloat * restrict Dmatrices,
+                               const dfloat * restrict Smatrices,
+                               const dfloat * restrict MM,
+                               const dlong  * restrict vmapM,
+                               const dfloat * restrict sMT,
+                               const dfloat lambda,
+                               const dfloat time,
+                               const dfloat * restrict x,
+                               const dfloat * restrict y,
+                               const dfloat * restrict z,
+                               const int    * restrict mapB,
+                                     dfloat * restrict rhsU,
+                                     dfloat * restrict rhsV,
+                                     dfloat * restrict rhsW){
+
+  for(dlong e=0;e<Nelements;e++;outer0){
+    shared dfloat s_u[p_Np];
+    shared dfloat s_v[p_Np];
+    shared dfloat s_w[p_Np];
+    shared dfloat s_ndu[p_Nfp*p_Nfaces];
+    shared dfloat s_ndv[p_Nfp*p_Nfaces];
+    shared dfloat s_ndw[p_Nfp*p_Nfaces];
+
+    for(int n=0;n<p_maxNodes;++n;inner0){
+      if(n<p_Np){
+        s_u[n] = 0.;
+        s_v[n] = 0.;
+        s_w[n] = 0.;
+      }
+      if(n<p_NfacesNfp){
+        s_ndu[n] = 0.;
+        s_ndv[n] = 0.;
+        s_ndw[n] = 0.;
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(int n=0;n<p_maxNodes;++n;inner0){
+      if(n<p_NfacesNfp){
+        const dlong id  = n + e*p_Nfaces*p_Nfp;
+        const dlong idM = vmapM[id];          
+        const int nid = idM%p_Np; 
+
+        const int face = n/p_Nfp;
+
+        dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;
+        dfloat dvdxP=0, dvdyP=0, dvdzP=0, vP=0;
+        dfloat dwdxP=0, dwdyP=0, dwdzP=0, wP=0;
+        
+        // load surface geofactors for this face
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx = sgeo[sid+p_NXID];
+        const dfloat ny = sgeo[sid+p_NYID];
+        const dfloat nz = sgeo[sid+p_NZID];
+        const dfloat sJ = sgeo[sid+p_SJID];
+
+        const int bc = mapB[idM];
+        if(bc>0) {
+          insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
+          insVelocityNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP,&dudyP,&dudzP, &dvdxP,&dvdyP,&dvdzP, &dwdxP,&dwdyP,&dwdzP);
+        }
+
+        s_u[nid] = uP;
+        s_v[nid] = vP;
+        s_w[nid] = wP;
+        s_ndu[n] = sJ*(nx*dudxP + ny*dudyP + nz*dudzP);
+        s_ndv[n] = sJ*(nx*dvdxP + ny*dvdyP + nz*dvdzP);
+        s_ndw[n] = sJ*(nx*dwdxP + ny*dwdyP + nz*dwdzP);
+      }
+    }
+
+    barrier(localMemFence);
+    
+    for(int n=0;n<p_maxNodes;++n;inner0){ 
+      if(n<p_Np){
+        //volume Dirichlet data
+        const dlong id = n + e*p_Np;
+        const dlong gid = e*p_Nggeo;
+        const dfloat Grr = ggeo[gid + p_G00ID];
+        const dfloat Grs = ggeo[gid + p_G01ID];
+        const dfloat Grt = ggeo[gid + p_G02ID];
+        const dfloat Gss = ggeo[gid + p_G11ID];
+        const dfloat Gst = ggeo[gid + p_G12ID];
+        const dfloat Gtt = ggeo[gid + p_G22ID];
+        const dfloat J   = ggeo[gid + p_GWJID];
+
+        dfloat MMu = 0., MMv = 0., MMw = 0.;
+        dfloat urr = 0., vrr = 0., wrr = 0.;
+        dfloat urs = 0., vrs = 0., wrs = 0.;
+        dfloat urt = 0., vrt = 0., wrt = 0.;
+        dfloat uss = 0., vss = 0., wss = 0.;
+        dfloat ust = 0., vst = 0., wst = 0.;
+        dfloat utt = 0., vtt = 0., wtt = 0.;
+
+        occaUnroll(p_Np)
+          for (int k=0;k<p_Np;k++) {
+            const dfloat MMn = MM[n+k*p_Np];
+            const dfloat Srr = Smatrices[n+k*p_Np+0*p_Np*p_Np];
+            const dfloat Srs = Smatrices[n+k*p_Np+1*p_Np*p_Np];
+            const dfloat Srt = Smatrices[n+k*p_Np+2*p_Np*p_Np];
+            const dfloat Sss = Smatrices[n+k*p_Np+3*p_Np*p_Np];
+            const dfloat Sst = Smatrices[n+k*p_Np+4*p_Np*p_Np];
+            const dfloat Stt = Smatrices[n+k*p_Np+5*p_Np*p_Np];
+
+            MMu += MMn*s_u[k];
+            urr += Srr*s_u[k];
+            urs += Srs*s_u[k];
+            urt += Srt*s_u[k];
+            uss += Sss*s_u[k];
+            ust += Sst*s_u[k];
+            utt += Stt*s_u[k];
+
+            MMv += MMn*s_v[k];
+            vrr += Srr*s_v[k];
+            vrs += Srs*s_v[k];
+            vrt += Srt*s_v[k];
+            vss += Sss*s_v[k];
+            vst += Sst*s_v[k];
+            vtt += Stt*s_v[k];
+
+            MMw += MMn*s_w[k];
+            wrr += Srr*s_w[k];
+            wrs += Srs*s_w[k];
+            wrt += Srt*s_w[k];
+            wss += Sss*s_w[k];
+            wst += Sst*s_w[k];
+            wtt += Stt*s_w[k];
+          }
+
+        dfloat Lndu = 0;            
+        dfloat Lndv = 0;            
+        dfloat Lndw = 0;            
+        // surface mass * surface terms
+        occaUnroll(p_NfacesNfp)
+          for(int i=0;i<p_NfacesNfp;++i){
+            const dfloat sMTn = sMT[n+i*p_Np];
+            Lndu += sMTn*s_ndu[i];
+            Lndv += sMTn*s_ndv[i];
+            Lndw += sMTn*s_ndw[i];
+          }
+
+        rhsU[id] -= Grr*urr+Grs*urs+Grt*urt
+                   +Gss*uss+Gst*ust+Gtt*utt + J*lambda*MMu - Lndu;
+        rhsV[id] -= Grr*vrr+Grs*vrs+Grt*vrt
+                   +Gss*vss+Gst*vst+Gtt*vtt + J*lambda*MMv - Lndv;
+        rhsW[id] -= Grr*wrr+Grs*wrs+Grt*wrt
+                   +Gss*wss+Gst*wst+Gtt*wtt + J*lambda*MMw - Lndw;
+
+      }
+    }
+  }
+}
+
+kernel void insVelocityAddBCTet3D(const dlong Nelements,
+                                   const dfloat time,
+                                   const dfloat * restrict sgeo,
+                                   const dfloat * restrict x,
+                                   const dfloat * restrict y,
+                                   const dfloat * restrict z,
+                                   const dlong  * restrict vmapM,
+                                   const int    * restrict mapB,
+                                         dfloat * restrict U,
+                                         dfloat * restrict V,
+                                         dfloat * restrict W){
+  
+  for(dlong e=0;e<Nelements;e++;outer0){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
+      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+      const int bc = mapB[idM];
+
+      if(bc>0) {
+        const dfloat uM = U[idM];
+        const dfloat vM = V[idM];
+        const dfloat wM = W[idM];
+
+        const int face = n/p_Nfp;
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx = sgeo[sid+p_NXID];
+        const dfloat ny = sgeo[sid+p_NYID];
+        const dfloat nz = sgeo[sid+p_NZID];
+
+        dfloat uP = 0.f;
+        dfloat vP = 0.f;
+        dfloat wP = 0.f;
+        insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
+        U[idM] = uP;
+        V[idM] = vP;
+        W[idM] = wP;
+      }    
+    }
+  }
+}

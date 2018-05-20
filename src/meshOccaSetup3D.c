@@ -44,13 +44,13 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_notInternalElementIds = mesh->device.malloc(NnotInterior*sizeof(dlong), notInternalElementIds);
 
 
-  // OCCA allocate device memory (remember to go back for halo)
-  mesh->o_q =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
-  mesh->o_rhsq =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
-  mesh->o_resq =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
+  // // OCCA allocate device memory (remember to go back for halo)
+  // mesh->o_q =
+  //   mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+  // mesh->o_rhsq =
+  //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->rhsq);
+  // mesh->o_resq =
+  //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
 
 
   if(mesh->Nfaces==4){
@@ -537,7 +537,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat),
           cubDWT);
 
-    mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat), cubDWT);
+    mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat), cubDWT);
 
     mesh->o_intx =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp*sizeof(dfloat),

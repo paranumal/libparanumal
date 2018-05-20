@@ -1,0 +1,54 @@
+
+kernel void insUpdateUpdate(const dlong Nelements,
+                            const dfloat dt,
+                            const dfloat ig0,
+                            const dfloat c0,
+                            const dfloat c1,
+                            const dfloat c2,
+                            const dlong offset,
+                            const dfloat * restrict Uhat,
+                            const dfloat * restrict PI,
+                            const dfloat * restrict gradPI,
+                                  dfloat * restrict U,
+                                  dfloat * restrict NU,
+                                  dfloat * restrict P,
+                                  dfloat * restrict gradP){
+
+  for(dlong e=0;e<Nelements;++e;outer0){
+    for(int n=0;n<p_Np;++n;inner0){
+      const dlong id  = n + e*p_Np;
+
+      const dlong id0 = id + 0*p_NVfields*offset;
+      const dlong id1 = id + 1*p_NVfields*offset;
+      const dlong id2 = id + 2*p_NVfields*offset;
+
+      const dlong pid0 = id + 0*offset;
+      const dlong pid1 = id + 1*offset;
+      const dlong pid2 = id + 2*offset;
+
+      const dfloat p0 = P[pid0];
+      const dfloat p1 = P[pid1];
+      const dfloat p2 = P[pid2];
+
+      //shift histories
+      for (int i=0;i<p_NVfields; i++) {
+        NU[id2+i*offset] = NU[id1+i*offset];
+        NU[id1+i*offset] = NU[id0+i*offset];
+
+        U[id2+i*offset] = U[id1+i*offset];
+        U[id1+i*offset] = U[id0+i*offset];
+
+        // Update Velocity u = u - dt/g0 * grad(Pr)
+        U[id0+i*offset] = Uhat[id+i*offset]- dt*ig0 * gradPI[id+i*offset];
+      }
+      gradP[pid2] = gradP[pid1];
+      gradP[pid1] = gradP[pid0];
+
+      P[pid2] = p1;
+      P[pid1] = p0;
+
+      // Get Pressure from Pressure Increament
+      P[pid0] = PI[id] + c0*p0 + c1*p1 + c2*p2;
+    }
+  }
+}

@@ -1,0 +1,361 @@
+
+
+#define surfaceTerms(sk,face,i, j)                                      \
+  {                                                                     \
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
+  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           \
+                                                                        \
+  dfloat dudxP=0, dudyP=0, uP=0;                                        \
+  dfloat dvdxP=0, dvdyP=0, vP=0;                                        \
+                                                                        \
+  const int bc = EToB[face+p_Nfaces*e];                                 \
+  if(bc>0) {                                                            \
+    const dlong idM = vmapM[sk];                                        \
+    insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);\
+    insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);\
+  }                                                                     \
+                                                                        \
+  const dfloat du = uP;                                                 \
+  const dfloat dv = vP;                                                 \
+                                                                        \
+  s_dudx[j][i] += WsJ*nx*du;                                            \
+  s_dudy[j][i] += WsJ*ny*du;                                            \
+  s_dvdx[j][i] += WsJ*nx*dv;                                            \
+  s_dvdy[j][i] += WsJ*ny*dv;                                            \
+                                                                        \
+  s_rhsu[j][i] -= WsJ*(nx*dudxP + ny*dudyP+ tau*du*hinv);               \
+  s_rhsv[j][i] -= WsJ*(nx*dvdxP + ny*dvdyP+ tau*dv*hinv);               \
+  }
+
+kernel void insVelocityIpdgBCQuad2D(const dlong Nelements,
+                                    const dlong  * restrict vmapM,
+                                    const dfloat tau,
+                                    const dfloat time,
+                                    const dfloat * restrict x,
+                                    const dfloat * restrict y,
+                                    const dfloat * restrict z,
+                                    const dfloat * restrict vgeo,
+                                    const dfloat * restrict sgeo,
+                                    const int    * restrict EToB,
+                                    const dfloat * restrict D,
+                                    const dfloat * restrict LIFTT,
+                                    const dfloat * restrict MM,
+                                          dfloat * restrict rhsU,
+                                          dfloat * restrict rhsV,
+                                          dfloat * restrict rhsW){
+
+  for(dlong e=0;e<Nelements;++e;outer0){
+
+    shared dfloat s_dudx[p_Nq][p_Nq];
+    shared dfloat s_dudy[p_Nq][p_Nq];
+    shared dfloat s_dvdx[p_Nq][p_Nq];
+    shared dfloat s_dvdy[p_Nq][p_Nq];
+    shared dfloat s_rhsu[p_Nq][p_Nq];
+    shared dfloat s_rhsv[p_Nq][p_Nq];
+    shared dfloat s_D[p_Nq][p_Nq];
+
+    // loop over slabs
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;inner0){
+        s_dudx[j][i] = 0.f;
+        s_dudy[j][i] = 0.f;
+        s_dvdx[j][i] = 0.f;
+        s_dvdy[j][i] = 0.f;
+        s_rhsu[j][i] = 0.f;
+        s_rhsv[j][i] = 0.f;
+
+        s_D[j][i] = D[j*p_Nq+i];
+      }
+    }
+
+    barrier(localMemFence);
+
+    // loop over faces to add pseudo-gradient
+
+    // face 0 & 2
+    for(int i=0;i<p_Nq;++i;inner0){
+      const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i ;
+      const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i ;
+
+      surfaceTerms(sk0,0,i,0     );
+      surfaceTerms(sk2,2,i,p_Nq-1);
+    }
+
+    barrier(localMemFence);
+
+    // face 1 & 3
+    for(int j=0;j<p_Nq;++j;inner0){
+      const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+      const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+
+      surfaceTerms(sk1,1,p_Nq-1,j);
+      surfaceTerms(sk3,3,0     ,j);
+    }
+
+    barrier(localMemFence);
+
+    // prescale by geofacs
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;inner0){
+        // does need the nasty geofacs
+        const dlong gid = i + j*p_Nq + e*p_Np*p_Nvgeo;
+
+        const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+        const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+        const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+        const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+
+        const dfloat dudx = s_dudx[j][i];
+        const dfloat dudy = s_dudy[j][i];
+        const dfloat dvdx = s_dvdx[j][i];
+        const dfloat dvdy = s_dvdy[j][i];
+
+        s_dudx[j][i] = (drdx*dudx + drdy*dudy);
+        s_dudy[j][i] = (dsdx*dudx + dsdy*dudy);
+        s_dvdx[j][i] = (drdx*dvdx + drdy*dvdy);
+        s_dvdy[j][i] = (dsdx*dvdx + dsdy*dvdy);
+      }
+    }
+
+    barrier(localMemFence);
+
+    // loop over slabs
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;inner0){
+        dfloat dur = 0, dus = 0;
+        dfloat dvr = 0, dvs = 0;
+
+        for(int n=0;n<p_Nq;++n){
+          dur += s_D[n][i]*s_dudx[j][n];
+          dus += s_D[n][j]*s_dudy[n][i];
+          dvr += s_D[n][i]*s_dvdx[j][n];
+          dvs += s_D[n][j]*s_dvdy[n][i];
+        }
+
+        const dlong id = e*p_Np + j*p_Nq + i;
+        rhsU[id] -= s_rhsu[j][i]  + dur + dus;
+        rhsV[id] -= s_rhsv[j][i]  + dvr + dvs;
+      }
+    }
+  }
+}
+#undef surfaceTerms
+
+
+#define surfaceTerms(sk,face,i, j)                                      \
+{                                                                       \
+  const dlong idM = vmapM[sk];                                          \
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
+                                                                        \
+  dfloat dudxP=0.f, dudyP=0.f, uP=0.f;                                  \
+  dfloat dvdxP=0.f, dvdyP=0.f, vP=0.f;                                  \
+                                                                        \
+  const int bc = mapB[idM];                                             \
+  if(bc>0) {                                                            \
+    insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);\
+    insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);\
+  }                                                                     \
+                                                                        \
+  s_u  [j][i]  = uP;                                                    \
+  s_v  [j][i]  = vP;                                                    \
+  s_ndu[j][i] -= WsJ*(nx*dudxP + ny*dudyP);                             \
+  s_ndv[j][i] -= WsJ*(nx*dvdxP + ny*dvdyP);                             \
+}
+
+//RHS contributions for continuous solver
+kernel void insVelocityBCQuad2D(const dlong Nelements,
+                                const dfloat * restrict ggeo,
+                                const dfloat * restrict sgeo,
+                                const dfloat * restrict D,
+                                const dfloat * restrict S,
+                                const dfloat * restrict MM,
+                                const dlong  * restrict vmapM,
+                                const dfloat * restrict sMT,
+                                const dfloat lambda,
+                                const dfloat time,
+                                const dfloat * restrict x,
+                                const dfloat * restrict y,
+                                const dfloat * restrict z,
+                                const int    * restrict mapB,
+                                      dfloat * restrict rhsU,
+                                      dfloat * restrict rhsV,
+                                      dfloat * restrict rhsW){
+
+  for(dlong e=0;e<Nelements;e++;outer0){
+    shared dfloat s_u[p_Nq][p_Nq];
+    shared dfloat s_v[p_Nq][p_Nq];
+    shared dfloat s_ndu[p_Nq][p_Nq];
+    shared dfloat s_ndv[p_Nq][p_Nq];
+    
+    shared dfloat s_D[p_Nq][p_Nq];
+
+    exclusive dfloat r_ur[p_Nq], r_us[p_Nq], r_rhsu[p_Nq];
+    exclusive dfloat r_vr[p_Nq], r_vs[p_Nq], r_rhsv[p_Nq];
+    
+    exclusive dfloat r_G00[p_Nq], r_G01[p_Nq], r_G11[p_Nq], r_GwJ[p_Nq];
+
+    // loop over slabs
+    for(int i=0;i<p_Nq;++i;inner0){
+      occaUnroll(p_Nq)
+      for(int j=0;j<p_Nq;++j){
+        s_u  [j][i] = 0.;
+        s_v  [j][i] = 0.;
+        s_ndu[j][i] = 0.;
+        s_ndv[j][i] = 0.;
+
+        s_D[j][i] = D[j*p_Nq+i];
+      }
+    }
+
+    barrier(localMemFence);
+
+    // face 0 & 2
+    for(int i=0;i<p_Nq;++i;inner0){
+      const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
+      const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
+
+      surfaceTerms(sk0,0,i,0     );
+      surfaceTerms(sk2,2,i,p_Nq-1);
+    }
+  
+    barrier(localMemFence);
+
+    // face 1 & 3
+    for(int j=0;j<p_Nq;++j;inner0){
+      const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+      const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+
+      surfaceTerms(sk1,1,p_Nq-1,j);
+      surfaceTerms(sk3,3,0     ,j);
+    }
+
+    barrier(localMemFence);
+    
+    // loop over slabs
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;inner0){
+        const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
+
+        // assumes w*J built into G entries
+        r_GwJ[j] = ggeo[base+p_GWJID*p_Np];
+        r_G00[j] = ggeo[base+p_G00ID*p_Np];
+        r_G01[j] = ggeo[base+p_G01ID*p_Np];
+        r_G11[j] = ggeo[base+p_G11ID*p_Np];
+
+        dfloat ur = 0.f, us = 0.f;
+        dfloat vr = 0.f, vs = 0.f;
+        
+        occaUnroll(p_Nq)
+          for(int n=0; n<p_Nq; ++n){
+            ur += s_D[i][n]*s_u[j][n];
+            us += s_D[j][n]*s_u[n][i];
+            vr += s_D[i][n]*s_v[j][n];
+            vs += s_D[j][n]*s_v[n][i];
+          }
+        
+        r_ur[j] = ur; r_us[j] = us; 
+        r_vr[j] = vr; r_vs[j] = vs; 
+        r_rhsu[j] = r_GwJ[j]*lambda*s_u[j][i];
+        r_rhsv[j] = r_GwJ[j]*lambda*s_v[j][i];
+      }
+    }
+
+    // r term ----->
+    barrier(localMemFence);
+
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;inner0){
+        s_u[j][i] = r_G00[j]*r_ur[j] + r_G01[j]*r_us[j];
+        s_v[j][i] = r_G00[j]*r_vr[j] + r_G01[j]*r_vs[j];
+      }
+    }
+      
+    barrier(localMemFence);
+
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;inner0){
+        dfloat utmp = 0.f;
+        dfloat vtmp = 0.f;
+        occaUnroll(p_Nq)
+          for(int n=0;n<p_Nq;++n) {
+            utmp += s_D[n][i]*s_u[j][n];
+            vtmp += s_D[n][i]*s_v[j][n];
+          }
+
+        r_rhsu[j] += utmp;
+        r_rhsv[j] += vtmp;
+      }
+    }
+
+    // s term ---->
+    barrier(localMemFence);
+
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;inner0){
+        s_u[j][i] = r_G01[j]*r_ur[j] + r_G11[j]*r_us[j];
+        s_v[j][i] = r_G01[j]*r_vr[j] + r_G11[j]*r_vs[j];
+      }
+    }
+      
+    barrier(localMemFence);
+
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;inner0){
+        dfloat utmp = 0.f;
+        dfloat vtmp = 0.f;
+
+        occaUnroll(p_Nq) 
+          for(int n=0;n<p_Nq;++n) {
+            utmp += s_D[n][j]*s_u[n][i];
+            vtmp += s_D[n][j]*s_v[n][i];
+          }
+        
+        r_rhsu[j] += utmp;
+        r_rhsv[j] += vtmp;
+
+        const dlong id = e*p_Np + j*p_Nq + i;
+        rhsU[id] -= r_rhsu[j] + s_ndu[j][i];
+        rhsV[id] -= r_rhsv[j] + s_ndv[j][i];
+      }
+    }
+  }
+}
+
+kernel void insVelocityAddBCQuad2D(const dlong Nelements,
+                                    const dfloat time,
+                                    const dfloat * restrict sgeo,
+                                    const dfloat * restrict x,
+                                    const dfloat * restrict y,
+                                    const dfloat * restrict z,
+                                    const dlong  * restrict vmapM,
+                                    const int    * restrict mapB,
+                                          dfloat * restrict U,
+                                          dfloat * restrict V,
+                                          dfloat * restrict W){
+
+  for(dlong e=0;e<Nelements;e++;outer0){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
+      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+      const int bc = mapB[idM];
+
+      if(bc>0) {
+        const dfloat uM = U[idM];
+        const dfloat vM = V[idM];
+
+        const dlong sk = e*p_Nfp*p_Nfaces + n;
+        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+
+        dfloat uP = 0.f;
+        dfloat vP = 0.f;
+        insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+        U[idM] = uP;
+        V[idM] = vP;
+      }    
+    }
+  }
+}
