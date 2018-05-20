@@ -43,10 +43,10 @@ CUDA
 0
 
 [TIME INTEGRATOR]
-SARK  
+MRSAAB  
 
 [FIXED TIME STEP]
-0 
+1 
 
 [RELAXATION TYPE]
 CUBATURE
@@ -70,7 +70,7 @@ CUBATURE
 1000
 
 [TSTEPS FOR SOLUTION OUTPUT]
-5000
+1000
 
 [REPORT FREQUENCY]
 1000
@@ -97,7 +97,7 @@ CUBATURE
 100
 
 [CFL]
-0.5
+0.1
 
 [RESTART FROM FILE]
 0
@@ -106,4 +106,5 @@ CUBATURE
 VTU
 
 [OUTPUT FILE NAME]
-/scratch/boltzmannT/square_cyclinder3D
+square_cyclinder3D
+#/scratch/boltzmannT/square_cyclinder3D

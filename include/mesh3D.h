@@ -110,7 +110,7 @@ void meshBuildFaceNodesHex3D(mesh3D *mesh);
 dfloat meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels, dfloat finalTime); 
 
 //MRAB weighted mesh partitioning
-void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
+void meshMRABWeightedPartition3D(mesh3D *mesh, dfloat *weights,
                                       int numLevels, int *levels);
 
 #define norm3(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )

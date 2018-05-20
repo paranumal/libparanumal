@@ -767,9 +767,9 @@ kernel void bnsMRPmlSurfaceTet3D(const dlong pmlNelements,
               const dfloat L = LIFTT[n+m*p_Np];
               occaUnroll(p_Nfields)
               for(int fld=0; fld<p_Nfields; fld++){
-                r_lnxdq[fld] = L*s_nxdq[es][fld][m];
-                r_lnydq[fld] = L*s_nydq[es][fld][m];
-                r_lnzdq[fld] = L*s_nzdq[es][fld][m];
+                r_lnxdq[fld] += L*s_nxdq[es][fld][m];
+                r_lnydq[fld] += L*s_nydq[es][fld][m];
+                r_lnzdq[fld] += L*s_nzdq[es][fld][m];
               }
             }
 
