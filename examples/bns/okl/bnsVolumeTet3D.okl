@@ -275,9 +275,9 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
         r_N[8] = 2.f*ramp*drampdt*p_q9bar;
         r_N[9] = 2.f*ramp*drampdt*p_q10bar;
  
-        const dlong id       = e*p_Nfields*p_Np + n;
-              dlong rhsId    = id;
-              dlong pmlrhsId = p_Nfields*pmlId*p_Np + n;
+        
+        dlong rhsId    = e*p_Nfields*p_Np + n;
+        dlong pmlrhsId = p_Nfields*pmlId*p_Np + n;
 
         if(p_MRSAAB){
           rhsId     += shift*offset;

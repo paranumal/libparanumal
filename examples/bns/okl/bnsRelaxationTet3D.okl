@@ -5,6 +5,8 @@
 // MRAB relaxation cub
 kernel void bnsRelaxationTet3D(const dlong Nelements,
 															 const dlong * restrict elementIds,
+															 const dfloat * restrict vgeo, // only quad kernels
+                               const dfloat * restrict cubvgeo, // only quad kernels
 															 const dlong offset,
 															 const int   shift,
 															 const dfloat * restrict cubInterpT,
@@ -129,6 +131,8 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
 																	const dlong * restrict pmlElementIds,
 																	const dlong * restrict pmlIds,
+																	const dfloat * restrict vgeo, // only quad kernels
+                                  const dfloat * restrict cubvgeo, // only quad kernels
 																	const dlong offset,
 																	const dlong pmloffset,
 																	const int   shift,
@@ -228,12 +232,12 @@ kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
 						const dfloat msigmaze = sigmaze + sigmaxe*p_pmlAlpha + sigmaye*p_pmlAlpha;
 						
 						occaUnroll(p_Nfields)
-				for(int fld=0; fld<p_Nfields ; fld++){
-		s_cubqx[es][fld][n] = -msigmaxe*r_qx[fld];
-		s_cubqy[es][fld][n] = -msigmaye*r_qy[fld];
-		s_cubqz[es][fld][n] = -msigmaze*r_qz[fld];
-		s_cubq[es][fld][n]  = -msigmaxe*r_qx[fld]-msigmaye*r_qy[fld]-msigmaze*r_qz[fld];
-				}
+						for(int fld=0; fld<p_Nfields ; fld++){
+							s_cubqx[es][fld][n] = -msigmaxe*r_qx[fld];
+							s_cubqy[es][fld][n] = -msigmaye*r_qy[fld];
+							s_cubqz[es][fld][n] = -msigmaze*r_qz[fld];
+							s_cubq[es][fld][n]  = -msigmaxe*r_qx[fld]-msigmaye*r_qy[fld]-msigmaze*r_qz[fld];
+						}
 						
 						dfloat icubq1 = 1.f/r_q[0];
 
