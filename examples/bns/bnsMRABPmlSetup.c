@@ -178,7 +178,7 @@ void bnsMRABPmlSetup(bns_t *bns, setupAide &options){
 
     //set up the damping factor
     for (int  lev=0;lev<mesh->MRABNlevels;lev++){
-      for(dlong m=0; m<mesh->MRABpmlNelements[lev];m++) {
+      for(dlong m=0; m<mesh->MRABpmlNelements[lev];m++){
         dlong e = mesh->MRABpmlElementIds[lev][m];
         dlong pmlId = mesh->MRABpmlIds[lev][m];
         dlong type = mesh->elementInfo[e];
@@ -200,8 +200,17 @@ void bnsMRABPmlSetup(bns_t *bns, setupAide &options){
             x = -0.5*(rn+sn)*xe[0] + 0.5*(1+rn)*xe[1] + 0.5*(1+sn)*xe[2];
             y = -0.5*(rn+sn)*ye[0] + 0.5*(1+rn)*ye[1] + 0.5*(1+sn)*ye[2];
           }
-          else if(bns->elementType==TETRAHEDRA)
-          {
+          else if(bns->elementType==QUADRILATERALS){
+            // r is fastest
+            const int i = n%mesh->cubNq;
+            const int j = n/mesh->cubNq; 
+            rn = mesh->cubr[i];
+            sn = mesh->cubr[j]; 
+            // sn = mesh->cubs[n]; 
+            x =  0.25*( (1.0-rn)*(1-sn)*xe[0]+(1.0-rn)*(1+sn)*xe[1]+(1.0+rn)*(1+sn)*xe[2]+(1.0+rn)*(1-sn)*xe[3]);
+            y =  0.25*( (1.0-rn)*(1-sn)*ye[0]+(1.0-rn)*(1+sn)*ye[1]+(1.0+rn)*(1+sn)*ye[2]+(1.0+rn)*(1-sn)*ye[3]); 
+          }
+          else if(bns->elementType==TETRAHEDRA){
             rn = mesh->cubr[n];
             sn = mesh->cubs[n]; 
             tn = mesh->cubt[n];
@@ -270,8 +279,7 @@ void bnsMRABPmlSetup(bns_t *bns, setupAide &options){
                 bns->pmlSigmaZ[mesh->cubNp*pmlId + n] = bns->sigmaZmax*pow(z-zmin,bns->pmlOrder)/zminScale;
             }
           }
-   
-      }
+        }
       }
     }
 

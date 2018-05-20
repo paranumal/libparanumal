@@ -406,8 +406,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
   // Setup MRAB PML
   if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
-    printf("Preparing Pml for multirate rate\n");
-    
+    printf("Preparing Pml for multirate rate\n");  
     bnsMRABPmlSetup(bns, options);
 
     mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
