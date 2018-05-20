@@ -18,7 +18,7 @@ kernel void bnsVorticityQuad2D(const dlong Nelements,
           const dlong e = eo+es; // element in block
           if(e<Nelements){ 
             const dlong qbase = e*p_Nfields*p_Np + j*p_Nq +i;
-            const dfloat rho= q[qbase + 0*p_Np];
+            const dfloat q0 = q[qbase + 0*p_Np];
             const dfloat q1 = q[qbase + 1*p_Np];
             const dfloat q2 = q[qbase + 2*p_Np];
             
