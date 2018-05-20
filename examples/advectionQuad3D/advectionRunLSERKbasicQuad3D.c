@@ -5,7 +5,7 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
   mesh_t *mesh = solver->mesh;
     
   // MPI send buffer
-  dfloat * test_q = (dfloat *) calloc(mesh->Nelements*solver->Nfields*mesh->Np,sizeof(dfloat));
+  dfloat * test_q = (dfloat *) calloc(mesh->NgridElements*solver->Nfields*mesh->Np,sizeof(dfloat));
     
   //kernel arguments
   dfloat alpha = alpha_scale;
@@ -16,6 +16,8 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			       mesh->Nelements,
 			       solver->o_rlocal,
 			       solver->o_slocal,
+			       solver->o_par_loc,
+			       solver->o_perp_index,
 			       solver->o_eInterp,
 			       solver->o_overlapDirection,
 			       solver->o_rhsq);
@@ -71,10 +73,12 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 				     mesh->Nelements,
 				     solver->o_rlocal,
 				     solver->o_slocal,
+				     solver->o_par_loc,
+				     solver->o_perp_index,
 				     solver->o_eInterp,
 				     solver->o_overlapDirection,
 				     solver->o_rhsq);
-	
+				     
 	solver->filterKernelH(mesh->Nelements,
 			      mesh->NgridElements,
 			      solver->o_dualProjMatrix,
@@ -106,10 +110,6 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			     solver->o_qCorr,
 			     solver->o_resq,
 			     solver->o_qpre);
-      }
-      if (tstep == 49) {
-	  solver->o_qpre.copyTo(solver->q);
-	  advectionErrorNormQuad3D(solver,50*solver->dt,"start",0);
       }
   }
 }

@@ -2,6 +2,8 @@ kernel void boltzmannLoadFilterGridQuad3D(const iint Ngrid,
 					  const iint Nelements,
 					  const dfloat * restrict rlocal,
 					  const dfloat * restrict slocal,
+					  const dfloat * restrict par_loc,
+					  const iint * restrict perp_index,
 					  const iint * restrict eInterp,
 					  const char * restrict overlapDirection,
 					  dfloat * restrict rhsq) {
@@ -9,31 +11,32 @@ kernel void boltzmannLoadFilterGridQuad3D(const iint Ngrid,
     for(iint s = 0; s < p_Nq; ++s; inner1) {
       for(iint r = 0; r < p_Nq; ++r; inner0) {
 	char overlapDir = overlapDirection[e];
-	iint n = s*p_Np + r;
+	iint n = s*p_Nq + r;
 	iint eRef = eInterp[e*p_Np + n];
+	iint stripe = perp_index[e*p_Np + n];
 	for (iint fld = 0; fld < p_Nfields; ++fld) {
 	  dfloat q_sum = 0;
 	  for (iint li = 0; li < p_Nq; ++li) {
-	    dfloat q_prod = 1;
+	    dfloat q_prod;
 	    if (overlapDir) {
-	      q_prod *= rhsq[eRef*p_Nfields*p_Np + fld*p_Np + li*p_Nq + r];
+	      q_prod = rhsq[eRef*p_Nfields*p_Np + fld*p_Np + li*p_Nq + stripe];
 	    }
 	    else {
-	      q_prod *= rhsq[eRef*p_Nfields*p_Np + fld*p_Np + s*p_Nq + li];
+	      q_prod = rhsq[eRef*p_Nfields*p_Np + fld*p_Np + stripe*p_Nq + li];
 	    }
 	    for (iint lj = 0; lj < p_Nq; ++lj) {
 	      if (li != lj) {
 		if (overlapDir) {
-		  q_prod *= (slocal[(Nelements + e)*p_Np + n] - slocal[eRef*p_Np + lj*p_Nq + r])/(slocal[eRef*p_Np + li*p_Nq + r] - slocal[eRef*p_Np + lj*p_Nq + r]);
+		  q_prod *= (par_loc[e*p_Np + n] - slocal[eRef*p_Np + lj*p_Nq + stripe])/(slocal[eRef*p_Np + li*p_Nq + stripe] - slocal[eRef*p_Np + lj*p_Nq + stripe]);
 		}
 		else {
-		  q_prod *= (rlocal[(Nelements + e)*p_Np + n] - rlocal[eRef*p_Np + s*p_Nq + lj])/(rlocal[eRef*p_Np + s*p_Nq + li] - rlocal[eRef*p_Np + s*p_Nq + lj]);
+		  q_prod *= (par_loc[e*p_Np + n] - rlocal[eRef*p_Np + stripe*p_Nq + lj])/(rlocal[eRef*p_Np + stripe*p_Nq + li] - rlocal[eRef*p_Np + stripe*p_Nq + lj]);
 		}
 	      }
 	    }
 	    q_sum += q_prod;
 	  }
-	  rhsq[(e+Nelements)*p_Nfields*p_Np + fld*p_Np + s*p_Nq + r] = q_sum;
+	  rhsq[(e+Nelements)*p_Nfields*p_Np + fld*p_Np + n] = q_sum;
 	}
       }
     }

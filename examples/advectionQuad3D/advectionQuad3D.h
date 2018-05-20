@@ -43,6 +43,8 @@ typedef struct {
   occa::memory o_overlapDirection;
   occa::memory o_rlocal;
   occa::memory o_slocal;
+  occa::memory o_par_loc;
+  occa::memory o_perp_index;
   occa::memory o_gridToE;
   occa::kernel haloExtractKernel;
   occa::kernel haloScatterKernel;
