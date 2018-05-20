@@ -4,6 +4,7 @@
 // adapted from http://paulbourke.net/geometry/polygonise/source1.c
 // https://michelanders.blogspot.com/2012/02/marching-tetrahedrons-in-python.html
 
+
 #define p_plotNfields (p_dim+p_Nfields)
 
 dfloat intersection(const dfloat iso, const dfloat val1, const dfloat val2){
@@ -20,9 +21,9 @@ dfloat intersection(const dfloat iso, const dfloat val1, const dfloat val2){
 
 void intersect(const int fld,
 	       const dfloat iso, 
-	       const dfloat *vals1,
-	       const dfloat *vals2,
-	       dfloat *valsIso ){
+	       const dfloat * restrict vals1,
+	       const dfloat * restrict vals2,
+	       dfloat * restrict valsIso ){
 
   const dfloat r = intersection(iso, vals1[fld], vals2[fld]);
   
@@ -32,13 +33,13 @@ void intersect(const int fld,
 }
 
 int marchingTet(const int fld,
-		const dfloat vals[][p_plotNfields], // stack X and fields
+		const dfloat  restrict vals[][p_plotNfields], // stack X and fields
 		const int v0,
 		const int v1,
 		const int v2,
 		const int v3,
 		const dfloat iso,
-		dfloat *valsIso){
+		dfloat * restrict valsIso){
   
   int ntri = 0;
 
@@ -159,16 +160,16 @@ int marchingTet(const int fld,
 kernel void meshIsoSurface3D(const int Nelements,    // number of elements
 			     const int isoField,     // which field to use for isosurfacing
 			     const int isoNlevels,   // number of isosurface levels
-			     const dfloat *isoLevels,// array of isosurface levels
+			     const dfloat * restrict isoLevels,// array of isosurface levels
 			     const int isoMaxNtris,  // maximum number of generated triangles
-			     const dfloat *x,     
-			     const dfloat *y,
-			     const dfloat *z,
-			     const dfloat *q,
-			     const dfloat *plotInterp,
-			     const int *plotEToV,
-			     int *isoNtris,          // output: number of generated triangles
-			     dfloat *isoQ            // output: (p_dim+p_Nfields)*3*isoNtris[0] values (x,y,z,q0,q1..)
+			     const dfloat * restrict x,     
+			     const dfloat * restrict y,
+			     const dfloat * restrict z,
+			     const dfloat * restrict q,
+			     const dfloat * restrict plotInterp,
+			     const int * restrict plotEToV,
+			     int * restrict isoNtris, // output: number of generated triangles
+			     dfloat * restrict isoQ   // output: (p_dim+p_Nfields)*3*isoNtris[0] values (x,y,z,q0,q1..)
 			     ){
 
   
