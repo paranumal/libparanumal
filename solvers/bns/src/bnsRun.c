@@ -88,7 +88,9 @@ occaTimerTic(mesh->device,"BOLTZMANN");
 tic_tot = MPI_Wtime();
 
 
-if( bns->fixed_dt ){
+ if( options.compareArgs("TIME INTEGRATOR", "MRSAAB")  || 
+     options.compareArgs("TIME INTEGRATOR", "LSERK")   ||
+     (options.compareArgs("TIME INTEGRATOR", "SARK")  && bns->fixed_dt ) ){
 
  for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
       
