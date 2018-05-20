@@ -3,9 +3,15 @@
 void bnsReport(bns_t *bns, dfloat time, setupAide &options){
 
   mesh_t *mesh = bns->mesh; 
-   
+
+  bns->vorticityKernel(mesh->Nelements,
+                       mesh->o_vgeo,
+                       mesh->o_Dmatrices,
+                       bns->o_q,
+                       bns->o_Vort); 
   // copy data back to host
   bns->o_q.copyTo(bns->q);
+  bns->o_Vort.copyTo(bns->Vort);
 
 
   // report ramp function

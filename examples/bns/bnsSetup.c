@@ -489,9 +489,13 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
 }
 
+  
+  bns->Vort   = (dfloat*) calloc(3*mesh->Nelements*mesh->Np, sizeof(dfloat));
+  bns->o_Vort = mesh->device.malloc(3*mesh->Nelements*mesh->Np*sizeof(dfloat), bns->Vort);
+  
 
 
-
+  
 
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
@@ -660,6 +664,17 @@ for (int r=0;r<size;r++){
         sprintf(kernelName, "bnsMRSAABPmlUpdate%s", suffixUpdate);
         bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
         }
+
+
+         // Surface kernels 
+        sprintf(fileName, "okl/bnsVorticity.okl");
+        sprintf(kernelName, "bnsVorticity%s", suffix);
+        bns->vorticityKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+
+
+
+
+
     }
   MPI_Barrier(MPI_COMM_WORLD);
 }
