@@ -1,14 +1,12 @@
 #include "ins.h"
 
-void insReport(ins_t *ins, int tstep){
+void insReport(ins_t *ins, dfloat time, int tstep){
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   mesh_t *mesh = ins->mesh;
 
-  dfloat t = (tstep)*ins->dt;
-  
   ins->vorticityKernel(mesh->Nelements,
                        mesh->o_vgeo,
                        mesh->o_Dmatrices,
@@ -35,7 +33,7 @@ void insReport(ins_t *ins, int tstep){
   ins->o_Div.copyTo(ins->Div);
 
   // do error stuff on host
-  insError(ins, t);
+  insError(ins, time);
 
   if(ins->options.compareArgs("OUTPUT TYPE","VTU")){ 
     // output field files

@@ -5,6 +5,7 @@ kernel void insVelocityUpdate(const dlong Nelements,
                               const dfloat dt,
                               const dlong fieldOffset,
                               const dfloat * restrict prkA,
+                              const dfloat * restrict prkAA,
                               const dfloat * restrict rkGP,
                               const dfloat * restrict GP,
                                     dfloat * restrict rkU){
@@ -14,17 +15,26 @@ kernel void insVelocityUpdate(const dlong Nelements,
       const dlong id  = n + e*p_Np;
 
       for (int i=0;i<p_NVfields;i++) {
-        dfloat Un = rkU[id+i*fieldOffset] - dt*rkGP[id+i*fieldOffset];
+        dfloat Un;
+        if (ARKswitch) {
+          dfloat prkAAn = prkAA[stage*(p_Nstages+1)+stage];
 
-        for (int s=0;s<stage;s++) {
-          dfloat prkAn;
-          if (ARKswitch)
-            prkAn = prkA[stage*(p_Nstages+1)+s];
-          else
-            prkAn = prkA[s];
-          
-          Un += dt*prkAn*GP[id+i*fieldOffset+s*p_NVfields*fieldOffset];
+          Un = rkU[id+i*fieldOffset] - dt*prkAAn*rkGP[id+i*fieldOffset];
+          for (int s=0;s<stage;s++) {
+            dfloat prkAn  = prkA [stage*(p_Nstages+1)+s];
+            dfloat prkAAn = prkAA[stage*(p_Nstages+1)+s];
+            
+            Un += dt*(prkAn-prkAAn)*GP[id+i*fieldOffset+s*p_NVfields*fieldOffset];
+          }
+        } else {
+          Un = rkU[id+i*fieldOffset] - dt*rkGP[id+i*fieldOffset];
+
+          for (int s=0;s<stage;s++) {
+            dfloat prkAn = prkA[s];
+            Un += dt*prkAn*GP[id+i*fieldOffset+s*p_NVfields*fieldOffset];
+          }
         }
+
         rkU[id+i*fieldOffset] = Un;
       }
     }

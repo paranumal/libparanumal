@@ -68,7 +68,7 @@ typedef struct {
   //ARK data
   int Nrk;
   dfloat *rkC;
-  dfloat *erkA, *irkA, *prkA;
+  dfloat *erkA, *irkA, *prkA, *prkAA;
   dfloat *erkB, *irkB, *prkB;
   dfloat *erkE, *irkE, *prkE;
   int embeddedRKFlag;
@@ -119,7 +119,7 @@ typedef struct {
 
   //ARK data
   occa::memory o_rkC;
-  occa::memory o_erkA, o_irkA, o_prkA;
+  occa::memory o_erkA, o_irkA, o_prkA, o_prkAA;
   occa::memory o_erkB, o_irkB, o_prkB;
   occa::memory o_erkE, o_irkE, o_prkE;
 
@@ -173,7 +173,7 @@ void insRunARK(ins_t *ins);
 void insRunEXTBDF(ins_t *ins);
 
 void insPlotVTU(ins_t *ins, char *fileNameBase);
-void insReport(ins_t *ins, int tstep);
+void insReport(ins_t *ins, dfloat time,  int tstep);
 void insError(ins_t *ins, dfloat time);
 
 void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU);

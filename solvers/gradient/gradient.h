@@ -57,5 +57,5 @@ void gradientError(mesh_t *mesh, dfloat time);
 
 void gradientReport(gradient_t *gradient, dfloat time, setupAide &options);
 
-void gradientPlotVTU(gradient_t *gradient, char *fileName);
+void gradientPlotVTU(gradient_t *gradient, int isoNtris, dfloat *isoq, char *fileName);
 

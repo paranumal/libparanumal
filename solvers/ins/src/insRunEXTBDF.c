@@ -70,7 +70,7 @@ void insRunEXTBDF(ins_t *ins){
 
   ins->dt = oldDt;
   // Write Initial Data
-  insReport(ins, 0);
+  insReport(ins, 0.0, 0);
 
   for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
     if(tstep<1) 
@@ -131,7 +131,7 @@ void insRunEXTBDF(ins_t *ins){
     if(((tstep+1)%(ins->outputStep))==0){
       if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
       if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
-      insReport(ins, tstep+1);
+      insReport(ins, time+ins->dt, tstep+1);
     }
 
     if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
@@ -144,7 +144,7 @@ void insRunEXTBDF(ins_t *ins){
 
   dfloat finalTime = ins->NtimeSteps*ins->dt;
   printf("\n");
-  insReport(ins, ins->NtimeSteps);
+  insReport(ins, finalTime,ins->NtimeSteps);
   
   if(rank==0) occa::printTimer();
 }

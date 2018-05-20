@@ -3,6 +3,7 @@ kernel void insPressureUpdate(const dlong Nelements,
                             const int stage,
                             const int ARKswitch,
                             const dfloat * restrict prkA,
+                            const dfloat * restrict prkAA,
                             const dlong fieldOffset,
                             const dfloat * restrict PI,
                             const dfloat * restrict P,
@@ -12,16 +13,22 @@ kernel void insPressureUpdate(const dlong Nelements,
     for(int n=0;n<p_Np;++n;inner0){
       const dlong id  = n + e*p_Np;
 
-      dfloat rkPn = PI[id];
+      dfloat rkPn;
+      if (ARKswitch) {
+        rkPn = PI[id] + P[id];
+        //rkPn = PI[id];
+        // for (int s=0;s<stage;s++) {
 
-      for (int s=0;s<stage;s++) {
-        dfloat prkAn;
-        if (ARKswitch)
-          prkAn = prkA[stage*(p_Nstages+1)+s];
-        else
-          prkAn = prkA[s];
-        
-        rkPn += prkAn*P[id+s*fieldOffset];
+        //   dfloat prkAn = prkA[stage*(p_Nstages+1)+s];   
+        //   rkPn += P[id+s*fieldOffset];
+        // }
+      } else {
+        rkPn = PI[id];
+        for (int s=0;s<stage;s++) {
+
+          dfloat prkAn = prkA[s];
+          rkPn += prkAn*P[id+s*fieldOffset];
+        }
       }
 
       rkP[id] = rkPn;      
