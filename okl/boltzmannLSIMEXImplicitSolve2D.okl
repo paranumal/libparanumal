@@ -30,14 +30,8 @@ for(int es=0;es<Nelements;++es;outer0){
     dfloat qim4 = qex4;
     dfloat qim5 = qex5;
     dfloat qim6 = qex6; 
-    //
-    #if DENSITY_SHIFT
-        dfloat delta = 1e-2;
-        dfloat iqex1 = 1.f/occaSqrt(qex1*qex1+delta*delta);
-    #else
-        dfloat  iqex1 = 1.f/qex1;
-    #endif
-    
+   
+    dfloat  iqex1 = 1.f/qex1;
     // Hold the constant part of nonlinear function
     dfloat N4c = -(qex2*qex3*iqex1 );
     dfloat N5c = -p_invsqrt2*( qex2*qex2*iqex1 );
@@ -151,13 +145,7 @@ kernel void boltzmannLSIMEXImplicitSolveCub2D(const int Nelements,
               qe6 += Icn*s_qE[es][5][m];
             }
         
-        //
-        #if DENSITY_SHIFT
-        dfloat delta = 1e-2;
-        dfloat iqe1 = 1.f/occaSqrt(qe1*qe1+delta*delta);
-        #else
         dfloat  iqe1 = 1.f/qe1;
-        #endif
    
         // Hold the constant part of nonlinear function
          N4c = -(qe2*qe3*iqe1 );
