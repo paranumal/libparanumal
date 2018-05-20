@@ -1,0 +1,88 @@
+#define p_Nvort 3
+
+kernel void bnsVorticityTet3D(const dlong Nelements,
+                              const dfloat * restrict vgeo,
+                              const dfloat * restrict DT,
+                              const dfloat * restrict q,
+                                    dfloat * restrict Vort){  
+  
+  // block partition of elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+    
+    shared dfloat s_u[p_NblockV][p_Np];
+    shared dfloat s_v[p_NblockV][p_Np];
+    shared dfloat s_w[p_NblockV][p_Np];
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+      const dlong e = eo+es; 
+        if (e<Nelements) {
+          const dlong id = e*p_Nfields*p_Np + n;
+          const dfloat q0  = q[id + 0*p_Np]; // rho
+          const dfloat q1  = q[id + 1*p_Np]; // q1
+          const dfloat q2  = q[id + 2*p_Np]; // q2
+          const dfloat q3  = q[id + 3*p_Np]; // q2
+          // get physical velocities
+          s_u[es][n] = p_sqrtRT*q1/q0;
+          s_v[es][n] = p_sqrtRT*q2/q0;        
+          s_w[es][n] = p_sqrtRT*q3/q0;        
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for(int es=0;es<p_NblockV;++es;inner1){
+      for(int n=0;n<p_Np;++n;inner0){
+        const dlong e = eo+es; 
+        if(e<Nelements){
+
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+          const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+          const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+          const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+          const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+
+          dfloat ur = 0, vr = 0, wr=0;
+          dfloat us = 0, vs = 0, ws=0;
+          dfloat ut = 0, vt = 0, wt=0;
+
+          occaUnroll(p_Np)
+            for(int i=0;i<p_Np;++i) {
+              const dfloat Drn = DT[n + i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsn = DT[n + i*p_Np+1*p_Np*p_Np];
+              const dfloat Dtn = DT[n + i*p_Np+1*p_Np*p_Np];
+              ur += Drn*s_u[es][i];
+              us += Dsn*s_u[es][i];
+              ut += Dtn*s_u[es][i];
+              vr += Drn*s_v[es][i];
+              vs += Dsn*s_v[es][i];
+              vt += Dtn*s_v[es][i];
+              wr += Drn*s_w[es][i];
+              ws += Dsn*s_w[es][i];
+              wt += Dtn*s_w[es][i];
+
+            }
+
+          const dfloat uy = drdy*ur + dsdy*us + dtdy*ut;
+          const dfloat uz = drdz*ur + dsdz*us + dtdz*ut;
+
+          const dfloat vx = drdx*vr + dsdx*vs + dtdx*vt;
+          const dfloat vz = drdz*vr + dsdz*vs + dtdz*vt;
+
+          const dfloat wx = drdx*wr + dsdx*ws + dtdx*wt;
+          const dfloat wy = drdy*wr + dsdy*ws + dtdy*wt;
+
+          const dlong id = p_Nvort*e*p_Np + n; 
+
+          Vort[id+0*p_Np] = wy-vz;
+          Vort[id+1*p_Np] = uz-wx;
+          Vort[id+2*p_Np] = vx-uy;
+        }
+      }
+    }
+  }
+}
