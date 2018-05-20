@@ -97,7 +97,7 @@ CUBATURE
 100
 
 [CFL]
-0.1
+0.15
 
 [RESTART FROM FILE]
 0
@@ -106,5 +106,5 @@ CUBATURE
 VTU
 
 [OUTPUT FILE NAME]
-square_cyclinder3D
-#/scratch/boltzmannT/square_cyclinder3D
+#square_cyclinder3D
+/scratch/boltzmannT/square_cyclinder3D

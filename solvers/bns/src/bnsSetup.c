@@ -125,23 +125,25 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   // Output interval for variable dt integration
   options.getArgs("OUTPUT INTERVAL",   bns->outputInterval);
 
-  printf("=============WRITING INPUT PARAMETERS===================\n");
 
-  printf("REYNOLDS NUMBER\t:\t%.2e\n", bns->Re);
-  printf("MACH NUMBER\t:\t%.2e\n", bns->Ma);
-  printf("CFL NUMBER\t:\t%.2e\n", bns->cfl);
-  printf("START TIME\t:\t%.2e\n", bns->startTime);
-  printf("FINAL TIME\t:\t%.2e\n", bns->finalTime);
-  printf("FIXED DT\t:\t%d\n", bns->fixed_dt);
-  printf("PML FORMULATION\t:\t%d\n", bns->pmlFlag);
-  if(bns->pmlFlag){
-    printf("PML PROFILE N\t:\t%d\n", bns->pmlOrder);
-    printf("PML SIGMA X\t:\t%.2e\n", bns->sigmaXmax);
-    printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
-    printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
+  if(rank==0){
+    printf("=============WRITING INPUT PARAMETERS===================\n");
+
+    printf("REYNOLDS NUMBER\t:\t%.2e\n", bns->Re);
+    printf("MACH NUMBER\t:\t%.2e\n", bns->Ma);
+    printf("CFL NUMBER\t:\t%.2e\n", bns->cfl);
+    printf("START TIME\t:\t%.2e\n", bns->startTime);
+    printf("FINAL TIME\t:\t%.2e\n", bns->finalTime);
+    printf("FIXED DT\t:\t%d\n", bns->fixed_dt);
+    printf("PML FORMULATION\t:\t%d\n", bns->pmlFlag);
+    if(bns->pmlFlag){
+      printf("PML PROFILE N\t:\t%d\n", bns->pmlOrder);
+      printf("PML SIGMA X\t:\t%.2e\n", bns->sigmaXmax);
+      printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
+      printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
+    }
+    printf("ERROR STEP\t:\t%d\n", bns->errorStep);
   }
-  printf("ERROR STEP\t:\t%d\n", bns->errorStep);
-
     
 
   // printf("Starting initial conditions\n");
