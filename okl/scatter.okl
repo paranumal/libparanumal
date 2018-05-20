@@ -2,20 +2,24 @@
 kernel void scatter(const dlong Nscatter,
 		   const dlong * restrict scatterStarts,
 		   const dlong * restrict scatterIds,
+       const int Nentries,
+       const dlong stride,
 		   const dfloat * restrict q,
 		   dfloat * restrict scatterq){
 
   for(dlong s=0;s<Nscatter;++s;tile(256)){
 
     if(s<Nscatter){
-      const dfloat qs = q[s];
-      
-      const dlong start = scatterStarts[s];
-      const dlong end = scatterStarts[s+1];
-      
-      for(dlong n=start;n<end;++n){
-      	const dlong id =	scatterIds[n];
-      	scatterq[id] = qs;
+      for (int i=0;i<Nentries;i++) {
+        const dfloat qs = q[Nentries*s+i];
+        
+        const dlong start = scatterStarts[s];
+        const dlong end = scatterStarts[s+1];
+        
+        for(dlong n=start;n<end;++n){
+        	const dlong id =	scatterIds[n];
+        	scatterq[id+i*stride] = qs;
+        }
       }
     }
   }

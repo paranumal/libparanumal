@@ -109,14 +109,14 @@ groupDatasets1Display.SetScalarBarVisibility(renderView1, False)
 
 # current camera placement for renderView1
 renderView1.InteractionMode = '2D'
-renderView1.CameraPosition = [3.8648142362157496, -0.12321016819782263, 25.0]
-renderView1.CameraFocalPoint = [3.8648142362157496, -0.12321016819782263, 0.0]
+renderView1.CameraPosition = [3., 0, 12.0]
+renderView1.CameraFocalPoint = [3., 0, 0.0]
 renderView1.CameraParallelScale = 6.210760565455133
 
 # save animation
 #SaveAnimation(imageFilesOut+'.avi', renderView1, ImageResolution=[1596, 800], FrameRate=15, FrameWindow=[0, len(files)])
 SaveAnimation(imageFilesOut+'.png', renderView1, ImageResolution=[1855, 1163],
-    FrameWindow=[0, 10])
+    FrameWindow=[0, Nfiles])
 
 #### uncomment the following to render all views
 #RenderAllViews()

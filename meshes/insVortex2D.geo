@@ -1,4 +1,4 @@
-res = DefineNumber[0.1];
+res = DefineNumber[0.025];
 Point(1) = {-0.5, -0.5, 0, res};
 Point(2) = {-0.5, 0.5, 0, res};
 Point(3) = {0.5, 0.5, 0, res};
@@ -17,7 +17,6 @@ Line(7) = {2, 5};
 Line(8) = {5, 1};
 Line Loop(9) = {1, 2, 3, 4, 5, 6, 7, 8};
 Plane Surface(9) = {9};
-Physical Line("Inflow",2) = {6, 4, 2, 8, 5, 3, 1, 7};
-//+Physical Line("Outflow",3) = {5, 3, 1, 7};
 Physical Surface("Domain",9) = {9};
-Mesh.Algorithm=2; 
+Physical Line("Inflow",2) = {2, 4, 6, 8};
+Physical Line("Outflow",3) = {1, 3, 5, 7};
