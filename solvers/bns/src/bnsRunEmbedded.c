@@ -136,6 +136,9 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
           bns->dt = nextOutputTime-bns->time;
           // print
           printf("Taking output mini step: %g\n", bns->dt);
+          
+          // Compute new coefficients
+          bnsSAADRKCoefficients(bns, options);
 
           // if(options.compareArgs("TIME INTEGRATOR","SARK"))  // SA Adaptive RK 
           bnsSARKStep(bns, bns->time, haloBytes, sendBuffer, recvBuffer, options);
@@ -147,6 +150,10 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
           bnsReport(bns, nextOutputTime, options);
           // restore time step
           bns->dt = savedt;
+
+          // Go back to old coefficients
+          bnsSAADRKCoefficients(bns, options);
+
           // increment next output time
           nextOutputTime += outputInterval;
 

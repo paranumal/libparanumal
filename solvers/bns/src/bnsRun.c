@@ -3,6 +3,10 @@
 void bnsRun(bns_t *bns, setupAide &options){
 
   mesh_t  *mesh = bns->mesh; 
+
+  int rank, size; 
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
     
   // MPI send buffer
   dfloat *sendBuffer;
@@ -71,7 +75,7 @@ void bnsRun(bns_t *bns, setupAide &options){
 
   }
 
-printf("N: %d Nsteps: %d dt: %.5e \n", mesh->N, bns->NtimeSteps, bns->dt);
+if(rank==0) printf("N: %d Nsteps: %d dt: %.5e \n", mesh->N, bns->NtimeSteps, bns->dt);
 
 
 
@@ -172,9 +176,7 @@ tic_tot = MPI_Wtime();
   MPI_Allreduce(&elp_sol, &gelp_sol, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   
   
-  int rank, size; 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  
 
   if(rank==0){
     printf("ORDER\tSIZE\tTOTAL_TIME\tSOLVER_TIME\tOUTPUT TIME\n");
