@@ -23,7 +23,7 @@
     *(vB) = p_vbar;                 \
     *(wB) = p_wbar;                 \
   } else if(bc==3){                 \
-    *(rB) = p_rbar;                 \
+    *(rB) = pM;                 \
     *(uB) = uM;                     \
     *(vB) = vM;                     \
     *(wB) = wM;                     \
