@@ -16,7 +16,7 @@ CC	= mpic++.openmpi
 LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"'
+CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"'
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -g 
@@ -28,6 +28,7 @@ INCLUDES = bns.h
 
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
+$(HDRDIR)/mesh2D.h \
 $(HDRDIR)/mesh3D.h
 
 # types of files we are going to construct rules for
@@ -39,21 +40,21 @@ $(HDRDIR)/mesh3D.h
 
 # list of objects to be compiled
 AOBJS    = \
-bnsMain.o \
-bnsSetup.o \
-bnsRun.o \
-bnsRampFunction.o \
-bnsPmlSetup.o \
-bnsMRABPmlSetup.o \
-bnsTimeStepperCoefficients.o \
-bnsSAADRKCoefficients.o \
-bnsPlotVTU.o \
-bnsReport.o \
-bnsError.o \
-bnsLSERKStep.o \
-bnsSARKStep.o \
-bnsMRSAABStep.o \
-bnsRunEmbedded.o    
+./src/bnsMain.o \
+./src/bnsSetup.o \
+./src/bnsRun.o \
+./src/bnsRampFunction.o \
+./src/bnsPmlSetup.o \
+./src/bnsMRABPmlSetup.o \
+./src/bnsTimeStepperCoefficients.o \
+./src/bnsSAADRKCoefficients.o \
+./src/bnsPlotVTU.o \
+./src/bnsReport.o \
+./src/bnsError.o \
+./src/bnsLSERKStep.o \
+./src/bnsSARKStep.o \
+./src/bnsMRSAABStep.o \
+./src/bnsRunEmbedded.o    
 
 # library objects
 LOBJS = \
