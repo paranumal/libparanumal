@@ -44,7 +44,7 @@ int main(int argc, char **argv){
     dfloat y = mesh->y[n];
     dfloat z = mesh->z[n];
 
-    gradient->q[n] = sin(M_PI*x)*sin(M_PI*y)*sin(M_PI*z);
+    gradient->q[n] = cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*z);
   }
 
   gradient->o_q.copyFrom(gradient->q);
