@@ -71,55 +71,66 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
                        1.0, 0.0};
     dfloat irkA[2*2] ={0.0, 0.0,\
                        0.0, 1.0};
+    
     dfloat prkA[2*2] ={0.0, 0.0,\
                        1.0, 0.0};
+    dfloat prkAA[2*2]={0.0, 0.0,\
+                       0.0, 1.0};                       
 
     ins->Nrk = Nrk;
     ins->rkC = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
     ins->erkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->irkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->prkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->prkAA= (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
 
     memcpy(ins->rkC, rkC, ins->Nrk*sizeof(dfloat));
     memcpy(ins->erkA, erkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->irkA, irkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->prkA, prkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->prkAA, prkAA, ins->Nrk*ins->Nrk*sizeof(dfloat));
 
+    ins->g0 =  1.0;
     ins->embeddedRKFlag = 0; //no embedded method
   } else if (options.compareArgs("TIME INTEGRATOR", "ARK2")) {
     ins->Nstages = 2;
     int Nrk = 3;
 
-    dfloat gamma = (2.0-sqrt(2))/2.0;
+    dfloat gamma = (2.0-sqrt(2.0))/2.0;
     dfloat delta = 1.0 - 1.0/(2.0*gamma);
 
     dfloat rkC[3]    ={  0.0,   gamma,   1.0};
 
     dfloat erkA[3*3] ={  0.0,     0.0,   0.0,\
-                       gamma,     0.0,   0.0
+                       gamma,     0.0,   0.0,\
                        delta, 1-delta,   0.0};
     dfloat irkA[3*3] ={  0.0,     0.0,   0.0,\
-                         0.0,   gamma,   0.0,
+                         0.0,   gamma,   0.0,\
                          0.0, 1-gamma, gamma};
+    
     dfloat prkA[3*3] ={  0.0,     0.0,   0.0,\
-                       gamma,     0.0,   0.0,
+                       gamma,     0.0,   0.0,\
                          1.0,     0.0,   0.0};
 
-    dfloat prkB[3] = {   0.5,     0.0,   0.5};
+    dfloat prkAA[3*3] = {0.0,     0.0,   0.0,\
+                         0.0,   gamma,   0.0,\
+                         0.5,     0.0,   0.5};
 
     ins->Nrk = Nrk;
     ins->rkC = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
     ins->erkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->irkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->prkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
-    ins->prkB = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
+    ins->prkAA= (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    
 
     memcpy(ins->rkC, rkC, ins->Nrk*sizeof(dfloat));
     memcpy(ins->erkA, erkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->irkA, irkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->prkA, prkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
-    memcpy(ins->prkB, prkB, ins->Nrk*sizeof(dfloat));
-
+    memcpy(ins->prkAA, prkAA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    
+    ins->g0 =  1.0/gamma;
     ins->embeddedRKFlag = 0; //no embedded method
   } 
 
@@ -251,6 +262,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   ins->o_U = mesh->device.malloc(ins->NVfields*ins->Nstages*Ntotal*sizeof(dfloat), ins->U);
   ins->o_P = mesh->device.malloc(              ins->Nstages*Ntotal*sizeof(dfloat), ins->P);
+
+  if (rank==0 && options.compareArgs("VERBOSE","TRUE")) 
+    occa::setVerboseCompilation(true);
+  else 
+    occa::setVerboseCompilation(false);
 
   for (int r=0;r<size;r++) {
     if (r==rank) {
@@ -466,10 +482,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->o_VmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), ins->VmapB);
   ins->o_PmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), ins->PmapB);
 
-  if (rank==0 && options.compareArgs("VERBOSE","TRUE")) 
-    occa::setVerboseCompilation(true);
-  else 
-    occa::setVerboseCompilation(false);
 
   kernelInfo.addDefine("p_blockSize", blockSize);
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
@@ -507,6 +519,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->o_erkA = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->erkA);
     ins->o_irkA = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->irkA);
     ins->o_prkA = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->prkA);
+    ins->o_prkAA= mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->prkAA);
   }
 
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
@@ -519,7 +532,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
     ins->o_extC = mesh->device.malloc(3*sizeof(dfloat)); 
 
-    ins->o_prkA = ins->o_extbdfC;
+    ins->o_prkA  = ins->o_extbdfC;
+    ins->o_prkAA = ins->o_extbdfC;
   }
 
   // MEMORY ALLOCATION
