@@ -75,7 +75,7 @@ if(bns->NrkStages==5){
 	// move data to device
 	bns->o_sarkC = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), rkC);
 	bns->o_sarkA = mesh->device.malloc(bns->NrkStages*bns->NrkStages*sizeof(dfloat), rkA);
-  bns->o_sarkE = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), rkE); 
+    bns->o_sarkE = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), rkE); 
 }
 
 else if(bns->NrkStages==7){

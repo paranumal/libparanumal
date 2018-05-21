@@ -84,7 +84,7 @@ dfloat meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels, dfloat finalT
     }
     
     if (rank==0) printf("Repartitioning for MRAB...\n");
-    meshMRABWeightedPartitionTet3D(mesh,weights,mesh->MRABNlevels, mesh->MRABlevel);
+    meshMRABWeightedPartition3D(mesh,weights,mesh->MRABNlevels, mesh->MRABlevel);
   }
 
   //construct element and halo lists

@@ -113,6 +113,8 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       occaTimerTic(mesh->device,"NonPmlRelaxationKernel");
       bns->relaxationKernel(mesh->MRABNelements[l],
                     mesh->o_MRABelementIds[l],
+                    mesh->o_vgeo,
+                    mesh->o_cubvgeo,
                     offset,
                     mesh->MRABshiftIndex[l],
                     mesh->o_cubInterpT,
@@ -127,6 +129,8 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
       bns->pmlRelaxationKernel(mesh->MRABpmlNelements[l],
                               mesh->o_MRABpmlElementIds[l],
                               mesh->o_MRABpmlIds[l],
+                              mesh->o_vgeo,
+                              mesh->o_cubvgeo,
                               offset,   
                               pmloffset, 
                               mesh->MRABshiftIndex[l],

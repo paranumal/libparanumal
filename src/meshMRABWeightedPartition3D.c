@@ -50,7 +50,7 @@ The algorithm performs the following steps
     the mesh setup. 
 
 ------------------------------------------------------------ */
-void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
+void meshMRABWeightedPartition3D(mesh3D *mesh, dfloat *weights,
                                       int numLevels, int *levels) {
 
   const dfloat TOL = 0.8; //tolerance on what partitions are ruled 'acceptable'
@@ -123,22 +123,30 @@ void meshMRABWeightedPartitionTet3D(mesh3D *mesh, dfloat *weights,
   
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
-
-  // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesTet3D(mesh);
-
-  // compute geometric factors
-  meshGeometricFactorsTet3D(mesh);
-
+  
+  if(mesh->Nverts==4){ // tetrahedral
+    // compute physical (x,y) locations of the element nodes
+    meshPhysicalNodesTet3D(mesh);
+    // compute geometric factors
+    meshGeometricFactorsTet3D(mesh);
+  }else{
+    // compute physical (x,y) locations of the element nodes
+    meshPhysicalNodesHex3D(mesh);
+    // compute geometric factors
+    meshGeometricFactorsHex3D(mesh);
+  }
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup(mesh);
 
   // connect face nodes (find trace indices)
   meshConnectFaceNodes3D(mesh);
-
+  
   // compute surface geofacs
-  meshSurfaceGeometricFactorsTet3D(mesh);
-
+  if(mesh->Nverts==4) // tetrahedral
+    meshSurfaceGeometricFactorsTet3D(mesh);
+  else
+    meshSurfaceGeometricFactorsHex3D(mesh);
+  
   // global nodes
   meshParallelConnectNodes(mesh);
 

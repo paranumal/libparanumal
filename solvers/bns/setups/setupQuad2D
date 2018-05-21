@@ -1,18 +1,21 @@
 [FORMAT]
 1.0
 
+[FORMAT]
+1.0
+
 [DATA FILE]
-data/bnsUniform3D.h
+data/bnsUniform2D.h
 
 [MESH FILE]
-../../meshes/boltzmannSquareCylinderPML3D.msh
-#../../meshes/boltzmannAcousticPulsePML3D.msh
+../../meshes/boltzmannSquareCylinderPMLQuad2D.msh
+#../../meshes/boltzmannSquareCylinderPMLStructuredQuad2D.msh
 
 [MESH DIMENSION]
-3
+2
 
 [ELEMENT TYPE] # number of edges
-6
+4
 
 [POLYNOMIAL DEGREE]
 3
@@ -29,10 +32,6 @@ PML
 [PML SIGMAY MAX]
 100
 
-[PML SIGMAZ MAX]
-100
-
-
 [THREAD MODEL]
 CUDA
 
@@ -43,7 +42,7 @@ CUDA
 0
 
 [TIME INTEGRATOR]
-LSERK  
+MRSAAB 
 
 [FIXED TIME STEP]
 1 
@@ -73,22 +72,22 @@ CUBATURE
 1000
 
 [REPORT FREQUENCY]
-1000
+1
 
 [START TIME]
 0
 
 [FINAL TIME]
-5
+50
 
 [OUTPUT INTERVAL]
 .5
 
 [ABSOLUTE TOLERANCE]
-1E-7
+1E-5
 
 [RELATIVE TOLERANCE]
-1E-5
+1E-4
 
 [MINUMUM TIME STEP SIZE]
 1E-10
@@ -97,7 +96,7 @@ CUBATURE
 100
 
 [CFL]
-0.5
+0.1
 
 [RESTART FROM FILE]
 0
@@ -106,4 +105,4 @@ CUBATURE
 VTU
 
 [OUTPUT FILE NAME]
-vtkOut/tshape
+square_cyclinder_quad

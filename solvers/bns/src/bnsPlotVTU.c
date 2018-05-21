@@ -59,60 +59,7 @@ void bnsPlotVTU(bns_t *bns, char *fileName){
     }
   }
   fprintf(fp, "       </DataArray>\n");
-  
-  
-
-
-#if 0
-  // calculate plot vorticity
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"VorticityDivergence\" NumberOfComponents=\"2\" Format=\"ascii\">\n");
-  dfloat *curlU = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  dfloat *divU  = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
-  
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      dfloat dUdr = 0, dUds = 0, dVdr = 0, dVds = 0;
-      for(int m=0;m<mesh->Np;++m){
-        int base = bns->Nfields*(m + e*mesh->Np);
-        dfloat rho = bns->q[base + 0];
-        dfloat u = bns->q[1 + base]*bns->sqrtRT/rho;
-        dfloat v = bns->q[2 + base]*bns->sqrtRT/rho;
-      	dUdr += mesh->Dr[n*mesh->Np+m]*u;
-      	dUds += mesh->Ds[n*mesh->Np+m]*u;
-      	dVdr += mesh->Dr[n*mesh->Np+m]*v;
-      	dVds += mesh->Ds[n*mesh->Np+m]*v;
-      }
-      dfloat rx = mesh->vgeo[e*mesh->Nvgeo+RXID];
-      dfloat ry = mesh->vgeo[e*mesh->Nvgeo+RYID];
-      dfloat sx = mesh->vgeo[e*mesh->Nvgeo+SXID];
-      dfloat sy = mesh->vgeo[e*mesh->Nvgeo+SYID];
-
-      dfloat dUdx = rx*dUdr + sx*dUds;
-      dfloat dUdy = ry*dUdr + sy*dUds;
-      dfloat dVdx = rx*dVdr + sx*dVds;
-      dfloat dVdy = ry*dVdr + sy*dVds;
-      
-      curlU[n] = dVdx-dUdy;
-      divU[n] = dUdx+dVdy;
-    }
-    
-    for(int n=0;n<mesh->plotNp;++n){
-      dfloat plotCurlUn = 0;
-      dfloat plotDivUn = 0;
-      for(int m=0;m<mesh->Np;++m){
-        plotCurlUn += mesh->plotInterp[n*mesh->Np+m]*curlU[m];
-        plotDivUn += mesh->plotInterp[n*mesh->Np+m]*divU[m];	
-      }
-      fprintf(fp, "       ");
-      fprintf(fp, "%g %g\n", plotCurlUn, plotDivUn);
-    }
-  }
-  fprintf(fp, "       </DataArray>\n");
-  free(curlU);
-  free(divU);
-  #endif
-
-
+ 
 
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh->Nelements;++e){
@@ -140,9 +87,28 @@ void bnsPlotVTU(bns_t *bns, char *fileName){
   fprintf(fp, "       </DataArray>\n");
 
 
+  // write out vorticity (need to fix for 3D vorticity)
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->plotNp;++n){
+      dfloat plotVortx = 0, plotVorty = 0, plotVortz = 0;
+      for(int m=0;m<mesh->Np;++m){
+        dlong id = m+e*mesh->Np*3;
+        dfloat vortx = bns->Vort[id+ 0*mesh->Np];
+        dfloat vorty = bns->Vort[id+ 1*mesh->Np];
+        dfloat vortz = bns->Vort[id+ 2*mesh->Np];
+        plotVortx += mesh->plotInterp[n*mesh->Np+m]*vortx;
+        plotVorty += mesh->plotInterp[n*mesh->Np+m]*vorty;
+        plotVortz += mesh->plotInterp[n*mesh->Np+m]*vortz;
+      }
+
+      fprintf(fp, "       ");
+      fprintf(fp, "%g %g %g\n", plotVortx, plotVorty, plotVortz);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
 
 
-  
   fprintf(fp, "     </PointData>\n");
   
   fprintf(fp, "    <Cells>\n");

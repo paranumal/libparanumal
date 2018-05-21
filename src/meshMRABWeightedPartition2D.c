@@ -50,7 +50,7 @@ The algorithm performs the following steps
 
 ------------------------------------------------------------ */
 
-void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,
+void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
                                       int numLevels, int *levels) {
 
   const dfloat TOL = 0.8; //tolerance on what partitions are ruled 'acceptable'
@@ -122,11 +122,16 @@ void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
 
+  if(mesh->Nverts==3){
   // compute physical (x,y) locations of the element nodes
-  meshPhysicalNodesTri2D(mesh);
-
-  // compute geometric factors
-  meshGeometricFactorsTri2D(mesh);
+    meshPhysicalNodesTri2D(mesh); 
+    // compute geometric factors
+    meshGeometricFactorsTri2D(mesh);
+  }
+  else{
+    meshPhysicalNodesQuad2D(mesh);
+    meshGeometricFactorsQuad2D(mesh);
+  }
 
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup(mesh);
@@ -134,8 +139,12 @@ void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,
   // connect face nodes (find trace indices)
   meshConnectFaceNodes2D(mesh);
 
+
   // compute surface geofacs
+  if(mesh->Nverts==3)
   meshSurfaceGeometricFactorsTri2D(mesh);
+  else
+  meshSurfaceGeometricFactorsQuad2D(mesh);
 
   // global nodes
   meshParallelConnectNodes(mesh);

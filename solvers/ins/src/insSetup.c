@@ -86,6 +86,41 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     memcpy(ins->prkA, prkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
 
     ins->embeddedRKFlag = 0; //no embedded method
+  } else if (options.compareArgs("TIME INTEGRATOR", "ARK2")) {
+    ins->Nstages = 2;
+    int Nrk = 3;
+
+    dfloat gamma = (2.0-sqrt(2))/2.0;
+    dfloat delta = 1.0 - 1.0/(2.0*gamma);
+
+    dfloat rkC[3]    ={  0.0,   gamma,   1.0};
+
+    dfloat erkA[3*3] ={  0.0,     0.0,   0.0,\
+                       gamma,     0.0,   0.0
+                       delta, 1-delta,   0.0};
+    dfloat irkA[3*3] ={  0.0,     0.0,   0.0,\
+                         0.0,   gamma,   0.0,
+                         0.0, 1-gamma, gamma};
+    dfloat prkA[3*3] ={  0.0,     0.0,   0.0,\
+                       gamma,     0.0,   0.0,
+                         1.0,     0.0,   0.0};
+
+    dfloat prkB[3] = {   0.5,     0.0,   0.5};
+
+    ins->Nrk = Nrk;
+    ins->rkC = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
+    ins->erkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->irkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->prkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->prkB = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
+
+    memcpy(ins->rkC, rkC, ins->Nrk*sizeof(dfloat));
+    memcpy(ins->erkA, erkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->irkA, irkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->prkA, prkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->prkB, prkB, ins->Nrk*sizeof(dfloat));
+
+    ins->embeddedRKFlag = 0; //no embedded method
   } 
 
 
