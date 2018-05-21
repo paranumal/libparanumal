@@ -1,21 +1,75 @@
 #include "bns.h"
 
 // complete a time step using LSERK4
-void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
+void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 				  dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options){
 
 
-const dlong offset    = 0.0;
-const dlong pmloffset = 0.0;
-const int shift       = 0; 
  // bns->shiftIndex = 0; 
- mesh_t *mesh = bns->mesh; 	
+ mesh_t *mesh = bns->mesh; 
+
+ dlong offset    = mesh->Nelements*mesh->Np*bns->Nfields;
+ dlong pmloffset = mesh->pmlNelements*mesh->Np*bns->Nfields;
+
+ const dfloat fzero = 0.0; 
+ const int    izero = 0; 
 
 // LSERK4 stages
-for(int rk=0;rk<mesh->Nrk;++rk){
+for(int rk=0;rk<bns->NrkStages;++rk){
 
   // intermediate stage time
-  dfloat t = bns->startTime + tstep*bns->dt + bns->dt*mesh->rkc[rk];
+  dfloat currentTime = time + bns->rkC[rk]*bns->dt;
+
+  occaTimerTic(mesh->device, "RKStageKernel");  
+  if(mesh->nonPmlNelements){
+    occaTimerTic(mesh->device, "NonPmlRKStageKernel");  
+    bns->updateStageKernel(mesh->nonPmlNelements,
+                           mesh->o_nonPmlElementIds,
+                           offset,
+                           rk,
+                           bns->dt,
+                           bns->o_sarkC,
+                           bns->o_rkA,
+                           bns->o_sarkA,
+                           bns->o_q,
+                           bns->o_rkrhsq,
+                           bns->o_rkq);
+    occaTimerToc(mesh->device, "NonPmlRKStageKernel");  
+  }
+  
+  if(mesh->pmlNelements){
+  occaTimerTic(mesh->device, "PmlRKStageKernel");  
+  bns->pmlUpdateStageKernel(mesh->pmlNelements,
+                        mesh->o_pmlElementIds,
+                        mesh->o_pmlIds,
+                        offset,
+                        pmloffset,
+                        rk,
+                        bns->dt,
+                        bns->o_sarkC,
+                        bns->o_rkA,
+                        bns->o_sarkA,
+                        bns->o_q,
+                        bns->o_pmlqx,
+                        bns->o_pmlqy,
+                        bns->o_pmlqz,
+                        bns->o_rkrhsq,
+                        bns->o_rkrhsqx,
+                        bns->o_rkrhsqy,
+                        bns->o_rkrhsqz,
+                        bns->o_rkq,
+                        bns->o_rkqx,
+                        bns->o_rkqy,
+                        bns->o_rkqz);
+  occaTimerToc(mesh->device, "PmlRKStageKernel");
+  }
+
+  occaTimerToc(mesh->device, "RKStageKernel");  
+
+
+
+
+
 
   if(mesh->totalHaloPairs>0){
     #if ASYNC 
@@ -26,7 +80,7 @@ for(int rk=0;rk<mesh->Nrk;++rk){
     mesh->haloExtractKernel(mesh->totalHaloPairs,
                 Nentries,
                 mesh->o_haloElementList,
-                bns->o_q,
+                bns->o_rkq,
                 mesh->o_haloBuffer);
 
     // copy extracted halo to HOST
@@ -36,10 +90,11 @@ for(int rk=0;rk<mesh->Nrk;++rk){
       mesh->device.setStream(defaultStream);
     #endif
   }
-
+    
+    // dfloat ramp = 1.0, drampdt = 0.0; 
     // COMPUTE RAMP FUNCTION 
     dfloat ramp, drampdt;
-    bnsRampFunction(t, &ramp, &drampdt);
+    bnsRampFunction(currentTime , &ramp, &drampdt);
       
 
     occaTimerTic(mesh->device, "VolumeKernel");    
@@ -49,17 +104,17 @@ for(int rk=0;rk<mesh->Nrk;++rk){
       bns->pmlVolumeKernel(mesh->pmlNelements,
                         mesh->o_pmlElementIds,
                         mesh->o_pmlIds,
-                        offset,    // 0
-                        pmloffset, // 0
-                        shift, // 0
+                        fzero,
+                        fzero,
+                        izero,
                         ramp, 
                         drampdt,
                         mesh->o_vgeo,
                         mesh->o_Dmatrices,
-                        bns->o_q,
-                        bns->o_pmlqx,
-                        bns->o_pmlqy,
-                        bns->o_pmlqz,
+                        bns->o_rkq,
+                        bns->o_rkqx,
+                        bns->o_rkqy,
+                        bns->o_rkqz,
                         bns->o_rhsq,
                         bns->o_pmlrhsqx,
                         bns->o_pmlrhsqy,
@@ -73,13 +128,13 @@ for(int rk=0;rk<mesh->Nrk;++rk){
       occaTimerTic(mesh->device,"NonPmlVolumeKernel");
        bns->volumeKernel(mesh->nonPmlNelements,
                           mesh->o_nonPmlElementIds,
-                          offset, 
-                          shift, 
+                          fzero,
+                          izero,
                           ramp, 
                           drampdt,
                           mesh->o_vgeo,
                           mesh->o_Dmatrices,
-                          bns->o_q,
+                          bns->o_rkq,
                           bns->o_rhsq);
       occaTimerToc(mesh->device,"NonPmlVolumeKernel");
   }
@@ -94,18 +149,20 @@ for(int rk=0;rk<mesh->Nrk;++rk){
 	  bns->pmlRelaxationKernel(mesh->pmlNelements,
                               mesh->o_pmlElementIds,
                               mesh->o_pmlIds,
-                              offset,    // 0
-                              pmloffset, // 0
-                              shift, // 0
+                              mesh->o_vgeo,
+                              mesh->o_cubvgeo,
+                              fzero,
+                              fzero,
+                              izero,
                               mesh->o_cubInterpT,
                               mesh->o_cubProjectT,
                               bns->o_pmlSigmaX,
                               bns->o_pmlSigmaY,
                               bns->o_pmlSigmaZ,
-                              bns->o_q,
-                              bns->o_pmlqx,
-                              bns->o_pmlqy,
-                              bns->o_pmlqz,
+                              bns->o_rkq,
+                              bns->o_rkqx,
+                              bns->o_rkqy,
+                              bns->o_rkqz,
                               bns->o_rhsq,
                               bns->o_pmlrhsqx,
                               bns->o_pmlrhsqy,
@@ -118,11 +175,13 @@ for(int rk=0;rk<mesh->Nrk;++rk){
     occaTimerTic(mesh->device, "NonPmlRelaxationKernel");
 	  bns->relaxationKernel(mesh->nonPmlNelements,
                           mesh->o_nonPmlElementIds,
-                          offset, // 0
-                          shift, //0
+                          mesh->o_vgeo,
+                          mesh->o_cubvgeo,
+                          fzero, // 0
+                          izero, //0
                           mesh->o_cubInterpT,
                           mesh->o_cubProjectT,
-                          bns->o_q,
+                          bns->o_rkq,
                           bns->o_rhsq);  
    occaTimerToc(mesh->device, "NonPmlRelaxationKernel");
 	}
@@ -146,7 +205,7 @@ for(int rk=0;rk<mesh->Nrk;++rk){
     meshHaloExchangeFinish(mesh);
     // copy halo data to DEVICE
     size_t offset = mesh->Np*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-    bns->o_q.asyncCopyFrom(recvBuffer, haloBytes, offset);
+    bns->o_rkq.asyncCopyFrom(recvBuffer, haloBytes, offset);
     mesh->device.finish();        
 
     #if ASYNC 
@@ -164,7 +223,7 @@ for(int rk=0;rk<mesh->Nrk;++rk){
     bns->pmlSurfaceKernel(mesh->pmlNelements,
                           mesh->o_pmlElementIds,
                           mesh->o_pmlIds,
-                          t,
+                          currentTime,
                           ramp,
                           mesh->o_sgeo,
                           mesh->o_LIFTT,
@@ -174,7 +233,7 @@ for(int rk=0;rk<mesh->Nrk;++rk){
                           mesh->o_x,
                           mesh->o_y,
                           mesh->o_z,
-                          bns->o_q,
+                          bns->o_rkq,
                           bns->o_rhsq,
                           bns->o_pmlrhsqx,
                           bns->o_pmlrhsqy,
@@ -186,7 +245,7 @@ for(int rk=0;rk<mesh->Nrk;++rk){
     occaTimerTic(mesh->device,"NonPmlSurfaceKernel");
     bns->surfaceKernel(mesh->nonPmlNelements,
                         mesh->o_nonPmlElementIds,
-                        t,
+                        currentTime,
                         ramp,
                         mesh->o_sgeo,
                         mesh->o_LIFTT,
@@ -196,17 +255,17 @@ for(int rk=0;rk<mesh->Nrk;++rk){
                         mesh->o_x,
                         mesh->o_y,
                         mesh->o_z,
-                        bns->o_q,
+                        bns->o_rkq,
                         bns->o_rhsq);
     occaTimerToc(mesh->device,"NonPmlSurfaceKernel");
   }
   occaTimerToc(mesh->device,"SurfaceKernel");
 
     
-  // ramp function for flow at next RK stage
-  dfloat tupdate = tstep*bns->dt + bns->dt*mesh->rkc[rk+1];
-  dfloat rampUpdate, drampdtUpdate;
-  bnsRampFunction(tupdate, &rampUpdate, &drampdtUpdate);
+  // // ramp function for flow at next RK stage
+  // dfloat tupdate  = time + bns->rkC[rk+1]*bns->dt;
+  // dfloat rampUpdate, drampdtUpdate;
+  // bnsRampFunction(tupdate, &rampUpdate, &drampdtUpdate);
 
   //UPDATE
   occaTimerTic(mesh->device,"UpdateKernel");
@@ -216,24 +275,34 @@ for(int rk=0;rk<mesh->Nrk;++rk){
   if (mesh->pmlNelements){   
     occaTimerTic(mesh->device,"PmlUpdateKernel");
     bns->pmlUpdateKernel(mesh->pmlNelements,
-                          mesh->o_pmlElementIds,
-                          mesh->o_pmlIds,
-                          bns->dt,
-                          mesh->rka[rk],
-                          mesh->rkb[rk],
-                          rampUpdate,
-                          bns->o_rhsq,
-                          bns->o_pmlrhsqx,
-                          bns->o_pmlrhsqy,
-                          bns->o_pmlrhsqz,
-                          bns->o_resq,
-                          bns->o_pmlresqx,
-                          bns->o_pmlresqy,
-                          bns->o_pmlresqz,
-                          bns->o_pmlqx,
-                          bns->o_pmlqy,
-                          bns->o_pmlqz,
-                          bns->o_q);
+                        mesh->o_pmlElementIds,
+                        mesh->o_pmlIds,
+                        offset,
+                        pmloffset,
+                        rk,
+                        bns->dt,
+                        bns->o_sarkC,
+                        bns->o_rkA, 
+                        bns->o_rkE,
+                        bns->o_sarkA, 
+                        bns->o_sarkE,
+                        bns->o_q,
+                        bns->o_pmlqx,
+                        bns->o_pmlqy,
+                        bns->o_pmlqz,
+                        bns->o_rhsq,
+                        bns->o_pmlrhsqx,
+                        bns->o_pmlrhsqy,
+                        bns->o_pmlrhsqz,
+                        bns->o_rkrhsq,
+                        bns->o_rkrhsqx,
+                        bns->o_rkrhsqy,
+                        bns->o_rkrhsqz,
+                        bns->o_rkq,
+                        bns->o_rkqx,
+                        bns->o_rkqy,
+                        bns->o_rkqz,
+                        bns->o_rkerr);
     occaTimerToc(mesh->device,"PmlUpdateKernel");
 
   }
@@ -242,12 +311,19 @@ for(int rk=0;rk<mesh->Nrk;++rk){
     occaTimerTic(mesh->device,"NonPmlUpdateKernel");
     bns->updateKernel(mesh->nonPmlNelements,
                       mesh->o_nonPmlElementIds,
+                      offset,
+                      rk,
                       bns->dt,
-                      mesh->rka[rk],
-                      mesh->rkb[rk],
+                      bns->o_sarkC,
+                      bns->o_rkA, 
+                      bns->o_rkE,
+                      bns->o_sarkA, 
+                      bns->o_sarkE,
+                      bns->o_q,
                       bns->o_rhsq,
-                      bns->o_resq,
-                      bns->o_q);
+                      bns->o_rkrhsq,
+                      bns->o_rkq,
+                      bns->o_rkerr);
     occaTimerToc(mesh->device,"NonPmlUpdateKernel");
   }
 

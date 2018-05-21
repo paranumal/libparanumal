@@ -93,7 +93,7 @@ dfloat meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels, dfloat finalT
     }
     
     if (rank==0) printf("Repartitioning for MRAB...\n");
-    meshMRABWeightedPartitionTri2D(mesh,weights,mesh->MRABNlevels, mesh->MRABlevel);
+    meshMRABWeightedPartition2D(mesh,weights,mesh->MRABNlevels, mesh->MRABlevel);
   }
 
   //construct element and halo lists

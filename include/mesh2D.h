@@ -112,7 +112,7 @@ dfloat meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels, dfloat finalT
 
 
 //MRAB weighted mesh partitioning
-void meshMRABWeightedPartitionTri2D(mesh2D *mesh, dfloat *weights,
+void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
                                       int numLevels, int *levels);
 
 

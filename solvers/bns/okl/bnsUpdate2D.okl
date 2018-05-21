@@ -1,4 +1,7 @@
-kernel void bnsLSERKUpdateTet3D(const dlong Nelements,
+
+#define p_Nvars 3
+
+kernel void bnsLSERKUpdate2D(const dlong Nelements,
                                 const dlong * restrict elementIds,
                                 const dfloat dt,  
                                 const dfloat rka,
@@ -19,13 +22,16 @@ kernel void bnsLSERKUpdateTet3D(const dlong Nelements,
          const dlong idn = id + fld*p_Np;
          dfloat r_resq = resq[idn];
          dfloat r_rhsq = rhsq[idn]; 
+
+
          dfloat r_q    = q[idn];
-         
+         //
          r_resq = rka*r_resq + dt*r_rhsq;
          r_q   += rkb*r_resq;
-         
+         //
          resq[idn] = r_resq;
          q[idn]    = r_q;
+       
       }
     }
   }
@@ -33,7 +39,7 @@ kernel void bnsLSERKUpdateTet3D(const dlong Nelements,
 
 
 
-kernel void bnsLSERKPmlUpdateTet3D(const dlong pmlNelements,
+kernel void bnsLSERKPmlUpdate2D(const dlong pmlNelements,
                                    const dlong   * restrict pmlElementIds,
                                    const dlong   * restrict pmlIds,
                                    const dfloat dt,  
@@ -72,32 +78,26 @@ for(dlong es=0;es<pmlNelements;++es;outer0){
         const dfloat r_q  = q [id ];
         const dfloat r_qx = qx[pid];
         const dfloat r_qy = qy[pid];
-        const dfloat r_qz = qz[pid];
 
         dfloat r_resq  = resq [id ];      
         dfloat r_resqx = resqx[pid];
         dfloat r_resqy = resqy[pid];
-        dfloat r_resqz = resqz[pid];
 
         const dfloat r_rhsq  = rhsq [id ];
         const dfloat r_rhsqx = rhsqx[pid];
         const dfloat r_rhsqy = rhsqy[pid];
-        const dfloat r_rhsqz = rhsqz[pid];
 
         r_resq  = rka*r_resq  + dt*r_rhsq ;
         r_resqx = rka*r_resqx + dt*r_rhsqx;
         r_resqy = rka*r_resqy + dt*r_rhsqy;
-        r_resqz = rka*r_resqz + dt*r_rhsqz;
 
         q [id ] = r_q  + rkb*r_resq ;
         qx[pid] = r_qx + rkb*r_resqx;
         qy[pid] = r_qy + rkb*r_resqy;
-        qz[pid] = r_qz + rkb*r_resqz;
 
         resq [id ]  = r_resq ;      
         resqx[pid]  = r_resqx;
         resqy[pid]  = r_resqy;
-        resqz[pid]  = r_resqz;
       } 
     }
   }
@@ -106,8 +106,7 @@ for(dlong es=0;es<pmlNelements;++es;outer0){
 
 
 
-
-kernel void bnsSARKUpdateStageTet3D(const dlong Nelements,
+kernel void bnsSARKUpdateStage2D(const dlong Nelements,
                          const dlong * restrict elementIds,
                          const dlong offset,
                          const int stage,
@@ -129,7 +128,7 @@ kernel void bnsSARKUpdateStageTet3D(const dlong Nelements,
       for(int fld=0; fld< p_Nfields; ++fld){
 
         dfloat r_q = 0.f; 
-        if(fld<4){
+        if(fld<p_Nvars){
           r_q = q[id +fld*p_Np];
           for (int i=0;i<stage;i++){
             r_q += dt*rkA[p_NrkStages*stage + i]*rkrhsq[id + fld*p_Np +i*offset];
@@ -153,7 +152,7 @@ kernel void bnsSARKUpdateStageTet3D(const dlong Nelements,
 
 
 
-kernel void bnsSARKPmlUpdateStageTet3D( const dlong pmlNelements,
+kernel void bnsSARKPmlUpdateStage2D( const dlong pmlNelements,
                                         const dlong   * restrict pmlElementIds,
                                         const dlong   * restrict pmlIds,
                                         const dlong offset,
@@ -192,39 +191,33 @@ kernel void bnsSARKPmlUpdateStageTet3D( const dlong pmlNelements,
           dfloat r_q  = 0.f;
           dfloat r_qx = 0.f;
           dfloat r_qy = 0.f;
-          dfloat r_qz = 0.f;
 
-          if(fld<4){
+          if(fld<p_Nvars){
             r_q  = q[id  + fld*p_Np];
             r_qx = qx[pid+ fld*p_Np];
             r_qy = qy[pid+ fld*p_Np];
-            r_qz = qz[pid+ fld*p_Np];
 
             for (int i=0;i<stage;i++){
               r_q  += dt*rkA[p_NrkStages*stage+i]*rkrhsq[ id +fld*p_Np+i*offset];
               r_qx += dt*rkA[p_NrkStages*stage+i]*rkrhsqx[pid+fld*p_Np+i*pmloffset];
               r_qy += dt*rkA[p_NrkStages*stage+i]*rkrhsqy[pid+fld*p_Np+i*pmloffset];
-              r_qz += dt*rkA[p_NrkStages*stage+i]*rkrhsqz[pid+fld*p_Np+i*pmloffset];
             }
           }
           else{
             r_q  = sarkC[stage]*q[id  + fld*p_Np];
             r_qx = qx[pid+ fld*p_Np];
             r_qy = qy[pid+ fld*p_Np];
-            r_qz = qz[pid+ fld*p_Np];
 
             for (int i=0;i<stage;i++){
               r_q  += dt*sarkA[p_NrkStages*stage+i]*rkrhsq[id+fld*p_Np+i*offset];
               r_qx += dt*rkA[p_NrkStages*stage+i]*rkrhsqx[pid+fld*p_Np+i*pmloffset];
               r_qy += dt*rkA[p_NrkStages*stage+i]*rkrhsqy[pid+fld*p_Np+i*pmloffset];
-              r_qz += dt*rkA[p_NrkStages*stage+i]*rkrhsqz[pid+fld*p_Np+i*pmloffset];
             }
           }
 
           rkq [id  +fld*p_Np] = r_q;
           rkqx[pid +fld*p_Np] = r_qx;
           rkqy[pid +fld*p_Np] = r_qy;
-          rkqz[pid +fld*p_Np] = r_qz;
       }
     }
   }
@@ -234,7 +227,7 @@ kernel void bnsSARKPmlUpdateStageTet3D( const dlong pmlNelements,
 
 
 
-kernel void bnsSARKUpdateTet3D(const dlong Nelements,
+kernel void bnsSARKUpdate2D(const dlong Nelements,
                                 const dlong * restrict elementIds,
                                 const dlong offset,
                                 const int stage,
@@ -265,7 +258,7 @@ kernel void bnsSARKUpdateTet3D(const dlong Nelements,
 
         if(stage==(p_NrkStages-1)){
 
-          if(fld<4){
+          if(fld<p_Nvars){
 
             r_q = q[id +fld*p_Np];
 
@@ -288,10 +281,9 @@ kernel void bnsSARKUpdateTet3D(const dlong Nelements,
             r_rkerr += dt*sarkE[                    p_NrkStages-1]*r_rhsq;
           }
 
-          rkq[id   +fld*p_Np] = r_q;
-          rkerr[id +fld*p_Np] = r_rkerr;
+          rkq[id     + fld*p_Np] = r_q;
+          rkerr[id   + fld*p_Np] = r_rkerr;
         }
-
         rkrhsq[id+fld*p_Np+stage*offset] = r_rhsq;
       }
     }
@@ -301,7 +293,7 @@ kernel void bnsSARKUpdateTet3D(const dlong Nelements,
 
 
 
-kernel void bnsSARKPmlUpdateTet3D(const dlong pmlNelements,
+kernel void bnsSARKPmlUpdate2D(const dlong pmlNelements,
                                   const dlong   * restrict pmlElementIds,
                                   const dlong   * restrict pmlIds,
                                   const dlong offset,
@@ -345,21 +337,18 @@ kernel void bnsSARKPmlUpdateTet3D(const dlong pmlNelements,
           dfloat r_rhsq  = rhsq [id  + fld*p_Np];
           dfloat r_rhsqx = rhsqx[pid + fld*p_Np];
           dfloat r_rhsqy = rhsqy[pid + fld*p_Np];
-          dfloat r_rhsqz = rhsqz[pid + fld*p_Np];
 
           if(stage==(p_NrkStages-1)){
             //
             dfloat r_q     = 0.f;
             dfloat r_qx    = 0.f;
             dfloat r_qy    = 0.f;
-            dfloat r_qz    = 0.f;
             dfloat r_rkerr = 0.f;
 
-            if(fld<4){
+            if(fld<p_Nvars){
               r_q  = q [id  +fld*p_Np];
               r_qx = qx[pid +fld*p_Np];
               r_qy = qy[pid +fld*p_Np];
-              r_qz = qz[pid +fld*p_Np];
 
               dfloat r_rkerr = 0.f;
 
@@ -367,14 +356,12 @@ kernel void bnsSARKPmlUpdateTet3D(const dlong pmlNelements,
                 r_q     += dt*rkA[p_NrkStages*stage + i]*rkrhsq[  id + fld*p_Np + i*offset];
                 r_qx    += dt*rkA[p_NrkStages*stage + i]*rkrhsqx[pid + fld*p_Np + i*pmloffset];
                 r_qy    += dt*rkA[p_NrkStages*stage + i]*rkrhsqy[pid + fld*p_Np + i*pmloffset];
-                r_qz    += dt*rkA[p_NrkStages*stage + i]*rkrhsqz[pid + fld*p_Np + i*pmloffset];
                 r_rkerr += dt*rkE[       i]*rkrhsq[id + fld*p_Np + i*offset];
               }
 
               r_q     += dt*rkA[p_NrkStages*stage + p_NrkStages-1]*r_rhsq;
               r_qx    += dt*rkA[p_NrkStages*stage + p_NrkStages-1]*r_rhsqx;
               r_qy    += dt*rkA[p_NrkStages*stage + p_NrkStages-1]*r_rhsqy;
-              r_qz    += dt*rkA[p_NrkStages*stage + p_NrkStages-1]*r_rhsqz;
 
               r_rkerr += dt*rkE[p_NrkStages-1]*r_rhsq;
             }
@@ -383,7 +370,6 @@ kernel void bnsSARKPmlUpdateTet3D(const dlong pmlNelements,
               r_q  = sarkC[stage]*q [id  +fld*p_Np];
               r_qx = qx[pid +fld*p_Np];
               r_qy = qy[pid +fld*p_Np];
-              r_qz = qz[pid +fld*p_Np];
 
               dfloat r_rkerr = 0.f;
 
@@ -391,7 +377,6 @@ kernel void bnsSARKPmlUpdateTet3D(const dlong pmlNelements,
                 r_q     += dt*sarkA[p_NrkStages*stage + i]*rkrhsq[id + fld*p_Np + i*offset];
                 r_qx    += dt*rkA[p_NrkStages*stage + i]*rkrhsqx[pid + fld*p_Np + i*pmloffset];
                 r_qy    += dt*rkA[p_NrkStages*stage + i]*rkrhsqy[pid + fld*p_Np + i*pmloffset];
-                r_qz    += dt*rkA[p_NrkStages*stage + i]*rkrhsqz[pid + fld*p_Np + i*pmloffset];
 
                 r_rkerr += dt*sarkE[       i]*rkrhsq[id + fld*p_Np + i*offset];
               }
@@ -399,7 +384,6 @@ kernel void bnsSARKPmlUpdateTet3D(const dlong pmlNelements,
               r_q     += dt*sarkA[p_NrkStages*stage + p_NrkStages-1]*r_rhsq;
               r_qx    += dt*rkA[p_NrkStages*stage + p_NrkStages-1]*r_rhsqx;
               r_qy    += dt*rkA[p_NrkStages*stage + p_NrkStages-1]*r_rhsqy;
-              r_qz    += dt*rkA[p_NrkStages*stage + p_NrkStages-1]*r_rhsqz;
 
               r_rkerr += dt*sarkE[p_NrkStages-1]*r_rhsq; 
             }
@@ -407,14 +391,12 @@ kernel void bnsSARKPmlUpdateTet3D(const dlong pmlNelements,
             rkq[id     + fld*p_Np] = r_q;
             rkqx[pid   + fld*p_Np] = r_qx;
             rkqy[pid   + fld*p_Np] = r_qy;
-            rkqz[pid   + fld*p_Np] = r_qz;
             rkerr[id   + fld*p_Np] = r_rkerr;
           }
 
         rkrhsq[id  +fld*p_Np  +stage*offset]    = r_rhsq;
         rkrhsqx[pid+fld*p_Np+stage*pmloffset]   = r_rhsqx;
         rkrhsqy[pid+fld*p_Np+stage*pmloffset]   = r_rhsqy;
-        rkrhsqz[pid+fld*p_Np+stage*pmloffset]   = r_rhsqz;
         }     
       }
     }
@@ -426,7 +408,7 @@ kernel void bnsSARKPmlUpdateTet3D(const dlong pmlNelements,
 
 
 // This kernel is used in both pml and non-pml regions
-kernel void bnsMRSAABTraceUpdateTet3D(const dlong Nelements,
+kernel void bnsMRSAABTraceUpdate2D(const dlong Nelements,
                                           const dlong * restrict elementIds,
                                           const dlong offset,
                                           const int shift,
@@ -460,7 +442,7 @@ kernel void bnsMRSAABTraceUpdateTet3D(const dlong Nelements,
         occaUnroll(p_Nfields)
           for(int fld=0; fld< p_Nfields; ++fld){
             const int fid = fld*p_Np; 
-            if(fld<4)
+            if(fld<p_Nvars)
               s_q[n+fid] = q[id+fid]+ab1*rhsq[rhsId1+fid]+ab2*rhsq[rhsId2+fid]+ab3*rhsq[rhsId3+fid];
             else
               s_q[n+fid] = expdt*q[id+fid] + saab1*rhsq[rhsId1+fid] + saab2*rhsq[rhsId2+fid] + saab3*rhsq[rhsId3+fid];
@@ -492,7 +474,7 @@ kernel void bnsMRSAABTraceUpdateTet3D(const dlong Nelements,
 
 
 // This kernel does not use float 4 format, 
-kernel void bnsMRSAABUpdateTet3D( const dlong Nelements,
+kernel void bnsMRSAABUpdate2D( const dlong Nelements,
                                   const dlong * restrict elementIds,
                                   const dlong offset,
                                   const int shift,
@@ -527,7 +509,7 @@ kernel void bnsMRSAABUpdateTet3D( const dlong Nelements,
         occaUnroll(p_Nfields)
         for(int fld=0; fld< p_Nfields; ++fld){
           const int fid = fld*p_Np; 
-            if(fld<4)
+            if(fld<p_Nvars)
               s_q[n+fid] = q[id+fid]+ab1*rhsq[rhsId1+fid]+ab2*rhsq[rhsId2+fid]+ab3*rhsq[rhsId3+fid];
             else
               s_q[n+fid] = expdt*q[id+fid] + saab1*rhsq[rhsId1+fid] + saab2*rhsq[rhsId2+fid] + saab3*rhsq[rhsId3+fid];
@@ -569,7 +551,7 @@ kernel void bnsMRSAABUpdateTet3D( const dlong Nelements,
 }
 
 
-kernel void bnsMRSAABPmlUpdateTet3D(const dlong pmlNelements,
+kernel void bnsMRSAABPmlUpdate2D(const dlong pmlNelements,
                                     const dlong   * restrict pmlElementIds,
                                     const dlong   * restrict pmlIds,
                                     const dlong offset,
@@ -619,11 +601,10 @@ kernel void bnsMRSAABPmlUpdateTet3D(const dlong pmlNelements,
 
           pmlqx[pid+fid] += ab1*pmlrhsqx[pmlrhsId1+fid] + ab2*pmlrhsqx[pmlrhsId2+fid] + ab3*pmlrhsqx[pmlrhsId3+fid];
           pmlqy[pid+fid] += ab1*pmlrhsqy[pmlrhsId1+fid] + ab2*pmlrhsqy[pmlrhsId2+fid] + ab3*pmlrhsqy[pmlrhsId3+fid];
-          pmlqz[pid+fid] += ab1*pmlrhsqz[pmlrhsId1+fid] + ab2*pmlrhsqz[pmlrhsId2+fid] + ab3*pmlrhsqz[pmlrhsId3+fid];
 
           dfloat n_q = 0.f; 
 
-          if(fld<4)
+          if(fld<p_Nvars)
             n_q      = q[id+fid]+ab1*rhsq[rhsId1+fid]+ab2*rhsq[rhsId2+fid]+ab3*rhsq[rhsId3+fid];
           else
             n_q      = expdt*q[id+fid]+saab1*rhsq[rhsId1+fid] + saab2*rhsq[rhsId2+fid] + saab3*rhsq[rhsId3+fid];
@@ -654,3 +635,5 @@ kernel void bnsMRSAABPmlUpdateTet3D(const dlong pmlNelements,
       
   }
 }
+
+
