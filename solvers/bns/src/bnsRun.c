@@ -138,10 +138,12 @@ tic_tot = MPI_Wtime();
         dfloat time = tstep*bns->dt;  
         bnsSARKStep(bns, time, haloBytes, sendBuffer, recvBuffer, options);
         bns->o_q.copyFrom(bns->o_rkq);
-        bns->o_pmlqx.copyFrom(bns->o_rkqx);
-        bns->o_pmlqy.copyFrom(bns->o_rkqy);
-        if(bns->dim==3)
-          bns->o_pmlqz.copyFrom(bns->o_rkqz);
+        if(mesh->pmlNelements){
+          bns->o_pmlqx.copyFrom(bns->o_rkqx);
+          bns->o_pmlqy.copyFrom(bns->o_rkqy);
+          if(bns->dim==3)
+            bns->o_pmlqz.copyFrom(bns->o_rkqz);
+        }
 
         occaTimerToc(mesh->device, "SARK");  
       }
