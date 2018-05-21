@@ -125,7 +125,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
           dfloat savedt = bns->dt;        
           // save rkq
           bns->o_saveq.copyFrom(bns->o_rkq);
-          if(bns->pmlFlag){
+          if(mesh->pmlNelements){
             bns->o_saveqx.copyFrom(bns->o_rkqx);
             bns->o_saveqy.copyFrom(bns->o_rkqy);
             if(bns->dim==3)
@@ -152,7 +152,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
 
           // accept saved rkq
           bns->o_q.copyFrom(bns->o_saveq);
-          if(bns->pmlFlag){
+          if(mesh->pmlNelements){
             bns->o_pmlqx.copyFrom(bns->o_saveqx);
             bns->o_pmlqy.copyFrom(bns->o_saveqy);
             if(bns->dim==3)
@@ -162,7 +162,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
         else{
           // Accept rkq
           bns->o_q.copyFrom(bns->o_rkq);
-          if(bns->pmlFlag){
+          if(mesh->pmlNelements){
             bns->o_pmlqx.copyFrom(bns->o_rkqx);
             bns->o_pmlqy.copyFrom(bns->o_rkqy); 
             if(bns->dim==3)
@@ -174,7 +174,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
       else{
         // Accept rkq
         bns->o_q.copyFrom(bns->o_rkq);
-        if(bns->pmlFlag){
+        if(mesh->pmlNelements){
           bns->o_pmlqx.copyFrom(bns->o_rkqx);
           bns->o_pmlqy.copyFrom(bns->o_rkqy); 
           if(bns->dim==3)
