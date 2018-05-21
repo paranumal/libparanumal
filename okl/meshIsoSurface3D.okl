@@ -9,31 +9,32 @@
 
 dfloat intersection(const dfloat iso, const dfloat val1, const dfloat val2){
 
-  const dfloat tol = 1e-5;
-  
-  if(fabs(iso-val1)<tol) return 0.f;
-  if(fabs(iso-val2)<tol) return 1.f;
-  if(fabs(val1-val2)<tol) return 0.f;
+  const dfloat tol = 1.e-5;
+
+  if(occaFabs(iso-val1)<tol) return (dfloat)0.f;
+  if(occaFabs(iso-val2)<tol) return (dfloat)1.f;
+  if(occaFabs(val1-val2)<tol) return (dfloat)0.f;
 
   const dfloat r = (iso-val1)/(val2-val1);
+
   return r;
 }  
 
 void intersect(const int fld,
 	       const dfloat iso, 
-	       const dfloat * restrict vals1,
-	       const dfloat * restrict vals2,
-	       dfloat * restrict valsIso ){
+	       const dfloat * vals1,
+	       const dfloat * vals2,
+	       dfloat * valsIso ){
 
   const dfloat r = intersection(iso, vals1[fld], vals2[fld]);
-  
-  for(int f=0;f<p_Nfields+p+dim;++f){
+
+  for(int f=0;f<p_plotNfields;++f){
     valsIso[f] = vals1[f] + r*(vals2[f]-vals1[f]);
   }
 }
 
 int marchingTet(const int fld,
-		const dfloat  restrict vals[][p_plotNfields], // stack X and fields
+		const dfloat vals[][p_plotNfields], // stack X and fields
 		const int v0,
 		const int v1,
 		const int v2,
@@ -178,7 +179,7 @@ kernel void meshIsoSurface3D(const int Nelements,    // number of elements
     shared dfloat s_q[p_plotNfields][p_Np];
     shared dfloat s_plotq[p_plotNp][p_plotNfields];
 
-    for(int n=0;n<p_NplotThreads;++n;inner0){
+    for(int n=0;n<p_plotNthreads;++n;inner0){
 
       if(n<p_Np){
 	int id = e*p_Np + n;
@@ -197,7 +198,7 @@ kernel void meshIsoSurface3D(const int Nelements,    // number of elements
 
     barrier(localMemFence);
     
-    for(int n=0;n<p_NplotThreads;++n;inner0){
+    for(int n=0;n<p_plotNthreads;++n;inner0){
       if(n<p_plotNp){
 	dfloat r_plotq[p_plotNfields];
 	
@@ -225,19 +226,19 @@ kernel void meshIsoSurface3D(const int Nelements,    // number of elements
     
     barrier(localMemFence);
 
-    for(int n=0;n<p_NplotThreads;++n;inner0){
+    for(int n=0;n<p_plotNthreads;++n;inner0){
 
       if(n<p_plotNelements){
 	dfloat isoVals[2*(3*p_plotNfields)]; // max number of output vertices
-
+	
 	const int v1 = plotEToV[n + 0*p_plotNelements];
 	const int v2 = plotEToV[n + 1*p_plotNelements];
 	const int v3 = plotEToV[n + 2*p_plotNelements];
 	const int v4 = plotEToV[n + 3*p_plotNelements];
-
+	
 	// loop over isosurface levels
 	for(int i=0;i<isoNlevels;++i){
-	
+	  
 	  const int ntri = marchingTet(isoField, s_plotq, v1, v2, v3, v4, isoLevels[i], isoVals);
 	  
 	  if(ntri){ // really should do a scan and collapse new iso tris to a contiguous group
@@ -254,10 +255,9 @@ kernel void meshIsoSurface3D(const int Nelements,    // number of elements
 	    
 	    if(ntri==2 && ((offset+2)<isoMaxNtris)){ // make sure this triangle is in bound
 	      ++offset;
-	      t+=3*p_plotNfields;
 	      occaUnroll(3*p_plotNfields)
 		for(int t=0;t<3*p_plotNfields;++t){
-		  isoQ[offset*p_plotNfields*3+t] = isoVals[t]; // bad striding
+		  isoQ[offset*p_plotNfields*3+t] = isoVals[t+3*p_plotNfields]; // bad striding
 		}
 	    }
 	  }
