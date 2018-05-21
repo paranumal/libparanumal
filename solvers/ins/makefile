@@ -152,7 +152,7 @@ clean:
 	cd ../parALMOND; make clean; cd ../ins
 	cd ../elliptic; make clean; cd ../ins
 	cd ../../src; rm *.o; cd ../solvers/ins
-	rm *.o insMain libins.a
+	rm ./src/*.o insMain libins.a
 
 realclean:
 	cd ../../3rdParty/gslib.github; make clean; cd ../../solvers/ins
@@ -160,4 +160,4 @@ realclean:
 	cd ../parALMOND; make clean; cd ../ins
 	cd ../elliptic; make clean; cd ../ins
 	cd ../../src; rm *.o; cd ../solvers/ins
-	rm *.o insMain libins.a
+	rm ./src/*.o insMain libins.a

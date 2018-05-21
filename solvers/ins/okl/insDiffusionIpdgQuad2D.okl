@@ -72,6 +72,8 @@ kernel void insDiffusionIpdgQuad2D(const dlong Nelements,
     occaUnroll(p_NVfields)
     for (int fld=0; fld<p_NVfields; fld++) {
 
+      barrier(localMemFence);
+
       // loop over slabs
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i;inner0){
