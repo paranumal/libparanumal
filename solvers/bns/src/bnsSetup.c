@@ -585,76 +585,73 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
 
 
-char fileName[BUFSIZ], kernelName[BUFSIZ];
-for (int r=0;r<size;r++){
+  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  for (int r=0;r<size;r++){
 
     if (r==rank) {
 
-        // Volume kernels
-        sprintf(fileName, "okl/bnsVolume%s.okl", suffix);
+      // Volume kernels
+      sprintf(fileName, DBNS "/okl/bnsVolume%s.okl", suffix);
 
-        sprintf(kernelName, "bnsVolume%s", suffix);
-        bns->volumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-        sprintf(kernelName, "bnsPmlVolume%s", suffix);
-        bns->pmlVolumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-       
-        // Relaxation kernels
-        sprintf(fileName, "okl/bnsRelaxation%s.okl", suffix);
-  
-        sprintf(kernelName, "bnsRelaxation%s", suffix);
-        bns->relaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-        sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
-        bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      sprintf(kernelName, "bnsVolume%s", suffix);
+      bns->volumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      sprintf(kernelName, "bnsPmlVolume%s", suffix);
+      bns->pmlVolumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+     
+      // Relaxation kernels
+      sprintf(fileName, DBNS "/okl/bnsRelaxation%s.okl", suffix);
+
+      sprintf(kernelName, "bnsRelaxation%s", suffix);
+      bns->relaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
+      bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      
+      // Surface kernels 
+      sprintf(fileName, DBNS "/okl/bnsSurface%s.okl", suffix);
+
+      if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
+        sprintf(kernelName, "bnsMRSurface%s", suffix);
+        bns->surfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+
+        sprintf(kernelName, "bnsMRPmlSurface%s", suffix);
+        bns->pmlSurfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+      }else{
+        sprintf(kernelName, "bnsSurface%s", suffix);
+        bns->surfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+
+        sprintf(kernelName, "bnsPmlSurface%s", suffix);
+        bns->pmlSurfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+      }
+
+      
+      sprintf(fileName, DBNS "/okl/bnsUpdate%s.okl", suffixUpdate);
+      // Update Kernels
+      if(options.compareArgs("TIME INTEGRATOR","LSERK")){
+        sprintf(kernelName, "bnsLSERKUpdate%s", suffixUpdate);
+        bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+
+        sprintf(kernelName, "bnsLSERKPmlUpdate%s", suffixUpdate);
+        bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+      } else if(options.compareArgs("TIME INTEGRATOR","SARK")){
+        sprintf(kernelName, "bnsSARKUpdateStage%s", suffixUpdate);
+        bns->updateStageKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+
+        sprintf(kernelName, "bnsSARKPmlUpdateStage%s", suffixUpdate);
+        bns->pmlUpdateStageKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+
+        sprintf(kernelName, "bnsSARKUpdate%s", suffixUpdate);
+        bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+
+        sprintf(kernelName, "bnsSARKPmlUpdate%s", suffixUpdate);
+        bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
         
-        // Surface kernels 
-        sprintf(fileName, "okl/bnsSurface%s.okl", suffix);
-
-        if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
-          sprintf(kernelName, "bnsMRSurface%s", suffix);
-          bns->surfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
-
-          sprintf(kernelName, "bnsMRPmlSurface%s", suffix);
-          bns->pmlSurfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
-        }else{
-          sprintf(kernelName, "bnsSurface%s", suffix);
-          bns->surfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
-
-          sprintf(kernelName, "bnsPmlSurface%s", suffix);
-          bns->pmlSurfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+        if(bns->fixed_dt==0){
+          sprintf(fileName, DBNS "/okl/bnsErrorEstimate.okl");
+          sprintf(kernelName, "bnsErrorEstimate");
+          bns->errorEstimateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
         }
-
-        
-        sprintf(fileName, "okl/bnsUpdate%s.okl", suffixUpdate);
-        // Update Kernels
-        if(options.compareArgs("TIME INTEGRATOR","LSERK")){
-          sprintf(kernelName, "bnsLSERKUpdate%s", suffixUpdate);
-          bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
-
-          sprintf(kernelName, "bnsLSERKPmlUpdate%s", suffixUpdate);
-          bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
-        }
-        else if(options.compareArgs("TIME INTEGRATOR","SARK")){
-          sprintf(kernelName, "bnsSARKUpdateStage%s", suffixUpdate);
-          bns->updateStageKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
-
-          sprintf(kernelName, "bnsSARKPmlUpdateStage%s", suffixUpdate);
-          bns->pmlUpdateStageKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
-
-          sprintf(kernelName, "bnsSARKUpdate%s", suffixUpdate);
-          bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
-
-          sprintf(kernelName, "bnsSARKPmlUpdate%s", suffixUpdate);
-          bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
-          
-          if(bns->fixed_dt==0){
-            sprintf(fileName, "okl/bnsErrorEstimate.okl");
-            sprintf(kernelName, "bnsErrorEstimate");
-            bns->errorEstimateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-          }
-        }
-
-        else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
-        
+      } else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
+      
         sprintf(kernelName, "bnsMRSAABTraceUpdate%s", suffixUpdate);
         bns->traceUpdateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
@@ -663,24 +660,17 @@ for (int r=0;r<size;r++){
 
         sprintf(kernelName, "bnsMRSAABPmlUpdate%s", suffixUpdate);
         bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
-        }
+      }
 
-
-         // Surface kernels 
-        sprintf(fileName, "okl/bnsVorticity%s.okl",suffix);
-        sprintf(kernelName, "bnsVorticity%s", suffix);
-        bns->vorticityKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
-
-
-
-
+      sprintf(fileName, DBNS "/okl/bnsVorticity%s.okl",suffix);
+      sprintf(kernelName, "bnsVorticity%s", suffix);
+      bns->vorticityKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
     }
-  MPI_Barrier(MPI_COMM_WORLD);
-}
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
 
-return bns; 
-  
+  return bns; 
 }
 
 
