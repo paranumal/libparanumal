@@ -352,13 +352,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
   for (iint i = 0; i < mesh->NgridElements - mesh->Nelements; ++i) {
     iint eOverlap = mesh->overlap[i];
     
-    iint eAdj;
-    for (iint f = 0; f < mesh->Nfaces; ++f) {
-      if (mesh->cubeFaceNumber[eOverlap] != mesh->cubeFaceNumber[mesh->EToE[eOverlap*mesh->Nfaces + f]]) {
-	eAdj = mesh->EToE[eOverlap*mesh->Nfaces + f];
-	break;
-      }
-    }
+    iint eAdj = mesh->eAdjacent[i];
     
     iint e = mesh->Nelements + i;
     
@@ -396,7 +390,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smin = mesh->sphysical[eInterp*mesh->Np];
 	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
+	  perp_index = n%mesh->Nq;
 	  par_loc = (snew - smin)/(smax - smin);
 	  
 	  rsdir = sdir;
@@ -419,7 +413,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smin = mesh->sphysical[eInterp*mesh->Np];
 	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  perp_index = n%mesh->Nq;
+	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
 	  par_loc = (snew - smin)/(smax - smin);
 	  
 	  rsdir = sdir;
@@ -442,7 +436,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smin = mesh->sphysical[eInterp*mesh->Np];
 	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  perp_index = n%mesh->Nq;
+	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
 	  par_loc = (snew - smin)/(smax - smin);
 	  
 	  rsdir = sdir;
@@ -465,7 +459,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smin = mesh->sphysical[eInterp*mesh->Np];
 	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
+	  perp_index = n%mesh->Nq;
 	  par_loc = (snew - smin)/(smax - smin);
 	  
 	  rsdir = sdir;
@@ -475,7 +469,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rold = mesh->rphysical[eAdj*mesh->Np + n] + offset;
 	  sold = mesh->sphysical[eAdj*mesh->Np + n];
 
-	  rnew = rold - M_PI/2;
+	  rnew = M_PI/2 - rold;
 	  snew = atan(tan(sold)/tan(rold));
 
 	  smin = mesh->sphysical[eOverlap*mesh->Np];
@@ -488,7 +482,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smin = mesh->sphysical[eInterp*mesh->Np];
 	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  perp_index = n%mesh->Nq;
+	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
 	  par_loc = (snew - smin)/(smax - smin);
 	  
 	  rsdir = sdir;
@@ -583,7 +577,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmax = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
 	  par_loc = (rnew - rmin)/(rmax - rmin);
-	  perp_index = (mesh->Np - n -1)/mesh->Nq;
+	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
 	  
 	  rsdir = rdir;
 
@@ -606,7 +600,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
 	  par_loc = (snew - smin)/(smax - smin);
-	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
+	  perp_index = n%mesh->Nq;
 	  
 	  rsdir = sdir;
 
@@ -629,7 +623,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmax = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
 	  par_loc = (rnew - rmin)/(rmax - rmin);
-	  perp_index = n/mesh->Nq;
+	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
 	  
 	  rsdir = rdir;
 
@@ -652,7 +646,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
 	  par_loc = (snew - smin)/(smax - smin);
-	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
+	  perp_index = n%mesh->Nq;
 	  
 	  rsdir = sdir;
 
@@ -675,7 +669,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmin = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 
 	  par_loc = (rnew - rmin)/(rmax - rmin);
-	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
+	  perp_index = n/mesh->Nq;
 	  
 	  rsdir = rdir;
 
@@ -698,7 +692,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
 	  par_loc = (snew - smin)/(smax - smin);
-	  perp_index = n%mesh->Nq;
+	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
 	  
 	  rsdir = sdir;
 
