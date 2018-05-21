@@ -313,6 +313,7 @@ typedef struct {
   iint edgeLength;
   iint NgridElements;
   iint *overlap;
+  iint *eAdjacent;
   iint *eInterp;
   dfloat *rphysical;
   dfloat *sphysical;
