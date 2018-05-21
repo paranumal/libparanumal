@@ -19,17 +19,16 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     if (hostIds[r]==hostId) deviceID++;
   }
 
+  if (size==1) options.getArgs("DEVICE NUMBER" ,deviceID);
+
   // read thread model/device/platform from options
   if(options.compareArgs("THREAD MODEL", "CUDA")){
-    int dev; 
-    options.getArgs("DEVICE NUMBER" ,dev);
-    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",dev);
+    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
   }
   else if(options.compareArgs("THREAD MODEL", "OpenCL")){
-    int dev, plat;
-    options.getArgs("DEVICE NUMBER", dev);
+    int plat;
     options.getArgs("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", dev, plat);
+    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", deviceID, plat);
   }
   else if(options.compareArgs("THREAD MODEL", "OpenMP")){
     sprintf(deviceConfig, "mode = OpenMP");
@@ -170,7 +169,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   dfloat q6bar =0., q7bar =0., q8bar =0., q9bar =0., q10bar =0.; 
   // Set time step size
   if(bns->dim==2){
-     printf("MESH DIMENSION\t:\t%d\n", bns->dim);
+    if (rank==0) printf("MESH DIMENSION\t:\t%d\n", bns->dim);
     q1bar = rho;
     q2bar = rho*u/bns->sqrtRT;
     q3bar = rho*v/bns->sqrtRT;
@@ -178,7 +177,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     q5bar = (rho*u*u - sigma11)/(sqrt(2.)*bns->RT);
     q6bar = (rho*v*v - sigma22)/(sqrt(2.)*bns->RT);    
   } else{
-    printf("MESH DIMENSION\t:\t%d\n", bns->dim);
+    if (rank==0) printf("MESH DIMENSION\t:\t%d\n", bns->dim);
     
     q1bar  = rho;
     q2bar  = rho*u/bns->sqrtRT;
@@ -247,7 +246,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   if(options.compareArgs("TIME INTEGRATOR", "MRSAAB") ){
     int maxLevels =0; options.getArgs("MAX MRAB LEVELS", maxLevels);
 
-    printf("MR MAX LEVELS\t:\t%d\n", maxLevels);
+    if (rank==0) printf("MR MAX LEVELS\t:\t%d\n", maxLevels);
 
     if(bns->dim==2)
       bns->dt = meshMRABSetup2D(mesh,EtoDT,maxLevels, (bns->finalTime-bns->startTime));
@@ -256,7 +255,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
     bns->NtimeSteps =  (bns->finalTime-bns->startTime)/(pow(2,mesh->MRABNlevels-1)*bns->dt);
 
-    printf("MR  LEVELS\t:\t%d\n", mesh->MRABNlevels);
+    if (rank==0) printf("MR  LEVELS\t:\t%d\n", mesh->MRABNlevels);
   }
   else{
     // printf("MESH DIMENSION\t:\t%d\n", bns->dt);  

@@ -20,7 +20,7 @@
     *(uB) = p_ubar;                 \
     *(vB) = p_vbar;                 \
   } else if(bc==3){                 \
-    *(rB) = pM;                 \
+    *(rB) = rM;                 \
     *(uB) = uM;                     \
     *(vB) = vM;                     \
   } else if(bc==4||bc==5){          \
