@@ -551,6 +551,9 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   if(options.getArgs("BODYFORCE-Y", AY))
     if(AY)
       kernelInfo.addDefine("p_AY", AY/bns->sqrtRT);
+  if(options.getArgs("BODYFORCE-Z", AZ))
+    if(AZ)
+      kernelInfo.addDefine("p_AZ", AZ/bns->sqrtRT);
 
   kernelInfo.addDefine("p_q1bar", q1bar);
   kernelInfo.addDefine("p_q2bar", q2bar);
