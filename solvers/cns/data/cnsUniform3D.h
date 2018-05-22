@@ -23,10 +23,10 @@
     *(vB) = p_vbar;                 \
     *(wB) = p_wbar;                 \
   } else if(bc==3){                 \
-    *(rB) = pM;                 \
-    *(uB) = uM;                     \
-    *(vB) = vM;                     \
-    *(wB) = wM;                     \
+    *(rB) = rM;                     \
+    *(uB) = p_ubar;                 \
+    *(vB) = p_vbar;                 \
+    *(wB) = p_wbar;                 \
   } else if(bc==4||bc==5||bc==6){   \
     *(rB) = rM;                     \
     *(uB) = uM - (nx*uM+ny*vM+nz*wM)*nx;  \
