@@ -160,7 +160,20 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   bns->Lambda2 = 0.5/(bns->sqrtRT);
   
   // Setting initial conditions
-  dfloat rho     = 1.,   u       = 1.,  v       = 0.,   w  = 0.; 
+  dfloat rho     = 1.,   u       = 1.,  v       = 0.,   w  = 0.;
+
+  check = options.getArgs("RBAR", rho);
+  if(!check) printf("WARNING setup file does not include RBAR\n");
+  
+  check = options.getArgs("UBAR", u);
+  if(!check) printf("WARNING setup file does not include UBAR\n");
+
+  check = options.getArgs("VBAR", v);
+  if(!check) printf("WARNING setup file does not include VBAR\n");
+
+  check = options.getArgs("WBAR", w);
+  if(!check) printf("WARNING setup file does not include WBAR\n");
+  
   dfloat sigma11 = 0.f , sigma12 = 0.f, sigma13 = 0.f;
   dfloat sigma22 = 0.f , sigma23 = 0.f;
   dfloat sigma33 = 0.f;
@@ -529,6 +542,15 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   kernelInfo.addDefine("p_isq6", (dfloat)sqrt(1./6.));
   kernelInfo.addDefine("p_invsqrt2", (dfloat)sqrt(1./2.));
   kernelInfo.addDefine("p_tauInv", bns->tauInv);
+
+  dfloat AX = 0, AY = 0;
+
+  if(options.getArgs("BODYFORCE-X", AX))
+    if(AX)
+      kernelInfo.addDefine("p_AX", AX/bns->sqrtRT);
+  if(options.getArgs("BODYFORCE-Y", AY))
+    if(AY)
+      kernelInfo.addDefine("p_AY", AY/bns->sqrtRT);
 
   kernelInfo.addDefine("p_q1bar", q1bar);
   kernelInfo.addDefine("p_q2bar", q2bar);
