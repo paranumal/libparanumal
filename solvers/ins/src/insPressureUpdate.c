@@ -8,9 +8,7 @@ void insPressureUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkP){
   occaTimerTic(mesh->device,"PressureUpdate");
   ins->pressureUpdateKernel(mesh->Nelements,
                             stage,
-                            ins->ARKswitch,
-                            ins->o_prkA,
-		                        ins->o_prkAA,
+		                        ins->o_prkB,
                             ins->fieldOffset,
                             ins->o_PI,
                             ins->o_P,

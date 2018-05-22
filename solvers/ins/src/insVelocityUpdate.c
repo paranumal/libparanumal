@@ -14,7 +14,7 @@ void insVelocityUpdate(ins_t *ins, dfloat time, int stage,
                               ins->dt,
                               ins->fieldOffset,
                               ins->o_prkA,
-                              ins->o_prkAA,
+                              ins->o_prkB,
                               o_rkGP,
                               ins->o_GP,
                               o_rkU);

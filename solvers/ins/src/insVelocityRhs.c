@@ -15,6 +15,7 @@ void insVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occ
                            ins->o_erkA,
                            ins->o_irkA,
                            ins->o_prkA,
+                           ins->o_prkB,
                            ins->fieldOffset,
                            ins->o_U,
                            ins->o_NU,
