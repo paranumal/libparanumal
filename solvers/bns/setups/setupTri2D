@@ -16,6 +16,21 @@ data/bnsUniform2D.h
 [POLYNOMIAL DEGREE]
 3
 
+[RBAR] # mean density
+1.0
+
+[UBAR] # mean x-velocity
+0.0
+
+[VBAR] # mean y-velocity
+0.0
+
+[BODYFORCE-X] # constant global force on particles in x-direction
+0.0
+
+[BODYFORCE-Y] # constant global force on particles in y-direction
+0.0
+
 [ABSORBING LAYER]
 PML
 
@@ -38,6 +53,7 @@ CUDA
 0
 
 [TIME INTEGRATOR]
+#LSERK4
 SARK 
 
 [FIXED TIME STEP]
