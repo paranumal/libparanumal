@@ -2,18 +2,16 @@
 
 void bnsSAADRKCoefficients(bns_t *bns, setupAide &options){
 
-mesh_t * mesh = bns->mesh; 
+	mesh_t * mesh = bns->mesh; 
 
-dfloat alpha = -bns->tauInv*bns->dt, coef = -bns->tauInv, h   = bns->dt; 
+	dfloat alpha = -bns->tauInv*bns->dt, coef = -bns->tauInv, h   = bns->dt; 
 
-// printf("alpha = %.16e\t h= %.16e\t coef=%.16e \n", alpha,bns->dt, -bns->tauInv);
+	const int Nr = 32;   dfloat complex R[Nr]; 
 
-const int Nr = 32;   dfloat complex R[Nr]; 
-
-for(int ind =1; ind <= Nr; ++ind){
-	const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr; 
-	R[ind-1] = cexp(I*M_PI* theta);
-}
+	for(int ind =1; ind <= Nr; ++ind){
+		const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr; 
+		R[ind-1] = cexp(I*M_PI* theta);
+	}
 
 
 
@@ -210,14 +208,5 @@ else if(bns->NrkStages==7){
 
 
 }
-
-
-
-
-
-
-
-
-
 
 }

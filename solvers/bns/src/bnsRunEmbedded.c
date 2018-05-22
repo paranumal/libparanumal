@@ -5,6 +5,9 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
 
   mesh_t *mesh = bns->mesh;
 
+  int rank; 
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
   dfloat safe  = 0.9;   //safety factor
   //error control parameters
   dfloat beta       = 0.05; 
@@ -135,7 +138,10 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
           // change dt to match output
           bns->dt = nextOutputTime-bns->time;
           // print
-          printf("Taking output mini step: %g\n", bns->dt);
+          if(rank==0) printf("Taking output mini step: %g\n", bns->dt);
+          
+          // Compute new coefficients
+          bnsSAADRKCoefficients(bns, options);
 
           // if(options.compareArgs("TIME INTEGRATOR","SARK"))  // SA Adaptive RK 
           bnsSARKStep(bns, bns->time, haloBytes, sendBuffer, recvBuffer, options);
@@ -147,6 +153,9 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
           bnsReport(bns, nextOutputTime, options);
           // restore time step
           bns->dt = savedt;
+          // Go back to old coefficients
+          bnsSAADRKCoefficients(bns, options);
+
           // increment next output time
           nextOutputTime += outputInterval;
 
@@ -199,11 +208,12 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
     bns->atstep++;
 
     bnsSAADRKCoefficients(bns, options);
-
+    #if 0
     char fname[BUFSIZ]; sprintf(fname, "boltzmannAddaptiveDt.dat");
     FILE *fp; fp = fopen(fname, "a");
     fprintf(fp, "%.5e %.5e\n", bns->time, bns->dt); 
     fclose(fp);
+    #endif
   }
 
 
