@@ -8,7 +8,7 @@ kernel void insPressureIpdgBCTet3D(const dlong Nelements,
                                      const int stage,
                                      const int ARKswitch,
                                      const dfloat * restrict c,
-                                     const dfloat * restrict prkA,
+                                     const dfloat * restrict prkB,
                                      const dfloat * restrict x,
                                      const dfloat * restrict y,
                                      const dfloat * restrict z,
@@ -60,12 +60,12 @@ kernel void insPressureIpdgBCTet3D(const dlong Nelements,
           insPressureNeumannConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP);
             
           for (int s=0;s<stage;s++) {
-            dfloat prkAn, ctime;
+            dfloat prkBn, ctime;
             if (ARKswitch) {
-              prkAn = prkA[stage*(p_Nstages+1)+s];
+              prkBn = prkB[stage*(p_Nstages+1)+s];
               ctime = time-(c[stage]-c[s])*dt;
             } else {
-              prkAn = prkA[s];
+              prkBn = prkB[s];
               ctime = time-(s+1)*dt;
             }
             
@@ -73,10 +73,10 @@ kernel void insPressureIpdgBCTet3D(const dlong Nelements,
             insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPm);
             insPressureNeumannConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxPm, &dpdyPm, &dpdzPm);
           
-            pP    -= prkAn*pPm;
-            dpdxP -= prkAn*dpdxPm;
-            dpdyP -= prkAn*dpdyPm;
-            dpdzP -= prkAn*dpdzPm;
+            pP    -= prkBn*pPm;
+            dpdxP -= prkBn*dpdxPm;
+            dpdyP -= prkBn*dpdyPm;
+            dpdzP -= prkBn*dpdzPm;
           }
         }
         const dfloat dp = pP;
@@ -201,7 +201,7 @@ kernel void insPressureBCTet3D(const dlong Nelements,
                                  const int stage,
                                  const int ARKswitch,
                                  const dfloat * restrict c,
-                                 const dfloat * restrict prkA,
+                                 const dfloat * restrict prkB,
                                  const dfloat * restrict x,
                                  const dfloat * restrict y,
                                  const dfloat * restrict z,
@@ -246,12 +246,12 @@ kernel void insPressureBCTet3D(const dlong Nelements,
           insPressureNeumannConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP);
           
           for (int s=0;s<stage;s++) {
-            dfloat prkAn, ctime;
+            dfloat prkBn, ctime;
             if (ARKswitch) {
-              prkAn = prkA[stage*(p_Nstages+1)+s];
+              prkBn = prkB[stage*(p_Nstages+1)+s];
               ctime = time-(c[stage]-c[s])*dt;
             } else {
-              prkAn = prkA[s];
+              prkBn = prkB[s];
               ctime = time-(s+1)*dt;
             }
             
@@ -259,10 +259,10 @@ kernel void insPressureBCTet3D(const dlong Nelements,
             insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPm);
             insPressureNeumannConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxPm, &dpdyPm, &dpdzPm);
           
-            pP    -= prkAn*pPm;
-            dpdxP -= prkAn*dpdxPm;
-            dpdyP -= prkAn*dpdyPm;
-            dpdzP -= prkAn*dpdzPm;
+            pP    -= prkBn*pPm;
+            dpdxP -= prkBn*dpdxPm;
+            dpdyP -= prkBn*dpdyPm;
+            dpdzP -= prkBn*dpdzPm;
           }
         } 
 
@@ -322,7 +322,7 @@ kernel void insPressureAddBCTet3D(const dlong Nelements,
                                  const int stage,
                                  const int ARKswitch,
                                  const dfloat * restrict c,
-                                 const dfloat * restrict prkA,
+                                 const dfloat * restrict prkB,
                                  const dfloat * restrict x,
                                  const dfloat * restrict y,
                                  const dfloat * restrict z,
@@ -340,19 +340,19 @@ kernel void insPressureAddBCTet3D(const dlong Nelements,
         insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP);
         
         for (int s=0;s<stage;s++) {
-          dfloat prkAn, ctime;
+          dfloat prkBn, ctime;
           if (ARKswitch) {
-            prkAn = prkA[stage*(p_Nstages+1)+s];
+            prkBn = prkB[stage*(p_Nstages+1)+s];
             ctime = time-(c[stage]-c[s])*dt;
           } else {
-            prkAn = prkA[s];
+            prkBn = prkB[s];
             ctime = time-(s+1)*dt;
           }
           
           dfloat pPm;
           insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPm);
          
-          pP    -= prkAn*pPm;
+          pP    -= prkBn*pPm;
         }
         
         P[idM] = pP;

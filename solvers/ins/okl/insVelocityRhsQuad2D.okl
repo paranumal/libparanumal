@@ -8,6 +8,7 @@ kernel void insVelocityRhsARKQuad2D(const dlong Nelements,
                                    const dfloat * restrict erkA,
                                    const dfloat * restrict irkA,
                                    const dfloat * restrict prkA,
+                                   const dfloat * restrict prkB,
                                    const dlong fieldOffset,
                                    const dfloat * restrict U,
                                    const dfloat * restrict NU,
@@ -31,6 +32,7 @@ kernel void insVelocityRhsARKQuad2D(const dlong Nelements,
             dfloat rhsUn = idt*U[id + 0*fieldOffset];
             dfloat rhsVn = idt*U[id + 1*fieldOffset];
 
+            dfloat prkAs = prkA[stage*(p_Nstages+1)+stage];
             for (int s=0;s<stage;s++) {
               // NU
               rhsUn -= erkA[stage*(p_Nstages+1)+s]*NU[id+0*fieldOffset + s*p_NVfields*fieldOffset];
@@ -41,8 +43,9 @@ kernel void insVelocityRhsARKQuad2D(const dlong Nelements,
               rhsVn += irkA[stage*(p_Nstages+1)+s]*LU[id+1*fieldOffset + s*p_NVfields*fieldOffset];
 
               // GP
-              rhsUn -= prkA[stage*(p_Nstages+1)+s]*GP[id+0*fieldOffset + s*p_NVfields*fieldOffset];
-              rhsVn -= prkA[stage*(p_Nstages+1)+s]*GP[id+1*fieldOffset + s*p_NVfields*fieldOffset];
+              dfloat prkAB = prkA[stage*(p_Nstages+1)+s]+prkAs*prkB[stage*(p_Nstages+1)+s];
+              rhsUn -= prkAB*GP[id+0*fieldOffset + s*p_NVfields*fieldOffset];
+              rhsVn -= prkAB*GP[id+1*fieldOffset + s*p_NVfields*fieldOffset];
             }
 
             rhsU[id] = JW*inu/irkA[stage*(p_Nstages+1)+stage]*rhsUn;

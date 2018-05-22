@@ -2,10 +2,10 @@
 1.0
 
 [DATA FILE]
-data/insUniform2D.h
+data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/T2D_Mar27_ins.msh
+../../meshes/insVortex2D.msh
 
 [MESH DIMENSION]
 2
@@ -28,7 +28,7 @@ CUDA
 # can be EXTBDF1,2, or 3, or ARK1
 # can add SUBCYCLING STEPS with EXTBDF
 [TIME INTEGRATOR]
-EXTBDF2
+ARK2
 
 [SUBCYCLING STEPS]
 4
@@ -38,7 +38,7 @@ EXTBDF2
 CUBATURE
 
 [VISCOSITY]
-1E-3
+0.025
 
 [MACH NUMBER]
 .2
@@ -53,7 +53,7 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+1
 
 [START TIME]
 0
@@ -71,7 +71,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-fence
+vortex
 
 #################################################
 ########## Velocity Solver Options ##############
@@ -178,7 +178,7 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-NONE
+VORTEX
 
 [VERBOSE]
 FALSE

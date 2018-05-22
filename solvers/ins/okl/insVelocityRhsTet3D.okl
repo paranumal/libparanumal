@@ -8,6 +8,7 @@ kernel void insVelocityRhsARKTet3D(const dlong Nelements,
                                 const dfloat * restrict erkA,
                                 const dfloat * restrict irkA,
                                 const dfloat * restrict prkA,
+                                const dfloat * restrict prkB,
                                 const dlong fieldOffset,
                                 const dfloat * restrict U,
                                 const dfloat * restrict NU,
@@ -34,6 +35,7 @@ kernel void insVelocityRhsARKTet3D(const dlong Nelements,
           s_rhsV[es][n] = idt*U[id + 1*fieldOffset];
           s_rhsW[es][n] = idt*U[id + 2*fieldOffset];
 
+          dfloat prkAs = prkA[stage*(p_Nstages+1)+stage];
           for (int s=0;s<stage;s++) {
             // NU
             s_rhsU[es][n] -= erkA[stage*(p_Nstages+1)+s]*NU[id+0*fieldOffset + s*p_NVfields*fieldOffset];
@@ -46,9 +48,10 @@ kernel void insVelocityRhsARKTet3D(const dlong Nelements,
             s_rhsW[es][n] += irkA[stage*(p_Nstages+1)+s]*LU[id+2*fieldOffset + s*p_NVfields*fieldOffset];
 
             // GP
-            s_rhsU[es][n] -= prkA[stage*(p_Nstages+1)+s]*GP[id+0*fieldOffset + s*p_NVfields*fieldOffset];
-            s_rhsV[es][n] -= prkA[stage*(p_Nstages+1)+s]*GP[id+1*fieldOffset + s*p_NVfields*fieldOffset];
-            s_rhsW[es][n] -= prkA[stage*(p_Nstages+1)+s]*GP[id+2*fieldOffset + s*p_NVfields*fieldOffset];
+            dfloat prkAB = prkA[stage*(p_Nstages+1)+s]+prkAs*prkB[stage*(p_Nstages+1)+s];
+            s_rhsU[es][n] -= prkAB*GP[id+0*fieldOffset + s*p_NVfields*fieldOffset];
+            s_rhsV[es][n] -= prkAB*GP[id+1*fieldOffset + s*p_NVfields*fieldOffset];
+            s_rhsW[es][n] -= prkAB*GP[id+2*fieldOffset + s*p_NVfields*fieldOffset];
           }
 
           s_rhsU[es][n] *= J*inu/irkA[stage*(p_Nstages+1)+stage];

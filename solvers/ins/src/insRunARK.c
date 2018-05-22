@@ -60,7 +60,6 @@ void insRunARK(ins_t *ins){
       insVelocityRhs  (ins, stageTime, stage, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
       insVelocitySolve(ins, stageTime, stage, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
-
       insPressureRhs  (ins, stageTime, stage);
       insPressureSolve(ins, stageTime, stage);      
 

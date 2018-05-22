@@ -67,28 +67,29 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->Nstages = 1;
     int Nrk = 2;
     dfloat rkC[2] = {0.0, 1.0};
+
     dfloat erkA[2*2] ={0.0, 0.0,\
                        1.0, 0.0};
     dfloat irkA[2*2] ={0.0, 0.0,\
                        0.0, 1.0};
     
     dfloat prkA[2*2] ={0.0, 0.0,\
-                       1.0, 0.0};
-    dfloat prkAA[2*2]={0.0, 0.0,\
-                       0.0, 1.0};                       
+                       0.0, 1.0};
+    dfloat prkB[2*2] ={0.0, 0.0,\
+                       1.0, 0.0};                       
 
     ins->Nrk = Nrk;
     ins->rkC = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
     ins->erkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->irkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->prkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
-    ins->prkAA= (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->prkB = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
 
     memcpy(ins->rkC, rkC, ins->Nrk*sizeof(dfloat));
     memcpy(ins->erkA, erkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->irkA, irkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->prkA, prkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
-    memcpy(ins->prkAA, prkAA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->prkB, prkB, ins->Nrk*ins->Nrk*sizeof(dfloat));
 
     ins->g0 =  1.0;
     ins->embeddedRKFlag = 0; //no embedded method
@@ -109,29 +110,96 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
                          0.0, 1-gamma, gamma};
     
     dfloat prkA[3*3] ={  0.0,     0.0,   0.0,\
-                       gamma,     0.0,   0.0,\
-                         1.0,     0.0,   0.0};
-
-    dfloat prkAA[3*3] = {0.0,     0.0,   0.0,\
                          0.0,   gamma,   0.0,\
                          0.5,     0.0,   0.5};
+
+    dfloat prkB[3*3] = {0.0,     0.0,   0.0,\
+                        1.0,     0.0,   0.0,\
+                        1.0,     0.0,   0.0};
 
     ins->Nrk = Nrk;
     ins->rkC = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
     ins->erkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->irkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     ins->prkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
-    ins->prkAA= (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->prkB = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
     
 
     memcpy(ins->rkC, rkC, ins->Nrk*sizeof(dfloat));
     memcpy(ins->erkA, erkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->irkA, irkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
     memcpy(ins->prkA, prkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
-    memcpy(ins->prkAA, prkAA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->prkB, prkB, ins->Nrk*ins->Nrk*sizeof(dfloat));
     
     ins->g0 =  1.0/gamma;
     ins->embeddedRKFlag = 0; //no embedded method
+  } else if (options.compareArgs("TIME INTEGRATOR", "ARK3")) {
+    ins->Nstages = 4;
+    int Nrk = 4;
+
+    dfloat erkA[4*4] ={                              0.0,                              0.0,                               0.0, 0.0,\
+                         1767732205903.0/2027836641118.0,                              0.0,                               0.0, 0.0,\
+                        5535828885825.0/10492691773637.0,  788022342437.0/10882634858940.0,                               0.0, 0.0,\
+                        6485989280629.0/16251701735622.0, -4246266847089.0/9704473918619.0, 10755448449292.0/10357097424841.0, 0.0};
+    dfloat erkB[4] = {1471266399579.0/7840856788654.0, \
+                      -4482444167858.0/7529755066697.0, \
+                      11266239266428.0/11593286722821.0, \
+                      1767732205903.0/4055673282236.0};
+    dfloat erkE[4] = {1471266399579.0/7840856788654.0 - 2756255671327.0/12835298489170.0,\
+                      -4482444167858.0/7529755066697.0 - -10771552573575.0/22201958757719.0,\
+                      11266239266428.0/11593286722821.0 - 9247589265047.0/10645013368117.0,\
+                      1767732205903.0/4055673282236.0 - 2193209047091.0/5459859503100.0};
+
+    dfloat irkA[4*4] ={                              0.0,                              0.0,                               0.0,                             0.0,\
+                         1767732205903.0/4055673282236.0,  1767732205903.0/4055673282236.0,                               0.0,                             0.0,\
+                        2746238789719.0/10658868560708.0,  -640167445237.0/6845629431997.0,   1767732205903.0/4055673282236.0,                             0.0,\
+                         1471266399579.0/7840856788654.0, -4482444167858.0/7529755066697.0, 11266239266428.0/11593286722821.0, 1767732205903.0/4055673282236.0};
+    dfloat irkB[4] = {1471266399579.0/7840856788654.0,\
+                      -4482444167858.0/7529755066697.0,\
+                      11266239266428.0/11593286722821.0,\
+                      1767732205903.0/4055673282236.0};
+    dfloat irkE[4] = {1471266399579.0/7840856788654.0 - 2756255671327.0/12835298489170.0,\
+                      -4482444167858.0/7529755066697.0 - -10771552573575.0/22201958757719.0,
+                      11266239266428.0/11593286722821.0 - 9247589265047.0/10645013368117.0,\
+                      1767732205903.0/4055673282236.0 - 2193209047091.0/5459859503100.0};
+
+    dfloat rkC[4] = {0.0, \
+                    1767732205903.0/2027836641118.0, \
+                    3.0/5.0, \
+                    1.0};
+
+    dfloat prkA[4*4] ={  0.0,                             0.0,       0.0,   0.0,\
+                         0.0, 1767732205903.0/2027836641118.0,       0.0,   0.0,\
+                         0.5,                             0.0,       0.5,   0.5};
+
+    dfloat prkB[4*4] ={  0.0,                             0.0,       0.0,   0.0,\
+                         0.0, 1767732205903.0/2027836641118.0,       0.0,   0.0,\
+                         0.5,                             0.0,       0.5,   0.5};
+
+    ins->Nrk = Nrk;
+    ins->erkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->irkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->prkA = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->prkB = (dfloat*) calloc(ins->Nrk*ins->Nrk, sizeof(dfloat));
+    ins->erkB = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
+    ins->erkE = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
+    ins->irkB = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
+    ins->irkE = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
+    ins->rkC  = (dfloat*) calloc(ins->Nrk, sizeof(dfloat));
+
+
+    memcpy(ins->erkA, erkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->irkA, irkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->prkA, prkA, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->prkB, prkB, ins->Nrk*ins->Nrk*sizeof(dfloat));
+    memcpy(ins->erkB, erkB, ins->Nrk*sizeof(dfloat));
+    memcpy(ins->erkE, erkE, ins->Nrk*sizeof(dfloat));
+    memcpy(ins->irkB, irkB, ins->Nrk*sizeof(dfloat));
+    memcpy(ins->irkE, irkE, ins->Nrk*sizeof(dfloat));
+    memcpy(ins->rkC, rkC, ins->Nrk*sizeof(dfloat));
+    
+    ins->g0 =  4055673282236.0/1767732205903.0;
+    ins->embeddedRKFlag = 1; 
   } 
 
 
@@ -519,7 +587,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->o_erkA = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->erkA);
     ins->o_irkA = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->irkA);
     ins->o_prkA = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->prkA);
-    ins->o_prkAA= mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->prkAA);
+    ins->o_prkB = mesh->device.malloc(ins->Nrk*ins->Nrk*sizeof(dfloat),ins->prkB);
   }
 
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
@@ -532,8 +600,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
     ins->o_extC = mesh->device.malloc(3*sizeof(dfloat)); 
 
-    ins->o_prkA  = ins->o_extbdfC;
-    ins->o_prkAA = ins->o_extbdfC;
+    ins->o_prkA = ins->o_extbdfC;
+    ins->o_prkB = ins->o_extbdfC;
   }
 
   // MEMORY ALLOCATION

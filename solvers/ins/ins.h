@@ -68,7 +68,7 @@ typedef struct {
   //ARK data
   int Nrk;
   dfloat *rkC;
-  dfloat *erkA, *irkA, *prkA, *prkAA;
+  dfloat *erkA, *irkA, *prkA;
   dfloat *erkB, *irkB, *prkB;
   dfloat *erkE, *irkE, *prkE;
   int embeddedRKFlag;
@@ -119,7 +119,7 @@ typedef struct {
 
   //ARK data
   occa::memory o_rkC;
-  occa::memory o_erkA, o_irkA, o_prkA, o_prkAA;
+  occa::memory o_erkA, o_irkA, o_prkA;
   occa::memory o_erkB, o_irkB, o_prkB;
   occa::memory o_erkE, o_irkE, o_prkE;
 
