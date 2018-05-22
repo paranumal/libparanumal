@@ -20,9 +20,9 @@
     *(uB) = p_ubar;                 \
     *(vB) = p_vbar;                 \
   } else if(bc==3){                 \
-    *(rB) = rM;                 \
-    *(uB) = uM;                     \
-    *(vB) = vM;                     \
+    *(rB) = rM;                     \
+    *(uB) = p_ubar;                 \
+    *(vB) = p_vbar;                 \
   } else if(bc==4||bc==5){          \
     *(rB) = rM;                     \
     *(uB) = uM - (nx*uM+ny*vM)*nx;  \

@@ -56,67 +56,87 @@ void cnsPlotVTU(cns_t *cns, char *fileName){
   fprintf(fp, "       </DataArray>\n");
 
   // write out velocity
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->plotNp;++n){
-      dfloat plotun = 0, plotvn = 0, plotwn = 0;
-      for(int m=0;m<mesh->Np;++m){
-        dfloat rm = mesh->q[e*mesh->Np*mesh->Nfields+m           ];
-        dfloat um = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ]/rm;
-        dfloat vm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2]/rm;
-        dfloat wm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*3]/rm;
-        //
-        plotun += mesh->plotInterp[n*mesh->Np+m]*um;
-        plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
-        plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
+  if (cns->dim==2) {
+    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
+    for(dlong e=0;e<mesh->Nelements;++e){
+      for(int n=0;n<mesh->plotNp;++n){
+        dfloat plotun = 0, plotvn = 0, plotwn = 0;
+        for(int m=0;m<mesh->Np;++m){
+          dfloat rm = mesh->q[e*mesh->Np*mesh->Nfields+m           ];
+          dfloat um = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ]/rm;
+          dfloat vm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2]/rm;
+          dfloat wm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*3]/rm;
+          //
+          plotun += mesh->plotInterp[n*mesh->Np+m]*um;
+          plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
+          plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
+        }
+      
+        fprintf(fp, "       ");
+        fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);
       }
-    
-      fprintf(fp, "       ");
-      fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);
     }
+    fprintf(fp, "       </DataArray>\n");
+  } else {
+    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"2\" Format=\"ascii\">\n");
+    for(dlong e=0;e<mesh->Nelements;++e){
+      for(int n=0;n<mesh->plotNp;++n){
+        dfloat plotun = 0, plotvn = 0;
+        for(int m=0;m<mesh->Np;++m){
+          dfloat rm = mesh->q[e*mesh->Np*mesh->Nfields+m           ];
+          dfloat um = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ]/rm;
+          dfloat vm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2]/rm;
+          //
+          plotun += mesh->plotInterp[n*mesh->Np+m]*um;
+          plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
+        }
+      
+        fprintf(fp, "       ");
+        fprintf(fp, "%g %g\n", plotun, plotvn);
+      }
+    }
+    fprintf(fp, "       </DataArray>\n");
   }
-  fprintf(fp, "       </DataArray>\n");
 
   // write out vorticity (need to fix for 3D vorticity)
-  const int Ncomponents = (cns->dim==2) ? 1: 3;
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Ncomponents);
 
-  if(cns->dim==3){
+  if(cns->dim==2){
+    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
     for(dlong e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->plotNp;++n){
-	dfloat plotVortx = 0, plotVorty = 0, plotVortz = 0;
-	for(int m=0;m<mesh->Np;++m){
-	  dlong id = m+e*mesh->Np*3;
-	  dfloat vortx = cns->Vort[id];
-	  dfloat vorty = cns->Vort[id+mesh->Np];
-	  dfloat vortz = cns->Vort[id+2*mesh->Np];
-	  plotVortx += mesh->plotInterp[n*mesh->Np+m]*vortx;
-        plotVorty += mesh->plotInterp[n*mesh->Np+m]*vorty;
-        plotVortz += mesh->plotInterp[n*mesh->Np+m]*vortz;
-	}
-	
-	fprintf(fp, "       ");
-	fprintf(fp, "%g %g %g\n", plotVortx, plotVorty, plotVortz);
+        dfloat plotVort = 0;
+        for(int m=0;m<mesh->Np;++m){
+          dlong id = m+e*mesh->Np;
+          dfloat vort = cns->Vort[id];
+          plotVort += mesh->plotInterp[n*mesh->Np+m]*vort;
+        }
+
+        fprintf(fp, "       ");
+        fprintf(fp, "%g\n", plotVort);
       }
     }
-  }
-  else{
+    fprintf(fp, "       </DataArray>\n");
+  } else {
+    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
     for(dlong e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->plotNp;++n){
-	dfloat plotVort = 0;
-	for(int m=0;m<mesh->Np;++m){
-	  dlong id = m+e*mesh->Np;
-	  dfloat vort = cns->Vort[id];
-	  plotVort += mesh->plotInterp[n*mesh->Np+m]*vort;
-	}
-	
-	fprintf(fp, "       ");
-	fprintf(fp, "%g\n", plotVort);
+        dfloat plotVortx = 0, plotVorty = 0, plotVortz = 0;
+        for(int m=0;m<mesh->Np;++m){
+          dlong id = m+e*mesh->Np*3;
+          dfloat vortx = cns->Vort[id];
+          dfloat vorty = cns->Vort[id+mesh->Np];
+          dfloat vortz = cns->Vort[id+2*mesh->Np];
+          plotVortx += mesh->plotInterp[n*mesh->Np+m]*vortx;
+          plotVorty += mesh->plotInterp[n*mesh->Np+m]*vorty;
+          plotVortz += mesh->plotInterp[n*mesh->Np+m]*vortz;
+        }
+        
+        fprintf(fp, "       ");
+        fprintf(fp, "%g %g %g\n", plotVortx, plotVorty, plotVortz);
       }
     }
+    fprintf(fp, "       </DataArray>\n");
   }
-  fprintf(fp, "       </DataArray>\n");
-
   
   fprintf(fp, "     </PointData>\n");
   
