@@ -19,17 +19,16 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     if (hostIds[r]==hostId) deviceID++;
   }
 
+  if (size==1) options.getArgs("DEVICE NUMBER" ,deviceID);
+
   // read thread model/device/platform from options
   if(options.compareArgs("THREAD MODEL", "CUDA")){
-    int dev; 
-    options.getArgs("DEVICE NUMBER" ,dev);
-    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",dev);
+    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
   }
   else if(options.compareArgs("THREAD MODEL", "OpenCL")){
-    int dev, plat;
-    options.getArgs("DEVICE NUMBER", dev);
+    int plat;
     options.getArgs("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", dev, plat);
+    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", deviceID, plat);
   }
   else if(options.compareArgs("THREAD MODEL", "OpenMP")){
     sprintf(deviceConfig, "mode = OpenMP");
