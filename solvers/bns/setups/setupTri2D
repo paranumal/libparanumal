@@ -20,7 +20,7 @@ data/bnsUniform2D.h
 1.0
 
 [UBAR] # mean x-velocity
-0.0
+1.0
 
 [VBAR] # mean y-velocity
 0.0
@@ -54,6 +54,7 @@ CUDA
 
 [TIME INTEGRATOR]
 #LSERK4
+#MRSAAB
 SARK 
 
 [FIXED TIME STEP]
