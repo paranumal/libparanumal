@@ -1,0 +1,27 @@
+[FORMAT]
+1.0
+
+[MESH FILE]
+../../meshes/cavityH00125.msh
+
+[MESH DIMENSION]
+2
+
+[ELEMENT TYPE] # number of edges
+3
+
+[POLYNOMIAL DEGREE]
+6
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+#this is ignored when running with MPI
+[DEVICE NUMBER]
+0
+
+[OUTPUT FILE NAME]
+cube
