@@ -2,7 +2,7 @@
 1.0
 
 [MESH FILE]
-../../meshes/cavityTetH05.msh
+../../meshes/cavityTetH00625.msh
 
 [MESH DIMENSION]
 3
@@ -11,7 +11,7 @@
 6
 
 [POLYNOMIAL DEGREE]
-4
+5
 
 [THREAD MODEL]
 CUDA

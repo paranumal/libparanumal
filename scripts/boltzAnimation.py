@@ -95,13 +95,15 @@ groupDatasets1Display.RescaleTransferFunctionToDataRange(True, False)
 vorticityLUT = GetColorTransferFunction('Vorticity')
 
 # Rescale transfer function
-vorticityLUT.RescaleTransferFunction(-4.0, 4.0)
+vorticityLUT.RescaleTransferFunction(-5.0, 5.0)
 
 # get opacity transfer function/opacity map for 'Vorticity'
 vorticityPWF = GetOpacityTransferFunction('Vorticity')
 
 # Rescale transfer function
-vorticityPWF.RescaleTransferFunction(-4.0, 4.0)
+vorticityPWF.RescaleTransferFunction(-5.0, 5.0)
+
+vorticityLUT.ApplyPreset('Rainbow Desaturated', True)
 
 # Hide orientation axes
 renderView1.OrientationAxesVisibility = 0
@@ -109,7 +111,7 @@ groupDatasets1Display.SetScalarBarVisibility(renderView1, False)
 
 # current camera placement for renderView1
 renderView1.InteractionMode = '2D'
-renderView1.CameraPosition = [2.75, 0, 35.0]
+renderView1.CameraPosition = [2.75, 0, 8.0]
 renderView1.CameraFocalPoint = [2.75, 0, 0.0]
 renderView1.CameraParallelScale = 6.210760565455133
 
