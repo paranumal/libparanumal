@@ -178,13 +178,17 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 	mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
       
-#if 0
       // kernels from volume file
-      sprintf(fileName, DGRADIENT "/okl/gradientVolume%s.okl", suffix);
+      sprintf(fileName, DGRADIENT "/okl/gradientVolume%s.okl",
+	      suffix);
       sprintf(kernelName, "gradientVolume%s", suffix);
 
-      gradient->gradientKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      gradient->gradientKernel =
+	mesh->device.buildKernelFromSource(fileName,
+					   kernelName,
+					   kernelInfo);
 
+#if 0
       // fix this later
       mesh->haloExtractKernel =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
