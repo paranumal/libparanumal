@@ -48,9 +48,36 @@ int main(int argc, char **argv){
   }
 
   gradient->o_q.copyFrom(gradient->q);
+
+  // call gradient kernel
+  gradient->gradientKernel(mesh->Nelements,
+			   mesh->o_vgeo,
+			   mesh->o_Dmatrices,
+			   gradient->o_q,
+			   gradient->o_gradientq);
+
+  // copy gradient back to host
+  gradient->o_gradientq.copyTo(gradient->gradientq);
+
+#if 0
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      int id = e*mesh->Np*mesh->dim + n;
+      if(mesh->dim==3)
+	printf("(%g,%g,%g)\n ",
+	       gradient->gradientq[id],
+	       gradient->gradientq[id+mesh->Np],
+	       gradient->gradientq[id+2*mesh->Np]);
+      else
+	printf("(%g,%g)\n ",
+	       gradient->gradientq[id],
+	       gradient->gradientq[id+mesh->Np]);
+    }
+  }
+#endif
   
   // extract isosurface
-  gradientReport(gradient, 0.0,  options);
+  //  gradientReport(gradient, 0.0,  options);
 
   // close down MPI
   MPI_Finalize();

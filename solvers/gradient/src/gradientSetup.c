@@ -79,7 +79,7 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
 
   gradient->o_gradientq =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*3*sizeof(dfloat));
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->dim*sizeof(dfloat));
 
   dfloat *plotInterp = (dfloat*) calloc(mesh->plotNp*mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->plotNp;++n){
@@ -178,13 +178,17 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 	mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
       
-#if 0
       // kernels from volume file
-      sprintf(fileName, DGRADIENT "/okl/gradientVolume%s.okl", suffix);
+      sprintf(fileName, DGRADIENT "/okl/gradientVolume%s.okl",
+	      suffix);
       sprintf(kernelName, "gradientVolume%s", suffix);
 
-      gradient->gradientKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      gradient->gradientKernel =
+	mesh->device.buildKernelFromSource(fileName,
+					   kernelName,
+					   kernelInfo);
 
+#if 0
       // fix this later
       mesh->haloExtractKernel =
         mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
