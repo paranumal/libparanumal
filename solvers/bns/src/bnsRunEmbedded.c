@@ -8,10 +8,10 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
   int rank; 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  dfloat safe  = 0.9;   //safety factor
+  dfloat safe  = 0.95;   //safety factor
   //error control parameters
   dfloat beta       = 0.05; 
-  dfloat factor1    = 0.2;
+  dfloat factor1    = 0.25;
   dfloat factor2    = 10.0;
   dfloat exp1       = 1.0/bns->rkp -0.75*beta; 
   dfloat invfactor1 = 1.0/factor1;
@@ -203,12 +203,15 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
       printf("\r time = %g (%d), dt = %g rejected (ratio dt/min = %g), trying %g", bns->time,bns->atstep, bns->dt, bns->dt/hmin, dtnew);
       done =0;
     }
-
+   
     bns->dt = dtnew;
     bns->atstep++;
+    
+
+
 
     bnsSAADRKCoefficients(bns, options);
-    #if 0
+    #if 1
     char fname[BUFSIZ]; sprintf(fname, "boltzmannAddaptiveDt.dat");
     FILE *fp; fp = fopen(fname, "a");
     fprintf(fp, "%.5e %.5e\n", bns->time, bns->dt); 
@@ -216,6 +219,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
     #endif
   }
 
+    printf("Total Step: %d, Rejected Step: %d, Accepted Step: %d \n", bns->atstep, bns->rtstep, bns->tstep);
 
 }
 

@@ -1,56 +1,75 @@
 
-// Initial conditions 
-#define cnsFlowField2D(t,x,y,u,v,p)   \
-  {                                   \
-    *(r) = p_rbar;                    \
-    *(u) = p_ubar;                    \
-    *(v) = p_vbar;                    \
+// Initial conditions: not in use cirrently 
+#define bnsFlowField2D(t,x,y,ramp,q1,q2,q3,q4,q5,q6)  \
+  {                                                   \
+    *(q1) = q1bar;                                    \
+    *(q2) = ramp*q2bar;                               \
+    *(q3) = ramp*q3bar;                               \
+    *(q4) = ramp*ramp*q4bar;                          \
+    *(q5) = ramp*ramp*q5bar;                          \
+    *(q6) = ramp*ramp*q6bar;                          \
   }   
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define cnsDirichletConditions2D(bc, t, x, y, nx, ny, rM, uM, vM, rB, uB, vB) \
-{                                   \
-  if(bc==1){                        \
-    *(rB) = rM;                     \
-    *(uB) = 0.f;                    \
-    *(vB) = 0.f;                    \
-  } else if(bc==2){                 \
-    *(rB) = p_rbar;                 \
-    *(uB) = p_ubar;                 \
-    *(vB) = p_vbar;                 \
-  } else if(bc==3){                 \
-    *(rB) = p_rbar;                 \
-    *(uB) = uM;                     \
-    *(vB) = vM;                     \
-  } else if(bc==4||bc==5){          \
-    *(rB) = rM;                     \
-    *(uB) = uM - (nx*uM+ny*vM)*nx;  \
-    *(vB) = vM - (nx*uM+ny*vM)*ny;  \
-  }                                 \
+#define boundaryConditionsPML2D(bc, t, x, y, nx, ny, ramp, q1M, q2M, q3M, q4M, q5M, q6M, q1B, q2B, q3B, q4B, q5B, q6B) \
+{                                           \
+  if(bc==1){                                \
+    *(q1B) =  q1M;                          \
+    *(q2B) = -q2M;                          \
+    *(q3B) = -q3M;                          \
+    *(q4B) =  q4M;                          \
+    *(q5B) =  q5M;                          \
+    *(q6B) =  q6M;                          \
+  } else if(bc==4||bc==5){                  \
+    *(q1B) = q1M;                           \
+    *(q2B) = q2M-2.f*(nx*q2M+ny*q3M)*nx;    \
+    *(q3B) = q3M-2.f*(nx*q2M+ny*q3M)*ny;    \
+    *(q4B) =  q4M;                          \
+    *(q5B) =  q5M;                          \
+    *(q6B) =  q6M;                          \
+  }                                         \
+  else {                                    \
+    *(q1B) = 2.f*p_q1bar - q1M;             \
+    *(q2B) = 2.f*ramp*p_q2bar - q2M;        \
+    *(q3B) = 2.f*ramp*p_q3bar - q3M;        \
+    *(q4B) = 2.f*ramp*ramp*p_q4bar - q4M;   \
+    *(q5B) = 2.f*ramp*ramp*p_q5bar - q5M;   \
+    *(q6B) = 2.f*ramp*ramp*p_q6bar - q6M;   \
+  }                                         \
 }
 
-#define cnsNeumannConditions2D(bc, t, x, y, nx, ny, uxM, uyM, vxM, vyM, uxB, uyB, vxB, vyB) \
-{                                          \
-  if(bc==1 || bc==2){                      \
-    *(uxB) = uxM;                          \
-    *(uyB) = uyM;                          \
-    *(vxB) = vxM;                          \
-    *(vyB) = vyM;                          \
-  } else if(bc==3){                        \
-    *(uxB) = 0.f;                          \
-    *(uyB) = 0.f;                          \
-    *(vxB) = 0.f;                          \
-    *(vyB) = 0.f;                          \
-  } else if(bc==4){                        \
-    *(uxB) = uxM;                          \
-    *(uyB) = uyM;                          \
-    *(vxB) = 0.f;                          \
-    *(vyB) = 0.f;                          \
-  } else if(bc==5){                        \
-    *(uxB) = 0.f;                          \
-    *(uyB) = 0.f;                          \
-    *(vxB) = vxM;                          \
-    *(vyB) = vyM;                          \
-  }                                        \
+// Boundary conditions: Did not check yet
+/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
+#define boundaryConditions2D(bc, t, x, y, nx, ny, ramp, q1M, q2M, q3M, q4M, q5M, q6M, q1B, q2B, q3B, q4B, q5B, q6B) \
+{                                           \
+  if(bc==1){                                \
+    *(q1B) =  q1M;                          \
+    *(q2B) = -q2M;                          \
+    *(q3B) = -q3M;                          \
+    *(q4B) =  q4M;                          \
+    *(q5B) =  q5M;                          \
+    *(q6B) =  q6M;                          \
+  } else if(bc==2){                         \
+    *(q1B) = 2.f*p_q1bar - q1M;             \
+    *(q2B) = 2.f*ramp*p_q2bar - q2M;        \
+    *(q3B) = 2.f*ramp*p_q3bar - q3M;        \
+    *(q4B) = 2.f*ramp*ramp*p_q4bar - q4M;   \
+    *(q5B) = 2.f*ramp*ramp*p_q5bar - q5M;   \
+    *(q6B) = 2.f*ramp*ramp*p_q6bar - q6M;   \
+  } else if(bc==3){                         \
+    *(q1B) = 2.f*q1M - q1M;                 \
+    *(q2B) = 2.f*ramp*p_q2bar - q2M;        \
+    *(q3B) = 2.f*ramp*p_q3bar - q3M;        \
+    *(q4B) = 2.f*ramp*ramp*p_q4bar - q4M;   \
+    *(q5B) = 2.f*ramp*ramp*p_q5bar - q5M;   \
+    *(q6B) = 2.f*ramp*ramp*p_q6bar - q6M;   \
+  } else if(bc==4||bc==5){                  \
+    *(q1B) = q1M;                           \
+    *(q2B) = q2M-2.f*(nx*q2M+ny*q3M)*nx;    \
+    *(q3B) = q3M-2.f*(nx*q2M+ny*q3M)*ny;    \
+    *(q4B) = q4M;                           \
+    *(q5B) = q5M;                           \
+    *(q6B) = q6M;                           \
+  }                                         \
 }

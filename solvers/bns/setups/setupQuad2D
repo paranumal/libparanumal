@@ -20,6 +20,21 @@ data/bnsUniform2D.h
 [POLYNOMIAL DEGREE]
 3
 
+[RBAR] # mean density
+1.0
+
+[UBAR] # mean x-velocity
+1.0
+
+[VBAR] # mean y-velocity
+0.0
+
+[BODYFORCE-X] # constant global force on particles in x-direction
+0.0
+
+[BODYFORCE-Y] # constant global force on particles in y-direction
+0.0
+
 [ABSORBING LAYER]
 PML
 
@@ -42,19 +57,18 @@ CUDA
 0
 
 [TIME INTEGRATOR]
-MRSAAB 
+#LSERK4
+#MRSAAB
+SARK 
 
 [FIXED TIME STEP]
-1 
+0 
 
-[RELAXATION TYPE]
-CUBATURE
+[VISCOSITY]
+5.e-3
 
-[REYNOLDS NUMBER]
-200
-
-[MACH NUMBER]
-0.2
+[SPEED OF SOUND]
+5.0
 
 [PROBE FLAG]
 0
@@ -71,14 +85,11 @@ CUBATURE
 [TSTEPS FOR SOLUTION OUTPUT]
 1000
 
-[REPORT FREQUENCY]
-1
-
 [START TIME]
 0
 
 [FINAL TIME]
-50
+10
 
 [OUTPUT INTERVAL]
 .5
@@ -96,7 +107,7 @@ CUBATURE
 100
 
 [CFL]
-0.1
+0.5
 
 [RESTART FROM FILE]
 0
@@ -105,4 +116,4 @@ CUBATURE
 VTU
 
 [OUTPUT FILE NAME]
-square_cyclinder_quad
+square_cylinder

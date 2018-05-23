@@ -21,99 +21,99 @@ void upwind1D(const dfloat nx, const dfloat ny,
 
 
 
-void boundaryConditions2D(const int bc,
-        const dfloat  t, const dfloat  x, const dfloat  y,
-        const dfloat  nx, const dfloat  ny,
-        const dfloat ramp,
-        const dfloat  q1M, const dfloat  q2M, const dfloat  q3M,
-        const dfloat  q4M, const dfloat  q5M, const dfloat  q6M,
-        dfloat * restrict q1B, dfloat * restrict q2B, dfloat * restrict q3B,
-        dfloat * restrict q4B, dfloat * restrict q5B, dfloat * restrict q6B){
-#if PML_ENABLED
-  if (1 == bc)       // Wall
-  {
-    *q1B =  q1M; 
-    *q2B = -q2M;
-    *q3B = -q3M;
-    *q4B =  q4M;
-    *q5B =  q5M;
-    *q6B =  q6M;
-  }
+// void boundaryConditions2D(const int bc,
+//         const dfloat  t, const dfloat  x, const dfloat  y,
+//         const dfloat  nx, const dfloat  ny,
+//         const dfloat ramp,
+//         const dfloat  q1M, const dfloat  q2M, const dfloat  q3M,
+//         const dfloat  q4M, const dfloat  q5M, const dfloat  q6M,
+//         dfloat * restrict q1B, dfloat * restrict q2B, dfloat * restrict q3B,
+//         dfloat * restrict q4B, dfloat * restrict q5B, dfloat * restrict q6B){
+// #if PML_ENABLED
+//   if (1 == bc)       // Wall
+//   {
+//     *q1B =  q1M; 
+//     *q2B = -q2M;
+//     *q3B = -q3M;
+//     *q4B =  q4M;
+//     *q5B =  q5M;
+//     *q6B =  q6M;
+//   }
 
-   else if (bc==2)   // NBN: testing inflow
-  { 
-    *q1B = 2.f*p_q1bar - q1M; 
-    *q2B = 2.f*ramp*p_q2bar - q2M; 
-    *q3B = 2.f*ramp*p_q3bar - q3M; 
-    *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
-    *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
-    *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
-  }
+//    else if (bc==2)   // NBN: testing inflow
+//   { 
+//     *q1B = 2.f*p_q1bar - q1M; 
+//     *q2B = 2.f*ramp*p_q2bar - q2M; 
+//     *q3B = 2.f*ramp*p_q3bar - q3M; 
+//     *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
+//     *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
+//     *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
+//   }
 
-   else if (bc==3)   // NBN: testing inflow
-  { 
+//    else if (bc==3)   // NBN: testing inflow
+//   { 
 
-    *q1B = 2.f*p_q1bar - q1M; 
-    *q2B = 2.f*ramp*p_q2bar - q2M; 
-    *q3B = 2.f*ramp*p_q3bar - q3M; 
-    *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
-    *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
-    *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
-  }
+//     *q1B = 2.f*p_q1bar - q1M; 
+//     *q2B = 2.f*ramp*p_q2bar - q2M; 
+//     *q3B = 2.f*ramp*p_q3bar - q3M; 
+//     *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
+//     *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
+//     *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
+//   }
 
-   else if (bc==4)   // NBN: testing inflow
-  { 
+//    else if (bc==4)   // NBN: testing inflow
+//   { 
 
-    *q1B = 2.f*p_q1bar - q1M; 
-    *q2B = 2.f*ramp*p_q2bar - q2M; 
-    *q3B = 2.f*ramp*p_q3bar - q3M; 
-    *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
-    *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
-    *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
-  }
+//     *q1B = 2.f*p_q1bar - q1M; 
+//     *q2B = 2.f*ramp*p_q2bar - q2M; 
+//     *q3B = 2.f*ramp*p_q3bar - q3M; 
+//     *q4B = 2.f*ramp*ramp*p_q4bar - q4M;
+//     *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
+//     *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
+//   }
 
 
  
- #else
-  if(bc==1){ // Wall 
-    *q1B = q1M; 
-    *q2B = -q2M;
-    *q3B = -q3M;
-    *q4B = q4M;
-    *q5B = q5M;
-    *q6B = q6M;
-  }
-  if(bc==2){ // Inflow
-    *q1B = q1M; 
-    *q2B = 1.f/p_sqrtRT; //Uniform Velocity
-    //*q2B = (1.0f - y*y)/p_sqrtRT; //Parabolic
-    *q3B = 0.f;
-    *q4B = q4M;
-    *q5B = q5M;
-    *q6B = q6M;
-  }
-  if(bc==3){ // Outflow // do nothing
-    *q1B = 1.0f; // Define atleast one parameter
-    // *q2B = q2M;
-    // *q3B = q3M;
-    // *q4B = q4M;
-    // *q5B = q5M;
-    // *q6B = q6M;
-  }
+//  #else
+//   if(bc==1){ // Wall 
+//     *q1B = q1M; 
+//     *q2B = -q2M;
+//     *q3B = -q3M;
+//     *q4B = q4M;
+//     *q5B = q5M;
+//     *q6B = q6M;
+//   }
+//   if(bc==2){ // Inflow
+//     *q1B = q1M; 
+//     *q2B = 1.f/p_sqrtRT; //Uniform Velocity
+//     //*q2B = (1.0f - y*y)/p_sqrtRT; //Parabolic
+//     *q3B = 0.f;
+//     *q4B = q4M;
+//     *q5B = q5M;
+//     *q6B = q6M;
+//   }
+//   if(bc==3){ // Outflow // do nothing
+//     *q1B = 1.0f; // Define atleast one parameter
+//     // *q2B = q2M;
+//     // *q3B = q3M;
+//     // *q4B = q4M;
+//     // *q5B = q5M;
+//     // *q6B = q6M;
+//   }
 
-  if(bc==4){ // Slip for q2/ no slip for q3
-    *q1B = q1M; 
-    *q2B = q2M; // Slip for u
-    *q3B = -q3M; // v = 0
-    *q4B = q4M;
-    *q5B = q5M;
-    *q6B = q6M;
-  }
+//   if(bc==4){ // Slip for q2/ no slip for q3
+//     *q1B = q1M; 
+//     *q2B = q2M; // Slip for u
+//     *q3B = -q3M; // v = 0
+//     *q4B = q4M;
+//     *q5B = q5M;
+//     *q6B = q6M;
+//   }
 
 
-  #endif
+//   #endif
   
-}
+// }
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {                                                                     \
@@ -144,7 +144,10 @@ void boundaryConditions2D(const int bc,
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0){                                                             \
-  boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, ramp, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);\
+    if(p_PML)                                                           \
+      boundaryConditionsPML2D(bc, time, x[idM], y[idM], nx, ny, ramp, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P)\
+    else                                                                \
+      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, ramp, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P)\
   }                                                                     \
                                                                         \
   dfloat q1U, q2U, q3U, q4U, q5U, q6U;                                  \
@@ -198,7 +201,7 @@ void boundaryConditions2D(const int bc,
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0){                                                             \
-  boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, ramp, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);\
+  boundaryConditionsPML2D(bc, time, x[idM], y[idM], nx, ny, ramp, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);\
   }                                                                     \
                                                                         \
   dfloat q1U, q2U, q3U, q4U, q5U, q6U;                                  \
@@ -259,9 +262,12 @@ void boundaryConditions2D(const int bc,
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0){                                                             \
-  const dlong idB = vmapM[sk];                                          \
-  boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);\
-  }                                                                     \
+  const dlong idB = vmapM[sk];                                         \
+  if(p_PML)                                                           \
+    boundaryConditionsPML2D(bc, time, x[idB], y[idB], nx, ny, ramp, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P)\
+  else                                                                \
+    boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P)\
+  }                                                                       \
                                                                         \
   dfloat q1U, q2U, q3U, q4U, q5U, q6U;                                  \
   upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, &q1U, &q2U, &q3U, &q4U, &q5U, &q6U); \
@@ -312,9 +318,9 @@ void boundaryConditions2D(const int bc,
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0){                                                             \
-  const dlong idB = vmapM[sk];                                          \
-  boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, ramp, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P);\
-  }                                                                     \                                                 \
+    const dlong idB = vmapM[sk];                                         \
+    boundaryConditionsPML2D(bc, time, x[idB], y[idB], nx, ny, ramp, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P)\
+  }                                                                       \
                                                                         \
   dfloat q1U, q2U, q3U, q4U, q5U, q6U;                                  \
   upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, &q1U, &q2U, &q3U, &q4U, &q5U, &q6U); \
@@ -335,7 +341,7 @@ void boundaryConditions2D(const int bc,
   s_Aqx[es][3][j][i] += -p_sqrtRT*sc*nx*(dq3);                           \
   s_Aqx[es][4][j][i] += -p_sqrtRT*sc*nx*(p_sqrt2*dq2);                   \
   s_Aqx[es][5][j][i] +=  0.f;                                            \
-                                                                        \
+                                                                         \
   s_Bqy[es][0][j][i] += -p_sqrtRT*sc*ny*(dq3);                           \
   s_Bqy[es][1][j][i] += -p_sqrtRT*sc*ny*(dq4);                           \
   s_Bqy[es][2][j][i] += -p_sqrtRT*sc*ny*(dq1+p_sqrt2*dq6);               \
