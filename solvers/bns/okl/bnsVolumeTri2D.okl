@@ -242,6 +242,22 @@ kernel void bnsPmlVolumeTri2D(const dlong pmlNelements,
         r_N[4] = 2.f*ramp*drampdt*p_q5bar;
         r_N[5] = 2.f*ramp*drampdt*p_q6bar;
  
+        #if 0
+          #ifdef p_AX
+          // add x-body forcing (e.g. gravity)
+          r_N[1] += p_AX*s_q[es][0][n]; // assumes AX = gx/(sqrt(RT))
+          r_N[3] += p_AX*s_q[es][2][n];
+          r_N[4] += p_sqrt2*p_AX*s_q[es][1][n];
+          #endif
+
+          #ifdef p_AY
+          // add y-body forcing (e.g. gravity)
+          r_N[2] += p_AY*s_q[es][0][n]; // assumes AY = gy/(sqrt(RT))
+          r_N[3] += p_AY*s_q[es][1][n];
+          r_N[5] += p_sqrt2*p_AY*s_q[es][2][n];
+          #endif  
+        #endif
+
         const dlong id       = e*p_Nfields*p_Np + n;
               dlong rhsId    = id;
               dlong pmlrhsId = p_Nfields*pmlId*p_Np + n;

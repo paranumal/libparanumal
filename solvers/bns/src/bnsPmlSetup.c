@@ -5,6 +5,8 @@ void bnsPmlSetup(bns_t *bns, setupAide &options){
   mesh_t *mesh = bns->mesh;  
   //count the pml elements
   mesh->pmlNelements=0;
+
+  if(options.compareArgs("ABSORBING LAYER", "PML")){
   for (dlong m=0;m<mesh->Nelements;m++) {
     dlong e    = mesh->nonPmlElementIds[m];
     int type   = mesh->elementInfo[e];
@@ -14,6 +16,7 @@ void bnsPmlSetup(bns_t *bns, setupAide &options){
       mesh->pmlNelements++;
     }
   }
+}
 
   //set up the pml
   if (mesh->pmlNelements) {
