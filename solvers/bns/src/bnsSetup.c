@@ -543,7 +543,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   kernelInfo.addDefine("p_invsqrt2", (dfloat)sqrt(1./2.));
   kernelInfo.addDefine("p_tauInv", bns->tauInv);
 
-  dfloat AX = 0, AY = 0;
+  dfloat AX = 0, AY = 0, , AZ = 0;
 
   if(options.getArgs("BODYFORCE-X", AX))
     if(AX)
