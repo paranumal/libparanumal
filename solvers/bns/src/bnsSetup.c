@@ -609,6 +609,12 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   kernelInfo.addDefine("p_blockSize", blockSize);
   kernelInfo.addDefine("p_NrkStages", bns->NrkStages);
 
+  if(mesh->pmlNelements)
+    kernelInfo.addDefine("p_PML", (int) 1);
+  else
+    kernelInfo.addDefine("p_PML", (int) 0);
+
+
 
   if(bns->fexplicit) // full explicit or semi-nalaytic
     kernelInfo.addDefine("p_SEMI_ANALYTIC", (int) 0);
@@ -644,7 +650,9 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
     suffixUpdate = strdup("3D");
   
 
-
+  string boundaryHeaderFileName; 
+  options.getArgs("DATA FILE", boundaryHeaderFileName);
+  kernelInfo.addInclude((char*)boundaryHeaderFileName.c_str());
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
   for (int r=0;r<size;r++){

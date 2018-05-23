@@ -24,88 +24,88 @@ void upwind1D(const dfloat nx,  const dfloat ny,  const dfloat nz,
 }
 
 
-void boundaryConditions3D(const int bc, const dfloat  t,  const dfloat  x,  const dfloat  y,  const dfloat  z,
-                                        const dfloat  nx, const dfloat  ny, const dfloat  nz, const dfloat ramp,
-                    const dfloat  q1M, const dfloat  q2M, const dfloat  q3M, const dfloat  q4M, const dfloat  q5M, 
-                    const dfloat  q6M, const dfloat  q7M, const dfloat  q8M, const dfloat  q9M, const dfloat  q10M,
-                          dfloat * restrict q1B, dfloat * restrict q2B, dfloat * restrict q3B, dfloat * restrict q4B, dfloat * restrict q5B,
-                          dfloat * restrict q6B, dfloat * restrict q7B, dfloat * restrict q8B, dfloat * restrict q9B, dfloat * restrict q10B ){
-#if PML_ENABLED
-  if (1 == bc)       // Wall
-  {
-    *q1B  =  q1M; 
-    *q2B  = -q2M; // u=0;
-    *q3B  = -q3M; // v=0;
-    *q4B  = -q4M; // w=0; 
-    *q5B  =  q5M;
-    *q6B  =  q6M;
-    *q7B  =  q7M;
-    *q8B  =  q8M;
-    *q9B  =  q9M;
-    *q10B =  q10M;
-  }
-  else  
-  { 
-    *q1B  = 2.f*p_q1bar - q1M; 
-    *q2B  = 2.f*ramp*p_q2bar - q2M; 
-    *q3B  = 2.f*ramp*p_q3bar - q3M; 
-    *q4B  = 2.f*ramp*p_q4bar - q4M;
-    *q5B  = 2.f*ramp*ramp*p_q5bar  - q5M;
-    *q6B  = 2.f*ramp*ramp*p_q6bar  - q6M;
-    *q7B  = 2.f*ramp*ramp*p_q7bar  - q7M;
-    *q8B  = 2.f*ramp*ramp*p_q8bar  - q8M;
-    *q9B  = 2.f*ramp*ramp*p_q9bar  - q9M;
-    *q10B = 2.f*ramp*ramp*p_q10bar - q10M;
-  }
+// void boundaryConditions3D(const int bc, const dfloat  t,  const dfloat  x,  const dfloat  y,  const dfloat  z,
+//                                         const dfloat  nx, const dfloat  ny, const dfloat  nz, const dfloat ramp,
+//                     const dfloat  q1M, const dfloat  q2M, const dfloat  q3M, const dfloat  q4M, const dfloat  q5M, 
+//                     const dfloat  q6M, const dfloat  q7M, const dfloat  q8M, const dfloat  q9M, const dfloat  q10M,
+//                           dfloat * restrict q1B, dfloat * restrict q2B, dfloat * restrict q3B, dfloat * restrict q4B, dfloat * restrict q5B,
+//                           dfloat * restrict q6B, dfloat * restrict q7B, dfloat * restrict q8B, dfloat * restrict q9B, dfloat * restrict q10B ){
+// #if PML_ENABLED
+//   if (1 == bc)       // Wall
+//   {
+//     *q1B  =  q1M; 
+//     *q2B  = -q2M; // u=0;
+//     *q3B  = -q3M; // v=0;
+//     *q4B  = -q4M; // w=0; 
+//     *q5B  =  q5M;
+//     *q6B  =  q6M;
+//     *q7B  =  q7M;
+//     *q8B  =  q8M;
+//     *q9B  =  q9M;
+//     *q10B =  q10M;
+//   }
+//   else  
+//   { 
+//     *q1B  = 2.f*p_q1bar - q1M; 
+//     *q2B  = 2.f*ramp*p_q2bar - q2M; 
+//     *q3B  = 2.f*ramp*p_q3bar - q3M; 
+//     *q4B  = 2.f*ramp*p_q4bar - q4M;
+//     *q5B  = 2.f*ramp*ramp*p_q5bar  - q5M;
+//     *q6B  = 2.f*ramp*ramp*p_q6bar  - q6M;
+//     *q7B  = 2.f*ramp*ramp*p_q7bar  - q7M;
+//     *q8B  = 2.f*ramp*ramp*p_q8bar  - q8M;
+//     *q9B  = 2.f*ramp*ramp*p_q9bar  - q9M;
+//     *q10B = 2.f*ramp*ramp*p_q10bar - q10M;
+//   }
   
 
 
- #else
-  if(bc==1){ // Wall 
-    *q1B  =  q1M; 
-    *q2B  = -q2M; // u=0;
-    *q3B  = -q3M; // v=0;
-    *q4B  = -q4M; // w=0; 
-    *q5B  =  q5M;
-    *q6B  =  q6M;
-    *q7B  =  q7M;
-    *q8B  =  q8M;
-    *q9B  =  q9M;
-    *q10B =  q10M;
-  }
-  if(bc==2){ // Inflow
-    *q1B  =  q1M; 
-    *q2B  =  1.f /p_sqrtRT; // Uniform flow;
-    *q3B  =  0.f; // v=0;
-    *q4B  =  0.f; // w=0; 
-    *q5B  =  q5M;
-    *q6B  =  q6M;
-    *q7B  =  q7M;
-    *q8B  =  q8M;
-    *q9B  =  q9M;
-    *q10B =  q10M;
-  }
-  if(bc==3){ // Outflow // do nothing
-    *q1B = 1.0f; // Define atleast one parameter, Do nothing for others
-  }
+//  #else
+//   if(bc==1){ // Wall 
+//     *q1B  =  q1M; 
+//     *q2B  = -q2M; // u=0;
+//     *q3B  = -q3M; // v=0;
+//     *q4B  = -q4M; // w=0; 
+//     *q5B  =  q5M;
+//     *q6B  =  q6M;
+//     *q7B  =  q7M;
+//     *q8B  =  q8M;
+//     *q9B  =  q9M;
+//     *q10B =  q10M;
+//   }
+//   if(bc==2){ // Inflow
+//     *q1B  =  q1M; 
+//     *q2B  =  1.f /p_sqrtRT; // Uniform flow;
+//     *q3B  =  0.f; // v=0;
+//     *q4B  =  0.f; // w=0; 
+//     *q5B  =  q5M;
+//     *q6B  =  q6M;
+//     *q7B  =  q7M;
+//     *q8B  =  q8M;
+//     *q9B  =  q9M;
+//     *q10B =  q10M;
+//   }
+//   if(bc==3){ // Outflow // do nothing
+//     *q1B = 1.0f; // Define atleast one parameter, Do nothing for others
+//   }
 
-  if(bc==4){ // Slip for q2/ no slip for q3
-    *q1B  =  q1M; 
-    *q2B  =  q2M; // sli[p for u;
-    *q3B  = -q3M; // v=0;
-    *q4B  = -q4M; // w=0; 
-    *q5B  =  q5M;
-    *q6B  =  q6M;
-    *q7B  =  q7M;
-    *q8B  =  q8M;
-    *q9B  =  q9M;
-    *q10B =  q10M;
-  }
+//   if(bc==4){ // Slip for q2/ no slip for q3
+//     *q1B  =  q1M; 
+//     *q2B  =  q2M; // sli[p for u;
+//     *q3B  = -q3M; // v=0;
+//     *q4B  = -q4M; // w=0; 
+//     *q5B  =  q5M;
+//     *q6B  =  q6M;
+//     *q7B  =  q7M;
+//     *q8B  =  q8M;
+//     *q9B  =  q9M;
+//     *q10B =  q10M;
+//   }
 
 
-  #endif
+//   #endif
   
-}
+// }
 
 
 // This kernel uses Upwind flux 
@@ -179,11 +179,10 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
           const int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
               const dlong idB = vmapM[id];
-              boundaryConditions3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,
-                                   q1M, q2M, q3M, q4M, q5M,
-                                   q6M, q7M, q8M, q9M, q10M,
-                                   &q1P, &q2P, &q3P, &q4P, &q5P,
-                                   &q6P, &q7P, &q8P, &q9P, &q10P);
+              if(p_PML)
+                boundaryConditionsPML3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P, &q7P, &q8P, &q9P, &q10P)
+              else
+                boundaryConditions3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P, &q7P, &q8P, &q9P, &q10P)
           }
       
            // compute (q^*)
@@ -340,9 +339,7 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
                 const dlong idB = vmapM[id];
-                boundaryConditions3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,
-                                     q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M,
-                                     &q1P, &q2P, &q3P, &q4P, &q5P, &q6P, &q7P, &q8P, &q9P, &q10P);
+                boundaryConditionsPML3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P, &q7P, &q8P, &q9P, &q10P)
             }
         
            //  // compute (q^*)
@@ -536,11 +533,11 @@ kernel void bnsMRSurfaceTet3D(const dlong Nelements,
           const int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
               const dlong idB = vmapM[id];
-              boundaryConditions3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,
-                                   q1M, q2M, q3M, q4M, q5M,
-                                   q6M, q7M, q8M, q9M, q10M,
-                                   &q1P, &q2P, &q3P, &q4P, &q5P,
-                                   &q6P, &q7P, &q8P, &q9P, &q10P);
+              if(p_PML)
+                boundaryConditionsPML3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P, &q7P, &q8P, &q9P, &q10P)
+              else
+                boundaryConditions3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P, &q7P, &q8P, &q9P, &q10P)
+
           }
       
            // compute (q^*)
@@ -701,10 +698,8 @@ kernel void bnsMRPmlSurfaceTet3D(const dlong pmlNelements,
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-                const dlong idB = vmapM[id];
-                boundaryConditions3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,
-                                     q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M,
-                                     &q1P, &q2P, &q3P, &q4P, &q5P, &q6P, &q7P, &q8P, &q9P, &q10P);
+              const dlong idB = vmapM[id];
+                boundaryConditionsPML3D(bc, time, x[idB], y[idB], z[idB], nx, ny, nz, ramp,q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P, &q7P, &q8P, &q9P, &q10P)
             }
         
            //  // compute (q^*)
