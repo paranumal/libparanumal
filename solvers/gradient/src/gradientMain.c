@@ -62,11 +62,16 @@ int main(int argc, char **argv){
 #if 0
   for(int e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
-      int id = e*mesh->Np*3 + n;
-      printf("(%g,%g,%g)\n ",
-	     gradient->gradientq[id],
-	     gradient->gradientq[id+mesh->Np],
-	     gradient->gradientq[id+2*mesh->Np]);
+      int id = e*mesh->Np*mesh->dim + n;
+      if(mesh->dim==3)
+	printf("(%g,%g,%g)\n ",
+	       gradient->gradientq[id],
+	       gradient->gradientq[id+mesh->Np],
+	       gradient->gradientq[id+2*mesh->Np]);
+      else
+	printf("(%g,%g)\n ",
+	       gradient->gradientq[id],
+	       gradient->gradientq[id+mesh->Np]);
     }
   }
 #endif
