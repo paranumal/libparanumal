@@ -5,6 +5,7 @@
 data/bnsUniform2D.h
 
 [MESH FILE]
+#../../meshes/boltzmannVortex2D.msh
 ../../meshes/boltzmannSquareCylinderPMLTri2D.msh
 
 [MESH DIMENSION]
@@ -20,7 +21,7 @@ data/bnsUniform2D.h
 1.0
 
 [UBAR] # mean x-velocity
-0.0
+1.0
 
 [VBAR] # mean y-velocity
 0.0
@@ -54,16 +55,17 @@ CUDA
 
 [TIME INTEGRATOR]
 #LSERK4
-SARK 
+MRSAAB
+#SARK 
 
 [FIXED TIME STEP]
 0 
 
-[REYNOLDS NUMBER]
-200
+[VISCOSITY]
+5.e-3
 
-[MACH NUMBER]
-0.2
+[SPEED OF SOUND]
+5.0
 
 [PROBE FLAG]
 0

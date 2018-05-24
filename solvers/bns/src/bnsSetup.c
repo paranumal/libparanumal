@@ -67,11 +67,11 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   // Load input parameters
   int check; 
 
-  check = options.getArgs("REYNOLDS NUMBER", bns->Re);
-  if(!check) printf("WARNING setup file does not include REYNOLDS NUMBER\n");
+  check = options.getArgs("VISCOSITY", bns->nu);
+  if(!check) printf("WARNING setup file does not include VISCOSITY\n");
 
-  check = options.getArgs("MACH NUMBER", bns->Ma);
-  if(!check) printf("WARNING setup file does not include MACH NUMBER\n");
+  check = options.getArgs("SPEED OF SOUND", bns->sqrtRT);
+  if(!check) printf("WARNING setup file does not include SPEED OF SOUND\n");
 
   check = options.getArgs("START TIME", bns->startTime);
   if(!check) printf("WARNING setup file does not include START TIME\n");
@@ -128,8 +128,8 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   if(rank==0){
     printf("=============WRITING INPUT PARAMETERS===================\n");
 
-    printf("REYNOLDS NUMBER\t:\t%.2e\n", bns->Re);
-    printf("MACH NUMBER\t:\t%.2e\n", bns->Ma);
+    printf("VISCOSITY\t:\t%.2e\n", bns->nu);
+    printf("SPEED OF SOUND\t:\t%.2e\n", bns->sqrtRT);
     printf("CFL NUMBER\t:\t%.2e\n", bns->cfl);
     printf("START TIME\t:\t%.2e\n", bns->startTime);
     printf("FINAL TIME\t:\t%.2e\n", bns->finalTime);
@@ -145,16 +145,16 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   }
     
 
-  // printf("Starting initial conditions\n");
-  // Set characteristic length, should be one in a proper problem setting
-  dfloat Uref = 1.0;   
-  dfloat Lref = 1.0;   
-  //
-  bns->RT       = Uref*Uref/(bns->Ma*bns->Ma);
-  bns->sqrtRT   = sqrt(bns->RT);  
-  //
-  dfloat nu     = Uref*Lref/bns->Re; 
-  bns->tauInv   = bns->RT/nu;
+  
+  // bns->RT       = Uref*Uref/(bns->Ma*bns->Ma);
+  bns->RT     = bns->sqrtRT*bns->sqrtRT;  
+  bns->tauInv = bns->RT/bns->nu;
+  bns->Re = 1.0; 
+  bns->Ma = 0.2; 
+
+  // Tentative, depends on the reference velocity;
+  // bns->Re = Uref*Lref/bns->nu; 
+  // bns->Ma = Uref/bns->RT; 
 
   // Set penalty parameter for flux setting
   bns->Lambda2 = 0.5/(bns->sqrtRT);
@@ -171,9 +171,11 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   check = options.getArgs("VBAR", v);
   if(!check) printf("WARNING setup file does not include VBAR\n");
 
-  check = options.getArgs("WBAR", w);
-  if(!check) printf("WARNING setup file does not include WBAR\n");
-  
+  if(bns->dim==3){
+    check = options.getArgs("WBAR", w);
+    if(!check) printf("WARNING setup file does not include WBAR\n");
+  }
+
   dfloat sigma11 = 0.f , sigma12 = 0.f, sigma13 = 0.f;
   dfloat sigma22 = 0.f , sigma23 = 0.f;
   dfloat sigma33 = 0.f;
@@ -340,7 +342,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   }
 
  
-
+  dfloat Gy = 0.0; options.getArgs("BODYFORCE-Y",Gy);
   dfloat time = bns->startTime + 0.0; 
   // Define Initial Mean Velocity
   dfloat ramp, drampdt;
@@ -357,6 +359,36 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
       const dlong id = e*bns->Nfields*mesh->Np +n; 
       if(bns->dim==2){
+         // Uniform Flow
+        // dfloat phi = sqrt(x*x + y*y) -0.5; 
+        // dfloat signum = 0.5*(1.0 - tanh(M_PI*phi/0.1));
+        // bns->q[id+0*mesh->Np] = q1bar*(1.0 + signum); 
+        // bns->q[id+1*mesh->Np] = ramp*q2bar;
+        // bns->q[id+2*mesh->Np] = ramp*q3bar;
+        // bns->q[id+3*mesh->Np] = ramp*ramp*q4bar;
+        // bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
+        // bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;   
+
+        // Vortex Problem
+        // dfloat r     = sqrt(pow((x-u*time),2) + pow( (y-v*time),2) );
+        // dfloat Umax  = 0.5; 
+        // dfloat b     = 0.1;
+
+        // dfloat Ur    = Umax/b*r*exp(0.5*(1.0-pow(r/b,2)));
+
+        // dfloat rhor  = rho*exp(-Umax*Umax/(2. * bns->RT) *exp(1.0-r*r/(b*b)));
+        // rhor = 1.0;
+
+        // dfloat theta = atan2(y,x);
+
+        // bns->q[id+0*mesh->Np] = rhor*(1./bns->sqrtRT * Gy * y + 1.0); 
+        // bns->q[id+1*mesh->Np] = rhor*(-Ur*sin(theta)+u)/bns->sqrtRT;
+        // bns->q[id+2*mesh->Np] = rhor*( Ur*cos(theta)+v)/bns->sqrtRT;
+        // bns->q[id+3*mesh->Np] = q4bar;
+        // bns->q[id+4*mesh->Np] = q5bar;
+        // bns->q[id+5*mesh->Np] = q6bar;  
+
+
         // Uniform Flow
         bns->q[id+0*mesh->Np] = q1bar; 
         bns->q[id+1*mesh->Np] = ramp*q2bar;
@@ -543,7 +575,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   kernelInfo.addDefine("p_invsqrt2", (dfloat)sqrt(1./2.));
   kernelInfo.addDefine("p_tauInv", bns->tauInv);
 
-  dfloat AX = 0, AY = 0, , AZ = 0;
+  dfloat AX = 0, AY = 0, AZ = 0;
 
   if(options.getArgs("BODYFORCE-X", AX))
     if(AX)
@@ -551,9 +583,12 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   if(options.getArgs("BODYFORCE-Y", AY))
     if(AY)
       kernelInfo.addDefine("p_AY", AY/bns->sqrtRT);
-  if(options.getArgs("BODYFORCE-Z", AZ))
-    if(AZ)
-      kernelInfo.addDefine("p_AZ", AZ/bns->sqrtRT);
+
+  if(bns->dim==3){
+    if(options.getArgs("BODYFORCE-Z", AZ))
+      if(AZ)
+        kernelInfo.addDefine("p_AZ", AZ/bns->sqrtRT);
+   }
 
   kernelInfo.addDefine("p_q1bar", q1bar);
   kernelInfo.addDefine("p_q2bar", q2bar);

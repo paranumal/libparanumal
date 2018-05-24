@@ -39,23 +39,25 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
     if (Ntick % (1<<lev) != 0) break; //find the max lev to compute rhs
   
   if(mesh->totalHaloPairs>0){
+    // if(tstep==0)
+    // printf("Doing halo exchange for lev = %d and Ntick= %d \n", lev, Ntick);
     // extract halo on DEVICE
     #if ASYNC 
-      mesh->device.setStream(dataStream);
+    mesh->device.setStream(dataStream);
     #endif
 
     int Nentries = mesh->Nfp*bns->Nfields*mesh->Nfaces;
     mesh->haloExtractKernel(mesh->totalHaloPairs,
-                            Nentries,
-                            mesh->o_haloElementList,
-                            bns->o_fQM,
-                            mesh->o_haloBuffer);
+                    Nentries,
+                    mesh->o_haloElementList,
+                    bns->o_fQM,
+                    mesh->o_haloBuffer);
 
     // copy extracted halo to HOST
     mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
 
     #if ASYNC 
-      mesh->device.setStream(defaultStream);
+    mesh->device.setStream(defaultStream);
     #endif
   }
 
@@ -163,9 +165,9 @@ for (int Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {
 
     // start halo exchange
     meshHaloExchangeStart(mesh,
-          mesh->Nfields*mesh->Nfp*mesh->Nfaces*sizeof(dfloat),
-          sendBuffer,
-          recvBuffer);
+                          mesh->Nfields*mesh->Nfp*mesh->Nfaces*sizeof(dfloat),
+                          sendBuffer,
+                          recvBuffer);
 
     // wait for halo data to arrive
     meshHaloExchangeFinish(mesh);

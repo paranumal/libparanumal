@@ -50,7 +50,7 @@ void boundaryConditions2D(const int bc,
     *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
   }
 
-   else if (bc==3)   // NBN: testing inflow
+   else if (bc==3) // outflow   
   { 
 
     *q1B = 2.f*p_q1bar - q1M; 
@@ -71,7 +71,16 @@ void boundaryConditions2D(const int bc,
     *q5B = 2.f*ramp*ramp*p_q5bar - q5M;
     *q6B = 2.f*ramp*ramp*p_q6bar - q6M;
   }
+  else if(bc==5) // slip
+  {
+    *q1B = q1M;
+    *q2B = q2M-(nx*q2M+ny*q3M)*nx;
+    *q3B = q3M-(nx*q2M+ny*q3M)*ny;
+    *q4B =  q4M;
+    *q5B =  q5M;
+    *q6B =  q6M;
 
+  }
 
  
  #else
