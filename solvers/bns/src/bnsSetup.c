@@ -540,11 +540,6 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   bns->Vort   = (dfloat*) calloc(3*mesh->Nelements*mesh->Np, sizeof(dfloat));
   bns->o_Vort = mesh->device.malloc(3*mesh->Nelements*mesh->Np*sizeof(dfloat), bns->Vort);
   
-
-
-  
-
-
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   int maxCubNodes = mymax(maxNodes,mesh->cubNp);
 
@@ -626,12 +621,6 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
     kernelInfo.addDefine("p_MRSAAB", (int) 1);
   else
     kernelInfo.addDefine("p_MRSAAB", (int) 0);
-
-
-
-
-        
-
 
   // set kernel name suffix
   char *suffix, *suffixUpdate;

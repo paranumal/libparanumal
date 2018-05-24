@@ -26,7 +26,7 @@ data/bnsUniform3D.h
 [VBAR] # mean y-velocity
 0.0
 
-[WBAR] # mean y-velocity
+[WBAR] # mean z-velocity
 0.0
 
 [BODYFORCE-X] # constant global force on particles in x-direction
@@ -35,7 +35,7 @@ data/bnsUniform3D.h
 [BODYFORCE-Y] # constant global force on particles in y-direction
 0.0
 
-[BODYFORCE-Z] # constant global force on particles in y-direction
+[BODYFORCE-Z] # constant global force on particles in z-direction
 0.0
 
 [ABSORBING LAYER]
