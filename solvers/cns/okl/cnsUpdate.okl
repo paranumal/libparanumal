@@ -114,8 +114,8 @@ kernel void cnsErrorEstimate(const dlong N,
     for(int t=0;t<p_blockSize;++t;inner0){
       const dlong id = t + p_blockSize*b;
       if (id<N) {
-        const dfloat   qn =   q[id];
-        const dfloat rkqn = rkq[id];
+        const dfloat   qn =   occaFabs(q[id]);
+        const dfloat rkqn = occaFabs(rkq[id]);
         const dfloat qmax = (qn>rkqn) ? qn : rkqn;
         dfloat sk = ATOL + RTOL*qmax;
 
