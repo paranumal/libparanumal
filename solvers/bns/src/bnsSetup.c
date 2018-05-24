@@ -167,7 +167,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   bns->RT     = bns->sqrtRT*bns->sqrtRT;  
   bns->tauInv = bns->RT/bns->nu;
 
-  bns->Re = (fabs(u)>0) ? u*L/bns->nu   : 1.0; // just for postprocessing
+  bns->Re = (fabs(u)>0) ? u/bns->nu   : 1.0; // just for postprocessing , assume unit characteristic length
   bns->Ma = (fabs(u)>0) ? u/bns->sqrtRT : 1.0; // just for postprocessing
   // Set penalty parameter for flux setting
   bns->Lambda2 = 0.5/(bns->sqrtRT);
