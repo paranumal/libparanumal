@@ -53,7 +53,7 @@ typedef struct{
 	int errorStep;   // number of steps between error calculations
 	int reportStep;  // number of steps between error calculations
 
-	dfloat RT, sqrtRT, tauInv, Ma, Re; // Flow parameters
+	dfloat RT, sqrtRT, tauInv, Ma, Re, nu; // Flow parameters
 
 
 	mesh_t *mesh; 
