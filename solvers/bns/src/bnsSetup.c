@@ -143,22 +143,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     }
     printf("ERROR STEP\t:\t%d\n", bns->errorStep);
   }
-    
 
-  
-  // bns->RT       = Uref*Uref/(bns->Ma*bns->Ma);
-  bns->RT     = bns->sqrtRT*bns->sqrtRT;  
-  bns->tauInv = bns->RT/bns->nu;
-  bns->Re = 1.0; 
-  bns->Ma = 0.2; 
-
-  // Tentative, depends on the reference velocity;
-  // bns->Re = Uref*Lref/bns->nu; 
-  // bns->Ma = Uref/bns->RT; 
-
-  // Set penalty parameter for flux setting
-  bns->Lambda2 = 0.5/(bns->sqrtRT);
-  
   // Setting initial conditions
   dfloat rho     = 1.,   u       = 1.,  v       = 0.,   w  = 0.;
 
@@ -175,6 +160,22 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     check = options.getArgs("WBAR", w);
     if(!check) printf("WARNING setup file does not include WBAR\n");
   }
+    
+
+  
+  // bns->RT       = Uref*Uref/(bns->Ma*bns->Ma);
+  bns->RT     = bns->sqrtRT*bns->sqrtRT;  
+  bns->tauInv = bns->RT/bns->nu;
+
+  bns->Re = (fabs(u)>0) ? u*L/bns->nu   : 1.0; // just for postprocessing
+  bns->Ma = (fabs(u)>0) ? u/bns->sqrtRT : 1.0; // just for postprocessing
+  // Set penalty parameter for flux setting
+  bns->Lambda2 = 0.5/(bns->sqrtRT);
+  
+  
+
+  
+
 
   dfloat sigma11 = 0.f , sigma12 = 0.f, sigma13 = 0.f;
   dfloat sigma22 = 0.f , sigma23 = 0.f;
@@ -552,17 +553,17 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
 
   int NblockV = 128/mesh->Np; // works for CUDA
-  NblockV = 1; //!!!!!
+  // NblockV = 1; //!!!!!
   kernelInfo.addDefine("p_NblockV", NblockV);
 
   int NblockS = 128/maxNodes; // works for CUDA
 
-  NblockS = 1; // !!!!!
+  // NblockS = 1; // !!!!!
   kernelInfo.addDefine("p_NblockS", NblockS);
 
   int NblockCub = 128/mesh->cubNp; // works for CUDA
 
-  NblockCub = 1; // !!!!!!!!!!!!!!!!!!!!!
+  // NblockCub = 1; // !!!!!!!!!!!!!!!!!!!!!
 
   kernelInfo.addDefine("p_NblockCub", NblockCub);
 
@@ -609,7 +610,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   kernelInfo.addDefine("p_blockSize", blockSize);
   kernelInfo.addDefine("p_NrkStages", bns->NrkStages);
 
-  if(mesh->pmlNelements)
+  if(options.compareArgs("ABSORBING LAYER", "PML"))
     kernelInfo.addDefine("p_PML", (int) 1);
   else
     kernelInfo.addDefine("p_PML", (int) 0);
