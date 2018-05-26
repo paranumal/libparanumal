@@ -11,4 +11,4 @@ Line(4) = {4, 1};
 Line Loop(9) = {1, 2, 3, 4};
 Plane Surface(9) = {9};
 Physical Surface("Domain",9) = {9};
-Physical Line("Wall",1) = {1, 2, 3, 4};
+Physical Line("Slip",4) = {1, 2, 3, 4};
