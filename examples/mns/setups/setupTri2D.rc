@@ -1,6 +1,9 @@
 [FORMAT]
 1.0
 
+[SOLVER TYPE]
+LEVELSET
+
 [DATA FILE]
 data/mnsVortexStreching2D.h
 
@@ -14,7 +17,7 @@ data/mnsVortexStreching2D.h
 3
 
 [POLYNOMIAL DEGREE]
-4
+5
 
 [THREAD MODEL]
 CUDA
@@ -53,16 +56,16 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-1
+100
 
 [START TIME]
 0
 
 [FINAL TIME]
-10
+8.0
 
 [CFL]
-0.2
+0.5
 
 [OUTPUT TYPE]
 VTU
@@ -71,7 +74,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-vortex
+vortexStrech
 
 #################################################
 ########## Velocity Solver Options ##############
