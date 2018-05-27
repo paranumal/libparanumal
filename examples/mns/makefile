@@ -21,7 +21,7 @@ CC	= mpic++.openmpi
 LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -I$(ELLIPTICDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"'
+CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -I$(ELLIPTICDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DMNS='"${CURDIR}"'
 
 # link flags to be used 
 LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
@@ -67,6 +67,10 @@ $(ELLIPTICDIR)/ellipticPrecon.h
 AOBJS    = \
 ./src/mnsSetup.o \
 ./src/mnsPlotVTU.o \
+./src/mnsLevelSetRun.o \
+./src/mnsLevelSetStep.o \
+./src/mnsReport.o \
+./src/mnsError.o \
 
 
 # library objects

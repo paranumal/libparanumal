@@ -104,6 +104,7 @@ typedef struct {
 
   occa::memory o_U, o_P, o_Phi;
   occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP, o_rhsPhi; 
+  occa::memory o_resPhi; 
 
   occa::memory o_NU, o_LU, o_GP;
   occa::memory o_GU;
@@ -139,6 +140,10 @@ typedef struct {
   occa::kernel advectionCubatureVolumeKernel;
   occa::kernel advectionCubatureSurfaceKernel;
 
+  occa::kernel levelSetVolumeKernel;
+  occa::kernel levelSetSurfaceKernel;
+  occa::kernel levelSetUpdateKernel;
+
   occa::kernel diffusionKernel;
   occa::kernel diffusionIpdgKernel;
   occa::kernel velocityGradientKernel;
@@ -171,14 +176,16 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options);
 
 
 void mnsPlotVTU(mns_t *mns, char *fileNameBase);
+void mnsLevelSetRun(mns_t *mns);
+void mnsLevelSetStep(mns_t *mns, int tstep, int haloBytes,dfloat * sendBuffer, dfloat *recvBuffer);
 
+void mnsReport(mns_t *mns, dfloat time,  int tstep);
+void mnsError(mns_t *mns, dfloat time);
 
 #if 0
 void insRunARK(ins_t *ins);
 void insRunEXTBDF(ins_t *ins);
 
-void insReport(ins_t *ins, dfloat time,  int tstep);
-void insError(ins_t *ins, dfloat time);
 
 void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU);
 void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);
