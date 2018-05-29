@@ -2,14 +2,19 @@
 // Initial conditions 
 #define mnsFlowField2D(t,x,y,u,v,p,phi)\
   {                                     \
-    *(u)   =  occaSin(OCCA_PI*x)*occaSin(OCCA_PI*x)*occaSin(2.f*OCCA_PI*y); \
-    *(v)   = -occaSin(OCCA_PI*y)*occaSin(OCCA_PI*y)*occaSin(2.f*OCCA_PI*x); \
+    *(u)   = -occaSin(4.f*OCCA_PI*(x+0.5f))*occaSin(4.f*OCCA_PI*(y+0.5f)); \
+    *(v)   = -occaCos(4.f*OCCA_PI*(x+0.5f))*occaCos(4.f*OCCA_PI*(y+0.5f)); \
     *(p)   = p_pbar;\
-    *(phi) = sqrt( (x-0.5f)*(x-0.5f)+(y-0.75f)*(y-0.75f)) - 0.15f;\
+    *(phi) = sqrt( (x-0.0f)*(x-0.0f)+(y-0.0f)*(y-0.0f) ) - 0.15f;\
   }
 
 
-// Boundary conditions
+// Boundary conditions 
+// *(u)   =  occaSin(OCCA_PI*x)*occaSin(OCCA_PI*x)*occaSin(2.f*OCCA_PI*y); \
+//   *(v)   = -occaSin(OCCA_PI*y)*occaSin(OCCA_PI*y)*occaSin(2.f*OCCA_PI*x); \
+//   *(p)   = p_pbar;\
+//   *(phi) = sqrt( (x-0.5f)*(x-0.5f)+(y-0.75f)*(y-0.75f)) - 0.15f;\
+
 #define mnsLevelSetBoundaryConditions2D(bc, t, x, y, nx, ny, phiM, phiB) \
 {                                   \
   if(bc==1){                        \

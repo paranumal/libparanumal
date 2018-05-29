@@ -65,6 +65,15 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
 
   mns->g0 =  1.0;
 
+
+
+  #if 1
+
+  mnsMakePeriodic(mesh,0.0,1.0);
+  mnsMakePeriodic(mesh,1.0,0.0);
+
+  #endif
+
   if (options.compareArgs("TIME INTEGRATOR", "ARK1")) {
     mns->Nstages = 1;
     int Nrk = 2;

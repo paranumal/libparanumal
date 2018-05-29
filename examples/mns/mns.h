@@ -182,6 +182,8 @@ void mnsLevelSetStep(mns_t *mns, int tstep, int haloBytes,dfloat * sendBuffer, d
 void mnsReport(mns_t *mns, dfloat time,  int tstep);
 void mnsError(mns_t *mns, dfloat time);
 
+void mnsMakePeriodic(mesh_t *mesh, dfloat xper, dfloat yper);
+
 #if 0
 void insRunARK(ins_t *ins);
 void insRunEXTBDF(ins_t *ins);
