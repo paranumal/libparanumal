@@ -64,6 +64,7 @@ $(ELLIPTICDIR)/ellipticPrecon.h
 # ./src/insPressureRhs.o \
 # ./src/insPressureSolve.o \
 # ./src/insPressureUpdate.o 
+
 AOBJS    = \
 ./src/mnsSetup.o \
 ./src/mnsPlotVTU.o \
@@ -71,6 +72,8 @@ AOBJS    = \
 ./src/mnsLevelSetStep.o \
 ./src/mnsReport.o \
 ./src/mnsError.o \
+ ./src/mnsMakePeriodic.o \
+
 
 
 # library objects
@@ -155,15 +158,15 @@ all: lib mnsMain
 
 # what to do if user types "make clean"
 clean:
-	cd ../../solvers/parALMOND; make clean; cd ../mns
-	cd ../../solvers/elliptic; make clean; cd ../mns
+	cd ../../solvers/parALMOND; make clean; cd ../../examples/mns
+	cd ../../solvers/elliptic; make clean; cd ../../examples/mns
 	cd ../../src; rm *.o; cd ../examples/mns
 	rm *.o mnsMain libmns.a
 
 realclean:
 	cd ../../3rdParty/gslib.github; make clean; cd ../../examples/mns
 	cd ../../3rdParty/BlasLapack; make clean; cd ../../examples/mns
-	cd ../../solvers/parALMOND; make clean; cd ../mns
-	cd ../../solvers/elliptic; make clean; cd ../mns
+	cd ../../solvers/parALMOND; make clean; cd ../../examples/mns
+	cd ../../solvers/elliptic; make clean; cd ../../examples/mns
 	cd ../../src; rm *.o; cd ../examples/mns
 	rm *.o mnsMain libmns.a

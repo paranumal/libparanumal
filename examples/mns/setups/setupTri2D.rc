@@ -5,7 +5,7 @@
 LEVELSET
 
 [DATA FILE]
-data/mnsVortexStreching2D.h
+data/mnsVortex2D.h
 
 [MESH FILE]
 ../../meshes/mnsVortexBox2D.msh
@@ -17,7 +17,7 @@ data/mnsVortexStreching2D.h
 3
 
 [POLYNOMIAL DEGREE]
-5
+7
 
 [THREAD MODEL]
 CUDA
@@ -56,13 +56,13 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+5000
 
 [START TIME]
 0
 
 [FINAL TIME]
-8.0
+1.0
 
 [CFL]
 0.5
