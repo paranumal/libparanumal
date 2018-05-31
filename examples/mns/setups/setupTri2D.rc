@@ -2,10 +2,12 @@
 1.0
 
 [SOLVER TYPE]
-LEVELSET
+REINITIALIZATION
+#LEVELSET
 
 [DATA FILE]
-data/mnsVortex2D.h
+data/mnsReinitialization2D.h
+#data/mnsVortex2D.h
 
 [MESH FILE]
 ../../meshes/mnsVortexBox2D.msh
@@ -17,7 +19,7 @@ data/mnsVortex2D.h
 3
 
 [POLYNOMIAL DEGREE]
-7
+3
 
 [THREAD MODEL]
 CUDA

@@ -104,7 +104,11 @@ void mnsPlotVTU(mns_t *mns, char *fileName){
         dfloat plotVort = 0;
         for(int m=0;m<mesh->Np;++m){
           dlong id = m+e*mesh->Np;
+          #if 0
           dfloat vort = mns->Vort[id];
+          #else
+          dfloat vort = mns->SPhi[id];
+          #endif
           plotVort += mesh->plotInterp[n*mesh->Np+m]*vort;
         }
 
@@ -142,8 +146,14 @@ void mnsPlotVTU(mns_t *mns, char *fileName){
         dfloat plotun = 0, plotvn = 0;
         for(int m=0;m<mesh->Np;++m){
           dlong id = m+e*mesh->Np;
+
+          #if 0
           dfloat um = mns->U[id+0*offset];
           dfloat vm = mns->U[id+1*offset];
+          #else
+          dfloat um = mns->GPhi[id+0*offset];
+          dfloat vm = mns->GPhi[id+1*offset];
+          #endif
 
           plotun += mesh->plotInterp[n*mesh->Np+m]*um;
           plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;

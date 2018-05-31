@@ -70,6 +70,9 @@ AOBJS    = \
 ./src/mnsPlotVTU.o \
 ./src/mnsLevelSetRun.o \
 ./src/mnsLevelSetStep.o \
+./src/mnsReinitializationRun.o \
+./src/mnsReinitializationStep.o \
+./src/mnsComputeSignumTerm.o \
 ./src/mnsReport.o \
 ./src/mnsError.o \
  ./src/mnsMakePeriodic.o \

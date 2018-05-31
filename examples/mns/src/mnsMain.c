@@ -41,6 +41,7 @@ int main(int argc, char **argv){
   // if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
   // if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF"))  insRunEXTBDF(ins);
   if (mns->options.compareArgs("SOLVER TYPE", "LEVELSET"))  mnsLevelSetRun(mns);
+  if (mns->options.compareArgs("SOLVER TYPE", "REINITIALIZATION"))  mnsReinitializationRun(mns);
 
   // close down MPI
   MPI_Finalize();
