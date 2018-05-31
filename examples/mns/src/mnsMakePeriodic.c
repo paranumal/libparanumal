@@ -60,7 +60,7 @@ int findBestPeriodicMatch(dfloat xper, dfloat yper, dfloat x1, dfloat y1,
 
 
 // serial face-node to face-node connection
-  void mnsMakePeriodic(mesh_t *mesh, dfloat xper, dfloat yper){ 
+void mnsMakePeriodic(mesh_t *mesh, dfloat xper, dfloat yper){ 
 
 int Nconnected = 0;    
 /* assume elements already connected */

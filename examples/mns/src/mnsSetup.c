@@ -67,11 +67,9 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
 
 
 
-  #if 1
-
+  #if 0
   mnsMakePeriodic(mesh,0.0,1.0);
   mnsMakePeriodic(mesh,1.0,0.0);
-
   #endif
 
   if (options.compareArgs("TIME INTEGRATOR", "ARK1")) {
@@ -254,13 +252,15 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
   mns->rhsW   = (dfloat*) calloc(Nlocal,sizeof(dfloat));
   mns->rhsP   = (dfloat*) calloc(Nlocal,sizeof(dfloat));
   mns->rhsPhi = (dfloat*) calloc(Nlocal,sizeof(dfloat));
-
   //additional field storage
   mns->NU   = (dfloat*) calloc(mns->NVfields*(mns->Nstages+1)*Ntotal,sizeof(dfloat));
   mns->LU   = (dfloat*) calloc(mns->NVfields*(mns->Nstages+1)*Ntotal,sizeof(dfloat));
   mns->GP   = (dfloat*) calloc(mns->NVfields*(mns->Nstages+1)*Ntotal,sizeof(dfloat));
 
   mns->GU   = (dfloat*) calloc(mns->NVfields*Ntotal*4,sizeof(dfloat));
+
+  mns->GPhi = (dfloat*) calloc(mns->NVfields*Nlocal,sizeof(dfloat));
+  mns->SPhi = (dfloat*) calloc(              Nlocal,sizeof(dfloat));
   
   mns->rkU  = (dfloat*) calloc(mns->NVfields*Ntotal,sizeof(dfloat));
   mns->rkP  = (dfloat*) calloc(              Ntotal,sizeof(dfloat));
@@ -426,6 +426,8 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
 
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mns->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&hmin, &(mns->hmin), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+
 
   options.getArgs("FINAL TIME", mns->finalTime);
   
@@ -638,6 +640,10 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
   mns->o_rhsPhi  = mesh->device.malloc(Nlocal*sizeof(dfloat), mns->rhsPhi);
   mns->o_resPhi  = mesh->device.malloc(Nlocal*sizeof(dfloat), mns->rhsPhi);
 
+  //Reinitialize
+  mns->o_GPhi   = mesh->device.malloc(mns->NVfields*Nlocal*sizeof(dfloat), mns->GPhi);
+  mns->o_SPhi   = mesh->device.malloc(              Nlocal*sizeof(dfloat), mns->SPhi);
+
   mns->o_NU    = mesh->device.malloc(mns->NVfields*(mns->Nstages+1)*Ntotal*sizeof(dfloat), mns->NU);
   mns->o_LU    = mesh->device.malloc(mns->NVfields*(mns->Nstages+1)*Ntotal*sizeof(dfloat), mns->LU);
   mns->o_GP    = mesh->device.malloc(mns->NVfields*(mns->Nstages+1)*Ntotal*sizeof(dfloat), mns->GP);
@@ -666,6 +672,8 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
   else 
     mns->o_cU = mns->o_U;
 
+#if 0
+
   if(mesh->totalHaloPairs){//halo setup
     dlong vHaloBytes = mesh->totalHaloPairs*mesh->Np*(mns->NVfields)*sizeof(dfloat);
     occa::memory o_vsendBuffer = mesh->device.mappedAlloc(vHaloBytes, NULL);
@@ -685,6 +693,7 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
     mns->velocityHaloGatherTmp = (dfloat*) o_gatherTmpPinned.getMappedPointer();
     mns->o_velocityHaloGatherTmp = mesh->device.malloc(mns->NVfields*mesh->ogs->NhaloGather*sizeof(dfloat),  mns->velocityHaloGatherTmp);
   }
+#endif
 
   // set kernel name suffix
   char *suffix;
@@ -702,14 +711,34 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
 
   for (int r=0;r<size;r++) {
     if (r==rank) {
-      // Level Set kernels
+      // ===========================================================================    
       sprintf(fileName, DMNS "/okl/mnsLevelSet%s.okl", suffix);
       sprintf(kernelName, "mnsLevelSetCubatureVolume%s", suffix);
       mns->levelSetVolumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      
       sprintf(kernelName, "mnsLevelSetCubatureSurface%s",suffix);
       mns->levelSetSurfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      
       sprintf(kernelName, "mnsLevelSetUpdate%s",suffix);
       mns->levelSetUpdateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      
+      // ===========================================================================
+
+      sprintf(fileName, DMNS "/okl/mnsGradient%s.okl", suffix);
+      sprintf(kernelName, "mnsGradientVolume%s", suffix);
+      mns->gradientVolumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mnsGradientSurface%s", suffix);
+      mns->gradientSurfaceKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      
+      if(mns->dim==2)
+        sprintf(fileName, DMNS "/okl/mnsRegularize2D.okl");
+      else
+        sprintf(fileName, DMNS "/okl/mnsRegularize3D.okl");
+
+      sprintf(kernelName, "mnsRegularizedSignum");
+      mns->regularizedSignumKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
 
 
       // sprintf(fileName, DINS "/okl/insHaloExchange.okl");
@@ -754,14 +783,7 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
       // sprintf(kernelName, "insVelocityGradient%s", suffix);
       // ins->velocityGradientKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
 
-      // // ===========================================================================
-
-      // sprintf(fileName, DINS "/okl/insGradient%s.okl", suffix);
-      // sprintf(kernelName, "insGradientVolume%s", suffix);
-      // ins->gradientVolumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
-
-      // sprintf(kernelName, "insGradientSurface%s", suffix);
-      // ins->gradientSurfaceKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      
 
       // // ===========================================================================
       
@@ -860,6 +882,13 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
       //   sprintf(kernelName, "insSubCycleExt");
       //   ins->subCycleExtKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
       // }
+
+
+      // This needs to be unified
+      mesh->haloExtractKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
+                                           "meshHaloExtract3D",
+                                           kernelInfo);
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }

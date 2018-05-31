@@ -9,7 +9,7 @@ mesh_t *mesh = mns->mesh;
 
 
 // field offset at this step // index = 0 for levelSet run only, 
-dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+// dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 
 // LSERK4 stages
 for(int rk=0;rk<mesh->Nrk;++rk){

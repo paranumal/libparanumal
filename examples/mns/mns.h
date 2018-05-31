@@ -46,7 +46,10 @@ typedef struct {
   int ARKswitch;
   
   int NiterU, NiterV, NiterW, NiterP;
-
+  
+  // Reinitialization
+  dfloat hmin;
+  dfloat *SPhi, *GPhi; 
 
   //solver tolerances
   dfloat presTOL, velTOL;
@@ -103,8 +106,8 @@ typedef struct {
 
 
   occa::memory o_U, o_P, o_Phi;
-  occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP, o_rhsPhi; 
-  occa::memory o_resPhi; 
+  occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP; 
+  occa::memory o_resPhi, o_rhsPhi, o_SPhi, o_GPhi; 
 
   occa::memory o_NU, o_LU, o_GP;
   occa::memory o_GU;
@@ -170,6 +173,8 @@ typedef struct {
   
   occa::kernel vorticityKernel;
 
+  occa::kernel regularizedSignumKernel;
+
 }mns_t;
 
 mns_t *mnsSetup(mesh_t *mesh, setupAide options);
@@ -178,6 +183,12 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options);
 void mnsPlotVTU(mns_t *mns, char *fileNameBase);
 void mnsLevelSetRun(mns_t *mns);
 void mnsLevelSetStep(mns_t *mns, int tstep, int haloBytes,dfloat * sendBuffer, dfloat *recvBuffer);
+
+void mnsReinitializationRun(mns_t *mns);
+void mnsReinitializationStep(mns_t *mns, int tstep, int haloBytes,dfloat * sendBuffer, dfloat *recvBuffer);
+void mnsComputeSignumTerm(mns_t *mns, int haloBytes,dfloat * sendBuffer, dfloat *recvBuffer);
+
+
 
 void mnsReport(mns_t *mns, dfloat time,  int tstep);
 void mnsError(mns_t *mns, dfloat time);
