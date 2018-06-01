@@ -35,7 +35,7 @@ void mnsReport(mns_t *mns, dfloat time, int tstep){
   mns->o_GPhi.copyTo(mns->GPhi);
   mns->o_SPhi.copyTo(mns->SPhi);
   // do error stuff on host
- // mnsError(mns, time);
+  mnsError(mns, time);
 
   if(mns->options.compareArgs("OUTPUT TYPE","VTU")){ 
     // output field files

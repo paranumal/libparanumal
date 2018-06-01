@@ -174,6 +174,9 @@ typedef struct {
   occa::kernel vorticityKernel;
 
   occa::kernel regularizedSignumKernel;
+  occa::kernel reinitializationVolumeKernel;
+  occa::kernel reinitializationSurfaceKernel;
+  occa::kernel reinitializationUpdateKernel;
 
 }mns_t;
 

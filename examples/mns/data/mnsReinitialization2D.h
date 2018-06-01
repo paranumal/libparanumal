@@ -5,9 +5,11 @@
     *(u)   = 1.f; \
     *(v)   = 1.f; \
     *(p)   = 1.f; \
-    *(phi) = 0.5f*(sqrt( (x-0.0f)*(x-0.0f)+(y-0.0f)*(y-0.0f) ) - 0.15f);\
+   *(phi) = 0.5f*(sqrt( (x-0.0f)*(x-0.0f)+(y-0.0f)*(y-0.0f) ) - 0.15f);\
   }
 
+//*(phi) = 0.5f*(sqrt( (x-0.0f)*(x-0.0f)+(y-0.0f)*(y-0.0f) ) - 0.15f);\
+//*(phi) =((x-0.15f)*(x-0.15f)+(y-0.15f)*(y-0.15f) + 0.05)*(sqrt( (x-0.0f)*(x-0.0f)+(y-0.0f)*(y-0.0f) ) - 0.15f);\
 
 #define mnsLevelSetBoundaryConditions2D(bc, t, x, y, nx, ny, phiM, phiB) \
 {                                   \

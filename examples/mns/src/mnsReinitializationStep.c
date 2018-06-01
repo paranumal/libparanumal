@@ -7,112 +7,98 @@ void mnsReinitializationStep(mns_t *mns, int tstep, int haloBytes, dfloat * send
 
 mesh_t *mesh = mns->mesh; 
 
+// LSERK4 stages
+for(int rk=0;rk<mesh->Nrk;++rk){
 
-// field offset at this step // index = 0 for levelSet run only, 
-dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+  // intermediate stage time
+  dfloat time = tstep*mns->dt + mns->dt*mesh->rkc[rk];
 
-// // LSERK4 stages
-// for(int rk=0;rk<mesh->Nrk;++rk){
+  if(mesh->totalHaloPairs>0){
+    #if ASYNC 
+      mesh->device.setStream(dataStream);
+    #endif
 
-//   // intermediate stage time
-//   dfloat time = tstep*mns->dt + mns->dt*mesh->rkc[rk];
+    mesh->haloExtractKernel(mesh->totalHaloPairs,
+                mesh->Np,
+                mesh->o_haloElementList,
+                mns->o_Phi,
+                mesh->o_haloBuffer);
 
-//   if(mesh->totalHaloPairs>0){
-//     #if ASYNC 
-//       mesh->device.setStream(dataStream);
-//     #endif
+    // copy extracted halo to HOST
+    mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
 
-//     mesh->haloExtractKernel(mesh->totalHaloPairs,
-//                 mesh->Np,
-//                 mesh->o_haloElementList,
-//                 mns->o_Phi,
-//                 mesh->o_haloBuffer);
-
-//     // copy extracted halo to HOST
-//     mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
-
-//     #if ASYNC 
-//       mesh->device.setStream(defaultStream);
-//     #endif
-//   }
+    #if ASYNC 
+      mesh->device.setStream(defaultStream);
+    #endif
+  }
     
-//     occaTimerTic(mesh->device, "LevelSetVolumeKernel");   
-//     mns->levelSetVolumeKernel(mesh->Nelements,
-//                               mesh->o_vgeo,
-//                               mesh->o_cubvgeo,
-//                               mesh->o_cubDWmatrices,
-//                               mesh->o_cubInterpT,
-//                               mesh->o_cubProjectT,
-//                               mns->fieldOffset,
-//                               time, 
-//                               mns->o_U,
-//                               mns->o_Phi,
-//                               mns->o_rhsPhi);         
+    occaTimerTic(mesh->device, "ReinitializationVolumeKernel");   
+    mns->reinitializationVolumeKernel(mesh->Nelements,
+                                      mesh->o_vgeo,
+                                      mesh->o_Dmatrices,
+                                      mns->fieldOffset,
+                                      mns->o_Phi,
+                                      mns->o_GPhi);       
 
-//     occaTimerToc(mesh->device, "LevelSetVolumeKernel");   
+    occaTimerToc(mesh->device, "ReinitializationVolumeKernel");   
 
-//      if(mesh->totalHaloPairs>0){
+     if(mesh->totalHaloPairs>0){
     
-//     #if ASYNC 
-//       mesh->device.setStream(dataStream);
-//     #endif
+    #if ASYNC 
+      mesh->device.setStream(dataStream);
+    #endif
 
-//     //make sure the async copy is finished
-//     mesh->device.finish();
-//     // start halo exchange
-//     meshHaloExchangeStart(mesh,
-//                           mesh->Np*sizeof(dfloat),
-//                           sendBuffer,
-//                           recvBuffer);
-//     // wait for halo data to arrive
-//     meshHaloExchangeFinish(mesh);
-//     // copy halo data to DEVICE
-//     size_t offset = mesh->Np*mesh->Nelements*sizeof(dfloat); // offset for halo data
-//     mns->o_Phi.asyncCopyFrom(recvBuffer, haloBytes, offset);
-//     mesh->device.finish();        
+    //make sure the async copy is finished
+    mesh->device.finish();
+    // start halo exchange
+    meshHaloExchangeStart(mesh,
+                          mesh->Np*sizeof(dfloat),
+                          sendBuffer,
+                          recvBuffer);
+    // wait for halo data to arrive
+    meshHaloExchangeFinish(mesh);
+    // copy halo data to DEVICE
+    size_t offset = mesh->Np*mesh->Nelements*sizeof(dfloat); // offset for halo data
+    mns->o_Phi.asyncCopyFrom(recvBuffer, haloBytes, offset);
+    mesh->device.finish();        
 
-//     #if ASYNC 
-//       mesh->device.setStream(defaultStream);
-//     #endif
-//   }
+    #if ASYNC 
+      mesh->device.setStream(defaultStream);
+    #endif
+  }
 
 
-//       occaTimerTic(mesh->device,"LevelSetSurfaceKernel");
-//       mns->levelSetSurfaceKernel(mesh->Nelements,
-//                                 mesh->o_vgeo,
-//                                 mesh->o_sgeo,
-//                                 mesh->o_cubsgeo,
-//                                 mesh->o_intInterpT,
-//                                 mesh->o_intLIFTT,
-//                                 mesh->o_cubInterpT,
-//                                 mesh->o_cubProjectT,
-//                                 mesh->o_vmapM,
-//                                 mesh->o_vmapP,
-//                                 mesh->o_EToB,
-//                                 time,
-//                                 mesh->o_intx,
-//                                 mesh->o_inty,
-//                                 mesh->o_intz,
-//                                 mns->fieldOffset,
-//                                 mns->o_U,
-//                                 mns->o_Phi,
-//                                 mns->o_rhsPhi);  
-      
-//       occaTimerToc(mesh->device,"LevelSetSurfaceKernel");
+      occaTimerTic(mesh->device,"ReinitializationSurfaceKernel");
+      mns->reinitializationSurfaceKernel(mesh->Nelements,
+                                        mesh->o_sgeo,
+                                        mesh->o_LIFTT,
+                                        mesh->o_vmapM,
+                                        mesh->o_vmapP,
+                                        mesh->o_EToB,
+                                        mesh->o_x,
+                                        mesh->o_y,
+                                        mesh->o_z,
+                                        time,
+                                        mns->fieldOffset,
+                                        mns->o_Phi,
+                                        mns->o_SPhi,
+                                        mns->o_GPhi,
+                                        mns->o_rhsPhi);
+      occaTimerToc(mesh->device,"ReinitializationSurfaceKernel");
  
  
 
  
-//     occaTimerTic(mesh->device,"LevelSetUpdateKernel");
-//     mns->levelSetUpdateKernel(mesh->Nelements,
-//                               mns->dt,
-//                               mesh->rka[rk],
-//                               mesh->rkb[rk],
-//                               mns->o_rhsPhi,
-//                               mns->o_resPhi,
-//                               mns->o_Phi);
-//     occaTimerToc(mesh->device,"LevelSetUpdateKernel");
-//  }
+    occaTimerTic(mesh->device,"ReinitializationUpdateKernel");
+    mns->levelSetUpdateKernel(mesh->Nelements,
+                              mns->dt,
+                              mesh->rka[rk],
+                              mesh->rkb[rk],
+                              mns->o_rhsPhi,
+                              mns->o_resPhi,
+                              mns->o_Phi);
+    occaTimerToc(mesh->device,"ReinitializationUpdateKernel");
+ }
 
 
 }
