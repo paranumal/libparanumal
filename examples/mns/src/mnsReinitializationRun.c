@@ -31,16 +31,16 @@ void mnsReinitializationRun(mns_t *mns){
 
   for(int tstep=0;tstep<mns->NtimeSteps;++tstep){
 
-    // if((tstep%mns->outputStep)==0){
-    //   occaTimerTic(mesh->device, "REINITIALIZATION_OUTPUT");
-    //   dfloat time = mns->dt*tstep; 
-    //   mnsReport(mns, time, tstep);
-    //   occaTimerToc(mesh->device, "REINITIALIZATION_OUTPUT");
-    // }
+    if((tstep%mns->outputStep)==0){
+      occaTimerTic(mesh->device, "REINITIALIZATION_OUTPUT");
+      dfloat time = mns->dt*tstep; 
+      mnsReport(mns, time, tstep);
+      occaTimerToc(mesh->device, "REINITIALIZATION_OUTPUT");
+    }
 
-    // occaTimerTic(mesh->device, "REINITIALIZATION_STEP");  
-    // mnsReinitializationStep(mns, tstep, haloBytes, sendBuffer, recvBuffer);
-    // occaTimerToc(mesh->device, "REINITIALIZATION_STEP");  
+    occaTimerTic(mesh->device, "REINITIALIZATION_STEP");  
+    mnsReinitializationStep(mns, tstep, haloBytes, sendBuffer, recvBuffer);
+    occaTimerToc(mesh->device, "REINITIALIZATION_STEP");  
   }
 
 

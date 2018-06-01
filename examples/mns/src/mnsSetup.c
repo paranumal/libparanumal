@@ -259,7 +259,7 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
 
   mns->GU   = (dfloat*) calloc(mns->NVfields*Ntotal*4,sizeof(dfloat));
 
-  mns->GPhi = (dfloat*) calloc(mns->NVfields*Nlocal,sizeof(dfloat));
+  mns->GPhi = (dfloat*) calloc(mns->NVfields*Ntotal,sizeof(dfloat));
   mns->SPhi = (dfloat*) calloc(              Nlocal,sizeof(dfloat));
   
   mns->rkU  = (dfloat*) calloc(mns->NVfields*Ntotal,sizeof(dfloat));
@@ -641,7 +641,7 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
   mns->o_resPhi  = mesh->device.malloc(Nlocal*sizeof(dfloat), mns->rhsPhi);
 
   //Reinitialize
-  mns->o_GPhi   = mesh->device.malloc(mns->NVfields*Nlocal*sizeof(dfloat), mns->GPhi);
+  mns->o_GPhi   = mesh->device.malloc(mns->NVfields*Ntotal*sizeof(dfloat), mns->GPhi);
   mns->o_SPhi   = mesh->device.malloc(              Nlocal*sizeof(dfloat), mns->SPhi);
 
   mns->o_NU    = mesh->device.malloc(mns->NVfields*(mns->Nstages+1)*Ntotal*sizeof(dfloat), mns->NU);
@@ -731,6 +731,18 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "mnsGradientSurface%s", suffix);
       mns->gradientSurfaceKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
       
+      sprintf(fileName, DMNS "/okl/mnsReinitialization%s.okl", suffix);
+      sprintf(kernelName, "mnsReinitializationVolume%s",suffix);
+      mns->reinitializationVolumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+      sprintf(kernelName, "mnsReinitializationSurface%s",suffix);
+      mns->reinitializationSurfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+
+
+
+
+
       if(mns->dim==2)
         sprintf(fileName, DMNS "/okl/mnsRegularize2D.okl");
       else
@@ -739,6 +751,7 @@ mns_t *mnsSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "mnsRegularizedSignum");
       mns->regularizedSignumKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
+      
 
 
       // sprintf(fileName, DINS "/okl/insHaloExchange.okl");
