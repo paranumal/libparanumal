@@ -2,10 +2,10 @@
 1.0
 
 [DATA FILE]
-data/insVortex2D.h
+data/insUniform2D.h
 
 [MESH FILE]
-../../meshes/insVortex2D.msh
+../../meshes/insSquareCylinder2D.msh
 
 [MESH DIMENSION]
 2
@@ -53,7 +53,7 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-1
+100
 
 [START TIME]
 0
@@ -71,7 +71,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-vortex
+squareCylinder
 
 #################################################
 ########## Velocity Solver Options ##############
@@ -178,7 +178,8 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-VORTEX
+NONE
+#VORTEX
 
 [VERBOSE]
 FALSE

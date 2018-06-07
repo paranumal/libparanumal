@@ -1,18 +1,18 @@
 #include "bns.h"
 
 // currently maximum
-void bnsError(bns_t *bns, int tstep, setupAide &options){
+void bnsError(bns_t *bns, dfloat time, setupAide &options){
 
  bns->o_q.copyTo(bns->q);
 
   mesh_t *mesh = bns->mesh; 
 
-  dfloat time = 0.0; 
+  // dfloat time = 0.0; 
 
-  if(options.compareArgs("TIME INTEGRATOR","MRSAAB"))
-   time = bns->startTime + bns->dt*tstep*pow(2,(mesh->MRABNlevels-1));
-  else
-   time = bns->startTime + tstep*bns->dt;
+  // if(options.compareArgs("TIME INTEGRATOR","MRSAAB"))
+  //  time = bns->startTime + bns->dt*tstep*pow(2,(mesh->MRABNlevels-1));
+  // else
+  //  time = bns->startTime + tstep*bns->dt;
 
  if(bns->probeFlag){
     //   int rank;
@@ -55,7 +55,9 @@ void bnsError(bns_t *bns, int tstep, setupAide &options){
   }
 
 
-
+  #if 1
+    bnsForces(bns,time,options);
+  #endif
 
 
  if(options.compareArgs("ABSORBING LAYER","PML")){

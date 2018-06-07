@@ -175,6 +175,7 @@ void insRunEXTBDF(ins_t *ins);
 void insPlotVTU(ins_t *ins, char *fileNameBase);
 void insReport(ins_t *ins, dfloat time,  int tstep);
 void insError(ins_t *ins, dfloat time);
+void insForces(ins_t *ins, dfloat time);
 
 void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU);
 void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);

@@ -1,12 +1,13 @@
-#include "boltzmann2D.h"
+#include "bns.h"
 
 
-void boltzmannForces2D(bns_t *bns, dfloat time, setupAide &options){
+void bnsForces(bns_t *bns, dfloat time, setupAide &options){
 
 
-  mesh2D *mesh = bns->mesh; 
-	
-	// Hard coded weights i.e. sum(MM1D,1), MM1D = inv(V1)' * inv(V1)
+  mesh_t *mesh = bns->mesh; 
+
+  
+	// Hard coded weights i.e. sum(MM1D,1), MM1D = inv(V1)'*V1
   dfloat W[mesh->Nfp];
   if(mesh->N==1){
     W[0] = 1.000000000000000; W[1] = 1.000000000000000; 
@@ -49,7 +50,6 @@ void boltzmannForces2D(bns_t *bns, dfloat time, setupAide &options){
       int bc = mesh->EToB[e*mesh->Nfaces+f];
       if(bc == 1){ flag = 1; }
     }
-
     if(flag){
 
 			for(int f=0;f<mesh->Nfaces;++f){
@@ -61,17 +61,19 @@ void boltzmannForces2D(bns_t *bns, dfloat time, setupAide &options){
 						dfloat ny = mesh->sgeo[sid+NYID];
 						dfloat sJ = mesh->sgeo[sid+SJID];
 						//
-						int vid  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
-            int idM  = mesh->vmapM[vid];
-		    	 
-						dfloat q1  = bns->q[mesh->Nfields*idM + 0];
-						dfloat q2  = bns->q[mesh->Nfields*idM + 1];
-						dfloat q3  = bns->q[mesh->Nfields*idM + 2];
-						dfloat q4  = bns->q[mesh->Nfields*idM + 3];
-						dfloat q5  = bns->q[mesh->Nfields*idM + 4];
-						dfloat q6  = bns->q[mesh->Nfields*idM + 5];
+						int id   = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
+            int idM  = mesh->vmapM[id];
 
-						
+            const int vidM = idM%mesh->Np;
+            const int qidM = e*mesh->Np*bns->Nfields + vidM;
+            		    	 
+						dfloat q1  = bns->q[qidM + 0*mesh->Np];
+						dfloat q2  = bns->q[qidM + 1*mesh->Np];
+						dfloat q3  = bns->q[qidM + 2*mesh->Np];
+						dfloat q4  = bns->q[qidM + 3*mesh->Np];
+						dfloat q5  = bns->q[qidM + 4*mesh->Np];
+						dfloat q6  = bns->q[qidM + 5*mesh->Np];
+
     	      // Compute Stress Tensor
     	      dfloat s11 = -bns->RT*(sqrt(2.0)*q5 - q2*q2/q1);
     	      dfloat s12 = -bns->RT*(          q4 - q2*q3/q1);
@@ -99,7 +101,7 @@ void boltzmannForces2D(bns_t *bns, dfloat time, setupAide &options){
 
   if(rank==0){
 		char fname[BUFSIZ];
-		sprintf(fname, "ForceData_%d_%.f_%05d_%03d.dat", mesh->N, bns->Re, mesh->Nelements, bns->Ntscale);
+		sprintf(fname, "BNSForceData_N%d.dat", mesh->N);
 
 		FILE *fp; 
 		fp = fopen(fname, "a");  
@@ -108,10 +110,4 @@ void boltzmannForces2D(bns_t *bns, dfloat time, setupAide &options){
 
 		fclose(fp);
   }
-  
-  
-
-
-
-
 }

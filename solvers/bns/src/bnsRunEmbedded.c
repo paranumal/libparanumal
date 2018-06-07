@@ -119,7 +119,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
     dfloat dtnew = bns->dt/fac;
 
     if(err<1.0){
-      
+
 
       if(bns->reportFlag){
         occaTimerTic(mesh->device, "SARK_OUTPUT"); 
@@ -189,7 +189,13 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
           if(bns->dim==3)
             bns->o_pmlqz.copyFrom(bns->o_rkqz);
         }
-      } 
+      }
+
+      if(bns->errorFlag){
+        if((bns->tstep%bns->errorStep)==0){
+            bnsError(bns, bns->time, options);
+        } 
+      }
 
       facold = mymax(err,1E-4);
       bns->time += bns->dt;

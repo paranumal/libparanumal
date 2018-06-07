@@ -51,6 +51,7 @@ AOBJS    = \
 ./src/bnsPlotVTU.o \
 ./src/bnsReport.o \
 ./src/bnsError.o \
+./src/bnsForces.o \
 ./src/bnsLSERKStep.o \
 ./src/bnsSARKStep.o \
 ./src/bnsMRSAABStep.o \

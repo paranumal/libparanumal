@@ -6,7 +6,7 @@ data/bnsUniform2D.h
 
 [MESH FILE]
 #../../meshes/boltzmannVortex2D.msh
-../../meshes/boltzmannSquareCylinderPMLTri2D.msh
+../../meshes/boltzmannSquareCylinderPML2D.msh
 
 [MESH DIMENSION]
 2
@@ -62,7 +62,7 @@ SARK
 0 
 
 [VISCOSITY]
-5.e-3
+1.e-3
 
 [SPEED OF SOUND]
 5.0
@@ -77,7 +77,7 @@ SARK
 1
 
 [TSTEPS FOR ERROR COMPUTE]
-1000
+100
 
 [TSTEPS FOR SOLUTION OUTPUT]
 1000
@@ -90,6 +90,7 @@ SARK
 
 [OUTPUT INTERVAL]
 .5
+
 
 [ABSOLUTE TOLERANCE]
 1E-5

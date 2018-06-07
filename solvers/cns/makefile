@@ -43,6 +43,7 @@ OBJS    = \
 ./src/cnsStep.o \
 ./src/cnsMain.o \
 ./src/cnsError.o \
+./src/cnsForces.o \
 ./src/cnsRun.o \
 ./src/cnsSetup.o \
 ./src/cnsGaussianPulse.o \
