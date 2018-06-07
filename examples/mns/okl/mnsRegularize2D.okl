@@ -19,7 +19,7 @@ kernel void mnsRegularizedSignum(const dlong Nelements,
       dfloat alpha  = ( dphi> 1.0) ?  dphi :1.0f; 
       dfloat ialpha = 1.0f/(alpha*epsilon);
      
-
+      #if 0
       // Regularize signum term
       dfloat sphi   = 0.f;  
       if(phi>(epsilon*alpha))
@@ -28,6 +28,9 @@ kernel void mnsRegularizedSignum(const dlong Nelements,
         sphi = -1.0f;
       else
         sphi = phi*ialpha + 1.f/OCCA_PI * occaSin(OCCA_PI*phi*ialpha);
+      #else
+      dfloat sphi = occaTanh(OCCA_PI*phi/(4.0*epsilon));
+      #endif
 
       // Update
       SPhi[id]    = sphi;

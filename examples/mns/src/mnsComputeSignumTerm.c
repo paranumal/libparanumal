@@ -87,7 +87,7 @@ void mnsComputeSignumTerm(mns_t *mns, int haloBytes, dfloat * sendBuffer, dfloat
  
   occaTimerTic(mesh->device,"RegularizedSignum");
   mns->regularizedSignumKernel(mesh->Nelements,
-                              2*mns->hmin,
+                              mns->hmin,
                               mns->fieldOffset,
                               mns->o_Phi,
                               mns->o_GPhi,
