@@ -1,4 +1,4 @@
-coarse = DefineNumber[0.31];
+coarse = DefineNumber[1.00];
 fine   = DefineNumber[0.31];
 fineC  = DefineNumber[0.31];
 

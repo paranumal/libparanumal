@@ -1,18 +1,18 @@
 cl__1 = 1;
 
-r_0 = DefineNumber[0.5];
-r_1 = DefineNumber[0.1];
+r_0 = DefineNumber[0.3];
+r_1 = DefineNumber[0.075];
 
 
-xmin = DefineNumber[-5.4];
-xmax = DefineNumber[ 9.4];
-ymin = DefineNumber[-5.4];
-ymax = DefineNumber[ 5.4];
+xmin = DefineNumber[-1.25*5.4];
+xmax = DefineNumber[ 1.25*9.4];
+ymin = DefineNumber[-1.25*5.4];
+ymax = DefineNumber[ 1.25*5.4];
 
-xpmlmin = DefineNumber[xmin - 1*1.6];
-xpmlmax = DefineNumber[xmax + 1*1.6]; 
-ypmlmin = DefineNumber[ymin - 1*1.6];
-ypmlmax = DefineNumber[ymax + 1*1.6];
+xpmlmin = DefineNumber[xmin - 1.5*1.6];
+xpmlmax = DefineNumber[xmax + 1.5*1.6]; 
+ypmlmin = DefineNumber[ymin - 1.5*1.6];
+ypmlmax = DefineNumber[ymax + 1.5*1.6];
 
 
 xcmin = DefineNumber[-0.5];

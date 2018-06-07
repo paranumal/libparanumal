@@ -179,8 +179,8 @@ void bnsMRABPmlSetup(bns_t *bns, setupAide &options);
 
 void bnsRun(bns_t *bns, setupAide &options);
 void bnsReport(bns_t *bns, dfloat time, setupAide &options);
-void bnsError(bns_t *bns, int tstep, setupAide &options);
-// void bnsForces(bns_t *bns, dfloat time, setupAide &options);
+void bnsError(bns_t *bns, dfloat time, setupAide &options);
+void bnsForces(bns_t *bns, dfloat time, setupAide &options);
 void bnsPlotVTU(bns_t *bns, char * FileName);
 
 // Function for ramp start

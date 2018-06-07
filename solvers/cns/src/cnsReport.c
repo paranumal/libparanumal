@@ -20,6 +20,8 @@ void cnsReport(cns_t *cns, dfloat time, setupAide &options){
   // do error stuff on host
   cnsError(mesh, time);
 
+  cnsForces(cns, time);
+
   // output field files
   char fname[BUFSIZ];
   string outName;

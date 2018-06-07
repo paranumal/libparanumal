@@ -24,12 +24,6 @@ void bnsReport(bns_t *bns, dfloat time, setupAide &options){
     printf("t: %g ramp: %g drampdt: %g\n", time, ramp, drampdt);
   }
   
-  
-  // not implemented yet
-  #if 0 
-    bnsForces(bns,t,options);
-  #endif
-
 
   if(options.compareArgs("OUTPUT FILE FORMAT","VTU")){
     char fname[BUFSIZ];
