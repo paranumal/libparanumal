@@ -121,10 +121,15 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   // Report / error time steps for fixed dt integration
   options.getArgs("TSTEPS FOR SOLUTION OUTPUT", bns->reportStep);
   options.getArgs("TSTEPS FOR ERROR COMPUTE",   bns->errorStep);
+
   // Output interval for variable dt integration
   options.getArgs("OUTPUT INTERVAL",   bns->outputInterval);
-
-
+  
+  // steps between force output
+  bns->outputForceStep = 0;
+  
+  options.getArgs("TSTEPS FOR FORCE OUTPUT",   bns->outputForceStep);
+  
   if(rank==0){
     printf("=============WRITING INPUT PARAMETERS===================\n");
 

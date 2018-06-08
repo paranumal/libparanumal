@@ -197,6 +197,14 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
         } 
       }
 
+      if(bns->outputForceStep){
+	if(bns->tstep%bns->outputForceStep){
+	  bns->o_q.copyTo(bns->q);
+	  bnsForces(bns,bns->time,options);
+	}
+      }
+      
+
       facold = mymax(err,1E-4);
       bns->time += bns->dt;
 

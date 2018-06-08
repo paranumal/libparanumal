@@ -438,6 +438,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   options.getArgs("TSTEPS FOR SOLUTION OUTPUT", ins->outputStep);
   if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->outputStep, ins->dt);
 
+  ins->outputForceStep = 0;
+  options.getArgs("TSTEPS FOR FORCE OUTPUT", ins->outputForceStep);
+  
+  
 
   //make option objects for elliptc solvers
   ins->vOptions = options;
