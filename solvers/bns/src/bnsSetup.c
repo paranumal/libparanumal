@@ -328,10 +328,6 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     bns->emethod = 0; // 0 PID / 1 PI / 2 P / 3 I    
     bns->rkp     = 5; // order of embedded scheme + 1 
 
-    
-    dlong Ntotal  = mesh->Nelements*mesh->Np*bns->Nfields;
-    bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
-
     dlong localElements =  mesh->Nelements;
     MPI_Allreduce(&localElements, &(bns->totalElements), 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 
@@ -344,6 +340,10 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     bns->rkq      = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rkrhsq   = (dfloat*) calloc(bns->NrkStages*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
     bns->rkerr    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
+    
+    dlong Ntotal  = mesh->Nelements*mesh->Np*bns->Nfields;
+    bns->Nblock   = (Ntotal+blockSize-1)/blockSize;
+    // printf("blockSize: %d %d \n", blockSize, bns->Nblock);
     bns->errtmp  =  (dfloat*) calloc(bns->Nblock, sizeof(dfloat)); 
   }
 
@@ -444,7 +444,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
   }
   
-   
+  
 
   occa::kernelInfo kernelInfo;
   if(bns->dim==3)
@@ -522,8 +522,6 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   bns->o_rhsq = 
     mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq); 
   
-  int Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
-  
   bns->o_rkq =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkq);
 
@@ -534,6 +532,9 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
     mesh->device.malloc(bns->NrkStages*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rkrhsq);
   bns->o_rkerr =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkerr);
+  
+  // dlong Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
+  // printf("blockSize: %d  %d %d \n", Ntotal, blockSize, bns->Nblock);
   bns->o_errtmp = mesh->device.malloc(bns->Nblock*sizeof(dfloat), bns->errtmp);
 
   bns->o_rkA = mesh->device.malloc(bns->NrkStages*bns->NrkStages*sizeof(dfloat), bns->rkA);
