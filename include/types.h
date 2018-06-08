@@ -13,7 +13,7 @@
 #endif
 
 //host index data type
-#if 0
+#if 1
 #define hlong int
 #define MPI_HLONG MPI_INT
 #define hlongFormat "%d"
