@@ -41,7 +41,8 @@ typedef struct {
   int ExplicitOrder; 
   int   NtimeSteps;  // number of time steps 
   int   Nstages;     
-  int   outputStep; 
+  int   outputStep;
+  int   outputForceStep; 
 
   int ARKswitch;
   
