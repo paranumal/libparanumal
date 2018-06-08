@@ -15,7 +15,7 @@ data/bnsUniform2D.h
 3
 
 [POLYNOMIAL DEGREE]
-3
+4
 
 [RBAR] # mean density
 1.0
@@ -86,11 +86,13 @@ SARK
 0
 
 [FINAL TIME]
-3
+10
 
 [OUTPUT INTERVAL]
 .5
 
+[TSTEPS FOR FORCE OUTPUT]
+10
 
 [ABSOLUTE TOLERANCE]
 1E-5
