@@ -89,9 +89,9 @@ void insForces(ins_t *ins, dfloat time){
         if(bc==1){
           for(int n=0;n<mesh->Nfp; n++){
             int sid = mesh->Nsgeo*(e*mesh->Nfaces+f);
-            dfloat nx = mesh->sgeo[sid+0];
-            dfloat ny = mesh->sgeo[sid+1];
-            dfloat sJ = mesh->sgeo[sid+2];
+            dfloat nx = mesh->sgeo[sid+NXID];
+            dfloat ny = mesh->sgeo[sid+NYID];
+            dfloat sJ = mesh->sgeo[sid+SJID];
 
             int vid  = e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n;
             int idM  = mesh->vmapM[vid];
