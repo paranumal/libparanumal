@@ -80,9 +80,9 @@ void bnsForces(bns_t *bns, dfloat time, setupAide &options){
 	    dfloat s22 = -bns->RT*(sqrt(2.0)*q6 - q3*q3/q1);
 
 	    dfloat P   = q1*bns->RT; // rho*RT 
-
-            Fx  += W[n]*sJ*(P*nx  - (s11*nx + s12*ny) );
-            Fy  += W[n]*sJ*(P*ny  - (s12*nx + s22*ny) );
+	    
+            Fx  += W[n]*sJ*(-P*nx  + (s11*nx + s12*ny) );
+            Fy  += W[n]*sJ*(-P*ny  + (s12*nx + s22*ny) );
           }
         }
       }

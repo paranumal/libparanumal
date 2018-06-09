@@ -62,7 +62,7 @@ SARK
 0 
 
 [VISCOSITY]
-1.e-3
+0.025
 
 [SPEED OF SOUND]
 5.0
