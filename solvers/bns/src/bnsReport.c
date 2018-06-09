@@ -19,9 +19,10 @@ void bnsReport(bns_t *bns, dfloat time, setupAide &options){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   if(rank==0){
-    dfloat ramp, drampdt;
-    bnsRampFunction(time, &ramp, &drampdt);
-    printf("t: %g ramp: %g drampdt: %g\n", time, ramp, drampdt);
+    dfloat fx, fy, fz, intfx, intfy, intfz;
+    bnsBodyForce(time, &fx, &fy, &fz, &intfx, &intfy, &intfz);
+    printf("t: %g (fx,fy,fz) = (%g,%g,%g), int(fx,fy,fz) = (%g,%g,%g)\n",
+	   time, fx,fy,fz, intfx, intfy, intfz);
   }
   
 

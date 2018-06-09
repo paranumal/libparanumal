@@ -17,9 +17,6 @@ void bnsRun(bns_t *bns, setupAide &options){
     haloBytes = mesh->totalHaloPairs*mesh->Nfp*bns->Nfields*mesh->Nfaces*sizeof(dfloat);
   else
     haloBytes = mesh->totalHaloPairs*mesh->Np*bns->Nfields*sizeof(dfloat);
-  
-   
-
 
   if (haloBytes) {
     occa::memory o_sendBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
@@ -28,77 +25,67 @@ void bnsRun(bns_t *bns, setupAide &options){
     recvBuffer = (dfloat*) o_recvBufferPinned.getMappedPointer();
   }
 
-  
-
-
   if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
-  printf("Populating trace values\n");
-  // Populate Trace Buffer
-  dlong offset = mesh->Np*mesh->Nelements*bns->Nfields;
-  for (int l=0; l<mesh->MRABNlevels; l++) {  
-    const int id = 3*mesh->MRABNlevels*3 + 3*l;
-    if (mesh->MRABNelements[l])
-    bns->traceUpdateKernel(mesh->MRABNelements[l],
-                      mesh->o_MRABelementIds[l],
-                      offset,
-                      mesh->MRABshiftIndex[l],
-                      bns->MRSAAB_C[l-1], //
-                      bns->MRAB_B[id+0], //
-                      bns->MRAB_B[id+1],
-                      bns->MRAB_B[id+2], //
-                      bns->MRSAAB_B[id+0], //
-                      bns->MRSAAB_B[id+1],
-                      bns->MRSAAB_B[id+2],
-                      mesh->o_vmapM,
-                      bns->o_q,
-                      bns->o_rhsq,
-                      bns->o_fQM);
+    printf("Populating trace values\n");
+    // Populate Trace Buffer
+    dlong offset = mesh->Np*mesh->Nelements*bns->Nfields;
+    for (int l=0; l<mesh->MRABNlevels; l++) {  
+      const int id = 3*mesh->MRABNlevels*3 + 3*l;
+      if (mesh->MRABNelements[l])
+	bns->traceUpdateKernel(mesh->MRABNelements[l],
+			       mesh->o_MRABelementIds[l],
+			       offset,
+			       mesh->MRABshiftIndex[l],
+			       bns->MRSAAB_C[l-1], //
+			       bns->MRAB_B[id+0], //
+			       bns->MRAB_B[id+1],
+			       bns->MRAB_B[id+2], //
+			       bns->MRSAAB_B[id+0], //
+			       bns->MRSAAB_B[id+1],
+			       bns->MRSAAB_B[id+2],
+			       mesh->o_vmapM,
+			       bns->o_q,
+			       bns->o_rhsq,
+			       bns->o_fQM);
 
-  if (mesh->MRABpmlNelements[l])
-    bns->traceUpdateKernel(mesh->MRABpmlNelements[l],
-                        mesh->o_MRABpmlElementIds[l],
-                        offset,
-                        mesh->MRABshiftIndex[l],
-                        bns->MRSAAB_C[l-1], //
-                        bns->MRAB_B[id+0], //
-                        bns->MRAB_B[id+1],
-                        bns->MRAB_B[id+2], //
-                        bns->MRSAAB_B[id+0], //
-                        bns->MRSAAB_B[id+1],
-                        bns->MRSAAB_B[id+2],
-                        mesh->o_vmapM,
-                        bns->o_q,
-                        bns->o_rhsq,
-                        bns->o_fQM);
-
+      if (mesh->MRABpmlNelements[l])
+	bns->traceUpdateKernel(mesh->MRABpmlNelements[l],
+			       mesh->o_MRABpmlElementIds[l],
+			       offset,
+			       mesh->MRABshiftIndex[l],
+			       bns->MRSAAB_C[l-1], //
+			       bns->MRAB_B[id+0], //
+			       bns->MRAB_B[id+1],
+			       bns->MRAB_B[id+2], //
+			       bns->MRSAAB_B[id+0], //
+			       bns->MRSAAB_B[id+1],
+			       bns->MRSAAB_B[id+2],
+			       mesh->o_vmapM,
+			       bns->o_q,
+			       bns->o_rhsq,
+			       bns->o_fQM);
+    }
   }
 
-  }
-
-if(rank==0) printf("N: %d Nsteps: %d dt: %.5e \n", mesh->N, bns->NtimeSteps, bns->dt);
+  if(rank==0) printf("N: %d Nsteps: %d dt: %.5e \n", mesh->N, bns->NtimeSteps, bns->dt);
 
 
+  double tic_tot = 0.f, elp_tot = 0.f; 
+  double tic_sol = 0.f, elp_sol = 0.f; 
+  double tic_out = 0.f, elp_out = 0.f;
 
+  occa::initTimer(mesh->device);
+  occaTimerTic(mesh->device,"BOLTZMANN");
 
-double tic_tot = 0.f, elp_tot = 0.f; 
-double tic_sol = 0.f, elp_sol = 0.f; 
-double tic_out = 0.f, elp_out = 0.f;
+  tic_tot = MPI_Wtime();
 
+  if( options.compareArgs("TIME INTEGRATOR", "MRSAAB")  || 
+      options.compareArgs("TIME INTEGRATOR", "LSERK")   ||
+      (options.compareArgs("TIME INTEGRATOR", "SARK")  && bns->fixed_dt ) ){
 
-
-occa::initTimer(mesh->device);
-occaTimerTic(mesh->device,"BOLTZMANN");
-
-tic_tot = MPI_Wtime();
-
-
- if( options.compareArgs("TIME INTEGRATOR", "MRSAAB")  || 
-     options.compareArgs("TIME INTEGRATOR", "LSERK")   ||
-     (options.compareArgs("TIME INTEGRATOR", "SARK")  && bns->fixed_dt ) ){
-
- for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
+    for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
       
-   // for(int tstep=0;tstep<10;++tstep){
+      // for(int tstep=0;tstep<10;++tstep){
       tic_out = MPI_Wtime();
 
       if(bns->reportFlag){
@@ -114,15 +101,15 @@ tic_tot = MPI_Wtime();
         }
       }
 
-       if(bns->errorFlag){
+      if(bns->errorFlag){
         if((tstep%bns->errorStep)==0){
-           dfloat time =0; 
+	  dfloat time =0; 
           if(options.compareArgs("TIME INTEGRATOR", "MRSAAB"))
             time = bns->startTime + bns->dt*tstep*pow(2,(mesh->MRABNlevels-1));     
           else
             time = bns->startTime + tstep*bns->dt;
           
-         bnsError(bns, tstep, options);
+	  bnsError(bns, tstep, options);
         }
       }
   
@@ -133,7 +120,7 @@ tic_tot = MPI_Wtime();
      
       if(options.compareArgs("TIME INTEGRATOR", "MRSAAB")){
         occaTimerTic(mesh->device, "MRSAAB"); 
-         bnsMRSAABStep(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
+	bnsMRSAABStep(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
         occaTimerToc(mesh->device, "MRSAAB"); 
       }
 
@@ -159,14 +146,14 @@ tic_tot = MPI_Wtime();
       }
 
       elp_sol += (MPI_Wtime() - tic_sol);
-  }
-}else{
+    }
+  }else{
 
     occaTimerTic(mesh->device, "SARK_TOTAL");
     bnsRunEmbedded(bns, haloBytes, sendBuffer, recvBuffer, options);
     occaTimerToc(mesh->device, "SARK_TOTAL");
 
-}
+  }
 
  
 
@@ -181,22 +168,16 @@ tic_tot = MPI_Wtime();
   MPI_Allreduce(&elp_out, &gelp_out, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&elp_sol, &gelp_sol, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   
-  
-  
-
   if(rank==0){
     printf("ORDER\tSIZE\tTOTAL_TIME\tSOLVER_TIME\tOUTPUT TIME\n");
     printf("%2d %2d %.5e %.5e %.5e\n", mesh->N, size, gelp_tot, gelp_sol, gelp_out); 
   }
-
-
-
  
-printf("writing Final data\n");  
-// For Final Time
-//bnsReport(bns, bns->NtimeSteps,options);
+  printf("writing Final data\n");  
+  // For Final Time
+  //bnsReport(bns, bns->NtimeSteps,options);
 
-occa::printTimer();
+  occa::printTimer();
 }
 
 

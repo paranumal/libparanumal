@@ -165,8 +165,6 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     check = options.getArgs("WBAR", w);
     if(!check) printf("WARNING setup file does not include WBAR\n");
   }
-    
-
   
   // bns->RT       = Uref*Uref/(bns->Ma*bns->Ma);
   bns->RT     = bns->sqrtRT*bns->sqrtRT;  
@@ -176,10 +174,6 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   bns->Ma = (fabs(u)>0) ? u/bns->sqrtRT : 1.0; // just for postprocessing
   // Set penalty parameter for flux setting
   bns->Lambda2 = 0.5/(bns->sqrtRT);
-  
-  
-
-  
 
 
   dfloat sigma11 = 0.f , sigma12 = 0.f, sigma13 = 0.f;
@@ -349,11 +343,12 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
  
   dfloat Gy = 0.0; options.getArgs("BODYFORCE-Y",Gy);
-  dfloat time = bns->startTime + 0.0; 
+  dfloat time = bns->startTime + 0.0;
+  
   // Define Initial Mean Velocity
-  dfloat ramp, drampdt;
-  bnsRampFunction(time, &ramp, &drampdt);
-
+  dfloat fx, fy, fz, intfx, intfy, intfz;
+  bnsBodyForce(time, &fx, &fy, &fz, &intfx, &intfy, &intfz);
+  
  // INITIALIZE PROBLEM 
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
@@ -397,24 +392,26 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
         // Uniform Flow
         bns->q[id+0*mesh->Np] = q1bar; 
-        bns->q[id+1*mesh->Np] = ramp*q2bar;
-        bns->q[id+2*mesh->Np] = ramp*q3bar;
-        bns->q[id+3*mesh->Np] = ramp*ramp*q4bar;
-        bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
-        bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;   
+        bns->q[id+1*mesh->Np] = q1bar*intfx/bns->sqrtRT;
+        bns->q[id+2*mesh->Np] = q1bar*intfy/bns->sqrtRT;
+        bns->q[id+3*mesh->Np] = q1bar*intfx*intfy/bns->sqrtRT;
+        bns->q[id+4*mesh->Np] = q1bar*intfx*intfx/(sqrt(2.)*bns->sqrtRT);
+        bns->q[id+5*mesh->Np] = q1bar*intfy*intfy/(sqrt(2.)*bns->sqrtRT);
       }else{
 
         bns->q[id+0*mesh->Np] = q1bar; 
-        bns->q[id+1*mesh->Np] = ramp*q2bar;
-        bns->q[id+2*mesh->Np] = ramp*q3bar;
-        bns->q[id+3*mesh->Np] = ramp*q4bar;
+        bns->q[id+1*mesh->Np] = q1bar*intfx/bns->sqrtRT;
+        bns->q[id+2*mesh->Np] = q1bar*intfy/bns->sqrtRT;
+	bns->q[id+3*mesh->Np] = q1bar*intfz/bns->sqrtRT;
 
-        bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
-        bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;
-        bns->q[id+6*mesh->Np] = ramp*ramp*q7bar;   
-        bns->q[id+7*mesh->Np] = ramp*ramp*q8bar;   
-        bns->q[id+8*mesh->Np] = ramp*ramp*q9bar;   
-        bns->q[id+9*mesh->Np] = ramp*ramp*q10bar; 
+        bns->q[id+4*mesh->Np] = q1bar*intfx*intfy/bns->sqrtRT;
+	bns->q[id+5*mesh->Np] = q1bar*intfx*intfz/bns->sqrtRT;
+	bns->q[id+6*mesh->Np] = q1bar*intfy*intfz/bns->sqrtRT;
+
+        bns->q[id+7*mesh->Np] = q1bar*intfx*intfx/(sqrt(2.)*bns->sqrtRT);
+        bns->q[id+8*mesh->Np] = q1bar*intfy*intfy/(sqrt(2.)*bns->sqrtRT);
+	bns->q[id+9*mesh->Np] = q1bar*intfz*intfz/(sqrt(2.)*bns->sqrtRT);
+
       }
        
     }
@@ -571,6 +568,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   // physics 
   kernelInfo.addDefine("p_Lambda2", 0.5f);
   kernelInfo.addDefine("p_sqrtRT", bns->sqrtRT);
+  kernelInfo.addDefine("p_isqrtRT", (dfloat)(1./bns->sqrtRT));
   kernelInfo.addDefine("p_sqrt2", (dfloat)sqrt(2.));
   kernelInfo.addDefine("p_isq12", (dfloat)sqrt(1./12.));
   kernelInfo.addDefine("p_isq6", (dfloat)sqrt(1./6.));
