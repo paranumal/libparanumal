@@ -43,7 +43,7 @@ AOBJS    = \
 ./src/bnsMain.o \
 ./src/bnsSetup.o \
 ./src/bnsRun.o \
-./src/bnsRampFunction.o \
+./src/bnsBodyForce.o \
 ./src/bnsPmlSetup.o \
 ./src/bnsMRABPmlSetup.o \
 ./src/bnsTimeStepperCoefficients.o \

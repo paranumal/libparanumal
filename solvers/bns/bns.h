@@ -175,6 +175,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options);
 
 // Pml setup for single rate time discretization
 void bnsPmlSetup(bns_t *bns, setupAide &options);
+
 // Pml setup for multi rate time discretization
 void bnsMRABPmlSetup(bns_t *bns, setupAide &options);
 
@@ -186,6 +187,11 @@ void bnsPlotVTU(bns_t *bns, char * FileName);
 
 // Function for ramp start
 void bnsRampFunction(dfloat t, dfloat *ramp, dfloat *drampdt);
+
+// function for body forcing 
+void bnsBodyForce(dfloat t, dfloat *fx, dfloat *fy, dfloat *fz,
+		  dfloat *intfx, dfloat *intfy, dfloat *intfz);
+
 
 // Time stepper coefficients
 void bnsTimeStepperCoefficients(bns_t *bns, setupAide &options);
