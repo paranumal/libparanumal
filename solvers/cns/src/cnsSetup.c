@@ -80,12 +80,16 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   check = options.getArgs("VISCOSITY", cns->mu);
   if(!check) printf("WARNING setup file does not include VISCOSITY\n");
 
-  dfloat mach = 0.17;
-  check = options.getArgs("MACH NUMBER", mach);
+  dfloat soundSpeed = 5;
+  check = options.getArgs("SPEED OF SOUND", soundSpeed);
   if(!check) printf("WARNING setup file does not include MACH\n");
 
   // speed of sound (assuming isothermal unit bulk flow) = sqrt(RT)
-  cns->RT = cns->ubar*cns->ubar/(mach*mach);
+  cns->RT = soundSpeed*soundSpeed;
+
+  cns->outputForceStep = 0;
+  
+  options.getArgs("TSTEPS FOR FORCE OUTPUT",   cns->outputForceStep);
   
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
@@ -131,10 +135,11 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     memcpy(cns->rkC, rkC, cns->Nrk*sizeof(dfloat));
     memcpy(cns->rkE, rkE, cns->Nrk*sizeof(dfloat));
     memcpy(cns->rkA, rkA, cns->Nrk*cns->Nrk*sizeof(dfloat));
-    
-    cns->dtMIN = 1E-7; //minumum allowed timestep
-    cns->ATOL = 1E-5;  //absolute error tolerance
-    cns->RTOL = 1E-4;  //relative error tolerance
+
+    cns->ATOL    = 1.0; options.getArgs("ABSOLUTE TOLERANCE",   cns->ATOL); 
+    cns->RTOL    = 1.0; options.getArgs("RELATIVE TOLERANCE",   cns->RTOL);
+    cns->dtMIN   = 1.0; options.getArgs("MINUMUM TIME STEP SIZE",   cns->dtMIN); 
+
     cns->safe = 0.9;   //safety factor
 
     //error control parameters
