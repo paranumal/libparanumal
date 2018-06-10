@@ -83,15 +83,24 @@ void cnsRun(cns_t *cns, setupAide &options){
         
         // accept rkq
         cns->o_q.copyFrom(cns->o_rkq);
-        
+
         time += mesh->dt;
         tstep++;
-        
+
+	if(cns->outputForceStep){
+	  if(tstep%cns->outputForceStep){
+	    cns->o_q.copyTo(mesh->q);
+	    cns->mesh->device.finish();
+	    cnsForces(cns,time);
+	    
+	  }
+	}
+
         cns->facold = mymax(err,1E-4); // hard coded factor ?
 
         // check for time step interval output during this step
         if(tstepIntervalFlag && (tstep%outputTstepInterval==0)){
-          cns->o_q.copyTo(cns->o_q);
+	  //          cns->o_q.copyTo(cns->o_q); ?????
           
           // output  (print from rkq)
           cnsReport(cns, nextOutputTime, options);

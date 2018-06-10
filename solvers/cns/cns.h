@@ -37,7 +37,9 @@ typedef struct{
   dfloat ubar;
   dfloat vbar;
   dfloat wbar;
-      
+
+  int outputForceStep;
+  
   
   mesh_t *mesh;
 
