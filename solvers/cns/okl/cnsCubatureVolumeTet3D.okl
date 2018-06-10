@@ -2,6 +2,9 @@
 // isothermal Compressible Navier-Stokes
 kernel void cnsCubatureVolumeTet3D(const dlong Nelements,
 				   const int advSwitch,
+				   const dfloat fx,
+				   const dfloat fy,
+				   const dfloat fz, 
 				   const dfloat * restrict vgeo,
 				   const dfloat * restrict cubvgeo,	
 				   const dfloat * restrict cubDWmatrices,
@@ -152,9 +155,9 @@ kernel void cnsCubatureVolumeTet3D(const dlong Nelements,
         
         // move to rhs
         rhsq[base+0*p_Np] = -(df0dr+dg0ds+dh0dt);
-        rhsq[base+1*p_Np] = -(df1dr+dg1ds+dh1dt);
-        rhsq[base+2*p_Np] = -(df2dr+dg2ds+dh2dt);
-	rhsq[base+3*p_Np] = -(df3dr+dg3ds+dh3dt);
+        rhsq[base+1*p_Np] = -(df1dr+dg1ds+dh1dt)+fx*s_q[0][n];
+        rhsq[base+2*p_Np] = -(df2dr+dg2ds+dh2dt)+fy*s_q[0][n];
+	rhsq[base+3*p_Np] = -(df3dr+dg3ds+dh3dt)+fz*s_q[0][n];
       }
     }
   }

@@ -2,6 +2,9 @@
 // isothermal Compressible Navier-Stokes
 kernel void cnsVolumeQuad2D(const dlong Nelements,
                             const int advSwitch,
+			    const dfloat fx,
+			    const dfloat fy,
+			    const dfloat fz, 
                             const dfloat * restrict vgeo,
                             const dfloat * restrict D,
                             const dfloat * restrict viscousStresses,
@@ -13,6 +16,8 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
     shared dfloat s_D[p_Nq][p_Nq];
     shared dfloat s_F[p_Nfields][p_Nq][p_Nq];
     shared dfloat s_G[p_Nfields][p_Nq][p_Nq];
+
+    exclusive dfloat r;
     
     for(int j=0;j<p_Nq;++j;inner1){
       for(int i=0;i<p_Nq;++i;inner0){
@@ -28,7 +33,8 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
 
         // conserved variables
         const dlong  qbase = e*p_Np*p_Nfields + j*p_Nq + i;
-        const dfloat r  = q[qbase+0*p_Np];
+
+	r  = q[qbase+0*p_Np];
         const dfloat ru = q[qbase+1*p_Np];
         const dfloat rv = q[qbase+2*p_Np];
         const dfloat p  = r*p_RT;
@@ -94,8 +100,8 @@ kernel void cnsVolumeQuad2D(const dlong Nelements,
         
         // move to rhs
         rhsq[base+0*p_Np] = -invJW*rhsq0;
-        rhsq[base+1*p_Np] = -invJW*rhsq1;
-        rhsq[base+2*p_Np] = -invJW*rhsq2;
+        rhsq[base+1*p_Np] = -invJW*rhsq1+fx*r;
+        rhsq[base+2*p_Np] = -invJW*rhsq2+fy*r;
         
       }
     }

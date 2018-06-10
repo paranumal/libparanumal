@@ -99,6 +99,9 @@ kernel void cnsSurfaceTri2D(const dlong Nelements,
 			    const dfloat * restrict y,
 			    const dfloat * restrict z,
 			    const dfloat mu,
+			    const dfloat intfx,
+			    const dfloat intfy,
+			    const dfloat intfz,
 			    const dfloat * restrict q,
 			    const dfloat * restrict viscousStresses,
 			    dfloat * restrict rhsq){
@@ -171,7 +174,7 @@ kernel void cnsSurfaceTri2D(const dlong Nelements,
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              cnsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, rM, uM, vM, &rP, &uP, &vP);
+              cnsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, rM, uM, vM, &rP, &uP, &vP);
               ruP = rP*uP;
               rvP = rP*vP;
               pP = p_RT*rP;
@@ -274,18 +277,21 @@ kernel void cnsSurfaceTri2D(const dlong Nelements,
 }
 
 kernel void cnsStressesSurfaceTri2D(const dlong Nelements,
-                                     const dfloat * restrict sgeo,
-                                     const dfloat * restrict LIFTT,
-                                     const dlong  * restrict vmapM,
-                                     const dlong  * restrict vmapP,
-                                     const int    * restrict EToB,
-                                     const dfloat time,
-                                     const dfloat * restrict x,
-                                     const dfloat * restrict y,
+				    const dfloat * restrict sgeo,
+				    const dfloat * restrict LIFTT,
+				    const dlong  * restrict vmapM,
+				    const dlong  * restrict vmapP,
+				    const int    * restrict EToB,
+				    const dfloat time,
+				    const dfloat * restrict x,
+				    const dfloat * restrict y,
 				    const dfloat * restrict z,
-                                     const dfloat mu,
-                                     const dfloat * restrict q,
-                                           dfloat * restrict viscousStresses){
+				    const dfloat mu,
+				    const dfloat intfx,
+				    const dfloat intfy,
+				    const dfloat intfz,
+				    const dfloat * restrict q,
+				    dfloat * restrict viscousStresses){
   
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -342,7 +348,7 @@ kernel void cnsStressesSurfaceTri2D(const dlong Nelements,
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-              cnsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, rM, uM, vM, &rP, &uP, &vP);
+              cnsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, rM, uM, vM, &rP, &uP, &vP);
             }
             
             const dfloat dS11 = p_half*(nx*(p_two*(uP-uM))) - p_third*(nx*(uP-uM)+ny*(vP-vM));

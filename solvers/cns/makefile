@@ -40,6 +40,7 @@ $(HDRDIR)/mesh3D.h
 # list of objects to be compiled
 OBJS    = \
 ./src/cnsEstimate.o \
+./src/cnsBodyForce.o \
 ./src/cnsStep.o \
 ./src/cnsMain.o \
 ./src/cnsError.o \

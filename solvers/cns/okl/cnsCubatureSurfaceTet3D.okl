@@ -22,7 +22,7 @@ void upwindRoeAveraged(const dfloat nx,
                        dfloat *ruflux,
                        dfloat *rvflux,
 		       dfloat *rwflux
-		       	      ){
+		       ){
 
   // Rotate "-" trace momentum to face normal-tangent coordinates
   dfloat runM = nx*ruM + ny*rvM + nz*rwM;
@@ -59,18 +59,18 @@ void upwindRoeAveraged(const dfloat nx,
   /* 
      Riemann fluxes
 
-  V = [0 0 1   1; 
-       0 0 u+c u-c; 
-       0 1 v   v;
-       1 0 w   w];
-  >> inv(V)
+     V = [0 0 1   1; 
+     0 0 u+c u-c; 
+     0 1 v   v;
+     1 0 w   w];
+     >> inv(V)
 
-       ans =
+     ans =
 
-       [            -w,        0, 0, 1]
-       [            -v,        0, 1, 0]
-       [ (c - u)/(2*c),  1/(2*c), 0, 0]
-       [ (c + u)/(2*c), -1/(2*c), 0, 0]
+     [            -w,        0, 0, 1]
+     [            -v,        0, 1, 0]
+     [ (c - u)/(2*c),  1/(2*c), 0, 0]
+     [ (c + u)/(2*c), -1/(2*c), 0, 0]
   */
   
   dfloat W1M = rubM - ub*rM;
@@ -129,6 +129,9 @@ kernel void cnsCubatureSurfaceTet3D_v0(const dlong Nelements,
 				       const dfloat * restrict inty,
 				       const dfloat * restrict intz,
 				       const dfloat mu,
+				       const dfloat intfx,
+				       const dfloat intfy,
+				       const dfloat intfz,
 				       const dfloat * restrict q,
 				       const dfloat * restrict viscousStresses,
 				       dfloat * restrict rhsq){
@@ -221,33 +224,33 @@ kernel void cnsCubatureSurfaceTet3D_v0(const dlong Nelements,
 
         // local block interpolation (face nodes to integration nodes)
         occaUnroll(p_Nfp)
-        for(int m=0;m<p_Nfp;++m){
-          const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-          const int fm = face*p_Nfp+m;
-          rM  += iInm*s_qM[0][fm];
-          ruM += iInm*s_qM[1][fm];
-          rvM += iInm*s_qM[2][fm];
-	  rwM += iInm*s_qM[3][fm];
+	  for(int m=0;m<p_Nfp;++m){
+	    const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+	    const int fm = face*p_Nfp+m;
+	    rM  += iInm*s_qM[0][fm];
+	    ruM += iInm*s_qM[1][fm];
+	    rvM += iInm*s_qM[2][fm];
+	    rwM += iInm*s_qM[3][fm];
 
-          rP  += iInm*s_qP[0][fm];
-          ruP += iInm*s_qP[1][fm];
-          rvP += iInm*s_qP[2][fm];
-	  rwP += iInm*s_qP[3][fm];
+	    rP  += iInm*s_qP[0][fm];
+	    ruP += iInm*s_qP[1][fm];
+	    rvP += iInm*s_qP[2][fm];
+	    rwP += iInm*s_qP[3][fm];
 
-          T11M += iInm*s_vSM[0][fm];
-          T12M += iInm*s_vSM[1][fm];
-	  T13M += iInm*s_vSM[2][fm];
-          T22M += iInm*s_vSM[3][fm];
-	  T23M += iInm*s_vSM[4][fm];
-	  T33M += iInm*s_vSM[5][fm];
+	    T11M += iInm*s_vSM[0][fm];
+	    T12M += iInm*s_vSM[1][fm];
+	    T13M += iInm*s_vSM[2][fm];
+	    T22M += iInm*s_vSM[3][fm];
+	    T23M += iInm*s_vSM[4][fm];
+	    T33M += iInm*s_vSM[5][fm];
 
-          T11P += iInm*s_vSP[0][fm];
-          T12P += iInm*s_vSP[1][fm];
-	  T13P += iInm*s_vSP[2][fm];
-          T22P += iInm*s_vSP[3][fm];
-          T23P += iInm*s_vSP[4][fm];
-          T33P += iInm*s_vSP[5][fm];
-        }
+	    T11P += iInm*s_vSP[0][fm];
+	    T12P += iInm*s_vSP[1][fm];
+	    T13P += iInm*s_vSP[2][fm];
+	    T22P += iInm*s_vSP[3][fm];
+	    T23P += iInm*s_vSP[4][fm];
+	    T33P += iInm*s_vSP[5][fm];
+	  }
 
         const dfloat uM = ruM/rM;
         const dfloat vM = rvM/rM;
@@ -262,7 +265,7 @@ kernel void cnsCubatureSurfaceTet3D_v0(const dlong Nelements,
         // apply boundary condition
         const int bc = EToB[face+p_Nfaces*e];
         if(bc>0){
-          cnsDirichletConditions3D(bc, time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp],  intz[n+e*p_Nfaces*p_intNfp], nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP);
+          cnsDirichletConditions3D(bc, time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp],  intz[n+e*p_Nfaces*p_intNfp], nx, ny, nz, intfx, intfy, intfz, rM, uM, vM, wM, &rP, &uP, &vP, &wP);
           ruP = rP*uP;
           rvP = rP*vP;
 	  rwP = rP*wP;
@@ -384,6 +387,9 @@ kernel void cnsCubatureSurfaceTet3D_v1(const dlong Nelements,
 				       const dfloat * restrict inty,
 				       const dfloat * restrict intz,
 				       const dfloat mu,
+				       const dfloat intfx,
+				       const dfloat intfy,
+				       const dfloat intfz,
 				       const dfloat * restrict q,
 				       const dfloat * restrict viscousStresses,
 				       dfloat * restrict rhsq){
@@ -468,26 +474,26 @@ kernel void cnsCubatureSurfaceTet3D_v1(const dlong Nelements,
 
         // local block interpolation (face nodes to integration nodes)
         occaUnroll(p_Nfp)
-        for(int m=0;m<p_Nfp;++m){
-          const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-          const int fm = face*p_Nfp+m;
-          rM  += iInm*s_qM[0][fm];
-          ruM += iInm*s_qM[1][fm];
-          rvM += iInm*s_qM[2][fm];
-	  rwM += iInm*s_qM[3][fm];
+	  for(int m=0;m<p_Nfp;++m){
+	    const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+	    const int fm = face*p_Nfp+m;
+	    rM  += iInm*s_qM[0][fm];
+	    ruM += iInm*s_qM[1][fm];
+	    rvM += iInm*s_qM[2][fm];
+	    rwM += iInm*s_qM[3][fm];
 
-          rP  += iInm*s_qP[0][fm];
-          ruP += iInm*s_qP[1][fm];
-          rvP += iInm*s_qP[2][fm];
-	  rwP += iInm*s_qP[3][fm];
+	    rP  += iInm*s_qP[0][fm];
+	    ruP += iInm*s_qP[1][fm];
+	    rvP += iInm*s_qP[2][fm];
+	    rwP += iInm*s_qP[3][fm];
 	  
-          T11A += iInm*s_vSA[0][fm];
-          T12A += iInm*s_vSA[1][fm];
-	  T13A += iInm*s_vSA[2][fm];
-          T22A += iInm*s_vSA[3][fm];
-	  T23A += iInm*s_vSA[4][fm];
-	  T33A += iInm*s_vSA[5][fm];
-        }
+	    T11A += iInm*s_vSA[0][fm];
+	    T12A += iInm*s_vSA[1][fm];
+	    T13A += iInm*s_vSA[2][fm];
+	    T22A += iInm*s_vSA[3][fm];
+	    T23A += iInm*s_vSA[4][fm];
+	    T33A += iInm*s_vSA[5][fm];
+	  }
 
         const dfloat uM = ruM/rM;
         const dfloat vM = rvM/rM;
@@ -502,7 +508,7 @@ kernel void cnsCubatureSurfaceTet3D_v1(const dlong Nelements,
         // apply boundary condition
         const int bc = EToB[face+p_Nfaces*e];
         if(bc>0){
-          cnsDirichletConditions3D(bc, time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp],  intz[n+e*p_Nfaces*p_intNfp], nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP);
+          cnsDirichletConditions3D(bc, time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp],  intz[n+e*p_Nfaces*p_intNfp], nx, ny, nz, intfx, intfy, intfz, rM, uM, vM, wM, &rP, &uP, &vP, &wP);
           ruP = rP*uP;
           rvP = rP*vP;
 	  rwP = rP*wP;
@@ -581,6 +587,9 @@ kernel void cnsCubatureSurfaceTet3D(const dlong Nelements,
 				    const dfloat * restrict inty,
 				    const dfloat * restrict intz,
 				    const dfloat mu,
+				    const dfloat intfx,
+				    const dfloat intfy,
+				    const dfloat intfz,
 				    const dfloat * restrict q,
 				    const dfloat * restrict viscousStresses,
 				    dfloat * restrict rhsq){
@@ -608,163 +617,163 @@ kernel void cnsCubatureSurfaceTet3D(const dlong Nelements,
     }
 
     occaUnroll(p_Nfaces)
-    for(int face=0;face<p_Nfaces;++face){
+      for(int face=0;face<p_Nfaces;++face){
 
-      for(int n=0;n<p_cubMaxNodes1;++n;inner0){
-	if(n<p_Nfp){
-	  // indices of negative and positive traces of face node
-	  const dlong id  = e*p_Nfp*p_Nfaces + (n + face*p_Nfp);
-	  const dlong idM = vmapM[id];
-	  const dlong idP = vmapP[id];
+	for(int n=0;n<p_cubMaxNodes1;++n;inner0){
+	  if(n<p_Nfp){
+	    // indices of negative and positive traces of face node
+	    const dlong id  = e*p_Nfp*p_Nfaces + (n + face*p_Nfp);
+	    const dlong idM = vmapM[id];
+	    const dlong idP = vmapP[id];
 	  
-	  // load traces
-	  const dlong eM = e;
-	  const dlong eP = idP/p_Np;
-	  const int vidM = idM%p_Np;
-	  const int vidP = idP%p_Np;
+	    // load traces
+	    const dlong eM = e;
+	    const dlong eP = idP/p_Np;
+	    const int vidM = idM%p_Np;
+	    const int vidP = idP%p_Np;
 	  
-	  const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
-	  const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
+	    const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+	    const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
 	  
-	  const dlong sbaseM = eM*p_Np*p_Nstresses + vidM;
-	  const dlong sbaseP = eP*p_Np*p_Nstresses + vidP;
+	    const dlong sbaseM = eM*p_Np*p_Nstresses + vidM;
+	    const dlong sbaseP = eP*p_Np*p_Nstresses + vidP;
 	  
-	  s_qM[0][n] = q[qbaseM + 0*p_Np];
-	  s_qM[1][n] = q[qbaseM + 1*p_Np];
-	  s_qM[2][n] = q[qbaseM + 2*p_Np];
-	  s_qM[3][n] = q[qbaseM + 3*p_Np];
+	    s_qM[0][n] = q[qbaseM + 0*p_Np];
+	    s_qM[1][n] = q[qbaseM + 1*p_Np];
+	    s_qM[2][n] = q[qbaseM + 2*p_Np];
+	    s_qM[3][n] = q[qbaseM + 3*p_Np];
 	  
-	  s_qP[0][n] = q[qbaseP + 0*p_Np];
-	  s_qP[1][n] = q[qbaseP + 1*p_Np];
-	  s_qP[2][n] = q[qbaseP + 2*p_Np];
-	  s_qP[3][n] = q[qbaseP + 3*p_Np];
+	    s_qP[0][n] = q[qbaseP + 0*p_Np];
+	    s_qP[1][n] = q[qbaseP + 1*p_Np];
+	    s_qP[2][n] = q[qbaseP + 2*p_Np];
+	    s_qP[3][n] = q[qbaseP + 3*p_Np];
 	  
-	  s_vSA[0][n] = p_half*(viscousStresses[sbaseM+0*p_Np] + viscousStresses[sbaseP+0*p_Np]);
-	  s_vSA[1][n] = p_half*(viscousStresses[sbaseM+1*p_Np] + viscousStresses[sbaseP+1*p_Np]);
-	  s_vSA[2][n] = p_half*(viscousStresses[sbaseM+2*p_Np] + viscousStresses[sbaseP+2*p_Np]);
-	  s_vSA[3][n] = p_half*(viscousStresses[sbaseM+3*p_Np] + viscousStresses[sbaseP+3*p_Np]);
-	  s_vSA[4][n] = p_half*(viscousStresses[sbaseM+4*p_Np] + viscousStresses[sbaseP+4*p_Np]);
-	  s_vSA[5][n] = p_half*(viscousStresses[sbaseM+5*p_Np] + viscousStresses[sbaseP+5*p_Np]);
+	    s_vSA[0][n] = p_half*(viscousStresses[sbaseM+0*p_Np] + viscousStresses[sbaseP+0*p_Np]);
+	    s_vSA[1][n] = p_half*(viscousStresses[sbaseM+1*p_Np] + viscousStresses[sbaseP+1*p_Np]);
+	    s_vSA[2][n] = p_half*(viscousStresses[sbaseM+2*p_Np] + viscousStresses[sbaseP+2*p_Np]);
+	    s_vSA[3][n] = p_half*(viscousStresses[sbaseM+3*p_Np] + viscousStresses[sbaseP+3*p_Np]);
+	    s_vSA[4][n] = p_half*(viscousStresses[sbaseM+4*p_Np] + viscousStresses[sbaseP+4*p_Np]);
+	    s_vSA[5][n] = p_half*(viscousStresses[sbaseM+5*p_Np] + viscousStresses[sbaseP+5*p_Np]);
 	  
-	}
-      }
-    
-      barrier(localMemFence);
-      
-      // interpolate to surface integration nodes
-      for(int n=0;n<p_cubMaxNodes1;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
-	if(n<p_intNfp){
-	  
-	  // load surface geofactors for this face
-	  const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
-	  const dfloat nx   = sgeo[sid+p_NXID];
-	  const dfloat ny   = sgeo[sid+p_NYID];
-	  const dfloat nz   = sgeo[sid+p_NZID];
-	  const dfloat tx   = sgeo[sid+p_STXID];
-	  const dfloat ty   = sgeo[sid+p_STYID];
-	  const dfloat tz   = sgeo[sid+p_STZID];
-	  const dfloat bx   = sgeo[sid+p_SBXID];
-	  const dfloat by   = sgeo[sid+p_SBYID];
-	  const dfloat bz   = sgeo[sid+p_SBZID];
-	  const dfloat sJ   = sgeo[sid+p_SJID];
-	  const dfloat invJ = sgeo[sid+p_IJID];
-	  
-	  dfloat rM  = 0., ruM = 0., rvM = 0., rwM = 0.;
-	  dfloat rP  = 0., ruP = 0., rvP = 0., rwP = 0.;
-	  dfloat T11A  = 0., T12A = 0., T13A = 0., T22A = 0., T23A = 0., T33A = 0.;
-	  
-	  // local block interpolation (face nodes to integration nodes)
-	  occaUnroll(p_Nfp)
-	    for(int m=0;m<p_Nfp;++m){
-	      const dfloat iInm = intInterpT[ (n+face*p_intNfp) + m*p_Nfaces*p_intNfp];
-	      const int fm = m;
-	      rM  += iInm*s_qM[0][fm];
-	      ruM += iInm*s_qM[1][fm];
-	      rvM += iInm*s_qM[2][fm];
-	      rwM += iInm*s_qM[3][fm];
-	      
-	      rP  += iInm*s_qP[0][fm];
-	      ruP += iInm*s_qP[1][fm];
-	      rvP += iInm*s_qP[2][fm];
-	      rwP += iInm*s_qP[3][fm];
-	      
-	      T11A += iInm*s_vSA[0][fm];
-	      T12A += iInm*s_vSA[1][fm];
-	      T13A += iInm*s_vSA[2][fm];
-	      T22A += iInm*s_vSA[3][fm];
-	      T23A += iInm*s_vSA[4][fm];
-	      T33A += iInm*s_vSA[5][fm];
-	    }
-	  
-	  const dfloat uM = ruM/rM;
-	  const dfloat vM = rvM/rM;
-	  const dfloat wM = rwM/rM;
-	  const dfloat pM = p_RT*rM;
-	  
-	  dfloat uP = ruP/rP;
-	  dfloat vP = rvP/rP;
-	  dfloat wP = rwP/rP;
-	  dfloat pP = p_RT*rP;
-	  
-	  // apply boundary condition
-	  const int bc = EToB[face+p_Nfaces*e];
-	  if(bc>0){
-	    dfloat ix = intx[n+face*p_intNfp + e*p_Nfaces*p_intNfp];
-	    dfloat iy = inty[n+face*p_intNfp + e*p_Nfaces*p_intNfp];
-	    dfloat iz = intz[n+face*p_intNfp + e*p_Nfaces*p_intNfp];
-	    cnsDirichletConditions3D(bc, time, ix, iy, iz, nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP);
-	    ruP = rP*uP;
-	    rvP = rP*vP;
-	    rwP = rP*wP;
-	    pP = p_RT*rP;
-	    //should also add the Neumann BC here, but need uxM, uyM, vxM, abd vyM somehow
 	  }
-	  
-	  // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
-	  const dfloat sc = invJ*sJ;
-	  
-	  dfloat rflux, ruflux, rvflux, rwflux;
-	  
-	  upwindRoeAveraged(nx, ny, nz, tx, ty, tz, bx, by, bz, rM, ruM, rvM, rwM, rP, ruP, rvP, rwP, &rflux, &ruflux, &rvflux, &rwflux);
-	  
-	  rflux  *= advSwitch;
-	  ruflux *= advSwitch;
-	  rvflux *= advSwitch;
-	  rwflux *= advSwitch;
-	  
-	  // const dfloat hinv = sgeo[sid + p_IHID];
-	  // dfloat penalty = p_Nq*p_Nq*hinv*mu;
-
-	  ruflux -= nx*T11A + ny*T12A + nz*T13A;// + penalty*(uP-uM)); // should add viscous penalty
-	  rvflux -= nx*T12A + ny*T22A + nz*T23A;// + penalty*(vP-vM)); // should add viscous penalty
-	  rwflux -= nx*T13A + ny*T23A + nz*T33A;// + penalty*(vP-vM)); // should add viscous penalty
-	  
-	  s_rflux [n] = sc*(-rflux );
-	  s_ruflux[n] = sc*(-ruflux);
-	  s_rvflux[n] = sc*(-rvflux);
-	  s_rwflux[n] = sc*(-rwflux);
-	  
 	}
-      }
+    
+	barrier(localMemFence);
       
-      // wait for all shared memory writes of the previous inner loop to complete
-      barrier(localMemFence);
-      
-      // for each node in the element
-      for(int n=0;n<p_cubMaxNodes1;++n;inner0){
-	if(n<p_Np){            
-	  // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-	  occaUnroll(p_intNfp)
-	    for(int m=0;m<p_intNfp;++m){
-	      const dfloat L = intLIFTT[n+(m+face*p_intNfp)*p_Np];
-	      Lrflux  += L*s_rflux[m];
-	      Lruflux += L*s_ruflux[m];
-	      Lrvflux += L*s_rvflux[m];
-	      Lrwflux += L*s_rwflux[m];
+	// interpolate to surface integration nodes
+	for(int n=0;n<p_cubMaxNodes1;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+	  if(n<p_intNfp){
+	  
+	    // load surface geofactors for this face
+	    const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
+	    const dfloat nx   = sgeo[sid+p_NXID];
+	    const dfloat ny   = sgeo[sid+p_NYID];
+	    const dfloat nz   = sgeo[sid+p_NZID];
+	    const dfloat tx   = sgeo[sid+p_STXID];
+	    const dfloat ty   = sgeo[sid+p_STYID];
+	    const dfloat tz   = sgeo[sid+p_STZID];
+	    const dfloat bx   = sgeo[sid+p_SBXID];
+	    const dfloat by   = sgeo[sid+p_SBYID];
+	    const dfloat bz   = sgeo[sid+p_SBZID];
+	    const dfloat sJ   = sgeo[sid+p_SJID];
+	    const dfloat invJ = sgeo[sid+p_IJID];
+	  
+	    dfloat rM  = 0., ruM = 0., rvM = 0., rwM = 0.;
+	    dfloat rP  = 0., ruP = 0., rvP = 0., rwP = 0.;
+	    dfloat T11A  = 0., T12A = 0., T13A = 0., T22A = 0., T23A = 0., T33A = 0.;
+	  
+	    // local block interpolation (face nodes to integration nodes)
+	    occaUnroll(p_Nfp)
+	      for(int m=0;m<p_Nfp;++m){
+		const dfloat iInm = intInterpT[ (n+face*p_intNfp) + m*p_Nfaces*p_intNfp];
+		const int fm = m;
+		rM  += iInm*s_qM[0][fm];
+		ruM += iInm*s_qM[1][fm];
+		rvM += iInm*s_qM[2][fm];
+		rwM += iInm*s_qM[3][fm];
+	      
+		rP  += iInm*s_qP[0][fm];
+		ruP += iInm*s_qP[1][fm];
+		rvP += iInm*s_qP[2][fm];
+		rwP += iInm*s_qP[3][fm];
+	      
+		T11A += iInm*s_vSA[0][fm];
+		T12A += iInm*s_vSA[1][fm];
+		T13A += iInm*s_vSA[2][fm];
+		T22A += iInm*s_vSA[3][fm];
+		T23A += iInm*s_vSA[4][fm];
+		T33A += iInm*s_vSA[5][fm];
+	      }
+	  
+	    const dfloat uM = ruM/rM;
+	    const dfloat vM = rvM/rM;
+	    const dfloat wM = rwM/rM;
+	    const dfloat pM = p_RT*rM;
+	  
+	    dfloat uP = ruP/rP;
+	    dfloat vP = rvP/rP;
+	    dfloat wP = rwP/rP;
+	    dfloat pP = p_RT*rP;
+	  
+	    // apply boundary condition
+	    const int bc = EToB[face+p_Nfaces*e];
+	    if(bc>0){
+	      dfloat ix = intx[n+face*p_intNfp + e*p_Nfaces*p_intNfp];
+	      dfloat iy = inty[n+face*p_intNfp + e*p_Nfaces*p_intNfp];
+	      dfloat iz = intz[n+face*p_intNfp + e*p_Nfaces*p_intNfp];
+	      cnsDirichletConditions3D(bc, time, ix, iy, iz, nx, ny, nz, intfx, intfy, intfz, rM, uM, vM, wM, &rP, &uP, &vP, &wP);
+	      ruP = rP*uP;
+	      rvP = rP*vP;
+	      rwP = rP*wP;
+	      pP = p_RT*rP;
+	      //should also add the Neumann BC here, but need uxM, uyM, vxM, abd vyM somehow
 	    }
+	  
+	    // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
+	    const dfloat sc = invJ*sJ;
+	  
+	    dfloat rflux, ruflux, rvflux, rwflux;
+	  
+	    upwindRoeAveraged(nx, ny, nz, tx, ty, tz, bx, by, bz, rM, ruM, rvM, rwM, rP, ruP, rvP, rwP, &rflux, &ruflux, &rvflux, &rwflux);
+	  
+	    rflux  *= advSwitch;
+	    ruflux *= advSwitch;
+	    rvflux *= advSwitch;
+	    rwflux *= advSwitch;
+	  
+	    // const dfloat hinv = sgeo[sid + p_IHID];
+	    // dfloat penalty = p_Nq*p_Nq*hinv*mu;
+
+	    ruflux -= nx*T11A + ny*T12A + nz*T13A;// + penalty*(uP-uM)); // should add viscous penalty
+	    rvflux -= nx*T12A + ny*T22A + nz*T23A;// + penalty*(vP-vM)); // should add viscous penalty
+	    rwflux -= nx*T13A + ny*T23A + nz*T33A;// + penalty*(vP-vM)); // should add viscous penalty
+	  
+	    s_rflux [n] = sc*(-rflux );
+	    s_ruflux[n] = sc*(-ruflux);
+	    s_rvflux[n] = sc*(-rvflux);
+	    s_rwflux[n] = sc*(-rwflux);
+	  
+	  }
+	}
+      
+	// wait for all shared memory writes of the previous inner loop to complete
+	barrier(localMemFence);
+      
+	// for each node in the element
+	for(int n=0;n<p_cubMaxNodes1;++n;inner0){
+	  if(n<p_Np){            
+	    // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+	    occaUnroll(p_intNfp)
+	      for(int m=0;m<p_intNfp;++m){
+		const dfloat L = intLIFTT[n+(m+face*p_intNfp)*p_Np];
+		Lrflux  += L*s_rflux[m];
+		Lruflux += L*s_ruflux[m];
+		Lrvflux += L*s_rvflux[m];
+		Lrwflux += L*s_rwflux[m];
+	      }
+	  }
 	}
       }
-    }
 
     barrier(localMemFence);
     
@@ -794,6 +803,9 @@ kernel void cnsStressesSurfaceTet3D(const dlong Nelements,
 				    const dfloat * restrict y,
 				    const dfloat * restrict z,
 				    const dfloat mu,
+				    const dfloat intfx,
+				    const dfloat intfy,
+				    const dfloat intfz,
 				    const dfloat * restrict q,
 				    dfloat * restrict viscousStresses){
   
@@ -860,7 +872,7 @@ kernel void cnsStressesSurfaceTet3D(const dlong Nelements,
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-              cnsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP);
+              cnsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, intfx, intfy, intfz, rM, uM, vM, wM, &rP, &uP, &vP, &wP);
             }
             
             const dfloat dS11 = p_half*(nx*(p_two*(uP-uM))) - p_third*(nx*(uP-uM)+ny*(vP-vM)+nz*(wP-wM));

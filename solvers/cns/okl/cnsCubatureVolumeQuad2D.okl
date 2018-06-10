@@ -2,6 +2,9 @@
 // isothermal Compressible Navier-Stokes
 kernel void cnsCubatureVolumeQuad2D(const dlong Nelements,
                                     const int advSwitch,
+				    const dfloat fx,
+				    const dfloat fy,
+				    const dfloat fz, 
                                     const dfloat * restrict vgeo,
                                     const dfloat * restrict cubvgeo,
                                     const dfloat * restrict cubDWT,
@@ -232,9 +235,9 @@ kernel void cnsCubatureVolumeQuad2D(const dlong Nelements,
           const dlong base = e*p_Np*p_Nfields + j*p_Nq + i;
           
           // move to rhs
-          rhsq[base+0*p_Np] = -invJW*rhsq0;
-          rhsq[base+1*p_Np] = -invJW*rhsq1;
-          rhsq[base+2*p_Np] = -invJW*rhsq2;
+          rhsq[base+0*p_Np] = -invJW*rhsq0; 
+          rhsq[base+1*p_Np] = -invJW*rhsq1+fx*s_q[0][j][i];
+          rhsq[base+2*p_Np] = -invJW*rhsq2+fy*s_q[0][j][i];
         }
       }
     }

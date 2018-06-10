@@ -159,6 +159,9 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
                                            sizeof(dfloat));
 
   cns->Vort = (dfloat*) calloc(3*mesh->Nelements*mesh->Np,sizeof(dfloat)); // 3 components (hard coded)
+
+  dfloat fx, fy, fz, intfx, intfy, intfz;
+  cnsBodyForce(0.0, &fx, &fy, &fz, &intfx, &intfy, &intfz);
   
   // fix this later (initial conditions)
   for(dlong e=0;e<mesh->Nelements;++e){
@@ -178,12 +181,10 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
                        mesh->q+qbase+3*mesh->Np);
 #else
       mesh->q[qbase+0*mesh->Np] = cns->rbar;
-      //      mesh->q[qbase+1*mesh->Np] = cns->rbar*cns->ubar*y*(6-y)/9.;
-      const dfloat alpha = 20;
-      mesh->q[qbase+1*mesh->Np] = cns->rbar*cns->ubar; //*tanh(alpha*y)*tanh(alpha*(6-y));
-      mesh->q[qbase+2*mesh->Np] = cns->rbar*cns->vbar;
+      mesh->q[qbase+1*mesh->Np] = cns->rbar*intfx;
+      mesh->q[qbase+2*mesh->Np] = cns->rbar*intfy;
       if(cns->dim==3)
-        mesh->q[qbase+3*mesh->Np] = cns->rbar*cns->wbar;
+        mesh->q[qbase+3*mesh->Np] = cns->rbar*intfz;
 #endif
     }
   }

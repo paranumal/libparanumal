@@ -9,7 +9,7 @@
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define cnsDirichletConditions2D(bc, t, x, y, nx, ny, rM, uM, vM, rB, uB, vB) \
+#define cnsDirichletConditions2D(bc, t, x, y, nx, ny, intfx, intfy, rM, uM, vM, rB, uB, vB) \
 {                                   \
   if(bc==1){                        \
     *(rB) = rM;                     \
@@ -17,12 +17,12 @@
     *(vB) = 0.f;                    \
   } else if(bc==2){                 \
     *(rB) = p_rbar;                 \
-    *(uB) = p_ubar;                 \
-    *(vB) = p_vbar;                 \
+    *(uB) = intfx;                 \
+    *(vB) = intfy;                 \
   } else if(bc==3){                 \
     *(rB) = rM;                     \
-    *(uB) = p_ubar;                 \
-    *(vB) = p_vbar;                 \
+    *(uB) = intfx;                 \
+    *(vB) = intfy;                 \
   } else if(bc==4||bc==5){          \
     *(rB) = rM;                     \
     *(uB) = uM - (nx*uM+ny*vM)*nx;  \
