@@ -101,6 +101,9 @@ kernel void cnsCubatureSurfaceTri2D(const dlong Nelements,
 				    const dfloat * restrict inty,
 				    const dfloat * restrict intz,
 				    const dfloat mu,
+				    const dfloat intfx,
+				    const dfloat intfy,
+				    const dfloat intfz,
 				    const dfloat * restrict q,
 				    const dfloat * restrict viscousStresses,
 				    dfloat * restrict rhsq){
@@ -177,23 +180,23 @@ kernel void cnsCubatureSurfaceTri2D(const dlong Nelements,
 
         // local block interpolation (face nodes to integration nodes)
         occaUnroll(p_Nfp)
-        for(int m=0;m<p_Nfp;++m){
-          const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-          const int fm = face*p_Nfp+m;
-          rM  += iInm*s_qM[0][fm];
-          ruM += iInm*s_qM[1][fm];
-          rvM += iInm*s_qM[2][fm];
-          rP  += iInm*s_qP[0][fm];
-          ruP += iInm*s_qP[1][fm];
-          rvP += iInm*s_qP[2][fm];
+	  for(int m=0;m<p_Nfp;++m){
+	    const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+	    const int fm = face*p_Nfp+m;
+	    rM  += iInm*s_qM[0][fm];
+	    ruM += iInm*s_qM[1][fm];
+	    rvM += iInm*s_qM[2][fm];
+	    rP  += iInm*s_qP[0][fm];
+	    ruP += iInm*s_qP[1][fm];
+	    rvP += iInm*s_qP[2][fm];
 
-          T11M += iInm*s_vSM[0][fm];
-          T12M += iInm*s_vSM[1][fm];
-          T22M += iInm*s_vSM[2][fm];
-          T11P += iInm*s_vSP[0][fm];
-          T12P += iInm*s_vSP[1][fm];
-          T22P += iInm*s_vSP[2][fm];
-        }
+	    T11M += iInm*s_vSM[0][fm];
+	    T12M += iInm*s_vSM[1][fm];
+	    T22M += iInm*s_vSM[2][fm];
+	    T11P += iInm*s_vSP[0][fm];
+	    T12P += iInm*s_vSP[1][fm];
+	    T22P += iInm*s_vSP[2][fm];
+	  }
 
         const dfloat uM = ruM/rM;
         const dfloat vM = rvM/rM;
@@ -206,7 +209,7 @@ kernel void cnsCubatureSurfaceTri2D(const dlong Nelements,
         // apply boundary condition
         const int bc = EToB[face+p_Nfaces*e];
         if(bc>0){
-          cnsDirichletConditions2D(bc, time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, rM, uM, vM, &rP, &uP, &vP);
+          cnsDirichletConditions2D(bc, time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, intfx, intfy, rM, uM, vM, &rP, &uP, &vP);
           ruP = rP*uP;
           rvP = rP*vP;
           pP = p_RT*rP;
@@ -302,18 +305,21 @@ kernel void cnsCubatureSurfaceTri2D(const dlong Nelements,
 }
 
 kernel void cnsStressesSurfaceTri2D(const dlong Nelements,
-                                     const dfloat * restrict sgeo,
-                                     const dfloat * restrict LIFTT,
-                                     const dlong  * restrict vmapM,
-                                     const dlong  * restrict vmapP,
-                                     const int    * restrict EToB,
-                                     const dfloat time,
-                                     const dfloat * restrict x,
-                                     const dfloat * restrict y,
+				    const dfloat * restrict sgeo,
+				    const dfloat * restrict LIFTT,
+				    const dlong  * restrict vmapM,
+				    const dlong  * restrict vmapP,
+				    const int    * restrict EToB,
+				    const dfloat time,
+				    const dfloat * restrict x,
+				    const dfloat * restrict y,
 				    const dfloat * restrict z,
-                                     const dfloat mu,
-                                     const dfloat * restrict q,
-                                           dfloat * restrict viscousStresses){
+				    const dfloat mu,
+				    const dfloat intfx,
+				    const dfloat intfy,
+				    const dfloat intfz,
+				    const dfloat * restrict q,
+				    dfloat * restrict viscousStresses){
   
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
@@ -370,7 +376,7 @@ kernel void cnsStressesSurfaceTri2D(const dlong Nelements,
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-              cnsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, rM, uM, vM, &rP, &uP, &vP);
+              cnsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, rM, uM, vM, &rP, &uP, &vP);
             }
             
             const dfloat dS11 = p_half*(nx*(p_two*(uP-uM))) - p_third*(nx*(uP-uM)+ny*(vP-vM));

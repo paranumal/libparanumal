@@ -9,6 +9,11 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     
     // t_rk = t + C_rk*dt
     dfloat currentTime = time + cns->rkC[rk]*mesh->dt;
+
+    dfloat fx, fy, fz, intfx, intfy, intfz;
+    cnsBodyForce(currentTime , &fx, &fy, &fz, &intfx, &intfy, &intfz);
+
+    //    printf("F=%g,%g,%g. intF = %g,%g,%g\n", fx, fy, fz, intfx, intfy, intfz);
     
     //compute RK stage 
     // rkq = q + dt sum_{i=0}^{rk-1} a_{rk,i}*rhsq_i
@@ -39,7 +44,7 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     cns->stressesVolumeKernel(mesh->Nelements, 
                               mesh->o_vgeo, 
                               mesh->o_Dmatrices,
-                              cns->mu, 
+                              cns->mu,
                               cns->o_rkq, 
                               cns->o_viscousStresses);
 
@@ -62,7 +67,8 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                mesh->o_x, 
                                mesh->o_y,
                                mesh->o_z, 
-                               cns->mu, 
+                               cns->mu,
+			       intfx, intfy, intfz,
                                cns->o_rkq, 
                                cns->o_viscousStresses);
 
@@ -82,7 +88,8 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     // compute volume contribution to DG cns RHS
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureVolumeKernel(mesh->Nelements, 
-                                cns->advSwitch, 
+                                cns->advSwitch,
+				fx, fy, fz,
                                 mesh->o_vgeo,
                                 mesh->o_cubvgeo, 
                                 mesh->o_cubDWmatrices,
@@ -93,7 +100,8 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                 cns->o_rhsq);
     } else {
       cns->volumeKernel(mesh->Nelements, 
-                        cns->advSwitch, 
+                        cns->advSwitch,
+			fx, fy, fz,
                         mesh->o_vgeo, 
                         mesh->o_Dmatrices,
                         cns->o_viscousStresses, 
@@ -125,7 +133,8 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                  mesh->o_intx, 
                                  mesh->o_inty,
                                  mesh->o_intz, 
-                                 cns->mu, 
+                                 cns->mu,
+				 intfx, intfy, intfz,
                                  cns->o_rkq, 
                                  cns->o_viscousStresses, 
                                  cns->o_rhsq);
@@ -141,7 +150,8 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                          mesh->o_x, 
                          mesh->o_y,
                          mesh->o_z, 
-                         cns->mu, 
+                         cns->mu,
+			 intfx, intfy, intfz,
                          cns->o_rkq, 
                          cns->o_viscousStresses, 
                          cns->o_rhsq);
@@ -205,7 +215,10 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
   for(int rk=0;rk<mesh->Nrk;++rk){
       
     dfloat currentTime = time + mesh->rkc[rk]*mesh->dt;
-      
+
+    dfloat fx, fy, fz, intfx, intfy, intfz;
+    cnsBodyForce(currentTime , &fx, &fy, &fz, &intfx, &intfy, &intfz);
+    
     // extract q halo on DEVICE
     if(mesh->totalHaloPairs>0){
       int Nentries = mesh->Np*cns->Nfields;
@@ -223,7 +236,7 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     cns->stressesVolumeKernel(mesh->Nelements, 
                               mesh->o_vgeo, 
                               mesh->o_Dmatrices, 
-                              cns->mu, 
+                              cns->mu,			      
                               cns->o_q, 
                               cns->o_viscousStresses);
       
@@ -246,7 +259,8 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                mesh->o_x, 
                                mesh->o_y,
                                mesh->o_z, 
-                               cns->mu, 
+                               cns->mu,
+			       intfx, intfy, intfz,
                                cns->o_q, 
                                cns->o_viscousStresses);
       
@@ -267,7 +281,8 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
 
       cns->cubatureVolumeKernel(mesh->Nelements, 
-                                advSwitch, 
+                                advSwitch,
+				fx, fy, fz,
                                 mesh->o_vgeo,
                                 mesh->o_cubvgeo, 
                                 mesh->o_cubDWmatrices,
@@ -278,7 +293,8 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                 cns->o_rhsq);
     } else {
       cns->volumeKernel(mesh->Nelements, 
-                        advSwitch, 
+                        advSwitch,
+			fx, fy, fz,
                         mesh->o_vgeo, 
                         mesh->o_Dmatrices,
                         cns->o_viscousStresses, 
@@ -310,7 +326,8 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                  mesh->o_intx, 
                                  mesh->o_inty,
                                  mesh->o_intz, 
-                                 cns->mu, 
+                                 cns->mu,
+				 intfx, intfy, intfz,
                                  cns->o_q, 
                                  cns->o_viscousStresses, 
                                  cns->o_rhsq);
@@ -326,7 +343,8 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                          mesh->o_x, 
                          mesh->o_y,
                          mesh->o_z, 
-                         cns->mu, 
+                         cns->mu,
+			 intfx, intfy, intfz,
                          cns->o_q, 
                          cns->o_viscousStresses, 
                          cns->o_rhsq);

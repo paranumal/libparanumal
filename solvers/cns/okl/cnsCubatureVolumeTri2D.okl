@@ -1,15 +1,18 @@
 
-// isothermal Compressible Navier-Stokes
+// Isothermal Compressible Navier-Stokes
 kernel void cnsCubatureVolumeTri2D(const dlong Nelements,
-                                  const int advSwitch,
-                                  const dfloat * restrict vgeo,
-                                  const dfloat * restrict cubvgeo,
-                                  const dfloat * restrict cubDWmatrices,
-                                  const dfloat * restrict cubInterpT,
-                                  const dfloat * restrict cubProjectT,	
-                                  const dfloat * restrict viscousStresses,
-                                  const dfloat * restrict q,
-                                        dfloat * restrict rhsq){
+				   const int advSwitch,
+				   const dfloat fx,
+				   const dfloat fy,
+				   const dfloat fz, 
+				   const dfloat * restrict vgeo,
+				   const dfloat * restrict cubvgeo,
+				   const dfloat * restrict cubDWmatrices,
+				   const dfloat * restrict cubInterpT,
+				   const dfloat * restrict cubProjectT,	
+				   const dfloat * restrict viscousStresses,
+				   const dfloat * restrict q,
+				   dfloat * restrict rhsq){
   
   for(dlong e=0;e<Nelements;++e;outer0){
 
@@ -41,15 +44,15 @@ kernel void cnsCubatureVolumeTri2D(const dlong Nelements,
       dfloat r = 0., ru = 0., rv = 0.;
       dfloat T11 = 0., T12 = 0., T22 = 0.;
       occaUnroll(p_Np)
-      for(int i=0;i<p_Np;++i){
-        const dfloat cIni = cubInterpT[n+i*p_cubNp];
-        r  += cIni*s_q[0][i];
-        ru += cIni*s_q[1][i];
-        rv += cIni*s_q[2][i];
-        T11 += cIni*s_vS[0][i];
-        T12 += cIni*s_vS[1][i];
-        T22 += cIni*s_vS[2][i];
-      }
+	for(int i=0;i<p_Np;++i){
+	  const dfloat cIni = cubInterpT[n+i*p_cubNp];
+	  r  += cIni*s_q[0][i];
+	  ru += cIni*s_q[1][i];
+	  rv += cIni*s_q[2][i];
+	  T11 += cIni*s_vS[0][i];
+	  T12 += cIni*s_vS[1][i];
+	  T22 += cIni*s_vS[2][i];
+	}
 
       // primitive variables
       const dfloat p  = r*p_RT;
@@ -86,24 +89,24 @@ kernel void cnsCubatureVolumeTri2D(const dlong Nelements,
         dfloat dg2dr = 0.f, dg2ds = 0.f; 
 
         occaUnroll(p_cubNp)
-        for(int i=0;i<p_cubNp;++i){
-          const dfloat cDrni = cubDWmatrices[n+i*p_Np+0*p_cubNp*p_Np];
-          const dfloat cDsni = cubDWmatrices[n+i*p_Np+1*p_cubNp*p_Np];
+	  for(int i=0;i<p_cubNp;++i){
+	    const dfloat cDrni = cubDWmatrices[n+i*p_Np+0*p_cubNp*p_Np];
+	    const dfloat cDsni = cubDWmatrices[n+i*p_Np+1*p_cubNp*p_Np];
 
-          df0dr += cDrni*s_F[0][i];
-          df1dr += cDrni*s_F[1][i];
-          df2dr += cDrni*s_F[2][i];
-          df0ds += cDsni*s_F[0][i];
-          df1ds += cDsni*s_F[1][i];
-          df2ds += cDsni*s_F[2][i];
+	    df0dr += cDrni*s_F[0][i];
+	    df1dr += cDrni*s_F[1][i];
+	    df2dr += cDrni*s_F[2][i];
+	    df0ds += cDsni*s_F[0][i];
+	    df1ds += cDsni*s_F[1][i];
+	    df2ds += cDsni*s_F[2][i];
                   
-          dg0dr += cDrni*s_G[0][i];
-          dg1dr += cDrni*s_G[1][i];
-          dg2dr += cDrni*s_G[2][i];
-          dg0ds += cDsni*s_G[0][i];
-          dg1ds += cDsni*s_G[1][i];
-          dg2ds += cDsni*s_G[2][i];
-        }
+	    dg0dr += cDrni*s_G[0][i];
+	    dg1dr += cDrni*s_G[1][i];
+	    dg2dr += cDrni*s_G[2][i];
+	    dg0ds += cDsni*s_G[0][i];
+	    dg1ds += cDsni*s_G[1][i];
+	    dg2ds += cDsni*s_G[2][i];
+	  }
         
         const dfloat rhsq0 = drdx*df0dr + dsdx*df0ds + drdy*dg0dr + dsdy*dg0ds;
         const dfloat rhsq1 = drdx*df1dr + dsdx*df1ds + drdy*dg1dr + dsdy*dg1ds;
@@ -113,8 +116,8 @@ kernel void cnsCubatureVolumeTri2D(const dlong Nelements,
         
         // move to rhs
         rhsq[base+0*p_Np] = -rhsq0;
-        rhsq[base+1*p_Np] = -rhsq1;
-        rhsq[base+2*p_Np] = -rhsq2;
+        rhsq[base+1*p_Np] = -rhsq1+fx*s_q[0][n];
+        rhsq[base+2*p_Np] = -rhsq2+fy*s_q[0][n];
       }
     }
   }
@@ -122,11 +125,11 @@ kernel void cnsCubatureVolumeTri2D(const dlong Nelements,
 
 
 kernel void cnsStressesVolumeTri2D(const dlong Nelements,
-                                    const dfloat * restrict vgeo,
-                                    const dfloat * restrict DT,
-                                    const dfloat mu,
-                                    const dfloat * restrict q,
-                                          dfloat * restrict viscousStresses){
+				   const dfloat * restrict vgeo,
+				   const dfloat * restrict DT,
+				   const dfloat mu,
+				   const dfloat * restrict q,
+				   dfloat * restrict viscousStresses){
   
   for(dlong e=0;e<Nelements;++e;outer0){
 
