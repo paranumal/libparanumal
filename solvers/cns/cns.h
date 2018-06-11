@@ -116,3 +116,6 @@ void cnsDopriOutputStep(cns_t *cns, const dfloat time, const dfloat dt, const df
 void cnsLserkStep(cns_t *cns, setupAide &newOoptions, const dfloat time);
 
 dfloat cnsDopriEstimate(cns_t *cns);
+
+void cnsBodyForce(dfloat t, dfloat *fx, dfloat *fy, dfloat *fz,
+		  dfloat *intfx, dfloat *intfy, dfloat *intfz);
