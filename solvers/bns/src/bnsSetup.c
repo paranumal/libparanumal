@@ -580,6 +580,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   if(options.getArgs("BODYFORCE-X", AX))
     if(AX)
       kernelInfo.addDefine("p_AX", AX/bns->sqrtRT);
+  
   if(options.getArgs("BODYFORCE-Y", AY))
     if(AY)
       kernelInfo.addDefine("p_AY", AY/bns->sqrtRT);
@@ -616,7 +617,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
 
 
-  if(bns->fexplicit) // full explicit or semi-nalaytic
+  if(bns->fexplicit) // full explicit or semi-analaytic
     kernelInfo.addDefine("p_SEMI_ANALYTIC", (int) 0);
   else
     kernelInfo.addDefine("p_SEMI_ANALYTIC", (int) 1);
