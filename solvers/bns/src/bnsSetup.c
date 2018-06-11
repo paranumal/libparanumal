@@ -561,7 +561,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
   int NblockCub = 128/mesh->cubNp; // works for CUDA
 
-  // NblockCub = 1; // !!!!!!!!!!!!!!!!!!!!!
+  NblockCub = 1; // !!!!!!!!!!!!!!!!!!!!!
 
   kernelInfo.addDefine("p_NblockCub", NblockCub);
 
