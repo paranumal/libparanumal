@@ -3,7 +3,7 @@
 #define p_Nrelax 6
 
 // MRAB relaxation cub
-kernel void bnsRelaxationTet3D_0(const dlong Nelements,
+kernel void bnsRelaxationTet3D(const dlong Nelements,
                                const dlong * restrict elementIds,
                                const dfloat * restrict vgeo, // only quad kernels
                                const dfloat * restrict cubvgeo, // only quad kernels
@@ -18,6 +18,7 @@ kernel void bnsRelaxationTet3D_0(const dlong Nelements,
 
     // subgroup of density and momentum shared memory for q at nodes
     shared dfloat s_q[p_NblockCub][p_Nvars][p_Np];
+
     // sub-group of p_Np cubature node interpolants of N5...N10
     shared dfloat s_cubN[p_NblockCub][p_Nrelax][p_cubNp];
     exclusive dlong e;
@@ -126,12 +127,8 @@ kernel void bnsRelaxationTet3D_0(const dlong Nelements,
 
 
 
-
-
-
-
 // MRAB relaxation cub
-kernel void bnsRelaxationTet3D(const dlong Nelements,
+kernel void bnsRelaxationTet3D_0(const dlong Nelements,
                                const dlong * restrict elementIds,
                                const dfloat * restrict vgeo, // only quad kernels
                                const dfloat * restrict cubvgeo, // only quad kernels
@@ -146,7 +143,6 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 
     // subgroup of density and momentum shared memory for q at nodes
     shared dfloat s_q[p_NblockCub][p_Nvars][p_Np];
-
     // sub-group of p_Np cubature node interpolants of N5...N10
     shared dfloat s_cubN[p_NblockCub][p_Nrelax][p_cubNp];
     exclusive dlong e;
@@ -615,6 +611,13 @@ kernel void bnsPmlRelaxationTet3D_0(const dlong pmlNelements,
           dfloat r_rhsqx[p_Nfields];
           dfloat r_rhsqy[p_Nfields]; 
           dfloat r_rhsqz[p_Nfields]; 
+
+          // occaUnroll(p_Nrelax)
+          // for(int fld=0; fld<p_Nrelax; fld++){
+          //   const dlong id = e*p_Nfields*p_Np + n + (fld+p_Nvars)*p_Np;
+          //   r_rhsq[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*s_q[es][fld + p_Nvars][n]; 
+          // }
+         
                 
           occaUnroll(p_Nfields)
           for(int fld=0; fld<p_Nfields;++fld){
