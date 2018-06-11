@@ -317,7 +317,7 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
 	    r_N[2] += fy*s_q[es][0][n]; // assumes AY = gy/(sqrt(RT))
 	    r_N[4] += fy*s_q[es][1][n];
 	    r_N[6] += fy*s_q[es][3][n];
-	    r_N[8] += p_sqrt2*p_AX*s_q[es][2][n];
+	    r_N[8] += p_sqrt2*fy*s_q[es][2][n];
 	  }
 
 	  if(fz){
