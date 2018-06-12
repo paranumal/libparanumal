@@ -1,19 +1,19 @@
 // Only difference with boltzmannVolume2D is size of rhsq and shifting
 kernel void bnsVolumeQuad2D(const dlong Nelements,
-			    const dlong * restrict elementIds,
-			    const dlong offset,
-			    const int shift,
-			    const dfloat fx,
-			    const dfloat fy,
-			    const dfloat fz,
-			    const dfloat * restrict vgeo,
-			    const dfloat * restrict Dmatrices,
-			    const dfloat * restrict q,
-			    dfloat * restrict rhsq){
+          const dlong * restrict elementIds,
+          const dlong offset,
+          const int shift,
+          const dfloat fx,
+          const dfloat fy,
+          const dfloat fz,
+          const dfloat * restrict vgeo,
+          const dfloat * restrict Dmatrices,
+          const dfloat * restrict q,
+          dfloat * restrict rhsq){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
 
-    shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_q[p_NblockV][p_Nfields][p_Nq][p_Nq];
     shared dfloat s_D[p_Nq][p_Nq];
 
     for(int es=0;es<p_NblockV;++es;inner2){
@@ -25,7 +25,7 @@ kernel void bnsVolumeQuad2D(const dlong Nelements,
             const dlong e = elementIds[et];
             const dlong base = i + j*p_Nq + p_Nfields*p_Np*e;
             for(int fld=0;fld<p_Nfields;++fld){
-              s_q[fld][es][j][i] = q[base+fld*p_Np];
+              s_q[es][fld][j][i] = q[base+fld*p_Np];
             }
           }
 
@@ -59,35 +59,35 @@ kernel void bnsVolumeQuad2D(const dlong Nelements,
             dfloat r_rhsq[p_Nfields];
 
             occaUnroll(p_Nfields)
-	      for(int fld=0; fld<p_Nfields;++fld){
-		r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
-		r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
-		r_rhsq[fld] = 0.f;
-	      }
+            for(int fld=0; fld<p_Nfields;++fld){
+              r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
+              r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
+              r_rhsq[fld] = 0.f;
+            }
 
             occaUnroll(p_Nq)
-	      for(int m=0;m<p_Nq;++m){
-		const dfloat Dim = s_D[i][m]; 
-		const dfloat Djm = s_D[j][m];
-              
-		// differentiate q components with respect to 'r'
-		occaUnroll(p_Nfields)
-		  for(int fld=0;fld<p_Nfields;++fld)
-		    r_dqdr[fld] += Dim*s_q[fld][es][j][m]; 
+            for(int m=0;m<p_Nq;++m){
+              const dfloat Dim = s_D[i][m]; 
+              const dfloat Djm = s_D[j][m];
 
-		// differentiate q components with respect to 's'
-		occaUnroll(p_Nfields)
-		  for(int fld=0;fld<p_Nfields;++fld)
-		    r_dqds[fld] += Djm*s_q[fld][es][m][i];
-	      }
+              // differentiate q components with respect to 'r'
+              occaUnroll(p_Nfields)
+              for(int fld=0;fld<p_Nfields;++fld)
+                r_dqdr[fld] += Dim*s_q[es][fld][j][m]; 
 
-            
+              // differentiate q components with respect to 's'
+              occaUnroll(p_Nfields)
+              for(int fld=0;fld<p_Nfields;++fld)
+                r_dqds[fld] += Djm*s_q[es][fld][m][i];
+            }
+
+
             // Compute derivatives in physical coordinates 
             occaUnroll(p_Nfields)
-	      for(int fld=0; fld<p_Nfields;++fld){
-		r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
-		r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
-	      }
+            for(int fld=0; fld<p_Nfields;++fld){
+              r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
+              r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
+            }
 
             // transport operator
             r_rhsq[0] = -p_sqrtRT*(r_dqdx[1] + r_dqdy[2]);
@@ -97,34 +97,33 @@ kernel void bnsVolumeQuad2D(const dlong Nelements,
             r_rhsq[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
             r_rhsq[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
             
-	    if(fx){
-	      // add x-body forcing (e.g. gravity)
-	      r_rhsq[1] += fx*s_q[es][0][j][i]; // assumes AX = gx/(sqrt(RT))
-	      r_rhsq[3] += fx*s_q[es][2][j][i];
-	      r_rhsq[4] += p_sqrt2*fx*s_q[es][1][j][i];
-	    }
+            if(fx){
+              // add x-body forcing (e.g. gravity)
+              r_rhsq[1] += fx*p_isqrtRT*s_q[es][0][j][i]; 
+              r_rhsq[3] += fx*p_isqrtRT*s_q[es][2][j][i];
+              r_rhsq[4] += p_sqrt2*fx*p_isqrtRT*s_q[es][1][j][i];
+            }
 
-	    if(fy){
-	      // add y-body forcing (e.g. gravity)
-	      r_rhsq[2] += fy*s_q[es][0][j][i]; // assumes AY = gy/(sqrt(RT))
-	      r_rhsq[3] += fy*s_q[es][1][j][i];
-	      r_rhsq[5] += p_sqrt2*fy*s_q[es][2][j][i];
-	    }
+            if(fy){
+            // add y-body forcing (e.g. gravity)
+              r_rhsq[2] += fy*p_isqrtRT*s_q[es][0][j][i];
+              r_rhsq[3] += fy*p_isqrtRT*s_q[es][1][j][i];
+              r_rhsq[5] += p_sqrt2*fy*p_isqrtRT*s_q[es][2][j][i];
+            }
 
-	    
 #ifdef p_AX
-	    // add x-body forcing (e.g. gravity)
-	    r_rhsq[1] += p_AX*s_q[es][0][j][i]; // assumes AX = gx/(sqrt(RT))
-	    r_rhsq[3] += p_AX*s_q[es][2][j][i];
-	    r_rhsq[4] += p_sqrt2*p_AX*s_q[es][1][j][i];
+            // add x-body forcing (e.g. gravity)
+            r_rhsq[1] += p_AX*s_q[es][0][j][i]; // assumes AX = gx/(sqrt(RT))
+            r_rhsq[3] += p_AX*s_q[es][2][j][i];
+            r_rhsq[4] += p_sqrt2*p_AX*s_q[es][1][j][i];
 #endif
-	    
+
 #ifdef p_AY
-	    // add y-body forcing (e.g. gravity)
-	    r_rhsq[2] += p_AY*s_q[es][0][j][i]; // assumes AY = gy/(sqrt(RT))
-	    r_rhsq[3] += p_AY*s_q[es][1][j][i];
-	    r_rhsq[5] += p_sqrt2*p_AY*s_q[es][2][j][i];
-#endif	
+            // add y-body forcing (e.g. gravity)
+            r_rhsq[2] += p_AY*s_q[es][0][n]; // assumes AY = gy/(sqrt(RT))
+            r_rhsq[3] += p_AY*s_q[es][1][n];
+            r_rhsq[5] += p_sqrt2*p_AY*s_q[es][2][n];
+#endif  
 
             // Update 
             const dlong id    = e*p_Nfields*p_Np + j*p_Nq + i;
@@ -133,10 +132,10 @@ kernel void bnsVolumeQuad2D(const dlong Nelements,
             if(p_MRSAAB){
               rhsId   += shift*offset;  
             }
-	    
-	    for(int fld=0; fld<p_Nfields;++fld){
-              rhsq[rhsId + fld*p_Np] = r_rhsq[fld];
-	    }
+      
+            for(int fld=0; fld<p_Nfields;++fld){
+                    rhsq[rhsId + fld*p_Np] = r_rhsq[fld];
+            }
           }
         }
       }
@@ -146,27 +145,27 @@ kernel void bnsVolumeQuad2D(const dlong Nelements,
 
 
 kernel void bnsPmlVolumeQuad2D(const dlong pmlNelements,
-			       const dlong * restrict pmlElementIds,
-			       const dlong * restrict pmlIds,
-			       const dlong offset,
-			       const dlong pmloffset,
-			       const int   shift,
-			       const dfloat fx,
-			       const dfloat fy,
-			       const dfloat fz,
-			       const dfloat * restrict vgeo,
-			       const dfloat * restrict Dmatrices,
-			       const dfloat * restrict q,
-			       const dfloat * restrict pmlqx,
-			       const dfloat * restrict pmlqy,
-			       const dfloat * restrict pmlqz,
-			       dfloat * restrict rhsq,
-			       dfloat * restrict pmlrhsqx,
-			       dfloat * restrict pmlrhsqy,
-			       dfloat * restrict pmlrhsqz){
+             const dlong * restrict pmlElementIds,
+             const dlong * restrict pmlIds,
+             const dlong offset,
+             const dlong pmloffset,
+             const int   shift,
+             const dfloat fx,
+             const dfloat fy,
+             const dfloat fz,
+             const dfloat * restrict vgeo,
+             const dfloat * restrict Dmatrices,
+             const dfloat * restrict q,
+             const dfloat * restrict pmlqx,
+             const dfloat * restrict pmlqy,
+             const dfloat * restrict pmlqz,
+             dfloat * restrict rhsq,
+             dfloat * restrict pmlrhsqx,
+             dfloat * restrict pmlrhsqy,
+             dfloat * restrict pmlrhsqz){
   for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){   // for all elements
 
-    shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_q[p_NblockV][p_Nfields][p_Nq][p_Nq];
     // exclusive dlong e, pmlId;
     shared dfloat s_D[p_Nq][p_Nq];
 
@@ -175,16 +174,16 @@ kernel void bnsPmlVolumeQuad2D(const dlong pmlNelements,
         for(int i=0; i<p_Nq; ++i; inner0){     // for all nodes in this element
           const dlong et = eo+es; // element in block
           if(et<pmlNelements){
-            const dlong e     = pmlElementIds[et];
+            const dlong e  = pmlElementIds[et];
             const dlong id = e*p_Nfields*p_Np + j*p_Nq + i;
             occaUnroll(p_Nfields)
-	      for(int fld=0; fld<p_Nfields;++fld){
-		s_q[fld][es][j][i] = q[id+fld*p_Np];
-	      }
+            for(int fld=0; fld<p_Nfields;++fld){
+              s_q[es][fld][j][i] = q[id+fld*p_Np];
+            }
           }
 
-	  if(es==0)
-	    s_D[j][i] = Dmatrices[j*p_Nq+i];
+          if(es==0)
+            s_D[j][i] = Dmatrices[j*p_Nq+i];
         }
       }
     }
@@ -213,36 +212,36 @@ kernel void bnsPmlVolumeQuad2D(const dlong pmlNelements,
 
             // Initialize
             occaUnroll(p_Nfields)
-	      for(int fld=0; fld<p_Nfields; ++fld){
-		//r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
-		r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
-		r_dqdx[fld]  = 0.f, r_dqdy[fld]  = 0.f; 
-		r_N[fld]     = 0.f; 
-	      }
+            for(int fld=0; fld<p_Nfields; ++fld){
+              //r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
+              r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
+              r_dqdx[fld]  = 0.f, r_dqdy[fld]  = 0.f; 
+              r_N[fld]     = 0.f; 
+            }
 
             
             occaUnroll(p_Nq)
-	      for(int m=0;m<p_Nq;++m){
-		const dfloat Dim = s_D[i][m]; 
-		const dfloat Djm = s_D[j][m];
+            for(int m=0;m<p_Nq;++m){
+              const dfloat Dim = s_D[i][m]; 
+              const dfloat Djm = s_D[j][m];
               
-		// differentiate q components with respect to 'r'
-		occaUnroll(p_Nfields)
-		  for(int fld=0;fld<p_Nfields;++fld)
-		    r_dqdr[fld] += Dim*s_q[fld][es][j][m]; 
+              // differentiate q components with respect to 'r'
+              occaUnroll(p_Nfields)
+              for(int fld=0;fld<p_Nfields;++fld)
+                r_dqdr[fld] += Dim*s_q[es][fld][j][m]; 
 
-		// differentiate q components with respect to 's'
-		occaUnroll(p_Nfields)
-		  for(int fld=0;fld<p_Nfields;++fld)
-		    r_dqds[fld] += Djm*s_q[fld][es][m][i];
-	      }
+              // differentiate q components with respect to 's'
+              occaUnroll(p_Nfields)
+              for(int fld=0;fld<p_Nfields;++fld)
+                r_dqds[fld] += Djm*s_q[es][fld][m][i];
+              }
 
             // Compute derivatives in physical coordinates 
             occaUnroll(p_Nfields)
-	      for(int fld=0; fld<p_Nfields;++fld){
-		r_dqdx[fld] = (drdx*r_dqdr[fld] + dsdx*r_dqds[fld]);
-		r_dqdy[fld] = (drdy*r_dqdr[fld] + dsdy*r_dqds[fld]);
-	      }
+            for(int fld=0; fld<p_Nfields;++fld){
+              r_dqdx[fld] = (drdx*r_dqdr[fld] + dsdx*r_dqds[fld]);
+              r_dqdy[fld] = (drdy*r_dqdr[fld] + dsdy*r_dqds[fld]);
+            }
 
             // Compute volume flux for q, qx and qy
             // A*dQ/dx
@@ -260,15 +259,16 @@ kernel void bnsPmlVolumeQuad2D(const dlong pmlNelements,
             r_Bqy[4] =  0.f;
             r_Bqy[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];  
 
-	    r_N[0] = 0.f;
-	    r_N[1] = fx*s_q[es][0][n]; // assumes AX = gx/(sqrt(RT))
-	    r_N[2] = fy*s_q[es][0][n]; // assumes AY = gy/(sqrt(RT))
-	    r_N[3] = fx*s_q[es][2][n];
-	    r_N[3] += fy*s_q[es][1][n];
-	    r_N[4] = p_sqrt2*fx*s_q[es][1][n];
-	    r_N[5] = p_sqrt2*fy*s_q[es][2][n];
-	    
-            const dlong id       = e*p_Nfields*p_Np + j*p_Nq + i;
+            // body forcing 
+            r_N[0]  = 0.f;
+            r_N[1]  = fx*p_isqrtRT*s_q[es][0][j][i]; 
+            r_N[2]  = fy*p_isqrtRT*s_q[es][0][j][i]; 
+            r_N[3]  = fx*p_isqrtRT*s_q[es][2][j][i];
+            r_N[3] += fy*p_isqrtRT*s_q[es][1][j][i];
+            r_N[4]  = p_sqrt2*fx*p_isqrtRT*s_q[es][1][j][i];
+            r_N[5]  = p_sqrt2*fy*p_isqrtRT*s_q[es][2][j][i];
+      
+            const dlong id = e*p_Nfields*p_Np + j*p_Nq + i;
             dlong rhsId    = id;
             dlong pmlrhsId = pmlId*p_Nfields*p_Np + j*p_Nq + i;
 
@@ -278,12 +278,12 @@ kernel void bnsPmlVolumeQuad2D(const dlong pmlNelements,
             }
 
             occaUnroll(p_Nfields)
-	      for(int fld=0; fld<p_Nfields; ++fld){
-		pmlrhsqx[pmlrhsId + fld*p_Np] =  r_Aqx[fld];
-		pmlrhsqy[pmlrhsId + fld*p_Np] =  r_Bqy[fld];
-		rhsq[rhsId +fld*p_Np]         =  (r_Aqx[fld] + r_Bqy[fld] + r_N[fld]);
-	      }
-	    
+            for(int fld=0; fld<p_Nfields; ++fld){
+              pmlrhsqx[pmlrhsId + fld*p_Np] =  r_Aqx[fld];
+              pmlrhsqy[pmlrhsId + fld*p_Np] =  r_Bqy[fld];
+              rhsq[rhsId +fld*p_Np]         =  (r_Aqx[fld] + r_Bqy[fld] + r_N[fld]);
+            }
+      
           }
         }
       } 
