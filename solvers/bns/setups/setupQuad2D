@@ -65,7 +65,7 @@ SARK
 0 
 
 [VISCOSITY]
-5.e-3
+0.005
 
 [SPEED OF SOUND]
 5.0
@@ -107,7 +107,7 @@ SARK
 100
 
 [CFL]
-0.5
+0.2
 
 [RESTART FROM FILE]
 0
@@ -116,4 +116,4 @@ SARK
 VTU
 
 [OUTPUT FILE NAME]
-square_cylinder
+squareCylinderQuad
