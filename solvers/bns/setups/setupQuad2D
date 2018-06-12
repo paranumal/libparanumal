@@ -47,6 +47,10 @@ PML
 [PML SIGMAY MAX]
 100
 
+# compute sigma terms default: CUBATURE use COLLOCATION otherwise
+[PML INTEGRATION]
+COLLOCATION 
+
 [THREAD MODEL]
 CUDA
 

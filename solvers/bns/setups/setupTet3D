@@ -53,6 +53,10 @@ PML
 [PML SIGMAZ MAX]
 100
 
+# compute sigma terms default: CUBATURE use COLLOCATION otherwise
+[PML INTEGRATION]
+COLLOCATION 
+
 [THREAD MODEL]
 CUDA
 
@@ -71,7 +75,7 @@ SARK
 0 
 
 [VISCOSITY]
-5.e-3
+0.005
 
 [SPEED OF SOUND]
 5.0
