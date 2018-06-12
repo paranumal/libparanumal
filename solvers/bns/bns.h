@@ -45,6 +45,7 @@ typedef struct{
   int Nrk;
   int shiftIndex;    // Rhs index shifting for time steppers
   int fexplicit; 	//Set time stepper type, fully explicit or semi-analytic / imex 
+  int pmlcubature;  // Set the cunature integration rule for sigma terms in pml 
 
   int probeFlag; 
   int errorFlag;

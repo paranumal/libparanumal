@@ -112,6 +112,15 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
       if(!check) printf("WARNING setup file does not include PML SIGMAZ MAX\n");
     }
   }
+
+  
+  if(options.compareArgs("PML INTEGRATION", "COLLOCATION"))
+    bns->pmlcubature = 0;
+  else
+    bns->pmlcubature = 1; 
+
+ 
+
  
   
   // Set time discretization scheme:fully explicit or not
@@ -144,7 +153,9 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
       printf("PML PROFILE N\t:\t%d\n", bns->pmlOrder);
       printf("PML SIGMA X\t:\t%.2e\n", bns->sigmaXmax);
       printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
-      printf("PML SIGMA Y\t:\t%.2e\n", bns->sigmaYmax);
+      if(bns->dim==3)
+        printf("PML SIGMA Z\t:\t%.2e\n", bns->sigmaZmax);
+      printf("PML CUBATURE\t:\t%d\n", bns->pmlcubature);
     }
     printf("ERROR STEP\t:\t%d\n", bns->errorStep);
   }
@@ -360,36 +371,6 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
       const dlong id = e*bns->Nfields*mesh->Np +n; 
       if(bns->dim==2){
-         // Uniform Flow
-        // dfloat phi = sqrt(x*x + y*y) -0.5; 
-        // dfloat signum = 0.5*(1.0 - tanh(M_PI*phi/0.1));
-        // bns->q[id+0*mesh->Np] = q1bar*(1.0 + signum); 
-        // bns->q[id+1*mesh->Np] = ramp*q2bar;
-        // bns->q[id+2*mesh->Np] = ramp*q3bar;
-        // bns->q[id+3*mesh->Np] = ramp*ramp*q4bar;
-        // bns->q[id+4*mesh->Np] = ramp*ramp*q5bar;
-        // bns->q[id+5*mesh->Np] = ramp*ramp*q6bar;   
-
-        // Vortex Problem
-        // dfloat r     = sqrt(pow((x-u*time),2) + pow( (y-v*time),2) );
-        // dfloat Umax  = 0.5; 
-        // dfloat b     = 0.1;
-
-        // dfloat Ur    = Umax/b*r*exp(0.5*(1.0-pow(r/b,2)));
-
-        // dfloat rhor  = rho*exp(-Umax*Umax/(2. * bns->RT) *exp(1.0-r*r/(b*b)));
-        // rhor = 1.0;
-
-        // dfloat theta = atan2(y,x);
-
-        // bns->q[id+0*mesh->Np] = rhor*(1./bns->sqrtRT * Gy * y + 1.0); 
-        // bns->q[id+1*mesh->Np] = rhor*(-Ur*sin(theta)+u)/bns->sqrtRT;
-        // bns->q[id+2*mesh->Np] = rhor*( Ur*cos(theta)+v)/bns->sqrtRT;
-        // bns->q[id+3*mesh->Np] = q4bar;
-        // bns->q[id+4*mesh->Np] = q5bar;
-        // bns->q[id+5*mesh->Np] = q6bar;  
-
-
         // Uniform Flow
         bns->q[id+0*mesh->Np] = q1bar; 
         bns->q[id+1*mesh->Np] = q1bar*intfx/bns->sqrtRT;
@@ -402,15 +383,15 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
         bns->q[id+0*mesh->Np] = q1bar; 
         bns->q[id+1*mesh->Np] = q1bar*intfx/bns->sqrtRT;
         bns->q[id+2*mesh->Np] = q1bar*intfy/bns->sqrtRT;
-	bns->q[id+3*mesh->Np] = q1bar*intfz/bns->sqrtRT;
+        bns->q[id+3*mesh->Np] = q1bar*intfz/bns->sqrtRT;
 
         bns->q[id+4*mesh->Np] = q1bar*intfx*intfy/bns->sqrtRT;
-	bns->q[id+5*mesh->Np] = q1bar*intfx*intfz/bns->sqrtRT;
-	bns->q[id+6*mesh->Np] = q1bar*intfy*intfz/bns->sqrtRT;
+        bns->q[id+5*mesh->Np] = q1bar*intfx*intfz/bns->sqrtRT;
+	      bns->q[id+6*mesh->Np] = q1bar*intfy*intfz/bns->sqrtRT;
 
         bns->q[id+7*mesh->Np] = q1bar*intfx*intfx/(sqrt(2.)*bns->sqrtRT);
         bns->q[id+8*mesh->Np] = q1bar*intfy*intfy/(sqrt(2.)*bns->sqrtRT);
-	bns->q[id+9*mesh->Np] = q1bar*intfz*intfz/(sqrt(2.)*bns->sqrtRT);
+	      bns->q[id+9*mesh->Np] = q1bar*intfz*intfz/(sqrt(2.)*bns->sqrtRT);
 
       }
        
@@ -659,16 +640,32 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
       sprintf(kernelName, "bnsVolume%s", suffix);
       bns->volumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-      sprintf(kernelName, "bnsPmlVolume%s", suffix);
-      bns->pmlVolumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-     
+
+
+      // No that nonlinear terms are always integrated using cubature rules
+      // this cubature shift is for sigma terms on pml formulation
+      if(bns->pmlcubature){
+        sprintf(kernelName, "bnsPmlVolumeCub%s", suffix);
+        bns->pmlVolumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      }else{
+        sprintf(kernelName, "bnsPmlVolume%s", suffix);
+        bns->pmlVolumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);        
+      }
+
       // Relaxation kernels
       sprintf(fileName, DBNS "/okl/bnsRelaxation%s.okl", suffix);
 
       sprintf(kernelName, "bnsRelaxation%s", suffix);
       bns->relaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-      sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
-      bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+
+      if(bns->pmlcubature){
+        sprintf(kernelName, "bnsPmlRelaxationCub%s", suffix);        
+        bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);        
+      }else{
+        sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
+        bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);        
+      }
+
       
       // Surface kernels 
       sprintf(fileName, DBNS "/okl/bnsSurface%s.okl", suffix);

@@ -103,14 +103,15 @@ void bnsMRABPmlSetup(bns_t *bns, setupAide &options){
       mesh->MRABhaloIds[lev]    = (dlong*) realloc(mesh->MRABhaloIds[lev],mesh->MRABNhaloElements[lev]*sizeof(dlong));
     }
 
+    // Set the size of pml nodes
+    int pmlNp = (bns->pmlcubature) ? mesh->cubNp : mesh->Np;   
 
-
-     //
-    printf("Setting PML Coefficient for Cubature Integration\n");
+    //
+    printf("Setting PML Coefficient \n");
     //set up damping parameter
-    bns->pmlSigmaX   = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat));
-    bns->pmlSigmaY   = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat)); 
-    bns->pmlSigmaZ   = (dfloat *) calloc(mesh->pmlNelements*mesh->cubNp,sizeof(dfloat)); 
+    bns->pmlSigmaX   = (dfloat *) calloc(mesh->pmlNelements*pmlNp,sizeof(dfloat));
+    bns->pmlSigmaY   = (dfloat *) calloc(mesh->pmlNelements*pmlNp,sizeof(dfloat)); 
+    bns->pmlSigmaZ   = (dfloat *) calloc(mesh->pmlNelements*pmlNp,sizeof(dfloat)); 
 
    //find the bounding box of the whole domain and interior domain
     dfloat xmin = 1e9, xmax =-1e9;
@@ -191,29 +192,47 @@ void bnsMRABPmlSetup(bns_t *bns, setupAide &options){
             ze[n] = mesh->EZ[id+n];
         }
 
-        for(int n=0;n<mesh->cubNp;++n){ /* for each node */
+        for(int n=0;n<pmlNp;++n){ /* for each node */
           dfloat x  = 0, y  = 0, z  = 0; 
           dfloat rn = 0, sn = 0, tn = 0;
           if(bns->elementType==TRIANGLES){
-            rn = mesh->cubr[n];
-            sn = mesh->cubs[n]; 
+            if(bns->pmlcubature){
+              rn = mesh->cubr[n];
+              sn = mesh->cubs[n]; 
+             }else{
+              rn = mesh->r[n];
+              sn = mesh->s[n]; 
+             }
             x = -0.5*(rn+sn)*xe[0] + 0.5*(1+rn)*xe[1] + 0.5*(1+sn)*xe[2];
-            y = -0.5*(rn+sn)*ye[0] + 0.5*(1+rn)*ye[1] + 0.5*(1+sn)*ye[2];
+            y = -0.5*(rn+sn)*ye[0] + 0.5*(1+rn)*ye[1] + 0.5*(1+sn)*ye[2];              
           }
           else if(bns->elementType==QUADRILATERALS){
-            // r is fastest
-            const int i = n%mesh->cubNq;
-            const int j = n/mesh->cubNq; 
-            rn = mesh->cubr[i];
-            sn = mesh->cubr[j]; 
-            // sn = mesh->cubs[n]; 
+            if(bns->pmlcubature){
+              // r is fastest
+              const int i = n%mesh->cubNq;
+              const int j = n/mesh->cubNq; 
+              rn = mesh->cubr[i];
+              sn = mesh->cubr[j]; 
+            }else{
+              // r is fastest
+              const int i = n%mesh->Nq;
+              const int j = n/mesh->Nq; 
+              rn = mesh->r[i];
+              sn = mesh->r[j];    
+            } 
             x =  0.25*( (1.0-rn)*(1-sn)*xe[0]+(1.0-rn)*(1+sn)*xe[1]+(1.0+rn)*(1+sn)*xe[2]+(1.0+rn)*(1-sn)*xe[3]);
             y =  0.25*( (1.0-rn)*(1-sn)*ye[0]+(1.0-rn)*(1+sn)*ye[1]+(1.0+rn)*(1+sn)*ye[2]+(1.0+rn)*(1-sn)*ye[3]); 
           }
           else if(bns->elementType==TETRAHEDRA){
-            rn = mesh->cubr[n];
-            sn = mesh->cubs[n]; 
-            tn = mesh->cubt[n];
+            if(bns->pmlcubature){
+              rn = mesh->cubr[n];
+              sn = mesh->cubs[n]; 
+              tn = mesh->cubt[n];
+            }else{
+              rn = mesh->r[n];
+              sn = mesh->s[n]; 
+              tn = mesh->t[n];
+            }
             x = -0.5*(rn+sn+tn+1)*xe[0] + 0.5*(1+rn)*xe[1] + 0.5*(1+sn)*xe[2] + 0.5*(tn+1)*xe[3];
             y = -0.5*(rn+sn+tn+1)*ye[0] + 0.5*(1+rn)*ye[1] + 0.5*(1+sn)*ye[2] + 0.5*(tn+1)*ye[3];
             z = -0.5*(rn+sn+tn+1)*ze[0] + 0.5*(1+rn)*ze[1] + 0.5*(1+sn)*ze[2] + 0.5*(tn+1)*ze[3];
@@ -221,62 +240,62 @@ void bnsMRABPmlSetup(bns_t *bns, setupAide &options){
                       
           if (type==100) { //X Pml
             if(x>xmax)
-              bns->pmlSigmaX[mesh->cubNp*pmlId + n] = bns->sigmaXmax*pow(x-xmax,bns->pmlOrder)/xmaxScale;
+              bns->pmlSigmaX[pmlNp*pmlId + n] = bns->sigmaXmax*pow(x-xmax,bns->pmlOrder)/xmaxScale;
             if(x<xmin)
-              bns->pmlSigmaX[mesh->cubNp*pmlId + n] = bns->sigmaXmax*pow(x-xmin,bns->pmlOrder)/xminScale;
+              bns->pmlSigmaX[pmlNp*pmlId + n] = bns->sigmaXmax*pow(x-xmin,bns->pmlOrder)/xminScale;
           } else if (type==200) { //Y Pml
             if(y>ymax)
-              bns->pmlSigmaY[mesh->cubNp*pmlId + n] = bns->sigmaYmax*pow(y-ymax,bns->pmlOrder)/ymaxScale;
+              bns->pmlSigmaY[pmlNp*pmlId + n] = bns->sigmaYmax*pow(y-ymax,bns->pmlOrder)/ymaxScale;
             if(y<ymin)
-              bns->pmlSigmaY[mesh->cubNp*pmlId + n] = bns->sigmaYmax*pow(y-ymin,bns->pmlOrder)/yminScale;
+              bns->pmlSigmaY[pmlNp*pmlId + n] = bns->sigmaYmax*pow(y-ymin,bns->pmlOrder)/yminScale;
           } else if (type==300) { //XY Pml
             if(x>xmax)
-              bns->pmlSigmaX[mesh->cubNp*pmlId + n] = bns->sigmaXmax*pow(x-xmax,bns->pmlOrder)/xmaxScale;
+              bns->pmlSigmaX[pmlNp*pmlId + n] = bns->sigmaXmax*pow(x-xmax,bns->pmlOrder)/xmaxScale;
             if(x<xmin)
-              bns->pmlSigmaX[mesh->cubNp*pmlId + n] = bns->sigmaXmax*pow(x-xmin,bns->pmlOrder)/xminScale;
+              bns->pmlSigmaX[pmlNp*pmlId + n] = bns->sigmaXmax*pow(x-xmin,bns->pmlOrder)/xminScale;
             if(y>ymax)
-              bns->pmlSigmaY[mesh->cubNp*pmlId + n] = bns->sigmaYmax*pow(y-ymax,bns->pmlOrder)/ymaxScale;
+              bns->pmlSigmaY[pmlNp*pmlId + n] = bns->sigmaYmax*pow(y-ymax,bns->pmlOrder)/ymaxScale;
             if(y<ymin)
-              bns->pmlSigmaY[mesh->cubNp*pmlId + n] = bns->sigmaYmax*pow(y-ymin,bns->pmlOrder)/yminScale;
+              bns->pmlSigmaY[pmlNp*pmlId + n] = bns->sigmaYmax*pow(y-ymin,bns->pmlOrder)/yminScale;
           }
 
           if(bns->dim==3){
             if (type==400) { //Z Pml
               if(z>zmax)
-                bns->pmlSigmaZ[mesh->cubNp*pmlId + n] = bns->sigmaZmax*pow(z-zmax,bns->pmlOrder)/zmaxScale;
+                bns->pmlSigmaZ[pmlNp*pmlId + n] = bns->sigmaZmax*pow(z-zmax,bns->pmlOrder)/zmaxScale;
               if(z<zmin)
-                bns->pmlSigmaZ[mesh->cubNp*pmlId + n] = bns->sigmaZmax*pow(z-zmin,bns->pmlOrder)/zminScale;
+                bns->pmlSigmaZ[pmlNp*pmlId + n] = bns->sigmaZmax*pow(z-zmin,bns->pmlOrder)/zminScale;
             } else if (type==500) {//XZ Pml
               if(x>xmax)
-                bns->pmlSigmaX[mesh->cubNp*pmlId + n] = bns->sigmaXmax*pow(x-xmax,bns->pmlOrder)/xmaxScale;
+                bns->pmlSigmaX[pmlNp*pmlId + n] = bns->sigmaXmax*pow(x-xmax,bns->pmlOrder)/xmaxScale;
               if(x<xmin)
-                bns->pmlSigmaX[mesh->cubNp*pmlId + n] = bns->sigmaXmax*pow(x-xmin,bns->pmlOrder)/xminScale;
+                bns->pmlSigmaX[pmlNp*pmlId + n] = bns->sigmaXmax*pow(x-xmin,bns->pmlOrder)/xminScale;
               if(z>zmax)
-                bns->pmlSigmaZ[mesh->cubNp*pmlId + n] = bns->sigmaZmax*pow(z-zmax,bns->pmlOrder)/zmaxScale;
+                bns->pmlSigmaZ[pmlNp*pmlId + n] = bns->sigmaZmax*pow(z-zmax,bns->pmlOrder)/zmaxScale;
               if(z<zmin)
-                bns->pmlSigmaZ[mesh->cubNp*pmlId + n] = bns->sigmaZmax*pow(z-zmin,bns->pmlOrder)/zminScale;
+                bns->pmlSigmaZ[pmlNp*pmlId + n] = bns->sigmaZmax*pow(z-zmin,bns->pmlOrder)/zminScale;
             } else if (type==600){ //YZ Pml
               if(y>ymax)
-                bns->pmlSigmaY[mesh->cubNp*pmlId + n] = bns->sigmaYmax*pow(y-ymax,bns->pmlOrder)/ymaxScale;
+                bns->pmlSigmaY[pmlNp*pmlId + n] = bns->sigmaYmax*pow(y-ymax,bns->pmlOrder)/ymaxScale;
               if(y<ymin)
-                bns->pmlSigmaY[mesh->cubNp*pmlId + n] = bns->sigmaYmax*pow(y-ymin,bns->pmlOrder)/yminScale;
+                bns->pmlSigmaY[pmlNp*pmlId + n] = bns->sigmaYmax*pow(y-ymin,bns->pmlOrder)/yminScale;
               if(z>zmax)
-                bns->pmlSigmaZ[mesh->cubNp*pmlId + n] = bns->sigmaZmax*pow(z-zmax,bns->pmlOrder)/zmaxScale;
+                bns->pmlSigmaZ[pmlNp*pmlId + n] = bns->sigmaZmax*pow(z-zmax,bns->pmlOrder)/zmaxScale;
               if(z<zmin)
-                bns->pmlSigmaZ[mesh->cubNp*pmlId + n] = bns->sigmaZmax*pow(z-zmin,bns->pmlOrder)/zminScale;
+                bns->pmlSigmaZ[pmlNp*pmlId + n] = bns->sigmaZmax*pow(z-zmin,bns->pmlOrder)/zminScale;
             } else if (type==700){ //XYZ Pml
               if(x>xmax)
-                bns->pmlSigmaX[mesh->cubNp*pmlId + n] = bns->sigmaXmax*pow(x-xmax,bns->pmlOrder)/xmaxScale;
+                bns->pmlSigmaX[pmlNp*pmlId + n] = bns->sigmaXmax*pow(x-xmax,bns->pmlOrder)/xmaxScale;
               if(x<xmin)
-                bns->pmlSigmaX[mesh->cubNp*pmlId + n] = bns->sigmaXmax*pow(x-xmin,bns->pmlOrder)/xminScale;
+                bns->pmlSigmaX[pmlNp*pmlId + n] = bns->sigmaXmax*pow(x-xmin,bns->pmlOrder)/xminScale;
               if(y>ymax)
-                bns->pmlSigmaY[mesh->cubNp*pmlId + n] = bns->sigmaYmax*pow(y-ymax,bns->pmlOrder)/ymaxScale;
+                bns->pmlSigmaY[pmlNp*pmlId + n] = bns->sigmaYmax*pow(y-ymax,bns->pmlOrder)/ymaxScale;
               if(y<ymin)
-                bns->pmlSigmaY[mesh->cubNp*pmlId + n] = bns->sigmaYmax*pow(y-ymin,bns->pmlOrder)/yminScale;
+                bns->pmlSigmaY[pmlNp*pmlId + n] = bns->sigmaYmax*pow(y-ymin,bns->pmlOrder)/yminScale;
               if(z>zmax)
-                bns->pmlSigmaZ[mesh->cubNp*pmlId + n] = bns->sigmaZmax*pow(z-zmax,bns->pmlOrder)/zmaxScale;
+                bns->pmlSigmaZ[pmlNp*pmlId + n] = bns->sigmaZmax*pow(z-zmax,bns->pmlOrder)/zmaxScale;
               if(z<zmin)
-                bns->pmlSigmaZ[mesh->cubNp*pmlId + n] = bns->sigmaZmax*pow(z-zmin,bns->pmlOrder)/zminScale;
+                bns->pmlSigmaZ[pmlNp*pmlId + n] = bns->sigmaZmax*pow(z-zmin,bns->pmlOrder)/zminScale;
             }
           }
         }
@@ -307,9 +326,9 @@ void bnsMRABPmlSetup(bns_t *bns, setupAide &options){
     bns->o_pmlrhsqz  = mesh->device.malloc(bns->Nrhs*mesh->pmlNelements*mesh->Np*bns->Nfields*sizeof(dfloat), bns->pmlrhsqz);
 
     if (mesh->pmlNelements){
-      bns->o_pmlSigmaX     = mesh->device.malloc(mesh->pmlNelements*mesh->cubNp*sizeof(dfloat),bns->pmlSigmaX);
-      bns->o_pmlSigmaY     = mesh->device.malloc(mesh->pmlNelements*mesh->cubNp*sizeof(dfloat),bns->pmlSigmaY);
-      bns->o_pmlSigmaZ     = mesh->device.malloc(mesh->pmlNelements*mesh->cubNp*sizeof(dfloat),bns->pmlSigmaZ);
+      bns->o_pmlSigmaX     = mesh->device.malloc(mesh->pmlNelements*pmlNp*sizeof(dfloat),bns->pmlSigmaX);
+      bns->o_pmlSigmaY     = mesh->device.malloc(mesh->pmlNelements*pmlNp*sizeof(dfloat),bns->pmlSigmaY);
+      bns->o_pmlSigmaZ     = mesh->device.malloc(mesh->pmlNelements*pmlNp*sizeof(dfloat),bns->pmlSigmaZ);
     }
 
     

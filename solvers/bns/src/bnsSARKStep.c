@@ -100,7 +100,9 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     // compute volume contribution to DG boltzmann RHS
     if(mesh->pmlNelements){	
       occaTimerTic(mesh->device,"PmlVolumeKernel");
-      bns->pmlVolumeKernel(mesh->pmlNelements,
+
+      if(bns->pmlcubature){
+      	bns->pmlVolumeKernel(mesh->pmlNelements,
 			   mesh->o_pmlElementIds,
 			   mesh->o_pmlIds,
 			   dzero,
@@ -119,6 +121,31 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 			   bns->o_pmlrhsqx,
 			   bns->o_pmlrhsqy,
 			   bns->o_pmlrhsqz);
+      }else{
+      	bns->pmlVolumeKernel(mesh->pmlNelements,
+			   mesh->o_pmlElementIds,
+			   mesh->o_pmlIds,
+			   dzero,
+			   dzero,
+			   izero,
+			   fx,
+			   fy,
+			   fz,
+			   mesh->o_vgeo,
+			   bns->o_pmlSigmaX,
+		       bns->o_pmlSigmaY,
+		       bns->o_pmlSigmaZ,
+			   mesh->o_Dmatrices,
+			   bns->o_rkq,
+			   bns->o_rkqx,
+			   bns->o_rkqy,
+			   bns->o_rkqz,
+			   bns->o_rhsq,
+			   bns->o_pmlrhsqx,
+			   bns->o_pmlrhsqy,
+			   bns->o_pmlrhsqz);
+      }
+      
       occaTimerToc(mesh->device,"PmlVolumeKernel");
 
     }
@@ -145,27 +172,45 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     occaTimerTic(mesh->device, "RelaxationKernel");
     if(mesh->pmlNelements){
       occaTimerTic(mesh->device, "PmlRelaxationKernel");
+
+      if(bns->pmlcubature){
       bns->pmlRelaxationKernel(mesh->pmlNelements,
-			       mesh->o_pmlElementIds,
-			       mesh->o_pmlIds,
-			       mesh->o_vgeo,
-			       mesh->o_cubvgeo,
-			       dzero,
-			       dzero,
-			       izero,
-			       mesh->o_cubInterpT,
-			       mesh->o_cubProjectT,
-			       bns->o_pmlSigmaX,
-			       bns->o_pmlSigmaY,
-			       bns->o_pmlSigmaZ,
-			       bns->o_rkq,
-			       bns->o_rkqx,
-			       bns->o_rkqy,
-			       bns->o_rkqz,
-			       bns->o_rhsq,
-			       bns->o_pmlrhsqx,
-			       bns->o_pmlrhsqy,
-			       bns->o_pmlrhsqz);
+						       mesh->o_pmlElementIds,
+						       mesh->o_pmlIds,
+						       mesh->o_vgeo,
+						       mesh->o_cubvgeo,
+						       dzero,
+						       dzero,
+						       izero,
+						       mesh->o_cubInterpT,
+						       mesh->o_cubProjectT,
+						       bns->o_pmlSigmaX,
+						       bns->o_pmlSigmaY,
+						       bns->o_pmlSigmaZ,
+						       bns->o_rkq,
+						       bns->o_rkqx,
+						       bns->o_rkqy,
+						       bns->o_rkqz,
+						       bns->o_rhsq,
+						       bns->o_pmlrhsqx,
+						       bns->o_pmlrhsqy,
+						       bns->o_pmlrhsqz);	
+      }else{
+       bns->pmlRelaxationKernel(mesh->pmlNelements,
+						       mesh->o_pmlElementIds,
+						       mesh->o_pmlIds,
+						       mesh->o_vgeo,
+						       mesh->o_cubvgeo,
+						       dzero,
+						       dzero,
+						       izero,
+						       mesh->o_cubInterpT,
+						       mesh->o_cubProjectT,
+						       bns->o_rkq,
+						       bns->o_rhsq);
+
+      }
+     
       occaTimerToc(mesh->device, "PmlRelaxationKernel");
     }
 
