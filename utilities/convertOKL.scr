@@ -1,0 +1,38 @@
+#!/bin/bash
+
+for fl in *.okl; do
+    echo $f1
+    mv $fl tmp1
+
+    sed -i 's/kernel/@kernel/g' tmp1
+
+    sed -i 's/inner0/@inner(0)/g' tmp1
+    sed -i 's/inner1/@inner(1)/g' tmp1
+    sed -i 's/inner2/@inner(2)/g' tmp1
+
+    sed -i 's/outer0/@outer(0)/g' tmp1
+    sed -i 's/outer1/@outer(1)/g' tmp1
+    sed -i 's/outer2/@outer(2)/g' tmp1
+
+    sed -i 's/shared/@shared/g' tmp1
+
+    sed -i 's/exclusive/@exclusive/g' tmp1
+
+    sed -i 's/barrier(globalMemFence)/@barrier(\“global\”)/g' tmp1
+    sed -i 's/barrier(localMemFence)/@barrier(\“local\”)/g' tmp1
+
+    sed -i 's/occaUnroll\((.*)\)/#pragma unroll \1/g' tmp1
+
+    sed -i ‘s/occaRestrict/restrict/g’ tmp1
+
+    sed -i 's/tile(/@tile(/g' tmp1
+
+
+    sed -i 's/occaSin/sin/g' tmp1
+    sed -i 's/occaCos/cos/g' tmp1
+    sed -i 's/occaTan/tan/g' tmp1
+    sed -i 's/occaSqrt/sqrt/g' tmp1
+    sed -i 's/occaFabs/fabs/g' tmp1
+
+    mv tmp1 $fl
+done
