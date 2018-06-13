@@ -1,0 +1,16 @@
+#!/bin/bash
+
+for cl in *.c; do
+
+    echo $c1
+    mv $cl tmp1
+
+    sed -i 's/occa\:\:kernelInfo/occa\:\:properties/g' tmp1
+#    sed -i 's/kernelInfo.addDefine(\(.*\),\(.*\))/kernelInfo\[\"defines\/\" \1\]=\2/g' tmp1
+
+    sed -i 's/.addDefine(\(.*\),\(.*\))/\[\"defines\/\" \1\]=\2/g' tmp1
+    sed -i 's/.addCompilerFlag(\(.*\))/\[\"compilerFlags\"\] \+\= \1/g' tmp1
+    sed -i 's/.addInclude(\(.*\))/\[\"includes\"\] += \1/g' tmp1
+
+    mv tmp1 $cl
+done
