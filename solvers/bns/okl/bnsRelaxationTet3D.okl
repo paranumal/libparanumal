@@ -53,7 +53,7 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
         dlong et = eo+es; // element in block
         if(et<Nelements && n<p_cubNp){
 
-          dfloat r_cubq[p_Nfields];
+          dfloat r_cubq[p_Nvars];
           occaUnroll(p_Nvars)
           for(int fld=0; fld<p_Nvars;++fld){
             r_cubq[fld] = 0.f;
@@ -68,8 +68,7 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
             }
           }
 
-        const dfloat icubq1 = 1.f/r_cubq[0];
-
+          const dfloat icubq1 = 1.f/r_cubq[0];
           // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
           // [ for LSERK the linear term is added below ]
           s_cubN[es][0][n]  = p_tauInv*(r_cubq[1]*r_cubq[2]*icubq1);
@@ -99,12 +98,17 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 
         dfloat r_qN[p_Nrelax];
 
+        // occaUnroll(p_Nrelax)
+        //   for(int fld=0; fld<p_Nrelax; fld++){
+        //     const dlong id = e*p_Nfields*p_Np + n + (fld+p_Nvars)*p_Np;
+        //     r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*q[id]; 
+        //   }
+
         occaUnroll(p_Nrelax)
           for(int fld=0; fld<p_Nrelax; fld++){
-            const dlong id = e*p_Nfields*p_Np + n + (fld+p_Nvars)*p_Np;
-            r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*q[id]; 
+            r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*s_q[es][fld+p_Nvars][n]; 
           }
-        
+
          occaUnroll(p_cubNp)
           for(int i=0;i<p_cubNp;++i){
             const dfloat Pnc  = cubProjectT[i*p_Np+n];
@@ -421,11 +425,18 @@ kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
 
           dfloat r_qN[p_Nrelax];
 
-        occaUnroll(p_Nrelax)
+        // occaUnroll(p_Nrelax)
+        //   for(int fld=0; fld<p_Nrelax; fld++){
+        //     const dlong id = e*p_Nfields*p_Np + n + (fld+p_Nvars)*p_Np;
+        //     r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*q[id]; 
+        //   }
+
+          occaUnroll(p_Nrelax)
           for(int fld=0; fld<p_Nrelax; fld++){
-            const dlong id = e*p_Nfields*p_Np + n + (fld+p_Nvars)*p_Np;
-            r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*q[id]; 
+            // const dlong id = e*p_Nfields*p_Np + n + (fld+p_Nvars)*p_Np;
+            r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*s_q[es][fld+p_Nvars][n]; 
           }
+
         
          occaUnroll(p_cubNp)
           for(int i=0;i<p_cubNp;++i){
