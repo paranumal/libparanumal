@@ -16,7 +16,7 @@
     }                                                                   \
                                                                         \
     s_q  [m][j][i]  = uP;                                               \
-    s_ndq[m][j][i] -= WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);             \
+    s_ndq[m][j][i]  = WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);             \
   }
 
 kernel void ellipticRhsBCHex3D(const dlong Nelements,
