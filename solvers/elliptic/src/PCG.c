@@ -55,27 +55,30 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   while((Niter <MAXIT)) {
 
+    // [
     // A*p
     ellipticOperator(elliptic, lambda, o_p, o_Ap);
 
     // dot(p,A*p)
     pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree,o_p, o_Ap);
-
+    // ]
+    
     // alpha = dot(r,z)/dot(p,A*p)
     alpha = rdotz0/pAp;
 
     // x <= x + alpha*p
     ellipticScaledAdd(elliptic,  alpha, o_p,  1.f, o_x);
 
+    // [
     // r <= r - alpha*A*p
     ellipticScaledAdd(elliptic, -alpha, o_Ap, 1.f, o_r);
 
     // dot(r,r)
     rdotr1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
-
+    // ]
+    
     if (options.compareArgs("VERBOSE", "TRUE")&&(rank==0)) 
       printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
-
 
     if(rdotr1 < TOL) {
       rdotr0 = rdotr1;
@@ -84,12 +87,14 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
     occaTimerTic(mesh->device,"Preconditioner");
 
+    // [
     // z = Precon^{-1} r
     ellipticPreconditioner(elliptic, lambda, o_r, o_z);
 
     // dot(r,z)
     rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
-
+    // ]
+    
     // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
     if(options.compareArgs("KRYLOV SOLVER", "PCG+FLEXIBLE") ||
        options.compareArgs("KRYLOV SOLVER", "PCG,FLEXIBLE")) {
