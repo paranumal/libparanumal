@@ -2,6 +2,8 @@
 #include "omp.h"
 #include <unistd.h>
 
+void reportMemoryUsage(occa::device &device, const char *mess);
+
 elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, setupAide options){
 
   // OCCA build stuff
@@ -45,6 +47,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelI
   //set number of omp threads to use
   int Ncores = sysconf(_SC_NPROCESSORS_ONLN);
   int Nthreads = Ncores/totalDevices;
+
+  Nthreads = mymax(1,Nthreads/2);
   omp_set_num_threads(Nthreads);
   
   if (rank==0 && options.compareArgs("VERBOSE","TRUE")) 
@@ -68,6 +72,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelI
   else
     meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
 
+  reportMemoryUsage(mesh->device, "after occa setup");
+  
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
   elliptic->BCType = (int*) calloc(3,sizeof(int));
