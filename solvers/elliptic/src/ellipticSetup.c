@@ -48,6 +48,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelI
   int Ncores = sysconf(_SC_NPROCESSORS_ONLN);
   int Nthreads = Ncores/totalDevices;
 
+  //  Nthreads = mymax(1,Nthreads/2);
   Nthreads = mymax(1,Nthreads/2);
   omp_set_num_threads(Nthreads);
   

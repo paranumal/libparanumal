@@ -49,20 +49,25 @@ int main(int argc, char **argv){
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
   // convergence tolerance
-  dfloat tol = 1e-8;
+  dfloat tol = 1e-10;
 
   occa::streamTag startTag = mesh->device.tagStream();
   
   int it = ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
 
   occa::streamTag stopTag = mesh->device.tagStream();
-
+  mesh->device.finish();
+  
   double elapsed = mesh->device.timeBetween(startTag, stopTag);
 
-  printf("elapsed = %g, time per node = %g, nodes*iterations/time = %g\n",
+  printf("%d, %d, %g, %d, %g, %g; \%\%global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
+	 mesh->N,
+	 mesh->Nelements*mesh->Np,
 	 elapsed,
+	 it,
 	 elapsed/(mesh->Np*mesh->Nelements),
-	 mesh->Nelements*(it*mesh->Np/elapsed));
+	 mesh->Nelements*(it*mesh->Np/elapsed),
+	 options.getArgs("PRECONDITIONER").c_str());
 
   if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
     dfloat zero = 0.;
