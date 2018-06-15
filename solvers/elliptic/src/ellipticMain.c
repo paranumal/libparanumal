@@ -50,8 +50,19 @@ int main(int argc, char **argv){
 
   // convergence tolerance
   dfloat tol = 1e-8;
-  ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
 
+  occa::streamTag startTag = mesh->device.tagStream();
+  
+  int it = ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
+
+  occa::streamTag stopTag = mesh->device.tagStream();
+
+  double elapsed = mesh->device.timeBetween(startTag, stopTag);
+
+  printf("elapsed = %g, time per node = %g, nodes*iterations/time = %g\n",
+	 elapsed,
+	 elapsed/(mesh->Np*mesh->Nelements),
+	 mesh->Nelements*(it*mesh->Np/elapsed));
 
   if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
     dfloat zero = 0.;
