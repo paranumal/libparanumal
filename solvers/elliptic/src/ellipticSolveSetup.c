@@ -281,6 +281,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
       kernelInfo.addDefine("p_NpFine", mesh->Np);
       kernelInfo.addDefine("p_NpCoarse", mesh->Nverts);
 
+
       if (elliptic->elementType==QUADRILATERALS || elliptic->elementType==HEXAHEDRA) {
         kernelInfo.addDefine("p_NqFine", mesh->N+1);
         kernelInfo.addDefine("p_NqCoarse", 2);
@@ -298,6 +299,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
       int NnodesV = 1; //hard coded for now
       kernelInfo.addDefine("p_NblockV", NblockV);
       kernelInfo.addDefine("p_NnodesV", NnodesV);
+      kernelInfo.addDefine("p_NblockVFine", NblockV);
+      kernelInfo.addDefine("p_NblockVCoarse", NblockV);
 
       int NblockS = maxNthreads/maxNodes; // works for CUDA
       kernelInfo.addDefine("p_NblockS", NblockS);

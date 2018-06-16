@@ -20,15 +20,15 @@ kernel void ellipticPreconProlongateTri2D(const dlong Nelements,
                                      const dfloat * restrict qCoarse,
                                      dfloat * restrict qFine){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;outer0){
 
-    shared dfloat s_qCoarse[p_NblockV][p_NpCoarse];
+    shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(int es=0;es<p_NblockVFine;++es;inner1){
       for(int n=0;n<p_NpFine;++n;inner0){
         dlong t = n + es*p_NpFine;
 
-        if(t<p_NpCoarse*p_NblockV)
+        if(t<p_NpCoarse*p_NblockVFine)
           if((eo*p_NpCoarse + t)<Nelements*p_NpCoarse)
             s_qCoarse[0][t] = qCoarse[eo*p_NpCoarse+t];
       }
@@ -36,12 +36,12 @@ kernel void ellipticPreconProlongateTri2D(const dlong Nelements,
 
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(int es=0;es<p_NblockVFine;++es;inner1){
       for(int n=0;n<p_NpFine;++n;inner0){
         const dlong e = eo + es;
         if(e<Nelements){
-          dfloat tmp = 0.;
-          //dfloat tmp = qFine[e*p_NpFine+n];
+          //dfloat tmp = 0.;
+          dfloat tmp = qFine[e*p_NpFine+n];
 
           occaUnroll(p_NpCoarse)
             for(int i=0;i<p_NpCoarse;++i){
@@ -63,29 +63,29 @@ kernel void ellipticPreconProlongate_v1(const dlong Nelements,
                                      const dfloat * restrict qCoarse,
                                      dfloat * restrict qFine){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;outer0){
 
-    shared dfloat s_qCoarse[p_NblockV][p_NpCoarse];
+    shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
     shared dfloat s_R[p_NpCoarse][p_NpFine];
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(int es=0;es<p_NblockVFine;++es;inner1){
       for(int n=0;n<p_NpFine;++n;inner0){
         dlong t = n + es*p_NpFine;
 
-        if(t<p_NpCoarse*p_NblockV)
+        if(t<p_NpCoarse*p_NblockVFine)
           if((eo*p_NpCoarse + t)<Nelements*p_NpCoarse)
             s_qCoarse[0][t] = qCoarse[eo*p_NpCoarse+t];
 
         while(t<p_NpFine*p_NpCoarse){
           s_R[0][t] = R[t];
-          t += p_NpFine*p_NblockV;
+          t += p_NpFine*p_NblockVFine;
         }
       }
     }
 
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(int es=0;es<p_NblockVFine;++es;inner1){
       for(int n=0;n<p_NpFine;++n;inner0){
         const dlong e = eo + es;
         if(e<Nelements){
