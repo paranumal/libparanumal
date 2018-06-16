@@ -731,6 +731,11 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       kernelInfo.addDefine("p_NpFine", NpFine);
       kernelInfo.addDefine("p_NpCoarse", NpCoarse);
 
+      int NblockVFine = maxNthreads/NpFine; 
+      int NblockVCoarse = maxNthreads/NpCoarse; 
+      kernelInfo.addDefine("p_NblockVFine", NblockVFine);
+      kernelInfo.addDefine("p_NblockVCoarse", NblockVCoarse);
+
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
       elliptic->precon->coarsenKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);

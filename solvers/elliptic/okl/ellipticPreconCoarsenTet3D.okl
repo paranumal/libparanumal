@@ -5,25 +5,25 @@ kernel void ellipticPreconCoarsenTet3D(const dlong Nelements,
                                   const dfloat * restrict qN,
                                   dfloat * restrict q1){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockVCoarse;outer0){
 
-    shared dfloat s_qN[p_NblockV][p_NpFine];
+    shared dfloat s_qN[p_NblockVCoarse][p_NpFine];
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(int es=0;es<p_NblockVCoarse;++es;inner1){
       for(int n=0;n<p_NpCoarse;++n;inner0){
         dlong t = n + es*p_NpCoarse;
 
-        while(t<p_NpFine*p_NblockV){
+        while(t<p_NpFine*p_NblockVCoarse){
           if(eo*p_NpFine + t< Nelements*p_NpFine)
             s_qN[0][t] = qN[eo*p_NpFine+t];
-          t += p_NpCoarse*p_NblockV;
+          t += p_NpCoarse*p_NblockVCoarse;
         }
       }
     }
 
     barrier(localMemFence);
 
-    for(int es=0;es<p_NblockV;++es;inner1){
+    for(int es=0;es<p_NblockVCoarse;++es;inner1){
       for(int n=0;n<p_NpCoarse;++n;inner0){
         const dlong e = eo + es;
         if(e<Nelements){
