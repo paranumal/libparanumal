@@ -32,7 +32,7 @@ M = load('ellipticTetScanMultigrid.results');
 figure(6)
 ellipticHexScanPlot(M, 5, 'dofs', '(solve time)/dof', 'southeast')
 title('Tets: Hybrid AMG/pMG Preconditioner');
-
+myprint('ellipticPoissonSolverTetMultigridSolveTime.pdf')
 
 figure(8)
 ellipticHexScanPlot(M, 6, 'dofs', '(iterations x dofs)/(solve time)', 'southeast')
