@@ -17,7 +17,12 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   occa::memory &o_Ax = elliptic->o_Ax;
 
   /*compute norm b, set the tolerance */
+#if 0
   dfloat normB = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
+#else
+  dfloat normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+#endif
+
   dfloat TOL =  mymax(tol*tol*normB,tol*tol);
   // compute A*x
   ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax);
@@ -25,7 +30,11 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   // subtract r = b - A*x
   ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);
 
+#if 0
   dfloat rdotr0 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
+#else
+  dfloat rdotr0 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+#endif
 
   dfloat rdotz0 = 0;
   int Niter = 0;
@@ -60,7 +69,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticOperator(elliptic, lambda, o_p, o_Ap);
 
     // dot(p,A*p)
-    pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree,o_p, o_Ap);
+    pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
     // ]
     
     // alpha = dot(r,z)/dot(p,A*p)
@@ -69,13 +78,15 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     // x <= x + alpha*p
     ellipticScaledAdd(elliptic,  alpha, o_p,  1.f, o_x);
 
+    occaTimerTic(mesh->device,"Residual update");
     // [
     // r <= r - alpha*A*p
     ellipticScaledAdd(elliptic, -alpha, o_Ap, 1.f, o_r);
 
-    // dot(r,r)
-    rdotr1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
+    // dot(r,r)   
+    rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
     // ]
+    occaTimerToc(mesh->device,"Residual update");
     
     if (options.compareArgs("VERBOSE", "TRUE")&&(rank==0)) 
       printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
