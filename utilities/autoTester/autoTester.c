@@ -16,8 +16,8 @@ int main(int argc, char **argv){
   char cmd1[BUFSIZ];
   char cmd2[BUFSIZ];
   
-  sprintf(cmd1, "mpiexec.openmpi -np 1 %s setup.rc", executable);
-  sprintf(cmd2, "mpiexec.openmpi -np 2 %s setup.rc", executable);
+  sprintf(cmd1, "mpiexec -np 1 %s setup.rc", executable);
+  sprintf(cmd2, "mpiexec -np 2 %s setup.rc", executable);
   
   vector <string> &keyword = setup.getKeyword();
   vector <string> &data = setup.getData();
@@ -94,8 +94,8 @@ int main(int argc, char **argv){
     fprintf(stderr,"MPI(1): \n");
     system(cmd1);
 
-    fprintf(stderr,"MPI(2): \n");
-    system(cmd2);
+    //    fprintf(stderr,"MPI(2): \n");
+    //    system(cmd2);
     
   }
   
