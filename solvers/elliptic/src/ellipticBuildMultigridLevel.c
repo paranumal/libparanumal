@@ -617,21 +617,21 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
       kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-      int NblockV = 256/mesh->Np; // works for CUDA
+      int NblockV = maxNthreads/mesh->Np; // works for CUDA
       kernelInfo.addDefine("p_NblockV", NblockV);
 
       int one = 1; //set to one for now. TODO: try optimizing over these
       kernelInfo.addDefine("p_NnodesV", one);
 
-      int NblockS = 256/maxNodes; // works for CUDA
+      int NblockS = maxNthreads/maxNodes; // works for CUDA
       kernelInfo.addDefine("p_NblockS", NblockS);
 
-      int NblockP = 256/(4*mesh->Np); // get close to 256 threads
+      int NblockP = maxNthreads/(4*mesh->Np); // get close to maxNthreads threads
       kernelInfo.addDefine("p_NblockP", NblockP);
 
       int NblockG;
       if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
-      else NblockG = 256/mesh->Np;
+      else NblockG = maxNthreads/mesh->Np;
       kernelInfo.addDefine("p_NblockG", NblockG);
 
       //add standard boundary functions
@@ -730,6 +730,11 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       }
       kernelInfo.addDefine("p_NpFine", NpFine);
       kernelInfo.addDefine("p_NpCoarse", NpCoarse);
+
+      int NblockVFine = maxNthreads/NpFine; 
+      int NblockVCoarse = maxNthreads/NpCoarse; 
+      kernelInfo.addDefine("p_NblockVFine", NblockVFine);
+      kernelInfo.addDefine("p_NblockVCoarse", NblockVCoarse);
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);

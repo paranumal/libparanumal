@@ -128,8 +128,36 @@ kernel void ellipticPartialAxTet3D_v0(const dlong Nelements,
 //Ref3 from benchmarks 
 // number of outputs per thread 
 // important to tune this at low order
+
+// p_Ne: number of outputs per thread
+// p_Nb: number of Np blocks per threadblock
+
+#if p_N==1
+#define p_Ne 2
+#define p_Nb 8
+#elif p_N==2
+#define p_Ne 3
+#define p_Nb 3
+#elif p_N==3
+#define p_Ne 3
+#define p_Nb 3
+#elif p_N==4
+#define p_Ne 3
+#define p_Nb 5
+#elif p_N==5
+#define p_Ne 3
+#define p_Nb 5
+#elif p_N==6
+#define p_Ne 4
+#define p_Nb 6
+#else
+// from N=7
 #define p_Ne 4
 #define p_Nb 2
+#endif
+
+// #define p_Ne 4
+// #define p_Nb 2
 kernel void ellipticPartialAxTet3D(const dlong Nelements,
                                   const dlong   * restrict elementList,
                                   const dfloat * restrict ggeo,

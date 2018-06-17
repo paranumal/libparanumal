@@ -96,6 +96,9 @@ typedef struct {
   occa::kernel dotMultiplyKernel;
   occa::kernel dotDivideKernel;
 
+  occa::kernel weightedNorm2Kernel;
+  occa::kernel norm2Kernel;
+
   occa::kernel gradientKernel;
   occa::kernel ipdgKernel;
   occa::kernel partialGradientKernel;
@@ -128,7 +131,7 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
 
 void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq);
 
-
+dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a);
 void ellipticBuildIpdg(elliptic_t* elliptic, int basisNp, dfloat *basis, dfloat lambda, 
                         nonZero_t **A, dlong *nnzA, hlong *globalStarts);
 
@@ -151,5 +154,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda);
 
 dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level);
+
+#define maxNthreads 768
 
 #endif

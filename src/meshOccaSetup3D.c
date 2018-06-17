@@ -6,6 +6,13 @@
 
 #include "mesh3D.h"
 
+void reportMemoryUsage(occa::device &device, const char *mess){
+
+  size_t bytes = device.memoryAllocated();
+
+  printf("%s: bytes allocated = %llu\n", mess, bytes);
+}
+
 void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo){
 
   mesh->device.setup(deviceConfig);
@@ -52,7 +59,8 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
   // mesh->o_resq =
   //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
 
-
+  reportMemoryUsage(mesh->device, "meshOccaSetup3D: before operators ");
+  
   if(mesh->Nfaces==4){
 
     // build Dr, Ds, LIFT transposes
@@ -121,7 +129,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
         ELvals[i + j*mesh->Np] = mesh->ELvals[j+i*mesh->max_EL_nnz];
       }
     }
-    // =============== end BB stuff =============================
+      // =============== end BB stuff =============================
 
     if(mesh->cubNp){
       dfloat *cubDrWT = (dfloat*) calloc(mesh->cubNp*mesh->Np, sizeof(dfloat));
@@ -229,9 +237,11 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->o_intz =
         mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->intNfp*sizeof(dfloat),
                             mesh->intz);
-
+      
     }
 
+    reportMemoryUsage(mesh->device, "meshOccaSetup3D: after operators and integration grids ");
+    
     // =============== Bernstein-Bezier allocations [added by NC] ============
 
     // create packed BB indexes
@@ -267,7 +277,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       packedDids[8*mesh->Np+n*4+3] = D3ids[n+3*mesh->Np]-D0ids[n+3*mesh->Np];
     }
 
-    
+      
     mesh->o_packedDids = mesh->device.malloc(mesh->Np*3*4*sizeof(unsigned char),packedDids);
 
     mesh->o_L0ids  = mesh->device.malloc(mesh->Nfp*7*sizeof(int),L0ids);
@@ -438,6 +448,8 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
     mesh->o_LIFTT =
       mesh->device.malloc(1*sizeof(dfloat)); // dummy
+
+    reportMemoryUsage(mesh->device, "meshOccaSetup3D: before intX ");
     
     mesh->intx = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp, sizeof(dfloat));
     mesh->inty = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp, sizeof(dfloat));
@@ -506,6 +518,8 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
     mesh->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
     mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
 
+    reportMemoryUsage(mesh->device, "meshOccaSetup3D: before geofactors ");
+    
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
                           mesh->vgeo);
@@ -514,6 +528,8 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
                           mesh->sgeo);
 
+    reportMemoryUsage(mesh->device, "meshOccaSetup3D: before vgeo,sgeo ");
+    
     mesh->o_ggeo =
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
         mesh->ggeo);
@@ -539,6 +555,8 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
     mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat), cubDWT);
 
+    reportMemoryUsage(mesh->device, "meshOccaSetup3D: after geofactors ");
+    
     mesh->o_intx =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp*sizeof(dfloat),
           mesh->intx);
@@ -556,6 +574,8 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
 
     mesh->o_intLIFTT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
     mesh->o_intLIFTT.copyFrom(mesh->o_cubProjectT);
+
+    reportMemoryUsage(mesh->device, "meshOccaSetup3D: after intX ");
     
   } else {
     printf("Nverts = %d: unknown element type!\n",mesh->Nverts);

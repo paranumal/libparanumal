@@ -1,5 +1,6 @@
 #include "elliptic.h"
 
+
 void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &kernelInfo){
 
   int rank, size;
@@ -257,6 +258,17 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
     				       "innerProduct",
     				       kernelInfo);
 
+      elliptic->weightedNorm2Kernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedNorm2.okl",
+					   "weightedNorm2",
+					   kernelInfo);
+
+      elliptic->norm2Kernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/norm2.okl",
+					   "norm2",
+					   kernelInfo);
+      
+      
       elliptic->scaledAddKernel =
           mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
     					 "scaledAdd",
@@ -280,6 +292,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
       kernelInfo.addDefine("p_NpFine", mesh->Np);
       kernelInfo.addDefine("p_NpCoarse", mesh->Nverts);
 
+
       if (elliptic->elementType==QUADRILATERALS || elliptic->elementType==HEXAHEDRA) {
         kernelInfo.addDefine("p_NqFine", mesh->N+1);
         kernelInfo.addDefine("p_NqCoarse", 2);
@@ -293,20 +306,22 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
       int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
       kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-      int NblockV = 256/mesh->Np; // works for CUDA
+      int NblockV = maxNthreads/mesh->Np; // works for CUDA
       int NnodesV = 1; //hard coded for now
       kernelInfo.addDefine("p_NblockV", NblockV);
       kernelInfo.addDefine("p_NnodesV", NnodesV);
+      kernelInfo.addDefine("p_NblockVFine", NblockV);
+      kernelInfo.addDefine("p_NblockVCoarse", NblockV);
 
-      int NblockS = 256/maxNodes; // works for CUDA
+      int NblockS = maxNthreads/maxNodes; // works for CUDA
       kernelInfo.addDefine("p_NblockS", NblockS);
 
-      int NblockP = 256/(4*mesh->Np); // get close to 256 threads
+      int NblockP = maxNthreads/(4*mesh->Np); // get close to maxNthreads threads
       kernelInfo.addDefine("p_NblockP", NblockP);
 
       int NblockG;
       if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
-      else NblockG = 256/mesh->Np;
+      else NblockG = maxNthreads/mesh->Np;
       kernelInfo.addDefine("p_NblockG", NblockG);
 
       //add standard boundary functions

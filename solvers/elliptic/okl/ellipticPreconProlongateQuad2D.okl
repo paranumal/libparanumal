@@ -50,7 +50,7 @@ kernel void ellipticPreconProlongateQuad2D(const dlong Nelements,
           }
 
         const dlong id = i+j*p_NqFine+e*p_NpFine;
-        qN[id] = res;
+        qN[id] += res;
       }
     }
   }
