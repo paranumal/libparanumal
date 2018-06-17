@@ -258,6 +258,17 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
     				       "innerProduct",
     				       kernelInfo);
 
+      elliptic->weightedNorm2Kernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedNorm2.okl",
+					   "weightedNorm2",
+					   kernelInfo);
+
+      elliptic->norm2Kernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/norm2.okl",
+					   "norm2",
+					   kernelInfo);
+      
+      
       elliptic->scaledAddKernel =
           mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
     					 "scaledAdd",
