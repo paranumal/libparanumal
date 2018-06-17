@@ -3,10 +3,6 @@ r1 = DefineNumber[0.1];
 r2 = DefineNumber[0.15];
 r3 = DefineNumber[0.15];
 
-
-//+r4 = DefineNumber[0.4];
-//+r5 = DefineNumber[0.4];
-
 //+ Fence Dimensions
 fence_max_x = DefineNumber[ 0.05];
 fence_min_x = DefineNumber[-0.05];
@@ -35,12 +31,12 @@ wake_min_y = DefineNumber[1.5*box_min_y];
 wake_min_z = DefineNumber[1.5*box_min_z];
 
 //+ Size of Domain Without PML
-domain_max_x = DefineNumber[5.0];
-domain_max_y = DefineNumber[ 2.5];
-domain_max_z = DefineNumber[ 2.5];
+domain_max_x = DefineNumber[4.5];
+domain_max_y = DefineNumber[ 2.0];
+domain_max_z = DefineNumber[ 2.0];
 domain_min_x = DefineNumber[-2.0];
 domain_min_y = DefineNumber[ 0.0];
-domain_min_z = DefineNumber[-2.5];
+domain_min_z = DefineNumber[-2.0];
 
 // PML Width
 
