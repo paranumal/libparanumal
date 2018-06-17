@@ -1,4 +1,4 @@
-#define p_Nvort 3
+// #define p_Nvort 4
 kernel void bnsVorticityQuad2D(const dlong Nelements,
                               const dfloat * restrict vgeo,
                               const dfloat * restrict D,

@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <complex.h>  
+#include <complex.h> 
+
 #include "mpi.h"
 
 #include "mesh.h"
 #include "mesh2D.h"
 #include "mesh3D.h"
-
 
 // Block size of reduction 
 #define blockSize 256
@@ -54,6 +54,8 @@ typedef struct{
   int errorStep;   // number of steps between error calculations
   int reportStep;  // number of steps between error calculations
 
+  int procid; 
+
   dfloat RT, sqrtRT, tauInv, Ma, Re, nu; // Flow parameters
 
 
@@ -74,6 +76,15 @@ typedef struct{
   dfloat *pmlrhsqx, *pmlrhsqy, *pmlrhsqz;
   dfloat *pmlresqx, *pmlresqy, *pmlresqz;
 
+  // Some Iso-surfacing variables
+  int isoField, isoNfields, isoNlevels, isoMaxNtris, *isoNtris; 
+  dfloat isoMinVal, isoMaxVal, *isoLevels, *isoq; 
+  size_t isoMax; 
+
+  occa::memory o_isoLevels, o_isoq, o_isoNtris; 
+  occa::memory o_plotInterp, o_plotEToV; 
+
+
   // IMEX Coefficients
   dfloat LSIMEX_B[4], LSIMEX_C[4], LSIMEX_ABi[4], LSIMEX_ABe[4], LSIMEX_Ad[4];
   // MRSAAB Coefficients
@@ -91,6 +102,11 @@ typedef struct{
   dfloat *rkCex, *rkAex, *rkBex, *rkEex;
   dfloat *rkCim, *rkAim, *rkBim, *rkEim;
 
+
+  // NBN: add storage for compacted isosurf data
+  std::vector<double> iso_nodes;
+  std::vector<int> iso_tris;
+
   int emethod; 
   int tstep, atstep, rtstep, tstepAccepted, rkp;
   dfloat ATOL, RTOL, time; 
@@ -98,7 +114,8 @@ typedef struct{
 
   dfloat outputInterval, nextOutputTime;
   int outputForceStep;
-
+  
+  int Nvort;     // Number of vorticity fields i.e. 3 or 4 
   dfloat *Vort; 
 
   occa::memory o_Vort;
@@ -115,8 +132,10 @@ typedef struct{
   // IMEXRK 
   occa::memory o_rhsqim, o_rhsqex, o_rkrhsqim, o_rkrhsqex;
   occa::memory o_rkAex, o_rkEex, o_rkBex;  
-  occa::memory o_rkAim, o_rkEim, o_rkBim;  
+  occa::memory o_rkAim, o_rkEim, o_rkBim; 
 
+
+  
 
 
 
@@ -150,6 +169,8 @@ typedef struct{
   occa::kernel pmlTraceUpdateKernel;
 
   occa::kernel vorticityKernel;
+
+  occa::kernel isoSurfaceKernel;
 
   // Boltzmann Imex Kernels
   occa::kernel implicitUpdateKernel;
@@ -185,6 +206,8 @@ void bnsReport(bns_t *bns, dfloat time, setupAide &options);
 void bnsError(bns_t *bns, dfloat time, setupAide &options);
 void bnsForces(bns_t *bns, dfloat time, setupAide &options);
 void bnsPlotVTU(bns_t *bns, char * FileName);
+void bnsIsoPlotVTU(bns_t *bns, int isoNtris, dfloat *isoq, char *fileName);
+void bnsIsoWeldPlotVTU(bns_t *bns, char *fileName);
 
 // Function for ramp start
 void bnsRampFunction(dfloat t, dfloat *ramp, dfloat *drampdt);
