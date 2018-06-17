@@ -23,7 +23,7 @@ ellipticHexScanPlot(M, 6, 'dofs', '(iterations x dofs)/(solve time)', 'southeast
 title('Hexes: Hybrid AMG/pMG Preconditioner');
 myprint('ellipticPoissonSolverHexHybridMultigridThroughput.pdf')
 
-
+if(0)
 J = load('ellipticTetScanJacobi.results');
 
 M = load('ellipticTetScanMultigrid.results');
@@ -49,3 +49,4 @@ ellipticHexScanPlot(J, 6, 'dofs', '(iterations x dofs)/(solve time)', 'southeast
 title('Tets: Jacobi Preconditioner');
 myprint('ellipticPoissonSolverTetJacobiThroughput.pdf')
 
+end
