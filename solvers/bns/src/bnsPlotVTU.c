@@ -93,7 +93,7 @@ void bnsPlotVTU(bns_t *bns, char *fileName){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotVortx = 0, plotVorty = 0, plotVortz = 0;
       for(int m=0;m<mesh->Np;++m){
-        dlong id = m+e*mesh->Np*3;
+        dlong id = m+e*mesh->Np*bns->Nvort;  // was 3 !!!!!!
         dfloat vortx = bns->Vort[id+ 0*mesh->Np];
         dfloat vorty = bns->Vort[id+ 1*mesh->Np];
         dfloat vortz = bns->Vort[id+ 2*mesh->Np];

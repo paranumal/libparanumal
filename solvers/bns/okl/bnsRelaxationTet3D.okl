@@ -98,12 +98,6 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 
         dfloat r_qN[p_Nrelax];
 
-        // occaUnroll(p_Nrelax)
-        //   for(int fld=0; fld<p_Nrelax; fld++){
-        //     const dlong id = e*p_Nfields*p_Np + n + (fld+p_Nvars)*p_Np;
-        //     r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*q[id]; 
-        //   }
-
         occaUnroll(p_Nrelax)
           for(int fld=0; fld<p_Nrelax; fld++){
             r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*s_q[es][fld+p_Nvars][n]; 
@@ -425,18 +419,10 @@ kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
 
           dfloat r_qN[p_Nrelax];
 
-        // occaUnroll(p_Nrelax)
-        //   for(int fld=0; fld<p_Nrelax; fld++){
-        //     const dlong id = e*p_Nfields*p_Np + n + (fld+p_Nvars)*p_Np;
-        //     r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*q[id]; 
-        //   }
-
           occaUnroll(p_Nrelax)
           for(int fld=0; fld<p_Nrelax; fld++){
-            // const dlong id = e*p_Nfields*p_Np + n + (fld+p_Nvars)*p_Np;
             r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*s_q[es][fld+p_Nvars][n]; 
           }
-
         
          occaUnroll(p_cubNp)
           for(int i=0;i<p_cubNp;++i){

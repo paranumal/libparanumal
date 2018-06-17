@@ -24,7 +24,7 @@ LDFLAGS	= $(compilerFlags) $(flags) -g
 # libraries to be linked in
 LIBS	=  $(links) 
 
-INCLUDES = bns.h
+INCLUDES = bns.h 
 
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
@@ -55,7 +55,11 @@ AOBJS    = \
 ./src/bnsLSERKStep.o \
 ./src/bnsSARKStep.o \
 ./src/bnsMRSAABStep.o \
-./src/bnsRunEmbedded.o    
+./src/bnsIsoPlotVTU.o \
+./src/bnsIsoWeldPlotVTU.o \
+./src/bnsRunEmbedded.o \
+./src/weldTriVerts.o \
+./src/bnsIsoPlotGmsh.o   
 
 # library objects
 LOBJS = \
