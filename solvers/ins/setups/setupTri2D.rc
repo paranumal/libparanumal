@@ -2,10 +2,12 @@
 1.0
 
 [DATA FILE]
-data/insUniform2D.h
+data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insSquareCylinder2D.msh
+#../../meshes/insSquareCylinder2D.msh
+#../../meshes/boltzmannSquareCylinderPML2D.msh
+../../meshes/insVortex2D.msh
 
 [MESH DIMENSION]
 2
@@ -28,7 +30,8 @@ CUDA
 # can be EXTBDF1,2, or 3, or ARK1
 # can add SUBCYCLING STEPS with EXTBDF
 [TIME INTEGRATOR]
-ARK2
+EXTBDF2
+#ARK2
 
 [SUBCYCLING STEPS]
 4
@@ -38,7 +41,7 @@ ARK2
 CUBATURE
 
 [VISCOSITY]
-0.025
+0.005
 
 [MACH NUMBER]
 .2
@@ -181,8 +184,8 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-NONE
-#VORTEX
+#NONE
+VORTEX
 
 [VERBOSE]
 FALSE
