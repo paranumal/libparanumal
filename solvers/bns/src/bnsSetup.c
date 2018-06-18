@@ -457,13 +457,64 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   }
   
 
+   bns->Nvort      = 4;   // hold wx, wy, wz, magnitude  
+  // Set Iso-surfacing stuf here
+  if(bns->dim==3){
+    
+    // Only one field is exported for iso-surface to reduce the file size
+    bns->isoNfields  = 1; //1 + (bns->dim) + (1 + bns->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
+    bns->isoMaxNtris = 1.E7; 
+
+    bns->procid = gethostid();
+
+    //
+    options.getArgs("ISOSURFACE FIELD ID", bns->isoField);  // bns->isoField +=3;  // Adding x,y,z to field id
+    options.getArgs("ISOSURFACE LEVEL NUMBER", bns->isoNlevels);
+    options.getArgs("ISOSURFACE CONTOUR MAX", bns->isoMaxVal); 
+    options.getArgs("ISOSURFACE CONTOUR MIN", bns->isoMinVal); 
+
+    bns->isoMax    = (bns->dim + bns->isoNfields)*3*bns->isoMaxNtris;
+
+    bns->isoLevels = (dfloat*) calloc(bns->isoNlevels, sizeof(dfloat));
+    bns->isoNtris  = (int*) calloc(1, sizeof(int));
+
+    bns->isoq      = (dfloat*) calloc(bns->isoMax, sizeof(dfloat)); 
+
+    for(int l=0;l<bns->isoNlevels;++l)
+      bns->isoLevels[l] = bns->isoMinVal + (bns->isoMaxVal-bns->isoMinVal)*l/(dfloat)(bns->isoNlevels-1);
+
+    bns->o_isoLevels = mesh->device.malloc(bns->isoNlevels*sizeof(dfloat), bns->isoLevels);
+    bns->o_isoq      = mesh->device.malloc(bns->isoMax*sizeof(dfloat), bns->isoq);
+    bns->o_isoNtris  = mesh->device.malloc(1*sizeof(int), bns->isoNtris);
+
+
+
+    dfloat *plotInterp = (dfloat*) calloc(mesh->plotNp*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->plotNp;++n){
+      for(int m=0;m<mesh->Np;++m){
+        plotInterp[n+m*mesh->plotNp] = mesh->plotInterp[n*mesh->Np+m];
+      }
+    }
+    
+    bns->o_plotInterp = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(dfloat), plotInterp);
+
+    int *plotEToV = (int*) calloc(mesh->plotNp*mesh->Np, sizeof(int));
+    for(int n=0;n<mesh->plotNelements;++n){
+      for(int m=0;m<mesh->plotNverts;++m){
+        plotEToV[n+m*mesh->plotNelements] = mesh->plotEToV[n*mesh->plotNverts+m];
+      }
+    }
+    
+    bns->o_plotEToV = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(int), plotEToV);
+
+
+  }
 
 
 
 
-// Compute Time Stepper Coefficcients
-
-bnsTimeStepperCoefficients(bns, options);
+  // Compute Time Stepper Coefficcients
+  bnsTimeStepperCoefficients(bns, options);
 
 
 if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
@@ -520,9 +571,9 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
 }
 
-  
-  bns->Vort   = (dfloat*) calloc(3*mesh->Nelements*mesh->Np, sizeof(dfloat));
-  bns->o_Vort = mesh->device.malloc(3*mesh->Nelements*mesh->Np*sizeof(dfloat), bns->Vort);
+  // was 3
+  bns->Vort   = (dfloat*) calloc(bns->Nvort*mesh->Nelements*mesh->Np, sizeof(dfloat));
+  bns->o_Vort = mesh->device.malloc(bns->Nvort*mesh->Nelements*mesh->Np*sizeof(dfloat), bns->Vort);
   
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   int maxCubNodes = mymax(maxNodes,mesh->cubNp);
@@ -607,6 +658,21 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
     kernelInfo.addDefine("p_MRSAAB", (int) 1);
   else
     kernelInfo.addDefine("p_MRSAAB", (int) 0);
+
+
+  kernelInfo.addDefine("p_Nvort", bns->Nvort);
+
+  if(bns->dim==3){
+    kernelInfo.addDefine("p_isoNfields", bns->isoNfields);
+    kernelInfo.addDefine("p_triAreaTol", 1.0E-12);
+    kernelInfo.addDefine("p_dim", bns->dim);
+    kernelInfo.addDefine("p_plotNp", mesh->plotNp);
+    kernelInfo.addDefine("p_plotNelements", mesh->plotNelements);
+    
+    int plotNthreads = mymax(mesh->Np, mymax(mesh->plotNp, mesh->plotNelements));
+    kernelInfo.addDefine("p_plotNthreads", plotNthreads);
+    
+ } 
 
   // set kernel name suffix
   char *suffix, *suffixUpdate;
@@ -733,6 +799,16 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
         mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
                                            "meshHaloExtract3D",
                                            kernelInfo);
+
+
+      if(bns->dim==3){
+        // kernels from volume file
+        sprintf(fileName, DBNS "/okl/bnsIsoSurface3D.okl");
+        sprintf(kernelName, "bnsIsoSurface3D");
+
+        bns->isoSurfaceKernel =
+          mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);        
+      }
 
 
 
