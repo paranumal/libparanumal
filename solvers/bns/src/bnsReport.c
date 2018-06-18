@@ -1,19 +1,5 @@
 #include "bns.h"
 
-int weldTriVerts(bns_t *bns, int isoNtris, double *isoq);
-
-void bnsIsoPlotGmsh(
-  bns_t *bns, 
-  int isoNtris, 
-  char *fname,
-  int tstep,        // simulation time-step
-  int N_offset,     // gmsh mpi node offset
-  int E_offset,     // gmsh mpi element offset
-  int plotnum,      // plot counter
-  double plottime,  // simulation time
-  bool bBinary,
-  int procid);
-
 void bnsReport(bns_t *bns, dfloat time, setupAide &options){
 
 mesh_t *mesh = bns->mesh; 
@@ -95,7 +81,7 @@ mesh_t *mesh = bns->mesh;
       if(options.compareArgs("OUTPUT FILE FORMAT", "WELD")){
 
         int Ntris1 = bns->isoNtris[0];
-        int Ntris2 = weldTriVerts(bns, Ntris1, bns->isoq);
+        int Ntris2 = bnsWeldTriVerts(bns, Ntris1, bns->isoq);
 
         printf("Ntri1: %d and Ntris2:%d \n", Ntris1, Ntris2);
 

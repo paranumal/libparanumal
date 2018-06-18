@@ -233,6 +233,12 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
 		    dfloat *recvBuffer, setupAide &options);
 
+// Welding Tris
+
+int bnsWeldTriVerts(bns_t *bns, int isoNtris, double *isoq);
+
+void bnsIsoPlotGmsh(bns_t *bns, int isoNtris, char *fname, int tstep, int N_offset,     
+  					int E_offset, int plotnum, double plottime,    bool bBinary, int procid);
 
 
 

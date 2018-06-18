@@ -39,7 +39,7 @@ void bnsIsoPlotVTU(bns_t *bns, int isoNtris, dfloat *isoq, char *fileName){
   for(dlong n=0;n<3*isoNtris;++n){
 
     fprintf(fp, "       ");
-    for(int fld=0;fld<bns->isoNfields;++fld){
+    for(int fld=0;fld<bns->isoNfields;++fld){ // !!!!! write second field starting from 1
       int id = n*(mesh->dim+bns->isoNfields) + mesh->dim + fld;
       dfloat plotqfld = isoq[id];
 

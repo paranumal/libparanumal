@@ -58,7 +58,7 @@ AOBJS    = \
 ./src/bnsIsoPlotVTU.o \
 ./src/bnsIsoWeldPlotVTU.o \
 ./src/bnsRunEmbedded.o \
-./src/weldTriVerts.o \
+./src/bnsWeldTriVerts.o \
 ./src/bnsIsoPlotGmsh.o   
 
 # library objects
