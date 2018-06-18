@@ -4,7 +4,7 @@
 // adapted from http://paulbourke.net/geometry/polygonise/source1.c
 // https://michelanders.blogspot.com/2012/02/marching-tetrahedrons-in-python.html
 
-
+#define p_Nvort 4 
 #define p_plotNfields (p_dim+p_isoNfields)
 
 dfloat intersection(const dfloat iso, const dfloat val1, const dfloat val2){
@@ -236,7 +236,7 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
           s_q[3][n]  = q[id + isoField*p_Np]*p_sqrtRT/rho; // velocity
         else{
           int field_id = isoField%(p_dim+1);
-          s_q[3][n]  = vort[e*p_Np + n + field_id*p_Np]; // vorticity 
+          s_q[3][n]  = vort[e*p_Np*p_Nvort + n + field_id*p_Np]; // vorticity 
         }
 
         dfloat ux = q[id + 1*p_Np]*p_sqrtRT/rho;

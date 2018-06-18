@@ -463,7 +463,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     
     // Only one field is exported for iso-surface to reduce the file size
     bns->isoNfields  = 2; //1 + (bns->dim) + (1 + bns->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
-    bns->isoMaxNtris = 1.E7; 
+    bns->isoMaxNtris = 1.E8; 
 
     bns->procid = gethostid();
 
