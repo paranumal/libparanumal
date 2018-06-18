@@ -8,8 +8,8 @@ void gradientReport(gradient_t *gradient, dfloat time, setupAide &options){
   mesh3D *mesh = gradient->mesh;
 
   int isoField = 3;
-  int isoNlevels = 6;
-  int isoMaxNtris = 1E6;
+  int isoNlevels = 4;
+  int isoMaxNtris = 1E8;
   
   dfloat *isoLevels = (dfloat*) calloc(isoNlevels, sizeof(dfloat));
   int *isoNtris = (int*) calloc(1, sizeof(int));
