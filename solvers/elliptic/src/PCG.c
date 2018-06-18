@@ -17,7 +17,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   occa::memory &o_Ax = elliptic->o_Ax;
 
   /*compute norm b, set the tolerance */
-#if 0
+#if 1
   dfloat normB = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
   dfloat normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
@@ -30,7 +30,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   // subtract r = b - A*x
   ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);
 
-#if 0
+#if 1
   dfloat rdotr0 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
   dfloat rdotr0 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
@@ -83,8 +83,12 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     // r <= r - alpha*A*p
     ellipticScaledAdd(elliptic, -alpha, o_Ap, 1.f, o_r);
 
-    // dot(r,r)   
+    // dot(r,r)
+#if 1
+    rdotr1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
+#else
     rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+#endif
     // ]
     occaTimerToc(mesh->device,"Residual update");
     
