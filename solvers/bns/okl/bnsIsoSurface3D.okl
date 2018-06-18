@@ -211,8 +211,8 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
   
   for(int et=0;et<Nelements;++et;outer0){
 
-    shared dfloat s_q[p_plotNfields][p_Np];
-    shared dfloat s_plotq[p_plotNp][p_plotNfields];
+    shared dfloat s_q[p_plotNfields][p_Np]; // added +1
+    shared dfloat s_plotq[p_plotNp][p_plotNfields]; // added + 1
 
     exclusive int e; 
 
@@ -230,23 +230,25 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
 
         dfloat rho = q[id + 0*p_Np];
 
-        if(isoField==0){
+        if(isoField==0)
           s_q[3][n]  = rho*p_sqrtRT*p_sqrtRT; // Pressure
-        }
-        else if(isoField<(p_dim+1)){
+        else if(isoField<(p_dim+1))
           s_q[3][n]  = q[id + isoField*p_Np]*p_sqrtRT/rho; // velocity
-        }
         else{
           int field_id = isoField%(p_dim+1);
           s_q[3][n]  = vort[e*p_Np + n + field_id*p_Np]; // vorticity 
         }
-        
+
+        dfloat ux = q[id + 1*p_Np]*p_sqrtRT/rho;
+        dfloat uy = q[id + 2*p_Np]*p_sqrtRT/rho;
+        dfloat uz = q[id + 3*p_Np]*p_sqrtRT/rho;
+
+        s_q[4][n] = occaSqrt(ux*ux + uy*uy + uz*uz); 
         // // Write vorticity
         // s_q[3][n] =rho*p_sqrtRT*p_sqrtRT; // Pressure
         // s_q[4][n] =q[id + 1*p_Np]*p_sqrtRT/rho; // u vekocity
         // s_q[5][n] =q[id + 2*p_Np]*p_sqrtRT/rho; // v velocity
-        // s_q[6][n] =q[id + 3*p_Np]*p_sqrtRT/rho; // w velocity
-        
+        // s_q[6][n] =q[id + 3*p_Np]*p_sqrtRT/rho; // w velocity  
         // id = p_Nvort*e*p_Np + n;
         // s_q[7][n]  = vort[id +0*p_Np]; // worticity x field
         // s_q[8][n]  = vort[id +1*p_Np]; // worticity y field
@@ -289,7 +291,7 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
     for(int n=0;n<p_plotNthreads;++n;inner0){
 
       if(n<p_plotNelements){
-        dfloat isoVals[2*(3*p_plotNfields)]; // max number of output vertices
+        dfloat isoVals[2*(3*(p_plotNfields))]; // max number of output vertices added+1
         
         const int v1 = plotEToV[n + 0*p_plotNelements];
         const int v2 = plotEToV[n + 1*p_plotNelements];
