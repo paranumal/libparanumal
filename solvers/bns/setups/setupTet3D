@@ -5,8 +5,8 @@
 data/bnsUniform3D.h
 
 [MESH FILE]
-#../../meshes/boltzmannFencePML3D.msh
-../../meshes/boltzmannSquareCylinderPML3D.msh
+../../meshes/boltzmannFencePML3D.msh
+#../../meshes/boltzmannSquareCylinderPML3D.msh
 #../../meshes/boltzmannAcousticPulsePML3D.msh
 
 [MESH DIMENSION]
@@ -103,7 +103,7 @@ SARK
 10
 
 [OUTPUT INTERVAL]
-.5
+.1
 
 [ABSOLUTE TOLERANCE]
 1E-5
@@ -131,13 +131,13 @@ ISO_WELD
 7
 
 [ISOSURFACE CONTOUR MAX]
-2.0
+4.2
 
 [ISOSURFACE CONTOUR MIN]
--2.0
+0.2
 
 [ISOSURFACE LEVEL NUMBER]
-10
+20
 
 [OUTPUT FILE NAME]
 fence3D
