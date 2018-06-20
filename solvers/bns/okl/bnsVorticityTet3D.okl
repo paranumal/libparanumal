@@ -39,9 +39,11 @@ kernel void bnsVorticityTet3D(const dlong Nelements,
           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
           const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
           const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+
           const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
           const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
           const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+
           const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
           const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
           const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
@@ -52,15 +54,18 @@ kernel void bnsVorticityTet3D(const dlong Nelements,
 
           occaUnroll(p_Np)
             for(int i=0;i<p_Np;++i) {
-              const dfloat Drn = DT[n + i*p_Np+0*p_Np*p_Np];
-              const dfloat Dsn = DT[n + i*p_Np+1*p_Np*p_Np];
-              const dfloat Dtn = DT[n + i*p_Np+2*p_Np*p_Np];
+              const dfloat Drn = DT[n + i*p_Np + 0*p_Np*p_Np];
+              const dfloat Dsn = DT[n + i*p_Np + 1*p_Np*p_Np];
+              const dfloat Dtn = DT[n + i*p_Np + 2*p_Np*p_Np];
+
               ur += Drn*s_u[es][i];
               us += Dsn*s_u[es][i];
               ut += Dtn*s_u[es][i];
+
               vr += Drn*s_v[es][i];
               vs += Dsn*s_v[es][i];
               vt += Dtn*s_v[es][i];
+
               wr += Drn*s_w[es][i];
               ws += Dsn*s_w[es][i];
               wt += Dtn*s_w[es][i];
@@ -81,8 +86,10 @@ kernel void bnsVorticityTet3D(const dlong Nelements,
           Vort[id+0*p_Np] = wy-vz;
           Vort[id+1*p_Np] = uz-wx;
           Vort[id+2*p_Np] = vx-uy;
+
           if(p_Nvort==4)
-            Vort[id+3*p_Np] = occaSqrt( (vx-uy)*(vx-uy) + (uz-wx)*(uz-wx) + (wy-vz)*(wy-vz) );
+            Vort[id+3*p_Np] = (vx-uy)*(vx-uy) + (uz-wx)*(uz-wx) + (wy-vz)*(wy-vz) ;
+            // Vort[id+3*p_Np] = occaSqrt( (vx-uy)*(vx-uy) + (uz-wx)*(uz-wx) + (wy-vz)*(wy-vz) );
         }
       }
     }

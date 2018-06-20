@@ -77,7 +77,7 @@ typedef struct{
   dfloat *pmlresqx, *pmlresqy, *pmlresqz;
 
   // Some Iso-surfacing variables
-  int isoField, isoNfields, isoNlevels, isoMaxNtris, *isoNtris; 
+  int isoField, isoColorField, isoNfields, isoNlevels, isoMaxNtris, *isoNtris; 
   dfloat isoMinVal, isoMaxVal, *isoLevels, *isoq; 
   size_t isoMax; 
 
@@ -116,9 +116,9 @@ typedef struct{
   int outputForceStep;
   
   int Nvort;     // Number of vorticity fields i.e. 3 or 4 
-  dfloat *Vort; 
+  dfloat *Vort, *VortMag; 
 
-  occa::memory o_Vort;
+  occa::memory o_Vort, o_VortMag;
 
 
   dfloat *rkq, *rkrhsq, *rkerr, *errtmp;
