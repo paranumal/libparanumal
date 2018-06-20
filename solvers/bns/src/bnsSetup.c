@@ -462,7 +462,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   if(bns->dim==3){
     
     // Only one field is exported for iso-surface to reduce the file size
-    bns->isoNfields  = 2;   //1 + (bns->dim) + (1 + bns->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
+    bns->isoNfields  = 1;   //1 + (bns->dim) + (1 + bns->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
     bns->isoMaxNtris = 1.E7; 
 
     bns->procid = gethostid();
@@ -476,16 +476,73 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
 
     bns->isoMax    = (bns->dim + bns->isoNfields)*3*bns->isoMaxNtris;
-    bns->isoLevels = (dfloat*) calloc(bns->isoNlevels, sizeof(dfloat));
     bns->isoNtris  = (int*) calloc(1, sizeof(int));
     bns->isoq      = (dfloat*) calloc(bns->isoMax, sizeof(dfloat)); 
 
-    for(int l=0;l<bns->isoNlevels;++l)
-      bns->isoLevels[l] = bns->isoMinVal + (bns->isoMaxVal-bns->isoMinVal)*l/(dfloat)(bns->isoNlevels-1);
-
-    bns->o_isoLevels = mesh->device.malloc(bns->isoNlevels*sizeof(dfloat), bns->isoLevels);
+  
     bns->o_isoq      = mesh->device.malloc(bns->isoMax*sizeof(dfloat), bns->isoq);
     bns->o_isoNtris  = mesh->device.malloc(1*sizeof(int), bns->isoNtris);
+
+    bns->isoLevels = (dfloat*) calloc(bns->isoNlevels, sizeof(dfloat));
+      for(int l=0;l<bns->isoNlevels;++l)
+        bns->isoLevels[l] = bns->isoMinVal + (bns->isoMaxVal-bns->isoMinVal)*l/(dfloat)(bns->isoNlevels-1);
+
+    bns->o_isoLevels = mesh->device.malloc(bns->isoNlevels*sizeof(dfloat), bns->isoLevels);
+
+
+    // GROUP LEVELS of ISOCONTOURS
+
+    int levelsInGrpups = 0; 
+
+
+    options.getArgs("ISOSURFACE GROUP NUMBER", levelsInGrpups);
+
+    if(levelsInGrpups){
+
+      bns->isoGNgroups        = bns->isoNlevels/(levelsInGrpups);  
+      if(bns->isoNlevels%(levelsInGrpups))
+        bns->isoGNgroups++; 
+
+        bns->isoGNlevels        = (int *) calloc(bns->isoGNgroups,sizeof(int));
+        bns->isoGLvalues        = (dfloat **) calloc(bns->isoGNgroups,sizeof(dfloat*));
+
+      for(int gr =0; gr<bns->isoGNgroups; gr++){
+
+        int nlevels = (gr+1)*levelsInGrpups > bns->isoNlevels ? (bns->isoNlevels%levelsInGrpups) : levelsInGrpups;  
+
+        bns->isoGNlevels[gr] = nlevels;  
+        printf("Nlevels %d  in group %d\n ", bns->isoGNlevels[gr], gr);
+      }
+
+      // Allocate memory for levels in each group
+      for (int gr =0;gr<bns->isoGNgroups;gr++)
+        bns->isoGLvalues[gr] = (dfloat *) calloc(bns->isoGNlevels[gr],sizeof(dfloat));
+
+      int sk = 0; 
+      for (int gr =0;gr<bns->isoGNgroups;gr++){
+        for (int l=0;l<bns->isoGNlevels[gr];l++){
+          bns->isoGLvalues[gr][l] = bns->isoLevels[sk + l];
+          printf("group %d   value: %.4f\n", gr, bns->isoGLvalues[gr][l]);
+        }
+      sk += bns->isoGNlevels[gr]; 
+      }
+
+      
+      bns->o_isoGNlevels     = mesh->device.malloc(bns->isoGNgroups*sizeof(int), bns->isoGNlevels);
+      bns->o_isoGLvalues     = (occa::memory *) malloc(bns->isoGNgroups*sizeof(occa::memory));
+
+      for (int gr =0;gr<bns->isoGNgroups;gr++)
+        bns->o_isoGLvalues[gr] = mesh->device.malloc(bns->isoGNlevels[gr]*sizeof(dfloat),bns->isoGLvalues[gr]);
+    
+    }
+
+   
+    
+
+
+    
+
+
 
 
 
