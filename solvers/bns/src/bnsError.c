@@ -55,7 +55,7 @@ void bnsError(bns_t *bns, dfloat time, setupAide &options){
   }
 
 
-  #if 1
+  #if 0
     bnsForces(bns,time,options);
   #endif
 

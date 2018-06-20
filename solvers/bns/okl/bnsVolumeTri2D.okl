@@ -407,12 +407,14 @@ kernel void bnsPmlVolumeTri2D(const dlong pmlNelements,
 
         // body forcing 
         r_N[0] = 0.f;
+
         r_N[1] = fx*p_isqrtRT*s_q[es][0][n]; 
-        r_N[2] = fy*p_isqrtRT*s_q[es][0][n]; 
         r_N[3] = fx*p_isqrtRT*s_q[es][2][n];
+        r_N[4]  = p_sqrt2*fx*p_isqrtRT*s_q[es][1][n];
+
+        r_N[2] = fy*p_isqrtRT*s_q[es][0][n]; 
         r_N[3] += fy*p_isqrtRT*s_q[es][1][n];
-        r_N[4] = p_sqrt2*fx*p_isqrtRT*s_q[es][1][n];
-        r_N[5] = p_sqrt2*fy*p_isqrtRT*s_q[es][2][n];
+        r_N[5]  = p_sqrt2*fy*p_isqrtRT*s_q[es][2][n];
 
         occaUnroll(p_Nfields)
         for(int fld=0; fld<p_Nfields; ++fld){

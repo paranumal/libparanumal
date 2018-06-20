@@ -103,13 +103,13 @@ void bnsRun(bns_t *bns, setupAide &options){
 
       if(bns->errorFlag){
         if((tstep%bns->errorStep)==0){
-	  dfloat time =0; 
+         dfloat time =0; 
           if(options.compareArgs("TIME INTEGRATOR", "MRSAAB"))
             time = bns->startTime + bns->dt*tstep*pow(2,(mesh->MRABNlevels-1));     
           else
             time = bns->startTime + tstep*bns->dt;
           
-	  bnsError(bns, tstep, options);
+	       bnsError(bns, tstep, options);
         }
       }
   

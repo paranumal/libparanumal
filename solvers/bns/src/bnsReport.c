@@ -14,6 +14,10 @@ mesh_t *mesh = bns->mesh;
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+  // copy data back to host
+  bns->o_q.copyTo(bns->q);
+  bns->o_Vort.copyTo(bns->Vort);
+
   if(rank==0){
     dfloat fx, fy, fz, intfx, intfy, intfz;
     bnsBodyForce(time, &fx, &fy, &fz, &intfx, &intfy, &intfz);
@@ -23,9 +27,7 @@ mesh_t *mesh = bns->mesh;
   
 
   if(options.compareArgs("OUTPUT FILE FORMAT","VTU")){
-    // copy data back to host
-    bns->o_q.copyTo(bns->q);
-    bns->o_Vort.copyTo(bns->Vort);
+   
     //
     char fname[BUFSIZ];
     string outName;
@@ -49,6 +51,7 @@ mesh_t *mesh = bns->mesh;
       bns->isoSurfaceKernel(mesh->nonPmlNelements,       // Numner of elements 
                             mesh->o_nonPmlElementIds,    // Element Ids
                             bns->isoField,               // which field to use for isosurfacing
+                            bns->isoColorField,          // which field to use for isosurfacing
                             bns->isoNlevels,             // number of isosurface levels
                             bns->o_isoLevels,            // array of isosurface levels
                             bns->isoMaxNtris,            // maximum number of generated triangles
@@ -85,14 +88,14 @@ mesh_t *mesh = bns->mesh;
 
         printf("Ntri1: %d and Ntris2:%d \n", Ntris1, Ntris2);
 
-        // int procid   = gethostid(); // Processor id for gmsh file. 
-        int plotnum  = bns->frame;
-        int N_offset = 0;          // Gmsh mpi node offset
-        int E_offset = 0;          // Gmsh mpi element offset
-        double plottime = 0.0;     // record time
-        bool bBinary = false;      // toggle binary/ascii
-        // bool bBinary = true;      // toggle binary/ascii
-        int tstep = plotnum;       // dummy time-step
+        // // int procid   = gethostid(); // Processor id for gmsh file. 
+        // int plotnum  = bns->frame;
+        // int N_offset = 0;          // Gmsh mpi node offset
+        // int E_offset = 0;          // Gmsh mpi element offset
+        // double plottime = 0.0;     // record time
+        // bool bBinary = false;      // toggle binary/ascii
+        // // bool bBinary = true;      // toggle binary/ascii
+        // int tstep = plotnum;       // dummy time-step
 
         // sprintf(fname, "%s_%04d_%04d.msh",(char*)outName.c_str(), rank, bns->frame++);
         // bnsIsoPlotGmsh(bns, Ntris2, fname, bns->tstep, N_offset, E_offset, plotnum, plottime, bBinary);

@@ -462,22 +462,22 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   if(bns->dim==3){
     
     // Only one field is exported for iso-surface to reduce the file size
-    bns->isoNfields  = 2; //1 + (bns->dim) + (1 + bns->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
+    bns->isoNfields  = 2;   //1 + (bns->dim) + (1 + bns->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
     bns->isoMaxNtris = 1.E7; 
 
     bns->procid = gethostid();
 
     //
-    options.getArgs("ISOSURFACE FIELD ID", bns->isoField);  // bns->isoField +=3;  // Adding x,y,z to field id
+    options.getArgs("ISOSURFACE FIELD ID", bns->isoField); 
+    options.getArgs("ISOSURFACE COLOR ID", bns->isoColorField); 
     options.getArgs("ISOSURFACE LEVEL NUMBER", bns->isoNlevels);
     options.getArgs("ISOSURFACE CONTOUR MAX", bns->isoMaxVal); 
-    options.getArgs("ISOSURFACE CONTOUR MIN", bns->isoMinVal); 
+    options.getArgs("ISOSURFACE CONTOUR MIN", bns->isoMinVal);
+
 
     bns->isoMax    = (bns->dim + bns->isoNfields)*3*bns->isoMaxNtris;
-
     bns->isoLevels = (dfloat*) calloc(bns->isoNlevels, sizeof(dfloat));
     bns->isoNtris  = (int*) calloc(1, sizeof(int));
-
     bns->isoq      = (dfloat*) calloc(bns->isoMax, sizeof(dfloat)); 
 
     for(int l=0;l<bns->isoNlevels;++l)
@@ -572,9 +572,12 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 }
 
   // was 3
-  bns->Vort   = (dfloat*) calloc(bns->Nvort*mesh->Nelements*mesh->Np, sizeof(dfloat));
-  bns->o_Vort = mesh->device.malloc(bns->Nvort*mesh->Nelements*mesh->Np*sizeof(dfloat), bns->Vort);
+  bns->Vort      = (dfloat*) calloc(bns->Nvort*mesh->Nelements*mesh->Np, sizeof(dfloat));
+  bns->VortMag   = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
   
+  bns->o_Vort    = mesh->device.malloc(bns->Nvort*mesh->Nelements*mesh->Np*sizeof(dfloat), bns->Vort);
+  bns->o_VortMag = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), bns->VortMag);
+
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   int maxCubNodes = mymax(maxNodes,mesh->cubNp);
 
@@ -664,7 +667,10 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
   if(bns->dim==3){
     kernelInfo.addDefine("p_isoNfields", bns->isoNfields);
-    kernelInfo.addDefine("p_triAreaTol", 1.0E-12);
+    
+    // Define Isosurface Area Tolerance
+    kernelInfo.addDefine("p_triAreaTol", (dfloat) 1.0E-16);
+
     kernelInfo.addDefine("p_dim", bns->dim);
     kernelInfo.addDefine("p_plotNp", mesh->plotNp);
     kernelInfo.addDefine("p_plotNelements", mesh->plotNelements);
