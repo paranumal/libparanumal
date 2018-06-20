@@ -237,9 +237,9 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
 
         s_q[3][n] = ux*ux + uy*uy + uz*uz; // Velocity Magnitude squared 
 
-        // Temporarily Hard Coded !!!!!
-        int idvort = e*p_Np*p_Nvort + n; 
-        s_q[4][n]  = vort[idvort + 3*p_Np];  // vorticity magnitude
+        // // Temporarily Hard Coded !!!!!
+        // int idvort = e*p_Np*p_Nvort + n; 
+        // s_q[4][n]  = vort[idvort + 3*p_Np];  // vorticity magnitude
         
         // // Write vorticity
         // s_q[3][n] =rho*p_sqrtRT*p_sqrtRT; // Pressure
@@ -317,7 +317,7 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
         // loop over isosurface levels
         for(int i=0;i<isoNlevels;++i){
 
-          int iso_id = 4; // 4 Always holds isocontouring variable
+          int iso_id = 3; // 4 Always holds isocontouring variable
           const int ntri = marchingTet(iso_id, s_plotq, v1, v2, v3, v4, isoLevels[i], isoVals);
           
           // const int ntri = marchingTet(isoField, s_plotq, v1, v2, v3, v4, isoLevels[i], isoVals);

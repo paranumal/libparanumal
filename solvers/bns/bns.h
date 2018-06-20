@@ -103,7 +103,17 @@ typedef struct{
   dfloat *rkCim, *rkAim, *rkBim, *rkEim;
 
 
-  // NBN: add storage for compacted isosurf data
+
+  int *isoGNlevels, isoGNgroups;
+  dfloat **isoGLvalues;
+
+  occa::memory  o_isoGNlevels; 
+  occa::memory *o_isoGLvalues; 
+
+
+
+
+  // NBN: add storage for compacted isosurf data for gmsh write
   std::vector<double> iso_nodes;
   std::vector<int> iso_tris;
 
