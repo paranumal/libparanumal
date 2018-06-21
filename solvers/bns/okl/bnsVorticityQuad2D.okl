@@ -1,9 +1,10 @@
-// #define p_Nvort 4
+
 kernel void bnsVorticityQuad2D(const dlong Nelements,
                               const dfloat * restrict vgeo,
                               const dfloat * restrict D,
                               const dfloat * restrict q,
-                                    dfloat * restrict Vort){  
+                                    dfloat * restrict Vort,
+                                    dfloat * restrict VortMag){  
   
   // block partition of elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){

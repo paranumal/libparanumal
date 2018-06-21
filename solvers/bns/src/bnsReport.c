@@ -8,16 +8,20 @@ mesh_t *mesh = bns->mesh;
                        mesh->o_vgeo,
                        mesh->o_Dmatrices,
                        bns->o_q,
-                       bns->o_Vort);
+                       bns->o_Vort,
+                       bns->o_VortMag);
+
+  #if 1
+    meshParallelGatherScatter(mesh, mesh->ogs, bns->o_VortMag);
+    int Ntotal = mesh->Np*mesh->Nelements;
+    bns->dotMultiplyKernel(Ntotal, bns->o_VortMag, mesh->ogs->o_invDegree); 
+  #endif
 
   // report ramp function
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  // copy data back to host
-  bns->o_q.copyTo(bns->q);
-  bns->o_Vort.copyTo(bns->Vort);
-
+  
   if(rank==0){
     dfloat fx, fy, fz, intfx, intfy, intfz;
     bnsBodyForce(time, &fx, &fy, &fz, &intfx, &intfy, &intfz);
@@ -27,6 +31,11 @@ mesh_t *mesh = bns->mesh;
   
 
   if(options.compareArgs("OUTPUT FILE FORMAT","VTU")){
+
+    // copy data back to host
+    bns->o_q.copyTo(bns->q);
+    bns->o_Vort.copyTo(bns->Vort);
+    bns->o_VortMag.copyTo(bns->VortMag);
    
     //
     char fname[BUFSIZ];
@@ -56,6 +65,7 @@ mesh_t *mesh = bns->mesh;
                               mesh->o_z,
                               bns->o_q,
                               bns->o_Vort,
+                              bns->o_VortMag,
                               bns->o_plotInterp,
                               bns->o_plotEToV,
                               bns->o_isoNtris,             // output: number of generated triangles

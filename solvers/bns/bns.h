@@ -1,3 +1,6 @@
+#ifndef BNS_H
+#define BNS_H 1
+
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -6,7 +9,7 @@
 
 #include "mpi.h"
 
-#include "mesh.h"
+// #include "mesh.h"
 #include "mesh2D.h"
 #include "mesh3D.h"
 
@@ -194,6 +197,9 @@ typedef struct{
 
   occa::kernel errorEstimateKernel;
 
+  occa::kernel dotMultiplyKernel; 
+        
+
   // IMEXRK Damping Terms
   occa::kernel pmlDampingKernel; 
 
@@ -254,4 +260,7 @@ void bnsIsoPlotGmsh(bns_t *bns, int isoNtris, char *fname, int tstep, int N_offs
 #define QUADRILATERALS 4
 #define TETRAHEDRA 6
 #define HEXAHEDRA 12
+
+
+#endif
 

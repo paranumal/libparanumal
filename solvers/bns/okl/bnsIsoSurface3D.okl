@@ -4,7 +4,6 @@
 // adapted from http://paulbourke.net/geometry/polygonise/source1.c
 // https://michelanders.blogspot.com/2012/02/marching-tetrahedrons-in-python.html
 
-#define p_Nvort 4 
 #define p_plotNfields (p_dim+p_isoNfields) // added +1,  assumes only one field to reduce the sizes
 
 dfloat intersection(const dfloat iso, const dfloat val1, const dfloat val2){
@@ -204,6 +203,7 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
                            const dfloat * restrict z,
                            const dfloat * restrict q,
                            const dfloat * restrict vort,
+                           const dfloat * restrict vortMag,
                            const dfloat * restrict plotInterp,
                            const int * restrict plotEToV,
                                  int * restrict isoNtris, // output: number of generated triangles
@@ -236,6 +236,11 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
         dfloat uz = q[id + 3*p_Np]*p_sqrtRT/rho;
 
         s_q[3][n] = ux*ux + uy*uy + uz*uz; // Velocity Magnitude squared 
+        
+
+        //s_q[3][n]  = vortMag[e*p_Np + n];
+
+
 
         // // Temporarily Hard Coded !!!!!
         // int idvort = e*p_Np*p_Nvort + n; 

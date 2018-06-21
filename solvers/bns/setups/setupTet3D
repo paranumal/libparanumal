@@ -5,8 +5,8 @@
 data/bnsUniform3D.h
 
 [MESH FILE]
-../../meshes/boltzmannFencePML3D.msh
-#../../meshes/boltzmannSquareCylinderPML3D.msh
+#../../meshes/boltzmannFencePML3D.msh
+../../meshes/boltzmannSquareCylinderPML3D.msh
 #../../meshes/boltzmannAcousticPulsePML3D.msh
 
 [MESH DIMENSION]
@@ -76,7 +76,7 @@ SARK
 0 
 
 [VISCOSITY]
-1.e-4
+1.e-3
 
 [SPEED OF SOUND]
 5.0
@@ -138,7 +138,7 @@ ISO_WELD
 8
 
 [ISOSURFACE CONTOUR MAX]
-3.2
+2.3
 
 [ISOSURFACE CONTOUR MIN]
 0.4
