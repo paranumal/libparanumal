@@ -6,7 +6,8 @@ data/bnsUniform2D.h
 
 [MESH FILE]
 #../../meshes/boltzmannVortex2D.msh
-../../meshes/boltzmannSquareCylinderPML2D.msh
+#../../meshes/boltzmannSquareCylinderPML2D.msh
+../../meshes/T2D_Mar27_boltzPML_50K.msh
 
 [MESH DIMENSION]
 2
@@ -59,15 +60,15 @@ CUDA
 0
 
 [TIME INTEGRATOR]
-#LSERK4
+LSERK4
 #MRSAAB
-SARK 
+#SARK 
 
 [FIXED TIME STEP]
-0 
+1 
 
 [VISCOSITY]
-0.005
+0.01
 
 [SPEED OF SOUND]
 5.0
@@ -91,7 +92,7 @@ SARK
 0
 
 [FINAL TIME]
-100
+0.5
 
 [OUTPUT INTERVAL]
 0.5

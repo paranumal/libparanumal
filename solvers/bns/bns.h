@@ -107,7 +107,6 @@ typedef struct{
   int *isoGNlevels, isoGNgroups;
   dfloat **isoGLvalues;
 
-  occa::memory  o_isoGNlevels; 
   occa::memory *o_isoGLvalues; 
 
 
@@ -127,7 +126,6 @@ typedef struct{
   
   int Nvort;     // Number of vorticity fields i.e. 3 or 4 
   dfloat *Vort, *VortMag; 
-
   occa::memory o_Vort, o_VortMag;
 
 

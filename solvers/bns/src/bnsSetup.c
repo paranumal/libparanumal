@@ -266,7 +266,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   
 
 
-   // printf("dtex = %.5e dtim = %.5e \n", bns->cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), bns->cfl*1.f/(bns->tauInv));
+   printf("dtex = %.5e dtim = %.5e \n", bns->cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), bns->cfl*1.f/(bns->tauInv));
 
   // Set multiRate element groups/group  
   if(options.compareArgs("TIME INTEGRATOR", "MRSAAB") ){
@@ -483,35 +483,35 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     bns->o_isoq      = mesh->device.malloc(bns->isoMax*sizeof(dfloat), bns->isoq);
     bns->o_isoNtris  = mesh->device.malloc(1*sizeof(int), bns->isoNtris);
 
-    bns->isoLevels = (dfloat*) calloc(bns->isoNlevels, sizeof(dfloat));
-      for(int l=0;l<bns->isoNlevels;++l)
-        bns->isoLevels[l] = bns->isoMinVal + (bns->isoMaxVal-bns->isoMinVal)*l/(dfloat)(bns->isoNlevels-1);
+    
+    // Create all contour levels
+    dfloat *isoLevels = (dfloat*) calloc(bns->isoNlevels, sizeof(dfloat));
+    for(int l=0;l<bns->isoNlevels;++l)
+      isoLevels[l] = bns->isoMinVal + (bns->isoMaxVal-bns->isoMinVal)*l/(dfloat)(bns->isoNlevels-1);
 
-    bns->o_isoLevels = mesh->device.malloc(bns->isoNlevels*sizeof(dfloat), bns->isoLevels);
 
 
     // GROUP LEVELS of ISOCONTOURS
 
-    int levelsInGrpups = 0; 
+    int levelsInGroup = 0; 
+    options.getArgs("ISOSURFACE GROUP NUMBER", levelsInGroup);
 
+    if(levelsInGroup==0) {printf("Number of levels in each group can not be zero!!!\n");  exit(EXIT_FAILURE);} 
+    if(levelsInGroup){
 
-    options.getArgs("ISOSURFACE GROUP NUMBER", levelsInGrpups);
-
-    if(levelsInGrpups){
-
-      bns->isoGNgroups        = bns->isoNlevels/(levelsInGrpups);  
-      if(bns->isoNlevels%(levelsInGrpups))
+      // Number of groups for isosurfaces
+      bns->isoGNgroups        = bns->isoNlevels/(levelsInGroup);  
+      if(bns->isoNlevels%(levelsInGroup))
         bns->isoGNgroups++; 
 
-        bns->isoGNlevels        = (int *) calloc(bns->isoGNgroups,sizeof(int));
-        bns->isoGLvalues        = (dfloat **) calloc(bns->isoGNgroups,sizeof(dfloat*));
+      bns->isoGNlevels        = (int *) calloc(bns->isoGNgroups,sizeof(int));
+      bns->isoGLvalues        = (dfloat **) calloc(bns->isoGNgroups,sizeof(dfloat*));
 
-      for(int gr =0; gr<bns->isoGNgroups; gr++){
-
-        int nlevels = (gr+1)*levelsInGrpups > bns->isoNlevels ? (bns->isoNlevels%levelsInGrpups) : levelsInGrpups;  
-
+      for(int gr =0; gr<bns->isoGNgroups; gr++)
+      {
+        int nlevels = (gr+1)*levelsInGroup > bns->isoNlevels ? (bns->isoNlevels%levelsInGroup) : levelsInGroup;  
         bns->isoGNlevels[gr] = nlevels;  
-        printf("Nlevels %d  in group %d\n ", bns->isoGNlevels[gr], gr);
+        printf("Isosurface Group %d has %d levels\n", gr, bns->isoGNlevels[gr]);
       }
 
       // Allocate memory for levels in each group
@@ -520,48 +520,38 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
       int sk = 0; 
       for (int gr =0;gr<bns->isoGNgroups;gr++){
+        printf("Isosurface Group %d Values\n", gr);        
         for (int l=0;l<bns->isoGNlevels[gr];l++){
-          bns->isoGLvalues[gr][l] = bns->isoLevels[sk + l];
-          printf("group %d   value: %.4f\n", gr, bns->isoGLvalues[gr][l]);
+          bns->isoGLvalues[gr][l] = isoLevels[sk + l];
+          printf("%.4f\t", bns->isoGLvalues[gr][l]);
         }
+        printf("\n");
       sk += bns->isoGNlevels[gr]; 
       }
 
-      
-      bns->o_isoGNlevels     = mesh->device.malloc(bns->isoGNgroups*sizeof(int), bns->isoGNlevels);
+      // Create levels for each group
       bns->o_isoGLvalues     = (occa::memory *) malloc(bns->isoGNgroups*sizeof(occa::memory));
-
       for (int gr =0;gr<bns->isoGNgroups;gr++)
         bns->o_isoGLvalues[gr] = mesh->device.malloc(bns->isoGNlevels[gr]*sizeof(dfloat),bns->isoGLvalues[gr]);
     
     }
 
-   
-    
-
-
-    
-
-
-
-
-
+    // Interpolation operators form Np to PlotNp (equisapaced nodes of order >N generally)
     dfloat *plotInterp = (dfloat*) calloc(mesh->plotNp*mesh->Np, sizeof(dfloat));
     for(int n=0;n<mesh->plotNp;++n){
       for(int m=0;m<mesh->Np;++m){
         plotInterp[n+m*mesh->plotNp] = mesh->plotInterp[n*mesh->Np+m];
       }
     }
-    
     bns->o_plotInterp = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(dfloat), plotInterp);
 
+    // EToV for local triangulation
     int *plotEToV = (int*) calloc(mesh->plotNp*mesh->Np, sizeof(int));
     for(int n=0;n<mesh->plotNelements;++n){
       for(int m=0;m<mesh->plotNverts;++m){
         plotEToV[n+m*mesh->plotNelements] = mesh->plotEToV[n*mesh->plotNverts+m];
       }
     }
-    
     bns->o_plotEToV = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(int), plotEToV);
 
 
