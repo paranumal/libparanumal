@@ -457,7 +457,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   }
   
 
-   bns->Nvort      = 4;   // hold wx, wy, wz, magnitude  
+   bns->Nvort      = 3;   // hold wx, wy, wz
   // Set Iso-surfacing stuf here
   if(bns->dim==3){
     
@@ -483,7 +483,10 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     bns->o_isoq      = mesh->device.malloc(bns->isoMax*sizeof(dfloat), bns->isoq);
     bns->o_isoNtris  = mesh->device.malloc(1*sizeof(int), bns->isoNtris);
 
-    
+
+   
+
+    // meshParallelGatherScatter(mesh, ogs, o_q);
     // Create all contour levels
     dfloat *isoLevels = (dfloat*) calloc(bns->isoNlevels, sizeof(dfloat));
     for(int l=0;l<bns->isoNlevels;++l)
@@ -618,7 +621,6 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
 }
 
-  // was 3
   bns->Vort      = (dfloat*) calloc(bns->Nvort*mesh->Nelements*mesh->Np, sizeof(dfloat));
   bns->VortMag   = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
   
@@ -852,6 +854,23 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
         mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
                                            "meshHaloExtract3D",
                                            kernelInfo);
+       mesh->gatherKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
+                   "gather",
+                   kernelInfo);
+
+      mesh->scatterKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
+                   "scatter",
+                   kernelInfo);
+
+      mesh->gatherScatterKernel =
+        mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl", "gatherScatter", kernelInfo);
+
+      mesh->getKernel = mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl", "get", kernelInfo);
+
+
+      bns->dotMultiplyKernel = mesh->device.buildKernelFromSource(DBNS "/okl/bnsDotMultiply.okl", "bnsDotMultiply", kernelInfo);
 
 
       if(bns->dim==3){
@@ -869,6 +888,19 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }
+
+
+
+  // Setup Gather Scales
+
+   // Setup Gather Scatter
+    int verbose = 1;
+    mesh->ogs = meshParallelGatherScatterSetup(mesh,mesh->Np*mesh->Nelements,
+                                               mesh->gatherLocalIds,
+                                               mesh->gatherBaseIds,
+                                               mesh->gatherBaseRanks,
+                                               mesh->gatherHaloFlags,
+                                               verbose);
 
   return bns; 
 }

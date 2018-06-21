@@ -6,8 +6,8 @@ data/bnsUniform2D.h
 
 [MESH FILE]
 #../../meshes/boltzmannVortex2D.msh
-#../../meshes/boltzmannSquareCylinderPML2D.msh
-../../meshes/T2D_Mar27_boltzPML_50K.msh
+../../meshes/boltzmannSquareCylinderPML2D.msh
+#../../meshes/T2D_Mar27_boltzPML_50K.msh
 
 [MESH DIMENSION]
 2
@@ -47,7 +47,7 @@ PML
 
 # compute sigma terms default: CUBATURE use COLLOCATION otherwise
 [PML INTEGRATION]
-COLLOCATION 
+CUBATURE 
 
 
 [THREAD MODEL]
@@ -60,15 +60,15 @@ CUDA
 0
 
 [TIME INTEGRATOR]
-LSERK4
+#LSERK4
 #MRSAAB
-#SARK 
+SARK 
 
 [FIXED TIME STEP]
 1 
 
 [VISCOSITY]
-0.01
+0.001
 
 [SPEED OF SOUND]
 5.0
@@ -83,19 +83,19 @@ LSERK4
 1
 
 [TSTEPS FOR ERROR COMPUTE]
-100
+1000
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+1000
 
 [START TIME]
 0
 
 [FINAL TIME]
-0.5
+5.0
 
 [OUTPUT INTERVAL]
-0.5
+0.1
 
 [TSTEPS FOR FORCE OUTPUT]
 0
@@ -113,7 +113,7 @@ LSERK4
 100
 
 [CFL]
-0.5
+0.2
 
 [RESTART FROM FILE]
 0

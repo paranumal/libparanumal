@@ -108,9 +108,7 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
                              dzero,
                              dzero,
                              izero,
-                             fx,
-                             fy,
-                             fz,
+                             fx,fy,fz,
                              mesh->o_vgeo,
                              mesh->o_Dmatrices,
                              bns->o_rkq,
@@ -128,9 +126,7 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
                              dzero,
                              dzero,
                              izero,
-                             fx,
-                             fy,
-                             fz,
+                             fx,fy,fz,
                              mesh->o_vgeo,
                              bns->o_pmlSigmaX,
                              bns->o_pmlSigmaY,
@@ -242,9 +238,9 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
       mesh->device.finish();
       // start halo exchange
       meshHaloExchangeStart(mesh,
-          bns->Nfields*mesh->Np*sizeof(dfloat),
-          sendBuffer,
-          recvBuffer);
+                            bns->Nfields*mesh->Np*sizeof(dfloat),
+                            sendBuffer,
+                            recvBuffer);
       // wait for halo data to arrive
       meshHaloExchangeFinish(mesh);
       // copy halo data to DEVICE
@@ -265,42 +261,42 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     if(mesh->pmlNelements){
       occaTimerTic(mesh->device,"PmlSurfaceKernel");
       bns->pmlSurfaceKernel(mesh->pmlNelements,
-          mesh->o_pmlElementIds,
-          mesh->o_pmlIds,
-          currentTime,
-          intfx, intfy, intfz,
-          mesh->o_sgeo,
-          mesh->o_LIFTT,
-          mesh->o_vmapM,
-          mesh->o_vmapP,
-          mesh->o_EToB,
-          mesh->o_x,
-          mesh->o_y,
-          mesh->o_z,
-          bns->o_rkq,
-          bns->o_rhsq,
-          bns->o_pmlrhsqx,
-          bns->o_pmlrhsqy,
-          bns->o_pmlrhsqz);
+                            mesh->o_pmlElementIds,
+                            mesh->o_pmlIds,
+                            currentTime,
+                            intfx, intfy, intfz,
+                            mesh->o_sgeo,
+                            mesh->o_LIFTT,
+                            mesh->o_vmapM,
+                            mesh->o_vmapP,
+                            mesh->o_EToB,
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_z,
+                            bns->o_rkq,
+                            bns->o_rhsq,
+                            bns->o_pmlrhsqx,
+                            bns->o_pmlrhsqy,
+                            bns->o_pmlrhsqz);
       occaTimerToc(mesh->device,"PmlSurfaceKernel");
     }
 
     if(mesh->nonPmlNelements){
       occaTimerTic(mesh->device,"NonPmlSurfaceKernel");
       bns->surfaceKernel(mesh->nonPmlNelements,
-       mesh->o_nonPmlElementIds,
-       currentTime,
-       intfx, intfy, intfz,
-       mesh->o_sgeo,
-       mesh->o_LIFTT,
-       mesh->o_vmapM,
-       mesh->o_vmapP,
-       mesh->o_EToB,
-       mesh->o_x,
-       mesh->o_y,
-       mesh->o_z,
-       bns->o_rkq,
-       bns->o_rhsq);
+                         mesh->o_nonPmlElementIds,
+                         currentTime,
+                         intfx, intfy, intfz,
+                         mesh->o_sgeo,
+                         mesh->o_LIFTT,
+                         mesh->o_vmapM,
+                         mesh->o_vmapP,
+                         mesh->o_EToB,
+                         mesh->o_x,
+                         mesh->o_y,
+                         mesh->o_z,
+                         bns->o_rkq,
+                         bns->o_rhsq);
       occaTimerToc(mesh->device,"NonPmlSurfaceKernel");
     }
     occaTimerToc(mesh->device,"SurfaceKernel");
