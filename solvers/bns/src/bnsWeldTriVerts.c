@@ -109,10 +109,11 @@ int bnsWeldTriVerts(bns_t *bns, int Ntris, double *isoq){
   }
 
 #if (1)
-  printf("\n\n num isotri before: %8d\n", Ntris);
-  printf(    " num isotri  after: %8d\n", Ntris_Final);
-  printf(    " num nodes  before: %8d\n", Max_N);
-  printf(    " num nodes   after: %8d\n\n", nno);
+  // printf("\n\n num isotri before: %8d\n", Ntris);
+  // printf(    " num isotri  after: %8d\n", Ntris_Final);
+  // printf(    " num nodes  before: %8d\n", Max_N);
+  // printf(    " num nodes   after: %8d\n\n", nno);
+  printf(  "num nodes  before: %8d  and after: %8d\n", Max_N, nno);
 #endif
 
   delete VL;            // clean up helper object

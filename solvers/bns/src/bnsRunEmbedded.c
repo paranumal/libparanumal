@@ -208,13 +208,13 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
       facold = mymax(err,1E-4);
       bns->time += bns->dt;
 
-      printf("\r time = %g (%d), dt = %g accepted (ratio dt/hmin = %g)               ", bns->time, bns->atstep, bns->dt, bns->dt/hmin);
+      if(rank==0) printf("\r time = %g (%d), dt = %g accepted (ratio dt/hmin = %g)               ", bns->time, bns->atstep, bns->dt, bns->dt/hmin);
       bns->tstep++;
     }
     else{
       bns->rtstep++; 
       dtnew = bns->dt/(mymax(invfactor1,fac1/safe));
-      printf("\r time = %g (%d), dt = %g rejected (ratio dt/min = %g), trying %g", bns->time,bns->atstep, bns->dt, bns->dt/hmin, dtnew);
+      if(rank==0) printf("\r time = %g (%d), dt = %g rejected (ratio dt/min = %g), trying %g", bns->time,bns->atstep, bns->dt, bns->dt/hmin, dtnew);
       done =0;
     }
    
@@ -225,13 +225,16 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
 
 
     bnsSAADRKCoefficients(bns, options);
-    #if 1
+    #if 0
     char fname[BUFSIZ]; sprintf(fname, "boltzmannAddaptiveDt.dat");
     FILE *fp; fp = fopen(fname, "a");
     fprintf(fp, "%.5e %.5e\n", bns->time, bns->dt); 
     fclose(fp);
     #endif
   }
+
+
+  
 
     printf("Total Step: %d, Rejected Step: %d, Accepted Step: %d \n", bns->atstep, bns->rtstep, bns->tstep);
 

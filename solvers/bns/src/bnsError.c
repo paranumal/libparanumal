@@ -55,9 +55,9 @@ void bnsError(bns_t *bns, dfloat time, setupAide &options){
   }
 
 
-  #if 0
+  if(bns->outputForceStep)
     bnsForces(bns,time,options);
-  #endif
+
 
 
  if(options.compareArgs("ABSORBING LAYER","PML")){
