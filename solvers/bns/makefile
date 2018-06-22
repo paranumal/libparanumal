@@ -15,7 +15,7 @@ GSDIR  = ../../3rdParty/gslib.github/src
 # specify which compilers to use for c, fortran and linking
 cc	= mpicc
 CC	= mpic++
-LDFLAGS	= mpic++
+LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"'
@@ -24,7 +24,7 @@ CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"$
 LDFLAGS	= $(compilerFlags) -g -L../../3rdParty/gslib.github  -lgs
 
 # libraries to be linked in
-LIBS	=  $(links) 
+LIBS	=  $(links)
 
 INCLUDES = bns.h 
 DEPS = $(INCLUDES) \
@@ -129,8 +129,6 @@ LOBJS = \
 ../../src/meshParallelGatherScatter.o \
 ../../src/meshParallelGatherScatterSetup.o \
 
-#../../src/meshParallelGather.o \
-#../../src/meshParallelScatter.o \
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\
@@ -152,5 +150,4 @@ gslibInterface:
 clean :
 	cd ../../3rdParty/gslib.github; make clean; cd ../../solvers/bns
 	rm -r $(AOBJS) $(LOBJS) bnsMain
- 
 
