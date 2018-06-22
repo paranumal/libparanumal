@@ -1,4 +1,5 @@
 #include "bns.h"
+#define BNS_ANSYC 0
 
 void bnsMRSAABStep(bns_t *bns, int tstep, int haloBytes,
        dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options){
@@ -29,23 +30,33 @@ const dlong pmloffset = mesh->Np*mesh->pmlNelements*bns->Nfields;
       if (Ntick % (1<<lev) != 0) break; //find the max lev to compute rhs
     
       if(mesh->totalHaloPairs>0){
-        #if ASYNC 
-              mesh->device.setStream(dataStream);
-        #endif
+#if BNS_ASYNC 
+        mesh->device.setStream(dataStream);
 
-              int Nentries = mesh->Nfp*bns->Nfields*mesh->Nfaces;
-              mesh->haloExtractKernel(mesh->totalHaloPairs,
-                    Nentries,
-                    mesh->o_haloElementList,
-                    bns->o_fQM,
-                    mesh->o_haloBuffer);
 
-              // copy extracted halo to HOST
-              mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
+        int Nentries = mesh->Nfp*bns->Nfields*mesh->Nfaces;
+        mesh->haloExtractKernel(mesh->totalHaloPairs,
+                                Nentries,
+                                mesh->o_haloElementList,
+                                bns->o_fQM,
+                                mesh->o_haloBuffer);
 
-        #if ASYNC 
-              mesh->device.setStream(defaultStream);
-        #endif
+        // copy extracted halo to HOST
+        mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
+        mesh->device.setStream(defaultStream);
+#else
+        int Nentries = mesh->Nfp*bns->Nfields*mesh->Nfaces;
+        mesh->haloExtractKernel(mesh->totalHaloPairs,
+                                Nentries,
+                                mesh->o_haloElementList,
+                                bns->o_fQM,
+                                mesh->o_haloBuffer);
+
+        mesh->o_haloBuffer.copyTo(sendBuffer);
+        // start halo exchange
+        meshHaloExchangeStart(mesh, mesh->Nfields*mesh->Nfp*mesh->Nfaces*sizeof(dfloat),
+                              sendBuffer, recvBuffer);
+#endif
       }
 
 
@@ -180,30 +191,34 @@ const dlong pmloffset = mesh->Np*mesh->pmlNelements*bns->Nfields;
 
 
     if(mesh->totalHaloPairs>0){
-      #if ASYNC 
+#if BNS_ASYNC 
         mesh->device.setStream(dataStream);
-      #endif
+        //make sure the async copy is finished
+        mesh->device.finish();
 
-      //make sure the async copy is finished
-      mesh->device.finish();
+        // start halo exchange
+        meshHaloExchangeStart(mesh,
+                              mesh->Nfields*mesh->Nfp*mesh->Nfaces*sizeof(dfloat),
+                              sendBuffer,
+                              recvBuffer);
 
-      // start halo exchange
-      meshHaloExchangeStart(mesh,
-          mesh->Nfields*mesh->Nfp*mesh->Nfaces*sizeof(dfloat),
-          sendBuffer,
-          recvBuffer);
+        // wait for halo data to arrive
+        meshHaloExchangeFinish(mesh);
 
-      // wait for halo data to arrive
-      meshHaloExchangeFinish(mesh);
-
-      // copy halo data to DEVICE
-      size_t foffset = mesh->Nfaces*mesh->Nfp*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-      bns->o_fQM.asyncCopyFrom(recvBuffer, haloBytes, foffset);
-      mesh->device.finish();        
-
-      #if ASYNC 
+        // copy halo data to DEVICE
+        size_t foffset = mesh->Nfaces*mesh->Nfp*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+        bns->o_fQM.asyncCopyFrom(recvBuffer, haloBytes, foffset);
+        mesh->device.finish();
         mesh->device.setStream(defaultStream);
-      #endif
+#else
+        // wait for halo data to arrive
+        meshHaloExchangeFinish(mesh);
+
+        // copy halo data to DEVICE
+        size_t foffset = mesh->Nfaces*mesh->Nfp*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+        bns->o_fQM.copyFrom(recvBuffer, haloBytes, foffset);
+
+#endif
     }
 
 
