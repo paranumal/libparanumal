@@ -64,7 +64,7 @@ void cnsRun(cns_t *cns, setupAide &options){
       dfloat fac = fac1/pow(cns->facold,cns->beta);
 
       fac = mymax(cns->invfactor2, mymin(cns->invfactor1,fac/cns->safe));
-      dfloat dtnew = mesh->dt/fac;
+      dfloat dtnew = mymin(cns->dtMAX, mesh->dt/fac);
 
       if (err<1.0) { //dt is accepted
 
