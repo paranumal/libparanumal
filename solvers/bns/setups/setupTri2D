@@ -5,8 +5,8 @@
 data/bnsUniform2D.h
 
 [MESH FILE]
-#../../meshes/boltzmannVortex2D.msh
-../../meshes/boltzmannSquareCylinderPML2D.msh
+../../meshes/Tshape2D.msh
+#../../meshes/boltzmannSquareCylinderPML2D.msh
 #../../meshes/T2D_Mar27_boltzPML_50K.msh
 
 [MESH DIMENSION]
@@ -47,7 +47,7 @@ PML
 
 # compute sigma terms default: CUBATURE use COLLOCATION otherwise
 [PML INTEGRATION]
-CUBATURE 
+COLLOCATION 
 
 
 [THREAD MODEL]
@@ -65,10 +65,10 @@ CUDA
 SARK 
 
 [FIXED TIME STEP]
-1 
+0 
 
 [VISCOSITY]
-0.001
+0.0002
 
 [SPEED OF SOUND]
 5.0
@@ -92,7 +92,7 @@ SARK
 0
 
 [FINAL TIME]
-5.0
+75.0
 
 [OUTPUT INTERVAL]
 0.1
@@ -101,10 +101,10 @@ SARK
 0
 
 [ABSOLUTE TOLERANCE]
-1E-7
+1E-5
 
 [RELATIVE TOLERANCE]
-1E-6
+1E-4
 
 [MINUMUM TIME STEP SIZE]
 1E-10
@@ -122,4 +122,4 @@ SARK
 VTU
 
 [OUTPUT FILE NAME]
-square_cylinder
+Tshape

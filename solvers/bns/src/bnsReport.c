@@ -11,11 +11,11 @@ mesh_t *mesh = bns->mesh;
                        bns->o_Vort,
                        bns->o_VortMag);
 
-  #if 1
+  if(bns->dim==3){
     meshParallelGatherScatter(mesh, mesh->ogs, bns->o_VortMag);
     int Ntotal = mesh->Np*mesh->Nelements;
     bns->dotMultiplyKernel(Ntotal, bns->o_VortMag, mesh->ogs->o_invDegree); 
-  #endif
+  }
 
   // report ramp function
   int rank;
@@ -106,17 +106,18 @@ mesh_t *mesh = bns->mesh;
           sprintf(fname, "%s_%04d_%04d.msh",(char*)outName.c_str(), rank, bns->frame++);
           bnsIsoPlotGmsh(bns, Ntris2, fname, bns->tstep, N_offset, E_offset, plotnum, plottime, bBinary);
           #endif
-          sprintf(fname, "%s_%d_%d_ %04d_%04d.vtu",(char*)outName.c_str(), bns->isoField, gr, rank, bns->frame++);
+          sprintf(fname, "%s_%d_%d_ %04d_%04d.vtu",(char*)outName.c_str(), bns->isoField, gr, rank, bns->frame);
           bnsIsoWeldPlotVTU(bns,  fname);
         }
         else
         {
-          sprintf(fname, "%s_%d_%d_ %04d_%04d.vtu",(char*)outName.c_str(), bns->isoField, gr, rank, bns->frame++);
+          sprintf(fname, "%s_%d_%d_ %04d_%04d.vtu",(char*)outName.c_str(), bns->isoField, gr, rank, bns->frame);
           bnsIsoPlotVTU(bns, bns->isoNtris[0], bns->isoq, fname);
         }
 
 
       }
+      bns->frame++;
       
     }
   }

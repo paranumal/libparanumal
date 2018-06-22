@@ -851,29 +851,26 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
       // This needs to be unified
       mesh->haloExtractKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
-                                           "meshHaloExtract3D",
-                                           kernelInfo);
-       mesh->gatherKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
-                   "gather",
-                   kernelInfo);
-
-      mesh->scatterKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
-                   "scatter",
-                   kernelInfo);
-
-      mesh->gatherScatterKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl", "gatherScatter", kernelInfo);
-
-      mesh->getKernel = mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl", "get", kernelInfo);
-
-
-      bns->dotMultiplyKernel = mesh->device.buildKernelFromSource(DBNS "/okl/bnsDotMultiply.okl", "bnsDotMultiply", kernelInfo);
-
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl","meshHaloExtract3D",kernelInfo);
 
       if(bns->dim==3){
+        mesh->gatherKernel = 
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl","gather", kernelInfo);
+
+        mesh->scatterKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl","scatter",kernelInfo);
+
+        mesh->gatherScatterKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl", "gatherScatter", kernelInfo);
+
+        mesh->getKernel = 
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl", "get", kernelInfo);
+
+        mesh->putKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl", "put",kernelInfo);
+
+        bns->dotMultiplyKernel = mesh->device.buildKernelFromSource(DBNS "/okl/bnsDotMultiply.okl", "bnsDotMultiply", kernelInfo);
+
         // kernels from volume file
         sprintf(fileName, DBNS "/okl/bnsIsoSurface3D.okl");
         sprintf(kernelName, "bnsIsoSurface3D");
@@ -893,7 +890,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
   // Setup Gather Scales
 
-   // Setup Gather Scatter
+  if(bns->dim==3){
     int verbose = 1;
     mesh->ogs = meshParallelGatherScatterSetup(mesh,mesh->Np*mesh->Nelements,
                                                mesh->gatherLocalIds,
@@ -901,6 +898,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
                                                mesh->gatherBaseRanks,
                                                mesh->gatherHaloFlags,
                                                verbose);
+  }
 
   return bns; 
 }

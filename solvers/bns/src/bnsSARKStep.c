@@ -1,5 +1,7 @@
 #include "bns.h"
 
+#define BNS_ANSYC 0
+
 // complete a time step using LSERK4
 void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
      dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options){
@@ -24,43 +26,43 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     if(mesh->nonPmlNelements){
       occaTimerTic(mesh->device, "NonPmlRKStageKernel");  
       bns->updateStageKernel(mesh->nonPmlNelements,
-              mesh->o_nonPmlElementIds,
-              offset,
-              rk,
-              bns->dt,
-              bns->o_sarkC,
-              bns->o_rkA,
-              bns->o_sarkA,
-              bns->o_q,
-              bns->o_rkrhsq,
-              bns->o_rkq);
+                              mesh->o_nonPmlElementIds,
+                              offset,
+                              rk,
+                              bns->dt,
+                              bns->o_sarkC,
+                              bns->o_rkA,
+                              bns->o_sarkA,
+                              bns->o_q,
+                              bns->o_rkrhsq,
+                              bns->o_rkq);
       occaTimerToc(mesh->device, "NonPmlRKStageKernel");  
     }
   
     if(mesh->pmlNelements){
       occaTimerTic(mesh->device, "PmlRKStageKernel");  
       bns->pmlUpdateStageKernel(mesh->pmlNelements,
-        mesh->o_pmlElementIds,
-        mesh->o_pmlIds,
-        offset,
-        pmloffset,
-        rk,
-        bns->dt,
-        bns->o_sarkC,
-        bns->o_rkA,
-        bns->o_sarkA,
-        bns->o_q,
-        bns->o_pmlqx,
-        bns->o_pmlqy,
-        bns->o_pmlqz,
-        bns->o_rkrhsq,
-        bns->o_rkrhsqx,
-        bns->o_rkrhsqy,
-        bns->o_rkrhsqz,
-        bns->o_rkq,
-        bns->o_rkqx,
-        bns->o_rkqy,
-        bns->o_rkqz);
+                                mesh->o_pmlElementIds,
+                                mesh->o_pmlIds,
+                                offset,
+                                pmloffset,
+                                rk,
+                                bns->dt,
+                                bns->o_sarkC,
+                                bns->o_rkA,
+                                bns->o_sarkA,
+                                bns->o_q,
+                                bns->o_pmlqx,
+                                bns->o_pmlqy,
+                                bns->o_pmlqz,
+                                bns->o_rkrhsq,
+                                bns->o_rkrhsqx,
+                                bns->o_rkrhsqy,
+                                bns->o_rkrhsqz,
+                                bns->o_rkq,
+                                bns->o_rkqx,
+                                bns->o_rkqy,
+                                bns->o_rkqz);
       occaTimerToc(mesh->device, "PmlRKStageKernel");
     }
 
@@ -72,22 +74,31 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 
 
     if(mesh->totalHaloPairs>0){
-      #if ASYNC 
+      #if BNS_ASYNC 
         mesh->device.setStream(dataStream);
-      #endif
 
-      int Nentries = mesh->Np*bns->Nfields;
-      mesh->haloExtractKernel(mesh->totalHaloPairs,
-            Nentries,
-            mesh->o_haloElementList,
-            bns->o_rkq,
-            mesh->o_haloBuffer);
+        int Nentries = mesh->Np*bns->Nfields;
+        mesh->haloExtractKernel(mesh->totalHaloPairs,
+                                Nentries,
+                                mesh->o_haloElementList,
+                                bns->o_rkq,
+                                mesh->o_haloBuffer);
 
-      // copy extracted halo to HOST
-      mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
-
-      #if ASYNC 
+        // copy extracted halo to HOST
+        mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
         mesh->device.setStream(defaultStream);
+
+      #else
+        int Nentries = mesh->Np*bns->Nfields;
+        mesh->haloExtractKernel(mesh->totalHaloPairs,
+                                Nentries,
+                                mesh->o_haloElementList,
+                                bns->o_rkq,
+                                mesh->o_haloBuffer);
+        // copy extracted halo to HOST
+        mesh->o_haloBuffer.copyTo(sendBuffer);
+        // start halo exchange
+        meshHaloExchangeStart(mesh, bns->Nfields*mesh->Np*sizeof(dfloat), sendBuffer, recvBuffer);
       #endif
     }
     
@@ -230,27 +241,31 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 
     if(mesh->totalHaloPairs>0){
     
-#if ASYNC 
-      mesh->device.setStream(dataStream);
-#endif
+      #if BNS_ASYNC 
+        mesh->device.setStream(dataStream);
 
-      //make sure the async copy is finished
-      mesh->device.finish();
-      // start halo exchange
-      meshHaloExchangeStart(mesh,
-                            bns->Nfields*mesh->Np*sizeof(dfloat),
-                            sendBuffer,
-                            recvBuffer);
-      // wait for halo data to arrive
-      meshHaloExchangeFinish(mesh);
-      // copy halo data to DEVICE
-      size_t offset = mesh->Np*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-      bns->o_rkq.asyncCopyFrom(recvBuffer, haloBytes, offset);
-      mesh->device.finish();        
+          //make sure the async copy is finished
+        mesh->device.finish();
+        // start halo exchange
+        meshHaloExchangeStart(mesh,
+                              bns->Nfields*mesh->Np*sizeof(dfloat),
+                              sendBuffer,
+                              recvBuffer);
+        // wait for halo data to arrive
+        meshHaloExchangeFinish(mesh);
+        // copy halo data to DEVICE
+        size_t offset = mesh->Np*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+        bns->o_rkq.asyncCopyFrom(recvBuffer, haloBytes, offset);
+        mesh->device.finish();
 
-#if ASYNC 
-      mesh->device.setStream(defaultStream);
-#endif
+        mesh->device.setStream(defaultStream);
+      #else
+        meshHaloExchangeFinish(mesh);
+        // copy halo data to DEVICE
+        size_t offset = mesh->Np*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+        bns->o_rkq.copyFrom(recvBuffer, haloBytes, offset);
+      #endif
+
     }
 
 

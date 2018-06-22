@@ -15,7 +15,7 @@ GSDIR  = ../../3rdParty/gslib.github/src
 # specify which compilers to use for c, fortran and linking
 cc	= mpicc
 CC	= mpic++
-LD	= mpic++
+LDFLAGS	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"'
