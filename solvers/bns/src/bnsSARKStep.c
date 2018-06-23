@@ -1,8 +1,10 @@
 #include "bns.h"
 
+#define BNS_ANSYC 0
+
 // complete a time step using LSERK4
 void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
-		 dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options){
+     dfloat * sendBuffer, dfloat *recvBuffer, setupAide &options){
 
 
   // bns->shiftIndex = 0; 
@@ -24,43 +26,43 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     if(mesh->nonPmlNelements){
       occaTimerTic(mesh->device, "NonPmlRKStageKernel");  
       bns->updateStageKernel(mesh->nonPmlNelements,
-			     mesh->o_nonPmlElementIds,
-			     offset,
-			     rk,
-			     bns->dt,
-			     bns->o_sarkC,
-			     bns->o_rkA,
-			     bns->o_sarkA,
-			     bns->o_q,
-			     bns->o_rkrhsq,
-			     bns->o_rkq);
+                              mesh->o_nonPmlElementIds,
+                              offset,
+                              rk,
+                              bns->dt,
+                              bns->o_sarkC,
+                              bns->o_rkA,
+                              bns->o_sarkA,
+                              bns->o_q,
+                              bns->o_rkrhsq,
+                              bns->o_rkq);
       occaTimerToc(mesh->device, "NonPmlRKStageKernel");  
     }
   
     if(mesh->pmlNelements){
       occaTimerTic(mesh->device, "PmlRKStageKernel");  
       bns->pmlUpdateStageKernel(mesh->pmlNelements,
-				mesh->o_pmlElementIds,
-				mesh->o_pmlIds,
-				offset,
-				pmloffset,
-				rk,
-				bns->dt,
-				bns->o_sarkC,
-				bns->o_rkA,
-				bns->o_sarkA,
-				bns->o_q,
-				bns->o_pmlqx,
-				bns->o_pmlqy,
-				bns->o_pmlqz,
-				bns->o_rkrhsq,
-				bns->o_rkrhsqx,
-				bns->o_rkrhsqy,
-				bns->o_rkrhsqz,
-				bns->o_rkq,
-				bns->o_rkqx,
-				bns->o_rkqy,
-				bns->o_rkqz);
+                                mesh->o_pmlElementIds,
+                                mesh->o_pmlIds,
+                                offset,
+                                pmloffset,
+                                rk,
+                                bns->dt,
+                                bns->o_sarkC,
+                                bns->o_rkA,
+                                bns->o_sarkA,
+                                bns->o_q,
+                                bns->o_pmlqx,
+                                bns->o_pmlqy,
+                                bns->o_pmlqz,
+                                bns->o_rkrhsq,
+                                bns->o_rkrhsqx,
+                                bns->o_rkrhsqy,
+                                bns->o_rkrhsqz,
+                                bns->o_rkq,
+                                bns->o_rkqx,
+                                bns->o_rkqy,
+                                bns->o_rkqz);
       occaTimerToc(mesh->device, "PmlRKStageKernel");
     }
 
@@ -72,23 +74,32 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 
 
     if(mesh->totalHaloPairs>0){
-#if ASYNC 
-      mesh->device.setStream(dataStream);
-#endif
+      #if BNS_ASYNC 
+        mesh->device.setStream(dataStream);
 
-      int Nentries = mesh->Np*bns->Nfields;
-      mesh->haloExtractKernel(mesh->totalHaloPairs,
-			      Nentries,
-			      mesh->o_haloElementList,
-			      bns->o_rkq,
-			      mesh->o_haloBuffer);
+        int Nentries = mesh->Np*bns->Nfields;
+        mesh->haloExtractKernel(mesh->totalHaloPairs,
+                                Nentries,
+                                mesh->o_haloElementList,
+                                bns->o_rkq,
+                                mesh->o_haloBuffer);
 
-      // copy extracted halo to HOST
-      mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
+        // copy extracted halo to HOST
+        mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
+        mesh->device.setStream(defaultStream);
 
-#if ASYNC 
-      mesh->device.setStream(defaultStream);
-#endif
+      #else
+        int Nentries = mesh->Np*bns->Nfields;
+        mesh->haloExtractKernel(mesh->totalHaloPairs,
+                                Nentries,
+                                mesh->o_haloElementList,
+                                bns->o_rkq,
+                                mesh->o_haloBuffer);
+        // copy extracted halo to HOST
+        mesh->o_haloBuffer.copyTo(sendBuffer);
+        // start halo exchange
+        meshHaloExchangeStart(mesh, bns->Nfields*mesh->Np*sizeof(dfloat), sendBuffer, recvBuffer);
+      #endif
     }
     
     // dfloat ramp = 1.0, drampdt = 0.0; 
@@ -98,52 +109,48 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 
     occaTimerTic(mesh->device, "VolumeKernel");    
     // compute volume contribution to DG boltzmann RHS
-    if(mesh->pmlNelements){	
+    if(mesh->pmlNelements){ 
       occaTimerTic(mesh->device,"PmlVolumeKernel");
 
       if(bns->pmlcubature){
-      	bns->pmlVolumeKernel(mesh->pmlNelements,
-			   mesh->o_pmlElementIds,
-			   mesh->o_pmlIds,
-			   dzero,
-			   dzero,
-			   izero,
-			   fx,
-			   fy,
-			   fz,
-			   mesh->o_vgeo,
-			   mesh->o_Dmatrices,
-			   bns->o_rkq,
-			   bns->o_rkqx,
-			   bns->o_rkqy,
-			   bns->o_rkqz,
-			   bns->o_rhsq,
-			   bns->o_pmlrhsqx,
-			   bns->o_pmlrhsqy,
-			   bns->o_pmlrhsqz);
+        bns->pmlVolumeKernel(mesh->pmlNelements,
+                             mesh->o_pmlElementIds,
+                             mesh->o_pmlIds,
+                             dzero,
+                             dzero,
+                             izero,
+                             fx,fy,fz,
+                             mesh->o_vgeo,
+                             mesh->o_Dmatrices,
+                             bns->o_rkq,
+                             bns->o_rkqx,
+                             bns->o_rkqy,
+                             bns->o_rkqz,
+                             bns->o_rhsq,
+                             bns->o_pmlrhsqx,
+                             bns->o_pmlrhsqy,
+                             bns->o_pmlrhsqz);
       }else{
-      	bns->pmlVolumeKernel(mesh->pmlNelements,
-			   mesh->o_pmlElementIds,
-			   mesh->o_pmlIds,
-			   dzero,
-			   dzero,
-			   izero,
-			   fx,
-			   fy,
-			   fz,
-			   mesh->o_vgeo,
-			   bns->o_pmlSigmaX,
-		       bns->o_pmlSigmaY,
-		       bns->o_pmlSigmaZ,
-			   mesh->o_Dmatrices,
-			   bns->o_rkq,
-			   bns->o_rkqx,
-			   bns->o_rkqy,
-			   bns->o_rkqz,
-			   bns->o_rhsq,
-			   bns->o_pmlrhsqx,
-			   bns->o_pmlrhsqy,
-			   bns->o_pmlrhsqz);
+        bns->pmlVolumeKernel(mesh->pmlNelements,
+                             mesh->o_pmlElementIds,
+                             mesh->o_pmlIds,
+                             dzero,
+                             dzero,
+                             izero,
+                             fx,fy,fz,
+                             mesh->o_vgeo,
+                             bns->o_pmlSigmaX,
+                             bns->o_pmlSigmaY,
+                             bns->o_pmlSigmaZ,
+                             mesh->o_Dmatrices,
+                             bns->o_rkq,
+                             bns->o_rkqx,
+                             bns->o_rkqy,
+                             bns->o_rkqz,
+                             bns->o_rhsq,
+                             bns->o_pmlrhsqx,
+                             bns->o_pmlrhsqy,
+                             bns->o_pmlrhsqz);
       }
       
       occaTimerToc(mesh->device,"PmlVolumeKernel");
@@ -154,14 +161,14 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     if(mesh->nonPmlNelements){
       occaTimerTic(mesh->device,"NonPmlVolumeKernel");
       bns->volumeKernel(mesh->nonPmlNelements,
-			mesh->o_nonPmlElementIds,
-			dzero,
-			izero,
-			fx,fy, fz,
-			mesh->o_vgeo,
-			mesh->o_Dmatrices,
-			bns->o_rkq,
-			bns->o_rhsq);
+      mesh->o_nonPmlElementIds,
+      dzero,
+      izero,
+      fx,fy, fz,
+      mesh->o_vgeo,
+      mesh->o_Dmatrices,
+      bns->o_rkq,
+      bns->o_rhsq);
       occaTimerToc(mesh->device,"NonPmlVolumeKernel");
     }
     occaTimerToc(mesh->device, "VolumeKernel");    
@@ -175,39 +182,39 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 
       if(bns->pmlcubature){
       bns->pmlRelaxationKernel(mesh->pmlNelements,
-						       mesh->o_pmlElementIds,
-						       mesh->o_pmlIds,
-						       mesh->o_vgeo,
-						       mesh->o_cubvgeo,
-						       dzero,
-						       dzero,
-						       izero,
-						       mesh->o_cubInterpT,
-						       mesh->o_cubProjectT,
-						       bns->o_pmlSigmaX,
-						       bns->o_pmlSigmaY,
-						       bns->o_pmlSigmaZ,
-						       bns->o_rkq,
-						       bns->o_rkqx,
-						       bns->o_rkqy,
-						       bns->o_rkqz,
-						       bns->o_rhsq,
-						       bns->o_pmlrhsqx,
-						       bns->o_pmlrhsqy,
-						       bns->o_pmlrhsqz);	
+                   mesh->o_pmlElementIds,
+                   mesh->o_pmlIds,
+                   mesh->o_vgeo,
+                   mesh->o_cubvgeo,
+                   dzero,
+                   dzero,
+                   izero,
+                   mesh->o_cubInterpT,
+                   mesh->o_cubProjectT,
+                   bns->o_pmlSigmaX,
+                   bns->o_pmlSigmaY,
+                   bns->o_pmlSigmaZ,
+                   bns->o_rkq,
+                   bns->o_rkqx,
+                   bns->o_rkqy,
+                   bns->o_rkqz,
+                   bns->o_rhsq,
+                   bns->o_pmlrhsqx,
+                   bns->o_pmlrhsqy,
+                   bns->o_pmlrhsqz);  
       }else{
        bns->pmlRelaxationKernel(mesh->pmlNelements,
-						       mesh->o_pmlElementIds,
-						       mesh->o_pmlIds,
-						       mesh->o_vgeo,
-						       mesh->o_cubvgeo,
-						       dzero,
-						       dzero,
-						       izero,
-						       mesh->o_cubInterpT,
-						       mesh->o_cubProjectT,
-						       bns->o_rkq,
-						       bns->o_rhsq);
+                   mesh->o_pmlElementIds,
+                   mesh->o_pmlIds,
+                   mesh->o_vgeo,
+                   mesh->o_cubvgeo,
+                   dzero,
+                   dzero,
+                   izero,
+                   mesh->o_cubInterpT,
+                   mesh->o_cubProjectT,
+                   bns->o_rkq,
+                   bns->o_rhsq);
 
       }
      
@@ -218,15 +225,15 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     if(mesh->nonPmlNelements){
       occaTimerTic(mesh->device, "NonPmlRelaxationKernel");
       bns->relaxationKernel(mesh->nonPmlNelements,
-			    mesh->o_nonPmlElementIds,
-			    mesh->o_vgeo,
-			    mesh->o_cubvgeo,
-			    dzero, // 0
-			    izero, //0
-			    mesh->o_cubInterpT,
-			    mesh->o_cubProjectT,
-			    bns->o_rkq,
-			    bns->o_rhsq);  
+          mesh->o_nonPmlElementIds,
+          mesh->o_vgeo,
+          mesh->o_cubvgeo,
+          dzero, // 0
+          izero, //0
+          mesh->o_cubInterpT,
+          mesh->o_cubProjectT,
+          bns->o_rkq,
+          bns->o_rhsq);  
       occaTimerToc(mesh->device, "NonPmlRelaxationKernel");
     }
     // VOLUME KERNELS
@@ -234,27 +241,31 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 
     if(mesh->totalHaloPairs>0){
     
-#if ASYNC 
-      mesh->device.setStream(dataStream);
-#endif
+      #if BNS_ASYNC 
+        mesh->device.setStream(dataStream);
 
-      //make sure the async copy is finished
-      mesh->device.finish();
-      // start halo exchange
-      meshHaloExchangeStart(mesh,
-			    bns->Nfields*mesh->Np*sizeof(dfloat),
-			    sendBuffer,
-			    recvBuffer);
-      // wait for halo data to arrive
-      meshHaloExchangeFinish(mesh);
-      // copy halo data to DEVICE
-      size_t offset = mesh->Np*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-      bns->o_rkq.asyncCopyFrom(recvBuffer, haloBytes, offset);
-      mesh->device.finish();        
+          //make sure the async copy is finished
+        mesh->device.finish();
+        // start halo exchange
+        meshHaloExchangeStart(mesh,
+                              bns->Nfields*mesh->Np*sizeof(dfloat),
+                              sendBuffer,
+                              recvBuffer);
+        // wait for halo data to arrive
+        meshHaloExchangeFinish(mesh);
+        // copy halo data to DEVICE
+        size_t offset = mesh->Np*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+        bns->o_rkq.asyncCopyFrom(recvBuffer, haloBytes, offset);
+        mesh->device.finish();
 
-#if ASYNC 
-      mesh->device.setStream(defaultStream);
-#endif
+        mesh->device.setStream(defaultStream);
+      #else
+        meshHaloExchangeFinish(mesh);
+        // copy halo data to DEVICE
+        size_t offset = mesh->Np*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+        bns->o_rkq.copyFrom(recvBuffer, haloBytes, offset);
+      #endif
+
     }
 
 
@@ -265,42 +276,42 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     if(mesh->pmlNelements){
       occaTimerTic(mesh->device,"PmlSurfaceKernel");
       bns->pmlSurfaceKernel(mesh->pmlNelements,
-			    mesh->o_pmlElementIds,
-			    mesh->o_pmlIds,
-			    currentTime,
-			    intfx, intfy, intfz,
-			    mesh->o_sgeo,
-			    mesh->o_LIFTT,
-			    mesh->o_vmapM,
-			    mesh->o_vmapP,
-			    mesh->o_EToB,
-			    mesh->o_x,
-			    mesh->o_y,
-			    mesh->o_z,
-			    bns->o_rkq,
-			    bns->o_rhsq,
-			    bns->o_pmlrhsqx,
-			    bns->o_pmlrhsqy,
-			    bns->o_pmlrhsqz);
+                            mesh->o_pmlElementIds,
+                            mesh->o_pmlIds,
+                            currentTime,
+                            intfx, intfy, intfz,
+                            mesh->o_sgeo,
+                            mesh->o_LIFTT,
+                            mesh->o_vmapM,
+                            mesh->o_vmapP,
+                            mesh->o_EToB,
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_z,
+                            bns->o_rkq,
+                            bns->o_rhsq,
+                            bns->o_pmlrhsqx,
+                            bns->o_pmlrhsqy,
+                            bns->o_pmlrhsqz);
       occaTimerToc(mesh->device,"PmlSurfaceKernel");
     }
 
     if(mesh->nonPmlNelements){
       occaTimerTic(mesh->device,"NonPmlSurfaceKernel");
       bns->surfaceKernel(mesh->nonPmlNelements,
-			 mesh->o_nonPmlElementIds,
-			 currentTime,
-			 intfx, intfy, intfz,
-			 mesh->o_sgeo,
-			 mesh->o_LIFTT,
-			 mesh->o_vmapM,
-			 mesh->o_vmapP,
-			 mesh->o_EToB,
-			 mesh->o_x,
-			 mesh->o_y,
-			 mesh->o_z,
-			 bns->o_rkq,
-			 bns->o_rhsq);
+                         mesh->o_nonPmlElementIds,
+                         currentTime,
+                         intfx, intfy, intfz,
+                         mesh->o_sgeo,
+                         mesh->o_LIFTT,
+                         mesh->o_vmapM,
+                         mesh->o_vmapP,
+                         mesh->o_EToB,
+                         mesh->o_x,
+                         mesh->o_y,
+                         mesh->o_z,
+                         bns->o_rkq,
+                         bns->o_rhsq);
       occaTimerToc(mesh->device,"NonPmlSurfaceKernel");
     }
     occaTimerToc(mesh->device,"SurfaceKernel");
@@ -314,34 +325,34 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     if (mesh->pmlNelements){   
       occaTimerTic(mesh->device,"PmlUpdateKernel");
       bns->pmlUpdateKernel(mesh->pmlNelements,
-			   mesh->o_pmlElementIds,
-			   mesh->o_pmlIds,
-			   offset,
-			   pmloffset,
-			   rk,
-			   bns->dt,
-			   bns->o_sarkC,
-			   bns->o_rkA, 
-			   bns->o_rkE,
-			   bns->o_sarkA, 
-			   bns->o_sarkE,
-			   bns->o_q,
-			   bns->o_pmlqx,
-			   bns->o_pmlqy,
-			   bns->o_pmlqz,
-			   bns->o_rhsq,
-			   bns->o_pmlrhsqx,
-			   bns->o_pmlrhsqy,
-			   bns->o_pmlrhsqz,
-			   bns->o_rkrhsq,
-			   bns->o_rkrhsqx,
-			   bns->o_rkrhsqy,
-			   bns->o_rkrhsqz,
-			   bns->o_rkq,
-			   bns->o_rkqx,
-			   bns->o_rkqy,
-			   bns->o_rkqz,
-			   bns->o_rkerr);
+         mesh->o_pmlElementIds,
+         mesh->o_pmlIds,
+         offset,
+         pmloffset,
+         rk,
+         bns->dt,
+         bns->o_sarkC,
+         bns->o_rkA, 
+         bns->o_rkE,
+         bns->o_sarkA, 
+         bns->o_sarkE,
+         bns->o_q,
+         bns->o_pmlqx,
+         bns->o_pmlqy,
+         bns->o_pmlqz,
+         bns->o_rhsq,
+         bns->o_pmlrhsqx,
+         bns->o_pmlrhsqy,
+         bns->o_pmlrhsqz,
+         bns->o_rkrhsq,
+         bns->o_rkrhsqx,
+         bns->o_rkrhsqy,
+         bns->o_rkrhsqz,
+         bns->o_rkq,
+         bns->o_rkqx,
+         bns->o_rkqy,
+         bns->o_rkqz,
+         bns->o_rkerr);
       occaTimerToc(mesh->device,"PmlUpdateKernel");
 
     }
@@ -349,20 +360,20 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     if(mesh->nonPmlNelements){
       occaTimerTic(mesh->device,"NonPmlUpdateKernel");
       bns->updateKernel(mesh->nonPmlNelements,
-			mesh->o_nonPmlElementIds,
-			offset,
-			rk,
-			bns->dt,
-			bns->o_sarkC,
-			bns->o_rkA, 
-			bns->o_rkE,
-			bns->o_sarkA, 
-			bns->o_sarkE,
-			bns->o_q,
-			bns->o_rhsq,
-			bns->o_rkrhsq,
-			bns->o_rkq,
-			bns->o_rkerr);
+      mesh->o_nonPmlElementIds,
+      offset,
+      rk,
+      bns->dt,
+      bns->o_sarkC,
+      bns->o_rkA, 
+      bns->o_rkE,
+      bns->o_sarkA, 
+      bns->o_sarkE,
+      bns->o_q,
+      bns->o_rhsq,
+      bns->o_rkrhsq,
+      bns->o_rkq,
+      bns->o_rkerr);
       occaTimerToc(mesh->device,"NonPmlUpdateKernel");
     }
 

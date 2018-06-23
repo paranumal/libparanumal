@@ -266,7 +266,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   
 
 
-   // printf("dtex = %.5e dtim = %.5e \n", bns->cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), bns->cfl*1.f/(bns->tauInv));
+   printf("dtex = %.5e dtim = %.5e \n", bns->cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), bns->cfl*1.f/(bns->tauInv));
 
   // Set multiRate element groups/group  
   if(options.compareArgs("TIME INTEGRATOR", "MRSAAB") ){
@@ -457,13 +457,114 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   }
   
 
+   bns->Nvort      = 3;   // hold wx, wy, wz
+  // Set Iso-surfacing stuf here
+  if(bns->dim==3){
+    
+    // Only one field is exported for iso-surface to reduce the file size
+    bns->isoNfields  = 1;   //1 + (bns->dim) + (1 + bns->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
+    bns->isoMaxNtris = 1.E7; 
+
+    bns->procid = gethostid();
+
+    //
+    options.getArgs("ISOSURFACE FIELD ID", bns->isoField); 
+    options.getArgs("ISOSURFACE COLOR ID", bns->isoColorField); 
+    options.getArgs("ISOSURFACE LEVEL NUMBER", bns->isoNlevels);
+    options.getArgs("ISOSURFACE CONTOUR MAX", bns->isoMaxVal); 
+    options.getArgs("ISOSURFACE CONTOUR MIN", bns->isoMinVal);
+
+
+    bns->isoMax    = (bns->dim + bns->isoNfields)*3*bns->isoMaxNtris;
+    bns->isoNtris  = (int*) calloc(1, sizeof(int));
+    bns->isoq      = (dfloat*) calloc(bns->isoMax, sizeof(dfloat)); 
+
+  
+    bns->o_isoq      = mesh->device.malloc(bns->isoMax*sizeof(dfloat), bns->isoq);
+    bns->o_isoNtris  = mesh->device.malloc(1*sizeof(int), bns->isoNtris);
+
+
+   
+
+    // meshParallelGatherScatter(mesh, ogs, o_q);
+    // Create all contour levels
+    dfloat *isoLevels = (dfloat*) calloc(bns->isoNlevels, sizeof(dfloat));
+    for(int l=0;l<bns->isoNlevels;++l)
+      isoLevels[l] = bns->isoMinVal + (bns->isoMaxVal-bns->isoMinVal)*l/(dfloat)(bns->isoNlevels-1);
+
+
+
+    // GROUP LEVELS of ISOCONTOURS
+
+    int levelsInGroup = 0; 
+    options.getArgs("ISOSURFACE GROUP NUMBER", levelsInGroup);
+
+    if(levelsInGroup==0) {printf("Number of levels in each group can not be zero!!!\n");  exit(EXIT_FAILURE);} 
+    if(levelsInGroup){
+
+      // Number of groups for isosurfaces
+      bns->isoGNgroups        = bns->isoNlevels/(levelsInGroup);  
+      if(bns->isoNlevels%(levelsInGroup))
+        bns->isoGNgroups++; 
+
+      bns->isoGNlevels        = (int *) calloc(bns->isoGNgroups,sizeof(int));
+      bns->isoGLvalues        = (dfloat **) calloc(bns->isoGNgroups,sizeof(dfloat*));
+
+      for(int gr =0; gr<bns->isoGNgroups; gr++)
+      {
+        int nlevels = (gr+1)*levelsInGroup > bns->isoNlevels ? (bns->isoNlevels%levelsInGroup) : levelsInGroup;  
+        bns->isoGNlevels[gr] = nlevels;  
+        printf("Isosurface Group %d has %d levels\n", gr, bns->isoGNlevels[gr]);
+      }
+
+      // Allocate memory for levels in each group
+      for (int gr =0;gr<bns->isoGNgroups;gr++)
+        bns->isoGLvalues[gr] = (dfloat *) calloc(bns->isoGNlevels[gr],sizeof(dfloat));
+
+      int sk = 0; 
+      for (int gr =0;gr<bns->isoGNgroups;gr++){
+        printf("Isosurface Group %d Values\n", gr);        
+        for (int l=0;l<bns->isoGNlevels[gr];l++){
+          bns->isoGLvalues[gr][l] = isoLevels[sk + l];
+          printf("%.4f\t", bns->isoGLvalues[gr][l]);
+        }
+        printf("\n");
+      sk += bns->isoGNlevels[gr]; 
+      }
+
+      // Create levels for each group
+      bns->o_isoGLvalues     = (occa::memory *) malloc(bns->isoGNgroups*sizeof(occa::memory));
+      for (int gr =0;gr<bns->isoGNgroups;gr++)
+        bns->o_isoGLvalues[gr] = mesh->device.malloc(bns->isoGNlevels[gr]*sizeof(dfloat),bns->isoGLvalues[gr]);
+    
+    }
+
+    // Interpolation operators form Np to PlotNp (equisapaced nodes of order >N generally)
+    dfloat *plotInterp = (dfloat*) calloc(mesh->plotNp*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->plotNp;++n){
+      for(int m=0;m<mesh->Np;++m){
+        plotInterp[n+m*mesh->plotNp] = mesh->plotInterp[n*mesh->Np+m];
+      }
+    }
+    bns->o_plotInterp = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(dfloat), plotInterp);
+
+    // EToV for local triangulation
+    int *plotEToV = (int*) calloc(mesh->plotNp*mesh->Np, sizeof(int));
+    for(int n=0;n<mesh->plotNelements;++n){
+      for(int m=0;m<mesh->plotNverts;++m){
+        plotEToV[n+m*mesh->plotNelements] = mesh->plotEToV[n*mesh->plotNverts+m];
+      }
+    }
+    bns->o_plotEToV = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(int), plotEToV);
+
+
+  }
 
 
 
 
-// Compute Time Stepper Coefficcients
-
-bnsTimeStepperCoefficients(bns, options);
+  // Compute Time Stepper Coefficcients
+  bnsTimeStepperCoefficients(bns, options);
 
 
 if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
@@ -520,10 +621,12 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
 }
 
+  bns->Vort      = (dfloat*) calloc(bns->Nvort*mesh->Nelements*mesh->Np, sizeof(dfloat));
+  bns->VortMag   = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
   
-  bns->Vort   = (dfloat*) calloc(3*mesh->Nelements*mesh->Np, sizeof(dfloat));
-  bns->o_Vort = mesh->device.malloc(3*mesh->Nelements*mesh->Np*sizeof(dfloat), bns->Vort);
-  
+  bns->o_Vort    = mesh->device.malloc(bns->Nvort*mesh->Nelements*mesh->Np*sizeof(dfloat), bns->Vort);
+  bns->o_VortMag = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), bns->VortMag);
+
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   int maxCubNodes = mymax(maxNodes,mesh->cubNp);
 
@@ -542,7 +645,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
   int NblockCub = 128/mesh->cubNp; // works for CUDA
 
-  NblockCub = 1; // !!!!!!!!!!!!!!!!!!!!!
+  // NblockCub = 1; // !!!!!!!!!!!!!!!!!!!!!
 
   kernelInfo.addDefine("p_NblockCub", NblockCub);
 
@@ -607,6 +710,24 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
     kernelInfo.addDefine("p_MRSAAB", (int) 1);
   else
     kernelInfo.addDefine("p_MRSAAB", (int) 0);
+
+
+  kernelInfo.addDefine("p_Nvort", bns->Nvort);
+
+  if(bns->dim==3){
+    kernelInfo.addDefine("p_isoNfields", bns->isoNfields);
+    
+    // Define Isosurface Area Tolerance
+    kernelInfo.addDefine("p_triAreaTol", (dfloat) 1.0E-16);
+
+    kernelInfo.addDefine("p_dim", bns->dim);
+    kernelInfo.addDefine("p_plotNp", mesh->plotNp);
+    kernelInfo.addDefine("p_plotNelements", mesh->plotNelements);
+    
+    int plotNthreads = mymax(mesh->Np, mymax(mesh->plotNp, mesh->plotNelements));
+    kernelInfo.addDefine("p_plotNthreads", plotNthreads);
+    
+ } 
 
   // set kernel name suffix
   char *suffix, *suffixUpdate;
@@ -730,15 +851,53 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
       // This needs to be unified
       mesh->haloExtractKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
-                                           "meshHaloExtract3D",
-                                           kernelInfo);
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl","meshHaloExtract3D",kernelInfo);
+
+      if(bns->dim==3){
+        mesh->gatherKernel = 
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl","gather", kernelInfo);
+
+        mesh->scatterKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl","scatter",kernelInfo);
+
+        mesh->gatherScatterKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl", "gatherScatter", kernelInfo);
+
+        mesh->getKernel = 
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl", "get", kernelInfo);
+
+        mesh->putKernel =
+          mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl", "put",kernelInfo);
+
+        bns->dotMultiplyKernel = mesh->device.buildKernelFromSource(DBNS "/okl/bnsDotMultiply.okl", "bnsDotMultiply", kernelInfo);
+
+        // kernels from volume file
+        sprintf(fileName, DBNS "/okl/bnsIsoSurface3D.okl");
+        sprintf(kernelName, "bnsIsoSurface3D");
+
+        bns->isoSurfaceKernel =
+          mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);        
+      }
 
 
 
 
     }
     MPI_Barrier(MPI_COMM_WORLD);
+  }
+
+
+
+  // Setup Gather Scales
+
+  if(bns->dim==3){
+    int verbose = 1;
+    mesh->ogs = meshParallelGatherScatterSetup(mesh,mesh->Np*mesh->Nelements,
+                                               mesh->gatherLocalIds,
+                                               mesh->gatherBaseIds,
+                                               mesh->gatherBaseRanks,
+                                               mesh->gatherHaloFlags,
+                                               verbose);
   }
 
   return bns; 

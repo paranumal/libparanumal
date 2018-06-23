@@ -1,14 +1,17 @@
+#ifndef BNS_H
+#define BNS_H 1
+
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <complex.h>  
+#include <complex.h> 
+
 #include "mpi.h"
 
-#include "mesh.h"
+// #include "mesh.h"
 #include "mesh2D.h"
 #include "mesh3D.h"
-
 
 // Block size of reduction 
 #define blockSize 256
@@ -54,6 +57,8 @@ typedef struct{
   int errorStep;   // number of steps between error calculations
   int reportStep;  // number of steps between error calculations
 
+  int procid; 
+
   dfloat RT, sqrtRT, tauInv, Ma, Re, nu; // Flow parameters
 
 
@@ -74,6 +79,15 @@ typedef struct{
   dfloat *pmlrhsqx, *pmlrhsqy, *pmlrhsqz;
   dfloat *pmlresqx, *pmlresqy, *pmlresqz;
 
+  // Some Iso-surfacing variables
+  int isoField, isoColorField, isoNfields, isoNlevels, isoMaxNtris, *isoNtris; 
+  dfloat isoMinVal, isoMaxVal, *isoLevels, *isoq; 
+  size_t isoMax; 
+
+  occa::memory o_isoLevels, o_isoq, o_isoNtris; 
+  occa::memory o_plotInterp, o_plotEToV; 
+
+
   // IMEX Coefficients
   dfloat LSIMEX_B[4], LSIMEX_C[4], LSIMEX_ABi[4], LSIMEX_ABe[4], LSIMEX_Ad[4];
   // MRSAAB Coefficients
@@ -91,6 +105,20 @@ typedef struct{
   dfloat *rkCex, *rkAex, *rkBex, *rkEex;
   dfloat *rkCim, *rkAim, *rkBim, *rkEim;
 
+
+
+  int *isoGNlevels, isoGNgroups;
+  dfloat **isoGLvalues;
+
+  occa::memory *o_isoGLvalues; 
+
+
+
+
+  // NBN: add storage for compacted isosurf data for gmsh write
+  std::vector<double> iso_nodes;
+  std::vector<int> iso_tris;
+
   int emethod; 
   int tstep, atstep, rtstep, tstepAccepted, rkp;
   dfloat ATOL, RTOL, time; 
@@ -98,10 +126,10 @@ typedef struct{
 
   dfloat outputInterval, nextOutputTime;
   int outputForceStep;
-
-  dfloat *Vort; 
-
-  occa::memory o_Vort;
+  
+  int Nvort;     // Number of vorticity fields i.e. 3 or 4 
+  dfloat *Vort, *VortMag; 
+  occa::memory o_Vort, o_VortMag;
 
 
   dfloat *rkq, *rkrhsq, *rkerr, *errtmp;
@@ -115,8 +143,10 @@ typedef struct{
   // IMEXRK 
   occa::memory o_rhsqim, o_rhsqex, o_rkrhsqim, o_rkrhsqex;
   occa::memory o_rkAex, o_rkEex, o_rkBex;  
-  occa::memory o_rkAim, o_rkEim, o_rkBim;  
+  occa::memory o_rkAim, o_rkEim, o_rkBim; 
 
+
+  
 
 
 
@@ -151,6 +181,8 @@ typedef struct{
 
   occa::kernel vorticityKernel;
 
+  occa::kernel isoSurfaceKernel;
+
   // Boltzmann Imex Kernels
   occa::kernel implicitUpdateKernel;
   occa::kernel pmlImplicitUpdateKernel;
@@ -164,6 +196,9 @@ typedef struct{
   occa::kernel pmlUpdateStageKernel;
 
   occa::kernel errorEstimateKernel;
+
+  occa::kernel dotMultiplyKernel; 
+        
 
   // IMEXRK Damping Terms
   occa::kernel pmlDampingKernel; 
@@ -185,6 +220,8 @@ void bnsReport(bns_t *bns, dfloat time, setupAide &options);
 void bnsError(bns_t *bns, dfloat time, setupAide &options);
 void bnsForces(bns_t *bns, dfloat time, setupAide &options);
 void bnsPlotVTU(bns_t *bns, char * FileName);
+void bnsIsoPlotVTU(bns_t *bns, int isoNtris, dfloat *isoq, char *fileName);
+void bnsIsoWeldPlotVTU(bns_t *bns, char *fileName);
 
 // Function for ramp start
 void bnsRampFunction(dfloat t, dfloat *ramp, dfloat *drampdt);
@@ -210,6 +247,12 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
 void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
 		    dfloat *recvBuffer, setupAide &options);
 
+// Welding Tris
+
+int bnsWeldTriVerts(bns_t *bns, int isoNtris, double *isoq);
+
+void bnsIsoPlotGmsh(bns_t *bns, int isoNtris, char *fname, int tstep, int N_offset,     
+  					int E_offset, int plotnum, double plottime,    bool bBinary, int procid);
 
 
 
@@ -217,4 +260,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
 #define QUADRILATERALS 4
 #define TETRAHEDRA 6
 #define HEXAHEDRA 12
+
+
+#endif
 

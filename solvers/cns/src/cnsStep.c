@@ -1,11 +1,16 @@
 #include "cns.h"
 
+#define USE_OLD_HALO 0
+
 void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
 
   mesh_t *mesh = cns->mesh;
   
   //RK step
   for(int rk=0;rk<cns->Nrk;++rk){
+
+
+    mesh->device.setStream(mesh->defaultStream);
     
     // t_rk = t + C_rk*dt
     dfloat currentTime = time + cns->rkC[rk]*mesh->dt;
@@ -13,8 +18,6 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     dfloat fx, fy, fz, intfx, intfy, intfz;
     cnsBodyForce(currentTime , &fx, &fy, &fz, &intfx, &intfy, &intfz);
 
-    //    printf("F=%g,%g,%g. intF = %g,%g,%g\n", fx, fy, fz, intfx, intfy, intfz);
-    
     //compute RK stage 
     // rkq = q + dt sum_{i=0}^{rk-1} a_{rk,i}*rhsq_i
     cns->rkStageKernel(mesh->Nelements,
@@ -30,7 +33,10 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
 
     // extract q halo on DEVICE
     if(mesh->totalHaloPairs>0){
-      int Nentries = mesh->Np*cns->Nfields;          
+      int Nentries = mesh->Np*cns->Nfields;
+
+#if (USE_OLD_HALO)
+
       mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, cns->o_rkq, cns->o_haloBuffer);
       
       // copy extracted halo to HOST 
@@ -38,6 +44,22 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
       
       // start halo exchange
       meshHaloExchangeStart(mesh, mesh->Np*cns->Nfields*sizeof(dfloat), cns->sendBuffer, cns->recvBuffer);
+#else
+
+      // make sure rkq is updated
+      mesh->device.finish();  
+      
+      // launch haloExtractKernel on 2nd stream
+      mesh->device.setStream(mesh->dataStream);         
+
+      mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, cns->o_rkq, cns->o_haloBuffer);
+
+      // launch async copy on 2nd stream
+      cns->o_haloBuffer.asyncCopyTo(cns->sendBuffer);
+
+      // switch to stream0 for Volume kernel
+      mesh->device.setStream(mesh->defaultStream);      
+#endif
     }
 
     // now compute viscous stresses
@@ -50,11 +72,27 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
 
     // wait for q halo data to arrive
     if(mesh->totalHaloPairs>0){
+
+#if (!USE_OLD_HALO)
+      // switch dev->currentStream
+      mesh->device.setStream(mesh->dataStream);
+
+      // flush 2nd stream, ensure send buffer is loaded
+      mesh->device.finish();
+
+      // run remaining work on stream0
+      mesh->device.setStream(mesh->defaultStream);  
+
+      // start halo exchange on default stream
+      meshHaloExchangeStart(mesh, mesh->Np*cns->Nfields*sizeof(dfloat), cns->sendBuffer, cns->recvBuffer);
+#endif
+      
       meshHaloExchangeFinish(mesh);
-          
-      // copy halo data to DEVICE
-      size_t offset = mesh->Np*cns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+      
+      // offset for halo daat
+      size_t offset = mesh->Np*cns->Nfields*mesh->Nelements*sizeof(dfloat); 
       cns->o_rkq.copyFrom(cns->recvBuffer, cns->haloBytes, offset);
+
     }
 
     cns->stressesSurfaceKernel(mesh->Nelements, 
@@ -75,7 +113,8 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     // extract stresses halo on DEVICE
     if(mesh->totalHaloPairs>0){
       int Nentries = mesh->Np*cns->Nstresses;
-      
+
+#if (USE_OLD_HALO)
       mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, cns->o_viscousStresses, cns->o_haloStressesBuffer);
       
       // copy extracted halo to HOST 
@@ -83,6 +122,21 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
       
       // start halo exchange
       meshHaloExchangeStart(mesh, mesh->Np*cns->Nstresses*sizeof(dfloat), cns->sendStressesBuffer, cns->recvStressesBuffer);
+#else
+      // launch haloExtractKernel on 2nd stream
+      mesh->device.setStream(mesh->dataStream);                       
+
+      mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, cns->o_viscousStresses, cns->o_haloStressesBuffer);
+
+      // launch async copy on 2nd stream
+      cns->o_haloStressesBuffer.asyncCopyTo(cns->sendStressesBuffer);
+      
+      // switch to stream0 for Volume kernel
+      mesh->device.setStream(mesh->defaultStream);                   
+#endif
+				 
+
+      
     }
 
     // compute volume contribution to DG cns RHS
@@ -111,11 +165,25 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
 
     // wait for halo stresses data to arrive
     if(mesh->totalHaloPairs>0){
-      meshHaloExchangeFinish(mesh);
+#if (!USE_OLD_HALO)
+      // switch dev->currentStream
+      mesh->device.setStream(mesh->dataStream);
+
+      // flush 2nd stream, ensure send buffer is loaded
+      mesh->device.finish();
+
+      // run remaining work on stream0
+      mesh->device.setStream(mesh->defaultStream);  
       
+      meshHaloExchangeStart(mesh, mesh->Np*cns->Nstresses*sizeof(dfloat), cns->sendStressesBuffer, cns->recvStressesBuffer);
+#endif
+
+      meshHaloExchangeFinish(mesh);
+	    
       // copy halo data to DEVICE
       size_t offset = mesh->Np*cns->Nstresses*mesh->Nelements*sizeof(dfloat); // offset for halo data
       cns->o_viscousStresses.copyFrom(cns->recvStressesBuffer, cns->haloStressesBytes, offset);
+      
     }
 
     // compute surface contribution to DG cns RHS (LIFTT ?)
