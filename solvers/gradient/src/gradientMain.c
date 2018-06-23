@@ -76,8 +76,8 @@ int main(int argc, char **argv){
   }
 #endif
   
-  // extract isosurface
-  //  gradientReport(gradient, 0.0,  options);
+  //extract isosurface
+   gradientReport(gradient, 0.0,  options);
 
   // close down MPI
   MPI_Finalize();

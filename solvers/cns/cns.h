@@ -86,7 +86,7 @@ typedef struct{
   dfloat ATOL, RTOL;
   dfloat factor1, invfactor1;
   dfloat factor2, invfactor2;
-  dfloat exp1, facold,  dtMIN, safe, beta;
+  dfloat exp1, facold,  dtMIN, dtMAX, safe, beta;
   dfloat *rkA, *rkC, *rkE, *rkoutB;
   occa::memory o_rkA, o_rkC, o_rkE, o_rkoutB;
   

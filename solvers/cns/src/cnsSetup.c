@@ -138,7 +138,8 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
     cns->ATOL    = 1.0; options.getArgs("ABSOLUTE TOLERANCE",   cns->ATOL); 
     cns->RTOL    = 1.0; options.getArgs("RELATIVE TOLERANCE",   cns->RTOL);
-    cns->dtMIN   = 1.0; options.getArgs("MINUMUM TIME STEP SIZE",   cns->dtMIN); 
+    cns->dtMIN   = 1.0; options.getArgs("MINUMUM TIME STEP SIZE",   cns->dtMIN);
+    cns->dtMAX   = 1.0; options.getArgs("MAXIMUM TIME STEP SIZE",   cns->dtMAX); 
 
     cns->safe = 0.9;   //safety factor
 

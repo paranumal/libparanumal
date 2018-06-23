@@ -207,11 +207,11 @@ Physical Volume("XZPML",500) = {6, 8, 11, 9};
 Physical Volume("YZPML",600) = {13, 17};
 Physical Volume("XYZPML",700) = {12, 14, 16, 20};
 
-Physical Surface("Wall",1) = {158, 132, 216, 246, 82, 27, 58, 268, 106, 194, 176, 31, 33, 37, 29, 35};
-Physical Surface("Inflow",2) = {220, 137, 154, 282, 440, 466};
+
+Physical Surface("Wall", 1) = {29, 33, 37, 31, 35, 82, 58, 27};
+
+Physical Surface("Inflow",2) = {282, 154, 440, 466, 220, 137, 462, 467, 401, 396, 225, 247, 379, 374, 269, 159, 286, 308, 181, 330, 203, 357, 335, 313, 423, 291, 445, 216, 132, 158, 176, 194, 106, 268, 246};
+
 Physical Surface("Outflow",3) = {370, 352, 334, 198, 115, 264};
-Physical Surface("SlipY",5) = {335, 313, 291, 445, 467, 401, 423, 357, 379};
-Physical Surface("SlipZ",6) = {462, 396, 225, 247, 269, 374, 330, 203, 181, 159, 286, 308};
 
- Coherence;
-
+Coherence;

@@ -119,10 +119,10 @@ Surface Loop(48) = {41, 43, 39, 47, 27, 45, 29, 35, 37, 31, 33};
 Volume(1) = {48};
 
 //+ Creating Wake volume
-Point(17) = {wake_max_x, wake_min_y, wake_max_z, r1};
+Point(17) = {wake_max_x, wake_min_y, wake_max_z, r0};
 Point(18) = {wake_max_x, wake_max_y, wake_max_z, r1};
 Point(19) = {wake_max_x, wake_max_y, wake_min_z, r1};
-Point(20) = {wake_max_x, wake_min_y, wake_min_z, r1};
+Point(20) = {wake_max_x, wake_min_y, wake_min_z, r0};
 Line(49) = {16, 17};
 Line(50) = {17, 18};
 Line(51) = {18, 15};
@@ -146,15 +146,15 @@ Volume(2) = {67};
 
 //+ Creating domain 
 //+ Back Side
-Point(21) = {domain_max_x, domain_min_y, domain_max_z, r2};
+Point(21) = {domain_max_x, domain_min_y, domain_max_z, r0};
 Point(22) = {domain_max_x, domain_max_y, domain_max_z, r2};
-Point(23) = {domain_max_x, domain_min_y, domain_min_z, r2};
+Point(23) = {domain_max_x, domain_min_y, domain_min_z, r0};
 Point(24) = {domain_max_x, domain_max_y, domain_min_z, r2};
 //+Front Side
 Point(25) = {domain_min_x, domain_max_y, domain_max_z, r3};
-Point(26) = {domain_min_x, domain_min_y, domain_max_z, r3};
+Point(26) = {domain_min_x, domain_min_y, domain_max_z, r0};
 Point(27) = {domain_min_x, domain_max_y, domain_min_z, r3};
-Point(28) = {domain_min_x, domain_min_y, domain_min_z, r3};
+Point(28) = {domain_min_x, domain_min_y, domain_min_z, r0};
 
 Line(68) = {26, 21};
 Line(69) = {21, 22};
@@ -207,11 +207,11 @@ Physical Volume("XZPML",500) = {6, 8, 11, 9};
 Physical Volume("YZPML",600) = {13, 17};
 Physical Volume("XYZPML",700) = {12, 14, 16, 20};
 
-Physical Surface("Wall",1) = {158, 132, 216, 246, 82, 27, 58, 268, 106, 194, 176, 31, 33, 37, 29, 35};
-Physical Surface("Inflow",2) = {220, 137, 154, 282, 440, 466};
+
+Physical Surface("Wall", 1) = {29, 33, 37, 31, 35, 82, 58, 27};
+
+Physical Surface("Inflow",2) = {282, 154, 440, 466, 220, 137, 462, 467, 401, 396, 225, 247, 379, 374, 269, 159, 286, 308, 181, 330, 203, 357, 335, 313, 423, 291, 445, 216, 132, 158, 176, 194, 106, 268, 246};
+
 Physical Surface("Outflow",3) = {370, 352, 334, 198, 115, 264};
-Physical Surface("SlipY",5) = {335, 313, 291, 445, 467, 401, 423, 357, 379};
-Physical Surface("SlipZ",6) = {462, 396, 225, 247, 269, 374, 330, 203, 181, 159, 286, 308};
 
- Coherence;
-
+Coherence;

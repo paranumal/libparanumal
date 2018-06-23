@@ -1,6 +1,7 @@
 #define p_Nvars 3
 #define p_Nrelax 3
-// MRAB relaxation cub
+
+
 kernel void bnsRelaxationTri2D(const dlong Nelements,
                                const dlong * restrict elementIds,
                                const dfloat * restrict vgeo, // only quad kernels
