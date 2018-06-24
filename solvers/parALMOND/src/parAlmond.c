@@ -67,9 +67,6 @@ parAlmond_t *parAlmondInit(mesh_t *mesh, setupAide options) {
 
   buildAlmondKernels(parAlmond);
 
-  //buffer for innerproducts in kcycle
-  parAlmond->o_rho  = mesh->device.malloc(3*sizeof(dfloat));
-
   return parAlmond;
 }
 
