@@ -5,7 +5,7 @@
 data/bnsUniform2D.h
 
 [MESH FILE]
-#../../meshes/Tshape2D.msh
+../../meshes/Tshape2D.msh
 #../../meshes/boltzmannSquareCylinderPML2D.msh
 #../../meshes/T2D_Mar27_boltzPML_50K.msh
 
@@ -83,10 +83,10 @@ SARK
 1
 
 [TSTEPS FOR ERROR COMPUTE]
-1000
+5000
 
 [TSTEPS FOR SOLUTION OUTPUT]
-1000
+5000
 
 [START TIME]
 0
@@ -101,10 +101,10 @@ SARK
 0
 
 [ABSOLUTE TOLERANCE]
-1E-5
+1E-6
 
 [RELATIVE TOLERANCE]
-1E-4
+1E-5
 
 [MINUMUM TIME STEP SIZE]
 1E-10
@@ -122,4 +122,4 @@ SARK
 VTU
 
 [OUTPUT FILE NAME]
-Tshape
+Tbns
