@@ -27,8 +27,7 @@
       	if(tx >= 3*p_RDIMY/4) s_res[tx] += s_res[tx-p_RDIMY/4];		\
       	if(tx >= 7*p_RDIMY/8) s_res[tx] += s_res[tx-p_RDIMY/8];		\
       	if(tx==(p_RDIMY-1)) {						\
-          dfloat val = s_res[p_RDIMY-1];				\
-          atomicAdd(g_ip, val);						\
+          g_ip = s_res[p_RDIMY-1];				\
         }								\
       }									\
     }									\

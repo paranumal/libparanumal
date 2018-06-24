@@ -24,7 +24,7 @@ kernel void innerProductKernel(const dlong Nblocks,
       }
     }
     
-    twoPhaseReduction(res, s_ip, s_res, ip);
+    twoPhaseReduction(res, s_ip, s_res, ip[b]);
   }
 }
 

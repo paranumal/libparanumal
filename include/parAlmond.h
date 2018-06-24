@@ -255,6 +255,8 @@ typedef struct {
 
   occa::memory o_x;
   occa::memory o_Ax;
+
+  dfloat *rho;
   occa::memory o_rho;
 
   occa::kernel ellAXPYKernel;
