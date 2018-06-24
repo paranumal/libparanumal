@@ -91,11 +91,11 @@ void meshGeometricPartition3D(mesh3D *mesh){
   // compute element centers on this process
   for(dlong n=0;n<mesh->Nverts*mesh->Nelements;++n){
     minvx = mymin(minvx, mesh->EX[n]);
-    maxvx = mymax(minvx, mesh->EX[n]);
+    maxvx = mymax(maxvx, mesh->EX[n]);
     minvy = mymin(minvy, mesh->EY[n]);
-    maxvy = mymax(minvy, mesh->EY[n]);
+    maxvy = mymax(maxvy, mesh->EY[n]);
     minvz = mymin(minvz, mesh->EZ[n]);
-    maxvz = mymax(minvz, mesh->EZ[n]);
+    maxvz = mymax(maxvz, mesh->EZ[n]);
   }
   
   // find global bounding box of element centers
