@@ -34,9 +34,9 @@ kernel void kcycleCombinedOp1Kernel(const dlong Nblocks,
       }
     }
 
-    twoPhaseReduction(abi, s_ip, s_res, (ips+0));
-    twoPhaseReduction(aci, s_ip, s_res, (ips+1));
-    twoPhaseReduction(bbi, s_ip, s_res, (ips+2));
+    twoPhaseReduction(abi, s_ip, s_res, ips[3*g+0]);
+    twoPhaseReduction(aci, s_ip, s_res, ips[3*g+1]);
+    twoPhaseReduction(bbi, s_ip, s_res, ips[3*g+2]);
   }
 }
 
@@ -77,9 +77,9 @@ kernel void kcycleCombinedOp2Kernel(const dlong Nblocks,
       }
     }
 
-    twoPhaseReduction(abi, s_ip, s_res, (ips+0));
-    twoPhaseReduction(aci, s_ip, s_res, (ips+1));
-    twoPhaseReduction(adi, s_ip, s_res, (ips+2));
+    twoPhaseReduction(abi, s_ip, s_res, ips[3*g+0]);
+    twoPhaseReduction(aci, s_ip, s_res, ips[3*g+1]);
+    twoPhaseReduction(adi, s_ip, s_res, ips[3*g+2]);
   }
 }
     
@@ -120,9 +120,9 @@ kernel void kcycleWeightedCombinedOp1Kernel(const dlong Nblocks,
       }
     }
 
-    twoPhaseReduction(abi, s_ip, s_res, (ips+0));
-    twoPhaseReduction(aci, s_ip, s_res, (ips+1));
-    twoPhaseReduction(bbi, s_ip, s_res, (ips+2));
+    twoPhaseReduction(abi, s_ip, s_res, ips[3*g+0]);
+    twoPhaseReduction(aci, s_ip, s_res, ips[3*g+1]);
+    twoPhaseReduction(bbi, s_ip, s_res, ips[3*g+2]);
   }
 }
 
@@ -165,8 +165,8 @@ kernel void kcycleWeightedCombinedOp2Kernel(const dlong Nblocks,
       }
     }
 
-    twoPhaseReduction(abi, s_ip, s_res, (ips+0));
-    twoPhaseReduction(aci, s_ip, s_res, (ips+1));
-    twoPhaseReduction(adi, s_ip, s_res, (ips+2));
+    twoPhaseReduction(abi, s_ip, s_res, ips[3*g+0]);
+    twoPhaseReduction(aci, s_ip, s_res, ips[3*g+1]);
+    twoPhaseReduction(adi, s_ip, s_res, ips[3*g+2]);
   }
 }

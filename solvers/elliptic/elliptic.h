@@ -155,6 +155,6 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda);
 
 dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level);
 
-#define maxNthreads 768
+#define maxNthreads 256
 
 #endif

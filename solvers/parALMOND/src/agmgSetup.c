@@ -160,6 +160,10 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, hlong *globalRowSt
     if (M) levels[n]->o_res = device.malloc(M*sizeof(dfloat),levels[n]->res);
     if (N) levels[n]->o_rhs = device.malloc(N*sizeof(dfloat),levels[n]->rhs);
   }
+  //buffer for innerproducts in kcycle
+  dlong numBlocks = ((levels[0]->Nrows+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
+  parAlmond->rho  = (dfloat*) calloc(3*numBlocks,sizeof(dfloat));
+  parAlmond->o_rho  = device.malloc(3*numBlocks*sizeof(dfloat), parAlmond->rho); 
 }
 
 void parAlmondReport(parAlmond_t *parAlmond) {

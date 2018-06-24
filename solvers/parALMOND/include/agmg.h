@@ -13,6 +13,10 @@
 #define MAX_LEVELS 100
 #define GPU_CPU_SWITCH_SIZE 0 //host-device switch threshold
 
+#define RDIMX 32
+#define RDIMY 8
+#define RLOAD 1
+
 
 void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, hlong *globalRowStarts, setupAide options);
 void parAlmondReport(parAlmond_t *parAlmond);

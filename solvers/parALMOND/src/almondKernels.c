@@ -27,6 +27,9 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
     defs.addDefine("dfloat4", "float4");
   }
 
+  defs.addDefine("p_RDIMX", RDIMX);
+  defs.addDefine("p_RDIMY", RDIMY);
+
   defs.addInclude(DPWD "/okl/twoPhaseReduction.h");
 
   if(parAlmond->device.mode()=="OpenCL")

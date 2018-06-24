@@ -163,9 +163,8 @@ dfloat maxEntry(dlong n, dfloat *a){
   return maxVal;
 }
 
-#define RDIMX 32
-#define RDIMY 8
-#define RLOAD 1
+
+
 
 void scaleVector(parAlmond_t *parAlmond, dlong N, occa::memory o_a, dfloat alpha){
   if (N) parAlmond->scaleVectorKernel(N, alpha, o_a);
@@ -179,11 +178,14 @@ dfloat sumVector(parAlmond_t *parAlmond, dlong N, occa::memory o_a){
   dlong numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
   if(!numBlocks) numBlocks = 1;
 
-  dfloat alpha =0., zero = 0.;
-
-  parAlmond->setVectorKernel(1, zero, parAlmond->o_rho);
   if (N) parAlmond->sumVectorKernel(numBlocks,N,o_a,parAlmond->o_rho);
-  parAlmond->o_rho.copyTo(&alpha,1*sizeof(dfloat),0);
+  parAlmond->o_rho.copyTo(parAlmond->rho,numBlocks*sizeof(dfloat),0);
+  
+  dfloat alpha =0.;
+  #pragma omp parallel for reduction(+:alpha)
+  for (dlong i=0; i<numBlocks; i++) {
+    alpha += parAlmond->rho[i];
+  }
 
   return alpha;
 }
@@ -207,10 +209,14 @@ dfloat innerProd(parAlmond_t *parAlmond, dlong N,
   dlong numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
   if(!numBlocks) numBlocks = 1;
 
-  dfloat zero = 0, result;
-  parAlmond->setVectorKernel(1, zero, parAlmond->o_rho);
   parAlmond->innerProdKernel(numBlocks,N,o_x,o_y,parAlmond->o_rho);
-  parAlmond->o_rho.copyTo(&result,1*sizeof(dfloat),0);
+  parAlmond->o_rho.copyTo(parAlmond->rho,numBlocks*sizeof(dfloat),0);
+  
+  dfloat result =0.;
+  #pragma omp parallel for reduction(+:result)
+  for (dlong i=0; i<numBlocks; i++) {
+    result += parAlmond->rho[i];
+  }
 
   return result;
 }
@@ -222,15 +228,24 @@ void kcycleCombinedOp1(parAlmond_t *parAlmond, dlong N, dfloat *aDotbc,
   dlong numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
   if(!numBlocks) numBlocks = 1;
 
-  dfloat zero = 0;
-  parAlmond->setVectorKernel(3, zero, parAlmond->o_rho);
   if (weighted) {
     parAlmond->kcycleWeightedCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,o_w,parAlmond->o_rho);
   } else {
     parAlmond->kcycleCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,parAlmond->o_rho);
   }
-  parAlmond->o_rho.copyTo(aDotbc);
+  parAlmond->o_rho.copyTo(parAlmond->rho,3*numBlocks*sizeof(dfloat),0);
+  
+  dfloat aDotb = 0., aDotc = 0., bDotb = 0.;
+  #pragma omp parallel for reduction(+:aDotb) reduction(+:aDotc) reduction(+:bDotb)
+  for(dlong i=0; i<numBlocks; i++) {
+    aDotb += parAlmond->rho[3*i+0];
+    aDotc += parAlmond->rho[3*i+1];
+    bDotb += parAlmond->rho[3*i+2];
+  }  
 
+  aDotbc[0] = aDotb;
+  aDotbc[1] = aDotc;
+  aDotbc[2] = bDotb;
 }
 
 // returns aDotbcd[0] = a\dot b, aDotbcd[1] = a\dot c, aDotbcd[2] = a\dot d,
@@ -242,14 +257,24 @@ void kcycleCombinedOp2(parAlmond_t *parAlmond, dlong N, dfloat *aDotbcd,
   dlong numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
   if(!numBlocks) numBlocks = 1;
 
-  dfloat zero = 0;
-  parAlmond->setVectorKernel(3, zero, parAlmond->o_rho);
   if (weighted) {
     parAlmond->kcycleWeightedCombinedOp2Kernel(numBlocks,N,o_a,o_b,o_c,o_d,o_w,parAlmond->o_rho);
   } else {
     parAlmond->kcycleCombinedOp2Kernel(numBlocks,N,o_a,o_b,o_c,o_d,parAlmond->o_rho);
   }
-  parAlmond->o_rho.copyTo(aDotbcd);
+  parAlmond->o_rho.copyTo(parAlmond->rho,3*numBlocks*sizeof(dfloat),0);
+  
+  dfloat aDotb = 0., aDotc = 0., aDotd = 0.;
+  #pragma omp parallel for reduction(+:aDotb) reduction(+:aDotc) reduction(+:aDotd)
+  for(dlong i=0; i<numBlocks; i++) {
+    aDotb += parAlmond->rho[3*i+0];
+    aDotc += parAlmond->rho[3*i+1];
+    aDotd += parAlmond->rho[3*i+2];
+  }  
+
+  aDotbcd[0] = aDotb;
+  aDotbcd[1] = aDotc;
+  aDotbcd[2] = aDotd;
 }
 
 // y = beta*y + alpha*x, and return y\dot y
@@ -259,15 +284,18 @@ dfloat vectorAddInnerProd(parAlmond_t *parAlmond, dlong N, dfloat alpha, occa::m
   dlong numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
   if(!numBlocks) numBlocks = 1;
 
-  dfloat zero = 0, result;
-
-  parAlmond->setVectorKernel(1, zero, parAlmond->o_rho);
   if (weighted) {
     parAlmond->vectorAddWeightedInnerProdKernel(numBlocks,N,alpha,beta,o_x,o_y,o_w,parAlmond->o_rho);
   } else {
     parAlmond->vectorAddInnerProdKernel(numBlocks,N,alpha,beta,o_x,o_y,parAlmond->o_rho);
   }
-  parAlmond->o_rho.copyTo(&result,1*sizeof(dfloat),0);
+  parAlmond->o_rho.copyTo(parAlmond->rho,numBlocks*sizeof(dfloat),0);
+  
+  dfloat result =0.;
+  #pragma omp parallel for reduction(+:result)
+  for (dlong i=0; i<numBlocks; i++) {
+    result += parAlmond->rho[i];
+  }
 
   return result;
 }
