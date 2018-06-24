@@ -690,7 +690,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   }
 
   kernelInfo.addDefine("p_alpha0", (dfloat).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.1f);
+  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.2f);
   kernelInfo.addDefine("p_blockSize", blockSize);
   kernelInfo.addDefine("p_NrkStages", bns->NrkStages);
 

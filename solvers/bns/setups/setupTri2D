@@ -5,7 +5,7 @@
 data/bnsUniform2D.h
 
 [MESH FILE]
-../../meshes/Tshape2D.msh
+#../../meshes/Tshape2D.msh
 #../../meshes/boltzmannSquareCylinderPML2D.msh
 #../../meshes/T2D_Mar27_boltzPML_50K.msh
 
