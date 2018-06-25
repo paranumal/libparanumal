@@ -56,7 +56,7 @@ void cnsPlotVTU(cns_t *cns, char *fileName){
   fprintf(fp, "       </DataArray>\n");
 
   // write out velocity
-  if (cns->dim==2) {
+  if (cns->dim==3) {
     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
     for(dlong e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->plotNp;++n){
