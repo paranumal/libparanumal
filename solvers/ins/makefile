@@ -53,6 +53,7 @@ AOBJS    = \
 ./src/insPlotVTU.o \
 ./src/insError.o \
 ./src/insForces.o \
+./src/insComputeDt.o \
 ./src/insReport.o \
 ./src/insRunARK.o \
 ./src/insRunEXTBDF.o \
