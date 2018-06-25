@@ -372,6 +372,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       hmin = mymin(hmin, hest);
       hmax = mymax(hmax, hest);
     }
+
+     // dfloat maxMagVecLoc = 0;
+
     for(int n=0;n<mesh->Np;++n){
       const dlong id = n + mesh->Np*e;
       dfloat t = 0;
@@ -388,7 +391,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       else 
         numax = uxn*uxn + uyn*uyn + uzn*uzn;
       umax = mymax(umax, numax);
+      // maxMagVecLoc = mymax(maxMagVecLoc, numax);
     }
+    // maxMagVecLoc = sqrt(maxMagVecLoc);
+
+    // dfloat dtLoc = cfl*hminLoc/((mesh->N+1)*(mesh->N+1)*maxMagVelLoc);
+    // dt = mymin(dt, dtLoc)
   }
 
   // Maximum Velocity
