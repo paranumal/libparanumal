@@ -1,5 +1,3 @@
-#define p_RDIMX 32
-#define p_RDIMY 8
 
 // used a macro since I am not sure what happens with exclusive variables in OpenMP mode
 #define twoPhaseReduction(r_ip, s_ip, s_res, g_ip)			\
