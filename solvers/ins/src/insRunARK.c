@@ -23,6 +23,11 @@ void insRunARK(ins_t *ins){
 
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"INS");
+  
+
+
+   insComputeDt(ins, ins->time);
+  
 
   // Write Initial Data
   insReport(ins, 0.0, 0);
@@ -31,6 +36,9 @@ void insRunARK(ins_t *ins){
   ins->tstep = 0;
   int done = 0;
   ins->time = ins->startTime;
+
+  
+
   while (!done) {
 
     if (ins->dt<ins->dtMIN){
@@ -41,6 +49,7 @@ void insRunARK(ins_t *ins){
       printf("ERROR: Solution became unstable at time step=%d\n", ins->tstep);
       exit (-1);
     }
+
 
     //check for final timestep
     if (ins->time+ins->dt > ins->finalTime){
@@ -88,22 +97,31 @@ void insRunARK(ins_t *ins){
       ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat), 0);
       ins->tstep++;
       ins->time += ins->dt;
-      
+
       occaTimerTic(mesh->device,"Report");
       if(((ins->tstep)%(ins->outputStep))==0){
-	if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
-	if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
-	insReport(ins, ins->time, ins->tstep);
+        if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
+        if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
+        insReport(ins, ins->time, ins->tstep);
       }
       
       if(ins->outputForceStep){
-	if(((ins->tstep)%(ins->outputForceStep))==0){
-	  ins->o_U.copyTo(ins->U);
-	  ins->o_P.copyTo(ins->P);
-	  insForces(ins, ins->time);
-	}
+        if(((ins->tstep)%(ins->outputForceStep))==0){
+          ins->o_U.copyTo(ins->U);
+          ins->o_P.copyTo(ins->P);
+          insForces(ins, ins->time);
+        }
+      }
+
+       // Update Time-Step Size
+      if(((ins->tstep)%(ins->dtAdaptStep))==0){
+        printf("\n Adapting time Step Size \n");
+        insComputeDt(ins, ins->time);
       }
     }
+
+
+
       
     
     if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
