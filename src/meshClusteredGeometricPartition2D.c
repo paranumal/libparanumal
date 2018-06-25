@@ -37,68 +37,8 @@ typedef struct {
   unsigned int index; //hilbert index
 } parallelCluster_t;
 
-
-
-// Just a quick fix, Change it later !!!!!!!
-#if 0
-
 //This is linked form meshGeometricPartition2D.c
-//unsigned int hilbert2D(unsigned int index1, unsigned int index2);
-
-#else
-
-
-unsigned int Morton_2D_Encode_16bit( unsigned int index1, unsigned int index2 )
-{ // pack 2 16-bit indices into a 32-bit Morton code
-  index1 &= 0x0000ffff;
-  index2 &= 0x0000ffff;
-  index1 |= ( index1 << 8 );
-  index2 |= ( index2 << 8 );
-  index1 &= 0x00ff00ff;
-  index2 &= 0x00ff00ff;
-  index1 |= ( index1 << 4 );
-  index2 |= ( index2 << 4 );
-  index1 &= 0x0f0f0f0f;
-  index2 &= 0x0f0f0f0f;
-  index1 |= ( index1 << 2 );
-  index2 |= ( index2 << 2 );
-  index1 &= 0x33333333;
-  index2 &= 0x33333333;
-  index1 |= ( index1 << 1 );
-  index2 |= ( index2 << 1 );
-  index1 &= 0x55555555;
-  index2 &= 0x55555555;
-  return( index1 | ( index2 << 1 ) );
-}
-
-
-unsigned int MortonToHilbert2D( const unsigned int morton, const unsigned int bits )
-{
-  unsigned int hilbert = 0;
-  unsigned int remap = 0xb4;
-  unsigned int block = ( bits << 1 );
-  while( block )
-    {
-      block -= 2;
-      unsigned int mcode = ( ( morton >> block ) & 3 );
-      unsigned int hcode = ( ( remap >> ( mcode << 1 ) ) & 3 );
-      remap ^= ( 0x82000028 >> ( hcode << 3 ) );
-      hilbert = ( ( hilbert << 2 ) + hcode );
-    }
-  return( hilbert );
-}
-
-
-unsigned int hilbert2D(unsigned int index1, unsigned int index2){
-
-  unsigned int morton = Morton_2D_Encode_16bit(index1,index2);
-
-  return MortonToHilbert2D(morton, 16);
-}
-
-
-#endif
-
+unsigned int hilbert2D(unsigned int n, unsigned int index1, unsigned int index2);
 void bogusMatch(void *a, void *b);
 
 dfloat improveClusteredPartition2D(int *Nclusters, parallelCluster_t **parallelClusters);
@@ -206,7 +146,7 @@ dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, int Nclusters, cluster_t 
     unsigned int iy = (cy-gmincy)*Nboxes/(gmaxcy-gmincy);
 
     //fill the parallel cluster struct
-    parallelClusters[cnt].index =  hilbert2D(ix, iy);
+    parallelClusters[cnt].index =  hilbert2D(Nboxes, ix, iy);
     parallelClusters[cnt].Nelements = clusters[cnt].Nelements;
     parallelClusters[cnt].offSet = clusters[cnt].offSet;
     parallelClusters[cnt].rank = rank;
@@ -215,7 +155,7 @@ dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, int Nclusters, cluster_t 
   // pad cluster array with dummy clusters
   for(int n=Nclusters;n<maxNclusters;++n){
     parallelClusters[n].Nelements = -1;
-    parallelClusters[n].index = hilbert2D(Nboxes+1, Nboxes+1);
+    parallelClusters[n].index = hilbert2D(Nboxes, Nboxes-1, Nboxes-1);
   }
 
   // odd-even parallel sort of cluster capsules based on their Morton index
