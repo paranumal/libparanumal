@@ -223,6 +223,12 @@ void bnsPlotVTU(bns_t *bns, char * FileName);
 void bnsIsoPlotVTU(bns_t *bns, int isoNtris, dfloat *isoq, char *fileName);
 void bnsIsoWeldPlotVTU(bns_t *bns, char *fileName);
 
+//
+void bnsRestartWrite(bns_t *bns, dfloat time); 
+void bnsRestartRead(bns_t *bns, dfloat time); 
+// void bnsRestartSetup(bns_t *bns);
+
+
 // Function for ramp start
 void bnsRampFunction(dfloat t, dfloat *ramp, dfloat *drampdt);
 
