@@ -38,7 +38,7 @@ typedef struct {
 } parallelCluster_t;
 
 //This is linked form meshGeometricPartition2D.c
-unsigned int hilbert2D(unsigned int index1, unsigned int index2);
+unsigned int hilbert2D(unsigned int n, unsigned int index1, unsigned int index2);
 void bogusMatch(void *a, void *b);
 
 dfloat improveClusteredPartition2D(int *Nclusters, parallelCluster_t **parallelClusters);
@@ -146,7 +146,7 @@ dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, int Nclusters, cluster_t 
     unsigned int iy = (cy-gmincy)*Nboxes/(gmaxcy-gmincy);
 
     //fill the parallel cluster struct
-    parallelClusters[cnt].index =  hilbert2D(ix, iy);
+    parallelClusters[cnt].index =  hilbert2D(Nboxes, ix, iy);
     parallelClusters[cnt].Nelements = clusters[cnt].Nelements;
     parallelClusters[cnt].offSet = clusters[cnt].offSet;
     parallelClusters[cnt].rank = rank;
@@ -155,7 +155,7 @@ dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, int Nclusters, cluster_t 
   // pad cluster array with dummy clusters
   for(int n=Nclusters;n<maxNclusters;++n){
     parallelClusters[n].Nelements = -1;
-    parallelClusters[n].index = hilbert2D(Nboxes+1, Nboxes+1);
+    parallelClusters[n].index = hilbert2D(Nboxes, Nboxes-1, Nboxes-1);
   }
 
   // odd-even parallel sort of cluster capsules based on their Morton index
