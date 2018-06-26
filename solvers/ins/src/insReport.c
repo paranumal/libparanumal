@@ -34,9 +34,6 @@ void insReport(ins_t *ins, dfloat time, int tstep){
 
   // do error stuff on host
   insError(ins, time);
-  
-  // Compute Forces on Wall Boundaries
-  insForces(ins, time);
 
   if(ins->options.compareArgs("OUTPUT TYPE","VTU")){ 
     // output field files

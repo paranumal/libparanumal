@@ -41,7 +41,7 @@ ARK2
 CUBATURE
 
 [VISCOSITY]
-0.0002
+0.001
 
 [MACH NUMBER]
 .2
@@ -65,7 +65,7 @@ CUBATURE
 
 # zero to ignore, only ARK stepper
 [TSTEPS FOR TIME STEP ADAPT]
-25
+100
 
 [START TIME]
 0

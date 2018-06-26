@@ -38,7 +38,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
   dfloat outputNumber = 0;
 
   //initial time
-  bns->time = 0.0;
+  bns->time = bns->startTime;
   bns->tstep = 0;
   bns->atstep = 0; 
   bns->rtstep = 0;  

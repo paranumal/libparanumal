@@ -30,7 +30,7 @@ void insRunARK(ins_t *ins){
   ins->time = ins->startTime;
 
   // Compute dt according the local CFL condition
-  if(ins->dtAdaptStep) insComputeDt(ins, ins->time); 
+  // if(ins->dtAdaptStep) insComputeDt(ins, ins->time); 
   // Write Initial Data
   if(ins->outputStep) insReport(ins, 0.0, 0);
   // Write Initial Force Data (assumes U = o_U )
@@ -115,8 +115,9 @@ void insRunARK(ins_t *ins){
       // Update Time-Step Size
       if(ins->dtAdaptStep){
         if(((ins->tstep)%(ins->dtAdaptStep))==0){
-          printf("\n Adapting time Step Size \n");
+          if(rank==0) printf("\n Adapting time Step Size to : ");
           insComputeDt(ins, ins->time);
+          if(rank==0) printf("%.4e\n", ins->dt);
         }
       }
     }

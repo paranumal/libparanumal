@@ -38,9 +38,13 @@ int main(int argc, char **argv){
 
   
 
-   bns_t *bns = bnsSetup(mesh,options); 
-
+   bns_t *bns = bnsSetup(mesh,options);
    bnsRun(bns,options);
+
+#if 0
+   bnsRestartWrite(bns, 100.0);
+   bnsRestartRead(bns, 10.0);
+#endif   
    
   // close down MPI
   MPI_Finalize();
