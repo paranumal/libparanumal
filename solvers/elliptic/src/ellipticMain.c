@@ -48,9 +48,55 @@ int main(int argc, char **argv){
   occa::kernelInfo kernelInfo;
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
+#if 0
+  // test Ax throughput
+
+  occa::streamTag startAx = mesh->device.tagStream();
+
+  // includes GS
+  int NAx = 10;
+
+  for(int it=0;it<NAx;++it){
+
+#if 0
+    ellipticOperator(elliptic, lambda, elliptic->o_x, elliptic->o_Ax);
+#else
+    elliptic->partialAxKernel(elliptic->NlocalGatherElements,			      
+			      elliptic->o_localGatherElementList,
+			      mesh->o_ggeo,
+			      mesh->o_Dmatrices,
+			      mesh->o_Smatrices,
+			      mesh->o_MM,
+			      lambda,
+			      elliptic->o_x,
+			      elliptic->o_Ax);
+#endif
+  }
+  
+  occa::streamTag stopAx = mesh->device.tagStream();
+
+  mesh->device.finish();
+  
+  double elapsedAx = mesh->device.timeBetween(startAx, stopAx);
+  elapsedAx /= NAx;
+
+
+  printf("%d, %d, %g, %d, %g, %g; \%\%elemental: N, dofs, elapsed, dummy, time per node, nodes/time %s\n",
+	 mesh->N,
+	 elliptic->NlocalGatherElements*mesh->Np,
+	 0,
+	 elapsedAx,
+	 elapsedAx/(mesh->Np*mesh->Nelements),
+	 mesh->Nelements*mesh->Np/elapsedAx,
+	 options.getArgs("DISCRETIZATION").c_str());
+  
+  MPI_Finalize();
+  exit(-1);
+#endif
+  
   // convergence tolerance
   dfloat tol = 1e-10;
-
+  
   occa::streamTag startTag = mesh->device.tagStream();
   
   int it = ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
