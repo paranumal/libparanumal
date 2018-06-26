@@ -2,12 +2,12 @@
 1.0
 
 [DATA FILE]
-data/insVortex2D.h
+data/insUniform2D.h
 
 [MESH FILE]
-#../../meshes/insSquareCylinder2D.msh
+../../meshes/insSquareCylinder2D.msh
 #../../meshes/boltzmannSquareCylinderPML2D.msh
-../../meshes/insVortex2D.msh
+#../../meshes/insVortex2D.msh
 
 [MESH DIMENSION]
 2
@@ -41,7 +41,7 @@ ARK2
 CUBATURE
 
 [VISCOSITY]
-0.005
+0.0002
 
 [MACH NUMBER]
 .2
@@ -55,23 +55,26 @@ CUBATURE
 [PBAR]
 0.0
 
+#zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+500
 
+# zero to ignore
 [TSTEPS FOR FORCE OUTPUT]
-10
+0
+
+# zero to ignore, only ARK stepper
+[TSTEPS FOR TIME STEP ADAPT]
+25
 
 [START TIME]
 0
 
 [FINAL TIME]
-10
+75.0
 
 [CFL]
 0.5
-
-[TSTEPS FOR TIME STEP ADAPT]
-50
 
 [OUTPUT TYPE]
 VTU
@@ -80,7 +83,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-squareCylinder
+Tins
 
 #################################################
 ########## Velocity Solver Options ##############
@@ -187,8 +190,8 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-#NONE
-VORTEX
+NONE
+#VORTEX
 
 [VERBOSE]
 FALSE

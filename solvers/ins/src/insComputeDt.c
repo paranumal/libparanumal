@@ -42,14 +42,13 @@ void insComputeDt(ins_t *ins, dfloat time){
     //Guard for around zero velocity
     umaxL = (umaxL<1.E-12) ? 1.E-3 : umaxL;
 
-    dfloat dtLoc = ins->cfl*hminL/((mesh->N+1)*(mesh->N+1)*umaxL);
-    dt = mymin(dt, dtLoc); 
+    dfloat dtL = ins->cfl*hminL/((mesh->N+1)*(mesh->N+1)*umaxL);
+    dt = mymin(dt, dtL); 
   }
 
 
 // MPI_Allreduce to get global minimum dt
 MPI_Allreduce(&dt, &(ins->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-// printf("ins Dt Local: %.4e  \n", ins->dt);
 
 // Update dt dependent variables 
 ins->idt    = 1.0/ins->dt;
