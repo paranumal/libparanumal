@@ -76,7 +76,8 @@ mesh_t *mesh = bns->mesh;
         bns->o_isoNtris.copyTo(bns->isoNtris);
         bns->isoNtris[0] = mymin(bns->isoNtris[0], bns->isoMaxNtris);
 
-        printf("Group:%2d Triangles:%8d\n", bns->isoNtris[0], gr);
+        // 
+        printf("Rank:%2d Group:%2d Triangles:%8d\n", rank, bns->isoNtris[0], gr);
         //
         int offset = 0;
         bns->o_isoq.copyTo(bns->isoq, bns->isoNtris[0]*(mesh->dim+bns->isoNfields)*3*sizeof(dfloat), offset);

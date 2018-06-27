@@ -23,14 +23,68 @@ void insRunARK(ins_t *ins){
 
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"INS");
+#if 0
+  // 
+  int NstokesSteps = 100;
+  dfloat oldDt     = ins->dt;
+  ins->dt         *= 10;
+
+  ins->time = 0.0; 
+
+  if (rank ==0) printf("Running Initial Stokes Solve:\n");
   
+  for(int tstep=0;tstep<NstokesSteps;++tstep){
+
+    insDiffusion(ins, ins->time, ins->o_U, ins->o_LU);
+    insGradient (ins, ins->time, ins->o_P, ins->o_GP);
+    for(int stage=1;stage<=ins->Nstages;++stage){
+      // intermediate stage time
+      dfloat stageTime = ins->time + ins->rkC[stage]*ins->dt;
+      insVelocityRhs  (ins, stageTime, stage, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
+      insVelocitySolve(ins, stageTime, stage, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
+
+      insPressureRhs  (ins, stageTime, stage);
+      insPressureSolve(ins, stageTime, stage);      
+
+      insPressureUpdate(ins, stageTime, stage, ins->o_rkP);
+      insGradient(ins, stageTime, ins->o_rkP, ins->o_rkGP);
+
+      insVelocityUpdate(ins, stageTime, stage, ins->o_rkGP, ins->o_rkU);
+      
+      //compute and save NU and LU
+      // insAdvection(ins, stageTime, ins->o_rkU, ins->o_rkNU);
+      insDiffusion(ins, stageTime, ins->o_rkU, ins->o_rkLU); 
+
+
+      ins->o_NU.copyFrom(ins->o_rkNU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
+      ins->o_LU.copyFrom(ins->o_rkLU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
+
+      if (stage==ins->Nstages) break; //final stage
+      ins->o_U.copyFrom(ins->o_rkU, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
+      ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat), stage*ins->Ntotal*sizeof(dfloat), 0);
+      ins->o_GP.copyFrom(ins->o_rkGP, ins->Ntotal*ins->NVfields*sizeof(dfloat), stage*ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
+    } 
+
+    //accept the step and proceed
+    ins->o_U.copyFrom(ins->o_rkU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 0);
+    ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat), 0);
+    ins->tstep++;
+    ins->time += ins->dt;
+
+    if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep, ins->NiterU, ins->NiterV, ins->NiterP);
+  }
+
+  printf("done \n");
+
+  insReport(ins, 0.0, 0);
+#endif
 
   ins->tstep = 0;
   int done = 0;
   ins->time = ins->startTime;
 
   // Compute dt according the local CFL condition
-  // if(ins->dtAdaptStep) insComputeDt(ins, ins->time); 
+  if(ins->dtAdaptStep) insComputeDt(ins, ins->time); 
   // Write Initial Data
   if(ins->outputStep) insReport(ins, 0.0, 0);
   // Write Initial Force Data (assumes U = o_U )
@@ -115,7 +169,7 @@ void insRunARK(ins_t *ins){
       // Update Time-Step Size
       if(ins->dtAdaptStep){
         if(((ins->tstep)%(ins->dtAdaptStep))==0){
-          if(rank==0) printf("\n Adapting time Step Size to : ");
+          if(rank==0) printf("\n Adapting time Step Size to ");
           insComputeDt(ins, ins->time);
           if(rank==0) printf("%.4e\n", ins->dt);
         }
