@@ -372,6 +372,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       hmin = mymin(hmin, hest);
       hmax = mymax(hmax, hest);
     }
+
+     // dfloat maxMagVecLoc = 0;
+
     for(int n=0;n<mesh->Np;++n){
       const dlong id = n + mesh->Np*e;
       dfloat t = 0;
@@ -387,6 +390,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         numax = uxn*uxn + uyn*uyn;
       else 
         numax = uxn*uxn + uyn*uyn + uzn*uzn;
+
       umax = mymax(umax, numax);
     }
   }
@@ -394,10 +398,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   // Maximum Velocity
   umax = sqrt(umax);
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
-  
-  dfloat cfl; 
-  options.getArgs("CFL", cfl);
-  dfloat dt     = cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
+
+  options.getArgs("CFL", ins->cfl);
+  dfloat dt     = ins->cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
+
+  options.getArgs("TSTEPS FOR TIME STEP ADAPT", ins->dtAdaptStep);
+
 
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(ins->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
@@ -423,7 +429,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   if (rank==0) {
     printf("hmin = %g\n", hmin);
     printf("hmax = %g\n", hmax);
-    printf("cfl = %g\n",  cfl);
+    printf("cfl = %g\n",  ins->cfl);
     printf("dt = %g\n",   dt);
   }
 
@@ -557,6 +563,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   kernelInfo.addDefine("p_blockSize", blockSize);
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+
+   if(options.compareArgs("TIME INTEGRATOR", "EXTBDF"))
+    kernelInfo.addDefine("p_EXTBDF", 1);
+  else
+    kernelInfo.addDefine("p_EXTBDF", 0);
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo.addDefine("p_maxNodes", maxNodes);
