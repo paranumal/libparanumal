@@ -185,6 +185,9 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     levels[n]->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*ellipticL->mesh->Np;
 
     if (options.compareArgs("MULTIGRID SMOOTHER","CHEBYSHEV")) {
+      if (!options.getArgs("MULTIGRID CHEBYSHEV DEGREE", levels[n]->ChebyshevIterations))
+        levels[n]->ChebyshevIterations = 2; //default to degree 2
+
       levels[n]->device_smooth = ellipticMultigridSmoothChebyshev;
 
       levels[n]->smootherResidual = (dfloat *) calloc(levels[n]->Ncols,sizeof(dfloat));

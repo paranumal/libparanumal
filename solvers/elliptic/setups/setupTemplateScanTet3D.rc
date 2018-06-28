@@ -58,6 +58,10 @@ HALFDEGREES
 [MULTIGRID SMOOTHER]
 DAMPEDJACOBI+CHEBYSHEV
 
+# can be any integer >0
+[MULTIGRID CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 ########## ParAlmond Options ##############
@@ -72,6 +76,10 @@ VCYCLE
 [PARALMOND SMOOTHER]
 #DAMPEDJACOBI
 CHEBYSHEV
+
+# can be any integer >0
+[PARALMOND CHEBYSHEV DEGREE]
+2
 
 # can be STRONGNODES, DISTRIBUTED, SATURATE
 [PARALMOND PARTITION]
