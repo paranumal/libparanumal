@@ -19,8 +19,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     if (hostIds[r]==hostId) deviceID++;
   }
 
-  // if (size==1) 
-    options.getArgs("DEVICE NUMBER" ,deviceID);
+  if (size==1) options.getArgs("DEVICE NUMBER" ,deviceID);
 
   // read thread model/device/platform from options
   if(options.compareArgs("THREAD MODEL", "CUDA")){
