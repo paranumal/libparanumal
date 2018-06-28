@@ -124,8 +124,12 @@ SARK
 [CFL]
 0.2
 
+# Currently SARK and LSERK only
 [RESTART FROM FILE]
-0
+1
+
+[WRITE RESTART FILE]
+1
 
 [RESTART FILE NAME]
 bnsRestart
