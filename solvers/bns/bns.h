@@ -53,6 +53,8 @@ typedef struct{
   int probeFlag; 
   int errorFlag;
   int reportFlag;
+  int writeRestartFile, readRestartFile; 
+
   int pmlFlag;
   int errorStep;   // number of steps between error calculations
   int reportStep;  // number of steps between error calculations
@@ -224,8 +226,8 @@ void bnsIsoPlotVTU(bns_t *bns, int isoNtris, dfloat *isoq, char *fileName);
 void bnsIsoWeldPlotVTU(bns_t *bns, char *fileName);
 
 //
-void bnsRestartWrite(bns_t *bns, dfloat time); 
-void bnsRestartRead(bns_t *bns, dfloat time); 
+void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time); 
+void bnsRestartRead(bns_t *bns, setupAide &options); 
 // void bnsRestartSetup(bns_t *bns);
 
 

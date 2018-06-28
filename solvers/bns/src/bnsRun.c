@@ -80,8 +80,7 @@ void bnsRun(bns_t *bns, setupAide &options){
   tic_tot = MPI_Wtime();
 
   if( options.compareArgs("TIME INTEGRATOR", "MRSAAB")  || 
-      options.compareArgs("TIME INTEGRATOR", "LSERK")   ||
-      (options.compareArgs("TIME INTEGRATOR", "SARK")  && bns->fixed_dt ) ){
+      options.compareArgs("TIME INTEGRATOR", "LSERK") ){
 
     for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
       
@@ -89,8 +88,7 @@ void bnsRun(bns_t *bns, setupAide &options){
       tic_out = MPI_Wtime();
 
       if(bns->reportFlag){
-        if((tstep%bns->reportStep)==0){
-          
+        if((tstep%bns->reportStep)==0){ 
           dfloat time =0; 
           if(options.compareArgs("TIME INTEGRATOR", "MRSAAB"))
             time = bns->startTime + bns->dt*tstep*pow(2,(mesh->MRABNlevels-1));     
@@ -98,6 +96,13 @@ void bnsRun(bns_t *bns, setupAide &options){
             time = bns->startTime + tstep*bns->dt;
 
           bnsReport(bns, time, options);
+
+          // Write a restart file
+          if(bns->writeRestartFile){
+            if(rank==0) printf("\nWriting Binary Restart File....");
+              bnsRestartWrite(bns, options, time);
+            if(rank==0) printf("done\n");
+          }   
         }
       }
 
@@ -130,6 +135,8 @@ void bnsRun(bns_t *bns, setupAide &options){
         occaTimerToc(mesh->device, "LSERK");  
       }
 
+      /*
+
       if(options.compareArgs("TIME INTEGRATOR","SARK")){
         occaTimerTic(mesh->device, "SARK");
         dfloat time = tstep*bns->dt;  
@@ -144,15 +151,19 @@ void bnsRun(bns_t *bns, setupAide &options){
 
         occaTimerToc(mesh->device, "SARK");  
       }
+      */
 
       elp_sol += (MPI_Wtime() - tic_sol);
     }
-  }else{
+  }else if( options.compareArgs("TIME INTEGRATOR", "SARK")){
 
     occaTimerTic(mesh->device, "SARK_TOTAL");
     bnsRunEmbedded(bns, haloBytes, sendBuffer, recvBuffer, options);
     occaTimerToc(mesh->device, "SARK_TOTAL");
 
+  }else{
+    printf("Wrong time stepper\n");
+    exit(EXIT_FAILURE); 
   }
 
  

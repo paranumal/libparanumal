@@ -34,7 +34,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
   dfloat outputInterval;
   options.getArgs("OUTPUT INTERVAL", outputInterval);
 
-  dfloat nextOutputTime = outputInterval;
+  dfloat nextOutputTime = bns->startTime + outputInterval;
   dfloat outputNumber = 0;
 
   //initial time
@@ -42,6 +42,9 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
   bns->tstep = 0;
   bns->atstep = 0; 
   bns->rtstep = 0;  
+
+  // Compute Coefficients before starting loop
+  bnsSAADRKCoefficients(bns, options);
 
   if(bns->reportFlag)
     bnsReport(bns, bns->time, options);
@@ -125,6 +128,8 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
         occaTimerTic(mesh->device, "SARK_OUTPUT"); 
         // check for output during this step and do a mini-step
         if(bns->time<nextOutputTime && bns->time+bns->dt>nextOutputTime){
+
+          // Write a restart file
           dfloat savedt = bns->dt;        
           // save rkq
           bns->o_saveq.copyFrom(bns->o_rkq);
@@ -145,14 +150,21 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
 
           // if(options.compareArgs("TIME INTEGRATOR","SARK"))  // SA Adaptive RK 
           bnsSARKStep(bns, bns->time, haloBytes, sendBuffer, recvBuffer, options);
-
-
           // shift for output
           bns->o_rkq.copyTo(bns->o_q);
           // output  (print from rkq)
           bnsReport(bns, nextOutputTime, options);
+          
+          // Write a restart file
+          if(bns->writeRestartFile){
+            if(rank==0) printf("\nWriting Binary Restart File....");
+              bnsRestartWrite(bns, options, nextOutputTime);
+            if(rank==0) printf("done\n");
+          } 
+
           // restore time step
           bns->dt = savedt;
+
           // Go back to old coefficients
           bnsSAADRKCoefficients(bns, options);
 

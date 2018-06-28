@@ -39,11 +39,17 @@ int main(int argc, char **argv){
   
 
    bns_t *bns = bnsSetup(mesh,options);
+   if(bns->readRestartFile){
+    printf("Reading restart file \n"); 
+    bnsRestartRead(bns, options);   
+   }  
+
+
    bnsRun(bns,options);
 
 #if 0
-   bnsRestartWrite(bns, 100.0);
-   bnsRestartRead(bns, 10.0);
+   dfloat time = 100.0; 
+   bnsRestartWrite(bns, options, time);
 #endif   
    
   // close down MPI

@@ -5,9 +5,8 @@
 data/bnsUniform2D.h
 
 [MESH FILE]
-../../meshes/Tshape2D.msh
-#../../meshes/boltzmannSquareCylinderPML2D.msh
-#../../meshes/T2D_Mar27_boltzPML_50K.msh
+#../../meshes/Tshape2D.msh
+../../meshes/boltzmannSquareCylinderPML2D.msh
 
 [MESH DIMENSION]
 2
@@ -64,11 +63,8 @@ CUDA
 #MRSAAB
 SARK 
 
-[FIXED TIME STEP]
-0 
-
 [VISCOSITY]
-0.0002
+0.001
 
 [SPEED OF SOUND]
 5.0
@@ -116,7 +112,13 @@ SARK
 0.2
 
 [RESTART FROM FILE]
-0
+1
+
+[WRITE RESTART FILE]
+1
+
+[RESTART FILE NAME]
+bnsRestart
 
 [OUTPUT FILE FORMAT]
 VTU
