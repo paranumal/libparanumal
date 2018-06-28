@@ -53,7 +53,6 @@ void ellipticSetupSmootherLocalPatch(elliptic_t *elliptic, precon_t *precon,
 
     level->smoother_params = (dfloat *) calloc(2,sizeof(dfloat));
 
-    level->ChebyshevIterations = 2;
     level->smoother_params[0] = rho;
     level->smoother_params[1] = rho/10.;
 
@@ -91,7 +90,6 @@ void ellipticSetupSmootherDampedJacobi(elliptic_t *elliptic, precon_t *precon,
 
     level->smoother_params = (dfloat *) calloc(2,sizeof(dfloat));
 
-    level->ChebyshevIterations = 2;
     level->smoother_params[0] = rho;
     level->smoother_params[1] = rho/10.;
 

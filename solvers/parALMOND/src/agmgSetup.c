@@ -40,11 +40,15 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, hlong *globalRowSt
 
   
   SmoothType smoothType;
+  int ChebyshevIterations=2; //default to degree 2
   if (options.compareArgs("PARALMOND SMOOTHER", "CHEBYSHEV")) {
     smoothType = CHEBYSHEV;
+    options.getArgs("PARALMOND CHEBYSHEV DEGREE", ChebyshevIterations);
   } else { //default to DAMPED_JACOBI
     smoothType = DAMPED_JACOBI;
   }
+  levels[lev]->ChebyshevIterations = ChebyshevIterations;
+
   setupSmoother(parAlmond, levels[lev], smoothType);
 
   levels[lev]->deviceA = newHYB(parAlmond, levels[lev]->A);
@@ -97,6 +101,8 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, hlong *globalRowSt
     levels[lev+1]->Ncols = mymax(levels[lev+1]->A->Ncols, levels[lev+1]->P->Ncols);
     levels[lev+1]->globalRowStarts = levels[lev]->globalAggStarts;
     
+    levels[lev+1]->ChebyshevIterations = ChebyshevIterations;
+
     setupSmoother(parAlmond, levels[lev+1], smoothType);
 
     levels[lev+1]->deviceA = newHYB (parAlmond, levels[lev+1]->A);
