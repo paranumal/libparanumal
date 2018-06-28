@@ -29,10 +29,10 @@ typedef struct {
 
   int Nblock;
 
-  dfloat dt, cfl;          // time step
+  dfloat dt, cfl, dti;          // time step
   dfloat dtMIN;         
   dfloat time;
-  int tstep;
+  int tstep, frame;
   dfloat g0, ig0, lambda;      // helmhotz solver -lap(u) + lamda u
   dfloat startTime;   
   dfloat finalTime;   
@@ -44,6 +44,7 @@ typedef struct {
   int   outputStep;
   int   outputForceStep; 
   int   dtAdaptStep; 
+
 
   int ARKswitch;
   
@@ -96,6 +97,29 @@ typedef struct {
 
   dfloat *cU, *cUd;
   occa::memory o_cU, o_cUd;
+
+  // Some Iso-surfacing variables
+  int isoField, isoColorField, isoNfields, isoNlevels, isoMaxNtris, *isoNtris; 
+  dfloat isoMinVal, isoMaxVal, *isoLevels, *isoq; 
+  size_t isoMax; 
+  
+  int *isoGNlevels, isoGNgroups;
+  dfloat **isoGLvalues;
+  // NBN: add storage for compacted isosurf data for gmsh write
+  std::vector<double> iso_nodes;
+  std::vector<int> iso_tris;
+
+
+  int readRestartFile,writeRestartFile;
+
+
+
+  occa::memory *o_isoGLvalues; 
+  occa::memory o_isoLevels, o_isoq, o_isoNtris; 
+  occa::memory o_plotInterp, o_plotEToV; 
+
+
+
 
   occa::kernel scaledAddKernel;
   occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
@@ -166,6 +190,8 @@ typedef struct {
   occa::kernel velocityUpdateKernel;  
   
   occa::kernel vorticityKernel;
+  occa::kernel isoSurfaceKernel;
+
 
 }ins_t;
 
@@ -193,3 +219,11 @@ void insVelocityUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkGP, 
 void insPressureRhs  (ins_t *ins, dfloat time, int stage);
 void insPressureSolve(ins_t *ins, dfloat time, int stage);
 void insPressureUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkP);
+
+// Welding  to Tris, needs to be moved seperate library
+int insWeldTriVerts(ins_t *ins, int isoNtris, double *isoq);
+void insIsoPlotVTU(ins_t *ins, char *fileName);
+
+// Restarting from file
+void insRestartWrite(ins_t *ins, setupAide &options, dfloat time); 
+void insRestartRead(ins_t *ins, setupAide &options); 

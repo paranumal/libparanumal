@@ -37,7 +37,12 @@ int main(int argc, char **argv){
   }
 
   ins_t *ins = insSetup(mesh,options);
-  
+
+  if(ins->readRestartFile){
+    printf("Reading restart file..."); 
+    insRestartRead(ins, ins->options); 
+    printf("done\n");   
+   }  
   if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
   if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF"))  insRunEXTBDF(ins);
 

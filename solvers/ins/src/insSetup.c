@@ -225,6 +225,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->g0 = 11.f/6.f;
   }
 
+  ins->readRestartFile = 0; 
+  options.getArgs("RESTART FROM FILE", ins->readRestartFile);
+  
+  ins->writeRestartFile = 0; 
+  options.getArgs("WRITE RESTART FILE", ins->writeRestartFile);
+
+
+
   dlong Nlocal = mesh->Np*mesh->Nelements;
   dlong Ntotal = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   
@@ -404,23 +412,26 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   options.getArgs("TSTEPS FOR TIME STEP ADAPT", ins->dtAdaptStep);
 
-
   // MPI_Allreduce to get global minimum dt
-  MPI_Allreduce(&dt, &(ins->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&dt, &(ins->dti), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+
+  // save initial time-step estimate 
+  ins->dt = ins->dti; 
 
   options.getArgs("FINAL TIME", ins->finalTime);
+  options.getArgs("START TIME", ins->startTime);
   
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
-    ins->NtimeSteps = ins->finalTime/ins->dt;
+    ins->NtimeSteps = (ins->finalTime-ins->startTime)/ins->dt;
 
     if(ins->Nsubsteps){
       ins->dt         = ins->Nsubsteps*ins->dt;
-      ins->NtimeSteps = ins->finalTime/ins->dt;
-      ins->dt         = ins->finalTime/ins->NtimeSteps;
+      ins->NtimeSteps = (ins->finalTime-ins->startTime)/ins->dt;
+      ins->dt         = (ins->finalTime-ins->startTime)/ins->NtimeSteps;
       ins->sdt        = ins->dt/ins->Nsubsteps;
     } else{
-      ins->NtimeSteps = ins->finalTime/ins->dt;
-      ins->dt         = ins->finalTime/ins->NtimeSteps;
+      ins->NtimeSteps = (ins->finalTime-ins->startTime)/ins->dt;
+      ins->dt         = (ins->finalTime-ins->startTime)/ins->NtimeSteps;
     }
   }
 
@@ -446,6 +457,107 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   ins->outputForceStep = 0;
   options.getArgs("TSTEPS FOR FORCE OUTPUT", ins->outputForceStep);
+
+
+  //!!!!! Isosurface Setup !! remove those to seoperate library later !!!!
+  if(ins->dim==3){
+    
+    // Only one field is exported for iso-surface to reduce the file size
+    ins->isoNfields  = 1;   //1 + (ins->dim) + (1 + ins->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
+    ins->isoMaxNtris = 1.E7; 
+    //
+    options.getArgs("ISOSURFACE FIELD ID", ins->isoField); 
+    options.getArgs("ISOSURFACE COLOR ID", ins->isoColorField); 
+    options.getArgs("ISOSURFACE LEVEL NUMBER", ins->isoNlevels);
+    options.getArgs("ISOSURFACE CONTOUR MAX", ins->isoMaxVal); 
+    options.getArgs("ISOSURFACE CONTOUR MIN", ins->isoMinVal);
+
+
+    ins->isoMax    = (ins->dim + ins->isoNfields)*3*ins->isoMaxNtris;
+    ins->isoNtris  = (int*) calloc(1, sizeof(int));
+    ins->isoq      = (dfloat*) calloc(ins->isoMax, sizeof(dfloat)); 
+
+  
+    ins->o_isoq      = mesh->device.malloc(ins->isoMax*sizeof(dfloat), ins->isoq);
+    ins->o_isoNtris  = mesh->device.malloc(1*sizeof(int), ins->isoNtris);
+
+
+   
+
+    // meshParallelGatherScatter(mesh, ogs, o_q);
+    // Create all contour levels
+    dfloat *isoLevels = (dfloat*) calloc(ins->isoNlevels, sizeof(dfloat));
+    for(int l=0;l<ins->isoNlevels;++l)
+      isoLevels[l] = ins->isoMinVal + (ins->isoMaxVal-ins->isoMinVal)*l/(dfloat)(ins->isoNlevels-1);
+
+
+
+    // GROUP LEVELS of ISOCONTOURS
+
+    int levelsInGroup = 0; 
+    options.getArgs("ISOSURFACE GROUP NUMBER", levelsInGroup);
+
+    if(levelsInGroup==0) {printf("Number of levels in each group can not be zero!!!\n");  exit(EXIT_FAILURE);} 
+    if(levelsInGroup){
+
+      // Number of groups for isosurfaces
+      ins->isoGNgroups        = ins->isoNlevels/(levelsInGroup);  
+      if(ins->isoNlevels%(levelsInGroup))
+        ins->isoGNgroups++; 
+
+      ins->isoGNlevels        = (int *) calloc(ins->isoGNgroups,sizeof(int));
+      ins->isoGLvalues        = (dfloat **) calloc(ins->isoGNgroups,sizeof(dfloat*));
+
+      for(int gr =0; gr<ins->isoGNgroups; gr++)
+      {
+        int nlevels = (gr+1)*levelsInGroup > ins->isoNlevels ? (ins->isoNlevels%levelsInGroup) : levelsInGroup;  
+        ins->isoGNlevels[gr] = nlevels;  
+        printf("Isosurface Group %d has %d levels\n", gr, ins->isoGNlevels[gr]);
+      }
+
+      // Allocate memory for levels in each group
+      for (int gr =0;gr<ins->isoGNgroups;gr++)
+        ins->isoGLvalues[gr] = (dfloat *) calloc(ins->isoGNlevels[gr],sizeof(dfloat));
+
+      int sk = 0; 
+      for (int gr =0;gr<ins->isoGNgroups;gr++){
+        printf("Isosurface Group %d Values\n", gr);        
+        for (int l=0;l<ins->isoGNlevels[gr];l++){
+          ins->isoGLvalues[gr][l] = isoLevels[sk + l];
+          printf("%.4f\t", ins->isoGLvalues[gr][l]);
+        }
+        printf("\n");
+      sk += ins->isoGNlevels[gr]; 
+      }
+
+      // Create levels for each group
+      ins->o_isoGLvalues     = (occa::memory *) malloc(ins->isoGNgroups*sizeof(occa::memory));
+      for (int gr =0;gr<ins->isoGNgroups;gr++)
+        ins->o_isoGLvalues[gr] = mesh->device.malloc(ins->isoGNlevels[gr]*sizeof(dfloat),ins->isoGLvalues[gr]);
+    
+    }
+
+    // Interpolation operators form Np to PlotNp (equisapaced nodes of order >N generally)
+    dfloat *plotInterp = (dfloat*) calloc(mesh->plotNp*mesh->Np, sizeof(dfloat));
+    for(int n=0;n<mesh->plotNp;++n){
+      for(int m=0;m<mesh->Np;++m){
+        plotInterp[n+m*mesh->plotNp] = mesh->plotInterp[n*mesh->Np+m];
+      }
+    }
+    ins->o_plotInterp = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(dfloat), plotInterp);
+
+    // EToV for local triangulation
+    int *plotEToV = (int*) calloc(mesh->plotNp*mesh->Np, sizeof(int));
+    for(int n=0;n<mesh->plotNelements;++n){
+      for(int m=0;m<mesh->plotNverts;++m){
+        plotEToV[n+m*mesh->plotNelements] = mesh->plotEToV[n*mesh->plotNverts+m];
+      }
+    }
+    ins->o_plotEToV = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(int), plotEToV);
+
+
+  }
+
   
   
 
@@ -589,6 +701,27 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   //
   kernelInfo.addDefine("p_cubNblockV",cubNblockV);
   kernelInfo.addDefine("p_cubNblockS",cubNblockS);
+
+  
+  // IsoSurface related
+  if(ins->dim==3){
+    kernelInfo.addDefine("p_isoNfields", ins->isoNfields);
+    
+    // Define Isosurface Area Tolerance
+    kernelInfo.addDefine("p_triAreaTol", (dfloat) 1.0E-16);
+
+    kernelInfo.addDefine("p_dim", ins->dim);
+    kernelInfo.addDefine("p_plotNp", mesh->plotNp);
+    kernelInfo.addDefine("p_plotNelements", mesh->plotNelements);
+    
+    int plotNthreads = mymax(mesh->Np, mymax(mesh->plotNp, mesh->plotNelements));
+    kernelInfo.addDefine("p_plotNthreads", plotNthreads);
+    
+ } 
+
+
+
+
 
   // if (rank==0) {
   //   printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
@@ -800,6 +933,17 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "insVorticity%s", suffix);
       ins->vorticityKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
     
+      // ===========================================================================
+      sprintf(fileName, DINS "/okl/insIsoSurface3D.okl");
+      sprintf(kernelName, "insIsoSurface3D");
+
+      ins->isoSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);  
+
+
+
+
+
+
 
       if(ins->Nsubsteps){
         // Note that resU and resV can be replaced with already introduced buffer

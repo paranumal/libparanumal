@@ -17,7 +17,7 @@ void insRunEXTBDF(ins_t *ins){
   dfloat oldDt = ins->dt;
   ins->dt *= 100;
 
-  if (rank ==0) printf("Running Initial Stokes Solve:\n");
+  if (rank ==0) printf("Number of Timesteps: %d\n", ins->NtimeSteps);
   for(int tstep=0;tstep<NstokesSteps;++tstep){
     if(tstep<1) 
       extbdfCoefficents(ins,tstep+1);
@@ -80,7 +80,7 @@ void insRunEXTBDF(ins_t *ins){
     else if(tstep<3 && ins->temporalOrder>=3) 
       extbdfCoefficents(ins,tstep+1);
     
-    dfloat time = tstep*ins->dt;
+    dfloat time = ins->startTime + tstep*ins->dt;
 
     if(ins->Nsubsteps) {
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
@@ -122,6 +122,9 @@ void insRunEXTBDF(ins_t *ins){
       ins->o_NU.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
                                   (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
                                   (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+      // ins->o_GP.copyFrom(ins->o_GP, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+      //                             (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+      //                             (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
       ins->o_GP.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
                                   (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
                                   (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
@@ -134,6 +137,13 @@ void insRunEXTBDF(ins_t *ins){
         if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
         if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
         insReport(ins, time+ins->dt, tstep+1);
+
+        // Write a restart file
+        if(ins->writeRestartFile){
+          if(rank==0) printf("\nWriting Binary Restart File....");
+            insRestartWrite(ins, ins->options, time+ins->dt);
+          if(rank==0) printf("done\n");
+        } 
       }
     }
 
