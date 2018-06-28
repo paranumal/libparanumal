@@ -1,7 +1,7 @@
-r0 = DefineNumber[0.025];
-r1 = DefineNumber[0.1];
-r2 = DefineNumber[0.15];
-r3 = DefineNumber[0.15];
+r0 = DefineNumber[0.0275]; // 0.025
+r1 = DefineNumber[0.125];   // 0.1
+r2 = DefineNumber[0.2];  // 0.15
+r3 = DefineNumber[0.2];  // 0.15
 
 //+ Fence Dimensions
 fence_max_x = DefineNumber[ 0.05];

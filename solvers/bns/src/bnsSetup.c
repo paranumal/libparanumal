@@ -19,7 +19,8 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     if (hostIds[r]==hostId) deviceID++;
   }
 
-  if (size==1) options.getArgs("DEVICE NUMBER" ,deviceID);
+  // if (size==1) 
+    options.getArgs("DEVICE NUMBER" ,deviceID);
 
   // read thread model/device/platform from options
   if(options.compareArgs("THREAD MODEL", "CUDA")){
@@ -91,8 +92,8 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   check = options.getArgs("REPORT FLAG", bns->reportFlag);
   if(!check) printf("WARNING setup file does not include REPORT FLAG\n");
 
-  check = options.getArgs("FIXED TIME STEP", bns->fixed_dt);
-  if(!check) printf("WARNING setup file does not include FIXED TIME STEP\n");
+  // check = options.getArgs("FIXED TIME STEP", bns->fixed_dt);
+  // if(!check) printf("WARNING setup file does not include FIXED TIME STEP\n");
 
   if(options.compareArgs("ABSORBING LAYER", "PML"))
     bns->pmlFlag = 1; 
@@ -113,15 +114,17 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     }
   }
 
+  bns->readRestartFile = 0; 
+  options.getArgs("RESTART FROM FILE", bns->readRestartFile);
+  
+  bns->writeRestartFile = 0; 
+  options.getArgs("WRITE RESTART FILE", bns->writeRestartFile);
   
   if(options.compareArgs("PML INTEGRATION", "COLLOCATION"))
     bns->pmlcubature = 0;
   else
     bns->pmlcubature = 1; 
 
- 
-
- 
   
   // Set time discretization scheme:fully explicit or not
   bns->fexplicit = 0; 
@@ -147,7 +150,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     printf("CFL NUMBER\t:\t%.2e\n", bns->cfl);
     printf("START TIME\t:\t%.2e\n", bns->startTime);
     printf("FINAL TIME\t:\t%.2e\n", bns->finalTime);
-    printf("FIXED DT\t:\t%d\n", bns->fixed_dt);
+    // printf("FIXED DT\t:\t%d\n", bns->fixed_dt);
     printf("PML FORMULATION\t:\t%d\n", bns->pmlFlag);
     if(bns->pmlFlag){
       printf("PML PROFILE N\t:\t%d\n", bns->pmlOrder);
@@ -158,6 +161,8 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
       printf("PML CUBATURE\t:\t%d\n", bns->pmlcubature);
     }
     printf("ERROR STEP\t:\t%d\n", bns->errorStep);
+    printf("RESTART READ\t:\t%d\n", bns->readRestartFile);
+    printf("RESTART WRITE\t:\t%d\n", bns->writeRestartFile);
   }
 
   // Setting initial conditions
@@ -826,12 +831,10 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
         sprintf(kernelName, "bnsSARKPmlUpdate%s", suffixUpdate);
         bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
-        
-        if(bns->fixed_dt==0){
+
           sprintf(fileName, DBNS "/okl/bnsErrorEstimate.okl");
           sprintf(kernelName, "bnsErrorEstimate");
           bns->errorEstimateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
-        }
       } else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
       
         sprintf(kernelName, "bnsMRSAABTraceUpdate%s", suffixUpdate);
