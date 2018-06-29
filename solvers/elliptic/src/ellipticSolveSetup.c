@@ -29,7 +29,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   }
 
   dlong Ntotal = mesh->Np*mesh->Nelements;
-  dlong Nblock = (Ntotal+blockSize-1)/blockSize;
+  dlong Nblock = mymax(1,(Ntotal+blockSize-1)/blockSize);
   dlong Nhalo = mesh->Np*mesh->totalHaloPairs;
   dlong Nall   = Ntotal + Nhalo;
 
@@ -306,17 +306,17 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
       int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
       kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-      int NblockV = maxNthreads/mesh->Np; // works for CUDA
+      int NblockV = mymax(1,maxNthreads/mesh->Np); // works for CUDA
       int NnodesV = 1; //hard coded for now
       kernelInfo.addDefine("p_NblockV", NblockV);
       kernelInfo.addDefine("p_NnodesV", NnodesV);
       kernelInfo.addDefine("p_NblockVFine", NblockV);
       kernelInfo.addDefine("p_NblockVCoarse", NblockV);
 
-      int NblockS = maxNthreads/maxNodes; // works for CUDA
+      int NblockS = mymax(1,maxNthreads/maxNodes); // works for CUDA
       kernelInfo.addDefine("p_NblockS", NblockS);
 
-      int NblockP = maxNthreads/(4*mesh->Np); // get close to maxNthreads threads
+      int NblockP = mymax(1,maxNthreads/(4*mesh->Np)); // get close to maxNthreads threads
       kernelInfo.addDefine("p_NblockP", NblockP);
 
       int NblockG;
