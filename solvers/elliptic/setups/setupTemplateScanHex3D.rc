@@ -1,6 +1,9 @@
 [FORMAT]
 1.0
 
+[BENCHMARK]
+BK5
+
 [DATA FILE]
 data/ellipticHomogeneous3D.h
 
