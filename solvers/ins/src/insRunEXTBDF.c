@@ -138,12 +138,12 @@ void insRunEXTBDF(ins_t *ins){
         if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
         insReport(ins, time+ins->dt, tstep+1);
 
-        // Write a restart file
-        if(ins->writeRestartFile){
-          if(rank==0) printf("\nWriting Binary Restart File....");
-            insRestartWrite(ins, ins->options, time+ins->dt);
-          if(rank==0) printf("done\n");
-        } 
+        // // Write a restart file
+        // if(ins->writeRestartFile){
+        //   if(rank==0) printf("\nWriting Binary Restart File....");
+        //     insRestartWrite(ins, ins->options, time+ins->dt);
+        //   if(rank==0) printf("done\n");
+        // } 
       }
     }
 

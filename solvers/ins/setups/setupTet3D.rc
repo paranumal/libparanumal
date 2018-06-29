@@ -34,7 +34,7 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-4
+0
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
@@ -75,14 +75,14 @@ CUBATURE
 0.1
 
 [OUTPUT TYPE]
-ISO_WELD
+VTU
 
 #Tested only EXTBDF currently
 [RESTART FROM FILE]
-1
+0
 
 [WRITE RESTART FILE]
-1
+0
 
 [RESTART FILE NAME]
 insRestart
@@ -143,6 +143,10 @@ ALLDEGREES
 [VELOCITY MULTIGRID SMOOTHER]
 DAMPEDJACOBI,CHEBYSHEV
 
+# can be any integer >0
+[MULTIGRID CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 ########## ParAlmond Options ##############
@@ -159,6 +163,10 @@ CHEBYSHEV
 # can be STRONGNODES, DISTRIBUTED, SATURATE
 [VELOCITY PARALMOND PARTITION]
 STRONGNODES
+
+# can be any integer >0
+[PARALMOND CHEBYSHEV DEGREE]
+2
 
 ###########################################
 
@@ -216,8 +224,8 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be BELTRAMI
 [EXACT]
-NONE
-#BELTRAMI
+#NONE
+BELTRAMI
 
 [VERBOSE]
 FALSE
