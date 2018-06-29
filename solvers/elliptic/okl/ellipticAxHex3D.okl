@@ -290,7 +290,7 @@ kernel void ellipticPartialAxHex3D_v1(const dlong Nelements,
       shared dfloat s_Gqr[p_Nq][p_Nq];
       shared dfloat s_Gqs[p_Nq][p_Nq];
       
-      exclusive dfloat r_qt, r_Gqt, r_Auko;
+      exclusive dfloat r_qt, r_Auko;
       exclusive dfloat r_q[p_Nq]; // register array to hold u(i,j,0:N) private to thread
       
       exclusive dlong element;
@@ -323,16 +323,18 @@ kernel void ellipticPartialAxHex3D_v1(const dlong Nelements,
 	      
 	      // prefetch geometric factors
 	      const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+	      if(k==ko){
+		r_G00 = ggeo[gbase+p_G00ID*p_Np];
+		r_G01 = ggeo[gbase+p_G01ID*p_Np];
+		r_G11 = ggeo[gbase+p_G11ID*p_Np];
+		r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+	      }
 	      
-	      r_G00 = ggeo[gbase+p_G00ID*p_Np];
-	      r_G01 = ggeo[gbase+p_G01ID*p_Np];
 	      r_G02 = ggeo[gbase+p_G02ID*p_Np];
-	      
-	      r_G11 = ggeo[gbase+p_G11ID*p_Np];
 	      r_G12 = ggeo[gbase+p_G12ID*p_Np];
-	      r_G22 = ggeo[gbase+p_G22ID*p_Np];
-	      
-	      r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+	      r_G22 = ggeo[gbase+p_G22ID*p_Np];	      
+
 	    }
 	  }
 	  
@@ -368,7 +370,9 @@ kernel void ellipticPartialAxHex3D_v1(const dlong Nelements,
 		}
 	      
 	      // put this here for a performance bump
-	      r_Gqt = (r_G02*qr + r_G12*qs + r_G22*r_qt);
+	      const dfloat r_Gqt = (r_G02*qr + r_G12*qs + r_G22*r_qt);
+	      r_Auko += s_D[k][ko]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
+
 	      if(k==ko){
 		s_Gqs[j][i] = (r_G01*qr + r_G11*qs + r_G12*r_qt);
 		s_Gqr[j][i] = (r_G00*qr + r_G01*qs + r_G02*r_qt);
@@ -382,8 +386,6 @@ kernel void ellipticPartialAxHex3D_v1(const dlong Nelements,
 	  for(int j=0;j<p_Nq;++j;inner1){
 	    for(int i=0;i<p_Nq;++i;inner0){
 
-	      r_Auko += s_D[k][ko]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
-	      
 	      if(k==ko){
 		occaUnroll(p_Nq)
 		  for(int m = 0; m < p_Nq; m++){
