@@ -16,9 +16,9 @@ ELLIPTICDIR = ../elliptic
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-cc	= mpicc
-CC	= mpic++
-LD	= mpic++
+cc	= mpicc.openmpi
+CC	= mpic++.openmpi
+LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -I$(ELLIPTICDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"'
@@ -67,10 +67,11 @@ AOBJS    = \
 ./src/insVelocityUpdate.o \
 ./src/insPressureRhs.o \
 ./src/insPressureSolve.o \
-./src/insPressureUpdate.o \
-./src/insRestart.o \
-./src/insWeldTriVerts.o \
-./src/insIsoPlotVTU.o    
+./src/insPressureUpdate.o 
+
+#./src/insRestart.o \
+#./src/insWeldTriVerts.o \
+#./src/insIsoPlotVTU.o    
 
 # library objects
 LOBJS = \

@@ -45,7 +45,8 @@ void insReport(ins_t *ins, dfloat time, int tstep){
     insPlotVTU(ins, fname);
   }
 
-  if(ins->options.compareArgs("OUTPUT TYPE","ISO_WELD") && (ins->dim==3)){ 
+/*
+  if(ins->options.compareArgs("OUTPUT TYPE","ISO") && (ins->dim==3)){ 
 
      for (int gr=0; gr<ins->isoGNgroups; gr++){
 
@@ -92,6 +93,7 @@ void insReport(ins_t *ins, dfloat time, int tstep){
         insIsoPlotVTU(ins,  fname);
       }
   }
+  */
 
 }
 

@@ -141,7 +141,15 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
       }
     }
   }
-  MPI_Allreduce(&allNeumann, &(elliptic->allNeumann), 1, MPI::BOOL, MPI_LAND, MPI_COMM_WORLD);
+  
+
+  // !!!!!! Reemoved MPI::BOOL since some mpi versions complains about it !!!!! 
+  int lallNeumann, gallNeumann; 
+  lallNeumann = allNeumann ? 1:0; 
+  MPI_Allreduce(&lallNeumann, &gallNeumann, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  elliptic->allNeumann = gallNeumann ? true: false; 
+
+  // MPI_Allreduce(&allNeumann, &(elliptic->allNeumann), 1, MPI::BOOL, MPI_LAND, MPI_COMM_WORLD);
   if (rank==0&& options.compareArgs("VERBOSE","TRUE")) printf("allNeumann = %d \n", elliptic->allNeumann);
 
   //set surface mass matrix for continuous boundary conditions
