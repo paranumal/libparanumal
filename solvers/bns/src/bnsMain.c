@@ -46,11 +46,6 @@ int main(int argc, char **argv){
 
 
    bnsRun(bns,options);
-
-#if 0
-   dfloat time = 100.0; 
-   bnsRestartWrite(bns, options, time);
-#endif   
    
   // close down MPI
   MPI_Finalize();
