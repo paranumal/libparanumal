@@ -5,8 +5,8 @@
 data/bnsUniform3D.h
 
 [MESH FILE]
-#../../meshes/boltzmannFencePML3D.msh
-../../meshes/boltzmannSquareCylinderPML3D.msh
+../../meshes/boltzmannFencePML3DV2.msh
+#../../meshes/boltzmannSquareCylinderPML3D.msh
 #../../meshes/boltzmannAcousticPulsePML3D.msh
 
 [MESH DIMENSION]
@@ -76,7 +76,7 @@ SARK
 0 
 
 [VISCOSITY]
-1.e-3
+0.0005
 
 [SPEED OF SOUND]
 5.0
@@ -157,4 +157,5 @@ ISO_WELD
 5
 
 [OUTPUT FILE NAME]
+#/scratch/bnsFence3D
 fence3D
