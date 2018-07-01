@@ -159,7 +159,7 @@ void bnsRestartRead(bns_t *bns, setupAide &options){
     fread(&bns->frame, sizeof(int), 1, fp);
 
 
-    if(rank==0) printf("Restart time: %.4e \n", startTime);
+    if(rank==0) printf("Restart time: %.4e ...", startTime);
 
     // Write only q works check for MRAB, write history
     for(dlong e = 0; e<mesh->Nelements; e++){
@@ -214,5 +214,8 @@ void bnsRestartRead(bns_t *bns, setupAide &options){
   // Update NtimeSteps and dt
    bns->NtimeSteps = (bns->finalTime-bns->startTime)/bns->dt;
    bns->dt         = (bns->finalTime-bns->startTime)/bns->NtimeSteps; 
+}else{
+  printf("No restart file...");
+
 }
 }

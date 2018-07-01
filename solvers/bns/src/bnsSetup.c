@@ -463,7 +463,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
    bns->Nvort      = 3;   // hold wx, wy, wz
   // Set Iso-surfacing stuf here
-  if(bns->dim==3){
+  if(options.compareArgs("OUTPUT FILE FORMAT","ISO") && bns->dim==3){
     
     // Only one field is exported for iso-surface to reduce the file size
     bns->isoNfields  = 1;   //1 + (bns->dim) + (1 + bns->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
@@ -560,8 +560,6 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
       }
     }
     bns->o_plotEToV = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(int), plotEToV);
-
-
   }
 
 
@@ -855,7 +853,9 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
       mesh->haloExtractKernel =
           mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl","meshHaloExtract3D",kernelInfo);
 
-      if(bns->dim==3){
+
+  if(bns->dim==3){
+
         mesh->gatherKernel = 
           mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl","gather", kernelInfo);
 
@@ -880,10 +880,6 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
         bns->isoSurfaceKernel =
           mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);        
       }
-
-
-
-
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }
