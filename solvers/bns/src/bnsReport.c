@@ -52,7 +52,7 @@ mesh_t *mesh = bns->mesh;
 
         bns->isoNtris[0] = 0; 
         bns->o_isoNtris.copyFrom(bns->isoNtris);
-
+        if(mesh->nonPmlNelements){
         bns->isoSurfaceKernel(mesh->nonPmlNelements,    // Numner of elements 
                               mesh->o_nonPmlElementIds,    // Element Ids
                               bns->isoField,               // which field to use for isosurfacing
@@ -71,7 +71,7 @@ mesh_t *mesh = bns->mesh;
                               bns->o_isoNtris,             // output: number of generated triangles
                               bns->o_isoq);                // output: (p_dim+p_Nfields)*3*isoNtris[0] values (x,y,z,q0,q1..)
                   
-
+      }
         // find number of generated triangles
         bns->o_isoNtris.copyTo(bns->isoNtris);
         bns->isoNtris[0] = mymin(bns->isoNtris[0], bns->isoMaxNtris);

@@ -5,8 +5,8 @@
 data/bnsUniform3D.h
 
 [MESH FILE]
-../../meshes/boltzmannFencePML3DV2.msh
-#../../meshes/boltzmannSquareCylinderPML3D.msh
+#../../meshes/boltzmannFencePML3DV2.msh
+../../meshes/boltzmannSquareCylinderPML3D.msh
 #../../meshes/boltzmannAcousticPulsePML3D.msh
 
 [MESH DIMENSION]
@@ -76,7 +76,7 @@ SARK
 0 
 
 [VISCOSITY]
-0.0005
+0.05
 
 [SPEED OF SOUND]
 5.0
@@ -107,7 +107,7 @@ SARK
 50
 
 [OUTPUT INTERVAL]
-.1
+.01
 
 [ABSOLUTE TOLERANCE]
 1E-6
