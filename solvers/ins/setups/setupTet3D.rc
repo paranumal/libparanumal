@@ -2,12 +2,13 @@
 1.0
 
 [DATA FILE]
-#data/insUniform3D.h
-data/insBeltrami3D.h
+data/insUniform3D.h
+#data/insBeltrami3D.h
 
 [MESH FILE]
+../../meshes/insChannel3D.msh
 #../../meshes/insFence3Dv1.msh
-../../meshes/insBeltrami3D.msh
+#../../meshes/insBeltrami3D.msh
 
 [MESH DIMENSION]
 3
@@ -41,8 +42,8 @@ EXTBDF2
 CUBATURE
 
 [VISCOSITY]
-#0.0005
-1.0
+0.05
+#1.0
 
 [MACH NUMBER]
 .2
@@ -60,10 +61,14 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-500
+200
 
 [TSTEPS FOR FORCE OUTPUT]
 0
+
+[TSTEPS FOR TIME STEP ADAPT]
+0
+
 
 [START TIME]
 0
@@ -79,10 +84,10 @@ VTU
 
 #Tested only EXTBDF currently
 [RESTART FROM FILE]
-1
+0
 
 [WRITE RESTART FILE]
-1
+0
 
 [RESTART FILE NAME]
 insRestart
@@ -224,8 +229,8 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be BELTRAMI
 [EXACT]
-#NONE
-BELTRAMI
+NONE
+#BELTRAMI
 
 [VERBOSE]
 FALSE

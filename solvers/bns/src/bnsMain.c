@@ -40,8 +40,9 @@ int main(int argc, char **argv){
 
    bns_t *bns = bnsSetup(mesh,options);
    if(bns->readRestartFile){
-    printf("Reading restart file \n"); 
-    bnsRestartRead(bns, options);   
+    printf("Reading restart file..."); 
+    bnsRestartRead(bns, options);  
+    printf("done\n");  
    }  
 
 

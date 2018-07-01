@@ -409,7 +409,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   options.getArgs("CFL", ins->cfl);
   dfloat dt     = ins->cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
-
+  
+  ins->dtAdaptStep = 0; 
   options.getArgs("TSTEPS FOR TIME STEP ADAPT", ins->dtAdaptStep);
 
   // MPI_Allreduce to get global minimum dt
