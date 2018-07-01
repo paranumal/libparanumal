@@ -86,7 +86,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   free(sendBuffer);
 
   dlong Ntotal = mesh->Np*mesh->Nelements;
-  dlong Nblock = (Ntotal+blockSize-1)/blockSize;
+  dlong Nblock = mymax(1,(Ntotal+blockSize-1)/blockSize);
 
   elliptic->Nblock = Nblock;
 
@@ -503,6 +503,10 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   hlong totalElements = 0;
   MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
   elliptic->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
+
+
+  elliptic->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
+  elliptic->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), elliptic->tmp);
 
   // info for kernel construction
   occa::kernelInfo kernelInfo;

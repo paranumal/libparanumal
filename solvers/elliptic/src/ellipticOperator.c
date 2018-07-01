@@ -23,25 +23,48 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
     ogs_t *ogs = elliptic->mesh->ogs;
 
-    if(elliptic->allNeumann)
-      //elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree,o_q, o_tmp);
-      mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
-
-    if(ogs->NhaloGather) {
+    if(elliptic->NglobalGatherElements) 
       elliptic->partialAxKernel(elliptic->NglobalGatherElements, elliptic->o_globalGatherElementList,
           mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
-      //mesh->device.finish();
-      //mesh->device.setStream(elliptic->dataStream);
+
+    if(ogs->NhaloGather) {
+      mesh->device.finish();
+      mesh->device.setStream(elliptic->dataStream);
+
       mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, o_Aq, ogs->o_haloGatherTmp);
-      //ogs->o_haloGatherTmp.asyncCopyTo(ogs->haloGatherTmp);
-      ogs->o_haloGatherTmp.copyTo(ogs->haloGatherTmp);
-      // mesh->device.setStream(elliptic->defaultStream);
+      ogs->o_haloGatherTmp.asyncCopyTo(ogs->haloGatherTmp);
+
+      mesh->device.setStream(elliptic->defaultStream);
     }
-    if(elliptic->NlocalGatherElements){
-        elliptic->partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
+
+    if(elliptic->NlocalGatherElements)
+      elliptic->partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
             mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+    
+    // finalize gather using local and global contributions
+    if(ogs->NnonHaloGather) 
+      mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, one, dOne, o_Aq);
+
+    // C0 halo gather-scatter (on data stream)
+    if(ogs->NhaloGather) {
+      mesh->device.setStream(elliptic->dataStream);
+      mesh->device.finish();
+
+      // MPI based gather scatter using libgs
+      gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
+
+      // copy totally gather halo data back from HOST to DEVICE
+      ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
+    
+      // do scatter back to local nodes
+      mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, ogs->o_haloGatherTmp, o_Aq);
+    
+      mesh->device.finish(); 
+      mesh->device.setStream(elliptic->defaultStream);
     }
+
     if(elliptic->allNeumann) {
+      mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
       o_tmp.copyTo(tmp);
 
       for(dlong n=0;n<Nblock;++n)
@@ -49,41 +72,13 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
       alphaG *= elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
+
+      mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
     }
-
-    // finalize gather using local and global contributions
-    if(ogs->NnonHaloGather) mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, one, dOne, o_Aq);
-
-    // C0 halo gather-scatter (on data stream)
-    if(ogs->NhaloGather) {
-      //mesh->device.setStream(elliptic->dataStream);
-      //mesh->device.finish();
-
-      // MPI based gather scatter using libgs
-      gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
-
-      // copy totally gather halo data back from HOST to DEVICE
-      //ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
-      ogs->o_haloGatherTmp.copyFrom(ogs->haloGatherTmp);
-    
-      // do scatter back to local nodes
-      mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, ogs->o_haloGatherTmp, o_Aq);
-      //mesh->device.setStream(elliptic->defaultStream);
-    }
-
-    if(elliptic->allNeumann) {
-      mesh->addScalarKernel((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np, alphaG, o_Aq);
-      //dfloat one = 1.f;
-      //elliptic->scaledAddKernel(mesh->Nelements*mesh->Np, alphaG, elliptic->o_invDegree, one, o_Aq);
-    }
-
-    //mesh->device.finish();    
-    //mesh->device.setStream(elliptic->dataStream);
-    //mesh->device.finish();    
-    //mesh->device.setStream(elliptic->defaultStream);
 
     //post-mask
-    if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Aq);
+    if (elliptic->Nmasked) 
+      mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Aq);
 
   } else if(options.compareArgs("DISCRETIZATION", "IPDG")) {
     dlong offset = 0;

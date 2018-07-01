@@ -10,7 +10,7 @@ void reportMemoryUsage(occa::device &device, const char *mess){
 
   size_t bytes = device.memoryAllocated();
 
-  printf("%s: bytes allocated = %llu\n", mess, bytes);
+  printf("%s: bytes allocated = %lu\n", mess, bytes);
 }
 
 void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo){
