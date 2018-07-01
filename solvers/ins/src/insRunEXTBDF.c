@@ -58,7 +58,7 @@ void insRunEXTBDF(ins_t *ins){
 
     //cycle rhs history
     for (int s=ins->Nstages;s>1;s--) {
-      ins->o_GP.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+      ins->o_GP.copyFrom(ins->o_GP, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
                                   (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
                                   (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
@@ -122,10 +122,7 @@ void insRunEXTBDF(ins_t *ins){
       ins->o_NU.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
                                   (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
                                   (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
-      // ins->o_GP.copyFrom(ins->o_GP, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-      //                             (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-      //                             (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
-      ins->o_GP.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+      ins->o_GP.copyFrom(ins->o_GP, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
                                   (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
                                   (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }

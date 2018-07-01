@@ -30,11 +30,12 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     if(ogs->NhaloGather) {
       elliptic->partialAxKernel(elliptic->NglobalGatherElements, elliptic->o_globalGatherElementList,
           mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
-      mesh->device.finish();
-      mesh->device.setStream(elliptic->dataStream);
+      //mesh->device.finish();
+      //mesh->device.setStream(elliptic->dataStream);
       mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, o_Aq, ogs->o_haloGatherTmp);
-      ogs->o_haloGatherTmp.asyncCopyTo(ogs->haloGatherTmp);
-      mesh->device.setStream(elliptic->defaultStream);
+      //ogs->o_haloGatherTmp.asyncCopyTo(ogs->haloGatherTmp);
+      ogs->o_haloGatherTmp.copyTo(ogs->haloGatherTmp);
+      // mesh->device.setStream(elliptic->defaultStream);
     }
     if(elliptic->NlocalGatherElements){
         elliptic->partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
@@ -55,18 +56,19 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 
     // C0 halo gather-scatter (on data stream)
     if(ogs->NhaloGather) {
-      mesh->device.setStream(elliptic->dataStream);
-      mesh->device.finish();
+      //mesh->device.setStream(elliptic->dataStream);
+      //mesh->device.finish();
 
       // MPI based gather scatter using libgs
       gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
 
       // copy totally gather halo data back from HOST to DEVICE
-      ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
+      //ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
+      ogs->o_haloGatherTmp.copyFrom(ogs->haloGatherTmp);
     
       // do scatter back to local nodes
       mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, ogs->o_haloGatherTmp, o_Aq);
-      mesh->device.setStream(elliptic->defaultStream);
+      //mesh->device.setStream(elliptic->defaultStream);
     }
 
     if(elliptic->allNeumann) {
@@ -75,10 +77,10 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       //elliptic->scaledAddKernel(mesh->Nelements*mesh->Np, alphaG, elliptic->o_invDegree, one, o_Aq);
     }
 
-    mesh->device.finish();    
-    mesh->device.setStream(elliptic->dataStream);
-    mesh->device.finish();    
-    mesh->device.setStream(elliptic->defaultStream);
+    //mesh->device.finish();    
+    //mesh->device.setStream(elliptic->dataStream);
+    //mesh->device.finish();    
+    //mesh->device.setStream(elliptic->defaultStream);
 
     //post-mask
     if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Aq);
