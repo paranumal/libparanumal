@@ -67,11 +67,10 @@ AOBJS    = \
 ./src/insVelocityUpdate.o \
 ./src/insPressureRhs.o \
 ./src/insPressureSolve.o \
-./src/insPressureUpdate.o 
-
-#./src/insRestart.o \
-#./src/insWeldTriVerts.o \
-#./src/insIsoPlotVTU.o    
+./src/insPressureUpdate.o \
+./src/insRestart.o \
+./src/insWeldTriVerts.o \
+./src/insIsoPlotVTU.o    
 
 # library objects
 LOBJS = \

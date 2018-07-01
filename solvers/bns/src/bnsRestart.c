@@ -41,7 +41,7 @@ void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
     }
   }
 
-  if(bns->pmlFlag){
+  if(mesh->pmlNelements){
     // Copy Field To Host
     bns->o_pmlqx.copyTo(bns->pmlqx);
     bns->o_pmlqy.copyTo(bns->pmlqy);
@@ -202,7 +202,7 @@ void bnsRestartRead(bns_t *bns, setupAide &options){
   // Update Fields
     bns->o_q.copyFrom(bns->q);
 
-    if(bns->pmlFlag){
+    if(mesh->pmlNelements){
       bns->o_pmlqx.copyFrom(bns->pmlqx);
       bns->o_pmlqy.copyFrom(bns->pmlqy);
       if(bns->dim==3)
