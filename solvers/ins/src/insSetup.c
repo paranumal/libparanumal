@@ -245,10 +245,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->P     = (dfloat*) calloc(              ins->Nstages*Ntotal,sizeof(dfloat));
 
   //rhs storage
-  ins->rhsU  = (dfloat*) calloc(Nlocal,sizeof(dfloat));
-  ins->rhsV  = (dfloat*) calloc(Nlocal,sizeof(dfloat));
-  ins->rhsW  = (dfloat*) calloc(Nlocal,sizeof(dfloat));
-  ins->rhsP  = (dfloat*) calloc(Nlocal,sizeof(dfloat));
+  ins->rhsU  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+  ins->rhsV  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+  ins->rhsW  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+  ins->rhsP  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
 
   //additional field storage
   ins->NU   = (dfloat*) calloc(ins->NVfields*(ins->Nstages+1)*Ntotal,sizeof(dfloat));
@@ -754,10 +754,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   }
 
   // MEMORY ALLOCATION
-  ins->o_rhsU  = mesh->device.malloc(Nlocal*sizeof(dfloat), ins->rhsU);
-  ins->o_rhsV  = mesh->device.malloc(Nlocal*sizeof(dfloat), ins->rhsV);
-  ins->o_rhsW  = mesh->device.malloc(Nlocal*sizeof(dfloat), ins->rhsW);
-  ins->o_rhsP  = mesh->device.malloc(Nlocal*sizeof(dfloat), ins->rhsP);
+  ins->o_rhsU  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsU);
+  ins->o_rhsV  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsV);
+  ins->o_rhsW  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsW);
+  ins->o_rhsP  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsP);
 
   ins->o_NU    = mesh->device.malloc(ins->NVfields*(ins->Nstages+1)*Ntotal*sizeof(dfloat), ins->NU);
   ins->o_LU    = mesh->device.malloc(ins->NVfields*(ins->Nstages+1)*Ntotal*sizeof(dfloat), ins->LU);
