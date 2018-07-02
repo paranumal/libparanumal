@@ -143,11 +143,11 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   }
   
 
-  // !!!!!! Reemoved MPI::BOOL since some mpi versions complains about it !!!!! 
+  // !!!!!! Removed MPI::BOOL since some mpi versions complains about it !!!!! 
   int lallNeumann, gallNeumann; 
-  lallNeumann = allNeumann ? 1:0; 
+  lallNeumann = allNeumann ? 0:1; 
   MPI_Allreduce(&lallNeumann, &gallNeumann, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-  elliptic->allNeumann = gallNeumann ? true: false; 
+  elliptic->allNeumann = (gallNeumann>0) ? false: true; 
 
   // MPI_Allreduce(&allNeumann, &(elliptic->allNeumann), 1, MPI::BOOL, MPI_LAND, MPI_COMM_WORLD);
   if (rank==0&& options.compareArgs("VERBOSE","TRUE")) printf("allNeumann = %d \n", elliptic->allNeumann);
