@@ -70,7 +70,7 @@ void insRunEXTBDF(ins_t *ins){
 
   ins->dt = oldDt;
   // Write Initial Data
-  if(ins->outputStep) insReport(ins, 0.0, 0);
+  if(ins->outputStep) insReport(ins, ins->startTime, 0);
 
   for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
     if(tstep<1) 

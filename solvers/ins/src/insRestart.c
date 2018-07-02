@@ -148,10 +148,7 @@ void insRestartRead(ins_t *ins, setupAide &options){
     }else{
 
       printf("restart for ARK has not tested yet\n");
-
-
     }
-
 
   fclose(fp);
 
@@ -185,6 +182,8 @@ void insRestartRead(ins_t *ins, setupAide &options){
 
 
 
+}else{
+  printf("No restart file...");
 }
 
 }
