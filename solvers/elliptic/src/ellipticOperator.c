@@ -55,7 +55,6 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 
       // copy totally gather halo data back from HOST to DEVICE
       ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
-      ogs->o_haloGatherTmp.copyFrom(ogs->haloGatherTmp);
     
       // do scatter back to local nodes
       mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, ogs->o_haloGatherTmp, o_Aq);
