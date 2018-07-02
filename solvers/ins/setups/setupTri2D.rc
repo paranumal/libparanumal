@@ -3,6 +3,7 @@
 
 [DATA FILE]
 data/insUniform2D.h
+#data/insVortex2D.h
 
 [MESH FILE]
 ../../meshes/insSquareCylinder2D.msh
@@ -30,8 +31,8 @@ CUDA
 # can be EXTBDF1,2, or 3, or ARK1
 # can add SUBCYCLING STEPS with EXTBDF
 [TIME INTEGRATOR]
-#EXTBDF2
-ARK2
+#ARK2
+EXTBDF2
 
 [SUBCYCLING STEPS]
 4
@@ -57,7 +58,7 @@ CUBATURE
 
 #zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-500
+100
 
 # zero to ignore
 [TSTEPS FOR FORCE OUTPUT]
@@ -79,8 +80,15 @@ CUBATURE
 [OUTPUT TYPE]
 VTU
 
+#Tested only EXTBDF currently
 [RESTART FROM FILE]
-0
+1
+
+[WRITE RESTART FILE]
+1
+
+[RESTART FILE NAME]
+insRestartTri2D
 
 [OUTPUT FILE NAME]
 Tins
@@ -117,6 +125,10 @@ HALFDOFS
 [VELOCITY MULTIGRID SMOOTHER]
 DAMPEDJACOBI,CHEBYSHEV
 
+# can be any integer >0
+[MULTIGRID CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 ########## ParAlmond Options ##############
@@ -133,6 +145,10 @@ CHEBYSHEV
 # can be STRONGNODES, DISTRIBUTED, SATURATE
 [VELOCITY PARALMOND PARTITION]
 STRONGNODES
+
+# can be any integer >0
+[PARALMOND CHEBYSHEV DEGREE]
+2
 
 ###########################################
 

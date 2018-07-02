@@ -35,7 +35,7 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-0
+8
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
@@ -43,7 +43,7 @@ CUBATURE
 
 [VISCOSITY]
 0.05
-#1.0
+#0.0002
 
 [MACH NUMBER]
 .2
@@ -80,17 +80,17 @@ CUBATURE
 0.1
 
 [OUTPUT TYPE]
-VTU
+ISO
 
 #Tested only EXTBDF currently
 [RESTART FROM FILE]
-0
+1
 
 [WRITE RESTART FILE]
-0
+1
 
 [RESTART FILE NAME]
-insRestart
+insRestartTet3D
 
 # 0 pr (1,2,3) (u,v,w) 4 mag(u) (5,6,7) vort(x,y,x) 8 mag(vort)
 [ISOSURFACE FIELD ID]

@@ -59,10 +59,10 @@ void insError(ins_t *ins, dfloat time){
     if(rank==0)
       if (ins->dim==3) {
         printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minW: %g maxW: %g minP: %g maxP: %g\n", 
-           (int)(time/ins->dt), time, gMinU, gMaxU, gMinV, gMaxV, gMinW, gMaxW, gMinP, gMaxP );
+           (int)((time-ins->startTime)/ins->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinW, gMaxW, gMinP, gMaxP );
       } else {
         printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minP: %g maxP: %g\n", 
-           (int)(time/ins->dt), time, gMinU, gMaxU, gMinV, gMaxV, gMinP, gMaxP );
+           (int)((time-ins->startTime)/ins->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinP, gMaxP );
       }
 
     if( isnan(gMinU) || isnan(gMaxU) || 

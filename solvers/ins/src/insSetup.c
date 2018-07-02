@@ -934,7 +934,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       ins->vorticityKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
     
       // ===========================================================================
-      if(ins->dim==3){
+      if(ins->dim==3 && ins->options.compareArgs("OUTPUT TYPE","ISO")){
         sprintf(fileName, DINS "/okl/insIsoSurface3D.okl");
         sprintf(kernelName, "insIsoSurface3D");
 
