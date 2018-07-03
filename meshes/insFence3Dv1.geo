@@ -1,7 +1,7 @@
-r0 = DefineNumber[0.0275]; // 0.025
-r1 = DefineNumber[0.125];   // 0.1
-r2 = DefineNumber[0.2];  // 0.15
-r3 = DefineNumber[0.2];  // 0.15
+r0 = DefineNumber[0.03]; // 0.025
+r1 = DefineNumber[0.125];  //0.125 //  0.1
+r2 = DefineNumber[0.2];    // 0.2 // 0.15
+r3 = DefineNumber[0.2];    // 0.2 // 0.15
 
 //+ Fence Dimensions
 fence_max_x = DefineNumber[ 0.05];
@@ -31,12 +31,12 @@ wake_min_y = DefineNumber[1.5*box_min_y];
 wake_min_z = DefineNumber[1.5*box_min_z];
 
 //+ Size of Domain Without PML
-domain_max_x = DefineNumber[4.5];
-domain_max_y = DefineNumber[ 2.0];
-domain_max_z = DefineNumber[ 2.0];
-domain_min_x = DefineNumber[-2.0];
+domain_max_x = DefineNumber[ 5.0];
+domain_max_y = DefineNumber[ 3.0];
+domain_max_z = DefineNumber[ 2.5];
+domain_min_x = DefineNumber[-2.5];
 domain_min_y = DefineNumber[ 0.0];
-domain_min_z = DefineNumber[-2.0];
+domain_min_z = DefineNumber[-2.5];
 
 // PML Width
 
@@ -185,39 +185,12 @@ Surface Loop(93) = {84, 92, 90, 88, 86, 82, 43, 39, 41, 45, 66, 64, 60, 62};
 Volume(3) = {93};
 
 
-// Now Creating PML with extrusion
-// +x pml
 
-Extrude {pml_width, 0, 0} {Surface{88};}
-Extrude {-pml_width, 0, 0} {Surface{84};}
-//+ 
-Extrude {0, 0, -pml_width} {Surface{136, 86, 102};}
-Extrude {0, 0, pml_width} {Surface{128, 90, 110};}
-//+ 
-
-Extrude {0, pml_width, 0} {Surface{150, 168, 202, 114, 260, 238, 92, 124, 224};}
-
-//+ Domain Volumes
-Physical Volume("Interior", 9) = {1, 3, 2};
-Physical Volume("XPML",100) = {5, 4};
-Physical Volume("YPML",200) = {18};
-Physical Volume("ZPML",400) = {10, 7};
-Physical Volume("XYPML",300) = {19, 15};
-Physical Volume("XZPML",500) = {6, 8, 11, 9};
-Physical Volume("YZPML",600) = {13, 17};
-Physical Volume("XYZPML",700) = {12, 14, 16, 20};
-
-
-Physical Surface("Wall", 1) = {29, 33, 37, 31, 35, 82, 58, 27, 216, 246, 268, 106, 194, 176, 132,158};
-
-Physical Surface("Inflow",2) = {282, 440, 466, 154, 137, 220};
-
-Physical Surface("SlipY",5) = {291, 445, 467, 313, 423, 401, 335, 357, 379};
-
-Physical Surface("SlipZ",6) = {374, 269, 396, 247, 462, 225,286, 159, 308,181, 330,203};
-
-
-Physical Surface("Outflow",3) = {370, 352, 334, 198, 115, 264};
+Physical Surface("Wall", 1)   = {82, 58, 27, 29, 31, 33, 35, 37};
+Physical Surface("Inflow",2)  = {84};
+Physical Surface("Outflow",3) = {88};
+Physical Surface("SlipZ",6)   = {90, 86};
+Physical Surface("SlipY",5)   = {92};
+Physical Volume("Interior", 9) = {3, 2, 1};
 
 Coherence;
-

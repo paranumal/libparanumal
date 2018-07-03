@@ -140,7 +140,24 @@ void insRunEXTBDF(ins_t *ins){
           if(rank==0) printf("\nWriting Binary Restart File....");
             insRestartWrite(ins, ins->options, time+ins->dt);
           if(rank==0) printf("done\n");
-        } 
+        }
+
+        // // Update Time-Step Size
+        // if(ins->dtAdaptStep){
+        //   if(((ins->tstep)%(ins->dtAdaptStep))==0){
+        //     if(rank==0) printf("\n Adapting time Step Size to ");
+        //       insComputeDt(ins, ins->time);
+        //     if(rank==0) printf("%.4e\n", ins->dt);
+        //      // Interpolate history for the new time step size
+        //       insInterpolateHistory(ins, ins->dtold, ins->dt);
+              
+        //   }
+        // } 
+
+
+
+
+
       }
     }
 
