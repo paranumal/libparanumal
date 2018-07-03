@@ -30,13 +30,15 @@ void insRestartWrite(ins_t *ins, setupAide &options, dfloat t){
 
   // First Write the Solution Time
   fwrite(&t, sizeof(dfloat), 1, fp);
+  //Write dt
+  fwrite(&ins->dt, sizeof(dfloat), 1, fp);
   // Write output frame to prevent overwriting vtu files
   fwrite(&ins->frame, sizeof(int), 1, fp);
 
   // 
  if(options.compareArgs("TIME INTEGRATOR", "EXTBDF") ){
 
-  // Write U and P
+  // Write U and P 
   for(int s =0; s<ins->Nstages; s++){
     for(dlong e = 0;e<mesh->Nelements; e++){
       for(int n=0; n<mesh->Np; n++ ){
@@ -46,13 +48,12 @@ void insRestartWrite(ins_t *ins, setupAide &options, dfloat t){
             elmField[vf]   =  ins->U[idv + vf*ins->fieldOffset];
           }
           elmField[ins->NVfields] = ins->P[idp]; 
-
         fwrite(elmField, sizeof(dfloat), (ins->NVfields+1), fp);
       }
     } 
   }
   // Write nonlinear History 
-  for(int s =0; s<(ins->Nstages+1); s++){
+  for(int s =0; s<ins->Nstages; s++){
     for(dlong e = 0;e<mesh->Nelements; e++){
       for(int n=0; n<mesh->Np; n++ ){
         const dlong idv = e*mesh->Np + n + s*ins->Ntotal*ins->NVfields; 
@@ -62,16 +63,12 @@ void insRestartWrite(ins_t *ins, setupAide &options, dfloat t){
           
           for(int vf = 0; vf<ins->NVfields; vf++)
             elmField2[ins->NVfields+ vf]   =  ins->GP[idv + vf*ins->fieldOffset];
+
         fwrite(elmField2, sizeof(dfloat), 2*ins->NVfields, fp);
       }
     } 
   }
-
-
 }
-
-
-
 
 fclose(fp); 
 
@@ -106,6 +103,8 @@ void insRestartRead(ins_t *ins, setupAide &options){
     // First Write the Solution Time
     dfloat startTime = 0.0; 
     fread(&startTime, sizeof(dfloat), 1, fp); 
+    //Write dt
+    dfloat dtold; fread(&dtold, sizeof(dfloat), 1, fp);
     // Write output frame to prevent overwriting vtu files
     fread(&ins->frame, sizeof(int), 1, fp);
 
@@ -129,7 +128,7 @@ void insRestartRead(ins_t *ins, setupAide &options){
         } 
       }
       // Write nonlinear History 
-      for(int s =0; s<(ins->Nstages+1); s++){
+      for(int s =0; s<ins->Nstages; s++){
         for(dlong e = 0;e<mesh->Nelements; e++){
           for(int n=0; n<mesh->Np; n++ ){
             const dlong idv = e*mesh->Np + n + s*ins->Ntotal*ins->NVfields; 
@@ -141,28 +140,19 @@ void insRestartRead(ins_t *ins, setupAide &options){
               
               for(int vf = 0; vf<ins->NVfields; vf++)
                 ins->GP[idv + vf*ins->fieldOffset] = elmField2[ins->NVfields+vf];
-
           }
         } 
       }
     }else{
 
-      printf("restart for ARK has not tested yet\n");
+      if(rank==0) printf("restart for ARK has not tested yet\n");
     }
 
   fclose(fp);
 
-  ins->o_U.copyFrom(ins->U);
-  ins->o_P.copyFrom(ins->P);
-  // History of nonlinear terms !!!!
-  ins->o_NU.copyFrom(ins->NU);
-  // History of Pressure !!!!!
-  ins->o_GP.copyFrom(ins->GP);
-
   // Just Update start time
   ins->startTime = startTime; 
-
-  ins->dt = ins->dti; // set time-step to initial time-step estimate
+  ins->dt        = ins->dti; // set time-step to initial time-step estimate
 
    if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
     ins->NtimeSteps = (ins->finalTime-ins->startTime)/ins->dt;
@@ -176,10 +166,111 @@ void insRestartRead(ins_t *ins, setupAide &options){
       ins->NtimeSteps = (ins->finalTime-ins->startTime)/ins->dt;
       ins->dt         = (ins->finalTime-ins->startTime)/ins->NtimeSteps;
     }
+
+   // Interpolate history if dt is changed in new setup
+    if(fabs(ins->dt - dtold) > 1.E-12){ // guard for infinitesmall dt
+
+      if(rank==0) printf("Interpolating for new dt...");
+
+      // ins->Nstages is fixed to max 3; 
+      dfloat interp[ins->Nstages][ins->Nstages]; 
+
+      const dfloat tn0 = -0*dtold;
+      const dfloat tn1 = -1*dtold;
+      const dfloat tn2 = -2*dtold;
+
+      for(int stage = 0; stage<ins->Nstages; stage++){
+
+        dfloat t = stage*ins->dt; // current time levels to be interpolated
+
+        switch(ins->Nstages){
+          case 1:
+            interp[stage][0] = 1.f; interp[stage][1] = 0.f; interp[stage][2] = 0.f;
+          break;
+          case 2:
+            interp[stage][0] = (t-tn1)/(tn0-tn1);
+            interp[stage][1] = (t-tn0)/(tn1-tn0);
+            interp[stage][2] = 0.f; 
+          break;
+          case 3:
+            interp[stage][0] = (t-tn1)*(t-tn2)/((tn0-tn1)*(tn0-tn2)); 
+            interp[stage][1] = (t-tn0)*(t-tn2)/((tn1-tn0)*(tn1-tn2));
+            interp[stage][2] = (t-tn0)*(t-tn1)/((tn2-tn0)*(tn2-tn1));
+          break;
+        }
+      }
+
+      // Interpolation Storage after stage update 
+      dfloat *NUs = (dfloat *)calloc(ins->NVfields*ins->Nstages,sizeof(dfloat));
+      dfloat *GPs = (dfloat *)calloc(ins->NVfields*ins->Nstages,sizeof(dfloat));
+      dfloat *Us  = (dfloat *)calloc(ins->NVfields*ins->Nstages,sizeof(dfloat));
+      dfloat *Ps  = (dfloat *)calloc(ins->Nstages,sizeof(dfloat));
+
+      // hold for all fileds
+      dfloat *ui   = (dfloat *)calloc(ins->NVfields,sizeof(dfloat));      
+      dfloat *nui  = (dfloat *)calloc(ins->NVfields,sizeof(dfloat));      
+      dfloat *gpi  = (dfloat *)calloc(ins->NVfields,sizeof(dfloat));      
+      
+      // For EXTBDF history fields that have to be updated, NU, GP
+      for(dlong e=0; e<mesh->Nelements; e++){
+        for(int n=0; n<mesh->Np; n++){
+         
+          const dlong id           = e*mesh->Np + n; 
+          const dlong stageOffset  = ins->NVfields*ins->fieldOffset;
+
+          for(int stage = 0; stage<ins->Nstages; stage++){
+            
+            // Initialize to zero
+            for(int fld = 0; fld<ins->NVfields; fld++){
+              ui[fld]  = 0.0; nui[fld] = 0.0;  gpi[fld] = 0.0; 
+            }
+
+            dfloat pi = 0.0; 
+
+            for(int s = 0; s<ins->Nstages; s++){
+              for(int fld = 0; fld<ins->NVfields; fld++){
+                 ui[fld]  += interp[stage][s]*ins->U [id+fld*ins->fieldOffset+s*stageOffset];
+                nui[fld]  += interp[stage][s]*ins->NU[id+fld*ins->fieldOffset+s*stageOffset];
+                gpi[fld]  += interp[stage][s]*ins->GP[id+fld*ins->fieldOffset+s*stageOffset];
+              }
+              pi += interp[stage][s]*ins->P[id+s*ins->Ntotal];
+            }
+
+            // update field for this stage i.e. t = stage*ins->dtNew
+            for(int fld = 0; fld<ins->NVfields; fld++){
+               Us[stage*ins->NVfields + fld] =  ui[fld]; 
+              NUs[stage*ins->NVfields + fld] = nui[fld]; 
+              GPs[stage*ins->NVfields + fld] = gpi[fld]; 
+            }
+            Ps[stage] = pi;  
+          }
+
+          // Update node values 
+          for(int stage = 0; stage<ins->Nstages; stage++){
+            for(int fld = 0; fld<ins->NVfields; fld++){
+             ins-> U[id+fld*ins->fieldOffset+stage*stageOffset] =   Us[stage*ins->NVfields + fld]; 
+             ins->NU[id+fld*ins->fieldOffset+stage*stageOffset] =  NUs[stage*ins->NVfields + fld]; 
+             ins->GP[id+fld*ins->fieldOffset+stage*stageOffset] =  GPs[stage*ins->NVfields + fld]; 
+             }
+           ins->P[id + stage*ins->Ntotal] = Ps[stage]; 
+          }
+        }
+      }
+    }
+
   }else{
-      printf("restart for ARK has not tested yet\n");
+      if(rank==0) printf("restart for ARK has not tested yet\n");
   }
 
+
+
+
+  ins->o_U.copyFrom(ins->U);
+  ins->o_P.copyFrom(ins->P);
+  // History of nonlinear terms !!!!
+  ins->o_NU.copyFrom(ins->NU);
+  // History of Pressure !!!!!
+  ins->o_GP.copyFrom(ins->GP);
 
 
 }else{
@@ -187,3 +278,8 @@ void insRestartRead(ins_t *ins, setupAide &options){
 }
 
 }
+
+
+
+
+

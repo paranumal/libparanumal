@@ -474,19 +474,13 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     options.getArgs("ISOSURFACE CONTOUR MAX", ins->isoMaxVal); 
     options.getArgs("ISOSURFACE CONTOUR MIN", ins->isoMinVal);
 
-
     ins->isoMax    = (ins->dim + ins->isoNfields)*3*ins->isoMaxNtris;
     ins->isoNtris  = (int*) calloc(1, sizeof(int));
     ins->isoq      = (dfloat*) calloc(ins->isoMax, sizeof(dfloat)); 
 
-  
     ins->o_isoq      = mesh->device.malloc(ins->isoMax*sizeof(dfloat), ins->isoq);
     ins->o_isoNtris  = mesh->device.malloc(1*sizeof(int), ins->isoNtris);
 
-
-   
-
-    // meshParallelGatherScatter(mesh, ogs, o_q);
     // Create all contour levels
     dfloat *isoLevels = (dfloat*) calloc(ins->isoNlevels, sizeof(dfloat));
     for(int l=0;l<ins->isoNlevels;++l)

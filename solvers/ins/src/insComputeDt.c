@@ -47,6 +47,8 @@ void insComputeDt(ins_t *ins, dfloat time){
   }
 
 
+// Save the time step size
+// ins->dto = ins->dt; 
 // MPI_Allreduce to get global minimum dt
 MPI_Allreduce(&dt, &(ins->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
