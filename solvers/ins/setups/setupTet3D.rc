@@ -2,13 +2,13 @@
 1.0
 
 [DATA FILE]
-#data/insUniform3D.h
-data/insBeltrami3D.h
+data/insUniform3D.h
+#data/insBeltrami3D.h
 
 [MESH FILE]
-#../../meshes/insChannel3D.msh
+../../meshes/insChannel3D.msh
 #../../meshes/insFence3Dv1.msh
-../../meshes/insBeltrami3D.msh
+#../../meshes/insBeltrami3D.msh
 
 [MESH DIMENSION]
 3
@@ -42,7 +42,7 @@ EXTBDF2
 CUBATURE
 
 [VISCOSITY]
-1.0
+0.01
 #0.0002
 
 [MACH NUMBER]
@@ -77,7 +77,7 @@ CUBATURE
 50
 
 [CFL]
-0.075
+0.15
 
 [OUTPUT TYPE]
 ISO
@@ -229,8 +229,8 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be BELTRAMI
 [EXACT]
-#NONE
-BELTRAMI
+NONE
+#BELTRAMI
 
 [VERBOSE]
 FALSE
