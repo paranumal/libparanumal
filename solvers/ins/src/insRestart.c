@@ -168,9 +168,9 @@ void insRestartRead(ins_t *ins, setupAide &options){
     }
 
    // Interpolate history if dt is changed in new setup
-    if(fabs(ins->dt - dtold) > 1.E-12){ // guard for infinitesmall dt
+    if(fabs(ins->dt - dtold) > 1.E-12){ // guard for infinitesmall dt change
 
-      if(rank==0) printf("Interpolating for new dt...");
+      if(rank==0) printf("Interpolating history for new dt...");
 
       // ins->Nstages is fixed to max 3; 
       dfloat interp[ins->Nstages][ins->Nstages]; 
@@ -181,7 +181,7 @@ void insRestartRead(ins_t *ins, setupAide &options){
 
       for(int stage = 0; stage<ins->Nstages; stage++){
 
-        dfloat t = stage*ins->dt; // current time levels to be interpolated
+        dfloat t = -stage*ins->dt; // current time levels to be interpolated
 
         switch(ins->Nstages){
           case 1:
