@@ -236,7 +236,7 @@ void insRestartRead(ins_t *ins, setupAide &options){
               pi += interp[stage][s]*ins->P[id+s*ins->Ntotal];
             }
 
-            // update field for this stage i.e. t = stage*ins->dtNew
+            // update field for this stage i.e. t = -stage*ins->dtNew
             for(int fld = 0; fld<ins->NVfields; fld++){
                Us[stage*ins->NVfields + fld] =  ui[fld]; 
               NUs[stage*ins->NVfields + fld] = nui[fld]; 
