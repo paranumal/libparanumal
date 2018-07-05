@@ -383,6 +383,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
         elliptic->partialIpdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
       }
     }
+  MPI_Barrier(MPI_COMM_WORLD);
   }
 
   //on-host version of gather-scatter
@@ -467,6 +468,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
                      kernelInfo);
       }
     }
+  MPI_Barrier(MPI_COMM_WORLD);
   }
 
   long long int pre = mesh->device.memoryAllocated();
