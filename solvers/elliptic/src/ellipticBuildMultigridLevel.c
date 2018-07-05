@@ -689,6 +689,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
         elliptic->partialIpdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
       }
     }
+  MPI_Barrier(MPI_COMM_WORLD);
   }
 
   //new precon struct
@@ -748,6 +749,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
       elliptic->precon->prolongateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
     }
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 
   //on host gather-scatter
