@@ -1,6 +1,6 @@
 
 //float data type
-#if 1
+#if 0
 #define dfloat float
 #define MPI_DFLOAT MPI_FLOAT
 #define dfloatFormat "%f"
