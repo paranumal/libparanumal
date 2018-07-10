@@ -106,11 +106,11 @@ typedef struct {
   int *isoGNlevels, isoGNgroups;
   dfloat **isoGLvalues;
   // NBN: add storage for compacted isosurf data for gmsh write
-  std::vector<double> iso_nodes;
+  std::vector<dfloat> iso_nodes;
   std::vector<int> iso_tris;
 
 
-  int readRestartFile,writeRestartFile;
+  int readRestartFile,writeRestartFile, restartedFromFile;
 
 
 
@@ -221,7 +221,7 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage);
 void insPressureUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkP);
 
 // Welding  to Tris, needs to be moved seperate library
-int insWeldTriVerts(ins_t *ins, int isoNtris, double *isoq);
+int insWeldTriVerts(ins_t *ins, int isoNtris, dfloat *isoq);
 void insIsoPlotVTU(ins_t *ins, char *fileName);
 
 // Restarting from file

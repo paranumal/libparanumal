@@ -73,13 +73,21 @@ void insRunEXTBDF(ins_t *ins){
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
 
   for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
-    if(tstep<1) 
-      extbdfCoefficents(ins,tstep+1);
-    else if(tstep<2 && ins->temporalOrder>=2) 
-      extbdfCoefficents(ins,tstep+1);
-    else if(tstep<3 && ins->temporalOrder>=3) 
-      extbdfCoefficents(ins,tstep+1);
-    
+
+    // if(ins->restartedFromFile){
+      // if(tstep=0 && ins->temporalOrder>=2) 
+      //   extbdfCoefficents(ins,2);
+      // else if(tstep=0 && ins->temporalOrder>=3) 
+      //   extbdfCoefficents(ins,3);
+    // }else{
+      if(tstep<1) 
+        extbdfCoefficents(ins,tstep+1);
+      else if(tstep<2 && ins->temporalOrder>=2) 
+        extbdfCoefficents(ins,tstep+1);
+      else if(tstep<3 && ins->temporalOrder>=3) 
+        extbdfCoefficents(ins,tstep+1);
+    // }
+
     dfloat time = ins->startTime + tstep*ins->dt;
 
     if(ins->Nsubsteps) {
@@ -150,14 +158,9 @@ void insRunEXTBDF(ins_t *ins){
         //     if(rank==0) printf("%.4e\n", ins->dt);
         //      // Interpolate history for the new time step size
         //       insInterpolateHistory(ins, ins->dtold, ins->dt);
-              
+
         //   }
         // } 
-
-
-
-
-
       }
     }
 

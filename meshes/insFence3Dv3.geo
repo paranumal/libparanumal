@@ -1,7 +1,7 @@
-r0 = DefineNumber[0.0325]; // 0.025
-r1 = DefineNumber[0.15];  //0.125 //  0.1
-r2 = DefineNumber[0.30];    // 0.2 // 0.15
-r3 = DefineNumber[0.30];    // 0.2 // 0.15
+r0 = DefineNumber[0.025*2]; // 0.025
+r1 = DefineNumber[0.125*1.5];  //0.125 //  0.1
+r2 = DefineNumber[0.175*1.5];    // 0.2 // 0.15
+r3 = DefineNumber[0.175*1.5];    // 0.2 // 0.15
 
 //+ Fence Dimensions
 fence_max_x = DefineNumber[ 0.05];
@@ -31,12 +31,12 @@ wake_min_y = DefineNumber[1.5*box_min_y];
 wake_min_z = DefineNumber[1.5*box_min_z];
 
 //+ Size of Domain Without PML
-domain_max_x = DefineNumber[ 6.0];  //  5.0
-domain_max_y = DefineNumber[ 3.5];  //  2.5
-domain_max_z = DefineNumber[ 3.5];  //  2.5
-domain_min_x = DefineNumber[-3.5];  // -2.5
-domain_min_y = DefineNumber[ 0.0];  //  0.0
-domain_min_z = DefineNumber[-3.5];  // -2.5
+domain_max_x = DefineNumber[ 5.0];
+domain_max_y = DefineNumber[ 2.5];
+domain_max_z = DefineNumber[ 2.5];
+domain_min_x = DefineNumber[-2.5];
+domain_min_y = DefineNumber[ 0.0];
+domain_min_z = DefineNumber[-2.5];
 
 // PML Width
 
@@ -187,11 +187,10 @@ Volume(3) = {93};
 
 
 Physical Surface("Wall", 1)   = {82, 58, 27, 29, 31, 33, 35, 37};
-Physical Surface("Inflow",2)  = {84};
+Physical Surface("Inflow",2)  = {84, 92};
 Physical Surface("Outflow",3) = {88};
 Physical Surface("SlipZ",6)   = {90, 86};
-Physical Surface("SlipY",5)   = {92};
+// Physical Surface("SlipY",5)   = {92};
 Physical Volume("Interior", 9) = {3, 2, 1};
 
-Coherence;
 Coherence;
