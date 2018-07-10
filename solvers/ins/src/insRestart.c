@@ -9,6 +9,7 @@ void insRestartWrite(ins_t *ins, setupAide &options, dfloat t){
   // copy data back to host
   ins->o_U.copyTo(ins->U);
   ins->o_P.copyTo(ins->P);
+  
   // History of nonlinear terms !!!!
   ins->o_NU.copyTo(ins->NU);
   // History of Pressure !!!!!
@@ -42,8 +43,8 @@ void insRestartWrite(ins_t *ins, setupAide &options, dfloat t){
   for(int s =0; s<ins->Nstages; s++){
     for(dlong e = 0;e<mesh->Nelements; e++){
       for(int n=0; n<mesh->Np; n++ ){
-        const dlong idv = e*mesh->Np + n + s*ins->Ntotal*ins->NVfields; 
-        const dlong idp = e*mesh->Np + n + s*ins->Ntotal; 
+        const dlong idv = e*mesh->Np + n + s*ins->fieldOffset*ins->NVfields; 
+        const dlong idp = e*mesh->Np + n + s*ins->fieldOffset; 
           for(int vf = 0; vf<ins->NVfields; vf++){
             elmField[vf]   =  ins->U[idv + vf*ins->fieldOffset];
           }
@@ -56,7 +57,7 @@ void insRestartWrite(ins_t *ins, setupAide &options, dfloat t){
   for(int s =0; s<ins->Nstages; s++){
     for(dlong e = 0;e<mesh->Nelements; e++){
       for(int n=0; n<mesh->Np; n++ ){
-        const dlong idv = e*mesh->Np + n + s*ins->Ntotal*ins->NVfields; 
+        const dlong idv = e*mesh->Np + n + s*ins->fieldOffset*ins->NVfields; 
           
           for(int vf = 0; vf<ins->NVfields; vf++)
             elmField2[vf]   =  ins->NU[idv + vf*ins->fieldOffset];
@@ -71,7 +72,6 @@ void insRestartWrite(ins_t *ins, setupAide &options, dfloat t){
 }
 
 fclose(fp); 
-
 
 }
 
@@ -91,6 +91,8 @@ void insRestartRead(ins_t *ins, setupAide &options){
   sprintf(fname, "%s_%04d.dat",(char*)outName.c_str(), rank);
   FILE *fp; 
 
+
+  ins->restartedFromFile = 0; 
   // Overwrite  Binary File
   fp = fopen(fname,"rb");
 
@@ -101,10 +103,10 @@ void insRestartRead(ins_t *ins, setupAide &options){
     dfloat *elmField2 = (dfloat *) calloc(2*ins->NVfields, sizeof(dfloat)); 
 
     // First Write the Solution Time
-    dfloat startTime = 0.0; 
+    dfloat startTime = 0.0, dtold = 0.0;  
     fread(&startTime, sizeof(dfloat), 1, fp); 
     //Write dt
-    dfloat dtold; fread(&dtold, sizeof(dfloat), 1, fp);
+    fread(&dtold, sizeof(dfloat), 1, fp);
     // Write output frame to prevent overwriting vtu files
     fread(&ins->frame, sizeof(int), 1, fp);
 
@@ -118,11 +120,12 @@ void insRestartRead(ins_t *ins, setupAide &options){
 
             fread(elmField, sizeof(dfloat), (ins->NVfields+1), fp);
 
-            const dlong idv = e*mesh->Np + n + s*ins->Ntotal*ins->NVfields; 
-            const dlong idp = e*mesh->Np + n + s*ins->Ntotal; 
-              for(int vf = 0; vf<ins->NVfields; vf++){
+            const dlong idv = e*mesh->Np + n + s*ins->fieldOffset*ins->NVfields; 
+            const dlong idp = e*mesh->Np + n + s*ins->fieldOffset;
+
+              for(int vf = 0; vf<ins->NVfields; vf++)
                 ins->U[idv + vf*ins->fieldOffset] = elmField[vf];
-              }
+
               ins->P[idp] = elmField[ins->NVfields]; 
           }
         } 
@@ -131,13 +134,10 @@ void insRestartRead(ins_t *ins, setupAide &options){
       for(int s =0; s<ins->Nstages; s++){
         for(dlong e = 0;e<mesh->Nelements; e++){
           for(int n=0; n<mesh->Np; n++ ){
-            const dlong idv = e*mesh->Np + n + s*ins->Ntotal*ins->NVfields; 
-            
-            fread(elmField2, sizeof(dfloat), 2*ins->NVfields, fp);
-              
+            const dlong idv = e*mesh->Np + n + s*ins->fieldOffset*ins->NVfields;       
+            fread(elmField2, sizeof(dfloat), 2*ins->NVfields, fp);       
               for(int vf = 0; vf<ins->NVfields; vf++)
-                ins->NU[idv + vf*ins->fieldOffset] = elmField2[vf];
-              
+                ins->NU[idv + vf*ins->fieldOffset] = elmField2[vf];    
               for(int vf = 0; vf<ins->NVfields; vf++)
                 ins->GP[idv + vf*ins->fieldOffset] = elmField2[ins->NVfields+vf];
           }
@@ -150,6 +150,7 @@ void insRestartRead(ins_t *ins, setupAide &options){
 
   fclose(fp);
 
+  ins->restartedFromFile = 1;  
   // Just Update start time
   ins->startTime = startTime; 
   ins->dt        = ins->dti; // set time-step to initial time-step estimate
@@ -233,7 +234,7 @@ void insRestartRead(ins_t *ins, setupAide &options){
                 nui[fld]  += interp[stage][s]*ins->NU[id+fld*ins->fieldOffset+s*stageOffset];
                 gpi[fld]  += interp[stage][s]*ins->GP[id+fld*ins->fieldOffset+s*stageOffset];
               }
-              pi += interp[stage][s]*ins->P[id+s*ins->Ntotal];
+              pi += interp[stage][s]*ins->P[id+s*ins->fieldOffset];
             }
 
             // update field for this stage i.e. t = -stage*ins->dtNew
@@ -252,7 +253,7 @@ void insRestartRead(ins_t *ins, setupAide &options){
              ins->NU[id+fld*ins->fieldOffset+stage*stageOffset] =  NUs[stage*ins->NVfields + fld]; 
              ins->GP[id+fld*ins->fieldOffset+stage*stageOffset] =  GPs[stage*ins->NVfields + fld]; 
              }
-           ins->P[id + stage*ins->Ntotal] = Ps[stage]; 
+           ins->P[id + stage*ins->fieldOffset] = Ps[stage]; 
           }
         }
       }

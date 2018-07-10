@@ -7,17 +7,17 @@
 
 
 //---------------------------------------------------------
-int insWeldTriVerts(ins_t *ins, int Ntris, double *isoq){
+int insWeldTriVerts(ins_t *ins, int Ntris, dfloat *isoq){
   int Max_N = Ntris*12;                   // upper bound for node data
   int Max_T = Ntris*3;    // upper bound for connectivity ids
 
   std::vector<int>& refT = ins->iso_tris;
   refT.resize(Max_T);   // storage for 3 node ids for each tri
 
-  std::vector< std::vector<double> > Q;
-  Q.resize(ins->isoNfields, vector<double>(Max_T)); // for multiple field variables
+  std::vector< std::vector<dfloat> > Q;
+  Q.resize(ins->isoNfields, vector<dfloat>(Max_T)); // for multiple field variables
 
-  // std::vector<double> Q;
+  // std::vector<dfloat> Q;
   // Q.resize(Max_T*ins->isoNfields);      // storage for 1 scalar for each node
 
   mesh_t *mesh = ins->mesh;
@@ -31,8 +31,8 @@ int insWeldTriVerts(ins_t *ins, int Ntris, double *isoq){
   //---------------------------------------------
   vertexLookup* VL = new vertexLookup;
 
-  double p[3][3]={{0.0}};
-  double q[ins->isoNfields][3]={{0.0}}; 
+  dfloat p[3][3]={{0.0}};
+  dfloat q[ins->isoNfields][3]={{0.0}}; 
   int id=0, v[3]={0}; 
   int nodesk=0;
   vertexPos vpos;
@@ -97,7 +97,7 @@ int insWeldTriVerts(ins_t *ins, int Ntris, double *isoq){
 
   // load node coods and scalar
   int nno = VL->getVertexCount();
-  std::vector<double>& refN = ins->iso_nodes;
+  std::vector<dfloat>& refN = ins->iso_nodes;
   refN.resize(nno*(ins->dim + ins->isoNfields));
   int skN=0;
   for (int i=0; i<nno; ++i) {
