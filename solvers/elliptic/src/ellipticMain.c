@@ -54,22 +54,27 @@ int main(int argc, char **argv){
     // test Ax throughput
     occa::streamTag startAx = mesh->device.tagStream();
     
-    int NAx = 20;
+    int NAx = 1;
     
     for(int it=0;it<NAx;++it){
       // include gather-scatter
-      if(options.compareArgs("BENCHMARK", "BK5"))
-	ellipticOperator(elliptic, lambda, elliptic->o_x, elliptic->o_Ax);
-      else
-	elliptic->partialAxKernel(elliptic->NlocalGatherElements,			      
-				  elliptic->o_localGatherElementList,
-				  mesh->o_ggeo,
-				  mesh->o_Dmatrices,
-				  mesh->o_Smatrices,
-				  mesh->o_MM,
-				  lambda,
-				  elliptic->o_x,
-				  elliptic->o_Ax);
+      if(options.compareArgs("BENCHMARK", "BP5"))
+	ellipticOperator(elliptic, lambda, elliptic->o_x, elliptic->o_Ax, dfloatString); // standard precision
+
+      if(options.compareArgs("BENCHMARK", "BK5")){
+	if(!options.compareArgs("ELEMENT MAP", "TRILINEAR")){
+	  elliptic->partialAxKernel(elliptic->NlocalGatherElements,			      
+				    elliptic->o_localGatherElementList,
+				    mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM,
+				    lambda, elliptic->o_x, elliptic->o_Ax);
+	}
+	else{
+	  elliptic->partialAxKernel(elliptic->NlocalGatherElements,			      
+				    elliptic->o_localGatherElementList,
+				    elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM,
+				    lambda, elliptic->o_x, elliptic->o_Ax);
+	}
+      }
     }
       
     occa::streamTag stopAx = mesh->device.tagStream();

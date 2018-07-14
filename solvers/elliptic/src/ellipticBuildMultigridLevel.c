@@ -647,9 +647,14 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
         boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
       kernelInfo.addInclude(boundaryHeaderFileName);
 
+      occa::kernelInfo dfloatKernelInfo = kernelInfo;
+      occa::kernelInfo floatKernelInfo = kernelInfo;
+      floatKernelInfo.addDefine("pfloat", "float");
+      dfloatKernelInfo.addDefine("pfloat", dfloatString);
+      
       sprintf(fileName, DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
       sprintf(kernelName, "ellipticAx%s", suffix);
-      elliptic->AxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      elliptic->AxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,dfloatKernelInfo);
 
       // check for trilinear
       if(elliptic->elementType!=HEXAHEDRA){
@@ -664,9 +669,11 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       }
 
       //sprintf(kernelName, "ellipticPartialAx%s", suffix);
-      elliptic->partialAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      
+      elliptic->partialAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,dfloatKernelInfo);
 
-
+      elliptic->partialFloatAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,floatKernelInfo);
+      
       if (options.compareArgs("BASIS", "BERN")) {
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticGradientBB%s.okl", suffix);

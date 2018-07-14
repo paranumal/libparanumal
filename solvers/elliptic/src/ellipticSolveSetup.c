@@ -342,9 +342,14 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
 
       sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
       sprintf(kernelName, "ellipticAx%s", suffix);
-      elliptic->AxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
+      occa::kernelInfo dfloatKernelInfo = kernelInfo;
+      occa::kernelInfo floatKernelInfo = kernelInfo;
+      floatKernelInfo.addDefine("pfloat", "float");
+      dfloatKernelInfo.addDefine("pfloat", dfloatString);
 
+      elliptic->AxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,dfloatKernelInfo);
+      
       if(elliptic->elementType!=HEXAHEDRA){
 	sprintf(kernelName, "ellipticPartialAx%s", suffix);
       }
@@ -355,9 +360,13 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
 	  sprintf(kernelName, "ellipticPartialAx%s", suffix);
 	}
       }
-      
-      elliptic->partialAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
+      printf("LOOK HERE DFLOAT!!!!!!\n");
+      elliptic->partialAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,dfloatKernelInfo);
+
+      printf("LOOK HERE !!!!!!\n");
+      elliptic->partialFloatAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,floatKernelInfo);
+      
       if (options.compareArgs("BASIS","BERN")) {
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticGradientBB%s.okl", suffix);
