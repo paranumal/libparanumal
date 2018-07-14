@@ -80,6 +80,45 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelI
   elliptic->BCType = (int*) calloc(3,sizeof(int));
   memcpy(elliptic->BCType,BCType,3*sizeof(int));
 
+
+  // build trilinear geometric factors for hexes (do before solve setup)
+  if(elliptic->elementType==HEXAHEDRA){
+    if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
+      if(options.compareArgs("ELEMENT MAP", "TRILINEAR")){
+	printf("mesh->dim = %d, mesh->Nverts = %d\n", mesh->dim, mesh->Nverts);
+	
+	// pack gllz, gllw, and elementwise EXYZ
+	hlong Nxyz = mesh->Nelements*mesh->dim*mesh->Nverts;
+	dfloat *EXYZ = (dfloat*) calloc(Nxyz, sizeof(dfloat));
+	dfloat *gllzw = (dfloat*) calloc(2*mesh->Nq, sizeof(dfloat));
+	
+	int sk = 0;
+	for(int n=0;n<mesh->Nq;++n)
+	  gllzw[sk++] = mesh->gllz[n];
+	for(int n=0;n<mesh->Nq;++n)
+	  gllzw[sk++] = mesh->gllw[n];
+
+	sk = 0;
+	for(hlong e=0;e<mesh->Nelements;++e){
+	  for(int v=0;v<mesh->Nverts;++v)
+	    EXYZ[sk++] = mesh->EX[e*mesh->Nverts+v];
+	  for(int v=0;v<mesh->Nverts;++v)
+	    EXYZ[sk++] = mesh->EY[e*mesh->Nverts+v];
+	  for(int v=0;v<mesh->Nverts;++v)
+	    EXYZ[sk++] = mesh->EZ[e*mesh->Nverts+v];
+	}
+	
+	// nodewise ggeo with element coordinates and gauss node info
+	elliptic->o_EXYZ = mesh->device.malloc(Nxyz*sizeof(dfloat), EXYZ);
+	elliptic->o_gllzw = mesh->device.malloc(2*mesh->Nq*sizeof(dfloat), gllzw);
+
+	free(EXYZ);
+	free(gllzw);
+      }
+    }
+  }
+
+  // 
   ellipticSolveSetup(elliptic, lambda, kernelInfo);
 
 

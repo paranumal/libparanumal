@@ -344,9 +344,19 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
       sprintf(kernelName, "ellipticAx%s", suffix);
       elliptic->AxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-      sprintf(kernelName, "ellipticPartialAx%s", suffix);
-      elliptic->partialAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
+      if(elliptic->elementType!=HEXAHEDRA){
+	sprintf(kernelName, "ellipticPartialAx%s", suffix);
+      }
+      else{
+	if(elliptic->options.compareArgs("ELEMENT MAP", "TRILINEAR")){
+	  sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
+	}else{
+	  sprintf(kernelName, "ellipticPartialAx%s", suffix);
+	}
+      }
+      
+      elliptic->partialAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
       if (options.compareArgs("BASIS","BERN")) {
 

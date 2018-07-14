@@ -77,6 +77,9 @@ typedef struct {
   occa::memory o_R;
   occa::memory o_Ry;
 
+  occa::memory o_EXYZ; // element vertices for reconstructing geofacs (trilinear hexes only)
+  occa::memory o_gllzw; // GLL nodes and weights
+  
   // list of elements that are needed for global gather-scatter
   dlong NglobalGatherElements;
   occa::memory o_globalGatherElementList;
