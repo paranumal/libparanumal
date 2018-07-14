@@ -511,6 +511,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   // info for kernel construction
   occa::kernelInfo kernelInfo;
 
+  kernelInfo.addDefine("p_dim", mesh->dim);
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   kernelInfo.addDefine("p_N", mesh->N);
   kernelInfo.addDefine("p_Nq", mesh->N+1);
@@ -621,21 +622,21 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
       kernelInfo.addDefine("p_maxNodes", maxNodes);
 
-      int NblockV = maxNthreads/mesh->Np; // works for CUDA
+      int NblockV = mymax(1,maxNthreads/mesh->Np); // works for CUDA
       kernelInfo.addDefine("p_NblockV", NblockV);
 
       int one = 1; //set to one for now. TODO: try optimizing over these
       kernelInfo.addDefine("p_NnodesV", one);
 
-      int NblockS = maxNthreads/maxNodes; // works for CUDA
+      int NblockS = mymax(1,maxNthreads/maxNodes); // works for CUDA
       kernelInfo.addDefine("p_NblockS", NblockS);
 
-      int NblockP = maxNthreads/(4*mesh->Np); // get close to maxNthreads threads
+      int NblockP = mymax(1,maxNthreads/(4*mesh->Np)); // get close to maxNthreads threads
       kernelInfo.addDefine("p_NblockP", NblockP);
 
       int NblockG;
       if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
-      else NblockG = maxNthreads/mesh->Np;
+      else NblockG = mymax(1,maxNthreads/mesh->Np);
       kernelInfo.addDefine("p_NblockG", NblockG);
 
       //add standard boundary functions
@@ -650,7 +651,19 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       sprintf(kernelName, "ellipticAx%s", suffix);
       elliptic->AxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
-      sprintf(kernelName, "ellipticPartialAx%s", suffix);
+      // check for trilinear
+      if(elliptic->elementType!=HEXAHEDRA){
+	sprintf(kernelName, "ellipticPartialAx%s", suffix);
+      }
+      else{
+	if(elliptic->options.compareArgs("ELEMENT MAP", "TRILINEAR")){
+	  sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
+	}else{
+	  sprintf(kernelName, "ellipticPartialAx%s", suffix);
+	}
+      }
+
+      //sprintf(kernelName, "ellipticPartialAx%s", suffix);
       elliptic->partialAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
 
 
@@ -794,5 +807,26 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   }
   if (elliptic->Nmasked) elliptic->o_maskIds = mesh->device.malloc(elliptic->Nmasked*sizeof(dlong), elliptic->maskIds);
 
+
+  if(elliptic->elementType==HEXAHEDRA){
+    if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
+      if(options.compareArgs("ELEMENT MAP", "TRILINEAR")){
+	
+	// pack gllz, gllw, and elementwise EXYZ
+	dfloat *gllzw = (dfloat*) calloc(2*mesh->Nq, sizeof(dfloat));
+	
+	int sk = 0;
+	for(int n=0;n<mesh->Nq;++n)
+	  gllzw[sk++] = mesh->gllz[n];
+	for(int n=0;n<mesh->Nq;++n)
+	  gllzw[sk++] = mesh->gllw[n];
+
+	elliptic->o_gllzw = mesh->device.malloc(2*mesh->Nq*sizeof(dfloat), gllzw);
+	free(gllzw);
+      }
+    }
+  }
+
+  
   return elliptic;
 }

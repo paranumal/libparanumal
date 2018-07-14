@@ -23,10 +23,17 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
     ogs_t *ogs = elliptic->mesh->ogs;
 
-    if(elliptic->NglobalGatherElements) 
-      elliptic->partialAxKernel(elliptic->NglobalGatherElements, elliptic->o_globalGatherElementList,
-          mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
-
+    int mapType = (elliptic->elementType==HEXAHEDRA &&
+		   options.compareArgs("ELEMENT MAP", "TRILINEAR")) ? 1:0;
+    
+    if(elliptic->NglobalGatherElements) {
+      if(mapType==0)
+	elliptic->partialAxKernel(elliptic->NglobalGatherElements, elliptic->o_globalGatherElementList,
+				  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+      else
+	elliptic->partialAxKernel(elliptic->NglobalGatherElements, elliptic->o_globalGatherElementList,
+				  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+    }
     if(ogs->NhaloGather) {
       mesh->device.finish();
       mesh->device.setStream(elliptic->dataStream);
@@ -37,10 +44,15 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       mesh->device.setStream(elliptic->defaultStream);
     }
 
-    if(elliptic->NlocalGatherElements)
-      elliptic->partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
-            mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
-    
+    if(elliptic->NlocalGatherElements){
+      if(mapType==0)
+	elliptic->partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
+				  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+      else
+	elliptic->partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
+				  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+    }
+
     // finalize gather using local and global contributions
     if(ogs->NnonHaloGather) 
       mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, one, dOne, o_Aq);

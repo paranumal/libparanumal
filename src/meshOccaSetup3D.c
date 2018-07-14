@@ -613,6 +613,7 @@ void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelI
       mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat));
   }
 
+  kernelInfo.addDefine("p_dim", 3);
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   kernelInfo.addDefine("p_N", mesh->N);
   kernelInfo.addDefine("p_Nq", mesh->N+1);
