@@ -5,7 +5,7 @@ void ellipticMultigridAx(void **args, occa::memory &o_x, occa::memory &o_Ax) {
   elliptic_t *elliptic = (elliptic_t *) args[0];
   dfloat *lambda = (dfloat *) args[1];
 
-  ellipticOperator(elliptic,*lambda,o_x,o_Ax);
+  ellipticOperator(elliptic,*lambda,o_x,o_Ax, dfloatString); // "float" ); // hard coded for testing (should make an option)
 }
 
 void ellipticMultigridCoarsen(void **args, occa::memory &o_x, occa::memory &o_Rx) {

@@ -1,6 +1,6 @@
 #include "elliptic.h"
 
-void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq){
+void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision){
 
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
@@ -25,14 +25,16 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 
     int mapType = (elliptic->elementType==HEXAHEDRA &&
 		   options.compareArgs("ELEMENT MAP", "TRILINEAR")) ? 1:0;
+
+    occa::kernel &partialAxKernel = (strstr(precision, "float")) ? elliptic->partialFloatAxKernel : elliptic->partialAxKernel;
     
     if(elliptic->NglobalGatherElements) {
       if(mapType==0)
-	elliptic->partialAxKernel(elliptic->NglobalGatherElements, elliptic->o_globalGatherElementList,
-				  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+	partialAxKernel(elliptic->NglobalGatherElements, elliptic->o_globalGatherElementList,
+			mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
       else
-	elliptic->partialAxKernel(elliptic->NglobalGatherElements, elliptic->o_globalGatherElementList,
-				  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+	partialAxKernel(elliptic->NglobalGatherElements, elliptic->o_globalGatherElementList,
+			elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
     }
     if(ogs->NhaloGather) {
       mesh->device.finish();
@@ -46,13 +48,13 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 
     if(elliptic->NlocalGatherElements){
       if(mapType==0)
-	elliptic->partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
+	partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
 				  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
       else
-	elliptic->partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
-				  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+	partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
+			elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
     }
-
+    
     // finalize gather using local and global contributions
     if(ogs->NnonHaloGather) 
       mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, one, dOne, o_Aq);

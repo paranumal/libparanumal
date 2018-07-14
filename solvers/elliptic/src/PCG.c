@@ -25,7 +25,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   dfloat TOL =  mymax(tol*tol*normB,tol*tol);
   // compute A*x
-  ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax);
+  ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax, dfloatString);
 
   // subtract r = b - A*x
   ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);
@@ -66,7 +66,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
     // [
     // A*p
-    ellipticOperator(elliptic, lambda, o_p, o_Ap);
+    ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
 
     // dot(p,A*p)
     pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
