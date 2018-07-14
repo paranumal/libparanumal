@@ -1,11 +1,14 @@
 [FORMAT]
 1.0
 
+[BENCHMARK]
+BK5
+
 [DATA FILE]
 data/ellipticHomogeneous3D.h
 
 [MESH FILE]
-../../meshes/cavityHexH05.msh
+../../meshes/cavityHexH01.msh
 
 [MESH DIMENSION]
 3
@@ -14,7 +17,11 @@ data/ellipticHomogeneous3D.h
 12
 
 [POLYNOMIAL DEGREE]
-4
+8
+
+[ELEMENT MAP]
+ISOPARAMETRIC
+#TRILINEAR
 
 [THREAD MODEL]
 CUDA
@@ -42,6 +49,7 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
+#JACOBI
 MULTIGRID
 
 
