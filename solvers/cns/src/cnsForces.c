@@ -121,10 +121,7 @@ void cnsForces(cns_t *cns, dfloat time){
   MPI_Allreduce(&Fy, &gFy, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
   //
-  int rank; 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  if(rank==0){
+  if(mesh->rank==0){
     char fname[BUFSIZ];
     sprintf(fname, "CNSForceData_N%d.dat", mesh->N);
 

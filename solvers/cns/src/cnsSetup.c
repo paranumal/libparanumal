@@ -1,40 +1,6 @@
 #include "cns.h"
 
 cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
-
-  // OCCA build stuff
-  char deviceConfig[BUFSIZ];
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  
-  long int hostId = gethostid();
-
-  long int* hostIds = (long int*) calloc(size,sizeof(long int));
-  MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,MPI_COMM_WORLD);
-
-  int deviceID = 0;
-  for (int r=0;r<rank;r++) {
-    if (hostIds[r]==hostId) deviceID++;
-  }
-
-  if (size==1) options.getArgs("DEVICE NUMBER" ,deviceID);
-
-  // read thread model/device/platform from options
-  if(options.compareArgs("THREAD MODEL", "CUDA")){
-    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
-  }
-  else if(options.compareArgs("THREAD MODEL", "OpenCL")){
-    int plat;
-    options.getArgs("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", deviceID, plat);
-  }
-  else if(options.compareArgs("THREAD MODEL", "OpenMP")){
-    sprintf(deviceConfig, "mode = OpenMP");
-  }
-  else{
-    sprintf(deviceConfig, "mode = Serial");
-  }
         
   cns_t *cns = (cns_t*) calloc(1, sizeof(cns_t));
 
@@ -233,22 +199,22 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     mesh->dt = mesh->finalTime/mesh->NtimeSteps;
   }
 
-  if (rank ==0) printf("dtAdv = %lg (before cfl), dtVisc = %lg (before cfl), dt = %lg\n",
+  if (mesh->rank ==0) printf("dtAdv = %lg (before cfl), dtVisc = %lg (before cfl), dt = %lg\n",
    dtAdv, dtVisc, dt);
 
   cns->frame = 0;
   // errorStep
   mesh->errorStep = 1000;
 
-  if (rank ==0) printf("dt = %g\n", mesh->dt);
+  if (mesh->rank ==0) printf("dt = %g\n", mesh->dt);
 
   // OCCA build stuff
   
   occa::kernelInfo kernelInfo;
   if(cns->dim==3)
-    meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
+    meshOccaSetup3D(mesh, options, kernelInfo);
   else
-    meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
+    meshOccaSetup2D(mesh, options, kernelInfo);
 
   //add boundary data to kernel info  
   string boundaryHeaderFileName; 
@@ -269,7 +235,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   cns->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->rhsq);
 
-  if (rank==0)
+  if (mesh->rank==0)
     cout << "TIME INTEGRATOR (" << options.getArgs("TIME INTEGRATOR") << ")" << endl;
   
   if (options.compareArgs("TIME INTEGRATOR","LSERK4")){
@@ -322,7 +288,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     cns->recvStressesBuffer = (dfloat*) o_recvStressesBuffer.getMappedPointer();
   }
 
-  //if (rank!=0) 
+  //if (mesh->rank!=0) 
     occa::setVerboseCompilation(false);
 
   //  p_RT, p_rbar, p_ubar, p_vbar
@@ -387,8 +353,8 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
-  for (int r=0;r<size;r++) {
-    if (r==rank) {
+  for (int r=0;r<mesh->size;r++) {
+    if (r==mesh->rank) {
 
       // kernels from volume file
       sprintf(fileName, DCNS "/okl/cnsVolume%s.okl", suffix);

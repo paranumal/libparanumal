@@ -100,7 +100,8 @@ OBJS    = \
 ../../src/matrix.o \
 ../../src/setupAide.o \
 ../../src/trace.o \
-../../src/readArray.o
+../../src/readArray.o \
+../../src/occaDeviceConfig.o
 
 
 cnsMain:$(OBJS) 
