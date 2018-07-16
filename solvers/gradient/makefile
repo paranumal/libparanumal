@@ -95,7 +95,8 @@ OBJS    = \
 ../../src/setupAide.o \
 ../../src/trace.o \
 ../../src/readArray.o \
-../../src/occaDeviceConfig.o
+../../src/occaDeviceConfig.o\
+../../src/timer.o
 
 
 gradientMain:$(OBJS) 
