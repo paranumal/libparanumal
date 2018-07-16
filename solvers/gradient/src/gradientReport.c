@@ -2,9 +2,6 @@
 
 void gradientReport(gradient_t *gradient, dfloat time, setupAide &options){
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   mesh3D *mesh = gradient->mesh;
 
   int isoField = 3;
@@ -74,7 +71,7 @@ void gradientReport(gradient_t *gradient, dfloat time, setupAide &options){
   char fname[BUFSIZ];
   string outName;
   options.getArgs("OUTPUT FILE NAME", outName);
-  sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), rank, gradient->frame++);
+  sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, gradient->frame++);
 
   gradientPlotVTU(gradient, isoNtris[0], isoq, fname);
 #endif
