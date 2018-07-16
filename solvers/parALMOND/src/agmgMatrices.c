@@ -522,8 +522,7 @@ void axpy(parAlmond_t *parAlmond, dcoo *A, dfloat alpha, occa::memory o_x, dfloa
   //copy back to device
   if(A->NrecvTotal){
     parAlmond->device.setStream(parAlmond->dataStream);
-    o_x.asyncCopyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),
-                  A->NlocalCols*sizeof(dfloat));
+    o_x.asyncCopyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
     parAlmond->device.finish();
     parAlmond->device.setStream(parAlmond->defaultStream);
     parAlmond->device.finish();
