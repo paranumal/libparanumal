@@ -2,10 +2,6 @@
 
 void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda){
 
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
   mesh2D *mesh = elliptic->mesh;
   precon_t *precon = elliptic->precon;
   setupAide options = elliptic->options;
@@ -14,7 +10,7 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
     dlong nnz;
     nonZero_t *A;
 
-    hlong *globalStarts = (hlong*) calloc(size+1, sizeof(hlong));
+    hlong *globalStarts = (hlong*) calloc(mesh->size+1, sizeof(hlong));
 
     int basisNp = mesh->Np;
     dfloat *basis = NULL;

@@ -72,10 +72,6 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
     exit(0);
   }
 
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
   mesh_t* mesh = elliptic->mesh; //original mesh
 
   mesh_t* pmesh = (mesh_t*) calloc (1,sizeof(mesh_t)); //partially assembled fem mesh (result of projecting sem element to larger space)
@@ -155,7 +151,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
       if (fabs(pmesh->t[n]+1)<NODETOL)           pmesh->faceNodes[0*pmesh->Nfp+f0++] = n;
       if (fabs(pmesh->s[n]+1)<NODETOL)           pmesh->faceNodes[1*pmesh->Nfp+f1++] = n;
       if (fabs(pmesh->r[n]+pmesh->s[n]+
-                       pmesh->t[n]+1.0)<NODETOL) pmesh->faceNodes[2*pmesh->Nfp+f2++] = n;
+	       pmesh->t[n]+1.0)<NODETOL) pmesh->faceNodes[2*pmesh->Nfp+f2++] = n;
       if (fabs(pmesh->r[n]+1)<NODETOL)           pmesh->faceNodes[3*pmesh->Nfp+f3++] = n;
     }
 
@@ -357,7 +353,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
   int verbose = options.compareArgs("VERBOSE","TRUE") ? 1:0;
 
   hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  hlong *globalStarts = (hlong *) calloc(size+1,sizeof(hlong));
+  hlong *globalStarts = (hlong *) calloc(mesh->size+1,sizeof(hlong));
   memcpy(globalNumbering,pmesh->globalIds,Ntotal*sizeof(hlong)); 
 
   if (elliptic->elementType==TRIANGLES||elliptic->elementType==TETRAHEDRA) {
@@ -409,8 +405,8 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
   //build gather scatter with masked nodes
   precon->FEMogs = meshParallelGatherScatterSetup(pmesh, Ntotal, 
-                                        pmesh->gatherLocalIds,  gatherMaskedBaseIds, 
-                                        pmesh->gatherBaseRanks, pmesh->gatherHaloFlags,verbose);
+						  pmesh->gatherLocalIds,  gatherMaskedBaseIds, 
+						  pmesh->gatherBaseRanks, pmesh->gatherHaloFlags,verbose);
 
   if (elliptic->elementType==TRIANGLES||elliptic->elementType==TETRAHEDRA) {
     //dont need these anymore
@@ -468,17 +464,17 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
     }
   }
   
-  if (rank==0) printf("Building full SEMFEM matrix..."); fflush(stdout);
+  if (mesh->rank==0) printf("Building full SEMFEM matrix..."); fflush(stdout);
 
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = femMesh->Np*femMesh->Np*femMesh->Nelements;
 
   dlong cnt =0;
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  int *AsendCounts  = (int*) calloc(size, sizeof(int));
-  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
-  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
-  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
+  int *AsendCounts  = (int*) calloc(mesh->size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(mesh->size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(mesh->size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(mesh->size+1, sizeof(int));
 
   //Build unassembed non-zeros
   switch(elliptic->elementType){
@@ -520,7 +516,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
   // find send and recv offsets for gather
   dlong nnz = 0;
-  for(int r=0;r<size;++r){
+  for(int r=0;r<mesh->size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     nnz += ArecvCounts[r];
@@ -530,8 +526,8 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
-                           A, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
-                           MPI_COMM_WORLD);
+		A, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
+		MPI_COMM_WORLD);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
   qsort(A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
@@ -549,7 +545,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
   if (nnz) cnt++;
   nnz = cnt;
 
-  if(rank==0) printf("done.\n");
+  if(mesh->rank==0) printf("done.\n");
 
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Type_free(&MPI_NONZERO_T);
@@ -626,7 +622,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
 void BuildFEMMatrixTri2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,dlong *cnt, nonZero_t *A) {
 
-  #pragma omp parallel for
+#pragma omp parallel for
   for (dlong e=0;e<femMesh->Nelements;e++) {
     for (int n=0;n<femMesh->Np;n++) {
       dlong idn = localIds[e*femMesh->Np + n];
@@ -650,7 +646,7 @@ void BuildFEMMatrixTri2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *l
 
         dfloat nonZeroThreshold = 1e-7;
         if (fabs(val)>nonZeroThreshold) {
-          #pragma omp critical
+#pragma omp critical
           {
             // pack non-zero
             A[*cnt].val = val;
@@ -667,7 +663,7 @@ void BuildFEMMatrixTri2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *l
 
 void BuildFEMMatrixQuad2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,dlong *cnt, nonZero_t *A) {
 
-  #pragma omp parallel for
+#pragma omp parallel for
   for (dlong e=0;e<femMesh->Nelements;e++) {
     for (int ny=0;ny<femMesh->Nq;ny++) {
       for (int nx=0;nx<femMesh->Nq;nx++) {
@@ -718,7 +714,7 @@ void BuildFEMMatrixQuad2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *
 
             dfloat nonZeroThreshold = 1e-7;
             if (fabs(val)>nonZeroThreshold) {
-              #pragma omp critical
+#pragma omp critical
               {
                 // pack non-zero
                 A[*cnt].val = val;
@@ -737,7 +733,7 @@ void BuildFEMMatrixQuad2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *
 
 void BuildFEMMatrixTet3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,dlong *cnt, nonZero_t *A) {
 
-  #pragma omp parallel for
+#pragma omp parallel for
   for (dlong e=0;e<femMesh->Nelements;e++) {
 
     dfloat Grr = femMesh->ggeo[e*femMesh->Nggeo + G00ID];
@@ -769,7 +765,7 @@ void BuildFEMMatrixTet3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *l
 
         dfloat nonZeroThreshold = 1e-7;
         if (fabs(val)>nonZeroThreshold) {
-          #pragma omp critical
+#pragma omp critical
           {
             // pack non-zero
             A[*cnt].val = val;
@@ -786,105 +782,105 @@ void BuildFEMMatrixTet3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *l
 
 void BuildFEMMatrixHex3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,dlong *cnt, nonZero_t *A) {
 
-  #pragma omp parallel for
+#pragma omp parallel for
   for (dlong e=0;e<femMesh->Nelements;e++) {
     for (int nz=0;nz<femMesh->Nq;nz++) {
-    for (int ny=0;ny<femMesh->Nq;ny++) {
-    for (int nx=0;nx<femMesh->Nq;nx++) {
-      dlong nn = nx+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
-      dlong idn = localIds[e*femMesh->Np + nn];
-      if (globalNumbering[idn]<0) continue; //skip masked nodes
+      for (int ny=0;ny<femMesh->Nq;ny++) {
+	for (int nx=0;nx<femMesh->Nq;nx++) {
+	  dlong nn = nx+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+	  dlong idn = localIds[e*femMesh->Np + nn];
+	  if (globalNumbering[idn]<0) continue; //skip masked nodes
       
-      for (int mz=0;mz<femMesh->Nq;mz++) {
-      for (int my=0;my<femMesh->Nq;my++) {
-      for (int mx=0;mx<femMesh->Nq;mx++) {
-        dlong mm = mx+my*femMesh->Nq+mz*femMesh->Nq*femMesh->Nq;
-        dlong idm = localIds[e*femMesh->Np + mm];
-        if (globalNumbering[idm]<0) continue; //skip masked nodes
+	  for (int mz=0;mz<femMesh->Nq;mz++) {
+	    for (int my=0;my<femMesh->Nq;my++) {
+	      for (int mx=0;mx<femMesh->Nq;mx++) {
+		dlong mm = mx+my*femMesh->Nq+mz*femMesh->Nq*femMesh->Nq;
+		dlong idm = localIds[e*femMesh->Np + mm];
+		if (globalNumbering[idm]<0) continue; //skip masked nodes
       
-        int id;
-        dfloat val = 0.;
+		int id;
+		dfloat val = 0.;
         
-        if ((ny==my)&&(nz==mz)) {
-          for (int k=0;k<femMesh->Nq;k++) {
-            id = k+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
-            dfloat Grr = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G00ID*femMesh->Np];
+		if ((ny==my)&&(nz==mz)) {
+		  for (int k=0;k<femMesh->Nq;k++) {
+		    id = k+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+		    dfloat Grr = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G00ID*femMesh->Np];
 
-            val += Grr*femMesh->D[nx+k*femMesh->Nq]*femMesh->D[mx+k*femMesh->Nq];
-          }
-        }
+		    val += Grr*femMesh->D[nx+k*femMesh->Nq]*femMesh->D[mx+k*femMesh->Nq];
+		  }
+		}
 
-        if (nz==mz) {
-          id = mx+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
-          dfloat Grs = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G01ID*femMesh->Np];
-          val += Grs*femMesh->D[nx+mx*femMesh->Nq]*femMesh->D[my+ny*femMesh->Nq];
+		if (nz==mz) {
+		  id = mx+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+		  dfloat Grs = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G01ID*femMesh->Np];
+		  val += Grs*femMesh->D[nx+mx*femMesh->Nq]*femMesh->D[my+ny*femMesh->Nq];
 
-          id = nx+my*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
-          dfloat Gsr = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G01ID*femMesh->Np];
-          val += Gsr*femMesh->D[mx+nx*femMesh->Nq]*femMesh->D[ny+my*femMesh->Nq];
-        }
+		  id = nx+my*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+		  dfloat Gsr = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G01ID*femMesh->Np];
+		  val += Gsr*femMesh->D[mx+nx*femMesh->Nq]*femMesh->D[ny+my*femMesh->Nq];
+		}
 
-        if (ny==my) {
-          id = mx+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
-          dfloat Grt = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G02ID*femMesh->Np];
-          val += Grt*femMesh->D[nx+mx*femMesh->Nq]*femMesh->D[mz+nz*femMesh->Nq];
+		if (ny==my) {
+		  id = mx+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+		  dfloat Grt = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G02ID*femMesh->Np];
+		  val += Grt*femMesh->D[nx+mx*femMesh->Nq]*femMesh->D[mz+nz*femMesh->Nq];
 
-          id = nx+ny*femMesh->Nq+mz*femMesh->Nq*femMesh->Nq;
-          dfloat Gst = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G02ID*femMesh->Np];
-          val += Gst*femMesh->D[mx+nx*femMesh->Nq]*femMesh->D[nz+mz*femMesh->Nq];
-        }
+		  id = nx+ny*femMesh->Nq+mz*femMesh->Nq*femMesh->Nq;
+		  dfloat Gst = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G02ID*femMesh->Np];
+		  val += Gst*femMesh->D[mx+nx*femMesh->Nq]*femMesh->D[nz+mz*femMesh->Nq];
+		}
 
-        if ((nx==mx)&&(nz==mz)) {
-          for (int k=0;k<femMesh->Nq;k++) {
-            id = nx+k*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
-            dfloat Gss = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G11ID*femMesh->Np];
+		if ((nx==mx)&&(nz==mz)) {
+		  for (int k=0;k<femMesh->Nq;k++) {
+		    id = nx+k*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+		    dfloat Gss = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G11ID*femMesh->Np];
 
-            val += Gss*femMesh->D[ny+k*femMesh->Nq]*femMesh->D[my+k*femMesh->Nq];
-          }
-        }
+		    val += Gss*femMesh->D[ny+k*femMesh->Nq]*femMesh->D[my+k*femMesh->Nq];
+		  }
+		}
         
-        if (nx==mx) {
-          id = nx+my*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
-          dfloat Gst = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G12ID*femMesh->Np];
-          val += Gst*femMesh->D[ny+my*femMesh->Nq]*femMesh->D[mz+nz*femMesh->Nq];
+		if (nx==mx) {
+		  id = nx+my*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+		  dfloat Gst = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G12ID*femMesh->Np];
+		  val += Gst*femMesh->D[ny+my*femMesh->Nq]*femMesh->D[mz+nz*femMesh->Nq];
 
-          id = nx+ny*femMesh->Nq+mz*femMesh->Nq*femMesh->Nq;
-          dfloat Gts = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G12ID*femMesh->Np];
-          val += Gts*femMesh->D[my+ny*femMesh->Nq]*femMesh->D[nz+mz*femMesh->Nq];
-        }
+		  id = nx+ny*femMesh->Nq+mz*femMesh->Nq*femMesh->Nq;
+		  dfloat Gts = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G12ID*femMesh->Np];
+		  val += Gts*femMesh->D[my+ny*femMesh->Nq]*femMesh->D[nz+mz*femMesh->Nq];
+		}
 
-        if ((nx==mx)&&(ny==my)) {
-          for (int k=0;k<femMesh->Nq;k++) {
-            id = nx+ny*femMesh->Nq+k*femMesh->Nq*femMesh->Nq;
-            dfloat Gtt = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G22ID*femMesh->Np];
+		if ((nx==mx)&&(ny==my)) {
+		  for (int k=0;k<femMesh->Nq;k++) {
+		    id = nx+ny*femMesh->Nq+k*femMesh->Nq*femMesh->Nq;
+		    dfloat Gtt = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G22ID*femMesh->Np];
 
-            val += Gtt*femMesh->D[nz+k*femMesh->Nq]*femMesh->D[mz+k*femMesh->Nq];
-          }
-        }
+		    val += Gtt*femMesh->D[nz+k*femMesh->Nq]*femMesh->D[mz+k*femMesh->Nq];
+		  }
+		}
         
-        if ((nx==mx)&&(ny==my)&&(nz==mz)) {
-          id = nx + ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
-          dfloat JW = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + GWJID*femMesh->Np];
-          val += JW*lambda;
-        }
+		if ((nx==mx)&&(ny==my)&&(nz==mz)) {
+		  id = nx + ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
+		  dfloat JW = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + GWJID*femMesh->Np];
+		  val += JW*lambda;
+		}
         
-        // pack non-zero
-        dfloat nonZeroThreshold = 1e-7;
-        if (fabs(val) >= nonZeroThreshold) {
-          #pragma omp critical
-          {
-            A[*cnt].val = val;
-            A[*cnt].row = globalNumbering[idn];
-            A[*cnt].col = globalNumbering[idm];
-            A[*cnt].ownerRank = pmesh->globalOwners[idn];
-            (*cnt)++;
-          }
-        }
+		// pack non-zero
+		dfloat nonZeroThreshold = 1e-7;
+		if (fabs(val) >= nonZeroThreshold) {
+#pragma omp critical
+		  {
+		    A[*cnt].val = val;
+		    A[*cnt].row = globalNumbering[idn];
+		    A[*cnt].col = globalNumbering[idm];
+		    A[*cnt].ownerRank = pmesh->globalOwners[idn];
+		    (*cnt)++;
+		  }
+		}
+	      }
+	    }
+	  }
+	}
       }
-      }
-      }
-    }
-    }
     }
   }
 }

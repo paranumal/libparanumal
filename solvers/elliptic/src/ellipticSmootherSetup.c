@@ -144,10 +144,6 @@ dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level){
 
   int k = 10;
 
-  int rank, size;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   hlong Nlocal = (hlong) level->Nrows;
   hlong Ntotal = 0;
   MPI_Allreduce(&Nlocal, &Ntotal, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
@@ -236,7 +232,7 @@ dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level){
   for(int i=0; i<=k; i++) o_V[i].free();
   free((void*)o_V);
 
-  if((rank==0)&&(options.compareArgs("VERBOSE","TRUE"))) printf("weight = %g \n", rho);
+  if((mesh->rank==0)&&(options.compareArgs("VERBOSE","TRUE"))) printf("weight = %g \n", rho);
 
   return rho;
 }

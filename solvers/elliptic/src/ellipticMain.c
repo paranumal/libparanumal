@@ -5,9 +5,6 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   if(argc!=2){
     printf("usage: ./ellipticMain setupfile\n");
 
@@ -157,7 +154,7 @@ int main(int argc, char **argv){
       
     dfloat globalMaxError = 0;
     MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-    if(rank==0)
+    if(mesh->rank==0)
       fprintf(stderr,"globalMaxError = %g\n", globalMaxError);
       
 #if 0

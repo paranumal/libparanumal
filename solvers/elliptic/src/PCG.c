@@ -4,9 +4,6 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
         occa::memory &o_r, occa::memory &o_x, 
         const dfloat tol, const int MAXIT) {
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
@@ -41,12 +38,12 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   //sanity check
   if (rdotr0<1E-20) {
-    if (options.compareArgs("VERBOSE", "TRUE")&&(rank==0)){
+    if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)){
       printf("converged in ZERO iterations. Stopping.\n");}
     return 0;
   } 
 
-  if (options.compareArgs("VERBOSE", "TRUE")&&(rank==0)) 
+  if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
     printf("CG: initial res norm %12.12f WE NEED TO GET TO %12.12f \n", sqrt(rdotr0), sqrt(TOL));
 
   // Precon^{-1} (b-A*x)
@@ -92,7 +89,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     // ]
     occaTimerToc(mesh->device,"Residual update");
     
-    if (options.compareArgs("VERBOSE", "TRUE")&&(rank==0)) 
+    if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
       printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
 
     if(rdotr1 < TOL) {
