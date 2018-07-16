@@ -1,0 +1,49 @@
+#!/bin/bash
+
+cd ../include
+convertHeaders.scr
+
+cd ../src
+convertHost.scr
+
+cd ../okl
+convertOKL.scr
+
+cd ../solvers
+
+echo "bns here: "
+pwd
+cd bns
+convertSolver.scr
+cd ..
+
+echo "cns here: "
+pwd
+cd cns
+convertSolver.scr
+cd ..
+
+echo "ins here: "
+pwd
+cd ins
+convertSolver.scr
+cd ..
+
+cd elliptic
+convertSolver.scr
+cd ..
+
+cd acoustics
+convertSolver.scr
+cd ..
+
+cd parALMOND
+convertSolver.scr
+cd ..
+
+cd gradient
+convertSolver.scr
+cd ..
+
+
+

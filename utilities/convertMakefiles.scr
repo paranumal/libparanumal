@@ -1,0 +1,10 @@
+#!/bin/bash
+
+for ml in makefile; do
+
+    echo $ml
+    mv $ml tmp1
+
+    sed -i 's/makefile/Makefile/g' tmp1
+    mv tmp1 $ml
+done

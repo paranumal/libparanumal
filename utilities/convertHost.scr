@@ -2,15 +2,29 @@
 
 for cl in *.c; do
 
-    echo $c1
+    echo $cl
     mv $cl tmp1
 
+    sed -i 's/occa\:\:kernelInfo kernelInfo/occa::properties kernelInfo\;\n kernelInfo\[\"defines\"\].asObject()\;\n kernelInfo\[\"includes\"\].asArray();\n kernelInfo\["header"\].asArray();\n kernelInfo\[\"flags\"\].asObject()\;\n/g' tmp1 
+    
+    sed -i 's/)\(.*\).getMappedPointer()/) occa::opencl::getCLMappedPtr(\1)/g' tmp1
+    
     sed -i 's/occa\:\:kernelInfo/occa\:\:properties/g' tmp1
-#    sed -i 's/kernelInfo.addDefine(\(.*\),\(.*\))/kernelInfo\[\"defines\/\" \1\]=\2/g' tmp1
+    sed -i 's/buildKernelFromSource/buildKernel/g' tmp1
 
     sed -i 's/.addDefine(\(.*\),\(.*\))/\[\"defines\/\" \1\]=\2/g' tmp1
     sed -i 's/.addCompilerFlag(\(.*\))/\[\"compilerFlags\"\] \+\= \1/g' tmp1
-    sed -i 's/.addInclude(\(.*\))/\[\"includes\"\] += \1/g' tmp1
 
+    # hard to do this automatically since we need to set 
+
+    sed -i 's/.addInclude(\(.*\))/\[\"includes\"\] += \1/g' tmp1
+    sed -i 's/.addParserFlag(\(.*\),\(.*\))/\[\"parser\/\" \1] \= \2/g' tmp1
+
+    # mappedAlloc(foo,bah) => alloc(foo,bah,"mapped: true");
+
+    sed -i 's/mappedAlloc(\(.*\),\(.*\))/malloc(\1,\2,\"mapped\: true\")/g' tmp1
+    sed -i 's/asyncCopyTo(\(.*\))/copyTo(\1,\"async\: true\")/g' tmp1
+    sed -i 's/asyncCopyFrom(\(.*\))/copyFrom(\1,\"async\: true\")/g' tmp1 
+    
     mv tmp1 $cl
 done
