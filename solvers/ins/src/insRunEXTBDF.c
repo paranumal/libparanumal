@@ -4,10 +4,6 @@ void extbdfCoefficents(ins_t *ins, int order);
 
 void insRunEXTBDF(ins_t *ins){
 
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
   mesh_t *mesh = ins->mesh;
   
   occa::initTimer(mesh->device);
@@ -17,7 +13,7 @@ void insRunEXTBDF(ins_t *ins){
   dfloat oldDt = ins->dt;
   ins->dt *= 100;
 
-  if (rank ==0) printf("Number of Timesteps: %d\n", ins->NtimeSteps);
+  if (mesh->rank==0) printf("Number of Timesteps: %d\n", ins->NtimeSteps);
   for(int tstep=0;tstep<NstokesSteps;++tstep){
     if(tstep<1) 
       extbdfCoefficents(ins,tstep+1);
@@ -63,10 +59,10 @@ void insRunEXTBDF(ins_t *ins){
                                   (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
 
-    if (rank==0) printf("\rSstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
+    if (mesh->rank==0) printf("\rSstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
   }
 
-  if (rank==0) printf("\n");
+  if (mesh->rank==0) printf("\n");
 
   ins->dt = oldDt;
   // Write Initial Data
@@ -139,15 +135,15 @@ void insRunEXTBDF(ins_t *ins){
 
     if(ins->outputStep){
       if(((tstep+1)%(ins->outputStep))==0){
-        if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
-        if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
+        if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
+        if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
         insReport(ins, time+ins->dt, tstep+1);
 
         // Write a restart file
         if(ins->writeRestartFile){
-          if(rank==0) printf("\nWriting Binary Restart File....");
+          if(mesh->rank==0) printf("\nWriting Binary Restart File....");
             insRestartWrite(ins, ins->options, time+ins->dt);
-          if(rank==0) printf("done\n");
+          if(mesh->rank==0) printf("done\n");
         }
 
         // // Update Time-Step Size
@@ -164,8 +160,8 @@ void insRunEXTBDF(ins_t *ins){
       }
     }
 
-    if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
-    if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
+    if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
+    if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
     
     occaTimerToc(mesh->device,"Report");
   }
@@ -177,7 +173,7 @@ void insRunEXTBDF(ins_t *ins){
 
   if(ins->outputStep) insReport(ins, finalTime,ins->NtimeSteps);
   
-  if(rank==0) occa::printTimer();
+  if(mesh->rank==0) occa::printTimer();
 }
 
 

@@ -54,9 +54,7 @@ void insError(ins_t *ins, dfloat time){
     MPI_Allreduce(&maxP, &gMaxP, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&minP, &gMinP, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank==0)
+    if(mesh->rank==0)
       if (ins->dim==3) {
         printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minW: %g maxW: %g minP: %g maxP: %g\n", 
            (int)((time-ins->startTime)/ins->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinW, gMaxW, gMinP, gMaxP );
@@ -106,9 +104,7 @@ void insError(ins_t *ins, dfloat time){
       dfloat gMaxP;
       MPI_Allreduce(&maxP, &gMaxP, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
 
-      int rank;
-      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-      if(rank==0)
+      if(mesh->rank==0)
         printf("Step: %d Time: %g ErrorU: %g ErrorV: %g ErrorP: %g \n", 
            (int)(time/ins->dt), time, gMaxU, gMaxV, gMaxP);
 
@@ -163,9 +159,7 @@ void insError(ins_t *ins, dfloat time){
       dfloat gMaxP;
       MPI_Allreduce(&maxP, &gMaxP, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
 
-      int rank;
-      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-      if(rank==0)
+      if(mesh->rank==0)
         printf("Step: %d Time: %g ErrorU: %g ErrorV: %g ErrorW: %g ErrorP: %g \n", 
            (int)(time/ins->dt), time, gMaxU, gMaxV, gMaxW, gMaxP);
 

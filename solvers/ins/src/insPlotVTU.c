@@ -5,9 +5,6 @@ void insPlotVTU(ins_t *ins, char *fileName){
 
   mesh_t *mesh = ins->mesh;
   
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 
   FILE *fp;
