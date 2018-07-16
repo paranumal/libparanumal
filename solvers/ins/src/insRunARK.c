@@ -2,10 +2,6 @@
 
 void insRunARK(ins_t *ins){
 
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
   mesh_t *mesh = ins->mesh;
   
   //PID Control
@@ -31,7 +27,7 @@ void insRunARK(ins_t *ins){
 
   ins->time = 0.0; 
 
-  if (rank ==0) printf("Running Initial Stokes Solve:\n");
+  if (mesh->rank ==0) printf("Running Initial Stokes Solve:\n");
   
   for(int tstep=0;tstep<NstokesSteps;++tstep){
 
@@ -71,7 +67,7 @@ void insRunARK(ins_t *ins){
     ins->tstep++;
     ins->time += ins->dt;
 
-    if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep, ins->NiterU, ins->NiterV, ins->NiterP);
+    if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep, ins->NiterU, ins->NiterV, ins->NiterP);
   }
 
   printf("done \n");
@@ -152,8 +148,8 @@ void insRunARK(ins_t *ins){
       occaTimerTic(mesh->device,"Report");
       if(ins->outputStep){
         if(((ins->tstep)%(ins->outputStep))==0){
-          if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
-          if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
+          if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
+          if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
           insReport(ins, ins->time, ins->tstep);
         }
       }
@@ -169,9 +165,9 @@ void insRunARK(ins_t *ins){
       // Update Time-Step Size
       if(ins->dtAdaptStep){
         if(((ins->tstep)%(ins->dtAdaptStep))==0){
-          if(rank==0) printf("\n Adapting time Step Size to ");
+          if(mesh->rank==0) printf("\n Adapting time Step Size to ");
           insComputeDt(ins, ins->time);
-          if(rank==0) printf("%.4e\n", ins->dt);
+          if(mesh->rank==0) printf("%.4e\n", ins->dt);
         }
       }
     }
@@ -180,8 +176,8 @@ void insRunARK(ins_t *ins){
 
       
     
-    if (ins->dim==2 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
-    if (ins->dim==3 && rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
+    if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
+    if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", ins->tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
     occaTimerToc(mesh->device,"Report");
 
 
@@ -242,5 +238,5 @@ void insRunARK(ins_t *ins){
   printf("\n");
   insReport(ins, finalTime, ins->NtimeSteps);
   
-  if(rank==0) occa::printTimer();
+  if(mesh->rank==0) occa::printTimer();
 }

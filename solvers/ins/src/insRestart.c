@@ -1,10 +1,8 @@
 #include "ins.h"
 void insRestartWrite(ins_t *ins, setupAide &options, dfloat t){
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   mesh_t *mesh = ins->mesh; 
+
   // Copy Field To Host
   // copy data back to host
   ins->o_U.copyTo(ins->U);
@@ -19,7 +17,7 @@ void insRestartWrite(ins_t *ins, setupAide &options, dfloat t){
   char fname[BUFSIZ];
   string outName;
   options.getArgs("RESTART FILE NAME", outName);
-  sprintf(fname, "%s_%04d.dat",(char*)outName.c_str(), rank);
+  sprintf(fname, "%s_%04d.dat",(char*)outName.c_str(), mesh->rank);
   FILE *fp;
   
   // Overwrite  Binary File
@@ -80,15 +78,13 @@ fclose(fp);
 
 void insRestartRead(ins_t *ins, setupAide &options){
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  mesh_t *mesh = ins->mesh; 
+  mesh_t *mesh = ins->mesh;
+  
   // Create Binary File Name
   char fname[BUFSIZ];
   string outName;
   options.getArgs("RESTART FILE NAME", outName);
-  sprintf(fname, "%s_%04d.dat",(char*)outName.c_str(), rank);
+  sprintf(fname, "%s_%04d.dat",(char*)outName.c_str(), mesh->rank);
   FILE *fp; 
 
 
@@ -145,7 +141,7 @@ void insRestartRead(ins_t *ins, setupAide &options){
       }
     }else{
 
-      if(rank==0) printf("restart for ARK has not tested yet\n");
+      if(mesh->rank==0) printf("restart for ARK has not tested yet\n");
     }
 
   fclose(fp);
@@ -171,7 +167,7 @@ void insRestartRead(ins_t *ins, setupAide &options){
    // Interpolate history if dt is changed in new setup
     if(fabs(ins->dt - dtold) > 1.E-12){ // guard for infinitesmall dt change
 
-      if(rank==0) printf("Interpolating history for new dt...");
+      if(mesh->rank==0) printf("Interpolating history for new dt...");
 
       // ins->Nstages is fixed to max 3; 
       dfloat interp[ins->Nstages][ins->Nstages]; 
@@ -260,7 +256,7 @@ void insRestartRead(ins_t *ins, setupAide &options){
     }
 
   }else{
-      if(rank==0) printf("restart for ARK has not tested yet\n");
+      if(mesh->rank==0) printf("restart for ARK has not tested yet\n");
   }
 
 

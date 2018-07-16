@@ -2,9 +2,6 @@
 
 void insReport(ins_t *ins, dfloat time, int tstep){
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   mesh_t *mesh = ins->mesh;
 
   ins->vorticityKernel(mesh->Nelements,
@@ -40,7 +37,7 @@ void insReport(ins_t *ins, dfloat time, int tstep){
     char fname[BUFSIZ];
     string outName;
     ins->options.getArgs("OUTPUT FILE NAME", outName);
-    sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(),rank, ins->frame++);
+    sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, ins->frame++);
 
     insPlotVTU(ins, fname);
   }
@@ -75,7 +72,7 @@ void insReport(ins_t *ins, dfloat time, int tstep){
         ins->o_isoNtris.copyTo(ins->isoNtris);
         ins->isoNtris[0] = mymin(ins->isoNtris[0], ins->isoMaxNtris);
         // 
-        printf("Rank:%2d Group:%2d Triangles:%8d\n", rank, gr, ins->isoNtris[0]);
+        printf("Rank:%2d Group:%2d Triangles:%8d\n", mesh->rank, gr, ins->isoNtris[0]);
         //
         int offset = 0;
         ins->o_isoq.copyTo(ins->isoq, ins->isoNtris[0]*(mesh->dim+ins->isoNfields)*3*sizeof(dfloat), offset);
@@ -88,7 +85,7 @@ void insReport(ins_t *ins, dfloat time, int tstep){
         char fname[BUFSIZ];
         string outName;
         ins->options.getArgs("OUTPUT FILE NAME", outName);
-        sprintf(fname, "%s_%d_%d_ %04d_%04d.vtu",(char*)outName.c_str(), ins->isoField, gr, rank, ins->frame++);
+        sprintf(fname, "%s_%d_%d_ %04d_%04d.vtu",(char*)outName.c_str(), ins->isoField, gr, mesh->rank, ins->frame++);
         insIsoPlotVTU(ins,  fname);
       }
   }

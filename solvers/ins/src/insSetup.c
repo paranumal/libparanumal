@@ -4,52 +4,6 @@
 
 ins_t *insSetup(mesh_t *mesh, setupAide options){
 
-  // OCCA build stuff
-  char deviceConfig[BUFSIZ];
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  
-  long int hostId = gethostid();
-
-  long int* hostIds = (long int*) calloc(size,sizeof(long int));
-  MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,MPI_COMM_WORLD);
-
-  int deviceID = 0;
-  int totalDevices = 0;
-  for (int r=0;r<rank;r++) {
-    if (hostIds[r]==hostId) deviceID++;
-  }
-  for (int r=0;r<size;r++) {
-    if (hostIds[r]==hostId) totalDevices++;
-  }
-
-  if (size==1) options.getArgs("DEVICE NUMBER" ,deviceID);
-
-  // read thread model/device/platform from options
-  if(options.compareArgs("THREAD MODEL", "CUDA")){
-    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
-    // sprintf(deviceConfig, "mode = CUDA, deviceID = %d",(rank%2));
-  }
-  else if(options.compareArgs("THREAD MODEL", "OpenCL")){
-    int plat;
-    options.getArgs("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", deviceID, plat);
-  }
-  else if(options.compareArgs("THREAD MODEL", "OpenMP")){
-    sprintf(deviceConfig, "mode = OpenMP");
-  }
-  else{
-    sprintf(deviceConfig, "mode = Serial");
-  }
-  
-  //set number of omp threads to use
-  int Ncores = sysconf(_SC_NPROCESSORS_ONLN);
-  int Nthreads = Ncores/totalDevices;
-  omp_set_num_threads(Nthreads);
-  if (rank==0 && options.compareArgs("VERBOSE","TRUE")) 
-    printf("Rank %d: Ncores = %d, Nthreads = %d\n", rank, Ncores, Nthreads);
-
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
   ins->mesh = mesh;
   ins->options = options;
@@ -307,9 +261,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   occa::kernelInfo kernelInfo;
   if(ins->dim==3)
-    meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
+    meshOccaSetup3D(mesh, options, kernelInfo);
   else
-    meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
+    meshOccaSetup2D(mesh, options, kernelInfo);
 
   occa::kernelInfo kernelInfoV  = kernelInfo;
   occa::kernelInfo kernelInfoP  = kernelInfo;
@@ -340,13 +294,13 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->o_U = mesh->device.malloc(ins->NVfields*ins->Nstages*Ntotal*sizeof(dfloat), ins->U);
   ins->o_P = mesh->device.malloc(              ins->Nstages*Ntotal*sizeof(dfloat), ins->P);
 
-  if (rank==0 && options.compareArgs("VERBOSE","TRUE")) 
+  if (mesh->rank==0 && options.compareArgs("VERBOSE","TRUE")) 
     occa::setVerboseCompilation(true);
   else 
     occa::setVerboseCompilation(false);
 
-  for (int r=0;r<size;r++) {
-    if (r==rank) {
+  for (int r=0;r<mesh->size;r++) {
+    if (r==mesh->rank) {
       if (ins->dim==2) 
         ins->setFlowFieldKernel =  mesh->device.buildKernelFromSource(DINS "/okl/insSetFlowField2D.okl", "insSetFlowField2D", kernelInfo);  
       else
@@ -439,14 +393,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   ins->dtMIN = 1E-2*ins->dt; //minumum allowed timestep
 
-  if (rank==0) {
+  if (mesh->rank==0) {
     printf("hmin = %g\n", hmin);
     printf("hmax = %g\n", hmax);
     printf("cfl = %g\n",  ins->cfl);
     printf("dt = %g\n",   dt);
   }
 
-  if (ins->Nsubsteps && rank==0) printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", ins->dt, ins->sdt, ins->dt/ins->sdt);
+  if (ins->Nsubsteps && mesh->rank==0) printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", ins->dt, ins->sdt, ins->dt/ins->sdt);
   
   // Hold some inverses for kernels
   ins->inu = 1.0/ins->nu; 
@@ -455,7 +409,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->lambda = ins->g0 / (ins->dt * ins->nu);
 
   options.getArgs("TSTEPS FOR SOLUTION OUTPUT", ins->outputStep);
-  if (rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->outputStep, ins->dt);
+  if (mesh->rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", ins->NtimeSteps,ins->outputStep, ins->dt);
 
   ins->outputForceStep = 0;
   options.getArgs("TSTEPS FOR FORCE OUTPUT", ins->outputForceStep);
@@ -581,7 +535,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->pOptions.setArgs("PARALMOND SMOOTHER",   options.getArgs("PRESSURE PARALMOND SMOOTHER"));
   ins->pOptions.setArgs("PARALMOND PARTITION",  options.getArgs("PRESSURE PARALMOND PARTITION"));
 
-  if (rank==0) printf("==================ELLIPTIC SOLVE SETUP=========================\n");
+  if (mesh->rank==0) printf("==================ELLIPTIC SOLVE SETUP=========================\n");
 
   // SetUp Boundary Flags types for Elliptic Solve
   // bc = 1 -> wall
@@ -600,7 +554,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->velTOL  = 1E-8;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
-  if (rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");
+  if (mesh->rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");
 
   ins->uSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
   ins->uSolver->mesh = mesh;
@@ -631,7 +585,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ellipticSolveSetup(ins->wSolver, ins->lambda, kernelInfoV);  
   }
   
-  if (rank==0) printf("==================PRESSURE SOLVE SETUP=========================\n");
+  if (mesh->rank==0) printf("==================PRESSURE SOLVE SETUP=========================\n");
   ins->pSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
   ins->pSolver->mesh = mesh;
   ins->pSolver->options = ins->pOptions;
@@ -718,7 +672,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
 
 
-  // if (rank==0) {
+  // if (mesh->rank==0) {
   //   printf("maxNodes: %d \t  NblockV: %d \t NblockS: %d  \n", maxNodes, NblockV, NblockS);
   //   printf("maxNodesVolCub: %d \t maxNodesSurCub: %d \t NblockVCub: %d \t NblockSCub: %d  \n", maxNodesVolumeCub,maxNodesSurfaceCub, cubNblockV, cubNblockS);
 
@@ -815,8 +769,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
-  for (int r=0;r<size;r++) {
-    if (r==rank) {
+  for (int r=0;r<mesh->size;r++) {
+    if (r==mesh->rank) {
       sprintf(fileName, DINS "/okl/insHaloExchange.okl");
       sprintf(kernelName, "insVelocityHaloExtract");
       ins->velocityHaloExtractKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
