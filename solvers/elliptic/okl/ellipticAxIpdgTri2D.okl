@@ -60,7 +60,9 @@ kernel void ellipticAxIpdgTri2D(const dlong Nelements,
         int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
           ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
-          gradqP = 2*gradqP - gradqM;
+          gradqP.x = 2.f*gradqP.x - gradqM.x;
+	  gradqP.y = 2.f*gradqP.y - gradqM.y;	
+	  gradqP.w = 2.f*gradqP.w - gradqM.w;
         }
 
         const dfloat dq = gradqP.w - gradqM.w;
@@ -301,7 +303,9 @@ kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
             int bc = EToB[face+p_Nfaces*element[em]];
             if(bc>0) {
               ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
-              gradqP = 2*gradqP - gradqM;
+	      gradqP.x = 2.f*gradqP.x - gradqM.x;
+	      gradqP.y = 2.f*gradqP.y - gradqM.y;	
+	      gradqP.w = 2.f*gradqP.w - gradqM.w;
             }
 
             const dfloat dq = gradqP.w - gradqM.w;
