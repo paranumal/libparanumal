@@ -8,6 +8,9 @@
 
 #include "types.h"
 #include "ogs_t.h"
+#include <occa/modes/opencl/utils.hpp>
+
+#include "timer.h"
 
 #include "setupAide.hpp"
 
