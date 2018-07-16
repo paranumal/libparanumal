@@ -13,7 +13,7 @@ for cl in *.c; do
     sed -i 's/buildKernelFromSource/buildKernel/g' tmp1
 
     sed -i 's/.addDefine(\(.*\),\(.*\))/\[\"defines\/\" \1\]=\2/g' tmp1
-    sed -i 's/.addCompilerFlag(\(.*\))/\[\"compilerFlags\"\] \+\= \1/g' tmp1
+    sed -i 's/.addCompilerFlag(\(.*\))/\[\"compiler_flags\"\] \+\= \1/g' tmp1
 
     # hard to do this automatically since we need to set 
 
