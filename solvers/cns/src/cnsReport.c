@@ -2,9 +2,6 @@
 
 void cnsReport(cns_t *cns, dfloat time, setupAide &options){
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   mesh3D *mesh = cns->mesh;
 
   cns->vorticityKernel(mesh->Nelements,
@@ -26,7 +23,7 @@ void cnsReport(cns_t *cns, dfloat time, setupAide &options){
   char fname[BUFSIZ];
   string outName;
   options.getArgs("OUTPUT FILE NAME", outName);
-  sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), rank, cns->frame++);
+  sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, cns->frame++);
 
   cnsPlotVTU(cns, fname);
 

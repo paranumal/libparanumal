@@ -2,9 +2,6 @@
 
 void cnsRun(cns_t *cns, setupAide &options){
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   mesh_t *mesh = cns->mesh;
 
   cnsReport(cns, 0, options);
