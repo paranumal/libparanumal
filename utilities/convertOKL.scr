@@ -1,7 +1,7 @@
 #!/bin/bash
 
 for fl in *.okl; do
-    echo $f1
+    echo $fl
     mv $fl tmp1
 
     sed -i 's/kernel/@kernel/g' tmp1
@@ -14,19 +14,31 @@ for fl in *.okl; do
     sed -i 's/outer1/@outer(1)/g' tmp1
     sed -i 's/outer2/@outer(2)/g' tmp1
 
+    #    sed -i 's/shared volatile/volatile shared/g' tmp1
+    sed -i 's/volatile shared/shared volatile/g' tmp1
+    
     sed -i 's/shared/@shared/g' tmp1
 
     sed -i 's/exclusive/@exclusive/g' tmp1
 
-    sed -i 's/barrier(globalMemFence)/@barrier(\“global\”)/g' tmp1
-    sed -i 's/barrier(localMemFence)/@barrier(\“local\”)/g' tmp1
+    sed -i 's/barrier(globalMemFence)/@barrier(\"global\")/g' tmp1
+    sed -i 's/barrier(localMemFence)/@barrier(\"local\")/g' tmp1
 
-    sed -i 's/occaUnroll\((.*)\)/#pragma unroll \1/g' tmp1
+    sed -i 's/occaUnroll(\(.*\))/#pragma unroll \1/g' tmp1
 
-    sed -i ‘s/occaRestrict/restrict/g’ tmp1
+    sed -i 's/dfloat\(.*\)restrict/restrict dfloat\1/g' tmp1
+    sed -i 's/int\(.*\)restrict/restrict int\1/g' tmp1
+    sed -i 's/dlong\(.*\)restrict/restrict dlong\1/g' tmp1
 
-    sed -i 's/tile(/@tile(/g' tmp1
+    sed -i 's/const\(.*\)restrict/restrict const\1/g' tmp1
+    
+    sed -i 's/occaRestrict/restrict/g' tmp1
+    sed -i 's/restrict/@restrict/g' tmp1
+#    sed -i 's/@restrict/ /g' tmp1
 
+#    sed -i 's/tile(/@tile(/g' tmp1
+    sed -i 's/tile(256)/@tile(256,@outer,@inner)/g' tmp1
+    
 
     sed -i 's/occaSin/sin/g' tmp1
     sed -i 's/occaCos/cos/g' tmp1
@@ -34,5 +46,7 @@ for fl in *.okl; do
     sed -i 's/occaSqrt/sqrt/g' tmp1
     sed -i 's/occaFabs/fabs/g' tmp1
 
-    mv tmp1 $fl
+     mv tmp1 $fl
+#    clang-format tmp1 > $fl
+#    rm tmp1
 done

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+echo "before: "
+pwd
+convertHeaders.scr
+convertMakefiles.scr
+cd src
+convertHost.scr
+cd ../okl
+convertOKL.scr
+cd ../..
+echo "after: "
+pwd
+
