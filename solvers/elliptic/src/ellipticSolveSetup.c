@@ -3,10 +3,6 @@
 
 void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &kernelInfo){
 
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
@@ -150,7 +146,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   elliptic->allNeumann = (gallNeumann>0) ? false: true; 
 
   // MPI_Allreduce(&allNeumann, &(elliptic->allNeumann), 1, MPI::BOOL, MPI_LAND, MPI_COMM_WORLD);
-  if (rank==0&& options.compareArgs("VERBOSE","TRUE")) printf("allNeumann = %d \n", elliptic->allNeumann);
+  if (mesh->rank==0&& options.compareArgs("VERBOSE","TRUE")) printf("allNeumann = %d \n", elliptic->allNeumann);
 
   //set surface mass matrix for continuous boundary conditions
   mesh->sMT = (dfloat *) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));
@@ -168,7 +164,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   //copy boundary flags
   elliptic->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), elliptic->EToB);
 
-  if (rank==0 && options.compareArgs("VERBOSE","TRUE")) 
+  if (mesh->rank==0 && options.compareArgs("VERBOSE","TRUE")) 
     occa::setVerboseCompilation(true);
   else 
     occa::setVerboseCompilation(false);
@@ -197,8 +193,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
 
-  for (int r=0;r<size;r++) {
-    if (r==rank) {
+  for (int r=0;r<mesh->size;r++) {
+    if (r==mesh->rank) {
 
       //mesh kernels 
       mesh->haloExtractKernel =
@@ -452,8 +448,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   elliptic->precon = (precon_t*) calloc(1, sizeof(precon_t));
 
 
-  for (int r=0;r<size;r++) {
-    if (r==rank) {
+  for (int r=0;r<mesh->size;r++) {
+    if (r==mesh->rank) {
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);

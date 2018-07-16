@@ -42,10 +42,6 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   mesh2D *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
   /* Build a gather-scatter to assemble the global masked problem */
   dlong Ntotal = mesh->Np*mesh->Nelements;
 
@@ -73,10 +69,10 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   dlong nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  int *AsendCounts  = (int*) calloc(size, sizeof(int));
-  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
-  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
-  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
+  int *AsendCounts  = (int*) calloc(mesh->size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(mesh->size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(mesh->size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(mesh->size+1, sizeof(int));
 
   dfloat *Srr = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
   dfloat *Srs = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
@@ -95,7 +91,7 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
   for (dlong n=0;n<elliptic->Nmasked;n++) mask[elliptic->maskIds[n]] = 1;
 
-  if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
+  if(mesh->rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
   //Build unassembed non-zeros
   dlong cnt =0;
@@ -158,7 +154,7 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
 
   // find send and recv offsets for gather
   *nnz = 0;
-  for(int r=0;r<size;++r){
+  for(int r=0;r<mesh->size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     *nnz += ArecvCounts[r];
@@ -189,7 +185,7 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   if (*nnz) cnt++;
   *nnz = cnt;
 
-  if(rank==0) printf("done.\n");
+  if(mesh->rank==0) printf("done.\n");
 
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Type_free(&MPI_NONZERO_T);
@@ -214,10 +210,6 @@ void ellipticBuildContinuousQuad2D(elliptic_t *elliptic, dfloat lambda, nonZero_
 
   mesh2D *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
-
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   /* Build a gather-scatter to assemble the global masked problem */
   dlong Ntotal = mesh->Np*mesh->Nelements;
@@ -246,15 +238,15 @@ void ellipticBuildContinuousQuad2D(elliptic_t *elliptic, dfloat lambda, nonZero_
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  int *AsendCounts  = (int*) calloc(size, sizeof(int));
-  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
-  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
-  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
+  int *AsendCounts  = (int*) calloc(mesh->size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(mesh->size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(mesh->size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(mesh->size+1, sizeof(int));
 
   int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
   for (dlong n=0;n<elliptic->Nmasked;n++) mask[elliptic->maskIds[n]] = 1;
 
-  if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
+  if(mesh->rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
   //Build unassembed non-zeros
   dlong cnt =0;
@@ -344,7 +336,7 @@ void ellipticBuildContinuousQuad2D(elliptic_t *elliptic, dfloat lambda, nonZero_
 
   // find send and recv offsets for gather
   *nnz = 0;
-  for(int r=0;r<size;++r){
+  for(int r=0;r<mesh->size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     *nnz += ArecvCounts[r];
@@ -375,7 +367,7 @@ void ellipticBuildContinuousQuad2D(elliptic_t *elliptic, dfloat lambda, nonZero_
   if (*nnz) cnt++;
   *nnz = cnt;
 
-  if(rank==0) printf("done.\n");
+  if(mesh->rank==0) printf("done.\n");
 
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Type_free(&MPI_NONZERO_T);
@@ -393,10 +385,6 @@ void ellipticBuildContinuousTet3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
 
   mesh2D *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
-
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   /* Build a gather-scatter to assemble the global masked problem */
   dlong Ntotal = mesh->Np*mesh->Nelements;
@@ -425,16 +413,16 @@ void ellipticBuildContinuousTet3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   dlong nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
 
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  int *AsendCounts  = (int*) calloc(size, sizeof(int));
-  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
-  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
-  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
+  int *AsendCounts  = (int*) calloc(mesh->size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(mesh->size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(mesh->size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(mesh->size+1, sizeof(int));
 
   int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
   for (dlong n=0;n<elliptic->Nmasked;n++) mask[elliptic->maskIds[n]] = 1;
 
   //Build unassembed non-zeros
-  if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
+  if(mesh->rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
   dlong cnt =0;
   #pragma omp parallel for
@@ -509,7 +497,7 @@ void ellipticBuildContinuousTet3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
 
   // find send and recv offsets for gather
   *nnz = 0;
-  for(int r=0;r<size;++r){
+  for(int r=0;r<mesh->size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     *nnz += ArecvCounts[r];
@@ -540,7 +528,7 @@ void ellipticBuildContinuousTet3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   if (*nnz) cnt++;
   *nnz = cnt;
 
-  if(rank==0) printf("done.\n");
+  if(mesh->rank==0) printf("done.\n");
 
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Type_free(&MPI_NONZERO_T);
@@ -560,10 +548,6 @@ void ellipticBuildContinuousHex3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
 
   mesh2D *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
-
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   /* Build a gather-scatter to assemble the global masked problem */
   dlong Ntotal = mesh->Np*mesh->Nelements;
@@ -592,15 +576,15 @@ void ellipticBuildContinuousHex3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
     // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
   nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  int *AsendCounts  = (int*) calloc(size, sizeof(int));
-  int *ArecvCounts  = (int*) calloc(size, sizeof(int));
-  int *AsendOffsets = (int*) calloc(size+1, sizeof(int));
-  int *ArecvOffsets = (int*) calloc(size+1, sizeof(int));
+  int *AsendCounts  = (int*) calloc(mesh->size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(mesh->size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(mesh->size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(mesh->size+1, sizeof(int));
 
   int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
   for (dlong n=0;n<elliptic->Nmasked;n++) mask[elliptic->maskIds[n]] = 1;
 
-  if(rank==0) printf("Building full FEM matrix...");fflush(stdout);
+  if(mesh->rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
   dlong cnt =0;
   for (dlong e=0;e<mesh->Nelements;e++) {
@@ -727,7 +711,7 @@ void ellipticBuildContinuousHex3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
 
   // find send and recv offsets for gather
   *nnz = 0;
-  for(int r=0;r<size;++r){
+  for(int r=0;r<mesh->size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     *nnz += ArecvCounts[r];
@@ -758,7 +742,7 @@ void ellipticBuildContinuousHex3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   if (*nnz) cnt++;
   *nnz = cnt;
 
-  if(rank==0) printf("done.\n");
+  if(mesh->rank==0) printf("done.\n");
 
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Type_free(&MPI_NONZERO_T);

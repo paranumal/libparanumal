@@ -13,9 +13,6 @@ void BuildLocalContinuousDiagHex3D (elliptic_t* elliptic, mesh_t *mesh, dfloat l
 
 void ellipticBuildJacobi(elliptic_t* elliptic, dfloat lambda, dfloat **invDiagA){
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
@@ -106,7 +103,7 @@ void ellipticBuildJacobi(elliptic_t* elliptic, dfloat lambda, dfloat **invDiagA)
 
   dfloat *diagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
 
-  if(rank==0) printf("Building diagonal...");fflush(stdout);
+  if(mesh->rank==0) printf("Building diagonal...");fflush(stdout);
 
   if (options.compareArgs("DISCRETIZATION","IPDG")) {
     switch(elliptic->elementType){
@@ -170,7 +167,7 @@ void ellipticBuildJacobi(elliptic_t* elliptic, dfloat lambda, dfloat **invDiagA)
     (*invDiagA)[n] = 1/diagA[n];
   }
 
-  if(rank==0) printf("done.\n");
+  if(mesh->rank==0) printf("done.\n");
 
   free(diagA);
   free(MS);

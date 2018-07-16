@@ -3,10 +3,6 @@
 // create elliptic and mesh structs for multigrid levels
 elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf){
 
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
   elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
   memcpy(elliptic,baseElliptic,sizeof(elliptic_t));
 
@@ -608,8 +604,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
-  for (int r=0;r<size;r++) {
-    if (r==rank) {
+  for (int r=0;r<mesh->size;r++) {
+    if (r==mesh->rank) {
       kernelInfo.addDefine("p_blockSize", blockSize);
 
       // add custom defines
@@ -715,8 +711,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   //new precon struct
   elliptic->precon = (precon_t *) calloc(1,sizeof(precon_t));
 
-  for (int r=0;r<size;r++) {
-    if (r==rank) {
+  for (int r=0;r<mesh->size;r++) {
+    if (r==mesh->rank) {
       sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");
       sprintf(kernelName, "ellipticBlockJacobiPrecon");
       elliptic->precon->blockJacobiKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);

@@ -70,10 +70,6 @@ void buildCoarsenerQuadHex(elliptic_t* elliptic, mesh_t **meshLevels, int Nf, in
 
 void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) {
 
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
@@ -224,7 +220,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 
   //report top levels
   if (options.compareArgs("VERBOSE","TRUE")) {
-    if((rank==0)&&(numLevels>0)) { //report the upper multigrid levels
+    if((mesh->rank==0)&&(numLevels>0)) { //report the upper multigrid levels
       printf("------------------Multigrid Report---------------------\n");
       printf("-------------------------------------------------------\n");
       printf("level|  Degree  |    dimension   |      Smoother       \n");
@@ -243,7 +239,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 
       MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_DLONG, MPI_MAX, MPI_COMM_WORLD);
       MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
-      avgNrows = (dfloat) totalNrows/size;
+      avgNrows = (dfloat) totalNrows/mesh->size;
 
       if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
       MPI_Allreduce(&Nrows, &minNrows, 1, MPI_DLONG, MPI_MIN, MPI_COMM_WORLD);
@@ -251,14 +247,14 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
       char smootherString[BUFSIZ];
       strcpy(smootherString, (char*) (options.getArgs("MULTIGRID SMOOTHER")).c_str());
 
-      if (rank==0){
+      if (mesh->rank==0){
         printf(" %3d |   %3d    |    %10.2f  |   %s  \n",
           lev, levelDegree[lev], (dfloat)minNrows, smootherString);
         printf("     |          |    %10.2f  |   \n", (dfloat)maxNrows);
         printf("     |          |    %10.2f  |   \n", avgNrows);
       }
     }
-    if((rank==0)&&(numLevels>0)) 
+    if((mesh->rank==0)&&(numLevels>0)) 
       printf("-------------------------------------------------------\n");
   }
 
@@ -273,7 +269,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 
   if (options.compareArgs("BASIS","BERN")) basis = ellipticL->mesh->VB;
 
-  hlong *coarseGlobalStarts = (hlong*) calloc(size+1, sizeof(hlong));
+  hlong *coarseGlobalStarts = (hlong*) calloc(mesh->size+1, sizeof(hlong));
 
   if (options.compareArgs("DISCRETIZATION","IPDG")) {
     ellipticBuildIpdg(ellipticL, basisNp, basis, lambda, &coarseA, &nnzCoarseA,coarseGlobalStarts);
