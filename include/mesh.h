@@ -1,6 +1,8 @@
 #ifndef MESH_H
 #define MESH_H 1
 
+#include <unistd.h>
+
 #include "mpi.h"
 #include <math.h>
 #include <stdlib.h>
