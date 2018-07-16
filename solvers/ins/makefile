@@ -28,7 +28,7 @@ LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
 			-L$(ELLIPTICDIR) -lelliptic -L$(ALMONDDIR) -lparALMOND 
 
 # libraries to be linked in
-LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
+LIBS	=  -L$(OCCA_DIR)/lib $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 INCLUDES = ins.h
 DEPS = $(INCLUDES) \

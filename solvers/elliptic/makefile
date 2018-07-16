@@ -27,7 +27,7 @@ LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
 			-L$(ALMONDDIR) -lparALMOND
 
 # libraries to be linked in
-LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
+LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 #-llapack -lblas
 
