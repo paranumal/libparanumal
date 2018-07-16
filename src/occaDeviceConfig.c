@@ -20,31 +20,31 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   long int* hostIds = (long int*) calloc(size,sizeof(long int));
   MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,MPI_COMM_WORLD);
 
-  int deviceID = 0;
+  int device_id = 0;
   int totalDevices = 0;
   for (int r=0;r<rank;r++) {
-    if (hostIds[r]==hostId) deviceID++;
+    if (hostIds[r]==hostId) device_id++;
   }
   for (int r=0;r<size;r++) {
     if (hostIds[r]==hostId) totalDevices++;
   }
 
-  if (size==1) options.getArgs("DEVICE NUMBER" ,deviceID);
+  if (size==1) options.getArgs("DEVICE NUMBER" ,device_id);
 
   // read thread model/device/platform from options
   if(options.compareArgs("THREAD MODEL", "CUDA")){
-    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
+    sprintf(deviceConfig, "mode: 'CUDA', device_id: %d",device_id);
   }
   else if(options.compareArgs("THREAD MODEL", "OpenCL")){
     int plat;
     options.getArgs("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", deviceID, plat);
+    sprintf(deviceConfig, "mode: 'OpenCL', device_id: %d, platform_id: %d", device_id, plat);
   }
   else if(options.compareArgs("THREAD MODEL", "OpenMP")){
-    sprintf(deviceConfig, "mode = OpenMP");
+    sprintf(deviceConfig, "mode: 'OpenMP' ");
   }
   else{
-    sprintf(deviceConfig, "mode = Serial");
+    sprintf(deviceConfig, "mode: 'Serial' ");
   }
 
   //set number of omp threads to use
