@@ -4,10 +4,6 @@ void bnsRun(bns_t *bns, setupAide &options){
 
   mesh_t  *mesh = bns->mesh; 
 
-  int rank, size; 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-    
   // MPI send buffer
   dfloat *sendBuffer;
   dfloat *recvBuffer;
@@ -67,7 +63,7 @@ void bnsRun(bns_t *bns, setupAide &options){
     }
   }
 
-  if(rank==0) printf("N: %d Nsteps: %d dt: %.5e \n", mesh->N, bns->NtimeSteps, bns->dt);
+  if(mesh->rank==0) printf("N: %d Nsteps: %d dt: %.5e \n", mesh->N, bns->NtimeSteps, bns->dt);
 
 
   double tic_tot = 0.f, elp_tot = 0.f; 
@@ -99,9 +95,9 @@ void bnsRun(bns_t *bns, setupAide &options){
 
           // Write a restart file
           if(bns->writeRestartFile){
-            if(rank==0) printf("\nWriting Binary Restart File....");
+            if(mesh->rank==0) printf("\nWriting Binary Restart File....");
               bnsRestartWrite(bns, options, time);
-            if(rank==0) printf("done\n");
+            if(mesh->rank==0) printf("done\n");
           }   
         }
       }
@@ -179,9 +175,9 @@ void bnsRun(bns_t *bns, setupAide &options){
   MPI_Allreduce(&elp_out, &gelp_out, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&elp_sol, &gelp_sol, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   
-  if(rank==0){
+  if(mesh->rank==0){
     printf("ORDER\tSIZE\tTOTAL_TIME\tSOLVER_TIME\tOUTPUT TIME\n");
-    printf("%2d %2d %.5e %.5e %.5e\n", mesh->N, size, gelp_tot, gelp_sol, gelp_out); 
+    printf("%2d %2d %.5e %.5e %.5e\n", mesh->N, mesh->size, gelp_tot, gelp_sol, gelp_out); 
   }
  
   printf("writing Final data\n");  

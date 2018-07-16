@@ -96,10 +96,7 @@ void bnsForces(bns_t *bns, dfloat time, setupAide &options){
   MPI_Allreduce(&Fy, &gFy, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
 
   //
-  int rank; 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  if(rank==0){
+  if(mesh->rank==0){
     char fname[BUFSIZ];
     sprintf(fname, "BNSForceData_N%d.dat", mesh->N);
 

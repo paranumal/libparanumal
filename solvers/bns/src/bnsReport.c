@@ -18,11 +18,7 @@ mesh_t *mesh = bns->mesh;
   }
 
   // report ramp function
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  
-  if(rank==0){
+  if(mesh->rank==0){
     dfloat fx, fy, fz, intfx, intfy, intfz;
     bnsBodyForce(time, &fx, &fy, &fz, &intfx, &intfy, &intfz);
     printf("t: %g (fx,fy,fz) = (%g,%g,%g), int(fx,fy,fz) = (%g,%g,%g)\n",
@@ -41,7 +37,7 @@ mesh_t *mesh = bns->mesh;
     char fname[BUFSIZ];
     string outName;
     options.getArgs("OUTPUT FILE NAME", outName);
-    sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), rank, bns->frame++);
+    sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, bns->frame++);
     bnsPlotVTU(bns, fname);
   }
 
@@ -77,7 +73,7 @@ mesh_t *mesh = bns->mesh;
         bns->isoNtris[0] = mymin(bns->isoNtris[0], bns->isoMaxNtris);
 
         // 
-        printf("Rank:%2d Group:%2d Triangles:%8d\n", rank, bns->isoNtris[0], gr);
+        printf("Rank:%2d Group:%2d Triangles:%8d\n", mesh->rank, bns->isoNtris[0], gr);
         //
         int offset = 0;
         bns->o_isoq.copyTo(bns->isoq, bns->isoNtris[0]*(mesh->dim+bns->isoNfields)*3*sizeof(dfloat), offset);
@@ -104,15 +100,15 @@ mesh_t *mesh = bns->mesh;
           bool bBinary = false;      // toggle binary/ascii
           // bool bBinary = true;      // toggle binary/ascii
           int tstep = plotnum;       // dummy time-step
-          sprintf(fname, "%s_%04d_%04d.msh",(char*)outName.c_str(), rank, bns->frame++);
+          sprintf(fname, "%s_%04d_%04d.msh",(char*)outName.c_str(), mesh->rank, bns->frame++);
           bnsIsoPlotGmsh(bns, Ntris2, fname, bns->tstep, N_offset, E_offset, plotnum, plottime, bBinary);
           #endif
-          sprintf(fname, "%s_%d_%d_ %04d_%04d.vtu",(char*)outName.c_str(), bns->isoField, gr, rank, bns->frame);
+          sprintf(fname, "%s_%d_%d_ %04d_%04d.vtu",(char*)outName.c_str(), bns->isoField, gr, mesh->rank, bns->frame);
           bnsIsoWeldPlotVTU(bns,  fname);
         }
         else
         {
-          sprintf(fname, "%s_%d_%d_ %04d_%04d.vtu",(char*)outName.c_str(), bns->isoField, gr, rank, bns->frame);
+          sprintf(fname, "%s_%d_%d_ %04d_%04d.vtu",(char*)outName.c_str(), bns->isoField, gr, mesh->rank, bns->frame);
           bnsIsoPlotVTU(bns, bns->isoNtris[0], bns->isoq, fname);
         }
 

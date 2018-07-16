@@ -2,53 +2,16 @@
 
 bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   
-  // OCCA build 
-  char deviceConfig[BUFSIZ];
-  int rank, size;
-
-  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-  MPI_Comm_size(MPI_COMM_WORLD,&size);
-
-  long int hostId = gethostid();
-
-  long int* hostIds = (long int*) calloc(size,sizeof(long int));
-  MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,MPI_COMM_WORLD);
-
-  int deviceID = 0;
-  for (int r=0;r<rank;r++) {
-    if (hostIds[r]==hostId) deviceID++;
-  }
-
-  if (size==1) options.getArgs("DEVICE NUMBER" ,deviceID);
-
-  // read thread model/device/platform from options
-  if(options.compareArgs("THREAD MODEL", "CUDA")){
-    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
-  }
-  else if(options.compareArgs("THREAD MODEL", "OpenCL")){
-    int plat;
-    options.getArgs("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", deviceID, plat);
-  }
-  else if(options.compareArgs("THREAD MODEL", "OpenMP")){
-    sprintf(deviceConfig, "mode = OpenMP");
-  }
-  else{
-    sprintf(deviceConfig, "mode = Serial");
-  }
-  
   // BNS build
   bns_t *bns = (bns_t*) calloc(1, sizeof(bns_t));
 
   options.getArgs("MESH DIMENSION", bns->dim);
   options.getArgs("ELEMENT TYPE", bns->elementType);
-  
 
   mesh->Nfields = (bns->dim==3) ? 10:6;
   bns->Nfields = mesh->Nfields; 
 
   bns->mesh = mesh; 
-
     
   // Defaulting BNS Input Parameters
   bns->Ma         = 0.1;
@@ -141,7 +104,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   
   options.getArgs("TSTEPS FOR FORCE OUTPUT",   bns->outputForceStep);
   
-  if(rank==0){
+  if(mesh->rank==0){
     printf("=============WRITING INPUT PARAMETERS===================\n");
 
     printf("VISCOSITY\t:\t%.2e\n", bns->nu);
@@ -199,7 +162,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   dfloat q6bar =0., q7bar =0., q8bar =0., q9bar =0., q10bar =0.; 
   // Set time step size
   if(bns->dim==2){
-    if (rank==0) printf("MESH DIMENSION\t:\t%d\n", bns->dim);
+    if (mesh->rank==0) printf("MESH DIMENSION\t:\t%d\n", bns->dim);
     q1bar = rho;
     q2bar = rho*u/bns->sqrtRT;
     q3bar = rho*v/bns->sqrtRT;
@@ -207,7 +170,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     q5bar = (rho*u*u - sigma11)/(sqrt(2.)*bns->RT);
     q6bar = (rho*v*v - sigma22)/(sqrt(2.)*bns->RT);    
   } else{
-    if (rank==0) printf("MESH DIMENSION\t:\t%d\n", bns->dim);
+    if (mesh->rank==0) printf("MESH DIMENSION\t:\t%d\n", bns->dim);
     
     q1bar  = rho;
     q2bar  = rho*u/bns->sqrtRT;
@@ -276,7 +239,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   if(options.compareArgs("TIME INTEGRATOR", "MRSAAB") ){
     int maxLevels =0; options.getArgs("MAX MRAB LEVELS", maxLevels);
 
-    if (rank==0) printf("MR MAX LEVELS\t:\t%d\n", maxLevels);
+    if (mesh->rank==0) printf("MR MAX LEVELS\t:\t%d\n", maxLevels);
 
     if(bns->dim==2)
       bns->dt = meshMRABSetup2D(mesh,EtoDT,maxLevels, (bns->finalTime-bns->startTime));
@@ -285,7 +248,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
     bns->NtimeSteps =  (bns->finalTime-bns->startTime)/(pow(2,mesh->MRABNlevels-1)*bns->dt);
 
-    if (rank==0) printf("MR  LEVELS\t:\t%d\n", mesh->MRABNlevels);
+    if (mesh->rank==0) printf("MR  LEVELS\t:\t%d\n", mesh->MRABNlevels);
   }
   else{
     // printf("MESH DIMENSION\t:\t%d\n", bns->dt);  
@@ -404,7 +367,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
   
   // Write Problem Info 
-  if(rank==0){
+  if(mesh->rank==0){
     printf("dt   = %g max wave speed = %g",   bns->dt, sqrt(3.)*bns->sqrtRT);
     if(mesh->MRABNlevels)
       printf("Nsteps = %d dt = %.8e MRAB Level: %d  Final Time:%.5e\n", bns->NtimeSteps, bns->dt, mesh->MRABNlevels, bns->startTime+pow(2, mesh->MRABNlevels-1)*(bns->dt*(bns->NtimeSteps+1)));   
@@ -425,18 +388,14 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     // free(pX); free(pY);
 
   }
-  
-  
 
   occa::kernelInfo kernelInfo;
   if(bns->dim==3)
-    meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
+    meshOccaSetup3D(mesh, options, kernelInfo);
   else
-    meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
+    meshOccaSetup2D(mesh, options, kernelInfo);
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");   
-
- 
 
   // Setup MRAB PML
   if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
@@ -754,9 +713,9 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   kernelInfo.addInclude((char*)boundaryHeaderFileName.c_str());
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
-  for (int r=0;r<size;r++){
+  for (int r=0;r<mesh->size;r++){
 
-    if (r==rank) {
+    if (r==mesh->rank) {
 
       // Volume kernels
       sprintf(fileName, DBNS "/okl/bnsVolume%s.okl", suffix);

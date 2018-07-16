@@ -5,9 +5,6 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
 
   mesh_t *mesh = bns->mesh;
 
-  int rank; 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   dfloat safe  = 0.95;   //safety factor
   //error control parameters
   dfloat beta       = 0.05; 
@@ -143,7 +140,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
           // change dt to match output
           bns->dt = nextOutputTime-bns->time;
           // print
-          if(rank==0) printf("Taking output mini step: %g\n", bns->dt);
+          if(mesh->rank==0) printf("Taking output mini step: %g\n", bns->dt);
           
           // Compute new coefficients
           bnsSAADRKCoefficients(bns, options);
@@ -157,9 +154,9 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
           
           // Write a restart file
           if(bns->writeRestartFile){
-            if(rank==0) printf("\nWriting Binary Restart File....");
-              bnsRestartWrite(bns, options, nextOutputTime);
-            if(rank==0) printf("done\n");
+            if(mesh->rank==0) printf("\nWriting Binary Restart File....");
+	    bnsRestartWrite(bns, options, nextOutputTime);
+	    if(mesh->rank==0) printf("done\n");
           } 
 
           // restore time step
@@ -220,13 +217,13 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
       facold = mymax(err,1E-4);
       bns->time += bns->dt;
 
-      if(rank==0) printf("\r time = %g (%d), dt = %g accepted (ratio dt/hmin = %g)               ", bns->time, bns->atstep, bns->dt, bns->dt/hmin);
+      if(mesh->rank==0) printf("\r time = %g (%d), dt = %g accepted (ratio dt/hmin = %g)               ", bns->time, bns->atstep, bns->dt, bns->dt/hmin);
       bns->tstep++;
     }
     else{
       bns->rtstep++; 
       dtnew = bns->dt/(mymax(invfactor1,fac1/safe));
-      if(rank==0) printf("\r time = %g (%d), dt = %g rejected (ratio dt/min = %g), trying %g", bns->time,bns->atstep, bns->dt, bns->dt/hmin, dtnew);
+      if(mesh->rank==0) printf("\r time = %g (%d), dt = %g rejected (ratio dt/min = %g), trying %g", bns->time,bns->atstep, bns->dt, bns->dt/hmin, dtnew);
       done =0;
     }
    

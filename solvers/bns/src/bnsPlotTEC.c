@@ -10,10 +10,6 @@ void boltzmannPlotTEC2D(bns_t *bns, char *fileName, dfloat time){
 
   mesh2D *mesh = bns->mesh; 
 
-    
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   FILE *fp;
   
   fp = fopen(fileName, "a");
