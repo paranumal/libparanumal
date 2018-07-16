@@ -289,7 +289,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   }
 
   //if (mesh->rank!=0) 
-    occa::setVerboseCompilation(false);
+  //    occa::setVerboseCompilation(false);
 
   //  p_RT, p_rbar, p_ubar, p_vbar
   // p_half, p_two, p_third, p_Nstresses

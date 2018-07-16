@@ -79,7 +79,9 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 
   }
 
+#if 0
   occa::setVerboseCompilation(false);
+#endif
   
   kernelInfo.addDefine("p_Nfields", mesh->Nfields);
   kernelInfo.addDefine("p_dim", mesh->dim);

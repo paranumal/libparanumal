@@ -164,11 +164,13 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
   //copy boundary flags
   elliptic->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), elliptic->EToB);
 
+#if 0
   if (mesh->rank==0 && options.compareArgs("VERBOSE","TRUE")) 
     occa::setVerboseCompilation(true);
   else 
     occa::setVerboseCompilation(false);
-
+#endif
+  
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
