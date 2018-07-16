@@ -124,7 +124,6 @@ LOBJS = \
 ../../src/mysort.o \
 ../../src/parallelSort.o \
 ../../src/setupAide.o \
-../../src/timer.o\
 ../../src/readArray.o\
 ../../src/occaDeviceConfig.o\
 ../../src/timer.o

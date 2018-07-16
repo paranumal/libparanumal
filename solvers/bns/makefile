@@ -21,7 +21,7 @@ LD	= mpic++
 CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"'
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) -g -L../../3rdParty/gslib.github  -lgs
+LDFLAGS	= $(compilerFlags) -g -L../../3rdParty/gslib.github  -lgs -fopenmp
 
 # libraries to be linked in
 LIBS	=   -L$(OCCA_DIR)/lib $(links)
@@ -121,7 +121,6 @@ LOBJS = \
 ../../src/meshVTU3D.o \
 ../../src/mysort.o \
 ../../src/parallelSort.o \
-../../src/timer.o \
 ../../src/matrix.o \
 ../../src/setupAide.o \
 ../../src/trace.o \
