@@ -32,8 +32,10 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
 
   defs.addInclude(DPWD "/okl/twoPhaseReduction.h");
 
-  if(parAlmond->device.mode()=="OpenCL")
-    parAlmond->device.setCompilerFlags("-cl-opt-disable");
+  if(parAlmond->device.mode()=="OpenCL"){
+    //    parAlmond->device.setCompilerFlags("-cl-opt-disable");
+    defs.addCompilerFlag("-cl-opt-disable");
+  }
 
   if(parAlmond->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
     defs.addCompilerFlag("--ftz=true");
