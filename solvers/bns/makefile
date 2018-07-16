@@ -24,7 +24,7 @@ CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"$
 LDFLAGS	= $(compilerFlags) -g -L../../3rdParty/gslib.github  -lgs
 
 # libraries to be linked in
-LIBS	=  $(links)
+LIBS	=   -L$(OCCA_DIR)/lib $(links)
 
 INCLUDES = bns.h 
 DEPS = $(INCLUDES) \

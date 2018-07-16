@@ -22,7 +22,7 @@ CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -g  -D DHOLMES='"${CURDIR}/..
 LDFLAGS	= $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
-LIBS	=  $(links)
+LIBS	=   -L$(OCCA_DIR)/lib $(links)
 
 INCLUDES = cns.h
 
