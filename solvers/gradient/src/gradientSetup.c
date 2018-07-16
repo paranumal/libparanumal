@@ -2,40 +2,6 @@
 
 gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 
-  // OCCA build stuff
-  char deviceConfig[BUFSIZ];
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  
-  long int hostId = gethostid();
-
-  long int* hostIds = (long int*) calloc(size,sizeof(long int));
-  MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,MPI_COMM_WORLD);
-
-  int deviceID = 0;
-  for (int r=0;r<rank;r++) {
-    if (hostIds[r]==hostId) deviceID++;
-  }
-
-  if (size==1) options.getArgs("DEVICE NUMBER" ,deviceID);
-
-  // read thread model/device/platform from options
-  if(options.compareArgs("THREAD MODEL", "CUDA")){
-    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
-  }
-  else if(options.compareArgs("THREAD MODEL", "OpenCL")){
-    int plat;
-    options.getArgs("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", deviceID, plat);
-  }
-  else if(options.compareArgs("THREAD MODEL", "OpenMP")){
-    sprintf(deviceConfig, "mode = OpenMP");
-  }
-  else{
-    sprintf(deviceConfig, "mode = Serial");
-  }
-        
   gradient_t *gradient = (gradient_t*) calloc(1, sizeof(gradient_t));
 
   gradient->mesh = mesh;
@@ -70,9 +36,9 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
   // OCCA stuff
   occa::kernelInfo kernelInfo;
   if(gradient->dim==3)
-    meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
+    meshOccaSetup3D(mesh, options, kernelInfo);
   else
-    meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
+    meshOccaSetup2D(mesh, options, kernelInfo);
 
   //add boundary data to kernel info  
   gradient->o_q =
@@ -165,10 +131,10 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
-  for (int r=0;r<size;r++) {
+  for (int r=0;r<mesh->size;r++) {
 
     MPI_Barrier(MPI_COMM_WORLD);
-    if (r==rank) {
+    if (r==mesh->rank) {
 
       // kernels from volume file
       sprintf(fileName, DHOLMES "/okl/meshIsoSurface3D.okl");
