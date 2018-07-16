@@ -13,11 +13,10 @@ void reportMemoryUsage(occa::device &device, const char *mess){
   printf("%s: bytes allocated = %lu\n", mess, bytes);
 }
 
-void meshOccaSetup3D(mesh3D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo){
+void meshOccaSetup3D(mesh3D *mesh, setupAide &newOptions, occa::kernelInfo &kernelInfo){
 
-  mesh->device.setup(deviceConfig);
-
-  occa::initTimer(mesh->device);
+  // conigure device
+  occaDeviceConfig(mesh, newOptions);
   
   //make seperate stream for halo exchange
   mesh->defaultStream = mesh->device.getStream();

@@ -6,11 +6,10 @@
 
 #include "mesh2D.h"
 
-void meshOccaSetup2D(mesh2D *mesh, char *deviceConfig, occa::kernelInfo &kernelInfo){
+void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::kernelInfo &kernelInfo){
 
-  mesh->device.setup(deviceConfig);
-
-  occa::initTimer(mesh->device);
+  // conigure device
+  occaDeviceConfig(mesh, newOptions);
 
   //make seperate stream for halo exchange
   mesh->defaultStream = mesh->device.getStream();

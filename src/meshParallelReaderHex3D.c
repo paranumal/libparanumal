@@ -20,6 +20,9 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
 
   mesh3D *mesh = (mesh3D*) calloc(1, sizeof(mesh3D));
 
+  mesh->rank = rank;
+  mesh->size = size;
+  
   mesh->dim = 3;
   mesh->Nverts = 8; // number of vertices per element
   mesh->Nfaces = 6;

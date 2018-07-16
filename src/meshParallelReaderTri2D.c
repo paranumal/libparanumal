@@ -22,6 +22,9 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
 
   mesh2D *mesh = (mesh2D*) calloc(1, sizeof(mesh2D));
 
+  mesh->rank = rank;
+  mesh->size = size;
+  
   mesh->dim = 2;
   mesh->Nverts = 3; // number of vertices per element
   mesh->Nfaces = 3;
