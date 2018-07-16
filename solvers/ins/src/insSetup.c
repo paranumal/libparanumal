@@ -294,11 +294,13 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->o_U = mesh->device.malloc(ins->NVfields*ins->Nstages*Ntotal*sizeof(dfloat), ins->U);
   ins->o_P = mesh->device.malloc(              ins->Nstages*Ntotal*sizeof(dfloat), ins->P);
 
+#if 0
   if (mesh->rank==0 && options.compareArgs("VERBOSE","TRUE")) 
     occa::setVerboseCompilation(true);
   else 
     occa::setVerboseCompilation(false);
-
+#endif
+  
   for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
       if (ins->dim==2) 
