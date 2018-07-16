@@ -1,40 +1,6 @@
 #include "acoustics.h"
 
 acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileName){
-
-  // OCCA build stuff
-  char deviceConfig[BUFSIZ];
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  
-  long int hostId = gethostid();
-
-  long int* hostIds = (long int*) calloc(size,sizeof(long int));
-  MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,MPI_COMM_WORLD);
-
-  int deviceID = 0;
-  for (int r=0;r<rank;r++) {
-    if (hostIds[r]==hostId) deviceID++;
-  }
-
-  if (size==1) options.getArgs("DEVICE NUMBER" ,deviceID);
-
-  // read thread model/device/platform from newOptions
-  if(newOptions.compareArgs("THREAD MODEL", "CUDA")){
-    sprintf(deviceConfig, "mode = CUDA, deviceID = %d",deviceID);
-  }
-  else if(newOptions.compareArgs("THREAD MODEL", "OpenCL")){
-    int plat;
-    newOptions.getArgs("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode = OpenCL, deviceID = %d, platformID = %d", deviceID, plat);
-  }
-  else if(newOptions.compareArgs("THREAD MODEL", "OpenMP")){
-    sprintf(deviceConfig, "mode = OpenMP");
-  }
-  else{
-    sprintf(deviceConfig, "mode = Serial");
-  }
 	
   acoustics_t *acoustics = (acoustics_t*) calloc(1, sizeof(acoustics_t));
 
@@ -177,22 +143,22 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     mesh->dt = mesh->finalTime/mesh->NtimeSteps;
   }
 
-  if (rank ==0) printf("dtAdv = %lg (before cfl), dt = %lg\n",
+  if (mesh->rank ==0) printf("dtAdv = %lg (before cfl), dt = %lg\n",
    dtAdv, dt);
 
   acoustics->frame = 0;
   // errorStep
   mesh->errorStep = 1000;
 
-  if (rank ==0) printf("dt = %g\n", mesh->dt);
+  if (mesh->rank ==0) printf("dt = %g\n", mesh->dt);
 
   // OCCA build stuff
   
   occa::kernelInfo kernelInfo;
   if(acoustics->dim==3)
-    meshOccaSetup3D(mesh, deviceConfig, kernelInfo);
+    meshOccaSetup3D(mesh, newOptions, kernelInfo);
   else
-    meshOccaSetup2D(mesh, deviceConfig, kernelInfo);
+    meshOccaSetup2D(mesh, newOptions, kernelInfo);
 
   //add boundary data to kernel info
   kernelInfo.addInclude(boundaryHeaderFileName);

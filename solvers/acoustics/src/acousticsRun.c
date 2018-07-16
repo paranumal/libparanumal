@@ -2,9 +2,6 @@
 
 void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   mesh_t *mesh = acoustics->mesh;
 
   acousticsReport(acoustics, 0, newOptions);

@@ -18,6 +18,8 @@
 
 typedef struct {
 
+  int rank, size; // MPI rank and size (process count)
+  
   int dim;
   int Nverts, Nfaces, NfaceVertices;
 
@@ -702,6 +704,8 @@ void meshApplyElementMatrix(mesh_t *mesh, dfloat *A, dfloat *q, dfloat *Aq);
 
 void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
+
+void occaDeviceConfig(mesh_t *mesh, setupAide &newOptions);
 
 #endif
 
