@@ -1,5 +1,7 @@
 #include "bns.h"
 
+// TW: this needs to be tidied up
+
 // currently maximum
 void bnsError(bns_t *bns, dfloat time, setupAide &options){
 
@@ -78,9 +80,7 @@ void bnsError(bns_t *bns, dfloat time, setupAide &options){
     MPI_Allreduce(&maxQ1, &globalMaxQ1, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&minQ1, &globalMinQ1, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
 
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank==0)
+    if(mesh->rank==0)
       printf("%g %g %g (time,min(density),max(density)\n", time, globalMinQ1, globalMaxQ1);
 
     if(isnan(globalMinQ1) || isnan(globalMaxQ1))

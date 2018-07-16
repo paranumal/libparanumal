@@ -5,9 +5,6 @@ void bnsPlotVTU(bns_t *bns, char *fileName){
 
   mesh_t *mesh = bns->mesh;
   
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   FILE *fp;
   
   fp = fopen(fileName, "w");

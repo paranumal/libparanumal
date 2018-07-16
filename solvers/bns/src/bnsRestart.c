@@ -1,9 +1,6 @@
 #include "bns.h"
 void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   mesh_t *mesh = bns->mesh; 
   // Copy Field To Host
   bns->o_q.copyTo(bns->q);
@@ -12,7 +9,7 @@ void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
   char fname[BUFSIZ];
   string outName;
   options.getArgs("RESTART FILE NAME", outName);
-  sprintf(fname, "%s_%04d.dat",(char*)outName.c_str(), rank);
+  sprintf(fname, "%s_%04d.dat",(char*)outName.c_str(), mesh->rank);
   FILE *fp;
   
   // Overwrite  Binary File
@@ -132,15 +129,12 @@ void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
 
 void bnsRestartRead(bns_t *bns, setupAide &options){
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
   mesh_t *mesh = bns->mesh; 
   // Create Binary File Name
   char fname[BUFSIZ];
   string outName;
   options.getArgs("RESTART FILE NAME", outName);
-  sprintf(fname, "%s_%04d.dat",(char*)outName.c_str(), rank);
+  sprintf(fname, "%s_%04d.dat",(char*)outName.c_str(), mesh->rank);
   FILE *fp; 
 
   // Overwrite  Binary File
@@ -159,7 +153,7 @@ void bnsRestartRead(bns_t *bns, setupAide &options){
     fread(&bns->frame, sizeof(int), 1, fp);
 
 
-    if(rank==0) printf("Restart time: %.4e ...", startTime);
+    if(mesh->rank==0) printf("Restart time: %.4e ...", startTime);
 
     // Write only q works check for MRAB, write history
     for(dlong e = 0; e<mesh->Nelements; e++){
