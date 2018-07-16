@@ -7,8 +7,8 @@ void upwind1D(const dfloat nx,  const dfloat ny,  const dfloat nz,
               const dfloat q6M, const dfloat q7M, const dfloat q8M, const dfloat q9M, const dfloat q10M,
               const dfloat q1B, const dfloat q2B, const dfloat q3B, const dfloat q4B, const dfloat q5B, 
               const dfloat q6B, const dfloat q7B, const dfloat q8B, const dfloat q9B, const dfloat q10B, 
-              dfloat * restrict q1P, dfloat * restrict q2P, dfloat * restrict q3P, dfloat * restrict q4P, dfloat * restrict q5P, 
-              dfloat * restrict q6P, dfloat * restrict q7P, dfloat * restrict q8P, dfloat * restrict q9P, dfloat * restrict q10P){ 
+              restrict dfloat * q1P, restrict dfloat * q2P, restrict dfloat * q3P, restrict dfloat * q4P, restrict dfloat * q5P, 
+              restrict dfloat * q6P, restrict dfloat * q7P, restrict dfloat * q8P, restrict dfloat * q9P, restrict dfloat * q10P){ 
 
 
   *q1P  = 0.5f*(q1B  + q1M)  - p_isq12*(nx*(q2B-q2M) + ny*(q3B-q3M) + nz*(q4B-q4M));
