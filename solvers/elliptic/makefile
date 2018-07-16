@@ -126,7 +126,8 @@ LOBJS = \
 ../../src/setupAide.o \
 ../../src/timer.o\
 ../../src/readArray.o\
-../../src/occaDeviceConfig.o
+../../src/occaDeviceConfig.o\
+../../src/timer.o
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\

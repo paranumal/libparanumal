@@ -129,7 +129,8 @@ LOBJS = \
 ../../src/meshParallelConsecutiveGlobalNumbering.o\
 ../../src/meshParallelGatherScatter.o \
 ../../src/meshParallelGatherScatterSetup.o \
-../../src/occaDeviceConfig.o
+../../src/occaDeviceConfig.o\
+../../src/timer.o
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\
