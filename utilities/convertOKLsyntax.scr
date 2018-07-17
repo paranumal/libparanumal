@@ -1,7 +1,7 @@
 #!/bin/bash
 
-    echo #1
-    mv #1 tmp1
+    echo "$1"
+    mv "$1" tmp1
 
     sed -i 's/kernel/@kernel/g' tmp1
 
@@ -45,6 +45,6 @@
     sed -i 's/occaSqrt/sqrt/g' tmp1
     sed -i 's/occaFabs/fabs/g' tmp1
 
-     mv tmp1 #1
+     mv tmp1 "$1" 
 #    clang-format tmp1 > $fl
 #    rm tmp1
