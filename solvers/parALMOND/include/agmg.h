@@ -1,7 +1,12 @@
 #ifndef AGMG_H
 #define AGMG_H 1
 
+#ifdef OCCA_VERSION_1_0
+#include "occa/modes/opencl/utils.hpp"
+#endif
+
 #include "mesh.h"
+
 #include "parAlmond.h"
 #include "agmgLevel.h"
 #include "agmgMatrices.h"
