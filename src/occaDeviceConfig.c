@@ -31,6 +31,7 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
 
   if (size==1) options.getArgs("DEVICE NUMBER" ,device_id);
 
+#ifdef OCCA_VERSION_1_0
   // read thread model/device/platform from options
   if(options.compareArgs("THREAD MODEL", "CUDA")){
     sprintf(deviceConfig, "mode: 'CUDA', device_id: %d",device_id);
@@ -46,6 +47,23 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   else{
     sprintf(deviceConfig, "mode: 'Serial' ");
   }
+#else
+  // read thread model/device/platform from options
+  if(options.compareArgs("THREAD MODEL", "CUDA")){
+    sprintf(deviceConfig, "mode=CUDA, deviceID=%d",device_id);
+  }
+  else if(options.compareArgs("THREAD MODEL", "OpenCL")){
+    int plat;
+    options.getArgs("PLATFORM NUMBER", plat);
+    sprintf(deviceConfig, "mode=OpenCL, deviceID=%d, platformID=%d", device_id, plat);
+  }
+  else if(options.compareArgs("THREAD MODEL", "OpenMP")){
+    sprintf(deviceConfig, "mode=OpenMP ");
+  }
+  else{
+    sprintf(deviceConfig, "mode=Serial");
+  }
+#endif
 
   //set number of omp threads to use
   int Ncores = sysconf(_SC_NPROCESSORS_ONLN);

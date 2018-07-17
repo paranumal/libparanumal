@@ -10,7 +10,10 @@
 
 #include "types.h"
 #include "ogs_t.h"
+
+#ifdef OCCA_VERSION_1_0
 #include <occa/modes/opencl/utils.hpp>
+#endif
 
 #include "timer.h"
 
