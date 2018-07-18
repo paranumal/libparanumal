@@ -6,43 +6,43 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  occa::kernelInfo defs;
+  occa::kernelInfo kernelInfo;
 
-  defs.addDefine("bdim", AGMGBDIM);
-  defs.addDefine("simd", SIMDWIDTH);
+  kernelInfo.addDefine("bdim", AGMGBDIM);
+  kernelInfo.addDefine("simd", SIMDWIDTH);
 
   if(sizeof(dlong)==4){
-    defs.addDefine("dlong","int");
+    kernelInfo.addDefine("dlong","int");
   }
   if(sizeof(dlong)==8){
-    defs.addDefine("dlong","long long int");
+    kernelInfo.addDefine("dlong","long long int");
   }
 
   if(sizeof(dfloat) == sizeof(double)){
-    defs.addDefine("dfloat", "double");
-    defs.addDefine("dfloat4", "double4");
+    kernelInfo.addDefine("dfloat", "double");
+    kernelInfo.addDefine("dfloat4", "double4");
   }
   else if(sizeof(dfloat) == sizeof(float)){
-    defs.addDefine("dfloat", "float");
-    defs.addDefine("dfloat4", "float4");
+    kernelInfo.addDefine("dfloat", "float");
+    kernelInfo.addDefine("dfloat4", "float4");
   }
 
-  defs.addDefine("p_RDIMX", RDIMX);
-  defs.addDefine("p_RDIMY", RDIMY);
+  kernelInfo.addDefine("p_RDIMX", RDIMX);
+  kernelInfo.addDefine("p_RDIMY", RDIMY);
 
-  defs.addInclude(DPWD "/okl/twoPhaseReduction.h");
+  kernelInfo.addInclude(DPWD "/okl/twoPhaseReduction.h");
 
   if(parAlmond->device.mode()=="OpenCL"){
     //    parAlmond->device.setCompilerFlags("-cl-opt-disable");
-    defs.addCompilerFlag("-cl-opt-disable");
+    kernelInfo.addCompilerFlag("-cl-opt-disable");
   }
 
   if(parAlmond->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    defs.addCompilerFlag("--ftz=true");
-    defs.addCompilerFlag("--prec-div=false");
-    defs.addCompilerFlag("--prec-sqrt=false");
-    defs.addCompilerFlag("--use_fast_math");
-    defs.addCompilerFlag("--fmad=true"); // compiler option for cuda
+    kernelInfo.addCompilerFlag("--ftz=true");
+    kernelInfo.addCompilerFlag("--prec-div=false");
+    kernelInfo.addCompilerFlag("--prec-sqrt=false");
+    kernelInfo.addCompilerFlag("--use_fast_math");
+    kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
   }
 
   if (rank==0) printf("Compiling parALMOND Kernels \n");
@@ -50,67 +50,67 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
   for (int r=0;r<size;r++) {
     if (r==rank) {
       parAlmond->ellAXPYKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/ellAXPY.okl",
-           "ellAXPY", defs);
+           "ellAXPY", kernelInfo);
 
       parAlmond->ellZeqAXPYKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/ellAXPY.okl",
-              "ellZeqAXPY", defs);
+              "ellZeqAXPY", kernelInfo);
 
       parAlmond->ellJacobiKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/ellAXPY.okl",
-              "ellJacobi", defs);
+              "ellJacobi", kernelInfo);
 
       parAlmond->cooAXKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/cooAX.okl",
-             "cooAXKernel", defs);
+             "cooAXKernel", kernelInfo);
 
       parAlmond->scaleVectorKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/scaleVector.okl",
-             "scaleVectorKernel", defs);
+             "scaleVectorKernel", kernelInfo);
 
       parAlmond->sumVectorKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/sumVector.okl",
-             "sumVectorKernel", defs);
+             "sumVectorKernel", kernelInfo);
 
       parAlmond->addScalarKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/addScalar.okl",
-             "addScalarKernel", defs);
+             "addScalarKernel", kernelInfo);
 
       parAlmond->vectorAddKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/vectorAdd.okl",
-             "vectorAddKernel", defs);
+             "vectorAddKernel", kernelInfo);
 
       parAlmond->vectorAddKernel2 = parAlmond->device.buildKernelFromSource(DPWD "/okl/vectorAdd.okl",
-              "vectorAddKernel2", defs);
+              "vectorAddKernel2", kernelInfo);
 
       parAlmond->setVectorKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/setVector.okl",
-              "setVectorKernel", defs);
+              "setVectorKernel", kernelInfo);
 
       parAlmond->dotStarKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/dotStar.okl",
-               "dotStarKernel", defs);
+               "dotStarKernel", kernelInfo);
 
       parAlmond->simpleDotStarKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/dotStar.okl",
-               "simpleDotStarKernel", defs);
+               "simpleDotStarKernel", kernelInfo);
 
       parAlmond->haloExtract = parAlmond->device.buildKernelFromSource(DPWD "/okl/haloExtract.okl",
-                "haloExtract", defs);
+                "haloExtract", kernelInfo);
 
       parAlmond->agg_interpolateKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/agg_interpolate.okl",
-                 "agg_interpolate", defs);
+                 "agg_interpolate", kernelInfo);
 
       parAlmond->innerProdKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/innerProduct.okl",
-                 "innerProductKernel", defs);
+                 "innerProductKernel", kernelInfo);
 
       parAlmond->vectorAddInnerProdKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/vectorAddInnerProduct.okl",
-                 "vectorAddInnerProductKernel", defs);
+                 "vectorAddInnerProductKernel", kernelInfo);
 
       parAlmond->kcycleCombinedOp1Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/kcycleCombinedOp.okl",
-                 "kcycleCombinedOp1Kernel", defs);
+                 "kcycleCombinedOp1Kernel", kernelInfo);
 
       parAlmond->kcycleCombinedOp2Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/kcycleCombinedOp.okl",
-                 "kcycleCombinedOp2Kernel", defs);
+                 "kcycleCombinedOp2Kernel", kernelInfo);
 
       parAlmond->vectorAddWeightedInnerProdKernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/vectorAddInnerProduct.okl",
-                 "vectorAddWeightedInnerProductKernel", defs);
+                 "vectorAddWeightedInnerProductKernel", kernelInfo);
 
       parAlmond->kcycleWeightedCombinedOp1Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/kcycleCombinedOp.okl",
-                 "kcycleWeightedCombinedOp1Kernel", defs);
+                 "kcycleWeightedCombinedOp1Kernel", kernelInfo);
 
       parAlmond->kcycleWeightedCombinedOp2Kernel = parAlmond->device.buildKernelFromSource(DPWD "/okl/kcycleCombinedOp.okl",
-                 "kcycleWeightedCombinedOp2Kernel", defs);
+                 "kcycleWeightedCombinedOp2Kernel", kernelInfo);
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }
