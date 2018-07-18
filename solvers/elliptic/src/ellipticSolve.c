@@ -25,7 +25,7 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
     end = MPI_Wtime();
     double localElapsed = end-start;
 
-    occa::printTimer();
+    //    occa::printTimer();
 
     if(mesh->rank==0) printf("Solver converged in %d iters \n", Niter );
 
