@@ -68,7 +68,6 @@ void upwindRoeAveraged(const dfloat nx,
   dfloat dW2 = r*(vProt-vMrot);
   dfloat dW3 =  p_half*r*(uProt-uMrot)/c + p_half*(pP-pM)/c2;  
 
-
   dW1 *= occaFabs(urot-c);
   dW2 *= occaFabs(urot);
   dW3 *= occaFabs(urot+c); 
@@ -89,22 +88,28 @@ void upwindRoeAveraged(const dfloat nx,
 
 }
 
-#define quadSurfaceTerms(face,m, i, j)		\
-  {						\
-    dfloat r = 0.f, ru = 0.f, rv = 0.f;		\
-						\
-    occaUnroll(p_cubNq)				\
-    for(int n=0;n<p_cubNq;++n){			\
-      const dfloat Pni = s_cubProjectT[n][m];	\
-      r   += Pni*s_rflux [face][n];		\
-      ru  += Pni*s_ruflux[face][n];		\
-      rv  += Pni*s_rvflux[face][n];		\
-    }						\
-						\
-    s_rhsq[0][j][i] += r;			\
-    s_rhsq[1][j][i] += ru;			\
-    s_rhsq[2][j][i] += rv;			\
-  }
+void quadSurfaceTerms(const int face, const int m, const int i, const int j,
+		      const dfloat time,
+		      const dfloat s_cubProjectT[p_cubNq][p_Nq],
+		      dfloat s_rflux[p_Nfaces][p_cubNq],
+		      dfloat s_ruflux[p_Nfaces][p_cubNq],
+		      dfloat s_rvflux[p_Nfaces][p_cubNq],
+		      dfloat s_rhsq[p_Nfields][p_Nq][p_Nq]){
+  
+  dfloat r = 0.f, ru = 0.f, rv = 0.f;		
+  
+  occaUnroll(p_cubNq)				
+    for(int n=0;n<p_cubNq;++n){			
+      const dfloat Pni = s_cubProjectT[n][m];	
+      r   += Pni*s_rflux [face][n];		
+      ru  += Pni*s_ruflux[face][n];		
+      rv  += Pni*s_rvflux[face][n];		
+    }						
+  
+  s_rhsq[0][j][i] += r;			
+  s_rhsq[1][j][i] += ru;			
+  s_rhsq[2][j][i] += rv;			
+}
 
 // batch process elements
 kernel void cnsCubatureSurfaceQuad2D(const dlong Nelements,
@@ -279,9 +284,7 @@ kernel void cnsCubatureSurfaceQuad2D(const dlong Nelements,
                     
 	  const int bc = EToB[face+p_Nfaces*e];
 	  if(bc>0){
-	    cnsDirichletConditions2D(bc, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
-				     inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
-				     nx, ny, intfx, intfy, rM, uM, vM, &rP, &uP, &vP);
+	    cnsDirichletConditions2D(bc, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i],  nx, ny, intfx, intfy, rM, uM, vM, &rP, &uP, &vP);
 	    ruP = rP*uP;
 	    rvP = rP*vP;
 	    pP = p_RT*rP;
@@ -308,8 +311,14 @@ kernel void cnsCubatureSurfaceQuad2D(const dlong Nelements,
     // face 0 & 2
     for(int i=0;i<p_cubNq;++i;inner0){
       if(i<p_Nq){
-        quadSurfaceTerms(0,i,i,0     );
-        quadSurfaceTerms(2,i,i,p_Nq-1);
+	//        quadSurfaceTerms(0,i,i,0     );
+	quadSurfaceTerms(0, i, i, 0,
+			 time, s_cubProjectT, s_rflux, s_ruflux, s_rvflux, s_rhsq);
+
+	
+	//        quadSurfaceTerms(2,i,i,p_Nq-1);
+	quadSurfaceTerms(2, i, i, p_Nq-1,
+			 time, s_cubProjectT, s_rflux, s_ruflux, s_rvflux, s_rhsq);
       }
     }
 
@@ -318,11 +327,16 @@ kernel void cnsCubatureSurfaceQuad2D(const dlong Nelements,
     // face 1 & 3
     for(int j=0;j<p_cubNq;++j;inner0){
       if(j<p_Nq){
-        quadSurfaceTerms(1,j,p_Nq-1,j);
-        quadSurfaceTerms(3,j,0     ,j);
+	//        quadSurfaceTerms(1,j,p_Nq-1,j);
+	quadSurfaceTerms(1, j, p_Nq-1, j,
+			 time, s_cubProjectT, s_rflux, s_ruflux, s_rvflux, s_rhsq);
+       
+	//        quadSurfaceTerms(3,j,0     ,j);
+	quadSurfaceTerms(3, j, 0, j,
+	 		 time, s_cubProjectT, s_rflux, s_ruflux, s_rvflux, s_rhsq);
       }
     }
-
+    
     barrier(localMemFence);
 
     for(int i=0;i<p_cubNq;++i;inner0){
@@ -342,52 +356,60 @@ kernel void cnsCubatureSurfaceQuad2D(const dlong Nelements,
   }
 }
 
-#define stressSurfaceTerms(sk,face,i, j)                                \
-  {									\
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				\
-    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			\
-                                                                        \
-    const dlong idM = vmapM[sk];					\
-    const dlong idP = vmapP[sk];					\
-									\
-    const dlong eM = e;							\
-    const dlong eP = idP/p_Np;						\
-    const int vidM = idM%p_Np;						\
-    const int vidP = idP%p_Np;						\
-									\
-    const dlong baseM = eM*p_Np*p_Nfields + vidM;			\
-    const dlong baseP = eP*p_Np*p_Nfields + vidP;			\
-									\
-    const dfloat rM  = q[baseM + 0*p_Np];				\
-    const dfloat ruM = q[baseM + 1*p_Np];				\
-    const dfloat rvM = q[baseM + 2*p_Np];				\
-									\
-    dfloat uM = ruM/rM;							\
-    dfloat vM = rvM/rM;							\
-									\
-    dfloat rP  = q[baseP + 0*p_Np];					\
-    dfloat ruP = q[baseP + 1*p_Np];					\
-    dfloat rvP = q[baseP + 2*p_Np];					\
-									\
-    dfloat uP = ruP/rP;							\
-    dfloat vP = rvP/rP;							\
-									\
-    const int bc = EToB[face+p_Nfaces*e];				\
-    if(bc>0) {								\
-      cnsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, rM, uM, vM, &rP, &uP, &vP); \
-    }									\
-									\
-    const dfloat dS11 = p_half*(nx*(p_two*(uP-uM))) - p_third*(nx*(uP-uM)+ny*(vP-vM)); \
-    const dfloat dS12 = p_half*(ny*(uP-uM) + nx*(vP-vM));		\
-    const dfloat dS22 = p_half*(ny*(p_two*(vP-vM))) - p_third*(nx*(uP-uM)+ny*(vP-vM)); \
-									\
-    const dfloat sc = invWJ * sJ;					\
-    s_T11flux[es][j][i] += sc*p_two*mu*dS11;				\
-    s_T12flux[es][j][i] += sc*p_two*mu*dS12;				\
-    s_T22flux[es][j][i] += sc*p_two*mu*dS22;				\
-  }
+void stressSurfaceTerms(const int e, const int es, const int sk, const int face, const int i, const int j,
+			const dfloat time,
+			const dfloat mu, const dfloat intfx, const dfloat intfy, 
+			const dfloat *sgeo, const dfloat *x, const dfloat *y, 
+			const int *vmapM, const int *vmapP, const int *EToB, 
+			const dfloat *q,
+			dfloat s_T11flux[p_NblockS][p_Nq][p_Nq],
+			dfloat s_T12flux[p_NblockS][p_Nq][p_Nq],
+			dfloat s_T22flux[p_NblockS][p_Nq][p_Nq]){
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			
+  									
+  const dlong idM = vmapM[sk];						
+  const dlong idP = vmapP[sk];						
+  									
+  const dlong eM = e;							
+  const dlong eP = idP/p_Np;						
+  const int vidM = idM%p_Np;						
+  const int vidP = idP%p_Np;						
+  									
+  const dlong baseM = eM*p_Np*p_Nfields + vidM;				
+  const dlong baseP = eP*p_Np*p_Nfields + vidP;				
+  									
+  const dfloat rM  = q[baseM + 0*p_Np];					
+  const dfloat ruM = q[baseM + 1*p_Np];				
+  const dfloat rvM = q[baseM + 2*p_Np];				
+    									
+  dfloat uM = ruM/rM;							
+  dfloat vM = rvM/rM;							
+									
+  dfloat rP  = q[baseP + 0*p_Np];					
+  dfloat ruP = q[baseP + 1*p_Np];					
+  dfloat rvP = q[baseP + 2*p_Np];					
+									
+  dfloat uP = ruP/rP;							
+  dfloat vP = rvP/rP;							
+									
+  const int bc = EToB[face+p_Nfaces*e];				
+  if(bc>0) {								
+    cnsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, rM, uM, vM, &rP, &uP, &vP); 
+  }									
+									
+  const dfloat dS11 = p_half*(nx*(p_two*(uP-uM))) - p_third*(nx*(uP-uM)+ny*(vP-vM)); 
+  const dfloat dS12 = p_half*(ny*(uP-uM) + nx*(vP-vM));		
+  const dfloat dS22 = p_half*(ny*(p_two*(vP-vM))) - p_third*(nx*(uP-uM)+ny*(vP-vM)); 
+									
+  const dfloat sc = invWJ * sJ;					
+  s_T11flux[es][j][i] += sc*p_two*mu*dS11;				
+  s_T12flux[es][j][i] += sc*p_two*mu*dS12;				
+  s_T22flux[es][j][i] += sc*p_two*mu*dS22;				
+}
 
 kernel void cnsStressesSurfaceQuad2D(const int Nelements,
                                      const dfloat * restrict sgeo,
@@ -435,8 +457,15 @@ kernel void cnsStressesSurfaceQuad2D(const int Nelements,
           const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
           const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
 
-          stressSurfaceTerms(sk0,0,i,0     );
-          stressSurfaceTerms(sk2,2,i,p_Nq-1);
+	  //          stressSurfaceTerms(sk0,0,i,0     );
+	  stressSurfaceTerms(e, es, sk0, 0, i, 0,
+			     time, mu, intfx, intfy, sgeo, x, y, vmapM, vmapP, EToB, q,
+			     s_T11flux, s_T12flux, s_T22flux);
+	  
+	  //	    stressSurfaceTerms(sk2,2,i,p_Nq-1);
+	  stressSurfaceTerms(e, es, sk2, 2, i, p_Nq-1,
+			     time, mu, intfx, intfy, sgeo, x, y, vmapM, vmapP, EToB, q,
+			     s_T11flux, s_T12flux, s_T22flux);
         }
       }
     }
@@ -451,8 +480,16 @@ kernel void cnsStressesSurfaceQuad2D(const int Nelements,
           const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
           const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
-          stressSurfaceTerms(sk1,1,p_Nq-1,j);
-          stressSurfaceTerms(sk3,3,0     ,j);
+	  //          stressSurfaceTerms(sk1,1,p_Nq-1,j);
+	  stressSurfaceTerms(e, es, sk1, 1, p_Nq-1, j,
+			     time, mu, intfx, intfy, sgeo, x, y, vmapM, vmapP, EToB, q,
+			     s_T11flux, s_T12flux, s_T22flux);
+	  
+	  //stressSurfaceTerms(sk3,3,0     ,j);
+	  stressSurfaceTerms(e, es, sk3, 3, 0, j,
+			     time, mu, intfx, intfy, sgeo, x, y, vmapM, vmapP, EToB, q,
+			     s_T11flux, s_T12flux, s_T22flux);
+	  
         }
       }
     }
