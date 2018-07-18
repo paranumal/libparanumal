@@ -17,7 +17,7 @@
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
-    ellipticBoundaryConditions2D(bc, t, x[vmapM[sk]], y[vmapM[sk]], nx, ny, 0.f, 0.f, 0.f, qP, dqdxP, dqdyP); \
+    ellipticBoundaryConditions2D(bc, t, x[vmapM[sk]], y[vmapM[sk]], nx, ny, 0.f, 0.f, 0.f, qP, dqdxP, dqdyP) \
   }                                                                     \
                                                                         \
   dfloat dq = qP;                                                       \
@@ -70,8 +70,8 @@ kernel void ellipticRhsBCIpdgQuad2D(const dlong Nelements,
       const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i ;
       const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i ;
 
-      surfaceTerms(sk0,0,i,0);
-      surfaceTerms(sk2,2,i,p_Nq-1);
+      {surfaceTerms(sk0,0,i,0)}
+      {surfaceTerms(sk2,2,i,p_Nq-1)}
     }
 
     barrier(localMemFence);
@@ -81,8 +81,8 @@ kernel void ellipticRhsBCIpdgQuad2D(const dlong Nelements,
       const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
       const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
-      surfaceTerms(sk1,1,p_Nq-1,j);
-      surfaceTerms(sk3,3,0,j);
+      {surfaceTerms(sk1,1,p_Nq-1,j)}
+      {surfaceTerms(sk3,3,0,j)}
     }
 
     barrier(localMemFence);

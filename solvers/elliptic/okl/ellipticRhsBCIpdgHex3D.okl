@@ -10,7 +10,7 @@
                                                                         \
     const int bc = EToB[face+p_Nfaces*e];                               \
     if(bc>0) {                                                          \
-      ellipticBoundaryConditions3D(bc, t, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, qP, dqdxP, dqdyP, dqdzP);  \
+      ellipticBoundaryConditions3D(bc, t, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, qP, dqdxP, dqdyP, dqdzP)  \
     }                                                                   \
                                                                         \
     const dfloat dq = qP;                                               \

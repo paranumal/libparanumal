@@ -570,6 +570,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
         mesh->vmapP);
 
+    mesh->LIFT = baseElliptic->mesh->LIFT; //dummy buffer
+    mesh->o_LIFTT = baseElliptic->mesh->o_LIFTT; //dummy buffer
   }
 
 
