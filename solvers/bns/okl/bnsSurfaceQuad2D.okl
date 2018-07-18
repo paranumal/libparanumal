@@ -7,8 +7,8 @@ void upwind1D(const dfloat nx, const dfloat ny,
 	      const dfloat q4M, const dfloat q5M, const dfloat q6M,
               const dfloat q1B, const dfloat q2B, const dfloat q3B,
 	      const dfloat q4B, const dfloat q5B, const dfloat q6B,
-	      restrict dfloat * q1P, restrict dfloat * q2P,  restrict dfloat * q3P,
-	      restrict dfloat * q4P, restrict dfloat * q5P,  restrict dfloat * q6P){
+	       dfloat * q1P,  dfloat * q2P,   dfloat * q3P,
+	       dfloat * q4P,  dfloat * q5P,   dfloat * q6P){
   
   *q1P = 0.5f*(q1B + q1M) - p_isq12*(nx*(q2B-q2M) + ny*(q3B-q3M));
   *q2P = 0.5f*(q2B + q2M) - p_isq12*(nx*(q1B-q1M)) - p_isq6*nx*(q5B-q5M) - 0.5f*ny*(q4B-q4M);
@@ -18,245 +18,262 @@ void upwind1D(const dfloat nx, const dfloat ny,
   *q6P = 0.5f*(q6B + q6M) - p_isq6*ny*(q3B-q3M);
   
 }
-
-#define surfaceTerms(sk,face,i, j)                                      \
-  {                                                                     \
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				\
-    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			\
-                                                                        \
-    const dlong  idM = vmapM[sk];					\
-    const dlong  idP = vmapP[sk];					\
-                                                                        \
-    const dlong eM = e;							\
-    const dlong eP = idP/p_Np;						\
-    const int vidM = idM%p_Np;						\
-    const int vidP = idP%p_Np;						\
-                                                                        \
-    const dlong qidM = eM*p_Np*p_Nfields + vidM;			\
-    const dlong qidP = eP*p_Np*p_Nfields + vidP;			\
-                                                                        \
-                                                                        \
-    dfloat q1M = q[qidM + 0*p_Np], q1P = q[qidP + 0*p_Np];		\
-    dfloat q2M = q[qidM + 1*p_Np], q2P = q[qidP + 1*p_Np];		\
-    dfloat q3M = q[qidM + 2*p_Np], q3P = q[qidP + 2*p_Np];		\
-    dfloat q4M = q[qidM + 3*p_Np], q4P = q[qidP + 3*p_Np];		\
-    dfloat q5M = q[qidM + 4*p_Np], q5P = q[qidP + 4*p_Np];		\
-    dfloat q6M = q[qidM + 5*p_Np], q6P = q[qidP + 5*p_Np];		\
-                                                                        \
-                                                                        \
-    const int bc = EToB[face+p_Nfaces*e];				\
-    if(bc>0){								\
-      if(p_PML){							\
-	boundaryConditionsPML2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P); \
-      }									\
-      else{								\
-	boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P); \
-      }									\
-    }									\
-                                                                        \
-    dfloat q1U, q2U, q3U, q4U, q5U, q6U;				\
-    upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, &q1U, &q2U, &q3U, &q4U, &q5U, &q6U); \
-                                                                        \
-    const dfloat sc = invWJ*sJ;						\
-                                                                        \
-    dfloat dq1, dq2, dq3, dq4, dq5, dq6;				\
-    dq1 = q1U-q1M;							\
-    dq2 = q2U-q2M;							\
-    dq3 = q3U-q3M;							\
-    dq4 = q4U-q4M;							\
-    dq5 = q5U-q5M;							\
-    dq6 = q6U-q6M;							\
-                                                                        \
-    s_fluxq[es][0][j][i] += sc*p_sqrtRT*(-nx*dq2-ny*dq3);		\
-    s_fluxq[es][1][j][i] += sc*p_sqrtRT*(-nx*(dq1+p_sqrt2*dq5)-ny*dq4);	\
-    s_fluxq[es][2][j][i] += sc*p_sqrtRT*(-nx*dq4-ny*(dq1+p_sqrt2*dq6));	\
-    s_fluxq[es][3][j][i] += sc*p_sqrtRT*(-nx*dq3-ny*dq2);		\
-    s_fluxq[es][4][j][i] += sc*p_sqrtRT*(-nx*p_sqrt2*dq2);		\
-    s_fluxq[es][5][j][i] += sc*p_sqrtRT*(-ny*p_sqrt2*dq3);		\
-  }
-
-
-#define surfaceTermsPml(sk,face,i,j)                                    \
-  {                                                                     \
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				\
-    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			\
-                                                                        \
-    const dlong  idM = vmapM[sk];					\
-    const dlong  idP = vmapP[sk];					\
-                                                                        \
-    const dlong eM = e;							\
-    const dlong eP = idP/p_Np;						\
-    const int vidM = idM%p_Np;						\
-    const int vidP = idP%p_Np;						\
-                                                                        \
-    const dlong qidM = eM*p_Np*p_Nfields + vidM;			\
-    const dlong qidP = eP*p_Np*p_Nfields + vidP;			\
-                                                                        \
-                                                                        \
-    dfloat q1M = q[qidM + 0*p_Np], q1P = q[qidP + 0*p_Np];		\
-    dfloat q2M = q[qidM + 1*p_Np], q2P = q[qidP + 1*p_Np];		\
-    dfloat q3M = q[qidM + 2*p_Np], q3P = q[qidP + 2*p_Np];		\
-    dfloat q4M = q[qidM + 3*p_Np], q4P = q[qidP + 3*p_Np];		\
-    dfloat q5M = q[qidM + 4*p_Np], q5P = q[qidP + 4*p_Np];		\
-    dfloat q6M = q[qidM + 5*p_Np], q6P = q[qidP + 5*p_Np];		\
-                                                                        \
-                                                                        \
-    const int bc = EToB[face+p_Nfaces*e];				\
-    if(bc>0){								\
-      boundaryConditionsPML2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P); \
-    }									\
-                                                                        \
-    dfloat q1U, q2U, q3U, q4U, q5U, q6U;				\
-    upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, &q1U, &q2U, &q3U, &q4U, &q5U, &q6U); \
-                                                                        \
-    const dfloat sc = invWJ*sJ;						\
-                                                                        \
-    dfloat dq1, dq2, dq3, dq4, dq5, dq6;				\
-    dq1 = q1U-q1M;							\
-    dq2 = q2U-q2M;							\
-    dq3 = q3U-q3M;							\
-    dq4 = q4U-q4M;							\
-    dq5 = q5U-q5M;							\
-    dq6 = q6U-q6M;							\
-                                                                        \
-    s_Aqx[es][0][j][i] += -p_sqrtRT*sc*nx*(dq2);			\
-    s_Aqx[es][1][j][i] += -p_sqrtRT*sc*nx*(dq1+p_sqrt2*dq5);		\
-    s_Aqx[es][2][j][i] += -p_sqrtRT*sc*nx*(dq4);			\
-    s_Aqx[es][3][j][i] += -p_sqrtRT*sc*nx*(dq3);			\
-    s_Aqx[es][4][j][i] += -p_sqrtRT*sc*nx*(p_sqrt2*dq2);		\
-    s_Aqx[es][5][j][i] +=  0.f;						\
-                                                                        \
-    s_Bqy[es][0][j][i] += -p_sqrtRT*sc*ny*(dq3);			\
-    s_Bqy[es][1][j][i] += -p_sqrtRT*sc*ny*(dq4);			\
-    s_Bqy[es][2][j][i] += -p_sqrtRT*sc*ny*(dq1+p_sqrt2*dq6);		\
-    s_Bqy[es][3][j][i] += -p_sqrtRT*sc*ny*(dq2);			\
-    s_Bqy[es][4][j][i] +=  0.f;						\
-    s_Bqy[es][5][j][i] += -p_sqrtRT*sc*ny*(p_sqrt2*dq3);		\
-  }
+	
+void surfaceTerms(const int e, const int es, const int sk, const int face, const int i, const int j,
+		  const dfloat intfx, const dfloat intfy,
+		  const dfloat *sgeo, const dfloat *x, const dfloat *y, 
+		  const int *vmapM, const int *vmapP, const int *EToB, const dfloat *q,
+		  dfloat s_fluxq[p_NblockS][p_Nfields][p_Nq][p_Nq]){
+  
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			
+  
+  const dlong  idM = vmapM[sk];					
+  const dlong  idP = vmapP[sk];					
+                                                                        
+  const dlong eM = e;							
+  const dlong eP = idP/p_Np;						
+  const int vidM = idM%p_Np;						
+  const int vidP = idP%p_Np;						
+  
+  const dlong qidM = eM*p_Np*p_Nfields + vidM;			
+  const dlong qidP = eP*p_Np*p_Nfields + vidP;			
+  
+  
+  dfloat q1M = q[qidM + 0*p_Np], q1P = q[qidP + 0*p_Np];		
+  dfloat q2M = q[qidM + 1*p_Np], q2P = q[qidP + 1*p_Np];		
+  dfloat q3M = q[qidM + 2*p_Np], q3P = q[qidP + 2*p_Np];		
+  dfloat q4M = q[qidM + 3*p_Np], q4P = q[qidP + 3*p_Np];		
+  dfloat q5M = q[qidM + 4*p_Np], q5P = q[qidP + 4*p_Np];		
+  dfloat q6M = q[qidM + 5*p_Np], q6P = q[qidP + 5*p_Np];		
+  
+  
+  const int bc = EToB[face+p_Nfaces*e];				
+  if(bc>0){								
+    if(p_PML){							
+      boundaryConditionsPML2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P); 
+    }									
+    else{								
+      boundaryConditions2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P); 
+    }									
+  }									
+  
+  dfloat q1U, q2U, q3U, q4U, q5U, q6U;				
+  upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, &q1U, &q2U, &q3U, &q4U, &q5U, &q6U); 
+  
+  const dfloat sc = invWJ*sJ;						
+  
+  dfloat dq1, dq2, dq3, dq4, dq5, dq6;				
+  dq1 = q1U-q1M;							
+  dq2 = q2U-q2M;							
+  dq3 = q3U-q3M;							
+  dq4 = q4U-q4M;							
+  dq5 = q5U-q5M;							
+  dq6 = q6U-q6M;							
+  
+  s_fluxq[es][0][j][i] += sc*p_sqrtRT*(-nx*dq2-ny*dq3);		
+  s_fluxq[es][1][j][i] += sc*p_sqrtRT*(-nx*(dq1+p_sqrt2*dq5)-ny*dq4);	
+  s_fluxq[es][2][j][i] += sc*p_sqrtRT*(-nx*dq4-ny*(dq1+p_sqrt2*dq6));	
+  s_fluxq[es][3][j][i] += sc*p_sqrtRT*(-nx*dq3-ny*dq2);		
+  s_fluxq[es][4][j][i] += sc*p_sqrtRT*(-nx*p_sqrt2*dq2);		
+  s_fluxq[es][5][j][i] += sc*p_sqrtRT*(-ny*p_sqrt2*dq3);		
+}
 
 
+void surfaceTermsPml(const int e, const int es, const int sk, const int face, const int i, const int j,
+		     const dfloat intfx, const dfloat intfy,
+		     const dfloat *sgeo, const dfloat *x, const dfloat *y, 
+		     const int *vmapM, const int *vmapP, const int *EToB, const dfloat *q,
+		     dfloat s_Aqx[p_NblockS][p_Nfields][p_Nq][p_Nq],
+		     dfloat s_Bqy[p_NblockS][p_Nfields][p_Nq][p_Nq]){
+  
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			
+  
+  const dlong  idM = vmapM[sk];					
+  const dlong  idP = vmapP[sk];					
+                                                                        
+  const dlong eM = e;							
+  const dlong eP = idP/p_Np;						
+  const int vidM = idM%p_Np;						
+  const int vidP = idP%p_Np;						
+  
+  const dlong qidM = eM*p_Np*p_Nfields + vidM;			
+  const dlong qidP = eP*p_Np*p_Nfields + vidP;			
+  
+  dfloat q1M = q[qidM + 0*p_Np], q1P = q[qidP + 0*p_Np];		
+  dfloat q2M = q[qidM + 1*p_Np], q2P = q[qidP + 1*p_Np];		
+  dfloat q3M = q[qidM + 2*p_Np], q3P = q[qidP + 2*p_Np];		
+  dfloat q4M = q[qidM + 3*p_Np], q4P = q[qidP + 3*p_Np];		
+  dfloat q5M = q[qidM + 4*p_Np], q5P = q[qidP + 4*p_Np];		
+  dfloat q6M = q[qidM + 5*p_Np], q6P = q[qidP + 5*p_Np];		
+                                                                        
+                                                                        
+  const int bc = EToB[face+p_Nfaces*e];				
+  if(bc>0){								
+    boundaryConditionsPML2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P); 
+  }									
+  
+  dfloat q1U, q2U, q3U, q4U, q5U, q6U;				
+  upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, &q1U, &q2U, &q3U, &q4U, &q5U, &q6U); 
+  
+  const dfloat sc = invWJ*sJ;						
+  
+  dfloat dq1, dq2, dq3, dq4, dq5, dq6;				
+  dq1 = q1U-q1M;							
+  dq2 = q2U-q2M;							
+  dq3 = q3U-q3M;							
+  dq4 = q4U-q4M;							
+  dq5 = q5U-q5M;							
+  dq6 = q6U-q6M;							
+                                                                        
+  s_Aqx[es][0][j][i] += -p_sqrtRT*sc*nx*(dq2);			
+  s_Aqx[es][1][j][i] += -p_sqrtRT*sc*nx*(dq1+p_sqrt2*dq5);		
+  s_Aqx[es][2][j][i] += -p_sqrtRT*sc*nx*(dq4);			
+  s_Aqx[es][3][j][i] += -p_sqrtRT*sc*nx*(dq3);			
+  s_Aqx[es][4][j][i] += -p_sqrtRT*sc*nx*(p_sqrt2*dq2);		
+  s_Aqx[es][5][j][i] +=  0.f;						
+                                                                        
+  s_Bqy[es][0][j][i] += -p_sqrtRT*sc*ny*(dq3);			
+  s_Bqy[es][1][j][i] += -p_sqrtRT*sc*ny*(dq4);			
+  s_Bqy[es][2][j][i] += -p_sqrtRT*sc*ny*(dq1+p_sqrt2*dq6);		
+  s_Bqy[es][3][j][i] += -p_sqrtRT*sc*ny*(dq2);			
+  s_Bqy[es][4][j][i] +=  0.f;						
+  s_Bqy[es][5][j][i] += -p_sqrtRT*sc*ny*(p_sqrt2*dq3);		
+}
 
 
-#define surfaceMRTerms(sk,face,i, j)                                    \
-  {                                                                     \
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				\
-    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			\
-                                                                        \
-    const dlong eM   = e;						\
-    const dlong idP  = mapP[sk];					\
-    const dlong eP = idP/(p_Nfp*p_Nfaces);				\
-    const int fidM = sk%(p_Nfp*p_Nfaces);				\
-    const int fidP = idP%(p_Nfp*p_Nfaces);				\
-                                                                        \
-    const dlong qidM = eM*p_Nfp*p_Nfaces*p_Nfields + fidM;		\
-    const dlong qidP = eP*p_Nfp*p_Nfaces*p_Nfields + fidP;		\
-                                                                        \
-                                                                        \
-    dfloat q1M = fQM[qidM + 0*p_Nfp*p_Nfaces], q1P = fQM[qidP + 0*p_Nfp*p_Nfaces]; \
-    dfloat q2M = fQM[qidM + 1*p_Nfp*p_Nfaces], q2P = fQM[qidP + 1*p_Nfp*p_Nfaces]; \
-    dfloat q3M = fQM[qidM + 2*p_Nfp*p_Nfaces], q3P = fQM[qidP + 2*p_Nfp*p_Nfaces]; \
-    dfloat q4M = fQM[qidM + 3*p_Nfp*p_Nfaces], q4P = fQM[qidP + 3*p_Nfp*p_Nfaces]; \
-    dfloat q5M = fQM[qidM + 4*p_Nfp*p_Nfaces], q5P = fQM[qidP + 4*p_Nfp*p_Nfaces]; \
-    dfloat q6M = fQM[qidM + 5*p_Nfp*p_Nfaces], q6P = fQM[qidP + 5*p_Nfp*p_Nfaces]; \
-                                                                        \
-                                                                        \
-    const int bc = EToB[face+p_Nfaces*e];				\
-    if(bc>0){								\
-      const dlong idB = vmapM[sk];					\
-      if(p_PML){							\
-	boundaryConditionsPML2D(bc, time, x[idB], y[idB], nx, ny, intfx, intfy, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P); \
-      }									\
-      else{								\
-	boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, intfx, intfy, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P); \
-      }									\
-    }									\
-                                                                        \
-    dfloat q1U, q2U, q3U, q4U, q5U, q6U;				\
-    upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, &q1U, &q2U, &q3U, &q4U, &q5U, &q6U); \
-                                                                        \
-    const dfloat sc = invWJ*sJ;						\
-                                                                        \
-    dfloat dq1, dq2, dq3, dq4, dq5, dq6;				\
-    dq1 = q1U-q1M;							\
-    dq2 = q2U-q2M;							\
-    dq3 = q3U-q3M;							\
-    dq4 = q4U-q4M;							\
-    dq5 = q5U-q5M;							\
-    dq6 = q6U-q6M;							\
-                                                                        \
-    s_fluxq[es][0][j][i] += sc*p_sqrtRT*(-nx*dq2-ny*dq3);		\
-    s_fluxq[es][1][j][i] += sc*p_sqrtRT*(-nx*(dq1+p_sqrt2*dq5)-ny*dq4);	\
-    s_fluxq[es][2][j][i] += sc*p_sqrtRT*(-nx*dq4-ny*(dq1+p_sqrt2*dq6));	\
-    s_fluxq[es][3][j][i] += sc*p_sqrtRT*(-nx*dq3-ny*dq2);		\
-    s_fluxq[es][4][j][i] += sc*p_sqrtRT*(-nx*p_sqrt2*dq2);		\
-    s_fluxq[es][5][j][i] += sc*p_sqrtRT*(-ny*p_sqrt2*dq3);		\
-  }
+void surfaceMRTerms(const int e, const int es, const int sk, const int face, const int i, const int j,
+		    const dfloat intfx, const dfloat intfy,
+		    const dfloat *sgeo, const dfloat *x, const dfloat *y, 
+		    const int *vmapM, const int *mapP, const int *EToB,
+		    const dfloat *fQM, 
+		    dfloat s_fluxq[p_NblockS][p_Nfields][p_Nq][p_Nq]){
+  
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			
+  
+  const dlong eM   = e;						
+  const dlong idP  = mapP[sk];					
+  const dlong eP = idP/(p_Nfp*p_Nfaces);				
+  const int fidM = sk%(p_Nfp*p_Nfaces);				
+  const int fidP = idP%(p_Nfp*p_Nfaces);				
+  
+  const dlong qidM = eM*p_Nfp*p_Nfaces*p_Nfields + fidM;		
+  const dlong qidP = eP*p_Nfp*p_Nfaces*p_Nfields + fidP;		
+  
+  
+  dfloat q1M = fQM[qidM + 0*p_Nfp*p_Nfaces], q1P = fQM[qidP + 0*p_Nfp*p_Nfaces]; 
+  dfloat q2M = fQM[qidM + 1*p_Nfp*p_Nfaces], q2P = fQM[qidP + 1*p_Nfp*p_Nfaces]; 
+  dfloat q3M = fQM[qidM + 2*p_Nfp*p_Nfaces], q3P = fQM[qidP + 2*p_Nfp*p_Nfaces]; 
+  dfloat q4M = fQM[qidM + 3*p_Nfp*p_Nfaces], q4P = fQM[qidP + 3*p_Nfp*p_Nfaces]; 
+  dfloat q5M = fQM[qidM + 4*p_Nfp*p_Nfaces], q5P = fQM[qidP + 4*p_Nfp*p_Nfaces]; 
+  dfloat q6M = fQM[qidM + 5*p_Nfp*p_Nfaces], q6P = fQM[qidP + 5*p_Nfp*p_Nfaces]; 
+  
+  
+  const int bc = EToB[face+p_Nfaces*e];				
+  if(bc>0){								
+    const dlong idB = vmapM[sk];					
+    if(p_PML){							
+      boundaryConditionsPML2D(bc, time, x[idB], y[idB], nx, ny, intfx, intfy, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P); 
+    }									
+    else{								
+      boundaryConditions2D(bc, time, x[idB], y[idB], nx, ny, intfx, intfy, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P); 
+    }									
+  }									
+  
+  dfloat q1U, q2U, q3U, q4U, q5U, q6U;				
+  upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, &q1U, &q2U, &q3U, &q4U, &q5U, &q6U); 
+  
+  const dfloat sc = invWJ*sJ;						
+  
+  dfloat dq1, dq2, dq3, dq4, dq5, dq6;				
+  dq1 = q1U-q1M;							
+  dq2 = q2U-q2M;							
+  dq3 = q3U-q3M;							
+  dq4 = q4U-q4M;							
+  dq5 = q5U-q5M;							
+  dq6 = q6U-q6M;							
+  
+  s_fluxq[es][0][j][i] += sc*p_sqrtRT*(-nx*dq2-ny*dq3);		
+  s_fluxq[es][1][j][i] += sc*p_sqrtRT*(-nx*(dq1+p_sqrt2*dq5)-ny*dq4);	
+  s_fluxq[es][2][j][i] += sc*p_sqrtRT*(-nx*dq4-ny*(dq1+p_sqrt2*dq6));	
+  s_fluxq[es][3][j][i] += sc*p_sqrtRT*(-nx*dq3-ny*dq2);		
+  s_fluxq[es][4][j][i] += sc*p_sqrtRT*(-nx*p_sqrt2*dq2);		
+  s_fluxq[es][5][j][i] += sc*p_sqrtRT*(-ny*p_sqrt2*dq3);		
+}
 
 
-#define surfaceMRTermsPml(sk,face,i,j)                                  \
-  {                                                                     \
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				\
-    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			\
-                                                                        \
-    const dlong eM   = e;						\
-    const dlong idP  = mapP[sk];					\
-    const dlong eP   = idP/(p_Nfp*p_Nfaces);				\
-    const int fidM   = sk%(p_Nfp*p_Nfaces);				\
-    const int fidP   = idP%(p_Nfp*p_Nfaces);				\
-    									\
-    const dlong qidM = eM*p_Nfp*p_Nfaces*p_Nfields + fidM;		\
-    const dlong qidP = eP*p_Nfp*p_Nfaces*p_Nfields + fidP;		\
-    									\
-    									\
-    dfloat q1M = fQM[qidM + 0*p_Nfp*p_Nfaces], q1P = fQM[qidP + 0*p_Nfp*p_Nfaces]; \
-    dfloat q2M = fQM[qidM + 1*p_Nfp*p_Nfaces], q2P = fQM[qidP + 1*p_Nfp*p_Nfaces]; \
-    dfloat q3M = fQM[qidM + 2*p_Nfp*p_Nfaces], q3P = fQM[qidP + 2*p_Nfp*p_Nfaces]; \
-    dfloat q4M = fQM[qidM + 3*p_Nfp*p_Nfaces], q4P = fQM[qidP + 3*p_Nfp*p_Nfaces]; \
-    dfloat q5M = fQM[qidM + 4*p_Nfp*p_Nfaces], q5P = fQM[qidP + 4*p_Nfp*p_Nfaces]; \
-    dfloat q6M = fQM[qidM + 5*p_Nfp*p_Nfaces], q6P = fQM[qidP + 5*p_Nfp*p_Nfaces]; \
-    									\
-    									\
-    const int bc = EToB[face+p_Nfaces*e];				\
-    if(bc>0){								\
-      const dlong idB = vmapM[sk];					\
-      boundaryConditionsPML2D(bc, time, x[idB], y[idB], nx, ny, intfx, intfy, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P); \
-    }									\
-                                                                        \
-    dfloat q1U, q2U, q3U, q4U, q5U, q6U;				\
-    upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, &q1U, &q2U, &q3U, &q4U, &q5U, &q6U); \
-                                                                        \
-    const dfloat sc = invWJ*sJ;						\
-                                                                        \
-    dfloat dq1, dq2, dq3, dq4, dq5, dq6;				\
-    dq1 = q1U-q1M;							\
-    dq2 = q2U-q2M;							\
-    dq3 = q3U-q3M;							\
-    dq4 = q4U-q4M;							\
-    dq5 = q5U-q5M;							\
-    dq6 = q6U-q6M;							\
-                                                                        \
-    s_Aqx[es][0][j][i] += -p_sqrtRT*sc*nx*(dq2);			\
-    s_Aqx[es][1][j][i] += -p_sqrtRT*sc*nx*(dq1+p_sqrt2*dq5);		\
-    s_Aqx[es][2][j][i] += -p_sqrtRT*sc*nx*(dq4);			\
-    s_Aqx[es][3][j][i] += -p_sqrtRT*sc*nx*(dq3);			\
-    s_Aqx[es][4][j][i] += -p_sqrtRT*sc*nx*(p_sqrt2*dq2);		\
-    s_Aqx[es][5][j][i] +=  0.f;						\
-									\
-    s_Bqy[es][0][j][i] += -p_sqrtRT*sc*ny*(dq3);			\
-    s_Bqy[es][1][j][i] += -p_sqrtRT*sc*ny*(dq4);			\
-    s_Bqy[es][2][j][i] += -p_sqrtRT*sc*ny*(dq1+p_sqrt2*dq6);		\
-    s_Bqy[es][3][j][i] += -p_sqrtRT*sc*ny*(dq2);			\
-    s_Bqy[es][4][j][i] +=  0.f;						\
-    s_Bqy[es][5][j][i] += -p_sqrtRT*sc*ny*(p_sqrt2*dq3);		\
-  }
+void surfaceMRTermsPml(const int e, const int es, const int sk, const int face, const int i, const int j,
+		       const dfloat intfx, const dfloat intfy,
+		       const dfloat *sgeo, const dfloat *x, const dfloat *y, 
+		       const int *vmapM, const int *mapP, const int *EToB,
+		       const dfloat *fQM, 
+		       dfloat s_Aqx[p_NblockS][p_Nfields][p_Nq][p_Nq],
+		       dfloat s_Bqy[p_NblockS][p_Nfields][p_Nq][p_Nq]){
+  
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			
+                                                                        
+  const dlong eM   = e;						
+  const dlong idP  = mapP[sk];					
+  const dlong eP   = idP/(p_Nfp*p_Nfaces);				
+  const int fidM   = sk%(p_Nfp*p_Nfaces);				
+  const int fidP   = idP%(p_Nfp*p_Nfaces);				
+    									
+  const dlong qidM = eM*p_Nfp*p_Nfaces*p_Nfields + fidM;		
+  const dlong qidP = eP*p_Nfp*p_Nfaces*p_Nfields + fidP;		
+    									
+    									
+  dfloat q1M = fQM[qidM + 0*p_Nfp*p_Nfaces], q1P = fQM[qidP + 0*p_Nfp*p_Nfaces]; 
+  dfloat q2M = fQM[qidM + 1*p_Nfp*p_Nfaces], q2P = fQM[qidP + 1*p_Nfp*p_Nfaces]; 
+  dfloat q3M = fQM[qidM + 2*p_Nfp*p_Nfaces], q3P = fQM[qidP + 2*p_Nfp*p_Nfaces]; 
+  dfloat q4M = fQM[qidM + 3*p_Nfp*p_Nfaces], q4P = fQM[qidP + 3*p_Nfp*p_Nfaces]; 
+  dfloat q5M = fQM[qidM + 4*p_Nfp*p_Nfaces], q5P = fQM[qidP + 4*p_Nfp*p_Nfaces]; 
+  dfloat q6M = fQM[qidM + 5*p_Nfp*p_Nfaces], q6P = fQM[qidP + 5*p_Nfp*p_Nfaces]; 
+    									
+    									
+  const int bc = EToB[face+p_Nfaces*e];				
+  if(bc>0){								
+    const dlong idB = vmapM[sk];					
+    boundaryConditionsPML2D(bc, time, x[idB], y[idB], nx, ny, intfx, intfy, q1M, q2M, q3M, q4M, q5M, q6M, &q1P, &q2P, &q3P, &q4P, &q5P, &q6P); 
+  }									
+                                                                        
+  dfloat q1U, q2U, q3U, q4U, q5U, q6U;				
+  upwind1D(nx, ny, q1M, q2M, q3M, q4M, q5M, q6M, q1P, q2P, q3P, q4P, q5P, q6P, &q1U, &q2U, &q3U, &q4U, &q5U, &q6U); 
+                                                                        
+  const dfloat sc = invWJ*sJ;						
+                                                                        
+  dfloat dq1, dq2, dq3, dq4, dq5, dq6;				
+  dq1 = q1U-q1M;							
+  dq2 = q2U-q2M;							
+  dq3 = q3U-q3M;							
+  dq4 = q4U-q4M;							
+  dq5 = q5U-q5M;							
+  dq6 = q6U-q6M;							
+                                                                        
+  s_Aqx[es][0][j][i] += -p_sqrtRT*sc*nx*(dq2);			
+  s_Aqx[es][1][j][i] += -p_sqrtRT*sc*nx*(dq1+p_sqrt2*dq5);		
+  s_Aqx[es][2][j][i] += -p_sqrtRT*sc*nx*(dq4);			
+  s_Aqx[es][3][j][i] += -p_sqrtRT*sc*nx*(dq3);			
+  s_Aqx[es][4][j][i] += -p_sqrtRT*sc*nx*(p_sqrt2*dq2);		
+  s_Aqx[es][5][j][i] +=  0.f;						
+									
+  s_Bqy[es][0][j][i] += -p_sqrtRT*sc*ny*(dq3);			
+  s_Bqy[es][1][j][i] += -p_sqrtRT*sc*ny*(dq4);			
+  s_Bqy[es][2][j][i] += -p_sqrtRT*sc*ny*(dq1+p_sqrt2*dq6);		
+  s_Bqy[es][3][j][i] += -p_sqrtRT*sc*ny*(dq2);			
+  s_Bqy[es][4][j][i] +=  0.f;						
+  s_Bqy[es][5][j][i] += -p_sqrtRT*sc*ny*(p_sqrt2*dq3);		
+}
 
 
 
@@ -305,9 +322,13 @@ kernel void bnsSurfaceQuad2D(const dlong Nelements,
           const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
           const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
 
-          surfaceTerms(sk0,0,i,0     );
-          surfaceTerms(sk2,2,i,p_Nq-1);
-        }
+	  //          surfaceTerms(sk0,0,i,0     );
+	  surfaceTerms(e, es, sk0, 0, i, 0, intfx, intfy,
+		       sgeo, x, y, vmapM, vmapP, EToB, q, s_fluxq);
+
+          //surfaceTerms(sk2,2,i,p_Nq-1);
+    	  surfaceTerms(e, es, sk2, 2, i, p_Nq-1, intfx, intfy,
+		       sgeo, x, y, vmapM, vmapP, EToB, q, s_fluxq);     }
       }
     }
 
@@ -322,8 +343,13 @@ kernel void bnsSurfaceQuad2D(const dlong Nelements,
           const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
           const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
-          surfaceTerms(sk1,1,p_Nq-1,j);
-          surfaceTerms(sk3,3,0     ,j);
+	  //          surfaceTerms(sk1,1,p_Nq-1,j);
+	  surfaceTerms(e, es, sk1, 1, p_Nq-1, j, intfx, intfy,
+		       sgeo, x, y, vmapM, vmapP, EToB, q, s_fluxq);
+	  
+	  //          surfaceTerms(sk3,3,0     ,j);
+	  surfaceTerms(e, es, sk3, 3, 0, j, intfx, intfy,
+		       sgeo, x, y, vmapM, vmapP, EToB, q, s_fluxq);
         }
       }
     }
@@ -403,8 +429,13 @@ kernel void bnsPmlSurfaceQuad2D(const dlong pmlNelements,
           const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
           const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
           
-          surfaceTermsPml(sk0,0,i,0     );
-          surfaceTermsPml(sk2,2,i,p_Nq-1);
+	  //          surfaceTermsPml(sk0,0,i,0     );
+	  surfaceTermsPml(e, es, sk0, 0, i, 0, intfx, intfy,
+			  sgeo, x, y, vmapM, vmapP, EToB, q, s_Aqx, s_Bqy);
+
+	  //          surfaceTermsPml(sk2,2,i,p_Nq-1);
+	  surfaceTermsPml(e, es, sk2, 2, i, p_Nq-1, intfx, intfy,
+			  sgeo, x, y, vmapM, vmapP, EToB, q, s_Aqx, s_Bqy);
         }
       }
     }
@@ -420,8 +451,13 @@ kernel void bnsPmlSurfaceQuad2D(const dlong pmlNelements,
           const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
           const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
-          surfaceTermsPml(sk1,1,p_Nq-1,j);
-          surfaceTermsPml(sk3,3,0     ,j);
+	  //          surfaceTermsPml(sk1,1,p_Nq-1,j);
+	  surfaceTermsPml(e, es, sk1, 1, p_Nq-1, j, intfx, intfy,
+			  sgeo, x, y, vmapM, vmapP, EToB, q, s_Aqx, s_Bqy);
+
+	  //          surfaceTermsPml(sk3,3,0     ,j);
+	  surfaceTermsPml(e, es, sk3, 3, 0, j, intfx, intfy,
+			  sgeo, x, y, vmapM, vmapP, EToB, q, s_Aqx, s_Bqy);
         }
       }
     }
@@ -505,8 +541,13 @@ kernel void bnsMRSurfaceQuad2D(const dlong Nelements,
           const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
           const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
 
-          surfaceMRTerms(sk0,0,i,0     );
-          surfaceMRTerms(sk2,2,i,p_Nq-1);
+	  //          surfaceMRTerms(sk0,0,i,0     );
+	  surfaceMRTerms(e, es, sk0, 0, i, 0, intfx, intfy,
+			 sgeo, x, y, vmapM, mapP, EToB, fQM, s_fluxq);
+
+	  //          surfaceMRTerms(sk2,2,i,p_Nq-1);
+	  surfaceMRTerms(e, es, sk2, 2, i, p_Nq-1, intfx, intfy,
+			 sgeo, x, y, vmapM, mapP, EToB, fQM, s_fluxq);
         }
       }
     }
@@ -522,8 +563,13 @@ kernel void bnsMRSurfaceQuad2D(const dlong Nelements,
           const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
           const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
-          surfaceMRTerms(sk1,1,p_Nq-1,j);
-          surfaceMRTerms(sk3,3,0     ,j);
+	  //          surfaceMRTerms(sk1,1,p_Nq-1,j);
+	  surfaceMRTerms(e, es, sk1, 1, p_Nq-1, j, intfx, intfy,
+			 sgeo, x, y, vmapM, mapP, EToB, fQM, s_fluxq);
+
+          //surfaceMRTerms(sk3,3,0     ,j);
+	  surfaceMRTerms(e, es, sk3, 3, 0, j, intfx, intfy,
+			 sgeo, x, y, vmapM, mapP, EToB, fQM, s_fluxq);
         }
       }
     }
@@ -606,8 +652,13 @@ kernel void bnsMRPmlSurfaceQuad2D(const dlong pmlNelements,
           const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
           const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
           
-          surfaceMRTermsPml(sk0,0,i,0     );
-          surfaceMRTermsPml(sk2,2,i,p_Nq-1);
+	  //          surfaceMRTermsPml(sk0,0,i,0     );
+	  surfaceMRTermsPml(e, es, sk0, 0, i, 0, intfx, intfy,
+			    sgeo, x, y, vmapM, mapP, EToB, fQM, s_Aqx, s_Bqy);
+	    
+	  //          surfaceMRTermsPml(sk2,2,i,p_Nq-1);
+	  surfaceMRTermsPml(e, es, sk2, 2, i, p_Nq-1, intfx, intfy,
+			    sgeo, x, y, vmapM, mapP, EToB, fQM, s_Aqx, s_Bqy);
         }
       }
     }
@@ -623,8 +674,13 @@ kernel void bnsMRPmlSurfaceQuad2D(const dlong pmlNelements,
           const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
           const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
-          surfaceMRTermsPml(sk1,1,p_Nq-1,j);
-          surfaceMRTermsPml(sk3,3,0     ,j);
+	  //          surfaceMRTermsPml(sk1,1,p_Nq-1,j);
+	  surfaceMRTermsPml(e, es, sk1, 1, p_Nq-1, j, intfx, intfy,
+			    sgeo, x, y, vmapM, mapP, EToB, fQM, s_Aqx, s_Bqy);
+
+          //surfaceMRTermsPml(sk3,3,0     ,j);
+	  surfaceMRTermsPml(e, es, sk3, 3, 0, j, intfx, intfy,
+			    sgeo, x, y, vmapM, mapP, EToB, fQM, s_Aqx, s_Bqy);
         }
       }
     }
