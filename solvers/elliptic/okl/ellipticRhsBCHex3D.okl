@@ -1,6 +1,8 @@
 
-void surfaceTerms(int sk, int m, int i, int j, dfloat *sgeo,
-		  dfloat *x, dfloat *y, dfloat *z, int *vmapM, int *mapB, dfloat s_q[2][p_Nq][p_Nq], dfloat s_ndq[2][p_Nq][p_Nq]){
+void surfaceTerms(int sk, int m, int i, int j,
+		  const dfloat *sgeo, const dfloat *x, const dfloat *y, const dfloat *z,
+		  const int *vmapM, const int *mapB,
+		  dfloat s_q[2][p_Nq][p_Nq], dfloat s_ndq[2][p_Nq][p_Nq]){
   
   const dlong  idM = vmapM[sk];						
   
@@ -67,7 +69,7 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
         const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i + j*p_Nq;
 	
 	//	surfaceTerms(sk0,0,i,j);
-	surfaceTerms(sk0, 0, i, k, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+	surfaceTerms(sk0, 0, i, j, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
 	
 	//        surfaceTerms(sk5,1,i,j);
 	surfaceTerms(sk5, 1, i, j, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
