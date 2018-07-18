@@ -28,56 +28,58 @@ void upwind(const dfloat nx,
   
 }
 
-#define surfaceTerms(sk,face, i, j, k)                                  \
-  {									\
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
-    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				\
-    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			\
-                                                                        \
-    const dlong idM = vmapM[sk];					\
-    const dlong idP = vmapP[sk];					\
-                                                                        \
-    const dlong eM = e;							\
-    const dlong eP = idP/p_Np;						\
-    const int vidM = idM%p_Np;						\
-    const int vidP = idP%p_Np;						\
-                                                                        \
-    const dlong qbaseM = eM*p_Np*p_Nfields + vidM;			\
-    const dlong qbaseP = eP*p_Np*p_Nfields + vidP;			\
-									\
-    const dfloat rM = q[qbaseM + 0*p_Np];				\
-    const dfloat uM = q[qbaseM + 1*p_Np];				\
-    const dfloat vM = q[qbaseM + 2*p_Np];				\
-    const dfloat wM = q[qbaseM + 3*p_Np];				\
-									\
-    dfloat rP = q[qbaseP + 0*p_Np];					\
-    dfloat uP = q[qbaseP + 1*p_Np];					\
-    dfloat vP = q[qbaseP + 2*p_Np];					\
-    dfloat wP = q[qbaseP + 3*p_Np];					\
-									\
-    const int bc = EToB[face+p_Nfaces*e];				\
-    if(idM==idP){							\
-      dfloat ndotuM = nx*uM + ny*vM + nz*wM;				\
-      rP = rM;								\
-      uP = uM - p_two*ndotuM*nx;					\
-      vP = vM - p_two*ndotuM*ny;					\
-      wP = wM - p_two*ndotuM*nz;					\
-    }									\
-    									\
-    const dfloat sc = invWJ*sJ;						\
-    									\
-    dfloat rflux, uflux, vflux, wflux;					\
-    upwind(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux); \
-    									\
-    									\
-    const dlong base = e*p_Np*p_Nfields+k*p_Nq*p_Nq + j*p_Nq+i;		\
-    rhsq[base+0*p_Np] += sc*(-rflux);					\
-    rhsq[base+1*p_Np] += sc*(-uflux);					\
-    rhsq[base+2*p_Np] += sc*(-vflux);					\
-    rhsq[base+3*p_Np] += sc*(-wflux);					\
-  }
+void surfaceTerms(const	int e, const int sk, const int face, const int i, const int j, const int k,
+		  const dfloat *sgeo, const dfloat *x, const dfloat *y, const dfloat *z,
+		  const int *vmapM, const int *vmapP, const int *EToB, const dfloat *q,
+		  dfloat *rhsq){
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			
+                                                                        
+  const dlong idM = vmapM[sk];					
+  const dlong idP = vmapP[sk];					
+                                                                        
+  const dlong eM = e;							
+  const dlong eP = idP/p_Np;						
+  const int vidM = idM%p_Np;						
+  const int vidP = idP%p_Np;						
+                                                                        
+  const dlong qbaseM = eM*p_Np*p_Nfields + vidM;			
+  const dlong qbaseP = eP*p_Np*p_Nfields + vidP;			
+									
+  const dfloat rM = q[qbaseM + 0*p_Np];				
+  const dfloat uM = q[qbaseM + 1*p_Np];				
+  const dfloat vM = q[qbaseM + 2*p_Np];				
+  const dfloat wM = q[qbaseM + 3*p_Np];				
+									
+  dfloat rP = q[qbaseP + 0*p_Np];					
+  dfloat uP = q[qbaseP + 1*p_Np];					
+  dfloat vP = q[qbaseP + 2*p_Np];					
+  dfloat wP = q[qbaseP + 3*p_Np];					
+									
+  const int bc = EToB[face+p_Nfaces*e];				
+  if(idM==idP){							
+    dfloat ndotuM = nx*uM + ny*vM + nz*wM;				
+    rP = rM;								
+    uP = uM - p_two*ndotuM*nx;					
+    vP = vM - p_two*ndotuM*ny;					
+    wP = wM - p_two*ndotuM*nz;					
+  }									
+    									
+  const dfloat sc = invWJ*sJ;						
+    									
+  dfloat rflux, uflux, vflux, wflux;					
+  upwind(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux); 
+    
+  const dlong base = e*p_Np*p_Nfields+k*p_Nq*p_Nq + j*p_Nq+i;		
+  rhsq[base+0*p_Np] += sc*(-rflux);					
+  rhsq[base+1*p_Np] += sc*(-uflux);					
+  rhsq[base+2*p_Np] += sc*(-vflux);					
+  rhsq[base+3*p_Np] += sc*(-wflux);					
+}
 
 // batch process elements
 kernel void acousticsSurfaceHex3D(const dlong Nelements,
@@ -105,9 +107,12 @@ kernel void acousticsSurfaceHex3D(const dlong Nelements,
 	  if(e<Nelements){
 	    const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
 	    const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
-            
-	    surfaceTerms(sk0,0,i,j,0     );
-	    surfaceTerms(sk5,5,i,j,(p_Nq-1));
+	    
+	    //	    surfaceTerms(sk0,0,i,j,0     );
+	    surfaceTerms(e,sk0,0,i,j,0, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+
+	    //surfaceTerms(sk5,5,i,j,(p_Nq-1));
+	    surfaceTerms(e,sk5,5,i,j,(p_Nq-1), sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
 	  }
 	}
       }
@@ -124,8 +129,11 @@ kernel void acousticsSurfaceHex3D(const dlong Nelements,
 	    const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
 	    const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
             
-	    surfaceTerms(sk1,1,i,0     ,k);
-	    surfaceTerms(sk3,3,i,(p_Nq-1),k);
+	    //	    surfaceTerms(sk1,1,i,0     ,k);
+	    surfaceTerms(e,sk1,1,i,0,k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+
+	    //	    surfaceTerms(sk3,3,i,(p_Nq-1),k);
+	    surfaceTerms(e,sk3,3,i,(p_Nq-1),k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
 	  }
 	}
       }
@@ -142,8 +150,11 @@ kernel void acousticsSurfaceHex3D(const dlong Nelements,
 	    const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
 	    const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
             
-	    surfaceTerms(sk2,2,(p_Nq-1),j,k);
-	    surfaceTerms(sk4,4,0     ,j,k);
+	    //	    surfaceTerms(sk2,2,(p_Nq-1),j,k);
+	    surfaceTerms(e,sk2,2,(p_Nq-1),j,k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+
+	    //surfaceTerms(sk4,4,0     ,j,k);
+	    surfaceTerms(e,sk4,4,0,j,k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
 	  }
 	}
       }
