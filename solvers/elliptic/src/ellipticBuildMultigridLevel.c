@@ -400,7 +400,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->o_ggeo =
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
         mesh->ggeo);
-  
+
+    mesh->o_LIFTT = baseElliptic->mesh->o_LIFTT; //dummy buffer
+    
   } else if (elliptic->elementType==TETRAHEDRA) {
 
     // build Dr, Ds, LIFT transposes
