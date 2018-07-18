@@ -68,7 +68,10 @@ kernel void ellipticAxIpdgTet3D(const dlong Nelements,
         int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
           ellipticHomogeneousBC3D(bc, gradqM.w, gradqM.x, gradqM.y, gradqM.z, gradqP.w, gradqP.x, gradqP.y, gradqP.z);
-          gradqP = 2*gradqP - gradqM;
+	  gradqP.x = 2.f*gradqP.x - gradqM.x;
+	  gradqP.y = 2.f*gradqP.y - gradqM.y;				
+	  gradqP.z = 2.f*gradqP.z - gradqM.z;				
+	  gradqP.w = 2.f*gradqP.w - gradqM.w;				
         }
 
         const dfloat dq = gradqP.w - gradqM.w;

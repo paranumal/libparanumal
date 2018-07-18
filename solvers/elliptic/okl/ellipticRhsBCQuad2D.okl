@@ -48,9 +48,7 @@ kernel void ellipticRhsBCQuad2D(const dlong Nelements,
 
         const int bc = mapB[idM];
         if(bc>0) {
-          ellipticBoundaryConditions2D(bc, t, x[idM], y[idM], nx, ny, \
-                                    0.f, 0.f, 0.f,                \
-                                    uP, dudxP, dudyP);
+          ellipticBoundaryConditions2D(bc, t, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, uP, dudxP, dudyP)
         }
 
         s_q  [0][i] = uP;
@@ -68,9 +66,7 @@ kernel void ellipticRhsBCQuad2D(const dlong Nelements,
 
         const int bc = mapB[idM];
         if(bc>0) {
-          ellipticBoundaryConditions2D(bc, t, x[idM], y[idM], nx, ny, \
-                                    0.f, 0.f, 0.f,                \
-                                    uP, dudxP, dudyP);
+          ellipticBoundaryConditions2D(bc, t, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, uP, dudxP, dudyP)
         }
 
         s_q  [p_Nq-1][i] = uP;
@@ -94,9 +90,7 @@ kernel void ellipticRhsBCQuad2D(const dlong Nelements,
 
         const int bc = mapB[idM];
         if(bc>0) {
-          ellipticBoundaryConditions2D(bc, t, x[idM], y[idM], nx, ny, \
-                                    0.f, 0.f, 0.f,                \
-                                    uP, dudxP, dudyP);
+          ellipticBoundaryConditions2D(bc, t, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, uP, dudxP, dudyP)
         }
 
         s_q  [j][p_Nq-1] = uP;
