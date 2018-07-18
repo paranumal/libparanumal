@@ -263,7 +263,7 @@ kernel void ellipticPartialAxTet3D(const dlong Nelements,
               Gss*qss[et]+
               Gst*qst[et]+
               Gtt*qtt[et]+ 
-              +J*lambda*qM[et];
+	      J*lambda*qM[et];
           }
         }
       }

@@ -12,7 +12,7 @@
                                                                         \
     const int bc = mapB[idM];                                           \
     if(bc>0) {                                                          \
-      ellipticBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, uP, dudxP, dudyP, dudzP);  \
+      ellipticBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, uP, dudxP, dudyP, dudzP)  \
     }                                                                   \
                                                                         \
     s_q  [m][j][i]  = uP;                                               \
@@ -264,7 +264,7 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
                                                                         \
     const int bc = mapB[idM];                                           \
     if(bc>0) {                                                          \
-      ellipticBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, uP, dudxP, dudyP, dudzP);  \
+      ellipticBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, uP, dudxP, dudyP, dudzP)  \
     }                                                                   \
                                                                         \
     s_q  [k][j][i] = uP;                                                \

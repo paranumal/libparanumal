@@ -4,12 +4,124 @@
 elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf){
 
   elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
-  memcpy(elliptic,baseElliptic,sizeof(elliptic_t));
 
+#ifndef OCCA_VERSION_1_0
+  memcpy(elliptic,baseElliptic,sizeof(elliptic_t));
+#else
+    elliptic->dim = baseElliptic->dim;
+    elliptic->elementType = baseElliptic->elementType;
+    elliptic->options = baseElliptic->options;
+    elliptic->tau = baseElliptic->tau;
+    elliptic->BCType = baseElliptic->BCType;
+    elliptic->allNeumann = baseElliptic->allNeumann;
+    elliptic->allNeumannPenalty = baseElliptic->allNeumannPenalty;
+    
+    elliptic->sendBuffer = baseElliptic->sendBuffer;
+    elliptic->recvBuffer = baseElliptic->recvBuffer;
+    elliptic->gradSendBuffer = baseElliptic->gradSendBuffer;
+    elliptic->gradRecvBuffer = baseElliptic->gradRecvBuffer;
+
+    elliptic->defaultStream = baseElliptic->defaultStream;
+    elliptic->dataStream = baseElliptic->dataStream;
+
+    elliptic->o_EToB = baseElliptic->o_EToB;    
+    elliptic->o_globalGatherElementList = baseElliptic->o_globalGatherElementList;    
+    elliptic->o_localGatherElementList = baseElliptic->o_localGatherElementList;    
+
+    elliptic->o_grad = baseElliptic->o_grad;
+
+    elliptic->o_EXYZ = baseElliptic->o_EXYZ;    
+
+    elliptic->weightedInnerProduct1Kernel = baseElliptic->weightedInnerProduct1Kernel;
+    elliptic->weightedInnerProduct2Kernel = baseElliptic->weightedInnerProduct2Kernel;
+    elliptic->innerProductKernel = baseElliptic->innerProductKernel;
+    elliptic->weightedNorm2Kernel = baseElliptic->weightedNorm2Kernel;
+    elliptic->norm2Kernel = baseElliptic->norm2Kernel;
+    elliptic->scaledAddKernel = baseElliptic->scaledAddKernel;
+    elliptic->dotMultiplyKernel = baseElliptic->dotMultiplyKernel;
+    elliptic->dotDivideKernel = baseElliptic->dotDivideKernel;
+#endif
+    
   //populate the mini-mesh using the mesh struct
   mesh_t *mesh = (mesh_t*) calloc(1,sizeof(mesh_t));
-  memcpy(mesh,baseElliptic->mesh,sizeof(mesh_t));
 
+#ifndef OCCA_VERSION_1_0
+  memcpy(mesh,baseElliptic->mesh,sizeof(mesh_t));
+#else
+    mesh->rank = baseElliptic->mesh->rank;
+    mesh->size = baseElliptic->mesh->size;
+    
+    mesh->dim = baseElliptic->mesh->dim;
+    mesh->Nverts        = baseElliptic->mesh->Nverts;
+    mesh->Nfaces        = baseElliptic->mesh->Nfaces;
+    mesh->NfaceVertices = baseElliptic->mesh->NfaceVertices;
+
+    mesh->Nnodes = baseElliptic->mesh->Nnodes;
+    mesh->EX = baseElliptic->mesh->EX; // coordinates of vertices for each element
+    mesh->EY = baseElliptic->mesh->EY;
+    mesh->EZ = baseElliptic->mesh->EZ;
+
+    mesh->Nelements = baseElliptic->mesh->Nelements;
+    mesh->EToV = baseElliptic->mesh->EToV; // element-to-vertex connectivity
+    mesh->EToE = baseElliptic->mesh->EToE; // element-to-element connectivity
+    mesh->EToF = baseElliptic->mesh->EToF; // element-to-(local)face connectivity
+    mesh->EToP = baseElliptic->mesh->EToP; // element-to-partition/process connectivity
+    mesh->EToB = baseElliptic->mesh->EToB; // element-to-boundary condition type
+
+    mesh->elementInfo = baseElliptic->mesh->elementInfo;
+
+    // boundary faces
+    mesh->NboundaryFaces = baseElliptic->mesh->NboundaryFaces;
+    mesh->boundaryInfo = baseElliptic->mesh->boundaryInfo;
+
+    // MPI halo exchange info
+    mesh->totalHaloPairs = baseElliptic->mesh->totalHaloPairs;
+    mesh->haloElementList = baseElliptic->mesh->haloElementList;
+    mesh->NhaloPairs = baseElliptic->mesh->NhaloPairs;
+    mesh->NhaloMessages = baseElliptic->mesh->NhaloMessages;
+
+    mesh->haloSendRequests = baseElliptic->mesh->haloSendRequests;
+    mesh->haloRecvRequests = baseElliptic->mesh->haloRecvRequests;
+
+    mesh->NinternalElements = baseElliptic->mesh->NinternalElements;
+    mesh->NnotInternalElements = baseElliptic->mesh->NnotInternalElements;
+
+    mesh->o_haloElementList = baseElliptic->mesh->o_haloElementList;
+    mesh->o_haloBuffer      = baseElliptic->mesh->o_haloBuffer;
+    mesh->o_internalElementIds    = baseElliptic->mesh->o_internalElementIds;
+    mesh->o_notInternalElementIds = baseElliptic->mesh->o_notInternalElementIds;
+
+    // volumeGeometricFactors;
+    mesh->Nvgeo = baseElliptic->mesh->Nvgeo;
+    mesh->vgeo = baseElliptic->mesh->vgeo;
+    mesh->o_vgeo = baseElliptic->mesh->o_vgeo;
+
+    // second order volume geometric factors
+    mesh->Nggeo = baseElliptic->mesh->Nggeo;
+    mesh->ggeo = baseElliptic->mesh->ggeo;
+    mesh->o_ggeo = baseElliptic->mesh->o_ggeo;
+
+    mesh->Nsgeo = baseElliptic->mesh->Nsgeo;
+    mesh->sgeo = baseElliptic->mesh->sgeo;
+    mesh->o_sgeo = baseElliptic->mesh->o_sgeo;
+
+    // occa stuff
+    mesh->device = baseElliptic->mesh->device;
+
+    mesh->defaultStream = baseElliptic->mesh->defaultStream;
+    mesh->dataStream = baseElliptic->mesh->dataStream;
+
+    mesh->haloExtractKernel = baseElliptic->mesh->haloExtractKernel;
+    mesh->gatherKernel = baseElliptic->mesh->gatherKernel;
+    mesh->scatterKernel = baseElliptic->mesh->scatterKernel;
+    mesh->gatherScatterKernel = baseElliptic->mesh->gatherScatterKernel;
+    mesh->getKernel = baseElliptic->mesh->getKernel;
+    mesh->putKernel = baseElliptic->mesh->putKernel;
+    mesh->addScalarKernel = baseElliptic->mesh->addScalarKernel;
+    mesh->maskKernel = baseElliptic->mesh->maskKernel;
+    mesh->sumKernel = baseElliptic->mesh->sumKernel;
+#endif
+    
   elliptic->mesh = mesh;
 
   setupAide options = elliptic->options;

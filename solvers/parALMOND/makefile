@@ -35,7 +35,7 @@ lib: $(objects) $(deps)
 	ar -cr libparALMOND.a $(objects)
 
 $(objDir)/%.o:$(sDir)/%.c $(deps) #$(wildcard $(subst $(sDir),$(iDir),$(<:.cpp=.hpp)))
-	$(CC) $(flags) -o $@ $(libs) -c $<
+	$(CC) $(flags) -o $@ $(libs) -c $< $(paths)
 
 clean:
 	rm -f libparALMOND.a
