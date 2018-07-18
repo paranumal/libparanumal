@@ -121,101 +121,106 @@ void upwindRoeAveraged(const dfloat nx,
 
 
 
-#define surfaceTerms(sk,face, i, j, k)                                  \
-{                                                                       \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
-  const dfloat tx = sgeo[sk*p_Nsgeo+p_STXID];                            \
-  const dfloat ty = sgeo[sk*p_Nsgeo+p_STYID];                            \
-  const dfloat tz = sgeo[sk*p_Nsgeo+p_STZID];                            \
-  const dfloat bx = sgeo[sk*p_Nsgeo+p_SBXID];                            \
-  const dfloat by = sgeo[sk*p_Nsgeo+p_SBYID];                            \
-  const dfloat bz = sgeo[sk*p_Nsgeo+p_SBZID];                            \
-  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
-                                                                        \
-  const dlong idM = vmapM[sk];                                          \
-  const dlong idP = vmapP[sk];                                          \
-                                                                        \
-  const dlong eM = e;                                                   \
-  const dlong eP = idP/p_Np;                                            \
-  const int vidM = idM%p_Np;                                            \
-  const int vidP = idP%p_Np;                                            \
-                                                                        \
-  const dlong qbaseM = eM*p_Np*p_Nfields + vidM;                        \
-  const dlong qbaseP = eP*p_Np*p_Nfields + vidP;                        \
-                                                                        \
-  const dlong sbaseM = eM*p_Np*p_Nstresses + vidM;                      \
-  const dlong sbaseP = eP*p_Np*p_Nstresses + vidP;                      \
-                                                                        \
-  const dfloat rM  = q[qbaseM + 0*p_Np];                                \
-  const dfloat ruM = q[qbaseM + 1*p_Np];                                \
-  const dfloat rvM = q[qbaseM + 2*p_Np];                                \
-  const dfloat rwM = q[qbaseM + 3*p_Np];                                \
-                                                                        \
-  const dfloat T11M = viscousStresses[sbaseM+0*p_Np];                   \
-  const dfloat T12M = viscousStresses[sbaseM+1*p_Np];                   \
-  const dfloat T13M = viscousStresses[sbaseM+2*p_Np];                   \
-  const dfloat T22M = viscousStresses[sbaseM+3*p_Np];                   \
-  const dfloat T23M = viscousStresses[sbaseM+4*p_Np];                   \
-  const dfloat T33M = viscousStresses[sbaseM+5*p_Np];                   \
-                                                                        \
-  dfloat rP  = q[qbaseP + 0*p_Np];                                      \
-  dfloat ruP = q[qbaseP + 1*p_Np];                                      \
-  dfloat rvP = q[qbaseP + 2*p_Np];                                      \
-  dfloat rwP = q[qbaseP + 3*p_Np];                                      \
-                                                                        \
-  const dfloat T11P = viscousStresses[sbaseP+0*p_Np];                   \
-  const dfloat T12P = viscousStresses[sbaseP+1*p_Np];                   \
-  const dfloat T13P = viscousStresses[sbaseP+2*p_Np];                   \
-  const dfloat T22P = viscousStresses[sbaseP+3*p_Np];                   \
-  const dfloat T23P = viscousStresses[sbaseP+4*p_Np];                   \
-  const dfloat T33P = viscousStresses[sbaseP+5*p_Np];                   \
-                                                                        \
-  const dfloat uM = ruM/rM;                                             \
-  const dfloat vM = rvM/rM;                                             \
-  const dfloat wM = rwM/rM;                                             \
-  const dfloat pM = p_RT*rM;                                            \
-                                                                        \
-  dfloat uP = ruP/rP;                                                   \
-  dfloat vP = rvP/rP;                                                   \
-  dfloat wP = rwP/rP;                                                   \
-  dfloat pP = p_RT*rP;                                                  \
-                                                                        \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc>0){                                                             \
-    cnsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP); \
-    ruP = rP*uP;                                                        \
-    rvP = rP*vP;                                                        \
-    rwP = rP*wP;                                                        \
-    pP = p_RT*rP;                                                       \
-  }                                                                     \
-                                                                        \
-  const dfloat sc = invWJ*sJ;                                           \
-                                                                        \
-  dfloat rflux, ruflux, rvflux, rwflux;                                 \
-  upwindRoeAveraged (nx, ny, nz, tx, ty, tz, bx, by, bz, rM, ruM, rvM, rwM, rP, ruP, rvP, rwP, &rflux, &ruflux, &rvflux, &rwflux); \
-  rflux *= advSwitch;                                                   \
-  ruflux *= advSwitch;                                                  \
-  rvflux *= advSwitch;                                                  \
-  rwflux *= advSwitch;                                                  \
-                                                                        \
-  ruflux -= p_half*(nx*(T11P+T11M) + ny*(T12P+T12M) + nz*(T13P+T13M));  \
-  rvflux -= p_half*(nx*(T12P+T12M) + ny*(T22P+T22M) + nz*(T23P+T23M));  \
-  rwflux -= p_half*(nx*(T13P+T13M) + ny*(T23P+T23M) + nz*(T33P+T33M));  \
-                                                                        \
-                                                                        \
-  const dlong base = e*p_Np*p_Nfields+k*p_Nq*p_Nq + j*p_Nq+i;           \
-  rhsq[base+0*p_Np] += sc*(-rflux);                                     \
-  rhsq[base+1*p_Np] += sc*(-ruflux);                                    \
-  rhsq[base+2*p_Np] += sc*(-rvflux);                                    \
-  rhsq[base+3*p_Np] += sc*(-rwflux);                                    \
+void surfaceTerms(const int e, const int sk, const int face, const int i, const int j, const int k,
+		  const dfloat time, const int advSwitch, 
+		  const dfloat *x, const dfloat *y, const dfloat *z, 
+		  const dfloat *sgeo, const dlong *vmapM, const dong *vmapP,
+		  const dfloat *q, const dfloat *viscousStresses,
+		  dfloat *rhsq){
+  
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            
+  const dfloat tx = sgeo[sk*p_Nsgeo+p_STXID];                            
+  const dfloat ty = sgeo[sk*p_Nsgeo+p_STYID];                            
+  const dfloat tz = sgeo[sk*p_Nsgeo+p_STZID];                            
+  const dfloat bx = sgeo[sk*p_Nsgeo+p_SBXID];                            
+  const dfloat by = sgeo[sk*p_Nsgeo+p_SBYID];                            
+  const dfloat bz = sgeo[sk*p_Nsgeo+p_SBZID];                            
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        
+                                                                        
+  const dlong idM = vmapM[sk];                                          
+  const dlong idP = vmapP[sk];                                          
+                                                                        
+  const dlong eM = e;                                                   
+  const dlong eP = idP/p_Np;                                            
+  const int vidM = idM%p_Np;                                            
+  const int vidP = idP%p_Np;                                            
+                                                                        
+  const dlong qbaseM = eM*p_Np*p_Nfields + vidM;                        
+  const dlong qbaseP = eP*p_Np*p_Nfields + vidP;                        
+                                                                        
+  const dlong sbaseM = eM*p_Np*p_Nstresses + vidM;                      
+  const dlong sbaseP = eP*p_Np*p_Nstresses + vidP;                      
+                                                                        
+  const dfloat rM  = q[qbaseM + 0*p_Np];                                
+  const dfloat ruM = q[qbaseM + 1*p_Np];                                
+  const dfloat rvM = q[qbaseM + 2*p_Np];                                
+  const dfloat rwM = q[qbaseM + 3*p_Np];                                
+                                                                        
+  const dfloat T11M = viscousStresses[sbaseM+0*p_Np];                   
+  const dfloat T12M = viscousStresses[sbaseM+1*p_Np];                   
+  const dfloat T13M = viscousStresses[sbaseM+2*p_Np];                   
+  const dfloat T22M = viscousStresses[sbaseM+3*p_Np];                   
+  const dfloat T23M = viscousStresses[sbaseM+4*p_Np];                   
+  const dfloat T33M = viscousStresses[sbaseM+5*p_Np];                   
+                                                                        
+  dfloat rP  = q[qbaseP + 0*p_Np];                                      
+  dfloat ruP = q[qbaseP + 1*p_Np];                                      
+  dfloat rvP = q[qbaseP + 2*p_Np];                                      
+  dfloat rwP = q[qbaseP + 3*p_Np];                                      
+                                                                        
+  const dfloat T11P = viscousStresses[sbaseP+0*p_Np];                   
+  const dfloat T12P = viscousStresses[sbaseP+1*p_Np];                   
+  const dfloat T13P = viscousStresses[sbaseP+2*p_Np];                   
+  const dfloat T22P = viscousStresses[sbaseP+3*p_Np];                   
+  const dfloat T23P = viscousStresses[sbaseP+4*p_Np];                   
+  const dfloat T33P = viscousStresses[sbaseP+5*p_Np];                   
+                                                                        
+  const dfloat uM = ruM/rM;                                             
+  const dfloat vM = rvM/rM;                                             
+  const dfloat wM = rwM/rM;                                             
+  const dfloat pM = p_RT*rM;                                            
+                                                                        
+  dfloat uP = ruP/rP;                                                   
+  dfloat vP = rvP/rP;                                                   
+  dfloat wP = rwP/rP;                                                   
+  dfloat pP = p_RT*rP;                                                  
+                                                                        
+  const int bc = EToB[face+p_Nfaces*e];                                 
+  if(bc>0){                                                             
+    cnsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP); 
+    ruP = rP*uP;                                                        
+    rvP = rP*vP;                                                        
+    rwP = rP*wP;                                                        
+    pP = p_RT*rP;                                                       
+  }                                                                     
+                                                                        
+  const dfloat sc = invWJ*sJ;                                           
+                                                                        
+  dfloat rflux, ruflux, rvflux, rwflux;                                 
+  upwindRoeAveraged (nx, ny, nz, tx, ty, tz, bx, by, bz, rM, ruM, rvM, rwM, rP, ruP, rvP, rwP, &rflux, &ruflux, &rvflux, &rwflux); 
+  rflux *= advSwitch;                                                   
+  ruflux *= advSwitch;                                                  
+  rvflux *= advSwitch;                                                  
+  rwflux *= advSwitch;                                                  
+                                                                        
+  ruflux -= p_half*(nx*(T11P+T11M) + ny*(T12P+T12M) + nz*(T13P+T13M));  
+  rvflux -= p_half*(nx*(T12P+T12M) + ny*(T22P+T22M) + nz*(T23P+T23M));  
+  rwflux -= p_half*(nx*(T13P+T13M) + ny*(T23P+T23M) + nz*(T33P+T33M));  
+                                                                        
+                                                                        
+  const dlong base = e*p_Np*p_Nfields+k*p_Nq*p_Nq + j*p_Nq+i;           
+  rhsq[base+0*p_Np] += sc*(-rflux);                                     
+  rhsq[base+1*p_Np] += sc*(-ruflux);                                    
+  rhsq[base+2*p_Np] += sc*(-rvflux);                                    
+  rhsq[base+3*p_Np] += sc*(-rwflux);                                    
 }
 
 // batch process elements
 kernel void cnsSurfaceHex3D(const dlong Nelements,
-                            const int advSwitch,
+			    const int advSwitch,
                             const dfloat * restrict sgeo,
 			    const dfloat * restrict LIFTT,	
                             const dlong  * restrict vmapM,
@@ -243,8 +248,13 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
             const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
             const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
             
-            surfaceTerms(sk0,0,i,j,0     );
-            surfaceTerms(sk5,5,i,j,(p_Nq-1));
+	    //            surfaceTerms(sk0,0,i,j,0     );
+	    surfaceTerms(e, sk0, 0, i, j, 0, 
+			 time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+
+	    //            surfaceTerms(sk5,5,i,j,(p_Nq-1));
+	    surfaceTerms(e, sk5, 5, i, j, (p_Nq-1), 
+			 time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
           }
         }
       }
@@ -261,8 +271,13 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
             const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
             const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
             
-            surfaceTerms(sk1,1,i,0     ,k);
-            surfaceTerms(sk3,3,i,(p_Nq-1),k);
+	    //            surfaceTerms(sk1,1,i,0     ,k);
+	    surfaceTerms(e, sk1, 1, i, 0, k, 
+			 time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+
+            //surfaceTerms(sk3,3,i,(p_Nq-1),k);
+	    surfaceTerms(e, sk3, 3, i, (p_Nq-1), k,
+			 time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
           }
         }
       }
@@ -279,8 +294,13 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
             const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
             const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
             
-            surfaceTerms(sk2,2,(p_Nq-1),j,k);
-            surfaceTerms(sk4,4,0     ,j,k);
+	    //            surfaceTerms(sk2,2,(p_Nq-1),j,k);
+	    surfaceTerms(e, sk2, 2, (p_Nq-1), j, k, 
+			 time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+	    
+            //surfaceTerms(sk4,4,0     ,j,k);
+	    surfaceTerms(e, sk4, 4, 0, j, k, 
+			 time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
           }
         }
       }
@@ -288,63 +308,68 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
   }
 }
 
-#define stressSurfaceTerms(sk,face,i, j,k)                              \
-{                                                                       \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
-  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
-                                                                        \
-  const dlong idM = vmapM[sk];                                          \
-  const dlong idP = vmapP[sk];                                          \
-                                                                        \
-  const dlong eM = e;                                                   \
-  const dlong eP = idP/p_Np;                                            \
-  const int vidM = idM%p_Np;                                            \
-  const int vidP = idP%p_Np;                                            \
-                                                                        \
-  const dlong baseM = eM*p_Np*p_Nfields + vidM;                         \
-  const dlong baseP = eP*p_Np*p_Nfields + vidP;                         \
-                                                                        \
-  const dfloat rM  = q[baseM + 0*p_Np];                                 \
-  const dfloat ruM = q[baseM + 1*p_Np];                                 \
-  const dfloat rvM = q[baseM + 2*p_Np];                                 \
-  const dfloat rwM = q[baseM + 3*p_Np];                                 \
-                                                                        \
-  dfloat uM = ruM/rM;                                                   \
-  dfloat vM = rvM/rM;                                                   \
-  dfloat wM = rwM/rM;                                                   \
-                                                                        \
-  dfloat rP  = q[baseP + 0*p_Np];                                       \
-  dfloat ruP = q[baseP + 1*p_Np];                                       \
-  dfloat rvP = q[baseP + 2*p_Np];                                       \
-  dfloat rwP = q[baseP + 3*p_Np];                                       \
-                                                                        \
-  dfloat uP = ruP/rP;                                                   \
-  dfloat vP = rvP/rP;                                                   \
-  dfloat wP = rwP/rP;                                                   \
-                                                                        \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc>0) {                                                            \
-    cnsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP); \
-  }                                                                     \
-                                                                        \
-  const dfloat dS11 = p_half*(nx*(p_two*(uP-uM))) - p_third*(nx*(uP-uM)+ny*(vP-vM)+nz*(wP-wM)); \
-  const dfloat dS12 = p_half*(ny*(uP-uM) + nx*(vP-vM));                 \
-  const dfloat dS13 = p_half*(nz*(uP-uM) + nx*(wP-wM));                 \
-  const dfloat dS22 = p_half*(ny*(p_two*(vP-vM))) - p_third*(nx*(uP-uM)+ny*(vP-vM)+nz*(wP-wM)); \
-  const dfloat dS23 = p_half*(nz*(vP-vM) + ny*(wP-wM));                 \
-  const dfloat dS33 = p_half*(nz*(p_two*(wP-wM))) - p_third*(nx*(uP-uM)+ny*(vP-vM)+nz*(wP-wM)); \
-                                                                        \
-  const dfloat sc = invWJ * sJ;                                         \
-  const dlong base = e*p_Np*p_Nstresses+k*p_Nq*p_Nq+j*p_Nq+i;   \
-  viscousStresses[base+0*p_Np] += sc*p_two*mu*dS11;                     \
-  viscousStresses[base+1*p_Np] += sc*p_two*mu*dS12;                     \
-  viscousStresses[base+2*p_Np] += sc*p_two*mu*dS13;                     \
-  viscousStresses[base+3*p_Np] += sc*p_two*mu*dS22;                     \
-  viscousStresses[base+4*p_Np] += sc*p_two*mu*dS23;                     \
-  viscousStresses[base+5*p_Np] += sc*p_two*mu*dS33;                     \
+void stressSurfaceTerms(const int e, const int sk, const int face, const int i, const int j, const int k,
+			const dfloat time, 
+			const dfloat *x, const dfloat *y, const dfloat *z, 
+			const dfloat *sgeo, const dlong *vmapM, const dong *vmapP,
+			const dfloat *q,
+			dfloat *viscousStresses){
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        
+                                                                        
+  const dlong idM = vmapM[sk];                                          
+  const dlong idP = vmapP[sk];                                          
+                                                                        
+  const dlong eM = e;                                                   
+  const dlong eP = idP/p_Np;                                            
+  const int vidM = idM%p_Np;                                            
+  const int vidP = idP%p_Np;                                            
+                                                                        
+  const dlong baseM = eM*p_Np*p_Nfields + vidM;                         
+  const dlong baseP = eP*p_Np*p_Nfields + vidP;                         
+                                                                        
+  const dfloat rM  = q[baseM + 0*p_Np];                                 
+  const dfloat ruM = q[baseM + 1*p_Np];                                 
+  const dfloat rvM = q[baseM + 2*p_Np];                                 
+  const dfloat rwM = q[baseM + 3*p_Np];                                 
+                                                                        
+  dfloat uM = ruM/rM;                                                   
+  dfloat vM = rvM/rM;                                                   
+  dfloat wM = rwM/rM;                                                   
+                                                                        
+  dfloat rP  = q[baseP + 0*p_Np];                                       
+  dfloat ruP = q[baseP + 1*p_Np];                                       
+  dfloat rvP = q[baseP + 2*p_Np];                                       
+  dfloat rwP = q[baseP + 3*p_Np];                                       
+                                                                        
+  dfloat uP = ruP/rP;                                                   
+  dfloat vP = rvP/rP;                                                   
+  dfloat wP = rwP/rP;                                                   
+                                                                        
+  const int bc = EToB[face+p_Nfaces*e];                                 
+  if(bc>0) {                                                            
+    cnsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP); 
+  }                                                                     
+                                                                        
+  const dfloat dS11 = p_half*(nx*(p_two*(uP-uM))) - p_third*(nx*(uP-uM)+ny*(vP-vM)+nz*(wP-wM)); 
+  const dfloat dS12 = p_half*(ny*(uP-uM) + nx*(vP-vM));                 
+  const dfloat dS13 = p_half*(nz*(uP-uM) + nx*(wP-wM));                 
+  const dfloat dS22 = p_half*(ny*(p_two*(vP-vM))) - p_third*(nx*(uP-uM)+ny*(vP-vM)+nz*(wP-wM)); 
+  const dfloat dS23 = p_half*(nz*(vP-vM) + ny*(wP-wM));                 
+  const dfloat dS33 = p_half*(nz*(p_two*(wP-wM))) - p_third*(nx*(uP-uM)+ny*(vP-vM)+nz*(wP-wM)); 
+                                                                        
+  const dfloat sc = invWJ * sJ;                                         
+  const dlong base = e*p_Np*p_Nstresses+k*p_Nq*p_Nq+j*p_Nq+i;   
+  viscousStresses[base+0*p_Np] += sc*p_two*mu*dS11;                     
+  viscousStresses[base+1*p_Np] += sc*p_two*mu*dS12;                     
+  viscousStresses[base+2*p_Np] += sc*p_two*mu*dS13;                     
+  viscousStresses[base+3*p_Np] += sc*p_two*mu*dS22;                     
+  viscousStresses[base+4*p_Np] += sc*p_two*mu*dS23;                     
+  viscousStresses[base+5*p_Np] += sc*p_two*mu*dS33;                     
 }
 
 kernel void cnsStressesSurfaceHex3D(const int Nelements,
@@ -374,8 +399,13 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
             const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
             const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
             
-            stressSurfaceTerms(sk0,0,i,j,0     );
-            stressSurfaceTerms(sk5,5,i,j,(p_Nq-1));
+	    //            stressSurfaceTerms(sk0,0,i,j,0     );
+	    stressSurfaceTerms(e, sk0, 0, i, j, 0,
+			       time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+
+	    //            stressSurfaceTerms(sk5,5,i,j,(p_Nq-1));
+	    stressSurfaceTerms(e, sk5, 5, i, j, (p_Nq-1),
+			       time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
           }
         }
       }
@@ -392,8 +422,14 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
             const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
             const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
             
-            stressSurfaceTerms(sk1,1,i,0     ,k);
-            stressSurfaceTerms(sk3,3,i,(p_Nq-1),k);
+	    //            stressSurfaceTerms(sk1,1,i,0     ,k);
+	    stressSurfaceTerms(e, sk1, 1, i, 0, k, 
+			       time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+
+            //stressSurfaceTerms(sk3,3,i,(p_Nq-1),k);
+	    stressSurfaceTerms(e, sk3, 3, i, (p_Nq-1), k, 
+			       time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+
           }
         }
       }
@@ -410,8 +446,13 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
             const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
             const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
             
-            stressSurfaceTerms(sk2,2,(p_Nq-1),j ,k);
-            stressSurfaceTerms(sk4,4,0,     j, k);
+	    //            stressSurfaceTerms(sk2,2,(p_Nq-1),j ,k);
+	    stressSurfaceTerms(e, sk2, 2, (p_Nq-1), j, k, 
+			       time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+
+            //stressSurfaceTerms(sk4,4,0,     j, k);
+	    stressSurfaceTerms(e, sk4, 4, 0, j, k, 
+			       time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
           }
         }
       }
