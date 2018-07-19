@@ -2,6 +2,7 @@ sDir = ./src
 iDir = ./include
 objDir = ./
 
+include ${OCCA_DIR}/scripts/makefile
 
 sources = $(wildcard $(sDir)/*c)
 includes = $(wildcard $(iDir)/*h)
