@@ -77,6 +77,7 @@ int main(int argc, char **argv){
 #endif
   
   //extract isosurface
+  if(mesh->dim==3)
    gradientReport(gradient, 0.0,  options);
 
   // close down MPI

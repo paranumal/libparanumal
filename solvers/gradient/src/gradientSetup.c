@@ -139,12 +139,13 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
     if (r==mesh->rank) {
 
       // kernels from volume file
-      sprintf(fileName, DHOLMES "/okl/meshIsoSurface3D.okl");
-      sprintf(kernelName, "meshIsoSurface3D");
-
-      gradient->isoSurfaceKernel =
-	mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
-
+      if(mesh->dim==3){
+	sprintf(fileName, DHOLMES "/okl/meshIsoSurface3D.okl");
+	sprintf(kernelName, "meshIsoSurface3D");
+	
+	gradient->isoSurfaceKernel =
+	  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      }
       
       // kernels from volume file
       sprintf(fileName, DGRADIENT "/okl/gradientVolume%s.okl",

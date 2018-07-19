@@ -34,7 +34,7 @@ void intersect(const int fld,
 }
 
 int marchingTet(const int fld,
-                const dfloat vals[][p_plotNfields], // stack X and fields
+                const dfloat vals[p_plotNp][p_plotNfields], // stack X and fields
                 const int v0,
                 const int v1,
                 const int v2,
