@@ -7,7 +7,8 @@ for cl in *.c; do
 
     sed -i 's/occa\:\:kernelInfo kernelInfo/occa::properties kernelInfo\;\n kernelInfo\[\"defines\"\].asObject()\;\n kernelInfo\[\"includes\"\].asArray();\n kernelInfo\["header"\].asArray();\n kernelInfo\[\"flags\"\].asObject()\;\n/g' tmp1 
     
-    sed -i 's/)\(.*\).getMappedPointer()/) occa::opencl::getCLMappedPtr(\1)/g' tmp1
+    #    sed -i 's/)\(.*\).getMappedPointer()/) occa::opencl::getCLMappedPtr(\1)/g' tmp1
+    sed -i 's/)\(.*\).getMappedPointer()/) occa::cuda::getMappedPtr(\1)/g' tmp1
     
     sed -i 's/occa\:\:kernelInfo/occa\:\:properties/g' tmp1
     sed -i 's/buildKernelFromSource/buildKernel/g' tmp1
