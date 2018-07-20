@@ -254,8 +254,14 @@ dcoo *newDCOO(parAlmond_t *parAlmond, csr *B){
   
   if (A->NrecvTotal) A->recvBuffer = (dfloat *) malloc(A->NrecvTotal*sizeof(dfloat));
   if (A->NsendTotal) {
+#if 0
     occa::memory o_haloBuffer = parAlmond->device.mappedAlloc(A->NsendTotal*sizeof(dfloat), NULL);
-    A->sendBuffer = (dfloat*) o_haloBuffer.getMappedPointer(); 
+    A->sendBuffer = (dfloat*) o_haloBuffer.getMappedPointer();
+#endif
+    occa::memory o_haloBuffer;
+
+    A->sendBuffer = (dfloat*) occaHostMallocPinned(parAlmond->device, A->NsendTotal*sizeof(dfloat), NULL, o_haloBuffer);
+
     A->o_haloBuffer = parAlmond->device.malloc(A->NsendTotal*sizeof(dfloat), A->sendBuffer);
   }
 
@@ -443,8 +449,16 @@ hyb * newHYB(parAlmond_t *parAlmond, csr *csrA) {
 
   if (A->NrecvTotal) A->recvBuffer = (dfloat *) malloc(A->NrecvTotal*sizeof(dfloat));
   if (A->NsendTotal) {
+#if 0
     occa::memory o_haloBuffer = parAlmond->device.mappedAlloc(A->NsendTotal*sizeof(dfloat), NULL);
-    A->sendBuffer = (dfloat*) o_haloBuffer.getMappedPointer(); 
+    A->sendBuffer = (dfloat*) o_haloBuffer.getMappedPointer();
+#endif
+
+    occa::memory o_haloBuffer;
+
+    A->sendBuffer = (dfloat*) occaHostMallocPinned(parAlmond->device, A->NsendTotal*sizeof(dfloat), NULL, o_haloBuffer);
+
+    
     A->o_haloBuffer = parAlmond->device.malloc(A->NsendTotal*sizeof(dfloat), A->sendBuffer);
   }
 
