@@ -11,10 +11,6 @@
 #include "types.h"
 #include "ogs_t.h"
 
-#ifdef OCCA_VERSION_1_0
-#include <occa/modes/opencl/utils.hpp>
-#endif
-
 #include "timer.h"
 
 #include "setupAide.hpp"
@@ -714,6 +710,7 @@ void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
 void occaDeviceConfig(mesh_t *mesh, setupAide &newOptions);
+void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem);
 
 #endif
 
