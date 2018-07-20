@@ -274,20 +274,32 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   
     // MPI send buffer
     cns->haloBytes = mesh->totalHaloPairs*mesh->Np*cns->Nfields*sizeof(dfloat);
+    cns->haloStressesBytes = mesh->totalHaloPairs*mesh->Np*cns->Nstresses*sizeof(dfloat);
+    
+    cns->o_haloBuffer = mesh->device.malloc(cns->haloBytes);
+    cns->o_haloStressesBuffer = mesh->device.malloc(cns->haloStressesBytes);
+
+#if 0
     occa::memory o_sendBuffer = mesh->device.mappedAlloc(cns->haloBytes, NULL);
     occa::memory o_recvBuffer = mesh->device.mappedAlloc(cns->haloBytes, NULL);
-    cns->o_haloBuffer = mesh->device.malloc(cns->haloBytes);
     cns->sendBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
     cns->recvBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
 
-    cns->haloStressesBytes = mesh->totalHaloPairs*mesh->Np*cns->Nstresses*sizeof(dfloat);
     occa::memory o_sendStressesBuffer = mesh->device.mappedAlloc(cns->haloStressesBytes, NULL);
     occa::memory o_recvStressesBuffer = mesh->device.mappedAlloc(cns->haloStressesBytes, NULL);
-    cns->o_haloStressesBuffer = mesh->device.malloc(cns->haloStressesBytes);
     cns->sendStressesBuffer = (dfloat*) o_sendStressesBuffer.getMappedPointer();
     cns->recvStressesBuffer = (dfloat*) o_recvStressesBuffer.getMappedPointer();
-  }
+#endif
+    
+    occa::memory o_sendBuffer, o_recvBuffer;
 
+    cns->sendBuffer = occaHostMallocPinner(mesh->device, cns->haloBytes, NULL, o_sendBuffer);
+    cns->recvBuffer = occaHostMallocPinner(mesh->device, cns->haloBytes, NULL, o_recvBuffer);
+
+    cns->sendStressesBuffer = occaHostMallocPinner(mesh->device, cns->haloStressesBytes, NULL, o_sendBuffer);
+    cns->recvStressesBuffer = occaHostMallocPinner(mesh->device, cns->haloStressesBytes, NULL, o_recvBuffer);
+  }
+  
   //if (mesh->rank!=0) 
   //    occa::setVerboseCompilation(false);
 
