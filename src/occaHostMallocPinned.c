@@ -3,14 +3,15 @@
 
 #ifdef OCCA_VERSION_1_0
 
-#include <occa/modes/opencl/utils.hpp>
-#include <occa/modes/cuda/utils.hpp>
-#include <occa/modes/hip/utils.hpp>
+#include <occa/modes/opencl.hpp>
+#include <occa/modes/cuda.hpp>
+#include <occa/modes/hip.hpp>
 
 void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem){
 
   occa::properties props;
 
+#if OCCA_CUDA_ENABLED
   if(device.mode()=="cuda"){
     props["cuda/mapped"] = true;
     mem = device.malloc(size, source, props);
@@ -18,7 +19,9 @@ void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa
     void *ptr = occa::cuda::getMappedPtr(mem);
     return ptr;
   }
+#endif
 
+#if OCCA_OPENCL_ENABLED
   if(device.mode()=="opencl"){
     props["opencl/mapped"] = true;
 
@@ -27,7 +30,9 @@ void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa
     void *ptr = occa::opencl::getMappedPtr(mem);
     return ptr;
   }
+#endif
 
+#if OCCA_HIP_ENABLED
   if(device.mode()=="hip"){
     props["hip/mapped"] = true;
 
@@ -36,7 +41,7 @@ void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa
     void *ptr = occa::hip::getMappedPtr(mem);
     return ptr;
   }
-
+#endif
   
   return NULL;
   
@@ -48,7 +53,7 @@ void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa
   mem = device.mappedAlloc(size, source);
 
   void *ptr = mem.getMappedPointer();
-
+  
   return ptr;
 }
   
