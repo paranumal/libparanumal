@@ -1,7 +1,7 @@
 #include "bns.h"
 
 void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
-                                       dfloat *recvBuffer, setupAide &options){
+		    dfloat *recvBuffer, setupAide &options){
 
   mesh_t *mesh = bns->mesh;
 
