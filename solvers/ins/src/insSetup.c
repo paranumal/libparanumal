@@ -739,22 +739,35 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   if(mesh->totalHaloPairs){//halo setup
     dlong vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
+    dlong pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+    dlong vGatherBytes = ins->NVfields*mesh->ogs->NhaloGather*sizeof(dfloat);
+    ins->o_vHaloBuffer = mesh->device.malloc(vHaloBytes);
+    ins->o_pHaloBuffer = mesh->device.malloc(pHaloBytes);
+
+#if 0
     occa::memory o_vsendBuffer = mesh->device.mappedAlloc(vHaloBytes, NULL);
     occa::memory o_vrecvBuffer = mesh->device.mappedAlloc(vHaloBytes, NULL);
-    ins->o_vHaloBuffer = mesh->device.malloc(vHaloBytes);
-    ins->vSendBuffer = (dfloat*) o_vsendBuffer.getMappedPointer();
-    ins->vRecvBuffer = (dfloat*) o_vrecvBuffer.getMappedPointer();
-
-    dlong pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-    ins->o_pHaloBuffer = mesh->device.malloc(pHaloBytes);
     occa::memory o_psendBuffer = mesh->device.mappedAlloc(pHaloBytes, NULL);
     occa::memory o_precvBuffer = mesh->device.mappedAlloc(pHaloBytes, NULL);
+    occa::memory o_gatherTmpPinned = mesh->device.mappedAlloc(vGatherBytes, NULL);
+    
+    ins->vSendBuffer = (dfloat*) o_vsendBuffer.getMappedPointer();
+    ins->vRecvBuffer = (dfloat*) o_vrecvBuffer.getMappedPointer();
     ins->pSendBuffer = (dfloat*) o_psendBuffer.getMappedPointer();
     ins->pRecvBuffer = (dfloat*) o_precvBuffer.getMappedPointer();
-
-    occa::memory o_gatherTmpPinned = mesh->device.mappedAlloc(ins->NVfields*mesh->ogs->NhaloGather*sizeof(dfloat), NULL);
     ins->velocityHaloGatherTmp = (dfloat*) o_gatherTmpPinned.getMappedPointer();
-    ins->o_velocityHaloGatherTmp = mesh->device.malloc(ins->NVfields*mesh->ogs->NhaloGather*sizeof(dfloat),  ins->velocityHaloGatherTmp);
+#endif
+    occa::memory o_vSendBuffer, o_vRecvBuffer, o_pSendBuffer, o_pRecvBuffer, o_gatherTmpPinned;
+
+    ins->vSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, vHaloBytes, NULL, o_vSendBuffer);
+    ins->vRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, vHaloBytes, NULL, o_vRecvBuffer);
+
+    ins->pSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, pHaloBytes, NULL, o_pSendBuffer);
+    ins->pRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, pHaloBytes, NULL, o_pRecvBuffer);
+
+    ins->velocityHaloGatherTmp = (dfloat*) occaHostMallocPinned(mesh->device, vGatherBytes, NULL, o_gatherTmpPinned);
+    
+    ins->o_velocityHaloGatherTmp = mesh->device.malloc(vGatherBytes,  ins->velocityHaloGatherTmp);
   }
 
   // set kernel name suffix
