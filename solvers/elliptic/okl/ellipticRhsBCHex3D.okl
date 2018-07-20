@@ -2,8 +2,8 @@
 void surfaceTerms(int sk, int m, int i, int j,
 		  const dfloat *sgeo, const dfloat *x, const dfloat *y, const dfloat *z,
 		  const int *vmapM, const int *mapB,
-		  shared dfloat s_q[2][p_Nq][p_Nq],
-		  shared dfloat s_ndq[2][p_Nq][p_Nq]){
+		  dfloat s_q[2][p_Nq][p_Nq],
+		  dfloat s_ndq[2][p_Nq][p_Nq]){
   
   const dlong  idM = vmapM[sk];						
   

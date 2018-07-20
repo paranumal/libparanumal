@@ -17,10 +17,10 @@ void surfaceTerms(const int emap,
 		  const int *vmapP,
 		  const int *EToB,
 		  const dfloat4 *gradq,
-		  shared dfloat s_dqdx[2][p_Nq][p_Nq],
-		  shared dfloat s_dqdy[2][p_Nq][p_Nq],
-		  shared dfloat s_dqdz[2][p_Nq][p_Nq],
-		  shared dfloat s_Aq[2][p_Nq][p_Nq]){
+		  dfloat s_dqdx[2][p_Nq][p_Nq],
+		  dfloat s_dqdy[2][p_Nq][p_Nq],
+		  dfloat s_dqdz[2][p_Nq][p_Nq],
+		  dfloat s_Aq[2][p_Nq][p_Nq]){
   
   const dlong  idM = vmapM[sk];                                       
   const dlong  idP = vmapP[sk];                                       
