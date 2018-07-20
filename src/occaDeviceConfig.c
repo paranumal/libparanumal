@@ -36,6 +36,9 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   if(options.compareArgs("THREAD MODEL", "CUDA")){
     sprintf(deviceConfig, "mode: 'CUDA', device_id: %d",device_id);
   }
+  else if(options.compareArgs("THREAD MODEL", "HIP")){
+    sprintf(deviceConfig, "mode: 'HIP', device_id: %d",device_id);
+  }
   else if(options.compareArgs("THREAD MODEL", "OpenCL")){
     int plat;
     options.getArgs("PLATFORM NUMBER", plat);
