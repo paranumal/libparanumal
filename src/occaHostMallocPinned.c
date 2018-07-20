@@ -47,7 +47,7 @@ void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa
 
   mem = device.mappedAlloc(size, source);
 
-  void *ptr = device.getMappedPointer();
+  void *ptr = mem.getMappedPointer();
 
   return ptr;
 }
