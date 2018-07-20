@@ -90,11 +90,11 @@ void upwindRoeAveraged(const dfloat nx,
 
 void quadSurfaceTerms(const int face, const int m, const int i, const int j,
 		      const dfloat time,
-		      const dfloat s_cubProjectT[p_cubNq][p_Nq],
-		      dfloat s_rflux[p_Nfaces][p_cubNq],
-		      dfloat s_ruflux[p_Nfaces][p_cubNq],
-		      dfloat s_rvflux[p_Nfaces][p_cubNq],
-		      dfloat s_rhsq[p_Nfields][p_Nq][p_Nq]){
+		      shared dfloat s_cubProjectT[p_cubNq][p_Nq],
+		      shared dfloat s_rflux[p_Nfaces][p_cubNq],
+		      shared dfloat s_ruflux[p_Nfaces][p_cubNq],
+		      shared dfloat s_rvflux[p_Nfaces][p_cubNq],
+		      shared dfloat s_rhsq[p_Nfields][p_Nq][p_Nq]){
   
   dfloat r = 0.f, ru = 0.f, rv = 0.f;		
   
