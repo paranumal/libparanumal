@@ -23,7 +23,7 @@ for cl in *.c; do
 
     # mappedAlloc(foo,bah) => alloc(foo,bah,"mapped: true");
 
-    sed -i 's/mappedAlloc(\(.*\),\(.*\))/malloc(\1,\2,\"mapped\: true\")/g' tmp1
+#    sed -i 's/mappedAlloc(\(.*\),\(.*\))/malloc(\1,\2,\"mapped\: true\")/g' tmp1
     sed -i 's/asyncCopyTo(\(.*\))/copyTo(\1,\"async\: true\")/g' tmp1
     sed -i 's/asyncCopyFrom(\(.*\))/copyFrom(\1,\"async\: true\")/g' tmp1 
     
