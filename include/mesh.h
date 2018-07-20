@@ -710,6 +710,7 @@ void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
 void occaDeviceConfig(mesh_t *mesh, setupAide &newOptions);
+
 void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem);
 
 #endif

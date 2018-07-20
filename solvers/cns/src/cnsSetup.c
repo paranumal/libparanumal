@@ -293,11 +293,11 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     
     occa::memory o_sendBuffer, o_recvBuffer;
 
-    cns->sendBuffer = occaHostMallocPinner(mesh->device, cns->haloBytes, NULL, o_sendBuffer);
-    cns->recvBuffer = occaHostMallocPinner(mesh->device, cns->haloBytes, NULL, o_recvBuffer);
+    cns->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloBytes, NULL, o_sendBuffer);
+    cns->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloBytes, NULL, o_recvBuffer);
 
-    cns->sendStressesBuffer = occaHostMallocPinner(mesh->device, cns->haloStressesBytes, NULL, o_sendBuffer);
-    cns->recvStressesBuffer = occaHostMallocPinner(mesh->device, cns->haloStressesBytes, NULL, o_recvBuffer);
+    cns->sendStressesBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloStressesBytes, NULL, o_sendBuffer);
+    cns->recvStressesBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloStressesBytes, NULL, o_recvBuffer);
   }
   
   //if (mesh->rank!=0) 
