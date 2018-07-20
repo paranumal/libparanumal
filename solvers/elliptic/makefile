@@ -126,6 +126,7 @@ LOBJS = \
 ../../src/setupAide.o \
 ../../src/readArray.o\
 ../../src/occaDeviceConfig.o\
+../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
 COBJS = \
