@@ -23,7 +23,7 @@ void surfaceTerms(const int e, const int es, const int sk, const int face, const
 		  const dfloat intfx, const dfloat intfy,
 		  const dfloat *sgeo, const dfloat *x, const dfloat *y, 
 		  const int *vmapM, const int *vmapP, const int *EToB, const dfloat *q,
-		  shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nq][p_Nq]){
+		  dfloat s_fluxq[p_NblockS][p_Nfields][p_Nq][p_Nq]){
   
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				
@@ -86,8 +86,8 @@ void surfaceTermsPml(const int e, const int es, const int sk, const int face, co
 		     const dfloat intfx, const dfloat intfy,
 		     const dfloat *sgeo, const dfloat *x, const dfloat *y, 
 		     const int *vmapM, const int *vmapP, const int *EToB, const dfloat *q,
-		     shared dfloat s_Aqx[p_NblockS][p_Nfields][p_Nq][p_Nq],
-		     shared dfloat s_Bqy[p_NblockS][p_Nfields][p_Nq][p_Nq]){
+		     dfloat s_Aqx[p_NblockS][p_Nfields][p_Nq][p_Nq],
+		     dfloat s_Bqy[p_NblockS][p_Nfields][p_Nq][p_Nq]){
   
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				
@@ -152,7 +152,7 @@ void surfaceMRTerms(const int e, const int es, const int sk, const int face, con
 		    const dfloat *sgeo, const dfloat *x, const dfloat *y, 
 		    const int *vmapM, const int *mapP, const int *EToB,
 		    const dfloat *fQM, 
-		    shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nq][p_Nq]){
+		    dfloat s_fluxq[p_NblockS][p_Nfields][p_Nq][p_Nq]){
   
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				
@@ -215,8 +215,8 @@ void surfaceMRTermsPml(const int e, const int es, const int sk, const int face, 
 		       const dfloat *sgeo, const dfloat *x, const dfloat *y, 
 		       const int *vmapM, const int *mapP, const int *EToB,
 		       const dfloat *fQM, 
-		       shared dfloat s_Aqx[p_NblockS][p_Nfields][p_Nq][p_Nq],
-		       shared dfloat s_Bqy[p_NblockS][p_Nfields][p_Nq][p_Nq]){
+		       dfloat s_Aqx[p_NblockS][p_Nfields][p_Nq][p_Nq],
+		       dfloat s_Bqy[p_NblockS][p_Nfields][p_Nq][p_Nq]){
   
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				
