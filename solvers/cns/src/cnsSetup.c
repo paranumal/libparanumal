@@ -291,13 +291,10 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     cns->recvStressesBuffer = (dfloat*) o_recvStressesBuffer.getMappedPointer();
 #endif
     
-    occa::memory o_sendBuffer, o_recvBuffer, o_sendStressesBuffer, o_recvStressesBuffer;
-
-    cns->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloBytes, NULL, o_sendBuffer);
-    cns->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloBytes, NULL, o_recvBuffer);
-
-    cns->sendStressesBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloStressesBytes, NULL, o_sendStressesBuffer);
-    cns->recvStressesBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloStressesBytes, NULL, o_recvStressesBuffer);
+    cns->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloBytes, NULL, cns->o_sendBuffer);
+    cns->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloBytes, NULL, cns->o_recvBuffer);
+    cns->sendStressesBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloStressesBytes, NULL, cns->o_sendStressesBuffer);
+    cns->recvStressesBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloStressesBytes, NULL, cns->o_recvStressesBuffer);
   }
   
   //if (mesh->rank!=0) 

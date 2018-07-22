@@ -73,11 +73,15 @@ typedef struct{
   dlong haloBytes;
   dfloat *sendBuffer;
   dfloat *recvBuffer;
+  occa::memory o_sendBuffer;
+  occa::memory o_recvBuffer;
   occa::memory o_haloBuffer;
 
   dlong haloStressesBytes;
   dfloat *sendStressesBuffer;
   dfloat *recvStressesBuffer;
+  occa::memory o_sendStressesBuffer;
+  occa::memory o_recvStressesBuffer;
   occa::memory o_haloStressesBuffer;
 
   // DOPRI5 RK data

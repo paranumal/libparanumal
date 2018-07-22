@@ -57,6 +57,9 @@ typedef struct {
 
   dfloat *sendBuffer, *recvBuffer;
   dfloat *gradSendBuffer, *gradRecvBuffer;
+  occa::memory o_sendBuffer, o_recvBuffer;
+  occa::memory o_gradSendBuffer, o_gradRecvBuffer;
+
 
   occa::stream defaultStream;
   occa::stream dataStream;
