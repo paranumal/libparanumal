@@ -110,12 +110,10 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
     occa::memory o_gatherTmpPinned = mesh->device.mappedAlloc(ogs->NhaloGather*sizeof(dfloat), NULL);
     ogs->haloGatherTmp = (dfloat*) o_gatherTmpPinned.getMappedPointer(); // (char*) calloc(ogs->NhaloGather*sizeof(dfloat), sizeof(char));
 #else
-    occa::memory o_gatherTmpPinned;
-    ogs->haloGatherTmp = (dfloat*) occaHostMallocPinned(mesh->device, ogs->NhaloGather*sizeof(dfloat), NULL, o_gatherTmpPinned);
-#endif
-    ogs->o_haloGatherTmp      = mesh->device.malloc(ogs->NhaloGather*sizeof(dfloat),  ogs->haloGatherTmp);
+    ogs->haloGatherTmp = (dfloat*) occaHostMallocPinned(mesh->device, ogs->NhaloGather*sizeof(dfloat), NULL, ogs->o_haloGatherTmp);
     ogs->o_haloGatherOffsets  = mesh->device.malloc((ogs->NhaloGather+1)*sizeof(dlong), ogs->haloGatherOffsets);
     ogs->o_haloGatherLocalIds = mesh->device.malloc(Nhalo*sizeof(dlong),                ogs->haloGatherLocalIds);
+#endif
 
     ogs->o_ownedHaloGatherIds = mesh->device.malloc(ogs->NhaloGather*sizeof(dlong), ogs->ownedHaloGatherIds);
 

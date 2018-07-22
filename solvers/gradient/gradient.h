@@ -42,6 +42,8 @@ typedef struct{
   dlong haloBytes;
   dfloat *sendBuffer;
   dfloat *recvBuffer;
+  occa::memory o_sendBuffer;
+  occa::memory o_recvBuffer;
   occa::memory o_haloBuffer;
 
   dlong haloStressesBytes;

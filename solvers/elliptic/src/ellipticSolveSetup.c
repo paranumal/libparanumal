@@ -76,15 +76,10 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
     elliptic->gradRecvBuffer = (dfloat*) o_gradRecvBuffer.getMappedPointer();
 #endif
     
-    occa::memory o_sendBuffer, o_recvBuffer;
-
-    elliptic->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, Nbytes, NULL, o_sendBuffer);
-    elliptic->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, Nbytes, NULL, o_recvBuffer);
-
-    occa::memory o_gradSendBuffer, o_gradRecvBuffer;
-
-    elliptic->gradSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, 2*Nbytes, NULL, o_gradSendBuffer);
-    elliptic->gradRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, 2*Nbytes, NULL, o_gradRecvBuffer);
+    elliptic->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, Nbytes, NULL, elliptic->o_sendBuffer);
+    elliptic->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, Nbytes, NULL, elliptic->o_recvBuffer);
+    elliptic->gradSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, 2*Nbytes, NULL, elliptic->o_gradSendBuffer);
+    elliptic->gradRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, 2*Nbytes, NULL, elliptic->o_gradRecvBuffer);
     
   }else{
     elliptic->sendBuffer = NULL;
