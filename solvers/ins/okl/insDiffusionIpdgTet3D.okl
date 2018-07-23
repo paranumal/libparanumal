@@ -91,7 +91,10 @@ kernel void insDiffusionIpdgTet3D(const dlong Nelements,
                                                                                          &(UP[1].x), &(UP[1].y), &(UP[1].z), \\
                                                                                          &(UP[2].x), &(UP[2].y), &(UP[2].z));
 
-            gradqP = 2*UP[fld] - gradqM;
+            gradqP.x = 2.*UP[fld].x - gradqM.x;
+	    gradqP.y = 2.*UP[fld].y - gradqM.y;
+	    gradqP.z = 2.*UP[fld].z - gradqM.z;
+	    gradqP.w = 2.*UP[fld].w - gradqM.w;
           }
 
           const dfloat dq = gradqP.w - gradqM.w;
