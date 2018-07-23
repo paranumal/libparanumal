@@ -148,8 +148,8 @@ typedef struct{
   occa::memory o_rkAim, o_rkEim, o_rkBim; 
 
 
-  
-
+  occa::memory o_sendBufferPinned;
+  occa::memory o_recvBufferPinned;
 
 
 
