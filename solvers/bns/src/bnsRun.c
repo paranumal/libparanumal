@@ -22,10 +22,8 @@ void bnsRun(bns_t *bns, setupAide &options){
     recvBuffer = (dfloat*) o_recvBufferPinned.getMappedPointer();
 #endif
     
-    occa::memory o_sendBufferPinned, o_recvBufferPinned;
-    
-    sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, haloBytes, NULL, o_sendBufferPinned);
-    recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, haloBytes, NULL, o_recvBufferPinned);
+    sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, haloBytes, NULL, bns->o_sendBufferPinned);
+    recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, haloBytes, NULL, bns->o_recvBufferPinned);
   }
 
   if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
