@@ -1,8 +1,8 @@
-kernel void bnsDotMultiply(const dlong N,
-		            dfloat * restrict v,
-		      const dfloat * restrict w ){
+@kernel void bnsDotMultiply(const dlong N,
+		            @restrict dfloat *  v,
+		      @restrict const  dfloat *  w ){
   
-  for(dlong n=0;n<N;++n;tile(256)){
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
     if(n<N){
       dfloat q1 = v[n];
       dfloat q2 = w[n];

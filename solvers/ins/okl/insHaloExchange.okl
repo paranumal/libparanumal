@@ -1,17 +1,17 @@
 
-kernel void insVelocityHaloExtract(const dlong Nelements,
+@kernel void insVelocityHaloExtract(const dlong Nelements,
                                    const dlong NhaloElements,
-                                   const dlong   * restrict haloElements,
+                                   @restrict const  dlong   *  haloElements,
                                    const dlong offset,
-                                   const dfloat * restrict U,
-                                         dfloat * restrict haloq){
+                                   @restrict const  dfloat *  U,
+                                         @restrict dfloat *  haloq){
 
-  for(dlong e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){     // for all entries in this element
+  for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all entries in this element
       const dlong id   = n + p_Np*haloElements[e];
       const dlong base = n + p_NVfields*p_Np*e;
 
-      occaUnroll(p_NVfields)
+      #pragma unroll p_NVfields
       for (int i=0;i<p_NVfields;i++) {
         haloq[base + i*p_Np] = U[id +i*offset];
       }
@@ -19,18 +19,18 @@ kernel void insVelocityHaloExtract(const dlong Nelements,
   }
 }
 
-kernel void insVelocityHaloScatter(const dlong Nelements,
+@kernel void insVelocityHaloScatter(const dlong Nelements,
                                    const dlong NhaloElements,
                                    const dlong offset,
-                                         dfloat * restrict U,
-                                   const dfloat * restrict haloq){
+                                         @restrict dfloat *  U,
+                                   @restrict const  dfloat *  haloq){
 
-  for(dlong e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){ 
+  for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){ 
       const dlong id   = n + p_Np*(e+Nelements);
       const dlong base = n + p_NVfields*p_Np*e;
 
-      occaUnroll(p_NVfields)
+      #pragma unroll p_NVfields
       for (int i=0;i<p_NVfields;i++) {
         U[id + i*offset] = haloq[base + i*p_Np];
       }
@@ -38,14 +38,14 @@ kernel void insVelocityHaloScatter(const dlong Nelements,
   }
 }
 
-kernel void insPressureHaloExtract(const dlong Nelements,
+@kernel void insPressureHaloExtract(const dlong Nelements,
                                    const dlong NhaloElements,
-                                   const dlong  * restrict haloElements,
-                                   const dfloat * restrict P,
-                                         dfloat * restrict haloq){
+                                   @restrict const  dlong  *  haloElements,
+                                   @restrict const  dfloat *  P,
+                                         @restrict dfloat *  haloq){
 
-  for(dlong e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){     // for all entries in this element
+  for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all entries in this element
       const dlong id   = n + p_Np*haloElements[e];
       const dlong base = n + p_Np*e;
 
@@ -54,13 +54,13 @@ kernel void insPressureHaloExtract(const dlong Nelements,
   }
 }
 
-kernel void insPressureHaloScatter(const dlong Nelements,
+@kernel void insPressureHaloScatter(const dlong Nelements,
                                    const dlong NhaloElements,
-                                         dfloat * restrict P,
-                                   const dfloat * restrict haloq){
+                                         @restrict dfloat *  P,
+                                   @restrict const  dfloat *  haloq){
 
-  for(dlong e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){ 
+  for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){ 
       const dlong id   = n + p_Np*(e+Nelements);
       const dlong base = n + p_Np*e;
       P[id] = haloq[base];

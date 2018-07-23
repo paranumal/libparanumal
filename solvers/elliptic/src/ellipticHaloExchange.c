@@ -21,7 +21,7 @@ void ellipticStartHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nent
           o_q, mesh->o_haloBuffer);
 
     // queue up async copy of halo on data stream
-    mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
+    mesh->o_haloBuffer.copyTo(sendBuffer,"async: true");
 
     mesh->device.setStream(elliptic->defaultStream);
   }
@@ -70,7 +70,7 @@ void ellipticEndHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentri
     
     // copy into halo zone of o_r  HOST>DEVICE
     mesh->device.setStream(elliptic->dataStream);
-    o_q.asyncCopyFrom(recvBuffer, haloBytes, haloOffset);
+    o_q.copyFrom(recvBuffer, haloBytes, haloOffset,"async: true");
     mesh->device.finish();
     
     mesh->device.setStream(elliptic->defaultStream);

@@ -34,7 +34,12 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 
 
   // OCCA stuff
-  occa::kernelInfo kernelInfo;
+  occa::properties kernelInfo;
+ kernelInfo["defines"].asObject();
+ kernelInfo["includes"].asArray();
+ kernelInfo["header"].asArray();
+ kernelInfo["flags"].asObject();
+
   if(gradient->dim==3)
     meshOccaSetup3D(mesh, options, kernelInfo);
   else
@@ -91,41 +96,41 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
   occa::setVerboseCompilation(false);
 #endif
   
-  kernelInfo.addDefine("p_Nfields", mesh->Nfields);
-  kernelInfo.addDefine("p_dim", mesh->dim);
-  kernelInfo.addDefine("p_plotNp", mesh->plotNp);
-  kernelInfo.addDefine("p_plotNelements", mesh->plotNelements);
+  kernelInfo["defines/" "p_Nfields"]= mesh->Nfields;
+  kernelInfo["defines/" "p_dim"]= mesh->dim;
+  kernelInfo["defines/" "p_plotNp"]= mesh->plotNp;
+  kernelInfo["defines/" "p_plotNelements"]= mesh->plotNelements;
 
   int plotNthreads = mymax(mesh->Np, mymax(mesh->plotNp, mesh->plotNelements));
-  kernelInfo.addDefine("p_plotNthreads", plotNthreads);
+  kernelInfo["defines/" "p_plotNthreads"]= plotNthreads;
   
   const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3., p_zero = 0;
 
-  kernelInfo.addDefine("p_two", p_two);
-  kernelInfo.addDefine("p_one", p_one);
-  kernelInfo.addDefine("p_half", p_half);
-  kernelInfo.addDefine("p_third", p_third);
-  kernelInfo.addDefine("p_zero", p_zero);
+  kernelInfo["defines/" "p_two"]= p_two;
+  kernelInfo["defines/" "p_one"]= p_one;
+  kernelInfo["defines/" "p_half"]= p_half;
+  kernelInfo["defines/" "p_third"]= p_third;
+  kernelInfo["defines/" "p_zero"]= p_zero;
   
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
+  kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int NblockV = 512/mesh->Np; // works for CUDA
-  kernelInfo.addDefine("p_NblockV", NblockV);
+  kernelInfo["defines/" "p_NblockV"]= NblockV;
 
   int NblockS = 512/maxNodes; // works for CUDA
-  kernelInfo.addDefine("p_NblockS", NblockS);
+  kernelInfo["defines/" "p_NblockS"]= NblockS;
 
   int cubMaxNodes = mymax(mesh->Np, (mesh->intNfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_cubMaxNodes", cubMaxNodes);
+  kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;
 
   int cubMaxNodes1 = mymax(mesh->Np, (mesh->intNfp));
-  kernelInfo.addDefine("p_cubMaxNodes1", cubMaxNodes1);
+  kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
 
 
-  kernelInfo.addDefine("p_blockSize", blockSize);
+  kernelInfo["defines/" "p_blockSize"]= blockSize;
 
-  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
   // set kernel name suffix
   char *suffix;
@@ -152,7 +157,7 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 	sprintf(kernelName, "meshIsoSurface3D");
 	
 	gradient->isoSurfaceKernel =
-	  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+	  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
       
       // kernels from volume file
@@ -161,14 +166,14 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
       sprintf(kernelName, "gradientVolume%s", suffix);
 
       gradient->gradientKernel =
-	mesh->device.buildKernelFromSource(fileName,
+	mesh->device.buildKernel(fileName,
 					   kernelName,
 					   kernelInfo);
 
 #if 0
       // fix this later
       mesh->haloExtractKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl",
                                            "meshHaloExtract3D",
 					   kernelInfo);
 #endif

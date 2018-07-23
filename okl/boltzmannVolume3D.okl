@@ -33,24 +33,24 @@
 #define QZID10 20   
 
 
-kernel void boltzmannVolume3D(const int Nelements,
-				    const int * restrict elementIds,
+@kernel void boltzmannVolume3D(const int Nelements,
+				    @restrict const  int *  elementIds,
 				    const dfloat ramp,
 				    const dfloat drampdt,
-				    const dfloat *  restrict vgeo,
-				    const dfloat *  restrict DrT,
-				    const dfloat *  restrict DsT,
-				    const dfloat *  restrict DtT,
-				    const dfloat4 * restrict q,
-				          dfloat4 * restrict rhsq){
+				    @restrict const  dfloat *   vgeo,
+				    @restrict const  dfloat *   DrT,
+				    @restrict const  dfloat *   DsT,
+				    @restrict const  dfloat *   DtT,
+				    @restrict const  dfloat4 *  q,
+				          @restrict dfloat4 *  rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][10][p_Np];
-    exclusive int element;
+    @shared dfloat s_q[p_NblockV][10][p_Np];
+    @exclusive int element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 	int e = eo+es; // element in block
 
@@ -79,11 +79,11 @@ kernel void boltzmannVolume3D(const int Nelements,
       }
     }
 
-   // make sure all node data is loaded into shared
-    barrier(localMemFence);
+   // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -110,7 +110,7 @@ kernel void boltzmannVolume3D(const int Nelements,
 	  dfloat dq6dt= 0.f, dq7dt= 0.f, dq8dt= 0.f, dq9dt= 0.f, dq10dt= 0.f;
 	 
 
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat Drni  = DrT[n+i*p_Np];
 	    const dfloat Dsni  = DsT[n+i*p_Np];
@@ -258,24 +258,24 @@ kernel void boltzmannVolume3D(const int Nelements,
 
 
 
-kernel void boltzmannSAVolume3D(const int Nelements,
-				    const int * restrict elementIds,
+@kernel void boltzmannSAVolume3D(const int Nelements,
+				    @restrict const  int *  elementIds,
 				    const dfloat ramp,
 				    const dfloat drampdt,
-				    const dfloat *  restrict vgeo,
-				    const dfloat *  restrict DrT,
-				    const dfloat *  restrict DsT,
-				    const dfloat *  restrict DtT,
-				    const dfloat4 * restrict q,
-				          dfloat4 * restrict rhsq){
+				    @restrict const  dfloat *   vgeo,
+				    @restrict const  dfloat *   DrT,
+				    @restrict const  dfloat *   DsT,
+				    @restrict const  dfloat *   DtT,
+				    @restrict const  dfloat4 *  q,
+				          @restrict dfloat4 *  rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][10][p_Np];
-    exclusive int element;
+    @shared dfloat s_q[p_NblockV][10][p_Np];
+    @exclusive int element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 	int e = eo+es; // element in block
 
@@ -304,11 +304,11 @@ kernel void boltzmannSAVolume3D(const int Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -335,7 +335,7 @@ kernel void boltzmannSAVolume3D(const int Nelements,
 	  dfloat dq6dt= 0.f, dq7dt= 0.f, dq8dt= 0.f, dq9dt= 0.f, dq10dt= 0.f;
 	 
 
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat Drni  = DrT[n+i*p_Np];
 	    const dfloat Dsni  = DsT[n+i*p_Np];
@@ -484,24 +484,24 @@ kernel void boltzmannSAVolume3D(const int Nelements,
 
 
 
-kernel void boltzmannVolumeCub3D(const int Nelements,
-				    const int * restrict elementIds,
+@kernel void boltzmannVolumeCub3D(const int Nelements,
+				    @restrict const  int *  elementIds,
 				    const dfloat ramp,
 				    const dfloat drampdt,
-				    const dfloat *  restrict vgeo,
-				    const dfloat *  restrict DrT,
-				    const dfloat *  restrict DsT,
-				    const dfloat *  restrict DtT,
-				    const dfloat4 * restrict q,
-				          dfloat4 * restrict rhsq){
+				    @restrict const  dfloat *   vgeo,
+				    @restrict const  dfloat *   DrT,
+				    @restrict const  dfloat *   DsT,
+				    @restrict const  dfloat *   DtT,
+				    @restrict const  dfloat4 *  q,
+				          @restrict dfloat4 *  rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][10][p_Np];
-    exclusive int element;
+    @shared dfloat s_q[p_NblockV][10][p_Np];
+    @exclusive int element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 	int e = eo+es; // element in block
 
@@ -531,11 +531,11 @@ kernel void boltzmannVolumeCub3D(const int Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -562,7 +562,7 @@ kernel void boltzmannVolumeCub3D(const int Nelements,
 	  dfloat dq6dt= 0.f, dq7dt= 0.f, dq8dt= 0.f, dq9dt= 0.f, dq10dt= 0.f;
 	 
 
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat Drni  = DrT[n+i*p_Np];
 	    const dfloat Dsni  = DsT[n+i*p_Np];
@@ -701,29 +701,29 @@ kernel void boltzmannVolumeCub3D(const int Nelements,
 
 
 
-kernel void boltzmannPmlVolume3D(const int Nelements,
-				      const int * restrict elementIds,
+@kernel void boltzmannPmlVolume3D(const int Nelements,
+				      @restrict const  int *  elementIds,
 				      const dfloat ramp,
 				      const dfloat drampdt,
-				      const dfloat * restrict vgeo,
-				      const dfloat * restrict sigmax,
-				      const dfloat * restrict sigmay,
-				      const dfloat * restrict sigmaz,
-				      const dfloat * restrict DrT,
-				      const dfloat * restrict DsT,
-				      const dfloat * restrict DtT,
-				      const dfloat4 * restrict q,
-				      const dfloat * restrict pmlq,
-				            dfloat4 * restrict rhsq,
-				            dfloat * restrict rhspmlq){
+				      @restrict const  dfloat *  vgeo,
+				      @restrict const  dfloat *  sigmax,
+				      @restrict const  dfloat *  sigmay,
+				      @restrict const  dfloat *  sigmaz,
+				      @restrict const  dfloat *  DrT,
+				      @restrict const  dfloat *  DsT,
+				      @restrict const  dfloat *  DtT,
+				      @restrict const  dfloat4 *  q,
+				      @restrict const  dfloat *  pmlq,
+				            @restrict dfloat4 *  rhsq,
+				            @restrict dfloat *  rhspmlq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][10][p_Np];
-    exclusive int element;
+    @shared dfloat s_q[p_NblockV][10][p_Np];
+    @exclusive int element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 	int e = eo+es; // element in block
 
@@ -751,11 +751,11 @@ kernel void boltzmannPmlVolume3D(const int Nelements,
 	}
       }
     }
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -816,7 +816,7 @@ kernel void boltzmannPmlVolume3D(const int Nelements,
 	  dfloat dq6dt= 0.f, dq7dt= 0.f, dq8dt= 0.f, dq9dt= 0.f, dq10dt= 0.f;
 	 
 
-	   occaUnroll(p_Np)
+	   #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat Drni  = DrT[n+i*p_Np];
 	    const dfloat Dsni  = DsT[n+i*p_Np];
@@ -1021,29 +1021,29 @@ kernel void boltzmannPmlVolume3D(const int Nelements,
 
 
 
-kernel void boltzmannPmlVolumeCub3D(const int Nelements,
-				      const int * restrict elementIds,
+@kernel void boltzmannPmlVolumeCub3D(const int Nelements,
+				      @restrict const  int *  elementIds,
 				      const dfloat ramp,
 				      const dfloat drampdt,
-				      const dfloat * restrict vgeo,
-				      const dfloat * restrict sigmax,
-				      const dfloat * restrict sigmay,
-				      const dfloat * restrict sigmaz,
-				      const dfloat * restrict DrT,
-				      const dfloat * restrict DsT,
-				      const dfloat * restrict DtT,
-				      const dfloat4 * restrict q,
-				      const dfloat * restrict pmlq,
-				            dfloat4 * restrict rhsq,
-				            dfloat * restrict rhspmlq){
+				      @restrict const  dfloat *  vgeo,
+				      @restrict const  dfloat *  sigmax,
+				      @restrict const  dfloat *  sigmay,
+				      @restrict const  dfloat *  sigmaz,
+				      @restrict const  dfloat *  DrT,
+				      @restrict const  dfloat *  DsT,
+				      @restrict const  dfloat *  DtT,
+				      @restrict const  dfloat4 *  q,
+				      @restrict const  dfloat *  pmlq,
+				            @restrict dfloat4 *  rhsq,
+				            @restrict dfloat *  rhspmlq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][10][p_Np];
-    exclusive int element;
+    @shared dfloat s_q[p_NblockV][10][p_Np];
+    @exclusive int element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 	int e = eo+es; // element in block
 
@@ -1071,11 +1071,11 @@ kernel void boltzmannPmlVolumeCub3D(const int Nelements,
 	}
       }
     }
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -1136,7 +1136,7 @@ kernel void boltzmannPmlVolumeCub3D(const int Nelements,
 	  dfloat dq6dt= 0.f, dq7dt= 0.f, dq8dt= 0.f, dq9dt= 0.f, dq10dt= 0.f;
 	 
 
-	   occaUnroll(p_Np)
+	   #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat Drni  = DrT[n+i*p_Np];
 	    const dfloat Dsni  = DsT[n+i*p_Np];
@@ -1318,29 +1318,29 @@ kernel void boltzmannPmlVolumeCub3D(const int Nelements,
   }
 }
 
-kernel void boltzmannSAPmlVolume3D(const int Nelements,
-				      const int * restrict elementIds,
+@kernel void boltzmannSAPmlVolume3D(const int Nelements,
+				      @restrict const  int *  elementIds,
 				      const dfloat ramp,
 				      const dfloat drampdt,
-				      const dfloat * restrict vgeo,
-				      const dfloat * restrict sigmax,
-				      const dfloat * restrict sigmay,
-				      const dfloat * restrict sigmaz,
-				      const dfloat * restrict DrT,
-				      const dfloat * restrict DsT,
-				      const dfloat * restrict DtT,
-				      const dfloat4 * restrict q,
-				      const dfloat * restrict pmlq,
-				            dfloat4 * restrict rhsq,
-				            dfloat * restrict rhspmlq){
+				      @restrict const  dfloat *  vgeo,
+				      @restrict const  dfloat *  sigmax,
+				      @restrict const  dfloat *  sigmay,
+				      @restrict const  dfloat *  sigmaz,
+				      @restrict const  dfloat *  DrT,
+				      @restrict const  dfloat *  DsT,
+				      @restrict const  dfloat *  DtT,
+				      @restrict const  dfloat4 *  q,
+				      @restrict const  dfloat *  pmlq,
+				            @restrict dfloat4 *  rhsq,
+				            @restrict dfloat *  rhspmlq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][10][p_Np];
-    exclusive int element;
+    @shared dfloat s_q[p_NblockV][10][p_Np];
+    @exclusive int element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 	int e = eo+es; // element in block
 
@@ -1368,11 +1368,11 @@ kernel void boltzmannSAPmlVolume3D(const int Nelements,
 	}
       }
     }
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -1433,7 +1433,7 @@ kernel void boltzmannSAPmlVolume3D(const int Nelements,
 	  dfloat dq6dt= 0.f, dq7dt= 0.f, dq8dt= 0.f, dq9dt= 0.f, dq10dt= 0.f;
 	 
 
-	   occaUnroll(p_Np)
+	   #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat Drni  = DrT[n+i*p_Np];
 	    const dfloat Dsni  = DsT[n+i*p_Np];

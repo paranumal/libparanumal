@@ -1,8 +1,8 @@
 
 void flux(const dfloat nx, const dfloat ny, const dfloat nz,
 	  const dfloat alpha, const dfloat beta,
-	  const dfloat * restrict dq,
-	  dfloat * restrict fluxq){
+	  @restrict const  dfloat *  dq,
+	  @restrict dfloat *  fluxq){
 
   fluxq[0] = alpha*dq[0] - beta*(nx*dq[1] + ny*dq[2] + nz*dq[3]);
 
@@ -22,27 +22,27 @@ void flux(const dfloat nx, const dfloat ny, const dfloat nz,
 
 
 // nodal DG lift
-kernel void boltzmannSurfaceTri3D(const int Nelements,
-				  const dfloat * restrict sgeo,
-				  const dfloat * restrict LIFTT,
-				  const int   * restrict vmapM,
-				  const int   * restrict vmapP,
+@kernel void boltzmannSurfaceTri3D(const int Nelements,
+				  @restrict const  dfloat *  sgeo,
+				  @restrict const  dfloat *  LIFTT,
+				  @restrict const  int   *  vmapM,
+				  @restrict const  int   *  vmapP,
 				  const dfloat time,
-				  const dfloat * restrict x,
-				  const dfloat * restrict y,
-				  const dfloat * restrict z,
-				  const dfloat * restrict q,
-				  dfloat * restrict rhsq){
+				  @restrict const  dfloat *  x,
+				  @restrict const  dfloat *  y,
+				  @restrict const  dfloat *  z,
+				  @restrict const  dfloat *  q,
+				  @restrict dfloat *  rhsq){
   
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    shared dfloat s_dq[p_Nfields][p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_dq[p_Nfields][p_NblockS][p_Nfp*p_Nfaces];
 
     // for all faces (global barrier at end of body of this loop)
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_Nmaxnodes;++n;inner0){ // max(p_Np, p_Nfaces*p_Nfp)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_Nmaxnodes;++n;@inner(0)){ // max(p_Np, p_Nfaces*p_Nfp)
 	const int eM = eo + es;
 	
 	if(eM<Nelements && n<p_Nfp*p_Nfaces){
@@ -67,7 +67,7 @@ kernel void boltzmannSurfaceTri3D(const int Nelements,
 	  
 	  dfloat dq[p_Nfields], fluxq[p_Nfields];
 	  
-	  occaUnroll(p_Nfields)
+	  #pragma unroll p_Nfields
 	    for(int fld=0;fld<p_Nfields;++fld){
 	      const dfloat qM = q[vidM+fld*p_Np];
 	      const dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
@@ -85,7 +85,7 @@ kernel void boltzmannSurfaceTri3D(const int Nelements,
 	  // compute D*(0.5*[q] + 0.5*D*[q])
 	  flux(nx, ny, nz, zero, one, fluxq, dq);
 	  
-	  occaUnroll(p_Nfields)
+	  #pragma unroll p_Nfields
 	    for(int fld=0;fld<p_Nfields;++fld){
 	      s_dq[fld][es][n] =  invJ*sJ*dq[fld];
 	    }
@@ -93,17 +93,17 @@ kernel void boltzmannSurfaceTri3D(const int Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_Nmaxnodes;++n;inner0){ // max(p_Np, p_Nfaces*p_Nfp)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_Nmaxnodes;++n;@inner(0)){ // max(p_Np, p_Nfaces*p_Nfp)
 	  const int eM = eo + es;
 	  const dfloat foo = 1.2;
 	  if(eM<Nelements && n<p_Np){
 	    
 	    dfloat r_rhsq[p_Nfields];
 	    
-	    occaUnroll(p_Nfields)
+	    #pragma unroll p_Nfields
 	      for(int fld=0;fld<p_Nfields;++fld){
 		r_rhsq[fld] = rhsq[n + fld*p_Np + eM*p_Np*p_Nfields];
 	      }
@@ -113,13 +113,13 @@ kernel void boltzmannSurfaceTri3D(const int Nelements,
 	      
 	      const dfloat sc = LIFTT[n+m*p_Np];
 	      
-	      occaUnroll(p_Nfields)
+	      #pragma unroll p_Nfields
 		for(int fld=0;fld<p_Nfields;++fld){
 		  r_rhsq[fld] += sc*s_dq[fld][es][m];  // 4 smem bytes per flop (2 TFLOPS limit)
 		}
 	    }
 	    
-	    occaUnroll(p_Nfields)
+	    #pragma unroll p_Nfields
 	      for(int fld=0;fld<p_Nfields;++fld){
 		rhsq[n + fld*p_Np + eM*p_Np*p_Nfields] = r_rhsq[fld];
 	      }

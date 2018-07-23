@@ -389,13 +389,18 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
   }
 
-  occa::kernelInfo kernelInfo;
+  occa::properties kernelInfo;
+ kernelInfo["defines"].asObject();
+ kernelInfo["includes"].asArray();
+ kernelInfo["header"].asArray();
+ kernelInfo["flags"].asObject();
+
   if(bns->dim==3)
     meshOccaSetup3D(mesh, options, kernelInfo);
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
-  kernelInfo.addParserFlag("automate-add-barriers", "disabled");   
+  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";   
 
   // Setup MRAB PML
   if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
@@ -591,102 +596,102 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   int maxCubNodes = mymax(maxNodes,mesh->cubNp);
 
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
-  kernelInfo.addDefine("p_maxCubNodes", maxCubNodes);
+  kernelInfo["defines/" "p_maxNodes"]= maxNodes;
+  kernelInfo["defines/" "p_maxCubNodes"]= maxCubNodes;
 
 
   int NblockV = 128/mesh->Np; // works for CUDA
   // NblockV = 1; //!!!!!
-  kernelInfo.addDefine("p_NblockV", NblockV);
+  kernelInfo["defines/" "p_NblockV"]= NblockV;
 
   int NblockS = 128/maxNodes; // works for CUDA
 
   // NblockS = 1; // !!!!!
-  kernelInfo.addDefine("p_NblockS", NblockS);
+  kernelInfo["defines/" "p_NblockS"]= NblockS;
 
   int NblockCub = 128/mesh->cubNp; // works for CUDA
 
   // NblockCub = 1; // !!!!!!!!!!!!!!!!!!!!!
 
-  kernelInfo.addDefine("p_NblockCub", NblockCub);
+  kernelInfo["defines/" "p_NblockCub"]= NblockCub;
 
   // physics 
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
-  kernelInfo.addDefine("p_sqrtRT", bns->sqrtRT);
-  kernelInfo.addDefine("p_isqrtRT", (dfloat)(1./bns->sqrtRT));
-  kernelInfo.addDefine("p_sqrt2", (dfloat)sqrt(2.));
-  kernelInfo.addDefine("p_isq12", (dfloat)sqrt(1./12.));
-  kernelInfo.addDefine("p_isq6", (dfloat)sqrt(1./6.));
-  kernelInfo.addDefine("p_invsqrt2", (dfloat)sqrt(1./2.));
-  kernelInfo.addDefine("p_tauInv", bns->tauInv);
+  kernelInfo["defines/" "p_Lambda2"]= 0.5f;
+  kernelInfo["defines/" "p_sqrtRT"]= bns->sqrtRT;
+  kernelInfo["defines/" "p_isqrtRT"]= (dfloat)(1./bns->sqrtRT);
+  kernelInfo["defines/" "p_sqrt2"]= (dfloat)sqrt(2.);
+  kernelInfo["defines/" "p_isq12"]= (dfloat)sqrt(1./12.);
+  kernelInfo["defines/" "p_isq6"]= (dfloat)sqrt(1./6.);
+  kernelInfo["defines/" "p_invsqrt2"]= (dfloat)sqrt(1./2.);
+  kernelInfo["defines/" "p_tauInv"]= bns->tauInv;
 
   dfloat AX = 0, AY = 0, AZ = 0;
 
   if(options.getArgs("BODYFORCE-X", AX))
     if(AX)
-      kernelInfo.addDefine("p_AX", AX/bns->sqrtRT);
+      kernelInfo["defines/" "p_AX"]= AX/bns->sqrtRT;
   
   if(options.getArgs("BODYFORCE-Y", AY))
     if(AY)
-      kernelInfo.addDefine("p_AY", AY/bns->sqrtRT);
+      kernelInfo["defines/" "p_AY"]= AY/bns->sqrtRT;
 
   if(bns->dim==3){
     if(options.getArgs("BODYFORCE-Z", AZ))
       if(AZ)
-        kernelInfo.addDefine("p_AZ", AZ/bns->sqrtRT);
+        kernelInfo["defines/" "p_AZ"]= AZ/bns->sqrtRT;
    }
 
-  kernelInfo.addDefine("p_q1bar", q1bar);
-  kernelInfo.addDefine("p_q2bar", q2bar);
-  kernelInfo.addDefine("p_q3bar", q3bar);
-  kernelInfo.addDefine("p_q4bar", q4bar);
-  kernelInfo.addDefine("p_q5bar", q5bar);
-  kernelInfo.addDefine("p_q6bar", q6bar);
+  kernelInfo["defines/" "p_q1bar"]= q1bar;
+  kernelInfo["defines/" "p_q2bar"]= q2bar;
+  kernelInfo["defines/" "p_q3bar"]= q3bar;
+  kernelInfo["defines/" "p_q4bar"]= q4bar;
+  kernelInfo["defines/" "p_q5bar"]= q5bar;
+  kernelInfo["defines/" "p_q6bar"]= q6bar;
   
   if(bns->dim==3){
-    kernelInfo.addDefine("p_q7bar", q7bar);
-    kernelInfo.addDefine("p_q8bar", q8bar);
-    kernelInfo.addDefine("p_q9bar", q9bar);
-    kernelInfo.addDefine("p_q10bar", q10bar);
+    kernelInfo["defines/" "p_q7bar"]= q7bar;
+    kernelInfo["defines/" "p_q8bar"]= q8bar;
+    kernelInfo["defines/" "p_q9bar"]= q9bar;
+    kernelInfo["defines/" "p_q10bar"]= q10bar;
   }
 
-  kernelInfo.addDefine("p_alpha0", (dfloat).01f);
-  kernelInfo.addDefine("p_pmlAlpha", (dfloat)0.2f);
-  kernelInfo.addDefine("p_blockSize", blockSize);
-  kernelInfo.addDefine("p_NrkStages", bns->NrkStages);
+  kernelInfo["defines/" "p_alpha0"]= (dfloat).01f;
+  kernelInfo["defines/" "p_pmlAlpha"]= (dfloat)0.2f;
+  kernelInfo["defines/" "p_blockSize"]= blockSize;
+  kernelInfo["defines/" "p_NrkStages"]= bns->NrkStages;
 
   if(options.compareArgs("ABSORBING LAYER", "PML"))
-    kernelInfo.addDefine("p_PML", (int) 1);
+    kernelInfo["defines/" "p_PML"]= (int) 1;
   else
-    kernelInfo.addDefine("p_PML", (int) 0);
+    kernelInfo["defines/" "p_PML"]= (int) 0;
 
 
 
   if(bns->fexplicit) // full explicit or semi-analaytic
-    kernelInfo.addDefine("p_SEMI_ANALYTIC", (int) 0);
+    kernelInfo["defines/" "p_SEMI_ANALYTIC"]= (int) 0;
   else
-    kernelInfo.addDefine("p_SEMI_ANALYTIC", (int) 1);
+    kernelInfo["defines/" "p_SEMI_ANALYTIC"]= (int) 1;
 
   if(options.compareArgs("TIME INTEGRATOR", "MRSAAB"))
-    kernelInfo.addDefine("p_MRSAAB", (int) 1);
+    kernelInfo["defines/" "p_MRSAAB"]= (int) 1;
   else
-    kernelInfo.addDefine("p_MRSAAB", (int) 0);
+    kernelInfo["defines/" "p_MRSAAB"]= (int) 0;
 
 
-  kernelInfo.addDefine("p_Nvort", bns->Nvort);
+  kernelInfo["defines/" "p_Nvort"]= bns->Nvort;
 
   if(bns->dim==3){
-    kernelInfo.addDefine("p_isoNfields", bns->isoNfields);
+    kernelInfo["defines/" "p_isoNfields"]= bns->isoNfields;
     
     // Define Isosurface Area Tolerance
-    kernelInfo.addDefine("p_triAreaTol", (dfloat) 1.0E-16);
+    kernelInfo["defines/" "p_triAreaTol"]= (dfloat) 1.0E-16;
 
-    kernelInfo.addDefine("p_dim", bns->dim);
-    kernelInfo.addDefine("p_plotNp", mesh->plotNp);
-    kernelInfo.addDefine("p_plotNelements", mesh->plotNelements);
+    kernelInfo["defines/" "p_dim"]= bns->dim;
+    kernelInfo["defines/" "p_plotNp"]= mesh->plotNp;
+    kernelInfo["defines/" "p_plotNelements"]= mesh->plotNelements;
     
     int plotNthreads = mymax(mesh->Np, mymax(mesh->plotNp, mesh->plotNelements));
-    kernelInfo.addDefine("p_plotNthreads", plotNthreads);
+    kernelInfo["defines/" "p_plotNthreads"]= plotNthreads;
     
  } 
 
@@ -710,7 +715,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
   string boundaryHeaderFileName; 
   options.getArgs("DATA FILE", boundaryHeaderFileName);
-  kernelInfo.addInclude((char*)boundaryHeaderFileName.c_str());
+  kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
   for (int r=0;r<mesh->size;r++){
@@ -721,31 +726,31 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
       sprintf(fileName, DBNS "/okl/bnsVolume%s.okl", suffix);
 
       sprintf(kernelName, "bnsVolume%s", suffix);
-      bns->volumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      bns->volumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
 
       // No that nonlinear terms are always integrated using cubature rules
       // this cubature shift is for sigma terms on pml formulation
       if(bns->pmlcubature){
         sprintf(kernelName, "bnsPmlVolumeCub%s", suffix);
-        bns->pmlVolumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        bns->pmlVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       }else{
         sprintf(kernelName, "bnsPmlVolume%s", suffix);
-        bns->pmlVolumeKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);        
+        bns->pmlVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
       }
 
       // Relaxation kernels
       sprintf(fileName, DBNS "/okl/bnsRelaxation%s.okl", suffix);
 
       sprintf(kernelName, "bnsRelaxation%s", suffix);
-      bns->relaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      bns->relaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       if(bns->pmlcubature){
         sprintf(kernelName, "bnsPmlRelaxationCub%s", suffix);        
-        bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);        
+        bns->pmlRelaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
       }else{
         sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
-        bns->pmlRelaxationKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);        
+        bns->pmlRelaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
       }
 
       
@@ -754,16 +759,16 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
       if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
         sprintf(kernelName, "bnsMRSurface%s", suffix);
-        bns->surfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+        bns->surfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
         sprintf(kernelName, "bnsMRPmlSurface%s", suffix);
-        bns->pmlSurfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+        bns->pmlSurfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
       }else{
         sprintf(kernelName, "bnsSurface%s", suffix);
-        bns->surfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+        bns->surfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
         sprintf(kernelName, "bnsPmlSurface%s", suffix);
-        bns->pmlSurfaceKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+        bns->pmlSurfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
       }
 
       
@@ -771,73 +776,73 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
       // Update Kernels
       if(options.compareArgs("TIME INTEGRATOR","LSERK")){
         sprintf(kernelName, "bnsLSERKUpdate%s", suffixUpdate);
-        bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+        bns->updateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
 
         sprintf(kernelName, "bnsLSERKPmlUpdate%s", suffixUpdate);
-        bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+        bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
       } else if(options.compareArgs("TIME INTEGRATOR","SARK")){
         sprintf(kernelName, "bnsSARKUpdateStage%s", suffixUpdate);
-        bns->updateStageKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+        bns->updateStageKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
         sprintf(kernelName, "bnsSARKPmlUpdateStage%s", suffixUpdate);
-        bns->pmlUpdateStageKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+        bns->pmlUpdateStageKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
         sprintf(kernelName, "bnsSARKUpdate%s", suffixUpdate);
-        bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+        bns->updateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
 
         sprintf(kernelName, "bnsSARKPmlUpdate%s", suffixUpdate);
-        bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+        bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
 
           sprintf(fileName, DBNS "/okl/bnsErrorEstimate.okl");
           sprintf(kernelName, "bnsErrorEstimate");
-          bns->errorEstimateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+          bns->errorEstimateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       } else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
       
         sprintf(kernelName, "bnsMRSAABTraceUpdate%s", suffixUpdate);
-        bns->traceUpdateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        bns->traceUpdateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
         sprintf(kernelName, "bnsMRSAABUpdate%s", suffixUpdate);
-        bns->updateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+        bns->updateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
 
         sprintf(kernelName, "bnsMRSAABPmlUpdate%s", suffixUpdate);
-        bns->pmlUpdateKernel = mesh->device.buildKernelFromSource(fileName, kernelName,kernelInfo);
+        bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
       }
 
       sprintf(fileName, DBNS "/okl/bnsVorticity%s.okl",suffix);
       sprintf(kernelName, "bnsVorticity%s", suffix);
-      bns->vorticityKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      bns->vorticityKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 
       // This needs to be unified
       mesh->haloExtractKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl","meshHaloExtract3D",kernelInfo);
+          mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl","meshHaloExtract3D",kernelInfo);
 
 
   if(bns->dim==3){
 
         mesh->gatherKernel = 
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl","gather", kernelInfo);
+          mesh->device.buildKernel(DHOLMES "/okl/gather.okl","gather", kernelInfo);
 
         mesh->scatterKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl","scatter",kernelInfo);
+          mesh->device.buildKernel(DHOLMES "/okl/scatter.okl","scatter",kernelInfo);
 
         mesh->gatherScatterKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl", "gatherScatter", kernelInfo);
+          mesh->device.buildKernel(DHOLMES "/okl/gatherScatter.okl", "gatherScatter", kernelInfo);
 
         mesh->getKernel = 
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl", "get", kernelInfo);
+          mesh->device.buildKernel(DHOLMES "/okl/get.okl", "get", kernelInfo);
 
         mesh->putKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl", "put",kernelInfo);
+          mesh->device.buildKernel(DHOLMES "/okl/put.okl", "put",kernelInfo);
 
-        bns->dotMultiplyKernel = mesh->device.buildKernelFromSource(DBNS "/okl/bnsDotMultiply.okl", "bnsDotMultiply", kernelInfo);
+        bns->dotMultiplyKernel = mesh->device.buildKernel(DBNS "/okl/bnsDotMultiply.okl", "bnsDotMultiply", kernelInfo);
 
         // kernels from volume file
         sprintf(fileName, DBNS "/okl/bnsIsoSurface3D.okl");
         sprintf(kernelName, "bnsIsoSurface3D");
 
         bns->isoSurfaceKernel =
-          mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);        
+          mesh->device.buildKernel(fileName, kernelName, kernelInfo);        
       }
     }
     MPI_Barrier(MPI_COMM_WORLD);

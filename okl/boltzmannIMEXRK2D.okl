@@ -1,19 +1,19 @@
 
-kernel void boltzmannIMEXRKStageUpdate2D(const int Nelements,
-                                         const int * restrict elementIds,
+@kernel void boltzmannIMEXRKStageUpdate2D(const int Nelements,
+                                         @restrict const  int *  elementIds,
                                          const int NtotalElements,
                                          const int rk,
                                          const dfloat dt,  
-                                         const dfloat * restrict rkAex,
-                                         const dfloat * restrict rkAim,
-                                         const dfloat * restrict q,
-                                         const dfloat * restrict rkrhsqex,
-                                         const dfloat * restrict rkrhsqim,
-                                               dfloat * restrict rkq){
+                                         @restrict const  dfloat *  rkAex,
+                                         @restrict const  dfloat *  rkAim,
+                                         @restrict const  dfloat *  q,
+                                         @restrict const  dfloat *  rkrhsqex,
+                                         @restrict const  dfloat *  rkrhsqim,
+                                               @restrict dfloat *  rkq){
   
   // Runge Kutta intermediate stage
-  for(int es=0;es<Nelements;++es;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int es=0;es<Nelements;++es;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       const int e = elementIds[es];
       const int id = p_Nfields*(n + e*p_Np);
@@ -36,29 +36,29 @@ kernel void boltzmannIMEXRKStageUpdate2D(const int Nelements,
 } 
 
 
-kernel void boltzmannIMEXRKPmlStageUpdate2D(const int pmlNelements,
-                                        const int   * restrict pmlElementIds,
-                                        const int   * restrict pmlIds,
+@kernel void boltzmannIMEXRKPmlStageUpdate2D(const int pmlNelements,
+                                        @restrict const  int   *  pmlElementIds,
+                                        @restrict const  int   *  pmlIds,
                                         const int NtotalElements,
                                         const int rk,
                                         const dfloat dt,  
-                                        const dfloat * restrict rkAex,
-                                        const dfloat * restrict rkAim,
-                                        const dfloat * restrict q,
-                                        const dfloat * restrict qx,
-                                        const dfloat * restrict qy,
-                                        const dfloat * restrict rkrhsqex,
-                                        const dfloat * restrict rkrhsqim,
-                                        const dfloat * restrict rkrhsqx,
-                                        const dfloat * restrict rkrhsqy,
-                                              dfloat * restrict rkq,
-                                              dfloat * restrict rkqx,
-                                              dfloat * restrict rkqy){
+                                        @restrict const  dfloat *  rkAex,
+                                        @restrict const  dfloat *  rkAim,
+                                        @restrict const  dfloat *  q,
+                                        @restrict const  dfloat *  qx,
+                                        @restrict const  dfloat *  qy,
+                                        @restrict const  dfloat *  rkrhsqex,
+                                        @restrict const  dfloat *  rkrhsqim,
+                                        @restrict const  dfloat *  rkrhsqx,
+                                        @restrict const  dfloat *  rkrhsqy,
+                                              @restrict dfloat *  rkq,
+                                              @restrict dfloat *  rkqx,
+                                              @restrict dfloat *  rkqy){
   
   // Runge Kutta intermediate stage
-  for(int es=0;es<pmlNelements;++es;outer0){
-    exclusive int e;
-    for(int n=0; n < p_Np; ++n; inner0){
+  for(int es=0;es<pmlNelements;++es;@outer(0)){
+    @exclusive int e;
+    for(int n=0; n < p_Np; ++n; @inner(0)){
       e = pmlElementIds[es];
       if (n < p_Np){
         const int pmlId = pmlIds[es];
@@ -95,26 +95,26 @@ kernel void boltzmannIMEXRKPmlStageUpdate2D(const int pmlNelements,
 
 
 
-kernel void boltzmannIMEXRKUpdate2D(const int Nelements,
-                                    const int * restrict elementIds,
+@kernel void boltzmannIMEXRKUpdate2D(const int Nelements,
+                                    @restrict const  int *  elementIds,
                                     const int NtotalElements,
                                     const int rk,
                                     const dfloat dt,  
-                                    const dfloat * restrict rkBex,
-                                    const dfloat * restrict rkBim,
-                                    const dfloat * restrict rkEex,
-                                    const dfloat * restrict rkEim,
-                                    const dfloat * restrict rhsqex,
-                                    const dfloat * restrict rhsqim,
-                                          dfloat * restrict rkrhsqex,
-                                          dfloat * restrict rkrhsqim,
-                                    const dfloat * restrict q,
-                                          dfloat * restrict rkq,
-                                          dfloat * restrict rkerr){
+                                    @restrict const  dfloat *  rkBex,
+                                    @restrict const  dfloat *  rkBim,
+                                    @restrict const  dfloat *  rkEex,
+                                    @restrict const  dfloat *  rkEim,
+                                    @restrict const  dfloat *  rhsqex,
+                                    @restrict const  dfloat *  rhsqim,
+                                          @restrict dfloat *  rkrhsqex,
+                                          @restrict dfloat *  rkrhsqim,
+                                    @restrict const  dfloat *  q,
+                                          @restrict dfloat *  rkq,
+                                          @restrict dfloat *  rkerr){
   
   // Runge Kutta intermediate stage
-  for(int es=0;es<Nelements;++es;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int es=0;es<Nelements;++es;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       const int e = elementIds[es];
       const int id = p_Nfields*(n + e*p_Np);
@@ -153,35 +153,35 @@ kernel void boltzmannIMEXRKUpdate2D(const int Nelements,
 }
 
 
-kernel void boltzmannIMEXRKPmlUpdate2D(const int pmlNelements,
-                                        const int   * restrict pmlElementIds,
-                                        const int   * restrict pmlIds,
+@kernel void boltzmannIMEXRKPmlUpdate2D(const int pmlNelements,
+                                        @restrict const  int   *  pmlElementIds,
+                                        @restrict const  int   *  pmlIds,
                                         const int NtotalElements,
                                         const int rk,
                                         const dfloat dt,  
-                                        const dfloat * restrict rkBex,
-                                        const dfloat * restrict rkBim,
-                                        const dfloat * restrict rkEex,
-                                        const dfloat * restrict rkEim,
-                                        const dfloat * restrict q,
-                                        const dfloat * restrict qx,
-                                        const dfloat * restrict qy,
-                                        const dfloat * restrict rhsqex,
-                                        const dfloat * restrict rhsqim,
-                                        const dfloat * restrict rhsqx,
-                                        const dfloat * restrict rhsqy,
-                                              dfloat * restrict rkrhsqex,
-                                              dfloat * restrict rkrhsqim,
-                                              dfloat * restrict rkrhsqx,
-                                              dfloat * restrict rkrhsqy,
-                                              dfloat * restrict rkq,
-                                              dfloat * restrict rkqx,
-                                              dfloat * restrict rkqy,
-                                              dfloat * restrict rkerr){
+                                        @restrict const  dfloat *  rkBex,
+                                        @restrict const  dfloat *  rkBim,
+                                        @restrict const  dfloat *  rkEex,
+                                        @restrict const  dfloat *  rkEim,
+                                        @restrict const  dfloat *  q,
+                                        @restrict const  dfloat *  qx,
+                                        @restrict const  dfloat *  qy,
+                                        @restrict const  dfloat *  rhsqex,
+                                        @restrict const  dfloat *  rhsqim,
+                                        @restrict const  dfloat *  rhsqx,
+                                        @restrict const  dfloat *  rhsqy,
+                                              @restrict dfloat *  rkrhsqex,
+                                              @restrict dfloat *  rkrhsqim,
+                                              @restrict dfloat *  rkrhsqx,
+                                              @restrict dfloat *  rkrhsqy,
+                                              @restrict dfloat *  rkq,
+                                              @restrict dfloat *  rkqx,
+                                              @restrict dfloat *  rkqy,
+                                              @restrict dfloat *  rkerr){
   // Runge Kutta intermediate stage
-  for(int es=0;es<pmlNelements;++es;outer0){
-    exclusive int e;
-    for(int n=0; n < p_Np; ++n; inner0){
+  for(int es=0;es<pmlNelements;++es;@outer(0)){
+    @exclusive int e;
+    for(int n=0; n < p_Np; ++n; @inner(0)){
       e = pmlElementIds[es];
       if (n < p_Np){
         const int pmlId = pmlIds[es];
@@ -244,37 +244,37 @@ kernel void boltzmannIMEXRKPmlUpdate2D(const int pmlNelements,
 
 
 
-kernel void boltzmannIMEXRKImplicitSolveCub2D(const int Nelements,
+@kernel void boltzmannIMEXRKImplicitSolveCub2D(const int Nelements,
                           const int rk, 
                           const dfloat dt, 
-                          const dfloat * restrict rkAim, 
-                          const dfloat * restrict cubInterpT,
-                          const dfloat * restrict cubProjectT,
-                                dfloat * restrict q,
-                                dfloat * restrict rhsqim){ 
+                          @restrict const  dfloat *  rkAim, 
+                          @restrict const  dfloat *  cubInterpT,
+                          @restrict const  dfloat *  cubProjectT,
+                                @restrict dfloat *  q,
+                                @restrict dfloat *  rhsqim){ 
 
-  for(int eo=0;eo<Nelements;eo+=p_NblockCub;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockCub;@outer(0)){  // for all elements
 
-    // shared memory for q at nodes
-    shared dfloat s_q[p_NblockCub][p_Nfields][p_Np];
+    // @shared memory for q at nodes
+    @shared dfloat s_q[p_NblockCub][p_Nfields][p_Np];
     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-    shared dfloat s_cubN4[p_NblockCub][p_cubNp];
-    shared dfloat s_cubN5[p_NblockCub][p_cubNp];
-    shared dfloat s_cubN6[p_NblockCub][p_cubNp];
+    @shared dfloat s_cubN4[p_NblockCub][p_cubNp];
+    @shared dfloat s_cubN5[p_NblockCub][p_cubNp];
+    @shared dfloat s_cubN6[p_NblockCub][p_cubNp];
 
-    exclusive int   e;  
+    @exclusive int   e;  
 
-    exclusive dfloat akk; 
+    @exclusive dfloat akk; 
     //
-    exclusive dfloat N4c, N5c, N6c;
+    @exclusive dfloat N4c, N5c, N6c;
     //
-    exclusive dfloat qi4, qi5, qi6;
-    // exclusive dfloat q1, q2, q3 ;  
-    exclusive dfloat q4, q5, q6 ; 
+    @exclusive dfloat qi4, qi5, qi6;
+    // @exclusive dfloat q1, q2, q3 ;  
+    @exclusive dfloat q4, q5, q6 ; 
 
-    // prefetch q to shared
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){    
+    // prefetch q to @shared
+    for(int es=0;es<p_NblockCub;++es;@inner(1)){
+      for(int n=0;n<p_maxCubNodes;++n;@inner(0)){    
        int et = eo+es; // element in block
         if(et<Nelements){
         e = et;
@@ -288,12 +288,12 @@ kernel void boltzmannIMEXRKImplicitSolveCub2D(const int Nelements,
        }
      }
     
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
     // interpolate q to cubature
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){
+    for(int es=0;es<p_NblockCub;++es;@inner(1)){
+      for(int n=0;n<p_maxCubNodes;++n;@inner(0)){
 
         int et = eo+es; // element in block
         if(et<Nelements){
@@ -301,7 +301,7 @@ kernel void boltzmannIMEXRKImplicitSolveCub2D(const int Nelements,
             dfloat q1 = 0.f, q2 = 0.f, q3 =0.f ;
             q4=0.f ;  q5 =0.f ; q6 =0.f ;
 
-            occaUnroll(p_Np)
+            #pragma unroll p_Np
             for(int m=0;m<p_Np;++m){
 
               const dfloat Icn  = cubInterpT[m*p_cubNp+n];
@@ -333,11 +333,11 @@ kernel void boltzmannIMEXRKImplicitSolveCub2D(const int Nelements,
     }
   }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);  
+    // make sure all node data is loaded into @shared
+    @barrier("local");  
       // partial projection to nodes from cubature-sub-group
-    for(int es=0;es<p_NblockCub;++es;inner1){
-    for(int n=0;n<p_maxCubNodes;++n;inner0){
+    for(int es=0;es<p_NblockCub;++es;@inner(1)){
+    for(int n=0;n<p_maxCubNodes;++n;@inner(0)){
       int et = eo+es; // element in block
       if(et<Nelements){
 
@@ -375,18 +375,18 @@ kernel void boltzmannIMEXRKImplicitSolveCub2D(const int Nelements,
     }
       }
       
-      // make sure all cubature node data is loaded into shared
-    barrier(localMemFence);
+      // make sure all cubature node data is loaded into @shared
+    @barrier("local");
       
       // partial projection to nodes from cubature-sub-group
-  for(int es=0;es<p_NblockCub;++es;inner1){
-    for(int n=0;n<p_maxCubNodes;++n;inner0){
+  for(int es=0;es<p_NblockCub;++es;@inner(1)){
+    for(int n=0;n<p_maxCubNodes;++n;@inner(0)){
       int et = eo+es; // element in block
       if(et<Nelements){
         if(n<p_Np){
 
        
-      // use temporaries for part sums for N4,N5,N6 because of exclusives
+      // use temporaries for part sums for N4,N5,N6 because of @exclusives
         dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
 
         for(int i=0;i<p_cubNp;++i){
@@ -424,39 +424,39 @@ kernel void boltzmannIMEXRKImplicitSolveCub2D(const int Nelements,
 
 
 // Fully Explicit Scheme Uses Clasical half Half Splitting
-kernel void boltzmannIMEXRKPmlDampingCub2D(const int pmlNelements,
-                                    const int * restrict pmlElementIds,
-                                    const int * restrict pmlIds,
+@kernel void boltzmannIMEXRKPmlDampingCub2D(const int pmlNelements,
+                                    @restrict const  int *  pmlElementIds,
+                                    @restrict const  int *  pmlIds,
                                     const int nrhs,
                                     const int shift,
-                                    const dfloat * restrict cubInterpT,
-                                    const dfloat * restrict cubProjectT,
-                                    const dfloat * restrict pmlSigmaX,
-                                    const dfloat * restrict pmlSigmaY, 
-                                    const dfloat * restrict q,
-                                    const dfloat * restrict pmlqx,
-                                    const dfloat * restrict pmlqy,
-                                          dfloat * restrict rhsq,
-                                          dfloat * restrict pmlrhsqx,
-                                          dfloat * restrict pmlrhsqy){
+                                    @restrict const  dfloat *  cubInterpT,
+                                    @restrict const  dfloat *  cubProjectT,
+                                    @restrict const  dfloat *  pmlSigmaX,
+                                    @restrict const  dfloat *  pmlSigmaY, 
+                                    @restrict const  dfloat *  q,
+                                    @restrict const  dfloat *  pmlqx,
+                                    @restrict const  dfloat *  pmlqy,
+                                          @restrict dfloat *  rhsq,
+                                          @restrict dfloat *  pmlrhsqx,
+                                          @restrict dfloat *  pmlrhsqy){
 
-    for(int eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
+    for(int eo=0;eo<pmlNelements;eo+=p_NblockCub;@outer(0)){  // for all elements
 
-    // shared memory for q at nodes
-    shared dfloat  s_q[p_NblockCub][p_Nfields][p_Np];
-    shared dfloat s_qx[p_NblockCub][p_Nfields][p_Np];
-    shared dfloat s_qy[p_NblockCub][p_Nfields][p_Np];
+    // @shared memory for q at nodes
+    @shared dfloat  s_q[p_NblockCub][p_Nfields][p_Np];
+    @shared dfloat s_qx[p_NblockCub][p_Nfields][p_Np];
+    @shared dfloat s_qy[p_NblockCub][p_Nfields][p_Np];
 
     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-    shared dfloat s_cubq[p_NblockCub][p_Nfields][p_cubNp];
-    shared dfloat s_cubqx[p_NblockCub][p_Nfields][p_cubNp];
-    shared dfloat s_cubqy[p_NblockCub][p_Nfields][p_cubNp];
+    @shared dfloat s_cubq[p_NblockCub][p_Nfields][p_cubNp];
+    @shared dfloat s_cubqx[p_NblockCub][p_Nfields][p_cubNp];
+    @shared dfloat s_cubqy[p_NblockCub][p_Nfields][p_cubNp];
    
-    exclusive int e, pmlId;
+    @exclusive int e, pmlId;
 
-    // prefetch q to shared
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){      
+    // prefetch q to @shared
+    for(int es=0;es<p_NblockCub;++es;@inner(1)){
+      for(int n=0;n<p_maxCubNodes;++n;@inner(0)){      
         int et = eo+es; // element in block
         if(et<pmlNelements){
             e     = pmlElementIds[et];
@@ -466,7 +466,7 @@ kernel void boltzmannIMEXRKPmlDampingCub2D(const int pmlNelements,
               const int id  = p_Nfields*(e*p_Np + n);
               const int pid = p_Nfields*(pmlId*p_Np + n);
               
-              occaUnroll(p_Nfields)
+              #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields;++fld){
                 s_q[es][fld][n]   = q[id +fld];
                 s_qx[es][fld][n]  = pmlqx[pid+fld];
@@ -477,12 +477,12 @@ kernel void boltzmannIMEXRKPmlDampingCub2D(const int pmlNelements,
        }
     }
     
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
     // interpolate q to cubature
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    for(int es=0;es<p_NblockCub;++es;@inner(1)){
+      for(int n=0;n<p_maxCubNodes;++n;@inner(0)){     
         int et = eo+es; // element in block
         if(et<pmlNelements){
           if(n<p_cubNp){
@@ -490,17 +490,17 @@ kernel void boltzmannIMEXRKPmlDampingCub2D(const int pmlNelements,
             dfloat r_qx[p_Nfields];
             dfloat r_qy[p_Nfields];
             
-            occaUnroll(p_Nfields)
+            #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nfields ; fld++){
               r_q[fld]  = 0.f;
               r_qx[fld] = 0.f;
               r_qy[fld] = 0.f;
             }
             
-            occaUnroll(p_Np)
+            #pragma unroll p_Np
             for(int m=0;m<p_Np;++m){
               const dfloat Icn  = cubInterpT[m*p_cubNp+n];   
-              occaUnroll(p_Nfields)
+              #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields;++fld){
                 r_q[fld]  += Icn*s_q[es][fld][m];
                 r_qx[fld] += Icn*s_qx[es][fld][m];
@@ -515,7 +515,7 @@ kernel void boltzmannIMEXRKPmlDampingCub2D(const int pmlNelements,
             const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
             const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
             
-            occaUnroll(p_Nfields)
+            #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nfields;++fld){       
               s_cubqx[es][fld][n] = -msigmaxe*r_qx[fld];
               s_cubqy[es][fld][n] = -msigmaye*r_qy[fld];
@@ -531,12 +531,12 @@ kernel void boltzmannIMEXRKPmlDampingCub2D(const int pmlNelements,
       }
     }
 
-    // make sure all cubature node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all cubature node data is loaded into @shared
+    @barrier("local");
     
     // partial projection to nodes from cubature-sub-group
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    for(int es=0;es<p_NblockCub;++es;@inner(1)){
+      for(int n=0;n<p_maxCubNodes;++n;@inner(0)){     
     
         int et = eo+es; // element in block
           if(et<pmlNelements){
@@ -550,18 +550,18 @@ kernel void boltzmannIMEXRKPmlDampingCub2D(const int pmlNelements,
               dfloat r_rhsqy[p_Nfields]; 
               // dfloat r_rhsqt[p_Nfields];
             
-              occaUnroll(p_Nfields)
+              #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields;++fld){
                 r_rhsq[fld]  = 0.f;
                 r_rhsqx[fld] = 0.f;
                 r_rhsqy[fld] = 0.f;
               }
 
-              // use temporaries for part sums for N4,N5,N6 because of exclusives
-              occaUnroll(p_cubNp)
+              // use temporaries for part sums for N4,N5,N6 because of @exclusives
+              #pragma unroll p_cubNp
               for(int m=0;m<p_cubNp;++m){
                 const dfloat Pnc  = cubProjectT[m*p_Np+n];                  
-                 occaUnroll(p_Nfields)
+                 #pragma unroll p_Nfields
                  for(int fld=0; fld<p_Nfields; fld++){
                   r_rhsq [fld] += Pnc*s_cubq[es][fld][m];
                   r_rhsqx[fld] += Pnc*s_cubqx[es][fld][m];
@@ -569,7 +569,7 @@ kernel void boltzmannIMEXRKPmlDampingCub2D(const int pmlNelements,
                  }
               }
                 
-             occaUnroll(p_Nfields) 
+             #pragma unroll p_Nfields 
              for(int fld=0; fld<p_Nfields;++fld){
                 pmlrhsqx[pmlrhsId + fld] += r_rhsqx[fld];
                 pmlrhsqy[pmlrhsId + fld] += r_rhsqy[fld];

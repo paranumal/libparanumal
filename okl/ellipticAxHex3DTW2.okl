@@ -65,31 +65,31 @@
 
 #define p_pad 1
 
-kernel void ellipticAxHex3D_trilinear3(const int Nelements,
-                                       const int * restrict elementList,
-                                       const dfloat * restrict ggeo,
-                                       const dfloat * restrict D,
+@kernel void ellipticAxHex3D_trilinear3(const int Nelements,
+                                       @restrict const  int *  elementList,
+                                       @restrict const  dfloat *  ggeo,
+                                       @restrict const  dfloat *  D,
                                        const dfloat lambda,
-                                       const dfloat * restrict q,
-                                       dfloat * restrict Aq,
-                                       const dfloat * restrict grad){
+                                       @restrict const  dfloat *  q,
+                                       @restrict dfloat *  Aq,
+                                       @restrict const  dfloat *  grad){
 
   // assume multiple of 4
 
-  for(int e=0; e<Nelements; ++e; outer0) {
+  for(int e=0; e<Nelements; ++e; @outer(0)) {
 
-    shared dfloat s_q[p_Nslab][p_Nq][p_Nq+p_pad];
-    shared dfloat s_tmp1[p_Nslab][p_Nq][p_Nq+p_pad]; // 
-    shared dfloat s_tmp2[p_Nslab][p_Nq][p_Nq+p_pad];
-    shared dfloat s_D[p_Nq][p_Nq+p_pad];
-    shared dfloat s_DT[p_Nq][p_Nq+p_pad];
+    @shared dfloat s_q[p_Nslab][p_Nq][p_Nq+p_pad];
+    @shared dfloat s_tmp1[p_Nslab][p_Nq][p_Nq+p_pad]; // 
+    @shared dfloat s_tmp2[p_Nslab][p_Nq][p_Nq+p_pad];
+    @shared dfloat s_D[p_Nq][p_Nq+p_pad];
+    @shared dfloat s_DT[p_Nq][p_Nq+p_pad];
     
-    exclusive int emap, r_nodeId, r_smemId;
-    exclusive dfloat r_res;
+    @exclusive int emap, r_nodeId, r_smemId;
+    @exclusive dfloat r_res;
 
-    for(int ks=0;ks<p_Nslab;++ks;inner2){
-      for(int j=0;j<p_Nq;++j;inner1){
-	for(int i=0;i<p_Nq;++i;inner0){
+    for(int ks=0;ks<p_Nslab;++ks;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
 	  emap = elementList[e];
 	  if(ks==0){
 	    s_D[j][i] = D[j*p_Nq+i];
@@ -99,14 +99,14 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
       }
     }
 
-    occaUnroll(p_Nslabs)
+    #pragma unroll p_Nslabs
       for(int kslab=0;kslab<p_Nslabs;++kslab){
 
-	barrier(localMemFence);
+	@barrier("local");
 
-	for(int ks=0;ks<p_Nslab;++ks;inner2){
-	  for(int j=0;j<p_Nq;++j;inner1){
-	    for(int i=0;i<p_Nq;++i;inner0){
+	for(int ks=0;ks<p_Nslab;++ks;@inner(2)){
+	  for(int j=0;j<p_Nq;++j;@inner(1)){
+	    for(int i=0;i<p_Nq;++i;@inner(0)){
 
 	      const unsigned int t = i+j*p_Nq+ks*p_Nq*p_Nq;
 	      const unsigned int iT = t&3;
@@ -124,11 +124,11 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 	  }
 	}
 
-	barrier(localMemFence);
+	@barrier("local");
 
-	for(int ks=0;ks<p_Nslab;++ks;inner2){
-	  for(int j=0;j<p_Nq;++j;inner1){
-	    for(int i=0;i<p_Nq;++i;inner0){
+	for(int ks=0;ks<p_Nslab;++ks;@inner(2)){
+	  for(int j=0;j<p_Nq;++j;@inner(1)){
+	    for(int i=0;i<p_Nq;++i;@inner(0)){
 
 	      // assume specific data layout for G00 and G01
 	      const unsigned int base = emap*p_Np*p_Nggeo+(ks+kslab*p_Nslab)*p_Nq*p_Nq+j*p_Nq+i;
@@ -151,11 +151,11 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 	  }
 	}
 
-	barrier(localMemFence);
+	@barrier("local");
 	
-	for(int ks=0;ks<p_Nslab;++ks;inner2){
-	  for(int j=0;j<p_Nq;++j;inner1){
-	    for(int i=0;i<p_Nq;++i;inner0){
+	for(int ks=0;ks<p_Nslab;++ks;@inner(2)){
+	  for(int j=0;j<p_Nq;++j;@inner(1)){
+	    for(int i=0;i<p_Nq;++i;@inner(0)){
 	      dfloat tmpr = 0, tmps = 0;
 	      int n;
 	      n=0;
@@ -169,11 +169,11 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 	  }
 	}
 	
-	barrier(localMemFence);
+	@barrier("local");
 	
-	for(int ks=0;ks<p_Nslab;++ks;inner2){
-	  for(int j=0;j<p_Nq;++j;inner1){
-	    for(int i=0;i<p_Nq;++i;inner0){
+	for(int ks=0;ks<p_Nslab;++ks;@inner(2)){
+	  for(int j=0;j<p_Nq;++j;@inner(1)){
+	    for(int i=0;i<p_Nq;++i;@inner(0)){
 	      
 	      Aq[r_nodeId] = s_q[0][0][r_smemId];
 	    }
@@ -182,20 +182,20 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
       } // end of kslabbing
   }
 
-  // cannot merge kernels because of different ordering of access and output
-  for(int e=0; e<Nelements; ++e; outer0) {
+  // cannot merge @kernels because of different ordering of access and output
+  for(int e=0; e<Nelements; ++e; @outer(0)) {
     
-    shared dfloat s_q[p_Nslab][p_Nq][p_Nq+p_pad];
-    shared dfloat s_tmp1[p_Nslab][p_Nq][p_Nq+p_pad];
-    shared dfloat s_tmp2[p_Nslab][p_Nq][p_Nq+p_pad];
-    shared dfloat s_D[p_Nq][p_Nq+p_pad];
-    shared dfloat s_DT[p_Nq][p_Nq+p_pad];
+    @shared dfloat s_q[p_Nslab][p_Nq][p_Nq+p_pad];
+    @shared dfloat s_tmp1[p_Nslab][p_Nq][p_Nq+p_pad];
+    @shared dfloat s_tmp2[p_Nslab][p_Nq][p_Nq+p_pad];
+    @shared dfloat s_D[p_Nq][p_Nq+p_pad];
+    @shared dfloat s_DT[p_Nq][p_Nq+p_pad];
     
-    exclusive int emap, r_nodeId, r_smemId, r_res;
+    @exclusive int emap, r_nodeId, r_smemId, r_res;
 
-    for(int ks=0;ks<p_Nslab;++ks;inner2){
-      for(int j=0;j<p_Nq;++j;inner1){
-	for(int i=0;i<p_Nq;++i;inner0){
+    for(int ks=0;ks<p_Nslab;++ks;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
 	  emap = elementList[e];
 	  if(ks==0){
 	    s_D[j][i] = D[j*p_Nq+i];
@@ -205,14 +205,14 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
       }
     }
     
-    occaUnroll(p_Nslabs)
+    #pragma unroll p_Nslabs
       for(int jslab=0;jslab<p_Nslabs;++jslab){
 	
-	barrier(localMemFence);
+	@barrier("local");
 	
-	for(int js=0;js<p_Nslab;++js;inner2){
-	  for(int k=0;k<p_Nq;++k;inner1){
-	    for(int i=0;i<p_Nq;++i;inner0){
+	for(int js=0;js<p_Nslab;++js;@inner(2)){
+	  for(int k=0;k<p_Nq;++k;@inner(1)){
+	    for(int i=0;i<p_Nq;++i;@inner(0)){
 
 	      const unsigned int t = i+k*p_Nq+js*p_Nq*p_Nq;
 	      const unsigned int iT = t&3;
@@ -230,11 +230,11 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 	  }
 	}
 
-	barrier(localMemFence);
+	@barrier("local");
 
-	for(int js=0;js<p_Nslab;++js;inner2){
-	  for(int k=0;k<p_Nq;++k;inner1){
-	    for(int i=0;i<p_Nq;++i;inner0){
+	for(int js=0;js<p_Nslab;++js;@inner(2)){
+	  for(int k=0;k<p_Nq;++k;@inner(1)){
+	    for(int i=0;i<p_Nq;++i;@inner(0)){
 
 	      const unsigned int base = emap*p_Np*p_Nggeo+(js+jslab*p_Nslab)*p_Nq*p_Nq+k*p_Nq+i; // assume ordering (j,k,i) with i fastest
 	      const dfloat r_G02 = ggeo[base+p_G02ID*p_Np];
@@ -251,11 +251,11 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 	  }
 	}
 
-	barrier(localMemFence);
+	@barrier("local");
 
-	for(int js=0;js<p_Nslab;++js;inner2){
-	  for(int k=0;k<p_Nq;++k;inner1){
-	    for(int i=0;i<p_Nq;++i;inner0){
+	for(int js=0;js<p_Nslab;++js;@inner(2)){
+	  for(int k=0;k<p_Nq;++k;@inner(1)){
+	    for(int i=0;i<p_Nq;++i;@inner(0)){
 	      dfloat tmpr = 0, tmpt = 0;
 	      int n=0;
 	      UNROLLNq(tmpt += s_D[n][k]*s_tmp2[js][n][i]; tmpr += s_D[n][i]*s_tmp1[js][n][k]; ++n;);
@@ -266,11 +266,11 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 	  }
 	}
 
-	barrier(localMemFence);
+	@barrier("local");
 
-	for(int js=0;js<p_Nslab;++js;inner2){
-	  for(int k=0;k<p_Nq;++k;inner1){
-	    for(int i=0;i<p_Nq;++i;inner0){
+	for(int js=0;js<p_Nslab;++js;@inner(2)){
+	  for(int k=0;k<p_Nq;++k;@inner(1)){
+	    for(int i=0;i<p_Nq;++i;@inner(0)){
 
 	      Aq[r_nodeId] = r_res + s_q[0][0][r_smemId];
 	    }
@@ -279,20 +279,20 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
       } // end of jslabbing
   }
   
-  for(int e=0; e<Nelements; ++e; outer0) {
+  for(int e=0; e<Nelements; ++e; @outer(0)) {
     
-    shared dfloat s_q[p_Nslab][p_Nq][p_Nq+p_pad];
-    shared dfloat s_tmp1[p_Nslab][p_Nq][p_Nq+p_pad];
-    shared dfloat s_tmp2[p_Nslab][p_Nq][p_Nq+p_pad];
-    shared dfloat s_D[p_Nq][p_Nq+p_pad];
-    shared dfloat s_DT[p_Nq][p_Nq+p_pad];
+    @shared dfloat s_q[p_Nslab][p_Nq][p_Nq+p_pad];
+    @shared dfloat s_tmp1[p_Nslab][p_Nq][p_Nq+p_pad];
+    @shared dfloat s_tmp2[p_Nslab][p_Nq][p_Nq+p_pad];
+    @shared dfloat s_D[p_Nq][p_Nq+p_pad];
+    @shared dfloat s_DT[p_Nq][p_Nq+p_pad];
 
-    exclusive int emap, r_nodeId, r_smemId;
-    exclusive dfloat r_res;
+    @exclusive int emap, r_nodeId, r_smemId;
+    @exclusive dfloat r_res;
     
-    for(int ks=0;ks<p_Nslab;++ks;inner2){
-      for(int j=0;j<p_Nq;++j;inner1){
-	for(int i=0;i<p_Nq;++i;inner0){
+    for(int ks=0;ks<p_Nslab;++ks;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
 	  emap = elementList[e];
 	  if(ks==0){
 	    s_D[j][i] = D[j*p_Nq+i];
@@ -302,12 +302,12 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
       }
     }
     
-    occaUnroll(p_Nslabs)
+    #pragma unroll p_Nslabs
       for(int islab=0;islab<p_Nslabs;++islab){
 	
-	for(int is=0;is<p_Nslab;++is;inner2){
-	  for(int k=0;k<p_Nq;++k;inner1){
-	    for(int j=0;j<p_Nq;++j;inner0){
+	for(int is=0;is<p_Nslab;++is;@inner(2)){
+	  for(int k=0;k<p_Nq;++k;@inner(1)){
+	    for(int j=0;j<p_Nq;++j;@inner(0)){
 
 	      const unsigned int t = j+k*p_Nq+is*p_Nq*p_Nq;
 	      const unsigned int iT = t&3;
@@ -326,11 +326,11 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 	  }
 	}
 
-	barrier(localMemFence);
+	@barrier("local");
 
-	for(int is=0;is<p_Nslab;++is;inner2){
-	  for(int k=0;k<p_Nq;++k;inner1){
-	    for(int j=0;j<p_Nq;++j;inner0){
+	for(int is=0;is<p_Nslab;++is;@inner(2)){
+	  for(int k=0;k<p_Nq;++k;@inner(1)){
+	    for(int j=0;j<p_Nq;++j;@inner(0)){
 
 	      const unsigned int base = emap*p_Np*p_Nggeo+k*p_Nq+j + p_Nq*p_Nq*(is+islab*p_Nslab); // assume ordering (i,k,j)
 	      const dfloat r_G11 = ggeo[base+p_G11ID*p_Np];
@@ -347,11 +347,11 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 	  }
 	}
 
-	barrier(localMemFence);
+	@barrier("local");
 
-	for(int is=0;is<p_Nslab;++is;inner2){
-	  for(int k=0;k<p_Nq;++k;inner1){
-	    for(int j=0;j<p_Nq;++j;inner0){
+	for(int is=0;is<p_Nslab;++is;@inner(2)){
+	  for(int k=0;k<p_Nq;++k;@inner(1)){
+	    for(int j=0;j<p_Nq;++j;@inner(0)){
 
 	      dfloat tmps = 0, tmpt = 0;
 	      int n=0;
@@ -361,11 +361,11 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 	  }
 	}
 
-	barrier(localMemFence);
+	@barrier("local");
 	
-	for(int is=0;is<p_Nslab;++is;inner2){
-	  for(int k=0;k<p_Nq;++k;inner1){
-	    for(int j=0;j<p_Nq;++j;inner0){
+	for(int is=0;is<p_Nslab;++is;@inner(2)){
+	  for(int k=0;k<p_Nq;++k;@inner(1)){
+	    for(int j=0;j<p_Nq;++j;@inner(0)){
 	    
 	      Aq[r_nodeId] = r_res + s_q[0][0][r_smemId];
 	    }

@@ -55,7 +55,7 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
       mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, cns->o_rkq, cns->o_haloBuffer);
 
       // launch async copy on 2nd stream
-      cns->o_haloBuffer.asyncCopyTo(cns->sendBuffer);
+      cns->o_haloBuffer.copyTo(cns->sendBuffer,"async: true");
 
       // switch to stream0 for Volume kernel
       mesh->device.setStream(mesh->defaultStream);      
@@ -129,7 +129,7 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
       mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, cns->o_viscousStresses, cns->o_haloStressesBuffer);
 
       // launch async copy on 2nd stream
-      cns->o_haloStressesBuffer.asyncCopyTo(cns->sendStressesBuffer);
+      cns->o_haloStressesBuffer.copyTo(cns->sendStressesBuffer,"async: true");
       
       // switch to stream0 for Volume kernel
       mesh->device.setStream(mesh->defaultStream);                   

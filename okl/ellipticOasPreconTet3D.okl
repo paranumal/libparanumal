@@ -28,20 +28,20 @@
 #endif
 
 
-kernel void ellipticOasPreconTet3D(const int Nelements,
-          const int   * restrict vmapPP,
-          const dfloat * restrict forwardT,
-          const dfloat * restrict diagInvOp,
-          const dfloat * restrict backT,
-          const dfloat * restrict q,
-          dfloat * restrict Pq){
+@kernel void ellipticOasPreconTet3D(const int Nelements,
+          @restrict const  int   *  vmapPP,
+          @restrict const  dfloat *  forwardT,
+          @restrict const  dfloat *  diagInvOp,
+          @restrict const  dfloat *  backT,
+          @restrict const  dfloat *  q,
+          @restrict dfloat *  Pq){
   
-  for(int e=0; e<Nelements; ++e; outer0){
+  for(int e=0; e<Nelements; ++e; @outer(0)){
 
-    shared dfloat s_q1[p_NpP];
-    shared dfloat s_q2[p_NpP];
+    @shared dfloat s_q1[p_NpP];
+    @shared dfloat s_q2[p_NpP];
     
-    for(int n=0;n<p_NpP;++n;inner0){
+    for(int n=0;n<p_NpP;++n;@inner(0)){
       // load element
       if(n<p_Np)
         s_q1[n] = q[n+e*p_Np];
@@ -53,15 +53,15 @@ kernel void ellipticOasPreconTet3D(const int Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
 
     // forward transform and scaling
-    for(int n=0;n<p_NpP;++n;inner0){
+    for(int n=0;n<p_NpP;++n;@inner(0)){
       dfloat r_diagInvOp = diagInvOp[e*p_NpP + n];
       
       dfloat res = 0;
 
-      occaUnroll(p_NpP)
+      #pragma unroll p_NpP
         for(int i=0;i<p_NpP;++i){
           res += forwardT[n+i*p_NpP]*s_q1[i];
         }
@@ -69,13 +69,13 @@ kernel void ellipticOasPreconTet3D(const int Nelements,
       s_q2[n] = res*r_diagInvOp;
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // backward transform
-    for(int n=0;n<p_NpP;++n;inner0){
+    for(int n=0;n<p_NpP;++n;@inner(0)){
       dfloat res = 0;
 
-      occaUnroll(p_Np)
+      #pragma unroll p_Np
         for(int i=0;i<p_NpP;++i){
           res += backT[n+i*p_NpP]*s_q2[i];
         }

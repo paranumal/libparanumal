@@ -1,16 +1,16 @@
 
 
-kernel void ellipticPreconCoarsenTet3D(const dlong Nelements,
-                                  const dfloat * restrict R,
-                                  const dfloat * restrict qN,
-                                  dfloat * restrict q1){
+@kernel void ellipticPreconCoarsenTet3D(const dlong Nelements,
+                                  @restrict const  dfloat *  R,
+                                  @restrict const  dfloat *  qN,
+                                  @restrict dfloat *  q1){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockVCoarse;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockVCoarse;@outer(0)){
 
-    shared dfloat s_qN[p_NblockVCoarse][p_NpFine];
+    @shared dfloat s_qN[p_NblockVCoarse][p_NpFine];
 
-    for(int es=0;es<p_NblockVCoarse;++es;inner1){
-      for(int n=0;n<p_NpCoarse;++n;inner0){
+    for(int es=0;es<p_NblockVCoarse;++es;@inner(1)){
+      for(int n=0;n<p_NpCoarse;++n;@inner(0)){
         dlong t = n + es*p_NpCoarse;
 
         while(t<p_NpFine*p_NblockVCoarse){
@@ -21,14 +21,14 @@ kernel void ellipticPreconCoarsenTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int es=0;es<p_NblockVCoarse;++es;inner1){
-      for(int n=0;n<p_NpCoarse;++n;inner0){
+    for(int es=0;es<p_NblockVCoarse;++es;@inner(1)){
+      for(int n=0;n<p_NpCoarse;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           dfloat tmp = 0;
-          occaUnroll(p_NpFine)
+          #pragma unroll p_NpFine
             for(int i=0;i<p_NpFine;++i){
               tmp += R[n*p_NpFine + i]*s_qN[es][i]; // bank conflict ?
             }

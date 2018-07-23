@@ -19,40 +19,40 @@
 #endif
 
 #define cubeThreadsSliced                             \
-	for(int k=0; k<shift; ++k; inner2)            \
-		for(int j=0; j<p_Nq; ++j; inner1)          \
-			for(int i=0; i<p_Nq; ++i; inner0)
+	for(int k=0; k<shift; ++k; @inner(2))            \
+		for(int j=0; j<p_Nq; ++j; @inner(1))          \
+			for(int i=0; i<p_Nq; ++i; @inner(0))
 
-kernel void ellipticAxHex3D_rDir(const int Nelements,
-                                 const int * restrict elementList,
-                                 const dfloat * restrict ggeo,
-                                 const dfloat * restrict D,
+@kernel void ellipticAxHex3D_rDir(const int Nelements,
+                                 @restrict const  int *  elementList,
+                                 @restrict const  dfloat *  ggeo,
+                                 @restrict const  dfloat *  D,
                                  const dfloat lambda,
-                                 const dfloat * restrict q,
-                                 dfloat * restrict Aq,
-                                 dfloat * restrict aux
+                                 @restrict const  dfloat *  q,
+                                 @restrict dfloat *  Aq,
+                                 @restrict dfloat *  aux
                                 ){
-	for(int e=0; e<Nelements; ++e; outer0) {
+	for(int e=0; e<Nelements; ++e; @outer(0)) {
 
-		shared dfloat s_q[p_Nq][p_Nq][p_Nq];
-		//shared dfloat s_q2[p_Nq][p_Nq][p_Nq];
-		shared dfloat s_D[p_Nq][p_Nq];
-		//	exclusive dfloat r_qr[sliceThickness];
-		// prefetch q(:,:,:,e) to shared
+		@shared dfloat s_q[p_Nq][p_Nq][p_Nq];
+		//@shared dfloat s_q2[p_Nq][p_Nq][p_Nq];
+		@shared dfloat s_D[p_Nq][p_Nq];
+		//	@exclusive dfloat r_qr[sliceThickness];
+		// prefetch q(:,:,:,e) to @shared
 		cubeThreadsSliced {
 
-		  //  occaUnroll(p_Nq)
+		  //  #pragma unroll p_Nq
 		  for (int s=k; s<p_Nq;s+=shift){
 		  const int base = i + j*p_Nq + s*p_Nq*p_Nq + elementList[e]*p_Np;
 			  s_q[s][j][i] = q[base];
 		  }
-		  if(k==0) // fetch D to shared
+		  if(k==0) // fetch D to @shared
 		  s_D[j][i] = D[j*p_Nq+i];
 
 		}
 
 
-		barrier(localMemFence);
+		@barrier("local");
 
 
 
@@ -95,7 +95,7 @@ kernel void ellipticAxHex3D_rDir(const int Nelements,
 
 
 		//synchronize
-		barrier(localMemFence);
+		@barrier("local");
 		cubeThreadsSliced {
 		  for (int s=k; s<p_Nq;s+=shift){
 
@@ -114,51 +114,51 @@ kernel void ellipticAxHex3D_rDir(const int Nelements,
 
 
 	}//e
-}//kernel
+}//@kernel
 */
-// KASIA TRILINEAR KERNEL 3 (fly kernel 3)
-// in this kernel:
+// KASIA TRILINEAR KERNEL 3 (fly @kernel 3)
+// in this @kernel:
 //1) i-j marching --> i-k marching --> j-k matching -->
 //2) cube load structure (4 x 4 cubes)
 //3) geofactors  on the fly, with assumption of nice tensor product structure
 
 #define T 3
 
-kernel void ellipticAxHex3D_trilinear3(const int Nelements,
-                                       const int * restrict elementList,
-                                       const dfloat * restrict ggeo,
-                                       const dfloat * restrict D,
+@kernel void ellipticAxHex3D_trilinear3(const int Nelements,
+                                       @restrict const  int *  elementList,
+                                       @restrict const  dfloat *  ggeo,
+                                       @restrict const  dfloat *  D,
                                        const dfloat lambda,
-                                       const dfloat * restrict q,
-                                       dfloat * restrict Aq,
-                                       const dfloat * restrict grad){
+                                       @restrict const  dfloat *  q,
+                                       @restrict dfloat *  Aq,
+                                       @restrict const  dfloat *  grad){
 
-	for(int e=0; e<Nelements; ++e; outer0) {
+	for(int e=0; e<Nelements; ++e; @outer(0)) {
 // rename to make less confusing
-		shared dfloat s_tmp1[4][p_Nq][p_Nq];
-		shared dfloat s_tmp2[4][p_Nq][p_Nq];
-		shared dfloat s_q[p_Nq][p_Nq];
-		shared dfloat s_D[p_Nq][p_Nq];
+		@shared dfloat s_tmp1[4][p_Nq][p_Nq];
+		@shared dfloat s_tmp2[4][p_Nq][p_Nq];
+		@shared dfloat s_q[p_Nq][p_Nq];
+		@shared dfloat s_D[p_Nq][p_Nq];
 
-		shared dfloat s_EXYZ[9][3];
-		shared dfloat s_rw[2][p_Nq];
+		@shared dfloat s_EXYZ[9][3];
+		@shared dfloat s_rw[2][p_Nq];
 
 		//new --> we will load 16 cubes per slice, every cube is 4x4x4
 		// 16 is heuristic, change it later
 		// exactly 1024, will keep every thread busy
-		shared dfloat s_slice[16][4][4][4];
+		@shared dfloat s_slice[16][4][4][4];
 
 		//end of new
 
-		//	exclusive dfloat r_q[p_Nq];
-		//	exclusive dfloat r_Aq[p_Nq], r_qt, r_tmpt;
-		exclusive int emap;
-		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22;
-		exclusive dfloat r_GwJ;
+		//	@exclusive dfloat r_q[p_Nq];
+		//	@exclusive dfloat r_Aq[p_Nq], r_qt, r_tmpt;
+		@exclusive int emap;
+		@exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22;
+		@exclusive dfloat r_GwJ;
 
-		for (int k =0; k<4; ++k; inner2){
-			for(int j=0; j<p_Nq; ++j; inner1) {
-				for(int i=0; i<p_Nq; ++i; inner0) {
+		for (int k =0; k<4; ++k; @inner(2)){
+			for(int j=0; j<p_Nq; ++j; @inner(1)) {
+				for(int i=0; i<p_Nq; ++i; @inner(0)) {
 
 					emap = elementList[e];
 					if (k== 0){
@@ -181,15 +181,15 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 			}
 		}//k
 
-		barrier(localMemFence);
+		@barrier("local");
 
-		occaUnroll(4)
+		#pragma unroll 4
 		for (int p=0; p<4; ++p)
 		{
 			// first, load a slice
-			for(int k=0; k<4; ++k; inner2) {
-				for(int j=0; j<p_Nq; ++j; inner1) {
-					for(int i=0; i<p_Nq; ++i; inner0) {
+			for(int k=0; k<4; ++k; @inner(2)) {
+				for(int j=0; j<p_Nq; ++j; @inner(1)) {
+					for(int i=0; i<p_Nq; ++i; @inner(0)) {
 						//load
 						const int base = i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np;
 						// 4 x 16 x 16
@@ -205,10 +205,10 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 
 
 
-			for(int k=0; k<4; ++k; inner2) {
+			for(int k=0; k<4; ++k; @inner(2)) {
 
-				for(int j=0; j<p_Nq; ++j; inner1) {
-					for(int i=0; i<p_Nq; ++i; inner0) {
+				for(int j=0; j<p_Nq; ++j; @inner(1)) {
+					for(int i=0; i<p_Nq; ++i; @inner(0)) {
 						
 						const dfloat rn = s_rw[0][i];
 						const dfloat sn = s_rw[0][j];
@@ -247,7 +247,7 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 
 						// now differentiate in i j  dir
 						dfloat qs =0.0f, qr = 0.0f;
-						occaUnroll(p_Nq)
+						#pragma unroll p_Nq
 						for(int n=0; n<p_Nq; ++n) {
 							int cn = 4*(j/4)+(n/4);
 							//cube numbwe
@@ -264,13 +264,13 @@ kernel void ellipticAxHex3D_trilinear3(const int Nelements,
 					  }//i
 				  }//j
 			  }//k
-			  barrier(localMemFence);
-			for(int k=0; k<4; ++k; inner2) {
-				for(int j=0; j<p_Nq; ++j; inner1) {
-					for(int i=0; i<p_Nq; ++i; inner0) {
+			  @barrier("local");
+			for(int k=0; k<4; ++k; @inner(2)) {
+				for(int j=0; j<p_Nq; ++j; @inner(1)) {
+					for(int i=0; i<p_Nq; ++i; @inner(0)) {
 						dfloat Aq1 = 0.0f, Aq2 = 0.0f;
 
-						occaUnroll(p_Nq)
+						#pragma unroll p_Nq
 						for(int n=0; n<p_Nq; ++n) {
 							Aq1 += s_D[n][i]*(r_G00*s_tmp1[k][j][n] + r_G01*s_tmp2[k][j][n]);
 							Aq2 += s_D[n][j]*(r_G01*s_tmp1[k][n][i] + r_G11*s_tmp2[k][n][i]);

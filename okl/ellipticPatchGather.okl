@@ -3,17 +3,17 @@
 
 
 // experimental overlapping patch solver
-kernel void ellipticPatchGather(const dlong Nelements,
-                                const dlong   * restrict EToE,
-                                const int   * restrict EToF,
-                                const dfloat * restrict q,
-                                dfloat * restrict Gq){
+@kernel void ellipticPatchGather(const dlong Nelements,
+                                @restrict const  dlong   *  EToE,
+                                @restrict const  int   *  EToF,
+                                @restrict const  dfloat *  q,
+                                @restrict dfloat *  Gq){
 
   // assume one patch per outer iteration (tune later)
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockP;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockP;@outer(0)){
 
-    for(dlong e=eo;e<eo+p_NblockP;++e;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(dlong e=eo;e<eo+p_NblockP;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
 
         if(e<Nelements){
 
@@ -38,16 +38,16 @@ kernel void ellipticPatchGather(const dlong Nelements,
   }
 }
 
-kernel void ellipticFacePatchGather(const dlong Nelements,
-                                    const dlong  * restrict EToFPairs,
-                                    const dfloat * restrict q,
-                                    dfloat * restrict Gq){
+@kernel void ellipticFacePatchGather(const dlong Nelements,
+                                    @restrict const  dlong  *  EToFPairs,
+                                    @restrict const  dfloat *  q,
+                                    @restrict dfloat *  Gq){
 
   // assume one patch per outer iteration (tune later)
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockP;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockP;@outer(0)){
 
-    for(dlong e=eo;e<eo+p_NblockP;++e;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(dlong e=eo;e<eo+p_NblockP;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
 
         if(e<Nelements){
 

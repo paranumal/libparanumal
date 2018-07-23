@@ -114,7 +114,7 @@ typedef struct {
 
 }elliptic_t;
 
-elliptic_t *ellipticSetup(mesh2D *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, setupAide options);
+elliptic_t *ellipticSetup(mesh2D *mesh, dfloat lambda, occa::properties &kernelInfo, setupAide options);
 
 void ellipticParallelGatherScatter(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, const char *type, const char *op);
 void ellipticParallelGatherScatterSetup(elliptic_t *elliptic);
@@ -123,7 +123,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda, occa::memory &o
 void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda);
 
 int  ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x);
-void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &kernelInfo);
+void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &kernelInfo);
 
 
 void ellipticStartHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);

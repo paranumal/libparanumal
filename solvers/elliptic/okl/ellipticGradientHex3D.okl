@@ -1,39 +1,39 @@
 // compute local gradients
 
-kernel void ellipticGradientHex3D(const dlong Nelements,
-                                  const dfloat * restrict vgeo,
-                                  const dfloat * restrict  D,
-                                  const dfloat * restrict q,
-                                  dfloat4 * restrict gradq){  
+@kernel void ellipticGradientHex3D(const dlong Nelements,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *   D,
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat4 *  gradq){  
 
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    shared dfloat s_D[p_Nq][p_Nq];
-    shared dfloat s_q[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_q[p_Nq][p_Nq][p_Nq];
     
     // prefetch D
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         s_D[j][i] = D[i + p_Nq*j];
       }
     }
     
     // prefetch q
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong id = e*p_Np+k*p_Nq*p_Nq+j*p_Nq+i;
           s_q[k][j][i] = q[id];
         }
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
     
     // loop over slabs
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
         
           const dlong gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;
           
@@ -72,41 +72,41 @@ kernel void ellipticGradientHex3D(const dlong Nelements,
 }
 
 
-kernel void ellipticPartialGradientHex3D(const dlong Nelements,
+@kernel void ellipticPartialGradientHex3D(const dlong Nelements,
                                          const dlong startElement,
-                                         const dfloat * restrict vgeo,
-                                         const dfloat * restrict  D,
-                                         const dfloat * restrict q,
-                                         dfloat4 * restrict gradq){  
+                                         @restrict const  dfloat *  vgeo,
+                                         @restrict const  dfloat *   D,
+                                         @restrict const  dfloat *  q,
+                                         @restrict dfloat4 *  gradq){  
 
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    shared dfloat s_D[p_Nq][p_Nq];
-    shared dfloat s_q[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_q[p_Nq][p_Nq][p_Nq];
     
     // prefetch D
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         s_D[j][i] = D[i + p_Nq*j];
       }
     }
     
     // prefetch q
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong id = (e+startElement)*p_Np+k*p_Nq*p_Nq+j*p_Nq+i;
           s_q[k][j][i] = q[id];
         }
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
     
     // loop over slabs
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
         
           const dlong gid = i + j*p_Nq + k*p_Nq*p_Nq + (e+startElement)*p_Np*p_Nvgeo;
           

@@ -1,23 +1,23 @@
 
 // isothermal Compressible Navier-Stokes
-kernel void cnsFullVolumeHex3D(const dlong Nelements,
+@kernel void cnsFullVolumeHex3D(const dlong Nelements,
 			       const int advSwitch,
-			       const dfloat * restrict vgeo,
-			       const dfloat * restrict D,
-			       const dfloat * restrict viscousStresses,
-			       const dfloat * restrict q,
-			       dfloat * restrict rhsq){
+			       @restrict const  dfloat *  vgeo,
+			       @restrict const  dfloat *  D,
+			       @restrict const  dfloat *  viscousStresses,
+			       @restrict const  dfloat *  q,
+			       @restrict dfloat *  rhsq){
   
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    shared dfloat s_D[p_Nq][p_Nq];
-    shared dfloat s_F[p_Nfields][p_Nq][p_Nq][p_Nq];
-    shared dfloat s_G[p_Nfields][p_Nq][p_Nq][p_Nq];
-    shared dfloat s_H[p_Nfields][p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_F[p_Nfields][p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_G[p_Nfields][p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_H[p_Nfields][p_Nq][p_Nq][p_Nq];
 
-    for(int k=0;k<p_Nq;++k;inner2){
-      for(int j=0;j<p_Nq;++j;inner1){
-	for(int i=0;i<p_Nq;++i;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
 	  if(k==0)
 	    s_D[j][i] = D[j*p_Nq+i];
 	  
@@ -115,11 +115,11 @@ kernel void cnsFullVolumeHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int k=0;k<p_Nq;++k;inner2){
-      for(int j=0;j<p_Nq;++j;inner1){
-	for(int i=0;i<p_Nq;++i;inner0){    
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){    
 	  const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
 	  const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 	  

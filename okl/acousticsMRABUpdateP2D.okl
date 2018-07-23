@@ -1,42 +1,42 @@
-kernel void acousticsMRABUpdateP2D(const int Nelements,
-           const int   * restrict elementIds,
-           const int   * restrict N,
+@kernel void acousticsMRABUpdateP2D(const int Nelements,
+           @restrict const  int   *  elementIds,
+           @restrict const  int   *  N,
            const dfloat dt, 
            const dfloat a1,
            const dfloat a2,
            const dfloat a3,
            const dfloat t,
-           const dfloat * restrict x,
-           const dfloat * restrict y,
-           const dfloat * restrict invVB1D,
-           const int   * restrict EToB,
-           const int   * restrict EToE,
-           const dfloat * restrict BBLower,
-           const int   * restrict BBRaiseids,
-           const dfloat * restrict BBRaiseVals,  
-           const int   * restrict vmapM,
-           dfloat * restrict rhsq,
-           dfloat * restrict q,
-           dfloat * restrict fQM,
-           dfloat * restrict fQP,
+           @restrict const  dfloat *  x,
+           @restrict const  dfloat *  y,
+           @restrict const  dfloat *  invVB1D,
+           @restrict const  int   *  EToB,
+           @restrict const  int   *  EToE,
+           @restrict const  dfloat *  BBLower,
+           @restrict const  int   *  BBRaiseids,
+           @restrict const  dfloat *  BBRaiseVals,  
+           @restrict const  int   *  vmapM,
+           @restrict dfloat *  rhsq,
+           @restrict dfloat *  q,
+           @restrict dfloat *  fQM,
+           @restrict dfloat *  fQP,
            const int   rhsShift){
   
-  for(int et=0;et<Nelements;++et;outer0){  // for all elements
-    shared dfloat s_q[p_Np*p_Nfields];
+  for(int et=0;et<Nelements;++et;@outer(0)){  // for all elements
+    @shared dfloat s_q[p_Np*p_Nfields];
 
-    shared dfloat s_un[p_Nfaces*p_Nfp];
-    shared dfloat s_vn[p_Nfaces*p_Nfp];
-    shared dfloat s_pn[p_Nfaces*p_Nfp];
+    @shared dfloat s_un[p_Nfaces*p_Nfp];
+    @shared dfloat s_vn[p_Nfaces*p_Nfp];
+    @shared dfloat s_pn[p_Nfaces*p_Nfp];
 
-    shared dfloat s_unp[p_Nfaces*p_Nfpp1];
-    shared dfloat s_vnp[p_Nfaces*p_Nfpp1];
-    shared dfloat s_pnp[p_Nfaces*p_Nfpp1];
+    @shared dfloat s_unp[p_Nfaces*p_Nfpp1];
+    @shared dfloat s_vnp[p_Nfaces*p_Nfpp1];
+    @shared dfloat s_pnp[p_Nfaces*p_Nfpp1];
 
-    shared dfloat s_sourceu[p_Nfp*p_Nfaces];
-    shared dfloat s_sourcev[p_Nfp*p_Nfaces];
-    shared dfloat s_sourcep[p_Nfp*p_Nfaces];
+    @shared dfloat s_sourceu[p_Nfp*p_Nfaces];
+    @shared dfloat s_sourcev[p_Nfp*p_Nfaces];
+    @shared dfloat s_sourcep[p_Nfp*p_Nfaces];
 
-    for(int n=0; n < p_maxNodes; ++n; inner0){  //maxNodes = max(Np,Nfaces*Nfp)
+    for(int n=0; n < p_maxNodes; ++n; @inner(0)){  //maxNodes = max(Np,Nfaces*Nfp)
       if (n < p_Np){
         const int e = elementIds[et];
         const int id = p_Nfields*(e*p_NpMax + n);
@@ -49,9 +49,9 @@ kernel void acousticsMRABUpdateP2D(const int Nelements,
           s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
       }
     }
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0; n < p_maxNodes; ++n; inner0){  
+    for(int n=0; n < p_maxNodes; ++n; @inner(0)){  
       const int e = elementIds[et];
 
       //write update      
@@ -101,9 +101,9 @@ kernel void acousticsMRABUpdateP2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence); 
+    @barrier("local"); 
 
-    for(int n=0; n < p_maxNodes; ++n; inner0){  
+    for(int n=0; n < p_maxNodes; ++n; @inner(0)){  
       if (n < p_Nfp*p_Nfaces){
         const int e = elementIds[et];
         const int f  = n/p_Nfp; //face number
@@ -120,7 +120,7 @@ kernel void acousticsMRABUpdateP2D(const int Nelements,
           if (bc==-10) s= 1.f;
           if (bc==-11) s=-1.f;
 
-          occaUnroll(p_Nfp)
+          #pragma unroll p_Nfp
           for (int m=0;m<p_Nfp;m++) {
             sourceu += invVB1D[id + p_Nfp*m]*s_sourceu[f*p_Nfp+m];
             sourcev += invVB1D[id + p_Nfp*m]*s_sourcev[f*p_Nfp+m];
@@ -133,9 +133,9 @@ kernel void acousticsMRABUpdateP2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0; n < p_maxNodes; ++n; inner0){  
+    for(int n=0; n < p_maxNodes; ++n; @inner(0)){  
       const int e = elementIds[et];      
       
       if (n < p_Nfp*p_Nfaces){
@@ -151,7 +151,7 @@ kernel void acousticsMRABUpdateP2D(const int Nelements,
             s_unp[f*p_Nfpp1+id] = 0.0;
             s_vnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
-            occaUnroll(2)
+            #pragma unroll 2
             for (int m=0;m<2;m++){ //apply raise operator sparsly
               const dfloat BBRaiseVal = BBRaiseVals[2*id+m];
               const int BBRaiseid = BBRaiseids[2*id+m] + f*p_Nfp;
@@ -173,7 +173,7 @@ kernel void acousticsMRABUpdateP2D(const int Nelements,
             s_unp[f*p_Nfpp1+id] = 0.0;
             s_vnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
-            occaUnroll(p_Nfp)
+            #pragma unroll p_Nfp
             for (int m=0;m<p_Nfp;m++){
               s_unp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
               s_vnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
@@ -198,45 +198,45 @@ kernel void acousticsMRABUpdateP2D(const int Nelements,
   }
 }
 
-kernel void acousticsMRABTraceUpdateP2D(const int Nelements,
-           const int   * restrict elementIds,
-           const int   * restrict N,
+@kernel void acousticsMRABTraceUpdateP2D(const int Nelements,
+           @restrict const  int   *  elementIds,
+           @restrict const  int   *  N,
            const dfloat dt, 
            const dfloat a1,
            const dfloat a2,
            const dfloat a3,
            const dfloat t,
-           const dfloat * restrict x,
-           const dfloat * restrict y,
-           const dfloat * restrict invVB1D,
-           const int   * restrict EToB,
-           const int   * restrict EToE,
-           const dfloat * restrict BBLower,
-           const int   * restrict BBRaiseids,
-           const dfloat * restrict BBRaiseVals,  
-           const int   * restrict vmapM,
-           const dfloat * restrict rhsq,
-           const dfloat * restrict q,
-           dfloat * restrict fQM,
-           dfloat * restrict fQP,
+           @restrict const  dfloat *  x,
+           @restrict const  dfloat *  y,
+           @restrict const  dfloat *  invVB1D,
+           @restrict const  int   *  EToB,
+           @restrict const  int   *  EToE,
+           @restrict const  dfloat *  BBLower,
+           @restrict const  int   *  BBRaiseids,
+           @restrict const  dfloat *  BBRaiseVals,  
+           @restrict const  int   *  vmapM,
+           @restrict const  dfloat *  rhsq,
+           @restrict const  dfloat *  q,
+           @restrict dfloat *  fQM,
+           @restrict dfloat *  fQP,
            const int   rhsShift){
   
-  for(int et=0;et<Nelements;++et;outer0){  // for all elements
-    shared dfloat s_q[p_Np*p_Nfields];
+  for(int et=0;et<Nelements;++et;@outer(0)){  // for all elements
+    @shared dfloat s_q[p_Np*p_Nfields];
 
-    shared dfloat s_un[p_Nfaces*p_Nfp];
-    shared dfloat s_vn[p_Nfaces*p_Nfp];
-    shared dfloat s_pn[p_Nfaces*p_Nfp];
+    @shared dfloat s_un[p_Nfaces*p_Nfp];
+    @shared dfloat s_vn[p_Nfaces*p_Nfp];
+    @shared dfloat s_pn[p_Nfaces*p_Nfp];
 
-    shared dfloat s_unp[p_Nfaces*p_Nfpp1];
-    shared dfloat s_vnp[p_Nfaces*p_Nfpp1];
-    shared dfloat s_pnp[p_Nfaces*p_Nfpp1];
+    @shared dfloat s_unp[p_Nfaces*p_Nfpp1];
+    @shared dfloat s_vnp[p_Nfaces*p_Nfpp1];
+    @shared dfloat s_pnp[p_Nfaces*p_Nfpp1];
 
-    shared dfloat s_sourceu[p_Nfp*p_Nfaces];
-    shared dfloat s_sourcev[p_Nfp*p_Nfaces];
-    shared dfloat s_sourcep[p_Nfp*p_Nfaces];
+    @shared dfloat s_sourceu[p_Nfp*p_Nfaces];
+    @shared dfloat s_sourcev[p_Nfp*p_Nfaces];
+    @shared dfloat s_sourcep[p_Nfp*p_Nfaces];
 
-    for(int n=0; n < p_maxNodes; ++n; inner0){  //maxNodes = max(Np,Nfaces*Nfp)
+    for(int n=0; n < p_maxNodes; ++n; @inner(0)){  //maxNodes = max(Np,Nfaces*Nfp)
       if (n < p_Np){
         const int e = elementIds[et];
         const int id = p_Nfields*(e*p_NpMax + n);
@@ -249,9 +249,9 @@ kernel void acousticsMRABTraceUpdateP2D(const int Nelements,
           s_q[p_Nfields*n+fld] = q[id+fld] + dt*(a1*rhsq[rhsId1+fld] + a2*rhsq[rhsId2+fld] + a3*rhsq[rhsId3+fld]);
       }
     }
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0; n < p_maxNodes; ++n; inner0){  
+    for(int n=0; n < p_maxNodes; ++n; @inner(0)){  
       const int e = elementIds[et];
 
       if (n<p_Nfaces*p_Nfp) {
@@ -293,9 +293,9 @@ kernel void acousticsMRABTraceUpdateP2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence); 
+    @barrier("local"); 
 
-    for(int n=0; n < p_maxNodes; ++n; inner0){  
+    for(int n=0; n < p_maxNodes; ++n; @inner(0)){  
       if (n < p_Nfp*p_Nfaces){
         const int e = elementIds[et];
         const int f  = n/p_Nfp; //face number
@@ -312,7 +312,7 @@ kernel void acousticsMRABTraceUpdateP2D(const int Nelements,
           if (bc==-10) s= 1.f;
           if (bc==-11) s=-1.f;
 
-          occaUnroll(p_Nfp)
+          #pragma unroll p_Nfp
           for (int m=0;m<p_Nfp;m++) {
             sourceu += invVB1D[id + p_Nfp*m]*s_sourceu[f*p_Nfp+m];
             sourcev += invVB1D[id + p_Nfp*m]*s_sourcev[f*p_Nfp+m];
@@ -325,9 +325,9 @@ kernel void acousticsMRABTraceUpdateP2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
-    for(int n=0; n < p_maxNodes; ++n; inner0){  
+    for(int n=0; n < p_maxNodes; ++n; @inner(0)){  
       const int e = elementIds[et];      
       
       if (n < p_Nfp*p_Nfaces){
@@ -343,7 +343,7 @@ kernel void acousticsMRABTraceUpdateP2D(const int Nelements,
             s_unp[f*p_Nfpp1+id] = 0.0;
             s_vnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
-            occaUnroll(2)
+            #pragma unroll 2
             for (int m=0;m<2;m++){ //apply raise operator sparsly
               const dfloat BBRaiseVal = BBRaiseVals[2*id+m];
               const int BBRaiseid = BBRaiseids[2*id+m] + f*p_Nfp;
@@ -365,7 +365,7 @@ kernel void acousticsMRABTraceUpdateP2D(const int Nelements,
             s_unp[f*p_Nfpp1+id] = 0.0;
             s_vnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
-            occaUnroll(p_Nfp)
+            #pragma unroll p_Nfp
             for (int m=0;m<p_Nfp;m++){
               s_unp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
               s_vnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
@@ -392,51 +392,51 @@ kernel void acousticsMRABTraceUpdateP2D(const int Nelements,
 
 
 
-kernel void acousticsMRABUpdateP2D_wadg(const int Nelements,
-           const int   * restrict elementIds,
-           const int   * restrict N,
+@kernel void acousticsMRABUpdateP2D_wadg(const int Nelements,
+           @restrict const  int   *  elementIds,
+           @restrict const  int   *  N,
            const dfloat dt, 
            const dfloat a1,
            const dfloat a2,
            const dfloat a3,
-           const dfloat * restrict cubInterp,
-           const dfloat * restrict cubProject,
-           const dfloat * restrict c2,
+           @restrict const  dfloat *  cubInterp,
+           @restrict const  dfloat *  cubProject,
+           @restrict const  dfloat *  c2,
            const dfloat t,
-           const dfloat * restrict x,
-           const dfloat * restrict y,
-           const dfloat * restrict invVB1D,
-           const int   * restrict EToB,
-           const int   * restrict EToE,
-           const dfloat * restrict BBLower,
-           const int   * restrict BBRaiseids,
-           const dfloat * restrict BBRaiseVals,  
-           const int   * restrict vmapM,
-           dfloat * restrict rhsq,
-           dfloat * restrict q,
-           dfloat * restrict fQM,
-           dfloat * restrict fQP,
+           @restrict const  dfloat *  x,
+           @restrict const  dfloat *  y,
+           @restrict const  dfloat *  invVB1D,
+           @restrict const  int   *  EToB,
+           @restrict const  int   *  EToE,
+           @restrict const  dfloat *  BBLower,
+           @restrict const  int   *  BBRaiseids,
+           @restrict const  dfloat *  BBRaiseVals,  
+           @restrict const  int   *  vmapM,
+           @restrict dfloat *  rhsq,
+           @restrict dfloat *  q,
+           @restrict dfloat *  fQM,
+           @restrict dfloat *  fQP,
            const int   rhsShift){
   
-  for(int et=0;et<Nelements;++et;outer0){  // for all elements
-    shared dfloat s_q[p_Np*p_Nfields];
+  for(int et=0;et<Nelements;++et;@outer(0)){  // for all elements
+    @shared dfloat s_q[p_Np*p_Nfields];
 
-    shared dfloat s_un[p_Nfaces*p_Nfp];
-    shared dfloat s_vn[p_Nfaces*p_Nfp];
-    shared dfloat s_pn[p_Nfaces*p_Nfp];
+    @shared dfloat s_un[p_Nfaces*p_Nfp];
+    @shared dfloat s_vn[p_Nfaces*p_Nfp];
+    @shared dfloat s_pn[p_Nfaces*p_Nfp];
 
-    shared dfloat s_unp[p_Nfaces*p_Nfpp1];
-    shared dfloat s_vnp[p_Nfaces*p_Nfpp1];
-    shared dfloat s_pnp[p_Nfaces*p_Nfpp1];
+    @shared dfloat s_unp[p_Nfaces*p_Nfpp1];
+    @shared dfloat s_vnp[p_Nfaces*p_Nfpp1];
+    @shared dfloat s_pnp[p_Nfaces*p_Nfpp1];
 
-    shared dfloat s_sourceu[p_Nfp*p_Nfaces];
-    shared dfloat s_sourcev[p_Nfp*p_Nfaces];
-    shared dfloat s_sourcep[p_Nfp*p_Nfaces];
+    @shared dfloat s_sourceu[p_Nfp*p_Nfaces];
+    @shared dfloat s_sourcev[p_Nfp*p_Nfaces];
+    @shared dfloat s_sourcep[p_Nfp*p_Nfaces];
 
-    shared dfloat s_p[p_cubNp];
-    exclusive dfloat r_p;
+    @shared dfloat s_p[p_cubNp];
+    @exclusive dfloat r_p;
 
-    for(int n=0; n < p_maxCubNodes; ++n; inner0){  
+    for(int n=0; n < p_maxCubNodes; ++n; @inner(0)){  
       if (n < p_Np){
         const int e = elementIds[et];
         const int id = p_Nfields*(e*p_NpMax + n);
@@ -447,17 +447,17 @@ kernel void acousticsMRABUpdateP2D_wadg(const int Nelements,
       // Initialize register variable
       r_p = 0.f;
     }
-    barrier(localMemFence);
+    @barrier("local");
 
     // Interpolate rhs to cubature nodes
-    for(int n=0;n<p_maxCubNodes;++n;inner0){
+    for(int n=0;n<p_maxCubNodes;++n;@inner(0)){
       if (n<p_cubNp) {
         const int e = elementIds[et];
         // Prefetch value of c2
         const dfloat c2n = c2[n + e*p_cubNpMax];
         
         dfloat val = 0.f;
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for (int i=0;i<p_Np;++i){
           val += cubInterp[n + i*p_cubNp] * s_p[i];
         }
@@ -466,18 +466,18 @@ kernel void acousticsMRABUpdateP2D_wadg(const int Nelements,
         r_p = val * c2n;
       }
     }
-    barrier(localMemFence);
+    @barrier("local");
 
-    // Move temporary result back to shared memory
-    for(int n=0;n<p_maxCubNodes;++n;inner0){
+    // Move temporary result back to @shared memory
+    for(int n=0;n<p_maxCubNodes;++n;@inner(0)){
       if (n<p_cubNp) {
         s_p[n] = r_p;
       }
     }
-    barrier(localMemFence);
+    @barrier("local");
     
     // Increment solution, project result back down
-    for(int n=0;n<p_maxCubNodes;++n;inner0){
+    for(int n=0;n<p_maxCubNodes;++n;@inner(0)){
       if (n < p_Np){
         const int e = elementIds[et];
         // Extract velocity rhs
@@ -489,7 +489,7 @@ kernel void acousticsMRABUpdateP2D_wadg(const int Nelements,
         
         // Project scaled rhs down
         dfloat rhsp = 0.f;
-        occaUnroll(p_cubNp)
+        #pragma unroll p_cubNp
         for (int i=0;i<p_cubNp;++i){
           rhsp += cubProject[n + i*p_Np] * s_p[i];
         }
@@ -506,10 +506,10 @@ kernel void acousticsMRABUpdateP2D_wadg(const int Nelements,
         }
       }      
     }
-    barrier(localMemFence);
+    @barrier("local");
 
     //write update and negative traces
-    for(int n=0; n < p_maxCubNodes; ++n; inner0){  
+    for(int n=0; n < p_maxCubNodes; ++n; @inner(0)){  
       const int e = elementIds[et];
 
       //write update      
@@ -559,9 +559,9 @@ kernel void acousticsMRABUpdateP2D_wadg(const int Nelements,
       }
     }
 
-    barrier(localMemFence); 
+    @barrier("local"); 
 
-    for(int n=0; n < p_maxNodes; ++n; inner0){  
+    for(int n=0; n < p_maxNodes; ++n; @inner(0)){  
       if (n < p_Nfp*p_Nfaces){
         const int e = elementIds[et];
         const int f  = n/p_Nfp; //face number
@@ -578,7 +578,7 @@ kernel void acousticsMRABUpdateP2D_wadg(const int Nelements,
           if (bc==-10) s= 1.f;
           if (bc==-11) s=-1.f;
 
-          occaUnroll(p_Nfp)
+          #pragma unroll p_Nfp
           for (int m=0;m<p_Nfp;m++) {
             sourceu += invVB1D[id + p_Nfp*m]*s_sourceu[f*p_Nfp+m];
             sourcev += invVB1D[id + p_Nfp*m]*s_sourcev[f*p_Nfp+m];
@@ -591,9 +591,9 @@ kernel void acousticsMRABUpdateP2D_wadg(const int Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
-    for(int n=0; n < p_maxCubNodes; ++n; inner0){  
+    for(int n=0; n < p_maxCubNodes; ++n; @inner(0)){  
       const int e = elementIds[et];      
       
       if (n < p_Nfp*p_Nfaces){
@@ -609,7 +609,7 @@ kernel void acousticsMRABUpdateP2D_wadg(const int Nelements,
             s_unp[f*p_Nfpp1+id] = 0.0;
             s_vnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
-            occaUnroll(2)
+            #pragma unroll 2
             for (int m=0;m<2;m++){ //apply raise operator sparsly
               const dfloat BBRaiseVal = BBRaiseVals[2*id+m];
               const int BBRaiseid = BBRaiseids[2*id+m] + f*p_Nfp;
@@ -631,7 +631,7 @@ kernel void acousticsMRABUpdateP2D_wadg(const int Nelements,
             s_unp[f*p_Nfpp1+id] = 0.0;
             s_vnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
-            occaUnroll(p_Nfp)
+            #pragma unroll p_Nfp
             for (int m=0;m<p_Nfp;m++){
               s_unp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
               s_vnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];
@@ -656,51 +656,51 @@ kernel void acousticsMRABUpdateP2D_wadg(const int Nelements,
   }
 }
 
-kernel void acousticsMRABTraceUpdateP2D_wadg(const int Nelements,
-           const int   * restrict elementIds,
-           const int   * restrict N,
+@kernel void acousticsMRABTraceUpdateP2D_wadg(const int Nelements,
+           @restrict const  int   *  elementIds,
+           @restrict const  int   *  N,
            const dfloat dt, 
            const dfloat a1,
            const dfloat a2,
            const dfloat a3,
-           const dfloat * restrict cubInterp,
-           const dfloat * restrict cubProject,
-           const dfloat * restrict c2,
+           @restrict const  dfloat *  cubInterp,
+           @restrict const  dfloat *  cubProject,
+           @restrict const  dfloat *  c2,
            const dfloat t,
-           const dfloat * restrict x,
-           const dfloat * restrict y,
-           const dfloat * restrict invVB1D,
-           const int   * restrict EToB,
-           const int   * restrict EToE,
-           const dfloat * restrict BBLower,
-           const int   * restrict BBRaiseids,
-           const dfloat * restrict BBRaiseVals,  
-           const int   * restrict vmapM,
-           const dfloat * restrict rhsq,
-           const dfloat * restrict q,
-           dfloat * restrict fQM,
-           dfloat * restrict fQP,
+           @restrict const  dfloat *  x,
+           @restrict const  dfloat *  y,
+           @restrict const  dfloat *  invVB1D,
+           @restrict const  int   *  EToB,
+           @restrict const  int   *  EToE,
+           @restrict const  dfloat *  BBLower,
+           @restrict const  int   *  BBRaiseids,
+           @restrict const  dfloat *  BBRaiseVals,  
+           @restrict const  int   *  vmapM,
+           @restrict const  dfloat *  rhsq,
+           @restrict const  dfloat *  q,
+           @restrict dfloat *  fQM,
+           @restrict dfloat *  fQP,
            const int   rhsShift){
   
-  for(int et=0;et<Nelements;++et;outer0){  // for all elements
-    shared dfloat s_q[p_Np*p_Nfields];
+  for(int et=0;et<Nelements;++et;@outer(0)){  // for all elements
+    @shared dfloat s_q[p_Np*p_Nfields];
 
-    shared dfloat s_un[p_Nfaces*p_Nfp];
-    shared dfloat s_vn[p_Nfaces*p_Nfp];
-    shared dfloat s_pn[p_Nfaces*p_Nfp];
+    @shared dfloat s_un[p_Nfaces*p_Nfp];
+    @shared dfloat s_vn[p_Nfaces*p_Nfp];
+    @shared dfloat s_pn[p_Nfaces*p_Nfp];
 
-    shared dfloat s_unp[p_Nfaces*p_Nfpp1];
-    shared dfloat s_vnp[p_Nfaces*p_Nfpp1];
-    shared dfloat s_pnp[p_Nfaces*p_Nfpp1];
+    @shared dfloat s_unp[p_Nfaces*p_Nfpp1];
+    @shared dfloat s_vnp[p_Nfaces*p_Nfpp1];
+    @shared dfloat s_pnp[p_Nfaces*p_Nfpp1];
 
-    shared dfloat s_sourceu[p_Nfp*p_Nfaces];
-    shared dfloat s_sourcev[p_Nfp*p_Nfaces];
-    shared dfloat s_sourcep[p_Nfp*p_Nfaces];
+    @shared dfloat s_sourceu[p_Nfp*p_Nfaces];
+    @shared dfloat s_sourcev[p_Nfp*p_Nfaces];
+    @shared dfloat s_sourcep[p_Nfp*p_Nfaces];
 
-    shared dfloat s_p[p_cubNp];
-    exclusive dfloat r_p;
+    @shared dfloat s_p[p_cubNp];
+    @exclusive dfloat r_p;
 
-    for(int n=0; n < p_maxCubNodes; ++n; inner0){  
+    for(int n=0; n < p_maxCubNodes; ++n; @inner(0)){  
       if (n < p_Np){
         const int e = elementIds[et];
         const int id = p_Nfields*(e*p_NpMax + n);
@@ -711,17 +711,17 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const int Nelements,
       // Initialize register variable
       r_p = 0.f;
     }
-    barrier(localMemFence);
+    @barrier("local");
 
     // Interpolate rhs to cubature nodes
-    for(int n=0;n<p_maxCubNodes;++n;inner0){
+    for(int n=0;n<p_maxCubNodes;++n;@inner(0)){
       if (n<p_cubNp) {
         const int e = elementIds[et];
         // Prefetch value of c2
         const dfloat c2n = c2[n + e*p_cubNpMax];
         
         dfloat val = 0.f;
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for (int i=0;i<p_Np;++i){
           val += cubInterp[n + i*p_cubNp] * s_p[i];
         }
@@ -730,18 +730,18 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const int Nelements,
         r_p = val * c2n;
       }
     }
-    barrier(localMemFence);
+    @barrier("local");
 
-    // Move temporary result back to shared memory
-    for(int n=0;n<p_maxCubNodes;++n;inner0){
+    // Move temporary result back to @shared memory
+    for(int n=0;n<p_maxCubNodes;++n;@inner(0)){
       if (n<p_cubNp) {
         s_p[n] = r_p;
       }
     }
-    barrier(localMemFence);
+    @barrier("local");
     
     // Increment solution, project result back down
-    for(int n=0;n<p_maxCubNodes;++n;inner0){
+    for(int n=0;n<p_maxCubNodes;++n;@inner(0)){
       if (n < p_Np){
         const int e = elementIds[et];
         // Extract velocity rhs
@@ -753,7 +753,7 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const int Nelements,
         
         // Project scaled rhs down
         dfloat rhsp = 0.f;
-        occaUnroll(p_cubNp)
+        #pragma unroll p_cubNp
         for (int i=0;i<p_cubNp;++i){
           rhsp += cubProject[n + i*p_Np] * s_p[i];
         }
@@ -769,10 +769,10 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const int Nelements,
         }
       }      
     }
-    barrier(localMemFence);
+    @barrier("local");
 
     //write update and negative traces
-    for(int n=0; n < p_maxCubNodes; ++n; inner0){  
+    for(int n=0; n < p_maxCubNodes; ++n; @inner(0)){  
       const int e = elementIds[et];
 
       if (n<p_Nfaces*p_Nfp) {
@@ -814,9 +814,9 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const int Nelements,
       }
     }
 
-    barrier(localMemFence); 
+    @barrier("local"); 
 
-    for(int n=0; n < p_maxNodes; ++n; inner0){  
+    for(int n=0; n < p_maxNodes; ++n; @inner(0)){  
       if (n < p_Nfp*p_Nfaces){
         const int e = elementIds[et];
         const int f  = n/p_Nfp; //face number
@@ -833,7 +833,7 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const int Nelements,
           if (bc==-10) s= 1.f;
           if (bc==-11) s=-1.f;
 
-          occaUnroll(p_Nfp)
+          #pragma unroll p_Nfp
           for (int m=0;m<p_Nfp;m++) {
             sourceu += invVB1D[id + p_Nfp*m]*s_sourceu[f*p_Nfp+m];
             sourcev += invVB1D[id + p_Nfp*m]*s_sourcev[f*p_Nfp+m];
@@ -846,9 +846,9 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const int Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
-    for(int n=0; n < p_maxCubNodes; ++n; inner0){  
+    for(int n=0; n < p_maxCubNodes; ++n; @inner(0)){  
       const int e = elementIds[et];      
       
       if (n < p_Nfp*p_Nfaces){
@@ -864,7 +864,7 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const int Nelements,
             s_unp[f*p_Nfpp1+id] = 0.0;
             s_vnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
-            occaUnroll(2)
+            #pragma unroll 2
             for (int m=0;m<2;m++){ //apply raise operator sparsly
               const dfloat BBRaiseVal = BBRaiseVals[2*id+m];
               const int BBRaiseid = BBRaiseids[2*id+m] + f*p_Nfp;
@@ -886,7 +886,7 @@ kernel void acousticsMRABTraceUpdateP2D_wadg(const int Nelements,
             s_unp[f*p_Nfpp1+id] = 0.0;
             s_vnp[f*p_Nfpp1+id] = 0.0;
             s_pnp[f*p_Nfpp1+id] = 0.0;
-            occaUnroll(p_Nfp)
+            #pragma unroll p_Nfp
             for (int m=0;m<p_Nfp;m++){
               s_unp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_un[f*p_Nfp + m];
               s_vnp[f*p_Nfpp1+id] += BBLower[p_Nfp*id+m]*s_vn[f*p_Nfp + m];

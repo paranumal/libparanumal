@@ -45,8 +45,8 @@ void upwindRoeAveraged(const dfloat nx,
   dfloat pP = p_RT*rP;
   
   // Compute Roe average variables
-  dfloat rMsqr = occaSqrt(rM);
-  dfloat rPsqr = occaSqrt(rP); 
+  dfloat rMsqr = sqrt(rM);
+  dfloat rPsqr = sqrt(rP); 
 
   dfloat r = rMsqr*rPsqr;
   dfloat un = (rMsqr*unM + rPsqr*unP)/(rMsqr + rPsqr);
@@ -117,37 +117,37 @@ void upwindRoeAveraged(const dfloat nx,
 
 
 // batch process elements
-kernel void cnsSurfaceTet3D(const dlong Nelements,
+@kernel void cnsSurfaceTet3D(const dlong Nelements,
 			    const int advSwitch,
-			    const dfloat * restrict sgeo,
-			    const dfloat * restrict LIFTT,
-			    const dlong  * restrict vmapM,
-			    const dlong  * restrict vmapP,
-			    const int    * restrict EToB,
+			    @restrict const  dfloat *  sgeo,
+			    @restrict const  dfloat *  LIFTT,
+			    @restrict const  dlong  *  vmapM,
+			    @restrict const  dlong  *  vmapP,
+			    @restrict const  int    *  EToB,
 			    const dfloat time,
-			    const dfloat * restrict x,
-			    const dfloat * restrict y,
-			    const dfloat * restrict z,	
+			    @restrict const  dfloat *  x,
+			    @restrict const  dfloat *  y,
+			    @restrict const  dfloat *  z,	
 			    const dfloat mu,
 			    const dfloat intfx,
 			    const dfloat intfy,
 			    const dfloat intfz,
-			    const dfloat * restrict q,
-			    const dfloat * restrict viscousStresses,
-			    dfloat * restrict rhsq){
+			    @restrict const  dfloat *  q,
+			    @restrict const  dfloat *  viscousStresses,
+			    @restrict dfloat *  rhsq){
   
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     
-    // shared storage for flux terms
-    shared dfloat s_rflux [p_NblockS][p_NfacesNfp];
-    shared dfloat s_ruflux[p_NblockS][p_NfacesNfp];
-    shared dfloat s_rvflux[p_NblockS][p_NfacesNfp];
-    shared dfloat s_rwflux[p_NblockS][p_NfacesNfp];
+    // @shared storage for flux terms
+    @shared dfloat s_rflux [p_NblockS][p_NfacesNfp];
+    @shared dfloat s_ruflux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_rvflux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_rwflux[p_NblockS][p_NfacesNfp];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_NfacesNfp){
@@ -256,8 +256,8 @@ kernel void cnsSurfaceTet3D(const dlong Nelements,
 	    s_rwflux[es][n] = sc*(-rwflux);
             
 #else
-            const dfloat lambdaM = occaSqrt(uM*uM+vM*vM+wM*wM) + p_sqrtRT;
-            const dfloat lambdaP = occaSqrt(uP*uP+vP*vP+wP*wP) + p_sqrtRT;
+            const dfloat lambdaM = sqrt(uM*uM+vM*vM+wM*wM) + p_sqrtRT;
+            const dfloat lambdaP = sqrt(uP*uP+vP*vP+wP*wP) + p_sqrtRT;
 
             dfloat lambda = (lambdaM>lambdaP) ? lambdaM:lambdaP;
             
@@ -303,12 +303,12 @@ kernel void cnsSurfaceTet3D(const dlong Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){            
@@ -316,7 +316,7 @@ kernel void cnsSurfaceTet3D(const dlong Nelements,
             dfloat Lrflux = 0.f, Lruflux = 0.f, Lrvflux = 0.f, Lrwflux = 0.f;
             
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 const dfloat L = LIFTT[n+m*p_Np];
                 Lrflux  += L*s_rflux[es][m];
@@ -337,37 +337,37 @@ kernel void cnsSurfaceTet3D(const dlong Nelements,
   }
 }
 
-kernel void cnsStressesSurfaceTet3D(const dlong Nelements,
-				    const dfloat * restrict sgeo,
-				    const dfloat * restrict LIFTT,
-				    const dlong  * restrict vmapM,
-				    const dlong  * restrict vmapP,
-				    const int    * restrict EToB,
+@kernel void cnsStressesSurfaceTet3D(const dlong Nelements,
+				    @restrict const  dfloat *  sgeo,
+				    @restrict const  dfloat *  LIFTT,
+				    @restrict const  dlong  *  vmapM,
+				    @restrict const  dlong  *  vmapP,
+				    @restrict const  int    *  EToB,
 				    const dfloat time,
-				    const dfloat * restrict x,
-				    const dfloat * restrict y,
-				    const dfloat * restrict z,
+				    @restrict const  dfloat *  x,
+				    @restrict const  dfloat *  y,
+				    @restrict const  dfloat *  z,
 				    const dfloat mu,
 				    const dfloat intfx,
 				    const dfloat intfy,
 				    const dfloat intfz,
-				    const dfloat * restrict q,
-				    dfloat * restrict viscousStresses){
+				    @restrict const  dfloat *  q,
+				    @restrict dfloat *  viscousStresses){
   
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     
-    // shared storage for flux terms
-    shared dfloat s_T11flux[p_NblockS][p_NfacesNfp];
-    shared dfloat s_T12flux[p_NblockS][p_NfacesNfp];
-    shared dfloat s_T13flux[p_NblockS][p_NfacesNfp];
-    shared dfloat s_T22flux[p_NblockS][p_NfacesNfp];
-    shared dfloat s_T23flux[p_NblockS][p_NfacesNfp];
-    shared dfloat s_T33flux[p_NblockS][p_NfacesNfp];
+    // @shared storage for flux terms
+    @shared dfloat s_T11flux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_T12flux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_T13flux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_T22flux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_T23flux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_T33flux[p_NblockS][p_NfacesNfp];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_NfacesNfp){
@@ -439,11 +439,11 @@ kernel void cnsStressesSurfaceTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){      
@@ -452,7 +452,7 @@ kernel void cnsStressesSurfaceTet3D(const dlong Nelements,
 	    dfloat LT22flux = 0.f, LT23flux = 0.f, LT33flux = 0.f;
             
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 const dfloat L = LIFTT[n+m*p_Np];
                 LT11flux += L*s_T11flux[es][m];

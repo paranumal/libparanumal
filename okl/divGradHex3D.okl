@@ -1,43 +1,43 @@
 
 //written by KS
-//purpose: split the divergence and gradient into separate kernels
+//purpose: split the divergence and gradient into separate @kernels
 //COLLOCATION ONLY IN THIS FILE SO NO INTERPOLATION (!)
 //developement started Oct 25th 2017
 
 
 
-kernel void gradientHex3D_e0(const int Nelements,
-                             const int * restrict elementList,
-                             const dfloat * restrict gjGeo,
-                             const dfloat * restrict gjD,
-                             const dfloat * restrict gjI,
+@kernel void gradientHex3D_e0(const int Nelements,
+                             @restrict const  int *  elementList,
+                             @restrict const  dfloat *  gjGeo,
+                             @restrict const  dfloat *  gjD,
+                             @restrict const  dfloat *  gjI,
                              const dfloat lambda,
-                             const dfloat * restrict q,
-                             dfloat * restrict gradq,
-                             dfloat * restrict Aq){
+                             @restrict const  dfloat *  q,
+                             @restrict dfloat *  gradq,
+                             @restrict dfloat *  Aq){
 
-	for(int e=0; e<Nelements; ++e; outer0) {
+	for(int e=0; e<Nelements; ++e; @outer(0)) {
 
-		shared dfloat s_D[p_gjNq][p_Nq+p_gllPad];
+		@shared dfloat s_D[p_gjNq][p_Nq+p_gllPad];
 
-		exclusive dfloat r_q[p_Nq];
+		@exclusive dfloat r_q[p_Nq];
 
-		shared dfloat s_Ixxq[p_Nq][p_Nq+p_gllPad];
-		shared dfloat s_Dxxq[p_Nq][p_Nq+p_gllPad];
+		@shared dfloat s_Ixxq[p_Nq][p_Nq+p_gllPad];
+		@shared dfloat s_Dxxq[p_Nq][p_Nq+p_gllPad];
 
-		shared dfloat s_IxDq[p_Nq][p_gjNq+p_gjPad];
-		shared dfloat s_IxIq[p_Nq][p_gjNq+p_gjPad];
-		shared dfloat s_DxIq[p_Nq][p_gjNq+p_gjPad];
+		@shared dfloat s_IxDq[p_Nq][p_gjNq+p_gjPad];
+		@shared dfloat s_IxIq[p_Nq][p_gjNq+p_gjPad];
+		@shared dfloat s_DxIq[p_Nq][p_gjNq+p_gjPad];
 
-		exclusive int emap;
-		exclusive dfloat r_G00, r_G01, r_G02; 
-		exclusive dfloat r_G10, r_G11, r_G12; 
-		exclusive dfloat r_G20, r_G21, r_G22, r_GwJ;
-		exclusive dfloat r_u;
+		@exclusive int emap;
+		@exclusive dfloat r_G00, r_G01, r_G02; 
+		@exclusive dfloat r_G10, r_G11, r_G12; 
+		@exclusive dfloat r_G20, r_G21, r_G22, r_GwJ;
+		@exclusive dfloat r_u;
 
 		// prefetch D and I matrices and zero register storage
-		for(int b=0; b<p_gjNq; ++b; inner1) {
-			for(int a=0; a<p_gjNq; ++a; inner0) {
+		for(int b=0; b<p_gjNq; ++b; @inner(1)) {
+			for(int a=0; a<p_gjNq; ++a; @inner(0)) {
 				const int t = a + p_gjNq*b;
 
 				if(a<p_Nq && b<p_gjNq) {
@@ -48,7 +48,7 @@ kernel void gradientHex3D_e0(const int Nelements,
 
 				if(a<p_Nq && b<p_Nq) {
 
-					occaUnroll(p_Nq)
+					#pragma unroll p_Nq
 					for(int c=0; c<p_Nq; ++c) {
 						r_q[c] = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];
 					}
@@ -63,8 +63,8 @@ kernel void gradientHex3D_e0(const int Nelements,
 			optBarrier(localMemFence);
 
 			// prefetch slice
-			for(int b=0; b<p_gjNq; ++b; inner1) {
-				for(int a=0; a<p_gjNq; ++a; inner0) {
+			for(int b=0; b<p_gjNq; ++b; @inner(1)) {
+				for(int a=0; a<p_gjNq; ++a; @inner(0)) {
 
 					const int base = emap*p_Nggeo*p_gjNp + k*p_gjNq*p_gjNq + b*p_gjNq + a;
 
@@ -85,7 +85,7 @@ kernel void gradientHex3D_e0(const int Nelements,
 
 						dfloat Iqk = 0, Dqk = 0;
 
-						occaUnroll(p_Nq)
+						#pragma unroll p_Nq
 						for(int c=0; c<p_Nq; ++c) {
 							
 							r_u += s_D[k][c]*qcba;
@@ -98,14 +98,14 @@ kernel void gradientHex3D_e0(const int Nelements,
 			optBarrier(localMemFence);
 
 			// interpolate and differentiate in 'r' direction
-			for(int b=0; b<p_gjNq; ++b; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
+			for(int b=0; b<p_gjNq; ++b; @inner(1)) {
+				for(int i=0; i<p_gjNq; ++i; @inner(0)) {
 
 					if(b<p_Nq) {
 
 						dfloat IxDq= 0, IxIq = 0, DxIq = 0;
 
-						occaUnroll(p_Nq)
+						#pragma unroll p_Nq
 						for(int a=0; a<p_Nq; ++a) {
 						
 							const dfloat Dia = s_D[i][a];
@@ -124,13 +124,13 @@ kernel void gradientHex3D_e0(const int Nelements,
 
 			optBarrier(localMemFence);
 
-			for(int j=0; j<p_gjNq; ++j; inner1) {
-				for(int i=0; i<p_gjNq; ++i; inner0) {
+			for(int j=0; j<p_gjNq; ++j; @inner(1)) {
+				for(int i=0; i<p_gjNq; ++i; @inner(0)) {
 
 					dfloat qr = 0, qs = 0, qt = 0, qI = 0;
 
 					// interpolate and differentiate in 's' direction
-					occaUnroll(p_Nq)
+					#pragma unroll p_Nq
 					for(int n=0; n<p_Nq; ++n) {
 						const dfloat Ijn = s_I[j][n];
 						const dfloat Djn = s_D[j][n];

@@ -1,12 +1,12 @@
-kernel void testHYBmatvec_v0(int N,
+@kernel void testHYBmatvec_v0(int N,
                              double * values,
                              int * indices,
                              double * vector,
                              double * result){
                              
-	for(int b=0;b<p_Nblocks;++b;outer0){
+	for(int b=0;b<p_Nblocks;++b;@outer(0)){
 	
-		for (int m=0; m<p_blockSize; m++; inner0){
+		for (int m=0; m<p_blockSize; m++; @inner(0)){
 			double rowsum = 0.0f;
 			int r = p_blockSize*b+m;
 			if (r <N){
@@ -24,15 +24,15 @@ kernel void testHYBmatvec_v0(int N,
 	}
 }
 
-kernel void testHYBmatvec_v1(const int N,
-                             const double * restrict values,
-                             const int * restrict indices,
-                             const double * restrict vector,
+@kernel void testHYBmatvec_v1(const int N,
+                             @restrict const double *  values,
+                             @restrict const  int *  indices,
+                             @restrict const double *  vector,
                              double * result){
                              
-	for(int b=0;b<p_Nblocks;++b;outer0){
+	for(int b=0;b<p_Nblocks;++b;@outer(0)){
 	
-		for (int m=0; m<p_blockSize; m++; inner0){
+		for (int m=0; m<p_blockSize; m++; @inner(0)){
 			double rowsum = 0.0f;
 			int r = p_blockSize*b+m;
 			if (r <N){
@@ -50,19 +50,19 @@ kernel void testHYBmatvec_v1(const int N,
 	}
 }
 
-kernel void testHYBmatvec_v2(const int N,
-                             const double * restrict values,
-                             const int * restrict indices,
-                             const double * restrict vector,
+@kernel void testHYBmatvec_v2(const int N,
+                             @restrict const double *  values,
+                             @restrict const  int *  indices,
+                             @restrict const double *  vector,
                              double * result){
                              
-	for(int b=0;b<p_Nblocks;++b;outer0){
+	for(int b=0;b<p_Nblocks;++b;@outer(0)){
 	
-		for (int m=0; m<p_blockSize; m++; inner0){
+		for (int m=0; m<p_blockSize; m++; @inner(0)){
 			double rowsum = 0.0f;
 			int r = p_blockSize*b+m;
 			if (r <N){
-				occaUnroll(p_rowSize)
+				#pragma unroll p_rowSize
 				for (int k = 0; k< p_rowSize; k++){
 					int colindex = indices[r*p_rowSize+k];
 					if (colindex !=0)
@@ -77,16 +77,16 @@ kernel void testHYBmatvec_v2(const int N,
 	}
 }
 
-kernel void testHYBmatvec_v3(const int N,
-                             const double * restrict values,
-                             const int * restrict indices,
-                             const double * restrict vector,
+@kernel void testHYBmatvec_v3(const int N,
+                             @restrict const double *  values,
+                             @restrict const  int *  indices,
+                             @restrict const double *  vector,
                              double * result){
                              
-	for(int b=0;b<p_Nblocks;++b;outer0){
+	for(int b=0;b<p_Nblocks;++b;@outer(0)){
 	
-		shared double s_val[p_blockSize*p_rowSize];
-		for (int m=0; m<p_blockSize; m++; inner0){
+		@shared double s_val[p_blockSize*p_rowSize];
+		for (int m=0; m<p_blockSize; m++; @inner(0)){
 			double rowsum = 0.0f;
 			int r = p_blockSize*b+m;
 			
@@ -96,11 +96,11 @@ kernel void testHYBmatvec_v3(const int N,
 					s_val[m*p_rowSize+p] = values[p+r*p_rowSize];
 				}
 			}
-			//fetch values to shared memory
-			barrier(localMemFence);
+			//fetch values to @shared memory
+			@barrier("local");
 			
 			if (r <N){
-				occaUnroll(p_rowSize)
+				#pragma unroll p_rowSize
 				for (int k = 0; k< p_rowSize; k++){
 					int colindex = indices[r*p_rowSize+k];
 					if (colindex !=0)
@@ -116,17 +116,17 @@ kernel void testHYBmatvec_v3(const int N,
 }
 
 
-kernel void testHYBmatvec_v4(const int N,
-                             const double * restrict values,
-                             const int * restrict indices,
-                             const double * restrict vector,
+@kernel void testHYBmatvec_v4(const int N,
+                             @restrict const double *  values,
+                             @restrict const  int *  indices,
+                             @restrict const double *  vector,
                              double * result){
                              
-	for(int b=0;b<p_Nblocks;++b;outer0){
+	for(int b=0;b<p_Nblocks;++b;@outer(0)){
 	
-		shared double s_val[p_blockSize*p_rowSize];
-		shared int s_ind[p_blockSize*p_rowSize];
-		for (int m=0; m<p_blockSize; m++; inner0){
+		@shared double s_val[p_blockSize*p_rowSize];
+		@shared int s_ind[p_blockSize*p_rowSize];
+		for (int m=0; m<p_blockSize; m++; @inner(0)){
 			double rowsum = 0.0f;
 			int r = p_blockSize*b+m;
 			
@@ -137,11 +137,11 @@ kernel void testHYBmatvec_v4(const int N,
 					s_ind[m*p_rowSize+p] = indices[p+r*p_rowSize];
 				}
 			}
-			//fetch values to shared memory
-			barrier(localMemFence);
+			//fetch values to @shared memory
+			@barrier("local");
 			
 			if (r <N){
-				occaUnroll(p_rowSize)
+				#pragma unroll p_rowSize
 				for (int k = 0; k< p_rowSize; k++){
 					int colindex = s_ind[m*p_rowSize+k];
 					if (colindex !=0)
@@ -157,23 +157,23 @@ kernel void testHYBmatvec_v4(const int N,
 }
 
 //registers!
-kernel void testHYBmatvec_v5(const int N,
-                             const double * restrict values,
-                             const int * restrict indices,
-                             const double * restrict vector,
+@kernel void testHYBmatvec_v5(const int N,
+                             @restrict const double *  values,
+                             @restrict const  int *  indices,
+                             @restrict const double *  vector,
                              double * result){
                              
-	for(int b=0;b<p_Nblocks;++b;outer0){
+	for(int b=0;b<p_Nblocks;++b;@outer(0)){
 	
-		//	shared double s_val[p_blockSize*p_rowSize];
-		//shared int s_ind[p_blockSize*p_rowSize];
-		exclusive double r_val[p_rowSize];
-		exclusive int r_ind[p_rowSize];
-		exclusive int colindex;
-		for (int m=0; m<p_blockSize; m++; inner0){
+		//	@shared double s_val[p_blockSize*p_rowSize];
+		//@shared int s_ind[p_blockSize*p_rowSize];
+		@exclusive double r_val[p_rowSize];
+		@exclusive int r_ind[p_rowSize];
+		@exclusive int colindex;
+		for (int m=0; m<p_blockSize; m++; @inner(0)){
 			double rowsum = 0.0f;
 			int r = p_blockSize*b+m;
-			occaUnroll(p_rowSize)
+			#pragma unroll p_rowSize
 			for (int p = 0; p<p_rowSize; ++p)
 			{
 				if (r <N){
@@ -181,11 +181,11 @@ kernel void testHYBmatvec_v5(const int N,
 					r_ind[p] = indices[p+r*p_rowSize];
 				}
 			}
-			//fetch values to shared memory
-			//		barrier(localMemFence);
+			//fetch values to @shared memory
+			//		@barrier("local");
 			
 			if (r <N){
-				occaUnroll(p_rowSize)
+				#pragma unroll p_rowSize
 				for (int k = 0; k< p_rowSize; k++){
 					colindex = r_ind[k];
 					if (colindex !=0)
@@ -200,22 +200,22 @@ kernel void testHYBmatvec_v5(const int N,
 	}
 }
 
-kernel void testHYBmatvec_v6(const int N,
-                             const double * restrict values,
-                             const int * restrict indices,
-                             const double * restrict vector,
+@kernel void testHYBmatvec_v6(const int N,
+                             @restrict const double *  values,
+                             @restrict const  int *  indices,
+                             @restrict const double *  vector,
                              double * result){
                              
-	for(int b=0;b<p_Nblocks;++b;outer0){
+	for(int b=0;b<p_Nblocks;++b;@outer(0)){
 	
-		shared double s_val[p_blockSize*p_rowSize];
-		shared int s_ind[p_blockSize*p_rowSize];
-		shared double s_vec[p_blockSize];
-		//		shared double s_vec[]
-		for (int m=0; m<p_blockSize; m++; inner0){
+		@shared double s_val[p_blockSize*p_rowSize];
+		@shared int s_ind[p_blockSize*p_rowSize];
+		@shared double s_vec[p_blockSize];
+		//		@shared double s_vec[]
+		for (int m=0; m<p_blockSize; m++; @inner(0)){
 			double rowsum = 0.0f;
 			const int r = p_blockSize*b+m;
-			occaUnroll(p_rowSize)
+			#pragma unroll p_rowSize
 			for (int p = 0; p<p_rowSize; ++p)
 			{
 				if (r <N){
@@ -223,18 +223,18 @@ kernel void testHYBmatvec_v6(const int N,
 					s_ind[m*p_rowSize+p] = indices[p+r*p_rowSize];
 				}
 			}
-			//fetch values to shared memory
-			barrier(localMemFence);
+			//fetch values to @shared memory
+			@barrier("local");
 			//	if (r<N){
 			//	if (b ==p_Nblocks-1){
-			//	printf("loading value %d to shared at position %d\n", r, m);
+			//	printf("loading value %d to @shared at position %d\n", r, m);
 			//	}
 			s_vec[m] = vector[r];
 			//		}
-			barrier(localMemFence);
+			@barrier("local");
 			
 			if (r <N){
-				occaUnroll(p_rowSize)
+				#pragma unroll p_rowSize
 				//	for (int k = 0; k< p_rowSize; k++){
 				int k = 0;
 				int colindex = s_ind[m*p_rowSize+k];
@@ -260,22 +260,22 @@ kernel void testHYBmatvec_v6(const int N,
 	}
 }
 
-kernel void testHYBmatvec_v7(const int N,
-                             const double * restrict values,
-                             const int * restrict indices,
-                             const double * restrict vector,
+@kernel void testHYBmatvec_v7(const int N,
+                             @restrict const double *  values,
+                             @restrict const  int *  indices,
+                             @restrict const double *  vector,
                              double * result){
                              
-	for(int b=0;b<p_Nblocks;++b;outer0){
+	for(int b=0;b<p_Nblocks;++b;@outer(0)){
 	
-		shared double s_val[p_blockSize*p_rowSize];
-		shared int s_ind[p_blockSize*p_rowSize];
-		shared double s_vec[p_blockSize];
-		//		shared double s_vec[]
-		for (int m=0; m<p_blockSize; m++; inner0){
+		@shared double s_val[p_blockSize*p_rowSize];
+		@shared int s_ind[p_blockSize*p_rowSize];
+		@shared double s_vec[p_blockSize];
+		//		@shared double s_vec[]
+		for (int m=0; m<p_blockSize; m++; @inner(0)){
 			double rowsum = 0.0f;
 			const int r = p_blockSize*b+m;
-			occaUnroll(p_rowSize)
+			#pragma unroll p_rowSize
 			for (int p = 0; p<p_rowSize; ++p)
 			{
 				if (r <N){
@@ -283,18 +283,18 @@ kernel void testHYBmatvec_v7(const int N,
 					s_ind[m*p_rowSize+p] = indices[p+r*p_rowSize];
 				}
 			}
-			//fetch values to shared memory
-			barrier(localMemFence);
+			//fetch values to @shared memory
+			@barrier("local");
 			//	if (r<N){
 			//	if (b ==p_Nblocks-1){
-			//	printf("loading value %d to shared at position %d\n", r, m);
+			//	printf("loading value %d to @shared at position %d\n", r, m);
 			//	}
 			s_vec[m] = vector[r];
 			//		}
-			barrier(localMemFence);
+			@barrier("local");
 			
 			if (r <N){
-				occaUnroll(p_rowSize)
+				#pragma unroll p_rowSize
 				//	for (int k = 0; k< p_rowSize; k++){
 				int k = 0;
 				int colindex = s_ind[m*p_rowSize+k];

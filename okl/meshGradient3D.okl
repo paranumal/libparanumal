@@ -8,7 +8,7 @@
 #define TYID 7
 #define TZID 8
 
-kernel void meshGradient3D(const int Nelements,
+@kernel void meshGradient3D(const int Nelements,
 			   const int Np,
 			   const int Nvgeo,
 			   const float *vgeo,
@@ -21,9 +21,9 @@ kernel void meshGradient3D(const int Nelements,
 			   float *dqdz
 			   ){
   
-  for(int e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
         
-    for(int n=0;n<Np;++n;inner0){
+    for(int n=0;n<Np;++n;@inner(0)){
 
       dfloat drdx = vgeo[e*Nvgeo + RXID];
       dfloat drdy = vgeo[e*Nvgeo + RYID];

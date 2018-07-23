@@ -1,16 +1,16 @@
 
-kernel void cnsUpdate2D(const dlong Nelements,
+@kernel void cnsUpdate2D(const dlong Nelements,
                             const dfloat dt,  
                             const dfloat rka,
                             const dfloat rkb,
-                            const dfloat * restrict rhsq,
-                            dfloat * restrict resq,
-                            dfloat * restrict q){
+                            @restrict const  dfloat *  rhsq,
+                            @restrict dfloat *  resq,
+                            @restrict dfloat *  q){
   
   // Low storage Runge Kutta time step update
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    for(int n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       for(int fld=0; fld< p_Nfields; ++fld){
 
@@ -30,17 +30,17 @@ kernel void cnsUpdate2D(const dlong Nelements,
   }
 }
 
-kernel void cnsRkStage2D(const dlong Nelements,
+@kernel void cnsRkStage2D(const dlong Nelements,
                          const int rk,
                          const dfloat dt,  
-                         const dfloat * restrict rkA,
-                         const dfloat * restrict q,
-                         const dfloat * restrict rkrhsq,
-                               dfloat * restrict rkq){
+                         @restrict const  dfloat *  rkA,
+                         @restrict const  dfloat *  q,
+                         @restrict const  dfloat *  rkrhsq,
+                               @restrict dfloat *  rkq){
   
   // Runge Kutta intermediate stage
-  for(dlong e=0;e<Nelements;++e;outer0){\
-    for(int n=0;n<p_Np;++n;inner0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){\
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       for(int fld=0; fld< p_Nfields; ++fld){
         const dlong id = e*p_Np*p_Nfields + fld*p_Np + n;
@@ -58,20 +58,20 @@ kernel void cnsRkStage2D(const dlong Nelements,
   }
 }
 
-kernel void cnsRkUpdate2D(const dlong Nelements,
+@kernel void cnsRkUpdate2D(const dlong Nelements,
                           const int rk,
                           const dfloat dt,  
-                          const dfloat * restrict rkA,
-                          const dfloat * restrict rkE,
-                          const dfloat * restrict q,
-                          const dfloat * restrict rhsq,
-                                dfloat * restrict rkrhsq,
-                                dfloat * restrict rkq,
-                                dfloat * restrict rkerr){
+                          @restrict const  dfloat *  rkA,
+                          @restrict const  dfloat *  rkE,
+                          @restrict const  dfloat *  q,
+                          @restrict const  dfloat *  rhsq,
+                                @restrict dfloat *  rkrhsq,
+                                @restrict dfloat *  rkq,
+                                @restrict dfloat *  rkerr){
   
   // Runge Kutta intermediate stage
-  for(dlong e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       for(int fld=0; fld< p_Nfields; ++fld){
         const dlong id = e*p_Np*p_Nfields + fld*p_Np + n;
@@ -99,19 +99,19 @@ kernel void cnsRkUpdate2D(const dlong Nelements,
   }
 }
 
-kernel void cnsErrorEstimate2D(const dlong N,
+@kernel void cnsErrorEstimate2D(const dlong N,
                                const dfloat ATOL,
                                const dfloat RTOL,
-                               const dfloat * restrict q,
-                               const dfloat * restrict rkq,
-                               const dfloat * restrict rkerr,
-                                     dfloat * restrict errtmp){
+                               @restrict const  dfloat *  q,
+                               @restrict const  dfloat *  rkq,
+                               @restrict const  dfloat *  rkerr,
+                                     @restrict dfloat *  errtmp){
   
-  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
+  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;@outer(0)){
     
-    volatile shared dfloat s_err[p_blockSize];
+    @shared volatile dfloat s_err[p_blockSize];
 
-    for(int t=0;t<p_blockSize;++t;inner0){
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
       const dlong id = t + p_blockSize*b;
       if (id<N) {
         const dfloat   qn =   q[id];
@@ -125,28 +125,28 @@ kernel void cnsErrorEstimate2D(const dlong N,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 #if p_blockSize>512
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<512) s_err[t] += s_err[t+512];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<512) s_err[t] += s_err[t+512];
+    @barrier("local");
 #endif
 #if p_blockSize>256
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<256) s_err[t] += s_err[t+256];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) s_err[t] += s_err[t+256];
+    @barrier("local");
 #endif
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<128) s_err[t] += s_err[t+128];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) s_err[t] += s_err[t+128];
+    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t< 64) s_err[t] += s_err[t+64];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) s_err[t] += s_err[t+64];
+    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t< 32) s_err[t] += s_err[t+32];
-    for(int t=0;t<p_blockSize;++t;inner0) if(t< 16) s_err[t] += s_err[t+16];
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  8) s_err[t] += s_err[t+8];
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  4) s_err[t] += s_err[t+4];
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  2) s_err[t] += s_err[t+2];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) s_err[t] += s_err[t+32];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) s_err[t] += s_err[t+16];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) s_err[t] += s_err[t+8];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) s_err[t] += s_err[t+4];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_err[t] += s_err[t+2];
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  1) errtmp[b] = s_err[0] + s_err[1];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) errtmp[b] = s_err[0] + s_err[1];
   }
 }

@@ -1,30 +1,30 @@
 
 // compute div(NU)  = div(uxu) in collocation way
-kernel void insSubCycleVolumeTet3D(const dlong Nelements,
-                                   const dfloat * restrict vgeo,
-                                   const dfloat * restrict Dmatrices,
+@kernel void insSubCycleVolumeTet3D(const dlong Nelements,
+                                   @restrict const  dfloat *  vgeo,
+                                   @restrict const  dfloat *  Dmatrices,
                                    const dlong offset,
-                                   const dfloat * restrict U,
-                                   const dfloat * restrict Ud,
-                                         dfloat * restrict rhsU){
+                                   @restrict const  dfloat *  U,
+                                   @restrict const  dfloat *  Ud,
+                                         @restrict dfloat *  rhsU){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
     // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat s_F11[p_NblockV][p_Np];
-    shared dfloat s_F12[p_NblockV][p_Np];
-    shared dfloat s_F13[p_NblockV][p_Np];
+    @shared dfloat s_F11[p_NblockV][p_Np];
+    @shared dfloat s_F12[p_NblockV][p_Np];
+    @shared dfloat s_F13[p_NblockV][p_Np];
 
-    shared dfloat s_F21[p_NblockV][p_Np];
-    shared dfloat s_F22[p_NblockV][p_Np];
-    shared dfloat s_F23[p_NblockV][p_Np];
+    @shared dfloat s_F21[p_NblockV][p_Np];
+    @shared dfloat s_F22[p_NblockV][p_Np];
+    @shared dfloat s_F23[p_NblockV][p_Np];
     
-    shared dfloat s_F31[p_NblockV][p_Np];
-    shared dfloat s_F32[p_NblockV][p_Np];
-    shared dfloat s_F33[p_NblockV][p_Np];
+    @shared dfloat s_F31[p_NblockV][p_Np];
+    @shared dfloat s_F32[p_NblockV][p_Np];
+    @shared dfloat s_F33[p_NblockV][p_Np];
     
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){ 
           const dlong id = e*p_Np+n;
@@ -69,17 +69,17 @@ kernel void insSubCycleVolumeTet3D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_Np;++n;inner0){      
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){      
         const dlong e = eo+es; 
         if(e<Nelements){    
           const dlong id = e*p_Np+n;
           dfloat fluxU = 0., fluxV = 0., fluxW = 0.;
          
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
               const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
@@ -108,32 +108,32 @@ kernel void insSubCycleVolumeTet3D(const dlong Nelements,
 }
 
 //
-kernel void insSubCycleSurfaceTet3D(const dlong Nelements,
-                                    const dfloat * restrict sgeo,
-                                    const dfloat * restrict LIFTT,
-                                    const dlong  * restrict vmapM,
-                                    const dlong  * restrict vmapP,
-                                    const int    * restrict EToB,
+@kernel void insSubCycleSurfaceTet3D(const dlong Nelements,
+                                    @restrict const  dfloat *  sgeo,
+                                    @restrict const  dfloat *  LIFTT,
+                                    @restrict const  dlong  *  vmapM,
+                                    @restrict const  dlong  *  vmapP,
+                                    @restrict const  int    *  EToB,
                                     const dfloat bScale,
                                     const dfloat time,
-                                    const dfloat * restrict x,
-                                    const dfloat * restrict y,
-                                    const dfloat * restrict z,
+                                    @restrict const  dfloat *  x,
+                                    @restrict const  dfloat *  y,
+                                    @restrict const  dfloat *  z,
                                     const dlong offset,
-                                    const dfloat * restrict U,
-                                    const dfloat * restrict Ud,
-                                          dfloat * restrict rhsU){
+                                    @restrict const  dfloat *  U,
+                                    @restrict const  dfloat *  Ud,
+                                          @restrict dfloat *  rhsU){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_fluxU[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxV[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxW[p_NblockS][p_Nfp*p_Nfaces];
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_fluxU[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxV[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxW[p_NblockS][p_Nfp*p_Nfaces];
     
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -177,8 +177,8 @@ kernel void insSubCycleSurfaceTet3D(const dlong Nelements,
             }
 
             // Find max normal velocity on the face
-            const dfloat unM   = occaFabs(nx*UM + ny*VM + nz*WM);
-            const dfloat unP   = occaFabs(nx*UP + ny*VP + nz*WP);    
+            const dfloat unM   = fabs(nx*UM + ny*VM + nz*WM);
+            const dfloat unP   = fabs(nx*UP + ny*VP + nz*WP);    
             const dfloat unMax = (unM > unP) ? unM : unP;
 
             // evaluate "flux" terms: LLF
@@ -202,12 +202,12 @@ kernel void insSubCycleSurfaceTet3D(const dlong Nelements,
       }
     }
 
-    // wait for all flux functions are written to shared 
-    barrier(localMemFence);
+    // wait for all flux functions are written to @shared 
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
@@ -217,7 +217,7 @@ kernel void insSubCycleSurfaceTet3D(const dlong Nelements,
             dfloat rhsv = rhsU[id+1*offset];
             dfloat rhsw = rhsU[id+2*offset];
             // Lift
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
             for(int m=0;m<p_Nfaces*p_Nfp;++m){
               const dfloat L = LIFTT[n+m*p_Np];
               rhsu  += L*s_fluxU[es][m];
@@ -239,43 +239,43 @@ kernel void insSubCycleSurfaceTet3D(const dlong Nelements,
 
 
 // compute div(NU)  = div(uxu) in collocation way
-kernel void insSubCycleCubatureVolumeTet3D(const dlong Nelements,
-                                           const dfloat * restrict vgeo,
-                                           const dfloat * restrict cubvgeo,
-                                           const dfloat * restrict cubDWmatrices,
-                                           const dfloat * restrict cubInterpT,
-                                           const dfloat * restrict cubProjectT,
+@kernel void insSubCycleCubatureVolumeTet3D(const dlong Nelements,
+                                           @restrict const  dfloat *  vgeo,
+                                           @restrict const  dfloat *  cubvgeo,
+                                           @restrict const  dfloat *  cubDWmatrices,
+                                           @restrict const  dfloat *  cubInterpT,
+                                           @restrict const  dfloat *  cubProjectT,
                                            const dlong offset,
-                                           const dfloat * restrict U,
-                                           const dfloat * restrict Ud,
-                                                 dfloat * restrict cU, //storage for interpolated fields
-                                                 dfloat * restrict cUd, //storage for interpolated fields
-                                                 dfloat * restrict rhsU){
+                                           @restrict const  dfloat *  U,
+                                           @restrict const  dfloat *  Ud,
+                                                 @restrict dfloat *  cU, //storage for interpolated fields
+                                                 @restrict dfloat *  cUd, //storage for interpolated fields
+                                                 @restrict dfloat *  rhsU){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_U[p_cubNblockV][p_Np];
-    shared dfloat s_V[p_cubNblockV][p_Np];
-    shared dfloat s_W[p_cubNblockV][p_Np];
+    @shared dfloat s_U[p_cubNblockV][p_Np];
+    @shared dfloat s_V[p_cubNblockV][p_Np];
+    @shared dfloat s_W[p_cubNblockV][p_Np];
 
-    shared dfloat s_Ud[p_cubNblockV][p_Np];
-    shared dfloat s_Vd[p_cubNblockV][p_Np];
-    shared dfloat s_Wd[p_cubNblockV][p_Np];
+    @shared dfloat s_Ud[p_cubNblockV][p_Np];
+    @shared dfloat s_Vd[p_cubNblockV][p_Np];
+    @shared dfloat s_Wd[p_cubNblockV][p_Np];
 
-    shared dfloat s_cF11[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF12[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF13[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF11[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF12[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF13[p_cubNblockV][p_cubNp];
 
-    shared dfloat s_cF21[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF22[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF23[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF21[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF22[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF23[p_cubNblockV][p_cubNp];
 
-    shared dfloat s_cF31[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF32[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF33[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF31[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF32[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF33[p_cubNblockV][p_cubNp];
     //
-    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements && n<p_Np){ 
           const dlong id = e*p_Np+n;
@@ -309,17 +309,17 @@ kernel void insSubCycleCubatureVolumeTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements && n<p_cubNp){
 
           dfloat  cU = 0.f,  cV = 0.f,  cW = 0.f;
           dfloat cUd = 0.f, cVd = 0.f, cWd = 0.f;
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat cIni = cubInterpT[n+i*p_cubNp];
               cU  += cIni*s_U[es][i];
@@ -346,11 +346,11 @@ kernel void insSubCycleCubatureVolumeTet3D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_cubNblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){           
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){           
         const dlong e = eo+es;
 
         if(e<Nelements && n<p_Np){        
@@ -358,7 +358,7 @@ kernel void insSubCycleCubatureVolumeTet3D(const dlong Nelements,
 
           dfloat fluxU = 0., fluxV = 0., fluxW = 0.;
 
-          occaUnroll(p_cubNp)
+          #pragma unroll p_cubNp
             for(int i=0;i<p_cubNp;++i){
               const dfloat cDrWni = cubDWmatrices[n+i*p_Np+0*p_cubNp*p_Np];
               const dfloat cDsWni = cubDWmatrices[n+i*p_Np+1*p_cubNp*p_Np];
@@ -387,52 +387,52 @@ kernel void insSubCycleCubatureVolumeTet3D(const dlong Nelements,
 }
 
 
-kernel void insSubCycleCubatureSurfaceTet3D(const dlong Nelements,
-                                            const dfloat * restrict vgeo,
-                                            const dfloat * restrict sgeo,
-                                            const dfloat * restrict cubsgeo,
-                                            const dfloat * restrict intInterpT, // interpolate to integration nodes
-                                            const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                            const dfloat * restrict cubInterpT,
-                                            const dfloat * restrict cubProjectT,
-                                            const dlong  * restrict vmapM,
-                                            const dlong  * restrict vmapP,
-                                            const int    * restrict EToB,
+@kernel void insSubCycleCubatureSurfaceTet3D(const dlong Nelements,
+                                            @restrict const  dfloat *  vgeo,
+                                            @restrict const  dfloat *  sgeo,
+                                            @restrict const  dfloat *  cubsgeo,
+                                            @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
+                                            @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
+                                            @restrict const  dfloat *  cubInterpT,
+                                            @restrict const  dfloat *  cubProjectT,
+                                            @restrict const  dlong  *  vmapM,
+                                            @restrict const  dlong  *  vmapP,
+                                            @restrict const  int    *  EToB,
                                             const dfloat bScale,
                                             const dfloat time,
-                                            const dfloat * restrict intx, // integration nodes
-                                            const dfloat * restrict inty,
-                                            const dfloat * restrict intz,
+                                            @restrict const  dfloat *  intx, // integration nodes
+                                            @restrict const  dfloat *  inty,
+                                            @restrict const  dfloat *  intz,
                                             const dlong offset,
-                                            const dfloat * restrict U,
-                                            const dfloat * restrict Ud,
-                                                  dfloat * restrict rhsU){
+                                            @restrict const  dfloat *  U,
+                                            @restrict const  dfloat *  Ud,
+                                                  @restrict dfloat *  rhsU){
   
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_UM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_WM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_UP[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VP[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_WP[p_cubNblockS][p_NfacesNfp];
+    // @shared storage for flux terms
+    @shared dfloat s_UM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_VM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_WM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_UP[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_VP[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_WP[p_cubNblockS][p_NfacesNfp];
 
-    shared dfloat s_UdM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VdM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_WdM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_UdP[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VdP[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_WdP[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_UdM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_VdM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_WdM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_UdP[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_VdP[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_WdP[p_cubNblockS][p_NfacesNfp];
 
-    shared dfloat s_iFluxU[p_cubNblockS][p_intNfpNfaces];
-    shared dfloat s_iFluxV[p_cubNblockS][p_intNfpNfaces];
-    shared dfloat s_iFluxW[p_cubNblockS][p_intNfpNfaces];
+    @shared dfloat s_iFluxU[p_cubNblockS][p_intNfpNfaces];
+    @shared dfloat s_iFluxV[p_cubNblockS][p_intNfpNfaces];
+    @shared dfloat s_iFluxW[p_cubNblockS][p_intNfpNfaces];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_cubNblockS;++es;inner1){
-      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_Nfp)){
@@ -460,11 +460,11 @@ kernel void insSubCycleCubatureSurfaceTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // interpolate to surface integration nodes
-    for(int es=0;es<p_cubNblockS;++es;inner1){
-      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){ 
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<(p_Nfaces*p_intNfp)){
@@ -484,7 +484,7 @@ kernel void insSubCycleCubatureSurfaceTet3D(const dlong Nelements,
             dfloat iUdP = 0.f, iVdP = 0.f, iWdP = 0.f;
 
             // local block interpolation (face nodes to integration nodes)
-            occaUnroll(p_Nfp)
+            #pragma unroll p_Nfp
               for(int m=0;m<p_Nfp;++m){
                 const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
                 const int fm = face*p_Nfp+m;
@@ -518,8 +518,8 @@ kernel void insSubCycleCubatureSurfaceTet3D(const dlong Nelements,
 
 
             // Find max normal velocity on the face
-            const dfloat unm   = occaFabs(nx*iUM + ny*iVM + nz*iWM);
-            const dfloat unp   = occaFabs(nx*iUP + ny*iVP + nz*iWP);    
+            const dfloat unm   = fabs(nx*iUM + ny*iVM + nz*iWM);
+            const dfloat unp   = fabs(nx*iUP + ny*iVP + nz*iWP);    
             const dfloat unmax = (unm > unp) ? unm : unp;
 
             // evaluate "flux" terms: LLF
@@ -544,11 +544,11 @@ kernel void insSubCycleCubatureSurfaceTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // lift from surface integration to volume nodes
-    for(int es=0;es<p_cubNblockS;++es;inner1){
-      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
@@ -558,7 +558,7 @@ kernel void insSubCycleCubatureSurfaceTet3D(const dlong Nelements,
             dfloat rhsv = rhsU[id+1*offset];
             dfloat rhsw = rhsU[id+2*offset];
 
-            occaUnroll(p_intNfpNfaces)
+            #pragma unroll p_intNfpNfaces
               for(int m=0;m<p_intNfpNfaces;++m){
                 // RefMassMatrix^{-1}*cInterp^t*cWeight
                 const dfloat L = intLIFTT[n+m*p_Np];

@@ -30,8 +30,8 @@
 
 
 
-#define p_isq12 (1.f/occaSqrt(12.f))
-#define p_isq6 (1.f/occaSqrt(6.f))
+#define p_isq12 (1.f/sqrt(12.f))
+#define p_isq6 (1.f/sqrt(6.f))
 #define PML_ENABLED 1 
 
 void upwind3D(const dfloat nx,  const dfloat ny,  const dfloat nz,
@@ -39,8 +39,8 @@ void upwind3D(const dfloat nx,  const dfloat ny,  const dfloat nz,
               const dfloat q6M, const dfloat q7M, const dfloat q8M, const dfloat q9M, const dfloat q10M,
               const dfloat q1B, const dfloat q2B, const dfloat q3B, const dfloat q4B, const dfloat q5B, 
               const dfloat q6B, const dfloat q7B, const dfloat q8B, const dfloat q9B, const dfloat q10B, 
-              dfloat * restrict q1P, dfloat * restrict q2P, dfloat * restrict q3P, dfloat * restrict q4P, dfloat * restrict q5P, 
-              dfloat * restrict q6P, dfloat * restrict q7P, dfloat * restrict q8P, dfloat * restrict q9P, dfloat * restrict q10P){ 
+              @restrict dfloat * @restrict q1P, dfloat * @restrict q2P, dfloat * @restrict q3P, dfloat * @restrict q4P, dfloat *  q5P, 
+              @restrict dfloat * @restrict q6P, dfloat * @restrict q7P, dfloat * @restrict q8P, dfloat * @restrict q9P, dfloat *  q10P){ 
   
   *q1P  = 0.5f*(q1B  + q1M)  - p_isq12*(nx*(q2B-q2M) + ny*(q3B-q3M) + nz*(q4B-q4M));
   *q2P  = 0.5f*(q2B  + q2M)  - p_isq12*nx*(q1B-q1M) - p_isq6*nx*(q8B-q8M) - 0.5f*ny*(q5B-q5M) - 0.5f*nz*(q6B-q6M);
@@ -61,8 +61,8 @@ void boundaryConditions3D(const int bc, const dfloat  t, const dfloat  x, const 
 			              const dfloat ramp,
 			              const dfloat  q1M, const dfloat  q2M, const dfloat  q3M, const dfloat  q4M, const dfloat  q5M, 
 			              const dfloat  q6M, const dfloat  q7M, const dfloat  q8M, const dfloat  q9M, const dfloat  q10M,
-			                    dfloat * restrict q1B, dfloat * restrict q2B, dfloat * restrict q3B, dfloat * restrict q4B, dfloat * restrict q5B,
-			                    dfloat * restrict q6B, dfloat * restrict q7B, dfloat * restrict q8B, dfloat * restrict q9B, dfloat * restrict q10B ){
+			                    @restrict dfloat * @restrict q1B, dfloat * @restrict q2B, dfloat * @restrict q3B, dfloat * @restrict q4B, dfloat *  q5B,
+			                    @restrict dfloat * @restrict q6B, dfloat * @restrict q7B, dfloat * @restrict q8B, dfloat * @restrict q9B, dfloat *  q10B ){
 #if PML_ENABLED
   if (1 == bc)       // Wall
   {
@@ -141,31 +141,31 @@ void boundaryConditions3D(const int bc, const dfloat  t, const dfloat  x, const 
 }
 
 
-kernel void boltzmannSurface3D(const int Nelements,
-				     const int * restrict elementIds,
-				     const dfloat * restrict sgeo,
-				     const dfloat * restrict LIFTT,
-				     const int   * restrict vmapM,
-				     const int   * restrict vmapP,
-				     const int   * restrict EToB,
+@kernel void boltzmannSurface3D(const int Nelements,
+				     @restrict const  int *  elementIds,
+				     @restrict const  dfloat *  sgeo,
+				     @restrict const  dfloat *  LIFTT,
+				     @restrict const  int   *  vmapM,
+				     @restrict const  int   *  vmapP,
+				     @restrict const  int   *  EToB,
 				     const dfloat time,
-				     const dfloat * restrict x,
-				     const dfloat * restrict y,
-				     const dfloat * restrict z,
+				     @restrict const  dfloat *  x,
+				     @restrict const  dfloat *  y,
+				     @restrict const  dfloat *  z,
 				     const dfloat ramp,
-				     const dfloat4 * restrict q,
-				           dfloat4 * restrict rhsq){
+				     @restrict const  dfloat4 *  q,
+				           @restrict dfloat4 *  rhsq){
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxq[p_NblockS][10][p_Nfp*p_Nfaces];
-    exclusive int element;
+    // @shared storage for flux terms
+    @shared dfloat s_fluxq[p_NblockS][10][p_Nfp*p_Nfaces];
+    @exclusive int element;
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 	int e = eo + es;
 	if(e<Nelements){
 
@@ -248,12 +248,12 @@ kernel void boltzmannSurface3D(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
 	int e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Np){
@@ -263,7 +263,7 @@ kernel void boltzmannSurface3D(const int Nelements,
 	    dfloat4 rhsqna = rhsq[id+0], rhsqnb = rhsq[id+1], rhsqnc = rhsq[id+2];
 
 	    // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-	    occaUnroll(p_NfacesNfp)
+	    #pragma unroll p_NfacesNfp
 	      for(int m=0;m<p_NfacesNfp;++m){
 		dfloat L = LIFTT[n+m*p_Np];
 		rhsqna.x += L*s_fluxq[es][0][m];
@@ -296,56 +296,56 @@ kernel void boltzmannSurface3D(const int Nelements,
 
 
 // For variable geometric properties hold flux unction seperately
-kernel void boltzmannPmlSurface3D(const int Nelements,
-				       const int * restrict elementIds,
-				       const dfloat * restrict sgeo,
-				       const dfloat * restrict LIFTT,
-				       const int   * restrict vmapM,
-				       const int   * restrict vmapP,
-				       const int   * restrict EToB,
+@kernel void boltzmannPmlSurface3D(const int Nelements,
+				       @restrict const  int *  elementIds,
+				       @restrict const  dfloat *  sgeo,
+				       @restrict const  dfloat *  LIFTT,
+				       @restrict const  int   *  vmapM,
+				       @restrict const  int   *  vmapP,
+				       @restrict const  int   *  EToB,
 				       const dfloat time,
-				       const dfloat * restrict x,
-				       const dfloat * restrict y,
-				       const dfloat * restrict z, 
+				       @restrict const  dfloat *  x,
+				       @restrict const  dfloat *  y,
+				       @restrict const  dfloat *  z, 
 				       const dfloat ramp,
-				       const dfloat4 * restrict q,
-				             dfloat4 * restrict rhsq,
-				             dfloat * restrict rhspmlq){
+				       @restrict const  dfloat4 *  q,
+				             @restrict dfloat4 *  rhsq,
+				             @restrict dfloat *  rhspmlq){
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq3[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq4[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq5[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq6[p_NblockS][p_maxNodes];   
-    shared dfloat s_nxdq8[p_NblockS][p_maxNodes];
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq3[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq4[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq5[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq6[p_NblockS][p_maxNodes];   
+    @shared dfloat s_nxdq8[p_NblockS][p_maxNodes];
    
-    // shared storage for flux terms
-    shared dfloat s_nydq1[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq2[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq3[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq4[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq5[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq7[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq9[p_NblockS][p_maxNodes];
+    // @shared storage for flux terms
+    @shared dfloat s_nydq1[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq2[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq3[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq4[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq5[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq7[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq9[p_NblockS][p_maxNodes];
     
-    // shared storage for flux terms
-    shared dfloat s_nzdq1[p_NblockS][p_maxNodes];
-    shared dfloat s_nzdq2[p_NblockS][p_maxNodes];
-    shared dfloat s_nzdq3[p_NblockS][p_maxNodes];
-    shared dfloat s_nzdq4[p_NblockS][p_maxNodes];
-    shared dfloat s_nzdq6[p_NblockS][p_maxNodes];
-    shared dfloat s_nzdq7[p_NblockS][p_maxNodes];
-    shared dfloat s_nzdq10[p_NblockS][p_maxNodes];
+    // @shared storage for flux terms
+    @shared dfloat s_nzdq1[p_NblockS][p_maxNodes];
+    @shared dfloat s_nzdq2[p_NblockS][p_maxNodes];
+    @shared dfloat s_nzdq3[p_NblockS][p_maxNodes];
+    @shared dfloat s_nzdq4[p_NblockS][p_maxNodes];
+    @shared dfloat s_nzdq6[p_NblockS][p_maxNodes];
+    @shared dfloat s_nzdq7[p_NblockS][p_maxNodes];
+    @shared dfloat s_nzdq10[p_NblockS][p_maxNodes];
 
-    exclusive int element;
+    @exclusive int element;
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 	int e = eo + es;
 	if(e<Nelements){
 	  
@@ -427,11 +427,11 @@ kernel void boltzmannPmlSurface3D(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
 	const int e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Np){
@@ -442,7 +442,7 @@ kernel void boltzmannPmlSurface3D(const int Nelements,
 	    dfloat nzdq1 = 0.f, nzdq2 = 0.f, nzdq3 = 0.f, nzdq4 = 0.f, nzdq6 = 0.f, nzdq7 = 0.f, nzdq10 = 0.f;
 	    
 	    // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-	    occaUnroll(p_Nfaces)
+	    #pragma unroll p_Nfaces
 	    for(int m=0;m<p_NfacesNfp;++m){
 	      const dfloat L = LIFTT[n+m*p_Np];
 	      nxdq1  += L*s_nxdq1[es][m];

@@ -1,25 +1,25 @@
 
-kernel void acousticsbbdgMRABVolumeP3D(const int Nelements,
-          const int * restrict elementIds,
-          const dfloat * restrict vgeo,
-          const int * restrict D0ids,
-          const int * restrict D1ids,
-          const int * restrict D2ids,
-          const int * restrict D3ids,
-          const dfloat * restrict Dvals,    
-          const dfloat * restrict q,
-          dfloat * restrict rhsq,
+@kernel void acousticsbbdgMRABVolumeP3D(const int Nelements,
+          @restrict const  int *  elementIds,
+          @restrict const  dfloat *  vgeo,
+          @restrict const  int *  D0ids,
+          @restrict const  int *  D1ids,
+          @restrict const  int *  D2ids,
+          @restrict const  int *  D3ids,
+          @restrict const  dfloat *  Dvals,    
+          @restrict const  dfloat *  q,
+          @restrict dfloat *  rhsq,
           const int rhsShift){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_u[p_NblockV][p_Np];
-    shared dfloat s_v[p_NblockV][p_Np];
-    shared dfloat s_w[p_NblockV][p_Np];
-    shared dfloat s_p[p_NblockV][p_Np];
+    @shared dfloat s_u[p_NblockV][p_Np];
+    @shared dfloat s_v[p_NblockV][p_Np];
+    @shared dfloat s_w[p_NblockV][p_Np];
+    @shared dfloat s_p[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
         int et = eo+es; // element in block
 
@@ -33,11 +33,11 @@ kernel void acousticsbbdgMRABVolumeP3D(const int Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
   
         int et = eo+es; // element in block
         if(et<Nelements){

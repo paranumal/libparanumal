@@ -1,8 +1,8 @@
      
 #define cubeThreadsP \
-  for(int k=0;k<p_NqP;++k;inner2) \
-    for(int j=0;j<p_NqP;++j;inner1) \
-      for(int i=0;i<p_NqP;++i;inner0) 
+  for(int k=0;k<p_NqP;++k;@inner(2)) \
+    for(int j=0;j<p_NqP;++j;@inner(1)) \
+      for(int i=0;i<p_NqP;++i;@inner(0)) 
 
 #if 0
 // q  \in  Nq x Nq x Nq x Nelements
@@ -34,32 +34,32 @@
 #endif
 
 
-kernel void ellipticOasPreconHex3D(const int Nelements,
-				   const int   * restrict vmapPP,
-				   const int   * restrict faceNodesP,
-				   const dfloat * restrict forward,
-				   const dfloat * restrict diagInvOp,
-				   const dfloat * restrict back,
-				   const dfloat * restrict q,
-				   dfloat * restrict Pq){
+@kernel void ellipticOasPreconHex3D(const int Nelements,
+				   @restrict const  int   *  vmapPP,
+				   @restrict const  int   *  faceNodesP,
+				   @restrict const  dfloat *  forward,
+				   @restrict const  dfloat *  diagInvOp,
+				   @restrict const  dfloat *  back,
+				   @restrict const  dfloat *  q,
+				   @restrict dfloat *  Pq){
   
-  for(int e=0; e<Nelements; ++e; outer0){
+  for(int e=0; e<Nelements; ++e; @outer(0)){
     
-    shared dfloat s_q1[p_NqP][p_NqP][p_NqP];
-    shared dfloat s_q2[p_NqP][p_NqP][p_NqP];
-    shared dfloat s_q3[p_NqP][p_NqP][p_NqP];
-    shared dfloat s_forward[p_NqP][p_NqP];
-    shared dfloat s_back[p_NqP][p_NqP];
-    exclusive dfloat r_diagInvOp;
+    @shared dfloat s_q1[p_NqP][p_NqP][p_NqP];
+    @shared dfloat s_q2[p_NqP][p_NqP][p_NqP];
+    @shared dfloat s_q3[p_NqP][p_NqP][p_NqP];
+    @shared dfloat s_forward[p_NqP][p_NqP];
+    @shared dfloat s_back[p_NqP][p_NqP];
+    @exclusive dfloat r_diagInvOp;
     
     cubeThreadsP{
 
       int n=i+p_NqP*j+p_NqP*p_NqP*k;
 
-      s_q1[0][0][n] = 0; // zero shared memory
+      s_q1[0][0][n] = 0; // zero @shared memory
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
     cubeThreadsP{
 
@@ -93,39 +93,39 @@ kernel void ellipticOasPreconHex3D(const int Nelements,
       }
     }
       
-    barrier(localMemFence);
+    @barrier("local");
 
     // r-transform
     cubeThreadsP{
       dfloat tmp = 0.f;
 
-      occaUnroll(p_NqP)
+      #pragma unroll p_NqP
 	for(int n=0;n<p_NqP;++n)
 	  tmp += s_forward[i][n]*s_q1[k][j][n];
 
       s_q2[k][j][i] = tmp;
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // s-transform
     cubeThreadsP{
       dfloat tmp = 0.f;
 
-      occaUnroll(p_NqP)
+      #pragma unroll p_NqP
 	for(int n=0;n<p_NqP;++n)
 	  tmp += s_forward[j][n]*s_q2[k][n][i];
       
       s_q3[k][j][i]  = tmp;
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // t-transform 
     cubeThreadsP{
       dfloat tmp = 0.f;
 
-      occaUnroll(p_NqP)
+      #pragma unroll p_NqP
 	for(int n=0;n<p_NqP;++n)
 	  tmp += s_forward[k][n]*s_q3[n][j][i];
 
@@ -133,39 +133,39 @@ kernel void ellipticOasPreconHex3D(const int Nelements,
       s_q1[k][j][i] = r_diagInvOp*tmp;
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // t-transform back
     cubeThreadsP{
       dfloat tmp = 0.f;
 
-      occaUnroll(p_NqP)
+      #pragma unroll p_NqP
 	for(int n=0;n<p_NqP;++n)
 	  tmp += s_back[k][n]*s_q1[n][j][i];
       
       s_q2[k][j][i] = tmp; 
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
     // s-transform back
     cubeThreadsP{
       dfloat tmp = 0.f;
 
-      occaUnroll(p_NqP)
+      #pragma unroll p_NqP
 	for(int n=0;n<p_NqP;++n)
 	  tmp += s_back[j][n]*s_q2[k][n][i];
       
       s_q3[k][j][i] = tmp;
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // r-transform back
     cubeThreadsP{
       dfloat tmp = 0.f;
 
-      occaUnroll(p_NqP)
+      #pragma unroll p_NqP
 	for(int n=0;n<p_NqP;++n)
 	  tmp += s_back[i][n]*s_q3[k][j][n];
       

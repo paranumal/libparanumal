@@ -46,42 +46,42 @@
 }
 
 // Actually solves for Pr increamnet not presssure
-kernel void insPressureIpdgBCHex3D(const dlong Nelements,
-                                      const dlong  * restrict vmapM,
+@kernel void insPressureIpdgBCHex3D(const dlong Nelements,
+                                      @restrict const  dlong  *  vmapM,
                                       const dfloat tau,
                                       const dfloat time,
                                       const dfloat dt,
                                       const int stage,
                                       const int ARKswitch,
-                                      const dfloat * restrict c,
-                                      const dfloat * restrict prkB,
-                                      const dfloat * restrict x,
-                                      const dfloat * restrict y,
-                                      const dfloat * restrict z,
-                                      const dfloat * restrict vgeo,
-                                      const dfloat * restrict sgeo,
-                                      const int    * restrict EToB,
-                                      const dfloat * restrict D,
-                                      const dfloat * restrict LIFTT,
-                                      const dfloat * restrict MM,
-                                            dfloat * restrict rhsP){
+                                      @restrict const  dfloat *  c,
+                                      @restrict const  dfloat *  prkB,
+                                      @restrict const  dfloat *  x,
+                                      @restrict const  dfloat *  y,
+                                      @restrict const  dfloat *  z,
+                                      @restrict const  dfloat *  vgeo,
+                                      @restrict const  dfloat *  sgeo,
+                                      @restrict const  int    *  EToB,
+                                      @restrict const  dfloat *  D,
+                                      @restrict const  dfloat *  LIFTT,
+                                      @restrict const  dfloat *  MM,
+                                            @restrict dfloat *  rhsP){
   
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    shared dfloat s_dpdx[2][p_Nq][p_Nq];
-    shared dfloat s_dpdy[2][p_Nq][p_Nq];
-    shared dfloat s_dpdz[2][p_Nq][p_Nq];
-    shared dfloat s_rhsp[2][p_Nq][p_Nq];
+    @shared dfloat s_dpdx[2][p_Nq][p_Nq];
+    @shared dfloat s_dpdy[2][p_Nq][p_Nq];
+    @shared dfloat s_dpdz[2][p_Nq][p_Nq];
+    @shared dfloat s_rhsp[2][p_Nq][p_Nq];
 
-    shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
     
-    exclusive dfloat r_dpdx[p_Nq], r_dpdy[p_Nq], r_dpdz[p_Nq], r_rhsp[p_Nq];
-    exclusive dfloat r_dpdt;
+    @exclusive dfloat r_dpdx[p_Nq], r_dpdy[p_Nq], r_dpdz[p_Nq], r_rhsp[p_Nq];
+    @exclusive dfloat r_dpdt;
 
     // loop over slabs
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-        occaUnroll(p_Nq)
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           r_dpdx[k] = 0.f;
           r_dpdy[k] = 0.f;
@@ -93,11 +93,11 @@ kernel void insPressureIpdgBCHex3D(const dlong Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i ;
         const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i ;             
 
@@ -106,11 +106,11 @@ kernel void insPressureIpdgBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 0
         r_dpdx[0] += s_dpdx[0][j][i];
         r_dpdy[0] += s_dpdy[0][j][i];
@@ -125,11 +125,11 @@ kernel void insPressureIpdgBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1 & 3
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i ;
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i ;
 
@@ -138,13 +138,13 @@ kernel void insPressureIpdgBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1 & 3
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==0) {//face 1
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dpdx[k] += s_dpdx[0][k][i];
             r_dpdy[k] += s_dpdy[0][k][i];
@@ -153,7 +153,7 @@ kernel void insPressureIpdgBCHex3D(const dlong Nelements,
           }
         }
         if (j==p_Nq-1) {//face 3
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dpdx[k] += s_dpdx[1][k][i];
             r_dpdy[k] += s_dpdy[1][k][i];
@@ -164,11 +164,11 @@ kernel void insPressureIpdgBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 2 & 4
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
 
         const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j ;
         const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j ;
@@ -178,13 +178,13 @@ kernel void insPressureIpdgBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 2 & 4
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==p_Nq-1) {//face 2
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dpdx[k] += s_dpdx[0][k][j];
             r_dpdy[k] += s_dpdy[0][k][j];
@@ -193,7 +193,7 @@ kernel void insPressureIpdgBCHex3D(const dlong Nelements,
           }
         }
         if (i==0) {//face 4
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dpdx[k] += s_dpdx[1][k][j];
             r_dpdy[k] += s_dpdy[1][k][j];
@@ -204,13 +204,13 @@ kernel void insPressureIpdgBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     //layer by layer
-    occaUnroll(p_Nq)
+    #pragma unroll p_Nq
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
           const dlong gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;     
 
@@ -236,13 +236,13 @@ kernel void insPressureIpdgBCHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           dfloat dr = 0, ds = 0;
 
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
             dr += s_D[n][i]*s_dpdx[0][j][n];
             r_rhsp[n] += s_D[k][n]*r_dpdt; // DT(m,k)*ut(i,j,k,e)
@@ -253,13 +253,13 @@ kernel void insPressureIpdgBCHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
     }
 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         
-        occaUnroll(p_Nq)
+        #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           rhsP[id] -= r_rhsp[k];
@@ -310,46 +310,46 @@ kernel void insPressureIpdgBCHex3D(const dlong Nelements,
 }
 
 //RHS contributions for continuous solver
-kernel void insPressureBCHex3D(const dlong Nelements,
-                              const dfloat * restrict ggeo,
-                              const dfloat * restrict sgeo,
-                              const dfloat * restrict D,
-                              const dfloat * restrict S,
-                              const dlong  * restrict vmapM,
-                              const dlong  * restrict sMT,
+@kernel void insPressureBCHex3D(const dlong Nelements,
+                              @restrict const  dfloat *  ggeo,
+                              @restrict const  dfloat *  sgeo,
+                              @restrict const  dfloat *  D,
+                              @restrict const  dfloat *  S,
+                              @restrict const  dlong  *  vmapM,
+                              @restrict const  dlong  *  sMT,
                               const dfloat time,
                               const dfloat dt,
                               const int stage,
                               const int ARKswitch,
-                              const dfloat * restrict c,
-                              const dfloat * restrict prkB,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const dfloat * restrict z,
-                              const int    * restrict mapB,
-                                   dfloat  * restrict rhsP){
+                              @restrict const  dfloat *  c,
+                              @restrict const  dfloat *  prkB,
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
+                              @restrict const  int    *  mapB,
+                                   @restrict dfloat  *  rhsP){
   
-  for(dlong e=0; e<Nelements; ++e; outer0){
+  for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    shared dfloat s_D[p_Nq][p_Nq];
-    shared dfloat s_p[2][p_Nq][p_Nq];
-    shared dfloat s_ndp[2][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_p[2][p_Nq][p_Nq];
+    @shared dfloat s_ndp[2][p_Nq][p_Nq];
 
-    exclusive dfloat r_pt, r_Gpt;
-    exclusive dfloat r_p[p_Nq]; // register array to hold u(i,j,0:N) private to thread
-    exclusive dfloat r_rhs[p_Nq];// array for results Au(i,j,0:N)
+    @exclusive dfloat r_pt, r_Gpt;
+    @exclusive dfloat r_p[p_Nq]; // register array to hold u(i,j,0:N) private to thread
+    @exclusive dfloat r_rhs[p_Nq];// array for results Au(i,j,0:N)
 
     dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22;
 
     // for all face nodes of all elements
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         //load D into local memory
         // s_D[i][j] = d \phi_i at node j
         s_D[j][i] = D[p_Nq*j+i]; // D is column major
 
-        occaUnroll(p_Nq)
+        #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           r_p[k] = 0.;
           r_rhs[k] = 0.;
@@ -363,11 +363,11 @@ kernel void insPressureBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 0
         r_p[0] += s_p[0][j][i];
         r_rhs[0] += s_ndp[0][j][i];
@@ -378,11 +378,11 @@ kernel void insPressureBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 1 & 3
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i + k*p_Nq;
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
 
@@ -391,20 +391,20 @@ kernel void insPressureBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1 & 3
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==0) {//face 1
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_p[k] += s_p[0][k][i];
             r_rhs[k] += s_ndp[0][k][i];
           }
         }
         if (j==p_Nq-1) {//face 3
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_p[k] += s_p[1][k][i];
             r_rhs[k] += s_ndp[1][k][i];
@@ -413,11 +413,11 @@ kernel void insPressureBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 2 & 4
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
         const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + j + k*p_Nq;
         const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
 
@@ -426,20 +426,20 @@ kernel void insPressureBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 2 & 4
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==p_Nq-1) {//face 2
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_p[k] += s_p[0][k][j];
             r_rhs[k] += s_ndp[0][k][j];
           }
         }
         if (i==0) {//face 4
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_p[k] += s_p[1][k][j];
             r_rhs[k] += s_ndp[1][k][j];
@@ -448,14 +448,14 @@ kernel void insPressureBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence); 
+    @barrier("local"); 
 
 
     // Layer by layer
-    occaUnroll(p_Nq)
+    #pragma unroll p_Nq
       for(int k = 0;k < p_Nq; k++){
-        for(int j=0;j<p_Nq;++j;inner1){
-          for(int i=0;i<p_Nq;++i;inner0){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
 
             // prefetch geometric factors
             const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
@@ -470,32 +470,32 @@ kernel void insPressureBCHex3D(const dlong Nelements,
           }
         }
 
-        barrier(localMemFence);
+        @barrier("local");
 
-        for(int j=0;j<p_Nq;++j;inner1){
-          for(int i=0;i<p_Nq;++i;inner0){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
 
             // share u(:,:,k)
             s_p[0][j][i] = r_p[k];
 
             r_pt = 0;
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
                 r_pt += s_D[k][m]*r_p[m];
               }
           }
         }
 
-        barrier(localMemFence);
+        @barrier("local");
 
-        for(int j=0;j<p_Nq;++j;inner1){
-          for(int i=0;i<p_Nq;++i;inner0){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
 
             dfloat pr = 0.f;
             dfloat ps = 0.f;
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
                 pr += s_D[i][m]*s_p[0][j][m];
                 ps += s_D[j][m]*s_p[0][m][i];
@@ -510,13 +510,13 @@ kernel void insPressureBCHex3D(const dlong Nelements,
           }
         }
 
-        barrier(localMemFence);
+        @barrier("local");
 
-        for(int j=0;j<p_Nq;++j;inner1){
-          for(int i=0;i<p_Nq;++i;inner0){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
             dfloat Apk=0.f;
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++){
                 Apk      += s_D[m][j]*s_ndp[0][m][i];
                 r_rhs[m] += s_D[k][m]*r_Gpt; // DT(m,k)*ut(i,j,k,e)
@@ -530,9 +530,9 @@ kernel void insPressureBCHex3D(const dlong Nelements,
 
     // write out
 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-        occaUnroll(p_Nq)
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
           for(int k = 0; k < p_Nq; k++){
             const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
             rhsP[id] -= r_rhs[k];
@@ -542,22 +542,22 @@ kernel void insPressureBCHex3D(const dlong Nelements,
   }
 }
 
-kernel void insPressureAddBCHex3D(const dlong Nelements,
+@kernel void insPressureAddBCHex3D(const dlong Nelements,
                                   const dfloat time,
                                   const dfloat dt,
                                   const int stage,
                                   const int ARKswitch,
-                                  const dfloat * restrict c,
-                                  const dfloat * restrict prkB,
-                                  const dfloat * restrict x,
-                                  const dfloat * restrict y,
-                                  const dfloat * restrict z,
-                                  const dlong  * restrict vmapM,
-                                  const int    * restrict mapB,
-                                        dfloat * restrict P){
+                                  @restrict const  dfloat *  c,
+                                  @restrict const  dfloat *  prkB,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  int    *  mapB,
+                                        @restrict dfloat *  P){
   
-  for(dlong e=0;e<Nelements;e++;outer0){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
       const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
       const int bc = mapB[idM];
 

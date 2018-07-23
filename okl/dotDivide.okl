@@ -1,10 +1,10 @@
 
-kernel void dotDivide(const dlong N,
-		      const dfloat * restrict v,
-		      const dfloat * restrict w,
-		      dfloat * restrict viw){
+@kernel void dotDivide(const dlong N,
+		      @restrict const  dfloat *  v,
+		      @restrict const  dfloat *  w,
+		      @restrict dfloat *  viw){
   
-  for(dlong n=0;n<N;++n;tile(256)){
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
     if(n<N){
       viw [n] = v[n]/w[n];
     }

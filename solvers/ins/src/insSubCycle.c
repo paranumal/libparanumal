@@ -111,7 +111,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                                    ins->o_vHaloBuffer);
 
           // copy extracted halo to HOST 
-          ins->o_vHaloBuffer.asyncCopyTo(ins->vSendBuffer);            
+          ins->o_vHaloBuffer.copyTo(ins->vSendBuffer,"async: true");            
           mesh->device.setStream(mesh->defaultStream);
         }
 
@@ -156,7 +156,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 
           meshHaloExchangeFinish(mesh);
 
-          ins->o_vHaloBuffer.asyncCopyFrom(ins->vRecvBuffer); 
+          ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer,"async: true"); 
 
           ins->velocityHaloScatterKernel(mesh->Nelements,
                                     mesh->totalHaloPairs,

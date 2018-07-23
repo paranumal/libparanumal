@@ -15,7 +15,7 @@
 // 			              const dfloat  t, const dfloat  x, const dfloat  y,
 // 			              const dfloat  nx, const dfloat  ny,
 // 			              const dfloat  uxM, const dfloat  uyM, 
-// 			              dfloat * restrict uxB, dfloat * restrict uyB){
+// 			              @restrict dfloat * @restrict uxB, dfloat *  uyB){
 
 //   if(bc==1){ // Wall 
 //     *uxB = -uxM; 
@@ -23,40 +23,40 @@
 //   }
 //   if(bc==2){ // Inflow
 //   	dfloat nu   = 1.0/40.0;
-//   	dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
-//     *uxB = 1.0f - occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y) ; 
-//     *uyB = 0.5f*lamda/(OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
+//   	dfloat lamda = 1.f/(2.f * nu) - sqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
+//     *uxB = 1.0f - occaExp(lamda*x)*cos(2.f*OCCA_PI*y) ; 
+//     *uyB = 0.5f*lamda/(OCCA_PI)*occaExp(lamda*x)*sin(2.f*OCCA_PI*y);
 //   }
 //   if(bc==3){ // Outflow 
 //   // do nothing 
 //   	dfloat nu   = 1.0/40.0;
-//   	dfloat lamda = 1.f/(2.f * nu) - occaSqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
+//   	dfloat lamda = 1.f/(2.f * nu) - sqrt(1.f/(4.f*nu*nu) + 4.f*OCCA_PI*OCCA_PI) ;
 
-//     *uxB = -lamda*occaExp(lamda*x)*occaCos(2.f*OCCA_PI*y);
-//     *uyB =  lamda*(0.5f*lamda/OCCA_PI)*occaExp(lamda*x)*occaSin(2.f*OCCA_PI*y);
+//     *uxB = -lamda*occaExp(lamda*x)*cos(2.f*OCCA_PI*y);
+//     *uyB =  lamda*(0.5f*lamda/OCCA_PI)*occaExp(lamda*x)*sin(2.f*OCCA_PI*y);
 //   }
 // }
 
 
 
-kernel void insPressureRhsVolume2D(	const int Nelements,
+@kernel void insPressureRhsVolume2D(	const int Nelements,
 									const dfloat g0,
 									const dfloat dt,
-									const dfloat * restrict vgeo,
-									const dfloat * restrict DrT,
-									const dfloat * restrict DsT,
-									const dfloat * restrict UI,
-									      dfloat * restrict rhsPr
+									@restrict const  dfloat *  vgeo,
+									@restrict const  dfloat *  DrT,
+									@restrict const  dfloat *  DsT,
+									@restrict const  dfloat *  UI,
+									      @restrict dfloat *  rhsPr
 				          ){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
    
    // Hold Flux Vector on Shared
-   shared dfloat s_UxI[p_NblockV][p_Np];
-   shared dfloat s_UyI[p_NblockV][p_Np];
+   @shared dfloat s_UxI[p_NblockV][p_Np];
+   @shared dfloat s_UyI[p_NblockV][p_Np];
    //
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 		int e = eo+es; // element in block
 		if(e<Nelements){ 
@@ -70,12 +70,12 @@ kernel void insPressureRhsVolume2D(	const int Nelements,
       }
     }
 
-     // make sure all node data is loaded into shared
-     barrier(localMemFence);
+     // make sure all node data is loaded into @shared
+     @barrier("local");
 
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){	  
@@ -88,7 +88,7 @@ kernel void insPressureRhsVolume2D(	const int Nelements,
 
 	  // compute 'r' and 's' derivatives of (q_m) at node n
       dfloat duxdr = 0.f, duxds = 0.f, duydr = 0.f, duyds = 0.f; 
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat Drni = DrT[n+i*p_Np];
 	    const dfloat Dsni = DsT[n+i*p_Np];
@@ -113,28 +113,28 @@ kernel void insPressureRhsVolume2D(	const int Nelements,
 
 
 
-kernel void insPressureRhsSurface2D(const int Nelements,
-				     const dfloat * restrict sgeo,
-				     const dfloat * restrict LIFTT,
-				     const int   * restrict vmapM,
-				     const int   * restrict vmapP,
-				     const int   * restrict EToB,
+@kernel void insPressureRhsSurface2D(const int Nelements,
+				     @restrict const  dfloat *  sgeo,
+				     @restrict const  dfloat *  LIFTT,
+				     @restrict const  int   *  vmapM,
+				     @restrict const  int   *  vmapP,
+				     @restrict const  int   *  EToB,
 				     const dfloat time,
-				     const dfloat * restrict x,
-				     const dfloat * restrict y,
-				     const dfloar * restrict U,
-				     const dfloat * restrict NU,
-				     const dfloat * restrict UI,
-				           dfloat * restrict rhsPr){
+				     @restrict const  dfloat *  x,
+				     @restrict const  dfloat *  y,
+				     @restrict const dfloar *  U,
+				     @restrict const  dfloat *  NU,
+				     @restrict const  dfloat *  UI,
+				           @restrict dfloat *  rhsPr){
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_dPdn[p_NblockS][p_Nfp*p_Nfaces]; 
+    // @shared storage for flux terms
+    @shared dfloat s_dPdn[p_NblockS][p_Nfp*p_Nfaces]; 
      // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 	   int e = eo + es;
 	    if(e<Nelements){
 	      if(n<p_Nfp*p_Nfaces){
@@ -167,8 +167,8 @@ kernel void insPressureRhsSurface2D(const int Nelements,
 
 
         // Find max normal velocity
-		    dfloat unm   = occaFabs(nx*uxm + ny*uym);
-		    dfloat unp   = occaFabs(nx*uxp + ny*uyp);
+		    dfloat unm   = fabs(nx*uxm + ny*uym);
+		    dfloat unp   = fabs(nx*uxp + ny*uyp);
             
         dfloat unmax = (unm > unp) ? unm : unp;
 
@@ -185,8 +185,8 @@ kernel void insPressureRhsSurface2D(const int Nelements,
     
      #if 0
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 	         if(n<p_Nfp*p_Nfaces){
 	         	  int face = n/p_Nfp;
 	         	  if(face<Nface)
@@ -198,12 +198,12 @@ kernel void insPressureRhsSurface2D(const int Nelements,
 	   #endif
 
 
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
 	      int e = eo + es;
 	       if(e<Nelements){
 	          if(n<p_Np){
@@ -211,7 +211,7 @@ kernel void insPressureRhsSurface2D(const int Nelements,
              dfloat rhsux = rhsU[id + UXID*p_NtotalDofs];
              dfloat rhsuy = rhsU[id + UYID*p_NtotalDofs];
 				    // Lift
-				    occaUnroll(p_NfacesNfp)
+				    #pragma unroll p_NfacesNfp
 				      for(int m=0;m<p_NfacesNfp;++m){
 								dfloat L = LIFTT[n+m*p_Np];
 								rhsux  += L*s_fluxUx[es][m];
@@ -231,22 +231,22 @@ kernel void insPressureRhsSurface2D(const int Nelements,
 
 
 
-// kernel void insAdvectionUpdate2D(const int Nelements,
+// @kernel void insAdvectionUpdate2D(const int Nelements,
 // 				                      const dfloat dt,	
 // 				                      const dfloat a0,
 // 				                      const dfloat a1,
 // 				                      const dfloat b0,
 // 				                      const dfloat b1,
 // 				                      const dfloat g0,
-// 				                      const dfloat * restrict U,
-// 				                      const dfloat * restrict UO,
-// 				                      const dfloat * restrict rhsU,
-// 				                            dfloat * restrict NU,
-// 				                            dfloat * restrict UI){
+// 				                      @restrict const  dfloat *  U,
+// 				                      @restrict const  dfloat *  UO,
+// 				                      @restrict const  dfloat *  rhsU,
+// 				                            @restrict dfloat *  NU,
+// 				                            @restrict dfloat *  UI){
   
 //   // Low storage Runge Kutta time step update
-//   for(int e=0;e<Nelements;++e;outer0){
-//     for(int n=0;n<p_Np;++n;inner0){
+//   for(int e=0;e<Nelements;++e;@outer(0)){
+//     for(int n=0;n<p_Np;++n;@inner(0)){
      
 //      const int id = e*p_Np+n;
 //      //

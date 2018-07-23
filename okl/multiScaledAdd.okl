@@ -1,11 +1,11 @@
-kernel void multiScaledAdd(const int L,
+@kernel void multiScaledAdd(const int L,
 					            const int N,
-                      const dfloat * restrict alpha,
-                      const dfloat * restrict x,
+                      @restrict const  dfloat *  alpha,
+                      @restrict const  dfloat *  x,
                       const dfloat beta,
-                      dfloat * restrict y){
+                      @restrict dfloat *  y){
   
-  for(int n=0;n<N;++n;tile(256)){
+  for(int n=0;n<N;++n;@tile(256,@outer,@inner)){
     if(n<N){
       for (int l=0;l<L;l++) {
       	y[n] = alpha[l]*x[n+l*N] + beta*y[n];	

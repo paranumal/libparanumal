@@ -1,31 +1,31 @@
 // Compute RHS Forcing i.e. 1/nu*(-grad(Pr) + sum(a_i x u_i)^(n-i) -sum(b_i x N(u)^(n-i))
-kernel void insVelocityRhsARKHex3D(const dlong Nelements,
+@kernel void insVelocityRhsARKHex3D(const dlong Nelements,
                                    const int stage,  
-                                   const dfloat * restrict vgeo,
-                                   const dfloat * restrict MM,
+                                   @restrict const  dfloat *  vgeo,
+                                   @restrict const  dfloat *  MM,
                                    const dfloat idt,
                                    const dfloat inu,
-                                   const dfloat * restrict erkA,
-                                   const dfloat * restrict irkA,
-                                   const dfloat * restrict prkA,
-                                   const dfloat * restrict prkB,
+                                   @restrict const  dfloat *  erkA,
+                                   @restrict const  dfloat *  irkA,
+                                   @restrict const  dfloat *  prkA,
+                                   @restrict const  dfloat *  prkB,
                                    const dlong fieldOffset,
-                                   const dfloat * restrict U,
-                                   const dfloat * restrict NU,
-                                   const dfloat * restrict LU,
-                                   const dfloat * restrict GP,
-                                         dfloat * restrict rhsU,
-                                         dfloat * restrict rhsV,
-                                         dfloat * restrict rhsW){
+                                   @restrict const  dfloat *  U,
+                                   @restrict const  dfloat *  NU,
+                                   @restrict const  dfloat *  LU,
+                                   @restrict const  dfloat *  GP,
+                                         @restrict dfloat *  rhsU,
+                                         @restrict dfloat *  rhsV,
+                                         @restrict dfloat *  rhsW){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
-    for(int es=0;es<p_NblockV;++es;inner2){// for all elements in block
-      for(int j=0;j<p_Nq;++j;inner1){ 
-        for(int i=0;i<p_Nq;++i;inner0){
+    for(int es=0;es<p_NblockV;++es;@inner(2)){// for all elements in block
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
           if(e<Nelements){
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
             for(int k=0;k<p_Nq;++k){
 
               const dlong id = i + j*p_Nq + k*p_Nq*p_Nq + p_Np*e;
@@ -68,30 +68,30 @@ kernel void insVelocityRhsARKHex3D(const dlong Nelements,
 
 
 // rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
-kernel void insVelocityRhsEXTBDFHex3D(const dlong Nelements,
-                                const dfloat * restrict vgeo,
-                                const dfloat * restrict MM,
+@kernel void insVelocityRhsEXTBDFHex3D(const dlong Nelements,
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  MM,
                                 const dfloat idt,
                                 const dfloat inu,
-                                const dfloat * restrict extbdfA,
-                                const dfloat * restrict extbdfB,
-                                const dfloat * restrict extbdfC,
+                                @restrict const  dfloat *  extbdfA,
+                                @restrict const  dfloat *  extbdfB,
+                                @restrict const  dfloat *  extbdfC,
                                 const dlong fieldOffset,
-                                const dfloat * restrict U,
-                                const dfloat * restrict NU,
-                                const dfloat * restrict GP,
-                                      dfloat * restrict rhsU,
-                                      dfloat * restrict rhsV,
-                                      dfloat * restrict rhsW){
+                                @restrict const  dfloat *  U,
+                                @restrict const  dfloat *  NU,
+                                @restrict const  dfloat *  GP,
+                                      @restrict dfloat *  rhsU,
+                                      @restrict dfloat *  rhsV,
+                                      @restrict dfloat *  rhsW){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
-    for(int es=0;es<p_NblockV;++es;inner2){// for all elements in block
-      for(int j=0;j<p_Nq;++j;inner1){ 
-        for(int i=0;i<p_Nq;++i;inner0){
+    for(int es=0;es<p_NblockV;++es;@inner(2)){// for all elements in block
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
           if(e<Nelements){
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
             for(int k=0;k<p_Nq;++k){
               const dlong id = i + j*p_Nq + k*p_Nq*p_Nq + p_Np*e;
               const dlong gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;

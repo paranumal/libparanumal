@@ -1,9 +1,9 @@
 
 // Compute RHS Forcing i.e. 1/nu*(-grad(Pr) + sum(a_i x u_i)^(n-i) -sum(b_i x N(u)^(n-i))
-kernel void insHelmholtzRhsForcingTet3D(const dlong Nelements,
+@kernel void insHelmholtzRhsForcingTet3D(const dlong Nelements,
                                         const int subcycling,  
-                                        const dfloat * restrict vgeo,
-                                        const dfloat * restrict MM,
+                                        @restrict const  dfloat *  vgeo,
+                                        @restrict const  dfloat *  MM,
                                         const dfloat idt,
                                         const dfloat inu,
                                         const dfloat a0,
@@ -17,27 +17,27 @@ kernel void insHelmholtzRhsForcingTet3D(const dlong Nelements,
                                         const dfloat c2,
                                         const int index,
                                         const dlong offset,
-                                        const dfloat * restrict U,
-                                        const dfloat * restrict V,
-                                        const dfloat * restrict W,
-                                        const dfloat * restrict NU,
-                                        const dfloat * restrict NV,
-                                        const dfloat * restrict NW,
-                                        const dfloat * restrict Px,
-                                        const dfloat * restrict Py,
-                                        const dfloat * restrict Pz,
-                                              dfloat * restrict rhsU,
-                                              dfloat * restrict rhsV,
-                                              dfloat * restrict rhsW){
+                                        @restrict const  dfloat *  U,
+                                        @restrict const  dfloat *  V,
+                                        @restrict const  dfloat *  W,
+                                        @restrict const  dfloat *  NU,
+                                        @restrict const  dfloat *  NV,
+                                        @restrict const  dfloat *  NW,
+                                        @restrict const  dfloat *  Px,
+                                        @restrict const  dfloat *  Py,
+                                        @restrict const  dfloat *  Pz,
+                                              @restrict dfloat *  rhsU,
+                                              @restrict dfloat *  rhsV,
+                                              @restrict dfloat *  rhsW){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
-    shared dfloat s_rhsU[p_NblockV][p_Np];
-    shared dfloat s_rhsV[p_NblockV][p_Np];
-    shared dfloat s_rhsW[p_NblockV][p_Np];
+    @shared dfloat s_rhsU[p_NblockV][p_Np];
+    @shared dfloat s_rhsV[p_NblockV][p_Np];
+    @shared dfloat s_rhsW[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           //hard coded for 3 stages
@@ -121,18 +121,18 @@ kernel void insHelmholtzRhsForcingTet3D(const dlong Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           // Multiplay with Mass Matrix
           const dlong id = e*p_Np+n;
 
           dfloat rhsu = 0.f, rhsv = 0.f, rhsw = 0.f;
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat M = MM[n+i*p_Np];
               rhsu  += M*s_rhsU[es][i];
@@ -150,70 +150,70 @@ kernel void insHelmholtzRhsForcingTet3D(const dlong Nelements,
 }
 
 
-kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
-                                       const dlong * restrict vmapM,
-                                       const dlong * restrict vmapP,
+@kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
+                                       @restrict const  dlong *  vmapM,
+                                       @restrict const  dlong *  vmapP,
                                        const dfloat tau,
                                        const dfloat t,
-                                       const dfloat * restrict x,
-                                       const dfloat * restrict y,
-                                       const dfloat * restrict z,
-                                       const dfloat * restrict vgeo,
-                                       const dfloat * restrict sgeo,
-                                       const int    * restrict EToB,
-                                       const dfloat * restrict DrT,
-                                       const dfloat * restrict DsT,
-                                       const dfloat * restrict DtT,
-                                       const dfloat * restrict LIFTT,
-                                       const dfloat * restrict MM,
-                                             dfloat * restrict rhsU,
-                                             dfloat * restrict rhsV,
-                                             dfloat * restrict rhsW){
+                                       @restrict const  dfloat *  x,
+                                       @restrict const  dfloat *  y,
+                                       @restrict const  dfloat *  z,
+                                       @restrict const  dfloat *  vgeo,
+                                       @restrict const  dfloat *  sgeo,
+                                       @restrict const  int    *  EToB,
+                                       @restrict const  dfloat *  DrT,
+                                       @restrict const  dfloat *  DsT,
+                                       @restrict const  dfloat *  DtT,
+                                       @restrict const  dfloat *  LIFTT,
+                                       @restrict const  dfloat *  MM,
+                                             @restrict dfloat *  rhsU,
+                                             @restrict dfloat *  rhsV,
+                                             @restrict dfloat *  rhsW){
 
-  for(dlong e=0;e<Nelements;++e;outer0){
-    shared  dfloat s_dudx[p_Np];
-    shared  dfloat s_dudy[p_Np];
-    shared  dfloat s_dudz[p_Np];
-    shared  dfloat s_dvdx[p_Np];
-    shared  dfloat s_dvdy[p_Np];
-    shared  dfloat s_dvdz[p_Np];
-    shared  dfloat s_dwdx[p_Np];
-    shared  dfloat s_dwdy[p_Np];
-    shared  dfloat s_dwdz[p_Np];
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared  dfloat s_dudx[p_Np];
+    @shared  dfloat s_dudy[p_Np];
+    @shared  dfloat s_dudz[p_Np];
+    @shared  dfloat s_dvdx[p_Np];
+    @shared  dfloat s_dvdy[p_Np];
+    @shared  dfloat s_dvdz[p_Np];
+    @shared  dfloat s_dwdx[p_Np];
+    @shared  dfloat s_dwdy[p_Np];
+    @shared  dfloat s_dwdz[p_Np];
     //
-    shared  dfloat s_lapu[p_Np];
-    shared  dfloat s_lapv[p_Np];
-    shared  dfloat s_lapw[p_Np];
+    @shared  dfloat s_lapu[p_Np];
+    @shared  dfloat s_lapv[p_Np];
+    @shared  dfloat s_lapw[p_Np];
     //
-    shared  dfloat s_nxdu[p_NfacesNfp];
-    shared  dfloat s_nydu[p_NfacesNfp];
-    shared  dfloat s_nzdu[p_NfacesNfp];
-    shared  dfloat s_nxdv[p_NfacesNfp];
-    shared  dfloat s_nydv[p_NfacesNfp];
-    shared  dfloat s_nzdv[p_NfacesNfp];
-    shared  dfloat s_nxdw[p_NfacesNfp];
-    shared  dfloat s_nydw[p_NfacesNfp];
-    shared  dfloat s_nzdw[p_NfacesNfp];
+    @shared  dfloat s_nxdu[p_NfacesNfp];
+    @shared  dfloat s_nydu[p_NfacesNfp];
+    @shared  dfloat s_nzdu[p_NfacesNfp];
+    @shared  dfloat s_nxdv[p_NfacesNfp];
+    @shared  dfloat s_nydv[p_NfacesNfp];
+    @shared  dfloat s_nzdv[p_NfacesNfp];
+    @shared  dfloat s_nxdw[p_NfacesNfp];
+    @shared  dfloat s_nydw[p_NfacesNfp];
+    @shared  dfloat s_nzdw[p_NfacesNfp];
     //
-    shared  dfloat s_lapuflux[p_NfacesNfp];
-    shared  dfloat s_lapvflux[p_NfacesNfp];
-    shared  dfloat s_lapwflux[p_NfacesNfp];
+    @shared  dfloat s_lapuflux[p_NfacesNfp];
+    @shared  dfloat s_lapvflux[p_NfacesNfp];
+    @shared  dfloat s_lapwflux[p_NfacesNfp];
     //
-    shared  dfloat s_Lnxdu[p_Np];
-    shared  dfloat s_Lnydu[p_Np];
-    shared  dfloat s_Lnzdu[p_Np];
-    shared  dfloat s_Lnxdv[p_Np];
-    shared  dfloat s_Lnydv[p_Np];
-    shared  dfloat s_Lnzdv[p_Np];
-    shared  dfloat s_Lnxdw[p_Np];
-    shared  dfloat s_Lnydw[p_Np];
-    shared  dfloat s_Lnzdw[p_Np];
+    @shared  dfloat s_Lnxdu[p_Np];
+    @shared  dfloat s_Lnydu[p_Np];
+    @shared  dfloat s_Lnzdu[p_Np];
+    @shared  dfloat s_Lnxdv[p_Np];
+    @shared  dfloat s_Lnydv[p_Np];
+    @shared  dfloat s_Lnzdv[p_Np];
+    @shared  dfloat s_Lnxdw[p_Np];
+    @shared  dfloat s_Lnydw[p_Np];
+    @shared  dfloat s_Lnzdw[p_Np];
 
 
-    exclusive dlong idM;
-    exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
+    @exclusive dlong idM;
+    @exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const dlong id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];
@@ -260,10 +260,10 @@ kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // dqdx += LIFT*(sJ/J)*nx*dq
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         const dlong gid = e*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
@@ -290,7 +290,7 @@ kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
         dfloat Lnydw = 0.f;
         dfloat Lnzdw = 0.f;
 
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             dfloat liftt = LIFTT[n+i*p_Np];
             Lnxdu += liftt*s_nxdu[i];
@@ -344,9 +344,9 @@ kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const int id = idM%p_Np;
         s_lapuflux[n] += sJ*invJ*(nx*s_Lnxdu[id]+ny*s_Lnydu[id]+nz*s_Lnzdu[id]);
@@ -358,7 +358,7 @@ kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
         dfloat laur = 0.f, laus = 0.f, laut=0.f;
         dfloat lavr = 0.f, lavs = 0.f, lavt=0.f;
         dfloat lawr = 0.f, laws = 0.f, lawt=0.f;
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for(int i=0;i<p_Np;++i) {
             laur += DrT[n+i*p_Np]*s_dudx[i];
             laus += DsT[n+i*p_Np]*s_dudy[i];
@@ -380,16 +380,16 @@ kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
 
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         dfloat lau = 0.f;
         dfloat lav = 0.f;
         dfloat law = 0.f;
 
         // lift remaining surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             lau += LIFTT[n+i*p_Np]*s_lapuflux[i];
             lav += LIFTT[n+i*p_Np]*s_lapvflux[i];
@@ -402,9 +402,9 @@ kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         const dlong id = e*p_Np+n;
         const dfloat J = vgeo[e*p_Nvgeo + p_JID];
@@ -414,7 +414,7 @@ kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
         dfloat Mlapw = 0.f;
 
         // multiply by mass matrix
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             Mlapu += MM[n+i*p_Np]*s_lapu[i];
             Mlapv += MM[n+i*p_Np]*s_lapv[i];
@@ -430,40 +430,40 @@ kernel void insHelmholtzRhsIpdgBCTet3D(const dlong Nelements,
 }
 
 //RHS contributions for continuous solver
-kernel void insHelmholtzRhsBCTet3D(const dlong Nelements,
-                                   const dfloat * restrict ggeo,
-                                   const dfloat * restrict sgeo,
-                                   const dfloat * restrict SrrT,
-                                   const dfloat * restrict SrsT,
-                                   const dfloat * restrict SrtT,
-                                   const dfloat * restrict SsrT,
-                                   const dfloat * restrict SssT,
-                                   const dfloat * restrict SstT,
-                                   const dfloat * restrict StrT,
-                                   const dfloat * restrict StsT,
-                                   const dfloat * restrict SttT,
-                                   const dfloat * restrict MM,
-                                   const dlong  * restrict vmapM,
-                                   const dfloat * restrict sMT,
+@kernel void insHelmholtzRhsBCTet3D(const dlong Nelements,
+                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  dfloat *  sgeo,
+                                   @restrict const  dfloat *  SrrT,
+                                   @restrict const  dfloat *  SrsT,
+                                   @restrict const  dfloat *  SrtT,
+                                   @restrict const  dfloat *  SsrT,
+                                   @restrict const  dfloat *  SssT,
+                                   @restrict const  dfloat *  SstT,
+                                   @restrict const  dfloat *  StrT,
+                                   @restrict const  dfloat *  StsT,
+                                   @restrict const  dfloat *  SttT,
+                                   @restrict const  dfloat *  MM,
+                                   @restrict const  dlong  *  vmapM,
+                                   @restrict const  dfloat *  sMT,
                                    const dfloat lambda,
                                    const dfloat time,
-                                   const dfloat * restrict x,
-                                   const dfloat * restrict y,
-                                   const dfloat * restrict z,
-                                   const int    * restrict mapB,
-                                         dfloat * restrict rhsU,
-                                         dfloat * restrict rhsV,
-                                         dfloat * restrict rhsW){
+                                   @restrict const  dfloat *  x,
+                                   @restrict const  dfloat *  y,
+                                   @restrict const  dfloat *  z,
+                                   @restrict const  int    *  mapB,
+                                         @restrict dfloat *  rhsU,
+                                         @restrict dfloat *  rhsV,
+                                         @restrict dfloat *  rhsW){
   
-  for(dlong e=0;e<Nelements;e++;outer0){
-    shared dfloat s_u[p_Np];
-    shared dfloat s_v[p_Np];
-    shared dfloat s_w[p_Np];
-    shared dfloat s_ndu[p_Nfp*p_Nfaces];
-    shared dfloat s_ndv[p_Nfp*p_Nfaces];
-    shared dfloat s_ndw[p_Nfp*p_Nfaces];
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_u[p_Np];
+    @shared dfloat s_v[p_Np];
+    @shared dfloat s_w[p_Np];
+    @shared dfloat s_ndu[p_Nfp*p_Nfaces];
+    @shared dfloat s_ndv[p_Nfp*p_Nfaces];
+    @shared dfloat s_ndw[p_Nfp*p_Nfaces];
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         s_u[n] = 0.;
         s_v[n] = 0.;
@@ -476,9 +476,9 @@ kernel void insHelmholtzRhsBCTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const dlong id  = n + e*p_Nfaces*p_Nfp;
         const dlong idM = vmapM[id];          
@@ -512,9 +512,9 @@ kernel void insHelmholtzRhsBCTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int n=0;n<p_maxNodes;++n;inner0){ 
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ 
       if(n<p_Np){
         //volume Dirichlet data
         const dlong id = n + e*p_Np;
@@ -538,7 +538,7 @@ kernel void insHelmholtzRhsBCTet3D(const dlong Nelements,
         dfloat uts = 0., vts = 0., wts = 0.;
         dfloat utt = 0., vtt = 0., wtt = 0.;
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for (int k=0;k<p_Np;k++) {
             MMu += MM[n+k*p_Np]*s_u[k];
             urr += SrrT[n+k*p_Np]*s_u[k];
@@ -578,7 +578,7 @@ kernel void insHelmholtzRhsBCTet3D(const dlong Nelements,
         dfloat Lndv = 0;            
         dfloat Lndw = 0;            
         // surface mass * surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lndu += sMT[n+i*p_Np]*s_ndu[i];
             Lndv += sMT[n+i*p_Np]*s_ndv[i];
@@ -600,19 +600,19 @@ kernel void insHelmholtzRhsBCTet3D(const dlong Nelements,
   }
 }
 
-kernel void insHelmholtzAddBCTet3D(const dlong Nelements,
+@kernel void insHelmholtzAddBCTet3D(const dlong Nelements,
                                    const dfloat time,
-                                   const dfloat * restrict x,
-                                   const dfloat * restrict y,
-                                   const dfloat * restrict z,
-                                   const dlong  * restrict vmapM,
-                                   const int    * restrict mapB,
-                                         dfloat * restrict U,
-                                         dfloat * restrict V,
-                                         dfloat * restrict W){
+                                   @restrict const  dfloat *  x,
+                                   @restrict const  dfloat *  y,
+                                   @restrict const  dfloat *  z,
+                                   @restrict const  dlong  *  vmapM,
+                                   @restrict const  int    *  mapB,
+                                         @restrict dfloat *  U,
+                                         @restrict dfloat *  V,
+                                         @restrict dfloat *  W){
   
-  for(dlong e=0;e<Nelements;e++;outer0){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
       const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
       const int bc = mapB[idM];
 

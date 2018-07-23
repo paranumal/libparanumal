@@ -1,15 +1,15 @@
 
-kernel void ellipticPreconProlongateTet3D(const dlong Nelements,
-                                     const dfloat * restrict R,
-                                     const dfloat * restrict qCoarse,
-                                     dfloat * restrict qFine){
+@kernel void ellipticPreconProlongateTet3D(const dlong Nelements,
+                                     @restrict const  dfloat *  R,
+                                     @restrict const  dfloat *  qCoarse,
+                                     @restrict dfloat *  qFine){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;@outer(0)){
 
-    shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
+    @shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
 
-    for(int es=0;es<p_NblockVFine;++es;inner1){
-      for(int n=0;n<p_NpFine;++n;inner0){
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
         dlong t = n + es*p_NpFine;
 
         if(t<p_NpCoarse*p_NblockVFine)
@@ -18,16 +18,16 @@ kernel void ellipticPreconProlongateTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int es=0;es<p_NblockVFine;++es;inner1){
-      for(int n=0;n<p_NpFine;++n;inner0){
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           //dfloat tmp = 0.;
           dfloat tmp = qFine[e*p_NpFine+n];
 
-          occaUnroll(p_NpCoarse)
+          #pragma unroll p_NpCoarse
             for(int i=0;i<p_NpCoarse;++i){
               tmp += R[i*p_NpFine + n]*s_qCoarse[es][i];
             }

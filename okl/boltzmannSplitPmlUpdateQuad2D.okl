@@ -1,24 +1,24 @@
 
-kernel void boltzmannSplitPmlUpdateQuad2D(const int Nelements,
+@kernel void boltzmannSplitPmlUpdateQuad2D(const int Nelements,
 					  const int recombine,
 					  const dfloat dt,	
 					  const dfloat rka,
 					  const dfloat rkb,
 					  const dfloat ramp,
-					  const dfloat * restrict rhsqx,
-					  const dfloat * restrict rhsqy,
-					  const dfloat * restrict rhsNT,	
-					  dfloat * restrict resqx,
-					  dfloat * restrict resqy,
-					  dfloat * restrict resNT,
-					  dfloat * restrict qx,
-					  dfloat * restrict qy,
-					  dfloat * restrict NT,
-					  dfloat4 * restrict q){
+					  @restrict const  dfloat *  rhsqx,
+					  @restrict const  dfloat *  rhsqy,
+					  @restrict const  dfloat *  rhsNT,	
+					  @restrict dfloat *  resqx,
+					  @restrict dfloat *  resqy,
+					  @restrict dfloat *  resNT,
+					  @restrict dfloat *  qx,
+					  @restrict dfloat *  qy,
+					  @restrict dfloat *  NT,
+					  @restrict dfloat4 *  q){
   
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       const int base = n + e*p_Nfields*p_Np;
 

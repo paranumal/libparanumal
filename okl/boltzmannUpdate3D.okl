@@ -23,18 +23,18 @@
 #define QZID7 19  
 #define QZID10  20   
 
-kernel void boltzmannLSERKUpdate3D(const int Nelements,
-				    const int * restrict elementIds,
+@kernel void boltzmannLSERKUpdate3D(const int Nelements,
+				    @restrict const  int *  elementIds,
 				    const dfloat dt,	
 				    const dfloat rka,
 				    const dfloat rkb,
-				    const dfloat4 * restrict rhsq,
-				          dfloat4 * restrict resq,
-				          dfloat4 * restrict q){
+				    @restrict const  dfloat4 *  rhsq,
+				          @restrict dfloat4 *  resq,
+				          @restrict dfloat4 *  q){
   
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
       const int base = 3*(n + element*p_Np);
 
@@ -62,22 +62,22 @@ kernel void boltzmannLSERKUpdate3D(const int Nelements,
 }
 
 
-kernel void boltzmannSARK3StageUpdate3D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannSARK3StageUpdate3D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat expdt, 
             const dfloat rka,
             const dfloat erka,
             const dfloat rkb,
             const dfloat erkb,
-            const dfloat4 * restrict rhsq1,
-            const dfloat4 * restrict rhsq2,
-            const dfloat4 * restrict qold,
-                  dfloat4 * restrict q){
+            @restrict const  dfloat4 *  rhsq1,
+            @restrict const  dfloat4 *  rhsq2,
+            @restrict const  dfloat4 *  qold,
+                  @restrict dfloat4 *  q){
   
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
       const int base = 3*(n + element*p_Np);
 
@@ -112,8 +112,8 @@ kernel void boltzmannSARK3StageUpdate3D(const int Nelements,
 
 
 
-kernel void boltzmannSARK3Update3D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannSARK3Update3D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat expdt, 
             const dfloat rka,
@@ -122,15 +122,15 @@ kernel void boltzmannSARK3Update3D(const int Nelements,
             const dfloat erkb,
             const dfloat rkc,
             const dfloat erkc,
-            const dfloat4 * restrict rhsq1,
-            const dfloat4 * restrict rhsq2,
-            const dfloat4 * restrict rhsq3,
-                  dfloat4 * restrict qold,
-                  dfloat4 * restrict q){
+            @restrict const  dfloat4 *  rhsq1,
+            @restrict const  dfloat4 *  rhsq2,
+            @restrict const  dfloat4 *  rhsq3,
+                  @restrict dfloat4 *  qold,
+                  @restrict dfloat4 *  q){
   
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
       const int base = 3*(n + element*p_Np);
       dfloat4 rhsq1a = rhsq1[base+0], rhsq1b = rhsq1[base+1], rhsq1c = rhsq1[base+2];
@@ -170,8 +170,8 @@ kernel void boltzmannSARK3Update3D(const int Nelements,
 
 
 
-kernel void boltzmannSAAB3Update3D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannSAAB3Update3D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat expdt, 
             const dfloat ab1,
@@ -180,14 +180,14 @@ kernel void boltzmannSAAB3Update3D(const int Nelements,
             const dfloat saab1,
             const dfloat saab2,
             const dfloat saab3,
-                  dfloat4 * restrict rhsq3,
-                  dfloat4 * restrict rhsq2,
-                  dfloat4 * restrict rhsq1,
-                  dfloat4 * restrict q){
+                  @restrict dfloat4 *  rhsq3,
+                  @restrict dfloat4 *  rhsq2,
+                  @restrict dfloat4 *  rhsq1,
+                  @restrict dfloat4 *  q){
   
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
 
       const int base = 3*(n + element*p_Np);
@@ -230,17 +230,17 @@ kernel void boltzmannSAAB3Update3D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannLSIMEXResidualUpdate3D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannLSIMEXResidualUpdate3D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat aki,
             const dfloat ake, 
-            const dfloat4 * restrict q,
-            const dfloat4 * restrict qZ,
-                  dfloat4 * restrict qY){
+            @restrict const  dfloat4 *  q,
+            @restrict const  dfloat4 *  qZ,
+                  @restrict dfloat4 *  qY){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
       const int base = 3*(n + element*p_Np);
       
@@ -258,7 +258,7 @@ kernel void boltzmannLSIMEXResidualUpdate3D(const int Nelements,
 
 #if 0
   // TW alternative process as a vector operation
-  for(int n=0;n<Nelements*p_Np*3;++n;tile(256)){
+  for(int n=0;n<Nelements*p_Np*3;++n;@tile(256,@outer,@inner)){
     if(n<Nelements*p_Np*3){
       qY[n] = q[n] + ake*dt*qY[n] + aki*dt*qZ[n];
     }
@@ -269,17 +269,17 @@ kernel void boltzmannLSIMEXResidualUpdate3D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannLSIMEXImplicitUpdate3D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannLSIMEXImplicitUpdate3D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat akk,
-            const dfloat4 * restrict qZ,
-            const dfloat4 * restrict qY,
-                  dfloat4 * restrict q,
-                  dfloat4 * restrict qS){
+            @restrict const  dfloat4 *  qZ,
+            @restrict const  dfloat4 *  qY,
+                  @restrict dfloat4 *  q,
+                  @restrict dfloat4 *  qS){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       //
       const int element = elementIds[e];
       const int base = 3*(n + element*p_Np);
@@ -301,7 +301,7 @@ kernel void boltzmannLSIMEXImplicitUpdate3D(const int Nelements,
 
 #if 0
   // TW alternative process as a vector operation
-  for(int n=0;n<Nelements*p_Np*3;++n;tile(256)){
+  for(int n=0;n<Nelements*p_Np*3;++n;@tile(256,@outer,@inner)){
     if(n<Nelements*p_Np*3){
       dfloat4 qn = q[n];
       qS[n] = qn;
@@ -315,17 +315,17 @@ kernel void boltzmannLSIMEXImplicitUpdate3D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannLSIMEXUpdate3D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannLSIMEXUpdate3D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat akk,
-            const dfloat4 * restrict qZ,
-            const dfloat4 * restrict qY,
-            const dfloat4 * restrict qS,
-                  dfloat4 * restrict q){
+            @restrict const  dfloat4 *  qZ,
+            @restrict const  dfloat4 *  qY,
+            @restrict const  dfloat4 *  qS,
+                  @restrict dfloat4 *  q){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       const int element = elementIds[e];
       const int base = 3*(n + element*p_Np);
@@ -342,7 +342,7 @@ kernel void boltzmannLSIMEXUpdate3D(const int Nelements,
 
 #if 0
   // TW alternative process as a vector operation
-  for(int n=0;n<Nelements*p_Np*3;++n;tile(256)){
+  for(int n=0;n<Nelements*p_Np*3;++n;@tile(256,@outer,@inner)){
     if(n<Nelements*p_Np*3){
       q[n] = qS[n] + akk*dt*(qZ[n]+qY[n]);
     }
@@ -356,22 +356,22 @@ kernel void boltzmannLSIMEXUpdate3D(const int Nelements,
 
 
 
-kernel void boltzmannLSERKPmlUpdate3D(const int Nelements,
-              const int * restrict elementIds, 
+@kernel void boltzmannLSERKPmlUpdate3D(const int Nelements,
+              @restrict const  int *  elementIds, 
               const dfloat dt,  
               const dfloat rka,
               const dfloat rkb,
               const dfloat ramp, 
-              const dfloat4 * restrict rhsq, 
-              const dfloat *  restrict rhspmlq,
-                    dfloat4 * restrict resq,
-                    dfloat *  restrict respmlq,
-                    dfloat4 * restrict q,
-                    dfloat *  restrict pmlq){
+              @restrict const  dfloat4 *  rhsq, 
+              @restrict const  dfloat *   rhspmlq,
+                    @restrict dfloat4 *  resq,
+                    @restrict dfloat *   respmlq,
+                    @restrict dfloat4 *  q,
+                    @restrict dfloat *   pmlq){
   
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       const int element = elementIds[e];
 
@@ -527,8 +527,8 @@ kernel void boltzmannLSERKPmlUpdate3D(const int Nelements,
 }
 
 
-kernel void boltzmannSARK3PmlStageUpdate3D(const int Nelements,
-              const int * restrict elementIds, 
+@kernel void boltzmannSARK3PmlStageUpdate3D(const int Nelements,
+              @restrict const  int *  elementIds, 
               const dfloat dt,  
               const dfloat expdt, 
               const dfloat rka,
@@ -536,16 +536,16 @@ kernel void boltzmannSARK3PmlStageUpdate3D(const int Nelements,
               const dfloat rkb,
               const dfloat erkb,
               const dfloat ramp, 
-              const dfloat4 * restrict rhsq1,
-              const dfloat * restrict rhspmlq1,
-              const dfloat4 * restrict rhsq2, 
-              const dfloat * restrict rhspmlq2,
-              const dfloat4 * restrict qold,
-              const dfloat * restrict pmlqold,
-                    dfloat4 * restrict q,
-                    dfloat * restrict pmlq){
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+              @restrict const  dfloat4 *  rhsq1,
+              @restrict const  dfloat *  rhspmlq1,
+              @restrict const  dfloat4 *  rhsq2, 
+              @restrict const  dfloat *  rhspmlq2,
+              @restrict const  dfloat4 *  qold,
+              @restrict const  dfloat *  pmlqold,
+                    @restrict dfloat4 *  q,
+                    @restrict dfloat *  pmlq){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
       const int base = element*p_Np*p_pmlNfields+n;
          // No-Need to Qx7 Qx9 Qx10
@@ -681,8 +681,8 @@ kernel void boltzmannSARK3PmlStageUpdate3D(const int Nelements,
 }
 
 
-kernel void boltzmannSARK3PmlUpdate3D(const int Nelements,
-              const int * restrict elementIds, 
+@kernel void boltzmannSARK3PmlUpdate3D(const int Nelements,
+              @restrict const  int *  elementIds, 
               const dfloat dt,  
               const dfloat expdt, 
               const dfloat rka,
@@ -692,18 +692,18 @@ kernel void boltzmannSARK3PmlUpdate3D(const int Nelements,
               const dfloat rkc,
               const dfloat erkc,
               const dfloat ramp, 
-              const dfloat4 * restrict rhsq1,
-              const dfloat * restrict rhspmlq1,
-              const dfloat4 * restrict rhsq2, 
-              const dfloat * restrict rhspmlq2,
-              const dfloat4 * restrict rhsq3, 
-              const dfloat * restrict rhspmlq3,
-                    dfloat4 * restrict qold,
-                    dfloat * restrict pmlqold,
-                    dfloat4 * restrict q, 
-                    dfloat * restrict pmlq){
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+              @restrict const  dfloat4 *  rhsq1,
+              @restrict const  dfloat *  rhspmlq1,
+              @restrict const  dfloat4 *  rhsq2, 
+              @restrict const  dfloat *  rhspmlq2,
+              @restrict const  dfloat4 *  rhsq3, 
+              @restrict const  dfloat *  rhspmlq3,
+                    @restrict dfloat4 *  qold,
+                    @restrict dfloat *  pmlqold,
+                    @restrict dfloat4 *  q, 
+                    @restrict dfloat *  pmlq){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
       const int base = element*p_Np*p_pmlNfields+n;
 
@@ -921,8 +921,8 @@ kernel void boltzmannSARK3PmlUpdate3D(const int Nelements,
 }
 
 
-kernel void boltzmannSAAB3PmlUpdate3D(const int Nelements,
-              const int * restrict elementIds, 
+@kernel void boltzmannSAAB3PmlUpdate3D(const int Nelements,
+              @restrict const  int *  elementIds, 
               const dfloat dt,  
               const dfloat expdt, 
               const dfloat ramp, 
@@ -932,16 +932,16 @@ kernel void boltzmannSAAB3PmlUpdate3D(const int Nelements,
               const dfloat saab1,
               const dfloat saab2,
               const dfloat saab3, 
-              const dfloat4 * restrict rhsq1,
-              const dfloat * restrict rhspmlq1,
-                    dfloat4 * restrict rhsq2, 
-                    dfloat * restrict rhspmlq2,
-                    dfloat4 * restrict rhsq3, 
-                    dfloat * restrict rhspmlq3,
-                    dfloat4 * restrict q, 
-                    dfloat * restrict pmlq){
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+              @restrict const  dfloat4 *  rhsq1,
+              @restrict const  dfloat *  rhspmlq1,
+                    @restrict dfloat4 *  rhsq2, 
+                    @restrict dfloat *  rhspmlq2,
+                    @restrict dfloat4 *  rhsq3, 
+                    @restrict dfloat *  rhspmlq3,
+                    @restrict dfloat4 *  q, 
+                    @restrict dfloat *  pmlq){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
       const int base = element*p_Np*p_pmlNfields+n;
       // No-Need to Qx7 Qx9 Qx10
@@ -1181,20 +1181,20 @@ kernel void boltzmannSAAB3PmlUpdate3D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannLSIMEXPmlResidualUpdate3D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannLSIMEXPmlResidualUpdate3D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt,
             const dfloat ramp, 
             const dfloat c_im,
             const dfloat c_ex, 
-            const dfloat4 * restrict q,
-            const dfloat  * restrict pmlq,
-                  dfloat4 * restrict qZ,
-                  dfloat4 * restrict qY,  
-                  dfloat  * restrict pmlqY){
+            @restrict const  dfloat4 *  q,
+            @restrict const  dfloat  *  pmlq,
+                  @restrict dfloat4 *  qZ,
+                  @restrict dfloat4 *  qY,  
+                  @restrict dfloat  *  pmlqY){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
        const int element = elementIds[e];
       const int base = element*p_Np*p_pmlNfields+n;
       // No-Need to Qx7 Qx9 Qx10
@@ -1290,21 +1290,21 @@ kernel void boltzmannLSIMEXPmlResidualUpdate3D(const int Nelements,
 }
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannLSIMEXPmlImplicitUpdate3D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannLSIMEXPmlImplicitUpdate3D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat ramp,
             const dfloat akk,
-            const dfloat4 * restrict qY,
-            const dfloat  * restrict pmlqY,
-            const dfloat4 * restrict qZ,
-                  dfloat4 * restrict q,
-                  dfloat  * restrict pmlq,
-                  dfloat4 * restrict qS,
-                  dfloat  * restrict pmlqS){
+            @restrict const  dfloat4 *  qY,
+            @restrict const  dfloat  *  pmlqY,
+            @restrict const  dfloat4 *  qZ,
+                  @restrict dfloat4 *  q,
+                  @restrict dfloat  *  pmlq,
+                  @restrict dfloat4 *  qS,
+                  @restrict dfloat  *  pmlqS){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
       const int base = element*p_Np*p_pmlNfields+n;
 
@@ -1432,21 +1432,21 @@ kernel void boltzmannLSIMEXPmlImplicitUpdate3D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannLSIMEXPmlUpdate3D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannLSIMEXPmlUpdate3D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat akk,
             const dfloat ramp,
-            const dfloat4  * restrict qZ,
-            const dfloat4  * restrict qY,
-            const dfloat  * restrict pmlqY,
-            const dfloat4  * restrict qS,
-            const dfloat  * restrict pmlqS,
-                  dfloat4 * restrict q,   
-                  dfloat  * restrict pmlq){
+            @restrict const  dfloat4  *  qZ,
+            @restrict const  dfloat4  *  qY,
+            @restrict const  dfloat  *  pmlqY,
+            @restrict const  dfloat4  *  qS,
+            @restrict const  dfloat  *  pmlqS,
+                  @restrict dfloat4 *  q,   
+                  @restrict dfloat  *  pmlq){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
       const int base = element*p_Np*p_pmlNfields+n;
 

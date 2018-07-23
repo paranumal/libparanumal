@@ -3,23 +3,23 @@
 #define SXID 2  
 #define SYID 3
 
-kernel void boltzmannNonPmlVolume2D(const int Nelements,
-				    const int * restrict elementIds,
+@kernel void boltzmannNonPmlVolume2D(const int Nelements,
+				    @restrict const  int *  elementIds,
 				    const dfloat ramp,
 				    const dfloat drampdt,
-				    const dfloat * restrict vgeo,
-				    const dfloat * restrict DrT,
-				    const dfloat * restrict DsT,
-				    const dfloat4 * restrict q,
-				          dfloat4 * restrict rhsq){
+				    @restrict const  dfloat *  vgeo,
+				    @restrict const  dfloat *  DrT,
+				    @restrict const  dfloat *  DsT,
+				    @restrict const  dfloat4 *  q,
+				          @restrict dfloat4 *  rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive int element;
+    @shared dfloat s_q[p_NblockV][6][p_Np];
+    @exclusive int element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 	int e = eo+es; // element in block
 
@@ -42,11 +42,11 @@ kernel void boltzmannNonPmlVolume2D(const int Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -61,7 +61,7 @@ kernel void boltzmannNonPmlVolume2D(const int Nelements,
 	  dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
 	  dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
 
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat Drni = DrT[n+i*p_Np];
 	    const dfloat Dsni = DsT[n+i*p_Np];
@@ -140,25 +140,25 @@ kernel void boltzmannNonPmlVolume2D(const int Nelements,
 
 
 
-kernel void boltzmannNonPmlVolume2Dbbdg(const int Nelements,
-					const int * restrict elementIds,
+@kernel void boltzmannNonPmlVolume2Dbbdg(const int Nelements,
+					@restrict const  int *  elementIds,
 					const dfloat ramp,
 					const dfloat drampdt,
-					const dfloat * restrict vgeo,
-					const int * restrict D1ids,
-					const int * restrict D2ids,
-					const int * restrict D3ids,
-					const dfloat * restrict Dvals,		
-					const dfloat4 * restrict q,
-					dfloat4 * restrict rhsq){
+					@restrict const  dfloat *  vgeo,
+					@restrict const  int *  D1ids,
+					@restrict const  int *  D2ids,
+					@restrict const  int *  D3ids,
+					@restrict const  dfloat *  Dvals,		
+					@restrict const  dfloat4 *  q,
+					@restrict dfloat4 *  rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive int element;
+    @shared dfloat s_q[p_NblockV][6][p_Np];
+    @exclusive int element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 	int e = eo+es; // element in block
 
@@ -181,11 +181,11 @@ kernel void boltzmannNonPmlVolume2Dbbdg(const int Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){

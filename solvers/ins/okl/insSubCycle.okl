@@ -1,20 +1,20 @@
 
-kernel void insSubCycleRKUpdate(const dlong Nelements,
+@kernel void insSubCycleRKUpdate(const dlong Nelements,
                                 const dfloat dt,  
                                 const dfloat rka,
                                 const dfloat rkb,
                                 const dlong offset,
-                                const dfloat * restrict rhsU,
-                                dfloat  * restrict resU,
-                                dfloat  * restrict U){
+                                @restrict const  dfloat *  rhsU,
+                                @restrict dfloat  *  resU,
+                                @restrict dfloat  *  U){
 
   // Low storage Runge Kutta time step update
-  for(dlong e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       const dlong id = n + e*p_Np;
 
-      occaUnroll(p_NVfields)
+      #pragma unroll p_NVfields
       for (int i=0;i<p_NVfields;i++) {
         dfloat resu =  resU[id+i*offset];
         dfloat rhsu = -rhsU[id+i*offset];// -Nu
@@ -31,19 +31,19 @@ kernel void insSubCycleRKUpdate(const dlong Nelements,
 }
 
 
-kernel void insSubCycleExt(const dlong Nelements,
+@kernel void insSubCycleExt(const dlong Nelements,
                            const int Nstages,
                            const dlong fieldOffset,
-                           const dfloat * restrict c,
-                           const dfloat * restrict U,
-                                 dfloat * restrict Ue){
+                           @restrict const  dfloat *  c,
+                           @restrict const  dfloat *  U,
+                                 @restrict dfloat *  Ue){
 
   // Low storage Runge Kutta time step update
-  for(dlong e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong id = n+p_Np*e;
       
-      occaUnroll(p_NVfields)
+      #pragma unroll p_NVfields
       for (int i=0;i<p_NVfields;i++) {
         dfloat Un = 0.;
 

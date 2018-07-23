@@ -1,16 +1,16 @@
 
-kernel void acousticsUpdateP3D(const int Nelements,
-            const int * restrict Elements,
+@kernel void acousticsUpdateP3D(const int Nelements,
+            @restrict const  int *  Elements,
 			      const dfloat dt,	
 			      const dfloat rka,
 			      const dfloat rkb,
-			      const dfloat * restrict rhsq,
-			      dfloat * restrict resq,
-			      dfloat * restrict q){
+			      @restrict const  dfloat *  rhsq,
+			      @restrict dfloat *  resq,
+			      @restrict dfloat *  q){
 				  
   // Low storage Runge Kutta time step update
-  for(int et=0;et<Nelements;++et;outer0){
-    for (int n=0;n<p_Np;n++;inner0) {  
+  for(int et=0;et<Nelements;++et;@outer(0)){
+    for (int n=0;n<p_Np;n++;@inner(0)) {  
       const int id = p_Nfields*(Elements[et]*p_NpMax + n);
       for (int fld=0;fld<p_Nfields;fld++) {
         dfloat resqn = resq[id+fld];
@@ -22,24 +22,24 @@ kernel void acousticsUpdateP3D(const int Nelements,
   }
 }
 
-kernel void acousticsUpdateP3D_wadg(const int Nelements,
-           const int * restrict Elements,
+@kernel void acousticsUpdateP3D_wadg(const int Nelements,
+           @restrict const  int *  Elements,
            const dfloat dt, 
            const dfloat rka,
            const dfloat rkb,
-           const dfloat * restrict cubInterp,
-           const dfloat * restrict cubProject,
-           const dfloat * restrict c2,
-           const dfloat * restrict rhsq,
-           dfloat * restrict resq,
-           dfloat * restrict q){
+           @restrict const  dfloat *  cubInterp,
+           @restrict const  dfloat *  cubProject,
+           @restrict const  dfloat *  c2,
+           @restrict const  dfloat *  rhsq,
+           @restrict dfloat *  resq,
+           @restrict dfloat *  q){
   
   // Low storage Runge Kutta time step update
-  for(int et=0;et<Nelements;++et;outer0){  // for all elements
-    shared dfloat s_p[p_cubNp];
-    exclusive dfloat r_p;
+  for(int et=0;et<Nelements;++et;@outer(0)){  // for all elements
+    @shared dfloat s_p[p_cubNp];
+    @exclusive dfloat r_p;
 
-    for(int n=0; n < p_cubNp; ++n; inner0){  
+    for(int n=0; n < p_cubNp; ++n; @inner(0)){  
       if (n < p_Np){
         const int id = p_Nfields*(Elements[et]*p_NpMax + n);
         s_p[n] = rhsq[id + 3]; // extract pressure rhs
@@ -47,10 +47,10 @@ kernel void acousticsUpdateP3D_wadg(const int Nelements,
       // Initialize register variable
       r_p = 0.f;
     }
-    barrier(localMemFence);
+    @barrier("local");
 
     // Interpolate rhs to cubature nodes
-    for(int n=0;n<p_cubNp;++n;inner0){
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
       // Prefetch value of c2
       const dfloat c2n = c2[n + Elements[et]*p_cubNpMax];
       
@@ -62,16 +62,16 @@ kernel void acousticsUpdateP3D_wadg(const int Nelements,
       // Multiply result by wavespeed c2 at cubature node
       r_p = val * c2n;
     }
-    barrier(localMemFence);
+    @barrier("local");
 
-    // Move temporary result back to shared memory
-    for(int n=0;n<p_cubNp;++n;inner0){
+    // Move temporary result back to @shared memory
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
       s_p[n] = r_p;
     }
-    barrier(localMemFence);
+    @barrier("local");
     
     // Increment solution, project result back down
-    for(int n=0;n<p_cubNp;++n;inner0){
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
       if (n < p_Np){
         // Extract velocity rhs
         const int id = p_Nfields*(Elements[et]*p_NpMax + n);

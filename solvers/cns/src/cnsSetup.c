@@ -210,7 +210,12 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
   // OCCA build stuff
   
-  occa::kernelInfo kernelInfo;
+  occa::properties kernelInfo;
+ kernelInfo["defines"].asObject();
+ kernelInfo["includes"].asArray();
+ kernelInfo["header"].asArray();
+ kernelInfo["flags"].asObject();
+
   if(cns->dim==3)
     meshOccaSetup3D(mesh, options, kernelInfo);
   else
@@ -219,7 +224,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   //add boundary data to kernel info  
   string boundaryHeaderFileName; 
   options.getArgs("DATA FILE", boundaryHeaderFileName);
-  kernelInfo.addInclude((char*)boundaryHeaderFileName.c_str());
+  kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
  
   cns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
@@ -303,50 +308,50 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   //  p_RT, p_rbar, p_ubar, p_vbar
   // p_half, p_two, p_third, p_Nstresses
 
-    kernelInfo.addCompilerFlag("-g");
+    kernelInfo["compiler_flags"] += "-g";
     
-  kernelInfo.addDefine("p_Nfields", mesh->Nfields);
-  kernelInfo.addDefine("p_Nstresses", cns->Nstresses);
+  kernelInfo["defines/" "p_Nfields"]= mesh->Nfields;
+  kernelInfo["defines/" "p_Nstresses"]= cns->Nstresses;
 
-  kernelInfo.addDefine("p_RT", cns->RT);
+  kernelInfo["defines/" "p_RT"]= cns->RT;
 
   dfloat sqrtRT = sqrt(cns->RT);
-  kernelInfo.addDefine("p_sqrtRT", sqrtRT);
+  kernelInfo["defines/" "p_sqrtRT"]= sqrtRT;
   
-  kernelInfo.addDefine("p_rbar", cns->rbar);
-  kernelInfo.addDefine("p_ubar", cns->ubar);
-  kernelInfo.addDefine("p_vbar", cns->vbar);
-  kernelInfo.addDefine("p_wbar", cns->wbar);
+  kernelInfo["defines/" "p_rbar"]= cns->rbar;
+  kernelInfo["defines/" "p_ubar"]= cns->ubar;
+  kernelInfo["defines/" "p_vbar"]= cns->vbar;
+  kernelInfo["defines/" "p_wbar"]= cns->wbar;
   
 
   const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3., p_zero = 0;
 
-  kernelInfo.addDefine("p_two", p_two);
-  kernelInfo.addDefine("p_one", p_one);
-  kernelInfo.addDefine("p_half", p_half);
-  kernelInfo.addDefine("p_third", p_third);
-  kernelInfo.addDefine("p_zero", p_zero);
+  kernelInfo["defines/" "p_two"]= p_two;
+  kernelInfo["defines/" "p_one"]= p_one;
+  kernelInfo["defines/" "p_half"]= p_half;
+  kernelInfo["defines/" "p_third"]= p_third;
+  kernelInfo["defines/" "p_zero"]= p_zero;
   
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
+  kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int NblockV = 512/mesh->Np; // works for CUDA
-  kernelInfo.addDefine("p_NblockV", NblockV);
+  kernelInfo["defines/" "p_NblockV"]= NblockV;
 
   int NblockS = 512/maxNodes; // works for CUDA
-  kernelInfo.addDefine("p_NblockS", NblockS);
+  kernelInfo["defines/" "p_NblockS"]= NblockS;
 
   int cubMaxNodes = mymax(mesh->Np, (mesh->intNfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_cubMaxNodes", cubMaxNodes);
+  kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;
   int cubMaxNodes1 = mymax(mesh->Np, (mesh->intNfp));
-  kernelInfo.addDefine("p_cubMaxNodes1", cubMaxNodes1);
+  kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
 
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
+  kernelInfo["defines/" "p_Lambda2"]= 0.5f;
 
-  kernelInfo.addDefine("p_blockSize", blockSize);
+  kernelInfo["defines/" "p_blockSize"]= blockSize;
 
 
-  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
   // set kernel name suffix
   char *suffix;
@@ -369,69 +374,69 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
       sprintf(fileName, DCNS "/okl/cnsVolume%s.okl", suffix);
       sprintf(kernelName, "cnsVolume%s", suffix);
 
-      cns->volumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      cns->volumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "cnsStressesVolume%s", suffix);
-      cns->stressesVolumeKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      cns->stressesVolumeKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // kernels from surface file
       sprintf(fileName, DCNS "/okl/cnsSurface%s.okl", suffix);
       sprintf(kernelName, "cnsSurface%s", suffix);
       
-      cns->surfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      cns->surfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "cnsStressesSurface%s", suffix);
-      cns->stressesSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      cns->stressesSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       if(cns->elementType != HEXAHEDRA){ //remove later
       // kernels from cubature volume file
       sprintf(fileName, DCNS "/okl/cnsCubatureVolume%s.okl", suffix);
       sprintf(kernelName, "cnsCubatureVolume%s", suffix);
       
-      cns->cubatureVolumeKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      cns->cubatureVolumeKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // kernels from cubature surface file
       sprintf(fileName, DCNS "/okl/cnsCubatureSurface%s.okl", suffix);
       sprintf(kernelName, "cnsCubatureSurface%s", suffix);
 
-      cns->cubatureSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      cns->cubatureSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
       
       // kernels from vorticity file
       sprintf(fileName, DCNS "/okl/cnsVorticity%s.okl", suffix);
       sprintf(kernelName, "cnsVorticity%s", suffix);
       
-      cns->vorticityKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      cns->vorticityKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 
       // kernels from update file
       cns->updateKernel =
-        mesh->device.buildKernelFromSource(DCNS "/okl/cnsUpdate.okl",
+        mesh->device.buildKernel(DCNS "/okl/cnsUpdate.okl",
                                            "cnsUpdate",
                                            kernelInfo);
 
       cns->rkUpdateKernel =
-        mesh->device.buildKernelFromSource(DCNS "/okl/cnsUpdate.okl",
+        mesh->device.buildKernel(DCNS "/okl/cnsUpdate.okl",
                                            "cnsRkUpdate",
                                            kernelInfo);
       cns->rkStageKernel =
-        mesh->device.buildKernelFromSource(DCNS "/okl/cnsUpdate.okl",
+        mesh->device.buildKernel(DCNS "/okl/cnsUpdate.okl",
                                            "cnsRkStage",
                                            kernelInfo);
 
       cns->rkOutputKernel =
-        mesh->device.buildKernelFromSource(DCNS "/okl/cnsUpdate.okl",
+        mesh->device.buildKernel(DCNS "/okl/cnsUpdate.okl",
                                            "cnsRkOutput",
                                            kernelInfo);
 
       cns->rkErrorEstimateKernel =
-        mesh->device.buildKernelFromSource(DCNS "/okl/cnsUpdate.okl",
+        mesh->device.buildKernel(DCNS "/okl/cnsUpdate.okl",
                                            "cnsErrorEstimate",
                                            kernelInfo);
 
       // fix this later
       mesh->haloExtractKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl",
                                            "meshHaloExtract3D",
                                            kernelInfo);
     }

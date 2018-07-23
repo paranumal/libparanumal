@@ -1,43 +1,43 @@
 
 // Actually solves for Pr increamnet not presssure
-kernel void insPressureIpdgBCTet3D(const dlong Nelements,
-                                     const dlong  * restrict vmapM,
+@kernel void insPressureIpdgBCTet3D(const dlong Nelements,
+                                     @restrict const  dlong  *  vmapM,
                                      const dfloat tau,
                                      const dfloat time,
                                      const dfloat dt,
                                      const int stage,
                                      const int ARKswitch,
-                                     const dfloat * restrict c,
-                                     const dfloat * restrict prkB,
-                                     const dfloat * restrict x,
-                                     const dfloat * restrict y,
-                                     const dfloat * restrict z,
-                                     const dfloat * restrict vgeo,
-                                     const dfloat * restrict sgeo,
-                                     const int    * restrict EToB,
-                                     const dfloat * restrict Dmatrices,
-                                     const dfloat * restrict LIFTT,
-                                     const dfloat * restrict MM,
-                                           dfloat * restrict rhsP){
-  for(dlong e=0;e<Nelements;++e;outer0){
-    shared  dfloat s_dpdx[p_Np];
-    shared  dfloat s_dpdy[p_Np];
-    shared  dfloat s_dpdz[p_Np];
-    shared  dfloat s_lapp[p_Np];
+                                     @restrict const  dfloat *  c,
+                                     @restrict const  dfloat *  prkB,
+                                     @restrict const  dfloat *  x,
+                                     @restrict const  dfloat *  y,
+                                     @restrict const  dfloat *  z,
+                                     @restrict const  dfloat *  vgeo,
+                                     @restrict const  dfloat *  sgeo,
+                                     @restrict const  int    *  EToB,
+                                     @restrict const  dfloat *  Dmatrices,
+                                     @restrict const  dfloat *  LIFTT,
+                                     @restrict const  dfloat *  MM,
+                                           @restrict dfloat *  rhsP){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared  dfloat s_dpdx[p_Np];
+    @shared  dfloat s_dpdy[p_Np];
+    @shared  dfloat s_dpdz[p_Np];
+    @shared  dfloat s_lapp[p_Np];
 
-    shared  dfloat s_nxdp[p_NfacesNfp];
-    shared  dfloat s_nydp[p_NfacesNfp];
-    shared  dfloat s_nzdp[p_NfacesNfp];
+    @shared  dfloat s_nxdp[p_NfacesNfp];
+    @shared  dfloat s_nydp[p_NfacesNfp];
+    @shared  dfloat s_nzdp[p_NfacesNfp];
 
-    shared  dfloat s_lappflux[p_NfacesNfp];
-    shared  dfloat s_Lnxdp[p_Np];
-    shared  dfloat s_Lnydp[p_Np];
-    shared  dfloat s_Lnzdp[p_Np];
+    @shared  dfloat s_lappflux[p_NfacesNfp];
+    @shared  dfloat s_Lnxdp[p_Np];
+    @shared  dfloat s_Lnydp[p_Np];
+    @shared  dfloat s_Lnzdp[p_Np];
 
-    exclusive dlong idM;
-    exclusive dfloat nx, ny,nz, sJ, invJ, hinv;
+    @exclusive dlong idM;
+    @exclusive dfloat nx, ny,nz, sJ, invJ, hinv;
     
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const dlong id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];          
@@ -89,10 +89,10 @@ kernel void insPressureIpdgBCTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // dqdx += LIFT*(sJ/J)*nx*dq
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         const dlong gid = e*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
@@ -111,7 +111,7 @@ kernel void insPressureIpdgBCTet3D(const dlong Nelements,
         dfloat Lnydp = 0.f;
         dfloat Lnzdp = 0.f;
 
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             const dfloat L = LIFTT[n+i*p_Np];
             Lnxdp += L*s_nxdp[i];
@@ -133,9 +133,9 @@ kernel void insPressureIpdgBCTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const int id = idM%p_Np;
         s_lappflux[n] += sJ*invJ*(nx*s_Lnxdp[id]+ny*s_Lnydp[id]+nz*s_Lnzdp[id]);
@@ -143,7 +143,7 @@ kernel void insPressureIpdgBCTet3D(const dlong Nelements,
 
       if(n<p_Np){
         dfloat lapr = 0.f, laps = 0.f, lapt = 0.f;
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i) {
           lapr += Dmatrices[n+i*p_Np+0*p_Np*p_Np]*s_dpdx[i];
           laps += Dmatrices[n+i*p_Np+1*p_Np*p_Np]*s_dpdy[i];
@@ -155,13 +155,13 @@ kernel void insPressureIpdgBCTet3D(const dlong Nelements,
 
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         dfloat lap = 0.f;
         // lift remaining surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
         for(int i=0;i<p_NfacesNfp;++i){
           lap += LIFTT[n+i*p_Np]*s_lappflux[i];
         }
@@ -169,14 +169,14 @@ kernel void insPressureIpdgBCTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         const dfloat J = vgeo[e*p_Nvgeo + p_JID];
         dfloat Mlapp = 0;
         // multiply by mass matrix
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           Mlapp += MM[n+i*p_Np]*s_lapp[i];
         }
@@ -189,30 +189,30 @@ kernel void insPressureIpdgBCTet3D(const dlong Nelements,
 }
 
 //RHS contributions for continuous solver
-kernel void insPressureBCTet3D(const dlong Nelements,
-                                 const dfloat * restrict ggeo,
-                                 const dfloat * restrict sgeo,
-                                 const dfloat * restrict Dmatrices,
-                                 const dfloat * restrict Smatrices,
-                                 const dlong  * restrict vmapM,
-                                 const dfloat * restrict sMT,
+@kernel void insPressureBCTet3D(const dlong Nelements,
+                                 @restrict const  dfloat *  ggeo,
+                                 @restrict const  dfloat *  sgeo,
+                                 @restrict const  dfloat *  Dmatrices,
+                                 @restrict const  dfloat *  Smatrices,
+                                 @restrict const  dlong  *  vmapM,
+                                 @restrict const  dfloat *  sMT,
                                  const dfloat time,
                                  const dfloat dt,
                                  const int stage,
                                  const int ARKswitch,
-                                 const dfloat * restrict c,
-                                 const dfloat * restrict prkB,
-                                 const dfloat * restrict x,
-                                 const dfloat * restrict y,
-                                 const dfloat * restrict z,
-                                 const int    * restrict mapB,
-                                       dfloat * restrict rhsP){
+                                 @restrict const  dfloat *  c,
+                                 @restrict const  dfloat *  prkB,
+                                 @restrict const  dfloat *  x,
+                                 @restrict const  dfloat *  y,
+                                 @restrict const  dfloat *  z,
+                                 @restrict const  int    *  mapB,
+                                       @restrict dfloat *  rhsP){
   
-  for(dlong e=0;e<Nelements;e++;outer0){
-    shared dfloat s_q[p_Np];
-    shared dfloat s_ndq[p_Nfp*p_Nfaces];
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_q[p_Np];
+    @shared dfloat s_ndq[p_Nfp*p_Nfaces];
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         s_q[n] = 0.;
       }
@@ -221,9 +221,9 @@ kernel void insPressureBCTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const dlong id  = n + e*p_Nfaces*p_Nfp;
         const dlong idM = vmapM[id];          
@@ -271,9 +271,9 @@ kernel void insPressureBCTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int n=0;n<p_maxNodes;++n;inner0){ 
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ 
       if(n<p_Np){
         //volume Dirichlet data
         const dlong id = n + e*p_Np;
@@ -292,7 +292,7 @@ kernel void insPressureBCTet3D(const dlong Nelements,
         dfloat qst = 0.;
         dfloat qtt = 0.;
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for (int k=0;k<p_Np;k++) {
             qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*s_q[k];
             qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*s_q[k];
@@ -304,7 +304,7 @@ kernel void insPressureBCTet3D(const dlong Nelements,
 
         dfloat Lndq = 0;            
         // surface mass * surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lndq += sMT[n+i*p_Np]*s_ndq[i];
           }
@@ -316,22 +316,22 @@ kernel void insPressureBCTet3D(const dlong Nelements,
   }
 }
 
-kernel void insPressureAddBCTet3D(const dlong Nelements,
+@kernel void insPressureAddBCTet3D(const dlong Nelements,
                                  const dfloat time,
                                  const dfloat dt,
                                  const int stage,
                                  const int ARKswitch,
-                                 const dfloat * restrict c,
-                                 const dfloat * restrict prkB,
-                                 const dfloat * restrict x,
-                                 const dfloat * restrict y,
-                                 const dfloat * restrict z,
-                                 const dlong  * restrict vmapM,
-                                 const int    * restrict mapB,
-                                       dfloat * restrict P){
+                                 @restrict const  dfloat *  c,
+                                 @restrict const  dfloat *  prkB,
+                                 @restrict const  dfloat *  x,
+                                 @restrict const  dfloat *  y,
+                                 @restrict const  dfloat *  z,
+                                 @restrict const  dlong  *  vmapM,
+                                 @restrict const  int    *  mapB,
+                                       @restrict dfloat *  P){
   
-  for(dlong e=0;e<Nelements;e++;outer0){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
       const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
       const int bc = mapB[idM];
 

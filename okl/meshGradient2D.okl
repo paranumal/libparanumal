@@ -3,7 +3,7 @@
 #define SXID 2  
 #define SYID 3  
 
-kernel void meshGradient2D(const int Nelements,
+@kernel void meshGradient2D(const int Nelements,
 			   const int Np,
 			   const int Nvgeo,
 			   const float *vgeo,
@@ -14,14 +14,14 @@ kernel void meshGradient2D(const int Nelements,
 			   float *dqdy
 			   ){
   
-  for(int e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
     
     float drdx = vgeo[e*Nvgeo + RXID];
     float drdy = vgeo[e*Nvgeo + RYID];
     float dsdx = vgeo[e*Nvgeo + SXID];
     float dsdy = vgeo[e*Nvgeo + SYID];
     
-    for(int n=0;n<Np;++n;inner0){
+    for(int n=0;n<Np;++n;@inner(0)){
 
       float dqdr = 0, dqds = 0;
       

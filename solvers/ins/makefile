@@ -6,7 +6,7 @@ endif
 
 CXXFLAGS = 
 
-include ${OCCA_DIR}/scripts/makefile
+include ${OCCA_DIR}/scripts/Makefile
 
 # define variables
 HDRDIR  = ../../include
@@ -21,10 +21,10 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -I$(ELLIPTICDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -I$(ELLIPTICDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"'
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
 			-L$(ELLIPTICDIR) -lelliptic -L$(ALMONDDIR) -lparALMOND 
 
 # libraries to be linked in

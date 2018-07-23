@@ -154,14 +154,19 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   // OCCA build stuff
   
-  occa::kernelInfo kernelInfo;
+  occa::properties kernelInfo;
+ kernelInfo["defines"].asObject();
+ kernelInfo["includes"].asArray();
+ kernelInfo["header"].asArray();
+ kernelInfo["flags"].asObject();
+
   if(acoustics->dim==3)
     meshOccaSetup3D(mesh, newOptions, kernelInfo);
   else
     meshOccaSetup2D(mesh, newOptions, kernelInfo);
 
   //add boundary data to kernel info
-  kernelInfo.addInclude(boundaryHeaderFileName);
+  kernelInfo["includes"] += boundaryHeaderFileName;
  
   acoustics->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
@@ -221,35 +226,35 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   //  p_RT, p_rbar, p_ubar, p_vbar
   // p_half, p_two, p_third, p_Nstresses
   
-  kernelInfo.addDefine("p_Nfields", mesh->Nfields);
+  kernelInfo["defines/" "p_Nfields"]= mesh->Nfields;
   const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3., p_zero = 0;
 
-  kernelInfo.addDefine("p_two", p_two);
-  kernelInfo.addDefine("p_one", p_one);
-  kernelInfo.addDefine("p_half", p_half);
-  kernelInfo.addDefine("p_third", p_third);
-  kernelInfo.addDefine("p_zero", p_zero);
+  kernelInfo["defines/" "p_two"]= p_two;
+  kernelInfo["defines/" "p_one"]= p_one;
+  kernelInfo["defines/" "p_half"]= p_half;
+  kernelInfo["defines/" "p_third"]= p_third;
+  kernelInfo["defines/" "p_zero"]= p_zero;
   
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
+  kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int NblockV = 1024/mesh->Np; // works for CUDA
-  kernelInfo.addDefine("p_NblockV", NblockV);
+  kernelInfo["defines/" "p_NblockV"]= NblockV;
 
   int NblockS = 1024/maxNodes; // works for CUDA
-  kernelInfo.addDefine("p_NblockS", NblockS);
+  kernelInfo["defines/" "p_NblockS"]= NblockS;
 
   int cubMaxNodes = mymax(mesh->Np, (mesh->intNfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_cubMaxNodes", cubMaxNodes);
+  kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;
   int cubMaxNodes1 = mymax(mesh->Np, (mesh->intNfp));
-  kernelInfo.addDefine("p_cubMaxNodes1", cubMaxNodes1);
+  kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
 
-  kernelInfo.addDefine("p_Lambda2", 0.5f);
+  kernelInfo["defines/" "p_Lambda2"]= 0.5f;
 
-  kernelInfo.addDefine("p_blockSize", blockSize);
+  kernelInfo["defines/" "p_blockSize"]= blockSize;
 
 
-  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
   // set kernel name suffix
   char *suffix;
@@ -272,37 +277,37 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   printf("fileName=[ %s ] \n", fileName);
   printf("kernelName=[ %s ] \n", kernelName);
   
-  acoustics->volumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+  acoustics->volumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
   // kernels from surface file
   sprintf(fileName, DACOUSTICS "/okl/acousticsSurface%s.okl", suffix);
   sprintf(kernelName, "acousticsSurface%s", suffix);
   
-  acoustics->surfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+  acoustics->surfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
   // kernels from update file
   acoustics->updateKernel =
-    mesh->device.buildKernelFromSource(DACOUSTICS "/okl/acousticsUpdate.okl",
+    mesh->device.buildKernel(DACOUSTICS "/okl/acousticsUpdate.okl",
 				       "acousticsUpdate",
 				       kernelInfo);
 
   acoustics->rkUpdateKernel =
-    mesh->device.buildKernelFromSource(DACOUSTICS "/okl/acousticsUpdate.okl",
+    mesh->device.buildKernel(DACOUSTICS "/okl/acousticsUpdate.okl",
 				       "acousticsRkUpdate",
 				       kernelInfo);
   acoustics->rkStageKernel =
-    mesh->device.buildKernelFromSource(DACOUSTICS "/okl/acousticsUpdate.okl",
+    mesh->device.buildKernel(DACOUSTICS "/okl/acousticsUpdate.okl",
 				       "acousticsRkStage",
 				       kernelInfo);
 
   acoustics->rkErrorEstimateKernel =
-    mesh->device.buildKernelFromSource(DACOUSTICS "/okl/acousticsUpdate.okl",
+    mesh->device.buildKernel(DACOUSTICS "/okl/acousticsUpdate.okl",
 				       "acousticsErrorEstimate",
 				       kernelInfo);
 
   // fix this later
   mesh->haloExtractKernel =
-    mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract3D.okl",
+    mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
 				       kernelInfo);
 

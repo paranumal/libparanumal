@@ -1,14 +1,14 @@
 // Computes volume contribution of div(UI)
-kernel void insPressureRhsQuad2D(const dlong Nelements,
-                                   const dfloat * restrict vgeo,
-                                   const dfloat * restrict MM,
+@kernel void insPressureRhsQuad2D(const dlong Nelements,
+                                   @restrict const  dfloat *  vgeo,
+                                   @restrict const  dfloat *  MM,
                                    const dfloat idt,
-                                    dfloat * restrict rhs){
+                                    @restrict dfloat *  rhs){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           const dlong gid = n + e*p_Np*p_Nvgeo;

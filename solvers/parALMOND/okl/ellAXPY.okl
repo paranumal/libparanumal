@@ -1,15 +1,15 @@
-kernel void ellAXPY(const dlong   numRows,
+@kernel void ellAXPY(const dlong   numRows,
         const int             nnzPerRow,
         const dlong             strideLength,
         const dfloat           alpha,
         const dfloat           beta,
-        const dlong  *restrict cols,
-        const dfloat *restrict coefs,
-        const dfloat *restrict x,
-              dfloat *restrict y){
+        @restrict const  dlong  * cols,
+        @restrict const  dfloat * coefs,
+        @restrict const  dfloat * x,
+              @restrict dfloat * y){
 
   // y = alpha * A * x + beta * y
-  for(dlong i=0;i<numRows;++i;tile(256)){
+  for(dlong i=0;i<numRows;++i;@tile(256,@outer,@inner)){
 
     if(i < numRows){
       const dfloat betay = beta*y[i];
@@ -34,19 +34,19 @@ kernel void ellAXPY(const dlong   numRows,
   }
 }
 
-kernel void ellZeqAXPY(const dlong   numRows,
+@kernel void ellZeqAXPY(const dlong   numRows,
            const int   nnzPerRow,
            const dlong   strideLength,
            const dfloat   alpha,
            const dfloat   beta,
-           const dlong  *restrict cols,
-           const dfloat *restrict coefs,
-           const dfloat *restrict x,
-           const dfloat *restrict y,
-                 dfloat *restrict z){
+           @restrict const  dlong  * cols,
+           @restrict const  dfloat * coefs,
+           @restrict const  dfloat * x,
+           @restrict const  dfloat * y,
+                 @restrict dfloat * z){
 
   // z = alpha * A * x + beta * y
-  for(dlong i=0;i<numRows;++i;tile(256)){
+  for(dlong i=0;i<numRows;++i;@tile(256,@outer,@inner)){
     if(i < numRows){
       dfloat result = 0.;
       for(int c=0; c<nnzPerRow; c++){
@@ -64,17 +64,17 @@ kernel void ellZeqAXPY(const dlong   numRows,
   }
 }
 
-kernel void ellJacobi(const dlong   numRows,
+@kernel void ellJacobi(const dlong   numRows,
            const int   nnzPerRow,
            const dlong   strideLength,
-           const dlong  *restrict cols,
-           const dfloat *restrict coefs,
-           const dfloat *restrict x,
-           const dfloat *restrict r,
-                 dfloat *restrict z){
+           @restrict const  dlong  * cols,
+           @restrict const  dfloat * coefs,
+           @restrict const  dfloat * x,
+           @restrict const  dfloat * r,
+                 @restrict dfloat * z){
 
   // z = r - (A-D)*x
-  for(dlong i=0;i<numRows;++i;tile(256)){
+  for(dlong i=0;i<numRows;++i;@tile(256,@outer,@inner)){
     if(i < numRows){
       dfloat result = r[i];
 

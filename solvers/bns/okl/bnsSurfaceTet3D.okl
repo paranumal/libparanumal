@@ -1,5 +1,5 @@
-#define p_isq12 (1.f/occaSqrt(12.f))
-#define p_isq6 (1.f/occaSqrt(6.f))
+#define p_isq12 (1.f/sqrt(12.f))
+#define p_isq6 (1.f/sqrt(6.f))
 #define PML_ENABLED 1 
 
 void upwind1D(const dfloat nx,  const dfloat ny,  const dfloat nz,
@@ -7,8 +7,8 @@ void upwind1D(const dfloat nx,  const dfloat ny,  const dfloat nz,
               const dfloat q6M, const dfloat q7M, const dfloat q8M, const dfloat q9M, const dfloat q10M,
               const dfloat q1B, const dfloat q2B, const dfloat q3B, const dfloat q4B, const dfloat q5B, 
               const dfloat q6B, const dfloat q7B, const dfloat q8B, const dfloat q9B, const dfloat q10B, 
-              restrict dfloat * q1P, restrict dfloat * q2P, restrict dfloat * q3P, restrict dfloat * q4P, restrict dfloat * q5P, 
-              restrict dfloat * q6P, restrict dfloat * q7P, restrict dfloat * q8P, restrict dfloat * q9P, restrict dfloat * q10P){ 
+              @restrict @restrict dfloat * q1P, @restrict dfloat * q2P, @restrict dfloat * q3P, @restrict dfloat * q4P,  dfloat * q5P, 
+              @restrict @restrict dfloat * q6P, @restrict dfloat * q7P, @restrict dfloat * q8P, @restrict dfloat * q9P,  dfloat * q10P){ 
 
 
   *q1P  = 0.5f*(q1B  + q1M)  - p_isq12*(nx*(q2B-q2M) + ny*(q3B-q3M) + nz*(q4B-q4M));
@@ -23,34 +23,34 @@ void upwind1D(const dfloat nx,  const dfloat ny,  const dfloat nz,
   *q10P = 0.5f*(q10B + q10M) - p_isq6*nz*(q4B-q4M);  
 }
 
-// This kernel uses Upwind flux 
-kernel void bnsSurfaceTet3D(const dlong Nelements,
-			    const dlong * restrict elementIds,
+// This @kernel uses Upwind flux 
+@kernel void bnsSurfaceTet3D(const dlong Nelements,
+			    @restrict const  dlong *  elementIds,
 			    const dfloat time,
 			    const dfloat intfx,
 			    const dfloat intfy,
 			    const dfloat intfz,
-			    const dfloat * restrict sgeo,
-			    const dfloat * restrict LIFTT,
-			    const dlong   * restrict vmapM,
-			    const dlong   * restrict vmapP,
-			    const int   * restrict EToB,
-			    const dfloat * restrict x,
-			    const dfloat * restrict y,
-			    const dfloat * restrict z,
-			    const dfloat * restrict q,
-			    dfloat * restrict rhsq){
+			    @restrict const  dfloat *  sgeo,
+			    @restrict const  dfloat *  LIFTT,
+			    @restrict const  dlong   *  vmapM,
+			    @restrict const  dlong   *  vmapP,
+			    @restrict const  int   *  EToB,
+			    @restrict const  dfloat *  x,
+			    @restrict const  dfloat *  y,
+			    @restrict const  dfloat *  z,
+			    @restrict const  dfloat *  q,
+			    @restrict dfloat *  rhsq){
   
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
-    exclusive dlong e;
+    // @shared storage for flux terms
+    @shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
+    @exclusive dlong e;
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong et = eo + es;
         if(et<Nelements){
 	  e = elementIds[et];
@@ -144,12 +144,12 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong et = eo + es;
         if(et<Nelements){
           if(n<p_Np){
@@ -157,22 +157,22 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
             const dlong id = e*p_Nfields*p_Np + n ;
 
             dfloat r_rhsq[p_Nfields];
-            occaUnroll(p_Nfields)
+            #pragma unroll p_Nfields
 	      for(int fld=0; fld<p_Nfields; fld++){
 		r_rhsq[fld] = 0.f; 
 	      }
 
 	    // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 dfloat L = LIFTT[n+m*p_Np];
-                occaUnroll(p_Nfields)
+                #pragma unroll p_Nfields
 		  for(int fld=0; fld<p_Nfields; fld++){
 		    r_rhsq[fld] +=L*s_fluxq[es][fld][m]; 
 		  }
               }
           
-	    occaUnroll(p_Nfields)
+	    #pragma unroll p_Nfields
 	      for(int fld=0; fld<p_Nfields; fld++){
 		rhsq[id + fld*p_Np] += r_rhsq[fld];
 	      }
@@ -186,40 +186,40 @@ kernel void bnsSurfaceTet3D(const dlong Nelements,
 
 
 
-// This kernel uses upwind flux
-kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
-			       const dlong   * restrict pmlElementIds,
-			       const dlong   * restrict pmlIds,
+// This @kernel uses upwind flux
+@kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
+			       @restrict const  dlong   *  pmlElementIds,
+			       @restrict const  dlong   *  pmlIds,
 			       const dfloat time,
 			       const dfloat intfx,
 			       const dfloat intfy,
 			       const dfloat intfz,
-			       const dfloat * restrict sgeo,
-			       const dfloat * restrict LIFTT,
-			       const dlong  * restrict vmapM,
-			       const dlong  * restrict vmapP,
-			       const int   * restrict EToB,
-			       const dfloat * restrict x,
-			       const dfloat * restrict y,              
-			       const dfloat * restrict z,              
-			       const dfloat * restrict q,
-			       dfloat * restrict rhsq,
-			       dfloat * restrict pmlrhsqx,
-			       dfloat * restrict pmlrhsqy,
-			       dfloat * restrict pmlrhsqz){
+			       @restrict const  dfloat *  sgeo,
+			       @restrict const  dfloat *  LIFTT,
+			       @restrict const  dlong  *  vmapM,
+			       @restrict const  dlong  *  vmapP,
+			       @restrict const  int   *  EToB,
+			       @restrict const  dfloat *  x,
+			       @restrict const  dfloat *  y,              
+			       @restrict const  dfloat *  z,              
+			       @restrict const  dfloat *  q,
+			       @restrict dfloat *  rhsq,
+			       @restrict dfloat *  pmlrhsqx,
+			       @restrict dfloat *  pmlrhsqy,
+			       @restrict dfloat *  pmlrhsqz){
   
   // for all elements
-  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_nxdq[p_NblockS][p_Nfields][p_maxNodes];
-    shared dfloat s_nydq[p_NblockS][p_Nfields][p_maxNodes];
-    shared dfloat s_nzdq[p_NblockS][p_Nfields][p_maxNodes];
+  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_nxdq[p_NblockS][p_Nfields][p_maxNodes];
+    @shared dfloat s_nydq[p_NblockS][p_Nfields][p_maxNodes];
+    @shared dfloat s_nzdq[p_NblockS][p_Nfields][p_maxNodes];
    
-    exclusive dlong e;
+    @exclusive dlong e;
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong et = eo + es;
         if(et<pmlNelements){
 	  e = pmlElementIds[et];
@@ -298,12 +298,12 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong et = eo + es;
         if(et<pmlNelements){
 	  if(n<p_Np){
@@ -311,7 +311,7 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
 
 	    dfloat r_lnxdq[p_Nfields], r_lnydq[p_Nfields], r_lnzdq[p_Nfields];
 
-	    occaUnroll(p_Nfields)
+	    #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields; fld++){
                 r_lnxdq[fld] = 0.f; 
                 r_lnydq[fld] = 0.f; 
@@ -319,10 +319,10 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
               }
              
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
 	      for(int m=0;m<p_NfacesNfp;++m){
 		const dfloat L = LIFTT[n+m*p_Np];
-		occaUnroll(p_Nfields)
+		#pragma unroll p_Nfields
 		  for(int fld=0; fld<p_Nfields; fld++){
 		    r_lnxdq[fld] += L*s_nxdq[es][fld][m];
 		    r_lnydq[fld] += L*s_nydq[es][fld][m];
@@ -335,7 +335,7 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
             const dlong pmlrhsId = pmlId*p_Nfields*p_Np + n;
           
             dfloat r_Aqx[p_Nfields],r_Bqy[p_Nfields],r_Cqz[p_Nfields]; 
-            occaUnroll(p_Nfields)
+            #pragma unroll p_Nfields
 	      for(int fld=0; fld<p_Nfields; fld++){
 		r_Aqx[fld] = 0.f; 
 		r_Bqy[fld] = 0.f;  
@@ -366,7 +366,7 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
             r_Cqz[6]  = -p_sqrtRT*(r_lnzdq[2]);
             r_Cqz[9]  = -p_sqrtRT*(p_sqrt2*r_lnzdq[3]);
 
-            occaUnroll(p_Nfields)
+            #pragma unroll p_Nfields
 	      for(int fld=0; fld<p_Nfields; fld++){
 		pmlrhsqx[pmlrhsId + fld*p_Np] += r_Aqx[fld];
 		pmlrhsqy[pmlrhsId + fld*p_Np] += r_Bqy[fld];
@@ -384,37 +384,37 @@ kernel void bnsPmlSurfaceTet3D(const dlong pmlNelements,
 
 
 
-// This kernel uses Upwind flux 
-kernel void bnsMRSurfaceTet3D(const dlong Nelements,
-			      const dlong * restrict elementIds,
+// This @kernel uses Upwind flux 
+@kernel void bnsMRSurfaceTet3D(const dlong Nelements,
+			      @restrict const  dlong *  elementIds,
 			      const dlong offset,
 			      const int shift,
 			      const dfloat time,
 			      const dfloat intfx,
 			      const dfloat intfy,
 			      const dfloat intfz,
-			      const dfloat * restrict sgeo,
-			      const dfloat * restrict LIFTT,
-			      const dlong   * restrict vmapM,
-			      const dlong   * restrict mapP,
-			      const int   * restrict EToB,
-			      const dfloat * restrict x,
-			      const dfloat * restrict y,
-			      const dfloat * restrict z,
-			      const dfloat * restrict q,
-			      const dfloat * restrict fQM,
-			      dfloat * restrict rhsq){
+			      @restrict const  dfloat *  sgeo,
+			      @restrict const  dfloat *  LIFTT,
+			      @restrict const  dlong   *  vmapM,
+			      @restrict const  dlong   *  mapP,
+			      @restrict const  int   *  EToB,
+			      @restrict const  dfloat *  x,
+			      @restrict const  dfloat *  y,
+			      @restrict const  dfloat *  z,
+			      @restrict const  dfloat *  q,
+			      @restrict const  dfloat *  fQM,
+			      @restrict dfloat *  rhsq){
   
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
-    exclusive dlong e;
+    // @shared storage for flux terms
+    @shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
+    @exclusive dlong e;
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong et = eo + es;
         if(et<Nelements){
 	  e = elementIds[et];
@@ -505,12 +505,12 @@ kernel void bnsMRSurfaceTet3D(const dlong Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong et = eo + es;
         if(et<Nelements){
           if(n<p_Np){
@@ -518,16 +518,16 @@ kernel void bnsMRSurfaceTet3D(const dlong Nelements,
             
 
             dfloat r_rhsq[p_Nfields];
-            occaUnroll(p_Nfields)
+            #pragma unroll p_Nfields
 	      for(int fld=0; fld<p_Nfields; fld++){
 		r_rhsq[fld] = 0.f; 
 	      }
 
 	    // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 dfloat L = LIFTT[n+m*p_Np];
-                occaUnroll(p_Nfields)
+                #pragma unroll p_Nfields
 		  for(int fld=0; fld<p_Nfields; fld++){
 		    r_rhsq[fld] +=L*s_fluxq[es][fld][m]; 
 		  }
@@ -535,7 +535,7 @@ kernel void bnsMRSurfaceTet3D(const dlong Nelements,
 
 	    const dlong id = e*p_Nfields*p_Np + n  + shift*offset;
           
-	    occaUnroll(p_Nfields)
+	    #pragma unroll p_Nfields
 	      for(int fld=0; fld<p_Nfields; fld++){
 		rhsq[id + fld*p_Np] += r_rhsq[fld];
 	      }
@@ -549,9 +549,9 @@ kernel void bnsMRSurfaceTet3D(const dlong Nelements,
 
 
 
-kernel void bnsMRPmlSurfaceTet3D(const dlong pmlNelements,
-				 const dlong   * restrict pmlElementIds,
-				 const dlong   * restrict pmlIds,
+@kernel void bnsMRPmlSurfaceTet3D(const dlong pmlNelements,
+				 @restrict const  dlong   *  pmlElementIds,
+				 @restrict const  dlong   *  pmlIds,
 				 const dlong offset,
 				 const dlong pmloffset,
 				 const int   shift,
@@ -559,33 +559,33 @@ kernel void bnsMRPmlSurfaceTet3D(const dlong pmlNelements,
 				 const dfloat intfx,
 				 const dfloat intfy,
 				 const dfloat intfz,
-				 const dfloat * restrict sgeo,
-				 const dfloat * restrict LIFTT,
-				 const dlong  * restrict vmapM,
-				 const dlong  * restrict mapP,
-				 const int   * restrict EToB,
-				 const dfloat * restrict x,
-				 const dfloat * restrict y,              
-				 const dfloat * restrict z,              
-				 const dfloat * restrict q,
-				 const dfloat * restrict fQM,
-				 dfloat * restrict rhsq,
-				 dfloat * restrict pmlrhsqx,
-				 dfloat * restrict pmlrhsqy,
-				 dfloat * restrict pmlrhsqz){
+				 @restrict const  dfloat *  sgeo,
+				 @restrict const  dfloat *  LIFTT,
+				 @restrict const  dlong  *  vmapM,
+				 @restrict const  dlong  *  mapP,
+				 @restrict const  int   *  EToB,
+				 @restrict const  dfloat *  x,
+				 @restrict const  dfloat *  y,              
+				 @restrict const  dfloat *  z,              
+				 @restrict const  dfloat *  q,
+				 @restrict const  dfloat *  fQM,
+				 @restrict dfloat *  rhsq,
+				 @restrict dfloat *  pmlrhsqx,
+				 @restrict dfloat *  pmlrhsqy,
+				 @restrict dfloat *  pmlrhsqz){
   
   // for all elements
-  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_nxdq[p_NblockS][p_Nfields][p_maxNodes];
-    shared dfloat s_nydq[p_NblockS][p_Nfields][p_maxNodes];
-    shared dfloat s_nzdq[p_NblockS][p_Nfields][p_maxNodes];
+  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_nxdq[p_NblockS][p_Nfields][p_maxNodes];
+    @shared dfloat s_nydq[p_NblockS][p_Nfields][p_maxNodes];
+    @shared dfloat s_nzdq[p_NblockS][p_Nfields][p_maxNodes];
    
-    exclusive dlong e;
+    @exclusive dlong e;
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong et = eo + es;
         if(et<pmlNelements){
 	  e = pmlElementIds[et];
@@ -662,12 +662,12 @@ kernel void bnsMRPmlSurfaceTet3D(const dlong pmlNelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong et = eo + es;
         if(et<pmlNelements){
 	  if(n<p_Np){
@@ -675,7 +675,7 @@ kernel void bnsMRPmlSurfaceTet3D(const dlong pmlNelements,
 
 	    dfloat r_lnxdq[p_Nfields], r_lnydq[p_Nfields], r_lnzdq[p_Nfields];
 
-	    occaUnroll(p_Nfields)
+	    #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields; fld++){
                 r_lnxdq[fld] = 0.f; 
                 r_lnydq[fld] = 0.f; 
@@ -683,10 +683,10 @@ kernel void bnsMRPmlSurfaceTet3D(const dlong pmlNelements,
               }
              
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
 	      for(int m=0;m<p_NfacesNfp;++m){
 		const dfloat L = LIFTT[n+m*p_Np];
-		occaUnroll(p_Nfields)
+		#pragma unroll p_Nfields
 		  for(int fld=0; fld<p_Nfields; fld++){
 		    r_lnxdq[fld] += L*s_nxdq[es][fld][m];
 		    r_lnydq[fld] += L*s_nydq[es][fld][m];
@@ -699,7 +699,7 @@ kernel void bnsMRPmlSurfaceTet3D(const dlong pmlNelements,
             const dlong pmlrhsId = pmlId*p_Nfields*p_Np + n + shift*pmloffset;
           
             dfloat r_Aqx[p_Nfields],r_Bqy[p_Nfields],r_Cqz[p_Nfields]; 
-            occaUnroll(p_Nfields)
+            #pragma unroll p_Nfields
 	      for(int fld=0; fld<p_Nfields; fld++){
 		r_Aqx[fld] = 0.f; 
 		r_Bqy[fld] = 0.f;  
@@ -730,7 +730,7 @@ kernel void bnsMRPmlSurfaceTet3D(const dlong pmlNelements,
             r_Cqz[6]  = -p_sqrtRT*(r_lnzdq[2]);
             r_Cqz[9]  = -p_sqrtRT*(p_sqrt2*r_lnzdq[3]);
 
-            occaUnroll(p_Nfields)
+            #pragma unroll p_Nfields
 	      for(int fld=0; fld<p_Nfields; fld++){
 		pmlrhsqx[pmlrhsId + fld*p_Np] += r_Aqx[fld];
 		pmlrhsqy[pmlrhsId + fld*p_Np] += r_Bqy[fld];

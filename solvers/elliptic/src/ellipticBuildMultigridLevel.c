@@ -621,90 +621,95 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   elliptic->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), elliptic->tmp);
 
   // info for kernel construction
-  occa::kernelInfo kernelInfo;
+  occa::properties kernelInfo;
+ kernelInfo["defines"].asObject();
+ kernelInfo["includes"].asArray();
+ kernelInfo["header"].asArray();
+ kernelInfo["flags"].asObject();
 
-  kernelInfo.addDefine("p_dim", mesh->dim);
-  kernelInfo.addDefine("p_Nfields", mesh->Nfields);
-  kernelInfo.addDefine("p_N", mesh->N);
-  kernelInfo.addDefine("p_Nq", mesh->N+1);
-  kernelInfo.addDefine("p_Np", mesh->Np);
-  kernelInfo.addDefine("p_Nfp", mesh->Nfp);
-  kernelInfo.addDefine("p_Nfaces", mesh->Nfaces);
-  kernelInfo.addDefine("p_NfacesNfp", mesh->Nfp*mesh->Nfaces);
-  kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
-  kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
-  kernelInfo.addDefine("p_Nggeo", mesh->Nggeo);
 
-  kernelInfo.addDefine("p_NXID", NXID);
-  kernelInfo.addDefine("p_NYID", NYID);
-  kernelInfo.addDefine("p_NZID", NZID);
-  kernelInfo.addDefine("p_SJID", SJID);
-  kernelInfo.addDefine("p_IJID", IJID);
-  kernelInfo.addDefine("p_WSJID", WSJID);
-  kernelInfo.addDefine("p_IHID", IHID);
+  kernelInfo["defines/" "p_dim"]= mesh->dim;
+  kernelInfo["defines/" "p_Nfields"]= mesh->Nfields;
+  kernelInfo["defines/" "p_N"]= mesh->N;
+  kernelInfo["defines/" "p_Nq"]= mesh->N+1;
+  kernelInfo["defines/" "p_Np"]= mesh->Np;
+  kernelInfo["defines/" "p_Nfp"]= mesh->Nfp;
+  kernelInfo["defines/" "p_Nfaces"]= mesh->Nfaces;
+  kernelInfo["defines/" "p_NfacesNfp"]= mesh->Nfp*mesh->Nfaces;
+  kernelInfo["defines/" "p_Nvgeo"]= mesh->Nvgeo;
+  kernelInfo["defines/" "p_Nsgeo"]= mesh->Nsgeo;
+  kernelInfo["defines/" "p_Nggeo"]= mesh->Nggeo;
 
-  kernelInfo.addDefine("p_max_EL_nnz", mesh->max_EL_nnz); // for Bernstein Bezier lift
+  kernelInfo["defines/" "p_NXID"]= NXID;
+  kernelInfo["defines/" "p_NYID"]= NYID;
+  kernelInfo["defines/" "p_NZID"]= NZID;
+  kernelInfo["defines/" "p_SJID"]= SJID;
+  kernelInfo["defines/" "p_IJID"]= IJID;
+  kernelInfo["defines/" "p_WSJID"]= WSJID;
+  kernelInfo["defines/" "p_IHID"]= IHID;
 
-  kernelInfo.addDefine("p_cubNp", mesh->cubNp);
-  kernelInfo.addDefine("p_intNfp", mesh->intNfp);
-  kernelInfo.addDefine("p_intNfpNfaces", mesh->intNfp*mesh->Nfaces);
+  kernelInfo["defines/" "p_max_EL_nnz"]= mesh->max_EL_nnz; // for Bernstein Bezier lift
+
+  kernelInfo["defines/" "p_cubNp"]= mesh->cubNp;
+  kernelInfo["defines/" "p_intNfp"]= mesh->intNfp;
+  kernelInfo["defines/" "p_intNfpNfaces"]= mesh->intNfp*mesh->Nfaces;
 
   if(sizeof(dfloat)==4){
-    kernelInfo.addDefine("dfloat","float");
-    kernelInfo.addDefine("dfloat4","float4");
-    kernelInfo.addDefine("dfloat8","float8");
+    kernelInfo["defines/" "dfloat"]="float";
+    kernelInfo["defines/" "dfloat4"]="float4";
+    kernelInfo["defines/" "dfloat8"]="float8";
   }
   if(sizeof(dfloat)==8){
-    kernelInfo.addDefine("dfloat","double");
-    kernelInfo.addDefine("dfloat4","double4");
-    kernelInfo.addDefine("dfloat8","double8");
+    kernelInfo["defines/" "dfloat"]="double";
+    kernelInfo["defines/" "dfloat4"]="double4";
+    kernelInfo["defines/" "dfloat8"]="double8";
   }
 
   if(sizeof(dlong)==4){
-    kernelInfo.addDefine("dlong","int");
+    kernelInfo["defines/" "dlong"]="int";
   }
   if(sizeof(dlong)==8){
-    kernelInfo.addDefine("dlong","long long int");
+    kernelInfo["defines/" "dlong"]="long long int";
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    kernelInfo.addCompilerFlag("--ftz=true");
-    kernelInfo.addCompilerFlag("--prec-div=false");
-    kernelInfo.addCompilerFlag("--prec-sqrt=false");
-    kernelInfo.addCompilerFlag("--use_fast_math");
-    kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
-    kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+    kernelInfo["compiler_flags"] += "--ftz=true";
+    kernelInfo["compiler_flags"] += "--prec-div=false";
+    kernelInfo["compiler_flags"] += "--prec-sqrt=false";
+    kernelInfo["compiler_flags"] += "--use_fast_math";
+    kernelInfo["compiler_flags"] += "--fmad=true"; // compiler option for cuda
+    kernelInfo["compiler_flags"] += "-Xptxas -dlcm=ca";
   }
 
   if(mesh->device.mode()=="Serial")
-    kernelInfo.addCompilerFlag("-g");
+    kernelInfo["compiler_flags"] += "-g";
 
-  kernelInfo.addDefine("p_G00ID", G00ID);
-  kernelInfo.addDefine("p_G01ID", G01ID);
-  kernelInfo.addDefine("p_G02ID", G02ID);
-  kernelInfo.addDefine("p_G11ID", G11ID);
-  kernelInfo.addDefine("p_G12ID", G12ID);
-  kernelInfo.addDefine("p_G22ID", G22ID);
-  kernelInfo.addDefine("p_GWJID", GWJID);
-
-
-  kernelInfo.addDefine("p_RXID", RXID);
-  kernelInfo.addDefine("p_SXID", SXID);
-  kernelInfo.addDefine("p_TXID", TXID);
-
-  kernelInfo.addDefine("p_RYID", RYID);
-  kernelInfo.addDefine("p_SYID", SYID);
-  kernelInfo.addDefine("p_TYID", TYID);
-
-  kernelInfo.addDefine("p_RZID", RZID);
-  kernelInfo.addDefine("p_SZID", SZID);
-  kernelInfo.addDefine("p_TZID", TZID);
-
-  kernelInfo.addDefine("p_JID", JID);
-  kernelInfo.addDefine("p_JWID", JWID);
+  kernelInfo["defines/" "p_G00ID"]= G00ID;
+  kernelInfo["defines/" "p_G01ID"]= G01ID;
+  kernelInfo["defines/" "p_G02ID"]= G02ID;
+  kernelInfo["defines/" "p_G11ID"]= G11ID;
+  kernelInfo["defines/" "p_G12ID"]= G12ID;
+  kernelInfo["defines/" "p_G22ID"]= G22ID;
+  kernelInfo["defines/" "p_GWJID"]= GWJID;
 
 
-  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  kernelInfo["defines/" "p_RXID"]= RXID;
+  kernelInfo["defines/" "p_SXID"]= SXID;
+  kernelInfo["defines/" "p_TXID"]= TXID;
+
+  kernelInfo["defines/" "p_RYID"]= RYID;
+  kernelInfo["defines/" "p_SYID"]= SYID;
+  kernelInfo["defines/" "p_TYID"]= TYID;
+
+  kernelInfo["defines/" "p_RZID"]= RZID;
+  kernelInfo["defines/" "p_SZID"]= SZID;
+  kernelInfo["defines/" "p_TZID"]= TZID;
+
+  kernelInfo["defines/" "p_JID"]= JID;
+  kernelInfo["defines/" "p_JWID"]= JWID;
+
+
+  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
   // set kernel name suffix
   char *suffix;
@@ -722,34 +727,34 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
-      kernelInfo.addDefine("p_blockSize", blockSize);
+      kernelInfo["defines/" "p_blockSize"]= blockSize;
 
       // add custom defines
-      kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
-      kernelInfo.addDefine("p_Nverts", mesh->Nverts);
+      kernelInfo["defines/" "p_NpP"]= (mesh->Np+mesh->Nfp*mesh->Nfaces);
+      kernelInfo["defines/" "p_Nverts"]= mesh->Nverts;
 
       int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
-      kernelInfo.addDefine("p_Nmax", Nmax);
+      kernelInfo["defines/" "p_Nmax"]= Nmax;
 
       int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-      kernelInfo.addDefine("p_maxNodes", maxNodes);
+      kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
       int NblockV = mymax(1,maxNthreads/mesh->Np); // works for CUDA
-      kernelInfo.addDefine("p_NblockV", NblockV);
+      kernelInfo["defines/" "p_NblockV"]= NblockV;
 
       int one = 1; //set to one for now. TODO: try optimizing over these
-      kernelInfo.addDefine("p_NnodesV", one);
+      kernelInfo["defines/" "p_NnodesV"]= one;
 
       int NblockS = mymax(1,maxNthreads/maxNodes); // works for CUDA
-      kernelInfo.addDefine("p_NblockS", NblockS);
+      kernelInfo["defines/" "p_NblockS"]= NblockS;
 
       int NblockP = mymax(1,maxNthreads/(4*mesh->Np)); // get close to maxNthreads threads
-      kernelInfo.addDefine("p_NblockP", NblockP);
+      kernelInfo["defines/" "p_NblockP"]= NblockP;
 
       int NblockG;
       if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
       else NblockG = mymax(1,maxNthreads/mesh->Np);
-      kernelInfo.addDefine("p_NblockG", NblockG);
+      kernelInfo["defines/" "p_NblockG"]= NblockG;
 
       //add standard boundary functions
       char *boundaryHeaderFileName;
@@ -757,16 +762,16 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
         boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary2D.h");
       else if (elliptic->dim==3)
         boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
-      kernelInfo.addInclude(boundaryHeaderFileName);
+      kernelInfo["includes"] += boundaryHeaderFileName;
 
-      occa::kernelInfo dfloatKernelInfo = kernelInfo;
-      occa::kernelInfo floatKernelInfo = kernelInfo;
-      floatKernelInfo.addDefine("pfloat", "float");
-      dfloatKernelInfo.addDefine("pfloat", dfloatString);
+      occa::properties dfloatKernelInfo = kernelInfo;
+      occa::properties floatKernelInfo = kernelInfo;
+      floatKernelInfo["defines/" "pfloat"]= "float";
+      dfloatKernelInfo["defines/" "pfloat"]= dfloatString;
       
       sprintf(fileName, DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
       sprintf(kernelName, "ellipticAx%s", suffix);
-      elliptic->AxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,dfloatKernelInfo);
+      elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
 
       // check for trilinear
       if(elliptic->elementType!=HEXAHEDRA){
@@ -782,43 +787,43 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
       //sprintf(kernelName, "ellipticPartialAx%s", suffix);
       
-      elliptic->partialAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,dfloatKernelInfo);
+      elliptic->partialAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
 
-      elliptic->partialFloatAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,floatKernelInfo);
+      elliptic->partialFloatAxKernel = mesh->device.buildKernel(fileName,kernelName,floatKernelInfo);
       
       if (options.compareArgs("BASIS", "BERN")) {
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticGradientBB%s.okl", suffix);
         sprintf(kernelName, "ellipticGradientBB%s", suffix);
 
-        elliptic->gradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->gradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
         sprintf(kernelName, "ellipticPartialGradientBB%s", suffix);
-        elliptic->partialGradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->partialGradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       
         sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdgBB%s.okl", suffix);
         sprintf(kernelName, "ellipticAxIpdgBB%s", suffix);
-        elliptic->ipdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->ipdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
         sprintf(kernelName, "ellipticPartialAxIpdgBB%s", suffix);
-        elliptic->partialIpdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
           
       } else if (options.compareArgs("BASIS", "NODAL")) {
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticGradient%s.okl", suffix);
         sprintf(kernelName, "ellipticGradient%s", suffix);
 
-        elliptic->gradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->gradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
         sprintf(kernelName, "ellipticPartialGradient%s", suffix);
-        elliptic->partialGradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->partialGradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdg%s.okl", suffix);
         sprintf(kernelName, "ellipticAxIpdg%s", suffix);
-        elliptic->ipdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->ipdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
         sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
-        elliptic->partialIpdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       }
     }
   MPI_Barrier(MPI_COMM_WORLD);
@@ -831,20 +836,20 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     if (r==mesh->rank) {
       sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");
       sprintf(kernelName, "ellipticBlockJacobiPrecon");
-      elliptic->precon->blockJacobiKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      elliptic->precon->blockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       sprintf(kernelName, "ellipticPartialBlockJacobiPrecon");
-      elliptic->precon->partialblockJacobiKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      elliptic->precon->partialblockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticPatchSolver.okl");
       sprintf(kernelName, "ellipticApproxBlockJacobiSolver");
-      elliptic->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      elliptic->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       //sizes for the coarsen and prolongation kernels. degree NFine to degree N
       int NqFine   = (Nf+1);
       int NqCoarse = (Nc+1);
-      kernelInfo.addDefine("p_NqFine", Nf+1);
-      kernelInfo.addDefine("p_NqCoarse", Nc+1);
+      kernelInfo["defines/" "p_NqFine"]= Nf+1;
+      kernelInfo["defines/" "p_NqCoarse"]= Nc+1;
 
       int NpFine, NpCoarse;
       switch(elliptic->elementType){
@@ -865,21 +870,21 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
           NpCoarse = (Nc+1)*(Nc+1)*(Nc+1);
           break;
       }
-      kernelInfo.addDefine("p_NpFine", NpFine);
-      kernelInfo.addDefine("p_NpCoarse", NpCoarse);
+      kernelInfo["defines/" "p_NpFine"]= NpFine;
+      kernelInfo["defines/" "p_NpCoarse"]= NpCoarse;
 
       int NblockVFine = maxNthreads/NpFine; 
       int NblockVCoarse = maxNthreads/NpCoarse; 
-      kernelInfo.addDefine("p_NblockVFine", NblockVFine);
-      kernelInfo.addDefine("p_NblockVCoarse", NblockVCoarse);
+      kernelInfo["defines/" "p_NblockVFine"]= NblockVFine;
+      kernelInfo["defines/" "p_NblockVCoarse"]= NblockVCoarse;
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
-      elliptic->precon->coarsenKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      elliptic->precon->coarsenKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
-      elliptic->precon->prolongateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      elliptic->precon->prolongateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }

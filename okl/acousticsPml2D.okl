@@ -1,20 +1,20 @@
 
 // function to compute collocation differentiation
 // contributions to nodal DG rhs for acoustics
-kernel void acousticsPml2D(const int pmlNelements,
-			       const int    * restrict pmlElementList,
-			       const dfloat  * restrict pmlSigmaX,
-			       const dfloat  * restrict pmlSigmaY,
-			       const dfloat4 * restrict q,
-			       const dfloat4 * restrict pmlq,
-			       dfloat4 * restrict rhsq,
-			       dfloat4 * restrict pmlrhsq){
+@kernel void acousticsPml2D(const int pmlNelements,
+			       @restrict const  int    *  pmlElementList,
+			       @restrict const  dfloat  *  pmlSigmaX,
+			       @restrict const  dfloat  *  pmlSigmaY,
+			       @restrict const  dfloat4 *  q,
+			       @restrict const  dfloat4 *  pmlq,
+			       @restrict dfloat4 *  rhsq,
+			       @restrict dfloat4 *  pmlrhsq){
 
   // for all PML elements
-  for(int el=0;el<pmlNelements;++el;outer0){
+  for(int el=0;el<pmlNelements;++el;@outer(0)){
 
     // for all nodes in this element
-    for(int n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       // element index
       const int e = pmlElementList[el];

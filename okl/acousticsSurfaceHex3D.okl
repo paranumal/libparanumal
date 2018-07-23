@@ -13,11 +13,11 @@ void boundaryConditions3D(int bc, dfloat time,
     *pP = pM;
   }
   if(bc==2){
-    dfloat dx = 1.f/occaSqrt(2.f);
-    dfloat dy = 1.f/occaSqrt(2.f);
+    dfloat dx = 1.f/sqrt(2.f);
+    dfloat dy = 1.f/sqrt(2.f);
     dfloat dz = 0;
     dfloat omega = 10.f*M_PI;
-    dfloat wave = occaCos(omega*(time-(x*dx+y*dy+z*dz)));
+    dfloat wave = cos(omega*(time-(x*dx+y*dy+z*dz)));
     dfloat uI = dx*wave;
     dfloat vI = dy*wave;
     dfloat wI = dz*wave;
@@ -33,30 +33,30 @@ void boundaryConditions3D(int bc, dfloat time,
 
 // function to compute surface contributions 
 // for nodal DG acoustics right hand side
-kernel void acousticsSurfaceHex3D(const int Nelements,
-				  const dfloat * restrict sgeo,
-				  const dfloat * restrict LIFTT,
-				  const int   * restrict vmapM,
-				  const int   * restrict vmapP,
-				  const int   * restrict EToB,
+@kernel void acousticsSurfaceHex3D(const int Nelements,
+				  @restrict const  dfloat *  sgeo,
+				  @restrict const  dfloat *  LIFTT,
+				  @restrict const  int   *  vmapM,
+				  @restrict const  int   *  vmapP,
+				  @restrict const  int   *  EToB,
 				  const dfloat time,
-				  const dfloat * restrict x,
-				  const dfloat * restrict y,
-				  const dfloat * restrict z,
-				  const dfloat * restrict q,
-				  dfloat       * restrict rhsq){
+				  @restrict const  dfloat *  x,
+				  @restrict const  dfloat *  y,
+				  @restrict const  dfloat *  z,
+				  @restrict const  dfloat *  q,
+				  @restrict dfloat       *  rhsq){
   
   // for all elements
-  for(int e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxu[p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv[p_Nfp*p_Nfaces];
-    shared dfloat s_fluxw[p_Nfp*p_Nfaces];
-    shared dfloat s_fluxp[p_Nfp*p_Nfaces];
+    // @shared storage for flux terms
+    @shared dfloat s_fluxu[p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv[p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxw[p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxp[p_Nfp*p_Nfaces];
     
     // for all face nodes of all elements
-    for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
       if(n<p_Nfp*p_Nfaces){
 	// find face that owns this node
 	int face = n/p_Nfp;
@@ -100,11 +100,11 @@ kernel void acousticsSurfaceHex3D(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
 	int id = p_Nfields*(p_Np*e + n);
 

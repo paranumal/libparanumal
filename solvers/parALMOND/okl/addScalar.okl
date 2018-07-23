@@ -1,9 +1,9 @@
 // x = x + alpha
-kernel void addScalarKernel(const dlong   n,
+@kernel void addScalarKernel(const dlong   n,
           const dfloat alpha,
-                dfloat *restrict x){
+                @restrict dfloat * x){
 
-  for(dlong i=0;i<n;++i;tile(256)){
+  for(dlong i=0;i<n;++i;@tile(256,@outer,@inner)){
     if(i<n)
       x[i] += alpha;
   }

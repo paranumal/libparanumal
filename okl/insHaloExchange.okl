@@ -1,15 +1,15 @@
 
-kernel void insTotalHaloExtract2D(const int Nelments,
+@kernel void insTotalHaloExtract2D(const int Nelments,
                                   const int NhaloElements,
-			                            const int   * restrict haloElements,
+			                            @restrict const  int   *  haloElements,
                                   const int offset,
-                                  const dfloat * restrict U,
-                                  const dfloat * restrict V,
-                                  const dfloat * restrict P,
+                                  @restrict const  dfloat *  U,
+                                  @restrict const  dfloat *  V,
+                                  @restrict const  dfloat *  P,
 			                                  dfloat *haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){     // for all entries in this element
+  for(int e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all entries in this element
       const int id   = haloElements[e] + offset;
       const int base = p_NTfields*p_Np*e;
       haloq[n + 0*p_Np + base] = U[n + p_Np*id];
@@ -19,18 +19,18 @@ kernel void insTotalHaloExtract2D(const int Nelments,
   }
 }
 
-kernel void insTotalHaloExtract3D(const int Nelments,
+@kernel void insTotalHaloExtract3D(const int Nelments,
                                   const int NhaloElements,
-                                  const int   * restrict haloElements,
+                                  @restrict const  int   *  haloElements,
                                   const int offset,
-                                  const dfloat * restrict U,
-                                  const dfloat * restrict V,
-                                  const dfloat * restrict W,
-                                  const dfloat * restrict P,
+                                  @restrict const  dfloat *  U,
+                                  @restrict const  dfloat *  V,
+                                  @restrict const  dfloat *  W,
+                                  @restrict const  dfloat *  P,
                                         dfloat *haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){     // for all entries in this element
+  for(int e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all entries in this element
       const int id   = haloElements[e] + offset;
       const int base = p_NTfields*p_Np*e;
       haloq[n + 0*p_Np + base] = U[n + p_Np*id];
@@ -43,19 +43,19 @@ kernel void insTotalHaloExtract3D(const int Nelments,
 
 
 
-// kernel void insSubStepTotalHaloExtract2D(const int Nelments,
+// @kernel void insSubStepTotalHaloExtract2D(const int Nelments,
 //                                   const int NhaloElements,
-//                                   const int   * restrict haloElements,
+//                                   @restrict const  int   *  haloElements,
 //                                   const int offset0,
 //                                   const int offset1,
 //                                   const int offset2,
-//                                   const dfloat * restrict U,
-//                                   const dfloat * restrict V,
-//                                   const dfloat * restrict P,
+//                                   @restrict const  dfloat *  U,
+//                                   @restrict const  dfloat *  V,
+//                                   @restrict const  dfloat *  P,
 //                                         dfloat *haloq){
 
-//   for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
-//     for(int n=0;n<p_Np;++n;inner0){     // for all entries in this element
+//   for(int e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+//     for(int n=0;n<p_Np;++n;@inner(0)){     // for all entries in this element
       
 //       // const int offset0 = ((index+0)%3)*(Nelments + NhaloElements);
 //       // const int offset1 = ((index+2)%3)*(Nelments + NhaloElements);
@@ -81,19 +81,19 @@ kernel void insTotalHaloExtract3D(const int Nelments,
 // }
 
 
-// kernel void insSubStepTotalHaloScatter2D(const int Nelments,
+// @kernel void insSubStepTotalHaloScatter2D(const int Nelments,
 //                                   const int NhaloElements,
-//                                   const int   * restrict haloElements,
+//                                   @restrict const  int   *  haloElements,
 //                                   const int offset0,
 //                                   const int offset1,
 //                                   const int offset2,
-//                                         dfloat * restrict U,
-//                                         dfloat * restrict V,
-//                                         dfloat * restrict P,
-//                                   const dfloat * restrict haloq){
+//                                         @restrict dfloat *  U,
+//                                         @restrict dfloat *  V,
+//                                         @restrict dfloat *  P,
+//                                   @restrict const  dfloat *  haloq){
 
-//   for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
-//     for(int n=0;n<p_Np;++n;inner0){ 
+//   for(int e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+//     for(int n=0;n<p_Np;++n;@inner(0)){ 
 //       // const int offset0 = ((index+0)%3)*(Nelments + NhaloElements);
 //       // const int offset1 = ((index+2)%3)*(Nelments + NhaloElements);
 //       // const int offset2 = ((index+1)%3)*(Nelments + NhaloElements);
@@ -121,17 +121,17 @@ kernel void insTotalHaloExtract3D(const int Nelments,
 
 
 
-kernel void insTotalHaloScatter2D(const int Nelments,
+@kernel void insTotalHaloScatter2D(const int Nelments,
                                   const int NhaloElements,
-                                  const int   * restrict haloElements,
+                                  @restrict const  int   *  haloElements,
                                   const int offset,
-                                        dfloat * restrict U,
-                                        dfloat * restrict V,
-                                        dfloat * restrict P,
-                                  const dfloat * restrict haloq){
+                                        @restrict dfloat *  U,
+                                        @restrict dfloat *  V,
+                                        @restrict dfloat *  P,
+                                  @restrict const  dfloat *  haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){ 
+  for(int e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){ 
       const int id   = Nelments + offset;
       const int base = p_NTfields*p_Np*e;
       U[n + p_Np*(e+id)] = haloq[n + base + 0*p_Np];
@@ -142,18 +142,18 @@ kernel void insTotalHaloScatter2D(const int Nelments,
 }
 
 
-kernel void insTotalHaloScatter3D(const int Nelments,
+@kernel void insTotalHaloScatter3D(const int Nelments,
                                   const int NhaloElements,
-                                  const int   * restrict haloElements,
+                                  @restrict const  int   *  haloElements,
                                   const int offset,
-                                        dfloat * restrict U,
-                                        dfloat * restrict V,
-                                        dfloat * restrict W,
-                                        dfloat * restrict P,
-                                  const dfloat * restrict haloq){
+                                        @restrict dfloat *  U,
+                                        @restrict dfloat *  V,
+                                        @restrict dfloat *  W,
+                                        @restrict dfloat *  P,
+                                  @restrict const  dfloat *  haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){ 
+  for(int e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){ 
       const int id   = Nelments + offset;
       const int base = p_NTfields*p_Np*e;
       U[n + p_Np*(e+id)] = haloq[n + base + 0*p_Np];
@@ -166,16 +166,16 @@ kernel void insTotalHaloScatter3D(const int Nelments,
 
 
 
-kernel void insVelocityHaloExtract2D(const int Nelments,
+@kernel void insVelocityHaloExtract2D(const int Nelments,
                              const int NhaloElements,
-                             const int   * restrict haloElements,
+                             @restrict const  int   *  haloElements,
                              const int offset,
-                             const dfloat * restrict U,
-                             const dfloat * restrict V,
-                                   dfloat * restrict haloq){
+                             @restrict const  dfloat *  U,
+                             @restrict const  dfloat *  V,
+                                   @restrict dfloat *  haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){     // for all entries in this element
+  for(int e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all entries in this element
       const int id   = haloElements[e] + offset;
       const int base = p_NVfields*p_Np*e;
       haloq[n + 0*p_Np + base] = U[n + p_Np*id];
@@ -184,17 +184,17 @@ kernel void insVelocityHaloExtract2D(const int Nelments,
   }
 }
 
-kernel void insVelocityHaloExtract3D(const int Nelments,
+@kernel void insVelocityHaloExtract3D(const int Nelments,
                              const int NhaloElements,
-                             const int   * restrict haloElements,
+                             @restrict const  int   *  haloElements,
                              const int offset,
-                             const dfloat * restrict U,
-                             const dfloat * restrict V,
-                             const dfloat * restrict W,
-                                   dfloat * restrict haloq){
+                             @restrict const  dfloat *  U,
+                             @restrict const  dfloat *  V,
+                             @restrict const  dfloat *  W,
+                                   @restrict dfloat *  haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){     // for all entries in this element
+  for(int e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all entries in this element
       const int id   = haloElements[e] + offset;
       const int base = p_NVfields*p_Np*e;
 
@@ -205,16 +205,16 @@ kernel void insVelocityHaloExtract3D(const int Nelments,
   }
 }
 
-kernel void insVelocityHaloScatter2D(const int Nelments,
+@kernel void insVelocityHaloScatter2D(const int Nelments,
                              const int NhaloElements,
-                             const int   * restrict haloElements,
+                             @restrict const  int   *  haloElements,
                              const int offset,
-                                   dfloat * restrict U,
-                                   dfloat * restrict V,
-                             const dfloat * restrict haloq){
+                                   @restrict dfloat *  U,
+                                   @restrict dfloat *  V,
+                             @restrict const  dfloat *  haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){ 
+  for(int e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){ 
       const int id    = Nelments + offset;
        const int base = p_NVfields*p_Np*e;
        U[n + p_Np*(e+id)] = haloq[n + 0*p_Np + base];
@@ -223,17 +223,17 @@ kernel void insVelocityHaloScatter2D(const int Nelments,
   }
 }
 
-kernel void insVelocityHaloScatter3D(const int Nelments,
+@kernel void insVelocityHaloScatter3D(const int Nelments,
                              const int NhaloElements,
-                             const int   * restrict haloElements,
+                             @restrict const  int   *  haloElements,
                              const int offset,
-                                   dfloat * restrict U,
-                                   dfloat * restrict V,
-                                   dfloat * restrict W,
-                             const dfloat * restrict haloq){
+                                   @restrict dfloat *  U,
+                                   @restrict dfloat *  V,
+                                   @restrict dfloat *  W,
+                             @restrict const  dfloat *  haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){ 
+  for(int e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){ 
       const int id    = Nelments + offset;
        const int base = p_NVfields*p_Np*e;
        U[n + p_Np*(e+id)] = haloq[n + 0*p_Np + base];
@@ -244,14 +244,14 @@ kernel void insVelocityHaloScatter3D(const int Nelments,
 }
 
 
-kernel void insPressureHaloExtract(const int Nelments,
+@kernel void insPressureHaloExtract(const int Nelments,
                              const int NhaloElements,
-                             const int   * restrict haloElements,
-                             const dfloat * restrict P,
-                                   dfloat * restrict haloq){
+                             @restrict const  int   *  haloElements,
+                             @restrict const  dfloat *  P,
+                                   @restrict dfloat *  haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){     // for all entries in this element
+  for(int e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all entries in this element
       const int id   = haloElements[e];
       const int base = p_Np*e;
 
@@ -261,14 +261,14 @@ kernel void insPressureHaloExtract(const int Nelments,
 }
 
 
-kernel void insPressureHaloScatter(const int Nelments,
+@kernel void insPressureHaloScatter(const int Nelments,
                              const int NhaloElements,
-                             const int   * restrict haloElements,
-                                   dfloat * restrict P,
-                             const dfloat * restrict haloq){
+                             @restrict const  int   *  haloElements,
+                                   @restrict dfloat *  P,
+                             @restrict const  dfloat *  haloq){
 
-  for(int e=0;e<NhaloElements;++e;outer0){ // for all elements
-    for(int n=0;n<p_Np;++n;inner0){ 
+  for(int e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){ 
       const int id   = haloElements[e];
       const int base = p_Np*e;
       P[n + p_Np*(Nelments+e)] = haloq[n + base + 0*p_Np];

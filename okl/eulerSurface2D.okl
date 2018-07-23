@@ -2,7 +2,7 @@
 void upwind1D(const dfloat nx, const dfloat ny,
               const dfloat RM, const dfloat UM, const dfloat VM,
 	      const dfloat RP, const dfloat UP, const dfloat VP,
-              dfloat * restrict RS, dfloat * restrict US, dfloat * restrict VS){
+              @restrict dfloat * @restrict RS, dfloat * @restrict US, dfloat *  VS){
 
 
   const dfloat RA = 0.5f*(RM+RP);
@@ -43,7 +43,7 @@ void boundaryConditions2D(const int bc,
 			  const dfloat x,  const dfloat y, 
 			  const dfloat nx, const dfloat ny,
 			  const dfloat RM,  const dfloat UM, const dfloat VM,
-			  dfloat * restrict RB, dfloat * restrict UB, dfloat * restrict VB){
+			  @restrict dfloat * @restrict RB, dfloat * @restrict UB, dfloat *  VB){
 
   *RB = RM;
   *UB = -UM;
@@ -70,11 +70,11 @@ void boundaryConditions2D(const int bc,
 void laxFriedrichsFlux2D(const dfloat nx, const dfloat ny,
 			 const dfloat RM, const dfloat UM, const dfloat VM,
 			 const dfloat RP, const dfloat UP, const dfloat VP,
-			 dfloat * restrict fluxR,
-			 dfloat * restrict fluxU,
-			 dfloat * restrict fluxV){
+			 @restrict dfloat *  fluxR,
+			 @restrict dfloat *  fluxU,
+			 @restrict dfloat *  fluxV){
 
-  const dfloat lambda = occaMax(occaFabs(UM*nx+VM*ny)/RM+p_RT,occaFabs(UP*nx+VP*ny)/RP+p_RT);
+  const dfloat lambda = occaMax(fabs(UM*nx+VM*ny)/RM+p_RT,fabs(UP*nx+VP*ny)/RP+p_RT);
 
   const dfloat fxRM = -nx*UM-ny*VM;
   const dfloat fxUM = -nx*(UM*UM/RM+p_RT*RM)-ny*UM*VM/RM;
@@ -93,37 +93,37 @@ void laxFriedrichsFlux2D(const dfloat nx, const dfloat ny,
 
 // batch process elements
 // assume that the derivatives are on the test function
-kernel void eulerSurface2D(const int Nelements,
-			   const dfloat * restrict sgeo,
-			   const dfloat * restrict intInterpT, // interpolate to integration nodes
-			   const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-			   const int   * restrict vmapM,
-			   const int   * restrict vmapP,
-			   const int   * restrict EToB,
+@kernel void eulerSurface2D(const int Nelements,
+			   @restrict const  dfloat *  sgeo,
+			   @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
+			   @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
+			   @restrict const  int   *  vmapM,
+			   @restrict const  int   *  vmapP,
+			   @restrict const  int   *  EToB,
 			   const dfloat time,
-			   const dfloat * restrict intx, // integration nodes
-			   const dfloat * restrict inty,
-			   const dfloat4 * restrict q,
-			   dfloat4 * restrict rhsq){
+			   @restrict const  dfloat *  intx, // integration nodes
+			   @restrict const  dfloat *  inty,
+			   @restrict const  dfloat4 *  q,
+			   @restrict dfloat4 *  rhsq){
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_RM[p_NblockS][p_NfacesNfp];
-    shared dfloat s_UM[p_NblockS][p_NfacesNfp];
-    shared dfloat s_VM[p_NblockS][p_NfacesNfp];
-    shared dfloat s_RP[p_NblockS][p_NfacesNfp];
-    shared dfloat s_UP[p_NblockS][p_NfacesNfp];
-    shared dfloat s_VP[p_NblockS][p_NfacesNfp];
-    shared dfloat s_iRflux[p_NblockS][p_intNfpNfaces];
-    shared dfloat s_iUflux[p_NblockS][p_intNfpNfaces];
-    shared dfloat s_iVflux[p_NblockS][p_intNfpNfaces];
+    // @shared storage for flux terms
+    @shared dfloat s_RM[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_UM[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_VM[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_RP[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_UP[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_VP[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_iRflux[p_NblockS][p_intNfpNfaces];
+    @shared dfloat s_iUflux[p_NblockS][p_intNfpNfaces];
+    @shared dfloat s_iVflux[p_NblockS][p_intNfpNfaces];
 
     
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxSurfaceNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){
 
 	int e = eo + es;
 
@@ -156,11 +156,11 @@ kernel void eulerSurface2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // interpolate to surface integration nodes
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){ 
 	int e = eo + es;
 	if(e<Nelements){
 	  if(n<(p_Nfaces*p_intNfp)){
@@ -236,12 +236,12 @@ kernel void eulerSurface2D(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // lift from surface integration to volume nodes
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxSurfaceNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){
 	const int e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Np){

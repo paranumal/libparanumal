@@ -13,58 +13,58 @@
 #define p_Nq2 (p_Nq*p_Nq)
 #define p_gjNp (p_gjNq*p_gjNq*p_gjNq)
 
-kernel void massPartialAxHex3D_v1(const int Nelements,
-                                  const int * restrict elementList,
-                                  const dfloat * restrict gjGeo,
-                                  const dfloat * restrict gjI,
-                                  const dfloat * restrict q,
-                                  dfloat * restrict Mq){
+@kernel void massPartialAxHex3D_v1(const int Nelements,
+                                  @restrict const  int *  elementList,
+                                  @restrict const  dfloat *  gjGeo,
+                                  @restrict const  dfloat *  gjI,
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat *  Mq){
                                   
                                   
-	for(int e=0;e<Nelements;++e;outer0){
+	for(int e=0;e<Nelements;++e;@outer(0)){
 	
-		shared dfloat s_I[p_gjNq][p_Nq+p_gllPad];
+		@shared dfloat s_I[p_gjNq][p_Nq+p_gllPad];
 		
-		exclusive dfloat r_q[p_gjNq];
-		exclusive dfloat r_Mq[p_Nq];
+		@exclusive dfloat r_q[p_gjNq];
+		@exclusive dfloat r_Mq[p_Nq];
 		
-		shared dfloat s_q1[p_gjNq][p_gjNq+p_gjPad];
-		shared dfloat s_q2[p_gjNq][p_gjNq+p_gjPad];
+		@shared dfloat s_q1[p_gjNq][p_gjNq+p_gjPad];
+		@shared dfloat s_q2[p_gjNq][p_gjNq+p_gjPad];
 		
-		exclusive int emap;
+		@exclusive int emap;
 		
 		// prefetch D and I matrices and zero register storage
-		for(int b=0;b<p_gjNq;++b;inner1){
-			for(int a=0;a<p_gjNq;++a;inner0){
+		for(int b=0;b<p_gjNq;++b;@inner(1)){
+			for(int a=0;a<p_gjNq;++a;@inner(0)){
 			
 				emap = elementList[e];
 				
 				if(a<p_Nq)
 					s_I[b][a] = gjI[a+p_Nq*b];
 					
-				occaUnroll(p_Nq)
+				#pragma unroll p_Nq
 				for(int c=0;c<p_Nq;++c)
 					r_Mq[c] = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];
 			}
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
-		for(int b=0;b<p_gjNq;++b;inner1){
-			for(int a=0;a<p_gjNq;++a;inner0){
+		for(int b=0;b<p_gjNq;++b;@inner(1)){
+			for(int a=0;a<p_gjNq;++a;@inner(0)){
 				if(a<p_Nq && b<p_Nq){
 				
-					occaUnroll(p_gjNq)
+					#pragma unroll p_gjNq
 					for(int k=0;k<p_gjNq;++k){
 						dfloat tmp = 0;
-						occaUnroll(p_Nq)
+						#pragma unroll p_Nq
 						for(int c=0;c<p_Nq;++c){
 							tmp += s_I[k][c]*r_Mq[c];
 						}
 						r_q[k] = tmp;
 					}
 					
-					occaUnroll(p_Nq)
+					#pragma unroll p_Nq
 					for(int c=0;c<p_Nq;++c){
 						r_Mq[c] = 0;
 					}
@@ -72,25 +72,25 @@ kernel void massPartialAxHex3D_v1(const int Nelements,
 			}
 		}
 		
-		occaUnroll(p_gjNq)
+		#pragma unroll p_gjNq
 		for(int k=0;k<p_gjNq;++k){
 		
-			barrier(localMemFence);
+			@barrier("local");
 			
-			for(int b=0;b<p_gjNq;++b;inner1){
-				for(int a=0;a<p_gjNq;++a;inner0){
+			for(int b=0;b<p_gjNq;++b;@inner(1)){
+				for(int a=0;a<p_gjNq;++a;@inner(0)){
 					if(a<p_Nq && b<p_Nq)
 						s_q1[b][a] = r_q[k];
 				}
 			}
 			
-			barrier(localMemFence);
+			@barrier("local");
 			
-			for(int b=0;b<p_gjNq;++b;inner1){
-				for(int i=0;i<p_gjNq;++i;inner0){
+			for(int b=0;b<p_gjNq;++b;@inner(1)){
+				for(int i=0;i<p_gjNq;++i;@inner(0)){
 					if(b<p_Nq){
 						dfloat tmp = 0;
-						occaUnroll(p_Nq)
+						#pragma unroll p_Nq
 						for(int a=0;a<p_	Nq;++a){
 							tmp += s_I[i][a]*s_q1[b][a];
 						}
@@ -99,16 +99,16 @@ kernel void massPartialAxHex3D_v1(const int Nelements,
 				}
 			}
 			
-			barrier(localMemFence);
+			@barrier("local");
 			
-			for(int j=0;j<p_gjNq;++j;inner1){
-				for(int i=0;i<p_gjNq;++i;inner0){
+			for(int j=0;j<p_gjNq;++j;@inner(1)){
+				for(int i=0;i<p_gjNq;++i;@inner(0)){
 				
 					const dfloat r_GwJ = gjGeo[p_Nggeo*emap*p_gjNp+k*p_gjNq*p_gjNq+j*p_gjNq+i + p_GWJID*p_gjNp];
 					
 					dfloat tmp = 0;
 					
-					occaUnroll(p_Nq)
+					#pragma unroll p_Nq
 					for(int b=0;b<p_Nq;++b){
 						tmp += s_I[j][b]*s_q2[b][i];
 					}
@@ -117,14 +117,14 @@ kernel void massPartialAxHex3D_v1(const int Nelements,
 				}
 			}
 			
-			barrier(localMemFence);
+			@barrier("local");
 			
-			for(int b=0;b<p_gjNq;++b;inner1){
-				for(int i=0;i<p_gjNq;++i;inner0){
+			for(int b=0;b<p_gjNq;++b;@inner(1)){
+				for(int i=0;i<p_gjNq;++i;@inner(0)){
 					if(b<p_Nq){
 						dfloat tmp = 0;
 						
-						occaUnroll(p_gjNq)
+						#pragma unroll p_gjNq
 						for(int j=0;j<p_gjNq;++j){
 							tmp += s_I[j][b]*s_q1[j][i];
 						}
@@ -133,20 +133,20 @@ kernel void massPartialAxHex3D_v1(const int Nelements,
 				}
 			}
 			
-			barrier(localMemFence);
+			@barrier("local");
 			
-			for(int b=0;b<p_gjNq;++b;inner1){
-				for(int a=0;a<p_gjNq;++a;inner0){
+			for(int b=0;b<p_gjNq;++b;@inner(1)){
+				for(int a=0;a<p_gjNq;++a;@inner(0)){
 					if(a<p_Nq && b<p_Nq){
 					
 						dfloat tmp = 0;
 						
-						occaUnroll(p_gjNq)
+						#pragma unroll p_gjNq
 						for(int i=0;i<p_gjNq;++i){
 							tmp += s_I[i][a]*s_q2[b][i];
 						}
 						
-						occaUnroll(p_Nq)
+						#pragma unroll p_Nq
 						for(int c=0;c<p_Nq;++c){
 							r_Mq[c] += s_I[k][c]*tmp;
 						}
@@ -155,10 +155,10 @@ kernel void massPartialAxHex3D_v1(const int Nelements,
 			}
 		}
 		
-		for(int b=0;b<p_gjNq;++b;inner1){
-			for(int a=0;a<p_gjNq;++a;inner0){
+		for(int b=0;b<p_gjNq;++b;@inner(1)){
+			for(int a=0;a<p_gjNq;++a;@inner(0)){
 				if(a<p_Nq && b<p_Nq){
-					occaUnroll(p_Nq)
+					#pragma unroll p_Nq
 					for(int c=0;c<p_Nq;++c){
 						const int id = emap*p_Np + c*p_Nq2 + b*p_Nq + a;
 						Mq[id] = r_Mq[c];
@@ -170,26 +170,26 @@ kernel void massPartialAxHex3D_v1(const int Nelements,
 }
 
 
-kernel void massPartialAxHex3D_v2(const int Nelements,
-                                  const int * restrict elementList,
-                                  const dfloat * restrict gjGeo,
-                                  const dfloat * restrict gjI,
-                                  const dfloat * restrict q,
-                                  dfloat * restrict Mq){
+@kernel void massPartialAxHex3D_v2(const int Nelements,
+                                  @restrict const  int *  elementList,
+                                  @restrict const  dfloat *  gjGeo,
+                                  @restrict const  dfloat *  gjI,
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat *  Mq){
                                   
                                   
-	for(int e=0;e<Nelements;++e;outer0){
+	for(int e=0;e<Nelements;++e;@outer(0)){
 	
-		shared dfloat s_I[p_gjNq][p_Nq+p_gllPad];
-		volatile shared dfloat s_q[p_gjNq][p_gjNq][p_gjNq+p_gjPad];
+		@shared dfloat s_I[p_gjNq][p_Nq+p_gllPad];
+		@shared volatile dfloat s_q[p_gjNq][p_gjNq][p_gjNq+p_gjPad];
 		
-		exclusive dfloat r_q[p_gjNq];
+		@exclusive dfloat r_q[p_gjNq];
 		
-		exclusive int emap;
+		@exclusive int emap;
 		
 		// prefetch D and I matrices and zero register storage
-		for(int b=0;b<p_gjNq;++b;inner1){
-			for(int a=0;a<p_gjNq;++a;inner0){
+		for(int b=0;b<p_gjNq;++b;@inner(1)){
+			for(int a=0;a<p_gjNq;++a;@inner(0)){
 			
 				emap = elementList[e];
 				
@@ -197,29 +197,29 @@ kernel void massPartialAxHex3D_v2(const int Nelements,
 					s_I[b][a] = gjI[a+p_Nq*b];
 					
 				if(a<p_Nq && b<p_Nq){
-					occaUnroll(p_Nq)
+					#pragma unroll p_Nq
 					for(int c=0;c<p_Nq;++c)
 						s_q[c][b][a] = q[emap*p_Np+c*p_Nq2+b*p_Nq+a];
 				}
 			}
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		// transform in b
-		for(int c=0;c<p_gjNq;++c;inner1){
-			for(int a=0;a<p_gjNq;++a;inner0){
+		for(int c=0;c<p_gjNq;++c;@inner(1)){
+			for(int a=0;a<p_gjNq;++a;@inner(0)){
 				if(a<p_Nq && c<p_Nq){
 					// prefetch to registers
-					occaUnroll(p_Nq)
+					#pragma unroll p_Nq
 					for(int b=0;b<p_Nq;++b)
 						r_q[b] = s_q[c][b][a];
 						
 					// transform in b
-					occaUnroll(p_gjNq)
+					#pragma unroll p_gjNq
 					for(int j=0;j<p_gjNq;++j){
 						dfloat tmp = 0;
-						occaUnroll(p_Nq)
+						#pragma unroll p_Nq
 						for(int b=0;b<p_Nq;++b)
 							tmp += s_I[j][b]*r_q[b];
 						s_q[c][j][a] = tmp; // ok since only this thread
@@ -228,23 +228,23 @@ kernel void massPartialAxHex3D_v2(const int Nelements,
 			}
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		// transform in a
-		for(int c=0;c<p_gjNq;++c;inner1){
-			for(int j=0;j<p_gjNq;++j;inner0){
+		for(int c=0;c<p_gjNq;++c;@inner(1)){
+			for(int j=0;j<p_gjNq;++j;@inner(0)){
 				if(c<p_Nq){
 				
 					// prefetch to registers
-					occaUnroll(p_Nq)
+					#pragma unroll p_Nq
 					for(int a=0;a<p_Nq;++a)
 						r_q[a] = s_q[c][j][a];
 						
 					// transform in a
-					occaUnroll(p_gjNq)
+					#pragma unroll p_gjNq
 					for(int i=0;i<p_gjNq;++i){
 						dfloat tmp = 0;
-						occaUnroll(p_Nq)
+						#pragma unroll p_Nq
 						for(int a=0;a<p_Nq;++a)
 							tmp += s_I[i][a]*r_q[a];
 						s_q[c][j][i] = tmp; // ok since only this thread
@@ -253,18 +253,18 @@ kernel void massPartialAxHex3D_v2(const int Nelements,
 			}
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		// transform in c
-		for(int j=0;j<p_gjNq;++j;inner1){
-			for(int i=0;i<p_gjNq;++i;inner0){
+		for(int j=0;j<p_gjNq;++j;@inner(1)){
+			for(int i=0;i<p_gjNq;++i;@inner(0)){
 				// prefetch to registers
-				occaUnroll(p_Nq)
+				#pragma unroll p_Nq
 				for(int c=0;c<p_Nq;++c)
 					r_q[c] = s_q[c][j][i];
 					
 				// transform in c
-				occaUnroll(p_gjNq)
+				#pragma unroll p_gjNq
 				for(int k=0;k<p_gjNq;++k){
 					// prefetch integration weights
 					const int id = p_Nggeo*emap*p_gjNp
@@ -272,7 +272,7 @@ kernel void massPartialAxHex3D_v2(const int Nelements,
 					const dfloat r_GwJ = gjGeo[id];
 					
 					dfloat tmp = 0;
-					occaUnroll(p_Nq)
+					#pragma unroll p_Nq
 					for(int c=0;c<p_Nq;++c)
 						tmp += s_I[k][c]*r_q[c];
 						
@@ -281,19 +281,19 @@ kernel void massPartialAxHex3D_v2(const int Nelements,
 			}
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		// transform back in b
-		for(int k=0;k<p_gjNq;++k;inner1){
-			for(int i=0;i<p_gjNq;++i;inner0){
-				occaUnroll(p_gjNq)
+		for(int k=0;k<p_gjNq;++k;@inner(1)){
+			for(int i=0;i<p_gjNq;++i;@inner(0)){
+				#pragma unroll p_gjNq
 				for(int j=0;j<p_gjNq;++j)
 					r_q[j] = s_q[k][j][i];
 					
-				occaUnroll(p_Nq)
+				#pragma unroll p_Nq
 				for(int b=0;b<p_Nq;++b){
 					dfloat tmp = 0;
-					occaUnroll(p_gjNq)
+					#pragma unroll p_gjNq
 					for(int j=0;j<p_gjNq;++j)
 						tmp += s_I[j][b]*r_q[j];
 					s_q[k][b][i] = tmp; // ok since only this thread
@@ -301,20 +301,20 @@ kernel void massPartialAxHex3D_v2(const int Nelements,
 			}
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		// transform back in a
-		for(int k=0;k<p_gjNq;++k;inner1){
-			for(int b=0;b<p_gjNq;++b;inner0){
+		for(int k=0;k<p_gjNq;++k;@inner(1)){
+			for(int b=0;b<p_gjNq;++b;@inner(0)){
 				if(b<p_Nq){
-					occaUnroll(p_gjNq)
+					#pragma unroll p_gjNq
 					for(int i=0;i<p_gjNq;++i)
 						r_q[i] = s_q[k][b][i];
 						
-					occaUnroll(p_Nq)
+					#pragma unroll p_Nq
 					for(int a=0;a<p_Nq;++a){
 						dfloat tmp = 0;
-						occaUnroll(p_gjNq)
+						#pragma unroll p_gjNq
 						for(int i=0;i<p_gjNq;++i)
 							tmp += s_I[i][a]*r_q[i];
 						s_q[k][b][a] = tmp; // ok since only this thread
@@ -323,20 +323,20 @@ kernel void massPartialAxHex3D_v2(const int Nelements,
 			}
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		// transform back in c
-		for(int b=0;b<p_gjNq;++b;inner1){
-			for(int a=0;a<p_gjNq;++a;inner0){
+		for(int b=0;b<p_gjNq;++b;@inner(1)){
+			for(int a=0;a<p_gjNq;++a;@inner(0)){
 				if(a<p_Nq && b<p_Nq){
-					occaUnroll(p_gjNq)
+					#pragma unroll p_gjNq
 					for(int k=0;k<p_gjNq;++k)
 						r_q[k] = s_q[k][b][a];
 						
-					occaUnroll(p_Nq)
+					#pragma unroll p_Nq
 					for(int c=0;c<p_Nq;++c){
 						dfloat tmp = 0;
-						occaUnroll(p_gjNq)
+						#pragma unroll p_gjNq
 						for(int k=0;k<p_gjNq;++k)
 							tmp += s_I[k][c]*r_q[k];
 							

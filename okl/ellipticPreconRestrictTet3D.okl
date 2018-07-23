@@ -1,12 +1,12 @@
 
 
-kernel void ellipticFooTet3D(const int Nelements,
-			      const dfloat * restrict Pq,
-			      dfloat * restrict Rq){
+@kernel void ellipticFooTet3D(const int Nelements,
+			      @restrict const  dfloat *  Pq,
+			      @restrict dfloat *  Rq){
   
   
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       int idP = n + e*p_NpP;	
       int id  = n + e*p_Np;
       Rq[id] = Pq[idP];

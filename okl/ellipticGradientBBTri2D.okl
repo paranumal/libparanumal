@@ -1,21 +1,21 @@
 // compute local gradients
 
-kernel void ellipticGradientBBTri2D(const int Nelements,
-                                  const dfloat * restrict vgeo,
-                                  const int * restrict D1ids,
-                                  const int * restrict D2ids,
-                                  const int * restrict D3ids,
-                                  const dfloat * restrict Dvals,  
-                                  const dfloat * restrict q,
-                                  dfloat4 * restrict gradq){  
+@kernel void ellipticGradientBBTri2D(const int Nelements,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  int *  D1ids,
+                                  @restrict const  int *  D2ids,
+                                  @restrict const  int *  D3ids,
+                                  @restrict const  dfloat *  Dvals,  
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat4 *  gradq){  
   
   // block partition of elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     
-    shared dfloat s_q[p_NblockV][p_Np];
+    @shared dfloat s_q[p_NblockV][p_Np];
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
         if(e<Nelements){
           const int id = e*p_Np+n;
           s_q[e-eo][n] = q[id];
@@ -23,10 +23,10 @@ kernel void ellipticGradientBBTri2D(const int Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
         if(e<Nelements){
           // prefetch geometric factors (constant on triangle)
           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -71,23 +71,23 @@ kernel void ellipticGradientBBTri2D(const int Nelements,
   }
 }
 
-kernel void ellipticPartialGradientBBTri2D(const int Nelements,
+@kernel void ellipticPartialGradientBBTri2D(const int Nelements,
                                   const int offset,
-                                  const dfloat * restrict vgeo,
-                                  const int * restrict D1ids,
-                                  const int * restrict D2ids,
-                                  const int * restrict D3ids,
-                                  const dfloat * restrict Dvals,  
-                                  const dfloat * restrict q,
-                                  dfloat4 * restrict gradq){  
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  int *  D1ids,
+                                  @restrict const  int *  D2ids,
+                                  @restrict const  int *  D3ids,
+                                  @restrict const  dfloat *  Dvals,  
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat4 *  gradq){  
   
   // block partition of elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     
-    shared dfloat s_q[p_NblockV][p_Np];
+    @shared dfloat s_q[p_NblockV][p_Np];
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
         if(e<Nelements){
           const int id = (e+offset)*p_Np+n;
           s_q[e-eo][n] = q[id];
@@ -95,10 +95,10 @@ kernel void ellipticPartialGradientBBTri2D(const int Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
         if(e<Nelements){
           // prefetch geometric factors (constant on triangle)
           const dfloat drdx = vgeo[(e+offset)*p_Nvgeo + p_RXID];

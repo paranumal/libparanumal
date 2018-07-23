@@ -12,11 +12,11 @@ void boundaryConditions3D(int bc, dfloat time,
     *pP = pM;
   }
   if(bc==2){
-    dfloat dx = 1.f/occaSqrt(2.f);
-    dfloat dy = 1.f/occaSqrt(2.f);
+    dfloat dx = 1.f/sqrt(2.f);
+    dfloat dy = 1.f/sqrt(2.f);
     dfloat dz = 0;
     dfloat omega = 10*M_PI;
-    dfloat wave = occaCos(omega*(time-(x*dx+y*dy+z*dz)));
+    dfloat wave = cos(omega*(time-(x*dx+y*dy+z*dz)));
     dfloat uI = dx*wave;
     dfloat vI = dy*wave;
     dfloat wI = dz*wave;
@@ -30,50 +30,50 @@ void boundaryConditions3D(int bc, dfloat time,
   }
 }
 
-kernel void acousticsbbdgMRABPmlSurface3D(const int pmlNelements,
-           const int   * restrict pmlElementIds,
-           const int   * restrict pmlIds,
-           const dfloat * restrict sgeo,
-           const int   * restrict L0ids,
-           const dfloat * restrict L0vals,
-           const int   * restrict ELids,
-           const dfloat * restrict ELvals,
-           const int   * restrict vmapM,
-           const int   * restrict mapP,
-           const int   * restrict EToB,
+@kernel void acousticsbbdgMRABPmlSurface3D(const int pmlNelements,
+           @restrict const  int   *  pmlElementIds,
+           @restrict const  int   *  pmlIds,
+           @restrict const  dfloat *  sgeo,
+           @restrict const  int   *  L0ids,
+           @restrict const  dfloat *  L0vals,
+           @restrict const  int   *  ELids,
+           @restrict const  dfloat *  ELvals,
+           @restrict const  int   *  vmapM,
+           @restrict const  int   *  mapP,
+           @restrict const  int   *  EToB,
            const dfloat time,
-           const dfloat * restrict x,
-           const dfloat * restrict y,
-           const dfloat * restrict z,
-           const dfloat * restrict q,
-           const dfloat * restrict pmlq,
-           const dfloat * restrict fQM,
-           const dfloat * restrict fQP,
-           dfloat       * restrict rhsq,
-           dfloat       * restrict pmlrhsq,
+           @restrict const  dfloat *  x,
+           @restrict const  dfloat *  y,
+           @restrict const  dfloat *  z,
+           @restrict const  dfloat *  q,
+           @restrict const  dfloat *  pmlq,
+           @restrict const  dfloat *  fQM,
+           @restrict const  dfloat *  fQP,
+           @restrict dfloat       *  rhsq,
+           @restrict dfloat       *  pmlrhsq,
            const int   rhsShift){
 
   // for all elements
-  for(int eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxw[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxpx[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxpy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxpz[p_NblockS][p_Nfp*p_Nfaces];
+    // @shared storage for flux terms
+    @shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxw[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxpx[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxpy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxpz[p_NblockS][p_Nfp*p_Nfaces];
 
-    shared dfloat s_fluxu_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxw_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxpx_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxpy_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxpz_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxu_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxw_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxpx_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxpy_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxpz_copy[p_NblockS][p_Nfp*p_Nfaces];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const int et = eo + es;
         if(et<pmlNelements){
 
@@ -125,12 +125,12 @@ kernel void acousticsbbdgMRABPmlSurface3D(const int pmlNelements,
       }
     }
 
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // apply L0 to fluxes. use sparse format
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int et = eo + es;
         if(et<pmlNelements){
           if(n<p_Nfp*p_Nfaces){
@@ -146,7 +146,7 @@ kernel void acousticsbbdgMRABPmlSurface3D(const int pmlNelements,
             dfloat pztmpflux = 0.0;
 
             // sparse application of L0
-            occaUnroll(7)
+            #pragma unroll 7
             for (int m = 0; m < 7; ++m){
               int   L0id  = L0ids [id + p_Nfp*m];
               dfloat L0val = L0vals[id + p_Nfp*m];
@@ -170,11 +170,11 @@ kernel void acousticsbbdgMRABPmlSurface3D(const int pmlNelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // apply lift reduction and accumulate RHS
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int et = eo + es;
         if(et<pmlNelements){
           if(n<p_Np){
@@ -193,7 +193,7 @@ kernel void acousticsbbdgMRABPmlSurface3D(const int pmlNelements,
             dfloat rhsqnpz = pmlrhsq[pmlrhsId+2];
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_max_EL_nnz)
+            #pragma unroll p_max_EL_nnz
             for (int m = 0; m < p_max_EL_nnz; ++m){
               const int id = n + m*p_Np;
               const dfloat ELval = ELvals[id];

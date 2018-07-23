@@ -9,22 +9,22 @@
 #define TYID 7
 #define TZID 8
 
-kernel void boltzmannVolumeTri3D(const int Nelements,
-				 const dfloat * restrict vgeo,
-				 const dfloat * restrict DrT,
-				 const dfloat * restrict DsT,
-				 const dfloat * restrict x,
-				 const dfloat * restrict y,
-				 const dfloat * restrict z,
-				 const dfloat * restrict q,
-				 dfloat * restrict rhsq){
+@kernel void boltzmannVolumeTri3D(const int Nelements,
+				 @restrict const  dfloat *  vgeo,
+				 @restrict const  dfloat *  DrT,
+				 @restrict const  dfloat *  DsT,
+				 @restrict const  dfloat *  x,
+				 @restrict const  dfloat *  y,
+				 @restrict const  dfloat *  z,
+				 @restrict const  dfloat *  q,
+				 @restrict dfloat *  rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
     
-    shared dfloat s_q[p_Nfields][p_NblockV][p_Np];
+    @shared dfloat s_q[p_Nfields][p_NblockV][p_Np];
     
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -36,11 +36,11 @@ kernel void boltzmannVolumeTri3D(const int Nelements,
       }
     }
     
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
 	int e = eo+es; // element in block
 	
 	if(e<Nelements){
@@ -60,19 +60,19 @@ kernel void boltzmannVolumeTri3D(const int Nelements,
 	  // compute 'r' and 's' derivatives of (q_m) at node n
 	  dfloat dqdr[p_Nfields], dqds[p_Nfields];
 	  
-	  occaUnroll(p_Nfields)
+	  #pragma unroll p_Nfields
 	    for(int fld=0;fld<p_Nfields;++fld){
 	      dqdr[fld] = 0;
 	      dqds[fld] = 0;
 	    }
 	  
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	    for(int m=0;m<p_Np;++m){
 	      const dfloat Drnm = DrT[n+m*p_Np]; // L1
 	      const dfloat Dsnm = DsT[n+m*p_Np];
 	      
 	      // differentiate q components with respect to 'r' & 's'
-	      occaUnroll(p_Nfields)
+	      #pragma unroll p_Nfields
 		for(int fld=0;fld<p_Nfields;++fld) {
 		  const dfloat qm = s_q[fld][es][m];
 		  dqdr[fld] += Drnm*qm; // 2 bytes per flop (4TF max)

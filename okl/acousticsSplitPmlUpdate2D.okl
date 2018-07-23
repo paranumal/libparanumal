@@ -1,19 +1,19 @@
 
-kernel void acousticsSplitPmlUpdate2D(const int Ntotal,
+@kernel void acousticsSplitPmlUpdate2D(const int Ntotal,
 					  const int recombine,
 					  const dfloat dt,	
 					  const dfloat rka,
 					  const dfloat rkb,
-					  const dfloat * restrict rhsqx,
-					  const dfloat * restrict rhsqy,
-					  dfloat * restrict resqx,
-					  dfloat * restrict resqy,
-					  dfloat * restrict qx,
-					  dfloat * restrict qy,
-					  dfloat * restrict q){
+					  @restrict const  dfloat *  rhsqx,
+					  @restrict const  dfloat *  rhsqy,
+					  @restrict dfloat *  resqx,
+					  @restrict dfloat *  resqy,
+					  @restrict dfloat *  qx,
+					  @restrict dfloat *  qy,
+					  @restrict dfloat *  q){
   
   // Low storage Runge Kutta time step update
-  for(int n=0;n<Ntotal;++n;tile(256)){
+  for(int n=0;n<Ntotal;++n;@tile(256,@outer,@inner)){
     if(n<Ntotal){
       dfloat resqxn = resqx[n];
       dfloat qxn = qx[n];

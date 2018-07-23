@@ -1,9 +1,9 @@
 
-kernel void mask(const dlong Nmasked,
-                 const dlong    * restrict maskIds,
-                       dfloat * restrict q){
+@kernel void mask(const dlong Nmasked,
+                 @restrict const  dlong    *  maskIds,
+                       @restrict dfloat *  q){
 
-  for(dlong n=0;n<Nmasked;++n;tile(256)){
+  for(dlong n=0;n<Nmasked;++n;@tile(256,@outer,@inner)){
     if(n<Nmasked){
       q[maskIds[n]] = 0.;
     }

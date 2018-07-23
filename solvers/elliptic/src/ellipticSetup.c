@@ -4,7 +4,7 @@
 
 void reportMemoryUsage(occa::device &device, const char *mess);
 
-elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelInfo, setupAide options){
+elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelInfo, setupAide options){
  
   elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
 
@@ -112,7 +112,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelI
 
   string boundaryHeaderFileName; 
   options.getArgs("DATA FILE", boundaryHeaderFileName);
-  kernelInfo.addInclude((char*)boundaryHeaderFileName.c_str());
+  kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
 
   // set kernel name suffix
   char *suffix;
@@ -134,7 +134,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelI
     sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
     sprintf(kernelName, "ellipticRhsBCIpdg%s", suffix);
 
-    elliptic->rhsBCIpdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+    elliptic->rhsBCIpdgKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
     dfloat zero = 0.f;
     elliptic->rhsBCIpdgKernel(mesh->Nelements,
@@ -158,12 +158,12 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::kernelInfo &kernelI
     sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
     sprintf(kernelName, "ellipticRhsBC%s", suffix);
 
-    elliptic->rhsBCKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+    elliptic->rhsBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
     sprintf(fileName, DELLIPTIC "/okl/ellipticAddBC%s.okl", suffix);
     sprintf(kernelName, "ellipticAddBC%s", suffix);
 
-    elliptic->addBCKernel = mesh->device.buildKernelFromSource(fileName,kernelName, kernelInfo);
+    elliptic->addBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
     dfloat zero = 0.f;
     elliptic->rhsBCKernel(mesh->Nelements,

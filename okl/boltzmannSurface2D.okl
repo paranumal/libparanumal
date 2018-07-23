@@ -1,5 +1,5 @@
-#define p_isq12 (1.f/occaSqrt(12.f))
-#define p_isq6 (1.f/occaSqrt(6.f))
+#define p_isq12 (1.f/sqrt(12.f))
+#define p_isq6 (1.f/sqrt(6.f))
 #define PML_ENABLED 1
 
 void upwind1D(const dfloat nx, const dfloat ny,
@@ -7,8 +7,8 @@ void upwind1D(const dfloat nx, const dfloat ny,
         const dfloat q4M, const dfloat q5M, const dfloat q6M,
               const dfloat q1B, const dfloat q2B, const dfloat q3B,
         const dfloat q4B, const dfloat q5B, const dfloat q6B,
-              dfloat * restrict q1P, dfloat * restrict q2P, dfloat * restrict q3P,
-        dfloat * restrict q4P, dfloat * restrict q5P, dfloat * restrict q6P){
+              @restrict dfloat * @restrict q1P, dfloat * @restrict q2P, dfloat *  q3P,
+        @restrict dfloat * @restrict q4P, dfloat * @restrict q5P, dfloat *  q6P){
   
   *q1P = 0.5f*(q1B + q1M) - p_isq12*(nx*(q2B-q2M) + ny*(q3B-q3M));
   *q2P = 0.5f*(q2B + q2M) - p_isq12*(nx*(q1B-q1M)) - p_isq6*nx*(q5B-q5M) - 0.5f*ny*(q4B-q4M);
@@ -27,8 +27,8 @@ void boundaryConditions2D(const int bc,
         const dfloat ramp,
         const dfloat  q1M, const dfloat  q2M, const dfloat  q3M,
         const dfloat  q4M, const dfloat  q5M, const dfloat  q6M,
-        dfloat * restrict q1B, dfloat * restrict q2B, dfloat * restrict q3B,
-        dfloat * restrict q4B, dfloat * restrict q5B, dfloat * restrict q6B){
+        @restrict dfloat * @restrict q1B, dfloat * @restrict q2B, dfloat *  q3B,
+        @restrict dfloat * @restrict q4B, dfloat * @restrict q5B, dfloat *  q6B){
 #if PML_ENABLED
   if (1 == bc)       // Wall
   {
@@ -116,33 +116,33 @@ void boundaryConditions2D(const int bc,
 }
 
 
-// This kernel uses Upwind flux 
-kernel void boltzmannSurface2D(const int Nelements,
-                     const int * restrict elementIds,
+// This @kernel uses Upwind flux 
+@kernel void boltzmannSurface2D(const int Nelements,
+                     @restrict const  int *  elementIds,
                      const dfloat time,
                      const dfloat ramp,
                      const int   nrhs,
                      const int   shift,
-                     const dfloat * restrict sgeo,
-                     const dfloat * restrict LIFTT,
-                     const int   * restrict vmapM,
-                     const int   * restrict vmapP,
-                     const int   * restrict EToB,
-                     const dfloat * restrict x,
-                     const dfloat * restrict y,
-                     const dfloat * restrict q,
-                           dfloat * restrict rhsq){
+                     @restrict const  dfloat *  sgeo,
+                     @restrict const  dfloat *  LIFTT,
+                     @restrict const  int   *  vmapM,
+                     @restrict const  int   *  vmapP,
+                     @restrict const  int   *  EToB,
+                     @restrict const  dfloat *  x,
+                     @restrict const  dfloat *  y,
+                     @restrict const  dfloat *  q,
+                           @restrict dfloat *  rhsq){
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
-    exclusive int e;
+    // @shared storage for flux terms
+    @shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
+    @exclusive int e;
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         int et = eo + es;
         if(et<Nelements){
          e = elementIds[et];
@@ -208,12 +208,12 @@ kernel void boltzmannSurface2D(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int et = eo + es;
         if(et<Nelements){
           if(n<p_Np){
@@ -227,7 +227,7 @@ kernel void boltzmannSurface2D(const int Nelements,
             dfloat rhsq6 = rhsq[id+5];
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 dfloat L = LIFTT[n+m*p_Np];
                 rhsq1 += L*s_fluxq[es][0][m];
@@ -255,33 +255,33 @@ kernel void boltzmannSurface2D(const int Nelements,
 
 
 
-// This kernel uses penalty flux
-kernel void boltzmannSurface2D_v0(const int Nelements,
-                     const int * restrict elementIds,
+// This @kernel uses penalty flux
+@kernel void boltzmannSurface2D_v0(const int Nelements,
+                     @restrict const  int *  elementIds,
                      const dfloat time,
                      const dfloat ramp,
                      const int   nrhs,
                      const int   shift,
-                     const dfloat * restrict sgeo,
-                     const dfloat * restrict LIFTT,
-                     const int   * restrict vmapM,
-                     const int   * restrict vmapP,
-                     const int   * restrict EToB,
-                     const dfloat * restrict x,
-                     const dfloat * restrict y,
-                     const dfloat * restrict q,
-                           dfloat * restrict rhsq){
+                     @restrict const  dfloat *  sgeo,
+                     @restrict const  dfloat *  LIFTT,
+                     @restrict const  int   *  vmapM,
+                     @restrict const  int   *  vmapP,
+                     @restrict const  int   *  EToB,
+                     @restrict const  dfloat *  x,
+                     @restrict const  dfloat *  y,
+                     @restrict const  dfloat *  q,
+                           @restrict dfloat *  rhsq){
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
-    exclusive int e;
+    // @shared storage for flux terms
+    @shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
+    @exclusive int e;
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         int et = eo + es;
         if(et<Nelements){
          e = elementIds[et];
@@ -351,12 +351,12 @@ kernel void boltzmannSurface2D_v0(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int et = eo + es;
         if(et<Nelements){
           if(n<p_Np){
@@ -370,7 +370,7 @@ kernel void boltzmannSurface2D_v0(const int Nelements,
             dfloat rhsq6 = rhsq[id+5];
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 dfloat L = LIFTT[n+m*p_Np];
                 rhsq1 += L*s_fluxq[es][0][m];
@@ -395,48 +395,48 @@ kernel void boltzmannSurface2D_v0(const int Nelements,
 }
 
 
-// This kernel uses upwind flux
-kernel void boltzmannPmlSurface2D(const int pmlNelements,
-                        const int   * restrict pmlElementIds,
-                        const int   * restrict pmlIds,
+// This @kernel uses upwind flux
+@kernel void boltzmannPmlSurface2D(const int pmlNelements,
+                        @restrict const  int   *  pmlElementIds,
+                        @restrict const  int   *  pmlIds,
                         const dfloat time,
                         const dfloat ramp,
                         const int nrhs,
                         const int shift,
-                        const dfloat * restrict sgeo,
-                        const dfloat * restrict LIFTT,
-                        const int   * restrict vmapM,
-                        const int   * restrict vmapP,
-                        const int   * restrict EToB,
-                        const dfloat * restrict x,
-                        const dfloat * restrict y,              
-                        const dfloat * restrict q,
-                              dfloat * restrict rhsq,
-                              dfloat * restrict pmlrhsqx,
-                              dfloat * restrict pmlrhsqy){
+                        @restrict const  dfloat *  sgeo,
+                        @restrict const  dfloat *  LIFTT,
+                        @restrict const  int   *  vmapM,
+                        @restrict const  int   *  vmapP,
+                        @restrict const  int   *  EToB,
+                        @restrict const  dfloat *  x,
+                        @restrict const  dfloat *  y,              
+                        @restrict const  dfloat *  q,
+                              @restrict dfloat *  rhsq,
+                              @restrict dfloat *  pmlrhsqx,
+                              @restrict dfloat *  pmlrhsqy){
   
   // for all elements
-  for(int eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq3[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq4[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq5[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq6[p_NblockS][p_maxNodes];
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq3[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq4[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq5[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq6[p_NblockS][p_maxNodes];
 
-    shared dfloat s_nydq1[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq2[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq3[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq4[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq5[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq6[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq1[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq2[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq3[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq4[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq5[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq6[p_NblockS][p_maxNodes];
 
-    exclusive int e;
+    @exclusive int e;
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         int et = eo + es;
         if(et<pmlNelements){
             e = pmlElementIds[et];
@@ -502,12 +502,12 @@ kernel void boltzmannPmlSurface2D(const int pmlNelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const int et = eo + es;
         if(et<pmlNelements){
             if(n<p_Np){
@@ -516,7 +516,7 @@ kernel void boltzmannPmlSurface2D(const int pmlNelements,
         dfloat Lnydq1 = 0.f, Lnydq2 = 0.f, Lnydq3 = 0.f, Lnydq4 = 0.f, Lnydq5 = 0.f, Lnydq6 = 0.f;
         
         // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
         for(int m=0;m<p_NfacesNfp;++m){
           const dfloat L = LIFTT[n+m*p_Np];
           Lnxdq1 += L*s_nxdq1[es][m];
@@ -588,50 +588,50 @@ kernel void boltzmannPmlSurface2D(const int pmlNelements,
 
 
 
-// This kernel uses penalty flux
-kernel void boltzmannPmlSurface2D_v0(const int pmlNelements,
-                        const int   * restrict pmlElementIds,
-                        const int   * restrict pmlIds,
+// This @kernel uses penalty flux
+@kernel void boltzmannPmlSurface2D_v0(const int pmlNelements,
+                        @restrict const  int   *  pmlElementIds,
+                        @restrict const  int   *  pmlIds,
                         const dfloat time,
                         const dfloat ramp,
                         const int nrhs,
                         const int shift,
-                        const dfloat * restrict sgeo,
-                        const dfloat * restrict LIFTT,
-                        const int   * restrict vmapM,
-                        const int   * restrict vmapP,
-                        const int   * restrict EToB,
-                       // const dfloat * restrict pmlBetaX,
-                       // const dfloat * restrict pmlBetaY,
-                        const dfloat * restrict x,
-                        const dfloat * restrict y,              
-                        const dfloat * restrict q,
-                              dfloat * restrict rhsq,
-                              dfloat * restrict pmlrhsqx,
-                              dfloat * restrict pmlrhsqy){
+                        @restrict const  dfloat *  sgeo,
+                        @restrict const  dfloat *  LIFTT,
+                        @restrict const  int   *  vmapM,
+                        @restrict const  int   *  vmapP,
+                        @restrict const  int   *  EToB,
+                       // @restrict const  dfloat *  pmlBetaX,
+                       // @restrict const  dfloat *  pmlBetaY,
+                        @restrict const  dfloat *  x,
+                        @restrict const  dfloat *  y,              
+                        @restrict const  dfloat *  q,
+                              @restrict dfloat *  rhsq,
+                              @restrict dfloat *  pmlrhsqx,
+                              @restrict dfloat *  pmlrhsqy){
   
   // for all elements
-  for(int eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq3[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq4[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq5[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq6[p_NblockS][p_maxNodes];
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq3[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq4[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq5[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq6[p_NblockS][p_maxNodes];
 
-    shared dfloat s_nydq1[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq2[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq3[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq4[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq5[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq6[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq1[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq2[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq3[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq4[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq5[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq6[p_NblockS][p_maxNodes];
 
-    exclusive int e;
+    @exclusive int e;
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         int et = eo + es;
         if(et<pmlNelements){
             e = pmlElementIds[et];
@@ -710,12 +710,12 @@ kernel void boltzmannPmlSurface2D_v0(const int pmlNelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const int et = eo + es;
         if(et<pmlNelements){
             if(n<p_Np){
@@ -724,7 +724,7 @@ kernel void boltzmannPmlSurface2D_v0(const int pmlNelements,
         dfloat rhsqy1 = 0.f, rhsqy2 = 0.f, rhsqy3 = 0.f, rhsqy4 = 0.f, rhsqy5 = 0.f, rhsqy6 = 0.f;
         
         // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
         for(int m=0;m<p_NfacesNfp;++m){
           const dfloat L = LIFTT[n+m*p_Np];
           rhsqx1 += L*s_nxdq1[es][m];
@@ -782,33 +782,33 @@ kernel void boltzmannPmlSurface2D_v0(const int pmlNelements,
 
 
 
-kernel void boltzmannMRSurface2D(const int Nelements,
-                     const int * restrict elementIds,
+@kernel void boltzmannMRSurface2D(const int Nelements,
+                     @restrict const  int *  elementIds,
                      const dfloat time,
                      const dfloat ramp,
                      const int nrhs,
                      const int   shift,
-                     const dfloat * restrict sgeo,
-                     const dfloat * restrict LIFTT,
-                     const int   * restrict vmapM,
-                     const int   * restrict mapP,
-                     const int   * restrict EToB,
-                     const dfloat * restrict x,
-                     const dfloat * restrict y,
-                     const dfloat * restrict q,
-                     const dfloat * restrict fQM,
-                           dfloat * restrict rhsq){
+                     @restrict const  dfloat *  sgeo,
+                     @restrict const  dfloat *  LIFTT,
+                     @restrict const  int   *  vmapM,
+                     @restrict const  int   *  mapP,
+                     @restrict const  int   *  EToB,
+                     @restrict const  dfloat *  x,
+                     @restrict const  dfloat *  y,
+                     @restrict const  dfloat *  q,
+                     @restrict const  dfloat *  fQM,
+                           @restrict dfloat *  rhsq){
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
-    exclusive int e;
+    // @shared storage for flux terms
+    @shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
+    @exclusive int e;
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         int et = eo + es;
         if(et<Nelements){
          e = elementIds[et];
@@ -874,12 +874,12 @@ kernel void boltzmannMRSurface2D(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int et = eo + es;
         if(et<Nelements){
           if(n<p_Np){
@@ -893,7 +893,7 @@ kernel void boltzmannMRSurface2D(const int Nelements,
             dfloat rhsq6 = rhsq[id+5];
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 dfloat L = LIFTT[n+m*p_Np];
                 rhsq1 += L*s_fluxq[es][0][m];
@@ -922,48 +922,48 @@ kernel void boltzmannMRSurface2D(const int Nelements,
 
 
 // batch process elements
-kernel void boltzmannMRPmlSurface2D(const int pmlNelements,
-                        const int   * restrict pmlElementIds,
-                        const int   * restrict pmlIds,
+@kernel void boltzmannMRPmlSurface2D(const int pmlNelements,
+                        @restrict const  int   *  pmlElementIds,
+                        @restrict const  int   *  pmlIds,
                         const dfloat time,
                         const dfloat ramp,
                         const int nrhs,
                         const int shift,
-                        const dfloat * restrict sgeo,
-                        const dfloat * restrict LIFTT,
-                        const int   * restrict vmapM,
-                        const int   * restrict mapP,
-                        const int   * restrict EToB,
-                        const dfloat * restrict x,
-                        const dfloat * restrict y,              
-                        const dfloat * restrict q,
-                        const dfloat * restrict fQM,
-                              dfloat * restrict rhsq,
-                              dfloat * restrict pmlrhsqx,
-                              dfloat * restrict pmlrhsqy){
+                        @restrict const  dfloat *  sgeo,
+                        @restrict const  dfloat *  LIFTT,
+                        @restrict const  int   *  vmapM,
+                        @restrict const  int   *  mapP,
+                        @restrict const  int   *  EToB,
+                        @restrict const  dfloat *  x,
+                        @restrict const  dfloat *  y,              
+                        @restrict const  dfloat *  q,
+                        @restrict const  dfloat *  fQM,
+                              @restrict dfloat *  rhsq,
+                              @restrict dfloat *  pmlrhsqx,
+                              @restrict dfloat *  pmlrhsqy){
   
   // for all elements
-  for(int eo=0;eo<pmlNelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq3[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq4[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq5[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq6[p_NblockS][p_maxNodes];
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq3[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq4[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq5[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq6[p_NblockS][p_maxNodes];
 
-    shared dfloat s_nydq1[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq2[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq3[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq4[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq5[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq6[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq1[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq2[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq3[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq4[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq5[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq6[p_NblockS][p_maxNodes];
 
-    exclusive int e;
+    @exclusive int e;
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         int et = eo + es;
         if(et<pmlNelements){
             e = pmlElementIds[et];
@@ -1027,12 +1027,12 @@ kernel void boltzmannMRPmlSurface2D(const int pmlNelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const int et = eo + es;
         if(et<pmlNelements){
             if(n<p_Np){
@@ -1041,7 +1041,7 @@ kernel void boltzmannMRPmlSurface2D(const int pmlNelements,
         dfloat Lnydq1 = 0.f, Lnydq2 = 0.f, Lnydq3 = 0.f, Lnydq4 = 0.f, Lnydq5 = 0.f, Lnydq6 = 0.f;
         
         // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
         for(int m=0;m<p_NfacesNfp;++m){
           const dfloat L = LIFTT[n+m*p_Np];
           Lnxdq1 += L*s_nxdq1[es][m];

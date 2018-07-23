@@ -1,12 +1,12 @@
 
-kernel void gatherScatter(const dlong Ngather,
-                          const dlong * restrict gatherStarts,
-                          const dlong * restrict gatherIds,
+@kernel void gatherScatter(const dlong Ngather,
+                          @restrict const  dlong *  gatherStarts,
+                          @restrict const  dlong *  gatherIds,
                           const int Nentries,
                           const dlong stride,
-                          dfloat * restrict q){
+                          @restrict dfloat *  q){
   
-  for(dlong g=0;g<Ngather;++g;tile(256)){
+  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
     
     if(g<Ngather){
       const dlong start = gatherStarts[g];

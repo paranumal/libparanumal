@@ -44,8 +44,8 @@ void upwindRoeAveraged(const dfloat nx,
   dfloat pP = p_RT*rP;
   
   // Compute Roe average variables
-  dfloat rMsqr = occaSqrt(rM);
-  dfloat rPsqr = occaSqrt(rP); 
+  dfloat rMsqr = sqrt(rM);
+  dfloat rPsqr = sqrt(rP); 
 
   dfloat r = rMsqr*rPsqr;
   dfloat un = (rMsqr*unM + rPsqr*unP)/(rMsqr + rPsqr);
@@ -230,30 +230,30 @@ void surfaceTerms(const int e,
 }
 
 // batch process elements
-kernel void cnsSurfaceHex3D(const dlong Nelements,
+@kernel void cnsSurfaceHex3D(const dlong Nelements,
                             const int advSwitch,
-                            const dfloat * restrict sgeo,
-                            const dfloat * restrict LIFTT,      
-                            const dlong  * restrict vmapM,
-                            const dlong  * restrict vmapP,
-                            const int    * restrict EToB,
+                            @restrict const  dfloat *  sgeo,
+                            @restrict const  dfloat *  LIFTT,      
+                            @restrict const  dlong  *  vmapM,
+                            @restrict const  dlong  *  vmapP,
+                            @restrict const  int    *  EToB,
                             const dfloat time,
-                            const dfloat * restrict x,
-                            const dfloat * restrict y,
-                            const dfloat * restrict z,
+                            @restrict const  dfloat *  x,
+                            @restrict const  dfloat *  y,
+                            @restrict const  dfloat *  z,
                             const dfloat mu,
-                            const dfloat * restrict q,
-                            const dfloat * restrict viscousStresses,
-                            dfloat * restrict rhsq){
+                            @restrict const  dfloat *  q,
+                            @restrict const  dfloat *  viscousStresses,
+                            @restrict dfloat *  rhsq){
   
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     
     // for all face nodes of all elements
     // face 0 & 5
-    for(int es=0;es<p_NblockS;++es;inner2){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo + es;
           if(e<Nelements){
             const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
@@ -271,12 +271,12 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
       }
     }
     
-    barrier(globalMemFence);
+    @barrier("global");
     
     // face 1 & 3
-    for(int es=0;es<p_NblockS;++es;inner2){
-      for(int k=0;k<p_Nq;++k;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo + es;
           if(e<Nelements){
             const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
@@ -294,12 +294,12 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
       }
     }
     
-    barrier(globalMemFence);
+    @barrier("global");
     
     // face 2 & 4
-    for(int es=0;es<p_NblockS;++es;inner2){
-      for(int k=0;k<p_Nq;++k;inner1){
-        for(int j=0;j<p_Nq;++j;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int j=0;j<p_Nq;++j;@inner(0)){
           const dlong e = eo + es;
           if(e<Nelements){
             const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
@@ -392,28 +392,28 @@ void stressSurfaceTerms(const int e,
   viscousStresses[base+5*p_Np] += sc*p_two*mu*dS33;                     
 }
 
-kernel void cnsStressesSurfaceHex3D(const int Nelements,
-                                    const dfloat * restrict sgeo,
-                                     const dfloat * restrict LIFTT,
-                                    const int   * restrict vmapM,
-                                    const int   * restrict vmapP,
-                                    const int   * restrict EToB,
+@kernel void cnsStressesSurfaceHex3D(const int Nelements,
+                                    @restrict const  dfloat *  sgeo,
+                                     @restrict const  dfloat *  LIFTT,
+                                    @restrict const  int   *  vmapM,
+                                    @restrict const  int   *  vmapP,
+                                    @restrict const  int   *  EToB,
                                     const dfloat time,
-                                    const dfloat * restrict x,
-                                    const dfloat * restrict y,
-                                    const dfloat * restrict z,
+                                    @restrict const  dfloat *  x,
+                                    @restrict const  dfloat *  y,
+                                    @restrict const  dfloat *  z,
                                     const dfloat mu,
-                                    const dfloat * restrict q,
-                                    dfloat * restrict viscousStresses){
+                                    @restrict const  dfloat *  q,
+                                    @restrict dfloat *  viscousStresses){
   
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
     // for all face nodes of all elements
     // face 0 & 5
-    for(int es=0;es<p_NblockS;++es;inner2){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo + es;
           if(e<Nelements){
             const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
@@ -431,12 +431,12 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
       }
     }
     
-    barrier(globalMemFence);
+    @barrier("global");
       
     // face 1 & 3
-    for(int es=0;es<p_NblockS;++es;inner2){
-      for(int k=0;k<p_Nq;++k;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo + es;
           if(e<Nelements){
             const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
@@ -455,12 +455,12 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
       }
     }
 
-    barrier(globalMemFence);
+    @barrier("global");
 
     // face 2 & 4
-    for(int es=0;es<p_NblockS;++es;inner2){
-      for(int k=0;k<p_Nq;++k;inner1){
-        for(int j=0;j<p_Nq;++j;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int j=0;j<p_Nq;++j;@inner(0)){
           const dlong e = eo + es;
           if(e<Nelements){
             const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;

@@ -1,13 +1,13 @@
 
-kernel void scatter(const dlong Nscatter,
-		   const dlong * restrict scatterStarts,
-		   const dlong * restrict scatterIds,
+@kernel void scatter(const dlong Nscatter,
+		   @restrict const  dlong *  scatterStarts,
+		   @restrict const  dlong *  scatterIds,
        const int Nentries,
        const dlong stride,
-		   const dfloat * restrict q,
-		   dfloat * restrict scatterq){
+		   @restrict const  dfloat *  q,
+		   @restrict dfloat *  scatterq){
 
-  for(dlong s=0;s<Nscatter;++s;tile(256)){
+  for(dlong s=0;s<Nscatter;++s;@tile(256,@outer,@inner)){
 
     if(s<Nscatter){
       for (int i=0;i<Nentries;i++) {

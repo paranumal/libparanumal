@@ -34,27 +34,27 @@ void boundaryConditions2D(int bc, dfloat t, dfloat x, dfloat y,
    }
 }
 
-kernel void meshBoltzmannSurface2D(const int Nelements,
-				   const dfloat * restrict sgeo,
-				   const dfloat * restrict LIFTT,
-				   const int   * restrict vmapM,
-				   const int   * restrict vmapP,
-				   const int   * restrict EToB,
+@kernel void meshBoltzmannSurface2D(const int Nelements,
+				   @restrict const  dfloat *  sgeo,
+				   @restrict const  dfloat *  LIFTT,
+				   @restrict const  int   *  vmapM,
+				   @restrict const  int   *  vmapP,
+				   @restrict const  int   *  EToB,
 				   const dfloat time,
-				   const dfloat * restrict x,
-				   const dfloat * restrict y,
-				   const dfloat4 * restrict q,
-				   dfloat4       * restrict rhsq){
+				   @restrict const  dfloat *  x,
+				   @restrict const  dfloat *  y,
+				   @restrict const  dfloat4 *  q,
+				   @restrict dfloat4       *  rhsq){
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
+    // @shared storage for flux terms
+    @shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 	int e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Nfp*p_Nfaces){
@@ -112,12 +112,12 @@ kernel void meshBoltzmannSurface2D(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
 	int e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Np){
@@ -128,7 +128,7 @@ kernel void meshBoltzmannSurface2D(const int Nelements,
 	    dfloat4 rhsqnb = rhsq[2*id+1];
 
 	    // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-	    occaUnroll(p_NfacesNfp)
+	    #pragma unroll p_NfacesNfp
 	      for(int m=0;m<p_NfacesNfp;++m){
 		dfloat L = LIFTT[n+m*p_Np];
 		rhsqna.x += L*s_fluxq[es][0][m];

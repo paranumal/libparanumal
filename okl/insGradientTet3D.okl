@@ -1,21 +1,21 @@
 // Compute Gradient in Strong Form
-kernel void insGradientVolumeTet3D(const dlong Nelements,
-                                   const dfloat * restrict vgeo,
-                                   const dfloat * restrict DrT,
-                                   const dfloat * restrict DsT,
-                                   const dfloat * restrict DtT,
+@kernel void insGradientVolumeTet3D(const dlong Nelements,
+                                   @restrict const  dfloat *  vgeo,
+                                   @restrict const  dfloat *  DrT,
+                                   @restrict const  dfloat *  DsT,
+                                   @restrict const  dfloat *  DtT,
                                    const dlong  offset,
-                                   const dfloat * restrict P,
-                                         dfloat * restrict Px,
-                                         dfloat * restrict Py,
-                                         dfloat * restrict Pz){
+                                   @restrict const  dfloat *  P,
+                                         @restrict dfloat *  Px,
+                                         @restrict dfloat *  Py,
+                                         @restrict dfloat *  Pz){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     // for all elements
-    shared dfloat s_P[p_NblockV][p_Np];
+    @shared dfloat s_P[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           s_P[es][n]  = P[n + (e+offset)*p_Np];
@@ -23,11 +23,11 @@ kernel void insGradientVolumeTet3D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
            // prefetch geometric factors (constant on triangle)
@@ -44,7 +44,7 @@ kernel void insGradientVolumeTet3D(const dlong Nelements,
           const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 
           dfloat dpdr  = 0.f,  dpds  = 0.f, dpdt = 0.f;
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat Drni = DrT[n+i*p_Np];
               const dfloat Dsni = DsT[n+i*p_Np];
@@ -65,15 +65,15 @@ kernel void insGradientVolumeTet3D(const dlong Nelements,
   }
 }
 
-kernel void insGradientSurfaceTet3D(const dlong Nelements,
-                                    const dfloat * restrict sgeo,
-                                    const dfloat * restrict LIFTT,
-                                    const dlong  * restrict vmapM,
-                                    const dlong  * restrict vmapP,
-                                    const int    * restrict EToB,
-                                    const dfloat * restrict x,
-                                    const dfloat * restrict y,
-                                    const dfloat * restrict z,
+@kernel void insGradientSurfaceTet3D(const dlong Nelements,
+                                    @restrict const  dfloat *  sgeo,
+                                    @restrict const  dfloat *  LIFTT,
+                                    @restrict const  dlong  *  vmapM,
+                                    @restrict const  dlong  *  vmapP,
+                                    @restrict const  int    *  EToB,
+                                    @restrict const  dfloat *  x,
+                                    @restrict const  dfloat *  y,
+                                    @restrict const  dfloat *  z,
                                     const dfloat time,
                                     const dfloat dt,
                                     const dfloat c0,
@@ -82,21 +82,21 @@ kernel void insGradientSurfaceTet3D(const dlong Nelements,
                                     const int index,
                                     const dlong offset,
                                     const int solverID,
-                                    const dfloat * restrict POld,
-                                    const dfloat * restrict P,
-                                          dfloat * restrict Px,
-                                          dfloat * restrict Py,
-                                          dfloat * restrict Pz){
+                                    @restrict const  dfloat *  POld,
+                                    @restrict const  dfloat *  P,
+                                          @restrict dfloat *  Px,
+                                          @restrict dfloat *  Py,
+                                          @restrict dfloat *  Pz){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     //
-    shared dfloat s_fluxPx[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxPy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxPz[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxPx[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxPy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxPz[p_NblockS][p_Nfp*p_Nfaces];
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -147,12 +147,12 @@ kernel void insGradientSurfaceTet3D(const dlong Nelements,
       }
     }
 
-    // wait for all flux functions are written to shared
-    barrier(localMemFence);
+    // wait for all flux functions are written to @shared
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
@@ -167,7 +167,7 @@ kernel void insGradientSurfaceTet3D(const dlong Nelements,
             dfloat py  = Py[id];
             dfloat pz  = Pz[id];
             // Lift
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_Nfaces*p_Nfp;++m){
                 const dfloat L = LIFTT[n+m*p_Np];
                 px += L*s_fluxPx[es][m];

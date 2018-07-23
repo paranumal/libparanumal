@@ -1,41 +1,41 @@
 
-kernel void insDiffusionIpdgTri2D(const dlong Nelements,
-                                const dlong * restrict elementList,
-                                const dlong * restrict vmapM,
-                                const dlong * restrict vmapP,
+@kernel void insDiffusionIpdgTri2D(const dlong Nelements,
+                                @restrict const  dlong *  elementList,
+                                @restrict const  dlong *  vmapM,
+                                @restrict const  dlong *  vmapP,
                                 const dfloat nu,
                                 const dfloat tau,
-                                const dfloat * restrict vgeo,
-                                const dfloat * restrict sgeo,
-                                const int   * restrict EToB,
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  sgeo,
+                                @restrict const  int   *  EToB,
                                 const dfloat time,
-                                const dfloat * restrict x,
-                                const dfloat * restrict y,
-                                const dfloat * restrict z,
+                                @restrict const  dfloat *  x,
+                                @restrict const  dfloat *  y,
+                                @restrict const  dfloat *  z,
                                 const dlong fieldOffset,
-                                const dfloat * restrict Dmatrices,
-                                const dfloat * restrict LIFTT,
-                                const dfloat4 * restrict GU,
-                                      dfloat  * restrict LU){
+                                @restrict const  dfloat *  Dmatrices,
+                                @restrict const  dfloat *  LIFTT,
+                                @restrict const  dfloat4 *  GU,
+                                      @restrict dfloat  *  LU){
 
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    shared  dfloat s_dqdx[p_Np];
-    shared  dfloat s_dqdy[p_Np];
-    shared  dfloat s_nxdq[p_NfacesNfp];
-    shared  dfloat s_nydq[p_NfacesNfp];
-    shared  dfloat s_lapflux[p_NfacesNfp];
-    shared  dfloat s_Lnxdq[p_Np];
-    shared  dfloat s_Lnydq[p_Np];
-    exclusive dlong element;
-    exclusive dlong idM;
-    exclusive dfloat nx, ny, sJ, invJ, hinv;
+    @shared  dfloat s_dqdx[p_Np];
+    @shared  dfloat s_dqdy[p_Np];
+    @shared  dfloat s_nxdq[p_NfacesNfp];
+    @shared  dfloat s_nydq[p_NfacesNfp];
+    @shared  dfloat s_lapflux[p_NfacesNfp];
+    @shared  dfloat s_Lnxdq[p_Np];
+    @shared  dfloat s_Lnydq[p_Np];
+    @exclusive dlong element;
+    @exclusive dlong idM;
+    @exclusive dfloat nx, ny, sJ, invJ, hinv;
 
-    occaUnroll(p_NVfields)
+    #pragma unroll p_NVfields
     for (int i=0; i<p_NVfields; i++) {
 
-      barrier(localMemFence);
-      for(int n=0;n<p_maxNodes;++n;inner0){
+      @barrier("local");
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         element = elementList[e];
 
         if(n<p_Np){
@@ -53,7 +53,7 @@ kernel void insDiffusionIpdgTri2D(const dlong Nelements,
           // find face that owns this node
           const int face = n/p_Nfp;
 
-          dfloat4 gradqM = GU[idM+i*fieldOffset];// could fetch from shared after barrier
+          dfloat4 gradqM = GU[idM+i*fieldOffset];// could fetch from @shared after barrier
           dfloat4 gradqP = GU[idP+i*fieldOffset];
 
           // load surface geofactors for this face
@@ -102,10 +102,10 @@ kernel void insDiffusionIpdgTri2D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
       // dqdx += LIFT*(sJ/J)*nx*dq
-      for(int n=0;n<p_maxNodes;++n;inner0){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
 
         if(n<p_Np){
           const dlong gid = element*p_Nvgeo;
@@ -117,7 +117,7 @@ kernel void insDiffusionIpdgTri2D(const dlong Nelements,
           dfloat Lnxdq = 0;
           dfloat Lnydq = 0;
 
-          occaUnroll(p_NfacesNfp)
+          #pragma unroll p_NfacesNfp
             for(int k=0;k<p_NfacesNfp;++k){
               Lnxdq += LIFTT[n+k*p_Np]*s_nxdq[k];
               Lnydq += LIFTT[n+k*p_Np]*s_nydq[k];
@@ -133,23 +133,23 @@ kernel void insDiffusionIpdgTri2D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int n=0;n<p_maxNodes;++n;inner0){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         if(n<p_NfacesNfp){
           int id = idM%p_Np;
           s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]);
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int n=0;n<p_maxNodes;++n;inner0){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         if(n<p_Np){
           dfloat LUn = 0.0;
           dfloat lapr = 0, laps = 0;
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int k=0;k<p_Np;++k){
               lapr += Dmatrices[n+k*p_Np+0*p_Np*p_Np]*s_dqdx[k];
               laps += Dmatrices[n+k*p_Np+1*p_Np*p_Np]*s_dqdy[k];
@@ -158,7 +158,7 @@ kernel void insDiffusionIpdgTri2D(const dlong Nelements,
           LUn = -(lapr+laps);
 
           // lift remaining surface terms
-          occaUnroll(p_NfacesNfp)
+          #pragma unroll p_NfacesNfp
             for(int k=0;k<p_NfacesNfp;++k){
               LUn += LIFTT[n+k*p_Np]*s_lapflux[k];
             }

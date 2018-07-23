@@ -1,6 +1,6 @@
 
-// reference kernel; no unrolling anywhere and no padding, no const, no compiler variables
-kernel void massPartialAxHex3D_vBaseline(int Nelements,
+// reference @kernel; no unrolling anywhere and no padding, no const, no compiler variables
+@kernel void massPartialAxHex3D_vBaseline(int Nelements,
 					 int *  elementList,
 					 dfloat * gjGeo,
 					 dfloat *  gjI,
@@ -8,22 +8,22 @@ kernel void massPartialAxHex3D_vBaseline(int Nelements,
 					 dfloat *  Mq){
                                      
                                      
-  for(int e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
 	
     int Nq = p_gjNq-1;
     int Nq2 = Nq*Nq;
     int Np = Nq*Nq2;
 
-    shared dfloat s_I[p_gjNq][p_gjNq];
+    @shared dfloat s_I[p_gjNq][p_gjNq];
 		
-    shared dfloat s_q1[p_gjNq][p_gjNq];
-    shared dfloat s_q2[p_gjNq][p_gjNq];
+    @shared dfloat s_q1[p_gjNq][p_gjNq];
+    @shared dfloat s_q2[p_gjNq][p_gjNq];
 		
-    exclusive int emap;
+    @exclusive int emap;
 		
     // prefetch D and I matrices and zero register storage
-    for(int b=0;b<p_gjNq;++b;inner1){
-      for(int a=0;a<p_gjNq;++a;inner0){
+    for(int b=0;b<p_gjNq;++b;@inner(1)){
+      for(int a=0;a<p_gjNq;++a;@inner(0)){
 			
 	emap = elementList[e];
 				
@@ -39,15 +39,15 @@ kernel void massPartialAxHex3D_vBaseline(int Nelements,
       }
     }
 		
-    barrier(localMemFence);
+    @barrier("local");
 		
     //error starts here
     for(int k=0;k<p_gjNq;++k){
 		
-      barrier(localMemFence);
+      @barrier("local");
 			
-      for(int b=0;b<p_gjNq;++b;inner1){
-	for(int a=0;a<p_gjNq;++a;inner0){
+      for(int b=0;b<p_gjNq;++b;@inner(1)){
+	for(int a=0;a<p_gjNq;++a;@inner(0)){
 	  
 	  if(a<Nq && b<Nq){
 	    dfloat tmp = 0;
@@ -62,10 +62,10 @@ kernel void massPartialAxHex3D_vBaseline(int Nelements,
 	}
       }
 			
-      barrier(localMemFence);
+      @barrier("local");
 			
-      for(int b=0;b<p_gjNq;++b;inner1){
-	for(int i=0;i<p_gjNq;++i;inner0){
+      for(int b=0;b<p_gjNq;++b;@inner(1)){
+	for(int i=0;i<p_gjNq;++i;@inner(0)){
 	  if(b<Nq){
 	    dfloat tmp = 0;
 						
@@ -77,10 +77,10 @@ kernel void massPartialAxHex3D_vBaseline(int Nelements,
 	}
       }
 			
-      barrier(localMemFence);
+      @barrier("local");
 			
-      for(int j=0;j<p_gjNq;++j;inner1){
-	for(int i=0;i<p_gjNq;++i;inner0){
+      for(int j=0;j<p_gjNq;++j;@inner(1)){
+	for(int i=0;i<p_gjNq;++i;@inner(0)){
 				
 	  dfloat r_GwJ = gjGeo[p_Nggeo*emap*p_gjNp+k*p_gjNq*p_gjNq+j*p_gjNq+i + p_GWJID*p_gjNp];
 					
@@ -94,10 +94,10 @@ kernel void massPartialAxHex3D_vBaseline(int Nelements,
 	}
       }
 			
-      barrier(localMemFence);
+      @barrier("local");
 			
-      for(int b=0;b<p_gjNq;++b;inner1){
-	for(int i=0;i<p_gjNq;++i;inner0){
+      for(int b=0;b<p_gjNq;++b;@inner(1)){
+	for(int i=0;i<p_gjNq;++i;@inner(0)){
 	  if(b<Nq){
 	    dfloat tmp = 0;
 						
@@ -110,10 +110,10 @@ kernel void massPartialAxHex3D_vBaseline(int Nelements,
 	}
       }
 			
-      barrier(localMemFence);
+      @barrier("local");
 			
-      for(int b=0;b<p_gjNq;++b;inner1){
-	for(int a=0;a<p_gjNq;++a;inner0){
+      for(int b=0;b<p_gjNq;++b;@inner(1)){
+	for(int a=0;a<p_gjNq;++a;@inner(0)){
 	  if(a<Nq && b<Nq){
 					
 	    dfloat tmp = 0;

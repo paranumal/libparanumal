@@ -1,14 +1,14 @@
 
-kernel void acousticsUpdate3D(const int Ntotal,
+@kernel void acousticsUpdate3D(const int Ntotal,
 				  const dfloat dt,	
 				  const dfloat rka,
 				  const dfloat rkb,
-				  const dfloat * restrict rhsq,
-				  dfloat * restrict resq,
-				  dfloat * restrict q){
+				  @restrict const  dfloat *  rhsq,
+				  @restrict dfloat *  resq,
+				  @restrict dfloat *  q){
 				  
   // Low storage Runge Kutta time step update
-  for(int n=0;n<Ntotal;++n;tile(256)){
+  for(int n=0;n<Ntotal;++n;@tile(256,@outer,@inner)){
     if(n<Ntotal){
       dfloat resqn = resq[n];
       resqn = rka*resqn + dt*rhsq[n];
@@ -18,16 +18,16 @@ kernel void acousticsUpdate3D(const int Ntotal,
   }
 }
 
-kernel void acousticsUpdate3D_o1(const int Ntotal,
+@kernel void acousticsUpdate3D_o1(const int Ntotal,
 				     const dfloat dt,	
 				     const dfloat rka,
 				     const dfloat rkb,
-				     const dfloat4 * restrict rhsq,
-				     dfloat4 * restrict resq,
-				     dfloat4 * restrict q){
+				     @restrict const  dfloat4 *  rhsq,
+				     @restrict dfloat4 *  resq,
+				     @restrict dfloat4 *  q){
 				  
   // Low storage Runge Kutta time step update (assume Ntotal is divisible by 4)
-  for(int n=0;n<Ntotal/4;++n;tile(256)){
+  for(int n=0;n<Ntotal/4;++n;@tile(256,@outer,@inner)){
     if(n<Ntotal/4){
       dfloat4 resqn = resq[n];
       resqn = rka*resqn + dt*rhsq[n];
@@ -38,24 +38,24 @@ kernel void acousticsUpdate3D_o1(const int Ntotal,
 }
 
 
-kernel void acousticsUpdate3D_wadg(const int Nelements,
+@kernel void acousticsUpdate3D_wadg(const int Nelements,
            const dfloat dt, 
            const dfloat rka,
            const dfloat rkb,
-           const dfloat * restrict cubInterp,
-           const dfloat * restrict cubProject,
-           const dfloat * restrict c2,
-           const dfloat * restrict rhsq,
-           dfloat * restrict resq,
-           dfloat * restrict q){
+           @restrict const  dfloat *  cubInterp,
+           @restrict const  dfloat *  cubProject,
+           @restrict const  dfloat *  c2,
+           @restrict const  dfloat *  rhsq,
+           @restrict dfloat *  resq,
+           @restrict dfloat *  q){
   
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){  // for all elements
+  for(int e=0;e<Nelements;++e;@outer(0)){  // for all elements
 
-    shared dfloat s_p[p_cubNp];
-    exclusive dfloat r_p;
+    @shared dfloat s_p[p_cubNp];
+    @exclusive dfloat r_p;
 
-    for(int n=0; n < p_cubNp; ++n; inner0){  
+    for(int n=0; n < p_cubNp; ++n; @inner(0)){  
 
       if (n < p_Np){
         const int id = p_Nfields*(e*p_Np + n);
@@ -65,10 +65,10 @@ kernel void acousticsUpdate3D_wadg(const int Nelements,
       // Initialize register variable
       r_p = 0.f;
     }
-    barrier(localMemFence);
+    @barrier("local");
 
     // Interpolate rhs to cubature nodes
-    for(int n=0;n<p_cubNp;++n;inner0){
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
 
       // Prefetch value of c2
       const dfloat c2n = c2[n + e*p_cubNp];
@@ -81,16 +81,16 @@ kernel void acousticsUpdate3D_wadg(const int Nelements,
       // Multiply result by wavespeed c2 at cubature node
       r_p = val * c2n;
     }
-    barrier(localMemFence);
+    @barrier("local");
 
-    // Move temporary result back to shared memory
-    for(int n=0;n<p_cubNp;++n;inner0){
+    // Move temporary result back to @shared memory
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
       s_p[n] = r_p;
     }
-    barrier(localMemFence);
+    @barrier("local");
     
     // Increment solution, project result back down
-    for(int n=0;n<p_cubNp;++n;inner0){
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
 
       if (n < p_Np){
 

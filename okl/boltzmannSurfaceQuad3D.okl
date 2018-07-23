@@ -1,8 +1,8 @@
 
 void flux(const dfloat nx, const dfloat ny, const dfloat nz,
 	  const dfloat alpha, const dfloat beta,
-	  const dfloat * restrict dq,
-	  dfloat * restrict fluxq){
+	  @restrict const  dfloat *  dq,
+	  @restrict dfloat *  fluxq){
 
   fluxq[0] = alpha*dq[0] - beta*p_sqrtRT*(nx*dq[1] + ny*dq[2] + nz*dq[3]);
 
@@ -22,30 +22,30 @@ void flux(const dfloat nx, const dfloat ny, const dfloat nz,
 
 
 // pointwise SEM-DG lift
-kernel void boltzmannSurfaceQuad3D(const int Nelements,
-				   const dfloat * restrict sgeo,
-				   const dfloat * restrict LIFTT,
-				   const int   * restrict vmapM,
-				   const int   * restrict vmapP,
+@kernel void boltzmannSurfaceQuad3D(const int Nelements,
+				   @restrict const  dfloat *  sgeo,
+				   @restrict const  dfloat *  LIFTT,
+				   @restrict const  int   *  vmapM,
+				   @restrict const  int   *  vmapP,
 				   const dfloat time,
-				   const dfloat * restrict x,
-				   const dfloat * restrict y,
-				   const dfloat * restrict z,
-				   const dfloat * restrict q,
-				   dfloat * restrict rhsq){
+				   @restrict const  dfloat *  x,
+				   @restrict const  dfloat *  y,
+				   @restrict const  dfloat *  z,
+				   @restrict const  dfloat *  q,
+				   @restrict dfloat *  rhsq){
   
   
 #define p_LIFT (0.5f*(p_Nq-1)*p_Nq)
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     
     // for all faces (global barrier at end of body of this loop)
     for(int face=0;face<p_Nfaces;++face){      
 
       
-      for(int es=0;es<p_NblockS;++es;inner1){
-	for(int i=0;i<p_Nq;++i;inner0){ 
+      for(int es=0;es<p_NblockS;++es;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){ 
 
 	  const int eM = eo + es;
 	  
@@ -70,7 +70,7 @@ kernel void boltzmannSurfaceQuad3D(const int Nelements,
 
 	    dfloat dq[p_Nfields], fluxq[p_Nfields];
 	    
-	    occaUnroll(p_Nfields)
+	    #pragma unroll p_Nfields
 	      for(int fld=0;fld<p_Nfields;++fld){
 		const dfloat qM = q[vidM+fld*p_Np];
 		const dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
@@ -91,7 +91,7 @@ kernel void boltzmannSurfaceQuad3D(const int Nelements,
 	    // evaluate "flux" terms: (sJ/J)*(D+sigma*D*D)*(q^* - q^-)
 	    const dfloat sc = invJ*sJ*p_LIFT;
 
-	    occaUnroll(p_Nfields)
+	    #pragma unroll p_Nfields
 	      for(int fld=0;fld<p_Nfields;++fld){
 		rhsq[vidM+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
 	      }
@@ -100,7 +100,7 @@ kernel void boltzmannSurfaceQuad3D(const int Nelements,
       }
 
       // wait for all global memory writes of the previous inner loop to complete
-      barrier(globalMemFence);
+      @barrier("global");
 
       
     }

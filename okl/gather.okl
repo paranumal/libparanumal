@@ -1,13 +1,13 @@
 
-kernel void gather(const dlong Ngather,
-		   const dlong * restrict gatherStarts,
-		   const dlong * restrict gatherIds,
+@kernel void gather(const dlong Ngather,
+		   @restrict const  dlong *  gatherStarts,
+		   @restrict const  dlong *  gatherIds,
        const int Nentries,
        const dlong stride,
-		   const dfloat * restrict q,
-		   dfloat * restrict gatherq){
+		   @restrict const  dfloat *  q,
+		   @restrict dfloat *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;tile(256)){
+  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
 
     if(g<Ngather){
       const dlong start = gatherStarts[g];

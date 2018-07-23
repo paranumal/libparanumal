@@ -13,11 +13,11 @@ void boundaryConditions3D(int bc, dfloat time,
     *pP = pM;
   }
   if(bc==2){
-    dfloat dx = 1.f/occaSqrt(2.f);
-    dfloat dy = 1.f/occaSqrt(2.f);
+    dfloat dx = 1.f/sqrt(2.f);
+    dfloat dy = 1.f/sqrt(2.f);
     dfloat dz = 0;
     dfloat omega = 10*M_PI;
-    dfloat wave = occaCos(omega*(time-(x*dx+y*dy+z*dz)));
+    dfloat wave = cos(omega*(time-(x*dx+y*dy+z*dz)));
     dfloat uI = dx*wave;
     dfloat vI = dy*wave;
     dfloat wI = dz*wave;
@@ -31,42 +31,42 @@ void boundaryConditions3D(int bc, dfloat time,
   }
 }
 
-kernel void acousticsbbdgMRABSurface3D(const int Nelements,
-           const int   * restrict elementIds,
-           const dfloat * restrict sgeo,
-           const int   * restrict L0ids,
-           const dfloat * restrict L0vals,
-           const int   * restrict ELids,
-           const dfloat * restrict ELvals,
-           const int   * restrict vmapM,
-           const int   * restrict mapP,
-           const int   * restrict EToB,
+@kernel void acousticsbbdgMRABSurface3D(const int Nelements,
+           @restrict const  int   *  elementIds,
+           @restrict const  dfloat *  sgeo,
+           @restrict const  int   *  L0ids,
+           @restrict const  dfloat *  L0vals,
+           @restrict const  int   *  ELids,
+           @restrict const  dfloat *  ELvals,
+           @restrict const  int   *  vmapM,
+           @restrict const  int   *  mapP,
+           @restrict const  int   *  EToB,
            const dfloat time,
-           const dfloat * restrict x,
-           const dfloat * restrict y,
-           const dfloat * restrict z,
-           const dfloat * restrict q,
-           const dfloat * restrict fQM,
-           const dfloat * restrict fQP,
-           dfloat       * restrict rhsq,
+           @restrict const  dfloat *  x,
+           @restrict const  dfloat *  y,
+           @restrict const  dfloat *  z,
+           @restrict const  dfloat *  q,
+           @restrict const  dfloat *  fQM,
+           @restrict const  dfloat *  fQP,
+           @restrict dfloat       *  rhsq,
            const int   rhsShift){
 
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxw[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxp[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxu_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxw_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxp_copy[p_NblockS][p_Nfp*p_Nfaces];
+    // @shared storage for flux terms
+    @shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxw[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxp[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxu_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxw_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxp_copy[p_NblockS][p_Nfp*p_Nfaces];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const int et = eo + es;
         if(et<Nelements){
 
@@ -116,12 +116,12 @@ kernel void acousticsbbdgMRABSurface3D(const int Nelements,
       }
     }
 
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // apply L0 to fluxes. use sparse format
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int et = eo + es;
         if(et<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -135,7 +135,7 @@ kernel void acousticsbbdgMRABSurface3D(const int Nelements,
             dfloat ptmpflux = 0.0;
 
             // sparse application of L0
-            occaUnroll(7)
+            #pragma unroll 7
             for (int m = 0; m < 7; ++m){
               int   L0id  = L0ids [id + p_Nfp*m];
               dfloat L0val = L0vals[id + p_Nfp*m];
@@ -155,11 +155,11 @@ kernel void acousticsbbdgMRABSurface3D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // apply lift reduction and accumulate RHS
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int et = eo + es;
         if(et<Nelements){
           if(n<p_Np){
@@ -173,7 +173,7 @@ kernel void acousticsbbdgMRABSurface3D(const int Nelements,
             dfloat rhsqnp = rhsq[id+3];
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_max_EL_nnz)
+            #pragma unroll p_max_EL_nnz
             for (int m = 0; m < p_max_EL_nnz; ++m){
               const int id = n + m*p_Np;
               const dfloat ELval = ELvals[id];

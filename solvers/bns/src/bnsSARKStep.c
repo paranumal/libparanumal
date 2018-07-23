@@ -85,7 +85,7 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
                                 mesh->o_haloBuffer);
 
         // copy extracted halo to HOST
-        mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
+        mesh->o_haloBuffer.copyTo(sendBuffer,"async: true");
         mesh->device.setStream(defaultStream);
 
       #else
@@ -255,7 +255,7 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
         meshHaloExchangeFinish(mesh);
         // copy halo data to DEVICE
         size_t offset = mesh->Np*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-        bns->o_rkq.asyncCopyFrom(recvBuffer, haloBytes, offset);
+        bns->o_rkq.copyFrom(recvBuffer, haloBytes, offset,"async: true");
         mesh->device.finish();
 
         mesh->device.setStream(defaultStream);

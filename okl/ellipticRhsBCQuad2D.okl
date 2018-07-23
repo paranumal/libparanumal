@@ -1,26 +1,26 @@
-kernel void ellipticRhsBCQuad2D(const dlong Nelements,
-                              const dfloat * restrict ggeo,
-                              const dfloat * restrict sgeo,
-                              const dfloat * restrict D,
-                              const dlong   * restrict vmapM,
+@kernel void ellipticRhsBCQuad2D(const dlong Nelements,
+                              @restrict const  dfloat *  ggeo,
+                              @restrict const  dfloat *  sgeo,
+                              @restrict const  dfloat *  D,
+                              @restrict const  dlong   *  vmapM,
                               const dfloat lambda,
                               const dfloat t,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const int    * restrict mapB,
-                              dfloat  * restrict rhs){
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  int    *  mapB,
+                              @restrict dfloat  *  rhs){
   
-  for(dlong e=0;e<Nelements;e++;outer0){
-    shared dfloat s_q[p_Nq][p_Nq];
-    shared dfloat s_ndq[p_Nq][p_Nq];
-    shared dfloat s_D[p_Nq][p_Nq];
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_q[p_Nq][p_Nq];
+    @shared dfloat s_ndq[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
 
-    exclusive dfloat r_qr[p_Nq], r_qs[p_Nq], r_Aq[p_Nq];
-    exclusive dfloat r_G00[p_Nq], r_G01[p_Nq], r_G11[p_Nq], r_GwJ[p_Nq];
+    @exclusive dfloat r_qr[p_Nq], r_qs[p_Nq], r_Aq[p_Nq];
+    @exclusive dfloat r_G00[p_Nq], r_G01[p_Nq], r_G11[p_Nq], r_GwJ[p_Nq];
 
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
-      for(int i=0;i<p_Nq;++i;inner0){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         s_q[j][i] = 0.;
         s_ndq[j][i] = 0.;
 
@@ -28,10 +28,10 @@ kernel void ellipticRhsBCQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 0 & 2
-    for(int i=0;i<p_Nq;++i;inner0){
+    for(int i=0;i<p_Nq;++i;@inner(0)){
       {//face 0
         const dlong sk = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
         const dlong idM = vmapM[sk];
@@ -74,10 +74,10 @@ kernel void ellipticRhsBCQuad2D(const dlong Nelements,
       }
     }
   
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1 & 3
-    for(int j=0;j<p_Nq;++j;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(0)){
       {//face 1
         const dlong sk = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
         const dlong idM = vmapM[sk];
@@ -120,11 +120,11 @@ kernel void ellipticRhsBCQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
-      for(int i=0;i<p_Nq;++i;inner0){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
 
         // assumes w*J built into G entries
@@ -137,7 +137,7 @@ kernel void ellipticRhsBCQuad2D(const dlong Nelements,
 
         dfloat qr = 0.f, qs = 0.f;
         
-        occaUnroll(p_Nq)
+        #pragma unroll p_Nq
           for(int n=0; n<p_Nq; ++n){
             qr += s_D[i][n]*s_q[j][n];
             qs += s_D[j][n]*s_q[n][i];
@@ -150,20 +150,20 @@ kernel void ellipticRhsBCQuad2D(const dlong Nelements,
     }
 
     // r term ----->
-    barrier(localMemFence);
+    @barrier("local");
 
     for(int j=0;j<p_Nq;++j){
-      for(int i=0;i<p_Nq;++i;inner0){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         s_q[j][i] = r_G00[j]*r_qr[j] + r_G01[j]*r_qs[j];
       }
     }
       
-    barrier(localMemFence);
+    @barrier("local");
 
     for(int j=0;j<p_Nq;++j){
-      for(int i=0;i<p_Nq;++i;inner0){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         dfloat tmp = 0.f;
-        occaUnroll(p_Nq)
+        #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n) {
             tmp += s_D[n][i]*s_q[j][n];
           }
@@ -173,21 +173,21 @@ kernel void ellipticRhsBCQuad2D(const dlong Nelements,
     }
 
     // s term ---->
-    barrier(localMemFence);
+    @barrier("local");
 
     for(int j=0;j<p_Nq;++j){
-      for(int i=0;i<p_Nq;++i;inner0){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         s_q[j][i] = r_G01[j]*r_qr[j] + r_G11[j]*r_qs[j];
       }
     }
       
-    barrier(localMemFence);
+    @barrier("local");
 
     for(int j=0;j<p_Nq;++j){
-      for(int i=0;i<p_Nq;++i;inner0){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         dfloat tmp = 0.f;
 
-        occaUnroll(p_Nq) 
+        #pragma unroll p_Nq 
           for(int n=0;n<p_Nq;++n) {
             tmp += s_D[n][j]*s_q[n][i];
           }

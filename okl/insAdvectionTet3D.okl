@@ -1,31 +1,31 @@
 // compute div(NU)  = div(uxu) in collocation way
-kernel void insAdvectionVolumeTet3D(const dlong Nelements,
-                                    const dfloat * restrict vgeo,
-                                    const dfloat * restrict DrT,
-                                    const dfloat * restrict DsT,
-                                    const dfloat * restrict DtT,
+@kernel void insAdvectionVolumeTet3D(const dlong Nelements,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  DrT,
+                                    @restrict const  dfloat *  DsT,
+                                    @restrict const  dfloat *  DtT,
                                     const dlong offset,
-                                    const dfloat * restrict U,
-                                    const dfloat * restrict V,
-                                    const dfloat * restrict W,
-                                          dfloat * restrict NU,
-                                          dfloat * restrict NV,
-                                          dfloat * restrict NW){
+                                    @restrict const  dfloat *  U,
+                                    @restrict const  dfloat *  V,
+                                    @restrict const  dfloat *  W,
+                                          @restrict dfloat *  NU,
+                                          @restrict dfloat *  NV,
+                                          @restrict dfloat *  NW){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
     // Hold Flux Vector on Shared, use symmetry f
-    shared dfloat s_F11[p_NblockV][p_Np];
-    shared dfloat s_F12[p_NblockV][p_Np];
-    shared dfloat s_F13[p_NblockV][p_Np];
-    shared dfloat s_F21[p_NblockV][p_Np];
-    shared dfloat s_F22[p_NblockV][p_Np];
-    shared dfloat s_F23[p_NblockV][p_Np];
-    shared dfloat s_F31[p_NblockV][p_Np];
-    shared dfloat s_F32[p_NblockV][p_Np];
-    shared dfloat s_F33[p_NblockV][p_Np];
+    @shared dfloat s_F11[p_NblockV][p_Np];
+    @shared dfloat s_F12[p_NblockV][p_Np];
+    @shared dfloat s_F13[p_NblockV][p_Np];
+    @shared dfloat s_F21[p_NblockV][p_Np];
+    @shared dfloat s_F22[p_NblockV][p_Np];
+    @shared dfloat s_F23[p_NblockV][p_Np];
+    @shared dfloat s_F31[p_NblockV][p_Np];
+    @shared dfloat s_F32[p_NblockV][p_Np];
+    @shared dfloat s_F33[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){ 
           const dlong id = (e+offset)*p_Np+n;
@@ -65,15 +65,15 @@ kernel void insAdvectionVolumeTet3D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_Np;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){     
         const dlong e = eo+es; 
         if(e<Nelements){    
           dfloat nu = 0., nv = 0., nw = 0.;
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat Drni  = DrT[n+i*p_Np];
               const dfloat Dsni  = DsT[n+i*p_Np];
@@ -103,32 +103,32 @@ kernel void insAdvectionVolumeTet3D(const dlong Nelements,
   }
 }
 
-kernel void insAdvectionSurfaceTet3D(const dlong Nelements,
-                                     const dfloat * restrict sgeo,
-                                     const dfloat * restrict LIFTT,
-                                     const dlong  * restrict vmapM,
-                                     const dlong  * restrict vmapP,
-                                     const int    * restrict EToB,
+@kernel void insAdvectionSurfaceTet3D(const dlong Nelements,
+                                     @restrict const  dfloat *  sgeo,
+                                     @restrict const  dfloat *  LIFTT,
+                                     @restrict const  dlong  *  vmapM,
+                                     @restrict const  dlong  *  vmapP,
+                                     @restrict const  int    *  EToB,
                                      const dfloat time,
-                                     const dfloat * restrict x,
-                                     const dfloat * restrict y,
-                                     const dfloat * restrict z,
+                                     @restrict const  dfloat *  x,
+                                     @restrict const  dfloat *  y,
+                                     @restrict const  dfloat *  z,
                                      const dlong offset,
-                                     const dfloat * restrict U,
-                                     const dfloat * restrict V,
-                                     const dfloat * restrict W,
-                                           dfloat * restrict NU,
-                                           dfloat * restrict NV,
-                                           dfloat * restrict NW){
+                                     @restrict const  dfloat *  U,
+                                     @restrict const  dfloat *  V,
+                                     @restrict const  dfloat *  W,
+                                           @restrict dfloat *  NU,
+                                           @restrict dfloat *  NV,
+                                           @restrict dfloat *  NW){
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_fluxNx[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxNy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxNz[p_NblockS][p_Nfp*p_Nfaces];
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_fluxNx[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxNy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxNz[p_NblockS][p_Nfp*p_Nfaces];
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -159,8 +159,8 @@ kernel void insAdvectionSurfaceTet3D(const dlong Nelements,
             }
 
             // Find max normal velocity on the face
-            const dfloat unM   = occaFabs(nx*uM + ny*vM + nz*wM);
-            const dfloat unP   = occaFabs(nx*uP + ny*vP + nz*wP);    
+            const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);
+            const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);    
             const dfloat unMax = (unM > unP) ? unM : unP;
              // evaluate "flux" terms: LLF
             const dfloat sc = invJ * sJ ; 
@@ -184,12 +184,12 @@ kernel void insAdvectionSurfaceTet3D(const dlong Nelements,
     }
 
 
-    // wait for all flux functions are written to shared 
-    barrier(localMemFence);
+    // wait for all flux functions are written to @shared 
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
@@ -198,7 +198,7 @@ kernel void insAdvectionSurfaceTet3D(const dlong Nelements,
             dfloat rhsnv = NV[id];
             dfloat rhsnw = NW[id];
             // Lift
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_Nfaces*p_Nfp;++m){
                 const dfloat L = LIFTT[n+m*p_Np];
                 rhsnu  += L*s_fluxNx[es][m];
@@ -218,39 +218,39 @@ kernel void insAdvectionSurfaceTet3D(const dlong Nelements,
 
 
 // compute div(NU)  = div(uxu) in collocation way
-kernel void insAdvectionCubatureVolumeTet3D(const dlong Nelements,
-                                            const dfloat * restrict vgeo,
-                                            const dfloat * restrict cubDrWT,
-                                            const dfloat * restrict cubDsWT,
-                                            const dfloat * restrict cubDtWT,
-                                            const dfloat * restrict cubInterpT,
+@kernel void insAdvectionCubatureVolumeTet3D(const dlong Nelements,
+                                            @restrict const  dfloat *  vgeo,
+                                            @restrict const  dfloat *  cubDrWT,
+                                            @restrict const  dfloat *  cubDsWT,
+                                            @restrict const  dfloat *  cubDtWT,
+                                            @restrict const  dfloat *  cubInterpT,
                                             const dlong offset,
-                                            const dfloat * restrict U,
-                                            const dfloat * restrict V,
-                                            const dfloat * restrict W,
-                                                  dfloat * restrict NU,
-                                                  dfloat * restrict NV,
-                                                  dfloat * restrict NW){
+                                            @restrict const  dfloat *  U,
+                                            @restrict const  dfloat *  V,
+                                            @restrict const  dfloat *  W,
+                                                  @restrict dfloat *  NU,
+                                                  @restrict dfloat *  NV,
+                                                  @restrict dfloat *  NW){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
 
     // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat s_U[p_cubNblockV][p_Np];
-    shared dfloat s_V[p_cubNblockV][p_Np];
-    shared dfloat s_W[p_cubNblockV][p_Np];
+    @shared dfloat s_U[p_cubNblockV][p_Np];
+    @shared dfloat s_V[p_cubNblockV][p_Np];
+    @shared dfloat s_W[p_cubNblockV][p_Np];
 
-    shared dfloat s_cF11[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF12[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF13[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF21[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF22[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF23[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF31[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF32[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF33[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF11[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF12[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF13[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF21[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF22[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF23[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF31[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF32[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF33[p_cubNblockV][p_cubNp];
 
-    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){      // for all nodes in this element
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){      // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           if(n<p_Np){ 
@@ -263,11 +263,11 @@ kernel void insAdvectionCubatureVolumeTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
 
-    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements && n<p_cubNp){
           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -283,7 +283,7 @@ kernel void insAdvectionCubatureVolumeTet3D(const dlong Nelements,
           const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 
           dfloat cUn = 0, cVn = 0, cWn = 0;
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             const dfloat cIni = cubInterpT[n+i*p_cubNp];
             cUn += cIni*s_U[es][i];
@@ -310,15 +310,15 @@ kernel void insAdvectionCubatureVolumeTet3D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; 
         if(e<Nelements && n<p_Np){    
           dfloat nu = 0., nv = 0., nw = 0.;
-          occaUnroll(p_cubNp)
+          #pragma unroll p_cubNp
             for(int i=0;i<p_cubNp;++i){
               const dfloat cDrWni = cubDrWT[n+i*p_Np];
               const dfloat cDsWni = cubDsWT[n+i*p_Np];
@@ -349,44 +349,44 @@ kernel void insAdvectionCubatureVolumeTet3D(const dlong Nelements,
 }
 
 
-kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
-                                             const dfloat * restrict sgeo,
-                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
-                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                             const dlong  * restrict vmapM,
-                                             const dlong  * restrict vmapP,
-                                             const int    * restrict EToB,
+@kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
+                                             @restrict const  dfloat *  sgeo,
+                                             @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
+                                             @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
+                                             @restrict const  dlong  *  vmapM,
+                                             @restrict const  dlong  *  vmapP,
+                                             @restrict const  int    *  EToB,
                                              const dfloat time,
-                                             const dfloat * restrict intx, // integration nodes
-                                             const dfloat * restrict inty,
-                                             const dfloat * restrict intz,
+                                             @restrict const  dfloat *  intx, // integration nodes
+                                             @restrict const  dfloat *  inty,
+                                             @restrict const  dfloat *  intz,
                                              const dlong offset,
-                                             const dfloat * restrict U,
-                                             const dfloat * restrict V,
-                                             const dfloat * restrict W,
-                                                   dfloat * restrict NU,
-                                                   dfloat * restrict NV,
-                                                   dfloat * restrict NW){
+                                             @restrict const  dfloat *  U,
+                                             @restrict const  dfloat *  V,
+                                             @restrict const  dfloat *  W,
+                                                   @restrict dfloat *  NU,
+                                                   @restrict dfloat *  NV,
+                                                   @restrict dfloat *  NW){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_UM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VM[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_WM[p_cubNblockS][p_NfacesNfp];
+    // @shared storage for flux terms
+    @shared dfloat s_UM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_VM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_WM[p_cubNblockS][p_NfacesNfp];
 
-    shared dfloat s_UP[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_VP[p_cubNblockS][p_NfacesNfp];
-    shared dfloat s_WP[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_UP[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_VP[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_WP[p_cubNblockS][p_NfacesNfp];
 
-    shared dfloat s_iFluxNx[p_cubNblockS][p_intNfpNfaces];
-    shared dfloat s_iFluxNy[p_cubNblockS][p_intNfpNfaces];
-    shared dfloat s_iFluxNz[p_cubNblockS][p_intNfpNfaces];
+    @shared dfloat s_iFluxNx[p_cubNblockS][p_intNfpNfaces];
+    @shared dfloat s_iFluxNy[p_cubNblockS][p_intNfpNfaces];
+    @shared dfloat s_iFluxNz[p_cubNblockS][p_intNfpNfaces];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_cubNblockS;++es;inner1){
-      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements && n<(p_Nfaces*p_Nfp)){
           const dlong id  = e*p_Nfp*p_Nfaces + n;
@@ -405,11 +405,11 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // interpolate to surface integration nodes
-    for(int es=0;es<p_cubNblockS;++es;inner1){
-      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){ 
         const dlong e = eo + es;
         if(e<Nelements && n<(p_Nfaces*p_intNfp)){
            // find face that owns this integration node
@@ -426,7 +426,7 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
             dfloat iUP = 0.f, iVP = 0.f, iWP = 0.f;
 
             // local block interpolation (face nodes to integration nodes)
-            occaUnroll(p_Nfp)
+            #pragma unroll p_Nfp
             for(int m=0;m<p_Nfp;++m){
               const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
               const int fm = face*p_Nfp+m;
@@ -446,8 +446,8 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
             }
 
             // Find max normal velocity on the face // LLF
-            const dfloat unM   = occaFabs(nx*iUM + ny*iVM + nz*iWM);
-            const dfloat unP   = occaFabs(nx*iUP + ny*iVP + nz*iWP);    
+            const dfloat unM   = fabs(nx*iUM + ny*iVM + nz*iWM);
+            const dfloat unP   = fabs(nx*iUP + ny*iVP + nz*iWP);    
             const dfloat unMax = (unM > unP) ? unM : unP;
 
             // evaluate "flux" terms: LLF
@@ -470,12 +470,12 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
       }
     }
 
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // lift from surface integration to volume nodes
-    for(int es=0;es<p_cubNblockS;++es;inner1){
-      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements && n<p_Np ){
           const dlong id = n + p_Np*(e+offset);
@@ -484,7 +484,7 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
           dfloat NVn = NV[id];
           dfloat NWn = NW[id];
 
-          occaUnroll(p_intNfp*p_Nfaces)
+          #pragma unroll p_intNfp*p_Nfaces
           for(int m=0;m<(p_intNfp*p_Nfaces);++m){
             // RefMassMatrix^{-1}*cInterp^t*cWeight
             const dfloat L = intLIFTT[n+m*p_Np];
@@ -518,52 +518,52 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 // return max;
 // }
 
-// kernel void insAdvectionCubatureSurface3D_0(const int Nelements,
-//             const dfloat * restrict sgeo,
-//             const dfloat * restrict intInterpT, // interpolate to integration nodes
-//             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-//             const int   * restrict vmapM,
-//             const int   * restrict vmapP,
-//             const int   * restrict EToB,
+// @kernel void insAdvectionCubatureSurface3D_0(const int Nelements,
+//             @restrict const  dfloat *  sgeo,
+//             @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
+//             @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
+//             @restrict const  int   *  vmapM,
+//             @restrict const  int   *  vmapP,
+//             @restrict const  int   *  EToB,
 //             const dfloat time,
-//             const dfloat * restrict x, // integration nodes
-//             const dfloat * restrict y,
-//             const dfloat * restrict z,
-//             const dfloat * restrict intx, // integration nodes
-//             const dfloat * restrict inty,
-//             const dfloat * restrict intz,
+//             @restrict const  dfloat *  x, // integration nodes
+//             @restrict const  dfloat *  y,
+//             @restrict const  dfloat *  z,
+//             @restrict const  dfloat *  intx, // integration nodes
+//             @restrict const  dfloat *  inty,
+//             @restrict const  dfloat *  intz,
 //             const int offset,
-//             const dfloat * restrict U,
-//             const dfloat * restrict V,
-//             const dfloat * restrict W,
-//             dfloat * restrict NU,
-//             dfloat * restrict NV,
-//             dfloat * restrict NW){
+//             @restrict const  dfloat *  U,
+//             @restrict const  dfloat *  V,
+//             @restrict const  dfloat *  W,
+//             @restrict dfloat *  NU,
+//             @restrict dfloat *  NV,
+//             @restrict dfloat *  NW){
  
 //  // Just for testing modify later
 
 //   // for all elements
-//   for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+//   for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-//     shared volatile  dfloat s_a[p_NblockS][p_Nfaces][p_Nfp];
-//     // shared storage for flux terms
-//     shared dfloat s_UM[p_NblockS][p_NfacesNfp];
-//     shared dfloat s_VM[p_NblockS][p_NfacesNfp];
-//     shared dfloat s_WM[p_NblockS][p_NfacesNfp];
+//     @shared volatile  dfloat s_a[p_NblockS][p_Nfaces][p_Nfp];
+//     // @shared storage for flux terms
+//     @shared dfloat s_UM[p_NblockS][p_NfacesNfp];
+//     @shared dfloat s_VM[p_NblockS][p_NfacesNfp];
+//     @shared dfloat s_WM[p_NblockS][p_NfacesNfp];
 
-//     shared dfloat s_UP[p_NblockS][p_NfacesNfp];
-//     shared dfloat s_VP[p_NblockS][p_NfacesNfp];
-//     shared dfloat s_WP[p_NblockS][p_NfacesNfp];
+//     @shared dfloat s_UP[p_NblockS][p_NfacesNfp];
+//     @shared dfloat s_VP[p_NblockS][p_NfacesNfp];
+//     @shared dfloat s_WP[p_NblockS][p_NfacesNfp];
 
-//     shared dfloat s_iFluxNx[p_NblockS][p_intNfpNfaces];
-//     shared dfloat s_iFluxNy[p_NblockS][p_intNfpNfaces];
-//     shared dfloat s_iFluxNz[p_NblockS][p_intNfpNfaces];
+//     @shared dfloat s_iFluxNx[p_NblockS][p_intNfpNfaces];
+//     @shared dfloat s_iFluxNy[p_NblockS][p_intNfpNfaces];
+//     @shared dfloat s_iFluxNz[p_NblockS][p_intNfpNfaces];
 
-//     exclusive int f, m;
+//     @exclusive int f, m;
 
 //     // for all face nodes of all elements
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxSurfaceNodes;++n;inner0){
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){
 //         int e = eo + es;
 //         if(e<Nelements && n<(p_Nfaces*p_Nfp)){
 //           const int id  = e*p_Nfp*p_Nfaces + n;
@@ -592,8 +592,8 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 //             insAdvectionBoundaryConditions3D(bc,time, x[idM],y[idM],z[idM], nx,ny,nz, uM,vM,wM, &uP,&vP,&wP);
 //           }
 //           // Find max normal velocity on the face
-//           dfloat unM   = occaFabs(nx*uM + ny*vM + nz*wM);
-//           dfloat unP   = occaFabs(nx*uP + ny*vP + nz*wP);    
+//           dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);
+//           dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);    
           
 //           dfloat unMax = (unM > unP) ? unM : unP;
 
@@ -606,10 +606,10 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 //      }
 //     }
 
-//     barrier(localMemFence);
+//     @barrier("local");
 
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){ 
 //         if(n<(p_Nfaces*p_Nfp)){ 
 //         if(m<128 && m+128 < p_Nfp)
 //           s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+128]);
@@ -617,10 +617,10 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 //       }
 //     }
 
-//     barrier(localMemFence);
+//     @barrier("local");
 
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){ 
 //         if(n<(p_Nfaces*p_Nfp)){ 
 //         if(m<64 && m+64<p_Nfp)
 //           s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+64]);
@@ -629,10 +629,10 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 //     }
 
 
-//     barrier(localMemFence);
+//     @barrier("local");
 
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){ 
 //         if(n<(p_Nfaces*p_Nfp)){ 
 //         if(m<32 && m+32<p_Nfp)
 //           s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+32]);
@@ -640,10 +640,10 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 //       }
 //     }
 
-//   barrier(localMemFence); // OCCA COMPLAINS!!!!
+//   @barrier("local"); // OCCA COMPLAINS!!!!
 
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){ 
 //         if(n<(p_Nfaces*p_Nfp)){ 
 //         if(m<16 && m+16<p_Nfp)
 //           s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+16]);
@@ -651,10 +651,10 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 //       }
 //     }
 
-//     barrier(localMemFence);
+//     @barrier("local");
 
-//       for(int es=0;es<p_NblockS;++es;inner1){
-//         for(int n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+//       for(int es=0;es<p_NblockS;++es;@inner(1)){
+//         for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){ 
 //           if(n<(p_Nfaces*p_Nfp)){ 
 //           if(m<8 && m+8<p_Nfp)
 //             s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+8]);
@@ -662,10 +662,10 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 //         }
 //       }
 
-//   barrier(localMemFence);
+//   @barrier("local");
 
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){ 
 //         if(n<(p_Nfaces*p_Nfp)){ 
 //         if(m<4 && m+4<p_Nfp)
 //           s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+4]);
@@ -673,20 +673,20 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 //       }
 //     }
 
-//     barrier(localMemFence);
+//     @barrier("local");
 
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxSurfaceNodes;++n;inner0){
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){
 //        if(n<(p_Nfaces*p_Nfp)){ 
 //          if(m<2 && m+2<p_Nfp)
 //           s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+2]);
 //       }
 //       }
 //     }
-//   barrier(localMemFence);
+//   @barrier("local");
 
-//   for(int es=0;es<p_NblockS;++es;inner1){
-//         for(int n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+//   for(int es=0;es<p_NblockS;++es;@inner(1)){
+//         for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){ 
 //           if(n<(p_Nfaces*p_Nfp)){ 
 //           if(m<1 && (m+1)<p_Nfp)
 //             s_a[es][f][m]  = myMax(s_a[es][f][m],s_a[es][f][m+1]);
@@ -694,11 +694,11 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 //         }
 //       }
 
-//   barrier(localMemFence);
+//   @barrier("local");
 
 //     // interpolate to surface integration nodes
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxSurfaceNodes;++n;inner0){ 
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){ 
 //         int e = eo + es;
 //         if(e<Nelements && n<(p_Nfaces*p_intNfp)){
 //            // find face that owns this integration node
@@ -715,7 +715,7 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 //             dfloat iUP = 0.f, iVP = 0.f, iWP = 0.f;
 
 //             // local block interpolation (face nodes to integration nodes)
-//             occaUnroll(p_Nfp)
+//             #pragma unroll p_Nfp
 //             for(int m=0;m<p_Nfp;++m){
 //               const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
 //               const int fm = face*p_Nfp+m;
@@ -758,11 +758,11 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 //     }
 
 
-//     barrier(localMemFence);
+//     @barrier("local");
 
 //     // lift from surface integration to volume nodes
-//     for(int es=0;es<p_NblockS;++es;inner1){
-//       for(int n=0;n<p_maxSurfaceNodes;++n;inner0){
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<p_maxSurfaceNodes;++n;@inner(0)){
 //         const int e = eo + es;
 //         if(e<Nelements && n<p_Np ){
 //             int id = n + p_Np*(e+offset);
@@ -771,7 +771,7 @@ kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 //             dfloat NVn = NV[id];
 //             dfloat NWn = NW[id];
 
-//             occaUnroll(p_intNfp*p_Nfaces)
+//             #pragma unroll p_intNfp*p_Nfaces
 //             for(int m=0;m<(p_intNfp*p_Nfaces);++m){
 //               // RefMassMatrix^{-1}*cInterp^t*cWeight
 //               const dfloat L = intLIFTT[n+m*p_Np];

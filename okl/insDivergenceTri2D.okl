@@ -1,19 +1,19 @@
 
-// kernel void insDivergence2D(const int Nelements,
-//                             const dfloat * restrict vgeo,
-//                             const dfloat * restrict DrT,
-//                             const dfloat * restrict DsT,
-//                             const dfloat * restrict U,
-//                             const dfloat * restrict V,
-//                                   dfloat * restrict divU){
+// @kernel void insDivergence2D(const int Nelements,
+//                             @restrict const  dfloat *  vgeo,
+//                             @restrict const  dfloat *  DrT,
+//                             @restrict const  dfloat *  DsT,
+//                             @restrict const  dfloat *  U,
+//                             @restrict const  dfloat *  V,
+//                                   @restrict dfloat *  divU){
 
-//   for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+//   for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 //     // for all elements
-//     shared dfloat s_U[p_NblockV][p_Np];
-//     shared dfloat s_V[p_NblockV][p_Np];
+//     @shared dfloat s_U[p_NblockV][p_Np];
+//     @shared dfloat s_V[p_NblockV][p_Np];
      
-//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+//       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 //         int e = eo+es; // element in block
 //         if(e<Nelements){
 //           s_U[es][n]  = U[n + e*p_Np];
@@ -22,11 +22,11 @@
 //       }
 //     }
 
-//     // Make sure all node data is loaded into shared
-//     barrier(localMemFence);
+//     // Make sure all node data is loaded into @shared
+//     @barrier("local");
 
-//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+//       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 //         int e = eo+es; // element in block
 //         if(e<Nelements){
           
@@ -38,7 +38,7 @@
 
 //           dfloat dudr  = 0.f, duds  = 0.f;
 //           dfloat dvdr  = 0.f, dvds  = 0.f;
-//           occaUnroll(p_Np)
+//           #pragma unroll p_Np
 //             for(int i=0;i<p_Np;++i){
 //               const dfloat Drni = DrT[n+i*p_Np];
 //               const dfloat Dsni = DsT[n+i*p_Np];
@@ -61,22 +61,22 @@
 
 
 // Computes volume contribution of div(UI)
-kernel void insDivergenceVolumeTri2D(const dlong Nelements,
-                                     const dfloat * restrict vgeo,
-                                     const dfloat * restrict DrT,
-                                     const dfloat * restrict DsT,
+@kernel void insDivergenceVolumeTri2D(const dlong Nelements,
+                                     @restrict const  dfloat *  vgeo,
+                                     @restrict const  dfloat *  DrT,
+                                     @restrict const  dfloat *  DsT,
                                      const dlong offset,
-                                     const dfloat * restrict U,
-                                     const dfloat * restrict V,
-                                           dfloat * restrict divU){
+                                     @restrict const  dfloat *  U,
+                                     @restrict const  dfloat *  V,
+                                           @restrict dfloat *  divU){
   
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_U[p_NblockV][p_Np];
-    shared dfloat s_V[p_NblockV][p_Np];
+    @shared dfloat s_U[p_NblockV][p_Np];
+    @shared dfloat s_V[p_NblockV][p_Np];
   
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){ 
           const dlong id = (e+offset)*p_Np+n;
@@ -86,11 +86,11 @@ kernel void insDivergenceVolumeTri2D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){          
           // prefetch geometric factors (constant on triangle)
@@ -102,7 +102,7 @@ kernel void insDivergenceVolumeTri2D(const dlong Nelements,
           // compute 'r' and 's' derivatives of (q_m) at node n
           dfloat dudr = 0.f, duds = 0.f; 
           dfloat dvdr = 0.f, dvds = 0.f; 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat Drni = DrT[n+i*p_Np];
               const dfloat Dsni = DsT[n+i*p_Np];
@@ -125,25 +125,25 @@ kernel void insDivergenceVolumeTri2D(const dlong Nelements,
 }
 
 
-kernel void insDivergenceSurfaceTri2D(const dlong Nelements,
-                                      const dfloat * restrict sgeo,
-                                      const dfloat * restrict LIFTT,
-                                      const dlong  * restrict vmapM,
-                                      const dlong  * restrict vmapP,
-                                      const int    * restrict EToB,
+@kernel void insDivergenceSurfaceTri2D(const dlong Nelements,
+                                      @restrict const  dfloat *  sgeo,
+                                      @restrict const  dfloat *  LIFTT,
+                                      @restrict const  dlong  *  vmapM,
+                                      @restrict const  dlong  *  vmapP,
+                                      @restrict const  int    *  EToB,
                                       const dfloat time,
-                                      const dfloat * restrict x,
-                                      const dfloat * restrict y,
+                                      @restrict const  dfloat *  x,
+                                      @restrict const  dfloat *  y,
                                       const dlong offset,
-                                      const dfloat * restrict U,
-                                      const dfloat * restrict V,
-                                            dfloat * restrict divU){ 
+                                      @restrict const  dfloat *  U,
+                                      @restrict const  dfloat *  V,
+                                            @restrict dfloat *  divU){ 
 
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    shared dfloat s_fluxU[p_NblockS][p_Nfp*p_Nfaces];
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    @shared dfloat s_fluxU[p_NblockS][p_Nfp*p_Nfaces];
 
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -180,12 +180,12 @@ kernel void insDivergenceSurfaceTri2D(const dlong Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
@@ -193,7 +193,7 @@ kernel void insDivergenceSurfaceTri2D(const dlong Nelements,
             
             dfloat divu = divU[id];
             
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_Nfaces*p_Nfp;++m){
                 const dfloat L = LIFTT[n+m*p_Np];
                 divu += L*s_fluxU[es][m];

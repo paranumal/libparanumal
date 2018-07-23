@@ -27,7 +27,7 @@ void meshParallelGatherScatter(mesh_t *mesh,
 
     // copy totally gather halo data back from HOST to DEVICE
     mesh->device.setStream(mesh->dataStream);
-    ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
+    ogs->o_haloGatherTmp.copyFrom(ogs->haloGatherTmp,"async: true");
 
     // wait for async copy
     mesh->device.finish();
@@ -64,7 +64,7 @@ void meshParallelGather(mesh_t *mesh,
     mesh->device.setStream(mesh->dataStream);
     
     // copy gathered halo data back from HOST to DEVICE
-    ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
+    ogs->o_haloGatherTmp.copyFrom(ogs->haloGatherTmp,"async: true");
     
     // wait for async copy
     mesh->device.finish();
@@ -103,7 +103,7 @@ void meshParallelScatter(mesh_t *mesh,
     mesh->device.setStream(mesh->dataStream);
     
     // copy owned and gathered halo data back from HOST to DEVICE
-    ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
+    ogs->o_haloGatherTmp.copyFrom(ogs->haloGatherTmp,"async: true");
     
     // wait for async copy
     mesh->device.finish();

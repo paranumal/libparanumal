@@ -1,57 +1,57 @@
 #define B 256
 
-kernel void weightedInnerProduct1(const dlong N,
-				  const dfloat * restrict w,
-				  const dfloat * restrict x,
-				  dfloat * restrict wx2){
+@kernel void weightedInnerProduct1(const dlong N,
+				  @restrict const  dfloat *  w,
+				  @restrict const  dfloat *  x,
+				  @restrict dfloat *  wx2){
   
 
-  for(dlong b=0;b<(N+B-1)/B;++b;outer0){
+  for(dlong b=0;b<(N+B-1)/B;++b;@outer(0)){
     
-    volatile shared dfloat s_wx2[B];
+    @shared volatile dfloat s_wx2[B];
 
-    for(int t=0;t<B;++t;inner0){
+    for(int t=0;t<B;++t;@inner(0)){
       const dlong id = t + B*b;
       s_wx2[t] = (id<N) ? w[id]*x[id]*x[id] : 0.f;
     }
 
-    barrier(localMemFence);
-    for(int t=0;t<B;++t;inner0) if(t<128) s_wx2[t] += s_wx2[t+128];
-    barrier(localMemFence);
-    for(int t=0;t<B;++t;inner0) if(t< 64) s_wx2[t] += s_wx2[t+ 64];
-    barrier(localMemFence);
-    for(int t=0;t<B;++t;inner0) if(t< 32) s_wx2[t] += s_wx2[t+ 32];
-    barrier(localMemFence);
-    for(int t=0;t<B;++t;inner0) if(t< 16) s_wx2[t] += s_wx2[t+ 16];
-    barrier(localMemFence);
-    for(int t=0;t<B;++t;inner0) if(t<  8) s_wx2[t] += s_wx2[t+  8];
-    barrier(localMemFence);
-    for(int t=0;t<B;++t;inner0) if(t<  4) s_wx2[t] += s_wx2[t+  4];
-    barrier(localMemFence);
-    for(int t=0;t<B;++t;inner0) if(t<  2) s_wx2[t] += s_wx2[t+  2];
-    barrier(localMemFence);
-    for(int t=0;t<B;++t;inner0) if(t<  1) wx2[b] = s_wx2[0] + s_wx2[1];
+    @barrier("local");
+    for(int t=0;t<B;++t;@inner(0)) if(t<128) s_wx2[t] += s_wx2[t+128];
+    @barrier("local");
+    for(int t=0;t<B;++t;@inner(0)) if(t< 64) s_wx2[t] += s_wx2[t+ 64];
+    @barrier("local");
+    for(int t=0;t<B;++t;@inner(0)) if(t< 32) s_wx2[t] += s_wx2[t+ 32];
+    @barrier("local");
+    for(int t=0;t<B;++t;@inner(0)) if(t< 16) s_wx2[t] += s_wx2[t+ 16];
+    @barrier("local");
+    for(int t=0;t<B;++t;@inner(0)) if(t<  8) s_wx2[t] += s_wx2[t+  8];
+    @barrier("local");
+    for(int t=0;t<B;++t;@inner(0)) if(t<  4) s_wx2[t] += s_wx2[t+  4];
+    @barrier("local");
+    for(int t=0;t<B;++t;@inner(0)) if(t<  2) s_wx2[t] += s_wx2[t+  2];
+    @barrier("local");
+    for(int t=0;t<B;++t;@inner(0)) if(t<  1) wx2[b] = s_wx2[0] + s_wx2[1];
   }
 }
 
 #if 0
 // barrier avoiding (partial) reduction
-kernel void weightedInnerProduct1(const int N,
-				  const dfloat * restrict w,
-				  const dfloat * restrict x,
-				  dfloat * restrict wx2){
+@kernel void weightedInnerProduct1(const int N,
+				  @restrict const  dfloat *  w,
+				  @restrict const  dfloat *  x,
+				  @restrict dfloat *  wx2){
   
 #define G 8
 #define S 32
   
   // loop over blocks
-  for(int b=0;b<(N+G*S-1)/(G*S);++b;outer0){
+  for(int b=0;b<(N+G*S-1)/(G*S);++b;@outer(0)){
     
-    volatile shared dfloat s_a[G][S];
-    volatile shared dfloat s_b[G];
+    @shared volatile dfloat s_a[G][S];
+    @shared volatile dfloat s_b[G];
 
-    for(int g=0;g<G;++g;inner1){
-      for(int s=0;s<S;++s;inner0){
+    for(int g=0;g<G;++g;@inner(1)){
+      for(int s=0;s<S;++s;@inner(0)){
 	const int n = b*G*S + g*S + s;
 
 	const dfloat wgs = (n<N) ? w[n]:0.f;
@@ -61,10 +61,10 @@ kernel void weightedInnerProduct1(const int N,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int g=0;g<G;++g;inner1){
-      for(int s=0;s<S;++s;inner0){
+    for(int g=0;g<G;++g;@inner(1)){
+      for(int s=0;s<S;++s;@inner(0)){
 
         if(s<16) s_a[g][s] += s_a[g][s + 16];
         if(s< 8) s_a[g][s] += s_a[g][s +  8];
@@ -74,10 +74,10 @@ kernel void weightedInnerProduct1(const int N,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int g=0;g<G;++g;inner1){
-      for(int s=0;s<S;++s;inner0){
+    for(int g=0;g<G;++g;@inner(1)){
+      for(int s=0;s<S;++s;@inner(0)){
         if(g==0){
           if(s< 4) s_b[s] += s_b[s + 4];
           if(s< 2) s_b[s] += s_b[s + 2];
@@ -86,10 +86,10 @@ kernel void weightedInnerProduct1(const int N,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int g=0;g<G;++g;inner1){
-      for(int s=0;s<S;++s;inner0){
+    for(int g=0;g<G;++g;@inner(1)){
+      for(int s=0;s<S;++s;@inner(0)){
         if(g==0 && s==0){
 	  wx2[b] = s_b[0];
 	}

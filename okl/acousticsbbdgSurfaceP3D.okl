@@ -13,11 +13,11 @@ void boundaryConditions3D(int bc, dfloat time,
     *pP = pM;
   }
   if(0){ //bc==2){
-    dfloat dx = 1.f/occaSqrt(2.f);
-    dfloat dy = 1.f/occaSqrt(2.f);
+    dfloat dx = 1.f/sqrt(2.f);
+    dfloat dy = 1.f/sqrt(2.f);
     dfloat dz = 0;
     dfloat omega = 10*M_PI;
-    dfloat wave = occaCos(omega*(time-(x*dx+y*dy+z*dz)));
+    dfloat wave = cos(omega*(time-(x*dx+y*dy+z*dz)));
     dfloat uI = dx*wave;
     dfloat vI = dy*wave;
     dfloat wI = dz*wave;
@@ -32,51 +32,51 @@ void boundaryConditions3D(int bc, dfloat time,
 }
 
 
-kernel void acousticsSurface3Dbbdg_o1(const int Nelements,
-              const int   * restrict Elements,
-              const int   * restrict N,
-              const dfloat * restrict sgeo,
-              const int   * restrict L0ids,
-              const dfloat * restrict L0vals,  
-              const int   * restrict ELids,
-              const dfloat * restrict ELvals,
-              const dfloat * restrict BBLower,
-              const int   * restrict BBRaiseids,
-              const dfloat * restrict BBRaiseVals,   
-              const int   * restrict vmapM,
-              const int   * restrict vmapP,
-              const int   * restrict EToE,
-              const int   * restrict EToB,
+@kernel void acousticsSurface3Dbbdg_o1(const int Nelements,
+              @restrict const  int   *  Elements,
+              @restrict const  int   *  N,
+              @restrict const  dfloat *  sgeo,
+              @restrict const  int   *  L0ids,
+              @restrict const  dfloat *  L0vals,  
+              @restrict const  int   *  ELids,
+              @restrict const  dfloat *  ELvals,
+              @restrict const  dfloat *  BBLower,
+              @restrict const  int   *  BBRaiseids,
+              @restrict const  dfloat *  BBRaiseVals,   
+              @restrict const  int   *  vmapM,
+              @restrict const  int   *  vmapP,
+              @restrict const  int   *  EToE,
+              @restrict const  int   *  EToB,
               const dfloat time,
-              const dfloat * restrict x,
-              const dfloat * restrict y,
-              const dfloat * restrict z,
-              const dfloat * restrict q,
-              dfloat       * restrict rhsq){
+              @restrict const  dfloat *  x,
+              @restrict const  dfloat *  y,
+              @restrict const  dfloat *  z,
+              @restrict const  dfloat *  q,
+              @restrict dfloat       *  rhsq){
      
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxw[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxp[p_NblockS][p_Nfp*p_Nfaces];
+    // @shared storage for flux terms
+    @shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxw[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxp[p_NblockS][p_Nfp*p_Nfaces];
     
-    shared dfloat s_fluxu_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxw_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxp_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxu_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxw_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxp_copy[p_NblockS][p_Nfp*p_Nfaces];
 
     // storage for unknown order neighbouring faces
-    shared dfloat s_scratchu[p_NblockS][p_Nfpp1*p_Nfaces];
-    shared dfloat s_scratchv[p_NblockS][p_Nfpp1*p_Nfaces];
-    shared dfloat s_scratchw[p_NblockS][p_Nfpp1*p_Nfaces];
-    shared dfloat s_scratchp[p_NblockS][p_Nfpp1*p_Nfaces];
+    @shared dfloat s_scratchu[p_NblockS][p_Nfpp1*p_Nfaces];
+    @shared dfloat s_scratchv[p_NblockS][p_Nfpp1*p_Nfaces];
+    @shared dfloat s_scratchw[p_NblockS][p_Nfpp1*p_Nfaces];
+    @shared dfloat s_scratchp[p_NblockS][p_Nfpp1*p_Nfaces];
 
     //load neighbours face info
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int et = eo + es;
         if(et<Nelements){
           int e = Elements[et];
@@ -105,11 +105,11 @@ kernel void acousticsSurface3Dbbdg_o1(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     //project info to proper order space and store in flux_copy
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int et = eo + es;
         if(et<Nelements){
           if (n<p_Nfp*p_Nfaces) {
@@ -157,10 +157,10 @@ kernel void acousticsSurface3Dbbdg_o1(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         int et = eo + es;
         if(et<Nelements){
           int e = Elements[et];
@@ -211,12 +211,12 @@ kernel void acousticsSurface3Dbbdg_o1(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // apply L0 to fluxes. use sparse format
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int et = eo + es;
         if(et<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -249,11 +249,11 @@ kernel void acousticsSurface3Dbbdg_o1(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // apply lift reduction and accumulate RHS
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int et = eo + es;
         if(et<Nelements){
           if(n<p_Np){
@@ -267,7 +267,7 @@ kernel void acousticsSurface3Dbbdg_o1(const int Nelements,
             dfloat rhsqnp = rhsq[id+3];
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            //occaUnroll(p_NfacesNfp)
+            //#pragma unroll p_NfacesNfp
             for (int m = 0; m < p_max_EL_nnz; ++m){
               int id = n + m*p_Np;
               dfloat ELval = ELvals[id];

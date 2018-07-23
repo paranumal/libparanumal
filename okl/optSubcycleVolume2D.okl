@@ -1,8 +1,8 @@
 
-// ref0 starting kernel for optimization
-// Do not use const, restrict, multiple element in a block
-// Read vector from global without shared but save to shared after interpolation
-kernel void insSubCycleCubatureVolume2D_v0(
+// ref0 starting @kernel for optimization
+// Do not use @restrict const, , multiple element in a block
+// Read vector from global without @shared but save to @shared after interpolation
+@kernel void insSubCycleCubatureVolume2D_v0(
 					   int Nelements,
 					   dfloat * vgeo,
 					   dfloat * cubDrWT,
@@ -15,14 +15,14 @@ kernel void insSubCycleCubatureVolume2D_v0(
 					   dfloat * rhsU,
 					   dfloat * rhsV){
 
-  for(int e=0;e<Nelements;++e;outer0){  // for all elements
+  for(int e=0;e<Nelements;++e;@outer(0)){  // for all elements
 
-    shared dfloat s_cF11[p_cubNp];
-    shared dfloat s_cF12[p_cubNp];
-    shared dfloat s_cF21[p_cubNp];
-    shared dfloat s_cF22[p_cubNp];
+    @shared dfloat s_cF11[p_cubNp];
+    @shared dfloat s_cF12[p_cubNp];
+    @shared dfloat s_cF21[p_cubNp];
+    @shared dfloat s_cF22[p_cubNp];
   
-    for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
       if(e<Nelements && n<p_cubNp){
 
 	dfloat cU = 0.f,  cV = 0.f;
@@ -44,10 +44,10 @@ kernel void insSubCycleCubatureVolume2D_v0(
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     
 
 
       if(e<Nelements && n<p_Np){    
@@ -66,7 +66,7 @@ kernel void insSubCycleCubatureVolume2D_v0(
 	for(int i=0;i<p_cubNp;++i){
 	  dfloat cDrWni = cubDrWT[n+i*p_Np];
 	  dfloat cDsWni = cubDsWT[n+i*p_Np];
-	  // Fetch to shared, used twice
+	  // Fetch to @shared, used twice
 	  dfloat cF11 = s_cF11[i];  // makew them global
 	  dfloat cF12 = s_cF12[i];
 	  dfloat cF21 = s_cF21[i];
@@ -103,35 +103,35 @@ kernel void insSubCycleCubatureVolume2D_v0(
 
 
 
-// Add shared from global read
-kernel void insSubCycleCubatureVolume2D_v1(
+// Add @shared from global read
+@kernel void insSubCycleCubatureVolume2D_v1(
 					   const int Nelements,
-					   const dfloat * restrict vgeo,
-					   const dfloat * restrict cubDrWT,
-					   const dfloat * restrict cubDsWT,
-					   const dfloat * restrict cubInterpT,
-					   const dfloat * restrict U,
-					   const dfloat * restrict V,
-					   const dfloat * restrict Ud,
-					   const dfloat * restrict Vd,
-					   dfloat * restrict rhsU,
-					   dfloat * restrict rhsV){
+					   @restrict const  dfloat *  vgeo,
+					   @restrict const  dfloat *  cubDrWT,
+					   @restrict const  dfloat *  cubDsWT,
+					   @restrict const  dfloat *  cubInterpT,
+					   @restrict const  dfloat *  U,
+					   @restrict const  dfloat *  V,
+					   @restrict const  dfloat *  Ud,
+					   @restrict const  dfloat *  Vd,
+					   @restrict dfloat *  rhsU,
+					   @restrict dfloat *  rhsV){
 
-  for(int e=0;e<Nelements;++e;outer0){  // for all elements
+  for(int e=0;e<Nelements;++e;@outer(0)){  // for all elements
 
     // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat s_U[p_Np];
-    shared dfloat s_V[p_Np];
-    shared dfloat s_Ud[p_Np];
-    shared dfloat s_Vd[p_Np];
+    @shared dfloat s_U[p_Np];
+    @shared dfloat s_V[p_Np];
+    @shared dfloat s_Ud[p_Np];
+    @shared dfloat s_Vd[p_Np];
 
-    shared dfloat s_cF11[p_cubNp];
-    shared dfloat s_cF12[p_cubNp];
-    shared dfloat s_cF21[p_cubNp];
-    shared dfloat s_cF22[p_cubNp];
+    @shared dfloat s_cF11[p_cubNp];
+    @shared dfloat s_cF12[p_cubNp];
+    @shared dfloat s_cF21[p_cubNp];
+    @shared dfloat s_cF22[p_cubNp];
 
 
-    for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
       if(e<Nelements && n<p_Np){ 
         int id = e*p_Np+n;
         // prefetch geometric factors (constant on triangle)
@@ -152,9 +152,9 @@ kernel void insSubCycleCubatureVolume2D_v1(
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
   
-    for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
       if(e<Nelements && n<p_cubNp){
         dfloat cU = 0.f,  cV = 0.f;
         dfloat cUd = 0.f, cVd = 0.f;        
@@ -173,21 +173,21 @@ kernel void insSubCycleCubatureVolume2D_v1(
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
 
-    for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     
 
       if(e<Nelements && n<p_Np){    
        
         dfloat fluxu = 0.f, fluxv = 0.f; 
 
-        // occaUnroll(p_cubNp)
+        // #pragma unroll p_cubNp
         for(int i=0;i<p_cubNp;++i){
           dfloat cDrWni = cubDrWT[n+i*p_Np];
           dfloat cDsWni = cubDsWT[n+i*p_Np];
-          // Fetch to shared, used twice
+          // Fetch to @shared, used twice
           dfloat cF11 = s_cF11[i];
           dfloat cF12 = s_cF12[i];
           dfloat cF21 = s_cF21[i];
@@ -210,34 +210,34 @@ kernel void insSubCycleCubatureVolume2D_v1(
 
 
 // Add unrolling + const
-kernel void insSubCycleCubatureVolume2D_v2(
+@kernel void insSubCycleCubatureVolume2D_v2(
 					   const int Nelements,
-					   const dfloat * restrict vgeo,
-					   const dfloat * restrict cubDrWT,
-					   const dfloat * restrict cubDsWT,
-					   const dfloat * restrict cubInterpT,
-					   const dfloat * restrict U,
-					   const dfloat * restrict V,
-					   const dfloat * restrict Ud,
-					   const dfloat * restrict Vd,
-					   dfloat * restrict rhsU,
-					   dfloat * restrict rhsV){
+					   @restrict const  dfloat *  vgeo,
+					   @restrict const  dfloat *  cubDrWT,
+					   @restrict const  dfloat *  cubDsWT,
+					   @restrict const  dfloat *  cubInterpT,
+					   @restrict const  dfloat *  U,
+					   @restrict const  dfloat *  V,
+					   @restrict const  dfloat *  Ud,
+					   @restrict const  dfloat *  Vd,
+					   @restrict dfloat *  rhsU,
+					   @restrict dfloat *  rhsV){
 
-  for(int e=0;e<Nelements;++e;outer0){  // for all elements
+  for(int e=0;e<Nelements;++e;@outer(0)){  // for all elements
 
     // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat s_U[p_Np];
-    shared dfloat s_V[p_Np];
-    shared dfloat s_Ud[p_Np];
-    shared dfloat s_Vd[p_Np];
+    @shared dfloat s_U[p_Np];
+    @shared dfloat s_V[p_Np];
+    @shared dfloat s_Ud[p_Np];
+    @shared dfloat s_Vd[p_Np];
 
-    shared dfloat s_cF11[p_cubNp];
-    shared dfloat s_cF12[p_cubNp];
-    shared dfloat s_cF21[p_cubNp];
-    shared dfloat s_cF22[p_cubNp];
+    @shared dfloat s_cF11[p_cubNp];
+    @shared dfloat s_cF12[p_cubNp];
+    @shared dfloat s_cF21[p_cubNp];
+    @shared dfloat s_cF22[p_cubNp];
 
 
-    for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
       if(e<Nelements && n<p_Np){ 
 	int id = e*p_Np+n;
       
@@ -259,15 +259,15 @@ kernel void insSubCycleCubatureVolume2D_v2(
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
   
-    for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
       if(e<Nelements && n<p_cubNp){
 
 	dfloat cU = 0.f,  cV = 0.f;
 	dfloat cUd = 0.f, cVd = 0.f;
      
-	occaUnroll(p_Np)
+	#pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    dfloat cIni = cubInterpT[n+i*p_cubNp];
 	    cU  += cIni*s_U[i];
@@ -283,21 +283,21 @@ kernel void insSubCycleCubatureVolume2D_v2(
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
 
-    for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     
 
       if(e<Nelements && n<p_Np){    
        
 	dfloat fluxu = 0.f, fluxv = 0.f; 
 
-	occaUnroll(p_cubNp)
+	#pragma unroll p_cubNp
 	  for(int i=0;i<p_cubNp;++i){
 	    const dfloat cDrWni = cubDrWT[n+i*p_Np];
 	    const dfloat cDsWni = cubDsWT[n+i*p_Np];
-	    // Fetch to shared, used twice
+	    // Fetch to @shared, used twice
 	    const dfloat cF11 = s_cF11[i];
 	    const dfloat cF12 = s_cF12[i];
 	    const dfloat cF21 = s_cF21[i];
@@ -319,7 +319,7 @@ kernel void insSubCycleCubatureVolume2D_v2(
 }
 
 
-// // Optimized sizes for kernel 3
+// // Optimized sizes for @kernel 3
 #if p_N==1
 #define p_cubNblockV 11
 #endif
@@ -366,33 +366,33 @@ kernel void insSubCycleCubatureVolume2D_v2(
 
 
 // Add multiple elements per threadblock
-kernel void insSubCycleCubatureVolume2D_v3(const int Nelements,
-					   const dfloat * restrict vgeo,
-					   const dfloat * restrict cubDrWT,
-					   const dfloat * restrict cubDsWT,
-					   const dfloat * restrict cubInterpT,
-					   const dfloat * restrict U,
-					   const dfloat * restrict V,
-					   const dfloat * restrict Ud,
-					   const dfloat * restrict Vd,
-					   dfloat * restrict rhsU,
-					   dfloat * restrict rhsV){
+@kernel void insSubCycleCubatureVolume2D_v3(const int Nelements,
+					   @restrict const  dfloat *  vgeo,
+					   @restrict const  dfloat *  cubDrWT,
+					   @restrict const  dfloat *  cubDsWT,
+					   @restrict const  dfloat *  cubInterpT,
+					   @restrict const  dfloat *  U,
+					   @restrict const  dfloat *  V,
+					   @restrict const  dfloat *  Ud,
+					   @restrict const  dfloat *  Vd,
+					   @restrict dfloat *  rhsU,
+					   @restrict dfloat *  rhsV){
 
-  for(int eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
 
     // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat s_U[p_cubNblockV][p_Np];
-    shared dfloat s_V[p_cubNblockV][p_Np];
-    shared dfloat s_Ud[p_cubNblockV][p_Np];
-    shared dfloat s_Vd[p_cubNblockV][p_Np];
+    @shared dfloat s_U[p_cubNblockV][p_Np];
+    @shared dfloat s_V[p_cubNblockV][p_Np];
+    @shared dfloat s_Ud[p_cubNblockV][p_Np];
+    @shared dfloat s_Vd[p_cubNblockV][p_Np];
 
-    shared dfloat s_cF11[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF12[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF21[p_cubNblockV][p_cubNp];
-    shared dfloat s_cF22[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF11[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF12[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF21[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF22[p_cubNblockV][p_cubNp];
     //
-    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block      
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block      
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
 	int e = eo+es; // element in block
 	if(e<Nelements && n<p_Np){ 
 	  const int id = e*p_Np+n;
@@ -421,17 +421,17 @@ kernel void insSubCycleCubatureVolume2D_v3(const int Nelements,
       }
     }
    
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
 	int e = eo+es; // element in block
 	if(e<Nelements && n<p_cubNp){
 
 	  dfloat cU = 0.f,  cV = 0.f;
 	  dfloat cUd = 0.f, cVd = 0.f;
 
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	    for(int i=0;i<p_Np;++i){
 	      dfloat cIni = cubInterpT[n+i*p_cubNp];
 	      cU  += cIni*s_U[es][i];
@@ -448,22 +448,22 @@ kernel void insSubCycleCubatureVolume2D_v3(const int Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_cubNblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     
 	int e = eo+es;
 
 	if(e<Nelements && n<p_Np){    
          
 	  dfloat fluxu = 0.f, fluxv = 0.f; 
 
-	  occaUnroll(p_cubNp)
+	  #pragma unroll p_cubNp
 	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
 	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
-	      // Fetch to shared, used twice
+	      // Fetch to @shared, used twice
 	      const dfloat cF11 = s_cF11[es][i];
 	      const dfloat cF12 = s_cF12[es][i];
 	      const dfloat cF21 = s_cF21[es][i];
@@ -487,7 +487,7 @@ kernel void insSubCycleCubatureVolume2D_v3(const int Nelements,
 }
 
 
-// // Optimized sizes for kernel 4-5
+// // Optimized sizes for @kernel 4-5
 #if p_N==1
 #define p_cNbV 11
 #define p_cNmt 2
@@ -539,36 +539,36 @@ kernel void insSubCycleCubatureVolume2D_v3(const int Nelements,
 #endif
 
 // TW tweaks
-kernel void insSubCycleCubatureVolume2D_v4(const int Nelements,
-					   const dfloat * restrict vgeo,
-					   const dfloat * restrict cubDrWT,
-					   const dfloat * restrict cubDsWT,
-					   const dfloat * restrict cubInterpT,
-					   const dfloat * restrict U,
-					   const dfloat * restrict V,
-					   const dfloat * restrict Ud,
-					   const dfloat * restrict Vd,
-					   dfloat * restrict rhsU,
-					   dfloat * restrict rhsV){
+@kernel void insSubCycleCubatureVolume2D_v4(const int Nelements,
+					   @restrict const  dfloat *  vgeo,
+					   @restrict const  dfloat *  cubDrWT,
+					   @restrict const  dfloat *  cubDsWT,
+					   @restrict const  dfloat *  cubInterpT,
+					   @restrict const  dfloat *  U,
+					   @restrict const  dfloat *  V,
+					   @restrict const  dfloat *  Ud,
+					   @restrict const  dfloat *  Vd,
+					   @restrict dfloat *  rhsU,
+					   @restrict dfloat *  rhsV){
 
-  for(int eo=0;eo<Nelements;eo+=(p_cNbV*p_cNmt);outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=(p_cNbV*p_cNmt);@outer(0)){  // for all elements
     
     // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat  s_U[p_cNmt][p_cNbV][p_Np];
-    shared dfloat  s_V[p_cNmt][p_cNbV][p_Np];
-    shared dfloat s_Ud[p_cNmt][p_cNbV][p_Np];
-    shared dfloat s_Vd[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat  s_U[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat  s_V[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat s_Ud[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat s_Vd[p_cNmt][p_cNbV][p_Np];
     
-    shared dfloat s_cF11[p_cNmt][p_cNbV][p_cubNp];
-    shared dfloat s_cF12[p_cNmt][p_cNbV][p_cubNp];
-    shared dfloat s_cF21[p_cNmt][p_cNbV][p_cubNp];
-    shared dfloat s_cF22[p_cNmt][p_cNbV][p_cubNp];
+    @shared dfloat s_cF11[p_cNmt][p_cNbV][p_cubNp];
+    @shared dfloat s_cF12[p_cNmt][p_cNbV][p_cubNp];
+    @shared dfloat s_cF21[p_cNmt][p_cNbV][p_cubNp];
+    @shared dfloat s_cF22[p_cNmt][p_cNbV][p_cubNp];
     
     //
-    for(int es=0;es<p_cNbV;++es;inner1){// for all elements in block      
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_cNbV;++es;@inner(1)){// for all elements in block      
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
   
-	occaUnroll(p_cNmt)
+	#pragma unroll p_cNmt
 	  for(int em=0;em<p_cNmt;++em){
 	    const int e = eo + es*p_cNmt + em;
 	    const int id = e*p_Np + n;
@@ -594,14 +594,14 @@ kernel void insSubCycleCubatureVolume2D_v4(const int Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int es=0;es<p_cNbV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_cNbV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
 
 	dfloat cU[p_cNmt], cV[p_cNmt], cUd[p_cNmt], cVd[p_cNmt];
   
-	occaUnroll(p_cNmt)
+	#pragma unroll p_cNmt
 	  for(int em=0;em<p_cNmt;++em){
 	    cU[em] = 0.f;
 	    cV[em] = 0.f;
@@ -609,10 +609,10 @@ kernel void insSubCycleCubatureVolume2D_v4(const int Nelements,
 	    cVd[em] = 0.f;
 	  }
   
-	occaUnroll(p_Np)
+	#pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat cIni = cubInterpT[n+i*p_cubNp];
-	    occaUnroll(p_cNmt)
+	    #pragma unroll p_cNmt
 	      for(int em=0;em<p_cNmt;++em){
 		cU[em]  += cIni*s_U[em][es][i];
 		cV[em]  += cIni*s_V[em][es][i];
@@ -622,7 +622,7 @@ kernel void insSubCycleCubatureVolume2D_v4(const int Nelements,
 	  }
   
 	//
-	occaUnroll(p_cNmt)
+	#pragma unroll p_cNmt
 	  for(int em=0;em<p_cNmt;++em){
 	    s_cF11[em][es][n] = cU[em]*cUd[em];
 	    s_cF12[em][es][n] = cV[em]*cUd[em];
@@ -632,27 +632,27 @@ kernel void insSubCycleCubatureVolume2D_v4(const int Nelements,
       }
     }
     
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
     
-    for(int es=0;es<p_cNbV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     
+    for(int es=0;es<p_cNbV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     
   
 	if(n<p_Np){   
 	  dfloat fluxU[p_cNmt], fluxV[p_cNmt];
     
-	  occaUnroll(p_cNmt)
+	  #pragma unroll p_cNmt
 	    for(int em=0;em<p_cNmt;++em){
 	      fluxU[em] = 0;
 	      fluxV[em] = 0;
 	    }
     
-	  occaUnroll(p_cubNp)
+	  #pragma unroll p_cubNp
 	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat cDrWni = cubDrWT[n+i*p_Np];
 	      const dfloat cDsWni = cubDsWT[n+i*p_Np];
         
-	      occaUnroll(p_cNmt)
+	      #pragma unroll p_cNmt
 		for(int em=0;em<p_cNmt;++em){  
 		  const dfloat cF11 = s_cF11[em][es][i];
 		  const dfloat cF12 = s_cF12[em][es][i];
@@ -666,7 +666,7 @@ kernel void insSubCycleCubatureVolume2D_v4(const int Nelements,
 		}
 	    }
 
-	  occaUnroll(p_cNmt)
+	  #pragma unroll p_cNmt
 	    for(int em=0;em<p_cNmt;++em){
 	      int e = eo+es*p_cNmt+em;
 	      if(e<Nelements){
@@ -686,36 +686,36 @@ kernel void insSubCycleCubatureVolume2D_v4(const int Nelements,
 
 #define p_cubNpad 0 // Npad did not work use 0
 
-kernel void insSubCycleCubatureVolume2D_v5(const int Nelements,
-					   const dfloat * restrict vgeo,
-					   const dfloat2 * restrict cubDrsWT,
-					   const dfloat * restrict cubDsWT,
-					   const dfloat * restrict cubInterpT,
-					   const dfloat * restrict U,
-					   const dfloat * restrict V,
-					   const dfloat * restrict Ud,
-					   const dfloat * restrict Vd,
-					   dfloat * restrict rhsU,
-					   dfloat * restrict rhsV){
+@kernel void insSubCycleCubatureVolume2D_v5(const int Nelements,
+					   @restrict const  dfloat *  vgeo,
+					   @restrict const  dfloat2 *  cubDrsWT,
+					   @restrict const  dfloat *  cubDsWT,
+					   @restrict const  dfloat *  cubInterpT,
+					   @restrict const  dfloat *  U,
+					   @restrict const  dfloat *  V,
+					   @restrict const  dfloat *  Ud,
+					   @restrict const  dfloat *  Vd,
+					   @restrict dfloat *  rhsU,
+					   @restrict dfloat *  rhsV){
 
-  for(int eo=0;eo<Nelements;eo+=(p_cNbV*p_cNmt);outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=(p_cNbV*p_cNmt);@outer(0)){  // for all elements
     
     // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat  s_U[p_cNmt][p_cNbV][p_Np];
-    shared dfloat  s_V[p_cNmt][p_cNbV][p_Np];
-    shared dfloat s_Ud[p_cNmt][p_cNbV][p_Np];
-    shared dfloat s_Vd[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat  s_U[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat  s_V[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat s_Ud[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat s_Vd[p_cNmt][p_cNbV][p_Np];
     
-    shared dfloat s_cF11[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
-    shared dfloat s_cF12[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
-    shared dfloat s_cF21[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
-    shared dfloat s_cF22[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
+    @shared dfloat s_cF11[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
+    @shared dfloat s_cF12[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
+    @shared dfloat s_cF21[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
+    @shared dfloat s_cF22[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
     
     //
-    for(int es=0;es<p_cNbV;++es;inner1){// for all elements in block      
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_cNbV;++es;@inner(1)){// for all elements in block      
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
   
-	occaUnroll(p_cNmt)
+	#pragma unroll p_cNmt
 	  for(int em=0;em<p_cNmt;++em){
 	    const int e = eo + es*p_cNmt + em;
 	    const int id = e*p_Np + n;
@@ -747,14 +747,14 @@ kernel void insSubCycleCubatureVolume2D_v5(const int Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int es=0;es<p_cNbV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_cNbV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
 
 	dfloat cU[p_cNmt], cV[p_cNmt], cUd[p_cNmt], cVd[p_cNmt];
   
-	occaUnroll(p_cNmt)
+	#pragma unroll p_cNmt
 	  for(int em=0;em<p_cNmt;++em){
 	    cU[em] = 0.f;
 	    cV[em] = 0.f;
@@ -762,10 +762,10 @@ kernel void insSubCycleCubatureVolume2D_v5(const int Nelements,
 	    cVd[em] = 0.f;
 	  }
   
-	occaUnroll(p_Np)
+	#pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat cIni = cubInterpT[n+i*p_cubNp];
-	    occaUnroll(p_cNmt)
+	    #pragma unroll p_cNmt
 	      for(int em=0;em<p_cNmt;++em){
 		cU[em]  += cIni*s_U[em][es][i];
 		cV[em]  += cIni*s_V[em][es][i];
@@ -775,7 +775,7 @@ kernel void insSubCycleCubatureVolume2D_v5(const int Nelements,
 	  }
   
 	//
-	occaUnroll(p_cNmt)
+	#pragma unroll p_cNmt
 	  for(int em=0;em<p_cNmt;++em){
 	    s_cF11[em][es][n] = cU[em]*cUd[em];
 	    s_cF12[em][es][n] = cV[em]*cUd[em];
@@ -785,26 +785,26 @@ kernel void insSubCycleCubatureVolume2D_v5(const int Nelements,
       }
     }
     
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
     
-    for(int es=0;es<p_cNbV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     
+    for(int es=0;es<p_cNbV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     
   
 	if(n<p_Np){   
 	  dfloat fluxU[p_cNmt], fluxV[p_cNmt];
     
-	  occaUnroll(p_cNmt)
+	  #pragma unroll p_cNmt
 	    for(int em=0;em<p_cNmt;++em){
 	      fluxU[em] = 0;
 	      fluxV[em] = 0;
 	    }
     
-	  occaUnroll()
+	  #pragma unroll 
 	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat2 cDrsWni = cubDrsWT[n+i*p_Np];
         
-	      occaUnroll(p_cNmt)
+	      #pragma unroll p_cNmt
 		for(int em=0;em<p_cNmt;++em){  
 		  const dfloat cF11 = s_cF11[em][es][i];
 		  const dfloat cF12 = s_cF12[em][es][i];
@@ -818,7 +818,7 @@ kernel void insSubCycleCubatureVolume2D_v5(const int Nelements,
 		}
 	    }
 
-	  occaUnroll(p_cNmt)
+	  #pragma unroll p_cNmt
 	    for(int em=0;em<p_cNmt;++em){
 	      int e = eo+es*p_cNmt+em;
 	      if(e<Nelements){
@@ -835,7 +835,7 @@ kernel void insSubCycleCubatureVolume2D_v5(const int Nelements,
 }
 
 
-// // Optimized sizes for kernel 6, currently best one !!!!
+// // Optimized sizes for @kernel 6, currently best one !!!!
 #if p_N==1
 #define p_NbV 20
 #define p_Nmt 1
@@ -889,36 +889,36 @@ kernel void insSubCycleCubatureVolume2D_v5(const int Nelements,
 
 
 
-kernel void insSubCycleCubatureVolume2D_v6(const int Nelements,
-					   const dfloat * restrict vgeo,
-					   const dfloat * restrict cubDrWT,
-					   const dfloat * restrict cubDsWT,
-					   const dfloat * restrict cubInterpT,
-					   const dfloat * restrict U,
-					   const dfloat * restrict V,
-					   const dfloat * restrict Ud,
-					   const dfloat * restrict Vd,
-					   dfloat * restrict rhsU,
-					   dfloat * restrict rhsV){
+@kernel void insSubCycleCubatureVolume2D_v6(const int Nelements,
+					   @restrict const  dfloat *  vgeo,
+					   @restrict const  dfloat *  cubDrWT,
+					   @restrict const  dfloat *  cubDsWT,
+					   @restrict const  dfloat *  cubInterpT,
+					   @restrict const  dfloat *  U,
+					   @restrict const  dfloat *  V,
+					   @restrict const  dfloat *  Ud,
+					   @restrict const  dfloat *  Vd,
+					   @restrict dfloat *  rhsU,
+					   @restrict dfloat *  rhsV){
 
-  for(int eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);@outer(0)){  // for all elements
     
     // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat  s_U[p_Nmt][p_NbV][p_Np];
-    shared dfloat  s_V[p_Nmt][p_NbV][p_Np];
-    shared dfloat s_Ud[p_Nmt][p_NbV][p_Np];
-    shared dfloat s_Vd[p_Nmt][p_NbV][p_Np];
+    @shared dfloat  s_U[p_Nmt][p_NbV][p_Np];
+    @shared dfloat  s_V[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_Ud[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_Vd[p_Nmt][p_NbV][p_Np];
     
-    shared dfloat s_cF11[p_Nmt][p_NbV][p_Np];
-    shared dfloat s_cF12[p_Nmt][p_NbV][p_Np];
-    shared dfloat s_cF21[p_Nmt][p_NbV][p_Np];
-    shared dfloat s_cF22[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_cF11[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_cF12[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_cF21[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_cF22[p_Nmt][p_NbV][p_Np];
     
     //
-    for(int es=0;es<p_NbV;++es;inner1){// for all elements in block      
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NbV;++es;@inner(1)){// for all elements in block      
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
   
-	occaUnroll(p_Nmt)
+	#pragma unroll p_Nmt
 	  for(int em=0;em<p_Nmt;++em){
 	    const int e = eo + es*p_Nmt + em;
 	    const int id = e*p_Np + n;
@@ -950,13 +950,13 @@ kernel void insSubCycleCubatureVolume2D_v6(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
-    exclusive dfloat fluxU[p_Nmt], fluxV[p_Nmt];
+    @exclusive dfloat fluxU[p_Nmt], fluxV[p_Nmt];
       
-    for(int es=0;es<p_NbV;++es;inner1){// for all elements in block
-      for(int ns=0;ns<p_Np;++ns;inner0){     // for all nodes in this element
-	occaUnroll(p_Nmt)
+    for(int es=0;es<p_NbV;++es;@inner(1)){// for all elements in block
+      for(int ns=0;ns<p_Np;++ns;@inner(0)){     // for all nodes in this element
+	#pragma unroll p_Nmt
 	  for(int em=0;em<p_Nmt;++em){
 	    fluxU[em] = 0;
 	    fluxV[em] = 0;
@@ -964,19 +964,19 @@ kernel void insSubCycleCubatureVolume2D_v6(const int Nelements,
       }
     }
 
-    occaUnroll()
+    #pragma unroll 
       for(int io=0;io<p_cubNp;io+=p_Np){ // block the cubature nodes
 
-	barrier(localMemFence);
+	@barrier("local");
 
-	for(int es=0;es<p_NbV;++es;inner1){// for all elements in block
-	  for(int ns=0;ns<p_Np;++ns;inner0){     // for all nodes in this element
+	for(int es=0;es<p_NbV;++es;@inner(1)){// for all elements in block
+	  for(int ns=0;ns<p_Np;++ns;@inner(0)){     // for all nodes in this element
 	    const int n = ns+io; // choose cubature node to interpolate to
 	    if(n<p_cubNp){
 	      // compute Np of the cubNp cubature values
 	      dfloat cU[p_Nmt], cV[p_Nmt], cUd[p_Nmt], cVd[p_Nmt];
         
-	      occaUnroll(p_Nmt)
+	      #pragma unroll p_Nmt
 		for(int em=0;em<p_Nmt;++em){
 		  cU[em] = 0.f;
 		  cV[em] = 0.f;
@@ -984,10 +984,10 @@ kernel void insSubCycleCubatureVolume2D_v6(const int Nelements,
 		  cVd[em] = 0.f;
 		}
         
-	      occaUnroll(p_Np)
+	      #pragma unroll p_Np
 		for(int i=0;i<p_Np;++i){
 		  const dfloat cIni = cubInterpT[n+i*p_cubNp];
-		  occaUnroll(p_Nmt)
+		  #pragma unroll p_Nmt
 		    for(int em=0;em<p_Nmt;++em){
 		      cU[em]  += cIni*s_U[em][es][i];
 		      cV[em]  += cIni*s_V[em][es][i];
@@ -997,7 +997,7 @@ kernel void insSubCycleCubatureVolume2D_v6(const int Nelements,
 		}
         
 	      // share up to the Np cubature vals computed in this block
-	      occaUnroll(p_Nmt)
+	      #pragma unroll p_Nmt
 		for(int em=0;em<p_Nmt;++em){
 		  s_cF11[em][es][ns] = cU[em]*cUd[em];
 		  s_cF12[em][es][ns] = cV[em]*cUd[em];
@@ -1008,19 +1008,19 @@ kernel void insSubCycleCubatureVolume2D_v6(const int Nelements,
 	  }
 	}
     
-	// Make sure all node data is loaded into shared
-	barrier(localMemFence);
+	// Make sure all node data is loaded into @shared
+	@barrier("local");
   
-	for(int es=0;es<p_NbV;++es;inner1){
-	  for(int n=0;n<p_Np;++n;inner0){      
+	for(int es=0;es<p_NbV;++es;@inner(1)){
+	  for(int n=0;n<p_Np;++n;@inner(0)){      
       
-	    occaUnroll(p_Np)
+	    #pragma unroll p_Np
 	      for(int i=0;i<p_Np;++i){
 		if(i+io<p_cubNp){ // differentiate this sub block
 		  const dfloat cDrWni = cubDrWT[n+(i+io)*p_Np];
 		  const dfloat cDsWni = cubDsWT[n+(i+io)*p_Np];
       
-		  occaUnroll(p_Nmt)
+		  #pragma unroll p_Nmt
 		    for(int em=0;em<p_Nmt;++em){  
 		      const dfloat cF11 = s_cF11[em][es][i];
 		      const dfloat cF12 = s_cF12[em][es][i];
@@ -1038,9 +1038,9 @@ kernel void insSubCycleCubatureVolume2D_v6(const int Nelements,
 	}
       }
     
-    for(int es=0;es<p_NbV;++es;inner1){
-      for(int n=0;n<p_Np;++n;inner0){          
-	occaUnroll(p_Nmt)
+    for(int es=0;es<p_NbV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){          
+	#pragma unroll p_Nmt
 	  for(int em=0;em<p_Nmt;++em){
 	    int e = eo+es*p_Nmt+em;
 	    if(e<Nelements){

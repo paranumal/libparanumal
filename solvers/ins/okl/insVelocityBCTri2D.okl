@@ -1,49 +1,49 @@
 
 
-kernel void insVelocityIpdgBCTri2D(const dlong Nelements,
-                                   const dlong * restrict vmapM,
+@kernel void insVelocityIpdgBCTri2D(const dlong Nelements,
+                                   @restrict const  dlong *  vmapM,
                                    const dfloat tau,
                                    const dfloat time,
-                                   const dfloat * restrict x,
-                                   const dfloat * restrict y,
-                                   const dfloat * restrict z,
-                                   const dfloat * restrict vgeo,
-                                   const dfloat * restrict sgeo,
-                                   const int    * restrict EToB,
-                                   const dfloat * restrict Dmatrices,
-                                   const dfloat * restrict LIFTT,
-                                   const dfloat * restrict MM,
-                                         dfloat * restrict rhsU,
-                                         dfloat * restrict rhsV,
-                                         dfloat * restrict rhsW){
+                                   @restrict const  dfloat *  x,
+                                   @restrict const  dfloat *  y,
+                                   @restrict const  dfloat *  z,
+                                   @restrict const  dfloat *  vgeo,
+                                   @restrict const  dfloat *  sgeo,
+                                   @restrict const  int    *  EToB,
+                                   @restrict const  dfloat *  Dmatrices,
+                                   @restrict const  dfloat *  LIFTT,
+                                   @restrict const  dfloat *  MM,
+                                         @restrict dfloat *  rhsU,
+                                         @restrict dfloat *  rhsV,
+                                         @restrict dfloat *  rhsW){
 
-  for(dlong e=0;e<Nelements;++e;outer0){
-    shared  dfloat s_dudx[p_Np];
-    shared  dfloat s_dudy[p_Np];
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared  dfloat s_dudx[p_Np];
+    @shared  dfloat s_dudy[p_Np];
 
-    shared  dfloat s_dvdx[p_Np];
-    shared  dfloat s_dvdy[p_Np];
+    @shared  dfloat s_dvdx[p_Np];
+    @shared  dfloat s_dvdy[p_Np];
 
-    shared  dfloat s_lapu[p_Np];
-    shared  dfloat s_lapv[p_Np];
+    @shared  dfloat s_lapu[p_Np];
+    @shared  dfloat s_lapv[p_Np];
 
-    shared  dfloat s_nxdu[p_NfacesNfp];
-    shared  dfloat s_nydu[p_NfacesNfp];
-    shared  dfloat s_nxdv[p_NfacesNfp];
-    shared  dfloat s_nydv[p_NfacesNfp];
+    @shared  dfloat s_nxdu[p_NfacesNfp];
+    @shared  dfloat s_nydu[p_NfacesNfp];
+    @shared  dfloat s_nxdv[p_NfacesNfp];
+    @shared  dfloat s_nydv[p_NfacesNfp];
 
-    shared  dfloat s_lapuflux[p_NfacesNfp];
-    shared  dfloat s_lapvflux[p_NfacesNfp];
+    @shared  dfloat s_lapuflux[p_NfacesNfp];
+    @shared  dfloat s_lapvflux[p_NfacesNfp];
 
-    shared  dfloat s_Lnxdu[p_Np];
-    shared  dfloat s_Lnydu[p_Np];
-    shared  dfloat s_Lnxdv[p_Np];
-    shared  dfloat s_Lnydv[p_Np];
+    @shared  dfloat s_Lnxdu[p_Np];
+    @shared  dfloat s_Lnydu[p_Np];
+    @shared  dfloat s_Lnxdv[p_Np];
+    @shared  dfloat s_Lnydv[p_Np];
 
-    exclusive dlong idM;
-    exclusive dfloat nx, ny, sJ, invJ, hinv;
+    @exclusive dlong idM;
+    @exclusive dfloat nx, ny, sJ, invJ, hinv;
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const dlong id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];
@@ -78,10 +78,10 @@ kernel void insVelocityIpdgBCTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // dqdx += LIFT*(sJ/J)*nx*dq
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         const dlong gid = e*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
@@ -94,7 +94,7 @@ kernel void insVelocityIpdgBCTri2D(const dlong Nelements,
         dfloat Lnxdv = 0;
         dfloat Lnydv = 0;
 
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lnxdu += LIFTT[n+i*p_Np]*s_nxdu[i];
             Lnydu += LIFTT[n+i*p_Np]*s_nydu[i];
@@ -118,9 +118,9 @@ kernel void insVelocityIpdgBCTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const int id = idM%p_Np;
         s_lapuflux[n] += sJ*invJ*(nx*s_Lnxdu[id]+ny*s_Lnydu[id]);
@@ -131,7 +131,7 @@ kernel void insVelocityIpdgBCTri2D(const dlong Nelements,
         dfloat laur = 0, laus = 0;
         dfloat lavr = 0, lavs = 0;
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for(int i=0;i<p_Np;++i) {
               const dfloat Drn = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
               const dfloat Dsn = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
@@ -146,15 +146,15 @@ kernel void insVelocityIpdgBCTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         dfloat lau = 0;
         dfloat lav = 0;
 
         // lift remaining surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             lau += LIFTT[n+i*p_Np]*s_lapuflux[i];
             lav += LIFTT[n+i*p_Np]*s_lapvflux[i];
@@ -165,9 +165,9 @@ kernel void insVelocityIpdgBCTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         const dlong id = e*p_Np+n;
         const dfloat J = vgeo[e*p_Nvgeo + p_JID];
@@ -176,7 +176,7 @@ kernel void insVelocityIpdgBCTri2D(const dlong Nelements,
         dfloat Mlapv = 0;
 
         // multiply by mass matrix
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             Mlapu += MM[n+i*p_Np]*s_lapu[i];
             Mlapv += MM[n+i*p_Np]*s_lapv[i];
@@ -190,31 +190,31 @@ kernel void insVelocityIpdgBCTri2D(const dlong Nelements,
 }
 
 //RHS contributions for continuous solver
-kernel void insVelocityBCTri2D(const dlong Nelements,
-                               const dfloat * restrict ggeo,
-                               const dfloat * restrict sgeo,
-                               const dfloat * restrict Dmatrices,
-                               const dfloat * restrict Smatrices,
-                               const dfloat * restrict MM,
-                               const dlong  * restrict vmapM,
-                               const dfloat * restrict sMT,
+@kernel void insVelocityBCTri2D(const dlong Nelements,
+                               @restrict const  dfloat *  ggeo,
+                               @restrict const  dfloat *  sgeo,
+                               @restrict const  dfloat *  Dmatrices,
+                               @restrict const  dfloat *  Smatrices,
+                               @restrict const  dfloat *  MM,
+                               @restrict const  dlong  *  vmapM,
+                               @restrict const  dfloat *  sMT,
                                const dfloat lambda,
                                const dfloat time,
-                               const dfloat * restrict x,
-                               const dfloat * restrict y,
-                               const dfloat * restrict z,
-                               const int    * restrict mapB,
-                                     dfloat  * restrict rhsU,
-                                     dfloat  * restrict rhsV,
-                                     dfloat  * restrict rhsW){
+                               @restrict const  dfloat *  x,
+                               @restrict const  dfloat *  y,
+                               @restrict const  dfloat *  z,
+                               @restrict const  int    *  mapB,
+                                     @restrict dfloat  *  rhsU,
+                                     @restrict dfloat  *  rhsV,
+                                     @restrict dfloat  *  rhsW){
 
-  for(dlong e=0;e<Nelements;e++;outer0){
-    shared dfloat s_u[p_Np];
-    shared dfloat s_v[p_Np];
-    shared dfloat s_ndu[p_Nfp*p_Nfaces];
-    shared dfloat s_ndv[p_Nfp*p_Nfaces];
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_u[p_Np];
+    @shared dfloat s_v[p_Np];
+    @shared dfloat s_ndu[p_Nfp*p_Nfaces];
+    @shared dfloat s_ndv[p_Nfp*p_Nfaces];
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         s_u[n] = 0.;
         s_v[n] = 0.;
@@ -225,9 +225,9 @@ kernel void insVelocityBCTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const dlong id  = n + e*p_Nfaces*p_Nfp;
         const dlong idM = vmapM[id];          
@@ -257,9 +257,9 @@ kernel void insVelocityBCTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int n=0;n<p_maxNodes;++n;inner0){ 
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ 
       if(n<p_Np){
         //volume Dirichlet data
         const dlong id = n + e*p_Np;
@@ -274,7 +274,7 @@ kernel void insVelocityBCTri2D(const dlong Nelements,
         dfloat urs = 0., vrs = 0.;
         dfloat uss = 0., vss = 0.;
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for (int k=0;k<p_Np;k++) {
             const dfloat MMn = MM[n+k*p_Np];
             const dfloat Srr = Smatrices[n+k*p_Np+0*p_Np*p_Np];
@@ -294,7 +294,7 @@ kernel void insVelocityBCTri2D(const dlong Nelements,
         dfloat Lndu = 0;            
         dfloat Lndv = 0;            
         // surface mass * surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             const dfloat sMTn = sMT[n+i*p_Np];
             Lndu += sMTn*s_ndu[i];
@@ -308,20 +308,20 @@ kernel void insVelocityBCTri2D(const dlong Nelements,
   }
 }
 
-kernel void insVelocityAddBCTri2D(const dlong Nelements,
+@kernel void insVelocityAddBCTri2D(const dlong Nelements,
                                    const dfloat time,
-                                   const dfloat * restrict sgeo,
-                                   const dfloat * restrict x,
-                                   const dfloat * restrict y,
-                                   const dfloat * restrict z,
-                                   const dlong  * restrict vmapM,
-                                   const int    * restrict mapB,
-                                         dfloat * restrict U,
-                                         dfloat * restrict V,
-                                         dfloat * restrict W){
+                                   @restrict const  dfloat *  sgeo,
+                                   @restrict const  dfloat *  x,
+                                   @restrict const  dfloat *  y,
+                                   @restrict const  dfloat *  z,
+                                   @restrict const  dlong  *  vmapM,
+                                   @restrict const  int    *  mapB,
+                                         @restrict dfloat *  U,
+                                         @restrict dfloat *  V,
+                                         @restrict dfloat *  W){
   
-  for(dlong e=0;e<Nelements;e++;outer0){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
       const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
       const int bc = mapB[idM];
 
