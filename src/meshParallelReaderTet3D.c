@@ -23,6 +23,8 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
 
   mesh->rank = rank;
   mesh->size = size;
+
+  MPI_Comm_dup(MPI_COMM_WORLD, &mesh->comm);
   
   mesh->dim = 3;
   mesh->Nverts = 4; // number of vertices per element
