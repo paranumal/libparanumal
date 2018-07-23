@@ -5,7 +5,7 @@ endif
 
 CXXFLAGS =
 
-include ${OCCA_DIR}/scripts/makefile
+include ${OCCA_DIR}/scripts/Makefile
 
 # define variables
 HDRDIR = ../../include
@@ -21,7 +21,7 @@ CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CUR
 
 
 # link flags to be used
-LDFLAGS	= $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
+LDFLAGS	= -L$(OCCA_DIR)/lib $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
 			-L$(ALMONDDIR) -lparALMOND
 
 # libraries to be linked in
