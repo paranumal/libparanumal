@@ -1,29 +1,29 @@
 
 // isothermal Compressible Navier-Stokes
-kernel void cnsCubatureVolumeTet3D(const dlong Nelements,
+@kernel void cnsCubatureVolumeTet3D(const dlong Nelements,
 				   const int advSwitch,
 				   const dfloat fx,
 				   const dfloat fy,
 				   const dfloat fz, 
-				   const dfloat * restrict vgeo,
-				   const dfloat * restrict cubvgeo,	
-				   const dfloat * restrict cubDWmatrices,
-				   const dfloat * restrict cubInterpT,
-				   const dfloat * restrict cubProjectT,
-				   const dfloat * restrict viscousStresses,
-				   const dfloat * restrict q,
-				   dfloat * restrict rhsq){
+				   @restrict const  dfloat *  vgeo,
+				   @restrict const  dfloat *  cubvgeo,	
+				   @restrict const  dfloat *  cubDWmatrices,
+				   @restrict const  dfloat *  cubInterpT,
+				   @restrict const  dfloat *  cubProjectT,
+				   @restrict const  dfloat *  viscousStresses,
+				   @restrict const  dfloat *  q,
+				   @restrict dfloat *  rhsq){
   
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    shared dfloat s_q[p_Nfields][p_Np];
-    shared dfloat s_vS[p_Nstresses][p_Np];
+    @shared dfloat s_q[p_Nfields][p_Np];
+    @shared dfloat s_vS[p_Nstresses][p_Np];
 
-    shared dfloat s_F[p_Nfields][p_cubNp];
-    shared dfloat s_G[p_Nfields][p_cubNp];
-    shared dfloat s_H[p_Nfields][p_cubNp];
+    @shared dfloat s_F[p_Nfields][p_cubNp];
+    @shared dfloat s_G[p_Nfields][p_cubNp];
+    @shared dfloat s_H[p_Nfields][p_cubNp];
 
-    for(int n=0;n<p_cubNp;++n;inner0){      // for all nodes in this element
+    for(int n=0;n<p_cubNp;++n;@inner(0)){      // for all nodes in this element
       if(n<p_Np){ 
         const dlong  qbase = e*p_Np*p_Nfields + n;
         const dlong id = e*p_Np*p_Nstresses + n;
@@ -43,14 +43,14 @@ kernel void cnsCubatureVolumeTet3D(const dlong Nelements,
       }   
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_cubNp;++n;inner0){
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
       //interpolate to cubature
       dfloat r = 0., ru = 0., rv = 0., rw = 0;
       dfloat T11 = 0., T12 = 0., T13 = 0., T22 = 0., T23 = 0., T33 = 0.;
 
-      occaUnroll(p_Np)
+      #pragma unroll p_Np
 	for(int i=0;i<p_Np;++i){
 	  const dfloat cIni = cubInterpT[n+i*p_cubNp];
 	  r  += cIni*s_q[0][i];
@@ -118,9 +118,9 @@ kernel void cnsCubatureVolumeTet3D(const dlong Nelements,
       
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int n=0;n<p_cubNp;++n;inner0){ 
+    for(int n=0;n<p_cubNp;++n;@inner(0)){ 
       if (n<p_Np) {   
 
         dfloat df0dr = 0.f, dg0ds = 0.f, dh0dt = 0.f;
@@ -128,7 +128,7 @@ kernel void cnsCubatureVolumeTet3D(const dlong Nelements,
 	dfloat df2dr = 0.f, dg2ds = 0.f, dh2dt = 0.f;
 	dfloat df3dr = 0.f, dg3ds = 0.f, dh3dt = 0.f;
 
-        occaUnroll(p_cubNp)
+        #pragma unroll p_cubNp
 	  for(int i=0;i<p_cubNp;++i){
 	    const dfloat cDrni = cubDWmatrices[n+i*p_Np];
 	    const dfloat cDsni = cubDWmatrices[n+i*p_Np+1*p_Np*p_cubNp];
@@ -164,20 +164,20 @@ kernel void cnsCubatureVolumeTet3D(const dlong Nelements,
 }
 
 
-kernel void cnsStressesVolumeTet3D(const dlong Nelements,
-				   const dfloat * restrict vgeo,
-				   const dfloat * restrict DT,
+@kernel void cnsStressesVolumeTet3D(const dlong Nelements,
+				   @restrict const  dfloat *  vgeo,
+				   @restrict const  dfloat *  DT,
 				   const dfloat mu,
-				   const dfloat * restrict q,
-				   dfloat * restrict viscousStresses){
+				   @restrict const  dfloat *  q,
+				   @restrict dfloat *  viscousStresses){
   
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    shared dfloat s_u[p_Np];
-    shared dfloat s_v[p_Np];
-    shared dfloat s_w[p_Np];
+    @shared dfloat s_u[p_Np];
+    @shared dfloat s_v[p_Np];
+    @shared dfloat s_w[p_Np];
     
-    for(int n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong qbase = e*p_Nfields*p_Np + n;
       const dfloat r  = q[qbase + 0*p_Np];
       const dfloat ru = q[qbase + 1*p_Np];
@@ -189,9 +189,9 @@ kernel void cnsStressesVolumeTet3D(const dlong Nelements,
       s_w[n] = rw/r;        
     }
     
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
       const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];

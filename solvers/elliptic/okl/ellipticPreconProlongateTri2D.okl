@@ -1,10 +1,10 @@
-kernel void ellipticPreconProlongate_v0(const dlong Nelements,
-                                        const dfloat * restrict V1,
-                                        const dfloat * restrict q1,
-                                        dfloat * restrict qN){
+@kernel void ellipticPreconProlongate_v0(const dlong Nelements,
+                                        @restrict const  dfloat *  V1,
+                                        @restrict const  dfloat *  q1,
+                                        @restrict dfloat *  qN){
 
-  for(dlong e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       dfloat tmp = 0; // qN[e*p_Np+n] ;
 
       for(int i=0;i<p_Nverts;++i){
@@ -15,17 +15,17 @@ kernel void ellipticPreconProlongate_v0(const dlong Nelements,
   }
 }
 
-kernel void ellipticPreconProlongateTri2D(const dlong Nelements,
-                                     const dfloat * restrict R,
-                                     const dfloat * restrict qCoarse,
-                                     dfloat * restrict qFine){
+@kernel void ellipticPreconProlongateTri2D(const dlong Nelements,
+                                     @restrict const  dfloat *  R,
+                                     @restrict const  dfloat *  qCoarse,
+                                     @restrict dfloat *  qFine){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;@outer(0)){
 
-    shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
+    @shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
 
-    for(int es=0;es<p_NblockVFine;++es;inner1){
-      for(int n=0;n<p_NpFine;++n;inner0){
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
         dlong t = n + es*p_NpFine;
 
         if(t<p_NpCoarse*p_NblockVFine)
@@ -34,16 +34,16 @@ kernel void ellipticPreconProlongateTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int es=0;es<p_NblockVFine;++es;inner1){
-      for(int n=0;n<p_NpFine;++n;inner0){
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           //dfloat tmp = 0.;
           dfloat tmp = qFine[e*p_NpFine+n];
 
-          occaUnroll(p_NpCoarse)
+          #pragma unroll p_NpCoarse
             for(int i=0;i<p_NpCoarse;++i){
               tmp += R[i*p_NpFine + n]*s_qCoarse[es][i];
             }
@@ -56,20 +56,20 @@ kernel void ellipticPreconProlongateTri2D(const dlong Nelements,
 }
 
 
-//storing R in shared is too much for 3D
+//storing R in @shared is too much for 3D
 #if 0
-kernel void ellipticPreconProlongate_v1(const dlong Nelements,
-                                     const dfloat * restrict R,
-                                     const dfloat * restrict qCoarse,
-                                     dfloat * restrict qFine){
+@kernel void ellipticPreconProlongate_v1(const dlong Nelements,
+                                     @restrict const  dfloat *  R,
+                                     @restrict const  dfloat *  qCoarse,
+                                     @restrict dfloat *  qFine){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;@outer(0)){
 
-    shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
-    shared dfloat s_R[p_NpCoarse][p_NpFine];
+    @shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
+    @shared dfloat s_R[p_NpCoarse][p_NpFine];
 
-    for(int es=0;es<p_NblockVFine;++es;inner1){
-      for(int n=0;n<p_NpFine;++n;inner0){
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
         dlong t = n + es*p_NpFine;
 
         if(t<p_NpCoarse*p_NblockVFine)
@@ -83,16 +83,16 @@ kernel void ellipticPreconProlongate_v1(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int es=0;es<p_NblockVFine;++es;inner1){
-      for(int n=0;n<p_NpFine;++n;inner0){
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           dfloat tmp = 0.;
           //dfloat tmp = qFine[e*p_NpFine+n];
 
-          occaUnroll(p_NpCoarse)
+          #pragma unroll p_NpCoarse
             for(int i=0;i<p_NpCoarse;++i){
               tmp += s_R[i][n]*s_qCoarse[es][i];
             }
@@ -106,21 +106,21 @@ kernel void ellipticPreconProlongate_v1(const dlong Nelements,
 #endif
 
 #if 0
-kernel void ellipticPreconProlongateQuad2D(const int Nelements,
-             const dfloat * restrict V1,
-             const dfloat * restrict q1,
-             dfloat * restrict qN){
+@kernel void ellipticPreconProlongateQuad2D(const int Nelements,
+             @restrict const  dfloat *  V1,
+             @restrict const  dfloat *  q1,
+             @restrict dfloat *  qN){
 
 
-  for(int e=0;e<Nelements;++e;outer0){
-    shared dfloat s_q1N[p_Nq1][p_Nq];
-    shared dfloat s_q11[p_Nq1][p_Nq1];
-    shared dfloat s_V1[p_Nq1][p_Nq];
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    @shared dfloat s_q1N[p_Nq1][p_Nq];
+    @shared dfloat s_q11[p_Nq1][p_Nq1];
+    @shared dfloat s_V1[p_Nq1][p_Nq];
 
-    // prefetch to shared
+    // prefetch to @shared
 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
   int id = i+j*p_Nq;
   if(id<p_Nq1*p_Nq1){
     s_q11[0][id] = q1[id+e*p_Nq1*p_Nq1];
@@ -131,12 +131,12 @@ kernel void ellipticPreconProlongateQuad2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // prolongate in i index
 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
   if(j<2){
     dfloat res = 0;
     for(int m=0;m<p_Nq1;++m)
@@ -146,12 +146,12 @@ kernel void ellipticPreconProlongateQuad2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // coarsen in i index
 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
 
   dfloat res = 0;
   for(int m=0;m<p_Nq1;++m)

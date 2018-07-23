@@ -105,7 +105,7 @@ mesh2D *meshSetupTri2D(char *filename, int N);
 mesh2D *meshSetupQuad2D(char *filename, int N);
 
 // set up OCCA device and copy generic element info to device
-void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::kernelInfo &kernelInfo);
+void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::properties &kernelInfo);
 
 // void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels); 
 dfloat meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels, dfloat finalTime); 

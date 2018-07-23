@@ -1,19 +1,19 @@
 
-kernel void ellipticBBBRGradientVolume2D(const int Nelements,
-        const dfloat * restrict vgeo,
-        const int * restrict D1ids,
-        const int * restrict D2ids,
-        const int * restrict D3ids,
-        const dfloat * restrict Dvals,
-        const dfloat * restrict q,
-        dfloat * restrict gradq){
+@kernel void ellipticBBBRGradientVolume2D(const int Nelements,
+        @restrict const  dfloat *  vgeo,
+        @restrict const  int *  D1ids,
+        @restrict const  int *  D2ids,
+        @restrict const  int *  D3ids,
+        @restrict const  dfloat *  Dvals,
+        @restrict const  dfloat *  q,
+        @restrict dfloat *  gradq){
 
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     // for all elements
-    shared dfloat s_q[p_NblockV][p_Np];
+    @shared dfloat s_q[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         int e = eo+es; // element in block
         if(e<Nelements){
           s_q[es][n]  = q[n + e*p_Np];
@@ -21,11 +21,11 @@ kernel void ellipticBBBRGradientVolume2D(const int Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const int e = eo+es; // element in block
         if(e<Nelements){
           // prefetch geometric factors (constant on triangle)
@@ -65,28 +65,28 @@ kernel void ellipticBBBRGradientVolume2D(const int Nelements,
   }
 }
 
-kernel void ellipticBBBRGradientSurface2D(const int Nelements,
-         const int   * restrict vmapM,
-         const int   * restrict vmapP,
-         const dfloat * restrict sgeo,
-         const int   * restrict EToB,
-         const dfloat * restrict L0vals,
-         const int   * restrict ELids,
-         const dfloat * restrict ELvals,
-         const dfloat * restrict q,
-         dfloat * restrict gradq){
+@kernel void ellipticBBBRGradientSurface2D(const int Nelements,
+         @restrict const  int   *  vmapM,
+         @restrict const  int   *  vmapP,
+         @restrict const  dfloat *  sgeo,
+         @restrict const  int   *  EToB,
+         @restrict const  dfloat *  L0vals,
+         @restrict const  int   *  ELids,
+         @restrict const  dfloat *  ELvals,
+         @restrict const  dfloat *  q,
+         @restrict dfloat *  gradq){
 
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    shared dfloat s_fluxqx[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxqy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxqx_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxqy_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxqx[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxqy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxqx_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxqy_copy[p_NblockS][p_Nfp*p_Nfaces];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         int e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -126,12 +126,12 @@ kernel void ellipticBBBRGradientSurface2D(const int Nelements,
       }
     }
 
-    // wait for all flux functions are written to shared
-    barrier(localMemFence);
+    // wait for all flux functions are written to @shared
+    @barrier("local");
 
     // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -157,11 +157,11 @@ kernel void ellipticBBBRGradientSurface2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // apply lift reduction and accumulate RHS
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
@@ -171,7 +171,7 @@ kernel void ellipticBBBRGradientSurface2D(const int Nelements,
             dfloat qyn  = gradq[id+p_Np+n];
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_max_EL_nnz)
+            #pragma unroll p_max_EL_nnz
               for (int m = 0; m < p_max_EL_nnz; ++m){
                 int iid = n + m*p_Np;
                 dfloat ELval = ELvals[iid];
@@ -189,22 +189,22 @@ kernel void ellipticBBBRGradientSurface2D(const int Nelements,
   }
 }
 
-kernel void ellipticBBBRDivergenceVolume2D(const int Nelements,
-        const dfloat * restrict vgeo,
-        const int * restrict D1ids,
-        const int * restrict D2ids,
-        const int * restrict D3ids,
-        const dfloat * restrict Dvals,
-        const dfloat * restrict gradq,
-        dfloat * restrict Aq){
+@kernel void ellipticBBBRDivergenceVolume2D(const int Nelements,
+        @restrict const  dfloat *  vgeo,
+        @restrict const  int *  D1ids,
+        @restrict const  int *  D2ids,
+        @restrict const  int *  D3ids,
+        @restrict const  dfloat *  Dvals,
+        @restrict const  dfloat *  gradq,
+        @restrict dfloat *  Aq){
 
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     // for all elements
-    shared dfloat s_qx[p_NblockV][p_Np];
-    shared dfloat s_qy[p_NblockV][p_Np];
+    @shared dfloat s_qx[p_NblockV][p_Np];
+    @shared dfloat s_qy[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         int e = eo+es; // element in block
         if(e<Nelements){
           s_qx[es][n]  = gradq[n +        e*2*p_Np];
@@ -213,11 +213,11 @@ kernel void ellipticBBBRDivergenceVolume2D(const int Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
         int e = eo+es; // element in block
         if(e<Nelements){
@@ -264,32 +264,32 @@ kernel void ellipticBBBRDivergenceVolume2D(const int Nelements,
   }
 }
 
-kernel void ellipticBBBRDivergenceSurface2D(const int Nelements,
-         const int   * restrict vmapM,
-         const int   * restrict vmapP,
+@kernel void ellipticBBBRDivergenceSurface2D(const int Nelements,
+         @restrict const  int   *  vmapM,
+         @restrict const  int   *  vmapP,
          const dfloat lambda,
          const dfloat tau,
-         const dfloat * restrict vgeo,
-         const dfloat * restrict sgeo,
-         const int   * restrict EToB,
-         const dfloat * restrict L0vals,
-         const int   * restrict ELids,
-         const dfloat * restrict ELvals,
-         const dfloat * restrict MM,
-         const dfloat * restrict q,
-         const dfloat * restrict gradq,
-         dfloat * restrict Aq){
+         @restrict const  dfloat *  vgeo,
+         @restrict const  dfloat *  sgeo,
+         @restrict const  int   *  EToB,
+         @restrict const  dfloat *  L0vals,
+         @restrict const  int   *  ELids,
+         @restrict const  dfloat *  ELvals,
+         @restrict const  dfloat *  MM,
+         @restrict const  dfloat *  q,
+         @restrict const  dfloat *  gradq,
+         @restrict dfloat *  Aq){
 
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    shared dfloat s_flux[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_flux_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_Aq[p_NblockS][p_Np];
+    @shared dfloat s_flux[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_flux_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_Aq[p_NblockS][p_Np];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const int e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -336,12 +336,12 @@ kernel void ellipticBBBRDivergenceSurface2D(const int Nelements,
       }
     }
 
-    // wait for all flux functions are written to shared
-    barrier(localMemFence);
+    // wait for all flux functions are written to @shared
+    @barrier("local");
 
     // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const int e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -359,11 +359,11 @@ kernel void ellipticBBBRDivergenceSurface2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // apply lift reduction and accumulate RHS
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
@@ -373,7 +373,7 @@ kernel void ellipticBBBRDivergenceSurface2D(const int Nelements,
             dfloat qn  = q[id+n];
 
 
-            occaUnroll(p_max_EL_nnz)
+            #pragma unroll p_max_EL_nnz
               for (int m = 0; m < p_max_EL_nnz; ++m){
                 int iid = n + m*p_Np;
                 dfloat ELval = ELvals[iid];
@@ -387,10 +387,10 @@ kernel void ellipticBBBRDivergenceSurface2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
@@ -401,7 +401,7 @@ kernel void ellipticBBBRDivergenceSurface2D(const int Nelements,
             dfloat MAqn = 0.f;
 
             // multiply by mass matrix
-            occaUnroll(p_Np)
+            #pragma unroll p_Np
               for(int i=0;i<p_Np;++i){
                 MAqn += MM[n+i*p_Np]*s_Aq[es][i];
               }
@@ -414,32 +414,32 @@ kernel void ellipticBBBRDivergenceSurface2D(const int Nelements,
   }
 }
 
-kernel void ellipticBBBRDivergenceSurfaceNonSym2D(const int Nelements,
-         const int   * restrict vmapM,
-         const int   * restrict vmapP,
+@kernel void ellipticBBBRDivergenceSurfaceNonSym2D(const int Nelements,
+         @restrict const  int   *  vmapM,
+         @restrict const  int   *  vmapP,
          const dfloat lambda,
          const dfloat tau,
-         const dfloat * restrict vgeo,
-         const dfloat * restrict sgeo,
-         const int   * restrict EToB,
-         const dfloat * restrict L0vals,
-         const int   * restrict ELids,
-         const dfloat * restrict ELvals,
-         const dfloat * restrict MM,
-         const dfloat * restrict q,
-         const dfloat * restrict gradq,
-         dfloat * restrict Aq){
+         @restrict const  dfloat *  vgeo,
+         @restrict const  dfloat *  sgeo,
+         @restrict const  int   *  EToB,
+         @restrict const  dfloat *  L0vals,
+         @restrict const  int   *  ELids,
+         @restrict const  dfloat *  ELvals,
+         @restrict const  dfloat *  MM,
+         @restrict const  dfloat *  q,
+         @restrict const  dfloat *  gradq,
+         @restrict dfloat *  Aq){
 
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    shared dfloat s_flux[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_flux_copy[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_Aq[p_NblockS][p_Np];
+    @shared dfloat s_flux[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_flux_copy[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_Aq[p_NblockS][p_Np];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const int e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -486,12 +486,12 @@ kernel void ellipticBBBRDivergenceSurfaceNonSym2D(const int Nelements,
       }
     }
 
-    // wait for all flux functions are written to shared
-    barrier(localMemFence);
+    // wait for all flux functions are written to @shared
+    @barrier("local");
 
     // apply L0 to fluxes. use fact that L0 = tridiagonal in 2D
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const int e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -509,11 +509,11 @@ kernel void ellipticBBBRDivergenceSurfaceNonSym2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // apply lift reduction and accumulate RHS
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         int e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
@@ -524,7 +524,7 @@ kernel void ellipticBBBRDivergenceSurfaceNonSym2D(const int Nelements,
             dfloat qn  = q[id+n];
 
 
-            occaUnroll(p_max_EL_nnz)
+            #pragma unroll p_max_EL_nnz
               for (int m = 0; m < p_max_EL_nnz; ++m){
                 int iid = n + m*p_Np;
                 dfloat ELval = ELvals[iid];

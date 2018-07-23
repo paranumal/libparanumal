@@ -1,18 +1,18 @@
 
 // Computes volume contribution of div(UI)
-kernel void insPoissonRhsForcingTri2D(const dlong Nelements,
-                                      const dfloat * restrict vgeo,
-                                      const dfloat * restrict MM,
+@kernel void insPoissonRhsForcingTri2D(const dlong Nelements,
+                                      @restrict const  dfloat *  vgeo,
+                                      @restrict const  dfloat *  MM,
                                       const dfloat dt,
                                       const dfloat g0,
-                                            dfloat * restrict rhs){
+                                            @restrict dfloat *  rhs){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_rhs[p_NblockV][p_Np];
+    @shared dfloat s_rhs[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           const dlong id = e*p_Np+n;
@@ -21,18 +21,18 @@ kernel void insPoissonRhsForcingTri2D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
     // Multiply with Mass Matrix
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
           dfloat rhsn = 0.f;
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat M = MM[n+i*p_Np];
               rhsn += M*s_rhs[es][i];
@@ -47,16 +47,16 @@ kernel void insPoissonRhsForcingTri2D(const dlong Nelements,
 }
 
 
-kernel void insPoissonUpdateTri2D(const dlong Nelements,
+@kernel void insPoissonUpdateTri2D(const dlong Nelements,
                                   const dfloat dt,
                                   const dfloat g0,
-                                  const dfloat * restrict Px,
-                                  const dfloat * restrict Py,
-                                        dfloat * restrict Ut,
-                                        dfloat * restrict Vt){
+                                  @restrict const  dfloat *  Px,
+                                  @restrict const  dfloat *  Py,
+                                        @restrict dfloat *  Ut,
+                                        @restrict dfloat *  Vt){
 
-  for(dlong e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong id  = n + e*p_Np;
       // // Update Velocity u = u - dt/g0 * grad(Pr)
       Ut[id] -= dt*Px[id]/g0;
@@ -67,38 +67,38 @@ kernel void insPoissonUpdateTri2D(const dlong Nelements,
 
 
 // Actually solves for Pr increamnet not presssure
-kernel void insPoissonRhsIpdgBCTri2D(const dlong Nelements,
+@kernel void insPoissonRhsIpdgBCTri2D(const dlong Nelements,
                                      const int pressure_solve,
-                                     const dlong  * restrict vmapM,
+                                     @restrict const  dlong  *  vmapM,
                                      const dfloat tau,
                                      const dfloat time,
                                      const dfloat dt,
-                                     const dfloat * restrict x,
-                                     const dfloat * restrict y,
-                                     const dfloat * restrict vgeo,
-                                     const dfloat * restrict sgeo,
-                                     const int    * restrict EToB,
-                                     const dfloat * restrict DrT,
-                                     const dfloat * restrict DsT,
-                                     const dfloat * restrict LIFTT,
-                                     const dfloat * restrict MM,
-                                           dfloat * restrict rhsP){
-  for(dlong e=0;e<Nelements;++e;outer0){
-    shared  dfloat s_dpdx[p_Np];
-    shared  dfloat s_dpdy[p_Np];
-    shared  dfloat s_lapp[p_Np];
+                                     @restrict const  dfloat *  x,
+                                     @restrict const  dfloat *  y,
+                                     @restrict const  dfloat *  vgeo,
+                                     @restrict const  dfloat *  sgeo,
+                                     @restrict const  int    *  EToB,
+                                     @restrict const  dfloat *  DrT,
+                                     @restrict const  dfloat *  DsT,
+                                     @restrict const  dfloat *  LIFTT,
+                                     @restrict const  dfloat *  MM,
+                                           @restrict dfloat *  rhsP){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared  dfloat s_dpdx[p_Np];
+    @shared  dfloat s_dpdy[p_Np];
+    @shared  dfloat s_lapp[p_Np];
 
-    shared  dfloat s_nxdp[p_NfacesNfp];
-    shared  dfloat s_nydp[p_NfacesNfp];
+    @shared  dfloat s_nxdp[p_NfacesNfp];
+    @shared  dfloat s_nydp[p_NfacesNfp];
 
-    shared  dfloat s_lappflux[p_NfacesNfp];
-    shared  dfloat s_Lnxdp[p_Np];
-    shared  dfloat s_Lnydp[p_Np];
+    @shared  dfloat s_lappflux[p_NfacesNfp];
+    @shared  dfloat s_Lnxdp[p_Np];
+    @shared  dfloat s_Lnydp[p_Np];
 
-    exclusive dlong idM;
-    exclusive dfloat nx, ny, sJ, invJ, hinv;
+    @exclusive dlong idM;
+    @exclusive dfloat nx, ny, sJ, invJ, hinv;
     
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const dlong id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];          
@@ -135,10 +135,10 @@ kernel void insPoissonRhsIpdgBCTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // dqdx += LIFT*(sJ/J)*nx*dq
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         const dlong gid = e*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
@@ -149,7 +149,7 @@ kernel void insPoissonRhsIpdgBCTri2D(const dlong Nelements,
         dfloat Lnxdp = 0;
         dfloat Lnydp = 0;
 
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lnxdp += LIFTT[n+i*p_Np]*s_nxdp[i];
             Lnydp += LIFTT[n+i*p_Np]*s_nydp[i];
@@ -166,9 +166,9 @@ kernel void insPoissonRhsIpdgBCTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const int id = idM%p_Np;
         s_lappflux[n] += sJ*invJ*(nx*s_Lnxdp[id]+ny*s_Lnydp[id]);
@@ -177,7 +177,7 @@ kernel void insPoissonRhsIpdgBCTri2D(const dlong Nelements,
       if(n<p_Np){
         dfloat lapr = 0, laps = 0;
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i) {
           lapr += DrT[n+i*p_Np]*s_dpdx[i];
           laps += DsT[n+i*p_Np]*s_dpdy[i];
@@ -188,13 +188,13 @@ kernel void insPoissonRhsIpdgBCTri2D(const dlong Nelements,
 
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         dfloat lap = 0;
         // lift remaining surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
         for(int i=0;i<p_NfacesNfp;++i){
           lap += LIFTT[n+i*p_Np]*s_lappflux[i];
         }
@@ -202,16 +202,16 @@ kernel void insPoissonRhsIpdgBCTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 
         dfloat Mlapp = 0;
 
         // multiply by mass matrix
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           Mlapp += MM[n+i*p_Np]*s_lapp[i];
         }
@@ -224,29 +224,29 @@ kernel void insPoissonRhsIpdgBCTri2D(const dlong Nelements,
 }
 
 //RHS contributions for continuous solver
-kernel void insPoissonRhsBCTri2D(const dlong Nelements,
+@kernel void insPoissonRhsBCTri2D(const dlong Nelements,
                                  const int pressure_solve,
-                                 const dfloat * restrict ggeo,
-                                 const dfloat * restrict sgeo,
-                                 const dfloat * restrict SrrT,
-                                 const dfloat * restrict SrsT,
-                                 const dfloat * restrict SsrT,
-                                 const dfloat * restrict SssT,
-                                 const dfloat * restrict MM,
-                                 const dlong  * restrict vmapM,
-                                 const dfloat * restrict sMT,
+                                 @restrict const  dfloat *  ggeo,
+                                 @restrict const  dfloat *  sgeo,
+                                 @restrict const  dfloat *  SrrT,
+                                 @restrict const  dfloat *  SrsT,
+                                 @restrict const  dfloat *  SsrT,
+                                 @restrict const  dfloat *  SssT,
+                                 @restrict const  dfloat *  MM,
+                                 @restrict const  dlong  *  vmapM,
+                                 @restrict const  dfloat *  sMT,
                                  const dfloat time,
                                  const dfloat dt,
-                                 const dfloat * restrict x,
-                                 const dfloat * restrict y,
-                                 const int    * restrict mapB,
-                                       dfloat * restrict rhsP){
+                                 @restrict const  dfloat *  x,
+                                 @restrict const  dfloat *  y,
+                                 @restrict const  int    *  mapB,
+                                       @restrict dfloat *  rhsP){
   
-  for(dlong e=0;e<Nelements;e++;outer0){
-    shared dfloat s_q[p_Np];
-    shared dfloat s_ndq[p_Nfp*p_Nfaces];
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_q[p_Np];
+    @shared dfloat s_ndq[p_Nfp*p_Nfaces];
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         s_q[n] = 0.;
       }
@@ -255,9 +255,9 @@ kernel void insPoissonRhsBCTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const dlong id  = n + e*p_Nfaces*p_Nfp;
         const dlong idM = vmapM[id];          
@@ -292,9 +292,9 @@ kernel void insPoissonRhsBCTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int n=0;n<p_maxNodes;++n;inner0){ 
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ 
       if(n<p_Np){
         //volume Dirichlet data
         const dlong id = n + e*p_Np;
@@ -310,7 +310,7 @@ kernel void insPoissonRhsBCTri2D(const dlong Nelements,
         dfloat qss = 0.;
         dfloat qM = 0.;
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for (int k=0;k<p_Np;k++) {
             qrr += SrrT[n+k*p_Np]*s_q[k];
             qrs += SrsT[n+k*p_Np]*s_q[k];
@@ -321,7 +321,7 @@ kernel void insPoissonRhsBCTri2D(const dlong Nelements,
 
         dfloat Lndq = 0;            
         // surface mass * surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lndq += sMT[n+i*p_Np]*s_ndq[i];
           }
@@ -332,18 +332,18 @@ kernel void insPoissonRhsBCTri2D(const dlong Nelements,
   }
 }
 
-kernel void insPoissonAddBCTri2D(const dlong Nelements,
+@kernel void insPoissonAddBCTri2D(const dlong Nelements,
                                  const int pressure_solve,
                                  const dfloat time,
                                  const dfloat dt,
-                                 const dfloat * restrict x,
-                                 const dfloat * restrict y,
-                                 const dlong  * restrict vmapM,
-                                 const int    * restrict mapB,
-                                       dfloat * restrict P){
+                                 @restrict const  dfloat *  x,
+                                 @restrict const  dfloat *  y,
+                                 @restrict const  dlong  *  vmapM,
+                                 @restrict const  int    *  mapB,
+                                       @restrict dfloat *  P){
   
-  for(dlong e=0;e<Nelements;e++;outer0){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
       const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
       const int bc = mapB[idM];
 

@@ -259,27 +259,32 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   //Reynolds number
   ins->Re = ins->ubar/ins->nu;
 
-  occa::kernelInfo kernelInfo;
+  occa::properties kernelInfo;
+ kernelInfo["defines"].asObject();
+ kernelInfo["includes"].asArray();
+ kernelInfo["header"].asArray();
+ kernelInfo["flags"].asObject();
+
   if(ins->dim==3)
     meshOccaSetup3D(mesh, options, kernelInfo);
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
-  occa::kernelInfo kernelInfoV  = kernelInfo;
-  occa::kernelInfo kernelInfoP  = kernelInfo;
+  occa::properties kernelInfoV  = kernelInfo;
+  occa::properties kernelInfoP  = kernelInfo;
 
   // ADD-DEFINES
-  kernelInfo.addDefine("p_pbar", ins->pbar);
-  kernelInfo.addDefine("p_ubar", ins->ubar);
-  kernelInfo.addDefine("p_vbar", ins->vbar);
-  kernelInfo.addDefine("p_wbar", ins->wbar);
-  kernelInfo.addDefine("p_nu", ins->nu);
+  kernelInfo["defines/" "p_pbar"]= ins->pbar;
+  kernelInfo["defines/" "p_ubar"]= ins->ubar;
+  kernelInfo["defines/" "p_vbar"]= ins->vbar;
+  kernelInfo["defines/" "p_wbar"]= ins->wbar;
+  kernelInfo["defines/" "p_nu"]= ins->nu;
 
-  kernelInfo.addDefine("p_NTfields", ins->NTfields);
-  kernelInfo.addDefine("p_NVfields", ins->NVfields);
-  kernelInfo.addDefine("p_NfacesNfp",  mesh->Nfaces*mesh->Nfp);
-  kernelInfo.addDefine("p_Nstages",  ins->Nstages);
-  kernelInfo.addDefine("p_SUBCYCLING",  ins->Nsubsteps);
+  kernelInfo["defines/" "p_NTfields"]= ins->NTfields;
+  kernelInfo["defines/" "p_NVfields"]= ins->NVfields;
+  kernelInfo["defines/" "p_NfacesNfp"]=  mesh->Nfaces*mesh->Nfp;
+  kernelInfo["defines/" "p_Nstages"]=  ins->Nstages;
+  kernelInfo["defines/" "p_SUBCYCLING"]=  ins->Nsubsteps;
 
   if (options.compareArgs("TIME INTEGRATOR", "ARK")) 
     ins->ARKswitch = 1;   
@@ -289,7 +294,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   //add boundary data to kernel info
   string boundaryHeaderFileName; 
   options.getArgs("DATA FILE", boundaryHeaderFileName);
-  kernelInfo.addInclude((char*)boundaryHeaderFileName.c_str());
+  kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
 
   ins->o_U = mesh->device.malloc(ins->NVfields*ins->Nstages*Ntotal*sizeof(dfloat), ins->U);
   ins->o_P = mesh->device.malloc(              ins->Nstages*Ntotal*sizeof(dfloat), ins->P);
@@ -304,9 +309,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
       if (ins->dim==2) 
-        ins->setFlowFieldKernel =  mesh->device.buildKernelFromSource(DINS "/okl/insSetFlowField2D.okl", "insSetFlowField2D", kernelInfo);  
+        ins->setFlowFieldKernel =  mesh->device.buildKernel(DINS "/okl/insSetFlowField2D.okl", "insSetFlowField2D", kernelInfo);  
       else
-        ins->setFlowFieldKernel =  mesh->device.buildKernelFromSource(DINS "/okl/insSetFlowField3D.okl", "insSetFlowField3D", kernelInfo);  
+        ins->setFlowFieldKernel =  mesh->device.buildKernel(DINS "/okl/insSetFlowField3D.okl", "insSetFlowField3D", kernelInfo);  
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }
@@ -626,48 +631,48 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->o_PmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), ins->PmapB);
 
 
-  kernelInfo.addDefine("p_blockSize", blockSize);
-  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  kernelInfo["defines/" "p_blockSize"]= blockSize;
+  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
    if(options.compareArgs("TIME INTEGRATOR", "EXTBDF"))
-    kernelInfo.addDefine("p_EXTBDF", 1);
+    kernelInfo["defines/" "p_EXTBDF"]= 1;
   else
-    kernelInfo.addDefine("p_EXTBDF", 0);
+    kernelInfo["defines/" "p_EXTBDF"]= 0;
 
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-  kernelInfo.addDefine("p_maxNodes", maxNodes);
+  kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int NblockV = 256/mesh->Np; // works for CUDA
-  kernelInfo.addDefine("p_NblockV", NblockV);
+  kernelInfo["defines/" "p_NblockV"]= NblockV;
 
   int NblockS = 256/maxNodes; // works for CUDA
-  kernelInfo.addDefine("p_NblockS", NblockS);
+  kernelInfo["defines/" "p_NblockS"]= NblockS;
 
 
   int maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
-  kernelInfo.addDefine("p_maxNodesVolumeCub", maxNodesVolumeCub);
+  kernelInfo["defines/" "p_maxNodesVolumeCub"]= maxNodesVolumeCub;
   int cubNblockV = mymax(1,256/maxNodesVolumeCub);
   //
   int maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
-  kernelInfo.addDefine("p_maxNodesSurfaceCub",maxNodesSurfaceCub);
+  kernelInfo["defines/" "p_maxNodesSurfaceCub"]=maxNodesSurfaceCub;
   int cubNblockS = mymax(256/maxNodesSurfaceCub,1); // works for CUDA
   //
-  kernelInfo.addDefine("p_cubNblockV",cubNblockV);
-  kernelInfo.addDefine("p_cubNblockS",cubNblockS);
+  kernelInfo["defines/" "p_cubNblockV"]=cubNblockV;
+  kernelInfo["defines/" "p_cubNblockS"]=cubNblockS;
 
   
   // IsoSurface related
   if(ins->dim==3){
-    kernelInfo.addDefine("p_isoNfields", ins->isoNfields);
+    kernelInfo["defines/" "p_isoNfields"]= ins->isoNfields;
     // Define Isosurface Area Tolerance
-    kernelInfo.addDefine("p_triAreaTol", (dfloat) 1.0E-16);
+    kernelInfo["defines/" "p_triAreaTol"]= (dfloat) 1.0E-16;
 
-    kernelInfo.addDefine("p_dim", ins->dim);
-    kernelInfo.addDefine("p_plotNp", mesh->plotNp);
-    kernelInfo.addDefine("p_plotNelements", mesh->plotNelements);
+    kernelInfo["defines/" "p_dim"]= ins->dim;
+    kernelInfo["defines/" "p_plotNp"]= mesh->plotNp;
+    kernelInfo["defines/" "p_plotNelements"]= mesh->plotNelements;
     
     int plotNthreads = mymax(mesh->Np, mymax(mesh->plotNp, mesh->plotNelements));
-    kernelInfo.addDefine("p_plotNthreads", plotNthreads);
+    kernelInfo["defines/" "p_plotNthreads"]= plotNthreads;
  } 
 
 
@@ -788,63 +793,63 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     if (r==mesh->rank) {
       sprintf(fileName, DINS "/okl/insHaloExchange.okl");
       sprintf(kernelName, "insVelocityHaloExtract");
-      ins->velocityHaloExtractKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->velocityHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insVelocityHaloScatter");
-      ins->velocityHaloScatterKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->velocityHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insPressureHaloExtract");
-      ins->pressureHaloExtractKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->pressureHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insPressureHaloScatter");
-      ins->pressureHaloScatterKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->pressureHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
 
       sprintf(fileName, DINS "/okl/insAdvection%s.okl", suffix);
       sprintf(kernelName, "insAdvectionCubatureVolume%s", suffix);
-      ins->advectionCubatureVolumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->advectionCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insAdvectionCubatureSurface%s", suffix);
-      ins->advectionCubatureSurfaceKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->advectionCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insAdvectionVolume%s", suffix);
-      ins->advectionVolumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->advectionVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insAdvectionSurface%s", suffix);
-      ins->advectionSurfaceKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->advectionSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
       
       sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
       sprintf(kernelName, "insDiffusion%s", suffix);
-      ins->diffusionKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->diffusionKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(fileName, DINS "/okl/insDiffusionIpdg%s.okl", suffix);
       sprintf(kernelName, "insDiffusionIpdg%s", suffix);
-      ins->diffusionIpdgKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->diffusionIpdgKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(fileName, DINS "/okl/insVelocityGradient%s.okl", suffix);
       sprintf(kernelName, "insVelocityGradient%s", suffix);
-      ins->velocityGradientKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->velocityGradientKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
 
       sprintf(fileName, DINS "/okl/insGradient%s.okl", suffix);
       sprintf(kernelName, "insGradientVolume%s", suffix);
-      ins->gradientVolumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->gradientVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insGradientSurface%s", suffix);
-      ins->gradientSurfaceKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->gradientSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
       
       sprintf(fileName, DINS "/okl/insDivergence%s.okl", suffix);
       sprintf(kernelName, "insDivergenceVolume%s", suffix);
-      ins->divergenceVolumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->divergenceVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insDivergenceSurface%s", suffix);
-      ins->divergenceSurfaceKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
       
@@ -853,56 +858,56 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         sprintf(kernelName, "insVelocityRhsARK%s", suffix);
       else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) 
         sprintf(kernelName, "insVelocityRhsEXTBDF%s", suffix);
-      ins->velocityRhsKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->velocityRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(fileName, DINS "/okl/insVelocityBC%s.okl", suffix);
       sprintf(kernelName, "insVelocityIpdgBC%s", suffix);
-      ins->velocityRhsIpdgBCKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->velocityRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insVelocityBC%s", suffix);
-      ins->velocityRhsBCKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->velocityRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insVelocityAddBC%s", suffix);
-      ins->velocityAddBCKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
       
       sprintf(fileName, DINS "/okl/insPressureRhs%s.okl", suffix);
       sprintf(kernelName, "insPressureRhs%s", suffix);
-      ins->pressureRhsKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->pressureRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(fileName, DINS "/okl/insPressureBC%s.okl", suffix);
       sprintf(kernelName, "insPressureIpdgBC%s", suffix);
-      ins->pressureRhsIpdgBCKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->pressureRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insPressureBC%s", suffix);
-      ins->pressureRhsBCKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->pressureRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insPressureAddBC%s", suffix);
-      ins->pressureAddBCKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
 
       sprintf(fileName, DINS "/okl/insPressureUpdate.okl");
       sprintf(kernelName, "insPressureUpdate");
-      ins->pressureUpdateKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->pressureUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(fileName, DINS "/okl/insVelocityUpdate.okl");
       sprintf(kernelName, "insVelocityUpdate");
-      ins->velocityUpdateKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);      
+      ins->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);      
 
       // ===========================================================================
 
       sprintf(fileName, DINS "/okl/insVorticity%s.okl", suffix);
       sprintf(kernelName, "insVorticity%s", suffix);
-      ins->vorticityKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+      ins->vorticityKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
     
       // ===========================================================================
       if(ins->dim==3 && ins->options.compareArgs("OUTPUT TYPE","ISO")){
         sprintf(fileName, DINS "/okl/insIsoSurface3D.okl");
         sprintf(kernelName, "insIsoSurface3D");
 
-        ins->isoSurfaceKernel = mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);  
+        ins->isoSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
       }
       
       if(ins->Nsubsteps){
@@ -919,27 +924,27 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
         sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
         sprintf(kernelName, "scaledAddwOffset");
-        ins->scaledAddKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+        ins->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
         sprintf(fileName, DINS "/okl/insSubCycle%s.okl", suffix);
         sprintf(kernelName, "insSubCycleVolume%s", suffix);
-        ins->subCycleVolumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+        ins->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
         sprintf(kernelName, "insSubCycleSurface%s", suffix);
-        ins->subCycleSurfaceKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+        ins->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
         sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
-        ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+        ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
         sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
-        ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+        ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
         sprintf(fileName, DINS "/okl/insSubCycle.okl");
         sprintf(kernelName, "insSubCycleRKUpdate");
-        ins->subCycleRKUpdateKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+        ins->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
         sprintf(kernelName, "insSubCycleExt");
-        ins->subCycleExtKernel =  mesh->device.buildKernelFromSource(fileName, kernelName, kernelInfo);
+        ins->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
     }
     MPI_Barrier(MPI_COMM_WORLD);

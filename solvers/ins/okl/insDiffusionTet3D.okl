@@ -1,43 +1,43 @@
 
 #define p_Ne 4
-kernel void insDiffusionTet3D(const dlong Nelements,
-                              const dlong  * restrict elementList,
-                              const dfloat * restrict ggeo,
-                              const dfloat * restrict vgeo,
-                              const dfloat * restrict sgeo,
-                              const dfloat * restrict Dmatrices,
-                              const dfloat * restrict Smatrices,
-                              const dlong  * restrict vmapM,
-                              const dfloat * restrict sMT,
+@kernel void insDiffusionTet3D(const dlong Nelements,
+                              @restrict const  dlong  *  elementList,
+                              @restrict const  dfloat *  ggeo,
+                              @restrict const  dfloat *  vgeo,
+                              @restrict const  dfloat *  sgeo,
+                              @restrict const  dfloat *  Dmatrices,
+                              @restrict const  dfloat *  Smatrices,
+                              @restrict const  dlong  *  vmapM,
+                              @restrict const  dfloat *  sMT,
                               const dfloat nu,
                               const dfloat time,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const dfloat * restrict z,
-                              const int    * restrict mapB,
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
+                              @restrict const  int    *  mapB,
                               const dlong fieldOffset,
-                              const dfloat  * restrict U,
-                                    dfloat  * restrict LU){
+                              @restrict const  dfloat  *  U,
+                                    @restrict dfloat  *  LU){
 
   // p_Ne nodes per thread
   // p_Nb elements worth of threads per block
   
-  for(dlong eo=0;eo<Nelements;eo+=p_Ne;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_Ne;@outer(0)){
 
-    shared dfloat s_q[p_Ne][p_Np];
-    shared dfloat s_ggeo[p_Ne][p_Nggeo];
-    shared dfloat s_ndq[p_Ne][p_NfacesNfp];
+    @shared dfloat s_q[p_Ne][p_Np];
+    @shared dfloat s_ggeo[p_Ne][p_Nggeo];
+    @shared dfloat s_ndq[p_Ne][p_NfacesNfp];
 
-    exclusive dlong element[p_Ne];
+    @exclusive dlong element[p_Ne];
 
-    ////occaUnroll(p_NVfields)
+    ////#pragma unroll p_NVfields
     for (int fld=0; fld<p_NVfields; fld++) {
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int n=0;n<p_maxNodes;++n;inner0){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
     
-        //occaUnroll(p_Ne)
+        //#pragma unroll p_Ne
         for(int et=0;et<p_Ne;++et){
           const dlong e = eo + et;
 
@@ -62,10 +62,10 @@ kernel void insDiffusionTet3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int n=0;n<p_maxNodes;++n;inner0){
-        //occaUnroll(p_Ne)
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        //#pragma unroll p_Ne
         for(int et=0;et<p_Ne;++et){
           const dlong e = eo + et;
 
@@ -115,14 +115,14 @@ kernel void insDiffusionTet3D(const dlong Nelements,
         }
       }
       
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int n=0;n<p_maxNodes;++n;inner0){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
   
         dfloat qrr[p_Ne], qrs[p_Ne], qrt[p_Ne], qss[p_Ne], qst[p_Ne], qtt[p_Ne];
         dfloat Lndq[p_Ne];
 
-        //occaUnroll(p_Ne)
+        //#pragma unroll p_Ne
         for(int et=0;et<p_Ne;++et){
           qrr[et] = 0;    qrs[et] = 0;    qrt[et] = 0;
           qss[et] = 0;    qst[et] = 0;
@@ -131,9 +131,9 @@ kernel void insDiffusionTet3D(const dlong Nelements,
         }
         
         if (n<p_Np) {
-          // overall this does p_Ne*14 flops for  (7+p_Ne)*|dfloat| L1+shared accesse
+          // overall this does p_Ne*14 flops for  (7+p_Ne)*|dfloat| L1+@shared accesse
           // arithmetic intensity is  (p_Ne*14/((7+p_Ne)*8)) flops per byte
-          //occaUnroll(p_Np)
+          //#pragma unroll p_Np
           for (int k=0;k<p_Np;k++) {
             
             const dfloat Srr_nk = Smatrices[n+k*p_Np+0*p_Np*p_Np];
@@ -143,7 +143,7 @@ kernel void insDiffusionTet3D(const dlong Nelements,
             const dfloat Sst_nk = Smatrices[n+k*p_Np+4*p_Np*p_Np];
             const dfloat Stt_nk = Smatrices[n+k*p_Np+5*p_Np*p_Np];
             
-            //occaUnroll(p_Ne)
+            //#pragma unroll p_Ne
             for(int et=0;et<p_Ne;++et){
               const dfloat qk = s_q[et][k];
               qrr[et] += Srr_nk*qk;  
@@ -156,18 +156,18 @@ kernel void insDiffusionTet3D(const dlong Nelements,
           }
 
           // surface mass * surface terms
-          //occaUnroll(p_NfacesNfp)
+          //#pragma unroll p_NfacesNfp
           for(int k=0;k<p_NfacesNfp;++k){
             const dfloat sMTn = sMT[n+k*p_Np];
           
-            //occaUnroll(p_Ne)
+            //#pragma unroll p_Ne
             for(int et=0;et<p_Ne;++et){
               const dfloat ndqk = s_ndq[et][k];
               Lndq[et] += sMTn*ndqk;
             }
           }
               
-          //occaUnroll(p_Ne)
+          //#pragma unroll p_Ne
           for(int et=0;et<p_Ne;++et){
             const dlong e = eo + et;
             if(e<Nelements){

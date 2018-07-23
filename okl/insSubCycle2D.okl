@@ -1,18 +1,18 @@
 
-kernel void insSubCycleRKUpdate2D(const dlong Nelements,
+@kernel void insSubCycleRKUpdate2D(const dlong Nelements,
                                   const dfloat dt,  
                                   const dfloat rka,
                                   const dfloat rkb,
-                                  const dfloat * restrict rhsU,
-                                  const dfloat * restrict rhsV,
-                                  dfloat  * restrict resU,
-                                  dfloat  * restrict resV,
-                                  dfloat  * restrict U,
-                                  dfloat  * restrict V){
+                                  @restrict const  dfloat *  rhsU,
+                                  @restrict const  dfloat *  rhsV,
+                                  @restrict dfloat  *  resU,
+                                  @restrict dfloat  *  resV,
+                                  @restrict dfloat  *  U,
+                                  @restrict dfloat  *  V){
 
   // Low storage Runge Kutta time step update
-  for(dlong e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       const dlong id = n + e*p_Np;
 
@@ -40,20 +40,20 @@ kernel void insSubCycleRKUpdate2D(const dlong Nelements,
 }
 
 
-kernel void insSubCycleExt2D(const dlong Nelements,
+@kernel void insSubCycleExt2D(const dlong Nelements,
                              const int index,
                              const dlong offset,
                              const dfloat c0,
                              const dfloat c1,
                              const dfloat c2, 
-                             const dfloat * restrict U,
-                             const dfloat * restrict V,
-                             dfloat * restrict Ue,
-                             dfloat * restrict Ve){
+                             @restrict const  dfloat *  U,
+                             @restrict const  dfloat *  V,
+                             @restrict dfloat *  Ue,
+                             @restrict dfloat *  Ve){
 
   // Low storage Runge Kutta time step update
-  for(dlong e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       const int index0 = (index+0)%3;
       const int index1 = (index+2)%3; //back one step

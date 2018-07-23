@@ -2,19 +2,19 @@
 //computes multiple inner products.
 // x holds several vectors x_l 
 // returns partial redcutons of x_l . y
-kernel void multiInnerProduct(const int L,
+@kernel void multiInnerProduct(const int L,
                               const int Nblock,
                               const int N,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              dfloat * restrict xy){
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict dfloat *  xy){
   
 
-  for(int b=0;b<Nblock;++b;outer0){
+  for(int b=0;b<Nblock;++b;@outer(0)){
     
-    volatile shared dfloat s_xy[p_blockSize*p_maxMultiVectors];
+    @shared volatile dfloat s_xy[p_blockSize*p_maxMultiVectors];
 
-    for(int t=0;t<p_blockSize;++t;inner0){
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
       const int id = t + p_blockSize*b;
       
       for (int l=0;l<L;l++) {
@@ -22,87 +22,87 @@ kernel void multiInnerProduct(const int L,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
 #if p_blockSize>512
     
-    for(int t=0;t<p_blockSize;++t;inner0) {
+    for(int t=0;t<p_blockSize;++t;@inner(0)) {
       if(t<512) {
         for (int l=0;l<L;l++) {
           s_xy[t+l*p_blockSize] += s_xy[t+l*p_blockSize+512];
         }
       }
     }
-    barrier(localMemFence);
+    @barrier("local");
 
 #endif
 #if p_blockSize>256
 
-    for(int t=0;t<p_blockSize;++t;inner0) {
+    for(int t=0;t<p_blockSize;++t;@inner(0)) {
       if(t<256) {
         for (int l=0;l<L;l++) {
           s_xy[t+l*p_blockSize] += s_xy[t+l*p_blockSize+256];
         }
       }
     }
-    barrier(localMemFence);
+    @barrier("local");
 
 #endif
 
-    for(int t=0;t<p_blockSize;++t;inner0) {
+    for(int t=0;t<p_blockSize;++t;@inner(0)) {
       if(t<128) {
         for (int l=0;l<L;l++) {
           s_xy[t+l*p_blockSize] += s_xy[t+l*p_blockSize+128];
         }
       }
     }
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) {
+    for(int t=0;t<p_blockSize;++t;@inner(0)) {
       if(t<64) {
         for (int l=0;l<L;l++) {
           s_xy[t+l*p_blockSize] += s_xy[t+l*p_blockSize+64];
         }
       }
     }
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) {
+    for(int t=0;t<p_blockSize;++t;@inner(0)) {
       if(t<32) {
         for (int l=0;l<L;l++) {
           s_xy[t+l*p_blockSize] += s_xy[t+l*p_blockSize+32];
         }
       }
     }
-    for(int t=0;t<p_blockSize;++t;inner0) {
+    for(int t=0;t<p_blockSize;++t;@inner(0)) {
       if(t<16) {
         for (int l=0;l<L;l++) {
           s_xy[t+l*p_blockSize] += s_xy[t+l*p_blockSize+16];
         }
       }
     }
-    for(int t=0;t<p_blockSize;++t;inner0) {
+    for(int t=0;t<p_blockSize;++t;@inner(0)) {
       if(t<8) {
         for (int l=0;l<L;l++) {
           s_xy[t+l*p_blockSize] += s_xy[t+l*p_blockSize+8];
         }
       }
     }
-    for(int t=0;t<p_blockSize;++t;inner0) {
+    for(int t=0;t<p_blockSize;++t;@inner(0)) {
       if(t<4) {
         for (int l=0;l<L;l++) {
           s_xy[t+l*p_blockSize] += s_xy[t+l*p_blockSize+4];
         }
       }
     }
-    for(int t=0;t<p_blockSize;++t;inner0) {
+    for(int t=0;t<p_blockSize;++t;@inner(0)) {
       if(t<2) {
         for (int l=0;l<L;l++) {
           s_xy[t+l*p_blockSize] += s_xy[t+l*p_blockSize+2];
         }
       }
     }
-    for(int t=0;t<p_blockSize;++t;inner0) {
+    for(int t=0;t<p_blockSize;++t;@inner(0)) {
       if(t<1) {
         for (int l=0;l<L;l++) {
           xy[b+l*Nblock] = s_xy[0+l*p_blockSize] + s_xy[1+l*p_blockSize];

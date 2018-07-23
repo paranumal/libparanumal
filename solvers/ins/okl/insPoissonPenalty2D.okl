@@ -1,17 +1,17 @@
 
-kernel void insPoissonPenalty2D(const int Nelements,
-        const dfloat * restrict sgeo,
-        const dfloat * restrict vgeo,
-        const dfloat * restrict DrT,
-        const dfloat * restrict DsT,
-        const dfloat * restrict LIFTT,
-        const dfloat * restrict MM,
-        const int * restrict vmapM,
-        const int * restrict vmapP,
-        const int   * restrict EToB,
+@kernel void insPoissonPenalty2D(const int Nelements,
+        @restrict const  dfloat *  sgeo,
+        @restrict const  dfloat *  vgeo,
+        @restrict const  dfloat *  DrT,
+        @restrict const  dfloat *  DsT,
+        @restrict const  dfloat *  LIFTT,
+        @restrict const  dfloat *  MM,
+        @restrict const  int *  vmapM,
+        @restrict const  int *  vmapP,
+        @restrict const  int   *  EToB,
         const dfloat tau,
-        const dfloat * restrict x,
-        const dfloat * restrict y,
+        @restrict const  dfloat *  x,
+        @restrict const  dfloat *  y,
         const dfloat time,
         const dfloat dt,
         const dfloat c0,
@@ -19,15 +19,15 @@ kernel void insPoissonPenalty2D(const int Nelements,
         const dfloat c2,
         const int index,
         const int offset,
-        const dfloat * restrict P,
-              dfloat * restrict rhsP){
+        @restrict const  dfloat *  P,
+              @restrict dfloat *  rhsP){
   
-  for(int e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
     
-    shared  dfloat s_lapp[p_Np];
-    shared  dfloat s_lapflux[p_NfacesNfp];
+    @shared  dfloat s_lapp[p_Np];
+    @shared  dfloat s_lapflux[p_NfacesNfp];
     
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const int id  = n + e*p_Nfaces*p_Nfp;
         const int idM = vmapM[id];          
@@ -77,13 +77,13 @@ kernel void insPoissonPenalty2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         dfloat lap = 0;
         // lift surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
         for(int i=0;i<p_NfacesNfp;++i){
           lap += LIFTT[n+i*p_Np]*s_lapflux[i];
         }
@@ -91,15 +91,15 @@ kernel void insPoissonPenalty2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
         const dfloat J = vgeo[e*p_Nvgeo + p_JID];
         
         dfloat Mlapq = 0;
         // multiply by mass matrix
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           Mlapq += MM[n+i*p_Np]*s_lapp[i];
         }

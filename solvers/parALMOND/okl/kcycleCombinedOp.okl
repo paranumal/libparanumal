@@ -1,21 +1,21 @@
 
 // a.b, a.c, b.b
-kernel void kcycleCombinedOp1Kernel(const dlong Nblocks,
+@kernel void kcycleCombinedOp1Kernel(const dlong Nblocks,
 					      const dlong   N,
-					      const dfloat *restrict a,
-					      const dfloat *restrict b,
-					      const dfloat *restrict c,
-					            dfloat *restrict ips){
+					      @restrict const  dfloat * a,
+					      @restrict const  dfloat * b,
+					      @restrict const  dfloat * c,
+					            @restrict dfloat * ips){
 
-  for(dlong g=0;g<Nblocks;++g;outer0){
+  for(dlong g=0;g<Nblocks;++g;@outer(0)){
 
-    shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
-    shared volatile dfloat s_res[p_RDIMY];
+    @shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
+    @shared volatile dfloat s_res[p_RDIMY];
 
-    exclusive dfloat abi, aci, bbi;
+    @exclusive dfloat abi, aci, bbi;
     
-    for(int ty=0;ty<p_RDIMY;++ty;inner1){
-      for(int tx=0;tx<p_RDIMX;++tx;inner0){
+    for(int ty=0;ty<p_RDIMY;++ty;@inner(1)){
+      for(int tx=0;tx<p_RDIMX;++tx;@inner(0)){
 	      dlong i = tx + ty*p_RDIMX + g*p_RDIMX*p_RDIMY;
 
       	abi = 0.f;
@@ -41,23 +41,23 @@ kernel void kcycleCombinedOp1Kernel(const dlong Nblocks,
 }
 
 // a.b, a.c, b.b
-kernel void kcycleCombinedOp2Kernel(const dlong Nblocks,
+@kernel void kcycleCombinedOp2Kernel(const dlong Nblocks,
                 const dlong   N,
-                const dfloat *restrict a,
-                const dfloat *restrict b,
-                const dfloat *restrict c,
-                const dfloat *restrict d,
-                      dfloat *restrict ips){
+                @restrict const  dfloat * a,
+                @restrict const  dfloat * b,
+                @restrict const  dfloat * c,
+                @restrict const  dfloat * d,
+                      @restrict dfloat * ips){
 
-  for(dlong g=0;g<Nblocks;++g;outer0){
+  for(dlong g=0;g<Nblocks;++g;@outer(0)){
 
-    shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
-    shared volatile dfloat s_res[p_RDIMY];
+    @shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
+    @shared volatile dfloat s_res[p_RDIMY];
 
-    exclusive dfloat abi, aci, adi;
+    @exclusive dfloat abi, aci, adi;
     
-    for(int ty=0;ty<p_RDIMY;++ty;inner1){
-      for(int tx=0;tx<p_RDIMX;++tx;inner0){
+    for(int ty=0;ty<p_RDIMY;++ty;@inner(1)){
+      for(int tx=0;tx<p_RDIMX;++tx;@inner(0)){
         dlong i = tx + ty*p_RDIMX + g*p_RDIMX*p_RDIMY;
 
         abi = 0.f;
@@ -84,23 +84,23 @@ kernel void kcycleCombinedOp2Kernel(const dlong Nblocks,
 }
     
 // w.a.b, w.a.c, w.b.b
-kernel void kcycleWeightedCombinedOp1Kernel(const dlong Nblocks,
+@kernel void kcycleWeightedCombinedOp1Kernel(const dlong Nblocks,
                 const dlong   N,
-                const dfloat *restrict a,
-                const dfloat *restrict b,
-                const dfloat *restrict c,
-                const dfloat *restrict w,
-                      dfloat *restrict ips){
+                @restrict const  dfloat * a,
+                @restrict const  dfloat * b,
+                @restrict const  dfloat * c,
+                @restrict const  dfloat * w,
+                      @restrict dfloat * ips){
 
-  for(dlong g=0;g<Nblocks;++g;outer0){
+  for(dlong g=0;g<Nblocks;++g;@outer(0)){
 
-    shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
-    shared volatile dfloat s_res[p_RDIMY];
+    @shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
+    @shared volatile dfloat s_res[p_RDIMY];
 
-    exclusive dfloat abi, aci, bbi;
+    @exclusive dfloat abi, aci, bbi;
     
-    for(int ty=0;ty<p_RDIMY;++ty;inner1){
-      for(int tx=0;tx<p_RDIMX;++tx;inner0){
+    for(int ty=0;ty<p_RDIMY;++ty;@inner(1)){
+      for(int tx=0;tx<p_RDIMX;++tx;@inner(0)){
         dlong i = tx + ty*p_RDIMX + g*p_RDIMX*p_RDIMY;
 
         abi = 0.f;
@@ -127,24 +127,24 @@ kernel void kcycleWeightedCombinedOp1Kernel(const dlong Nblocks,
 }
 
 // w.a.b, w.a.c, w.b.b
-kernel void kcycleWeightedCombinedOp2Kernel(const dlong Nblocks,
+@kernel void kcycleWeightedCombinedOp2Kernel(const dlong Nblocks,
                 const dlong   N,
-                const dfloat *restrict a,
-                const dfloat *restrict b,
-                const dfloat *restrict c,
-                const dfloat *restrict d,
-                const dfloat *restrict w,
-                      dfloat *restrict ips){
+                @restrict const  dfloat * a,
+                @restrict const  dfloat * b,
+                @restrict const  dfloat * c,
+                @restrict const  dfloat * d,
+                @restrict const  dfloat * w,
+                      @restrict dfloat * ips){
 
-  for(dlong g=0;g<Nblocks;++g;outer0){
+  for(dlong g=0;g<Nblocks;++g;@outer(0)){
 
-    shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
-    shared volatile dfloat s_res[p_RDIMY];
+    @shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
+    @shared volatile dfloat s_res[p_RDIMY];
 
-    exclusive dfloat abi, aci, adi;
+    @exclusive dfloat abi, aci, adi;
     
-    for(int ty=0;ty<p_RDIMY;++ty;inner1){
-      for(int tx=0;tx<p_RDIMX;++tx;inner0){
+    for(int ty=0;ty<p_RDIMY;++ty;@inner(1)){
+      for(int tx=0;tx<p_RDIMX;++tx;@inner(0)){
         dlong i = tx + ty*p_RDIMX + g*p_RDIMX*p_RDIMY;
 
         abi = 0.f;

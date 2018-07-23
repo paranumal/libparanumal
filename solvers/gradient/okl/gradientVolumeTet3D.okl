@@ -56,8 +56,8 @@ void gradientVolumeTet3D(int Nelements,
 }
 #endif
 
-// annotate kernels with "kernel" keyword
-kernel void gradientVolumeTet3D_v0(int Nelements,
+// annotate @kernels with "@kernel" keyword
+@kernel void gradientVolumeTet3D_v0(int Nelements,
 				   dfloat *vgeo, // geometric factors
 				   dfloat *Drst, // D matrices
 				   dfloat *q,    // data at nodes
@@ -65,10 +65,10 @@ kernel void gradientVolumeTet3D_v0(int Nelements,
 				   ){
 
   // loop over all elements
-  for(int e=0;e<Nelements;++e;outer0){ // distributed amongst cores
+  for(int e=0;e<Nelements;++e;@outer(0)){ // distributed amongst cores
 
     // loop over all nodes in element e
-    for(int n=0;n<p_Np;++n;inner0){ // distributed to thread
+    for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
       
       dfloat qr = 0, qs = 0, qt = 0;
       
@@ -110,19 +110,19 @@ kernel void gradientVolumeTet3D_v0(int Nelements,
   }
 }
 
-// kernel 1: declare pointers as restrict and const everything we can
-kernel void gradientVolumeTet3D_v1(const int Nelements,
-				   const dfloat * restrict vgeo, // geometric factors
-				   const dfloat * restrict Drst, // D matrices
-				   const dfloat * restrict q,    // data at nodes
-				   dfloat * restrict gradq // physical gradient
+// @kernel 1: declare po@restrict inters as  and const everything we can
+@kernel void gradientVolumeTet3D_v1(const int Nelements,
+				   @restrict const  dfloat *  vgeo, // geometric factors
+				   @restrict const  dfloat *  Drst, // D matrices
+				   @restrict const  dfloat *  q,    // data at nodes
+				   @restrict dfloat *  gradq // physical gradient
 				){
 
   // loop over all elements
-  for(int e=0;e<Nelements;++e;outer0){ // distributed amongst cores
+  for(int e=0;e<Nelements;++e;@outer(0)){ // distributed amongst cores
 
     // loop over all nodes in element e
-    for(int n=0;n<p_Np;++n;inner0){ // distributed to thread
+    for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
       
       dfloat qr = 0, qs = 0, qt = 0;
       
@@ -164,23 +164,23 @@ kernel void gradientVolumeTet3D_v1(const int Nelements,
   }
 }
 
-// kernel 2: unroll innermost loop
-kernel void gradientVolumeTet3D_v2(const int Nelements,
-				const dfloat * restrict vgeo, // geometric factors
-				const dfloat * restrict Drst, // D matrices
-				const dfloat * restrict q,    // data at nodes
-				dfloat * restrict gradq // physical gradient
+// @kernel 2: unroll innermost loop
+@kernel void gradientVolumeTet3D_v2(const int Nelements,
+				@restrict const  dfloat *  vgeo, // geometric factors
+				@restrict const  dfloat *  Drst, // D matrices
+				@restrict const  dfloat *  q,    // data at nodes
+				@restrict dfloat *  gradq // physical gradient
 				){
 
   // loop over all elements
-  for(int e=0;e<Nelements;++e;outer0){ // distributed amongst cores
+  for(int e=0;e<Nelements;++e;@outer(0)){ // distributed amongst cores
 
     // loop over all nodes in element e
-    for(int n=0;n<p_Np;++n;inner0){ // distributed to thread
+    for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
       
       dfloat qr = 0, qs = 0, qt = 0;
 
-      occaUnroll(p_Np)
+      #pragma unroll p_Np
 	for(int m=0;m<p_Np;++m){
 	  const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
 	  const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
@@ -219,35 +219,35 @@ kernel void gradientVolumeTet3D_v2(const int Nelements,
   }
 }
 
-// kernel 3: shared memory prefetch
-kernel void gradientVolumeTet3D_v3(const int Nelements,
-				const dfloat * restrict vgeo, // geometric factors
-				const dfloat * restrict Drst, // D matrices
-				const dfloat * restrict q,    // data at nodes
-				dfloat * restrict gradq // physical gradient
+// @kernel 3: @shared memory prefetch
+@kernel void gradientVolumeTet3D_v3(const int Nelements,
+				@restrict const  dfloat *  vgeo, // geometric factors
+				@restrict const  dfloat *  Drst, // D matrices
+				@restrict const  dfloat *  q,    // data at nodes
+				@restrict dfloat *  gradq // physical gradient
 				){
 
   // loop over all elements
-  for(int e=0;e<Nelements;++e;outer0){ // distributed amongst cores
+  for(int e=0;e<Nelements;++e;@outer(0)){ // distributed amongst cores
 
-    shared dfloat s_q[p_Np]; // shared memory array for each element
+    @shared dfloat s_q[p_Np]; // @shared memory array for each element
 
-    for(int n=0;n<p_Np;++n;inner0){ // distributed to thread
+    for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
 
-      // prefetch to shared
+      // prefetch to @shared
       const int id = e*p_Np + n;
       s_q[n] = q[id];
     }
 
     // make sure all values are prefetched
-    barrier(localMemFence);
+    @barrier("local");
     
     // loop over all nodes in element e
-    for(int n=0;n<p_Np;++n;inner0){ // distributed to thread
+    for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
       
       dfloat qr = 0, qs = 0, qt = 0;
 
-      occaUnroll(p_Np)
+      #pragma unroll p_Np
 	for(int m=0;m<p_Np;++m){
 	  const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
 	  const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
@@ -284,25 +284,25 @@ kernel void gradientVolumeTet3D_v3(const int Nelements,
   }
 }
 
-// kernel 4: multiple nodes per thread
-kernel void gradientVolumeTet3D_v4(const int Nelements,
-				const dfloat * restrict vgeo, // geometric factors
-				const dfloat * restrict Drst, // D matrices
-				const dfloat * restrict q,    // data at nodes
-				dfloat * restrict gradq // physical gradient
+// @kernel 4: multiple nodes per thread
+@kernel void gradientVolumeTet3D_v4(const int Nelements,
+				@restrict const  dfloat *  vgeo, // geometric factors
+				@restrict const  dfloat *  Drst, // D matrices
+				@restrict const  dfloat *  q,    // data at nodes
+				@restrict dfloat *  gradq // physical gradient
 				){
 
 #define p_Nblock 4
   
   // loop over all elements
-  for(int eo=0;eo<Nelements;eo+=p_Nblock;outer0){ // distributed amongst cores
+  for(int eo=0;eo<Nelements;eo+=p_Nblock;@outer(0)){ // distributed amongst cores
     
-    shared dfloat s_q[p_Nblock][p_Np]; // shared memory array for each element
+    @shared dfloat s_q[p_Nblock][p_Np]; // @shared memory array for each element
     
-    for(int n=0;n<p_Np;++n;inner0){ // distributed to thread
+    for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
 
-      // prefetch to shared
-      occaUnroll(p_Nblock)
+      // prefetch to @shared
+      #pragma unroll p_Nblock
 	for(int es=0;es<p_Nblock;++es){
 	  const int e = eo + es;
 	  if(e<Nelements){
@@ -313,28 +313,28 @@ kernel void gradientVolumeTet3D_v4(const int Nelements,
     }
 
     // make sure all values are prefetched
-    barrier(localMemFence);
+    @barrier("local");
     
     // loop over all nodes in element e
-    for(int n=0;n<p_Np;++n;inner0){ // distributed to thread
+    for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
       
       dfloat qr[p_Nblock], qs[p_Nblock], qt[p_Nblock];
       
-      occaUnroll(p_Nblock)
+      #pragma unroll p_Nblock
 	for(int es=0;es<p_Nblock;++es){
 	  qr[es] = 0;
 	  qs[es] = 0;
 	  qt[es] = 0;
 	}
       
-      occaUnroll(p_Np)
+      #pragma unroll p_Np
 	for(int m=0;m<p_Np;++m){
 	  // Vasily Volkov "multiple outputs" paper
 	  const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
 	  const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
 	  const dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
 	  
-	  occaUnroll(p_Nblock)
+	  #pragma unroll p_Nblock
 	    for(int es=0;es<p_Nblock;++es){
 	      
 	      const dfloat qm = s_q[es][m];
@@ -344,7 +344,7 @@ kernel void gradientVolumeTet3D_v4(const int Nelements,
 	    }
 	}
 
-      occaUnroll(p_Nblock)
+      #pragma unroll p_Nblock
 	for(int es=0;es<p_Nblock;++es){
 	  const int e = eo + es;
 	  if(e<Nelements){
@@ -376,27 +376,27 @@ kernel void gradientVolumeTet3D_v4(const int Nelements,
   }
 }
 
-// kernel 5: simd cramming
-kernel void gradientVolumeTet3D(const int Nelements,
-				const dfloat * restrict vgeo, // geometric factors
-				const dfloat * restrict Drst, // D matrices
-				const dfloat * restrict q,    // data at nodes
-				dfloat * restrict gradq // physical gradient
+// @kernel 5: simd cramming
+@kernel void gradientVolumeTet3D(const int Nelements,
+				@restrict const  dfloat *  vgeo, // geometric factors
+				@restrict const  dfloat *  Drst, // D matrices
+				@restrict const  dfloat *  q,    // data at nodes
+				@restrict dfloat *  gradq // physical gradient
 				){
   
 #define p_Nvec 1
 #define p_Nblock 2
   
   // loop over all elements
-  for(int eo=0;eo<Nelements;eo+=p_Nblock*p_Nvec;outer0){ // distributed amongst cores
+  for(int eo=0;eo<Nelements;eo+=p_Nblock*p_Nvec;@outer(0)){ // distributed amongst cores
     
-    shared dfloat s_q[p_Nblock][p_Nvec][p_Np]; // shared memory array for each element
+    @shared dfloat s_q[p_Nblock][p_Nvec][p_Np]; // @shared memory array for each element
     
-    for(int et=0;et<p_Nvec;++et;inner1){
-      for(int n=0;n<p_Np;++n;inner0){ // distributed to thread
+    for(int et=0;et<p_Nvec;++et;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
 	
-	// prefetch to shared
-	occaUnroll(p_Nblock)
+	// prefetch to @shared
+	#pragma unroll p_Nblock
 	  for(int es=0;es<p_Nblock;++es){
 	    const int e = eo + et + p_Nvec*es;
 	    if(e<Nelements){
@@ -408,29 +408,29 @@ kernel void gradientVolumeTet3D(const int Nelements,
     }
 
     // make sure all values are prefetched
-    barrier(localMemFence);
+    @barrier("local");
     
     // loop over all nodes in element e
-    for(int et=0;et<p_Nvec;++et;inner1){
-      for(int n=0;n<p_Np;++n;inner0){ // distributed to thread
+    for(int et=0;et<p_Nvec;++et;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
 	
 	dfloat qr[p_Nblock], qs[p_Nblock], qt[p_Nblock];
 	
-	occaUnroll(p_Nblock)
+	#pragma unroll p_Nblock
 	  for(int es=0;es<p_Nblock;++es){
 	    qr[es] = 0;
 	    qs[es] = 0;
 	    qt[es] = 0;
 	  }
 	
-	occaUnroll(p_Np)
+	#pragma unroll p_Np
 	  for(int m=0;m<p_Np;++m){
 	    // Vasily Volkov "multiple outputs" paper
 	    const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
 	    const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
 	    const dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
 	    
-	    occaUnroll(p_Nblock)
+	    #pragma unroll p_Nblock
 	      for(int es=0;es<p_Nblock;++es){
 		
 		const dfloat qm = s_q[es][et][m];
@@ -440,7 +440,7 @@ kernel void gradientVolumeTet3D(const int Nelements,
 	      }
 	  }
 
-	occaUnroll(p_Nblock)
+	#pragma unroll p_Nblock
 	  for(int es=0;es<p_Nblock;++es){
 	    const int e = eo + et + p_Nvec*es;
 	    if(e<Nelements){

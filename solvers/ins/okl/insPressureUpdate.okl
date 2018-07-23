@@ -1,14 +1,14 @@
 // P^s = PI + \sum^s-1 prk_si P^i 
-kernel void insPressureUpdate(const dlong Nelements,
+@kernel void insPressureUpdate(const dlong Nelements,
                             const int stage,
-                            const dfloat * restrict prkB,
+                            @restrict const  dfloat *  prkB,
                             const dlong fieldOffset,
-                            const dfloat * restrict PI,
-                            const dfloat * restrict P,
-                                  dfloat * restrict rkP){
+                            @restrict const  dfloat *  PI,
+                            @restrict const  dfloat *  P,
+                                  @restrict dfloat *  rkP){
 
-  for(dlong e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong id  = n + e*p_Np;
 
       dfloat rkPn = PI[id];

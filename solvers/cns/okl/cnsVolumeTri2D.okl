@@ -1,24 +1,24 @@
 
 // isothermal Compressible Navier-Stokes
-kernel void cnsVolumeTri2D(const dlong Nelements,
+@kernel void cnsVolumeTri2D(const dlong Nelements,
 			   const int advSwitch,
 			   const dfloat fx,
 			   const dfloat fy,
 			   const dfloat fz, 
-			   const dfloat * restrict vgeo,
-			   const dfloat * restrict DT,
-			   const dfloat * restrict viscousStresses,
-			   const dfloat * restrict q,
-			   dfloat * restrict rhsq){
+			   @restrict const  dfloat *  vgeo,
+			   @restrict const  dfloat *  DT,
+			   @restrict const  dfloat *  viscousStresses,
+			   @restrict const  dfloat *  q,
+			   @restrict dfloat *  rhsq){
   
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    shared dfloat s_F[p_Nfields][p_Np];
-    shared dfloat s_G[p_Nfields][p_Np];
+    @shared dfloat s_F[p_Nfields][p_Np];
+    @shared dfloat s_G[p_Nfields][p_Np];
 
-    exclusive dfloat r;
+    @exclusive dfloat r;
     
-    for(int n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -69,9 +69,9 @@ kernel void cnsVolumeTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int n=0;n<p_Np;++n;inner0){    
+    for(int n=0;n<p_Np;++n;@inner(0)){    
 
       dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0;
 
@@ -98,19 +98,19 @@ kernel void cnsVolumeTri2D(const dlong Nelements,
 }
 
 
-kernel void cnsStressesVolumeTri2D(const dlong Nelements,
-				   const dfloat * restrict vgeo,
-				   const dfloat * restrict DT,
+@kernel void cnsStressesVolumeTri2D(const dlong Nelements,
+				   @restrict const  dfloat *  vgeo,
+				   @restrict const  dfloat *  DT,
 				   const dfloat mu,
-				   const dfloat * restrict q,
-				   dfloat * restrict viscousStresses){
+				   @restrict const  dfloat *  q,
+				   @restrict dfloat *  viscousStresses){
   
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    shared dfloat s_u[p_Np];
-    shared dfloat s_v[p_Np];
+    @shared dfloat s_u[p_Np];
+    @shared dfloat s_v[p_Np];
     
-    for(int n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong qbase = e*p_Nfields*p_Np + n;
       const dfloat r  = q[qbase + 0*p_Np];
       const dfloat ru = q[qbase + 1*p_Np];
@@ -120,9 +120,9 @@ kernel void cnsStressesVolumeTri2D(const dlong Nelements,
       s_v[n] = rv/r;        
     }
     
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
       const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];

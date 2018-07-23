@@ -1,17 +1,17 @@
-kernel void ellipticPreconProlongateQuad2D(const dlong Nelements,
-                                           const dfloat * restrict R,
-                                           const dfloat * restrict qc,
-                                                 dfloat * restrict qN){
+@kernel void ellipticPreconProlongateQuad2D(const dlong Nelements,
+                                           @restrict const  dfloat *  R,
+                                           @restrict const  dfloat *  qc,
+                                                 @restrict dfloat *  qN){
   
   
-  for(dlong e=0;e<Nelements;++e;outer0){
-    shared dfloat s_qcf[p_NqCoarse][p_NqFine];
-    shared dfloat s_qcc[p_NqCoarse][p_NqCoarse];
-    shared dfloat s_R[p_NqCoarse][p_NqFine];
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared dfloat s_qcf[p_NqCoarse][p_NqFine];
+    @shared dfloat s_qcc[p_NqCoarse][p_NqCoarse];
+    @shared dfloat s_R[p_NqCoarse][p_NqFine];
     
-    // prefetch to shared
-    for(int j=0;j<p_NqFine;++j;inner1){
-      for(int i=0;i<p_NqFine;++i;inner0){
+    // prefetch to @shared
+    for(int j=0;j<p_NqFine;++j;@inner(1)){
+      for(int i=0;i<p_NqFine;++i;@inner(0)){
         const int id = i+j*p_NqFine;
         if(id<p_NpCoarse){
           s_qcc[0][id] = qc[id+e*p_NpCoarse];
@@ -22,14 +22,14 @@ kernel void ellipticPreconProlongateQuad2D(const dlong Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
 
     // prolongate in i index
-    for(int j=0;j<p_NqFine;++j;inner1){
-      for(int i=0;i<p_NqFine;++i;inner0){
+    for(int j=0;j<p_NqFine;++j;@inner(1)){
+      for(int i=0;i<p_NqFine;++i;@inner(0)){
         if(j<p_NqCoarse){
           dfloat res = 0;
-          occaUnroll(p_NqCoarse)
+          #pragma unroll p_NqCoarse
             for(int m=0;m<p_NqCoarse;++m) {
               res += s_R[m][i]*s_qcc[j][m];
             }
@@ -38,13 +38,13 @@ kernel void ellipticPreconProlongateQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // coarsen in i index
-    for(int j=0;j<p_NqFine;++j;inner1){
-      for(int i=0;i<p_NqFine;++i;inner0){
+    for(int j=0;j<p_NqFine;++j;@inner(1)){
+      for(int i=0;i<p_NqFine;++i;@inner(0)){
         dfloat res = 0;
-        occaUnroll(p_NqCoarse)
+        #pragma unroll p_NqCoarse
           for(int m=0;m<p_NqCoarse;++m) {
             res += s_R[m][j]*s_qcf[m][i];
           }

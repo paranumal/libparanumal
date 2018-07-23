@@ -28,20 +28,20 @@
 #endif
 
 
-kernel void ellipticOasPreconTri2D_v0(const int Nelements,
-				      const int   * restrict vmapPP,
-				      const dfloat * restrict forwardT,
-				      const dfloat * restrict diagInvOp,
-				      const dfloat * restrict backT,
-				      const dfloat * restrict q,
-				      dfloat * restrict Pq){
+@kernel void ellipticOasPreconTri2D_v0(const int Nelements,
+				      @restrict const  int   *  vmapPP,
+				      @restrict const  dfloat *  forwardT,
+				      @restrict const  dfloat *  diagInvOp,
+				      @restrict const  dfloat *  backT,
+				      @restrict const  dfloat *  q,
+				      @restrict dfloat *  Pq){
   
-  for(int e=0; e<Nelements; ++e; outer0){
+  for(int e=0; e<Nelements; ++e; @outer(0)){
 
-    shared dfloat s_q1[p_NpP];
-    shared dfloat s_q2[p_NpP];
+    @shared dfloat s_q1[p_NpP];
+    @shared dfloat s_q2[p_NpP];
     
-    for(int n=0;n<p_NpP;++n;inner0){
+    for(int n=0;n<p_NpP;++n;@inner(0)){
       // load element
       if(n<p_Np)
 	s_q1[n] = q[n+e*p_Np];
@@ -53,10 +53,10 @@ kernel void ellipticOasPreconTri2D_v0(const int Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
 
     // forward transform and scaling
-    for(int n=0;n<p_NpP;++n;inner0){
+    for(int n=0;n<p_NpP;++n;@inner(0)){
       dfloat r_diagInvOp = diagInvOp[e*p_NpP + n];
       
       dfloat res = 0;
@@ -67,10 +67,10 @@ kernel void ellipticOasPreconTri2D_v0(const int Nelements,
       s_q2[n] = res*r_diagInvOp;
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // backward transform
-    for(int n=0;n<p_NpP;++n;inner0){
+    for(int n=0;n<p_NpP;++n;@inner(0)){
       dfloat res = 0;
       for(int i=0;i<p_NpP;++i){
 	res += backT[n+i*p_NpP]*s_q2[i];
@@ -80,21 +80,21 @@ kernel void ellipticOasPreconTri2D_v0(const int Nelements,
   } 
 }
 
-kernel void ellipticOasPreconTri2D_v1(const int Nelements,
-				      const int   * restrict vmapPP,
-				      const dfloat * restrict forwardT,
-				      const dfloat * restrict diagInvOp,
-				      const dfloat * restrict backT,
-				      const dfloat * restrict q,
-				      dfloat * restrict Pq){
+@kernel void ellipticOasPreconTri2D_v1(const int Nelements,
+				      @restrict const  int   *  vmapPP,
+				      @restrict const  dfloat *  forwardT,
+				      @restrict const  dfloat *  diagInvOp,
+				      @restrict const  dfloat *  backT,
+				      @restrict const  dfloat *  q,
+				      @restrict dfloat *  Pq){
   
-  for(int eo=0; eo<Nelements; eo+=p_NblockV; outer0){
+  for(int eo=0; eo<Nelements; eo+=p_NblockV; @outer(0)){
 
-    shared dfloat s_q1[p_NblockV][p_NpP];
-    shared dfloat s_q2[p_NblockV][p_NpP];
+    @shared dfloat s_q1[p_NblockV][p_NpP];
+    @shared dfloat s_q2[p_NblockV][p_NpP];
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_NpP;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_NpP;++n;@inner(0)){
 	if(e<Nelements){
 	  // load element
 	  if(n<p_Np)
@@ -109,11 +109,11 @@ kernel void ellipticOasPreconTri2D_v1(const int Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
 
     // forward transform and scaling
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_NpP;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_NpP;++n;@inner(0)){
 	if(e<Nelements){
 	  dfloat r_diagInvOp = diagInvOp[e*p_NpP + n];
 	  
@@ -127,11 +127,11 @@ kernel void ellipticOasPreconTri2D_v1(const int Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
 
     // backward transform
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_NpP;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_NpP;++n;@inner(0)){
 	if(e<Nelements){
 	  dfloat res = 0;
 	  for(int i=0;i<p_NpP;++i){
@@ -145,25 +145,25 @@ kernel void ellipticOasPreconTri2D_v1(const int Nelements,
 }
 
   
-kernel void ellipticOasPreconTri2D(const int Nelements,
-				   const int   * restrict vmapPP,
-				   const dfloat * restrict forwardT,
-				   const dfloat * restrict diagInvOp,
-				   const dfloat * restrict backT,
-				   const dfloat * restrict q,
-				   dfloat * restrict Pq){
+@kernel void ellipticOasPreconTri2D(const int Nelements,
+				   @restrict const  int   *  vmapPP,
+				   @restrict const  dfloat *  forwardT,
+				   @restrict const  dfloat *  diagInvOp,
+				   @restrict const  dfloat *  backT,
+				   @restrict const  dfloat *  q,
+				   @restrict dfloat *  Pq){
   
-  for(int eo=0; eo<Nelements; eo+=p_NblockV; outer0){
+  for(int eo=0; eo<Nelements; eo+=p_NblockV; @outer(0)){
 
-    shared dfloat s_q1[p_NblockV][p_Np];
-    shared dfloat s_q1halo[p_NblockV][p_NfacesNfp];
-    shared dfloat s_q2[p_NblockV][p_NpP];
+    @shared dfloat s_q1[p_NblockV][p_Np];
+    @shared dfloat s_q1halo[p_NblockV][p_NfacesNfp];
+    @shared dfloat s_q2[p_NblockV][p_NpP];
 
-    shared dfloat s_forwardT[p_NpP][p_NpP];
-    shared dfloat s_backT[p_NpP][p_NpP];
+    @shared dfloat s_forwardT[p_NpP][p_NpP];
+    @shared dfloat s_backT[p_NpP][p_NpP];
     
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_NpP;++n;inner0){
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_NpP;++n;@inner(0)){
 	int e = eo + es;
 	int t = es*p_NpP + n;
 	
@@ -186,22 +186,22 @@ kernel void ellipticOasPreconTri2D(const int Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
 
     // forward transform and scaling
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_NpP;++n;inner0){
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_NpP;++n;@inner(0)){
 	const int e = eo + es;
 	if(e<Nelements){
 	  dfloat r_diagInvOp = diagInvOp[e*p_NpP + n];
 	  
 	  dfloat res = 0;
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	    for(int i=0;i<p_Np;++i){
 	      res += s_forwardT[i][n]*s_q1[es][i];
 	    }
 	  
-	  occaUnroll(p_NfacesNfp)
+	  #pragma unroll p_NfacesNfp
 	    for(int i=0;i<p_NfacesNfp;++i){
 	      res += s_forwardT[i+p_Np][n]*s_q1halo[es][i];
 	    }
@@ -211,15 +211,15 @@ kernel void ellipticOasPreconTri2D(const int Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
     
     // backward transform
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_NpP;++n;inner0){
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_NpP;++n;@inner(0)){
 	const int e = eo + es;
 	if(e<Nelements){
 	  dfloat res = 0;
-	  occaUnroll(p_NpP)
+	  #pragma unroll p_NpP
 	    for(int i=0;i<p_NpP;++i){
 	      res += s_backT[i][n]*s_q2[es][i];
 	    }

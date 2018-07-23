@@ -1,16 +1,16 @@
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannIMEXResidualUpdate2D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannIMEXResidualUpdate2D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat c_im,
             const dfloat c_ex, 
-            const dfloat4 * restrict q,
-            const dfloat4 * restrict qZ,
-                  dfloat4 * restrict qY){
+            @restrict const  dfloat4 *  q,
+            @restrict const  dfloat4 *  qZ,
+                  @restrict dfloat4 *  qY){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
 
       const int id0 = 2*(n + element*p_Np);
@@ -35,17 +35,17 @@ kernel void boltzmannIMEXResidualUpdate2D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannIMEXImplicitUpdate2D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannIMEXImplicitUpdate2D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat akk,
-            const dfloat4 * restrict qZ,
-            const dfloat4 * restrict qY,
-                  dfloat4 * restrict q,
-                  dfloat4 * restrict qS){
+            @restrict const  dfloat4 *  qZ,
+            @restrict const  dfloat4 *  qY,
+                  @restrict dfloat4 *  q,
+                  @restrict dfloat4 *  qS){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
 
       const int id0 = 2*(n + element*p_Np);
@@ -72,17 +72,17 @@ kernel void boltzmannIMEXImplicitUpdate2D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannIMEXUpdate2D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannIMEXUpdate2D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat akk,
-            const dfloat4 * restrict qZ,
-            const dfloat4 * restrict qY,
-            const dfloat4 * restrict qS,
-                  dfloat4 * restrict q){
+            @restrict const  dfloat4 *  qZ,
+            @restrict const  dfloat4 *  qY,
+            @restrict const  dfloat4 *  qS,
+                  @restrict dfloat4 *  q){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
 
       const int id0 = 2*(n + element*p_Np);
@@ -106,27 +106,27 @@ kernel void boltzmannIMEXUpdate2D(const int Nelements,
 }
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannIMEXSplitPmlImplicitUpdate2D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannIMEXSplitPmlImplicitUpdate2D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat akk,
             const dfloat ramp,
-            const dfloat  * restrict qZx,
-            const dfloat  * restrict qZy,
-            const dfloat  * restrict qZnt,     
-            const dfloat  * restrict qYx,
-            const dfloat  * restrict qYy,
-            const dfloat  * restrict qYnt,
-                  dfloat  * restrict pmlqx,
-                  dfloat  * restrict pmlqy,
-                  dfloat  * restrict pmlNT,     
-                  dfloat  * restrict qSx,
-                  dfloat  * restrict qSy,
-                  dfloat  * restrict qSnt,
-                  dfloat4 * restrict q ){
+            @restrict const  dfloat  *  qZx,
+            @restrict const  dfloat  *  qZy,
+            @restrict const  dfloat  *  qZnt,     
+            @restrict const  dfloat  *  qYx,
+            @restrict const  dfloat  *  qYy,
+            @restrict const  dfloat  *  qYnt,
+                  @restrict dfloat  *  pmlqx,
+                  @restrict dfloat  *  pmlqy,
+                  @restrict dfloat  *  pmlNT,     
+                  @restrict dfloat  *  qSx,
+                  @restrict dfloat  *  qSy,
+                  @restrict dfloat  *  qSnt,
+                  @restrict dfloat4 *  q ){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
 
       //
@@ -290,27 +290,27 @@ kernel void boltzmannIMEXSplitPmlImplicitUpdate2D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannIMEXSplitPmlUpdate2D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannIMEXSplitPmlUpdate2D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat akk,
             const dfloat ramp,
-            const dfloat  * restrict qZx,
-            const dfloat  * restrict qZy,
-            const dfloat  * restrict qZnt,     
-            const dfloat  * restrict qYx,
-            const dfloat  * restrict qYy,
-            const dfloat  * restrict qYnt,
-            const dfloat  * restrict qSx,
-                  dfloat  * restrict qSy,
-                  dfloat  * restrict qSnt,     
-                  dfloat  * restrict pmlqx,
-                  dfloat  * restrict pmlqy,
-                  dfloat  * restrict pmlNT,
-                  dfloat4 * restrict q ){
+            @restrict const  dfloat  *  qZx,
+            @restrict const  dfloat  *  qZy,
+            @restrict const  dfloat  *  qZnt,     
+            @restrict const  dfloat  *  qYx,
+            @restrict const  dfloat  *  qYy,
+            @restrict const  dfloat  *  qYnt,
+            @restrict const  dfloat  *  qSx,
+                  @restrict dfloat  *  qSy,
+                  @restrict dfloat  *  qSnt,     
+                  @restrict dfloat  *  pmlqx,
+                  @restrict dfloat  *  pmlqy,
+                  @restrict dfloat  *  pmlNT,
+                  @restrict dfloat4 *  q ){
   // Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
 
       //
@@ -457,24 +457,24 @@ kernel void boltzmannIMEXSplitPmlUpdate2D(const int Nelements,
 
 
 // Perform an update like Y = Q + c_im*Res_IM + c_ex*Res_EX;
-kernel void boltzmannIMEXSplitPmlResidualUpdate2D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannIMEXSplitPmlResidualUpdate2D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat dt, 
             const dfloat c_im,
             const dfloat c_ex, 
-            const dfloat  * restrict pmlqx,
-            const dfloat  * restrict pmlqy,
-            const dfloat  * restrict pmlnt,
-            const dfloat  * restrict pmlZx,
-            const dfloat  * restrict pmlZy,
-            const dfloat  * restrict pmlZnt,
-                  dfloat  * restrict pmlYx,
-                  dfloat  * restrict pmlYy,
-                  dfloat  * restrict pmlYnt
+            @restrict const  dfloat  *  pmlqx,
+            @restrict const  dfloat  *  pmlqy,
+            @restrict const  dfloat  *  pmlnt,
+            @restrict const  dfloat  *  pmlZx,
+            @restrict const  dfloat  *  pmlZy,
+            @restrict const  dfloat  *  pmlZnt,
+                  @restrict dfloat  *  pmlYx,
+                  @restrict dfloat  *  pmlYy,
+                  @restrict dfloat  *  pmlYnt
                    ){
   Low storage Runge Kutta time step update
-  for(int e=0;e<Nelements;++e;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int element = elementIds[e];
 
       //

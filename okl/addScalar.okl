@@ -1,10 +1,10 @@
 //add constant scalar value to every entry of a vector
 
-kernel void addScalar(const dlong N,
+@kernel void addScalar(const dlong N,
                       const dfloat alpha,
-                      dfloat * restrict y){
+                      @restrict dfloat *  y){
   
-  for(dlong n=0;n<N;++n;tile(256)){
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
     if(n<N){
       y[n] += alpha;
     }

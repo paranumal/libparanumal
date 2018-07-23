@@ -1,44 +1,44 @@
 
 occaKernel void ellipticCGLocalPatchTri2D_v0(const int Nelements,
-                                      const int * restrict vmapM,
+                                      @restrict const  int *  vmapM,
                                       const dfloat lambda,
                                       const dfloat tau,
-                                      const dfloat * restrict vgeo,
-                                      const dfloat * restrict sgeo,
-                                      const int   * restrict EToB,
-                                      const dfloat * restrict DrT,
-                                      const dfloat * restrict DsT,
-                                      const dfloat * restrict LIFTT,
-                                      const dfloat * restrict MM,
-                                      const dfloat * restrict invDegree,
-                                      const dfloat * restrict q,
-                                            dfloat * restrict Sq,
+                                      @restrict const  dfloat *  vgeo,
+                                      @restrict const  dfloat *  sgeo,
+                                      @restrict const  int   *  EToB,
+                                      @restrict const  dfloat *  DrT,
+                                      @restrict const  dfloat *  DsT,
+                                      @restrict const  dfloat *  LIFTT,
+                                      @restrict const  dfloat *  MM,
+                                      @restrict const  dfloat *  invDegree,
+                                      @restrict const  dfloat *  q,
+                                            @restrict dfloat *  Sq,
                                       const dfloat TOL) {
 
-  for(int e=0;e<Nelements;++e;outer0){
-    shared  dfloat s_x[p_Np];
-    shared  dfloat s_r[p_Np];
-    shared  dfloat s_p[p_Np];
-    shared  dfloat s_Ap[p_Np];
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    @shared  dfloat s_x[p_Np];
+    @shared  dfloat s_r[p_Np];
+    @shared  dfloat s_p[p_Np];
+    @shared  dfloat s_Ap[p_Np];
 
-    volatile shared dfloat s_xy[p_Np];
+    @shared volatile dfloat s_xy[p_Np];
 
-    shared dfloat s_rdotr, s_rdotr1, s_pAp, s_alpha, s_beta;
+    @shared dfloat s_rdotr, s_rdotr1, s_pAp, s_alpha, s_beta;
 
-    shared  dfloat s_dpdx[p_Np];
-    shared  dfloat s_dpdy[p_Np];
-    shared  dfloat s_lapq[p_Np];
-    shared  dfloat s_nxdq[p_NfacesNfp];
-    shared  dfloat s_nydq[p_NfacesNfp];
-    shared  dfloat s_lapflux[p_NfacesNfp];
-    shared  dfloat s_Lnxdq[p_Np];
-    shared  dfloat s_Lnydq[p_Np];
-    shared  dfloat s_vgeo[p_Nvgeo];
-    shared  dfloat s_sgeo[p_Nfaces][p_Nsgeo];
-    exclusive int idM, bc;
+    @shared  dfloat s_dpdx[p_Np];
+    @shared  dfloat s_dpdy[p_Np];
+    @shared  dfloat s_lapq[p_Np];
+    @shared  dfloat s_nxdq[p_NfacesNfp];
+    @shared  dfloat s_nydq[p_NfacesNfp];
+    @shared  dfloat s_lapflux[p_NfacesNfp];
+    @shared  dfloat s_Lnxdq[p_Np];
+    @shared  dfloat s_Lnydq[p_Np];
+    @shared  dfloat s_vgeo[p_Nvgeo];
+    @shared  dfloat s_sgeo[p_Nfaces][p_Nsgeo];
+    @exclusive int idM, bc;
     
     //fetch q into rhs
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_Np) {
         s_r[n] = q[e*p_Np+n];
         s_p[n] = q[e*p_Np+n];
@@ -46,71 +46,71 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // sanity check
     /*---------------------Local Inner product -----------------*/
-    for(int n=0;n<p_Nmax;++n;inner0) if(n<p_Np) s_xy[n] = s_r[n]*s_r[n];
-    barrier(localMemFence);
+    for(int n=0;n<p_Nmax;++n;@inner(0)) if(n<p_Np) s_xy[n] = s_r[n]*s_r[n];
+    @barrier("local");
 
     #if p_Np>256
-    for(int n=0;n<p_Nmax;++n;inner0) if((n< 256)&&(n+256<p_Np)) s_xy[n] += s_xy[n+256];
-    barrier(localMemFence);
+    for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 256)&&(n+256<p_Np)) s_xy[n] += s_xy[n+256];
+    @barrier("local");
     #endif
 
     #if p_Np>128
-    for(int n=0;n<p_Nmax;++n;inner0) if((n< 128)&&(n+128<p_Np)) s_xy[n] += s_xy[n+128];
-    barrier(localMemFence);
+    for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 128)&&(n+128<p_Np)) s_xy[n] += s_xy[n+128];
+    @barrier("local");
     #endif
 
     #if p_Np>64
-    for(int n=0;n<p_Nmax;++n;inner0) if((n< 64)&&(n+64<p_Np)) s_xy[n] += s_xy[n+ 64];
-    barrier(localMemFence);
+    for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 64)&&(n+64<p_Np)) s_xy[n] += s_xy[n+ 64];
+    @barrier("local");
     #endif
 
     #if p_Np>32
-    for(int n=0;n<p_Nmax;++n;inner0) if((n< 32)&&(n+32<p_Np)) s_xy[n] += s_xy[n+ 32];
-    barrier(localMemFence);
+    for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 32)&&(n+32<p_Np)) s_xy[n] += s_xy[n+ 32];
+    @barrier("local");
     #endif
 
     #if p_Np>16
-    for(int n=0;n<p_Nmax;++n;inner0) if((n< 16)&&(n+16<p_Np)) s_xy[n] += s_xy[n+ 16];
-        // barrier(localMemFence);
+    for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 16)&&(n+16<p_Np)) s_xy[n] += s_xy[n+ 16];
+        // @barrier("local");
     #endif
 
     #if p_Np>8
-    for(int n=0;n<p_Nmax;++n;inner0) if((n< 8)&&(n+8<p_Np)) s_xy[n] += s_xy[n+ 8];
-        // barrier(localMemFence);
+    for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 8)&&(n+8<p_Np)) s_xy[n] += s_xy[n+ 8];
+        // @barrier("local");
     #endif
 
     #if p_Np>4
-    for(int n=0;n<p_Nmax;++n;inner0) if((n< 4)&&(n+4<p_Np)) s_xy[n] += s_xy[n+ 4];
-        // barrier(localMemFence);
+    for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 4)&&(n+4<p_Np)) s_xy[n] += s_xy[n+ 4];
+        // @barrier("local");
     #endif
 
     #if p_Np>2
-    for(int n=0;n<p_Nmax;++n;inner0) if((n< 2)&&(n+2<p_Np)) s_xy[n] += s_xy[n+ 2];
-        // barrier(localMemFence);
+    for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 2)&&(n+2<p_Np)) s_xy[n] += s_xy[n+ 2];
+        // @barrier("local");
     #endif
 
-    for(int n=0;n<p_Nmax;++n;inner0) 
+    for(int n=0;n<p_Nmax;++n;@inner(0)) 
       if((n< 1)&&(n+1<p_Np)) {
         s_rdotr = s_xy[0] + s_xy[1];
       }
-    barrier(localMemFence);
+    @barrier("local");
 
     /*---------------------End Local Inner product -----------------*/    
 
     if (s_rdotr<TOL*TOL) {
-      for(int n=0;n<p_Nmax;++n;inner0) {
+      for(int n=0;n<p_Nmax;++n;@inner(0)) {
         if(n<p_Np) {
           Sq[e*p_Np+n] = invDegree[e]*s_r[n];
         }
         return;
       }
     }
-    // read in geo data to shared
-    for(int n=0;n<p_Nmax;++n;inner0){
+    // read in geo data to @shared
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       int m = n;
       const int gid = e*p_Nvgeo;
       while(m<p_Nvgeo){
@@ -134,13 +134,13 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     //do an inner CG solve
     while(s_rdotr>TOL*TOL) {
     //for (int k=0;k<p_Np;k++) {
 
       /*---------------------Local Ax operator -----------------*/
-      for(int n=0;n<p_Nmax;++n;inner0){
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
         if (n<p_Np) {
           const dfloat drdx = s_vgeo[p_RXID];
           const dfloat drdy = s_vgeo[p_RYID];
@@ -159,10 +159,10 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const int Nelements,
         }
       }
       
-      barrier(localMemFence);
+      @barrier("local");
 
       // TW      
-      for(int n=0;n<p_Nmax;++n;inner0){
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
         
         if(n<p_Np){
           s_lapq[n] = lambda*s_p[n];
@@ -201,11 +201,11 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const int Nelements,
         }
       }
       
-      barrier(localMemFence);
+      @barrier("local");
       // TW2
       
       // dqdx += LIFT*(sJ/J)*nx*dq
-      for(int n=0;n<p_Nmax;++n;inner0){
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
         if(n<p_Np){
           const dfloat drdx = s_vgeo[p_RXID];
           const dfloat drdy = s_vgeo[p_RYID];
@@ -215,7 +215,7 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const int Nelements,
           dfloat Lnxdq = 0.f;
           dfloat Lnydq = 0.f;
 
-          occaUnroll(p_NfacesNfp)
+          #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
             Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
@@ -232,9 +232,9 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const int Nelements,
       }
 
       // TW3
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int n=0;n<p_Nmax;++n;inner0){
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
         if(n<p_NfacesNfp){
           const int face = n/p_Nfp;
           const dfloat nx   = s_sgeo[face][p_NXID];
@@ -248,7 +248,7 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const int Nelements,
         if(n<p_Np){
           dfloat lapr = 0.f, laps = 0.f;
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             lapr += DrT[n+i*p_Np]*s_dpdx[i];
             laps += DsT[n+i*p_Np]*s_dpdy[i];
@@ -260,14 +260,14 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const int Nelements,
       }
 
       // TW4
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int n=0;n<p_Nmax;++n;inner0){
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
         if(n<p_Np){
           dfloat lap = 0.f;
 
           // lift remaining surface terms
-          occaUnroll(p_NfacesNfp)
+          #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             lap += LIFTT[n+i*p_Np]*s_lapflux[i];
           }
@@ -277,153 +277,153 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const int Nelements,
       }
 
       // TW5
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int n=0;n<p_Nmax;++n;inner0){
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
         if(n<p_Np){
           const dfloat J = s_vgeo[p_JID];
 
           dfloat Mlapq = 0.f;
 
           // multiply by mass matrix
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             Mlapq += MM[n+i*p_Np]*s_lapq[i];
           }
           s_Ap[n] = J*Mlapq;
         }
       }
-      barrier(localMemFence);
+      @barrier("local");
 
       /*---------------------p.Ap -----------------*/
-      for(int n=0;n<p_Nmax;++n;inner0) if(n<p_Np) s_xy[n] = s_p[n]*s_Ap[n];
-      barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if(n<p_Np) s_xy[n] = s_p[n]*s_Ap[n];
+      @barrier("local");
 
 #if p_Np>256
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 256)&&(n+256<p_Np)) s_xy[n] += s_xy[n+256];
-      barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 256)&&(n+256<p_Np)) s_xy[n] += s_xy[n+256];
+      @barrier("local");
 #endif
 
 #if p_Np>128
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 128)&&(n+128<p_Np)) s_xy[n] += s_xy[n+128];
-      barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 128)&&(n+128<p_Np)) s_xy[n] += s_xy[n+128];
+      @barrier("local");
 #endif
 
 #if p_Np>64
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 64)&&(n+64<p_Np)) s_xy[n] += s_xy[n+ 64];
-      barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 64)&&(n+64<p_Np)) s_xy[n] += s_xy[n+ 64];
+      @barrier("local");
 #endif
 
 #if p_Np>32
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 32)&&(n+32<p_Np)) s_xy[n] += s_xy[n+ 32];
-      barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 32)&&(n+32<p_Np)) s_xy[n] += s_xy[n+ 32];
+      @barrier("local");
 #endif
 
 #if p_Np>16
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 16)&&(n+16<p_Np)) s_xy[n] += s_xy[n+ 16];
-          // barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 16)&&(n+16<p_Np)) s_xy[n] += s_xy[n+ 16];
+          // @barrier("local");
 #endif
 
 #if p_Np>8
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 8)&&(n+8<p_Np)) s_xy[n] += s_xy[n+ 8];
-          // barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 8)&&(n+8<p_Np)) s_xy[n] += s_xy[n+ 8];
+          // @barrier("local");
 #endif
 
 #if p_Np>4
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 4)&&(n+4<p_Np)) s_xy[n] += s_xy[n+ 4];
-          // barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 4)&&(n+4<p_Np)) s_xy[n] += s_xy[n+ 4];
+          // @barrier("local");
 #endif
 
 #if p_Np>2
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 2)&&(n+2<p_Np)) s_xy[n] += s_xy[n+ 2];
-          // barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 2)&&(n+2<p_Np)) s_xy[n] += s_xy[n+ 2];
+          // @barrier("local");
 #endif
 
-      for(int n=0;n<p_Nmax;++n;inner0) 
+      for(int n=0;n<p_Nmax;++n;@inner(0)) 
         if((n< 1)&&(n+1<p_Np)) {
           s_pAp = s_xy[0] + s_xy[1];
           s_alpha = s_rdotr/s_pAp;
         }
-      barrier(localMemFence);
+      @barrier("local");
       /*---------------------End p.Ap -----------------*/    
 
       /*--------------------- x += alpha*p -----------------*/    
       /*--------------------- r -= alpha*Ap -----------------*/    
-      for(int n=0;n<p_Nmax;++n;inner0){
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
         if(n<p_Np) {
           s_x[n] += s_alpha* s_p[n];
           s_r[n] -= s_alpha*s_Ap[n];
         } 
       } 
-      barrier(localMemFence);
+      @barrier("local");
 
       /*---------------------r.r -----------------*/
-      for(int n=0;n<p_Nmax;++n;inner0) if(n<p_Np) s_xy[n] = s_r[n]*s_r[n];
-      barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if(n<p_Np) s_xy[n] = s_r[n]*s_r[n];
+      @barrier("local");
 
 #if p_Np>256
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 256)&&(n+256<p_Np)) s_xy[n] += s_xy[n+256];
-      barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 256)&&(n+256<p_Np)) s_xy[n] += s_xy[n+256];
+      @barrier("local");
 #endif
 
 #if p_Np>128
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 128)&&(n+128<p_Np)) s_xy[n] += s_xy[n+128];
-      barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 128)&&(n+128<p_Np)) s_xy[n] += s_xy[n+128];
+      @barrier("local");
 #endif
     
 #if p_Np>64
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 64)&&(n+64<p_Np)) s_xy[n] += s_xy[n+ 64];
-      barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 64)&&(n+64<p_Np)) s_xy[n] += s_xy[n+ 64];
+      @barrier("local");
 #endif
 
 #if p_Np>32
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 32)&&(n+32<p_Np)) s_xy[n] += s_xy[n+ 32];
-      barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 32)&&(n+32<p_Np)) s_xy[n] += s_xy[n+ 32];
+      @barrier("local");
 #endif
 
 #if p_Np>16
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 16)&&(n+16<p_Np)) s_xy[n] += s_xy[n+ 16];
-          // barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 16)&&(n+16<p_Np)) s_xy[n] += s_xy[n+ 16];
+          // @barrier("local");
 #endif
 
 #if p_Np>8
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 8)&&(n+8<p_Np)) s_xy[n] += s_xy[n+ 8];
-          // barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 8)&&(n+8<p_Np)) s_xy[n] += s_xy[n+ 8];
+          // @barrier("local");
 #endif
 
 #if p_Np>4
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 4)&&(n+4<p_Np)) s_xy[n] += s_xy[n+ 4];
-          // barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 4)&&(n+4<p_Np)) s_xy[n] += s_xy[n+ 4];
+          // @barrier("local");
 #endif
 
 #if p_Np>2
-      for(int n=0;n<p_Nmax;++n;inner0) if((n< 2)&&(n+2<p_Np)) s_xy[n] += s_xy[n+ 2];
-          // barrier(localMemFence);
+      for(int n=0;n<p_Nmax;++n;@inner(0)) if((n< 2)&&(n+2<p_Np)) s_xy[n] += s_xy[n+ 2];
+          // @barrier("local");
 #endif
     
-      for(int n=0;n<p_Nmax;++n;inner0) 
+      for(int n=0;n<p_Nmax;++n;@inner(0)) 
         if((n< 1)&&(n+1<p_Np)) {
           s_rdotr1 = s_xy[0] + s_xy[1];
           s_beta = s_rdotr1/s_rdotr;
         }
-      barrier(localMemFence);
+      @barrier("local");
       /*---------------------End r.r -----------------*/    
 
-      for(int n=0;n<p_Nmax;++n;inner0) 
+      for(int n=0;n<p_Nmax;++n;@inner(0)) 
         if(s_rdotr1 < TOL*TOL) break;
 
       //precon would go here
     
       /*--------------------- p = beta*p + r -----------------*/    
-      for(int n=0;n<p_Nmax;++n;inner0){
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
         if(n<p_Np) s_p[n] = s_beta*s_p[n]+s_r[n];
         if(n==0) s_rdotr = s_rdotr1;
       } 
-      barrier(localMemFence);
+      @barrier("local");
 
     }
     
-    for(int n=0;n<p_Nmax;++n;inner0) {
+    for(int n=0;n<p_Nmax;++n;@inner(0)) {
       if(n<p_Np) {
         Sq[e*p_Np+n] = invDegree[e]*s_x[n];
       }
@@ -431,48 +431,48 @@ occaKernel void ellipticCGLocalPatchTri2D_v0(const int Nelements,
   }
 }
 
-//kernel is blocked into chucks of SIMDSIZE threads manually to avoid barriers
+//@kernel is blocked into chucks of SIMDSIZE threads manually to avoid barriers
 #define SIMDSIZE 32
 occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
-                                      const int * restrict vmapM,
+                                      @restrict const  int *  vmapM,
                                       const dfloat lambda,
                                       const dfloat tau,
-                                      const dfloat * restrict vgeo,
-                                      const dfloat * restrict sgeo,
-                                      const int   * restrict EToB,
-                                      const dfloat * restrict DrT,
-                                      const dfloat * restrict DsT,
-                                      const dfloat * restrict LIFTT,
-                                      const dfloat * restrict MM,
-                                      const dfloat * restrict invDegree,
-                                      const dfloat * restrict q,
-                                            dfloat * restrict Sq,
+                                      @restrict const  dfloat *  vgeo,
+                                      @restrict const  dfloat *  sgeo,
+                                      @restrict const  int   *  EToB,
+                                      @restrict const  dfloat *  DrT,
+                                      @restrict const  dfloat *  DsT,
+                                      @restrict const  dfloat *  LIFTT,
+                                      @restrict const  dfloat *  MM,
+                                      @restrict const  dfloat *  invDegree,
+                                      @restrict const  dfloat *  q,
+                                            @restrict dfloat *  Sq,
                                       const dfloat TOL) {
 
-  for(int e=0;e<Nelements;++e;outer0){
-    volatile shared  dfloat s_x[p_Np];
-    volatile shared  dfloat s_r[p_Np];
-    volatile shared  dfloat s_p[p_Np];
-    volatile shared  dfloat s_Ap[p_Np];
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    @shared volatile  dfloat s_x[p_Np];
+    @shared volatile  dfloat s_r[p_Np];
+    @shared volatile  dfloat s_p[p_Np];
+    @shared volatile  dfloat s_Ap[p_Np];
 
-    volatile shared dfloat s_xy[SIMDSIZE];
+    @shared volatile dfloat s_xy[SIMDSIZE];
 
-    volatile shared dfloat s_rdotr, s_rdotr1, s_pAp, s_alpha, s_beta;
+    @shared volatile dfloat s_rdotr, s_rdotr1, s_pAp, s_alpha, s_beta;
 
-    volatile shared  dfloat s_dpdx[p_Np];
-    volatile shared  dfloat s_dpdy[p_Np];
-    volatile shared  dfloat s_lapq[p_Np];
-    volatile shared  dfloat s_nxdq[p_NfacesNfp];
-    volatile shared  dfloat s_nydq[p_NfacesNfp];
-    volatile shared  dfloat s_lapflux[p_NfacesNfp];
-    volatile shared  dfloat s_Lnxdq[p_Np];
-    volatile shared  dfloat s_Lnydq[p_Np];
-    volatile shared  dfloat s_vgeo[p_Nvgeo];
-    volatile shared  dfloat s_sgeo[p_Nfaces][p_Nsgeo];
-    volatile shared    int s_idM[p_NfacesNfp], s_bc[p_NfacesNfp];
+    @shared volatile  dfloat s_dpdx[p_Np];
+    @shared volatile  dfloat s_dpdy[p_Np];
+    @shared volatile  dfloat s_lapq[p_Np];
+    @shared volatile  dfloat s_nxdq[p_NfacesNfp];
+    @shared volatile  dfloat s_nydq[p_NfacesNfp];
+    @shared volatile  dfloat s_lapflux[p_NfacesNfp];
+    @shared volatile  dfloat s_Lnxdq[p_Np];
+    @shared volatile  dfloat s_Lnydq[p_Np];
+    @shared volatile  dfloat s_vgeo[p_Nvgeo];
+    @shared volatile  dfloat s_sgeo[p_Nfaces][p_Nsgeo];
+    @shared volatile    int s_idM[p_NfacesNfp], s_bc[p_NfacesNfp];
     
     //fetch q into rhs
-    for(int n=0;n<SIMDSIZE;++n;inner0){
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)){
       int m = n;
       while (m<p_Np) {
         s_r[m] = q[e*p_Np+m];
@@ -484,7 +484,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
 
     // sanity check
     /*---------------------Local Inner product -----------------*/    
-    for(int n=0;n<SIMDSIZE;++n;inner0) {
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
       s_xy[n] = 0.f;
       int m = n;
       while (m<p_Np) {
@@ -492,15 +492,15 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         m += SIMDSIZE;
       } 
     }
-    for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 16) s_xy[n] += s_xy[n+16];
-    for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 8)  s_xy[n] += s_xy[n+8];
-    for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 4)  s_xy[n] += s_xy[n+4];
-    for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 2)  s_xy[n] += s_xy[n+2];
-    for(int n=0;n<SIMDSIZE;++n;inner0) if(n==0)  s_rdotr = s_xy[0] + s_xy[1];    
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n< 16) s_xy[n] += s_xy[n+16];
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n< 8)  s_xy[n] += s_xy[n+8];
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n< 4)  s_xy[n] += s_xy[n+4];
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n< 2)  s_xy[n] += s_xy[n+2];
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n==0)  s_rdotr = s_xy[0] + s_xy[1];    
     /*---------------------End Local Inner product -----------------*/    
 
     if (s_rdotr<TOL*TOL) {
-      for(int n=0;n<SIMDSIZE;++n;inner0) {
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
         int m = n;
         while (m<p_Np) {
           Sq[e*p_Np+m] = invDegree[e]*s_r[m];
@@ -509,8 +509,8 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         return;
       }
     }
-    // read in geo data to shared
-    for(int n=0;n<SIMDSIZE;++n;inner0){
+    // read in geo data to @shared
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)){
       int m = n;
       const int gid = e*p_Nvgeo;
       while(m<p_Nvgeo){
@@ -542,7 +542,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
     //for (int k=0;k<p_Np;k++) {
 
       /*---------------------Local Ax operator -----------------*/
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m = n;
         const dfloat drdx = s_vgeo[p_RXID];
         const dfloat drdy = s_vgeo[p_RYID];
@@ -552,7 +552,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         while(m<p_Np){  
           // compute 1D derivatives
           dfloat qr = 0.f, qs = 0.f;
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat p_i = s_p[i];
               qr += DrT[m+i*p_Np]*p_i;
@@ -565,7 +565,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         }
       }
 
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m = n;
         while(m<p_Np){
           s_lapq[m] = lambda*s_p[m];
@@ -610,7 +610,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
 
       
       // dqdx += LIFT*(sJ/J)*nx*dq
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         const dfloat drdx = s_vgeo[p_RXID];
         const dfloat drdy = s_vgeo[p_RYID];
         const dfloat dsdx = s_vgeo[p_SXID];
@@ -621,7 +621,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
           dfloat Lnxdq = 0.f;
           dfloat Lnydq = 0.f;
 
-          occaUnroll(p_NfacesNfp)
+          #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[m+i*p_Np]*s_nxdq[i];
             Lnydq += LIFTT[m+i*p_Np]*s_nydq[i];
@@ -638,7 +638,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         }
       }
 
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m = n;
         while(m<p_NfacesNfp){
           const int face = m/p_Nfp;
@@ -656,7 +656,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         while(m<p_Np){
           dfloat lapr = 0.f, laps = 0.f;
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             lapr += DrT[m+i*p_Np]*s_dpdx[i];
             laps += DsT[m+i*p_Np]*s_dpdy[i];
@@ -667,13 +667,13 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         }
       }
 
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m = n;
         while(m<p_Np){
           dfloat lap = 0.f;
 
           // lift remaining surface terms
-          occaUnroll(p_NfacesNfp)
+          #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             lap += LIFTT[m+i*p_Np]*s_lapflux[i];
           }
@@ -683,7 +683,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         }
       }
 
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m =n;
         while(m<p_Np){
           const dfloat J = s_vgeo[p_JID];
@@ -691,7 +691,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
           dfloat Mlapq = 0.f;
 
           // multiply by mass matrix
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             Mlapq += MM[m+i*p_Np]*s_lapq[i];
           }
@@ -702,7 +702,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
 
       
       /*---------------------p.Ap -----------------*/
-      for(int n=0;n<SIMDSIZE;++n;inner0) {
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
         s_xy[n] = 0.f;
         int m = n;
         while(m<p_Np) {
@@ -710,11 +710,11 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
           m += SIMDSIZE;
         }
       }
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n<16) s_xy[n] += s_xy[n+16];
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n<8)  s_xy[n] += s_xy[n+8];
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n<4)  s_xy[n] += s_xy[n+4];
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n<2)  s_xy[n] += s_xy[n+2];
-      for(int n=0;n<SIMDSIZE;++n;inner0) {
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n<16) s_xy[n] += s_xy[n+16];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n<8)  s_xy[n] += s_xy[n+8];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n<4)  s_xy[n] += s_xy[n+4];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n<2)  s_xy[n] += s_xy[n+2];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
         if(n==0) {
           s_pAp = s_xy[0] + s_xy[1];
           s_alpha = s_rdotr/s_pAp;
@@ -724,7 +724,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
 
       /*--------------------- x += alpha*p -----------------*/    
       /*--------------------- r -= alpha*Ap -----------------*/    
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m = n;
         while(m<p_Np) {
           s_x[m] += s_alpha* s_p[m];
@@ -734,7 +734,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
       } 
 
       /*---------------------r.r -----------------*/
-      for(int n=0;n<SIMDSIZE;++n;inner0) {
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
         s_xy[n] = 0.f;
         int m = n;
         while(m<p_Np) {
@@ -743,11 +743,11 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         }
       }
 
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 16) s_xy[n] += s_xy[n+16];
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 8)  s_xy[n] += s_xy[n+8];
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 4)  s_xy[n] += s_xy[n+4];
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 2)  s_xy[n] += s_xy[n+2];
-      for(int n=0;n<SIMDSIZE;++n;inner0) {
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n< 16) s_xy[n] += s_xy[n+16];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n< 8)  s_xy[n] += s_xy[n+8];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n< 4)  s_xy[n] += s_xy[n+4];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n< 2)  s_xy[n] += s_xy[n+2];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
         if(n==0) {
           s_rdotr1 = s_xy[0] + s_xy[1];
           s_beta = s_rdotr1/s_rdotr;
@@ -755,7 +755,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
       }
       /*---------------------End r.r -----------------*/    
 
-      for(int n=0;n<SIMDSIZE;++n;inner0) {
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
         if(s_rdotr1 < TOL*TOL) {
           break;
         }
@@ -763,7 +763,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
       //precon would go here
     
       /*--------------------- p = beta*p + r -----------------*/    
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m = n;
         while(m<p_Np) {
           s_p[m] = s_beta*s_p[m]+s_r[m];
@@ -774,7 +774,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
     }
     
     
-    for(int n=0;n<SIMDSIZE;++n;inner0) {
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
       int m = n;
       while(m<p_Np) {
         Sq[e*p_Np+m] = invDegree[e]*s_x[m];
@@ -786,51 +786,51 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
 #undef SIMDSIZE
 
 #if 0
-//kernel is blocked into chucks of SIMDSIZE threads manually to avoid barriers
+//@kernel is blocked into chucks of SIMDSIZE threads manually to avoid barriers
 #define SIMDSIZE 32
 #define Nnodes 4
 occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
-                                      const int * restrict vmapM,
+                                      @restrict const  int *  vmapM,
                                       const dfloat lambda,
                                       const dfloat tau,
-                                      const dfloat * restrict vgeo,
-                                      const dfloat * restrict sgeo,
-                                      const int   * restrict EToB,
-                                      const dfloat * restrict DrT,
-                                      const dfloat * restrict DsT,
-                                      const dfloat * restrict LIFTT,
-                                      const dfloat * restrict MM,
-                                      const dfloat * restrict invDegree,
-                                      const dfloat * restrict q,
-                                            dfloat * restrict Sq,
+                                      @restrict const  dfloat *  vgeo,
+                                      @restrict const  dfloat *  sgeo,
+                                      @restrict const  int   *  EToB,
+                                      @restrict const  dfloat *  DrT,
+                                      @restrict const  dfloat *  DsT,
+                                      @restrict const  dfloat *  LIFTT,
+                                      @restrict const  dfloat *  MM,
+                                      @restrict const  dfloat *  invDegree,
+                                      @restrict const  dfloat *  q,
+                                            @restrict dfloat *  Sq,
                                       const dfloat TOL) {
 
-  for(int es=0;es<Nelements;es+=Nnodes;outer0){
-    volatile shared  dfloat s_x[Nnodes][p_Np];
-    volatile shared  dfloat s_r[Nnodes][p_Np];
-    volatile shared  dfloat s_p[Nnodes][p_Np];
-    volatile shared  dfloat s_Ap[Nnodes][p_Np];
+  for(int es=0;es<Nelements;es+=Nnodes;@outer(0)){
+    @shared volatile  dfloat s_x[Nnodes][p_Np];
+    @shared volatile  dfloat s_r[Nnodes][p_Np];
+    @shared volatile  dfloat s_p[Nnodes][p_Np];
+    @shared volatile  dfloat s_Ap[Nnodes][p_Np];
 
-    volatile shared dfloat s_xy[Nnodes][SIMDSIZE];
+    @shared volatile dfloat s_xy[Nnodes][SIMDSIZE];
 
-    volatile shared dfloat s_rdotr[Nnodes], s_rdotr1[Nnodes], s_pAp[Nnodes], s_alpha[Nnodes], s_beta[Nnodes];
-    volatile shared dfloat s_avgrdotr;
+    @shared volatile dfloat s_rdotr[Nnodes], s_rdotr1[Nnodes], s_pAp[Nnodes], s_alpha[Nnodes], s_beta[Nnodes];
+    @shared volatile dfloat s_avgrdotr;
 
-    volatile shared  dfloat s_dpdx[Nnodes][p_Np];
-    volatile shared  dfloat s_dpdy[Nnodes][p_Np];
-    volatile shared  dfloat s_lapq[Nnodes][p_Np];
-    volatile shared  dfloat s_nxdq[Nnodes][p_NfacesNfp];
-    volatile shared  dfloat s_nydq[Nnodes][p_NfacesNfp];
-    volatile shared  dfloat s_lapflux[Nnodes][p_NfacesNfp];
-    volatile shared  dfloat s_Lnxdq[Nnodes][p_Np];
-    volatile shared  dfloat s_Lnydq[Nnodes][p_Np];
-    volatile shared  dfloat s_vgeo[Nnodes][p_Nvgeo];
-    volatile shared  dfloat s_sgeo[Nnodes][p_Nfaces][p_Nsgeo];
-    volatile shared    int s_idM[Nnodes][p_NfacesNfp], s_bc[Nnodes][p_NfacesNfp];
+    @shared volatile  dfloat s_dpdx[Nnodes][p_Np];
+    @shared volatile  dfloat s_dpdy[Nnodes][p_Np];
+    @shared volatile  dfloat s_lapq[Nnodes][p_Np];
+    @shared volatile  dfloat s_nxdq[Nnodes][p_NfacesNfp];
+    @shared volatile  dfloat s_nydq[Nnodes][p_NfacesNfp];
+    @shared volatile  dfloat s_lapflux[Nnodes][p_NfacesNfp];
+    @shared volatile  dfloat s_Lnxdq[Nnodes][p_Np];
+    @shared volatile  dfloat s_Lnydq[Nnodes][p_Np];
+    @shared volatile  dfloat s_vgeo[Nnodes][p_Nvgeo];
+    @shared volatile  dfloat s_sgeo[Nnodes][p_Nfaces][p_Nsgeo];
+    @shared volatile    int s_idM[Nnodes][p_NfacesNfp], s_bc[Nnodes][p_NfacesNfp];
     
     //fetch q into rhs
-    for(int n=0;n<SIMDSIZE;++n;inner0){
-      occaUnroll(Nnodes)
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)){
+      #pragma unroll Nnodes
       for (int k=0;k<Nnodes;k++) {
         int m = n;
         while (m<p_Np) {
@@ -844,8 +844,8 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
 
     // sanity check
     /*---------------------Local Inner product -----------------*/    
-    for(int n=0;n<SIMDSIZE;++n;inner0) {
-      occaUnroll(Nnodes)
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
+      #pragma unroll Nnodes
       for (int k=0;k<Nnodes;k++) {
         s_xy[k][n] = 0.f;
         int m = n;
@@ -855,28 +855,28 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         } 
       }
     }
-    for(int n=0;n<SIMDSIZE;++n;inner0) {
-      occaUnroll(Nnodes)
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
+      #pragma unroll Nnodes
       for (int k=0;k<Nnodes;k++) 
         if(n< 16) s_xy[k][n] += s_xy[k][n+16];
     }
-    for(int n=0;n<SIMDSIZE;++n;inner0) {
-      occaUnroll(Nnodes)
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
+      #pragma unroll Nnodes
       for (int k=0;k<Nnodes;k++) 
         if(n< 8) s_xy[k][n] += s_xy[k][n+8];
     }
-    for(int n=0;n<SIMDSIZE;++n;inner0) {
-      occaUnroll(Nnodes)
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
+      #pragma unroll Nnodes
       for (int k=0;k<Nnodes;k++) 
         if(n< 4) s_xy[k][n] += s_xy[k][n+4];
     }
-    for(int n=0;n<SIMDSIZE;++n;inner0) {
-      occaUnroll(Nnodes)
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
+      #pragma unroll Nnodes
       for (int k=0;k<Nnodes;k++) 
         if(n< 2) s_xy[k][n] += s_xy[k][n+2];
     }
-    for(int n=0;n<SIMDSIZE;++n;inner0) {
-      occaUnroll(Nnodes)
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
+      #pragma unroll Nnodes
       for (int k=0;k<Nnodes;k++) 
         if(n==0)  s_rdotr[k] = s_xy[k][0] + s_xy[k][1]; 
 
@@ -884,7 +884,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
     /*---------------------End Local Inner product -----------------*/    
 
     if (s_rdotr<TOL*TOL) {
-      for(int n=0;n<SIMDSIZE;++n;inner0) {
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
         int m = n;
         while (m<p_Np) {
           Sq[e*p_Np+m] = invDegree[e]*s_r[m];
@@ -893,8 +893,8 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         return;
       }
     }
-    // read in geo data to shared
-    for(int n=0;n<SIMDSIZE;++n;inner0){
+    // read in geo data to @shared
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)){
       int m = n;
       const int gid = e*p_Nvgeo;
       while(m<p_Nvgeo){
@@ -926,7 +926,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
     //for (int k=0;k<p_Np;k++) {
 
       /*---------------------Local Ax operator -----------------*/
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m = n;
         const dfloat drdx = s_vgeo[p_RXID];
         const dfloat drdy = s_vgeo[p_RYID];
@@ -936,7 +936,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         while(m<p_Np){  
           // compute 1D derivatives
           dfloat qr = 0.f, qs = 0.f;
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat p_i = s_p[i];
               qr += DrT[m+i*p_Np]*p_i;
@@ -949,7 +949,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         }
       }
 
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m = n;
         while(m<p_Np){
           s_lapq[m] = lambda*s_p[m];
@@ -994,7 +994,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
 
       
       // dqdx += LIFT*(sJ/J)*nx*dq
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         const dfloat drdx = s_vgeo[p_RXID];
         const dfloat drdy = s_vgeo[p_RYID];
         const dfloat dsdx = s_vgeo[p_SXID];
@@ -1005,7 +1005,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
           dfloat Lnxdq = 0.f;
           dfloat Lnydq = 0.f;
 
-          occaUnroll(p_NfacesNfp)
+          #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[m+i*p_Np]*s_nxdq[i];
             Lnydq += LIFTT[m+i*p_Np]*s_nydq[i];
@@ -1022,7 +1022,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         }
       }
 
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m = n;
         while(m<p_NfacesNfp){
           const int face = m/p_Nfp;
@@ -1040,7 +1040,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         while(m<p_Np){
           dfloat lapr = 0.f, laps = 0.f;
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             lapr += DrT[m+i*p_Np]*s_dpdx[i];
             laps += DsT[m+i*p_Np]*s_dpdy[i];
@@ -1051,13 +1051,13 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         }
       }
 
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m = n;
         while(m<p_Np){
           dfloat lap = 0.f;
 
           // lift remaining surface terms
-          occaUnroll(p_NfacesNfp)
+          #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             lap += LIFTT[m+i*p_Np]*s_lapflux[i];
           }
@@ -1067,7 +1067,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         }
       }
 
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m =n;
         while(m<p_Np){
           const dfloat J = s_vgeo[p_JID];
@@ -1075,7 +1075,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
           dfloat Mlapq = 0.f;
 
           // multiply by mass matrix
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             Mlapq += MM[m+i*p_Np]*s_lapq[i];
           }
@@ -1086,7 +1086,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
 
       
       /*---------------------p.Ap -----------------*/
-      for(int n=0;n<SIMDSIZE;++n;inner0) {
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
         s_xy[n] = 0.f;
         int m = n;
         while(m<p_Np) {
@@ -1094,11 +1094,11 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
           m += SIMDSIZE;
         }
       }
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n<16) s_xy[n] += s_xy[n+16];
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n<8)  s_xy[n] += s_xy[n+8];
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n<4)  s_xy[n] += s_xy[n+4];
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n<2)  s_xy[n] += s_xy[n+2];
-      for(int n=0;n<SIMDSIZE;++n;inner0) {
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n<16) s_xy[n] += s_xy[n+16];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n<8)  s_xy[n] += s_xy[n+8];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n<4)  s_xy[n] += s_xy[n+4];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n<2)  s_xy[n] += s_xy[n+2];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
         if(n==0) {
           s_pAp = s_xy[0] + s_xy[1];
           s_alpha = s_rdotr/s_pAp;
@@ -1108,7 +1108,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
 
       /*--------------------- x += alpha*p -----------------*/    
       /*--------------------- r -= alpha*Ap -----------------*/    
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m = n;
         while(m<p_Np) {
           s_x[m] += s_alpha* s_p[m];
@@ -1118,7 +1118,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
       } 
 
       /*---------------------r.r -----------------*/
-      for(int n=0;n<SIMDSIZE;++n;inner0) {
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
         s_xy[n] = 0.f;
         int m = n;
         while(m<p_Np) {
@@ -1127,11 +1127,11 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
         }
       }
 
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 16) s_xy[n] += s_xy[n+16];
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 8)  s_xy[n] += s_xy[n+8];
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 4)  s_xy[n] += s_xy[n+4];
-      for(int n=0;n<SIMDSIZE;++n;inner0) if(n< 2)  s_xy[n] += s_xy[n+2];
-      for(int n=0;n<SIMDSIZE;++n;inner0) {
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n< 16) s_xy[n] += s_xy[n+16];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n< 8)  s_xy[n] += s_xy[n+8];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n< 4)  s_xy[n] += s_xy[n+4];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) if(n< 2)  s_xy[n] += s_xy[n+2];
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
         if(n==0) {
           s_rdotr1 = s_xy[0] + s_xy[1];
           s_beta = s_rdotr1/s_rdotr;
@@ -1139,7 +1139,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
       }
       /*---------------------End r.r -----------------*/    
 
-      for(int n=0;n<SIMDSIZE;++n;inner0) {
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
         if(s_rdotr1 < TOL*TOL) {
           break;
         }
@@ -1147,7 +1147,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
       //precon would go here
     
       /*--------------------- p = beta*p + r -----------------*/    
-      for(int n=0;n<SIMDSIZE;++n;inner0){
+      for(int n=0;n<SIMDSIZE;++n;@inner(0)){
         int m = n;
         while(m<p_Np) {
           s_p[m] = s_beta*s_p[m]+s_r[m];
@@ -1158,7 +1158,7 @@ occaKernel void ellipticCGLocalPatchTri2D(const int Nelements,
     }
     
     
-    for(int n=0;n<SIMDSIZE;++n;inner0) {
+    for(int n=0;n<SIMDSIZE;++n;@inner(0)) {
       int m = n;
       while(m<p_Np) {
         Sq[e*p_Np+m] = invDegree[e]*s_x[m];

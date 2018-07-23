@@ -1,15 +1,15 @@
 
 // y += alpha*A*x
 
-kernel void cooAXKernel(const dlong   numRows,
+@kernel void cooAXKernel(const dlong   numRows,
 			    const dfloat           alpha,
-			    const   dlong *restrict offsets,
-			    const   dlong *restrict cols,
-			    const dfloat *restrict coeffs,
-			    const dfloat *restrict x,
-			          dfloat *restrict y){
+			    @restrict const    dlong * offsets,
+			    @restrict const    dlong * cols,
+			    @restrict const  dfloat * coeffs,
+			    @restrict const  dfloat * x,
+			          @restrict dfloat * y){
   
-  for(dlong n=0;n<numRows;++n;tile(256)){
+  for(dlong n=0;n<numRows;++n;@tile(256,@outer,@inner)){
     if (n<numRows) {
       dlong start = offsets[n];
       dlong end = offsets[n+1];

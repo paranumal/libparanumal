@@ -1,23 +1,23 @@
 // b = b.*a
-kernel void simpleDotStarKernel(const dlong   N,
-				      const dfloat *restrict a,
-				            dfloat *restrict b){
+@kernel void simpleDotStarKernel(const dlong   N,
+				      @restrict const  dfloat * a,
+				            @restrict dfloat * b){
 
-  for(dlong i=0;i<N;++i;tile(256)){
+  for(dlong i=0;i<N;++i;@tile(256,@outer,@inner)){
     if(i<N)
       b[i] *= a[i];
   }
 }
 
 // c = alpha*(a.*b) + beta *c
-kernel void dotStarKernel(const dlong   N,
+@kernel void dotStarKernel(const dlong   N,
 			        const dfloat   alpha,
 			        const dfloat   beta,
-			        const dfloat *restrict a,
-			        const dfloat *restrict b,
-			              dfloat *restrict c){
+			        @restrict const  dfloat * a,
+			        @restrict const  dfloat * b,
+			              @restrict dfloat * c){
 
-  for(dlong i=0;i<N;++i;tile(256)){
+  for(dlong i=0;i<N;++i;@tile(256,@outer,@inner)){
     if(i<N)
       c[i] = alpha * a[i] * b[i] + beta * c[i];
   }

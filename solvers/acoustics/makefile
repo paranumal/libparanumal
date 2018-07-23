@@ -5,7 +5,7 @@ endif
 
 CXXFLAGS = -O3
 
-include ${OCCA_DIR}/scripts/makefile
+include ${OCCA_DIR}/scripts/Makefile
 
 # define variables
 HDRDIR  = ../../include
@@ -16,10 +16,10 @@ CC	= mpic++.openmpi
 LD	= mpic++.openmpi
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. $(compilerFlags) $(flags) -I$(HDRDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DACOUSTICS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DACOUSTICS='"${CURDIR}"'
 
 # link flags to be used 
-LDFLAGS	= $(compilerFlags) $(flags) -g
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
 LIBS	=   -L$(OCCA_DIR)/lib $(links)

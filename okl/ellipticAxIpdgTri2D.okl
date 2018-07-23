@@ -2,34 +2,34 @@
 // sgeo stores dfloat4s with nx,ny,nz,(sJ/J)*(w1*w2*w3/(ws1*ws2))
 // nx,ny,nz,sJ,invJ - need WsJ
 
-kernel void ellipticAxIpdgTri2D(const dlong Nelements,
-                                const dlong * restrict vmapM,
-                                const dlong * restrict vmapP,
+@kernel void ellipticAxIpdgTri2D(const dlong Nelements,
+                                @restrict const  dlong *  vmapM,
+                                @restrict const  dlong *  vmapP,
                                 const dfloat lambda,
                                 const dfloat tau,
-                                const dfloat * restrict vgeo,
-                                const dfloat * restrict sgeo,
-                                const int   * restrict EToB,
-                                const dfloat * restrict DrT,
-                                const dfloat * restrict DsT,
-                                const dfloat * restrict LIFTT,
-                                const dfloat * restrict MM,
-                                const dfloat4 * restrict gradq,
-                                      dfloat  * restrict Aq){
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  sgeo,
+                                @restrict const  int   *  EToB,
+                                @restrict const  dfloat *  DrT,
+                                @restrict const  dfloat *  DsT,
+                                @restrict const  dfloat *  LIFTT,
+                                @restrict const  dfloat *  MM,
+                                @restrict const  dfloat4 *  gradq,
+                                      @restrict dfloat  *  Aq){
 
-  for(dlong e=0;e<Nelements;++e;outer0){
-    shared  dfloat s_dqdx[p_Np];
-    shared  dfloat s_dqdy[p_Np];
-    shared  dfloat s_lapq[p_Np];
-    shared  dfloat s_nxdq[p_NfacesNfp];
-    shared  dfloat s_nydq[p_NfacesNfp];
-    shared  dfloat s_lapflux[p_NfacesNfp];
-    shared  dfloat s_Lnxdq[p_Np];
-    shared  dfloat s_Lnydq[p_Np];
-    exclusive dlong idM;
-    exclusive dfloat nx, ny, sJ, invJ, hinv;
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared  dfloat s_dqdx[p_Np];
+    @shared  dfloat s_dqdy[p_Np];
+    @shared  dfloat s_lapq[p_Np];
+    @shared  dfloat s_nxdq[p_NfacesNfp];
+    @shared  dfloat s_nydq[p_NfacesNfp];
+    @shared  dfloat s_lapflux[p_NfacesNfp];
+    @shared  dfloat s_Lnxdq[p_Np];
+    @shared  dfloat s_Lnydq[p_Np];
+    @exclusive dlong idM;
+    @exclusive dfloat nx, ny, sJ, invJ, hinv;
 
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
 
       if(n<p_Np){
         // assume that this stores (qx, qy, qz, q) as dfloat4
@@ -47,7 +47,7 @@ kernel void ellipticAxIpdgTri2D(const dlong Nelements,
         // find face that owns this node
         const int face = n/p_Nfp;
 
-        dfloat4 gradqM = gradq[idM];// could fetch from shared after barrier
+        dfloat4 gradqM = gradq[idM];// could fetch from @shared after barrier
         dfloat4 gradqP = gradq[idP];
 
         // load surface geofactors for this face
@@ -76,10 +76,10 @@ kernel void ellipticAxIpdgTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // dqdx += LIFT*(sJ/J)*nx*dq
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
 
       if(n<p_Np){
         const dlong gid = e*p_Nvgeo;
@@ -91,7 +91,7 @@ kernel void ellipticAxIpdgTri2D(const dlong Nelements,
         dfloat Lnxdq = 0;
         dfloat Lnydq = 0;
 
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
             Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
@@ -107,9 +107,9 @@ kernel void ellipticAxIpdgTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_NfacesNfp){
         int id = idM%p_Np;
         s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]);
@@ -118,7 +118,7 @@ kernel void ellipticAxIpdgTri2D(const dlong Nelements,
       if(n<p_Np){
         dfloat lapr = 0, laps = 0;
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             lapr += DrT[n+i*p_Np]*s_dqdx[i];
             laps += DsT[n+i*p_Np]*s_dqdy[i];
@@ -129,14 +129,14 @@ kernel void ellipticAxIpdgTri2D(const dlong Nelements,
 
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_Np){
         dfloat lap = 0;
 
         // lift remaining surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             lap += LIFTT[n+i*p_Np]*s_lapflux[i];
           }
@@ -145,9 +145,9 @@ kernel void ellipticAxIpdgTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
 
       if(n<p_Np){
         const dfloat J = vgeo[e*p_Nvgeo + p_JID];
@@ -155,7 +155,7 @@ kernel void ellipticAxIpdgTri2D(const dlong Nelements,
         dfloat Mlapq = 0;
 
         // multiply by mass matrix
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             Mlapq += MM[n+i*p_Np]*s_lapq[i];
           }
@@ -168,36 +168,36 @@ kernel void ellipticAxIpdgTri2D(const dlong Nelements,
 
 
 
-kernel void ellipticPartialAxIpdgTri2D_v0(const dlong Nelements,
-                                const dlong * restrict elementList,
-                                const dlong * restrict vmapM,
-                                const dlong * restrict vmapP,
+@kernel void ellipticPartialAxIpdgTri2D_v0(const dlong Nelements,
+                                @restrict const  dlong *  elementList,
+                                @restrict const  dlong *  vmapM,
+                                @restrict const  dlong *  vmapP,
                                 const dfloat lambda,
                                 const dfloat tau,
-                                const dfloat * restrict vgeo,
-                                const dfloat * restrict sgeo,
-                                const int   * restrict EToB,
-                                const dfloat * restrict DrT,
-                                const dfloat * restrict DsT,
-                                const dfloat * restrict LIFTT,
-                                const dfloat * restrict MM,
-                                const dfloat4 * restrict gradq,
-                                      dfloat  * restrict Aq){
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  sgeo,
+                                @restrict const  int   *  EToB,
+                                @restrict const  dfloat *  DrT,
+                                @restrict const  dfloat *  DsT,
+                                @restrict const  dfloat *  LIFTT,
+                                @restrict const  dfloat *  MM,
+                                @restrict const  dfloat4 *  gradq,
+                                      @restrict dfloat  *  Aq){
 
-  for(dlong e=0;e<Nelements;++e;outer0){
-    shared  dfloat s_dqdx[p_Np];
-    shared  dfloat s_dqdy[p_Np];
-    shared  dfloat s_lapq[p_Np];
-    shared  dfloat s_nxdq[p_NfacesNfp];
-    shared  dfloat s_nydq[p_NfacesNfp];
-    shared  dfloat s_lapflux[p_NfacesNfp];
-    shared  dfloat s_Lnxdq[p_Np];
-    shared  dfloat s_Lnydq[p_Np];
-    exclusive dlong element;
-    exclusive dlong idM;
-    exclusive dfloat nx, ny, sJ, invJ, hinv;
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared  dfloat s_dqdx[p_Np];
+    @shared  dfloat s_dqdy[p_Np];
+    @shared  dfloat s_lapq[p_Np];
+    @shared  dfloat s_nxdq[p_NfacesNfp];
+    @shared  dfloat s_nydq[p_NfacesNfp];
+    @shared  dfloat s_lapflux[p_NfacesNfp];
+    @shared  dfloat s_Lnxdq[p_Np];
+    @shared  dfloat s_Lnydq[p_Np];
+    @exclusive dlong element;
+    @exclusive dlong idM;
+    @exclusive dfloat nx, ny, sJ, invJ, hinv;
 
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       element = elementList[e];
 
       if(n<p_Np){
@@ -216,7 +216,7 @@ kernel void ellipticPartialAxIpdgTri2D_v0(const dlong Nelements,
         // find face that owns this node
         const int face = n/p_Nfp;
 
-        dfloat4 gradqM = gradq[idM];// could fetch from shared after barrier
+        dfloat4 gradqM = gradq[idM];// could fetch from @shared after barrier
         dfloat4 gradqP = gradq[idP];
 
         // load surface geofactors for this face
@@ -245,10 +245,10 @@ kernel void ellipticPartialAxIpdgTri2D_v0(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // dqdx += LIFT*(sJ/J)*nx*dq
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
 
       if(n<p_Np){
         const dlong gid = element*p_Nvgeo;
@@ -260,7 +260,7 @@ kernel void ellipticPartialAxIpdgTri2D_v0(const dlong Nelements,
         dfloat Lnxdq = 0;
         dfloat Lnydq = 0;
 
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
             Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
@@ -276,9 +276,9 @@ kernel void ellipticPartialAxIpdgTri2D_v0(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_NfacesNfp){
         int id = idM%p_Np;
         s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]);
@@ -287,7 +287,7 @@ kernel void ellipticPartialAxIpdgTri2D_v0(const dlong Nelements,
       if(n<p_Np){
         dfloat lapr = 0, laps = 0;
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             lapr += DrT[n+i*p_Np]*s_dqdx[i];
             laps += DsT[n+i*p_Np]*s_dqdy[i];
@@ -298,14 +298,14 @@ kernel void ellipticPartialAxIpdgTri2D_v0(const dlong Nelements,
 
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_Np){
         dfloat lap = 0;
 
         // lift remaining surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             lap += LIFTT[n+i*p_Np]*s_lapflux[i];
           }
@@ -314,9 +314,9 @@ kernel void ellipticPartialAxIpdgTri2D_v0(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
 
       if(n<p_Np){
         const dfloat J = vgeo[element*p_Nvgeo + p_JID];
@@ -324,7 +324,7 @@ kernel void ellipticPartialAxIpdgTri2D_v0(const dlong Nelements,
         dfloat Mlapq = 0;
 
         // multiply by mass matrix
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             Mlapq += MM[n+i*p_Np]*s_lapq[i];
           }
@@ -337,7 +337,7 @@ kernel void ellipticPartialAxIpdgTri2D_v0(const dlong Nelements,
 
 
 
-  // // Optimized sizes for kernel 4-5
+  // // Optimized sizes for @kernel 4-5
 #if p_N==1
  #define p_NbV 5
  #define p_Nmt 1
@@ -389,47 +389,47 @@ kernel void ellipticPartialAxIpdgTri2D_v0(const dlong Nelements,
 #endif
 
 // Added multiple element per threadblock
-kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
-                                const dlong * restrict elementList,
-                                const dlong * restrict vmapM,
-                                const dlong * restrict vmapP,
+@kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
+                                @restrict const  dlong *  elementList,
+                                @restrict const  dlong *  vmapM,
+                                @restrict const  dlong *  vmapP,
                                 const dfloat lambda,
                                 const dfloat tau,
-                                const dfloat * restrict vgeo,
-                                const dfloat * restrict sgeo,
-                                const int   * restrict EToB,
-                                const dfloat * restrict DrT,
-                                const dfloat * restrict DsT,
-                                const dfloat * restrict LIFTT,
-                                const dfloat * restrict MM,
-                                const dfloat4 * restrict gradq,
-                                      dfloat  * restrict Aq){
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  sgeo,
+                                @restrict const  int   *  EToB,
+                                @restrict const  dfloat *  DrT,
+                                @restrict const  dfloat *  DsT,
+                                @restrict const  dfloat *  LIFTT,
+                                @restrict const  dfloat *  MM,
+                                @restrict const  dfloat4 *  gradq,
+                                      @restrict dfloat  *  Aq){
 
-  for(dlong eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);outer0){
-    shared  dfloat s_dqdx[p_Nmt][p_NbV][p_Np];
-    shared  dfloat s_dqdy[p_Nmt][p_NbV][p_Np];
-    shared  dfloat s_lapq[p_Nmt][p_NbV][p_Np];
-    shared  dfloat s_nxdq[p_Nmt][p_NbV][p_NfacesNfp];
-    shared  dfloat s_nydq[p_Nmt][p_NbV][p_NfacesNfp];
-    shared  dfloat s_lapflux[p_Nmt][p_NbV][p_NfacesNfp];
-    shared  dfloat s_Lnxdq[p_Nmt][p_NbV][p_Np];
-    shared  dfloat s_Lnydq[p_Nmt][p_NbV][p_Np];
+  for(dlong eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);@outer(0)){
+    @shared  dfloat s_dqdx[p_Nmt][p_NbV][p_Np];
+    @shared  dfloat s_dqdy[p_Nmt][p_NbV][p_Np];
+    @shared  dfloat s_lapq[p_Nmt][p_NbV][p_Np];
+    @shared  dfloat s_nxdq[p_Nmt][p_NbV][p_NfacesNfp];
+    @shared  dfloat s_nydq[p_Nmt][p_NbV][p_NfacesNfp];
+    @shared  dfloat s_lapflux[p_Nmt][p_NbV][p_NfacesNfp];
+    @shared  dfloat s_Lnxdq[p_Nmt][p_NbV][p_Np];
+    @shared  dfloat s_Lnydq[p_Nmt][p_NbV][p_Np];
 
-    // shared dlong idM[p_Nmt];
-    // shared dfloat nx[p_Nmt], ny[p_Nmt], sJ[p_Nmt];
-    // shared dfloat invJ[p_Nmt], hinv[p_Nmt];
+    // @shared dlong idM[p_Nmt];
+    // @shared dfloat nx[p_Nmt], ny[p_Nmt], sJ[p_Nmt];
+    // @shared dfloat invJ[p_Nmt], hinv[p_Nmt];
     
-    exclusive dlong idM[p_Nmt];
-    exclusive dfloat nx[p_Nmt], ny[p_Nmt], sJ[p_Nmt];
-    exclusive dfloat invJ[p_Nmt], hinv[p_Nmt];
+    @exclusive dlong idM[p_Nmt];
+    @exclusive dfloat nx[p_Nmt], ny[p_Nmt], sJ[p_Nmt];
+    @exclusive dfloat invJ[p_Nmt], hinv[p_Nmt];
 
-    exclusive dlong element[p_Nmt];
+    @exclusive dlong element[p_Nmt];
 
-   for(int es=0;es<p_NbV;++es;inner1){//
-    for(int n=0;n<p_Nmax;++n;inner0){
+   for(int es=0;es<p_NbV;++es;@inner(1)){//
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
 
     
-      occaUnroll(p_Nmt)
+      #pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
           const dlong e = eo+es*p_Nmt + em;
           if(e<Nelements){
@@ -437,7 +437,7 @@ kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
          }
       }
 
-      occaUnroll(p_Nmt)
+      #pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
           const dlong e = eo+es*p_Nmt + em;
           //const int element = elementList[e];
@@ -460,7 +460,7 @@ kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
             // find face that owns this node
             const int face = n/p_Nfp;
 
-            dfloat4 gradqM = gradq[idM[em]];// could fetch from shared after barrier
+            dfloat4 gradqM = gradq[idM[em]];// could fetch from @shared after barrier
             dfloat4 gradqP = gradq[idP];
 
             // load surface geofactors for this face
@@ -492,10 +492,10 @@ kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
     }
   }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-  for(int es=0;es<p_NbV;++es;inner1){//
-    for(int n=0;n<p_Nmax;++n;inner0){
+  for(int es=0;es<p_NbV;++es;@inner(1)){//
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
 
       dfloat Lnxdq[p_Nmt], Lnydq[p_Nmt];
       
@@ -503,7 +503,7 @@ kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
       // const dfloat drdx[p_Nmt], drdy[p_Nmt];
       // const dfloat dsdx[p_Nmt], dsdy[p_Nmt];
 
-      occaUnroll(p_Nmt)
+      #pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
           Lnxdq[em] = 0.f;
           Lnydq[em] = 0.f;
@@ -519,24 +519,24 @@ kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
           
        if(n<p_Np){
 
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
         for(int i=0;i<p_NfacesNfp;++i){
           const dfloat L = LIFTT[n+i*p_Np];
-            occaUnroll(p_Nmt)
+            #pragma unroll p_Nmt
             for(int em=0;em<p_Nmt;++em){
               Lnxdq[em] += L*s_nxdq[em][es][i];
               Lnydq[em] += L*s_nydq[em][es][i];
             }
           }
 
-        occaUnroll(p_Nmt)
+        #pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
           const dlong e = eo+es*p_Nmt + em;
           if(e<Nelements){
              // const int element = elementList[e];
               const dlong gid = element[em]*p_Nvgeo;
 
-              // These data can be stored on shared
+              // These data can be stored on @shared
               const dfloat drdx = vgeo[gid + p_RXID];
               const dfloat drdy = vgeo[gid + p_RYID];
               const dfloat dsdx = vgeo[gid + p_SXID];
@@ -557,13 +557,13 @@ kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
     }
   
 
-    barrier(localMemFence);
+    @barrier("local");
 
-  for(int es=0;es<p_NbV;++es;inner1){//
-    for(int n=0;n<p_Nmax;++n;inner0){
+  for(int es=0;es<p_NbV;++es;@inner(1)){//
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
 
       dfloat lapr[p_Nmt], laps[p_Nmt];
-      occaUnroll(p_Nmt)
+      #pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
           const dlong e = eo+es*p_Nmt + em;
            
@@ -578,12 +578,12 @@ kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
         }
 
         if(n<p_Np){
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat drT = DrT[n+i*p_Np];
               const dfloat dsT = DsT[n+i*p_Np];
 
-              occaUnroll(p_Nmt)
+              #pragma unroll p_Nmt
               for(int em=0;em<p_Nmt;++em){
                 lapr[em] += drT*s_dqdx[em][es][i];
                 laps[em] += dsT*s_dqdy[em][es][i];
@@ -592,7 +592,7 @@ kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
 
 
           if(n<p_Np){
-         occaUnroll(p_Nmt)
+         #pragma unroll p_Nmt
               for(int em=0;em<p_Nmt;++em){
           s_lapq[em][es][n] -= (lapr[em]+laps[em]);
            }
@@ -602,12 +602,12 @@ kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
     }
 
 
-    barrier(localMemFence);
+    @barrier("local");
 
-  for(int es=0;es<p_NbV;++es;inner1){//
-    for(int n=0;n<p_Nmax;++n;inner0){
+  for(int es=0;es<p_NbV;++es;@inner(1)){//
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       dfloat lap[p_Nmt];
-      occaUnroll(p_Nmt)
+      #pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
             lap[em] = 0.f;
         }
@@ -615,16 +615,16 @@ kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
         if(n<p_Np){
 
         // lift remaining surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
               const dfloat L = LIFTT[n+i*p_Np];
-              occaUnroll(p_Nmt)
+              #pragma unroll p_Nmt
               for(int em=0;em<p_Nmt;++em){
               lap[em] += L*s_lapflux[em][es][i];
             }
           }
 
-         occaUnroll(p_Nmt)
+         #pragma unroll p_Nmt
           for(int em=0;em<p_Nmt;++em){
              s_lapq[em][es][n] += lap[em];
           } 
@@ -633,30 +633,30 @@ kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
       }
  
 
-    barrier(localMemFence);
+    @barrier("local");
 
-  for(int es=0;es<p_NbV;++es;inner1){//
-    for(int n=0;n<p_Nmax;++n;inner0){
+  for(int es=0;es<p_NbV;++es;@inner(1)){//
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
 
       dfloat Mlapq[p_Nmt];
 
-      occaUnroll(p_Nmt)
+      #pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
             Mlapq[em] = 0.f;
         }
 
         if(n<p_Np){
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             const dfloat mm = MM[n+i*p_Np];
-            occaUnroll(p_Nmt)
+            #pragma unroll p_Nmt
              for(int em=0;em<p_Nmt;++em){
               Mlapq[em] += mm*s_lapq[em][es][i];
             }
           }
 
-         occaUnroll(p_Nmt)
+         #pragma unroll p_Nmt
          for(int em=0;em<p_Nmt;++em){
           const dlong e = eo+es*p_Nmt + em;
 

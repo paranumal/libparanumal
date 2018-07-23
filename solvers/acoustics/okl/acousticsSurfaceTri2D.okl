@@ -22,30 +22,30 @@ void upwind(const dfloat nx,
 }
 
 // batch process elements
-kernel void acousticsSurfaceTri2D(const dlong Nelements,
-				  const dfloat * restrict sgeo,
-				  const dfloat * restrict LIFTT,
-				  const dlong  * restrict vmapM,
-				  const dlong  * restrict vmapP,
-				  const int    * restrict EToB,
+@kernel void acousticsSurfaceTri2D(const dlong Nelements,
+				  @restrict const  dfloat *  sgeo,
+				  @restrict const  dfloat *  LIFTT,
+				  @restrict const  dlong  *  vmapM,
+				  @restrict const  dlong  *  vmapP,
+				  @restrict const  int    *  EToB,
 				  const dfloat time,
-				  const dfloat * restrict x,
-				  const dfloat * restrict y,
-				  const dfloat * restrict z,
-				  const dfloat * restrict q,
-				  dfloat * restrict rhsq){
+				  @restrict const  dfloat *  x,
+				  @restrict const  dfloat *  y,
+				  @restrict const  dfloat *  z,
+				  @restrict const  dfloat *  q,
+				  @restrict dfloat *  rhsq){
   
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     
-    // shared storage for flux terms
-    shared dfloat s_rflux [p_NblockS][p_NfacesNfp];
-    shared dfloat s_uflux[p_NblockS][p_NfacesNfp];
-    shared dfloat s_vflux[p_NblockS][p_NfacesNfp];
+    // @shared storage for flux terms
+    @shared dfloat s_rflux [p_NblockS][p_NfacesNfp];
+    @shared dfloat s_uflux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_vflux[p_NblockS][p_NfacesNfp];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_NfacesNfp){
@@ -106,12 +106,12 @@ kernel void acousticsSurfaceTri2D(const dlong Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){            
@@ -119,7 +119,7 @@ kernel void acousticsSurfaceTri2D(const dlong Nelements,
             dfloat Lrflux = 0.f, Luflux = 0.f, Lvflux = 0.f;
             
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 const dfloat L = LIFTT[n+m*p_Np];
                 Lrflux += L*s_rflux[es][m];

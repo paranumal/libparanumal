@@ -1,30 +1,30 @@
 
 // Fully Explicit Scheme Uses Clasical half Half Splitting
-kernel void boltzmannRelaxationCub3D(const int Nelements,
-					     const int * restrict elementIds,
-					     const dfloat * restrict cubInterpT,
-					     const dfloat * restrict cubProjectT,
-					     const dfloat4 * restrict q,
-					           dfloat4 * restrict rhsq){
+@kernel void boltzmannRelaxationCub3D(const int Nelements,
+					     @restrict const  int *  elementIds,
+					     @restrict const  dfloat *  cubInterpT,
+					     @restrict const  dfloat *  cubProjectT,
+					     @restrict const  dfloat4 *  q,
+					           @restrict dfloat4 *  rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    // shared memory for q at nodes
-    shared dfloat s_q[p_NblockV][10][p_Np];
+    // @shared memory for q at nodes
+    @shared dfloat s_q[p_NblockV][10][p_Np];
 
     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-    shared dfloat s_cubN5[p_NblockV][p_cubNp];
-    shared dfloat s_cubN6[p_NblockV][p_cubNp];
-    shared dfloat s_cubN7[p_NblockV][p_cubNp];
-    shared dfloat s_cubN8[p_NblockV][p_cubNp];
-    shared dfloat s_cubN9[p_NblockV][p_cubNp];
-    shared dfloat s_cubN10[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN5[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN6[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN7[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN8[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN9[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN10[p_NblockV][p_cubNp];
 
-    exclusive int element;
+    @exclusive int element;
 
-    // prefetch q to shared
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolume;++n;inner0){    
+    // prefetch q to @shared
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){    
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -51,12 +51,12 @@ kernel void boltzmannRelaxationCub3D(const int Nelements,
       }
     }
     
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
     // interpolate q to cubature
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolume;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){     
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -93,19 +93,19 @@ kernel void boltzmannRelaxationCub3D(const int Nelements,
       }
     }
 
-    // make sure all cubature node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all cubature node data is loaded into @shared
+    @barrier("local");
     
     // partial projection to nodes from cubature-sub-group
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolume;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){     
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
 	  if(n<p_Np){
 	    const int id = 3*(element*p_Np+n);
 	    
-	    // use temporaries for part sums for N4,N5,N6 because of exclusives
+	    // use temporaries for part sums for N4,N5,N6 because of @exclusives
 	    dfloat N5 = 0.f, N6 = 0.f, N7 = 0.f, N8 = 0.f, N9 = 0.f, N10 = 0.f;
 	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat Pnc  = cubProjectT[i*p_Np+n];
@@ -139,31 +139,31 @@ kernel void boltzmannRelaxationCub3D(const int Nelements,
 
 
 // Fully Explicit Scheme Uses Clasical half Half Splitting
-kernel void boltzmannSARelaxationCub3D(const int Nelements,
-					     const int * restrict elementIds,
-					     const dfloat * restrict cubInterpT,
-					     const dfloat * restrict cubProjectT,
-					     const dfloat4 * restrict q,
-					           dfloat4 * restrict rhsq){
+@kernel void boltzmannSARelaxationCub3D(const int Nelements,
+					     @restrict const  int *  elementIds,
+					     @restrict const  dfloat *  cubInterpT,
+					     @restrict const  dfloat *  cubProjectT,
+					     @restrict const  dfloat4 *  q,
+					           @restrict dfloat4 *  rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    // shared memory for q at nodes
-    shared dfloat s_q[p_NblockV][4][p_Np];
+    // @shared memory for q at nodes
+    @shared dfloat s_q[p_NblockV][4][p_Np];
 
     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-    shared dfloat s_cubN5[p_NblockV][p_cubNp];
-    shared dfloat s_cubN6[p_NblockV][p_cubNp];
-    shared dfloat s_cubN7[p_NblockV][p_cubNp];
-    shared dfloat s_cubN8[p_NblockV][p_cubNp];
-    shared dfloat s_cubN9[p_NblockV][p_cubNp];
-    shared dfloat s_cubN10[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN5[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN6[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN7[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN8[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN9[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN10[p_NblockV][p_cubNp];
 
-    exclusive int element;
+    @exclusive int element;
 
-    // prefetch q to shared
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolume;++n;inner0){    
+    // prefetch q to @shared
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){    
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -182,12 +182,12 @@ kernel void boltzmannSARelaxationCub3D(const int Nelements,
       }
     }
     
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
     // interpolate q to cubature
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolume;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){     
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -216,19 +216,19 @@ kernel void boltzmannSARelaxationCub3D(const int Nelements,
       }
     }
 
-    // make sure all cubature node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all cubature node data is loaded into @shared
+    @barrier("local");
     
     // partial projection to nodes from cubature-sub-group
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolume;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){     
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
 	  if(n<p_Np){
 	    const int id = 3*(element*p_Np+n);
 	    
-	    // use temporaries for part sums for N4,N5,N6 because of exclusives
+	    // use temporaries for part sums for N4,N5,N6 because of @exclusives
 	    dfloat N5 = 0.f, N6 = 0.f, N7 = 0.f, N8 = 0.f, N9 = 0.f, N10 = 0.f;
 	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat Pnc  = cubProjectT[i*p_Np+n];

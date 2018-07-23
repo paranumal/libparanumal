@@ -1,24 +1,24 @@
 
-kernel void ellipticCombinedUpdate(const int Ntotal,
+@kernel void ellipticCombinedUpdate(const int Ntotal,
 				   const int degreeWeighted,
-				   const dfloat * restrict invDegree,
+				   @restrict const  dfloat *  invDegree,
 				   const dfloat alpha,
 				   const dfloat beta,
-				   const dfloat * restrict Aw,
-				   dfloat * restrict p,
-				   dfloat * restrict r,
-				   dfloat * restrict s,
-				   dfloat * restrict w,
-				   dfloat * restrict x,
-				   dfloat * restrict z,
-				   dfloat * restrict results){
+				   @restrict const  dfloat *  Aw,
+				   @restrict dfloat *  p,
+				   @restrict dfloat *  r,
+				   @restrict dfloat *  s,
+				   @restrict dfloat *  w,
+				   @restrict dfloat *  x,
+				   @restrict dfloat *  z,
+				   @restrict dfloat *  results){
    
-  for(int b=0;b<(Ntotal+p_blockSize-1)/p_blockSize;++b;outer0){
+  for(int b=0;b<(Ntotal+p_blockSize-1)/p_blockSize;++b;@outer(0)){
 
-    volatile shared dfloat s_rdotr[p_blockSize];
-    volatile shared dfloat s_rdotw[p_blockSize];
+    @shared volatile dfloat s_rdotr[p_blockSize];
+    @shared volatile dfloat s_rdotw[p_blockSize];
     
-    for(int n=0;n<p_blockSize;++n;inner0){
+    for(int n=0;n<p_blockSize;++n;@inner(0)){
       const int id = n + b*p_blockSize;
       
       s_rdotr[n] = 0;
@@ -53,7 +53,7 @@ kernel void ellipticCombinedUpdate(const int Ntotal,
 	// w <= w - alpha*z
 	wn -= alpha*zn;
 
-	// copy into shared
+	// copy into @shared
 	s_rdotr[n] = rn*rn*weight;
 	s_rdotw[n] = rn*wn*weight;
 
@@ -68,43 +68,43 @@ kernel void ellipticCombinedUpdate(const int Ntotal,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
 #if p_blockSize>512
-    for(int n=0;n<p_blockSize;++n;inner0)
+    for(int n=0;n<p_blockSize;++n;@inner(0))
       if(n<512) { s_rdotr[n] += s_rdotr[n+512]; s_rdotw[n] += s_rdotw[n+512]; }
-    barrier(localMemFence);
+    @barrier("local");
 #endif
 #if p_blockSize>256
-    for(int n=0;n<p_blockSize;++n;inner0)
+    for(int n=0;n<p_blockSize;++n;@inner(0))
       if(n<256) { s_rdotr[n] += s_rdotr[n+256]; s_rdotw[n] += s_rdotw[n+256]; }
-    barrier(localMemFence);
+    @barrier("local");
 #endif
 
-    for(int n=0;n<p_blockSize;++n;inner0)
+    for(int n=0;n<p_blockSize;++n;@inner(0))
       if(n<128) { s_rdotr[n] += s_rdotr[n+128]; s_rdotw[n] += s_rdotw[n+128]; }
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int n=0;n<p_blockSize;++n;inner0)
+    for(int n=0;n<p_blockSize;++n;@inner(0))
       if(n< 64) { s_rdotr[n] += s_rdotr[n+64]; s_rdotw[n] += s_rdotw[n+64]; }
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_blockSize;++n;inner0)
+    for(int n=0;n<p_blockSize;++n;@inner(0))
       if(n< 32) { s_rdotr[n] += s_rdotr[n+32]; s_rdotw[n] += s_rdotw[n+32]; }
     
-    for(int n=0;n<p_blockSize;++n;inner0)
+    for(int n=0;n<p_blockSize;++n;@inner(0))
       if(n< 16) { s_rdotr[n] += s_rdotr[n+16]; s_rdotw[n] += s_rdotw[n+16]; }
  
-    for(int n=0;n<p_blockSize;++n;inner0)
+    for(int n=0;n<p_blockSize;++n;@inner(0))
       if(n<  8) { s_rdotr[n] += s_rdotr[n+ 8]; s_rdotw[n] += s_rdotw[n+ 8]; }
 
-    for(int n=0;n<p_blockSize;++n;inner0)
+    for(int n=0;n<p_blockSize;++n;@inner(0))
       if(n<  4) { s_rdotr[n] += s_rdotr[n+ 4]; s_rdotw[n] += s_rdotw[n+ 4]; }
 
-    for(int n=0;n<p_blockSize;++n;inner0)
+    for(int n=0;n<p_blockSize;++n;@inner(0))
       if(n<  2) { s_rdotr[n] += s_rdotr[n+ 2]; s_rdotw[n] += s_rdotw[n+ 2]; }
 
-    for(int n=0;n<p_blockSize;++n;inner0){
+    for(int n=0;n<p_blockSize;++n;@inner(0)){
       if(n==0){ // nasty
 	const dfloat rdotr = s_rdotr[0]+s_rdotr[1];
 	const dfloat rdotw = s_rdotw[0]+s_rdotw[1];

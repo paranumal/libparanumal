@@ -3,29 +3,29 @@
 #define p_Nrelax 6
 
 // MRAB relaxation cub
-kernel void bnsRelaxationTet3D(const dlong Nelements,
-                               const dlong * restrict elementIds,
-                               const dfloat * restrict vgeo, // only quad kernels
-                               const dfloat * restrict cubvgeo, // only quad kernels
+@kernel void bnsRelaxationTet3D(const dlong Nelements,
+                               @restrict const  dlong *  elementIds,
+                               @restrict const  dfloat *  vgeo, // only quad @kernels
+                               @restrict const  dfloat *  cubvgeo, // only quad @kernels
                                const dlong offset,
                                const int   shift,
-                               const dfloat * restrict cubInterpT,
-                               const dfloat * restrict cubProjectT,
-                               const dfloat * restrict q,
-                                     dfloat * restrict rhsq){
+                               @restrict const  dfloat *  cubInterpT,
+                               @restrict const  dfloat *  cubProjectT,
+                               @restrict const  dfloat *  q,
+                                     @restrict dfloat *  rhsq){
   
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockCub;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockCub;@outer(0)){  // for all elements
 
-    // subgroup of density and momentum shared memory for q at nodes
-    shared dfloat s_q[p_NblockCub][p_Nvars][p_Np];
+    // subgroup of density and momentum @shared memory for q at nodes
+    @shared dfloat s_q[p_NblockCub][p_Nvars][p_Np];
 
     // sub-group of p_Np cubature node interpolants of N5...N10
-    shared dfloat s_cubN[p_NblockCub][p_Nrelax][p_cubNp];
-    exclusive dlong e;
+    @shared dfloat s_cubN[p_NblockCub][p_Nrelax][p_cubNp];
+    @exclusive dlong e;
 
-    // prefetch q to shared
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){    
+    // prefetch q to @shared
+    for(int es=0;es<p_NblockCub;++es;@inner(1)){
+      for(int n=0;n<p_maxCubNodes;++n;@inner(0)){    
 
       dlong et = eo+es; // element in block
         if(et<Nelements){
@@ -34,7 +34,7 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
           if(n<p_Np){
             const dlong id = e*p_Nfields*p_Np + n;
 
-            occaUnroll(p_Nfields)
+            #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nvars;++fld){
               s_q[es][fld][n] = q[id+fld*p_Np];
             }
@@ -43,26 +43,26 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
       }
     }
     
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
     // interpolate q to cubature
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    for(int es=0;es<p_NblockCub;++es;@inner(1)){
+      for(int n=0;n<p_maxCubNodes;++n;@inner(0)){     
 
         dlong et = eo+es; // element in block
         if(et<Nelements && n<p_cubNp){
 
           dfloat r_cubq[p_Nvars];
-          occaUnroll(p_Nvars)
+          #pragma unroll p_Nvars
           for(int fld=0; fld<p_Nvars;++fld){
             r_cubq[fld] = 0.f;
           }
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
           for(int m=0;m<p_Np;++m){
             const dfloat Icn  = cubInterpT[m*p_cubNp+n];
-            occaUnroll(p_Nvars)
+            #pragma unroll p_Nvars
             for(int fld=0; fld<p_Nvars; fld++){
               r_cubq[fld] += Icn*s_q[es][fld][m];
             }
@@ -81,12 +81,12 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
       }
     }
 
-    //make sure all cubature node data is loaded into shared
-    barrier(localMemFence);
+    //make sure all cubature node data is loaded into @shared
+    @barrier("local");
     
     // partial projection to nodes from cubature-sub-group
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    for(int es=0;es<p_NblockCub;++es;@inner(1)){
+      for(int n=0;n<p_maxCubNodes;++n;@inner(0)){     
         dlong et = eo+es; // element in block
         if(et<Nelements && n<p_Np ){
           const dlong id    = e*p_Nfields*p_Np + n;
@@ -98,12 +98,12 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 
         dfloat r_qN[p_Nrelax];
 
-        occaUnroll(p_Nrelax)
+        #pragma unroll p_Nrelax
           for(int fld=0; fld<p_Nrelax; fld++){
             r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*s_q[es][fld+p_Nvars][n]; 
           }
 
-         occaUnroll(p_cubNp)
+         #pragma unroll p_cubNp
           for(int i=0;i<p_cubNp;++i){
             const dfloat Pnc  = cubProjectT[i*p_Np+n];
             for(int fld=0; fld<p_Nrelax; fld++){
@@ -111,7 +111,7 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
             }
           }
         
-        occaUnroll(p_Nrelax)
+        #pragma unroll p_Nrelax
           for(int fld=0; fld<p_Nrelax; fld++){
             rhsq[rhsId + (fld+p_Nvars)*p_Np] += r_qN[fld];
           }
@@ -124,47 +124,47 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 }
 
 // // Fully Explicit Scheme Uses Clasical half Half Splitting
-// kernel void bnsPmlRelaxationCubTet3D(const dlong pmlNelements,
-//                                   const dlong * restrict pmlElementIds,
-//                                   const dlong * restrict pmlIds,
-//                                   const dfloat * restrict vgeo, // only quad kernels
-//                                   const dfloat * restrict cubvgeo, // only quad kernels
+// @kernel void bnsPmlRelaxationCubTet3D(const dlong pmlNelements,
+//                                   @restrict const  dlong *  pmlElementIds,
+//                                   @restrict const  dlong *  pmlIds,
+//                                   @restrict const  dfloat *  vgeo, // only quad @kernels
+//                                   @restrict const  dfloat *  cubvgeo, // only quad @kernels
 //                                   const dlong offset,
 //                                   const dlong pmloffset,
 //                                   const int   shift,
-//                                   const dfloat * restrict cubInterpT,
-//                                   const dfloat * restrict cubProjectT,
-//                                   const dfloat * restrict pmlSigmaX,
-//                                   const dfloat * restrict pmlSigmaY, 
-//                                   const dfloat * restrict pmlSigmaZ, 
-//                                   const dfloat * restrict q,
-//                                   const dfloat * restrict pmlqx,
-//                                   const dfloat * restrict pmlqy,
-//                                   const dfloat * restrict pmlqz,
-//                                         dfloat * restrict rhsq,
-//                                         dfloat * restrict pmlrhsqx,
-//                                         dfloat * restrict pmlrhsqy,
-//                                         dfloat * restrict pmlrhsqz){
+//                                   @restrict const  dfloat *  cubInterpT,
+//                                   @restrict const  dfloat *  cubProjectT,
+//                                   @restrict const  dfloat *  pmlSigmaX,
+//                                   @restrict const  dfloat *  pmlSigmaY, 
+//                                   @restrict const  dfloat *  pmlSigmaZ, 
+//                                   @restrict const  dfloat *  q,
+//                                   @restrict const  dfloat *  pmlqx,
+//                                   @restrict const  dfloat *  pmlqy,
+//                                   @restrict const  dfloat *  pmlqz,
+//                                         @restrict dfloat *  rhsq,
+//                                         @restrict dfloat *  pmlrhsqx,
+//                                         @restrict dfloat *  pmlrhsqy,
+//                                         @restrict dfloat *  pmlrhsqz){
 
-//   for(dlong eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
+//   for(dlong eo=0;eo<pmlNelements;eo+=p_NblockCub;@outer(0)){  // for all elements
 
-//     // shared memory for q at nodes // Too much change this kernel later!!!!!!!!!!!!!!!
-//     shared dfloat  s_q[p_NblockCub][p_Nfields][p_Np];
-//     shared dfloat s_qx[p_NblockCub][p_Nfields][p_Np];
-//     shared dfloat s_qy[p_NblockCub][p_Nfields][p_Np];
-//     shared dfloat s_qz[p_NblockCub][p_Nfields][p_Np];
+//     // @shared memory for q at nodes // Too much change this @kernel later!!!!!!!!!!!!!!!
+//     @shared dfloat  s_q[p_NblockCub][p_Nfields][p_Np];
+//     @shared dfloat s_qx[p_NblockCub][p_Nfields][p_Np];
+//     @shared dfloat s_qy[p_NblockCub][p_Nfields][p_Np];
+//     @shared dfloat s_qz[p_NblockCub][p_Nfields][p_Np];
 
 //     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-//     shared dfloat s_cubq[p_NblockCub][p_Nfields][p_cubNp];
-//     shared dfloat s_cubqx[p_NblockCub][p_Nfields][p_cubNp];
-//     shared dfloat s_cubqy[p_NblockCub][p_Nfields][p_cubNp];
-//     shared dfloat s_cubqz[p_NblockCub][p_Nfields][p_cubNp];
+//     @shared dfloat s_cubq[p_NblockCub][p_Nfields][p_cubNp];
+//     @shared dfloat s_cubqx[p_NblockCub][p_Nfields][p_cubNp];
+//     @shared dfloat s_cubqy[p_NblockCub][p_Nfields][p_cubNp];
+//     @shared dfloat s_cubqz[p_NblockCub][p_Nfields][p_cubNp];
    
-//     exclusive dlong e, pmlId;
+//     @exclusive dlong e, pmlId;
 
-//     // prefetch q to shared
-//     for(int es=0;es<p_NblockCub;++es;inner1){
-//       for(int n=0;n<p_maxCubNodes;++n;inner0){      
+//     // prefetch q to @shared
+//     for(int es=0;es<p_NblockCub;++es;@inner(1)){
+//       for(int n=0;n<p_maxCubNodes;++n;@inner(0)){      
 //         const dlong et = eo+es; // element in block
 //         if(et<pmlNelements){
 //           e     = pmlElementIds[et];
@@ -173,7 +173,7 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 //           if(n<p_Np){
 //             const dlong id  = e*p_Nfields*p_Np + n;
 //             const dlong pid = pmlId*p_Nfields*p_Np + n;
-//             occaUnroll(p_Nfields)
+//             #pragma unroll p_Nfields
 //             for(int fld=0; fld<p_Nfields;++fld){
 //               s_q[es][fld][n]   = q[id +fld*p_Np];
 //               s_qx[es][fld][n]  = pmlqx[pid+fld*p_Np];
@@ -186,12 +186,12 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 //       }
 //     }
     
-//     // make sure all node data is loaded into shared
-//     barrier(localMemFence);
+//     // make sure all node data is loaded into @shared
+//     @barrier("local");
 
 //     // interpolate q to cubature
-//     for(int es=0;es<p_NblockCub;++es;inner1){
-//       for(int n=0;n<p_maxCubNodes;++n;inner0){     
+//     for(int es=0;es<p_NblockCub;++es;@inner(1)){
+//       for(int n=0;n<p_maxCubNodes;++n;@inner(0)){     
 //         const dlong et = eo+es; // element in block
 //         if(et<pmlNelements){
 //           if(n<p_cubNp){
@@ -199,16 +199,16 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 //             // TO much register !!!!! AK.
 //             dfloat r_q[p_Nfields], r_qx[p_Nfields], r_qy[p_Nfields], r_qz[p_Nfields];
             
-//             occaUnroll(p_Nfields)
+//             #pragma unroll p_Nfields
 //             for(int fld=0; fld<p_Nfields ; fld++){
 //               r_q[fld]  = 0.f, r_qx[fld] = 0.f;
 //               r_qy[fld] = 0.f, r_qz[fld] = 0.f;
 //             }
             
-//             occaUnroll(p_Np)
+//             #pragma unroll p_Np
 //             for(int m=0;m<p_Np;++m){
 //               const dfloat Icn  = cubInterpT[m*p_cubNp+n];   
-//               occaUnroll(p_Nfields)
+//               #pragma unroll p_Nfields
 //               for(int fld=0; fld<p_Nfields;++fld){
 //                 r_q[fld]  += Icn*s_q[es][fld][m];
 //                 r_qx[fld] += Icn*s_qx[es][fld][m];
@@ -227,7 +227,7 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 //             const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha + sigmaze*p_pmlAlpha;
 //             const dfloat msigmaze = sigmaze + sigmaxe*p_pmlAlpha + sigmaye*p_pmlAlpha;
             
-//             occaUnroll(p_Nfields)
+//             #pragma unroll p_Nfields
 //             for(int fld=0; fld<p_Nfields ; fld++){
 //               s_cubqx[es][fld][n] = -msigmaxe*r_qx[fld];
 //               s_cubqy[es][fld][n] = -msigmaye*r_qy[fld];
@@ -260,12 +260,12 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 //       }
 //     }
 
-//     // make sure all cubature node data is loaded into shared
-//     barrier(localMemFence);
+//     // make sure all cubature node data is loaded into @shared
+//     @barrier("local");
     
 //     // partial projection to nodes from cubature-sub-group
-//     for(int es=0;es<p_NblockCub;++es;inner1){
-//       for(int n=0;n<p_maxCubNodes;++n;inner0){     
+//     for(int es=0;es<p_NblockCub;++es;@inner(1)){
+//       for(int n=0;n<p_maxCubNodes;++n;@inner(0)){     
     
 //       const dlong et = eo+es; // element in block
 //       if(et<pmlNelements){
@@ -285,7 +285,7 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 //           dfloat r_rhsqy[p_Nfields]; 
 //           dfloat r_rhsqz[p_Nfields]; 
                 
-//           occaUnroll(p_Nfields)
+//           #pragma unroll p_Nfields
 //           for(int fld=0; fld<p_Nfields;++fld){
 //             r_rhsq[fld]  = 0.f;
 //             r_rhsqx[fld] = 0.f;
@@ -293,11 +293,11 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 //             r_rhsqz[fld] = 0.f;
 //           }
 
-//           // use temporaries for part sums for N4,N5,N6 because of exclusives
-//           occaUnroll(p_cubNp)
+//           // use temporaries for part sums for N4,N5,N6 because of @exclusives
+//           #pragma unroll p_cubNp
 //             for(int m=0;m<p_cubNp;++m){
 //               const dfloat Pnc  = cubProjectT[m*p_Np+n];                  
-//               occaUnroll(p_Nfields)
+//               #pragma unroll p_Nfields
 //               for(int fld=0; fld<p_Nfields; fld++){
 //                 r_rhsq [fld] += Pnc*s_cubq[es][fld][m];
 //                 r_rhsqx[fld] += Pnc*s_cubqx[es][fld][m];
@@ -306,7 +306,7 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 //               }
 //             }
                 
-//           occaUnroll(p_Nfields) 
+//           #pragma unroll p_Nfields 
 //           for(int fld=0; fld<p_Nfields;++fld){
 //               rhsq[rhsId + fld*p_Np]        += r_rhsq[fld];
 //               pmlrhsqx[pmlrhsId + fld*p_Np] += r_rhsqx[fld];
@@ -323,30 +323,30 @@ kernel void bnsRelaxationTet3D(const dlong Nelements,
 
 
 // MRAB relaxation cub
-kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
-                                  const dlong * restrict pmlElementIds,
-                                  const dlong * restrict pmlIds,
-                                  const dfloat * restrict vgeo,
-                                  const dfloat * restrict cubvgeo,
+@kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
+                                  @restrict const  dlong *  pmlElementIds,
+                                  @restrict const  dlong *  pmlIds,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  cubvgeo,
                                   const dlong offset,
                                   const dlong pmloffset,
                                   const int   shift,
-                                  const dfloat * restrict cubInterpT,
-                                  const dfloat * restrict cubProjectT,
-                                  const dfloat * restrict q,
-                                        dfloat * restrict rhsq){
-  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockCub;outer0){  // for all elements
+                                  @restrict const  dfloat *  cubInterpT,
+                                  @restrict const  dfloat *  cubProjectT,
+                                  @restrict const  dfloat *  q,
+                                        @restrict dfloat *  rhsq){
+  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockCub;@outer(0)){  // for all elements
 
-    // subgroup of density and momentum shared memory for q at nodes
-    shared dfloat s_q[p_NblockCub][p_Nvars][p_Np];
+    // subgroup of density and momentum @shared memory for q at nodes
+    @shared dfloat s_q[p_NblockCub][p_Nvars][p_Np];
 
     // sub-group of p_Np cubature node interpolants of N5...N10
-    shared dfloat s_cubN[p_NblockCub][p_Nrelax][p_cubNp];
-    exclusive dlong e;
+    @shared dfloat s_cubN[p_NblockCub][p_Nrelax][p_cubNp];
+    @exclusive dlong e;
 
-    // prefetch q to shared
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){    
+    // prefetch q to @shared
+    for(int es=0;es<p_NblockCub;++es;@inner(1)){
+      for(int n=0;n<p_maxCubNodes;++n;@inner(0)){    
 
       dlong et = eo+es; // element in block
         if(et<pmlNelements){
@@ -354,7 +354,7 @@ kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
           if(n<p_Np){
             const dlong id = e*p_Nfields*p_Np + n;
 
-            occaUnroll(p_Nfields)
+            #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nvars;++fld){
               s_q[es][fld][n] = q[id+fld*p_Np];
             }
@@ -363,26 +363,26 @@ kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
       }
     }
     
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
     // interpolate q to cubature
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    for(int es=0;es<p_NblockCub;++es;@inner(1)){
+      for(int n=0;n<p_maxCubNodes;++n;@inner(0)){     
 
         dlong et = eo+es; // element in block
         if(et<pmlNelements && n<p_cubNp){
 
           dfloat r_cubq[p_Nfields];
-          occaUnroll(p_Nvars)
+          #pragma unroll p_Nvars
           for(int fld=0; fld<p_Nvars;++fld){
             r_cubq[fld] = 0.f;
           }
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
           for(int m=0;m<p_Np;++m){
             const dfloat Icn  = cubInterpT[m*p_cubNp+n];
-            occaUnroll(p_Nvars)
+            #pragma unroll p_Nvars
             for(int fld=0; fld<p_Nvars; fld++){
               r_cubq[fld] += Icn*s_q[es][fld][m];
             }
@@ -402,12 +402,12 @@ kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
       }
     }
 
-    //make sure all cubature node data is loaded into shared
-    barrier(localMemFence);
+    //make sure all cubature node data is loaded into @shared
+    @barrier("local");
     
     // partial projection to nodes from cubature-sub-group
-    for(int es=0;es<p_NblockCub;++es;inner1){
-      for(int n=0;n<p_maxCubNodes;++n;inner0){     
+    for(int es=0;es<p_NblockCub;++es;@inner(1)){
+      for(int n=0;n<p_maxCubNodes;++n;@inner(0)){     
         dlong et = eo+es; // element in block
         if(et<pmlNelements && n<p_Np ){
           const dlong id    = e*p_Nfields*p_Np + n;
@@ -419,12 +419,12 @@ kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
 
           dfloat r_qN[p_Nrelax];
 
-          occaUnroll(p_Nrelax)
+          #pragma unroll p_Nrelax
           for(int fld=0; fld<p_Nrelax; fld++){
             r_qN[fld] = (p_SEMI_ANALYTIC) ? 0: -p_tauInv*s_q[es][fld+p_Nvars][n]; 
           }
         
-         occaUnroll(p_cubNp)
+         #pragma unroll p_cubNp
           for(int i=0;i<p_cubNp;++i){
             const dfloat Pnc  = cubProjectT[i*p_Np+n];
             for(int fld=0; fld<p_Nrelax; fld++){
@@ -432,7 +432,7 @@ kernel void bnsPmlRelaxationTet3D(const dlong pmlNelements,
             }
           }
         
-        occaUnroll(p_Nrelax)
+        #pragma unroll p_Nrelax
           for(int fld=0; fld<p_Nrelax; fld++){
             rhsq[rhsId + (fld+p_Nvars)*p_Np] += r_qN[fld];
           }

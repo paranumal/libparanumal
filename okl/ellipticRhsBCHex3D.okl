@@ -19,40 +19,40 @@
     s_ndq[m][j][i] -= WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);             \
   }
 
-kernel void ellipticRhsBCHex3D(const dlong Nelements,
-                              const dfloat * restrict ggeo,
-                              const dfloat * restrict sgeo,
-                              const dfloat * restrict D,
-                              const dlong   * restrict vmapM,
+@kernel void ellipticRhsBCHex3D(const dlong Nelements,
+                              @restrict const  dfloat *  ggeo,
+                              @restrict const  dfloat *  sgeo,
+                              @restrict const  dfloat *  D,
+                              @restrict const  dlong   *  vmapM,
                               const dfloat lambda,
                               const dfloat t,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const dfloat * restrict z,
-                              const int    * restrict mapB,
-                              dfloat  * restrict rhs){
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
+                              @restrict const  int    *  mapB,
+                              @restrict dfloat  *  rhs){
 
-  for(dlong e=0; e<Nelements; ++e; outer0){
+  for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    shared dfloat s_D[p_Nq][p_Nq];
-    shared dfloat s_q[2][p_Nq][p_Nq];
-    shared dfloat s_ndq[2][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_q[2][p_Nq][p_Nq];
+    @shared dfloat s_ndq[2][p_Nq][p_Nq];
 
-    exclusive dfloat r_qt, r_Gqt, r_Auk;
-    exclusive dfloat r_q[p_Nq]; // register array to hold u(i,j,0:N) private to thread
-    exclusive dfloat r_rhs[p_Nq];// array for results Au(i,j,0:N)
+    @exclusive dfloat r_qt, r_Gqt, r_Auk;
+    @exclusive dfloat r_q[p_Nq]; // register array to hold u(i,j,0:N) private to thread
+    @exclusive dfloat r_rhs[p_Nq];// array for results Au(i,j,0:N)
 
     dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 
     // for all face nodes of all elements
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         //load D into local memory
         // s_D[i][j] = d \phi_i at node j
         s_D[j][i] = D[p_Nq*j+i]; // D is column major
 
-        occaUnroll(p_Nq)
+        #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           r_q[k] = 0.;
           r_rhs[k] = 0.;
@@ -66,11 +66,11 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 0
         r_q[0] += s_q[0][j][i];
         r_rhs[0] += s_ndq[0][j][i];
@@ -81,11 +81,11 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 1 & 3
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i + k*p_Nq;
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
 
@@ -94,20 +94,20 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1 & 3
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==0) {//face 1
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_q[k] += s_q[0][k][i];
             r_rhs[k] += s_ndq[0][k][i];
           }
         }
         if (j==p_Nq-1) {//face 3
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_q[k] += s_q[1][k][i];
             r_rhs[k] += s_ndq[1][k][i];
@@ -116,11 +116,11 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 2 & 4
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
         const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + j + k*p_Nq;
         const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
 
@@ -129,20 +129,20 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 2 & 4
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==p_Nq-1) {//face 2
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_q[k] += s_q[0][k][j];
             r_rhs[k] += s_ndq[0][k][j];
           }
         }
         if (i==0) {//face 4
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_q[k] += s_q[1][k][j];
             r_rhs[k] += s_ndq[1][k][j];
@@ -151,14 +151,14 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence); 
+    @barrier("local"); 
 
 
     // Layer by layer
-    occaUnroll(p_Nq)
+    #pragma unroll p_Nq
       for(int k = 0;k < p_Nq; k++){
-        for(int j=0;j<p_Nq;++j;inner1){
-          for(int i=0;i<p_Nq;++i;inner0){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
 
             // prefetch geometric factors
             const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
@@ -175,32 +175,32 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
           }
         }
 
-        barrier(localMemFence);
+        @barrier("local");
 
-        for(int j=0;j<p_Nq;++j;inner1){
-          for(int i=0;i<p_Nq;++i;inner0){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
 
             // share u(:,:,k)
             s_q[0][j][i] = r_q[k];
 
             r_qt = 0;
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
                 r_qt += s_D[k][m]*r_q[m];
               }
           }
         }
 
-        barrier(localMemFence);
+        @barrier("local");
 
-        for(int j=0;j<p_Nq;++j;inner1){
-          for(int i=0;i<p_Nq;++i;inner0){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
 
             dfloat qr = 0.f;
             dfloat qs = 0.f;
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
                 qr += s_D[i][m]*s_q[0][j][m];
                 qs += s_D[j][m]*s_q[0][m][i];
@@ -216,12 +216,12 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
           }
         }
 
-        barrier(localMemFence);
+        @barrier("local");
 
-        for(int j=0;j<p_Nq;++j;inner1){
-          for(int i=0;i<p_Nq;++i;inner0){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++){
                 r_Auk    += s_D[m][j]*s_ndq[0][m][i];
                 r_rhs[m] += s_D[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
@@ -235,9 +235,9 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
 
     // write out
 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-        occaUnroll(p_Nq)
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
           for(int k = 0; k < p_Nq; k++){
             const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
             rhs[id] -= r_rhs[k];
@@ -268,31 +268,31 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
     s_ndq[k][j][i] -= WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);             \
   }
 
-kernel void ellipticRhsBCHex3D(const dlong Nelements,
-                              const dfloat * restrict ggeo,
-                              const dfloat * restrict sgeo,
-                              const dfloat * restrict D,
-                              const dlong   * restrict vmapM,
+@kernel void ellipticRhsBCHex3D(const dlong Nelements,
+                              @restrict const  dfloat *  ggeo,
+                              @restrict const  dfloat *  sgeo,
+                              @restrict const  dfloat *  D,
+                              @restrict const  dlong   *  vmapM,
                               const dfloat lambda,
                               const dfloat t,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const dfloat * restrict z,
-                              const int    * restrict mapB,
-                              dfloat  * restrict rhs){
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
+                              @restrict const  int    *  mapB,
+                              @restrict dfloat  *  rhs){
   
-  for(dlong e=0;e<Nelements;e++;outer0){
-    shared dfloat s_q[p_Nq][p_Nq][p_Nq];
-    shared dfloat s_ndq[p_Nq][p_Nq][p_Nq];
-    shared dfloat s_D[p_Nq][p_Nq];
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_q[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_ndq[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
 
-    exclusive dfloat r_qr[p_Nq], r_qs[p_Nq], r_qt[p_Nq], r_Aq[p_Nq];
-    exclusive dfloat r_G00[p_Nq], r_G01[p_Nq], r_G02[p_Nq], r_G11[p_Nq], r_G12[p_Nq], r_G22[p_Nq], r_GwJ[p_Nq];
+    @exclusive dfloat r_qr[p_Nq], r_qs[p_Nq], r_qt[p_Nq], r_Aq[p_Nq];
+    @exclusive dfloat r_G00[p_Nq], r_G01[p_Nq], r_G02[p_Nq], r_G11[p_Nq], r_G12[p_Nq], r_G22[p_Nq], r_GwJ[p_Nq];
 
     // loop over slabs
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           s_q[k][j][i] = 0.;
           s_ndq[k][j][i] = 0.;
 
@@ -302,11 +302,11 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
         const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
 
@@ -315,11 +315,11 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
       }
     }
   
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1 & 3
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
 
@@ -328,11 +328,11 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 2 & 4
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
         const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
         const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
         
@@ -341,12 +341,12 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
     // loop over slabs
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong base = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
           // assumes w*J built into G entries
@@ -376,21 +376,21 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
     }
 
     // r term ----->
-    barrier(localMemFence);
+    @barrier("local");
 
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           s_q[k][j][i] = r_G00[k]*r_qr[k] + r_G01[k]*r_qs[k] + r_G02[k]*r_qt[k];
         }
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           dfloat tmp = 0.f;
           for(int n=0; n<p_Nq; ++n)
             tmp += s_D[n][i]*s_q[k][j][n];
@@ -401,21 +401,21 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
     }
 
     // s term ---->
-    barrier(localMemFence);
+    @barrier("local");
 
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           s_q[k][j][i] = r_G01[k]*r_qr[k] + r_G11[k]*r_qs[k] + r_G12[k]*r_qt[k];
         }
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           dfloat tmp = 0.f;
           for(int n=0; n<p_Nq; ++n)
             tmp += s_D[n][j]*s_q[k][n][i];
@@ -426,21 +426,21 @@ kernel void ellipticRhsBCHex3D(const dlong Nelements,
     }
 
     // t term ---->
-    barrier(localMemFence);
+    @barrier("local");
 
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           s_q[k][j][i] = r_G02[k]*r_qr[k] + r_G12[k]*r_qs[k] + r_G22[k]*r_qt[k];
         }
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           dfloat tmp = 0.f;
           for(int n=0; n<p_Nq; ++n)
             tmp += s_D[n][k]*s_q[n][j][i];

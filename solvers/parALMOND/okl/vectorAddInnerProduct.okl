@@ -1,22 +1,22 @@
   
 // y = beta*y + alpha*x
 // ip = y.y 
-kernel void vectorAddInnerProductKernel(const dlong Nblocks,
+@kernel void vectorAddInnerProductKernel(const dlong Nblocks,
 					const dlong   N,
 					const dfloat   alpha,
 					const dfloat   beta,
-					const dfloat *restrict x,
-				        dfloat *restrict y,
-					      dfloat *restrict ip){
+					@restrict const  dfloat * x,
+				        @restrict dfloat * y,
+					      @restrict dfloat * ip){
 
-  for(dlong b=0;b<Nblocks;++b;outer0){
+  for(dlong b=0;b<Nblocks;++b;@outer(0)){
 
-    shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
-    shared volatile dfloat s_res[p_RDIMY];
-    exclusive dfloat res;
+    @shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
+    @shared volatile dfloat s_res[p_RDIMY];
+    @exclusive dfloat res;
     
-    for(int ty=0;ty<p_RDIMY;++ty;inner1){
-      for(int tx=0;tx<p_RDIMX;++tx;inner0){
+    for(int ty=0;ty<p_RDIMY;++ty;@inner(1)){
+      for(int tx=0;tx<p_RDIMX;++tx;@inner(0)){
       	dlong i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
       	
       	res = 0;
@@ -35,23 +35,23 @@ kernel void vectorAddInnerProductKernel(const dlong Nblocks,
 
 // y = beta*y + alpha*x
 // ip = w.y.y 
-kernel void vectorAddWeightedInnerProductKernel(const dlong Nblocks,
+@kernel void vectorAddWeightedInnerProductKernel(const dlong Nblocks,
           const dlong   N,
           const dfloat   alpha,
           const dfloat   beta,
-          const dfloat *restrict x,
-                dfloat *restrict y,
-          const dfloat *restrict w,
-                dfloat *restrict ip){
+          @restrict const  dfloat * x,
+                @restrict dfloat * y,
+          @restrict const  dfloat * w,
+                @restrict dfloat * ip){
 
-  for(dlong b=0;b<Nblocks;++b;outer0){
+  for(dlong b=0;b<Nblocks;++b;@outer(0)){
 
-    shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
-    shared volatile dfloat s_res[p_RDIMY];
-    exclusive dfloat res;
+    @shared volatile dfloat s_ip[p_RDIMY][p_RDIMX];
+    @shared volatile dfloat s_res[p_RDIMY];
+    @exclusive dfloat res;
     
-    for(int ty=0;ty<p_RDIMY;++ty;inner1){
-      for(int tx=0;tx<p_RDIMX;++tx;inner0){
+    for(int ty=0;ty<p_RDIMY;++ty;@inner(1)){
+      for(int tx=0;tx<p_RDIMX;++tx;@inner(0)){
         dlong i = tx + ty*p_RDIMX + b*p_RDIMX*p_RDIMY;
         
         res = 0;

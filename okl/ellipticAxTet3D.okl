@@ -1,33 +1,33 @@
  
-kernel void ellipticAxTet3D(const dlong Nelements,
-        const dfloat * restrict ggeo,
-        const dfloat * restrict SrrT,
-        const dfloat * restrict SrsT,
-        const dfloat * restrict SrtT,
-        const dfloat * restrict SsrT,
-        const dfloat * restrict SssT,
-        const dfloat * restrict SstT,
-        const dfloat * restrict StrT,
-        const dfloat * restrict StsT,
-        const dfloat * restrict SttT,
-        const dfloat * restrict MM,
+@kernel void ellipticAxTet3D(const dlong Nelements,
+        @restrict const  dfloat *  ggeo,
+        @restrict const  dfloat *  SrrT,
+        @restrict const  dfloat *  SrsT,
+        @restrict const  dfloat *  SrtT,
+        @restrict const  dfloat *  SsrT,
+        @restrict const  dfloat *  SssT,
+        @restrict const  dfloat *  SstT,
+        @restrict const  dfloat *  StrT,
+        @restrict const  dfloat *  StsT,
+        @restrict const  dfloat *  SttT,
+        @restrict const  dfloat *  MM,
         const dfloat lambda,
-        const dfloat  * restrict q,
-        dfloat  * restrict Aq){
+        @restrict const  dfloat  *  q,
+        @restrict dfloat  *  Aq){
   
-  for(dlong e=0;e<Nelements;e++;outer0){
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
 
-    shared dfloat s_q[p_Np];
+    @shared dfloat s_q[p_Np];
 
-    for(int n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       //prefetch q
       const dlong id = n + e*p_Np;
       s_q[n] = q[id];
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong gid = e*p_Nggeo;
 
       const dfloat Grr = ggeo[gid + p_G00ID];
@@ -49,7 +49,7 @@ kernel void ellipticAxTet3D(const dlong Nelements,
       dfloat qtt = 0.;
       dfloat qM = 0.;
 
-      occaUnroll(p_Np)
+      #pragma unroll p_Np
         for (int k=0;k<p_Np;k++) {
           qrr += SrrT[n+k*p_Np]*s_q[k];
           qrs += SrsT[n+k*p_Np]*s_q[k];
@@ -75,37 +75,37 @@ kernel void ellipticAxTet3D(const dlong Nelements,
 }
 
 
-kernel void ellipticPartialAxTet3D_v0(const dlong Nelements,
-                                  const dlong   * restrict elementList,
-                                  const dfloat * restrict ggeo,
-                                  const dfloat * restrict SrrT,
-                                  const dfloat * restrict SrsT,
-                                  const dfloat * restrict SrtT,
-                                  const dfloat * restrict SsrT,
-                                  const dfloat * restrict SssT,
-                                  const dfloat * restrict SstT,
-                                  const dfloat * restrict StrT,
-                                  const dfloat * restrict StsT,
-                                  const dfloat * restrict SttT,
-                                  const dfloat * restrict MM,
+@kernel void ellipticPartialAxTet3D_v0(const dlong Nelements,
+                                  @restrict const  dlong   *  elementList,
+                                  @restrict const  dfloat *  ggeo,
+                                  @restrict const  dfloat *  SrrT,
+                                  @restrict const  dfloat *  SrsT,
+                                  @restrict const  dfloat *  SrtT,
+                                  @restrict const  dfloat *  SsrT,
+                                  @restrict const  dfloat *  SssT,
+                                  @restrict const  dfloat *  SstT,
+                                  @restrict const  dfloat *  StrT,
+                                  @restrict const  dfloat *  StsT,
+                                  @restrict const  dfloat *  SttT,
+                                  @restrict const  dfloat *  MM,
                                   const dfloat lambda,
-                                  const dfloat  * restrict q,
-                                  dfloat  * restrict Aq){
+                                  @restrict const  dfloat  *  q,
+                                  @restrict dfloat  *  Aq){
   
-  for(dlong e=0;e<Nelements;e++;outer0){
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
 
-    shared dfloat s_q[p_Np];
+    @shared dfloat s_q[p_Np];
 
-    for(int n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       //prefetch q
       const dlong element = elementList[e];
       const dlong id = n + element*p_Np;
       s_q[n] = q[id];
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong element = elementList[e];
       const dlong gid = element*p_Nggeo;
 
@@ -128,7 +128,7 @@ kernel void ellipticPartialAxTet3D_v0(const dlong Nelements,
       dfloat qtt = 0.;
       dfloat qM = 0.;
 
-      occaUnroll(p_Np)
+      #pragma unroll p_Np
         for (int k=0;k<p_Np;k++) {
           qrr += SrrT[n+k*p_Np]*s_q[k];
           qrs += SrsT[n+k*p_Np]*s_q[k];
@@ -158,37 +158,37 @@ kernel void ellipticPartialAxTet3D_v0(const dlong Nelements,
 // important to tune this at low order
 #define p_Ne 4
 #define p_Nb 2
-kernel void ellipticPartialAxTet3D(const dlong Nelements,
-                                  const dlong   * restrict elementList,
-                                  const dfloat * restrict ggeo,
-                                  const dfloat * restrict SrrT,
-                                  const dfloat * restrict SrsT,
-                                  const dfloat * restrict SrtT,
-                                  const dfloat * restrict SsrT,
-                                  const dfloat * restrict SssT,
-                                  const dfloat * restrict SstT,
-                                  const dfloat * restrict StrT,
-                                  const dfloat * restrict StsT,
-                                  const dfloat * restrict SttT,
-                                  const dfloat * restrict MM,
+@kernel void ellipticPartialAxTet3D(const dlong Nelements,
+                                  @restrict const  dlong   *  elementList,
+                                  @restrict const  dfloat *  ggeo,
+                                  @restrict const  dfloat *  SrrT,
+                                  @restrict const  dfloat *  SrsT,
+                                  @restrict const  dfloat *  SrtT,
+                                  @restrict const  dfloat *  SsrT,
+                                  @restrict const  dfloat *  SssT,
+                                  @restrict const  dfloat *  SstT,
+                                  @restrict const  dfloat *  StrT,
+                                  @restrict const  dfloat *  StsT,
+                                  @restrict const  dfloat *  SttT,
+                                  @restrict const  dfloat *  MM,
                                   const dfloat lambda,
-                                  const dfloat  * restrict q,
-                                        dfloat  * restrict Aq){
+                                  @restrict const  dfloat  *  q,
+                                        @restrict dfloat  *  Aq){
 
   // p_Ne nodes per thread
   // p_Nb elements worth of threads per block
   
-  for(dlong eo=0;eo<Nelements;eo+=p_Ne*p_Nb;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_Ne*p_Nb;@outer(0)){
 
-    shared dfloat s_q[p_Ne][p_Nb][p_Np];
-    shared dfloat s_ggeo[p_Ne][p_Nb][p_Nggeo];
+    @shared dfloat s_q[p_Ne][p_Nb][p_Np];
+    @shared dfloat s_ggeo[p_Ne][p_Nb][p_Nggeo];
 
-    exclusive dlong element[p_Ne];
+    @exclusive dlong element[p_Ne];
 
-    for(int b=0;b<p_Nb;++b;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(int b=0;b<p_Nb;++b;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
   
-      occaUnroll(p_Ne)
+      #pragma unroll p_Ne
         for(int et=0;et<p_Ne;++et){
           const dlong e = eo + b + p_Nb*et;
 
@@ -208,14 +208,14 @@ kernel void ellipticPartialAxTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int b=0;b<p_Nb;++b;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(int b=0;b<p_Nb;++b;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
   
       dfloat qrr[p_Ne], qrs[p_Ne], qrt[p_Ne], qss[p_Ne], qst[p_Ne], qtt[p_Ne], qM[p_Ne];
       
-      occaUnroll(p_Ne)
+      #pragma unroll p_Ne
         for(int et=0;et<p_Ne;++et){
           qrr[et] = 0;    qrs[et] = 0;    qrt[et] = 0;
           qss[et] = 0;    qst[et] = 0;
@@ -223,9 +223,9 @@ kernel void ellipticPartialAxTet3D(const dlong Nelements,
           qM[et] = 0;
         }
       
-      // overall this does p_Ne*14 flops for  (7+p_Ne)*|dfloat| L1+shared accesse
+      // overall this does p_Ne*14 flops for  (7+p_Ne)*|dfloat| L1+@shared accesse
       // arithmetic intensity is  (p_Ne*14/((7+p_Ne)*8)) flops per byte
-      occaUnroll(p_Np)
+      #pragma unroll p_Np
         for (int k=0;k<p_Np;k++) {
           
           const dfloat Srr_nk = SrrT[n+k*p_Np];
@@ -236,7 +236,7 @@ kernel void ellipticPartialAxTet3D(const dlong Nelements,
           const dfloat Stt_nk = SttT[n+k*p_Np];
           const dfloat   MM_nk =    MM[n+k*p_Np];
           
-          occaUnroll(p_Ne)
+          #pragma unroll p_Ne
             for(int et=0;et<p_Ne;++et){
               const dfloat qk = s_q[et][b][k];
               qrr[et] += Srr_nk*qk;  
@@ -249,7 +249,7 @@ kernel void ellipticPartialAxTet3D(const dlong Nelements,
             }
         }
           
-      occaUnroll(p_Ne)
+      #pragma unroll p_Ne
         for(int et=0;et<p_Ne;++et){
           const dlong e = eo + b + p_Nb*et;
           if(e<Nelements){

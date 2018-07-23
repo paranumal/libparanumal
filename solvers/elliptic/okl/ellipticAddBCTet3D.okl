@@ -1,13 +1,13 @@
-kernel void ellipticAddBCTet3D(const int Nelements,
+@kernel void ellipticAddBCTet3D(const int Nelements,
                               const dfloat t,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const dfloat * restrict z,
-                              const int    * restrict mapB,
-                              dfloat  * restrict q){
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
+                              @restrict const  int    *  mapB,
+                              @restrict dfloat  *  q){
   
-  for(int e=0;e<Nelements;e++;outer0){
-    for(int n=0;n<p_Np;++n;inner0){
+  for(int e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
       const int id = n+e*p_Np;
       const int bc = mapB[n+e*p_Np];
 

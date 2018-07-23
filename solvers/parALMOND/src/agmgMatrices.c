@@ -506,7 +506,7 @@ void axpy(parAlmond_t *parAlmond, dcoo *A, dfloat alpha, occa::memory o_x, dfloa
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
 
     //copy from device
-    A->o_haloBuffer.asyncCopyTo(A->sendBuffer);
+    A->o_haloBuffer.copyTo(A->sendBuffer,"async: true");
     parAlmond->device.setStream(parAlmond->defaultStream);
   }
 
@@ -526,7 +526,7 @@ void axpy(parAlmond_t *parAlmond, dcoo *A, dfloat alpha, occa::memory o_x, dfloa
   //copy back to device
   if(A->NrecvTotal){
     parAlmond->device.setStream(parAlmond->dataStream);
-    o_x.asyncCopyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
+    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat),"async: true");
     parAlmond->device.finish();
     parAlmond->device.setStream(parAlmond->defaultStream);
     parAlmond->device.finish();
@@ -550,7 +550,7 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
     parAlmond->haloExtract(A->NsendTotal, 1, A->o_haloElementList, o_x, A->o_haloBuffer);
 
     //copy from device
-    A->o_haloBuffer.asyncCopyTo(A->sendBuffer);
+    A->o_haloBuffer.copyTo(A->sendBuffer,"async: true");
 
     parAlmond->device.setStream(parAlmond->defaultStream);
   }
@@ -578,7 +578,7 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
   //copy back to device
   if (A->NrecvTotal){
     parAlmond->device.setStream(parAlmond->dataStream);
-    o_x.asyncCopyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat));
+    o_x.copyFrom(A->recvBuffer,A->NrecvTotal*sizeof(dfloat),A->NlocalCols*sizeof(dfloat),"async: true");
     parAlmond->device.finish();
     parAlmond->device.setStream(parAlmond->defaultStream);
     parAlmond->device.finish();

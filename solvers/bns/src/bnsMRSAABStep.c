@@ -42,7 +42,7 @@ const dlong pmloffset = mesh->Np*mesh->pmlNelements*bns->Nfields;
                                 mesh->o_haloBuffer);
 
         // copy extracted halo to HOST
-        mesh->o_haloBuffer.asyncCopyTo(sendBuffer);
+        mesh->o_haloBuffer.copyTo(sendBuffer,"async: true");
         mesh->device.setStream(defaultStream);
 #else
         int Nentries = mesh->Nfp*bns->Nfields*mesh->Nfaces;
@@ -207,7 +207,7 @@ const dlong pmloffset = mesh->Np*mesh->pmlNelements*bns->Nfields;
 
         // copy halo data to DEVICE
         size_t foffset = mesh->Nfaces*mesh->Nfp*bns->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-        bns->o_fQM.asyncCopyFrom(recvBuffer, haloBytes, foffset);
+        bns->o_fQM.copyFrom(recvBuffer, haloBytes, foffset,"async: true");
         mesh->device.finish();
         mesh->device.setStream(defaultStream);
 #else

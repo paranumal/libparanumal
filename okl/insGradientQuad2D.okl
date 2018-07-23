@@ -1,20 +1,20 @@
 // Compute Gradient in Strong Form
-kernel void insGradientVolumeQuad2D(const dlong Nelements,
-                                    const dfloat * restrict vgeo,
-                                    const dfloat * restrict D,
+@kernel void insGradientVolumeQuad2D(const dlong Nelements,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  D,
                                     const dlong offset,
-                                    const dfloat * restrict P,
-                                          dfloat * restrict Px,
-                                          dfloat * restrict Py){
+                                    @restrict const  dfloat *  P,
+                                          @restrict dfloat *  Px,
+                                          @restrict dfloat *  Py){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_P[p_NblockV][p_Nq][p_Nq];
-    shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_P[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
 
-    for(int es=0;es<p_NblockV;++es;inner2){   
-      for(int j=0;j<p_Nq;++j;inner1){ 
-        for(int i=0;i<p_Nq;++i;inner0){    
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){    
           const dlong e = eo+es; // element in block
           if(e<Nelements){ 
             const dlong id = (e+offset)*p_Np + j*p_Nq+i;
@@ -28,12 +28,12 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner2){ 
-      for(int j=0;j<p_Nq;++j;inner1){ 
-        for(int i=0;i<p_Nq;++i;inner0){  
+    for(int es=0;es<p_NblockV;++es;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){  
           const dlong e = eo+es; 
           if(e<Nelements){ 
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
@@ -45,7 +45,7 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
             // compute 'r' and 's' derivatives of (q_m) at node n
             dfloat dpdr  = 0.f, dpds  = 0.f;
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
               for(int n=0;n<p_Nq;++n){
                 const dfloat Dr = s_D[i][n];
                 const dfloat Ds = s_D[j][n];
@@ -106,13 +106,13 @@ kernel void insGradientVolumeQuad2D(const dlong Nelements,
   s_fluxPy[es][j][i]  = sc*(.5f*ny*(PP-PM));                            \
 }
 
-kernel void insGradientSurfaceQuad2D(const dlong Nelements,
-                                     const dfloat * restrict sgeo,
-                                     const dlong  * restrict vmapM,
-                                     const dlong  * restrict vmapP,
-                                     const int   * restrict EToB,
-                                     const dfloat * restrict x,
-                                     const dfloat * restrict y,
+@kernel void insGradientSurfaceQuad2D(const dlong Nelements,
+                                     @restrict const  dfloat *  sgeo,
+                                     @restrict const  dlong  *  vmapM,
+                                     @restrict const  dlong  *  vmapP,
+                                     @restrict const  int   *  EToB,
+                                     @restrict const  dfloat *  x,
+                                     @restrict const  dfloat *  y,
                                      const dfloat time,
                                      const dfloat dt,
                                      const dfloat c0,
@@ -121,32 +121,32 @@ kernel void insGradientSurfaceQuad2D(const dlong Nelements,
                                      const int index,
                                      const dlong offset,
                                      const int solverID,
-                                     const dfloat * restrict POld,
-                                     const dfloat * restrict P,
-                                           dfloat * restrict Px,
-                                           dfloat * restrict Py){
+                                     @restrict const  dfloat *  POld,
+                                     @restrict const  dfloat *  P,
+                                           @restrict dfloat *  Px,
+                                           @restrict dfloat *  Py){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_fluxPx[p_NblockS][p_Nq][p_Nq];
-    shared dfloat s_fluxPy[p_NblockS][p_Nq][p_Nq];
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_fluxPx[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_fluxPy[p_NblockS][p_Nq][p_Nq];
 
     for(int j=0;j<p_Nq;++j){
-      for(int es=0;es<p_NblockS;++es;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int es=0;es<p_NblockS;++es;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           s_fluxPx[es][j][i] = 0.;
           s_fluxPy[es][j][i] = 0.;
         }
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // for all face nodes of all elements
     // face 0 & 2
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
@@ -158,11 +158,11 @@ kernel void insGradientSurfaceQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1 & 3
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
@@ -174,12 +174,12 @@ kernel void insGradientSurfaceQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // for each node in the element
     for(int j=0;j<p_Nq;++j){
-      for(int es=0;es<p_NblockS;++es;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int es=0;es<p_NblockS;++es;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo + es;
           if(e<Nelements){
             dlong id;

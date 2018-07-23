@@ -1,8 +1,8 @@
 
 #define cubeThreads                             \
-	for(int k=0; k<p_Nq; ++k; inner2)            \
-		for(int j=0; j<p_Nq; ++j; inner1)          \
-			for(int i=0; i<p_Nq; ++i; inner0)
+	for(int k=0; k<p_Nq; ++k; @inner(2))            \
+		for(int j=0; j<p_Nq; ++j; @inner(1))          \
+			for(int i=0; i<p_Nq; ++i; @inner(0))
 
 //this is just  for 3D threads, do not expect this to work with N>9
 #if p_Nq==8 || p_Nq==16
@@ -14,7 +14,7 @@
 //baseline - as unoptimized as possible
 
 
-kernel void ellipticAxHex3D_Ref3D0(int Nelements,
+@kernel void ellipticAxHex3D_Ref3D0(int Nelements,
                                    int *  elementList,
                                    dfloat * ggeo,
                                    dfloat *  D,
@@ -23,23 +23,23 @@ kernel void ellipticAxHex3D_Ref3D0(int Nelements,
                                    dfloat *  Aq,
                                    dfloat * Aqtemp){
                                    
-	for(int e=0; e<Nelements; ++e; outer0) {
+	for(int e=0; e<Nelements; ++e; @outer(0)) {
 	
-		//	shared dfloat q[p_Nq][p_Nq][p_Nq];
-		shared dfloat s_D[p_Nq][p_Nq];
+		//	@shared dfloat q[p_Nq][p_Nq][p_Nq];
+		@shared dfloat s_D[p_Nq][p_Nq];
 		
-		exclusive dfloat r_qr, r_qs, r_qt;
+		@exclusive dfloat r_qr, r_qs, r_qt;
 		
 		cubeThreads {
 		  //int base = i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np;
 		  
 		  
 		  
-		  if(k==0) // fetch D to shared
+		  if(k==0) // fetch D to @shared
 		  s_D[j][i] = D[j*p_Nq+i];
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		
@@ -67,7 +67,7 @@ kernel void ellipticAxHex3D_Ref3D0(int Nelements,
 		}
 		
 		// r term ----->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat G00, G01, G02;
@@ -81,7 +81,7 @@ kernel void ellipticAxHex3D_Ref3D0(int Nelements,
 		  // printf("q[%d][%d][%d] = %15.15f\n", k, j, i,q[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np]);
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
@@ -92,7 +92,7 @@ kernel void ellipticAxHex3D_Ref3D0(int Nelements,
 		}
 		
 		// s term ---->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat G01, G11, G12;
@@ -104,7 +104,7 @@ kernel void ellipticAxHex3D_Ref3D0(int Nelements,
 		  Aqtemp[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np] = G01*r_qr + G11*r_qs + G12*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
@@ -114,7 +114,7 @@ kernel void ellipticAxHex3D_Ref3D0(int Nelements,
 		  Aq[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np] += tmp;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		cubeThreads {
 		  dfloat G02, G12, G22;
 		  int base = elementList[e]*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
@@ -125,7 +125,7 @@ kernel void ellipticAxHex3D_Ref3D0(int Nelements,
 		  Aqtemp[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np] = G02*r_qr + G12*r_qs + G22*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
@@ -139,32 +139,32 @@ kernel void ellipticAxHex3D_Ref3D0(int Nelements,
 }
 
 //consrt variables, loop unrolling
-kernel void ellipticAxHex3D_Ref3D1(const int Nelements,
-                                   const int * restrict elementList,
-                                   const dfloat * restrict ggeo,
-                                   const dfloat * restrict D,
+@kernel void ellipticAxHex3D_Ref3D1(const int Nelements,
+                                   @restrict const  int *  elementList,
+                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  dfloat *  D,
                                    const dfloat lambda,
-                                   const dfloat * restrict q,
-                                   dfloat * restrict Aq,
-                                   dfloat * restrict Aqtemp){
+                                   @restrict const  dfloat *  q,
+                                   @restrict dfloat *  Aq,
+                                   @restrict dfloat *  Aqtemp){
                                    
-	for(int e=0; e<Nelements; ++e; outer0) {
+	for(int e=0; e<Nelements; ++e; @outer(0)) {
 	
-		//	shared dfloat q[p_Nq][p_Nq][p_Nq];
-		shared dfloat s_D[p_Nq][p_Nq];
+		//	@shared dfloat q[p_Nq][p_Nq][p_Nq];
+		@shared dfloat s_D[p_Nq][p_Nq];
 		
-		exclusive dfloat r_qr, r_qs, r_qt;
+		@exclusive dfloat r_qr, r_qs, r_qt;
 		
 		cubeThreads {
 		  //int base = i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np;
 		  
 		  
 		  
-		  if(k==0) // fetch D to shared
+		  if(k==0) // fetch D to @shared
 		  s_D[j][i] = D[j*p_Nq+i];
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		
@@ -192,7 +192,7 @@ kernel void ellipticAxHex3D_Ref3D1(const int Nelements,
 		}
 		
 		// r term ----->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat G00, G01, G02;
@@ -206,7 +206,7 @@ kernel void ellipticAxHex3D_Ref3D1(const int Nelements,
 		  // printf("q[%d][%d][%d] = %15.15f\n", k, j, i,q[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np]);
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
@@ -217,7 +217,7 @@ kernel void ellipticAxHex3D_Ref3D1(const int Nelements,
 		}
 		
 		// s term ---->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat G01, G11, G12;
@@ -229,7 +229,7 @@ kernel void ellipticAxHex3D_Ref3D1(const int Nelements,
 		  Aqtemp[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np] = G01*r_qr + G11*r_qs + G12*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
@@ -239,7 +239,7 @@ kernel void ellipticAxHex3D_Ref3D1(const int Nelements,
 		  Aq[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np] += tmp;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		cubeThreads {
 		  dfloat G02, G12, G22;
 		  const int base = elementList[e]*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
@@ -250,7 +250,7 @@ kernel void ellipticAxHex3D_Ref3D1(const int Nelements,
 		  Aqtemp[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np] = G02*r_qr + G12*r_qs + G22*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
@@ -264,32 +264,32 @@ kernel void ellipticAxHex3D_Ref3D1(const int Nelements,
 }
 //geofactors in registers, fetched ONCE
 
-kernel void ellipticAxHex3D_Ref3D2(const int Nelements,
-                                   const int * restrict elementList,
-                                   const dfloat * restrict ggeo,
-                                   const dfloat * restrict D,
+@kernel void ellipticAxHex3D_Ref3D2(const int Nelements,
+                                   @restrict const  int *  elementList,
+                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  dfloat *  D,
                                    const dfloat lambda,
-                                   const dfloat * restrict q,
-                                   dfloat * restrict Aq,
-                                   dfloat * restrict Aqtemp){
+                                   @restrict const  dfloat *  q,
+                                   @restrict dfloat *  Aq,
+                                   @restrict dfloat *  Aqtemp){
                                    
-	for(int e=0; e<Nelements; ++e; outer0) {
+	for(int e=0; e<Nelements; ++e; @outer(0)) {
 	
-		//	shared dfloat q[p_Nq][p_Nq][p_Nq];
-		shared dfloat s_D[p_Nq][p_Nq];
-		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
-		exclusive dfloat r_qr, r_qs, r_qt;
+		//	@shared dfloat q[p_Nq][p_Nq][p_Nq];
+		@shared dfloat s_D[p_Nq][p_Nq];
+		@exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
+		@exclusive dfloat r_qr, r_qs, r_qt;
 		
 		cubeThreads {
 		  //int base = i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np;
 		  
 		  
 		  
-		  if(k==0) // fetch D to shared
+		  if(k==0) // fetch D to @shared
 		  s_D[j][i] = D[j*p_Nq+i];
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		
@@ -325,7 +325,7 @@ kernel void ellipticAxHex3D_Ref3D2(const int Nelements,
 		}
 		
 		// r term ----->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		
@@ -335,7 +335,7 @@ kernel void ellipticAxHex3D_Ref3D2(const int Nelements,
 		  // printf("q[%d][%d][%d] = %15.15f\n", k, j, i,q[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np]);
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
@@ -346,14 +346,14 @@ kernel void ellipticAxHex3D_Ref3D2(const int Nelements,
 		}
 		
 		// s term ---->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		
 		  Aqtemp[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np] = r_G01*r_qr + r_G11*r_qs + r_G12*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
@@ -363,7 +363,7 @@ kernel void ellipticAxHex3D_Ref3D2(const int Nelements,
 		  Aq[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np] += tmp;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		cubeThreads {
 		  dfloat G02, G12, G22;
 		  const int base = elementList[e]*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
@@ -374,7 +374,7 @@ kernel void ellipticAxHex3D_Ref3D2(const int Nelements,
 		  Aqtemp[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np] = r_G02*r_qr + r_G12*r_qs + r_G22*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
@@ -388,32 +388,32 @@ kernel void ellipticAxHex3D_Ref3D2(const int Nelements,
 }
 
 //register variable instead of writing directly to Aq
-kernel void ellipticAxHex3D_Ref3D3(const int Nelements,
-                                   const int * restrict elementList,
-                                   const dfloat * restrict ggeo,
-                                   const dfloat * restrict D,
+@kernel void ellipticAxHex3D_Ref3D3(const int Nelements,
+                                   @restrict const  int *  elementList,
+                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  dfloat *  D,
                                    const dfloat lambda,
-                                   const dfloat * restrict q,
-                                   dfloat * restrict Aq,
-                                   dfloat * restrict Aqtemp){
+                                   @restrict const  dfloat *  q,
+                                   @restrict dfloat *  Aq,
+                                   @restrict dfloat *  Aqtemp){
                                    
-	for(int e=0; e<Nelements; ++e; outer0) {
+	for(int e=0; e<Nelements; ++e; @outer(0)) {
 	
-		//	shared dfloat q[p_Nq][p_Nq][p_Nq];
-		shared dfloat s_D[p_Nq][p_Nq];
-		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
-		exclusive dfloat r_qr, r_qs, r_qt, r_Aq;
+		//	@shared dfloat q[p_Nq][p_Nq][p_Nq];
+		@shared dfloat s_D[p_Nq][p_Nq];
+		@exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
+		@exclusive dfloat r_qr, r_qs, r_qt, r_Aq;
 		
 		cubeThreads {
 		  //int base = i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np;
 		  
 		  
 		  
-		  if(k==0) // fetch D to shared
+		  if(k==0) // fetch D to @shared
 		  s_D[j][i] = D[j*p_Nq+i];
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		
@@ -449,7 +449,7 @@ kernel void ellipticAxHex3D_Ref3D3(const int Nelements,
 		}
 		
 		// r term ----->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		
@@ -459,7 +459,7 @@ kernel void ellipticAxHex3D_Ref3D3(const int Nelements,
 		  // printf("q[%d][%d][%d] = %15.15f\n", k, j, i,q[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np]);
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
@@ -470,14 +470,14 @@ kernel void ellipticAxHex3D_Ref3D3(const int Nelements,
 		}
 		
 		// s term ---->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		
 		  Aqtemp[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np] = r_G01*r_qr + r_G11*r_qs + r_G12*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
@@ -487,7 +487,7 @@ kernel void ellipticAxHex3D_Ref3D3(const int Nelements,
 		  r_Aq += tmp;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		cubeThreads {
 		  dfloat G02, G12, G22;
 		  const int base = elementList[e]*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
@@ -498,7 +498,7 @@ kernel void ellipticAxHex3D_Ref3D3(const int Nelements,
 		  Aqtemp[i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np]  = r_G02*r_qr + r_G12*r_qs + r_G22*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
@@ -515,35 +515,35 @@ kernel void ellipticAxHex3D_Ref3D3(const int Nelements,
 }
 
 
-//q in shared
-kernel void ellipticAxHex3D_Ref3D4(const int Nelements,
-                                   const int * restrict elementList,
-                                   const dfloat * restrict ggeo,
-                                   const dfloat * restrict D,
+//q in @shared
+@kernel void ellipticAxHex3D_Ref3D4(const int Nelements,
+                                   @restrict const  int *  elementList,
+                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  dfloat *  D,
                                    const dfloat lambda,
-                                   const dfloat * restrict q,
-                                   dfloat * restrict Aq,
-                                   dfloat * restrict Aqtemp){
+                                   @restrict const  dfloat *  q,
+                                   @restrict dfloat *  Aq,
+                                   @restrict dfloat *  Aqtemp){
                                    
-	for(int e=0; e<Nelements; ++e; outer0) {
+	for(int e=0; e<Nelements; ++e; @outer(0)) {
 	
-		shared dfloat s_q[p_Nq][p_Nq][p_Nq];
-		shared dfloat s_D[p_Nq][p_Nq];
+		@shared dfloat s_q[p_Nq][p_Nq][p_Nq];
+		@shared dfloat s_D[p_Nq][p_Nq];
 		
-		exclusive dfloat r_qr, r_qs, r_qt, r_Aq;
-		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
+		@exclusive dfloat r_qr, r_qs, r_qt, r_Aq;
+		@exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 		
-		// prefetch q(:,:,:,e) to shared
+		// prefetch q(:,:,:,e) to @shared
 		cubeThreads {
 		  const int base = i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np;
 		  
 		  s_q[k][j][i] = q[base];
 		  
-		  if(k==0) // fetch D to shared
+		  if(k==0) // fetch D to @shared
 		  s_D[j][i] = D[j*p_Nq+i];
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		
@@ -561,7 +561,7 @@ kernel void ellipticAxHex3D_Ref3D4(const int Nelements,
 		  r_G22 = ggeo[base+p_G22ID*p_Np];
 		  
 		  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
-		  occaUnroll(p_Nq)
+		  #pragma unroll p_Nq
 		  for(int n=0; n<p_Nq; ++n) {
 		  qr += s_D[i][n]*s_q[k][j][n];
 			  qs += s_D[j][n]*s_q[k][n][i];
@@ -575,17 +575,17 @@ kernel void ellipticAxHex3D_Ref3D4(const int Nelements,
 		}
 		
 		// r term ----->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  s_q[k][j][i] = r_G00*r_qr + r_G01*r_qs + r_G02*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  occaUnroll(p_Nq)
+		  #pragma unroll p_Nq
 		  for(int n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][i]*s_q[k][j][n];
 		  
@@ -594,17 +594,17 @@ kernel void ellipticAxHex3D_Ref3D4(const int Nelements,
 		}
 		
 		// s term ---->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  s_q[k][j][i] = r_G01*r_qr + r_G11*r_qs + r_G12*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  occaUnroll(p_Nq)
+		  #pragma unroll p_Nq
 		  for(int n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][j]*s_q[k][n][i];
 		  
@@ -614,17 +614,17 @@ kernel void ellipticAxHex3D_Ref3D4(const int Nelements,
 		}
 		
 		// t term ---->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  s_q[k][j][i] = r_G02*r_qr + r_G12*r_qs + r_G22*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  occaUnroll(p_Nq)
+		  #pragma unroll p_Nq
 		  for(int n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][k]*s_q[n][j][i];
 		  
@@ -635,39 +635,39 @@ kernel void ellipticAxHex3D_Ref3D4(const int Nelements,
 		}
 	}
 }
-//Ref5: version with multiple shared arrays
+//Ref5: version with multiple @shared arrays
 
-kernel void ellipticAxHex3D_Ref3D5(const int Nelements,
-                                   const int * restrict elementList,
-                                   const dfloat * restrict ggeo,
-                                   const dfloat * restrict D,
+@kernel void ellipticAxHex3D_Ref3D5(const int Nelements,
+                                   @restrict const  int *  elementList,
+                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  dfloat *  D,
                                    const dfloat lambda,
-                                   const dfloat * restrict q,
-                                   dfloat * restrict Aq,
-                                   dfloat * restrict Aqtemp){
+                                   @restrict const  dfloat *  q,
+                                   @restrict dfloat *  Aq,
+                                   @restrict dfloat *  Aqtemp){
                                    
-	for(int e=0; e<Nelements; ++e; outer0) {
+	for(int e=0; e<Nelements; ++e; @outer(0)) {
 	
-		shared dfloat s_q[p_Nq][p_Nq][p_Nq];
-		shared dfloat s_q1[p_Nq][p_Nq][p_Nq];
-		shared dfloat s_q2[p_Nq][p_Nq][p_Nq];
-		shared dfloat s_q3[p_Nq][p_Nq][p_Nq];
-		shared dfloat s_D[p_Nq][p_Nq];
+		@shared dfloat s_q[p_Nq][p_Nq][p_Nq];
+		@shared dfloat s_q1[p_Nq][p_Nq][p_Nq];
+		@shared dfloat s_q2[p_Nq][p_Nq][p_Nq];
+		@shared dfloat s_q3[p_Nq][p_Nq][p_Nq];
+		@shared dfloat s_D[p_Nq][p_Nq];
 		
-		exclusive dfloat r_qr, r_qs, r_qt, r_Aq;
-		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
+		@exclusive dfloat r_qr, r_qs, r_qt, r_Aq;
+		@exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 		
-		// prefetch q(:,:,:,e) to shared
+		// prefetch q(:,:,:,e) to @shared
 		cubeThreads {
 		  const int base = i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np;
 		  
 		  s_q[k][j][i] = q[base];
 		  
-		  if(k==0) // fetch D to shared
+		  if(k==0) // fetch D to @shared
 		  s_D[j][i] = D[j*p_Nq+i];
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		
@@ -685,7 +685,7 @@ kernel void ellipticAxHex3D_Ref3D5(const int Nelements,
 		  r_G22 = ggeo[base+p_G22ID*p_Np];
 		  
 		  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
-		  occaUnroll(p_Nq)
+		  #pragma unroll p_Nq
 		  for(int n=0; n<p_Nq; ++n) {
 		  qr += s_D[i][n]*s_q[k][j][n];
 			  qs += s_D[j][n]*s_q[k][n][i];
@@ -703,12 +703,12 @@ kernel void ellipticAxHex3D_Ref3D5(const int Nelements,
 		}
 		
 		// r term ----->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  occaUnroll(p_Nq)
+		  #pragma unroll p_Nq
 		  for(int n=0; n<p_Nq; ++n){
 		  tmp += s_D[n][i]*s_q1[k][j][n];
 			  tmp += s_D[n][j]*s_q2[k][n][i];
@@ -722,33 +722,33 @@ kernel void ellipticAxHex3D_Ref3D5(const int Nelements,
 }
 
 
-kernel void ellipticAxHex3D_e0a(const int Nelements,
-                                const int * restrict elementList,
-                                const dfloat * restrict ggeo,
-                                const dfloat * restrict D,
+@kernel void ellipticAxHex3D_e0a(const int Nelements,
+                                @restrict const  int *  elementList,
+                                @restrict const  dfloat *  ggeo,
+                                @restrict const  dfloat *  D,
                                 const dfloat lambda,
-                                const dfloat * restrict q,
-                                dfloat * restrict Aq){
+                                @restrict const  dfloat *  q,
+                                @restrict dfloat *  Aq){
                                 
-	for(int e=0; e<Nelements; ++e; outer0) {
+	for(int e=0; e<Nelements; ++e; @outer(0)) {
 	
-		shared dfloat s_q[p_Nq][p_Nq][p_Nq];
-		shared dfloat s_D[p_Nq][p_Nq];
+		@shared dfloat s_q[p_Nq][p_Nq][p_Nq];
+		@shared dfloat s_D[p_Nq][p_Nq];
 		
-		exclusive dfloat r_qr, r_qs, r_qt, r_Aq;
-		exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
+		@exclusive dfloat r_qr, r_qs, r_qt, r_Aq;
+		@exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 		
-		// prefetch q(:,:,:,e) to shared
+		// prefetch q(:,:,:,e) to @shared
 		cubeThreads {
 		  const int base = i + j*p_Nq + k*p_Nq*p_Nq + elementList[e]*p_Np;
 		  
 		  s_q[k][j][i] = q[base];
 		  
-		  if(k==0) // fetch D to shared
+		  if(k==0) // fetch D to @shared
 		  s_D[j][i] = D[j*p_Nq+i];
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		
@@ -766,7 +766,7 @@ kernel void ellipticAxHex3D_e0a(const int Nelements,
 		  r_G22 = ggeo[base+p_G22ID*p_Np];
 		  
 		  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
-		  occaUnroll(p_Nq)
+		  #pragma unroll p_Nq
 		  for(int n=0; n<p_Nq; ++n) {
 		  qr += s_D[i][n]*s_q[k][j][n];
 			  qs += s_D[j][n]*s_q[k][n][i];
@@ -780,17 +780,17 @@ kernel void ellipticAxHex3D_e0a(const int Nelements,
 		}
 		
 		// r term ----->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  s_q[k][j][i] = r_G00*r_qr + r_G01*r_qs + r_G02*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  occaUnroll(p_Nq)
+		  #pragma unroll p_Nq
 		  for(int n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][i]*s_q[k][j][n];
 		  
@@ -799,17 +799,17 @@ kernel void ellipticAxHex3D_e0a(const int Nelements,
 		}
 		
 		// s term ---->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  s_q[k][j][i] = r_G01*r_qr + r_G11*r_qs + r_G12*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  occaUnroll(p_Nq)
+		  #pragma unroll p_Nq
 		  for(int n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][j]*s_q[k][n][i];
 		  
@@ -819,17 +819,17 @@ kernel void ellipticAxHex3D_e0a(const int Nelements,
 		}
 		
 		// t term ---->
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  s_q[k][j][i] = r_G02*r_qr + r_G12*r_qs + r_G22*r_qt;
 		}
 		
-		barrier(localMemFence);
+		@barrier("local");
 		
 		cubeThreads {
 		  dfloat tmp = 0.f;
-		  occaUnroll(p_Nq)
+		  #pragma unroll p_Nq
 		  for(int n=0; n<p_Nq; ++n)
 		  tmp += s_D[n][k]*s_q[n][j][i];
 		  

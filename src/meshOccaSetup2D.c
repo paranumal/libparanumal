@@ -6,7 +6,7 @@
 
 #include "mesh2D.h"
 
-void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::kernelInfo &kernelInfo){
+void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::properties &kernelInfo){
 
   // conigure device
   occaDeviceConfig(mesh, newOptions);
@@ -505,74 +505,74 @@ void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::kernelInfo &kern
   mesh->device.setStream(mesh->stream0);
   //-------------------------------------
 
-  kernelInfo.addDefine("p_Nfields", mesh->Nfields);
-  kernelInfo.addDefine("p_N", mesh->N);
-  kernelInfo.addDefine("p_Nq", mesh->N+1);
-  kernelInfo.addDefine("p_Np", mesh->Np);
-  kernelInfo.addDefine("p_Nfp", mesh->Nfp);
-  kernelInfo.addDefine("p_Nfaces", mesh->Nfaces);
-  kernelInfo.addDefine("p_NfacesNfp", mesh->Nfp*mesh->Nfaces);
-  kernelInfo.addDefine("p_Nvgeo", mesh->Nvgeo);
-  kernelInfo.addDefine("p_Nsgeo", mesh->Nsgeo);
-  kernelInfo.addDefine("p_Nggeo", mesh->Nggeo);
+  kernelInfo["defines/" "p_Nfields"]= mesh->Nfields;
+  kernelInfo["defines/" "p_N"]= mesh->N;
+  kernelInfo["defines/" "p_Nq"]= mesh->N+1;
+  kernelInfo["defines/" "p_Np"]= mesh->Np;
+  kernelInfo["defines/" "p_Nfp"]= mesh->Nfp;
+  kernelInfo["defines/" "p_Nfaces"]= mesh->Nfaces;
+  kernelInfo["defines/" "p_NfacesNfp"]= mesh->Nfp*mesh->Nfaces;
+  kernelInfo["defines/" "p_Nvgeo"]= mesh->Nvgeo;
+  kernelInfo["defines/" "p_Nsgeo"]= mesh->Nsgeo;
+  kernelInfo["defines/" "p_Nggeo"]= mesh->Nggeo;
 
-  kernelInfo.addDefine("p_NXID", NXID);
-  kernelInfo.addDefine("p_NYID", NYID);
-  kernelInfo.addDefine("p_SJID", SJID);
-  kernelInfo.addDefine("p_IJID", IJID);
-  kernelInfo.addDefine("p_IHID", IHID);
-  kernelInfo.addDefine("p_WIJID", WIJID);
-  kernelInfo.addDefine("p_WSJID", WSJID);
+  kernelInfo["defines/" "p_NXID"]= NXID;
+  kernelInfo["defines/" "p_NYID"]= NYID;
+  kernelInfo["defines/" "p_SJID"]= SJID;
+  kernelInfo["defines/" "p_IJID"]= IJID;
+  kernelInfo["defines/" "p_IHID"]= IHID;
+  kernelInfo["defines/" "p_WIJID"]= WIJID;
+  kernelInfo["defines/" "p_WSJID"]= WSJID;
 
-  kernelInfo.addDefine("p_max_EL_nnz", mesh->max_EL_nnz); // for Bernstein Bezier lift
+  kernelInfo["defines/" "p_max_EL_nnz"]= mesh->max_EL_nnz; // for Bernstein Bezier lift
 
-  kernelInfo.addDefine("p_cubNq", mesh->cubNq);
-  kernelInfo.addDefine("p_cubNp", mesh->cubNp);
-  kernelInfo.addDefine("p_intNfp", mesh->intNfp);
-  kernelInfo.addDefine("p_intNfpNfaces", mesh->intNfp*mesh->Nfaces);
+  kernelInfo["defines/" "p_cubNq"]= mesh->cubNq;
+  kernelInfo["defines/" "p_cubNp"]= mesh->cubNp;
+  kernelInfo["defines/" "p_intNfp"]= mesh->intNfp;
+  kernelInfo["defines/" "p_intNfpNfaces"]= mesh->intNfp*mesh->Nfaces;
 
   if(sizeof(dfloat)==4){
-    kernelInfo.addDefine("dfloat","float");
-    kernelInfo.addDefine("dfloat2","float2");
-    kernelInfo.addDefine("dfloat4","float4");
-    kernelInfo.addDefine("dfloat8","float8");
+    kernelInfo["defines/" "dfloat"]="float";
+    kernelInfo["defines/" "dfloat2"]="float2";
+    kernelInfo["defines/" "dfloat4"]="float4";
+    kernelInfo["defines/" "dfloat8"]="float8";
   }
   if(sizeof(dfloat)==8){
-    kernelInfo.addDefine("dfloat","double");
-    kernelInfo.addDefine("dfloat2","double2");
-    kernelInfo.addDefine("dfloat4","double4");
-    kernelInfo.addDefine("dfloat8","double8");
+    kernelInfo["defines/" "dfloat"]="double";
+    kernelInfo["defines/" "dfloat2"]="double2";
+    kernelInfo["defines/" "dfloat4"]="double4";
+    kernelInfo["defines/" "dfloat8"]="double8";
   }
 
   if(sizeof(dlong)==4){
-    kernelInfo.addDefine("dlong","int");
+    kernelInfo["defines/" "dlong"]="int";
   }
   if(sizeof(dlong)==8){
-    kernelInfo.addDefine("dlong","long long int");
+    kernelInfo["defines/" "dlong"]="long long int";
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    kernelInfo.addCompilerFlag("--ftz=true");
-    kernelInfo.addCompilerFlag("--prec-div=false");
-    kernelInfo.addCompilerFlag("--prec-sqrt=false");
-    kernelInfo.addCompilerFlag("--use_fast_math");
-    kernelInfo.addCompilerFlag("--fmad=true"); // compiler option for cuda
+    kernelInfo["compiler_flags"] += "--ftz=true";
+    kernelInfo["compiler_flags"] += "--prec-div=false";
+    kernelInfo["compiler_flags"] += "--prec-sqrt=false";
+    kernelInfo["compiler_flags"] += "--use_fast_math";
+    kernelInfo["compiler_flags"] += "--fmad=true"; // compiler option for cuda
   }
 
-  kernelInfo.addDefine("p_G00ID", G00ID);
-  kernelInfo.addDefine("p_G01ID", G01ID);
-  kernelInfo.addDefine("p_G11ID", G11ID);
-  kernelInfo.addDefine("p_GWJID", GWJID);
+  kernelInfo["defines/" "p_G00ID"]= G00ID;
+  kernelInfo["defines/" "p_G01ID"]= G01ID;
+  kernelInfo["defines/" "p_G11ID"]= G11ID;
+  kernelInfo["defines/" "p_GWJID"]= GWJID;
 
 
-  kernelInfo.addDefine("p_RXID", RXID);
-  kernelInfo.addDefine("p_SXID", SXID);
+  kernelInfo["defines/" "p_RXID"]= RXID;
+  kernelInfo["defines/" "p_SXID"]= SXID;
 
-  kernelInfo.addDefine("p_RYID", RYID);
-  kernelInfo.addDefine("p_SYID", SYID);
+  kernelInfo["defines/" "p_RYID"]= RYID;
+  kernelInfo["defines/" "p_SYID"]= SYID;
 
-  kernelInfo.addDefine("p_JID", JID);
-  kernelInfo.addDefine("p_JWID", JWID);
-  kernelInfo.addDefine("p_IJWID", IJWID);
+  kernelInfo["defines/" "p_JID"]= JID;
+  kernelInfo["defines/" "p_JWID"]= JWID;
+  kernelInfo["defines/" "p_IJWID"]= IJWID;
 
 }

@@ -28,50 +28,50 @@
   s_ndq[j][i] -= WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);                  \
 }
 
-kernel void insDiffusionHex3D(const dlong Nelements,
-                              const dlong  * restrict elementList,
-                              const dfloat * restrict ggeo,
-                              const dfloat * restrict vgeo,
-                              const dfloat * restrict sgeo,
-                              const dfloat * restrict D,
-                              const dfloat * restrict S,
-                              const dlong  * restrict vmapM,
-                              const dfloat * restrict sMT,
+@kernel void insDiffusionHex3D(const dlong Nelements,
+                              @restrict const  dlong  *  elementList,
+                              @restrict const  dfloat *  ggeo,
+                              @restrict const  dfloat *  vgeo,
+                              @restrict const  dfloat *  sgeo,
+                              @restrict const  dfloat *  D,
+                              @restrict const  dfloat *  S,
+                              @restrict const  dlong  *  vmapM,
+                              @restrict const  dfloat *  sMT,
                               const dfloat nu,
                               const dfloat time,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const dfloat * restrict z,
-                              const int    * restrict mapB,
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
+                              @restrict const  int    *  mapB,
                               const dlong fieldOffset,
-                              const dfloat  * restrict U,
-                                    dfloat  * restrict LU){
+                              @restrict const  dfloat  *  U,
+                                    @restrict dfloat  *  LU){
 
-  for(dlong e=0; e<Nelements; ++e; outer0){
+  for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    shared dfloat s_D[p_Nq][p_Nq];
-    shared dfloat s_q[p_Nq][p_Nq];
-    shared dfloat s_ndq[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_q[p_Nq][p_Nq];
+    @shared dfloat s_ndq[p_Nq][p_Nq];
 
-    shared dfloat s_Gqr[p_Nq][p_Nq];
-    shared dfloat s_Gqs[p_Nq][p_Nq];
+    @shared dfloat s_Gqr[p_Nq][p_Nq];
+    @shared dfloat s_Gqs[p_Nq][p_Nq];
 
-    exclusive dfloat r_qt, r_Gqt, r_Luk;
-    exclusive dfloat r_q[p_Nq]; // register array to hold u(i,j,0:N) private to thread
-    exclusive dfloat r_Lq[p_Nq];// array for results Au(i,j,0:N)
+    @exclusive dfloat r_qt, r_Gqt, r_Luk;
+    @exclusive dfloat r_q[p_Nq]; // register array to hold u(i,j,0:N) private to thread
+    @exclusive dfloat r_Lq[p_Nq];// array for results Au(i,j,0:N)
 
-    exclusive dlong element;
+    @exclusive dlong element;
 
     dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22;
 
-    occaUnroll(p_NVfields)
+    #pragma unroll p_NVfields
     for (int fld=0; fld<p_NVfields; fld++) {
 
-      barrier(localMemFence);
+      @barrier("local");
       
       // array of threads
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           //load D into local memory
           // s_D[i][j] = d \phi_i at node j
           s_D[j][i] = D[p_Nq*j+i]; // D is column major
@@ -86,53 +86,53 @@ kernel void insDiffusionHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
       // face 0
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           //face 0
           r_Lq[0] += s_ndq[j][i];
         }
       }
 
-      barrier(localMemFence);    
+      @barrier("local");    
 
       // face 5
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i + j*p_Nq;
           surfaceTerms(sk5,5,i,j);
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
       // face 5
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           //face 5
           r_Lq[p_Nq-1] += s_ndq[j][i];
         }
       }
 
-      barrier(localMemFence);    
+      @barrier("local");    
 
       // face 1
-      for(int k=0;k<p_Nq;++k;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i + k*p_Nq;
           surfaceTerms(sk1,1,i,k);
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
       // face 1
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           if (j==0) {//face 1
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
             for (int k=0;k<p_Nq;k++) {
               r_Lq[k] += s_ndq[k][i];
             }
@@ -140,23 +140,23 @@ kernel void insDiffusionHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);    
+      @barrier("local");    
 
       // face 3
-      for(int k=0;k<p_Nq;++k;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
           surfaceTerms(sk3,3,i,k);
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
       // face 3
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           if (j==p_Nq-1) {//face 3
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
             for (int k=0;k<p_Nq;k++) {
               r_Lq[k] += s_ndq[k][i];
             }
@@ -164,23 +164,23 @@ kernel void insDiffusionHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);    
+      @barrier("local");    
 
       // face 2
-      for(int k=0;k<p_Nq;++k;inner1){
-        for(int j=0;j<p_Nq;++j;inner0){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int j=0;j<p_Nq;++j;@inner(0)){
           const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + j + k*p_Nq;
           surfaceTerms(sk2,2,j,k);
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
       // face 2 
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           if (i==p_Nq-1) {//face 2
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
             for (int k=0;k<p_Nq;k++) {
               r_Lq[k] += s_ndq[k][j];
             }
@@ -188,23 +188,23 @@ kernel void insDiffusionHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence); 
+      @barrier("local"); 
 
       // face 4
-      for(int k=0;k<p_Nq;++k;inner1){
-        for(int j=0;j<p_Nq;++j;inner0){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int j=0;j<p_Nq;++j;@inner(0)){
           const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
           surfaceTerms(sk4,4,j,k);
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
       // face 4
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           if (i==0) {//face 4
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
             for (int k=0;k<p_Nq;k++) {
               r_Lq[k] += s_ndq[k][j];
             }
@@ -212,13 +212,13 @@ kernel void insDiffusionHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
       // Layer by layer
-      occaUnroll(p_Nq)
+      #pragma unroll p_Nq
         for(int k = 0;k < p_Nq; k++){
-          for(int j=0;j<p_Nq;++j;inner1){
-            for(int i=0;i<p_Nq;++i;inner0){
+          for(int j=0;j<p_Nq;++j;@inner(1)){
+            for(int i=0;i<p_Nq;++i;@inner(0)){
 
               // prefetch geometric factors
               const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
@@ -233,32 +233,32 @@ kernel void insDiffusionHex3D(const dlong Nelements,
             }
           }
 
-          barrier(localMemFence);
+          @barrier("local");
 
-          for(int j=0;j<p_Nq;++j;inner1){
-            for(int i=0;i<p_Nq;++i;inner0){
+          for(int j=0;j<p_Nq;++j;@inner(1)){
+            for(int i=0;i<p_Nq;++i;@inner(0)){
 
               // share u(:,:,k)
               s_q[j][i] = r_q[k];
 
               r_qt = 0;
 
-              occaUnroll(p_Nq)
+              #pragma unroll p_Nq
                 for(int m = 0; m < p_Nq; m++) {
                   r_qt += s_D[k][m]*r_q[m];
                 }
             }
           }
 
-          barrier(localMemFence);
+          @barrier("local");
 
-          for(int j=0;j<p_Nq;++j;inner1){
-            for(int i=0;i<p_Nq;++i;inner0){
+          for(int j=0;j<p_Nq;++j;@inner(1)){
+            for(int i=0;i<p_Nq;++i;@inner(0)){
 
               dfloat qr = 0.f;
               dfloat qs = 0.f;
 
-              occaUnroll(p_Nq)
+              #pragma unroll p_Nq
                 for(int m = 0; m < p_Nq; m++) {
                   qr += s_D[i][m]*s_q[j][m];
                   qs += s_D[j][m]*s_q[m][i];
@@ -273,12 +273,12 @@ kernel void insDiffusionHex3D(const dlong Nelements,
             }
           }
 
-          barrier(localMemFence);
+          @barrier("local");
 
-          for(int j=0;j<p_Nq;++j;inner1){
-            for(int i=0;i<p_Nq;++i;inner0){
+          for(int j=0;j<p_Nq;++j;@inner(1)){
+            for(int i=0;i<p_Nq;++i;@inner(0)){
 
-              occaUnroll(p_Nq)
+              #pragma unroll p_Nq
                 for(int m = 0; m < p_Nq; m++){
                   r_Luk   += s_D[m][j]*s_Gqs[m][i];
                   r_Lq[m] += s_D[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
@@ -292,9 +292,9 @@ kernel void insDiffusionHex3D(const dlong Nelements,
 
       // write out
 
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
-          occaUnroll(p_Nq)
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          #pragma unroll p_Nq
             for(int k = 0; k < p_Nq; k++){
               const dlong gid = element*p_Np*p_Nvgeo+ j*p_Nq +i;
               const dfloat invJW = vgeo[gid + p_IJWID*p_Np];

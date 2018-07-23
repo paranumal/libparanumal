@@ -1,21 +1,21 @@
 // Compute Gradient in weak Form
-kernel void insGradientVolumeHex3D(const dlong Nelements,
-                                    const dfloat * restrict vgeo,
-                                    const dfloat * restrict D,
+@kernel void insGradientVolumeHex3D(const dlong Nelements,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  D,
                                     const dlong offset,
-                                    const dfloat * restrict P,
-                                          dfloat * restrict Px,
-                                          dfloat * restrict Py,
-                                          dfloat * restrict Pz){
+                                    @restrict const  dfloat *  P,
+                                          @restrict dfloat *  Px,
+                                          @restrict dfloat *  Py,
+                                          @restrict dfloat *  Pz){
 
-  for(dlong e=0;e<Nelements;e++;outer0){  // for all elements
+  for(dlong e=0;e<Nelements;e++;@outer(0)){  // for all elements
 
-    shared dfloat s_P[p_Nq][p_Nq][p_Nq];
-    shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_P[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
 
-    for(int k=0;k<p_Nq;++k;inner2){ 
-      for(int j=0;j<p_Nq;++j;inner1){ 
-        for(int i=0;i<p_Nq;++i;inner0){    
+    for(int k=0;k<p_Nq;++k;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){    
           const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq+i;
 
           s_P[k][j][i]  = P[id];
@@ -26,12 +26,12 @@ kernel void insGradientVolumeHex3D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int k=0;k<p_Nq;++k;inner2){ 
-      for(int j=0;j<p_Nq;++j;inner1){ 
-        for(int i=0;i<p_Nq;++i;inner0){  
+    for(int k=0;k<p_Nq;++k;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){  
           const dlong gid = e*p_Np*p_Nvgeo +k*p_Nq*p_Nq +j*p_Nq +i;
           const dfloat drdx = vgeo[gid + p_RXID*p_Np];
           const dfloat drdy = vgeo[gid + p_RYID*p_Np];
@@ -46,7 +46,7 @@ kernel void insGradientVolumeHex3D(const dlong Nelements,
           // compute 'r' and 's' derivatives of (q_m) at node n
           dfloat dpdr  = 0.f, dpds  = 0.f, dpdt  = 0.f;
 
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
             for(int n=0;n<p_Nq;++n){
               const dfloat Dr = s_D[i][n];
               const dfloat Ds = s_D[j][n];
@@ -111,14 +111,14 @@ kernel void insGradientVolumeHex3D(const dlong Nelements,
   s_fluxPz[m][j][i]  = sc*(.5f*nz*(PP-PM));                             \
 }
 
-kernel void insGradientSurfaceHex3D(const dlong Nelements,
-                                     const dfloat * restrict sgeo,
-                                     const dlong  * restrict vmapM,
-                                     const dlong  * restrict vmapP,
-                                     const int    * restrict EToB,
-                                     const dfloat * restrict x,
-                                     const dfloat * restrict y,
-                                     const dfloat * restrict z,
+@kernel void insGradientSurfaceHex3D(const dlong Nelements,
+                                     @restrict const  dfloat *  sgeo,
+                                     @restrict const  dlong  *  vmapM,
+                                     @restrict const  dlong  *  vmapP,
+                                     @restrict const  int    *  EToB,
+                                     @restrict const  dfloat *  x,
+                                     @restrict const  dfloat *  y,
+                                     @restrict const  dfloat *  z,
                                      const dfloat time,
                                      const dfloat dt,
                                      const dfloat c0,
@@ -127,24 +127,24 @@ kernel void insGradientSurfaceHex3D(const dlong Nelements,
                                      const int index,
                                      const dlong offset,
                                      const int solverID,
-                                     const dfloat * restrict POld,
-                                     const dfloat * restrict P,
-                                           dfloat * restrict Px,
-                                           dfloat * restrict Py,
-                                           dfloat * restrict Pz){
+                                     @restrict const  dfloat *  POld,
+                                     @restrict const  dfloat *  P,
+                                           @restrict dfloat *  Px,
+                                           @restrict dfloat *  Py,
+                                           @restrict dfloat *  Pz){
 
   // for all elements
-  for(dlong e=0;e<Nelements;e++;outer0){
-    // shared storage for flux terms
-    shared dfloat s_fluxPx[2][p_Nq][p_Nq];
-    shared dfloat s_fluxPy[2][p_Nq][p_Nq];
-    shared dfloat s_fluxPz[2][p_Nq][p_Nq];
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_fluxPx[2][p_Nq][p_Nq];
+    @shared dfloat s_fluxPy[2][p_Nq][p_Nq];
+    @shared dfloat s_fluxPz[2][p_Nq][p_Nq];
 
-    exclusive dfloat r_Px[p_Nq], r_Py[p_Nq], r_Pz[p_Nq];
+    @exclusive dfloat r_Px[p_Nq], r_Py[p_Nq], r_Pz[p_Nq];
 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-        occaUnroll(p_Nq)
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           r_Px[k] = 0.;
           r_Py[k] = 0.;
@@ -153,12 +153,12 @@ kernel void insGradientSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // for all face nodes of all elements
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i + j*p_Nq;
         const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i + j*p_Nq;
 
@@ -167,11 +167,11 @@ kernel void insGradientSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 0
         r_Px[0] += s_fluxPx[0][j][i];
         r_Py[0] += s_fluxPy[0][j][i];
@@ -184,11 +184,11 @@ kernel void insGradientSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 1 & 3
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i + k*p_Nq;
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
 
@@ -197,13 +197,13 @@ kernel void insGradientSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1 & 3
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==0) {//face 1
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             r_Px[n] += s_fluxPx[0][n][i];
             r_Py[n] += s_fluxPy[0][n][i];
@@ -211,7 +211,7 @@ kernel void insGradientSurfaceHex3D(const dlong Nelements,
           }
         }
         if (j==p_Nq-1) {//face 3
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             r_Px[n] += s_fluxPx[1][n][i];
             r_Py[n] += s_fluxPy[1][n][i];
@@ -221,11 +221,11 @@ kernel void insGradientSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 2 & 4
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
         const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + j + k*p_Nq;
         const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
 
@@ -234,13 +234,13 @@ kernel void insGradientSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 2 & 4
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==p_Nq-1) {//face 2
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             r_Px[n] += s_fluxPx[0][n][j];
             r_Py[n] += s_fluxPy[0][n][j];
@@ -248,7 +248,7 @@ kernel void insGradientSurfaceHex3D(const dlong Nelements,
           }
         }
         if (i==0) {//face 4
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             r_Px[n] += s_fluxPx[1][n][j];
             r_Py[n] += s_fluxPy[1][n][j];
@@ -258,11 +258,11 @@ kernel void insGradientSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);   
+    @barrier("local");   
 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-        occaUnroll(p_Nq)
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           dlong id;
           if (solverID==1) { //no offset

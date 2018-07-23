@@ -1,21 +1,21 @@
 // Compute Gradient in Strong Form
-kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
-                                      const dfloat * restrict vgeo,
-                                      const dfloat * restrict D,
+@kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
+                                      @restrict const  dfloat *  vgeo,
+                                      @restrict const  dfloat *  D,
                                       const dlong offset,
-                                      const dfloat * restrict U,
-                                      const dfloat * restrict V,
-                                            dfloat * restrict divU){
+                                      @restrict const  dfloat *  U,
+                                      @restrict const  dfloat *  V,
+                                            @restrict dfloat *  divU){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_U[p_NblockV][p_Nq][p_Nq];
-    shared dfloat s_V[p_NblockV][p_Nq][p_Nq];
-    shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_U[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_V[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
 
-    for(int es=0;es<p_NblockV;++es;inner2){   
-      for(int j=0;j<p_Nq;++j;inner1){ 
-        for(int i=0;i<p_Nq;++i;inner0){    
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){    
           const dlong e = eo+es; // element in block
           if(e<Nelements){ 
             const dlong id = (e+offset)*p_Np + j*p_Nq+i;
@@ -30,12 +30,12 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner2){ 
-      for(int j=0;j<p_Nq;++j;inner1){ 
-        for(int i=0;i<p_Nq;++i;inner0){  
+    for(int es=0;es<p_NblockV;++es;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){  
           const dlong e = eo+es; 
           if(e<Nelements){ 
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
@@ -47,7 +47,7 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
             dfloat dUdr  = 0.f, dUds  = 0.f;
             dfloat dVdr  = 0.f, dVds  = 0.f;
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
               for(int n=0;n<p_Nq;++n){
                 const dfloat Dr = s_D[i][n];
                 const dfloat Ds = s_D[j][n];
@@ -96,38 +96,38 @@ kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
   s_fluxU[es][j][i] = 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM));                \
   }
 
-kernel void insDivergenceSurfaceQuad2D(const dlong Nelements,
-                                       const dfloat * restrict sgeo,
-                                       const dlong  * restrict vmapM,
-                                       const dlong  * restrict vmapP,
-                                       const int    * restrict EToB,
+@kernel void insDivergenceSurfaceQuad2D(const dlong Nelements,
+                                       @restrict const  dfloat *  sgeo,
+                                       @restrict const  dlong  *  vmapM,
+                                       @restrict const  dlong  *  vmapP,
+                                       @restrict const  int    *  EToB,
                                        const dfloat time,
-                                       const dfloat * restrict x,
-                                       const dfloat * restrict y,
+                                       @restrict const  dfloat *  x,
+                                       @restrict const  dfloat *  y,
                                        const dlong offset,
-                                       const dfloat * restrict U,
-                                       const dfloat * restrict V,
-                                             dfloat * restrict divU){
+                                       @restrict const  dfloat *  U,
+                                       @restrict const  dfloat *  V,
+                                             @restrict dfloat *  divU){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_fluxU[p_NblockS][p_Nq][p_Nq];
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_fluxU[p_NblockS][p_Nq][p_Nq];
 
     for(int j=0;j<p_Nq;++j){
-      for(int es=0;es<p_NblockS;++es;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int es=0;es<p_NblockS;++es;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           s_fluxU[es][j][i] = 0.;
         }
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // for all face nodes of all elements
     // face 0 & 2
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
@@ -139,11 +139,11 @@ kernel void insDivergenceSurfaceQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1 & 3
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
@@ -155,12 +155,12 @@ kernel void insDivergenceSurfaceQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // for each node in the element
     for(int j=0;j<p_Nq;++j){
-      for(int es=0;es<p_NblockS;++es;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int es=0;es<p_NblockS;++es;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo + es;
           if(e<Nelements){
             const dlong id = e*p_Np + j*p_Nq + i;

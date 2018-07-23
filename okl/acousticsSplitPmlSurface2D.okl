@@ -1,11 +1,11 @@
 
-#define p_isq12 (1.f/occaSqrt(12.f))
-#define p_isq6 (1.f/occaSqrt(6.f))
+#define p_isq12 (1.f/sqrt(12.f))
+#define p_isq6 (1.f/sqrt(6.f))
 
 void upwind1D(const dfloat nx, const dfloat ny,
               const dfloat q1M, const dfloat q2M, const dfloat q3M,
               const dfloat q1B, const dfloat q2B, const dfloat q3B,
-              dfloat * restrict q1P, dfloat * restrict q2P, dfloat * restrict q3P){
+              @restrict dfloat * @restrict q1P, dfloat * @restrict q2P, dfloat *  q3P){
   
   *q1P = 0.5f*(q1B + q1M) - 0.5f*(nx*(q2B-q2M) + ny*(q3B-q3M));
   *q2P = 0.5f*(q2B + q2M) - 0.5f*(nx*(q1B-q1M));
@@ -16,7 +16,7 @@ void upwind1D(const dfloat nx, const dfloat ny,
 void boundaryConditions2D(const int bc,
 			  const dfloat  t, const dfloat  x, const dfloat  y, const dfloat  nx, const dfloat  ny,
 			  const dfloat  q1M, const dfloat  q2M, const dfloat  q3M,
-			  dfloat * restrict q1B, dfloat * restrict q2B, dfloat * restrict q3B){
+			  @restrict dfloat * @restrict q1B, dfloat * @restrict q2B, dfloat *  q3B){
   if(bc==1){
     *q1B = q1M; 
     *q2B = -q2M;
@@ -34,34 +34,34 @@ void boundaryConditions2D(const int bc,
 
 
 // batch process elements
-kernel void acousticsSplitPmlSurface2D(const int Nelements,
-				       const dfloat * restrict sgeo,
-				       const dfloat * restrict LIFTT,
-				       const int   * restrict vmapM,
-				       const int   * restrict vmapP,
-				       const int   * restrict EToB,
+@kernel void acousticsSplitPmlSurface2D(const int Nelements,
+				       @restrict const  dfloat *  sgeo,
+				       @restrict const  dfloat *  LIFTT,
+				       @restrict const  int   *  vmapM,
+				       @restrict const  int   *  vmapP,
+				       @restrict const  int   *  EToB,
 				       const dfloat time,
-				       const dfloat * restrict x,
-				       const dfloat * restrict y,
-				       const dfloat4 * restrict q,
-				       dfloat       * restrict rhspmlqx,
-				       dfloat       * restrict rhspmlqy){
+				       @restrict const  dfloat *  x,
+				       @restrict const  dfloat *  y,
+				       @restrict const  dfloat4 *  q,
+				       @restrict dfloat       *  rhspmlqx,
+				       @restrict dfloat       *  rhspmlqy){
   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     
-    // shared storage for flux terms
-    shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
-    shared dfloat s_nxdq3[p_NblockS][p_maxNodes];
+    // @shared storage for flux terms
+    @shared dfloat s_nxdq1[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq2[p_NblockS][p_maxNodes];
+    @shared dfloat s_nxdq3[p_NblockS][p_maxNodes];
 
-    shared dfloat s_nydq1[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq2[p_NblockS][p_maxNodes];
-    shared dfloat s_nydq3[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq1[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq2[p_NblockS][p_maxNodes];
+    @shared dfloat s_nydq3[p_NblockS][p_maxNodes];
     
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 	int e = eo + es;
 	if(e<Nelements){
 	  if(n<p_NfacesNfp){
@@ -115,12 +115,12 @@ kernel void acousticsSplitPmlSurface2D(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
 	const int e = eo + es;
 	if(e<Nelements){
 	  if(n<p_Np){
@@ -131,7 +131,7 @@ kernel void acousticsSplitPmlSurface2D(const int Nelements,
 	    dfloat Lnydq1 = 0.f, Lnydq2 = 0.f, Lnydq3 = 0.f;
 	    
 	    // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-	    occaUnroll(p_Nfaces)
+	    #pragma unroll p_Nfaces
 	    for(int m=0;m<p_NfacesNfp;++m){
 	      const dfloat L = LIFTT[n+m*p_Np];
 	      Lnxdq1 += L*s_nxdq1[es][m];

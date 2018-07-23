@@ -1,11 +1,11 @@
 
-// used a macro since I am not sure what happens with exclusive variables in OpenMP mode
+// used a macro since I am not sure what happens with @exclusive variables in OpenMP mode
 #define twoPhaseReduction(r_ip, s_ip, s_res, g_ip)			\
 									\
-  barrier(localMemFence);						\
+  @barrier("local");						\
 									\
-  for(int ty=0;ty<p_RDIMY;++ty;inner1){					\
-    for(int tx=0;tx<p_RDIMX;++tx;inner0){				\
+  for(int ty=0;ty<p_RDIMY;++ty;@inner(1)){					\
+    for(int tx=0;tx<p_RDIMX;++tx;@inner(0)){				\
       s_ip[ty][tx] = r_ip;						\
       if(tx>=  1*p_RDIMX/2) s_ip[ty][tx] += s_ip[ty][tx-p_RDIMX/2];	\
       if(tx>=  3*p_RDIMX/4) s_ip[ty][tx] += s_ip[ty][tx-p_RDIMX/4];	\
@@ -16,10 +16,10 @@
     }									\
   }									\
 									\
-  barrier(localMemFence);						\
+  @barrier("local");						\
 									\
-  for(int ty=0;ty<p_RDIMY;++ty;inner1){					\
-    for(int tx=0;tx<p_RDIMX;++tx;inner0){				\
+  for(int ty=0;ty<p_RDIMY;++ty;@inner(1)){					\
+    for(int tx=0;tx<p_RDIMX;++tx;@inner(0)){				\
       if(ty==0 && tx<p_RDIMY){						\
       	if(tx >= 1*p_RDIMY/2) s_res[tx] += s_res[tx-p_RDIMY/2];		\
       	if(tx >= 3*p_RDIMY/4) s_res[tx] += s_res[tx-p_RDIMY/4];		\

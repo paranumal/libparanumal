@@ -1,17 +1,17 @@
 
 // rhsP = -MM*Div Uhat/ dt
-kernel void insPressureRhsTri2D(const dlong Nelements,
-                                const dfloat * restrict vgeo,
-                                const dfloat * restrict MM,
+@kernel void insPressureRhsTri2D(const dlong Nelements,
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  MM,
                                 const dfloat idt,
-                                      dfloat * restrict rhsP){
+                                      @restrict dfloat *  rhsP){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_rhsP[p_NblockV][p_Np];
+    @shared dfloat s_rhsP[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           const dlong id = e*p_Np+n;
@@ -20,18 +20,18 @@ kernel void insPressureRhsTri2D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
     // Multiply with Mass Matrix
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
           dfloat rhsn = 0.f;
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat M = MM[n+i*p_Np];
               rhsn += M*s_rhsP[es][i];

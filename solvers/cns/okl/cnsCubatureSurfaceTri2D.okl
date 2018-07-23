@@ -50,8 +50,8 @@ void upwindRoeAveraged(const dfloat nx,
   dfloat grvProt = vProt*rvProt + pP;
 
   // Compute Roe average variables
-  dfloat rMsqr = occaSqrt(rM);
-  dfloat rPsqr = occaSqrt(rP); 
+  dfloat rMsqr = sqrt(rM);
+  dfloat rPsqr = sqrt(rP); 
 
   dfloat r = rMsqr*rPsqr;
   dfloat urot = (rMsqr*uMrot + rPsqr*uProt)/(rMsqr + rPsqr);
@@ -66,9 +66,9 @@ void upwindRoeAveraged(const dfloat nx,
   dfloat dW3 =  p_half*r*(uProt-uMrot)/c + p_half*(pP-pM)/c2;  
 
 
-  dW1 *= occaFabs(urot-c);
-  dW2 *= occaFabs(urot);
-  dW3 *= occaFabs(urot+c); 
+  dW1 *= fabs(urot-c);
+  dW2 *= fabs(urot);
+  dW3 *= fabs(urot+c); 
 
   // Form Roe fluxes
   *rflux = p_half*(frProt+frMrot);
@@ -87,41 +87,41 @@ void upwindRoeAveraged(const dfloat nx,
 
 
 // batch process elements
-kernel void cnsCubatureSurfaceTri2D(const dlong Nelements,
+@kernel void cnsCubatureSurfaceTri2D(const dlong Nelements,
 				    const int advSwitch,
-				    const dfloat * restrict vgeo,
-				    const dfloat * restrict sgeo,
-				    const dlong  * restrict vmapM,
-				    const dlong  * restrict vmapP,
-				    const int    * restrict EToB,
-				    const dfloat * restrict intInterpT, // interpolate to integration nodes
-				    const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
+				    @restrict const  dfloat *  vgeo,
+				    @restrict const  dfloat *  sgeo,
+				    @restrict const  dlong  *  vmapM,
+				    @restrict const  dlong  *  vmapP,
+				    @restrict const  int    *  EToB,
+				    @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
+				    @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
 				    const dfloat time,
-				    const dfloat * restrict intx,
-				    const dfloat * restrict inty,
-				    const dfloat * restrict intz,
+				    @restrict const  dfloat *  intx,
+				    @restrict const  dfloat *  inty,
+				    @restrict const  dfloat *  intz,
 				    const dfloat mu,
 				    const dfloat intfx,
 				    const dfloat intfy,
 				    const dfloat intfz,
-				    const dfloat * restrict q,
-				    const dfloat * restrict viscousStresses,
-				    dfloat * restrict rhsq){
+				    @restrict const  dfloat *  q,
+				    @restrict const  dfloat *  viscousStresses,
+				    @restrict dfloat *  rhsq){
   
   // for all elements
-  for(dlong e=0;e<Nelements;e++;outer0){
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
     
-    // shared storage for flux terms
-    shared dfloat s_qM[p_Nfields][p_NfacesNfp];
-    shared dfloat s_qP[p_Nfields][p_NfacesNfp];
-    shared dfloat s_vSM[p_Nstresses][p_NfacesNfp];
-    shared dfloat s_vSP[p_Nstresses][p_NfacesNfp];
+    // @shared storage for flux terms
+    @shared dfloat s_qM[p_Nfields][p_NfacesNfp];
+    @shared dfloat s_qP[p_Nfields][p_NfacesNfp];
+    @shared dfloat s_vSM[p_Nstresses][p_NfacesNfp];
+    @shared dfloat s_vSP[p_Nstresses][p_NfacesNfp];
 
-    shared dfloat s_rflux [p_intNfpNfaces];
-    shared dfloat s_ruflux[p_intNfpNfaces];
-    shared dfloat s_rvflux[p_intNfpNfaces];
+    @shared dfloat s_rflux [p_intNfpNfaces];
+    @shared dfloat s_ruflux[p_intNfpNfaces];
+    @shared dfloat s_rvflux[p_intNfpNfaces];
 
-    for(int n=0;n<p_cubMaxNodes;++n;inner0){
+    for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         // indices of negative and positive traces of face node
         const dlong id  = e*p_Nfp*p_Nfaces + n;
@@ -158,10 +158,10 @@ kernel void cnsCubatureSurfaceTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // interpolate to surface integration nodes
-    for(int n=0;n<p_cubMaxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
       if(n<p_intNfpNfaces){
         // find face that owns this node
         const int face = n/p_intNfp;
@@ -179,7 +179,7 @@ kernel void cnsCubatureSurfaceTri2D(const dlong Nelements,
         dfloat T11P  = 0., T12P = 0., T22P = 0.;        
 
         // local block interpolation (face nodes to integration nodes)
-        occaUnroll(p_Nfp)
+        #pragma unroll p_Nfp
 	  for(int m=0;m<p_Nfp;++m){
 	    const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
 	    const int fm = face*p_Nfp+m;
@@ -240,8 +240,8 @@ kernel void cnsCubatureSurfaceTri2D(const dlong Nelements,
         s_rvflux[n] = sc*(-rvflux);
         
 #else
-        const dfloat lambdaM = occaSqrt(uM*uM+vM*vM) + p_sqrtRT;
-        const dfloat lambdaP = occaSqrt(uP*uP+vP*vP) + p_sqrtRT;
+        const dfloat lambdaM = sqrt(uM*uM+vM*vM) + p_sqrtRT;
+        const dfloat lambdaP = sqrt(uP*uP+vP*vP) + p_sqrtRT;
 
         dfloat lambda = (lambdaM>lambdaP) ? lambdaM:lambdaP;
         
@@ -277,17 +277,17 @@ kernel void cnsCubatureSurfaceTri2D(const dlong Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int n=0;n<p_cubMaxNodes;++n;inner0){
+    for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
       if(n<p_Np){            
         // load rhs data from volume fluxes
         dfloat Lrflux = 0.f, Lruflux = 0.f, Lrvflux = 0.f;
         
         // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-        occaUnroll(p_intNfpNfaces)
+        #pragma unroll p_intNfpNfaces
           for(int m=0;m<p_intNfpNfaces;++m){
             const dfloat L = intLIFTT[n+m*p_Np];
             Lrflux  += L*s_rflux[m];
@@ -304,34 +304,34 @@ kernel void cnsCubatureSurfaceTri2D(const dlong Nelements,
   }
 }
 
-kernel void cnsStressesSurfaceTri2D(const dlong Nelements,
-				    const dfloat * restrict sgeo,
-				    const dfloat * restrict LIFTT,
-				    const dlong  * restrict vmapM,
-				    const dlong  * restrict vmapP,
-				    const int    * restrict EToB,
+@kernel void cnsStressesSurfaceTri2D(const dlong Nelements,
+				    @restrict const  dfloat *  sgeo,
+				    @restrict const  dfloat *  LIFTT,
+				    @restrict const  dlong  *  vmapM,
+				    @restrict const  dlong  *  vmapP,
+				    @restrict const  int    *  EToB,
 				    const dfloat time,
-				    const dfloat * restrict x,
-				    const dfloat * restrict y,
-				    const dfloat * restrict z,
+				    @restrict const  dfloat *  x,
+				    @restrict const  dfloat *  y,
+				    @restrict const  dfloat *  z,
 				    const dfloat mu,
 				    const dfloat intfx,
 				    const dfloat intfy,
 				    const dfloat intfz,
-				    const dfloat * restrict q,
-				    dfloat * restrict viscousStresses){
+				    @restrict const  dfloat *  q,
+				    @restrict dfloat *  viscousStresses){
   
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     
-    // shared storage for flux terms
-    shared dfloat s_T11flux[p_NblockS][p_NfacesNfp];
-    shared dfloat s_T12flux[p_NblockS][p_NfacesNfp];
-    shared dfloat s_T22flux[p_NblockS][p_NfacesNfp];
+    // @shared storage for flux terms
+    @shared dfloat s_T11flux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_T12flux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_T22flux[p_NblockS][p_NfacesNfp];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_NfacesNfp){
@@ -392,11 +392,11 @@ kernel void cnsStressesSurfaceTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){      
@@ -404,7 +404,7 @@ kernel void cnsStressesSurfaceTri2D(const dlong Nelements,
             dfloat LT11flux = 0.f, LT12flux = 0.f, LT22flux = 0.f;
             
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 const dfloat L = LIFTT[n+m*p_Np];
                 LT11flux += L*s_T11flux[es][m];

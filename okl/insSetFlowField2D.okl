@@ -1,15 +1,15 @@
 
-kernel void insSetFlowField2D(const int Nelements
+@kernel void insSetFlowField2D(const int Nelements
 			      const dfloat t,
-			      const dfloat * restrict x,
-			      const dfloat * restrict y,
+			      @restrict const  dfloat *  x,
+			      @restrict const  dfloat *  y,
 			      const int offset,
-			      const dfloat * restrict U,
-			      const dfloat * restrict V,
-			      const dfloat * restrict P){
+			      @restrict const  dfloat *  U,
+			      @restrict const  dfloat *  V,
+			      @restrict const  dfloat *  P){
 
 
-  for(int n=0;n<p_Np*Nelements;++n;tile(256)){
+  for(int n=0;n<p_Np*Nelements;++n;@tile(256,@outer,@inner)){
 
     if(n<p_Np*Nelements){
       dfloat xn = x[n];

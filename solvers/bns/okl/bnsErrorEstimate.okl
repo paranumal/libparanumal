@@ -1,20 +1,20 @@
-kernel void bnsErrorEstimate(const dlong N,
+@kernel void bnsErrorEstimate(const dlong N,
                                const dfloat ATOL,
                                const dfloat RTOL,
-                               const dfloat * restrict q,
-                               const dfloat * restrict rkq,
-                               const dfloat * restrict rkerr,
-                                     dfloat * restrict errtmp){
+                               @restrict const  dfloat *  q,
+                               @restrict const  dfloat *  rkq,
+                               @restrict const  dfloat *  rkerr,
+                                     @restrict dfloat *  errtmp){
   
-  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
+  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;@outer(0)){
     
-    volatile shared dfloat s_err[p_blockSize];
+    @shared volatile dfloat s_err[p_blockSize];
 
-    for(int t=0;t<p_blockSize;++t;inner0){
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
       const dlong id = t + p_blockSize*b;
       if (id<N) {
-        const dfloat   qn = occaFabs(q[id]  );
-        const dfloat rkqn = occaFabs(rkq[id]);
+        const dfloat   qn = fabs(q[id]  );
+        const dfloat rkqn = fabs(rkq[id]);
         const dfloat qmax = (qn>rkqn) ? qn : rkqn;
         dfloat sk = ATOL + RTOL*qmax;
 
@@ -24,28 +24,28 @@ kernel void bnsErrorEstimate(const dlong N,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 #if p_blockSize>512
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<512) s_err[t] += s_err[t+512];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<512) s_err[t] += s_err[t+512];
+    @barrier("local");
 #endif
 #if p_blockSize>256
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<256) s_err[t] += s_err[t+256];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) s_err[t] += s_err[t+256];
+    @barrier("local");
 #endif
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<128) s_err[t] += s_err[t+128];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) s_err[t] += s_err[t+128];
+    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t< 64) s_err[t] += s_err[t+64];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) s_err[t] += s_err[t+64];
+    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t< 32) s_err[t] += s_err[t+32];
-    for(int t=0;t<p_blockSize;++t;inner0) if(t< 16) s_err[t] += s_err[t+16];
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  8) s_err[t] += s_err[t+8];
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  4) s_err[t] += s_err[t+4];
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  2) s_err[t] += s_err[t+2];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) s_err[t] += s_err[t+32];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) s_err[t] += s_err[t+16];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) s_err[t] += s_err[t+8];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) s_err[t] += s_err[t+4];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_err[t] += s_err[t+2];
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  1) errtmp[b] = s_err[0] + s_err[1];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) errtmp[b] = s_err[0] + s_err[1];
   }
 }

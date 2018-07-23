@@ -41,7 +41,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       mesh->device.setStream(elliptic->dataStream);
 
       mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, o_Aq, ogs->o_haloGatherTmp);
-      ogs->o_haloGatherTmp.asyncCopyTo(ogs->haloGatherTmp);
+      ogs->o_haloGatherTmp.copyTo(ogs->haloGatherTmp,"async: true");
 
       mesh->device.setStream(elliptic->defaultStream);
     }
@@ -68,7 +68,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
 
       // copy totally gather halo data back from HOST to DEVICE
-      ogs->o_haloGatherTmp.asyncCopyFrom(ogs->haloGatherTmp);
+      ogs->o_haloGatherTmp.copyFrom(ogs->haloGatherTmp,"async: true");
     
       // do scatter back to local nodes
       mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, ogs->o_haloGatherTmp, o_Aq);

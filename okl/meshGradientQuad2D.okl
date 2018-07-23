@@ -3,7 +3,7 @@
 #define SXID 2  
 #define SYID 3  
 
-kernel void meshGradientQuad2D(const int Nelements,
+@kernel void meshGradientQuad2D(const int Nelements,
 			       const int Np,
 			       const int Nvgeo,
 			       const float *vgeo,
@@ -14,9 +14,9 @@ kernel void meshGradientQuad2D(const int Nelements,
 			       float *dqdy
 			       ){
   
-  for(int e=0;e<Nelements;++e;outer0){
+  for(int e=0;e<Nelements;++e;@outer(0)){
     
-    for(int n=0;n<Np;++n;inner0){
+    for(int n=0;n<Np;++n;@inner(0)){
       /* improve coalescing of geometric factor loads */
       int id = Np*Nvgeo*e + n;
       float drdx = vgeo[id + Np*RXID];

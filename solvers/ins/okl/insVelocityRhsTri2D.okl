@@ -1,30 +1,30 @@
 // rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
-kernel void insVelocityRhsARKTri2D(const dlong Nelements,
+@kernel void insVelocityRhsARKTri2D(const dlong Nelements,
                                 const int stage,  
-                                const dfloat * restrict vgeo,
-                                const dfloat * restrict MM,
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  MM,
                                 const dfloat idt,
                                 const dfloat inu,
-                                const dfloat * restrict erkA,
-                                const dfloat * restrict irkA,
-                                const dfloat * restrict prkA,
-                                const dfloat * restrict prkB,
+                                @restrict const  dfloat *  erkA,
+                                @restrict const  dfloat *  irkA,
+                                @restrict const  dfloat *  prkA,
+                                @restrict const  dfloat *  prkB,
                                 const dlong fieldOffset,
-                                const dfloat * restrict U,
-                                const dfloat * restrict NU,
-                                const dfloat * restrict LU,
-                                const dfloat * restrict GP,
-                                      dfloat * restrict rhsU,
-                                      dfloat * restrict rhsV,
-                                      dfloat * restrict rhsW){
+                                @restrict const  dfloat *  U,
+                                @restrict const  dfloat *  NU,
+                                @restrict const  dfloat *  LU,
+                                @restrict const  dfloat *  GP,
+                                      @restrict dfloat *  rhsU,
+                                      @restrict dfloat *  rhsV,
+                                      @restrict dfloat *  rhsW){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
-    shared dfloat s_rhsU[p_NblockV][p_Np];
-    shared dfloat s_rhsV[p_NblockV][p_Np];
+    @shared dfloat s_rhsU[p_NblockV][p_Np];
+    @shared dfloat s_rhsV[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           const dlong id = n + p_Np*e;
@@ -55,18 +55,18 @@ kernel void insVelocityRhsARKTri2D(const dlong Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           // Multiplay with Mass Matrix
           const dlong id = e*p_Np+n;
 
           dfloat rhsu = 0.f, rhsv = 0.f;
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat M = MM[n+i*p_Np];
               rhsu  += M*s_rhsU[es][i];
@@ -83,29 +83,29 @@ kernel void insVelocityRhsARKTri2D(const dlong Nelements,
 
 
 // rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
-kernel void insVelocityRhsEXTBDFTri2D(const dlong Nelements,
-                                const dfloat * restrict vgeo,
-                                const dfloat * restrict MM,
+@kernel void insVelocityRhsEXTBDFTri2D(const dlong Nelements,
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  MM,
                                 const dfloat idt,
                                 const dfloat inu,
-                                const dfloat * restrict extbdfA,
-                                const dfloat * restrict extbdfB,
-                                const dfloat * restrict extbdfC,
+                                @restrict const  dfloat *  extbdfA,
+                                @restrict const  dfloat *  extbdfB,
+                                @restrict const  dfloat *  extbdfC,
                                 const dlong fieldOffset,
-                                const dfloat * restrict U,
-                                const dfloat * restrict NU,
-                                const dfloat * restrict GP,
-                                      dfloat * restrict rhsU,
-                                      dfloat * restrict rhsV,
-                                      dfloat * restrict rhsW){
+                                @restrict const  dfloat *  U,
+                                @restrict const  dfloat *  NU,
+                                @restrict const  dfloat *  GP,
+                                      @restrict dfloat *  rhsU,
+                                      @restrict dfloat *  rhsV,
+                                      @restrict dfloat *  rhsW){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
-    shared dfloat s_rhsU[p_NblockV][p_Np];
-    shared dfloat s_rhsV[p_NblockV][p_Np];
+    @shared dfloat s_rhsU[p_NblockV][p_Np];
+    @shared dfloat s_rhsV[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           const dlong id = n + p_Np*e;
@@ -153,18 +153,18 @@ kernel void insVelocityRhsEXTBDFTri2D(const dlong Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           // Multiplay with Mass Matrix
           const dlong id = e*p_Np+n;
 
           dfloat rhsu = 0.f, rhsv = 0.f;
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat M = MM[n+i*p_Np];
               rhsu  += M*s_rhsU[es][i];

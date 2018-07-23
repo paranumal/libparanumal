@@ -1,32 +1,32 @@
-kernel void ellipticRhsBCIpdgTri2D(const dlong Nelements,
-                                  const dlong * restrict vmapM,
+@kernel void ellipticRhsBCIpdgTri2D(const dlong Nelements,
+                                  @restrict const  dlong *  vmapM,
                                   const dfloat tau,
                                   const dfloat t,
-                                  const dfloat * restrict x,
-                                  const dfloat * restrict y,
-                                  const dfloat * restrict z,
-                                  const dfloat * restrict vgeo,
-                                  const dfloat * restrict sgeo,
-                                  const int   * restrict EToB,
-                                  const dfloat * restrict Dmatrices,
-                                  const dfloat * restrict LIFTT,
-                                  const dfloat * restrict MM,
-                                  dfloat * restrict rhs){
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  int   *  EToB,
+                                  @restrict const  dfloat *  Dmatrices,
+                                  @restrict const  dfloat *  LIFTT,
+                                  @restrict const  dfloat *  MM,
+                                  @restrict dfloat *  rhs){
   
-  for(int e=0;e<Nelements;++e;outer0){
-    shared  dfloat s_dudx[p_Np];
-    shared  dfloat s_dudy[p_Np];
-    shared  dfloat s_lapu[p_Np];
-    shared  dfloat s_nxdu[p_NfacesNfp];
-    shared  dfloat s_nydu[p_NfacesNfp];
-    shared  dfloat s_lapuflux[p_NfacesNfp];
-    shared  dfloat s_Lnxdu[p_Np];
-    shared  dfloat s_Lnydu[p_Np];
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    @shared  dfloat s_dudx[p_Np];
+    @shared  dfloat s_dudy[p_Np];
+    @shared  dfloat s_lapu[p_Np];
+    @shared  dfloat s_nxdu[p_NfacesNfp];
+    @shared  dfloat s_nydu[p_NfacesNfp];
+    @shared  dfloat s_lapuflux[p_NfacesNfp];
+    @shared  dfloat s_Lnxdu[p_Np];
+    @shared  dfloat s_Lnydu[p_Np];
 
-    exclusive int idM;
-    exclusive dfloat nx, ny, sJ, invJ, hinv;
+    @exclusive int idM;
+    @exclusive dfloat nx, ny, sJ, invJ, hinv;
     
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const int id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];          
@@ -60,10 +60,10 @@ kernel void ellipticRhsBCIpdgTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // dqdx += LIFT*(sJ/J)*nx*dq
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_Np){
         const int gid = e*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
@@ -74,7 +74,7 @@ kernel void ellipticRhsBCIpdgTri2D(const dlong Nelements,
         dfloat Lnxdu = 0;
         dfloat Lnydu = 0;
               
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lnxdu += LIFTT[n+i*p_Np]*s_nxdu[i];
             Lnydu += LIFTT[n+i*p_Np]*s_nydu[i];
@@ -91,9 +91,9 @@ kernel void ellipticRhsBCIpdgTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_NfacesNfp){
         int id = idM%p_Np;
         s_lapuflux[n] += sJ*invJ*(nx*s_Lnxdu[id]+ny*s_Lnydu[id]);
@@ -102,7 +102,7 @@ kernel void ellipticRhsBCIpdgTri2D(const dlong Nelements,
       if(n<p_Np){
         dfloat laur = 0, laus = 0;
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i) {
           laur += Dmatrices[n+i*p_Np+0*p_Np*p_Np]*s_dudx[i];
           laus += Dmatrices[n+i*p_Np+0*p_Np*p_Np]*s_dudy[i];
@@ -113,14 +113,14 @@ kernel void ellipticRhsBCIpdgTri2D(const dlong Nelements,
       
     }
     
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_Np){
         dfloat lau = 0;
               
         // lift remaining surface terms
-        occaUnroll(p_NfacesNfp)
+        #pragma unroll p_NfacesNfp
         for(int i=0;i<p_NfacesNfp;++i){
           lau += LIFTT[n+i*p_Np]*s_lapuflux[i];
         }
@@ -129,16 +129,16 @@ kernel void ellipticRhsBCIpdgTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_Nmax;++n;inner0){
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_Np){
         const dfloat J = vgeo[e*p_Nvgeo + p_JID];
               
         dfloat Mlapu = 0;
 
         // multiply by mass matrix
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           Mlapu += MM[n+i*p_Np]*s_lapu[i];
         }

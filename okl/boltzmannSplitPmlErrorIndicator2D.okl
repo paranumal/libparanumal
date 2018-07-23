@@ -7,8 +7,8 @@ void boundaryConditions2D(const int bc,
 			  const dfloat ramp,
 			  const dfloat  q1M, const dfloat  q2M, const dfloat  q3M,
 			  const dfloat  q4M, const dfloat  q5M, const dfloat  q6M,
-			  dfloat * restrict q1B, dfloat * restrict q2B, dfloat * restrict q3B,
-			  dfloat * restrict q4B, dfloat * restrict q5B, dfloat * restrict q6B){
+			  @restrict dfloat * @restrict q1B, dfloat * @restrict q2B, dfloat *  q3B,
+			  @restrict dfloat * @restrict q4B, dfloat * @restrict q5B, dfloat *  q6B){
 
   if(bc==1){
     *q1B = q1M; 
@@ -29,25 +29,25 @@ void boundaryConditions2D(const int bc,
 }
 
 
-kernel void boltzmannSplitPmlErrorIndicator2D(const int Nelements,		 
-					      const dfloat * restrict sgeo,	 
-					      const dfloat * restrict w,	 
-					      const int   * restrict vmapM,	 
-					      const int   * restrict vmapP,	 
-					      const int   * restrict EToB,	 
+@kernel void boltzmannSplitPmlErrorIndicator2D(const int Nelements,		 
+					      @restrict const  dfloat *  sgeo,	 
+					      @restrict const  dfloat *  w,	 
+					      @restrict const  int   *  vmapM,	 
+					      @restrict const  int   *  vmapP,	 
+					      @restrict const  int   *  EToB,	 
 					      const dfloat time,		 
-					      const dfloat * restrict x,	 
-					      const dfloat * restrict y,	 
+					      @restrict const  dfloat *  x,	 
+					      @restrict const  dfloat *  y,	 
 					      const dfloat ramp,		 
-					      const dfloat4 * restrict q,
-					      dfloat * restrict qindicator){
+					      @restrict const  dfloat4 *  q,
+					      @restrict dfloat *  qindicator){
 
 
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    shared dfloat s_dq2[p_NblockS][p_NfpNfaces];
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    @shared dfloat s_dq2[p_NblockS][p_NfpNfaces];
 
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_NfpNfaces;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_NfpNfaces;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 	int e = eo + es;
 	if(e<Nelements){
 
@@ -100,13 +100,13 @@ kernel void boltzmannSplitPmlErrorIndicator2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     int alive = (p_NfpNfaces+1)/2;
     while(n<alive){
       
-      for(int es=0;es<p_NblockS;++es;inner1){
-	for(int n=0;n<p_NfpNfaces;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+      for(int es=0;es<p_NblockS;++es;@inner(1)){
+	for(int n=0;n<p_NfpNfaces;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 	  int e = eo + es;
 	  if(e<Nelements){
 	    if(n+alive<p_NfpNfaces)
@@ -117,10 +117,10 @@ kernel void boltzmannSplitPmlErrorIndicator2D(const int Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_NfpNfaces;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_NfpNfaces;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 	int e = eo + es;
 	if(e<Nelements){
 	  if(n==0)

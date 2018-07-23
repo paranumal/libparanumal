@@ -10,10 +10,10 @@ void boundaryConditions2D(int bc, dfloat time, dfloat x, dfloat y,
     *pP = pM;
   }
   if(bc==2){
-    dfloat dx = 1.f/occaSqrt(2.f);
-    dfloat dy = 1.f/occaSqrt(2.f);
+    dfloat dx = 1.f/sqrt(2.f);
+    dfloat dy = 1.f/sqrt(2.f);
     dfloat omega = 10*M_PI;
-    dfloat wave = occaCos(omega*(time-(x*dx+y*dy)));
+    dfloat wave = cos(omega*(time-(x*dx+y*dy)));
     dfloat uI = dx*wave;
     dfloat vI = dy*wave;
     dfloat pI = wave;
@@ -27,29 +27,29 @@ void boundaryConditions2D(int bc, dfloat time, dfloat x, dfloat y,
 
 // function to compute surface contributions 
 // for nodal DG acoustics right hand side
-kernel void acousticsPartialSurface2D_s0(const int Nelements,
-					     const int   * restrict elementIds, 
-					     const dfloat * restrict sgeo,
-					     const dfloat * restrict LIFTT,
-					     const int   * restrict vmapM,
-					     const int   * restrict vmapP,
-					     const int   * restrict EToB,
+@kernel void acousticsPartialSurface2D_s0(const int Nelements,
+					     @restrict const  int   *  elementIds, 
+					     @restrict const  dfloat *  sgeo,
+					     @restrict const  dfloat *  LIFTT,
+					     @restrict const  int   *  vmapM,
+					     @restrict const  int   *  vmapP,
+					     @restrict const  int   *  EToB,
 					     const dfloat time,
-					     const dfloat * restrict x,
-					     const dfloat * restrict y,
-					     const dfloat * restrict q,
-					     dfloat       * restrict rhsq){
+					     @restrict const  dfloat *  x,
+					     @restrict const  dfloat *  y,
+					     @restrict const  dfloat *  q,
+					     @restrict dfloat       *  rhsq){
 				   
   // for element in list
-  for(int el=0;el<Nelements;++el;outer0){
+  for(int el=0;el<Nelements;++el;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxu[p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv[p_Nfp*p_Nfaces];
-    shared dfloat s_fluxp[p_Nfp*p_Nfaces];
+    // @shared storage for flux terms
+    @shared dfloat s_fluxu[p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv[p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxp[p_Nfp*p_Nfaces];
     
     // for all face nodes of all elements
-    for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 
       const int e = elementIds[el];
       
@@ -93,11 +93,11 @@ kernel void acousticsPartialSurface2D_s0(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
 
 	const int e = elementIds[el];
@@ -127,29 +127,29 @@ kernel void acousticsPartialSurface2D_s0(const int Nelements,
 }
     
 // s1: float4 for q,rhsq
-kernel void acousticsPartialSurface2D_s1(const int Nelements,
-					     const int   * restrict elementIds, 
-					     const dfloat * restrict sgeo,
-					     const dfloat * restrict LIFTT,
-					     const int   * restrict vmapM,
-					     const int   * restrict vmapP,
-					     const int   * restrict EToB,
+@kernel void acousticsPartialSurface2D_s1(const int Nelements,
+					     @restrict const  int   *  elementIds, 
+					     @restrict const  dfloat *  sgeo,
+					     @restrict const  dfloat *  LIFTT,
+					     @restrict const  int   *  vmapM,
+					     @restrict const  int   *  vmapP,
+					     @restrict const  int   *  EToB,
 					     const dfloat time,
-					     const dfloat * restrict x,
-					     const dfloat * restrict y,
-					     const dfloat4 * restrict q4,
-					     dfloat4       * restrict rhsq4){
+					     @restrict const  dfloat *  x,
+					     @restrict const  dfloat *  y,
+					     @restrict const  dfloat4 *  q4,
+					     @restrict dfloat4       *  rhsq4){
 				   
   // for elements in list
-  for(int el=0;el<Nelements;++el;outer0){
+  for(int el=0;el<Nelements;++el;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxu[p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv[p_Nfp*p_Nfaces];
-    shared dfloat s_fluxp[p_Nfp*p_Nfaces];
+    // @shared storage for flux terms
+    @shared dfloat s_fluxu[p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv[p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxp[p_Nfp*p_Nfaces];
     
     // for all face nodes of all elements
-    for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 
       if(n<p_Nfp*p_Nfaces){
 
@@ -195,11 +195,11 @@ kernel void acousticsPartialSurface2D_s1(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
 
 	// find element
@@ -232,29 +232,29 @@ kernel void acousticsPartialSurface2D_s1(const int Nelements,
 }
 
 // s2: float4 for sgeo
-kernel void acousticsPartialSurface2D_s2(const int Nelements,
-					     const int   * restrict elementIds, 
-					     const dfloat4 * restrict sgeo,
-					     const dfloat * restrict LIFTT,
-					     const int   * restrict vmapM,
-					     const int   * restrict vmapP,
-					     const int   * restrict EToB,
+@kernel void acousticsPartialSurface2D_s2(const int Nelements,
+					     @restrict const  int   *  elementIds, 
+					     @restrict const  dfloat4 *  sgeo,
+					     @restrict const  dfloat *  LIFTT,
+					     @restrict const  int   *  vmapM,
+					     @restrict const  int   *  vmapP,
+					     @restrict const  int   *  EToB,
 					     const dfloat time,
-					     const dfloat * restrict x,
-					     const dfloat * restrict y,
-					     const dfloat4 * restrict q4,
-					     dfloat4       * restrict rhsq4){
+					     @restrict const  dfloat *  x,
+					     @restrict const  dfloat *  y,
+					     @restrict const  dfloat4 *  q4,
+					     @restrict dfloat4       *  rhsq4){
 				   
   // for elements in list
-  for(int el=0;el<Nelements;++el;outer0){
+  for(int el=0;el<Nelements;++el;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxu[p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv[p_Nfp*p_Nfaces];
-    shared dfloat s_fluxp[p_Nfp*p_Nfaces];
+    // @shared storage for flux terms
+    @shared dfloat s_fluxu[p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv[p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxp[p_Nfp*p_Nfaces];
     
     // for all face nodes of all elements
-    for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
       
       if(n<p_Nfp*p_Nfaces){
 
@@ -302,11 +302,11 @@ kernel void acousticsPartialSurface2D_s2(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
 
 	// find element
@@ -339,29 +339,29 @@ kernel void acousticsPartialSurface2D_s2(const int Nelements,
 }
     
 // s3: unroll lift loop (use float for sgeo)
-kernel void acousticsPartialSurface2D_s3(const int Nelements,
-					     const int   * restrict elementIds, 
-					     const dfloat * restrict sgeo,
-					     const dfloat * restrict LIFTT,
-					     const int   * restrict vmapM,
-					     const int   * restrict vmapP,
-					     const int   * restrict EToB,
+@kernel void acousticsPartialSurface2D_s3(const int Nelements,
+					     @restrict const  int   *  elementIds, 
+					     @restrict const  dfloat *  sgeo,
+					     @restrict const  dfloat *  LIFTT,
+					     @restrict const  int   *  vmapM,
+					     @restrict const  int   *  vmapP,
+					     @restrict const  int   *  EToB,
 					     const dfloat time,
-					     const dfloat * restrict x,
-					     const dfloat * restrict y,	     
-					     const dfloat4 * restrict q4,
-					     dfloat4       * restrict rhsq4){
+					     @restrict const  dfloat *  x,
+					     @restrict const  dfloat *  y,	     
+					     @restrict const  dfloat4 *  q4,
+					     @restrict dfloat4       *  rhsq4){
 				   
   // for all elements
-  for(int el=0;el<Nelements;++el;outer0){
+  for(int el=0;el<Nelements;++el;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxu[p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv[p_Nfp*p_Nfaces];
-    shared dfloat s_fluxp[p_Nfp*p_Nfaces];
+    // @shared storage for flux terms
+    @shared dfloat s_fluxu[p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv[p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxp[p_Nfp*p_Nfaces];
     
     // for all face nodes of all elements
-    for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
       
       if(n<p_Nfp*p_Nfaces){
 
@@ -408,11 +408,11 @@ kernel void acousticsPartialSurface2D_s3(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element 
-    for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
 
 	// find element
@@ -427,7 +427,7 @@ kernel void acousticsPartialSurface2D_s3(const int Nelements,
 	dfloat rhsp = rhsq.z;
 
 	// rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-	occaUnroll(p_Nfp)
+	#pragma unroll p_Nfp
 	  for(int m=0;m<p_Nfp*p_Nfaces;++m){
 	    dfloat L = LIFTT[n+m*p_Np];
 	    rhsu += L*s_fluxu[m];
@@ -446,30 +446,30 @@ kernel void acousticsPartialSurface2D_s3(const int Nelements,
 }
 
 // s4: batch process elements
-kernel void acousticsPartialSurface2D_s4(const int Nelements,
-					     const int   * restrict elementIds, 
-					     const dfloat * restrict sgeo,
-					     const dfloat * restrict LIFTT,
-					     const int   * restrict vmapM,
-					     const int   * restrict vmapP,
-					     const int   * restrict EToB,
+@kernel void acousticsPartialSurface2D_s4(const int Nelements,
+					     @restrict const  int   *  elementIds, 
+					     @restrict const  dfloat *  sgeo,
+					     @restrict const  dfloat *  LIFTT,
+					     @restrict const  int   *  vmapM,
+					     @restrict const  int   *  vmapP,
+					     @restrict const  int   *  EToB,
 					     const dfloat time,
-					     const dfloat * restrict x,
-					     const dfloat * restrict y,
-					     const dfloat4 * restrict q4,
-					     dfloat4       * restrict rhsq4){
+					     @restrict const  dfloat *  x,
+					     @restrict const  dfloat *  y,
+					     @restrict const  dfloat4 *  q4,
+					     @restrict dfloat4       *  rhsq4){
 				   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxp[p_NblockS][p_Nfp*p_Nfaces];    
+    // @shared storage for flux terms
+    @shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxp[p_NblockS][p_Nfp*p_Nfaces];    
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 	int el = eo + es;
 	if(el<Nelements){
 
@@ -520,12 +520,12 @@ kernel void acousticsPartialSurface2D_s4(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
 	int el = eo + es;
 	if(el<Nelements){
 	  if(n<p_Np){
@@ -543,7 +543,7 @@ kernel void acousticsPartialSurface2D_s4(const int Nelements,
 	    dfloat rhsp = rhsq.z;
 	    
 	    // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-	    occaUnroll(p_Nfp)
+	    #pragma unroll p_Nfp
 	      for(int m=0;m<p_Nfp*p_Nfaces;++m){
 		dfloat L = LIFTT[n+m*p_Np];
 		rhsu += L*s_fluxu[es][m];
@@ -563,32 +563,32 @@ kernel void acousticsPartialSurface2D_s4(const int Nelements,
   }
 }
 
-// s5: lift in shared
-kernel void acousticsPartialSurface2D_s5(const int Nelements,
-					     const int   * restrict elementIds, 
-					     const dfloat * restrict sgeo,
-					     const dfloat * restrict LIFTT,
-					     const int   * restrict vmapM,
-					     const int   * restrict vmapP,
-					     const int   * restrict EToB,
+// s5: lift in @shared
+@kernel void acousticsPartialSurface2D_s5(const int Nelements,
+					     @restrict const  int   *  elementIds, 
+					     @restrict const  dfloat *  sgeo,
+					     @restrict const  dfloat *  LIFTT,
+					     @restrict const  int   *  vmapM,
+					     @restrict const  int   *  vmapP,
+					     @restrict const  int   *  EToB,
 					     const dfloat time,
-					     const dfloat * restrict x,
-					     const dfloat * restrict y,
-					     const dfloat4 * restrict q4,
-					     dfloat4       * restrict rhsq4){
+					     @restrict const  dfloat *  x,
+					     @restrict const  dfloat *  y,
+					     @restrict const  dfloat4 *  q4,
+					     @restrict dfloat4       *  rhsq4){
 				   
   // for all elements
-  for(int eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxv[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxp[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_LIFTT[p_Nfp*p_Nfaces][p_Np];
+    // @shared storage for flux terms
+    @shared dfloat s_fluxu[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxv[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxp[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_LIFTT[p_Nfp*p_Nfaces][p_Np];
     
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
 	int el = eo + es;
 	
 	int t = n + p_maxNodes*es;
@@ -645,12 +645,12 @@ kernel void acousticsPartialSurface2D_s5(const int Nelements,
       }
     }
     
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
 	int el = eo + es;
 	if(el<Nelements){
 	  if(n<p_Np){
@@ -667,7 +667,7 @@ kernel void acousticsPartialSurface2D_s5(const int Nelements,
 	    dfloat rhsp = rhsq.z;
 	    
 	    // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-	    occaUnroll(p_NfacesNfp)
+	    #pragma unroll p_NfacesNfp
 	      for(int m=0;m<p_Nfp*p_Nfaces;++m){
 		dfloat L = s_LIFTT[m][n]; 
 		rhsu += L*s_fluxu[es][m];

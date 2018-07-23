@@ -1,20 +1,20 @@
 
 // compute div(NU)  = div(uxu) in collocation way
-kernel void insAdvectionVolumeTri2D(const dlong Nelements,
-                                    const dfloat * restrict vgeo,
-                                    const dfloat * restrict Dmatrices,
+@kernel void insAdvectionVolumeTri2D(const dlong Nelements,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  Dmatrices,
                                     const dlong offset,
-                                    const dfloat * restrict U,
-                                          dfloat * restrict NU){
+                                    @restrict const  dfloat *  U,
+                                          @restrict dfloat *  NU){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
     // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat s_F11[p_NblockV][p_Np];
-    shared dfloat s_F12[p_NblockV][p_Np];
-    shared dfloat s_F22[p_NblockV][p_Np];
+    @shared dfloat s_F11[p_NblockV][p_Np];
+    @shared dfloat s_F12[p_NblockV][p_Np];
+    @shared dfloat s_F22[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){ 
           const dlong id = e*p_Np+n;
@@ -28,11 +28,11 @@ kernel void insAdvectionVolumeTri2D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_Np;++n;inner0){           
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){           
         const dlong e = eo+es; 
         if(e<Nelements){          
           // prefetch geometric factors (constant on triangle)
@@ -45,7 +45,7 @@ kernel void insAdvectionVolumeTri2D(const dlong Nelements,
           dfloat df12dr = 0.f, df12ds = 0.f; 
           dfloat df22dr = 0.f, df22ds = 0.f; 
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
               const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
@@ -81,28 +81,28 @@ kernel void insAdvectionVolumeTri2D(const dlong Nelements,
   }
 }
 
-kernel void insAdvectionSurfaceTri2D(const dlong Nelements,
-                                  const dfloat * restrict sgeo,
-                                  const dfloat * restrict LIFTT,
-                                  const dlong  * restrict vmapM,
-                                  const dlong  * restrict vmapP,
-                                  const int    * restrict EToB,
+@kernel void insAdvectionSurfaceTri2D(const dlong Nelements,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dfloat *  LIFTT,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  dlong  *  vmapP,
+                                  @restrict const  int    *  EToB,
                                   const dfloat time,
-                                  const dfloat * restrict x,
-                                  const dfloat * restrict y,
-                                  const dfloat * restrict z,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
                                   const dlong offset,
-                                  const dfloat * restrict U,
-                                        dfloat * restrict NU){
+                                  @restrict const  dfloat *  U,
+                                        @restrict dfloat *  NU){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_fluxNx[p_NblockS][p_Nfp*p_Nfaces];
-    shared dfloat s_fluxNy[p_NblockS][p_Nfp*p_Nfaces];
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_fluxNx[p_NblockS][p_Nfp*p_Nfaces];
+    @shared dfloat s_fluxNy[p_NblockS][p_Nfp*p_Nfaces];
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){ // maxNodes = max(Nfp*Nfaces,Np)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
@@ -131,8 +131,8 @@ kernel void insAdvectionSurfaceTri2D(const dlong Nelements,
             }
 
             // Find max normal velocity on the face
-            const dfloat unM   = occaFabs(nx*uM + ny*vM);
-            const dfloat unP   = occaFabs(nx*uP + ny*vP);    
+            const dfloat unM   = fabs(nx*uM + ny*vM);
+            const dfloat unP   = fabs(nx*uP + ny*vP);    
             const dfloat unMax = (unM > unP) ? unM : unP;
              // evaluate "flux" terms: LLF
             const dfloat sc = invJ * sJ ; 
@@ -145,12 +145,12 @@ kernel void insAdvectionSurfaceTri2D(const dlong Nelements,
       }
     }
 
-    // wait for all flux functions are written to shared 
-    barrier(localMemFence);
+    // wait for all flux functions are written to @shared 
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int n=0;n<p_maxNodes;++n;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
@@ -159,7 +159,7 @@ kernel void insAdvectionSurfaceTri2D(const dlong Nelements,
             dfloat rhsnu = NU[id+0*offset];
             dfloat rhsnv = NU[id+1*offset];
             // Lift
-            occaUnroll(p_NfacesNfp)
+            #pragma unroll p_NfacesNfp
               for(int m=0;m<p_Nfaces*p_Nfp;++m){
                 const dfloat L = LIFTT[n+m*p_Np];
                 rhsnu  += L*s_fluxNx[es][m];
@@ -177,28 +177,28 @@ kernel void insAdvectionSurfaceTri2D(const dlong Nelements,
 
 
 // compute div(NU)  = div(uxu) in collocation way
-kernel void insAdvectionCubatureVolumeTri2D(const dlong Nelements,
-                                            const dfloat * restrict vgeo,
-                                            const dfloat * restrict cubvgeo,
-                                            const dfloat * restrict cubDmatrices,
-                                            const dfloat * restrict cubInterpT,
-                                            const dfloat * restrict cubProjectT,
+@kernel void insAdvectionCubatureVolumeTri2D(const dlong Nelements,
+                                            @restrict const  dfloat *  vgeo,
+                                            @restrict const  dfloat *  cubvgeo,
+                                            @restrict const  dfloat *  cubDmatrices,
+                                            @restrict const  dfloat *  cubInterpT,
+                                            @restrict const  dfloat *  cubProjectT,
                                             const dlong offset,
-                                            const dfloat * restrict U,
-                                                  dfloat * restrict cU,
-                                                  dfloat * restrict NU){
+                                            @restrict const  dfloat *  U,
+                                                  @restrict dfloat *  cU,
+                                                  @restrict dfloat *  NU){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
 
     // Hold Flux Vector on Shared, use symmetry f21 = f12
-    shared dfloat s_U[p_NblockV][p_Np];
-    shared dfloat s_V[p_NblockV][p_Np];
-    shared dfloat s_cF11[p_NblockV][p_cubNp];
-    shared dfloat s_cF12[p_NblockV][p_cubNp];
-    shared dfloat s_cF22[p_NblockV][p_cubNp];
+    @shared dfloat s_U[p_NblockV][p_Np];
+    @shared dfloat s_V[p_NblockV][p_Np];
+    @shared dfloat s_cF11[p_NblockV][p_cubNp];
+    @shared dfloat s_cF12[p_NblockV][p_cubNp];
+    @shared dfloat s_cF22[p_NblockV][p_cubNp];
 
-    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){      // for all nodes in this element
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){      // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
           if(n<p_Np){ 
@@ -210,14 +210,14 @@ kernel void insAdvectionCubatureVolumeTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements && n<p_cubNp){
           dfloat cU = 0, cV = 0;
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat cIni = cubInterpT[n+i*p_cubNp];
               cU += cIni*s_U[es][i];
@@ -231,11 +231,11 @@ kernel void insAdvectionCubatureVolumeTri2D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_cubNblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_maxNodesVolumeCub;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; 
         if(e<Nelements && n<p_Np){        
           // prefetch geometric factors (constant on triangle)
@@ -248,7 +248,7 @@ kernel void insAdvectionCubatureVolumeTri2D(const dlong Nelements,
           dfloat df12dr = 0.f, df12ds = 0.f; 
           dfloat df22dr = 0.f, df22ds = 0.f; 
 
-          occaUnroll(p_cubNp)
+          #pragma unroll p_cubNp
             for(int i=0;i<p_cubNp;++i){
               const dfloat cDrWni = cubDmatrices[n+i*p_Np+0*p_cubNp*p_Np];
               const dfloat cDsWni = cubDmatrices[n+i*p_Np+1*p_cubNp*p_Np];
@@ -277,39 +277,39 @@ kernel void insAdvectionCubatureVolumeTri2D(const dlong Nelements,
 }
 
 
-kernel void insAdvectionCubatureSurfaceTri2D(const dlong Nelements,
-                                             const dfloat * restrict vgeo,
-                                             const dfloat * restrict sgeo,
-                                             const dfloat * restrict cubsgeo,
-                                             const dfloat * restrict intInterpT, // interpolate to integration nodes
-                                             const dfloat * restrict intLIFTT, // lift from integration to interpolation nodes
-                                             const dfloat * restrict cubInterpT, 
-                                             const dfloat * restrict cubProjectT, 
-                                             const dlong  * restrict vmapM,
-                                             const dlong  * restrict vmapP,
-                                             const int    * restrict EToB,
+@kernel void insAdvectionCubatureSurfaceTri2D(const dlong Nelements,
+                                             @restrict const  dfloat *  vgeo,
+                                             @restrict const  dfloat *  sgeo,
+                                             @restrict const  dfloat *  cubsgeo,
+                                             @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
+                                             @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
+                                             @restrict const  dfloat *  cubInterpT, 
+                                             @restrict const  dfloat *  cubProjectT, 
+                                             @restrict const  dlong  *  vmapM,
+                                             @restrict const  dlong  *  vmapP,
+                                             @restrict const  int    *  EToB,
                                              const dfloat time,
-                                             const dfloat * restrict intx, // integration nodes
-                                             const dfloat * restrict inty,
-                                             const dfloat * restrict intz,
+                                             @restrict const  dfloat *  intx, // integration nodes
+                                             @restrict const  dfloat *  inty,
+                                             @restrict const  dfloat *  intz,
                                              const dlong offset,
-                                             const dfloat * restrict U,
-                                                   dfloat * restrict NU){
+                                             @restrict const  dfloat *  U,
+                                                   @restrict dfloat *  NU){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockS;@outer(0)){
 
-    // shared storage for flux terms
-    shared dfloat s_UM[p_NblockS][p_NfacesNfp];
-    shared dfloat s_VM[p_NblockS][p_NfacesNfp];
-    shared dfloat s_UP[p_NblockS][p_NfacesNfp];
-    shared dfloat s_VP[p_NblockS][p_NfacesNfp];
-    shared dfloat s_iFluxNx[p_NblockS][p_intNfpNfaces];
-    shared dfloat s_iFluxNy[p_NblockS][p_intNfpNfaces];
+    // @shared storage for flux terms
+    @shared dfloat s_UM[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_VM[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_UP[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_VP[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_iFluxNx[p_NblockS][p_intNfpNfaces];
+    @shared dfloat s_iFluxNy[p_NblockS][p_intNfpNfaces];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_cubNblockS;++es;inner1){
-      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements && n<(p_Nfaces*p_Nfp)){
           const dlong id  = e*p_Nfp*p_Nfaces + n;
@@ -325,11 +325,11 @@ kernel void insAdvectionCubatureSurfaceTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // interpolate to surface integration nodes
-    for(int es=0;es<p_cubNblockS;++es;inner1){
-      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){ 
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){ 
         const dlong e = eo + es;
         if(e<Nelements && n<(p_Nfaces*p_intNfp)){
           const int face = n/p_intNfp; // find face that owns this integration node
@@ -345,7 +345,7 @@ kernel void insAdvectionCubatureSurfaceTri2D(const dlong Nelements,
           dfloat iUP = 0.f, iVP = 0.f;
 
           // local block interpolation (face nodes to integration nodes)
-          occaUnroll(p_Nfp)
+          #pragma unroll p_Nfp
           for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
             const int fm = face*p_Nfp+m;
@@ -363,8 +363,8 @@ kernel void insAdvectionCubatureSurfaceTri2D(const dlong Nelements,
           }
 
           // Find max normal velocity on the face
-          const dfloat unM   = occaFabs(nx*iUM + ny*iVM);
-          const dfloat unP   = occaFabs(nx*iUP + ny*iVP);    
+          const dfloat unM   = fabs(nx*iUM + ny*iVM);
+          const dfloat unP   = fabs(nx*iUP + ny*iVP);    
           const dfloat unMax = (unM > unP) ? unM : unP;
 
           // evaluate "flux" terms: LLF
@@ -377,19 +377,19 @@ kernel void insAdvectionCubatureSurfaceTri2D(const dlong Nelements,
       }
     }
 
-    // wait for all shared memory writes of the previous inner loop to complete
-    barrier(localMemFence);
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
 
     // lift from surface integration to volume nodes
-    for(int es=0;es<p_cubNblockS;++es;inner1){
-      for(int n=0;n<p_maxNodesSurfaceCub;++n;inner0){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements && n<p_Np ){
           const dlong id = n + p_Np*e;
           // prefetch volume rhs
           dfloat NUn = NU[id+0*offset];
           dfloat NVn = NU[id+1*offset];
-          occaUnroll(p_intNfp*p_Nfaces)
+          #pragma unroll p_intNfp*p_Nfaces
           for(int m=0;m<(p_intNfp*p_Nfaces);++m){
             const dfloat L = intLIFTT[n+m*p_Np];
             NUn += L*s_iFluxNx[es][m];

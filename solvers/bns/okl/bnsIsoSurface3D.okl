@@ -10,9 +10,9 @@ dfloat intersection(const dfloat iso, const dfloat val1, const dfloat val2){
 
   const dfloat tol = 1.e-7; // was 1e-5
 
-  if(occaFabs(iso-val1)<tol) return (dfloat)0.f;
-  if(occaFabs(iso-val2)<tol) return (dfloat)1.f;
-  if(occaFabs(val1-val2)<tol) return (dfloat)0.f;
+  if(fabs(iso-val1)<tol) return (dfloat)0.f;
+  if(fabs(iso-val2)<tol) return (dfloat)1.f;
+  if(fabs(val1-val2)<tol) return (dfloat)0.f;
 
   const dfloat r = (iso-val1)/(val2-val1);
 
@@ -52,7 +52,7 @@ dfloat triArea(const dfloat *v0, const dfloat *v1, const dfloat *v2){
   const dfloat cz = dx2*dy1-dy2*dx1;
 
 
-  const dfloat area = occaSqrt(cx*cx+cy*cy+cz*cz);
+  const dfloat area = sqrt(cx*cx+cy*cy+cz*cz);
 
 
   return area;
@@ -66,7 +66,7 @@ int marchingTet(const int fld,
                 const int v2,
                 const int v3,
                 const dfloat iso,
-                dfloat * restrict valsIso){
+                @restrict dfloat *  valsIso){
   
   int ntri = 0;
 
@@ -191,34 +191,34 @@ int marchingTet(const int fld,
 //------------------------------------------------------------------------------------------
 
 
-kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
-                           const int *restrict elementIds,
+@kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
+                           @restrict const  int * elementIds,
                            const int isoField,     // which field to use for isosurfacing
                            const int isoColorField,// which field to color isosurfaces
                            const int isoNlevels,   // number of isosurface levels
-                           const dfloat * restrict isoLevels,// array of isosurface levels
+                           @restrict const  dfloat *  isoLevels,// array of isosurface levels
                            const int isoMaxNtris,  // maximum number of generated triangles
-                           const dfloat * restrict x,     
-                           const dfloat * restrict y,
-                           const dfloat * restrict z,
-                           const dfloat * restrict q,
-                           const dfloat * restrict vort,
-                           const dfloat * restrict vortMag,
-                           const dfloat * restrict plotInterp,
-                           const int * restrict plotEToV,
-                                 int * restrict isoNtris, // output: number of generated triangles
-                                 dfloat * restrict isoQ   // output: (p_dim+p_Nfields)*3*isoNtris[0] values (x,y,z,q0,q1..)
+                           @restrict const  dfloat *  x,     
+                           @restrict const  dfloat *  y,
+                           @restrict const  dfloat *  z,
+                           @restrict const  dfloat *  q,
+                           @restrict const  dfloat *  vort,
+                           @restrict const  dfloat *  vortMag,
+                           @restrict const  dfloat *  plotInterp,
+                           @restrict const  int *  plotEToV,
+                                 @restrict int *  isoNtris, // output: number of generated triangles
+                                 @restrict dfloat *  isoQ   // output: (p_dim+p_Nfields)*3*isoNtris[0] values (x,y,z,q0,q1..)
                            ){
 
   
-  for(int et=0;et<Nelements;++et;outer0){
+  for(int et=0;et<Nelements;++et;@outer(0)){
 
-    shared dfloat s_q[p_plotNfields][p_Np]; 
-    shared dfloat s_plotq[p_plotNp][p_plotNfields]; // added +1, assumes only one field to reduce the sizes
+    @shared dfloat s_q[p_plotNfields][p_Np]; 
+    @shared dfloat s_plotq[p_plotNp][p_plotNfields]; // added +1, assumes only one field to reduce the sizes
 
-    exclusive int e; 
+    @exclusive int e; 
 
-    for(int n=0;n<p_plotNthreads;++n;inner0){
+    for(int n=0;n<p_plotNthreads;++n;@inner(0)){
       e = elementIds[et]; 
       if(n<p_Np){
         int id = e*p_Np + n;
@@ -235,7 +235,7 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
         dfloat uy = q[id + 2*p_Np]*p_sqrtRT/rho;
         dfloat uz = q[id + 3*p_Np]*p_sqrtRT/rho;
 
-        s_q[3][n] = occaSqrt(ux*ux + uy*uy + uz*uz); // Velocity Magnitude squared 
+        s_q[3][n] = sqrt(ux*ux + uy*uy + uz*uz); // Velocity Magnitude squared 
         
         // s_q[3][n]  = vortMag[e*p_Np + n];
 
@@ -273,18 +273,18 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
         // dfloat uy = q[id + 2*p_Np]*p_sqrtRT/rho;
         // dfloat uz = q[id + 3*p_Np]*p_sqrtRT/rho;
 
-        // s_q[4][n] = occaSqrt(ux*ux + uy*uy + uz*uz); 
+        // s_q[4][n] = sqrt(ux*ux + uy*uy + uz*uz); 
 
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int n=0;n<p_plotNthreads;++n;inner0){
+    for(int n=0;n<p_plotNthreads;++n;@inner(0)){
       if(n<p_plotNp){
         dfloat r_plotq[p_plotNfields];
         
-        occaUnroll(p_plotNfields)
+        #pragma unroll p_plotNfields
           for(int fld=0;fld<p_plotNfields;++fld){
             r_plotq[fld] = 0;
           }
@@ -292,13 +292,13 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
         for(int m=0;m<p_Np;++m){
           dfloat Inm = plotInterp[n+m*p_plotNp];
           
-          occaUnroll(p_plotNfields)
+          #pragma unroll p_plotNfields
             for(int fld=0;fld<p_plotNfields;++fld){
               r_plotq[fld] += Inm*s_q[fld][m];
             }
         }
         
-        occaUnroll(p_plotNfields)
+        #pragma unroll p_plotNfields
           for(int fld=0;fld<p_plotNfields;++fld){
             s_plotq[n][fld] = r_plotq[fld]; // note switch to field fastest layout
           }
@@ -306,9 +306,9 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
     }
     
     
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int n=0;n<p_plotNthreads;++n;inner0){
+    for(int n=0;n<p_plotNthreads;++n;@inner(0)){
 
       if(n<p_plotNelements){
         dfloat isoVals[2*(3*(p_plotNfields))]; // max number of output vertices 
@@ -333,7 +333,7 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
             #if 1
             // since ntri!=0 => ntri>=1
             if(offset+1<isoMaxNtris){  // make sure this triangle is in bound
-              occaUnroll(3*p_plotNfields)
+              #pragma unroll 3*p_plotNfields
                 for(int t=0;t<3*p_plotNfields;++t){
                   isoQ[offset*p_plotNfields*3+t] = isoVals[t]; // bad striding
                 }
@@ -341,7 +341,7 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
             
             if(ntri==2 && ((offset+2)<isoMaxNtris)){ // make sure this triangle is in bound
               ++offset;
-              occaUnroll(3*p_plotNfields)
+              #pragma unroll 3*p_plotNfields
                 for(int t=0;t<3*p_plotNfields;++t){
                   isoQ[offset*p_plotNfields*3+t] = isoVals[t+3*p_plotNfields]; // bad striding
                 }
@@ -350,7 +350,7 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
 
             int Nvert  = 3; 
             if(offset+1<isoMaxNtris){  // make sure this triangle is in bound
-              occaUnroll(3*p_plotNfields)
+              #pragma unroll 3*p_plotNfields
                 for(int t=0;t<3*p_plotNfields;++t){
                   int vert   = t/(p_plotNfields);
                   int field  = t%(Nvert);
@@ -361,7 +361,7 @@ kernel void bnsIsoSurface3D(const int Nelements,    // number of elements
             
             if(ntri==2 && ((offset+2)<isoMaxNtris)){ // make sure this triangle is in bound
               ++offset;
-              occaUnroll(3*p_plotNfields)
+              #pragma unroll 3*p_plotNfields
                 for(int t=0;t<3*p_plotNfields;++t){
                   int vert   = t/(p_plotNfields);
                   int field  = t%(Nvert);

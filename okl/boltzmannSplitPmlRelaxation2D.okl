@@ -1,28 +1,28 @@
 
-kernel void boltzmannSplitPmlRelaxation2D(const int Nelements,
-					     const int * restrict elementIds,
-					     const dfloat * restrict cubInterpT,
-					     const dfloat * restrict cubProjectT,
-					     const dfloat4 * restrict q,
-					     dfloat * restrict rhspmlqx,
-					     dfloat * restrict rhspmlqy,
-					     dfloat * restrict rhspmlNT){
+@kernel void boltzmannSplitPmlRelaxation2D(const int Nelements,
+					     @restrict const  int *  elementIds,
+					     @restrict const  dfloat *  cubInterpT,
+					     @restrict const  dfloat *  cubProjectT,
+					     @restrict const  dfloat4 *  q,
+					     @restrict dfloat *  rhspmlqx,
+					     @restrict dfloat *  rhspmlqy,
+					     @restrict dfloat *  rhspmlNT){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    // shared memory for q at nodes
-    shared dfloat s_q[p_NblockV][6][p_Np];
+    // @shared memory for q at nodes
+    @shared dfloat s_q[p_NblockV][6][p_Np];
 
     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-    shared dfloat s_cubN4[p_NblockV][p_cubNp];
-    shared dfloat s_cubN5[p_NblockV][p_cubNp];
-    shared dfloat s_cubN6[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN4[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN5[p_NblockV][p_cubNp];
+    @shared dfloat s_cubN6[p_NblockV][p_cubNp];
 
-    exclusive int element;
+    @exclusive int element;
 
-    // prefetch q to shared
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolume;++n;inner0){    
+    // prefetch q to @shared
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){    
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -45,12 +45,12 @@ kernel void boltzmannSplitPmlRelaxation2D(const int Nelements,
       }
     }
     
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
     // interpolate q to cubature
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolume;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){     
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -77,19 +77,19 @@ kernel void boltzmannSplitPmlRelaxation2D(const int Nelements,
       }
     }
 
-    // make sure all cubature node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all cubature node data is loaded into @shared
+    @barrier("local");
     
     // partial projection to nodes from cubature-sub-group
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_maxNodesVolume;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){     
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
 	  if(n<p_Np){
 	    int base = element*p_Np*p_Nfields+n;
 	    
-	    // use temporaries for part sums for N4,N5,N6 because of exclusives
+	    // use temporaries for part sums for N4,N5,N6 because of @exclusives
 	    dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
 	    for(int i=0;i<p_cubNp;++i){
 	      const dfloat Pnc  = cubProjectT[i*p_Np+n];
@@ -118,32 +118,32 @@ kernel void boltzmannSplitPmlRelaxation2D(const int Nelements,
 }
 
 // c1: working (reproduces c0)
-kernel void boltzmannSplitPmlRelaxation2D_c1(const int Nelements,
-					     const int * restrict elementIds,
-					     const dfloat * restrict cubInterpT,
-					     const dfloat * restrict cubProjectT,
-					     const dfloat4 * restrict q,
-					     dfloat * restrict rhspmlqx,
-					     dfloat * restrict rhspmlqy,
-					     dfloat * restrict rhspmlNT){
+@kernel void boltzmannSplitPmlRelaxation2D_c1(const int Nelements,
+					     @restrict const  int *  elementIds,
+					     @restrict const  dfloat *  cubInterpT,
+					     @restrict const  dfloat *  cubProjectT,
+					     @restrict const  dfloat4 *  q,
+					     @restrict dfloat *  rhspmlqx,
+					     @restrict dfloat *  rhspmlqy,
+					     @restrict dfloat *  rhspmlNT){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    // shared memory for q at nodes
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    // @shared memory for q at nodes
+    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
 
     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-    shared dfloat s_cubN4[p_NblockV][p_Np];
-    shared dfloat s_cubN5[p_NblockV][p_Np];
-    shared dfloat s_cubN6[p_NblockV][p_Np];
+    @shared dfloat s_cubN4[p_NblockV][p_Np];
+    @shared dfloat s_cubN5[p_NblockV][p_Np];
+    @shared dfloat s_cubN6[p_NblockV][p_Np];
 
     // result of interpolation and projection
-    exclusive dfloat N4, N5, N6;
-    exclusive int element;
+    @exclusive dfloat N4, N5, N6;
+    @exclusive int element;
 
-    // prefetch q to shared
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_Np;++n;inner0){    
+    // prefetch q to @shared
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){    
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -170,12 +170,12 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const int Nelements,
     // interpolate q to cubature
     for(int co=0;co<p_cubNp;co+=p_Np){
 
-      // make sure all node data is loaded into shared
-      barrier(localMemFence);
+      // make sure all node data is loaded into @shared
+      @barrier("local");
 
       // interpolate to sub-group of p_Np cubature nodes 
-      for(int es=0;es<p_NblockV;++es;inner1){
-	for(int n=0;n<p_Np;++n;inner0){     
+      for(int es=0;es<p_NblockV;++es;@inner(1)){
+	for(int n=0;n<p_Np;++n;@inner(0)){     
 	  
 	  int e = eo+es; // element in block
 	  if(e<Nelements){
@@ -183,7 +183,7 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const int Nelements,
 	      dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
 	      dfloat cubq4 = 0.0f, cubq5 = 0.0f, cubq6 = 0.0f;
 	      
-	      occaUnroll(p_Np)
+	      #pragma unroll p_Np
 	      for(int m=0;m<p_Np;++m){
 		const dfloat Icn  = cubInterpT[m*p_cubNp+n+co];
 		cubq1 += Icn*s_q[es][0][m];
@@ -204,16 +204,16 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const int Nelements,
 	}
       }
 
-      // make sure all cubature node data is loaded into shared
-      barrier(localMemFence);
+      // make sure all cubature node data is loaded into @shared
+      @barrier("local");
       
       // partial projection to nodes from cubature-sub-group
-      for(int es=0;es<p_NblockV;++es;inner1){
-	for(int n=0;n<p_Np;++n;inner0){     
+      for(int es=0;es<p_NblockV;++es;@inner(1)){
+	for(int n=0;n<p_Np;++n;@inner(0)){     
 	  
 	  int e = eo+es; // element in block
 	  if(e<Nelements){
-	    // use temporaries for part sums for N4,N5,N6 because of exclusives
+	    // use temporaries for part sums for N4,N5,N6 because of @exclusives
 	    dfloat partN4 = 0.f, partN5 = 0.f, partN6 = 0.f;
 	    for(int i=0;i<p_Np;++i){
 	      if(i+co<p_cubNp){
@@ -230,8 +230,8 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const int Nelements,
     } // end of chunked cubature loop
   
     // write out
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_Np;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){     
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -258,34 +258,34 @@ kernel void boltzmannSplitPmlRelaxation2D_c1(const int Nelements,
 
 
 // c2: do not interpolate q4,q5,q6
-kernel void boltzmannSplitPmlRelaxation2D_c2(const int Nelements,
-					  const int * restrict elementIds,
-					  const dfloat * restrict cubInterpT,
-					  const dfloat * restrict cubProjectT,
-					  const dfloat4 * restrict q,
-					  dfloat * restrict rhspmlqx,
-					  dfloat * restrict rhspmlqy,
-					  dfloat * restrict rhspmlNT){
+@kernel void boltzmannSplitPmlRelaxation2D_c2(const int Nelements,
+					  @restrict const  int *  elementIds,
+					  @restrict const  dfloat *  cubInterpT,
+					  @restrict const  dfloat *  cubProjectT,
+					  @restrict const  dfloat4 *  q,
+					  @restrict dfloat *  rhspmlqx,
+					  @restrict dfloat *  rhspmlqy,
+					  @restrict dfloat *  rhspmlNT){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    // shared memory for q at nodes
-    shared dfloat s_q1[p_NblockV][p_Np];
-    shared dfloat s_q2[p_NblockV][p_Np];
-    shared dfloat s_q3[p_NblockV][p_Np];
+    // @shared memory for q at nodes
+    @shared dfloat s_q1[p_NblockV][p_Np];
+    @shared dfloat s_q2[p_NblockV][p_Np];
+    @shared dfloat s_q3[p_NblockV][p_Np];
 
     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-    shared dfloat s_cubN4[p_NblockV][p_Np];
-    shared dfloat s_cubN5[p_NblockV][p_Np];
-    shared dfloat s_cubN6[p_NblockV][p_Np];
+    @shared dfloat s_cubN4[p_NblockV][p_Np];
+    @shared dfloat s_cubN5[p_NblockV][p_Np];
+    @shared dfloat s_cubN6[p_NblockV][p_Np];
 
     // result of interpolation and projection
-    exclusive dfloat N4, N5, N6;
-    exclusive int element;
+    @exclusive dfloat N4, N5, N6;
+    @exclusive int element;
 
-    // prefetch q to shared
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_Np;++n;inner0){    
+    // prefetch q to @shared
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){    
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -310,12 +310,12 @@ kernel void boltzmannSplitPmlRelaxation2D_c2(const int Nelements,
     // interpolate q to cubature
     for(int co=0;co<p_cubNp;co+=p_Np){
 
-      // make sure all node data is loaded into shared
-      barrier(localMemFence);
+      // make sure all node data is loaded into @shared
+      @barrier("local");
 
       // interpolate to sub-group of p_Np cubature nodes 
-      for(int es=0;es<p_NblockV;++es;inner1){
-	for(int n=0;n<p_Np;++n;inner0){     
+      for(int es=0;es<p_NblockV;++es;@inner(1)){
+	for(int n=0;n<p_Np;++n;@inner(0)){     
 	  
 	  int e = eo+es; // element in block
 	  if(e<Nelements){
@@ -323,7 +323,7 @@ kernel void boltzmannSplitPmlRelaxation2D_c2(const int Nelements,
 	    if(n+co<p_cubNp){
 	      dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
 	      
-	      occaUnroll(p_Np)
+	      #pragma unroll p_Np
 	      for(int m=0;m<p_Np;++m){
 		const dfloat Icn  = cubInterpT[m*p_cubNp+n+co];
 		cubq1 += Icn*s_q1[es][m];
@@ -342,16 +342,16 @@ kernel void boltzmannSplitPmlRelaxation2D_c2(const int Nelements,
 	}
       }
 
-      // make sure all cubature node data is loaded into shared
-      barrier(localMemFence);
+      // make sure all cubature node data is loaded into @shared
+      @barrier("local");
       
       // partial projection to nodes from cubature-sub-group
-      for(int es=0;es<p_NblockV;++es;inner1){
-	for(int n=0;n<p_Np;++n;inner0){     
+      for(int es=0;es<p_NblockV;++es;@inner(1)){
+	for(int n=0;n<p_Np;++n;@inner(0)){     
 	  
 	  int e = eo+es; // element in block
 	  if(e<Nelements){
-	    // use temporaries for part sums for N4,N5,N6 because of exclusives
+	    // use temporaries for part sums for N4,N5,N6 because of @exclusives
 	    dfloat partN4 = 0.f, partN5 = 0.f, partN6 = 0.f;
 	    for(int i=0;i<p_Np;++i){
 	      if(i+co<p_cubNp){
@@ -370,8 +370,8 @@ kernel void boltzmannSplitPmlRelaxation2D_c2(const int Nelements,
     } // end of chunked cubature loop
     
     // write out
-    for(int es=0;es<p_NblockV;++es;inner1){
-      for(int n=0;n<p_Np;++n;inner0){     
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){     
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){

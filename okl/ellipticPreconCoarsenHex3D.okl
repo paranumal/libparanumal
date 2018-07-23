@@ -1,22 +1,22 @@
-kernel void ellipticPreconCoarsenHex3D(const dlong Nelements,
-                                        const dfloat * restrict R,
-                                        const dfloat * restrict qf,
-                                              dfloat * restrict qc){
+@kernel void ellipticPreconCoarsenHex3D(const dlong Nelements,
+                                        @restrict const  dfloat *  R,
+                                        @restrict const  dfloat *  qf,
+                                              @restrict dfloat *  qc){
   
   
-  for(dlong e=0;e<Nelements;++e;outer0){
-    shared dfloat s_qfff[p_NqFine][p_NqFine][p_NqFine];
-    shared dfloat s_qcff[p_NqCoarse][p_NqFine][p_NqFine];
-    shared dfloat s_qccf[p_NqCoarse][p_NqCoarse][p_NqFine];
-    shared dfloat s_qccc[p_NqCoarse][p_NqCoarse][p_NqCoarse];
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared dfloat s_qfff[p_NqFine][p_NqFine][p_NqFine];
+    @shared dfloat s_qcff[p_NqCoarse][p_NqFine][p_NqFine];
+    @shared dfloat s_qccf[p_NqCoarse][p_NqCoarse][p_NqFine];
+    @shared dfloat s_qccc[p_NqCoarse][p_NqCoarse][p_NqCoarse];
 
-    shared dfloat s_R[p_NqCoarse][p_NqFine];
+    @shared dfloat s_R[p_NqCoarse][p_NqFine];
 
-    // prefetch to shared
+    // prefetch to @shared
     
-    for(int k=0;k<p_NqFine;++k;inner2){
-      for(int j=0;j<p_NqFine;++j;inner1){
-        for(int i=0;i<p_NqFine;++i;inner0){
+    for(int k=0;k<p_NqFine;++k;@inner(2)){
+      for(int j=0;j<p_NqFine;++j;@inner(1)){
+        for(int i=0;i<p_NqFine;++i;@inner(0)){
           const dlong id = i+j*p_NqFine+k*p_NqFine*p_NqFine+e*p_NpFine;
           s_qfff[k][j][i] = qf[id];
 
@@ -26,15 +26,15 @@ kernel void ellipticPreconCoarsenHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // coarsen in k index
-    for(int k=0;k<p_NqFine;++k;inner2){
-      for(int j=0;j<p_NqFine;++j;inner1){
-        for(int i=0;i<p_NqFine;++i;inner0){
+    for(int k=0;k<p_NqFine;++k;@inner(2)){
+      for(int j=0;j<p_NqFine;++j;@inner(1)){
+        for(int i=0;i<p_NqFine;++i;@inner(0)){
           if(k<p_NqCoarse){
             dfloat res = 0;
-            occaUnroll(p_NqFine)
+            #pragma unroll p_NqFine
               for(int m=0;m<p_NqFine;++m) {
                 res += s_R[k][m]*s_qfff[m][j][i];
               }
@@ -44,15 +44,15 @@ kernel void ellipticPreconCoarsenHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // coarsen in j index
-    for(int k=0;k<p_NqFine;++k;inner2){
-      for(int j=0;j<p_NqFine;++j;inner1){
-        for(int i=0;i<p_NqFine;++i;inner0){
+    for(int k=0;k<p_NqFine;++k;@inner(2)){
+      for(int j=0;j<p_NqFine;++j;@inner(1)){
+        for(int i=0;i<p_NqFine;++i;@inner(0)){
           if((k<p_NqCoarse)&&(j<p_NqCoarse)){
             dfloat res = 0;
-            occaUnroll(p_NqFine)
+            #pragma unroll p_NqFine
               for(int m=0;m<p_NqFine;++m) {
                 res += s_R[j][m]*s_qcff[k][m][i];
               }
@@ -62,15 +62,15 @@ kernel void ellipticPreconCoarsenHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // coarsen in i index
-    for(int k=0;k<p_NqFine;++k;inner2){
-      for(int j=0;j<p_NqFine;++j;inner1){
-        for(int i=0;i<p_NqFine;++i;inner0){
+    for(int k=0;k<p_NqFine;++k;@inner(2)){
+      for(int j=0;j<p_NqFine;++j;@inner(1)){
+        for(int i=0;i<p_NqFine;++i;@inner(0)){
           if((k<p_NqCoarse) && (j<p_NqCoarse) && (i<p_NqCoarse)){
             dfloat rtmp = 0;
-            occaUnroll(p_NqFine)
+            #pragma unroll p_NqFine
               for(int m=0;m<p_NqFine;++m) {
                 rtmp += s_R[i][m]*s_qccf[k][j][m];
               }
@@ -80,12 +80,12 @@ kernel void ellipticPreconCoarsenHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // collect writes
-    for(int k=0;k<p_NqFine;++k;inner2){
-      for(int j=0;j<p_NqFine;++j;inner1){
-        for(int i=0;i<p_NqFine;++i;inner0){
+    for(int k=0;k<p_NqFine;++k;@inner(2)){
+      for(int j=0;j<p_NqFine;++j;@inner(1)){
+        for(int i=0;i<p_NqFine;++i;@inner(0)){
           const int id = i + j*p_NqFine+k*p_NqFine*p_NqFine;
           if(id<p_NpCoarse){
             qc[id + p_NpCoarse*e] = s_qccc[0][0][id];

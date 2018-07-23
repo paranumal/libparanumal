@@ -42,7 +42,12 @@ int main(int argc, char **argv){
   options.getArgs("LAMBDA", lambda);
 
   // set up
-  occa::kernelInfo kernelInfo;
+  occa::properties kernelInfo;
+ kernelInfo["defines"].asObject();
+ kernelInfo["includes"].asArray();
+ kernelInfo["header"].asArray();
+ kernelInfo["flags"].asObject();
+
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
   if(options.compareArgs("BENCHMARK", "BK5") ||

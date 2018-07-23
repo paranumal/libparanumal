@@ -1,25 +1,25 @@
-kernel void insVorticityTet3D(const dlong Nelements,
-                              const dfloat * restrict vgeo,
-                              const dfloat * restrict const DrT,
-                              const dfloat * restrict const DsT,
-                              const dfloat * restrict const DtT,
+@kernel void insVorticityTet3D(const dlong Nelements,
+                              @restrict const  dfloat *  vgeo,
+                              @restrict const  dfloat *  const DrT,
+                              @restrict const  dfloat *  const DsT,
+                              @restrict const  dfloat *  const DtT,
                               const dlong offset,
-                              const dfloat * restrict U,
-                              const dfloat * restrict V,
-                              const dfloat * restrict W,
-                                    dfloat * restrict Vx,
-                                    dfloat * restrict Vy,
-                                    dfloat * restrict Vz){  
+                              @restrict const  dfloat *  U,
+                              @restrict const  dfloat *  V,
+                              @restrict const  dfloat *  W,
+                                    @restrict dfloat *  Vx,
+                                    @restrict dfloat *  Vy,
+                                    @restrict dfloat *  Vz){  
   
   // block partition of elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     
-    shared dfloat s_u[p_NblockV][p_Np];
-    shared dfloat s_v[p_NblockV][p_Np];
-    shared dfloat s_w[p_NblockV][p_Np];
+    @shared dfloat s_u[p_NblockV][p_Np];
+    @shared dfloat s_v[p_NblockV][p_Np];
+    @shared dfloat s_w[p_NblockV][p_Np];
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
         if(e<Nelements){
           const dlong id = (e+offset)*p_Np+n;
           s_u[e-eo][n] = U[id];
@@ -29,10 +29,10 @@ kernel void insVorticityTet3D(const dlong Nelements,
       }
     }
           
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
         if(e<Nelements){
           const int es = e-eo;
           const dlong gid = e*p_Nvgeo;
@@ -51,7 +51,7 @@ kernel void insVorticityTet3D(const dlong Nelements,
           dfloat us = 0, vs = 0, ws =0;
           dfloat ut = 0, vt = 0, wt =0;
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i) {
               const dfloat Drn = DrT[n + i*p_Np];
               const dfloat Dsn = DsT[n + i*p_Np];

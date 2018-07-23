@@ -1,10 +1,10 @@
-kernel void scaledAdd(const dlong N,
+@kernel void scaledAdd(const dlong N,
                       const dfloat alpha,
-                      const dfloat * restrict x,
+                      @restrict const  dfloat *  x,
                       const dfloat beta,
-                      dfloat * restrict y){
+                      @restrict dfloat *  y){
   
-  for(dlong n=0;n<N;++n;tile(256)){
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
     if(n<N){
       y[n] = alpha*x[n] + beta*y[n];
     }
@@ -12,15 +12,15 @@ kernel void scaledAdd(const dlong N,
 }
 
 
-kernel void scaledAddwOffset(const dlong N,
+@kernel void scaledAddwOffset(const dlong N,
                       const dfloat alpha,
                       const dlong sourceOffset,
-                      const dfloat * restrict x,
+                      @restrict const  dfloat *  x,
                       const dfloat beta,
                       const dlong destOffset,
-                      dfloat * restrict y){
+                      @restrict dfloat *  y){
   
-  for(dlong n=0;n<N;++n;tile(256)){
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
     if(n<N){
       y[n+destOffset] = alpha*x[n+sourceOffset] + beta*y[n+destOffset];
     }

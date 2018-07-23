@@ -1,68 +1,68 @@
 
-kernel void innerProduct(const dlong N,
-			 const dfloat * restrict w,
-			 const dfloat * restrict x,
-			 dfloat * restrict wx){
+@kernel void innerProduct(const dlong N,
+			 @restrict const  dfloat *  w,
+			 @restrict const  dfloat *  x,
+			 @restrict dfloat *  wx){
   
 
-  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;outer0){
+  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;@outer(0)){
     
-    volatile shared dfloat s_wx[p_blockSize];
+    @shared volatile dfloat s_wx[p_blockSize];
 
-    for(int t=0;t<p_blockSize;++t;inner0){
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
       const dlong id = t + b*p_blockSize;
       s_wx[t] = (id<N) ? (w[id]*x[id]) : 0.f;
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
 #if p_blockSize>512
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<512) s_wx[t] += s_wx[t+512];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<512) s_wx[t] += s_wx[t+512];
+    @barrier("local");
 #endif
 
 #if p_blockSize>256
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<256) s_wx[t] += s_wx[t+256];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) s_wx[t] += s_wx[t+256];
+    @barrier("local");
 #endif
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<128) s_wx[t] += s_wx[t+128];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) s_wx[t] += s_wx[t+128];
+    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t< 64) s_wx[t] += s_wx[t+ 64];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) s_wx[t] += s_wx[t+ 64];
+    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t< 32) s_wx[t] += s_wx[t+ 32];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) s_wx[t] += s_wx[t+ 32];
+    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t< 16) s_wx[t] += s_wx[t+ 16];
-    //    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) s_wx[t] += s_wx[t+ 16];
+    //    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  8) s_wx[t] += s_wx[t+  8];
-    //    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) s_wx[t] += s_wx[t+  8];
+    //    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  4) s_wx[t] += s_wx[t+  4];
-    //    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) s_wx[t] += s_wx[t+  4];
+    //    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  2) s_wx[t] += s_wx[t+  2];
-    //    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_wx[t] += s_wx[t+  2];
+    //    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  1) wx[b] = s_wx[0] + s_wx[1];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) wx[b] = s_wx[0] + s_wx[1];
   }
 }
 
-kernel void innerProductAtomic(const dlong N,
+@kernel void innerProductAtomic(const dlong N,
 			       const dlong Nblocks,
-			       const dfloat * restrict w,
-			       const dfloat * restrict x,
-			       dfloat * restrict wx){
+			       @restrict const  dfloat *  w,
+			       @restrict const  dfloat *  x,
+			       @restrict dfloat *  wx){
   
 
-  for(dlong b=0;b<Nblocks;++b;outer0){
+  for(dlong b=0;b<Nblocks;++b;@outer(0)){
     
-    volatile shared dfloat s_wx[p_blockSize];
+    @shared volatile dfloat s_wx[p_blockSize];
 
-    for(int t=0;t<p_blockSize;++t;inner0){
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
       dlong id = t + b*p_blockSize;
       dfloat tmp  = 0;
       while(id<N){
@@ -72,33 +72,33 @@ kernel void innerProductAtomic(const dlong N,
       s_wx[t] = tmp;
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
 #if p_blockSize>512
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<512) s_wx[t] += s_wx[t+512];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<512) s_wx[t] += s_wx[t+512];
+    @barrier("local");
 #endif
 
 #if p_blockSize>256
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<256) s_wx[t] += s_wx[t+256];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) s_wx[t] += s_wx[t+256];
+    @barrier("local");
 #endif
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<128) s_wx[t] += s_wx[t+128];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) s_wx[t] += s_wx[t+128];
+    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t< 64) s_wx[t] += s_wx[t+ 64];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) s_wx[t] += s_wx[t+ 64];
+    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t< 32) s_wx[t] += s_wx[t+ 32];
-    barrier(localMemFence);
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) s_wx[t] += s_wx[t+ 32];
+    @barrier("local");
 
-    for(int t=0;t<p_blockSize;++t;inner0) if(t< 16) s_wx[t] += s_wx[t+ 16];
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  8) s_wx[t] += s_wx[t+  8];
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  4) s_wx[t] += s_wx[t+  4];
-    for(int t=0;t<p_blockSize;++t;inner0) if(t<  2) s_wx[t] += s_wx[t+  2];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) s_wx[t] += s_wx[t+ 16];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) s_wx[t] += s_wx[t+  8];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) s_wx[t] += s_wx[t+  4];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_wx[t] += s_wx[t+  2];
 
-    for(int t=0;t<p_blockSize;++t;inner0)
+    for(int t=0;t<p_blockSize;++t;@inner(0))
       if(t<  1){
 	dfloat res = s_wx[0]+s_wx[1];
 	atomicAdd(wx,res);

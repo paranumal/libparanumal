@@ -1,7 +1,7 @@
 #include "elliptic.h"
 
 
-void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &kernelInfo){
+void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &kernelInfo){
 
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
@@ -180,14 +180,14 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
     occa::setVerboseCompilation(false);
 #endif
   
-  kernelInfo.addParserFlag("automate-add-barriers", "disabled");
+  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    kernelInfo.addCompilerFlag("-Xptxas -dlcm=ca");
+    kernelInfo["compiler_flags"] += "-Xptxas -dlcm=ca";
   }
 
   if(mesh->device.mode()=="Serial")
-    kernelInfo.addCompilerFlag("-g");
+    kernelInfo["compiler_flags"] += "-g";
 
   // set kernel name suffix
   char *suffix;
@@ -209,135 +209,135 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
 
       //mesh kernels 
       mesh->haloExtractKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/meshHaloExtract2D.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract2D.okl",
     				       "meshHaloExtract2D",
     				       kernelInfo);
 
       mesh->gatherKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/gather.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/gather.okl",
     				       "gather",
     				       kernelInfo);
 
       mesh->scatterKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/scatter.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/scatter.okl",
     				       "scatter",
     				       kernelInfo);
 
       mesh->gatherScatterKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/gatherScatter.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/gatherScatter.okl",
                    "gatherScatter",
                    kernelInfo);
 
       mesh->getKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/get.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/get.okl",
     				       "get",
     				       kernelInfo);
 
       mesh->putKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/put.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/put.okl",
     				       "put",
     				       kernelInfo);
 
 
       mesh->addScalarKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/addScalar.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/addScalar.okl",
                    "addScalar",
                    kernelInfo);
 
       mesh->maskKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/mask.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/mask.okl",
                    "mask",
                    kernelInfo);
 
 
-      kernelInfo.addDefine("p_blockSize", blockSize);
+      kernelInfo["defines/" "p_blockSize"]= blockSize;
       
 
       mesh->sumKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/sum.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/sum.okl",
                    "sum",
                    kernelInfo);
 
       elliptic->weightedInnerProduct1Kernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct1.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/weightedInnerProduct1.okl",
     				       "weightedInnerProduct1",
     				       kernelInfo);
 
       elliptic->weightedInnerProduct2Kernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedInnerProduct2.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/weightedInnerProduct2.okl",
     				       "weightedInnerProduct2",
     				       kernelInfo);
 
       elliptic->innerProductKernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/innerProduct.okl",
     				       "innerProduct",
     				       kernelInfo);
 
       elliptic->weightedNorm2Kernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/weightedNorm2.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/weightedNorm2.okl",
 					   "weightedNorm2",
 					   kernelInfo);
 
       elliptic->norm2Kernel =
-        mesh->device.buildKernelFromSource(DHOLMES "/okl/norm2.okl",
+        mesh->device.buildKernel(DHOLMES "/okl/norm2.okl",
 					   "norm2",
 					   kernelInfo);
       
       
       elliptic->scaledAddKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
+          mesh->device.buildKernel(DHOLMES "/okl/scaledAdd.okl",
     					 "scaledAdd",
     					 kernelInfo);
 
       elliptic->dotMultiplyKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/dotMultiply.okl",
+          mesh->device.buildKernel(DHOLMES "/okl/dotMultiply.okl",
     					 "dotMultiply",
     					 kernelInfo);
 
       elliptic->dotDivideKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/dotDivide.okl",
+          mesh->device.buildKernel(DHOLMES "/okl/dotDivide.okl",
     					 "dotDivide",
     					 kernelInfo);
       
       // add custom defines
-      kernelInfo.addDefine("p_NpP", (mesh->Np+mesh->Nfp*mesh->Nfaces));
-      kernelInfo.addDefine("p_Nverts", mesh->Nverts);
+      kernelInfo["defines/" "p_NpP"]= (mesh->Np+mesh->Nfp*mesh->Nfaces);
+      kernelInfo["defines/" "p_Nverts"]= mesh->Nverts;
 
       //sizes for the coarsen and prolongation kernels. degree N to degree 1
-      kernelInfo.addDefine("p_NpFine", mesh->Np);
-      kernelInfo.addDefine("p_NpCoarse", mesh->Nverts);
+      kernelInfo["defines/" "p_NpFine"]= mesh->Np;
+      kernelInfo["defines/" "p_NpCoarse"]= mesh->Nverts;
 
 
       if (elliptic->elementType==QUADRILATERALS || elliptic->elementType==HEXAHEDRA) {
-        kernelInfo.addDefine("p_NqFine", mesh->N+1);
-        kernelInfo.addDefine("p_NqCoarse", 2);
+        kernelInfo["defines/" "p_NqFine"]= mesh->N+1;
+        kernelInfo["defines/" "p_NqCoarse"]= 2;
       }
 
-      kernelInfo.addDefine("p_NpFEM", mesh->NpFEM);
+      kernelInfo["defines/" "p_NpFEM"]= mesh->NpFEM;
 
       int Nmax = mymax(mesh->Np, mesh->Nfaces*mesh->Nfp);
-      kernelInfo.addDefine("p_Nmax", Nmax);
+      kernelInfo["defines/" "p_Nmax"]= Nmax;
 
       int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
-      kernelInfo.addDefine("p_maxNodes", maxNodes);
+      kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
       int NblockV = mymax(1,maxNthreads/mesh->Np); // works for CUDA
       int NnodesV = 1; //hard coded for now
-      kernelInfo.addDefine("p_NblockV", NblockV);
-      kernelInfo.addDefine("p_NnodesV", NnodesV);
-      kernelInfo.addDefine("p_NblockVFine", NblockV);
-      kernelInfo.addDefine("p_NblockVCoarse", NblockV);
+      kernelInfo["defines/" "p_NblockV"]= NblockV;
+      kernelInfo["defines/" "p_NnodesV"]= NnodesV;
+      kernelInfo["defines/" "p_NblockVFine"]= NblockV;
+      kernelInfo["defines/" "p_NblockVCoarse"]= NblockV;
 
       int NblockS = mymax(1,maxNthreads/maxNodes); // works for CUDA
-      kernelInfo.addDefine("p_NblockS", NblockS);
+      kernelInfo["defines/" "p_NblockS"]= NblockS;
 
       int NblockP = mymax(1,maxNthreads/(4*mesh->Np)); // get close to maxNthreads threads
-      kernelInfo.addDefine("p_NblockP", NblockP);
+      kernelInfo["defines/" "p_NblockP"]= NblockP;
 
       int NblockG;
       if(mesh->Np<=32) NblockG = ( 32/mesh->Np );
       else NblockG = maxNthreads/mesh->Np;
-      kernelInfo.addDefine("p_NblockG", NblockG);
+      kernelInfo["defines/" "p_NblockG"]= NblockG;
 
       //add standard boundary functions
       char *boundaryHeaderFileName;
@@ -345,17 +345,17 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
         boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary2D.h");
       else if (elliptic->dim==3)
         boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
-      kernelInfo.addInclude(boundaryHeaderFileName);
+      kernelInfo["includes"] += boundaryHeaderFileName;
 
       sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
       sprintf(kernelName, "ellipticAx%s", suffix);
 
-      occa::kernelInfo dfloatKernelInfo = kernelInfo;
-      occa::kernelInfo floatKernelInfo = kernelInfo;
-      floatKernelInfo.addDefine("pfloat", "float");
-      dfloatKernelInfo.addDefine("pfloat", dfloatString);
+      occa::properties dfloatKernelInfo = kernelInfo;
+      occa::properties floatKernelInfo = kernelInfo;
+      floatKernelInfo["defines/" "pfloat"]= "float";
+      dfloatKernelInfo["defines/" "pfloat"]= dfloatString;
 
-      elliptic->AxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,dfloatKernelInfo);
+      elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
       
       if(elliptic->elementType!=HEXAHEDRA){
 	sprintf(kernelName, "ellipticPartialAx%s", suffix);
@@ -369,44 +369,44 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
       }
 
       printf("LOOK HERE DFLOAT!!!!!!\n");
-      elliptic->partialAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,dfloatKernelInfo);
+      elliptic->partialAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
 
       printf("LOOK HERE !!!!!!\n");
-      elliptic->partialFloatAxKernel = mesh->device.buildKernelFromSource(fileName,kernelName,floatKernelInfo);
+      elliptic->partialFloatAxKernel = mesh->device.buildKernel(fileName,kernelName,floatKernelInfo);
       
       if (options.compareArgs("BASIS","BERN")) {
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticGradientBB%s.okl", suffix);
         sprintf(kernelName, "ellipticGradientBB%s", suffix);
 
-        elliptic->gradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->gradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
         sprintf(kernelName, "ellipticPartialGradientBB%s", suffix);
-        elliptic->partialGradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->partialGradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       
         sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdgBB%s.okl", suffix);
         sprintf(kernelName, "ellipticAxIpdgBB%s", suffix);
-        elliptic->ipdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->ipdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
         sprintf(kernelName, "ellipticPartialAxIpdgBB%s", suffix);
-        elliptic->partialIpdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
           
       } else if (options.compareArgs("BASIS","NODAL")) {
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticGradient%s.okl", suffix);
         sprintf(kernelName, "ellipticGradient%s", suffix);
 
-        elliptic->gradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->gradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
         sprintf(kernelName, "ellipticPartialGradient%s", suffix);
-        elliptic->partialGradientKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->partialGradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdg%s.okl", suffix);
         sprintf(kernelName, "ellipticAxIpdg%s", suffix);
-        elliptic->ipdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->ipdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
         sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
-        elliptic->partialIpdgKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+        elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       }
     }
   MPI_Barrier(MPI_COMM_WORLD);
@@ -464,32 +464,32 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::kernelInfo &k
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
-      elliptic->precon->coarsenKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      elliptic->precon->coarsenKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
-      elliptic->precon->prolongateKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      elliptic->precon->prolongateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");
       sprintf(kernelName, "ellipticBlockJacobiPrecon");
-      elliptic->precon->blockJacobiKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      elliptic->precon->blockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       sprintf(kernelName, "ellipticPartialBlockJacobiPrecon");
-      elliptic->precon->partialblockJacobiKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      elliptic->precon->partialblockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticPatchSolver.okl");
       sprintf(kernelName, "ellipticApproxBlockJacobiSolver");
-      elliptic->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernelFromSource(fileName,kernelName,kernelInfo);
+      elliptic->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       if (   elliptic->elementType == TRIANGLES 
           || elliptic->elementType == TETRAHEDRA) {
         elliptic->precon->SEMFEMInterpKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMInterp.okl",
+          mesh->device.buildKernel(DHOLMES "/okl/ellipticSEMFEMInterp.okl",
                      "ellipticSEMFEMInterp",
                      kernelInfo);
 
         elliptic->precon->SEMFEMAnterpKernel =
-          mesh->device.buildKernelFromSource(DHOLMES "/okl/ellipticSEMFEMAnterp.okl",
+          mesh->device.buildKernel(DHOLMES "/okl/ellipticSEMFEMAnterp.okl",
                      "ellipticSEMFEMAnterp",
                      kernelInfo);
       }

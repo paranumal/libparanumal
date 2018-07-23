@@ -17,7 +17,7 @@ data/ellipticHomogeneous2D.h
 4
 
 [THREAD MODEL]
-OpenCL
+CUDA
 
 [PLATFORM NUMBER]
 0

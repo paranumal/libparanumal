@@ -1,27 +1,27 @@
 
 // compute div(NU)  = div(uxu) in collocation way (weak form)
-kernel void insSubCycleVolumeQuad2D(const dlong Nelements,
-                                    const dfloat * restrict vgeo,
-                                    const dfloat * restrict D,
-                                    const dfloat * restrict U,
-                                    const dfloat * restrict V,
-                                    const dfloat * restrict Ud,
-                                    const dfloat * restrict Vd,
-                                          dfloat * restrict rhsU,
-                                          dfloat * restrict rhsV){
+@kernel void insSubCycleVolumeQuad2D(const dlong Nelements,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  D,
+                                    @restrict const  dfloat *  U,
+                                    @restrict const  dfloat *  V,
+                                    @restrict const  dfloat *  Ud,
+                                    @restrict const  dfloat *  Vd,
+                                          @restrict dfloat *  rhsU,
+                                          @restrict dfloat *  rhsV){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_F11[p_NblockV][p_Nq][p_Nq];
-    shared dfloat s_F12[p_NblockV][p_Nq][p_Nq];
-    shared dfloat s_F21[p_NblockV][p_Nq][p_Nq];
-    shared dfloat s_F22[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_F11[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_F12[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_F21[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_F22[p_NblockV][p_Nq][p_Nq];
 
-    shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
 
-    for(int es=0;es<p_NblockV;++es;inner2){   
-      for(int j=0;j<p_Nq;++j;inner1){ 
-        for(int i=0;i<p_Nq;++i;inner0){    
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){    
           const dlong e = eo+es; // element in block
           if(e<Nelements){ 
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
@@ -53,19 +53,19 @@ kernel void insSubCycleVolumeQuad2D(const dlong Nelements,
       }
     }
 
-    // Make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner2){ 
-      for(int j=0;j<p_Nq;++j;inner1){ 
-        for(int i=0;i<p_Nq;++i;inner0){  
+    for(int es=0;es<p_NblockV;++es;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){  
           const dlong e = eo+es; 
           if(e<Nelements){ 
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
             const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
             dfloat nu = 0.f, nv = 0.f;
             
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
               for(int n=0;n<p_Nq;++n){
                 const dfloat Dr = s_D[n][i];
                 const dfloat Ds = s_D[n][j];
@@ -110,8 +110,8 @@ kernel void insSubCycleVolumeQuad2D(const dlong Nelements,
     vdP *= bScale;                                                      \
   }                                                                     \
                                                                         \
-  dfloat unM   = occaFabs(nx*uM + ny*vM);                               \
-  dfloat unP   = occaFabs(nx*uP + ny*vP);                               \
+  dfloat unM   = fabs(nx*uM + ny*vM);                               \
+  dfloat unP   = fabs(nx*uP + ny*vP);                               \
   dfloat unMax = (unM > unP) ? unM : unP;                               \
                                                                         \
   const dfloat sc = invWJ * sJ;                                         \
@@ -121,31 +121,31 @@ kernel void insSubCycleVolumeQuad2D(const dlong Nelements,
                                + ny*(vP*vdP + vM*vdM)  + unMax*(vdM-vdP) ));\
   }
 
-kernel void insSubCycleSurfaceQuad2D(const dlong Nelements,
-                                    const dfloat * restrict sgeo,
-                                    const dlong  * restrict vmapM,
-                                    const dlong  * restrict vmapP,
-                                    const int   * restrict EToB,
+@kernel void insSubCycleSurfaceQuad2D(const dlong Nelements,
+                                    @restrict const  dfloat *  sgeo,
+                                    @restrict const  dlong  *  vmapM,
+                                    @restrict const  dlong  *  vmapP,
+                                    @restrict const  int   *  EToB,
                                     const dfloat bScale,
                                     const dfloat time,
-                                    const dfloat * restrict x,
-                                    const dfloat * restrict y,
-                                    const dfloat * restrict U,
-                                    const dfloat * restrict V,
-                                    const dfloat * restrict Ud,
-                                    const dfloat * restrict Vd,
-                                          dfloat * restrict rhsU,
-                                          dfloat * restrict rhsV){
+                                    @restrict const  dfloat *  x,
+                                    @restrict const  dfloat *  y,
+                                    @restrict const  dfloat *  U,
+                                    @restrict const  dfloat *  V,
+                                    @restrict const  dfloat *  Ud,
+                                    @restrict const  dfloat *  Vd,
+                                          @restrict dfloat *  rhsU,
+                                          @restrict dfloat *  rhsV){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_fluxNU[p_NblockS][p_Nq][p_Nq];
-    shared dfloat s_fluxNV[p_NblockS][p_Nq][p_Nq];
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_fluxNU[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_fluxNV[p_NblockS][p_Nq][p_Nq];
 
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-        occaUnroll(p_Nq)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
         for(int j=0;j<p_Nq;++j){
           s_fluxNU[es][j][i] = 0.;
           s_fluxNV[es][j][i] = 0.;
@@ -153,12 +153,12 @@ kernel void insSubCycleSurfaceQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // for all face nodes of all elements
     // face 0 & 2
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
@@ -170,11 +170,11 @@ kernel void insSubCycleSurfaceQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1 & 3
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
@@ -186,14 +186,14 @@ kernel void insSubCycleSurfaceQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){ 
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for(int j=0;j<p_Nq;++j){
             const dlong id = e*p_Np + j*p_Nq + i;
 
@@ -206,41 +206,41 @@ kernel void insSubCycleSurfaceQuad2D(const dlong Nelements,
   }
 }
 
-/* ------------------Quadrature kernels ----------------------------------*/
+/* ------------------Quadrature @kernels ----------------------------------*/
 
 // compute div(NU)  = div(uxu) using quadrature (weak form)
-kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
-                                            const dfloat * restrict vgeo,
-                                            const dfloat * restrict cubvgeo,
-                                            const dfloat * restrict cubDWT,
-                                            const dfloat * restrict cubInterpT,
-                                            const dfloat * restrict cubProjectT,
-                                            const dfloat * restrict U,
-                                            const dfloat * restrict V,
-                                            const dfloat * restrict Ud,
-                                            const dfloat * restrict Vd,
-                                                  dfloat * restrict rhsU,
-                                                  dfloat * restrict rhsV){
+@kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
+                                            @restrict const  dfloat *  vgeo,
+                                            @restrict const  dfloat *  cubvgeo,
+                                            @restrict const  dfloat *  cubDWT,
+                                            @restrict const  dfloat *  cubInterpT,
+                                            @restrict const  dfloat *  cubProjectT,
+                                            @restrict const  dfloat *  U,
+                                            @restrict const  dfloat *  V,
+                                            @restrict const  dfloat *  Ud,
+                                            @restrict const  dfloat *  Vd,
+                                                  @restrict dfloat *  rhsU,
+                                                  @restrict dfloat *  rhsV){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_F11[p_NblockV][p_cubNq][p_cubNq];
-    shared dfloat s_F12[p_NblockV][p_cubNq][p_cubNq];
-    shared dfloat s_F21[p_NblockV][p_cubNq][p_cubNq];
-    shared dfloat s_F22[p_NblockV][p_cubNq][p_cubNq];
+    @shared dfloat s_F11[p_NblockV][p_cubNq][p_cubNq];
+    @shared dfloat s_F12[p_NblockV][p_cubNq][p_cubNq];
+    @shared dfloat s_F21[p_NblockV][p_cubNq][p_cubNq];
+    @shared dfloat s_F22[p_NblockV][p_cubNq][p_cubNq];
 
-    shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    shared dfloat s_cubProjectT[p_cubNq][p_Nq];
-    shared dfloat s_cubDWT[p_cubNq][p_Nq];
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    @shared dfloat s_cubDWT[p_cubNq][p_Nq];
 
-    exclusive dfloat r_Un, r_Vn;
-    exclusive dfloat r_Udn, r_Vdn;
-    exclusive dfloat r_F11, r_F12, r_F21, r_F22;
+    @exclusive dfloat r_Un, r_Vn;
+    @exclusive dfloat r_Udn, r_Vdn;
+    @exclusive dfloat r_F11, r_F12, r_F21, r_F22;
 
-    //fetch the U and V values and store in flux arrays in shared
-    for(int es=0;es<p_NblockV;++es;inner2){   
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){    
+    //fetch the U and V values and store in flux arrays in @shared
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){    
           const dlong e = eo+es; // element in block
           if(e<Nelements && i<p_Nq && j<p_Nq){ 
             const dlong id = e*p_Np + j*p_Nq+i;
@@ -266,17 +266,17 @@ kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     //interpolate in i, store in register
-    for(int es=0;es<p_NblockV;++es;inner2){   
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
             r_Un  = 0.; r_Vn  = 0.;
             r_Udn = 0.; r_Vdn = 0.;
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
               const dfloat Ini = s_cubInterpT[n][i];
               r_Un  += Ini*s_F11[es][j][n];
@@ -289,12 +289,12 @@ kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    //write register back to shared
-    for(int es=0;es<p_NblockV;++es;inner2){   
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+    //write register back to @shared
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
             s_F11[es][j][i] = r_Un;
             s_F12[es][j][i] = r_Vn;
@@ -305,16 +305,16 @@ kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     //interpolate in j and store flux in register
-    for(int es=0;es<p_NblockV;++es;inner2){   
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           r_Un  = 0.; r_Vn  = 0.;
           r_Udn = 0.; r_Vdn = 0.;
 
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             const dfloat Inj = s_cubInterpT[n][j];
             r_Un  += Inj*s_F11[es][n][i];
@@ -326,11 +326,11 @@ kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner2){   
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
           if(e<Nelements){ 
             const dlong gid = e*p_cubNp*p_Nvgeo+ j*p_cubNq +i;
@@ -352,17 +352,17 @@ kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     //project/differentiate in j
-    for(int es=0;es<p_NblockV;++es;inner2){   
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           r_F11  = 0.; r_F12  = 0.;
           r_F21  = 0.; r_F22  = 0.;
 
           if (j<p_Nq) {
-            occaUnroll(p_cubNq)
+            #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
               const dfloat Pnj = s_cubProjectT[n][j];
               const dfloat Dnj = s_cubDWT[n][j];
@@ -376,12 +376,12 @@ kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    //write register back to shared
-    for(int es=0;es<p_NblockV;++es;inner2){   
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+    //write register back to @shared
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
             s_F11[es][j][i] = r_F11;
             s_F12[es][j][i] = r_F12;
@@ -392,12 +392,12 @@ kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     //project/differentiate in i and write back 
-    for(int es=0;es<p_NblockV;++es;inner2){ 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){  
+    for(int es=0;es<p_NblockV;++es;@inner(2)){ 
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){  
           const dlong e = eo+es; // element in block
           if(e<Nelements && i<p_Nq && j<p_Nq){ 
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
@@ -405,7 +405,7 @@ kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
             
             dfloat nu = 0.f, nv = 0.f;
             
-            occaUnroll(p_cubNq)
+            #pragma unroll p_cubNq
               for(int n=0;n<p_cubNq;++n){
                 const dfloat Pni = s_cubProjectT[n][i];
                 const dfloat Dni = s_cubDWT[n][i];
@@ -432,7 +432,7 @@ kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
 {                                                                       \
   dfloat nu = 0.f, nv = 0.f;                                            \
                                                                         \
-  occaUnroll(p_cubNq)                                                   \
+  #pragma unroll p_cubNq                                                   \
     for(int n=0;n<p_cubNq;++n){                                         \
       const dfloat Pni = s_cubProjectT[n][m];                           \
       nu  += Pni*s_fluxNU[es][face][n];                                 \
@@ -443,59 +443,59 @@ kernel void insSubCycleCubatureVolumeQuad2D(const dlong Nelements,
   s_NV[es][j][i] += nv;                                                 \
 }
 
-kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
-                                            const dfloat * restrict vgeo,
-                                            const dfloat * restrict cubsgeo,
-                                            const dlong  * restrict vmapM,
-                                            const dlong  * restrict vmapP,
-                                            const int    * restrict EToB,
-                                            const dfloat * restrict cubInterpT,
-                                            const dfloat * restrict cubProjectT,
+@kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
+                                            @restrict const  dfloat *  vgeo,
+                                            @restrict const  dfloat *  cubsgeo,
+                                            @restrict const  dlong  *  vmapM,
+                                            @restrict const  dlong  *  vmapP,
+                                            @restrict const  int    *  EToB,
+                                            @restrict const  dfloat *  cubInterpT,
+                                            @restrict const  dfloat *  cubProjectT,
                                             const dfloat bScale,
                                             const dfloat time,
-                                            const dfloat * restrict intx,
-                                            const dfloat * restrict inty,
-                                            const dfloat * restrict U,
-                                            const dfloat * restrict V,
-                                            const dfloat * restrict Ud,
-                                            const dfloat * restrict Vd,
-                                                  dfloat * restrict rhsU,
-                                                  dfloat * restrict rhsV){
+                                            @restrict const  dfloat *  intx,
+                                            @restrict const  dfloat *  inty,
+                                            @restrict const  dfloat *  U,
+                                            @restrict const  dfloat *  V,
+                                            @restrict const  dfloat *  Ud,
+                                            @restrict const  dfloat *  Vd,
+                                                  @restrict dfloat *  rhsU,
+                                                  @restrict dfloat *  rhsV){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
-    // shared storage for flux terms
-    shared dfloat s_NU[p_NblockS][p_Nq][p_Nq];
-    shared dfloat s_NV[p_NblockS][p_Nq][p_Nq];
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_NU[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_NV[p_NblockS][p_Nq][p_Nq];
 
-    shared dfloat s_UM[p_NblockS][p_Nfaces][p_cubNq];
-    shared dfloat s_VM[p_NblockS][p_Nfaces][p_cubNq];
-    shared dfloat s_UP[p_NblockS][p_Nfaces][p_cubNq];
-    shared dfloat s_VP[p_NblockS][p_Nfaces][p_cubNq];
+    @shared dfloat s_UM[p_NblockS][p_Nfaces][p_cubNq];
+    @shared dfloat s_VM[p_NblockS][p_Nfaces][p_cubNq];
+    @shared dfloat s_UP[p_NblockS][p_Nfaces][p_cubNq];
+    @shared dfloat s_VP[p_NblockS][p_Nfaces][p_cubNq];
 
-    shared dfloat s_UdM[p_NblockS][p_Nfaces][p_cubNq];
-    shared dfloat s_VdM[p_NblockS][p_Nfaces][p_cubNq];
-    shared dfloat s_UdP[p_NblockS][p_Nfaces][p_cubNq];
-    shared dfloat s_VdP[p_NblockS][p_Nfaces][p_cubNq];
+    @shared dfloat s_UdM[p_NblockS][p_Nfaces][p_cubNq];
+    @shared dfloat s_VdM[p_NblockS][p_Nfaces][p_cubNq];
+    @shared dfloat s_UdP[p_NblockS][p_Nfaces][p_cubNq];
+    @shared dfloat s_VdP[p_NblockS][p_Nfaces][p_cubNq];
 
-    //reuse shared memory buffers
+    //reuse @shared memory buffers
     #define s_fluxNU s_UM
     #define s_fluxNV s_VM
 
-    exclusive dfloat r_UMn[p_Nfaces], r_VMn[p_Nfaces];
-    exclusive dfloat r_UPn[p_Nfaces], r_VPn[p_Nfaces];
-    exclusive dfloat r_UdMn[p_Nfaces], r_VdMn[p_Nfaces];
-    exclusive dfloat r_UdPn[p_Nfaces], r_VdPn[p_Nfaces];
+    @exclusive dfloat r_UMn[p_Nfaces], r_VMn[p_Nfaces];
+    @exclusive dfloat r_UPn[p_Nfaces], r_VPn[p_Nfaces];
+    @exclusive dfloat r_UdMn[p_Nfaces], r_VdMn[p_Nfaces];
+    @exclusive dfloat r_UdPn[p_Nfaces], r_VdPn[p_Nfaces];
 
-    shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements && i<p_Nq){
-          occaUnroll(p_Nfaces)
+          #pragma unroll p_Nfaces
           for (int face=0;face<p_Nfaces;face++) {
             const dlong id  = e*p_Nfp*p_Nfaces + face*p_Nq + i;
             const dlong idM = vmapM[id];
@@ -516,7 +516,7 @@ kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
 
         //zero out resulting surface contributions
         if (i<p_Nq) {
-          occaUnroll(p_Nq)          
+          #pragma unroll p_Nq          
           for(int j=0;j<p_Nq;++j){
             s_NU[es][j][i] = 0.;
             s_NV[es][j][i] = 0.;
@@ -525,7 +525,7 @@ kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
 
         //fetch reference operators
         if (es==0) {
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for(int j=0;j<p_Nq;++j){
             const int id = i+j*p_cubNq;
             s_cubInterpT[0][id] = cubInterpT[id];
@@ -535,12 +535,12 @@ kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     //interpolate traces, store flux in register
-    for(int es=0;es<p_NblockS;++es;inner1){   
-      for(int i=0;i<p_cubNq;++i;inner0){
-        occaUnroll(p_Nfaces)
+    for(int es=0;es<p_NblockS;++es;@inner(1)){   
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        #pragma unroll p_Nfaces
         for (int face=0;face<p_Nfaces;face++) {
           r_UMn[face] = 0., r_VMn[face] = 0.;
           r_UPn[face] = 0., r_VPn[face] = 0.;
@@ -548,11 +548,11 @@ kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
           r_UdPn[face] = 0., r_VdPn[face] = 0.;
         }
 
-        occaUnroll(p_Nq)
+        #pragma unroll p_Nq
         for (int n=0;n<p_Nq;n++) {
           const dfloat Ini = s_cubInterpT[n][i];
           
-          occaUnroll(p_Nfaces)
+          #pragma unroll p_Nfaces
           for (int face=0;face<p_Nfaces;face++) {
             r_UMn[face]  += Ini*s_UM[es][face][n];
             r_VMn[face]  += Ini*s_VM[es][face][n];
@@ -567,14 +567,14 @@ kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence); //need a barrier since s_fluxNU and s_fluxNV are aliased
+    @barrier("local"); //need a barrier since s_fluxNU and s_fluxNV are aliased
 
-    //write fluxes to shared
-    for(int es=0;es<p_NblockS;++es;inner1){   
-      for(int i=0;i<p_cubNq;++i;inner0){
+    //write fluxes to @shared
+    for(int es=0;es<p_NblockS;++es;@inner(1)){   
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
-          occaUnroll(p_Nfaces)
+          #pragma unroll p_Nfaces
           for (int face=0;face<p_Nfaces;face++) {
             const dlong sk = e*p_cubNq*p_Nfaces + face*p_cubNq + i;
             const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];
@@ -594,8 +594,8 @@ kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
               vdP *= bScale;
             }
 
-            dfloat unM   = occaFabs(nx*uM + ny*vM);
-            dfloat unP   = occaFabs(nx*uP + ny*vP);
+            dfloat unM   = fabs(nx*uM + ny*vM);
+            dfloat unP   = fabs(nx*uP + ny*vP);
             dfloat unMax = (unM > unP) ? unM : unP;
 
             s_fluxNU[es][face][i] = sJ*(.5f*(nx*(uP*udP + uM*udM)
@@ -607,12 +607,12 @@ kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // for all face nodes of all elements
     // face 0 & 2
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         if(i<p_Nq){
           quadSurfaceTerms(0,i,i,0     );
           quadSurfaceTerms(2,i,i,p_Nq-1);
@@ -620,11 +620,11 @@ kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1 & 3
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int j=0;j<p_cubNq;++j;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int j=0;j<p_cubNq;++j;@inner(0)){
         if(j<p_Nq){
           quadSurfaceTerms(1,j,p_Nq-1,j);
           quadSurfaceTerms(3,j,0     ,j);
@@ -632,14 +632,14 @@ kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements && i<p_Nq){
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for(int j=0;j<p_Nq;++j){
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
             const dfloat invJW = vgeo[gid + p_IJWID*p_Np];

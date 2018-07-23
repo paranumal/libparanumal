@@ -1,17 +1,17 @@
-kernel void cnsVorticityTri2D(const dlong Nelements,
-                              const dfloat * restrict vgeo,
-                              const dfloat * restrict const DT,
-                              const dfloat * restrict q,
-                                    dfloat * restrict Vort){  
+@kernel void cnsVorticityTri2D(const dlong Nelements,
+                              @restrict const  dfloat *  vgeo,
+                              @restrict const  dfloat *  const DT,
+                              @restrict const  dfloat *  q,
+                                    @restrict dfloat *  Vort){  
   
   // block partition of elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     
-    shared dfloat s_u[p_NblockV][p_Np];
-    shared dfloat s_v[p_NblockV][p_Np];
+    @shared dfloat s_u[p_NblockV][p_Np];
+    @shared dfloat s_v[p_NblockV][p_Np];
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
         if (e<Nelements) {
           const dlong qbase = e*p_Nfields*p_Np + n;
           const dfloat r  = q[qbase + 0*p_Np];
@@ -24,10 +24,10 @@ kernel void cnsVorticityTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(dlong e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
         if(e<Nelements){
           const int es = e-eo;
           const dlong gid = e*p_Nvgeo;
@@ -41,7 +41,7 @@ kernel void cnsVorticityTri2D(const dlong Nelements,
           dfloat ur = 0, vr = 0;
           dfloat us = 0, vs = 0;
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i) {
               const dfloat Drn = DT[n + i*p_Np+0*p_Np*p_Np];
               const dfloat Dsn = DT[n + i*p_Np+1*p_Np*p_Np];

@@ -1,39 +1,39 @@
 
 
 // compute div(NU)  = div(uxu) in collocation way (weak form)
-kernel void insAdvectionVolumeHex3D(const dlong Nelements,
-                                     const dfloat * restrict vgeo,
-                                     const dfloat * restrict D,
+@kernel void insAdvectionVolumeHex3D(const dlong Nelements,
+                                     @restrict const  dfloat *  vgeo,
+                                     @restrict const  dfloat *  D,
                                      const dlong offset,
-                                     const dfloat * restrict U,
-                                     const dfloat * restrict V,
-                                     const dfloat * restrict W,
-                                           dfloat * restrict NU,
-                                           dfloat * restrict NV,
-                                           dfloat * restrict NW){
+                                     @restrict const  dfloat *  U,
+                                     @restrict const  dfloat *  V,
+                                     @restrict const  dfloat *  W,
+                                           @restrict dfloat *  NU,
+                                           @restrict dfloat *  NV,
+                                           @restrict dfloat *  NW){
 
-  for(dlong e=0; e<Nelements; ++e; outer0) {
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
 
-    shared dfloat s_F11[p_Nq][p_Nq];
-    shared dfloat s_F12[p_Nq][p_Nq];
-    shared dfloat s_F13[p_Nq][p_Nq];
-    shared dfloat s_F21[p_Nq][p_Nq];
-    shared dfloat s_F22[p_Nq][p_Nq];
-    shared dfloat s_F23[p_Nq][p_Nq];
-    shared dfloat s_F31[p_Nq][p_Nq];
-    shared dfloat s_F32[p_Nq][p_Nq];
-    shared dfloat s_F33[p_Nq][p_Nq];
+    @shared dfloat s_F11[p_Nq][p_Nq];
+    @shared dfloat s_F12[p_Nq][p_Nq];
+    @shared dfloat s_F13[p_Nq][p_Nq];
+    @shared dfloat s_F21[p_Nq][p_Nq];
+    @shared dfloat s_F22[p_Nq][p_Nq];
+    @shared dfloat s_F23[p_Nq][p_Nq];
+    @shared dfloat s_F31[p_Nq][p_Nq];
+    @shared dfloat s_F32[p_Nq][p_Nq];
+    @shared dfloat s_F33[p_Nq][p_Nq];
 
-    shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
 
-    exclusive dfloat r_NU[p_Nq], r_NV[p_Nq], r_NW[p_Nq];
+    @exclusive dfloat r_NU[p_Nq], r_NV[p_Nq], r_NW[p_Nq];
 
-    for(int j=0;j<p_Nq;++j;inner1){ 
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){ 
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const int id = i+j*p_Nq;
         s_D[0][id] = D[id];
 
-        occaUnroll(p_Nq)
+        #pragma unroll p_Nq
           for(int k=0;k<p_Nq;++k){         
             r_NU[k] = 0.;
             r_NV[k] = 0.;
@@ -42,14 +42,14 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    occaUnroll(p_Nq)
+    #pragma unroll p_Nq
     for(int k=0;k<p_Nq;++k){ 
 
       //fetch slice
-      for(int j=0;j<p_Nq;++j;inner1){ 
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
           const dfloat drdx = vgeo[gid + p_RXID*p_Np];
           const dfloat drdy = vgeo[gid + p_RYID*p_Np];
@@ -83,11 +83,11 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_Nq;++j;inner1){ 
-        for(int i=0;i<p_Nq;++i;inner0){
-          occaUnroll(p_Nq)
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
               const dfloat Dr = s_D[n][i];
               const dfloat Ds = s_D[n][j];
@@ -107,13 +107,13 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
     } //k loop
 
     //write out
-    for(int j=0;j<p_Nq;++j;inner1){ 
-      for(int i=0;i<p_Nq;++i;inner0){
-        occaUnroll(p_Nq)
+    for(int j=0;j<p_Nq;++j;@inner(1)){ 
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
           for(int k=0;k<p_Nq;++k){
             const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
             const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
@@ -148,8 +148,8 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
     insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
   }                                                                     \
                                                                         \
-  const dfloat unM   = occaFabs(nx*uM + ny*vM + nz*wM);                 \
-  const dfloat unP   = occaFabs(nx*uP + ny*vP + nz*wP);                 \
+  const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);                 \
+  const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);                 \
   const dfloat unMax = (unM > unP) ? unM : unP;                         \
                                                                         \
   const dfloat sc = invWJ * sJ;                                         \
@@ -164,37 +164,37 @@ kernel void insAdvectionVolumeHex3D(const dlong Nelements,
                              + nz*(wP*wP + wM*wM)  + unMax*(wM-wP) )); \
 }
 
-kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
-                                      const dfloat * restrict sgeo,
-                                      const dlong  * restrict vmapM,
-                                      const dlong  * restrict vmapP,
-                                      const int    * restrict EToB,
+@kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
+                                      @restrict const  dfloat *  sgeo,
+                                      @restrict const  dlong  *  vmapM,
+                                      @restrict const  dlong  *  vmapP,
+                                      @restrict const  int    *  EToB,
                                       const dfloat time,
-                                      const dfloat * restrict x,
-                                      const dfloat * restrict y,
-                                      const dfloat * restrict z,
+                                      @restrict const  dfloat *  x,
+                                      @restrict const  dfloat *  y,
+                                      @restrict const  dfloat *  z,
                                       const dlong offset,
-                                      const dfloat * restrict U,
-                                      const dfloat * restrict V,
-                                      const dfloat * restrict W,
-                                            dfloat * restrict NU,
-                                            dfloat * restrict NV,
-                                            dfloat * restrict NW){
+                                      @restrict const  dfloat *  U,
+                                      @restrict const  dfloat *  V,
+                                      @restrict const  dfloat *  W,
+                                            @restrict dfloat *  NU,
+                                            @restrict dfloat *  NV,
+                                            @restrict dfloat *  NW){
 
   // for all elements
-  for(dlong e=0;e<Nelements;e++;outer0){
-    // shared storage for flux terms
-    shared dfloat s_fluxNU[2][p_Nq][p_Nq];
-    shared dfloat s_fluxNV[2][p_Nq][p_Nq];
-    shared dfloat s_fluxNW[2][p_Nq][p_Nq];
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_fluxNU[2][p_Nq][p_Nq];
+    @shared dfloat s_fluxNV[2][p_Nq][p_Nq];
+    @shared dfloat s_fluxNW[2][p_Nq][p_Nq];
 
-    exclusive dfloat r_NU[p_Nq], r_NV[p_Nq], r_NW[p_Nq];
+    @exclusive dfloat r_NU[p_Nq], r_NV[p_Nq], r_NW[p_Nq];
 
     // for all face nodes of all elements
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-        occaUnroll(p_Nq)
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           r_NU[k] = 0.;
           r_NV[k] = 0.;
@@ -209,11 +209,11 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 0
         r_NU[0] += s_fluxNU[0][j][i];
         r_NV[0] += s_fluxNV[0][j][i];
@@ -226,11 +226,11 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 1 & 3
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i + k*p_Nq;
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
 
@@ -239,13 +239,13 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1 & 3
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==0) {//face 1
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             r_NU[n] += s_fluxNU[0][n][i];
             r_NV[n] += s_fluxNV[0][n][i];
@@ -253,7 +253,7 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
           }
         }
         if (j==p_Nq-1) {//face 3
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             r_NU[n] += s_fluxNU[1][n][i];
             r_NV[n] += s_fluxNV[1][n][i];
@@ -263,11 +263,11 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 2 & 4
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
         const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + j + k*p_Nq;
         const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
 
@@ -276,13 +276,13 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 2 & 4
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==p_Nq-1) {//face 2
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             r_NU[n] += s_fluxNU[0][n][j];
             r_NV[n] += s_fluxNV[0][n][j];
@@ -290,7 +290,7 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
           }
         }
         if (i==0) {//face 4
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             r_NU[n] += s_fluxNU[1][n][j];
             r_NV[n] += s_fluxNV[1][n][j];
@@ -300,11 +300,11 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);   
+    @barrier("local");   
 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-        occaUnroll(p_Nq)
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           const dlong id = (e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
@@ -319,42 +319,42 @@ kernel void insAdvectionSurfaceHex3D(const dlong Nelements,
 #undef surfaceTerms
 
 #if 0
-/* ------------------Quadrature kernels ----------------------------------*/
-kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
-                                             const dfloat * restrict vgeo,
-                                             const dfloat * restrict cubvgeo,
-                                             const dfloat * restrict cubD,
-                                             const dfloat * restrict cubInterpT,
-                                             const dfloat * restrict cubProjectT,
+/* ------------------Quadrature @kernels ----------------------------------*/
+@kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
+                                             @restrict const  dfloat *  vgeo,
+                                             @restrict const  dfloat *  cubvgeo,
+                                             @restrict const  dfloat *  cubD,
+                                             @restrict const  dfloat *  cubInterpT,
+                                             @restrict const  dfloat *  cubProjectT,
                                              const dlong offset,
-                                             const dfloat * restrict U,
-                                             const dfloat * restrict V,
-                                             const dfloat * restrict W,
-                                                   dfloat * restrict cU, //storage for interpolated fields
-                                                   dfloat * restrict cV, //storage for interpolated fields
-                                                   dfloat * restrict cW, //storage for interpolated fields
-                                                   dfloat * restrict NU,
-                                                   dfloat * restrict NV,
-                                                   dfloat * restrict NW){
+                                             @restrict const  dfloat *  U,
+                                             @restrict const  dfloat *  V,
+                                             @restrict const  dfloat *  W,
+                                                   @restrict dfloat *  cU, //storage for interpolated fields
+                                                   @restrict dfloat *  cV, //storage for interpolated fields
+                                                   @restrict dfloat *  cW, //storage for interpolated fields
+                                                   @restrict dfloat *  NU,
+                                                   @restrict dfloat *  NV,
+                                                   @restrict dfloat *  NW){
 
-  //----------------------------kernel 1 interpolate velocity fields to quadrature points
-  for(dlong e=0; e<Nelements; ++e; outer0) {
+  //----------------------------@kernel 1 interpolate velocity fields to quadrature points
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
 
-    shared dfloat s_U[p_Nq][p_cubNq];
-    shared dfloat s_V[p_Nq][p_cubNq];
-    shared dfloat s_W[p_Nq][p_cubNq];
-    shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    @shared dfloat s_U[p_Nq][p_cubNq];
+    @shared dfloat s_V[p_Nq][p_cubNq];
+    @shared dfloat s_W[p_Nq][p_cubNq];
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
 
-    exclusive dfloat r_U[p_cubNq], r_V[p_cubNq], r_W[p_cubNq];
+    @exclusive dfloat r_U[p_cubNq], r_V[p_cubNq], r_W[p_cubNq];
 
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         const int id = i+j*p_cubNq;
         if (id<p_Nq*p_cubNq) {
           s_cubInterpT[0][id] = cubInterpT[id];
         }
 
-        occaUnroll(p_cubNq)
+        #pragma unroll p_cubNq
           for(int k=0;k<p_cubNq;++k){         
             r_U[k] = 0.;
             r_V[k] = 0.;
@@ -363,20 +363,20 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     //read in and interpolate in k
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         if (i<p_Nq && j<p_Nq) {
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for(int k=0;k<p_Nq;++k){
             const dlong id =(e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
             const dfloat uc = U[id];
             const dfloat vc = V[id];
             const dfloat wc = W[id];
 
-            occaUnroll(p_cubNq)
+            #pragma unroll p_cubNq
             for(int n=0;n<p_cubNq;++n){
               const dfloat Ik = s_cubInterpT[k][n];
               r_U[n] += Ik*uc;
@@ -388,13 +388,13 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    occaUnroll(p_cubNq)
+    #pragma unroll p_cubNq
     for(int k=0;k<p_cubNq;++k){ 
-      //load slice to shared
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      //load slice to @shared
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (i<p_Nq && j<p_Nq) {
             s_U[j][i] = r_U[k];
             s_V[j][i] = r_V[k];
@@ -403,14 +403,14 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if(j<p_Nq){
             r_U[k] = 0; r_V[k] = 0; r_W[k] = 0;
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
               const dfloat Ii = s_cubInterpT[n][i];
               r_U[k] += Ii*s_U[j][n];
@@ -421,10 +421,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if(j<p_Nq){
             s_U[j][i] = r_U[k];
             s_V[j][i] = r_V[k];
@@ -433,13 +433,13 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           r_U[k] = 0; r_V[k] = 0; r_W[k] = 0;
 
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             const dfloat Ij = s_cubInterpT[n][j];
             r_U[k] += Ij*s_U[n][i];
@@ -453,35 +453,35 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
           cW[id] = r_W[k];
         }
       }
-      barrier(localMemFence);
+      @barrier("local");
     }
   }
 
-  barrier(globalMemFence);
+  @barrier("global");
 
-  //-----------------------------kernel 2 do the reference divergence
-  for(dlong e=0; e<Nelements; ++e; outer0) {
+  //-----------------------------@kernel 2 do the reference divergence
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
 
-    shared dfloat s_F11[p_cubNq][p_cubNq];
-    shared dfloat s_F12[p_cubNq][p_cubNq];
-    shared dfloat s_F13[p_cubNq][p_cubNq];
-    shared dfloat s_F21[p_cubNq][p_cubNq];
-    shared dfloat s_F22[p_cubNq][p_cubNq];
-    shared dfloat s_F23[p_cubNq][p_cubNq];
-    shared dfloat s_F31[p_cubNq][p_cubNq];
-    shared dfloat s_F32[p_cubNq][p_cubNq];
-    shared dfloat s_F33[p_cubNq][p_cubNq];
+    @shared dfloat s_F11[p_cubNq][p_cubNq];
+    @shared dfloat s_F12[p_cubNq][p_cubNq];
+    @shared dfloat s_F13[p_cubNq][p_cubNq];
+    @shared dfloat s_F21[p_cubNq][p_cubNq];
+    @shared dfloat s_F22[p_cubNq][p_cubNq];
+    @shared dfloat s_F23[p_cubNq][p_cubNq];
+    @shared dfloat s_F31[p_cubNq][p_cubNq];
+    @shared dfloat s_F32[p_cubNq][p_cubNq];
+    @shared dfloat s_F33[p_cubNq][p_cubNq];
 
-    shared dfloat s_cubD[p_cubNq][p_cubNq];
+    @shared dfloat s_cubD[p_cubNq][p_cubNq];
 
-    exclusive dfloat r_NU[p_cubNq], r_NV[p_cubNq], r_NW[p_cubNq];
+    @exclusive dfloat r_NU[p_cubNq], r_NV[p_cubNq], r_NW[p_cubNq];
 
-    for(int j=0;j<p_cubNq;++j;inner1){ 
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         const int id = i+j*p_cubNq;
         s_cubD[0][id] = cubD[id];
 
-        occaUnroll(p_cubNq)
+        #pragma unroll p_cubNq
           for(int k=0;k<p_cubNq;++k){         
             r_NU[k] = 0.;
             r_NV[k] = 0.;
@@ -490,14 +490,14 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    occaUnroll(p_cubNq)
+    #pragma unroll p_cubNq
     for(int k=0;k<p_cubNq;++k){ 
 
       //fetch slice
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           const dlong gid = e*p_cubNp*p_Nvgeo+ k*p_cubNq*p_cubNq + j*p_cubNq +i;
           const dfloat drdx = cubvgeo[gid + p_RXID*p_cubNp];
           const dfloat drdy = cubvgeo[gid + p_RYID*p_cubNp];
@@ -531,11 +531,11 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
-          occaUnroll(p_cubNq)
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
               const dfloat Dr = s_cubD[n][i];
               const dfloat Ds = s_cubD[n][j];
@@ -555,13 +555,13 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
     } //k loop
 
     //write out
-    for(int j=0;j<p_cubNq;++j;inner1){ 
-      for(int i=0;i<p_cubNq;++i;inner0){
-        occaUnroll(p_cubNq)
+    for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        #pragma unroll p_cubNq
           for(int k=0;k<p_cubNq;++k){
             const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
             cU[id] = r_NU[k];
@@ -572,25 +572,25 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     }
   }
 
-  barrier(globalMemFence);
+  @barrier("global");
 
-  //---------------------------kernel 3 project fluxes back to GLL grid
-  for(dlong e=0; e<Nelements; ++e; outer0) {
-    shared dfloat s_NU[p_cubNq][p_cubNq];
-    shared dfloat s_NV[p_cubNq][p_cubNq];
-    shared dfloat s_NW[p_cubNq][p_cubNq];
-    shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+  //---------------------------@kernel 3 project fluxes back to GLL grid
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+    @shared dfloat s_NU[p_cubNq][p_cubNq];
+    @shared dfloat s_NV[p_cubNq][p_cubNq];
+    @shared dfloat s_NW[p_cubNq][p_cubNq];
+    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
 
-    exclusive dfloat r_NU[p_Nq], r_NV[p_Nq], r_NW[p_Nq];
+    @exclusive dfloat r_NU[p_Nq], r_NV[p_Nq], r_NW[p_Nq];
 
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         const int id = i+j*p_cubNq;
         if (id<p_Nq*p_cubNq) {
           s_cubProjectT[0][id] = cubProjectT[id];
         }
         
-        occaUnroll(p_Nq)
+        #pragma unroll p_Nq
           for(int k=0;k<p_Nq;++k){         
             r_NU[k] = 0.;
             r_NV[k] = 0.;
@@ -599,19 +599,19 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     //read in and project in k
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
-        occaUnroll(p_cubNq)
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        #pragma unroll p_cubNq
         for(int k=0;k<p_cubNq;++k){
           const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
           const dfloat NUn = cU[id];
           const dfloat NVn = cV[id];
           const dfloat NWn = cW[id];
 
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
             const dfloat Pk = s_cubProjectT[k][n];
             r_NU[n] += Pk*NUn;
@@ -622,27 +622,27 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    occaUnroll(p_Nq)
+    #pragma unroll p_Nq
     for(int k=0;k<p_Nq;++k){ 
-      //load slice to shared
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      //load slice to @shared
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           s_NU[j][i] = r_NU[k];
           s_NV[j][i] = r_NV[k];
           s_NW[j][i] = r_NW[k];
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if(j<p_Nq){
             r_NU[k] = 0; r_NV[k] = 0; r_NW[k] = 0;
 
-            occaUnroll(p_cubNq)
+            #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
               const dfloat Pj = s_cubProjectT[n][j];
               r_NU[k] += Pj*s_NU[n][i];
@@ -653,10 +653,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if(j<p_Nq){
             s_NU[j][i] = r_NU[k];
             s_NV[j][i] = r_NV[k];
@@ -665,17 +665,17 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (i<p_Nq && j<p_Nq) {
             const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
             const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 
             r_NU[k] = 0; r_NV[k] = 0; r_NW[k] = 0;
 
-            occaUnroll(p_cubNq)
+            #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
               const dfloat Pi = s_cubProjectT[n][i];
               r_NU[k] += Pi*s_NU[j][n];
@@ -690,47 +690,47 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
           }
         }
       }
-      barrier(localMemFence);
+      @barrier("local");
     }
   }
 }
 #else
 
-//unified kernel, but might use too much memory
-kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
-                                             const dfloat * restrict vgeo,
-                                             const dfloat * restrict cubvgeo,
-                                             const dfloat * restrict cubD,
-                                             const dfloat * restrict cubInterpT,
-                                             const dfloat * restrict cubProjectT,
+//unified @kernel, but might use too much memory
+@kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
+                                             @restrict const  dfloat *  vgeo,
+                                             @restrict const  dfloat *  cubvgeo,
+                                             @restrict const  dfloat *  cubD,
+                                             @restrict const  dfloat *  cubInterpT,
+                                             @restrict const  dfloat *  cubProjectT,
                                              const dlong offset,
-                                             const dfloat * restrict U,
-                                             const dfloat * restrict V,
-                                             const dfloat * restrict W,
-                                                   dfloat * restrict cU, //storage for interpolated fields
-                                                   dfloat * restrict cV, //storage for interpolated fields
-                                                   dfloat * restrict cW, //storage for interpolated fields
-                                                   dfloat * restrict NU,
-                                                   dfloat * restrict NV,
-                                                   dfloat * restrict NW){
+                                             @restrict const  dfloat *  U,
+                                             @restrict const  dfloat *  V,
+                                             @restrict const  dfloat *  W,
+                                                   @restrict dfloat *  cU, //storage for interpolated fields
+                                                   @restrict dfloat *  cV, //storage for interpolated fields
+                                                   @restrict dfloat *  cW, //storage for interpolated fields
+                                                   @restrict dfloat *  NU,
+                                                   @restrict dfloat *  NV,
+                                                   @restrict dfloat *  NW){
 
-  //----------------------------kernel 1 interpolate velocity fields to quadrature points
-  for(dlong e=0; e<Nelements; ++e; outer0) {
+  //----------------------------@kernel 1 interpolate velocity fields to quadrature points
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
 
-    shared dfloat s_cubD[p_cubNq][p_cubNq];
-    shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    @shared dfloat s_cubD[p_cubNq][p_cubNq];
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
 
 
-    shared dfloat s_F11[p_cubNq][p_cubNq];
-    shared dfloat s_F12[p_cubNq][p_cubNq];
-    shared dfloat s_F13[p_cubNq][p_cubNq];
-    shared dfloat s_F21[p_cubNq][p_cubNq];
-    shared dfloat s_F22[p_cubNq][p_cubNq];
-    shared dfloat s_F23[p_cubNq][p_cubNq];
-    shared dfloat s_F31[p_cubNq][p_cubNq];
-    shared dfloat s_F32[p_cubNq][p_cubNq];
-    shared dfloat s_F33[p_cubNq][p_cubNq];
+    @shared dfloat s_F11[p_cubNq][p_cubNq];
+    @shared dfloat s_F12[p_cubNq][p_cubNq];
+    @shared dfloat s_F13[p_cubNq][p_cubNq];
+    @shared dfloat s_F21[p_cubNq][p_cubNq];
+    @shared dfloat s_F22[p_cubNq][p_cubNq];
+    @shared dfloat s_F23[p_cubNq][p_cubNq];
+    @shared dfloat s_F31[p_cubNq][p_cubNq];
+    @shared dfloat s_F32[p_cubNq][p_cubNq];
+    @shared dfloat s_F33[p_cubNq][p_cubNq];
 
     #define s_U s_F11
     #define s_V s_F12
@@ -740,11 +740,11 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     #define s_NV s_F12
     #define s_NW s_F13
 
-    exclusive dfloat r_cU[p_cubNq], r_cV[p_cubNq], r_cW[p_cubNq];
-    exclusive dfloat r_NU[p_cubNq], r_NV[p_cubNq], r_NW[p_cubNq];
+    @exclusive dfloat r_cU[p_cubNq], r_cV[p_cubNq], r_cW[p_cubNq];
+    @exclusive dfloat r_NU[p_cubNq], r_NV[p_cubNq], r_NW[p_cubNq];
 
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         const int id = i+j*p_cubNq;
         if (id<p_Nq*p_cubNq) {
           s_cubInterpT[0][id] = cubInterpT[id];
@@ -752,7 +752,7 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
         s_cubD[0][id] = cubD[id];
 
-        occaUnroll(p_cubNq)
+        #pragma unroll p_cubNq
           for(int k=0;k<p_cubNq;++k){         
             r_cU[k] = 0.;
             r_cV[k] = 0.;
@@ -764,20 +764,20 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     //read in and interpolate in k
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         if (i<p_Nq && j<p_Nq) {
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for(int k=0;k<p_Nq;++k){
             const dlong id =(e+offset)*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
             const dfloat uc = U[id];
             const dfloat vc = V[id];
             const dfloat wc = W[id];
 
-            occaUnroll(p_cubNq)
+            #pragma unroll p_cubNq
             for(int n=0;n<p_cubNq;++n){
               const dfloat Ik = s_cubInterpT[k][n];
               r_cU[n] += Ik*uc;
@@ -789,13 +789,13 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    occaUnroll(p_cubNq)
+    #pragma unroll p_cubNq
     for(int k=0;k<p_cubNq;++k){ 
-      //load slice to shared
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      //load slice to @shared
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (i<p_Nq && j<p_Nq) {
             s_U[j][i] = r_cU[k];
             s_V[j][i] = r_cV[k];
@@ -804,14 +804,14 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if(j<p_Nq){
             r_cU[k] = 0; r_cV[k] = 0; r_cW[k] = 0;
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
               const dfloat Ii = s_cubInterpT[n][i];
               r_cU[k] += Ii*s_U[j][n];
@@ -822,10 +822,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if(j<p_Nq){
             s_U[j][i] = r_cU[k];
             s_V[j][i] = r_cV[k];
@@ -834,13 +834,13 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           r_cU[k] = 0; r_cV[k] = 0; r_cW[k] = 0;
 
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             const dfloat Ij = s_cubInterpT[n][j];
             r_cU[k] += Ij*s_U[n][i];
@@ -850,15 +850,15 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);      
+      @barrier("local");      
     }
 
-    occaUnroll(p_cubNq)
+    #pragma unroll p_cubNq
     for(int k=0;k<p_cubNq;++k){ 
 
       //fetch slice
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           const dlong gid = e*p_cubNp*p_Nvgeo+ k*p_cubNq*p_cubNq + j*p_cubNq +i;
           const dfloat drdx = cubvgeo[gid + p_RXID*p_cubNp];
           const dfloat drdy = cubvgeo[gid + p_RYID*p_cubNp];
@@ -891,11 +891,11 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
-          occaUnroll(p_cubNq)
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
               const dfloat Dr = s_cubD[n][i];
               const dfloat Ds = s_cubD[n][j];
@@ -915,28 +915,28 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
     } //k loop
 
-    occaUnroll(p_cubNq)
+    #pragma unroll p_cubNq
     for(int k=0;k<p_cubNq;++k){ 
-      //load slice to shared
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      //load slice to @shared
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           s_NU[j][i] = r_NU[k];
           s_NV[j][i] = r_NV[k];
           s_NW[j][i] = r_NW[k];
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if(j<p_Nq){
             r_NU[k] = 0; r_NV[k] = 0; r_NW[k] = 0;
 
-            occaUnroll(p_cubNq)
+            #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
               const dfloat Pj = s_cubProjectT[n][j];
               r_NU[k] += Pj*s_NU[n][i];
@@ -947,10 +947,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if(j<p_Nq){
             s_NU[j][i] = r_NU[k];
             s_NV[j][i] = r_NV[k];
@@ -959,14 +959,14 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_cubNq;++j;inner1){ 
-        for(int i=0;i<p_cubNq;++i;inner0){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           if ((i<p_Nq) && (j<p_Nq)) {
             r_NU[k] = 0; r_NV[k] = 0; r_NW[k] = 0;
 
-            occaUnroll(p_cubNq)
+            #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
               const dfloat Pi = s_cubProjectT[n][i];
               r_NU[k] += Pi*s_NU[j][n];
@@ -977,18 +977,18 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
         }
       }
       
-      barrier(localMemFence);
+      @barrier("local");
     }
 
     //project in k and write out
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         if ((i<p_Nq) && (j<p_Nq)) {
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for(int k=0;k<p_Nq;++k){    
             dfloat nu=0., nv=0., nw=0.; 
 
-            occaUnroll(p_cubNq)
+            #pragma unroll p_cubNq
             for(int n=0;n<p_cubNq;++n){
               const dfloat Pk = s_cubProjectT[n][k];
               nu += Pk*r_NU[n];
@@ -1013,8 +1013,8 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
 
 #define quadSurfaceTerms(face)                           \
 {                                                                       \
-  for(int j=0;j<p_cubNq;++j;inner1){\
-    for(int i=0;i<p_cubNq;++i;inner0){\
+  for(int j=0;j<p_cubNq;++j;@inner(1)){\
+    for(int i=0;i<p_cubNq;++i;@inner(0)){\
       if(i<p_Nq && j<p_Nq){\
         const dlong id  = e*p_Nfp*p_Nfaces + face*p_Nfp + j*p_Nq +i;\
         const dlong idM = vmapM[id]+offset*p_Np;\
@@ -1029,14 +1029,14 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     }\
   }\
 \
-  barrier(localMemFence);\
+  @barrier("local");\
 \
-  for(int j=0;j<p_cubNq;++j;inner1){\
-    for(int i=0;i<p_cubNq;++i;inner0){\
+  for(int j=0;j<p_cubNq;++j;@inner(1)){\
+    for(int i=0;i<p_cubNq;++i;@inner(0)){\
       if (j<p_Nq) {\
         r_UMn = 0.; r_VMn = 0.; r_WMn = 0.;\
         r_UPn = 0.; r_VPn = 0.; r_WPn = 0.;\
-        occaUnroll(p_Nq)\
+        #pragma unroll p_Nq\
         for (int n=0;n<p_Nq;n++) {\
           const dfloat Ini = s_cubInterpT[n][i];\
           r_UMn  += Ini*s_UM[j][n];\
@@ -1050,10 +1050,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     }\
   }\
 \
-  barrier(localMemFence);\
+  @barrier("local");\
 \
-  for(int j=0;j<p_cubNq;++j;inner1){\
-    for(int i=0;i<p_cubNq;++i;inner0){\
+  for(int j=0;j<p_cubNq;++j;@inner(1)){\
+    for(int i=0;i<p_cubNq;++i;@inner(0)){\
       if (j<p_Nq) {\
         s_UM[j][i] = r_UMn;\
         s_VM[j][i] = r_VMn;\
@@ -1065,13 +1065,13 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     }\
   }\
 \
-  barrier(localMemFence);\
+  @barrier("local");\
 \
-  for(int j=0;j<p_cubNq;++j;inner1){\
-    for(int i=0;i<p_cubNq;++i;inner0){\
+  for(int j=0;j<p_cubNq;++j;@inner(1)){\
+    for(int i=0;i<p_cubNq;++i;@inner(0)){\
       r_UMn = 0.; r_VMn = 0.; r_WMn = 0.;\
       r_UPn = 0.; r_VPn = 0.; r_WPn = 0.;\
-      occaUnroll(p_Nq)\
+      #pragma unroll p_Nq\
       for (int n=0;n<p_Nq;n++) {\
         const dfloat Inj = s_cubInterpT[n][j];\
         r_UMn += Inj*s_UM[n][i];\
@@ -1084,10 +1084,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     }\
   }\
 \
-  barrier(localMemFence);\
+  @barrier("local");\
 \
-  for(int j=0;j<p_cubNq;++j;inner1){\
-    for(int i=0;i<p_cubNq;++i;inner0){\
+  for(int j=0;j<p_cubNq;++j;@inner(1)){\
+    for(int i=0;i<p_cubNq;++i;@inner(0)){\
       const dlong sk = e*p_cubNfp*p_Nfaces + face*p_cubNfp + j*p_cubNq + i;\
       const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];\
       const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];\
@@ -1103,8 +1103,8 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
                                                    intz[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);\
       }\
 \
-      const dfloat unM   = occaFabs(nx*uM + ny*vM + nz*wM);\
-      const dfloat unP   = occaFabs(nx*uP + ny*vP + nz*wP);\
+      const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);\
+      const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);\
       const dfloat unMax = (unM > unP) ? unM : unP;\
 \
       s_fluxNU[j][i] = WsJ*(.5f*(nx*(uP*uP + uM*uM)\
@@ -1119,13 +1119,13 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     }\
   }\
 \
-  barrier(localMemFence);\
+  @barrier("local");\
 \
-  for(int j=0;j<p_cubNq;++j;inner1){\
-    for(int i=0;i<p_cubNq;++i;inner0){\
+  for(int j=0;j<p_cubNq;++j;@inner(1)){\
+    for(int i=0;i<p_cubNq;++i;@inner(0)){\
       if (j<p_Nq) {\
         r_NUn = 0.; r_NVn = 0.; r_NWn = 0.;\
-        occaUnroll(p_cubNq)\
+        #pragma unroll p_cubNq\
         for (int n=0;n<p_cubNq;n++) {\
           const dfloat Pnj = s_cubProjectT[n][j];\
           r_NUn  += Pnj*s_fluxNU[n][i];\
@@ -1136,10 +1136,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     }\
   }\
 \
-  barrier(localMemFence);\
+  @barrier("local");\
 \
-  for(int j=0;j<p_cubNq;++j;inner1){\
-    for(int i=0;i<p_cubNq;++i;inner0){\
+  for(int j=0;j<p_cubNq;++j;@inner(1)){\
+    for(int i=0;i<p_cubNq;++i;@inner(0)){\
       if (j<p_Nq) {\
         s_fluxNU[j][i] = r_NUn;\
         s_fluxNV[j][i] = r_NVn;\
@@ -1148,11 +1148,11 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     }\
   }\
 \
-  for(int j=0;j<p_cubNq;++j;inner1){\
-    for(int i=0;i<p_cubNq;++i;inner0){\
+  for(int j=0;j<p_cubNq;++j;@inner(1)){\
+    for(int i=0;i<p_cubNq;++i;@inner(0)){\
       if (j<p_Nq && i<p_Nq) {\
         r_NUn = 0.; r_NVn = 0.; r_NWn = 0.;\
-        occaUnroll(p_cubNq)\
+        #pragma unroll p_cubNq\
         for(int n=0;n<p_cubNq;++n){\
           const dfloat Pni = s_cubProjectT[n][i];\
           r_NUn += Pni*s_fluxNU[j][n];\
@@ -1163,10 +1163,10 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
     }\
   }\
 \
-  barrier(localMemFence);\
+  @barrier("local");\
 \
-  for(int j=0;j<p_cubNq;++j;inner1){\
-    for(int i=0;i<p_cubNq;++i;inner0){\
+  for(int j=0;j<p_cubNq;++j;@inner(1)){\
+    for(int i=0;i<p_cubNq;++i;@inner(0)){\
       if (j<p_Nq && i<p_Nq) {\
         s_fluxNU[j][i] = r_NUn;\
         s_fluxNV[j][i] = r_NVn;\
@@ -1176,58 +1176,58 @@ kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
   }\
 }
 
-kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
-                                            const dfloat * restrict vgeo,
-                                            const dfloat * restrict cubsgeo,
-                                            const dlong  * restrict vmapM,
-                                            const dlong  * restrict vmapP,
-                                            const int    * restrict EToB,
-                                            const dfloat * restrict cubInterpT,
-                                            const dfloat * restrict cubProjectT,
+@kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
+                                            @restrict const  dfloat *  vgeo,
+                                            @restrict const  dfloat *  cubsgeo,
+                                            @restrict const  dlong  *  vmapM,
+                                            @restrict const  dlong  *  vmapP,
+                                            @restrict const  int    *  EToB,
+                                            @restrict const  dfloat *  cubInterpT,
+                                            @restrict const  dfloat *  cubProjectT,
                                             const dfloat time,
-                                            const dfloat * restrict intx,
-                                            const dfloat * restrict inty,
-                                            const dfloat * restrict intz,
+                                            @restrict const  dfloat *  intx,
+                                            @restrict const  dfloat *  inty,
+                                            @restrict const  dfloat *  intz,
                                             const dlong offset,
-                                            const dfloat * restrict U,
-                                            const dfloat * restrict V,
-                                            const dfloat * restrict W,
-                                                  dfloat * restrict NU,
-                                                  dfloat * restrict NV,
-                                                  dfloat * restrict NW){
+                                            @restrict const  dfloat *  U,
+                                            @restrict const  dfloat *  V,
+                                            @restrict const  dfloat *  W,
+                                                  @restrict dfloat *  NU,
+                                                  @restrict dfloat *  NV,
+                                                  @restrict dfloat *  NW){
 
   // for all elements
-  for(dlong e=0;e<Nelements;e++;outer0){
-    // shared storage for flux terms
-    exclusive dfloat r_NU[p_Nq], r_NV[p_Nq], r_NW[p_Nq];
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    // @shared storage for flux terms
+    @exclusive dfloat r_NU[p_Nq], r_NV[p_Nq], r_NW[p_Nq];
 
-    shared dfloat s_UM[p_cubNq][p_cubNq];
-    shared dfloat s_VM[p_cubNq][p_cubNq];
-    shared dfloat s_WM[p_cubNq][p_cubNq];
-    shared dfloat s_UP[p_cubNq][p_cubNq];
-    shared dfloat s_VP[p_cubNq][p_cubNq];
-    shared dfloat s_WP[p_cubNq][p_cubNq];
+    @shared dfloat s_UM[p_cubNq][p_cubNq];
+    @shared dfloat s_VM[p_cubNq][p_cubNq];
+    @shared dfloat s_WM[p_cubNq][p_cubNq];
+    @shared dfloat s_UP[p_cubNq][p_cubNq];
+    @shared dfloat s_VP[p_cubNq][p_cubNq];
+    @shared dfloat s_WP[p_cubNq][p_cubNq];
 
-    // reuse shared memory buffers
+    // reuse @shared memory buffers
     #define s_fluxNU s_UM
     #define s_fluxNV s_VM
     #define s_fluxNW s_WM
 
-    exclusive dfloat r_UMn, r_VMn, r_WMn;
-    exclusive dfloat r_UPn, r_VPn, r_WPn;
+    @exclusive dfloat r_UMn, r_VMn, r_WMn;
+    @exclusive dfloat r_UPn, r_VPn, r_WPn;
 
     #define r_NUn r_UMn
     #define r_NVn r_VMn
     #define r_NWn r_WMn
 
-    shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
 
     // for all face nodes of all elements
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         //zero out resulting surface contributions
-        occaUnroll(p_Nq)
+        #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           r_NU[k] = 0.;
           r_NV[k] = 0.;
@@ -1243,15 +1243,15 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     quadSurfaceTerms(0) //face 0
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     //accumulate in register pencil
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         if (j<p_Nq && i<p_Nq) {
           r_NU[0] += s_fluxNU[j][i];
           r_NV[0] += s_fluxNV[j][i];
@@ -1260,15 +1260,15 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     quadSurfaceTerms(5) //face 5
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     //accumulate in register pencil
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         if (j<p_Nq && i<p_Nq) {
           r_NU[p_Nq-1] += s_fluxNU[j][i];
           r_NV[p_Nq-1] += s_fluxNV[j][i];
@@ -1277,17 +1277,17 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     quadSurfaceTerms(1) //face 1
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     //accumulate in register pencil
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         if (j==0 && i<p_Nq) {//face 1
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             r_NU[n] += s_fluxNU[n][i];
             r_NV[n] += s_fluxNV[n][i];
@@ -1297,17 +1297,17 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     quadSurfaceTerms(3) //face 3
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     //accumulate in register pencil
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         if (j==p_Nq-1 && i<p_Nq) {//face 3
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             r_NU[n] += s_fluxNU[n][i];
             r_NV[n] += s_fluxNV[n][i];
@@ -1317,17 +1317,17 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     quadSurfaceTerms(2) //face 2
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     //accumulate in register pencil
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         if (j<p_Nq && i==p_Nq-1) {//face 2
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             r_NU[n] += s_fluxNU[n][j];
             r_NV[n] += s_fluxNV[n][j];
@@ -1337,17 +1337,17 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     quadSurfaceTerms(4) //face 4
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     //accumulate in register pencil
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         if (j<p_Nq && i==0) {//face 4
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             r_NU[n] += s_fluxNU[n][j];
             r_NV[n] += s_fluxNV[n][j];
@@ -1357,12 +1357,12 @@ kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(int j=0;j<p_cubNq;++j;inner1){
-      for(int i=0;i<p_cubNq;++i;inner0){
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
         if(i<p_Nq && j<p_Nq){
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for(int k=0;k<p_Nq;++k){
             const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
             const dfloat invJW = vgeo[gid + p_IJWID*p_Np];

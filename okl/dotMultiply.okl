@@ -1,10 +1,10 @@
 
-kernel void dotMultiply(const dlong N,
-			const dfloat * restrict w,
-			const dfloat * restrict v,
-			dfloat * restrict wv){
+@kernel void dotMultiply(const dlong N,
+			@restrict const  dfloat *  w,
+			@restrict const  dfloat *  v,
+			@restrict dfloat *  wv){
 
-  for(dlong n=0;n<N;++n;tile(256)){
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
     if(n<N){
       wv [n] = w[n]*v[n];
     }

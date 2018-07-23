@@ -10,16 +10,16 @@
 
 // function to compute collocation differentiation
 // contributions to nodal DG rhs for acoustics
-kernel void acousticsVolumeHex3D(const int Nelements,
-				 const dfloat * restrict vgeo,
-				 const dfloat * restrict DrT,
-				 const dfloat * restrict DsT,
-				 const dfloat * restrict DtT,
-				 const dfloat * restrict q,
-				 dfloat * restrict rhsq){
+@kernel void acousticsVolumeHex3D(const int Nelements,
+				 @restrict const  dfloat *  vgeo,
+				 @restrict const  dfloat *  DrT,
+				 @restrict const  dfloat *  DsT,
+				 @restrict const  dfloat *  DtT,
+				 @restrict const  dfloat *  q,
+				 @restrict dfloat *  rhsq){
   
-  for(int e=0;e<Nelements;++e;outer0){  // for all elements
-    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  for(int e=0;e<Nelements;++e;@outer(0)){  // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
       // prefetch geometric factors (constant on triangle)
       const int base = e*p_Np*p_Nvgeo + n;

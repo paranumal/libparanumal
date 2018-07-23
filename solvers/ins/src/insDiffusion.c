@@ -39,7 +39,7 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
                          ins->NVfields,
                          ins->fieldOffset,
                          ins->o_velocityHaloGatherTmp);
-      ins->o_velocityHaloGatherTmp.asyncCopyTo(ins->velocityHaloGatherTmp);
+      ins->o_velocityHaloGatherTmp.copyTo(ins->velocityHaloGatherTmp,"async: true");
       mesh->device.setStream(uSolver->defaultStream);
     }
     if(uSolver->NlocalGatherElements){
@@ -81,7 +81,7 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
       gsVecParallelGatherScatter(ogs->haloGsh, ins->velocityHaloGatherTmp, ins->NVfields, dfloatString, "add");
 
       // copy totally gather halo data back from HOST to DEVICE
-      ins->o_velocityHaloGatherTmp.asyncCopyFrom(ins->velocityHaloGatherTmp);
+      ins->o_velocityHaloGatherTmp.copyFrom(ins->velocityHaloGatherTmp,"async: true");
     
       // do scatter back to local nodes
       mesh->scatterKernel(ogs->NhaloGather, 

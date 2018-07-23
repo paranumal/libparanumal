@@ -5,15 +5,15 @@
 
 // function to compute collocation differentiation
 // contributions to nodal DG rhs for acoustics
-kernel void acousticsVolume2D_o0(const int Nelements,
-				     const dfloat * restrict vgeo,
-				     const dfloat * restrict DrT,
-				     const dfloat * restrict DsT,
-				     const dfloat * restrict q,
-				     dfloat * restrict rhsq){
+@kernel void acousticsVolume2D_o0(const int Nelements,
+				     @restrict const  dfloat *  vgeo,
+				     @restrict const  dfloat *  DrT,
+				     @restrict const  dfloat *  DsT,
+				     @restrict const  dfloat *  q,
+				     @restrict dfloat *  rhsq){
   
-  for(int e=0;e<Nelements;++e;outer0){  // for all elements
-    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  for(int e=0;e<Nelements;++e;@outer(0)){  // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
@@ -58,15 +58,15 @@ kernel void acousticsVolume2D_o0(const int Nelements,
 
 
 // o1: float4s
-kernel void acousticsVolume2D_o1(const int Nelements,
-				     const dfloat * restrict vgeo,
-				     const dfloat * restrict DrT,
-				     const dfloat * restrict DsT,
-				     const dfloat4 * restrict q4,
-				     dfloat4 * restrict rhsq4){
+@kernel void acousticsVolume2D_o1(const int Nelements,
+				     @restrict const  dfloat *  vgeo,
+				     @restrict const  dfloat *  DrT,
+				     @restrict const  dfloat *  DsT,
+				     @restrict const  dfloat4 *  q4,
+				     @restrict dfloat4 *  rhsq4){
   
-  for(int e=0;e<Nelements;++e;outer0){  // for all elements
-    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  for(int e=0;e<Nelements;++e;@outer(0)){  // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
@@ -113,19 +113,19 @@ kernel void acousticsVolume2D_o1(const int Nelements,
 
 
 
-// o2: load q into shared
-kernel void acousticsVolume2D_o2(const int Nelements,
-				     const dfloat * restrict vgeo,
-				     const dfloat * restrict DrT,
-				     const dfloat * restrict DsT,
-				     const dfloat4 * restrict q4,
-				     dfloat4 * restrict rhsq4){
+// o2: load q into @shared
+@kernel void acousticsVolume2D_o2(const int Nelements,
+				     @restrict const  dfloat *  vgeo,
+				     @restrict const  dfloat *  DrT,
+				     @restrict const  dfloat *  DsT,
+				     @restrict const  dfloat4 *  q4,
+				     @restrict dfloat4 *  rhsq4){
   
-  for(int e=0;e<Nelements;++e;outer0){  // for all elements
+  for(int e=0;e<Nelements;++e;@outer(0)){  // for all elements
 
-    shared dfloat s_u[p_Np], s_v[p_Np], s_p[p_Np];
+    @shared dfloat s_u[p_Np], s_v[p_Np], s_p[p_Np];
     
-    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
       const int id = e*p_Np + n;
       const dfloat4 q4n = q4[id];
       s_u[n] = q4n.x;
@@ -133,10 +133,10 @@ kernel void acousticsVolume2D_o2(const int Nelements,
       s_p[n] = q4n.z;
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
     
-    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + RXID];
@@ -178,21 +178,21 @@ kernel void acousticsVolume2D_o2(const int Nelements,
 }
 
 // o3: multiple elements for each outer iteration
-kernel void acousticsVolume2D_o3(const int Nelements,
-				     const dfloat * restrict vgeo,
-				     const dfloat * restrict DrT,
-				     const dfloat * restrict DsT,
-				     const dfloat4 * restrict q4,
-				     dfloat4 * restrict rhsq4){
+@kernel void acousticsVolume2D_o3(const int Nelements,
+				     @restrict const  dfloat *  vgeo,
+				     @restrict const  dfloat *  DrT,
+				     @restrict const  dfloat *  DsT,
+				     @restrict const  dfloat4 *  q4,
+				     @restrict dfloat4 *  rhsq4){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_u[p_NblockV][p_Np];
-    shared dfloat s_v[p_NblockV][p_Np];
-    shared dfloat s_p[p_NblockV][p_Np];
+    @shared dfloat s_u[p_NblockV][p_Np];
+    @shared dfloat s_v[p_NblockV][p_Np];
+    @shared dfloat s_p[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -205,11 +205,11 @@ kernel void acousticsVolume2D_o3(const int Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -256,21 +256,21 @@ kernel void acousticsVolume2D_o3(const int Nelements,
 }
 
 // o4: unroll 
-kernel void acousticsVolume2D_o4(const int Nelements,
-				     const dfloat * restrict vgeo,
-				     const dfloat * restrict DrT,
-				     const dfloat * restrict DsT,
-				     const dfloat4 * restrict q4,
-				     dfloat4 * restrict rhsq4){
+@kernel void acousticsVolume2D_o4(const int Nelements,
+				     @restrict const  dfloat *  vgeo,
+				     @restrict const  dfloat *  DrT,
+				     @restrict const  dfloat *  DsT,
+				     @restrict const  dfloat4 *  q4,
+				     @restrict dfloat4 *  rhsq4){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_u[p_NblockV][p_Np];
-    shared dfloat s_v[p_NblockV][p_Np];
-    shared dfloat s_p[p_NblockV][p_Np];
+    @shared dfloat s_u[p_NblockV][p_Np];
+    @shared dfloat s_v[p_NblockV][p_Np];
+    @shared dfloat s_p[p_NblockV][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -283,11 +283,11 @@ kernel void acousticsVolume2D_o4(const int Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -303,7 +303,7 @@ kernel void acousticsVolume2D_o4(const int Nelements,
 	  dfloat dvdr = 0, dvds = 0;
 	  dfloat dpdr = 0, dpds = 0;
 
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    // load data at node i of element e
 	    const dfloat Drni = DrT[n+i*p_Np];
@@ -334,26 +334,26 @@ kernel void acousticsVolume2D_o4(const int Nelements,
   }
 }
 
-// o5: DrT,Ds into shared
-kernel void acousticsVolume2D_o5(const int Nelements,
-				     const dfloat * restrict vgeo,
-				     const dfloat * restrict DrT,
-				     const dfloat * restrict DsT,
-				     const dfloat4 * restrict q4,
-				     dfloat4 * restrict rhsq4){
+// o5: DrT,Ds into @shared
+@kernel void acousticsVolume2D_o5(const int Nelements,
+				     @restrict const  dfloat *  vgeo,
+				     @restrict const  dfloat *  DrT,
+				     @restrict const  dfloat *  DsT,
+				     @restrict const  dfloat4 *  q4,
+				     @restrict dfloat4 *  rhsq4){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_u[p_NblockV][p_Np];
-    shared dfloat s_v[p_NblockV][p_Np];
-    shared dfloat s_p[p_NblockV][p_Np];
+    @shared dfloat s_u[p_NblockV][p_Np];
+    @shared dfloat s_v[p_NblockV][p_Np];
+    @shared dfloat s_p[p_NblockV][p_Np];
 
-    shared dfloat s_DrT[p_Np][p_Np];
-    shared dfloat s_DsT[p_Np][p_Np];
+    @shared dfloat s_DrT[p_Np][p_Np];
+    @shared dfloat s_DsT[p_Np][p_Np];
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-	// prefetch DrT, Ds into shared
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+	// prefetch DrT, Ds into @shared
 	int t = n + es*p_Np;
 	while(t<p_Np*p_Np){
 	  s_DrT[0][t] = DrT[t];
@@ -372,11 +372,11 @@ kernel void acousticsVolume2D_o5(const int Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -392,7 +392,7 @@ kernel void acousticsVolume2D_o5(const int Nelements,
 	  dfloat dvdr = 0, dvds = 0;
 	  dfloat dpdr = 0, dpds = 0;
 
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    // load data at node i of element e
 	    const dfloat Drni = s_DrT[i][n];
@@ -428,28 +428,28 @@ kernel void acousticsVolume2D_o5(const int Nelements,
 }
 
 
-// o6: vgeo in shared
-kernel void acousticsVolume2D_o6(const int Nelements,
-				     const dfloat * restrict vgeo,
-				     const dfloat * restrict DrT,
-				     const dfloat * restrict DsT,
-				     const dfloat4 * restrict q4,
-				     dfloat4 * restrict rhsq4){
+// o6: vgeo in @shared
+@kernel void acousticsVolume2D_o6(const int Nelements,
+				     @restrict const  dfloat *  vgeo,
+				     @restrict const  dfloat *  DrT,
+				     @restrict const  dfloat *  DsT,
+				     @restrict const  dfloat4 *  q4,
+				     @restrict dfloat4 *  rhsq4){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_u[p_NblockV][p_Np];
-    shared dfloat s_v[p_NblockV][p_Np];
-    shared dfloat s_p[p_NblockV][p_Np];
+    @shared dfloat s_u[p_NblockV][p_Np];
+    @shared dfloat s_v[p_NblockV][p_Np];
+    @shared dfloat s_p[p_NblockV][p_Np];
 
-    shared dfloat s_DrT[p_Np][p_Np];
-    shared dfloat s_DsT[p_Np][p_Np];
+    @shared dfloat s_DrT[p_Np][p_Np];
+    @shared dfloat s_DsT[p_Np][p_Np];
 
-    shared dfloat s_vgeo[p_NblockV][p_Nvgeo];
+    @shared dfloat s_vgeo[p_NblockV][p_Nvgeo];
     
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
-	// prefetch DrT, Ds into shared
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+	// prefetch DrT, Ds into @shared
 	int t = n + es*p_Np;
 	while(t<p_Np*p_Np){
 	  s_DrT[0][t] = DrT[t];
@@ -476,11 +476,11 @@ kernel void acousticsVolume2D_o6(const int Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -496,7 +496,7 @@ kernel void acousticsVolume2D_o6(const int Nelements,
 	  dfloat dvdr = 0, dvds = 0;
 	  dfloat dpdr = 0, dpds = 0;
 
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat Drni = s_DrT[i][n];
 	    
@@ -506,7 +506,7 @@ kernel void acousticsVolume2D_o6(const int Nelements,
 	    dpdr += Drni*s_p[es][i];
 	  }
 	  
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	    for(int i=0;i<p_Np;++i){
 	      
 	      const dfloat Dsni = s_DsT[i][n];

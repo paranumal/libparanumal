@@ -26,59 +26,59 @@
   s_ndq[j][i] -= WsJ*(nx*dudxP + ny*dudyP); \
 }
 
-kernel void insDiffusionQuad2D(const dlong Nelements,
-                              const dlong  * restrict elementList,
-                              const dfloat * restrict ggeo,
-                              const dfloat * restrict vgeo,
-                              const dfloat * restrict sgeo,
-                              const dfloat * restrict D,
-                              const dfloat * restrict S,
-                              const dlong  * restrict vmapM,
-                              const dfloat * restrict sMT,
+@kernel void insDiffusionQuad2D(const dlong Nelements,
+                              @restrict const  dlong  *  elementList,
+                              @restrict const  dfloat *  ggeo,
+                              @restrict const  dfloat *  vgeo,
+                              @restrict const  dfloat *  sgeo,
+                              @restrict const  dfloat *  D,
+                              @restrict const  dfloat *  S,
+                              @restrict const  dlong  *  vmapM,
+                              @restrict const  dfloat *  sMT,
                               const dfloat nu,
                               const dfloat time,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const dfloat * restrict z,
-                              const int    * restrict mapB,
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
+                              @restrict const  int    *  mapB,
                               const dlong fieldOffset,
-                              const dfloat  * restrict U,
-                                    dfloat  * restrict LU){
+                              @restrict const  dfloat  *  U,
+                                    @restrict dfloat  *  LU){
 
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
     
-    shared dfloat s_q[p_Nq][p_Nq];
-    shared dfloat s_ndq[p_Nq][p_Nq];
-    shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_q[p_Nq][p_Nq];
+    @shared dfloat s_ndq[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
 
-    exclusive dlong element;
-    exclusive dfloat r_qr, r_qs, r_Aq;
-    exclusive dfloat r_G00, r_G01, r_G11;
+    @exclusive dlong element;
+    @exclusive dfloat r_qr, r_qs, r_Aq;
+    @exclusive dfloat r_G00, r_G01, r_G11;
     
-    occaUnroll(p_NVfields)
+    #pragma unroll p_NVfields
     for (int fld=0; fld<p_NVfields; fld++) {
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      // prefetch q(:,:,:,e) to shared
-      for(int j=0; j<p_Nq; ++j; inner1) {
-        for(int i=0; i<p_Nq; ++i; inner0) {
+      // prefetch q(:,:,:,e) to @shared
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
           element = elementList[e];
           const dlong id = i + j*p_Nq + element*p_Np; 
           
           s_q[j][i] = U[id+fld*fieldOffset];
           s_ndq[j][i] = 0.;
           
-          // fetch D to shared
+          // fetch D to @shared
           s_D[j][i] = D[j*p_Nq+i];
         }
       }
         
-      barrier(localMemFence);
+      @barrier("local");
 
       //surface terms
-      for(int j=0; j<p_Nq; ++j; inner1) {
-        for(int i=0; i<p_Nq; ++i; inner0) {
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
           if (j==0) {
             const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
             const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
@@ -89,11 +89,11 @@ kernel void insDiffusionQuad2D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
       //surface terms
-      for(int j=0; j<p_Nq; ++j; inner1) {
-        for(int i=0; i<p_Nq; ++i; inner0) {
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
           if (j==0) {
             const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i;
             const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i;
@@ -104,10 +104,10 @@ kernel void insDiffusionQuad2D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0; j<p_Nq; ++j; inner1) {
-        for(int i=0; i<p_Nq; ++i; inner0) {
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
           
           const dlong base = element*p_Nggeo*p_Np + j*p_Nq + i;
 
@@ -119,7 +119,7 @@ kernel void insDiffusionQuad2D(const dlong Nelements,
 
           dfloat qr = 0.f, qs = 0.f;
           
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
             for(int n=0; n<p_Nq; ++n){
               qr += s_D[i][n]*s_q[j][n];
               qs += s_D[j][n]*s_q[n][i];
@@ -132,20 +132,20 @@ kernel void insDiffusionQuad2D(const dlong Nelements,
       }
 
       // r term ----->
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0; j<p_Nq; ++j; inner1) {
-        for(int i=0; i<p_Nq; ++i; inner0) {
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
           s_q[j][i] = r_G00*r_qr + r_G01*r_qs;
         }
       }
       
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0; j<p_Nq; ++j; inner1) {
-        for(int i=0; i<p_Nq; ++i; inner0) {
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
           dfloat tmp = 0.f;
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
             for(int n=0;n<p_Nq;++n) {
               tmp += s_D[n][i]*s_q[j][n];
             }
@@ -155,24 +155,24 @@ kernel void insDiffusionQuad2D(const dlong Nelements,
       }
 
       // s term ---->
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0; j<p_Nq; ++j; inner1) {
-        for(int i=0; i<p_Nq; ++i; inner0) {
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
           s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
         }
       }
       
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0; j<p_Nq; ++j; inner1) {
-        for(int i=0; i<p_Nq; ++i; inner0) {
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
           const dlong gid = element*p_Np*p_Nvgeo+ j*p_Nq +i;
           const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 
           dfloat tmp = 0.f;
 
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
             for(int n=0;n<p_Nq;++n){
               tmp += s_D[n][j]*s_q[n][i];
           }

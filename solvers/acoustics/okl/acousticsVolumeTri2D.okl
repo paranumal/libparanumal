@@ -1,17 +1,17 @@
 
 // isothermal Compressible Navier-Stokes
-kernel void acousticsVolumeTri2D(const dlong Nelements,
-                            const dfloat * restrict vgeo,
-                            const dfloat * restrict DT,
-                            const dfloat * restrict q,
-                                  dfloat * restrict rhsq){
+@kernel void acousticsVolumeTri2D(const dlong Nelements,
+                            @restrict const  dfloat *  vgeo,
+                            @restrict const  dfloat *  DT,
+                            @restrict const  dfloat *  q,
+                                  @restrict dfloat *  rhsq){
   
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    shared dfloat s_F[p_Nfields][p_Np];
-    shared dfloat s_G[p_Nfields][p_Np];
+    @shared dfloat s_F[p_Nfields][p_Np];
+    @shared dfloat s_G[p_Nfields][p_Np];
     
-    for(int n=0;n<p_Np;++n;inner0){
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -46,9 +46,9 @@ kernel void acousticsVolumeTri2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int n=0;n<p_Np;++n;inner0){    
+    for(int n=0;n<p_Np;++n;@inner(0)){    
 
       dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0;
 

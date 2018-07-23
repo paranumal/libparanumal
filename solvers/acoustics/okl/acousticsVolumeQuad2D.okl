@@ -1,19 +1,19 @@
 
 // isothermal Compressible Navier-Stokes
-kernel void acousticsVolumeQuad2D(const dlong Nelements,
-				  const dfloat * restrict vgeo,
-				  const dfloat * restrict D,
-				  const dfloat * restrict q,
-				  dfloat * restrict rhsq){
+@kernel void acousticsVolumeQuad2D(const dlong Nelements,
+				  @restrict const  dfloat *  vgeo,
+				  @restrict const  dfloat *  D,
+				  @restrict const  dfloat *  q,
+				  @restrict dfloat *  rhsq){
   
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    shared dfloat s_D[p_Nq][p_Nq];
-    shared dfloat s_F[p_Nfields][p_Nq][p_Nq];
-    shared dfloat s_G[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_F[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_G[p_Nfields][p_Nq][p_Nq];
     
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         s_D[j][i] = D[j*p_Nq+i];
 
         // geometric factors
@@ -55,10 +55,10 @@ kernel void acousticsVolumeQuad2D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
     
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){    
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){    
         const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
         const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 

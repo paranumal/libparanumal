@@ -1,24 +1,24 @@
 
 // Only difference with boltzmannVolume2D is size of rhsq and shifting
-kernel void bnsVolumeTet3D(const dlong Nelements,
-         const dlong * restrict elementIds,
+@kernel void bnsVolumeTet3D(const dlong Nelements,
+         @restrict const  dlong *  elementIds,
          const dlong offset,
          const int shift,
          const dfloat fx,
          const dfloat fy,
          const dfloat fz,
-         const dfloat * restrict vgeo,
-         const dfloat * restrict Dmatrices,
-         const dfloat * restrict q,
-         dfloat * restrict rhsq){
+         @restrict const  dfloat *  vgeo,
+         @restrict const  dfloat *  Dmatrices,
+         @restrict const  dfloat *  q,
+         @restrict dfloat *  rhsq){
   
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive dlong e;
+    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    @exclusive dlong e;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
   dlong et = eo+es; // element in block
 
@@ -26,7 +26,7 @@ kernel void bnsVolumeTet3D(const dlong Nelements,
     e = elementIds[et];
     const dlong id = e*p_Nfields*p_Np + n;
         
-    occaUnroll(p_Nfields)
+    #pragma unroll p_Nfields
       for(int fld=0; fld<p_Nfields;++fld){
         s_q[es][fld][n] = q[id+fld*p_Np];
       }
@@ -34,11 +34,11 @@ kernel void bnsVolumeTet3D(const dlong Nelements,
   }
       }
     }
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
   dlong et = eo+es; // element in block
   if(et<Nelements){   
     // prefetch geometric factors (constant on triangle)
@@ -57,19 +57,19 @@ kernel void bnsVolumeTet3D(const dlong Nelements,
     dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields], r_dqdz[p_Nfields];
     dfloat r_rhsq[p_Nfields];
         
-    occaUnroll(p_Nfields)
+    #pragma unroll p_Nfields
       for(int fld=0; fld<p_Nfields;++fld){
         r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f, r_dqdt[fld] = 0.f;
         r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f, r_dqdz[fld] = 0.f;
         r_rhsq[fld] = 0.f;
       }
 
-    occaUnroll(p_Np)
+    #pragma unroll p_Np
       for(int i=0;i<p_Np;++i){
         const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
         const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
         const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
     for(int fld=0; fld<p_Nfields;++fld){
       r_dqdr[fld] += Drni*s_q[es][fld][i];
       r_dqds[fld] += Dsni*s_q[es][fld][i];
@@ -78,7 +78,7 @@ kernel void bnsVolumeTet3D(const dlong Nelements,
       }
       
     // Compute derivatives in physical coordinates 
-    occaUnroll(p_Nfields)
+    #pragma unroll p_Nfields
       for(int fld=0; fld<p_Nfields;++fld){
         r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld] + dtdx*r_dqdt[fld];
         r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld] + dtdy*r_dqdt[fld];
@@ -170,33 +170,33 @@ kernel void bnsVolumeTet3D(const dlong Nelements,
 
 
 
-kernel void bnsPmlVolumeCubTet3D(const dlong pmlNelements,
-            const dlong * restrict pmlElementIds,
-            const dlong * restrict pmlIds,
+@kernel void bnsPmlVolumeCubTet3D(const dlong pmlNelements,
+            @restrict const  dlong *  pmlElementIds,
+            @restrict const  dlong *  pmlIds,
             const dlong offset,
             const dlong pmloffset,
             const int   shift,
             const dfloat fx,
             const dfloat fy,
             const dfloat fz,
-            const dfloat * restrict vgeo,
-            const dfloat * restrict Dmatrices,
-            const dfloat * restrict q,
-            const dfloat * restrict pmlqx,
-            const dfloat * restrict pmlqy,
-            const dfloat * restrict pmlqz,
-            dfloat * restrict rhsq,
-            dfloat * restrict pmlrhsqx,
-            dfloat * restrict pmlrhsqy,
-            dfloat * restrict pmlrhsqz){
+            @restrict const  dfloat *  vgeo,
+            @restrict const  dfloat *  Dmatrices,
+            @restrict const  dfloat *  q,
+            @restrict const  dfloat *  pmlqx,
+            @restrict const  dfloat *  pmlqy,
+            @restrict const  dfloat *  pmlqz,
+            @restrict dfloat *  rhsq,
+            @restrict dfloat *  pmlrhsqx,
+            @restrict dfloat *  pmlrhsqy,
+            @restrict dfloat *  pmlrhsqz){
   
-  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive dlong e, pmlId;
+    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    @exclusive dlong e, pmlId;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
   dlong et = eo+es; // element in block
   if(et<pmlNelements){
@@ -204,7 +204,7 @@ kernel void bnsPmlVolumeCubTet3D(const dlong pmlNelements,
     pmlId = pmlIds[et];
 
     const dlong id = e*p_Nfields*p_Np + n;
-    occaUnroll(p_Nfields)
+    #pragma unroll p_Nfields
       for(int fld=0; fld<p_Nfields;++fld){
         s_q[es][fld][n] = q[id+fld*p_Np];
       }
@@ -212,11 +212,11 @@ kernel void bnsPmlVolumeCubTet3D(const dlong pmlNelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
   dlong et = eo+es; // element in block
   if(et<pmlNelements){  
 
@@ -238,7 +238,7 @@ kernel void bnsPmlVolumeCubTet3D(const dlong pmlNelements,
     dfloat r_N[p_Nfields];
         
     // Initialize
-    occaUnroll(p_Nfields)
+    #pragma unroll p_Nfields
       for(int fld=0; fld<p_Nfields;++fld){
         r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f, r_dqdt[fld] = 0.f;
         r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f, r_dqdz[fld] = 0.f;
@@ -247,12 +247,12 @@ kernel void bnsPmlVolumeCubTet3D(const dlong pmlNelements,
       }
     
     // Compute local derivatives
-    occaUnroll(p_Np)
+    #pragma unroll p_Np
       for(int i=0;i<p_Np;++i){
         const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
         const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
         const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
     for(int fld=0; fld<p_Nfields;++fld){
       r_dqdr[fld] += Drni*s_q[es][fld][i];
       r_dqds[fld] += Dsni*s_q[es][fld][i];
@@ -261,7 +261,7 @@ kernel void bnsPmlVolumeCubTet3D(const dlong pmlNelements,
       }
         
     // Compute derivatives in physical coordinates 
-    occaUnroll(p_Nfields)
+    #pragma unroll p_Nfields
       for(int fld=0; fld<p_Nfields;++fld){
         r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld] + dtdx*r_dqdt[fld];
         r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld] + dtdy*r_dqdt[fld];
@@ -336,7 +336,7 @@ kernel void bnsPmlVolumeCubTet3D(const dlong pmlNelements,
       pmlrhsId  += shift*pmloffset;
     }
           
-    occaUnroll(p_Nfields)
+    #pragma unroll p_Nfields
       for(int fld=0; fld<p_Nfields; ++fld){
         pmlrhsqx[pmlrhsId + fld*p_Np] =  r_Aqx[fld];
         pmlrhsqy[pmlrhsId + fld*p_Np] =  r_Bqy[fld];
@@ -356,36 +356,36 @@ kernel void bnsPmlVolumeCubTet3D(const dlong pmlNelements,
 
 
 
-kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
-            const dlong * restrict pmlElementIds,
-            const dlong * restrict pmlIds,
+@kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
+            @restrict const  dlong *  pmlElementIds,
+            @restrict const  dlong *  pmlIds,
             const dlong offset,
             const dlong pmloffset,
             const int   shift,
             const dfloat fx,
             const dfloat fy,
             const dfloat fz,
-            const dfloat * restrict vgeo,
-            const dfloat * restrict pmlSigmaX,
-            const dfloat * restrict pmlSigmaY, 
-            const dfloat * restrict pmlSigmaZ, 
-            const dfloat * restrict Dmatrices,
-            const dfloat * restrict q,
-            const dfloat * restrict pmlqx,
-            const dfloat * restrict pmlqy,
-            const dfloat * restrict pmlqz,
-            dfloat * restrict rhsq,
-            dfloat * restrict pmlrhsqx,
-            dfloat * restrict pmlrhsqy,
-            dfloat * restrict pmlrhsqz){
+            @restrict const  dfloat *  vgeo,
+            @restrict const  dfloat *  pmlSigmaX,
+            @restrict const  dfloat *  pmlSigmaY, 
+            @restrict const  dfloat *  pmlSigmaZ, 
+            @restrict const  dfloat *  Dmatrices,
+            @restrict const  dfloat *  q,
+            @restrict const  dfloat *  pmlqx,
+            @restrict const  dfloat *  pmlqy,
+            @restrict const  dfloat *  pmlqz,
+            @restrict dfloat *  rhsq,
+            @restrict dfloat *  pmlrhsqx,
+            @restrict dfloat *  pmlrhsqy,
+            @restrict dfloat *  pmlrhsqz){
   
-  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){  // for all elements
+  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive dlong e, pmlId;
+    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    @exclusive dlong e, pmlId;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
       dlong et = eo+es; // element in block
       if(et<pmlNelements){
@@ -393,7 +393,7 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
         pmlId = pmlIds[et];
 
         const dlong id = e*p_Nfields*p_Np + n;
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld*p_Np];
         }
@@ -401,11 +401,11 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
     }
   }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
       dlong et = eo+es; // element in block
       if(et<pmlNelements){  
 
@@ -451,7 +451,7 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
         }
 
         // Initialize
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f, r_dqdt[fld] = 0.f;
           r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f, r_dqdz[fld] = 0.f;
@@ -459,12 +459,12 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
         }
     
         // Compute local derivatives
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
           const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
           const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
-          occaUnroll(p_Nfields)
+          #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
             r_dqdr[fld] += Drni*s_q[es][fld][i];
             r_dqds[fld] += Dsni*s_q[es][fld][i];
@@ -473,7 +473,7 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
         }
         
         // Compute derivatives in physical coordinates 
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld] + dtdx*r_dqdt[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld] + dtdy*r_dqdt[fld];
@@ -540,7 +540,7 @@ kernel void bnsPmlVolumeTet3D(const dlong pmlNelements,
           r_N[9] += p_sqrt2*fz*p_isqrtRT*s_q[es][3][n];
         }
       
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           pmlrhsqx[pmlbase + fld*p_Np] =  r_Aqx[fld];
           pmlrhsqy[pmlbase + fld*p_Np] =  r_Bqy[fld];

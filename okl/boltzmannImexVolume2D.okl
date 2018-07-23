@@ -4,23 +4,23 @@
 #define SYID 3
 
 //
-kernel void boltzmannNonPmlImexS1Volume2D(const int Nelements,
-				    const int * restrict elementIds,
+@kernel void boltzmannNonPmlImexS1Volume2D(const int Nelements,
+				    @restrict const  int *  elementIds,
 				    const dfloat ramp,
 				    const dfloat drampdt,
-				    const dfloat * restrict vgeo,
-				    const dfloat * restrict DrT,
-				    const dfloat * restrict DsT,
-				    const dfloat4 * restrict q,
-				          dfloat4 * restrict rhsq){
+				    @restrict const  dfloat *  vgeo,
+				    @restrict const  dfloat *  DrT,
+				    @restrict const  dfloat *  DsT,
+				    @restrict const  dfloat4 *  q,
+				          @restrict dfloat4 *  rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive int element;
+    @shared dfloat s_q[p_NblockV][6][p_Np];
+    @exclusive int element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 	int e = eo+es; // element in block
 
@@ -43,11 +43,11 @@ kernel void boltzmannNonPmlImexS1Volume2D(const int Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -62,7 +62,7 @@ kernel void boltzmannNonPmlImexS1Volume2D(const int Nelements,
 	  dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
 	  dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
 
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat Drni = DrT[n+i*p_Np];
 	    const dfloat Dsni = DsT[n+i*p_Np];
@@ -143,30 +143,30 @@ kernel void boltzmannNonPmlImexS1Volume2D(const int Nelements,
 
 
 
-kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
-				      const int * restrict elementIds,
+@kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
+				      @restrict const  int *  elementIds,
 				      const dfloat ramp,
-				      const dfloat * restrict vgeo,
-				      const dfloat * restrict sigmax,
-				      const dfloat * restrict sigmay,
-				      const dfloat * restrict DrT,
-				      const dfloat * restrict DsT,
-				      const dfloat4 * restrict q,
-				      const dfloat * restrict qx,
-				      const dfloat * restrict qy,
-				      const dfloat * restrict qnt,
-				            dfloat * restrict rhsqx,
-				            dfloat * restrict rhsqy,
-				            dfloat * restrict rhsqnt
+				      @restrict const  dfloat *  vgeo,
+				      @restrict const  dfloat *  sigmax,
+				      @restrict const  dfloat *  sigmay,
+				      @restrict const  dfloat *  DrT,
+				      @restrict const  dfloat *  DsT,
+				      @restrict const  dfloat4 *  q,
+				      @restrict const  dfloat *  qx,
+				      @restrict const  dfloat *  qy,
+				      @restrict const  dfloat *  qnt,
+				            @restrict dfloat *  rhsqx,
+				            @restrict dfloat *  rhsqy,
+				            @restrict dfloat *  rhsqnt
 				      ){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][6][p_Np];
-    exclusive int element;
+    @shared dfloat s_q[p_NblockV][6][p_Np];
+    @exclusive int element;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -188,11 +188,11 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
       }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 	int e = eo+es; // element in block
 	if(e<Nelements){
@@ -232,7 +232,7 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 	  dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
 	  dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
 
-	  occaUnroll(p_Np)
+	  #pragma unroll p_Np
 	  for(int i=0;i<p_Np;++i){
 	    const dfloat Drni = DrT[n+i*p_Np];
 	    const dfloat Dsni = DsT[n+i*p_Np];
@@ -345,29 +345,29 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 
 
 // // DEPRECATED
-// kernel void boltzmannSplitPmlImexS2Volume2D(const int Nelements,
-// 				      const int * restrict elementIds,
+// @kernel void boltzmannSplitPmlImexS2Volume2D(const int Nelements,
+// 				      @restrict const  int *  elementIds,
 // 				      const dfloat ramp,
-// 				      const dfloat * restrict vgeo,
-// 				      const dfloat * restrict sigmax,
-// 				      const dfloat * restrict sigmay,
-// 				      const dfloat * restrict DrT,
-// 				      const dfloat * restrict DsT,
-// 				      const dfloat4 * restrict q,
-// 				      const dfloat * restrict qx,
-// 				      const dfloat * restrict qy,
-// 				      const dfloat * restrict qnt,
-// 				            dfloat * restrict rhsqx,
-// 				            dfloat * restrict rhsqy,
-// 				            dfloat * restrict rhsqnt){
+// 				      @restrict const  dfloat *  vgeo,
+// 				      @restrict const  dfloat *  sigmax,
+// 				      @restrict const  dfloat *  sigmay,
+// 				      @restrict const  dfloat *  DrT,
+// 				      @restrict const  dfloat *  DsT,
+// 				      @restrict const  dfloat4 *  q,
+// 				      @restrict const  dfloat *  qx,
+// 				      @restrict const  dfloat *  qy,
+// 				      @restrict const  dfloat *  qnt,
+// 				            @restrict dfloat *  rhsqx,
+// 				            @restrict dfloat *  rhsqy,
+// 				            @restrict dfloat *  rhsqnt){
   
-//   for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+//   for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-//     shared dfloat s_q[p_NblockV][6][p_Np];
-//     exclusive int element;
+//     @shared dfloat s_q[p_NblockV][6][p_Np];
+//     @exclusive int element;
 
-//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+//       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 // 	int e = eo+es; // element in block
 // 	if(e<Nelements){
@@ -391,11 +391,11 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 //       }
 //     }
 
-//     // make sure all node data is loaded into shared
-//     barrier(localMemFence);
+//     // make sure all node data is loaded into @shared
+//     @barrier("local");
 
-//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+//       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 // 	int e = eo+es; // element in block
 // 	if(e<Nelements){
@@ -435,7 +435,7 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 // 	  dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
 // 	  dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
 
-// 	  occaUnroll(p_Np)
+// 	  #pragma unroll p_Np
 // 	  for(int i=0;i<p_Np;++i){
 // 	    const dfloat Drni = DrT[n+i*p_Np];
 // 	    const dfloat Dsni = DsT[n+i*p_Np];
@@ -542,29 +542,29 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 
 
 
-// kernel void boltzmannSplitPmlImexS2VolumeNonlinear2D(const int Nelements,
-// 					     const int * restrict elementIds,
-// 					     const dfloat  * restrict cubInterpT,
-// 					     const dfloat  * restrict cubProjectT,
-// 					     const dfloat4 * restrict q,
-// 					           dfloat  * restrict qZx,
-// 					           dfloat  * restrict qZy,
-// 					           dfloat  * restrict qZnt){
+// @kernel void boltzmannSplitPmlImexS2VolumeNonlinear2D(const int Nelements,
+// 					     @restrict const  int *  elementIds,
+// 					     @restrict const  dfloat  *  cubInterpT,
+// 					     @restrict const  dfloat  *  cubProjectT,
+// 					     @restrict const  dfloat4 *  q,
+// 					           @restrict dfloat  *  qZx,
+// 					           @restrict dfloat  *  qZy,
+// 					           @restrict dfloat  *  qZnt){
   
-//   for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+//   for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-//     // shared memory for q at nodes
-//     shared dfloat s_q[p_NblockV][3][p_Np];
+//     // @shared memory for q at nodes
+//     @shared dfloat s_q[p_NblockV][3][p_Np];
 
 //     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-//     shared dfloat s_cubN4[p_NblockV][p_cubNp];
-//     shared dfloat s_cubN5[p_NblockV][p_cubNp];
-//     shared dfloat s_cubN6[p_NblockV][p_cubNp];
+//     @shared dfloat s_cubN4[p_NblockV][p_cubNp];
+//     @shared dfloat s_cubN5[p_NblockV][p_cubNp];
+//     @shared dfloat s_cubN6[p_NblockV][p_cubNp];
 
-//     exclusive int element;
+//     @exclusive int element;
 
-//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+//       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 // 	int e = eo+es; // element in block
 // 	if(e<Nelements){
@@ -583,19 +583,19 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 //       }
 //     }
     
-//     // make sure all node data is loaded into shared
-//     barrier(localMemFence);
+//     // make sure all node data is loaded into @shared
+//     @barrier("local");
 
 //     // interpolate q to cubature
-//     for(int es=0;es<p_NblockV;++es;inner1){
-//       for(int n=0;n<p_maxNodesVolume;++n;inner0){     
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){
+//       for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){     
 	
 // 	int e = eo+es; // element in block
 // 	if(e<Nelements){
 // 	  if(n<p_cubNp){
 // 	    dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
 	   	    
-// 	    occaUnroll(p_Np)
+// 	    #pragma unroll p_Np
 // 	    for(int m=0;m<p_Np;++m){
 // 	      const dfloat Icn  = cubInterpT[m*p_cubNp+n];
 // 	      cubq1 += Icn*s_q[es][0][m];
@@ -613,22 +613,22 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 //       }
 //     }
 
-//     // make sure all cubature node data is loaded into shared
-//     barrier(localMemFence);
+//     // make sure all cubature node data is loaded into @shared
+//     @barrier("local");
     
 //     // partial projection to nodes from cubature-sub-group
-//     for(int es=0;es<p_NblockV;++es;inner1){
-//       for(int n=0;n<p_maxNodesVolume;++n;inner0){     
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){
+//       for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){     
 	
 // 	int e = eo+es; // element in block
 // 	if(e<Nelements){
 // 	  if(n<p_Np){
 // 	    int base = element*p_Np*p_Nfields+n;
 	    
-// 	    // use temporaries for part sums for N4,N5,N6 because of exclusives
+// 	    // use temporaries for part sums for N4,N5,N6 because of @exclusives
 // 	    dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
 
-// 	    occaUnroll(p_cubNp)
+// 	    #pragma unroll p_cubNp
 
 // 	    for(int i=0;i<p_cubNp;++i){
 // 	      const dfloat Pnc  = cubProjectT[i*p_Np+n];
@@ -669,23 +669,23 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 
 
 
-// kernel void boltzmannNonPmlImexS2Volume2D(const int Nelements,
-// 				    const int * restrict elementIds,
+// @kernel void boltzmannNonPmlImexS2Volume2D(const int Nelements,
+// 				    @restrict const  int *  elementIds,
 // 				    const dfloat ramp,
 // 				    const dfloat drampdt,
-// 				    const dfloat * restrict vgeo,
-// 				    const dfloat * restrict DrT,
-// 				    const dfloat * restrict DsT,
-// 				    const dfloat4 * restrict q,
-// 				          dfloat4 * restrict rhsq){
+// 				    @restrict const  dfloat *  vgeo,
+// 				    @restrict const  dfloat *  DrT,
+// 				    @restrict const  dfloat *  DsT,
+// 				    @restrict const  dfloat4 *  q,
+// 				          @restrict dfloat4 *  rhsq){
   
-//   for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+//   for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-//     shared dfloat s_q[p_NblockV][6][p_Np];
-//     exclusive int element;
+//     @shared dfloat s_q[p_NblockV][6][p_Np];
+//     @exclusive int element;
 
-//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+//       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
 // 	int e = eo+es; // element in block
 
@@ -708,11 +708,11 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 //       }
 //     }
 
-//     // make sure all node data is loaded into shared
-//     barrier(localMemFence);
+//     // make sure all node data is loaded into @shared
+//     @barrier("local");
 
-//     for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-//       for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+//       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 	
 // 	int e = eo+es; // element in block
 // 	if(e<Nelements){
@@ -727,7 +727,7 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 // 	  dfloat dq1dr = 0, dq2dr = 0, dq3dr = 0, dq4dr = 0, dq5dr = 0, dq6dr = 0;
 // 	  dfloat dq1ds = 0, dq2ds = 0, dq3ds = 0, dq4ds = 0, dq5ds = 0, dq6ds = 0;
 
-// 	  occaUnroll(p_Np)
+// 	  #pragma unroll p_Np
 // 	  for(int i=0;i<p_Np;++i){
 // 	    const dfloat Drni = DrT[n+i*p_Np];
 // 	    const dfloat Dsni = DsT[n+i*p_Np];
@@ -805,28 +805,28 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 
 
 
-// kernel void boltzmannNonPmlImexS2VolumeNonlinear2D(const int Nelements,
-// 					     const int * restrict elementIds,
-// 					     const dfloat * restrict cubInterpT,
-// 					     const dfloat * restrict cubProjectT,
-// 					     const dfloat4 * restrict qin,
-// 					           dfloat4 * restrict rhsq){
+// @kernel void boltzmannNonPmlImexS2VolumeNonlinear2D(const int Nelements,
+// 					     @restrict const  int *  elementIds,
+// 					     @restrict const  dfloat *  cubInterpT,
+// 					     @restrict const  dfloat *  cubProjectT,
+// 					     @restrict const  dfloat4 *  qin,
+// 					           @restrict dfloat4 *  rhsq){
   
-//   for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+//   for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-//     // shared memory for q at nodes
-//     shared dfloat s_q[p_NblockV][3][p_Np];
+//     // @shared memory for q at nodes
+//     @shared dfloat s_q[p_NblockV][3][p_Np];
 
 //     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-//     shared dfloat s_cubN4[p_NblockV][p_cubNp];
-//     shared dfloat s_cubN5[p_NblockV][p_cubNp];
-//     shared dfloat s_cubN6[p_NblockV][p_cubNp];
+//     @shared dfloat s_cubN4[p_NblockV][p_cubNp];
+//     @shared dfloat s_cubN5[p_NblockV][p_cubNp];
+//     @shared dfloat s_cubN6[p_NblockV][p_cubNp];
 
-//     exclusive int element;
+//     @exclusive int element;
 
-//     // prefetch q to shared
-//     for(int es=0;es<p_NblockV;++es;inner1){
-//       for(int n=0;n<p_maxNodesVolume;++n;inner0){    
+//     // prefetch q to @shared
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){
+//       for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){    
 	
 // 	int e = eo+es; // element in block
 // 	if(e<Nelements){
@@ -844,19 +844,19 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 //       }
 //     }
     
-//     // make sure all node data is loaded into shared
-//     barrier(localMemFence);
+//     // make sure all node data is loaded into @shared
+//     @barrier("local");
 
 //     // interpolate q to cubature
-//     for(int es=0;es<p_NblockV;++es;inner1){
-//       for(int n=0;n<p_maxNodesVolume;++n;inner0){     
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){
+//       for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){     
 	
 // 	int e = eo+es; // element in block
 // 	if(e<Nelements){
 // 	  if(n<p_cubNp){
 // 	    dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
 	    	    
-// 	    occaUnroll(p_Np)
+// 	    #pragma unroll p_Np
 // 	    for(int m=0;m<p_Np;++m){
 // 	      const dfloat Icn  = cubInterpT[m*p_cubNp+n];
 // 	      cubq1 += Icn*s_q[es][0][m];
@@ -873,21 +873,21 @@ kernel void boltzmannSplitPmlImexS1Volume2D(const int Nelements,
 //       }
 //     }
 
-//     // make sure all cubature node data is loaded into shared
-//     barrier(localMemFence);
+//     // make sure all cubature node data is loaded into @shared
+//     @barrier("local");
     
 //     // partial projection to nodes from cubature-sub-group
-//     for(int es=0;es<p_NblockV;++es;inner1){
-//       for(int n=0;n<p_maxNodesVolume;++n;inner0){     
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){
+//       for(int n=0;n<p_maxNodesVolume;++n;@inner(0)){     
 	
 // 	int e = eo+es; // element in block
 // 	if(e<Nelements){
 // 	  if(n<p_Np){
 	    	    
-// 	    // use temporaries for part sums for N4,N5,N6 because of exclusives
+// 	    // use temporaries for part sums for N4,N5,N6 because of @exclusives
 // 	    dfloat N4 = 0.f, N5 = 0.f, N6 = 0.f;
 
-// 	    occaUnroll(p_cubNp)
+// 	    #pragma unroll p_cubNp
 // 	    for(int i=0;i<p_cubNp;++i){
 // 	      const dfloat Pnc  = cubProjectT[i*p_Np+n];
 // 	      N4 += Pnc*s_cubN4[es][i];

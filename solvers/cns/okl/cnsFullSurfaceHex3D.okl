@@ -26,8 +26,8 @@ void fullUpwindRoeAveraged(const dfloat nx,
   
   // Rotate "-" trace momentum to face normal-tangent coordinates
 
-  dfloat sqrtrM = occaSqrt(rM);
-  dfloat sqrtrP = occaSqrt(rP);
+  dfloat sqrtrM = sqrt(rM);
+  dfloat sqrtrP = sqrt(rP);
 
   // extract primitive variables from negative trace
   dfloat uM = ruM/rM;
@@ -53,7 +53,7 @@ void fullUpwindRoeAveraged(const dfloat nx,
   dfloat v = (vM*sqrtrM + vP*sqrtrP)/(sqrtrM + sqrtrP);
   dfloat w = (wM*sqrtrM + wP*sqrtrP)/(sqrtrM + sqrtrP);
   dfloat h = (hM*sqrtrM + hP*sqrtrP)/(sqrtrM + sqrtrP);
-  dfloat a = occaSqrt( ((p_gamma-p_one)*(h-p_half*(u*u+v*v+w*w))) );
+  dfloat a = sqrt( ((p_gamma-p_one)*(h-p_half*(u*u+v*v+w*w))) );
   dfloat qn = (qnM*sqrtrM + qnP*sqrtrP)/(sqrtrM + sqrtrP);
 
   // jump terms
@@ -65,10 +65,10 @@ void fullUpwindRoeAveraged(const dfloat nx,
   dfloat dqn = qnP-qnM;
 
   // weighting for characteristics
-  dfloat w1 = occaFabs((qn-a))*p_half*(dp-r*a*dqn)/(a*a);
-  dfloat w2 = occaFabs(qn)*(dr-(dp/(a*a)));
-  dfloat w3 = occaFabs((qn+a))*p_half*(dp+r*a*dqn)/(a*a);
-  dfloat w4 = occaFabs(qn)*r;
+  dfloat w1 = fabs((qn-a))*p_half*(dp-r*a*dqn)/(a*a);
+  dfloat w2 = fabs(qn)*(dr-(dp/(a*a)));
+  dfloat w3 = fabs((qn+a))*p_half*(dp+r*a*dqn)/(a*a);
+  dfloat w4 = fabs(qn)*r;
 
   // negative trace flux contribution to average (1/2 later)
    *rflux = qnM*rM;
@@ -221,29 +221,29 @@ void fullUpwindRoeAveraged(const dfloat nx,
 }
 
 // batch process elements
-kernel void cnsFullSurfaceHex3D(const dlong Nelements,
+@kernel void cnsFullSurfaceHex3D(const dlong Nelements,
                                 const int advSwitch,
-                                const dfloat * restrict sgeo,
-                                const dlong  * restrict vmapM,
-                                const dlong  * restrict vmapP,
-                                const int    * restrict EToB,
+                                @restrict const  dfloat *  sgeo,
+                                @restrict const  dlong  *  vmapM,
+                                @restrict const  dlong  *  vmapP,
+                                @restrict const  int    *  EToB,
                                 const dfloat time,
-                                const dfloat * restrict x,
-                                const dfloat * restrict y,
-                                const dfloat * restrict z,
+                                @restrict const  dfloat *  x,
+                                @restrict const  dfloat *  y,
+                                @restrict const  dfloat *  z,
                                 const dfloat mu,
-                                const dfloat * restrict q,
-                                const dfloat * restrict viscousStresses,
-                                dfloat * restrict rhsq){
+                                @restrict const  dfloat *  q,
+                                @restrict const  dfloat *  viscousStresses,
+                                @restrict dfloat *  rhsq){
   
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     
     // for all face nodes of all elements
     // face 0 & 5
-    for(int es=0;es<p_NblockS;++es;inner2){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo + es;
           if(e<Nelements){
             const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
@@ -256,12 +256,12 @@ kernel void cnsFullSurfaceHex3D(const dlong Nelements,
       }
     }
     
-    barrier(globalMemFence);
+    @barrier("global");
     
     // face 1 & 3
-    for(int es=0;es<p_NblockS;++es;inner2){
-      for(int k=0;k<p_Nq;++k;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo + es;
           if(e<Nelements){
             const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
@@ -274,12 +274,12 @@ kernel void cnsFullSurfaceHex3D(const dlong Nelements,
       }
     }
     
-    barrier(globalMemFence);
+    @barrier("global");
     
     // face 2 & 4
-    for(int es=0;es<p_NblockS;++es;inner2){
-      for(int k=0;k<p_Nq;++k;inner1){
-        for(int j=0;j<p_Nq;++j;inner0){
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int j=0;j<p_Nq;++j;@inner(0)){
           const dlong e = eo + es;
           if(e<Nelements){
             const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;

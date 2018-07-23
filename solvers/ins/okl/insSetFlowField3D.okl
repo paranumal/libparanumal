@@ -1,14 +1,14 @@
 
-kernel void insSetFlowField3D(const dlong Nelements,
+@kernel void insSetFlowField3D(const dlong Nelements,
                               const dfloat t,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const dfloat * restrict z,
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
                               const dlong offset,
-                                    dfloat * restrict U,
-                                    dfloat * restrict P){
+                                    @restrict dfloat *  U,
+                                    @restrict dfloat *  P){
 
-  for(dlong n=0;n<p_Np*Nelements;++n;tile(256)){
+  for(dlong n=0;n<p_Np*Nelements;++n;@tile(256,@outer,@inner)){
 
     if(n<p_Np*Nelements){
       dfloat xn = x[n];

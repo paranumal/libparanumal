@@ -1,18 +1,18 @@
-kernel void cnsVorticityTet3D(const dlong Nelements,
-                              const dfloat * restrict vgeo,
-                              const dfloat * restrict const DT,
-                              const dfloat * restrict q,
-                                    dfloat * restrict Vort){  
+@kernel void cnsVorticityTet3D(const dlong Nelements,
+                              @restrict const  dfloat *  vgeo,
+                              @restrict const  dfloat *  const DT,
+                              @restrict const  dfloat *  q,
+                                    @restrict dfloat *  Vort){  
   
   // block partition of elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;outer0){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     
-    shared dfloat s_u[p_NblockV][p_Np];
-    shared dfloat s_v[p_NblockV][p_Np];
-    shared dfloat s_w[p_NblockV][p_Np];
+    @shared dfloat s_u[p_NblockV][p_Np];
+    @shared dfloat s_v[p_NblockV][p_Np];
+    @shared dfloat s_w[p_NblockV][p_Np];
 
-    for(int e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
         if (e<Nelements) {
           const dlong qbase = e*p_Nfields*p_Np + n;
           const dfloat r  = q[qbase + 0*p_Np];
@@ -27,10 +27,10 @@ kernel void cnsVorticityTet3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
-    for(dlong e=eo;e<eo+p_NblockV;++e;inner1){
-      for(int n=0;n<p_Np;++n;inner0){
+    for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
         if(e<Nelements){
           const int es = e-eo;
           const dlong gid = e*p_Nvgeo;
@@ -50,7 +50,7 @@ kernel void cnsVorticityTet3D(const dlong Nelements,
           dfloat us = 0, vs = 0, ws = 0;
 	  dfloat ut = 0, vt = 0, wt = 0;
 
-          occaUnroll(p_Np)
+          #pragma unroll p_Np
             for(int i=0;i<p_Np;++i) {
 	      const dfloat ui = s_u[es][i];
 	      const dfloat vi = s_v[es][i];

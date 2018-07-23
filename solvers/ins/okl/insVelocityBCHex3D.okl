@@ -36,49 +36,49 @@
   s_rhsW[j][i] = -WsJ*(nx*dwdxP + ny*dwdyP+ nz*dwdzP+ tau*dw*hinv);     \
 }
 
-kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
-                                  const dlong  * restrict vmapM,
+@kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
+                                  @restrict const  dlong  *  vmapM,
                                   const dfloat tau,
                                   const dfloat time,
-                                  const dfloat * restrict x,
-                                  const dfloat * restrict y,
-                                  const dfloat * restrict z,
-                                  const dfloat * restrict vgeo,
-                                  const dfloat * restrict sgeo,
-                                  const int    * restrict EToB,
-                                  const dfloat * restrict D,
-                                  const dfloat * restrict LIFTT,
-                                  const dfloat * restrict MM,
-                                        dfloat * restrict rhsU,
-                                        dfloat * restrict rhsV,
-                                        dfloat * restrict rhsW){
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  int    *  EToB,
+                                  @restrict const  dfloat *  D,
+                                  @restrict const  dfloat *  LIFTT,
+                                  @restrict const  dfloat *  MM,
+                                        @restrict dfloat *  rhsU,
+                                        @restrict dfloat *  rhsV,
+                                        @restrict dfloat *  rhsW){
 
-  for(dlong e=0;e<Nelements;++e;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
     
-    shared dfloat s_dudx[p_Nq][p_Nq];
-    shared dfloat s_dudy[p_Nq][p_Nq];
-    shared dfloat s_dudz[p_Nq][p_Nq];
-    shared dfloat s_dvdx[p_Nq][p_Nq];
-    shared dfloat s_dvdy[p_Nq][p_Nq];
-    shared dfloat s_dvdz[p_Nq][p_Nq];
-    shared dfloat s_dwdx[p_Nq][p_Nq];
-    shared dfloat s_dwdy[p_Nq][p_Nq];
-    shared dfloat s_dwdz[p_Nq][p_Nq];
-    shared dfloat s_rhsU[p_Nq][p_Nq];
-    shared dfloat s_rhsV[p_Nq][p_Nq];
-    shared dfloat s_rhsW[p_Nq][p_Nq];
+    @shared dfloat s_dudx[p_Nq][p_Nq];
+    @shared dfloat s_dudy[p_Nq][p_Nq];
+    @shared dfloat s_dudz[p_Nq][p_Nq];
+    @shared dfloat s_dvdx[p_Nq][p_Nq];
+    @shared dfloat s_dvdy[p_Nq][p_Nq];
+    @shared dfloat s_dvdz[p_Nq][p_Nq];
+    @shared dfloat s_dwdx[p_Nq][p_Nq];
+    @shared dfloat s_dwdy[p_Nq][p_Nq];
+    @shared dfloat s_dwdz[p_Nq][p_Nq];
+    @shared dfloat s_rhsU[p_Nq][p_Nq];
+    @shared dfloat s_rhsV[p_Nq][p_Nq];
+    @shared dfloat s_rhsW[p_Nq][p_Nq];
 
-    shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
     
-    exclusive dfloat r_dudx[p_Nq], r_dudy[p_Nq], r_dudz[p_Nq], r_rhsU[p_Nq];
-    exclusive dfloat r_dvdx[p_Nq], r_dvdy[p_Nq], r_dvdz[p_Nq], r_rhsV[p_Nq];
-    exclusive dfloat r_dwdx[p_Nq], r_dwdy[p_Nq], r_dwdz[p_Nq], r_rhsW[p_Nq];
-    exclusive dfloat r_dudt, r_dvdt, r_dwdt;
+    @exclusive dfloat r_dudx[p_Nq], r_dudy[p_Nq], r_dudz[p_Nq], r_rhsU[p_Nq];
+    @exclusive dfloat r_dvdx[p_Nq], r_dvdy[p_Nq], r_dvdz[p_Nq], r_rhsV[p_Nq];
+    @exclusive dfloat r_dwdx[p_Nq], r_dwdy[p_Nq], r_dwdz[p_Nq], r_rhsW[p_Nq];
+    @exclusive dfloat r_dudt, r_dvdt, r_dwdt;
 
     // loop over slabs
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-        occaUnroll(p_Nq)
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           r_dudx[k] = 0.f;
           r_dudy[k] = 0.f;
@@ -98,21 +98,21 @@ kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
       }
     }
     
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i ;
         surfaceTerms(sk0,0,i,j);
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 0 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 0
         r_dudx[0] += s_dudx[j][i];
         r_dudy[0] += s_dudy[j][i];
@@ -129,21 +129,21 @@ kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 0 & 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i ;             
         surfaceTerms(sk5,5,i,j); 
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 5
         r_dudx[p_Nq-1] += s_dudx[j][i];
         r_dudy[p_Nq-1] += s_dudy[j][i];
@@ -160,23 +160,23 @@ kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i ;
         surfaceTerms(sk1,1,i,k);
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==0) {//face 1
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dudx[k] += s_dudx[k][i];
             r_dudy[k] += s_dudy[k][i];
@@ -195,23 +195,23 @@ kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 3
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i ;
         surfaceTerms(sk3,3,i,k); 
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 3
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==p_Nq-1) {//face 3
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dudx[k] += s_dudx[k][i];
             r_dudy[k] += s_dudy[k][i];
@@ -230,23 +230,23 @@ kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 2
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
         const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j ;
         surfaceTerms(sk2,2,j,k);
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 2
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==p_Nq-1) {//face 2
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dudx[k] += s_dudx[k][j];
             r_dudy[k] += s_dudy[k][j];
@@ -265,23 +265,23 @@ kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 4
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
         const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j ;
         surfaceTerms(sk4,4,j,k); 
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 4
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==0) {//face 4
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dudx[k] += s_dudx[k][j];
             r_dudy[k] += s_dudy[k][j];
@@ -300,13 +300,13 @@ kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     //layer by layer
-    occaUnroll(p_Nq)
+    #pragma unroll p_Nq
     for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
           const dlong gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;     
 
@@ -344,15 +344,15 @@ kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
 
-      for(int j=0;j<p_Nq;++j;inner1){
-        for(int i=0;i<p_Nq;++i;inner0){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           dfloat ur = 0, us = 0;
           dfloat vr = 0, vs = 0;
           dfloat wr = 0, ws = 0;
 
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
             const dfloat Dr = s_D[n][i];
             const dfloat Ds = s_D[n][j];
@@ -374,13 +374,13 @@ kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
         }
       }
 
-      barrier(localMemFence);
+      @barrier("local");
     }
 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         
-        occaUnroll(p_Nq)
+        #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           rhsU[id] -= r_rhsU[k];
@@ -421,60 +421,60 @@ kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
 }
 
 //RHS contributions for continuous solver
-kernel void insVelocityBCHex3D(const dlong Nelements,
-                              const dfloat * restrict ggeo,
-                              const dfloat * restrict sgeo,
-                              const dfloat * restrict D,
-                              const dfloat * restrict S,
-                              const dfloat * restrict MM,
-                              const dlong  * restrict vmapM,
-                              const dlong  * restrict sMT,
+@kernel void insVelocityBCHex3D(const dlong Nelements,
+                              @restrict const  dfloat *  ggeo,
+                              @restrict const  dfloat *  sgeo,
+                              @restrict const  dfloat *  D,
+                              @restrict const  dfloat *  S,
+                              @restrict const  dfloat *  MM,
+                              @restrict const  dlong  *  vmapM,
+                              @restrict const  dlong  *  sMT,
                               const dfloat lambda,
                               const dfloat time,
-                              const dfloat * restrict x,
-                              const dfloat * restrict y,
-                              const dfloat * restrict z,
-                              const int    * restrict mapB,
-                                    dfloat * restrict rhsU,
-                                    dfloat * restrict rhsV,
-                                    dfloat * restrict rhsW){
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
+                              @restrict const  int    *  mapB,
+                                    @restrict dfloat *  rhsU,
+                                    @restrict dfloat *  rhsV,
+                                    @restrict dfloat *  rhsW){
 
 
-  for(dlong e=0; e<Nelements; ++e; outer0){
+  for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    shared dfloat s_D[p_Nq][p_Nq];
-    shared dfloat s_U[p_Nq][p_Nq];
-    shared dfloat s_V[p_Nq][p_Nq];
-    shared dfloat s_W[p_Nq][p_Nq];
-    shared dfloat s_ndU[p_Nq][p_Nq];
-    shared dfloat s_ndV[p_Nq][p_Nq];
-    shared dfloat s_ndW[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_U[p_Nq][p_Nq];
+    @shared dfloat s_V[p_Nq][p_Nq];
+    @shared dfloat s_W[p_Nq][p_Nq];
+    @shared dfloat s_ndU[p_Nq][p_Nq];
+    @shared dfloat s_ndV[p_Nq][p_Nq];
+    @shared dfloat s_ndW[p_Nq][p_Nq];
 
     #define s_Gur s_ndU
     #define s_Gvr s_ndV
     #define s_Gwr s_ndW
 
-    shared dfloat s_Gus[p_Nq][p_Nq];
-    shared dfloat s_Gvs[p_Nq][p_Nq];
-    shared dfloat s_Gws[p_Nq][p_Nq];
+    @shared dfloat s_Gus[p_Nq][p_Nq];
+    @shared dfloat s_Gvs[p_Nq][p_Nq];
+    @shared dfloat s_Gws[p_Nq][p_Nq];
 
-    exclusive dfloat r_ut, r_Gut, r_Auk;
-    exclusive dfloat r_vt, r_Gvt, r_Avk;
-    exclusive dfloat r_wt, r_Gwt, r_Awk;
-    exclusive dfloat r_U[p_Nq], r_V[p_Nq], r_W[p_Nq]; // register array to hold u(i,j,0:N) private to thread
-    exclusive dfloat r_rhsU[p_Nq], r_rhsV[p_Nq], r_rhsW[p_Nq];// array for results Au(i,j,0:N)
+    @exclusive dfloat r_ut, r_Gut, r_Auk;
+    @exclusive dfloat r_vt, r_Gvt, r_Avk;
+    @exclusive dfloat r_wt, r_Gwt, r_Awk;
+    @exclusive dfloat r_U[p_Nq], r_V[p_Nq], r_W[p_Nq]; // register array to hold u(i,j,0:N) private to thread
+    @exclusive dfloat r_rhsU[p_Nq], r_rhsV[p_Nq], r_rhsW[p_Nq];// array for results Au(i,j,0:N)
 
     dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 
     // for all face nodes of all elements
     // face 0
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         //load D into local memory
         // s_D[i][j] = d \phi_i at node j
         s_D[j][i] = D[p_Nq*j+i]; // D is column major
 
-        occaUnroll(p_Nq)
+        #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           r_U[k] = 0.;
           r_V[k] = 0.;
@@ -489,11 +489,11 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 0
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 0
         r_U   [0] += s_U  [j][i];
         r_V   [0] += s_V  [j][i];
@@ -504,21 +504,21 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i + j*p_Nq;
         surfaceTerms(sk5,5,i,j);
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 5
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 5
         r_U   [p_Nq-1] += s_U  [j][i];
         r_V   [p_Nq-1] += s_V  [j][i];
@@ -529,23 +529,23 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 1
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i + k*p_Nq;
         surfaceTerms(sk1,1,i,k);
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 1
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==0) {//face 1
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_U   [k] += s_U  [k][i];
             r_V   [k] += s_V  [k][i];
@@ -558,23 +558,23 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 3
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
         surfaceTerms(sk3,3,i,k);
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 3
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==p_Nq-1) {//face 3
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_U   [k] += s_U  [k][i];
             r_V   [k] += s_V  [k][i];
@@ -587,23 +587,23 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence);    
+    @barrier("local");    
 
     // face 2
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
         const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + j + k*p_Nq;
         surfaceTerms(sk2,2,j,k);
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 2 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==p_Nq-1) {//face 2
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_U   [k] += s_U  [k][j];
             r_V   [k] += s_V  [k][j];
@@ -616,23 +616,23 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence); 
+    @barrier("local"); 
 
     // face 4
-    for(int k=0;k<p_Nq;++k;inner1){
-      for(int j=0;j<p_Nq;++j;inner0){
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
         const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
         surfaceTerms(sk4,4,j,k);
       }
     }
 
-    barrier(localMemFence);
+    @barrier("local");
 
     // face 4
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==0) {//face 4
-          occaUnroll(p_Nq)
+          #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_U   [k] += s_U  [k][j];
             r_V   [k] += s_V  [k][j];
@@ -645,13 +645,13 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
       }
     }
 
-    barrier(localMemFence); 
+    @barrier("local"); 
 
     // Layer by layer
-    occaUnroll(p_Nq)
+    #pragma unroll p_Nq
       for(int k = 0;k < p_Nq; k++){
-        for(int j=0;j<p_Nq;++j;inner1){
-          for(int i=0;i<p_Nq;++i;inner0){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
 
             // prefetch geometric factors
             const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
@@ -668,10 +668,10 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
           }
         }
 
-        barrier(localMemFence);
+        @barrier("local");
 
-        for(int j=0;j<p_Nq;++j;inner1){
-          for(int i=0;i<p_Nq;++i;inner0){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
             // share u(:,:,k)
             s_U[j][i] = r_U[k];
             s_V[j][i] = r_V[k];
@@ -679,7 +679,7 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
 
             r_ut = 0; r_vt = 0; r_wt = 0;
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
                 const dfloat Dt = s_D[k][m];
                 r_ut += Dt*r_U[m];
@@ -689,14 +689,14 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
           }
         }
 
-        barrier(localMemFence);
+        @barrier("local");
 
-        for(int j=0;j<p_Nq;++j;inner1){
-          for(int i=0;i<p_Nq;++i;inner0){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
             dfloat ur = 0.f, vr = 0.f, wr = 0.f;
             dfloat us = 0.f, vs = 0.f, ws = 0.f;
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
                 const dfloat Dr = s_D[i][m];
                 const dfloat Ds = s_D[j][m];
@@ -725,12 +725,12 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
           }
         }
 
-        barrier(localMemFence);
+        @barrier("local");
 
-        for(int j=0;j<p_Nq;++j;inner1){
-          for(int i=0;i<p_Nq;++i;inner0){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
 
-            occaUnroll(p_Nq)
+            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++){
                 const dfloat Dr = s_D[m][i];
                 const dfloat Ds = s_D[m][j];
@@ -755,9 +755,9 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
 
     // write out
 
-    for(int j=0;j<p_Nq;++j;inner1){
-      for(int i=0;i<p_Nq;++i;inner0){
-        occaUnroll(p_Nq)
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
           for(int k = 0; k < p_Nq; k++){
             const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
             rhsU[id] -= r_rhsU[k];
@@ -769,20 +769,20 @@ kernel void insVelocityBCHex3D(const dlong Nelements,
   }
 }
 
-kernel void insVelocityAddBCHex3D(const dlong Nelements,
+@kernel void insVelocityAddBCHex3D(const dlong Nelements,
                                     const dfloat time,
-                                    const dfloat * restrict sgeo,
-                                    const dfloat * restrict x,
-                                    const dfloat * restrict y,
-                                    const dfloat * restrict z,
-                                    const dlong  * restrict vmapM,
-                                    const int    * restrict mapB,
-                                          dfloat * restrict U,
-                                          dfloat * restrict V,
-                                          dfloat * restrict W){
+                                    @restrict const  dfloat *  sgeo,
+                                    @restrict const  dfloat *  x,
+                                    @restrict const  dfloat *  y,
+                                    @restrict const  dfloat *  z,
+                                    @restrict const  dlong  *  vmapM,
+                                    @restrict const  int    *  mapB,
+                                          @restrict dfloat *  U,
+                                          @restrict dfloat *  V,
+                                          @restrict dfloat *  W){
 
-  for(dlong e=0;e<Nelements;e++;outer0){
-    for(int n=0;n<p_Nfp*p_Nfaces;++n;inner0){
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
       const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
       const int bc = mapB[idM];
 

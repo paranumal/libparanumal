@@ -1,22 +1,22 @@
 // Only difference with boltzmannVolume2D is size of rhsq and shifting
-kernel void boltzmannVolume2D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannVolume2D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat ramp,
             const dfloat drampdt,
             const int nrhs,
             const int shift,
-            const dfloat * restrict vgeo,
-            const dfloat * restrict DrT,
-            const dfloat * restrict DsT,
-            const dfloat * restrict q,
-                  dfloat * restrict rhsq){  
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+            @restrict const  dfloat *  vgeo,
+            @restrict const  dfloat *  DrT,
+            @restrict const  dfloat *  DsT,
+            @restrict const  dfloat *  q,
+                  @restrict dfloat *  rhsq){  
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive int e;
+    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    @exclusive int e;
 
-  for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
       int et = eo+es; // element in block
 
@@ -24,7 +24,7 @@ kernel void boltzmannVolume2D(const int Nelements,
         e = elementIds[et];
         const int id = p_Nfields*(e*p_Np + n);
         
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -33,11 +33,11 @@ kernel void boltzmannVolume2D(const int Nelements,
     }
   }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-  for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+  for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
       int et = eo+es; // element in block
       if(et<Nelements){   
         // prefetch geometric factors (constant on triangle)
@@ -51,18 +51,18 @@ kernel void boltzmannVolume2D(const int Nelements,
         dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
         dfloat r_rhsq[p_Nfields];
         
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
           r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
           r_rhsq[fld] = 0.f;
          }
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
           const dfloat Dsni = DsT[n+i*p_Np];
-          occaUnroll(p_Nfields)
+          #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
            r_dqdr[fld] += Drni*s_q[es][fld][i];
            r_dqds[fld] += Dsni*s_q[es][fld][i];
@@ -70,7 +70,7 @@ kernel void boltzmannVolume2D(const int Nelements,
         }
       
         // Compute derivatives in physical coordinates 
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -110,33 +110,33 @@ kernel void boltzmannVolume2D(const int Nelements,
 }
 
 
-// Original kernel!!!!!
-kernel void boltzmannPmlVolume2D(const int pmlNelements,
-              const int * restrict pmlElementIds,
-              const int * restrict pmlIds,
+// Original @kernel!!!!!
+@kernel void boltzmannPmlVolume2D(const int pmlNelements,
+              @restrict const  int *  pmlElementIds,
+              @restrict const  int *  pmlIds,
               const dfloat ramp,
               const dfloat drampdt,
               const int nrhs, 
               const int shift,
-              const dfloat * restrict vgeo,
-              const dfloat * restrict pmlSigmaX,
-              const dfloat * restrict pmlSigmaY,
-              const dfloat * restrict DrT,
-              const dfloat * restrict DsT,
-              const dfloat * restrict q,
-              const dfloat * restrict pmlqx,
-              const dfloat * restrict pmlqy,
-                    dfloat * restrict rhsq,
-                    dfloat * restrict pmlrhsqx,
-                    dfloat * restrict pmlrhsqy){
+              @restrict const  dfloat *  vgeo,
+              @restrict const  dfloat *  pmlSigmaX,
+              @restrict const  dfloat *  pmlSigmaY,
+              @restrict const  dfloat *  DrT,
+              @restrict const  dfloat *  DsT,
+              @restrict const  dfloat *  q,
+              @restrict const  dfloat *  pmlqx,
+              @restrict const  dfloat *  pmlqy,
+                    @restrict dfloat *  rhsq,
+                    @restrict dfloat *  pmlrhsqx,
+                    @restrict dfloat *  pmlrhsqy){
   
-  for(int eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive int e, pmlId;
+    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    @exclusive int e, pmlId;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
       int et = eo+es; // element in block
       if(et<pmlNelements){
@@ -145,7 +145,7 @@ kernel void boltzmannPmlVolume2D(const int pmlNelements,
 
         const int id = p_Nfields*(e*p_Np + n);
 
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -153,11 +153,11 @@ kernel void boltzmannPmlVolume2D(const int pmlNelements,
      }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
        int et = eo+es; // element in block
        if(et<pmlNelements){  
 
@@ -179,7 +179,7 @@ kernel void boltzmannPmlVolume2D(const int pmlNelements,
         dfloat r_N[p_Nfields];
         
         // Initialize
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
           r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
@@ -191,7 +191,7 @@ kernel void boltzmannPmlVolume2D(const int pmlNelements,
        // Read from global
         const int pid = p_Nfields*(pmlId*p_Np + n);
 
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           r_pmlqx[fld] = pmlqx[pid+fld]; 
           r_pmlqy[fld] = pmlqy[pid+fld]; 
@@ -199,18 +199,18 @@ kernel void boltzmannPmlVolume2D(const int pmlNelements,
 
 
         // Compute Derivatives
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
           const dfloat Dsni = DsT[n+i*p_Np];
-          occaUnroll(p_Nfields)
+          #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields; ++fld){
             r_dqdr[fld] += Drni*s_q[es][fld][i];
             r_dqds[fld] += Dsni*s_q[es][fld][i];
           }
         }
         
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -250,7 +250,7 @@ kernel void boltzmannPmlVolume2D(const int pmlNelements,
         const int rhsId    = nrhs*id + p_Nfields*shift;
         const int pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
 
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           pmlrhsqx[pmlrhsId + fld] = -msigmaxe*r_pmlqx[fld]  + r_Aqx[fld];
           pmlrhsqy[pmlrhsId + fld] = -msigmaye*r_pmlqy[fld]  + r_Bqy[fld];
@@ -268,32 +268,32 @@ kernel void boltzmannPmlVolume2D(const int pmlNelements,
 
 
 // Only difference with boltzmannVolume2D is size of rhsq and shifting
-kernel void boltzmannVolumeCub2D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannVolumeCub2D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat ramp,
             const dfloat drampdt,
             const int nrhs,
             const int shift,
-            const dfloat * restrict vgeo,
-            const dfloat * restrict DrT,
-            const dfloat * restrict DsT,
-            const dfloat * restrict q,
-                  dfloat * restrict rhsq){
+            @restrict const  dfloat *  vgeo,
+            @restrict const  dfloat *  DrT,
+            @restrict const  dfloat *  DsT,
+            @restrict const  dfloat *  q,
+                  @restrict dfloat *  rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive int e;
+    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    @exclusive int e;
 
-  for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
       int et = eo+es; // element in block
 
       if(et<Nelements){
         e = elementIds[et];
         const int id = p_Nfields*(e*p_Np + n);
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -302,11 +302,11 @@ kernel void boltzmannVolumeCub2D(const int Nelements,
     }
   }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-  for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+  for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
       int et = eo+es; // element in block
       if(et<Nelements){   
         // prefetch geometric factors (constant on triangle)
@@ -320,18 +320,18 @@ kernel void boltzmannVolumeCub2D(const int Nelements,
         dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
         dfloat r_rhsq[p_Nfields];
         
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
           r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
           r_rhsq[fld] = 0.f;
          }
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
           const dfloat Dsni = DsT[n+i*p_Np];
-          occaUnroll(p_Nfields)
+          #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
            r_dqdr[fld] += Drni*s_q[es][fld][i];
            r_dqds[fld] += Dsni*s_q[es][fld][i];
@@ -339,7 +339,7 @@ kernel void boltzmannVolumeCub2D(const int Nelements,
         }
       
         // Compute derivatives in physical coordinates 
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -377,32 +377,32 @@ kernel void boltzmannVolumeCub2D(const int Nelements,
 
 
 
-kernel void boltzmannPmlVolumeCub2D(const int pmlNelements,
-              const int * restrict pmlElementIds,
-              const int * restrict pmlIds,
+@kernel void boltzmannPmlVolumeCub2D(const int pmlNelements,
+              @restrict const  int *  pmlElementIds,
+              @restrict const  int *  pmlIds,
               const dfloat ramp,
               const dfloat drampdt,
               const int nrhs, 
               const int shift,
-              const dfloat * restrict vgeo,
-              const dfloat * restrict pmlSigmaX, // unused just for keeping the same structure in timeSteppers
-              const dfloat * restrict pmlSigmaY, // unused just for keeping the same structure in timeSteppers
-              const dfloat * restrict DrT,
-              const dfloat * restrict DsT,
-              const dfloat * restrict q,
-              const dfloat * restrict pmlqx,
-              const dfloat * restrict pmlqy,
-                    dfloat * restrict rhsq,
-                    dfloat * restrict pmlrhsqx,
-                    dfloat * restrict pmlrhsqy){
+              @restrict const  dfloat *  vgeo,
+              @restrict const  dfloat *  pmlSigmaX, // unused just for keeping the same structure in timeSteppers
+              @restrict const  dfloat *  pmlSigmaY, // unused just for keeping the same structure in timeSteppers
+              @restrict const  dfloat *  DrT,
+              @restrict const  dfloat *  DsT,
+              @restrict const  dfloat *  q,
+              @restrict const  dfloat *  pmlqx,
+              @restrict const  dfloat *  pmlqy,
+                    @restrict dfloat *  rhsq,
+                    @restrict dfloat *  pmlrhsqx,
+                    @restrict dfloat *  pmlrhsqy){
   
-  for(int eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive int e, pmlId;
+    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    @exclusive int e, pmlId;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
       int et = eo+es; // element in block
       if(et<pmlNelements){
@@ -410,7 +410,7 @@ kernel void boltzmannPmlVolumeCub2D(const int pmlNelements,
         pmlId = pmlIds[et];
 
         const int id = p_Nfields*(e*p_Np + n);
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -418,11 +418,11 @@ kernel void boltzmannPmlVolumeCub2D(const int pmlNelements,
      }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
        int et = eo+es; // element in block
        if(et<pmlNelements){  
 
@@ -440,7 +440,7 @@ kernel void boltzmannPmlVolumeCub2D(const int pmlNelements,
         dfloat r_N[p_Nfields];
         
         // Initialize
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           //r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
           r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
@@ -449,18 +449,18 @@ kernel void boltzmannPmlVolumeCub2D(const int pmlNelements,
         }
     
         // Compute Derivatives
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
           const dfloat Dsni = DsT[n+i*p_Np];
-          occaUnroll(p_Nfields)
+          #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields; ++fld){
             r_dqdr[fld] += Drni*s_q[es][fld][i];
             r_dqds[fld] += Dsni*s_q[es][fld][i];
           }
         }
         
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -495,7 +495,7 @@ kernel void boltzmannPmlVolumeCub2D(const int pmlNelements,
         const int rhsId    = nrhs*id + p_Nfields*shift;
         const int pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
         
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           pmlrhsqx[pmlrhsId + fld] =  r_Aqx[fld];
           pmlrhsqy[pmlrhsId + fld] =  r_Bqy[fld];
@@ -511,32 +511,32 @@ kernel void boltzmannPmlVolumeCub2D(const int pmlNelements,
 }
 
 
-kernel void boltzmannIMEXPmlVolumeCub2D(const int pmlNelements,
-              const int * restrict pmlElementIds,
-              const int * restrict pmlIds,
+@kernel void boltzmannIMEXPmlVolumeCub2D(const int pmlNelements,
+              @restrict const  int *  pmlElementIds,
+              @restrict const  int *  pmlIds,
               const dfloat ramp,
               const dfloat drampdt,
               const int nrhs, 
               const int shift,
-              const dfloat * restrict vgeo,
-              const dfloat * restrict pmlSigmaX, // unused just for keeping the same structure in timeSteppers
-              const dfloat * restrict pmlSigmaY, // unused just for keeping the same structure in timeSteppers
-              const dfloat * restrict DrT,
-              const dfloat * restrict DsT,
-              const dfloat * restrict q,
-              const dfloat * restrict pmlqx,
-              const dfloat * restrict pmlqy,
-                    dfloat * restrict rhsq,
-                    dfloat * restrict pmlrhsqx,
-                    dfloat * restrict pmlrhsqy){
+              @restrict const  dfloat *  vgeo,
+              @restrict const  dfloat *  pmlSigmaX, // unused just for keeping the same structure in timeSteppers
+              @restrict const  dfloat *  pmlSigmaY, // unused just for keeping the same structure in timeSteppers
+              @restrict const  dfloat *  DrT,
+              @restrict const  dfloat *  DsT,
+              @restrict const  dfloat *  q,
+              @restrict const  dfloat *  pmlqx,
+              @restrict const  dfloat *  pmlqy,
+                    @restrict dfloat *  rhsq,
+                    @restrict dfloat *  pmlrhsqx,
+                    @restrict dfloat *  pmlrhsqy){
   
-  for(int eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive int e, pmlId;
+    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    @exclusive int e, pmlId;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
       int et = eo+es; // element in block
       if(et<pmlNelements){
@@ -544,7 +544,7 @@ kernel void boltzmannIMEXPmlVolumeCub2D(const int pmlNelements,
         pmlId = pmlIds[et];
 
         const int id = p_Nfields*(e*p_Np + n);
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -552,11 +552,11 @@ kernel void boltzmannIMEXPmlVolumeCub2D(const int pmlNelements,
      }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
        int et = eo+es; // element in block
        if(et<pmlNelements){  
 
@@ -574,7 +574,7 @@ kernel void boltzmannIMEXPmlVolumeCub2D(const int pmlNelements,
         dfloat r_N[p_Nfields];
         
         // Initialize
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           //r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
           r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
@@ -583,18 +583,18 @@ kernel void boltzmannIMEXPmlVolumeCub2D(const int pmlNelements,
         }
     
         // Compute Derivatives
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
           const dfloat Dsni = DsT[n+i*p_Np];
-          occaUnroll(p_Nfields)
+          #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields; ++fld){
             r_dqdr[fld] += Drni*s_q[es][fld][i];
             r_dqds[fld] += Dsni*s_q[es][fld][i];
           }
         }
         
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -629,7 +629,7 @@ kernel void boltzmannIMEXPmlVolumeCub2D(const int pmlNelements,
         const int rhsId    = nrhs*id + p_Nfields*shift;
         const int pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
         
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           pmlrhsqx[pmlrhsId + fld] +=  r_Aqx[fld];
           pmlrhsqy[pmlrhsId + fld] +=  r_Bqy[fld];
@@ -647,32 +647,32 @@ kernel void boltzmannIMEXPmlVolumeCub2D(const int pmlNelements,
 
 
 
-kernel void boltzmannSAVolume2D(const int Nelements,
-            const int * restrict elementIds,
+@kernel void boltzmannSAVolume2D(const int Nelements,
+            @restrict const  int *  elementIds,
             const dfloat ramp,
             const dfloat drampdt,
             const int nrhs,
             const int shift,
-            const dfloat * restrict vgeo,
-            const dfloat * restrict DrT,
-            const dfloat * restrict DsT,
-            const dfloat * restrict q,
-                  dfloat * restrict rhsq){
+            @restrict const  dfloat *  vgeo,
+            @restrict const  dfloat *  DrT,
+            @restrict const  dfloat *  DsT,
+            @restrict const  dfloat *  q,
+                  @restrict dfloat *  rhsq){
   
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive int e;
+    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    @exclusive int e;
 
-  for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+  for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
       int et = eo+es; // element in block
 
       if(et<Nelements){
         e = elementIds[et];
         const int id = p_Nfields*(e*p_Np + n);
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -681,11 +681,11 @@ kernel void boltzmannSAVolume2D(const int Nelements,
     }
   }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-  for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-    for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+  for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
       int et = eo+es; // element in block
       if(et<Nelements){   
         // prefetch geometric factors (constant on triangle)
@@ -699,18 +699,18 @@ kernel void boltzmannSAVolume2D(const int Nelements,
         dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
         dfloat r_rhsq[p_Nfields];
         
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
           r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
           r_rhsq[fld] = 0.f;
          }
 
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
           const dfloat Dsni = DsT[n+i*p_Np];    
-          occaUnroll(p_Nfields)
+          #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
            r_dqdr[fld] += Drni*s_q[es][fld][i];
            r_dqds[fld] += Dsni*s_q[es][fld][i];
@@ -718,7 +718,7 @@ kernel void boltzmannSAVolume2D(const int Nelements,
         }
       
         // Compute derivatives in physical coordinates 
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -748,7 +748,7 @@ kernel void boltzmannSAVolume2D(const int Nelements,
         const int id = p_Nfields*(e*p_Np + n);
         const int rhsId = nrhs*id + p_Nfields*shift;
         
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           rhsq[rhsId + fld] = r_rhsq[fld];
         }
@@ -763,32 +763,32 @@ kernel void boltzmannSAVolume2D(const int Nelements,
 
 
 
-kernel void boltzmannSAPmlVolume2D(const int pmlNelements,
-              const int * restrict pmlElementIds,
-              const int * restrict pmlIds,
+@kernel void boltzmannSAPmlVolume2D(const int pmlNelements,
+              @restrict const  int *  pmlElementIds,
+              @restrict const  int *  pmlIds,
               const dfloat ramp,
               const dfloat drampdt,
               const int nrhs, 
               const int shift,
-              const dfloat * restrict vgeo,
-              const dfloat * restrict pmlSigmaX,
-              const dfloat * restrict pmlSigmaY,
-              const dfloat * restrict DrT,
-              const dfloat * restrict DsT,
-              const dfloat * restrict q,
-              const dfloat * restrict pmlqx,
-              const dfloat * restrict pmlqy,
-                    dfloat * restrict rhsq,
-                    dfloat * restrict pmlrhsqx,
-                    dfloat * restrict pmlrhsqy){
+              @restrict const  dfloat *  vgeo,
+              @restrict const  dfloat *  pmlSigmaX,
+              @restrict const  dfloat *  pmlSigmaY,
+              @restrict const  dfloat *  DrT,
+              @restrict const  dfloat *  DsT,
+              @restrict const  dfloat *  q,
+              @restrict const  dfloat *  pmlqx,
+              @restrict const  dfloat *  pmlqy,
+                    @restrict dfloat *  rhsq,
+                    @restrict dfloat *  pmlrhsqx,
+                    @restrict dfloat *  pmlrhsqy){
   
-  for(int eo=0;eo<pmlNelements;eo+=p_NblockV;outer0){  // for all elements
+  for(int eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    exclusive int e, pmlId;
+    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    @exclusive int e, pmlId;
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
       int et = eo+es; // element in block
       if(et<pmlNelements){
@@ -796,7 +796,7 @@ kernel void boltzmannSAPmlVolume2D(const int pmlNelements,
         pmlId = pmlIds[et];
 
         const int id = p_Nfields*(e*p_Np + n);
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           s_q[es][fld][n] = q[id+fld];
         }
@@ -804,11 +804,11 @@ kernel void boltzmannSAPmlVolume2D(const int pmlNelements,
      }
     }
 
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
+    // make sure all node data is loaded into @shared
+    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;inner1){// for all elements in block
-      for(int n=0;n<p_Np;++n;inner0){     // for all nodes in this element 
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
        int et = eo+es; // element in block
        if(et<pmlNelements){  
 
@@ -830,7 +830,7 @@ kernel void boltzmannSAPmlVolume2D(const int pmlNelements,
         dfloat r_N[p_Nfields];
         
         // Initialize
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
           r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
@@ -841,7 +841,7 @@ kernel void boltzmannSAPmlVolume2D(const int pmlNelements,
        
        // Read from global
         const int pid = p_Nfields*(pmlId*p_Np + n);
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           r_pmlqx[fld] = pmlqx[pid+fld]; 
           r_pmlqy[fld] = pmlqy[pid+fld]; 
@@ -849,18 +849,18 @@ kernel void boltzmannSAPmlVolume2D(const int pmlNelements,
 
 
         // Compute Derivatives
-        occaUnroll(p_Np)
+        #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           const dfloat Drni = DrT[n+i*p_Np];
           const dfloat Dsni = DsT[n+i*p_Np];   
-          occaUnroll(p_Nfields)
+          #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields; ++fld){
             r_dqdr[fld] += Drni*s_q[es][fld][i];
             r_dqds[fld] += Dsni*s_q[es][fld][i];
           }
         }
         
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
           r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
@@ -900,7 +900,7 @@ kernel void boltzmannSAPmlVolume2D(const int pmlNelements,
         const int rhsId    = nrhs*id + p_Nfields*shift;
         const int pmlrhsId = nrhs*p_Nfields*(pmlId*p_Np + n) + p_Nfields*shift; 
         
-        occaUnroll(p_Nfields)
+        #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields; ++fld){
           pmlrhsqx[pmlrhsId + fld] = -msigmaxe*r_pmlqx[fld]  + r_Aqx[fld];
           pmlrhsqy[pmlrhsId + fld] = -msigmaye*r_pmlqy[fld]  + r_Bqy[fld];
