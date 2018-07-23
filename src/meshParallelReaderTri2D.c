@@ -24,6 +24,8 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
 
   mesh->rank = rank;
   mesh->size = size;
+
+  MPI_Comm_dup(MPI_COMM_WORLD, &mesh->comm);
   
   mesh->dim = 2;
   mesh->Nverts = 3; // number of vertices per element

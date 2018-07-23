@@ -65,6 +65,10 @@ parAlmond_t *parAlmondInit(mesh_t *mesh, setupAide options) {
     parAlmond->ktype = PCG;
   }
 
+  MPI_Comm_dup(mesh->comm, &parAlmond->comm);
+  parAlmond->rank = mesh->rank;
+  parAlmond->size = mesh->size;
+  
   buildAlmondKernels(parAlmond);
 
   return parAlmond;

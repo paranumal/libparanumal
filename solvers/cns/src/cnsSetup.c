@@ -308,7 +308,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   //  p_RT, p_rbar, p_ubar, p_vbar
   // p_half, p_two, p_third, p_Nstresses
 
-    kernelInfo["compiler_flags"] += "-g";
+  //    kernelInfo["compiler_flags"] += "-g";
     
   kernelInfo["defines/" "p_Nfields"]= mesh->Nfields;
   kernelInfo["defines/" "p_Nstresses"]= cns->Nstresses;
