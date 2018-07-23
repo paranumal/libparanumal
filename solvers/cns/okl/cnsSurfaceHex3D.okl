@@ -121,12 +121,23 @@ void upwindRoeAveraged(const dfloat nx,
 
 
 
-void surfaceTerms(const int e, const int sk, const int face, const int i, const int j, const int k,
-		  const dfloat time, const int advSwitch, 
-		  const dfloat *x, const dfloat *y, const dfloat *z, 
-		  const dfloat *sgeo, const dlong *vmapM, const dong *vmapP,
-		  const dfloat *q, const dfloat *viscousStresses,
-		  dfloat *rhsq){
+void surfaceTerms(const int e, 
+                  const int sk, 
+                  const int face, 
+                  const int i, 
+                  const int j, 
+                  const int k,
+                  const dfloat time, 
+                  const int advSwitch, 
+                  @global const dfloat *x, 
+                  @global const dfloat *y, 
+                  @global const dfloat *z, 
+                  @global const dfloat *sgeo, 
+                  @global const dlong *vmapM, 
+                  @global const dong *vmapP,
+                  @global const dfloat *q, 
+                  @global const dfloat *viscousStresses,
+                  @global dfloat *rhsq){
   
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            
@@ -220,9 +231,9 @@ void surfaceTerms(const int e, const int sk, const int face, const int i, const 
 
 // batch process elements
 kernel void cnsSurfaceHex3D(const dlong Nelements,
-			    const int advSwitch,
+                            const int advSwitch,
                             const dfloat * restrict sgeo,
-			    const dfloat * restrict LIFTT,	
+                            const dfloat * restrict LIFTT,      
                             const dlong  * restrict vmapM,
                             const dlong  * restrict vmapP,
                             const int    * restrict EToB,
@@ -248,13 +259,13 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
             const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
             const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
             
-	    //            surfaceTerms(sk0,0,i,j,0     );
-	    surfaceTerms(e, sk0, 0, i, j, 0, 
-			 time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+            //            surfaceTerms(sk0,0,i,j,0     );
+            surfaceTerms(e, sk0, 0, i, j, 0, 
+                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
 
-	    //            surfaceTerms(sk5,5,i,j,(p_Nq-1));
-	    surfaceTerms(e, sk5, 5, i, j, (p_Nq-1), 
-			 time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+            //            surfaceTerms(sk5,5,i,j,(p_Nq-1));
+            surfaceTerms(e, sk5, 5, i, j, (p_Nq-1), 
+                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
           }
         }
       }
@@ -271,13 +282,13 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
             const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
             const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
             
-	    //            surfaceTerms(sk1,1,i,0     ,k);
-	    surfaceTerms(e, sk1, 1, i, 0, k, 
-			 time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+            //            surfaceTerms(sk1,1,i,0     ,k);
+            surfaceTerms(e, sk1, 1, i, 0, k, 
+                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
 
             //surfaceTerms(sk3,3,i,(p_Nq-1),k);
-	    surfaceTerms(e, sk3, 3, i, (p_Nq-1), k,
-			 time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk3, 3, i, (p_Nq-1), k,
+                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
           }
         }
       }
@@ -294,13 +305,13 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
             const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
             const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
             
-	    //            surfaceTerms(sk2,2,(p_Nq-1),j,k);
-	    surfaceTerms(e, sk2, 2, (p_Nq-1), j, k, 
-			 time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
-	    
+            //            surfaceTerms(sk2,2,(p_Nq-1),j,k);
+            surfaceTerms(e, sk2, 2, (p_Nq-1), j, k, 
+                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+            
             //surfaceTerms(sk4,4,0     ,j,k);
-	    surfaceTerms(e, sk4, 4, 0, j, k, 
-			 time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk4, 4, 0, j, k, 
+                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
           }
         }
       }
@@ -308,12 +319,21 @@ kernel void cnsSurfaceHex3D(const dlong Nelements,
   }
 }
 
-void stressSurfaceTerms(const int e, const int sk, const int face, const int i, const int j, const int k,
-			const dfloat time, 
-			const dfloat *x, const dfloat *y, const dfloat *z, 
-			const dfloat *sgeo, const dlong *vmapM, const dong *vmapP,
-			const dfloat *q,
-			dfloat *viscousStresses){
+void stressSurfaceTerms(const int e, 
+                        const int sk,
+                        const int face,
+                        const int i, 
+                        const int j, 
+                        const int k,
+                        const dfloat time, 
+                        @global const dfloat *x, 
+                        @global const dfloat *y, 
+                        @global const dfloat *z, 
+                        @global const dfloat *sgeo, 
+                        @global const dlong *vmapM, 
+                        @global const dong *vmapP,
+                        @global const dfloat *q,
+                        @global dfloat *viscousStresses){
 
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            
@@ -374,7 +394,7 @@ void stressSurfaceTerms(const int e, const int sk, const int face, const int i, 
 
 kernel void cnsStressesSurfaceHex3D(const int Nelements,
                                     const dfloat * restrict sgeo,
-   				     const dfloat * restrict LIFTT,
+                                     const dfloat * restrict LIFTT,
                                     const int   * restrict vmapM,
                                     const int   * restrict vmapP,
                                     const int   * restrict EToB,
@@ -399,13 +419,13 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
             const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
             const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
             
-	    //            stressSurfaceTerms(sk0,0,i,j,0     );
-	    stressSurfaceTerms(e, sk0, 0, i, j, 0,
-			       time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+            //            stressSurfaceTerms(sk0,0,i,j,0     );
+            stressSurfaceTerms(e, sk0, 0, i, j, 0,
+                               time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
 
-	    //            stressSurfaceTerms(sk5,5,i,j,(p_Nq-1));
-	    stressSurfaceTerms(e, sk5, 5, i, j, (p_Nq-1),
-			       time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+            //            stressSurfaceTerms(sk5,5,i,j,(p_Nq-1));
+            stressSurfaceTerms(e, sk5, 5, i, j, (p_Nq-1),
+                               time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
           }
         }
       }
@@ -422,13 +442,13 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
             const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
             const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
             
-	    //            stressSurfaceTerms(sk1,1,i,0     ,k);
-	    stressSurfaceTerms(e, sk1, 1, i, 0, k, 
-			       time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+            //            stressSurfaceTerms(sk1,1,i,0     ,k);
+            stressSurfaceTerms(e, sk1, 1, i, 0, k, 
+                               time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
 
             //stressSurfaceTerms(sk3,3,i,(p_Nq-1),k);
-	    stressSurfaceTerms(e, sk3, 3, i, (p_Nq-1), k, 
-			       time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+            stressSurfaceTerms(e, sk3, 3, i, (p_Nq-1), k, 
+                               time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
 
           }
         }
@@ -446,13 +466,13 @@ kernel void cnsStressesSurfaceHex3D(const int Nelements,
             const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
             const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
             
-	    //            stressSurfaceTerms(sk2,2,(p_Nq-1),j ,k);
-	    stressSurfaceTerms(e, sk2, 2, (p_Nq-1), j, k, 
-			       time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+            //            stressSurfaceTerms(sk2,2,(p_Nq-1),j ,k);
+            stressSurfaceTerms(e, sk2, 2, (p_Nq-1), j, k, 
+                               time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
 
             //stressSurfaceTerms(sk4,4,0,     j, k);
-	    stressSurfaceTerms(e, sk4, 4, 0, j, k, 
-			       time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+            stressSurfaceTerms(e, sk4, 4, 0, j, k, 
+                               time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
           }
         }
       }

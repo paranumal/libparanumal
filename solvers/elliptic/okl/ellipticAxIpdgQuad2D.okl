@@ -6,20 +6,20 @@
 // nx,ny,nz,sJ,invJ - need WsJ
 
 void surfaceTerms(const int element,
-		  const int sk,
-		  const int face,
-		  const int i,
-		  const int j,
-		  const dfloat tau,
-		  const dfloat *sgeo,
-		  const int *vmapM,
-		  const int *vmapP,
-		  const int *EToB,
-		  const dfloat4 *gradq,
-		  dfloat s_dqdx[p_Nq][p_Nq],
-		  dfloat s_dqdy[p_Nq][p_Nq],
-		  dfloat s_rhsq[p_Nq][p_Nq]){
-						  
+                  const int sk,
+                  const int face,
+                  const int i,
+                  const int j,
+                  const dfloat tau,
+                  @global const dfloat *sgeo,
+                  @global const int *vmapM,
+                  @global const int *vmapP,
+                  @global const int *EToB,
+                  @global const dfloat4 *gradq,
+                  dfloat s_dqdx[p_Nq][p_Nq],
+                  dfloat s_dqdy[p_Nq][p_Nq],
+                  dfloat s_rhsq[p_Nq][p_Nq]){
+                                                  
   const dlong  idM = vmapM[sk];                                          
   const dlong  idP = vmapP[sk];                                          
                                                                         
@@ -34,9 +34,9 @@ void surfaceTerms(const int element,
   int bc = EToB[face+p_Nfaces*element];                                         
   if(bc>0) {                                                            
     ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y,gradqP.w, gradqP.x, gradqP.y);
-    gradqP.x = 2.f*gradqP.x - gradqM.x;					
-    gradqP.y = 2.f*gradqP.y - gradqM.y;					
-    gradqP.w = 2.f*gradqP.w - gradqM.w;					
+    gradqP.x = 2.f*gradqP.x - gradqM.x;                                 
+    gradqP.y = 2.f*gradqP.y - gradqM.y;                                 
+    gradqP.w = 2.f*gradqP.w - gradqM.w;                                 
   }                                                                     
   
   dfloat dq = gradqP.w - gradqM.w;                                      
