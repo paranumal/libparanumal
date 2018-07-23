@@ -22,6 +22,7 @@
 
 typedef struct {
 
+  MPI_Comm comm;
   int rank, size; // MPI rank and size (process count)
   
   int dim;
