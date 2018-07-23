@@ -113,7 +113,7 @@ SARK
 
 # Currently SARK and LSERK only
 [RESTART FROM FILE]
-1
+0
 
 [WRITE RESTART FILE]
 1
