@@ -85,7 +85,9 @@ kernel void insDiffusionIpdgTri2D(const dlong Nelements,
                                                                             &(UP[0].x), &(UP[0].y), \
                                                                             &(UP[1].x), &(UP[1].y));
 
-            gradqP = 2*UP[i] - gradqM;
+            gradqP.x = 2.f*UP[i].x - gradqM.x;
+	    gradqP.y = 2.f*UP[i].y - gradqM.y;
+	    gradqP.w = 2.f*UP[i].w - gradqM.w;
           }
 
           const dfloat dq = gradqP.w - gradqM.w;
