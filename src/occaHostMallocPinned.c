@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "occa.hpp"
 
-#ifdef OCCA_VERSION_1_0
+#if 0
 
 #include <occa/modes/opencl.hpp>
 #include <occa/modes/cuda.hpp>
@@ -11,6 +11,8 @@
 void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem){
 
   occa::properties props;
+
+
 
 #if OCCA_CUDA_ENABLED
   if(device.mode()=="CUDA"){
