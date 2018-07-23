@@ -51,6 +51,7 @@
   }
 }
 
+#if 0
 @kernel void innerProductAtomic(const dlong N,
 			       const dlong Nblocks,
 			       @restrict const  dfloat *  w,
@@ -108,3 +109,4 @@
 }
 
 
+#endif
