@@ -1,12 +1,22 @@
 
 
-void surfaceTerms(int e, int sk, int face, int m, int i, int j,
-		  const dfloat *sgeo, const dfloat *x, const dfloat *y, const dfloat *z,
-		  const int *vmapM, const int *EToB, const dfloat tau,
-		  dfloat s_dqdx[2][p_Nq][p_Nq],
-		  dfloat s_dqdy[2][p_Nq][p_Nq],
-		  dfloat s_dqdz[2][p_Nq][p_Nq],
-		  dfloat s_rhs[2][p_Nq][p_Nq]){
+void surfaceTerms(int e, 
+                  int sk, 
+                  int face, 
+                  int m, 
+                  int i, 
+                  int j,
+                  @global const dfloat *sgeo, 
+                  @global const dfloat *x, 
+                  @global const dfloat *y, 
+                  @global const dfloat *z,
+                  @global const int *vmapM, 
+                  @global const int *EToB, 
+                  const dfloat tau,
+                  dfloat s_dqdx[2][p_Nq][p_Nq],
+                  dfloat s_dqdy[2][p_Nq][p_Nq],
+                  dfloat s_dqdz[2][p_Nq][p_Nq],
+                  dfloat s_rhs[2][p_Nq][p_Nq]){
   
     const dfloat nx  = sgeo[sk*p_Nsgeo+p_NXID];                         
     const dfloat ny  = sgeo[sk*p_Nsgeo+p_NYID];                         
@@ -118,13 +128,13 @@ kernel void ellipticRhsBCIpdgHex3D(const dlong Nelements,
         const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i ;
         const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i ;             
 
-	//	{surfaceTerms(sk0,0,0,i,j)}
-	surfaceTerms(e, sk0, 0, 0, i, j,
-		     sgeo, x, y, z, vmapM, EToB, tau, s_dqdx, s_dqdy, s_dqdz, s_rhs);
+        //      {surfaceTerms(sk0,0,0,i,j)}
+        surfaceTerms(e, sk0, 0, 0, i, j,
+                     sgeo, x, y, z, vmapM, EToB, tau, s_dqdx, s_dqdy, s_dqdz, s_rhs);
 
-	//        {surfaceTerms(sk5,5,1,i,j)}
-	surfaceTerms(e, sk5, 5, 1, i, j,
-		     sgeo, x, y, z, vmapM, EToB, tau, s_dqdx, s_dqdy, s_dqdz, s_rhs);
+        //        {surfaceTerms(sk5,5,1,i,j)}
+        surfaceTerms(e, sk5, 5, 1, i, j,
+                     sgeo, x, y, z, vmapM, EToB, tau, s_dqdx, s_dqdy, s_dqdz, s_rhs);
       }
     }
 
@@ -155,13 +165,13 @@ kernel void ellipticRhsBCIpdgHex3D(const dlong Nelements,
         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i ;
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i ;
 
-	//        {surfaceTerms(sk1,1,0,i,k)}
-	surfaceTerms(e, sk1, 1, 0, i, k,
-		     sgeo, x, y, z, vmapM, EToB, tau, s_dqdx, s_dqdy, s_dqdz, s_rhs);
+        //        {surfaceTerms(sk1,1,0,i,k)}
+        surfaceTerms(e, sk1, 1, 0, i, k,
+                     sgeo, x, y, z, vmapM, EToB, tau, s_dqdx, s_dqdy, s_dqdz, s_rhs);
 
-	//        {surfaceTerms(sk3,3,1,i,k)}
-	surfaceTerms(e, sk3, 3, 1, i, k,
-		     sgeo, x, y, z, vmapM, EToB, tau, s_dqdx, s_dqdy, s_dqdz, s_rhs);
+        //        {surfaceTerms(sk3,3,1,i,k)}
+        surfaceTerms(e, sk3, 3, 1, i, k,
+                     sgeo, x, y, z, vmapM, EToB, tau, s_dqdx, s_dqdy, s_dqdz, s_rhs);
       }
     }
 
@@ -200,13 +210,13 @@ kernel void ellipticRhsBCIpdgHex3D(const dlong Nelements,
         const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j ;
         const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j ;
         
-	//        {surfaceTerms(sk2,2,0,j,k)}
-	surfaceTerms(e, sk2, 2, 0, j, k,
-		     sgeo, x, y, z, vmapM, EToB, tau, s_dqdx, s_dqdy, s_dqdz, s_rhs);
+        //        {surfaceTerms(sk2,2,0,j,k)}
+        surfaceTerms(e, sk2, 2, 0, j, k,
+                     sgeo, x, y, z, vmapM, EToB, tau, s_dqdx, s_dqdy, s_dqdz, s_rhs);
 
-	//	{surfaceTerms(sk4,4,1,j,k)}
-	surfaceTerms(e, sk4, 4, 1, j, k,
-		     sgeo, x, y, z, vmapM, EToB, tau, s_dqdx, s_dqdy, s_dqdz, s_rhs);
+        //      {surfaceTerms(sk4,4,1,j,k)}
+        surfaceTerms(e, sk4, 4, 1, j, k,
+                     sgeo, x, y, z, vmapM, EToB, tau, s_dqdx, s_dqdy, s_dqdz, s_rhs);
       }
     }
 

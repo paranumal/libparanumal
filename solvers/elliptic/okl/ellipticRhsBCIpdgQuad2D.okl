@@ -6,11 +6,15 @@
 // nx,ny,nz,sJ,invJ - need WsJ
 
 void surfaceTerms(int e, int sk, int face, int i, int j,
-		  const dfloat *sgeo, const dfloat *x, const dfloat *y, 
-		  const int *vmapM, const int *EToB, const dfloat tau,
-		  dfloat s_dqdx[p_Nq][p_Nq],
-		  dfloat s_dqdy[p_Nq][p_Nq],
-		  dfloat s_rhsq[p_Nq][p_Nq]){
+                  @global const dfloat *sgeo, 
+                  @global const dfloat *x, 
+                  @global const dfloat *y, 
+                  @global const int *vmapM, 
+                  @global const int *EToB, 
+                  const dfloat tau,
+                  dfloat s_dqdx[p_Nq][p_Nq],
+                  dfloat s_dqdy[p_Nq][p_Nq],
+                  dfloat s_rhsq[p_Nq][p_Nq]){
 
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            
@@ -77,11 +81,11 @@ kernel void ellipticRhsBCIpdgQuad2D(const dlong Nelements,
 
       //      surfaceTerms(sk0,0,i,0);
       surfaceTerms(e, sk0, 0, i, 0, sgeo, x, y, vmapM, EToB, tau,
-		   s_dqdx, s_dqdy, s_rhsq);
+                   s_dqdx, s_dqdy, s_rhsq);
 
       //      surfaceTerms(sk2,2,i,p_Nq-1);
       surfaceTerms(e, sk2, 2, i, p_Nq-1, sgeo, x, y, vmapM, EToB, tau,
-		   s_dqdx, s_dqdy, s_rhsq);
+                   s_dqdx, s_dqdy, s_rhsq);
     }
 
     barrier(localMemFence);
@@ -93,11 +97,11 @@ kernel void ellipticRhsBCIpdgQuad2D(const dlong Nelements,
 
       //      surfaceTerms(sk1,1,p_Nq-1,j);
       surfaceTerms(e, sk1, 1, p_Nq-1, j, sgeo, x, y, vmapM, EToB, tau,
-		   s_dqdx, s_dqdy, s_rhsq);
+                   s_dqdx, s_dqdy, s_rhsq);
 
       //      surfaceTerms(sk3,3,0,j);
       surfaceTerms(e, sk3, 3, 0, j, sgeo, x, y, vmapM, EToB, tau,
-		   s_dqdx, s_dqdy, s_rhsq);
+                   s_dqdx, s_dqdy, s_rhsq);
       
     }
 
