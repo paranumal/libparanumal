@@ -19,7 +19,7 @@ void pcg(parAlmond_t *parAlmond,
   // initial residual
   dfloat rdotr0Local = innerProd(m, r, r);
   dfloat rdotr0 = 0;
-  MPI_Allreduce(&rdotr0Local,&rdotr0,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+  MPI_Allreduce(&rdotr0Local,&rdotr0,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
   dfloat *x, *p, *Ap;
 
@@ -50,7 +50,7 @@ void pcg(parAlmond_t *parAlmond,
 
   dfloat rdotz0Local = innerProd(m, r, z);
   dfloat rdotz0 = 0;
-  MPI_Allreduce(&rdotz0Local,&rdotz0,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+  MPI_Allreduce(&rdotz0Local,&rdotz0,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
@@ -63,7 +63,7 @@ void pcg(parAlmond_t *parAlmond,
 
     dfloat pApLocal = innerProd(m, p, Ap);
     pAp = 0;
-    MPI_Allreduce(&pApLocal,&pAp,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&pApLocal,&pAp,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
     alpha = rdotz0/pAp;
 
@@ -78,7 +78,7 @@ void pcg(parAlmond_t *parAlmond,
 
     dfloat rdotr1Local = innerProd(m, r, r);
     rdotr1 = 0;
-    MPI_Allreduce(&rdotr1Local,&rdotr1,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&rdotr1Local,&rdotr1,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
     if(rdotr1 < tol*tol) {
       rdotr0 = rdotr1;
@@ -94,13 +94,13 @@ void pcg(parAlmond_t *parAlmond,
 
     dfloat rdotz1Local = innerProd(m, r, z);
     rdotz1 = 0;
-    MPI_Allreduce(&rdotz1Local,&rdotz1,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&rdotz1Local,&rdotz1,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
   #if 1
     // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
     dfloat zdotApLocal = innerProd(m, z, Ap);
     dfloat zdotAp = 0;
-    MPI_Allreduce(&zdotApLocal,&zdotAp,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&zdotApLocal,&zdotAp,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
     beta = -alpha*zdotAp/rdotz0;
   #else
     beta = rdotz1/rdotz0;
@@ -145,7 +145,7 @@ void device_pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol){
   // initial residual
   dfloat rdotr0Local = innerProd(parAlmond, m, o_r, o_r);
   dfloat rdotr0 = 0;
-  MPI_Allreduce(&rdotr0Local,&rdotr0,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+  MPI_Allreduce(&rdotr0Local,&rdotr0,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
   occa::memory o_x, o_p, o_Ap;
 
@@ -174,7 +174,7 @@ void device_pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol){
 
   dfloat rdotz0Local = innerProd(parAlmond, m, o_r, o_z);
   dfloat rdotz0 = 0;
-  MPI_Allreduce(&rdotz0Local,&rdotz0,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+  MPI_Allreduce(&rdotz0Local,&rdotz0,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
@@ -187,7 +187,7 @@ void device_pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol){
 
     dfloat pApLocal = innerProd(parAlmond, m, o_p, o_Ap);
     pAp = 0;
-    MPI_Allreduce(&pApLocal,&pAp,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&pApLocal,&pAp,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
     alpha = rdotz0/pAp;
 
@@ -202,7 +202,7 @@ void device_pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol){
 
     dfloat rdotr1Local = innerProd(parAlmond, m, o_r, o_r);
     rdotr1 = 0.;
-    MPI_Allreduce(&rdotr1Local,&rdotr1,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&rdotr1Local,&rdotr1,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
     if(rdotr1 < tol*tol) {
       rdotr0 = rdotr1;
@@ -218,13 +218,13 @@ void device_pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol){
 
     dfloat rdotz1Local = innerProd(parAlmond, m, o_r, o_z);
     rdotz1 = 0;
-    MPI_Allreduce(&rdotz1Local,&rdotz1,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&rdotz1Local,&rdotz1,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
   #if 1
     // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
     dfloat zdotApLocal = innerProd(parAlmond, m, o_z, o_Ap);
     dfloat zdotAp = 0;
-    MPI_Allreduce(&zdotApLocal,&zdotAp,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&zdotApLocal,&zdotAp,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
     beta = -alpha*zdotAp/rdotz0;
   #else
     beta = rdotz1/rdotz0;

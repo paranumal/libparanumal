@@ -3,9 +3,9 @@
 void buildAlmondKernels(parAlmond_t *parAlmond){
 
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
+  rank = agmg::rank;
+  size = agmg::size;
+  
   occa::properties kernelInfo;
  kernelInfo["defines"].asObject();
  kernelInfo["includes"].asArray();
@@ -117,6 +117,6 @@ void buildAlmondKernels(parAlmond_t *parAlmond){
       parAlmond->kcycleWeightedCombinedOp2Kernel = parAlmond->device.buildKernel(DPWD "/okl/kcycleCombinedOp.okl",
                  "kcycleWeightedCombinedOp2Kernel", kernelInfo);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(agmg::comm);
   }
 }

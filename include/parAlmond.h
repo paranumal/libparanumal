@@ -281,9 +281,6 @@ typedef struct {
   occa::kernel kcycleWeightedCombinedOp1Kernel;
   occa::kernel kcycleWeightedCombinedOp2Kernel;
 
-  int rank, size;
-  MPI_Comm comm;
-  
 } parAlmond_t;
 
 parAlmond_t *parAlmondInit(mesh_t *mesh, setupAide options);
