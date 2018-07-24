@@ -200,7 +200,7 @@ void insRunARK(ins_t *ins){
     for(int n=0;n<ins->Nblock;++n){
       localerr += ins->errtmp[n];
     }
-    MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
     err = sqrt(err/(ins->totalElements*mesh->Np*ins->NVfields));
 

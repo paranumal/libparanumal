@@ -313,7 +313,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       else
         ins->setFlowFieldKernel =  mesh->device.buildKernel(DINS "/okl/insSetFlowField3D.okl", "insSetFlowField3D", kernelInfo);  
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(mesh->comm);
   }
 
   ins->startTime =0.0;
@@ -376,7 +376,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   options.getArgs("TSTEPS FOR TIME STEP ADAPT", ins->dtAdaptStep);
 
   // MPI_Allreduce to get global minimum dt
-  MPI_Allreduce(&dt, &(ins->dti), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&dt, &(ins->dti), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
 
   // save initial time-step estimate 
   ins->dt = ins->dti; 
@@ -947,7 +947,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         ins->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(mesh->comm);
   }
 
   return ins;
