@@ -50,15 +50,18 @@ void mergeLists(size_t sz,
 }
 
 // assumes N is even and the same on all ranks
-void parallelSort(int N, void *vv, size_t sz,
+void parallelSort(int size, int rank, MPI_Comm comm,
+		  int N, void *vv, size_t sz,
 		  int (*compare)(const void *, const void *),
 		  void (*match)(void *, void *)
 		  ){
-   
+
+#if 0
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-    
+#endif
+  
   /* cast void * to char * */
   char *v = (char*) vv;
 
@@ -86,9 +89,9 @@ void parallelSort(int N, void *vv, size_t sz,
       
     /* send C, receive A */
     if(rank<size-1)
-      MPI_Isend(C, NC*sz, MPI_CHAR,  rank+1, tag, MPI_COMM_WORLD, &sendC);
+      MPI_Isend(C, NC*sz, MPI_CHAR,  rank+1, tag, comm, &sendC);
     if(rank>0)
-      MPI_Irecv(A, NA*sz, MPI_CHAR,  rank-1, tag, MPI_COMM_WORLD, &recvA);
+      MPI_Irecv(A, NA*sz, MPI_CHAR,  rank-1, tag, comm, &recvA);
       
     if(rank<size-1)
       MPI_Wait(&sendC, &status);
@@ -101,9 +104,9 @@ void parallelSort(int N, void *vv, size_t sz,
       
     /* send A, receive C */
     if(rank>0)
-      MPI_Isend(A, NA*sz, MPI_CHAR, rank-1, tag, MPI_COMM_WORLD, &sendA);
+      MPI_Isend(A, NA*sz, MPI_CHAR, rank-1, tag, comm, &sendA);
     if(rank<size-1)
-      MPI_Irecv(C, NC*sz, MPI_CHAR, rank+1, tag, MPI_COMM_WORLD, &recvC);
+      MPI_Irecv(C, NC*sz, MPI_CHAR, rank+1, tag, comm, &recvC);
       
     if(rank>0)
       MPI_Wait(&sendA, &status);

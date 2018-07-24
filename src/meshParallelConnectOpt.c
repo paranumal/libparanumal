@@ -52,8 +52,8 @@ int parallelCompareFaces(const void *a,
 void meshParallelConnect(mesh_t *mesh){
 
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = mesh->rank;
+  size = mesh->size;
 
   // serial connectivity on each process
   meshConnect(mesh);
@@ -164,7 +164,7 @@ void meshParallelConnect(mesh_t *mesh){
   // exchange byte counts 
   MPI_Alltoall(Nsend, 1, MPI_INT,
                Nrecv, 1, MPI_INT,
-               MPI_COMM_WORLD);
+               mesh->comm);
   
   // count incoming faces
   int allNrecv = 0;
@@ -181,7 +181,7 @@ void meshParallelConnect(mesh_t *mesh){
   // exchange parallel faces
   MPI_Alltoallv(sendFaces, Nsend, sendOffsets, MPI_PARALLELFACE_T,
                 recvFaces, Nrecv, recvOffsets, MPI_PARALLELFACE_T,
-                MPI_COMM_WORLD);
+                mesh->comm);
   
   // local sort allNrecv received faces
   qsort(recvFaces, allNrecv, sizeof(parallelFace_t), parallelCompareVertices);
@@ -206,7 +206,7 @@ void meshParallelConnect(mesh_t *mesh){
   // send faces back from whence they came
   MPI_Alltoallv(recvFaces, Nrecv, recvOffsets, MPI_PARALLELFACE_T,
                 sendFaces, Nsend, sendOffsets, MPI_PARALLELFACE_T,
-                MPI_COMM_WORLD);
+                mesh->comm);
   
   // extract connectivity info
   mesh->EToP = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int));
@@ -227,7 +227,7 @@ void meshParallelConnect(mesh_t *mesh){
     }
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   MPI_Type_free(&MPI_PARALLELFACE_T);
   free(sendFaces);
   free(recvFaces);

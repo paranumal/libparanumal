@@ -6,8 +6,8 @@
 void meshParallelPrint3D(mesh3D *mesh){
 
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = mesh->rank;
+  size = mesh->size;
 
   printf("rank %d: Nelements=" dlongFormat " Nnodes=" hlongFormat "\n", 
          rank, mesh->Nelements, mesh->Nnodes);
@@ -25,7 +25,7 @@ void meshParallelPrint3D(mesh3D *mesh){
   dlong *otherNelements = (dlong*) calloc(size, sizeof(dlong));
   MPI_Allgather(&(mesh->Nelements), 1, MPI_DLONG,
                     otherNelements, 1, MPI_DLONG, 
-                    MPI_COMM_WORLD);
+                    mesh->comm);
   
   hlong *elementStarts = (hlong*) calloc(size, sizeof(hlong));
   for(int r=1;r<size;++r){
@@ -33,7 +33,7 @@ void meshParallelPrint3D(mesh3D *mesh){
   }
 
   for(int r1=0;r1<size;++r1){
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(mesh->comm);
     if(rank==r1){
       fflush(stdout);
       if(r1==0)
@@ -62,7 +62,7 @@ void meshParallelPrint3D(mesh3D *mesh){
         fflush(stdout);
       }
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(mesh->comm);
   }
   free(otherNelements);
   free(elementStarts);

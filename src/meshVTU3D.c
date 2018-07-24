@@ -7,9 +7,9 @@
 void meshVTU3D(mesh3D *mesh, char *fileName){
   
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
+  rank = mesh->rank;
+  size = mesh->size;
+  
   FILE *fp;
   int *allNelements = (int*) calloc(size, sizeof(int));
   int totalNelements = 0, maxNelements = 0;
@@ -23,7 +23,7 @@ void meshVTU3D(mesh3D *mesh, char *fileName){
   // gather element counts to root
   MPI_Allgather(&(mesh->Nelements), 1, MPI_INT, 
 		allNelements, 1, MPI_INT, 
-		MPI_COMM_WORLD);
+		mesh->comm);
   
   if(rank==0){
 
@@ -61,21 +61,21 @@ for(int e=0;e<mesh->Nelements;++e){
     
     if(rank==r){
       MPI_Send(mesh->EX, mesh->Nelements*mesh->Nverts, 
-	       MPI_DFLOAT, 0, 666, MPI_COMM_WORLD);
+	       MPI_DFLOAT, 0, 666, mesh->comm);
       MPI_Send(mesh->EY, mesh->Nelements*mesh->Nverts, 
-	       MPI_DFLOAT, 0, 666, MPI_COMM_WORLD);
+	       MPI_DFLOAT, 0, 666, mesh->comm);
       MPI_Send(mesh->EZ, mesh->Nelements*mesh->Nverts, 
-	       MPI_DFLOAT, 0, 666, MPI_COMM_WORLD);
+	       MPI_DFLOAT, 0, 666, mesh->comm);
     }
     
     if(rank==0){
       MPI_Status status;
       MPI_Recv(tmpEX, allNelements[r]*mesh->Nverts, 
-	       MPI_DFLOAT, r, 666, MPI_COMM_WORLD, &status);
+	       MPI_DFLOAT, r, 666, mesh->comm, &status);
       MPI_Recv(tmpEY, allNelements[r]*mesh->Nverts, 
-	       MPI_DFLOAT, r, 666, MPI_COMM_WORLD, &status);
+	       MPI_DFLOAT, r, 666, mesh->comm, &status);
       MPI_Recv(tmpEZ, allNelements[r]*mesh->Nverts, 
-	       MPI_DFLOAT, r, 666, MPI_COMM_WORLD, &status);
+	       MPI_DFLOAT, r, 666, mesh->comm, &status);
       
 for(int e=0;e<allNelements[r];++e){
 	fprintf(fp, "        ");
@@ -147,5 +147,5 @@ for(int e=0;e<allNelements[r];++e){
     fclose(fp);
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
 }

@@ -4,6 +4,10 @@
 
 #include "mesh.h"
 
+
+// int rank for this process (not host thread safe)
+int localRank = -1;
+
 typedef struct{
 
   dlong element; // local element id
@@ -52,8 +56,7 @@ int parallelCompareBaseNodes(const void *a, const void *b){
   parallelNode_t *fa = (parallelNode_t*) a;
   parallelNode_t *fb = (parallelNode_t*) b;
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  int rank = localRank;
 
   if ((fa->baseRank==rank)&&(fb->baseRank!=rank)) return -1; //move locally-owned nodes to the beginning
   if ((fa->baseRank!=rank)&&(fb->baseRank==rank)) return  1;
@@ -74,15 +77,16 @@ int parallelCompareBaseNodes(const void *a, const void *b){
 void meshParallelConnectNodes(mesh_t *mesh){
 
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = mesh->rank; 
+  size = mesh->size; 
+  localRank = rank;
 
   dlong localNodeCount = mesh->Np*mesh->Nelements;
   dlong *allLocalNodeCounts = (dlong*) calloc(size, sizeof(dlong));
 
   MPI_Allgather(&localNodeCount,    1, MPI_DLONG,
                 allLocalNodeCounts, 1, MPI_DLONG,
-                MPI_COMM_WORLD);
+                mesh->comm);
   
   hlong gatherNodeStart = 0;
   for(int r=0;r<rank;++r)
@@ -185,7 +189,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
     }
 
     // sum up changes
-    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_DLONG, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_DLONG, MPI_SUM, mesh->comm);
   }
 
   // sort based on base nodes (rank,element,node at base)
@@ -230,7 +234,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
     sendCounts[sendNodes[n].baseRank]++;
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(sendCounts, 1, MPI_INT, recvCounts, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(sendCounts, 1, MPI_INT, recvCounts, 1, MPI_INT, mesh->comm);
   
   // find send and recv offsets for gather
   dlong recvNtotal = 0;
@@ -246,7 +250,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
   // load up node data to send 
   MPI_Alltoallv(sendNodes, sendCounts, sendOffsets, MPI_PARALLELNODE_T,
                 recvNodes, recvCounts, recvOffsets, MPI_PARALLELNODE_T,
-                MPI_COMM_WORLD);
+                mesh->comm);
 
   // sort by global index shifting halo nodes to the end
   qsort(recvNodes, recvNtotal, sizeof(parallelNode_t), parallelCompareBaseNodes);
@@ -264,7 +268,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
 
   // collect unique node counts from all processes
   dlong *allGather   = (dlong*) calloc(size, sizeof(dlong));
-  MPI_Allgather(&Ngather, 1, MPI_DLONG, allGather, 1, MPI_DLONG, MPI_COMM_WORLD);
+  MPI_Allgather(&Ngather, 1, MPI_DLONG, allGather, 1, MPI_DLONG, mesh->comm);
 
   // cumulative sum of unique node counts => starting node index for each process
   mesh->gatherGlobalStarts = (hlong*) calloc(size+1, sizeof(hlong));
@@ -281,7 +285,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
   // reverse all to all to reclaim nodes
   MPI_Alltoallv(recvNodes, recvCounts, recvOffsets, MPI_PARALLELNODE_T,
                 sendNodes, sendCounts, sendOffsets, MPI_PARALLELNODE_T,
-                MPI_COMM_WORLD);
+                mesh->comm);
 
   // sort by rank, local index
   qsort(sendNodes, localNodeCount, sizeof(parallelNode_t), parallelCompareBaseNodes);
@@ -299,7 +303,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
     mesh->gatherHaloFlags[id] = sendNodes[id].haloFlag;
   }
   
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   MPI_Type_free(&MPI_PARALLELNODE_T);
   free(sendBuffer);
   free(sendNodes);

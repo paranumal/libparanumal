@@ -159,11 +159,11 @@ void bogusMatch(void *a, void *b){ }
 void meshGeometricPartition2D(mesh2D *mesh){
 
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = mesh->rank;
+  size = mesh->size;
 
   dlong maxNelements;
-  MPI_Allreduce(&(mesh->Nelements), &maxNelements, 1, MPI_DLONG, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&(mesh->Nelements), &maxNelements, 1, MPI_DLONG, MPI_MAX, mesh->comm);
   maxNelements = 2*((maxNelements+1)/2);
 
   // fix maxNelements
@@ -198,10 +198,10 @@ void meshGeometricPartition2D(mesh2D *mesh){
 
   // find global bounding box of element centers
   dfloat gmincx, gmincy, gmaxcx, gmaxcy;
-  MPI_Allreduce(&mincx, &gmincx, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-  MPI_Allreduce(&mincy, &gmincy, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-  MPI_Allreduce(&maxcx, &gmaxcx, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-  MPI_Allreduce(&maxcy, &gmaxcy, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&mincx, &gmincx, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
+  MPI_Allreduce(&mincy, &gmincy, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
+  MPI_Allreduce(&maxcx, &gmaxcx, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
+  MPI_Allreduce(&maxcy, &gmaxcy, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
 
   dfloat maxlength = mymax(gmaxcx-gmincx, gmaxcy-gmincy);
   
@@ -248,7 +248,8 @@ void meshGeometricPartition2D(mesh2D *mesh){
   }
 
   // odd-even parallel sort of element capsules based on their Morton index
-  parallelSort(maxNelements, elements, sizeof(element_t),
+  parallelSort(mesh->size, mesh->rank, mesh->comm,
+	       maxNelements, elements, sizeof(element_t),
 	       compareElements2D,
 	       bogusMatch);
 
@@ -270,7 +271,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
   dlong *globalNelements = (dlong *) calloc(size,sizeof(dlong));
   hlong *starts = (hlong *) calloc(size+1,sizeof(hlong));
 
-  MPI_Allgather(&localNelements, 1, MPI_DLONG, globalNelements, 1,  MPI_DLONG, MPI_COMM_WORLD);
+  MPI_Allgather(&localNelements, 1, MPI_DLONG, globalNelements, 1,  MPI_DLONG, mesh->comm);
 
   for(int r=0;r<size;++r)
     starts[r+1] = starts[r]+globalNelements[r];
@@ -328,7 +329,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
     sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
 
   // exchange byte counts
-  MPI_Alltoall(Nsend, 1, MPI_INT, Nrecv, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(Nsend, 1, MPI_INT, Nrecv, 1, MPI_INT, mesh->comm);
 
   // count incoming clusters
   dlong newNelements = 0;
@@ -342,9 +343,9 @@ void meshGeometricPartition2D(mesh2D *mesh){
 
   // exchange parallel clusters
   MPI_Alltoallv(elements, Nsend, sendOffsets, MPI_ELEMENT_T,
-                tmpElements, Nrecv, recvOffsets, MPI_ELEMENT_T, MPI_COMM_WORLD);
+                tmpElements, Nrecv, recvOffsets, MPI_ELEMENT_T, mesh->comm);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   MPI_Type_free(&MPI_ELEMENT_T);
 
   // replace elements with inbound elements

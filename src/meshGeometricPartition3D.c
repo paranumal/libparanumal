@@ -71,12 +71,12 @@ void bogusMatch3D(void *a, void *b){ }
 void meshGeometricPartition3D(mesh3D *mesh){
 
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = mesh->rank;
+  size = mesh->size;
 
   dlong maxNelements;
   MPI_Allreduce(&(mesh->Nelements), &maxNelements, 1, MPI_DLONG, MPI_MAX,
-		MPI_COMM_WORLD);
+		mesh->comm);
   maxNelements = 2*((maxNelements+1)/2);
   
   // fix maxNelements
@@ -100,12 +100,12 @@ void meshGeometricPartition3D(mesh3D *mesh){
   
   // find global bounding box of element centers
   dfloat gminvx, gminvy, gminvz, gmaxvx, gmaxvy, gmaxvz;
-  MPI_Allreduce(&minvx, &gminvx, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-  MPI_Allreduce(&minvy, &gminvy, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-  MPI_Allreduce(&minvz, &gminvz, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-  MPI_Allreduce(&maxvx, &gmaxvx, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-  MPI_Allreduce(&maxvy, &gmaxvy, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-  MPI_Allreduce(&maxvz, &gmaxvz, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&minvx, &gminvx, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
+  MPI_Allreduce(&minvy, &gminvy, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
+  MPI_Allreduce(&minvz, &gminvz, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
+  MPI_Allreduce(&maxvx, &gmaxvx, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
+  MPI_Allreduce(&maxvy, &gmaxvy, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
+  MPI_Allreduce(&maxvz, &gmaxvz, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
 
   // choose sub-range of Morton lattice coordinates to embed element centers in
   unsigned long long int Nboxes = (((unsigned long long int)1)<<(bitRange-1));
@@ -152,7 +152,8 @@ void meshGeometricPartition3D(mesh3D *mesh){
   }
 
   // odd-even parallel sort of element capsules based on their Morton index
-  parallelSort(maxNelements, elements, sizeof(element_t),
+  parallelSort(mesh->size, mesh->rank, mesh->comm,
+	       maxNelements, elements, sizeof(element_t),
 	       compareElements, 
 	       bogusMatch3D);
 
@@ -202,7 +203,7 @@ void meshGeometricPartition3D(mesh3D *mesh){
   dlong *globalNelements = (dlong *) calloc(size,sizeof(dlong));
   hlong *starts = (hlong *) calloc(size+1,sizeof(hlong));
 
-  MPI_Allgather(&localNelements, 1, MPI_DLONG, globalNelements, 1,  MPI_DLONG, MPI_COMM_WORLD);
+  MPI_Allgather(&localNelements, 1, MPI_DLONG, globalNelements, 1,  MPI_DLONG, mesh->comm);
 
   for(int r=0;r<size;++r)
     starts[r+1] = starts[r]+globalNelements[r];
@@ -264,7 +265,7 @@ void meshGeometricPartition3D(mesh3D *mesh){
     sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
 
   // exchange byte counts
-  MPI_Alltoall(Nsend, 1, MPI_INT, Nrecv, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(Nsend, 1, MPI_INT, Nrecv, 1, MPI_INT, mesh->comm);
 
   // count incoming clusters
   dlong newNelements = 0;
@@ -278,9 +279,9 @@ void meshGeometricPartition3D(mesh3D *mesh){
 
   // exchange parallel clusters
   MPI_Alltoallv(elements, Nsend, sendOffsets, MPI_ELEMENT_T,
-                tmpElements, Nrecv, recvOffsets, MPI_ELEMENT_T, MPI_COMM_WORLD);
+                tmpElements, Nrecv, recvOffsets, MPI_ELEMENT_T, mesh->comm);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   MPI_Type_free(&MPI_ELEMENT_T);
 
   // replace elements with inbound elements

@@ -10,7 +10,7 @@
 #include "types.h"
 
 void *gsParallelGatherScatterSetup(dlong NuniqueBases,
-                        				   hlong *gatherGlobalNodes,
+				   hlong *gatherGlobalNodes,
                                    int verbose){
 
   /* gslib stuff */
