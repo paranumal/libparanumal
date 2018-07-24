@@ -1,0 +1,32 @@
+@kernel void mppfSetFlowField2D(const dlong Nelements,
+                                const dfloat t,
+                                @restrict const  dfloat *  x,
+                                @restrict const  dfloat *  y,
+                                @restrict const  dfloat *  z,
+                                const dlong offset,
+                                      @restrict dfloat *  U,
+                                      @restrict dfloat *  P,
+                                      @restrict dfloat *  Phi){
+
+  for(int n=0;n<p_Np*Nelements;++n;@tile(256,@outer,@inner)){
+
+    if(n<p_Np*Nelements){
+      dfloat xn = x[n];
+      dfloat yn = y[n];
+      
+      dfloat u   = 0.f;
+      dfloat v   = 0.f;
+      dfloat p   = 0.f;
+      dfloat phi = 0.f;
+
+      mppfFlowField2D(t, xn, yn, &u, &v, &p, &phi);
+
+      U[n+0*offset] = u;
+      U[n+1*offset] = v;
+      P[n]          = p;
+      Phi[n]        = phi;
+    }
+  }
+
+
+}
