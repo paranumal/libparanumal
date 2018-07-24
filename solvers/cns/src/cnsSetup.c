@@ -373,7 +373,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
       // kernels from volume file
       sprintf(fileName, DCNS "/okl/cnsVolume%s.okl", suffix);
       sprintf(kernelName, "cnsVolume%s", suffix);
-
+      
       cns->volumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "cnsStressesVolume%s", suffix);
@@ -389,17 +389,17 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
       cns->stressesSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       if(cns->elementType != HEXAHEDRA){ //remove later
-      // kernels from cubature volume file
-      sprintf(fileName, DCNS "/okl/cnsCubatureVolume%s.okl", suffix);
-      sprintf(kernelName, "cnsCubatureVolume%s", suffix);
-      
-      cns->cubatureVolumeKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
-      // kernels from cubature surface file
-      sprintf(fileName, DCNS "/okl/cnsCubatureSurface%s.okl", suffix);
-      sprintf(kernelName, "cnsCubatureSurface%s", suffix);
-
-      cns->cubatureSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	// kernels from cubature volume file
+	sprintf(fileName, DCNS "/okl/cnsCubatureVolume%s.okl", suffix);
+	sprintf(kernelName, "cnsCubatureVolume%s", suffix);
+	
+	cns->cubatureVolumeKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	
+	// kernels from cubature surface file
+	sprintf(fileName, DCNS "/okl/cnsCubatureSurface%s.okl", suffix);
+	sprintf(kernelName, "cnsCubatureSurface%s", suffix);
+	
+	cns->cubatureSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
       
       // kernels from vorticity file
@@ -440,6 +440,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
                                            "meshHaloExtract3D",
                                            kernelInfo);
     }
+    MPI_Barrier(mesh->comm);
   }
 
   return cns;
