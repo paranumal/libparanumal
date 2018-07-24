@@ -18,7 +18,7 @@ void bnsError(bns_t *bns, dfloat time, setupAide &options){
 
  if(bns->probeFlag){
     //   int rank;
-    //   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    //   MPI_Comm_rank(mesh->comm, &rank);
 
     //   // printf("Rank: %d has %d probes elements\n", rank, mesh->probeN);
 
@@ -77,8 +77,8 @@ void bnsError(bns_t *bns, dfloat time, setupAide &options){
 
     // compute maximum over all processes
     dfloat globalMaxQ1, globalMinQ1;
-    MPI_Allreduce(&maxQ1, &globalMaxQ1, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&minQ1, &globalMinQ1, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&maxQ1, &globalMaxQ1, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
+    MPI_Allreduce(&minQ1, &globalMinQ1, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
 
     if(mesh->rank==0)
       printf("%g %g %g (time,min(density),max(density)\n", time, globalMinQ1, globalMaxQ1);
@@ -132,16 +132,16 @@ else{
 
     // // compute maximum over all processes
     // dfloat globalMaxQ1, globalMinQ1, globalMaxErr;
-    // MPI_Allreduce(&maxQ1, &globalMaxQ1, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-    // MPI_Allreduce(&minQ1, &globalMinQ1, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
-    // MPI_Allreduce(&maxerr, &globalMaxErr, 1,  MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    // MPI_Allreduce(&maxQ1, &globalMaxQ1, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
+    // MPI_Allreduce(&minQ1, &globalMinQ1, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
+    // MPI_Allreduce(&maxerr, &globalMaxErr, 1,  MPI_DFLOAT, MPI_MAX, mesh->comm);
 
     
     
 
    
     // int rank;
-    // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    // MPI_Comm_rank(mesh->comm, &rank);
     // if(rank==0){
     //   printf("%g %g %g %g (time,min(density),max(density),max(error)\n", time, globalMinQ1, globalMaxQ1, globalMaxErr);
     // }

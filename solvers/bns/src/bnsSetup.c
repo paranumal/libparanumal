@@ -254,7 +254,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     // printf("MESH DIMENSION\t:\t%d\n", bns->dt);  
     //!!!!!!!!!!!!!! Fix time step to compute the error in postprecessing step  
     // MPI_Allreduce to get global minimum dt
-    MPI_Allreduce(&dt, &(bns->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&dt, &(bns->dt), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
     bns->NtimeSteps = (bns->finalTime-bns->startTime)/bns->dt;
     bns->dt         = (bns->finalTime-bns->startTime)/bns->NtimeSteps;
     //offset index
@@ -301,7 +301,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     bns->rkp     = 5; // order of embedded scheme + 1 
 
     dlong localElements =  mesh->Nelements;
-    MPI_Allreduce(&localElements, &(bns->totalElements), 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&localElements, &(bns->totalElements), 1, MPI_LONG, MPI_SUM, mesh->comm);
 
     // compute samples of q at interpolation nodes
     bns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*bns->Nfields, sizeof(dfloat));
@@ -845,7 +845,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
           mesh->device.buildKernel(fileName, kernelName, kernelInfo);        
       }
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(mesh->comm);
   }
 
 
