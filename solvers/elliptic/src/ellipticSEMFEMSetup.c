@@ -360,7 +360,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
     //build a new mask for NpFEM>Np node sets
 
     //on-host version of gather-scatter
-    pmesh->hostGsh = gsParallelGatherScatterSetup(Ntotal, globalNumbering,verbose);
+    pmesh->hostGsh = gsParallelGatherScatterSetup(mesh->comm, Ntotal, globalNumbering,verbose);
 
     //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
     int *mapB = (int *) calloc(Ntotal,sizeof(int));

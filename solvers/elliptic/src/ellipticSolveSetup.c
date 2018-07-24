@@ -414,7 +414,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   //on-host version of gather-scatter
   int verbose = options.compareArgs("VERBOSE","TRUE") ? 1:0;
-  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds,verbose);
+  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->comm, mesh->Nelements*mesh->Np, mesh->globalIds,verbose);
 
   // set up separate gather scatter infrastructure for halo and non halo nodes
   ellipticParallelGatherScatterSetup(elliptic);

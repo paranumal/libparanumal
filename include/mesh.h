@@ -660,7 +660,7 @@ void occaTimerToc(occa::device device,std::string name);
 
 extern "C"
 {
-  void *gsParallelGatherScatterSetup(dlong Ngather, hlong *gatherIds, int verbose);
+  void *gsParallelGatherScatterSetup(MPI_Comm comm, dlong Ngather, hlong *gatherIds, int verbose);
   void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
   void gsVecParallelGatherScatter(void *gsh, void *v, int k, const char *type, const char *op);
   void gsParallelGatherScatterDestroy(void *gsh);

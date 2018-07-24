@@ -893,7 +893,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   //on host gather-scatter
   int verbose = options.compareArgs("VERBOSE", "TRUE") ? 1:0;
-  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->Nelements*mesh->Np, mesh->globalIds, verbose);
+  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->comm, mesh->Nelements*mesh->Np, mesh->globalIds, verbose);
 
   // set up separate gather scatter infrastructure for halo and non halo nodes
   ellipticParallelGatherScatterSetup(elliptic);
