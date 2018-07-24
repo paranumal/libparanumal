@@ -23,7 +23,7 @@ dfloat cnsDopriEstimate(cns_t *cns){
   for(dlong n=0;n<cns->Nblock;++n){
     localerr += cns->errtmp[n];
   }
-  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
   err = sqrt(err/(mesh->Np*cns->totalElements*cns->Nfields));
   
