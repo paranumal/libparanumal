@@ -237,12 +237,12 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
       hlong totalNrows=0;
       dfloat avgNrows;
 
-      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_DLONG, MPI_MAX, MPI_COMM_WORLD);
-      MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_DLONG, MPI_MAX, mesh->comm);
+      MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, mesh->comm);
       avgNrows = (dfloat) totalNrows/mesh->size;
 
       if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
-      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_DLONG, MPI_MIN, MPI_COMM_WORLD);
+      MPI_Allreduce(&Nrows, &minNrows, 1, MPI_DLONG, MPI_MIN, mesh->comm);
 
       char smootherString[BUFSIZ];
       strcpy(smootherString, (char*) (options.getArgs("MULTIGRID SMOOTHER")).c_str());

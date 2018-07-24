@@ -146,7 +146,7 @@ dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level){
 
   hlong Nlocal = (hlong) level->Nrows;
   hlong Ntotal = 0;
-  MPI_Allreduce(&Nlocal, &Ntotal, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&Nlocal, &Ntotal, 1, MPI_HLONG, MPI_SUM, mesh->comm);
   if(k > Ntotal) k = (int) Ntotal;
 
   // do an arnoldi

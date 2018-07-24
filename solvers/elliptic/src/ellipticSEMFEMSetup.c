@@ -67,7 +67,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
   if (!(options.compareArgs("DISCRETIZATION", "CONTINUOUS"))) {
     printf("SEMFEM is supported for CONTINUOUS only\n");
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(elliptic->mesh->comm);
     MPI_Finalize();
     exit(0);
   }
@@ -512,7 +512,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh->comm);
 
   // find send and recv offsets for gather
   dlong nnz = 0;
@@ -527,7 +527,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
 		A, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
-		MPI_COMM_WORLD);
+		mesh->comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
   qsort(A, nnz, sizeof(nonZero_t), parallelCompareRowColumn);
@@ -547,7 +547,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
   if(mesh->rank==0) printf("done.\n");
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   MPI_Type_free(&MPI_NONZERO_T);
 
   hlong *Rows = (hlong *) calloc(nnz, sizeof(hlong));

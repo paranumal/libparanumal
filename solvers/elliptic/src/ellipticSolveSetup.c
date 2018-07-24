@@ -132,7 +132,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   elliptic->allNeumannPenalty = 1;
   hlong localElements = (hlong) mesh->Nelements;
   hlong totalElements = 0;
-  MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, mesh->comm);
   elliptic->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
   elliptic->EToB = (int *) calloc(mesh->Nelements*mesh->Nfaces,sizeof(int));
@@ -151,10 +151,10 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   // !!!!!! Removed MPI::BOOL since some mpi versions complains about it !!!!! 
   int lallNeumann, gallNeumann; 
   lallNeumann = allNeumann ? 0:1; 
-  MPI_Allreduce(&lallNeumann, &gallNeumann, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&lallNeumann, &gallNeumann, 1, MPI_INT, MPI_SUM, mesh->comm);
   elliptic->allNeumann = (gallNeumann>0) ? false: true; 
 
-  // MPI_Allreduce(&allNeumann, &(elliptic->allNeumann), 1, MPI::BOOL, MPI_LAND, MPI_COMM_WORLD);
+  // MPI_Allreduce(&allNeumann, &(elliptic->allNeumann), 1, MPI::BOOL, MPI_LAND, mesh->comm);
   if (mesh->rank==0&& options.compareArgs("VERBOSE","TRUE")) printf("allNeumann = %d \n", elliptic->allNeumann);
 
   //set surface mass matrix for continuous boundary conditions
@@ -409,7 +409,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
         elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       }
     }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   }
 
   //on-host version of gather-scatter
@@ -494,7 +494,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
                      kernelInfo);
       }
     }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   }
 
   long long int pre = mesh->device.memoryAllocated();

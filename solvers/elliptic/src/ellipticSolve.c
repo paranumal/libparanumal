@@ -29,8 +29,7 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
 
     if(mesh->rank==0) printf("Solver converged in %d iters \n", Niter );
 
-    int size;
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    int size = mesh->size;
 
     hlong   localDofs = (hlong) mesh->Np*mesh->Nelements;
     hlong   localElements = (hlong) mesh->Nelements;
@@ -38,9 +37,9 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
     hlong   globalDofs;
     hlong   globalElements;
 
-    MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_HLONG,   MPI_SUM, 0, MPI_COMM_WORLD );
-    MPI_Reduce(&localElements,&globalElements,1, MPI_HLONG,   MPI_SUM, 0, MPI_COMM_WORLD );
+    MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, mesh->comm );
+    MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_HLONG,   MPI_SUM, 0, mesh->comm );
+    MPI_Reduce(&localElements,&globalElements,1, MPI_HLONG,   MPI_SUM, 0, mesh->comm );
 
     if (mesh->rank==0){
       printf("%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %3.5g \t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME PRECONMEMORY] \n",

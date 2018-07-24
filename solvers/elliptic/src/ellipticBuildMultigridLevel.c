@@ -615,7 +615,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
   hlong localElements = (hlong) mesh->Nelements;
   hlong totalElements = 0;
-  MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, mesh->comm);
   elliptic->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
 
@@ -828,7 +828,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
         elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       }
     }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   }
 
   //new precon struct
@@ -888,7 +888,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
       elliptic->precon->prolongateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(mesh->comm);
   }
 
   //on host gather-scatter
