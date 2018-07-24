@@ -26,8 +26,8 @@ void cnsError(mesh_t *mesh, dfloat time){
   // compute maximum over all processes
   dfloat globalMaxR;
   dfloat globalMinR;
-  MPI_Allreduce(&maxR, &globalMaxR, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-  MPI_Allreduce(&minR, &globalMinR, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&maxR, &globalMaxR, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
+  MPI_Allreduce(&minR, &globalMinR, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
 
   if(mesh->rank==0)
     printf("\n%g, %g, %g ( time, min density, max density)\n", time, globalMinR, globalMaxR);
