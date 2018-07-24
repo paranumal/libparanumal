@@ -5,19 +5,25 @@
 void meshPrint3D(mesh3D *mesh){
   printf("EToV:\n");
   for(dlong e=0;e<mesh->Nelements;++e){
-    printf(hlongFormat hlongFormat hlongFormat hlongFormat"\n", 
-	   mesh->EToV[e*mesh->Nverts+0],
-	   mesh->EToV[e*mesh->Nverts+1],
-	   mesh->EToV[e*mesh->Nverts+2],
-	   mesh->EToV[e*mesh->Nverts+3]);
+    for(int v=0;v<mesh->Nverts;++v){
+      printf(hlongFormat " ", mesh->EToV[e*mesh->Nverts+v]);
+    }
+    printf("\n");
   }
 
   printf("EToE:\n");
   for(dlong e=0;e<mesh->Nelements;++e){
-    printf(dlongFormat dlongFormat dlongFormat dlongFormat"\n", 
-	   mesh->EToE[e*mesh->Nfaces+0],
-	   mesh->EToE[e*mesh->Nfaces+1],
-	   mesh->EToE[e*mesh->Nfaces+2],
-	   mesh->EToE[e*mesh->Nfaces+3]);
+    for(int f=0;f<mesh->Nfaces;++f){
+      printf(dlongFormat " ",  mesh->EToE[e*mesh->Nfaces+f]);
+    }
+    printf("\n");
+  }
+
+  printf("EToB:\n");
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
+      printf("%d ",  mesh->EToB[e*mesh->Nfaces+f]);
+    }
+    printf("\n");
   }
 }

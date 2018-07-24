@@ -37,6 +37,9 @@ int main(int argc, char **argv){
     mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
   }
 
+  if(mesh->Nelements<10)
+    meshPrint3D(mesh);
+  
   // parameter for elliptic problem (-laplacian + lambda)*q = f
   dfloat lambda;
   options.getArgs("LAMBDA", lambda);
