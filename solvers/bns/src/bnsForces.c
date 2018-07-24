@@ -92,8 +92,8 @@ void bnsForces(bns_t *bns, dfloat time, setupAide &options){
 
   dfloat gFx = 0., gFy = 0.; 
   // Add all processors force, 
-  MPI_Allreduce(&Fx, &gFx, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&Fy, &gFy, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&Fx, &gFx, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+  MPI_Allreduce(&Fy, &gFy, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
   //
   if(mesh->rank==0){

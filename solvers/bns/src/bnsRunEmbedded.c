@@ -102,7 +102,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
       localerr += bns->errtmp[n];
     }
 
-    MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
    
     // printf("Error\t:\t%.5e\t%.5e\t\n", err, bns->dt);
     err = sqrt(err/(bns->totalElements*mesh->Np*bns->Nfields));
