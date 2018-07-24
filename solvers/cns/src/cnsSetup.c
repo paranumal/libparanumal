@@ -17,7 +17,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   cns->Nblock = (Ntotal+blockSize-1)/blockSize;
   
   hlong localElements = (hlong) mesh->Nelements;
-  MPI_Allreduce(&localElements, &(cns->totalElements), 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&localElements, &(cns->totalElements), 1, MPI_HLONG, MPI_SUM, mesh->comm);
 
   // mean flow
   cns->rbar = 1;
@@ -189,7 +189,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   dt = cfl*dtAdv;
   
   // MPI_Allreduce to get global minimum dt
-  MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
   
   //
   options.getArgs("FINAL TIME", mesh->finalTime);
