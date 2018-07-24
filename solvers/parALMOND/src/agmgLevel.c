@@ -143,8 +143,6 @@ static void eig(const int Nrows, double *A, double *WR,
 
   int INFO = -999;
 
-  printf("N = %d, LWORK = %d\n", N, LWORK);
-  
   dgeev_ (&JOBVL, &JOBVR, &N, A, &LDA, WR, WI,
     VL, &LDA, VR, &LDA, WORK, &LWORK, &INFO);
 

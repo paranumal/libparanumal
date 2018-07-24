@@ -368,10 +368,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 	}
       }
 
-      printf("LOOK HERE DFLOAT!!!!!!\n");
       elliptic->partialAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
 
-      printf("LOOK HERE !!!!!!\n");
       elliptic->partialFloatAxKernel = mesh->device.buildKernel(fileName,kernelName,floatKernelInfo);
       
       if (options.compareArgs("BASIS","BERN")) {

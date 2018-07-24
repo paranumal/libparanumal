@@ -1,28 +1,30 @@
 
 @kernel void insSetFlowField2D(const dlong Nelements,
-                              const dfloat t,
-                              @restrict const  dfloat *  x,
-                              @restrict const  dfloat *  y,
-                              @restrict const  dfloat *  z,
-                              const dlong offset,
-                                    @restrict dfloat *  U,
-                                    @restrict dfloat *  P){
-
-  for(int n=0;n<p_Np*Nelements;++n;@tile(256,@outer,@inner)){
-
-    if(n<p_Np*Nelements){
-      dfloat xn = x[n];
-      dfloat yn = y[n];
+			       const dfloat t,
+			       @restrict const  dfloat *  x,
+			       @restrict const  dfloat *  y,
+			       @restrict const  dfloat *  z,
+			       const dlong offset,
+			       @restrict dfloat *  U,
+			       @restrict dfloat *  P){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      
+      const int id = n + e*p_Np;
+      
+      dfloat xn = x[id];
+      dfloat yn = y[id];
       
       dfloat u = 0.0;
       dfloat v = 0.0;
       dfloat p = 0.0;
-
+      
       insFlowField2D(t, xn, yn, &u, &v, &p);
-
-      U[n+0*offset] = u;
-      U[n+1*offset] = v;
-      P[n] = p;
+      
+      U[id+0*offset] = u;
+      U[id+1*offset] = v;
+      P[id] = p;
     }
   }
 

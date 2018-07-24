@@ -127,14 +127,18 @@ void surfaceTerms(const int e,
                   const int i, 
                   const int j, 
                   const int k,
-                  const dfloat time, 
-                  const int advSwitch, 
+                  const int advSwitch,
+		  const dfloat intfx,
+		  const dfloat intfy,		  
+		  const dfloat intfz,
+		  const dfloat time, 
                   @global const dfloat *x, 
                   @global const dfloat *y, 
                   @global const dfloat *z, 
                   @global const dfloat *sgeo, 
                   @global const dlong *vmapM, 
-                  @global const dong *vmapP,
+                  @global const dlong *vmapP,
+		  @global const dlong *EToB,
                   @global const dfloat *q, 
                   @global const dfloat *viscousStresses,
                   @global dfloat *rhsq){
@@ -201,7 +205,7 @@ void surfaceTerms(const int e,
                                                                         
   const int bc = EToB[face+p_Nfaces*e];                                 
   if(bc>0){                                                             
-    cnsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP); 
+    cnsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, intfx, intfy, intfz, rM, uM, vM, wM, &rP, &uP, &vP, &wP); 
     ruP = rP*uP;                                                        
     rvP = rP*vP;                                                        
     rwP = rP*wP;                                                        
@@ -241,8 +245,11 @@ void surfaceTerms(const int e,
                             @restrict const  dfloat *  x,
                             @restrict const  dfloat *  y,
                             @restrict const  dfloat *  z,
-                            const dfloat mu,
-                            @restrict const  dfloat *  q,
+			     const dfloat mu,
+			     const dfloat intfx,
+			     const dfloat intfy,
+			     const dfloat intfz,
+			     @restrict const  dfloat *  q,
                             @restrict const  dfloat *  viscousStresses,
                             @restrict dfloat *  rhsq){
   
@@ -260,12 +267,12 @@ void surfaceTerms(const int e,
             const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
             
             //            surfaceTerms(sk0,0,i,j,0     );
-            surfaceTerms(e, sk0, 0, i, j, 0, 
-                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk0, 0, i, j, 0, advSwitch, intfx, intfy, intfz, time,
+			 x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
 
             //            surfaceTerms(sk5,5,i,j,(p_Nq-1));
-            surfaceTerms(e, sk5, 5, i, j, (p_Nq-1), 
-                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk5, 5, i, j, (p_Nq-1), advSwitch, intfx, intfy, intfz, time,
+                         x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
           }
         }
       }
@@ -283,12 +290,12 @@ void surfaceTerms(const int e,
             const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
             
             //            surfaceTerms(sk1,1,i,0     ,k);
-            surfaceTerms(e, sk1, 1, i, 0, k, 
-                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk1, 1, i, 0, k, advSwitch, intfx, intfy, intfz, time,
+			 x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
 
             //surfaceTerms(sk3,3,i,(p_Nq-1),k);
-            surfaceTerms(e, sk3, 3, i, (p_Nq-1), k,
-                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk3, 3, i, (p_Nq-1), k, advSwitch, intfx, intfy, intfz, time,
+			 x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
           }
         }
       }
@@ -306,12 +313,12 @@ void surfaceTerms(const int e,
             const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
             
             //            surfaceTerms(sk2,2,(p_Nq-1),j,k);
-            surfaceTerms(e, sk2, 2, (p_Nq-1), j, k, 
-                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk2, 2, (p_Nq-1), j, k, advSwitch, intfx, intfy, intfz, time,
+			 x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
             
             //surfaceTerms(sk4,4,0     ,j,k);
-            surfaceTerms(e, sk4, 4, 0, j, k, 
-                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk4, 4, 0, j, k, advSwitch, intfx, intfy, intfz, time,
+			 x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
           }
         }
       }
@@ -325,13 +332,18 @@ void stressSurfaceTerms(const int e,
                         const int i, 
                         const int j, 
                         const int k,
-                        const dfloat time, 
+			const dfloat intfx,
+			const dfloat intfy,
+			const dfloat intfz,
+                        const dfloat time,
+			const dfloat mu,
                         @global const dfloat *x, 
                         @global const dfloat *y, 
                         @global const dfloat *z, 
                         @global const dfloat *sgeo, 
                         @global const dlong *vmapM, 
-                        @global const dong *vmapP,
+                        @global const dlong *vmapP,
+			@global const dlong *EToB,
                         @global const dfloat *q,
                         @global dfloat *viscousStresses){
 
@@ -372,7 +384,7 @@ void stressSurfaceTerms(const int e,
                                                                         
   const int bc = EToB[face+p_Nfaces*e];                                 
   if(bc>0) {                                                            
-    cnsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP); 
+    cnsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, intfx, intfy, intfz, rM, uM, vM, wM, &rP, &uP, &vP, &wP); 
   }                                                                     
                                                                         
   const dfloat dS11 = p_half*(nx*(p_two*(uP-uM))) - p_third*(nx*(uP-uM)+ny*(vP-vM)+nz*(wP-wM)); 
@@ -403,7 +415,10 @@ void stressSurfaceTerms(const int e,
                                     @restrict const  dfloat *  y,
                                     @restrict const  dfloat *  z,
                                     const dfloat mu,
-                                    @restrict const  dfloat *  q,
+				     const dfloat intfx,
+				     const dfloat intfy,
+				     const dfloat intfz,
+				     @restrict const  dfloat *  q,
                                     @restrict dfloat *  viscousStresses){
   
   // for all elements
@@ -420,12 +435,12 @@ void stressSurfaceTerms(const int e,
             const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
             
             //            stressSurfaceTerms(sk0,0,i,j,0     );
-            stressSurfaceTerms(e, sk0, 0, i, j, 0,
-                               time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+            stressSurfaceTerms(e, sk0, 0, i, j, 0, intfx, intfy, intfz,
+                               time, mu, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses);
 
             //            stressSurfaceTerms(sk5,5,i,j,(p_Nq-1));
-            stressSurfaceTerms(e, sk5, 5, i, j, (p_Nq-1),
-                               time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+            stressSurfaceTerms(e, sk5, 5, i, j, (p_Nq-1), intfx, intfy, intfz,
+                               time, mu, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses);
           }
         }
       }
@@ -443,12 +458,12 @@ void stressSurfaceTerms(const int e,
             const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
             
             //            stressSurfaceTerms(sk1,1,i,0     ,k);
-            stressSurfaceTerms(e, sk1, 1, i, 0, k, 
-                               time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+            stressSurfaceTerms(e, sk1, 1, i, 0, k, intfx, intfy, intfz,
+                               time, mu, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses);
 
             //stressSurfaceTerms(sk3,3,i,(p_Nq-1),k);
-            stressSurfaceTerms(e, sk3, 3, i, (p_Nq-1), k, 
-                               time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+            stressSurfaceTerms(e, sk3, 3, i, (p_Nq-1), k,  intfx, intfy, intfz,
+                               time, mu, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses);
 
           }
         }
@@ -467,12 +482,12 @@ void stressSurfaceTerms(const int e,
             const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
             
             //            stressSurfaceTerms(sk2,2,(p_Nq-1),j ,k);
-            stressSurfaceTerms(e, sk2, 2, (p_Nq-1), j, k, 
-                               time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+            stressSurfaceTerms(e, sk2, 2, (p_Nq-1), j, k, intfx, intfy, intfz,
+                               time, mu, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses);
 
             //stressSurfaceTerms(sk4,4,0,     j, k);
-            stressSurfaceTerms(e, sk4, 4, 0, j, k, 
-                               time, x, y, z, sgeo, vmapM, vmapP, q, viscousStresses);
+            stressSurfaceTerms(e, sk4, 4, 0, j, k, intfx, intfy, intfz,
+                               time, mu, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses);
           }
         }
       }
