@@ -84,8 +84,8 @@ void parAlmondAgmgSetup(parAlmond_t *parAlmond,
                          dfloat nullSpacePenalty){   
 
   int size, rank;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  size = agmg::size;
+  rank = agmg::rank;
 
   hlong TotalRows = globalRowStarts[size];
   dlong numLocalRows = (dlong) (globalRowStarts[rank+1]-globalRowStarts[rank]);

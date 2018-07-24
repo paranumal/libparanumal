@@ -16,7 +16,7 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
   gradient->Nblock = (Ntotal+blockSize-1)/blockSize;
   
   hlong localElements = (hlong) mesh->Nelements;
-  MPI_Allreduce(&localElements, &(gradient->totalElements), 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&localElements, &(gradient->totalElements), 1, MPI_HLONG, MPI_SUM, mesh->comm);
 
   int check;
 
@@ -148,7 +148,7 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 
   for (int r=0;r<mesh->size;r++) {
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(mesh->comm);
     if (r==mesh->rank) {
 
       // kernels from volume file
