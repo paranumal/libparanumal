@@ -23,7 +23,7 @@ dfloat acousticsDopriEstimate(acoustics_t *acoustics){
   for(dlong n=0;n<acoustics->Nblock;++n){
     localerr += acoustics->errtmp[n];
   }
-  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
   err = sqrt(err/(mesh->Np*acoustics->totalElements*acoustics->Nfields));
   
