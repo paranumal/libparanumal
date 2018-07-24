@@ -13,8 +13,8 @@ void coarsenAgmgLevel(agmgLevel *level, csr **coarseA, csr **P, csr **R, dfloat 
 void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, hlong *globalRowStarts, setupAide options){
 
   int rank, size;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  rank = agmg::rank;
+  size = agmg::size;
 
   // approximate Nrows at coarsest level
   int gCoarseSize = 1000;
@@ -72,7 +72,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, hlong *globalRowSt
 
   hlong localSize = (hlong) levels[lev]->A->Nrows;
   hlong globalSize = 0;
-  MPI_Allreduce(&localSize, &globalSize, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&localSize, &globalSize, 1, MPI_HLONG, MPI_SUM, agmg::comm);
 
   //if the system if already small, dont create MG levels
   bool done = false;
@@ -131,7 +131,7 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, hlong *globalRowSt
 
     const hlong localCoarseDim = (hlong) levels[lev+1]->A->Nrows;
     hlong globalCoarseSize;
-    MPI_Allreduce(&localCoarseDim, &globalCoarseSize, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&localCoarseDim, &globalCoarseSize, 1, MPI_HLONG, MPI_SUM, agmg::comm);
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
       setupExactSolve(parAlmond, levels[lev+1],parAlmond->nullSpace,parAlmond->nullSpacePenalty);
@@ -175,8 +175,8 @@ void agmgSetup(parAlmond_t *parAlmond, csr *A, dfloat *nullA, hlong *globalRowSt
 void parAlmondReport(parAlmond_t *parAlmond) {
 
   int rank, size;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  rank = agmg::rank;
+  size = agmg::size;
 
   if(rank==0) {
     printf("------------------ParAlmond Report-----------------------------------\n");
@@ -193,17 +193,17 @@ void parAlmondReport(parAlmond_t *parAlmond) {
 
     int active = (Nrows>0) ? 1:0;
     int totalActive=0;
-    MPI_Allreduce(&active, &totalActive, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&active, &totalActive, 1, MPI_INT, MPI_SUM, agmg::comm);
 
     dlong minNrows=0, maxNrows=0;
     hlong totalNrows=0;
     dfloat avgNrows;
-    MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_DLONG, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_DLONG, MPI_MAX, agmg::comm);
+    MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, agmg::comm);
     avgNrows = (dfloat) totalNrows/totalActive;
 
     if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
-    MPI_Allreduce(&Nrows, &minNrows, 1, MPI_DLONG, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&Nrows, &minNrows, 1, MPI_DLONG, MPI_MIN, agmg::comm);
 
 
     long long int nnz;
@@ -213,22 +213,22 @@ void parAlmondReport(parAlmond_t *parAlmond) {
       nnz =0;
     long long int minNnz=0, maxNnz=0, totalNnz=0;
     dfloat avgNnz;
-    MPI_Allreduce(&nnz, &maxNnz, 1, MPI_LONG_LONG_INT, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&nnz, &totalNnz, 1, MPI_LONG_LONG_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&nnz, &maxNnz, 1, MPI_LONG_LONG_INT, MPI_MAX, agmg::comm);
+    MPI_Allreduce(&nnz, &totalNnz, 1, MPI_LONG_LONG_INT, MPI_SUM, agmg::comm);
     avgNnz = (dfloat) totalNnz/totalActive;
 
     if (nnz==0) nnz = maxNnz; //set this so it's ignored for the global min
-    MPI_Allreduce(&nnz, &minNnz, 1, MPI_LONG_LONG_INT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&nnz, &minNnz, 1, MPI_LONG_LONG_INT, MPI_MIN, agmg::comm);
 
     Nrows = parAlmond->levels[lev]->Nrows;
     dfloat nnzPerRow = (Nrows==0) ? 0 : (dfloat) nnz/Nrows;
     dfloat minNnzPerRow=0, maxNnzPerRow=0, avgNnzPerRow=0;
-    MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_DFLOAT, MPI_MAX, agmg::comm);
+    MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_DFLOAT, MPI_SUM, agmg::comm);
     avgNnzPerRow /= totalActive;
 
     if (Nrows==0) nnzPerRow = maxNnzPerRow;
-    MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, agmg::comm);
 
     if (rank==0){
       printf(" %3d |        %4d  |   %10.2f  |   %10.2f  |   %10.2f  |\n",
@@ -391,8 +391,8 @@ bool customLess(int smax, dfloat rmax, hlong imax, int s, dfloat r, hlong i){
 hlong * form_aggregates(agmgLevel *level, csr *C){
 
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = agmg::rank;
+  size = agmg::size;
 
   const dlong N   = C->Nrows;
   const dlong M   = C->Ncols;
@@ -452,7 +452,7 @@ hlong * form_aggregates(agmgLevel *level, csr *C){
     if (A->NsendTotal) {
       if(A->NsendPairs[r]) {
         MPI_Irecv(recvNnzCnt+sendOffset, A->NsendPairs[r], MPI_INT, r, tag,
-            MPI_COMM_WORLD, (MPI_Request*)A->haloSendRequests+sendMessage);
+            agmg::comm, (MPI_Request*)A->haloSendRequests+sendMessage);
         sendOffset += A->NsendPairs[r];
         ++sendMessage;
       }
@@ -460,7 +460,7 @@ hlong * form_aggregates(agmgLevel *level, csr *C){
     if (A->NrecvTotal) {
       if(A->NrecvPairs[r]){
         MPI_Isend(nnzCnt+recvOffset, A->NrecvPairs[r], MPI_INT, r, tag,
-            MPI_COMM_WORLD, (MPI_Request*)A->haloRecvRequests+recvMessage);
+            agmg::comm, (MPI_Request*)A->haloRecvRequests+recvMessage);
         recvOffset += A->NrecvPairs[r];
         ++recvMessage;
       }
@@ -574,7 +574,7 @@ hlong * form_aggregates(agmgLevel *level, csr *C){
 
     // if number of undecided nodes = 0, algorithm terminates
     hlong cnt = std::count(states, states+N, 0);
-    MPI_Allreduce(&cnt,&done,1,MPI_HLONG, MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&cnt,&done,1,MPI_HLONG, MPI_SUM,agmg::comm);
     done = (done == 0) ? 1 : 0;
   }
 
@@ -585,7 +585,7 @@ hlong * form_aggregates(agmgLevel *level, csr *C){
   for(dlong i=0; i<N; i++)
     if(states[i] == 1) numAggs++;
 
-  MPI_Allgather(&numAggs,1,MPI_DLONG,gNumAggs,1,MPI_DLONG,MPI_COMM_WORLD);
+  MPI_Allgather(&numAggs,1,MPI_DLONG,gNumAggs,1,MPI_DLONG,agmg::comm);
 
   level->globalAggStarts[0] = 0;
   for (int r=0;r<size;r++)
@@ -744,8 +744,8 @@ int compareOrigin(const void *a, const void *b){
 void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, setupAide options) {
   // MPI info
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = agmg::rank;
+  size = agmg::size;
 
   dlong N = level->A->Nrows;
 
@@ -804,7 +804,7 @@ void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, setupAide opti
     sendCounts[sendAggs[i].ownerRank]++;
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(sendCounts, 1, MPI_INT, recvCounts, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(sendCounts, 1, MPI_INT, recvCounts, 1, MPI_INT, agmg::comm);
 
   // find send and recv offsets for gather
   dlong recvNtotal = 0;
@@ -817,7 +817,7 @@ void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, setupAide opti
 
   MPI_Alltoallv(sendAggs, sendCounts, sendOffsets, MPI_PARALLEL_AGGREGATE,
                 recvAggs, recvCounts, recvOffsets, MPI_PARALLEL_AGGREGATE,
-                MPI_COMM_WORLD);
+                agmg::comm);
 
   //sort by coarse aggregate number, and then by original rank
   qsort(recvAggs, recvNtotal, sizeof(parallelAggregate_t), compareAgg);
@@ -842,7 +842,7 @@ void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, setupAide opti
     //use a random dfloat for each rank to break ties.
     dfloat rand = (dfloat) drand48();
     dfloat *gRands = (dfloat *) calloc(size,sizeof(dfloat));
-    MPI_Allgather(&rand, 1, MPI_DFLOAT, gRands, 1, MPI_DFLOAT, MPI_COMM_WORLD);
+    MPI_Allgather(&rand, 1, MPI_DFLOAT, gRands, 1, MPI_DFLOAT, agmg::comm);
 
     //determine the aggregates majority owner
     int *rankCounts = (int *) calloc(size,sizeof(int));
@@ -900,7 +900,7 @@ void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, setupAide opti
     newSendCounts[recvAggs[i].ownerRank]++;
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(newSendCounts, 1, MPI_INT, newRecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(newSendCounts, 1, MPI_INT, newRecvCounts, 1, MPI_INT, agmg::comm);
 
   // find send and recv offsets for gather
   dlong newRecvNtotal = 0;
@@ -913,7 +913,7 @@ void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, setupAide opti
 
   MPI_Alltoallv(   recvAggs, newSendCounts, newSendOffsets, MPI_PARALLEL_AGGREGATE,
                 newRecvAggs, newRecvCounts, newRecvOffsets, MPI_PARALLEL_AGGREGATE,
-                MPI_COMM_WORLD);
+                agmg::comm);
 
   //sort by coarse aggregate number, and then by original rank
   qsort(newRecvAggs, newRecvNtotal, sizeof(parallelAggregate_t), compareAgg);
@@ -926,7 +926,7 @@ void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, setupAide opti
 
   //determine a global numbering of the aggregates
   dlong *lNumAggs = (dlong*) calloc(size,sizeof(dlong));
-  MPI_Allgather(&numAggs, 1, MPI_DLONG, lNumAggs, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Allgather(&numAggs, 1, MPI_DLONG, lNumAggs, 1, MPI_INT, agmg::comm);
 
   level->globalAggStarts[0] = 0;
   for (int r=0;r<size;r++)
@@ -954,7 +954,7 @@ void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, setupAide opti
     sendCounts[newRecvAggs[i].originRank]++;
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(sendCounts, 1, MPI_INT, recvCounts, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(sendCounts, 1, MPI_INT, recvCounts, 1, MPI_INT, agmg::comm);
 
   // find send and recv offsets for gather
   recvNtotal = 0;
@@ -967,10 +967,10 @@ void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, setupAide opti
   //send the aggregate data back
   MPI_Alltoallv(newRecvAggs, sendCounts, sendOffsets, MPI_PARALLEL_AGGREGATE,
                    sendAggs, recvCounts, recvOffsets, MPI_PARALLEL_AGGREGATE,
-                MPI_COMM_WORLD);
+                agmg::comm);
 
   //clean up
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(agmg::comm);
   MPI_Type_free(&MPI_PARALLEL_AGGREGATE);
 
   free(recvAggs);
@@ -991,8 +991,8 @@ void find_aggregate_owners(agmgLevel *level, hlong* FineToCoarse, setupAide opti
 csr *construct_interpolator(agmgLevel *level, hlong *FineToCoarse, dfloat **nullCoarseA){
   // MPI info
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = agmg::rank;
+  size = agmg::size;
 
   const dlong N = level->A->Nrows;
   // const dlong M = level->A->Ncols;
@@ -1122,7 +1122,7 @@ csr *construct_interpolator(agmgLevel *level, hlong *FineToCoarse, dfloat **null
     if (P->NsendTotal) {
       if(P->NsendPairs[r]) {
         MPI_Irecv(recvNnzSum+sendOffset, P->NsendPairs[r], MPI_DFLOAT, r, tag,
-            MPI_COMM_WORLD, (MPI_Request*)P->haloSendRequests+sendMessage);
+            agmg::comm, (MPI_Request*)P->haloSendRequests+sendMessage);
         sendOffset += P->NsendPairs[r];
         ++sendMessage;
       }
@@ -1130,7 +1130,7 @@ csr *construct_interpolator(agmgLevel *level, hlong *FineToCoarse, dfloat **null
     if (P->NrecvTotal) {
       if(P->NrecvPairs[r]){
         MPI_Isend(nnzSum+recvOffset, P->NrecvPairs[r], MPI_DFLOAT, r, tag,
-            MPI_COMM_WORLD, (MPI_Request*)P->haloRecvRequests+recvMessage);
+            agmg::comm, (MPI_Request*)P->haloRecvRequests+recvMessage);
         recvOffset += P->NrecvPairs[r];
         ++recvMessage;
       }
@@ -1168,7 +1168,7 @@ csr *construct_interpolator(agmgLevel *level, hlong *FineToCoarse, dfloat **null
   for(dlong i=0; i<P->offdNNZ; i++)
     P->offdCoefs[i] /= (*nullCoarseA)[P->offdCols[i]];
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(agmg::comm);
   if (P->NsendTotal) free(recvNnzSum);
 
   return P;
@@ -1204,8 +1204,8 @@ csr * transpose(agmgLevel* level, csr *A,
 
   // MPI info
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = agmg::rank;
+  size = agmg::size;
 
   csr *At = (csr *) calloc(1,sizeof(csr));
 
@@ -1291,7 +1291,7 @@ csr * transpose(agmgLevel* level, csr *A,
   if (A->offdNNZ)
     qsort(sendNonZeros, A->offdNNZ, sizeof(nonzero_t), compareNonZero);
 
-  MPI_Alltoall(Nsend, 1, MPI_INT, Nrecv, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(Nsend, 1, MPI_INT, Nrecv, 1, MPI_INT, agmg::comm);
 
   //count incoming nonzeros
   At->offdNNZ = 0;
@@ -1310,7 +1310,7 @@ csr * transpose(agmgLevel* level, csr *A,
     if (At->offdNNZ) {
       if(Nrecv[r]) {
         MPI_Irecv(((char*)recvNonZeros)+recvOffset, Nrecv[r]*sizeof(nonzero_t),
-                      MPI_CHAR, r, tag, MPI_COMM_WORLD,
+                      MPI_CHAR, r, tag, agmg::comm,
                       (MPI_Request*)A->haloSendRequests+recvMessage);
         recvOffset += Nrecv[r]*sizeof(nonzero_t);
         ++recvMessage;
@@ -1319,7 +1319,7 @@ csr * transpose(agmgLevel* level, csr *A,
     if (A->offdNNZ) {
       if(Nsend[r]){
         MPI_Isend(((char*)sendNonZeros)+sendOffset, Nsend[r]*sizeof(nonzero_t),
-                      MPI_CHAR, r, tag, MPI_COMM_WORLD,
+                      MPI_CHAR, r, tag, agmg::comm,
                       (MPI_Request*)A->haloRecvRequests+sendMessage);
         sendOffset += Nsend[r]*sizeof(nonzero_t);
         ++sendMessage;
@@ -1438,8 +1438,8 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
 
   // MPI info
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = agmg::rank;
+  size = agmg::size;
 
   hlong *globalAggStarts = level->globalAggStarts;
   // hlong *globalRowStarts = level->globalRowStarts;
@@ -1548,7 +1548,7 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   }
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(sendCounts, 1, MPI_INT, recvCounts, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(sendCounts, 1, MPI_INT, recvCounts, 1, MPI_INT, agmg::comm);
 
   // find send and recv offsets for gather
   dlong recvNtotal = 0;
@@ -1565,7 +1565,7 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   
   MPI_Alltoallv(    RAPEntries, sendCounts, sendOffsets, MPI_RAPENTRY_T,
                 recvRAPEntries, recvCounts, recvOffsets, MPI_RAPENTRY_T,
-                MPI_COMM_WORLD);
+                agmg::comm);
 
   //sort entries by the coarse row and col
   if (recvNtotal) qsort(recvRAPEntries, recvNtotal, sizeof(rapEntry_t), compareRAPEntries);
@@ -1712,7 +1712,7 @@ csr *galerkinProd(agmgLevel *level, csr *R, csr *A, csr *P){
   csrHaloSetup(RAP,globalAggStarts);
 
   //clean up
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(agmg::comm);
   MPI_Type_free(&MPI_RAPENTRY_T);
 
   free(PEntries);

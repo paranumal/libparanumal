@@ -39,4 +39,9 @@ void device_pgmres(parAlmond_t *parAlmond, int maxIt, dfloat tol);
 void pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol);
 void device_pcg(parAlmond_t *parAlmond, int maxIt, dfloat tol);
 
+namespace agmg {
+  extern int rank;
+  extern int size;
+  extern MPI_Comm comm;
+};
 #endif

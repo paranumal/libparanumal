@@ -4,8 +4,8 @@ csr * newCSRfromCOO(dlong N, hlong* globalRowStarts,
                     dlong nnz, hlong *Ai, hlong *Aj, dfloat *Avals){
 
   int size, rank;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  rank = agmg::rank;
+  size = agmg::size;
 
   csr *A = (csr *) calloc(1,sizeof(csr));
 
@@ -476,7 +476,7 @@ void axpy(csr *A, dfloat alpha, dfloat *x, dfloat beta, dfloat *y, bool nullSpac
   //rank 1 correction if there is a nullspace
   if (nullSpace) {
     dfloat alphaL = innerProd(A->Nrows, A->null, x);
-    MPI_Allreduce(&alphaL, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&alphaL, &alphaG, 1, MPI_DFLOAT, MPI_SUM, agmg::comm);
     alphaG *= nullSpacePenalty;
   }
 
@@ -568,7 +568,7 @@ void axpy(parAlmond_t *parAlmond, hyb *A, dfloat alpha, occa::memory o_x, dfloat
   //rank 1 correction if there is a nullspace
   if (nullSpace) {
     dfloat alphaL = innerProd(parAlmond, A->Nrows, A->o_null, o_x);
-    MPI_Allreduce(&alphaL, &alphaG, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&alphaL, &alphaG, 1, MPI_DFLOAT, MPI_SUM, agmg::comm);
     alphaG *= nullSpacePenalty;
   }
 
@@ -836,9 +836,9 @@ void csrHaloSetup(csr *A, hlong *globalColStarts){
 
   // MPI info
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
+  rank = agmg::rank;
+  size = agmg::size;
+  
   // non-blocking MPI isend/irecv requests (used in meshHaloExchange)
   A->haloSendRequests = calloc(size, sizeof(MPI_Request));
   A->haloRecvRequests = calloc(size, sizeof(MPI_Request));
@@ -857,7 +857,7 @@ void csrHaloSetup(csr *A, hlong *globalColStarts){
     }
   }
 
-  MPI_Alltoall(A->NrecvPairs, 1, MPI_INT, A->NsendPairs, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(A->NrecvPairs, 1, MPI_INT, A->NsendPairs, 1, MPI_INT, agmg::comm);
 
   A->NsendTotal = 0;
   for (int r=0;r<size;r++)
@@ -887,13 +887,13 @@ void csrHaloSetup(csr *A, hlong *globalColStarts){
   for(int r=0;r<size;++r){
      if(A->NsendPairs[r]) {
       MPI_Irecv(ghaloElementList+sendOffset, A->NsendPairs[r], MPI_HLONG, r, tag,
-          MPI_COMM_WORLD, (MPI_Request*)A->haloSendRequests+sendMessage);
+          agmg::comm, (MPI_Request*)A->haloSendRequests+sendMessage);
       sendOffset += A->NsendPairs[r];
       ++sendMessage;
     }
     if(A->NrecvPairs[r]){
       MPI_Isend(A->colMap+recvOffset, A->NrecvPairs[r], MPI_HLONG, r, tag,
-          MPI_COMM_WORLD, (MPI_Request*)A->haloRecvRequests+recvMessage);
+          agmg::comm, (MPI_Request*)A->haloRecvRequests+recvMessage);
       recvOffset += A->NrecvPairs[r];
       ++recvMessage;
     }
@@ -926,8 +926,9 @@ void csrHaloExchange(csr *A,
                     void *recvBuffer) {
   // MPI info
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = agmg::rank;
+  size = agmg::size;
+  
   int tag = 999;
 
   // copy data from outgoing elements into temporary send buffer
@@ -946,7 +947,7 @@ void csrHaloExchange(csr *A,
     if (A->NrecvTotal) {
       if(A->NrecvPairs[r]) {
         MPI_Irecv(((char*)recvBuffer)+recvOffset, A->NrecvPairs[r]*Nbytes, MPI_CHAR, r, tag,
-            MPI_COMM_WORLD, (MPI_Request*)A->haloRecvRequests+recvMessage);
+            agmg::comm, (MPI_Request*)A->haloRecvRequests+recvMessage);
         recvOffset += A->NrecvPairs[r]*Nbytes;
         ++recvMessage;
       }
@@ -954,7 +955,7 @@ void csrHaloExchange(csr *A,
     if (A->NsendTotal) {
       if(A->NsendPairs[r]){
         MPI_Isend(((char*)sendBuffer)+sendOffset, A->NsendPairs[r]*Nbytes, MPI_CHAR, r, tag,
-            MPI_COMM_WORLD, (MPI_Request*)A->haloSendRequests+sendMessage);
+            agmg::comm, (MPI_Request*)A->haloSendRequests+sendMessage);
         sendOffset += A->NsendPairs[r]*Nbytes;
         ++sendMessage;
       }
@@ -981,8 +982,9 @@ void csrHaloExchangeStart(csr *A,
                     void *recvBuffer) {
   // MPI info
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = agmg::rank;
+  size = agmg::size;
+  
   int tag = 999;
 
   // copy data from outgoing elements into temporary send buffer
@@ -1001,7 +1003,7 @@ void csrHaloExchangeStart(csr *A,
     if (A->NrecvTotal) {
       if(A->NrecvPairs[r]) {
         MPI_Irecv(((char*)recvBuffer)+recvOffset, A->NrecvPairs[r]*Nbytes, MPI_CHAR, r, tag,
-            MPI_COMM_WORLD, (MPI_Request*)A->haloRecvRequests+recvMessage);
+            agmg::comm, (MPI_Request*)A->haloRecvRequests+recvMessage);
         recvOffset += A->NrecvPairs[r]*Nbytes;
         ++recvMessage;
       }
@@ -1009,7 +1011,7 @@ void csrHaloExchangeStart(csr *A,
     if (A->NsendTotal) {
       if(A->NsendPairs[r]){
         MPI_Isend(((char*)sendBuffer)+sendOffset, A->NsendPairs[r]*Nbytes, MPI_CHAR, r, tag,
-            MPI_COMM_WORLD, (MPI_Request*)A->haloSendRequests+sendMessage);
+            agmg::comm, (MPI_Request*)A->haloSendRequests+sendMessage);
         sendOffset += A->NsendPairs[r]*Nbytes;
         ++sendMessage;
       }
@@ -1034,8 +1036,8 @@ void csrHaloExchangeFinish(csr *A) {
 void dcooHaloExchangeStart(dcoo *A, size_t Nbytes, void *sendBuffer, void *recvBuffer) {
   // MPI info
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = agmg::rank;
+  size = agmg::size;
 
   // count outgoing and incoming meshes
   int tag = 999;
@@ -1048,7 +1050,7 @@ void dcooHaloExchangeStart(dcoo *A, size_t Nbytes, void *sendBuffer, void *recvB
     if (A->NrecvTotal) {
       if(A->NrecvPairs[r]) {
         MPI_Irecv(((char*)A->recvBuffer)+recvOffset, A->NrecvPairs[r]*Nbytes, MPI_CHAR, r, tag,
-            MPI_COMM_WORLD, (MPI_Request*)A->haloRecvRequests+recvMessage);
+            agmg::comm, (MPI_Request*)A->haloRecvRequests+recvMessage);
         recvOffset += A->NrecvPairs[r]*Nbytes;
         ++recvMessage;
       }
@@ -1056,7 +1058,7 @@ void dcooHaloExchangeStart(dcoo *A, size_t Nbytes, void *sendBuffer, void *recvB
     if (A->NsendTotal) {
       if(A->NsendPairs[r]){
         MPI_Isend(((char*)A->sendBuffer)+sendOffset, A->NsendPairs[r]*Nbytes, MPI_CHAR, r, tag,
-            MPI_COMM_WORLD, (MPI_Request*)A->haloSendRequests+sendMessage);
+            agmg::comm, (MPI_Request*)A->haloSendRequests+sendMessage);
         sendOffset += A->NsendPairs[r]*Nbytes;
         ++sendMessage;
       }
@@ -1081,8 +1083,8 @@ void dcooHaloExchangeFinish(dcoo *A) {
 void hybHaloExchangeStart(hyb *A, size_t Nbytes, void *sendBuffer, void *recvBuffer) {
   // MPI info
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = agmg::rank;
+  size = agmg::size;
 
   // count outgoing and incoming meshes
   int tag = 999;
@@ -1095,7 +1097,7 @@ void hybHaloExchangeStart(hyb *A, size_t Nbytes, void *sendBuffer, void *recvBuf
     if (A->NrecvTotal) {
       if(A->NrecvPairs[r]) {
         MPI_Irecv(((char*)recvBuffer)+recvOffset, A->NrecvPairs[r]*Nbytes, MPI_CHAR, r, tag,
-            MPI_COMM_WORLD, (MPI_Request*)A->haloRecvRequests+recvMessage);
+            agmg::comm, (MPI_Request*)A->haloRecvRequests+recvMessage);
         recvOffset += A->NrecvPairs[r]*Nbytes;
         ++recvMessage;
       }
@@ -1103,7 +1105,7 @@ void hybHaloExchangeStart(hyb *A, size_t Nbytes, void *sendBuffer, void *recvBuf
     if (A->NsendTotal) {
       if(A->NsendPairs[r]){
         MPI_Isend(((char*)sendBuffer)+sendOffset, A->NsendPairs[r]*Nbytes, MPI_CHAR, r, tag,
-            MPI_COMM_WORLD, (MPI_Request*)A->haloSendRequests+sendMessage);
+            agmg::comm, (MPI_Request*)A->haloSendRequests+sendMessage);
         sendOffset += A->NsendPairs[r]*Nbytes;
         ++sendMessage;
       }

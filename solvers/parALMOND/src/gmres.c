@@ -71,7 +71,7 @@ void pgmres(parAlmond_t *parAlmond,
   // initial residual
   dfloat nbLocal = innerProd(m, r, r);
   dfloat nb = 0;
-  MPI_Allreduce(&nbLocal,&nb,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+  MPI_Allreduce(&nbLocal,&nb,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
   nb = sqrt(nb);
 
   //    x = 0;
@@ -145,7 +145,7 @@ void pgmres(parAlmond_t *parAlmond,
     for(int k=0; k<=i; ++k){
       dfloat hkiLocal = innerProd(m, w, V[k]);
       dfloat hki = 0.;
-      MPI_Allreduce(&hkiLocal,&hki,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+      MPI_Allreduce(&hkiLocal,&hki,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
       // w = w - hki*V[k]
       vectorAdd(m, -hki, V[k], 1.0, w);
@@ -156,7 +156,7 @@ void pgmres(parAlmond_t *parAlmond,
 
     dfloat wdotwLocal = innerProd(m, w, w);
     dfloat wdotw = 0.;
-    MPI_Allreduce(&wdotwLocal,&wdotw,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&wdotwLocal,&wdotw,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
     H[i+1 + i*(maxIt+1)] = sqrt(wdotw);
 
@@ -191,7 +191,7 @@ void pgmres(parAlmond_t *parAlmond,
     if(i < maxIt-1){
       dfloat wdotwLocal = innerProd(m, w, w);
       dfloat wdotw = 0.;
-      MPI_Allreduce(&wdotwLocal,&wdotw,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+      MPI_Allreduce(&wdotwLocal,&wdotw,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
       dfloat nw = sqrt(wdotw);
 
@@ -232,7 +232,7 @@ void device_pgmres(parAlmond_t *parAlmond,
   // initial residual
   dfloat nbLocal = innerProd(parAlmond, m, o_r, o_r);
   dfloat nb = 0;
-  MPI_Allreduce(&nbLocal,&nb,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+  MPI_Allreduce(&nbLocal,&nb,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
   nb = sqrt(nb);
 
   dfloat *dummy = (dfloat*) calloc(m, sizeof(dfloat));
@@ -260,7 +260,7 @@ void device_pgmres(parAlmond_t *parAlmond,
 
   dfloat nrLocal = innerProd(parAlmond, m, o_r, o_r);
   dfloat nr = 0;
-  MPI_Allreduce(&nrLocal,&nr,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+  MPI_Allreduce(&nrLocal,&nr,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
   nr = sqrt(nr);
 
   dfloat *s = (dfloat *) calloc(maxIt+1, sizeof(dfloat));
@@ -300,7 +300,7 @@ void device_pgmres(parAlmond_t *parAlmond,
     for(int k=0; k<=i; ++k){
       dfloat hkiLocal = innerProd(parAlmond, m, o_z, o_V[k]);
       dfloat hki = 0.;
-      MPI_Allreduce(&hkiLocal,&hki,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+      MPI_Allreduce(&hkiLocal,&hki,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
       // w = w - hki*V[k]
       vectorAdd(parAlmond, m, -hki, o_V[k], 1.0, o_z);
@@ -311,7 +311,7 @@ void device_pgmres(parAlmond_t *parAlmond,
 
     dfloat nwLocal = innerProd(parAlmond, m, o_z, o_z);
     dfloat nw = 0.;
-    MPI_Allreduce(&nwLocal,&nw,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&nwLocal,&nw,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
     nw = sqrt(nw);
     H[i+1 + i*(maxIt+1)] = nw;
 

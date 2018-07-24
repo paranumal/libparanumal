@@ -1,5 +1,13 @@
 #include "agmg.h"
 
+namespace agmg{
+
+  int rank;
+  int size;
+  MPI_Comm comm;
+
+}
+
 void kcycle(parAlmond_t *parAlmond, int k){
 
   agmgLevel **levels = parAlmond->levels;
@@ -73,7 +81,7 @@ void kcycle(parAlmond_t *parAlmond, int k){
     if(parAlmond->ktype == GMRES)
       kcycleCombinedOp1(mCoarse, rhoLocal, vkp1, rkp1, vkp1, w, weighted);
 
-    MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
     alpha1 = rhoGlobal[0];
     rho1   = rhoGlobal[1];
@@ -81,7 +89,7 @@ void kcycle(parAlmond_t *parAlmond, int k){
 
     // rkp1 = rkp1 - (alpha1/rho1)*vkp1
     norm_rktilde_p = vectorAddInnerProd(mCoarse, -alpha1/rho1, vkp1, 1.0, rkp1, w, weighted);
-    MPI_Allreduce(&norm_rktilde_p,&norm_rktilde_pGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&norm_rktilde_p,&norm_rktilde_pGlobal,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
     norm_rktilde_pGlobal = sqrt(norm_rktilde_pGlobal);
 
     dfloat t = 0.2;
@@ -104,7 +112,7 @@ void kcycle(parAlmond_t *parAlmond, int k){
       if(parAlmond->ktype == GMRES)
         kcycleCombinedOp2(mCoarse,rhoLocal,wkp1,vkp1,wkp1,rkp1, w, weighted);
 
-      MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+      MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
       gamma  = rhoGlobal[0];
       beta   = rhoGlobal[1];
@@ -224,7 +232,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
                         levels[k+1]->o_weight,
                         levels[k+1]->weightedInnerProds);
 
-    MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
     alpha1 = rhoGlobal[0];
     rho1   = rhoGlobal[1];
@@ -236,7 +244,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
                                               levels[k+1]->o_rhs,
                                               levels[k+1]->o_weight,
                                               levels[k+1]->weightedInnerProds);
-    MPI_Allreduce(&norm_rktilde_pLocal,&norm_rktilde_pGlobal,1,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&norm_rktilde_pLocal,&norm_rktilde_pGlobal,1,MPI_DFLOAT,MPI_SUM,agmg::comm);
     norm_rktilde_pGlobal = sqrt(norm_rktilde_pGlobal);
 
     dfloat t = 0.2;
@@ -273,7 +281,7 @@ void device_kcycle(parAlmond_t *parAlmond, int k){
                           levels[k+1]->o_weight,
                           levels[k+1]->weightedInnerProds);
 
-      MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,MPI_COMM_WORLD);
+      MPI_Allreduce(rhoLocal,rhoGlobal,3,MPI_DFLOAT,MPI_SUM,agmg::comm);
 
       gamma  = rhoGlobal[0];
       beta   = rhoGlobal[1];
