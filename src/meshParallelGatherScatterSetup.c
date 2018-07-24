@@ -118,7 +118,7 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
     ogs->o_ownedHaloGatherIds = mesh->device.malloc(ogs->NhaloGather*sizeof(dlong), ogs->ownedHaloGatherIds);
 
     // initiate gslib gather-scatter comm pattern on halo nodes only
-    ogs->haloGsh = gsParallelGatherScatterSetup(ogs->NhaloGather, ogs->haloGatherBaseIds,verbose);
+    ogs->haloGsh = gsParallelGatherScatterSetup(mesh->comm, ogs->NhaloGather, ogs->haloGatherBaseIds,verbose);
   }
 
   // if there are non-halo nodes to gather

@@ -9,7 +9,8 @@
 
 #include "types.h"
 
-void *gsParallelGatherScatterSetup(dlong NuniqueBases,
+void *gsParallelGatherScatterSetup(MPI_Comm meshComm,
+				   dlong NuniqueBases,
 				   hlong *gatherGlobalNodes,
                                    int verbose){
 
@@ -18,7 +19,7 @@ void *gsParallelGatherScatterSetup(dlong NuniqueBases,
   struct comm com;
   
   /*  MPI_Comm_dup(MPI_COMM_WORLD, (MPI_Comm*) &world); */
-  world = (comm_ext)MPI_COMM_WORLD;
+  world = (comm_ext)meshComm; // MPI_COMM_WORLD;
   
   comm_init(&com, world);
 
