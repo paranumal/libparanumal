@@ -278,7 +278,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   kernelInfo["defines/" "p_ubar"]= ins->ubar;
   kernelInfo["defines/" "p_vbar"]= ins->vbar;
   kernelInfo["defines/" "p_wbar"]= ins->wbar;
-  kernelInfo["defines/" "p_nu"]= ins->nu;
+  kernelInfo["defines/" "p_nu"]  = ins->nu;
 
   kernelInfo["defines/" "p_NTfields"]= ins->NTfields;
   kernelInfo["defines/" "p_NVfields"]= ins->NVfields;
