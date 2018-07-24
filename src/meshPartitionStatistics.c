@@ -7,9 +7,8 @@ void meshPartitionStatistics(mesh_t *mesh){
 
   /* get MPI rank and size */
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  
+  rank = mesh->rank;
+  size = mesh->size;
   
   /* now gather statistics on connectivity between processes */
   int *comms = (int*) calloc(size, sizeof(int));
@@ -31,7 +30,7 @@ void meshPartitionStatistics(mesh_t *mesh){
       ++Nmessages;
 
   for(int r=0;r<size;++r){
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(mesh->comm);
     if(r==rank){
       fflush(stdout);
       printf("r: %02d [", rank);

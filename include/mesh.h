@@ -589,10 +589,11 @@ typedef struct {
 void mysort(hlong *data, int N, const char *order);
 
 // sort entries in an array in parallel
-void parallelSort(int N, void *vv, size_t sz,
-    int (*compare)(const void *, const void *),
-    void (*match)(void *, void *)
-    );
+void parallelSort(int size, int rank, MPI_Comm comm,
+		  int N, void *vv, size_t sz,
+		  int (*compare)(const void *, const void *),
+		  void (*match)(void *, void *)
+		  );
 
 #define mymax(a,b) (((a)>(b))?(a):(b))
 #define mymin(a,b) (((a)<(b))?(a):(b))

@@ -8,8 +8,8 @@
 dfloat meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels, dfloat finalTime) {
 
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = mesh->rank;
+  size = mesh->size;
 
   //find global min and max dt
   dfloat dtmin, dtmax;
@@ -20,8 +20,8 @@ dfloat meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels, dfloat finalT
     dtmax = mymax(dtmax,EToDT[e]);
   }
   dfloat dtGmin, dtGmax;
-  MPI_Allreduce(&dtmin, &dtGmin, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);    
-  MPI_Allreduce(&dtmax, &dtGmax, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);    
+  MPI_Allreduce(&dtmin, &dtGmin, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);    
+  MPI_Allreduce(&dtmax, &dtGmax, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);    
 
 
   if (rank==0) {
@@ -78,7 +78,7 @@ dfloat meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels, dfloat finalT
     mesh->MRABNlevels = (mesh->MRABlevel[e]>mesh->MRABNlevels) ? mesh->MRABlevel[e] : mesh->MRABNlevels;
   mesh->MRABNlevels++;
   int localNlevels = mesh->MRABNlevels;
-  MPI_Allreduce(&localNlevels, &(mesh->MRABNlevels), 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);    
+  MPI_Allreduce(&localNlevels, &(mesh->MRABNlevels), 1, MPI_INT, MPI_MAX, mesh->comm);    
   // mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
 
   printf("MRABNlevels %d \n", mesh->MRABNlevels);
@@ -147,16 +147,16 @@ dfloat meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels, dfloat finalT
     printf("| Rank | Level | Nelements | Level/Level Boundary Elements | \n");
     printf("------------------------------------------------------------\n");
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   for (int r =0;r<size;r++) {
     if (r==rank) {
       for (int lev =0; lev<mesh->MRABNlevels; lev++) 
         printf("|  %d,    %d,      %d,        %d     \n", rank, lev, mesh->MRABNelements[lev], mesh->MRABNhaloElements[lev]);
       printf("------------------------------------------------------------\n");
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(mesh->comm);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
 
 
   return dtGmin;
@@ -169,8 +169,8 @@ dfloat meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels, dfloat finalT
 void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
 
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(mesh->comm, &rank);
+  MPI_Comm_size(mesh->comm, &size);
 
   //find global min and max dt
   dfloat dtmin, dtmax;
@@ -181,8 +181,8 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     dtmax = mymax(dtmax,EToDT[e]);
   }
   dfloat dtGmin, dtGmax;
-  MPI_Allreduce(&dtmin, &dtGmin, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);    
-  MPI_Allreduce(&dtmax, &dtGmax, 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);    
+  MPI_Allreduce(&dtmin, &dtGmin, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);    
+  MPI_Allreduce(&dtmax, &dtGmax, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);    
 
 
   if (rank==0) {
@@ -239,7 +239,7 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     mesh->MRABNlevels = (mesh->MRABlevel[e]>mesh->MRABNlevels) ? mesh->MRABlevel[e] : mesh->MRABNlevels;
   mesh->MRABNlevels++;
   int localNlevels = mesh->MRABNlevels;
-  MPI_Allreduce(&localNlevels, &(mesh->MRABNlevels), 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);    
+  MPI_Allreduce(&localNlevels, &(mesh->MRABNlevels), 1, MPI_INT, MPI_MAX, mesh->comm);    
   mesh->NtimeSteps = mesh->finalTime/(pow(2,mesh->MRABNlevels-1)*dtGmin);
 
   printf("MRABNlevels %d \n", mesh->MRABNlevels);
@@ -308,15 +308,15 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     printf("| Rank | Level | Nelements | Level/Level Boundary Elements | \n");
     printf("------------------------------------------------------------\n");
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   for (int r =0;r<size;r++) {
     if (r==rank) {
       for (int lev =0; lev<mesh->MRABNlevels; lev++) 
         printf("|  %d,    %d,      %d,        %d     \n", rank, lev, mesh->MRABNelements[lev], mesh->MRABNhaloElements[lev]);
       printf("------------------------------------------------------------\n");
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(mesh->comm);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
 }
 #endif

@@ -41,8 +41,8 @@ void meshBuildMRABClusters3D(mesh3D *mesh, int lev, dfloat *weights, int *levels
 
   int rank, size;
 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = mesh->rank;
+  size = mesh->size;
 
   // minimum {vertex id % size}
   int *Nsend = (int*) calloc(size, sizeof(int));
@@ -106,7 +106,7 @@ void meshBuildMRABClusters3D(mesh3D *mesh, int lev, dfloat *weights, int *levels
       }    
     }
 
-    MPI_Allreduce(&rankDone, &allDone, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&rankDone, &allDone, 1, MPI_INT, MPI_SUM, mesh->comm);
     allDone /= size;
   }
 
@@ -130,7 +130,7 @@ void meshBuildMRABClusters3D(mesh3D *mesh, int lev, dfloat *weights, int *levels
   // exchange byte counts 
   MPI_Alltoall(Nsend, 1, MPI_INT,
          Nrecv, 1, MPI_INT,
-         MPI_COMM_WORLD);
+         mesh->comm);
   
   // count incoming faces
   int allNrecv = 0;
@@ -149,7 +149,7 @@ void meshBuildMRABClusters3D(mesh3D *mesh, int lev, dfloat *weights, int *levels
   // exchange parallel faces
   MPI_Alltoallv(*elements, Nsend, sendOffsets, MPI_CHAR,
       recvElements, Nrecv, recvOffsets, MPI_CHAR,
-      MPI_COMM_WORLD);
+      mesh->comm);
 
   free(*elements);
   *elements = recvElements;

@@ -57,10 +57,9 @@ void meshMRABWeightedPartition3D(mesh3D *mesh, dfloat *weights,
                           // min_{ranks} totalWeight > TOL*max_{ranks} totalWeight => accepted
 
   int rank, size;
-
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
+  rank = mesh->rank;
+  size = mesh->size;
+  
   int Nelements, Nclusters;
 
   cElement_t *elements, *acceptedPartition;

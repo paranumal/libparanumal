@@ -12,13 +12,13 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = mesh->rank;
+  size = mesh->size;
 
   long int hostId = gethostid();
 
   long int* hostIds = (long int*) calloc(size,sizeof(long int));
-  MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,MPI_COMM_WORLD);
+  MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,mesh->comm);
 
   int device_id = 0;
   int totalDevices = 0;

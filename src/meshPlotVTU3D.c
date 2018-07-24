@@ -8,7 +8,7 @@
 void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, int fld){
   
   int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  rank = mesh->rank;
 
   FILE *fp;
   char fileName[BUFSIZ];

@@ -15,7 +15,7 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
                                       int verbose) { 
 
   int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  rank = mesh->rank;
 
   ogs_t *ogs = (ogs_t*) calloc(1, sizeof(ogs_t));
 
