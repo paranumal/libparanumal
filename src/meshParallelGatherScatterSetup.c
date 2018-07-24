@@ -140,7 +140,8 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
   
   meshParallelGather(mesh, ogs, ogs->o_invDegree, ogs->o_gatherInvDegree);
 
-  ogs->o_gatherInvDegree.copyTo(ogs->gatherInvDegree);
+  if(ogs->Ngather)
+    ogs->o_gatherInvDegree.copyTo(ogs->gatherInvDegree);
 
   meshParallelScatter(mesh, ogs, ogs->o_gatherInvDegree, ogs->o_invDegree);
 
@@ -152,8 +153,11 @@ ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
   for(dlong n=0;n<ogs->Ngather;++n)
     ogs->gatherInvDegree[n] = 1./ogs->gatherInvDegree[n];
 
-  ogs->o_gatherInvDegree.copyFrom(ogs->gatherInvDegree);
-  ogs->o_invDegree.copyFrom(ogs->invDegree);
+  if(ogs->Ngather)
+    ogs->o_gatherInvDegree.copyFrom(ogs->gatherInvDegree);
+
+  if(Nlocal)
+    ogs->o_invDegree.copyFrom(ogs->invDegree);
 
   free(baseIds  );
   free(localIds );
