@@ -50,6 +50,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 #else
     mesh->rank = baseElliptic->mesh->rank;
     mesh->size = baseElliptic->mesh->size;
+
+    MPI_Comm_dup(baseElliptic->mesh->comm, &(mesh->comm));
     
     mesh->dim = baseElliptic->mesh->dim;
     mesh->Nverts        = baseElliptic->mesh->Nverts;
