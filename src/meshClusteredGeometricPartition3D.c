@@ -41,7 +41,8 @@ typedef struct {
 unsigned long long int mortonIndex3D(unsigned int ix, unsigned int iy, unsigned int iz);
 void bogusMatch(void *a, void *b);
 
-dfloat improveClusteredPartition3D(int *Nclusters, parallelCluster_t **parallelClusters);
+dfloat improveClusteredPartition3D(int rank, int size, MPI_Comm comm,
+				   int *Nclusters, parallelCluster_t **parallelClusters);
 
 
 // compare the Morton indices for two clusters
@@ -237,7 +238,8 @@ dfloat meshClusteredGeometricPartition3D(mesh3D *mesh, int Nclusters, cluster_t 
   parallelClusters = tmpParallelClusters;
 
   //improve the partitioning by exchanging elements between neighboring prcesses
-  dfloat partQuality = improveClusteredPartition3D(&newNclusters, &parallelClusters);
+  dfloat partQuality = improveClusteredPartition3D(mesh->rank, mesh->size, mesh->comm,
+						   &newNclusters, &parallelClusters);
 
   //now that we're partitioned and (hopefully) balance3Dd, send the elements
 
@@ -362,13 +364,9 @@ dfloat meshClusteredGeometricPartition3D(mesh3D *mesh, int Nclusters, cluster_t 
 
 
 //swap clusters between neighboring processes to try and improve the partitioning
-void balance3D(int rankL, int rankR, dfloat *weightL, dfloat *weightR, 
+void balance3D(int rank, int size, MPI_Comm comm,
+	       int rankL, int rankR, dfloat *weightL, dfloat *weightR, 
               int *Nclusters, parallelCluster_t **parallelClusters) {
-  
-  int rank, size;
-
-  MPI_Comm_rank(mesh->comm, &rank);
-  MPI_Comm_size(mesh->comm, &size);
   
   int tag = 999;
   MPI_Request recv, send;
@@ -396,25 +394,25 @@ void balance3D(int rankL, int rankR, dfloat *weightL, dfloat *weightR,
         }
       }
 
-      MPI_Isend(&Nsend, 1, MPI_INT,  rankR, tag, mesh->comm, &send);
+      MPI_Isend(&Nsend, 1, MPI_INT,  rankR, tag, comm, &send);
       MPI_Wait(&send, &status);
 
       if (Nsend) {
         *Nclusters -= Nsend;
 
-        MPI_Isend((*parallelClusters) + *Nclusters, Nsend*sizeof(parallelCluster_t), MPI_CHAR,  rankR, tag, mesh->comm, &send);
+        MPI_Isend((*parallelClusters) + *Nclusters, Nsend*sizeof(parallelCluster_t), MPI_CHAR,  rankR, tag, comm, &send);
         MPI_Wait(&send, &status);
       }
     } else if ( *weightL < *weightR) {
       int Nrecv;
-      MPI_Irecv(&Nrecv, 1, MPI_INT,  rankR, tag, mesh->comm, &recv);
+      MPI_Irecv(&Nrecv, 1, MPI_INT,  rankR, tag, comm, &recv);
       MPI_Wait(&recv, &status);
 
       if (Nrecv) {
         parallelCluster_t *newParallelClusters = (parallelCluster_t *) calloc(*Nclusters+Nrecv,sizeof(parallelCluster_t));
         memcpy(newParallelClusters,*parallelClusters,*Nclusters*sizeof(parallelCluster_t));
 
-        MPI_Irecv(newParallelClusters+*Nclusters, Nrecv*sizeof(parallelCluster_t), MPI_CHAR,  rankR, tag, mesh->comm, &recv);
+        MPI_Irecv(newParallelClusters+*Nclusters, Nrecv*sizeof(parallelCluster_t), MPI_CHAR,  rankR, tag, comm, &recv);
         MPI_Wait(&recv, &status);
         
         for (int n=*Nclusters;n<*Nclusters+Nrecv;n++) {
@@ -450,7 +448,7 @@ void balance3D(int rankL, int rankR, dfloat *weightL, dfloat *weightR,
         }
       }
 
-      MPI_Isend(&Nsend, 1, MPI_INT,  rankL, tag, mesh->comm, &send);
+      MPI_Isend(&Nsend, 1, MPI_INT,  rankL, tag, comm, &send);
       MPI_Wait(&send, &status);
 
       if (Nsend) {
@@ -458,7 +456,7 @@ void balance3D(int rankL, int rankR, dfloat *weightL, dfloat *weightR,
         parallelCluster_t *newParallelClusters = (parallelCluster_t *) calloc(*Nclusters,sizeof(parallelCluster_t));
         memcpy(newParallelClusters,(*parallelClusters) + Nsend,*Nclusters*sizeof(parallelCluster_t));
 
-        MPI_Isend(*parallelClusters, Nsend*sizeof(parallelCluster_t), MPI_CHAR,  rankL, tag, mesh->comm, &send);
+        MPI_Isend(*parallelClusters, Nsend*sizeof(parallelCluster_t), MPI_CHAR,  rankL, tag, comm, &send);
         MPI_Wait(&send, &status);
 
         free(*parallelClusters);
@@ -466,13 +464,13 @@ void balance3D(int rankL, int rankR, dfloat *weightL, dfloat *weightR,
       }
     } else if (*weightL > *weightR) {
       int Nrecv;
-      MPI_Irecv(&Nrecv, 1, MPI_INT,  rankL, tag, mesh->comm, &recv);
+      MPI_Irecv(&Nrecv, 1, MPI_INT,  rankL, tag, comm, &recv);
       MPI_Wait(&recv, &status);
 
       if (Nrecv) {
         parallelCluster_t *tmpParallelClusters = (parallelCluster_t *) calloc(Nrecv,sizeof(parallelCluster_t));
 
-        MPI_Irecv(tmpParallelClusters, Nrecv*sizeof(parallelCluster_t), MPI_CHAR, rankL, tag, mesh->comm, &recv);
+        MPI_Irecv(tmpParallelClusters, Nrecv*sizeof(parallelCluster_t), MPI_CHAR, rankL, tag, comm, &recv);
         MPI_Wait(&recv, &status);
 
         for (int n=0;n<Nrecv;n++) {
@@ -495,12 +493,9 @@ void balance3D(int rankL, int rankR, dfloat *weightL, dfloat *weightR,
 }
 
 
-dfloat improveClusteredPartition3D(int *Nclusters, parallelCluster_t **parallelClusters){
+dfloat improveClusteredPartition3D(int rank, int size, MPI_Comm comm,
+				   int *Nclusters, parallelCluster_t **parallelClusters){
 
-  int rank, size;
-
-  MPI_Comm_rank(mesh->comm, &rank);
-  MPI_Comm_size(mesh->comm, &size);
   int tag = 999;
 
   MPI_Request recv, send;
@@ -515,43 +510,43 @@ dfloat improveClusteredPartition3D(int *Nclusters, parallelCluster_t **parallelC
     for (int n=0; n<*Nclusters; n++) 
       localTotalWeight += (*parallelClusters)[n].weight;
     
-    MPI_Allgather(&localTotalWeight, 1, MPI_DFLOAT, totalWeights, 1, MPI_DFLOAT, mesh->comm);
+    MPI_Allgather(&localTotalWeight, 1, MPI_DFLOAT, totalWeights, 1, MPI_DFLOAT, comm);
 
     dfloat maxTotalWeight, minTotalWeight;
-    MPI_Allreduce(&localTotalWeight, &minTotalWeight, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
-    MPI_Allreduce(&localTotalWeight, &maxTotalWeight, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
+    MPI_Allreduce(&localTotalWeight, &minTotalWeight, 1, MPI_DFLOAT, MPI_MIN, comm);
+    MPI_Allreduce(&localTotalWeight, &maxTotalWeight, 1, MPI_DFLOAT, MPI_MAX, comm);
 
     quality = minTotalWeight/maxTotalWeight;
 
     //ends
     if ((rank==0)||(rank==size-1)) 
-      balance3D(size-1,0,totalWeights+size-1, totalWeights+0, Nclusters,parallelClusters);
+      balance3D(rank, size, comm,size-1,0,totalWeights+size-1, totalWeights+0, Nclusters,parallelClusters);
 
     //resync
     localTotalWeight = totalWeights[rank];
-    MPI_Allgather(&localTotalWeight, 1, MPI_DFLOAT, totalWeights, 1, MPI_DFLOAT, mesh->comm);
+    MPI_Allgather(&localTotalWeight, 1, MPI_DFLOAT, totalWeights, 1, MPI_DFLOAT, comm);
 
     //evens
     if (( (rank%2) == 0)&&(rank+1 < size))
-      balance3D(rank,rank+1,totalWeights+rank, totalWeights+rank+1, Nclusters,parallelClusters);
+      balance3D(rank, size, comm,rank,rank+1,totalWeights+rank, totalWeights+rank+1, Nclusters,parallelClusters);
     if (( (rank%2) == 1)&&(rank-1 > -1))
-      balance3D(rank-1,rank,totalWeights+rank-1, totalWeights+rank, Nclusters,parallelClusters);
+      balance3D(rank, size, comm,rank-1,rank,totalWeights+rank-1, totalWeights+rank, Nclusters,parallelClusters);
 
     //resync
     localTotalWeight = totalWeights[rank];
-    MPI_Allgather(&localTotalWeight, 1, MPI_DFLOAT, totalWeights, 1, MPI_DFLOAT, mesh->comm);
+    MPI_Allgather(&localTotalWeight, 1, MPI_DFLOAT, totalWeights, 1, MPI_DFLOAT, comm);
 
     //odds
     if (((rank%2) == 0)&&(rank-1 > -1))
-      balance3D(rank-1,rank,totalWeights+rank-1, totalWeights+rank, Nclusters,parallelClusters);
+      balance3D(rank, size, comm,rank-1,rank,totalWeights+rank-1, totalWeights+rank, Nclusters,parallelClusters);
     if (((rank%2) == 1)&&(rank+1 < size))
-      balance3D(rank,rank+1,totalWeights+rank, totalWeights+rank+1, Nclusters,parallelClusters);
+      balance3D(rank, size, comm,rank,rank+1,totalWeights+rank, totalWeights+rank+1, Nclusters,parallelClusters);
 
     //resync
     localTotalWeight = totalWeights[rank];
-    MPI_Allgather(&localTotalWeight, 1, MPI_DFLOAT, totalWeights, 1, MPI_DFLOAT, mesh->comm);
-    MPI_Allreduce(&localTotalWeight, &minTotalWeight, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
-    MPI_Allreduce(&localTotalWeight, &maxTotalWeight, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
+    MPI_Allgather(&localTotalWeight, 1, MPI_DFLOAT, totalWeights, 1, MPI_DFLOAT, comm);
+    MPI_Allreduce(&localTotalWeight, &minTotalWeight, 1, MPI_DFLOAT, MPI_MIN, comm);
+    MPI_Allreduce(&localTotalWeight, &maxTotalWeight, 1, MPI_DFLOAT, MPI_MAX, comm);
 
     dfloat newQuality = minTotalWeight/maxTotalWeight;
 
