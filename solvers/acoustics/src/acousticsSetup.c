@@ -16,7 +16,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   acoustics->Nblock = (Ntotal+blockSize-1)/blockSize;
   
   hlong localElements = (hlong) mesh->Nelements;
-  MPI_Allreduce(&localElements, &(acoustics->totalElements), 1, MPI_HLONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&localElements, &(acoustics->totalElements), 1, MPI_HLONG, MPI_SUM, mesh->comm);
 
   // viscosity
   int check;
@@ -133,7 +133,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   dfloat dt = cfl*dtAdv;
   
   // MPI_Allreduce to get global minimum dt
-  MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
   
   //
   newOptions.getArgs("FINAL TIME", mesh->finalTime);
