@@ -37,7 +37,7 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
   }
 
   dfloat globalwab = 0;
-  MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
   return globalwab;
 }
@@ -67,7 +67,7 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   }
 
   dfloat globalwab = 0;
-  MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
   return globalwab;
 }
@@ -94,7 +94,7 @@ dfloat ellipticInnerProduct(elliptic_t *elliptic, occa::memory &o_a, occa::memor
   }
 
   dfloat globalab = 0;
-  MPI_Allreduce(&ab, &globalab, 1, MPI_DFLOAT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&ab, &globalab, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
   return globalab;
 }

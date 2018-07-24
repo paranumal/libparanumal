@@ -150,7 +150,7 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh->comm);
 
   // find send and recv offsets for gather
   *nnz = 0;
@@ -165,7 +165,7 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
                         (*A), ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
-                        MPI_COMM_WORLD);
+                        mesh->comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
   qsort((*A), *nnz, sizeof(nonZero_t), parallelCompareRowColumn);
@@ -187,7 +187,7 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
 
   if(mesh->rank==0) printf("done.\n");
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
@@ -332,7 +332,7 @@ void ellipticBuildContinuousQuad2D(elliptic_t *elliptic, dfloat lambda, nonZero_
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh->comm);
 
   // find send and recv offsets for gather
   *nnz = 0;
@@ -347,7 +347,7 @@ void ellipticBuildContinuousQuad2D(elliptic_t *elliptic, dfloat lambda, nonZero_
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
                         (*A), ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
-                        MPI_COMM_WORLD);
+                        mesh->comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
   qsort((*A), *nnz, sizeof(nonZero_t), parallelCompareRowColumn);
@@ -369,7 +369,7 @@ void ellipticBuildContinuousQuad2D(elliptic_t *elliptic, dfloat lambda, nonZero_
 
   if(mesh->rank==0) printf("done.\n");
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
@@ -493,7 +493,7 @@ void ellipticBuildContinuousTet3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh->comm);
 
   // find send and recv offsets for gather
   *nnz = 0;
@@ -508,7 +508,7 @@ void ellipticBuildContinuousTet3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
                         (*A), ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
-                        MPI_COMM_WORLD);
+                        mesh->comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
   qsort((*A), *nnz, sizeof(nonZero_t), parallelCompareRowColumn);
@@ -530,7 +530,7 @@ void ellipticBuildContinuousTet3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
 
   if(mesh->rank==0) printf("done.\n");
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
@@ -707,7 +707,7 @@ void ellipticBuildContinuousHex3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh->comm);
 
   // find send and recv offsets for gather
   *nnz = 0;
@@ -722,7 +722,7 @@ void ellipticBuildContinuousHex3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
                         (*A), ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
-                        MPI_COMM_WORLD);
+                        mesh->comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
   qsort((*A), *nnz, sizeof(nonZero_t), parallelCompareRowColumn);
@@ -744,7 +744,7 @@ void ellipticBuildContinuousHex3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
 
   if(mesh->rank==0) printf("done.\n");
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(mesh->comm);
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);

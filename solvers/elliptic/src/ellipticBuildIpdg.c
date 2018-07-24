@@ -57,7 +57,7 @@ void ellipticBuildIpdgTri2D(elliptic_t *elliptic, int basisNp, dfloat *basis,
   hlong *globalIds = (hlong *) calloc((Nelements+mesh->totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, MPI_COMM_WORLD);
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh->comm);
   for(int r=0;r<mesh->size;++r)
     globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
 
@@ -65,7 +65,7 @@ void ellipticBuildIpdgTri2D(elliptic_t *elliptic, int basisNp, dfloat *basis,
   dlong *rankNelements = (dlong*) calloc(mesh->size, sizeof(dlong));
   hlong *rankStarts = (hlong*) calloc(mesh->size+1, sizeof(hlong));
   MPI_Allgather(&Nelements, 1, MPI_DLONG,
-    rankNelements, 1, MPI_DLONG, MPI_COMM_WORLD);
+    rankNelements, 1, MPI_DLONG, mesh->comm);
   //find offsets
   for(int r=0;r<mesh->size;++r){
     rankStarts[r+1] = rankStarts[r]+rankNelements[r];
@@ -340,7 +340,7 @@ void ellipticBuildIpdgQuad2D(elliptic_t *elliptic, int basisNp, dfloat *basis,
   hlong *globalIds = (hlong *) calloc((Nelements+mesh->totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, MPI_COMM_WORLD);
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh->comm);
   for(int r=0;r<mesh->size;++r)
     globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
 
@@ -348,7 +348,7 @@ void ellipticBuildIpdgQuad2D(elliptic_t *elliptic, int basisNp, dfloat *basis,
   dlong *rankNelements = (dlong*) calloc(mesh->size, sizeof(dlong));
   hlong *rankStarts = (hlong*) calloc(mesh->size+1, sizeof(hlong));
   MPI_Allgather(&Nelements, 1, MPI_DLONG,
-    rankNelements, 1, MPI_DLONG, MPI_COMM_WORLD);
+    rankNelements, 1, MPI_DLONG, mesh->comm);
   //find offsets
   for(int r=0;r<mesh->size;++r){
     rankStarts[r+1] = rankStarts[r]+rankNelements[r];
@@ -565,7 +565,7 @@ void ellipticBuildIpdgTet3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
   hlong *globalIds = (hlong *) calloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, MPI_COMM_WORLD);
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh->comm);
     for(int r=0;r<mesh->size;++r)
       globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
 
@@ -574,7 +574,7 @@ void ellipticBuildIpdgTet3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
   hlong *rankStarts = (hlong*) calloc(mesh->size+1, sizeof(hlong));
   dlong Nelements = mesh->Nelements;
   MPI_Allgather(&(mesh->Nelements), 1, MPI_DLONG,
-                      rankNelements, 1, MPI_DLONG, MPI_COMM_WORLD);
+                      rankNelements, 1, MPI_DLONG, mesh->comm);
   //find offsets
   for(int r=0;r<mesh->size;++r){
     rankStarts[r+1] = rankStarts[r]+rankNelements[r];
@@ -847,7 +847,7 @@ void ellipticBuildIpdgHex3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
   hlong *globalIds = (hlong *) calloc((Nelements+mesh->totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, MPI_COMM_WORLD);
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh->comm);
   for(int r=0;r<mesh->size;++r)
     globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
 
@@ -855,7 +855,7 @@ void ellipticBuildIpdgHex3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
   dlong *rankNelements = (dlong*) calloc(mesh->size, sizeof(dlong));
   hlong *rankStarts = (hlong*) calloc(mesh->size+1, sizeof(hlong));
   MPI_Allgather(&Nelements, 1, MPI_DLONG,
-    rankNelements, 1, MPI_DLONG, MPI_COMM_WORLD);
+    rankNelements, 1, MPI_DLONG, mesh->comm);
   //find offsets
   for(int r=0;r<mesh->size;++r){
     rankStarts[r+1] = rankStarts[r]+rankNelements[r];

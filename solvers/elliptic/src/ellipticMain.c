@@ -161,7 +161,7 @@ int main(int argc, char **argv){
     }
       
     dfloat globalMaxError = 0;
-    MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
     if(mesh->rank==0)
       fprintf(stderr,"globalMaxError = %g\n", globalMaxError);
       
