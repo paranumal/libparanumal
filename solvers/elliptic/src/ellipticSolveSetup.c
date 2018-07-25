@@ -482,12 +482,12 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       if (   elliptic->elementType == TRIANGLES 
           || elliptic->elementType == TETRAHEDRA) {
         elliptic->precon->SEMFEMInterpKernel =
-          mesh->device.buildKernel(DHOLMES "/okl/ellipticSEMFEMInterp.okl",
+          mesh->device.buildKernel(DELLIPTIC "/okl/ellipticSEMFEMInterp.okl",
                      "ellipticSEMFEMInterp",
                      kernelInfo);
 
         elliptic->precon->SEMFEMAnterpKernel =
-          mesh->device.buildKernel(DHOLMES "/okl/ellipticSEMFEMAnterp.okl",
+          mesh->device.buildKernel(DELLIPTIC "/okl/ellipticSEMFEMAnterp.okl",
                      "ellipticSEMFEMAnterp",
                      kernelInfo);
       }
