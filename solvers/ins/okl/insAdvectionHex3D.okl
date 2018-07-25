@@ -992,171 +992,167 @@
 }
 #endif
 
-#define quadSurfaceTerms(face)                           \
-{                                                                       \
-  for(int j=0;j<p_cubNq;++j;@inner(1)){\
-    for(int i=0;i<p_cubNq;++i;@inner(0)){\
-      if(i<p_Nq && j<p_Nq){\
-        const dlong id  = e*p_Nfp*p_Nfaces + face*p_Nfp + j*p_Nq +i;\
-        const dlong idM = vmapM[id];\
-        const dlong idP = vmapP[id];\
-        s_UM[j][i] = U[idM+0*offset];\
-        s_VM[j][i] = U[idM+1*offset];\
-        s_WM[j][i] = U[idM+2*offset];\
-        s_UP[j][i] = U[idP+0*offset];\
-        s_VP[j][i] = U[idP+1*offset];\
-        s_WP[j][i] = U[idP+2*offset];\
-      }\
-    }\
-  }\
-\
-  @barrier("local");\
-\
-  for(int j=0;j<p_cubNq;++j;@inner(1)){\
-    for(int i=0;i<p_cubNq;++i;@inner(0)){\
-      if (j<p_Nq) {\
-        r_UMn = 0.; r_VMn = 0.; r_WMn = 0.;\
-        r_UPn = 0.; r_VPn = 0.; r_WPn = 0.;\
-        #pragma unroll p_Nq\
-        for (int n=0;n<p_Nq;n++) {\
-          const dfloat Ini = s_cubInterpT[n][i];\
-          r_UMn  += Ini*s_UM[j][n];\
-          r_VMn  += Ini*s_VM[j][n];\
-          r_WMn  += Ini*s_WM[j][n];\
-          r_UPn  += Ini*s_UP[j][n];\
-          r_VPn  += Ini*s_VP[j][n];\
-          r_WPn  += Ini*s_WP[j][n];\
-        }\
-      }\
-    }\
-  }\
-\
-  @barrier("local");\
-\
-  for(int j=0;j<p_cubNq;++j;@inner(1)){\
-    for(int i=0;i<p_cubNq;++i;@inner(0)){\
-      if (j<p_Nq) {\
-        s_UM[j][i] = r_UMn;\
-        s_VM[j][i] = r_VMn;\
-        s_WM[j][i] = r_WMn;\
-        s_UP[j][i] = r_UPn;\
-        s_VP[j][i] = r_VPn;\
-        s_WP[j][i] = r_WPn;\
-      }\
-    }\
-  }\
-\
-  @barrier("local");\
-\
-  for(int j=0;j<p_cubNq;++j;@inner(1)){\
-    for(int i=0;i<p_cubNq;++i;@inner(0)){\
-      r_UMn = 0.; r_VMn = 0.; r_WMn = 0.;\
-      r_UPn = 0.; r_VPn = 0.; r_WPn = 0.;\
-      #pragma unroll p_Nq\
-      for (int n=0;n<p_Nq;n++) {\
-        const dfloat Inj = s_cubInterpT[n][j];\
-        r_UMn += Inj*s_UM[n][i];\
-        r_VMn += Inj*s_VM[n][i];\
-        r_WMn += Inj*s_WM[n][i];\
-        r_UPn += Inj*s_UP[n][i];\
-        r_VPn += Inj*s_VP[n][i];\
-        r_WPn += Inj*s_WP[n][i];\
-      }\
-    }\
-  }\
-\
-  @barrier("local");\
-\
-  for(int j=0;j<p_cubNq;++j;@inner(1)){\
-    for(int i=0;i<p_cubNq;++i;@inner(0)){\
-      const dlong sk = e*p_cubNfp*p_Nfaces + face*p_cubNfp + j*p_cubNq + i;\
-      const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];\
-      const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];\
-      const dfloat nz = cubsgeo[sk*p_Nsgeo+p_NZID];\
-      const dfloat WsJ = cubsgeo[sk*p_Nsgeo+p_WSJID];\
-      const dfloat uM = r_UMn, vM = r_VMn, wM = r_WMn;\
-            dfloat uP = r_UPn, vP = r_VPn, wP = r_WPn;\
-\
-      const int bc = EToB[face+p_Nfaces*e];\
-      if(bc>0) {\
-        insVelocityDirichletConditions3D(bc, time, intx[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i],\
-                                                   inty[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i],\
-                                                   intz[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);\
-      }\
-\
-      const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);\
-      const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);\
-      const dfloat unMax = (unM > unP) ? unM : unP;\
-\
-      s_fluxNU[j][i] = WsJ*(.5f*(nx*(uP*uP + uM*uM)\
-                               + ny*(uP*vP + uM*vM)\
-                               + nz*(uP*wP + uM*wM)  + unMax*(uM-uP) ));\
-      s_fluxNV[j][i] = WsJ*(.5f*(nx*(vP*uP + vM*uM)\
-                               + ny*(vP*vP + vM*vM)\
-                               + nz*(vP*wP + vM*wM)  + unMax*(vM-vP) ));\
-      s_fluxNW[j][i] = WsJ*(.5f*(nx*(wP*uP + wM*uM)\
-                               + ny*(wP*vP + wM*vM)\
-                               + nz*(wP*wP + wM*wM)  + unMax*(wM-wP) ));\
-    }\
-  }\
-\
-  @barrier("local");\
-\
-  for(int j=0;j<p_cubNq;++j;@inner(1)){\
-    for(int i=0;i<p_cubNq;++i;@inner(0)){\
-      if (j<p_Nq) {\
-        r_NUn = 0.; r_NVn = 0.; r_NWn = 0.;\
-        #pragma unroll p_cubNq\
-        for (int n=0;n<p_cubNq;n++) {\
-          const dfloat Pnj = s_cubProjectT[n][j];\
-          r_NUn  += Pnj*s_fluxNU[n][i];\
-          r_NVn  += Pnj*s_fluxNV[n][i];\
-          r_NWn  += Pnj*s_fluxNW[n][i];\
-        }\
-      }\
-    }\
-  }\
-\
-  @barrier("local");\
-\
-  for(int j=0;j<p_cubNq;++j;@inner(1)){\
-    for(int i=0;i<p_cubNq;++i;@inner(0)){\
-      if (j<p_Nq) {\
-        s_fluxNU[j][i] = r_NUn;\
-        s_fluxNV[j][i] = r_NVn;\
-        s_fluxNW[j][i] = r_NWn;\
-      }\
-    }\
-  }\
-  @barrier("local");\
-\
-  for(int j=0;j<p_cubNq;++j;@inner(1)){\
-    for(int i=0;i<p_cubNq;++i;@inner(0)){\
-      if (j<p_Nq && i<p_Nq) {\
-        r_NUn = 0.; r_NVn = 0.; r_NWn = 0.;\
-        #pragma unroll p_cubNq\
-        for(int n=0;n<p_cubNq;++n){\
-          const dfloat Pni = s_cubProjectT[n][i];\
-          r_NUn += Pni*s_fluxNU[j][n];\
-          r_NVn += Pni*s_fluxNV[j][n];\
-          r_NWn += Pni*s_fluxNW[j][n];\
-        }\
-      }\
-    }\
-  }\
-\
-  @barrier("local");\
-\
-  for(int j=0;j<p_cubNq;++j;@inner(1)){\
-    for(int i=0;i<p_cubNq;++i;@inner(0)){\
-      if (j<p_Nq && i<p_Nq) {\
-        s_fluxNU[j][i] = r_NUn;\
-        s_fluxNV[j][i] = r_NVn;\
-        s_fluxNW[j][i] = r_NWn;\
-      }\
-    }\
-  }\
-}
+#define quadSurfaceTerms(face)						\
+  {									\
+    for(int j=0;j<p_cubNq;++j;@inner(1)){				\
+      for(int i=0;i<p_cubNq;++i;@inner(0)){				\
+	if(i<p_Nq && j<p_Nq){						\
+	  const dlong id  = e*p_Nfp*p_Nfaces + face*p_Nfp + j*p_Nq +i;	\
+	  const dlong idM = vmapM[id];					\
+	  const dlong idP = vmapP[id];					\
+	  s_UM[j][i] = U[idM+0*offset];					\
+	  s_VM[j][i] = U[idM+1*offset];					\
+	  s_WM[j][i] = U[idM+2*offset];					\
+	  s_UP[j][i] = U[idP+0*offset];					\
+	  s_VP[j][i] = U[idP+1*offset];					\
+	  s_WP[j][i] = U[idP+2*offset];					\
+	}								\
+      }									\
+    }									\
+									\
+    @barrier("local");							\
+									\
+    for(int j=0;j<p_cubNq;++j;@inner(1)){				\
+      for(int i=0;i<p_cubNq;++i;@inner(0)){				\
+	if (j<p_Nq) {							\
+	  r_UMn = 0.; r_VMn = 0.; r_WMn = 0.;				\
+	  r_UPn = 0.; r_VPn = 0.; r_WPn = 0.;				\
+	  for (int n=0;n<p_Nq;n++) {					\
+	    const dfloat Ini = s_cubInterpT[n][i];			\
+	    r_UMn  += Ini*s_UM[j][n];					\
+	    r_VMn  += Ini*s_VM[j][n];					\
+	    r_WMn  += Ini*s_WM[j][n];					\
+	    r_UPn  += Ini*s_UP[j][n];					\
+	    r_VPn  += Ini*s_VP[j][n];					\
+	    r_WPn  += Ini*s_WP[j][n];					\
+	  }								\
+	}								\
+      }									\
+    }									\
+									\
+    @barrier("local");							\
+									\
+    for(int j=0;j<p_cubNq;++j;@inner(1)){				\
+      for(int i=0;i<p_cubNq;++i;@inner(0)){				\
+	if (j<p_Nq) {							\
+	  s_UM[j][i] = r_UMn;						\
+	  s_VM[j][i] = r_VMn;						\
+	  s_WM[j][i] = r_WMn;						\
+	  s_UP[j][i] = r_UPn;						\
+	  s_VP[j][i] = r_VPn;						\
+	  s_WP[j][i] = r_WPn;						\
+	}								\
+      }									\
+    }									\
+									\
+    @barrier("local");							\
+									\
+    for(int j=0;j<p_cubNq;++j;@inner(1)){				\
+      for(int i=0;i<p_cubNq;++i;@inner(0)){				\
+	r_UMn = 0.; r_VMn = 0.; r_WMn = 0.;				\
+	r_UPn = 0.; r_VPn = 0.; r_WPn = 0.;				\
+	for (int n=0;n<p_Nq;n++) {					\
+	  const dfloat Inj = s_cubInterpT[n][j];			\
+	  r_UMn += Inj*s_UM[n][i];					\
+	  r_VMn += Inj*s_VM[n][i];					\
+	  r_WMn += Inj*s_WM[n][i];					\
+	  r_UPn += Inj*s_UP[n][i];					\
+	  r_VPn += Inj*s_VP[n][i];					\
+	  r_WPn += Inj*s_WP[n][i];					\
+	}								\
+      }									\
+    }									\
+									\
+    @barrier("local");							\
+									\
+    for(int j=0;j<p_cubNq;++j;@inner(1)){				\
+      for(int i=0;i<p_cubNq;++i;@inner(0)){				\
+	const dlong sk = e*p_cubNfp*p_Nfaces + face*p_cubNfp + j*p_cubNq + i; \
+	const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];			\
+	const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];			\
+	const dfloat nz = cubsgeo[sk*p_Nsgeo+p_NZID];			\
+	const dfloat WsJ = cubsgeo[sk*p_Nsgeo+p_WSJID];			\
+	const dfloat uM = r_UMn, vM = r_VMn, wM = r_WMn;		\
+	dfloat uP = r_UPn, vP = r_VPn, wP = r_WPn;			\
+									\
+	const int bc = EToB[face+p_Nfaces*e];				\
+	if(bc>0) {							\
+	  insVelocityDirichletConditions3D(bc, time, intx[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i],	\
+					   inty[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], \
+					   intz[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
+	}								\
+									\
+	const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);		\
+	const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);		\
+	const dfloat unMax = (unM > unP) ? unM : unP;			\
+									\
+	s_fluxNU[j][i] = WsJ*(.5f*(nx*(uP*uP + uM*uM)			\
+				   + ny*(uP*vP + uM*vM)			\
+				   + nz*(uP*wP + uM*wM)  + unMax*(uM-uP) )); \
+	s_fluxNV[j][i] = WsJ*(.5f*(nx*(vP*uP + vM*uM)			\
+				   + ny*(vP*vP + vM*vM)			\
+				   + nz*(vP*wP + vM*wM)  + unMax*(vM-vP) )); \
+	s_fluxNW[j][i] = WsJ*(.5f*(nx*(wP*uP + wM*uM)			\
+				   + ny*(wP*vP + wM*vM)			\
+				   + nz*(wP*wP + wM*wM)  + unMax*(wM-wP) )); \
+      }									\
+    }									\
+									\
+    @barrier("local");							\
+									\
+    for(int j=0;j<p_cubNq;++j;@inner(1)){				\
+      for(int i=0;i<p_cubNq;++i;@inner(0)){				\
+	if (j<p_Nq) {							\
+	  r_NUn = 0.; r_NVn = 0.; r_NWn = 0.;				\
+	  for (int n=0;n<p_cubNq;n++) {					\
+	    const dfloat Pnj = s_cubProjectT[n][j];			\
+	    r_NUn  += Pnj*s_fluxNU[n][i];				\
+	    r_NVn  += Pnj*s_fluxNV[n][i];				\
+	    r_NWn  += Pnj*s_fluxNW[n][i];				\
+	  }								\
+	}								\
+      }									\
+    }									\
+									\
+    @barrier("local");							\
+									\
+    for(int j=0;j<p_cubNq;++j;@inner(1)){				\
+      for(int i=0;i<p_cubNq;++i;@inner(0)){				\
+	if (j<p_Nq) {							\
+	  s_fluxNU[j][i] = r_NUn;					\
+	  s_fluxNV[j][i] = r_NVn;					\
+	  s_fluxNW[j][i] = r_NWn;					\
+	}								\
+      }									\
+    }									\
+    @barrier("local");							\
+									\
+    for(int j=0;j<p_cubNq;++j;@inner(1)){				\
+      for(int i=0;i<p_cubNq;++i;@inner(0)){				\
+	if (j<p_Nq && i<p_Nq) {						\
+	  r_NUn = 0.; r_NVn = 0.; r_NWn = 0.;				\
+	  for(int n=0;n<p_cubNq;++n){					\
+	    const dfloat Pni = s_cubProjectT[n][i];			\
+	    r_NUn += Pni*s_fluxNU[j][n];				\
+	    r_NVn += Pni*s_fluxNV[j][n];				\
+	    r_NWn += Pni*s_fluxNW[j][n];				\
+	  }								\
+	}								\
+      }									\
+    }									\
+									\
+    @barrier("local");							\
+									\
+    for(int j=0;j<p_cubNq;++j;@inner(1)){				\
+      for(int i=0;i<p_cubNq;++i;@inner(0)){				\
+	if (j<p_Nq && i<p_Nq) {						\
+	  s_fluxNU[j][i] = r_NUn;					\
+	  s_fluxNV[j][i] = r_NVn;					\
+	  s_fluxNW[j][i] = r_NWn;					\
+	}								\
+      }									\
+    }									\
+  }
 
 @kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
                                             @restrict const  dfloat *  vgeo,
