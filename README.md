@@ -1,13 +1,13 @@
 # holmes
 It's elementary.
 
-## Clone: Holmes
+## 1. Clone: Holmes
 git clone https://github.com/tcew/holmes
 
-## OCCA dependency (currently OCCA 1.0 forked by Noel Chalmers)
+## 2. OCCA dependency (currently OCCA 1.0 forked by Noel Chalmers)
 git clone https://github.com/noelchalmers/occa
 
-## Build OCCA
+## 3. Build OCCA
 cd occa
 
 export OCCA_DIR=`pwd`
@@ -18,12 +18,13 @@ make -j
 
 cd ../
 
-## build holmes elliptic example
-cd holmes
-
-cd solvers/elliptic
+## 4. Build holmes elliptic example
+cd holmes/solvers/elliptic
 
 make -j
 
-## run elliptic example: 2 MPI processes with settings in supplied setup file
+## 5-1. Run elliptic example with provided quadrilateral set up file on a single device:
+./ellipticMain setups/setupQuad2D.rc
+
+## 5-2. Run the same example with two devices:
 mpiexec -n 2 ./ellipticMain setups/setupQuad2D.rc
