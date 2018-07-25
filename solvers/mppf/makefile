@@ -50,7 +50,7 @@ $(ELLIPTICDIR)/ellipticPrecon.h
 # list of objects to be compiled
 AOBJS    = \
 ./src/mppfSetup.o \
-#./src/insPlotVTU.o \
+./src/mppfPlotVTU.o \
 #./src/insError.o \
 #./src/insForces.o \
 #./src/insComputeDt.o \

@@ -16,9 +16,11 @@ typedef struct {
   elliptic_t *vSolver;
   elliptic_t *wSolver;
   elliptic_t *pSolver;
+  elliptic_t *phiSolver;
+  elliptic_t *psiSolver;
 
   setupAide options;
-  setupAide vOptions, pOptions; 	
+  setupAide vOptions, pOptions, phiOptions, psiOptions; 	
 
   // INS SOLVER OCCA VARIABLES
   dfloat rho1, mu1, rho2, mu2, Re;
@@ -35,7 +37,11 @@ typedef struct {
   int tstep, frame;
   dfloat g0, ig0, lambda;      // helmhotz solver -lap(u) + lamda u
   dfloat startTime;   
-  dfloat finalTime;   
+  dfloat finalTime; 
+
+  // Cahn-Hilliard
+  dfloat chM, chL, chS, chA; // Mobility, energy Density (lamda), derived parameters (S and alpha)
+  dfloat lambdaVel, lambdaPhi, lambdaPsi;   
 
   int temporalOrder;
   int ExplicitOrder; 
@@ -55,7 +61,7 @@ typedef struct {
   dfloat presTOL, velTOL, phiTOL;
 
   dfloat idt, inu; // hold some inverses
-  
+  dfloat hmin, eta, eta2;     // element length, interface thickness, eta^2. 
   dfloat *U, *P, *Phi, *Psi, *Rho, *Mu;
   dfloat *NU, *LU, *GP, *NPhi;
   dfloat *GU;   
@@ -135,6 +141,8 @@ typedef struct {
 
 
   occa::memory o_U, o_P, o_Phi, o_Psi;
+  occa::memory o_Rho, o_Mu; 
+
   occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP, o_rhsPhi; 
 
   occa::memory o_NU, o_LU, o_GP, o_NPhi;
@@ -165,6 +173,8 @@ typedef struct {
   occa::kernel pressureHaloScatterKernel;
 
   occa::kernel setFlowFieldKernel;
+  occa::kernel setPhaseFieldKernel;
+  occa::kernel setMaterialPropertyKernel;
 
   occa::kernel advectionVolumeKernel;
   occa::kernel advectionSurfaceKernel;
@@ -206,7 +216,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options);
 // void insRunARK(ins_t *ins);
 // void insRunEXTBDF(ins_t *ins);
 
-// void insPlotVTU(ins_t *ins, char *fileNameBase);
+ void mppfPlotVTU(mppf_t *mppf, char *fileNameBase);
 // void insReport(ins_t *ins, dfloat time,  int tstep);
 // void insError(ins_t *ins, dfloat time);
 // void insForces(ins_t *ins, dfloat time);

@@ -1,0 +1,20 @@
+@kernel void mppfSetMaterialProperty2D(const dlong Nelements,
+                                        @restrict const dfloat *  Phi,
+                                        @restrict dfloat *  Rho,
+                                        @restrict dfloat *  Mu){
+
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dlong id = n+p_Np*e;
+
+      if(id<p_Np*Nelements){
+        const dfloat phin = Phi[id]; 
+        Rho[id]        = 0.5f* (p_rho1 + p_rho2) + 0.5f*(p_rho1- p_rho2)*phin;
+        Mu[id]         = 0.5f* (p_mu1  + p_mu2)  + 0.5f*(p_mu1 - p_mu2)*phin;
+      }
+    }
+
+  }
+
+}

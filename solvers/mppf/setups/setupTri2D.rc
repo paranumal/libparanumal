@@ -35,7 +35,7 @@ EXTBDF2
 [ADVECTION TYPE]
 CUBATURE
 
-[MIXING ENERGY]
+[MIXING ENERGY DENSITY]
 0.001
 
 [MOBILITY]
@@ -91,16 +91,16 @@ VTU
 
 #Tested only EXTBDF currently
 [RESTART FROM FILE]
-1
+0
 
 [WRITE RESTART FILE]
-1
+0
 
 [RESTART FILE NAME]
-insRestartTri2D
+mppfRestartTri2D
 
 [OUTPUT FILE NAME]
-Tins
+CahnHilliard
 
 #################################################
 ########## Velocity Solver Options ##############

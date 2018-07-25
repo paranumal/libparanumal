@@ -1,0 +1,28 @@
+@kernel void mppfSetPhaseField2D(const dlong Nelements,
+                                 const dfloat t,
+                                 const dfloat hmin,
+                                @restrict const  dfloat *  x,
+                                @restrict const  dfloat *  y,
+                                @restrict const  dfloat *  z,
+                                      @restrict  dfloat *  Phi){
+
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dlong id = n+p_Np*e;
+
+      if(id<p_Np*Nelements){
+      dfloat xn = x[id];
+      dfloat yn = y[id];
+      
+      dfloat phi   = 0.f;
+
+      mppfPhaseField2D(t, hmin, xn, yn, &phi);
+
+      Phi[id]        = phi;
+      }
+    }
+
+  }
+
+}
