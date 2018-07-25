@@ -1,64 +1,67 @@
 
-#define surfaceTerms(sk,face,i, j)                                         \
+#define surfaceTerms(sk,face,i, j)					\
   {                                                                     \
-  const dlong  idM = vmapM[sk];                                          \
-  const dlong  idP = vmapP[sk];                                          \
+    const dlong  idM = vmapM[sk];					\
+    const dlong  idP = vmapP[sk];					\
                                                                         \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
-  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           \
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\
                                                                         \
-  const dfloat4 gradqM = GU[idM+fld*fieldOffset];                                    \
-        dfloat4 gradqP = GU[idP+fld*fieldOffset];                                          \
+    const dfloat4 gradqM = GU[idM+fld*fieldOffset];			\
+    dfloat4 gradqP = GU[idP+fld*fieldOffset];				\
                                                                         \
-  int bc = EToB[face+p_Nfaces*element];                                         \
-  if(bc>0) {                                                            \
-    dfloat4 UM[p_NVfields]; \
-    dfloat4 UP[p_NVfields]; \
-\
-    for (int f=0;f<p_NVfields;f++) {\
-      UM[f].x = 0.;               \
-      UM[f].y = 0.;               \
-      UM[f].z = 0.;               \
-      UM[f].w = 0.;               \
-    }\
-    UM[fld] = gradqM;\
-\
-    insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, UM[0].w, UM[1].w, &(UP[0].w), &(UP[1].w));\
-    insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, UM[0].x, UM[0].y, UM[1].x, UM[1].y, &(UP[0].x), &(UP[0].y), &(UP[1].x), &(UP[1].y));\
-\
-    gradqP = 2*UP[fld] - gradqM;\
-  }                                                                     \
+    int bc = EToB[face+p_Nfaces*element];				\
+    if(bc>0) {								\
+      dfloat4 UM[p_NVfields];						\
+      dfloat4 UP[p_NVfields];						\
+									\
+      for (int f=0;f<p_NVfields;f++) {					\
+	UM[f].x = 0.;							\
+	UM[f].y = 0.;							\
+	UM[f].z = 0.;							\
+	UM[f].w = 0.;							\
+      }									\
+      UM[fld] = gradqM;							\
+									\
+      insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, UM[0].w, UM[1].w, &(UP[0].w), &(UP[1].w)); \
+      insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, UM[0].x, UM[0].y, UM[1].x, UM[1].y, &(UP[0].x), &(UP[0].y), &(UP[1].x), &(UP[1].y)); \
+									\
+      gradqP.x = 2.f*UP[fld].x - gradqM.x;				\
+      gradqP.y = 2.f*UP[fld].y - gradqM.y;				\
+      gradqP.z = 2.f*UP[fld].z - gradqM.z;				\
+      gradqP.w = 2.f*UP[fld].w - gradqM.w;				\
+    }									\
                                                                         \
-  dfloat dq = gradqP.w - gradqM.w;                                      \
+    dfloat dq = gradqP.w - gradqM.w;					\
                                                                         \
-  s_dqdx[j][i] += 0.5f*WsJ*nx*dq;                                       \
-  s_dqdy[j][i] += 0.5f*WsJ*ny*dq;                                       \
+    s_dqdx[j][i] += 0.5f*WsJ*nx*dq;					\
+    s_dqdy[j][i] += 0.5f*WsJ*ny*dq;					\
                                                                         \
-  s_Lq[j][i] -= 0.5f*WsJ*(nx*(gradqP.x+gradqM.x) +                    \
+    s_Lq[j][i] -= 0.5f*WsJ*(nx*(gradqP.x+gradqM.x) +                    \
                             ny*(gradqP.y+gradqM.y) +                    \
                             tau*dq*hinv);                               \
   }
 
 @kernel void insDiffusionIpdgQuad2D(const dlong Nelements,
-                                @restrict const  dlong *  elementList,
-                                @restrict const  dlong *  vmapM,
-                                @restrict const  dlong *  vmapP,
-                                const dfloat nu,
-                                const dfloat tau,
-                                @restrict const  dfloat *  vgeo,
-                                @restrict const  dfloat *  sgeo,
-                                @restrict const  int   *  EToB,
-                                const dfloat time,
-                                @restrict const  dfloat *  x,
-                                @restrict const  dfloat *  y,
-                                @restrict const  dfloat *  z,
-                                const dlong fieldOffset,
-                                @restrict const  dfloat *  D,
-                                @restrict const  dfloat *  LIFTT,
-                                @restrict const  dfloat4 *  GU,
-                                      @restrict dfloat  *  LU){
+				    @restrict const  dlong *  elementList,
+				    @restrict const  dlong *  vmapM,
+				    @restrict const  dlong *  vmapP,
+				    const dfloat nu,
+				    const dfloat tau,
+				    @restrict const  dfloat *  vgeo,
+				    @restrict const  dfloat *  sgeo,
+				    @restrict const  int   *  EToB,
+				    const dfloat time,
+				    @restrict const  dfloat *  x,
+				    @restrict const  dfloat *  y,
+				    @restrict const  dfloat *  z,
+				    const dlong fieldOffset,
+				    @restrict const  dfloat *  D,
+				    @restrict const  dfloat *  LIFTT,
+				    @restrict const  dfloat4 *  GU,
+				    @restrict dfloat  *  LU){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
@@ -69,7 +72,7 @@
 
     @exclusive dlong element;
 
-    #pragma unroll p_NVfields
+#pragma unroll p_NVfields
     for (int fld=0; fld<p_NVfields; fld++) {
 
       @barrier("local");
@@ -149,11 +152,11 @@
 
           dfloat dr = 0, ds = 0;
 
-          #pragma unroll p_Nq
-            for(int n=0;n<p_Nq;++n){
-              dr += s_D[n][i]*s_dqdx[j][n];
-              ds += s_D[n][j]*s_dqdy[n][i];
-            }
+#pragma unroll p_Nq
+	  for(int n=0;n<p_Nq;++n){
+	    dr += s_D[n][i]*s_dqdx[j][n];
+	    ds += s_D[n][j]*s_dqdy[n][i];
+	  }
 
           const dlong id = element*p_Np + j*p_Nq + i;
           LU[id+fld*fieldOffset] = -nu*invJW*(s_Lq[j][i]  + dr + ds);
