@@ -20,7 +20,7 @@ typedef struct {
   elliptic_t *psiSolver;
 
   setupAide options;
-  setupAide vOptions, pOptions, phiOptions, psiOptions; 	
+  setupAide vOptions, pOptions, phiOptions; // psiOptions; 	
 
   // INS SOLVER OCCA VARIABLES
   dfloat rho1, mu1, rho2, mu2, Re;

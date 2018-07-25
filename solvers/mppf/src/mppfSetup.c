@@ -318,7 +318,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
 
   mppf->outputStep = 0;
   options.getArgs("TSTEPS FOR SOLUTION OUTPUT", mppf->outputStep);
-  // if (mesh->rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", mppf->NtimeSteps,ins->outputStep, mppf->dt);
+  // if (mesh->rank==0) printf("Nsteps = %d NerrStep= %d dt = %.8e\n", mppf->NtimeSteps,mppf->outputStep, mppf->dt);
 
   mppf->outputForceStep = 0;
   options.getArgs("TSTEPS FOR FORCE OUTPUT", mppf->outputForceStep);
@@ -340,6 +340,84 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   // Helmholtz solve lambda's i.e. -laplace*phi +[-alpha]*phi = -psi 
   mppf->lambdaPhi = -mppf->chA;
 
+  //make option objects for elliptc solvers
+  mppf->phiOptions = options;
+  mppf->phiOptions.setArgs("KRYLOV SOLVER",        options.getArgs("PHASE FIELD KRYLOV SOLVER"));
+  mppf->phiOptions.setArgs("DISCRETIZATION",       options.getArgs("PHASE FIELD DISCRETIZATION"));
+  mppf->phiOptions.setArgs("BASIS",                options.getArgs("PHASE FIELD BASIS"));
+  mppf->phiOptions.setArgs("PRECONDITIONER",       options.getArgs("PHASE FIELD PRECONDITIONER"));
+  mppf->phiOptions.setArgs("MULTIGRID COARSENING", options.getArgs("PHASE FIELD MULTIGRID COARSENING"));
+  mppf->phiOptions.setArgs("MULTIGRID SMOOTHER",   options.getArgs("PHASE FIELD MULTIGRID SMOOTHER"));
+  mppf->phiOptions.setArgs("PARALMOND CYCLE",      options.getArgs("PHASE FIELD PARALMOND CYCLE"));
+  mppf->phiOptions.setArgs("PARALMOND SMOOTHER",   options.getArgs("PHASE FIELD PARALMOND SMOOTHER"));
+  mppf->phiOptions.setArgs("PARALMOND PARTITION",  options.getArgs("PHASE FIELD PARALMOND PARTITION"));
+
+  mppf->vOptions = options;
+  mppf->vOptions.setArgs("KRYLOV SOLVER",        options.getArgs("VELOCITY KRYLOV SOLVER"));
+  mppf->vOptions.setArgs("DISCRETIZATION",       options.getArgs("VELOCITY DISCRETIZATION"));
+  mppf->vOptions.setArgs("BASIS",                options.getArgs("VELOCITY BASIS"));
+  mppf->vOptions.setArgs("PRECONDITIONER",       options.getArgs("VELOCITY PRECONDITIONER"));
+  mppf->vOptions.setArgs("MULTIGRID COARSENING", options.getArgs("VELOCITY MULTIGRID COARSENING"));
+  mppf->vOptions.setArgs("MULTIGRID SMOOTHER",   options.getArgs("VELOCITY MULTIGRID SMOOTHER"));
+  mppf->vOptions.setArgs("PARALMOND CYCLE",      options.getArgs("VELOCITY PARALMOND CYCLE"));
+  mppf->vOptions.setArgs("PARALMOND SMOOTHER",   options.getArgs("VELOCITY PARALMOND SMOOTHER"));
+  mppf->vOptions.setArgs("PARALMOND PARTITION",  options.getArgs("VELOCITY PARALMOND PARTITION"));
+
+  mppf->pOptions = options;
+  mppf->pOptions.setArgs("KRYLOV SOLVER",        options.getArgs("PRESSURE KRYLOV SOLVER"));
+  mppf->pOptions.setArgs("DISCRETIZATION",       options.getArgs("PRESSURE DISCRETIZATION"));
+  mppf->pOptions.setArgs("BASIS",                options.getArgs("PRESSURE BASIS"));
+  mppf->pOptions.setArgs("PRECONDITIONER",       options.getArgs("PRESSURE PRECONDITIONER"));
+  mppf->pOptions.setArgs("MULTIGRID COARSENING", options.getArgs("PRESSURE MULTIGRID COARSENING"));
+  mppf->pOptions.setArgs("MULTIGRID SMOOTHER",   options.getArgs("PRESSURE MULTIGRID SMOOTHER"));
+  mppf->pOptions.setArgs("PARALMOND CYCLE",      options.getArgs("PRESSURE PARALMOND CYCLE"));
+  mppf->pOptions.setArgs("PARALMOND SMOOTHER",   options.getArgs("PRESSURE PARALMOND SMOOTHER"));
+  mppf->pOptions.setArgs("PARALMOND PARTITION",  options.getArgs("PRESSURE PARALMOND PARTITION"));
+
+  if (mesh->rank==0) printf("==================ELLIPTIC SOLVE SETUP=========================\n");
+
+  // SetUp Boundary Flags types for Elliptic Solve
+  // bc = 1 -> wall
+  // bc = 2 -> inflow
+  // bc = 3 -> outflow
+  // bc = 4 -> x-aligned slip
+  // bc = 5 -> y-aligned slip
+  // bc = 6 -> z-aligned slip
+  int uBCType[7]   = {0,1,1,2,1,2,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  int vBCType[7]   = {0,1,1,2,2,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  int wBCType[7]   = {0,1,1,2,2,2,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  int pBCType[7]   = {0,2,2,1,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+  int phiBCType[7] = {0,2,2,2,2,2,2}; // All homogenous Neumann BCs for Phi and Psi solves 
+
+  //Solver tolerances 
+  mppf->presTOL = 1E-8;
+  mppf->velTOL  = 1E-8;
+  mppf->phiTOL  = 1E-8;
+
+  // Use third Order Velocity Solve: full rank should converge for low orders
+  if (mesh->rank==0) printf("================PHASE-FIELD SOLVE SETUP=========================\n");
+ 
+  if (mesh->rank==0) printf("==================Phi Solve Setup=========================\n");
+  // -laplace(Phi) + [-alpha ]*Phi = -Psi 
+  mppf->phiSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  mppf->phiSolver->mesh = mesh;
+  mppf->phiSolver->options = mppf->phiOptions;
+  mppf->phiSolver->dim = mppf->dim;
+  mppf->phiSolver->elementType = mppf->elementType;
+  mppf->phiSolver->BCType = (int*) calloc(7,sizeof(int));
+  memcpy(mppf->phiSolver->BCType,phiBCType,7*sizeof(int));
+  ellipticSolveSetup(mppf->phiSolver, mppf->lambdaPhi, kernelInfoPhi);
+
+  if (mesh->rank==0) printf("==================Psi Solve Setup=========================\n");
+  // -laplace(Psi) + [alpha+ S/eta^2]*Psi = -Q 
+  mppf->psiSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  mppf->psiSolver->mesh = mesh;
+  mppf->psiSolver->options = mppf->phiOptions; // Using the same options with Phi solver
+  mppf->psiSolver->dim = mppf->dim;
+  mppf->psiSolver->elementType = mppf->elementType;
+  mppf->psiSolver->BCType = (int*) calloc(7,sizeof(int));
+  memcpy(mppf->phiSolver->BCType,phiBCType,7*sizeof(int)); // Using the same boundary flags
+  ellipticSolveSetup(mppf->psiSolver, mppf->lambdaPsi, kernelInfoPsi);
 
 
 
@@ -348,7 +426,88 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
 
 
 
-  // mppf->lambdaVel = mppf->g0 / (mppf->dt * mppf->nu);
+  //make node-wise boundary flags
+  mppf->VmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  mppf->PmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  for (int e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) mppf->VmapB[n+e*mesh->Np] = 1E9;
+    for (int f=0;f<mesh->Nfaces;f++) {
+      int bc = mesh->EToB[f+e*mesh->Nfaces];
+      if (bc>0) {
+        for (int n=0;n<mesh->Nfp;n++) {
+          int fid = mesh->faceNodes[n+f*mesh->Nfp];
+          mppf->VmapB[fid+e*mesh->Np] = mymin(bc,mppf->VmapB[fid+e*mesh->Np]);
+          mppf->PmapB[fid+e*mesh->Np] = mymax(bc,mppf->PmapB[fid+e*mesh->Np]);
+        }
+      }
+    }
+  }
+  gsParallelGatherScatter(mesh->hostGsh, mppf->VmapB, "int", "min"); 
+  gsParallelGatherScatter(mesh->hostGsh, mppf->PmapB, "int", "max"); 
+
+  for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (mppf->VmapB[n] == 1E9) {
+      mppf->VmapB[n] = 0.;
+    }
+  }
+  mppf->o_VmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mppf->VmapB);
+  mppf->o_PmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mppf->PmapB);
+  
+  // Kernel defines
+  kernelInfo["defines/" "p_blockSize"]= blockSize;
+  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
+
+  kernelInfo["defines/" "p_blockSize"]= blockSize;
+  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
+
+   // if(options.compareArgs("TIME INTEGRATOR", "EXTBDF"))
+  kernelInfo["defines/" "p_EXTBDF"]= 1;
+  // else
+    // kernelInfo["defines/" "p_EXTBDF"]= 0;
+
+  int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
+  kernelInfo["defines/" "p_maxNodes"]= maxNodes;
+
+  int NblockV = 256/mesh->Np; // works for CUDA
+  kernelInfo["defines/" "p_NblockV"]= NblockV;
+
+  int NblockS = 256/maxNodes; // works for CUDA
+  kernelInfo["defines/" "p_NblockS"]= NblockS;
+
+
+  int maxNodesVolumeCub = mymax(mesh->cubNp,mesh->Np);  
+  kernelInfo["defines/" "p_maxNodesVolumeCub"]= maxNodesVolumeCub;
+  int cubNblockV = mymax(1,256/maxNodesVolumeCub);
+  //
+  int maxNodesSurfaceCub = mymax(mesh->Np, mymax(mesh->Nfaces*mesh->Nfp, mesh->Nfaces*mesh->intNfp));
+  kernelInfo["defines/" "p_maxNodesSurfaceCub"]=maxNodesSurfaceCub;
+  int cubNblockS = mymax(256/maxNodesSurfaceCub,1); // works for CUDA
+  //
+  kernelInfo["defines/" "p_cubNblockV"]=cubNblockV;
+  kernelInfo["defines/" "p_cubNblockS"]=cubNblockS;
+
+  
+  // IsoSurface related
+  if(mppf->dim==3){
+    if(options.compareArgs("OUTPUT FILE FORMAT", "ISO")){
+      kernelInfo["defines/" "p_isoNfields"]= mppf->isoNfields;
+      // Define Isosurface Area Tolerance
+      kernelInfo["defines/" "p_triAreaTol"]= (dfloat) 1.0E-16;
+
+      kernelInfo["defines/" "p_dim"]= mppf->dim;
+      kernelInfo["defines/" "p_plotNp"]= mesh->plotNp;
+      kernelInfo["defines/" "p_plotNelements"]= mesh->plotNelements;
+      
+      int plotNthreads = mymax(mesh->Np, mymax(mesh->plotNp, mesh->plotNelements));
+      kernelInfo["defines/" "p_plotNthreads"]= plotNthreads;     
+    }
+ } 
+
+
+
+
+
+
  
 if(mesh->rank==0){
     printf("=============WRITING INPUT PARAMETERS===================\n");
@@ -364,8 +523,8 @@ if(mesh->rank==0){
     printf("DENSITY PHASE 2\t\t:\t%.2e\n", mppf->rho2);
     printf("MIXING ENERGY\t\t:\t%.2e\n", mppf->chL);
     printf("MOBILITY\t\t:\t%.2e\n", mppf->chM);
-    printf("CH HELMHOLTZ LAMBDA 1\t:\t%.2e\n", mppf->lambdaPsi);
-    printf("CH HELMHOLTZ LAMBDA 2\t:\t%.2e\n", mppf->lambdaPhi);
+    printf("CH HELMHOLTZ LAMBDA PSI\t:\t%.2e\n", mppf->lambdaPsi);
+    printf("CH HELMHOLTZ LAMBDA PHI\t:\t%.2e\n", mppf->lambdaPhi);
  printf("============================================================\n");
     printf("# TIME STEPS\t\t:\t%d\n", mppf->NtimeSteps);
     printf("# OUTPUT STEP\t\t:\t%d\n", mppf->outputStep);

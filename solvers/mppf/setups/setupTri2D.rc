@@ -102,6 +102,66 @@ mppfRestartTri2D
 [OUTPUT FILE NAME]
 CahnHilliard
 
+
+
+#################################################
+######## Phase Field Solver Options #############
+#################################################
+
+# can add FLEXIBLE to PCG
+[PHASE FIELD KRYLOV SOLVER]
+PCG
+
+# can be IPDG, or CONTINUOUS
+[PHASE FIELD DISCRETIZATION]
+IPDG
+
+# can be NODAL or BERN
+[PHASE FIELD BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+[PHASE FIELD PRECONDITIONER]
+MASSMATRIX
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[PHASE FIELD MULTIGRID COARSENING]
+HALFDOFS
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[PHASE FIELD MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+# can be any integer >0
+[MULTIGRID CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[PHASE FIELD PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[PHASE FIELD PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[PHASE FIELD PARALMOND PARTITION]
+STRONGNODES
+
+# can be any integer >0
+[PARALMOND CHEBYSHEV DEGREE]
+2
+
+
 #################################################
 ########## Velocity Solver Options ##############
 #################################################
@@ -219,4 +279,4 @@ NONE
 #VORTEX
 
 [VERBOSE]
-FALSE
+TRUE
