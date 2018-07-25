@@ -267,12 +267,12 @@ void surfaceTerms(const int e,
             const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
             
             //            surfaceTerms(sk0,0,i,j,0     );
-            surfaceTerms(e, sk0, 0, i, j, 0, intfx, intfy, intfz,
-                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk0, 0, i, j, 0, advSwitch, intfx, intfy, intfz, time,
+			 x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
 
             //            surfaceTerms(sk5,5,i,j,(p_Nq-1));
-            surfaceTerms(e, sk5, 5, i, j, (p_Nq-1), intfx, intfy, intfz,
-                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk5, 5, i, j, (p_Nq-1), advSwitch, intfx, intfy, intfz, time,
+                         x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
           }
         }
       }
@@ -290,12 +290,12 @@ void surfaceTerms(const int e,
             const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
             
             //            surfaceTerms(sk1,1,i,0     ,k);
-            surfaceTerms(e, sk1, 1, i, 0, k, intfx, intfy, intfz,
-                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk1, 1, i, 0, k, advSwitch, intfx, intfy, intfz, time,
+			 x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
 
             //surfaceTerms(sk3,3,i,(p_Nq-1),k);
-            surfaceTerms(e, sk3, 3, i, (p_Nq-1), k, intfx, intfy, intfz,
-                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk3, 3, i, (p_Nq-1), k, advSwitch, intfx, intfy, intfz, time,
+			 x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
           }
         }
       }
@@ -313,12 +313,12 @@ void surfaceTerms(const int e,
             const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
             
             //            surfaceTerms(sk2,2,(p_Nq-1),j,k);
-            surfaceTerms(e, sk2, 2, (p_Nq-1), j, k, intfx, intfy, intfz,
-                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk2, 2, (p_Nq-1), j, k, advSwitch, intfx, intfy, intfz, time,
+			 x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
             
             //surfaceTerms(sk4,4,0     ,j,k);
-            surfaceTerms(e, sk4, 4, 0, j, k, intfx, intfy, intfz,
-                         time, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
+            surfaceTerms(e, sk4, 4, 0, j, k, advSwitch, intfx, intfy, intfz, time,
+			 x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, rhsq);
           }
         }
       }
