@@ -132,7 +132,8 @@ typedef struct {
 
 
 
-
+  occa::kernel phaseFieldAdvectionVolumeKernel;
+  occa::kernel phaseFieldAdvectionSurfaceKernel;
   occa::kernel scaledAddKernel;
   occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
   occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;

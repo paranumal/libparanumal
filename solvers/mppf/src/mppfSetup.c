@@ -593,10 +593,14 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
 
+      sprintf(fileName, DMPPF "/okl/mppfPhaseFieldAdvection%s.okl", suffix);
+      sprintf(kernelName, "mppfPhaseFieldAdvectionCubatureVolume%s", suffix);
+      mppf->phaseFieldAdvectionVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+      sprintf(kernelName, "mppfPhaseFieldAdvectionCubatureSurface%s", suffix);
+      mppf->phaseFieldAdvectionSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-
-
+       // ===========================================================================
 
     }
    MPI_Barrier(mesh->comm);
