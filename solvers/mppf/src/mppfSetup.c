@@ -425,7 +425,6 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
 
 
 
-
   //make node-wise boundary flags
   mppf->VmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
   mppf->PmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
@@ -504,9 +503,104 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
  } 
 
 
+ if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
+    dfloat rkC[4] = {1.0, 0.0, -1.0, -2.0};
+
+    mppf->o_rkC  = mesh->device.malloc(4*sizeof(dfloat),rkC);
+    mppf->o_extbdfA = mesh->device.malloc(3*sizeof(dfloat));
+    mppf->o_extbdfB = mesh->device.malloc(3*sizeof(dfloat));
+    mppf->o_extbdfC = mesh->device.malloc(3*sizeof(dfloat)); 
+
+    mppf->o_extC = mesh->device.malloc(3*sizeof(dfloat)); 
+
+    mppf->o_prkA = mppf->o_extbdfC;
+    mppf->o_prkB = mppf->o_extbdfC;
+  }
+
+  // MEMORY ALLOCATION
+  mppf->o_Psi    = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->Psi);
+
+  mppf->o_rhsU    = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->rhsU);
+  mppf->o_rhsV    = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->rhsV);
+  mppf->o_rhsW    = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->rhsW);
+  mppf->o_rhsP    = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->rhsP);
+  mppf->o_rhsPhi  = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->rhsPhi);
+
+  mppf->o_NPhi  = mesh->device.malloc(               (mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->NPhi);
+  mppf->o_NU    = mesh->device.malloc(mppf->NVfields*(mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->NU);
+  mppf->o_LU    = mesh->device.malloc(mppf->NVfields*(mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->LU);
+  mppf->o_GP    = mesh->device.malloc(mppf->NVfields*(mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->GP);
+  
+  mppf->o_GU    = mesh->device.malloc(mppf->NVfields*Ntotal*4*sizeof(dfloat), mppf->GU);
+  
+  mppf->o_rkU   = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkU);
+  mppf->o_rkP   = mesh->device.malloc(              Ntotal*sizeof(dfloat), mppf->rkP);
+  mppf->o_PI    = mesh->device.malloc(              Ntotal*sizeof(dfloat), mppf->PI);
+  
+  mppf->o_rkNU  = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkNU);
+  mppf->o_rkLU  = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkLU);
+  mppf->o_rkGP  = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkGP);
+
+  //storage for helmholtz solves
+  mppf->o_UH = mesh->device.malloc(Ntotal*sizeof(dfloat));
+  mppf->o_VH = mesh->device.malloc(Ntotal*sizeof(dfloat));
+  mppf->o_WH = mesh->device.malloc(Ntotal*sizeof(dfloat));
+
+  //plotting fields
+  mppf->o_Vort = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->Vort);
+  mppf->o_Div  = mesh->device.malloc(              Nlocal*sizeof(dfloat), mppf->Div);
+
+  if(mppf->elementType==HEXAHEDRA)
+    mppf->o_cU = mesh->device.malloc(mppf->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), mppf->cU);
+  else 
+    mppf->o_cU = mppf->o_U;
+
+  if(mesh->totalHaloPairs){//halo setup
+    dlong vHaloBytes = mesh->totalHaloPairs*mesh->Np*(mppf->NVfields)*sizeof(dfloat);
+    dlong pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+    dlong vGatherBytes = mppf->NVfields*mesh->ogs->NhaloGather*sizeof(dfloat);
+    mppf->o_vHaloBuffer = mesh->device.malloc(vHaloBytes);
+    mppf->o_pHaloBuffer = mesh->device.malloc(pHaloBytes);
+
+    occa::memory o_vSendBuffer, o_vRecvBuffer, o_pSendBuffer, o_pRecvBuffer, o_gatherTmpPinned;
+
+    mppf->vSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, vHaloBytes, NULL, mppf->o_vSendBuffer);
+    mppf->vRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, vHaloBytes, NULL, mppf->o_vRecvBuffer);
+
+    mppf->pSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, pHaloBytes, NULL, mppf->o_pSendBuffer);
+    mppf->pRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, pHaloBytes, NULL, mppf->o_pRecvBuffer);
+
+    mppf->velocityHaloGatherTmp = (dfloat*) occaHostMallocPinned(mesh->device, vGatherBytes, NULL, mppf->o_gatherTmpPinned);
+    
+    mppf->o_velocityHaloGatherTmp = mesh->device.malloc(vGatherBytes,  mppf->velocityHaloGatherTmp);
+  }
+
+
+  // set kernel name suffix
+  char *suffix;
+  
+  if(mppf->elementType==TRIANGLES)
+    suffix = strdup("Tri2D");
+  if(mppf->elementType==QUADRILATERALS)
+    suffix = strdup("Quad2D");
+  if(mppf->elementType==TETRAHEDRA)
+    suffix = strdup("Tet3D");
+  if(mppf->elementType==HEXAHEDRA)
+    suffix = strdup("Hex3D");
+
+  char fileName[BUFSIZ], kernelName[BUFSIZ];
+
+  for (int r=0;r<mesh->size;r++) {
+    if (r==mesh->rank) {
 
 
 
+
+
+
+    }
+   MPI_Barrier(mesh->comm);
+  }
 
  
 if(mesh->rank==0){
