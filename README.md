@@ -1,6 +1,9 @@
 # holmes
 It's elementary.
 
+# 0. Code overview
+![Code overview](http://www.math.vt.edu/people/tcew/libParanumalDiagramLocal-crop.png)
+
 ## 1. Clone: Holmes
 git clone https://github.com/tcew/holmes
 
