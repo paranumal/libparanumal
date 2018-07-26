@@ -46,48 +46,48 @@ mpiexec -n 2 ./ellipticMain setups/setupQuad2D.rc
 
 The directory structure is relatively flat, annotated here:
 
-holmes/
-├── 3rdParty
-│   ├── BlasLapack
-│   └── gslib.github
-├── meshes
-├── nodes `(contains node data files for different elements)`
-├── okl
-├── solvers
-│   ├── acoustics
-│   │   ├── okl
-│   │   ├── setups
-│   │   └── src
-│   ├── bns
-│   │   ├── data
-│   │   ├── okl
-│   │   ├── setups
-│   │   └── src
-│   ├── cns
-│   │   ├── data
-│   │   ├── okl
-│   │   ├── setups
-│   │   └── src
-│   ├── elliptic
-│   │   ├── data
-│   │   ├── okl
-│   │   ├── setups
-│   │   └── src
-│   ├── gradient
-│   │   ├── okl
-│   │   ├── setups
-│   │   └── src
-│   ├── ins
-│   │   ├── data
-│   │   ├── okl
-│   │   ├── setups
-│   │   └── src
-│   └── parALMOND
-│       ├── include
-│       ├── okl
-│       └── src
-├── src
-└── utilities
-    ├── autoTester
-    └── VTU
+holmes/  
+├── 3rdParty  
+│   ├── BlasLapack  
+│   └── gslib.github  
+├── meshes  
+├── nodes `(contains node data files for different elements)`  
+├── okl  
+├── solvers  
+│   ├── acoustics  
+│   │   ├── okl  
+│   │   ├── setups  
+│   │   └── src  
+│   ├── bns  
+│   │   ├── data  
+│   │   ├── okl  
+│   │   ├── setups  
+│   │   └── src  
+│   ├── cns  
+│   │   ├── data  
+│   │   ├── okl  
+│   │   ├── setups  
+│   │   └── src  
+│   ├── elliptic  
+│   │   ├── data  
+│   │   ├── okl  
+│   │   ├── setups  
+│   │   └── src  
+│   ├── gradient  
+│   │   ├── okl  
+│   │   ├── setups  
+│   │   └── src  
+│   ├── ins  
+│   │   ├── data  
+│   │   ├── okl  
+│   │   ├── setups  
+│   │   └── src  
+│   └── parALMOND  
+│       ├── include  
+│       ├── okl  
+│       └── src  
+├── src  
+└── utilities  
+    ├── autoTester  
+    └── VTU  
 
