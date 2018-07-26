@@ -29,10 +29,10 @@
 #  define FPREFIXED_NAME(x) x
 #endif
 
-#if defined(NEKHOLMES_UPCASE)
+#if defined(UPCASE)
 #  define FORTRAN_NAME(low,up) FPREFIXED_NAME(up)
 #  define FORTRAN_UNPREFIXED(low,up) up
-#elif defined(NEKHOLMES_UNDERSCORE)
+#elif defined(UNDERSCORE)
 #  define FORTRAN_NAME(low,up) FPREFIXED_NAME(TOKEN_PASTE(low,_))
 #  define FORTRAN_UNPREFIXED(low,up) TOKEN_PASTE(low,_)
 #else
