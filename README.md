@@ -14,7 +14,7 @@ git clone https://github.com/tcew/holmes
 git clone https://github.com/noelchalmers/occa
 
 ---
-### 3. Build OCCA 
+#### 2-1. Build OCCA 
 cd occa
 
 export OCCA_DIR=\`pwd\`
@@ -26,17 +26,17 @@ make -j
 cd ../
 
 ---
-### 4. Running the codes: 
+### 3. Running the codes: 
 
-The elliptic solver and flow solvers reside in sub-directories of the solver directory. Each sub-directory includes makefile, src directory, data directory (including header files for defining boundary conditions), and setups directory. The setups directory includes a number of example input files that specify input parameters for the solver.
+The elliptic solver and flow solvers reside in sub-directories of the solver directory. Each sub-directory includes makefile, src directory, data directory (including header files for defining boundary conditions), okl kernel directory, and setups directory. The setups directory includes a number of example input files that specify input parameters for the solver.
 
-#### 4-0. Build holmes elliptic example
+#### 3-1. Build holmes elliptic example
 cd holmes/solvers/elliptic
 
 make -j
 
-#### 4-1. Run elliptic example with provided quadrilateral set up file on a single device:
+#### 3-2. Run elliptic example with provided quadrilateral set up file on a single device:
 ./ellipticMain setups/setupQuad2D.rc
 
-#### 4-2. Run the same example with two devices:
+#### 3-3. Run the same example with two devices:
 mpiexec -n 2 ./ellipticMain setups/setupQuad2D.rc
