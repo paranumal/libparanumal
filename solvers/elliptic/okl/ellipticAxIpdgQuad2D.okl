@@ -268,10 +268,10 @@ void surfaceTerms(const int element,
       dlong sk3 = element*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
       //      surfaceTerms(sk1,1,p_Nq-1,j);
-      surfaceTerms(e, sk1, 1, p_Nq-1, j, tau, sgeo, vmapM, vmapP, EToB, gradq, s_dqdx, s_dqdy, s_rhsq);
+      surfaceTerms(element, sk1, 1, p_Nq-1, j, tau, sgeo, vmapM, vmapP, EToB, gradq, s_dqdx, s_dqdy, s_rhsq);
       
       //      surfaceTerms(sk3,3,0,j);
-      surfaceTerms(e, sk3, 3, 0, j, tau, sgeo, vmapM, vmapP, EToB, gradq, s_dqdx, s_dqdy, s_rhsq);
+      surfaceTerms(element, sk3, 3, 0, j, tau, sgeo, vmapM, vmapP, EToB, gradq, s_dqdx, s_dqdy, s_rhsq);
     }
 
     @barrier("local");
