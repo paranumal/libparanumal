@@ -13,7 +13,7 @@ git clone https://github.com/noelchalmers/occa
 ## 3. Build OCCA
 cd occa
 
-export OCCA_DIR=``pwd``
+export OCCA_DIR=\`pwd\`
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib
 
