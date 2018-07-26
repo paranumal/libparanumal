@@ -13,7 +13,6 @@ git clone https://github.com/tcew/holmes
 ### 2. OCCA dependency (currently OCCA 1.0 forked by Noel Chalmers) 
 git clone https://github.com/noelchalmers/occa
 
----
 #### 2-1. Build OCCA 
 cd occa
 
