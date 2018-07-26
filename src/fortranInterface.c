@@ -57,7 +57,6 @@ extern "C" {
 
       *err = 0;
     }
-
   }
 
 #define fSetupAideCreate FORTRAN_NAME(holmessetupaidecreate,HOLMESSETUPAIDECREATE)
@@ -95,8 +94,8 @@ extern "C" {
     }
   }
 
-#define fsetupAideSetArgs FORTRAN_NAME(holmessetupaidesetargs,HOLMESSETUPAIDESETARGS)
-  void fSetupAideSetArgs(char *argname, char *argvalue, int *handle, int *err) {
+#define fSetupAideSetArg FORTRAN_NAME(holmessetupaidesetarg,HOLMESSETUPAIDESETARG)
+  void fSetupAideSetArg(char *argname, char *argvalue, int *handle, int *err) {
     *err = 1;
 
     std::string key(argname);
@@ -108,8 +107,8 @@ extern "C" {
     }
   }
 
-#define fSetupAideGetArgs FORTRAN_NAME(holmessetupaidegetargs,HOLMESSETUPAIDEGETARGS)
-  void fSetupAideGetArgs(char *argvalue, char *argname, int *handle, int *err) {
+#define fSetupAideGetArg FORTRAN_NAME(holmessetupaidegetarg,HOLMESSETUPAIDEGETARG)
+  void fSetupAideGetArg(char *argvalue, int *len, char *argname, int *handle, int *err) {
     *err = 1;
 
     std::string key(argname);
@@ -118,6 +117,7 @@ extern "C" {
     if(checkHandle(*handle,LOWER_BOUND,setupAideCount)) {
       setupAideHandles[*handle]->getArgs(key,value);
       std::strcpy(argvalue, value.c_str());
+      *len = value.length();
       *err = 0;
     }
   }
