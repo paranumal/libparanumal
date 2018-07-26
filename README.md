@@ -51,43 +51,43 @@ holmes/
 │   ├── BlasLapack  
 │   └── gslib.github  
 ├── meshes  
-├── nodes `(contains node data files for different elements)`  
+├── nodes         `(Node data files for different elements)`  
 ├── okl  
 ├── solvers  
-│   ├── acoustics  
-│   │   ├── okl  
-│   │   ├── setups  
-│   │   └── src  
-│   ├── bns  
+│   ├── acoustics `(DGTD discretization of linearized Euler acoustics)`  
+│   │   ├── okl   `(OCCA Kernel Language DEVICE kernels for acoustics)`  
+│   │   ├── setups`(Default set up files for acoustics solver)`    
+│   │   └── src   `(HOST code for driving acoustics solver)`  
+│   ├── bns       `(DGTD discretization of Galerkin-Boltzmann gas dynamics solver)`  
 │   │   ├── data  
 │   │   ├── okl  
 │   │   ├── setups  
 │   │   └── src  
-│   ├── cns  
+│   ├── cns       `(DGTD discretization based isothermal compressible Navier-Stokes solver)`  
 │   │   ├── data  
 │   │   ├── okl  
 │   │   ├── setups  
 │   │   └── src  
-│   ├── elliptic  
+│   ├── elliptic  `(DG and C0-FEM discretization based Poisson and screened Poisson potential problems)`    
 │   │   ├── data  
 │   │   ├── okl  
 │   │   ├── setups  
 │   │   └── src  
-│   ├── gradient  
+│   ├── gradient  `(Elemental gradient operations example)`  
 │   │   ├── okl  
 │   │   ├── setups  
 │   │   └── src  
-│   ├── ins  
+│   ├── ins       `(DG and C0-FEM discretization based incompressible Navier-Stokes solver)`   
 │   │   ├── data  
 │   │   ├── okl  
 │   │   ├── setups  
 │   │   └── src  
-│   └── parALMOND  
+│   └── parALMOND `(Hybrid p-type multigrid and algebraic multigrid linear solvers)`  
 │       ├── include  
 │       ├── okl  
 │       └── src  
-├── src  
-└── utilities  
+├── src           `(Base library for mesh wrangling)`  
+└── utilities     `(Useful utilities)`  
     ├── autoTester  
     └── VTU  
 
