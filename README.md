@@ -2,7 +2,7 @@
 It's elementary.
 
 # 0. Code block diagram
-<img src="http://www.math.vt.edu/people/tcew/libParanumalDiagramLocal-crop.png" width="500" >
+<img src="http://www.math.vt.edu/people/tcew/libParanumalDiagramLocal-crop.png" width="600" >
 
 ## 1. Clone: Holmes
 git clone https://github.com/tcew/holmes
