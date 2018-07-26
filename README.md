@@ -1,8 +1,8 @@
 # holmes
 It's elementary.
 
-# 0. Code overview
-![Code overview](http://www.math.vt.edu/people/tcew/libParanumalDiagramLocal-crop.png | width=500)
+# 0. Code block diagram
+<img src="http://www.math.vt.edu/people/tcew/libParanumalDiagramLocal-crop.png" width="500" >
 
 ## 1. Clone: Holmes
 git clone https://github.com/tcew/holmes
