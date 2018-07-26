@@ -26,6 +26,10 @@ cd holmes/solvers/elliptic
 
 make -j
 
+## 5. Running the codes:
+
+The elliptic solver and flow solvers reside in sub-directories of the solver directory. Each sub-directory includes makefile, src directory, data directory (including header files for defining boundary conditions), and setups directory. The setups directory includes a number of example input files that specify input parameters for the solver.
+
 ## 5-1. Run elliptic example with provided quadrilateral set up file on a single device:
 ./ellipticMain setups/setupQuad2D.rc
 
