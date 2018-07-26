@@ -32,6 +32,7 @@ The elliptic solver and flow solvers reside in sub-directories of the solver dir
 
 #### 4-0. Build holmes elliptic example
 cd holmes/solvers/elliptic
+
 make -j
 
 #### 4-1. Run elliptic example with provided quadrilateral set up file on a single device:
