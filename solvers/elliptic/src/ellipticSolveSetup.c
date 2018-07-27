@@ -129,11 +129,11 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   //check all the bounaries for a Dirichlet
   bool allNeumann = (lambda==0) ? true :false;
-  elliptic->allNeumannPenalty = 1;
+  elliptic->allNeumannPenalty = 1.;
   hlong localElements = (hlong) mesh->Nelements;
   hlong totalElements = 0;
   MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, mesh->comm);
-  elliptic->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
+  elliptic->allNeumannScale = 1./sqrt((dfloat)mesh->Np*totalElements);
 
   elliptic->EToB = (int *) calloc(mesh->Nelements*mesh->Nfaces,sizeof(int));
   for (dlong e=0;e<mesh->Nelements;e++) {
