@@ -834,7 +834,7 @@
       @barrier("local");      
     }
 
-    #pragma unroll p_cubNq
+    //#pragma unroll p_cubNq
     for(int k=0;k<p_cubNq;++k){ 
 
       //fetch slice
