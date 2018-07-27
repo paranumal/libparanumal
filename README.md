@@ -65,9 +65,9 @@ E. Dependencies:
 #### 4-1. Build OCCA 
 `cd occa`    
 export OCCA_DIR=\`pwd\`  
-`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib  
-make -j  
-cd ../  `  
+`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib`    
+`make -j`    
+`cd ../  `  
 
 ---
 ### 5. Running the codes: 
@@ -76,8 +76,8 @@ The elliptic solver and flow solvers reside in sub-directories of the solver dir
 
 #### 5-1. Build holmes elliptic example
   
-`cd holmes/solvers/elliptic  
-make -j  `
+`cd holmes/solvers/elliptic`    
+`make -j  `  
 
 #### 5-2. Run elliptic example with provided quadrilateral set up file on a single device:
   
