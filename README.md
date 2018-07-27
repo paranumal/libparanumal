@@ -1,5 +1,37 @@
-## holmes
-It's elementary.
+## libParanumal
+An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) systems. 
+
+*Features include*:
+
+1. Supported elements:
+  - Triangles, quadrilaterals, tetrahedra, hexahedra.
+  - Lagrange basis functions up to degree 15.
+  - Partial support for Bezier-Bernstein basis functions.
+  
+2. Mesh wrangling:
+  - Gmsh format file loaders.
+  - Load balanced geometric partitioning using space filling curves (Hilbert or Morton ordering). 
+  - Clustered partitioning for multirate time stepping.
+  
+3. Elliptic solver:
+  - Linear Poisson and screened Poisson potential solvers.
+  - GPU optimized matrix-vector products.
+  - Hybrid p-type multigrid and algebraic multigrid  preconditioned conjugate gradient solver.
+  - Sparse matrix or nearly matrix-free algebraic multigrid for coarse levels of multigrid hierarchy.
+
+4. Heterogeneous accelerated flow solvers:
+  - Linearized Euler equations.
+  - Isothermal compressible Navier-Stokes solver with:
+     * Upwind discontinuous Galerkin discretization in space.
+     * Dormand-Prince adaptive Runge-Kutta integration in time.
+  - Isothermal Galerkin-Boltzmann gas dynamics solver with:
+     * Penalty flux DG discretization in space.
+     * Adaptive semi-analytic (pointwise exponential) integration in time.
+     * Multiaxial quasi-perfectly matched absorbing layer far field boundary condition.
+  - Incompressible Navier-Stokes solver with:
+     * Choice of continuous FEM or interior penalty DG in space.
+     * Extrapolation-BDF integration in time.
+     * Sub-cycling (Operator Integration Factor Splitting) for advection.
 
 ---
 ### 0. Code block diagram 
