@@ -768,7 +768,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
       occa::properties dfloatKernelInfo = kernelInfo;
       occa::properties floatKernelInfo = kernelInfo;
-      floatKernelInfo["defines/" "pfloat"]= dfloatString;
+      floatKernelInfo["defines/" "pfloat"]= "float";
       dfloatKernelInfo["defines/" "pfloat"]= dfloatString;
       
       sprintf(fileName, DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
