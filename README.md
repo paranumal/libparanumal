@@ -3,23 +3,25 @@ An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) s
 
 ### 1. Overview 
 
-1. Supported elements:
+Brief summary of major features:
+
+A. Supported elements:
   - Triangles, quadrilaterals, tetrahedra, hexahedra.
   - Lagrange basis functions up to degree 15.
   - Partial support for Bezier-Bernstein basis functions.
   
-2. Mesh wrangling:
+B. Mesh wrangling:
   - Gmsh format file loaders.
   - Load balanced geometric partitioning using space filling curves (Hilbert or Morton ordering). 
   - Clustered partitioning for multirate time stepping.
   
-3. Elliptic solver:
+C. Elliptic solver:
   - Linear Poisson and screened Poisson potential solvers.
   - GPU optimized matrix-vector products.
   - Hybrid p-type multigrid and algebraic multigrid  preconditioned conjugate gradient solver.
   - Sparse matrix or nearly matrix-free algebraic multigrid for coarse levels of multigrid hierarchy.
 
-4. Heterogeneous accelerated flow solvers:
+D. Heterogeneous accelerated flow solvers:
   - Linearized Euler equations.
   - Isothermal compressible Navier-Stokes solver with:
      * Upwind discontinuous Galerkin discretization in space.
