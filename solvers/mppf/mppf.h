@@ -40,7 +40,7 @@ typedef struct {
   dfloat finalTime; 
 
   // Cahn-Hilliard
-  dfloat chM, chL, chS, chA; // Mobility, energy Density (lamda), derived parameters (S and alpha)
+  dfloat chM, chL, chS, chA, chSeta2; // Mobility, energy Density (lamda), derived parameters (S and alpha)
   dfloat lambdaVel, lambdaPhi, lambdaPsi;   
 
   int temporalOrder;
@@ -54,19 +54,19 @@ typedef struct {
 
   int ARKswitch;
   
-  int NiterU, NiterV, NiterW, NiterP;
+  int NiterU, NiterV, NiterW, NiterP, NiterPhi, NiterPsi;
 
 
   //solver tolerances
   dfloat presTOL, velTOL, phiTOL;
 
   dfloat idt, inu; // hold some inverses
-  dfloat hmin, eta, eta2;     // element length, interface thickness, eta^2. 
+  dfloat hmin, eta, eta2, inveta2;     // element length, interface thickness, eta^2. 
   dfloat *U, *P, *Phi, *Psi, *Rho, *Mu;
   dfloat *NU, *LU, *GP, *NPhi;
   dfloat *GU;   
   dfloat *rhsU, *rhsV, *rhsW, *rhsP, *rhsPhi;   
-  dfloat *rkU, *rkP, *PI;
+  dfloat *rkU, *rkP, *rkPhi, *PI;
   dfloat *rkNU, *rkLU, *rkGP;
   
   dfloat *Vort, *Div;
@@ -94,12 +94,16 @@ typedef struct {
   dfloat *vRecvBuffer;
   dfloat *pSendBuffer;
   dfloat *pRecvBuffer;
+  dfloat *phiSendBuffer;
+  dfloat *phiRecvBuffer;
   dfloat * velocityHaloGatherTmp;
 
   occa::memory o_vSendBuffer;
   occa::memory o_vRecvBuffer;
   occa::memory o_pSendBuffer;
   occa::memory o_pRecvBuffer;
+  occa::memory o_phiSendBuffer;
+  occa::memory o_phiRecvBuffer;
   occa::memory o_gatherTmpPinned;
 
 
@@ -134,7 +138,14 @@ typedef struct {
 
   occa::kernel phaseFieldAdvectionVolumeKernel;
   occa::kernel phaseFieldAdvectionSurfaceKernel;
+  occa::kernel phaseFieldDivGradKernel; 
+  occa::kernel phaseFieldRhsKernel; 
+  occa::kernel phaseFieldRhsIpdgBCKernel;
+
+
   occa::kernel scaledAddKernel;
+  occa::kernel multiplyScalarKernel;
+
   occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
   occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
   occa::kernel subCycleRKUpdateKernel;
@@ -142,20 +153,21 @@ typedef struct {
 
 
   occa::memory o_U, o_P, o_Phi, o_Psi;
-  occa::memory o_Rho, o_Mu; 
+  occa::memory o_Rho, o_Mu;
+  occa::memory o_lapPhi;   // laplace of extrapolated phi for  Helmholtz-Psi Rhs  
 
   occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP, o_rhsPhi; 
 
   occa::memory o_NU, o_LU, o_GP, o_NPhi;
   occa::memory o_GU;
 
-  occa::memory o_UH, o_VH, o_WH;
-  occa::memory o_rkU, o_rkP, o_PI;
+  occa::memory o_UH, o_VH, o_WH, o_PhiH;
+  occa::memory o_rkU, o_rkP, o_rkPhi, o_PI;
   occa::memory o_rkNU, o_rkLU, o_rkGP;
 
   occa::memory o_Vort, o_Div;
 
-  occa::memory o_vHaloBuffer, o_pHaloBuffer; 
+  occa::memory o_vHaloBuffer, o_pHaloBuffer, o_phiHaloBuffer; 
   occa::memory o_velocityHaloGatherTmp;
 
   //ARK data
@@ -172,6 +184,8 @@ typedef struct {
   occa::kernel velocityHaloScatterKernel;
   occa::kernel pressureHaloExtractKernel;
   occa::kernel pressureHaloScatterKernel;
+  occa::kernel phaseFieldHaloExtractKernel;
+  occa::kernel phaseFieldHaloScatterKernel;
 
   occa::kernel setFlowFieldKernel;
   occa::kernel setPhaseFieldKernel;
@@ -218,6 +232,12 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options);
 // void insRunEXTBDF(ins_t *ins);
 
  void mppfPlotVTU(mppf_t *mppf, char *fileNameBase);
+ void mppfRun(mppf_t *mppf);
+
+ void mppfPhaseFieldRhs(mppf_t *mppf, dfloat time);
+ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_rhsPhi, occa::memory o_rkU);
+
+
 // void insReport(ins_t *ins, dfloat time,  int tstep);
 // void insError(ins_t *ins, dfloat time);
 // void insForces(ins_t *ins, dfloat time);

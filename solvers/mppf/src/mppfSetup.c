@@ -76,6 +76,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
 
   mppf->rkU     = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
   mppf->rkP     = (dfloat*) calloc(               Ntotal,sizeof(dfloat));
+  mppf->rkPhi   = (dfloat*) calloc(               Ntotal,sizeof(dfloat));
   mppf->PI      = (dfloat*) calloc(               Ntotal,sizeof(dfloat));
 
   mppf->rkNU    = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
@@ -259,7 +260,9 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   MPI_Allreduce(&hmin, &(mppf->hmin), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
   
   // characteristic length of interface thickness
-  mppf->eta =  mppf->hmin; // Change this later, currently no inside !!!!!
+  mppf->eta =  mppf->hmin; // Change this later, currently no mppfide !!!!!
+
+  mppf->eta = 0.1;  // WARNING MUST COMMENT OUT !!!!!!!!!!!!!!!!!!!!!
 
   mppf->dt = mppf->dti;
 
@@ -327,20 +330,29 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   options.getArgs("MOBILITY", mppf->chM);
 
 
+  kernelInfo["defines/" "p_chL"]        = mppf->chL;   // mixing energy
+  kernelInfo["defines/" "p_chM"]        = mppf->chM;   // mobility
+  kernelInfo["defines/" "p_chInvLM"]    = 1.0/ (mppf->chL*mppf->chM);   // mobility
 
   // Some derived parameters
   mppf->idt  = 1.0/mppf->dt;
   mppf->eta2 = mppf->eta*mppf->eta; 
+  mppf->inveta2 = 1.0/ mppf->eta2; 
+
+
+
   // Define coefficients of Helmholtz solves in Chan-Hilliard equation
   mppf->chS = 1.5 * mppf->eta2 *sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
   mppf->chA = -mppf->chS/(2.0*mppf->eta2) * (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
   
+  mppf->chSeta2 = mppf->chS/mppf->eta2; 
+  
+  
   // Helmholtz solve lambda's i.e. -laplace*psi + [alpha+ S/eta^2]*psi = -Q 
-  mppf->lambdaPsi = mppf->chA + mppf->chS/mppf->eta2;
+  mppf->lambdaPsi = mppf->chA + mppf->chS*mppf->inveta2;
   // Helmholtz solve lambda's i.e. -laplace*phi +[-alpha]*phi = -psi 
   mppf->lambdaPhi = -mppf->chA;
 
-  //make option objects for elliptc solvers
   mppf->phiOptions = options;
   mppf->phiOptions.setArgs("KRYLOV SOLVER",        options.getArgs("PHASE FIELD KRYLOV SOLVER"));
   mppf->phiOptions.setArgs("DISCRETIZATION",       options.getArgs("PHASE FIELD DISCRETIZATION"));
@@ -387,6 +399,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   int vBCType[7]   = {0,1,1,2,2,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
   int wBCType[7]   = {0,1,1,2,2,2,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
   int pBCType[7]   = {0,2,2,1,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+  // int phiBCType[7] = {0,2,2,2,2,2,2}; // All homogenous Neumann BCs for Phi and Psi solves 
   int phiBCType[7] = {0,2,2,2,2,2,2}; // All homogenous Neumann BCs for Phi and Psi solves 
 
   //Solver tolerances 
@@ -518,7 +531,8 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   }
 
   // MEMORY ALLOCATION
-  mppf->o_Psi    = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->Psi);
+  mppf->o_Psi       = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->Psi);
+  mppf->o_lapPhi    = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->Psi);
 
   mppf->o_rhsU    = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->rhsU);
   mppf->o_rhsV    = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->rhsV);
@@ -535,6 +549,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   
   mppf->o_rkU   = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkU);
   mppf->o_rkP   = mesh->device.malloc(              Ntotal*sizeof(dfloat), mppf->rkP);
+  mppf->o_rkPhi = mesh->device.malloc(              Ntotal*sizeof(dfloat), mppf->rkPhi);
   mppf->o_PI    = mesh->device.malloc(              Ntotal*sizeof(dfloat), mppf->PI);
   
   mppf->o_rkNU  = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkNU);
@@ -542,9 +557,10 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->o_rkGP  = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkGP);
 
   //storage for helmholtz solves
-  mppf->o_UH = mesh->device.malloc(Ntotal*sizeof(dfloat));
-  mppf->o_VH = mesh->device.malloc(Ntotal*sizeof(dfloat));
-  mppf->o_WH = mesh->device.malloc(Ntotal*sizeof(dfloat));
+  mppf->o_UH   = mesh->device.malloc(Ntotal*sizeof(dfloat));
+  mppf->o_VH   = mesh->device.malloc(Ntotal*sizeof(dfloat));
+  mppf->o_WH   = mesh->device.malloc(Ntotal*sizeof(dfloat));
+  mppf->o_PhiH = mesh->device.malloc(Ntotal*sizeof(dfloat));
 
   //plotting fields
   mppf->o_Vort = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->Vort);
@@ -556,19 +572,28 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
     mppf->o_cU = mppf->o_U;
 
   if(mesh->totalHaloPairs){//halo setup
-    dlong vHaloBytes = mesh->totalHaloPairs*mesh->Np*(mppf->NVfields)*sizeof(dfloat);
-    dlong pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-    dlong vGatherBytes = mppf->NVfields*mesh->ogs->NhaloGather*sizeof(dfloat);
-    mppf->o_vHaloBuffer = mesh->device.malloc(vHaloBytes);
-    mppf->o_pHaloBuffer = mesh->device.malloc(pHaloBytes);
+    dlong vHaloBytes    = mesh->totalHaloPairs*mesh->Np*(mppf->NVfields)*sizeof(dfloat);
+    dlong pHaloBytes    = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+    dlong phiHaloBytes  = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+    dlong vGatherBytes  = mppf->NVfields*mesh->ogs->NhaloGather*sizeof(dfloat);
+    
+    mppf->o_vHaloBuffer   = mesh->device.malloc(vHaloBytes);
+    mppf->o_pHaloBuffer   = mesh->device.malloc(pHaloBytes);
+    mppf->o_phiHaloBuffer = mesh->device.malloc(phiHaloBytes);
 
-    occa::memory o_vSendBuffer, o_vRecvBuffer, o_pSendBuffer, o_pRecvBuffer, o_gatherTmpPinned;
+    occa::memory o_vSendBuffer,   o_vRecvBuffer; 
+    occa::memory o_pSendBuffer,   o_pRecvBuffer;
+    occa::memory o_phiSendBuffer, o_phiRecvBuffer;
+    occa::memory o_gatherTmpPinned;
 
-    mppf->vSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, vHaloBytes, NULL, mppf->o_vSendBuffer);
-    mppf->vRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, vHaloBytes, NULL, mppf->o_vRecvBuffer);
+    mppf->vSendBuffer   = (dfloat*) occaHostMallocPinned(mesh->device, vHaloBytes, NULL, mppf->o_vSendBuffer);
+    mppf->vRecvBuffer   = (dfloat*) occaHostMallocPinned(mesh->device, vHaloBytes, NULL, mppf->o_vRecvBuffer);
 
-    mppf->pSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, pHaloBytes, NULL, mppf->o_pSendBuffer);
-    mppf->pRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, pHaloBytes, NULL, mppf->o_pRecvBuffer);
+    mppf->pSendBuffer   = (dfloat*) occaHostMallocPinned(mesh->device, pHaloBytes, NULL, mppf->o_pSendBuffer);
+    mppf->pRecvBuffer   = (dfloat*) occaHostMallocPinned(mesh->device, pHaloBytes, NULL, mppf->o_pRecvBuffer);
+
+    mppf->phiSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, phiHaloBytes, NULL, mppf->o_phiSendBuffer);
+    mppf->phiRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, phiHaloBytes, NULL, mppf->o_phiRecvBuffer);
 
     mppf->velocityHaloGatherTmp = (dfloat*) occaHostMallocPinned(mesh->device, vGatherBytes, NULL, mppf->o_gatherTmpPinned);
     
@@ -593,14 +618,52 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
 
+      sprintf(fileName, DMPPF "/okl/mppfHaloExchange.okl");
+      sprintf(kernelName, "mppfVelocityHaloExtract");
+      mppf->velocityHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfVelocityHaloScatter");
+      mppf->velocityHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfPressureHaloExtract");
+      mppf->pressureHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfPressureHaloScatter");
+      mppf->pressureHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfPhaseFieldHaloExtract");
+      mppf->phaseFieldHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfPhaseFieldHaloScatter");
+      mppf->phaseFieldHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+       // ===========================================================================
+
       sprintf(fileName, DMPPF "/okl/mppfPhaseFieldAdvection%s.okl", suffix);
       sprintf(kernelName, "mppfPhaseFieldAdvectionCubatureVolume%s", suffix);
       mppf->phaseFieldAdvectionVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "mppfPhaseFieldAdvectionCubatureSurface%s", suffix);
       mppf->phaseFieldAdvectionSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      
+      // ===========================================================================//
+      sprintf(fileName, DMPPF "/okl/mppfPhaseFieldDivGrad%s.okl", suffix);
+      sprintf(kernelName, "mppfPhaseFieldDivGrad%s", suffix);
+      mppf->phaseFieldDivGradKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-       // ===========================================================================
+       // ===========================================================================//
+      sprintf(fileName, DMPPF "/okl/mppfPhaseFieldRhs%s.okl", suffix);
+      sprintf(kernelName, "mppfPhaseFieldRhs%s", suffix);
+      mppf->phaseFieldRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(fileName, DMPPF "/okl/mppfPhaseFieldBC%s.okl", suffix);
+      sprintf(kernelName, "mppfPhaseFieldIpdgBC%s", suffix);
+      mppf->phaseFieldRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+
+      sprintf(fileName, DHOLMES "/okl/multiplyScalar.okl");
+      sprintf(kernelName, "multiplyScalar");
+      mppf->multiplyScalarKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
     }
    MPI_Barrier(mesh->comm);
@@ -613,6 +676,7 @@ if(mesh->rank==0){
     printf("INTERFACE LENGTH\t:\t%.2e\n", mppf->eta);
     printf("INTERFACE THICKNESS\t:\t%.2e\n", mppf->hmin);
     printf("MINUM TIME STEP SIZE\t:\t%.2e\n", mppf->dt);
+    printf("# TIME STEP\t:\t%d\n", mppf->NtimeSteps);
     printf("# SUBSTEPS\t\t:\t%d\n", mppf->Nsubsteps);
  printf("============================================================\n");
     printf("VISCOSITY PHASE 1\t:\t%.2e\n", mppf->mu1);
@@ -627,6 +691,8 @@ if(mesh->rank==0){
     printf("# TIME STEPS\t\t:\t%d\n", mppf->NtimeSteps);
     printf("# OUTPUT STEP\t\t:\t%d\n", mppf->outputStep);
     printf("# FORCE STEP\t\t:\t%d\n", mppf->outputForceStep);
+ printf("============================================================\n");
+
   }
 
 

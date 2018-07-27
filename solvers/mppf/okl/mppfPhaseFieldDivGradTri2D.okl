@@ -1,0 +1,97 @@
+// Compute Gradient in Strong Form
+@kernel void mppfPhaseFieldDivGradTri2D(const dlong Nelements,
+                                       @restrict const  dfloat *  vgeo,
+                                       @restrict const  dfloat *  Dmatrices,
+                                       @restrict const  dfloat *  extbdfA,
+                                       const dlong offset,
+                                       const dfloat inveta2,  
+                                       const dfloat chSeta2,  
+                                       @restrict const  dfloat *  Phi,
+                                             @restrict dfloat *  lapPhi){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+    // for all elements
+    @shared dfloat s_Phi[p_NblockV][p_Np]; // extrapolated Phi i.e. Phi^*
+    @shared dfloat s_dPhidx[p_NblockV][p_Np]; // extrapolated Phi i.e. Phi^*
+    @shared dfloat s_dPhidy[p_NblockV][p_Np]; // extrapolated Phi i.e. Phi^*
+
+    @exclusive dfloat drdx, drdy, dsdx, dsdy; 
+    // Extrapolate Phi to time level (n+1)
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          drdx = 0.f,  drdy = 0.f;
+          dsdx = 0.f,  dsdy = 0.f;
+          dfloat phie  = 0.f; 
+          
+          // Extrapolate Phi history
+          const dlong id = n + e*p_Np; 
+          for (int s=0;s<p_Nstages;s++) {
+            phie  += extbdfA[s]*Phi[id + s*offset];
+          }
+          // compute h(phie)  - S/eta^2 * phie
+          s_Phi[es][n]  = inveta2*phie*(phie*phie - 1.0f) - chSeta2*phie; 
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          // prefetch geometric factors (constant on triangle)
+          drdx = vgeo[e*p_Nvgeo + p_RXID];
+          drdy = vgeo[e*p_Nvgeo + p_RYID];
+          dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+          dfloat dphidr  = 0.f, dphids  = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+
+              dphidr  += Drni*s_Phi[es][i];
+              dphids  += Dsni*s_Phi[es][i];
+            }
+
+          s_dPhidx[es][n] = drdx*dphidr + dsdx*dphids;
+          s_dPhidy[es][n] = drdy*dphidr + dsdy*dphids;
+        }
+      }
+    }
+
+     // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          // prefetch geometric factors (constant on triangle)
+          dfloat dpxdr  = 0.f, dpxds  = 0.f;
+          dfloat dpydr  = 0.f, dpyds  = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+
+              dpxdr  += Drni*s_dPhidx[es][i];
+              dpxds  += Dsni*s_dPhidx[es][i];
+              
+              dpydr  += Drni*s_dPhidy[es][i];
+              dpyds  += Dsni*s_dPhidy[es][i];
+            }
+
+          const dlong id = e*p_Np+n;
+          lapPhi[id]  = (drdx*dpxdr + dsdx*dpxds) + (drdy*dpydr + dsdy*dpyds);
+        }
+      }
+    }
+
+  }
+}

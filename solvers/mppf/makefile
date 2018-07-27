@@ -51,6 +51,9 @@ $(ELLIPTICDIR)/ellipticPrecon.h
 AOBJS    = \
 ./src/mppfSetup.o \
 ./src/mppfPlotVTU.o \
+./src/mppfPhaseFieldRhs.o \
+./src/mppfRun.o \
+./src/mppfCahnHilliardSolve.o \
 #./src/insError.o \
 #./src/insForces.o \
 #./src/insComputeDt.o \

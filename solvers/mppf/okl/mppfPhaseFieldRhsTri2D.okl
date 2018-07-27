@@ -1,0 +1,76 @@
+@kernel void mppfPhaseFieldRhsTri2D(const dlong Nelements,
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  x,
+                                @restrict const  dfloat *  y,
+                                @restrict const  dfloat *  z,
+                                @restrict const  dfloat *  MM,
+                                const dfloat time, 
+                                const dfloat idt,
+                                @restrict const  dfloat *  extbdfA,
+                                @restrict const  dfloat *  extbdfB,
+                                const dlong fieldOffset,
+                                @restrict const  dfloat *  Phi,
+                                @restrict const  dfloat *  NPhi,
+                                @restrict const  dfloat *  lapPhi,
+                                      @restrict dfloat *  rhsPhi){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+
+    @shared dfloat s_rhsPhi[p_NblockV][p_Np];
+   
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          const dlong id = n + p_Np*e;
+          const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+          s_rhsPhi[es][n] = 0.f; // Add  lap(h(phie) - S/eta^2 * phie)
+        
+          for (int s=0;s<p_Nstages;s++) {
+            const dfloat phim   = Phi[id  + s*fieldOffset];
+            const dfloat nphim  = NPhi[id + s*fieldOffset];
+
+            s_rhsPhi[es][n] += J*p_chInvLM*(idt*extbdfB[s]*phim - extbdfA[s]*nphim); // 1/ (lamda*M) * ( BDF(Phi)/dt -  ext(NPhi) )
+          }
+          
+          s_rhsPhi[es][n] += J*lapPhi[id]; // Add  lap(h(phie) - S/eta^2 * phie)
+#if 1
+          // If manufactured solution add forcing
+          dfloat xn = x[id];
+          dfloat yn = y[id];
+          // dfloat zn = z[id];
+          
+          dfloat gn1 = 0.f; 
+
+          mppfPhaseFieldSource2D(time,xn,yn,&gn1);
+
+          s_rhsPhi[es][n] += J*p_chInvLM * gn1;
+#endif
+
+        }
+      }
+    }
+
+    // make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          // Multiplay with Mass Matrix
+          const dlong id = e*p_Np+n;
+
+          dfloat rhsphi = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat M = MM[n+i*p_Np];
+              rhsphi  += M*s_rhsPhi[es][i];
+            }
+          // Update
+          rhsPhi[id] = -rhsphi; // Not sign change here, solving for - (helmholtz)
+        }
+      }
+    }
+  }
+}

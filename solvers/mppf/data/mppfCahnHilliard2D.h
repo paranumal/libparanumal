@@ -13,30 +13,29 @@
     *(phi)  =  cos(M_PI*x)*cos(M_PI*y)*sin(t);\
   }
 
-// #define mppfSourceField2D(t,x,y,f,g) \
-//   {                                    \
-//     dfloat epsilon = 0.1; \
-//     dfloat lambda  = 0.001; \
-//     dfloat M       = 0.001; \
-//     dfloat u       =  cos(M_PI*y)*sin(M_PI*x)*sin(t);\
-//     dfloat v       = -sin(M_PI*y)*cos(M_PI*x)*sin(t);\
-//     dfloat p       =  sin(M_PI*y)*sin(M_PI*x)*cos(t);\
-//     dfloat phi     =  cos(M_PI*x)*cos(M_PI*y)*sin(t);\
-//     dfloat phit    = cos(M_PI*x)*cos(M_PI*y)*cos(t); \
-//     dfloat phix    = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t); \
-//     dfloat phiy    = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t); \
-//     dfloat h       = phi*(phi*phi-1.f)/(epsilon*epsilon); \
-//     dfloat phi2xx = 2.f*M_PI*M_PI*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t); \
-//     dfloat phi2yy = 2.f*M_PI*M_PI*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t); \
-//     dfloat hxx1    = cos(M_PI*x)*cos(M_PI*y)*sin(t); \
-//     dfloat hxx2    = cos(M_PI*y)*sin(M_PI*x)*sin(t); \
-//     dfloat hxx     = (M_PI*M_PI*hxx1*(6.f*hxx2*hxx2 - 3.f*hxx1*hxx1 + 1.f))/(epsilon*epsilon); \
-//     dfloat hyy1    = cos(M_PI*x)*cos(M_PI*y)*sin(t); \
-//     dfloat hyy2    = cos(M_PI*x)*sin(M_PI*y)*sin(t) ; \
-//     dfloat hyy     = (M_PI*M_PI*hyy1*(6.f*hyy2*hyy2 - 3.f*hyy1*hyy1 + 1.f))/(epsilon*epsilon); \
-//     *(g)           = phit + u*phix + v*phiy + lambda*M*(phi2xx + phi2yy - hxx -hyy);\
-//     *(f)           = 0.f;\
-//   } 
+#define mppfPhaseFieldSource2D(t,x,y,g) \
+  {                                    \
+    dfloat eta = 0.1; \
+    dfloat lambda  = 0.001; \
+    dfloat M       = 0.001; \
+    dfloat u       =  cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+    dfloat v       = -sin(M_PI*y)*cos(M_PI*x)*sin(t);\
+    dfloat p       =  sin(M_PI*y)*sin(M_PI*x)*cos(t);\
+    dfloat phi     =  cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat phit    = cos(M_PI*x)*cos(M_PI*y)*cos(t); \
+    dfloat phix    = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t); \
+    dfloat phiy    = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t); \
+    dfloat h       = phi*(phi*phi-1.f)/(eta*eta); \
+    dfloat phi2xx = 2.f*M_PI*M_PI*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t); \
+    dfloat phi2yy = 2.f*M_PI*M_PI*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t); \
+    dfloat hxx1    = cos(M_PI*x)*cos(M_PI*y)*sin(t); \
+    dfloat hxx2    = cos(M_PI*y)*sin(M_PI*x)*sin(t); \
+    dfloat hxx     = (M_PI*M_PI*hxx1*(6.f*hxx2*hxx2 - 3.f*hxx1*hxx1 + 1.f))/(eta*eta); \
+    dfloat hyy1    = cos(M_PI*x)*cos(M_PI*y)*sin(t); \
+    dfloat hyy2    = cos(M_PI*x)*sin(M_PI*y)*sin(t) ; \
+    dfloat hyy     = (M_PI*M_PI*hyy1*(6.f*hyy2*hyy2 - 3.f*hyy1*hyy1 + 1.f))/(eta*eta); \
+    *(g)           = phit + u*phix + v*phiy + lambda*M*(phi2xx + phi2yy - hxx -hyy);\
+  } 
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
@@ -44,9 +43,9 @@
 #define mppfPhaseFieldDirichletConditions2D(bc, t, x, y, nx, ny, phiM, phiB) \
 {                                   \
   if(bc==1){                        \
-    *(phiB) = phiM;                  \
+    *(phiB) = phiM;                 \
   } else if(bc==2){                 \
-    *(phiB) = cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    *(phiB) = phiM;                 \
   } else if(bc==3){                 \
     *(phiB) = phiM;                 \
   } else if(bc==4){                 \

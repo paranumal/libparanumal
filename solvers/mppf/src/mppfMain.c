@@ -37,6 +37,9 @@ int main(int argc, char **argv){
   }
 
   mppf_t *mppf = mppfSetup(mesh,options);
+  
+  // Run
+  mppfRun(mppf);
 
   // if(ins->readRestartFile){
   //   printf("Reading restart file..."); 
