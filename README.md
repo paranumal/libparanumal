@@ -14,11 +14,11 @@ It's elementary.
 `git clone https://github.com/noelchalmers/occa`
 
 #### 2-1. Build OCCA 
-`cd occa  
+`cd occa`    
 export OCCA_DIR=\`pwd\`  
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib  
+`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib  
 make -j  
-cd ../  `
+cd ../  `  
 
 ---
 ### 3. Running the codes: 
