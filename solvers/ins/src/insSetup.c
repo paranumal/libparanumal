@@ -642,10 +642,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
-  int NblockV = 256/mesh->Np; // works for CUDA
+  int NblockV = mymax(1,256/mesh->Np); // works for CUDA
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  int NblockS = 256/maxNodes; // works for CUDA
+  int NblockS = mymax(1,256/maxNodes); // works for CUDA
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
 

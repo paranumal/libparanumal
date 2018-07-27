@@ -78,7 +78,8 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     }
 
     if(elliptic->allNeumann) {
-      mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
+      // mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
+      elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
       o_tmp.copyTo(tmp);
 
       for(dlong n=0;n<Nblock;++n)
