@@ -612,7 +612,12 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
 			mesh->vmapP);
 
-  elliptic->allNeumannScale = baseElliptic->allNeumannScale;
+  
+  //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
+  hlong localElements = (hlong) mesh->Nelements;
+  hlong totalElements = 0;
+  MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, mesh->comm);
+  elliptic->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
   elliptic->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
   elliptic->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), elliptic->tmp);
