@@ -1,6 +1,9 @@
 ## libParanumal
-An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) systems. 
+An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) systems. The initial development of libParanumal was performed by the Parallel Numerical Algorithms Group at Virginia Tech.   
 
+libParanumal is funded in part by the US Department of Energy as part of the activities of the [Center for Efficient Exscale Discretizations](http://ceed.exascaleproject.org). 
+
+---
 ### 1. Overview 
 
 Brief summary of major features:
@@ -34,6 +37,18 @@ D. Heterogeneous accelerated flow solvers:
      * Choice of continuous FEM or interior penalty DG in space.
      * Extrapolation-BDF integration in time.
      * Sub-cycling (Operator Integration Factor Splitting) for advection.
+
+E. Dependencies:
+   - Message Passing Interface (MPI).
+      * The libParanumal makefiles assume that mpic++ are installed and visible in your path.     
+   - Open Concurrent Compute Abstraction (OCCA) 
+      * OCCA must be installed.
+      * OCCA will try to detect if any of these execution models are installed OpenMP, CUDA, OpenCL, HIP.
+      * If OCCA does not detect any of these it will default to Serial execution.
+      * You will need to adjust the libParnumal setup input files to choose the execution model and compute device appropriate for your system.
+      * The OCCA github repo is [here](https://github.com/libocca/occa)
+      * The OCCA webpage is [here](http://libocca.org)
+      
 
 ---
 ### 2. Code block diagram 
