@@ -49,6 +49,7 @@ $(ALMONDDIR)/parALMOND.h \
 # list of objects to be compiled
 AOBJS    = \
 ./src/PCG.o \
+./src/ellipticPlotVTUHex3D.o \
 ./src/ellipticBuildContinuous.o \
 ./src/ellipticBuildIpdg.o \
 ./src/ellipticBuildJacobi.o \

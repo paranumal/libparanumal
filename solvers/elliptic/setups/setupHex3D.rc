@@ -7,10 +7,12 @@ SOLVE
 #BP5
 
 [DATA FILE]
-data/ellipticHomogeneous3D.h
+data/ellipticSineTest3D.h
+#data/ellipticHomogeneous3D.h
 
 [MESH FILE]
-../../meshes/cavityHexH01.msh
+../../meshes/cubeHexE8Thilina.msh
+#../../meshes/cavityHexH01.msh
 
 [MESH DIMENSION]
 3
@@ -19,11 +21,11 @@ data/ellipticHomogeneous3D.h
 12
 
 [POLYNOMIAL DEGREE]
-7
+8
 
 [ELEMENT MAP]
-#ISOPARAMETRIC
-TRILINEAR
+ISOPARAMETRIC
+#TRILINEAR
 
 [THREAD MODEL]
 CUDA
