@@ -156,7 +156,6 @@ int main(int argc, char **argv){
 	dfloat error = fabs(exact-mesh->q[id]);
 	  
 	maxError = mymax(maxError, error);
-	//mesh->q[id] -= exact;
       }
     }
       
@@ -176,7 +175,8 @@ int main(int argc, char **argv){
       meshPlotVTU2D(mesh, fname, 0);
 #endif
   }
-  
+
+#if 0
   {
     dfloat maxError = 0;
     for(int n=0;n<mesh->Np*mesh->Nelements;++n){
@@ -184,19 +184,13 @@ int main(int argc, char **argv){
       dfloat exact = cos(sc*mesh->x[n])*cos(sc*mesh->y[n])*cos(sc*mesh->z[n]);
       dfloat error =  exact - mesh->q[n];
       maxError = mymax(maxError, fabs(error));
-      printf("%g, %g,%g\n", 
-	     exact,
-	     mesh->q[n],
-	     exact/mesh->q[n]
-	     );
-      //      mesh->q[n] -= exact;
-      
     }
     printf("maxError = %g\n", maxError);
 
     printf("PRINTING VTU\n");
     ellipticPlotVTUHex3D(mesh, "bah", 0);
   }
+#endif
   
   // close down MPI
   MPI_Finalize();

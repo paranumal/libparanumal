@@ -11,8 +11,8 @@ data/ellipticSineTest3D.h
 #data/ellipticHomogeneous3D.h
 
 [MESH FILE]
-../../meshes/cubeHexE8Thilina.msh
-#../../meshes/cavityHexH01.msh
+#../../meshes/cubeHexE8Thilina.msh
+../../meshes/cavityHexH01.msh
 
 [MESH DIMENSION]
 3
@@ -45,8 +45,8 @@ PCG+FLEXIBLE
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-IPDG
-#CONTINUOUS
+#IPDG
+CONTINUOUS
 
 # can be NODAL or BERN
 [BASIS]
@@ -56,6 +56,7 @@ NODAL
 [PRECONDITIONER]
 #JACOBI
 MULTIGRID
+
 
 
 ########## MULTIGRID Options ##############
