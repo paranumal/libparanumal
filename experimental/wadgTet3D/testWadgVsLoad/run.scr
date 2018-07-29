@@ -1,0 +1,9 @@
+make clean; make
+for ((N=3; N<=6; N++))
+do
+        for ((Kblk=1; Kblk<=8; Kblk++))
+        do
+              ./main $N $Kblk
+        done
+        echo "-----------------------------------"
+done
