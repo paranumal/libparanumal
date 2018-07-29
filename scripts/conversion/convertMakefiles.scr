@@ -1,0 +1,13 @@
+#!/bin/bash
+
+for ml in makefile; do
+
+    echo $ml
+    mv $ml tmp1
+
+    sed -i 's/makefile/Makefile/g' tmp1
+    sed -i 's/\$(compilerFlags)/-DOCCA_VERSION_1_0 \$(compilerFlags)/g' tmp1
+    sed -i 's/-I\${OCCA_DIR}\/include/-DOCCA_VERSION_1_0 -I\${OCCA_DIR}\/include/g' tmp1    
+    
+    mv tmp1 $ml
+done

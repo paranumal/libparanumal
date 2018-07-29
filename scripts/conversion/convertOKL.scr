@@ -1,0 +1,11 @@
+#!/bin/bash
+
+shopt -s nullglob
+
+for fl in *.okl; do
+    convertOKLsyntax.scr $fl
+done
+
+for fl in *.h; do
+    convertOKLsyntax.scr $fl
+done
