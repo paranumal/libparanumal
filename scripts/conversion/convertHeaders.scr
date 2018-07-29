@@ -1,0 +1,10 @@
+#!/bin/bash
+
+for hl in *.h; do
+
+    echo $hl
+    mv $hl tmp1
+
+    sed -i 's/occa\:\:kernelInfo/occa\:\:properties/g' tmp1
+    mv tmp1 $hl
+done
