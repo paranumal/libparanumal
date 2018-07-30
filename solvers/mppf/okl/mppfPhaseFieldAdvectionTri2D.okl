@@ -14,8 +14,8 @@
   for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
 
     // Hold Flux Vector on Shared, use symmetry f21 = f12
-    @shared dfloat s_V[p_cubNblockV][p_Np];
     @shared dfloat s_U[p_cubNblockV][p_Np];
+    @shared dfloat s_V[p_cubNblockV][p_Np];
     @shared dfloat s_Phi[p_cubNblockV][p_Np];
     //
     @shared dfloat s_cFr[p_cubNblockV][p_cubNp];
@@ -76,7 +76,7 @@
               dfds += cubDmatrices[n+m*p_Np]*s_cFs[es][m];
       	    }
       	  // Update
-      	  NPhi[e*p_Np+n] = -(dfdr + dfds); // note  change in sign	  
+      	  NPhi[e*p_Np+n] = -(dfdr + dfds); // note  change in sign, weakly implemented  
       	}
       }
     }
@@ -180,8 +180,8 @@
             // apply boundary condition
             int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              phip = phim; // Currently use this baoundary, change later !!!!! 
-              //insAdvectionBoundaryConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp] , nx, ny, iUM,iVM, &iUP, &iVP);
+              // phip = phim; // Currently use this baoundary, change later !!!!! 
+              mppfPhaseFieldDirichletConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp] , nx, ny,phim, &phip);
             }
 
             // Find max normal velocity on the face

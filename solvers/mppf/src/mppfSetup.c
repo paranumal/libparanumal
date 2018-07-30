@@ -304,8 +304,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
                                   mppf->o_Rho,
                                   mppf->o_Mu);
   
-#if 0
-
+#if 1
   mppf->o_Rho.copyTo(mppf->Rho);
   mppf->o_Mu.copyTo(mppf->Mu);
   mppf->o_P.copyTo(mppf->P);
@@ -335,16 +334,16 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   kernelInfo["defines/" "p_chInvLM"]    = 1.0/ (mppf->chL*mppf->chM);   // mobility
 
   // Some derived parameters
-  mppf->idt  = 1.0/mppf->dt;
-  mppf->eta2 = mppf->eta*mppf->eta; 
+  mppf->idt     = 1.0/mppf->dt;
+  mppf->eta2    = mppf->eta*mppf->eta; 
   mppf->inveta2 = 1.0/ mppf->eta2; 
 
+  mppf->factorS = 2.0; // has to be >1.0 
 
-
-  // Define coefficients of Helmholtz solves in Chan-Hilliard equation
-  mppf->chS = 1.5 * mppf->eta2 *sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
-  mppf->chA = -mppf->chS/(2.0*mppf->eta2) * (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
+  mppf->chS = mppf->factorS*mppf->eta2*sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
+  mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
   
+  // Hold S/n^2
   mppf->chSeta2 = mppf->chS/mppf->eta2; 
   
   
@@ -638,7 +637,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
       mppf->phaseFieldHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
        // ===========================================================================
-
+      printf("Compiling Kernels\n");
       sprintf(fileName, DMPPF "/okl/mppfPhaseFieldAdvection%s.okl", suffix);
       sprintf(kernelName, "mppfPhaseFieldAdvectionCubatureVolume%s", suffix);
       mppf->phaseFieldAdvectionVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
@@ -653,17 +652,20 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
 
        // ===========================================================================//
       sprintf(fileName, DMPPF "/okl/mppfPhaseFieldRhs%s.okl", suffix);
-      sprintf(kernelName, "mppfPhaseFieldRhs%s", suffix);
-      mppf->phaseFieldRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "mppfPhaseFieldRhsSolve1%s", suffix);
+      mppf->phaseFieldRhsSolve1Kernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfPhaseFieldRhsSolve2%s", suffix);
+      mppf->phaseFieldRhsSolve2Kernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(fileName, DMPPF "/okl/mppfPhaseFieldBC%s.okl", suffix);
       sprintf(kernelName, "mppfPhaseFieldIpdgBC%s", suffix);
       mppf->phaseFieldRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 
-      sprintf(fileName, DHOLMES "/okl/multiplyScalar.okl");
-      sprintf(kernelName, "multiplyScalar");
-      mppf->multiplyScalarKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      // sprintf(fileName, DHOLMES "/okl/multiplyScalar.okl");
+      // sprintf(kernelName, "multiplyScalar");
+      // mppf->multiplyScalarKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
     }
    MPI_Barrier(mesh->comm);

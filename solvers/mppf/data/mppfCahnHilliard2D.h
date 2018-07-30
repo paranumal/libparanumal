@@ -13,33 +13,31 @@
     *(phi)  =  cos(M_PI*x)*cos(M_PI*y)*sin(t);\
   }
 
-#define mppfPhaseFieldSource2D(t,x,y,g) \
+#define mppfPhaseFieldSource2D(t,x,y,g)\
   {                                    \
-    dfloat eta = 0.1; \
+    dfloat eta     = 0.1; \
     dfloat lambda  = 0.001; \
     dfloat M       = 0.001; \
+    dfloat eta2    = eta*eta;\
     dfloat u       =  cos(M_PI*y)*sin(M_PI*x)*sin(t);\
     dfloat v       = -sin(M_PI*y)*cos(M_PI*x)*sin(t);\
     dfloat p       =  sin(M_PI*y)*sin(M_PI*x)*cos(t);\
     dfloat phi     =  cos(M_PI*x)*cos(M_PI*y)*sin(t);\
-    dfloat phit    = cos(M_PI*x)*cos(M_PI*y)*cos(t); \
-    dfloat phix    = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t); \
-    dfloat phiy    = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t); \
-    dfloat h       = phi*(phi*phi-1.f)/(eta*eta); \
-    dfloat phi2xx = 2.f*M_PI*M_PI*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t); \
-    dfloat phi2yy = 2.f*M_PI*M_PI*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t); \
-    dfloat hxx1    = cos(M_PI*x)*cos(M_PI*y)*sin(t); \
-    dfloat hxx2    = cos(M_PI*y)*sin(M_PI*x)*sin(t); \
-    dfloat hxx     = (M_PI*M_PI*hxx1*(6.f*hxx2*hxx2 - 3.f*hxx1*hxx1 + 1.f))/(eta*eta); \
-    dfloat hyy1    = cos(M_PI*x)*cos(M_PI*y)*sin(t); \
-    dfloat hyy2    = cos(M_PI*x)*sin(M_PI*y)*sin(t) ; \
-    dfloat hyy     = (M_PI*M_PI*hyy1*(6.f*hyy2*hyy2 - 3.f*hyy1*hyy1 + 1.f))/(eta*eta); \
-    *(g)           = phit + u*phix + v*phiy + lambda*M*(phi2xx + phi2yy - hxx -hyy);\
+    dfloat phit    = cos(M_PI*x)*cos(M_PI*y)*cos(t);\
+    dfloat phix    = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+    dfloat phiy    = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat term1   = 2.f*M*M_PI*M_PI*M_PI*M_PI*lambda*cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat h1      = sin(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat term2   = -(2.f*M*lambda*M_PI*M_PI*phi*(3.f*sin(t)*sin(t) + 9.f*h1*h1 + 1.f))/eta2;\
+    *(g)           = phit + u*phix + v*phiy + term1 + term2;\
   } 
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
 /*  Inflow condition should be phiM to create zero normal derivative ? */
+
+
+
 #define mppfPhaseFieldDirichletConditions2D(bc, t, x, y, nx, ny, phiM, phiB) \
 {                                   \
   if(bc==1){                        \

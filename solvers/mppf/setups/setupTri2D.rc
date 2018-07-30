@@ -14,7 +14,7 @@ data/mppfCahnHilliard2D.h
 3
 
 [POLYNOMIAL DEGREE]
-4
+3
 
 [THREAD MODEL]
 CUDA
@@ -275,8 +275,8 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-NONE
-#VORTEX
+#NONE
+NSCH2D
 
 [VERBOSE]
 TRUE

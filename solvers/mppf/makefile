@@ -54,10 +54,10 @@ AOBJS    = \
 ./src/mppfPhaseFieldRhs.o \
 ./src/mppfRun.o \
 ./src/mppfCahnHilliardSolve.o \
-#./src/insError.o \
+./src/mppfReport.o \
+./src/mppfError.o \
 #./src/insForces.o \
 #./src/insComputeDt.o \
-#./src/insReport.o \
 #./src/insRunARK.o \
 #./src/insRunEXTBDF.o \
 #./src/insAdvection.o \

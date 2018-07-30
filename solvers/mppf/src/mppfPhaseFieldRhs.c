@@ -84,7 +84,7 @@ void mppfPhaseFieldRhs(mppf_t *mppf, dfloat time){
 
   dfloat tn1 = mppf->time + mppf->dt;
   
-  mppf->phaseFieldRhsKernel(mesh->Nelements,
+  mppf->phaseFieldRhsSolve1Kernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_x,
                             mesh->o_y,

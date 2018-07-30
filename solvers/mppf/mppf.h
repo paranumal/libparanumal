@@ -61,7 +61,7 @@ typedef struct {
   dfloat presTOL, velTOL, phiTOL;
 
   dfloat idt, inu; // hold some inverses
-  dfloat hmin, eta, eta2, inveta2;     // element length, interface thickness, eta^2. 
+  dfloat hmin, eta, eta2, inveta2, factorS;     // element length, interface thickness, eta^2. 
   dfloat *U, *P, *Phi, *Psi, *Rho, *Mu;
   dfloat *NU, *LU, *GP, *NPhi;
   dfloat *GU;   
@@ -139,7 +139,8 @@ typedef struct {
   occa::kernel phaseFieldAdvectionVolumeKernel;
   occa::kernel phaseFieldAdvectionSurfaceKernel;
   occa::kernel phaseFieldDivGradKernel; 
-  occa::kernel phaseFieldRhsKernel; 
+  occa::kernel phaseFieldRhsSolve1Kernel; 
+  occa::kernel phaseFieldRhsSolve2Kernel; 
   occa::kernel phaseFieldRhsIpdgBCKernel;
 
 
@@ -235,11 +236,11 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options);
  void mppfRun(mppf_t *mppf);
 
  void mppfPhaseFieldRhs(mppf_t *mppf, dfloat time);
- void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_rhsPhi, occa::memory o_rkU);
+ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_rkU);
 
 
-// void insReport(ins_t *ins, dfloat time,  int tstep);
-// void insError(ins_t *ins, dfloat time);
+void mppfReport(mppf_t *mppf, dfloat time,  int tstep);
+void mppfError(mppf_t *mppf, dfloat time);
 // void insForces(ins_t *ins, dfloat time);
 // void insComputeDt(ins_t *ins, dfloat time); 
 

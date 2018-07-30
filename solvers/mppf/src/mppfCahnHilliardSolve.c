@@ -1,7 +1,7 @@
 #include "mppf.h"
 
 // solve lambda*U + A*U = rhsU
-void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_rhsPhi, occa::memory o_PhiHat){
+void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_PhiHat){
   
   mesh_t *mesh = mppf->mesh; 
   elliptic_t *phiSolver = mppf->phiSolver; 
@@ -52,7 +52,7 @@ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_rhsPhi, occ
                                   mesh->o_Dmatrices,
                                   mesh->o_LIFTT,
                                   mesh->o_MM,
-                                  o_rhsPhi);
+                                  mppf->o_rhsPhi);
     occaTimerToc(mesh->device,"CahnHilliardRhsIpdgBC");   
   }
 
@@ -70,17 +70,14 @@ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_rhsPhi, occ
   // }
   
   occaTimerTic(mesh->device,"Psi-Solve");
-  mppf->NiterPsi = ellipticSolve(psiSolver, mppf->lambdaPsi, mppf->phiTOL, o_rhsPhi, mppf->o_Psi);
+  mppf->NiterPsi = ellipticSolve(psiSolver, mppf->lambdaPsi, mppf->phiTOL, mppf->o_rhsPhi, mppf->o_Psi);
   occaTimerToc(mesh->device,"Psi-Solve"); 
-
   
-  dlong Nlocal = mesh->Np*mesh->Nelements;
-  const dfloat scl = -1.0;  
-  mppf->multiplyScalarKernel(Nlocal, scl, mppf->o_Psi);
-
+  // Compute Rhs for Phi Solve i.e. rhs =  -M*J*Psi
+  mppf->phaseFieldRhsSolve2Kernel(mesh->Nelements, mesh->o_vgeo, mesh->o_MM, mppf->o_Psi, mppf->o_rhsPhi);
 
   occaTimerTic(mesh->device,"Phi-Solve");
-  mppf->NiterPhi = ellipticSolve(phiSolver, mppf->lambdaPhi, mppf->phiTOL, mppf->o_Psi, mppf->o_PhiH);
+  mppf->NiterPhi = ellipticSolve(phiSolver, mppf->lambdaPhi, mppf->phiTOL, mppf->o_rhsPhi, mppf->o_PhiH);
   occaTimerToc(mesh->device,"Phi-Solve");
 
  

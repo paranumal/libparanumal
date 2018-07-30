@@ -9,11 +9,22 @@ void mppfRun(mppf_t *mppf){
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"MPPF");
 
+  char fname[BUFSIZ];
+  string outName;
+  mppf->options.getArgs("OUTPUT FILE NAME", outName);
+
+  mppf->o_Phi.copyTo(mppf->Phi);
+  mppf->o_U.copyTo(mppf->U);
+  mppf->o_P.copyTo(mppf->P);
+  sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, mppf->frame++);
+
+  mppfPlotVTU(mppf, fname);
+
   // Write Initial Data
   // if(mppf->outputStep) insReport(mppf, mppf->startTime, 0);
 
   // for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
-  for(int tstep=0;tstep<1;++tstep){
+  for(int tstep=0;tstep<10;++tstep){
 
     if(tstep<1) 
       extbdfCoefficents(mppf,tstep+1);
@@ -24,14 +35,72 @@ void mppfRun(mppf_t *mppf){
   
     dfloat time = mppf->startTime + tstep*mppf->dt;
     
+    dfloat time_new = time + mppf->dt; 
 
     // printf("Calling CF Rhs Function\n");
-    mppfPhaseFieldRhs(mppf, time);
+    mppfPhaseFieldRhs(mppf, time_new);
 
-    mppfCahnHilliardSolve(mppf, time+mppf->dt, mppf->o_rhsPhi, mppf->o_rkPhi);
+    mppfCahnHilliardSolve(mppf, time, mppf->o_rkPhi);
+
+
+    mppf->setFlowFieldKernel(mesh->Nelements,
+                              time_new, 
+                              mesh->o_x,
+                              mesh->o_y,
+                              mesh->o_z,
+                              mppf->fieldOffset,
+                              mppf->o_rkU,
+                              mppf->o_rkP);
+
+     //cycle history
+    for (int s=mppf->Nstages;s>1;s--) {
+      mppf->o_U.copyFrom(mppf->o_U, mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
+                                  (s-1)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
+                                  (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
+      mppf->o_P.copyFrom(mppf->o_P, mppf->Ntotal*sizeof(dfloat), 
+                                  (s-1)*mppf->Ntotal*sizeof(dfloat), 
+                                  (s-2)*mppf->Ntotal*sizeof(dfloat));
+
+      mppf->o_Phi.copyFrom(mppf->o_Phi, mppf->Ntotal*sizeof(dfloat), 
+                                  (s-1)*mppf->Ntotal*sizeof(dfloat), 
+                                  (s-2)*mppf->Ntotal*sizeof(dfloat));
+    }
+
+
+     //copy updated fields
+    mppf->o_Phi.copyFrom(mppf->o_rkPhi, mppf->Ntotal*sizeof(dfloat));
+    mppf->o_U.copyFrom(mppf->o_rkU, mppf->NVfields*mppf->Ntotal*sizeof(dfloat));  
+    mppf->o_P.copyFrom(mppf->o_rkP,                mppf->Ntotal*sizeof(dfloat));  
 
 
 
+     //cycle rhs history
+    for (int s=mppf->Nstages;s>1;s--) {
+      // mppf->o_NU.copyFrom(mppf->o_NU, mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
+      //                             (s-1)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
+      //                             (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
+      // mppf->o_GP.copyFrom(mppf->o_GP, mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
+      //                             (s-1)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
+      //                             (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
+
+       mppf->o_NPhi.copyFrom(mppf->o_NPhi, mppf->Ntotal*sizeof(dfloat), 
+                                  (s-1)*mppf->Ntotal*sizeof(dfloat), 
+                                  (s-2)*mppf->Ntotal*sizeof(dfloat));
+    }
+
+
+
+
+
+
+    mppf->o_Phi.copyTo(mppf->Phi);
+    mppf->o_U.copyTo(mppf->U);
+    mppf->o_P.copyTo(mppf->P);
+    sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, mppf->frame++);
+    mppfPlotVTU(mppf, fname);
+
+
+    
 
     // if(mppf->Nsubsteps) {
     //   mppfSubCycle(mppf, time, mppf->Nstages, mppf->o_U, mppf->o_NU);
@@ -108,7 +177,7 @@ void mppfRun(mppf_t *mppf){
 
   // if(mppf->outputStep) mppfReport(mppf, finalTime,mppf->NtimeSteps);
   
-  if(mesh->rank==0) occa::printTimer();
+  // if(mesh->rank==0) occa::printTimer();
 }
 
 
@@ -132,13 +201,13 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
     mppf->ExplicitOrder = 1; 
 
     // Define coefficients of Helmholtz solves in Chan-Hilliard equation
-    mppf->chS = 1.0 * mppf->eta2 *sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
-    mppf->chA = -mppf->chS/(2.0*mppf->eta2) * (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
+    mppf->chS = mppf->factorS*mppf->eta2*sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
+    mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
 
     mppf->chSeta2 = mppf->chS/mppf->eta2; 
  
     // Helmholtz solve lambda's i.e. -laplace*psi + [alpha+ S/eta^2]*psi = -Q 
-    mppf->lambdaPsi = mppf->chA + mppf->chS/mppf->eta2;
+    mppf->lambdaPsi = mppf->chA + mppf->chSeta2;
     // Helmholtz solve lambda's i.e. -laplace*phi +[-alpha]*phi = -psi 
     mppf->lambdaPhi = -mppf->chA;
     // // 
@@ -162,16 +231,15 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
     mppf->ExplicitOrder=2;
 
     // Define coefficients of Helmholtz solves in Chan-Hilliard equation
-    mppf->chS = 1.0 * mppf->eta2 *sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
-    mppf->chA = -mppf->chS/(2.0*mppf->eta2) *  (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
+    mppf->chS = mppf->factorS*mppf->eta2*sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
+    mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
 
     mppf->chSeta2 = mppf->chS/mppf->eta2; 
  
     // Helmholtz solve lambda's i.e. -laplace*psi + [alpha+ S/eta^2]*psi = -Q 
-    mppf->lambdaPsi = mppf->chA + mppf->chS/mppf->eta2;
+    mppf->lambdaPsi = mppf->chA + mppf->chSeta2;
     // Helmholtz solve lambda's i.e. -laplace*phi +[-alpha]*phi = -psi 
     mppf->lambdaPhi = -mppf->chA;
-
     // mppf->lambda = mppf->g0 / (mppf->dt * mppf->nu);
     // mppf->ig0 = 1.0/mppf->g0; 
   } else if(order==3) {
@@ -192,13 +260,13 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
     mppf->ExplicitOrder=3;
 
     // Define coefficients of Helmholtz solves in Chan-Hilliard equation
-    mppf->chS = 1.0 * mppf->eta2 *sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
-    mppf->chA = -mppf->chS/(2.0*mppf->eta2) * (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
+    mppf->chS = mppf->factorS*mppf->eta2*sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
+    mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
 
     mppf->chSeta2 = mppf->chS/mppf->eta2; 
  
     // Helmholtz solve lambda's i.e. -laplace*psi + [alpha+ S/eta^2]*psi = -Q 
-    mppf->lambdaPsi = mppf->chA + mppf->chS/mppf->eta2;
+    mppf->lambdaPsi = mppf->chA + mppf->chSeta2;
     // Helmholtz solve lambda's i.e. -laplace*phi +[-alpha]*phi = -psi 
     mppf->lambdaPhi = -mppf->chA;
 

@@ -1,4 +1,4 @@
-@kernel void mppfPhaseFieldRhsTri2D(const dlong Nelements,
+@kernel void mppfPhaseFieldRhsSolve1Tri2D(const dlong Nelements,
                                 @restrict const  dfloat *  vgeo,
                                 @restrict const  dfloat *  x,
                                 @restrict const  dfloat *  y,
@@ -33,7 +33,8 @@
             s_rhsPhi[es][n] += J*p_chInvLM*(idt*extbdfB[s]*phim - extbdfA[s]*nphim); // 1/ (lamda*M) * ( BDF(Phi)/dt -  ext(NPhi) )
           }
           
-          s_rhsPhi[es][n] += J*lapPhi[id]; // Add  lap(h(phie) - S/eta^2 * phie)
+          s_rhsPhi[es][n] +=  J*lapPhi[id]; // Add  lap(h(phie) - S/eta^2 * phie)
+     
 #if 1
           // If manufactured solution add forcing
           dfloat xn = x[id];
@@ -69,6 +70,55 @@
             }
           // Update
           rhsPhi[id] = -rhsphi; // Not sign change here, solving for - (helmholtz)
+        }
+      }
+    }
+  }
+}
+
+
+
+
+@kernel void mppfPhaseFieldRhsSolve2Tri2D(const dlong Nelements,
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  MM,
+                                @restrict const  dfloat *  Psi,
+                                      @restrict dfloat *  rhsPsi){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+
+    @shared dfloat s_rhsPsi[p_NblockV][p_Np];
+   
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          const dlong id = n + p_Np*e;
+          const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+                   
+          s_rhsPsi[es][n] =  -J*Psi[id]; 
+        }
+      }
+    }
+
+    // make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          // Multiplay with Mass Matrix
+          const dlong id = e*p_Np+n;
+
+          dfloat rhspsi = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat M = MM[n+i*p_Np];
+              rhspsi  += M*s_rhsPsi[es][i];
+            }
+          // Update
+          rhsPsi[id] =  rhspsi; // Not sign change here, solving for - (helmholtz)
         }
       }
     }

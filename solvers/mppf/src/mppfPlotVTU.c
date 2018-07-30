@@ -178,7 +178,6 @@ void mppfPlotVTU(mppf_t *mppf, char *fileName){
           dlong id = m+e*mesh->Np;
           dfloat um = mppf->U[id+0*offset];
           dfloat vm = mppf->U[id+1*offset];
-
           plotun += mesh->plotInterp[n*mesh->Np+m]*um;
           plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
         }
