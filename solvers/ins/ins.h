@@ -259,3 +259,10 @@ void insIsoPlotVTU(ins_t *ins, char *fileName);
 // Restarting from file
 void insRestartWrite(ins_t *ins, setupAide &options, dfloat time); 
 void insRestartRead(ins_t *ins, setupAide &options); 
+
+
+// customized hex writer
+extern "C"
+{
+  void insPlotVTUHex3D(ins_t *ins, char *fileNameBase);
+}
