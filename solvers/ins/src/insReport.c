@@ -44,10 +44,21 @@ void insReport(ins_t *ins, dfloat time, int tstep){
                              ins->o_U,
                              ins->o_Div);
 
-  // gather-scatter the vorticity
-  ellipticParallelGatherScatter(mesh, mesh->ogs, ins->o_Vort, dfloatString, "add");  
-  ins->pSolver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, ins->o_Vort, ins->o_Vort);
-  
+  // gatherscatter vorticity field
+  for(int s=0; s<ins->dim; s++){
+    dlong Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+    ins->o_UH.copyFrom(ins->o_Vort,Ntotal*sizeof(dfloat),0,s*ins->fieldOffset*sizeof(dfloat));
+    
+    ellipticParallelGatherScatter(mesh, mesh->ogs, ins->o_UH, dfloatString, "add");  
+    ins->pSolver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, ins->o_UH, ins->o_UH);
+    
+    ins->o_UH.copyTo(ins->o_Vort,Ntotal*sizeof(dfloat),s*ins->fieldOffset*sizeof(dfloat),0);
+  }
+
+  // gather-scatter divergence 
+  ellipticParallelGatherScatter(mesh, mesh->ogs, ins->o_Div, dfloatString, "add");  
+  ins->pSolver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, ins->o_Div, ins->o_Div);
+
   // copy data back to host
   ins->o_U.copyTo(ins->U);
   ins->o_P.copyTo(ins->P);
