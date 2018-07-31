@@ -7,9 +7,11 @@ SOLVE
 #BP5
 
 [DATA FILE]
-data/ellipticHomogeneous3D.h
+data/ellipticSineTest3D.h
+#data/ellipticHomogeneous3D.h
 
 [MESH FILE]
+#../../meshes/cubeHexE8Thilina.msh
 ../../meshes/cavityHexH01.msh
 
 [MESH DIMENSION]
@@ -19,11 +21,11 @@ data/ellipticHomogeneous3D.h
 12
 
 [POLYNOMIAL DEGREE]
-7
+8
 
 [ELEMENT MAP]
-#ISOPARAMETRIC
-TRILINEAR
+ISOPARAMETRIC
+#TRILINEAR
 
 [THREAD MODEL]
 CUDA
@@ -43,8 +45,8 @@ PCG+FLEXIBLE
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-IPDG
-#CONTINUOUS
+#IPDG
+CONTINUOUS
 
 # can be NODAL or BERN
 [BASIS]
@@ -54,6 +56,7 @@ NODAL
 [PRECONDITIONER]
 #JACOBI
 MULTIGRID
+
 
 
 ########## MULTIGRID Options ##############

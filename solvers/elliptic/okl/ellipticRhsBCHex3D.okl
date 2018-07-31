@@ -1,8 +1,35 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
 
 void surfaceTerms(int sk, 
                   int m, 
                   int i, 
                   int j,
+		  const dfloat t, 
                   @global const dfloat *sgeo, 
                   @global const dfloat *x, 
                   @global const dfloat *y, 
@@ -23,7 +50,7 @@ void surfaceTerms(int sk,
   
   const int bc = mapB[idM];                                             
   
-  if(bc>0) {                                                            
+  if(bc>0) {
     ellipticBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, uP, dudxP, dudyP, dudzP);
   }                                                                     
   
@@ -77,10 +104,10 @@ void surfaceTerms(int sk,
         const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i + j*p_Nq;
         
         //      surfaceTerms(sk0,0,i,j);
-        surfaceTerms(sk0, 0, i, j, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+        surfaceTerms(sk0, 0, i, j, t, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
         
         //        surfaceTerms(sk5,1,i,j);
-        surfaceTerms(sk5, 1, i, j, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+        surfaceTerms(sk5, 1, i, j, t, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
       }
     }
 
@@ -90,11 +117,11 @@ void surfaceTerms(int sk,
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 0
-        r_q[0] += s_q[0][j][i];
+        r_q[0] = s_q[0][j][i]; //TW += => =
         r_rhs[0] += s_ndq[0][j][i];
 
         //face 5
-        r_q[p_Nq-1] += s_q[1][j][i];
+        r_q[p_Nq-1] = s_q[1][j][i];//TW += => =
         r_rhs[p_Nq-1] += s_ndq[1][j][i];
       }
     }
@@ -108,10 +135,10 @@ void surfaceTerms(int sk,
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
 
         //        surfaceTerms(sk1,0,i,k);
-        surfaceTerms(sk1, 0, i, k, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+        surfaceTerms(sk1, 0, i, k, t, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
 
         //surfaceTerms(sk3,1,i,k);
-        surfaceTerms(sk3, 1, i, k, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+        surfaceTerms(sk3, 1, i, k, t, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
       }
     }
 
@@ -123,14 +150,14 @@ void surfaceTerms(int sk,
         if (j==0) {//face 1
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_q[k] += s_q[0][k][i];
+            r_q[k] = s_q[0][k][i]; //TW += => =
             r_rhs[k] += s_ndq[0][k][i];
           }
         }
         if (j==p_Nq-1) {//face 3
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_q[k] += s_q[1][k][i];
+            r_q[k] = s_q[1][k][i]; //TW += => =
             r_rhs[k] += s_ndq[1][k][i];
           }
         }
@@ -146,10 +173,10 @@ void surfaceTerms(int sk,
         const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
 
         //        surfaceTerms(sk2,0,j,k);
-        surfaceTerms(sk2, 0, j, k, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+        surfaceTerms(sk2, 0, j, k, t, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
 
         //        surfaceTerms(sk4,1,j,k);
-        surfaceTerms(sk4, 1, j, k, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+        surfaceTerms(sk4, 1, j, k, t, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
       }
     }
 
@@ -161,14 +188,14 @@ void surfaceTerms(int sk,
         if (i==p_Nq-1) {//face 2
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_q[k] += s_q[0][k][j];
+            r_q[k] = s_q[0][k][j]; //TW += => =
             r_rhs[k] += s_ndq[0][k][j];
           }
         }
         if (i==0) {//face 4
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_q[k] += s_q[1][k][j];
+            r_q[k] = s_q[1][k][j]; //TW += => =
             r_rhs[k] += s_ndq[1][k][j];
           }
         }

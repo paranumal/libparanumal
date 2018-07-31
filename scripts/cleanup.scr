@@ -1,5 +1,0 @@
-
-find . -name \*.o -exec rm {} \;
-rm foo*vtu
-find . -name \*~ -exec rm {} \;
-find . -name \#* -exec rm {} \;

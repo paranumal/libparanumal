@@ -1,3 +1,29 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
 #include "elliptic.h"
 
 // create elliptic and mesh structs for multigrid levels
@@ -8,38 +34,39 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 #ifndef OCCA_VERSION_1_0
   memcpy(elliptic,baseElliptic,sizeof(elliptic_t));
 #else
-    elliptic->dim = baseElliptic->dim;
-    elliptic->elementType = baseElliptic->elementType;
-    elliptic->options = baseElliptic->options;
-    elliptic->tau = baseElliptic->tau;
-    elliptic->BCType = baseElliptic->BCType;
-    elliptic->allNeumann = baseElliptic->allNeumann;
-    elliptic->allNeumannPenalty = baseElliptic->allNeumannPenalty;
+
+  elliptic->dim = baseElliptic->dim;
+  elliptic->elementType = baseElliptic->elementType;
+  elliptic->options = baseElliptic->options;
+  elliptic->tau = baseElliptic->tau;
+  elliptic->BCType = baseElliptic->BCType;
+  elliptic->allNeumann = baseElliptic->allNeumann;
+  elliptic->allNeumannPenalty = baseElliptic->allNeumannPenalty;
     
-    elliptic->sendBuffer = baseElliptic->sendBuffer;
-    elliptic->recvBuffer = baseElliptic->recvBuffer;
-    elliptic->gradSendBuffer = baseElliptic->gradSendBuffer;
-    elliptic->gradRecvBuffer = baseElliptic->gradRecvBuffer;
+  elliptic->sendBuffer = baseElliptic->sendBuffer;
+  elliptic->recvBuffer = baseElliptic->recvBuffer;
+  elliptic->gradSendBuffer = baseElliptic->gradSendBuffer;
+  elliptic->gradRecvBuffer = baseElliptic->gradRecvBuffer;
 
-    elliptic->defaultStream = baseElliptic->defaultStream;
-    elliptic->dataStream = baseElliptic->dataStream;
+  elliptic->defaultStream = baseElliptic->defaultStream;
+  elliptic->dataStream = baseElliptic->dataStream;
 
-    elliptic->o_EToB = baseElliptic->o_EToB;    
-    elliptic->o_globalGatherElementList = baseElliptic->o_globalGatherElementList;    
-    elliptic->o_localGatherElementList = baseElliptic->o_localGatherElementList;    
+  elliptic->o_EToB = baseElliptic->o_EToB;    
+  elliptic->o_globalGatherElementList = baseElliptic->o_globalGatherElementList;    
+  elliptic->o_localGatherElementList = baseElliptic->o_localGatherElementList;    
 
-    elliptic->o_grad = baseElliptic->o_grad;
+  elliptic->o_grad = baseElliptic->o_grad;
 
-    elliptic->o_EXYZ = baseElliptic->o_EXYZ;    
+  elliptic->o_EXYZ = baseElliptic->o_EXYZ;    
 
-    elliptic->weightedInnerProduct1Kernel = baseElliptic->weightedInnerProduct1Kernel;
-    elliptic->weightedInnerProduct2Kernel = baseElliptic->weightedInnerProduct2Kernel;
-    elliptic->innerProductKernel = baseElliptic->innerProductKernel;
-    elliptic->weightedNorm2Kernel = baseElliptic->weightedNorm2Kernel;
-    elliptic->norm2Kernel = baseElliptic->norm2Kernel;
-    elliptic->scaledAddKernel = baseElliptic->scaledAddKernel;
-    elliptic->dotMultiplyKernel = baseElliptic->dotMultiplyKernel;
-    elliptic->dotDivideKernel = baseElliptic->dotDivideKernel;
+  elliptic->weightedInnerProduct1Kernel = baseElliptic->weightedInnerProduct1Kernel;
+  elliptic->weightedInnerProduct2Kernel = baseElliptic->weightedInnerProduct2Kernel;
+  elliptic->innerProductKernel = baseElliptic->innerProductKernel;
+  elliptic->weightedNorm2Kernel = baseElliptic->weightedNorm2Kernel;
+  elliptic->norm2Kernel = baseElliptic->norm2Kernel;
+  elliptic->scaledAddKernel = baseElliptic->scaledAddKernel;
+  elliptic->dotMultiplyKernel = baseElliptic->dotMultiplyKernel;
+  elliptic->dotDivideKernel = baseElliptic->dotDivideKernel;
 #endif
     
   //populate the mini-mesh using the mesh struct
@@ -48,80 +75,80 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 #ifndef OCCA_VERSION_1_0
   memcpy(mesh,baseElliptic->mesh,sizeof(mesh_t));
 #else
-    mesh->rank = baseElliptic->mesh->rank;
-    mesh->size = baseElliptic->mesh->size;
+  mesh->rank = baseElliptic->mesh->rank;
+  mesh->size = baseElliptic->mesh->size;
 
-    MPI_Comm_dup(baseElliptic->mesh->comm, &(mesh->comm));
+  MPI_Comm_dup(baseElliptic->mesh->comm, &(mesh->comm));
     
-    mesh->dim = baseElliptic->mesh->dim;
-    mesh->Nverts        = baseElliptic->mesh->Nverts;
-    mesh->Nfaces        = baseElliptic->mesh->Nfaces;
-    mesh->NfaceVertices = baseElliptic->mesh->NfaceVertices;
+  mesh->dim = baseElliptic->mesh->dim;
+  mesh->Nverts        = baseElliptic->mesh->Nverts;
+  mesh->Nfaces        = baseElliptic->mesh->Nfaces;
+  mesh->NfaceVertices = baseElliptic->mesh->NfaceVertices;
 
-    mesh->Nnodes = baseElliptic->mesh->Nnodes;
-    mesh->EX = baseElliptic->mesh->EX; // coordinates of vertices for each element
-    mesh->EY = baseElliptic->mesh->EY;
-    mesh->EZ = baseElliptic->mesh->EZ;
+  mesh->Nnodes = baseElliptic->mesh->Nnodes;
+  mesh->EX = baseElliptic->mesh->EX; // coordinates of vertices for each element
+  mesh->EY = baseElliptic->mesh->EY;
+  mesh->EZ = baseElliptic->mesh->EZ;
 
-    mesh->Nelements = baseElliptic->mesh->Nelements;
-    mesh->EToV = baseElliptic->mesh->EToV; // element-to-vertex connectivity
-    mesh->EToE = baseElliptic->mesh->EToE; // element-to-element connectivity
-    mesh->EToF = baseElliptic->mesh->EToF; // element-to-(local)face connectivity
-    mesh->EToP = baseElliptic->mesh->EToP; // element-to-partition/process connectivity
-    mesh->EToB = baseElliptic->mesh->EToB; // element-to-boundary condition type
+  mesh->Nelements = baseElliptic->mesh->Nelements;
+  mesh->EToV = baseElliptic->mesh->EToV; // element-to-vertex connectivity
+  mesh->EToE = baseElliptic->mesh->EToE; // element-to-element connectivity
+  mesh->EToF = baseElliptic->mesh->EToF; // element-to-(local)face connectivity
+  mesh->EToP = baseElliptic->mesh->EToP; // element-to-partition/process connectivity
+  mesh->EToB = baseElliptic->mesh->EToB; // element-to-boundary condition type
 
-    mesh->elementInfo = baseElliptic->mesh->elementInfo;
+  mesh->elementInfo = baseElliptic->mesh->elementInfo;
 
-    // boundary faces
-    mesh->NboundaryFaces = baseElliptic->mesh->NboundaryFaces;
-    mesh->boundaryInfo = baseElliptic->mesh->boundaryInfo;
+  // boundary faces
+  mesh->NboundaryFaces = baseElliptic->mesh->NboundaryFaces;
+  mesh->boundaryInfo = baseElliptic->mesh->boundaryInfo;
 
-    // MPI halo exchange info
-    mesh->totalHaloPairs = baseElliptic->mesh->totalHaloPairs;
-    mesh->haloElementList = baseElliptic->mesh->haloElementList;
-    mesh->NhaloPairs = baseElliptic->mesh->NhaloPairs;
-    mesh->NhaloMessages = baseElliptic->mesh->NhaloMessages;
+  // MPI halo exchange info
+  mesh->totalHaloPairs = baseElliptic->mesh->totalHaloPairs;
+  mesh->haloElementList = baseElliptic->mesh->haloElementList;
+  mesh->NhaloPairs = baseElliptic->mesh->NhaloPairs;
+  mesh->NhaloMessages = baseElliptic->mesh->NhaloMessages;
 
-    mesh->haloSendRequests = baseElliptic->mesh->haloSendRequests;
-    mesh->haloRecvRequests = baseElliptic->mesh->haloRecvRequests;
+  mesh->haloSendRequests = baseElliptic->mesh->haloSendRequests;
+  mesh->haloRecvRequests = baseElliptic->mesh->haloRecvRequests;
 
-    mesh->NinternalElements = baseElliptic->mesh->NinternalElements;
-    mesh->NnotInternalElements = baseElliptic->mesh->NnotInternalElements;
+  mesh->NinternalElements = baseElliptic->mesh->NinternalElements;
+  mesh->NnotInternalElements = baseElliptic->mesh->NnotInternalElements;
 
-    mesh->o_haloElementList = baseElliptic->mesh->o_haloElementList;
-    mesh->o_haloBuffer      = baseElliptic->mesh->o_haloBuffer;
-    mesh->o_internalElementIds    = baseElliptic->mesh->o_internalElementIds;
-    mesh->o_notInternalElementIds = baseElliptic->mesh->o_notInternalElementIds;
+  mesh->o_haloElementList = baseElliptic->mesh->o_haloElementList;
+  mesh->o_haloBuffer      = baseElliptic->mesh->o_haloBuffer;
+  mesh->o_internalElementIds    = baseElliptic->mesh->o_internalElementIds;
+  mesh->o_notInternalElementIds = baseElliptic->mesh->o_notInternalElementIds;
 
-    // volumeGeometricFactors;
-    mesh->Nvgeo = baseElliptic->mesh->Nvgeo;
-    mesh->vgeo = baseElliptic->mesh->vgeo;
-    mesh->o_vgeo = baseElliptic->mesh->o_vgeo;
+  // volumeGeometricFactors;
+  mesh->Nvgeo = baseElliptic->mesh->Nvgeo;
+  mesh->vgeo = baseElliptic->mesh->vgeo;
+  mesh->o_vgeo = baseElliptic->mesh->o_vgeo;
 
-    // second order volume geometric factors
-    mesh->Nggeo = baseElliptic->mesh->Nggeo;
-    mesh->ggeo = baseElliptic->mesh->ggeo;
-    mesh->o_ggeo = baseElliptic->mesh->o_ggeo;
+  // second order volume geometric factors
+  mesh->Nggeo = baseElliptic->mesh->Nggeo;
+  mesh->ggeo = baseElliptic->mesh->ggeo;
+  mesh->o_ggeo = baseElliptic->mesh->o_ggeo;
 
-    mesh->Nsgeo = baseElliptic->mesh->Nsgeo;
-    mesh->sgeo = baseElliptic->mesh->sgeo;
-    mesh->o_sgeo = baseElliptic->mesh->o_sgeo;
+  mesh->Nsgeo = baseElliptic->mesh->Nsgeo;
+  mesh->sgeo = baseElliptic->mesh->sgeo;
+  mesh->o_sgeo = baseElliptic->mesh->o_sgeo;
 
-    // occa stuff
-    mesh->device = baseElliptic->mesh->device;
+  // occa stuff
+  mesh->device = baseElliptic->mesh->device;
 
-    mesh->defaultStream = baseElliptic->mesh->defaultStream;
-    mesh->dataStream = baseElliptic->mesh->dataStream;
+  mesh->defaultStream = baseElliptic->mesh->defaultStream;
+  mesh->dataStream = baseElliptic->mesh->dataStream;
 
-    mesh->haloExtractKernel = baseElliptic->mesh->haloExtractKernel;
-    mesh->gatherKernel = baseElliptic->mesh->gatherKernel;
-    mesh->scatterKernel = baseElliptic->mesh->scatterKernel;
-    mesh->gatherScatterKernel = baseElliptic->mesh->gatherScatterKernel;
-    mesh->getKernel = baseElliptic->mesh->getKernel;
-    mesh->putKernel = baseElliptic->mesh->putKernel;
-    mesh->addScalarKernel = baseElliptic->mesh->addScalarKernel;
-    mesh->maskKernel = baseElliptic->mesh->maskKernel;
-    mesh->sumKernel = baseElliptic->mesh->sumKernel;
+  mesh->haloExtractKernel = baseElliptic->mesh->haloExtractKernel;
+  mesh->gatherKernel = baseElliptic->mesh->gatherKernel;
+  mesh->scatterKernel = baseElliptic->mesh->scatterKernel;
+  mesh->gatherScatterKernel = baseElliptic->mesh->gatherScatterKernel;
+  mesh->getKernel = baseElliptic->mesh->getKernel;
+  mesh->putKernel = baseElliptic->mesh->putKernel;
+  mesh->addScalarKernel = baseElliptic->mesh->addScalarKernel;
+  mesh->maskKernel = baseElliptic->mesh->maskKernel;
+  mesh->sumKernel = baseElliptic->mesh->sumKernel;
 #endif
     
   elliptic->mesh = mesh;
@@ -129,24 +156,24 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   setupAide options = elliptic->options;
 
   switch(elliptic->elementType){
-    case TRIANGLES:
-      meshLoadReferenceNodesTri2D(mesh, Nc);
-      meshPhysicalNodesTri2D(mesh);
-      break;
-    case QUADRILATERALS:
-      meshLoadReferenceNodesQuad2D(mesh, Nc);
-      meshPhysicalNodesQuad2D(mesh);
-      meshGeometricFactorsQuad2D(mesh);
-      break;
-    case TETRAHEDRA:
-      meshLoadReferenceNodesTet3D(mesh, Nc);
-      meshPhysicalNodesTet3D(mesh);
-      break;
-    case HEXAHEDRA:
-      meshLoadReferenceNodesHex3D(mesh, Nc);
-      meshPhysicalNodesHex3D(mesh);
-      meshGeometricFactorsHex3D(mesh);
-      break;
+  case TRIANGLES:
+    meshLoadReferenceNodesTri2D(mesh, Nc);
+    meshPhysicalNodesTri2D(mesh);
+    break;
+  case QUADRILATERALS:
+    meshLoadReferenceNodesQuad2D(mesh, Nc);
+    meshPhysicalNodesQuad2D(mesh);
+    meshGeometricFactorsQuad2D(mesh);
+    break;
+  case TETRAHEDRA:
+    meshLoadReferenceNodesTet3D(mesh, Nc);
+    meshPhysicalNodesTet3D(mesh);
+    break;
+  case HEXAHEDRA:
+    meshLoadReferenceNodesHex3D(mesh, Nc);
+    meshPhysicalNodesHex3D(mesh);
+    meshGeometricFactorsHex3D(mesh);
+    break;
   }
 
 
@@ -168,20 +195,20 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   }
 
   switch(elliptic->elementType){
-    case TRIANGLES:
-      meshConnectFaceNodes2D(mesh);
-      break;
-    case QUADRILATERALS:
-      meshConnectFaceNodes2D(mesh);
-      meshSurfaceGeometricFactorsQuad2D(mesh);
-      break;
-    case TETRAHEDRA:
-      meshConnectFaceNodes3D(mesh);
-      break;
-    case HEXAHEDRA:
-      meshConnectFaceNodes3D(mesh);
-      meshSurfaceGeometricFactorsHex3D(mesh);
-      break;
+  case TRIANGLES:
+    meshConnectFaceNodes2D(mesh);
+    break;
+  case QUADRILATERALS:
+    meshConnectFaceNodes2D(mesh);
+    meshSurfaceGeometricFactorsQuad2D(mesh);
+    break;
+  case TETRAHEDRA:
+    meshConnectFaceNodes3D(mesh);
+    break;
+  case HEXAHEDRA:
+    meshConnectFaceNodes3D(mesh);
+    meshSurfaceGeometricFactorsHex3D(mesh);
+    break;
   }
 
   // global nodes
@@ -325,26 +352,26 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     }
 
     mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-             mesh->Dr);
+				     mesh->Dr);
 
     mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-             mesh->Ds);
+				     mesh->Ds);
 
     mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-              DrT);
+				      DrT);
 
     mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-              DsT);
+				      DsT);
 
     mesh->o_Dmatrices = mesh->device.malloc(2*mesh->Np*mesh->Np*sizeof(dfloat), DrsT);
 
     mesh->o_LIFT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-        mesh->LIFT);
+			  mesh->LIFT);
 
     mesh->o_LIFTT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-        LIFTT);
+			  LIFTT);
 
     
 
@@ -395,13 +422,13 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
-        mesh->vgeo);
+			  mesh->vgeo);
     mesh->o_sgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
-        mesh->sgeo);
+			  mesh->sgeo);
     mesh->o_ggeo =
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
-        mesh->ggeo);
+			  mesh->ggeo);
 
     mesh->o_LIFTT = baseElliptic->mesh->o_LIFTT; //dummy buffer
     
@@ -495,32 +522,32 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     }
 
     mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-             mesh->Dr);
+				     mesh->Dr);
 
     mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-             mesh->Ds);
+				     mesh->Ds);
 
     mesh->o_Dt = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-             mesh->Dt);
+				     mesh->Dt);
 
     mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-              DrT);
+				      DrT);
 
     mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-              DsT);
+				      DsT);
 
     mesh->o_DtT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-              DtT);
+				      DtT);
 
     mesh->o_Dmatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), DrstT);
 
     mesh->o_LIFT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-        mesh->LIFT);
+			  mesh->LIFT);
 
     mesh->o_LIFTT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-        LIFTT);
+			  LIFTT);
 
     mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrrT);
     mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrsT);
@@ -558,21 +585,21 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
-        mesh->vgeo);
+			  mesh->vgeo);
     mesh->o_sgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
-        mesh->sgeo);
+			  mesh->sgeo);
     mesh->o_ggeo =
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
-        mesh->ggeo);
+			  mesh->ggeo);
 
     mesh->o_vmapM =
       mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
-        mesh->vmapM);
+			  mesh->vmapM);
 
     mesh->o_vmapP =
       mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
-        mesh->vmapP);
+			  mesh->vmapP);
 
     mesh->LIFT = baseElliptic->mesh->LIFT; //dummy buffer
     mesh->o_LIFTT = baseElliptic->mesh->o_LIFTT; //dummy buffer
@@ -589,10 +616,10 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
 
     meshHaloExchange(mesh,
-         mesh->Nvgeo*mesh->Np*sizeof(dfloat),
-         mesh->vgeo,
-         vgeoSendBuffer,
-         mesh->vgeo + Nlocal*mesh->Nvgeo);
+		     mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+		     mesh->vgeo,
+		     vgeoSendBuffer,
+		     mesh->vgeo + Nlocal*mesh->Nvgeo);
 
     mesh->o_vgeo =
       mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
@@ -600,16 +627,16 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   }
 
   mesh->o_MM =
-      mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-        mesh->MM);
+    mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+			mesh->MM);
 
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
-      mesh->vmapM);
+			mesh->vmapM);
 
   mesh->o_vmapP =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
-      mesh->vmapP);
+			mesh->vmapP);
 
   
   //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
@@ -618,16 +645,15 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, mesh->comm);
   elliptic->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
 
-
   elliptic->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
   elliptic->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), elliptic->tmp);
 
   // info for kernel construction
   occa::properties kernelInfo;
- kernelInfo["defines"].asObject();
- kernelInfo["includes"].asArray();
- kernelInfo["header"].asArray();
- kernelInfo["flags"].asObject();
+  kernelInfo["defines"].asObject();
+  kernelInfo["includes"].asArray();
+  kernelInfo["header"].asArray();
+  kernelInfo["flags"].asObject();
 
 
   kernelInfo["defines/" "p_dim"]= mesh->dim;
@@ -828,7 +854,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
         elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       }
     }
-  MPI_Barrier(mesh->comm);
+    MPI_Barrier(mesh->comm);
   }
 
   //new precon struct
@@ -855,22 +881,22 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
       int NpFine, NpCoarse;
       switch(elliptic->elementType){
-        case TRIANGLES:
-          NpFine   = (Nf+1)*(Nf+2)/2;
-          NpCoarse = (Nc+1)*(Nc+2)/2;
-          break;
-        case QUADRILATERALS:
-          NpFine   = (Nf+1)*(Nf+1);
-          NpCoarse = (Nc+1)*(Nc+1);
-          break;
-        case TETRAHEDRA:
-          NpFine   = (Nf+1)*(Nf+2)*(Nf+3)/6;
-          NpCoarse = (Nc+1)*(Nc+2)*(Nc+3)/6;
-          break;
-        case HEXAHEDRA:
-          NpFine   = (Nf+1)*(Nf+1)*(Nf+1);
-          NpCoarse = (Nc+1)*(Nc+1)*(Nc+1);
-          break;
+      case TRIANGLES:
+	NpFine   = (Nf+1)*(Nf+2)/2;
+	NpCoarse = (Nc+1)*(Nc+2)/2;
+	break;
+      case QUADRILATERALS:
+	NpFine   = (Nf+1)*(Nf+1);
+	NpCoarse = (Nc+1)*(Nc+1);
+	break;
+      case TETRAHEDRA:
+	NpFine   = (Nf+1)*(Nf+2)*(Nf+3)/6;
+	NpCoarse = (Nc+1)*(Nc+2)*(Nc+3)/6;
+	break;
+      case HEXAHEDRA:
+	NpFine   = (Nf+1)*(Nf+1)*(Nf+1);
+	NpCoarse = (Nc+1)*(Nc+1)*(Nc+1);
+	break;
       }
       kernelInfo["defines/" "p_NpFine"]= NpFine;
       kernelInfo["defines/" "p_NpCoarse"]= NpCoarse;

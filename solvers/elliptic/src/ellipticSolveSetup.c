@@ -1,3 +1,29 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
 #include "elliptic.h"
 
 
@@ -129,11 +155,11 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   //check all the bounaries for a Dirichlet
   bool allNeumann = (lambda==0) ? true :false;
-  elliptic->allNeumannPenalty = 1;
+  elliptic->allNeumannPenalty = 1.;
   hlong localElements = (hlong) mesh->Nelements;
   hlong totalElements = 0;
   MPI_Allreduce(&localElements, &totalElements, 1, MPI_HLONG, MPI_SUM, mesh->comm);
-  elliptic->allNeumannScale = 1.0/sqrt(mesh->Np*totalElements);
+  elliptic->allNeumannScale = 1./sqrt((dfloat)mesh->Np*totalElements);
 
   elliptic->EToB = (int *) calloc(mesh->Nelements*mesh->Nfaces,sizeof(int));
   for (dlong e=0;e<mesh->Nelements;e++) {
@@ -482,12 +508,12 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       if (   elliptic->elementType == TRIANGLES 
           || elliptic->elementType == TETRAHEDRA) {
         elliptic->precon->SEMFEMInterpKernel =
-          mesh->device.buildKernel(DHOLMES "/okl/ellipticSEMFEMInterp.okl",
+          mesh->device.buildKernel(DELLIPTIC "/okl/ellipticSEMFEMInterp.okl",
                      "ellipticSEMFEMInterp",
                      kernelInfo);
 
         elliptic->precon->SEMFEMAnterpKernel =
-          mesh->device.buildKernel(DHOLMES "/okl/ellipticSEMFEMAnterp.okl",
+          mesh->device.buildKernel(DELLIPTIC "/okl/ellipticSEMFEMAnterp.okl",
                      "ellipticSEMFEMAnterp",
                      kernelInfo);
       }

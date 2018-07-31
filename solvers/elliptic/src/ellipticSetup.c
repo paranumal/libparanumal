@@ -1,3 +1,29 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
 #include "elliptic.h"
 #include "omp.h"
 #include <unistd.h>
@@ -30,7 +56,6 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   int BCType[3] = {0,1,2};
   elliptic->BCType = (int*) calloc(3,sizeof(int));
   memcpy(elliptic->BCType,BCType,3*sizeof(int));
-
 
   // build trilinear geometric factors for hexes (do before solve setup)
   if(elliptic->elementType==HEXAHEDRA){
@@ -95,7 +120,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       if(elliptic->dim==2)
         elliptic->r[id] = J*(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
       else 
-        elliptic->r[id] = J*(3*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
+        elliptic->r[id] = J*(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
       elliptic->x[id] = 0;
     }
   }
@@ -130,41 +155,48 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 
   //add boundary condition contribution to rhs
   if (options.compareArgs("DISCRETIZATION","IPDG")) {
-
-    sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
-    sprintf(kernelName, "ellipticRhsBCIpdg%s", suffix);
-
-    elliptic->rhsBCIpdgKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
-
+    for(int r=0;r<mesh->size;++r){
+      if(r==mesh->rank){
+	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
+	sprintf(kernelName, "ellipticRhsBCIpdg%s", suffix);
+	
+	elliptic->rhsBCIpdgKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+      }
+      MPI_Barrier(mesh->comm);
+    }
     dfloat zero = 0.f;
     elliptic->rhsBCIpdgKernel(mesh->Nelements,
-                            mesh->o_vmapM,
-                            elliptic->tau,
-                            zero,
-                            mesh->o_x,
-                            mesh->o_y,
-                            mesh->o_z,
-                            mesh->o_vgeo,
-                            mesh->o_sgeo,
-                            elliptic->o_EToB,
-                            mesh->o_Dmatrices,
-                            mesh->o_LIFTT,
-                            mesh->o_MM,
-                            elliptic->o_r);
+			      mesh->o_vmapM,
+			      elliptic->tau,
+			      zero,
+			      mesh->o_x,
+			      mesh->o_y,
+			      mesh->o_z,
+			      mesh->o_vgeo,
+			      mesh->o_sgeo,
+			      elliptic->o_EToB,
+			      mesh->o_Dmatrices,
+			      mesh->o_LIFTT,
+			      mesh->o_MM,
+			      elliptic->o_r);
   }
 
   if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-
-    sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
-    sprintf(kernelName, "ellipticRhsBC%s", suffix);
-
-    elliptic->rhsBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
-
-    sprintf(fileName, DELLIPTIC "/okl/ellipticAddBC%s.okl", suffix);
-    sprintf(kernelName, "ellipticAddBC%s", suffix);
-
-    elliptic->addBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
-
+    for(int r=0;r<mesh->size;++r){
+      if(r==mesh->rank){
+	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
+	sprintf(kernelName, "ellipticRhsBC%s", suffix);
+	
+	elliptic->rhsBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+	
+	sprintf(fileName, DELLIPTIC "/okl/ellipticAddBC%s.okl", suffix);
+	sprintf(kernelName, "ellipticAddBC%s", suffix);
+	
+	elliptic->addBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+      }
+      MPI_Barrier(mesh->comm);
+    }
+    
     dfloat zero = 0.f;
     elliptic->rhsBCKernel(mesh->Nelements,
                         mesh->o_ggeo,
