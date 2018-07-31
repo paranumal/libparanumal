@@ -24,8 +24,6 @@ SOFTWARE.
 
 */
 
-
-
 // A very bad implementation for fast testing: AK 
 @kernel void insVorticityHex3D(const dlong Nelements,
                                      @restrict const  dfloat *  vgeo,
