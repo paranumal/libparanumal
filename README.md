@@ -57,8 +57,8 @@ E. Dependencies:
 <img src="http://www.math.vt.edu/people/tcew/libParanumalDiagramLocal-crop-V2.png" width="600" >
 
 ---
-### 3. Clone: Holmes
-`git clone https://github.com/tcew/holmes`
+### 3. Clone: libParanumal
+`git clone https://github.com/tcew/paranumal/libparanumal`
 
 ---
 ### 4. OCCA dependency (currently OCCA 1.0 forked by Noel Chalmers) 
@@ -76,9 +76,9 @@ export OCCA_DIR=\`pwd\`
 
 The elliptic solver and flow solvers reside in sub-directories of the solver directory. Each sub-directory includes makefile, src directory, data directory (including header files for defining boundary conditions), okl kernel directory, and setups directory. The setups directory includes a number of example input files that specify input parameters for the solver.
 
-#### 5-1. Build holmes elliptic example
+#### 5-1. Build libParanumal elliptic example
   
-`cd holmes/solvers/elliptic`    
+`cd libparanumal/solvers/elliptic`    
 `make -j  `  
 
 #### 5-2. Run elliptic example with provided quadrilateral set up file on a single device:
@@ -95,7 +95,7 @@ The elliptic solver and flow solvers reside in sub-directories of the solver dir
 
 The directory structure is relatively flat, annotated here:
 
-holmes/  
+paranumal/  
 ├── 3rdParty  
 │   ├── BlasLapack  
 │   └── gslib.github  
