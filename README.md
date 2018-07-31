@@ -95,7 +95,7 @@ The elliptic solver and flow solvers reside in sub-directories of the solver dir
 
 The directory structure is relatively flat, annotated here:
 
-paranumal/  
+libparanumal/  
 ├── 3rdParty  
 │   ├── BlasLapack  
 │   └── gslib.github  
