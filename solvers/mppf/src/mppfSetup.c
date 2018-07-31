@@ -338,10 +338,10 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->eta2    = mppf->eta*mppf->eta; 
   mppf->inveta2 = 1.0/ mppf->eta2; 
 
-  mppf->factorS = 2.0; // has to be >1.0 
+  mppf->factorS = 1.5; // has to be >1.0 
 
   mppf->chS = mppf->factorS*mppf->eta2*sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
-  mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
+  mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 - sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
   
   // Hold S/n^2
   mppf->chSeta2 = mppf->chS/mppf->eta2; 
@@ -650,7 +650,8 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "mppfPhaseFieldDivGrad%s", suffix);
       mppf->phaseFieldDivGradKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-       // ===========================================================================//
+      // ===========================================================================//
+
       sprintf(fileName, DMPPF "/okl/mppfPhaseFieldRhs%s.okl", suffix);
       sprintf(kernelName, "mppfPhaseFieldRhsSolve1%s", suffix);
       mppf->phaseFieldRhsSolve1Kernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
@@ -662,11 +663,22 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "mppfPhaseFieldIpdgBC%s", suffix);
       mppf->phaseFieldRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+      //===========================================================================//
 
-      // sprintf(fileName, DHOLMES "/okl/multiplyScalar.okl");
-      // sprintf(kernelName, "multiplyScalar");
-      // mppf->multiplyScalarKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(fileName, DMPPF "/okl/mppfVorticity%s.okl", suffix);
+      sprintf(kernelName, "mppfVorticity%s", suffix);
+      mppf->vorticityKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      
+      //===========================================================================//
+      
+      sprintf(fileName, DMPPF "/okl/mppfDivergence%s.okl", suffix);
+      sprintf(kernelName, "mppfDivergenceVolume%s", suffix);
+      mppf->divergenceVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+      // sprintf(kernelName, "mppfDivergenceSurface%s", suffix);
+      // mppf->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      
     }
    MPI_Barrier(mesh->comm);
   }

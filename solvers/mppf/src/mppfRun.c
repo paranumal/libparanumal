@@ -9,22 +9,22 @@ void mppfRun(mppf_t *mppf){
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"MPPF");
 
-  char fname[BUFSIZ];
-  string outName;
-  mppf->options.getArgs("OUTPUT FILE NAME", outName);
+  // char fname[BUFSIZ];
+  // string outName;
+  // mppf->options.getArgs("OUTPUT FILE NAME", outName);
 
-  mppf->o_Phi.copyTo(mppf->Phi);
-  mppf->o_U.copyTo(mppf->U);
-  mppf->o_P.copyTo(mppf->P);
-  sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, mppf->frame++);
+  // mppf->o_Phi.copyTo(mppf->Phi);
+  // mppf->o_U.copyTo(mppf->U);
+  // mppf->o_P.copyTo(mppf->P);
+  // sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, mppf->frame++);
 
-  mppfPlotVTU(mppf, fname);
+  // mppfPlotVTU(mppf, fname);
 
   // Write Initial Data
-  // if(mppf->outputStep) insReport(mppf, mppf->startTime, 0);
+  if(mppf->outputStep) mppfReport(mppf, mppf->startTime, 0);
 
-  // for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
-  for(int tstep=0;tstep<10;++tstep){
+  for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
+  // for(int tstep=0;tstep<100;++tstep){
 
     if(tstep<1) 
       extbdfCoefficents(mppf,tstep+1);
@@ -69,8 +69,8 @@ void mppfRun(mppf_t *mppf){
 
      //copy updated fields
     mppf->o_Phi.copyFrom(mppf->o_rkPhi, mppf->Ntotal*sizeof(dfloat));
-    mppf->o_U.copyFrom(mppf->o_rkU, mppf->NVfields*mppf->Ntotal*sizeof(dfloat));  
-    mppf->o_P.copyFrom(mppf->o_rkP,                mppf->Ntotal*sizeof(dfloat));  
+    mppf->o_U.copyFrom(  mppf->o_rkU,   mppf->NVfields*mppf->Ntotal*sizeof(dfloat));  
+    mppf->o_P.copyFrom(  mppf->o_rkP,                  mppf->Ntotal*sizeof(dfloat));  
 
 
 
@@ -87,17 +87,6 @@ void mppfRun(mppf_t *mppf){
                                   (s-1)*mppf->Ntotal*sizeof(dfloat), 
                                   (s-2)*mppf->Ntotal*sizeof(dfloat));
     }
-
-
-
-
-
-
-    mppf->o_Phi.copyTo(mppf->Phi);
-    mppf->o_U.copyTo(mppf->U);
-    mppf->o_P.copyTo(mppf->P);
-    sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, mppf->frame++);
-    mppfPlotVTU(mppf, fname);
 
 
     
@@ -147,27 +136,27 @@ void mppfRun(mppf_t *mppf){
     //                               (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
     // }
 
-    // occaTimerTic(mesh->device,"Report");
+    occaTimerTic(mesh->device,"Report");
 
-    // if(mppf->outputStep){
-    //   if(((tstep+1)%(mppf->outputStep))==0){
-    //     if (mppf->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, mppf->NiterU, mppf->NiterV, mppf->NiterP);
-    //     if (mppf->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, mppf->NiterU, mppf->NiterV, mppf->NiterW, mppf->NiterP);
-    //     mppfReport(mppf, time+mppf->dt, tstep+1);
+    if(mppf->outputStep){
+      if(((tstep+1)%(mppf->outputStep))==0){
+        if (mppf->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d Psi - %3d Phi - %3d \n", tstep+1, mppf->NiterU, mppf->NiterV, mppf->NiterP, mppf->NiterPsi, mppf->NiterPhi);
+        if (mppf->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d Psi - %3d Phi - %3d \n", tstep+1, mppf->NiterU, mppf->NiterV, mppf->NiterW, mppf->NiterP, mppf->NiterPsi, mppf->NiterPhi);
+        mppfReport(mppf, time+mppf->dt, tstep+1);
 
-    //     // Write a restart file
-    //     if(mppf->writeRestartFile){
-    //       if(mesh->rank==0) printf("\nWriting Binary Restart File....");
-    //         mppfRestartWrite(mppf, mppf->options, time+mppf->dt);
-    //       if(mesh->rank==0) printf("done\n");
-    //     }
-    //   }
-    // }
+        // // Write a restart file
+        // if(mppf->writeRestartFile){
+        //   if(mesh->rank==0) printf("\nWriting Binary Restart File....");
+        //     mppfRestartWrite(mppf, mppf->options, time+mppf->dt);
+        //   if(mesh->rank==0) printf("done\n");
+        // }
+      }
+    }
 
-    // if (mppf->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, mppf->NiterU, mppf->NiterV, mppf->NiterP); fflush(stdout);
-    // if (mppf->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, mppf->NiterU, mppf->NiterV, mppf->NiterW, mppf->NiterP); fflush(stdout);
+    // if (mppf->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d Psi - %3d Phi - %3d \n", tstep+1, mppf->NiterU, mppf->NiterV, mppf->NiterP, mppf->NiterPsi, mppf->NiterPhi);
+    // if (mppf->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d Psi - %3d Phi - %3d \n", tstep+1, mppf->NiterU, mppf->NiterV, mppf->NiterW, mppf->NiterP, mppf->NiterPsi, mppf->NiterPhi); 
     
-    // occaTimerToc(mesh->device,"Report");
+    occaTimerToc(mesh->device,"Report");
   }
   occaTimerToc(mesh->device,"MPPF");
 
@@ -175,7 +164,7 @@ void mppfRun(mppf_t *mppf){
   dfloat finalTime = mppf->NtimeSteps*mppf->dt;
   printf("\n");
 
-  // if(mppf->outputStep) mppfReport(mppf, finalTime,mppf->NtimeSteps);
+  if(mppf->outputStep) mppfReport(mppf, finalTime,mppf->NtimeSteps);
   
   // if(mesh->rank==0) occa::printTimer();
 }
@@ -202,7 +191,7 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
 
     // Define coefficients of Helmholtz solves in Chan-Hilliard equation
     mppf->chS = mppf->factorS*mppf->eta2*sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
-    mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
+    mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 - sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
 
     mppf->chSeta2 = mppf->chS/mppf->eta2; 
  
@@ -232,7 +221,7 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
 
     // Define coefficients of Helmholtz solves in Chan-Hilliard equation
     mppf->chS = mppf->factorS*mppf->eta2*sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
-    mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
+    mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 - sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
 
     mppf->chSeta2 = mppf->chS/mppf->eta2; 
  
@@ -261,7 +250,7 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
 
     // Define coefficients of Helmholtz solves in Chan-Hilliard equation
     mppf->chS = mppf->factorS*mppf->eta2*sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
-    mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 + sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
+    mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 - sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
 
     mppf->chSeta2 = mppf->chS/mppf->eta2; 
  

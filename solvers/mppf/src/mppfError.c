@@ -82,13 +82,11 @@ void mppfError(mppf_t *mppf, dfloat time){
 
     if(mesh->rank==0)
       if (mppf->dim==3) {
-        printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minW: %g maxW: %g minP: %g maxP: %g
-                minRho: %g maxRho: %g minMu: %g maxMu: %g minPhi: %g maxPhi: %g \n", 
-           (int)((time-mppf->startTime)/mppf->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinW, gMaxW, gMinP, gMaxP,
+        printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minW: %g maxW: %g minP: %g maxP: %g minRho: %g maxRho: %g minMu: %g maxMu: %g minPhi: %g maxPhi: %g \n", 
+           (int)( (time-mppf->startTime)/mppf->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinW, gMaxW, gMinP, gMaxP,
                   gMinR, gMaxR, gMinM, gMaxM, gMinPhi, gMaxPhi);
       } else {
-        printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minP: %g maxP: %g  
-               minRho: %g maxRho: %g minMu: %g maxMu: %g minPhi: %g maxPhi: %g \n", 
+        printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minP: %g maxP: %g minRho: %g maxRho: %g minMu: %g maxMu: %g minPhi: %g maxPhi: %g \n", 
            (int)((time-mppf->startTime)/mppf->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinP, gMaxP,
                   gMinR, gMaxR, gMinM, gMaxM, gMinPhi, gMaxPhi);
       }
@@ -111,10 +109,6 @@ void mppfError(mppf_t *mppf, dfloat time){
           dfloat x = mesh->x[id];
           dfloat y = mesh->y[id];
 
-          dfloat uExact = -sin(2.f*M_PI*y)*exp(-mppf->nu*4.f*M_PI*M_PI*time);
-          dfloat vExact =  sin(2.f*M_PI*x)*exp(-mppf->nu*4.f*M_PI*M_PI*time);
-          dfloat pExact = -cos(2.f*M_PI*x)*cos(2.f*M_PI*y)*exp(-mppf->nu*8.f*M_PI*M_PI*time);
-
           dfloat uExact    =  cos(M_PI*y)*sin(M_PI*x)*sin(time);
           dfloat vExact    = -sin(M_PI*y)*cos(M_PI*x)*sin(time);
           dfloat pExact    =  sin(M_PI*y)*sin(M_PI*x)*cos(time);
@@ -129,7 +123,7 @@ void mppfError(mppf_t *mppf, dfloat time){
             mppf->U[id+0*offset] -= uExact;
             mppf->U[id+1*offset] -= vExact;
             mppf->P[id]          -= pExact;
-            mppf->Phi[id]        -= phipExact;
+            mppf->Phi[id]        -= phiExact;
           #endif
         }
       }
@@ -144,13 +138,17 @@ void mppfError(mppf_t *mppf, dfloat time){
       dfloat gMaxP;
       MPI_Allreduce(&maxP, &gMaxP, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
 
+      dfloat gMaxPhi;
+      MPI_Allreduce(&maxPhi, &gMaxPhi, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
+
       if(mesh->rank==0)
-        printf("Step: %d Time: %g ErrorU: %g ErrorV: %g ErrorP: %g \n", 
-           (int)(time/mppf->dt), time, gMaxU, gMaxV, gMaxP);
+        printf("Step: %d Time: %g ErrorU: %g ErrorV: %g ErrorP: %g ErrorPhi: %g \n", 
+           (int)(time/mppf->dt), time, gMaxU, gMaxV, gMaxP, gMaxPhi);
 
       if( isnan(gMaxU) || 
           isnan(gMaxV) || 
-          isnan(gMaxP) )
+          isnan(gMaxP) ||
+          isnan(gMaxPhi))
         exit(EXIT_FAILURE);
     } 
     // else if (mppf->options.compareArgs("EXACT","BELTRAMI")) { //3D Beltrami flow

@@ -26,12 +26,51 @@
     dfloat phit    = cos(M_PI*x)*cos(M_PI*y)*cos(t);\
     dfloat phix    = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
     dfloat phiy    = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
-    dfloat term1   = 2.f*M*M_PI*M_PI*M_PI*M_PI*lambda*cos(M_PI*x)*cos(M_PI*y)*sin(t);\
-    dfloat h1      = sin(M_PI*x)*sin(M_PI*y)*sin(t);\
-    dfloat term2   = -(2.f*M*lambda*M_PI*M_PI*phi*(3.f*sin(t)*sin(t) + 9.f*h1*h1 + 1.f))/eta2;\
-    *(g)           = phit + u*phix + v*phiy + term1 + term2;\
+    dfloat dt1     = sin(M_PI*x)*sin(t);\
+    dfloat dt2     = sin(M_PI*y)*sin(t); \
+    dfloat dt3     = sin(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat dif     = (2.f*M*M_PI*M_PI*lambda*phi*(3.f*sin(t)*sin(t) - 6.f*dt1*dt1 - 6.f*dt2*dt2 + 2.f*M_PI*M_PI*eta2 + 9.f*dt3*dt3 - 1.f))/eta2; \
+    *(g)           = phit + u*phix + v*phiy + dif;\
   } 
 
+
+
+
+  #define mppfPhaseFieldFixTermNu2D(t,x,y,nu)\
+  {                                    \
+    dfloat eta     = 0.1; \
+    dfloat lambda  = 0.001; \
+    dfloat M       = 0.001; \
+    dfloat eta2    = eta*eta;\
+    dfloat u       =  cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+    dfloat v       = -sin(M_PI*y)*cos(M_PI*x)*sin(t);\
+    dfloat p       =  sin(M_PI*y)*sin(M_PI*x)*cos(t);\
+    dfloat phi     =  cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat phix    = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+    dfloat phiy    = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+    *(nu)          =  u*phix + v*phiy;\
+  } 
+
+
+
+   #define mppfPhaseFieldFixTermLap2D(t,x,y,inveta2, chSeta2, lap)\
+  {                                    \
+    dfloat eta     = 0.1; \
+    dfloat lambda  = 0.001; \
+    dfloat M       = 0.001; \
+    dfloat eta2    = eta*eta;\
+    dfloat phi     =  cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat dt1     = cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+    *(lap)         =  (2.f*M_PI*M_PI*phi*(chSeta2/inveta2 - 3.f*phi*phi + 6.f*dt1*dt1 + 1.f))*inveta2;\
+  } 
+
+
+// (2*M_PI^2*cos(M_PI*x)*cos(M_PI*y)*sin(t)*(chSeta2*eta2 - 3*cos(M_PI*x)^2*cos(M_PI*y)^2*sin(t)^2 + 6*cos(M_PI*y)^2*sin(M_PI*x)^2*sin(t)^2 + 1))/eta2
+ 
+
+// dfloat term1   = 2.f*M*M_PI*M_PI*M_PI*M_PI*lambda*cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat h1      = sin(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat term2   = -(2.f*M*lambda*M_PI*M_PI*phi*(3.f*sin(t)*sin(t) + 9.f*h1*h1 + 1.f))/eta2;\
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
 /*  Inflow condition should be phiM to create zero normal derivative ? */

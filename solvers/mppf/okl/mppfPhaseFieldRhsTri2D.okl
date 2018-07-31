@@ -10,8 +10,8 @@
                                 @restrict const  dfloat *  extbdfB,
                                 const dlong fieldOffset,
                                 @restrict const  dfloat *  Phi,
-                                @restrict const  dfloat *  NPhi,
-                                @restrict const  dfloat *  lapPhi,
+                                @restrict        dfloat *  NPhi,
+                                @restrict        dfloat *  lapPhi,
                                       @restrict dfloat *  rhsPhi){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
@@ -25,7 +25,13 @@
           const dlong id = n + p_Np*e;
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
           s_rhsPhi[es][n] = 0.f; // Add  lap(h(phie) - S/eta^2 * phie)
-        
+
+
+          // dfloat nu=0; 
+          // mppfPhaseFieldFixTermNu2D(time,x[id],y[id],&nu) 
+          // NPhi[id] = nu;
+
+       
           for (int s=0;s<p_Nstages;s++) {
             const dfloat phim   = Phi[id  + s*fieldOffset];
             const dfloat nphim  = NPhi[id + s*fieldOffset];
@@ -33,17 +39,13 @@
             s_rhsPhi[es][n] += J*p_chInvLM*(idt*extbdfB[s]*phim - extbdfA[s]*nphim); // 1/ (lamda*M) * ( BDF(Phi)/dt -  ext(NPhi) )
           }
           
-          s_rhsPhi[es][n] +=  J*lapPhi[id]; // Add  lap(h(phie) - S/eta^2 * phie)
+          // s_rhsPhi[es][n] +=  0.f*J*lapPhi[id]; // Add  lap(h(phie) - S/eta^2 * phie)
      
 #if 1
-          // If manufactured solution add forcing
-          dfloat xn = x[id];
-          dfloat yn = y[id];
-          // dfloat zn = z[id];
-          
+                  
           dfloat gn1 = 0.f; 
 
-          mppfPhaseFieldSource2D(time,xn,yn,&gn1);
+          mppfPhaseFieldSource2D(time,x[id],y[id],&gn1);
 
           s_rhsPhi[es][n] += J*p_chInvLM * gn1;
 #endif
@@ -69,7 +71,7 @@
               rhsphi  += M*s_rhsPhi[es][i];
             }
           // Update
-          rhsPhi[id] = -rhsphi; // Not sign change here, solving for - (helmholtz)
+          rhsPhi[id] = -rhsphi; // Not sign change here, solving for - (Helmholtz)
         }
       }
     }
@@ -118,7 +120,7 @@
               rhspsi  += M*s_rhsPsi[es][i];
             }
           // Update
-          rhsPsi[id] =  rhspsi; // Not sign change here, solving for - (helmholtz)
+          rhsPsi[id] =  rhspsi; 
         }
       }
     }

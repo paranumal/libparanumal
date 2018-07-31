@@ -1,7 +1,11 @@
 // Compute Gradient in Strong Form
 @kernel void mppfPhaseFieldDivGradTri2D(const dlong Nelements,
                                        @restrict const  dfloat *  vgeo,
+                                       @restrict const  dfloat *  x,
+                                       @restrict const  dfloat *  y,
+                                       @restrict const  dfloat *  z,
                                        @restrict const  dfloat *  Dmatrices,
+                                       const dfloat time,
                                        @restrict const  dfloat *  extbdfA,
                                        const dlong offset,
                                        const dfloat inveta2,  
@@ -89,6 +93,13 @@
 
           const dlong id = e*p_Np+n;
           lapPhi[id]  = (drdx*dpxdr + dsdx*dpxds) + (drdy*dpydr + dsdy*dpyds);
+
+
+          // dfloat lap = 0.f;
+          // mppfPhaseFieldFixTermLap2D(time,x[id],y[id],inveta2, chSeta2,&lap) 
+          // lapPhi[id] = lap; 
+
+
         }
       }
     }

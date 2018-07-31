@@ -152,7 +152,7 @@
             const int face = n/p_intNfp; // find face that owns this integration node
 
             // load surface geofactors for this face
-            const int sid     = p_Nsgeo*(e*p_Nfaces+face);
+            const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
@@ -180,8 +180,8 @@
             // apply boundary condition
             int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              // phip = phim; // Currently use this baoundary, change later !!!!! 
-              mppfPhaseFieldDirichletConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp] , nx, ny,phim, &phip);
+              phip = phim; // Currently use this baoundary, change later !!!!! 
+              // mppfPhaseFieldDirichletConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp] , nx, ny,phim, &phip);
             }
 
             // Find max normal velocity on the face
@@ -212,8 +212,10 @@
             for(int m=0;m<(p_intNfp*p_Nfaces);++m){
               rhs += intLIFTT[n+m*p_Np]*s_fluxPhi[es][m];
             }
+
             NPhi[id] = rhs;
-          }
+
+           }
       }
     }
   }

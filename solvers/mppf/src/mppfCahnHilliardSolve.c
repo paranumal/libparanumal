@@ -38,22 +38,22 @@ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_PhiHat){
 
   } else if (mppf->phiOptions.compareArgs("DISCRETIZATION","IPDG")) {
 
-    occaTimerTic(mesh->device,"CahnHilliardRhsIpdgBC");    
-    mppf->phaseFieldRhsIpdgBCKernel(mesh->Nelements,
-                                  mesh->o_vmapM,
-                                  phiSolver->tau,
-                                  time,
-                                  mesh->o_x,
-                                  mesh->o_y,
-                                  mesh->o_z,
-                                  mesh->o_vgeo,
-                                  mesh->o_sgeo,
-                                  mesh->o_EToB,
-                                  mesh->o_Dmatrices,
-                                  mesh->o_LIFTT,
-                                  mesh->o_MM,
-                                  mppf->o_rhsPhi);
-    occaTimerToc(mesh->device,"CahnHilliardRhsIpdgBC");   
+    // occaTimerTic(mesh->device,"CahnHilliardRhsIpdgBC");    
+    // mppf->phaseFieldRhsIpdgBCKernel(mesh->Nelements,
+    //                               mesh->o_vmapM,
+    //                               phiSolver->tau,
+    //                               time,
+    //                               mesh->o_x,
+    //                               mesh->o_y,
+    //                               mesh->o_z,
+    //                               mesh->o_vgeo,
+    //                               mesh->o_sgeo,
+    //                               mesh->o_EToB,
+    //                               mesh->o_Dmatrices,
+    //                               mesh->o_LIFTT,
+    //                               mesh->o_MM,
+    //                               mppf->o_rhsPhi);
+    // occaTimerToc(mesh->device,"CahnHilliardRhsIpdgBC");   
   }
 
   //copy current velocity fields as initial guess? (could use Uhat or beter guess)
@@ -73,6 +73,23 @@ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_PhiHat){
   mppf->NiterPsi = ellipticSolve(psiSolver, mppf->lambdaPsi, mppf->phiTOL, mppf->o_rhsPhi, mppf->o_Psi);
   occaTimerToc(mesh->device,"Psi-Solve"); 
   
+
+  
+
+  int tstep = (int)( (time-mppf->startTime)/mppf->dt)+1 ; 
+
+  if(((tstep)%(mppf->outputStep))==0){
+  char fname[BUFSIZ];
+  string outName;
+  mppf->options.getArgs("OUTPUT FILE NAME", outName);
+
+  printf("Writing Psi, %d \n", tstep);
+
+  mppf->o_Psi.copyTo(mppf->Phi);
+  sprintf(fname, "%s_%04d_%04dPsi.vtu",(char*)outName.c_str(), mesh->rank, mppf->frame);
+  mppfPlotVTU(mppf, fname);
+}
+
   // Compute Rhs for Phi Solve i.e. rhs =  -M*J*Psi
   mppf->phaseFieldRhsSolve2Kernel(mesh->Nelements, mesh->o_vgeo, mesh->o_MM, mppf->o_Psi, mppf->o_rhsPhi);
 
