@@ -76,19 +76,26 @@ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_PhiHat){
 
   
 
-  int tstep = (int)( (time-mppf->startTime)/mppf->dt)+1 ; 
+  // int tstep = (int)( (time-mppf->startTime)/mppf->dt)+1 ; 
 
-  if(((tstep)%(mppf->outputStep))==0){
-  char fname[BUFSIZ];
-  string outName;
-  mppf->options.getArgs("OUTPUT FILE NAME", outName);
+  // if(((tstep)%(mppf->outputStep))==0){
+  // char fname[BUFSIZ];
+  // string outName;
+  // mppf->options.getArgs("OUTPUT FILE NAME", outName);
 
-  printf("Writing Psi, %d \n", tstep);
+  // printf("Writing Psi, %d  time = %.2e \n", tstep, time+mppf->dt);
 
-  mppf->o_Psi.copyTo(mppf->Phi);
-  sprintf(fname, "%s_%04d_%04dPsi.vtu",(char*)outName.c_str(), mesh->rank, mppf->frame);
-  mppfPlotVTU(mppf, fname);
-}
+  // mppf->o_lapPhi.copyTo(mppf->Phi);
+  // sprintf(fname, "%s_%04d_%04dlapPhi.vtu",(char*)outName.c_str(), mesh->rank, mppf->frame++);
+  // mppfPlotVTU(mppf, fname);
+
+
+  // // dlong Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+  // mppf->o_NPhi.copyTo(mppf->Phi, Ntotal*sizeof(dfloat));
+  // sprintf(fname, "%s_%04d_%04dNu.vtu",(char*)outName.c_str(), mesh->rank, mppf->frame++);
+  // mppfPlotVTU(mppf, fname);
+
+// }
 
   // Compute Rhs for Phi Solve i.e. rhs =  -M*J*Psi
   mppf->phaseFieldRhsSolve2Kernel(mesh->Nelements, mesh->o_vgeo, mesh->o_MM, mppf->o_Psi, mppf->o_rhsPhi);

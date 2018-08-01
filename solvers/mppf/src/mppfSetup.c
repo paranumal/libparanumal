@@ -692,6 +692,11 @@ if(mesh->rank==0){
     printf("MINUM TIME STEP SIZE\t:\t%.2e\n", mppf->dt);
     printf("# TIME STEP\t:\t%d\n", mppf->NtimeSteps);
     printf("# SUBSTEPS\t\t:\t%d\n", mppf->Nsubsteps);
+    printf("# chSeta2\t:\t%.4e\n", mppf->chSeta2);
+    printf("# eta2\t\t:\t%.4e\n", mppf->eta2);
+
+
+
  printf("============================================================\n");
     printf("VISCOSITY PHASE 1\t:\t%.2e\n", mppf->mu1);
     printf("VISCOSITY PHASE 2\t:\t%.2e\n", mppf->mu2);

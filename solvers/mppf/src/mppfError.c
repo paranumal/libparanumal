@@ -119,7 +119,7 @@ void mppfError(mppf_t *mppf, dfloat time){
           maxP   = mymax(maxP,   fabs(mppf->P[id]-pExact));
           maxPhi = mymax(maxPhi, fabs(mppf->Phi[id]-phiExact));
 
-          #if 1
+          #if 0
             mppf->U[id+0*offset] -= uExact;
             mppf->U[id+1*offset] -= vExact;
             mppf->P[id]          -= pExact;

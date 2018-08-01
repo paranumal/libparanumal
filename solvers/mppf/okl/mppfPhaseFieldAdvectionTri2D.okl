@@ -72,8 +72,8 @@
       	  dfloat dfdr = 0.f, dfds = 0.f; 
       	  #pragma unroll (p_cubNp)
       	    for(int m=0;m<p_cubNp;++m){
-              dfdr += cubDmatrices[n+m*p_Np]*s_cFr[es][m];
-              dfds += cubDmatrices[n+m*p_Np]*s_cFs[es][m];
+              dfdr += cubDmatrices[n+m*p_Np+0*p_cubNp*p_Np]*s_cFr[es][m];
+              dfds += cubDmatrices[n+m*p_Np+1*p_cubNp*p_Np]*s_cFs[es][m];
       	    }
       	  // Update
       	  NPhi[e*p_Np+n] = -(dfdr + dfds); // note  change in sign, weakly implemented  
@@ -165,7 +165,7 @@
             // local block interpolation (face nodes to integration nodes)
             #pragma unroll p_Nfp
             for(int m=0;m<p_Nfp;++m){
-              const dfloat iInm = intInterpT[n+m*p_intNfpNfaces];
+              const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
               const int fm = face*p_Nfp+m;
               um += iInm*s_UM[es][fm];
               vm += iInm*s_VM[es][fm];

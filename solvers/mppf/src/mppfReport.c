@@ -29,6 +29,8 @@ void mppfReport(mppf_t *mppf, dfloat time, int tstep){
   mppf->o_Rho.copyTo(mppf->Rho);
   mppf->o_Mu.copyTo(mppf->Mu);
 
+  mppf->o_NPhi.copyTo(mppf->NPhi);
+
   mppf->o_Vort.copyTo(mppf->Vort);
   mppf->o_Div.copyTo(mppf->Div);
 

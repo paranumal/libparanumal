@@ -20,8 +20,8 @@ void mppfRun(mppf_t *mppf){
 
   // mppfPlotVTU(mppf, fname);
 
-  // Write Initial Data
-  if(mppf->outputStep) mppfReport(mppf, mppf->startTime, 0);
+   // Write Initial Data
+  // if(mppf->outputStep) mppfReport(mppf, mppf->startTime, 0);
 
   for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
   // for(int tstep=0;tstep<100;++tstep){
@@ -68,9 +68,9 @@ void mppfRun(mppf_t *mppf){
 
 
      //copy updated fields
-    mppf->o_Phi.copyFrom(mppf->o_rkPhi, mppf->Ntotal*sizeof(dfloat));
     mppf->o_U.copyFrom(  mppf->o_rkU,   mppf->NVfields*mppf->Ntotal*sizeof(dfloat));  
     mppf->o_P.copyFrom(  mppf->o_rkP,                  mppf->Ntotal*sizeof(dfloat));  
+    mppf->o_Phi.copyFrom(mppf->o_rkPhi,                mppf->Ntotal*sizeof(dfloat));
 
 
 
@@ -202,6 +202,9 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
     // // 
     // mppf->lambda = mppf->g0 / (mppf->dt * mppf->nu);
     // mppf->ig0 = 1.0/mppf->g0; 
+
+    printf("# chSeta2\t:\t%.4e\n", mppf->chSeta2);
+    printf("# eta2\t\t:\t%.4e\n", mppf->eta2);
   } else if(order==2) {
     //advection, second order in time, increment
     mppf->g0 =  1.5f;
@@ -230,6 +233,9 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
     // Helmholtz solve lambda's i.e. -laplace*phi +[-alpha]*phi = -psi 
     mppf->lambdaPhi = -mppf->chA;
     // mppf->lambda = mppf->g0 / (mppf->dt * mppf->nu);
+
+    printf("# chSeta2\t:\t%.4e\n", mppf->chSeta2);
+    printf("# eta2\t\t:\t%.4e\n", mppf->eta2);
     // mppf->ig0 = 1.0/mppf->g0; 
   } else if(order==3) {
     //advection, third order in time, increment
@@ -258,6 +264,9 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
     mppf->lambdaPsi = mppf->chA + mppf->chSeta2;
     // Helmholtz solve lambda's i.e. -laplace*phi +[-alpha]*phi = -psi 
     mppf->lambdaPhi = -mppf->chA;
+
+    printf("# chSeta2\t:\t%.4e\n", mppf->chSeta2);
+    printf("# eta2\t\t:\t%.4e\n", mppf->eta2);
 
     // mppf->lambda = mppf->g0 / (mppf->dt * mppf->nu);
     // mppf->ig0 = 1.0/mppf->g0; 

@@ -25,12 +25,6 @@
           const dlong id = n + p_Np*e;
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
           s_rhsPhi[es][n] = 0.f; // Add  lap(h(phie) - S/eta^2 * phie)
-
-
-          // dfloat nu=0; 
-          // mppfPhaseFieldFixTermNu2D(time,x[id],y[id],&nu) 
-          // NPhi[id] = nu;
-
        
           for (int s=0;s<p_Nstages;s++) {
             const dfloat phim   = Phi[id  + s*fieldOffset];
@@ -39,14 +33,11 @@
             s_rhsPhi[es][n] += J*p_chInvLM*(idt*extbdfB[s]*phim - extbdfA[s]*nphim); // 1/ (lamda*M) * ( BDF(Phi)/dt -  ext(NPhi) )
           }
           
-          // s_rhsPhi[es][n] +=  0.f*J*lapPhi[id]; // Add  lap(h(phie) - S/eta^2 * phie)
+          s_rhsPhi[es][n] +=  1.f*J*lapPhi[id]; // Add  lap(h(phie) - S/eta^2 * phie)
      
-#if 1
-                  
+#if 1            
           dfloat gn1 = 0.f; 
-
           mppfPhaseFieldSource2D(time,x[id],y[id],&gn1);
-
           s_rhsPhi[es][n] += J*p_chInvLM * gn1;
 #endif
 

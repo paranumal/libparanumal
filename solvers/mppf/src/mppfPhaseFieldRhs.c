@@ -70,7 +70,7 @@ void mppfPhaseFieldRhs(mppf_t *mppf, dfloat time){
                                         mppf->o_NPhi);
 
 
-dfloat tn1 = mppf->time + mppf->dt;
+// dfloat tn1 = mppf->time + mppf->dt;
   // Compute laplace (h (phi^*)  - S/eta^2 phi^*) (replace with actial IPDG version)
   mppf->phaseFieldDivGradKernel(mesh->Nelements,
                                 mesh->o_vgeo,
@@ -78,7 +78,7 @@ dfloat tn1 = mppf->time + mppf->dt;
                                 mesh->o_y,
                                 mesh->o_z,
                                 mesh->o_Dmatrices,
-                                tn1,
+                                time,
                                 mppf->o_extbdfA,
                                 mppf->fieldOffset,
                                 mppf->inveta2,
@@ -94,7 +94,7 @@ dfloat tn1 = mppf->time + mppf->dt;
                             mesh->o_y,
                             mesh->o_z,
                             mesh->o_MM,
-                            tn1,
+                            time,
                             mppf->idt,
                             mppf->o_extbdfA,
                             mppf->o_extbdfB,

@@ -31,6 +31,7 @@
           
           // Extrapolate Phi history
           const dlong id = n + e*p_Np; 
+          
           for (int s=0;s<p_Nstages;s++) {
             phie  += extbdfA[s]*Phi[id + s*offset];
           }
@@ -93,12 +94,6 @@
 
           const dlong id = e*p_Np+n;
           lapPhi[id]  = (drdx*dpxdr + dsdx*dpxds) + (drdy*dpydr + dsdy*dpyds);
-
-
-          // dfloat lap = 0.f;
-          // mppfPhaseFieldFixTermLap2D(time,x[id],y[id],inveta2, chSeta2,&lap) 
-          // lapPhi[id] = lap; 
-
 
         }
       }

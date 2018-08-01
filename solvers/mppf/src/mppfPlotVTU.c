@@ -169,7 +169,7 @@ void mppfPlotVTU(mppf_t *mppf, char *fileName){
     fprintf(fp, "       </DataArray>\n");
   }
 
-  if (mppf->dim==2) {
+  if (mppf->dim ==2) {
     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"2\" Format=\"ascii\">\n");
     for(dlong e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->plotNp;++n){
@@ -199,6 +199,10 @@ void mppfPlotVTU(mppf_t *mppf, char *fileName){
           dfloat vm = mppf->U[id+1*offset];
           dfloat wm = mppf->U[id+2*offset];
 
+          // dfloat um = mppf->NPhi[id+0*offset];
+          // dfloat vm = mppf->NPhi[id+1*offset];
+          // dfloat wm = mppf->NPhi[id+2*offset];
+
           plotun += mesh->plotInterp[n*mesh->Np+m]*um;
           plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
           plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
@@ -211,6 +215,28 @@ void mppfPlotVTU(mppf_t *mppf, char *fileName){
     fprintf(fp, "       </DataArray>\n");
     fprintf(fp, "     </PointData>\n");
   }
+
+
+  // fprintf(fp, "        <DataArray type=\"Float32\" Name=\"NPhi\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
+  //   for(dlong e=0;e<mesh->Nelements;++e){
+  //     for(int n=0;n<mesh->plotNp;++n){
+  //       dfloat plotun = 0, plotvn = 0, plotwn =0;
+  //       for(int m=0;m<mesh->Np;++m){
+  //         dlong id = m+e*mesh->Np;
+  //         dfloat um = mppf->NPhi[id+0*offset];
+  //         dfloat vm = mppf->NPhi[id+1*offset];
+  //         dfloat wm = mppf->NPhi[id+2*offset];
+  //         plotun += mesh->plotInterp[n*mesh->Np+m]*um;
+  //         plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
+  //         plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
+  //       }
+      
+  //       fprintf(fp, "       ");
+  //       fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);
+  //     }
+  //   }
+  //   fprintf(fp, "       </DataArray>\n");
+  //   fprintf(fp, "     </PointData>\n");
   
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
