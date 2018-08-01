@@ -51,6 +51,8 @@ extern "C" {
 
       commActive--;
       if(commActive == 0) {
+	commHandlesCount = 0;
+	commHandlesMax = 0;
         free(commHandles);
         commHandles = NULL;
       }
@@ -87,7 +89,10 @@ extern "C" {
 
       setupAideActive--;
       if(setupAideActive == 0) {
+	setupAideCount = 0;
+	setupAideMax = 0;
         free(setupAideHandles);
+	setupAideHandles = NULL;
       }
 
       *err = 0;
