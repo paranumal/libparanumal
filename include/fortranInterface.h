@@ -1,6 +1,9 @@
 #ifndef _FORTRAN_INTERFACE_H_
 #define _FORTRAN_INTERFACE_H_
 
+#include "mesh.h"
+#include "mesh3D.h"
+
 /* establishes some macros to establish
    * the FORTRAN naming convention
      default      gs_setup, etc.
@@ -39,5 +42,22 @@
 #  define FORTRAN_NAME(low,up) FPREFIXED_NAME(low)
 #  define FORTRAN_UNPREFIXED(low,up) low
 #endif
+
+#ifdef HOLMES_DEBUG
+#define dbgfl printf("%s:%d\n",__FILE__,__LINE__);
+#else
+#define dbgfl ;
+#endif
+
+mesh_t *meshSetupHex3DExternal(mesh_t *mesh, int N,
+  dfloat *x   , dfloat *y   , dfloat *z   ,
+  dfloat *NHxr, dfloat *NHxs, dfloat *NHxt,
+  dfloat *NHyr, dfloat *NHys, dfloat *NHyt,
+  dfloat *NHzr, dfloat *NHzs, dfloat *NHzt);
+
+mesh3D* meshParallelReaderHex3DExternal(MPI_Comm comm,
+    hlong NHNnodes, hlong NHNhexes, hlong NHNboundaryFaces,
+    hlong* EToV, hlong* BToV,
+    dfloat* NHVX, dfloat* NHVY, dfloat* NHVZ);
 
 #endif

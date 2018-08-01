@@ -128,7 +128,8 @@ LOBJS = \
 ../../src/occaDeviceConfig.o\
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o \
-../../src/fortranInterface.o
+../../src/fortranInterface.o \
+../../src/fortranMeshSetup.o
 
 COBJS = \
 ../../src/gsParallelGatherScatter.o\

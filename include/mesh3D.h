@@ -48,6 +48,9 @@ void meshSurfaceGeometricFactorsTri3D(mesh3D *mesh);
 void meshSurfaceGeometricFactorsQuad3D(mesh3D *mesh);
 void meshSurfaceGeometricFactorsTet3D(mesh3D *mesh);
 void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh);
+void computeFrame(dfloat nx, dfloat ny, dfloat nz,
+		  dfloat &tanx, dfloat &tany, dfloat &tanz,
+		  dfloat &binx, dfloat &biny, dfloat &binz);
 
 void meshPhysicalNodesTri3D(mesh3D *mesh);
 void meshPhysicalNodesQuad3D(mesh3D *mesh);

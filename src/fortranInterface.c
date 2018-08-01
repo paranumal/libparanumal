@@ -13,6 +13,11 @@ static int commCount = 0;
 static int commMax = 0;
 static int commActive = 0;
 
+static mesh_t** meshHandles = NULL;
+static int meshCount;
+static int meshMax;
+static int meshActive;
+
 static setupAide** setupAideHandles = NULL;
 static int setupAideCount = 0;
 static int setupAideMax = 0;
@@ -51,8 +56,8 @@ extern "C" {
 
       commActive--;
       if(commActive == 0) {
-	commHandlesCount = 0;
-	commHandlesMax = 0;
+	commCount = 0;
+	commMax = 0;
         free(commHandles);
         commHandles = NULL;
       }
@@ -127,3 +132,36 @@ extern "C" {
     }
   }
 }
+
+#define fHolmesMeshInit FORTRAN_NAME(holmesmeshinit,HOLMESMESHINIT)
+  void fHolmesMeshInit(int *mhandle,  int *Ndim, int *Nverts,
+                       hlong *Nnodes, hlong *Nelements, hlong *NboundaryFaces,
+                       hlong *EToV, hlong *BToV,
+                       dfloat *VX, dfloat *VY, dfloat *VZ,
+                       int *handle, int *err) {
+    *err = 1;
+
+    mesh_t *mesh;
+
+    // only for hexes as of now
+    if(*Ndim == 3 && *Nverts == 8) {
+
+      mesh = meshParallelReaderHex3DExternal(commHandles[*handle],
+                                              *Nnodes, *Nelements,
+                                              *NboundaryFaces, EToV, BToV,
+                                              VX, VY, VZ);
+    }
+
+    // Add the mesh_t pointer to the map keyed by handle
+    if(meshCount == meshMax) {
+      meshMax += meshMax / 2 + 1;
+      meshHandles = (mesh_t **) realloc(meshHandles,
+                                        meshMax * sizeof(mesh_t *));
+    }
+
+    meshHandles[meshCount] = mesh;
+    ++meshActive;
+    *mhandle = meshCount++;
+
+    *err = 0;
+  }
