@@ -72,10 +72,10 @@ int main(int argc, char **argv){
 
   // set up
   occa::properties kernelInfo;
- kernelInfo["defines"].asObject();
- kernelInfo["includes"].asArray();
- kernelInfo["header"].asArray();
- kernelInfo["flags"].asObject();
+  kernelInfo["defines"].asObject();
+  kernelInfo["includes"].asArray();
+  kernelInfo["header"].asArray();
+  kernelInfo["flags"].asObject();
 
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 

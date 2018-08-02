@@ -10,6 +10,7 @@ include ${OCCA_DIR}/scripts/Makefile
 # define variables
 HDRDIR = ../../include
 GSDIR  = ../../3rdParty/gslib.github/src
+OGSDIR  = ../../libs/gatherScatter
 ALMONDDIR = ../parALMOND
 
 # set options for this machine
@@ -19,12 +20,12 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"'
 
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
-			-L$(ALMONDDIR) -lparALMOND
+			-L$(ALMONDDIR) -lparALMOND -L$(OGSDIR) -logs
 
 # libraries to be linked in
 LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
@@ -139,6 +140,7 @@ COBJS = \
 ellipticMain:$(AOBJS) $(LOBJS) ./src/ellipticMain.o gslibInterface
 	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../solvers/elliptic
 	cd ../parALMOND; make -j lib; cd ../elliptic
+	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/elliptic
 	$(LD)  $(LDFLAGS)  -o ellipticMain ./src/ellipticMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
@@ -156,6 +158,7 @@ all: lib ellipticMain
 clean:
 	cd ../parALMOND; make clean; cd ../elliptic
 	cd ../../src; rm *.o; cd ../solvers/elliptic
+	cd ../../libs/gatherScatter; make clean; cd ../../solvers/elliptic
 	rm src/*.o ellipticMain libelliptic.a
 
 realclean:
