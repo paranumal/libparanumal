@@ -32,7 +32,7 @@ void ogsGather(occa::memory o_gv,
                occa::memory o_v, 
                const char *type, 
                const char *op, 
-               ogs2_t *ogs){
+               ogs_t *ogs){
   ogsGatherStart (o_gv, o_v, type, op, ogs);
   ogsGatherFinish(o_gv, o_v, type, op, ogs);
 }
@@ -41,7 +41,7 @@ void ogsGatherStart(occa::memory o_gv,
                     occa::memory o_v, 
                     const char *type, 
                     const char *op, 
-                    ogs2_t *ogs){
+                    ogs_t *ogs){
   const int one = 1;
   const dlong dOne = 1;
 
@@ -79,7 +79,7 @@ void ogsGatherFinish(occa::memory o_gv,
                      occa::memory o_v, 
                      const char *type, 
                      const char *op, 
-                     ogs2_t *ogs){
+                     ogs_t *ogs){
   const int one = 1;
   const dlong dOne = 1;
 

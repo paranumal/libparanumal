@@ -195,7 +195,7 @@ dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level){
 
   //gather-scatter 
   if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-    gsParallelGatherScatter(mesh->hostGsh, Vx, dfloatString, "add"); 
+    ogsGatherScatter(Vx, ogsDfloat, ogsAdd, mesh->ogs); 
   
     for (dlong i=0;i<elliptic->Nmasked;i++) Vx[elliptic->maskIds[i]] = 0.;
   }

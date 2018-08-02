@@ -205,6 +205,58 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   else 
     occa::setVerboseCompilation(false);
 #endif
+
+  //setup an unmasked gs handle
+  int verbose = options.compareArgs("VERBOSE","TRUE") ? 1:0;
+  meshParallelGatherScatterSetup(mesh, Ntotal, mesh->globalIds, mesh->comm, verbose);
+  
+  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
+  elliptic->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  for (dlong e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) elliptic->mapB[n+e*mesh->Np] = 1E9;
+    for (int f=0;f<mesh->Nfaces;f++) {
+      int bc = mesh->EToB[f+e*mesh->Nfaces];
+      if (bc>0) {
+        for (int n=0;n<mesh->Nfp;n++) {
+          int BCFlag = elliptic->BCType[bc];
+          int fid = mesh->faceNodes[n+f*mesh->Nfp];
+          elliptic->mapB[fid+e*mesh->Np] = mymin(BCFlag,elliptic->mapB[fid+e*mesh->Np]);
+        }
+      }
+    }
+  }
+  ogsGatherScatter(elliptic->mapB, ogsInt, ogsMin, mesh->ogs); 
+
+  //use the bc flags to find masked ids
+  elliptic->Nmasked = 0;
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (elliptic->mapB[n] == 1E9) {
+      elliptic->mapB[n] = 0.;
+    } else if (elliptic->mapB[n] == 1) { //Dirichlet boundary
+      elliptic->Nmasked++;
+    }
+  }
+  elliptic->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), elliptic->mapB);
+  
+  elliptic->maskIds = (dlong *) calloc(elliptic->Nmasked, sizeof(dlong));
+  elliptic->Nmasked =0; //reset
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (elliptic->mapB[n] == 1) elliptic->maskIds[elliptic->Nmasked++] = n;
+  }
+  if (elliptic->Nmasked) elliptic->o_maskIds = mesh->device.malloc(elliptic->Nmasked*sizeof(dlong), elliptic->maskIds);
+
+  //make a masked version of the global id numbering
+  mesh->maskedGlobalIds = (hlong *) calloc(Ntotal,sizeof(hlong));
+  memcpy(mesh->maskedGlobalIds, mesh->globalIds, Ntotal*sizeof(hlong));
+  for (dlong n=0;n<elliptic->Nmasked;n++) 
+    mesh->maskedGlobalIds[elliptic->maskIds[n]] = 0;
+
+  //use the masked ids to make another gs handle
+  elliptic->ogs = ogsSetup(Ntotal, mesh->maskedGlobalIds, mesh->comm, verbose, mesh->device);
+  elliptic->o_invDegree = elliptic->ogs->o_invDegree;
+  
+  /*preconditioner setup */
+  elliptic->precon = (precon_t*) calloc(1, sizeof(precon_t));
   
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
@@ -236,34 +288,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       //mesh kernels 
       mesh->haloExtractKernel =
         mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract2D.okl",
-    				       "meshHaloExtract2D",
-    				       kernelInfo);
-
-      mesh->gatherKernel =
-        mesh->device.buildKernel(DHOLMES "/okl/gather.okl",
-    				       "gather",
-    				       kernelInfo);
-
-      mesh->scatterKernel =
-        mesh->device.buildKernel(DHOLMES "/okl/scatter.okl",
-    				       "scatter",
-    				       kernelInfo);
-
-      mesh->gatherScatterKernel =
-        mesh->device.buildKernel(DHOLMES "/okl/gatherScatter.okl",
-                   "gatherScatter",
-                   kernelInfo);
-
-      mesh->getKernel =
-        mesh->device.buildKernel(DHOLMES "/okl/get.okl",
-    				       "get",
-    				       kernelInfo);
-
-      mesh->putKernel =
-        mesh->device.buildKernel(DHOLMES "/okl/put.okl",
-    				       "put",
-    				       kernelInfo);
-
+                                       "meshHaloExtract2D",
+                                       kernelInfo);
 
       mesh->addScalarKernel =
         mesh->device.buildKernel(DHOLMES "/okl/addScalar.okl",
@@ -286,44 +312,44 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
       elliptic->weightedInnerProduct1Kernel =
         mesh->device.buildKernel(DHOLMES "/okl/weightedInnerProduct1.okl",
-    				       "weightedInnerProduct1",
-    				       kernelInfo);
+                                       "weightedInnerProduct1",
+                                       kernelInfo);
 
       elliptic->weightedInnerProduct2Kernel =
         mesh->device.buildKernel(DHOLMES "/okl/weightedInnerProduct2.okl",
-    				       "weightedInnerProduct2",
-    				       kernelInfo);
+                                       "weightedInnerProduct2",
+                                       kernelInfo);
 
       elliptic->innerProductKernel =
         mesh->device.buildKernel(DHOLMES "/okl/innerProduct.okl",
-    				       "innerProduct",
-    				       kernelInfo);
+                                       "innerProduct",
+                                       kernelInfo);
 
       elliptic->weightedNorm2Kernel =
         mesh->device.buildKernel(DHOLMES "/okl/weightedNorm2.okl",
-					   "weightedNorm2",
-					   kernelInfo);
+                                           "weightedNorm2",
+                                           kernelInfo);
 
       elliptic->norm2Kernel =
         mesh->device.buildKernel(DHOLMES "/okl/norm2.okl",
-					   "norm2",
-					   kernelInfo);
+                                           "norm2",
+                                           kernelInfo);
       
       
       elliptic->scaledAddKernel =
           mesh->device.buildKernel(DHOLMES "/okl/scaledAdd.okl",
-    					 "scaledAdd",
-    					 kernelInfo);
+                                         "scaledAdd",
+                                         kernelInfo);
 
       elliptic->dotMultiplyKernel =
           mesh->device.buildKernel(DHOLMES "/okl/dotMultiply.okl",
-    					 "dotMultiply",
-    					 kernelInfo);
+                                         "dotMultiply",
+                                         kernelInfo);
 
       elliptic->dotDivideKernel =
           mesh->device.buildKernel(DHOLMES "/okl/dotDivide.okl",
-    					 "dotDivide",
-    					 kernelInfo);
+                                         "dotDivide",
+                                         kernelInfo);
       
       // add custom defines
       kernelInfo["defines/" "p_NpP"]= (mesh->Np+mesh->Nfp*mesh->Nfaces);
@@ -384,14 +410,14 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
       
       if(elliptic->elementType!=HEXAHEDRA){
-	sprintf(kernelName, "ellipticPartialAx%s", suffix);
+        sprintf(kernelName, "ellipticPartialAx%s", suffix);
       }
       else{
-	if(elliptic->options.compareArgs("ELEMENT MAP", "TRILINEAR")){
-	  sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
-	}else{
-	  sprintf(kernelName, "ellipticPartialAx%s", suffix);
-	}
+        if(elliptic->options.compareArgs("ELEMENT MAP", "TRILINEAR")){
+          sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
+        }else{
+          sprintf(kernelName, "ellipticPartialAx%s", suffix);
+        }
       }
 
       elliptic->partialAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
@@ -432,59 +458,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
         sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
         elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       }
-    }
-  MPI_Barrier(mesh->comm);
-  }
-
-  //on-host version of gather-scatter
-  int verbose = options.compareArgs("VERBOSE","TRUE") ? 1:0;
-  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->comm, mesh->Nelements*mesh->Np, mesh->globalIds,verbose);
-
-  // set up separate gather scatter infrastructure for halo and non halo nodes
-  ellipticParallelGatherScatterSetup(elliptic);
-
-  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
-  elliptic->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  for (dlong e=0;e<mesh->Nelements;e++) {
-    for (int n=0;n<mesh->Np;n++) elliptic->mapB[n+e*mesh->Np] = 1E9;
-    for (int f=0;f<mesh->Nfaces;f++) {
-      int bc = mesh->EToB[f+e*mesh->Nfaces];
-      if (bc>0) {
-        for (int n=0;n<mesh->Nfp;n++) {
-          int BCFlag = elliptic->BCType[bc];
-          int fid = mesh->faceNodes[n+f*mesh->Nfp];
-          elliptic->mapB[fid+e*mesh->Np] = mymin(BCFlag,elliptic->mapB[fid+e*mesh->Np]);
-        }
-      }
-    }
-  }
-  gsParallelGatherScatter(mesh->hostGsh, elliptic->mapB, "int", "min"); 
-
-
-  //use the bc flags to find masked ids
-  elliptic->Nmasked = 0;
-  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
-    if (elliptic->mapB[n] == 1E9) {
-      elliptic->mapB[n] = 0.;
-    } else if (elliptic->mapB[n] == 1) { //Dirichlet boundary
-      elliptic->Nmasked++;
-    }
-  }
-  elliptic->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), elliptic->mapB);
-  
-  elliptic->maskIds = (dlong *) calloc(elliptic->Nmasked, sizeof(dlong));
-  elliptic->Nmasked =0; //reset
-  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
-    if (elliptic->mapB[n] == 1) elliptic->maskIds[elliptic->Nmasked++] = n;
-  }
-  if (elliptic->Nmasked) elliptic->o_maskIds = mesh->device.malloc(elliptic->Nmasked*sizeof(dlong), elliptic->maskIds);
-
-  /*preconditioner setup */
-  elliptic->precon = (precon_t*) calloc(1, sizeof(precon_t));
-
-
-  for (int r=0;r<mesh->size;r++) {
-    if (r==mesh->rank) {
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
@@ -518,7 +491,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
                      kernelInfo);
       }
     }
-  MPI_Barrier(mesh->comm);
+    MPI_Barrier(mesh->comm);
   }
 
   long long int pre = mesh->device.memoryAllocated();

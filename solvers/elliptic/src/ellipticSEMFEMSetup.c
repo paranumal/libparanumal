@@ -80,10 +80,10 @@ int parallelCompareFEMvertsLocalId(const void *a, const void *b){
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void BuildFEMMatrixTri2D (mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,dlong *cnt, nonZero_t *A);
-void BuildFEMMatrixQuad2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,dlong *cnt, nonZero_t *A);
-void BuildFEMMatrixTet3D (mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,dlong *cnt, nonZero_t *A);
-void BuildFEMMatrixHex3D (mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,dlong *cnt, nonZero_t *A);
+void BuildFEMMatrixTri2D (mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,int *globalOwners,dlong *cnt, nonZero_t *A);
+void BuildFEMMatrixQuad2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,int *globalOwners,dlong *cnt, nonZero_t *A);
+void BuildFEMMatrixTet3D (mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,int *globalOwners,dlong *cnt, nonZero_t *A);
+void BuildFEMMatrixHex3D (mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,int *globalOwners,dlong *cnt, nonZero_t *A);
 
 
 
@@ -154,7 +154,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
     // global nodes
     meshParallelConnectNodes(pmesh);
-    //pmesh->globalIds and pmesh->globalOwners are now populated
+    //pmesh->globalIds is now populated
 
   } else if (elliptic->elementType==TETRAHEDRA) {
 
@@ -208,7 +208,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
     // global nodes
     meshParallelConnectNodes(pmesh);
-    //pmesh->globalIds and pmesh->globalOwners are now populated    
+    //pmesh->globalIds is now populated    
   }
 
 
@@ -378,15 +378,13 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
   dlong Ntotal = pmesh->Np*pmesh->Nelements;
   int verbose = options.compareArgs("VERBOSE","TRUE") ? 1:0;
 
-  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  hlong *globalStarts = (hlong *) calloc(mesh->size+1,sizeof(hlong));
-  memcpy(globalNumbering,pmesh->globalIds,Ntotal*sizeof(hlong)); 
-
+  pmesh->maskedGlobalIds = (hlong *) calloc(Ntotal,sizeof(hlong));
+  memcpy(pmesh->maskedGlobalIds, pmesh->globalIds, Ntotal*sizeof(hlong));
   if (elliptic->elementType==TRIANGLES||elliptic->elementType==TETRAHEDRA) {
     //build a new mask for NpFEM>Np node sets
 
-    //on-host version of gather-scatter
-    pmesh->hostGsh = gsParallelGatherScatterSetup(mesh->comm, Ntotal, globalNumbering,verbose);
+    // gather-scatter
+    pmesh->ogs = ogsSetup(Ntotal, pmesh->globalIds, mesh->comm, verbose, mesh->device);
 
     //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
     int *mapB = (int *) calloc(Ntotal,sizeof(int));
@@ -403,12 +401,12 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
         }
       }
     }
-    gsParallelGatherScatter(pmesh->hostGsh, mapB, "int", "min");
+    ogsGatherScatter(mapB, ogsInt, ogsMin, pmesh->ogs); 
 
     //use the bc flags to find masked ids
     for (dlong n=0;n<pmesh->Nelements*pmesh->Np;n++) {
       if (mapB[n] == 1) { //Dirichlet boundary
-        globalNumbering[n] = -1;
+        pmesh->maskedGlobalIds[n] = 0;
       }
     } 
     free(mapB);   
@@ -416,23 +414,41 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
     //mask using the original mask
     for (dlong n=0;n<elliptic->Nmasked;n++) 
-      globalNumbering[elliptic->maskIds[n]] = -1;
+      pmesh->maskedGlobalIds[elliptic->maskIds[n]] = 0;
 
   }
 
-  // squeeze node numbering
-  meshParallelConsecutiveGlobalNumbering(pmesh, Ntotal, globalNumbering, pmesh->globalOwners, globalStarts);
+  //build masked gs handle
+  precon->FEMogs = ogsSetup(Ntotal, pmesh->maskedGlobalIds, mesh->comm, verbose, mesh->device);
 
-  hlong *gatherMaskedBaseIds   = (hlong *) calloc(Ntotal,sizeof(hlong));
-  for (dlong n=0;n<Ntotal;n++) {
-    dlong id = pmesh->gatherLocalIds[n];
-    gatherMaskedBaseIds[n] = globalNumbering[id];
+  // number of degrees of freedom on this rank (after gathering)
+  hlong Ngather = precon->FEMogs->Ngather;
+
+  // create a global numbering system
+  hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
+  int   *owner     = (int *) calloc(Ngather,sizeof(int));
+
+  // every gathered degree of freedom has its own global id
+  hlong *globalStarts = (hlong *) calloc(mesh->size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh->comm);
+  for(int r=0;r<mesh->size;++r)
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+
+  //use the offsets to set a consecutive global numbering
+  for (dlong n =0;n<precon->FEMogs->Ngather;n++) {
+    globalIds[n] = n + globalStarts[mesh->rank];
+    owner[n] = mesh->rank;
   }
 
-  //build gather scatter with masked nodes
-  precon->FEMogs = meshParallelGatherScatterSetup(pmesh, Ntotal, 
-						  pmesh->gatherLocalIds,  gatherMaskedBaseIds, 
-						  pmesh->gatherBaseRanks, pmesh->gatherHaloFlags,verbose);
+  //scatter this numbering to the original nodes
+  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
+  int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
+  for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
+  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, precon->FEMogs);
+  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, precon->FEMogs);
+
+
+  free(globalIds); free(owner);
 
   if (elliptic->elementType==TRIANGLES||elliptic->elementType==TETRAHEDRA) {
     //dont need these anymore
@@ -505,13 +521,13 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
   //Build unassembed non-zeros
   switch(elliptic->elementType){
   case TRIANGLES:
-    BuildFEMMatrixTri2D(femMesh,pmesh,lambda, localIds, globalNumbering,&cnt,sendNonZeros); break;
+    BuildFEMMatrixTri2D(femMesh,pmesh,lambda, localIds, globalNumbering, globalOwners,&cnt,sendNonZeros); break;
   case QUADRILATERALS:
-    BuildFEMMatrixQuad2D(femMesh,pmesh,lambda, localIds, globalNumbering,&cnt,sendNonZeros); break;
+    BuildFEMMatrixQuad2D(femMesh,pmesh,lambda, localIds, globalNumbering, globalOwners,&cnt,sendNonZeros); break;
   case TETRAHEDRA:
-    BuildFEMMatrixTet3D(femMesh,pmesh,lambda, localIds, globalNumbering,&cnt,sendNonZeros); break;
+    BuildFEMMatrixTet3D(femMesh,pmesh,lambda, localIds, globalNumbering, globalOwners,&cnt,sendNonZeros); break;
   case HEXAHEDRA:
-    BuildFEMMatrixHex3D(femMesh,pmesh,lambda, localIds, globalNumbering,&cnt,sendNonZeros); break;
+    BuildFEMMatrixHex3D(femMesh,pmesh,lambda, localIds, globalNumbering, globalOwners,&cnt,sendNonZeros); break;
   }  
   
   // Make the MPI_NONZERO_T data type
@@ -646,7 +662,9 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 }
 
 
-void BuildFEMMatrixTri2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,dlong *cnt, nonZero_t *A) {
+void BuildFEMMatrixTri2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, 
+                        dlong *localIds, hlong* globalNumbering, int *globalOwners,
+                        dlong *cnt, nonZero_t *A) {
 
 #pragma omp parallel for
   for (dlong e=0;e<femMesh->Nelements;e++) {
@@ -678,7 +696,7 @@ void BuildFEMMatrixTri2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *l
             A[*cnt].val = val;
             A[*cnt].row = globalNumbering[idn];
             A[*cnt].col = globalNumbering[idm];
-            A[*cnt].ownerRank = pmesh->globalOwners[idn];
+            A[*cnt].ownerRank = globalOwners[idn];
             (*cnt)++;
           }
         }
@@ -687,7 +705,9 @@ void BuildFEMMatrixTri2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *l
   }
 }
 
-void BuildFEMMatrixQuad2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,dlong *cnt, nonZero_t *A) {
+void BuildFEMMatrixQuad2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, 
+                          dlong *localIds, hlong* globalNumbering, int *globalOwners,
+                          dlong *cnt, nonZero_t *A) {
 
 #pragma omp parallel for
   for (dlong e=0;e<femMesh->Nelements;e++) {
@@ -746,7 +766,7 @@ void BuildFEMMatrixQuad2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *
                 A[*cnt].val = val;
                 A[*cnt].row = globalNumbering[idn];
                 A[*cnt].col = globalNumbering[idm];
-                A[*cnt].ownerRank = pmesh->globalOwners[idn];
+                A[*cnt].ownerRank = globalOwners[idn];
                 (*cnt)++;
               }
             }
@@ -757,7 +777,9 @@ void BuildFEMMatrixQuad2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *
   }
 }
 
-void BuildFEMMatrixTet3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,dlong *cnt, nonZero_t *A) {
+void BuildFEMMatrixTet3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, 
+                        dlong *localIds, hlong* globalNumbering, int *globalOwners,
+                        dlong *cnt, nonZero_t *A) {
 
 #pragma omp parallel for
   for (dlong e=0;e<femMesh->Nelements;e++) {
@@ -797,7 +819,7 @@ void BuildFEMMatrixTet3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *l
             A[*cnt].val = val;
             A[*cnt].row = globalNumbering[idn];
             A[*cnt].col = globalNumbering[idm];
-            A[*cnt].ownerRank = pmesh->globalOwners[idn];
+            A[*cnt].ownerRank = globalOwners[idn];
             (*cnt)++;
           }
         }
@@ -806,7 +828,9 @@ void BuildFEMMatrixTet3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *l
   }
 }
 
-void BuildFEMMatrixHex3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *localIds, hlong* globalNumbering,dlong *cnt, nonZero_t *A) {
+void BuildFEMMatrixHex3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, 
+                        dlong *localIds, hlong* globalNumbering, int *globalOwners,
+                        dlong *cnt, nonZero_t *A) {
 
 #pragma omp parallel for
   for (dlong e=0;e<femMesh->Nelements;e++) {
@@ -898,7 +922,7 @@ void BuildFEMMatrixHex3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, dlong *l
 		    A[*cnt].val = val;
 		    A[*cnt].row = globalNumbering[idn];
 		    A[*cnt].col = globalNumbering[idm];
-		    A[*cnt].ownerRank = pmesh->globalOwners[idn];
+		    A[*cnt].ownerRank = globalOwners[idn];
 		    (*cnt)++;
 		  }
 		}

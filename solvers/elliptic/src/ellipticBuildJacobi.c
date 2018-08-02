@@ -186,7 +186,7 @@ void ellipticBuildJacobi(elliptic_t* elliptic, dfloat lambda, dfloat **invDiagA)
   }
 
   if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) 
-    gsParallelGatherScatter(mesh->hostGsh, diagA, dfloatString, "add"); 
+    ogsGatherScatter(diagA, ogsDfloat, ogsAdd, elliptic->ogs);
     
   *invDiagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
   for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {

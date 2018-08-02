@@ -35,7 +35,6 @@ typedef struct{
   
   dlong newId;         // new global id
   int owned;
-  int flagged;
 
 }parallelNode_t;
 
@@ -66,10 +65,10 @@ int compareLocalId(const void *a, const void *b){
   return 0;
 }
 
-ogs2_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm, 
+ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm, 
                 int verbose, occa::device device){
 
-  ogs2_t *ogs = (ogs2_t*) calloc(1, sizeof(ogs2_t));
+  ogs_t *ogs = (ogs_t*) calloc(1, sizeof(ogs_t));
 
   //Keep track of how many gs handles we've created, and 
   // build kernels if this is the first
@@ -127,7 +126,6 @@ ogs2_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
         localNodes[cnt].localId = i;
         localNodes[cnt].baseId  = ids[i];
         localNodes[cnt].owned   = 0;
-        localNodes[cnt].flagged   = 0;
         cnt++;
       }
     }
@@ -204,7 +202,6 @@ ogs2_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
         haloNodes[cnt].localId = i;
         haloNodes[cnt].baseId  = flagIds[i];
         haloNodes[cnt].owned   = 0;
-        haloNodes[cnt].flagged = 0;
         cnt++;
       }
     }
@@ -212,23 +209,22 @@ ogs2_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
     // sort based on base ids then local id
     qsort(haloNodes, ogs->Nhalo, sizeof(parallelNode_t), compareBaseId);
 
-    ogs->NhaloGather=0;
+    //move the flagged node to the lowest local index if present
     cnt = 0;
+    ogs->NhaloGather=0;
     haloNodes[0].newId = 0;
     haloNodes[0].owned = 1;
-    if (haloNodes[0].baseId>0) 
-      haloNodes[0].flagged = 1;
 
     for (dlong i=1;i<ogs->Nhalo;i++) {
       int s = 0;
-      if (haloNodes[i].baseId!=haloNodes[i-1].baseId) { //new gather node
-        ogs->NhaloGather++;
+      if (abs(haloNodes[i].baseId)!=abs(haloNodes[i-1].baseId)) { //new gather node
         s = 1;
         cnt = i;
+        ogs->NhaloGather++;
       }
 
-      haloNodes[i].newId = ogs->NhaloGather;
       haloNodes[i].owned = s;
+      haloNodes[i].newId = ogs->NhaloGather;
       if (haloNodes[i].baseId>0) {
         haloNodes[i].baseId   = -abs(haloNodes[i].baseId);
         haloNodes[cnt].baseId =  abs(haloNodes[cnt].baseId);
@@ -242,21 +238,28 @@ ogs2_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
     //tally up how many nodes are being gathered to each gatherNode and 
     //  map to a local ordering
     dlong *haloGatherCounts = (dlong*) calloc(ogs->NhaloGather,sizeof(dlong));
-    dlong *haloGatherMap    = (dlong*) calloc(ogs->NhaloGather,sizeof(dlong));
+    dlong *haloGatherMap    = (dlong*) calloc(ogs->NlocalGather,sizeof(dlong));
     hlong *symIds    = (hlong *) calloc(ogs->NhaloGather,sizeof(hlong));
     hlong *nonSymIds = (hlong *) calloc(ogs->NhaloGather,sizeof(hlong));
 
     cnt = 0;
+    dlong cnt2 = ogs->NownedHalo;
     for (dlong i=0;i<ogs->Nhalo;i++) {
       dlong newId = haloNodes[i].newId; //get the ordered id
       
       if (haloNodes[i].owned) {
-        symIds[cnt]    = abs(haloNodes[i].baseId); //record the base id 
-        nonSymIds[cnt] = haloNodes[i].baseId;      //record the base id 
-        haloGatherMap[newId] = cnt++; //record a new index if this is a new gatherNode
+        dlong c;
+        if (haloNodes[i].baseId>0) 
+          c = cnt++;
+        else 
+          c = cnt2++;
+
+        symIds[c]    = abs(haloNodes[i].baseId); //record the base id 
+        nonSymIds[c] = haloNodes[i].baseId;      //record the base id 
+        haloGatherMap[newId] = c; //record a new index if this is a new gatherNode
       }
       
-      haloNodes[i].newId = haloGatherMap[newId]; //reorder
+      haloNodes[i].newId = haloGatherMap[newId];  //reorder
       haloGatherCounts[haloGatherMap[newId]]++;  //tally
     }
     free(haloGatherMap);
@@ -328,7 +331,7 @@ ogs2_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
 }
 
 
-void ogsFree(ogs2_t *ogs) {
+void ogsFree(ogs_t *ogs) {
 
   if (ogs->Nlocal) {
     free(ogs->localGatherOffsets);
