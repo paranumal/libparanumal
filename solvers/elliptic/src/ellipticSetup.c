@@ -217,7 +217,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 
   // gather-scatter
   if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
-    ellipticParallelGatherScatter(mesh, mesh->ogs, elliptic->o_r, dfloatString, "add");  
+    ogsGatherScatter(elliptic->o_r, ogsDfloat, ogsAdd, mesh->ogs);  
     if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, elliptic->o_r);
   }
 

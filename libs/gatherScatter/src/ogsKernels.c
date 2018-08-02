@@ -31,6 +31,9 @@ namespace ogs {
 
   int Nrefs = 0;
 
+  void* hostBuf;
+  size_t hostBufSize=0;
+
   void* haloBuf;
   occa::memory o_haloBuf;
 

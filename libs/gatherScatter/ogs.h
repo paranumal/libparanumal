@@ -33,7 +33,7 @@ SOFTWARE.
     hlong id[N];    // the hlong and dlong types are defined in "types.h"
     int   haloFlag[N];    
     ...
-    struct ogs2_t *ogs = ogsSetup(N, id, &comm, verbose);
+    struct ogs_t *ogs = ogsSetup(N, id, &comm, verbose);
     
   defines a partition of the set of (processor, local index) pairs,
     (p,i) \in S_j  iff   abs(id[i]) == j  on processor p
@@ -162,25 +162,26 @@ typedef struct {
   occa::memory o_invDegree;
   occa::memory o_gatherInvDegree;
 
-}ogs2_t;
+}ogs_t;
 
 
-ogs2_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm, 
+ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm, 
                 int verbose, occa::device device);
 
-void ogsGatherScatter      (void *v, const char *type, const char *op, ogs2_t *ogs); //wrapper for gslib call
-void ogsGatherScatter      (occa::memory o_v, const char *type, const char *op, ogs2_t *ogs);
-void ogsGatherScatterStart (occa::memory o_v, const char *type, const char *op, ogs2_t *ogs);
-void ogsGatherScatterFinish(occa::memory o_v, const char *type, const char *op, ogs2_t *ogs);
+void ogsGatherScatter      (void *v, const char *type, const char *op, ogs_t *ogs); //wrapper for gslib call
+void ogsGatherScatter      (occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherScatterStart (occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherScatterFinish(occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
 
-void ogsGather      (occa::memory o_Gv, occa::memory o_v, const char *type, const char *op, ogs2_t *ogs);
-void ogsGatherStart (occa::memory o_Gv, occa::memory o_v, const char *type, const char *op, ogs2_t *ogs);
-void ogsGatherFinish(occa::memory o_Gv, occa::memory o_v, const char *type, const char *op, ogs2_t *ogs);
+void ogsGather      (occa::memory o_Gv, occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherStart (occa::memory o_Gv, occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherFinish(occa::memory o_Gv, occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
 
-void ogsScatter      (occa::memory o_Sv, occa::memory o_v, const char *type, const char *op, ogs2_t *ogs);
-void ogsScatterStart (occa::memory o_Sv, occa::memory o_v, const char *type, const char *op, ogs2_t *ogs);
-void ogsScatterFinish(occa::memory o_Sv, occa::memory o_v, const char *type, const char *op, ogs2_t *ogs);
+void ogsScatter      (void *sv, void *v, const char *type, const char *op, ogs_t *ogs);
+void ogsScatter      (occa::memory o_Sv, occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsScatterStart (occa::memory o_Sv, occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsScatterFinish(occa::memory o_Sv, occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
 
-void ogsFree(ogs2_t* ogs);
+void ogsFree(ogs_t* ogs);
 
 #endif

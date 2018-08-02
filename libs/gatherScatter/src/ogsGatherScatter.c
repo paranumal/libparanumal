@@ -31,22 +31,22 @@ SOFTWARE.
 void ogsGatherScatter(void *v, 
                       const char *type, 
                       const char *op, 
-                      ogs2_t *ogs){
+                      ogs_t *ogs){
   ogsHostGatherScatter(v, type, op, ogs->hostGsh);
 }
 
-void ogsGatherScatter(occa::memory &o_v, 
+void ogsGatherScatter(occa::memory o_v, 
                       const char *type, 
                       const char *op, 
-                      ogs2_t *ogs){
+                      ogs_t *ogs){
   ogsGatherScatterStart (o_v, type, op, ogs);
   ogsGatherScatterFinish(o_v, type, op, ogs);
 }
 
-void ogsGatherScatterStart(occa::memory &o_v, 
+void ogsGatherScatterStart(occa::memory o_v, 
                           const char *type, 
                           const char *op, 
-                          ogs2_t *ogs){
+                          ogs_t *ogs){
   const int one = 1;
   const dlong dOne = 1;
 
@@ -80,10 +80,10 @@ void ogsGatherScatterStart(occa::memory &o_v,
 }
 
 
-void ogsGatherScatterFinish(occa::memory &o_v, 
+void ogsGatherScatterFinish(occa::memory o_v, 
                           const char *type, 
                           const char *op, 
-                          ogs2_t *ogs){
+                          ogs_t *ogs){
   const int one = 1;
   const dlong dOne = 1;
 
