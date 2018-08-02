@@ -238,7 +238,7 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
     //tally up how many nodes are being gathered to each gatherNode and 
     //  map to a local ordering
     dlong *haloGatherCounts = (dlong*) calloc(ogs->NhaloGather,sizeof(dlong));
-    dlong *haloGatherMap    = (dlong*) calloc(ogs->NlocalGather,sizeof(dlong));
+    dlong *haloGatherMap    = (dlong*) calloc(ogs->NhaloGather,sizeof(dlong));
     hlong *symIds    = (hlong *) calloc(ogs->NhaloGather,sizeof(hlong));
     hlong *nonSymIds = (hlong *) calloc(ogs->NhaloGather,sizeof(hlong));
 
