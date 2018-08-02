@@ -448,22 +448,23 @@ SOFTWARE.
 
 //RHS contributions for continuous solver
 @kernel void insVelocityBCHex3D(const dlong Nelements,
-                              @restrict const  dfloat *  ggeo,
-                              @restrict const  dfloat *  sgeo,
-                              @restrict const  dfloat *  D,
-                              @restrict const  dfloat *  S,
-                              @restrict const  dfloat *  MM,
-                              @restrict const  dlong  *  vmapM,
-                              @restrict const  dlong  *  sMT,
-                              const dfloat lambda,
-                              const dfloat time,
-                              @restrict const  dfloat *  x,
-                              @restrict const  dfloat *  y,
-                              @restrict const  dfloat *  z,
-                              @restrict const  int    *  mapB,
-                                    @restrict dfloat *  rhsU,
-                                    @restrict dfloat *  rhsV,
-                                    @restrict dfloat *  rhsW){
+				@restrict const  dfloat *  ggeo,
+				@restrict const  dfloat *  sgeo,
+				@restrict const  dfloat *  D,
+				@restrict const  dfloat *  S,
+				@restrict const  dfloat *  MM,
+				@restrict const  dlong  *  vmapM,
+				@restrict const  int    *  EToB,
+				@restrict const  dlong  *  sMT,
+				const dfloat lambda,
+				const dfloat time,
+				@restrict const  dfloat *  x,
+				@restrict const  dfloat *  y,
+				@restrict const  dfloat *  z,
+				@restrict const  int    *  mapB,
+				@restrict dfloat *  rhsU,
+				@restrict dfloat *  rhsV,
+				@restrict dfloat *  rhsW){
 
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
@@ -520,18 +521,20 @@ SOFTWARE.
     // face 0
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        //face 0
-        r_U   [0] += s_U  [j][i];
-        r_V   [0] += s_V  [j][i];
-        r_W   [0] += s_W  [j][i];
-        r_rhsU[0] += s_ndU[j][i];
-        r_rhsV[0] += s_ndV[j][i];
-        r_rhsW[0] += s_ndW[j][i];
+	//face 0
+	r_U   [0]  = s_U  [j][i];
+	r_V   [0]  = s_V  [j][i];
+	r_W   [0]  = s_W  [j][i];
+	if(EToB[e*p_Nfaces+0]>0){
+	  r_rhsU[0] += s_ndU[j][i];
+	  r_rhsV[0] += s_ndV[j][i];
+	  r_rhsW[0] += s_ndW[j][i];
+	}
       }
     }
-
+    
     @barrier("local");    
-
+    
     // face 5
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -545,21 +548,23 @@ SOFTWARE.
     // face 5
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        //face 5
-        r_U   [p_Nq-1] += s_U  [j][i];
-        r_V   [p_Nq-1] += s_V  [j][i];
-        r_W   [p_Nq-1] += s_W  [j][i];
-        r_rhsU[p_Nq-1] += s_ndU[j][i];
-        r_rhsV[p_Nq-1] += s_ndV[j][i];
-        r_rhsW[p_Nq-1] += s_ndW[j][i]; 
+	//face 5
+	r_U   [p_Nq-1]  = s_U  [j][i];
+	r_V   [p_Nq-1]  = s_V  [j][i];
+	r_W   [p_Nq-1]  = s_W  [j][i];
+	if(EToB[e*p_Nfaces+5]>0){
+	  r_rhsU[p_Nq-1] += s_ndU[j][i];
+	  r_rhsV[p_Nq-1] += s_ndV[j][i];
+	  r_rhsW[p_Nq-1] += s_ndW[j][i];
+	}
       }
     }
-
+    
     @barrier("local");    
 
     // face 1
     for(int k=0;k<p_Nq;++k;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){	
         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i + k*p_Nq;
         surfaceTerms(sk1,1,i,k);
       }
@@ -571,15 +576,17 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==0) {//face 1
-          #pragma unroll p_Nq
-          for (int k=0;k<p_Nq;k++) {
-            r_U   [k] += s_U  [k][i];
-            r_V   [k] += s_V  [k][i];
-            r_W   [k] += s_W  [k][i];
-            r_rhsU[k] += s_ndU[k][i];
-            r_rhsV[k] += s_ndV[k][i];
-            r_rhsW[k] += s_ndW[k][i]; 
-          }
+#pragma unroll p_Nq
+	  for (int k=0;k<p_Nq;k++) {
+	    r_U   [k]  = s_U  [k][i];
+	    r_V   [k]  = s_V  [k][i];
+	    r_W   [k]  = s_W  [k][i];
+	    if(EToB[e*p_Nfaces+1]>0){
+	      r_rhsU[k] += s_ndU[k][i];
+	      r_rhsV[k] += s_ndV[k][i];
+	      r_rhsW[k] += s_ndW[k][i]; 
+	    }
+	  }
         }
       }
     }
@@ -600,21 +607,23 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==p_Nq-1) {//face 3
-          #pragma unroll p_Nq
-          for (int k=0;k<p_Nq;k++) {
-            r_U   [k] += s_U  [k][i];
-            r_V   [k] += s_V  [k][i];
-            r_W   [k] += s_W  [k][i];
-            r_rhsU[k] += s_ndU[k][i];
-            r_rhsV[k] += s_ndV[k][i];
-            r_rhsW[k] += s_ndW[k][i]; 
-          }
-        }
+#pragma unroll p_Nq
+	    for (int k=0;k<p_Nq;k++) {
+	      r_U[k]  = s_U[k][i];
+	      r_V[k]  = s_V[k][i];
+	      r_W[k]  = s_W[k][i];
+	      if(EToB[e*p_Nfaces+3]>0){
+		r_rhsU[k] += s_ndU[k][i];
+		r_rhsV[k] += s_ndV[k][i];
+		r_rhsW[k] += s_ndW[k][i];
+	      }
+	    }
+	}
       }
     }
 
     @barrier("local");    
-
+    
     // face 2
     for(int k=0;k<p_Nq;++k;@inner(1)){
       for(int j=0;j<p_Nq;++j;@inner(0)){
@@ -622,26 +631,28 @@ SOFTWARE.
         surfaceTerms(sk2,2,j,k);
       }
     }
-
+    
     @barrier("local");
-
+    
     // face 2 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==p_Nq-1) {//face 2
-          #pragma unroll p_Nq
-          for (int k=0;k<p_Nq;k++) {
-            r_U   [k] += s_U  [k][j];
-            r_V   [k] += s_V  [k][j];
-            r_W   [k] += s_W  [k][j];
-            r_rhsU[k] += s_ndU[k][j];
-            r_rhsV[k] += s_ndV[k][j];
-            r_rhsW[k] += s_ndW[k][j]; 
-          }
+#pragma unroll p_Nq
+	  for (int k=0;k<p_Nq;k++) {
+	    r_U[k] = s_U[k][j];
+	    r_V[k] = s_V[k][j];
+	    r_W[k] = s_W[k][j];
+	    if(EToB[e*p_Nfaces+2]>0){
+	      r_rhsU[k] += s_ndU[k][j];
+	      r_rhsV[k] += s_ndV[k][j];
+	      r_rhsW[k] += s_ndW[k][j];
+	    }
+	  }
         }
       }
     }
-
+    
     @barrier("local"); 
 
     // face 4
@@ -660,17 +671,19 @@ SOFTWARE.
         if (i==0) {//face 4
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_U   [k] += s_U  [k][j];
-            r_V   [k] += s_V  [k][j];
-            r_W   [k] += s_W  [k][j];
-            r_rhsU[k] += s_ndU[k][j];
-            r_rhsV[k] += s_ndV[k][j];
-            r_rhsW[k] += s_ndW[k][j]; 
+            r_U[k]  = s_U[k][j];
+            r_V[k]  = s_V[k][j];
+            r_W[k]  = s_W[k][j];
+	    if(EToB[e*p_Nfaces+4]>0){
+	      r_rhsU[k] += s_ndU[k][j];
+	      r_rhsV[k] += s_ndV[k][j];
+	      r_rhsW[k] += s_ndW[k][j];
+	    }
           }
         }
       }
     }
-
+    
     @barrier("local"); 
 
     // Layer by layer
@@ -678,18 +691,18 @@ SOFTWARE.
       for(int k = 0;k < p_Nq; k++){
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
-
+	    
             // prefetch geometric factors
             const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-
+	    
             r_G00 = ggeo[gbase+p_G00ID*p_Np];
             r_G01 = ggeo[gbase+p_G01ID*p_Np];
             r_G02 = ggeo[gbase+p_G02ID*p_Np];
-
+	    
             r_G11 = ggeo[gbase+p_G11ID*p_Np];
             r_G12 = ggeo[gbase+p_G12ID*p_Np];
             r_G22 = ggeo[gbase+p_G22ID*p_Np];
-
+	    
             r_GwJ = ggeo[gbase+p_GWJID*p_Np];
           }
         }
@@ -722,7 +735,7 @@ SOFTWARE.
             dfloat ur = 0.f, vr = 0.f, wr = 0.f;
             dfloat us = 0.f, vs = 0.f, ws = 0.f;
 
-            #pragma unroll p_Nq
+#pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
                 const dfloat Dr = s_D[i][m];
                 const dfloat Ds = s_D[j][m];
