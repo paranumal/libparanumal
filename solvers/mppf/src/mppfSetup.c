@@ -559,7 +559,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->o_UH   = mesh->device.malloc(Ntotal*sizeof(dfloat));
   mppf->o_VH   = mesh->device.malloc(Ntotal*sizeof(dfloat));
   mppf->o_WH   = mesh->device.malloc(Ntotal*sizeof(dfloat));
-  mppf->o_PhiH = mesh->device.malloc(Ntotal*sizeof(dfloat));
+  // mppf->o_PhiH = mesh->device.malloc(Ntotal*sizeof(dfloat));
 
   //plotting fields
   mppf->o_Vort = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->Vort);

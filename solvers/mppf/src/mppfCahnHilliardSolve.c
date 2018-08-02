@@ -1,7 +1,7 @@
 #include "mppf.h"
 
 // solve lambda*U + A*U = rhsU
-void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_PhiHat){
+void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time){
   
   mesh_t *mesh = mppf->mesh; 
   elliptic_t *phiSolver = mppf->phiSolver; 
@@ -37,28 +37,28 @@ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_PhiHat){
     //   if (wsolver->Nmasked) mesh->maskKernel(wsolver->Nmasked, wsolver->o_maskIds, o_rhsW);
 
   } else if (mppf->phiOptions.compareArgs("DISCRETIZATION","IPDG")) {
-
-    // occaTimerTic(mesh->device,"CahnHilliardRhsIpdgBC");    
-    // mppf->phaseFieldRhsIpdgBCKernel(mesh->Nelements,
-    //                               mesh->o_vmapM,
-    //                               phiSolver->tau,
-    //                               time,
-    //                               mesh->o_x,
-    //                               mesh->o_y,
-    //                               mesh->o_z,
-    //                               mesh->o_vgeo,
-    //                               mesh->o_sgeo,
-    //                               mesh->o_EToB,
-    //                               mesh->o_Dmatrices,
-    //                               mesh->o_LIFTT,
-    //                               mesh->o_MM,
-    //                               mppf->o_rhsPhi);
-    // occaTimerToc(mesh->device,"CahnHilliardRhsIpdgBC");   
+    // Currently we do not need that deuto homegenous bcs need to be used for more complex bcs
+    occaTimerTic(mesh->device,"CahnHilliardRhsIpdgBC");    
+    mppf->phaseFieldRhsIpdgBCKernel(mesh->Nelements,
+                                  mesh->o_vmapM,
+                                  phiSolver->tau,
+                                  time,
+                                  mesh->o_x,
+                                  mesh->o_y,
+                                  mesh->o_z,
+                                  mesh->o_vgeo,
+                                  mesh->o_sgeo,
+                                  mesh->o_EToB,
+                                  mesh->o_Dmatrices,
+                                  mesh->o_LIFTT,
+                                  mesh->o_MM,
+                                  mppf->o_rhsPhi);
+    occaTimerToc(mesh->device,"CahnHilliardRhsIpdgBC");   
   }
 
   //copy current velocity fields as initial guess? (could use Uhat or beter guess)
   dlong Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
-  mppf->o_PhiH.copyFrom(mppf->o_Phi,Ntotal*sizeof(dfloat),0, 0*mppf->fieldOffset*sizeof(dfloat));
+  mppf->o_rkPhi.copyFrom(mppf->o_Phi,Ntotal*sizeof(dfloat),0, 0*mppf->fieldOffset*sizeof(dfloat));
   
 
   // if (mppf->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
@@ -73,35 +73,11 @@ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_PhiHat){
   mppf->NiterPsi = ellipticSolve(psiSolver, mppf->lambdaPsi, mppf->phiTOL, mppf->o_rhsPhi, mppf->o_Psi);
   occaTimerToc(mesh->device,"Psi-Solve"); 
   
-
-  
-
-  // int tstep = (int)( (time-mppf->startTime)/mppf->dt)+1 ; 
-
-  // if(((tstep)%(mppf->outputStep))==0){
-  // char fname[BUFSIZ];
-  // string outName;
-  // mppf->options.getArgs("OUTPUT FILE NAME", outName);
-
-  // printf("Writing Psi, %d  time = %.2e \n", tstep, time+mppf->dt);
-
-  // mppf->o_lapPhi.copyTo(mppf->Phi);
-  // sprintf(fname, "%s_%04d_%04dlapPhi.vtu",(char*)outName.c_str(), mesh->rank, mppf->frame++);
-  // mppfPlotVTU(mppf, fname);
-
-
-  // // dlong Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
-  // mppf->o_NPhi.copyTo(mppf->Phi, Ntotal*sizeof(dfloat));
-  // sprintf(fname, "%s_%04d_%04dNu.vtu",(char*)outName.c_str(), mesh->rank, mppf->frame++);
-  // mppfPlotVTU(mppf, fname);
-
-// }
-
   // Compute Rhs for Phi Solve i.e. rhs =  -M*J*Psi
   mppf->phaseFieldRhsSolve2Kernel(mesh->Nelements, mesh->o_vgeo, mesh->o_MM, mppf->o_Psi, mppf->o_rhsPhi);
 
   occaTimerTic(mesh->device,"Phi-Solve");
-  mppf->NiterPhi = ellipticSolve(phiSolver, mppf->lambdaPhi, mppf->phiTOL, mppf->o_rhsPhi, mppf->o_PhiH);
+  mppf->NiterPhi = ellipticSolve(phiSolver, mppf->lambdaPhi, mppf->phiTOL, mppf->o_rhsPhi, mppf->o_rkPhi);
   occaTimerToc(mesh->device,"Phi-Solve");
 
  
@@ -120,6 +96,7 @@ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_PhiHat){
     //                         mppf->o_WH);
   }
 
-  //copy into intermediate stage storage
-   mppf->o_PhiH.copyTo(o_PhiHat,Ntotal*sizeof(dfloat),0*mppf->fieldOffset*sizeof(dfloat),0);
+  // Smooth density and viscosity on device 
+  mppf->setMaterialPropertyKernel(mesh->Nelements, mppf->o_rkPhi, mppf->o_Rho, mppf->o_Mu);
+
 }

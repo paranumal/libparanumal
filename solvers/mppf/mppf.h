@@ -236,7 +236,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options);
  void mppfRun(mppf_t *mppf);
 
  void mppfPhaseFieldRhs(mppf_t *mppf, dfloat time);
- void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time, occa::memory o_rkU);
+ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time);
 
 
 void mppfReport(mppf_t *mppf, dfloat time,  int tstep);

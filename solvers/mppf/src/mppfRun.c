@@ -9,20 +9,7 @@ void mppfRun(mppf_t *mppf){
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"MPPF");
 
-  // char fname[BUFSIZ];
-  // string outName;
-  // mppf->options.getArgs("OUTPUT FILE NAME", outName);
-
-  // mppf->o_Phi.copyTo(mppf->Phi);
-  // mppf->o_U.copyTo(mppf->U);
-  // mppf->o_P.copyTo(mppf->P);
-  // sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, mppf->frame++);
-
-  // mppfPlotVTU(mppf, fname);
-
-   // Write Initial Data
-  // if(mppf->outputStep) mppfReport(mppf, mppf->startTime, 0);
-
+  
   for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
   // for(int tstep=0;tstep<100;++tstep){
 
@@ -40,7 +27,8 @@ void mppfRun(mppf_t *mppf){
     // printf("Calling CF Rhs Function\n");
     mppfPhaseFieldRhs(mppf, time_new);
 
-    mppfCahnHilliardSolve(mppf, time, mppf->o_rkPhi);
+    mppfCahnHilliardSolve(mppf, time);
+
 
 
     mppf->setFlowFieldKernel(mesh->Nelements,
