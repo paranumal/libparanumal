@@ -342,6 +342,7 @@ SOFTWARE.
                               @restrict const  dfloat *  D,
                               @restrict const  dfloat *  S,
                               @restrict const  dlong  *  vmapM,
+				@restrict const  int  *  EToB,
                               @restrict const  dlong  *  sMT,
                               const dfloat time,
                               const dfloat dt,
@@ -395,12 +396,16 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 0
-        r_p[0] += s_p[0][j][i];
-        r_rhs[0] += s_ndp[0][j][i];
+        r_p[0] = s_p[0][j][i];
+
+	if(EToB[e*p_Nfaces+0]>0)
+	  r_rhs[0] += s_ndp[0][j][i];
 
         //face 5
-        r_p[p_Nq-1] += s_p[1][j][i];
-        r_rhs[p_Nq-1] += s_ndp[1][j][i];
+        r_p[p_Nq-1] = s_p[1][j][i];
+
+	if(EToB[e*p_Nfaces+5]>0)
+	  r_rhs[p_Nq-1] += s_ndp[1][j][i];
       }
     }
 
@@ -425,15 +430,19 @@ SOFTWARE.
         if (j==0) {//face 1
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_p[k] += s_p[0][k][i];
-            r_rhs[k] += s_ndp[0][k][i];
+            r_p[k] = s_p[0][k][i];
+
+	    if(EToB[e*p_Nfaces+1]>0)
+	      r_rhs[k] += s_ndp[0][k][i];
           }
         }
         if (j==p_Nq-1) {//face 3
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_p[k] += s_p[1][k][i];
-            r_rhs[k] += s_ndp[1][k][i];
+            r_p[k] = s_p[1][k][i];
+
+	    if(EToB[e*p_Nfaces+3]>0)
+	      r_rhs[k] += s_ndp[1][k][i];
           }
         }
       }
@@ -460,15 +469,19 @@ SOFTWARE.
         if (i==p_Nq-1) {//face 2
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_p[k] += s_p[0][k][j];
-            r_rhs[k] += s_ndp[0][k][j];
+            r_p[k] = s_p[0][k][j];
+
+	    if(EToB[e*p_Nfaces+2]>0)
+	      r_rhs[k] += s_ndp[0][k][j];
           }
         }
         if (i==0) {//face 4
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_p[k] += s_p[1][k][j];
-            r_rhs[k] += s_ndp[1][k][j];
+            r_p[k] = s_p[1][k][j];
+
+	    if(EToB[e*p_Nfaces+4]>0)
+	      r_rhs[k] += s_ndp[1][k][j];
           }
         }
       }

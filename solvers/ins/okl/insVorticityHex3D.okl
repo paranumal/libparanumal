@@ -24,9 +24,93 @@ SOFTWARE.
 
 */
 
+// A very bad implementation for fast testing: AK 
+@kernel void insVorticityHex3D(const dlong Nelements,
+                                     @restrict const  dfloat *  vgeo,
+                                     @restrict const  dfloat *  D,
+                                     const dlong offset,
+                                     @restrict const  dfloat *  U,
+                                           @restrict dfloat *  Vort){
+
+
+  for(dlong e=0;e<Nelements;e++;@outer(0)){  // for all elements
+
+    @shared dfloat s_U[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_V[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_W[p_Nq][p_Nq][p_Nq];
+
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int k=0;k<p_Nq;++k;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){    
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq+i;
+
+          s_U[k][j][i]  = U[id + 0*offset];
+          s_V[k][j][i]  = U[id + 1*offset];
+          s_W[k][j][i]  = U[id + 2*offset];
+
+          if (k==0)
+            s_D[j][i] = D[j*p_Nq+i];
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int k=0;k<p_Nq;++k;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){  
+          const dlong gid = e*p_Np*p_Nvgeo +k*p_Nq*p_Nq +j*p_Nq +i;
+          const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+          const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+          const dfloat drdz = vgeo[gid + p_RZID*p_Np];
+          const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+          const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+          const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
+          const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+          const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+          const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          dfloat dudr  = 0.f, duds  = 0.f, dudt  = 0.f;
+          dfloat dvdr  = 0.f, dvds  = 0.f, dvdt  = 0.f;
+          dfloat dwdr  = 0.f, dwds  = 0.f, dwdt  = 0.f;
+
+          #pragma unroll p_Nq
+            for(int n=0;n<p_Nq;++n){
+              const dfloat Dr = s_D[i][n];
+              const dfloat Ds = s_D[j][n];
+              const dfloat Dt = s_D[k][n];
+
+              dudr += Dr*s_U[k][j][n];
+              duds += Ds*s_U[k][n][i];
+              dudt += Dt*s_U[n][j][i];
+
+              dvdr += Dr*s_V[k][j][n];
+              dvds += Ds*s_V[k][n][i];
+              dvdt += Dt*s_V[n][j][i];
+
+              dwdr += Dr*s_W[k][j][n];
+              dwds += Ds*s_W[k][n][i];
+              dwdt += Dt*s_W[n][j][i];
+
+            }
+
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          Vort[id+0*offset] = (drdy*dwdr + dsdy*dwds + dtdy*dwdt) - (drdz*dvdr + dsdz*dvds + dtdz*dvdt);
+          Vort[id+1*offset] = (drdz*dudr + dsdz*duds + dtdz*dudt) - (drdx*dwdr + dsdx*dwds + dtdx*dwdt);
+          Vort[id+2*offset] = (drdx*dvdr + dsdx*dvds + dtdx*dvdt) - (drdy*dudr + dsdy*duds + dtdy*dudt);
+        }
+      }
+    }
+  }  
+}
+
 
 // compute div(NU)  = div(uxu) in collocation way (weak form)
-@kernel void insVorticityHex3D(const dlong Nelements,
+@kernel void insVorticityVolumeHex3D(const dlong Nelements,
                                      @restrict const  dfloat *  vgeo,
                                      @restrict const  dfloat *  D,
                                      const dlong offset,
@@ -91,9 +175,9 @@ SOFTWARE.
           s_F11[j][i] = JW*( drdy*Wn-drdz*Vn);
           s_F12[j][i] = JW*( dsdy*Wn-dsdz*Vn);
           s_F13[j][i] = JW*( dtdy*Wn-dtdz*Vn);
-          s_F21[j][i] = JW*(-drdx*Wn+drdz*Un);
-          s_F22[j][i] = JW*(-dsdx*Wn+dsdz*Un);
-          s_F23[j][i] = JW*(-dtdx*Wn+dtdz*Un);
+          s_F21[j][i] = JW*( drdz*Un-drdx*Wn);
+          s_F22[j][i] = JW*( dsdz*Un-dsdx*Wn);
+          s_F23[j][i] = JW*( dtdz*Un-dtdx*Wn);
           s_F31[j][i] = JW*( drdx*Vn-drdy*Un);
           s_F32[j][i] = JW*( dsdx*Vn-dsdy*Un);
           s_F33[j][i] = JW*( dtdx*Vn-dtdy*Un);
@@ -136,9 +220,9 @@ SOFTWARE.
             const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 
             const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-            Vort[id+0*offset] = -invJW*r_Vx[k];
-            Vort[id+1*offset] = -invJW*r_Vy[k];
-            Vort[id+2*offset] = -invJW*r_Vz[k];
+            Vort[id+0*offset] = -invJW*r_Vx[k];  //sign 
+            Vort[id+1*offset] = -invJW*r_Vy[k];  //sign 
+            Vort[id+2*offset] = -invJW*r_Vz[k];  //sign 
           }
       }
     }
