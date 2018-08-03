@@ -165,3 +165,19 @@ extern "C" {
 
     *err = 0;
   }
+
+#define fHolmesMeshSetup FORTRAN_NAME(holmesmeshsetup,HOLMESMESHSETUP)
+  void fHolmesMeshSetup(int *N,
+                       dfloat *X, dfloat *Y, dfloat *Z,
+                       dfloat *XR, dfloat *XS, dfloat *XT,
+                       dfloat *YR, dfloat *YS, dfloat *YT,
+                       dfloat *ZR, dfloat *ZS, dfloat *ZT,
+                       int *mhandle, int *handle, int *err) {
+    *err = 1;
+
+    char sN[3]; sprintf(sN,"%d",*N);
+    setupAideHandles[*mhandle]->setArgs("POLYNOMIAL DEGREE", sN);
+    meshHandles[*mhandle] = meshSetupHex3DExternal(meshHandles[*mhandle], *N,
+                                X,Y,Z,XR,XS,XT,YR,YS,YT,ZR,ZS,ZT);
+    *err = 0;
+  }

@@ -1,23 +1,23 @@
 #!/bin/bash
 
 : ${HOLMES_DIR:=`cd ..; pwd`}
-ELLIPTIC_DIR=${HOLMES_DIR}/solvers/elliptic
-SRC_DIR=${HOLMES_DIR}/src
+: ${OCCA_DIR:="${HOLMES_DIR}/../occa"}
 : ${OMP_FLAG:=-fopenmp}
 
-cd ${ELLIPTIC_DIR}
+ELLIPTIC_DIR=${HOLMES_DIR}/solvers/elliptic
+SRC_DIR=${HOLMES_DIR}/src
+
+cd ${OCCA_DIR}; make -j; cd -
 
 # Just to build setupAide.o and fortranInterface.o
 echo "Building Holmes ..."
-make -j
-
-cd -
+cd ${ELLIPTIC_DIR}; make -j; cd -
 
 echo "Compiling fortranInterfaceTest ..."
 mpif77 -static-libgfortran -c fortranInterfaceTest.f
 
 mpicxx ${OMP_FLAG} -o fortranInterfaceTest fortranInterfaceTest.o \
-	${SRC_DIR}/setupAide.o ${SRC_DIR}/fortranInterface.o  -lgfortran
+       ${SRC_DIR}/setupAide.o ${SRC_DIR}/fortranInterface.o ${SRC_DIR}/fortranMeshSetup.o -lgfortran
 
 echo "Running the interfaceTest ..."
 ./fortranInterfaceTest
