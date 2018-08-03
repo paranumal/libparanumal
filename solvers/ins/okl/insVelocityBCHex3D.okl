@@ -521,9 +521,9 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 0
-        r_U   [0] += s_U  [j][i];
-        r_V   [0] += s_V  [j][i];
-        r_W   [0] += s_W  [j][i];
+        r_U   [0]  = s_U  [j][i];
+        r_V   [0]  = s_V  [j][i];
+        r_W   [0]  = s_W  [j][i];
         r_rhsU[0] += s_ndU[j][i];
         r_rhsV[0] += s_ndV[j][i];
         r_rhsW[0] += s_ndW[j][i];
@@ -546,9 +546,9 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         //face 5
-        r_U   [p_Nq-1] += s_U  [j][i];
-        r_V   [p_Nq-1] += s_V  [j][i];
-        r_W   [p_Nq-1] += s_W  [j][i];
+        r_U   [p_Nq-1]  = s_U  [j][i];
+        r_V   [p_Nq-1]  = s_V  [j][i];
+        r_W   [p_Nq-1]  = s_W  [j][i];
         r_rhsU[p_Nq-1] += s_ndU[j][i];
         r_rhsV[p_Nq-1] += s_ndV[j][i];
         r_rhsW[p_Nq-1] += s_ndW[j][i]; 
@@ -573,9 +573,9 @@ SOFTWARE.
         if (j==0) {//face 1
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_U   [k] += s_U  [k][i];
-            r_V   [k] += s_V  [k][i];
-            r_W   [k] += s_W  [k][i];
+            r_U   [k]  = s_U  [k][i];
+            r_V   [k]  = s_V  [k][i];
+            r_W   [k]  = s_W  [k][i];
             r_rhsU[k] += s_ndU[k][i];
             r_rhsV[k] += s_ndV[k][i];
             r_rhsW[k] += s_ndW[k][i]; 
@@ -602,9 +602,9 @@ SOFTWARE.
         if (j==p_Nq-1) {//face 3
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_U   [k] += s_U  [k][i];
-            r_V   [k] += s_V  [k][i];
-            r_W   [k] += s_W  [k][i];
+            r_U   [k]  = s_U  [k][i];
+            r_V   [k]  = s_V  [k][i];
+            r_W   [k]  = s_W  [k][i];
             r_rhsU[k] += s_ndU[k][i];
             r_rhsV[k] += s_ndV[k][i];
             r_rhsW[k] += s_ndW[k][i]; 
@@ -631,9 +631,9 @@ SOFTWARE.
         if (i==p_Nq-1) {//face 2
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_U   [k] += s_U  [k][j];
-            r_V   [k] += s_V  [k][j];
-            r_W   [k] += s_W  [k][j];
+            r_U   [k]  = s_U  [k][j];
+            r_V   [k]  = s_V  [k][j];
+            r_W   [k]  = s_W  [k][j];
             r_rhsU[k] += s_ndU[k][j];
             r_rhsV[k] += s_ndV[k][j];
             r_rhsW[k] += s_ndW[k][j]; 
@@ -660,9 +660,9 @@ SOFTWARE.
         if (i==0) {//face 4
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_U   [k] += s_U  [k][j];
-            r_V   [k] += s_V  [k][j];
-            r_W   [k] += s_W  [k][j];
+            r_U   [k]  = s_U  [k][j];
+            r_V   [k]  = s_V  [k][j];
+            r_W   [k]  = s_W  [k][j];
             r_rhsU[k] += s_ndU[k][j];
             r_rhsV[k] += s_ndV[k][j];
             r_rhsW[k] += s_ndW[k][j]; 
