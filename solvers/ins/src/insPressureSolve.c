@@ -39,6 +39,7 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
                             mesh->o_Dmatrices,
                             mesh->o_Smatrices,
                             mesh->o_vmapM,
+			     mesh->o_EToB,
                             mesh->o_sMT,
                             time,
                             ins->dt,

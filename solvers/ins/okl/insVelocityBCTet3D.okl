@@ -306,22 +306,23 @@ SOFTWARE.
 
 //RHS contributions for continuous solver
 @kernel void insVelocityBCTet3D(const dlong Nelements,
-                               @restrict const  dfloat *  ggeo,
-                               @restrict const  dfloat *  sgeo,
-                               @restrict const  dfloat *  Dmatrices,
-                               @restrict const  dfloat *  Smatrices,
-                               @restrict const  dfloat *  MM,
-                               @restrict const  dlong  *  vmapM,
-                               @restrict const  dfloat *  sMT,
-                               const dfloat lambda,
-                               const dfloat time,
-                               @restrict const  dfloat *  x,
-                               @restrict const  dfloat *  y,
-                               @restrict const  dfloat *  z,
-                               @restrict const  int    *  mapB,
-                                     @restrict dfloat *  rhsU,
-                                     @restrict dfloat *  rhsV,
-                                     @restrict dfloat *  rhsW){
+				@restrict const  dfloat *  ggeo,
+				@restrict const  dfloat *  sgeo,
+				@restrict const  dfloat *  Dmatrices,
+				@restrict const  dfloat *  Smatrices,
+				@restrict const  dfloat *  MM,
+				@restrict const  dlong  *  vmapM,
+				@restrict const  int    *  EToB,
+				@restrict const  dfloat *  sMT,
+				const dfloat lambda,
+				const dfloat time,
+				@restrict const  dfloat *  x,
+				@restrict const  dfloat *  y,
+				@restrict const  dfloat *  z,
+				@restrict const  int    *  mapB,
+				@restrict dfloat *  rhsU,
+				@restrict dfloat *  rhsV,
+				@restrict dfloat *  rhsW){
 
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     @shared dfloat s_u[p_Np];
