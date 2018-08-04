@@ -8,7 +8,7 @@ BK5
 data/ellipticHomogeneous3D.h
 
 [MESH FILE]
-../../meshes/cavityHexH006.msh,../../meshes/cavityHexH0075.msh,../../meshes/cavityHexH008.msh,../../meshes/cavityHexH0125.msh,../../meshes/cavityHexH016.msh,../../meshes/cavityHexH01.msh,../../meshes/cavityHexH02.msh,../../meshes/cavityHexH03.msh,../../meshes/cavityHexH04.msh
+../../meshes/cavityHexH005.msh,../../meshes/cavityHexH0125.msh,../../meshes/cavityHexH016.msh,../../meshes/cavityHexH01.msh,../../meshes/cavityHexH02.msh,../../meshes/cavityHexH03.msh,../../meshes/cavityHexH04.msh
 
 [MESH DIMENSION]
 3
