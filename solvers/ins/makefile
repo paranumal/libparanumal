@@ -49,6 +49,7 @@ $(ELLIPTICDIR)/ellipticPrecon.h
 
 # list of objects to be compiled
 AOBJS    = \
+./src/insPlotWallsVTUHex3D.o \
 ./src/insPlotVTUHex3D.o \
 ./src/insSetup.o \
 ./src/insPlotVTU.o \
