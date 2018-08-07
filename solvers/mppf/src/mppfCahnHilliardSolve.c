@@ -8,34 +8,7 @@ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time){
   elliptic_t *psiSolver = mppf->psiSolver; 
   
   if (mppf->phiOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-    // mppf->velocityRhsBCKernel(mesh->Nelements,
-    //                           mesh->o_ggeo,
-    //                           mesh->o_sgeo,
-    //                           mesh->o_Dmatrices,
-    //                           mesh->o_Smatrices,
-    //                           mesh->o_MM,
-    //                           mesh->o_vmapM,
-    //                           mesh->o_sMT,
-    //                           mppf->lambda,
-    //                           time,
-    //                           mesh->o_x,
-    //                           mesh->o_y,
-    //                           mesh->o_z,
-    //                           mppf->o_VmapB,
-    //                           o_rhsU,
-    //                           o_rhsV,
-    //                           o_rhsW);
-    
-    // // gather-scatter
-    // ellipticParallelGatherScatter(mesh, mesh->ogs, o_rhsU, dfloatString, "add");  
-    // ellipticParallelGatherScatter(mesh, mesh->ogs, o_rhsV, dfloatString, "add");  
-    // if (mppf->dim==3)
-    //   ellipticParallelGatherScatter(mesh, mesh->ogs, o_rhsW, dfloatString, "add");  
-    // if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, o_rhsU);
-    // if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, o_rhsV);
-    // if (mppf->dim==3)
-    //   if (wsolver->Nmasked) mesh->maskKernel(wsolver->Nmasked, wsolver->o_maskIds, o_rhsW);
-
+    // NADA
   } else if (mppf->phiOptions.compareArgs("DISCRETIZATION","IPDG")) {
     // Currently we do not need that deuto homegenous bcs need to be used for more complex bcs
     occaTimerTic(mesh->device,"CahnHilliardRhsIpdgBC");    
@@ -60,14 +33,6 @@ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time){
   dlong Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
   mppf->o_rkPhi.copyFrom(mppf->o_Phi,Ntotal*sizeof(dfloat),0, 0*mppf->fieldOffset*sizeof(dfloat));
   
-
-  // if (mppf->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-  //   if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, mppf->o_UH);
-  //   if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, mppf->o_VH);
-  //   if (mppf->dim==3)
-  //     if (wsolver->Nmasked) mesh->maskKernel(wsolver->Nmasked, wsolver->o_maskIds, mppf->o_WH);
-
-  // }
   
   occaTimerTic(mesh->device,"Psi-Solve");
   mppf->NiterPsi = ellipticSolve(psiSolver, mppf->lambdaPsi, mppf->phiTOL, mppf->o_rhsPhi, mppf->o_Psi);
@@ -83,20 +48,9 @@ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time){
  
 
   if (mppf->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-    // mppf->velocityAddBCKernel(mesh->Nelements,
-    //                         time,
-    //                         mesh->o_sgeo,
-    //                         mesh->o_x,
-    //                         mesh->o_y,
-    //                         mesh->o_z,
-    //                         mesh->o_vmapM,
-    //                         mppf->o_VmapB,
-    //                         mppf->o_UH,
-    //                         mppf->o_VH,
-    //                         mppf->o_WH);
+    // NADA
   }
 
-  // Smooth density and viscosity on device 
-  mppf->setMaterialPropertyKernel(mesh->Nelements, mppf->o_rkPhi, mppf->o_Rho, mppf->o_Mu);
+  
 
 }

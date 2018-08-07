@@ -51,11 +51,19 @@ $(ELLIPTICDIR)/ellipticPrecon.h
 AOBJS    = \
 ./src/mppfSetup.o \
 ./src/mppfPlotVTU.o \
-./src/mppfPhaseFieldRhs.o \
 ./src/mppfRun.o \
+./src/mppfCahnHilliardRhs.o \
 ./src/mppfCahnHilliardSolve.o \
+./src/mppfCahnHilliardUpdate.o \
 ./src/mppfReport.o \
 ./src/mppfError.o \
+./src/mppfAdvection.o \
+./src/mppfPressureGradient.o \
+./src/mppfVelocityGradient.o \
+./src/mppfAdvectionUpdate.o \
+./src/mppfPressureRhs.o \
+./src/mppfDivergence.o \
+./src/mppfPressureSolve.o \
 #./src/insForces.o \
 #./src/insComputeDt.o \
 #./src/insRunARK.o \

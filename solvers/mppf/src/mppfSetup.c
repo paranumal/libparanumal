@@ -20,6 +20,8 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mesh->Nfields = 1; // set mesh Nfields to 1, this may cause problems in meshOccaSetup 
 
 
+  mppf->ARKswitch = 0; 
+
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
     mppf->extbdfA = (dfloat*) calloc(3, sizeof(dfloat));
     mppf->extbdfB = (dfloat*) calloc(3, sizeof(dfloat));
@@ -41,6 +43,8 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
     mppf->g0 = 11.f/6.f;
   }
 
+
+
   // Initialize fields
   dlong Nlocal = mesh->Np*mesh->Nelements;
   dlong Ntotal = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
@@ -58,6 +62,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->Psi     = (dfloat*) calloc(                               Ntotal,sizeof(dfloat));
   mppf->Rho     = (dfloat*) calloc(                               Ntotal,sizeof(dfloat));
   mppf->Mu      = (dfloat*) calloc(                               Ntotal,sizeof(dfloat));
+  mppf->GMu     = (dfloat*) calloc(                mppf->NVfields*Ntotal,sizeof(dfloat));
   
   // rhs storage
   mppf->rhsU    = (dfloat*) calloc(Ntotal,sizeof(dfloat));
@@ -71,8 +76,12 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->LU      = (dfloat*) calloc(mppf->NVfields*(mppf->Nstages+1)*Ntotal,sizeof(dfloat));
   mppf->GP      = (dfloat*) calloc(mppf->NVfields*(mppf->Nstages+1)*Ntotal,sizeof(dfloat));
   mppf->NPhi    = (dfloat*) calloc(               (mppf->Nstages+1)*Ntotal,sizeof(dfloat));
+  mppf->HPhi    = (dfloat*) calloc(               (mppf->Nstages+1)*Ntotal,sizeof(dfloat));
+  
+  // This needs to be changed too much storage!!!!!!!
+  mppf->GU      = (dfloat*) calloc(mppf->NVfields*mppf->NVfields*Ntotal,sizeof(dfloat));
 
-  mppf->GU      = (dfloat*) calloc(mppf->NVfields*Ntotal*4,sizeof(dfloat));
+  mppf->GPhi   =  (dfloat*) calloc(mppf->NVfields*Ntotal, sizeof(dfloat));
 
   mppf->rkU     = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
   mppf->rkP     = (dfloat*) calloc(               Ntotal,sizeof(dfloat));
@@ -86,6 +95,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   //plotting fields
   mppf->Vort    = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
   mppf->Div     = (dfloat*) calloc(               Nlocal,sizeof(dfloat));
+  mppf->Ue      = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
 
   //  Substepping will come  here // NOT IN USE CURRENTLY
   if(mppf->elementType==HEXAHEDRA)
@@ -96,18 +106,19 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->Nsubsteps = 0;
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF"))
     options.getArgs("SUBCYCLING STEPS",mppf->Nsubsteps);
+    
+    
+  // if(mppf->Nsubsteps){
+  //   mppf->Ud    = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
+  //   mppf->Ue    = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
+  //   mppf->resU  = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
+  //   mppf->rhsUd = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
 
-  if(mppf->Nsubsteps){
-    mppf->Ud    = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
-    mppf->Ue    = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
-    mppf->resU  = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
-    mppf->rhsUd = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
-
-    if(mppf->elementType==HEXAHEDRA)
-      mppf->cUd = (dfloat *) calloc(mppf->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
-    else 
-      mppf->cUd = mppf->U;
-  }
+  //   if(mppf->elementType==HEXAHEDRA)
+  //     mppf->cUd = (dfloat *) calloc(mppf->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+  //   else 
+  //     mppf->cUd = mppf->U;
+  // }
 
 
 
@@ -169,6 +180,13 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   kernelInfo["defines/" "p_rho1"] = mppf->rho1;
   kernelInfo["defines/" "p_rho2"] = mppf->rho2;
 
+  mppf->rho0 = mymin(mppf->rho1, mppf->rho2);
+  mppf->nu0  = 0.5*mymax(mppf->mu1, mppf->mu2)/ mymin(mppf->rho1, mppf->rho2); 
+
+  kernelInfo["defines/" "p_invrho0"] = 1.0/mppf->rho0;
+  kernelInfo["defines/" "p_rho0"] = mppf->rho0;
+  kernelInfo["defines/" "p_nu0"] = mppf->nu0;
+
   kernelInfo["defines/" "p_NTfields"]= mppf->NTfields;
   kernelInfo["defines/" "p_NVfields"]= mppf->NVfields;
   kernelInfo["defines/" "p_NfacesNfp"]=  mesh->Nfaces*mesh->Nfp;
@@ -186,6 +204,8 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->o_Phi = mesh->device.malloc(               mppf->Nstages*Ntotal*sizeof(dfloat), mppf->Phi);
   mppf->o_Rho = mesh->device.malloc(                             Ntotal*sizeof(dfloat), mppf->Rho);
   mppf->o_Mu  = mesh->device.malloc(                             Ntotal*sizeof(dfloat), mppf->Mu);
+  mppf->o_GMu = mesh->device.malloc(              mppf->NVfields*Ntotal*sizeof(dfloat), mppf->GMu);
+  mppf->o_Ue  = mesh->device.malloc(              mppf->NVfields*Ntotal*sizeof(dfloat), mppf->Ue);
   
    for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
@@ -432,6 +452,15 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   ellipticSolveSetup(mppf->psiSolver, mppf->lambdaPsi, kernelInfoPsi);
 
 
+  if (mesh->rank==0) printf("==================PRESSURE SOLVE SETUP=========================\n");
+  mppf->pSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  mppf->pSolver->mesh = mesh;
+  mppf->pSolver->options = mppf->pOptions;
+  mppf->pSolver->dim = mppf->dim;
+  mppf->pSolver->elementType = mppf->elementType;
+  mppf->pSolver->BCType = (int*) calloc(7,sizeof(int));
+  memcpy(mppf->pSolver->BCType,pBCType,7*sizeof(int));
+  ellipticSolveSetup(mppf->pSolver, 0.0, kernelInfoP);
 
 
 
@@ -539,12 +568,16 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->o_rhsP    = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->rhsP);
   mppf->o_rhsPhi  = mesh->device.malloc(Ntotal*sizeof(dfloat), mppf->rhsPhi);
 
+  mppf->o_GPhi  = mesh->device.malloc(                  mppf->NVfields*Ntotal*sizeof(dfloat), mppf->GPhi);
   mppf->o_NPhi  = mesh->device.malloc(               (mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->NPhi);
+  mppf->o_HPhi  = mesh->device.malloc(               (mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->HPhi);
+  
   mppf->o_NU    = mesh->device.malloc(mppf->NVfields*(mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->NU);
   mppf->o_LU    = mesh->device.malloc(mppf->NVfields*(mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->LU);
   mppf->o_GP    = mesh->device.malloc(mppf->NVfields*(mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->GP);
   
-  mppf->o_GU    = mesh->device.malloc(mppf->NVfields*Ntotal*4*sizeof(dfloat), mppf->GU);
+  // This needs to be changed, too much storage
+  mppf->o_GU    = mesh->device.malloc(mppf->NVfields*mppf->NVfields*Ntotal*sizeof(dfloat), mppf->GU);
   
   mppf->o_rkU   = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkU);
   mppf->o_rkP   = mesh->device.malloc(              Ntotal*sizeof(dfloat), mppf->rkP);
@@ -675,8 +708,80 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "mppfDivergenceVolume%s", suffix);
       mppf->divergenceVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      // sprintf(kernelName, "mppfDivergenceSurface%s", suffix);
-      // mppf->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "mppfDivergenceSurface%s", suffix);
+      mppf->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+
+      //===========================================================================//
+
+      sprintf(fileName, DMPPF "/okl/mppfPhaseFieldGradient%s.okl", suffix);
+      sprintf(kernelName, "mppfPhaseFieldGradientVolume%s", suffix);
+      mppf->phaseFieldGradientVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfPhaseFieldGradientSurface%s", suffix);
+      mppf->phaseFieldGradientSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      // ===========================================================================
+
+      sprintf(fileName, DMPPF "/okl/mppfAdvection%s.okl", suffix);
+      sprintf(kernelName, "mppfAdvectionCubatureVolume%s", suffix);
+      mppf->advectionCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfAdvectionCubatureSurface%s", suffix);
+      mppf->advectionCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfAdvectionVolume%s", suffix);
+      mppf->advectionVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfAdvectionSurface%s", suffix);
+      mppf->advectionSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+
+       // ===========================================================================
+
+      sprintf(fileName, DMPPF "/okl/mppfAdvectionUpdate%s.okl", suffix);
+      sprintf(kernelName, "mppfAdvectionUpdate%s", suffix);
+      mppf->advectionUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      // ===========================================================================
+
+      sprintf(fileName, DMPPF "/okl/mppfPressureGradient%s.okl", suffix);
+      sprintf(kernelName, "mppfPressureGradientVolume%s", suffix);
+      mppf->pressureGradientVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfPressureGradientSurface%s", suffix);
+      mppf->pressureGradientSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      // ===========================================================================
+
+      sprintf(fileName, DMPPF "/okl/mppfVelocityGradient%s.okl", suffix);
+      sprintf(kernelName, "mppfVelocityGradientVolume%s", suffix);
+      mppf->velocityGradientVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfVelocityGradientSurface%s", suffix);
+      mppf->velocityGradientSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+       // ===========================================================================
+
+      sprintf(fileName, DMPPF "/okl/mppfVelocityExtrapolate.okl");
+      sprintf(kernelName, "mppfVelocityExtrapolate");
+      mppf->velocityExtrapolateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+       // ===========================================================================
+
+      sprintf(fileName, DMPPF "/okl/mppfPressureRhs%s.okl", suffix);
+      sprintf(kernelName, "mppfPressureRhs%s", suffix);
+      mppf->pressureRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(fileName, DMPPF "/okl/mppfPressureBC%s.okl", suffix);
+      sprintf(kernelName, "mppfPressureIpdgBC%s", suffix);
+      mppf->pressureRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfPressureBC%s", suffix);
+      mppf->pressureRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfPressureAddBC%s", suffix);
+      mppf->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       
     }

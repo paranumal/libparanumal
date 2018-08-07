@@ -1,0 +1,115 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+// Compute curl(curl(U)) in Strong Form
+@kernel void mppfVelocityCurlTri2D(const dlong Nelements,
+                             @restrict const  dfloat *  vgeo,
+                             @restrict const  dfloat *  Dmatrices,
+                             const dlong offset,
+                             @restrict const  dfloat *  U,
+                                   @restrict dfloat *   curlU){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+    // for all elements
+    @shared dfloat s_U[p_NblockV][p_Np];
+    @shared dfloat s_V[p_NblockV][p_Np];
+
+    @shared dfloat s_curlU[p_NblockV][p_Np];
+
+    @exclusive dfloat drdx, dsdx, drdy, dsdy; 
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          const dlong id = e*p_Np + n;
+           // prefetch geometric factors (constant on triangle)
+          drdx = vgeo[e*p_Nvgeo + p_RXID];
+          drdy = vgeo[e*p_Nvgeo + p_RYID];
+          dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+          s_U[es][n]  = U[id + 0*offset];
+          s_V[es][n]  = U[id + 1*offset];
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          dfloat dudr  = 0.f, duds  = 0.f;
+          dfloat dvdr  = 0.f, dvds  = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+              dudr  += Drni*s_U[es][i];
+              duds  += Dsni*s_U[es][i];
+
+              dvdr  += Drni*s_V[es][i];
+              dvds  += Dsni*s_V[es][i];
+            }
+
+            const dfloat dvdx =  drdx*dvdr + dsdx*dvds;
+            const dfloat dudy =  drdy*dudr + dsdy*duds;
+
+            s_curlU[es][n] = dvdx- dudy;
+        }
+      }
+    }
+
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+         dfloat dwdr  = 0.f, dwds  = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+              dwdr  += Drni*s_curlU[es][i];
+              dwds  += Dsni*s_curlU[es][i];
+            }
+
+            const dfloat dwdy =  drdy*dwdr + dsdy*dwds;
+            const dfloat dwdx =  drdx*dwdr + dsdx*dwds;           
+        
+          const dlong id = e*p_Np+n;
+          curlU[id+0*offset] =  dwdy;
+          curlU[id+1*offset] = -dwdx;
+        }
+      }
+    }
+  }
+}

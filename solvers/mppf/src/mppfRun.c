@@ -9,12 +9,17 @@ void mppfRun(mppf_t *mppf){
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"MPPF");
 
+  // Initiliaze Pressure Gradient for non-zero Pressure Velocity
+
   
   for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
   // for(int tstep=0;tstep<100;++tstep){
 
-    if(tstep<1) 
+    if(tstep<1){
       extbdfCoefficents(mppf,tstep+1);
+      // Initialize Pressure Gradient GP for non-zero Pressure IC
+      mppfPressureGradient(mppf, 0.0, mppf->o_P, mppf->o_GP);      
+    } 
     else if(tstep<2 && mppf->temporalOrder>=2) 
       extbdfCoefficents(mppf,tstep+1);
     else if(tstep<3 && mppf->temporalOrder>=3) 
@@ -24,13 +29,27 @@ void mppfRun(mppf_t *mppf){
     
     dfloat time_new = time + mppf->dt; 
 
-    // printf("Calling CF Rhs Function\n");
-    mppfPhaseFieldRhs(mppf, time_new);
-
+    // Interface Solver
+    // Compute Rhs
+    mppfCahnHilliardRhs(mppf, time_new);
+    // Solve for Psi  and Phi
     mppfCahnHilliardSolve(mppf, time);
+    // Update Phi and Compute Gradient Phi
+    mppfCahnHilliardUpdate(mppf, time_new);
 
 
+    // Compute Nonlinear Term N(U) 
+    mppfAdvection(mppf, time, mppf->o_U, mppf->o_NU);
+    // Compute Extrapolated Velocity Gradients i.e. grad(u^*)
+    mppfVelocityGradient(mppf, time, mppf->o_U, mppf->o_GU); 
+    // Finalize Explicit Solver
+    // rkU = rhsU^s = \sum^s-1 es_bi U^(n^i) - \sum^s-1 ea_si N(U^i) + (1/rho0 - 1/rho)*\sum^s-1 ea_si GP^i)
+    mppfAdvectionUpdate(mppf, time, mppf->o_NU, mppf->o_GU, mppf->o_GP, mppf->o_rkU);
 
+    //Pressure Solve
+    mppfPressureRhs(mppf, time, mppf->o_rkU);
+
+#if 1
     mppf->setFlowFieldKernel(mesh->Nelements,
                               time_new, 
                               mesh->o_x,
@@ -38,7 +57,11 @@ void mppfRun(mppf_t *mppf){
                               mesh->o_z,
                               mppf->fieldOffset,
                               mppf->o_rkU,
-                              mppf->o_rkP);
+                              mppf->o_rhsPhi); // pressure is not exact anymore
+#endif
+
+
+    mppfPressureSolve(mppf,time,mppf->o_rkP);
 
      //cycle history
     for (int s=mppf->Nstages;s>1;s--) {
@@ -49,31 +72,35 @@ void mppfRun(mppf_t *mppf){
                                   (s-1)*mppf->Ntotal*sizeof(dfloat), 
                                   (s-2)*mppf->Ntotal*sizeof(dfloat));
 
-      mppf->o_Phi.copyFrom(mppf->o_Phi, mppf->Ntotal*sizeof(dfloat), 
-                                  (s-1)*mppf->Ntotal*sizeof(dfloat), 
-                                  (s-2)*mppf->Ntotal*sizeof(dfloat));
+      // mppf->o_Phi.copyFrom(mppf->o_Phi, mppf->Ntotal*sizeof(dfloat), 
+      //                             (s-1)*mppf->Ntotal*sizeof(dfloat), 
+      //                             (s-2)*mppf->Ntotal*sizeof(dfloat));
     }
 
 
      //copy updated fields
     mppf->o_U.copyFrom(  mppf->o_rkU,   mppf->NVfields*mppf->Ntotal*sizeof(dfloat));  
     mppf->o_P.copyFrom(  mppf->o_rkP,                  mppf->Ntotal*sizeof(dfloat));  
-    mppf->o_Phi.copyFrom(mppf->o_rkPhi,                mppf->Ntotal*sizeof(dfloat));
+    // mppf->o_Phi.copyFrom(mppf->o_rkPhi,                mppf->Ntotal*sizeof(dfloat));
 
 
 
      //cycle rhs history
     for (int s=mppf->Nstages;s>1;s--) {
-      // mppf->o_NU.copyFrom(mppf->o_NU, mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
-      //                             (s-1)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
-      //                             (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
-      // mppf->o_GP.copyFrom(mppf->o_GP, mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
-      //                             (s-1)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
-      //                             (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
+      mppf->o_NU.copyFrom(mppf->o_NU, mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
+                                  (s-1)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
+                                  (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
+      mppf->o_GP.copyFrom(mppf->o_GP, mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
+                                  (s-1)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
+                                  (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
 
-       mppf->o_NPhi.copyFrom(mppf->o_NPhi, mppf->Ntotal*sizeof(dfloat), 
-                                  (s-1)*mppf->Ntotal*sizeof(dfloat), 
-                                  (s-2)*mppf->Ntotal*sizeof(dfloat));
+      //  mppf->o_NPhi.copyFrom(mppf->o_NPhi, mppf->Ntotal*sizeof(dfloat), 
+      //                             (s-1)*mppf->Ntotal*sizeof(dfloat), 
+      //                             (s-2)*mppf->Ntotal*sizeof(dfloat));
+
+      // mppf->o_HPhi.copyFrom(mppf->o_HPhi, mppf->Ntotal*sizeof(dfloat), 
+      //                           (s-1)*mppf->Ntotal*sizeof(dfloat), 
+      //                           (s-2)*mppf->Ntotal*sizeof(dfloat));
     }
 
 

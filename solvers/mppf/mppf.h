@@ -23,7 +23,7 @@ typedef struct {
   setupAide vOptions, pOptions, phiOptions; // psiOptions; 	
 
   // INS SOLVER OCCA VARIABLES
-  dfloat rho1, mu1, rho2, mu2, Re;
+  dfloat rho1, mu1, rho2, mu2, rho0, nu0, Re;
   dfloat ubar, vbar, wbar, pbar;
   int NVfields, NTfields, NPfields; // # of velocity, velocity + pressure and Phi fields
   dlong fieldOffset;
@@ -62,8 +62,8 @@ typedef struct {
 
   dfloat idt, inu; // hold some inverses
   dfloat hmin, eta, eta2, inveta2, factorS;     // element length, interface thickness, eta^2. 
-  dfloat *U, *P, *Phi, *Psi, *Rho, *Mu;
-  dfloat *NU, *LU, *GP, *NPhi;
+  dfloat *U, *P, *Phi, *Psi, *Rho, *Mu, *GMu;
+  dfloat *NU, *LU, *GP, *NPhi, *HPhi, *GPhi;
   dfloat *GU;   
   dfloat *rhsU, *rhsV, *rhsW, *rhsP, *rhsPhi;   
   dfloat *rkU, *rkP, *rkPhi, *PI;
@@ -143,6 +143,9 @@ typedef struct {
   occa::kernel phaseFieldRhsSolve2Kernel; 
   occa::kernel phaseFieldRhsIpdgBCKernel;
 
+  occa::kernel phaseFieldGradientVolumeKernel;
+  occa::kernel phaseFieldGradientSurfaceKernel;
+
 
   occa::kernel scaledAddKernel;
   occa::kernel multiplyScalarKernel;
@@ -154,12 +157,12 @@ typedef struct {
 
 
   occa::memory o_U, o_P, o_Phi, o_Psi;
-  occa::memory o_Rho, o_Mu;
+  occa::memory o_Rho, o_Mu, o_GMu;
   occa::memory o_lapPhi;   // laplace of extrapolated phi for  Helmholtz-Psi Rhs  
 
   occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP, o_rhsPhi; 
 
-  occa::memory o_NU, o_LU, o_GP, o_NPhi;
+  occa::memory o_NU, o_LU, o_GP, o_NPhi, o_HPhi, o_GPhi;
   occa::memory o_GU;
 
   occa::memory o_UH, o_VH, o_WH, o_PhiH;
@@ -196,13 +199,16 @@ typedef struct {
   occa::kernel advectionSurfaceKernel;
   occa::kernel advectionCubatureVolumeKernel;
   occa::kernel advectionCubatureSurfaceKernel;
+  occa::kernel advectionUpdateKernel;
 
   occa::kernel diffusionKernel;
   occa::kernel diffusionIpdgKernel;
   occa::kernel velocityGradientKernel;
 
-  occa::kernel gradientVolumeKernel;
-  occa::kernel gradientSurfaceKernel;
+  occa::kernel pressureGradientVolumeKernel;
+  occa::kernel pressureGradientSurfaceKernel;
+  occa::kernel velocityGradientVolumeKernel;
+  occa::kernel velocityGradientSurfaceKernel;
 
   occa::kernel divergenceVolumeKernel;
   occa::kernel divergenceSurfaceKernel;
@@ -220,6 +226,7 @@ typedef struct {
   occa::kernel velocityRhsBCKernel;
   occa::kernel velocityAddBCKernel;
   occa::kernel velocityUpdateKernel;  
+  occa::kernel velocityExtrapolateKernel;  
   
   occa::kernel vorticityKernel;
   occa::kernel isoSurfaceKernel;
@@ -235,8 +242,9 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options);
  void mppfPlotVTU(mppf_t *mppf, char *fileNameBase);
  void mppfRun(mppf_t *mppf);
 
- void mppfPhaseFieldRhs(mppf_t *mppf, dfloat time);
+ void mppfCahnHilliardRhs(mppf_t *mppf, dfloat time);
  void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time);
+ void mppfCahnHilliardUpdate(mppf_t *mppf, dfloat time);
 
 
 void mppfReport(mppf_t *mppf, dfloat time,  int tstep);
@@ -244,7 +252,20 @@ void mppfError(mppf_t *mppf, dfloat time);
 // void insForces(ins_t *ins, dfloat time);
 // void insComputeDt(ins_t *ins, dfloat time); 
 
-// void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU);
+void mppfAdvection(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_NU);
+void mppfAdvectionUpdate(mppf_t *mppf, dfloat time, occa::memory o_NU,occa::memory o_GU, occa::memory o_GP, occa::memory o_rkU);
+void mppfPressureGradient (mppf_t *mppf, dfloat time, occa::memory o_P, occa::memory o_GP);
+void mppfVelocityGradient (mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_GU);
+
+
+
+void mppfPressureRhs  (mppf_t *mppf, dfloat time, occa::memory o_rkU);
+void mppfPressureSolve(mppf_t *mppf, dfloat time, occa::memory o_rkP);
+
+
+
+void mppfDivergence(mppf_t *mppf,dfloat time, occa::memory o_U, occa::memory o_DU);
+
 // void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);
 // void insGradient (ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP);
 // void insDivergence(ins_t *ins,dfloat time, occa::memory o_U, occa::memory o_DU);

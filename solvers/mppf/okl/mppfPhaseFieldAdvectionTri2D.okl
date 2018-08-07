@@ -9,7 +9,8 @@
                                                         @restrict const  dfloat *  U,
                                                         @restrict        dfloat *  cU,
                                                         @restrict const  dfloat *  Phi, 
-                                                        @restrict        dfloat *  NPhi){
+                                                        @restrict        dfloat *  NPhi,
+                                                        @restrict        dfloat *  HPhi){
 
   for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
 
@@ -76,7 +77,11 @@
               dfds += cubDmatrices[n+m*p_Np+1*p_cubNp*p_Np]*s_cFs[es][m];
       	    }
       	  // Update
-      	  NPhi[e*p_Np+n] = -(dfdr + dfds); // note  change in sign, weakly implemented  
+      	  NPhi[e*p_Np + n] = -(dfdr + dfds); // note  change in sign, weakly implemented
+
+          // Update poatential function
+          dfloat hphi = s_Phi[es][n]; 
+          HPhi[e*p_Np + n] =  hphi*(hphi*hphi - 1.0f); // double-well potential 
       	}
       }
     }
@@ -180,8 +185,8 @@
             // apply boundary condition
             int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              phip = phim; // Currently use this baoundary, change later !!!!! 
-              // mppfPhaseFieldDirichletConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp] , nx, ny,phim, &phip);
+              // phip = phim; // Currently use this baoundary, change later !!!!! 
+              mppfPhaseFieldDirichletConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp] , nx, ny,phim, &phip);
             }
 
             // Find max normal velocity on the face

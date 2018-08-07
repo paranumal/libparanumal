@@ -1,29 +1,32 @@
 #include "mppf.h"
 
-void mppfPhaseFieldRhs(mppf_t *mppf, dfloat time){
+void mppfCahnHilliardRhs(mppf_t *mppf, dfloat time){
   
   mesh_t *mesh = mppf->mesh; 
 
-  //Exctract Halo On Device for Phase Field function 
-  if(mesh->totalHaloPairs>0){
-    mppf->phaseFieldHaloExtractKernel(mesh->Nelements,
-                                      mesh->totalHaloPairs,
-                                      mesh->o_haloElementList,
-                                      mppf->o_Phi,
-                                      mppf->o_phiHaloBuffer);
+  // Velocity needed to be axchange, Phi is already done on update function
 
-    // copy extracted halo to HOST 
-    mppf->o_phiHaloBuffer.copyTo(mppf->phiSendBuffer);           
+  //Exctract Halo On Device for Phase Field function it is already done after Solve!!!!!
+  // // Assumes Velocity is already halo exchanged  
+  // if(mesh->totalHaloPairs>0){
+  //   mppf->phaseFieldHaloExtractKernel(mesh->Nelements,
+  //                                     mesh->totalHaloPairs,
+  //                                     mesh->o_haloElementList,
+  //                                     mppf->o_Phi,
+  //                                     mppf->o_phiHaloBuffer);
+
+  //   // copy extracted halo to HOST 
+  //   mppf->o_phiHaloBuffer.copyTo(mppf->phiSendBuffer);           
   
-    // start halo exchange
-    meshHaloExchangeStart(mesh,
-                         mesh->Np*sizeof(dfloat),
-                         mppf->phiSendBuffer,
-                         mppf->phiRecvBuffer);
-  }
+  //   // start halo exchange
+  //   meshHaloExchangeStart(mesh,
+  //                        mesh->Np*sizeof(dfloat),
+  //                        mppf->phiSendBuffer,
+  //                        mppf->phiRecvBuffer);
+  // }
   
   // 
-  // 1-> compute NPhi =  u*grad(Phi) = div(u*Phi) on Cubature Nodes 
+  // 1-> compute NPhi =  u*grad(Phi) = div(u*Phi) on Cubature Nodes and update potential function HPhi
   mppf->phaseFieldAdvectionVolumeKernel(mesh->Nelements,
                                        mesh->o_vgeo,
                                        mesh->o_cubvgeo,
@@ -34,20 +37,21 @@ void mppfPhaseFieldRhs(mppf_t *mppf, dfloat time){
                                        mppf->o_U,
                                        mppf->o_cU,
                                        mppf->o_Phi,
-                                       mppf->o_NPhi);
+                                       mppf->o_NPhi, // Nonlinear convective Cahn-Hilliard term
+                                       mppf->o_HPhi); // Potential function to be extrapolated: double-well currently
 
 
-  if(mesh->totalHaloPairs>0){
+  // if(mesh->totalHaloPairs>0){
 
-    meshHaloExchangeFinish(mesh);
+  //   meshHaloExchangeFinish(mesh);
 
-    mppf->o_phiHaloBuffer.copyFrom(mppf->phiRecvBuffer);
+  //   mppf->o_phiHaloBuffer.copyFrom(mppf->phiRecvBuffer);
 
-    mppf->phaseFieldHaloScatterKernel(mesh->Nelements,
-                                      mesh->totalHaloPairs,
-                                      mppf->o_Phi,
-                                      mppf->o_phiHaloBuffer);
-  }
+  //   mppf->phaseFieldHaloScatterKernel(mesh->Nelements,
+  //                                     mesh->totalHaloPairs,
+  //                                     mppf->o_Phi,
+  //                                     mppf->o_phiHaloBuffer);
+  // }
 
   mppf->phaseFieldAdvectionSurfaceKernel(mesh->Nelements,
                                         mesh->o_vgeo,
@@ -84,6 +88,7 @@ void mppfPhaseFieldRhs(mppf_t *mppf, dfloat time){
                                 mppf->inveta2,
                                 mppf->chSeta2,
                                 mppf->o_Phi,
+                                mppf->o_HPhi,
                                 mppf->o_lapPhi);
 
   
