@@ -24,31 +24,36 @@ SOFTWARE.
 
 */
 
-#ifndef OGS_KERNELS_H
-#define OGS_KERNELS_H 1
 
-#include "ogs.h"
+#ifndef OGS_SCATTERMANY_TPP
+#define OGS_SCATTERMANY_TPP 1
 
-namespace ogs {
+#include "ogs.hpp"
 
-  extern int Nrefs;
+template <class T> 
+void scatterMany(const  dlong Nscatter,
+             const  int Nentries,
+             const  dlong  stride,
+             const  dlong sstride,
+             const  dlong *  scatterStarts,
+             const  dlong *  scatterIds,
+             const  T     *  q,
+                    T     *  scatterq) {
 
-  extern void* hostBuf;
-  extern size_t hostBufSize;
+  for(int k=0;k<Nentries;++k){
+    for(dlong s=0;s<Nscatter;++s){
 
-  extern void* haloBuf;
-  extern occa::memory o_haloBuf;
+      const dlong start = scatterStarts[s];
+      const dlong end = scatterStarts[s+1];
 
-  extern occa::kernel gatherScatterKernel;
-  extern occa::kernel gatherKernel;
-  extern occa::kernel scatterKernel;
-
-  extern occa::stream defaultStream;
-  extern occa::stream dataStream;
-
-  void initKernels(MPI_Comm comm, occa::device device);
-
-  void freeKernels();
+      const T qs = q[s+k*stride];
+        
+      for(dlong n=start;n<end;++n){
+        const dlong id = scatterIds[n];
+        scatterq[id+k*sstride] = qs;
+      }
+    }
+  }
 }
 
 #endif

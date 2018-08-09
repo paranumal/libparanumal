@@ -24,27 +24,34 @@ SOFTWARE.
 
 */
 
-#ifndef OGS_INTERFACE_H
-#define OGS_INTERFACE_H 1
 
-extern "C"
-{
-  void *ogsHostSetup(MPI_Comm comm, dlong Ngather, hlong *gatherIds, int unique, int verbose);
-  void  ogsGsUnique(hlong *gatherIds, dlong Ngather, MPI_Comm comm);
+#ifndef OGS_SCATTERVEC_TPP
+#define OGS_SCATTERVEC_TPP 1
 
-  void ogsHostGatherScatter    (void *v, const char *type, const char *op, void *gsh);
-  void ogsHostGatherScatterVec (void *v, const int k, const char *type, const char *op, void *gsh);
-  void ogsHostGatherScatterMany(void *v, const int k, const char *type, const char *op, void *gsh);
+#include "ogs.hpp"
+
+template <class T> 
+void scatterVec(const  dlong Nscatter,
+             const  int Nentries,
+             const  dlong *  scatterStarts,
+             const  dlong *  scatterIds,
+             const  T     *  q,
+                    T     *  scatterq) {
   
-  void ogsHostGather    (void *v, const char *type, const char *op, void *gsh);
-  void ogsHostGatherVec (void *v, const int k, const char *type, const char *op, void *gsh);
-  void ogsHostGatherMany(void *v, const int k, const char *type, const char *op, void *gsh);
-  
-  void ogsHostScatter    (void *v, const char *type, const char *op, void *gsh);
-  void ogsHostScatterVec (void *v, const int k, const char *type, const char *op, void *gsh);
-  void ogsHostScatterMany(void *v, const int k, const char *type, const char *op, void *gsh);
-  
-  void ogsHostFree(void *gsh);
+  for(dlong s=0;s<Nscatter;++s){
+
+    const dlong start = scatterStarts[s];
+    const dlong end = scatterStarts[s+1];
+
+    for (int k=0;k<Nentries;k++) {
+      const T qs = q[s*Nentries+k];
+        
+      for(dlong n=start;n<end;++n){
+        const dlong id = scatterIds[n];
+        scatterq[id*Nentries+k] = qs;
+      }
+    }
+  }
 }
 
 #endif

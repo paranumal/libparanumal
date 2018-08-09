@@ -84,4 +84,3 @@ void ogsHostScatter(void *v, const char *type, const char *op, void *gsh){
       gs(v, gs_long_long, gs_max, 0, gsh, 0);
   } 
 }
-

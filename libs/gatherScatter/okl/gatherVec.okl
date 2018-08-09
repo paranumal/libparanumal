@@ -25,21 +25,24 @@ SOFTWARE.
 */
 
 
-@kernel void gather_floatAdd(const dlong Ngather,
+@kernel void gatherVec_floatAdd(const dlong Ngather,
+                 const  int      Nentries,
 		   @restrict const  dlong *  gatherStarts,
 		   @restrict const  dlong *  gatherIds,
 		   @restrict const  float *  q,
 		   @restrict float *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     float gq = 0.f;
     for(dlong n=start;n<end;++n){
     	const dlong id = gatherIds[n];
-    	gq += q[id];
+    	gq += q[id*Nentries+k];
     }
 
     //contiguously packed
@@ -47,21 +50,24 @@ SOFTWARE.
   }
 }
 
-@kernel void gather_doubleAdd(const dlong Ngather,
+@kernel void gatherVec_doubleAdd(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  double *  q,
        @restrict double *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     double gq = 0.f;
     for(dlong n=start;n<end;++n){
       const dlong id = gatherIds[n];
-      gq += q[id];
+      gq += q[id*Nentries+k];
     }
 
     //contiguously packed
@@ -69,21 +75,24 @@ SOFTWARE.
   }
 }
 
-@kernel void gather_intAdd(const dlong Ngather,
+@kernel void gatherVec_intAdd(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  int *  q,
        @restrict int *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     int gq = 0;
     for(dlong n=start;n<end;++n){
       const dlong id = gatherIds[n];
-      gq += q[id];
+      gq += q[id*Nentries+k];
     }
 
     //contiguously packed
@@ -91,21 +100,24 @@ SOFTWARE.
   }
 }
 
-@kernel void gather_longAdd(const dlong Ngather,
+@kernel void gatherVec_longAdd(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  long long int *  q,
        @restrict long long int *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     long long int gq = 0;
     for(dlong n=start;n<end;++n){
       const dlong id = gatherIds[n];
-      gq += q[id];
+      gq += q[id*Nentries+k];
     }
 
     //contiguously packed
@@ -113,21 +125,24 @@ SOFTWARE.
   }
 }
 
-@kernel void gather_floatMul(const dlong Ngather,
+@kernel void gatherVec_floatMul(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  float *  q,
        @restrict float *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     float gq = 1.f;
     for(dlong n=start;n<end;++n){
       const dlong id = gatherIds[n];
-      gq *= q[id];
+      gq *= q[id*Nentries+k];
     }
 
     //contiguously packed
@@ -135,21 +150,24 @@ SOFTWARE.
   }
 }
 
-@kernel void gather_doubleMul(const dlong Ngather,
+@kernel void gatherVec_doubleMul(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  double *  q,
        @restrict double *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     double gq = 1.f;
     for(dlong n=start;n<end;++n){
       const dlong id = gatherIds[n];
-      gq *= q[id];
+      gq *= q[id*Nentries+k];
     }
 
     //contiguously packed
@@ -157,21 +175,24 @@ SOFTWARE.
   }
 }
 
-@kernel void gather_intMul(const dlong Ngather,
+@kernel void gatherVec_intMul(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  int *  q,
        @restrict int *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     int gq = 1;
     for(dlong n=start;n<end;++n){
       const dlong id = gatherIds[n];
-      gq *= q[id];
+      gq *= q[id*Nentries+k];
     }
 
     //contiguously packed
@@ -179,21 +200,24 @@ SOFTWARE.
   }
 }
 
-@kernel void gather_longMul(const dlong Ngather,
+@kernel void gatherVec_longMul(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  long long int *  q,
        @restrict long long int *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     long long int gq = 1.f;
     for(dlong n=start;n<end;++n){
       const dlong id = gatherIds[n];
-      gq *= q[id];
+      gq *= q[id*Nentries+k];
     }
 
     //contiguously packed
@@ -201,22 +225,25 @@ SOFTWARE.
   }
 }
 
-@kernel void gather_floatMin(const dlong Ngather,
+@kernel void gatherVec_floatMin(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  float *  q,
        @restrict float *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     const dlong startId = gatherIds[start];
-    float gq = q[startId];
+    float gq = q[startId*Nentries+k];
     for(dlong n=start+1;n<end;++n){
       const dlong id = gatherIds[n];
-      gq = (q[id] < gq) ? q[id] : gq;
+      gq = (q[id*Nentries+k] < gq) ? q[id*Nentries+k] : gq;
     }
 
     //contiguously packed
@@ -225,22 +252,25 @@ SOFTWARE.
 }
 
 
-@kernel void gather_doubleMin(const dlong Ngather,
+@kernel void gatherVec_doubleMin(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  double *  q,
        @restrict double *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     const dlong startId = gatherIds[start];
-    double gq = q[startId];
+    double gq = q[startId*Nentries+k];
     for(dlong n=start+1;n<end;++n){
       const dlong id = gatherIds[n];
-      gq = (q[id] < gq) ? q[id] : gq;
+      gq = (q[id*Nentries+k] < gq) ? q[id*Nentries+k] : gq;
     }
 
     //contiguously packed
@@ -249,22 +279,25 @@ SOFTWARE.
 }
 
 
-@kernel void gather_intMin(const dlong Ngather,
+@kernel void gatherVec_intMin(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  int *  q,
        @restrict int *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     const dlong startId = gatherIds[start];
-    int gq = q[startId];
+    int gq = q[startId*Nentries+k];
     for(dlong n=start+1;n<end;++n){
       const dlong id = gatherIds[n];
-      gq = (q[id] < gq) ? q[id] : gq;
+      gq = (q[id*Nentries+k] < gq) ? q[id*Nentries+k] : gq;
     }
 
     //contiguously packed
@@ -273,22 +306,25 @@ SOFTWARE.
 }
 
 
-@kernel void gather_longMin(const dlong Ngather,
+@kernel void gatherVec_longMin(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  long long int *  q,
        @restrict long long int *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     const dlong startId = gatherIds[start];
-    long long int gq = q[startId];
+    long long int gq = q[startId*Nentries+k];
     for(dlong n=start+1;n<end;++n){
       const dlong id = gatherIds[n];
-      gq = (q[id] < gq) ? q[id] : gq;
+      gq = (q[id*Nentries+k] < gq) ? q[id*Nentries+k] : gq;
     }
 
     //contiguously packed
@@ -297,22 +333,25 @@ SOFTWARE.
 }
 
 
-@kernel void gather_floatMax(const dlong Ngather,
+@kernel void gatherVec_floatMax(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  float *  q,
        @restrict float *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     const dlong startId = gatherIds[start];
-    float gq = q[startId];
+    float gq = q[startId*Nentries+k];
     for(dlong n=start+1;n<end;++n){
       const dlong id = gatherIds[n];
-      gq = (q[id] >  gq) ? q[id] : gq;
+      gq = (q[id*Nentries+k] >  gq) ? q[id*Nentries+k] : gq;
     }
 
     //contiguously packed
@@ -320,22 +359,25 @@ SOFTWARE.
   }
 }
 
-@kernel void gather_doubleMax(const dlong Ngather,
+@kernel void gatherVec_doubleMax(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  double *  q,
        @restrict double *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     const dlong startId = gatherIds[start];
-    double gq = q[startId];
+    double gq = q[startId*Nentries+k];
     for(dlong n=start+1;n<end;++n){
       const dlong id = gatherIds[n];
-      gq = (q[id] >  gq) ? q[id] : gq;
+      gq = (q[id*Nentries+k] >  gq) ? q[id*Nentries+k] : gq;
     }
 
     //contiguously packed
@@ -343,22 +385,25 @@ SOFTWARE.
   }
 }
 
-@kernel void gather_intMax(const dlong Ngather,
+@kernel void gatherVec_intMax(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  int *  q,
        @restrict int *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     const dlong startId = gatherIds[start];
-    int gq = q[startId];
+    int gq = q[startId*Nentries+k];
     for(dlong n=start+1;n<end;++n){
       const dlong id = gatherIds[n];
-      gq = (q[id] >  gq) ? q[id] : gq;
+      gq = (q[id*Nentries+k] >  gq) ? q[id*Nentries+k] : gq;
     }
 
     //contiguously packed
@@ -366,22 +411,25 @@ SOFTWARE.
   }
 }
 
-@kernel void gather_longMax(const dlong Ngather,
+@kernel void gatherVec_longMax(const dlong Ngather,
+                 const  int      Nentries,
        @restrict const  dlong *  gatherStarts,
        @restrict const  dlong *  gatherIds,
        @restrict const  long long int *  q,
        @restrict long long int *  gatherq){
 
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
+  for(dlong g=0;g<Ngather*Nentries;++g;@tile(256,@outer,@inner)){
 
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
+    const dlong gid = g/Nentries;
+    const int k = g%Nentries;
+    const dlong start = gatherStarts[gid];
+    const dlong end = gatherStarts[gid+1];
      
     const dlong startId = gatherIds[start];
-    long long int gq = q[startId];
+    long long int gq = q[startId*Nentries+k];
     for(dlong n=start+1;n<end;++n){
       const dlong id = gatherIds[n];
-      gq = (q[id] >  gq) ? q[id] : gq;
+      gq = (q[id*Nentries+k] >  gq) ? q[id*Nentries+k] : gq;
     }
 
     //contiguously packed

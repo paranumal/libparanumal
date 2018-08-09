@@ -89,12 +89,15 @@ SOFTWARE.
   is independent of k.
   
   For combining the communication for "gs" on multiple arrays:
-  
+      
     occa::memory o_v1, o_v2, ..., o_vk;
-    occa::memory o_vs[k] = {o_v1, o_v2, ..., o_vk};
     
-    ogsGatherScatterMany(o_vs, k, ogsDouble, op, ogs);
+    ogsGatherScatterMany(o_v, k, stride, ogsDouble, op, ogs);
   
+  when the arrays o_v1, o_v2, ..., o_vk are packed in o_v as 
+
+    o_v1 = o_v + 0*stride, o_v2 = o_v + 1*stride, ...
+
   This call is equivalent to
   
     ogsGatherScatter(o_v1, gsDouble, op, ogs);
@@ -103,11 +106,11 @@ SOFTWARE.
     ogsGatherScatter(o_vk, gsDouble, op, ogs);
     
   except that all communication is done together.
-  
+
 */  
 
-#ifndef OGS_H
-#define OGS_H 1
+#ifndef OGS_HPP
+#define OGS_HPP 1
 
 #include <math.h>
 #include <stdlib.h>
@@ -168,20 +171,56 @@ typedef struct {
 ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm, 
                 int verbose, occa::device device);
 
-void ogsGatherScatter      (void *v, const char *type, const char *op, ogs_t *ogs); //wrapper for gslib call
-void ogsGatherScatter      (occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
-void ogsGatherScatterStart (occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
-void ogsGatherScatterFinish(occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
-
-void ogsGather      (occa::memory o_Gv, occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
-void ogsGatherStart (occa::memory o_Gv, occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
-void ogsGatherFinish(occa::memory o_Gv, occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
-
-void ogsScatter      (void *sv, void *v, const char *type, const char *op, ogs_t *ogs);
-void ogsScatter      (occa::memory o_Sv, occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
-void ogsScatterStart (occa::memory o_Sv, occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
-void ogsScatterFinish(occa::memory o_Sv, occa::memory o_v, const char *type, const char *op, ogs_t *ogs);
-
 void ogsFree(ogs_t* ogs);
+
+// Host array versions
+void ogsGatherScatter    (void  *v, const char *type, const char *op, ogs_t *ogs); //wrapper for gslib call
+void ogsGatherScatterVec (void  *v, const int k, const char *type, const char *op, ogs_t *ogs); //wrapper for gslib call
+void ogsGatherScatterMany(void  *v, const int k, const dlong stride, const char *type, const char *op, ogs_t *ogs); //wrapper for gslib call
+
+void ogsGather    (void  *gv, void  *v, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherVec (void  *gv, void  *v, const int k, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherMany(void  *gv, void  *v, const int k, const dlong stride, const char *type, const char *op, ogs_t *ogs);
+
+void ogsScatter    (void  *sv, void  *v, const char *type, const char *op, ogs_t *ogs);
+void ogsScatterVec (void  *sv, void  *v, const int k, const char *type, const char *op, ogs_t *ogs);
+void ogsScatterMany(void  *sv, void  *v, const int k, const dlong stride, const char *type, const char *op, ogs_t *ogs);
+
+
+// Synchronous device buffer versions
+void ogsGatherScatter    (occa::memory  o_v, const char *type, const char *op, ogs_t *ogs); //wrapper for gslib call
+void ogsGatherScatterVec (occa::memory  o_v, const int k, const char *type, const char *op, ogs_t *ogs); //wrapper for gslib call
+void ogsGatherScatterMany(occa::memory  o_v, const int k, const dlong stride, const char *type, const char *op, ogs_t *ogs); //wrapper for gslib call
+
+void ogsGather    (occa::memory  o_gv, occa::memory  o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherVec (occa::memory  o_gv, occa::memory  o_v, const int k, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherMany(occa::memory  o_gv, occa::memory  o_v, const int k, const dlong stride, const char *type, const char *op, ogs_t *ogs);
+
+void ogsScatter    (occa::memory  o_sv, occa::memory  o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsScatterVec (occa::memory  o_sv, occa::memory  o_v, const int k, const char *type, const char *op, ogs_t *ogs);
+void ogsScatterMany(occa::memory  o_sv, occa::memory  o_v, const int k, const dlong stride, const char *type, const char *op, ogs_t *ogs);
+
+// Asynchronous device buffer versions
+void ogsGatherScatterStart     (occa::memory  o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherScatterFinish    (occa::memory  o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherScatterVecStart  (occa::memory  o_v, const int k, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherScatterVecFinish (occa::memory  o_v, const int k, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherScatterManyStart (occa::memory  o_v, const int k, const dlong stride, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherScatterManyFinish(occa::memory  o_v, const int k, const dlong stride, const char *type, const char *op, ogs_t *ogs);
+
+void ogsGatherStart     (occa::memory  o_Gv, occa::memory  o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherFinish    (occa::memory  o_Gv, occa::memory  o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherVecStart  (occa::memory  o_Gv, occa::memory  o_v, const int k, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherVecFinish (occa::memory  o_Gv, occa::memory  o_v, const int k, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherManyStart (occa::memory  o_Gv, occa::memory  o_v, const int k, const dlong gstride, const dlong stride, const char *type, const char *op, ogs_t *ogs);
+void ogsGatherManyFinish(occa::memory  o_Gv, occa::memory  o_v, const int k, const dlong gstride, const dlong stride, const char *type, const char *op, ogs_t *ogs);
+
+void ogsScatterStart     (occa::memory  o_Sv, occa::memory  o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsScatterFinish    (occa::memory  o_Sv, occa::memory  o_v, const char *type, const char *op, ogs_t *ogs);
+void ogsScatterVecStart  (occa::memory  o_Sv, occa::memory  o_v, const int k, const char *type, const char *op, ogs_t *ogs);
+void ogsScatterVecFinish (occa::memory  o_Sv, occa::memory  o_v, const int k, const char *type, const char *op, ogs_t *ogs);
+void ogsScatterManyStart (occa::memory  o_Sv, occa::memory  o_v, const int k, const dlong sstride, const dlong stride, const char *type, const char *op, ogs_t *ogs);
+void ogsScatterManyFinish(occa::memory  o_Sv, occa::memory  o_v, const int k, const dlong sstride, const dlong stride, const char *type, const char *op, ogs_t *ogs);
+
 
 #endif

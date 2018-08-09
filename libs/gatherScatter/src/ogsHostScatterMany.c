@@ -33,54 +33,54 @@ SOFTWARE.
 
 #include "gslib.h"
 
-void ogsHostGatherScatter(void *v, const char *type, const char *op, void *gsh){
+void ogsHostScatterMany(void **v, const int k, const char *type, const char *op, void *gsh){
 
   /* need gs_float or gs_double */
   if(!strcmp(type, "float")){
     //    printf("performing string gs on %s\n", type);
     if(!strcmp(op, "add"))
-      gs(v, gs_float, gs_add, 0, gsh, 0);
+      gs_many(v, k, gs_float, gs_add, 0, gsh, 0);
     else if(!strcmp(op, "mul"))
-      gs(v, gs_float, gs_mul, 0, gsh, 0);
+      gs_many(v, k, gs_float, gs_mul, 0, gsh, 0);
     else if(!strcmp(op, "min"))
-      gs(v, gs_float, gs_min, 0, gsh, 0);
+      gs_many(v, k, gs_float, gs_min, 0, gsh, 0);
     else if(!strcmp(op, "max"))
-      gs(v, gs_float, gs_max, 0, gsh, 0);
+      gs_many(v, k, gs_float, gs_max, 0, gsh, 0);
   }
   
   if(!strcmp(type, "double")){
     //    printf("performing double gs on %s\n", type);
     if(!strcmp(op, "add"))
-      gs(v, gs_double, gs_add, 0, gsh, 0);
+      gs_many(v, k, gs_double, gs_add, 0, gsh, 0);
     else if(!strcmp(op, "mul"))
-      gs(v, gs_double, gs_mul, 0, gsh, 0);
+      gs_many(v, k, gs_double, gs_mul, 0, gsh, 0);
     else if(!strcmp(op, "min"))
-      gs(v, gs_double, gs_min, 0, gsh, 0);
+      gs_many(v, k, gs_double, gs_min, 0, gsh, 0);
     else if(!strcmp(op, "max"))
-      gs(v, gs_double, gs_max, 0, gsh, 0);
+      gs_many(v, k, gs_double, gs_max, 0, gsh, 0);
   }
 
   if(!strcmp(type, "int")){
     //    printf("performing int gs\n");
     if(!strcmp(op, "add"))
-      gs(v, gs_int, gs_add, 0, gsh, 0);
+      gs_many(v, k, gs_int, gs_add, 0, gsh, 0);
     else if(!strcmp(op, "mul"))
-      gs(v, gs_int, gs_mul, 0, gsh, 0);
+      gs_many(v, k, gs_int, gs_mul, 0, gsh, 0);
     else if(!strcmp(op, "min"))
-      gs(v, gs_int, gs_min, 0, gsh, 0);
+      gs_many(v, k, gs_int, gs_min, 0, gsh, 0);
     else if(!strcmp(op, "max"))
-      gs(v, gs_int, gs_max, 0, gsh, 0);
+      gs_many(v, k, gs_int, gs_max, 0, gsh, 0);
   }
 
   if(!strcmp(type, "long long int")){
     //    printf("performing long_long gs\n");
     if(!strcmp(op, "add"))
-      gs(v, gs_long_long, gs_add, 0, gsh, 0);
+      gs_many(v, k, gs_long_long, gs_add, 0, gsh, 0);
     else if(!strcmp(op, "mul"))
-      gs(v, gs_long_long, gs_mul, 0, gsh, 0);
+      gs_many(v, k, gs_long_long, gs_mul, 0, gsh, 0);
     else if(!strcmp(op, "min"))
-      gs(v, gs_long_long, gs_min, 0, gsh, 0);
+      gs_many(v, k, gs_long_long, gs_min, 0, gsh, 0);
     else if(!strcmp(op, "max"))
-      gs(v, gs_long_long, gs_max, 0, gsh, 0);
-  }   
+      gs_many(v, k, gs_long_long, gs_max, 0, gsh, 0);
+  } 
 }
