@@ -12,7 +12,8 @@ data/ellipticSineTest3D.h
 
 [MESH FILE]
 #../../meshes/cubeHexE8Thilina.msh
-../../meshes/cavityHexH01.msh
+#../../meshes/cavityHexH01.msh
+../../meshes/cavityHexH0075.msh
 
 [MESH DIMENSION]
 3
@@ -105,4 +106,4 @@ STRONGNODES
 cavity
 
 [VERBOSE]
-TRUE
+FALSE
