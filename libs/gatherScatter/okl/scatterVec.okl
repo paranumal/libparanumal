@@ -25,82 +25,94 @@ SOFTWARE.
 */
 
 
-@kernel void scatter_float(const dlong Nscatter,
+@kernel void scatterVec_float(const dlong Nscatter,
+                             const   int Nentries,
                    @restrict const  dlong *  scatterStarts,
                    @restrict const  dlong *  scatterIds,
                    @restrict const  float *  q,
                    @restrict float *  scatterq){
 
-  for(dlong s=0;s<Nscatter;++s;@tile(256,@outer,@inner)){
+  for(dlong s=0;s<Nscatter*Nentries;++s;@tile(256,@outer,@inner)){
 
     const float qs = q[s];
     
-    const dlong start = scatterStarts[s];
-    const dlong end = scatterStarts[s+1];
+    const dlong sid = s/Nentries;
+    const int k = s%Nentries;
+    const dlong start = scatterStarts[sid];
+    const dlong end = scatterStarts[sid+1];
     
     for(dlong n=start;n<end;++n){
       const dlong id = scatterIds[n];
-      scatterq[id] = qs;
+      scatterq[id*Nentries+k] = qs;
     }
   }
 }
 
-@kernel void scatter_double(const dlong Nscatter,
+@kernel void scatterVec_double(const dlong Nscatter,
+                             const   int Nentries,
                    @restrict const  dlong *  scatterStarts,
                    @restrict const  dlong *  scatterIds,
                    @restrict const  double *  q,
                    @restrict double *  scatterq){
 
-  for(dlong s=0;s<Nscatter;++s;@tile(256,@outer,@inner)){
+  for(dlong s=0;s<Nscatter*Nentries;++s;@tile(256,@outer,@inner)){
 
     const double qs = q[s];
     
-    const dlong start = scatterStarts[s];
-    const dlong end = scatterStarts[s+1];
+    const dlong sid = s/Nentries;
+    const int k = s%Nentries;
+    const dlong start = scatterStarts[sid];
+    const dlong end = scatterStarts[sid+1];
     
     for(dlong n=start;n<end;++n){
       const dlong id = scatterIds[n];
-      scatterq[id] = qs;
+      scatterq[id*Nentries+k] = qs;
     }
   }
 }
 
-@kernel void scatter_int(const dlong Nscatter,
+@kernel void scatterVec_int(const dlong Nscatter,
+                             const   int Nentries,
                    @restrict const  dlong *  scatterStarts,
                    @restrict const  dlong *  scatterIds,
                    @restrict const  int *  q,
                    @restrict int *  scatterq){
 
-  for(dlong s=0;s<Nscatter;++s;@tile(256,@outer,@inner)){
+  for(dlong s=0;s<Nscatter*Nentries;++s;@tile(256,@outer,@inner)){
 
     const int qs = q[s];
     
-    const dlong start = scatterStarts[s];
-    const dlong end = scatterStarts[s+1];
+    const dlong sid = s/Nentries;
+    const int k = s%Nentries;
+    const dlong start = scatterStarts[sid];
+    const dlong end = scatterStarts[sid+1];
     
     for(dlong n=start;n<end;++n){
       const dlong id = scatterIds[n];
-      scatterq[id] = qs;
+      scatterq[id*Nentries+k] = qs;
     }
   }
 }
 
-@kernel void scatter_long(const dlong Nscatter,
+@kernel void scatterVec_long(const dlong Nscatter,
+                             const   int Nentries,
                    @restrict const  dlong *  scatterStarts,
                    @restrict const  dlong *  scatterIds,
                    @restrict const  long long int *  q,
                    @restrict long long int *  scatterq){
 
-  for(dlong s=0;s<Nscatter;++s;@tile(256,@outer,@inner)){
+  for(dlong s=0;s<Nscatter*Nentries;++s;@tile(256,@outer,@inner)){
 
     const long long int qs = q[s];
     
-    const dlong start = scatterStarts[s];
-    const dlong end = scatterStarts[s+1];
+    const dlong sid = s/Nentries;
+    const int k = s%Nentries;
+    const dlong start = scatterStarts[sid];
+    const dlong end = scatterStarts[sid+1];
     
     for(dlong n=start;n<end;++n){
       const dlong id = scatterIds[n];
-      scatterq[id] = qs;
+      scatterq[id*Nentries+k] = qs;
     }
   }
 }

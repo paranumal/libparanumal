@@ -24,8 +24,8 @@ SOFTWARE.
 
 */
 
-#include "ogs.h"
-#include "ogsKernels.h"
+#include "ogs.hpp"
+#include "ogsKernels.hpp"
 #include "ogsInterface.h"
 
 typedef struct{
