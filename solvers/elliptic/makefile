@@ -9,7 +9,7 @@ include ${OCCA_DIR}/scripts/Makefile
 
 # define variables
 HDRDIR = ../../include
-GSDIR  = ../../3rdParty/gslib.github
+GSDIR  = ../../3rdParty/gslib
 OGSDIR  = ../../libs/gatherScatter
 ALMONDDIR = ../parALMOND
 
@@ -25,7 +25,7 @@ CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g \
-			-L$(ALMONDDIR) -lparALMOND  -L$(OGSDIR) -logs -L$(GSDIR) -lgs
+			-L$(ALMONDDIR) -lparALMOND  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs
 
 # libraries to be linked in
 LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
@@ -147,6 +147,7 @@ clean:
 
 realclean:
 	cd ../../3rdParty/BlasLapack; make clean; cd ../../solvers/elliptic
+	cd ../../libs/gatherScatter; make realclean; cd ../../solvers/elliptic
 	cd ../parALMOND; make clean; cd ../elliptic
 	cd ../../src; rm *.o; cd ../solvers/elliptic
 	rm src/*.o ellipticMain libelliptic.a
