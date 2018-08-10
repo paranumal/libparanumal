@@ -5,7 +5,7 @@
 data/ellipticHomogeneous2D.h
 
 [MESH FILE]
-../../meshes/cavityH05.msh
+../../meshes/cavityH00125.msh
 
 [MESH DIMENSION]
 2

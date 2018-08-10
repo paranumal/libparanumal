@@ -10,7 +10,7 @@ include ${OCCA_DIR}/scripts/Makefile
 # define variables
 HDRDIR = ../../include
 OGSDIR  = ./include
-GSDIR  = ../../3rdParty/gslib.github/src
+GSDIR  = ../../3rdParty/gslib
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -19,14 +19,14 @@ CXX	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DOGS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR)/src -g  -D DHOLMES='"${CURDIR}/../.."' -D DOGS='"${CURDIR}"'
 
 
 # link flags to be used
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs 
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g 
 
 # libraries to be linked in
-LIBS	=   -L$(OCCA_DIR)/lib  $(links) 
+LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L$(GSDIR)/lib  -lgs 
 
 #-llapack -lblas
 
@@ -75,7 +75,7 @@ lib:$(OBJS) gslibInterface
 	ar -cr libogs.a $(OBJS) $(COBJS)
 
 gslibInterface:
-	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../libs/gatherScatter
+	cd ../../3rdParty/gslib; CC=$(CC) make -j install; cd ../../libs/gatherScatter
 	$(CC) $(CFLAGS) -c -o ./src/ogsHostGatherScatter.o     ./src/ogsHostGatherScatter.c     $(paths)
 	$(CC) $(CFLAGS) -c -o ./src/ogsHostGatherScatterVec.o  ./src/ogsHostGatherScatterVec.c  $(paths)
 	$(CC) $(CFLAGS) -c -o ./src/ogsHostGatherScatterMany.o ./src/ogsHostGatherScatterMany.c $(paths)
@@ -94,6 +94,6 @@ clean:
 	rm src/*.o libogs.a
 
 realclean:
-	cd ../../3rdParty/gslib.github; make clean; cd ../../libs/gatherScatter
+	cd ../../3rdParty/gslib; make clean; cd ../../libs/gatherScatter
 	rm src/*.o libogs.a
 
