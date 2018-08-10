@@ -9,7 +9,7 @@ includes = $(wildcard $(iDir)/*h)
 objects = $(subst $(sDir)/,$(objDir)/,$(sources:.c=.o))
 deps = $(includes) \
 ../../include/mesh.h \
-../../libs/gatherScatter/ogs.h \
+../../libs/gatherScatter/ogs.hpp \
 ../../include/parAlmond.h
 
 flags = -DOCCA_VERSION_1_0 -I${OCCA_DIR}/include -I$(iDir) -I../../include -I../../libs/gatherScatter
