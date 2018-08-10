@@ -108,7 +108,7 @@ void ogsGatherFinish(occa::memory o_gv,
     // copy totally gather halo data back from HOST to DEVICE
     if (ogs->NownedHalo)
       o_gv.copyFrom(ogs::haloBuf, ogs->NownedHalo*Nbytes, 
-                              ogs->NlocalGather*Nbytes, 0, "async: true");
+                              ogs->NlocalGather*Nbytes, "async: true");
 
     ogs->device.finish();
     ogs->device.setStream(ogs::defaultStream);

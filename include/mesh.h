@@ -35,7 +35,7 @@ SOFTWARE.
 #include <occa.hpp>
 
 #include "types.h"
-#include "ogs.h"
+#include "ogs.hpp"
 
 #include "timer.h"
 

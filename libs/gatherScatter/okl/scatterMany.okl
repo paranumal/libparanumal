@@ -117,7 +117,7 @@ SOFTWARE.
     const dlong sid = s%Nscatter;
     const int k = s/Nscatter;
     
-    const long long int qsid+k*sstrid = q[s];
+    const long long int qs = q[sid+k*stride];
 
     const dlong start = scatterStarts[sid];
     const dlong end = scatterStarts[sid+1];
