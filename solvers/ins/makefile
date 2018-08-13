@@ -10,7 +10,8 @@ include ${OCCA_DIR}/scripts/Makefile
 
 # define variables
 HDRDIR  = ../../include
-GSDIR  = ../../3rdParty/gslib.github/src
+GSDIR  = ../../3rdParty/gslib
+OGSDIR  = ../../libs/gatherScatter
 ALMONDDIR = ../parALMOND
 ELLIPTICDIR = ../elliptic
 
@@ -21,21 +22,23 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -I$(ELLIPTICDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"'
 
 # link flags to be used 
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
-			-L$(ELLIPTICDIR) -lelliptic -L$(ALMONDDIR) -lparALMOND 
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
-LIBS	=  -L$(OCCA_DIR)/lib $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
+LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(ALMONDDIR) -lparALMOND  \
+		   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
+		   -L$(OCCA_DIR)/lib $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
+			
 
 INCLUDES = ins.h
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
 $(HDRDIR)/mesh3D.h \
-$(HDRDIR)/ogs_t.h \
+$(OGSDIR)/ogs.hpp \
 $(ALMONDDIR)/parALMOND.h \
 $(ELLIPTICDIR)/elliptic.h \
 $(ELLIPTICDIR)/ellipticPrecon.h  
@@ -97,7 +100,6 @@ LOBJS = \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
 ../../src/meshParallelConsecutiveGlobalNumbering.o\
-../../src/meshParallelGatherScatter.o \
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelReaderTri2D.o \
 ../../src/meshParallelReaderQuad2D.o \
@@ -133,25 +135,23 @@ LOBJS = \
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
-COBJS = \
-../../src/gsParallelGatherScatter.o\
-../../src/gsParallelGatherScatterSetup.o\
-../../src/xxtCoarseSolve.o
-
-insMain:$(AOBJS) $(LOBJS) ./src/insMain.o gslibInterface
-	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../solvers/ins
-	cd ../parALMOND; make -j lib; cd ../ins
-	cd ../elliptic; make -j lib; cd ../ins
+insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparALMOND libelliptic
 	$(LD)  $(LDFLAGS)  -o insMain ./src/insMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
 	ar -cr libins.a $(AOBJS)
 
-gslibInterface:
-	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../solvers/ins
-	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
-	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths) 
-	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
+libogs:
+	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/ins
+
+libblas:
+	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../solvers/ins
+
+libparALMOND:
+	cd ../parALMOND; make -j lib; cd ../ins
+
+libelliptic:
+	cd ../elliptic; make -j lib; cd ../ins
 
 all: lib insMain
 
@@ -159,13 +159,14 @@ all: lib insMain
 clean:
 	cd ../parALMOND; make clean; cd ../ins
 	cd ../elliptic; make clean; cd ../ins
+	cd ../../lib/gatherScatter/; make clean; cd ../../solvers/ins
 	cd ../../src; rm *.o; cd ../solvers/ins
 	rm ./src/*.o insMain libins.a
 
 realclean:
-	cd ../../3rdParty/gslib.github; make clean; cd ../../solvers/ins
 	cd ../../3rdParty/BlasLapack; make clean; cd ../../solvers/ins
 	cd ../parALMOND; make clean; cd ../ins
 	cd ../elliptic; make clean; cd ../ins
+	cd ../../lib/gatherScatter/; make realclean; cd ../../solvers/ins
 	cd ../../src; rm *.o; cd ../solvers/ins
 	rm ./src/*.o insMain libins.a

@@ -36,9 +36,9 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
   if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
     ogs_t *ogs = mesh->ogs;
 
-    if(ogs->NhaloGather) {
-      ins->diffusionKernel(uSolver->NglobalGatherElements, 
-                           uSolver->o_globalGatherElementList,
+    if(mesh->NglobalGatherElements)
+      ins->diffusionKernel(mesh->NglobalGatherElements, 
+                           mesh->o_globalGatherElementList,
                            mesh->o_ggeo, 
                            mesh->o_vgeo, 
                            mesh->o_sgeo, 
@@ -56,21 +56,12 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
                            o_U, 
                            o_LU);
 
-      mesh->device.finish();
-      mesh->device.setStream(uSolver->dataStream);
-      mesh->gatherKernel(ogs->NhaloGather, 
-                         ogs->o_haloGatherOffsets, 
-                         ogs->o_haloGatherLocalIds, 
-                         o_LU, 
-                         ins->NVfields,
-                         ins->fieldOffset,
-                         ins->o_velocityHaloGatherTmp);
-      ins->o_velocityHaloGatherTmp.copyTo(ins->velocityHaloGatherTmp,"async: true");
-      mesh->device.setStream(uSolver->defaultStream);
-    }
-    if(uSolver->NlocalGatherElements){
-        ins->diffusionKernel(uSolver->NlocalGatherElements, 
-                             uSolver->o_localGatherElementList,
+    ogsGatherScatterManyStart(o_LU, ins->dim, ins->fieldOffset,
+                              ogsDfloat, ogsAdd, ogs);
+
+    if(mesh->NlocalGatherElements)
+        ins->diffusionKernel(mesh->NlocalGatherElements, 
+                             mesh->o_localGatherElementList,
                              mesh->o_ggeo, 
                              mesh->o_vgeo, 
                              mesh->o_sgeo, 
@@ -87,43 +78,9 @@ void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU){
                              ins->fieldOffset,
                              o_U, 
                              o_LU);
-    }
 
-    // finalize gather using local and global contributions
-    if(ogs->NnonHaloGather) 
-      mesh->gatherScatterKernel(ogs->NnonHaloGather, 
-                                ogs->o_nonHaloGatherOffsets, 
-                                ogs->o_nonHaloGatherLocalIds,
-                                ins->NVfields,
-                                ins->fieldOffset, 
-                                o_LU);
-
-    // C0 halo gather-scatter (on data stream)
-    if(ogs->NhaloGather) {
-      mesh->device.setStream(uSolver->dataStream);
-      mesh->device.finish();
-
-      // MPI based gather scatter using libgs
-      gsVecParallelGatherScatter(ogs->haloGsh, ins->velocityHaloGatherTmp, ins->NVfields, dfloatString, "add");
-
-      // copy totally gather halo data back from HOST to DEVICE
-      ins->o_velocityHaloGatherTmp.copyFrom(ins->velocityHaloGatherTmp,"async: true");
-    
-      // do scatter back to local nodes
-      mesh->scatterKernel(ogs->NhaloGather, 
-                          ogs->o_haloGatherOffsets, 
-                          ogs->o_haloGatherLocalIds, 
-                          ins->NVfields,
-                          ins->fieldOffset,
-                          ins->o_velocityHaloGatherTmp, 
-                          o_LU);
-      mesh->device.setStream(uSolver->defaultStream);
-    }
-
-    mesh->device.finish();    
-    mesh->device.setStream(uSolver->dataStream);
-    mesh->device.finish();    
-    mesh->device.setStream(uSolver->defaultStream);
+    ogsGatherScatterManyFinish(o_LU, ins->dim, ins->fieldOffset,
+                              ogsDfloat, ogsAdd, ogs);    
 
   } else if(options.compareArgs("DISCRETIZATION", "IPDG")) {
     dlong offset = 0;

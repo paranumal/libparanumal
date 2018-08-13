@@ -9,7 +9,8 @@ include ${OCCA_DIR}/scripts/Makefile
 
 # define variables
 HDRDIR  = ../../include
-GSDIR  = ../../3rdParty/gslib.github/src
+OGSDIR  = ../../libs/gatherScatter
+GSDIR  = ../../3rdParty/gslib
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -18,20 +19,21 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"'
 
 # link flags to be used 
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) -g -L../../3rdParty/gslib.github  -lgs -fopenmp
 
 # libraries to be linked in
-LIBS	=   -L$(OCCA_DIR)/lib $(links)
+LIBS	=   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
+			-L$(OCCA_DIR)/lib $(links)
 
 INCLUDES = bns.h 
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
 $(HDRDIR)/mesh3D.h \
-$(HDRDIR)/ogs_t.h 
+$(OGSDIR)/ogs.hpp 
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c 
@@ -124,31 +126,16 @@ LOBJS = \
 ../../src/setupAide.o \
 ../../src/trace.o \
 ../../src/readArray.o \
-../../src/meshParallelConsecutiveGlobalNumbering.o\
-../../src/meshParallelGatherScatter.o \
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/occaDeviceConfig.o\
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
-COBJS = \
-../../src/gsParallelGatherScatter.o\
-../../src/gsParallelGatherScatterSetup.o\
 
-
-bnsMain:$(AOBJS) $(LOBJS) ./src/bnsMain.o gslibInterface
+bnsMain:$(AOBJS) $(LOBJS) ./src/bnsMain.o
 	$(LD)  $(LDFLAGS)  -o bnsMain $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS) 
-
-
-
-gslibInterface:
-	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../solvers/bns
-	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
-	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths) 
-
 
 # what to do if user types "make clean"
 clean :
-	cd ../../3rdParty/gslib.github; make clean; cd ../../solvers/bns
 	rm -r $(AOBJS) $(LOBJS) bnsMain
 

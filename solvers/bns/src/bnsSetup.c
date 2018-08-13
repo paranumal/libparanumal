@@ -876,16 +876,11 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
 
 
-  // Setup Gather Scales
-
+  // Setup GatherScatter
   if(bns->dim==3){
     int verbose = 1;
-    mesh->ogs = meshParallelGatherScatterSetup(mesh,mesh->Np*mesh->Nelements,
-                                               mesh->gatherLocalIds,
-                                               mesh->gatherBaseIds,
-                                               mesh->gatherBaseRanks,
-                                               mesh->gatherHaloFlags,
-                                               verbose);
+    dlong Ntotal = mesh->Np*mesh->Nelements;
+    meshParallelGatherScatterSetup(mesh, Ntotal, mesh->globalIds, mesh->comm, verbose);
   }
 
   return bns; 
