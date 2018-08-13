@@ -24,11 +24,11 @@ CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR
 
 
 # link flags to be used
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g \
-			-L$(ALMONDDIR) -lparALMOND  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g 
 
 # libraries to be linked in
-LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
+LIBS	=   -L$(ALMONDDIR) -lparALMOND  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs \
+			-L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 #-llapack -lblas
 
@@ -127,14 +127,20 @@ LOBJS = \
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
-ellipticMain:$(AOBJS) $(LOBJS) ./src/ellipticMain.o
-	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../solvers/elliptic
-	cd ../parALMOND; make -j lib; cd ../elliptic
-	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/elliptic
+ellipticMain:$(AOBJS) $(LOBJS) ./src/ellipticMain.o libblas libogs libparALMOND
 	$(LD)  $(LDFLAGS)  -o ellipticMain ./src/ellipticMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
 	ar -cr libelliptic.a $(AOBJS)
+
+libogs:
+	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/elliptic
+
+libblas:
+	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../solvers/elliptic
+
+libparALMOND:
+	cd ../parALMOND; make -j lib; cd ../elliptic
 
 all: lib ellipticMain
 

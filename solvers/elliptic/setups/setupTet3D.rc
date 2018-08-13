@@ -5,7 +5,7 @@
 data/ellipticHomogeneous3D.h
 
 [MESH FILE]
-../../meshes/cavityTetH009.msh
+../../meshes/cavityTetH05.msh
 
 [MESH DIMENSION]
 3
