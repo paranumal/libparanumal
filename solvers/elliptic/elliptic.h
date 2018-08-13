@@ -56,6 +56,7 @@ typedef struct {
   char *type;
 
   dlong Nblock;
+  dlong Nblock2; // second reduction
 
   dfloat tau;
 
@@ -99,6 +100,7 @@ typedef struct {
   occa::memory o_Ax; // A*initial guess
   occa::memory o_Ap; // A*search direction
   occa::memory o_tmp; // temporary
+  occa::memory o_tmp2; // temporary (second reduction)
   occa::memory o_grad; // temporary gradient storage (part of A*)
   occa::memory o_rtmp;
   occa::memory o_invDegree;
