@@ -43,9 +43,11 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
   mesh_t *mesh = elliptic->mesh;
   dfloat *tmp = elliptic->tmp;
   dlong Nblock = elliptic->Nblock;
+  dlong Nblock2 = elliptic->Nblock2;
   dlong Ntotal = mesh->Nelements*mesh->Np;
 
   occa::memory &o_tmp = elliptic->o_tmp;
+  occa::memory &o_tmp2 = elliptic->o_tmp2;
 
   occaTimerTic(mesh->device,"weighted inner product2");
   if(elliptic->options.compareArgs("DISCRETIZATION","CONTINUOUS"))
@@ -55,10 +57,27 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
 
   occaTimerToc(mesh->device,"weighted inner product2");
 
-  o_tmp.copyTo(tmp);
+  /* add a second sweep if Nblock>Ncutoff */
+  dlong Ncutoff = 10;
+  dlong Nfinal;
+  if(Nblock>Ncutoff){
+
+    mesh->sumKernel(Nblock, o_tmp, o_tmp2);
+
+    o_tmp2.copyTo(tmp);
+
+    Nfinal = Nblock2;
+	
+  }
+  else{
+    o_tmp.copyTo(tmp);
+    
+    Nfinal = Nblock;
+
+  }    
 
   dfloat wab = 0;
-  for(dlong n=0;n<Nblock;++n){
+  for(dlong n=0;n<Nfinal;++n){
     wab += tmp[n];
   }
 
@@ -73,9 +92,11 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   mesh_t *mesh = elliptic->mesh;
   dfloat *tmp = elliptic->tmp;
   dlong Nblock = elliptic->Nblock;
+  dlong Nblock2 = elliptic->Nblock2;
   dlong Ntotal = mesh->Nelements*mesh->Np;
 
   occa::memory &o_tmp = elliptic->o_tmp;
+  occa::memory &o_tmp2 = elliptic->o_tmp2;
 
   occaTimerTic(mesh->device,"weighted inner product2");
   if(elliptic->options.compareArgs("DISCRETIZATION","CONTINUOUS"))
@@ -85,10 +106,27 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
 
   occaTimerToc(mesh->device,"weighted norm2");
 
-  o_tmp.copyTo(tmp);
+  /* add a second sweep if Nblock>Ncutoff */
+  dlong Ncutoff = 10;
+  dlong Nfinal;
+  if(Nblock>Ncutoff){
+    
+    mesh->sumKernel(Nblock, o_tmp, o_tmp2);
+    
+    o_tmp2.copyTo(tmp);
+    
+    Nfinal = Nblock2;
+	
+  }
+  else{
+    o_tmp.copyTo(tmp);
+    
+    Nfinal = Nblock;
+
+  }    
 
   dfloat wab = 0;
-  for(dlong n=0;n<Nblock;++n){
+  for(dlong n=0;n<Nfinal;++n){
     wab += tmp[n];
   }
 
