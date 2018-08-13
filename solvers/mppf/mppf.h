@@ -64,7 +64,7 @@ typedef struct {
   dfloat hmin, eta, eta2, inveta2, factorS;     // element length, interface thickness, eta^2. 
   dfloat *U, *P, *Phi, *Psi, *Rho, *Mu, *GMu;
   dfloat *NU, *LU, *GP, *NPhi, *HPhi, *GPhi;
-  dfloat *GU;   
+  dfloat *GU, *DU, *SU;   // GU is depreceated
   dfloat *rhsU, *rhsV, *rhsW, *rhsP, *rhsPhi;   
   dfloat *rkU, *rkP, *rkPhi, *PI;
   dfloat *rkNU, *rkLU, *rkGP;
@@ -163,9 +163,9 @@ typedef struct {
   occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP, o_rhsPhi; 
 
   occa::memory o_NU, o_LU, o_GP, o_NPhi, o_HPhi, o_GPhi;
-  occa::memory o_GU;
+  occa::memory o_GU, o_DU, o_SU; // o_GU is depreceated
 
-  occa::memory o_UH, o_VH, o_WH, o_PhiH;
+  occa::memory o_UH, o_VH, o_WH, o_PhiH, o_Uhat;
   occa::memory o_rkU, o_rkP, o_rkPhi, o_PI;
   occa::memory o_rkNU, o_rkLU, o_rkGP;
 
@@ -199,7 +199,6 @@ typedef struct {
   occa::kernel advectionSurfaceKernel;
   occa::kernel advectionCubatureVolumeKernel;
   occa::kernel advectionCubatureSurfaceKernel;
-  occa::kernel advectionUpdateKernel;
 
   occa::kernel diffusionKernel;
   occa::kernel diffusionIpdgKernel;
@@ -207,8 +206,12 @@ typedef struct {
 
   occa::kernel pressureGradientVolumeKernel;
   occa::kernel pressureGradientSurfaceKernel;
-  occa::kernel velocityGradientVolumeKernel;
-  occa::kernel velocityGradientSurfaceKernel;
+
+
+  occa::kernel explicitDiffusiveKernel;
+  occa::kernel explicitDiffusiveVolumeKernel;
+  occa::kernel explicitDiffusiveSurfaceKernel;
+  occa::kernel explicitUpdateKernel;
 
   occa::kernel divergenceVolumeKernel;
   occa::kernel divergenceSurfaceKernel;
@@ -253,9 +256,8 @@ void mppfError(mppf_t *mppf, dfloat time);
 // void insComputeDt(ins_t *ins, dfloat time); 
 
 void mppfAdvection(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_NU);
-void mppfAdvectionUpdate(mppf_t *mppf, dfloat time, occa::memory o_NU,occa::memory o_GU, occa::memory o_GP, occa::memory o_rkU);
 void mppfPressureGradient (mppf_t *mppf, dfloat time, occa::memory o_P, occa::memory o_GP);
-void mppfVelocityGradient (mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_GU);
+void mppfExplicitDiffusive(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_DU, occa::memory o_SU);
 
 
 
@@ -263,10 +265,13 @@ void mppfPressureRhs  (mppf_t *mppf, dfloat time, occa::memory o_rkU);
 void mppfPressureSolve(mppf_t *mppf, dfloat time, occa::memory o_rkP);
 
 
+void mppfVelocityRhs  (mppf_t *mppf, dfloat time, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW);//
+void mppfVelocitySolve(mppf_t *mppf, dfloat time, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW, occa::memory o_rkU);
 
-void mppfDivergence(mppf_t *mppf,dfloat time, occa::memory o_U, occa::memory o_DU);
 
-// void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);
+void mppfDivergence(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_DU);
+
+// void mppfDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);
 // void insGradient (ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP);
 // void insDivergence(ins_t *ins,dfloat time, occa::memory o_U, occa::memory o_DU);
 // void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_NU);

@@ -104,9 +104,12 @@
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-              mppfVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
-              uP = 2.f*uP-uM;        
-              vP = 2.f*vP-vM;         
+              // Not sure about that !!!!!!
+              // mppfVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+              // uP = 2.f*uP-uM;        
+              // vP = 2.f*vP-vM;    
+              uP = 2.f*uM-uM;        
+              vP = 2.f*vM-vM;         
             }
             
             const dfloat sc = invJ * sJ ; 

@@ -111,10 +111,12 @@ void mppfError(mppf_t *mppf, dfloat time){
 
           dfloat uExact    =  cos(M_PI*y)*sin(M_PI*x)*sin(time);
           dfloat vExact    = -sin(M_PI*y)*cos(M_PI*x)*sin(time);
-          // dfloat uExact    =  -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(time);
-          // dfloat vExact    =  -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(time);
           dfloat pExact    =  sin(M_PI*y)*sin(M_PI*x)*cos(time);
           dfloat phiExact  =  cos(M_PI*x)*cos(M_PI*y)*sin(time);
+          // dfloat dphidx    = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(time);
+          // dfloat dphidy    = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(time);
+
+          // pExact           += 0.5*mppf->chL*(dphidx*dphidx + dphidy*dphidy);  
 
           maxU   = mymax(maxU,   fabs(mppf->U[id+0*offset]-uExact));
           maxV   = mymax(maxV,   fabs(mppf->U[id+1*offset]-vExact));

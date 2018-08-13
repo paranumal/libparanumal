@@ -1,0 +1,102 @@
+// rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
+@kernel void mppfExplicitUpdateTri2D(const dlong Nelements,
+                                @restrict const  dfloat *  x,
+                                @restrict const  dfloat *  y,
+                                @restrict const  dfloat *  z,
+                                const dfloat dt,
+                                const dfloat time,
+                                const dfloat alpha,                                
+                                @restrict const  dfloat *  extbdfA,
+                                @restrict const  dfloat *  extbdfB,
+                                const dlong fieldOffset,
+                                @restrict const  dfloat *  U,
+                                @restrict const  dfloat *  Rho,
+                                @restrict const  dfloat *  Mu,
+                                @restrict const  dfloat *  NU,
+                                @restrict const  dfloat *  DU,
+                                @restrict const  dfloat *  SU,
+                                @restrict const  dfloat *  GP,
+                                @restrict const  dfloat *  Psi,
+                                @restrict const  dfloat *  Phi,
+                                @restrict const  dfloat *  GPhi,
+                                      @restrict dfloat *   Uhat){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+
+    @shared dfloat s_rhsU[p_NblockV][p_Np];
+    
+    @exclusive dfloat curlx, curly; 
+
+      for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){           
+        const dlong e = eo+es; 
+        if(e<Nelements){  
+          const dlong id = n + p_Np*e;
+          
+          dfloat rhsu = 0.;
+          dfloat rhsv = 0.;
+
+          const dfloat invrho  = 1.f / Rho[id];
+          const dfloat mu      = Mu[id];
+          
+          for (int s=0;s<p_Nstages;s++) {
+            //U 
+            const dfloat Um  = U[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+            const dfloat Vm  = U[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+
+            // NU
+            const dfloat NUm  = NU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+            const dfloat NVm  = NU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+
+            // GP
+            const dfloat GPx  = GP[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+            const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+
+            rhsu +=  extbdfB[s]*Um  - dt*extbdfA[s]*(NUm - (p_invrho0 - invrho)*GPx);
+            rhsv +=  extbdfB[s]*Vm  - dt*extbdfA[s]*(NVm - (p_invrho0 - invrho)*GPy);
+          }
+
+          // Add explicit diffusion term
+          rhsu += dt*(-mu*invrho)*DU[id + 0*fieldOffset];
+          rhsv += dt*(-mu*invrho)*DU[id + 1*fieldOffset];
+
+          // rhsu += (-mu*invrho)*DU[id + 0*fieldOffset];
+          // rhsv += (-mu*invrho)*DU[id + 1*fieldOffset];
+
+
+          // Add stress term form non-constant viscosity
+          rhsu += dt*(invrho)*SU[id + 0*fieldOffset];
+          rhsv += dt*(invrho)*SU[id + 1*fieldOffset];
+
+          // rhsu += (invrho)*SU[id + 0*fieldOffset];
+          // rhsv += (invrho)*SU[id + 1*fieldOffset];
+
+          // Add surface Tension Force
+          const dfloat psi  = Psi[id];
+          const dfloat phi  = Phi[id];
+          const dfloat phix = GPhi[id + 0*fieldOffset];
+          const dfloat phiy = GPhi[id + 1*fieldOffset];
+
+          // Add explicit viscous stress 
+          rhsu += dt*(-p_chL*invrho)*(psi-alpha*phi)*phix;
+          rhsv += dt*(-p_chL*invrho)*(psi-alpha*phi)*phiy;
+
+          // Add explicit viscous stress 
+                    
+          dfloat fbx = 0.f; 
+          dfloat fby = 0.f;
+          #if 1  
+            mppfVelocitySource2D(time,x[id],y[id],&fbx, &fby);
+          #endif
+          rhsu += dt*invrho*fbx;
+          rhsv += dt*invrho*fby;
+          // //
+          Uhat[id + 0*fieldOffset] = rhsu;
+          Uhat[id + 1*fieldOffset] = rhsv; 
+          // Uhat[id + 0*fieldOffset] = fbx;
+          // Uhat[id + 1*fieldOffset] = fby;
+        }
+      }
+    }
+  }
+}

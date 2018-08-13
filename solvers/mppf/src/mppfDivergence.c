@@ -90,5 +90,5 @@ void mppfDivergence(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_
                                 o_U,
                                 o_DU);
     occaTimerToc(mesh->device,"DivergenceSurface");
-  //}
+  // }
 }

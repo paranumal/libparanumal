@@ -24,18 +24,23 @@ SOFTWARE.
 
 */
 
-// Compute Gradient in Strong Form
-@kernel void mppfVelocityGradientTri2D(const dlong Nelements,
+@kernel void mppfExplicitDiffusiveTri2D(const dlong Nelements,
                              @restrict const  dfloat *  vgeo,
                              @restrict const  dfloat *  Dmatrices,
                              const dlong offset,
+                             @restrict const  dfloat *  Rho,
+                             @restrict const  dfloat *  Mu,
+                             @restrict const  dfloat *  GPhi,
                              @restrict const  dfloat *  U,
-                                   @restrict dfloat *  gradU){
+                                   @restrict  dfloat *  DU,
+                                   @restrict  dfloat *  SU){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     // for all elements
     @shared dfloat s_U[p_NblockV][p_Np];
     @shared dfloat s_V[p_NblockV][p_Np];
+
+    @exclusive dfloat dudx, dvdx, dudy, dvdy;
 
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
@@ -76,21 +81,82 @@ SOFTWARE.
               dvds  += Dsni*s_V[es][i];
 
             }
+            //
+          dudx= drdx*dudr + dsdx*duds;   // dudx
+          dudy= drdy*dudr + dsdy*duds;   // dudy
+          dvdx= drdx*dvdr + dsdx*dvds;   // dvdx
+          dvdy= drdy*dvdr + dsdy*dvds;   // dvdy
+        }
+      }
+    }
 
-          const dlong id = e*p_Np+n;
-          gradU[id+0*offset] = drdx*dudr + dsdx*duds;   // dudx
-          gradU[id+1*offset] = drdy*dudr + dsdy*duds;   // dudy
-          gradU[id+2*offset] = drdx*dvdr + dsdx*dvds;   // dvdx
-          gradU[id+3*offset] = drdy*dvdr + dsdy*dvds;   // dvdy
+    @barrier("local");
+    
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+         // Overwrite shared values with Curl of U
+         s_U[es][n] = dvdx-dudy; // i.e. w = curl u = [ux uy]
+        }
+      }
+    }
 
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+          dfloat dwdr  = 0.f, dwds  = 0.f;
+          
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+
+              dwdr  += Drni*s_U[es][i];
+              dwds  += Dsni*s_U[es][i];
+
+            }
+            //
+          const dfloat dwdx= drdx*dwdr + dsdx*dwds;   // dwdx
+          const dfloat dwdy= drdy*dwdr + dsdy*dwds;   // dwdy
+          
+          const dlong id = e*p_Np + n; 
+
+          // Read material Properties at t^(n+1)
+          const dfloat rho     = Rho[id];
+          const dfloat mu      = Mu[id];
+          const dfloat gmux    = 0.5f*(p_mu1 - p_mu2)*GPhi[id + 0*offset];
+          const dfloat gmuy    = 0.5f*(p_mu1 - p_mu2)*GPhi[id + 1*offset];
+
+          // Update diffusive term coming from non-constant viscosity curl( curl (u))
+          DU[id  + 0*offset] =  dwdy; 
+          DU[id  + 1*offset] = -dwdx;
+          // Update explicit viscous strees term i.e. grad(mu) \cdot D(u) 
+          SU[id  + 0*offset] = gmux*(2.f* dudx)   +  gmuy*(dudy + dvdx) ; 
+          SU[id  + 1*offset] = gmux*(dvdx + dudy) +  gmuy* (2.f* dvdy)  ;   
         }
       }
     }
   }
 }
 
+
+
+
+
 // Compute Gradient in Strong Form
-@kernel void mppfVelocityGradientVolumeTri2D(const dlong Nelements,
+@kernel void mppfExplicitDiffusiveVolumeTri2D(const dlong Nelements,
                                    @restrict const  dfloat *  vgeo,
                                    @restrict const  dfloat *  Dmatrices,
                                    const dlong offset,
@@ -154,8 +220,10 @@ SOFTWARE.
   }
 }
 
-@kernel void mppfVelocityGradientSurfaceTri2D(const dlong Nelements,
+@kernel void mppfExplicitDiffusiveSurfaceTri2D(const dlong Nelements,
+                                    @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  sgeo,
+                                    @restrict const  dfloat *  Dmatrices,
                                     @restrict const  dfloat *  LIFTT,
                                     @restrict const  dlong  *  vmapM,
                                     @restrict const  dlong  *  vmapP,
@@ -163,10 +231,15 @@ SOFTWARE.
                                     @restrict const  dfloat *  x,
                                     @restrict const  dfloat *  y,
                                     @restrict const  dfloat *  z,
+                                    @restrict const  dfloat *  Rho,
+                                    @restrict const  dfloat *  Mu,
+                                    @restrict const  dfloat *  GPhi,
                                     const dfloat time,
                                     const dlong offset,
                                     @restrict const  dfloat *  U,
-                                          @restrict dfloat *  gradU){
+                                    @restrict  dfloat *  gradU,
+                                    @restrict  dfloat *  DU,
+                                    @restrict  dfloat *  SU){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -176,6 +249,9 @@ SOFTWARE.
     @shared dfloat s_fluxVx[p_NblockS][p_Nfp*p_Nfaces];
     @shared dfloat s_fluxVy[p_NblockS][p_Nfp*p_Nfaces];
 
+    @shared dfloat s_curlU[p_NblockS][p_Np];
+
+    @exclusive dfloat dudx, dvdx, dudy, dvdy;
 
     // for all face nodes of all elements
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -204,12 +280,14 @@ SOFTWARE.
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              mppfVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+              mppfVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);  
+              uP = 2.f*uP - uM; 
+              vP = 2.f*vP - vM; 
             }
 
             // evaluate "flux" terms: LLF
             const dfloat sc = invJ * sJ ;
-            // Centered flux for pr p*-p = 0.5(PP-PM) // Central Flux
+            // Centered flux for pr = 0.5(PP-PM) // Central Flux
             s_fluxUx[es][n]  = sc*(.5f*nx*(uP-uM));
             s_fluxUy[es][n]  = sc*(.5f*ny*(uP-uM));
             s_fluxVx[es][n]  = sc*(.5f*nx*(vP-vM));
@@ -230,30 +308,104 @@ SOFTWARE.
           if(n<p_Np){
             const dlong id = e*p_Np + n;;
 
-            dfloat ux  = gradU[id+0*offset];
-            dfloat uy  = gradU[id+1*offset];
-            dfloat vx  = gradU[id+2*offset];
-            dfloat vy  = gradU[id+3*offset];
+            dudx  = gradU[id+0*offset];
+            dudy  = gradU[id+1*offset];
+            dvdx  = gradU[id+2*offset];
+            dvdy  = gradU[id+3*offset];
 
             // Lift
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_Nfaces*p_Nfp;++m){
                 const dfloat L = LIFTT[n+m*p_Np];
-                ux += L*s_fluxUx[es][m];
-                uy += L*s_fluxUy[es][m];
-                vx += L*s_fluxVx[es][m];
-                vy += L*s_fluxVy[es][m];
+                dudx += L*s_fluxUx[es][m];
+                dudy += L*s_fluxUy[es][m];
+                dvdx += L*s_fluxVx[es][m];
+                dvdy += L*s_fluxVy[es][m];
 
               }
-            //  rhsu = grad(p) // Note that multiplied with M^-1
-            gradU[id+0*offset] = ux;
-            gradU[id+1*offset] = uy;
-            gradU[id+3*offset] = vx;
-            gradU[id+4*offset] = vy;
+            // //  rhsu = grad(p) // Note that multiplied with M^-1
+            // gradU[id+0*offset] = dudx;
+            // gradU[id+1*offset] = dudy;
+            // gradU[id+2*offset] = dvdx;
+            // gradU[id+3*offset] = dvdy;
           }
         }
       }
     }
+
+
+      @barrier("local");
+    
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_Np){
+           // Overwrite shared values with Curl of U
+            s_curlU[es][n] = dvdx-dudy; // i.e. w = curl u = [ux uy]
+          }
+        }
+      }
+    }
+
+
+     // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_Np){
+            // prefetch geometric factors (constant on triangle)
+            const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+            const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+            const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+            const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+            dfloat dwdr  = 0.f, dwds  = 0.f;
+            
+            #pragma unroll p_Np
+              for(int i=0;i<p_Np;++i){
+                const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+                const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+
+                dwdr  += Drni*s_curlU[es][i];
+                dwds  += Dsni*s_curlU[es][i];
+              }
+              //
+              const dfloat dwdx= drdx*dwdr + dsdx*dwds;   // dwdx
+              const dfloat dwdy= drdy*dwdr + dsdy*dwds;   // dwdy
+              
+              const dlong id = e*p_Np + n; 
+
+              // Read material Properties at t^(n+1)
+              const dfloat invrho  = 1.f / Rho[id];
+              const dfloat mu      = Mu[id];
+              const dfloat gmux    = 0.5f*(p_mu1 - p_mu2)*GPhi[id + 0*offset];
+              const dfloat gmuy    = 0.5f*(p_mu1 - p_mu2)*GPhi[id + 1*offset];
+
+              // Update diffusive term coming from non-constant viscosity curl( curl (u))
+              // DU[id  + 0*offset] =  mu*dwdy*invrho; 
+              // DU[id  + 1*offset] = -mu*dwdx*invrho;
+              DU[id  + 0*offset] =  dwdy; 
+              DU[id  + 1*offset] = -dwdx;
+              // Update explicit viscous strees term i.e. grad(mu) \cdot D(u) 
+              // SU[id  + 0*offset] = invrho*( gmux* (2.f* dudx)  +  gmuy*(dudy + dvdx)) ; 
+              // SU[id  + 1*offset] = invrho*( gmux*(dvdx + dudy) +  gmuy* (2.f* dvdy) ) ; 
+              SU[id  + 0*offset] = ( gmux* (2.f* dudx)  +  gmuy*(dudy + dvdx)) ; 
+              SU[id  + 1*offset] = ( gmux*(dvdx + dudy) +  gmuy* (2.f* dvdy) ) ; 
+
+              // // //  rhsu = grad(p) // Note that multiplied with M^-1
+              // gradU[id+0*offset] = DU[id  + 0*offset];
+              // gradU[id+1*offset] = DU[id  + 1*offset];
+              // gradU[id+2*offset] = SU[id  + 0*offset];
+              // gradU[id+3*offset] = SU[id  + 1*offset];
+            }
+          }
+        }
+      }
+
+    }
   }
-}
 

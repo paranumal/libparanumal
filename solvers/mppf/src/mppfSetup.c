@@ -80,6 +80,8 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   
   // This needs to be changed too much storage!!!!!!!
   mppf->GU      = (dfloat*) calloc(mppf->NVfields*mppf->NVfields*Ntotal,sizeof(dfloat));
+  mppf->DU      = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
+  mppf->SU      = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
 
   mppf->GPhi   =  (dfloat*) calloc(mppf->NVfields*Ntotal, sizeof(dfloat));
 
@@ -185,7 +187,9 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
 
   kernelInfo["defines/" "p_invrho0"] = 1.0/mppf->rho0;
   kernelInfo["defines/" "p_rho0"] = mppf->rho0;
+
   kernelInfo["defines/" "p_nu0"] = mppf->nu0;
+  kernelInfo["defines/" "p_invnu0"] = 1.0/mppf->nu0;
 
   kernelInfo["defines/" "p_NTfields"]= mppf->NTfields;
   kernelInfo["defines/" "p_NVfields"]= mppf->NVfields;
@@ -351,7 +355,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
 
   kernelInfo["defines/" "p_chL"]        = mppf->chL;   // mixing energy
   kernelInfo["defines/" "p_chM"]        = mppf->chM;   // mobility
-  kernelInfo["defines/" "p_chInvLM"]    = 1.0/ (mppf->chL*mppf->chM);   // mobility
+  kernelInfo["defines/" "p_chInvLM"]    = 1.0/ (mppf->chL*mppf->chM);   
 
   // Some derived parameters
   mppf->idt     = 1.0/mppf->dt;
@@ -371,6 +375,9 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->lambdaPsi = mppf->chA + mppf->chS*mppf->inveta2;
   // Helmholtz solve lambda's i.e. -laplace*phi +[-alpha]*phi = -psi 
   mppf->lambdaPhi = -mppf->chA;
+  // Velocity Solve lambda 
+  mppf->lambdaVel = mppf->g0/(mppf->dt*mppf->nu0);
+
 
   mppf->phiOptions = options;
   mppf->phiOptions.setArgs("KRYLOV SOLVER",        options.getArgs("PHASE FIELD KRYLOV SOLVER"));
@@ -417,8 +424,9 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   int uBCType[7]   = {0,1,1,2,1,2,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
   int vBCType[7]   = {0,1,1,2,2,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
   int wBCType[7]   = {0,1,1,2,2,2,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
-  int pBCType[7]   = {0,2,2,1,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
-  // int phiBCType[7] = {0,2,2,2,2,2,2}; // All homogenous Neumann BCs for Phi and Psi solves 
+  // int pBCType[7]   = {0,2,2,1,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+  int pBCType[7]   = {0,1,1,2,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+  
   int phiBCType[7] = {0,2,2,2,2,2,2}; // All homogenous Neumann BCs for Phi and Psi solves 
 
   //Solver tolerances 
@@ -463,7 +471,37 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   ellipticSolveSetup(mppf->pSolver, 0.0, kernelInfoP);
 
 
+  // Use third Order Velocity Solve: full rank should converge for low orders
+  if (mesh->rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");
 
+  mppf->uSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  mppf->uSolver->mesh = mesh;
+  mppf->uSolver->options = mppf->vOptions;
+  mppf->uSolver->dim = mppf->dim;
+  mppf->uSolver->elementType = mppf->elementType;
+  mppf->uSolver->BCType = (int*) calloc(7,sizeof(int));
+  memcpy(mppf->uSolver->BCType,uBCType,7*sizeof(int));
+  ellipticSolveSetup(mppf->uSolver, mppf->lambdaVel, kernelInfoV);
+
+  mppf->vSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  mppf->vSolver->mesh = mesh;
+  mppf->vSolver->options = mppf->vOptions;
+  mppf->vSolver->dim = mppf->dim;
+  mppf->vSolver->elementType = mppf->elementType;
+  mppf->vSolver->BCType = (int*) calloc(7,sizeof(int));
+  memcpy(mppf->vSolver->BCType,vBCType,7*sizeof(int));
+  ellipticSolveSetup(mppf->vSolver, mppf->lambdaVel, kernelInfoV);
+
+  if (mppf->dim==3) {
+    mppf->wSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+    mppf->wSolver->mesh = mesh;
+    mppf->wSolver->options = mppf->vOptions;
+    mppf->wSolver->dim = mppf->dim;
+    mppf->wSolver->elementType = mppf->elementType;
+    mppf->wSolver->BCType = (int*) calloc(7,sizeof(int));
+    memcpy(mppf->wSolver->BCType,wBCType,7*sizeof(int));
+    ellipticSolveSetup(mppf->wSolver, mppf->lambdaVel, kernelInfoV);  
+  }
 
 
   //make node-wise boundary flags
@@ -547,7 +585,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
  if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
     dfloat rkC[4] = {1.0, 0.0, -1.0, -2.0};
 
-    mppf->o_rkC  = mesh->device.malloc(4*sizeof(dfloat),rkC);
+    mppf->o_rkC     = mesh->device.malloc(4*sizeof(dfloat),rkC);
     mppf->o_extbdfA = mesh->device.malloc(3*sizeof(dfloat));
     mppf->o_extbdfB = mesh->device.malloc(3*sizeof(dfloat));
     mppf->o_extbdfC = mesh->device.malloc(3*sizeof(dfloat)); 
@@ -578,6 +616,11 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   
   // This needs to be changed, too much storage
   mppf->o_GU    = mesh->device.malloc(mppf->NVfields*mppf->NVfields*Ntotal*sizeof(dfloat), mppf->GU);
+
+  mppf->o_DU    = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->DU);
+  mppf->o_SU    = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->SU);
+
+
   
   mppf->o_rkU   = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkU);
   mppf->o_rkP   = mesh->device.malloc(              Ntotal*sizeof(dfloat), mppf->rkP);
@@ -587,6 +630,8 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->o_rkNU  = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkNU);
   mppf->o_rkLU  = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkLU);
   mppf->o_rkGP  = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkGP);
+
+  mppf->o_Uhat  = mesh->device.malloc(mppf->NVfields*Ntotal*sizeof(dfloat), mppf->rkGP);
 
   //storage for helmholtz solves
   mppf->o_UH   = mesh->device.malloc(Ntotal*sizeof(dfloat));
@@ -739,9 +784,9 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
 
        // ===========================================================================
 
-      sprintf(fileName, DMPPF "/okl/mppfAdvectionUpdate%s.okl", suffix);
-      sprintf(kernelName, "mppfAdvectionUpdate%s", suffix);
-      mppf->advectionUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(fileName, DMPPF "/okl/mppfExplicitUpdate%s.okl", suffix);
+      sprintf(kernelName, "mppfExplicitUpdate%s", suffix);
+      mppf->explicitUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
 
@@ -754,12 +799,15 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
 
       // ===========================================================================
 
-      sprintf(fileName, DMPPF "/okl/mppfVelocityGradient%s.okl", suffix);
-      sprintf(kernelName, "mppfVelocityGradientVolume%s", suffix);
-      mppf->velocityGradientVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(fileName, DMPPF "/okl/mppfExplicitDiffusive%s.okl", suffix);
+      sprintf(kernelName, "mppfExplicitDiffusive%s", suffix);
+      mppf->explicitDiffusiveKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "mppfVelocityGradientSurface%s", suffix);
-      mppf->velocityGradientSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "mppfExplicitDiffusiveVolume%s", suffix);
+      mppf->explicitDiffusiveVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfExplicitDiffusiveSurface%s", suffix);
+      mppf->explicitDiffusiveSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
        // ===========================================================================
 
@@ -783,6 +831,23 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "mppfPressureAddBC%s", suffix);
       mppf->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+
+      // ===========================================================================
+
+      sprintf(fileName, DMPPF "/okl/mppfVelocityRhs%s.okl", suffix);
+      sprintf(kernelName, "mppfVelocityRhs%s", suffix);
+      mppf->velocityRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(fileName, DMPPF "/okl/mppfVelocityBC%s.okl", suffix);
+      sprintf(kernelName, "mppfVelocityIpdgBC%s", suffix);
+      mppf->velocityRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfVelocityBC%s", suffix);
+      mppf->velocityRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfVelocityAddBC%s", suffix);
+      mppf->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
       
     }
    MPI_Barrier(mesh->comm);
@@ -798,7 +863,7 @@ if(mesh->rank==0){
     printf("# TIME STEP\t:\t%d\n", mppf->NtimeSteps);
     printf("# SUBSTEPS\t\t:\t%d\n", mppf->Nsubsteps);
     printf("# chSeta2\t:\t%.4e\n", mppf->chSeta2);
-    printf("# eta2\t\t:\t%.4e\n", mppf->eta2);
+    printf("# chAlpha\t\t:\t%.4e\n", mppf->chA);
 
 
 

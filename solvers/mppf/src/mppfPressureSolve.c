@@ -75,8 +75,6 @@ void mppfPressureSolve(mppf_t *mppf, dfloat time, occa::memory o_rkP){
     occaTimerToc(mesh->device,"PoissonRhsIpdg");
   }
 
-  //keep current PI as the initial guess?
-
   // gather-scatter
   if(mppf->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
     ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsP, dfloatString, "add");  

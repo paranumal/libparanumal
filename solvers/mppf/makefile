@@ -59,11 +59,12 @@ AOBJS    = \
 ./src/mppfError.o \
 ./src/mppfAdvection.o \
 ./src/mppfPressureGradient.o \
-./src/mppfVelocityGradient.o \
-./src/mppfAdvectionUpdate.o \
+./src/mppfExplicitDiffusive.o \
 ./src/mppfPressureRhs.o \
 ./src/mppfDivergence.o \
 ./src/mppfPressureSolve.o \
+./src/mppfVelocityRhs.o \
+./src/mppfVelocitySolve.o \
 #./src/insForces.o \
 #./src/insComputeDt.o \
 #./src/insRunARK.o \

@@ -24,47 +24,62 @@ SOFTWARE.
 
 */
 
-
-// rhsP = -MM*rho0*Div Uhat/ dt
-@kernel void mppfPressureRhsTri2D(const dlong Nelements,
+@kernel void mppfVelocityRhsTri2D(const dlong Nelements,
                                 @restrict const  dfloat *  vgeo,
-                                const dfloat idt,
                                 @restrict const  dfloat *  MM,
-                                      @restrict dfloat *  rhsP){
+                                const dfloat invdt,
+                                const dlong fieldOffset,
+                                @restrict const  dfloat *  Uhat,
+                                @restrict const  dfloat *  DU,
+                                @restrict const  dfloat *  GP,
+                                      @restrict dfloat *  rhsU,
+                                      @restrict dfloat *  rhsV,
+                                      @restrict dfloat *  rhsW){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
-    @shared dfloat s_rhsP[p_NblockV][p_Np];
+    @shared dfloat s_rhsU[p_NblockV][p_Np];
+    @shared dfloat s_rhsV[p_NblockV][p_Np];
 
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
-          const dlong id = e*p_Np+n;
-          s_rhsP[es][n] = rhsP[id];
+          const dlong id = n + p_Np*e;
+          const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+
+            s_rhsU[es][n] = -J*p_invnu0*invdt*Uhat[id +0*fieldOffset];
+            s_rhsV[es][n] = -J*p_invnu0*invdt*Uhat[id +1*fieldOffset];
+
+            s_rhsU[es][n] += J*p_invnu0*p_invrho0*GP[id + 0*fieldOffset];
+            s_rhsV[es][n] += J*p_invnu0*p_invrho0*GP[id + 1*fieldOffset];
+
+            s_rhsU[es][n] += J*DU[id + 0*fieldOffset];
+            s_rhsV[es][n] += J*DU[id + 1*fieldOffset];
         }
       }
     }
 
-    // Make sure all node data is loaded into @shared
+    // make sure all node data is loaded into @shared
     @barrier("local");
 
-    // Multiply with Mass Matrix
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
-          const dfloat J = vgeo[e*p_Nvgeo + p_JID];
-          dfloat rhsn = 0.f;
+          // Multiplay with Mass Matrix
+          const dlong id = e*p_Np+n;
 
+          dfloat rhsu = 0.f, rhsv = 0.f;
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat M = MM[n+i*p_Np];
-              rhsn += M*s_rhsP[es][i];
+              rhsu  += M*s_rhsU[es][i];
+              rhsv  += M*s_rhsV[es][i];
             }
-
-          const dlong id = e*p_Np+n;
-          rhsP[id] = -J*p_rho0*rhsn*idt;
+          // Update
+          rhsU[id] = rhsu;
+          rhsV[id] = rhsv;
         }
       }
     }

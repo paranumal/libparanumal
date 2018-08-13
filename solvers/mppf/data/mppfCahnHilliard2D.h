@@ -39,23 +39,31 @@
     dfloat eta     = 0.1; \
     dfloat lambda  = 0.001; \
     dfloat M       = 0.001; \
-    dfloat eta2    = eta*eta;\
-    dfloat u       =  cos(M_PI*y)*sin(M_PI*x)*sin(t);\
-    dfloat v       = -sin(M_PI*y)*cos(M_PI*x)*sin(t);\
-    dfloat p       =  sin(M_PI*y)*sin(M_PI*x)*cos(t);\
-    dfloat phi     =  cos(M_PI*x)*cos(M_PI*y)*sin(t);\
-    dfloat phit    = cos(M_PI*x)*cos(M_PI*y)*cos(t);\
-    dfloat phix    = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
-    dfloat phiy    = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
-    dfloat dt1     = sin(M_PI*x)*sin(t);\
-    dfloat dt2     = sin(M_PI*y)*sin(t); \
-    dfloat dt3     = sin(M_PI*x)*sin(M_PI*y)*sin(t);\
-    dfloat dif     = (2.f*M*M_PI*M_PI*lambda*phi*(3.f*sin(t)*sin(t) - 6.f*dt1*dt1 - 6.f*dt2*dt2 + 2.f*M_PI*M_PI*eta2 + 9.f*dt3*dt3 - 1.f))/eta2; \
-    *(fx)           = phit + u*phix + v*phiy + dif;\
-    *(fy)           = phit + u*phix + v*phiy + dif;\
+    dfloat rho1    = 1.0; \
+    dfloat rho2    = 3.0; \
+    dfloat mu1     = 0.01; \
+    dfloat mu2     = 0.02; \
+    dfloat u       = cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+    dfloat v       = -cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat ut      = cos(M_PI*y)*sin(M_PI*x)*cos(t);\
+    dfloat vt      = -cos(M_PI*x)*sin(M_PI*y)*cos(t);\
+    dfloat ux      = M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat uy      = -M_PI*sin(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat vx      = M_PI*sin(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat vy      = -M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat px      = M_PI*cos(M_PI*x)*sin(M_PI*y)*cos(t);\
+    dfloat py      = M_PI*cos(M_PI*y)*sin(M_PI*x)*cos(t);\
+    dfloat phi     = cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat rho     = 0.5f*( (rho1 + rho1) +  (rho1-rho2)*phi);\
+    dfloat DU      = (M_PI*M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t)*(2.f*cos(M_PI*x)*cos(M_PI*y)*sin(t) - 3.f))/100.f;\
+    dfloat DV      = -(M_PI*M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t)*(2.f*cos(M_PI*x)*cos(M_PI*y)*sin(t) - 3.f))/100.f;\
+    dfloat Sx      = M_PI*M_PI*M_PI*lambda*cos(M_PI*x)*sin(M_PI*x)*sin(t)*sin(t)*(2.f*cos(2.f*M_PI*y) + 1.f);\
+    dfloat Sy      = M_PI*M_PI*M_PI*lambda*cos(M_PI*y)*sin(M_PI*y)*sin(t)*sin(t)*(2.f*cos(2.f*M_PI*x) + 1.f);\
+    *(fx)          = rho*(ut + u*ux + v*uy) + px -DU + Sx;\
+    *(fy)          = rho*(vt + u*vx + v*vy) + py -DV + Sy;\
   } 
-
-
+// -2*M_PI^2*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+    // dfloat p_c     = (M_PI*M_PI*lambda*sin(t)*sin(t)*(sin(M_PI*x)*sin(M_PI*x) - 2.f*sin(M_PI*x)*sin(M_PI*x)*sin(M_PI*y)*sin(M_PI*y) + sin(M_PI*y)*sin(M_PI*y)))/2.f;\
 
 #define mppfPhaseFieldDirichletConditions2D(bc, t, x, y, nx, ny, phiM, phiB) \
 {                                   \
@@ -141,7 +149,7 @@
 #define mppfPressureDirichletConditions2D(bc, t, x, y, nx, ny, pM, pB) \
 {                                   \
   if(bc==1 || bc==2){               \
-    *(pB) = pM;                     \
+    *(pB) = pM;\
   } else if(bc==3){                 \
     *(pB) = sin(M_PI*y)*sin(M_PI*x)*cos(t);\
   } else if(bc==4){                 \
@@ -150,12 +158,13 @@
     *(pB) = pM;                     \
   }                                 \
 }
+// 
 
 #define mppfPressureNeumannConditions2D(bc, t, x, y, nx, ny, pxM, pyM, pxB, pyB) \
 {                                          \
   if(bc==1 || bc==2){                      \
-    *(pxB) = M_PI*cos(M_PI*x)*sin(M_PI*y)*cos(t);\
-    *(pyB) = M_PI*cos(M_PI*y)*sin(M_PI*x)*cos(t);\
+    *(pxB) = 0.f;                          \
+    *(pyB) = 0.f;                          \
   } else if(bc==3){                        \
     *(pxB) = pxM;                          \
     *(pyB) = pyM;                          \

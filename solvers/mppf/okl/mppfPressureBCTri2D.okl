@@ -206,7 +206,7 @@ SOFTWARE.
                                  @restrict const  dfloat *  Dmatrices,
                                  @restrict const  dfloat *  Smatrices,
                                  @restrict const  dlong  *  vmapM,
-				@restrict const  int  *  EToB,	
+                                 @restrict const  int  *  EToB,  
                                  @restrict const  dfloat *  sMT,
                                  const dfloat time,
                                  const dfloat dt,
@@ -361,3 +361,4 @@ SOFTWARE.
   }
 }
 
+    

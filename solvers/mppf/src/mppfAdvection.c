@@ -122,4 +122,32 @@ void mppfAdvection(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_N
                                 o_NU);
   }
   occaTimerToc(mesh->device,"AdvectionSurface");
+
+
+// Give exact NU
+#if 0
+  for(int e=0; e<mesh->Nelements;e++){
+    for(int n=0; n<mesh->Np; n++){
+      const int id = e*mesh->Np + n;
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+
+      dfloat nux = -(M_PI*sin(2.0*M_PI*x)*(cos(2.0*time)/2.0 - 1.0/2.0))/2.0;
+      dfloat nuy = -(M_PI*sin(2.0*M_PI*y)*(cos(2.0*time)/2.0 - 1.0/2.0))/2.0;
+
+      mppf->rkU[id + 0*mppf->fieldOffset] = nux;
+      mppf->rkU[id + 1*mppf->fieldOffset] = nuy;
+    }
+  }
+  
+  mppf->o_rkU.copyFrom(mppf->rkU, mppf->NVfields*mppf->Ntotal*sizeof(dfloat));
+  o_NU.copyFrom(mppf->o_rkU, mppf->NVfields*mppf->Ntotal*sizeof(dfloat), 0, 0); 
+
+#endif
+
+
+
+
+
+
 }

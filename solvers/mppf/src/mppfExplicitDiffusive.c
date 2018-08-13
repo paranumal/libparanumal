@@ -27,7 +27,7 @@ SOFTWARE.
 #include "mppf.h"
 
 // complete a time step using LSERK4
-void mppfVelocityGradient(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_GU){
+void mppfExplicitDiffusive(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_DU, occa::memory o_SU){
 
   mesh_t *mesh = mppf->mesh;
   // Halo exchange is already done in Advection kernel, just extrapolate elements with halo 
@@ -44,24 +44,43 @@ void mppfVelocityGradient(mppf_t *mppf, dfloat time, occa::memory o_U, occa::mem
 
   occaTimerToc(mesh->device,"velocityExtrapolate");
 
-
+// COMPLETE HALO EXCHANGE
+  if (mppf->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
   occaTimerTic(mesh->device,"velocityGradientVolume");
   // Compute Volume Contribution
-  mppf->velocityGradientVolumeKernel(mesh->Nelements,
+  mppf->explicitDiffusiveKernel(mesh->Nelements,
+                                      mesh->o_vgeo,
+                                      mesh->o_Dmatrices,
+                                      mppf->fieldOffset,
+                                      mppf->o_Rho,
+                                      mppf->o_Mu,
+                                      mppf->o_Phi,
+                                      mppf->o_Ue,
+                                      o_DU,
+                                      o_SU);
+  occaTimerToc(mesh->device,"velocityGradientVolume");
+}
+else if (mppf->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  occaTimerTic(mesh->device,"velocityGradientVolume");
+ 
+    occaTimerTic(mesh->device,"explicitDiffusiveVolume");
+    // Compute Volume Contribution
+    mppf->explicitDiffusiveVolumeKernel(mesh->Nelements,
                                       mesh->o_vgeo,
                                       mesh->o_Dmatrices,
                                       mppf->fieldOffset,
                                       mppf->o_Ue,
-                                      o_GU);
-  occaTimerToc(mesh->device,"velocityGradientVolume");
+                                      mppf->o_GU);
+    occaTimerToc(mesh->device,"explicitDiffusiveVolume");
 
-  // COMPLETE HALO EXCHANGE
-  if (mppf->pOptions.compareArgs("DISCRETIZATION","IPDG")) {
-    
-    occaTimerTic(mesh->device,"velocityGradientSurface");
+
+
+    occaTimerTic(mesh->device,"explicitDiffusiveSurface");
     // Compute Surface Conribution
-    mppf->velocityGradientSurfaceKernel(mesh->Nelements,
+    mppf->explicitDiffusiveSurfaceKernel(mesh->Nelements,
+                                         mesh->o_vgeo,
                                          mesh->o_sgeo,
+                                         mesh->o_Dmatrices,
                                          mesh->o_LIFTT,
                                          mesh->o_vmapM,
                                          mesh->o_vmapP,
@@ -69,10 +88,15 @@ void mppfVelocityGradient(mppf_t *mppf, dfloat time, occa::memory o_U, occa::mem
                                          mesh->o_x,
                                          mesh->o_y,
                                          mesh->o_z,
+                                         mppf->o_Rho,
+                                         mppf->o_Mu,
+                                         mppf->o_GPhi,
                                          time,
                                          mppf->fieldOffset,
                                          mppf->o_Ue,
-                                         o_GU);
-    occaTimerToc(mesh->device,"velocityGradientSurface");
+                                         mppf->o_GU,
+                                         o_DU,
+                                         o_SU);
+    occaTimerToc(mesh->device,"explicitDiffusiveSurface");
   }
 }

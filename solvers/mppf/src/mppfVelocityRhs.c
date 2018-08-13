@@ -26,30 +26,20 @@ SOFTWARE.
 
 #include "mppf.h"
 
-// complete a time step using LSERK4
-void mppfAdvectionUpdate(mppf_t *mppf, dfloat time, occa::memory o_NU, occa::memory o_GU, occa::memory o_GP, occa::memory o_rkU){
-
-  mesh_t *mesh = mppf->mesh;
+void mppfVelocityRhs(mppf_t *mppf, dfloat time, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW){
   
-  mppf->advectionUpdateKernel(mesh->Nelements,
+  mesh_t *mesh = mppf->mesh; 
+
+     // rhsU^s = MM*(\sum^s b_i U^n-i - \sum^s-1 a_i N(U^n-i) + \sum^s-1 c_i GP^n-i)/nu dt
+    mppf->velocityRhsKernel(mesh->Nelements,
                            mesh->o_vgeo,
-                           mesh->o_Dmatrices,
-                           mesh->o_x,
-                           mesh->o_y,
-                           mesh->o_z,
-                           mppf->dt,
-                           mppf->time,
-                           mppf->o_extbdfA,
-                           mppf->o_extbdfB,
+                           mesh->o_MM,
+                           mppf->idt,
                            mppf->fieldOffset,
-                           mppf->o_U,
-                           mppf->o_Rho,
-                           mppf->o_Mu,
-                           mppf->o_GMu,
-                           o_NU,
-                           o_GU,
-                           o_GP,
-                           mppf->o_Psi,
-                           mppf->o_GPhi,
-                           o_rkU);
+                           mppf->o_Uhat,
+                           mppf->o_DU,
+                           mppf->o_GP,
+                           o_rhsU,
+                           o_rhsV,
+                           o_rhsW);
 }

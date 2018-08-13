@@ -19,8 +19,32 @@ void mppfCahnHilliardUpdate(mppf_t *mppf, dfloat time){
                                   (s-2)*mppf->Ntotal*sizeof(dfloat));
   }
 
+// Feed exact Phi and Psi
+#if 0
+  // Set pahse field function on device
+  mppf->setPhaseFieldKernel(mesh->Nelements,
+                          time,
+                          mppf->eta,
+                          mesh->o_x,
+                          mesh->o_y,
+                          mesh->o_z,
+                          mppf->o_rkPhi);
+
+  for(int e=0; e<mesh->Nelements;e++){
+    for(int n=0; n<mesh->Np; n++){
+      const int id = e*mesh->Np + n;
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+      mppf->Psi[id] =   -2*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time) + mppf->chA*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+    }
+  }
+mppf->o_Psi.copyFrom(mppf->Psi);
+#endif
+
   // Update Phi
   mppf->o_Phi.copyFrom(mppf->o_rkPhi, mppf->Ntotal*sizeof(dfloat));
+
+  
 
   // Compute grad(Phi)
 
@@ -77,6 +101,26 @@ void mppfCahnHilliardUpdate(mppf_t *mppf, dfloat time){
                                       mppf->o_GPhi);
 
 
+// Give exact GPhi
+ #if 0
+
+for(int e=0; e<mesh->Nelements;e++){
+    for(int n=0; n<mesh->Np; n++){
+      const int id = e*mesh->Np + n;
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+      dfloat phix   = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(time);
+      dfloat phiy   = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(time);
+
+      mppf->rkU[id + 0*mppf->fieldOffset] = phix;
+      mppf->rkU[id + 1*mppf->fieldOffset] = phiy;
+    }
+  }
+  mppf->o_GPhi.copyFrom(mppf->rkU);
+
+ #endif
+
+
   
 
   // Smooth density and viscosity on device 
@@ -84,14 +128,13 @@ void mppfCahnHilliardUpdate(mppf_t *mppf, dfloat time){
 
 
   
-  // Compute Gradient of Mu
-
-  mppf->phaseFieldGradientVolumeKernel(mesh->Nelements,
-                                      mesh->o_vgeo,
-                                      mesh->o_Dmatrices,
-                                      mppf->fieldOffset,
-                                      mppf->o_Mu,
-                                      mppf->o_GMu);
+  // // Compute Gradient of Mu /// Recompute using GPhi
+  // mppf->phaseFieldGradientVolumeKernel(mesh->Nelements,
+  //                                     mesh->o_vgeo,
+  //                                     mesh->o_Dmatrices,
+  //                                     mppf->fieldOffset,
+  //                                     mppf->o_Mu,
+  //                                     mppf->o_GMu);
 
 
 
