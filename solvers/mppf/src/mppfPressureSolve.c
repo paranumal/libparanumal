@@ -79,11 +79,11 @@ void mppfPressureSolve(mppf_t *mppf, dfloat time, occa::memory o_rkP){
   if(mppf->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
     ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsP, dfloatString, "add");  
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, mppf->o_rhsP);
-    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, mppf->o_rkP);
+    if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_rkP);
   }
 
   occaTimerTic(mesh->device,"Pr Solve");
-  mppf->NiterP = ellipticSolve(solver, 0.0, mppf->presTOL, mppf->o_rhsP, mppf->o_rkP); 
+  mppf->NiterP = ellipticSolve(solver, 0.0, mppf->presTOL, mppf->o_rhsP, o_rkP); 
   occaTimerToc(mesh->device,"Pr Solve"); 
 
   if (mppf->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
@@ -99,6 +99,6 @@ void mppfPressureSolve(mppf_t *mppf, dfloat time, occa::memory o_rkP){
                             mesh->o_z,
                             mesh->o_vmapM,
                             mppf->o_PmapB,
-                            mppf->o_rkP);
+                            o_rkP);
   }
 }

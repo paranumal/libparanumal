@@ -25,7 +25,7 @@ void mppfReport(mppf_t *mppf, dfloat time, int tstep){
   // copy data back to host
   mppf->o_Phi.copyTo(mppf->Phi);
   mppf->o_U.copyTo(mppf->U); 
-  mppf->o_rhsP.copyTo(mppf->GU); 
+  mppf->o_GU.copyTo(mppf->GU); 
   mppf->o_P.copyTo(mppf->P);
   mppf->o_Rho.copyTo(mppf->Rho);
   mppf->o_Mu.copyTo(mppf->Mu);

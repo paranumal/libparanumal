@@ -26,22 +26,21 @@ void mppfRun(mppf_t *mppf){
     
     dfloat time_new = time + mppf->dt; 
 
-    // Interface Solver
-    // Compute Rhs
+    // // Interface Solver
+    // // Compute Rhs
     mppfCahnHilliardRhs(mppf, time_new);
     // Solve for Psi  and Phi
     mppfCahnHilliardSolve(mppf, time_new);
     // Update Phi and Compute Gradient Phi
     mppfCahnHilliardUpdate(mppf, time_new);
 
-    
     // Compute Nonlinear Term N(U) 
     mppfAdvection(mppf, time, mppf->o_U, mppf->o_NU);
 
     // Compute intermediate velocity, save to Uhat , take divergence and compute Pr Rhs
-    mppfPressureRhs(mppf, time_new, mppf->o_Uhat);
+    mppfPressureRhs(mppf, time, mppf->o_Uhat);
 
-#if 1
+#if 0
     mppf->setFlowFieldKernel(mesh->Nelements,
                               time_new, 
                               mesh->o_x,
@@ -53,7 +52,7 @@ void mppfRun(mppf_t *mppf){
 #endif
 
 
-     mppfPressureSolve(mppf,time_new,mppf->o_rkP);
+     mppfPressureSolve(mppf,time, mppf->o_rkP);
 
     
     //cycle history for update
@@ -70,33 +69,27 @@ void mppfRun(mppf_t *mppf){
 
     // update pressure
     mppf->o_P.copyFrom(mppf->o_rkP,mppf->Ntotal*sizeof(dfloat));  
-    // update pressure gradient
+    // // update pressure gradient
     mppfPressureGradient(mppf, time_new, mppf->o_P, mppf->o_GP);   
 
-
-
-
-    // mppfVelocityRhs(mppf, time_new, mppf->o_rhsU, mppf->o_rhsV, mppf->o_rhsW);
-    // mppfVelocitySolve(mppf, time_new, mppf->o_rhsU, mppf->o_rhsV, mppf->o_rhsW, mppf->o_rkU);
+    
+    mppfVelocityRhs(mppf, time_new, mppf->o_rhsU, mppf->o_rhsV, mppf->o_rhsW);
+    mppfVelocitySolve(mppf, time_new, mppf->o_rhsU, mppf->o_rhsV, mppf->o_rhsW, mppf->o_rkU);
 
      //cycle history 
     for (int s=mppf->Nstages;s>1;s--) {
       mppf->o_U.copyFrom(mppf->o_U, mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
                                   (s-1)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
                                   (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
-    }
 
-
-     // copy updated fields
-     mppf->o_U.copyFrom(  mppf->o_rkU,   mppf->NVfields*mppf->Ntotal*sizeof(dfloat));  
-     //cycle rhs history
-    for (int s=mppf->Nstages;s>1;s--) {
       mppf->o_NU.copyFrom(mppf->o_NU, mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
                                   (s-1)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 
                                   (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
     }
 
-
+   // copy updated fields
+   mppf->o_U.copyFrom(mppf->o_rkU,   mppf->NVfields*mppf->Ntotal*sizeof(dfloat));  
+    
     
     occaTimerTic(mesh->device,"Report");
 
@@ -228,8 +221,6 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
     mppf->lambdaPhi = -mppf->chA;
 
    printf("# chSeta2\t:\t%.4e\n", mppf->chSeta2);
-    printf("# chAlpha\t\t:\t%.4e\n", mppf->chA);
-    // mppf->lambda = mppf->g0 / (mppf->dt * mppf->nu);
-    // mppf->ig0 = 1.0/mppf->g0; 
+   printf("# chAlpha\t\t:\t%.4e\n", mppf->chA);
   }
 }

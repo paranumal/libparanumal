@@ -14,7 +14,7 @@ data/mppfCahnHilliard2D.h
 3
 
 [POLYNOMIAL DEGREE]
-5
+3
 
 [THREAD MODEL]
 CUDA
@@ -67,7 +67,7 @@ CUBATURE
 
 #zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+10
 
 # zero to ignore
 [TSTEPS FOR FORCE OUTPUT]
@@ -81,7 +81,7 @@ CUBATURE
 0
 
 [FINAL TIME]
-0.2
+0.5
 
 [CFL]
 0.1

@@ -146,7 +146,7 @@ void mppfError(mppf_t *mppf, dfloat time){
       MPI_Allreduce(&maxPhi, &gMaxPhi, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
 
       if(mesh->rank==0)
-        printf("Step: %d Time: %g ErrorU: %g ErrorV: %g ErrorP: %g ErrorPhi: %g \n", 
+        printf("Step: %d Time: %g ErrorU: %.4e ErrorV: %.4e ErrorP: %.4e ErrorPhi: %.4e \n", 
            (int)(time/mppf->dt), time, gMaxU, gMaxV, gMaxP, gMaxPhi);
 
       if( isnan(gMaxU) || 

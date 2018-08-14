@@ -90,4 +90,27 @@ void mppfPressureGradient(mppf_t *mppf, dfloat time, occa::memory o_P, occa::mem
                                          o_GP);
     occaTimerToc(mesh->device,"GradientSurface");
   }
+
+#if 1
+
+for(int e=0; e<mesh->Nelements;e++){
+    for(int n=0; n<mesh->Np; n++){
+      const int id = e*mesh->Np + n;
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+      //
+      dfloat px = M_PI*cos(M_PI*x)*sin(M_PI*y)*cos(time);
+      dfloat py = M_PI*cos(M_PI*y)*sin(M_PI*x)*cos(time);
+      //   
+      mppf->rkU[id + 0*mppf->fieldOffset] = px;
+      mppf->rkU[id + 1*mppf->fieldOffset] = py;
+    }
+  }
+
+  mppf->o_GSave.copyFrom(mppf->rkU, mppf->NVfields*mppf->Ntotal*sizeof(dfloat));
+  o_GP.copyFrom(mppf->o_GSave, mppf->NVfields*mppf->Ntotal*sizeof(dfloat), 0, 0); 
+
+#endif
+
+
 }

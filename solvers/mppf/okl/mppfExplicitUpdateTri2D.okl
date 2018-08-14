@@ -38,6 +38,9 @@
 
           const dfloat invrho  = 1.f / Rho[id];
           const dfloat mu      = Mu[id];
+
+#if 1
+
           
           for (int s=0;s<p_Nstages;s++) {
             //U 
@@ -55,21 +58,33 @@
             rhsu +=  extbdfB[s]*Um  - dt*extbdfA[s]*(NUm - (p_invrho0 - invrho)*GPx);
             rhsv +=  extbdfB[s]*Vm  - dt*extbdfA[s]*(NVm - (p_invrho0 - invrho)*GPy);
           }
+#else
+           // const dfloat Um  = U[id+0*fieldOffset+0*p_NVfields*fieldOffset];
+           // const dfloat Vm  = U[id+1*fieldOffset+0*p_NVfields*fieldOffset];
+          const dfloat Um  = U[id+0*fieldOffset+0*p_NVfields*fieldOffset];
+          const dfloat Vm  = U[id+1*fieldOffset+0*p_NVfields*fieldOffset];
 
+
+           // NU
+            const dfloat NUm  = NU[id+0*fieldOffset+0*p_NVfields*fieldOffset];
+            const dfloat NVm  = NU[id+1*fieldOffset+0*p_NVfields*fieldOffset];
+
+            // GP
+            const dfloat GPx  = GP[id+0*fieldOffset+0*p_NVfields*fieldOffset];
+            const dfloat GPy  = GP[id+1*fieldOffset+0*p_NVfields*fieldOffset];
+
+            rhsu  = Um -dt*(NUm - (p_invrho0 - invrho)*GPx);
+            rhsv  = Vm -dt*(NVm - (p_invrho0 - invrho)*GPy);
+
+
+#endif
           // Add explicit diffusion term
           rhsu += dt*(-mu*invrho)*DU[id + 0*fieldOffset];
           rhsv += dt*(-mu*invrho)*DU[id + 1*fieldOffset];
 
-          // rhsu += (-mu*invrho)*DU[id + 0*fieldOffset];
-          // rhsv += (-mu*invrho)*DU[id + 1*fieldOffset];
-
-
-          // Add stress term form non-constant viscosity
+          // Add stress term from non-constant viscosity
           rhsu += dt*(invrho)*SU[id + 0*fieldOffset];
           rhsv += dt*(invrho)*SU[id + 1*fieldOffset];
-
-          // rhsu += (invrho)*SU[id + 0*fieldOffset];
-          // rhsv += (invrho)*SU[id + 1*fieldOffset];
 
           // Add surface Tension Force
           const dfloat psi  = Psi[id];
@@ -77,9 +92,25 @@
           const dfloat phix = GPhi[id + 0*fieldOffset];
           const dfloat phiy = GPhi[id + 1*fieldOffset];
 
-          // Add explicit viscous stress 
           rhsu += dt*(-p_chL*invrho)*(psi-alpha*phi)*phix;
           rhsv += dt*(-p_chL*invrho)*(psi-alpha*phi)*phiy;
+
+          // rhsu -= dt*p_chL*invrho*(psi)*phix;
+          // rhsv -= dt*p_chL*invrho*(psi)*phiy;
+
+          // dfloat phix   = -M_PI*cos(M_PI*y[id])*sin(M_PI*x[id])*sin(time);
+          // dfloat phiy   = -M_PI*cos(M_PI*x[id])*sin(M_PI*y[id])*sin(time);
+          // dfloat lapPhi = -2.f*M_PI*M_PI*cos(M_PI*x[id])*cos(M_PI*y[id])*sin(time);
+
+          // rhsu += dt*(-p_chL*invrho)*(lapPhi)*phix;
+          // rhsv += dt*(-p_chL*invrho)*(lapPhi)*phiy;
+
+
+
+
+
+
+
 
           // Add explicit viscous stress 
                     
@@ -88,9 +119,10 @@
           #if 1  
             mppfVelocitySource2D(time,x[id],y[id],&fbx, &fby);
           #endif
+
           rhsu += dt*invrho*fbx;
           rhsv += dt*invrho*fby;
-          // //
+          //
           Uhat[id + 0*fieldOffset] = rhsu;
           Uhat[id + 1*fieldOffset] = rhsv; 
           // Uhat[id + 0*fieldOffset] = fbx;

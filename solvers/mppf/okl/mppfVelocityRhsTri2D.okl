@@ -48,11 +48,11 @@ SOFTWARE.
           const dlong id = n + p_Np*e;
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 
-            s_rhsU[es][n] = -J*p_invnu0*invdt*Uhat[id +0*fieldOffset];
-            s_rhsV[es][n] = -J*p_invnu0*invdt*Uhat[id +1*fieldOffset];
+            s_rhsU[es][n] = J*p_invnu0*invdt*Uhat[id +0*fieldOffset]; // omitted - sign
+            s_rhsV[es][n] = J*p_invnu0*invdt*Uhat[id +1*fieldOffset]; // omitted - sign
 
-            s_rhsU[es][n] += J*p_invnu0*p_invrho0*GP[id + 0*fieldOffset];
-            s_rhsV[es][n] += J*p_invnu0*p_invrho0*GP[id + 1*fieldOffset];
+            s_rhsU[es][n] -= J*p_invnu0*p_invrho0*GP[id + 0*fieldOffset];
+            s_rhsV[es][n] -= J*p_invnu0*p_invrho0*GP[id + 1*fieldOffset];
 
             s_rhsU[es][n] += J*DU[id + 0*fieldOffset];
             s_rhsV[es][n] += J*DU[id + 1*fieldOffset];
