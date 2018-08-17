@@ -31,7 +31,7 @@ void mppfDivergence(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_
 
   mesh_t *mesh = mppf->mesh;
 
-  //if (mppf->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  if (mppf->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
     if(mesh->totalHaloPairs>0){
       mppf->velocityHaloExtractKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
@@ -49,7 +49,7 @@ void mppfDivergence(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_
                            mppf->vSendBuffer,
                            mppf->vRecvBuffer);
     }
-  //}
+  }
 
   // computes div u^(n+1) volume term
   occaTimerTic(mesh->device,"DivergenceVolume");
@@ -61,7 +61,7 @@ void mppfDivergence(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_
                              o_DU);
   occaTimerToc(mesh->device,"DivergenceVolume");
 
-  //if (mppf->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  if (mppf->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
 
@@ -90,5 +90,5 @@ void mppfDivergence(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_
                                 o_U,
                                 o_DU);
     occaTimerToc(mesh->device,"DivergenceSurface");
-  // }
+  }
 }

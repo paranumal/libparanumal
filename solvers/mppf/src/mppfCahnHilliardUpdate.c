@@ -35,8 +35,8 @@ void mppfCahnHilliardUpdate(mppf_t *mppf, dfloat time){
       const int id = e*mesh->Np + n;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
-      // mppf->Psi[id] =   -2*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time) + mppf->chA*cos(M_PI*x)*cos(M_PI*y)*sin(time);
-      mppf->Psi[id] =   -2.0*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+      mppf->Psi[id] =   -2*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time) + mppf->chA*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+      // mppf->Psi[id] =   -2.0*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time);
     }
   }
 mppf->o_Psi.copyFrom(mppf->Psi);

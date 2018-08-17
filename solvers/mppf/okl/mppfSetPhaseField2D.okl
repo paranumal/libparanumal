@@ -9,18 +9,13 @@
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     for(int n=0;n<p_Np;++n;@inner(0)){
-      dlong id = n+p_Np*e;
-
-      if(id<p_Np*Nelements){
-      dfloat xn = x[id];
-      dfloat yn = y[id];
-      
+      const dlong id = n+p_Np*e;
+      const dfloat xn = x[id];
+      const dfloat yn = y[id];
       dfloat phi   = 0.f;
 
       mppfPhaseField2D(t, hmin, xn, yn, &phi);
-
       Phi[id]        = phi;
-      }
     }
 
   }

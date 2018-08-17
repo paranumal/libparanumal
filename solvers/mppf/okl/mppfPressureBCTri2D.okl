@@ -82,25 +82,25 @@ SOFTWARE.
           mppfPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);
           mppfPressureNeumannConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);
 
-          for (int s=0;s<stage;s++) {
-            dfloat prkBn, ctime;
-            if (ARKswitch) {
-              prkBn = prkB[stage*(p_Nstages+1)+s];
-              ctime = time-(c[stage]-c[s])*dt;
-            } else {
-              prkBn = prkB[s];
-              ctime = time-(s+1)*dt;
-            }
+          // for (int s=0;s<stage;s++) {
+          //   dfloat prkBn, ctime;
+          //   if (ARKswitch) {
+          //     prkBn = prkB[stage*(p_Nstages+1)+s];
+          //     ctime = time-(c[stage]-c[s])*dt;
+          //   } else {
+          //     prkBn = prkB[s];
+          //     ctime = time-(s+1)*dt;
+          //   }
             
-            dfloat pPm, dpdxPm, dpdyPm;
-            mppfPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, &pPm);
-            mppfPressureNeumannConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm, &dpdyPm);
+          //   dfloat pPm, dpdxPm, dpdyPm;
+          //   mppfPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, &pPm);
+          //   mppfPressureNeumannConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm, &dpdyPm);
             
 
-            pP    -= prkBn*pPm;
-            dpdxP -= prkBn*dpdxPm;
-            dpdyP -= prkBn*dpdyPm;
-          }
+          //   pP    -= prkBn*pPm;
+          //   dpdxP -= prkBn*dpdxPm;
+          //   dpdyP -= prkBn*dpdyPm;
+          // }
         }
         const dfloat dp = pP;
 
@@ -256,24 +256,24 @@ SOFTWARE.
           mppfPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);
           mppfPressureNeumannConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);
 
-          for (int s=0;s<stage;s++) {
-            dfloat prkBn, ctime;
-            if (ARKswitch) {
-              prkBn = prkB[stage*(p_Nstages+1)+s];
-              ctime = time-(c[stage]-c[s])*dt;
-            } else {
-              prkBn = prkB[s];
-              ctime = time-(s+1)*dt;
-            }
+          // for (int s=0;s<stage;s++) {
+          //   dfloat prkBn, ctime;
+          //   if (ARKswitch) {
+          //     prkBn = prkB[stage*(p_Nstages+1)+s];
+          //     ctime = time-(c[stage]-c[s])*dt;
+          //   } else {
+          //     prkBn = prkB[s];
+          //     ctime = time-(s+1)*dt;
+          //   }
             
-            dfloat pPm, dpdxPm, dpdyPm;
-            mppfPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, &pPm);
-            mppfPressureNeumannConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm, &dpdyPm);
+          //   dfloat pPm, dpdxPm, dpdyPm;
+          //   mppfPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, &pPm);
+          //   mppfPressureNeumannConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPm, &dpdyPm);
 
-            pP    -= prkBn*pPm;
-            dpdxP -= prkBn*dpdxPm;
-            dpdyP -= prkBn*dpdyPm;
-          }
+          //   pP    -= prkBn*pPm;
+          //   dpdxP -= prkBn*dpdxPm;
+          //   dpdyP -= prkBn*dpdyPm;
+          // }
         }
 
         s_q[nid] = pP;
@@ -339,21 +339,21 @@ SOFTWARE.
         dfloat pP;
         mppfPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);
 
-        for (int s=0;s<stage;s++) {
-          dfloat prkBn, ctime;
-          if (ARKswitch) {
-            prkBn = prkB[stage*(p_Nstages+1)+s];
-            ctime = time-(c[stage]-c[s])*dt;
-          } else {
-            prkBn = prkB[s];
-            ctime = time-(s+1)*dt;
-          }
+        // for (int s=0;s<stage;s++) {
+        //   dfloat prkBn, ctime;
+        //   if (ARKswitch) {
+        //     prkBn = prkB[stage*(p_Nstages+1)+s];
+        //     ctime = time-(c[stage]-c[s])*dt;
+        //   } else {
+        //     prkBn = prkB[s];
+        //     ctime = time-(s+1)*dt;
+        //   }
           
-          dfloat pPm;
-          mppfPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, &pPm);
+        //   dfloat pPm;
+        //   mppfPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, &pPm);
          
-          pP    -= prkBn*pPm;
-        }
+        //   pP    -= prkBn*pPm;
+        // }
 
         P[idM] = pP;
       }

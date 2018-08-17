@@ -424,9 +424,8 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   int uBCType[7]   = {0,1,1,2,1,2,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
   int vBCType[7]   = {0,1,1,2,2,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
   int wBCType[7]   = {0,1,1,2,2,2,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
-  int pBCType[7]   = {0,2,2,1,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
-  // int pBCType[7]   = {0,1,1,2,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
-  
+  int pBCType[7]   = {0,2,2,1,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc. 
+  // int pBCType[7]   = {0,1,1,2,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc. 
   int phiBCType[7] = {0,2,2,2,2,2,2}; // All homogenous Neumann BCs for Phi and Psi solves 
 
   //Solver tolerances 

@@ -132,16 +132,11 @@
     *(uyB) =-M_PI*sin(M_PI*x)*sin(M_PI*y)*sin(t);\
     *(vxB) = M_PI*sin(M_PI*x)*sin(M_PI*y)*sin(t);\
     *(vyB) =-M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t);\
-  } else if(bc==4){                        \
-    *(uxB) = uxM;                          \
-    *(uyB) = uyM;                          \
-    *(vxB) = 0.f;                          \
-    *(vyB) = 0.f;                          \
-  } else if(bc==5){                        \
-    *(uxB) = 0.f;                          \
-    *(uyB) = 0.f;                          \
-    *(vxB) = vxM;                          \
-    *(vyB) = vyM;                          \
+  } else if(bc==4||bc==5){                  \
+    *(uxB) = nx*nx*uxM;                     \
+    *(uyB) = nx*nx*uyM;                    \
+    *(vxB) = ny*ny*vxM;                    \
+    *(vyB) = ny*ny*vyM;                    \
   }                                        \
 }
 
@@ -152,9 +147,7 @@
     *(pB) = pM;                     \
   } else if(bc==3){                 \
     *(pB) = sin(M_PI*y)*sin(M_PI*x)*cos(t);\
-  } else if(bc==4){                 \
-    *(pB) = pM;                     \
-  } else if(bc==5){                 \
+  } else if(bc==4|| bc==5){         \
     *(pB) = pM;                     \
   }                                 \
 }
@@ -165,13 +158,10 @@
   if(bc==1 || bc==2){                      \
     *(pxB) = 0.f;                          \
     *(pyB) = 0.f;                          \
-  } else if(bc==3){                        \
-    *(pxB) = pxM;                          \
-    *(pyB) = pyM;                          \
-  } else if(bc==4){                        \
-    *(pxB) = 0.f;                          \
-    *(pyB) = 0.f;                          \
-  } else if(bc==5){                        \
+  } else if(bc==3){                             \
+    *(pxB) =M_PI*cos(M_PI*x)*sin(M_PI*y)*cos(t);\
+    *(pyB) =M_PI*cos(M_PI*y)*sin(M_PI*x)*cos(t);\
+  } else if(bc==4|| bc==5){                \
     *(pxB) = 0.f;                          \
     *(pyB) = 0.f;                          \
   }                                        \

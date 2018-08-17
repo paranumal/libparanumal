@@ -10,22 +10,20 @@
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     for(int n=0;n<p_Np;++n;@inner(0)){
-      dlong id = n+p_Np*e;
+      const dlong id = n+p_Np*e;
 
-      if(id<p_Np*Nelements){
-      // dfloat xn = x[id];
-      // dfloat yn = y[id];
-      
+      const dfloat xn = x[id];
+      const dfloat yn = y[id];
+
       dfloat u   = 0.f;
       dfloat v   = 0.f;
       dfloat p   = 0.f;
 
-      mppfFlowField2D(t, x[id], y[id], &u, &v, &p);
+      mppfFlowField2D(t, xn, yn, &u, &v, &p);
 
       U[id+0*offset] = u;
       U[id+1*offset] = v;
       P[id]          = p;
-      }
     }
 
   }

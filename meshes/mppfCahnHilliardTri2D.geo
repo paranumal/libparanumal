@@ -18,8 +18,8 @@ Line Loop(5) = {1, 2, 3, 4};
 //+
 Plane Surface(6) = {5};
 Physical Surface("Domain", 9) = {6};
-//+
-//+Physical Line("Wall", 1) = {1,3};
 Physical Line("Inflow", 2) = {1,2,3,4};
-// + Physical Line("Outflow", 3) = {2};
-//+
+
+
+// +Physical Line("Inflow", 2) = {2,3,4};
+// +Physical Line("Outflow", 3) = {1};

@@ -30,6 +30,9 @@ void mppfPressureRhs(mppf_t *mppf, dfloat time, occa::memory o_rkU){
 
   mesh_t *mesh = mppf->mesh;
 
+// Compute Explicit Diffusive Terms; i.e. DU = curl*curl*u^*  and  SU = grad(mu)\cdot D(u^*)
+  mppfExplicitDiffusive(mppf, time, mppf->o_U, mppf->o_DU, mppf->o_SU); 
+
 
 // Give exact DU and SU are fine
 #if 0
@@ -50,8 +53,9 @@ void mppfPressureRhs(mppf_t *mppf, dfloat time, occa::memory o_rkU){
 
       dfloat px = M_PI*cos(M_PI*x)*sin(M_PI*y)*cos(time);
       dfloat py = M_PI*cos(M_PI*y)*sin(M_PI*x)*cos(time);
-
-      dfloat lapPhi = -2.0*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+      
+      dfloat phi     = cos(M_PI*x)*cos(M_PI*y)*sin(time);
+      dfloat lapPhi = -2.0*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time) + mppf->chA*phi;
       dfloat phix = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(time);
       dfloat phiy = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(time);
 
@@ -75,15 +79,15 @@ void mppfPressureRhs(mppf_t *mppf, dfloat time, occa::memory o_rkU){
       mppf->GPhi[id + 0*mppf->fieldOffset] = phix;
       mppf->GPhi[id + 1*mppf->fieldOffset] = phiy;
 
-      // mppf->NU[id + 0*mppf->fieldOffset] = nux;
-      // mppf->NU[id + 1*mppf->fieldOffset] = nuy;
+      mppf->NU[id + 0*mppf->fieldOffset] = nux;
+      mppf->NU[id + 1*mppf->fieldOffset] = nuy;
 
 
 
       // mppf->rkU[id + 0*mppf->fieldOffset] = -nux + (1.0/mppf->rho0 - 1.0/rho)*px -mu/rho*dux + 1/rho*sux - mppf->chL/rho*lapPhi*phix;
       // mppf->rkU[id + 1*mppf->fieldOffset] = -nuy + (1.0/mppf->rho0 - 1.0/rho)*py -mu/rho*duy + 1/rho*suy - mppf->chL/rho*lapPhi*phiy;
        
-      //  dfloat t = time;
+      // dfloat t = time;
       // // Add forcing
       // dfloat gx = M_PI*cos(M_PI*x)*sin(M_PI*y)*cos(t) - sin(M_PI*x)*(cos(M_PI*x)*cos(M_PI*y)*sin(t) - 2.f)*(M_PI*cos(M_PI*x) + cos(M_PI*y)*cos(t) - M_PI*cos(M_PI*x)*cos(t)*cos(t)) - (M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*y)*sin(M_PI*x)*sin(t)*sin(t))/100.f - 2.f*M_PI*M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t)*((cos(M_PI*x)*cos(M_PI*y)*sin(t))/200.f - 3.f/200.f) + 2.f*M_PI*M_PI*M_PI*mppf->chL*cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*y)*sin(M_PI*x)*sin(t)*sin(t);
       // dfloat gy = sin(M_PI*y)*(cos(M_PI*x)*cos(M_PI*y)*sin(t) - 2.f)*(cos(M_PI*x)*cos(t) - M_PI*cos(M_PI*y) + M_PI*cos(M_PI*y)*cos(t)*cos(t)) + M_PI*cos(M_PI*y)*sin(M_PI*x)*cos(t) + (M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*y)*sin(M_PI*y)*sin(t)*sin(t))/100.f + 2.f*M_PI*M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t)*((cos(M_PI*x)*cos(M_PI*y)*sin(t))/200.f - 3.f/200.f) + 2.f*M_PI*M_PI*M_PI*mppf->chL*cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*y)*sin(M_PI*y)*sin(t)*sin(t);
@@ -113,8 +117,7 @@ void mppfPressureRhs(mppf_t *mppf, dfloat time, occa::memory o_rkU){
   // mppf->o_NU.copyFrom(mppf->NU); 
 
 #endif
-// Compute Explicit Diffusive Terms; i.e. DU = curl*curl*u^*  and  SU = grad(mu)\cdot D(u^*)
-  mppfExplicitDiffusive(mppf, time, mppf->o_U, mppf->o_DU, mppf->o_SU); 
+
 
 
 
@@ -141,12 +144,6 @@ void mppfPressureRhs(mppf_t *mppf, dfloat time, occa::memory o_rkU){
                            mppf->o_Phi,
                            mppf->o_GPhi,
                            o_rkU);
-
-
-
-
-
-
 // Give exact NU
 #if 0 // Divergence is fine
   // o_rkU.copyTo(mppf->rkU);

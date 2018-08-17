@@ -323,11 +323,6 @@ SOFTWARE.
                 dvdy += L*s_fluxVy[es][m];
 
               }
-            // //  rhsu = grad(p) // Note that multiplied with M^-1
-            // gradU[id+0*offset] = dudx;
-            // gradU[id+1*offset] = dudy;
-            // gradU[id+2*offset] = dvdx;
-            // gradU[id+3*offset] = dvdy;
           }
         }
       }
@@ -386,13 +381,9 @@ SOFTWARE.
               const dfloat gmuy    = 0.5f*(p_mu1 - p_mu2)*GPhi[id + 1*offset];
 
               // Update diffusive term coming from non-constant viscosity curl( curl (u))
-              // DU[id  + 0*offset] =  mu*dwdy*invrho; 
-              // DU[id  + 1*offset] = -mu*dwdx*invrho;
               DU[id  + 0*offset] =  dwdy; 
               DU[id  + 1*offset] = -dwdx;
-              // Update explicit viscous strees term i.e. grad(mu) \cdot D(u) 
-              // SU[id  + 0*offset] = invrho*( gmux* (2.f* dudx)  +  gmuy*(dudy + dvdx)) ; 
-              // SU[id  + 1*offset] = invrho*( gmux*(dvdx + dudy) +  gmuy* (2.f* dvdy) ) ; 
+              // 
               SU[id  + 0*offset] = ( gmux* (2.f* dudx)  +  gmuy*(dudy + dvdx)) ; 
               SU[id  + 1*offset] = ( gmux*(dvdx + dudy) +  gmuy* (2.f* dvdy) ) ; 
 

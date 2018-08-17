@@ -9,13 +9,14 @@ void mppfRun(mppf_t *mppf){
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"MPPF");
 
-  for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
-  // for(int tstep=0;tstep<100;++tstep){
+ for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
+   // for(int tstep=0;tstep<1000;++tstep){
 
     if(tstep<1){
       extbdfCoefficents(mppf,tstep+1);
       // Initialize Pressure Gradient GP for non-zero Pressure IC
-      mppfPressureGradient(mppf, 0.0, mppf->o_P, mppf->o_GP);      
+      mppfPressureGradient(mppf,mppf->startTime, mppf->o_P, mppf->o_GP);
+      mppfReport(mppf, mppf->startTime, tstep+1);      
     } 
     else if(tstep<2 && mppf->temporalOrder>=2) 
       extbdfCoefficents(mppf,tstep+1);
@@ -38,7 +39,7 @@ void mppfRun(mppf_t *mppf){
     mppfAdvection(mppf, time, mppf->o_U, mppf->o_NU);
 
     // Compute intermediate velocity, save to Uhat , take divergence and compute Pr Rhs
-    mppfPressureRhs(mppf, time, mppf->o_Uhat);
+    mppfPressureRhs(mppf, time_new, mppf->o_Uhat);
 
 #if 0
     mppf->setFlowFieldKernel(mesh->Nelements,
@@ -47,12 +48,12 @@ void mppfRun(mppf_t *mppf){
                               mesh->o_y,
                               mesh->o_z,
                               mppf->fieldOffset,
-                              mppf->o_rkU,
-                              mppf->o_rkPhi); // pressure is not exact anymore
+                              mppf->o_rkPhi,
+                              mppf->o_rkP); // pressure is not exact anymore
 #endif
 
 
-     mppfPressureSolve(mppf,time, mppf->o_rkP);
+    mppfPressureSolve(mppf,time_new, mppf->o_rkP);
 
     
     //cycle history for update
@@ -67,10 +68,10 @@ void mppfRun(mppf_t *mppf){
                                   (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
     }
 
-    // update pressure
-    mppf->o_P.copyFrom(mppf->o_rkP,mppf->Ntotal*sizeof(dfloat));  
-    // // update pressure gradient
-    mppfPressureGradient(mppf, time_new, mppf->o_P, mppf->o_GP);   
+    // // update pressure
+     mppf->o_P.copyFrom(mppf->o_rkP,mppf->Ntotal*sizeof(dfloat));  
+    //update pressure gradient
+     mppfPressureGradient(mppf, time_new, mppf->o_P, mppf->o_GP);   
 
     
     mppfVelocityRhs(mppf, time_new, mppf->o_rhsU, mppf->o_rhsV, mppf->o_rhsW);
@@ -87,8 +88,8 @@ void mppfRun(mppf_t *mppf){
                                   (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
     }
 
-   // copy updated fields
-   mppf->o_U.copyFrom(mppf->o_rkU,   mppf->NVfields*mppf->Ntotal*sizeof(dfloat));  
+     // copy updated fields
+     mppf->o_U.copyFrom(mppf->o_rkU,   mppf->NVfields*mppf->Ntotal*sizeof(dfloat));  
     
     
     occaTimerTic(mesh->device,"Report");
