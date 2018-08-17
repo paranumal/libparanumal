@@ -64,6 +64,8 @@ int main(int argc, char **argv){
 
   ins_t *ins = insSetup(mesh,options);
 
+  insPlotWallsVTUHex3D(ins, "walls");
+  
   if(ins->readRestartFile){
     printf("Reading restart file..."); 
     insRestartRead(ins, ins->options); 

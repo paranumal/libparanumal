@@ -56,6 +56,7 @@ typedef struct {
   char *type;
 
   dlong Nblock;
+  dlong Nblock2; // second reduction
 
   dfloat tau;
 
@@ -99,6 +100,7 @@ typedef struct {
   occa::memory o_Ax; // A*initial guess
   occa::memory o_Ap; // A*search direction
   occa::memory o_tmp; // temporary
+  occa::memory o_tmp2; // temporary (second reduction)
   occa::memory o_grad; // temporary gradient storage (part of A*)
   occa::memory o_rtmp;
   occa::memory o_invDegree;
@@ -161,6 +163,8 @@ int pcg      (elliptic_t* elliptic, dfloat lambda, occa::memory &o_r, occa::memo
 
 void ellipticScaledAdd(elliptic_t *elliptic, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
 dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b);
+
+dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b);
 
 void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision);
 
