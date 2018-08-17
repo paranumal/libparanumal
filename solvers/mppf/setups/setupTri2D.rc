@@ -17,7 +17,7 @@ data/mppfCahnHilliard2D.h
 3
 
 [THREAD MODEL]
-OPENCL
+CUDA
 
 [PLATFORM NUMBER]
 0
