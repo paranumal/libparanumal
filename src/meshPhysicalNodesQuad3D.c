@@ -669,7 +669,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmin = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 
 	  par_loc = (rnew - rmin)/(rmax - rmin);
-	  perp_index = n/mesh->Nq;
+	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
 	  
 	  rsdir = rdir;
 
@@ -738,7 +738,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmax = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
 	  par_loc = (rnew - rmin)/(rmax - rmin);
-	  perp_index = n%mesh->Nq;
+	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
 	  
 	  rsdir = rdir;
 
@@ -761,17 +761,17 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smin = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
 	  par_loc = (snew - smin)/(smax - smin);
-	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
+	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
 	  
-	  rsdir = rdir;
+	  rsdir = sdir;
 
 	  break;
 	case 10:
-	  rold = mesh->rphysical[eAdj*mesh->Np + n];
-	  sold = mesh->sphysical[eAdj*mesh->Np + n] + offset;
+	  rold = mesh->rphysical[eAdj*mesh->Np + n] + offset;
+	  sold = mesh->sphysical[eAdj*mesh->Np + n];
 
-	  snew = M_PI/2. - sold;
-	  rnew = atan(tan(rold)/tan(sold));
+	  snew = M_PI/2. - rold;
+	  rnew = atan(tan(sold)/tan(rold));
 
 	  rmax = mesh->rphysical[eOverlap*mesh->Np];
 	  rmin = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
@@ -784,17 +784,17 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmin = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
 	  par_loc = (rnew - rmin)/(rmax - rmin);
-	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
+	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
 	  
 	  rsdir = rdir;
 
 	  break;
 	case 22:
-	  rold = mesh->rphysical[eAdj*mesh->Np + n];
-	  sold = mesh->sphysical[eAdj*mesh->Np + n] - offset;
+	  rold = mesh->rphysical[eAdj*mesh->Np + n] - offset;
+	  sold = mesh->sphysical[eAdj*mesh->Np + n];
 
-	  snew = sold + M_PI/2.;
-	  rnew = -1*atan(tan(rold)/tan(sold));
+	  snew = rold + M_PI/2.;
+	  rnew = -1*atan(tan(sold)/tan(rold));
 
 	  rmin = mesh->rphysical[eOverlap*mesh->Np];
 	  rmax = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
@@ -807,7 +807,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmax = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
 	  par_loc = (rnew - rmin)/(rmax - rmin);
-	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
+	  perp_index = n%mesh->Nq;
 	  
 	  rsdir = rdir;
 
@@ -816,31 +816,31 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rold = mesh->rphysical[eAdj*mesh->Np + n];
 	  sold = mesh->sphysical[eAdj*mesh->Np + n] + offset;
 
-	  snew = sold - M_PI/2.;
-	  rnew = atan(tan(rold)/tan(sold));
+	  rnew = sold - M_PI/2.;
+	  snew = atan(tan(rold)/tan(sold));
 
-	  rmax = mesh->rphysical[eOverlap*mesh->Np];
-	  rmin = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
+	  smax = mesh->sphysical[eOverlap*mesh->Np];
+	  smin = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
-	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  if (smin - snew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  else if (snew - smax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
 	  else eInterp = eOverlap;
 
-	  rmax = mesh->rphysical[eInterp*mesh->Np];
-	  rmin = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
+	  smax = mesh->sphysical[eInterp*mesh->Np];
+	  smin = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  par_loc = (rnew - rmin)/(rmax - rmin);
+	  par_loc = (snew - smin)/(smax - smin);
 	  perp_index = n/mesh->Nq;
 	  
-	  rsdir = rdir;
+	  rsdir = sdir;
 
 	  break;
 	case 11:
-	  rold = mesh->rphysical[eAdj*mesh->Np + n];
-	  sold = mesh->sphysical[eAdj*mesh->Np + n] + offset;
+	  rold = mesh->rphysical[eAdj*mesh->Np + n] + offset;
+	  sold = mesh->sphysical[eAdj*mesh->Np + n];
 
-	  snew = sold - M_PI/2.;
-	  rnew = atan(tan(rold)/tan(sold));
+	  snew = rold - M_PI/2.;
+	  rnew = atan(tan(sold)/tan(rold));
 
 	  rmax = mesh->rphysical[eOverlap*mesh->Np];
 	  rmin = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
@@ -853,7 +853,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmin = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
 	  par_loc = (rnew - rmin)/(rmax - rmin);
-	  perp_index = n/mesh->Nq;
+	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
 	  
 	  rsdir = rdir;
 
@@ -862,69 +862,69 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rold = mesh->rphysical[eAdj*mesh->Np + n];
 	  sold = mesh->sphysical[eAdj*mesh->Np + n] - offset;
 
-	  snew = M_PI/2. + sold;
-	  rnew = -1*atan(tan(rold)/tan(sold));
+	  rnew = M_PI/2. + sold;
+	  snew = -1*atan(tan(rold)/tan(sold));
+
+	  smin = mesh->sphysical[eOverlap*mesh->Np];
+	  smax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
+	  
+	  if (smin - snew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (snew - smax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  else eInterp = eOverlap;
+	  
+	  smin = mesh->sphysical[eInterp*mesh->Np];
+	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
+	  
+	  par_loc = (snew - smin)/(smax - smin);
+	  perp_index = n/mesh->Nq;
+	  
+	  rsdir = sdir;
+
+	  break;
+	case 23:
+	  rold = mesh->rphysical[eAdj*mesh->Np + n] - offset;
+	  sold = mesh->sphysical[eAdj*mesh->Np + n];
+
+	  snew = -1*(rold + M_PI/2.);
+	  rnew = -1*atan(tan(sold)/tan(rold));
 
 	  rmin = mesh->rphysical[eOverlap*mesh->Np];
 	  rmax = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
-	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
+	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
 	  else eInterp = eOverlap;
-	  
+
 	  rmin = mesh->rphysical[eInterp*mesh->Np];
 	  rmax = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
 	  par_loc = (rnew - rmin)/(rmax - rmin);
-	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
+	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
 	  
 	  rsdir = rdir;
-
-	  break;
-	case 23:
-	  rold = mesh->rphysical[eAdj*mesh->Np + n];
-	  sold = mesh->sphysical[eAdj*mesh->Np + n] - offset;
-
-	  rnew = -1*(sold + M_PI/2.);
-	  snew = -1*atan(tan(rold)/tan(sold));
-
-	  smin = mesh->rphysical[eOverlap*mesh->Np];
-	  smax = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
-	  
-	  if (smin - snew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 3];
-	  else if (snew - smax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 1];
-	  else eInterp = eOverlap;
-
-	  smin = mesh->rphysical[eInterp*mesh->Np];
-	  smax = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
-	  
-	  par_loc = (snew - smin)/(smax - smin);
-	  perp_index = n%mesh->Nq;
-	  
-	  rsdir = sdir;
 
 	  break;
 	case 33:
 	  rold = mesh->rphysical[eAdj*mesh->Np + n];
 	  sold = mesh->sphysical[eAdj*mesh->Np + n] - offset;
 
-	  snew = -1*(sold + M_PI/2.);
-	  rnew = -1*atan(tan(rold)/tan(sold));
+	  rnew = -1*(sold + M_PI/2.);
+	  snew = -1*atan(tan(rold)/tan(sold));
 
-	  rmin = mesh->rphysical[eOverlap*mesh->Np];
-	  rmax = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
+	  smin = mesh->sphysical[eOverlap*mesh->Np];
+	  smax = mesh->sphysical[eOverlap*mesh->Np + mesh->Np - 1];
 	  
-	  if (rmin - rnew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
-	  else if (rnew - rmax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
+	  if (smin - snew > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 0];
+	  else if (snew - smax > tol) eInterp = mesh->EToE[eOverlap*mesh->Nfaces + 2];
 	  else eInterp = eOverlap;
 
-	  rmin = mesh->rphysical[eInterp*mesh->Np];
-	  rmax = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
+	  smin = mesh->sphysical[eInterp*mesh->Np];
+	  smax = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  par_loc = (rnew - rmin)/(rmax - rmin);
-	  perp_index = n/mesh->Nq;
+	  par_loc = (snew - smin)/(smax - smin);
+	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
 	  
-	  rsdir = rdir;
+	  rsdir = sdir;
 
 	  break;	  
 	}
