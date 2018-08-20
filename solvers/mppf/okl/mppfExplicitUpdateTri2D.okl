@@ -80,12 +80,17 @@
           // Add explicit viscous stress                     
           dfloat fbx = 0.f; 
           dfloat fby = 0.f;
-          #if 1  
-            mppfVelocitySource2D(time,x[id],y[id],&fbx, &fby);
-          #endif
+          mppfVelocitySource2D(time,x[id],y[id],&fbx, &fby);
+          
 
+          #if 0  
           rhsu += dt*invrho*fbx;
           rhsv += dt*invrho*fby;
+          #else
+          rhsu += dt*fbx;
+          rhsv += dt*fby;
+          #endif
+
           //
           Uhat[id + 0*fieldOffset] = rhsu;
           Uhat[id + 1*fieldOffset] = rhsv; 

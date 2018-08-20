@@ -63,7 +63,7 @@ typedef struct {
   dfloat idt, inu; // hold some inverses
   dfloat hmin, eta, eta2, inveta2, factorS;     // element length, interface thickness, eta^2. 
   dfloat *U, *P, *Phi, *Psi, *Rho, *Mu, *GMu;
-  dfloat *NU, *LU, *GP, *NPhi, *HPhi, *GPhi;
+  dfloat *NU, *LU, *GP, *NPhi, *HPhi, *GHPhi, *GPhi;
   dfloat *GU, *DU, *SU;   // GU is depreceated
   dfloat *rhsU, *rhsV, *rhsW, *rhsP, *rhsPhi;   
   dfloat *rkU, *rkP, *rkPhi, *PI;
@@ -136,16 +136,7 @@ typedef struct {
 
 
 
-  occa::kernel phaseFieldAdvectionVolumeKernel;
-  occa::kernel phaseFieldAdvectionSurfaceKernel;
-  occa::kernel phaseFieldDivGradKernel; 
-  occa::kernel phaseFieldRhsSolve1Kernel; 
-  occa::kernel phaseFieldRhsSolve2Kernel; 
-  occa::kernel phaseFieldRhsIpdgBCKernel;
-
-  occa::kernel phaseFieldGradientVolumeKernel;
-  occa::kernel phaseFieldGradientSurfaceKernel;
-
+  
 
   occa::kernel scaledAddKernel;
   occa::kernel multiplyScalarKernel;
@@ -163,7 +154,7 @@ typedef struct {
 
   occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP, o_rhsPhi; 
 
-  occa::memory o_NU, o_LU, o_GP, o_NPhi, o_HPhi, o_GPhi;
+  occa::memory o_NU, o_LU, o_GP, o_NPhi, o_HPhi, o_GHPhi, o_GPhi;
   occa::memory o_GU, o_DU, o_SU; // o_GU is depreceated
 
   occa::memory o_UH, o_VH, o_WH, o_PhiH, o_Uhat;
@@ -184,6 +175,25 @@ typedef struct {
   //EXTBDF data
   occa::memory o_extbdfA, o_extbdfB, o_extbdfC;
   occa::memory o_extC;
+
+
+  occa::kernel phaseFieldAdvectionVolumeKernel;
+  occa::kernel phaseFieldAdvectionSurfaceKernel;
+  occa::kernel phaseFieldDivGradKernel; 
+  occa::kernel phaseFieldUpdateMixingEnergyKernel; 
+  occa::kernel phaseFieldAxGradKernel;
+  occa::kernel phaseFieldAxIpdgKernel;
+
+
+  occa::kernel phaseFieldRhsSolve1Kernel; 
+  occa::kernel phaseFieldRhsSolve2Kernel; 
+  occa::kernel phaseFieldRhsIpdgBCKernel;
+  occa::kernel phaseFieldRhsBCKernel;
+  occa::kernel phaseFieldAddBCKernel;
+
+  occa::kernel phaseFieldGradientVolumeKernel;
+  occa::kernel phaseFieldGradientSurfaceKernel;
+
 
   occa::kernel velocityHaloExtractKernel;
   occa::kernel velocityHaloScatterKernel;

@@ -33,6 +33,7 @@
             s_rhsPhi[es][n] += J*p_chInvLM*(idt*extbdfB[s]*phim - extbdfA[s]*nphim); // 1/ (lamda*M) * ( BDF(Phi)/dt -  ext(NPhi) )
           }
           
+          // Sign needd to be checked
           s_rhsPhi[es][n] +=  1.f*J*lapPhi[id]; // Add  lap(h(phie) - S/eta^2 * phie)
      
 #if 1            

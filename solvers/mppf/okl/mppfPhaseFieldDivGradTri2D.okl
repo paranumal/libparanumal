@@ -11,8 +11,8 @@
                                        const dfloat inveta2,  
                                        const dfloat chSeta2,  
                                        @restrict const  dfloat *  Phi,
-                                       @restrict const  dfloat *  HPhi,
-                                             @restrict dfloat *  lapPhi){
+                                       @restrict        dfloat *  HPhi,
+                                       @restrict        dfloat *  lapPhi){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     // for all elements
@@ -28,20 +28,25 @@
         if(e<Nelements){
           drdx = 0.f,  drdy = 0.f;
           dsdx = 0.f,  dsdy = 0.f;
-          dfloat phie   = 0.f; // phase field
+          // dfloat phie   = 0.f; // phase field
           dfloat hphie  = 0.f; // potential function
-
-          
           // Extrapolate Phi history
           const dlong id = n + e*p_Np; 
+
+          #if 1
+          dfloat phin =  Phi[id]; 
+          HPhi[id]    = inveta2*phin*(phin*phin - 1.0f) - chSeta2*phin;
+
+          #endif
           
           for (int s=0;s<p_Nstages;s++) {
-            phie   += extbdfA[s]* Phi[id + s*offset]; // extrapolated phi
+            // phie   += extbdfA[s]* Phi[id + s*offset]; // extrapolated phi
             hphie  += extbdfA[s]*HPhi[id + s*offset]; // extrapolated potential
           }
           // compute h(phie)  - S/eta^2 * phie
           // s_Phi[es][n]  = inveta2*phie*(phie*phie - 1.0f) - chSeta2*phie; 
-          s_Phi[es][n]  = inveta2*hphie - chSeta2*phie; 
+          // s_Phi[es][n]  = inveta2*hphie - chSeta2*phie; 
+          s_Phi[es][n]  = hphie; 
         }
       }
     }

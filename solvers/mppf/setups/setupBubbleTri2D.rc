@@ -2,12 +2,12 @@
 1.0
 
 [DATA FILE]
-data/mppfCahnHilliard2D.h
-#data/mppfRisingBubble2D.h
+#data/mppfCahnHilliard2D.h
+data/mppfRisingBubble2D.h
 
 [MESH FILE]
-../../meshes/mppfCahnHilliardTri2D.msh
-#../../meshes/mppfRisingBubbleTri2D.msh
+#../../meshes/mppfCahnHilliardTri2D.msh
+../../meshes/mppfRisingBubbleTri2D.msh
 
 [MESH DIMENSION]
 2
@@ -39,36 +39,27 @@ CUBATURE
 
 #give zero to default it 
 [BAND THICKNESS]
-0.1
-#0.0005
+0.05
 
 #give zero if you need to compute inside 
 [MIXING ENERGY DENSITY]
-0.001
-#0.0
+0.0
 
 #give zero if you need to compute inside 
 [MOBILITY]
-0.001
-#0.0
+0.0
 
 [VISCOSITY PHASE 1]
-0.01
-#1.78E-5
+0.0148
 
 [VISCOSITY PHASE 2]
-0.02
-#1.002E-3
-#1.78E-5
+0.8322
 
 [DENSITY PHASE 1]
 1.0
-#1.204
 
 [DENSITY PHASE 2]
-3.0
-#998.207
-#2.404
+826.08
 
 [MACH NUMBER]
 .2
@@ -84,7 +75,7 @@ CUBATURE
 
 #zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-1
+100
 
 # zero to ignore
 [TSTEPS FOR FORCE OUTPUT]
@@ -98,7 +89,7 @@ CUBATURE
 0.0
 
 [FINAL TIME]
-0.5
+3.0
 
 [CFL]
 0.2
@@ -197,7 +188,7 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [VELOCITY PRECONDITIONER]
-MASSMATRIX
+MULTIGRID
 
 ########## MULTIGRID Options ##############
 

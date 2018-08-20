@@ -155,3 +155,142 @@
     }
   }
 }
+
+
+
+
+
+
+//RHS contributions for continuous solver
+@kernel void mppfPhaseFieldBCTri2D(const dlong Nelements,
+        @restrict const  dfloat *  ggeo,
+        @restrict const  dfloat *  sgeo,
+        @restrict const  dfloat *  Dmatrices,
+        @restrict const  dfloat *  Smatrices,
+        @restrict const  dfloat *  MM,
+        @restrict const  dlong  *  vmapM,
+        @restrict const  int    *  EToB,
+        @restrict const  dfloat *  sMT,
+        const dfloat lambda,
+        const dfloat time,
+        @restrict const  dfloat *  x,
+        @restrict const  dfloat *  y,
+        @restrict const  dfloat *  z,
+        @restrict const  int    *  mapB,
+        @restrict dfloat  *  rhsPhi){
+
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_Phi[p_Np];
+    @shared dfloat s_ndPhi[p_Nfp*p_Nfaces];
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        s_Phi[n] = 0.;
+      }
+      if(n<p_NfacesNfp){
+        s_ndPhi[n] = 0.;
+      }
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp){
+        const dlong id  = n + e*p_Nfaces*p_Nfp;
+        const dlong idM = vmapM[id];          
+        const int nid = idM%p_Np; 
+
+        const int face = n/p_Nfp;
+        
+        // load surface geofactors for this face
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx = sgeo[sid+p_NXID];
+        const dfloat ny = sgeo[sid+p_NYID];
+        const dfloat sJ = sgeo[sid+p_SJID];
+
+        dfloat dphidxP=0, dphidyP=0, phiP=0;
+       
+        const int bc = mapB[idM];
+        if(bc>0) {
+          mppfPhaseFieldDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, &phiP);
+          mppfPhaseFieldNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dphidxP, &dphidyP);
+        }
+
+        s_Phi[nid] = phiP;
+        s_ndPhi[n] = sJ*(nx*dphidxP + ny*dphidyP);
+      }
+    }
+
+    @barrier("local");
+    
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ 
+      if(n<p_Np){
+        //volume Dirichlet data
+        const dlong id = n + e*p_Np;
+        const dlong gid = e*p_Nggeo;
+        const dfloat Grr = ggeo[gid + p_G00ID];
+        const dfloat Grs = ggeo[gid + p_G01ID];
+        const dfloat Gss = ggeo[gid + p_G11ID];
+        const dfloat J   = ggeo[gid + p_GWJID];
+
+        dfloat MMphi = 0.f;
+        dfloat phirr = 0.f;
+        dfloat phirs = 0.f;
+        dfloat phiss = 0.f;
+
+        #pragma unroll p_Np
+          for (int k=0;k<p_Np;k++) {
+            const dfloat MMn = MM[n+k*p_Np];
+            const dfloat Srr = Smatrices[n+k*p_Np+0*p_Np*p_Np];
+            const dfloat Srs = Smatrices[n+k*p_Np+1*p_Np*p_Np];
+            const dfloat Sss = Smatrices[n+k*p_Np+2*p_Np*p_Np];
+            MMphi += MMn*s_Phi[k];
+            phirr += Srr*s_Phi[k];
+            phirs += Srs*s_Phi[k];
+            phiss += Sss*s_Phi[k];
+          }
+
+        dfloat LndPhi = 0;            
+        // surface mass * surface terms
+        #pragma unroll p_NfacesNfp
+          for(int i=0;i<p_NfacesNfp;++i){
+            const dfloat sMTn = sMT[n+i*p_Np];
+            LndPhi += sMTn*s_ndPhi[i];
+          }
+
+        rhsPhi[id] -= Grr*phirr+Grs*phirs+Gss*phiss + J*lambda*MMphi - LndPhi;
+      }
+    }
+  }
+}
+
+@kernel void mppfPhaseFieldAddBCTri2D(const dlong Nelements,
+                                   const dfloat time,
+                                   @restrict const  dfloat *  sgeo,
+                                   @restrict const  dfloat *  x,
+                                   @restrict const  dfloat *  y,
+                                   @restrict const  dfloat *  z,
+                                   @restrict const  dlong  *  vmapM,
+                                   @restrict const  int    *  mapB,
+                                         @restrict dfloat *   Phi){
+  
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
+      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+      const int bc = mapB[idM];
+
+      if(bc>0) {
+        const dfloat phiM = Phi[idM];
+        
+        const int face = n/p_Nfp;
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx = sgeo[sid+p_NXID];
+        const dfloat ny = sgeo[sid+p_NYID];
+
+        dfloat phiP = 0.f;
+        mppfPhaseFieldDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, phiM, &phiP);
+        Phi[idM] = phiP;
+      }    
+    }
+  }
+}

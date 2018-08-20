@@ -26,8 +26,23 @@ void mppfCahnHilliardRhs(mppf_t *mppf, dfloat time){
   }
   
   // 
-  // 1-> compute NPhi =  u*grad(Phi) = div(u*Phi) on Cubature Nodes and update potential function HPhi
-  mppf->phaseFieldAdvectionVolumeKernel(mesh->Nelements,
+  // // 1-> compute NPhi =  u*grad(Phi) = div(u*Phi) on Cubature Nodes and update potential function HPhi
+  // mppf->phaseFieldAdvectionVolumeKernel(mesh->Nelements,
+  //                                      mesh->o_vgeo,
+  //                                      mesh->o_cubvgeo,
+  //                                      mesh->o_cubDWmatrices,
+  //                                      mesh->o_cubInterpT,
+  //                                      mesh->o_cubProjectT,
+  //                                      mppf->fieldOffset,
+  //                                      mppf->o_U,
+  //                                      mppf->o_cU,
+  //                                      mppf->o_Phi,
+  //                                      mppf->o_NPhi, // Nonlinear convective Cahn-Hilliard term
+  //                                      mppf->o_HPhi); // Potential function to be extrapolated: double-well currently
+
+
+
+mppf->phaseFieldAdvectionVolumeKernel(mesh->Nelements,
                                        mesh->o_vgeo,
                                        mesh->o_cubvgeo,
                                        mesh->o_cubDWmatrices,
@@ -37,8 +52,7 @@ void mppfCahnHilliardRhs(mppf_t *mppf, dfloat time){
                                        mppf->o_U,
                                        mppf->o_cU,
                                        mppf->o_Phi,
-                                       mppf->o_NPhi, // Nonlinear convective Cahn-Hilliard term
-                                       mppf->o_HPhi); // Potential function to be extrapolated: double-well currently
+                                       mppf->o_NPhi); // Potential function to be extrapolated: double-well currently
 
 
   if(mesh->totalHaloPairs>0){
@@ -74,6 +88,7 @@ void mppfCahnHilliardRhs(mppf_t *mppf, dfloat time){
                                         mppf->o_NPhi);
 
 
+#if 0
 // dfloat tn1 = mppf->time + mppf->dt;
   // Compute laplace (h (phi^*)  - S/eta^2 phi^*) (replace with actial IPDG version)
   mppf->phaseFieldDivGradKernel(mesh->Nelements,
@@ -90,6 +105,42 @@ void mppfCahnHilliardRhs(mppf_t *mppf, dfloat time){
                                 mppf->o_Phi,
                                 mppf->o_HPhi,
                                 mppf->o_lapPhi);
+#else
+// Upadte Hq energy term
+const dlong Ntotal = mesh->Nelements + mesh->totalHaloPairs; 
+mppf->phaseFieldUpdateMixingEnergyKernel(Ntotal,
+                                         time,
+                                         mppf->inveta2,
+                                         mppf->chSeta2,
+                                         mppf->o_Phi,
+                                         mppf->o_HPhi);
+// Extrapolate and compute Gradient
+mppf->phaseFieldAxGradKernel(mesh->Nelements,
+                            mppf->fieldOffset,
+                            mppf->o_extbdfA,
+                            mesh->o_vgeo,
+                            mesh->o_Dmatrices,
+                            mppf->o_HPhi,
+                            mppf->o_GHPhi);
+
+
+const dfloat zero = 0.0; 
+
+// laplace(HPhi) = - M^-1 * Ax(HPhi)
+mppf->phaseFieldAxIpdgKernel(mesh->Nelements,
+                        mesh->o_vmapM,
+                        mesh->o_vmapP,
+                        zero, // lambda,
+                        mppf->psiSolver->tau,// zero, // mppf->tau,
+                        mesh->o_vgeo,
+                        mesh->o_sgeo,
+                        mesh->o_EToB,
+                        mesh->o_Dmatrices,
+                        mesh->o_LIFTT,
+                        mesh->o_MM,
+                        mppf->o_GHPhi,
+                        mppf->o_lapPhi);
+#endif
 
   
   

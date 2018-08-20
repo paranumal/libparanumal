@@ -77,6 +77,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->GP      = (dfloat*) calloc(mppf->NVfields*(mppf->Nstages+1)*Ntotal,sizeof(dfloat));
   mppf->NPhi    = (dfloat*) calloc(               (mppf->Nstages+1)*Ntotal,sizeof(dfloat));
   mppf->HPhi    = (dfloat*) calloc(               (mppf->Nstages+1)*Ntotal,sizeof(dfloat));
+  mppf->GHPhi   = (dfloat*) calloc(                               4*Ntotal,sizeof(dfloat));
   
   // This needs to be changed too much storage!!!!!!!
   mppf->GU      = (dfloat*) calloc(mppf->NVfields*mppf->NVfields*Ntotal,sizeof(dfloat));
@@ -140,6 +141,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
 
   options.getArgs("DENSITY PHASE 1", mppf->rho1);
   options.getArgs("DENSITY PHASE 2", mppf->rho2);
+
   
   
   //Reynolds number defined on the phase with lower material properties
@@ -283,11 +285,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   MPI_Allreduce(&dt  , &(mppf->dti),  1, MPI_DFLOAT, MPI_MIN, mesh->comm);
   MPI_Allreduce(&hmin, &(mppf->hmin), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
   
-  // characteristic length of interface thickness
-  mppf->eta =  mppf->hmin; // Change this later, currently no mppfide !!!!!
-
-  mppf->eta = 0.1;  // WARNING MUST COMMENT OUT !!!!!!!!!!!!!!!!!!!!!
-
+  
   mppf->dt = mppf->dti;
 
   options.getArgs("FINAL TIME", mppf->finalTime);
@@ -310,6 +308,13 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->dtMIN = 1E-2*mppf->dt; //minumum allowed timestep
   if (mppf->Nsubsteps && mesh->rank==0) 
     printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", mppf->dt, mppf->sdt, mppf->dt/mppf->sdt);
+
+
+options.getArgs("BAND THICKNESS", mppf->eta);
+  // characteristic length of interface thickness
+  if(mppf->eta<1.0E-12)
+    mppf->eta =  10.0*mppf->hmin; 
+
 
 
   // // Set pahse field function on device
@@ -349,8 +354,21 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->outputForceStep = 0;
   options.getArgs("TSTEPS FOR FORCE OUTPUT", mppf->outputForceStep);
 
+
+
   options.getArgs("MIXING ENERGY DENSITY", mppf->chL);
   options.getArgs("MOBILITY", mppf->chM);
+  
+  if(mppf->chL<1.0E-12 || mppf->chM<1.0E-12){
+    // Problem specific definitions, normally should be constant and given in setup file
+    //  lmabda = 3/sqrt(2) * surface_tension * interface_thickness
+    // mppf->chL = 1.5 * 7.28E-2 * mppf->eta/ sqrt(2.0);
+    // mppf->chM = 1.0E-7/ mppf->chL;
+    dfloat nsigma =  604.6512; // non-dminasional surface tension
+
+    mppf->chL = 1.5 *nsigma* mppf->eta/ sqrt(2.0);
+    mppf->chM = 1.0E-7/ mppf->chL;
+  }
 
 
   kernelInfo["defines/" "p_chL"]        = mppf->chL;   // mixing energy
@@ -608,6 +626,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->o_GPhi  = mesh->device.malloc(                  mppf->NVfields*Ntotal*sizeof(dfloat), mppf->GPhi);
   mppf->o_NPhi  = mesh->device.malloc(               (mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->NPhi);
   mppf->o_HPhi  = mesh->device.malloc(               (mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->HPhi);
+  mppf->o_GHPhi = mesh->device.malloc(                               4*Ntotal*sizeof(dfloat), mppf->GHPhi);
   
   mppf->o_NU    = mesh->device.malloc(mppf->NVfields*(mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->NU);
   mppf->o_LU    = mesh->device.malloc(mppf->NVfields*(mppf->Nstages+1)*Ntotal*sizeof(dfloat), mppf->LU);
@@ -727,7 +746,18 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
       sprintf(fileName, DMPPF "/okl/mppfPhaseFieldDivGrad%s.okl", suffix);
       sprintf(kernelName, "mppfPhaseFieldDivGrad%s", suffix);
       mppf->phaseFieldDivGradKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      
+      mppf->phaseFieldUpdateMixingEnergyKernel =  
+               mesh->device.buildKernel(DMPPF "/okl/mppfPhaseFieldUpdateMixingEnergy.okl", 
+                                              "mppfPhaseFieldUpdateMixingEnergy", kernelInfo);
 
+      sprintf(fileName, DMPPF "/okl/mppfPhaseFieldAxGrad%s.okl", suffix);
+      sprintf(kernelName, "mppfPhaseFieldAxGrad%s", suffix);
+      mppf->phaseFieldAxGradKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      
+      sprintf(fileName, DMPPF "/okl/mppfPhaseFieldAxIpdg%s.okl", suffix);
+      sprintf(kernelName, "mppfPhaseFieldAxIpdg%s", suffix);
+      mppf->phaseFieldAxIpdgKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       // ===========================================================================//
 
       sprintf(fileName, DMPPF "/okl/mppfPhaseFieldRhs%s.okl", suffix);
@@ -740,6 +770,12 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
       sprintf(fileName, DMPPF "/okl/mppfPhaseFieldBC%s.okl", suffix);
       sprintf(kernelName, "mppfPhaseFieldIpdgBC%s", suffix);
       mppf->phaseFieldRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfPhaseFieldBC%s", suffix);
+      mppf->phaseFieldRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfPhaseFieldAddBC%s", suffix);
+      mppf->phaseFieldAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       //===========================================================================//
 

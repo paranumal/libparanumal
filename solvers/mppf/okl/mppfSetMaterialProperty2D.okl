@@ -9,7 +9,9 @@
       dlong id = n+p_Np*e;
 
       if(id<p_Np*Nelements){
-        const dfloat phin = Phi[id]; 
+        const dfloat phi = Phi[id]; 
+        // Enforce positivity
+        dfloat phin = (fabs(phi)<=1.f) ?  phi : fabs(phi)/phi; 
         Rho[id]        = 0.5f* (p_rho1 + p_rho2) + 0.5f*(p_rho1- p_rho2)*phin;
         Mu[id]         = 0.5f* (p_mu1  + p_mu2)  + 0.5f*(p_mu1 - p_mu2)*phin;
       }

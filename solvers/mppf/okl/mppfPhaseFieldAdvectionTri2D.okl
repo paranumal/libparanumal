@@ -1,4 +1,18 @@
-// compute Nphi =  div(u*Phi) on cubature points
+// // compute Nphi =  div(u*Phi) on cubature points
+// @kernel void mppfPhaseFieldAdvectionCubatureVolumeTri2D(const dlong Nelements,
+//                                                         @restrict const  dfloat *  vgeo,
+//                                                         @restrict const  dfloat *  cubvgeo,
+//                                                         @restrict const  dfloat *  cubDmatrices,
+//                                                         @restrict const  dfloat *  cubInterpT,
+//                                                         @restrict const  dfloat *  cubProjectT,
+//                                                                   const  dlong     offset,
+//                                                         @restrict const  dfloat *  U,
+//                                                         @restrict        dfloat *  cU,
+//                                                         @restrict const  dfloat *  Phi, 
+//                                                         @restrict        dfloat *  NPhi,
+//                                                         @restrict        dfloat *  HPhi){
+
+  // compute Nphi =  div(u*Phi) on cubature points
 @kernel void mppfPhaseFieldAdvectionCubatureVolumeTri2D(const dlong Nelements,
                                                         @restrict const  dfloat *  vgeo,
                                                         @restrict const  dfloat *  cubvgeo,
@@ -9,8 +23,8 @@
                                                         @restrict const  dfloat *  U,
                                                         @restrict        dfloat *  cU,
                                                         @restrict const  dfloat *  Phi, 
-                                                        @restrict        dfloat *  NPhi,
-                                                        @restrict        dfloat *  HPhi){
+                                                        @restrict        dfloat *  NPhi){
+
 
   for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
 
@@ -80,8 +94,8 @@
       	  NPhi[e*p_Np + n] = -(dfdr + dfds); // note  change in sign, weakly implemented
 
           // Update poatential function
-          dfloat hphi = s_Phi[es][n]; 
-          HPhi[e*p_Np + n] =  hphi*(hphi*hphi - 1.0f); // double-well potential 
+          // dfloat hphi = s_Phi[es][n]; 
+          // HPhi[e*p_Np + n] =  hphi*(hphi*hphi - 1.0f); // double-well potential 
       	}
       }
     }

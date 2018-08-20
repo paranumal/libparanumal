@@ -92,7 +92,7 @@ void mppfPressureGradient(mppf_t *mppf, dfloat time, occa::memory o_P, occa::mem
   }
 
 
-#if 1
+#if 0
 o_GP.copyTo(mppf->GP); 
   for(int e=0; e<mesh->Nelements;e++){
       for(int n=0; n<mesh->Np; n++){

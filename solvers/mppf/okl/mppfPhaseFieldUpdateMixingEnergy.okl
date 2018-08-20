@@ -1,0 +1,17 @@
+@kernel void mppfPhaseFieldUpdateMixingEnergy(const dlong Nelements,
+                                                const dfloat t,
+                                                const dfloat inveta2,
+                                                const dfloat Sinveta2,
+                                                @restrict  const dfloat *  Phi,
+                                                @restrict        dfloat *  HPhi){
+
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = n+p_Np*e;
+      const dfloat phin = Phi[id];
+      const dfloat hphi = inveta2*phin*(phin*phin - 1.0f) -Sinveta2*phin; 
+      HPhi[id] = hphi; 
+    }
+  }
+}
