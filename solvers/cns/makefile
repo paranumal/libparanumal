@@ -9,8 +9,8 @@ include ${OCCA_DIR}/scripts/Makefile
 
 # define variables
 HDRDIR  = ../../include
+GSDIR  = ../../3rdParty/gslib
 OGSDIR  = ../../libs/gatherScatter
-
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -24,13 +24,15 @@ CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
-LIBS	=   -L$(OCCA_DIR)/lib $(links)
+LIBS	=   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
+			-L$(OCCA_DIR)/lib $(links)
 
 INCLUDES = cns.h
 
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
-$(HDRDIR)/mesh3D.h
+$(HDRDIR)/mesh3D.h \
+$(OGSDIR)/ogs.hpp 
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c 
@@ -107,8 +109,11 @@ OBJS    = \
 ../../src/timer.o
 
 
-cnsMain:$(OBJS) 
+cnsMain:$(OBJS) libogs
 	$(LD)  $(LDFLAGS)  -o cnsMain $(OBJS) $(paths) $(LIBS) 
+
+libogs:
+	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/cns
 
 # what to do if user types "make clean"
 clean :

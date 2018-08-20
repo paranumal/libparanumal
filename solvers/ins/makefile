@@ -157,16 +157,11 @@ all: lib insMain
 
 # what to do if user types "make clean"
 clean:
-	cd ../parALMOND; make clean; cd ../ins
 	cd ../elliptic; make clean; cd ../ins
-	cd ../../lib/gatherScatter/; make clean; cd ../../solvers/ins
 	cd ../../src; rm *.o; cd ../solvers/ins
 	rm ./src/*.o insMain libins.a
 
 realclean:
-	cd ../../3rdParty/BlasLapack; make clean; cd ../../solvers/ins
-	cd ../parALMOND; make clean; cd ../ins
-	cd ../elliptic; make clean; cd ../ins
-	cd ../../lib/gatherScatter/; make realclean; cd ../../solvers/ins
+	cd ../elliptic; make realclean; cd ../ins
 	cd ../../src; rm *.o; cd ../solvers/ins
 	rm ./src/*.o insMain libins.a
