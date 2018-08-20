@@ -9,8 +9,8 @@ include ${OCCA_DIR}/scripts/Makefile
 
 # define variables
 HDRDIR  = ../../include
-OGSDIR  = ../../libs/gatherScatter
 GSDIR  = ../../3rdParty/gslib
+OGSDIR  = ../../libs/gatherScatter
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -22,7 +22,7 @@ LD	= mpic++
 CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"'
 
 # link flags to be used 
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) -g -L../../3rdParty/gslib.github  -lgs -fopenmp
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) -g -fopenmp
 
 # libraries to be linked in
 LIBS	=   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
@@ -132,10 +132,14 @@ LOBJS = \
 ../../src/timer.o
 
 
-bnsMain:$(AOBJS) $(LOBJS) ./src/bnsMain.o
+bnsMain:$(AOBJS) $(LOBJS) ./src/bnsMain.o libogs
 	$(LD)  $(LDFLAGS)  -o bnsMain $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS) 
+
+libogs:
+	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/bns
 
 # what to do if user types "make clean"
 clean :
+	cd ../../libs/gatherScatter; make clean; cd ../../solvers/bns
 	rm -r $(AOBJS) $(LOBJS) bnsMain
 
