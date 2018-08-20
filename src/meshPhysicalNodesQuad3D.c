@@ -701,8 +701,8 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rold = mesh->rphysical[eAdj*mesh->Np + n];
 	  sold = mesh->sphysical[eAdj*mesh->Np + n] - offset;
 
-	  rnew = atan(tan(rold)/tan(sold));
-	  snew = -1*(rold + M_PI/2.);
+	  rnew = -1*atan(tan(rold)/tan(sold));
+	  snew = -1*(sold + M_PI/2.);
 
 	  rmax = mesh->rphysical[eOverlap*mesh->Np];
 	  rmin = mesh->rphysical[eOverlap*mesh->Np + mesh->Np - 1];
@@ -724,7 +724,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rold = mesh->rphysical[eAdj*mesh->Np + n];
 	  sold = mesh->sphysical[eAdj*mesh->Np + n] - offset;
 
-	  rnew = atan(tan(rold)/tan(sold));
+	  rnew = -1*atan(tan(rold)/tan(sold));
 	  snew = -1*(M_PI/2. + sold);
 
 	  rmin = mesh->rphysical[eOverlap*mesh->Np];
