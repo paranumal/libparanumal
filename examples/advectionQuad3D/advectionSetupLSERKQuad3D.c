@@ -64,7 +64,7 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
       }
     }
     
-    dfloat cfl = 2; // depends on the stability region size
+    dfloat cfl = 1; // depends on the stability region size
 
     // dt ~ cfl (h/(N+1)^2)/(Lambda^2*fastest wave speed)
     solver->dt = cfl*hmin/((mesh->N+1.)*(mesh->N+1.));
@@ -85,14 +85,20 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
     printf("dt = %g\n", solver->dt);
     
     occa::kernelInfo kernelInfo;
+
+    // resize some variables prior to loading
+    solver->q = (dfloat *)realloc(solver->q,mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));
+    for (iint i = 0; i <  mesh->NgridElements - mesh->Nelements; ++i) {
+      solver->q[(mesh->Nelements + i)*mesh->Np*solver->Nfields] = 0;
+    }
     
     advectionSetupOccaQuad3D(solver,&kernelInfo);
        
     solver->o_q =
-      solver->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*solver->Nfields*sizeof(dfloat), solver->q);
+      solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat), solver->rhsq);
 
     solver->o_qpre =
-      solver->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*solver->Nfields*sizeof(dfloat), solver->q);
+      solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat), solver->q);
 
     solver->o_rhsq =
       solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat), solver->rhsq);
@@ -101,7 +107,7 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
       solver->device.malloc(mesh->Np*(mesh->NgridElements-mesh->Nelements)*sizeof(iint),mesh->eInterp);
 
     solver->o_gridToE =
-      solver->device.malloc(mesh->Nfaces*mesh->NgridElements*sizeof(iint),mesh->gridToE);
+      solver->device.malloc(mesh->Nfaces*mesh->Nelements*sizeof(iint),mesh->gridToE);
     
     solver->o_overlapDirection =
       solver->device.malloc((mesh->NgridElements - mesh->Nelements)*sizeof(char),mesh->overlapDirection);

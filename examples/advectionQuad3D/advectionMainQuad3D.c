@@ -43,7 +43,7 @@ int main(int argc, char **argv){
     advectionRunDOPRIQuad3D(solver);
   }
   else if (strstr(mode,"LSERK")) {
-    advectionRunLSERKbasicQuad3D(solver,1./N);
+    advectionRunLSERKbasicQuad3D(solver,atoi(argv[3])/10.);
   }
   
   solver->o_qpre.copyTo(solver->q);
