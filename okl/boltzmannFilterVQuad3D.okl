@@ -389,6 +389,7 @@ kernel void boltzmannFilterVglobalQuad3D(const iint Nelements,
 					 const dfloat * restrict x,
 					 const dfloat * restrict y,
 					 const dfloat * restrict z,
+					 const dfloat * restrict qOrig,
 					 const dfloat * restrict qIn,
 					 dfloat * restrict Fq) {
   
@@ -414,8 +415,8 @@ kernel void boltzmannFilterVglobalQuad3D(const iint Nelements,
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
 	      s_q[fld][1][j][i] = qIn[eo*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
-	      s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
-	      s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	      s_q[fld][0][j][i] = qOrig[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+	      s_q[fld][2][j][i] = qOrig[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 	    }
 	}
       }
@@ -450,7 +451,7 @@ kernel void boltzmannFilterVglobalQuad3D(const iint Nelements,
 	  // use saved data for blend
 	  for (iint fld=0; fld<p_Nfields;++fld) {
 	    int id = eo*p_Nfields*p_Np+fld*p_Np + j*p_Nq + i;
-	    Fqij[fld] = Fqij[fld]*(1. - alpha) + alpha*Fq[id];
+	    Fqij[fld] = Fqij[fld]*(1. - alpha) + alpha*qOrig[id];
 	  }
 	  
 	  // constrain momentum changes to lie on sphere
