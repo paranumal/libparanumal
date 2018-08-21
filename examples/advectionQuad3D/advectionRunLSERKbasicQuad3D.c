@@ -29,7 +29,6 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			solver->o_gridToE,
 			solver->o_qpre,
 			solver->o_qFilter);
-  
   solver->filterKernelV(mesh->Nelements,
 			mesh->NgridElements,
 			alpha,
@@ -118,9 +117,9 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			     solver->o_resq,
 			     solver->o_qpre);
       }
-      /*if (tstep == 349) {
+      if (tstep == 9) {
 	solver->o_qpre.copyTo(solver->q);
-	advectionErrorNormQuad3D(solver,350*solver->dt,"end",0);
-	}*/
+	advectionErrorNormQuad3D(solver,10*solver->dt,"start",0);
+      }
   }
 }
