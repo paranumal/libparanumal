@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "mppf.h"
 
-void mppfPressureRhs(mppf_t *mppf, dfloat time, occa::memory o_rkU){
+void mppfPressureRhs(mppf_t *mppf, dfloat time){
 
   mesh_t *mesh = mppf->mesh;
 
@@ -104,7 +104,7 @@ void mppfPressureRhs(mppf_t *mppf, dfloat time, occa::memory o_rkU){
     }
   }
 
-  // o_rkU.copyFrom(mppf->rkU);
+  // mppf->o_Uhat.copyFrom(mppf->rkU);
   
   // mppf->o_DU.copyFrom(mppf->DU); 
   // mppf->o_SU.copyFrom(mppf->SU); 
@@ -121,7 +121,7 @@ void mppfPressureRhs(mppf_t *mppf, dfloat time, occa::memory o_rkU){
 
 
 
-  // Upadte i.e. o_rkU = -NU + U^/dt + (1/rh0 - 1/rho^n+1)*GP^(*,n+1) -mu^(n+1)/rho^(n+1)*DU 
+  // Upadte i.e. mppf->o_Uhat = -NU + U^/dt + (1/rh0 - 1/rho^n+1)*GP^(*,n+1) -mu^(n+1)/rho^(n+1)*DU 
   //                                 + 1/rho^(n+1)*SU - lamdba*Psi*Ghi + 1/(rho^n+1)*f^(n+1) 
   mppf->explicitUpdateKernel(mesh->Nelements,
                            mesh->o_x,
@@ -143,10 +143,10 @@ void mppfPressureRhs(mppf_t *mppf, dfloat time, occa::memory o_rkU){
                            mppf->o_Psi,
                            mppf->o_Phi,
                            mppf->o_GPhi,
-                           o_rkU);
+                           mppf->o_Uhat);
 // Give exact NU
 #if 0 // Divergence is fine
-  // o_rkU.copyTo(mppf->rkU);
+  // mppf->o_Uhat.copyTo(mppf->rkU);
 
   for(int e=0; e<mesh->Nelements;e++){
     for(int n=0; n<mesh->Np; n++){
@@ -164,13 +164,13 @@ void mppfPressureRhs(mppf_t *mppf, dfloat time, occa::memory o_rkU){
   }
 
   // mppf->o_GSave.copyFrom(mppf->rkU); 
-  o_rkU.copyFrom(mppf->rkU); 
+  mppf->o_Uhat.copyFrom(mppf->rkU); 
 
 #endif
 
   
   // rhsP = Div Uhat
-  mppfDivergence(mppf, time, o_rkU, mppf->o_rhsP);
+  mppfDivergence(mppf, time, mppf->o_Uhat, mppf->o_rhsP);
 
 
 

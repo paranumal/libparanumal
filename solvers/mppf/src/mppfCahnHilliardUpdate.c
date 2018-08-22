@@ -4,7 +4,7 @@ void mppfCahnHilliardUpdate(mppf_t *mppf, dfloat time){
   
  mesh_t *mesh = mppf->mesh; 
  
-  // Update History// Very bad storage!!!! will try to decrease
+  // Update History // Very bad storage!!!! will try to decrease
   for (int s=mppf->Nstages;s>1;s--) {
     mppf->o_Phi.copyFrom(mppf->o_Phi, mppf->Ntotal*sizeof(dfloat), 
                                   (s-1)*mppf->Ntotal*sizeof(dfloat), 
@@ -49,7 +49,7 @@ mppf->o_Psi.copyFrom(mppf->Psi);
 
   
 
-  // Compute grad(Phi)
+  // Exchange Phi Here // Compute grad(Phi)
 
   if(mesh->totalHaloPairs>0){
     mppf->phaseFieldHaloExtractKernel(mesh->Nelements,
@@ -123,9 +123,6 @@ for(int e=0; e<mesh->Nelements;e++){
   mppf->o_GPhi.copyFrom(mppf->rkU);
 
  #endif
-
-
-  
 
   // Smooth density and viscosity on device 
   mppf->setMaterialPropertyKernel(mesh->Nelements, mppf->o_Phi, mppf->o_Rho, mppf->o_Mu);

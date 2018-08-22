@@ -377,6 +377,7 @@ options.getArgs("BAND THICKNESS", mppf->eta);
 
   // Some derived parameters
   mppf->idt     = 1.0/mppf->dt;
+  printf("Dt = %.4e\n ", mppf->dt);
   mppf->eta2    = mppf->eta*mppf->eta; 
   mppf->inveta2 = 1.0/ mppf->eta2; 
 
@@ -668,14 +669,18 @@ options.getArgs("BAND THICKNESS", mppf->eta);
     mppf->o_cU = mppf->o_U;
 
   if(mesh->totalHaloPairs){//halo setup
-    dlong vHaloBytes    = mesh->totalHaloPairs*mesh->Np*(mppf->NVfields)*sizeof(dfloat);
-    dlong pHaloBytes    = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-    dlong phiHaloBytes  = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+    dlong vHaloBytes     = mesh->totalHaloPairs*mesh->Np*(mppf->NVfields)*sizeof(dfloat);
+    dlong pHaloBytes     = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+    dlong phiHaloBytes   = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+    // Currently uses float 4 
+    dlong gPhiHaloBytes  = 4*mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+    
     dlong vGatherBytes  = mppf->NVfields*mesh->ogs->NhaloGather*sizeof(dfloat);
     
-    mppf->o_vHaloBuffer   = mesh->device.malloc(vHaloBytes);
-    mppf->o_pHaloBuffer   = mesh->device.malloc(pHaloBytes);
-    mppf->o_phiHaloBuffer = mesh->device.malloc(phiHaloBytes);
+    mppf->o_vHaloBuffer    = mesh->device.malloc(vHaloBytes);
+    mppf->o_pHaloBuffer    = mesh->device.malloc(pHaloBytes);
+    mppf->o_phiHaloBuffer  = mesh->device.malloc(phiHaloBytes);
+    mppf->o_gPhiHaloBuffer = mesh->device.malloc(gPhiHaloBytes);
 
     occa::memory o_vSendBuffer,   o_vRecvBuffer; 
     occa::memory o_pSendBuffer,   o_pRecvBuffer;
@@ -690,6 +695,9 @@ options.getArgs("BAND THICKNESS", mppf->eta);
 
     mppf->phiSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, phiHaloBytes, NULL, mppf->o_phiSendBuffer);
     mppf->phiRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, phiHaloBytes, NULL, mppf->o_phiRecvBuffer);
+
+    mppf->gPhiSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, gPhiHaloBytes, NULL, mppf->o_gPhiSendBuffer);
+    mppf->gPhiRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, gPhiHaloBytes, NULL, mppf->o_gPhiRecvBuffer);
 
     mppf->velocityHaloGatherTmp = (dfloat*) occaHostMallocPinned(mesh->device, vGatherBytes, NULL, mppf->o_gatherTmpPinned);
     
@@ -732,6 +740,13 @@ options.getArgs("BAND THICKNESS", mppf->eta);
 
       sprintf(kernelName, "mppfPhaseFieldHaloScatter");
       mppf->phaseFieldHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+
+      sprintf(kernelName, "mppfGradPhiHaloExtract");
+      mppf->gradPhaseFieldHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfGradPhiHaloScatter");
+      mppf->gradPhaseFieldHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
        // ===========================================================================
       printf("Compiling Kernels\n");

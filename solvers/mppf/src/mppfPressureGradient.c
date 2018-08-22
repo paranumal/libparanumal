@@ -27,37 +27,37 @@ SOFTWARE.
 #include "mppf.h"
 
 // complete a time step using LSERK4
-void mppfPressureGradient(mppf_t *mppf, dfloat time, occa::memory o_P, occa::memory o_GP){
+void mppfPressureGradient(mppf_t *mppf, dfloat time){
 
   mesh_t *mesh = mppf->mesh;
   
   if (mppf->pOptions.compareArgs("DISCRETIZATION","IPDG")) {
     if(mesh->totalHaloPairs>0){
       mppf->pressureHaloExtractKernel(mesh->Nelements,
-                                     mesh->totalHaloPairs,
-                                     mesh->o_haloElementList,
-                                     o_P,
-                                     mppf->o_pHaloBuffer);
+                                      mesh->totalHaloPairs,
+                                      mesh->o_haloElementList,
+                                      mppf->o_P,
+                                      mppf->o_pHaloBuffer);
 
       // copy extracted halo to HOST
       mppf->o_pHaloBuffer.copyTo(mppf->pSendBuffer);
 
       // start halo exchange
       meshHaloExchangeStart(mesh,
-                           mesh->Np*sizeof(dfloat),
-                           mppf->pSendBuffer,
-                           mppf->pRecvBuffer);
+                            mesh->Np*sizeof(dfloat),
+                            mppf->pSendBuffer,
+                            mppf->pRecvBuffer);
     }
   }
 
   occaTimerTic(mesh->device,"GradientVolume");
   // Compute Volume Contribution
   mppf->pressureGradientVolumeKernel(mesh->Nelements,
-                            mesh->o_vgeo,
-                            mesh->o_Dmatrices,
-                            mppf->fieldOffset,
-                            o_P,
-                            o_GP);
+                                    mesh->o_vgeo,
+                                    mesh->o_Dmatrices,
+                                    mppf->fieldOffset,
+                                    mppf->o_P,
+                                    mppf->o_GP);
   occaTimerToc(mesh->device,"GradientVolume");
 
   // COMPLETE HALO EXCHANGE
@@ -69,31 +69,31 @@ void mppfPressureGradient(mppf_t *mppf, dfloat time, occa::memory o_P, occa::mem
 
       mppf->pressureHaloScatterKernel(mesh->Nelements,
                                       mesh->totalHaloPairs,
-                                      o_P,
+                                      mppf->o_P,
                                       mppf->o_pHaloBuffer);
     }
 
     occaTimerTic(mesh->device,"GradientSurface");
     // Compute Surface Conribution
     mppf->pressureGradientSurfaceKernel(mesh->Nelements,
-                                         mesh->o_sgeo,
-                                         mesh->o_LIFTT,
-                                         mesh->o_vmapM,
-                                         mesh->o_vmapP,
-                                         mesh->o_EToB,
-                                         mesh->o_x,
-                                         mesh->o_y,
-                                         mesh->o_z,
-                                         time,
-                                         mppf->fieldOffset,
-                                         o_P,
-                                         o_GP);
+                                        mesh->o_sgeo,
+                                        mesh->o_LIFTT,
+                                        mesh->o_vmapM,
+                                        mesh->o_vmapP,
+                                        mesh->o_EToB,
+                                        mesh->o_x,
+                                        mesh->o_y,
+                                        mesh->o_z,
+                                        time,
+                                        mppf->fieldOffset,
+                                        mppf->o_P,
+                                        mppf->o_GP);
     occaTimerToc(mesh->device,"GradientSurface");
   }
 
 
 #if 0
-o_GP.copyTo(mppf->GP); 
+mppf->o_GP.copyTo(mppf->GP); 
   for(int e=0; e<mesh->Nelements;e++){
       for(int n=0; n<mesh->Np; n++){
         const int id = e*mesh->Np + n;
@@ -108,7 +108,7 @@ o_GP.copyTo(mppf->GP);
       }
     }
 
-o_GP.copyFrom(mppf->GP); 
+mppf->o_GP.copyFrom(mppf->GP); 
 
 #endif
 

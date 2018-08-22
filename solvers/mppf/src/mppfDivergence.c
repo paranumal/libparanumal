@@ -34,20 +34,20 @@ void mppfDivergence(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_
   if (mppf->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
     if(mesh->totalHaloPairs>0){
       mppf->velocityHaloExtractKernel(mesh->Nelements,
-                                 mesh->totalHaloPairs,
-                                 mesh->o_haloElementList,
-                                 mppf->fieldOffset,
-                                 o_U,
-                                 mppf->o_vHaloBuffer);
+                                    mesh->totalHaloPairs,
+                                    mesh->o_haloElementList,
+                                    mppf->fieldOffset,
+                                    o_U,
+                                    mppf->o_vHaloBuffer);
 
       // copy extracted halo to HOST 
       mppf->o_vHaloBuffer.copyTo(mppf->vSendBuffer);           
-    
+
       // start halo exchange
       meshHaloExchangeStart(mesh,
-                           mesh->Np*(mppf->NVfields)*sizeof(dfloat),
-                           mppf->vSendBuffer,
-                           mppf->vRecvBuffer);
+                            mesh->Np*(mppf->NVfields)*sizeof(dfloat),
+                            mppf->vSendBuffer,
+                            mppf->vRecvBuffer);
     }
   }
 

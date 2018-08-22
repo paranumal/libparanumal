@@ -171,24 +171,5 @@ SOFTWARE.
         Aq[n+e*p_Np] = -lap;
       }
     }
-
-    // @barrier("local");
-
-    // for(int n=0;n<p_maxNodes;++n;@inner(0)){
-
-    //   if(n<p_Np){
-    //     const dfloat J = vgeo[e*p_Nvgeo + p_JID];
-
-    //     dfloat Mlapq = 0;
-
-    //     // multiply by mass matrix
-    //     #pragma unroll p_Np
-    //       for(int i=0;i<p_Np;++i){
-    //         Mlapq += MM[n+i*p_Np]*s_lapq[i];
-    //       }
-
-    //     Aq[n+e*p_Np] = J*Mlapq;
-    //   }
-    // }
   }
 }

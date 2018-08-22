@@ -31,7 +31,7 @@ void mppfExplicitDiffusive(mppf_t *mppf, dfloat time, occa::memory o_U, occa::me
 
   mesh_t *mesh = mppf->mesh;
   // Halo exchange is already done in Advection kernel, just extrapolate elements with halo 
-  const dlong NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);  
+  const dlong NtotalElements = mesh->Nelements+mesh->totalHaloPairs;  
   
   occaTimerTic(mesh->device,"velocityExtrapolate");
   //compute advective velocity fields at time t

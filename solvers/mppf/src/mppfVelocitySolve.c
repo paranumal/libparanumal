@@ -27,8 +27,7 @@ SOFTWARE.
 #include "mppf.h"
 
 // solve lambda*U + A*U = rhsU
-void mppfVelocitySolve(mppf_t *mppf, dfloat time, occa::memory o_rhsU,  occa::memory o_rhsV, occa::memory o_rhsW, 
-                                                  occa::memory o_rkU){
+void mppfVelocitySolve(mppf_t *mppf, dfloat time, occa::memory o_rkU){
   
   mesh_t *mesh = mppf->mesh; 
   elliptic_t *usolver = mppf->uSolver; 
@@ -51,19 +50,20 @@ void mppfVelocitySolve(mppf_t *mppf, dfloat time, occa::memory o_rhsU,  occa::me
                               mesh->o_y,
                               mesh->o_z,
                               mppf->o_VmapB,
-                              o_rhsU,
-                              o_rhsV,
-                              o_rhsW);
+                              mppf->o_rhsU,
+                              mppf->o_rhsV,
+                              mppf->o_rhsW);
     
     // gather-scatter
-    ellipticParallelGatherScatter(mesh, mesh->ogs, o_rhsU, dfloatString, "add");  
-    ellipticParallelGatherScatter(mesh, mesh->ogs, o_rhsV, dfloatString, "add");  
+    ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsU, dfloatString, "add");  
+    ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsV, dfloatString, "add");  
     if (mppf->dim==3)
-      ellipticParallelGatherScatter(mesh, mesh->ogs, o_rhsW, dfloatString, "add");  
-    if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, o_rhsU);
-    if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, o_rhsV);
+      ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsW, dfloatString, "add");  
+    
+    if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, mppf->o_rhsU);
+    if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, mppf->o_rhsV);
     if (mppf->dim==3)
-      if (wsolver->Nmasked) mesh->maskKernel(wsolver->Nmasked, wsolver->o_maskIds, o_rhsW);
+      if (wsolver->Nmasked) mesh->maskKernel(wsolver->Nmasked, wsolver->o_maskIds, mppf->o_rhsW);
 
   } else if (mppf->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
 
@@ -81,9 +81,9 @@ void mppfVelocitySolve(mppf_t *mppf, dfloat time, occa::memory o_rhsU,  occa::me
                                   mesh->o_Dmatrices,
                                   mesh->o_LIFTT,
                                   mesh->o_MM,
-                                  o_rhsU,
-                                  o_rhsV,
-                                  o_rhsW);
+                                  mppf->o_rhsU,
+                                  mppf->o_rhsV,
+                                  mppf->o_rhsW);
     occaTimerToc(mesh->device,"velocityRhsIpdg");   
   }
 
@@ -103,16 +103,16 @@ void mppfVelocitySolve(mppf_t *mppf, dfloat time, occa::memory o_rhsU,  occa::me
   }
   
   occaTimerTic(mesh->device,"Ux-Solve");
-  mppf->NiterU = ellipticSolve(usolver, mppf->lambdaVel, mppf->velTOL, o_rhsU, mppf->o_UH);
+  mppf->NiterU = ellipticSolve(usolver, mppf->lambdaVel, mppf->velTOL, mppf->o_rhsU, mppf->o_UH);
   occaTimerToc(mesh->device,"Ux-Solve"); 
 
   occaTimerTic(mesh->device,"Uy-Solve");
-  mppf->NiterV = ellipticSolve(vsolver, mppf->lambdaVel, mppf->velTOL, o_rhsV, mppf->o_VH);
+  mppf->NiterV = ellipticSolve(vsolver, mppf->lambdaVel, mppf->velTOL, mppf->o_rhsV, mppf->o_VH);
   occaTimerToc(mesh->device,"Uy-Solve");
 
   if (mppf->dim==3) {
     occaTimerTic(mesh->device,"Uz-Solve");
-    mppf->NiterW = ellipticSolve(wsolver, mppf->lambdaVel, mppf->velTOL, o_rhsW, mppf->o_WH);
+    mppf->NiterW = ellipticSolve(wsolver, mppf->lambdaVel, mppf->velTOL, mppf->o_rhsW, mppf->o_WH);
     occaTimerToc(mesh->device,"Uz-Solve");
   }
 

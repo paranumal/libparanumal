@@ -96,6 +96,8 @@ typedef struct {
   dfloat *pRecvBuffer;
   dfloat *phiSendBuffer;
   dfloat *phiRecvBuffer;
+  dfloat *gPhiSendBuffer;
+  dfloat *gPhiRecvBuffer;
   dfloat * velocityHaloGatherTmp;
 
   occa::memory o_vSendBuffer;
@@ -104,6 +106,8 @@ typedef struct {
   occa::memory o_pRecvBuffer;
   occa::memory o_phiSendBuffer;
   occa::memory o_phiRecvBuffer;
+  occa::memory o_gPhiSendBuffer;
+  occa::memory o_gPhiRecvBuffer;
   occa::memory o_gatherTmpPinned;
 
 
@@ -163,7 +167,7 @@ typedef struct {
 
   occa::memory o_Vort, o_Div;
 
-  occa::memory o_vHaloBuffer, o_pHaloBuffer, o_phiHaloBuffer; 
+  occa::memory o_vHaloBuffer, o_pHaloBuffer, o_phiHaloBuffer, o_gPhiHaloBuffer; 
   occa::memory o_velocityHaloGatherTmp;
 
   //ARK data
@@ -201,6 +205,8 @@ typedef struct {
   occa::kernel pressureHaloScatterKernel;
   occa::kernel phaseFieldHaloExtractKernel;
   occa::kernel phaseFieldHaloScatterKernel;
+  occa::kernel gradPhaseFieldHaloExtractKernel;
+  occa::kernel gradPhaseFieldHaloScatterKernel;
 
   occa::kernel setFlowFieldKernel;
   occa::kernel setPhaseFieldKernel;
@@ -263,42 +269,19 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options);
 
 void mppfReport(mppf_t *mppf, dfloat time,  int tstep);
 void mppfError(mppf_t *mppf, dfloat time);
-// void insForces(ins_t *ins, dfloat time);
-// void insComputeDt(ins_t *ins, dfloat time); 
 
-void mppfAdvection(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_NU);
-void mppfPressureGradient (mppf_t *mppf, dfloat time, occa::memory o_P, occa::memory o_GP);
+void mppfAdvection(mppf_t *mppf, dfloat time);
+void mppfPressureRhs  (mppf_t *mppf, dfloat time);
+void mppfVelocityRhs  (mppf_t *mppf, dfloat time);
+
+void mppfPressureGradient (mppf_t *mppf, dfloat time);
 void mppfExplicitDiffusive(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_DU, occa::memory o_SU);
 
 
 
-void mppfPressureRhs  (mppf_t *mppf, dfloat time, occa::memory o_rkU);
 void mppfPressureSolve(mppf_t *mppf, dfloat time, occa::memory o_rkP);
-
-
-void mppfVelocityRhs  (mppf_t *mppf, dfloat time, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW);//
-void mppfVelocitySolve(mppf_t *mppf, dfloat time, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW, occa::memory o_rkU);
+void mppfVelocitySolve(mppf_t *mppf, dfloat time, occa::memory o_rkU);
 
 
 void mppfDivergence(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_DU);
 
-// void mppfDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);
-// void insGradient (ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP);
-// void insDivergence(ins_t *ins,dfloat time, occa::memory o_U, occa::memory o_DU);
-// void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_NU);
-
-// void insVelocityRhs  (ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW);
-// void insVelocitySolve(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW, occa::memory o_rkU);
-// void insVelocityUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkGP, occa::memory o_rkU);
-
-// void insPressureRhs  (ins_t *ins, dfloat time, int stage);
-// void insPressureSolve(ins_t *ins, dfloat time, int stage);
-// void insPressureUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkP);
-
-// // Welding  to Tris, needs to be moved seperate library
-// int insWeldTriVerts(ins_t *ins, int isoNtris, dfloat *isoq);
-// void insIsoPlotVTU(ins_t *ins, char *fileName);
-
-// // Restarting from file
-// void insRestartWrite(ins_t *ins, setupAide &options, dfloat time); 
-// void insRestartRead(ins_t *ins, setupAide &options); 

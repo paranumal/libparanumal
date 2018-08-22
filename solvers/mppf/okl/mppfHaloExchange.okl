@@ -101,3 +101,33 @@
   }
 }
 
+@kernel void mppfGradPhiHaloExtract(const dlong Nelements,
+                                   const dlong NhaloElements,
+                                   @restrict const  dlong   *  haloElements,
+                                   @restrict const  dfloat4 *  U,
+                                         @restrict dfloat4 *  haloq){
+
+  for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all entries in this element
+      const dlong id   = n + p_Np*haloElements[e];
+      const dlong base = n + p_Np*e;
+      const dfloat4 hq = U[id];
+      haloq[base] = hq; 
+    }
+  }
+}
+
+@kernel void mppfGradPhiHaloScatter(const dlong Nelements,
+                                   const dlong NhaloElements,
+                                         @restrict dfloat4 *  U,
+                                   @restrict const  dfloat4 *  haloq){
+
+  for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){ 
+      const dlong id   = n + p_Np*(e+Nelements);
+      const dlong base = n + p_Np*e;
+      const dfloat4 hq = haloq[base];
+      U[id] = hq; 
+    }
+  }
+}

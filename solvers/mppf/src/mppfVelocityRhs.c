@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "mppf.h"
 
-void mppfVelocityRhs(mppf_t *mppf, dfloat time, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW){
+void mppfVelocityRhs(mppf_t *mppf, dfloat time){
   
   mesh_t *mesh = mppf->mesh; 
 
@@ -38,7 +38,7 @@ void mppfVelocityRhs(mppf_t *mppf, dfloat time, occa::memory o_rhsU, occa::memor
                          mppf->o_Uhat,
                          mppf->o_DU,
                          mppf->o_GP,
-                         o_rhsU,
-                         o_rhsV,
-                         o_rhsW);
+                         mppf->o_rhsU,
+                         mppf->o_rhsV,
+                         mppf->o_rhsW);
 }

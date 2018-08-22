@@ -27,99 +27,68 @@ SOFTWARE.
 #include "mppf.h"
 
 // compute NU = N(U)
-void mppfAdvection(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_NU){
+void mppfAdvection(mppf_t *mppf, dfloat time){
 
   mesh_t *mesh = mppf->mesh;
   
-  //Exctract Halo On Device, all fields
-  if(mesh->totalHaloPairs>0){
-    mppf->velocityHaloExtractKernel(mesh->Nelements,
-                                 mesh->totalHaloPairs,
-                                 mesh->o_haloElementList,
-                                 mppf->fieldOffset,
-                                 o_U,
-                                 mppf->o_vHaloBuffer);
-
-    // copy extracted halo to HOST 
-    mppf->o_vHaloBuffer.copyTo(mppf->vSendBuffer);           
-  
-    // start halo exchange
-    meshHaloExchangeStart(mesh,
-                         mesh->Np*(mppf->NVfields)*sizeof(dfloat),
-                         mppf->vSendBuffer,
-                         mppf->vRecvBuffer);
-  }
-
   // Compute Volume Contribution
   occaTimerTic(mesh->device,"AdvectionVolume");
   if(mppf->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
     mppf->advectionCubatureVolumeKernel(mesh->Nelements,
-                                       mesh->o_vgeo,
-                                       mesh->o_cubvgeo,
-                                       mesh->o_cubDWmatrices,
-                                       mesh->o_cubInterpT,
-                                       mesh->o_cubProjectT,
-                                       mppf->fieldOffset,
-                                       o_U,
-                                       mppf->o_cU,
-                                       o_NU);
+                                        mesh->o_vgeo,
+                                        mesh->o_cubvgeo,
+                                        mesh->o_cubDWmatrices,
+                                        mesh->o_cubInterpT,
+                                        mesh->o_cubProjectT,
+                                        mppf->fieldOffset,
+                                        mppf->o_U,
+                                        mppf->o_cU,
+                                        mppf->o_NU);
   } else {
     mppf->advectionVolumeKernel(mesh->Nelements,
-                               mesh->o_vgeo,
-                               mesh->o_Dmatrices,
-                               mppf->fieldOffset,
-                               o_U,
-                               o_NU);
+                                mesh->o_vgeo,
+                                mesh->o_Dmatrices,
+                                mppf->fieldOffset,
+                                mppf->o_U,
+                                mppf->o_NU);
   }
   occaTimerToc(mesh->device,"AdvectionVolume");
 
-  // COMPLETE HALO EXCHANGE
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-
-    mppf->o_vHaloBuffer.copyFrom(mppf->vRecvBuffer); 
-
-    mppf->velocityHaloScatterKernel(mesh->Nelements,
-                                  mesh->totalHaloPairs,
-                                  mppf->fieldOffset,
-                                  o_U,
-                                  mppf->o_vHaloBuffer);
-  }
-
+ 
   occaTimerTic(mesh->device,"AdvectionSurface");
   if(mppf->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
     mppf->advectionCubatureSurfaceKernel(mesh->Nelements,
-                                        mesh->o_vgeo,
-                                        mesh->o_sgeo,
-                                        mesh->o_cubsgeo,
-                                        mesh->o_intInterpT,
-                                        mesh->o_intLIFTT,
-                                        mesh->o_cubInterpT,
-                                        mesh->o_cubProjectT,
-                                        mesh->o_vmapM,
-                                        mesh->o_vmapP,
-                                        mesh->o_EToB,
-                                        time,
-                                        mesh->o_intx,
-                                        mesh->o_inty,
-                                        mesh->o_intz,
-                                        mppf->fieldOffset,
-                                        o_U,
-                                        o_NU);
+                                          mesh->o_vgeo,
+                                          mesh->o_sgeo,
+                                          mesh->o_cubsgeo,
+                                          mesh->o_intInterpT,
+                                          mesh->o_intLIFTT,
+                                          mesh->o_cubInterpT,
+                                          mesh->o_cubProjectT,
+                                          mesh->o_vmapM,
+                                          mesh->o_vmapP,
+                                          mesh->o_EToB,
+                                          time,
+                                          mesh->o_intx,
+                                          mesh->o_inty,
+                                          mesh->o_intz,
+                                          mppf->fieldOffset,
+                                          mppf->o_U,
+                                          mppf->o_NU);
   } else {
     mppf->advectionSurfaceKernel(mesh->Nelements,
-                                mesh->o_sgeo,
-                                mesh->o_LIFTT,
-                                mesh->o_vmapM,
-                                mesh->o_vmapP,
-                                mesh->o_EToB,
-                                time,
-                                mesh->o_x,
-                                mesh->o_y,
-                                mesh->o_z,
-                                mppf->fieldOffset,
-                                o_U,
-                                o_NU);
+                                  mesh->o_sgeo,
+                                  mesh->o_LIFTT,
+                                  mesh->o_vmapM,
+                                  mesh->o_vmapP,
+                                  mesh->o_EToB,
+                                  time,
+                                  mesh->o_x,
+                                  mesh->o_y,
+                                  mesh->o_z,
+                                  mppf->fieldOffset,
+                                  mppf->o_U,
+                                  mppf->o_NU);
   }
   occaTimerToc(mesh->device,"AdvectionSurface");
 

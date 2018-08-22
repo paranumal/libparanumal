@@ -6,18 +6,44 @@ void mppfRun(mppf_t *mppf){
 
   mesh_t *mesh = mppf->mesh;
   
+  // Excahnge Required Phase Field Data for Initial Solution
+  if(mesh->totalHaloPairs>0){
+
+    mppf->phaseFieldHaloExtractKernel(mesh->Nelements,
+                                      mesh->totalHaloPairs,
+                                      mesh->o_haloElementList,
+                                      mppf->o_Phi,
+                                      mppf->o_phiHaloBuffer);
+    // copy extracted halo to HOST 
+    mppf->o_phiHaloBuffer.copyTo(mppf->phiSendBuffer);           
+
+    // start halo exchange
+    meshHaloExchangeStart(mesh,
+                       mesh->Np*sizeof(dfloat),
+                       mppf->phiSendBuffer,
+                       mppf->phiRecvBuffer);
+    meshHaloExchangeFinish(mesh);
+
+    mppf->o_phiHaloBuffer.copyFrom(mppf->phiRecvBuffer);
+
+    mppf->phaseFieldHaloScatterKernel(mesh->Nelements,
+                                      mesh->totalHaloPairs,
+                                      mppf->o_Phi,
+                                      mppf->o_phiHaloBuffer);
+  }
+
+ 
+  // Initialize GP which exchanges initial pressure data also 
+  mppfPressureGradient(mppf,mppf->startTime);
+
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"MPPF");
 
  for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
-   // for(int tstep=0;tstep<10;++tstep){
+   // for(int tstep=0;tstep<1;++tstep){
 
-    if(tstep<1){
+    if(tstep<1)
       extbdfCoefficents(mppf,tstep+1);
-      // Initialize Pressure Gradient GP for non-zero Pressure IC
-      mppfPressureGradient(mppf,mppf->startTime, mppf->o_P, mppf->o_GP);
-      mppfReport(mppf, mppf->startTime, tstep+1);      
-    } 
     else if(tstep<2 && mppf->temporalOrder>=2) 
       extbdfCoefficents(mppf,tstep+1);
     else if(tstep<3 && mppf->temporalOrder>=3) 
@@ -27,36 +53,22 @@ void mppfRun(mppf_t *mppf){
     
     dfloat time_new = time + mppf->dt; 
 
-    // // Interface Solver
-    // // Compute Rhs
+    // Interface Solver
     mppfCahnHilliardRhs(mppf, time_new);
     // Solve for Psi  and Phi
     mppfCahnHilliardSolve(mppf, time_new);
-    // Update Phi and Compute Gradient Phi
+    // Update Phi. Exchange it  and Compute Gradient Phi
     mppfCahnHilliardUpdate(mppf, time_new);
 
     // Compute Nonlinear Term N(U) 
-    mppfAdvection(mppf, time, mppf->o_U, mppf->o_NU);
-
-    // Compute intermediate velocity, save to Uhat , take divergence and compute Pr Rhs
-    mppfPressureRhs(mppf, time_new, mppf->o_Uhat);
-
-#if 0
-    mppf->setFlowFieldKernel(mesh->Nelements,
-                              time_new, 
-                              mesh->o_x,
-                              mesh->o_y,
-                              mesh->o_z,
-                              mppf->fieldOffset,
-                              mppf->o_rkPhi,
-                              mppf->o_rkP); // pressure is not exact anymore
-#endif
-
-
+    mppfAdvection(mppf, time);
+    // Compute intermediate velocity, Uhat, take divergence and compute Pr Rhs
+    mppfPressureRhs(mppf, time_new);
+    // Solve for pressure
     mppfPressureSolve(mppf,time_new, mppf->o_rkP);
 
     
-    //cycle history for update
+    //Cycle pressure and gradient pressure history before update
     for (int s=mppf->Nstages;s>1;s--) {
      
       mppf->o_P.copyFrom(mppf->o_P, mppf->Ntotal*sizeof(dfloat), 
@@ -68,14 +80,15 @@ void mppfRun(mppf_t *mppf){
                                   (s-2)*mppf->Ntotal*mppf->NVfields*sizeof(dfloat));
     }
 
-    // // update pressure
+    // Update pressure
      mppf->o_P.copyFrom(mppf->o_rkP,mppf->Ntotal*sizeof(dfloat));  
-    //update pressure gradient
-     mppfPressureGradient(mppf, time_new, mppf->o_P, mppf->o_GP);   
+    // Exchange pressure and update pressure gradient
+     mppfPressureGradient(mppf, time_new);   
 
     
-    mppfVelocityRhs(mppf, time_new, mppf->o_rhsU, mppf->o_rhsV, mppf->o_rhsW);
-    mppfVelocitySolve(mppf, time_new, mppf->o_rhsU, mppf->o_rhsV, mppf->o_rhsW, mppf->o_rkU);
+    // Compute velocity Rhs i.e. rhsU, rhsV, rhsW
+    mppfVelocityRhs(mppf, time_new);
+    mppfVelocitySolve(mppf, time_new, mppf->o_rkU);
 
      //cycle history 
     for (int s=mppf->Nstages;s>1;s--) {
