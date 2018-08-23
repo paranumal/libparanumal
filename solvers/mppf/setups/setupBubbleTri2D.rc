@@ -16,7 +16,7 @@ data/mppfRisingBubble2D.h
 3
 
 [POLYNOMIAL DEGREE]
-3
+5
 
 [THREAD MODEL]
 CUDA
@@ -75,7 +75,7 @@ CUBATURE
 
 #zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+10
 
 # zero to ignore
 [TSTEPS FOR FORCE OUTPUT]

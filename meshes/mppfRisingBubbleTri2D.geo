@@ -1,5 +1,5 @@
 L = DefineNumber[1.0];
-r = DefineNumber[L*0.015];
+r = DefineNumber[L*0.05];
 xmin = DefineNumber[-L/2];
 xmax = DefineNumber[ L/2];
 ymin = DefineNumber[ 0.0];

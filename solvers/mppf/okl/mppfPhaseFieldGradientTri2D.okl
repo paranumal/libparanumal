@@ -214,8 +214,6 @@ for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
             GPhi[id+0*offset] = dphidx;
             GPhi[id+1*offset] = dphidy;
-            // GPhi[id+0*offset] = -M_PI*cos(M_PI*y[id])*sin(M_PI*x[id])*sin(time);
-            // GPhi[id+1*offset] = -M_PI*cos(M_PI*x[id])*sin(M_PI*y[id])*sin(time);
           }
         }
       }

@@ -241,12 +241,21 @@ typedef struct {
   occa::kernel pressurePenaltyKernel;
   occa::kernel pressureUpdateKernel;
 
+  // Intermediate Velocity Kernels
+  occa::kernel velocityExtrapolateKernel;  
+  occa::kernel velocityGradientVolumeKernel;
+  occa::kernel velocityGradientSurfaceKernel;
+  occa::kernel velocityCurlVolumeKernel;
+  occa::kernel velocityCurlSurfaceKernel;
+
+  occa::kernel velocityAddPressureKernel;
+  
+  // Velocity Solve Kernels
   occa::kernel velocityRhsKernel;
   occa::kernel velocityRhsIpdgBCKernel;
   occa::kernel velocityRhsBCKernel;
   occa::kernel velocityAddBCKernel;
   occa::kernel velocityUpdateKernel;  
-  occa::kernel velocityExtrapolateKernel;  
   
   occa::kernel vorticityKernel;
   occa::kernel isoSurfaceKernel;
@@ -275,6 +284,8 @@ void mppfPressureRhs  (mppf_t *mppf, dfloat time);
 void mppfVelocityRhs  (mppf_t *mppf, dfloat time);
 
 void mppfPressureGradient (mppf_t *mppf, dfloat time);
+void mppfVelocityGradient (mppf_t *mppf, dfloat time, occa::memory o_Ue, occa::memory o_GU);
+
 void mppfExplicitDiffusive(mppf_t *mppf, dfloat time, occa::memory o_U, occa::memory o_DU, occa::memory o_SU);
 
 

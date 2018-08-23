@@ -39,8 +39,8 @@ void mppfRun(mppf_t *mppf){
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"MPPF");
 
- for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
-   // for(int tstep=0;tstep<1;++tstep){
+ // for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
+   for(int tstep=0;tstep<1;++tstep){
 
     if(tstep<1)
       extbdfCoefficents(mppf,tstep+1);
@@ -168,12 +168,12 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
     mppf->lambdaPsi = mppf->chA + mppf->chSeta2;
     // Helmholtz solve lambda's i.e. -laplace*phi +[-alpha]*phi = -psi 
     mppf->lambdaPhi = -mppf->chA;
-    // // 
+    // 
     // mppf->lambda = mppf->g0 / (mppf->dt * mppf->nu);
     // mppf->ig0 = 1.0/mppf->g0; 
 
-    printf("# chSeta2\t:\t%.4e\n", mppf->chSeta2);
-    printf("# chAlpha\t\t:\t%.4e\n", mppf->chA);
+    // printf("# chSeta2\t:\t%.4e\n", mppf->chSeta2);
+    // printf("# chAlpha\t\t:\t%.4e\n", mppf->chA);
   } else if(order==2) {
     //advection, second order in time, increment
     mppf->g0 =  1.5f;
@@ -202,9 +202,9 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
     // Helmholtz solve lambda's i.e. -laplace*phi +[-alpha]*phi = -psi 
     mppf->lambdaPhi = -mppf->chA;
     // mppf->lambda = mppf->g0 / (mppf->dt * mppf->nu);
-
-    printf("# chSeta2\t:\t%.4e\n", mppf->chSeta2);
-    printf("# chAlpha\t\t:\t%.4e\n", mppf->chA);
+   
+    // printf("# chSeta2\t:\t%.4e\n", mppf->chSeta2);
+    // printf("# chAlpha\t\t:\t%.4e\n", mppf->chA);
     // mppf->ig0 = 1.0/mppf->g0; 
   } else if(order==3) {
     //advection, third order in time, increment
@@ -234,7 +234,7 @@ void extbdfCoefficents(mppf_t *mppf, int order) {
     // Helmholtz solve lambda's i.e. -laplace*phi +[-alpha]*phi = -psi 
     mppf->lambdaPhi = -mppf->chA;
 
-   printf("# chSeta2\t:\t%.4e\n", mppf->chSeta2);
-   printf("# chAlpha\t\t:\t%.4e\n", mppf->chA);
+   // printf("# chSeta2\t:\t%.4e\n", mppf->chSeta2);
+   // printf("# chAlpha\t\t:\t%.4e\n", mppf->chA);
   }
 }

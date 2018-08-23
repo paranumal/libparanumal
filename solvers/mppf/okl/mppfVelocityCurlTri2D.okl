@@ -1,0 +1,60 @@
+// Compute Gradient in Strong Form
+@kernel void mppfVelocityCurlVolumeTri2D(const dlong Nelements,
+                                            @restrict const  dfloat *  vgeo,
+                                            @restrict const  dfloat *  Dmatrices,
+                                            const dlong offset,
+                                            @restrict const  dfloat *  GU,
+                                                 @restrict dfloat *  DU){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+    // for all elements
+    @shared dfloat s_U[p_NblockV][p_Np];
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          const dlong id = e*p_Np + n; 
+
+          const dfloat dvdx = GU[id + 2*offset];
+          const dfloat dudy = GU[id + 1*offset];
+          s_U[es][n]  = dvdx - dudy;
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+          dfloat dwdr  = 0.f, dwds  = 0.f;
+
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+              dwdr  += Drni*s_U[es][i];
+              dwds  += Dsni*s_U[es][i];
+            }
+
+          const dfloat dwdx= drdx*dwdr + dsdx*dwds;   // dwdx
+          const dfloat dwdy= drdy*dwdr + dsdy*dwds;   // dwdy          
+
+          const dlong id = e*p_Np+n;
+         // Update diffusive term coming from non-constant viscosity curl( curl (u))
+          DU[id  + 0*offset] =  dwdy; 
+          DU[id  + 1*offset] = -dwdx;
+        }
+      }
+    }
+  }
+}

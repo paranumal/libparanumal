@@ -28,6 +28,8 @@ SOFTWARE.
 
 void mppfPressureRhs(mppf_t *mppf, dfloat time){
 
+  #if 0
+
   mesh_t *mesh = mppf->mesh;
 
 // Compute Explicit Diffusive Terms; i.e. DU = curl*curl*u^*  and  SU = grad(mu)\cdot D(u^*)
@@ -211,39 +213,58 @@ void mppfPressureRhs(mppf_t *mppf, dfloat time){
                               mppf->o_rhsP);
   occaTimerToc(mesh->device,"PoissonRhsForcing");
 
-  
-  
 
-#if 0
-  //add penalty from jumps in previous pressure
-  mppf->poissonPenaltyKernel(mesh->Nelements,
-                                mesh->o_sgeo,
+#else
+
+
+mesh_t *mesh = mppf->mesh;
+// Halo exchange is already done in Advection kernel, just extrapolate elements with halo 
+const dlong NtotalElements = mesh->Nelements+mesh->totalHaloPairs;  
+
+//Compute advective velocity field aprroximated  at time t^n
+occaTimerTic(mesh->device,"velocityExtrapolate");
+mppf->velocityExtrapolateKernel(NtotalElements,
+                                 mppf->Nstages,
+                                 mppf->fieldOffset,
+                                 mppf->o_extbdfA,
+                                 mppf->o_U,
+                                 mppf->o_Ue);
+
+occaTimerToc(mesh->device,"velocityExtrapolate");
+
+// Compute Gradient of Velocity i.e. o_GU = [dudx, dudy, dvdx, dvdy]
+  // note that weak derivatives are computed Ue computed also in halo elements
+mppfVelocityGradient(mppf, time, mppf->o_Ue, mppf->o_GU);
+
+// Compute o_DU = CurlxCurlxUe, uses GU o_DU = [dw/dy, -dw/dx]; w = dv/dx - du/dy
+mppf->velocityCurlVolumeKernel(mesh->Nelements,
+                              mesh->o_vgeo,
+                              mesh->o_Dmatrices,
+                              mppf->fieldOffset,
+                              mppf->o_GU,
+                              mppf->o_DU); // holds curl curl Ue
+
+
+// Add pressure term i.e. Uhat = (1/rho0 - 1/rho)*GP^*
+mppf->velocityAddPressureKernel(mesh->Nelements,
                                 mesh->o_vgeo,
-                                mesh->o_DrT,
-                                mesh->o_DsT,
-                                mesh->o_LIFTT,
-                                mesh->o_MM,
-                                mesh->o_vmapM,
-                                mesh->o_vmapP,
-                                mesh->o_EToB,
-                                mppf->tau,
-                                mesh->o_x,
-                                mesh->o_y,
-                                t,
+                                mesh->o_cubvgeo,
+                                mesh->o_cubInterpT,
+                                mesh->o_cubProjectT,
+                                mppf->o_extbdfA,
                                 mppf->dt,
-                                mppf->c0,
-                                mppf->c1,
-                                mppf->c2,
-                                mppf->index,
-                                (mesh->Nelements+mesh->totalHaloPairs),
-                                mppf->o_P,
-                                mppf->o_rhsP);
-  #endif
+                                mppf->fieldOffset,
+                                mppf->o_Rho,
+                                mppf->o_GP,
+                                mppf->o_Uhat);
 
 
 
 
 
 
+#endif
+
+ 
 
 }

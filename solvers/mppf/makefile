@@ -65,6 +65,7 @@ AOBJS    = \
 ./src/mppfPressureSolve.o \
 ./src/mppfVelocityRhs.o \
 ./src/mppfVelocitySolve.o \
+./src/mppfVelocityGradient.o \
 #./src/insForces.o \
 #./src/insComputeDt.o \
 #./src/insRunARK.o \

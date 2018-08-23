@@ -377,7 +377,6 @@ options.getArgs("BAND THICKNESS", mppf->eta);
 
   // Some derived parameters
   mppf->idt     = 1.0/mppf->dt;
-  printf("Dt = %.4e\n ", mppf->dt);
   mppf->eta2    = mppf->eta*mppf->eta; 
   mppf->inveta2 = 1.0/ mppf->eta2; 
 
@@ -850,6 +849,24 @@ options.getArgs("BAND THICKNESS", mppf->eta);
 
       // ===========================================================================
 
+      sprintf(fileName, DMPPF "/okl/mppfVelocityGradient%s.okl", suffix);
+      sprintf(kernelName, "mppfVelocityGradientVolume%s", suffix);
+      mppf->velocityGradientVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfVelocityGradientSurface%s", suffix);
+      mppf->velocityGradientSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+       // ===========================================================================
+
+      sprintf(fileName, DMPPF "/okl/mppfVelocityCurl%s.okl", suffix);
+      sprintf(kernelName, "mppfVelocityCurlVolume%s", suffix);
+      mppf->velocityCurlVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      // sprintf(kernelName, "mppfVelocityCurlSurface%s", suffix);
+      // mppf->velocityCurlSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      // ===========================================================================
+
       sprintf(fileName, DMPPF "/okl/mppfExplicitDiffusive%s.okl", suffix);
       sprintf(kernelName, "mppfExplicitDiffusive%s", suffix);
       mppf->explicitDiffusiveKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
@@ -872,6 +889,12 @@ options.getArgs("BAND THICKNESS", mppf->eta);
       sprintf(kernelName, "mppfPressureRhs%s", suffix);
       mppf->pressureRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+
+       sprintf(kernelName, "mppfVelocityAddPressure%s", suffix);
+      mppf->velocityAddPressureKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+
+
       sprintf(fileName, DMPPF "/okl/mppfPressureBC%s.okl", suffix);
       sprintf(kernelName, "mppfPressureIpdgBC%s", suffix);
       mppf->pressureRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
@@ -881,6 +904,9 @@ options.getArgs("BAND THICKNESS", mppf->eta);
 
       sprintf(kernelName, "mppfPressureAddBC%s", suffix);
       mppf->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+     
+
 
 
       // ===========================================================================

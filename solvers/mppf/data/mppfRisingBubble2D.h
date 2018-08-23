@@ -27,7 +27,7 @@
 // Only gravitational force 
 #define mppfVelocitySource2D(t,x,y,fx, fy)\
 {                                    \
-  *(fx)          = 0.f;\
+  *(fx)          =  0.f;\
   *(fy)          = -9.8f;\
 } 
 
