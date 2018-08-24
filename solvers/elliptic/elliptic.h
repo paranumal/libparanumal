@@ -110,14 +110,6 @@ typedef struct {
 
   occa::memory o_EXYZ; // element vertices for reconstructing geofacs (trilinear hexes only)
   occa::memory o_gllzw; // GLL nodes and weights
-  
-  // list of elements that are needed for global gather-scatter
-  dlong NglobalGatherElements;
-  occa::memory o_globalGatherElementList;
-
-  // list of elements that are not needed for global gather-scatter
-  dlong NlocalGatherElements;
-  occa::memory o_localGatherElementList;
 
   occa::kernel AxKernel;
   occa::kernel partialAxKernel;
@@ -143,9 +135,6 @@ typedef struct {
 }elliptic_t;
 
 elliptic_t *ellipticSetup(mesh2D *mesh, dfloat lambda, occa::properties &kernelInfo, setupAide options);
-
-void ellipticParallelGatherScatter(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, const char *type, const char *op);
-void ellipticParallelGatherScatterSetup(elliptic_t *elliptic);
 
 void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_z);
 void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda);

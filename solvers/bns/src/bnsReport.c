@@ -38,7 +38,7 @@ mesh_t *mesh = bns->mesh;
                        bns->o_VortMag);
 
   if(bns->dim==3){
-    meshParallelGatherScatter(mesh, mesh->ogs, bns->o_VortMag);
+    ogsGatherScatter(bns->o_VortMag, ogsDfloat, ogsAdd, mesh->ogs);  
     int Ntotal = mesh->Np*mesh->Nelements;
     bns->dotMultiplyKernel(Ntotal, bns->o_VortMag, mesh->ogs->o_invDegree); 
   }

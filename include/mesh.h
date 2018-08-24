@@ -35,7 +35,7 @@ SOFTWARE.
 #include <occa.hpp>
 
 #include "types.h"
-#include "ogs_t.h"
+#include "ogs.hpp"
 
 #include "timer.h"
 
@@ -83,6 +83,22 @@ typedef struct {
 
   dlong NinternalElements; // number of elements that can update without halo exchange
   dlong NnotInternalElements; // number of elements that cannot update without halo exchange
+
+  // CG gather-scatter info
+  hlong *globalIds;
+  hlong *maskedGlobalIds;
+  void *gsh, *hostGsh; // gslib struct pointer
+  ogs_t *ogs; //occa gs pointer
+
+  // list of elements that are needed for global gather-scatter
+  dlong NglobalGatherElements;
+  dlong *globalGatherElementList;
+  occa::memory o_globalGatherElementList;
+
+  // list of elements that are not needed for global gather-scatter
+  dlong NlocalGatherElements;
+  dlong *localGatherElementList;
+  occa::memory o_localGatherElementList;
 
   //list of fair pairs
   dlong NfacePairs;
@@ -499,34 +515,6 @@ typedef struct {
   occa::memory o_pmlqY, o_pmlqS; // 3D IMEX
 
 
-
-
-  // CG gather-scatter info
-  void *gsh, *hostGsh; // gslib struct pointer
-  ogs_t *ogs; //occa gs pointer
-
-  hlong *globalIds;
-  int *globalOwners;
-  int *globalHaloFlags;
-
-  dlong *gatherLocalIds; // local index of rank/gather id sorted list of nodes
-  hlong *gatherBaseIds;  // gather index of ""
-  int *gatherBaseRanks; // base rank
-  dlong *gatherOffsets; 
-  int *gatherMaxRanks;  // maximum rank connected to each sorted node
-  int *gatherHaloFlags;  // maximum rank connected to each sorted node
-  hlong *gatherGlobalStarts;
-
-  dlong NuniqueBases; // number of unique bases on this rank
-  occa::memory o_gatherNodeOffsets; // list of offsets into gatherLocalNodes for start of base
-  occa::memory o_gatherLocalNodes; // indices of local nodes collected by base node
-  occa::memory o_gatherTmp; // temporary array to store base values gathered locally
-
-  dlong NnodeHalo; // number of halo bases on this rank
-  occa::memory o_nodeHaloIds;  // indices of halo base nodes after initial local gather
-  occa::memory o_subGatherTmp; // temporary DEVICE array to store halo base values prior to DEVICE>HOST copy
-  dfloat        *subGatherTmp; // temporary HALO array
-
   occa::memory o_ggeo; // second order geometric factors
   occa::memory o_projectL2; // local weights for projection.
 
@@ -661,36 +649,17 @@ void meshPartitionStatistics(mesh_t *mesh);
 // build element-boundary connectivity
 void meshConnectBoundary(mesh_t *mesh);
 
-// squeeze gaps out of a globalNumbering of local nodes (arranged in NpNum blocks
-void meshParallelConsecutiveGlobalNumbering(mesh_t *mesh,
-                                            dlong Nnum,
-                                            hlong *globalNumbering, 
-                                            int *globalOwners, 
-                                            hlong *globalStarts);
-
-ogs_t *meshParallelGatherScatterSetup(mesh_t *mesh,
-                                      dlong Nlocal,
-                                      dlong *gatherLocalIds,
-                                      hlong *gatherBaseIds,
-                                      int *gatherBaseRanks,
-                                      int  *gatherHaloFlags,
+void meshParallelGatherScatterSetup(mesh_t *mesh,
+                                      dlong N,
+                                      dlong *globalIds,
+                                      MPI_Comm &comm,
                                       int verbose);
-
-void meshParallelGatherScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v);
-void meshParallelGather(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_gv);
-void meshParallelScatter(mesh_t *mesh, ogs_t *ogs, occa::memory &o_v, occa::memory &o_sv);
-
 
 void occaTimerTic(occa::device device,std::string name);
 void occaTimerToc(occa::device device,std::string name);
 
 extern "C"
 {
-  void *gsParallelGatherScatterSetup(MPI_Comm comm, dlong Ngather, hlong *gatherIds, int verbose);
-  void gsParallelGatherScatter(void *gsh, void *v, const char *type, const char *op);
-  void gsVecParallelGatherScatter(void *gsh, void *v, int k, const char *type, const char *op);
-  void gsParallelGatherScatterDestroy(void *gsh);
-
   void * xxtSetup(uint num_local_rows,
       void* row_ids,
       uint nnz,

@@ -9,11 +9,10 @@ includes = $(wildcard $(iDir)/*h)
 objects = $(subst $(sDir)/,$(objDir)/,$(sources:.c=.o))
 deps = $(includes) \
 ../../include/mesh.h \
-../../include/ogs_t.h \
-../../include/hgs_t.h \
+../../libs/gatherScatter/ogs.hpp \
 ../../include/parAlmond.h
 
-flags = -DOCCA_VERSION_1_0 -I${OCCA_DIR}/include -I$(iDir) -I../../include
+flags = -DOCCA_VERSION_1_0 -I${OCCA_DIR}/include -I$(iDir) -I../../include -I../../libs/gatherScatter
 libs   =  -L${OCCA_DIR}/lib -locca -llapack -lblas
 
 flags  += -D DPWD='"${CURDIR}"'
