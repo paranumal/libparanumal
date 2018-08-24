@@ -1,0 +1,65 @@
+
+BNS+TET+Serial: fails because bnsIsoSurface3D.okl uses occaAtomicAdd
+
+0 0.996512 1.00399 (time,min(density),max(density)
+ time = 0.0217286 (99), dt = 0.000300669 accepted (ratio dt/hmin = 0.0345185)               0.0217286 0.9589 1.03881 (time,min(density),max(density)
+  time = 0.0451057 (199), dt = 0.000185443 accepted (ratio dt/hmin = 0.0212899)               0.0451057 0.947236 1.05515 (time,min(density),max(density)
+
+BNS+TET+MPI(2)
+
+==16517== Conditional jump or move depends on uninitialised value(s)
+==16517==    at 0x50211E3: occa::memory::setMHandle(occa::memory_v*) (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x502325B: occa::memory::operator=(occa::memory const&) (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x41BCEC: bnsSetup(mesh_t*, setupAide&) (bnsSetup.c:532)
+==16517==    by 0x40CEB1: main (bnsMain.c:67)
+==16517==
+==16517== Conditional jump or move depends on uninitialised value(s)
+==16517==    at 0x502116E: occa::memory::removeMHandleRef() (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x50211F5: occa::memory::setMHandle(occa::memory_v*) (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x502325B: occa::memory::operator=(occa::memory const&) (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x41BCEC: bnsSetup(mesh_t*, setupAide&) (bnsSetup.c:532)
+==16517==    by 0x40CEB1: main (bnsMain.c:67)
+==16517==
+==16517== Use of uninitialised value of size 8
+==16517==    at 0x4F64CB0: occa::withRefs::removeRef() (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x5021178: occa::memory::removeMHandleRef() (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x50211F5: occa::memory::setMHandle(occa::memory_v*) (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x502325B: occa::memory::operator=(occa::memory const&) (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x41BCEC: bnsSetup(mesh_t*, setupAide&) (bnsSetup.c:532)
+==16517==    by 0x40CEB1: main (bnsMain.c:67)
+==16517==
+==16517== Invalid read of size 4
+==16517==    at 0x4F64CB0: occa::withRefs::removeRef() (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x5021178: occa::memory::removeMHandleRef() (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x50211F5: occa::memory::setMHandle(occa::memory_v*) (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x502325B: occa::memory::operator=(occa::memory const&) (in /home/tcew/Work/git/occa.NC/lib/libocca.so)
+==16517==    by 0x41BCEC: bnsSetup(mesh_t*, setupAide&) (bnsSetup.c:532)
+==16517==    by 0x40CEB1: main (bnsMain.c:67)
+==16517==  Address 0x40139e47b7fe793d is not stack'd, malloc'd or (recently) free'd
+==16517==
+
+Culprint:
+
+bns->o_isoGLvalues     = (occa::memory *) malloc(bns->isoGNgroups*sizeof(occa::memory));
+  for (int gr =0;gr<bns->isoGNgroups;gr++)
+        bns->o_isoGLvalues[gr] = mesh->device.malloc(bns->isoGNlevels[gr]*sizeof(dfloat),bns->isoGLvalues[gr]);
+
+
+
+[twnvws1:16517] *** Process received signal ***
+[twnvws1:16517] Signal: Segmentation fault (11)
+[twnvws1:16517] Signal code:  (128)
+[twnvws1:16517] Failing at address: (nil)
+Loading cached [put] from [/home/tcew/Work/git/libparanumal.ogs/solvers/bns/../../okl/put.okl] in [08c05df2c4c6fa95/binary]
+Loading cached [bnsDotMultiply] from [/home/tcew/Work/git/libparanumal.ogs/solvers/bns/okl/bnsDotMultiply.okl] in [c4f1414560622374/binary]
+[twnvws1:16517] [ 0] /lib/x86_64-linux-gnu/libc.so.6(+0x354b0)[0x62994b0]
+[twnvws1:16517] [ 1] /home/tcew/Work/git/occa.NC/lib/libocca.so(_ZN4occa8withRefs9removeRefEv+0x0)[0x4f64cb0]
+[twnvws1:16517] [ 2] /home/tcew/Work/git/occa.NC/lib/libocca.so(_ZN4occa6memory16removeMHandleRefEv+0x29)[0x5021179]
+[twnvws1:16517] [ 3] /home/tcew/Work/git/occa.NC/lib/libocca.so(_ZN4occa6memory10setMHandleEPNS_8memory_vE+0x16)[0x50211f6]
+[twnvws1:16517] [ 4] /home/tcew/Work/git/occa.NC/lib/libocca.so(_ZN4occa6memoryaSERKS0_+0xc)[0x502325c]
+[twnvws1:16517] [ 5] ../../../solvers/bns/bnsMain[0x41bced]
+[twnvws1:16517] [ 6] ../../../solvers/bns/bnsMain[0x40ceb2]
+[twnvws1:16517] [ 7] /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf0)[0x6284830]
+[twnvws1:16517] [ 8] ../../../solvers/bns/bnsMain[0x40edc9]
+[twnvws1:16517] *** End of error message ***
+
