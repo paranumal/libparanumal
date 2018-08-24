@@ -265,4 +265,7 @@ void insRestartRead(ins_t *ins, setupAide &options);
 extern "C"
 {
   void insPlotVTUHex3D(ins_t *ins, char *fileNameBase);
+  void insPlotWallsVTUHex3D(ins_t *ins, char *fileNameBase);
 }
+
+
