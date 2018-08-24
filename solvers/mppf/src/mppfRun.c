@@ -39,8 +39,8 @@ void mppfRun(mppf_t *mppf){
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"MPPF");
 
- // for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
-   for(int tstep=0;tstep<1;++tstep){
+ for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
+   // for(int tstep=0;tstep<10;++tstep){
 
     if(tstep<1)
       extbdfCoefficents(mppf,tstep+1);

@@ -162,3 +162,342 @@ SOFTWARE.
   }
 }
 
+
+// compute div(NU)  = div(uxu) in collocation way
+@kernel void mppfVelocityAddDiffusiveTri2D(const dlong Nelements,
+                                            @restrict const  dfloat *  vgeo,
+                                            @restrict const  dfloat *  cubvgeo,
+                                            @restrict const  dfloat *  cubInterpT,
+                                            @restrict const  dfloat *  cubProjectT,
+                                            const dfloat dt,
+                                            const dlong offset,
+                                            @restrict const  dfloat *  Rho,
+                                            @restrict const  dfloat *  Mu,
+                                            @restrict const  dfloat *  DU,
+                                                  @restrict dfloat *   Uhat){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
+    @shared dfloat s_Dx[p_NblockV][p_Np];
+    @shared dfloat s_Dy[p_NblockV][p_Np];
+    @shared dfloat s_iR[p_NblockV][p_Np];
+    @shared dfloat s_Mu[p_NblockV][p_Np];
+    // Will hold iR and Mu on Cubature nodes
+    @shared dfloat s_cFx[p_NblockV][p_cubNp];
+    @shared dfloat s_cFy[p_NblockV][p_cubNp];
+    //
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){      // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          if(n<p_Np){ 
+            const dlong id = e*p_Np+n;
+            s_Dx[es][n] = DU[id+0*offset];
+            s_Dy[es][n] = DU[id+1*offset];
+            s_iR[es][n] = 1.f/Rho[id];
+            s_Mu[es][n] = Mu[id];
+          }
+        } 
+      }
+    }
+
+    @barrier("local");
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements && n<p_cubNp){
+          dfloat cDx = 0.f, cDy = 0.f;
+          dfloat ciR = 0.f, cMu = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat cIni = cubInterpT[n+i*p_cubNp];
+              cDx += cIni*s_Dx[es][i];
+              cDy += cIni*s_Dy[es][i];
+              ciR += cIni*s_iR[es][i];
+              cMu += cIni*s_Mu[es][i];
+            }
+          s_cFx[es][n] = cMu*ciR*cDx;
+          s_cFy[es][n] = cMu*ciR*cDy;
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; 
+        if(e<Nelements && n<p_Np){        
+          dfloat rhsu = 0.f;
+          dfloat rhsv = 0.f;
+          #pragma unroll p_cubNp
+            for(int i=0;i<p_cubNp;++i){
+              const dfloat Pnc  = cubProjectT[i*p_Np+n];
+              rhsu += Pnc*s_cFx[es][i];
+              rhsv += Pnc*s_cFy[es][i];
+            }
+          // Update
+          const dlong id = e*p_Np+n;
+          Uhat[id+0*offset] -= dt*rhsu; 
+          Uhat[id+1*offset] -= dt*rhsv;           
+        }
+      }
+    }
+  }
+}
+
+
+// compute div(NU)  = div(uxu) in collocation way
+@kernel void mppfVelocityAddTensionTri2D(const dlong Nelements,
+                                            @restrict const  dfloat *  vgeo,
+                                            @restrict const  dfloat *  cubvgeo,
+                                            @restrict const  dfloat *  cubInterpT,
+                                            @restrict const  dfloat *  cubProjectT,
+                                            const dfloat dt,
+                                            const dlong offset,
+                                            const dfloat alpha,
+                                            @restrict const  dfloat *  Rho,
+                                            @restrict const  dfloat *  Psi,
+                                            @restrict const  dfloat *  Phi,
+                                            @restrict const  dfloat *  GPhi,
+                                                  @restrict dfloat *   Uhat){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
+    @shared dfloat s_Psi[p_NblockV][p_Np];
+    @shared dfloat s_Phi[p_NblockV][p_Np];
+    @shared dfloat s_dPhix[p_NblockV][p_Np];
+    @shared dfloat s_dPhiy[p_NblockV][p_Np];
+    @shared dfloat s_iR[p_NblockV][p_Np];
+    // Will hold iR and Mu on Cubature nodes
+    @shared dfloat s_cFx[p_NblockV][p_cubNp];
+    @shared dfloat s_cFy[p_NblockV][p_cubNp];
+    //
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){      // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          if(n<p_Np){ 
+            const dlong id = e*p_Np+n;
+            s_Psi[es][n]   = Psi[id];
+            s_Phi[es][n]   = Phi[id];
+            s_dPhix[es][n] = GPhi[id + 0*offset];
+            s_dPhiy[es][n] = GPhi[id + 1*offset];
+            s_iR[es][n] = 1.f/Rho[id];
+          }
+        } 
+      }
+    }
+
+    @barrier("local");
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements && n<p_cubNp){
+          dfloat cpsi = 0.f,   cphi = 0.f;
+          dfloat cdpdx = 0.f, cdpdy = 0.f;
+          dfloat ciR  = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat cIni = cubInterpT[n+i*p_cubNp];
+              cpsi   += cIni*s_Psi[es][i];
+              cphi   += cIni*s_Phi[es][i];
+              cdpdx  += cIni*s_dPhix[es][i];
+              cdpdy  += cIni*s_dPhiy[es][i];
+              ciR    += cIni*s_iR[es][i];
+            }
+          s_cFx[es][n] = p_chL * ciR* (cpsi- alpha*cphi)*cdpdx ;
+          s_cFy[es][n] = p_chL * ciR* (cpsi- alpha*cphi)*cdpdy;
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; 
+        if(e<Nelements && n<p_Np){        
+          dfloat rhsu = 0.f;
+          dfloat rhsv = 0.f;
+          #pragma unroll p_cubNp
+            for(int i=0;i<p_cubNp;++i){
+              const dfloat Pnc  = cubProjectT[i*p_Np+n];
+              rhsu += Pnc*s_cFx[es][i];
+              rhsv += Pnc*s_cFy[es][i];
+            }
+          // Update
+          const dlong id = e*p_Np+n;
+          Uhat[id+0*offset] -= dt*rhsu; 
+          Uhat[id+1*offset] -= dt*rhsv;           
+        }
+      }
+    }
+  }
+}
+
+
+// compute div(NU)  = div(uxu) in collocation way
+@kernel void mppfVelocityAddStressTri2D(const dlong Nelements,
+                                            @restrict const  dfloat *  vgeo,
+                                            @restrict const  dfloat *  cubvgeo,
+                                            @restrict const  dfloat *  cubInterpT,
+                                            @restrict const  dfloat *  cubProjectT,
+                                            const dfloat dt,
+                                            const dlong offset,
+                                            @restrict const  dfloat *  Rho,
+                                            @restrict const  dfloat *  GPhi,
+                                            @restrict const  dfloat *  GU,
+                                                  @restrict dfloat *   Uhat){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
+    @shared dfloat s_dPhix[p_NblockV][p_Np];
+    @shared dfloat s_dPhiy[p_NblockV][p_Np];
+    @shared dfloat s_dUdx[p_NblockV][p_Np];
+    @shared dfloat s_dUdy[p_NblockV][p_Np];
+    @shared dfloat s_dVdx[p_NblockV][p_Np];
+    @shared dfloat s_dVdy[p_NblockV][p_Np];
+    @shared dfloat s_iR[p_NblockV][p_Np];
+    // Will hold iR and Mu on Cubature nodes
+    @shared dfloat s_cFx[p_NblockV][p_cubNp];
+    @shared dfloat s_cFy[p_NblockV][p_cubNp];
+    //
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){      // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          if(n<p_Np){ 
+            const dlong id = e*p_Np+n;
+            s_dPhix[es][n] = GPhi[id + 0*offset];
+            s_dPhiy[es][n] = GPhi[id + 1*offset];
+            s_dUdx[es][n]  = GU[id + 0*offset];
+            s_dUdy[es][n]  = GU[id + 1*offset];
+            s_dVdx[es][n]  = GU[id + 2*offset];
+            s_dVdy[es][n]  = GU[id + 3*offset];
+            s_iR[es][n] = 1.f/Rho[id];
+          }
+        } 
+      }
+    }
+
+    @barrier("local");
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements && n<p_cubNp){
+          dfloat cdpdx = 0.f, cdpdy = 0.f;
+          dfloat cdudx = 0.f, cdudy = 0.f;
+          dfloat cdvdx = 0.f, cdvdy = 0.f;
+          dfloat ciR  = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat cIni = cubInterpT[n+i*p_cubNp];
+              cdpdx  += cIni*s_dPhix[es][i];
+              cdpdy  += cIni*s_dPhiy[es][i];
+              cdudx  += cIni*s_dUdx[es][i];
+              cdudy  += cIni*s_dUdy[es][i];
+              cdvdx  += cIni*s_dVdx[es][i];
+              cdvdy  += cIni*s_dVdy[es][i];
+              ciR    += cIni*s_iR[es][i];
+            }
+
+          const dfloat gmux = 0.5f*(p_mu1 - p_mu2)*cdpdx;
+          const dfloat gmuy = 0.5f*(p_mu1 - p_mu2)*cdpdy;
+
+          s_cFx[es][n] = ciR*(gmux*(2.f* cdudx)    +  gmuy*(cdudy + cdvdx) ) ; 
+          s_cFy[es][n] = ciR*(gmux*(cdvdx + cdudy) +  gmuy*(2.f* cdvdy)    ) ;  
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; 
+        if(e<Nelements && n<p_Np){        
+          dfloat rhsu = 0.f;
+          dfloat rhsv = 0.f;
+          #pragma unroll p_cubNp
+            for(int i=0;i<p_cubNp;++i){
+              const dfloat Pnc  = cubProjectT[i*p_Np+n];
+              rhsu += Pnc*s_cFx[es][i];
+              rhsv += Pnc*s_cFy[es][i];
+            }
+          // Update
+          const dlong id = e*p_Np+n;
+          Uhat[id+0*offset] += dt*rhsu; 
+          Uhat[id+1*offset] += dt*rhsv;           
+        }
+      }
+    }
+  }
+}
+
+
+
+@kernel void mppfVelocityUpdateTri2D(const dlong Nelements,
+                                @restrict const  dfloat *  x,
+                                @restrict const  dfloat *  y,
+                                @restrict const  dfloat *  z,
+                                const dfloat dt,
+                                const dfloat time,
+                                @restrict const  dfloat *  extbdfA,
+                                @restrict const  dfloat *  extbdfB,
+                                const dlong fieldOffset,
+                                @restrict const  dfloat *  U,
+                                @restrict const  dfloat *  NU,
+                                      @restrict dfloat *   Uhat){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+      for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){           
+        const dlong e = eo+es; 
+        if(e<Nelements){  
+          const dlong id = n + p_Np*e;
+          
+          dfloat rhsu = 0.;
+          dfloat rhsv = 0.;
+          
+          for (int s=0;s<p_Nstages;s++) {
+            //U 
+            const dfloat Um  = U[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+            const dfloat Vm  = U[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+
+            // NU
+            const dfloat NUm  = NU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+            const dfloat NVm  = NU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+
+            rhsu +=  extbdfB[s]*Um  - dt*extbdfA[s]*NUm ;
+            rhsv +=  extbdfB[s]*Vm  - dt*extbdfA[s]*NVm ;
+          }
+
+         
+          // Add explicit viscous stress                     
+          dfloat fbx = 0.f; 
+          dfloat fby = 0.f;
+          mppfVelocitySource2D(time,x[id],y[id],&fbx, &fby);
+          
+
+          #if 0  
+          rhsu += dt*invrho*fbx;
+          rhsv += dt*invrho*fby;
+          #else
+          rhsu += dt*fbx;
+          rhsv += dt*fby;
+          #endif
+
+          //
+          Uhat[id + 0*fieldOffset] += rhsu;
+          Uhat[id + 1*fieldOffset] += rhsv; 
+        }
+      }
+    }
+  }
+}
+
+

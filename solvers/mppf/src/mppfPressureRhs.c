@@ -259,9 +259,75 @@ mppf->velocityAddPressureKernel(mesh->Nelements,
                                 mppf->o_Uhat);
 
 
+// Add pressure term i.e. Uhat = (1/rho0 - 1/rho)*GP^*
+mppf->velocityAddDiffusiveKernel(mesh->Nelements,
+                                mesh->o_vgeo,
+                                mesh->o_cubvgeo,
+                                mesh->o_cubInterpT,
+                                mesh->o_cubProjectT,
+                                mppf->dt,
+                                mppf->fieldOffset,
+                                mppf->o_Rho,
+                                mppf->o_Mu,
+                                mppf->o_DU,
+                                mppf->o_Uhat);
+
+
+// Add pressure term i.e. Uhat = (1/rho0 - 1/rho)*GP^*
+mppf->velocityAddTensionKernel(mesh->Nelements,
+                                mesh->o_vgeo,
+                                mesh->o_cubvgeo,
+                                mesh->o_cubInterpT,
+                                mesh->o_cubProjectT,
+                                mppf->dt,
+                                mppf->fieldOffset,
+                                mppf->chA,
+                                mppf->o_Rho,
+                                mppf->o_Psi,
+                                mppf->o_Phi,
+                                mppf->o_GPhi,
+                                mppf->o_Uhat);
+
+// Add pressure term i.e. Uhat = (1/rho0 - 1/rho)*GP^*
+mppf->velocityAddStressKernel(mesh->Nelements,
+                                mesh->o_vgeo,
+                                mesh->o_cubvgeo,
+                                mesh->o_cubInterpT,
+                                mesh->o_cubProjectT,
+                                mppf->dt,
+                                mppf->fieldOffset,
+                                mppf->o_Rho,
+                                mppf->o_GPhi,
+                                mppf->o_GU,
+                                mppf->o_Uhat);
 
 
 
+mppf->velocityUpdateKernel(mesh->Nelements,
+                           mesh->o_x,
+                           mesh->o_y,
+                           mesh->o_z,
+                           mppf->dt,
+                           time,
+                           mppf->o_extbdfA,
+                           mppf->o_extbdfB,
+                           mppf->fieldOffset,
+                           mppf->o_U,
+                           mppf->o_NU,
+                           mppf->o_Uhat);
+
+
+// rhsP = Div Uhat
+  mppfDivergence(mppf, time, mppf->o_Uhat, mppf->o_rhsP);
+
+// // rhsP = -MM*rho0* Div Uhat
+  occaTimerTic(mesh->device,"PoissonRhsForcing");
+  mppf->pressureRhsKernel(mesh->Nelements,
+                              mesh->o_vgeo,
+                              mppf->idt,
+                              mesh->o_MM, 
+                              mppf->o_rhsP);
+  occaTimerToc(mesh->device,"PoissonRhsForcing");
 
 #endif
 

@@ -890,8 +890,20 @@ options.getArgs("BAND THICKNESS", mppf->eta);
       mppf->pressureRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 
-       sprintf(kernelName, "mppfVelocityAddPressure%s", suffix);
+      sprintf(kernelName, "mppfVelocityAddPressure%s", suffix);
       mppf->velocityAddPressureKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfVelocityAddDiffusive%s", suffix);
+      mppf->velocityAddDiffusiveKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfVelocityAddTension%s", suffix);
+      mppf->velocityAddTensionKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfVelocityAddStress%s", suffix);
+      mppf->velocityAddStressKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "mppfVelocityUpdate%s", suffix);
+      mppf->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 
 

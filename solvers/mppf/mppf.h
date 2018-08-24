@@ -249,6 +249,9 @@ typedef struct {
   occa::kernel velocityCurlSurfaceKernel;
 
   occa::kernel velocityAddPressureKernel;
+  occa::kernel velocityAddDiffusiveKernel;
+  occa::kernel velocityAddTensionKernel;
+  occa::kernel velocityAddStressKernel;
   
   // Velocity Solve Kernels
   occa::kernel velocityRhsKernel;
