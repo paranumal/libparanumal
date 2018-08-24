@@ -55,6 +55,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   dlong Nhalo = mesh->Np*mesh->totalHaloPairs;
   dlong Nall   = Ntotal + Nhalo;
 
+  dlong Nblock2 = mymax(1,(Nblock+blockSize-1)/blockSize);
+  
   //tau
   if (elliptic->elementType==TRIANGLES || elliptic->elementType==QUADRILATERALS)
     elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
@@ -78,6 +80,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   elliptic->o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->p);
   elliptic->o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->Ap);
   elliptic->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), elliptic->tmp);
+  elliptic->o_tmp2 = mesh->device.malloc(Nblock2*sizeof(dfloat), elliptic->tmp);
 
   elliptic->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), elliptic->grad);
 
@@ -116,6 +119,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   elliptic->type = strdup(dfloatString);
 
   elliptic->Nblock = Nblock;
+  elliptic->Nblock2 = Nblock2;
 
   //fill geometric factors in halo
   if(mesh->totalHaloPairs){

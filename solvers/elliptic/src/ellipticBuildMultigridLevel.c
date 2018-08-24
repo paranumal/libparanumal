@@ -217,8 +217,10 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   dlong Ntotal = mesh->Np*mesh->Nelements;
   dlong Nblock = mymax(1,(Ntotal+blockSize-1)/blockSize);
+  dlong Nblock2 = mymax(1,(Nblock+blockSize-1)/blockSize);
 
   elliptic->Nblock = Nblock;
+  elliptic->Nblock2 = Nblock2;
 
   if (elliptic->elementType==TRIANGLES) {
 
@@ -640,6 +642,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   elliptic->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
   elliptic->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), elliptic->tmp);
+  elliptic->o_tmp2 = mesh->device.malloc(Nblock2*sizeof(dfloat), elliptic->tmp);
 
 
   //setup an unmasked gs handle
