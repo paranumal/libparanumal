@@ -20,10 +20,10 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"' -DUNDERSCORE
 
 # link flags to be used
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g 
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g -DUNDERSCORE
 
 # libraries to be linked in
 LIBS	=   -L$(ALMONDDIR) -lparALMOND  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs \

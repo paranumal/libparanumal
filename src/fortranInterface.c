@@ -29,8 +29,8 @@ int checkHandle(int handle, int low, int up) {
 
 extern "C" {
 
-#define fHolmesInit FORTRAN_NAME(holmesinit,HOLMESINIT)
-  void fHolmesInit(int *handle, MPI_Fint *comm, int *err) {
+#define fParanumalInit FORTRAN_NAME(paranumalinit,PARANUMALINIT)
+  void fParanumalInit(int *handle, MPI_Fint *comm, int *err) {
     *err = 1;
     MPI_Comm ccomm = MPI_Comm_f2c(*comm);
 
@@ -46,8 +46,8 @@ extern "C" {
     *err = 0;
   }
 
-#define fHolmesFinalize FORTRAN_NAME(holmesfinalize,HOLMESFINALIZE)
-  void fHolmesFinalize(int *handle, int *err) {
+#define fParanumalFinalize FORTRAN_NAME(paranumalfinalize,PARANUMALFINALIZE)
+  void fParanumalFinalize(int *handle, int *err) {
     *err = 1;
 
     if(checkHandle(*handle,LOWER_BOUND,commCount)) {
@@ -66,7 +66,7 @@ extern "C" {
     }
   }
 
-#define fSetupAideCreate FORTRAN_NAME(holmessetupaidecreate,HOLMESSETUPAIDECREATE)
+#define fSetupAideCreate FORTRAN_NAME(paranumalsetupaidecreate,PARANUMALSETUPAIDECREATE)
   void fSetupAideCreate(int *handle, int *err) {
     *err = 1;
 
@@ -84,7 +84,7 @@ extern "C" {
     *err = 0;
   }
 
-#define fSetupAideDestroy FORTRAN_NAME(holmessetupaidedestroy,HOLMESSETUPAIDEDESTROY)
+#define fSetupAideDestroy FORTRAN_NAME(paranumalsetupaidedestroy,PARANUMALSETUPAIDEDESTROY)
   void fSetupAideDestroy(int *handle, int *err) {
     *err = 1;
 
@@ -104,7 +104,7 @@ extern "C" {
     }
   }
 
-#define fSetupAideSetArg FORTRAN_NAME(holmessetupaidesetarg,HOLMESSETUPAIDESETARG)
+#define fSetupAideSetArg FORTRAN_NAME(paranumalsetupaidesetarg,PARANUMALSETUPAIDESETARG)
   void fSetupAideSetArg(char *argname, char *argvalue, int *handle, int *err) {
     *err = 1;
 
@@ -117,7 +117,7 @@ extern "C" {
     }
   }
 
-#define fSetupAideGetArg FORTRAN_NAME(holmessetupaidegetarg,HOLMESSETUPAIDEGETARG)
+#define fSetupAideGetArg FORTRAN_NAME(paranumalsetupaidegetarg,PARANUMALSETUPAIDEGETARG)
   void fSetupAideGetArg(char *argvalue, int *len, char *argname, int *handle, int *err) {
     *err = 1;
 
@@ -133,8 +133,8 @@ extern "C" {
   }
 }
 
-#define fHolmesMeshInit FORTRAN_NAME(holmesmeshinit,HOLMESMESHINIT)
-  void fHolmesMeshInit(int *mhandle,  int *Ndim, int *Nverts,
+#define fParanumalMeshInit FORTRAN_NAME(paranumalmeshinit,PARANUMALMESHINIT)
+  void fParanumalMeshInit(int *mhandle,  int *Ndim, int *Nverts,
                        hlong *Nnodes, hlong *Nelements, hlong *NboundaryFaces,
                        hlong *EToV, hlong *BToV,
                        dfloat *VX, dfloat *VY, dfloat *VZ,
@@ -166,8 +166,8 @@ extern "C" {
     *err = 0;
   }
 
-#define fHolmesMeshSetup FORTRAN_NAME(holmesmeshsetup,HOLMESMESHSETUP)
-  void fHolmesMeshSetup(int *N,
+#define fParanumalMeshSetup FORTRAN_NAME(paranumalmeshsetup,PARANUMALMESHSETUP)
+  void fParanumalMeshSetup(int *N,
                        dfloat *X, dfloat *Y, dfloat *Z,
                        dfloat *XR, dfloat *XS, dfloat *XT,
                        dfloat *YR, dfloat *YS, dfloat *YT,
