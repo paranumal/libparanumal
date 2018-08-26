@@ -1,3 +1,29 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
 #include "elliptic.h"
 
 int pcg(elliptic_t* elliptic, dfloat lambda, 
@@ -15,7 +41,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   /*compute norm b, set the tolerance */
 #if 1
-  dfloat normB = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
+  dfloat normB = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
   dfloat normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 #endif
@@ -28,7 +54,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);
 
 #if 1
-  dfloat rdotr0 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
+  dfloat rdotr0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
   dfloat rdotr0 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 #endif
@@ -53,7 +79,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   o_p.copyFrom(o_z); // PCG
 
   // dot(r,z)
-  rdotz0 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+  rdotz0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
 
@@ -66,7 +92,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
 
     // dot(p,A*p)
-    pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
+    pAp =  ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
     // ]
     
     // alpha = dot(r,z)/dot(p,A*p)
@@ -82,7 +108,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
     // dot(r,r)
 #if 1
-    rdotr1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
+    rdotr1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
     rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 #endif
@@ -104,13 +130,13 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticPreconditioner(elliptic, lambda, o_r, o_z);
 
     // dot(r,z)
-    rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+    rdotz1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
     // ]
     
     // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
     if(options.compareArgs("KRYLOV SOLVER", "PCG+FLEXIBLE") ||
        options.compareArgs("KRYLOV SOLVER", "PCG,FLEXIBLE")) {
-      dfloat zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
+      dfloat zdotAp = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
       beta = -alpha*zdotAp/rdotz0;
     } else {
       beta = rdotz1/rdotz0;

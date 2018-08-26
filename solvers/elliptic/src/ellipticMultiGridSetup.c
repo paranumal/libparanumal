@@ -1,3 +1,29 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
 #include "elliptic.h"
 
 void ellipticMultigridAx(void **args, occa::memory &o_x, occa::memory &o_Ax) {
@@ -25,7 +51,7 @@ void ellipticMultigridCoarsen(void **args, occa::memory &o_x, occa::memory &o_Rx
   precon->coarsenKernel(mesh->Nelements, o_R, o_x, o_Rx);
 
   if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-    ellipticParallelGatherScatter(mesh, mesh->ogs, o_Rx, dfloatString, "add");  
+    ogsGatherScatter(o_Rx, ogsDfloat, ogsAdd, mesh->ogs);  
     if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Rx);
   }
 }
@@ -49,7 +75,7 @@ void ellipticGather(void **args, occa::memory &o_x, occa::memory &o_Gx) {
   mesh_t *mesh      = elliptic->mesh;
   setupAide options = elliptic->options;
 
-  meshParallelGather(mesh, ogs, o_x, o_Gx);  
+  ogsGather(o_Gx, o_x, ogsDfloat, ogsAdd, ogs);
   elliptic->dotMultiplyKernel(ogs->Ngather, ogs->o_gatherInvDegree, o_Gx, o_Gx);
 }
 
@@ -62,7 +88,7 @@ void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx) {
   mesh_t *mesh      = elliptic->mesh;
   setupAide options = elliptic->options;
 
-  meshParallelScatter(mesh, ogs, o_x, o_Sx);  
+  ogsScatter(o_Sx, o_x, ogsDfloat, ogsAdd, ogs);
 }
 
 void buildCoarsenerTriTet(elliptic_t* elliptic, mesh_t **meshLevels, int Nf, int Nc);
@@ -311,7 +337,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 
     coarseLevel->gatherArgs = (void **) calloc(3,sizeof(void*));  
     coarseLevel->gatherArgs[0] = (void *) ellipticL;
-    coarseLevel->gatherArgs[1] = (void *) coarseogs;
+    coarseLevel->gatherArgs[1] = (void *) ellipticL->ogs;
     coarseLevel->gatherArgs[2] = (void *) &(coarseLevel->o_Sx);
     coarseLevel->scatterArgs = coarseLevel->gatherArgs;
 

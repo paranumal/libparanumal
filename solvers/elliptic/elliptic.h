@@ -1,3 +1,29 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
 #ifndef ELLIPTIC_H
 #define ELLIPTIC_H 1
 
@@ -30,6 +56,7 @@ typedef struct {
   char *type;
 
   dlong Nblock;
+  dlong Nblock2; // second reduction
 
   dfloat tau;
 
@@ -73,6 +100,7 @@ typedef struct {
   occa::memory o_Ax; // A*initial guess
   occa::memory o_Ap; // A*search direction
   occa::memory o_tmp; // temporary
+  occa::memory o_tmp2; // temporary (second reduction)
   occa::memory o_grad; // temporary gradient storage (part of A*)
   occa::memory o_rtmp;
   occa::memory o_invDegree;
@@ -82,14 +110,6 @@ typedef struct {
 
   occa::memory o_EXYZ; // element vertices for reconstructing geofacs (trilinear hexes only)
   occa::memory o_gllzw; // GLL nodes and weights
-  
-  // list of elements that are needed for global gather-scatter
-  dlong NglobalGatherElements;
-  occa::memory o_globalGatherElementList;
-
-  // list of elements that are not needed for global gather-scatter
-  dlong NlocalGatherElements;
-  occa::memory o_localGatherElementList;
 
   occa::kernel AxKernel;
   occa::kernel partialAxKernel;
@@ -116,9 +136,6 @@ typedef struct {
 
 elliptic_t *ellipticSetup(mesh2D *mesh, dfloat lambda, occa::properties &kernelInfo, setupAide options);
 
-void ellipticParallelGatherScatter(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, const char *type, const char *op);
-void ellipticParallelGatherScatterSetup(elliptic_t *elliptic);
-
 void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_z);
 void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda);
 
@@ -135,6 +152,8 @@ int pcg      (elliptic_t* elliptic, dfloat lambda, occa::memory &o_r, occa::memo
 
 void ellipticScaledAdd(elliptic_t *elliptic, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
 dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b);
+
+dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b);
 
 void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision);
 
@@ -164,4 +183,10 @@ dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level);
 
 #define maxNthreads 256
 
+extern "C"
+{
+  void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld);
+}
+
 #endif
+

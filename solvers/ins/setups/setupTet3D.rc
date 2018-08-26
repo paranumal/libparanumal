@@ -74,20 +74,20 @@ CUBATURE
 0
 
 [FINAL TIME]
-50
+0.1
 
 [CFL]
 0.1
 
 [OUTPUT TYPE]
-ISO_WELD
+VTU
 
 #Tested only EXTBDF currently
 [RESTART FROM FILE]
-1
+0
 
 [WRITE RESTART FILE]
-1
+0
 
 [RESTART FILE NAME]
 insRestartTet3D

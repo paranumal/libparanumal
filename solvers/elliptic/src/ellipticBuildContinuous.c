@@ -1,3 +1,29 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
 #include "elliptic.h"
 
 
@@ -42,28 +68,38 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   mesh2D *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
-  /* Build a gather-scatter to assemble the global masked problem */
-  dlong Ntotal = mesh->Np*mesh->Nelements;
+  int rank = mesh->rank;
 
-  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  memcpy(globalNumbering,mesh->globalIds,Ntotal*sizeof(hlong)); 
-  for (dlong n=0;n<elliptic->Nmasked;n++) 
-    globalNumbering[elliptic->maskIds[n]] = -1;
+  //use the masked gs handle to define a global ordering
 
-  // squeeze node numbering
-  meshParallelConsecutiveGlobalNumbering(mesh, Ntotal, globalNumbering, mesh->globalOwners, globalStarts);
+  // number of degrees of freedom on this rank (after gathering)
+  hlong Ngather = elliptic->ogs->Ngather;
+  dlong Ntotal  = mesh->Np*mesh->Nelements;
 
-  hlong *gatherMaskedBaseIds   = (hlong *) calloc(Ntotal,sizeof(hlong));
-  for (dlong n=0;n<Ntotal;n++) {
-    dlong id = mesh->gatherLocalIds[n];
-    gatherMaskedBaseIds[n] = globalNumbering[id];
+
+  // create a global numbering system
+  hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
+  int   *owner     = (int *) calloc(Ngather,sizeof(int));
+
+  // every gathered degree of freedom has its own global id
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh->comm);
+  for(int r=0;r<mesh->size;++r)
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+
+  //use the offsets to set a consecutive global numbering
+  for (dlong n =0;n<elliptic->ogs->Ngather;n++) {
+    globalIds[n] = n + globalStarts[rank];
+    owner[n] = rank;
   }
 
-  //build gather scatter with masked nodes
-  int verbose = options.compareArgs("VERBOSE", "TRUE") ? 1:0;
-  *ogs = meshParallelGatherScatterSetup(mesh, Ntotal, 
-                                        mesh->gatherLocalIds,  gatherMaskedBaseIds, 
-                                        mesh->gatherBaseRanks, mesh->gatherHaloFlags,verbose);
+  //scatter this numbering to the original nodes
+  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
+  int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
+  for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
+  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, elliptic->ogs);
+  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, elliptic->ogs);
+
+  free(globalIds); free(owner);
 
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
@@ -88,9 +124,6 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
     }
   }
 
-  int *mask = (int *) calloc(mesh->Np*mesh->Nelements,sizeof(int));
-  for (dlong n=0;n<elliptic->Nmasked;n++) mask[elliptic->maskIds[n]] = 1;
-
   if(mesh->rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
   //Build unassembed non-zeros
@@ -102,9 +135,9 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
     dfloat J   = mesh->ggeo[e*mesh->Nggeo + GWJID];
 
     for (int n=0;n<mesh->Np;n++) {
-      if (mask[e*mesh->Np + n]) continue; //skip masked nodes
+      if (globalNumbering[e*mesh->Np + n]<0) continue; //skip masked nodes
       for (int m=0;m<mesh->Np;m++) {
-        if (mask[e*mesh->Np + m]) continue; //skip masked nodes
+        if (globalNumbering[e*mesh->Np + m]<0) continue; //skip masked nodes
 
         dfloat val = 0.;
 
@@ -119,7 +152,7 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
           sendNonZeros[cnt].val = val;
           sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + n];
           sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + m];
-          sendNonZeros[cnt].ownerRank = mesh->globalOwners[e*mesh->Np + n];
+          sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + n];
           cnt++;
         }
       }
@@ -191,7 +224,7 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
-  free(globalNumbering);
+  free(globalNumbering); free(globalOwners);
 
   free(AsendCounts);
   free(ArecvCounts);
@@ -202,7 +235,6 @@ void ellipticBuildContinuousTri2D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   free(Srs);
   free(Sss);
   free(MM );
-  free(mask);
 }
 
 
@@ -211,29 +243,37 @@ void ellipticBuildContinuousQuad2D(elliptic_t *elliptic, dfloat lambda, nonZero_
   mesh2D *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
-  /* Build a gather-scatter to assemble the global masked problem */
-  dlong Ntotal = mesh->Np*mesh->Nelements;
+  int rank = mesh->rank;
 
-  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  memcpy(globalNumbering,mesh->globalIds,Ntotal*sizeof(hlong)); 
-  for (dlong n=0;n<elliptic->Nmasked;n++) 
-    globalNumbering[elliptic->maskIds[n]] = -1;
+  //use the masked gs handle to define a global ordering
 
-  // squeeze node numbering
-  meshParallelConsecutiveGlobalNumbering(mesh, Ntotal, globalNumbering, mesh->globalOwners, globalStarts);
+  // number of degrees of freedom on this rank (after gathering)
+  hlong Ngather = elliptic->ogs->Ngather;
+  dlong Ntotal  = mesh->Np*mesh->Nelements;
 
-  hlong *gatherMaskedBaseIds   = (hlong *) calloc(Ntotal,sizeof(hlong));
-  for (dlong n=0;n<Ntotal;n++) {
-    dlong id = mesh->gatherLocalIds[n];
-    gatherMaskedBaseIds[n] = globalNumbering[id];
+  // create a global numbering system
+  hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
+  int   *owner     = (int *) calloc(Ngather,sizeof(int));
+
+  // every gathered degree of freedom has its own global id
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh->comm);
+  for(int r=0;r<mesh->size;++r)
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+
+  //use the offsets to set a consecutive global numbering
+  for (dlong n =0;n<elliptic->ogs->Ngather;n++) {
+    globalIds[n] = n + globalStarts[rank];
+    owner[n] = rank;
   }
 
-  //build gather scatter with masked nodes
-  int verbose = options.compareArgs("VERBOSE", "TRUE") ? 1:0;
-  *ogs = meshParallelGatherScatterSetup(mesh, Ntotal, 
-                                        mesh->gatherLocalIds,  gatherMaskedBaseIds, 
-                                        mesh->gatherBaseRanks, mesh->gatherHaloFlags,verbose);
+  //scatter this numbering to the original nodes
+  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
+  int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
+  for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
+  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, elliptic->ogs);
+  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, elliptic->ogs);
 
+  free(globalIds); free(owner);
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
@@ -299,7 +339,7 @@ void ellipticBuildContinuousQuad2D(elliptic_t *elliptic, dfloat lambda, nonZero_
               sendNonZeros[cnt].val = val;
               sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + nx+ny*mesh->Nq];
               sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + mx+my*mesh->Nq];
-              sendNonZeros[cnt].ownerRank = mesh->globalOwners[e*mesh->Np + nx+ny*mesh->Nq];
+              sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + nx+ny*mesh->Nq];
               cnt++;
             }
           }
@@ -373,7 +413,7 @@ void ellipticBuildContinuousQuad2D(elliptic_t *elliptic, dfloat lambda, nonZero_
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
-  free(globalNumbering);
+  free(globalNumbering); free(globalOwners);
 
   free(AsendCounts);
   free(ArecvCounts);
@@ -386,28 +426,38 @@ void ellipticBuildContinuousTet3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   mesh2D *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
-  /* Build a gather-scatter to assemble the global masked problem */
-  dlong Ntotal = mesh->Np*mesh->Nelements;
+  int rank = mesh->rank;
 
-  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  memcpy(globalNumbering,mesh->globalIds,Ntotal*sizeof(hlong)); 
-  for (dlong n=0;n<elliptic->Nmasked;n++) 
-    globalNumbering[elliptic->maskIds[n]] = -1;
+  //use the masked gs handle to define a global ordering
 
-  // squeeze node numbering
-  meshParallelConsecutiveGlobalNumbering(mesh, Ntotal, globalNumbering, mesh->globalOwners, globalStarts);
+  // number of degrees of freedom on this rank (after gathering)
+  hlong Ngather = elliptic->ogs->Ngather;
+  dlong Ntotal  = mesh->Np*mesh->Nelements;
 
-  hlong *gatherMaskedBaseIds   = (hlong *) calloc(Ntotal,sizeof(hlong));
-  for (dlong n=0;n<Ntotal;n++) {
-    dlong id = mesh->gatherLocalIds[n];
-    gatherMaskedBaseIds[n] = globalNumbering[id];
+  // create a global numbering system
+  hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
+  int   *owner     = (int *) calloc(Ngather,sizeof(int));
+
+  // every gathered degree of freedom has its own global id
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh->comm);
+  for(int r=0;r<mesh->size;++r)
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+
+  //use the offsets to set a consecutive global numbering
+  for (dlong n =0;n<elliptic->ogs->Ngather;n++) {
+    globalIds[n] = n + globalStarts[rank];
+    owner[n] = rank;
   }
 
-  //build gather scatter with masked nodes
-  int verbose = options.compareArgs("VERBOSE", "TRUE") ? 1:0;
-  *ogs = meshParallelGatherScatterSetup(mesh, Ntotal, 
-                                        mesh->gatherLocalIds,  gatherMaskedBaseIds, 
-                                        mesh->gatherBaseRanks, mesh->gatherHaloFlags, verbose);
+  //scatter this numbering to the original nodes
+  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
+  int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
+  for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
+  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, elliptic->ogs);
+  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, elliptic->ogs);
+
+  free(globalIds); free(owner);
+
 
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh->Np*mesh->Np*mesh->Nelements;
@@ -461,7 +511,7 @@ void ellipticBuildContinuousTet3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
             sendNonZeros[cnt].val = val;
             sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + n];
             sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + m];
-            sendNonZeros[cnt].ownerRank = mesh->globalOwners[e*mesh->Np + n];
+            sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + n];
             cnt++;
           }
         }
@@ -534,7 +584,7 @@ void ellipticBuildContinuousTet3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
-  free(globalNumbering);
+  free(globalNumbering); free(globalOwners);
 
   free(AsendCounts);
   free(ArecvCounts);
@@ -549,28 +599,37 @@ void ellipticBuildContinuousHex3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   mesh2D *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
-  /* Build a gather-scatter to assemble the global masked problem */
-  dlong Ntotal = mesh->Np*mesh->Nelements;
+  int rank = mesh->rank;
 
-  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  memcpy(globalNumbering,mesh->globalIds,Ntotal*sizeof(hlong)); 
-  for (dlong n=0;n<elliptic->Nmasked;n++) 
-    globalNumbering[elliptic->maskIds[n]] = -1;
+  //use the masked gs handle to define a global ordering
 
-  // squeeze node numbering
-  meshParallelConsecutiveGlobalNumbering(mesh, Ntotal, globalNumbering, mesh->globalOwners, globalStarts);
+  // number of degrees of freedom on this rank (after gathering)
+  hlong Ngather = elliptic->ogs->Ngather;
+  dlong Ntotal  = mesh->Np*mesh->Nelements;
 
-  hlong *gatherMaskedBaseIds   = (hlong *) calloc(Ntotal,sizeof(hlong));
-  for (dlong n=0;n<Ntotal;n++) {
-    dlong id = mesh->gatherLocalIds[n];
-    gatherMaskedBaseIds[n] = globalNumbering[id];
+  // create a global numbering system
+  hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
+  int   *owner     = (int *) calloc(Ngather,sizeof(int));
+
+  // every gathered degree of freedom has its own global id
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh->comm);
+  for(int r=0;r<mesh->size;++r)
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+
+  //use the offsets to set a consecutive global numbering
+  for (dlong n =0;n<elliptic->ogs->Ngather;n++) {
+    globalIds[n] = n + globalStarts[rank];
+    owner[n] = rank;
   }
 
-  //build gather scatter with masked nodes
-  int verbose = options.compareArgs("VERBOSE", "TRUE") ? 1:0;
-  *ogs = meshParallelGatherScatterSetup(mesh, Ntotal, 
-                                        mesh->gatherLocalIds,  gatherMaskedBaseIds, 
-                                        mesh->gatherBaseRanks, mesh->gatherHaloFlags,verbose);
+  //scatter this numbering to the original nodes
+  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
+  int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
+  for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
+  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, elliptic->ogs);
+  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, elliptic->ogs);
+
+  free(globalIds); free(owner);
 
 
     // 2. Build non-zeros of stiffness matrix (unassembled)
@@ -672,7 +731,7 @@ void ellipticBuildContinuousHex3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
               sendNonZeros[cnt].val = val;
               sendNonZeros[cnt].row = globalNumbering[e*mesh->Np + idn];
               sendNonZeros[cnt].col = globalNumbering[e*mesh->Np + idm];
-              sendNonZeros[cnt].ownerRank = mesh->globalOwners[e*mesh->Np + idn];
+              sendNonZeros[cnt].ownerRank = globalOwners[e*mesh->Np + idn];
               cnt++;
             }
         }
@@ -748,7 +807,7 @@ void ellipticBuildContinuousHex3D(elliptic_t *elliptic, dfloat lambda, nonZero_t
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
-  free(globalNumbering);
+  free(globalNumbering); free(globalOwners);
 
   free(AsendCounts);
   free(ArecvCounts);

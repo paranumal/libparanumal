@@ -9,7 +9,8 @@ include ${OCCA_DIR}/scripts/Makefile
 
 # define variables
 HDRDIR = ../../include
-GSDIR  = ../../3rdParty/gslib.github/src
+GSDIR  = ../../3rdParty/gslib
+OGSDIR  = ../../libs/gatherScatter
 ALMONDDIR = ../parALMOND
 
 # set options for this machine
@@ -19,15 +20,14 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DUNDERSCORE -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"'
-
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"'
 
 # link flags to be used
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
-			-L$(ALMONDDIR) -lparALMOND
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g 
 
 # libraries to be linked in
-LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
+LIBS	=   -L$(ALMONDDIR) -lparALMOND  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs \
+			-L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 #-llapack -lblas
 
@@ -49,6 +49,7 @@ $(ALMONDDIR)/parALMOND.h \
 # list of objects to be compiled
 AOBJS    = \
 ./src/PCG.o \
+./src/ellipticPlotVTUHex3D.o \
 ./src/ellipticBuildContinuous.o \
 ./src/ellipticBuildIpdg.o \
 ./src/ellipticBuildJacobi.o \
@@ -57,8 +58,6 @@ AOBJS    = \
 ./src/ellipticHaloExchange.o\
 ./src/ellipticMultiGridSetup.o \
 ./src/ellipticOperator.o \
-./src/ellipticParallelGatherScatter.o \
-./src/ellipticParallelGatherScatterSetup.o \
 ./src/ellipticPreconditioner.o\
 ./src/ellipticPreconditionerSetup.o\
 ./src/ellipticSEMFEMSetup.o\
@@ -93,8 +92,6 @@ LOBJS = \
 ../../src/meshOccaSetup3D.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
-../../src/meshParallelConsecutiveGlobalNumbering.o\
-../../src/meshParallelGatherScatter.o \
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelReaderTri2D.o \
 ../../src/meshParallelReaderQuad2D.o \
@@ -131,25 +128,20 @@ LOBJS = \
 ../../src/fortranInterface.o \
 ../../src/fortranMeshSetup.o
 
-COBJS = \
-../../src/gsParallelGatherScatter.o\
-../../src/gsParallelGatherScatterSetup.o\
-../../src/xxtCoarseSolve.o
-
-
-ellipticMain:$(AOBJS) $(LOBJS) ./src/ellipticMain.o gslibInterface
-	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../solvers/elliptic
-	cd ../parALMOND; make -j lib; cd ../elliptic
+ellipticMain:$(AOBJS) $(LOBJS) ./src/ellipticMain.o libblas libogs libparALMOND
 	$(LD)  $(LDFLAGS)  -o ellipticMain ./src/ellipticMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
 	ar -cr libelliptic.a $(AOBJS)
 
-gslibInterface:
-	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../solvers/elliptic
-	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
-	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths)
-	$(cc) $(CFLAGS) -c -o ../../src/xxtCoarseSolve.o ../../src/xxtCoarseSolve.c $(paths)
+libogs:
+	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/elliptic
+
+libblas:
+	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../solvers/elliptic
+
+libparALMOND:
+	cd ../parALMOND; make -j lib; cd ../elliptic
 
 all: lib ellipticMain
 
@@ -157,11 +149,12 @@ all: lib ellipticMain
 clean:
 	cd ../parALMOND; make clean; cd ../elliptic
 	cd ../../src; rm *.o; cd ../solvers/elliptic
+	cd ../../libs/gatherScatter; make clean; cd ../../solvers/elliptic
 	rm src/*.o ellipticMain libelliptic.a
 
 realclean:
-	cd ../../3rdParty/gslib.github; make clean; cd ../../solvers/elliptic
 	cd ../../3rdParty/BlasLapack; make clean; cd ../../solvers/elliptic
+	cd ../../libs/gatherScatter; make realclean; cd ../../solvers/elliptic
 	cd ../parALMOND; make clean; cd ../elliptic
 	cd ../../src; rm *.o; cd ../solvers/elliptic
 	rm src/*.o ellipticMain libelliptic.a

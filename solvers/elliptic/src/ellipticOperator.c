@@ -1,3 +1,29 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
 #include "elliptic.h"
 
 void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision){
@@ -16,69 +42,42 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   dlong Nblock = elliptic->Nblock;
   dfloat *tmp = elliptic->tmp;
   occa::memory &o_tmp = elliptic->o_tmp;
-
-  int one = 1;
-  dlong dOne = 1;
+  
 
   if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
-    ogs_t *ogs = elliptic->mesh->ogs;
+    ogs_t *ogs = elliptic->ogs;
 
     int mapType = (elliptic->elementType==HEXAHEDRA &&
-		   options.compareArgs("ELEMENT MAP", "TRILINEAR")) ? 1:0;
+                   options.compareArgs("ELEMENT MAP", "TRILINEAR")) ? 1:0;
 
     occa::kernel &partialAxKernel = (strstr(precision, "float")) ? elliptic->partialFloatAxKernel : elliptic->partialAxKernel;
     
-    if(elliptic->NglobalGatherElements) {
+    if(mesh->NglobalGatherElements) {
       if(mapType==0)
-	partialAxKernel(elliptic->NglobalGatherElements, elliptic->o_globalGatherElementList,
-			mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+        partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
+                        mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
       else
-	partialAxKernel(elliptic->NglobalGatherElements, elliptic->o_globalGatherElementList,
-			elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
-    }
-    if(ogs->NhaloGather) {
-      mesh->device.finish();
-      mesh->device.setStream(elliptic->dataStream);
-
-      mesh->gatherKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, o_Aq, ogs->o_haloGatherTmp);
-      ogs->o_haloGatherTmp.copyTo(ogs->haloGatherTmp,"async: true");
-
-      mesh->device.setStream(elliptic->defaultStream);
+        partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
+                        elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
     }
 
-    if(elliptic->NlocalGatherElements){
+    ogsGatherScatterStart(o_Aq, ogsDfloat, ogsAdd, ogs);
+
+    if(mesh->NlocalGatherElements){
       if(mapType==0)
-	partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
-				  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+        partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
+                                  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
       else
-	partialAxKernel(elliptic->NlocalGatherElements, elliptic->o_localGatherElementList,
-			elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+        partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
+                        elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
     }
     
     // finalize gather using local and global contributions
-    if(ogs->NnonHaloGather) 
-      mesh->gatherScatterKernel(ogs->NnonHaloGather, ogs->o_nonHaloGatherOffsets, ogs->o_nonHaloGatherLocalIds, one, dOne, o_Aq);
-
-    // C0 halo gather-scatter (on data stream)
-    if(ogs->NhaloGather) {
-      mesh->device.setStream(elliptic->dataStream);
-      mesh->device.finish();
-
-      // MPI based gather scatter using libgs
-      gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
-
-      // copy totally gather halo data back from HOST to DEVICE
-      ogs->o_haloGatherTmp.copyFrom(ogs->haloGatherTmp,"async: true");
-    
-      // do scatter back to local nodes
-      mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, ogs->o_haloGatherTmp, o_Aq);
-    
-      mesh->device.finish(); 
-      mesh->device.setStream(elliptic->defaultStream);
-    }
+    ogsGatherScatterFinish(o_Aq, ogsDfloat, ogsAdd, ogs);
 
     if(elliptic->allNeumann) {
-      mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
+      // mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
+      elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
       o_tmp.copyTo(tmp);
 
       for(dlong n=0;n<Nblock;++n)
