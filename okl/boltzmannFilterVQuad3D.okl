@@ -471,12 +471,6 @@ kernel void boltzmannFilterVglobalQuad3D(const iint Nelements,
 	    Fq[id] = Fqij[fld];
 	  }
 	}
-	else {
-	  for(iint fld=0;fld<p_Nfields;++fld){
-	    int id = eo*p_Nfields*p_Np+fld*p_Np + j*p_Nq + i;	    
-	    Fq[id] = qIn[id];
-	  }
-	}
       }
     }
   }
