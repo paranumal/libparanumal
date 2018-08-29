@@ -668,7 +668,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmax = mesh->rphysical[eInterp*mesh->Np];
 	  rmin = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 
-	  par_loc = (rnew - rmin)/(rmax - rmin);
+	  par_loc = 1. - (rnew - rmin)/(rmax - rmin);
 	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
 	  
 	  rsdir = rdir;
@@ -714,7 +714,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmax = mesh->rphysical[eInterp*mesh->Np];
 	  rmin = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  par_loc = (rnew - rmin)/(rmax - rmin);
+	  par_loc = 1. - (rnew - rmin)/(rmax - rmin);
 	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
 	  
 	  rsdir = rdir;
@@ -760,7 +760,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smax = mesh->sphysical[eInterp*mesh->Np];
 	  smin = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  par_loc = (snew - smin)/(smax - smin);
+	  par_loc = 1. - (snew - smin)/(smax - smin);
 	  perp_index = (mesh->Np - n - 1)/mesh->Nq;
 	  
 	  rsdir = sdir;
@@ -783,7 +783,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmax = mesh->rphysical[eInterp*mesh->Np];
 	  rmin = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  par_loc = (rnew - rmin)/(rmax - rmin);
+	  par_loc = 1. - (rnew - rmin)/(rmax - rmin);
 	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
 	  
 	  rsdir = rdir;
@@ -829,7 +829,7 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  smax = mesh->sphysical[eInterp*mesh->Np];
 	  smin = mesh->sphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  par_loc = (snew - smin)/(smax - smin);
+	  par_loc = 1. - (snew - smin)/(smax - smin);
 	  perp_index = n/mesh->Nq;
 	  
 	  rsdir = sdir;
@@ -852,8 +852,8 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  rmax = mesh->rphysical[eInterp*mesh->Np];
 	  rmin = mesh->rphysical[eInterp*mesh->Np + mesh->Np - 1];
 	  
-	  par_loc = (rnew - rmin)/(rmax - rmin);
-	  perp_index = (mesh->Np - n - 1)%mesh->Nq;
+	  par_loc = 1. - (rnew - rmin)/(rmax - rmin);
+	  perp_index = n%mesh->Nq;
 	  
 	  rsdir = rdir;
 
@@ -929,18 +929,15 @@ void meshEquiSphericalExtensionQuad3D(mesh_t *mesh) {
 	  break;	  
 	}
       
-      /*      if (rsdir == sdir && (rnew > M_PI/4 + tol || rnew < -M_PI/4 - tol || (rnew < M_PI/4 - offset - tol && rnew > -M_PI/4 + offset + tol))) printf("bad bounding %lf %d\n",rnew,faceHash);
+      if (rsdir == sdir && (rnew > M_PI/4 + tol || rnew < -M_PI/4 - tol || (rnew < M_PI/4 - offset - tol && rnew > -M_PI/4 + offset + tol))) printf("bad bounding %lf %d\n",rnew,faceHash);
       if (rsdir == rdir && (snew > M_PI/4 + tol || snew < -M_PI/4 - tol || (snew < M_PI/4 - offset - tol && snew > -M_PI/4 + offset + tol))) printf("bad bounding %lf %d\n",snew,faceHash);
       if (mesh->cubeFaceNumber[eInterp] != mesh->cubeFaceNumber[eOverlap]) printf("indexing error %d\n",faceHash);
       if (mesh->cubeDistance[eInterp] != 0) printf("interior element detected %d\n",faceHash);
       if (rsdir == sdir && smin >= smax) printf("element orientation mistake %d\n",faceHash);
       if (rsdir == rdir && rmin >= rmax) printf("element orientation mistake %d\n",faceHash);
-      if (rsdir == sdir && (((sloc - 1) > tol) || (sloc < -tol))) {
-	printf("placement error with sloc %lf, sabs %lf, rold %lf, sold %lf bounds %lf %lf,element %d and hash %d\n",sloc,snew,rold,sold,smin,smax,mesh->cubeFaceNumber[eOverlap],faceHash);
+      if (((par_loc - 1) > tol) || (par_loc < -tol)) {
+	printf("placement error with par_loc %lf, sabs %lf, rold %lf, sold %lf bounds %lf %lf,element %d and hash %d\n",par_loc,snew,rold,sold,smin,smax,mesh->cubeFaceNumber[eOverlap],faceHash);
       }
-      if (rsdir == rdir && (((rloc - 1) > tol) || (rloc < -tol))) {
-	printf("placement error with rloc %lf, rabs %lf, rold %lf, sold %lf bounds %lf %lf,element %d and hash %d\n",rloc,rnew,rold,sold,rmin,rmax,eOverlap,faceHash);
-	}*/
       
       mesh->rphysical[e*mesh->Np + n] = rnew;
       mesh->sphysical[e*mesh->Np + n] = snew;

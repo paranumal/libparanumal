@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for N in `seq 2 7`;
+for N in `seq 3 8`;
 do
     for alpha in `seq 0 10`;
     do
