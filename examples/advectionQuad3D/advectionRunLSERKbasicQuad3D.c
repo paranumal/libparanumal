@@ -12,6 +12,14 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 
   iint Nboundary = mesh->NgridElements - mesh->Nelements;
 
+  /*for (iint e = 0; e < mesh->Nelements; ++e) {
+    for (iint n = 0; n < mesh->Np; ++n) {
+      solver->q[e*mesh->Np*solver->Nfields + n] = mesh->x[e*mesh->Np + n];
+    }
+  }
+  solver->o_qpre.copyFrom(solver->q);
+  */
+  
   solver->loadFilterGridKernel(Nboundary,
 			       mesh->Nelements,
 			       solver->o_rlocal,
@@ -43,6 +51,10 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			solver->o_q);
 
   solver->o_q.copyTo(solver->o_qpre);
+  /*
+  solver->o_q.copyTo(solver->q);
+  advectionErrorNormQuad3D(solver,0,"basic",0);
+  */
   
   for(iint tstep=0;tstep < solver->NtimeSteps;++tstep){
 	
@@ -103,7 +115,7 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_rhsq,
 			      solver->o_qFilter,
 			      solver->o_q);
-  
+	
 	solver->volumeCorrectionKernel(mesh->Nelements,
 				       solver->o_q,
 				       solver->o_qCorr);
@@ -117,9 +129,9 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			     solver->o_resq,
 			     solver->o_qpre);
       }
-      if (tstep == 9) {
+      if (tstep == 99) {
 	solver->o_qpre.copyTo(solver->q);
-	advectionErrorNormQuad3D(solver,10*solver->dt,"start",0);
+	advectionErrorNormQuad3D(solver,100*solver->dt,"start",0);
       }
   }
 }
