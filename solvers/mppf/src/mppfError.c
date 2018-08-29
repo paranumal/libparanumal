@@ -86,9 +86,12 @@ void mppfError(mppf_t *mppf, dfloat time){
            (int)( (time-mppf->startTime)/mppf->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinW, gMaxW, gMinP, gMaxP,
                   gMinR, gMaxR, gMinM, gMaxM, gMinPhi, gMaxPhi);
       } else {
-        printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minP: %g maxP: %g minRho: %g maxRho: %g minMu: %g maxMu: %g minPhi: %g maxPhi: %g \n", 
-           (int)((time-mppf->startTime)/mppf->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinP, gMaxP,
-                  gMinR, gMaxR, gMinM, gMaxM, gMinPhi, gMaxPhi);
+        // printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minP: %g maxP: %g minRho: %g maxRho: %g minMu: %g maxMu: %g minPhi: %g maxPhi: %g \n", 
+        //    (int)((time-mppf->startTime)/mppf->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinP, gMaxP,
+        //           gMinR, gMaxR, gMinM, gMaxM, gMinPhi, gMaxPhi);
+
+         printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minP: %g maxP: %g minPhi: %g maxPhi: %g \n", 
+           (int)((time-mppf->startTime)/mppf->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinP, gMaxP, gMinPhi, gMaxPhi);
       }
 
     if( isnan(gMinU)   || isnan(gMaxU) || 

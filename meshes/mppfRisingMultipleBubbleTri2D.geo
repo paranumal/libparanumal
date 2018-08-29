@@ -1,9 +1,9 @@
 L = DefineNumber[1.0];
 r = DefineNumber[L*0.02];
-xmin = DefineNumber[-L/2];
-xmax = DefineNumber[ L/2];
+xmin = DefineNumber[-3*L/3];
+xmax = DefineNumber[ 3*L/3];
 ymin = DefineNumber[ 0.0];
-ymax = DefineNumber[ 1.5*L];
+ymax = DefineNumber[ 4*L];
 
 Point(1) = {xmin, ymin, 0.0, r};
 Point(2) = {xmax, ymin, 0.0, r};

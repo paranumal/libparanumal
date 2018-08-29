@@ -2,12 +2,12 @@
 1.0
 
 [DATA FILE]
-#data/mppfCahnHilliard2D.h
-data/mppfRisingBubble2D.h
+data/mppfRisingMultipleBubble2D.h
+#data/mppfRisingBubble2D.h
 
 [MESH FILE]
-#../../meshes/mppfCahnHilliardTri2D.msh
-../../meshes/mppfRisingBubbleTri2D.msh
+../../meshes/mppfRisingMultipleBubbleTri2D.msh
+#../../meshes/mppfRisingBubbleTri2D.msh
 
 [MESH DIMENSION]
 2
@@ -39,7 +39,7 @@ CUBATURE
 
 #give zero to default it 
 [BAND THICKNESS]
-0.01
+0.02
 
 #give zero if you need to compute inside 
 [MIXING ENERGY DENSITY]
@@ -75,7 +75,7 @@ CUBATURE
 
 #zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-500
+250
 
 # zero to ignore
 [TSTEPS FOR FORCE OUTPUT]
@@ -83,7 +83,7 @@ CUBATURE
 
 # zero to ignore, only ARK stepper
 [TSTEPS FOR TIME STEP ADAPT]
-100
+250
 
 [START TIME]
 0.0
@@ -92,7 +92,7 @@ CUBATURE
 10.0
 
 [CFL]
-0.05
+0.1
 
 [OUTPUT TYPE]
 VTU
@@ -108,7 +108,8 @@ VTU
 mppfRestartTri2D
 
 [OUTPUT FILE NAME]
-/scratch/MPPF/RisingBuble2D
+/scratch/MPPF/RisingMultipleBuble2DV2
+#RisingBuble2D
 
 
 
@@ -283,8 +284,7 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-#NONE
-NSCH2D
+NONE
 
 [VERBOSE]
 FALSE

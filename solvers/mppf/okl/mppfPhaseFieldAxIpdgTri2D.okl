@@ -80,11 +80,11 @@ SOFTWARE.
 
         int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
-          // mppfHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
+         // mppfHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
           gradqP.x = gradqM.x; 
           gradqP.y = gradqM.y; 
           gradqP.w = gradqM.w; 
-
+          // mppfPhaseFieldDirichletConditions2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
           gradqP.x = 2.f*gradqP.x - gradqM.x;
           gradqP.y = 2.f*gradqP.y - gradqM.y;	
           gradqP.w = 2.f*gradqP.w - gradqM.w;

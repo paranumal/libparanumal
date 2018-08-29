@@ -10,13 +10,22 @@
 
 #define mppfPhaseField2D(t,h,x,y,phi) \
 {                                                         \
-  dfloat L    = 1.0f;                                     \
-  dfloat xc   = 0.f;                                      \
-  dfloat yc   = 0.5f*L;                                   \
-  dfloat rad  = 0.25f*L;                                  \
-  dfloat phiL = sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc)) - rad;\
-  *(phi)      = -tanh(phiL/(sqrt(2.f)*h)) ;               \
+  dfloat L     = 1.0f;                                     \
+  dfloat xc1    = 0.f;                                      \
+  dfloat yc1    = 1.25f*L;                                   \
+  dfloat rad1  = 0.25f*L;                                  \
+  dfloat xc2   = 0.0f;                                      \
+  dfloat yc2   = 0.5f*L;                                   \
+  dfloat rad2  = 0.25f*L;                                  \
+  dfloat phiL1 = sqrt((x-xc1)*(x-xc1) + (y-yc1)*(y-yc1)) - rad1;\
+  dfloat phiL2 = sqrt((x-xc2)*(x-xc2) + (y-yc2)*(y-yc2)) - rad2;\
+  *(phi)      = 1.0f + tanh(-phiL1/(sqrt(2.f)*h)) +tanh(-phiL2/(sqrt(2.f)*h));               \
 }
+  // dfloat xc3   = -0.5f;                                      \
+  // dfloat yc3   = 0.5f*L;                                   \
+  // dfloat rad3  = 0.25f*L;                                  \
+  dfloat phiL3 = sqrt((x-xc3)*(x-xc3) + (y-yc3)*(y-yc3)) - rad3;\
+//  *(phi)      = 1.0f + tanh(phiL1/(sqrt(2.f)*h)) +tanh(phiL2/(sqrt(2.f)*h)) +tanh(phiL3/(sqrt(2.f)*h));               \
 
 // This is only for manufactured solutions
 #define mppfPhaseFieldSource2D(t,x,y,g) \

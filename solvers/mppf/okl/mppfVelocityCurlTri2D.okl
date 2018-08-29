@@ -16,8 +16,8 @@
         if(e<Nelements){
           const dlong id = e*p_Np + n; 
 
-          const dfloat dvdx = GU[id + 2*offset];
           const dfloat dudy = GU[id + 1*offset];
+          const dfloat dvdx = GU[id + 2*offset];
           s_U[es][n]  = dvdx - dudy;
         }
       }

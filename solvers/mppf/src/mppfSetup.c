@@ -185,7 +185,8 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   kernelInfo["defines/" "p_rho2"] = mppf->rho2;
 
   mppf->rho0 = mymin(mppf->rho1, mppf->rho2);
-  mppf->nu0  = 0.5*mymax(mppf->mu1, mppf->mu2)/ mymin(mppf->rho1, mppf->rho2); 
+  mppf->nu0  = 0.5*(mppf->mu1/mppf->rho1 + mppf->mu2/mppf->rho2); 
+  // mppf->nu0  = 0.5*mymax(mppf->mu1, mppf->mu2)/ mymin(mppf->rho1, mppf->rho2); 
 
   kernelInfo["defines/" "p_invrho0"] = 1.0/mppf->rho0;
   kernelInfo["defines/" "p_rho0"] = mppf->rho0;
@@ -380,7 +381,7 @@ options.getArgs("BAND THICKNESS", mppf->eta);
   mppf->eta2    = mppf->eta*mppf->eta; 
   mppf->inveta2 = 1.0/ mppf->eta2; 
 
-  mppf->factorS = 1.5; // has to be >1.0 
+  mppf->factorS = 1.25; // has to be >=1.0 
 
   mppf->chS = mppf->factorS*mppf->eta2*sqrt(4.0*mppf->g0/ (mppf->chM*mppf->chL*mppf->dt));   
   mppf->chA  = -mppf->chS/(2.0*mppf->eta2) * (1.0 - sqrt(1 - 4.0*mppf->g0*mppf->eta2*mppf->eta2/(mppf->chM*mppf->chL*mppf->dt*mppf->chS*mppf->chS)));   
