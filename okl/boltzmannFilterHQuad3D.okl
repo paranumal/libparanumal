@@ -337,6 +337,8 @@ kernel void boltzmannFilterHglobalQuad3D(const iint Nelements,
 	  
 	  const iint eL = EToE[eo*p_Nfaces + 3];
 	  const iint eR = EToE[eo*p_Nfaces + 1];
+	  const iint eD = EToE[eo*p_Nfaces + 0];
+	  const iint eU = EToE[eo*p_Nfaces + 2];
 	  
 	  const iint faceC = cubeFaceNumber[eo];
 	  
@@ -383,12 +385,6 @@ kernel void boltzmannFilterHglobalQuad3D(const iint Nelements,
 	    for(iint fld=0;fld<p_Nfields;++fld){
 	      Fq[eo*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = Fqij[fld];
 	    }
-	}
-	else {
-	  for(iint fld=0;fld<p_Nfields;++fld){
-	    iint id = eo*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i;
-	    Fq[id] = qIn[id];
-	  }
 	}
       }
     }
