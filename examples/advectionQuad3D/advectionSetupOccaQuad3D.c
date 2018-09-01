@@ -9,9 +9,9 @@ void advectionSetupOccaQuad3D(solver_t *solver,occa::kernelInfo *kernelInfo) {
   mesh_t *mesh = solver->mesh;
   
   // use rank to choose DEVICE
-  //sprintf(solver->deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
+  sprintf(solver->deviceConfig, "mode = CUDA, deviceID = %d", (rank+1)%2);
   //sprintf(solver->deviceConfig, "mode = OpenCL, deviceID = 0, platformID = 0");
-  sprintf(solver->deviceConfig, "mode = OpenMP, deviceID = %d", 1);
+  //sprintf(solver->deviceConfig, "mode = OpenMP, deviceID = %d", 1);
   //sprintf(solver->deviceConfig, "mode = Serial");
   
   solver->device.setup(solver->deviceConfig);
