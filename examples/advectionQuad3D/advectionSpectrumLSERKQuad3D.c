@@ -62,7 +62,7 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			    solver->o_qpre,
 			    solver->o_rhsq);
       
-      solver->loadFilterGridKernel(Nboundary,
+      /*      solver->loadFilterGridKernel(Nboundary,
                                    mesh->Nelements,
 				   solver->o_rlocal,
 				   solver->o_slocal,
@@ -93,10 +93,10 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			    solver->o_qFilter,
 			    solver->o_q);
       
-
+      */
       solver->q[curr_pos] = 0.;
 
-      solver->o_q.copyTo(test_q);
+      solver->o_rhsq.copyTo(test_q);
 
       for (iint e = 0; e < mesh->Nelements; ++e) {
 	for (iint n = 0; n < mesh->Np; ++n) {
