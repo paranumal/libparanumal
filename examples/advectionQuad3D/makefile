@@ -44,6 +44,7 @@ advectionSetupMRSAABQuad3D.o \
 advectionSetupDOPRIQuad3D.o \
 advectionRunLSERKQuad3D.o \
 advectionErrorNormQuad3D.o \
+advectionSpectrumLSERKQuad3D.o \
 ../../src/meshExtendGridQuad3D.o \
 ../../src/meshParallelReaderQuad3D.o \
 ../../src/meshSetupQuad3D.o \

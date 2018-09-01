@@ -1,6 +1,6 @@
 #include "advectionQuad3D.h"
 
-void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
+void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 
   mesh_t *mesh = solver->mesh;
     
@@ -12,6 +12,9 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 
   iint Nboundary = mesh->NgridElements - mesh->Nelements;
 
+  FILE *matrix = fopen("./output_matrix","w");
+  double output_tol = 1e-18;
+  
   /*for (iint e = 0; e < mesh->Nelements; ++e) {
     for (iint n = 0; n < mesh->Np; ++n) {
       solver->q[e*mesh->Np*solver->Nfields + n] = mesh->x[e*mesh->Np + n];
@@ -58,7 +61,7 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			    solver->o_z,
 			    solver->o_qpre,
 			    solver->o_rhsq);
-    /*
+      
       solver->loadFilterGridKernel(Nboundary,
                                    mesh->Nelements,
 				   solver->o_rlocal,
@@ -89,13 +92,22 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			    solver->o_rhsq,
 			    solver->o_qFilter,
 			    solver->o_q);
-  */	
-      solver->volumeCorrectionKernel(mesh->Nelements,
-				     solver->o_q,
-				     solver->o_qCorr);
+      
 
       solver->q[curr_pos] = 0.;
 
-      solver->o_rhsq.copy_to(test_q);
-      
+      solver->o_q.copyTo(test_q);
+
+      for (iint e = 0; e < mesh->Nelements; ++e) {
+	for (iint n = 0; n < mesh->Np; ++n) {
+	  if (test_q[e*mesh->Np*solver->Nfields + n] < output_tol) 
+	    fprintf(matrix,"0");
+	  else
+	    fprintf(matrix,"%g",test_q[e*mesh->Np*solver->Nfields + n]);
+	  fprintf(matrix," ");
+	}
+      }
+      fprintf(matrix,"\n");
+    }
+  }
 }
