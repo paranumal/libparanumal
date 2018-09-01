@@ -13,7 +13,7 @@ int main(int argc, char **argv){
 
   //changes solver mode.
   //options are: DOPRI MRSAAB
-  char *mode = "LSERK";
+  char *mode = "RK_SPECTRUM";
   
   // int specify polynomial degree 
   int N = atoi(argv[2]);
@@ -30,7 +30,7 @@ int main(int argc, char **argv){
   else if (strstr(mode,"DOPRI")) {
     advectionSetupDOPRIQuad3D(solver);
   }
-  else if (strstr(mode,"LSERK")) {
+  else if (strstr(mode,"LSERK") || strstr(mode,"RK_SPECTRUM")) {
     advectionSetupLSERKQuad3D(solver);
   }
   
@@ -44,6 +44,9 @@ int main(int argc, char **argv){
   }
   else if (strstr(mode,"LSERK")) {
     advectionRunLSERKbasicQuad3D(solver,atoi(argv[3])/10.);
+  }
+  else if (strstr(mode,"RK_SPECTRUM")) {
+    advectionSpectrumLSERKQuad3D(solver,atoi(argv[3])/10.);
   }
   
   solver->o_qpre.copyTo(solver->q);
