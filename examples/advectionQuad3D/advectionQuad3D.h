@@ -3,7 +3,6 @@
 #include <math.h>
 #include <mpi.h>
 #include "mesh3D.h"
-#include <complex.h>
 
 typedef struct {
   

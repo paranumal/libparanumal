@@ -13,7 +13,6 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
   iint Nboundary = mesh->NgridElements - mesh->Nelements;
 
   FILE *matrix = fopen("./output_matrix","w");
-  double output_tol = 1e-18;
   
   /*for (iint e = 0; e < mesh->Nelements; ++e) {
     for (iint n = 0; n < mesh->Np; ++n) {
@@ -27,16 +26,19 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
   dfloat t = 0;
 
   for (iint e = 0; e < mesh->Nelements; ++e) {
-    for (iint n = 0; n < mesh->Np; ++n) {
-      solver->q[e*mesh->Np*solver->Nfields + n] = 0.;
+    for (iint f = 0; f < 2; ++f) {
+      for (iint n = 0; n < mesh->Np; ++n) {
+	solver->q[e*mesh->Np*solver->Nfields + f*solver->Nfields + n] = 0.;
+      }
     }
   }
   solver->o_qpre.copyFrom(solver->q);
   
   for (iint e = 0; e < mesh->Nelements; ++e) {
+    for (iint f = 0; f < 2; ++f) {
     for (iint n = 0; n < mesh->Np; ++n) {
 
-      iint curr_pos = e*mesh->Nelements*solver->Nfields + n;
+      iint curr_pos = e*mesh->Np*solver->Nfields + f*mesh->Np + n;
       solver->q[curr_pos] = 1.;
       solver->o_qpre.copyFrom(solver->q);
       
@@ -99,15 +101,15 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
       solver->o_rhsq.copyTo(test_q);
 
       for (iint e = 0; e < mesh->Nelements; ++e) {
-	for (iint n = 0; n < mesh->Np; ++n) {
-	  if (test_q[e*mesh->Np*solver->Nfields + n] < output_tol) 
-	    fprintf(matrix,"0");
-	  else
-	    fprintf(matrix,"%g",test_q[e*mesh->Np*solver->Nfields + n]);
-	  fprintf(matrix," ");
+	for (iint f = 0; f < 2; ++f) {
+	  for (iint n = 0; n < mesh->Np; ++n) {
+	    fprintf(matrix,"%17.15g ",test_q[e*mesh->Np*solver->Nfields + n]);
+	  }
 	}
       }
       fprintf(matrix,"\n");
     }
+    }
   }
 }
+  
