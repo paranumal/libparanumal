@@ -24,10 +24,7 @@ int main(int argc, char **argv){
 
   // set up boltzmann stuff
   solver_t *solver = advectionSetupPhysicsQuad3D(mesh);
-  if (strstr(mode,"MRSAAB")) {
-    advectionSetupMRSAABQuad3D(solver);
-  }
-  else if (strstr(mode,"DOPRI")) {
+  if (strstr(mode,"DOPRI")) {
     advectionSetupDOPRIQuad3D(solver);
   }
   else if (strstr(mode,"LSERK") || strstr(mode,"RK_SPECTRUM")) {
@@ -35,11 +32,7 @@ int main(int argc, char **argv){
   }
   
   // time step Boltzmann equations
-  if (strstr(mode,"MRSAAB")) {
-    advectionRunLSERKQuad3D(solver);
-    advectionRunMRSAABQuad3D(solver);
-  }
-  else if (strstr(mode,"DOPRI")) {
+  if (strstr(mode,"DOPRI")) {
     advectionRunDOPRIQuad3D(solver);
   }
   else if (strstr(mode,"LSERK")) {
