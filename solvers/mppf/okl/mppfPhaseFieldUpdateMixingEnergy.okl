@@ -1,7 +1,85 @@
+
 @kernel void mppfPhaseFieldUpdateMixingEnergy(const dlong Nelements,
-                                                const dfloat t,
+                                                const dfloat time,
                                                 const dfloat inveta2,
-                                                const dfloat Sinveta2,
+                                                const dfloat chSeta2,
+                                                @restrict const  dfloat *  cubInterpT,
+                                                @restrict const  dfloat *  cubProjectT,
+                                                @restrict const  dfloat *  x,
+                                                @restrict const  dfloat *  y,
+                                                @restrict const  dfloat *  z,
+                                                @restrict  const dfloat *  Phi,
+                                                @restrict        dfloat *  HPhi){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
+
+    // Hold Flux Vector on Shared, use symmetry f21 = f12
+    @shared dfloat s_Phi[p_cubNblockV][p_Np];
+    @shared dfloat s_cPhi[p_cubNblockV][p_cubNp];
+    @exclusive dlong e; 
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){      // for all nodes in this element
+        e = eo+es; // element in block
+        if(e<Nelements){
+          if(n<p_Np){ 
+            const dlong id = e*p_Np+n;
+            s_Phi[es][n] = Phi[id];
+          }
+        } 
+      }
+    }
+
+    @barrier("local");
+
+     for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){      // for all nodes in this element
+        if(e<Nelements){
+          if(n<p_cubNp){
+            dfloat cphi = 0.f;  
+            #pragma unroll p_Np
+            for(int m=0; m<p_Np; m++){
+              cphi +=cubInterpT[m*p_cubNp + n]*s_Phi[es][m]; 
+            }
+            s_cPhi[es][n] = inveta2*cphi*(cphi*cphi - 1.f) - chSeta2*cphi;
+          }
+        } 
+      }
+    }
+
+     @barrier("local");
+
+     for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){      // for all nodes in this element
+        if(e<Nelements){
+          if(n<p_Np){
+            dfloat phi = 0.f;  
+            #pragma unroll p_cubNp
+            for(int m=0; m<p_cubNp; m++){
+              phi +=cubProjectT[m*p_Np + n]*s_cPhi[es][m]; 
+            }
+            const dlong id = n+p_Np*e;            
+            HPhi[id] = phi; 
+          }
+        } 
+      }
+    }
+
+  }
+}
+
+
+
+
+
+
+@kernel void mppfPhaseFieldUpdateMixingEnergy_v0(const dlong Nelements,
+                                                const dfloat time,
+                                                const dfloat inveta2,
+                                                const dfloat chSeta2,
+                                                @restrict const  dfloat *  x,
+                                                @restrict const  dfloat *  y,
+                                                @restrict const  dfloat *  z,
                                                 @restrict  const dfloat *  Phi,
                                                 @restrict        dfloat *  HPhi){
 
@@ -10,8 +88,12 @@
     for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong id = n+p_Np*e;
       const dfloat phin = Phi[id];
-      const dfloat hphi = inveta2*phin*(phin*phin - 1.0f) -Sinveta2*phin; 
+      const dfloat hphi = inveta2*phin*(phin*phin - 1.0f) -chSeta2*phin; 
       HPhi[id] = hphi; 
+
+      // const dfloat h    = -cos(M_PI*x[id])*cos(M_PI*y[id])*sin(time)*(chSeta2 + inveta2 - inveta2*cos(M_PI*x[id])*cos(M_PI*x[id])*cos(M_PI*y[id])*cos(M_PI*y[id])*sin(time)*sin(time));
+      // HPhi[id] = h; 
+
     }
   }
 }

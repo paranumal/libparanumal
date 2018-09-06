@@ -6,7 +6,7 @@ data/mppfCahnHilliard2D.h
 #data/mppfRisingBubble2D.h
 
 [MESH FILE]
-../../meshes/mppfCahnHilliardTri2D.msh
+../../meshes/mppfCahnHilliardTri2Dh0.msh
 #../../meshes/mppfRisingBubbleTri2D.msh
 
 [MESH DIMENSION]
@@ -16,7 +16,7 @@ data/mppfCahnHilliard2D.h
 3
 
 [POLYNOMIAL DEGREE]
-3
+5
 
 [THREAD MODEL]
 CUDA
@@ -58,17 +58,12 @@ CUBATURE
 
 [VISCOSITY PHASE 2]
 0.02
-#1.002E-3
-#1.78E-5
 
 [DENSITY PHASE 1]
 1.0
-#1.204
 
 [DENSITY PHASE 2]
 3.0
-#998.207
-#2.404
 
 [MACH NUMBER]
 .2
@@ -84,7 +79,7 @@ CUBATURE
 
 #zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-1
+500
 
 # zero to ignore
 [TSTEPS FOR FORCE OUTPUT]
@@ -101,7 +96,7 @@ CUBATURE
 0.5
 
 [CFL]
-0.2
+0.05
 
 [OUTPUT TYPE]
 VTU
@@ -117,7 +112,7 @@ VTU
 mppfRestartTri2D
 
 [OUTPUT FILE NAME]
-RisingBuble2D
+exactCHSolV2
 
 
 

@@ -56,16 +56,32 @@ void mppfRun(mppf_t *mppf){
     // Interface Solver
     mppfCahnHilliardRhs(mppf, time_new);
     // Solve for Psi  and Phi
-    mppfCahnHilliardSolve(mppf, time_new);
+    mppfCahnHilliardSolve(mppf, time);
     // Update Phi. Exchange it  and Compute Gradient Phi
     mppfCahnHilliardUpdate(mppf, time_new);
 
+#if 0
     // Compute Nonlinear Term N(U) 
     mppfAdvection(mppf, time);
     // Compute intermediate velocity, Uhat, take divergence and compute Pr Rhs
     mppfPressureRhs(mppf, time_new);
     // Solve for pressure
     mppfPressureSolve(mppf,time_new, mppf->o_rkP);
+
+#else
+ mppf->setFlowFieldKernel(mesh->Nelements,
+                          time_new,
+                          mesh->o_x,
+                          mesh->o_y,
+                          mesh->o_z,
+                          mppf->fieldOffset,
+                          mppf->o_rhsP,
+                          mppf->o_rkP);
+
+
+
+#endif
+
 
     
     //Cycle pressure and gradient pressure history before update
@@ -85,10 +101,21 @@ void mppfRun(mppf_t *mppf){
     // Exchange pressure and update pressure gradient
      mppfPressureGradient(mppf, time_new);   
 
-    
+#if 0   
     // Compute velocity Rhs i.e. rhsU, rhsV, rhsW
     mppfVelocityRhs(mppf, time_new);
     mppfVelocitySolve(mppf, time_new, mppf->o_rkU);
+#else
+ mppf->setFlowFieldKernel(mesh->Nelements,
+                          time_new,
+                          mesh->o_x,
+                          mesh->o_y,
+                          mesh->o_z,
+                          mppf->fieldOffset,
+                          mppf->o_rkU,
+                          mppf->o_rhsP);
+#endif
+
 
      //cycle history 
     for (int s=mppf->Nstages;s>1;s--) {
@@ -121,6 +148,25 @@ void mppfRun(mppf_t *mppf){
         // }
       }
     }
+
+
+    // if(((tstep+1)%100)==0){
+
+    // if(mesh->rank==0){
+    //     // output field files
+    //     char fname[BUFSIZ];
+    //     string outName;
+    //     //mppf->options.getArgs("OUTPUT FILE NAME", outName);
+    //     sprintf(fname, "IterationsMPPF.dat");
+
+    //     FILE *fp;
+    //     fp = fopen(fname, "a");
+    //     fprintf(fp,"%3d %3d %3d %3d %3d %3d\n", tstep+1, mppf->NiterU, mppf->NiterV, mppf->NiterP, mppf->NiterPsi, mppf->NiterPhi);
+    //     fclose(fp);
+    //   }
+    // }
+
+
 
     // if (mppf->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d Psi - %3d Phi - %3d \n", tstep+1, mppf->NiterU, mppf->NiterV, mppf->NiterP, mppf->NiterPsi, mppf->NiterPhi);
     // if (mppf->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d Psi - %3d Phi - %3d \n", tstep+1, mppf->NiterU, mppf->NiterV, mppf->NiterW, mppf->NiterP, mppf->NiterPsi, mppf->NiterPhi); 

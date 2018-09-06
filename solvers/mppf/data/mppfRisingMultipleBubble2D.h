@@ -56,14 +56,14 @@
 #define mppfPhaseFieldNeumannConditions2D(bc, t, x, y, nx, ny, phixM, phiyM, phixB, phiyB) \
 {                                          \
   if(bc==1 || bc==2){                      \
-    *(phixB) = 0.f;                        \
-    *(phiyB) = 0.f;                        \
+    *(phixB) = phixM;                      \
+    *(phiyB) = phiyM;                      \
   } else if(bc==3){                        \
     *(phixB) = 0.f;                        \
     *(phiyB) = 0.f;                        \
   } else if(bc==4||bc==5){                 \
-    *(phixB) = 0.f;                        \
-    *(phiyB) = 0.f;                        \
+    *(phixB) = nx*nx*phixM;                \
+    *(phiyB) = ny*ny*phiyM;                \
   }                                        \
 }
 

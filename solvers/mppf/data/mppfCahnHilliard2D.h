@@ -80,6 +80,8 @@
   }                                 \
 }
 
+
+
 #define mppfPhaseFieldNeumannConditions2D(bc, t, x, y, nx, ny, phixM, phiyM, phixB, phiyB) \
 {                                          \
   if(bc==1 || bc==2){                      \
@@ -96,6 +98,29 @@
     *(phiyB) = 0.f;                        \
   }                                        \
 }
+
+
+// #define mppfPhaseFieldNeumannConditions2D(bc, t, x, y,phiM, phixM, phiyM, phiB, phixB, phiyB) \
+// {                                          \
+//   dfloat phi     =  cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+//   dfloat phix    = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+//   dfloat phiy    = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+//   if(bc==1 || bc==2){                      \
+//     *(phixB) = 0.f;                        \
+//     *(phiyB) = 0.f;                        \
+//   } else if(bc==3){                        \
+//     *(phixB) = 0.f;                        \
+//     *(phiyB) = 0.f;                        \
+//   } else if(bc==4){                        \
+//     *(phixB) = 0.f;                        \
+//     *(phiyB) = 0.f;                        \
+//   } else if(bc==5){                        \
+//     *(phixB) = 0.f;                        \
+//     *(phiyB) = 0.f;                        \
+//   }                                        \
+// }
+
+
 
 
 // Boundary conditions

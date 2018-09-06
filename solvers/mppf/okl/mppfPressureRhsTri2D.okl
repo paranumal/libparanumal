@@ -449,6 +449,7 @@ SOFTWARE.
                                 @restrict const  dfloat *  extbdfA,
                                 @restrict const  dfloat *  extbdfB,
                                 const dlong fieldOffset,
+                                @restrict const  dfloat *  Rho,                                
                                 @restrict const  dfloat *  U,
                                 @restrict const  dfloat *  NU,
                                       @restrict dfloat *   Uhat){
@@ -483,9 +484,9 @@ SOFTWARE.
           mppfVelocitySource2D(time,x[id],y[id],&fbx, &fby);
           
 
-          #if 0  
-          rhsu += dt*invrho*fbx;
-          rhsv += dt*invrho*fby;
+          #if 1  
+          rhsu += dt*fbx/Rho[id];
+          rhsv += dt*fby/Rho[id];
           #else
           rhsu += dt*fbx;
           rhsv += dt*fby;

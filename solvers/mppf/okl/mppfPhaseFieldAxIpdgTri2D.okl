@@ -2,10 +2,10 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copy[id]right (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
+of this software and associated documentation files (timehe "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -14,7 +14,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EX[id]PRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -26,10 +26,16 @@ SOFTWARE.
 @kernel void mppfPhaseFieldAxIpdgTri2D(const dlong Nelements,
                                       @restrict const  dlong *  vmapM,
                                       @restrict const  dlong *  vmapP,
+                                      const dfloat time,
+                                      const dfloat inveta2,  
+                                      const dfloat chSeta2,  
                                       const dfloat lambda,
                                       const dfloat tau,
                                       @restrict const  dfloat *  vgeo,
                                       @restrict const  dfloat *  sgeo,
+                                      @restrict const  dfloat *  x,
+                                      @restrict const  dfloat *  y,
+                                      @restrict const  dfloat *  z,
                                       @restrict const  int   *  EToB,
                                       @restrict const  dfloat *  Dmatrices,
                                       @restrict const  dfloat *  LIFTT,
@@ -80,11 +86,15 @@ SOFTWARE.
 
         int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
-         // mppfHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
           gradqP.x = gradqM.x; 
           gradqP.y = gradqM.y; 
           gradqP.w = gradqM.w; 
-          // mppfPhaseFieldDirichletConditions2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
+
+         //  dfloat xn  = x[idM];
+         //  dfloat yn  = y[idM];
+         //  dfloat phin =  cos(M_PI*xn)*cos(M_PI*yn)*sin(time);
+         //  gradqP.w    = inveta2*phin*(phin*phin - 1.0f) - chSeta2*phin;
+         // mppfPhaseFieldAxConditions2D(bc, t, x[idM], y[idM], gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
           gradqP.x = 2.f*gradqP.x - gradqM.x;
           gradqP.y = 2.f*gradqP.y - gradqM.y;	
           gradqP.w = 2.f*gradqP.w - gradqM.w;
@@ -165,10 +175,15 @@ SOFTWARE.
           for(int i=0;i<p_NfacesNfp;++i){
             lap += LIFTT[n+i*p_Np]*s_lapflux[i];
           }
+        
+        Aq[n+e*p_Np]   = -lap;
 
-        // s_lapq[n] += lap;
 
-        Aq[n+e*p_Np] = -lap;
+        // const dlong id = n+e*p_Np;
+        // dfloat laph = 2*M_PI*M_PI*cos(M_PI*x[id])*cos(M_PI*y[id])*sin(time);
+        // laph *= (chSeta2 + inveta2 - 3*inveta2*sin(time)*sin(time) + 6*inveta2*sin(M_PI*x[id])*sin(M_PI*x[id])*sin(time)*sin(time) + 6*inveta2*sin(M_PI*y[id])*sin(M_PI*y[id])*sin(time)*sin(time) - 9*inveta2*sin(M_PI*x[id])*sin(M_PI*x[id])*sin(M_PI*y[id])*sin(M_PI*y[id])*sin(time)*sin(time) );
+        // 
+        // Aq[n+e*p_Np]   = laph;
       }
     }
   }

@@ -92,56 +92,135 @@ mppf->phaseFieldAdvectionVolumeKernel(mesh->Nelements,
 #else
 // Upadte Hq energy term
 const dlong Ntotal = mesh->Nelements+mesh->totalHaloPairs;
+
+// mppf->phaseFieldUpdateMixingEnergyKernel(Ntotal,
+//                                          time,
+//                                          mppf->inveta2,
+//                                          mppf->chSeta2,
+//                                          mppf->o_Phi,
+//                                          mppf->o_HPhi);
+
+
+
+dfloat tt = time-mppf->dt;
 mppf->phaseFieldUpdateMixingEnergyKernel(Ntotal,
-                                         time,
+                                         tt,
                                          mppf->inveta2,
                                          mppf->chSeta2,
+                                         mesh->o_cubInterpT,
+                                         mesh->o_cubProjectT,
+                                         mesh->o_x,
+                                         mesh->o_y,
+                                         mesh->o_z,
                                          mppf->o_Phi,
                                          mppf->o_HPhi);
 
 
+mppf->phaseFieldExtrapolateKernel(Ntotal,
+                                  mppf->Nstages,
+                                  mppf->fieldOffset,
+                                  mppf->o_extbdfA,
+                                  mppf->o_HPhi,
+                                  mppf->o_HPhiE); // Extrapolated mixing energy
 
 
-// Extrapolate and compute Gradient
-mppf->phaseFieldAxGradKernel(mesh->Nelements,
-                            mppf->fieldOffset,
-                            mppf->o_extbdfA,
-                            mesh->o_vgeo,
-                            mesh->o_Dmatrices,
-                            mppf->o_HPhi,
-                            mppf->o_GHPhi);
+mppf->phaseFieldAxGradVolumeKernel(mesh->Nelements,
+                                  mesh->o_vgeo,
+                                  mesh->o_Dmatrices,
+                                  mppf->fieldOffset,
+                                  mppf->o_HPhiE,
+                                  mppf->o_GPhi);
+
+  
+
+ mppf->phaseFieldAxGradSurfaceKernel(mesh->Nelements,
+                                    mppf->inveta2,
+                                    mppf->chSeta2,
+                                    mesh->o_sgeo,
+                                    mesh->o_LIFTT,
+                                    mesh->o_vmapM,
+                                    mesh->o_vmapP,
+                                    mesh->o_EToB,
+                                    mesh->o_x,
+                                    mesh->o_y,
+                                    mesh->o_z,
+                                    time,
+                                    mppf->fieldOffset,
+                                    mppf->o_HPhiE,
+                                    mppf->o_GPhi);
 
 
 
 
-// Velocity needed to be exchanged, Phi is already done on update function
-  if(mesh->totalHaloPairs>0){
-    const int gNfields = 4; 
-    mppf->gradPhaseFieldHaloExtractKernel(mesh->Nelements,
-                                          mesh->totalHaloPairs,
-                                          mesh->o_haloElementList,
-                                          mppf->o_GHPhi,
-                                          mppf->o_gPhiHaloBuffer);
 
-    // copy extracted halo to HOST 
-    mppf->o_gPhiHaloBuffer.copyTo(mppf->gPhiSendBuffer);           
+// // Extrapolate and compute Gradient
+// mppf->phaseFieldAxGradKernel(mesh->Nelements,
+//                             mppf->fieldOffset,
+//                             mppf->o_extbdfA,
+//                             mesh->o_vgeo,
+//                             mesh->o_Dmatrices,
+//                             mppf->o_HPhi,
+//                             mppf->o_GHPhi);
 
-    // start halo exchange
-    meshHaloExchangeStart(mesh,
-                         mesh->Np*gNfields*sizeof(dfloat),
-                         mppf->gPhiSendBuffer,
-                         mppf->gPhiRecvBuffer);
+// // Extrapolate and compute Gradient
+// mppf->phaseFieldAxGradKernel(Ntotal, //mesh->Nelements,
+//                             mppf->fieldOffset,
+//                             time,
+//                             mppf->inveta2,
+//                             mppf->chSeta2,
+//                             mppf->o_extbdfA,
+//                             mesh->o_vgeo,
+//                             mesh->o_x,
+//                             mesh->o_y,
+//                             mesh->o_z,
+//                             mesh->o_Dmatrices,
+//                             mppf->o_HPhi,
+//                             mppf->o_GHPhi);
 
 
-    meshHaloExchangeFinish(mesh);
+// // Extrapolate and compute Gradient
+// mppf->phaseFieldAxGradSurafceKernel(mesh->Nelements,
+//                                       mesh->o_sgeo,
+//                                       mesh->o_LIFTT,
+//                                       mesh->o_vmapM,
+//                                       mesh->o_vmapP,
+//                                       mesh->o_EToB,
+//                                       mesh->o_x,
+//                                       mesh->o_y,
+//                                       mesh->o_z,
+//                                       time,
+//                                       mppf->fieldOffset,
+//                                       mppf->o_GHPhi);
 
-    mppf->o_gPhiHaloBuffer.copyFrom(mppf->gPhiRecvBuffer); 
 
-    mppf->gradPhaseFieldHaloScatterKernel(mesh->Nelements,
-                                          mesh->totalHaloPairs,
-                                          mppf->o_GHPhi,
-                                          mppf->o_gPhiHaloBuffer);
-  }
+// // Velocity needed to be exchanged, Phi is already done on update function
+//   if(mesh->totalHaloPairs>0){
+//     const int gNfields = 4; 
+//     mppf->gradPhaseFieldHaloExtractKernel(mesh->Nelements,
+//                                           mesh->totalHaloPairs,
+//                                           mesh->o_haloElementList,
+//                                           mppf->o_GHPhi,
+//                                           mppf->o_gPhiHaloBuffer);
+
+//     // copy extracted halo to HOST 
+//     mppf->o_gPhiHaloBuffer.copyTo(mppf->gPhiSendBuffer);           
+
+//     // start halo exchange
+//     meshHaloExchangeStart(mesh,
+//                          mesh->Np*gNfields*sizeof(dfloat),
+//                          mppf->gPhiSendBuffer,
+//                          mppf->gPhiRecvBuffer);
+
+
+//     meshHaloExchangeFinish(mesh);
+
+//     mppf->o_gPhiHaloBuffer.copyFrom(mppf->gPhiRecvBuffer); 
+
+//     mppf->gradPhaseFieldHaloScatterKernel(mesh->Nelements,
+//                                           mesh->totalHaloPairs,
+//                                           mppf->o_GHPhi,
+//                                           mppf->o_gPhiHaloBuffer);
+//   }
 
 
 
@@ -152,16 +231,45 @@ const dfloat zero = 0.0;
 mppf->phaseFieldAxIpdgKernel(mesh->Nelements,
                         mesh->o_vmapM,
                         mesh->o_vmapP,
+                        time,
+                        mppf->inveta2,
+                        mppf->chSeta2,
                         zero, // lambda,
-                        zero,// mppf->psiSolver->tau,
+                        zero, //zero //mppf->psiSolver->tau,
+                        mppf->fieldOffset,
                         mesh->o_vgeo,
                         mesh->o_sgeo,
+                        mesh->o_x,
+                        mesh->o_y,
+                        mesh->o_z,
                         mesh->o_EToB,
                         mesh->o_Dmatrices,
                         mesh->o_LIFTT,
                         mesh->o_MM,
-                        mppf->o_GHPhi,
+                        mppf->o_HPhiE,
+                        mppf->o_GPhi,
                         mppf->o_lapPhi);
+
+// // laplace(HPhi) = - M^-1 * Ax(HPhi)
+// mppf->phaseFieldAxIpdgKernel(mesh->Nelements,
+//                         mesh->o_vmapM,
+//                         mesh->o_vmapP,
+//                         time,
+//                         mppf->inveta2,
+//                         mppf->chSeta2,
+//                         zero, // lambda,
+//                         zero, //zero //mppf->psiSolver->tau,
+//                         mesh->o_vgeo,
+//                         mesh->o_sgeo,
+//                         mesh->o_x,
+//                         mesh->o_y,
+//                         mesh->o_z,
+//                         mesh->o_EToB,
+//                         mesh->o_Dmatrices,
+//                         mesh->o_LIFTT,
+//                         mesh->o_MM,
+//                         mppf->o_GHPhi,
+//                         mppf->o_lapPhi);
 #endif
 
   

@@ -312,6 +312,7 @@ mppf->velocityUpdateKernel(mesh->Nelements,
                            mppf->o_extbdfA,
                            mppf->o_extbdfB,
                            mppf->fieldOffset,
+                           mppf->o_Rho,
                            mppf->o_U,
                            mppf->o_NU,
                            mppf->o_Uhat);

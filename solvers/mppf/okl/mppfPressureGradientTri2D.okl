@@ -178,7 +178,6 @@ SOFTWARE.
             if(bc>0){
               mppfPressureDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);
               PP = 2.f*PP - PM; //Strong form BCs
-              // PP = 2.f*PM - PM; //Strong form BCs              
             }
 
             // evaluate "flux" terms: LLF

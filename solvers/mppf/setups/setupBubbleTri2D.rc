@@ -39,7 +39,7 @@ CUBATURE
 
 #give zero to default it 
 [BAND THICKNESS]
-0.02
+0.05
 
 #give zero if you need to compute inside 
 [MIXING ENERGY DENSITY]
@@ -75,7 +75,7 @@ CUBATURE
 
 #zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-250
+200
 
 # zero to ignore
 [TSTEPS FOR FORCE OUTPUT]
@@ -83,7 +83,7 @@ CUBATURE
 
 # zero to ignore, only ARK stepper
 [TSTEPS FOR TIME STEP ADAPT]
-250
+2000
 
 [START TIME]
 0.0
@@ -108,8 +108,8 @@ VTU
 mppfRestartTri2D
 
 [OUTPUT FILE NAME]
-/scratch/MPPF/RisingMultipleBuble2DV2
-#RisingBuble2D
+#/scratch/MPPF/RisingMultipleBuble2DV2
+RisingBuble2D
 
 
 

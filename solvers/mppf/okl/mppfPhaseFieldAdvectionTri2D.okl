@@ -200,7 +200,7 @@
             int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               // phip = phim; // Currently use this baoundary, change later !!!!! 
-              mppfPhaseFieldDirichletConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp] , nx, ny,phim, &phip);
+              mppfPhaseFieldDirichletConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp],nx,ny,phim,&phip);
             }
 
             // Find max normal velocity on the face

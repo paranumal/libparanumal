@@ -83,7 +83,7 @@
           mppfVelocitySource2D(time,x[id],y[id],&fbx, &fby);
           
 
-          #if 0  
+          #if 1  
           rhsu += dt*invrho*fbx;
           rhsv += dt*invrho*fby;
           #else

@@ -50,11 +50,11 @@ SOFTWARE.
     *(uB) = uM;                     \
     *(vB) = vM;                     \
     *(wB) = wM;                     \
-  } else if(bc==4||bc==5||bc==6){   \
+  } else if(bc==4||bc==5||bc==6){       \
     *(uB) = uM - (nx*uM+ny*vM+nz*wM)*nx;\
     *(vB) = vM - (nx*uM+ny*vM+nz*wM)*ny;\
     *(wB) = wM - (nx*uM+ny*vM+nz*wM)*nz;\
-  }                                 \
+  }                                     \
 }
 
 #define insVelocityNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, uxM, uyM, uzM, vxM, vyM, vzM, wxM, wyM, wzM, uxB, uyB, uzB, vxB, vyB, vzB, wxB, wyB, wzB) \

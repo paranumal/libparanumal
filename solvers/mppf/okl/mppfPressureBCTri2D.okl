@@ -84,13 +84,13 @@ SOFTWARE.
 
           // for (int s=0;s<stage;s++) {
           //   dfloat prkBn, ctime;
-          //   if (ARKswitch) {
-          //     prkBn = prkB[stage*(p_Nstages+1)+s];
-          //     ctime = time-(c[stage]-c[s])*dt;
-          //   } else {
+          //   // if (ARKswitch) {
+          //   //   prkBn = prkB[stage*(p_Nstages+1)+s];
+          //   //   ctime = time-(c[stage]-c[s])*dt;
+          //   // } else {
           //     prkBn = prkB[s];
           //     ctime = time-(s+1)*dt;
-          //   }
+          //   // }
             
           //   dfloat pPm, dpdxPm, dpdyPm;
           //   mppfPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, &pPm);

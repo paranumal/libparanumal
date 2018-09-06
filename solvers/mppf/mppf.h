@@ -112,8 +112,8 @@ typedef struct {
 
 
   int Nsubsteps;  
-  dfloat *Ud, *Ue, *resU, *rhsUd, sdt;
-  occa::memory o_Ud, o_Ue, o_resU, o_rhsUd;
+  dfloat *Ud, *Ue, *HPhiE, *resU, *rhsUd, sdt;
+  occa::memory o_Ud, o_Ue, o_HPhiE, o_resU, o_rhsUd;
 
   dfloat *cU, *cUd;
   occa::memory o_cU, o_cUd;
@@ -180,12 +180,14 @@ typedef struct {
   occa::memory o_extbdfA, o_extbdfB, o_extbdfC;
   occa::memory o_extC;
 
-
+  occa::kernel phaseFieldExtrapolateKernel;  
   occa::kernel phaseFieldAdvectionVolumeKernel;
   occa::kernel phaseFieldAdvectionSurfaceKernel;
   occa::kernel phaseFieldDivGradKernel; 
   occa::kernel phaseFieldUpdateMixingEnergyKernel; 
   occa::kernel phaseFieldAxGradKernel;
+  occa::kernel phaseFieldAxGradVolumeKernel;
+  occa::kernel phaseFieldAxGradSurfaceKernel;
   occa::kernel phaseFieldAxIpdgKernel;
 
 

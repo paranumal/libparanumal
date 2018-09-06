@@ -25,7 +25,7 @@ void mppfReport(mppf_t *mppf, dfloat time, int tstep){
   // copy data back to host
   mppf->o_Phi.copyTo(mppf->Phi);
   mppf->o_U.copyTo(mppf->U); 
-  mppf->o_GU.copyTo(mppf->GU); 
+  mppf->o_GHPhi.copyTo(mppf->GHPhi); 
   mppf->o_P.copyTo(mppf->P);
   mppf->o_Rho.copyTo(mppf->Rho);
 
@@ -36,6 +36,25 @@ void mppfReport(mppf_t *mppf, dfloat time, int tstep){
 
   mppf->o_Vort.copyTo(mppf->Vort);
   mppf->o_Div.copyTo(mppf->Div);
+
+
+
+  for(dlong e=0;e<mesh->Nelements;++e){
+      for(int n=0;n<mesh->Np;++n){
+      dlong ida = (n+e*mesh->Np)*4;
+      dlong id  = (n+e*mesh->Np);
+      
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+
+      dfloat dhdx = M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(time)*(mppf->chSeta2 + mppf->inveta2 - 3*mppf->inveta2*cos(M_PI*x)*cos(M_PI*y)*sin(time)*cos(M_PI*x)*cos(M_PI*y)*sin(time));
+      dfloat dhdy = M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(time)*(mppf->chSeta2 + mppf->inveta2 - 3*mppf->inveta2*cos(M_PI*x)*cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*y)*sin(time)*sin(time));         
+    // printf("%.4e %.4e\n",dhdx,dhdx);
+      mppf->GHPhi[ida + 0] = mppf->GHPhi[ida + 0] - dhdx;
+      mppf->GHPhi[ida + 1] = mppf->GHPhi[ida + 1] - dhdy;
+    }
+
+  }
 
   // do error stuff on host
   mppfError(mppf, time);

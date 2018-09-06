@@ -2,7 +2,7 @@
 
 void mppfCahnHilliardUpdate(mppf_t *mppf, dfloat time){
   
- mesh_t *mesh = mppf->mesh; 
+  mesh_t *mesh = mppf->mesh; 
  
   // Update History // Very bad storage!!!! will try to decrease
   for (int s=mppf->Nstages;s>1;s--) {

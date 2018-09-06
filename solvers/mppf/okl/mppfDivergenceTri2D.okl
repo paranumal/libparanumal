@@ -107,9 +107,7 @@
               // Not sure about that !!!!!!
               mppfVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
               uP = 2.f*uP-uM;        
-              vP = 2.f*vP-vM;    
-              // uP = 2.f*uM-uM;        
-              // vP = 2.f*vM-vM;         
+              vP = 2.f*vP-vM;        
             }
             
             const dfloat sc = invJ * sJ ; 

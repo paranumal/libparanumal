@@ -176,11 +176,19 @@ void mppfPlotVTU(mppf_t *mppf, char *fileName){
         dfloat plotux = 0, plotuy = 0;
         dfloat plotvx = 0, plotvy = 0;
         for(int m=0;m<mesh->Np;++m){
-          dlong id = m+e*mesh->Np;
-          dfloat ux = mppf->GU[id+0*offset];
-          dfloat uy = mppf->GU[id+1*offset];
-          dfloat vx = mppf->GU[id+2*offset];
-          dfloat vy = mppf->GU[id+3*offset];
+          dlong id = (m+e*mesh->Np)*4;
+          dfloat ux = mppf->GHPhi[id+0];
+          dfloat uy = mppf->GHPhi[id+1];
+          dfloat vx = mppf->GHPhi[id+2];
+          dfloat vy = mppf->GHPhi[id+3];
+
+
+
+          // dlong id = m+e*mesh->Np;
+          // dfloat ux = mppf->GU[id+0*offset];
+          // dfloat uy = mppf->GU[id+1*offset];
+          // dfloat vx = mppf->GU[id+2*offset];
+          // dfloat vy = mppf->GU[id+3*offset];
           plotux += mesh->plotInterp[n*mesh->Np+m]*ux;
           plotuy += mesh->plotInterp[n*mesh->Np+m]*uy;
           plotvx += mesh->plotInterp[n*mesh->Np+m]*vx;

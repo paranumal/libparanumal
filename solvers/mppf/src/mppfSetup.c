@@ -99,6 +99,7 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->Vort    = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
   mppf->Div     = (dfloat*) calloc(               Nlocal,sizeof(dfloat));
   mppf->Ue      = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
+  mppf->HPhiE   = (dfloat*) calloc(               Ntotal,sizeof(dfloat));
 
   //  Substepping will come  here // NOT IN USE CURRENTLY
   if(mppf->elementType==HEXAHEDRA)
@@ -206,13 +207,14 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   options.getArgs("DATA FILE", boundaryHeaderFileName);
   kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
 
-  mppf->o_U   = mesh->device.malloc(mppf->NVfields*mppf->Nstages*Ntotal*sizeof(dfloat), mppf->U);
-  mppf->o_P   = mesh->device.malloc(               mppf->Nstages*Ntotal*sizeof(dfloat), mppf->P);
-  mppf->o_Phi = mesh->device.malloc(               mppf->Nstages*Ntotal*sizeof(dfloat), mppf->Phi);
-  mppf->o_Rho = mesh->device.malloc(                             Ntotal*sizeof(dfloat), mppf->Rho);
-  mppf->o_Mu  = mesh->device.malloc(                             Ntotal*sizeof(dfloat), mppf->Mu);
-  mppf->o_GMu = mesh->device.malloc(              mppf->NVfields*Ntotal*sizeof(dfloat), mppf->GMu);
-  mppf->o_Ue  = mesh->device.malloc(              mppf->NVfields*Ntotal*sizeof(dfloat), mppf->Ue);
+  mppf->o_U    = mesh->device.malloc(mppf->NVfields*mppf->Nstages*Ntotal*sizeof(dfloat), mppf->U);
+  mppf->o_P    = mesh->device.malloc(               mppf->Nstages*Ntotal*sizeof(dfloat), mppf->P);
+  mppf->o_Phi  = mesh->device.malloc(               mppf->Nstages*Ntotal*sizeof(dfloat), mppf->Phi);
+  mppf->o_Rho  = mesh->device.malloc(                             Ntotal*sizeof(dfloat), mppf->Rho);
+  mppf->o_Mu   = mesh->device.malloc(                             Ntotal*sizeof(dfloat), mppf->Mu);
+  mppf->o_GMu  = mesh->device.malloc(              mppf->NVfields*Ntotal*sizeof(dfloat), mppf->GMu);
+  mppf->o_Ue   = mesh->device.malloc(              mppf->NVfields*Ntotal*sizeof(dfloat), mppf->Ue);
+  mppf->o_HPhiE= mesh->device.malloc(                             Ntotal*sizeof(dfloat), mppf->HPhiE);
   
    for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
@@ -765,12 +767,21 @@ options.getArgs("BAND THICKNESS", mppf->eta);
       mppf->phaseFieldUpdateMixingEnergyKernel =  
                mesh->device.buildKernel(DMPPF "/okl/mppfPhaseFieldUpdateMixingEnergy.okl", 
                                               "mppfPhaseFieldUpdateMixingEnergy", kernelInfo);
+      // ===========================================================================//
 
-      sprintf(fileName, DMPPF "/okl/mppfPhaseFieldAxGrad%s.okl", suffix);
-      sprintf(kernelName, "mppfPhaseFieldAxGrad%s", suffix);
-      mppf->phaseFieldAxGradKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(fileName, DMPPF "/okl/mppfPhaseFieldAx%s.okl", suffix);
       
-      sprintf(fileName, DMPPF "/okl/mppfPhaseFieldAxIpdg%s.okl", suffix);
+      // sprintf(kernelName, "mppfPhaseFieldAxGrad%s", suffix);
+      // mppf->phaseFieldAxGradKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      
+      sprintf(kernelName, "mppfPhaseFieldAxGradVolume%s", suffix);
+      mppf->phaseFieldAxGradVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+
+      sprintf(kernelName, "mppfPhaseFieldAxGradSurface%s", suffix);
+      mppf->phaseFieldAxGradSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+
       sprintf(kernelName, "mppfPhaseFieldAxIpdg%s", suffix);
       mppf->phaseFieldAxIpdgKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       // ===========================================================================//
@@ -880,9 +891,12 @@ options.getArgs("BAND THICKNESS", mppf->eta);
 
        // ===========================================================================
 
-      sprintf(fileName, DMPPF "/okl/mppfVelocityExtrapolate.okl");
+      sprintf(fileName, DMPPF "/okl/mppfExtrapolate.okl");
       sprintf(kernelName, "mppfVelocityExtrapolate");
       mppf->velocityExtrapolateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      
+      sprintf(kernelName, "mppfPhaseFieldExtrapolate");
+      mppf->phaseFieldExtrapolateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
        // ===========================================================================
 
