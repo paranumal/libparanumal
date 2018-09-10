@@ -109,7 +109,7 @@ typedef struct {
   dfloat *B, *tmp2;
   occa::memory *o_B, o_tmp2;
   void *xxt2;
-  parAlmond_t *parAlmond;
+  void *parAlmond;
 
   // block Jacobi precon
   occa::memory o_invMM;
@@ -117,8 +117,8 @@ typedef struct {
   occa::kernel partialblockJacobiKernel;
 
   //dummy almond level to store the OAS smoothing op
-  agmgLevel *OASLevel;
-  void **OASsmoothArgs;
+  // agmgLevel *OASLevel;
+  // void **OASsmoothArgs;
 
   //SEMFEM variables
   mesh_t *femMesh;
