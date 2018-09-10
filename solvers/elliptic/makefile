@@ -11,7 +11,7 @@ include ${OCCA_DIR}/scripts/Makefile
 HDRDIR = ../../include
 GSDIR  = ../../3rdParty/gslib
 OGSDIR  = ../../libs/gatherScatter
-ALMONDDIR = ../parALMOND
+ALMONDDIR = ../../libs/parAlmond
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -20,25 +20,22 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"'
-
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ALMONDDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"'
 
 # link flags to be used
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g 
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
-LIBS	=   -L$(ALMONDDIR) -lparALMOND  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs \
+LIBS	=   -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs \
 			-L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
-
-#-llapack -lblas
 
 INCLUDES = elliptic.h ellipticPrecon.h
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
 $(HDRDIR)/mesh3D.h \
-$(HDRDIR)/ogs_t.h \
-$(ALMONDDIR)/parALMOND.h \
+$(OGSDIR)/ogs.hpp \
+$(ALMONDDIR)/parAlmond.hpp \
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c
@@ -57,17 +54,18 @@ AOBJS    = \
 ./src/ellipticBuildLocalPatches.o \
 ./src/ellipticBuildMultigridLevel.o \
 ./src/ellipticHaloExchange.o\
-./src/ellipticMultiGridSetup.o \
 ./src/ellipticOperator.o \
 ./src/ellipticPreconditioner.o\
 ./src/ellipticPreconditionerSetup.o\
-./src/ellipticSEMFEMSetup.o\
 ./src/ellipticSetup.o \
-./src/ellipticSmoother.o \
-./src/ellipticSmootherSetup.o \
 ./src/ellipticSolve.o\
 ./src/ellipticSolveSetup.o\
 ./src/ellipticVectors.o \
+
+# ./src/ellipticMultiGridSetup.o \
+# ./src/ellipticSEMFEMSetup.o\
+# ./src/ellipticSmoother.o \
+# ./src/ellipticSmootherSetup.o \
 
 # library objects
 LOBJS = \
@@ -127,7 +125,7 @@ LOBJS = \
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
-ellipticMain:$(AOBJS) $(LOBJS) ./src/ellipticMain.o libblas libogs libparALMOND
+ellipticMain:$(AOBJS) $(LOBJS) ./src/ellipticMain.o libblas libogs libparAlmond
 	$(LD)  $(LDFLAGS)  -o ellipticMain ./src/ellipticMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
@@ -139,14 +137,14 @@ libogs:
 libblas:
 	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../solvers/elliptic
 
-libparALMOND:
-	cd ../parALMOND; make -j lib; cd ../elliptic
+libparAlmond:
+	cd ../../libs/parAlmond; make -j lib; cd ../../solvers/elliptic
 
 all: lib ellipticMain
 
 # what to do if user types "make clean"
 clean:
-	cd ../parALMOND; make clean; cd ../elliptic
+	cd ../../libs/parAlmond; make clean; cd ../../solvers/elliptic
 	cd ../../src; rm *.o; cd ../solvers/elliptic
 	cd ../../libs/gatherScatter; make clean; cd ../../solvers/elliptic
 	rm src/*.o ellipticMain libelliptic.a
@@ -154,7 +152,7 @@ clean:
 realclean:
 	cd ../../3rdParty/BlasLapack; make clean; cd ../../solvers/elliptic
 	cd ../../libs/gatherScatter; make realclean; cd ../../solvers/elliptic
-	cd ../parALMOND; make clean; cd ../elliptic
+	cd ../../libs/parAlmond; make clean; cd ../../solvers/elliptic
 	cd ../../src; rm *.o; cd ../solvers/elliptic
 	rm src/*.o ellipticMain libelliptic.a
 

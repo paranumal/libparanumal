@@ -5,7 +5,7 @@
 data/ellipticHomogeneous2D.h
 
 [MESH FILE]
-../../meshes/cavityH00125.msh
+../../meshes/cavityH01.msh
 
 [MESH DIMENSION]
 2
@@ -14,10 +14,10 @@ data/ellipticHomogeneous2D.h
 3
 
 [POLYNOMIAL DEGREE]
-4
+1
 
 [THREAD MODEL]
-Serial
+CUDA
 
 [PLATFORM NUMBER]
 0
@@ -26,7 +26,7 @@ Serial
 0
 
 [LAMBDA]
-0
+1
 
 # can add FLEXIBLE to PCG
 [KRYLOV SOLVER]
@@ -34,7 +34,7 @@ PCG+FLEXIBLE
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-CONTINUOUS
+IPDG
 
 # can be NODAL or BERN
 [BASIS]
@@ -42,7 +42,7 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
-MULTIGRID
+FULLALMOND
 
 
 ########## MULTIGRID Options ##############
@@ -72,7 +72,7 @@ KCYCLE
 
 # can be DAMPEDJACOBI or CHEBYSHEV
 [PARALMOND SMOOTHER]
-CHEBYSHEV
+DAMPEDJACOBI
 
 # can be any integer >0
 [PARALMOND CHEBYSHEV DEGREE]

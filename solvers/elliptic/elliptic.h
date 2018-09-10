@@ -34,7 +34,7 @@ SOFTWARE.
 #include "mpi.h"
 #include "mesh2D.h"
 #include "mesh3D.h"
-#include "parAlmond.h"
+#include "parAlmond.hpp"
 #include "ellipticPrecon.h"
 
 // block size for reduction (hard coded)
@@ -158,10 +158,10 @@ dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory 
 void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision);
 
 dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a);
-void ellipticBuildIpdg(elliptic_t* elliptic, int basisNp, dfloat *basis, dfloat lambda, 
+void ellipticBuildIpdg(elliptic_t* elliptic, int basisNp, dfloat *basis, dfloat lambda,
                         nonZero_t **A, dlong *nnzA, hlong *globalStarts);
 
-void ellipticBuildContinuous(elliptic_t* elliptic, dfloat lambda, nonZero_t **A, 
+void ellipticBuildContinuous(elliptic_t* elliptic, dfloat lambda, nonZero_t **A,
                                   dlong *nnz, ogs_t **ogs, hlong *globalStarts);
 
 void ellipticBuildJacobi(elliptic_t *elliptic, dfloat lambda, dfloat **invDiagA);
@@ -169,17 +169,17 @@ void ellipticBuildJacobi(elliptic_t *elliptic, dfloat lambda, dfloat **invDiagA)
 void ellipticBuildLocalPatches(elliptic_t *elliptic, dfloat lambda, dfloat rateTolerance,
                                dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA);
 
-//smoother setups
-void ellipticSetupSmoother(elliptic_t *elliptic, precon_t *precon, dfloat lambda);
-void ellipticSetupSmootherDampedJacobi    (elliptic_t *elliptic, precon_t *precon, agmgLevel *level, dfloat lambda);
-void ellipticSetupSmootherLocalPatch(elliptic_t *elliptic, precon_t *precon, agmgLevel *level, dfloat lambda, dfloat rateTolerance);
+// //smoother setups
+// void ellipticSetupSmoother(elliptic_t *elliptic, precon_t *precon, dfloat lambda);
+// void ellipticSetupSmootherDampedJacobi    (elliptic_t *elliptic, precon_t *precon, agmgLevel *level, dfloat lambda);
+// void ellipticSetupSmootherLocalPatch(elliptic_t *elliptic, precon_t *precon, agmgLevel *level, dfloat lambda, dfloat rateTolerance);
 
 void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda);
 elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf);
 
 void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda);
 
-dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level);
+// dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level);
 
 #define maxNthreads 256
 

@@ -52,15 +52,15 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
     hlong *Rows = (hlong *) calloc(nnz, sizeof(hlong));
     hlong *Cols = (hlong *) calloc(nnz, sizeof(hlong));
     dfloat *Vals = (dfloat*) calloc(nnz,sizeof(dfloat));
-    
+
     for (dlong n=0;n<nnz;n++) {
       Rows[n] = A[n].row;
       Cols[n] = A[n].col;
       Vals[n] = A[n].val;
     }
 
-    precon->parAlmond = parAlmondInit(mesh, options);
-    parAlmondAgmgSetup(precon->parAlmond,
+    precon->parAlmond = parAlmond::Init(mesh->device, mesh->comm, options);
+    parAlmond::AMGSetup(precon->parAlmond,
                        globalStarts,
                        nnz,
                        Rows,
@@ -70,25 +70,28 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
                        elliptic->allNeumannPenalty);
     free(A); free(Rows); free(Cols); free(Vals);
 
+    if (options.compareArgs("VERBOSE", "TRUE"))
+      parAlmond::Report(precon->parAlmond);
+
     if (options.compareArgs("DISCRETIZATION", "CONTINUOUS")) {//tell parAlmond to gather this level
-      agmgLevel *baseLevel = precon->parAlmond->levels[0];
+      // agmgLevel *baseLevel = precon->parAlmond->levels[0];
 
-      baseLevel->gatherLevel = true;
-      baseLevel->Srhs = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
-      baseLevel->Sx   = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
-      baseLevel->o_Srhs = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
-      baseLevel->o_Sx   = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+      // baseLevel->gatherLevel = true;
+      // baseLevel->Srhs = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+      // baseLevel->Sx   = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+      // baseLevel->o_Srhs = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+      // baseLevel->o_Sx   = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
 
-      baseLevel->weightedInnerProds = false;
+      // baseLevel->weightedInnerProds = false;
 
-      baseLevel->gatherArgs = (void **) calloc(3,sizeof(void*));  
-      baseLevel->gatherArgs[0] = (void *) elliptic;
-      baseLevel->gatherArgs[1] = (void *) precon->ogs;
-      baseLevel->gatherArgs[2] = (void *) &(baseLevel->o_Sx);
-      baseLevel->scatterArgs = baseLevel->gatherArgs;
+      // baseLevel->gatherArgs = (void **) calloc(3,sizeof(void*));
+      // baseLevel->gatherArgs[0] = (void *) elliptic;
+      // baseLevel->gatherArgs[1] = (void *) precon->ogs;
+      // baseLevel->gatherArgs[2] = (void *) &(baseLevel->o_Sx);
+      // baseLevel->scatterArgs = baseLevel->gatherArgs;
 
-      baseLevel->device_gather  = ellipticGather;
-      baseLevel->device_scatter = ellipticScatter;        
+      // baseLevel->device_gather  = ellipticGather;
+      // baseLevel->device_scatter = ellipticScatter;
     }
 
 /*
@@ -138,11 +141,11 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
 
   } else if(options.compareArgs("PRECONDITIONER", "MULTIGRID")){
 
-    ellipticMultiGridSetup(elliptic,precon,lambda);
+    // ellipticMultiGridSetup(elliptic,precon,lambda);
 
   } else if(options.compareArgs("PRECONDITIONER", "SEMFEM")) {
 
-    ellipticSEMFEMSetup(elliptic,precon,lambda);
+    // ellipticSEMFEMSetup(elliptic,precon,lambda);
 
   } else if(options.compareArgs("PRECONDITIONER", "JACOBI")) {
 

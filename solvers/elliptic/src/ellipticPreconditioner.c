@@ -32,12 +32,12 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
   mesh_t *mesh = elliptic->mesh;
   precon_t *precon = elliptic->precon;
   setupAide options = elliptic->options;
-  
+
   if (   options.compareArgs("PRECONDITIONER", "FULLALMOND")
       || options.compareArgs("PRECONDITIONER", "MULTIGRID")) {
 
     occaTimerTic(mesh->device,"parALMOND");
-    parAlmondPrecon(precon->parAlmond, o_z, o_r);
+    parAlmond::Precon(precon->parAlmond, o_z, o_r);
     occaTimerToc(mesh->device,"parALMOND");
 
   } else if(options.compareArgs("PRECONDITIONER", "MASSMATRIX")){
@@ -53,20 +53,20 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
 
       elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, ogs->o_invDegree, o_r, elliptic->o_rtmp);
 
-      if(mesh->NglobalGatherElements) 
-        precon->partialblockJacobiKernel(mesh->NglobalGatherElements, 
+      if(mesh->NglobalGatherElements)
+        precon->partialblockJacobiKernel(mesh->NglobalGatherElements,
                                 mesh->o_globalGatherElementList,
                                 invLambda, mesh->o_vgeo, precon->o_invMM, elliptic->o_rtmp, o_z);
 
       ogsGatherScatterStart(o_z, ogsDfloat, ogsAdd, ogs);
 
       if(mesh->NlocalGatherElements)
-        precon->partialblockJacobiKernel(mesh->NlocalGatherElements, 
+        precon->partialblockJacobiKernel(mesh->NlocalGatherElements,
                                 mesh->o_localGatherElementList,
                                 invLambda, mesh->o_vgeo, precon->o_invMM, elliptic->o_rtmp, o_z);
-      
+
       ogsGatherScatterFinish(o_z, ogsDfloat, ogsAdd, ogs);
-      
+
       elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, ogs->o_invDegree, o_z, o_z);
 
       //post-mask
@@ -81,7 +81,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
       precon->SEMFEMInterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,o_z,precon->o_rFEM);
       ogsGather(precon->o_GrFEM, precon->o_rFEM, ogsDfloat, ogsAdd, precon->FEMogs);
       occaTimerTic(mesh->device,"parALMOND");
-      parAlmondPrecon(precon->parAlmond, precon->o_GzFEM, precon->o_GrFEM);
+      parAlmond::Precon(precon->parAlmond, precon->o_GzFEM, precon->o_GrFEM);
       occaTimerToc(mesh->device,"parALMOND");
       ogsScatter(precon->o_zFEM, precon->o_GzFEM, ogsDfloat, ogsAdd, precon->FEMogs);
       precon->SEMFEMAnterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,precon->o_zFEM,o_z);
@@ -91,7 +91,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
       if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_z);
     } else {
       occaTimerTic(mesh->device,"parALMOND");
-      parAlmondPrecon(precon->parAlmond, o_z, o_r);
+      parAlmond::Precon(precon->parAlmond, o_z, o_r);
       occaTimerToc(mesh->device,"parALMOND");
     }
 
@@ -102,7 +102,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
     occaTimerTic(mesh->device,"dotDivideKernel");
     elliptic->dotMultiplyKernel(Ntotal, o_r, precon->o_invDiagA, o_z);
     occaTimerToc(mesh->device,"dotDivideKernel");
-  
+
   } else{ // turn off preconditioner
     o_z.copyFrom(o_r);
   }
