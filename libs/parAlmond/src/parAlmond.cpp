@@ -25,21 +25,20 @@ SOFTWARE.
 */
 
 #include "parAlmond.hpp"
-#include "solver.hpp"
 
 namespace parAlmond {
 
 
-void *Init(occa::device device, MPI_Comm comm, setupAide options) {
+solver_t *Init(occa::device device, MPI_Comm comm, setupAide options) {
   solver_t *M = new solver_t(device, comm, options);
 
   if (Nrefs==0) buildParAlmondKernels(comm, device);
   Nrefs++;
 
-  return (void*) M;
+  return M;
 }
 
-void AMGSetup(void *MM,
+void AMGSetup(solver_t *MM,
                hlong* globalRowStarts,       //global partition
                dlong nnz,                    //--
                hlong* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
@@ -74,9 +73,7 @@ void AMGSetup(void *MM,
   if(rank==0) printf("done.\n");
 }
 
-void Precon(void *MM, occa::memory o_x, occa::memory o_rhs) {
-
-  solver_t *M = (solver_t *) MM;
+void Precon(solver_t *M, occa::memory o_x, occa::memory o_rhs) {
 
   M->levels[0]->o_x   = o_x;
   M->levels[0]->o_rhs = o_rhs;
@@ -92,15 +89,11 @@ void Precon(void *MM, occa::memory o_x, occa::memory o_rhs) {
   }
 }
 
-void Report(void *MM) {
-  solver_t *M = (solver_t *) MM;;
-
+void Report(solver_t *M) {
   M->Report();
 }
 
-void Free(void* MM) {
-  solver_t *M = (solver_t *) MM;
-
+void Free(solver_t* M) {
   Nrefs--;
   if (Nrefs==0) {
     freeParAlmondKernels();

@@ -36,11 +36,21 @@ SOFTWARE.
 #include "ogs.hpp"
 #include "setupAide.hpp"
 
+#include "include/defines.hpp"
+#include "include/utils.hpp"
+#include "include/vector.hpp"
+#include "include/matrix.hpp"
+#include "include/level.hpp"
+#include "include/agmg.hpp"
+#include "include/coarse.hpp"
+#include "include/solver.hpp"
+
+
 namespace parAlmond {
 
-void *Init(occa::device device, MPI_Comm comm, setupAide options);
+solver_t *Init(occa::device device, MPI_Comm comm, setupAide options);
 
-void AMGSetup(void* M,
+void AMGSetup(solver_t* M,
              hlong* rowStarts,
              dlong nnz,
              hlong* Ai,
@@ -49,11 +59,11 @@ void AMGSetup(void* M,
              bool nullSpace,
              dfloat nullSpacePenalty);
 
-void Precon(void* M, occa::memory o_x, occa::memory o_rhs);
+void Precon(solver_t* M, occa::memory o_x, occa::memory o_rhs);
 
-void Report(void *M);
+void Report(solver_t *M);
 
-void Free(void* M);
+void Free(solver_t* M);
 
 } //namespace parAlmond
 
