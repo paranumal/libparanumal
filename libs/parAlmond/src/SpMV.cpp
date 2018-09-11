@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "matrix.hpp"
+#include "parAlmond.hpp"
 
 namespace parAlmond {
 

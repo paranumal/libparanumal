@@ -61,9 +61,9 @@ AOBJS    = \
 ./src/ellipticSolve.o\
 ./src/ellipticSolveSetup.o\
 ./src/ellipticVectors.o \
+./src/ellipticSEMFEMSetup.o\
 
 # ./src/ellipticMultiGridSetup.o \
-# ./src/ellipticSEMFEMSetup.o\
 # ./src/ellipticSmoother.o \
 # ./src/ellipticSmootherSetup.o \
 

@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "vector.hpp"
+#include "parAlmond.hpp"
 
 namespace parAlmond {
 

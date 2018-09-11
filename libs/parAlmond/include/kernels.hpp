@@ -27,9 +27,6 @@ SOFTWARE.
 #ifndef PARALMOND_KERNELS_HPP
 #define PARALMOND_KERNELS_HPP
 
-#include "parAlmond.hpp"
-#include "defines.hpp"
-
 namespace parAlmond {
 
 	void buildParAlmondKernels(MPI_Comm comm, occa::device device);

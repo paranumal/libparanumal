@@ -105,9 +105,18 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
       ogsGatherScatter(o_z, ogsDfloat, ogsAdd, elliptic->ogs);
       if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_z);
     } else {
+      ogsGather(precon->o_rhsG, o_r, ogsDfloat, ogsAdd, precon->FEMogs);
+      elliptic->dotMultiplyKernel(precon->FEMogs->Ngather,
+                      precon->FEMogs->o_gatherInvDegree, precon->o_rhsG, precon->o_rhsG);
       occaTimerTic(mesh->device,"parALMOND");
-      parAlmond::Precon(precon->parAlmond, o_z, o_r);
+      parAlmond::Precon(precon->parAlmond, precon->o_xG, precon->o_rhsG);
       occaTimerToc(mesh->device,"parALMOND");
+      ogsScatter(o_z, precon->o_xG, ogsDfloat, ogsAdd, precon->FEMogs);
+
+
+      // occaTimerTic(mesh->device,"parALMOND");
+      // parAlmond::Precon(precon->parAlmond, o_z, o_r);
+      // occaTimerToc(mesh->device,"parALMOND");
     }
 
   } else if(options.compareArgs("PRECONDITIONER", "JACOBI")){

@@ -27,11 +27,6 @@ SOFTWARE.
 #ifndef PARALMOND_VECTOR_HPP
 #define PARALMOND_VECTOR_HPP
 
-#include "parAlmond.hpp"
-#include "defines.hpp"
-#include "utils.hpp"
-#include "kernels.hpp"
-
 namespace parAlmond {
 
 //------------------------------------------------------------------------

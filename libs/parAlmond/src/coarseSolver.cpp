@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "coarse.hpp"
+#include "parAlmond.hpp"
 
 namespace parAlmond {
 

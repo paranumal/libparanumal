@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "agmg.h"
+#include "parAlmond.hpp"
 
 void occaTimerTic(occa::device device,std::string name) {
   std::string profilerOn = occa::env::var("OCCA_PROFILE");

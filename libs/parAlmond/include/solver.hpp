@@ -27,14 +27,6 @@ SOFTWARE.
 #ifndef PARALMOND_SOLVER_HPP
 #define PARALMOND_SOLVER_HPP
 
-#include "parAlmond.hpp"
-#include "defines.hpp"
-#include "utils.hpp"
-#include "vector.hpp"
-#include "matrix.hpp"
-#include "level.hpp"
-#include "coarse.hpp"
-
 namespace parAlmond {
 
 class solver_t {
