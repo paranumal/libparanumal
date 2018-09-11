@@ -270,16 +270,15 @@ void vectorDotStar(const dlong N, const dfloat alpha, occa::memory o_a,
 dfloat vectorInnerProd(const dlong N, occa::memory o_x, occa::memory o_y,
                        MPI_Comm comm){
 
-  dlong numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
-  if(!numBlocks) numBlocks = 1;
+  dlong numBlocks = (N < NBLOCKS) ? N : NBLOCKS;
 
-  vectorInnerProdKernel(numBlocks,N,o_x,o_y,o_scratch);
-  o_scratch.copyTo(scratch,numBlocks*sizeof(dfloat),0);
+  vectorInnerProdKernel(numBlocks,N,o_x,o_y,o_reductionScratch);
+  o_reductionScratch.copyTo(reductionScratch,numBlocks*sizeof(dfloat),0);
 
   dfloat result =0., gresult = 0.;
   //#pragma omp parallel for reduction(+:result)
   for (dlong i=0; i<numBlocks; i++) {
-    result += ((dfloat*)scratch)[i];
+    result += ((dfloat*)reductionScratch)[i];
   }
   MPI_Allreduce(&result, &gresult, 1, MPI_DFLOAT, MPI_SUM, comm);
   return gresult;
@@ -293,21 +292,20 @@ void kcycleCombinedOp1(const dlong N, dfloat *aDotbc, occa::memory o_a,
                        const bool weighted, MPI_Comm comm) {
 
   dfloat result[3] = {0.,0.,0.};
-  dlong numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
-  if(!numBlocks) numBlocks = 1;
+  dlong numBlocks = (N < NBLOCKS) ? N : NBLOCKS;
 
   if (weighted) {
-    kcycleWeightedCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,o_w,o_scratch);
+    kcycleWeightedCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,o_w,o_reductionScratch);
   } else {
-    kcycleCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,o_scratch);
+    kcycleCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,o_reductionScratch);
   }
-  o_scratch.copyTo(scratch,3*numBlocks*sizeof(dfloat),0);
+  o_reductionScratch.copyTo(reductionScratch,3*numBlocks*sizeof(dfloat),0);
 
   // #pragma omp parallel for reduction(+:aDotb) reduction(+:aDotc) reduction(+:bDotb)
   for(dlong i=0; i<numBlocks; i++) {
-    result[0] += ((dfloat*)scratch)[3*i+0];
-    result[1] += ((dfloat*)scratch)[3*i+1];
-    result[2] += ((dfloat*)scratch)[3*i+2];
+    result[0] += ((dfloat*)reductionScratch)[3*i+0];
+    result[1] += ((dfloat*)reductionScratch)[3*i+1];
+    result[2] += ((dfloat*)reductionScratch)[3*i+2];
   }
   MPI_Allreduce(result,aDotbc,3,MPI_DFLOAT,MPI_SUM,comm);
 }
@@ -319,22 +317,21 @@ void kcycleCombinedOp2(const dlong N, dfloat *aDotbcd,
                         occa::memory o_w, const bool weighted, MPI_Comm comm) {
 
   dfloat result[3] = {0.,0.,0.};
-  dlong numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
-  if(!numBlocks) numBlocks = 1;
+  dlong numBlocks = (N < NBLOCKS) ? N : NBLOCKS;
 
   if (weighted) {
-    kcycleWeightedCombinedOp2Kernel(numBlocks,N,o_a,o_b,o_c,o_d,o_w,o_scratch);
+    kcycleWeightedCombinedOp2Kernel(numBlocks,N,o_a,o_b,o_c,o_d,o_w,o_reductionScratch);
   } else {
-    kcycleCombinedOp2Kernel(numBlocks,N,o_a,o_b,o_c,o_d,o_scratch);
+    kcycleCombinedOp2Kernel(numBlocks,N,o_a,o_b,o_c,o_d,o_reductionScratch);
   }
-  o_scratch.copyTo(scratch,3*numBlocks*sizeof(dfloat),0);
+  o_reductionScratch.copyTo(reductionScratch,3*numBlocks*sizeof(dfloat),0);
 
   dfloat aDotb = 0., aDotc = 0., aDotd = 0.;
   // #pragma omp parallel for reduction(+:aDotb) reduction(+:aDotc) reduction(+:aDotd)
   for(dlong i=0; i<numBlocks; i++) {
-    result[0] += ((dfloat*)scratch)[3*i+0];
-    result[1] += ((dfloat*)scratch)[3*i+1];
-    result[2] += ((dfloat*)scratch)[3*i+2];
+    result[0] += ((dfloat*)reductionScratch)[3*i+0];
+    result[1] += ((dfloat*)reductionScratch)[3*i+1];
+    result[2] += ((dfloat*)reductionScratch)[3*i+2];
   }
   MPI_Allreduce(result,aDotbcd,3,MPI_DFLOAT,MPI_SUM,comm);
 }
@@ -346,19 +343,18 @@ dfloat vectorAddInnerProd(const dlong N, const dfloat alpha, occa::memory o_x,
 
   dfloat result = 0.;
   dfloat gresult = 0.;
-  dlong numBlocks = ((N+RDIMX*RDIMY-1)/(RDIMX*RDIMY))/RLOAD;
-  if(!numBlocks) numBlocks = 1;
+  dlong numBlocks = (N < NBLOCKS) ? N : NBLOCKS;
 
   if (weighted) {
-    vectorAddWeightedInnerProdKernel(numBlocks,N,alpha,beta,o_x,o_y,o_w,o_scratch);
+    vectorAddWeightedInnerProdKernel(numBlocks,N,alpha,beta,o_x,o_y,o_w,o_reductionScratch);
   } else {
-    vectorAddInnerProdKernel(numBlocks,N,alpha,beta,o_x,o_y,o_scratch);
+    vectorAddInnerProdKernel(numBlocks,N,alpha,beta,o_x,o_y,o_reductionScratch);
   }
-  o_scratch.copyTo(scratch,numBlocks*sizeof(dfloat),0);
+  o_reductionScratch.copyTo(reductionScratch,numBlocks*sizeof(dfloat),0);
 
   // #pragma omp parallel for reduction(+:result)
   for (dlong i=0; i<numBlocks; i++) {
-    result += ((dfloat*)scratch)[i];
+    result += ((dfloat*)reductionScratch)[i];
   }
   MPI_Allreduce(&result,&gresult,1,MPI_DFLOAT,MPI_SUM,comm);
   return gresult;

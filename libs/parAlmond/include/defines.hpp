@@ -28,18 +28,14 @@ SOFTWARE.
 #define PARALMOND_DEFINES_HPP
 
 #define BLOCKSIZE 512
-#define AGMGBDIM 32 //block size
-#define SIMDWIDTH 32 //width of simd blocks
+#define NBLOCKS 128
+
 #define MAX_LEVELS 100
 #define GPU_CPU_SWITCH_SIZE 0 //host-device switch threshold
 
-#define NUMKCYCLES 2
+#define NUMKCYCLES 3
 #define COARSENTHREASHOLD 0.5
 #define KCYCLETOL 0.2
-
-#define RDIMX 32
-#define RDIMY 8
-#define RLOAD 1
 
 extern int ChebyshevIterations;
 

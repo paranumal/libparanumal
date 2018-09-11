@@ -45,8 +45,8 @@ SOFTWARE.
   for(dlong i=0;i<N;++i;@tile(p_BLOCKSIZE,@outer,@inner)){
     dfloat ci = 0.0;
     if (beta)
-      ci = c[i];
+      ci = beta*c[i];
 
-    c[i] = alpha * a[i] * b[i] + beta * ci;
+    c[i] = (alpha * a[i] * b[i]) + ci;
   }
 }

@@ -37,6 +37,9 @@ size_t pinnedScratchSpaceBytes=0;
 void *pinnedScratch=NULL;
 occa::memory o_pinnedScratch;
 
+size_t reductionScratchBytes=0;
+void *reductionScratch=NULL;
+occa::memory o_reductionScratch;
 
 void allocateScratchSpace(size_t requiredBytes, occa::device device) {
 
@@ -46,8 +49,14 @@ void allocateScratchSpace(size_t requiredBytes, occa::device device) {
       o_scratch.free();
     }
     scratch   = malloc(requiredBytes);
+    memset(scratch, 0, requiredBytes);
     o_scratch = device.malloc(requiredBytes, scratch);
     scratchSpaceBytes = requiredBytes;
+  }
+  if (reductionScratchBytes==0) {
+    reductionScratchBytes = 3*NBLOCKS*sizeof(dfloat);
+    o_reductionScratch = device.mappedAlloc(reductionScratchBytes);
+    reductionScratch = o_reductionScratch.getMappedPointer();
   }
 }
 
@@ -57,6 +66,12 @@ void freeScratchSpace() {
     o_scratch.free();
   }
   scratchSpaceBytes=0;
+
+  if (reductionScratchBytes!=0) {
+    reductionScratchBytes = 0;
+    free(reductionScratch);
+    o_reductionScratch.free();
+  }
 }
 
 void allocatePinnedScratchSpace(size_t requiredBytes, occa::device device) {

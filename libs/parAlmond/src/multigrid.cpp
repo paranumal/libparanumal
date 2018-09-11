@@ -56,7 +56,7 @@ void solver_t::kcycle(int k){
   // rhsC = P^T res
   levelC->coarsen(res, rhsC);
 
-  if(k>NUMKCYCLES) {
+  if(k+1>NUMKCYCLES) {
     this->vcycle(k+1);
   } else{
     // first inner krylov iteration
@@ -109,8 +109,6 @@ void solver_t::device_kcycle(int k){
     return;
   }
 
-
-
   //check for base level
   if(k==baseLevel) {
     coarseLevel->solve(o_rhs, o_x);
@@ -129,13 +127,12 @@ void solver_t::device_kcycle(int k){
   // rhsC = P^T res
   levelC->coarsen(o_res, o_rhsC);
 
-  if(k>NUMKCYCLES) {
+  if(k+1>NUMKCYCLES) {
     this->device_vcycle(k+1);
   } else{
     // first inner krylov iteration
     this->device_kcycle(k+1);
 
-    // ck = x
     // alpha1=ck*rhsC, rho1=ck*Ack, norm_rhs=sqrt(rhsC*rhsC)
     // rhsC = rhsC - (alpha1/rho1)*vkp1
     // norm_rtilde = sqrt(rhsC*rhsC)

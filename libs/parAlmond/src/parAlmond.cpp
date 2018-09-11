@@ -72,8 +72,6 @@ void AMGSetup(void *MM,
   M->AMGSetup(A);
 
   if(rank==0) printf("done.\n");
-  if (M->options.compareArgs("VERBOSE","TRUE"))
-    M->Report();
 }
 
 void Precon(void *MM, occa::memory o_x, occa::memory o_rhs) {
