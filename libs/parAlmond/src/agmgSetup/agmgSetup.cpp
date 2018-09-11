@@ -31,6 +31,10 @@ namespace parAlmond {
 
 void solver_t::AMGSetup(parCSR *A){
 
+
+  double seed = (double) rank;
+  srand48(seed);
+
   // approximate Nrows at coarsest level
   coarseLevel = new coarseSolver(options);
   const int gCoarseSize = coarseLevel->getTargetSize();
@@ -39,6 +43,8 @@ void solver_t::AMGSetup(parCSR *A){
 
   agmgLevel *L = new agmgLevel(A, ktype);
   levels[numLevels] = L;
+
+  setupAgmgSmoother((agmgLevel*)(levels[numLevels]), stype, ChebyshevIterations);
 
   hlong globalSize = L->A->globalRowStarts[size];
 
@@ -51,23 +57,20 @@ void solver_t::AMGSetup(parCSR *A){
   }
 
   numLevels++;
-  printf("Nrows = %d, \n", globalSize);
   int rank, size;
   MPI_Comm_rank(A->comm, &rank);
   MPI_Comm_size(A->comm, &size);
-  printf("rank = %d, size = %d\n", rank , size);
 
   while(!done){
-    printf("Setting up coarse level %d\n", numLevels);
     L = coarsenAgmgLevel((agmgLevel*)(levels[numLevels-1]), ktype, options);
     levels[numLevels] = L;
     hlong globalCoarseSize = L->A->globalRowStarts[size];
-    printf("Nrows = %d, \n", globalCoarseSize);
 
     int rank, size;
     MPI_Comm_rank(L->A->comm, &rank);
     MPI_Comm_size(L->A->comm, &size);
-    printf("rank = %d, size = %d\n", rank , size);
+
+    setupAgmgSmoother((agmgLevel*)(levels[numLevels]), stype, ChebyshevIterations);
 
     numLevels++;
 
@@ -83,7 +86,7 @@ void solver_t::AMGSetup(parCSR *A){
   allocateScratchSpace(requiredBytes, device);
 
   for (int n=AMGstartLev;n<numLevels;n++) {
-    setupAgmgSmoother((agmgLevel*)(levels[n]), stype, ChebyshevIterations);
+    // setupAgmgSmoother((agmgLevel*)(levels[n]), stype, ChebyshevIterations);
     allocateAgmgVectors((agmgLevel*)(levels[n]), n, numLevels, ctype);
     syncAgmgToDevice((agmgLevel*)(levels[n]), n, numLevels, ctype);
   }
@@ -174,7 +177,7 @@ void syncAgmgToDevice(agmgLevel *level, int k, int numLevels, CycleType ctype) {
   if (level->res) level->o_res = device.malloc(level->Ncols*sizeof(dfloat),level->res);
 
   if (ctype==KCYCLE) {
-    if (level->ck) {
+    if ((k>0) && (k<NUMKCYCLES+1)) {
       level->o_ck = device.malloc(level->Ncols*sizeof(dfloat),level->ck);
       level->o_vk = device.malloc(level->Nrows*sizeof(dfloat),level->vk);
       level->o_wk = device.malloc(level->Nrows*sizeof(dfloat),level->wk);

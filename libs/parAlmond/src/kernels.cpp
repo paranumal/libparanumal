@@ -60,8 +60,8 @@ void buildParAlmondKernels(MPI_Comm comm, occa::device device){
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 
-  double seed = (double) rank;
-  srand48(seed);
+  // double seed = (double) rank;
+  // srand48(seed);
 
   occa::properties kernelInfo;
   kernelInfo["defines"].asObject();

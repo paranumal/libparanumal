@@ -28,6 +28,7 @@ SOFTWARE.
 #define PARALMOND_UTILS_HPP
 
 #include "parAlmond.hpp"
+#include "defines.hpp"
 
 namespace parAlmond {
 
@@ -39,6 +40,10 @@ extern occa::memory o_scratch;
 extern size_t pinnedScratchSpaceBytes;
 extern void *pinnedScratch;
 extern occa::memory o_pinnedScratch;
+
+extern size_t reductionScratchBytes;
+extern void *reductionScratch;
+extern occa::memory o_reductionScratch;
 
 void allocateScratchSpace(size_t requiredBytes, occa::device device);
 void allocatePinnedScratchSpace(size_t requiredBytes, occa::device device);

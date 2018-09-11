@@ -33,7 +33,7 @@ coarseSolver::coarseSolver(setupAide Options) {
 }
 
 int coarseSolver::getTargetSize() {
-  return 1000;
+  return 100;
 }
 
 //set up exact solver using xxt
@@ -44,8 +44,6 @@ void coarseSolver::setup(parCSR *A) {
   int rank, size;
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
-
-  printf("rank = %d, size = %d\n", rank , size);
 
   //copy the global coarse partition as ints
   coarseOffsets = (int* ) calloc(size+1,sizeof(int));
@@ -61,8 +59,8 @@ void coarseSolver::setup(parCSR *A) {
   int *cols;
   dfloat *vals;
 
-  if((rank==0)&&(options.compareArgs("VERBOSE","TRUE")))
-    printf("Setting up coarse solver...");fflush(stdout);
+  // if((rank==0)&&(options.compareArgs("VERBOSE","TRUE")))
+  //   printf("Setting up coarse solver...");fflush(stdout);
 
   // Make the MPI_NONZERO_T data type
   nonzero_t NZ;
@@ -175,7 +173,7 @@ void coarseSolver::setup(parCSR *A) {
 
   free(coarseA);
 
-  if((rank==0)&&(options.compareArgs("VERBOSE","TRUE"))) printf("done.\n");
+  // if((rank==0)&&(options.compareArgs("VERBOSE","TRUE"))) printf("done.\n");
 }
 
 void coarseSolver::syncToDevice() {}

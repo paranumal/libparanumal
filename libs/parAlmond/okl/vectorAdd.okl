@@ -34,7 +34,7 @@ SOFTWARE.
   for(dlong i=0;i<N;++i;@tile(p_BLOCKSIZE,@outer,@inner)){
     dfloat yi = 0.0;
     if (beta)
-      yi = y[i];
+      yi = beta*y[i];
 
     y[i] = yi + alpha*x[i];
   }

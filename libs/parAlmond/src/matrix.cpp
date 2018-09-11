@@ -404,11 +404,13 @@ parCSR::~parCSR() {
 
 dfloat parCSR::rhoDinvA(){
 
+  int rank, size;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
+
   int k = 10;
 
-  hlong Nlocal = (hlong) Nrows;
-  hlong Ntotal = 0;
-  MPI_Allreduce(&Nlocal, &Ntotal, 1, MPI_HLONG, MPI_SUM, comm);
+  hlong Ntotal = globalRowStarts[size];
   if(k > Ntotal) k = (int) Ntotal;
 
   // do an arnoldi
@@ -484,7 +486,7 @@ dfloat parCSR::rhoDinvA(){
   free(Vx);
   free(V);
 
-  printf("weight = %g \n", rho);
+  // printf("weight = %g \n", rho);
 
   return rho;
 }
@@ -545,15 +547,24 @@ parHYB::parHYB(parCSR *A): matrix_t(A->Nrows, A->Ncols) {
     }
   }
   */
+  if(Nrows) {
+    free(rowCounters);
+    // free(bins);
+  }
+
   int nnzPerRow = maxNnzPerRow;
 
   //build the ELL matrix from the local CSR
   E = new ELL(Nrows, Ncols);
+  C = new MCSR(Nrows, Ncols);
 
   E->nnzPerRow = nnzPerRow;
 
   E->cols  = (dlong *) calloc(Nrows*E->nnzPerRow, sizeof(dlong));
   E->vals = (dfloat *) calloc(Nrows*E->nnzPerRow, sizeof(dfloat));
+
+  C->nnz = 0;
+  C->actualRows = 0;
 
   for(dlong i=0; i<Nrows; i++){
     dlong Jstart = A->diag->rowStarts[i];
@@ -567,30 +578,20 @@ parHYB::parHYB(parCSR *A): matrix_t(A->Nrows, A->Ncols) {
       E->cols[i*nnzPerRow+c] = A->diag->cols[Jstart+c];
       E->vals[i*nnzPerRow+c] = A->diag->vals[Jstart+c];
     }
+
     for(int c=maxNnz; c<nnzPerRow; c++){
       E->cols[i*nnzPerRow+c] = -1; //ignore this column
     }
-  }
 
-  //build the ELL matrix from the local CSR
-  C = new MCSR(Nrows, Ncols);
-
-  // count the number of nonzeros to be stored in MCSR format
-  C->nnz = 0;
-  C->actualRows = 0;
-  for(dlong i=0; i<Nrows; i++) {
-    //excess from row in diag
-    if(rowCounters[i] > nnzPerRow) {
-      rowCounters[i] -= - nnzPerRow;
-    } else {
-      rowCounters[i] = 0;
-    }
+    // count the number of nonzeros to be stored in MCSR format
 
     //all of offd
-    rowCounters[i] += (int) (A->offd->rowStarts[i+1]-A->offd->rowStarts[i]);
+    int cnt= (int) (A->offd->rowStarts[i+1]-A->offd->rowStarts[i]);
+    if (rowNnz>nnzPerRow)
+      cnt += rowNnz-nnzPerRow; //excess of diag
 
-    if (rowCounters[i]) {
-      C->nnz += rowCounters[i];
+    if (cnt) {
+      C->nnz += cnt;
       C->actualRows++;
     }
   }
@@ -606,9 +607,11 @@ parHYB::parHYB(parCSR *A): matrix_t(A->Nrows, A->Ncols) {
     dlong Jstart = A->diag->rowStarts[i];
     dlong Jend   = A->diag->rowStarts[i+1];
     int rowNnz = (int)  (Jend - Jstart);
+    int rowCnt =0;
 
     // store the remaining row in MCSR format
     if(rowNnz > nnzPerRow){
+      rowCnt += rowNnz-nnzPerRow;
       for(int c=nnzPerRow; c<rowNnz; c++){
         C->cols[cnt] = A->diag->cols[Jstart+c];
         C->vals[cnt] = A->diag->vals[Jstart+c];
@@ -619,21 +622,17 @@ parHYB::parHYB(parCSR *A): matrix_t(A->Nrows, A->Ncols) {
     //add the offd non-zeros
     Jstart = A->offd->rowStarts[i];
     Jend   = A->offd->rowStarts[i+1];
+    rowCnt += (int) (Jend-Jstart);
     for (dlong j=Jstart;j<Jend;j++) {
       C->cols[cnt] = A->offd->cols[j];
       C->vals[cnt] = A->offd->vals[j];
       cnt++;
     }
 
-    if (rowCounters[i]) {
+    if (rowCnt) {
       C->rows[row++] = i;
       C->rowStarts[row] = cnt;
     }
-  }
-
-  if(Nrows) {
-    free(rowCounters);
-    // free(bins);
   }
 
   nullSpace = A->nullSpace;
