@@ -58,6 +58,7 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
       Cols[n] = A[n].col;
       Vals[n] = A[n].val;
     }
+    free(A);
 
     precon->parAlmond = parAlmond::Init(mesh->device, mesh->comm, options);
     parAlmond::AMGSetup(precon->parAlmond,
@@ -68,30 +69,18 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
                        Vals,
                        elliptic->allNeumann,
                        elliptic->allNeumannPenalty);
-    free(A); free(Rows); free(Cols); free(Vals);
+    free(Rows); free(Cols); free(Vals);
 
     if (options.compareArgs("VERBOSE", "TRUE"))
       parAlmond::Report(precon->parAlmond);
 
     if (options.compareArgs("DISCRETIZATION", "CONTINUOUS")) {//tell parAlmond to gather this level
-      // agmgLevel *baseLevel = precon->parAlmond->levels[0];
+      parAlmond::multigridLevel *baseLevel = precon->parAlmond->levels[0];
 
-      // baseLevel->gatherLevel = true;
-      // baseLevel->Srhs = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
-      // baseLevel->Sx   = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
-      // baseLevel->o_Srhs = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
-      // baseLevel->o_Sx   = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
-
-      // baseLevel->weightedInnerProds = false;
-
-      // baseLevel->gatherArgs = (void **) calloc(3,sizeof(void*));
-      // baseLevel->gatherArgs[0] = (void *) elliptic;
-      // baseLevel->gatherArgs[1] = (void *) precon->ogs;
-      // baseLevel->gatherArgs[2] = (void *) &(baseLevel->o_Sx);
-      // baseLevel->scatterArgs = baseLevel->gatherArgs;
-
-      // baseLevel->device_gather  = ellipticGather;
-      // baseLevel->device_scatter = ellipticScatter;
+      precon->rhsG = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
+      precon->xG   = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
+      precon->o_rhsG = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat));
+      precon->o_xG   = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat));
     }
 
 /*

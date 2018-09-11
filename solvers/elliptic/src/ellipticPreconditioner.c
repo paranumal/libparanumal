@@ -33,12 +33,27 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
   precon_t *precon = elliptic->precon;
   setupAide options = elliptic->options;
 
-  if (   options.compareArgs("PRECONDITIONER", "FULLALMOND")
-      || options.compareArgs("PRECONDITIONER", "MULTIGRID")) {
+  if (options.compareArgs("PRECONDITIONER", "MULTIGRID")) {
 
     occaTimerTic(mesh->device,"parALMOND");
     parAlmond::Precon(precon->parAlmond, o_z, o_r);
     occaTimerToc(mesh->device,"parALMOND");
+
+  } else if (options.compareArgs("PRECONDITIONER", "FULLALMOND")) {
+
+    if (options.compareArgs("DISCRETIZATION", "IPDG")) {
+      occaTimerTic(mesh->device,"parALMOND");
+      parAlmond::Precon(precon->parAlmond, o_z, o_r);
+      occaTimerToc(mesh->device,"parALMOND");
+    } else if (options.compareArgs("DISCRETIZATION", "CONTINUOUS")) {
+      ogsGather(precon->o_rhsG, o_r, ogsDfloat, ogsAdd, elliptic->ogs);
+      elliptic->dotMultiplyKernel(elliptic->ogs->Ngather,
+                      elliptic->ogs->o_gatherInvDegree, precon->o_rhsG, precon->o_rhsG);
+      occaTimerTic(mesh->device,"parALMOND");
+      parAlmond::Precon(precon->parAlmond, precon->o_xG, precon->o_rhsG);
+      occaTimerToc(mesh->device,"parALMOND");
+      ogsScatter(o_z, precon->o_xG, ogsDfloat, ogsAdd, elliptic->ogs);
+    }
 
   } else if(options.compareArgs("PRECONDITIONER", "MASSMATRIX")){
 

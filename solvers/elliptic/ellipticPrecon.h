@@ -43,6 +43,9 @@ typedef struct {
   dfloat *zP;
   occa::memory o_zP;
 
+  dfloat *xG, *rhsG;
+  occa::memory o_xG, o_rhsG;
+
   occa::memory o_Gr;
   occa::memory o_Gz;
   occa::memory o_Sr;
@@ -109,7 +112,7 @@ typedef struct {
   dfloat *B, *tmp2;
   occa::memory *o_B, o_tmp2;
   void *xxt2;
-  void *parAlmond;
+  parAlmond::solver_t *parAlmond;
 
   // block Jacobi precon
   occa::memory o_invMM;
