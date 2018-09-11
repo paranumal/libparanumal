@@ -24,8 +24,7 @@ SOFTWARE.
 
 */
 
-#include "solver.hpp"
-#include "agmg.hpp"
+#include "parAlmond.hpp"
 
 namespace parAlmond {
 

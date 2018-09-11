@@ -108,7 +108,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
   memcpy(femMesh,mesh,sizeof(mesh_t));
 
   if (elliptic->elementType==TRIANGLES) {
-  
+
     //set semfem nodes as the grid points
     pmesh->Np = mesh->NpFEM;
     pmesh->r  = mesh->rFEM;
@@ -139,7 +139,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
       if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]-1)*(pmesh->s[n]-1)<NODETOL)
         pmesh->vertexNodes[2] = n;
     }
-  
+
     // connect elements using parallel sort
     meshParallelConnect(pmesh);
 
@@ -208,7 +208,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
     // global nodes
     meshParallelConnectNodes(pmesh);
-    //pmesh->globalIds is now populated    
+    //pmesh->globalIds is now populated
   }
 
 
@@ -220,32 +220,32 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
   femMesh->EToV = (hlong*) calloc(femMesh->Nelements*femMesh->Nverts, sizeof(hlong));
   femMesh->EX = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
   femMesh->EY = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
-  if (elliptic->dim==3) 
+  if (elliptic->dim==3)
     femMesh->EZ = (dfloat*) calloc(femMesh->Nverts*femMesh->Nelements, sizeof(dfloat));
-  
+
   dlong *localIds = (dlong *) calloc(femMesh->Nverts*femMesh->Nelements,sizeof(dlong));
 
   // dlong NFEMverts = mesh->Nelements*mesh->NpFEM;
   for(dlong e=0;e<mesh->Nelements;++e){
     for (int n=0;n<mesh->NelFEM;n++) {
       dlong id[femMesh->Nverts];
-      
+
       dlong femId = e*mesh->NelFEM*mesh->Nverts+n*mesh->Nverts;
 
       for (int i=0;i<femMesh->Nverts;i++) {
         //local ids in the subelement fem grid
-        id[i] = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+i];  
-        
+        id[i] = e*mesh->NpFEM + mesh->FEMEToV[n*mesh->Nverts+i];
+
         /* read vertex triplet for triangle */
         femMesh->EToV[femId+i] = pmesh->globalIds[id[i]];
-        
+
         femMesh->EX[femId+i] = pmesh->x[id[i]];
         femMesh->EY[femId+i] = pmesh->y[id[i]];
-        if (elliptic->dim==3) 
+        if (elliptic->dim==3)
           femMesh->EZ[femId+i] = pmesh->z[id[i]];
 
       }
-      
+
       switch(elliptic->elementType){
       case TRIANGLES:
         localIds[femId+0] = id[0];
@@ -310,9 +310,9 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
   for (int n=0;n<mesh->NelFEM;n++) {
     for (int f=0;f<femMesh->Nfaces;f++) {
-      
+
       for (int face=0; face<pmesh->Nfaces;face++) {
-        
+
         //count the nodes on this face which are on a macro face
         int NvertsOnFace = 0;
         for (int i=0;i<femMesh->Nfp;i++){
@@ -322,7 +322,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
         }
         if (NvertsOnFace == femMesh->Nfp)
           femFaceMap[n*femMesh->Nfaces+f] = face; //on macro face
-      }      
+      }
     }
   }
 
@@ -401,19 +401,19 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
         }
       }
     }
-    ogsGatherScatter(mapB, ogsInt, ogsMin, pmesh->ogs); 
+    ogsGatherScatter(mapB, ogsInt, ogsMin, pmesh->ogs);
 
     //use the bc flags to find masked ids
     for (dlong n=0;n<pmesh->Nelements*pmesh->Np;n++) {
       if (mapB[n] == 1) { //Dirichlet boundary
         pmesh->maskedGlobalIds[n] = 0;
       }
-    } 
-    free(mapB);   
+    }
+    free(mapB);
   } else {
 
     //mask using the original mask
-    for (dlong n=0;n<elliptic->Nmasked;n++) 
+    for (dlong n=0;n<elliptic->Nmasked;n++)
       pmesh->maskedGlobalIds[elliptic->maskIds[n]] = 0;
 
   }
@@ -475,7 +475,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
           }
         }
       }
-    }  
+    }
   } else if (elliptic->elementType==TETRAHEDRA) {
     //build stiffness matrices
     femMesh->Srr = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
@@ -505,7 +505,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
       }
     }
   }
-  
+
   if (mesh->rank==0) printf("Building full SEMFEM matrix..."); fflush(stdout);
 
   // Build non-zeros of stiffness matrix (unassembled)
@@ -528,8 +528,8 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
     BuildFEMMatrixTet3D(femMesh,pmesh,lambda, localIds, globalNumbering, globalOwners,&cnt,sendNonZeros); break;
   case HEXAHEDRA:
     BuildFEMMatrixHex3D(femMesh,pmesh,lambda, localIds, globalNumbering, globalOwners,&cnt,sendNonZeros); break;
-  }  
-  
+  }
+
   // Make the MPI_NONZERO_T data type
   MPI_Datatype MPI_NONZERO_T;
   MPI_Datatype dtype[4] = {MPI_HLONG, MPI_HLONG, MPI_INT, MPI_DFLOAT};
@@ -601,9 +601,10 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
     Cols[n] = A[n].col;
     Vals[n] = A[n].val;
   }
+  free(A);
 
-  precon->parAlmond = parAlmondInit(mesh, options);
-  parAlmondAgmgSetup(precon->parAlmond,
+  precon->parAlmond = parAlmond::Init(mesh->device, mesh->comm, options);
+  parAlmond::AMGSetup(precon->parAlmond,
                      globalStarts,
                      nnz,
                      Rows,
@@ -611,13 +612,16 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
                      Vals,
                      elliptic->allNeumann,
                      elliptic->allNeumannPenalty);
-  free(A); free(Rows); free(Cols); free(Vals);
+  free(Rows); free(Cols); free(Vals);
+
+  if (options.compareArgs("VERBOSE", "TRUE"))
+      parAlmond::Report(precon->parAlmond);
 
   if (elliptic->elementType==TRIANGLES||elliptic->elementType==TETRAHEDRA) {
-    //tell parAlmond not to gather this level (its done manually)
-    agmgLevel *baseLevel = precon->parAlmond->levels[0];
-    baseLevel->gatherLevel = false;
-    baseLevel->weightedInnerProds = false;
+    // //tell parAlmond not to gather this level (its done manually)
+    // agmgLevel *baseLevel = precon->parAlmond->levels[0];
+    // baseLevel->gatherLevel = false;
+    // baseLevel->weightedInnerProds = false;
 
     // build interp and anterp
     dfloat *SEMFEMAnterp = (dfloat*) calloc(mesh->NpFEM*mesh->Np, sizeof(dfloat));
@@ -639,30 +643,36 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
     precon->o_GzFEM = mesh->device.malloc(precon->FEMogs->Ngather*sizeof(dfloat));
   } else {
 
-    //tell parAlmond to gather this level
-    agmgLevel *baseLevel = precon->parAlmond->levels[0];
+    // //tell parAlmond to gather this level
+    // agmgLevel *baseLevel = precon->parAlmond->levels[0];
 
-    baseLevel->gatherLevel = true;
-    baseLevel->Srhs = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
-    baseLevel->Sx   = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
-    baseLevel->o_Srhs = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
-    baseLevel->o_Sx   = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+    // baseLevel->gatherLevel = true;
+    parAlmond::multigridLevel *baseLevel = precon->parAlmond->levels[0];
+    precon->rhsG = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
+    precon->xG   = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
+    precon->o_rhsG = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat));
+    precon->o_xG   = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat));
 
-    baseLevel->weightedInnerProds = false;
+    // baseLevel->Srhs = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+    // baseLevel->Sx   = (dfloat*) calloc(mesh->Np*mesh->Nelements,sizeof(dfloat));
+    // baseLevel->o_Srhs = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
+    // baseLevel->o_Sx   = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat));
 
-    baseLevel->gatherArgs = (void **) calloc(3,sizeof(void*));  
-    baseLevel->gatherArgs[0] = (void *) elliptic;
-    baseLevel->gatherArgs[1] = (void *) precon->FEMogs;  //use the gs made from the partial gathered femgrid 
-    baseLevel->gatherArgs[2] = (void *) &(baseLevel->o_Sx);
-    baseLevel->scatterArgs = baseLevel->gatherArgs;
+    // baseLevel->weightedInnerProds = false;
 
-    baseLevel->device_gather  = ellipticGather;
-    baseLevel->device_scatter = ellipticScatter;  
+    // baseLevel->gatherArgs = (void **) calloc(3,sizeof(void*));
+    // baseLevel->gatherArgs[0] = (void *) elliptic;
+    // baseLevel->gatherArgs[1] = (void *) precon->FEMogs;  //use the gs made from the partial gathered femgrid
+    // baseLevel->gatherArgs[2] = (void *) &(baseLevel->o_Sx);
+    // baseLevel->scatterArgs = baseLevel->gatherArgs;
+
+    // baseLevel->device_gather  = ellipticGather;
+    // baseLevel->device_scatter = ellipticScatter;
   }
 }
 
 
-void BuildFEMMatrixTri2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, 
+void BuildFEMMatrixTri2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda,
                         dlong *localIds, hlong* globalNumbering, int *globalOwners,
                         dlong *cnt, nonZero_t *A) {
 
@@ -705,7 +715,7 @@ void BuildFEMMatrixTri2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda,
   }
 }
 
-void BuildFEMMatrixQuad2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, 
+void BuildFEMMatrixQuad2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda,
                           dlong *localIds, hlong* globalNumbering, int *globalOwners,
                           dlong *cnt, nonZero_t *A) {
 
@@ -777,7 +787,7 @@ void BuildFEMMatrixQuad2D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda,
   }
 }
 
-void BuildFEMMatrixTet3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, 
+void BuildFEMMatrixTet3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda,
                         dlong *localIds, hlong* globalNumbering, int *globalOwners,
                         dlong *cnt, nonZero_t *A) {
 
@@ -828,7 +838,7 @@ void BuildFEMMatrixTet3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda,
   }
 }
 
-void BuildFEMMatrixHex3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda, 
+void BuildFEMMatrixHex3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda,
                         dlong *localIds, hlong* globalNumbering, int *globalOwners,
                         dlong *cnt, nonZero_t *A) {
 
@@ -840,17 +850,17 @@ void BuildFEMMatrixHex3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda,
 	  dlong nn = nx+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
 	  dlong idn = localIds[e*femMesh->Np + nn];
 	  if (globalNumbering[idn]<0) continue; //skip masked nodes
-      
+
 	  for (int mz=0;mz<femMesh->Nq;mz++) {
 	    for (int my=0;my<femMesh->Nq;my++) {
 	      for (int mx=0;mx<femMesh->Nq;mx++) {
 		dlong mm = mx+my*femMesh->Nq+mz*femMesh->Nq*femMesh->Nq;
 		dlong idm = localIds[e*femMesh->Np + mm];
 		if (globalNumbering[idm]<0) continue; //skip masked nodes
-      
+
 		int id;
 		dfloat val = 0.;
-        
+
 		if ((ny==my)&&(nz==mz)) {
 		  for (int k=0;k<femMesh->Nq;k++) {
 		    id = k+ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
@@ -888,7 +898,7 @@ void BuildFEMMatrixHex3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda,
 		    val += Gss*femMesh->D[ny+k*femMesh->Nq]*femMesh->D[my+k*femMesh->Nq];
 		  }
 		}
-        
+
 		if (nx==mx) {
 		  id = nx+my*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
 		  dfloat Gst = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + G12ID*femMesh->Np];
@@ -907,13 +917,13 @@ void BuildFEMMatrixHex3D(mesh_t *femMesh, mesh_t *pmesh, dfloat lambda,
 		    val += Gtt*femMesh->D[nz+k*femMesh->Nq]*femMesh->D[mz+k*femMesh->Nq];
 		  }
 		}
-        
+
 		if ((nx==mx)&&(ny==my)&&(nz==mz)) {
 		  id = nx + ny*femMesh->Nq+nz*femMesh->Nq*femMesh->Nq;
 		  dfloat JW = femMesh->ggeo[e*femMesh->Np*femMesh->Nggeo + id + GWJID*femMesh->Np];
 		  val += JW*lambda;
 		}
-        
+
 		// pack non-zero
 		dfloat nonZeroThreshold = 1e-7;
 		if (fabs(val) >= nonZeroThreshold) {

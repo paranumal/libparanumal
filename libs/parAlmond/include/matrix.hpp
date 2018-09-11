@@ -27,11 +27,6 @@ SOFTWARE.
 #ifndef PARALMOND_MATRIX_HPP
 #define PARALMOND_MATRIX_HPP
 
-#include "parAlmond.hpp"
-#include "kernels.hpp"
-#include "defines.hpp"
-#include "utils.hpp"
-#include "vector.hpp"
 
 namespace parAlmond {
 

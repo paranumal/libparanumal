@@ -24,6 +24,8 @@ SOFTWARE.
 
 */
 
+#include "parAlmond.hpp"
+
 namespace parAlmond {
 
 void adjustPartition(agmgLevel *level, hlong* FineToCoarse, setupAide options) {

@@ -27,13 +27,6 @@ SOFTWARE.
 #ifndef PARALMOND_AGMGLEVEL_HPP
 #define PARALMOND_AGMGLEVEL_HPP
 
-#include "parAlmond.hpp"
-#include "defines.hpp"
-#include "utils.hpp"
-#include "vector.hpp"
-#include "matrix.hpp"
-#include "level.hpp"
-
 namespace parAlmond {
 
 class agmgLevel: public multigridLevel {

@@ -134,7 +134,7 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
 
   } else if(options.compareArgs("PRECONDITIONER", "SEMFEM")) {
 
-    // ellipticSEMFEMSetup(elliptic,precon,lambda);
+    ellipticSEMFEMSetup(elliptic,precon,lambda);
 
   } else if(options.compareArgs("PRECONDITIONER", "JACOBI")) {
 

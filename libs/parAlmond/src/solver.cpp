@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "solver.hpp"
+#include "parAlmond.hpp"
 
 namespace parAlmond {
 

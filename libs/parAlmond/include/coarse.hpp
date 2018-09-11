@@ -27,12 +27,6 @@ SOFTWARE.
 #ifndef PARALMOND_COARSESOLVE_HPP
 #define PARALMOND_COARSESOLVE_HPP
 
-#include "parAlmond.hpp"
-#include "defines.hpp"
-#include "utils.hpp"
-#include "vector.hpp"
-#include "matrix.hpp"
-
 namespace parAlmond {
 
 class coarseSolver {

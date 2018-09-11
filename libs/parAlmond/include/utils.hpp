@@ -27,9 +27,6 @@ SOFTWARE.
 #ifndef PARALMOND_UTILS_HPP
 #define PARALMOND_UTILS_HPP
 
-#include "parAlmond.hpp"
-#include "defines.hpp"
-
 namespace parAlmond {
 
 //scratch space

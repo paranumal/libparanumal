@@ -38,6 +38,7 @@ SOFTWARE.
 
 #include "include/defines.hpp"
 #include "include/utils.hpp"
+#include "include/kernels.hpp"
 #include "include/vector.hpp"
 #include "include/matrix.hpp"
 #include "include/level.hpp"
