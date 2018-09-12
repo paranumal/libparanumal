@@ -40,7 +40,7 @@ int main(int argc, char **argv){
 
   // if argv > 2 then should load input data from argv
   setupAide options(argv[1]);
-  
+
   // set up mesh stuff
   string fileName;
   int N, dim, elementType;
@@ -65,7 +65,7 @@ int main(int argc, char **argv){
 
   if(mesh->Nelements<10)
     meshPrint3D(mesh);
-  
+
   // parameter for elliptic problem (-laplacian + lambda)*q = f
   dfloat lambda;
   options.getArgs("LAMBDA", lambda);
@@ -81,12 +81,12 @@ int main(int argc, char **argv){
 
   if(options.compareArgs("BENCHMARK", "BK5") ||
      options.compareArgs("BENCHMARK", "BP5")){
-    
+
     // test Ax throughput
     occa::streamTag startAx = mesh->device.tagStream();
-    
+
     int NAx = 1;
-    
+
     for(int it=0;it<NAx;++it){
       // include gather-scatter
       if(options.compareArgs("BENCHMARK", "BP5"))
@@ -94,60 +94,62 @@ int main(int argc, char **argv){
 
       if(options.compareArgs("BENCHMARK", "BK5")){
         if(!options.compareArgs("ELEMENT MAP", "TRILINEAR")){
-          elliptic->partialAxKernel(mesh->NlocalGatherElements,                           
+          elliptic->partialAxKernel(mesh->NlocalGatherElements,
                                     mesh->o_localGatherElementList,
                                     mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM,
                                     lambda, elliptic->o_x, elliptic->o_Ax);
         }
         else{
-          elliptic->partialAxKernel(mesh->NlocalGatherElements,                           
+          elliptic->partialAxKernel(mesh->NlocalGatherElements,
                                     mesh->o_localGatherElementList,
                                     elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM,
                                     lambda, elliptic->o_x, elliptic->o_Ax);
         }
       }
     }
-      
+
     occa::streamTag stopAx = mesh->device.tagStream();
-      
+
     mesh->device.finish();
-      
+
     double elapsedAx = mesh->device.timeBetween(startAx, stopAx);
     elapsedAx /= NAx;
-      
-      
-    printf("%d, %d, %g, %d, %g, %g; \%\%elemental: N, dofs, elapsed, dummy, time per node, nodes/time %s\n",
+
+
+    if (mesh->rank==0)
+      printf("%d, %d, %g, %d, %g, %g; \%\%elemental: N, dofs, elapsed, dummy, time per node, nodes/time %s\n",
            mesh->N,
            mesh->NlocalGatherElements*mesh->Np,
-           0,
            elapsedAx,
+           0,
            elapsedAx/(mesh->Np*mesh->Nelements),
            mesh->Nelements*mesh->Np/elapsedAx,
-           options.getArgs("DISCRETIZATION").c_str());
-      
+           (char*) options.getArgs("DISCRETIZATION").c_str());
+
   }
   else{
-    
+
     // convergence tolerance
     dfloat tol = 1e-8;
-  
+
     occa::streamTag startTag = mesh->device.tagStream();
-  
+
     int it = ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
 
     occa::streamTag stopTag = mesh->device.tagStream();
     mesh->device.finish();
-  
+
     double elapsed = mesh->device.timeBetween(startTag, stopTag);
 
-    printf("%d, %d, %g, %d, %g, %g; \%\%global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
+    if (mesh->rank==0)
+      printf("%d, %d, %g, %d, %g, %g; \%\%global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
            mesh->N,
            mesh->Nelements*mesh->Np,
            elapsed,
            it,
            elapsed/(mesh->Np*mesh->Nelements),
            mesh->Nelements*(it*mesh->Np/elapsed),
-           options.getArgs("PRECONDITIONER").c_str());
+           (char*) options.getArgs("PRECONDITIONER").c_str());
 
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
       dfloat zero = 0.;
@@ -159,13 +161,13 @@ int main(int argc, char **argv){
                             elliptic->o_mapB,
                             elliptic->o_x);
     }
-      
+
     // copy solution from DEVICE to HOST
     elliptic->o_x.copyTo(mesh->q);
-      
+
     if (options.compareArgs("BASIS","BERN"))
       meshApplyElementMatrix(mesh,mesh->VB,mesh->q,mesh->q);
-      
+
     dfloat maxError = 0;
     for(dlong e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->Np;++n){
@@ -173,23 +175,23 @@ int main(int argc, char **argv){
         dfloat xn = mesh->x[id];
         dfloat yn = mesh->y[id];
         dfloat zn = mesh->z[id];
-      
+
         dfloat exact;
         if (elliptic->dim==2)
           exact = sin(M_PI*xn)*sin(M_PI*yn);
-        else 
+        else
           exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
         dfloat error = fabs(exact-mesh->q[id]);
-          
+
         maxError = mymax(maxError, error);
       }
     }
-      
+
     dfloat globalMaxError = 0;
     MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
     if(mesh->rank==0)
-      fprintf(stderr,"globalMaxError = %g\n", globalMaxError);
-      
+      printf("globalMaxError = %g\n", globalMaxError);
+
 #if 0
     char fname[BUFSIZ];
     string outName;
@@ -197,7 +199,7 @@ int main(int argc, char **argv){
     sprintf(fname, "%s_%04d.vtu",(char*)outName.c_str(), rank);
     if(elliptic->dim==3)
       meshPlotVTU3D(mesh, fname, 0);
-    else 
+    else
       meshPlotVTU2D(mesh, fname, 0);
 #endif
   }
@@ -217,10 +219,9 @@ int main(int argc, char **argv){
     ellipticPlotVTUHex3D(mesh, "bah", 0);
   }
 #endif
-  
+
   // close down MPI
   MPI_Finalize();
-  
-  exit(0);
+
   return 0;
 }

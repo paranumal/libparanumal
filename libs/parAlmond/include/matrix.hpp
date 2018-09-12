@@ -144,6 +144,7 @@ public:
   ogs_t *ogsHalo=NULL;
   dlong Nhalo;
   dlong Nshared;
+  dlong NlocalCols;
 
   dlong *haloIds=NULL;
   occa::memory o_haloIds;
@@ -212,6 +213,7 @@ public:
   ogs_t *ogsHalo=NULL;
   dlong Nhalo;
   dlong Nshared;
+  dlong NlocalCols;
 
   dlong *haloIds=NULL;
   occa::memory o_haloIds;

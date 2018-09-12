@@ -69,7 +69,6 @@ void freeScratchSpace() {
 
   if (reductionScratchBytes!=0) {
     reductionScratchBytes = 0;
-    free(reductionScratch);
     o_reductionScratch.free();
   }
 }
@@ -78,7 +77,6 @@ void allocatePinnedScratchSpace(size_t requiredBytes, occa::device device) {
 
   if (pinnedScratchSpaceBytes<requiredBytes) {
     if (pinnedScratchSpaceBytes!=0) {
-      free(pinnedScratch);
       o_pinnedScratch.free();
     }
     o_pinnedScratch = device.mappedAlloc(requiredBytes);

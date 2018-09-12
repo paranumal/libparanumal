@@ -70,6 +70,8 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   ogsGatherScatter(Pcols, ogsHlong,  ogsAdd, A->ogs);
   ogsGatherScatter(Pvals, ogsDfloat, ogsAdd, A->ogs);
 
+
+
   dlong sendNtotal = A->diag->nnz+A->offd->nnz;
   nonzero_t *sendPTAP = (nonzero_t *) calloc(sendNtotal,sizeof(nonzero_t));
 
@@ -130,7 +132,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   int r=0;
   for(dlong i=0;i<sendNtotal;++i) {
     hlong id = sendPTAP[i].row;
-    while(id<globalAggStarts[r]) r++;
+    while(id>=globalAggStarts[r+1]) r++;
     sendCounts[r]++;
   }
 
@@ -217,7 +219,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   hlong *colIds = (hlong *) malloc(Ac->offd->nnz*sizeof(hlong));
   cnt=0;
   for (dlong n=0;n<nnz;n++) {
-    if ((PTAP[n].col <= globalAggStarts[rank]-1)||
+    if ((PTAP[n].col <= (globalAggStarts[rank]-1))||
         (PTAP[n].col >= globalAggStarts[rank+1])) {
       colIds[cnt++] = PTAP[n].col;
     }
@@ -236,7 +238,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   for (dlong n=0;n<nnz;n++) {
     if ((PTAP[n].col > globalAggStarts[rank]-1)&&
         (PTAP[n].col < globalAggStarts[rank+1])) {
-      Ac->diag->cols[diagCnt] = PTAP[n].col;
+      Ac->diag->cols[diagCnt] = (dlong) (PTAP[n].col - globalAggOffset);
       Ac->diag->vals[diagCnt] = PTAP[n].val;
 
       //record the diagonal
