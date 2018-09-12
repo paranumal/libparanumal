@@ -33,7 +33,7 @@ parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
   // MPI info
   int rank, size;
   MPI_Comm_rank(A->comm, &rank);
-  MPI_Comm_rank(A->comm, &size);
+  MPI_Comm_size(A->comm, &size);
 
   const dlong N = A->Nrows;
 
@@ -49,8 +49,6 @@ parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
   P->offd->rowStarts = (dlong *) calloc(N+1, sizeof(dlong));
 
   // each row has exactly one nonzero
-  P->diag->nnz =0;
-  P->offd->nnz =0;
   for(dlong i=0; i<N; i++) {
     hlong col = FineToCoarse[i];
     if ((col>globalAggOffset-1)&&(col<globalAggOffset+NCoarse)) {
@@ -75,7 +73,6 @@ parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
       colIds[cnt++] = col;
   }
   P->haloSetup(colIds);
-
 
   P->diag->cols = (dlong *)  calloc(P->diag->nnz, sizeof(dlong));
   P->diag->vals = (dfloat *) calloc(P->diag->nnz, sizeof(dfloat));
@@ -106,7 +103,7 @@ parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
   for(dlong i=0; i<P->offd->nnz; i++)
     (*nullCoarseA)[P->offd->cols[i]] += P->offd->vals[i] * P->offd->vals[i];
 
-  ogsGatherScatter((*nullCoarseA), ogsDfloat,  ogsAdd, A->ogs);
+  ogsGatherScatter((*nullCoarseA), ogsDfloat,  ogsAdd, P->ogs);
 
   for(dlong i=0; i<NCoarse; i++)
     (*nullCoarseA)[i] = sqrt((*nullCoarseA)[i]);
@@ -114,7 +111,7 @@ parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
   for(dlong i=NCoarse; i<P->Ncols; i++)
     (*nullCoarseA)[i] = 0.;
 
-  ogsGatherScatter((*nullCoarseA), ogsDfloat,  ogsAdd, A->ogs);
+  ogsGatherScatter((*nullCoarseA), ogsDfloat,  ogsAdd, P->ogs);
 
   for(dlong i=0; i<P->diag->nnz; i++)
     P->diag->vals[i] /= (*nullCoarseA)[P->diag->cols[i]];

@@ -51,7 +51,6 @@ parCSR *transpose(parCSR *A){
 
   At->diag->nnz = A->diag->nnz; //local entries remain local
   At->diag->rowStarts = (dlong *) calloc(At->Nrows+1, sizeof(dlong));
-  At->offd->rowStarts = (dlong *) calloc(At->Nrows+1, sizeof(dlong));
 
   //start with local entries
   At->diag->cols = (dlong *)  calloc(At->diag->nnz, sizeof(dlong));
@@ -125,9 +124,10 @@ parCSR *transpose(parCSR *A){
   int r=0;
   for (dlong n=0;n<A->offd->nnz;n++) {
     dlong row = sendNonZeros[n].row;
-    while(row<globalColStarts[r]) r++;
+    while(row>=globalColStarts[r+1]) r++;
     sendCounts[r]++;
   }
+
   MPI_Alltoall(sendCounts, 1, MPI_INT,
                recvCounts, 1, MPI_INT, A->comm);
 
@@ -164,6 +164,7 @@ parCSR *transpose(parCSR *A){
   At->haloSetup(colIds);
 
   //fill the CSR matrix
+  At->offd->rowStarts = (dlong *) calloc(At->Nrows+1, sizeof(dlong));
   At->offd->cols = (dlong *)  calloc(At->offd->nnz, sizeof(dlong));
   At->offd->vals = (dfloat *) calloc(At->offd->nnz, sizeof(dfloat));
   for (dlong n=0;n<At->offd->nnz;n++) {

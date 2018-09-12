@@ -214,8 +214,9 @@ void MCSR::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
   // y[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   // occaTimerTic(device,"SpMV MCSR");
   if (actualRows)
-    SpMVmcsrKernel1(actualRows, o_rowStarts, o_rows, o_cols, o_vals,
-                           alpha, o_x, o_y);
+    SpMVmcsrKernel1(actualRows, alpha, beta,
+                    o_rowStarts, o_rows, o_cols, o_vals,
+                    o_x, o_y);
   // occaTimerToc(device,"SpMV MCSR");
 }
 
@@ -224,8 +225,9 @@ void MCSR::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   // occaTimerTic(device,"SpMV MCSR");
   if (actualRows)
-    SpMVmcsrKernel2(actualRows, o_rowStarts, o_rows, o_cols, o_vals,
-                           alpha, o_x, o_y, o_z);
+    SpMVmcsrKernel2(actualRows, alpha, beta,
+                    o_rowStarts, o_rows, o_cols, o_vals,
+                    o_x, o_y, o_z);
   // occaTimerToc(device,"SpMV MCSR");
 }
 

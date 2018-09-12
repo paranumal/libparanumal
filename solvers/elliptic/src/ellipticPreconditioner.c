@@ -112,11 +112,6 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
       parAlmond::Precon(precon->parAlmond, precon->o_xG, precon->o_rhsG);
       occaTimerToc(mesh->device,"parALMOND");
       ogsScatter(o_z, precon->o_xG, ogsDfloat, ogsAdd, precon->FEMogs);
-
-
-      // occaTimerTic(mesh->device,"parALMOND");
-      // parAlmond::Precon(precon->parAlmond, o_z, o_r);
-      // occaTimerToc(mesh->device,"parALMOND");
     }
 
   } else if(options.compareArgs("PRECONDITIONER", "JACOBI")){
