@@ -129,9 +129,9 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			     solver->o_resq,
 			     solver->o_qpre);
       }
-      if (tstep == 99) {
+      if (tstep == 250) {
 	solver->o_qpre.copyTo(solver->q);
-	advectionErrorNormQuad3D(solver,100*solver->dt,"start",0);
+	advectionErrorNormQuad3D(solver,251*solver->dt,"start",0);
       }
   }
 }

@@ -156,10 +156,10 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
     
     solver->filterKernelH =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
-					 "boltzmannFilterHglobalQuad3D",
+					 "boltzmannFilterHq0Quad3D",
 					 kernelInfo);
     solver->filterKernelV =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
-					 "boltzmannFilterVglobalQuad3D",
+					 "boltzmannFilterVq0Quad3D",
 					 kernelInfo);
 }
