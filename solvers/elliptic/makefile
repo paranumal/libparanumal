@@ -62,10 +62,9 @@ AOBJS    = \
 ./src/ellipticSolveSetup.o\
 ./src/ellipticVectors.o \
 ./src/ellipticSEMFEMSetup.o\
-
-# ./src/ellipticMultiGridSetup.o \
-# ./src/ellipticSmoother.o \
-# ./src/ellipticSmootherSetup.o \
+./src/ellipticMultiGridSetup.o \
+./src/ellipticMultiGridLevel.o \
+./src/ellipticMultiGridLevelSetup.o \
 
 # library objects
 LOBJS = \

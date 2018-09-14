@@ -28,25 +28,27 @@ SOFTWARE.
 
 namespace parAlmond {
 
-agmgLevel::agmgLevel(parCSR *AA, KrylovType Ktype):
-  multigridLevel(AA->Nrows, AA->Ncols, Ktype, AA->comm) {
+agmgLevel::agmgLevel(parCSR *A_, KrylovType ktype_):
+  multigridLevel(A_->Nrows, A_->Ncols, ktype_, A_->comm) {
 
   weighted = false;
+  gatherLevel = false;
 
-  A = AA;
+  A = A_;
 }
 
-agmgLevel::agmgLevel(parCSR *AA, parCSR *PP, parCSR *RR, KrylovType Ktype):
-  multigridLevel(AA->Nrows, AA->Ncols, Ktype, AA->comm) {
+agmgLevel::agmgLevel(parCSR *A_, parCSR *P_, parCSR *R_, KrylovType ktype_):
+  multigridLevel(A_->Nrows, A_->Ncols, ktype_, A_->comm) {
 
   //max
-  Ncols = (AA->Ncols>PP->Ncols) ? AA->Ncols : PP->Ncols;
+  Ncols = (A_->Ncols>P_->Ncols) ? A_->Ncols : P_->Ncols;
 
   weighted = false;
+  gatherLevel = false;
 
-  A = AA;
-  P = PP;
-  R = RR;
+  A = A_;
+  P = P_;
+  R = R_;
 }
 
 agmgLevel::~agmgLevel() {
@@ -58,17 +60,49 @@ agmgLevel::~agmgLevel() {
 
 void agmgLevel::Ax        (dfloat *x, dfloat *Ax){ A->SpMV(1.0, x, 0.0, Ax); }
 
-void agmgLevel::coarsen   (dfloat *r, dfloat *Rr){ R->SpMV(1.0, r, 0.0, Rr); }
+void agmgLevel::coarsen   (dfloat *r, dfloat *Rr){
+  if (gatherLevel) {
+    ogsGather(Gx, r, ogsDfloat, ogsAdd, ogs);
+    vectorDotStar(ogs->Ngather, ogs->gatherInvDegree, Gx);
+    R->SpMV(1.0, Gx, 0.0, Rr);
+  } else {
+    R->SpMV(1.0, r, 0.0, Rr);
+  }
+}
 
-void agmgLevel::prolongate(dfloat *x, dfloat *Px){ P->SpMV(1.0, x, 1.0, Px); }
+void agmgLevel::prolongate(dfloat *x, dfloat *Px){
+  if (gatherLevel) {
+    P->SpMV(1.0, x, 0.0, Gx);
+    ogsScatter(Sx, Gx, ogsDfloat, ogsAdd, ogs);
+    vectorAdd(P->Nrows, 1.0, Sx, 1.0, Px);
+  } else {
+    P->SpMV(1.0, x, 1.0, Px);
+  }
+}
 
 void agmgLevel::residual  (dfloat *rhs, dfloat *x, dfloat *res) { A->SpMV(-1.0, x, 1.0, rhs, res); }
 
 void agmgLevel::Ax        (occa::memory o_x, occa::memory o_Ax){ o_A->SpMV(1.0, o_x, 0.0, o_Ax); }
 
-void agmgLevel::coarsen   (occa::memory o_r, occa::memory o_Rr){ o_R->SpMV(1.0, o_r, 0.0, o_Rr); }
+void agmgLevel::coarsen   (occa::memory o_r, occa::memory o_Rr){
+  if (gatherLevel) {
+    ogsGather(o_Gx, o_r, ogsDfloat, ogsAdd, ogs);
+    vectorDotStar(ogs->Ngather, ogs->o_gatherInvDegree, o_Gx);
+    o_R->SpMV(1.0, o_Gx, 0.0, o_Rr);
+  } else {
+    o_R->SpMV(1.0, o_r, 0.0, o_Rr);
+  }
+}
 
-void agmgLevel::prolongate(occa::memory o_x, occa::memory o_Px){ o_P->SpMV(1.0, o_x, 1.0, o_Px); }
+void agmgLevel::prolongate(occa::memory o_x, occa::memory o_Px){
+  if (gatherLevel) {
+    o_P->SpMV(1.0, o_x, 0.0, o_Gx);
+    ogsScatter(o_Sx, o_Gx, ogsDfloat, ogsAdd, ogs);
+    vectorAdd(ogs->N, 1.0, o_Sx, 1.0, o_Px);
+  } else {
+    o_P->SpMV(1.0, o_x, 1.0, o_Px);
+  }
+}
 
 void agmgLevel::residual  (occa::memory o_rhs, occa::memory o_x, occa::memory o_res) { o_A->SpMV(-1.0, o_x, 1.0, o_rhs, o_res); }
 
@@ -136,13 +170,16 @@ void agmgLevel::Report() {
   if (Nrows==0) nnzPerRow = maxNnzPerRow;
   MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, comm);
 
+  char smootherString[BUFSIZ];
+  if (stype==DAMPED_JACOBI)
+    strcpy(smootherString, "Damped Jacobi   ");
+  else if (stype==CHEBYSHEV)
+    strcpy(smootherString, "Chebyshev       ");
+
   if (rank==0){
-    printf(     "|        %4d  |   %10.2f  |   %10.2f  |   %10.2f  |\n",
-      totalActive, (dfloat)minNrows, (dfloat)minNnz, minNnzPerRow);
-    printf("     |              |   %10.2f  |   %10.2f  |   %10.2f  |\n",
-      (dfloat)maxNrows, (dfloat)maxNnz, maxNnzPerRow);
-    printf("     |              |   %10.2f  |   %10.2f  |   %10.2f  |\n",
-      avgNrows, avgNnz, avgNnzPerRow);
+    printf(     "|  parAlmond |  %12d  | %13d   |   %s|\n", minNrows, (int)minNnzPerRow, smootherString);
+    printf("     |            |  %12d  | %13d   |                   |\n", maxNrows, (int)maxNnzPerRow);
+    printf("     |            |  %12d  | %13d   |                   |\n", (int)avgNrows, (int)avgNnzPerRow);
   }
 }
 

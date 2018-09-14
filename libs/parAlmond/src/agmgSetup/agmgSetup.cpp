@@ -30,10 +30,6 @@ namespace parAlmond {
 
 void solver_t::AMGSetup(parCSR *A){
 
-
-  double seed = (double) rank;
-  srand48(seed);
-
   // approximate Nrows at coarsest level
   coarseLevel = new coarseSolver(options);
   const int gCoarseSize = coarseLevel->getTargetSize();
@@ -54,23 +50,12 @@ void solver_t::AMGSetup(parCSR *A){
     baseLevel = numLevels;
     done = true;
   }
-
   numLevels++;
-  int rank, size;
-  MPI_Comm_rank(A->comm, &rank);
-  MPI_Comm_size(A->comm, &size);
 
   while(!done){
     L = coarsenAgmgLevel((agmgLevel*)(levels[numLevels-1]), ktype, options);
     levels[numLevels] = L;
     hlong globalCoarseSize = L->A->globalRowStarts[size];
-
-    int rank, size;
-    MPI_Comm_rank(L->A->comm, &rank);
-    MPI_Comm_size(L->A->comm, &size);
-
-    setupAgmgSmoother((agmgLevel*)(levels[numLevels]), stype, ChebyshevIterations);
-
     numLevels++;
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
@@ -85,9 +70,9 @@ void solver_t::AMGSetup(parCSR *A){
   allocateScratchSpace(requiredBytes, device);
 
   for (int n=AMGstartLev;n<numLevels;n++) {
-    // setupAgmgSmoother((agmgLevel*)(levels[n]), stype, ChebyshevIterations);
-    allocateAgmgVectors((agmgLevel*)(levels[n]), n, numLevels, ctype);
-    syncAgmgToDevice((agmgLevel*)(levels[n]), n, numLevels, ctype);
+    setupAgmgSmoother((agmgLevel*)(levels[n]), stype, ChebyshevIterations);
+    allocateAgmgVectors((agmgLevel*)(levels[n]), n, AMGstartLev, ctype);
+    syncAgmgToDevice((agmgLevel*)(levels[n]), n, AMGstartLev, ctype);
   }
   coarseLevel->syncToDevice();
 }
@@ -141,7 +126,7 @@ void setupAgmgSmoother(agmgLevel *level, SmoothType s, int ChebIterations){
   }
 }
 
-void allocateAgmgVectors(agmgLevel *level, int k, int numLevels, CycleType ctype) {
+void allocateAgmgVectors(agmgLevel *level, int k, int AMGstartLev, CycleType ctype) {
 
   if (k) level->x    = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
   if (k) level->rhs  = (dfloat *) calloc(level->Nrows,sizeof(dfloat));
@@ -158,13 +143,13 @@ void allocateAgmgVectors(agmgLevel *level, int k, int numLevels, CycleType ctype
   }
 }
 
-void syncAgmgToDevice(agmgLevel *level, int k, int numLevels, CycleType ctype) {
+void syncAgmgToDevice(agmgLevel *level, int k, int AMGstartLev, CycleType ctype) {
 
   occa::device device = level->A->device;
 
   level->o_A = new parHYB(level->A);
   level->o_A->syncToDevice();
-  if (k) {
+  if (k>AMGstartLev) {
     level->o_R = new parHYB(level->R);
     level->o_P = new parHYB(level->P);
     level->o_R->syncToDevice();

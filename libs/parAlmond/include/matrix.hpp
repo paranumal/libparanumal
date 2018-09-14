@@ -156,7 +156,7 @@ public:
   parCSR(dlong N, dlong M, MPI_Comm Comm, occa::device Device);
 
   //build a parCSR matrix from a distributed COO matrix
-	parCSR(dlong N,         // number of rows on this rank
+  parCSR(dlong N,         // number of rows on this rank
          hlong* starts,   // global partitioning
          dlong nnz,       // number of nonzeros on this rank
          hlong *Ai,       // global row ids
@@ -168,7 +168,7 @@ public:
          MPI_Comm Comm,
          occa::device Device);
 
-	~parCSR();
+  ~parCSR();
 
   void haloSetup(hlong *colIds);
   void haloExchangeStart (dfloat *x);
@@ -220,10 +220,10 @@ public:
 
   occa::device device;
 
-	parHYB(dlong N=0, dlong M=0);
-	parHYB(parCSR *A); //build from parCSR
+  parHYB(dlong N=0, dlong M=0);
+  parHYB(parCSR *A); //build from parCSR
 
-	~parHYB();
+  ~parHYB();
 
   void haloExchangeStart (dfloat *x);
   void haloExchangeFinish(dfloat *x);

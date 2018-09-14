@@ -40,6 +40,11 @@ public:
 
   int ChebyshevIterations;
 
+  bool gatherLevel;
+  ogs_t *ogs;
+  dfloat *Gx, *Sx;
+  occa::memory o_Sx, o_Gx;
+
   agmgLevel(parCSR *AA, KrylovType Ktype);
   agmgLevel(parCSR *AA, parCSR *PP, parCSR *RR, KrylovType Ktype);
   ~agmgLevel();

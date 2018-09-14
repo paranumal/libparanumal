@@ -29,35 +29,35 @@ SOFTWARE.
 
 namespace parAlmond {
 
-	void buildParAlmondKernels(MPI_Comm comm, occa::device device);
+  void buildParAlmondKernels(MPI_Comm comm, occa::device device);
 
-	void freeParAlmondKernels();
+  void freeParAlmondKernels();
 
-	extern int Nrefs;
+  extern int Nrefs;
 
-	extern occa::kernel haloExtractKernel;
+  extern occa::kernel haloExtractKernel;
 
-	extern occa::kernel SpMVcsrKernel1;
-	extern occa::kernel SpMVcsrKernel2;
-	extern occa::kernel SpMVellKernel1;
-	extern occa::kernel SpMVellKernel2;
-	extern occa::kernel SpMVmcsrKernel1;
-	extern occa::kernel SpMVmcsrKernel2;
+  extern occa::kernel SpMVcsrKernel1;
+  extern occa::kernel SpMVcsrKernel2;
+  extern occa::kernel SpMVellKernel1;
+  extern occa::kernel SpMVellKernel2;
+  extern occa::kernel SpMVmcsrKernel1;
+  extern occa::kernel SpMVmcsrKernel2;
 
-	extern occa::kernel vectorSetKernel;
-	extern occa::kernel vectorScaleKernel;
-	extern occa::kernel vectorAddScalarKernel;
-	extern occa::kernel vectorAddKernel1;
-	extern occa::kernel vectorAddKernel2;
-	extern occa::kernel vectorDotStarKernel1;
-	extern occa::kernel vectorDotStarKernel2;
-	extern occa::kernel vectorInnerProdKernel;
-	extern occa::kernel vectorAddInnerProdKernel;
-	extern occa::kernel vectorAddWeightedInnerProdKernel;
-	extern occa::kernel kcycleCombinedOp1Kernel;
-	extern occa::kernel kcycleCombinedOp2Kernel;
-	extern occa::kernel kcycleWeightedCombinedOp1Kernel;
-	extern occa::kernel kcycleWeightedCombinedOp2Kernel;
+  extern occa::kernel vectorSetKernel;
+  extern occa::kernel vectorScaleKernel;
+  extern occa::kernel vectorAddScalarKernel;
+  extern occa::kernel vectorAddKernel1;
+  extern occa::kernel vectorAddKernel2;
+  extern occa::kernel vectorDotStarKernel1;
+  extern occa::kernel vectorDotStarKernel2;
+  extern occa::kernel vectorInnerProdKernel;
+  extern occa::kernel vectorAddInnerProdKernel;
+  extern occa::kernel vectorAddWeightedInnerProdKernel;
+  extern occa::kernel kcycleCombinedOp1Kernel;
+  extern occa::kernel kcycleCombinedOp2Kernel;
+  extern occa::kernel kcycleWeightedCombinedOp1Kernel;
+  extern occa::kernel kcycleWeightedCombinedOp2Kernel;
 
 } //namespace parAlmond
 

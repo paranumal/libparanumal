@@ -127,17 +127,3 @@ typedef struct {
   mesh_t *femMesh;
 
 } precon_t;
-
-
-//Multigrid function callbacks
-void AxTri2D        (void **args, occa::memory &o_x, occa::memory &o_Ax);
-void coarsenTri2D   (void **args, occa::memory &o_x, occa::memory &o_Rx);
-void prolongateTri2D(void **args, occa::memory &o_x, occa::memory &o_Px);
-void ellipticGather (void **args, occa::memory &o_x, occa::memory &o_Gx);
-void ellipticScatter(void **args, occa::memory &o_x, occa::memory &o_Sx);
-void ellipticMultigridSmooth         (void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
-void ellipticMultigridSmoothChebyshev(void **args, occa::memory &o_r, occa::memory &o_x, bool xIsZero);
-
-//smoother ops
-void LocalPatch  (void **args, occa::memory &o_r, occa::memory &o_Sr);
-void dampedJacobi(void **args, occa::memory &o_r, occa::memory &o_Sr);

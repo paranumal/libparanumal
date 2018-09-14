@@ -49,10 +49,10 @@ void freePinnedScratchSpace();
 
 typedef struct {
 
-	dlong localId;
-	hlong globalId;
+  dlong localId;
+  hlong globalId;
 
-	dlong newId;
+  dlong newId;
 
 } parallelId_t;
 

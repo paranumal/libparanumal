@@ -60,8 +60,8 @@ void buildParAlmondKernels(MPI_Comm comm, occa::device device){
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 
-  // double seed = (double) rank;
-  // srand48(seed);
+  double seed = (double) rank;
+  srand48(seed);
 
   occa::properties kernelInfo;
   kernelInfo["defines"].asObject();
@@ -99,7 +99,7 @@ void buildParAlmondKernels(MPI_Comm comm, occa::device device){
     kernelInfo["compiler_flags"] += "--fmad=true"; // compiler option for cuda
   }
 
-  if (rank==0) printf("Compiling parALMOND Kernels \n");
+  if (rank==0) printf("Compiling parALMOND Kernels...");fflush(stdout);
 
   for (int r=0;r<size;r++) {
     if (r==rank) {
@@ -131,6 +131,7 @@ void buildParAlmondKernels(MPI_Comm comm, occa::device device){
     }
     MPI_Barrier(comm);
   }
+  if(rank==0) printf("done.\n");
 }
 
 void freeParAlmondKernels() {

@@ -28,8 +28,9 @@ SOFTWARE.
 
 namespace parAlmond {
 
-coarseSolver::coarseSolver(setupAide Options) {
-  options = Options;
+coarseSolver::coarseSolver(setupAide options_) {
+  gatherLevel = false;
+  options = options_;
 }
 
 int coarseSolver::getTargetSize() {
@@ -180,24 +181,49 @@ void coarseSolver::syncToDevice() {}
 
 void coarseSolver::solve(dfloat *rhs, dfloat *x) {
 
-  //gather the full vector
-  MPI_Allgatherv(rhs,                  N,                MPI_DFLOAT,
-                 rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
+  if (gatherLevel) {
+    ogsGather(Gx, rhs, ogsDfloat, ogsAdd, ogs);
+    //gather the full vector
+    MPI_Allgatherv(Gx,                  N,                MPI_DFLOAT,
+                   rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
 
-  //multiply by local part of the exact matrix inverse
-  // #pragma omp parallel for
-  for (int n=0;n<N;n++) {
-    x[n] = 0.;
-    for (int m=0;m<coarseTotal;m++) {
-      x[n] += invCoarseA[n*coarseTotal+m]*rhsCoarse[m];
+    //multiply by local part of the exact matrix inverse
+    // #pragma omp parallel for
+    for (int n=0;n<N;n++) {
+      xLocal[n] = 0.;
+      for (int m=0;m<coarseTotal;m++) {
+        xLocal[n] += invCoarseA[n*coarseTotal+m]*rhsCoarse[m];
+      }
+    }
+    ogsScatter(x, xLocal, ogsDfloat, ogsAdd, ogs);
+
+  } else {
+    //gather the full vector
+    MPI_Allgatherv(rhs,                  N,                MPI_DFLOAT,
+                   rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
+
+    //multiply by local part of the exact matrix inverse
+    // #pragma omp parallel for
+    for (int n=0;n<N;n++) {
+      x[n] = 0.;
+      for (int m=0;m<coarseTotal;m++) {
+        x[n] += invCoarseA[n*coarseTotal+m]*rhsCoarse[m];
+      }
     }
   }
+
+
 }
 
 void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
 
-  //use coarse solver
-  o_rhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
+  if (gatherLevel) {
+    ogsGather(o_Gx, o_rhs, ogsDfloat, ogsAdd, ogs);
+    o_Gx.copyTo(rhsLocal, N*sizeof(dfloat), 0);
+  } else {
+    o_rhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
+  }
+
   //gather the full vector
   MPI_Allgatherv(rhsLocal,             N,                MPI_DFLOAT,
                  rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
@@ -211,7 +237,12 @@ void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
     }
   }
 
-  o_x.copyFrom(xLocal, N*sizeof(dfloat), 0);
+  if (gatherLevel) {
+    o_Gx.copyFrom(xLocal, N*sizeof(dfloat), 0);
+    ogsScatter(o_x, o_Gx, ogsDfloat, ogsAdd, ogs);
+  } else {
+    o_x.copyFrom(xLocal, N*sizeof(dfloat), 0);
+  }
 }
 
 #if 0

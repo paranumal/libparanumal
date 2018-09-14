@@ -158,7 +158,7 @@ void ogs::initKernels(MPI_Comm comm, occa::device device) {
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
-  
+
   ogs::defaultStream = device.getStream();
   ogs::dataStream    = device.createStream();
 
@@ -197,7 +197,7 @@ void ogs::initKernels(MPI_Comm comm, occa::device device) {
    kernelInfo["compiler_flags"] += "--fmad=true"; // compiler option for cuda
   }
 
-  if (rank==0) printf("Compiling GatherScatter Kernels \n");
+  if (rank==0) printf("Compiling GatherScatter Kernels...");fflush(stdout);
 
   for (int r=0;r<size;r++) {
     if (r==rank) {
@@ -260,7 +260,7 @@ void ogs::initKernels(MPI_Comm comm, occa::device device) {
       ogs::gatherScatterManyKernel_longMul = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_longMul", kernelInfo);
       ogs::gatherScatterManyKernel_longMin = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_longMin", kernelInfo);
       ogs::gatherScatterManyKernel_longMax = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_longMax", kernelInfo);
-      
+
 
 
       ogs::gatherKernel_floatAdd = device.buildKernel(DOGS "/okl/gather.okl", "gather_floatAdd", kernelInfo);
@@ -323,7 +323,7 @@ void ogs::initKernels(MPI_Comm comm, occa::device device) {
       ogs::gatherManyKernel_longMin = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_longMin", kernelInfo);
       ogs::gatherManyKernel_longMax = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_longMax", kernelInfo);
 
-      
+
 
       ogs::scatterKernel_float = device.buildKernel(DOGS "/okl/scatter.okl", "scatter_float", kernelInfo);
       ogs::scatterKernel_double = device.buildKernel(DOGS "/okl/scatter.okl", "scatter_double", kernelInfo);
@@ -342,6 +342,7 @@ void ogs::initKernels(MPI_Comm comm, occa::device device) {
     }
     MPI_Barrier(comm);
   }
+  if(rank==0) printf("done.\n");
 }
 
 void ogs::freeKernels() {

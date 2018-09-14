@@ -83,54 +83,13 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
       precon->o_xG   = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat));
     }
 
-/*
-    if (strstr(options,"MATRIXFREE")&&strstr(options,"IPDG")) { //swap the top AMG level ops for matrix free versions
-      agmgLevel *baseLevel = precon->parAlmond->levels[0];
-
-      dfloat *vlambda = (dfloat *) calloc(1,sizeof(dfloat));
-      *vlambda = lambda;
-      baseLevel->AxArgs = (void **) calloc(3,sizeof(void*));
-      baseLevel->AxArgs[0] = (void *) elliptic;
-      baseLevel->AxArgs[1] = (void *) vlambda;
-      baseLevel->AxArgs[2] = (void *) options;
-      baseLevel->device_Ax = AxTri2D;
-
-      baseLevel->smoothArgs = (void **) calloc(2,sizeof(void*));
-      baseLevel->smoothArgs[0] = (void *) elliptic;
-      baseLevel->smoothArgs[1] = (void *) baseLevel;
-      baseLevel->device_smooth = smoothTri2D;
-
-      baseLevel->smootherArgs = (void **) calloc(1,sizeof(void*));
-      baseLevel->smootherArgs[0] = (void *) elliptic;
-
-      baseLevel->Nrows = mesh->Nelements*mesh->Np;
-      baseLevel->Ncols = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
-
-      // extra storage for smoothing op
-      baseLevel->o_smootherResidual = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat),baseLevel->x);
-
-      dfloat rateTolerance;    // 0 - accept not approximate patches, 1 - accept all approximate patches
-      if(strstr(options, "EXACT")){
-        rateTolerance = 0.0;
-      } else {
-        rateTolerance = 1.0;
-      }
-
-      //set up the fine problem smoothing
-      if(strstr(options, "LOCALPATCH")){
-        ellipticSetupSmootherLocalPatch(elliptic, precon, baseLevel, tau, lambda, BCType, rateTolerance, options);
-      } else { //default to damped jacobi
-        ellipticSetupSmootherDampedJacobi(elliptic, precon, baseLevel, tau, lambda, BCType, options);
-      }
-    }
-*/
   } else if (options.compareArgs("PRECONDITIONER", "MASSMATRIX")){
 
     precon->o_invMM = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), mesh->invMM);
 
   } else if(options.compareArgs("PRECONDITIONER", "MULTIGRID")){
 
-    // ellipticMultiGridSetup(elliptic,precon,lambda);
+    ellipticMultiGridSetup(elliptic,precon,lambda);
 
   } else if(options.compareArgs("PRECONDITIONER", "SEMFEM")) {
 

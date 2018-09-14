@@ -261,7 +261,7 @@ void vectorDotStar(const dlong N, occa::memory o_a, occa::memory o_b){
 }
 
 void vectorDotStar(const dlong N, const dfloat alpha, occa::memory o_a,
-	                 occa::memory o_b, const dfloat beta, occa::memory o_c){
+                   occa::memory o_b, const dfloat beta, occa::memory o_c){
   if (N) vectorDotStarKernel2(N, alpha, beta, o_a, o_b, o_c);
 }
 
