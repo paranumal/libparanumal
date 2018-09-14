@@ -64,38 +64,36 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_qpre,
 			      solver->o_rhsq);
 			      
-	/*      solver->loadFilterGridKernel(Nboundary,
-		mesh->Nelements,
-		solver->o_rlocal,
-		solver->o_slocal,
-		solver->o_par_loc,
-		solver->o_perp_index,
-		solver->o_eInterp,
-		solver->o_overlapDirection,
-		solver->o_rhsq);
+	/*solver->loadFilterGridKernel(Nboundary,
+				     mesh->Nelements,
+				     solver->o_rlocal,
+				     solver->o_slocal,
+				     solver->o_par_loc,
+				     solver->o_perp_index,
+				     solver->o_eInterp,
+				     solver->o_overlapDirection,
+				     solver->o_rhsq);
+	*/	
+	solver->filterKernelH(mesh->Nelements,
+			      solver->o_dualProjMatrix,
+			      solver->o_cubeFaceNumber,
+			      solver->o_gridToE,
+			      solver->o_rhsq,
+			      solver->o_qFilter);
 		
-		solver->filterKernelH(mesh->Nelements,
-		mesh->NgridElements,
-		solver->o_dualProjMatrix,
-		solver->o_cubeFaceNumber,
-		solver->o_gridToE,
-		solver->o_rhsq,
-		solver->o_qFilter);
-		
-		solver->filterKernelV(mesh->Nelements,
-		mesh->NgridElements,
-		alpha,
-		solver->o_dualProjMatrix,
-		solver->o_cubeFaceNumber,
-		solver->o_gridToE,
-		solver->o_x,
-		solver->o_y,
-		solver->o_z,
-		solver->o_rhsq,
-		solver->o_qFilter,
-		solver->o_q);
-		
-	*/
+	solver->filterKernelV(mesh->Nelements,
+			      alpha,
+			      solver->o_dualProjMatrix,
+			      solver->o_cubeFaceNumber,
+			      solver->o_gridToE,
+			      solver->o_x,
+			      solver->o_y,
+			      solver->o_z,
+			      solver->o_rhsq,
+			      solver->o_qFilter,
+			      solver->o_q);
+	
+	
 	solver->q[curr_pos] = 0.;
 	
 	solver->o_rhsq.copyTo(test_q);

@@ -134,7 +134,7 @@ solver_t *advectionSetupPhysicsQuad3D(mesh_t *mesh) {
 	      solver->q[base+9*mesh->Np] = q10bar;*/
 
       solver->q[base+0*mesh->Np] = 1 + .1*exp(-20*((x-1)*(x-1)+y*y+z*z));
-      solver->q[base+1*mesh->Np] = 1 ;
+      solver->q[base+1*mesh->Np] = 1;
     }
   }
 
