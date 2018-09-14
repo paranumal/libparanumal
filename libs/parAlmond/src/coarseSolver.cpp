@@ -34,7 +34,7 @@ coarseSolver::coarseSolver(setupAide options_) {
 }
 
 int coarseSolver::getTargetSize() {
-  return 100;
+  return 1000;
 }
 
 //set up exact solver using xxt
