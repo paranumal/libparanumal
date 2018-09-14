@@ -127,10 +127,10 @@ parCSR::parCSR(dlong N, dlong M): matrix_t(N,M) {
 }
 
 parCSR::parCSR(dlong N, dlong M,
-               MPI_Comm Comm,
-               occa::device Device): matrix_t(N,M) {
-  MPI_Comm_dup(Comm, &comm);
-  device = Device;
+               MPI_Comm comm_,
+               occa::device device_): matrix_t(N,M) {
+  MPI_Comm_dup(comm_, &comm);
+  device = device_;
 
   diag = new CSR(N,M);
   offd = new CSR(N,M);
@@ -148,16 +148,16 @@ parCSR::parCSR(dlong N,         // number of rows on this rank
                bool NullSpace,          //switch for nullspace
                dfloat *Null,            //null vector (or low energy mode)
                dfloat NullSpacePenalty, //penalty parameter for rank boost
-               MPI_Comm Comm,
-               occa::device Device) {
+               MPI_Comm comm_,
+               occa::device device_) {
 
   Nrows = N;
   Ncols = N;
   globalRowStarts = starts;
   globalColStarts = starts;
 
-  device = Device;
-  MPI_Comm_dup(Comm, &comm);
+  device = device_;
+  MPI_Comm_dup(comm_, &comm);
 
   int rank, size;
   MPI_Comm_rank(comm, &rank);

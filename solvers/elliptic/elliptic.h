@@ -134,6 +134,8 @@ typedef struct {
 
 }elliptic_t;
 
+#include "ellipticMultiGrid.h"
+
 elliptic_t *ellipticSetup(mesh2D *mesh, dfloat lambda, occa::properties &kernelInfo, setupAide options);
 
 void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_z);

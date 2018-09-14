@@ -28,9 +28,9 @@ SOFTWARE.
 
 namespace parAlmond {
 
-multigridLevel::multigridLevel(dlong N, dlong M, KrylovType Ktype, MPI_Comm Comm):
-  Nrows(N), Ncols(M), ktype(Ktype) {
-  comm = Comm;
+multigridLevel::multigridLevel(dlong N, dlong M, KrylovType ktype_, MPI_Comm comm_):
+  Nrows(N), Ncols(M), ktype(ktype_) {
+  comm = comm_;
 }
 
 multigridLevel::~multigridLevel() {

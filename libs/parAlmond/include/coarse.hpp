@@ -46,6 +46,11 @@ public:
   dfloat *xCoarse=NULL;
   dfloat *rhsCoarse=NULL;
 
+  bool gatherLevel;
+  ogs_t *ogs;
+  dfloat *Gx, *Sx;
+  occa::memory o_Sx, o_Gx;
+
   MPI_Comm comm;
   occa::device device;
 

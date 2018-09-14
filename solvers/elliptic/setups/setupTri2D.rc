@@ -1,11 +1,16 @@
 [FORMAT]
 1.0
 
+[BENCHMARK]
+SOLVE
+#NONE
+#BP5
+
 [DATA FILE]
 data/ellipticHomogeneous2D.h
 
 [MESH FILE]
-../../meshes/cavityH005.msh
+../../meshes/cavityH00125.msh
 
 [MESH DIMENSION]
 2
@@ -14,7 +19,7 @@ data/ellipticHomogeneous2D.h
 3
 
 [POLYNOMIAL DEGREE]
-4
+6
 
 [THREAD MODEL]
 CUDA
@@ -42,7 +47,7 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
-SEMFEM
+MULTIGRID
 
 
 ########## MULTIGRID Options ##############

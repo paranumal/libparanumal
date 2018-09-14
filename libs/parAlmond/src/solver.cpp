@@ -28,19 +28,19 @@ SOFTWARE.
 
 namespace parAlmond {
 
-solver_t::solver_t(occa::device otherdevice, MPI_Comm othercomm,
-                   setupAide otheroptions) {
+solver_t::solver_t(occa::device device_, MPI_Comm comm_,
+                   setupAide options_) {
 
-  device = otherdevice;
+  device = device_;
 
-  comm = othercomm;
+  comm = comm_;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 
   levels = (multigridLevel **) calloc(MAX_LEVELS,sizeof(multigridLevel *));
   numLevels = 0;
 
-  options = otheroptions;
+  options = options_;
 
   if (options.compareArgs("PARALMOND CYCLE", "NONSYM")) {
     ktype = GMRES;
@@ -78,20 +78,20 @@ solver_t::~solver_t() {
 void solver_t::Report() {
 
   if(rank==0) {
-    printf("------------------ParAlmond Report-----------------------------------\n");
-    printf("---------------------------------------------------------------------\n");
-    printf("level| active ranks |   dimension   |  nnzs         |  nnz/row      |\n");
-    printf("     |              | (min,max,avg) | (min,max,avg) | (min,max,avg) |\n");
-    printf("---------------------------------------------------------------------\n");
+    printf("------------------Multigrid Report----------------------------------------\n");
+    printf("--------------------------------------------------------------------------\n");
+    printf("level|    Type    |    dimension   |   nnz per row   |   Smoother        |\n");
+    printf("     |            |  (min,max,avg) |  (min,max,avg)  |                   |\n");
+    printf("--------------------------------------------------------------------------\n");
   }
 
   for(int lev=0; lev<numLevels; lev++) {
-    printf(" %3d ", lev);
+    if(rank==0) {printf(" %3d ", lev);fflush(stdout);}
     levels[lev]->Report();
   }
 
   if(rank==0)
-    printf("---------------------------------------------------------------------\n");
+    printf("--------------------------------------------------------------------------\n");
 }
 
 }
