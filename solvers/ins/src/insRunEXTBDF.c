@@ -31,13 +31,27 @@ void extbdfCoefficents(ins_t *ins, int order);
 void insRunEXTBDF(ins_t *ins){
 
   mesh_t *mesh = ins->mesh;
+
+  dfloat inss = 0, inst = 0 ;
+  dfloat advs = 0, advt = 0 ; 
+  dfloat vels = 0, velt = 0 ; 
+  dfloat pres = 0, pret = 0 ; 
+  dfloat upds = 0, updt = 0 ; 
+  dfloat reps = 0, rept = 0 ; 
   
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"INS");
 
+  mesh->device.finish();
+  inss = MPI_Wtime();
+
+
+
   int NstokesSteps = 0;
   dfloat oldDt = ins->dt;
   ins->dt *= 100;
+  
+  
 
   if (mesh->rank==0) printf("Number of Timesteps: %d\n", ins->NtimeSteps);
   for(int tstep=0;tstep<NstokesSteps;++tstep){
@@ -112,22 +126,57 @@ void insRunEXTBDF(ins_t *ins){
 
     dfloat time = ins->startTime + tstep*ins->dt;
 
+    occaTimerTic(mesh->device,"Advection");
+    
+    mesh->device.finish();
+    advs = MPI_Wtime();
+
     if(ins->Nsubsteps) {
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
       insAdvection(ins, time, ins->o_U, ins->o_NU);
     } 
-    insGradient (ins, time, ins->o_P, ins->o_GP);
+     occaTimerToc(mesh->device,"Advection");
 
+     mesh->device.finish();
+     advt += (MPI_Wtime() - advs);
+
+    occaTimerTic(mesh->device,"Velocity");
+
+    mesh->device.finish();
+    vels = MPI_Wtime();
+    
+    insGradient (ins, time, ins->o_P, ins->o_GP);
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
     insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
+    occaTimerToc(mesh->device,"Velocity");
+
+    mesh->device.finish();
+    velt += (MPI_Wtime() - vels);
+
+
+    mesh->device.finish();
+    pres = MPI_Wtime();
+
+
+    occaTimerTic(mesh->device,"Pressure");
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
     insPressureSolve(ins, time+ins->dt, ins->Nstages); 
 
     insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
+    
     insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
+    occaTimerToc(mesh->device,"Pressure");
 
+    mesh->device.finish();
+    pret += (MPI_Wtime() - pres);
+
+
+    mesh->device.finish();
+    upds = MPI_Wtime();
+
+    occaTimerTic(mesh->device,"Update");
     //cycle history
     for (int s=ins->Nstages;s>1;s--) {
       ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
@@ -137,7 +186,7 @@ void insRunEXTBDF(ins_t *ins){
                                   (s-1)*ins->Ntotal*sizeof(dfloat), 
                                   (s-2)*ins->Ntotal*sizeof(dfloat));
     }
-
+    
     //copy updated pressure
     ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat)); 
 
@@ -157,7 +206,30 @@ void insRunEXTBDF(ins_t *ins){
                                   (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
 
+    occaTimerToc(mesh->device,"Update");
+
+    mesh->device.finish();
+    updt += (MPI_Wtime() - upds); 
+
+
+
     occaTimerTic(mesh->device,"Report");
+
+    mesh->device.finish();
+    reps = MPI_Wtime();
+
+
+
+    int NiterStep = 5; 
+ 
+
+    if((tstep+1)%NiterStep == 0){
+      char fname[BUFSIZ];
+      sprintf(fname, "IterationNumbers_%d_%02d.dat", mesh->N, ins->Nsubsteps);
+      FILE *fp = fopen(fname,"a");
+      fprintf(fp, "%d %d %d %d\n", time+ins->dt, ins->NiterU, ins->NiterV, ins->NiterP);
+      fclose(fp);
+    }
 
     if(ins->outputStep){
       if(((tstep+1)%(ins->outputStep))==0){
@@ -190,16 +262,33 @@ void insRunEXTBDF(ins_t *ins){
     if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
     
     occaTimerToc(mesh->device,"Report");
+
+    mesh->device.finish();
+    rept += (MPI_Wtime() - reps); 
+
+
   }
   occaTimerToc(mesh->device,"INS");
 
+  inst = MPI_Wtime() - inss;
 
+  
   dfloat finalTime = ins->NtimeSteps*ins->dt;
   printf("\n");
 
   if(ins->outputStep) insReport(ins, finalTime,ins->NtimeSteps);
   
   if(mesh->rank==0) occa::printTimer();
+
+      char fname2[BUFSIZ];
+      sprintf(fname2, "SolverTime.dat");
+      FILE *fp2 = fopen(fname2,"a");
+      fprintf(fp2, "%d %d %.4f %.4f %.4f %.4f %.4f %.4f\n",  mesh->N, ins->Nsubsteps, inst, advt, velt, pret, updt, rept); 
+      fclose(fp2);
+ 
+
+
+
 }
 
 

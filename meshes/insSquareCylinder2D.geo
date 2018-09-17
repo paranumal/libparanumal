@@ -1,6 +1,6 @@
-coarse = DefineNumber[1.00];
-fine   = DefineNumber[0.31];
-fineC  = DefineNumber[0.31];
+coarse = DefineNumber[12.5];
+fine   = DefineNumber[0.625];
+fineC  = DefineNumber[0.10];
 
 xmax  = DefineNumber[25];
 xmin  = DefineNumber[-16];
@@ -13,9 +13,9 @@ ycmax  = DefineNumber[0.5];
 ycmin  = DefineNumber[-0.5];
 
 xbmax  = xmax;
-xbmin  = DefineNumber[-4];
-ybmax  = DefineNumber[4];
-ybmin  = DefineNumber[-4];
+xbmin  = DefineNumber[-2];
+ybmax  = DefineNumber[2];
+ybmin  = DefineNumber[-2];
 
 
 Point(1) = {xmin, ymin, 0, coarse};
