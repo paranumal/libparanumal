@@ -1,7 +1,5 @@
 /*
-
 The MIT License (MIT)
-
 Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,11 +28,8 @@ SOFTWARE.
 #include <string.h>
 #include "mpi.h"
 #include "mesh2D.h"
-#include "ellipticTri2D.h"
+#include "elliptic.h"
 
-#define UXID 0
-#define UYID 1
-#define PRID 2
 
 typedef struct {
 
