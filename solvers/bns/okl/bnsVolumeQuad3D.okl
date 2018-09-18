@@ -56,7 +56,7 @@
 	  }
 	  
 	  if(es==0)
-	    s_D[j][i] = D[j*p_Nq+i];
+	    s_D[j][i] = Dmatrices[j*p_Nq+i];
 	}
       }
     }
