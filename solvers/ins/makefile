@@ -4,7 +4,7 @@ ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
-CXXFLAGS = 
+CXXFLAGS =
 
 include ${OCCA_DIR}/scripts/Makefile
 
@@ -12,7 +12,7 @@ include ${OCCA_DIR}/scripts/Makefile
 HDRDIR  = ../../include
 GSDIR  = ../../3rdParty/gslib
 OGSDIR  = ../../libs/gatherScatter
-ALMONDDIR = ../parALMOND
+ALMONDDIR = ../../libs/parAlmond
 ELLIPTICDIR = ../elliptic
 
 # set options for this machine
@@ -22,16 +22,16 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(ALMONDDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"'
 
-# link flags to be used 
+# link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
-LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(ALMONDDIR) -lparALMOND  \
+LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(ALMONDDIR) -lparAlmond  \
 		   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
 		   -L$(OCCA_DIR)/lib $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
-			
+
 
 INCLUDES = ins.h
 DEPS = $(INCLUDES) \
@@ -39,12 +39,13 @@ $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
 $(HDRDIR)/mesh3D.h \
 $(OGSDIR)/ogs.hpp \
-$(ALMONDDIR)/parALMOND.h \
+$(ALMONDDIR)/parAlmond.hpp \
 $(ELLIPTICDIR)/elliptic.h \
-$(ELLIPTICDIR)/ellipticPrecon.h  
+$(ELLIPTICDIR)/ellipticPrecon.h \
+$(ELLIPTICDIR)/ellipticMultiGrid.h
 
 # types of files we are going to construct rules for
-.SUFFIXES: .c 
+.SUFFIXES: .c
 
 # rule for .c files
 .c.o: $(DEPS)
@@ -75,7 +76,7 @@ AOBJS    = \
 ./src/insPressureUpdate.o \
 ./src/insRestart.o \
 ./src/insWeldTriVerts.o \
-./src/insIsoPlotVTU.o    
+./src/insIsoPlotVTU.o
 
 # library objects
 LOBJS = \
@@ -136,7 +137,7 @@ LOBJS = \
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
-insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparALMOND libelliptic
+insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparAlmond libelliptic
 	$(LD)  $(LDFLAGS)  -o insMain ./src/insMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
@@ -148,8 +149,8 @@ libogs:
 libblas:
 	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../solvers/ins
 
-libparALMOND:
-	cd ../parALMOND; make -j lib; cd ../ins
+libparAlmond:
+	cd ../../libs/parAlmond; make -j lib; cd ../../solvers/ins
 
 libelliptic:
 	cd ../elliptic; make -j lib; cd ../ins
