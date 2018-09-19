@@ -416,16 +416,16 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   }
 
   occa::properties kernelInfo;
- kernelInfo["defines"].asObject();
- kernelInfo["includes"].asArray();
- kernelInfo["header"].asArray();
- kernelInfo["flags"].asObject();
-
-  if(bns->dim==3)
+  kernelInfo["defines"].asObject();
+  kernelInfo["includes"].asArray();
+  kernelInfo["header"].asArray();
+  kernelInfo["flags"].asObject();
+  
+  if(bns->dim==3 && bns->elementType != QUADRILATERALS)
     meshOccaSetup3D(mesh, options, kernelInfo);
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
-
+  
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";   
 
   // Setup MRAB PML
@@ -734,7 +734,10 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
     suffix = strdup("Hex3D");
 
   if(bns->elementType==TRIANGLES || bns->elementType==QUADRILATERALS)
-    suffixUpdate = strdup("2D");
+    if(bns->dim==2)
+      suffixUpdate = strdup("2D");
+    else
+      suffixUpdate = strdup("3D");
   if(bns->elementType==TETRAHEDRA || bns->elementType==HEXAHEDRA)
     suffixUpdate = strdup("3D");
   

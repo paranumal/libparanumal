@@ -33,7 +33,7 @@ SOFTWARE.
 void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nvgeo = 11; // 
+  mesh->Nvgeo = 12; // 
   
   /* note that we have volume geometric factors for each node */
   mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->Np, sizeof(dfloat));
