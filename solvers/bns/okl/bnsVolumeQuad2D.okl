@@ -26,17 +26,20 @@ SOFTWARE.
 
 // Only difference with boltzmannVolume2D is size of rhsq and shifting
 @kernel void bnsVolumeQuad2D(const dlong Nelements,
-          @restrict const  dlong *  elementIds,
-          const dlong offset,
-          const int shift,
-          const dfloat fx,
-          const dfloat fy,
-          const dfloat fz,
-          @restrict const  dfloat *  vgeo,
-          @restrict const  dfloat *  Dmatrices,
-          @restrict const  dfloat *  q,
-          @restrict dfloat *  rhsq){
-
+			     @restrict const  dlong *  elementIds,
+			     const dlong offset,
+			     const int shift,
+			     const dfloat fx,
+			     const dfloat fy,
+			     const dfloat fz,
+			     @restrict const  dfloat *  vgeo,
+			     @restrict const dfloat *x, 
+			     @restrict const dfloat *y,
+			     @restrict const dfloat *z,
+			     @restrict const  dfloat *  Dmatrices,
+			     @restrict const  dfloat *  q,
+			     @restrict dfloat *  rhsq){
+  
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
     @shared dfloat s_q[p_NblockV][p_Nfields][p_Nq][p_Nq];

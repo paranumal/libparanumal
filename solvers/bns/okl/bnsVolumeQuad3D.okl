@@ -33,14 +33,17 @@
 			     const dfloat fy,
 			     const dfloat fz,
 			     @restrict const  dfloat *  vgeo,
+			     @restrict const  dfloat * x, 
+			     @restrict const  dfloat * y,
+			     @restrict const  dfloat * z, 
 			     @restrict const  dfloat *  Dmatrices,
 			     @restrict const  dfloat *  q,
 			     @restrict dfloat *  rhsq){
   
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
     
-    shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
-    shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -75,15 +78,15 @@
 
 	    // prefetch geometric factors (constant on triangle)
 	    const int gbase = e*p_Np*p_Nvgeo + n;
-	    const dfloat drdx = vgeo[gbase + p_Np*RXID];
-	    const dfloat drdy = vgeo[gbase + p_Np*RYID];
-	    const dfloat drdz = vgeo[gbase + p_Np*RZID];
-	    const dfloat dsdx = vgeo[gbase + p_Np*SXID];
-	    const dfloat dsdy = vgeo[gbase + p_Np*SYID];
-	    const dfloat dsdz = vgeo[gbase + p_Np*SZID];
-	    const dfloat dtdx = vgeo[gbase + p_Np*TXID];
-	    const dfloat dtdy = vgeo[gbase + p_Np*TYID];
-	    const dfloat dtdz = vgeo[gbase + p_Np*TZID];
+	    const dfloat drdx = vgeo[gbase + p_Np*p_RXID];
+	    const dfloat drdy = vgeo[gbase + p_Np*p_RYID];
+	    const dfloat drdz = vgeo[gbase + p_Np*p_RZID];
+	    const dfloat dsdx = vgeo[gbase + p_Np*p_SXID];
+	    const dfloat dsdy = vgeo[gbase + p_Np*p_SYID];
+	    const dfloat dsdz = vgeo[gbase + p_Np*p_SZID];
+	    const dfloat dtdx = vgeo[gbase + p_Np*p_TXID];
+	    const dfloat dtdy = vgeo[gbase + p_Np*p_TYID];
+	    const dfloat dtdz = vgeo[gbase + p_Np*p_TZID];
 
 	    // compute 'r' and 's' derivatives of (q_m) at node n
 	    dfloat dqdr[p_Nfields], dqds[p_Nfields];
