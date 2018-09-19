@@ -87,6 +87,7 @@ LOBJS = \
 ../../src/meshLoadReferenceNodesTet3D.o \
 ../../src/meshLoadReferenceNodesHex3D.o \
 ../../src/meshOccaSetup2D.o \
+../../src/meshOccaSetupQuad3D.o \
 ../../src/meshOccaSetup3D.o \
 ../../src/meshMRABSetup2D.o \
 ../../src/meshMRABSetup3D.o \

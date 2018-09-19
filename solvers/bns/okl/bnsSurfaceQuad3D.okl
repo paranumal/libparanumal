@@ -29,8 +29,8 @@ void flux(const dfloat nx,
 	  const dfloat nz,
 	  const dfloat alpha,
 	  const dfloat beta,
-	  const dfloat * restrict dq,
-	  dfloat * restrict fluxq){
+	  const dfloat * dq,
+	  dfloat * fluxq){
 
   fluxq[0] = alpha*dq[0] - beta*p_sqrtRT*(nx*dq[1] + ny*dq[2] + nz*dq[3]);
 
@@ -69,22 +69,22 @@ void flux(const dfloat nx,
 #define p_LIFT (0.5f*(p_Nq-1)*p_Nq)
   
   // for all elements
-  for(iint eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     
     // for all faces (global barrier at end of body of this loop)
-    for(iint face=0;face<p_Nfaces;++face){      
+    for(dlong face=0;face<p_Nfaces;++face){      
       
-      for(iint es=0;es<p_NblockS;++es;@inner(1)){
-	for(iint i=0;i<p_Nq;++i;@inner(0)){ 
+      for(dlong es=0;es<p_NblockS;++es;@inner(1)){
+	for(dlong i=0;i<p_Nq;++i;@inner(0)){ 
 	  
-	  const iint et = eo + es;
+	  const dlong et = eo + es;
 	  
 	  if(et<Nelements){
 
 	    const dlong   eM = elementIds[et];
 	    
 	    // load surface geofactors for this face
-	    const iint sid = eM*p_Nsgeo*p_Nq*p_Nfaces + face*p_Nsgeo*p_Nq + i; 
+	    const dlong sid = eM*p_Nsgeo*p_Nq*p_Nfaces + face*p_Nsgeo*p_Nq + i; 
 	    const dfloat nx = sgeo[sid+0*p_Nq];
 	    const dfloat ny = sgeo[sid+1*p_Nq];
 	    const dfloat nz = sgeo[sid+2*p_Nq];
@@ -92,17 +92,17 @@ void flux(const dfloat nx,
 	    const dfloat invJ = sgeo[sid+4*p_Nq];
 
 	    // indices of negative and positive traces of face node
-	    const iint id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
+	    const dlong id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
 	    const int idM = vmapM[id];
 	    const int idP = vmapP[id];
 	    const int eP = idP/p_Np;
 	    
-	    const iint vidM = eM*p_Np*p_Nfields + (idM%p_Np);
-	    const iint vidP = eP*p_Np*p_Nfields + (idP%p_Np);
+	    const dlong vidM = eM*p_Np*p_Nfields + (idM%p_Np);
+	    const dlong vidP = eP*p_Np*p_Nfields + (idP%p_Np);
 	    
 	    dfloat dq[p_Nfields], fluxq[p_Nfields];
 	    
-	    occaUnroll(p_Nfields)
+#pragma unroll p_Nfields
 	      for(int fld=0;fld<p_Nfields;++fld){
 		const dfloat qM = q[vidM+fld*p_Np];
 		dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
@@ -112,7 +112,7 @@ void flux(const dfloat nx,
 	    
 	    // D = nx*A + ny*B + nz*C
    	    // compute 0.5*[q] + 0.5*D*[q]/sqrt(RT)
-	    const dfloat alpha = 0.5, beta = 0.5*p_invsqrtRT;
+	    const dfloat alpha = 0.5, beta = 0.5*p_isqrtRT;
 	    
 	    flux(nx, ny, nz, alpha, beta, dq, fluxq);
 	    
@@ -124,7 +124,7 @@ void flux(const dfloat nx,
 	    // evaluate "flux" terms: (sJ/J)*(D+sigma*D*D)*(q^* - q^-)
 	    const dfloat sc = invJ*sJ*p_LIFT;
 	    
-	    occaUnroll(p_Nfields)
+#pragma unroll p_Nfields
 	      for(int fld=0;fld<p_Nfields;++fld){
 		rhsq[vidM+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
 	      }

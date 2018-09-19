@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -87,14 +87,14 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     bns->pmlFlag = 1; 
 
   if(bns->pmlFlag){
-   check = options.getArgs("PML PROFILE ORDER", bns->pmlOrder);
-   if(!check) printf("WARNING setup file does not include PML ORDER\n");
+    check = options.getArgs("PML PROFILE ORDER", bns->pmlOrder);
+    if(!check) printf("WARNING setup file does not include PML ORDER\n");
 
-   check = options.getArgs("PML SIGMAX MAX", bns->sigmaXmax);
-   if(!check) printf("WARNING setup file does not include PML SIGMAX MAX\n");
+    check = options.getArgs("PML SIGMAX MAX", bns->sigmaXmax);
+    if(!check) printf("WARNING setup file does not include PML SIGMAX MAX\n");
 
-   check = options.getArgs("PML SIGMAY MAX", bns->sigmaYmax);
-   if(!check) printf("WARNING setup file does not include PML SIGMAY MAX\n");
+    check = options.getArgs("PML SIGMAY MAX", bns->sigmaYmax);
+    if(!check) printf("WARNING setup file does not include PML SIGMAY MAX\n");
 
     if(bns->dim==3){
       check = options.getArgs("PML SIGMAZ MAX", bns->sigmaZmax);
@@ -251,15 +251,15 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     else              // implicit-explicit or semi-analytic schemes
       dtest  = dtex;
       
-      dt            = mymin(dt, dtest);      // For SR 
-      EtoDT[e]      = mymin(EtoDT[e],dtest); // For MR
+    dt            = mymin(dt, dtest);      // For SR 
+    EtoDT[e]      = mymin(EtoDT[e],dtest); // For MR
   }
 
 
   
 
 
-   printf("dtex = %.5e dtim = %.5e \n", bns->cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), bns->cfl*1.f/(bns->tauInv));
+  printf("dtex = %.5e dtim = %.5e \n", bns->cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), bns->cfl*1.f/(bns->tauInv));
 
   // Set multiRate element groups/group  
   if(options.compareArgs("TIME INTEGRATOR", "MRSAAB") ){
@@ -291,9 +291,9 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
     mesh->nonPmlElementIds = (dlong*) calloc(mesh->Nelements, sizeof(dlong));
     for(dlong e=0;e<mesh->Nelements;++e)
-     mesh->nonPmlElementIds[e] = e; 
+      mesh->nonPmlElementIds[e] = e; 
 
-   printf("TIME STEPSIZE\t:\t%.2e\n", bns->dt); 
+    printf("TIME STEPSIZE\t:\t%.2e\n", bns->dt); 
   }
 
 
@@ -317,7 +317,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     bns->resq = (dfloat*) calloc(bns->Nrhs*mesh->Nelements*mesh->Np*bns->Nfields, sizeof(dfloat));
   }
 
-   // Initialize  
+  // Initialize  
   if (options.compareArgs("TIME INTEGRATOR","SARK")){ // SARK for fixed or adaptive time stepping,
     bns->Nrhs  = 1;
     bns->ATOL    = 1.0; options.getArgs("ABSOLUTE TOLERANCE",   bns->ATOL); 
@@ -353,7 +353,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   dfloat fx, fy, fz, intfx, intfy, intfz;
   bnsBodyForce(time, &fx, &fy, &fz, &intfx, &intfy, &intfz);
   
- // INITIALIZE PROBLEM 
+  // INITIALIZE PROBLEM 
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
       dfloat t = 0., x = 0., y = 0., z = 0.;
@@ -380,11 +380,11 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
         bns->q[id+4*mesh->Np] = q1bar*intfx*intfy/bns->sqrtRT;
         bns->q[id+5*mesh->Np] = q1bar*intfx*intfz/bns->sqrtRT;
-	      bns->q[id+6*mesh->Np] = q1bar*intfy*intfz/bns->sqrtRT;
+	bns->q[id+6*mesh->Np] = q1bar*intfy*intfz/bns->sqrtRT;
 
         bns->q[id+7*mesh->Np] = q1bar*intfx*intfx/(sqrt(2.)*bns->sqrtRT);
         bns->q[id+8*mesh->Np] = q1bar*intfy*intfy/(sqrt(2.)*bns->sqrtRT);
-	      bns->q[id+9*mesh->Np] = q1bar*intfz*intfz/(sqrt(2.)*bns->sqrtRT);
+	bns->q[id+9*mesh->Np] = q1bar*intfz*intfz/(sqrt(2.)*bns->sqrtRT);
 
       }
        
@@ -398,7 +398,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     if(mesh->MRABNlevels)
       printf("Nsteps = %d dt = %.8e MRAB Level: %d  Final Time:%.5e\n", bns->NtimeSteps, bns->dt, mesh->MRABNlevels, bns->startTime+pow(2, mesh->MRABNlevels-1)*(bns->dt*(bns->NtimeSteps+1)));   
     else
-     printf("Nsteps = %d dt = %.8e Final Time:%.5e\n", bns->NtimeSteps, bns->dt,  bns->startTime + bns->dt*bns->NtimeSteps);
+      printf("Nsteps = %d dt = %.8e Final Time:%.5e\n", bns->NtimeSteps, bns->dt,  bns->startTime + bns->dt*bns->NtimeSteps);
   }
  
  
@@ -421,8 +421,12 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   kernelInfo["header"].asArray();
   kernelInfo["flags"].asObject();
   
-  if(bns->dim==3 && bns->elementType != QUADRILATERALS)
-    meshOccaSetup3D(mesh, options, kernelInfo);
+  if(bns->dim==3){
+    if(bns->elementType != QUADRILATERALS)
+      meshOccaSetup3D(mesh, options, kernelInfo);
+    else
+      meshOccaSetupQuad3D(mesh, options, kernelInfo);
+  }
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
   
@@ -442,16 +446,16 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
         mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(dlong), mesh->MRABhaloIds[lev]);
     }
   } else{
-   printf("Preparing Pml for single rate integrator\n");
-   bnsPmlSetup(bns, options); 
+    printf("Preparing Pml for single rate integrator\n");
+    bnsPmlSetup(bns, options); 
 
     if (mesh->nonPmlNelements)
-        mesh->o_nonPmlElementIds = mesh->device.malloc(mesh->nonPmlNelements*sizeof(dlong), mesh->nonPmlElementIds);
+      mesh->o_nonPmlElementIds = mesh->device.malloc(mesh->nonPmlNelements*sizeof(dlong), mesh->nonPmlElementIds);
 
   }
   
 
-   bns->Nvort      = 3;   // hold wx, wy, wz
+  bns->Nvort      = 3;   // hold wx, wy, wz
   // Set Iso-surfacing stuf here
   if(options.compareArgs("OUTPUT FILE FORMAT","ISO") && bns->dim==3){
     
@@ -505,11 +509,11 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
       bns->isoGLvalues        = (dfloat **) calloc(bns->isoGNgroups,sizeof(dfloat*));
 
       for(int gr =0; gr<bns->isoGNgroups; gr++)
-      {
-        int nlevels = (gr+1)*levelsInGroup > bns->isoNlevels ? (bns->isoNlevels%levelsInGroup) : levelsInGroup;  
-        bns->isoGNlevels[gr] = nlevels;  
-        printf("Isosurface Group %d has %d levels\n", gr, bns->isoGNlevels[gr]);
-      }
+	{
+	  int nlevels = (gr+1)*levelsInGroup > bns->isoNlevels ? (bns->isoNlevels%levelsInGroup) : levelsInGroup;  
+	  bns->isoGNlevels[gr] = nlevels;  
+	  printf("Isosurface Group %d has %d levels\n", gr, bns->isoGNlevels[gr]);
+	}
 
       // Allocate memory for levels in each group
       for (int gr =0;gr<bns->isoGNgroups;gr++)
@@ -523,7 +527,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
           printf("%.4f\t", bns->isoGLvalues[gr][l]);
         }
         printf("\n");
-      sk += bns->isoGNlevels[gr]; 
+	sk += bns->isoGNlevels[gr]; 
       }
 
       // Create levels for each group
@@ -559,59 +563,59 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   bnsTimeStepperCoefficients(bns, options);
 
 
-if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
+  if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
 
-  bns->o_q     = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat),bns->q);
-  bns->o_rhsq  = mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq);
+    bns->o_q     = mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat),bns->q);
+    bns->o_rhsq  = mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq);
   
-  //reallocate halo buffer for trace exchange
-  if (mesh->totalHaloPairs) {
-    mesh->o_haloBuffer.free();
-    mesh->o_haloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Nfp*bns->Nfields*mesh->Nfaces*sizeof(dfloat));
+    //reallocate halo buffer for trace exchange
+    if (mesh->totalHaloPairs) {
+      mesh->o_haloBuffer.free();
+      mesh->o_haloBuffer = mesh->device.malloc(mesh->totalHaloPairs*mesh->Nfp*bns->Nfields*mesh->Nfaces*sizeof(dfloat));
+    }
+
+    bns->o_fQM = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*bns->Nfields*sizeof(dfloat),
+				     bns->fQM);
+    mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int), mesh->mapP);
   }
 
-  bns->o_fQM = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*bns->Nfields*sizeof(dfloat),
-                          bns->fQM);
-  mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int), mesh->mapP);
-}
 
+  if(options.compareArgs("TIME INTEGRATOR", "LSERK")){
+    // 
+    bns->o_q =
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
+    bns->o_rhsq =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq);
+    bns->o_resq =
+      mesh->device.malloc(mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->resq);
+  }
 
-if(options.compareArgs("TIME INTEGRATOR", "LSERK")){
-  // 
-  bns->o_q =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
-  bns->o_rhsq =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq);
-  bns->o_resq =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->resq);
-}
+  if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
-if(options.compareArgs("TIME INTEGRATOR","SARK")){
-
-  bns->o_q =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
-  bns->o_rhsq = 
-    mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq); 
+    bns->o_q =
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->q);
+    bns->o_rhsq = 
+      mesh->device.malloc(bns->Nrhs*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rhsq); 
   
-  bns->o_rkq =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkq);
+    bns->o_rkq =
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkq);
 
-  bns->o_saveq =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkq);
+    bns->o_saveq =
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkq);
 
-  bns->o_rkrhsq =
-    mesh->device.malloc(bns->NrkStages*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rkrhsq);
-  bns->o_rkerr =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkerr);
+    bns->o_rkrhsq =
+      mesh->device.malloc(bns->NrkStages*mesh->Np*mesh->Nelements*bns->Nfields*sizeof(dfloat), bns->rkrhsq);
+    bns->o_rkerr =
+      mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*bns->Nfields*sizeof(dfloat), bns->rkerr);
   
-  // dlong Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
-  // printf("blockSize: %d  %d %d \n", Ntotal, blockSize, bns->Nblock);
-  bns->o_errtmp = mesh->device.malloc(bns->Nblock*sizeof(dfloat), bns->errtmp);
+    // dlong Ntotal    = mesh->Nelements*mesh->Np*bns->Nfields;
+    // printf("blockSize: %d  %d %d \n", Ntotal, blockSize, bns->Nblock);
+    bns->o_errtmp = mesh->device.malloc(bns->Nblock*sizeof(dfloat), bns->errtmp);
 
-  bns->o_rkA = mesh->device.malloc(bns->NrkStages*bns->NrkStages*sizeof(dfloat), bns->rkA);
-  bns->o_rkE = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), bns->rkE);
+    bns->o_rkA = mesh->device.malloc(bns->NrkStages*bns->NrkStages*sizeof(dfloat), bns->rkA);
+    bns->o_rkE = mesh->device.malloc(bns->NrkStages*sizeof(dfloat), bns->rkE);
 
-}
+  }
 
   bns->Vort      = (dfloat*) calloc(bns->Nvort*mesh->Nelements*mesh->Np, sizeof(dfloat));
   bns->VortMag   = (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
@@ -625,6 +629,8 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
   kernelInfo["defines/" "p_maxCubNodes"]= maxCubNodes;
 
+  kernelInfo["defines/" "p_fainv"] = (dfloat) 0.0;
+  kernelInfo["defines/" "p_invRadiusSq"] = (dfloat) 1./(mesh->sphereRadius*mesh->sphereRadius);
 
   int NblockV = 128/mesh->Np; // works for CUDA
   // NblockV = 1; //!!!!!
@@ -665,7 +671,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
     if(options.getArgs("BODYFORCE-Z", AZ))
       if(AZ)
         kernelInfo["defines/" "p_AZ"]= AZ/bns->sqrtRT;
-   }
+  }
 
   kernelInfo["defines/" "p_q1bar"]= q1bar;
   kernelInfo["defines/" "p_q2bar"]= q2bar;
@@ -719,15 +725,19 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
     int plotNthreads = mymax(mesh->Np, mymax(mesh->plotNp, mesh->plotNelements));
     kernelInfo["defines/" "p_plotNthreads"]= plotNthreads;
     
- } 
+  } 
 
   // set kernel name suffix
   char *suffix, *suffixUpdate;
   
   if(bns->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
-  if(bns->elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
+  if(bns->elementType==QUADRILATERALS){
+    if(bns->dim==2)
+      suffix = strdup("Quad2D");
+    else
+      suffix = strdup("Quad3D");
+  }
   if(bns->elementType==TETRAHEDRA)
     suffix = strdup("Tet3D");
   if(bns->elementType==HEXAHEDRA)
@@ -738,6 +748,7 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
       suffixUpdate = strdup("2D");
     else
       suffixUpdate = strdup("3D");
+
   if(bns->elementType==TETRAHEDRA || bns->elementType==HEXAHEDRA)
     suffixUpdate = strdup("3D");
   
@@ -757,29 +768,32 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
       sprintf(kernelName, "bnsVolume%s", suffix);
       bns->volumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-
-      // No that nonlinear terms are always integrated using cubature rules
-      // this cubature shift is for sigma terms on pml formulation
-      if(bns->pmlcubature){
-        sprintf(kernelName, "bnsPmlVolumeCub%s", suffix);
-        bns->pmlVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-      }else{
-        sprintf(kernelName, "bnsPmlVolume%s", suffix);
-        bns->pmlVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
+      if(bns->pmlFlag){
+	// No that nonlinear terms are always integrated using cubature rules
+	// this cubature shift is for sigma terms on pml formulation
+	if(bns->pmlcubature){
+	  sprintf(kernelName, "bnsPmlVolumeCub%s", suffix);
+	  bns->pmlVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+	}else{
+	  sprintf(kernelName, "bnsPmlVolume%s", suffix);
+	  bns->pmlVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
+	}
       }
-
+      
       // Relaxation kernels
       sprintf(fileName, DBNS "/okl/bnsRelaxation%s.okl", suffix);
 
       sprintf(kernelName, "bnsRelaxation%s", suffix);
       bns->relaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      if(bns->pmlcubature){
-        sprintf(kernelName, "bnsPmlRelaxationCub%s", suffix);        
-        bns->pmlRelaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
-      }else{
-        sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
-        bns->pmlRelaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
+      if(bns->pmlFlag){
+	if(bns->pmlcubature){
+	  sprintf(kernelName, "bnsPmlRelaxationCub%s", suffix);        
+	  bns->pmlRelaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
+	}else{
+	  sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
+	  bns->pmlRelaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
+	}
       }
 
       
@@ -790,14 +804,18 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
         sprintf(kernelName, "bnsMRSurface%s", suffix);
         bns->surfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
-        sprintf(kernelName, "bnsMRPmlSurface%s", suffix);
-        bns->pmlSurfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+	if(bns->pmlFlag){
+	  sprintf(kernelName, "bnsMRPmlSurface%s", suffix);
+	  bns->pmlSurfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+	}
       }else{
         sprintf(kernelName, "bnsSurface%s", suffix);
         bns->surfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
-        sprintf(kernelName, "bnsPmlSurface%s", suffix);
-        bns->pmlSurfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+	if(bns->pmlFlag){
+	  sprintf(kernelName, "bnsPmlSurface%s", suffix);
+	  bns->pmlSurfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+	}
       }
 
       
@@ -807,24 +825,29 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
         sprintf(kernelName, "bnsLSERKUpdate%s", suffixUpdate);
         bns->updateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
 
-        sprintf(kernelName, "bnsLSERKPmlUpdate%s", suffixUpdate);
-        bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
+	if(bns->pmlFlag){
+	  sprintf(kernelName, "bnsLSERKPmlUpdate%s", suffixUpdate);
+	  bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
+	}
       } else if(options.compareArgs("TIME INTEGRATOR","SARK")){
         sprintf(kernelName, "bnsSARKUpdateStage%s", suffixUpdate);
         bns->updateStageKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
-        sprintf(kernelName, "bnsSARKPmlUpdateStage%s", suffixUpdate);
-        bns->pmlUpdateStageKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
-
+	if(bns->pmlFlag){
+	  sprintf(kernelName, "bnsSARKPmlUpdateStage%s", suffixUpdate);
+	  bns->pmlUpdateStageKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+	}
+	
         sprintf(kernelName, "bnsSARKUpdate%s", suffixUpdate);
         bns->updateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
 
-        sprintf(kernelName, "bnsSARKPmlUpdate%s", suffixUpdate);
-        bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
-
-          sprintf(fileName, DBNS "/okl/bnsErrorEstimate.okl");
-          sprintf(kernelName, "bnsErrorEstimate");
-          bns->errorEstimateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+	if(bns->pmlFlag){
+	  sprintf(kernelName, "bnsSARKPmlUpdate%s", suffixUpdate);
+	  bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
+	}
+	sprintf(fileName, DBNS "/okl/bnsErrorEstimate.okl");
+	sprintf(kernelName, "bnsErrorEstimate");
+	bns->errorEstimateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       } else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
       
         sprintf(kernelName, "bnsMRSAABTraceUpdate%s", suffixUpdate);
@@ -833,8 +856,10 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
         sprintf(kernelName, "bnsMRSAABUpdate%s", suffixUpdate);
         bns->updateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
 
-        sprintf(kernelName, "bnsMRSAABPmlUpdate%s", suffixUpdate);
-        bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
+	if(bns->pmlFlag){
+	  sprintf(kernelName, "bnsMRSAABPmlUpdate%s", suffixUpdate);
+	  bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
+	}
       }
 
       sprintf(fileName, DBNS "/okl/bnsVorticity%s.okl",suffix);
@@ -844,10 +869,10 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
       // This needs to be unified
       mesh->haloExtractKernel =
-          mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl","meshHaloExtract3D",kernelInfo);
+	mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl","meshHaloExtract3D",kernelInfo);
 
 
-  if(bns->dim==3){
+      if(bns->dim==3){
 
         mesh->gatherKernel = 
           mesh->device.buildKernel(DHOLMES "/okl/gather.okl","gather", kernelInfo);
@@ -867,11 +892,13 @@ if(options.compareArgs("TIME INTEGRATOR","SARK")){
         bns->dotMultiplyKernel = mesh->device.buildKernel(DBNS "/okl/bnsDotMultiply.okl", "bnsDotMultiply", kernelInfo);
 
         // kernels from volume file
-        sprintf(fileName, DBNS "/okl/bnsIsoSurface3D.okl");
-        sprintf(kernelName, "bnsIsoSurface3D");
-
-        bns->isoSurfaceKernel =
-          mesh->device.buildKernel(fileName, kernelName, kernelInfo);        
+	if(bns->elementType!=QUADRILATERALS){
+	  sprintf(fileName, DBNS "/okl/bnsIsoSurface3D.okl");
+	  sprintf(kernelName, "bnsIsoSurface3D");
+	  
+	  bns->isoSurfaceKernel =
+	    mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	}
       }
     }
     MPI_Barrier(mesh->comm);
