@@ -47,6 +47,11 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
 
   mesh_t *mesh = (mesh_t*) calloc(1, sizeof(mesh_t));
 
+  mesh->rank = rank;
+  mesh->size = size;
+
+  MPI_Comm_dup(MPI_COMM_WORLD, &mesh->comm);
+
   mesh->dim = 3;
   mesh->Nverts = 4; // number of vertices per element
   mesh->Nfaces = 4;
