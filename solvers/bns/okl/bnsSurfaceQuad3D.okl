@@ -84,12 +84,12 @@ void flux(const dfloat nx,
 	    const dlong   eM = elementIds[et];
 	    
 	    // load surface geofactors for this face
-	    const dlong sid = eM*p_Nsgeo*p_Nq*p_Nfaces + face*p_Nsgeo*p_Nq + i; 
-	    const dfloat nx = sgeo[sid+0*p_Nq];
-	    const dfloat ny = sgeo[sid+1*p_Nq];
-	    const dfloat nz = sgeo[sid+2*p_Nq];
-	    const dfloat sJ = sgeo[sid+3*p_Nq];
-	    const dfloat invJ = sgeo[sid+4*p_Nq];
+	    const dlong sid = p_Nsgeo*(eM*p_Nq*p_Nfaces + face*p_Nq + i); 
+	    const dfloat nx = sgeo[sid+p_NXID];
+	    const dfloat ny = sgeo[sid+p_NYID];
+	    const dfloat nz = sgeo[sid+p_NZID];
+	    const dfloat sJ = sgeo[sid+p_SJID];
+	    const dfloat invJ = sgeo[sid+p_IJID];
 
 	    // indices of negative and positive traces of face node
 	    const dlong id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
