@@ -79,7 +79,7 @@ int main(int argc, char **argv){
     printf("done\n");  
    }  
 
-
+   bnsPlotVTU(bns, "foo.vtu");
    bnsRun(bns,options);
    
   // close down MPI

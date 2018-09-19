@@ -256,9 +256,9 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   }
 
 
+  printf("ghmin =  %lg\n", ghmin);
+
   
-
-
   printf("dtex = %.5e dtim = %.5e \n", bns->cfl*ghmin/((mesh->N+1.)*(mesh->N+1.)*sqrt(3.)*bns->sqrtRT), bns->cfl*1.f/(bns->tauInv));
 
   // Set multiRate element groups/group  
