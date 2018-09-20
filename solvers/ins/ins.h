@@ -231,6 +231,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options);
 
 void insRunARK(ins_t *ins);
 void insRunEXTBDF(ins_t *ins);
+void insBenchmark(mesh_t *mesh, setupAide options);
 
 void insPlotVTU(ins_t *ins, char *fileNameBase);
 void insReport(ins_t *ins, dfloat time,  int tstep);

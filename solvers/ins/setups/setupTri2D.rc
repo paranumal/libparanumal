@@ -1,12 +1,23 @@
 [FORMAT]
 1.0
 
+[SOLVER_TYPE]
+BENCHMARK
+#INS
+
+[BENCHMARK KERNEL]
+CUBATURE_SURFACE
+
+[BENCHMARK KERNEL NUMBER]
+8
+
 [DATA FILE]
 data/insUniform2D.h
 #data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insSquareCylinder2D.msh
+../../meshes/insKernelOptimizeTri2D.msh
+#../../meshes/insSquareCylinder2D.msh
 #../../meshes/boltzmannSquareCylinderPML2D.msh
 #../../meshes/insVortex2D.msh
 
@@ -17,7 +28,7 @@ data/insUniform2D.h
 3
 
 [POLYNOMIAL DEGREE]
-4
+5
 
 [THREAD MODEL]
 CUDA
@@ -35,7 +46,7 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-0
+4
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
@@ -72,7 +83,7 @@ CUBATURE
 0
 
 [FINAL TIME]
-2.0
+200.0
 
 [CFL]
 0.25
