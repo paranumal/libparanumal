@@ -26,15 +26,21 @@ data/bnsUniform3D.h
 1.0
 
 [UBAR] # mean x-velocity
-1.0
+0.0
 
 [VBAR] # mean y-velocity
+0.0
+
+[WBAR] # mean z-velocity
 0.0
 
 [BODYFORCE-X] # constant global force on particles in x-direction
 0.0
 
 [BODYFORCE-Y] # constant global force on particles in y-direction
+0.0
+
+[BODYFORCE-Z] # constant global force on particles in z-direction
 0.0
 
 [ABSORBING LAYER]
@@ -50,9 +56,9 @@ CUDA
 0
 
 [TIME INTEGRATOR]
-LSERK4
+#LSERK4
 #MRSAAB
-#SARK 
+SARK 
 
 [VISCOSITY]
 0.005
@@ -82,7 +88,7 @@ LSERK4
 10
 
 [OUTPUT INTERVAL]
-.5
+.1
 
 [ABSOLUTE TOLERANCE]
 1E-5
