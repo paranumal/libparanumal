@@ -232,6 +232,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     EtoDT[e] = dtmax;
 
     for(int f=0;f<mesh->Nfaces;++f){
+      // not good for all element types (some have varying geofacs)
       dlong sid   = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
       dfloat invJ = mesh->sgeo[sid + IJID];
@@ -371,8 +372,23 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
         bns->q[id+3*mesh->Np] = q1bar*intfx*intfy/bns->sqrtRT;
         bns->q[id+4*mesh->Np] = q1bar*intfx*intfx/(sqrt(2.)*bns->sqrtRT);
         bns->q[id+5*mesh->Np] = q1bar*intfy*intfy/(sqrt(2.)*bns->sqrtRT);
-      }else{
+      }
+      if(bns->dim==3 && bns->elementType==QUADRILATERALS){
+        bns->q[id+0*mesh->Np] = q1bar*(2+exp(-40*((x-1)*(x-1) + y*y + z*z))); 
+        bns->q[id+1*mesh->Np] = 0;
+        bns->q[id+2*mesh->Np] = 0;
+        bns->q[id+3*mesh->Np] = 0;
 
+        bns->q[id+4*mesh->Np] = 0;
+        bns->q[id+5*mesh->Np] = 0;
+	bns->q[id+6*mesh->Np] = 0;
+
+        bns->q[id+7*mesh->Np] = 0;
+        bns->q[id+8*mesh->Np] = 0;
+	bns->q[id+9*mesh->Np] = 0;
+
+      }
+      else if(bns->dim==3){
         bns->q[id+0*mesh->Np] = q1bar; 
         bns->q[id+1*mesh->Np] = q1bar*intfx/bns->sqrtRT;
         bns->q[id+2*mesh->Np] = q1bar*intfy/bns->sqrtRT;
