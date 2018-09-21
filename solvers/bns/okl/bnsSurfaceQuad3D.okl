@@ -103,11 +103,11 @@ void flux(const dfloat nx,
 	    dfloat dq[p_Nfields], fluxq[p_Nfields];
 	    
 #pragma unroll p_Nfields
-	      for(int fld=0;fld<p_Nfields;++fld){
-		const dfloat qM = q[vidM+fld*p_Np];
-		dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
-		dq[fld] = qP-qM;
-	      }
+	    for(int fld=0;fld<p_Nfields;++fld){
+	      const dfloat qM = q[vidM+fld*p_Np];
+	      dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
+	      dq[fld] = qP-qM;
+	    }
 	    
 	    
 	    // D = nx*A + ny*B + nz*C
@@ -125,9 +125,9 @@ void flux(const dfloat nx,
 	    const dfloat sc = invJ*sJ*p_LIFT;
 	    
 #pragma unroll p_Nfields
-	      for(int fld=0;fld<p_Nfields;++fld){
-		rhsq[vidM+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
-	      }
+	    for(int fld=0;fld<p_Nfields;++fld){
+	      rhsq[vidM+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
+	    }
 	  }
 	}
       }
