@@ -159,9 +159,23 @@ void bnsRun(bns_t *bns, setupAide &options){
       if(options.compareArgs("TIME INTEGRATOR","LSERK")){
         occaTimerTic(mesh->device, "LSERK");  
         bnsLSERKStep(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
-        occaTimerToc(mesh->device, "LSERK");  
+        occaTimerToc(mesh->device, "LSERK");
+
+        bns->o_q.copyTo(bns->q);
+	for(int fld=0;fld<bns->Nfields;++fld){
+	  dfloat maxq = -1e9, minq = 1e9;
+	  for(int e=0;e<mesh->Nelements;++e){
+	    for(int n=0;n<mesh->Np;++n){
+	      hlong id = e*mesh->Np*mesh->Nfields + n;
+	      maxq = mymax(maxq, bns->q[id + fld*mesh->Np]);
+	      minq = mymin(minq, bns->q[id + fld*mesh->Np]);
+	    }
+	  }
+	  printf("fld %d in [%g,%g]\n", fld, minq, maxq);
+	}
       }
 
+      
       /*
 
       if(options.compareArgs("TIME INTEGRATOR","SARK")){
