@@ -1,0 +1,1055 @@
+// ref0 starting kernel for optimization
+// Do not use const, restrict, multiple element in a block
+// Read vector from global without @shared but save to shared after interpolation
+@kernel void insSubCycleCubatureVolumeTri2D_v0(dlong Nelements,
+                                              dfloat * vgeo,
+                                              dfloat * cubvgeo,
+                                              dfloat * cubDmatrices,
+                                              dfloat * cubInterpT,
+                                              dfloat * cubProjectT,
+                                              dlong    offset,  
+                                              dfloat * U,
+                                              dfloat * Ud,
+                                              dfloat * cU,
+                                              dfloat * cUd,
+                                              dfloat * rhsU){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){  // for all elements
+
+    @shared dfloat s_cF11[p_cubNp];
+    @shared dfloat s_cF12[p_cubNp];
+    @shared dfloat s_cF21[p_cubNp];
+    @shared dfloat s_cF22[p_cubNp];
+  
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+      if(e<Nelements && n<p_cubNp){
+
+        dfloat cU = 0.f,  cV = 0.f;
+        dfloat cUd = 0.f, cVd = 0.f;
+    
+        for(int i=0;i<p_Np;++i){
+          dfloat cIni = cubInterpT[n+i*p_cubNp];
+          int  id   = e*p_Np + i;  // global id  
+          cU  += cIni*U[id + 0*offset];
+          cV  += cIni*U[id + 1*offset];
+          cUd += cIni*Ud[id + 0*offset];
+          cVd += cIni*Ud[id + 1*offset];       
+        }
+        //
+        s_cF11[n] = cU*cUd;
+        s_cF12[n] = cV*cUd;
+        s_cF21[n] = cU*cVd;
+        s_cF22[n] = cV*cVd;
+      }
+    }
+
+    // Make sure all node data is loaded into shared
+    @barrier("local");
+
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     
+
+      if(e<Nelements && n<p_Np){    
+        // prefetch geometric factors (constant on triangle)
+        dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+        dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+        dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+        dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+       
+        // compute 'r' and 's' derivatives of (q_m) at node n
+        dfloat df11dr = 0.f, df11ds = 0.f; 
+        dfloat df12dr = 0.f, df12ds = 0.f; 
+        dfloat df21dr = 0.f, df21ds = 0.f; 
+        dfloat df22dr = 0.f, df22ds = 0.f; 
+
+
+        for(int i=0;i<p_cubNp;++i){
+          dfloat cDrWni = cubDmatrices[n+i*p_Np + 0*p_cubNp*p_Np];
+          dfloat cDsWni = cubDmatrices[n+i*p_Np + 1*p_cubNp*p_Np];
+          // Fetch to shared, used twice
+          dfloat cF11 = s_cF11[i];  // makew them global
+          dfloat cF12 = s_cF12[i];
+          dfloat cF21 = s_cF21[i];
+          dfloat cF22 = s_cF22[i];
+
+          df11dr += cDrWni*cF11;
+          df11ds += cDsWni*cF11;
+
+          df12dr += cDrWni*cF12;
+          df12ds += cDsWni*cF12;
+
+          df21dr += cDrWni*cF21;
+          df21ds += cDsWni*cF21;
+
+          df22dr += cDrWni*cF22;
+          df22ds += cDsWni*cF22;
+        }
+
+        dfloat rhsu = drdx*df11dr + dsdx*df11ds + drdy*df12dr + dsdy*df12ds;
+        dfloat rhsv = drdx*df21dr + dsdx*df21ds + drdy*df22dr + dsdy*df22ds;
+
+        dlong id = e*p_Np+n;
+
+        rhsU[id + 0*offset]   = -rhsu; // note  change in sign
+        rhsU[id + 1*offset]   = -rhsv;     
+      }
+    } 
+  }
+}
+
+
+
+
+
+// Add shared from global read
+@kernel void insSubCycleCubatureVolumeTri2D_v1(const dlong Nelements,
+                                              @restrict const dfloat * vgeo,
+                                              @restrict const dfloat * cubvgeo,
+                                              @restrict const dfloat * cubDmatrices,
+                                              @restrict const dfloat * cubInterpT,
+                                              @restrict const dfloat * cubProjectT,
+                                              const dlong    offset, 
+                                              @restrict const dfloat *  U,
+                                              @restrict const dfloat *  Ud,
+                                              @restrict const dfloat *  cU,
+                                              @restrict const dfloat *  cUd,
+                                              @restrict       dfloat *  rhsU){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){  // for all elements
+
+    @shared dfloat s_U[p_Np];
+    @shared dfloat s_V[p_Np];
+    @shared dfloat s_Ud[p_Np];
+    @shared dfloat s_Vd[p_Np];
+
+    @shared dfloat s_cF11[p_cubNp];
+    @shared dfloat s_cF12[p_cubNp];
+    @shared dfloat s_cF21[p_cubNp];
+    @shared dfloat s_cF22[p_cubNp];
+
+
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+      if(e<Nelements && n<p_Np){ 
+        dlong id = e*p_Np+n;
+        // prefetch geometric factors (constant on triangle)
+        dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+        dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+        dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+        dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+        //           
+        dfloat Un = U[id + 0*offset];
+        dfloat Vn = U[id + 1*offset];
+            
+        s_Ud[n] = Ud[id + 0*offset];
+        s_Vd[n] = Ud[id + 1*offset];
+            
+        s_U[n] = drdx*Un + drdy*Vn; // rotate velocity 
+        s_V[n] = dsdx*Un + dsdy*Vn; // 
+
+      }
+    }
+
+    @barrier("local");
+  
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+      if(e<Nelements && n<p_cubNp){
+        dfloat cU = 0.f,  cV = 0.f;
+        dfloat cUd = 0.f, cVd = 0.f;        
+        for(int i=0;i<p_Np;++i){
+          dfloat cIni = cubInterpT[n+i*p_cubNp];
+          cU  += cIni*s_U[i];
+          cV  += cIni*s_V[i];
+          cUd += cIni*s_Ud[i];
+          cVd += cIni*s_Vd[i];        
+        }
+        //
+        s_cF11[n] = cU*cUd;
+        s_cF12[n] = cV*cUd;
+        s_cF21[n] = cU*cVd;
+        s_cF22[n] = cV*cVd;
+      }
+    }
+
+    // Make sure all node data is loaded into shared
+    @barrier("local");
+
+
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     
+
+      if(e<Nelements && n<p_Np){    
+       
+        dfloat fluxu = 0.f, fluxv = 0.f; 
+
+        
+        for(int i=0;i<p_cubNp;++i){
+          dfloat cDrWni = cubDmatrices[n+i*p_Np+0*p_cubNp*p_Np];
+          dfloat cDsWni = cubDmatrices[n+i*p_Np+1*p_cubNp*p_Np];
+          // Fetch to shared, used twice
+          dfloat cF11 = s_cF11[i];
+          dfloat cF12 = s_cF12[i];
+          dfloat cF21 = s_cF21[i];
+          dfloat cF22 = s_cF22[i];
+
+          fluxu += cDrWni*cF11 + cDsWni*cF12;          
+          fluxv += cDrWni*cF21 + cDsWni*cF22;
+        }
+
+        dlong id = e*p_Np+n;
+
+        rhsU[id + 0*offset]   = -fluxu; // note  change in sign
+        rhsU[id + 1*offset]   = -fluxv;      
+      }
+    }
+
+  }
+}
+
+
+// Add shared from global read
+@kernel void insSubCycleCubatureVolumeTri2D_v2(const dlong Nelements,
+                                              @restrict const dfloat * vgeo,
+                                              @restrict const dfloat * cubvgeo,
+                                              @restrict const dfloat * cubDmatrices,
+                                              @restrict const dfloat * cubInterpT,
+                                              @restrict const dfloat * cubProjectT,
+                                              const dlong    offset, 
+                                              @restrict const dfloat *  U,
+                                              @restrict const dfloat *  Ud,
+                                              @restrict const dfloat *  cU,
+                                              @restrict const dfloat *  cUd,
+                                              @restrict       dfloat *  rhsU){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){  // for all elements
+
+    // Hold Flux Vector on Shared, use symmetry f21 = f12
+    @shared dfloat s_U[p_Np];
+    @shared dfloat s_V[p_Np];
+    @shared dfloat s_Ud[p_Np];
+    @shared dfloat s_Vd[p_Np];
+
+    @shared dfloat s_cF11[p_cubNp];
+    @shared dfloat s_cF12[p_cubNp];
+    @shared dfloat s_cF21[p_cubNp];
+    @shared dfloat s_cF22[p_cubNp];
+
+
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+      if(e<Nelements && n<p_Np){ 
+        dlong id = e*p_Np+n;
+          
+        // prefetch geometric factors (constant on triangle)
+        const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+        const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+        const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+        const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+          
+        const dfloat Un = U[id + 0*offset];
+        const dfloat Vn = U[id + 1*offset];
+          
+        s_Ud[n] = Ud[id + 0*offset];
+        s_Vd[n] = Ud[id + 1*offset];
+          
+        s_U[n] = drdx*Un + drdy*Vn; // rotate velocity 
+        s_V[n] = dsdx*Un + dsdy*Vn; // 
+
+      }
+    }
+
+    @barrier("local");
+  
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+      if(e<Nelements && n<p_cubNp){
+
+        dfloat cU = 0.f,  cV = 0.f;
+        dfloat cUd = 0.f, cVd = 0.f;
+           
+        #pragma unroll p_Np
+        for(int i=0;i<p_Np;++i){
+           dfloat cIni = cubInterpT[n+i*p_cubNp];
+           cU  += cIni*s_U[i];
+           cV  += cIni*s_V[i];
+           cUd += cIni*s_Ud[i];
+           cVd += cIni*s_Vd[i];        
+         }
+        //
+        s_cF11[n] = cU*cUd;
+        s_cF12[n] = cV*cUd;
+        s_cF21[n] = cU*cVd;
+        s_cF22[n] = cV*cVd;
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+
+    for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     
+
+      if(e<Nelements && n<p_Np){    
+       
+        dfloat fluxu = 0.f, fluxv = 0.f; 
+
+        #pragma unroll p_cubNp
+         for(int i=0;i<p_cubNp;++i){
+          const dfloat cDrWni = cubDmatrices[n+i*p_Np+0*p_cubNp*p_Np];
+          const dfloat cDsWni = cubDmatrices[n+i*p_Np+1*p_cubNp*p_Np];
+           // Fetch to @shared, used twice
+           const dfloat cF11 = s_cF11[i];
+           const dfloat cF12 = s_cF12[i];
+           const dfloat cF21 = s_cF21[i];
+           const dfloat cF22 = s_cF22[i];
+
+           fluxu += cDrWni*cF11 + cDsWni*cF12;     
+           fluxv += cDrWni*cF21 + cDsWni*cF22;
+         }
+
+        const dlong id = e*p_Np+n;
+
+        rhsU[id + 0*offset]   = -fluxu; // note  change in sign
+        rhsU[id + 1*offset]   = -fluxv;      
+      }
+    }
+
+  }
+}
+
+
+// // Optimized sizes for kernel 3
+#if p_N==1
+#define p_cubNblockV 11
+#endif
+
+#if p_N==2
+#define p_cubNblockV 3
+#endif
+
+#if p_N==3
+#define p_cubNblockV 2
+#endif
+
+#if p_N==4
+#define p_cubNblockV 5
+#endif
+
+#if p_N==5
+#define p_cubNblockV 4
+#endif
+
+#if p_N==6
+#define p_cubNblockV 1
+#endif
+
+#if p_N==7
+#define p_cubNblockV 5
+#endif
+
+#if p_N==8
+#define p_cubNblockV 3
+#endif
+
+#if p_N==9
+#define p_cubNblockV 1
+#endif
+
+#if p_N==10
+#define p_cubNblockV 1
+#endif
+
+
+
+
+
+
+// Add shared from global read
+@kernel void insSubCycleCubatureVolumeTri2D_v3(const dlong Nelements,
+                                              @restrict const dfloat * vgeo,
+                                              @restrict const dfloat * cubvgeo,
+                                              @restrict const dfloat * cubDmatrices,
+                                              @restrict const dfloat * cubInterpT,
+                                              @restrict const dfloat * cubProjectT,
+                                              const dlong    offset, 
+                                              @restrict const dfloat *  U,
+                                              @restrict const dfloat *  Ud,
+                                              @restrict const dfloat *  cU,
+                                              @restrict const dfloat *  cUd,
+                                              @restrict       dfloat *  rhsU){
+
+
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
+
+    // Hold Flux Vector on @Shared, use symmetry f21 = f12
+    @shared dfloat s_U[p_cubNblockV][p_Np];
+    @shared dfloat s_V[p_cubNblockV][p_Np];
+    @shared dfloat s_Ud[p_cubNblockV][p_Np];
+    @shared dfloat s_Vd[p_cubNblockV][p_Np];
+
+    @shared dfloat s_cF11[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF12[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF21[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF22[p_cubNblockV][p_cubNp];
+    //
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block      
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+        int e = eo+es; // element in block
+        if(e<Nelements && n<p_Np){ 
+          const dlong id = e*p_Np+n;
+
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+          const dfloat Un = U[id + 0*offset];
+          const dfloat Vn = U[id + 1*offset];
+
+          s_Ud[es][n] = Ud[id + 0*offset];
+          s_Vd[es][n] = Ud[id + 1*offset];
+
+          s_U[es][n] = drdx*Un + drdy*Vn; // rotate velocity 
+          s_V[es][n] = dsdx*Un + dsdy*Vn; // 
+        }
+        else{
+          s_U[es][n]  = 0.f;
+          s_V[es][n]  = 0.f;
+          s_Ud[es][n] = 0.f;
+          s_Vd[es][n] = 0.f;
+        }
+      }
+    }
+   
+    @barrier("local");
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+        dlong e = eo+es; // element in block
+        if(e<Nelements && n<p_cubNp){
+
+        dfloat cU = 0.f,  cV = 0.f;
+        dfloat cUd = 0.f, cVd = 0.f;
+
+        #pragma unroll p_Np
+        for(int i=0;i<p_Np;++i){
+          dfloat cIni = cubInterpT[n+i*p_cubNp];
+          cU  += cIni*s_U[es][i];
+          cV  += cIni*s_V[es][i];
+          cUd += cIni*s_Ud[es][i];
+          cVd += cIni*s_Vd[es][i];        
+        }
+        //
+        s_cF11[es][n] = cU*cUd;
+        s_cF12[es][n] = cV*cUd;
+        s_cF21[es][n] = cU*cVd;
+        s_cF22[es][n] = cV*cVd;
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     
+        int e = eo+es;
+
+        if(e<Nelements && n<p_Np){    
+
+        dfloat fluxu = 0.f, fluxv = 0.f; 
+
+        #pragma unroll p_cubNp
+        for(int i=0;i<p_cubNp;++i){
+          const dfloat cDrWni = cubDmatrices[n+i*p_Np + 0*p_cubNp*p_Np];
+          const dfloat cDsWni = cubDmatrices[n+i*p_Np + 1*p_cubNp*p_Np];
+          // Fetch to @shared, used twice
+          const dfloat cF11 = s_cF11[es][i];
+          const dfloat cF12 = s_cF12[es][i];
+          const dfloat cF21 = s_cF21[es][i];
+          const dfloat cF22 = s_cF22[es][i];
+
+          fluxu += cDrWni*cF11 + cDsWni*cF12;
+
+          fluxv += cDrWni*cF21 + cDsWni*cF22;
+        }
+
+        const dlong id = e*p_Np+n;
+
+        rhsU[id + 0*offset]   = -fluxu; // note  change in sign
+        rhsU[id + 1*offset]   = -fluxv;      
+      }
+      }
+    }
+
+  }
+
+}
+
+
+// // Optimized sizes for kernel 4-5
+#if p_N==1
+#define p_cNbV 11
+#define p_cNmt 2
+#endif
+
+#if p_N==2
+#define p_cNbV 8
+#define p_cNmt 2
+#endif
+
+#if p_N==3
+#define p_cNbV 2
+#define p_cNmt 2
+#endif
+
+#if p_N==4
+#define p_cNbV 5
+#define p_cNmt 2
+#endif
+
+#if p_N==5
+#define p_cNbV 1
+#define p_cNmt 2
+#endif
+
+#if p_N==6
+#define p_cNbV 5
+#define p_cNmt 2
+#endif
+
+#if p_N==7
+#define p_cNbV 1
+#define p_cNmt 3
+#endif
+
+#if p_N==8
+#define p_cNbV 3
+#define p_cNmt 2
+#endif
+
+#if p_N==9
+#define p_cNbV 2
+#define p_cNmt 2
+#endif
+
+#if p_N==10
+#define p_cNbV 2
+#define p_cNmt 1
+#endif
+
+
+// Add shared from global read
+@kernel void insSubCycleCubatureVolumeTri2D_v4(const dlong Nelements,
+                                              @restrict const dfloat * vgeo,
+                                              @restrict const dfloat * cubvgeo,
+                                              @restrict const dfloat * cubDmatrices,
+                                              @restrict const dfloat * cubInterpT,
+                                              @restrict const dfloat * cubProjectT,
+                                              const dlong    offset, 
+                                              @restrict const dfloat *  U,
+                                              @restrict const dfloat *  Ud,
+                                              @restrict const dfloat *  cU,
+                                              @restrict const dfloat *  cUd,
+                                              @restrict       dfloat *  rhsU){
+
+  for(dlong eo=0;eo<Nelements;eo+=(p_cNbV*p_cNmt);@outer(0)){  // for all elements
+    
+    // Hold Flux Vector on @Shared, use symmetry f21 = f12
+    @shared dfloat  s_U[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat  s_V[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat s_Ud[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat s_Vd[p_cNmt][p_cNbV][p_Np];
+    
+    @shared dfloat s_cF11[p_cNmt][p_cNbV][p_cubNp];
+    @shared dfloat s_cF12[p_cNmt][p_cNbV][p_cubNp];
+    @shared dfloat s_cF21[p_cNmt][p_cNbV][p_cubNp];
+    @shared dfloat s_cF22[p_cNmt][p_cNbV][p_cubNp];
+    
+    //
+    for(int es=0;es<p_cNbV;++es;@inner(1)){// for all elements in block      
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+  
+      #pragma unroll p_cNmt
+      for(int em=0;em<p_cNmt;++em){
+        const dlong e = eo + es*p_cNmt + em;
+        const dlong id = e*p_Np + n;
+
+        if(e<Nelements && n<p_Np){
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+          const dfloat Un = U[id + 0*offset];
+          const dfloat Vn = U[id + 1*offset];
+
+          s_Ud[em][es][n] = Ud[id + 0*offset];
+          s_Vd[em][es][n] = Ud[id + 1*offset];
+
+          s_U[em][es][n] = drdx*Un + drdy*Vn; // rotate velocity 
+          s_V[em][es][n] = dsdx*Un + dsdy*Vn; // 
+          }
+        }
+      }
+    }
+    
+    @barrier("local");
+    
+    for(int es=0;es<p_cNbV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+
+      dfloat cU[p_cNmt], cV[p_cNmt], cUd[p_cNmt], cVd[p_cNmt];
+
+      #pragma unroll p_cNmt
+      for(int em=0;em<p_cNmt;++em){
+        cU[em] = 0.f;
+        cV[em] = 0.f;
+        cUd[em] = 0.f; 
+        cVd[em] = 0.f;
+      }
+
+      #pragma unroll p_Np
+      for(int i=0;i<p_Np;++i){
+        const dfloat cIni = cubInterpT[n+i*p_cubNp];
+        #pragma unroll p_cNmt
+        for(int em=0;em<p_cNmt;++em){
+          cU[em]  += cIni*s_U[em][es][i];
+          cV[em]  += cIni*s_V[em][es][i];
+          cUd[em] += cIni*s_Ud[em][es][i];
+          cVd[em] += cIni*s_Vd[em][es][i];        
+        }
+      }
+
+      //
+      #pragma unroll p_cNmt
+      for(int em=0;em<p_cNmt;++em){
+        s_cF11[em][es][n] = cU[em]*cUd[em];
+        s_cF12[em][es][n] = cV[em]*cUd[em];
+        s_cF21[em][es][n] = cU[em]*cVd[em];
+        s_cF22[em][es][n] = cV[em]*cVd[em];
+      }
+    }
+  }
+    
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+    
+    for(int es=0;es<p_cNbV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     
+  
+        if(n<p_Np){   
+          dfloat fluxU[p_cNmt], fluxV[p_cNmt];
+
+          #pragma unroll p_cNmt
+          for(int em=0;em<p_cNmt;++em){
+             fluxU[em] = 0;
+             fluxV[em] = 0;
+           }
+          
+           #pragma unroll p_cubNp
+             for(int i=0;i<p_cubNp;++i){
+               const dfloat cDrWni = cubDmatrices[n+i*p_Np + 0*p_cubNp*p_Np];
+               const dfloat cDsWni = cubDmatrices[n+i*p_Np + 1*p_cubNp*p_Np];
+                
+               #pragma unroll p_cNmt
+               for(int em=0;em<p_cNmt;++em){  
+                const dfloat cF11 = s_cF11[em][es][i];
+                const dfloat cF12 = s_cF12[em][es][i];
+                const dfloat cF21 = s_cF21[em][es][i];
+                const dfloat cF22 = s_cF22[em][es][i];
+
+                fluxU[em] += cDrWni*cF11;
+                fluxU[em] += cDsWni*cF12;
+                fluxV[em] += cDrWni*cF21;
+                fluxV[em] += cDsWni*cF22;
+              }
+           }
+
+          #pragma unroll p_cNmt
+          for(int em=0;em<p_cNmt;++em){
+            dlong e = eo+es*p_cNmt+em;
+            if(e<Nelements){
+              const dlong id = e*p_Np+n;
+              rhsU[id+0*offset]   = -fluxU[em]; // note  change in sign
+              rhsU[id+1*offset]   = -fluxV[em];      
+            }
+          }
+        }
+      }
+    } 
+  }
+}
+
+
+
+#define p_cubNpad 0 // Npad did not work use 0
+
+// Add shared from global read
+@kernel void insSubCycleCubatureVolumeTri2D_v5(const dlong Nelements,
+                                              @restrict const dfloat * vgeo,
+                                              @restrict const dfloat * cubvgeo,
+                                              @restrict const dfloat2 * cubDmatrices,
+                                              @restrict const dfloat * cubInterpT,
+                                              @restrict const dfloat * cubProjectT,
+                                              const dlong    offset, 
+                                              @restrict const dfloat *  U,
+                                              @restrict const dfloat *  Ud,
+                                              @restrict const dfloat *  cU,
+                                              @restrict const dfloat *  cUd,
+                                              @restrict       dfloat *  rhsU){
+
+  for(dlong eo=0;eo<Nelements;eo+=(p_cNbV*p_cNmt);@outer(0)){  // for all elements
+    
+    // Hold Flux Vector on @Shared, use symmetry f21 = f12
+    @shared dfloat  s_U[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat  s_V[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat s_Ud[p_cNmt][p_cNbV][p_Np];
+    @shared dfloat s_Vd[p_cNmt][p_cNbV][p_Np];
+    
+    @shared dfloat s_cF11[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
+    @shared dfloat s_cF12[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
+    @shared dfloat s_cF21[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
+    @shared dfloat s_cF22[p_cNmt][p_cNbV][p_cubNp+p_cubNpad];
+    
+    //
+    for(int es=0;es<p_cNbV;++es;@inner(1)){// for all elements in block      
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+  
+        #pragma unroll p_cNmt
+        for(int em=0;em<p_cNmt;++em){
+          const dlong e = eo + es*p_cNmt + em;
+          const dlong id = e*p_Np + n;
+
+          if(e<Nelements && n<p_Np){
+
+            // prefetch geometric factors (constant on triangle)
+            const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+            const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+            const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+            const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+            const dfloat Un = U[id + 0*offset];
+            const dfloat Vn = U[id + 1*offset];
+
+            s_Ud[em][es][n] = Ud[id + 0*offset];
+            s_Vd[em][es][n] = Ud[id + 1*offset];
+
+            s_U[em][es][n] = drdx*Un + drdy*Vn; // rotate velocity 
+            s_V[em][es][n] = dsdx*Un + dsdy*Vn; // 
+          }
+          else{
+            s_U[em][es][n] = 0;
+            s_V[em][es][n] = 0;
+            s_Ud[em][es][n] = 0;
+            s_Vd[em][es][n] = 0;
+          }
+        }
+      }
+    }
+    
+    @barrier("local");
+    
+    for(int es=0;es<p_cNbV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     // for all nodes in this element
+
+        dfloat cU[p_cNmt], cV[p_cNmt], cUd[p_cNmt], cVd[p_cNmt];
+
+        #pragma unroll p_cNmt
+        for(int em=0;em<p_cNmt;++em){
+          cU[em] = 0.f;
+          cV[em] = 0.f;
+          cUd[em] = 0.f; 
+          cVd[em] = 0.f;
+        }
+
+        #pragma unroll p_Np
+        for(int i=0;i<p_Np;++i){
+          const dfloat cIni = cubInterpT[n+i*p_cubNp];
+          #pragma unroll p_cNmt
+          for(int em=0;em<p_cNmt;++em){
+            cU[em]  += cIni*s_U[em][es][i];
+            cV[em]  += cIni*s_V[em][es][i];
+            cUd[em] += cIni*s_Ud[em][es][i];
+            cVd[em] += cIni*s_Vd[em][es][i];        
+          }
+        }
+
+        //
+        #pragma unroll p_cNmt
+        for(int em=0;em<p_cNmt;++em){
+          s_cF11[em][es][n] = cU[em]*cUd[em];
+          s_cF12[em][es][n] = cV[em]*cUd[em];
+          s_cF21[em][es][n] = cU[em]*cVd[em];
+          s_cF22[em][es][n] = cV[em]*cVd[em];
+        }
+      }
+    }
+    
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+    
+    for(int es=0;es<p_cNbV;++es;@inner(1)){
+      for(int n=0;n<p_maxNodesVolumeCub;++n;@inner(0)){     
+  
+      if(n<p_Np){   
+        dfloat fluxU[p_cNmt], fluxV[p_cNmt];
+
+        #pragma unroll p_cNmt
+        for(int em=0;em<p_cNmt;++em){
+          fluxU[em] = 0;
+          fluxV[em] = 0;
+        }
+
+        #pragma unroll p_cubNp
+        for(int i=0;i<p_cubNp;++i){
+          const dfloat2 cDrsWni = cubDmatrices[n+i*p_Np];
+
+          #pragma unroll p_cNmt
+          for(int em=0;em<p_cNmt;++em){  
+          const dfloat cF11 = s_cF11[em][es][i];
+          const dfloat cF12 = s_cF12[em][es][i];
+          const dfloat cF21 = s_cF21[em][es][i];
+          const dfloat cF22 = s_cF22[em][es][i];
+
+          fluxU[em] += cDrsWni.x*cF11;
+          fluxU[em] += cDrsWni.y*cF12;
+          fluxV[em] += cDrsWni.x*cF21;
+          fluxV[em] += cDrsWni.y*cF22;
+          }
+        }
+
+        #pragma unroll p_cNmt
+        for(int em=0;em<p_cNmt;++em){
+          dlong e = eo+es*p_cNmt+em;
+          if(e<Nelements){
+            const dlong id = e*p_Np+n;
+
+            rhsU[id+ 0*offset]   = -fluxU[em]; // note  change in sign
+            rhsU[id+ 1*offset]   = -fluxV[em];      
+          }
+        }
+      }
+    }
+  }
+}
+}
+
+
+// // Optimized sizes for kernel 6, currently best one !!!!
+#if p_N==1
+#define p_NbV 20
+#define p_Nmt 1
+#endif
+
+#if p_N==2
+#define p_NbV 5
+#define p_Nmt 2
+#endif
+
+#if p_N==3
+#define p_NbV 6
+#define p_Nmt 2
+#endif
+
+#if p_N==4
+#define p_NbV 2
+#define p_Nmt 2
+#endif
+
+#if p_N==5
+#define p_NbV 3
+#define p_Nmt 2
+#endif
+
+#if p_N==6
+#define p_NbV 6
+#define p_Nmt 3
+#endif
+
+#if p_N==7
+#define p_NbV 3
+#define p_Nmt 3
+#endif
+
+#if p_N==8
+#define p_NbV 5
+#define p_Nmt 2
+#endif
+
+#if p_N==9
+#define p_NbV 3
+#define p_Nmt 2
+#endif
+
+#if p_N==10
+#define p_NbV 3
+#define p_Nmt 2
+#endif
+
+
+
+
+// Add shared from global read
+@kernel void insSubCycleCubatureVolumeTri2D_v6(const dlong Nelements,
+                                              @restrict const dfloat * vgeo,
+                                              @restrict const dfloat * cubvgeo,
+                                              @restrict const dfloat * cubDmatrices,
+                                              @restrict const dfloat * cubInterpT,
+                                              @restrict const dfloat * cubProjectT,
+                                              const dlong    offset, 
+                                              @restrict const dfloat *  U,
+                                              @restrict const dfloat *  Ud,
+                                              @restrict const dfloat *  cU,
+                                              @restrict const dfloat *  cUd,
+                                              @restrict       dfloat *  rhsU){
+
+  for(dlong eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);@outer(0)){  // for all elements
+    
+    // Hold Flux Vector on @Shared, use symmetry f21 = f12
+    @shared dfloat  s_U[p_Nmt][p_NbV][p_Np];
+    @shared dfloat  s_V[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_Ud[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_Vd[p_Nmt][p_NbV][p_Np];
+    
+    @shared dfloat s_cF11[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_cF12[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_cF21[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_cF22[p_Nmt][p_NbV][p_Np];
+    
+    //
+    for(int es=0;es<p_NbV;++es;@inner(1)){// for all elements in block      
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+  
+        #pragma unroll p_Nmt
+        for(int em=0;em<p_Nmt;++em){
+          const dlong e = eo + es*p_Nmt + em;
+          const dlong id = e*p_Np + n;
+
+          if(e<Nelements){
+
+          // prefetch geometric factors (constant on triangle)
+            const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+            const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+            const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+            const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+            const dfloat Un = U[id+0*offset];
+            const dfloat Vn = U[id+1*offset];
+
+            s_Ud[em][es][n] = Ud[id+0*offset];
+            s_Vd[em][es][n] = Ud[id+1*offset];
+
+            s_U[em][es][n] = drdx*Un + drdy*Vn; // rotate velocity 
+            s_V[em][es][n] = dsdx*Un + dsdy*Vn; // 
+            }
+            else{
+            s_U[em][es][n] = 0;
+            s_V[em][es][n] = 0;
+            s_Ud[em][es][n] = 0;
+            s_Vd[em][es][n] = 0;
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+    
+    @exclusive dfloat fluxU[p_Nmt], fluxV[p_Nmt];
+      
+    for(int es=0;es<p_NbV;++es;@inner(1)){// for all elements in block
+      for(int ns=0;ns<p_Np;++ns;@inner(0)){     // for all nodes in this element
+        #pragma unroll p_Nmt
+        for(int em=0;em<p_Nmt;++em){
+          fluxU[em] = 0;
+          fluxV[em] = 0;
+        }
+      }
+    }
+
+    #pragma unroll p_cubNp
+     for(int io=0;io<p_cubNp;io+=p_Np){ // block the cubature nodes
+
+     @barrier("local");
+
+    for(int es=0;es<p_NbV;++es;@inner(1)){// for all elements in block
+      for(int ns=0;ns<p_Np;++ns;@inner(0)){     // for all nodes in this element
+        const int n = ns+io; // choose cubature node to interpolate to
+        if(n<p_cubNp){
+          // compute Np of the cubNp cubature values
+          dfloat cU[p_Nmt], cV[p_Nmt], cUd[p_Nmt], cVd[p_Nmt];
+
+          #pragma unroll p_Nmt
+          for(int em=0;em<p_Nmt;++em){
+            cU[em] = 0.f;
+            cV[em] = 0.f;
+            cUd[em] = 0.f; 
+            cVd[em] = 0.f;
+          }
+        
+          #pragma unroll p_Np
+          for(int i=0;i<p_Np;++i){
+            const dfloat cIni = cubInterpT[n+i*p_cubNp];
+            #pragma unroll p_Nmt
+            for(int em=0;em<p_Nmt;++em){
+              cU[em]  += cIni*s_U[em][es][i];
+              cV[em]  += cIni*s_V[em][es][i];
+              cUd[em] += cIni*s_Ud[em][es][i];
+              cVd[em] += cIni*s_Vd[em][es][i];        
+            }
+          }
+        
+          // share up to the Np cubature vals computed in this block
+          #pragma unroll p_Nmt
+          for(int em=0;em<p_Nmt;++em){
+            s_cF11[em][es][ns] = cU[em]*cUd[em];
+            s_cF12[em][es][ns] = cV[em]*cUd[em];
+            s_cF21[em][es][ns] = cU[em]*cVd[em];
+            s_cF22[em][es][ns] = cV[em]*cVd[em];
+          }
+        }
+      }
+    }
+    
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NbV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){      
+
+        #pragma unroll p_Np
+          for(int i=0;i<p_Np;++i){
+            if(i+io<p_cubNp){ // differentiate this sub block
+              const dfloat cDrWni = cubDmatrices[n+(i+io)*p_Np + 0*p_cubNp*p_Np];
+              const dfloat cDsWni = cubDmatrices[n+(i+io)*p_Np + 1*p_cubNp*p_Np];
+
+              #pragma unroll p_Nmt
+              for(int em=0;em<p_Nmt;++em){  
+                const dfloat cF11 = s_cF11[em][es][i];
+                const dfloat cF12 = s_cF12[em][es][i];
+                const dfloat cF21 = s_cF21[em][es][i];
+                const dfloat cF22 = s_cF22[em][es][i];
+
+                fluxU[em] += cDrWni*cF11;
+                fluxU[em] += cDsWni*cF12;
+                fluxV[em] += cDrWni*cF21;
+                fluxV[em] += cDsWni*cF22;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    for(int es=0;es<p_NbV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){          
+        #pragma unroll p_Nmt
+        for(int em=0;em<p_Nmt;++em){
+          dlong e = eo+es*p_Nmt+em;
+          if(e<Nelements){
+            const dlong id = e*p_Np+n;
+
+            rhsU[id+ 0*offset]   = -fluxU[em]; // note  change in sign
+            rhsU[id+ 1*offset]   = -fluxV[em];      
+          }
+        }
+      }
+    }
+  }
+}
