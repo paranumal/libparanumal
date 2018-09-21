@@ -87,21 +87,21 @@
 	    const dfloat dtdx = vgeo[gbase + p_Np*p_TXID];
 	    const dfloat dtdy = vgeo[gbase + p_Np*p_TYID];
 	    const dfloat dtdz = vgeo[gbase + p_Np*p_TZID];
-
+	    
 	    // compute 'r' and 's' derivatives of (q_m) at node n
 	    dfloat dqdr[p_Nfields], dqds[p_Nfields];
-
+	    
 #pragma unroll p_Nfields
 	    for(int fld=0;fld<p_Nfields;++fld){
 	      dqdr[fld] = 0;
 	      dqds[fld] = 0;
 	    }
-
+	    
 #pragma unroll p_Nq
 	    for(int m=0;m<p_Nq;++m){
 	      const dfloat Dim = s_D[i][m]; // could L1
 	      const dfloat Djm = s_D[j][m];
-
+	      
 	      // differentiate q components with respect to 'r'
 #pragma unroll p_Nfields
 	      for(int fld=0;fld<p_Nfields;++fld)
@@ -112,7 +112,7 @@
 	      for(int fld=0;fld<p_Nfields;++fld)
 		dqds[fld] += Djm*s_q[fld][es][m][i];
 	    }
-
+	    
 	    const dfloat q1  = s_q[0][es][j][i];
 	    const dfloat q2  = s_q[1][es][j][i];
 	    const dfloat q3  = s_q[2][es][j][i];
