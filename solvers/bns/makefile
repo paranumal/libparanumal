@@ -56,7 +56,7 @@ AOBJS    = \
 ./src/bnsReport.o \
 ./src/bnsError.o \
 ./src/bnsForces.o \
-./src/bnsLSERKStep.o \
+./src/bnsLSERKStepQuad3D.o \
 ./src/bnsSARKStep.o \
 ./src/bnsMRSAABStep.o \
 ./src/bnsIsoPlotVTU.o \

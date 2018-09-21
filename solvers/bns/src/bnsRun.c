@@ -161,17 +161,20 @@ void bnsRun(bns_t *bns, setupAide &options){
         bnsLSERKStep(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
         occaTimerToc(mesh->device, "LSERK");
 
-        bns->o_q.copyTo(bns->q);
-	for(int fld=0;fld<bns->Nfields;++fld){
-	  dfloat maxq = -1e9, minq = 1e9;
-	  for(int e=0;e<mesh->Nelements;++e){
-	    for(int n=0;n<mesh->Np;++n){
-	      hlong id = e*mesh->Np*mesh->Nfields + n;
-	      maxq = mymax(maxq, bns->q[id + fld*mesh->Np]);
-	      minq = mymin(minq, bns->q[id + fld*mesh->Np]);
+	if(!(tstep%100)){
+	  bns->o_q.copyTo(bns->q);
+	  for(int fld=0;fld<bns->Nfields;++fld){
+	    dfloat maxq = -1e9, minq = 1e9;
+	    for(int e=0;e<mesh->Nelements;++e){
+	      for(int n=0;n<mesh->Np;++n){
+		hlong id = e*mesh->Np*mesh->Nfields + n;
+		maxq = mymax(maxq, bns->q[id + fld*mesh->Np]);
+		minq = mymin(minq, bns->q[id + fld*mesh->Np]);
+	      }
 	    }
+	    if(fld==0)
+	      printf("fld %d in [%g,%g]\n", fld, minq, maxq);
 	  }
-	  printf("fld %d in [%g,%g]\n", fld, minq, maxq);
 	}
       }
 
