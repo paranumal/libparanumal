@@ -147,16 +147,27 @@
     for(int es=0;es<p_NblockV;++es;@inner(2)){   
       for(int j=0;j<p_cubNq;++j;@inner(1)){ 
         for(int i=0;i<p_cubNq;++i;@inner(0)){
+	  const dlong gid = e*p_cubNp*p_Nvgeo+ j*p_cubNq +i;
+	  const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
          
           const dfloat icubq1 = 1.f/r_q[0];
           // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
           // [ for LSERK the linear term is added below ]
-          s_q[es][0][j][i]  = p_tauInv*(r_q[1]*r_q[2]*icubq1);
-          s_q[es][1][j][i]  = p_tauInv*(r_q[1]*r_q[3]*icubq1);
-          s_q[es][2][j][i]  = p_tauInv*(r_q[2]*r_q[3]*icubq1);
-          s_q[es][3][j][i]  = p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-          s_q[es][4][j][i]  = p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1);
-          s_q[es][5][j][i]  = p_tauInv*(p_invsqrt2*r_q[3]*r_q[3]*icubq1);
+          s_q[es][0][j][i]  = J*p_tauInv*(r_q[1]*r_q[2]*icubq1);
+          s_q[es][1][j][i]  = J*p_tauInv*(r_q[1]*r_q[3]*icubq1);
+          s_q[es][2][j][i]  = J*p_tauInv*(r_q[2]*r_q[3]*icubq1);
+          s_q[es][3][j][i]  = J*p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
+          s_q[es][4][j][i]  = J*p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1);
+          s_q[es][5][j][i]  = J*p_tauInv*(p_invsqrt2*r_q[3]*r_q[3]*icubq1);
+
+	  if(!p_SEMI_ANALYTIC){
+	    s_q[es][0][j][i] -= J*p_tauInv*r_q[4];
+	    s_q[es][1][j][i] -= J*p_tauInv*r_q[5];
+	    s_q[es][2][j][i] -= J*p_tauInv*r_q[6];
+	    s_q[es][4][j][i] -= J*p_tauInv*r_q[7];
+	    s_q[es][5][j][i] -= J*p_tauInv*r_q[8];
+	    s_q[es][6][j][i] -= J*p_tauInv*r_q[9];
+	  }
         }
       }
     }
@@ -176,7 +187,7 @@
             for (int n=0;n<p_cubNq;n++) {
               const dfloat Pnj = s_cubProjectT[n][j];
               for(int fld=p_qNs; fld<p_Nfields; fld++){
-                r_q[fld] += Pnj*s_q[es][fld][n][i];
+                r_q[fld] += Pnj*s_q[es][fld-p_qNs][n][i];
               }
             }
           }

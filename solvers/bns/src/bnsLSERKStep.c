@@ -131,14 +131,17 @@ void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
     if(mesh->nonPmlNelements){
       occaTimerTic(mesh->device,"NonPmlVolumeKernel");
       bns->volumeKernel(mesh->nonPmlNelements,
-      mesh->o_nonPmlElementIds,
-      offset, 
-      shift,
-      fx, fy, fz,
-      mesh->o_vgeo,
-      mesh->o_Dmatrices,
-      bns->o_q,
-      bns->o_rhsq);
+			mesh->o_nonPmlElementIds,
+			offset, 
+			shift,
+			fx, fy, fz,
+			mesh->o_vgeo,
+			mesh->o_x,
+			mesh->o_y,
+			mesh->o_z,
+			mesh->o_Dmatrices,
+			bns->o_q,
+			bns->o_rhsq);
       occaTimerToc(mesh->device,"NonPmlVolumeKernel");
     }
     occaTimerToc(mesh->device, "VolumeKernel");    
