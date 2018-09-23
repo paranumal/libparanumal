@@ -39,6 +39,7 @@ int main(int argc, char **argv){
 
   // if argv > 2 then should load input data from argv
   setupAide options(argv[1]);
+
   
   if(options.compareArgs("SOLVER_TYPE", "BENCHMARK")){
 
@@ -76,6 +77,8 @@ int main(int argc, char **argv){
   int N, dim, elementType;
 
   options.getArgs("MESH FILE", fileName);
+
+  // for(int N=5; N<=6; N++){
   options.getArgs("POLYNOMIAL DEGREE", N);
   options.getArgs("ELEMENT TYPE", elementType);
   options.getArgs("MESH DIMENSION", dim);
@@ -105,6 +108,8 @@ int main(int argc, char **argv){
 
     if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
     if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF"))  insRunEXTBDF(ins);
+
+  // }
 
  }
 

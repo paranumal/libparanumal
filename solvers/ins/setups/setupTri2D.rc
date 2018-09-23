@@ -2,8 +2,8 @@
 1.0
 
 [SOLVER_TYPE]
-BENCHMARK
-#INS
+#BENCHMARK
+INS
 
 [BENCHMARK KERNEL]
 CUBATURE_VOLUME
@@ -15,14 +15,14 @@ CUBATURE_VOLUME
 5
 
 [DATA FILE]
-data/insUniform2D.h
-#data/insVortex2D.h
+#data/insUniform2D.h
+data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insKernelOptimizeTri2D.msh
+#../../meshes/insKernelOptimizeTri2D.msh
 #../../meshes/insSquareCylinder2D.msh
 #../../meshes/boltzmannSquareCylinderPML2D.msh
-#../../meshes/insVortex2D.msh
+../../meshes/insVortex2D_h2.msh
 
 [MESH DIMENSION]
 2
@@ -31,7 +31,7 @@ data/insUniform2D.h
 3
 
 [POLYNOMIAL DEGREE]
-5
+4
 
 [THREAD MODEL]
 CUDA
@@ -49,7 +49,7 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-4
+0
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
@@ -57,6 +57,7 @@ CUBATURE
 
 [VISCOSITY]
 0.01
+#0.01
 
 [MACH NUMBER]
 .2
@@ -72,7 +73,7 @@ CUBATURE
 
 #zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-10000
+1000
 
 # zero to ignore
 [TSTEPS FOR FORCE OUTPUT]
@@ -86,7 +87,7 @@ CUBATURE
 0
 
 [FINAL TIME]
-200.0
+0.5
 
 [CFL]
 0.25
@@ -184,7 +185,8 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRESSURE PRECONDITIONER]
-MULTIGRID
+FULLALMOND
+#MULTIGRID
 
 ########## MULTIGRID Options ##############
 

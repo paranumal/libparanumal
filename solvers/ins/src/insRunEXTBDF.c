@@ -220,12 +220,12 @@ void insRunEXTBDF(ins_t *ins){
 
 
 
-    int NiterStep = 5; 
+    int NiterStep = 1; 
  
 
     if((tstep+1)%NiterStep == 0){
       char fname[BUFSIZ];
-      sprintf(fname, "IterationNumbers_%d_%02d_v2.dat", mesh->N, ins->Nsubsteps);
+      sprintf(fname, "VortexIterationNumbers_AMG_%d_%d_%02d.dat", mesh->Nelements, mesh->N, ins->Nsubsteps);
       FILE *fp = fopen(fname,"a");
       fprintf(fp, "%.4f %d %d %d\n", time+ins->dt, ins->NiterU, ins->NiterV, ins->NiterP);
       fclose(fp);
@@ -281,7 +281,7 @@ void insRunEXTBDF(ins_t *ins){
   if(mesh->rank==0) occa::printTimer();
 
       char fname2[BUFSIZ];
-      sprintf(fname2, "SolverTime_v2.dat");
+      sprintf(fname2, "SolverTime.dat");
       FILE *fp2 = fopen(fname2,"a");
       fprintf(fp2, "%d %d %.4f %.4f %.4f %.4f %.4f %.4f\n",  mesh->N, ins->Nsubsteps, inst, advt, velt, pret, updt, rept); 
       fclose(fp2);

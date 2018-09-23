@@ -112,7 +112,7 @@ void insError(ins_t *ins, dfloat time){
           maxV = mymax(maxV, fabs(ins->U[id+1*offset]-vExact));
           maxP = mymax(maxP, fabs(ins->P[id]-pExact));
 
-          #if 1
+          #if 0
             ins->U[id+0*offset] -= uExact;
             ins->U[id+1*offset] -= vExact;
             ins->P[id] -= pExact;
