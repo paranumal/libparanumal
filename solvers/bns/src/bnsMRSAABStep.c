@@ -157,7 +157,7 @@ const dlong pmloffset = mesh->Np*mesh->pmlNelements*bns->Nfields;
 
     occaTimerToc(mesh->device, "VolumeKernel");   
 
-#if 0     
+#if 1     
     occaTimerTic(mesh->device, "RelaxationKernel");
     for (int l=0;l<lev;l++) {
       if (mesh->MRABNelements[l]){
@@ -221,7 +221,7 @@ const dlong pmloffset = mesh->Np*mesh->pmlNelements*bns->Nfields;
 #endif
 
 
-    
+
     if(mesh->totalHaloPairs>0){
 #if BNS_ASYNC 
         mesh->device.setStream(dataStream);

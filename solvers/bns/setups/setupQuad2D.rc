@@ -108,14 +108,14 @@ MRSAAB
 100
 
 [CFL]
-0.2
+0.1
 
 # Currently SARK and LSERK only
 [RESTART FROM FILE]
-1
+0
 
 [WRITE RESTART FILE]
-1
+0
 
 [RESTART FILE NAME]
 bnsRestart
