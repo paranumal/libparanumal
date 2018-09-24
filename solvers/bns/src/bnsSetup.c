@@ -381,11 +381,11 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
         bns->q[id+4*mesh->Np] = 0;
         bns->q[id+5*mesh->Np] = 0;
-	bns->q[id+6*mesh->Np] = 0;
+        bns->q[id+6*mesh->Np] = 0;
 
         bns->q[id+7*mesh->Np] = 0;
         bns->q[id+8*mesh->Np] = 0;
-	bns->q[id+9*mesh->Np] = 0;
+        bns->q[id+9*mesh->Np] = 0;
 
       }
       else if(bns->dim==3){
@@ -396,11 +396,11 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
         bns->q[id+4*mesh->Np] = q1bar*intfx*intfy/bns->sqrtRT;
         bns->q[id+5*mesh->Np] = q1bar*intfx*intfz/bns->sqrtRT;
-	bns->q[id+6*mesh->Np] = q1bar*intfy*intfz/bns->sqrtRT;
+        bns->q[id+6*mesh->Np] = q1bar*intfy*intfz/bns->sqrtRT;
 
         bns->q[id+7*mesh->Np] = q1bar*intfx*intfx/(sqrt(2.)*bns->sqrtRT);
         bns->q[id+8*mesh->Np] = q1bar*intfy*intfy/(sqrt(2.)*bns->sqrtRT);
-	bns->q[id+9*mesh->Np] = q1bar*intfz*intfz/(sqrt(2.)*bns->sqrtRT);
+        bns->q[id+9*mesh->Np] = q1bar*intfz*intfz/(sqrt(2.)*bns->sqrtRT);
 
       }
        
@@ -450,20 +450,32 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
   // Setup MRAB PML
   if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
-    printf("Preparing Pml for multirate rate\n");  
-    bnsMRABPmlSetup(bns, options);
 
-    mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+      printf("Preparing Pml for multirate rate\n"); 
+      bnsMRABPmlSetup(bns, options);
+   
+    // mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+    // mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+    mesh->o_MRABelementIds = new occa::memory[mesh->MRABNlevels];
+    mesh->o_MRABhaloIds    = new occa::memory[mesh->MRABNlevels];
     for (int lev=0;lev<mesh->MRABNlevels;lev++) {
-      if (mesh->MRABNelements[lev])
-        mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(dlong),mesh->MRABelementIds[lev]);
-      if (mesh->MRABNhaloElements[lev])
-        mesh->o_MRABhaloIds[lev] = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(dlong), mesh->MRABhaloIds[lev]);
+      printf(" lev : %d Total levels: %d and Nelements: %d Total Elements: %d \n", lev, mesh->MRABNlevels, mesh->MRABNelements[lev], mesh->Nelements);
+
+      if (mesh->MRABNelements[lev]){
+        // mesh->o_MRABelementIds[lev] = new occa::memory; 
+        mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(dlong),mesh->MRABelementIds[lev]); 
+      }
+      if (mesh->MRABNhaloElements[lev]){
+        // mesh->o_MRABhaloIds[lev]    = new occa::memory;
+        mesh->o_MRABhaloIds[lev]    = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(dlong), mesh->MRABhaloIds[lev]);
+      }
     }
   } else{
-    printf("Preparing Pml for single rate integrator\n");
-    bnsPmlSetup(bns, options); 
+
+    if(bns->pmlFlag){
+     printf("Preparing Pml for single rate integrator\n");
+      bnsPmlSetup(bns, options); 
+    }
 
     if (mesh->nonPmlNelements)
       mesh->o_nonPmlElementIds = mesh->device.malloc(mesh->nonPmlNelements*sizeof(dlong), mesh->nonPmlElementIds);
@@ -525,11 +537,11 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
       bns->isoGLvalues        = (dfloat **) calloc(bns->isoGNgroups,sizeof(dfloat*));
 
       for(int gr =0; gr<bns->isoGNgroups; gr++)
-	{
-	  int nlevels = (gr+1)*levelsInGroup > bns->isoNlevels ? (bns->isoNlevels%levelsInGroup) : levelsInGroup;  
-	  bns->isoGNlevels[gr] = nlevels;  
-	  printf("Isosurface Group %d has %d levels\n", gr, bns->isoGNlevels[gr]);
-	}
+  {
+    int nlevels = (gr+1)*levelsInGroup > bns->isoNlevels ? (bns->isoNlevels%levelsInGroup) : levelsInGroup;  
+    bns->isoGNlevels[gr] = nlevels;  
+    printf("Isosurface Group %d has %d levels\n", gr, bns->isoGNlevels[gr]);
+  }
 
       // Allocate memory for levels in each group
       for (int gr =0;gr<bns->isoGNgroups;gr++)
@@ -543,7 +555,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
           printf("%.4f\t", bns->isoGLvalues[gr][l]);
         }
         printf("\n");
-	sk += bns->isoGNlevels[gr]; 
+  sk += bns->isoGNlevels[gr]; 
       }
 
       // Create levels for each group
@@ -591,7 +603,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     }
 
     bns->o_fQM = mesh->device.malloc((mesh->Nelements+mesh->totalHaloPairs)*mesh->Nfp*mesh->Nfaces*bns->Nfields*sizeof(dfloat),
-				     bns->fQM);
+             bns->fQM);
     mesh->o_mapP = mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int), mesh->mapP);
   }
 
@@ -785,15 +797,15 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
       bns->volumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       if(bns->pmlFlag){
-	// No that nonlinear terms are always integrated using cubature rules
-	// this cubature shift is for sigma terms on pml formulation
-	if(bns->pmlcubature){
-	  sprintf(kernelName, "bnsPmlVolumeCub%s", suffix);
-	  bns->pmlVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-	}else{
-	  sprintf(kernelName, "bnsPmlVolume%s", suffix);
-	  bns->pmlVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
-	}
+      // No that nonlinear terms are always integrated using cubature rules
+      // this cubature shift is for sigma terms on pml formulation
+        if(bns->pmlcubature){
+          sprintf(kernelName, "bnsPmlVolumeCub%s", suffix);
+          bns->pmlVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+        }else{
+          sprintf(kernelName, "bnsPmlVolume%s", suffix);
+          bns->pmlVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
+         }
       }
       
       // Relaxation kernels
@@ -803,13 +815,13 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
       bns->relaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       if(bns->pmlFlag){
-	if(bns->pmlcubature){
-	  sprintf(kernelName, "bnsPmlRelaxationCub%s", suffix);        
-	  bns->pmlRelaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
-	}else{
-	  sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
-	  bns->pmlRelaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
-	}
+        if(bns->pmlcubature){
+          sprintf(kernelName, "bnsPmlRelaxationCub%s", suffix);        
+          bns->pmlRelaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
+        }else{
+          sprintf(kernelName, "bnsPmlRelaxation%s", suffix);        
+          bns->pmlRelaxationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);        
+        }
       }
 
       
@@ -820,18 +832,18 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
         sprintf(kernelName, "bnsMRSurface%s", suffix);
         bns->surfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
-	if(bns->pmlFlag){
-	  sprintf(kernelName, "bnsMRPmlSurface%s", suffix);
-	  bns->pmlSurfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
-	}
-      }else{
-        sprintf(kernelName, "bnsSurface%s", suffix);
-        bns->surfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+        if(bns->pmlFlag){
+          sprintf(kernelName, "bnsMRPmlSurface%s", suffix);
+          bns->pmlSurfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+        }
+        }else{
+          sprintf(kernelName, "bnsSurface%s", suffix);
+          bns->surfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
-	if(bns->pmlFlag){
-	  sprintf(kernelName, "bnsPmlSurface%s", suffix);
-	  bns->pmlSurfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
-	}
+        if(bns->pmlFlag){
+          sprintf(kernelName, "bnsPmlSurface%s", suffix);
+          bns->pmlSurfaceKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+        }
       }
 
       
@@ -841,29 +853,30 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
         sprintf(kernelName, "bnsLSERKUpdate%s", suffixUpdate);
         bns->updateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
 
-	if(bns->pmlFlag){
-	  sprintf(kernelName, "bnsLSERKPmlUpdate%s", suffixUpdate);
-	  bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
-	}
+        if(bns->pmlFlag){
+          sprintf(kernelName, "bnsLSERKPmlUpdate%s", suffixUpdate);
+          bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
+        }
       } else if(options.compareArgs("TIME INTEGRATOR","SARK")){
         sprintf(kernelName, "bnsSARKUpdateStage%s", suffixUpdate);
         bns->updateStageKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
-	if(bns->pmlFlag){
-	  sprintf(kernelName, "bnsSARKPmlUpdateStage%s", suffixUpdate);
-	  bns->pmlUpdateStageKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
-	}
-	
+        if(bns->pmlFlag){
+          sprintf(kernelName, "bnsSARKPmlUpdateStage%s", suffixUpdate);
+          bns->pmlUpdateStageKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+        }
+  
         sprintf(kernelName, "bnsSARKUpdate%s", suffixUpdate);
         bns->updateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
 
-	if(bns->pmlFlag){
-	  sprintf(kernelName, "bnsSARKPmlUpdate%s", suffixUpdate);
-	  bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
-	}
-	sprintf(fileName, DBNS "/okl/bnsErrorEstimate.okl");
-	sprintf(kernelName, "bnsErrorEstimate");
-	bns->errorEstimateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      if(bns->pmlFlag){
+        sprintf(kernelName, "bnsSARKPmlUpdate%s", suffixUpdate);
+        bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
+      }
+      sprintf(fileName, DBNS "/okl/bnsErrorEstimate.okl");
+      sprintf(kernelName, "bnsErrorEstimate");
+      bns->errorEstimateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+
       } else if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
       
         sprintf(kernelName, "bnsMRSAABTraceUpdate%s", suffixUpdate);
@@ -872,10 +885,10 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
         sprintf(kernelName, "bnsMRSAABUpdate%s", suffixUpdate);
         bns->updateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
 
-	if(bns->pmlFlag){
-	  sprintf(kernelName, "bnsMRSAABPmlUpdate%s", suffixUpdate);
-	  bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
-	}
+        if(bns->pmlFlag){
+          sprintf(kernelName, "bnsMRSAABPmlUpdate%s", suffixUpdate);
+          bns->pmlUpdateKernel = mesh->device.buildKernel(fileName, kernelName,kernelInfo);
+        }
       }
 
       sprintf(fileName, DBNS "/okl/bnsVorticity%s.okl",suffix);
@@ -885,7 +898,7 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
       // This needs to be unified
       mesh->haloExtractKernel =
-	mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl","meshHaloExtract3D",kernelInfo);
+      mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl","meshHaloExtract3D",kernelInfo);
 
 
       if(bns->dim==3){
@@ -908,13 +921,13 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
         bns->dotMultiplyKernel = mesh->device.buildKernel(DBNS "/okl/bnsDotMultiply.okl", "bnsDotMultiply", kernelInfo);
 
         // kernels from volume file
-	if(bns->elementType!=QUADRILATERALS){
-	  sprintf(fileName, DBNS "/okl/bnsIsoSurface3D.okl");
-	  sprintf(kernelName, "bnsIsoSurface3D");
-	  
-	  bns->isoSurfaceKernel =
-	    mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-	}
+  if(bns->elementType!=QUADRILATERALS){
+    sprintf(fileName, DBNS "/okl/bnsIsoSurface3D.okl");
+    sprintf(kernelName, "bnsIsoSurface3D");
+    
+    bns->isoSurfaceKernel =
+      mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  }
       }
     }
     MPI_Barrier(mesh->comm);
