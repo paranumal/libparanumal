@@ -148,13 +148,20 @@ void meshMRABWeightedPartition3D(mesh3D *mesh, dfloat *weights,
   
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
-  
-  if(mesh->Nverts==4){ // tetrahedral
+
+
+  if(mesh->NfaceVertices==2){ // Quad 3D
+    void meshLoadReferenceNodesQuad2D(mesh_t *mesh, int N);
+    meshLoadReferenceNodesQuad2D(mesh, mesh->N);
+    meshPhysicalNodesQuad3D(mesh);
+    meshGeometricFactorsQuad3D(mesh);
+  }
+  else if(mesh->NfaceVertices==4){ // tet
     // compute physical (x,y) locations of the element nodes
     meshPhysicalNodesTet3D(mesh);
     // compute geometric factors
     meshGeometricFactorsTet3D(mesh);
-  }else{
+  }else{                         // Hex
     // compute physical (x,y) locations of the element nodes
     meshPhysicalNodesHex3D(mesh);
     // compute geometric factors
@@ -162,12 +169,16 @@ void meshMRABWeightedPartition3D(mesh3D *mesh, dfloat *weights,
   }
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup(mesh);
+  
+
 
   // connect face nodes (find trace indices)
   meshConnectFaceNodes3D(mesh);
   
   // compute surface geofacs
-  if(mesh->Nverts==4) // tetrahedral
+  if(mesh->NfaceVertices==2)
+    meshSurfaceGeometricFactorsQuad3D(mesh);
+  else if(mesh->NfaceVertices==3)
     meshSurfaceGeometricFactorsTet3D(mesh);
   else
     meshSurfaceGeometricFactorsHex3D(mesh);

@@ -8,6 +8,7 @@
 data/bnsUniform3D.h
 
 [MESH FILE]
+#../../meshes/sphereMR.msh
 ../../meshes/sphereQuadH01.msh
 
 [MESH DIMENSION]
@@ -57,8 +58,8 @@ CUDA
 
 [TIME INTEGRATOR]
 #LSERK4
-#MRSAAB
-SARK 
+MRSAAB
+#SARK 
 
 [VISCOSITY]
 0.005
@@ -79,7 +80,7 @@ SARK
 1000
 
 [TSTEPS FOR SOLUTION OUTPUT]
-200
+500
 
 [START TIME]
 0
@@ -100,7 +101,7 @@ SARK
 1E-10
 
 [MAX MRAB LEVELS]
-100
+2
 
 [CFL]
 0.1

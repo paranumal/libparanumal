@@ -14,9 +14,9 @@ OGSDIR  = ../../libs/gatherScatter
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-cc	= mpicc
-CC	= mpic++
-LD	= mpic++
+cc	= mpicc -g
+CC	= mpic++ -g
+LD	= mpic++ -g
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"'
