@@ -451,22 +451,18 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   // Setup MRAB PML
   if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
 
-      printf("Preparing Pml for multirate rate\n"); 
-      bnsMRABPmlSetup(bns, options);
-   
-    // mesh->o_MRABelementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    // mesh->o_MRABhaloIds    = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
+    printf("Preparing Pml for multirate rate\n"); 
+    bnsMRABPmlSetup(bns, options);
+
     mesh->o_MRABelementIds = new occa::memory[mesh->MRABNlevels];
     mesh->o_MRABhaloIds    = new occa::memory[mesh->MRABNlevels];
     for (int lev=0;lev<mesh->MRABNlevels;lev++) {
       printf(" lev : %d Total levels: %d and Nelements: %d Total Elements: %d \n", lev, mesh->MRABNlevels, mesh->MRABNelements[lev], mesh->Nelements);
 
       if (mesh->MRABNelements[lev]){
-        // mesh->o_MRABelementIds[lev] = new occa::memory; 
         mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(dlong),mesh->MRABelementIds[lev]); 
       }
       if (mesh->MRABNhaloElements[lev]){
-        // mesh->o_MRABhaloIds[lev]    = new occa::memory;
         mesh->o_MRABhaloIds[lev]    = mesh->device.malloc(mesh->MRABNhaloElements[lev]*sizeof(dlong), mesh->MRABhaloIds[lev]);
       }
     }
@@ -657,22 +653,17 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
   kernelInfo["defines/" "p_maxCubNodes"]= maxCubNodes;
 
-  kernelInfo["defines/" "p_fainv"] = (dfloat) 0.0;
-  kernelInfo["defines/" "p_invRadiusSq"] = (dfloat) 1./(mesh->sphereRadius*mesh->sphereRadius);
-
+  if(bns->elementType==QUADRILATERALS && mesh->dim==3){
+    kernelInfo["defines/" "p_fainv"] = (dfloat) 0.0;
+    kernelInfo["defines/" "p_invRadiusSq"] = (dfloat) 1./(mesh->sphereRadius*mesh->sphereRadius);
+  }
   int NblockV = 128/mesh->Np; // works for CUDA
-  // NblockV = 1; //!!!!!
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
   int NblockS = 128/maxNodes; // works for CUDA
-
-  // NblockS = 1; // !!!!!
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
   int NblockCub = 128/mesh->cubNp; // works for CUDA
-
-  // NblockCub = 1; // !!!!!!!!!!!!!!!!!!!!!
-
   kernelInfo["defines/" "p_NblockCub"]= NblockCub;
 
   // physics 
