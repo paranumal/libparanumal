@@ -457,7 +457,6 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
     mesh->o_MRABelementIds = new occa::memory[mesh->MRABNlevels];
     mesh->o_MRABhaloIds    = new occa::memory[mesh->MRABNlevels];
     for (int lev=0;lev<mesh->MRABNlevels;lev++) {
-      printf(" lev : %d Total levels: %d and Nelements: %d Total Elements: %d \n", lev, mesh->MRABNlevels, mesh->MRABNelements[lev], mesh->Nelements);
 
       if (mesh->MRABNelements[lev]){
         mesh->o_MRABelementIds[lev] = mesh->device.malloc(mesh->MRABNelements[lev]*sizeof(dlong),mesh->MRABelementIds[lev]); 

@@ -1,7 +1,7 @@
 //+
 res0  = DefineNumber[0.1];
 res1  = DefineNumber[0.1];
-res2  = DefineNumber[0.1];
+res2  = DefineNumber[0.01];
 rad   = DefineNumber[1.0];
 Point(1) = {0, 0, 0, 1};
 Point(2) = {rad, 0, 0, res0};
