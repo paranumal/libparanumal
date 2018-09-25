@@ -295,6 +295,22 @@ void bnsIsoPlotGmsh(bns_t *bns, int isoNtris, char *fname, int tstep, int N_offs
 #define TETRAHEDRA 6
 #define HEXAHEDRA 12
 
+void bnsBrownMinionQuad3D(bns_t *bns);
+
+#ifdef RENDER
+
+void simpleRayTracer(int     plotNelements,
+		     dfloat *plotx,
+		     dfloat *ploty,
+		     dfloat *plotz,
+		     dfloat *plotq,
+		     const char	 *fileBaseName,
+		      const int fileIndex);
+
+void bnsRenderQuad3D(bns_t *bns, char *fileBaseName, int fileIndex);
+
+#endif
+
 
 #endif
 

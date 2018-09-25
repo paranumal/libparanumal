@@ -354,56 +354,62 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
   dfloat fx, fy, fz, intfx, intfy, intfz;
   bnsBodyForce(time, &fx, &fy, &fz, &intfx, &intfy, &intfz);
   
-  // INITIALIZE PROBLEM 
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      dfloat t = 0., x = 0., y = 0., z = 0.;
-      x = mesh->x[n + mesh->Np*e];
-      y = mesh->y[n + mesh->Np*e];
-      if(bns->dim==3)
-        z = mesh->z[n + mesh->Np*e];
+  // INITIALIZE PROBLEM
+  if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION")){
+        bnsBrownMinionQuad3D(bns);
+  }
+  else{
 
-      const dlong id = e*bns->Nfields*mesh->Np +n; 
-      if(bns->dim==2){
-        // Uniform Flow
-        bns->q[id+0*mesh->Np] = q1bar; 
-        bns->q[id+1*mesh->Np] = q1bar*intfx/bns->sqrtRT;
-        bns->q[id+2*mesh->Np] = q1bar*intfy/bns->sqrtRT;
-        bns->q[id+3*mesh->Np] = q1bar*intfx*intfy/bns->sqrtRT;
-        bns->q[id+4*mesh->Np] = q1bar*intfx*intfx/(sqrt(2.)*bns->sqrtRT);
-        bns->q[id+5*mesh->Np] = q1bar*intfy*intfy/(sqrt(2.)*bns->sqrtRT);
+    for(dlong e=0;e<mesh->Nelements;++e){
+      for(int n=0;n<mesh->Np;++n){
+	dfloat t = 0., x = 0., y = 0., z = 0.;
+	x = mesh->x[n + mesh->Np*e];
+	y = mesh->y[n + mesh->Np*e];
+	if(bns->dim==3)
+	  z = mesh->z[n + mesh->Np*e];
+	
+	const dlong id = e*bns->Nfields*mesh->Np +n; 
+	if(bns->dim==2){
+	  // Uniform Flow
+	  bns->q[id+0*mesh->Np] = q1bar; 
+	  bns->q[id+1*mesh->Np] = q1bar*intfx/bns->sqrtRT;
+	  bns->q[id+2*mesh->Np] = q1bar*intfy/bns->sqrtRT;
+	  bns->q[id+3*mesh->Np] = q1bar*intfx*intfy/bns->sqrtRT;
+	  bns->q[id+4*mesh->Np] = q1bar*intfx*intfx/(sqrt(2.)*bns->sqrtRT);
+	  bns->q[id+5*mesh->Np] = q1bar*intfy*intfy/(sqrt(2.)*bns->sqrtRT);
+	}
+	if(bns->dim==3 && bns->elementType==QUADRILATERALS){
+	  bns->q[id+0*mesh->Np] = q1bar*(2+exp(-40*((x-1)*(x-1) + y*y + z*z))); 
+	  bns->q[id+1*mesh->Np] = 0;
+	  bns->q[id+2*mesh->Np] = 0;
+	  bns->q[id+3*mesh->Np] = 0;
+	  
+	  bns->q[id+4*mesh->Np] = 0;
+	  bns->q[id+5*mesh->Np] = 0;
+	  bns->q[id+6*mesh->Np] = 0;
+	  
+	  bns->q[id+7*mesh->Np] = 0;
+	  bns->q[id+8*mesh->Np] = 0;
+	  bns->q[id+9*mesh->Np] = 0;
+	  
+	}
+	else if(bns->dim==3){
+	  bns->q[id+0*mesh->Np] = q1bar; 
+	  bns->q[id+1*mesh->Np] = q1bar*intfx/bns->sqrtRT;
+	  bns->q[id+2*mesh->Np] = q1bar*intfy/bns->sqrtRT;
+	  bns->q[id+3*mesh->Np] = q1bar*intfz/bns->sqrtRT;
+	  
+	  bns->q[id+4*mesh->Np] = q1bar*intfx*intfy/bns->sqrtRT;
+	  bns->q[id+5*mesh->Np] = q1bar*intfx*intfz/bns->sqrtRT;
+	  bns->q[id+6*mesh->Np] = q1bar*intfy*intfz/bns->sqrtRT;
+	  
+	  bns->q[id+7*mesh->Np] = q1bar*intfx*intfx/(sqrt(2.)*bns->sqrtRT);
+	  bns->q[id+8*mesh->Np] = q1bar*intfy*intfy/(sqrt(2.)*bns->sqrtRT);
+	  bns->q[id+9*mesh->Np] = q1bar*intfz*intfz/(sqrt(2.)*bns->sqrtRT);
+	  
+	}
+	
       }
-      if(bns->dim==3 && bns->elementType==QUADRILATERALS){
-        bns->q[id+0*mesh->Np] = q1bar*(2+exp(-40*((x-1)*(x-1) + y*y + z*z))); 
-        bns->q[id+1*mesh->Np] = 0;
-        bns->q[id+2*mesh->Np] = 0;
-        bns->q[id+3*mesh->Np] = 0;
-
-        bns->q[id+4*mesh->Np] = 0;
-        bns->q[id+5*mesh->Np] = 0;
-        bns->q[id+6*mesh->Np] = 0;
-
-        bns->q[id+7*mesh->Np] = 0;
-        bns->q[id+8*mesh->Np] = 0;
-        bns->q[id+9*mesh->Np] = 0;
-
-      }
-      else if(bns->dim==3){
-        bns->q[id+0*mesh->Np] = q1bar; 
-        bns->q[id+1*mesh->Np] = q1bar*intfx/bns->sqrtRT;
-        bns->q[id+2*mesh->Np] = q1bar*intfy/bns->sqrtRT;
-        bns->q[id+3*mesh->Np] = q1bar*intfz/bns->sqrtRT;
-
-        bns->q[id+4*mesh->Np] = q1bar*intfx*intfy/bns->sqrtRT;
-        bns->q[id+5*mesh->Np] = q1bar*intfx*intfz/bns->sqrtRT;
-        bns->q[id+6*mesh->Np] = q1bar*intfy*intfz/bns->sqrtRT;
-
-        bns->q[id+7*mesh->Np] = q1bar*intfx*intfx/(sqrt(2.)*bns->sqrtRT);
-        bns->q[id+8*mesh->Np] = q1bar*intfy*intfy/(sqrt(2.)*bns->sqrtRT);
-        bns->q[id+9*mesh->Np] = q1bar*intfz*intfz/(sqrt(2.)*bns->sqrtRT);
-
-      }
-       
     }
   }
 
