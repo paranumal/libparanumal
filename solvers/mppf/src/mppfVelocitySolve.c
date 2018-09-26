@@ -55,10 +55,13 @@ void mppfVelocitySolve(mppf_t *mppf, dfloat time, occa::memory o_rkU){
                               mppf->o_rhsW);
     
     // gather-scatter
-    ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsU, dfloatString, "add");  
-    ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsV, dfloatString, "add");  
+    // ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsU, dfloatString, "add");  
+    // ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsV, dfloatString, "add");  
+    ogsGatherScatter(mppf->o_rhsU, ogsDfloat, ogsAdd,  mesh->ogs);  
+    ogsGatherScatter(mppf->o_rhsV, ogsDfloat, ogsAdd,  mesh->ogs);  
     if (mppf->dim==3)
-      ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsW, dfloatString, "add");  
+        ogsGatherScatter(mppf->o_rhsW, ogsDfloat, ogsAdd,  mesh->ogs);  
+      // ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsW, dfloatString, "add");  
     
     if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, mppf->o_rhsU);
     if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, mppf->o_rhsV);

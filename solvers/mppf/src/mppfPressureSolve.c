@@ -77,7 +77,8 @@ void mppfPressureSolve(mppf_t *mppf, dfloat time, occa::memory o_rkP){
 
   // gather-scatter
   if(mppf->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
-    ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsP, dfloatString, "add");  
+    // ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsP, dfloatString, "add");  
+    ogsGatherScatter(mppf->o_rhsP, ogsDfloat, ogsAdd, mesh->ogs);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, mppf->o_rhsP);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, o_rkP);
   }

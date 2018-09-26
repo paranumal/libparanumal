@@ -26,7 +26,9 @@ void mppfCahnHilliardSolve(mppf_t *mppf, dfloat time){
                               mppf->o_rhsPhi);
     
     // gather-scatter
-    ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsPhi, dfloatString, "add");
+    // ellipticParallelGatherScatter(mesh, mesh->ogs, mppf->o_rhsPhi, dfloatString, "add");
+    ogsGatherScatter(mppf->o_rhsPhi, ogsDfloat, ogsAdd, mesh->ogs);
+
     if (psiSolver->Nmasked) mesh->maskKernel(psiSolver->Nmasked, psiSolver->o_maskIds, mppf->o_rhsPhi);
   } else if (mppf->phiOptions.compareArgs("DISCRETIZATION","IPDG")) {
     // Currently we do not need that deuto homegenous bcs need to be used for more complex bcs

@@ -540,8 +540,8 @@ options.getArgs("BAND THICKNESS", mppf->eta);
       }
     }
   }
-  gsParallelGatherScatter(mesh->hostGsh, mppf->VmapB, "int", "min"); 
-  gsParallelGatherScatter(mesh->hostGsh, mppf->PmapB, "int", "max"); 
+  ogsGatherScatter(mppf->VmapB, ogsInt, ogsMin, mesh->ogs);
+  ogsGatherScatter(mppf->PmapB, ogsInt, ogsMax, mesh->ogs);
 
   for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (mppf->VmapB[n] == 1E9) {
