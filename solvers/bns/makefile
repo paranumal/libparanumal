@@ -64,7 +64,9 @@ AOBJS    = \
 ./src/bnsRunEmbedded.o \
 ./src/bnsWeldTriVerts.o \
 ./src/bnsIsoPlotGmsh.o \
-./src/bnsRestart.o    
+./src/bnsRestart.o \
+./src/bnsBrownMinionQuad3D.o 
+
 
 # library objects
 LOBJS = \
