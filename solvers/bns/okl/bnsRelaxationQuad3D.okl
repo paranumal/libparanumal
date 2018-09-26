@@ -24,11 +24,83 @@
 
 */
 
-#define p_Nvars 3
-#define p_Nrelax 3
 // Start index of non-zero nonlinear terms
-#define p_qNs 3
+#define p_qNs 4
 
+#if 0
+
+// cubature version 
+@kernel void bnsRelaxationQuad3D(const dlong Nelements,
+				 @restrict const  dlong *  elementIds,
+				 @restrict const  dfloat *  vgeo,
+				 @restrict const  dfloat *  cubvgeo,
+				 const dlong offset,
+				 const int   shift,
+				 @restrict const  dfloat *  cubInterpT,
+				 @restrict const  dfloat *  cubProjectT,
+				 @restrict const  dfloat *  q,
+				 @restrict dfloat *  rhsq){
+  
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+    
+    // @shared memory for q at nodes
+    @exclusive dfloat r_q[p_Nfields];
+    @exclusive dlong e; 
+    
+    //fetch the U and V values and store in flux arrays in @shared
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){    
+          dlong et = eo+es; // element in block
+          if (et<Nelements) {
+            e = elementIds[et];
+
+	    const dlong id = e*p_Nfields*p_Np + j*p_Nq + i;
+	    
+#pragma unroll p_Nfields
+	    for(int fld=0; fld<p_Nfields;++fld){
+	      r_q[fld] = q[id+fld*p_Np];
+	    }
+	    
+            dlong rhsId = e*p_Np*p_Nfields + j*p_Nq + i;
+	    // 
+	    if(p_MRSAAB)
+	      rhsId     += shift*offset;
+	    
+	    // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
+	    // [ for LSERK the linear term is added below ]
+	    dfloat rinv = 1.f/r_q[0];
+	    dfloat tmp4 = (p_invsqrt2*r_q[1]*r_q[1]*rinv);
+	    dfloat tmp5 = (p_invsqrt2*r_q[2]*r_q[2]*rinv);
+	    dfloat tmp6 = (p_invsqrt2*r_q[3]*r_q[3]*rinv);
+	    dfloat tmp7 = r_q[1]*r_q[2]*rinv;
+	    dfloat tmp8 = r_q[1]*r_q[3]*rinv;
+	    dfloat tmp9 = r_q[2]*r_q[3]*rinv;
+	    
+	    if(!p_SEMI_ANALYTIC){
+	      tmp4 -= r_q[4];
+	      tmp5 -= r_q[5];
+	      tmp6 -= r_q[6];
+	      tmp7 -= r_q[7];
+	      tmp8 -= r_q[8];
+	      tmp9 -= r_q[9];
+	    }
+
+	    rhsq[rhsId + 4*p_Np] += p_tauInv*tmp4;
+	    rhsq[rhsId + 5*p_Np] += p_tauInv*tmp5;
+	    rhsq[rhsId + 6*p_Np] += p_tauInv*tmp6;
+	    rhsq[rhsId + 7*p_Np] += p_tauInv*tmp7;
+	    rhsq[rhsId + 8*p_Np] += p_tauInv*tmp8;
+	    rhsq[rhsId + 9*p_Np] += p_tauInv*tmp9;	    
+	  }
+	}
+      }
+    }
+  }
+} 
+
+#else
+// cubature version 
 @kernel void bnsRelaxationQuad3D(const dlong Nelements,
 				 @restrict const  dlong *  elementIds,
 				 @restrict const  dfloat *  vgeo,
@@ -130,10 +202,10 @@
   
 #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
-            const dfloat Ini = s_cubInterpT[n][j];
+            const dfloat Inj = s_cubInterpT[n][j];
             // #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nfields; fld++){
-              r_q[fld]  += Ini*s_q[es][fld][n][i];                
+              r_q[fld]  += Inj*s_q[es][fld][n][i];                
             }
           }   
         }
@@ -154,12 +226,13 @@
 	    const dfloat icubq1 = 1.f/r_q[0];
 	    // BGK relaxation approximation to the Boltzmann collision operator for N5 - N10
 	    // [ for LSERK the linear term is added below ]
-	    s_q[es][4][j][i]  = J*p_tauInv*(r_q[1]*r_q[2]*icubq1);
-	    s_q[es][5][j][i]  = J*p_tauInv*(r_q[1]*r_q[3]*icubq1);
-	    s_q[es][6][j][i]  = J*p_tauInv*(r_q[2]*r_q[3]*icubq1);
-	    s_q[es][7][j][i]  = J*p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-	    s_q[es][8][j][i]  = J*p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1);
-	    s_q[es][9][j][i]  = J*p_tauInv*(p_invsqrt2*r_q[3]*r_q[3]*icubq1);
+	    s_q[es][4][j][i]  = J*p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
+	    s_q[es][5][j][i]  = J*p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1);
+	    s_q[es][6][j][i]  = J*p_tauInv*(p_invsqrt2*r_q[3]*r_q[3]*icubq1);
+
+	    s_q[es][7][j][i]  = J*p_tauInv*(r_q[1]*r_q[2]*icubq1);
+	    s_q[es][8][j][i]  = J*p_tauInv*(r_q[1]*r_q[3]*icubq1);
+	    s_q[es][9][j][i]  = J*p_tauInv*(r_q[2]*r_q[3]*icubq1);
 	    
 	    if(!p_SEMI_ANALYTIC){
 	      s_q[es][4][j][i] -= J*p_tauInv*r_q[4];
@@ -248,4 +321,4 @@
     }
   }  
 } 
-
+#endif
