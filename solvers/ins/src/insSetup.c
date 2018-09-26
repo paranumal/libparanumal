@@ -645,8 +645,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       }
     }
   }
-  gsParallelGatherScatter(mesh->hostGsh, ins->VmapB, "int", "min"); 
-  gsParallelGatherScatter(mesh->hostGsh, ins->PmapB, "int", "max"); 
+  ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs);
+  ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs);
 
   for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (ins->VmapB[n] == 1E9) {

@@ -9,29 +9,31 @@ include ${OCCA_DIR}/scripts/Makefile
 
 # define variables
 HDRDIR  = ../../include
-GSDIR  = ../../3rdParty/gslib.github/src
+GSDIR  = ../../3rdParty/gslib
+OGSDIR  = ../../libs/gatherScatter
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-cc	= mpicc
-CC	= mpic++
-LD	= mpic++
+cc	= mpicc -g
+CC	= mpic++ -g
+LD	= mpic++ -g
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"'
 
 # link flags to be used 
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) -g -L../../3rdParty/gslib.github  -lgs -fopenmp
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) -g -fopenmp
 
 # libraries to be linked in
-LIBS	=   -L$(OCCA_DIR)/lib $(links)
+LIBS	=   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
+			-L$(OCCA_DIR)/lib $(links)
 
 INCLUDES = bns.h 
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
 $(HDRDIR)/mesh3D.h \
-$(HDRDIR)/ogs_t.h 
+$(OGSDIR)/ogs.hpp 
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c 
@@ -62,7 +64,9 @@ AOBJS    = \
 ./src/bnsRunEmbedded.o \
 ./src/bnsWeldTriVerts.o \
 ./src/bnsIsoPlotGmsh.o \
-./src/bnsRestart.o    
+./src/bnsRestart.o \
+./src/bnsBrownMinionQuad3D.o 
+
 
 # library objects
 LOBJS = \
@@ -74,6 +78,7 @@ LOBJS = \
 ../../src/meshGeometricFactorsHex3D.o \
 ../../src/meshGeometricFactorsTri2D.o \
 ../../src/meshGeometricFactorsQuad2D.o \
+../../src/meshGeometricFactorsQuad3D.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshGeometricPartition3D.o \
 ../../src/meshHaloExchange.o \
@@ -84,6 +89,7 @@ LOBJS = \
 ../../src/meshLoadReferenceNodesTet3D.o \
 ../../src/meshLoadReferenceNodesHex3D.o \
 ../../src/meshOccaSetup2D.o \
+../../src/meshOccaSetupQuad3D.o \
 ../../src/meshOccaSetup3D.o \
 ../../src/meshMRABSetup2D.o \
 ../../src/meshMRABSetup3D.o \
@@ -100,11 +106,13 @@ LOBJS = \
 ../../src/meshParallelReaderQuad2D.o \
 ../../src/meshParallelReaderTet3D.o \
 ../../src/meshParallelReaderHex3D.o \
+../../src/meshParallelReaderQuad3D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPhysicalNodesTri2D.o \
 ../../src/meshPhysicalNodesQuad2D.o \
 ../../src/meshPhysicalNodesTet3D.o \
 ../../src/meshPhysicalNodesHex3D.o \
+../../src/meshPhysicalNodesQuad3D.o \
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPlotVTU3D.o \
 ../../src/meshPrint2D.o \
@@ -113,10 +121,12 @@ LOBJS = \
 ../../src/meshSetupQuad2D.o \
 ../../src/meshSetupTet3D.o \
 ../../src/meshSetupHex3D.o \
+../../src/meshSetupQuad3D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
 ../../src/meshSurfaceGeometricFactorsQuad2D.o \
 ../../src/meshSurfaceGeometricFactorsTet3D.o \
 ../../src/meshSurfaceGeometricFactorsHex3D.o \
+../../src/meshSurfaceGeometricFactorsQuad3D.o \
 ../../src/meshVTU2D.o \
 ../../src/meshVTU3D.o \
 ../../src/mysort.o \
@@ -124,31 +134,20 @@ LOBJS = \
 ../../src/setupAide.o \
 ../../src/trace.o \
 ../../src/readArray.o \
-../../src/meshParallelConsecutiveGlobalNumbering.o\
-../../src/meshParallelGatherScatter.o \
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/occaDeviceConfig.o\
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
-COBJS = \
-../../src/gsParallelGatherScatter.o\
-../../src/gsParallelGatherScatterSetup.o\
 
-
-bnsMain:$(AOBJS) $(LOBJS) ./src/bnsMain.o gslibInterface
+bnsMain:$(AOBJS) $(LOBJS) ./src/bnsMain.o libogs
 	$(LD)  $(LDFLAGS)  -o bnsMain $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS) 
 
-
-
-gslibInterface:
-	cd ../../3rdParty/gslib.github; make -j libgs.a; cd ../../solvers/bns
-	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatter.o ../../src/gsParallelGatherScatter.c $(paths)
-	$(cc) $(CFLAGS) -c -o ../../src/gsParallelGatherScatterSetup.o ../../src/gsParallelGatherScatterSetup.c $(paths) 
-
+libogs:
+	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/bns
 
 # what to do if user types "make clean"
 clean :
-	cd ../../3rdParty/gslib.github; make clean; cd ../../solvers/bns
+	cd ../../libs/gatherScatter; make clean; cd ../../solvers/bns
 	rm -r $(AOBJS) $(LOBJS) bnsMain
 

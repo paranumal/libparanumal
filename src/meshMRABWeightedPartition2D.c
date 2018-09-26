@@ -147,13 +147,13 @@ void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
 
-  if(mesh->Nverts==3){
+  if(mesh->dim==2 && mesh->Nverts==3){ // Triangle
   // compute physical (x,y) locations of the element nodes
     meshPhysicalNodesTri2D(mesh); 
     // compute geometric factors
     meshGeometricFactorsTri2D(mesh);
   }
-  else{
+  else if(mesh->dim==2 && mesh->Nverts==4){ // Quad2D
     meshPhysicalNodesQuad2D(mesh);
     meshGeometricFactorsQuad2D(mesh);
   }
@@ -161,15 +161,14 @@ void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup(mesh);
 
-  // connect face nodes (find trace indices)
-  meshConnectFaceNodes2D(mesh);
-
-
-  // compute surface geofacs
-  if(mesh->Nverts==3)
-  meshSurfaceGeometricFactorsTri2D(mesh);
-  else
-  meshSurfaceGeometricFactorsQuad2D(mesh);
+  if(mesh->dim==2 && mesh->Nverts==3){ // Triangle
+    meshConnectFaceNodes2D(mesh);
+    meshSurfaceGeometricFactorsTri2D(mesh);
+  }
+  else if(mesh->dim==2 && mesh->Nverts==4){ // Quad2D
+    meshConnectFaceNodes2D(mesh);
+    meshSurfaceGeometricFactorsQuad2D(mesh);
+  }
 
   // global nodes
   meshParallelConnectNodes(mesh);

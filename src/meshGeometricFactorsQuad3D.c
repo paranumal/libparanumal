@@ -33,16 +33,34 @@ SOFTWARE.
 void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nvgeo = 11; // 
+  mesh->Nvgeo = 12; // 
   
   /* note that we have volume geometric factors for each node */
   mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->Np, sizeof(dfloat));
 
-  for(int e=0;e<mesh->Nelements;++e){ /* for each element */
+  mesh->cubvgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->cubNp, sizeof(dfloat));
 
+  dfloat *cxr = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
+  dfloat *cxs = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
+  dfloat *cyr = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
+  dfloat *cys = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
+  dfloat *czr = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
+  dfloat *czs = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
+  dfloat *cx  = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
+  dfloat *cy  = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
+  dfloat *cz  = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
+  
+  for(int e=0;e<mesh->Nelements;++e){ /* for each element */
+    
+    for(int n=0;n<mesh->cubNq*mesh->cubNq;++n){
+      cxr[n] = 0; cyr[n] = 0; czr[n] = 0;
+      cxs[n] = 0; cys[n] = 0; czs[n] = 0;
+      cx[n] = 0;  cy[n] = 0;  cz[n] = 0;
+    }
+    
     for(int j=0;j<mesh->Nq;++j){
       for(int i=0;i<mesh->Nq;++i){
-
+	
 	dfloat xij = mesh->x[i+j*mesh->Nq+e*mesh->Np];
 	dfloat yij = mesh->y[i+j*mesh->Nq+e*mesh->Np];
 	dfloat zij = mesh->z[i+j*mesh->Nq+e*mesh->Np];
@@ -64,7 +82,7 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 	  zs += Djn*mesh->z[i+n*mesh->Nq+e*mesh->Np];
 
 	}
-
+	
 	dfloat rx = ys*zij - zs*yij; // dXds x X
 	dfloat ry = zs*xij - xs*zij;
 	dfloat rz = xs*yij - ys*xij;
@@ -79,27 +97,13 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
 	dfloat Gx = tx, Gy = ty, Gz = tz;
 
-#if 0
-	dfloat foo = xij*tx+yij*ty+zij*tz;
-	printf("foo = %g [%g,%g,%g] [%g,%g,%g]\n", foo,
-	       xij,yij,zij,tx-foo*xij,ty-foo*yij,tz-foo*zij);
-#endif
-	
 	dfloat J = xij*tx + yij*ty + zij*tz;
 
 	if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
 	
-	rx /= J;
-	ry /= J;
-	rz /= J;
-
-	sx /= J;
-	sy /= J;
-	sz /= J;
-
-	tx /= J;
-	ty /= J;
-	tz /= J;
+	rx /= J;      sx /= J;      tx /= J;
+	ry /= J;      sy /= J;      ty /= J;
+	rz /= J;      sz /= J;      tz /= J;
 
 	// use this for "volume" Jacobian
 	J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
@@ -122,8 +126,76 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 	mesh->vgeo[base + mesh->Np*TZID] = tz;
 	mesh->vgeo[base + mesh->Np*JID]  = J;
 	mesh->vgeo[base + mesh->Np*JWID] = JW;
-      
+	mesh->vgeo[base + mesh->Np*IJWID] = 1./JW;
+
+	// now do for cubvgeo
+	// 1. interpolate Jacobian matrix to cubature nodes
+	for(int m=0;m<mesh->cubNq;++m){
+	  for(int n=0;n<mesh->cubNq;++n){
+	    dfloat cIni = mesh->cubInterp[n*mesh->Nq+i];
+	    dfloat cImj = mesh->cubInterp[m*mesh->Nq+j];
+	    cxr[n+m*mesh->cubNq] += cIni*cImj*xr;
+	    cxs[n+m*mesh->cubNq] += cIni*cImj*xs;
+	    cyr[n+m*mesh->cubNq] += cIni*cImj*yr;
+	    cys[n+m*mesh->cubNq] += cIni*cImj*ys;
+	    czr[n+m*mesh->cubNq] += cIni*cImj*zr;
+	    czs[n+m*mesh->cubNq] += cIni*cImj*zs;
+	    cx[n+m*mesh->cubNq] += cIni*cImj*xij;
+	    cy[n+m*mesh->cubNq] += cIni*cImj*yij;
+	    cz[n+m*mesh->cubNq] += cIni*cImj*zij;
+	  }
+	}
       }
     }
+
+    
+    for(int n=0;n<mesh->cubNq*mesh->cubNq;++n){
+      
+      dfloat rx = cys[n]*cz[n] - czs[n]*cy[n]; // dXds x X
+      dfloat ry = czs[n]*cx[n] - cxs[n]*cz[n];
+      dfloat rz = cxs[n]*cy[n] - cys[n]*cx[n];
+      
+      dfloat sx = czr[n]*cy[n] - cyr[n]*cz[n]; // -dXdr x X
+      dfloat sy = cxr[n]*cz[n] - czr[n]*cx[n];
+      dfloat sz = cyr[n]*cx[n] - cxr[n]*cy[n];
+      
+      dfloat tx = cyr[n]*czs[n] - czr[n]*cys[n]; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
+      dfloat ty = czr[n]*cxs[n] - cxr[n]*czs[n];
+      dfloat tz = cxr[n]*cys[n] - cyr[n]*cxs[n];
+      
+      dfloat Gx = tx, Gy = ty, Gz = tz;
+      
+      dfloat J = cx[n]*tx + cy[n]*ty + cz[n]*tz;
+      
+      if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
+      
+      rx /= J;      sx /= J;      tx /= J;
+      ry /= J;      sy /= J;      ty /= J;
+      rz /= J;      sz /= J;      tz /= J;
+      
+      // use this for "volume" Jacobian
+      J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
+      
+      if(J<1e-8) { printf("Negative or small cubature Jacobian: %g (Gx,y,z=%g,%g,%g)\n",
+			  J, Gx, Gy, Gz); exit(-1);}
+      
+      dfloat JW = J*mesh->cubw[n%mesh->cubNq]*mesh->cubw[n/mesh->cubNq];
+      
+      /* store geometric factors */
+      int base = mesh->Nvgeo*mesh->cubNp*e + n;
+      
+      mesh->cubvgeo[base + mesh->cubNp*RXID] = rx;
+      mesh->cubvgeo[base + mesh->cubNp*RYID] = ry;
+      mesh->cubvgeo[base + mesh->cubNp*RZID] = rz;
+      mesh->cubvgeo[base + mesh->cubNp*SXID] = sx;
+      mesh->cubvgeo[base + mesh->cubNp*SYID] = sy;
+      mesh->cubvgeo[base + mesh->cubNp*SZID] = sz;
+      mesh->cubvgeo[base + mesh->cubNp*TXID] = tx;
+      mesh->cubvgeo[base + mesh->cubNp*TYID] = ty;
+      mesh->cubvgeo[base + mesh->cubNp*TZID] = tz;
+      mesh->cubvgeo[base + mesh->cubNp*JID]  = J;
+      mesh->cubvgeo[base + mesh->cubNp*JWID] = JW;
+      mesh->cubvgeo[base + mesh->cubNp*IJWID] = 1./JW;
+    }	
   }
 }

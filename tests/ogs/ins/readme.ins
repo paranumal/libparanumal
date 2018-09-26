@@ -1,0 +1,112 @@
+This warning when compiling on pascal compute node;
+
+/home/tcew/Work/git/occa.NC/scripts/shellTools.sh: line 369: /home/tcew/Work/git/occa.NC/scripts/compilerVendorTest: Text file busy
+/home/tcew/Work/git/occa.NC/scripts/shellTools.sh: line 369: /home/tcew/Work/git/occa.NC/scripts/compilerVendorTest: Text file busy
+
+MPI(1):
+
+OCCA_VERBOSE=1 ../../../solvers/ins/insMain setupInsTri2D.rc 
+
+Step: 1 Time: 0 minU: 1 maxU: 1 minV: 0 maxV: 0 minP: 0 maxP: 0
+tstep = 100, solver iterations: U -   5, V -   6, P -   5
+Step: 101 Time: 0.899388 minU: 2.98196e-06 maxU: 3.51925 minV: 1.78537e-08 maxV: 1.60021 minP: 0 maxP: 2.09901
+
+Writing Binary Restart File....done
+tstep = 200, solver iterations: U -   4, V -   6, P -   5
+Step: 201 Time: 1.79878 minU: 7.21785e-05 maxU: 3.38123 minV: 1.51454e-09 maxV: 1.51165 minP: 0 maxP: 1.68119
+
+Writing Binary Restart File....done
+tstep = 300, solver iterations: U -   4, V -   6, P -   5
+Step: 301 Time: 2.69817 minU: 7.82594e-05 maxU: 3.40896 minV: 4.66123e-10 maxV: 1.46822 minP: 0 maxP: 1.45971
+
+Writing Binary Restart File....done
+tstep = 400, solver iterations: U -   4, V -   6, P -   5
+Step: 401 Time: 3.59755 minU: 5.54487e-05 maxU: 3.43688 minV: 2.93711e-10 maxV: 1.41623 minP: 0 maxP: 1.49691
+
+Writing Binary Restart File....done
+tstep = 500, solver iterations: U -   4, V -   6, P -   5
+Step: 501 Time: 4.49694 minU: 1.8506e-05 maxU: 2.68207 minV: 4.62998e-10 maxV: 1.34705 minP: 0 maxP: 1.73217
+
+Writing Binary Restart File....done
+tstep = 600, solver iterations: U -   4, V -   6, P -   5
+Step: 601 Time: 5.39633 minU: 7.38336e-06 maxU: 3.00247 minV: 2.52416e-09 maxV: 1.3453 minP: 0 maxP: 1.80372
+
+Writing Binary Restart File....done
+tstep = 700, solver iterations: U -   4, V -   6, P -   5
+Step: 701 Time: 6.29572 minU: 7.09099e-07 maxU: 3.51038 minV: 1.59509e-10 maxV: 1.31237 minP: 0 maxP: 1.81222
+
+Writing Binary Restart File....done
+tstep = 800, solver iterations: U -   4, V -   6, P -   5
+Step: 801 Time: 7.19511 minU: 2.47566e-06 maxU: 2.84548 minV: 2.24355e-10 maxV: 1.29519 minP: 0 maxP: 1.89712
+
+
+MPI(2)
+
+OCCA_VERBOSE=1 mpiexec.mpich -n 2   ../../../solvers/ins/insMain setupInsTri2D.rc 
+
+Step: 1 Time: 0 minU: 1 maxU: 1 minV: 0 maxV: 0 minP: 0 maxP: 0
+tstep = 100, solver iterations: U -   5, V -   6, P -   5
+Step: 101 Time: 0.899388 minU: 2.98196e-06 maxU: 3.51925 minV: 1.7969e-08 maxV: 1.60021 minP: 0 maxP: 2.09901
+
+Writing Binary Restart File....done
+tstep = 200, solver iterations: U -   4, V -   6, P -   5
+Step: 201 Time: 1.79878 minU: 7.21785e-05 maxU: 3.38123 minV: 1.51231e-09 maxV: 1.51165 minP: 0 maxP: 1.68119
+
+Writing Binary Restart File....done
+tstep = 300, solver iterations: U -   4, V -   6, P -   5
+Step: 301 Time: 2.69817 minU: 7.82594e-05 maxU: 3.40896 minV: 5.43209e-11 maxV: 1.46822 minP: 0 maxP: 1.45971
+
+Writing Binary Restart File....done
+tstep = 400, solver iterations: U -   4, V -   6, P -   5
+Step: 401 Time: 3.59755 minU: 5.54486e-05 maxU: 3.43689 minV: 5.8604e-09 maxV: 1.41623 minP: 0 maxP: 1.49691
+
+Writing Binary Restart File....done
+tstep = 500, solver iterations: U -   4, V -   6, P -   5
+Step: 501 Time: 4.49694 minU: 1.85059e-05 maxU: 2.68207 minV: 4.63447e-10 maxV: 1.34705 minP: 0 maxP: 1.73217
+
+Writing Binary Restart File....done
+tstep = 600, solver iterations: U -   4, V -   6, P -   5
+Step: 601 Time: 5.39633 minU: 7.38335e-06 maxU: 3.00247 minV: 1.85397e-09 maxV: 1.3453 minP: 0 maxP: 1.80372
+
+Writing Binary Restart File....done
+tstep = 700, solver iterations: U -   4, V -   6, P -   6
+Step: 701 Time: 6.29572 minU: 7.09082e-07 maxU: 3.51039 minV: 1.59252e-10 maxV: 1.31237 minP: 0 maxP: 1.81222
+
+Writing Binary Restart File....done
+tstep = 800, solver iterations: U -   4, V -   6, P -   5
+Step: 801 Time: 7.19511 minU: 2.47568e-06 maxU: 2.84548 minV: 2.24559e-10 maxV: 1.29519 minP: 0 maxP: 1.89712
+
+MPI(4)
+
+Step: 1 Time: 0 minU: 1 maxU: 1 minV: 0 maxV: 0 minP: 0 maxP: 0
+tstep = 100, solver iterations: U -   5, V -   6, P -   5
+Step: 101 Time: 0.899388 minU: 4.24509e-05 maxU: 3.60427 minV: 8.49773e-09 maxV: 1.60015 minP: 0 maxP: 2.09905
+
+Writing Binary Restart File....done
+tstep = 200, solver iterations: U -   4, V -   6, P -   5
+Step: 201 Time: 1.79878 minU: 9.12985e-05 maxU: 3.22414 minV: 3.84348e-09 maxV: 1.50416 minP: 0 maxP: 1.67956
+
+Writing Binary Restart File....done
+tstep = 300, solver iterations: U -   4, V -   6, P -   5
+Step: 301 Time: 2.69817 minU: 4.83735e-05 maxU: 3.23234 minV: 6.62942e-11 maxV: 1.46158 minP: 0 maxP: 1.41877
+
+Writing Binary Restart File....done
+tstep = 400, solver iterations: U -   4, V -   6, P -   5
+Step: 401 Time: 3.59755 minU: 5.14672e-05 maxU: 3.83142 minV: 4.2182e-09 maxV: 1.40855 minP: 0 maxP: 1.48998
+
+Writing Binary Restart File....done
+tstep = 500, solver iterations: U -   4, V -   6, P -   5
+Step: 501 Time: 4.49694 minU: 1.97316e-05 maxU: 2.84452 minV: 8.45863e-10 maxV: 1.34087 minP: 0 maxP: 1.7267
+
+Writing Binary Restart File....done
+tstep = 600, solver iterations: U -   4, V -   6, P -   5
+Step: 601 Time: 5.39633 minU: 1.44322e-05 maxU: 3.02015 minV: 1.46332e-09 maxV: 1.32105 minP: 0 maxP: 1.80392
+
+Writing Binary Restart File....done
+tstep = 700, solver iterations: U -   4, V -   6, P -   5
+Step: 701 Time: 6.29572 minU: 7.35894e-06 maxU: 3.04242 minV: 6.70193e-10 maxV: 1.30973 minP: 0 maxP: 1.81706
+
+Writing Binary Restart File....done
+tstep = 800, solver iterations: U -   4, V -   6, P -   5
+Step: 801 Time: 7.19511 minU: 4.61542e-07 maxU: 3.6222 minV: 8.54138e-10 maxV: 1.29296 minP: 0 maxP: 1.91073
+

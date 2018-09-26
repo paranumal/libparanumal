@@ -31,7 +31,7 @@ SOFTWARE.
 void reportMemoryUsage(occa::device &device, const char *mess);
 
 elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelInfo, setupAide options){
- 
+
   elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
 
   options.getArgs("MESH DIMENSION", elliptic->dim);
@@ -50,8 +50,9 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
-  reportMemoryUsage(mesh->device, "after occa setup");
-  
+  if (mesh->rank==0)
+    reportMemoryUsage(mesh->device, "after occa setup");
+
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
   elliptic->BCType = (int*) calloc(3,sizeof(int));
@@ -62,12 +63,12 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
       if(options.compareArgs("ELEMENT MAP", "TRILINEAR")){
 	printf("mesh->dim = %d, mesh->Nverts = %d\n", mesh->dim, mesh->Nverts);
-	
+
 	// pack gllz, gllw, and elementwise EXYZ
 	hlong Nxyz = mesh->Nelements*mesh->dim*mesh->Nverts;
 	dfloat *EXYZ = (dfloat*) calloc(Nxyz, sizeof(dfloat));
 	dfloat *gllzw = (dfloat*) calloc(2*mesh->Nq, sizeof(dfloat));
-	
+
 	int sk = 0;
 	for(int n=0;n<mesh->Nq;++n)
 	  gllzw[sk++] = mesh->gllz[n];
@@ -83,7 +84,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 	  for(int v=0;v<mesh->Nverts;++v)
 	    EXYZ[sk++] = mesh->EZ[e*mesh->Nverts+v];
 	}
-	
+
 	// nodewise ggeo with element coordinates and gauss node info
 	elliptic->o_EXYZ = mesh->device.malloc(Nxyz*sizeof(dfloat), EXYZ);
 	elliptic->o_gllzw = mesh->device.malloc(2*mesh->Nq*sizeof(dfloat), gllzw);
@@ -94,7 +95,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     }
   }
 
-  // 
+  //
   ellipticSolveSetup(elliptic, lambda, kernelInfo);
 
 
@@ -105,12 +106,12 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   // load forcing into r
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
-      
+
       dfloat J;
       if (elliptic->elementType==TRIANGLES || elliptic->elementType==TETRAHEDRA) {
         J = mesh->vgeo[e*mesh->Nvgeo+JID];
       } else {
-        J = mesh->vgeo[mesh->Np*(e*mesh->Nvgeo + JID) + n];  
+        J = mesh->vgeo[mesh->Np*(e*mesh->Nvgeo + JID) + n];
       }
       dlong id = n+e*mesh->Np;
       dfloat xn = mesh->x[id];
@@ -119,7 +120,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 
       if(elliptic->dim==2)
         elliptic->r[id] = J*(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
-      else 
+      else
         elliptic->r[id] = J*(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
       elliptic->x[id] = 0;
     }
@@ -135,13 +136,13 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   elliptic->o_x   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->x);
 
 
-  string boundaryHeaderFileName; 
+  string boundaryHeaderFileName;
   options.getArgs("DATA FILE", boundaryHeaderFileName);
   kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
 
   // set kernel name suffix
   char *suffix;
-  
+
   if(elliptic->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
   if(elliptic->elementType==QUADRILATERALS)
@@ -159,7 +160,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       if(r==mesh->rank){
 	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
 	sprintf(kernelName, "ellipticRhsBCIpdg%s", suffix);
-	
+
 	elliptic->rhsBCIpdgKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
       }
       MPI_Barrier(mesh->comm);
@@ -186,17 +187,17 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       if(r==mesh->rank){
 	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
 	sprintf(kernelName, "ellipticRhsBC%s", suffix);
-	
+
 	elliptic->rhsBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
-	
+
 	sprintf(fileName, DELLIPTIC "/okl/ellipticAddBC%s.okl", suffix);
 	sprintf(kernelName, "ellipticAddBC%s", suffix);
-	
+
 	elliptic->addBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
       }
       MPI_Barrier(mesh->comm);
     }
-    
+
     dfloat zero = 0.f;
     elliptic->rhsBCKernel(mesh->Nelements,
                         mesh->o_ggeo,
@@ -217,7 +218,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 
   // gather-scatter
   if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
-    ellipticParallelGatherScatter(mesh, mesh->ogs, elliptic->o_r, dfloatString, "add");  
+    ogsGatherScatter(elliptic->o_r, ogsDfloat, ogsAdd, mesh->ogs);
     if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, elliptic->o_r);
   }
 

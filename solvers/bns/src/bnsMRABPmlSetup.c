@@ -358,12 +358,11 @@ void bnsMRABPmlSetup(bns_t *bns, setupAide &options){
     }
 
     
+    mesh->o_MRABpmlElementIds     = new occa::memory[mesh->MRABNlevels];
+    mesh->o_MRABpmlIds            = new occa::memory[mesh->MRABNlevels];
+    mesh->o_MRABpmlHaloElementIds = new occa::memory[mesh->MRABNlevels];
+    mesh->o_MRABpmlHaloIds        = new occa::memory[mesh->MRABNlevels];
 
-
-    mesh->o_MRABpmlElementIds     = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    mesh->o_MRABpmlIds            = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    mesh->o_MRABpmlHaloElementIds = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
-    mesh->o_MRABpmlHaloIds        = (occa::memory *) malloc(mesh->MRABNlevels*sizeof(occa::memory));
     for (int lev=0;lev<mesh->MRABNlevels;lev++) {
       if (mesh->MRABpmlNelements[lev]) {
         mesh->o_MRABpmlElementIds[lev] = mesh->device.malloc(mesh->MRABpmlNelements[lev]*sizeof(dlong),

@@ -58,10 +58,10 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
                               o_rhsW);
     
     // gather-scatter
-    ellipticParallelGatherScatter(mesh, mesh->ogs, o_rhsU, dfloatString, "add");  
-    ellipticParallelGatherScatter(mesh, mesh->ogs, o_rhsV, dfloatString, "add");  
+    ogsGatherScatter(o_rhsU, ogsDfloat, ogsAdd, mesh->ogs);
+    ogsGatherScatter(o_rhsV, ogsDfloat, ogsAdd, mesh->ogs);
     if (ins->dim==3)
-      ellipticParallelGatherScatter(mesh, mesh->ogs, o_rhsW, dfloatString, "add");  
+      ogsGatherScatter(o_rhsW, ogsDfloat, ogsAdd, mesh->ogs);
     if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, o_rhsU);
     if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, o_rhsV);
     if (ins->dim==3)

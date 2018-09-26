@@ -1,6 +1,11 @@
 [FORMAT]
 1.0
 
+[BENCHMARK]
+SOLVE
+#NONE
+#BP5
+
 [DATA FILE]
 data/ellipticHomogeneous2D.h
 
@@ -14,7 +19,7 @@ data/ellipticHomogeneous2D.h
 3
 
 [POLYNOMIAL DEGREE]
-4
+6
 
 [THREAD MODEL]
 CUDA

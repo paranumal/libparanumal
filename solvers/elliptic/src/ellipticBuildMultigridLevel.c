@@ -52,9 +52,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   elliptic->dataStream = baseElliptic->dataStream;
 
   elliptic->o_EToB = baseElliptic->o_EToB;    
-  elliptic->o_globalGatherElementList = baseElliptic->o_globalGatherElementList;    
-  elliptic->o_localGatherElementList = baseElliptic->o_localGatherElementList;    
-
+  
   elliptic->o_grad = baseElliptic->o_grad;
 
   elliptic->o_EXYZ = baseElliptic->o_EXYZ;    
@@ -141,11 +139,6 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   mesh->dataStream = baseElliptic->mesh->dataStream;
 
   mesh->haloExtractKernel = baseElliptic->mesh->haloExtractKernel;
-  mesh->gatherKernel = baseElliptic->mesh->gatherKernel;
-  mesh->scatterKernel = baseElliptic->mesh->scatterKernel;
-  mesh->gatherScatterKernel = baseElliptic->mesh->gatherScatterKernel;
-  mesh->getKernel = baseElliptic->mesh->getKernel;
-  mesh->putKernel = baseElliptic->mesh->putKernel;
   mesh->addScalarKernel = baseElliptic->mesh->addScalarKernel;
   mesh->maskKernel = baseElliptic->mesh->maskKernel;
   mesh->sumKernel = baseElliptic->mesh->sumKernel;
@@ -354,26 +347,26 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     }
 
     mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				     mesh->Dr);
+                                     mesh->Dr);
 
     mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				     mesh->Ds);
+                                     mesh->Ds);
 
     mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				      DrT);
+                                      DrT);
 
     mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				      DsT);
+                                      DsT);
 
     mesh->o_Dmatrices = mesh->device.malloc(2*mesh->Np*mesh->Np*sizeof(dfloat), DrsT);
 
     mesh->o_LIFT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			  mesh->LIFT);
+                          mesh->LIFT);
 
     mesh->o_LIFTT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			  LIFTT);
+                          LIFTT);
 
     
 
@@ -424,13 +417,13 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
-			  mesh->vgeo);
+                          mesh->vgeo);
     mesh->o_sgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
-			  mesh->sgeo);
+                          mesh->sgeo);
     mesh->o_ggeo =
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
-			  mesh->ggeo);
+                          mesh->ggeo);
 
     mesh->o_LIFTT = baseElliptic->mesh->o_LIFTT; //dummy buffer
     
@@ -524,32 +517,32 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     }
 
     mesh->o_Dr = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				     mesh->Dr);
+                                     mesh->Dr);
 
     mesh->o_Ds = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				     mesh->Ds);
+                                     mesh->Ds);
 
     mesh->o_Dt = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				     mesh->Dt);
+                                     mesh->Dt);
 
     mesh->o_DrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				      DrT);
+                                      DrT);
 
     mesh->o_DsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				      DsT);
+                                      DsT);
 
     mesh->o_DtT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-				      DtT);
+                                      DtT);
 
     mesh->o_Dmatrices = mesh->device.malloc(3*mesh->Np*mesh->Np*sizeof(dfloat), DrstT);
 
     mesh->o_LIFT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			  mesh->LIFT);
+                          mesh->LIFT);
 
     mesh->o_LIFTT =
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			  LIFTT);
+                          LIFTT);
 
     mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrrT);
     mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrsT);
@@ -587,21 +580,21 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
-			  mesh->vgeo);
+                          mesh->vgeo);
     mesh->o_sgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
-			  mesh->sgeo);
+                          mesh->sgeo);
     mesh->o_ggeo =
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
-			  mesh->ggeo);
+                          mesh->ggeo);
 
     mesh->o_vmapM =
       mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
-			  mesh->vmapM);
+                          mesh->vmapM);
 
     mesh->o_vmapP =
       mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
-			  mesh->vmapP);
+                          mesh->vmapP);
 
     mesh->LIFT = baseElliptic->mesh->LIFT; //dummy buffer
     mesh->o_LIFTT = baseElliptic->mesh->o_LIFTT; //dummy buffer
@@ -618,10 +611,10 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
 
     meshHaloExchange(mesh,
-		     mesh->Nvgeo*mesh->Np*sizeof(dfloat),
-		     mesh->vgeo,
-		     vgeoSendBuffer,
-		     mesh->vgeo + Nlocal*mesh->Nvgeo);
+                     mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+                     mesh->vgeo,
+                     vgeoSendBuffer,
+                     mesh->vgeo + Nlocal*mesh->Nvgeo);
 
     mesh->o_vgeo =
       mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
@@ -630,15 +623,15 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   mesh->o_MM =
     mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
-			mesh->MM);
+                        mesh->MM);
 
   mesh->o_vmapM =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
-			mesh->vmapM);
+                        mesh->vmapM);
 
   mesh->o_vmapP =
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
-			mesh->vmapP);
+                        mesh->vmapP);
 
   
   //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
@@ -650,6 +643,58 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   elliptic->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
   elliptic->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), elliptic->tmp);
   elliptic->o_tmp2 = mesh->device.malloc(Nblock2*sizeof(dfloat), elliptic->tmp);
+
+
+  //setup an unmasked gs handle
+  int verbose = options.compareArgs("VERBOSE","TRUE") ? 1:0;
+  meshParallelGatherScatterSetup(mesh, Ntotal, mesh->globalIds, mesh->comm, verbose);
+  
+  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
+  elliptic->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  for (dlong e=0;e<mesh->Nelements;e++) {
+    for (int n=0;n<mesh->Np;n++) elliptic->mapB[n+e*mesh->Np] = 1E9;
+    for (int f=0;f<mesh->Nfaces;f++) {
+      int bc = mesh->EToB[f+e*mesh->Nfaces];
+      if (bc>0) {
+        for (int n=0;n<mesh->Nfp;n++) {
+          int BCFlag = elliptic->BCType[bc];
+          int fid = mesh->faceNodes[n+f*mesh->Nfp];
+          elliptic->mapB[fid+e*mesh->Np] = mymin(BCFlag,elliptic->mapB[fid+e*mesh->Np]);
+        }
+      }
+    }
+  }
+  ogsGatherScatter(elliptic->mapB, ogsInt, ogsMin, mesh->ogs); 
+
+  //use the bc flags to find masked ids
+  elliptic->Nmasked = 0;
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (elliptic->mapB[n] == 1E9) {
+      elliptic->mapB[n] = 0.;
+    } else if (elliptic->mapB[n] == 1) { //Dirichlet boundary
+      elliptic->Nmasked++;
+    }
+  }
+  elliptic->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), elliptic->mapB);
+  
+  elliptic->maskIds = (dlong *) calloc(elliptic->Nmasked, sizeof(dlong));
+  elliptic->Nmasked =0; //reset
+  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
+    if (elliptic->mapB[n] == 1) elliptic->maskIds[elliptic->Nmasked++] = n;
+  }
+  if (elliptic->Nmasked) elliptic->o_maskIds = mesh->device.malloc(elliptic->Nmasked*sizeof(dlong), elliptic->maskIds);
+
+  //make a masked version of the global id numbering
+  mesh->maskedGlobalIds = (hlong *) calloc(Ntotal,sizeof(hlong));
+  memcpy(mesh->maskedGlobalIds, mesh->globalIds, Ntotal*sizeof(hlong));
+  for (dlong n=0;n<elliptic->Nmasked;n++) 
+    mesh->maskedGlobalIds[elliptic->maskIds[n]] = 0;
+
+  //use the masked ids to make another gs handle
+  elliptic->ogs = ogsSetup(Ntotal, mesh->maskedGlobalIds, mesh->comm, verbose, mesh->device);
+  elliptic->o_invDegree = elliptic->ogs->o_invDegree;
+  
+
 
   // info for kernel construction
   occa::properties kernelInfo;
@@ -806,14 +851,14 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
       // check for trilinear
       if(elliptic->elementType!=HEXAHEDRA){
-	sprintf(kernelName, "ellipticPartialAx%s", suffix);
+        sprintf(kernelName, "ellipticPartialAx%s", suffix);
       }
       else{
-	if(elliptic->options.compareArgs("ELEMENT MAP", "TRILINEAR")){
-	  sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
-	}else{
-	  sprintf(kernelName, "ellipticPartialAx%s", suffix);
-	}
+        if(elliptic->options.compareArgs("ELEMENT MAP", "TRILINEAR")){
+          sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
+        }else{
+          sprintf(kernelName, "ellipticPartialAx%s", suffix);
+        }
       }
 
       //sprintf(kernelName, "ellipticPartialAx%s", suffix);
@@ -885,21 +930,21 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       int NpFine, NpCoarse;
       switch(elliptic->elementType){
       case TRIANGLES:
-	NpFine   = (Nf+1)*(Nf+2)/2;
-	NpCoarse = (Nc+1)*(Nc+2)/2;
-	break;
+        NpFine   = (Nf+1)*(Nf+2)/2;
+        NpCoarse = (Nc+1)*(Nc+2)/2;
+        break;
       case QUADRILATERALS:
-	NpFine   = (Nf+1)*(Nf+1);
-	NpCoarse = (Nc+1)*(Nc+1);
-	break;
+        NpFine   = (Nf+1)*(Nf+1);
+        NpCoarse = (Nc+1)*(Nc+1);
+        break;
       case TETRAHEDRA:
-	NpFine   = (Nf+1)*(Nf+2)*(Nf+3)/6;
-	NpCoarse = (Nc+1)*(Nc+2)*(Nc+3)/6;
-	break;
+        NpFine   = (Nf+1)*(Nf+2)*(Nf+3)/6;
+        NpCoarse = (Nc+1)*(Nc+2)*(Nc+3)/6;
+        break;
       case HEXAHEDRA:
-	NpFine   = (Nf+1)*(Nf+1)*(Nf+1);
-	NpCoarse = (Nc+1)*(Nc+1)*(Nc+1);
-	break;
+        NpFine   = (Nf+1)*(Nf+1)*(Nf+1);
+        NpCoarse = (Nc+1)*(Nc+1)*(Nc+1);
+        break;
       }
       kernelInfo["defines/" "p_NpFine"]= NpFine;
       kernelInfo["defines/" "p_NpCoarse"]= NpCoarse;
@@ -920,64 +965,21 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     MPI_Barrier(mesh->comm);
   }
 
-  //on host gather-scatter
-  int verbose = options.compareArgs("VERBOSE", "TRUE") ? 1:0;
-  mesh->hostGsh = gsParallelGatherScatterSetup(mesh->comm, mesh->Nelements*mesh->Np, mesh->globalIds, verbose);
-
-  // set up separate gather scatter infrastructure for halo and non halo nodes
-  ellipticParallelGatherScatterSetup(elliptic);
-
-  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
-  elliptic->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  for (dlong e=0;e<mesh->Nelements;e++) {
-    for (int n=0;n<mesh->Np;n++) elliptic->mapB[n+e*mesh->Np] = 1E9;
-    for (int f=0;f<mesh->Nfaces;f++) {
-      int bc = mesh->EToB[f+e*mesh->Nfaces];
-      if (bc>0) {
-        for (int n=0;n<mesh->Nfp;n++) {
-          int BCFlag = elliptic->BCType[bc];
-          int fid = mesh->faceNodes[n+f*mesh->Nfp];
-          elliptic->mapB[fid+e*mesh->Np] = mymin(BCFlag,elliptic->mapB[fid+e*mesh->Np]);
-        }
-      }
-    }
-  }
-  gsParallelGatherScatter(mesh->hostGsh, elliptic->mapB, "int", "min"); 
-
-  //use the bc flags to find masked ids
-  elliptic->Nmasked = 0;
-  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
-    if (elliptic->mapB[n] == 1E9) {
-      elliptic->mapB[n] = 0.;
-    } else if (elliptic->mapB[n] == 1) { //Dirichlet boundary
-      elliptic->Nmasked++;
-    }
-  }
-  elliptic->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), elliptic->mapB);
-  
-  elliptic->maskIds = (dlong *) calloc(elliptic->Nmasked, sizeof(dlong));
-  elliptic->Nmasked =0; //reset
-  for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
-    if (elliptic->mapB[n] == 1) elliptic->maskIds[elliptic->Nmasked++] = n;
-  }
-  if (elliptic->Nmasked) elliptic->o_maskIds = mesh->device.malloc(elliptic->Nmasked*sizeof(dlong), elliptic->maskIds);
-
-
   if(elliptic->elementType==HEXAHEDRA){
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
       if(options.compareArgs("ELEMENT MAP", "TRILINEAR")){
-	
-	// pack gllz, gllw, and elementwise EXYZ
-	dfloat *gllzw = (dfloat*) calloc(2*mesh->Nq, sizeof(dfloat));
-	
-	int sk = 0;
-	for(int n=0;n<mesh->Nq;++n)
-	  gllzw[sk++] = mesh->gllz[n];
-	for(int n=0;n<mesh->Nq;++n)
-	  gllzw[sk++] = mesh->gllw[n];
+        
+        // pack gllz, gllw, and elementwise EXYZ
+        dfloat *gllzw = (dfloat*) calloc(2*mesh->Nq, sizeof(dfloat));
+        
+        int sk = 0;
+        for(int n=0;n<mesh->Nq;++n)
+          gllzw[sk++] = mesh->gllz[n];
+        for(int n=0;n<mesh->Nq;++n)
+          gllzw[sk++] = mesh->gllw[n];
 
-	elliptic->o_gllzw = mesh->device.malloc(2*mesh->Nq*sizeof(dfloat), gllzw);
-	free(gllzw);
+        elliptic->o_gllzw = mesh->device.malloc(2*mesh->Nq*sizeof(dfloat), gllzw);
+        free(gllzw);
       }
     }
   }

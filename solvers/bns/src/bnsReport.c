@@ -37,12 +37,14 @@ mesh_t *mesh = bns->mesh;
                        bns->o_Vort,
                        bns->o_VortMag);
 
+#if 0
   if(bns->dim==3){
-    meshParallelGatherScatter(mesh, mesh->ogs, bns->o_VortMag);
+    ogsGatherScatter(bns->o_VortMag, ogsDfloat, ogsAdd, mesh->ogs);  
     int Ntotal = mesh->Np*mesh->Nelements;
     bns->dotMultiplyKernel(Ntotal, bns->o_VortMag, mesh->ogs->o_invDegree); 
   }
-
+#endif
+  
   // report ramp function
   if(mesh->rank==0){
     dfloat fx, fy, fz, intfx, intfy, intfz;
@@ -50,8 +52,23 @@ mesh_t *mesh = bns->mesh;
     printf("t: %g (fx,fy,fz) = (%g,%g,%g), int(fx,fy,fz) = (%g,%g,%g)\n",
      time, fx,fy,fz, intfx, intfy, intfz);
   }
-  
 
+#ifdef RENDER
+  if(options.compareArgs("OUTPUT FILE FORMAT","PPM")){
+
+    // copy data back to host
+    bns->o_q.copyTo(bns->q);
+    bns->o_Vort.copyTo(bns->Vort);
+    bns->o_VortMag.copyTo(bns->VortMag);
+   
+    //
+    char fname[BUFSIZ];
+    string outName;
+    options.getArgs("OUTPUT FILE NAME", outName);
+    bnsRenderQuad3D(bns, (char*)outName.c_str(), bns->frame++);
+  }
+#endif
+  
   if(options.compareArgs("OUTPUT FILE FORMAT","VTU")){
 
     // copy data back to host

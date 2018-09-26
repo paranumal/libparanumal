@@ -33,7 +33,7 @@ SOFTWARE.
 void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nsgeo = 7;
+  mesh->Nsgeo = 14; // fix later
   mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
 				mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
@@ -145,16 +145,16 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 
 	if(sJ<1e-8) { printf("Negative or small surface Jacobian: %g\n", sJ); exit(-1);}
 	
-	int base = e*mesh->Nq*mesh->Nfaces*mesh->Nsgeo + n + f*mesh->Nq*mesh->Nsgeo;
+	int base = mesh->Nsgeo*(e*mesh->Nq*mesh->Nfaces + n + f*mesh->Nq);
 	
-	mesh->sgeo[base+mesh->Nq*NXID] = nx;
-	mesh->sgeo[base+mesh->Nq*NYID] = ny;
-	mesh->sgeo[base+mesh->Nq*NZID] = nz;
-	mesh->sgeo[base+mesh->Nq*SJID] = sJ;
+	mesh->sgeo[base+NXID] = nx;
+	mesh->sgeo[base+NYID] = ny;
+	mesh->sgeo[base+NZID] = nz;
+	mesh->sgeo[base+SJID] = sJ;
 
-	mesh->sgeo[base+mesh->Nq*IJID] = 1./Jid;
+	mesh->sgeo[base+IJID] = 1./Jid;
 	
-	mesh->sgeo[base+mesh->Nq*WSJID] = sJ*mesh->gllw[n];
+	mesh->sgeo[base+WSJID] = sJ*mesh->gllw[n];
       }
     }
   }

@@ -34,7 +34,7 @@ SOFTWARE.
 #include "mpi.h"
 #include "mesh2D.h"
 #include "mesh3D.h"
-#include "parAlmond.h"
+#include "parAlmond.hpp"
 #include "ellipticPrecon.h"
 
 // block size for reduction (hard coded)
@@ -110,14 +110,6 @@ typedef struct {
 
   occa::memory o_EXYZ; // element vertices for reconstructing geofacs (trilinear hexes only)
   occa::memory o_gllzw; // GLL nodes and weights
-  
-  // list of elements that are needed for global gather-scatter
-  dlong NglobalGatherElements;
-  occa::memory o_globalGatherElementList;
-
-  // list of elements that are not needed for global gather-scatter
-  dlong NlocalGatherElements;
-  occa::memory o_localGatherElementList;
 
   occa::kernel AxKernel;
   occa::kernel partialAxKernel;
@@ -142,10 +134,9 @@ typedef struct {
 
 }elliptic_t;
 
-elliptic_t *ellipticSetup(mesh2D *mesh, dfloat lambda, occa::properties &kernelInfo, setupAide options);
+#include "ellipticMultiGrid.h"
 
-void ellipticParallelGatherScatter(mesh2D *mesh, ogs_t *ogs, occa::memory &o_v, const char *type, const char *op);
-void ellipticParallelGatherScatterSetup(elliptic_t *elliptic);
+elliptic_t *ellipticSetup(mesh2D *mesh, dfloat lambda, occa::properties &kernelInfo, setupAide options);
 
 void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_z);
 void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda);
@@ -169,10 +160,10 @@ dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory 
 void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision);
 
 dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a);
-void ellipticBuildIpdg(elliptic_t* elliptic, int basisNp, dfloat *basis, dfloat lambda, 
+void ellipticBuildIpdg(elliptic_t* elliptic, int basisNp, dfloat *basis, dfloat lambda,
                         nonZero_t **A, dlong *nnzA, hlong *globalStarts);
 
-void ellipticBuildContinuous(elliptic_t* elliptic, dfloat lambda, nonZero_t **A, 
+void ellipticBuildContinuous(elliptic_t* elliptic, dfloat lambda, nonZero_t **A,
                                   dlong *nnz, ogs_t **ogs, hlong *globalStarts);
 
 void ellipticBuildJacobi(elliptic_t *elliptic, dfloat lambda, dfloat **invDiagA);
@@ -180,17 +171,17 @@ void ellipticBuildJacobi(elliptic_t *elliptic, dfloat lambda, dfloat **invDiagA)
 void ellipticBuildLocalPatches(elliptic_t *elliptic, dfloat lambda, dfloat rateTolerance,
                                dlong *Npataches, dlong **patchesIndex, dfloat **patchesInvA);
 
-//smoother setups
-void ellipticSetupSmoother(elliptic_t *elliptic, precon_t *precon, dfloat lambda);
-void ellipticSetupSmootherDampedJacobi    (elliptic_t *elliptic, precon_t *precon, agmgLevel *level, dfloat lambda);
-void ellipticSetupSmootherLocalPatch(elliptic_t *elliptic, precon_t *precon, agmgLevel *level, dfloat lambda, dfloat rateTolerance);
+// //smoother setups
+// void ellipticSetupSmoother(elliptic_t *elliptic, precon_t *precon, dfloat lambda);
+// void ellipticSetupSmootherDampedJacobi    (elliptic_t *elliptic, precon_t *precon, agmgLevel *level, dfloat lambda);
+// void ellipticSetupSmootherLocalPatch(elliptic_t *elliptic, precon_t *precon, agmgLevel *level, dfloat lambda, dfloat rateTolerance);
 
 void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda);
 elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf);
 
 void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda);
 
-dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level);
+// dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level);
 
 #define maxNthreads 256
 

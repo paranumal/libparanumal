@@ -98,6 +98,9 @@ const dlong pmloffset = mesh->Np*mesh->pmlNelements*bns->Nfields;
                             mesh->MRABshiftIndex[l],
                             fx, fy, fz,
                             mesh->o_vgeo,
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_z, 
                             mesh->o_Dmatrices,
                             bns->o_q,
                             bns->o_rhsq);
@@ -154,7 +157,7 @@ const dlong pmloffset = mesh->Np*mesh->pmlNelements*bns->Nfields;
 
     occaTimerToc(mesh->device, "VolumeKernel");   
 
-     
+#if 1     
     occaTimerTic(mesh->device, "RelaxationKernel");
     for (int l=0;l<lev;l++) {
       if (mesh->MRABNelements[l]){
@@ -214,6 +217,9 @@ const dlong pmloffset = mesh->Np*mesh->pmlNelements*bns->Nfields;
       }
     }
     occaTimerToc(mesh->device, "RelaxationKernel");
+
+#endif
+
 
 
     if(mesh->totalHaloPairs>0){
@@ -298,7 +304,7 @@ const dlong pmloffset = mesh->Np*mesh->pmlNelements*bns->Nfields;
                               bns->o_pmlrhsqy,
                               bns->o_pmlrhsqz);
         occaTimerToc(mesh->device,"PmlSurfaceKernel");
-      }
+       }
       occaTimerToc(mesh->device,"SurfaceKernel");
     }
 

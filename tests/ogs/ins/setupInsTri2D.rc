@@ -1,0 +1,211 @@
+[FORMAT]
+1.0
+
+[DATA FILE]
+data/insUniform2D.h
+#data/insVortex2D.h
+
+[MESH FILE]
+../../../meshes/insSquareCylinder2D.msh
+
+[MESH DIMENSION]
+2
+
+[ELEMENT TYPE] # number of edges
+3
+
+[POLYNOMIAL DEGREE]
+4
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+# can be EXTBDF1,2, or 3, or ARK1
+# can add SUBCYCLING STEPS with EXTBDF
+[TIME INTEGRATOR]
+#ARK2
+EXTBDF2
+
+[SUBCYCLING STEPS]
+4
+
+# can be CUBATURE or COLLOCATION
+[ADVECTION TYPE]
+CUBATURE
+
+[VISCOSITY]
+0.001
+
+[MACH NUMBER]
+.2
+
+[UBAR]
+1.0
+
+[VBAR]
+0.0
+
+[PBAR]
+0.0
+
+#zero to ignore
+[TSTEPS FOR SOLUTION OUTPUT]
+100
+
+# zero to ignore
+[TSTEPS FOR FORCE OUTPUT]
+0
+
+# zero to ignore, only ARK stepper
+[TSTEPS FOR TIME STEP ADAPT]
+100
+
+[START TIME]
+0
+
+[FINAL TIME]
+75.0
+
+[CFL]
+0.5
+
+[OUTPUT TYPE]
+VTU
+
+#Tested only EXTBDF currently
+[RESTART FROM FILE]
+0
+
+[WRITE RESTART FILE]
+1
+
+[RESTART FILE NAME]
+insRestartTri2D
+
+[OUTPUT FILE NAME]
+Tins
+
+#################################################
+########## Velocity Solver Options ##############
+#################################################
+
+# can add FLEXIBLE to PCG
+[VELOCITY KRYLOV SOLVER]
+PCG
+
+# can be IPDG, or CONTINUOUS
+[VELOCITY DISCRETIZATION]
+IPDG
+
+# can be NODAL or BERN
+[VELOCITY BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+[VELOCITY PRECONDITIONER]
+MASSMATRIX
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[VELOCITY MULTIGRID COARSENING]
+HALFDOFS
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[VELOCITY MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+# can be any integer >0
+[MULTIGRID CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[VELOCITY PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[VELOCITY PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[VELOCITY PARALMOND PARTITION]
+STRONGNODES
+
+# can be any integer >0
+[PARALMOND CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+#################################################
+########## Pressure Solver Options ##############
+#################################################
+
+# can add FLEXIBLE to PCG
+[PRESSURE KRYLOV SOLVER]
+PCG,FLEXIBLE
+
+# can be IPDG, or CONTINUOUS
+[PRESSURE DISCRETIZATION]
+CONTINUOUS
+
+# can be NODAL or BERN
+[PRESSURE BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+[PRESSURE PRECONDITIONER]
+MULTIGRID
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[PRESSURE MULTIGRID COARSENING]
+HALFDOFS
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[PRESSURE MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[PRESSURE PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[PRESSURE PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[PRESSURE PARALMOND PARTITION]
+STRONGNODES
+
+###########################################
+
+# compare to a reference solution. Use NONE to skip comparison
+# can be VORTEX or KOVASZNAY
+[EXACT]
+NONE
+#VORTEX
+
+[VERBOSE]
+FALSE

@@ -60,37 +60,38 @@ void bnsRun(bns_t *bns, setupAide &options){
       const int id = 3*mesh->MRABNlevels*3 + 3*l;
       if (mesh->MRABNelements[l])
         bns->traceUpdateKernel(mesh->MRABNelements[l],
-                      	       mesh->o_MRABelementIds[l],
-                      	       offset,
-                      	       mesh->MRABshiftIndex[l],
-                      	       bns->MRSAAB_C[l-1], //
-                      	       bns->MRAB_B[id+0], //
-                      	       bns->MRAB_B[id+1],
-                      	       bns->MRAB_B[id+2], //
-                      	       bns->MRSAAB_B[id+0], //
-                      	       bns->MRSAAB_B[id+1],
-                      	       bns->MRSAAB_B[id+2],
-                      	       mesh->o_vmapM,
-                      	       bns->o_q,
-                      	       bns->o_rhsq,
-                      	       bns->o_fQM);
-
-      if (mesh->MRABpmlNelements[l])
-        bns->traceUpdateKernel(mesh->MRABpmlNelements[l],
-                      	       mesh->o_MRABpmlElementIds[l],
-                      	       offset,
-                      	       mesh->MRABshiftIndex[l],
-                      	       bns->MRSAAB_C[l-1], //
-                      	       bns->MRAB_B[id+0], //
-                      	       bns->MRAB_B[id+1],
-                      	       bns->MRAB_B[id+2], //
-                      	       bns->MRSAAB_B[id+0], //
-                      	       bns->MRSAAB_B[id+1],
-                      	       bns->MRSAAB_B[id+2],
-                      	       mesh->o_vmapM,
-                      	       bns->o_q,
-                      	       bns->o_rhsq,
-                      	       bns->o_fQM);
+                               mesh->o_MRABelementIds[l],
+                               offset,
+                               mesh->MRABshiftIndex[l],
+                               bns->MRSAAB_C[l-1], //
+                               bns->MRAB_B[id+0], //
+                               bns->MRAB_B[id+1],
+                               bns->MRAB_B[id+2], //
+                               bns->MRSAAB_B[id+0], //
+                               bns->MRSAAB_B[id+1],
+                               bns->MRSAAB_B[id+2],
+                               mesh->o_vmapM,
+                               bns->o_q,
+                               bns->o_rhsq,
+                               bns->o_fQM);
+      // if(bns->pmlFlag){
+        if (mesh->MRABpmlNelements[l])
+          bns->traceUpdateKernel(mesh->MRABpmlNelements[l],
+                                 mesh->o_MRABpmlElementIds[l],
+                                 offset,
+                                 mesh->MRABshiftIndex[l],
+                                 bns->MRSAAB_C[l-1], //
+                                 bns->MRAB_B[id+0], //
+                                 bns->MRAB_B[id+1],
+                                 bns->MRAB_B[id+2], //
+                                 bns->MRSAAB_B[id+0], //
+                                 bns->MRSAAB_B[id+1],
+                                 bns->MRSAAB_B[id+2],
+                                 mesh->o_vmapM,
+                                 bns->o_q,
+                                 bns->o_rhsq,
+                                 bns->o_fQM);
+      // }
     }
   }
 
@@ -109,10 +110,9 @@ void bnsRun(bns_t *bns, setupAide &options){
   if( options.compareArgs("TIME INTEGRATOR", "MRSAAB")  || 
       options.compareArgs("TIME INTEGRATOR", "LSERK") ){
 
+    // for(int tstep=0;tstep<1;++tstep){
     for(int tstep=0;tstep<bns->NtimeSteps;++tstep){
-      
-      // for(int tstep=0;tstep<10;++tstep){
-      tic_out = MPI_Wtime();
+        tic_out = MPI_Wtime();
 
       if(bns->reportFlag){
         if((tstep%bns->reportStep)==0){ 
@@ -141,7 +141,7 @@ void bnsRun(bns_t *bns, setupAide &options){
           else
             time = bns->startTime + tstep*bns->dt;
           
-	       bnsError(bns, tstep, options);
+         bnsError(bns, tstep, options);
         }
       }
   
@@ -152,16 +152,33 @@ void bnsRun(bns_t *bns, setupAide &options){
      
       if(options.compareArgs("TIME INTEGRATOR", "MRSAAB")){
         occaTimerTic(mesh->device, "MRSAAB"); 
-	bnsMRSAABStep(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
+        bnsMRSAABStep(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
         occaTimerToc(mesh->device, "MRSAAB"); 
       }
 
       if(options.compareArgs("TIME INTEGRATOR","LSERK")){
         occaTimerTic(mesh->device, "LSERK");  
         bnsLSERKStep(bns, tstep, haloBytes, sendBuffer, recvBuffer, options);
-        occaTimerToc(mesh->device, "LSERK");  
-      }
+        occaTimerToc(mesh->device, "LSERK");
 
+      if(!(tstep%100)){
+        bns->o_q.copyTo(bns->q);
+        for(int fld=0;fld<bns->Nfields;++fld){
+          dfloat maxq = -1e9, minq = 1e9;
+          for(int e=0;e<mesh->Nelements;++e){
+            for(int n=0;n<mesh->Np;++n){
+              hlong id = e*mesh->Np*mesh->Nfields + n;
+              maxq = mymax(maxq, bns->q[id + fld*mesh->Np]);
+              minq = mymin(minq, bns->q[id + fld*mesh->Np]);
+            }
+          }
+        if(fld==0)
+        printf("fld %d in [%g,%g]\n", fld, minq, maxq);
+        }
+      }
+    }
+
+      
       /*
 
       if(options.compareArgs("TIME INTEGRATOR","SARK")){

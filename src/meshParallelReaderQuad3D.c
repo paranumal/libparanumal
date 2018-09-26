@@ -47,6 +47,11 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
 
   mesh_t *mesh = (mesh_t*) calloc(1, sizeof(mesh_t));
 
+  mesh->rank = rank;
+  mesh->size = size;
+
+  MPI_Comm_dup(MPI_COMM_WORLD, &mesh->comm);
+
   mesh->dim = 3;
   mesh->Nverts = 4; // number of vertices per element
   mesh->Nfaces = 4;
@@ -125,6 +130,9 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
     = (int*) calloc(NquadrilateralsLocal*mesh->Nverts, 
 		     sizeof(int));
 
+  mesh->elementInfo
+    = (int*) calloc(NquadrilateralsLocal,sizeof(int));
+  
   /* scan through file looking for quadrilateral elements */
   int cnt=0, bcnt=0;
   Nquadrilaterals = 0;
@@ -145,9 +153,9 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
     
     if(elementType==3){  // quadrilateral
       if(start<=Nquadrilaterals && Nquadrilaterals<=end){
-	sscanf(buf, "%*d%*d%*d%*d%*d %d%d%d%d", 
-	       &v1, &v2, &v3, &v4);
-
+        sscanf(buf, "%*d%*d%*d %d %*d" hlongFormat hlongFormat hlongFormat hlongFormat, 
+               mesh->elementInfo+cnt, &v1, &v2, &v3, &v4);
+	
 #if 0
 	// check orientation
 	dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe4 = VX[v4-1];
