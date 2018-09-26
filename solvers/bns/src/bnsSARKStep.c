@@ -198,7 +198,7 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     occaTimerToc(mesh->device, "VolumeKernel");    
     
 
-
+#if 1
 
     occaTimerTic(mesh->device, "RelaxationKernel");
     if(mesh->pmlNelements){
@@ -262,7 +262,8 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     }
     // VOLUME KERNELS
     occaTimerToc(mesh->device, "RelaxationKernel");
-
+#endif
+    
     if(mesh->totalHaloPairs>0){
     
 #if BNS_ASYNC 

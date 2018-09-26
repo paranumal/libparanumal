@@ -37,12 +37,14 @@ mesh_t *mesh = bns->mesh;
                        bns->o_Vort,
                        bns->o_VortMag);
 
+#if 0
   if(bns->dim==3){
     ogsGatherScatter(bns->o_VortMag, ogsDfloat, ogsAdd, mesh->ogs);  
     int Ntotal = mesh->Np*mesh->Nelements;
     bns->dotMultiplyKernel(Ntotal, bns->o_VortMag, mesh->ogs->o_invDegree); 
   }
-
+#endif
+  
   // report ramp function
   if(mesh->rank==0){
     dfloat fx, fy, fz, intfx, intfy, intfz;
