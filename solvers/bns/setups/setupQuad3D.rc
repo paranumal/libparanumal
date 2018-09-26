@@ -7,6 +7,9 @@
 [DATA FILE]
 data/bnsUniform3D.h
 
+[INITIAL CONDITION]
+BROWN-MINION
+
 [MESH FILE]
 #../../meshes/sphereMR.msh
 ../../meshes/sphereQuadH01.msh
@@ -71,16 +74,16 @@ LSERK4
 0
 
 [REPORT FLAG]
-0
+1
 
 [ERROR FLAG]
 0
 
 [TSTEPS FOR ERROR COMPUTE]
-5000
+1000
 
 [TSTEPS FOR SOLUTION OUTPUT]
-5000
+1000
 
 [START TIME]
 0
