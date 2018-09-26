@@ -29,7 +29,7 @@
 
 #if 0
 
-// cubature version 
+// nodal version
 @kernel void bnsRelaxationQuad3D(const dlong Nelements,
 				 @restrict const  dlong *  elementIds,
 				 @restrict const  dfloat *  vgeo,
