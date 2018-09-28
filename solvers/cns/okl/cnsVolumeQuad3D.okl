@@ -27,15 +27,18 @@ SOFTWARE.
 
 // isothermal Compressible Navier-Stokes
 @kernel void cnsVolumeQuad3D(const dlong Nelements,
-                            const int advSwitch,
-			    const dfloat fx,
-			    const dfloat fy,
-			    const dfloat fz, 
-                            @restrict const  dfloat *  vgeo,
-                            @restrict const  dfloat *  D,
-                            @restrict const  dfloat *  viscousStresses,
-                            @restrict const  dfloat *  q,
-                            @restrict dfloat *  rhsq){
+			     const int advSwitch,
+			     const dfloat fx,
+			     const dfloat fy,
+			     const dfloat fz, 
+			     @restrict const  dfloat *  vgeo,
+			     @restrict const  dfloat *  x,
+			     @restrict const  dfloat *  y,
+			     @restrict const  dfloat *  z,
+			     @restrict const  dfloat *  D,
+			     @restrict const  dfloat *  viscousStresses,
+			     @restrict const  dfloat *  q,
+			     @restrict dfloat *  rhsq){
   
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
@@ -44,7 +47,7 @@ SOFTWARE.
     @shared dfloat s_G[p_Nfields][p_Nq][p_Nq];
     @shared dfloat s_H[p_Nfields][p_Nq][p_Nq];
 
-    @exclusive dfloat r;
+    @exclusive dfloat r, ru, rv, rw;
     
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -55,6 +58,7 @@ SOFTWARE.
         const dfloat rx = vgeo[gbase+p_Np*p_RXID];
         const dfloat ry = vgeo[gbase+p_Np*p_RYID];
 	const dfloat rz = vgeo[gbase+p_Np*p_RZID];
+
         const dfloat sx = vgeo[gbase+p_Np*p_SXID];
         const dfloat sy = vgeo[gbase+p_Np*p_SYID];
 	const dfloat sz = vgeo[gbase+p_Np*p_SZID];
@@ -69,9 +73,9 @@ SOFTWARE.
         const dlong  qbase = e*p_Np*p_Nfields + j*p_Nq + i;
 
 	r  = q[qbase+0*p_Np];
-        const dfloat ru = q[qbase+1*p_Np];
-        const dfloat rv = q[qbase+2*p_Np];
-	const dfloat rw = q[qbase+3*p_Np];
+        ru = q[qbase+1*p_Np];
+        rv = q[qbase+2*p_Np];
+	rw = q[qbase+3*p_Np];
         const dfloat p  = r*p_RT;
 
         // primitive variables (velocity)
@@ -160,15 +164,30 @@ SOFTWARE.
 	  rhsq3 += Djn*s_G[3][n][i];
         }
         
+	// constrain momentum changes to lie on sphere
+	const dfloat xij = x[i+j*p_Nq+e*p_Np];
+	const dfloat yij = y[i+j*p_Nq+e*p_Np];
+	const dfloat zij = z[i+j*p_Nq+e*p_Np];
+	
+	// add coriolis force to momentum equation
+	rhsq2 -= p_fainv*zij*(yij*rw-zij*rv); // check if density should be here
+	rhsq3 -= p_fainv*zij*(zij*ru-xij*rw);
+	rhsq4 -= p_fainv*zij*(xij*rv-yij*ru);
+	
+	// remove radial component of momentum change
+	const dfloat xdotrhsq = (rhsq2*xij + rhsq3*yij + rhsq4*zij)*p_invRadiusSq;
+	
+	rhsq2 -= xij*xdotrhsq;
+	rhsq3 -= yij*xdotrhsq;
+	rhsq4 -= zij*xdotrhsq;
+	
         const dlong base = e*p_Np*p_Nfields + j*p_Nq + i;
-
-	// TW: NEED TO PROJECT AWAY FROM NORMAL
-	// TW: NEED TO CHECK INTEGRATED BY PARTGS 
-        // move to rhs
+	
+        // move to rhs 
         rhsq[base+0*p_Np] = -invJW*rhsq0;
-        rhsq[base+1*p_Np] = -invJW*rhsq1+fx*r;
-        rhsq[base+2*p_Np] = -invJW*rhsq2+fy*r;
-	rhsq[base+3*p_Np] = -invJW*rhsq3+fz*r;
+        rhsq[base+1*p_Np] = -invJW*rhsq1;
+        rhsq[base+2*p_Np] = -invJW*rhsq2;
+	rhsq[base+3*p_Np] = -invJW*rhsq3;
         
       }
     }
@@ -188,6 +207,7 @@ SOFTWARE.
     @shared dfloat s_D[p_Nq][p_Nq];
     @shared dfloat s_u[p_Nq][p_Nq];
     @shared dfloat s_v[p_Nq][p_Nq];
+    @shared dfloat s_w[p_Nq][p_Nq];
     
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -198,9 +218,11 @@ SOFTWARE.
         const dfloat r  = q[qbase + 0*p_Np];
         const dfloat ru = q[qbase + 1*p_Np];
         const dfloat rv = q[qbase + 2*p_Np];
+	const dfloat rw = q[qbase + 3*p_Np];
         
         s_u[j][i] = ru/r;
         s_v[j][i] = rv/r;
+	s_w[j][i] = rw/r;
         
       }
     }
@@ -210,7 +232,7 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         
-        dfloat dudr = 0, duds = 0, dvdr = 0, dvds = 0;
+        dfloat dudr = 0, duds = 0, dvdr = 0, dvds = 0, dwdr = 0, dwds = 0;
 
         for(int n=0;n<p_Nq;++n){
           const dfloat Din = s_D[i][n];
@@ -221,28 +243,50 @@ SOFTWARE.
 
           dvdr += Din*s_v[j][n];
           dvds += Djn*s_v[n][i];
+
+	  dwdr += Din*s_w[j][n];
+          dwds += Djn*s_w[n][i];
         }
 
         const dlong gbase = e*p_Np*p_Nvgeo + j*p_Nq + i;
         const dfloat rx = vgeo[gbase+p_Np*p_RXID];
         const dfloat ry = vgeo[gbase+p_Np*p_RYID];
+	const dfloat rz = vgeo[gbase+p_Np*p_RZID];
         const dfloat sx = vgeo[gbase+p_Np*p_SXID];
         const dfloat sy = vgeo[gbase+p_Np*p_SYID];
+	const dfloat sz = vgeo[gbase+p_Np*p_SZID];
+	const dfloat tx = vgeo[gbase+p_Np*p_TXID];
+        const dfloat ty = vgeo[gbase+p_Np*p_TYID];
+	const dfloat tz = vgeo[gbase+p_Np*p_TZID];
 
-        const dfloat dudx = rx*dudr + sx*duds;
-        const dfloat dudy = ry*dudr + sy*duds;
-        const dfloat dvdx = rx*dvdr + sx*dvds;
-        const dfloat dvdy = ry*dvdr + sy*dvds;
+        const dfloat dudx = rx*dudr + sx*duds + tx*s_u[j][i];
+        const dfloat dudy = ry*dudr + sy*duds + ty*s_u[j][i];
+	const dfloat dudz = rz*dudr + sz*duds + tz*s_u[j][i];
+
+        const dfloat dvdx = rx*dvdr + sx*dvds + tx*s_v[j][i];
+        const dfloat dvdy = ry*dvdr + sy*dvds + ty*s_v[j][i];
+	const dfloat dvdz = rz*dvdr + sz*dvds + tz*s_v[j][i];
+
+	const dfloat dwdx = rx*dwdr + sx*dwds + tx*s_w[j][i];
+        const dfloat dwdy = ry*dwdr + sy*dwds + ty*s_w[j][i];
+	const dfloat dwdz = rz*dwdr + sz*dwds + tz*s_w[j][i];
         
         const dlong sbase = e*p_Nstresses*p_Np + j*p_Nq + i;
 
-        const dfloat S11 = p_half*(dudx+dudx) - p_third*(dudx+dvdy);
+	const dfloat divV = dudx + dvdy + dwdz;
+        const dfloat S11 = p_half*(dudx+dudx) - p_third*divV;
         const dfloat S12 = p_half*(dudy+dvdx);
-        const dfloat S22 = p_half*(dvdy+dvdy) - p_third*(dudx+dvdy);
+	const dfloat S13 = p_half*(dudz+dwdx);
+        const dfloat S22 = p_half*(dvdy+dvdy) - p_third*divV;
+	const dfloat S23 = p_half*(dvdz+dwdy);
+	const dfloat S33 = p_half*(dwdz+dwdz) - p_third*divV;
         
         viscousStresses[sbase + 0*p_Np] = p_two*mu*S11;
         viscousStresses[sbase + 1*p_Np] = p_two*mu*S12;
-        viscousStresses[sbase + 2*p_Np] = p_two*mu*S22;
+	viscousStresses[sbase + 2*p_Np] = p_two*mu*S13;
+        viscousStresses[sbase + 3*p_Np] = p_two*mu*S22;
+	viscousStresses[sbase + 4*p_Np] = p_two*mu*S23;
+	viscousStresses[sbase + 5*p_Np] = p_two*mu*S33;
       }
     }
   }
