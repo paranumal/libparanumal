@@ -40,7 +40,7 @@ void mppfRun(mppf_t *mppf){
   occaTimerTic(mesh->device,"MPPF");
 
  for(int tstep=0;tstep<mppf->NtimeSteps;++tstep){
-   // for(int tstep=0;tstep<10;++tstep){
+   // for(int tstep=0;tstep<1;++tstep){
 
     if(tstep<1)
       extbdfCoefficents(mppf,tstep+1);
@@ -56,11 +56,11 @@ void mppfRun(mppf_t *mppf){
     // Interface Solver
     mppfCahnHilliardRhs(mppf, time_new);
     // Solve for Psi  and Phi
-    mppfCahnHilliardSolve(mppf, time);
+    mppfCahnHilliardSolve(mppf, time_new);
     // Update Phi. Exchange it  and Compute Gradient Phi
     mppfCahnHilliardUpdate(mppf, time_new);
 
-#if 0
+#if 1
     // Compute Nonlinear Term N(U) 
     mppfAdvection(mppf, time);
     // Compute intermediate velocity, Uhat, take divergence and compute Pr Rhs
@@ -101,7 +101,7 @@ void mppfRun(mppf_t *mppf){
     // Exchange pressure and update pressure gradient
      mppfPressureGradient(mppf, time_new);   
 
-#if 0   
+#if 1   
     // Compute velocity Rhs i.e. rhsU, rhsV, rhsW
     mppfVelocityRhs(mppf, time_new);
     mppfVelocitySolve(mppf, time_new, mppf->o_rkU);

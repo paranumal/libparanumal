@@ -72,36 +72,13 @@ mppf->phaseFieldAdvectionVolumeKernel(mesh->Nelements,
                                         mppf->o_NPhi);
 
 
-#if 0
-// dfloat tn1 = mppf->time + mppf->dt;
-  // Compute laplace (h (phi^*)  - S/eta^2 phi^*) (replace with actial IPDG version)
-  mppf->phaseFieldDivGradKernel(mesh->Nelements,
-                                mesh->o_vgeo,
-                                mesh->o_x,
-                                mesh->o_y,
-                                mesh->o_z,
-                                mesh->o_Dmatrices,
-                                time,
-                                mppf->o_extbdfA,
-                                mppf->fieldOffset,
-                                mppf->inveta2,
-                                mppf->chSeta2,
-                                mppf->o_Phi,
-                                mppf->o_HPhi,
-                                mppf->o_lapPhi);
-#else
+
+
+  
+
+
 // Upadte Hq energy term
 const dlong Ntotal = mesh->Nelements+mesh->totalHaloPairs;
-
-// mppf->phaseFieldUpdateMixingEnergyKernel(Ntotal,
-//                                          time,
-//                                          mppf->inveta2,
-//                                          mppf->chSeta2,
-//                                          mppf->o_Phi,
-//                                          mppf->o_HPhi);
-
-
-
 dfloat tt = time-mppf->dt;
 mppf->phaseFieldUpdateMixingEnergyKernel(Ntotal,
                                          tt,
@@ -116,7 +93,7 @@ mppf->phaseFieldUpdateMixingEnergyKernel(Ntotal,
                                          mppf->o_HPhi);
 
 
-mppf->phaseFieldExtrapolateKernel(Ntotal,
+mppf->phaseFieldExtrapolateKernel(Ntotal, // Extrapolate the halo elements, no need to exchange!!!
                                   mppf->Nstages,
                                   mppf->fieldOffset,
                                   mppf->o_extbdfA,
@@ -124,118 +101,57 @@ mppf->phaseFieldExtrapolateKernel(Ntotal,
                                   mppf->o_HPhiE); // Extrapolated mixing energy
 
 
-mppf->phaseFieldAxGradVolumeKernel(mesh->Nelements,
+if(mppf->phiOptions.compareArgs("DISCRETIZATION", "IPDG")){
+
+  mppf->phaseFieldAxGradVolumeKernel(mesh->Nelements,
                                   mesh->o_vgeo,
                                   mesh->o_Dmatrices,
                                   mppf->fieldOffset,
                                   mppf->o_HPhiE,
                                   mppf->o_GPhi);
 
-  
-
- mppf->phaseFieldAxGradSurfaceKernel(mesh->Nelements,
-                                    mppf->inveta2,
-                                    mppf->chSeta2,
-                                    mesh->o_sgeo,
-                                    mesh->o_LIFTT,
-                                    mesh->o_vmapM,
-                                    mesh->o_vmapP,
-                                    mesh->o_EToB,
-                                    mesh->o_x,
-                                    mesh->o_y,
-                                    mesh->o_z,
-                                    time,
-                                    mppf->fieldOffset,
-                                    mppf->o_HPhiE,
-                                    mppf->o_GPhi);
 
 
+   mppf->phaseFieldAxGradSurfaceKernel(mesh->Nelements,
+                                      mppf->inveta2,
+                                      mppf->chSeta2,
+                                      mesh->o_sgeo,
+                                      mesh->o_LIFTT,
+                                      mesh->o_vmapM,
+                                      mesh->o_vmapP,
+                                      mesh->o_EToB,
+                                      mesh->o_x,
+                                      mesh->o_y,
+                                      mesh->o_z,
+                                      time,
+                                      mppf->fieldOffset,
+                                      mppf->o_HPhiE,
+                                      mppf->o_GU,
+                                      mppf->o_GPhi);
 
+   // Just Testing postprocessing
+#if 0
+  dlong NtotalT = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+  for(int s=0; s<mppf->dim; s++){
+    mppf->o_rkP.copyFrom(mppf->o_GPhi,NtotalT*sizeof(dfloat),0,s*mppf->fieldOffset*sizeof(dfloat));
 
-
-// // Extrapolate and compute Gradient
-// mppf->phaseFieldAxGradKernel(mesh->Nelements,
-//                             mppf->fieldOffset,
-//                             mppf->o_extbdfA,
-//                             mesh->o_vgeo,
-//                             mesh->o_Dmatrices,
-//                             mppf->o_HPhi,
-//                             mppf->o_GHPhi);
-
-// // Extrapolate and compute Gradient
-// mppf->phaseFieldAxGradKernel(Ntotal, //mesh->Nelements,
-//                             mppf->fieldOffset,
-//                             time,
-//                             mppf->inveta2,
-//                             mppf->chSeta2,
-//                             mppf->o_extbdfA,
-//                             mesh->o_vgeo,
-//                             mesh->o_x,
-//                             mesh->o_y,
-//                             mesh->o_z,
-//                             mesh->o_Dmatrices,
-//                             mppf->o_HPhi,
-//                             mppf->o_GHPhi);
-
-
-// // Extrapolate and compute Gradient
-// mppf->phaseFieldAxGradSurafceKernel(mesh->Nelements,
-//                                       mesh->o_sgeo,
-//                                       mesh->o_LIFTT,
-//                                       mesh->o_vmapM,
-//                                       mesh->o_vmapP,
-//                                       mesh->o_EToB,
-//                                       mesh->o_x,
-//                                       mesh->o_y,
-//                                       mesh->o_z,
-//                                       time,
-//                                       mppf->fieldOffset,
-//                                       mppf->o_GHPhi);
-
-
-// // Velocity needed to be exchanged, Phi is already done on update function
-//   if(mesh->totalHaloPairs>0){
-//     const int gNfields = 4; 
-//     mppf->gradPhaseFieldHaloExtractKernel(mesh->Nelements,
-//                                           mesh->totalHaloPairs,
-//                                           mesh->o_haloElementList,
-//                                           mppf->o_GHPhi,
-//                                           mppf->o_gPhiHaloBuffer);
-
-//     // copy extracted halo to HOST 
-//     mppf->o_gPhiHaloBuffer.copyTo(mppf->gPhiSendBuffer);           
-
-//     // start halo exchange
-//     meshHaloExchangeStart(mesh,
-//                          mesh->Np*gNfields*sizeof(dfloat),
-//                          mppf->gPhiSendBuffer,
-//                          mppf->gPhiRecvBuffer);
-
-
-//     meshHaloExchangeFinish(mesh);
-
-//     mppf->o_gPhiHaloBuffer.copyFrom(mppf->gPhiRecvBuffer); 
-
-//     mppf->gradPhaseFieldHaloScatterKernel(mesh->Nelements,
-//                                           mesh->totalHaloPairs,
-//                                           mppf->o_GHPhi,
-//                                           mppf->o_gPhiHaloBuffer);
-//   }
-
-
-
+    ogsGatherScatter(mppf->o_rkP, ogsDfloat, ogsAdd, mesh->ogs);  
+    mppf->pSolver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, mppf->o_rkP, mppf->o_rkP);
+    
+    mppf->o_rkP.copyTo(mppf->o_GPhi,NtotalT*sizeof(dfloat),s*mppf->fieldOffset*sizeof(dfloat),0);
+  }
+#endif
 
 const dfloat zero = 0.0; 
-
-// laplace(HPhi) = - M^-1 * Ax(HPhi)
-mppf->phaseFieldAxIpdgKernel(mesh->Nelements,
+    // laplace(HPhi) = - M^-1 * Ax(HPhi)
+  mppf->phaseFieldAxIpdgKernel(mesh->Nelements,
                         mesh->o_vmapM,
                         mesh->o_vmapP,
                         time,
                         mppf->inveta2,
                         mppf->chSeta2,
                         zero, // lambda,
-                        zero, //zero //mppf->psiSolver->tau,
+                        zero, //mppf->psiSolver->tau, // zero ????
                         mppf->fieldOffset,
                         mesh->o_vgeo,
                         mesh->o_sgeo,
@@ -249,31 +165,25 @@ mppf->phaseFieldAxIpdgKernel(mesh->Nelements,
                         mppf->o_HPhiE,
                         mppf->o_GPhi,
                         mppf->o_lapPhi);
+}
 
-// // laplace(HPhi) = - M^-1 * Ax(HPhi)
-// mppf->phaseFieldAxIpdgKernel(mesh->Nelements,
-//                         mesh->o_vmapM,
-//                         mesh->o_vmapP,
-//                         time,
-//                         mppf->inveta2,
-//                         mppf->chSeta2,
-//                         zero, // lambda,
-//                         zero, //zero //mppf->psiSolver->tau,
-//                         mesh->o_vgeo,
-//                         mesh->o_sgeo,
-//                         mesh->o_x,
-//                         mesh->o_y,
-//                         mesh->o_z,
-//                         mesh->o_EToB,
-//                         mesh->o_Dmatrices,
-//                         mesh->o_LIFTT,
-//                         mesh->o_MM,
-//                         mppf->o_GHPhi,
-//                         mppf->o_lapPhi);
-#endif
 
-  
-  
+if (mppf->phiOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
+
+mppf->phaseFieldAxKernel(mesh->Nelements,
+                        mesh->o_ggeo,
+                        time,          // no need just for exact solution
+                        mppf->inveta2, // no need just for exact solution
+                        mppf->chSeta2, // no need just for exact solution
+                        mesh->o_Dmatrices,
+                        mesh->o_Smatrices,
+                        mppf->o_HPhiE,
+                        mppf->o_lapPhi);
+}
+
+
+
+
   mppf->phaseFieldRhsSolve1Kernel(mesh->Nelements,
                             mesh->o_vgeo,
                             mesh->o_x,

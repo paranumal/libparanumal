@@ -53,8 +53,9 @@
         if(bc>0) {
           mppfPhaseFieldDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, &phiP);
           mppfPhaseFieldNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dphidxP, &dphidyP);
-        }
 
+        }
+        
         const dfloat dphi = phiP;
 
         s_nxdphi[n] = sJ*invJ*nx*dphi;

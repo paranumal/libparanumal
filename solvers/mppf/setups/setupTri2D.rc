@@ -16,7 +16,7 @@ data/mppfCahnHilliard2D.h
 3
 
 [POLYNOMIAL DEGREE]
-5
+4
 
 [THREAD MODEL]
 CUDA
@@ -79,7 +79,7 @@ CUBATURE
 
 #zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-500
+1000
 
 # zero to ignore
 [TSTEPS FOR FORCE OUTPUT]
@@ -87,16 +87,16 @@ CUBATURE
 
 # zero to ignore, only ARK stepper
 [TSTEPS FOR TIME STEP ADAPT]
-100
+1000
 
 [START TIME]
 0.0
 
 [FINAL TIME]
-0.5
+2.0
 
 [CFL]
-0.05
+0.2
 
 [OUTPUT TYPE]
 VTU
@@ -126,7 +126,8 @@ PCG
 
 # can be IPDG, or CONTINUOUS
 [PHASE FIELD DISCRETIZATION]
-IPDG
+CONTINUOUS
+#IPDG
 
 # can be NODAL or BERN
 [PHASE FIELD BASIS]

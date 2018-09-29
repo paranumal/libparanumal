@@ -446,8 +446,11 @@ options.getArgs("BAND THICKNESS", mppf->eta);
   int vBCType[7]   = {0,1,1,2,2,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
   int wBCType[7]   = {0,1,1,2,2,2,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
   int pBCType[7]   = {0,2,2,1,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc. 
-  // int pBCType[7]   = {0,1,1,2,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc. 
+  // int phiBCType[7] = {0,2,2,2,2,2,2}; // All homogenous Neumann BCs for Phi and Psi solves 
+  // int psiBCType[7] = {0,2,2,2,2,2,2}; // All homogenous Neumann BCs for Phi and Psi solves ????????
+
   int phiBCType[7] = {0,2,2,2,2,2,2}; // All homogenous Neumann BCs for Phi and Psi solves 
+  int psiBCType[7] = {0,2,2,2,2,2,2}; // All homogenous Neumann BCs for Phi and Psi solves ????????
 
   //Solver tolerances 
   mppf->presTOL = 1E-8;
@@ -455,7 +458,7 @@ options.getArgs("BAND THICKNESS", mppf->eta);
   mppf->phiTOL  = 1E-8;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
-  if (mesh->rank==0) printf("================PHASE-FIELD SOLVE SETUP=========================\n");
+  // if (mesh->rank==0) printf("================PHASE-FIELD SOLVE SETUP=========================\n");
  
   if (mesh->rank==0) printf("==================Phi Solve Setup=========================\n");
   // -laplace(Phi) + [-alpha ]*Phi = -Psi 
@@ -476,7 +479,7 @@ options.getArgs("BAND THICKNESS", mppf->eta);
   mppf->psiSolver->dim = mppf->dim;
   mppf->psiSolver->elementType = mppf->elementType;
   mppf->psiSolver->BCType = (int*) calloc(7,sizeof(int));
-  memcpy(mppf->phiSolver->BCType,phiBCType,7*sizeof(int)); // Using the same boundary flags
+  memcpy(mppf->phiSolver->BCType,psiBCType,7*sizeof(int)); // Using the same boundary flags
   ellipticSolveSetup(mppf->psiSolver, mppf->lambdaPsi, kernelInfoPsi);
 
 
@@ -525,10 +528,12 @@ options.getArgs("BAND THICKNESS", mppf->eta);
 
 
   //make node-wise boundary flags
-  mppf->VmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
-  mppf->PmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  mppf->VmapB   = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  mppf->PmapB   = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  // mppf->FmapB   = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
   for (int e=0;e<mesh->Nelements;e++) {
-    for (int n=0;n<mesh->Np;n++) mppf->VmapB[n+e*mesh->Np] = 1E9;
+    for (int n=0;n<mesh->Np;n++)
+      mppf->VmapB[n+e*mesh->Np]   = 1E9;
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
       if (bc>0) {
@@ -540,6 +545,7 @@ options.getArgs("BAND THICKNESS", mppf->eta);
       }
     }
   }
+
   ogsGatherScatter(mppf->VmapB, ogsInt, ogsMin, mesh->ogs);
   ogsGatherScatter(mppf->PmapB, ogsInt, ogsMax, mesh->ogs);
 
@@ -550,6 +556,9 @@ options.getArgs("BAND THICKNESS", mppf->eta);
   }
   mppf->o_VmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mppf->VmapB);
   mppf->o_PmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mppf->PmapB);
+
+
+  mppf->o_FmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), mppf->VmapB); //!!!!!
   
   // Kernel defines
   kernelInfo["defines/" "p_blockSize"]= blockSize;
@@ -784,6 +793,10 @@ options.getArgs("BAND THICKNESS", mppf->eta);
 
       sprintf(kernelName, "mppfPhaseFieldAxIpdg%s", suffix);
       mppf->phaseFieldAxIpdgKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+
+      sprintf(kernelName, "mppfPhaseFieldAx%s", suffix);
+      mppf->phaseFieldAxKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       // ===========================================================================//
 
       sprintf(fileName, DMPPF "/okl/mppfPhaseFieldRhs%s.okl", suffix);

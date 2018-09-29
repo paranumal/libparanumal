@@ -65,6 +65,44 @@
 // -2*M_PI*M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
     // dfloat p_c     = (M_PI*M_PI*lambda*sin(t)*sin(t)*(sin(M_PI*x)*sin(M_PI*x) - 2.f*sin(M_PI*x)*sin(M_PI*x)*sin(M_PI*y)*sin(M_PI*y) + sin(M_PI*y)*sin(M_PI*y)))/2.f;\
 
+// #define mppfPhaseFieldDirichletConditions2D(bc, t, x, y, nx, ny, phiM, phiB) \
+// {                                   \
+//   if(bc==1){                        \
+//     *(phiB) = cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+//   } else if(bc==2){                 \
+//     *(phiB) = cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+//   } else if(bc==3){                 \
+//     *(phiB) = cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+//   } else if(bc==4){                 \
+//     *(phiB) = cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+//   } else if(bc==5){                 \
+//     *(phiB) = cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+//   }                                 \
+// }
+
+
+
+// #define mppfPhaseFieldNeumannConditions2D(bc, t, x, y, nx, ny, phixM, phiyM, phixB, phiyB) \
+// {                                          \
+//   if(bc==1 || bc==2){                      \
+//     *(phixB) =-M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+//     *(phiyB) =-M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+//   } else if(bc==3){                        \
+//     *(phixB) = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+//     *(phiyB) = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+//   } else if(bc==4){                        \
+//     *(phixB) = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+//     *(phiyB) = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+//   } else if(bc==5){                        \
+//     *(phixB) = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+//     *(phiyB) = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+//   }                                        \
+// }
+
+
+
+
+
 #define mppfPhaseFieldDirichletConditions2D(bc, t, x, y, nx, ny, phiM, phiB) \
 {                                   \
   if(bc==1){                        \
@@ -100,14 +138,28 @@
 }
 
 
-// #define mppfPhaseFieldNeumannConditions2D(bc, t, x, y,phiM, phixM, phiyM, phiB, phixB, phiyB) \
+// #define mppfPhaseFieldDirichletConditions2D(bc, t, x, y, nx, ny, phiM, phiB) \
+// {                                   \
+//   if(bc==1){                        \
+//     *(phiB) = 100000;               \
+//   } else if(bc==2){                 \
+//     *(phiB) = 1000;                 \
+//   } else if(bc==3){                 \
+//     *(phiB) = 1000;                 \
+//   } else if(bc==4){                 \
+//     *(phiB) = 1000;                 \
+//   } else if(bc==5){                 \
+//     *(phiB) = 1000;                 \
+//   }                                 \
+// }
+
+
+
+// #define mppfPhaseFieldNeumannConditions2D(bc, t, x, y, nx, ny, phixM, phiyM, phixB, phiyB) \
 // {                                          \
-//   dfloat phi     =  cos(M_PI*x)*cos(M_PI*y)*sin(t);\
-//   dfloat phix    = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
-//   dfloat phiy    = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
 //   if(bc==1 || bc==2){                      \
-//     *(phixB) = 0.f;                        \
-//     *(phiyB) = 0.f;                        \
+//     *(phixB) = 100000.f;                        \
+//     *(phiyB) = 1000.f;                        \
 //   } else if(bc==3){                        \
 //     *(phixB) = 0.f;                        \
 //     *(phiyB) = 0.f;                        \
@@ -119,7 +171,6 @@
 //     *(phiyB) = 0.f;                        \
 //   }                                        \
 // }
-
 
 
 

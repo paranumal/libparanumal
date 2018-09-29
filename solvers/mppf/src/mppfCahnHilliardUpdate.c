@@ -49,6 +49,8 @@ mppf->o_Psi.copyFrom(mppf->Psi);
 
   
 
+
+if (mppf->phiOptions.compareArgs("DISCRETIZATION","IPDG")) {
   // Exchange Phi Here // Compute grad(Phi)
 
   if(mesh->totalHaloPairs>0){
@@ -67,14 +69,23 @@ mppf->o_Psi.copyFrom(mppf->Psi);
                          mppf->phiSendBuffer,
                          mppf->phiRecvBuffer);
   }
+}
 
 
-  mppf->phaseFieldGradientVolumeKernel(mesh->Nelements,
+
+mppf->phaseFieldGradientVolumeKernel(mesh->Nelements,
                                       mesh->o_vgeo,
                                       mesh->o_Dmatrices,
                                       mppf->fieldOffset,
                                       mppf->o_Phi,
                                       mppf->o_GPhi);
+
+
+
+
+
+if (mppf->phiOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  
 
    if(mesh->totalHaloPairs>0){
 
@@ -103,7 +114,7 @@ mppf->o_Psi.copyFrom(mppf->Psi);
                                       mppf->o_Phi,
                                       mppf->o_GPhi);
 
-
+}
 // Give exact GPhi
  #if 0
 

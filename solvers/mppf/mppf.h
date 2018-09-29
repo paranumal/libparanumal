@@ -87,7 +87,7 @@ typedef struct {
   dfloat *extC;
 
   int *VmapB, *PmapB;
-  occa::memory o_VmapB, o_PmapB;
+  occa::memory o_VmapB, o_PmapB, o_FmapB;
 
   //halo data
   dfloat *vSendBuffer;
@@ -189,6 +189,7 @@ typedef struct {
   occa::kernel phaseFieldAxGradVolumeKernel;
   occa::kernel phaseFieldAxGradSurfaceKernel;
   occa::kernel phaseFieldAxIpdgKernel;
+  occa::kernel phaseFieldAxKernel;
 
 
   occa::kernel phaseFieldRhsSolve1Kernel; 

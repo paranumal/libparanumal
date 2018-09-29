@@ -10,8 +10,8 @@
                                 @restrict const  dfloat *  extbdfB,
                                 const dlong fieldOffset,
                                 @restrict const  dfloat *  Phi,
-                                @restrict        dfloat *  NPhi,
-                                @restrict        dfloat *  lapPhi,
+                                @restrict const  dfloat *  NPhi,
+                                @restrict const  dfloat *  lapPhi,
                                       @restrict dfloat *  rhsPhi){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
@@ -33,8 +33,8 @@
             s_rhsPhi[es][n] += J*p_chInvLM*(idt*extbdfB[s]*phim - extbdfA[s]*nphim); // 1/ (lamda*M) * ( BDF(Phi)/dt -  ext(NPhi) )
           }
           
-          // Sign needd to be checked
-          s_rhsPhi[es][n] +=  1.f*J*lapPhi[id]; // Add  lap(h(phie) - S/eta^2 * phie)
+          // // Sign needd to be checked
+          // s_rhsPhi[es][n] +=  1.f*J*lapPhi[id]; // Add  lap(h(phie) - S/eta^2 * phie)
      
 #if 1            
           dfloat gn1 = 0.f; 
@@ -57,11 +57,15 @@
           const dlong id = e*p_Np+n;
 
           dfloat rhsphi = 0.f;
+          // dfloat rhsphi = lapPhi[id]; 
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat M = MM[n+i*p_Np];
               rhsphi  += M*s_rhsPhi[es][i];
             }
+
+            dfloat lapphi = lapPhi[id];
+            rhsphi  += lapphi; // Assumes that lapPhi premultiplied with mass matrix !!!!! 
           // Update
           rhsPhi[id] = -rhsphi; // Not sign change here, solving for - (Helmholtz)
         }
