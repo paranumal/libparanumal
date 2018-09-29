@@ -3,7 +3,7 @@ ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
-CXXFLAGS = -O3
+CXXFLAGS = -g
 
 include ${OCCA_DIR}/scripts/Makefile
 
@@ -54,6 +54,7 @@ OBJS    = \
 ./src/cnsGaussianPulse.o \
 ./src/cnsPlotVTU.o \
 ./src/cnsReport.o \
+./src/cnsBrownMinionQuad3D.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \
@@ -62,6 +63,7 @@ OBJS    = \
 ../../src/meshGeometricFactorsHex3D.o \
 ../../src/meshGeometricFactorsTri2D.o \
 ../../src/meshGeometricFactorsQuad2D.o \
+../../src/meshGeometricFactorsQuad3D.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshGeometricPartition3D.o \
 ../../src/meshHaloExchange.o \
@@ -73,16 +75,19 @@ OBJS    = \
 ../../src/meshLoadReferenceNodesHex3D.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/meshOccaSetup3D.o \
+../../src/meshOccaSetupQuad3D.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
 ../../src/meshParallelPrint2D.o \
 ../../src/meshParallelReaderTri2D.o \
 ../../src/meshParallelReaderQuad2D.o \
+../../src/meshParallelReaderQuad3D.o \
 ../../src/meshParallelReaderTet3D.o \
 ../../src/meshParallelReaderHex3D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPhysicalNodesTri2D.o \
 ../../src/meshPhysicalNodesQuad2D.o \
+../../src/meshPhysicalNodesQuad3D.o \
 ../../src/meshPhysicalNodesTet3D.o \
 ../../src/meshPhysicalNodesHex3D.o \
 ../../src/meshPlotVTU2D.o \
@@ -91,10 +96,12 @@ OBJS    = \
 ../../src/meshPrint3D.o \
 ../../src/meshSetupTri2D.o \
 ../../src/meshSetupQuad2D.o \
+../../src/meshSetupQuad3D.o \
 ../../src/meshSetupTet3D.o \
 ../../src/meshSetupHex3D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
 ../../src/meshSurfaceGeometricFactorsQuad2D.o \
+../../src/meshSurfaceGeometricFactorsQuad3D.o \
 ../../src/meshSurfaceGeometricFactorsTet3D.o \
 ../../src/meshSurfaceGeometricFactorsHex3D.o \
 ../../src/meshVTU2D.o \

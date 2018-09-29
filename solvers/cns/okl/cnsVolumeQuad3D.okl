@@ -76,6 +76,7 @@ SOFTWARE.
         ru = q[qbase+1*p_Np];
         rv = q[qbase+2*p_Np];
 	rw = q[qbase+3*p_Np];
+
         const dfloat p  = r*p_RT;
 
         // primitive variables (velocity)
@@ -111,7 +112,7 @@ SOFTWARE.
           // F1 = 2*mu*S11 - (ru^2+p), G1 = 2*mu*S12 - (rvu)
           const dfloat f = T11-advSwitch*(ru*u+p);
           const dfloat g = T12-advSwitch*(rv*u);
-	  const dfloat g = T12-advSwitch*(rw*u);
+	  const dfloat h = T13-advSwitch*(rw*u);
           s_F[1][j][i] = JW*(rx*f + ry*g + rz*h);
           s_G[1][j][i] = JW*(sx*f + sy*g + sz*h);
 	  s_H[1][j][i] = JW*(tx*f + ty*g + tz*h);
@@ -170,16 +171,16 @@ SOFTWARE.
 	const dfloat zij = z[i+j*p_Nq+e*p_Np];
 	
 	// add coriolis force to momentum equation
-	rhsq2 -= p_fainv*zij*(yij*rw-zij*rv); // check if density should be here
-	rhsq3 -= p_fainv*zij*(zij*ru-xij*rw);
-	rhsq4 -= p_fainv*zij*(xij*rv-yij*ru);
+	rhsq1 -= p_fainv*zij*(yij*rw-zij*rv); // check if density should be here
+	rhsq2 -= p_fainv*zij*(zij*ru-xij*rw);
+	rhsq3 -= p_fainv*zij*(xij*rv-yij*ru);
 	
 	// remove radial component of momentum change
-	const dfloat xdotrhsq = (rhsq2*xij + rhsq3*yij + rhsq4*zij)*p_invRadiusSq;
+	const dfloat xdotrhsq = (rhsq1*xij + rhsq2*yij + rhsq3*zij)*p_invRadiusSq;
 	
-	rhsq2 -= xij*xdotrhsq;
-	rhsq3 -= yij*xdotrhsq;
-	rhsq4 -= zij*xdotrhsq;
+	rhsq1 -= xij*xdotrhsq;
+	rhsq2 -= yij*xdotrhsq;
+	rhsq3 -= zij*xdotrhsq;
 	
         const dlong base = e*p_Np*p_Nfields + j*p_Nq + i;
 	

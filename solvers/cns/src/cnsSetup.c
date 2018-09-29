@@ -155,30 +155,36 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
   dfloat fx, fy, fz, intfx, intfy, intfz;
   cnsBodyForce(0.0, &fx, &fy, &fz, &intfx, &intfy, &intfz);
-  
-  // fix this later (initial conditions)
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      dfloat t = 0;
-      dfloat x = mesh->x[n + mesh->Np*e];
-      dfloat y = mesh->y[n + mesh->Np*e];
-      dfloat z = mesh->z[n + mesh->Np*e];
 
-      dlong qbase = e*mesh->Np*mesh->Nfields + n;
+  if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION")){
+    cnsBrownMinionQuad3D(cns);
+  }
+  else{
+    
+    // fix this later (initial conditions)
+    for(dlong e=0;e<mesh->Nelements;++e){
+      for(int n=0;n<mesh->Np;++n){
+	dfloat t = 0;
+	dfloat x = mesh->x[n + mesh->Np*e];
+	dfloat y = mesh->y[n + mesh->Np*e];
+	dfloat z = mesh->z[n + mesh->Np*e];
 
+	dlong qbase = e*mesh->Np*mesh->Nfields + n;
+	
 #if 0
-      cnsGaussianPulse(x, y, z, t,
+	cnsGaussianPulse(x, y, z, t,
                        mesh->q+qbase,
-                       mesh->q+qbase+mesh->Np,
-                       mesh->q+qbase+2*mesh->Np,
-                       mesh->q+qbase+3*mesh->Np);
+			 mesh->q+qbase+mesh->Np,
+			 mesh->q+qbase+2*mesh->Np,
+			 mesh->q+qbase+3*mesh->Np);
 #else
-      mesh->q[qbase+0*mesh->Np] = cns->rbar;
-      mesh->q[qbase+1*mesh->Np] = cns->rbar*intfx;
-      mesh->q[qbase+2*mesh->Np] = cns->rbar*intfy;
-      if(cns->dim==3)
-        mesh->q[qbase+3*mesh->Np] = cns->rbar*intfz;
+	mesh->q[qbase+0*mesh->Np] = cns->rbar;
+	mesh->q[qbase+1*mesh->Np] = cns->rbar*intfx;
+	mesh->q[qbase+2*mesh->Np] = cns->rbar*intfy;
+	if(cns->dim==3)
+	  mesh->q[qbase+3*mesh->Np] = cns->rbar*intfz;
 #endif
+      }
     }
   }
 
@@ -237,16 +243,20 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   // OCCA build stuff
   
   occa::properties kernelInfo;
- kernelInfo["defines"].asObject();
- kernelInfo["includes"].asArray();
- kernelInfo["header"].asArray();
- kernelInfo["flags"].asObject();
-
-  if(cns->dim==3)
-    meshOccaSetup3D(mesh, options, kernelInfo);
+  kernelInfo["defines"].asObject();
+  kernelInfo["includes"].asArray();
+  kernelInfo["header"].asArray();
+  kernelInfo["flags"].asObject();
+  
+  if(cns->dim==3){
+    if(cns->elementType != QUADRILATERALS)
+      meshOccaSetup3D(mesh, options, kernelInfo);
+    else
+      meshOccaSetupQuad3D(mesh, options, kernelInfo);
+  }
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
-
+ 
   //add boundary data to kernel info  
   string boundaryHeaderFileName; 
   options.getArgs("DATA FILE", boundaryHeaderFileName);
@@ -309,18 +319,6 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     
     cns->o_haloBuffer = mesh->device.malloc(cns->haloBytes);
     cns->o_haloStressesBuffer = mesh->device.malloc(cns->haloStressesBytes);
-
-#if 0
-    occa::memory o_sendBuffer = mesh->device.mappedAlloc(cns->haloBytes, NULL);
-    occa::memory o_recvBuffer = mesh->device.mappedAlloc(cns->haloBytes, NULL);
-    cns->sendBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
-    cns->recvBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
-
-    occa::memory o_sendStressesBuffer = mesh->device.mappedAlloc(cns->haloStressesBytes, NULL);
-    occa::memory o_recvStressesBuffer = mesh->device.mappedAlloc(cns->haloStressesBytes, NULL);
-    cns->sendStressesBuffer = (dfloat*) o_sendStressesBuffer.getMappedPointer();
-    cns->recvStressesBuffer = (dfloat*) o_recvStressesBuffer.getMappedPointer();
-#endif
     
     cns->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloBytes, NULL, cns->o_sendBuffer);
     cns->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloBytes, NULL, cns->o_recvBuffer);
@@ -328,14 +326,6 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     cns->recvStressesBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloStressesBytes, NULL, cns->o_recvStressesBuffer);
   }
   
-  //if (mesh->rank!=0) 
-  //    occa::setVerboseCompilation(false);
-
-  //  p_RT, p_rbar, p_ubar, p_vbar
-  // p_half, p_two, p_third, p_Nstresses
-
-  //    kernelInfo["compiler_flags"] += "-g";
-    
   kernelInfo["defines/" "p_Nfields"]= mesh->Nfields;
   kernelInfo["defines/" "p_Nstresses"]= cns->Nstresses;
 
@@ -373,7 +363,11 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
 
   kernelInfo["defines/" "p_Lambda2"]= 0.5f;
-
+  if(cns->elementType==QUADRILATERALS && mesh->dim==3){
+    kernelInfo["defines/" "p_fainv"] = (dfloat) 0.0;
+    kernelInfo["defines/" "p_invRadiusSq"] = (dfloat) 1./(mesh->sphereRadius*mesh->sphereRadius);
+  }
+  
   kernelInfo["defines/" "p_blockSize"]= blockSize;
 
 
@@ -384,8 +378,12 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   
   if(cns->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
-  if(cns->elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
+  if(cns->elementType==QUADRILATERALS){
+    if(cns->dim==2)
+      suffix = strdup("Quad2D");
+    else
+      suffix = strdup("Quad3D");
+  }
   if(cns->elementType==TETRAHEDRA)
     suffix = strdup("Tet3D");
   if(cns->elementType==HEXAHEDRA)

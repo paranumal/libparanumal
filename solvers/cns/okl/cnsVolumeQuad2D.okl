@@ -27,15 +27,18 @@ SOFTWARE.
 
 // isothermal Compressible Navier-Stokes
 @kernel void cnsVolumeQuad2D(const dlong Nelements,
-                            const int advSwitch,
-			    const dfloat fx,
-			    const dfloat fy,
-			    const dfloat fz, 
-                            @restrict const  dfloat *  vgeo,
-                            @restrict const  dfloat *  D,
-                            @restrict const  dfloat *  viscousStresses,
-                            @restrict const  dfloat *  q,
-                            @restrict dfloat *  rhsq){
+			     const int advSwitch,
+			     const dfloat fx,
+			     const dfloat fy,
+			     const dfloat fz, 
+			     @restrict const  dfloat *  vgeo,
+			     @restrict const  dfloat *  x,
+			     @restrict const  dfloat *  y,
+			     @restrict const  dfloat *  z,
+			     @restrict const  dfloat *  D,
+			     @restrict const  dfloat *  viscousStresses,
+			     @restrict const  dfloat *  q,
+			     @restrict dfloat *  rhsq){
   
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
