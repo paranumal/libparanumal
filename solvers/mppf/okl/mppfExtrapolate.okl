@@ -1,0 +1,52 @@
+@kernel void mppfVelocityExtrapolate(const dlong Nelements,
+                                    const int Nstages,
+                                    const dlong fieldOffset,
+                                    @restrict const  dfloat *  c,
+                                    @restrict const  dfloat *  U,
+                                         @restrict dfloat *  Ue){
+
+  // Low storage Runge Kutta time step update
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = n+p_Np*e;
+      
+      #pragma unroll p_NVfields
+      for (int i=0;i<p_NVfields;i++) {
+        dfloat Un = 0.;
+
+        for (int s=0;s<Nstages;s++) {
+          const dlong idm = id+i*fieldOffset+s*p_NVfields*fieldOffset;
+          const dfloat Um = U[idm];
+          Un += c[s]*Um;
+        }
+
+        Ue[id+i*fieldOffset] = Un;
+      }
+    }
+  }
+}
+
+
+
+@kernel void mppfPhaseFieldExtrapolate(const dlong Nelements,
+                                      const int Nstages,
+                                      const dlong fieldOffset,
+                                      @restrict const  dfloat *  c,
+                                      @restrict const  dfloat *  Phi,
+                                      @restrict dfloat *  PhiE){
+
+  // Low storage Runge Kutta time step update
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = n+p_Np*e;
+        dfloat phin = 0.;
+
+        for (int s=0;s<Nstages;s++) {
+          const dlong idm = id+s*fieldOffset;
+          phin += c[s]*Phi[idm];
+        }
+
+        PhiE[id] = phin;
+    }
+  }
+}
