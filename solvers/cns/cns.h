@@ -149,3 +149,5 @@ dfloat cnsDopriEstimate(cns_t *cns);
 
 void cnsBodyForce(dfloat t, dfloat *fx, dfloat *fy, dfloat *fz,
 		  dfloat *intfx, dfloat *intfy, dfloat *intfz);
+
+void cnsBrownMinionQuad3D(cns_t *cns);
