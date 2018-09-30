@@ -160,6 +160,8 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   dfloat fx, fy, fz, intfx, intfy, intfz;
   cnsBodyForce(0.0, &fx, &fy, &fz, &intfx, &intfy, &intfz);
 
+  printf("setting up initial condition\n");
+  
   if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION")){
     cnsBrownMinionQuad3D(cns);
   }
@@ -251,6 +253,8 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   kernelInfo["includes"].asArray();
   kernelInfo["header"].asArray();
   kernelInfo["flags"].asObject();
+
+  printf("occa setup\n");
   
   if(cns->dim==3){
     if(cns->elementType != QUADRILATERALS)
@@ -260,7 +264,9 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   }
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
- 
+
+  printf("occa array setup\n");
+  
   //add boundary data to kernel info  
   string boundaryHeaderFileName; 
   options.getArgs("DATA FILE", boundaryHeaderFileName);
@@ -395,6 +401,8 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
+  printf("Building kernels\n");
+  
   for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
 
@@ -471,5 +479,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     MPI_Barrier(mesh->comm);
   }
 
+  printf("done building kernels\n");
+  
   return cns;
 }
