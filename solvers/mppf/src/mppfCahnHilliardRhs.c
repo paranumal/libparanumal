@@ -145,26 +145,26 @@ if(mppf->phiOptions.compareArgs("DISCRETIZATION", "IPDG")){
 const dfloat zero = 0.0; 
     // laplace(HPhi) = - M^-1 * Ax(HPhi)
   mppf->phaseFieldAxIpdgKernel(mesh->Nelements,
-                        mesh->o_vmapM,
-                        mesh->o_vmapP,
-                        time,
-                        mppf->inveta2,
-                        mppf->chSeta2,
-                        zero, // lambda,
-                        zero, //mppf->psiSolver->tau, // zero ????
-                        mppf->fieldOffset,
-                        mesh->o_vgeo,
-                        mesh->o_sgeo,
-                        mesh->o_x,
-                        mesh->o_y,
-                        mesh->o_z,
-                        mesh->o_EToB,
-                        mesh->o_Dmatrices,
-                        mesh->o_LIFTT,
-                        mesh->o_MM,
-                        mppf->o_HPhiE,
-                        mppf->o_GPhi,
-                        mppf->o_lapPhi);
+                              mesh->o_vmapM,
+                              mesh->o_vmapP,
+                              time,
+                              mppf->inveta2,
+                              mppf->chSeta2,
+                              zero, // lambda,
+                              zero, //mppf->psiSolver->tau, // zero ????
+                              mppf->fieldOffset,
+                              mesh->o_vgeo,
+                              mesh->o_sgeo,
+                              mesh->o_x,
+                              mesh->o_y,
+                              mesh->o_z,
+                              mesh->o_EToB,
+                              mesh->o_Dmatrices,
+                              mesh->o_LIFTT,
+                              mesh->o_MM,
+                              mppf->o_HPhiE,
+                              mppf->o_GPhi,
+                              mppf->o_lapPhi);
 }
 
 

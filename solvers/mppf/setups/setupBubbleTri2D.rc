@@ -2,12 +2,12 @@
 1.0
 
 [DATA FILE]
-data/mppfRisingMultipleBubble2D.h
-#data/mppfRisingBubble2D.h
+data/mppfRisingBubble2D.h
+#data/mppfRisingMultipleBubble2D.h
 
 [MESH FILE]
-../../meshes/mppfRisingMultipleBubbleTri2D.msh
-#../../meshes/mppfRisingBubbleTri2D.msh
+../../meshes/mppfRisingBubbleTri2D.msh
+#../../meshes/mppfRisingMultipleBubbleTri2D.msh
 
 [MESH DIMENSION]
 2
@@ -16,7 +16,7 @@ data/mppfRisingMultipleBubble2D.h
 3
 
 [POLYNOMIAL DEGREE]
-5
+3
 
 [THREAD MODEL]
 CUDA
@@ -123,7 +123,7 @@ PCG
 
 # can be IPDG, or CONTINUOUS
 [PHASE FIELD DISCRETIZATION]
-IPDG
+CONTINUOUS
 
 # can be NODAL or BERN
 [PHASE FIELD BASIS]

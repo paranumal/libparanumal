@@ -23,6 +23,7 @@ int main(int argc, char **argv){
   options.getArgs("ELEMENT TYPE", elementType);
   options.getArgs("MESH DIMENSION", dim);
   
+  printf("%s\n", (char*)fileName.c_str());
   // set up mesh
   mesh_t *mesh;
   switch(elementType){

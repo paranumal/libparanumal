@@ -60,7 +60,7 @@ void mppfRun(mppf_t *mppf){
     // Update Phi. Exchange it  and Compute Gradient Phi
     mppfCahnHilliardUpdate(mppf, time_new);
 
-#if 1
+#if 0
     // Compute Nonlinear Term N(U) 
     mppfAdvection(mppf, time);
     // Compute intermediate velocity, Uhat, take divergence and compute Pr Rhs
@@ -101,7 +101,7 @@ void mppfRun(mppf_t *mppf){
     // Exchange pressure and update pressure gradient
      mppfPressureGradient(mppf, time_new);   
 
-#if 1   
+#if 0   
     // Compute velocity Rhs i.e. rhsU, rhsV, rhsW
     mppfVelocityRhs(mppf, time_new);
     mppfVelocitySolve(mppf, time_new, mppf->o_rkU);

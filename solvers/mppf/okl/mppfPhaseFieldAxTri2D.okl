@@ -148,15 +148,15 @@ for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
             GPhi[id+0*offset] = dphidx;
             GPhi[id+1*offset] = dphidy;
 
-            dfloat phi     =       cos(M_PI*x[id])*cos(M_PI*y[id])*sin(time);  
-            dfloat phix    = -M_PI*cos(M_PI*y[id])*sin(M_PI*x[id])*sin(time);
-            dfloat phiy    = -M_PI*cos(M_PI*x[id])*sin(M_PI*y[id])*sin(time);
+            // dfloat phi     =       cos(M_PI*x[id])*cos(M_PI*y[id])*sin(time);  
+            // dfloat phix    = -M_PI*cos(M_PI*y[id])*sin(M_PI*x[id])*sin(time);
+            // dfloat phiy    = -M_PI*cos(M_PI*x[id])*sin(M_PI*y[id])*sin(time);
 
-            // GPhi[id+0*offset] = inveta2*(3.f*phi*phi*phix - phix) - chSeta2*phix;
-            // GPhi[id+1*offset] = inveta2*(3.f*phi*phi*phiy - phiy) - chSeta2*phiy;
+            // // GPhi[id+0*offset] = inveta2*(3.f*phi*phi*phix - phix) - chSeta2*phix;
+            // // GPhi[id+1*offset] = inveta2*(3.f*phi*phi*phiy - phiy) - chSeta2*phiy;
 
-            GU[id+0*offset] = dphidx - ( inveta2*(3.f*phi*phi*phix - phix) - chSeta2*phix);
-            GU[id+1*offset] = dphidy - ( inveta2*(3.f*phi*phi*phiy - phiy) - chSeta2*phiy);
+            // GU[id+0*offset] = dphidx - ( inveta2*(3.f*phi*phi*phix - phix) - chSeta2*phix);
+            // GU[id+1*offset] = dphidy - ( inveta2*(3.f*phi*phi*phiy - phiy) - chSeta2*phiy);
 
 
           }

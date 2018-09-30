@@ -155,7 +155,7 @@ if (mppf->phiOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
                             mesh->o_y,
                             mesh->o_z,
                             mesh->o_vmapM,
-                            mppf->o_VmapB,
+                            mppf->o_FmapB,
                             mppf->o_rkPhi);
   }
 
