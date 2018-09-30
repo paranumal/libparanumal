@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -110,6 +110,37 @@ void cnsRun(cns_t *cns, setupAide &options){
         time += mesh->dt;
         tstep++;
 
+	if(0){
+	  dfloat *maxStresses = (dfloat*) calloc(cns->Nstresses, sizeof(dfloat));
+	  cns->o_viscousStresses.copyTo(cns->viscousStresses);
+	  for(int e=0;e<mesh->Nelements;++e){
+	    for(int fld=0;fld<cns->Nstresses;++fld){
+	      for(int n=0;n<mesh->Np;++n){
+		maxStresses[fld] =
+		  mymax(fabs(cns->viscousStresses[e*mesh->Np*cns->Nstresses+fld*mesh->Np+n]), maxStresses[fld]);
+	      }
+	    }
+	  }
+	  for(int fld=0;fld<cns->Nstresses;++fld){
+	    printf("maxStresses[%d] = %g\n", fld, maxStresses[fld]);
+	  }
+	  
+	  dfloat *maxQ = (dfloat*) calloc(mesh->Nfields, sizeof(dfloat));
+	  cns->o_q.copyTo(mesh->q);
+	  for(int e=0;e<mesh->Nelements;++e){
+	    for(int fld=0;fld<mesh->Nfields;++fld){
+	      for(int n=0;n<mesh->Np;++n){
+		maxQ[fld] =
+		  mymax(fabs(mesh->q[e*mesh->Np*mesh->Nfields+fld*mesh->Np+n]), maxQ[fld]);
+	      }
+	    }
+	  }
+	  for(int fld=0;fld<mesh->Nfields;++fld){
+	    printf("maxQ[%d] = %g\n", fld, maxQ[fld]);
+	  }
+	}      
+	
+	
 	if(cns->outputForceStep){
 	  if(tstep%cns->outputForceStep){
 	    cns->o_q.copyTo(mesh->q);
@@ -118,53 +149,53 @@ void cnsRun(cns_t *cns, setupAide &options){
 	    
 	  }
 	}
-
-        cns->facold = mymax(err,1E-4); // hard coded factor ?
-
-        // check for time step interval output during this step
-        if(tstepIntervalFlag && (tstep%outputTstepInterval==0)){
-	  //          cns->o_q.copyTo(cns->o_q); ?????
+	
+	cns->facold = mymax(err,1E-4); // hard coded factor ?
+	
+	// check for time step interval output during this step
+	if(tstepIntervalFlag && (tstep%outputTstepInterval==0)){
+	  cns->o_q.copyTo(mesh->q);//  ?????
           
-          // output  (print from rkq)
-          cnsReport(cns, nextOutputTime, options);
+	// output  (print from rkq)
+	cnsReport(cns, nextOutputTime, options);
 
-          // increment next output time
-          nextOutputTime += outputInterval;
-        }
-      } else {
-        dtnew = mesh->dt/(mymax(cns->invfactor1,fac1/cns->safe));
-        Nregect++;
-
-        done = 0;
+	// increment next output time
+	nextOutputTime += outputInterval;
       }
+    } else {
+      dtnew = mesh->dt/(mymax(cns->invfactor1,fac1/cns->safe));
+      Nregect++;
 
-      mesh->dt = dtnew;
-      allStep++;
-
-      printf("\rTime = %.4e (%d). Average Dt = %.4e, Rejection rate = %.2g   ", time, tstep, time/(dfloat)tstep, Nregect/(dfloat) tstep); fflush(stdout);
+      done = 0;
     }
+
+    mesh->dt = dtnew;
+    allStep++;
+
+    printf("\rTime = %.4e (%d). Average Dt = %.4e, Rejection rate = %.2g   ", time, tstep, time/(dfloat)tstep, Nregect/(dfloat) tstep); fflush(stdout);
+  }
     
-    mesh->device.finish();
+  mesh->device.finish();
     
-    double elapsed  = timer.toc("Run");
+  double elapsed  = timer.toc("Run");
 
-    printf("\nRun took %lg seconds for %d accepted steps and %d total steps\n", elapsed, tstep, allStep);
+  printf("\nRun took %lg seconds for %d accepted steps and %d total steps\n", elapsed, tstep, allStep);
     
-  } else if (options.compareArgs("TIME INTEGRATOR","LSERK4")) {
+} else if (options.compareArgs("TIME INTEGRATOR","LSERK4")) {
 
-    for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<mesh->NtimeSteps;++tstep){
 
-      dfloat time = tstep*mesh->dt;
+    dfloat time = tstep*mesh->dt;
 
-      cnsLserkStep(cns, options, time);
+    cnsLserkStep(cns, options, time);
 
-      cnsReport(cns, time, options);
+    cnsReport(cns, time, options);
       
-      if(((tstep+1)%mesh->errorStep)==0){
-        time += mesh->dt;
-        cnsReport(cns, time, options);
-      }
+    if(((tstep+1)%mesh->errorStep)==0){
+      time += mesh->dt;
+      cnsReport(cns, time, options);
     }
   }
+ }
   
 }

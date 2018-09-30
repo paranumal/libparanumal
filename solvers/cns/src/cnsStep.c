@@ -88,6 +88,8 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
 #endif
     }
 
+    //    printf("calling stress vol kernel with viscosity %g\n", cns->mu);
+    
     // now compute viscous stresses
     cns->stressesVolumeKernel(mesh->Nelements, 
                               mesh->o_vgeo, 
@@ -273,6 +275,7 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                         cns->o_rkq,
                         cns->o_rkerr);
   }
+  
 }
 
 void cnsDopriOutputStep(cns_t *cns, const dfloat time, const dfloat dt, const dfloat outTime, occa::memory o_outq){

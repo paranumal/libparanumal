@@ -272,16 +272,18 @@ SOFTWARE.
         const dfloat dwdy = ry*dwdr + sy*dwds + ty*s_w[j][i];
 	const dfloat dwdz = rz*dwdr + sz*dwds + tz*s_w[j][i];
         
-        const dlong sbase = e*p_Nstresses*p_Np + j*p_Nq + i;
-
 	const dfloat divV = dudx + dvdy + dwdz;
+
         const dfloat S11 = p_half*(dudx+dudx) - p_third*divV;
+	const dfloat S22 = p_half*(dvdy+dvdy) - p_third*divV;
+	const dfloat S33 = p_half*(dwdz+dwdz) - p_third*divV;
+	
         const dfloat S12 = p_half*(dudy+dvdx);
 	const dfloat S13 = p_half*(dudz+dwdx);
-        const dfloat S22 = p_half*(dvdy+dvdy) - p_third*divV;
 	const dfloat S23 = p_half*(dvdz+dwdy);
-	const dfloat S33 = p_half*(dwdz+dwdz) - p_third*divV;
-        
+
+        const dlong sbase = e*p_Nstresses*p_Np + j*p_Nq + i;
+	
         viscousStresses[sbase + 0*p_Np] = p_two*mu*S11;
         viscousStresses[sbase + 1*p_Np] = p_two*mu*S12;
 	viscousStresses[sbase + 2*p_Np] = p_two*mu*S13;

@@ -60,13 +60,14 @@ void cnsReport(cns_t *cns, dfloat time, setupAide &options){
   }
 #endif
 
-  
-  // output field files
-  char fname[BUFSIZ];
-  string outName;
-  options.getArgs("OUTPUT FILE NAME", outName);
-  sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, cns->frame++);
-
-  cnsPlotVTU(cns, fname);
+  if(options.compareArgs("OUTPUT FILE FORMAT","VTU")){  
+    // output field files
+    char fname[BUFSIZ];
+    string outName;
+    options.getArgs("OUTPUT FILE NAME", outName);
+    sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, cns->frame++);
+    
+    cnsPlotVTU(cns, fname);
+  }
 
 }

@@ -63,10 +63,10 @@ void upwindRoeAveraged(const dfloat nx,
   dfloat qnP = nx*uP+ny*vP+nz*wP;
   
   // Roe averaged variables
-  dfloat r = sqrtrM*sqrtrP;
-  dfloat u = (uM*sqrtrM + uP*sqrtrP)/(sqrtrM + sqrtrP);
-  dfloat v = (vM*sqrtrM + vP*sqrtrP)/(sqrtrM + sqrtrP);
-  dfloat w = (wM*sqrtrM + wP*sqrtrP)/(sqrtrM + sqrtrP);
+  dfloat r  = sqrtrM*sqrtrP;
+  dfloat u  = (uM*sqrtrM + uP*sqrtrP)/(sqrtrM + sqrtrP);
+  dfloat v  = (vM*sqrtrM + vP*sqrtrP)/(sqrtrM + sqrtrP);
+  dfloat w  = (wM*sqrtrM + wP*sqrtrP)/(sqrtrM + sqrtrP);
   dfloat qn = (qnM*sqrtrM + qnP*sqrtrP)/(sqrtrM + sqrtrP);
 
   // jump terms
@@ -84,6 +84,8 @@ void upwindRoeAveraged(const dfloat nx,
   dfloat w3 = fabs((qn+a))*p_half*(dp+r*a*dqn)/(a*a);
   dfloat w4 = fabs(qn)*r;
 
+  // f(q^*) = 0.5*(f(q^-) + f(q^+))
+  
   // negative trace flux contribution to average (1/2 later)
   *rflux  = qnM*rM;
   *ruflux = qnM*ruM + nx*pM;
@@ -132,7 +134,8 @@ void surfaceTerms(const int e,
                   const int face, 
                   const int i, 
                   const int j,
-                  const dfloat time, 
+                  const dfloat time,
+		  const dfloat mu, 
                   const dfloat intfx, 
                   const dfloat intfy,
 		  const dfloat intfz, 
@@ -209,7 +212,8 @@ void surfaceTerms(const int e,
   
   dfloat rflux, ruflux, rvflux, rwflux;                                 
   upwindRoeAveraged (nx, ny, nz, rM, ruM, rvM, rwM, rP, ruP, rvP, rwP, &rflux, &ruflux, &rvflux, &rwflux); 
-  rflux *= advSwitch;                                                   
+
+  rflux  *= advSwitch;                                                   
   ruflux *= advSwitch;                                          
   rvflux *= advSwitch;
   rwflux *= advSwitch;                                          
@@ -217,6 +221,12 @@ void surfaceTerms(const int e,
   ruflux -= p_half*(nx*(T11P+T11M) + ny*(T12P+T12M) + nz*(T13P+T13M));                   
   rvflux -= p_half*(nx*(T12P+T12M) + ny*(T22P+T22M) + nz*(T23P+T23M));
   rwflux -= p_half*(nx*(T13P+T13M) + ny*(T23P+T23M) + nz*(T33P+T33M));
+
+  const dfloat penalty = mu*sgeo[sk*p_Nsgeo+p_IHID]*(p_Nq)*(p_Nq-1)*p_half;                        
+
+  ruflux -= penalty*(ruP-ruM);
+  rvflux -= penalty*(rvP-rvM);
+  rwflux -= penalty*(rwP-rwM);
   
   s_rflux [es][j][i] += sc*(-rflux);                                    
   s_ruflux[es][j][i] += sc*(-ruflux);                                  
@@ -278,11 +288,11 @@ void surfaceTerms(const int e,
 
           // surfaceTerms(sk0,0,i,0     );
           surfaceTerms(e, es, sk0, 0, i, 0,
-                       time, intfx, intfy, intfz, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, s_rflux, s_ruflux, s_rvflux, s_rwflux);
+                       time, mu, intfx, intfy, intfz, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, s_rflux, s_ruflux, s_rvflux, s_rwflux);
           
           //          surfaceTerms(sk2,2,i,p_Nq-1);
           surfaceTerms(e, es, sk2, 2, i, p_Nq-1,
-                       time, intfx, intfy, intfz, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, s_rflux, s_ruflux, s_rvflux, s_rwflux);
+                       time, mu, intfx, intfy, intfz, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, s_rflux, s_ruflux, s_rvflux, s_rwflux);
         }
       }
     }
@@ -299,11 +309,11 @@ void surfaceTerms(const int e,
 
           //          surfaceTerms(sk1,1,p_Nq-1,j);
           surfaceTerms(e, es, sk1, 1, p_Nq-1, j,
-                       time, intfx, intfy, intfz, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, s_rflux, s_ruflux, s_rvflux, s_rwflux);
+                       time, mu, intfx, intfy, intfz, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, s_rflux, s_ruflux, s_rvflux, s_rwflux);
 
           //surfaceTerms(sk3,3,0     ,j);
           surfaceTerms(e, es, sk3, 3, 0, j,
-                       time, intfx, intfy, intfz, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, s_rflux, s_ruflux, s_rvflux, s_rwflux);
+                       time, mu, intfx, intfy, intfz, advSwitch, x, y, z, sgeo, vmapM, vmapP, EToB, q, viscousStresses, s_rflux, s_ruflux, s_rvflux, s_rwflux);
         }
       }
     }
@@ -359,7 +369,7 @@ void stressSurfaceTerms(const int e,
   
     const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                          
     const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-    const dfloat nz = sgeo[sk*p_Nsgeo+p_NYID];                          
+    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                          
     const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                          
     const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                      
                                                                         
@@ -393,12 +403,14 @@ void stressSurfaceTerms(const int e,
     dfloat wP = rwP/rP;                                                 
 
     const dfloat ndotdV = nx*(uP-uM)+ny*(vP-vM)+nz*(wP-wM);
+
     const dfloat dS11 = p_half*(nx*(p_two*(uP-uM))) - p_third*ndotdV;
-    const dfloat dS12 = p_half*(ny*(uP-uM) + nx*(vP-vM));
-    const dfloat dS13 = p_half*(nz*(uP-uM) + nx*(wP-wM));               
     const dfloat dS22 = p_half*(ny*(p_two*(vP-vM))) - p_third*ndotdV;
-    const dfloat dS23 = p_half*(nz*(vP-vM) + ny*(wP-wM));
     const dfloat dS33 = p_half*(nz*(p_two*(wP-wM))) - p_third*ndotdV;
+
+    const dfloat dS12 = p_half*(ny*(uP-uM) + nx*(vP-vM));
+    const dfloat dS13 = p_half*(nz*(uP-uM) + nx*(wP-wM));
+    const dfloat dS23 = p_half*(nz*(vP-vM) + ny*(wP-wM));      
     
     const dfloat sc = invWJ * sJ;                                       
     s_T11flux[es][j][i] += sc*p_two*mu*dS11;                            

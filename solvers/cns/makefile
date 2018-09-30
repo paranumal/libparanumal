@@ -18,7 +18,7 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DCNS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DCNS='"${CURDIR}"'   
 
 # link flags to be used 
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
