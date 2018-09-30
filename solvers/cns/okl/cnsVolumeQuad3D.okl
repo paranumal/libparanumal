@@ -146,11 +146,11 @@ SOFTWARE.
         const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
         const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 
-	// TW: CHECK SIGN
-        dfloat rhsq0 = -s_H[0][j][i];
-	dfloat rhsq1 = -s_H[1][j][i];
-	dfloat rhsq2 = -s_H[2][j][i];
-	dfloat rhsq3 = -s_H[3][j][i];
+	// TW: CHECK SIGN ???
+        dfloat rhsq0 = s_H[0][j][i];
+	dfloat rhsq1 = s_H[1][j][i];
+	dfloat rhsq2 = s_H[2][j][i];
+	dfloat rhsq3 = s_H[3][j][i];
 
         for(int n=0;n<p_Nq;++n){
           const dfloat Din = s_D[n][i];
@@ -184,7 +184,7 @@ SOFTWARE.
 	
         const dlong base = e*p_Np*p_Nfields + j*p_Nq + i;
 	
-        // move to rhs 
+        // move to rhs . Why negative
         rhsq[base+0*p_Np] = -invJW*rhsq0;
         rhsq[base+1*p_Np] = -invJW*rhsq1;
         rhsq[base+2*p_Np] = -invJW*rhsq2;

@@ -27,21 +27,21 @@ SOFTWARE.
 
 
 void upwindRoeAveraged(const dfloat nx,
-                           const dfloat ny,
-                           const dfloat nz,
-                           const dfloat rM,
-                           const dfloat ruM,
-                           const dfloat rvM,
-                           const dfloat rwM,       
-                           const dfloat rP,
-                           const dfloat ruP,
-                           const dfloat rvP,
-                           const dfloat rwP,
-                           dfloat *rflux,
-                           dfloat *ruflux,
-                           dfloat *rvflux,
-                           dfloat *rwflux
-                           ){
+		       const dfloat ny,
+		       const dfloat nz,
+		       const dfloat rM,
+		       const dfloat ruM,
+		       const dfloat rvM,
+		       const dfloat rwM,       
+		       const dfloat rP,
+		       const dfloat ruP,
+		       const dfloat rvP,
+		       const dfloat rwP,
+		       dfloat *rflux,
+		       dfloat *ruflux,
+		       dfloat *rvflux,
+		       dfloat *rwflux
+		       ){
   
   // Rotate "-" trace momentum to face normal-tangent coordinates
 
@@ -61,7 +61,7 @@ void upwindRoeAveraged(const dfloat nx,
   dfloat wP = rwP/rP;
   dfloat pP = rP*p_RT;
   dfloat qnP = nx*uP+ny*vP+nz*wP;
-
+  
   // Roe averaged variables
   dfloat r = sqrtrM*sqrtrP;
   dfloat u = (uM*sqrtrM + uP*sqrtrP)/(sqrtrM + sqrtrP);
@@ -85,7 +85,7 @@ void upwindRoeAveraged(const dfloat nx,
   dfloat w4 = fabs(qn)*r;
 
   // negative trace flux contribution to average (1/2 later)
-   *rflux = qnM*rM;
+  *rflux  = qnM*rM;
   *ruflux = qnM*ruM + nx*pM;
   *rvflux = qnM*rvM + ny*pM;
   *rwflux = qnM*rwM + nz*pM;
@@ -143,7 +143,7 @@ void surfaceTerms(const int e,
                   @global const dfloat *sgeo, 
                   @global const int *vmapM, 
                   @global const int *vmapP, 
-                 @global const int *EToB,
+		  @global const int *EToB,
                   @global const dfloat *q, 
                   @global const dfloat *viscousStresses,
                   dfloat s_rflux [p_NblockS][p_Nq][p_Nq],
@@ -217,7 +217,6 @@ void surfaceTerms(const int e,
   ruflux -= p_half*(nx*(T11P+T11M) + ny*(T12P+T12M) + nz*(T13P+T13M));                   
   rvflux -= p_half*(nx*(T12P+T12M) + ny*(T22P+T22M) + nz*(T23P+T23M));
   rwflux -= p_half*(nx*(T13P+T13M) + ny*(T23P+T23M) + nz*(T33P+T33M));
-
   
   s_rflux [es][j][i] += sc*(-rflux);                                    
   s_ruflux[es][j][i] += sc*(-ruflux);                                  
@@ -398,7 +397,7 @@ void stressSurfaceTerms(const int e,
     const dfloat dS12 = p_half*(ny*(uP-uM) + nx*(vP-vM));
     const dfloat dS13 = p_half*(nz*(uP-uM) + nx*(wP-wM));               
     const dfloat dS22 = p_half*(ny*(p_two*(vP-vM))) - p_third*ndotdV;
-    const dfloat dS23 = p_half*(nz*(vP-vM) + nz*(vP-vM));
+    const dfloat dS23 = p_half*(nz*(vP-vM) + ny*(wP-wM));
     const dfloat dS33 = p_half*(nz*(p_two*(wP-wM))) - p_third*ndotdV;
     
     const dfloat sc = invWJ * sJ;                                       
