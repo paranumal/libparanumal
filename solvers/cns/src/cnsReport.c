@@ -45,6 +45,22 @@ void cnsReport(cns_t *cns, dfloat time, setupAide &options){
 
   //  cnsForces(cns, time);
 
+#ifdef RENDER
+  if(options.compareArgs("OUTPUT FILE FORMAT","PPM")){
+
+    // copy data back to host
+    cns->o_q.copyTo(cns->q);
+    cns->o_Vort.copyTo(cns->Vort);
+   
+    //
+    char fname[BUFSIZ];
+    string outName;
+    options.getArgs("OUTPUT FILE NAME", outName);
+    cnsRenderQuad3D(cns, (char*)outName.c_str(), cns->frame++);
+  }
+#endif
+
+  
   // output field files
   char fname[BUFSIZ];
   string outName;

@@ -86,6 +86,10 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   // compute samples of q at interpolation nodes
   mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
                                 sizeof(dfloat));
+
+  cns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
+			       sizeof(dfloat));
+  
   cns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
                                 sizeof(dfloat));
   
