@@ -123,7 +123,22 @@ void meshOccaSetupQuad3D(mesh_t *mesh, setupAide &newOptions, occa::properties &
 
     mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
 
-    mesh->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+    // bundle D and (W^{-1} D^t W)
+    dfloat *Dmatrices = (dfloat*) calloc(mesh->Nq*mesh->Nq*2, sizeof(dfloat));
+    for(int n=0;n<mesh->Nq*mesh->Nq;++n){
+      Dmatrices[n] = mesh->D[n];
+    }
+    for(int j=0;j<mesh->Nq;++j){
+      for(int i=0;i<mesh->Nq;++i){
+	// note minus
+	Dmatrices[mesh->Nq*mesh->Nq + i + j*mesh->Nq] = -mesh->D[i*mesh->Nq + j]*mesh->gllw[i]/mesh->gllw[j];
+      }
+    }
+    
+    mesh->o_Dmatrices = mesh->device.malloc(2*mesh->Nq*mesh->Nq*sizeof(dfloat), Dmatrices);
+
+    free(Dmatrices);
+    
     mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
 
     mesh->o_vgeo =

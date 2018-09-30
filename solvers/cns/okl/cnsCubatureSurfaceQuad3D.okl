@@ -370,10 +370,16 @@ void quadSurfaceTerms(const int face,
           ruflux *= advSwitch;
           rvflux *= advSwitch;
 	  rwflux *= advSwitch;
-        
+
+	  // TW: WATCH OUT FOR THIS
+	  rflux = 0;
+	  ruflux = 0;
+	  rvflux = 0;
+	  rwflux = 0;
+	  
           ruflux -= p_half*(nx*(T11P+T11M) + ny*(T12P+T12M) + nz*(T13P+T13M));
-          rvflux -= p_half*(nx*(T12P+T12M) + ny*(T22P+T22M) + nz*(T23P+T23M)) ;
-	  rwflux -= p_half*(nx*(T13P+T13M) + ny*(T23P+T23M) + nz*(T33P+T33M)) ;
+          rvflux -= p_half*(nx*(T12P+T12M) + ny*(T22P+T22M) + nz*(T23P+T23M));
+	  rwflux -= p_half*(nx*(T13P+T13M) + ny*(T23P+T23M) + nz*(T33P+T33M));
       
           s_rflux [face][i] = sJ*(-rflux);
           s_ruflux[face][i] = sJ*(-ruflux);
@@ -497,11 +503,12 @@ void stressSurfaceTerms(const int e,
 
   const dfloat ndotdV  = nx*(uP-uM) + ny*(vP-vM) + nz*(wP-wM);
   const dfloat dS11 = p_half*(nx*(p_two*(uP-uM))) - p_third*(ndotdV);
+  const dfloat dS22 = p_half*(ny*(p_two*(vP-vM))) - p_third*(ndotdV);
+  const dfloat dS33 = p_half*(nz*(p_two*(wP-wM))) - p_third*(ndotdV);
+  
   const dfloat dS12 = p_half*(ny*(uP-uM) + nx*(vP-vM));
   const dfloat dS13 = p_half*(nz*(uP-uM) + nx*(wP-wM));         
-  const dfloat dS22 = p_half*(ny*(p_two*(vP-vM))) - p_third*(ndotdV);
   const dfloat dS23 = p_half*(ny*(wP-wM) + nz*(vP-vM));
-  const dfloat dS33 = p_half*(nz*(p_two*(wP-wM))) - p_third*(ndotdV);
                                                                         
   const dfloat sc = invWJ * sJ;                                 
   s_T11flux[es][j][i] += sc*p_two*mu*dS11;                              
