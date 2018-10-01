@@ -45,7 +45,7 @@
           const dlong idm = id+s*fieldOffset;
           phin += c[s]*Phi[idm];
         }
-
+        
         PhiE[id] = phin;
     }
   }

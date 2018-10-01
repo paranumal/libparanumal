@@ -84,6 +84,8 @@ mppf_t *mppfSetup(mesh_t *mesh, setupAide options){
   mppf->DU      = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
   mppf->SU      = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
 
+  mppf->Uhat    = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));
+
   mppf->GPhi   =  (dfloat*) calloc(mppf->NVfields*Ntotal, sizeof(dfloat));
 
   mppf->rkU     = (dfloat*) calloc(mppf->NVfields*Ntotal,sizeof(dfloat));

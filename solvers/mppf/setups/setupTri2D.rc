@@ -40,7 +40,6 @@ CUBATURE
 #give zero to default it 
 [BAND THICKNESS]
 0.1
-#0.0005
 
 #give zero if you need to compute inside 
 [MIXING ENERGY DENSITY]
@@ -79,7 +78,7 @@ CUBATURE
 
 #zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-1000
+200
 
 # zero to ignore
 [TSTEPS FOR FORCE OUTPUT]

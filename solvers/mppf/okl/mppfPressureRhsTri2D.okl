@@ -283,7 +283,7 @@ SOFTWARE.
             s_Phi[es][n]   = Phi[id];
             s_dPhix[es][n] = GPhi[id + 0*offset];
             s_dPhiy[es][n] = GPhi[id + 1*offset];
-            s_iR[es][n] = 1.f/Rho[id];
+            s_iR[es][n]    = 1.f/Rho[id];
           }
         } 
       }
@@ -376,7 +376,7 @@ SOFTWARE.
             s_dUdy[es][n]  = GU[id + 1*offset];
             s_dVdx[es][n]  = GU[id + 2*offset];
             s_dVdy[es][n]  = GU[id + 3*offset];
-            s_iR[es][n] = 1.f/Rho[id];
+            s_iR[es][n]    = 1.f/Rho[id];
           }
         } 
       }
@@ -484,7 +484,7 @@ SOFTWARE.
           mppfVelocitySource2D(time,x[id],y[id],&fbx, &fby);
           
 
-          #if 1  
+          #if 1  // Just for exact solution
           rhsu += dt*fbx/Rho[id];
           rhsv += dt*fby/Rho[id];
           #else

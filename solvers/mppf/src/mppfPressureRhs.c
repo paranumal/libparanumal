@@ -233,9 +233,12 @@ mppf->velocityExtrapolateKernel(NtotalElements,
 occaTimerToc(mesh->device,"velocityExtrapolate");
 
 // Compute Gradient of Velocity i.e. o_GU = [dudx, dudy, dvdx, dvdy]
-  // note that weak derivatives are computed Ue computed also in halo elements
+
+// note that weak derivatives are computed Ue computed also in halo elements
 mppfVelocityGradient(mppf, time, mppf->o_Ue, mppf->o_GU);
 
+
+#if 1
 // Compute o_DU = CurlxCurlxUe, uses GU o_DU = [dw/dy, -dw/dx]; w = dv/dx - du/dy
 mppf->velocityCurlVolumeKernel(mesh->Nelements,
                               mesh->o_vgeo,
@@ -243,7 +246,30 @@ mppf->velocityCurlVolumeKernel(mesh->Nelements,
                               mppf->fieldOffset,
                               mppf->o_GU,
                               mppf->o_DU); // holds curl curl Ue
+#else
 
+for(int e=0; e<mesh->Nelements;e++){
+    for(int n=0; n<mesh->Np; n++){
+      const int id = e*mesh->Np + n;
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+
+      dfloat curlx =  2*M_PI*M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(time);
+      dfloat curly = -2*M_PI*M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(time);
+
+      mppf->rkU[id + 0*mppf->fieldOffset] = curlx;
+      mppf->rkU[id + 1*mppf->fieldOffset] = curly;
+
+    }
+  }
+  mppf->o_DU.copyFrom(mppf->rkU);
+
+
+#endif
+
+
+
+#if 1
 
 // Add pressure term i.e. Uhat = (1/rho0 - 1/rho)*GP^*
 mppf->velocityAddPressureKernel(mesh->Nelements,
@@ -257,9 +283,34 @@ mppf->velocityAddPressureKernel(mesh->Nelements,
                                 mppf->o_Rho,
                                 mppf->o_GP,
                                 mppf->o_Uhat);
+#else
+
+mppf->o_Rho.copyTo(mppf->Rho);
+for(int e=0; e<mesh->Nelements;e++){
+    for(int n=0; n<mesh->Np; n++){
+      const int id = e*mesh->Np + n;
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+
+      dfloat rho = mppf->Rho[id];
+
+      dfloat px =  M_PI*sin(M_PI*y)*cos(M_PI*x)*cos(time);
+      dfloat py =  M_PI*cos(M_PI*y)*sin(M_PI*x)*cos(time);
+
+      mppf->Uhat[id + 0*mppf->fieldOffset] = mppf->dt*(1.0/mppf->rho0 - 1.0/rho)*px;
+      mppf->Uhat[id + 1*mppf->fieldOffset] = mppf->dt*(1.0/mppf->rho0 - 1.0/rho)*py;
+
+    }
+  }
+  mppf->o_Uhat.copyFrom(mppf->Uhat);
+#endif
 
 
-// Add pressure term i.e. Uhat = (1/rho0 - 1/rho)*GP^*
+
+
+#if 1
+
+// Add pressure term i.e. Uhat = 1/rho*Gmu*D(u)
 mppf->velocityAddDiffusiveKernel(mesh->Nelements,
                                 mesh->o_vgeo,
                                 mesh->o_cubvgeo,
@@ -271,7 +322,36 @@ mppf->velocityAddDiffusiveKernel(mesh->Nelements,
                                 mppf->o_Mu,
                                 mppf->o_DU,
                                 mppf->o_Uhat);
+#else
 
+mppf->o_Rho.copyTo(mppf->Rho);
+mppf->o_Mu.copyTo(mppf->Mu);
+mppf->o_Uhat.copyTo(mppf->Uhat);
+
+for(int e=0; e<mesh->Nelements;e++){
+    for(int n=0; n<mesh->Np; n++){
+      const int id = e*mesh->Np + n;
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+
+      dfloat rho = mppf->Rho[id];
+      dfloat mu  = mppf->Mu[id];
+
+      dfloat curlCurlx =  2*M_PI*M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(time);
+      dfloat curlCurly = -2*M_PI*M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(time);
+
+      mppf->Uhat[id + 0*mppf->fieldOffset] -= mppf->dt*mu/rho*curlCurlx;
+      mppf->Uhat[id + 1*mppf->fieldOffset] -= mppf->dt*mu/rho*curlCurly;
+
+    }
+  }
+  mppf->o_Uhat.copyFrom(mppf->Uhat);
+#endif
+
+
+
+
+#if 1
 
 // Add pressure term i.e. Uhat = (1/rho0 - 1/rho)*GP^*
 mppf->velocityAddTensionKernel(mesh->Nelements,
@@ -287,6 +367,37 @@ mppf->velocityAddTensionKernel(mesh->Nelements,
                                 mppf->o_Phi,
                                 mppf->o_GPhi,
                                 mppf->o_Uhat);
+#else
+
+mppf->o_Rho.copyTo(mppf->Rho);
+mppf->o_Mu.copyTo(mppf->Mu);
+mppf->o_Uhat.copyTo(mppf->Uhat);
+
+for(int e=0; e<mesh->Nelements;e++){
+    for(int n=0; n<mesh->Np; n++){
+      const int id = e*mesh->Np + n;
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+
+      dfloat rho = mppf->Rho[id];
+      
+      dfloat phixx = -M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+      dfloat phiyy = -M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+
+      dfloat phix = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(time);
+      dfloat phiy = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(time);
+ 
+      mppf->Uhat[id + 0*mppf->fieldOffset] -= mppf->dt*mppf->chL*1./rho*(phixx + phiyy)*phix;
+      mppf->Uhat[id + 1*mppf->fieldOffset] -= mppf->dt*mppf->chL*1./rho*(phixx + phiyy)*phiy;
+
+    }
+  }
+  mppf->o_Uhat.copyFrom(mppf->Uhat);
+#endif
+
+
+
+#if 1
 
 // Add pressure term i.e. Uhat = (1/rho0 - 1/rho)*GP^*
 mppf->velocityAddStressKernel(mesh->Nelements,
@@ -300,6 +411,42 @@ mppf->velocityAddStressKernel(mesh->Nelements,
                                 mppf->o_GPhi,
                                 mppf->o_GU,
                                 mppf->o_Uhat);
+
+
+#else
+
+mppf->o_Rho.copyTo(mppf->Rho);
+mppf->o_Mu.copyTo(mppf->Mu);
+mppf->o_Uhat.copyTo(mppf->Uhat);
+
+for(int e=0; e<mesh->Nelements;e++){
+    for(int n=0; n<mesh->Np; n++){
+      const int id = e*mesh->Np + n;
+      dfloat x = mesh->x[id];
+      dfloat y = mesh->y[id];
+
+      dfloat rho = mppf->Rho[id];
+
+      dfloat phix = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(time);
+      dfloat phiy = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(time);
+
+      dfloat ux   =  M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+      dfloat uy   = -M_PI*sin(M_PI*x)*sin(M_PI*y)*sin(time);
+      dfloat vx   =  M_PI*sin(M_PI*x)*sin(M_PI*y)*sin(time);
+      dfloat vy   = -M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+
+      dfloat mux  = 0.5*(mppf->mu1 - mppf->mu2)*phix;
+      dfloat muy  = 0.5*(mppf->mu1 - mppf->mu2)*phiy;
+
+      mppf->Uhat[id + 0*mppf->fieldOffset] += 1/rho*mppf->dt*(mux*2.0*ux + muy*(uy + vx));
+      mppf->Uhat[id + 1*mppf->fieldOffset] += 1/rho*mppf->dt*(muy*2.0*vy + mux*(uy + vx));
+
+    }
+  }
+  mppf->o_Uhat.copyFrom(mppf->Uhat);
+#endif
+
+
 
 
 

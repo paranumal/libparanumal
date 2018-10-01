@@ -69,7 +69,7 @@ typedef struct {
   dfloat *rkU, *rkP, *rkPhi, *PI;
   dfloat *rkNU, *rkLU, *rkGP;
   
-  dfloat *Vort, *Div;
+  dfloat *Vort, *Div, *Uhat;
 
   dfloat g[3];      // gravitational Acceleration
 

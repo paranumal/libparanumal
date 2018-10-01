@@ -20,7 +20,7 @@ void mppfCahnHilliardUpdate(mppf_t *mppf, dfloat time){
   }
 
 // Feed exact Phi and Psi
-#if 0
+#if 1
   // Set pahse field function on device
   mppf->setPhaseFieldKernel(mesh->Nelements,
                           time,
@@ -35,8 +35,10 @@ void mppfCahnHilliardUpdate(mppf_t *mppf, dfloat time){
       const int id = e*mesh->Np + n;
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
-      mppf->Psi[id] =   -2*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time) + mppf->chA*cos(M_PI*x)*cos(M_PI*y)*sin(time);
-      // mppf->Psi[id] =   -2.0*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+      dfloat phi   = cos(M_PI*x)*cos(M_PI*y)*sin(time); 
+      dfloat phixx = -M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+      dfloat phiyy = -M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+      mppf->Psi[id]=   (phixx + phiyy) + mppf->chA*phi;
     }
   }
 mppf->o_Psi.copyFrom(mppf->Psi);
@@ -116,7 +118,7 @@ if (mppf->phiOptions.compareArgs("DISCRETIZATION","IPDG")) {
 
 }
 // Give exact GPhi
- #if 0
+ #if 1
 
 for(int e=0; e<mesh->Nelements;e++){
     for(int n=0; n<mesh->Np; n++){

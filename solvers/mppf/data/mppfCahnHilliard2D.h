@@ -36,9 +36,30 @@
   // mu1 = 0.01 // mu2 = 0.02 rho1 = 1 rho2 = 3 are hard coded
   #define mppfVelocitySource2D(t,x,y,fx, fy)\
   {                                    \
+    dfloat eta     = 0.1; \
     dfloat lambda  = 0.001; \
-    dfloat gx = M_PI*cos(M_PI*x)*sin(M_PI*y)*cos(t) - sin(M_PI*x)*(cos(M_PI*x)*cos(M_PI*y)*sin(t) - 2.f)*(M_PI*cos(M_PI*x) + cos(M_PI*y)*cos(t) - M_PI*cos(M_PI*x)*cos(t)*cos(t)) - (M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*y)*sin(M_PI*x)*sin(t)*sin(t))/100.f - 2.f*M_PI*M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t)*((cos(M_PI*x)*cos(M_PI*y)*sin(t))/200.f - 3.f/200.f) + 2.f*M_PI*M_PI*M_PI*lambda*cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*y)*sin(M_PI*x)*sin(t)*sin(t);\
-    dfloat gy = sin(M_PI*y)*(cos(M_PI*x)*cos(M_PI*y)*sin(t) - 2.f)*(cos(M_PI*x)*cos(t) - M_PI*cos(M_PI*y) + M_PI*cos(M_PI*y)*cos(t)*cos(t)) + M_PI*cos(M_PI*y)*sin(M_PI*x)*cos(t) + (M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*y)*sin(M_PI*y)*sin(t)*sin(t))/100.f + 2.f*M_PI*M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t)*((cos(M_PI*x)*cos(M_PI*y)*sin(t))/200.f - 3.f/200.f) + 2.f*M_PI*M_PI*M_PI*lambda*cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*y)*sin(M_PI*y)*sin(t)*sin(t);\
+    dfloat M       = 0.001; \
+    dfloat u = cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+    dfloat v = -cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat ut = cos(M_PI*y)*sin(M_PI*x)*cos(t);\
+    dfloat vt = -cos(M_PI*x)*sin(M_PI*y)*cos(t);\
+    dfloat ux = M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat uy = -M_PI*sin(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat vx = M_PI*sin(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat vy = -M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat px = M_PI*cos(M_PI*x)*sin(M_PI*y)*cos(t);\
+    dfloat py = M_PI*cos(M_PI*y)*sin(M_PI*x)*cos(t);\
+    dfloat rho= 2.f - cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat mu = 3.f/200.f - (cos(M_PI*x)*cos(M_PI*y)*sin(t))/200.f;\
+    dfloat mux= (M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t))/200.f;\
+    dfloat muy= (M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t))/200.f;\
+    dfloat phix= -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+    dfloat phiy= -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat lapphi= -2.f*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat lapu= -2.f*M_PI*M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+    dfloat lapv= 2*M_PI*M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat gx = rho*(ut + u*ux+ v*uy) + px - mu*lapu - (mux*2.f*ux + muy*(uy + vx)) + lambda*lapphi*phix;\
+    dfloat gy = rho*(vt + u*vx+ v*vy) + py - mu*lapv - (muy*2.f*vy + mux*(uy + vx)) + lambda*lapphi*phiy;\
     *(fx)          = gx;\
     *(fy)          = gy;\
   } 
@@ -136,41 +157,6 @@
     *(phiyB) = 0.f;                        \
   }                                        \
 }
-
-
-// #define mppfPhaseFieldDirichletConditions2D(bc, t, x, y, nx, ny, phiM, phiB) \
-// {                                   \
-//   if(bc==1){                        \
-//     *(phiB) = 100000;               \
-//   } else if(bc==2){                 \
-//     *(phiB) = 1000;                 \
-//   } else if(bc==3){                 \
-//     *(phiB) = 1000;                 \
-//   } else if(bc==4){                 \
-//     *(phiB) = 1000;                 \
-//   } else if(bc==5){                 \
-//     *(phiB) = 1000;                 \
-//   }                                 \
-// }
-
-
-
-// #define mppfPhaseFieldNeumannConditions2D(bc, t, x, y, nx, ny, phixM, phiyM, phixB, phiyB) \
-// {                                          \
-//   if(bc==1 || bc==2){                      \
-//     *(phixB) = 100000.f;                        \
-//     *(phiyB) = 1000.f;                        \
-//   } else if(bc==3){                        \
-//     *(phixB) = 0.f;                        \
-//     *(phiyB) = 0.f;                        \
-//   } else if(bc==4){                        \
-//     *(phixB) = 0.f;                        \
-//     *(phiyB) = 0.f;                        \
-//   } else if(bc==5){                        \
-//     *(phixB) = 0.f;                        \
-//     *(phiyB) = 0.f;                        \
-//   }                                        \
-// }
 
 
 

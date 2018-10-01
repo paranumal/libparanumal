@@ -60,15 +60,16 @@ void mppfRun(mppf_t *mppf){
     // Update Phi. Exchange it  and Compute Gradient Phi
     mppfCahnHilliardUpdate(mppf, time_new);
 
-#if 0
+#if 1
     // Compute Nonlinear Term N(U) 
-    mppfAdvection(mppf, time);
+    mppfAdvection(mppf, time_new);
     // Compute intermediate velocity, Uhat, take divergence and compute Pr Rhs
     mppfPressureRhs(mppf, time_new);
     // Solve for pressure
     mppfPressureSolve(mppf,time_new, mppf->o_rkP);
 
 #else
+
  mppf->setFlowFieldKernel(mesh->Nelements,
                           time_new,
                           mesh->o_x,

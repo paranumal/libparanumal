@@ -32,7 +32,7 @@ void mppfVelocityGradient(mppf_t *mppf, dfloat time, occa::memory o_Ue, occa::me
   mesh_t *mesh = mppf->mesh;
   
 
-  occaTimerTic(mesh->device,"GradientVolume");
+  occaTimerTic(mesh->device,"velocityGradientVolume");
   // Compute Volume Contribution
   mppf->velocityGradientVolumeKernel(mesh->Nelements,
                                     mesh->o_vgeo,
@@ -40,12 +40,12 @@ void mppfVelocityGradient(mppf_t *mppf, dfloat time, occa::memory o_Ue, occa::me
                                     mppf->fieldOffset,
                                     o_Ue,
                                     o_GU);
-  occaTimerToc(mesh->device,"GradientVolume");
+  occaTimerToc(mesh->device,"velocityGradientVolume");
 
   // COMPLETE HALO EXCHANGE
   if (mppf->pOptions.compareArgs("DISCRETIZATION","IPDG")) {
     
-    occaTimerTic(mesh->device,"GradientSurface");
+    occaTimerTic(mesh->device,"velocityGradientSurface");
     // Compute Surface Conribution
     mppf->velocityGradientSurfaceKernel(mesh->Nelements,
                                         mesh->o_sgeo,
@@ -60,7 +60,7 @@ void mppfVelocityGradient(mppf_t *mppf, dfloat time, occa::memory o_Ue, occa::me
                                         mppf->fieldOffset,
                                         o_Ue,
                                         o_GU);
-    occaTimerToc(mesh->device,"GradientSurface");
+    occaTimerToc(mesh->device,"velocityGradientSurface");
   }
 
 }

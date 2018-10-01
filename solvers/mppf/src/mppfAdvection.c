@@ -101,8 +101,15 @@ void mppfAdvection(mppf_t *mppf, dfloat time){
       dfloat x = mesh->x[id];
       dfloat y = mesh->y[id];
 
-      dfloat nux = -(M_PI*sin(2*M_PI*x)*(cos(2.0*time)/2.0 - 0.5))/2.0;
-      dfloat nuy = -(M_PI*sin(2*M_PI*y)*(cos(2.0*time)/2.0 - 0.5))/2.0;
+      dfloat u  =  cos(M_PI*y)*sin(M_PI*x)*sin(time);
+      dfloat v  = -cos(M_PI*x)*sin(M_PI*y)*sin(time);
+      dfloat ux =  M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+      dfloat uy = -M_PI*sin(M_PI*x)*sin(M_PI*y)*sin(time);
+      dfloat vx =  M_PI*sin(M_PI*x)*sin(M_PI*y)*sin(time);
+      dfloat vy = -M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(time);
+
+      dfloat nux = u*ux + v*uy;
+      dfloat nuy = u*vx + v*vy;
 
       mppf->rkU[id + 0*mppf->fieldOffset] = nux;
       mppf->rkU[id + 1*mppf->fieldOffset] = nuy;
@@ -110,7 +117,7 @@ void mppfAdvection(mppf_t *mppf, dfloat time){
   }
   
   mppf->o_GSave.copyFrom(mppf->rkU, mppf->NVfields*mppf->Ntotal*sizeof(dfloat));
-  o_NU.copyFrom(mppf->o_GSave, mppf->NVfields*mppf->Ntotal*sizeof(dfloat), 0, 0); 
+  mppf->o_NU.copyFrom(mppf->o_GSave, mppf->NVfields*mppf->Ntotal*sizeof(dfloat), 0, 0); 
 
 #endif
 
