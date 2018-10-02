@@ -110,17 +110,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
                             bns->o_errtmp);
 
     bns->o_errtmp.copyTo(bns->errtmp);
-    bns->o_rkerr.copyTo(bns->rkerr);
-
-
-    dfloat maxerr = 0.f;
-    for(dlong e=0; e<mesh->Nelements; e++){
-      for(int n =0;n<mesh->Np;n++){
-        const dlong id = e*mesh->Np + n; 
-          maxerr= mymax(maxerr,bns->rkerr[id]);
-       }
-    }
-
+    
     // printf("Max err:\t%.5e\n",maxerr);
     dfloat localerr = 0, err = 0;
 
@@ -134,9 +124,6 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
     err = sqrt(err/(bns->totalElements*mesh->Np*bns->Nfields));
     
     occaTimerToc(mesh->device, "SARK_ERROR"); 
-
-
-
 
     dfloat fac1 = pow(err,exp1);
     dfloat fac  = fac1/pow(facold,beta);

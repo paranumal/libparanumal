@@ -149,24 +149,24 @@ for(dlong es=0;es<pmlNelements;++es;@outer(0)){
     for(int n=0;n<p_Np;++n;@inner(0)){
 
       const dlong e      = elementIds[es];
-      const dlong id     = e*p_Nfields*p_Np + n;
     
       for(int fld=0; fld< p_Nfields; ++fld){
 
+        const dlong id     = e*p_Nfields*p_Np + fld*p_Np + n;
         dfloat r_q = 0.f; 
         if(fld<4){
-          r_q = q[id +fld*p_Np];
+          r_q = q[id];
           for (int i=0;i<stage;i++){
-            r_q += dt*rkA[p_NrkStages*stage + i]*rkrhsq[id + fld*p_Np +i*offset];
+            r_q += dt*rkA[p_NrkStages*stage + i]*rkrhsq[id + i*offset];
           }
         }
         else{
-          r_q = sarkC[stage]*q[id +fld*p_Np];
+          r_q = sarkC[stage]*q[id];
           for (int i=0;i<stage;i++){
-            r_q += dt*sarkA[p_NrkStages*stage + i]*rkrhsq[id + fld*p_Np +i*offset];
+            r_q += dt*sarkA[p_NrkStages*stage + i]*rkrhsq[id + i*offset];
           }
         }
-        rkq[id + fld*p_Np] = r_q;
+        rkq[id] = r_q;
       }
     }
   }
@@ -208,11 +208,11 @@ for(dlong es=0;es<pmlNelements;++es;@outer(0)){
       e = pmlElementIds[es];
       if (n < p_Np){
         const dlong pmlId     = pmlIds[es];
-        const dlong id        = e*p_Nfields*p_Np + n;
-        const dlong pid       = p_Nfields*pmlId*p_Np + n;
         
 
         for(int fld=0; fld< p_Nfields; ++fld){
+        const dlong id        = e*p_Nfields*p_Np + fld*p_Np + n;
+        const dlong pid       = p_Nfields*pmlId*p_Np + fld*p_Np + n;
           // const int idn = id + fld;        
           dfloat r_q  = 0.f;
           dfloat r_qx = 0.f;
@@ -220,36 +220,36 @@ for(dlong es=0;es<pmlNelements;++es;@outer(0)){
           dfloat r_qz = 0.f;
 
           if(fld<4){
-            r_q  = q[id  + fld*p_Np];
-            r_qx = qx[pid+ fld*p_Np];
-            r_qy = qy[pid+ fld*p_Np];
-            r_qz = qz[pid+ fld*p_Np];
+            r_q  = q[id  ];
+            r_qx = qx[pid];
+            r_qy = qy[pid];
+            r_qz = qz[pid];
 
             for (int i=0;i<stage;i++){
-              r_q  += dt*rkA[p_NrkStages*stage+i]*rkrhsq[ id +fld*p_Np+i*offset];
-              r_qx += dt*rkA[p_NrkStages*stage+i]*rkrhsqx[pid+fld*p_Np+i*pmloffset];
-              r_qy += dt*rkA[p_NrkStages*stage+i]*rkrhsqy[pid+fld*p_Np+i*pmloffset];
-              r_qz += dt*rkA[p_NrkStages*stage+i]*rkrhsqz[pid+fld*p_Np+i*pmloffset];
+              r_q  += dt*rkA[p_NrkStages*stage+i]*rkrhsq[  id + i*offset];
+              r_qx += dt*rkA[p_NrkStages*stage+i]*rkrhsqx[pid + i*pmloffset];
+              r_qy += dt*rkA[p_NrkStages*stage+i]*rkrhsqy[pid + i*pmloffset];
+              r_qz += dt*rkA[p_NrkStages*stage+i]*rkrhsqz[pid + i*pmloffset];
             }
           }
           else{
-            r_q  = sarkC[stage]*q[id  + fld*p_Np];
-            r_qx = qx[pid+ fld*p_Np];
-            r_qy = qy[pid+ fld*p_Np];
-            r_qz = qz[pid+ fld*p_Np];
+            r_q  = sarkC[stage]*q[id];
+            r_qx = qx[pid];
+            r_qy = qy[pid];
+            r_qz = qz[pid];
 
             for (int i=0;i<stage;i++){
-              r_q  += dt*sarkA[p_NrkStages*stage+i]*rkrhsq[id+fld*p_Np+i*offset];
-              r_qx += dt*rkA[p_NrkStages*stage+i]*rkrhsqx[pid+fld*p_Np+i*pmloffset];
-              r_qy += dt*rkA[p_NrkStages*stage+i]*rkrhsqy[pid+fld*p_Np+i*pmloffset];
-              r_qz += dt*rkA[p_NrkStages*stage+i]*rkrhsqz[pid+fld*p_Np+i*pmloffset];
+              r_q  += dt*sarkA[p_NrkStages*stage+i]*rkrhsq[  id + i*offset];
+              r_qx += dt*rkA[p_NrkStages*stage+i]  *rkrhsqx[pid + i*pmloffset];
+              r_qy += dt*rkA[p_NrkStages*stage+i]  *rkrhsqy[pid + i*pmloffset];
+              r_qz += dt*rkA[p_NrkStages*stage+i]  *rkrhsqz[pid + i*pmloffset];
             }
           }
 
-          rkq [id  +fld*p_Np] = r_q;
-          rkqx[pid +fld*p_Np] = r_qx;
-          rkqy[pid +fld*p_Np] = r_qy;
-          rkqz[pid +fld*p_Np] = r_qz;
+          rkq [id ] = r_q;
+          rkqx[pid] = r_qx;
+          rkqy[pid] = r_qy;
+          rkqz[pid] = r_qz;
       }
     }
   }
@@ -280,11 +280,11 @@ for(dlong es=0;es<pmlNelements;++es;@outer(0)){
     for(int n=0;n<p_Np;++n;@inner(0)){
 
       const dlong e  = elementIds[es];
-      const dlong id = e*p_Nfields*p_Np + n;
 
       for(int fld=0; fld< p_Nfields; ++fld){
 
-        dfloat r_rhsq  = rhsq[id + fld*p_Np];
+        const dlong id = e*p_Nfields*p_Np + fld*p_Np + n;
+        dfloat r_rhsq  = rhsq[id];
         dfloat r_q     = 0.f;
         dfloat r_rkerr = 0.f;
 
@@ -292,32 +292,32 @@ for(dlong es=0;es<pmlNelements;++es;@outer(0)){
 
           if(fld<4){
 
-            r_q = q[id +fld*p_Np];
+            r_q = q[id];
 
             for (int i=0;i<(p_NrkStages-1);i++) {
-              r_q     += dt*rkA[p_NrkStages*stage + i]*rkrhsq[id + fld*p_Np + i*offset];
-              r_rkerr += dt*rkE[       i]*rkrhsq[id + fld*p_Np + i*offset];
+              r_q     += dt*rkA[p_NrkStages*stage + i]*rkrhsq[id + i*offset];
+              r_rkerr += dt*rkE[       i]             *rkrhsq[id + i*offset];
             }
             r_q     += dt*rkA[p_NrkStages*stage + p_NrkStages-1]*r_rhsq;
             r_rkerr += dt*rkE[                    p_NrkStages-1]*r_rhsq;
           }
           else{
 
-            r_q = sarkC[stage]*q[id +fld*p_Np];
+            r_q = sarkC[stage]*q[id];
 
              for (int i=0;i<(p_NrkStages-1);i++) {
-              r_q     += dt*sarkA[p_NrkStages*stage + i]*rkrhsq[id + fld*p_Np + i*offset];
-              r_rkerr += dt*sarkE[                    i]*rkrhsq[id + fld*p_Np + i*offset];
+              r_q     += dt*sarkA[p_NrkStages*stage + i]*rkrhsq[id + i*offset];
+              r_rkerr += dt*sarkE[                    i]*rkrhsq[id + i*offset];
             }
             r_q     += dt*sarkA[p_NrkStages*stage + p_NrkStages-1]*r_rhsq;
             r_rkerr += dt*sarkE[                    p_NrkStages-1]*r_rhsq;
           }
 
-          rkq[id   +fld*p_Np] = r_q;
-          rkerr[id +fld*p_Np] = r_rkerr;
+          rkq[id  ] = r_q;
+          rkerr[id] = r_rkerr;
         }
 
-        rkrhsq[id+fld*p_Np+stage*offset] = r_rhsq;
+        rkrhsq[id + stage*offset] = r_rhsq;
       }
     }
   }
@@ -362,15 +362,15 @@ for(dlong es=0;es<pmlNelements;++es;@outer(0)){
       e = pmlElementIds[es];
       if (n < p_Np){
         const dlong pmlId = pmlIds[es];
-        const dlong id  = p_Nfields*e*p_Np + n;
-        const dlong pid = p_Nfields*pmlId*p_Np + n;
 
         for(int fld=0; fld< p_Nfields; ++fld){
 
-          dfloat r_rhsq  = rhsq [id  + fld*p_Np];
-          dfloat r_rhsqx = rhsqx[pid + fld*p_Np];
-          dfloat r_rhsqy = rhsqy[pid + fld*p_Np];
-          dfloat r_rhsqz = rhsqz[pid + fld*p_Np];
+          const dlong id  = p_Nfields*e*p_Np + fld*p_Np + n;
+          const dlong pid = p_Nfields*pmlId*p_Np + fld*p_Np + n;
+          dfloat r_rhsq  = rhsq [id ];
+          dfloat r_rhsqx = rhsqx[pid];
+          dfloat r_rhsqy = rhsqy[pid];
+          dfloat r_rhsqz = rhsqz[pid];
 
           if(stage==(p_NrkStages-1)){
             //
@@ -381,19 +381,19 @@ for(dlong es=0;es<pmlNelements;++es;@outer(0)){
             dfloat r_rkerr = 0.f;
 
             if(fld<4){
-              r_q  = q [id  +fld*p_Np];
-              r_qx = qx[pid +fld*p_Np];
-              r_qy = qy[pid +fld*p_Np];
-              r_qz = qz[pid +fld*p_Np];
+              r_q  = q [id ];
+              r_qx = qx[pid];
+              r_qy = qy[pid];
+              r_qz = qz[pid];
 
               dfloat r_rkerr = 0.f;
 
               for (int i=0;i<(p_NrkStages-1);i++) {
-                r_q     += dt*rkA[p_NrkStages*stage + i]*rkrhsq[  id + fld*p_Np + i*offset];
-                r_qx    += dt*rkA[p_NrkStages*stage + i]*rkrhsqx[pid + fld*p_Np + i*pmloffset];
-                r_qy    += dt*rkA[p_NrkStages*stage + i]*rkrhsqy[pid + fld*p_Np + i*pmloffset];
-                r_qz    += dt*rkA[p_NrkStages*stage + i]*rkrhsqz[pid + fld*p_Np + i*pmloffset];
-                r_rkerr += dt*rkE[       i]*rkrhsq[id + fld*p_Np + i*offset];
+                r_q     += dt*rkA[p_NrkStages*stage + i]*rkrhsq[  id  + i*offset];
+                r_qx    += dt*rkA[p_NrkStages*stage + i]*rkrhsqx[pid  + i*pmloffset];
+                r_qy    += dt*rkA[p_NrkStages*stage + i]*rkrhsqy[pid  + i*pmloffset];
+                r_qz    += dt*rkA[p_NrkStages*stage + i]*rkrhsqz[pid  + i*pmloffset];
+                r_rkerr += dt*rkE[       i]*rkrhsq[id + i*offset];
               }
 
               r_q     += dt*rkA[p_NrkStages*stage + p_NrkStages-1]*r_rhsq;
@@ -405,20 +405,20 @@ for(dlong es=0;es<pmlNelements;++es;@outer(0)){
             }
             else{
 
-              r_q  = sarkC[stage]*q [id  +fld*p_Np];
-              r_qx = qx[pid +fld*p_Np];
-              r_qy = qy[pid +fld*p_Np];
-              r_qz = qz[pid +fld*p_Np];
+              r_q  = sarkC[stage]*q [id];
+              r_qx = qx[pid];
+              r_qy = qy[pid];
+              r_qz = qz[pid];
 
               dfloat r_rkerr = 0.f;
 
               for (int i=0;i<(p_NrkStages-1);i++) {
-                r_q     += dt*sarkA[p_NrkStages*stage + i]*rkrhsq[id + fld*p_Np + i*offset];
-                r_qx    += dt*rkA[p_NrkStages*stage + i]*rkrhsqx[pid + fld*p_Np + i*pmloffset];
-                r_qy    += dt*rkA[p_NrkStages*stage + i]*rkrhsqy[pid + fld*p_Np + i*pmloffset];
-                r_qz    += dt*rkA[p_NrkStages*stage + i]*rkrhsqz[pid + fld*p_Np + i*pmloffset];
+                r_q     += dt*sarkA[p_NrkStages*stage + i]*rkrhsq[id + i*offset];
+                r_qx    += dt*rkA[p_NrkStages*stage + i]*rkrhsqx[pid + i*pmloffset];
+                r_qy    += dt*rkA[p_NrkStages*stage + i]*rkrhsqy[pid + i*pmloffset];
+                r_qz    += dt*rkA[p_NrkStages*stage + i]*rkrhsqz[pid + i*pmloffset];
 
-                r_rkerr += dt*sarkE[       i]*rkrhsq[id + fld*p_Np + i*offset];
+                r_rkerr += dt*sarkE[       i]*rkrhsq[id + i*offset];
               }
 
               r_q     += dt*sarkA[p_NrkStages*stage + p_NrkStages-1]*r_rhsq;
@@ -429,17 +429,17 @@ for(dlong es=0;es<pmlNelements;++es;@outer(0)){
               r_rkerr += dt*sarkE[p_NrkStages-1]*r_rhsq; 
             }
 
-            rkq[id     + fld*p_Np] = r_q;
-            rkqx[pid   + fld*p_Np] = r_qx;
-            rkqy[pid   + fld*p_Np] = r_qy;
-            rkqz[pid   + fld*p_Np] = r_qz;
-            rkerr[id   + fld*p_Np] = r_rkerr;
+            rkq[id  ] = r_q;
+            rkqx[pid] = r_qx;
+            rkqy[pid] = r_qy;
+            rkqz[pid] = r_qz;
+            rkerr[id] = r_rkerr;
           }
 
-        rkrhsq[id  +fld*p_Np  +stage*offset]    = r_rhsq;
-        rkrhsqx[pid+fld*p_Np+stage*pmloffset]   = r_rhsqx;
-        rkrhsqy[pid+fld*p_Np+stage*pmloffset]   = r_rhsqy;
-        rkrhsqz[pid+fld*p_Np+stage*pmloffset]   = r_rhsqz;
+        rkrhsq[id   + stage*offset]      = r_rhsq;
+        rkrhsqx[pid + stage*pmloffset]   = r_rhsqx;
+        rkrhsqy[pid + stage*pmloffset]   = r_rhsqy;
+        rkrhsqz[pid + stage*pmloffset]   = r_rhsqz;
         }     
       }
     }
