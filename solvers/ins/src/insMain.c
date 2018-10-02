@@ -54,8 +54,16 @@ int main(int argc, char **argv){
   switch(elementType){
   case TRIANGLES:
     mesh = meshSetupTri2D((char*)fileName.c_str(), N); break;
-  case QUADRILATERALS:
-    mesh = meshSetupQuad2D((char*)fileName.c_str(), N); break;
+  case QUADRILATERALS:{
+    if(dim==2)
+      mesh = meshSetupQuad2D((char*)fileName.c_str(), N);
+  else{
+    dfloat radius = 1;
+    options.getArgs("SPHERE RADIUS", radius);
+    mesh = meshSetupQuad3D((char*)fileName.c_str(), N, radius);
+  }
+  break;
+  }
   case TETRAHEDRA:
     mesh = meshSetupTet3D((char*)fileName.c_str(), N); break;
   case HEXAHEDRA:
