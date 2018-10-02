@@ -448,7 +448,7 @@ SOFTWARE.
                                 const dfloat time,
                                 @restrict const  dfloat *  extbdfA,
                                 @restrict const  dfloat *  extbdfB,
-                                const dlong fieldOffset,
+                                const dlong offset,
                                 @restrict const  dfloat *  Rho,                                
                                 @restrict const  dfloat *  U,
                                 @restrict const  dfloat *  NU,
@@ -466,12 +466,12 @@ SOFTWARE.
           
           for (int s=0;s<p_Nstages;s++) {
             //U 
-            const dfloat Um  = U[id+0*fieldOffset+s*p_NVfields*fieldOffset];
-            const dfloat Vm  = U[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+            const dfloat Um  = U[id+0*offset+s*p_NVfields*offset];
+            const dfloat Vm  = U[id+1*offset+s*p_NVfields*offset];
 
             // NU
-            const dfloat NUm  = NU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
-            const dfloat NVm  = NU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+            const dfloat NUm  = NU[id+0*offset+s*p_NVfields*offset];
+            const dfloat NVm  = NU[id+1*offset+s*p_NVfields*offset];
 
             rhsu +=  extbdfB[s]*Um  - dt*extbdfA[s]*NUm ;
             rhsv +=  extbdfB[s]*Vm  - dt*extbdfA[s]*NVm ;
@@ -484,7 +484,7 @@ SOFTWARE.
           mppfVelocitySource2D(time,x[id],y[id],&fbx, &fby);
           
 
-          #if 1  // Just for exact solution
+          #if 0  // Just for exact solution
           rhsu += dt*fbx/Rho[id];
           rhsv += dt*fby/Rho[id];
           #else
@@ -493,8 +493,8 @@ SOFTWARE.
           #endif
 
           //
-          Uhat[id + 0*fieldOffset] += rhsu;
-          Uhat[id + 1*fieldOffset] += rhsv; 
+          Uhat[id + 0*offset] += rhsu;
+          Uhat[id + 1*offset] += rhsv; 
         }
       }
     }

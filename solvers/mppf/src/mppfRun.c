@@ -78,9 +78,6 @@ void mppfRun(mppf_t *mppf){
                           mppf->fieldOffset,
                           mppf->o_rhsP,
                           mppf->o_rkP);
-
-
-
 #endif
 
 
@@ -102,7 +99,7 @@ void mppfRun(mppf_t *mppf){
     // Exchange pressure and update pressure gradient
      mppfPressureGradient(mppf, time_new);   
 
-#if 0   
+#if 1 
     // Compute velocity Rhs i.e. rhsU, rhsV, rhsW
     mppfVelocityRhs(mppf, time_new);
     mppfVelocitySolve(mppf, time_new, mppf->o_rkU);
@@ -116,8 +113,6 @@ void mppfRun(mppf_t *mppf){
                           mppf->o_rkU,
                           mppf->o_rhsP);
 #endif
-
-
      //cycle history 
     for (int s=mppf->Nstages;s>1;s--) {
       mppf->o_U.copyFrom(mppf->o_U, mppf->Ntotal*mppf->NVfields*sizeof(dfloat), 

@@ -13,24 +13,21 @@
     *(phi)  =  cos(M_PI*x)*cos(M_PI*y)*sin(t);\
   }
 
-#define mppfPhaseFieldSource2D(t,x,y,g)\
+
+  #define mppfPhaseFieldSource2D(t,x,y,g)\
   {                                    \
     dfloat eta     = 0.1; \
     dfloat lambda  = 0.001; \
     dfloat M       = 0.001; \
     dfloat eta2    = eta*eta;\
-    dfloat u       =  cos(M_PI*y)*sin(M_PI*x)*sin(t);\
-    dfloat v       = -sin(M_PI*y)*cos(M_PI*x)*sin(t);\
-    dfloat p       =  sin(M_PI*y)*sin(M_PI*x)*cos(t);\
-    dfloat phi     =  cos(M_PI*x)*cos(M_PI*y)*sin(t);\
-    dfloat phit    = cos(M_PI*x)*cos(M_PI*y)*cos(t);\
-    dfloat phix    = -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
-    dfloat phiy    = -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
-    dfloat dt1     = sin(M_PI*x)*sin(t);\
-    dfloat dt2     = sin(M_PI*y)*sin(t); \
-    dfloat dt3     = sin(M_PI*x)*sin(M_PI*y)*sin(t);\
-    dfloat dif     = (2.f*M*M_PI*M_PI*lambda*phi*(3.f*sin(t)*sin(t) - 6.f*dt1*dt1 - 6.f*dt2*dt2 + 2.f*M_PI*M_PI*eta2 + 9.f*dt3*dt3 - 1.f))/eta2; \
-    *(g)           = phit + u*phix + v*phiy + dif;\
+    dfloat u = cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+    dfloat v = -cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat phit= cos(M_PI*x)*cos(M_PI*y)*cos(t);\
+    dfloat phi = cos(M_PI*x)*cos(M_PI*y)*sin(t);\
+    dfloat phix= -M_PI*cos(M_PI*y)*sin(M_PI*x)*sin(t);\
+    dfloat phiy= -M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
+    dfloat lapfunc= (2.f*M_PI*M_PI*cos(M_PI*x)*cos(M_PI*y)*sin(t)*(3.f*sin(t)*sin(t) - 6.f*sin(M_PI*x)*sin(M_PI*x)*sin(t)*sin(t) - 6.f*sin(M_PI*y)*sin(M_PI*y)*sin(t)*sin(t) + 2.f*M_PI*M_PI*eta2 + 9.f*sin(M_PI*x)*sin(M_PI*x)*sin(M_PI*y)*sin(M_PI*y)*sin(t)*sin(t) - 1.f))/eta2;\
+    *(g)           = phit + u*phix + v*phiy  + lambda*M*lapfunc;\
   } 
 
   // mu1 = 0.01 // mu2 = 0.02 rho1 = 1 rho2 = 3 are hard coded
@@ -60,8 +57,8 @@
     dfloat lapv= 2*M_PI*M_PI*cos(M_PI*x)*sin(M_PI*y)*sin(t);\
     dfloat gx = rho*(ut + u*ux+ v*uy) + px - mu*lapu - (mux*2.f*ux + muy*(uy + vx)) + lambda*lapphi*phix;\
     dfloat gy = rho*(vt + u*vx+ v*vy) + py - mu*lapv - (muy*2.f*vy + mux*(uy + vx)) + lambda*lapphi*phiy;\
-    *(fx)          = gx;\
-    *(fy)          = gy;\
+    *(fx)          = gx/rho;\
+    *(fy)          = gy/rho;\
   } 
 
   // dfloat lambda  = 0.001; \
