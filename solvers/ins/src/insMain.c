@@ -72,16 +72,16 @@ int main(int argc, char **argv){
 
   ins_t *ins = insSetup(mesh,options);
 
-  insPlotWallsVTUHex3D(ins, "walls");
+  // insPlotWallsVTUHex3D(ins, "walls");
   
-  if(ins->readRestartFile){
-    printf("Reading restart file..."); 
-    insRestartRead(ins, ins->options); 
-    printf("done\n");   
-   }  
+  // if(ins->readRestartFile){
+  //   printf("Reading restart file..."); 
+  //   insRestartRead(ins, ins->options); 
+  //   printf("done\n");   
+  //  }  
   
-  if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
-  if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF"))  insRunEXTBDF(ins);
+  // if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
+  // if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF"))  insRunEXTBDF(ins);
 
   // close down MPI
   MPI_Finalize();

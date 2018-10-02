@@ -291,8 +291,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
  kernelInfo["header"].asArray();
  kernelInfo["flags"].asObject();
 
-  if(ins->dim==3)
-    meshOccaSetup3D(mesh, options, kernelInfo);
+  if(ins->dim==3){
+    if(ins->elementType != QUADRILATERALS)
+      meshOccaSetup3D(mesh, options, kernelInfo);
+    else
+      meshOccaSetupQuad3D(mesh, options, kernelInfo); 
+  } 
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
@@ -332,6 +336,15 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     occa::setVerboseCompilation(false);
 #endif
   
+
+if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION")){
+
+printf("Setting up initial condition for BROWN-MINION test case...");
+
+
+printf("done\n");
+}else{
+
   for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
       if (ins->dim==2) 
@@ -353,6 +366,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
                           ins->o_U,
                           ins->o_P);
   ins->o_U.copyTo(ins->U);
+
+}
 
   // set time step
   dfloat hmin = 1e9, hmax = 0;

@@ -88,6 +88,7 @@ LOBJS = \
 ../../src/meshGeometricFactorsHex3D.o \
 ../../src/meshGeometricFactorsTri2D.o \
 ../../src/meshGeometricFactorsQuad2D.o \
+../../src/meshGeometricFactorsQuad3D.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshGeometricPartition3D.o \
 ../../src/meshHaloExchange.o \
@@ -99,17 +100,19 @@ LOBJS = \
 ../../src/meshLoadReferenceNodesHex3D.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/meshOccaSetup3D.o \
+../../src/meshOccaSetupQuad3D.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
-../../src/meshParallelConsecutiveGlobalNumbering.o\
-../../src/meshParallelGatherScatterSetup.o \
+../../src/meshParallelPrint2D.o \
 ../../src/meshParallelReaderTri2D.o \
 ../../src/meshParallelReaderQuad2D.o \
+../../src/meshParallelReaderQuad3D.o \
 ../../src/meshParallelReaderTet3D.o \
 ../../src/meshParallelReaderHex3D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPhysicalNodesTri2D.o \
 ../../src/meshPhysicalNodesQuad2D.o \
+../../src/meshPhysicalNodesQuad3D.o \
 ../../src/meshPhysicalNodesTet3D.o \
 ../../src/meshPhysicalNodesHex3D.o \
 ../../src/meshPlotVTU2D.o \
@@ -118,24 +121,25 @@ LOBJS = \
 ../../src/meshPrint3D.o \
 ../../src/meshSetupTri2D.o \
 ../../src/meshSetupQuad2D.o \
+../../src/meshSetupQuad3D.o \
 ../../src/meshSetupTet3D.o \
 ../../src/meshSetupHex3D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
 ../../src/meshSurfaceGeometricFactorsQuad2D.o \
+../../src/meshSurfaceGeometricFactorsQuad3D.o \
 ../../src/meshSurfaceGeometricFactorsTet3D.o \
 ../../src/meshSurfaceGeometricFactorsHex3D.o \
 ../../src/meshVTU2D.o \
 ../../src/meshVTU3D.o \
-../../src/matrixInverse.o \
-../../src/matrixConditionNumber.o \
 ../../src/mysort.o \
-../../src/parallelSort.o\
-../../src/hash.o\
+../../src/parallelSort.o \
 ../../src/setupAide.o \
-../../src/readArray.o\
-../../src/occaDeviceConfig.o\
+../../src/trace.o \
+../../src/readArray.o \
+../../src/occaDeviceConfig.o \
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
+
 
 insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparAlmond libelliptic
 	$(LD)  $(LDFLAGS)  -o insMain ./src/insMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
