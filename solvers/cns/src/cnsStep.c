@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "cns.h"
 
-#define USE_OLD_HALO 0
+#define USE_OLD_HALO 1
 
 void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
 
@@ -168,7 +168,6 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     }
 
     // compute volume contribution to DG cns RHS
-#if 1
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureVolumeKernel(mesh->Nelements, 
                                 cns->advSwitch,
@@ -185,7 +184,6 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                 cns->o_rkq, 
                                 cns->o_rhsq);
     } else
-#endif
       {
       cns->volumeKernel(mesh->Nelements, 
                         cns->advSwitch,
@@ -224,8 +222,8 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     }
 
     // compute surface contribution to DG cns RHS (LIFTT ?)
-#if 0
     // THIS ?
+#if 1
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureSurfaceKernel(mesh->Nelements, 
                                  cns->advSwitch,
@@ -234,8 +232,10 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                  mesh->o_vmapM, 
                                  mesh->o_vmapP, 
                                  mesh->o_EToB,
-                                 mesh->o_intInterpT,
-                                 mesh->o_intLIFTT, 
+				 mesh->o_cubInterpT,
+				 mesh->o_cubProjectT,
+				 //                                 mesh->o_intInterpT,
+				 //                                 mesh->o_intLIFTT, 
                                  currentTime, 
                                  mesh->o_intx, 
                                  mesh->o_inty,
@@ -388,7 +388,6 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     }
       
     // compute volume contribution to DG cns RHS
-#if 0
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
 
       cns->cubatureVolumeKernel(mesh->Nelements, 
@@ -406,7 +405,6 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                 cns->o_q, 
                                 cns->o_rhsq);
     } else
-#endif
       {
       cns->volumeKernel(mesh->Nelements, 
                         advSwitch,
@@ -431,7 +429,6 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     }
       
     // compute surface contribution to DG cns RHS (LIFTT ?)
-#if 0
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureSurfaceKernel(mesh->Nelements, 
                                  advSwitch,
@@ -452,7 +449,6 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                  cns->o_viscousStresses, 
                                  cns->o_rhsq);
     } else
-#endif
       {
       cns->surfaceKernel(mesh->Nelements, 
                          advSwitch, 
