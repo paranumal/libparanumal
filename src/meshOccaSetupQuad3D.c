@@ -76,6 +76,9 @@ void meshOccaSetupQuad3D(mesh_t *mesh, setupAide &newOptions, occa::properties &
   mesh->o_resq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
   
+  size_t bytes = mesh->device.memoryAllocated();
+  printf("bytes allocated: %lg\n", bytes/1.e9);
+  
   //lumped mass matrix
   mesh->MM = (dfloat *) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   for (int j=0;j<mesh->Nq;j++) {
@@ -120,69 +123,90 @@ void meshOccaSetupQuad3D(mesh_t *mesh, setupAide &newOptions, occa::properties &
 	mesh->intz[id] = iz;
       }
     }
-
-    mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-
-    mesh->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-    mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
-
-    mesh->o_vgeo =
-      mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
-          mesh->vgeo);
-    mesh->o_sgeo =
-      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
-          mesh->sgeo);
-    mesh->o_ggeo =
-      mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
-          mesh->ggeo);
-
-    mesh->o_cubvgeo =
-      mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->cubNp*sizeof(dfloat),
-          mesh->cubvgeo);
-
-    mesh->o_cubsgeo =
-      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*mesh->Nsgeo*sizeof(dfloat),
-          mesh->cubsgeo);
-
-    mesh->o_cubInterpT =
-      mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
-          cubInterpT);
-
-    mesh->o_cubProjectT =
-      mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
-          cubProjectT);
-
-    mesh->o_cubDWT =
-      mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
-          cubDWT);
-
-    mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat), cubDWT);
-
-    dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-
-    mesh->o_LIFTT =
-      mesh->device.malloc(1*sizeof(dfloat)); // dummy
-    
-    mesh->o_intx =
-      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*sizeof(dfloat),
-			  mesh->intx);
-    
-    mesh->o_inty =
-      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*sizeof(dfloat),
-			  mesh->inty);
-    
-    mesh->o_intz =
-      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*sizeof(dfloat),
-			  mesh->intz);
-    
-    //dummy quadrature lifter operators
-    mesh->o_intInterpT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
-    mesh->o_intInterpT.copyFrom(mesh->o_cubInterpT);
-
-    mesh->o_intLIFTT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
-    mesh->o_intLIFTT.copyFrom(mesh->o_cubProjectT);
   }
   
+  mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+  
+  bytes = mesh->device.memoryAllocated();
+  printf("bytes allocated: %lg\n", bytes/1.e9);
+  
+  // bundle D and (W^{-1} D^t W)
+  dfloat *Dmatrices = (dfloat*) calloc(mesh->Nq*mesh->Nq*2, sizeof(dfloat));
+  for(int n=0;n<mesh->Nq*mesh->Nq;++n){
+    Dmatrices[n] = mesh->D[n];
+  }
+  for(int j=0;j<mesh->Nq;++j){
+    for(int i=0;i<mesh->Nq;++i){
+      // note minus
+      Dmatrices[mesh->Nq*mesh->Nq + i + j*mesh->Nq] = -mesh->D[i*mesh->Nq + j]*mesh->gllw[i]/mesh->gllw[j];
+    }
+  }
+  
+  mesh->o_Dmatrices = mesh->device.malloc(2*mesh->Nq*mesh->Nq*sizeof(dfloat), Dmatrices);
+  
+  free(Dmatrices);
+  
+  mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
+  
+  mesh->o_vgeo =
+    mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
+			mesh->vgeo);
+  mesh->o_sgeo =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
+			mesh->sgeo);
+  mesh->o_ggeo =
+    mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
+			mesh->ggeo);
+  
+  bytes = mesh->device.memoryAllocated();
+  printf("bytes allocated: %lg\n", bytes/1.e9);
+  
+  mesh->o_cubvgeo =
+    mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->cubNp*sizeof(dfloat),
+			mesh->cubvgeo);
+  
+  mesh->o_cubsgeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*mesh->Nsgeo*sizeof(dfloat),
+			  mesh->cubsgeo);
+  
+  mesh->o_cubInterpT =
+    mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
+			cubInterpT);
+  
+  mesh->o_cubProjectT =
+    mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
+			cubProjectT);
+  
+  mesh->o_cubDWT =
+    mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
+			cubDWT);
+  
+  mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat), cubDWT);
+  
+  dfloat *LIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
+  
+  mesh->o_LIFTT =
+    mesh->device.malloc(1*sizeof(dfloat)); // dummy
+  
+  mesh->o_intx =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*sizeof(dfloat),
+			mesh->intx);
+  
+  mesh->o_inty =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*sizeof(dfloat),
+			mesh->inty);
+  
+  mesh->o_intz =
+    mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNq*sizeof(dfloat),
+			mesh->intz);
+  
+  //dummy quadrature lifter operators
+  mesh->o_intInterpT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
+  mesh->o_intInterpT.copyFrom(mesh->o_cubInterpT);
+  
+  mesh->o_intLIFTT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
+  mesh->o_intLIFTT.copyFrom(mesh->o_cubProjectT);
+ 
   
   mesh->o_MM =
     mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),

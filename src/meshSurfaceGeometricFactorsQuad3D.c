@@ -38,6 +38,10 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 				mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
 
+  mesh->cubsgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
+                                mesh->Nsgeo*mesh->cubNq*mesh->Nfaces, 
+                                sizeof(dfloat));
+  
   dfloat *xr = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   dfloat *yr = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   dfloat *zr = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
@@ -95,7 +99,6 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
       }
     }
 
-    // face 0
     for(int f=0;f<mesh->Nfaces;++f){
       for(int n=0;n<mesh->Nq;++n){
 	int id = mesh->faceNodes[n+f*mesh->Nq];
@@ -153,8 +156,86 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	mesh->sgeo[base+SJID] = sJ;
 
 	mesh->sgeo[base+IJID] = 1./Jid;
-	
+
+	mesh->sgeo[base+WIJID] = 1./(Jid*mesh->gllw[0]);
 	mesh->sgeo[base+WSJID] = sJ*mesh->gllw[n];
+      }
+    }
+
+    // interpolate geofacs to surface quadrature
+    for(int f=0;f<mesh->Nfaces;++f){
+
+      for(int n=0;n<mesh->cubNq;++n){
+	dfloat cxr = 0, cxs = 0, cx = 0;
+	dfloat cyr = 0, cys = 0, cy = 0;
+	dfloat czr = 0, czs = 0, cz = 0;
+	
+	for(int i=0;i<mesh->Nq;++i){
+	  int id = mesh->faceNodes[i+f*mesh->Nq];
+	  dfloat cIni = mesh->cubInterp[n*mesh->Nq+i];
+	  cxr += cIni*xr[id];
+	  cxs += cIni*xs[id];
+	  cyr += cIni*yr[id];
+	  cys += cIni*ys[id];
+	  czr += cIni*zr[id];
+	  czs += cIni*zs[id];
+	  cx  += cIni*mesh->x[id+e*mesh->Np];
+	  cy  += cIni*mesh->y[id+e*mesh->Np];
+	  cz  += cIni*mesh->z[id+e*mesh->Np];
+	}
+
+	dfloat Gx = cyr*czs - czr*cys;
+	dfloat Gy = czr*cxs - cxr*czs;
+	dfloat Gz = cxr*cys - cyr*cxs;	
+	dfloat cJ = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
+	
+	dfloat nx, ny, nz;
+
+	if(f==0){
+	  nx = cyr*cz - czr*cy;
+	  ny = czr*cx - cxr*cz;
+	  nz = cxr*cy - cyr*cx;
+	}
+	
+	if(f==1){
+	  nx = cys*cz - czs*cy;
+	  ny = czs*cx - cxs*cz;
+	  nz = cxs*cy - cys*cx;
+	}
+
+	if(f==2){
+	  nx = -cyr*cz + czr*cy;
+	  ny = -czr*cx + cxr*cz;
+	  nz = -cxr*cy + cyr*cx;
+	}
+
+	if(f==3){
+	  nx = -cys*cz + czs*cy;
+	  ny = -czs*cx + cxs*cz;
+	  nz = -cxs*cy + cys*cx;
+	}
+
+	dfloat R = sqrt(cx*cx+cy*cy+cz*cz);
+	
+	nx /= R;
+	ny /= R;
+	nz /= R;
+	
+	dfloat sJ = sqrt(nx*nx+ny*ny+nz*nz);
+
+	nx /= sJ;
+	ny /= sJ;
+	nz /= sJ;
+
+	if(sJ<1e-8) { printf("Negative or small surface Jacobian: %g\n", sJ); exit(-1);}
+	
+	int base = mesh->Nsgeo*(e*mesh->cubNq*mesh->Nfaces + n + f*mesh->cubNq);
+	
+	mesh->cubsgeo[base+NXID] = nx;
+	mesh->cubsgeo[base+NYID] = ny;
+	mesh->cubsgeo[base+NZID] = nz;
+	mesh->cubsgeo[base+SJID] = sJ;
+	//	mesh->cubsgeo[base+WSJID] = sJ*mesh->cubw[n];
       }
     }
   }
@@ -185,4 +266,22 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
   }
 #endif  
   // TW: omit 1/min(h) calculation
+
+  for(dlong e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
+    for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
+      dlong baseM = e*mesh->Nfp*mesh->Nfaces + n;
+      dlong baseP = mesh->mapP[baseM];
+      if(baseP<0) baseP = baseM;
+      
+      // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
+      dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
+      dfloat hinvP = mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
+
+      //      printf("hinvM/P = %g,%g\n", hinvM, hinvP);
+      
+      mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
+      mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
+    }
+  }  
+  
 }

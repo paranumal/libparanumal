@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "cns.h"
 
-#define USE_OLD_HALO 0
+#define USE_OLD_HALO 1
 
 void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
 
@@ -88,6 +88,8 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
 #endif
     }
 
+    //    printf("calling stress vol kernel with viscosity %g\n", cns->mu);
+    
     // now compute viscous stresses
     cns->stressesVolumeKernel(mesh->Nelements, 
                               mesh->o_vgeo, 
@@ -171,6 +173,9 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                 cns->advSwitch,
 				fx, fy, fz,
                                 mesh->o_vgeo,
+				mesh->o_x, 
+				mesh->o_y,
+				mesh->o_z, 
                                 mesh->o_cubvgeo, 
                                 mesh->o_cubDWmatrices,
                                 mesh->o_cubInterpT,
@@ -178,11 +183,15 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                 cns->o_viscousStresses, 
                                 cns->o_rkq, 
                                 cns->o_rhsq);
-    } else {
+    } else
+      {
       cns->volumeKernel(mesh->Nelements, 
                         cns->advSwitch,
 			fx, fy, fz,
-                        mesh->o_vgeo, 
+                        mesh->o_vgeo,
+			mesh->o_x, 
+			mesh->o_y,
+			mesh->o_z, 
                         mesh->o_Dmatrices,
                         cns->o_viscousStresses, 
                         cns->o_rkq, 
@@ -213,6 +222,8 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
     }
 
     // compute surface contribution to DG cns RHS (LIFTT ?)
+    // THIS ?
+#if 1
     if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")) {
       cns->cubatureSurfaceKernel(mesh->Nelements, 
                                  cns->advSwitch,
@@ -221,8 +232,10 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                  mesh->o_vmapM, 
                                  mesh->o_vmapP, 
                                  mesh->o_EToB,
-                                 mesh->o_intInterpT,
-                                 mesh->o_intLIFTT, 
+				 mesh->o_cubInterpT,
+				 mesh->o_cubProjectT,
+				 //                                 mesh->o_intInterpT,
+				 //                                 mesh->o_intLIFTT, 
                                  currentTime, 
                                  mesh->o_intx, 
                                  mesh->o_inty,
@@ -232,7 +245,9 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                  cns->o_rkq, 
                                  cns->o_viscousStresses, 
                                  cns->o_rhsq);
-    } else {
+    } else
+#endif
+      {
       cns->surfaceKernel(mesh->Nelements, 
                          cns->advSwitch, 
                          mesh->o_sgeo, 
@@ -267,6 +282,7 @@ void cnsDopriStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                         cns->o_rkq,
                         cns->o_rkerr);
   }
+  
 }
 
 void cnsDopriOutputStep(cns_t *cns, const dfloat time, const dfloat dt, const dfloat outTime, occa::memory o_outq){
@@ -378,6 +394,9 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                 advSwitch,
 				fx, fy, fz,
                                 mesh->o_vgeo,
+				mesh->o_x, 
+				mesh->o_y,
+				mesh->o_z, 				
                                 mesh->o_cubvgeo, 
                                 mesh->o_cubDWmatrices,
                                 mesh->o_cubInterpT,
@@ -385,11 +404,15 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                 cns->o_viscousStresses, 
                                 cns->o_q, 
                                 cns->o_rhsq);
-    } else {
+    } else
+      {
       cns->volumeKernel(mesh->Nelements, 
                         advSwitch,
 			fx, fy, fz,
-                        mesh->o_vgeo, 
+                        mesh->o_vgeo,
+			mesh->o_x, 
+			mesh->o_y,
+			mesh->o_z, 
                         mesh->o_Dmatrices,
                         cns->o_viscousStresses, 
                         cns->o_q, 
@@ -425,7 +448,8 @@ void cnsLserkStep(cns_t *cns, setupAide &newOptions, const dfloat time){
                                  cns->o_q, 
                                  cns->o_viscousStresses, 
                                  cns->o_rhsq);
-    } else {
+    } else
+      {
       cns->surfaceKernel(mesh->Nelements, 
                          advSwitch, 
                          mesh->o_sgeo, 

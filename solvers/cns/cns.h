@@ -149,3 +149,20 @@ dfloat cnsDopriEstimate(cns_t *cns);
 
 void cnsBodyForce(dfloat t, dfloat *fx, dfloat *fy, dfloat *fz,
 		  dfloat *intfx, dfloat *intfy, dfloat *intfz);
+
+void cnsBrownMinionQuad3D(cns_t *cns);
+
+#ifdef RENDER
+
+void simpleRayTracer(int     plotNelements,
+		     dfloat *plotx,
+		     dfloat *ploty,
+		     dfloat *plotz,
+		     dfloat *plotq,
+		     const char	 *fileBaseName,
+		      const int fileIndex);
+
+void cnsRenderQuad3D(cns_t *cns, char *fileBaseName, int fileIndex);
+
+#endif
+
