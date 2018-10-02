@@ -194,7 +194,7 @@ void cnsPlotVTU(cns_t *cns, char *fileName){
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNelements;++n){
-      if(cns->dim==2)
+      if(cns->dim==2 || cns->elementType==QUADRILATERALS)
         fprintf(fp, "5\n");
       else
         fprintf(fp, "10\n");
