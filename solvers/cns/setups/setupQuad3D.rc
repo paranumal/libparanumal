@@ -5,7 +5,7 @@
 data/cnsUniform2D.h
 
 [MESH FILE]
-../../meshes/sphereQuadH01.msh
+../../meshes/sphereQuadH01a.msh
 
 [MESH DIMENSION]
 3
@@ -14,7 +14,7 @@ data/cnsUniform2D.h
 4
 
 [POLYNOMIAL DEGREE]
-4
+8
 
 [SPHERE RADIUS]
 1.0
@@ -51,10 +51,11 @@ DOPRI5
 
 #Can be COLLOCATION or CUBATURE
 [ADVECTION TYPE]
+#CUBATURE
 COLLOCATION
 
 [VISCOSITY]
-0
+0.0002
 
 [SPEED OF SOUND]
 5.0
@@ -75,15 +76,15 @@ COLLOCATION
 0
 
 [FINAL TIME]
-10
+100
 
 #set to 0.0 to ignore
 [TIME OUTPUT INTERVAL]
-0.0001
+0.1
 
 #set to 0 to ignore
 [TSTEP OUTPUT INTERVAL]
-1
+0
 
 [CFL]
 0.1

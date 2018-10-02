@@ -27,24 +27,21 @@ SOFTWARE.
 
 
 void upwindRoeAveraged(const dfloat nx,
-                           const dfloat ny,
-                           const dfloat nz,
-                           const dfloat rM,
-                           const dfloat ruM,
-                           const dfloat rvM,
-                           const dfloat rwM,       
-                           const dfloat rP,
-                           const dfloat ruP,
-                           const dfloat rvP,
-                           const dfloat rwP,
-                           dfloat *rflux,
-                           dfloat *ruflux,
-                           dfloat *rvflux,
-                           dfloat *rwflux
-                           ){
+		       const dfloat ny,
+		       const dfloat nz,
+		       const dfloat rM,
+		       const dfloat ruM,
+		       const dfloat rvM,
+		       const dfloat rwM,       
+		       const dfloat rP,
+		       const dfloat ruP,
+		       const dfloat rvP,
+		       const dfloat rwP,
+		       dfloat *rflux,
+		       dfloat *ruflux,
+		       dfloat *rvflux,
+		       dfloat *rwflux){
   
-  // Rotate "-" trace momentum to face normal-tangent coordinates
-
   dfloat sqrtrM = sqrt(rM);
   dfloat sqrtrP = sqrt(rP);
 
@@ -117,6 +114,7 @@ void upwindRoeAveraged(const dfloat nx,
   *rvflux -= w4*(dv-ny*dqn);
   *rwflux -= w4*(dw-nz*dqn);
 
+ 
   // scale to average
    *rflux *= p_half;
   *ruflux *= p_half;
@@ -275,10 +273,14 @@ void quadSurfaceTerms(const int face,
     for(int i=0;i<p_cubNq;++i;@inner(0)){
       #pragma unroll p_Nfaces 
         for (int face=0;face<p_Nfaces;face++) {
-          r_qM[0*p_Nfaces+face] = 0.; r_qM[1*p_Nfaces+face] = 0.;
-	  r_qM[2*p_Nfaces+face] = 0.; r_qM[3*p_Nfaces+face] = 0.;
-          r_qP[0*p_Nfaces+face] = 0.; r_qP[1*p_Nfaces+face] = 0.;
-	  r_qP[2*p_Nfaces+face] = 0.; r_qP[3*p_Nfaces+face] = 0.; 
+          r_qM[0*p_Nfaces+face] = 0.;
+	  r_qM[1*p_Nfaces+face] = 0.;
+	  r_qM[2*p_Nfaces+face] = 0.;
+	  r_qM[3*p_Nfaces+face] = 0.;
+          r_qP[0*p_Nfaces+face] = 0.;
+	  r_qP[1*p_Nfaces+face] = 0.;
+	  r_qP[2*p_Nfaces+face] = 0.;
+	  r_qP[3*p_Nfaces+face] = 0.; 
           r_vSM[0*p_Nfaces+face] = 0.; r_vSM[1*p_Nfaces+face] = 0.; r_vSM[2*p_Nfaces+face] = 0.;
 	  r_vSM[3*p_Nfaces+face] = 0.; r_vSM[4*p_Nfaces+face] = 0.; r_vSM[5*p_Nfaces+face] = 0.;
           r_vSP[0*p_Nfaces+face] = 0.; r_vSP[1*p_Nfaces+face] = 0.; r_vSP[2*p_Nfaces+face] = 0.;
@@ -363,7 +365,7 @@ void quadSurfaceTerms(const int face,
           dfloat vP = rvP/rP;
 	  dfloat wP = rwP/rP;
           dfloat pP = p_RT*rP;
-                    
+	  
           dfloat rflux, ruflux, rvflux, rwflux;
           upwindRoeAveraged (nx, ny, nz, rM, ruM, rvM, rwM, rP, ruP, rvP, rwP, &rflux, &ruflux, &rvflux, &rwflux);
           rflux *= advSwitch;
@@ -372,11 +374,6 @@ void quadSurfaceTerms(const int face,
 	  rwflux *= advSwitch;
 
 	  // TW: WATCH OUT FOR THIS
-	  rflux = 0;
-	  ruflux = 0;
-	  rvflux = 0;
-	  rwflux = 0;
-	  
           ruflux -= p_half*(nx*(T11P+T11M) + ny*(T12P+T12M) + nz*(T13P+T13M));
           rvflux -= p_half*(nx*(T12P+T12M) + ny*(T22P+T22M) + nz*(T23P+T23M));
 	  rwflux -= p_half*(nx*(T13P+T13M) + ny*(T23P+T23M) + nz*(T33P+T33M));
@@ -519,6 +516,7 @@ void stressSurfaceTerms(const int e,
   s_T33flux[es][j][i] += sc*p_two*mu*dS33;                              
 }
 
+#if 0
 @kernel void cnsStressesSurfaceQuad3D(const int Nelements,
                                      @restrict const  dfloat *  sgeo,
                                      @restrict const  dfloat *  LIFTT,
@@ -635,9 +633,4 @@ void stressSurfaceTerms(const int e,
     }
   }
 }
-
-
-
-
-
-
+#endif
