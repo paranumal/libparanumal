@@ -58,7 +58,6 @@ SOFTWARE.
 
 #define s_S23 s_H[0]
 #define s_S33 s_H[1]
-    
 
     @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
     @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
@@ -185,7 +184,7 @@ SOFTWARE.
 	const dfloat tx = cubvgeo[gid + p_TXID*p_cubNp];
         const dfloat ty = cubvgeo[gid + p_TYID*p_cubNp];
 	const dfloat tz = cubvgeo[gid + p_TZID*p_cubNp];
-        const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
+        const dfloat J  = cubvgeo[gid + p_JID*p_cubNp];
 
         const dfloat r  = r_q[0];
         const dfloat ru = r_q[1];
@@ -260,18 +259,18 @@ SOFTWARE.
           for (int n=0;n<p_cubNq;n++) {
             const dfloat Pnj = s_cubProjectT[n][j];
             const dfloat Dnj = s_cubDWT[n][j];
-            r_F[0]  += Pnj*s_F[0][n][i];
-            r_F[1]  += Pnj*s_F[1][n][i];
-            r_F[2]  += Pnj*s_F[2][n][i];
-	    r_F[3]  += Pnj*s_F[3][n][i]; 
-            r_G[0]  += Dnj*s_G[0][n][i];
-            r_G[1]  += Dnj*s_G[1][n][i];
-	    r_G[2]  += Dnj*s_G[2][n][i];
-	    r_G[3]  += Dnj*s_G[3][n][i];
-	    r_H[0]  += Pnj*s_H[0][n][i];
-            r_H[1]  += Pnj*s_H[1][n][i];
-            r_H[2]  += Pnj*s_H[2][n][i];
-	    r_H[3]  += Pnj*s_H[3][n][i]; 
+            r_F[0] += Pnj*s_F[0][n][i];
+            r_F[1] += Pnj*s_F[1][n][i];
+            r_F[2] += Pnj*s_F[2][n][i];
+	    r_F[3] += Pnj*s_F[3][n][i]; 
+            r_G[0] += Dnj*s_G[0][n][i];
+            r_G[1] += Dnj*s_G[1][n][i];
+	    r_G[2] += Dnj*s_G[2][n][i];
+	    r_G[3] += Dnj*s_G[3][n][i];
+	    r_H[0] += Pnj*s_H[0][n][i];
+            r_H[1] += Pnj*s_H[1][n][i];
+            r_H[2] += Pnj*s_H[2][n][i];
+	    r_H[3] += Pnj*s_H[3][n][i]; 
           }
         }
       }
@@ -315,25 +314,10 @@ SOFTWARE.
             const dfloat Pni = s_cubProjectT[n][i];
             const dfloat Dni = s_cubDWT[n][i];
 
-            rhsq0 +=
-	       Dni*s_F[0][j][n]
-	      +Pni*s_G[0][j][n]
-	      +Pni*s_H[0][j][n];
-
-            rhsq1 +=
-	       Dni*s_F[1][j][n]
-	      +Pni*s_G[1][j][n]
-	      +Pni*s_H[1][j][n];
-
-            rhsq2 +=
-	       Dni*s_F[2][j][n]
-	      +Pni*s_G[2][j][n]
-	      +Pni*s_H[2][j][n];
-
-	    rhsq3 +=
-	       Dni*s_F[3][j][n]
-	      +Pni*s_G[3][j][n]
-	      +Pni*s_H[3][j][n];
+            rhsq0 += Dni*s_F[0][j][n] + Pni*s_G[0][j][n] + Pni*s_H[0][j][n];
+            rhsq1 += Dni*s_F[1][j][n] + Pni*s_G[1][j][n] + Pni*s_H[1][j][n];
+            rhsq2 += Dni*s_F[2][j][n] + Pni*s_G[2][j][n] + Pni*s_H[2][j][n];
+	    rhsq3 += Dni*s_F[3][j][n] + Pni*s_G[3][j][n] + Pni*s_H[3][j][n];
           }
 
 	  // remove radial component of momentum change
@@ -383,7 +367,7 @@ SOFTWARE.
         const dfloat r  = q[qbase + 0*p_Np];
         const dfloat ru = q[qbase + 1*p_Np];
         const dfloat rv = q[qbase + 2*p_Np];
-	const dfloat rw = q[qbase + 2*p_Np];
+	const dfloat rw = q[qbase + 3*p_Np];
         
         s_u[j][i] = ru/r;
         s_v[j][i] = rv/r;

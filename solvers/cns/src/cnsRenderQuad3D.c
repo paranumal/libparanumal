@@ -117,15 +117,73 @@ void cnsRenderQuad3D(cns_t *cns, char *fileBaseName, int fileIndex){
     }
   }
 
-  simpleRayTracer(plotNelements,
-		  plotx,
-		  ploty,
-		  plotz,
-		  plotVortMag,
-		  fileBaseName,
-		  fileIndex);
+  int *allNelements = NULL;
 
-  printf("plotq in [%g,%g]\n", minPlotq, maxPlotq);
+  if(mesh->rank==0){
+    allNelements = (int*) calloc(mesh->size, sizeof(int));
+  }
+  
+  MPI_Gather(&plotNelements, 1, MPI_INT,
+	     allNelements,  1, MPI_INT,
+	     0, mesh->comm);
+  
+  dfloat *allPlotx = NULL;
+  dfloat *allPloty = NULL;
+  dfloat *allPlotz = NULL;
+  dfloat *allPlotq = NULL;
+  dfloat *allPlotVortMag = NULL;
+  int    *allDispls = NULL;
+  
+  if(mesh->rank==0){
+    
+    allDispls = (int*) calloc(mesh->size+1, sizeof(int));
+    
+    for(int r=0;r<mesh->size;++r){
+      allNelements[r] *= 3;
+    }
+    for(int r=1;r<=mesh->size;++r){
+      allDispls[r] = allDispls[r-1]+allNelements[r-1];
+    }
+
+    allPlotx  = (dfloat*) calloc(allDispls[mesh->size], sizeof(dfloat));
+    allPloty  = (dfloat*) calloc(allDispls[mesh->size], sizeof(dfloat));
+    allPlotz  = (dfloat*) calloc(allDispls[mesh->size], sizeof(dfloat));
+    allPlotq  = (dfloat*) calloc(allDispls[mesh->size], sizeof(dfloat));
+    allPlotVortMag  = (dfloat*) calloc(allDispls[mesh->size], sizeof(dfloat));
+  }
+  
+  MPI_Gatherv(plotx, plotNelements*3, MPI_DFLOAT,
+	      allPlotx, allNelements, allDispls, MPI_DFLOAT, 0, mesh->comm);
+
+  MPI_Gatherv(ploty, plotNelements*3, MPI_DFLOAT,
+	      allPloty, allNelements, allDispls, MPI_DFLOAT, 0, mesh->comm);
+
+  MPI_Gatherv(plotz, plotNelements*3, MPI_DFLOAT,
+	      allPlotz, allNelements, allDispls, MPI_DFLOAT, 0, mesh->comm);
+
+  MPI_Gatherv(plotq, plotNelements*3, MPI_DFLOAT,
+	      allPlotq, allNelements, allDispls, MPI_DFLOAT, 0, mesh->comm);
+
+  MPI_Gatherv(plotVortMag, plotNelements*3, MPI_DFLOAT,
+	      allPlotVortMag, allNelements, allDispls, MPI_DFLOAT, 0, mesh->comm);
+
+  if(mesh->rank==0){
+    simpleRayTracer(allDispls[mesh->size]/3,
+		    allPlotx,
+		    allPloty,
+		    allPlotz,
+		    allPlotVortMag,
+		    fileBaseName,
+		    fileIndex);
+    
+    printf("plotq in [%g,%g]\n", minPlotq, maxPlotq);
+    free(allPlotx);
+    free(allPloty);
+    free(allPlotz);
+    free(allPlotq);
+    free(allPlotVortMag);
+    free(allDispls);
+  }
   
   free(tmpPlotx);
   free(tmpPloty);
