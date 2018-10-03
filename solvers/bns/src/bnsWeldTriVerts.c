@@ -33,17 +33,17 @@ SOFTWARE.
 
 
 //---------------------------------------------------------
-int bnsWeldTriVerts(bns_t *bns, int Ntris, double *isoq){
+int bnsWeldTriVerts(bns_t *bns, int Ntris, dfloat *isoq){
   int Max_N = Ntris*12;                   // upper bound for node data
   int Max_T = Ntris*3;    // upper bound for connectivity ids
 
   std::vector<int>& refT = bns->iso_tris;
   refT.resize(Max_T);   // storage for 3 node ids for each tri
 
-  std::vector< std::vector<double> > Q;
-  Q.resize(bns->isoNfields, vector<double>(Max_T)); // for multiple field variables
+  std::vector< std::vector<dfloat> > Q;
+  Q.resize(bns->isoNfields, vector<dfloat>(Max_T)); // for multiple field variables
 
-  // std::vector<double> Q;
+  // std::vector<dfloat> Q;
   // Q.resize(Max_T*bns->isoNfields);      // storage for 1 scalar for each node
 
   mesh_t *mesh = bns->mesh;
@@ -57,8 +57,8 @@ int bnsWeldTriVerts(bns_t *bns, int Ntris, double *isoq){
   //---------------------------------------------
   vertexLookup* VL = new vertexLookup;
 
-  double p[3][3]={{0.0}};
-  double q[bns->isoNfields][3]={{0.0}}; 
+  dfloat p[3][3]={{0.0}};
+  dfloat q[bns->isoNfields][3]={{0.0}}; 
   int id=0, v[3]={0}; 
   int nodesk=0;
   vertexPos vpos;
@@ -123,7 +123,7 @@ int bnsWeldTriVerts(bns_t *bns, int Ntris, double *isoq){
 
   // load node coods and scalar
   int nno = VL->getVertexCount();
-  std::vector<double>& refN = bns->iso_nodes;
+  std::vector<dfloat>& refN = bns->iso_nodes;
   refN.resize(nno*(bns->dim + bns->isoNfields));
   int skN=0;
   for (int i=0; i<nno; ++i) {
