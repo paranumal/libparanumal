@@ -144,7 +144,7 @@ typedef struct{
 
 
   // NBN: add storage for compacted isosurf data for gmsh write
-  std::vector<double> iso_nodes;
+  std::vector<dfloat> iso_nodes;
   std::vector<int> iso_tris;
 
   int emethod; 
@@ -283,10 +283,10 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
 
 // Welding Tris
 
-int bnsWeldTriVerts(bns_t *bns, int isoNtris, double *isoq);
+int bnsWeldTriVerts(bns_t *bns, int isoNtris, dfloat *isoq);
 
 void bnsIsoPlotGmsh(bns_t *bns, int isoNtris, char *fname, int tstep, int N_offset,     
-  					int E_offset, int plotnum, double plottime,    bool bBinary, int procid);
+  					int E_offset, int plotnum, dfloat plottime,    bool bBinary, int procid);
 
 
 

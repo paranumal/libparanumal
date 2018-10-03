@@ -59,7 +59,7 @@ void bnsIsoPlotGmsh(
   // for isosurfaces, geometry/topology changes for each plot,
   // so we need to export mesh coord data for every plot.
 
-  std::vector<double>& refN = bns->iso_nodes;
+  std::vector<dfloat>& refN = bns->iso_nodes;
   std::vector<int>& refT = bns->iso_tris;
 
   int Nnodes = refN.size()/(bns->dim + bns->isoNfields);
@@ -79,7 +79,7 @@ void bnsIsoPlotGmsh(
   //-------------------------------------
 
   // size of data on this platform
-  size_t szD = sizeof(double), szI = sizeof(int);
+  size_t szD = sizeof(dfloat), szI = sizeof(int);
 
   //-------------------------------------
   // 1. Write the gmsh header details
@@ -108,7 +108,7 @@ void bnsIsoPlotGmsh(
   int id1 = N_offset;  // node offset for this partition
 
   if (bBinary) {
-    double data[3];
+    dfloat data[3];
     for(dlong n=0; n<Nnodes; ++n){
 
       int idn = n*noff;         // load coords for node n
@@ -123,7 +123,7 @@ void bnsIsoPlotGmsh(
     fprintf(fp,"\n");           // add eol for binary
   }
   else {
-    double pxn,pyn,pzn;
+    dfloat pxn,pyn,pzn;
     for (dlong n=0; n<Nnodes; ++n) {
 
       int idn = n*noff;         // load coords for node n
@@ -205,7 +205,7 @@ void bnsIsoPlotGmsh(
 
       int id = N_offset;   // node offset for this partition
       if (bBinary) {
-        double val=0.0;
+        dfloat val=0.0;
 
         for (dlong n=0; n<Nnodes; ++n) {
           ++id; val = refN[n*noff + fld];   // incr id, get value
