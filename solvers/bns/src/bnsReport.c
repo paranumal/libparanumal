@@ -37,7 +37,7 @@ mesh_t *mesh = bns->mesh;
                        bns->o_Vort,
                        bns->o_VortMag);
 
-#if 0
+#if 1
   if(bns->dim==3){
     ogsGatherScatter(bns->o_VortMag, ogsDfloat, ogsAdd, mesh->ogs);  
     int Ntotal = mesh->Np*mesh->Nelements;

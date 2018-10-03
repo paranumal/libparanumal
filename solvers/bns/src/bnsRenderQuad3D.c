@@ -43,6 +43,9 @@ void bnsRenderQuad3D(bns_t *bns, char *fileBaseName, int fileIndex){
   dfloat *tmpPloty = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
   dfloat *tmpPlotz = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
   dfloat *tmpPlotq = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
+  dfloat *tmpPlotVortx = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
+  dfloat *tmpPlotVorty = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
+  dfloat *tmpPlotVortz = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
   dfloat *tmpPlotVortMag = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
   
   // compute plot node coordinates on the fly
@@ -52,14 +55,19 @@ void bnsRenderQuad3D(bns_t *bns, char *fileBaseName, int fileIndex){
   for(dlong e=0;e<mesh->Nelements;++e){
 
     for(int n=0;n<mesh->plotNp;++n){
-      dfloat plotxn = 0, plotyn = 0, plotzn=0, plotqn = 0, plotVortMagn = 0;
+      dfloat plotxn = 0, plotyn = 0, plotzn=0, plotqn = 0;
+      dfloat plotVortxn = 0, plotVortyn = 0, plotVortzn = 0, plotVortMagn = 0;
 
       for(int m=0;m<mesh->Np;++m){
 	dfloat Inm = mesh->plotInterp[n*mesh->Np+m];
-        plotxn += Inm*mesh->x[m+e*mesh->Np];
-        plotyn += Inm*mesh->y[m+e*mesh->Np];
-        plotzn += Inm*mesh->z[m+e*mesh->Np];
+	int idm = m+e*mesh->Np;
+        plotxn += Inm*mesh->x[idm];
+        plotyn += Inm*mesh->y[idm];
+        plotzn += Inm*mesh->z[idm];
 	plotqn += Inm*bns->q[m+e*mesh->Np*mesh->Nfields];
+	plotVortxn += Inm*bns->Vort[m+e*mesh->Np*bns->Nvort + 0*mesh->Np] ;
+	plotVortyn += Inm*bns->Vort[m+e*mesh->Np*bns->Nvort + 1*mesh->Np] ;
+	plotVortzn += Inm*bns->Vort[m+e*mesh->Np*bns->Nvort + 2*mesh->Np] ;
 	plotVortMagn += Inm*bns->VortMag[m+e*mesh->Np];
       }
 
@@ -70,7 +78,15 @@ void bnsRenderQuad3D(bns_t *bns, char *fileBaseName, int fileIndex){
       tmpPloty[n] = plotyn;
       tmpPlotz[n] = plotzn;
       tmpPlotq[n] = plotqn;
-      tmpPlotVortMag[n] = plotVortMagn;
+      tmpPlotVortx[n] = plotVortxn;
+      tmpPlotVorty[n] = plotVortyn;
+      tmpPlotVortz[n] = plotVortzn;
+
+      // mag after interp
+      tmpPlotVortMag[n] =
+	sqrt(plotVortxn*plotVortxn +
+	     plotVortyn*plotVortyn +
+	     plotVortzn*plotVortzn);
     }
 
     for(int n=0;n<mesh->plotNelements;++n){
@@ -115,6 +131,9 @@ void bnsRenderQuad3D(bns_t *bns, char *fileBaseName, int fileIndex){
   free(tmpPlotx);
   free(tmpPloty);
   free(tmpPlotz);
+  free(tmpPlotVortx);
+  free(tmpPlotVorty);
+  free(tmpPlotVortz);
   free(tmpPlotq);
   free(tmpPlotVortMag);
 

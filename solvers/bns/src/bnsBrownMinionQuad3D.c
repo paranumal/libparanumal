@@ -43,7 +43,8 @@ void brownMinion(dfloat bmRho, dfloat bmDelta, dfloat sphereRadius,
     vout = 0;
   }
 
-  dfloat wout = bmDelta*sin(2*atan2(y,x))*(1-z*z);
+  //  dfloat wout = bmDelta*sin(2*atan2(y,x))*(1-z*z);
+  dfloat wout = bmDelta*sin(8*atan2(y,x))*(1-z*z);
 
   dfloat udotx = uout*x+vout*y+wout*z;
   *u = uout - udotx*x/(sphereRadius*sphereRadius);
