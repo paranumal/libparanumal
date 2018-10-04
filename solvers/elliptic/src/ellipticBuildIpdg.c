@@ -757,19 +757,23 @@ void ellipticBuildIpdgQuad3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
             int idmM = m*mesh->Np+vidM;
             int idmP = m*mesh->Np+vidP;
 
-            dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM];
-            dfloat dlndyM = drdyM*Br[idnM] + dsdyM*Bs[idnM];
-            dfloat ndotgradlnM = nx*dlndxM+ny*dlndyM;
+            dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM] + dtdxM;
+            dfloat dlndyM = drdyM*Br[idnM] + dsdyM*Bs[idnM] + dtdyM;
+            dfloat dlndzM = drdzM*Br[idnM] + dsdzM*Bs[idnM] + dtdzM;
+
+            dfloat ndotgradlnM = nx*dlndxM+ny*dlndyM + nz*dlndzM;
             dfloat lnM = B[idnM];
 
-            dfloat dlmdxM = drdxM*Br[idmM] + dsdxM*Bs[idmM];
-            dfloat dlmdyM = drdyM*Br[idmM] + dsdyM*Bs[idmM];
-            dfloat ndotgradlmM = nx*dlmdxM+ny*dlmdyM;
+            dfloat dlmdxM = drdxM*Br[idmM] + dsdxM*Bs[idmM] + dtdxM;
+            dfloat dlmdyM = drdyM*Br[idmM] + dsdyM*Bs[idmM] + dtdyM;
+            dfloat dlmdzM = drdzM*Br[idmM] + dsdzM*Bs[idmM] + dtdzM;
+            dfloat ndotgradlmM = nx*dlmdxM+ny*dlmdyM + nz*dlmdzM;
             dfloat lmM = B[idmM];
             
-            dfloat dlmdxP = drdxP*Br[idmP] + dsdxP*Bs[idmP];
-            dfloat dlmdyP = drdyP*Br[idmP] + dsdyP*Bs[idmP];
-            dfloat ndotgradlmP = nx*dlmdxP+ny*dlmdyP;
+            dfloat dlmdxP = drdxP*Br[idmP] + dsdxP*Bs[idmP] + dtdxP;
+            dfloat dlmdyP = drdyP*Br[idmP] + dsdyP*Bs[idmP] + dtdyP;
+            dfloat dlmdzP = drdzP*Br[idmP] + dsdzP*Bs[idmP] + dtdzP;
+            dfloat ndotgradlmP = nx*dlmdxP+ny*dlmdyP+nz*dlmdzP;
             dfloat lmP = B[idmP];
             
             dfloat penalty = elliptic->tau*hinv;     
@@ -778,30 +782,9 @@ void ellipticBuildIpdgQuad3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
             Anm += -0.5*wsJ*ndotgradlnM*lmM;  // -(N.grad ln^-, lm^-)
             Anm += +0.5*wsJ*penalty*lnM*lmM; // +((tau/h)*ln^-,lm^-)
 
-            dlong eP    = mesh->EToE[eM*mesh->Nfaces+fM];
-            if (eP < 0) {
-              int qSgn, gradqSgn;
-              int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
-              int bcType = elliptic->BCType[bc];          //find its type (Dirichlet/Neumann)
-              if(bcType==1){ // Dirichlet
-                qSgn     = -1;
-                gradqSgn =  1;
-              } else if (bcType==2){ // Neumann
-                qSgn     =  1;
-                gradqSgn = -1;
-              } else { // Neumann for now
-                qSgn     =  1;
-                gradqSgn = -1;
-              }
-
-              Anm += -0.5*gradqSgn*wsJ*lnM*ndotgradlmM;  // -(ln^-, -N.grad lm^-)
-              Anm += +0.5*qSgn*wsJ*ndotgradlnM*lmM;  // +(N.grad ln^-, lm^-)
-              Anm += -0.5*qSgn*wsJ*penalty*lnM*lmM; // -((tau/h)*ln^-,lm^-) 
-            } else {
-              AnmP += -0.5*wsJ*lnM*ndotgradlmP;  // -(ln^-, N.grad lm^+)
-              AnmP += +0.5*wsJ*ndotgradlnM*lmP;  // +(N.grad ln^-, lm^+)
-              AnmP += -0.5*wsJ*penalty*lnM*lmP; // -((tau/h)*ln^-,lm^+)
-            }
+            AnmP += -0.5*wsJ*lnM*ndotgradlmP;  // -(ln^-, N.grad lm^+)
+            AnmP += +0.5*wsJ*ndotgradlnM*lmP;  // +(N.grad ln^-, lm^+)
+            AnmP += -0.5*wsJ*penalty*lnM*lmP; // -((tau/h)*ln^-,lm^+)
           }
           if(fabs(AnmP)>tol){
             // remote info
