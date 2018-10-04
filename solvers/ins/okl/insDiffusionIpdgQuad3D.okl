@@ -98,7 +98,7 @@ SOFTWARE.
 
           s_dqdx[j][i] = JW*gradqn.x;
           s_dqdy[j][i] = JW*gradqn.y;
-	  s_dqdz[j][i] = JW*gradqn.z;
+	        s_dqdz[j][i] = JW*gradqn.z;
           s_Lq[j][i] = 0.0;
 
           s_D[j][i] = D[j*p_Nq+i];
@@ -139,22 +139,22 @@ SOFTWARE.
 
           const dfloat drdx = vgeo[gid + p_RXID*p_Np];
           const dfloat drdy = vgeo[gid + p_RYID*p_Np];
-	  const dfloat drdz = vgeo[gid + p_RZID*p_Np];
+          const dfloat drdz = vgeo[gid + p_RZID*p_Np];
           const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
           const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
-	  const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-	  const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+          const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
+          const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
           const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
-	  const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+          const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
 
           // chain rule (need to scale by wei
           const dfloat dqdx = s_dqdx[j][i];
           const dfloat dqdy = s_dqdy[j][i];
-	  const dfloat dqdz = s_dqdz[j][i];
+          const dfloat dqdz = s_dqdz[j][i];
 
           s_dqdx[j][i] = (drdx*dqdx + drdy*dqdy + drdz*dqdz);
           s_dqdy[j][i] = (dsdx*dqdx + dsdy*dqdy + dsdz*dqdz);
-	  s_dqdz[j][i] = (dtdx*dqdx + dtdy*dqdy + dtdz*dqdz);
+	        s_dqdz[j][i] = (dtdx*dqdx + dtdy*dqdy + dtdz*dqdz);
         }
       }
 
@@ -168,11 +168,11 @@ SOFTWARE.
 
           dfloat dr = 0, ds = 0, dt = s_dqdz[j][i];
 
-#pragma unroll p_Nq
-	  for(int n=0;n<p_Nq;++n){
-	    dr += s_D[n][i]*s_dqdx[j][n];
-	    ds += s_D[n][j]*s_dqdy[n][i];
-	  }
+          #pragma unroll p_Nq
+            for(int n=0;n<p_Nq;++n){
+              dr += s_D[n][i]*s_dqdx[j][n];
+              ds += s_D[n][j]*s_dqdy[n][i];
+            }
 
           const dlong id = element*p_Np + j*p_Nq + i;
           LU[id+fld*fieldOffset] = -nu*invJW*(s_Lq[j][i]  + dr + ds + dt);
