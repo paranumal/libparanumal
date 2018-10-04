@@ -260,7 +260,7 @@ void insIsoPlotVTU(ins_t *ins, char *fileName);
 void insRestartWrite(ins_t *ins, setupAide &options, dfloat time); 
 void insRestartRead(ins_t *ins, setupAide &options); 
 
-
+void insBrownMinionQuad3D(ins_t *ins);
 // customized hex writer
 extern "C"
 {

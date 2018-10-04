@@ -316,6 +316,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   kernelInfo["defines/" "p_Nstages"]=  ins->Nstages;
   kernelInfo["defines/" "p_SUBCYCLING"]=  ins->Nsubsteps;
 
+  if(ins->elementType==QUADRILATERALS && mesh->dim==3){
+    kernelInfo["defines/" "p_fainv"] = (dfloat) 0.0;
+    kernelInfo["defines/" "p_invRadiusSq"] = (dfloat) 1./(mesh->sphereRadius*mesh->sphereRadius);
+  }
+
   if (options.compareArgs("TIME INTEGRATOR", "ARK")) 
     ins->ARKswitch = 1;   
   else 
@@ -337,12 +342,19 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 #endif
   
 
-if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION")){
+if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
+  (ins->elementType == QUADRILATERALS && ins->dim==3)){
+  printf("Setting up initial condition for BROWN-MINION test case...");
+  insBrownMinionQuad3D(ins);
+  ins->o_U.copyFrom(ins->U);
+  ins->o_P.copyFrom(ins->P);
+  printf("done\n");
 
-printf("Setting up initial condition for BROWN-MINION test case...");
-
-
-printf("done\n");
+  char fname[BUFSIZ];
+  string outName;
+  ins->options.getArgs("OUTPUT FILE NAME", outName);
+  sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, ins->frame++);
+  insPlotVTU(ins, fname);
 }else{
 
   for (int r=0;r<mesh->size;r++) {
@@ -611,7 +623,7 @@ printf("done\n");
   ins->uSolver->elementType = ins->elementType;
   ins->uSolver->BCType = (int*) calloc(7,sizeof(int));
   memcpy(ins->uSolver->BCType,uBCType,7*sizeof(int));
-  ellipticSolveSetup(ins->uSolver, ins->lambda, kernelInfoV);
+  ellipticSolveSetup(ins->uSolver, ins->lambda, kernelInfoV); 
 
   ins->vSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
   ins->vSolver->mesh = mesh;
@@ -620,7 +632,7 @@ printf("done\n");
   ins->vSolver->elementType = ins->elementType;
   ins->vSolver->BCType = (int*) calloc(7,sizeof(int));
   memcpy(ins->vSolver->BCType,vBCType,7*sizeof(int));
-  ellipticSolveSetup(ins->vSolver, ins->lambda, kernelInfoV);
+  // ellipticSolveSetup(ins->vSolver, ins->lambda, kernelInfoV); !!!!!
 
   if (ins->dim==3) {
     ins->wSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
@@ -630,7 +642,7 @@ printf("done\n");
     ins->wSolver->elementType = ins->elementType;
     ins->wSolver->BCType = (int*) calloc(7,sizeof(int));
     memcpy(ins->wSolver->BCType,wBCType,7*sizeof(int));
-    ellipticSolveSetup(ins->wSolver, ins->lambda, kernelInfoV);  
+    // ellipticSolveSetup(ins->wSolver, ins->lambda, kernelInfoV);  !!!!! 
   }
   
   if (mesh->rank==0) printf("==================PRESSURE SOLVE SETUP=========================\n");
@@ -641,7 +653,7 @@ printf("done\n");
   ins->pSolver->elementType = ins->elementType;
   ins->pSolver->BCType = (int*) calloc(7,sizeof(int));
   memcpy(ins->pSolver->BCType,pBCType,7*sizeof(int));
-  ellipticSolveSetup(ins->pSolver, 0.0, kernelInfoP);
+  // ellipticSolveSetup(ins->pSolver, 0.0, kernelInfoP); !!!!
 
 
   //make node-wise boundary flags
@@ -660,8 +672,9 @@ printf("done\n");
       }
     }
   }
-  ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs);
-  ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs);
+
+  // ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs); !!!!!!!!!!!!!!!!!
+  // ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs); !!!!!!!!!!!!!!!!!
 
   for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (ins->VmapB[n] == 1E9) {
@@ -703,7 +716,7 @@ printf("done\n");
 
   
   // IsoSurface related
-  if(ins->dim==3){
+  if(ins->dim==3 && ins->elementType != QUADRILATERALS ){
     kernelInfo["defines/" "p_isoNfields"]= ins->isoNfields;
     // Define Isosurface Area Tolerance
     kernelInfo["defines/" "p_triAreaTol"]= (dfloat) 1.0E-16;
@@ -778,7 +791,7 @@ printf("done\n");
   ins->o_Vort = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->Vort);
   ins->o_Div  = mesh->device.malloc(              Nlocal*sizeof(dfloat), ins->Div);
 
-  if(ins->elementType==HEXAHEDRA)
+  if(ins->elementType==HEXAHEDRA) // !!!! check that
     ins->o_cU = mesh->device.malloc(ins->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->cU);
   else 
     ins->o_cU = ins->o_U;
@@ -821,8 +834,12 @@ printf("done\n");
   
   if(ins->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
-  if(ins->elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
+  if(ins->elementType==QUADRILATERALS){
+    if(ins->dim==2)
+      suffix = strdup("Quad2D");
+    else
+      suffix = strdup("Quad3D"); 
+  }
   if(ins->elementType==TETRAHEDRA)
     suffix = strdup("Tet3D");
   if(ins->elementType==HEXAHEDRA)
@@ -848,11 +865,15 @@ printf("done\n");
       // ===========================================================================
 
       sprintf(fileName, DINS "/okl/insAdvection%s.okl", suffix);
-      sprintf(kernelName, "insAdvectionCubatureVolume%s", suffix);
-      ins->advectionCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "insAdvectionCubatureSurface%s", suffix);
-      ins->advectionCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      // needed to be implemented
+      if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){
+        sprintf(kernelName, "insAdvectionCubatureVolume%s", suffix);
+        ins->advectionCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+        sprintf(kernelName, "insAdvectionCubatureSurface%s", suffix);
+        ins->advectionCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      }
 
       sprintf(kernelName, "insAdvectionVolume%s", suffix);
       ins->advectionVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
@@ -860,21 +881,21 @@ printf("done\n");
       sprintf(kernelName, "insAdvectionSurface%s", suffix);
       ins->advectionSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      // ===========================================================================
+      // // ===========================================================================
       
-      sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
-      sprintf(kernelName, "insDiffusion%s", suffix);
-      ins->diffusionKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      // sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
+      // sprintf(kernelName, "insDiffusion%s", suffix);
+      // ins->diffusionKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, DINS "/okl/insDiffusionIpdg%s.okl", suffix);
-      sprintf(kernelName, "insDiffusionIpdg%s", suffix);
-      ins->diffusionIpdgKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      // sprintf(fileName, DINS "/okl/insDiffusionIpdg%s.okl", suffix);
+      // sprintf(kernelName, "insDiffusionIpdg%s", suffix);
+      // ins->diffusionIpdgKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, DINS "/okl/insVelocityGradient%s.okl", suffix);
-      sprintf(kernelName, "insVelocityGradient%s", suffix);
-      ins->velocityGradientKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      // sprintf(fileName, DINS "/okl/insVelocityGradient%s.okl", suffix);
+      // sprintf(kernelName, "insVelocityGradient%s", suffix);
+      // ins->velocityGradientKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      // ===========================================================================
+      // // ===========================================================================
 
       sprintf(fileName, DINS "/okl/insGradient%s.okl", suffix);
       sprintf(kernelName, "insGradientVolume%s", suffix);
@@ -896,36 +917,43 @@ printf("done\n");
       
       sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
       if (options.compareArgs("TIME INTEGRATOR", "ARK")) 
-        sprintf(kernelName, "insVelocityRhsARK%s", suffix);
+        sprintf(kernelName, "insVelocityRhsARK%s", suffix); 
       else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) 
         sprintf(kernelName, "insVelocityRhsEXTBDF%s", suffix);
       ins->velocityRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, DINS "/okl/insVelocityBC%s.okl", suffix);
-      sprintf(kernelName, "insVelocityIpdgBC%s", suffix);
-      ins->velocityRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "insVelocityBC%s", suffix);
-      ins->velocityRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "insVelocityAddBC%s", suffix);
-      ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){
+        sprintf(fileName, DINS "/okl/insVelocityBC%s.okl", suffix);
+        sprintf(kernelName, "insVelocityIpdgBC%s", suffix);
+        ins->velocityRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+        sprintf(kernelName, "insVelocityBC%s", suffix);
+        ins->velocityRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+        sprintf(kernelName, "insVelocityAddBC%s", suffix);
+        ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      }
 
       // ===========================================================================
       
+      // Dont forget to modify!!!!!!!!
       sprintf(fileName, DINS "/okl/insPressureRhs%s.okl", suffix);
       sprintf(kernelName, "insPressureRhs%s", suffix);
       ins->pressureRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, DINS "/okl/insPressureBC%s.okl", suffix);
-      sprintf(kernelName, "insPressureIpdgBC%s", suffix);
-      ins->pressureRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+       if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){
+        sprintf(fileName, DINS "/okl/insPressureBC%s.okl", suffix);
+        sprintf(kernelName, "insPressureIpdgBC%s", suffix);
+        ins->pressureRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "insPressureBC%s", suffix);
-      ins->pressureRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "insPressureBC%s", suffix);
+        ins->pressureRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "insPressureAddBC%s", suffix);
-      ins->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "insPressureAddBC%s", suffix);
+        ins->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      }
 
       // ===========================================================================
 
@@ -951,6 +979,8 @@ printf("done\n");
         ins->isoSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
       }
       
+
+      // Not implemented for Quad 3D yet !!!!!!!!!!
       if(ins->Nsubsteps){
         // Note that resU and resV can be replaced with already introduced buffer
         ins->o_Ue    = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->Ue);

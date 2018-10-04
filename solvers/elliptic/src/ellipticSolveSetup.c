@@ -58,7 +58,9 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   dlong Nblock2 = mymax(1,(Nblock+blockSize-1)/blockSize);
 
   //tau
-  if (elliptic->elementType==TRIANGLES || elliptic->elementType==QUADRILATERALS)
+  if (elliptic->elementType==TRIANGLES || 
+      elliptic->elementType==QUADRILATERALS || 
+      (elliptic->dim==3 && elliptic->elementType==QUADRILATERALS))
     elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
   else
     elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+3);
@@ -276,8 +278,12 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   if(elliptic->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
-  if(elliptic->elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
+  if(elliptic->elementType==QUADRILATERALS){
+     if(elliptic->dim==2)
+      suffix = strdup("Quad2D");
+    else
+      suffix = strdup("Quad3D");
+  }
   if(elliptic->elementType==TETRAHEDRA)
     suffix = strdup("Tet3D");
   if(elliptic->elementType==HEXAHEDRA)
@@ -403,84 +409,84 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
         boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
       kernelInfo["includes"] += boundaryHeaderFileName;
 
-      sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
-      sprintf(kernelName, "ellipticAx%s", suffix);
+      // sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
+      // sprintf(kernelName, "ellipticAx%s", suffix);
 
-      occa::properties dfloatKernelInfo = kernelInfo;
-      occa::properties floatKernelInfo = kernelInfo;
-      floatKernelInfo["defines/" "pfloat"]= "float";
-      dfloatKernelInfo["defines/" "pfloat"]= dfloatString;
+      // occa::properties dfloatKernelInfo = kernelInfo;
+      // occa::properties floatKernelInfo = kernelInfo;
+      // floatKernelInfo["defines/" "pfloat"]= "float";
+      // dfloatKernelInfo["defines/" "pfloat"]= dfloatString;
 
-      elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
+      // elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
 
-      if(elliptic->elementType!=HEXAHEDRA){
-        sprintf(kernelName, "ellipticPartialAx%s", suffix);
-      }
-      else{
-        if(elliptic->options.compareArgs("ELEMENT MAP", "TRILINEAR")){
-          sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
-        }else{
-          sprintf(kernelName, "ellipticPartialAx%s", suffix);
-        }
-      }
+      // if(elliptic->elementType!=HEXAHEDRA){
+      //   sprintf(kernelName, "ellipticPartialAx%s", suffix);
+      // }
+      // else{
+      //   if(elliptic->options.compareArgs("ELEMENT MAP", "TRILINEAR")){
+      //     sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
+      //   }else{
+      //     sprintf(kernelName, "ellipticPartialAx%s", suffix);
+      //   }
+      // }
 
-      elliptic->partialAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
+      // elliptic->partialAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
 
-      elliptic->partialFloatAxKernel = mesh->device.buildKernel(fileName,kernelName,floatKernelInfo);
+      // elliptic->partialFloatAxKernel = mesh->device.buildKernel(fileName,kernelName,floatKernelInfo);
 
-      if (options.compareArgs("BASIS","BERN")) {
+      // if (options.compareArgs("BASIS","BERN")) {
 
-        sprintf(fileName, DELLIPTIC "/okl/ellipticGradientBB%s.okl", suffix);
-        sprintf(kernelName, "ellipticGradientBB%s", suffix);
+      //   sprintf(fileName, DELLIPTIC "/okl/ellipticGradientBB%s.okl", suffix);
+      //   sprintf(kernelName, "ellipticGradientBB%s", suffix);
 
-        elliptic->gradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      //   elliptic->gradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-        sprintf(kernelName, "ellipticPartialGradientBB%s", suffix);
-        elliptic->partialGradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      //   sprintf(kernelName, "ellipticPartialGradientBB%s", suffix);
+      //   elliptic->partialGradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-        sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdgBB%s.okl", suffix);
-        sprintf(kernelName, "ellipticAxIpdgBB%s", suffix);
-        elliptic->ipdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      //   sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdgBB%s.okl", suffix);
+      //   sprintf(kernelName, "ellipticAxIpdgBB%s", suffix);
+      //   elliptic->ipdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-        sprintf(kernelName, "ellipticPartialAxIpdgBB%s", suffix);
-        elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      //   sprintf(kernelName, "ellipticPartialAxIpdgBB%s", suffix);
+      //   elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      } else if (options.compareArgs("BASIS","NODAL")) {
+      // } else if (options.compareArgs("BASIS","NODAL")) {
 
-        sprintf(fileName, DELLIPTIC "/okl/ellipticGradient%s.okl", suffix);
-        sprintf(kernelName, "ellipticGradient%s", suffix);
+      //   sprintf(fileName, DELLIPTIC "/okl/ellipticGradient%s.okl", suffix);
+      //   sprintf(kernelName, "ellipticGradient%s", suffix);
 
-        elliptic->gradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      //   elliptic->gradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-        sprintf(kernelName, "ellipticPartialGradient%s", suffix);
-        elliptic->partialGradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      //   sprintf(kernelName, "ellipticPartialGradient%s", suffix);
+      //   elliptic->partialGradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-        sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdg%s.okl", suffix);
-        sprintf(kernelName, "ellipticAxIpdg%s", suffix);
-        elliptic->ipdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      //   sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdg%s.okl", suffix);
+      //   sprintf(kernelName, "ellipticAxIpdg%s", suffix);
+      //   elliptic->ipdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-        sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
-        elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-      }
+      //   sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
+      //   elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      // }
 
-      sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
-      sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
-      elliptic->precon->coarsenKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      // sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
+      // sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
+      // elliptic->precon->coarsenKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
-      sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
-      elliptic->precon->prolongateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      // sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
+      // sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
+      // elliptic->precon->prolongateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");
-      sprintf(kernelName, "ellipticBlockJacobiPrecon");
-      elliptic->precon->blockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      // sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");
+      // sprintf(kernelName, "ellipticBlockJacobiPrecon");
+      // elliptic->precon->blockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      sprintf(kernelName, "ellipticPartialBlockJacobiPrecon");
-      elliptic->precon->partialblockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      // sprintf(kernelName, "ellipticPartialBlockJacobiPrecon");
+      // elliptic->precon->partialblockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      sprintf(fileName, DELLIPTIC "/okl/ellipticPatchSolver.okl");
-      sprintf(kernelName, "ellipticApproxBlockJacobiSolver");
-      elliptic->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      // sprintf(fileName, DELLIPTIC "/okl/ellipticPatchSolver.okl");
+      // sprintf(kernelName, "ellipticApproxBlockJacobiSolver");
+      // elliptic->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       if (   elliptic->elementType == TRIANGLES
           || elliptic->elementType == TETRAHEDRA) {
@@ -500,11 +506,11 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   long long int pre = mesh->device.memoryAllocated();
 
-  occaTimerTic(mesh->device,"PreconditionerSetup");
-  ellipticPreconditionerSetup(elliptic, elliptic->ogs, lambda);
-  occaTimerToc(mesh->device,"PreconditionerSetup");
+  // occaTimerTic(mesh->device,"PreconditionerSetup");
+  // ellipticPreconditionerSetup(elliptic, elliptic->ogs, lambda);
+  // occaTimerToc(mesh->device,"PreconditionerSetup");
 
-  long long int usedBytes = mesh->device.memoryAllocated()-pre;
+  // long long int usedBytes = mesh->device.memoryAllocated()-pre;
 
-  elliptic->precon->preconBytes = usedBytes;
+  // elliptic->precon->preconBytes = usedBytes;
 }

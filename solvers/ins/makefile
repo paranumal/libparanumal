@@ -76,7 +76,8 @@ AOBJS    = \
 ./src/insPressureUpdate.o \
 ./src/insRestart.o \
 ./src/insWeldTriVerts.o \
-./src/insIsoPlotVTU.o
+./src/insIsoPlotVTU.o \
+./src/insBrownMinionQuad3D.o 
 
 # library objects
 LOBJS = \
@@ -103,7 +104,8 @@ LOBJS = \
 ../../src/meshOccaSetupQuad3D.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
-../../src/meshParallelPrint2D.o \
+../../src/meshParallelConsecutiveGlobalNumbering.o\
+../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelReaderTri2D.o \
 ../../src/meshParallelReaderQuad2D.o \
 ../../src/meshParallelReaderQuad3D.o \
@@ -131,12 +133,14 @@ LOBJS = \
 ../../src/meshSurfaceGeometricFactorsHex3D.o \
 ../../src/meshVTU2D.o \
 ../../src/meshVTU3D.o \
+../../src/matrixInverse.o \
+../../src/matrixConditionNumber.o \
 ../../src/mysort.o \
-../../src/parallelSort.o \
+../../src/parallelSort.o\
+../../src/hash.o\
 ../../src/setupAide.o \
-../../src/trace.o \
-../../src/readArray.o \
-../../src/occaDeviceConfig.o \
+../../src/readArray.o\
+../../src/occaDeviceConfig.o\
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 

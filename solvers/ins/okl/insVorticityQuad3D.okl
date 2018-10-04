@@ -1,0 +1,114 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void insVorticityQuad3D(const dlong Nelements,
+                              @restrict const  dfloat *  vgeo,
+                              @restrict const  dfloat *  const D,
+                              const dlong offset,
+                              @restrict const  dfloat *  U,
+                                    @restrict dfloat *  Vort){  
+  
+  // block partition of elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+    
+    @shared dfloat s_U[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_V[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_W[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){    
+          const dlong e = eo+es; // element in block
+          if(e<Nelements){ 
+            const dlong id = e*p_Np + j*p_Nq+i;
+
+            s_U[es][j][i]  = U[id+0*offset];
+            s_V[es][j][i]  = U[id+1*offset];
+            s_W[es][j][i]  = U[id+2*offset];
+
+            if (es==0)
+              s_D[j][i] = D[j*p_Nq+i];
+          }
+        }
+      }
+    }
+          
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){  
+          const dlong e = eo+es; 
+          if(e<Nelements){
+            const dlong gid = e*p_Np*p_Nvgeo + j*p_Nq +i; 
+            const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+            const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+            const dfloat drdz = vgeo[gid + p_RZID*p_Np];
+            const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+            const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+            const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
+            const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+            const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+            const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+
+            // compute 'r' and 's' derivatives of (q_m) at node n
+            dfloat dudr  = 0.f, duds  = 0.f;
+            dfloat dvdr  = 0.f, dvds  = 0.f;
+            dfloat dwdr  = 0.f, dwds  = 0.f;
+
+            #pragma unroll p_Nq
+              for(int n=0;n<p_Nq;++n){
+                const dfloat Dr = s_D[i][n];
+                const dfloat Ds = s_D[j][n];
+
+                dudr += Dr*s_U[es][j][n];
+                duds += Ds*s_U[es][n][i];
+                dvdr += Dr*s_V[es][j][n];
+                dvds += Ds*s_V[es][n][i];
+                dwdr += Dr*s_W[es][j][n];
+                dwds += Ds*s_W[es][n][i];
+              }
+
+            dfloat wy = drdy*dwdr + dsdy*dwds + dtdy*s_W[es][j][i]; 
+            dfloat vz = drdz*dvdr + dsdz*dvds + dtdz*s_V[es][j][i]; 
+
+            dfloat uz = drdz*dudr + dsdz*duds + dtdz*s_U[es][j][i]; 
+            dfloat wx = drdx*dwdr + dsdx*dwds + dtdx*s_W[es][j][i]; 
+
+            dfloat vx = drdx*dvdr + dsdx*dvds + dtdx*s_V[es][j][i]; 
+            dfloat uy = drdy*dudr + dsdy*duds + dtdy*s_U[es][j][i]; 
+
+            const dlong id = e*p_Np+j*p_Nq +i; 
+            Vort[id + 0*offset] = wy - vz;
+            Vort[id + 1*offset] = uz - wx;
+            Vort[id + 2*offset] = vx - uy;
+          }
+        }
+      }
+    }
+  }
+}

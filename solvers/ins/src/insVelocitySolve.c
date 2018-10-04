@@ -35,27 +35,32 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   mesh_t *mesh = ins->mesh; 
   elliptic_t *usolver = ins->uSolver; 
   elliptic_t *vsolver = ins->vSolver; 
-  elliptic_t *wsolver = ins->wSolver; 
+  elliptic_t *wsolver = ins->wSolver;
+
+  int quad3D = (ins->dim==3 && ins->elementType==QUADRILATERALS) ? 1 : 0;  
   
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-    ins->velocityRhsBCKernel(mesh->Nelements,
-                              mesh->o_ggeo,
-                              mesh->o_sgeo,
-                              mesh->o_Dmatrices,
-                              mesh->o_Smatrices,
-                              mesh->o_MM,
-                              mesh->o_vmapM,
-			     mesh->o_EToB,
-                              mesh->o_sMT,
-                              ins->lambda,
-                              time,
-                              mesh->o_x,
-                              mesh->o_y,
-                              mesh->o_z,
-                              ins->o_VmapB,
-                              o_rhsU,
-                              o_rhsV,
-                              o_rhsW);
+
+    if(!quad3D){
+      ins->velocityRhsBCKernel(mesh->Nelements,
+                                mesh->o_ggeo,
+                                mesh->o_sgeo,
+                                mesh->o_Dmatrices,
+                                mesh->o_Smatrices,
+                                mesh->o_MM,
+                                mesh->o_vmapM,
+    	                          mesh->o_EToB,
+                                mesh->o_sMT,
+                                ins->lambda,
+                                time,
+                                mesh->o_x,
+                                mesh->o_y,
+                                mesh->o_z,
+                                ins->o_VmapB,
+                                o_rhsU,
+                                o_rhsV,
+                                o_rhsW);
+    }
     
     // gather-scatter
     ogsGatherScatter(o_rhsU, ogsDfloat, ogsAdd, mesh->ogs);
@@ -67,7 +72,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
     if (ins->dim==3)
       if (wsolver->Nmasked) mesh->maskKernel(wsolver->Nmasked, wsolver->o_maskIds, o_rhsW);
 
-  } else if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  } else if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG") && !quad3D) {
 
     occaTimerTic(mesh->device,"velocityRhsIpdg");    
     ins->velocityRhsIpdgBCKernel(mesh->Nelements,
@@ -104,21 +109,21 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
 
   }
   
-  occaTimerTic(mesh->device,"Ux-Solve");
-  ins->NiterU = ellipticSolve(usolver, ins->lambda, ins->velTOL, o_rhsU, ins->o_UH);
-  occaTimerToc(mesh->device,"Ux-Solve"); 
+  // occaTimerTic(mesh->device,"Ux-Solve");
+  // ins->NiterU = ellipticSolve(usolver, ins->lambda, ins->velTOL, o_rhsU, ins->o_UH);
+  // occaTimerToc(mesh->device,"Ux-Solve"); 
 
-  occaTimerTic(mesh->device,"Uy-Solve");
-  ins->NiterV = ellipticSolve(vsolver, ins->lambda, ins->velTOL, o_rhsV, ins->o_VH);
-  occaTimerToc(mesh->device,"Uy-Solve");
+  // occaTimerTic(mesh->device,"Uy-Solve");
+  // ins->NiterV = ellipticSolve(vsolver, ins->lambda, ins->velTOL, o_rhsV, ins->o_VH);
+  // occaTimerToc(mesh->device,"Uy-Solve");
 
-  if (ins->dim==3) {
-    occaTimerTic(mesh->device,"Uz-Solve");
-    ins->NiterW = ellipticSolve(wsolver, ins->lambda, ins->velTOL, o_rhsW, ins->o_WH);
-    occaTimerToc(mesh->device,"Uz-Solve");
-  }
+  // if (ins->dim==3) {
+  //   occaTimerTic(mesh->device,"Uz-Solve");
+  //   ins->NiterW = ellipticSolve(wsolver, ins->lambda, ins->velTOL, o_rhsW, ins->o_WH);
+  //   occaTimerToc(mesh->device,"Uz-Solve");
+  // }
 
-  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
+  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
     ins->velocityAddBCKernel(mesh->Nelements,
                             time,
                             mesh->o_sgeo,
