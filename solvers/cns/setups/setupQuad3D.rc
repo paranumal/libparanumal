@@ -5,7 +5,7 @@
 data/cnsUniform2D.h
 
 [MESH FILE]
-../../meshes/sphereQuadH01a.msh
+../../meshes/sphereQuadH01.msh
 
 [MESH DIMENSION]
 3

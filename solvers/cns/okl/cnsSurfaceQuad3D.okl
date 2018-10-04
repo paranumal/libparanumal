@@ -40,11 +40,8 @@ void upwindRoeAveraged(const dfloat nx,
 		       dfloat *rflux,
 		       dfloat *ruflux,
 		       dfloat *rvflux,
-		       dfloat *rwflux
-		       ){
+		       dfloat *rwflux){
   
-  // Rotate "-" trace momentum to face normal-tangent coordinates
-
   dfloat sqrtrM = sqrt(rM);
   dfloat sqrtrP = sqrt(rP);
 
@@ -84,8 +81,6 @@ void upwindRoeAveraged(const dfloat nx,
   dfloat w3 = fabs((qn+a))*p_half*(dp+r*a*dqn)/(a*a);
   dfloat w4 = fabs(qn)*r;
 
-  // f(q^*) = 0.5*(f(q^-) + f(q^+))
-  
   // negative trace flux contribution to average (1/2 later)
   *rflux  = qnM*rM;
   *ruflux = qnM*ruM + nx*pM;
@@ -124,7 +119,6 @@ void upwindRoeAveraged(const dfloat nx,
   *ruflux *= p_half;
   *rvflux *= p_half;
   *rwflux *= p_half;
-
 }
 
 
