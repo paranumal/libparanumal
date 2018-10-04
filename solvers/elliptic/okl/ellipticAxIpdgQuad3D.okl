@@ -139,7 +139,7 @@ void surfaceTerms(const int element,
         const dfloat4 gradqn = gradq[e*p_Np+j*p_Nq+i];
 
         const dlong gid = i + j*p_Nq + e*p_Np*p_Nvgeo;
-              dfloat JW = vgeo[gid + p_JWID*p_Np];
+	dfloat JW = vgeo[gid + p_JWID*p_Np];
 
         s_dqdx[j][i] = JW*gradqn.x;
         s_dqdy[j][i] = JW*gradqn.y;
@@ -207,8 +207,9 @@ void surfaceTerms(const int element,
         const dfloat dqdy = s_dqdy[j][i];
         const dfloat dqdz = s_dqdz[j][i];
 
-        s_dqdx[j][i] = (drdx*dqdx + drdy*dqdy + dtdx*dqdz);
-        s_dqdy[j][i] = (dsdx*dqdx + dsdy*dqdy + dtdy*dqdz);
+        s_dqdx[j][i] = (drdx*dqdx + drdy*dqdy + drdz*dqdz);
+        s_dqdy[j][i] = (dsdx*dqdx + dsdy*dqdy + dsdz*dqdz);
+	s_dqdz[j][i] = (dtdx*dqdx + dtdy*dqdy + dtdy*dqdz);
       }
     }
 
@@ -217,7 +218,7 @@ void surfaceTerms(const int element,
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        dfloat dr = 0, ds = 0;
+        dfloat dr = 0, ds = 0, dt = s_dqdz[j][i];
 
         #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
@@ -226,7 +227,7 @@ void surfaceTerms(const int element,
           }
 
         const dlong id = e*p_Np + j*p_Nq + i;
-        Aq[id] = s_rhsq[j][i]  + dr + ds;
+        Aq[id] = s_rhsq[j][i]  + dr + ds + dt;
       }
     }
   }
@@ -234,22 +235,22 @@ void surfaceTerms(const int element,
 
 
 @kernel void ellipticPartialAxIpdgQuad3D(const dlong Nelements,
-                                 @restrict const  dlong *  elementList,
-                                 @restrict const  dlong *  vmapM,
-                                 @restrict const  dlong *  vmapP,
-                                 const dfloat lambda,
-                                 const dfloat tau,
-                                 @restrict const  dfloat *  vgeo,
-                                 @restrict const  dfloat *  sgeo,
-                                 @restrict const  int   *  EToB,
-                                 @restrict const  dfloat *  D,
-                                 @restrict const  dfloat *  LIFTT,
-                                 @restrict const  dfloat *  MM,
-                                 @restrict const  dfloat4 *  gradq,
+					 @restrict const  dlong *  elementList,
+					 @restrict const  dlong *  vmapM,
+					 @restrict const  dlong *  vmapP,
+					 const dfloat lambda,
+					 const dfloat tau,
+					 @restrict const  dfloat *  vgeo,
+					 @restrict const  dfloat *  sgeo,
+					 @restrict const  int   *  EToB,
+					 @restrict const  dfloat *  D,
+					 @restrict const  dfloat *  LIFTT,
+					 @restrict const  dfloat *  MM,
+					 @restrict const  dfloat4 *  gradq,
                                  @restrict dfloat  *  Aq){
-
+  
   for(dlong e=0;e<Nelements;++e;@outer(0)){
-
+    
     @shared dfloat s_dqdx[p_Nq][p_Nq];
     @shared dfloat s_dqdy[p_Nq][p_Nq];
     @shared dfloat s_dqdz[p_Nq][p_Nq];
@@ -271,6 +272,7 @@ void surfaceTerms(const int element,
 
         s_dqdx[j][i] = JW*gradqn.x;
         s_dqdy[j][i] = JW*gradqn.y;
+	s_dqdz[j][i] = JW*gradqn.z;
         s_rhsq[j][i] = JW*lambda*gradqn.w;
 
         s_D[j][i] = D[j*p_Nq+i];
@@ -331,10 +333,10 @@ void surfaceTerms(const int element,
         const dfloat dqdx = s_dqdx[j][i];
         const dfloat dqdy = s_dqdy[j][i];
         const dfloat dqdz = s_dqdz[j][i];
-        
 
-        s_dqdx[j][i] = (drdx*dqdx + drdy*dqdy);
-        s_dqdy[j][i] = (dsdx*dqdx + dsdy*dqdy);
+        s_dqdx[j][i] = (drdx*dqdx + drdy*dqdy + drdz*dqdz);
+        s_dqdy[j][i] = (dsdx*dqdx + dsdy*dqdy + dsdz*dqdz);
+	s_dqdz[j][i] = (dtdx*dqdx + dtdy*dqdy + dtdz*dqdz);
       }
     }
 
@@ -343,7 +345,7 @@ void surfaceTerms(const int element,
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        dfloat dr = 0, ds = 0;
+        dfloat dr = 0, ds = 0, dt = s_dqdz[j][i];
 
         #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
@@ -352,7 +354,7 @@ void surfaceTerms(const int element,
           }
 
         const dlong id = element*p_Np + j*p_Nq + i;
-        Aq[id] = s_rhsq[j][i]  + dr + ds;
+        Aq[id] = s_rhsq[j][i]  + dr + ds + dt;
       }
     }
   }
