@@ -39,9 +39,8 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
 
   int quad3D = (ins->dim==3 && ins->elementType==QUADRILATERALS) ? 1 : 0;  
   
-  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
+  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
 
-    if(!quad3D){
       ins->velocityRhsBCKernel(mesh->Nelements,
                                 mesh->o_ggeo,
                                 mesh->o_sgeo,
@@ -59,9 +58,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
                                 ins->o_VmapB,
                                 o_rhsU,
                                 o_rhsV,
-                                o_rhsW);
-    }
-    
+                                o_rhsW);   
     // gather-scatter
     ogsGatherScatter(o_rhsU, ogsDfloat, ogsAdd, mesh->ogs);
     ogsGatherScatter(o_rhsV, ogsDfloat, ogsAdd, mesh->ogs);
@@ -101,7 +98,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   if (ins->dim==3)
     ins->o_WH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,2*ins->fieldOffset*sizeof(dfloat));
 
-  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
+  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
     if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, ins->o_UH);
     if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, ins->o_VH);
     if (ins->dim==3)
@@ -109,19 +106,19 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
 
   }
   
-  // occaTimerTic(mesh->device,"Ux-Solve");
-  // ins->NiterU = ellipticSolve(usolver, ins->lambda, ins->velTOL, o_rhsU, ins->o_UH);
-  // occaTimerToc(mesh->device,"Ux-Solve"); 
+  occaTimerTic(mesh->device,"Ux-Solve");
+  ins->NiterU = ellipticSolve(usolver, ins->lambda, ins->velTOL, o_rhsU, ins->o_UH);
+  occaTimerToc(mesh->device,"Ux-Solve"); 
 
-  // occaTimerTic(mesh->device,"Uy-Solve");
-  // ins->NiterV = ellipticSolve(vsolver, ins->lambda, ins->velTOL, o_rhsV, ins->o_VH);
-  // occaTimerToc(mesh->device,"Uy-Solve");
+  occaTimerTic(mesh->device,"Uy-Solve");
+  ins->NiterV = ellipticSolve(vsolver, ins->lambda, ins->velTOL, o_rhsV, ins->o_VH);
+  occaTimerToc(mesh->device,"Uy-Solve");
 
-  // if (ins->dim==3) {
-  //   occaTimerTic(mesh->device,"Uz-Solve");
-  //   ins->NiterW = ellipticSolve(wsolver, ins->lambda, ins->velTOL, o_rhsW, ins->o_WH);
-  //   occaTimerToc(mesh->device,"Uz-Solve");
-  // }
+  if (ins->dim==3) {
+    occaTimerTic(mesh->device,"Uz-Solve");
+    ins->NiterW = ellipticSolve(wsolver, ins->lambda, ins->velTOL, o_rhsW, ins->o_WH);
+    occaTimerToc(mesh->device,"Uz-Solve");
+  }
 
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
     ins->velocityAddBCKernel(mesh->Nelements,
