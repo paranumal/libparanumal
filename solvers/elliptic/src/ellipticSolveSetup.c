@@ -409,15 +409,16 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
         boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
       kernelInfo["includes"] += boundaryHeaderFileName;
 
-      // sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
-      // sprintf(kernelName, "ellipticAx%s", suffix);
+    
+      sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
+      sprintf(kernelName, "ellipticAx%s", suffix);
 
-      // occa::properties dfloatKernelInfo = kernelInfo;
-      // occa::properties floatKernelInfo = kernelInfo;
-      // floatKernelInfo["defines/" "pfloat"]= "float";
-      // dfloatKernelInfo["defines/" "pfloat"]= dfloatString;
+      occa::properties dfloatKernelInfo = kernelInfo;
+      occa::properties floatKernelInfo = kernelInfo;
+      floatKernelInfo["defines/" "pfloat"]= "float";
+      dfloatKernelInfo["defines/" "pfloat"]= dfloatString;
 
-      // elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
+      elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
 
       // if(elliptic->elementType!=HEXAHEDRA){
       //   sprintf(kernelName, "ellipticPartialAx%s", suffix);

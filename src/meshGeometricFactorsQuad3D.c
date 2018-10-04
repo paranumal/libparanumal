@@ -40,6 +40,10 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
   mesh->cubvgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->cubNp, sizeof(dfloat));
 
+  // Can be computed on the fly
+  mesh->Nggeo = 7; 
+  mesh->ggeo  = (dfloat *) calloc(mesh->Nelements*mesh->Np*mesh->Nggeo, sizeof(dfloat));
+
   dfloat *cxr = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
   dfloat *cxs = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
   dfloat *cyr = (dfloat*) calloc(mesh->cubNq*mesh->cubNq, sizeof(dfloat));
@@ -60,91 +64,101 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
     
     for(int j=0;j<mesh->Nq;++j){
       for(int i=0;i<mesh->Nq;++i){
-	
-	dfloat xij = mesh->x[i+j*mesh->Nq+e*mesh->Np];
-	dfloat yij = mesh->y[i+j*mesh->Nq+e*mesh->Np];
-	dfloat zij = mesh->z[i+j*mesh->Nq+e*mesh->Np];
+  
+  dfloat xij = mesh->x[i+j*mesh->Nq+e*mesh->Np];
+  dfloat yij = mesh->y[i+j*mesh->Nq+e*mesh->Np];
+  dfloat zij = mesh->z[i+j*mesh->Nq+e*mesh->Np];
 
-	dfloat xr = 0, yr = 0, zr = 0;
-	dfloat xs = 0, ys = 0, zs = 0;
-	
-	for(int n=0;n<mesh->Nq;++n){
+  dfloat xr = 0, yr = 0, zr = 0;
+  dfloat xs = 0, ys = 0, zs = 0;
+  
+  for(int n=0;n<mesh->Nq;++n){
 
-	  dfloat Din = mesh->D[i*mesh->Nq+n];
-	  dfloat Djn = mesh->D[j*mesh->Nq+n];
+    dfloat Din = mesh->D[i*mesh->Nq+n];
+    dfloat Djn = mesh->D[j*mesh->Nq+n];
 
-	  xr += Din*mesh->x[n+j*mesh->Nq+e*mesh->Np];
-	  yr += Din*mesh->y[n+j*mesh->Nq+e*mesh->Np];
-	  zr += Din*mesh->z[n+j*mesh->Nq+e*mesh->Np];
+    xr += Din*mesh->x[n+j*mesh->Nq+e*mesh->Np];
+    yr += Din*mesh->y[n+j*mesh->Nq+e*mesh->Np];
+    zr += Din*mesh->z[n+j*mesh->Nq+e*mesh->Np];
 
-	  xs += Djn*mesh->x[i+n*mesh->Nq+e*mesh->Np];
-	  ys += Djn*mesh->y[i+n*mesh->Nq+e*mesh->Np];
-	  zs += Djn*mesh->z[i+n*mesh->Nq+e*mesh->Np];
+    xs += Djn*mesh->x[i+n*mesh->Nq+e*mesh->Np];
+    ys += Djn*mesh->y[i+n*mesh->Nq+e*mesh->Np];
+    zs += Djn*mesh->z[i+n*mesh->Nq+e*mesh->Np];
 
-	}
-	
-	dfloat rx = ys*zij - zs*yij; // dXds x X
-	dfloat ry = zs*xij - xs*zij;
-	dfloat rz = xs*yij - ys*xij;
+  }
+  
+  dfloat rx = ys*zij - zs*yij; // dXds x X
+  dfloat ry = zs*xij - xs*zij;
+  dfloat rz = xs*yij - ys*xij;
 
-	dfloat sx = zr*yij - yr*zij; // -dXdr x X
-	dfloat sy = xr*zij - zr*xij;
-	dfloat sz = yr*xij - xr*yij;
+  dfloat sx = zr*yij - yr*zij; // -dXdr x X
+  dfloat sy = xr*zij - zr*xij;
+  dfloat sz = yr*xij - xr*yij;
 
-	dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
-	dfloat ty = zr*xs - xr*zs;
-	dfloat tz = xr*ys - yr*xs;
+  dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
+  dfloat ty = zr*xs - xr*zs;
+  dfloat tz = xr*ys - yr*xs;
 
-	dfloat Gx = tx, Gy = ty, Gz = tz;
+  dfloat Gx = tx, Gy = ty, Gz = tz;
 
-	dfloat J = xij*tx + yij*ty + zij*tz;
+  dfloat J = xij*tx + yij*ty + zij*tz;
 
-	if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
-	
-	rx /= J;      sx /= J;      tx /= J;
-	ry /= J;      sy /= J;      ty /= J;
-	rz /= J;      sz /= J;      tz /= J;
+  if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
+  
+  rx /= J;      sx /= J;      tx /= J;
+  ry /= J;      sy /= J;      ty /= J;
+  rz /= J;      sz /= J;      tz /= J;
 
-	// use this for "volume" Jacobian
-	J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
+  // use this for "volume" Jacobian
+  J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
 
-	if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
+  if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
 
-	dfloat JW = J*mesh->gllw[i]*mesh->gllw[j];
-	
-	/* store geometric factors */
-	int base = mesh->Nvgeo*mesh->Np*e + j*mesh->Nq + i;
+  dfloat JW = J*mesh->gllw[i]*mesh->gllw[j];
+  
+  /* store geometric factors */
+  int base = mesh->Nvgeo*mesh->Np*e + j*mesh->Nq + i;
 
-	mesh->vgeo[base + mesh->Np*RXID] = rx;
-	mesh->vgeo[base + mesh->Np*RYID] = ry;
-	mesh->vgeo[base + mesh->Np*RZID] = rz;
-	mesh->vgeo[base + mesh->Np*SXID] = sx;
-	mesh->vgeo[base + mesh->Np*SYID] = sy;
-	mesh->vgeo[base + mesh->Np*SZID] = sz;
-	mesh->vgeo[base + mesh->Np*TXID] = tx;
-	mesh->vgeo[base + mesh->Np*TYID] = ty;
-	mesh->vgeo[base + mesh->Np*TZID] = tz;
-	mesh->vgeo[base + mesh->Np*JID]  = J;
-	mesh->vgeo[base + mesh->Np*JWID] = JW;
-	mesh->vgeo[base + mesh->Np*IJWID] = 1./JW;
+  mesh->vgeo[base + mesh->Np*RXID] = rx;
+  mesh->vgeo[base + mesh->Np*RYID] = ry;
+  mesh->vgeo[base + mesh->Np*RZID] = rz;
+  mesh->vgeo[base + mesh->Np*SXID] = sx;
+  mesh->vgeo[base + mesh->Np*SYID] = sy;
+  mesh->vgeo[base + mesh->Np*SZID] = sz;
+  mesh->vgeo[base + mesh->Np*TXID] = tx;
+  mesh->vgeo[base + mesh->Np*TYID] = ty;
+  mesh->vgeo[base + mesh->Np*TZID] = tz;
+  mesh->vgeo[base + mesh->Np*JID]  = J;
+  mesh->vgeo[base + mesh->Np*JWID] = JW;
+  mesh->vgeo[base + mesh->Np*IJWID] = 1./JW;
 
-	// now do for cubvgeo
-	// 1. interpolate Jacobian matrix to cubature nodes
-	for(int m=0;m<mesh->cubNq;++m){
-	  for(int n=0;n<mesh->cubNq;++n){
-	    dfloat cIni = mesh->cubInterp[n*mesh->Nq+i];
-	    dfloat cImj = mesh->cubInterp[m*mesh->Nq+j];
-	    cxr[n+m*mesh->cubNq] += cIni*cImj*xr;
-	    cxs[n+m*mesh->cubNq] += cIni*cImj*xs;
-	    cyr[n+m*mesh->cubNq] += cIni*cImj*yr;
-	    cys[n+m*mesh->cubNq] += cIni*cImj*ys;
-	    czr[n+m*mesh->cubNq] += cIni*cImj*zr;
-	    czs[n+m*mesh->cubNq] += cIni*cImj*zs;
-	    cx[n+m*mesh->cubNq] += cIni*cImj*xij;
-	    cy[n+m*mesh->cubNq] += cIni*cImj*yij;
-	    cz[n+m*mesh->cubNq] += cIni*cImj*zij;
-	  }
-	}
+  /* store second order geometric factors (can be computed on the fly, later!!!)*/
+  int gbase = mesh->Nggeo*mesh->Np*e + j*mesh->Nq + i;
+  mesh->ggeo[gbase + mesh->Np*G00ID] = JW*(rx*rx + ry*ry + sz*sz);
+  mesh->ggeo[gbase + mesh->Np*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
+  mesh->ggeo[gbase + mesh->Np*G02ID] = JW*(rx*tx + ry*ty + rz*tz)*2.0; 
+  mesh->ggeo[gbase + mesh->Np*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
+  mesh->ggeo[gbase + mesh->Np*G12ID] = JW*(sx*tx + sy*ty + sz*tz)*2.0;
+  mesh->ggeo[gbase + mesh->Np*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
+  mesh->ggeo[gbase + mesh->Np*GWJID] = JW;
+
+  // now do for cubvgeo
+  // 1. interpolate Jacobian matrix to cubature nodes
+  for(int m=0;m<mesh->cubNq;++m){
+    for(int n=0;n<mesh->cubNq;++n){
+      dfloat cIni = mesh->cubInterp[n*mesh->Nq+i];
+      dfloat cImj = mesh->cubInterp[m*mesh->Nq+j];
+      cxr[n+m*mesh->cubNq] += cIni*cImj*xr;
+      cxs[n+m*mesh->cubNq] += cIni*cImj*xs;
+      cyr[n+m*mesh->cubNq] += cIni*cImj*yr;
+      cys[n+m*mesh->cubNq] += cIni*cImj*ys;
+      czr[n+m*mesh->cubNq] += cIni*cImj*zr;
+      czs[n+m*mesh->cubNq] += cIni*cImj*zs;
+      cx[n+m*mesh->cubNq] += cIni*cImj*xij;
+      cy[n+m*mesh->cubNq] += cIni*cImj*yij;
+      cz[n+m*mesh->cubNq] += cIni*cImj*zij;
+    }
+  }
       }
     }
 
@@ -177,7 +191,7 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
       J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
       
       if(J<1e-8) { printf("Negative or small cubature Jacobian: %g (Gx,y,z=%g,%g,%g)\n",
-			  J, Gx, Gy, Gz); exit(-1);}
+        J, Gx, Gy, Gz); exit(-1);}
       
       dfloat JW = J*mesh->cubw[n%mesh->cubNq]*mesh->cubw[n/mesh->cubNq];
       
@@ -196,6 +210,6 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
       mesh->cubvgeo[base + mesh->cubNp*JID]  = J;
       mesh->cubvgeo[base + mesh->cubNp*JWID] = JW;
       mesh->cubvgeo[base + mesh->cubNp*IJWID] = 1./JW;
-    }	
+    } 
   }
 }
