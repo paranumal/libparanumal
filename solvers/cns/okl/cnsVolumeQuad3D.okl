@@ -174,13 +174,15 @@ SOFTWARE.
 	rhsq1 -= p_fainv*zij*(yij*rw-zij*rv); // check if density should be here
 	rhsq2 -= p_fainv*zij*(zij*ru-xij*rw);
 	rhsq3 -= p_fainv*zij*(xij*rv-yij*ru);
-	
+
+#if 0
 	// remove radial component of momentum change
 	const dfloat xdotrhsq = (rhsq1*xij + rhsq2*yij + rhsq3*zij)*p_invRadiusSq;
 	
 	rhsq1 -= xij*xdotrhsq;
 	rhsq2 -= yij*xdotrhsq;
 	rhsq3 -= zij*xdotrhsq;
+#endif
 	
         const dlong base = e*p_Np*p_Nfields + j*p_Nq + i;
 	

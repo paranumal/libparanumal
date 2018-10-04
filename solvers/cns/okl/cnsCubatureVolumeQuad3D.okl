@@ -321,6 +321,7 @@ SOFTWARE.
           }
 
 	  // remove radial component of momentum change
+          // (note we do this before scaling with invJW, ok since pointwise)
 	  const dfloat xij = x[i+j*p_Nq+e*p_Np];
 	  const dfloat yij = y[i+j*p_Nq+e*p_Np];
 	  const dfloat zij = z[i+j*p_Nq+e*p_Np];

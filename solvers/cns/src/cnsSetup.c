@@ -474,7 +474,13 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
       mesh->haloExtractKernel =
         mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl",
                                            "meshHaloExtract3D",
-                                           kernelInfo);
+				 kernelInfo);
+
+      if(cns->elementType==QUADRILATERALS && mesh->dim==3){
+	sprintf(kernelName, "cnsConstrain%s", suffix);
+	sprintf(fileName, DCNS "/okl/cnsConstrain%s.okl", suffix);
+	cns->constrainKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      }
     }
     MPI_Barrier(mesh->comm);
   }
