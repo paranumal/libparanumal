@@ -42,25 +42,25 @@ public:
   vertexPos() { 
     mPos[0]=0.0;  mPos[1]=0.0;  mPos[2]=0.0; 
   }
-  vertexPos(const double *p) {
+  vertexPos(const dfloat *p) {
     mPos[0]=p[0]; mPos[1]=p[1]; mPos[2]=p[2];
   }
   
-  void set(const double *p) {
+  void set(const dfloat *p) {
     mPos[0]=p[0]; mPos[1]=p[1]; mPos[2]=p[2]; 
   }
 
-  void set(int index, const double *pos) {
-    const double *p = &pos[index*3];
+  void set(int index, const dfloat *pos) {
+    const dfloat *p = &pos[index*3];
     mPos[0]=p[0]; mPos[1]=p[1]; mPos[2]=p[2];
   }
 
-  double getX() const { return mPos[0]; };
-  double getY() const { return mPos[1]; };
-  double getZ() const { return mPos[2]; };
+  dfloat getX() const { return mPos[0]; };
+  dfloat getY() const { return mPos[1]; };
+  dfloat getZ() const { return mPos[2]; };
 
   // coords of vertex position
-  double mPos[3];
+  dfloat mPos[3];
 };
 
 
@@ -78,7 +78,7 @@ public:
 
     // convert to scaled int to avoid floating point ambiguity
     // alternative: enable tolerance for merging vertices
-    const double scale = 1.0e5;
+    const dfloat scale = 1.0e5;
 
     int ixA = (int)(a.getX()*scale);
     int ixB = (int)(b.getX()*scale);
@@ -116,7 +116,7 @@ private:
 
   static Type          mFind;   // vertex to find
   static vertexVector *mList;   // pointer to list of vertices
-//static double        s_tol;   // tolerance for merging vertices
+//static dfloat        s_tol;   // tolerance for merging vertices
 };
 
 
@@ -142,7 +142,7 @@ public:
     return idx;
   }
 
-  const double* getPos(int idx) const { return mVtxs[idx].mPos; }
+  const dfloat* getPos(int idx) const { return mVtxs[idx].mPos; }
   const Type&   get(int idx) const    { return mVtxs[idx]; }
   int           getSize() const       { return (int)mVtxs.size(); }
 

@@ -12,7 +12,7 @@ BROWN-MINION
 
 [MESH FILE]
 #../../meshes/sphereMR.msh
-../../meshes/sphereQuadH01.msh
+../../meshes/sphereQuadH01a.msh
 
 [MESH DIMENSION]
 3
@@ -21,7 +21,7 @@ BROWN-MINION
 4
 
 [POLYNOMIAL DEGREE]
-3
+8
 
 [SPHERE RADIUS]
 1.0
@@ -60,12 +60,12 @@ CUDA
 0
 
 [TIME INTEGRATOR]
-LSERK4
+#LSERK4
 #MRSAAB
-#SARK 
+SARK 
 
 [VISCOSITY]
-0.005
+0.0002
 
 [SPEED OF SOUND]
 5.0
@@ -83,7 +83,7 @@ LSERK4
 1000
 
 [TSTEPS FOR SOLUTION OUTPUT]
-1000
+0
 
 [START TIME]
 0
@@ -120,7 +120,7 @@ LSERK4
 bnsRestart
 
 [OUTPUT FILE FORMAT]
-VTU
+PPM
 
 [OUTPUT FILE NAME]
 squareCylinderQuad
