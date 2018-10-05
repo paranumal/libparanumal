@@ -153,11 +153,16 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     meshLoadReferenceNodesTri2D(mesh, Nc);
     meshPhysicalNodesTri2D(mesh);
     break;
-  case QUADRILATERALS:
+  case QUADRILATERALS:{
     meshLoadReferenceNodesQuad2D(mesh, Nc);
-    meshPhysicalNodesQuad2D(mesh);
-    meshGeometricFactorsQuad2D(mesh);
-    break;
+    if(elliptic->dim==2){
+      meshPhysicalNodesQuad2D(mesh);
+      meshGeometricFactorsQuad2D(mesh);
+    }else{
+      meshPhysicalNodesQuad3D(mesh);
+      meshGeometricFactorsQuad3D(mesh);
+    }
+    }break;
   case TETRAHEDRA:
     meshLoadReferenceNodesTet3D(mesh, Nc);
     meshPhysicalNodesTet3D(mesh);
@@ -191,10 +196,15 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   case TRIANGLES:
     meshConnectFaceNodes2D(mesh);
     break;
-  case QUADRILATERALS:
-    meshConnectFaceNodes2D(mesh);
-    meshSurfaceGeometricFactorsQuad2D(mesh);
-    break;
+  case QUADRILATERALS:{
+    if(elliptic->dim==2){
+      meshConnectFaceNodes2D(mesh);
+      meshSurfaceGeometricFactorsQuad2D(mesh);
+    }else{
+      meshConnectFaceNodes3D(mesh);
+      meshSurfaceGeometricFactorsQuad3D(mesh);
+    }
+  }break;
   case TETRAHEDRA:
     meshConnectFaceNodes3D(mesh);
     break;
@@ -400,7 +410,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     free(VBq); free(PBq);
     free(L0vals); free(ELids ); free(ELvals);
 
-  } else if (elliptic->elementType==QUADRILATERALS) {
+  } else if (elliptic->elementType==QUADRILATERALS) { // This should be ok for Quad3D
 
     //lumped mass matrix
     mesh->MM = (dfloat *) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
@@ -792,8 +802,12 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   
   if(elliptic->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
-  if(elliptic->elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
+  if(elliptic->elementType==QUADRILATERALS){
+    if(elliptic->dim==2)
+      suffix = strdup("Quad2D");
+    if(elliptic->dim==3)
+      suffix = strdup("Quad3D");
+  }
   if(elliptic->elementType==TETRAHEDRA)
     suffix = strdup("Tet3D");
   if(elliptic->elementType==HEXAHEDRA)
@@ -953,6 +967,10 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       int NblockVCoarse = maxNthreads/NpCoarse; 
       kernelInfo["defines/" "p_NblockVFine"]= NblockVFine;
       kernelInfo["defines/" "p_NblockVCoarse"]= NblockVCoarse;
+
+      // Use the same kernel with quads for the following kenels
+      if((elliptic->dim==3 && elliptic->elementType==QUADRILATERALS))
+        suffix = strdup("Quad2D"); 
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
