@@ -471,24 +471,30 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
         elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       }
 
-      // sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
-      // sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
-      // elliptic->precon->coarsenKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      // Use the same kernel with quads for the following kenels
+      if((elliptic->dim==3 && elliptic->elementType==QUADRILATERALS))
+        suffix = strdup("Quad2D"); 
 
-      // sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
-      // sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
-      // elliptic->precon->prolongateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
+      sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
+      elliptic->precon->coarsenKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      // sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");
-      // sprintf(kernelName, "ellipticBlockJacobiPrecon");
-      // elliptic->precon->blockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
+      sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
+      elliptic->precon->prolongateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      // sprintf(kernelName, "ellipticPartialBlockJacobiPrecon");
-      // elliptic->precon->partialblockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      
 
-      // sprintf(fileName, DELLIPTIC "/okl/ellipticPatchSolver.okl");
-      // sprintf(kernelName, "ellipticApproxBlockJacobiSolver");
-      // elliptic->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");
+      sprintf(kernelName, "ellipticBlockJacobiPrecon");
+      elliptic->precon->blockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+
+      sprintf(kernelName, "ellipticPartialBlockJacobiPrecon");
+      elliptic->precon->partialblockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+
+      sprintf(fileName, DELLIPTIC "/okl/ellipticPatchSolver.okl");
+      sprintf(kernelName, "ellipticApproxBlockJacobiSolver");
+      elliptic->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
       if (   elliptic->elementType == TRIANGLES
           || elliptic->elementType == TETRAHEDRA) {
@@ -508,11 +514,11 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   long long int pre = mesh->device.memoryAllocated();
 
-  // occaTimerTic(mesh->device,"PreconditionerSetup");
-  // ellipticPreconditionerSetup(elliptic, elliptic->ogs, lambda);
-  // occaTimerToc(mesh->device,"PreconditionerSetup");
+  occaTimerTic(mesh->device,"PreconditionerSetup");
+  ellipticPreconditionerSetup(elliptic, elliptic->ogs, lambda);
+  occaTimerToc(mesh->device,"PreconditionerSetup");
 
-  // long long int usedBytes = mesh->device.memoryAllocated()-pre;
+  long long int usedBytes = mesh->device.memoryAllocated()-pre;
 
-  // elliptic->precon->preconBytes = usedBytes;
+  elliptic->precon->preconBytes = usedBytes;
 }

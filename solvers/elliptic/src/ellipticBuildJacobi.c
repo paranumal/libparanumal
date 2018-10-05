@@ -29,11 +29,13 @@ SOFTWARE.
 void BuildLocalIpdgBBDiagTri2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dlong eM, dfloat *A);
 void BuildLocalIpdgDiagTri2D (elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dlong eM, dfloat *A);
 void BuildLocalIpdgDiagQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dfloat *B, dfloat *Br, dfloat *Bs, dlong eM, dfloat *A);
+void BuildLocalIpdgDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dfloat *B, dfloat *Br, dfloat *Bs, dlong eM, dfloat *A);
 void BuildLocalIpdgDiagTet3D (elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dlong eM, dfloat *A);
 void BuildLocalIpdgDiagHex3D (elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dfloat *B, dfloat *Br, dfloat *Bs, dfloat *Bt, dlong eM, dfloat *A);
 
 void BuildLocalContinuousDiagTri2D (elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dlong eM, dfloat *A);
 void BuildLocalContinuousDiagQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dlong eM, dfloat *B, dfloat *Br, dfloat *Bs, dfloat *A);
+void BuildLocalContinuousDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dlong eM, dfloat *B, dfloat *Br, dfloat *Bs, dfloat *A);
 void BuildLocalContinuousDiagTet3D (elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dlong eM, dfloat *A);
 void BuildLocalContinuousDiagHex3D (elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dlong eM, dfloat *B, dfloat *Br, dfloat *Bs, dfloat *Bt, dfloat *A);
 
@@ -167,11 +169,15 @@ void ellipticBuildJacobi(elliptic_t* elliptic, dfloat lambda, dfloat **invDiagA)
         for(dlong eM=0;eM<mesh->Nelements;++eM)
           BuildLocalContinuousDiagTri2D(elliptic, mesh, lambda, eM, diagA + eM*mesh->Np);
         break;
-      case QUADRILATERALS:
+      case QUADRILATERALS:{
         #pragma omp parallel for 
-        for(dlong eM=0;eM<mesh->Nelements;++eM)
-          BuildLocalContinuousDiagQuad2D(elliptic, mesh, lambda, eM, B, Br, Bs, diagA + eM*mesh->Np);
-        break;
+        for(dlong eM=0;eM<mesh->Nelements;++eM){
+          if(elliptic->dim==2)
+            BuildLocalContinuousDiagQuad2D(elliptic, mesh, lambda, eM, B, Br, Bs, diagA + eM*mesh->Np);
+          if(elliptic->dim==3)
+            BuildLocalContinuousDiagQuad3D(elliptic, mesh, lambda, eM, B, Br, Bs, diagA + eM*mesh->Np);
+          }
+        }break;
       case TETRAHEDRA:
         #pragma omp parallel for 
         for(dlong eM=0;eM<mesh->Nelements;++eM)
@@ -480,6 +486,122 @@ void BuildLocalContinuousDiagQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloat l
     }
   }
 }
+
+
+void BuildLocalIpdgDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dfloat *B, dfloat *Br, dfloat *Bs, dlong eM, dfloat *A) {
+  /* start with stiffness matrix  */
+  for(int n=0;n<mesh->Np;++n){
+    A[n] = 0;
+
+    // (grad phi_n, grad phi_m)_{D^e}
+    for(int i=0;i<mesh->Np;++i){
+      dlong base = eM*mesh->Np*mesh->Nvgeo + i;
+      dfloat drdx = mesh->vgeo[base+mesh->Np*RXID];
+      dfloat drdy = mesh->vgeo[base+mesh->Np*RYID];
+      dfloat drdz = mesh->vgeo[base+mesh->Np*RZID];
+      dfloat dsdx = mesh->vgeo[base+mesh->Np*SXID];
+      dfloat dsdy = mesh->vgeo[base+mesh->Np*SYID];
+      dfloat dsdz = mesh->vgeo[base+mesh->Np*SZID];
+      dfloat dtdx = mesh->vgeo[base+mesh->Np*TXID];
+      dfloat dtdy = mesh->vgeo[base+mesh->Np*TYID];
+      dfloat dtdz = mesh->vgeo[base+mesh->Np*TZID];
+      dfloat JW   = mesh->vgeo[base+mesh->Np*JWID];
+      
+      int idn = n*mesh->Np+i;
+      dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn] + dtdx;
+      dfloat dlndy = drdy*Br[idn] + dsdy*Bs[idn] + dtdy;
+      dfloat dlndz = drdz*Br[idn] + dsdz*Bs[idn] + dtdz;
+      A[n] += JW*(dlndx*dlndx + dlndy*dlndy + dlndz*dlndz);
+      A[n] += lambda*JW*B[idn]*B[idn];
+    }
+
+    for (int fM=0;fM<mesh->Nfaces;fM++) {
+      // accumulate flux terms for negative and positive traces
+      for(int i=0;i<mesh->Nfp;++i){
+        int vidM = mesh->faceNodes[i+fM*mesh->Nfp];
+
+        // grab vol geofacs at surface nodes
+        dlong baseM = eM*mesh->Np*mesh->Nvgeo + vidM;
+        dfloat drdxM = mesh->vgeo[baseM+mesh->Np*RXID];
+        dfloat drdyM = mesh->vgeo[baseM+mesh->Np*RYID];
+        dfloat drdzM = mesh->vgeo[baseM+mesh->Np*RZID];
+        
+        dfloat dsdxM = mesh->vgeo[baseM+mesh->Np*SXID];
+        dfloat dsdyM = mesh->vgeo[baseM+mesh->Np*SYID];
+        dfloat dsdzM = mesh->vgeo[baseM+mesh->Np*SZID];
+        
+        dfloat dtdxM = mesh->vgeo[baseM+mesh->Np*TXID];
+        dfloat dtdyM = mesh->vgeo[baseM+mesh->Np*TYID];
+        dfloat dtdzM = mesh->vgeo[baseM+mesh->Np*TZID];
+
+        // grab surface geometric factors
+        dlong base = mesh->Nsgeo*(eM*mesh->Nfp*mesh->Nfaces + fM*mesh->Nfp + i);
+        dfloat nx = mesh->sgeo[base+NXID];
+        dfloat ny = mesh->sgeo[base+NYID];
+        dfloat nz = mesh->sgeo[base+NZID];
+        dfloat wsJ = mesh->sgeo[base+WSJID];
+        dfloat hinv = mesh->sgeo[base+IHID];
+        
+        // form negative trace terms in IPDG
+        int idnM = n*mesh->Np+vidM; 
+
+        dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM] + dtdxM;
+        dfloat dlndyM = drdyM*Br[idnM] + dsdyM*Bs[idnM] + dtdyM;
+        dfloat dlndzM = drdzM*Br[idnM] + dsdzM*Bs[idnM] + dtdzM;
+        dfloat ndotgradlnM = nx*dlndxM+ny*dlndyM+nz*dlndzM ;
+        dfloat lnM = B[idnM];
+        
+        dfloat penalty = elliptic->tau*hinv;     
+       
+        A[n] += -0.5*wsJ*lnM*ndotgradlnM;  // -(ln^-, N.grad lm^-)
+        A[n] += -0.5*wsJ*ndotgradlnM*lnM;  // -(N.grad ln^-, lm^-)
+        A[n] += +0.5*wsJ*penalty*lnM*lnM; // +((tau/h)*ln^-,lm^-)
+      }
+    }
+  }
+}
+
+void BuildLocalContinuousDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dlong eM, 
+                                    dfloat *B, dfloat *Br, dfloat* Bs, dfloat *A) {
+
+  for (int ny=0;ny<mesh->Nq;ny++) {
+    for (int nx=0;nx<mesh->Nq;nx++) {
+      int iid = nx+ny*mesh->Nq;
+      A[iid] = 0;
+
+      for (int k=0;k<mesh->Nq;k++) {
+        int id = k+ny*mesh->Nq;
+        dfloat Grr = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G00ID*mesh->Np];
+        A[iid] += Grr*mesh->D[nx+k*mesh->Nq]*mesh->D[nx+k*mesh->Nq];
+      }
+
+      for (int k=0;k<mesh->Nq;k++) {
+        int id = nx+k*mesh->Nq;
+        dfloat Gss = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G11ID*mesh->Np];
+        A[iid] += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[ny+k*mesh->Nq];
+      }
+
+      int id = nx+ny*mesh->Nq;
+      dfloat Grs = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
+      A[iid] += 2*Grs*mesh->D[nx+nx*mesh->Nq]*mesh->D[ny+ny*mesh->Nq];
+
+      id = nx+ny*mesh->Nq;
+      dfloat Grt = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
+      A[iid] += 2*Grt*mesh->D[nx+nx*mesh->Nq];
+
+      id = nx+ny*mesh->Nq;
+      dfloat Gst = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
+      A[iid] += 2*Gst*mesh->D[ny+ny*mesh->Nq];
+
+
+      dfloat Gtt = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G22ID*mesh->Np];
+      dfloat JW  = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
+      A[iid] += JW*lambda + Gtt;
+    }
+  }
+}
+
+
 
 void BuildLocalIpdgDiagTet3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dfloat *MS, dlong eM, dfloat *A) {
   dlong vbase = eM*mesh->Nvgeo;

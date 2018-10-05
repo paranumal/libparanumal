@@ -632,7 +632,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   ins->vSolver->elementType = ins->elementType;
   ins->vSolver->BCType = (int*) calloc(7,sizeof(int));
   memcpy(ins->vSolver->BCType,vBCType,7*sizeof(int));
-  // ellipticSolveSetup(ins->vSolver, ins->lambda, kernelInfoV); !!!!!
+  ellipticSolveSetup(ins->vSolver, ins->lambda, kernelInfoV); //!!!!!
 
   if (ins->dim==3) {
     ins->wSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
@@ -642,7 +642,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
     ins->wSolver->elementType = ins->elementType;
     ins->wSolver->BCType = (int*) calloc(7,sizeof(int));
     memcpy(ins->wSolver->BCType,wBCType,7*sizeof(int));
-    // ellipticSolveSetup(ins->wSolver, ins->lambda, kernelInfoV);  !!!!! 
+    ellipticSolveSetup(ins->wSolver, ins->lambda, kernelInfoV);  //!!!!! 
   }
   
   if (mesh->rank==0) printf("==================PRESSURE SOLVE SETUP=========================\n");
@@ -653,7 +653,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   ins->pSolver->elementType = ins->elementType;
   ins->pSolver->BCType = (int*) calloc(7,sizeof(int));
   memcpy(ins->pSolver->BCType,pBCType,7*sizeof(int));
-  // ellipticSolveSetup(ins->pSolver, 0.0, kernelInfoP); !!!!
+  ellipticSolveSetup(ins->pSolver, 0.0, kernelInfoP); //!!!!
 
 
   //make node-wise boundary flags
