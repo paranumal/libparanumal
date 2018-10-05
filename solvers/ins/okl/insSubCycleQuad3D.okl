@@ -319,7 +319,6 @@ SOFTWARE.
             s_F21[es][j][i] = Udn;
             s_F22[es][j][i] = Vdn;
 	    s_F23[es][j][i] = Wdn;
-	    ?? ;
           }
 
           const int id = i+j*p_cubNq;
