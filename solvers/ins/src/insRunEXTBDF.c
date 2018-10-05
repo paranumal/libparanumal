@@ -123,74 +123,74 @@ void insRunEXTBDF(ins_t *ins){
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
     insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
-    // insPressureRhs  (ins, time+ins->dt, ins->Nstages);
-    // insPressureSolve(ins, time+ins->dt, ins->Nstages); 
+    insPressureRhs  (ins, time+ins->dt, ins->Nstages);
+    insPressureSolve(ins, time+ins->dt, ins->Nstages); 
 
-    // insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
-    // insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
+    insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
+    insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
 
-    // //cycle history
-    // for (int s=ins->Nstages;s>1;s--) {
-    //   ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-    //                               (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-    //                               (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
-    //   ins->o_P.copyFrom(ins->o_P, ins->Ntotal*sizeof(dfloat), 
-    //                               (s-1)*ins->Ntotal*sizeof(dfloat), 
-    //                               (s-2)*ins->Ntotal*sizeof(dfloat));
-    // }
+    //cycle history
+    for (int s=ins->Nstages;s>1;s--) {
+      ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+      ins->o_P.copyFrom(ins->o_P, ins->Ntotal*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*sizeof(dfloat));
+    }
 
-    // //copy updated pressure
-    // ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat)); 
+    //copy updated pressure
+    ins->o_P.copyFrom(ins->o_rkP, ins->Ntotal*sizeof(dfloat)); 
 
-    // //update velocity
-    // insVelocityUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkGP, ins->o_rkU);
+    //update velocity
+    insVelocityUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkGP, ins->o_rkU);
 
-    // //copy updated pressure
-    // ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
+    //copy updated pressure
+    ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
 
-    // //cycle rhs history
-    // for (int s=ins->Nstages;s>1;s--) {
-    //   ins->o_NU.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-    //                               (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-    //                               (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
-    //   ins->o_GP.copyFrom(ins->o_GP, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-    //                               (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-    //                               (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
-    // }
+    //cycle rhs history
+    for (int s=ins->Nstages;s>1;s--) {
+      ins->o_NU.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+      ins->o_GP.copyFrom(ins->o_GP, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+    }
 
-    // occaTimerTic(mesh->device,"Report");
+    occaTimerTic(mesh->device,"Report");
 
-    // if(ins->outputStep){
-    //   if(((tstep+1)%(ins->outputStep))==0){
-    //     if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
-    //     if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
-    //     insReport(ins, time+ins->dt, tstep+1);
+    if(ins->outputStep){
+      if(((tstep+1)%(ins->outputStep))==0){
+        if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
+        if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
+        insReport(ins, time+ins->dt, tstep+1);
 
-    //     // Write a restart file
-    //     if(ins->writeRestartFile){
-    //       if(mesh->rank==0) printf("\nWriting Binary Restart File....");
-    //         insRestartWrite(ins, ins->options, time+ins->dt);
-    //       if(mesh->rank==0) printf("done\n");
-    //     }
+        // Write a restart file
+        if(ins->writeRestartFile){
+          if(mesh->rank==0) printf("\nWriting Binary Restart File....");
+            insRestartWrite(ins, ins->options, time+ins->dt);
+          if(mesh->rank==0) printf("done\n");
+        }
 
-    //     // // Update Time-Step Size
-    //     // if(ins->dtAdaptStep){
-    //     //   if(((ins->tstep)%(ins->dtAdaptStep))==0){
-    //     //     if(rank==0) printf("\n Adapting time Step Size to ");
-    //     //       insComputeDt(ins, ins->time);
-    //     //     if(rank==0) printf("%.4e\n", ins->dt);
-    //     //      // Interpolate history for the new time step size
-    //     //       insInterpolateHistory(ins, ins->dtold, ins->dt);
+        // // Update Time-Step Size
+        // if(ins->dtAdaptStep){
+        //   if(((ins->tstep)%(ins->dtAdaptStep))==0){
+        //     if(rank==0) printf("\n Adapting time Step Size to ");
+        //       insComputeDt(ins, ins->time);
+        //     if(rank==0) printf("%.4e\n", ins->dt);
+        //      // Interpolate history for the new time step size
+        //       insInterpolateHistory(ins, ins->dtold, ins->dt);
 
-    //     //   }
-    //     // } 
-    //   }
-    // }
+        //   }
+        // } 
+      }
+    }
 
-    // if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
-    // if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
+    if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
+    if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
     
-    // occaTimerToc(mesh->device,"Report");
+    occaTimerToc(mesh->device,"Report");
   }
   occaTimerToc(mesh->device,"INS");
 
