@@ -198,7 +198,7 @@ void insRunEXTBDF(ins_t *ins){
   dfloat finalTime = ins->NtimeSteps*ins->dt;
   printf("\n");
 
-  // if(ins->outputStep) insReport(ins, finalTime,ins->NtimeSteps);
+  if(ins->outputStep) insReport(ins, finalTime,ins->NtimeSteps);
   
   if(mesh->rank==0) occa::printTimer();
 }

@@ -585,18 +585,21 @@ void BuildLocalContinuousDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat l
       dfloat Grs = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G01ID*mesh->Np];
       A[iid] += 2*Grs*mesh->D[nx+nx*mesh->Nq]*mesh->D[ny+ny*mesh->Nq];
 
-      id = nx+ny*mesh->Nq;
-      dfloat Grt = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
-      A[iid] += 2*Grt*mesh->D[nx+nx*mesh->Nq];
+      // id = nx+ny*mesh->Nq;
+      // dfloat Grt = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
+      // A[iid] += 2*Grt*mesh->D[nx+nx*mesh->Nq];
 
-      id = nx+ny*mesh->Nq;
-      dfloat Gst = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
-      A[iid] += 2*Gst*mesh->D[ny+ny*mesh->Nq];
+      // id = nx+ny*mesh->Nq;
+      // dfloat Gst = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
+      // A[iid] += 2*Gst*mesh->D[ny+ny*mesh->Nq];
+      
+      // dfloat Gtt = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G22ID*mesh->Np];
+      // A[iid] += Gtt;
+      
 
 
-      dfloat Gtt = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G22ID*mesh->Np];
       dfloat JW  = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
-      A[iid] += JW*lambda + Gtt;
+      A[iid] += JW*lambda;
     }
   }
 }

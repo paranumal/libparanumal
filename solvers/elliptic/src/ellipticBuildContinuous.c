@@ -325,13 +325,13 @@ void ellipticBuildContinuousQuad3D(elliptic_t *elliptic, dfloat lambda, nonZero_
             val += Gsr*mesh->D[mx+nx*mesh->Nq]*mesh->D[ny+my*mesh->Nq];
 
 
-            id = mx+ny*mesh->Nq;
-            dfloat Grt = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
-            val += Grt*mesh->D[nx+mx*mesh->Nq];
+            // id = mx+ny*mesh->Nq;
+            // dfloat Grt = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
+            // val += Grt*mesh->D[nx+mx*mesh->Nq];
 
-            id = nx+my*mesh->Nq;
-            dfloat Gtr = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
-            val += Gtr*mesh->D[mx+nx*mesh->Nq];
+            // id = nx+my*mesh->Nq;
+            // dfloat Gtr = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G02ID*mesh->Np];
+            // val += Gtr*mesh->D[mx+nx*mesh->Nq];
 
 
             if (nx==mx) {
@@ -344,20 +344,20 @@ void ellipticBuildContinuousQuad3D(elliptic_t *elliptic, dfloat lambda, nonZero_
             }
 
             // double check following two: AK
-            id = nx+my*mesh->Nq;
-            dfloat Gst = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
-            val += Gst*mesh->D[ny+my*mesh->Nq];
+            // id = nx+my*mesh->Nq;
+            // dfloat Gst = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
+            // val += Gst*mesh->D[ny+my*mesh->Nq];
 
-            id = mx+ny*mesh->Nq;
-            dfloat Gts = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
-            val += Gts*mesh->D[my+ny*mesh->Nq];
+            // id = mx+ny*mesh->Nq;
+            // dfloat Gts = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
+            // val += Gts*mesh->D[my+ny*mesh->Nq];
 
 
             if ((nx==mx)&&(ny==my)) {
               id = nx + ny*mesh->Nq;  
 
-              dfloat Gtt = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G22ID*mesh->Np];
-              val += Gtt; 
+              // dfloat Gtt = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + G22ID*mesh->Np];
+              // val += Gtt; 
 
               dfloat JW = mesh->ggeo[e*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
               val += JW*lambda;

@@ -94,7 +94,8 @@
     @barrier("local");
 
     squareThreads{
-      s_q[j][i] = r_G00*r_qr + r_G01*r_qs + r_G02*r_q;
+      // s_q[j][i] = r_G00*r_qr + r_G01*r_qs + r_G02*r_q;
+      s_q[j][i] = r_G00*r_qr + r_G01*r_qs;
     }
     
     @barrier("local");
@@ -108,23 +109,25 @@
       r_Aq += tmp;
     }
     
-    // t term ---->
+    // // t term ---->
 
-    squareThreads{
-      r_Aq += r_G02*r_qr + r_G12*r_qs + r_G22*r_q;
-    }
+    // squareThreads{
+    //   r_Aq += r_G02*r_qr + r_G12*r_qs + r_G22*r_q;
+    // }
     
     // s term ---->
     @barrier("local");
 
     squareThreads{
-      s_q[j][i] = r_G01*r_qr + r_G11*r_qs + r_G12*r_q;
+      // s_q[j][i] = r_G01*r_qr + r_G11*r_qs + 0.f*r_G12*r_q;
+      s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
     }
     
     @barrier("local");
 
     squareThreads{
-      dfloat tmp = r_G22*r_q;
+      // dfloat tmp = r_G22*r_q;
+      dfloat tmp = 0.f;
 
 #pragma unroll p_Nq 
       for(int n=0;n<p_Nq;++n) {
@@ -201,7 +204,8 @@
     @barrier("local");
 
     squareThreads{
-      s_q[j][i] =  r_G00*r_qr + r_G01*r_qs + r_G02*r_q;
+      // s_q[j][i] =  r_G00*r_qr + r_G01*r_qs + r_G02*r_q;
+      s_q[j][i] =  r_G00*r_qr + r_G01*r_qs;
     }
     
     @barrier("local");
@@ -216,22 +220,24 @@
       r_Aq += tmp;
     }
 
-    // ts term ---->
-    squareThreads{
-      r_Aq += r_G02*r_qr + r_G12*r_qs + r_G22*r_q;
-    }
+    // // ts term ---->
+    // squareThreads{
+    //   r_Aq += r_G02*r_qr + r_G12*r_qs + r_G22*r_q;
+    // }
     
     // s term ---->
     @barrier("local");
 
     squareThreads{
-      s_q[j][i] = r_G01*r_qr + r_G11*r_qs + r_G12*r_q;
+      // s_q[j][i] = r_G01*r_qr + r_G11*r_qs + r_G12*r_q;
+      s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
     }
     
     @barrier("local");
 
     squareThreads{
-      dfloat tmp = r_G22*r_q;
+      // dfloat tmp = r_G22*r_q;
+      dfloat tmp = 0.f;
 
 #pragma unroll p_Nq
       for(int n=0;n<p_Nq;++n){
@@ -271,7 +277,7 @@
 //     @shared dfloat s_q[p_Nq][p_Nq];
 //     @shared dfloat s_D[p_Nq][p_Nq];
 
-//     @exclusive dfloat r_qr, r_qs, r_Aq;
+//     @exclusive dfloat r_qr, r_qs, r_q, r_Aq;
 //     @exclusive pfloat r_G00, r_G01, r_G02;
 //     @exclusive pfloat r_G11, r_G12;
 //     @exclusive pfloat r_G22;
@@ -310,16 +316,16 @@
 //   qs += s_D[j][n]*s_q[n][i];
 //       }
       
-//       r_qr = qr; r_qs = qs; 
+//       r_qr = qr; r_qs = qs; r_q = s_q[j][i];
       
-//       r_Aq = r_GwJ*lambda*s_q[j][i];
+//       r_Aq = r_GwJ*lambda*r_q;
 //     }
 
 //     // r term ----->
 //     @barrier("local");
 
 //     squareThreads{
-//       s_q[j][i] = r_G00*r_qr + r_G01*r_qs + r_G02*s_q[j][i];
+//       s_q[j][i] = r_G00*r_qr + r_G01*r_qs + r_G02*r_q;
 //     }
     
 //     @barrier("local");
@@ -336,24 +342,24 @@
 //     // t term ---->
 
 //     squareThreads{
-//       r_Aq += r_G02*r_qr + r_G12*r_qs + r_G22*s_q[j][i];
+//       r_Aq += r_G02*r_qr + r_G12*r_qs + r_G22*r_q;
 //     }
     
 //     // s term ---->
 //     @barrier("local");
 
 //     squareThreads{
-//       s_q[j][i] = r_G01*r_qr + r_G11*r_qs + r_G12*s_q[j][i];
+//       s_q[j][i] = r_G01*r_qr + r_G11*r_qs + r_G12*r_q;
 //     }
     
 //     @barrier("local");
 
 //     squareThreads{
-//       dfloat tmp = r_G22*s_q[j][i];
+//       dfloat tmp = r_G22*r_q;
 
 // #pragma unroll p_Nq 
 //       for(int n=0;n<p_Nq;++n) {
-//   tmp += s_D[n][j]*s_q[n][i];
+//        tmp += s_D[n][j]*s_q[n][i];
 //       }
       
 //       r_Aq += tmp;
@@ -381,7 +387,7 @@
 //     @shared dfloat s_D[p_Nq][p_Nq];
 
 //     @exclusive dlong element;
-//     @exclusive dfloat r_qr, r_qs, r_Aq;
+//     @exclusive dfloat r_qr, r_qs, r_q, r_Aq;
 //     @exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
     
 //     // prefetch q(:,:,:,e) to @shared
@@ -417,16 +423,16 @@
 //   qs += s_D[j][n]*s_q[n][i];
 //       }
       
-//       r_qr = qr; r_qs = qs; 
+//       r_qr = qr; r_qs = qs; r_q = s_q[j][i];
       
-//       r_Aq = r_GwJ*lambda*s_q[j][i];
+//       r_Aq = r_GwJ*lambda*r_q;
 //     }
 
 //     // r term ----->
 //     @barrier("local");
 
 //     squareThreads{
-//       s_q[j][i] =  r_G00*r_qr + r_G01*r_qs + r_G02*s_q[j][i];
+//       s_q[j][i] =  r_G00*r_qr + r_G01*r_qs + r_G02*r_q;
 //     }
     
 //     @barrier("local");
@@ -443,24 +449,24 @@
 
 //     // ts term ---->
 //     squareThreads{
-//       r_Aq += r_G02*r_qr + r_G12*r_qs + r_G22*s_q[j][i];
+//       r_Aq += r_G02*r_qr + r_G12*r_qs + r_G22*r_q;
 //     }
     
 //     // s term ---->
 //     @barrier("local");
 
 //     squareThreads{
-//       s_q[j][i] = r_G01*r_qr + r_G11*r_qs + r_G12*s_q[j][i];
+//       s_q[j][i] = r_G01*r_qr + r_G11*r_qs + r_G12*r_q;
 //     }
     
 //     @barrier("local");
 
 //     squareThreads{
-//       dfloat tmp = r_G22*s_q[j][i];
+//       dfloat tmp = r_G22*r_q;
 
 // #pragma unroll p_Nq
 //       for(int n=0;n<p_Nq;++n){
-//   tmp += s_D[n][j]*s_q[n][i];
+//          tmp += s_D[n][j]*s_q[n][i];
 //       }
 
 //       r_Aq += tmp;
@@ -470,5 +476,3 @@
 //     }
 //   }
 // }
-
-
