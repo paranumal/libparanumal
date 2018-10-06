@@ -45,8 +45,12 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   // compute samples of q at interpolation nodes
   mesh->q = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
-  if(elliptic->dim==3)
-    meshOccaSetup3D(mesh, options, kernelInfo);
+  if(elliptic->dim==3){
+    if(elliptic->elementType != QUADRILATERALS)
+      meshOccaSetup3D(mesh, options, kernelInfo);
+    else
+      meshOccaSetupQuad3D(mesh, options, kernelInfo); 
+  } 
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
@@ -145,8 +149,12 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 
   if(elliptic->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
-  if(elliptic->elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
+  if(elliptic->elementType==QUADRILATERALS){
+    if(elliptic->dim==2)
+      suffix = strdup("Quad2D");
+    else
+      suffix = strdup("Quad3D"); 
+  }
   if(elliptic->elementType==TETRAHEDRA)
     suffix = strdup("Tet3D");
   if(elliptic->elementType==HEXAHEDRA)
@@ -155,7 +163,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
   //add boundary condition contribution to rhs
-  if (options.compareArgs("DISCRETIZATION","IPDG")) {
+  if (options.compareArgs("DISCRETIZATION","IPDG") && 
+      !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS) ) {
     for(int r=0;r<mesh->size;++r){
       if(r==mesh->rank){
 	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
@@ -182,7 +191,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 			      elliptic->o_r);
   }
 
-  if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
+  if (options.compareArgs("DISCRETIZATION","CONTINUOUS") &&
+       !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS) ) {
     for(int r=0;r<mesh->size;++r){
       if(r==mesh->rank){
 	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
@@ -217,7 +227,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   }
 
   // gather-scatter
-  if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
+  if(options.compareArgs("DISCRETIZATION","CONTINUOUS") &&
+     !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS) ){
     ogsGatherScatter(elliptic->o_r, ogsDfloat, ogsAdd, mesh->ogs);
     if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, elliptic->o_r);
   }

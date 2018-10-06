@@ -78,9 +78,15 @@ SOFTWARE.
           }
         
         dfloat4 gradqn;
-        gradqn.x = drdx*qr + dsdx*qs + dtdx*s_q[j][i];
-        gradqn.y = drdy*qr + dsdy*qs + dtdy*s_q[j][i];
-        gradqn.z = drdz*qr + dsdz*qs + dtdz*s_q[j][i];
+        // gradqn.x = drdx*qr + dsdx*qs + dtdx*s_q[j][i];
+        // gradqn.y = drdy*qr + dsdy*qs + dtdy*s_q[j][i];
+        // gradqn.z = drdz*qr + dsdz*qs + dtdz*s_q[j][i];
+       
+        // Just checking for C0 
+        gradqn.x = drdx*qr + dsdx*qs;
+        gradqn.y = drdy*qr + dsdy*qs;
+        gradqn.z = drdz*qr + dsdz*qs;
+
         gradqn.w = s_q[j][i];
         
         const dlong id = e*p_Np+j*p_Nq+i; 
@@ -142,9 +148,15 @@ SOFTWARE.
           }
         
         dfloat4 gradqn;
-        gradqn.x = drdx*qr + dsdx*qs + dtdx*s_q[j][i];
-        gradqn.y = drdy*qr + dsdy*qs + dtdy*s_q[j][i];
-        gradqn.z = drdz*qr + dsdz*qs + dtdz*s_q[j][i];
+        // gradqn.x = drdx*qr + dsdx*qs + dtdx*s_q[j][i];
+        // gradqn.y = drdy*qr + dsdy*qs + dtdy*s_q[j][i];
+        // gradqn.z = drdz*qr + dsdz*qs + dtdz*s_q[j][i];
+       
+        // Just checking for C0 
+        gradqn.x = drdx*qr + dsdx*qs;
+        gradqn.y = drdy*qr + dsdy*qs;
+        gradqn.z = drdz*qr + dsdz*qs;
+
         gradqn.w = s_q[j][i];
         
         const dlong id = (e+offset)*p_Np+j*p_Nq+i; 

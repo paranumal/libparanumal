@@ -52,7 +52,8 @@ void ellipticBuildIpdg(elliptic_t *elliptic, int basisNp, dfloat *basis,
     ellipticBuildIpdgQuad2D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts); 
     else
     ellipticBuildIpdgQuad3D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts); 
-  } break; 
+    break;
+  }  
   case TETRAHEDRA:
     ellipticBuildIpdgTet3D(elliptic, basisNp, basis,lambda, A, nnzA, globalStarts); break;
   case HEXAHEDRA:

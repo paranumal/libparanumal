@@ -89,6 +89,7 @@ LOBJS = \
 ../../src/meshLoadReferenceNodesHex3D.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/meshOccaSetup3D.o \
+../../src/meshOccaSetupQuad3D.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
 ../../src/meshParallelGatherScatterSetup.o \
@@ -109,6 +110,7 @@ LOBJS = \
 ../../src/meshPrint3D.o \
 ../../src/meshSetupTri2D.o \
 ../../src/meshSetupQuad2D.o \
+../../src/meshSetupQuad3D.o \
 ../../src/meshSetupTet3D.o \
 ../../src/meshSetupHex3D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \

@@ -60,7 +60,8 @@ void ellipticBuildContinuous(elliptic_t *elliptic, dfloat lambda, nonZero_t **A,
     ellipticBuildContinuousQuad2D(elliptic, lambda, A, nnz, ogs, globalStarts);
     else
     ellipticBuildContinuousQuad3D(elliptic, lambda, A, nnz, ogs, globalStarts);
-  } break;
+    break;
+  } 
   case TETRAHEDRA:
     ellipticBuildContinuousTet3D(elliptic, lambda, A, nnz, ogs, globalStarts); break; 
   case HEXAHEDRA:
