@@ -294,6 +294,13 @@ void ellipticBuildContinuousQuad3D(elliptic_t *elliptic, dfloat lambda, nonZero_
 
   if(mesh->rank==0) printf("Building full FEM matrix...");fflush(stdout);
 
+
+
+#if 0
+  hlong NTf = mesh->Nelements*mesh->Np * mesh->Nelements*mesh->Np ; 
+  dfloat *Af = (dfloat *)calloc(NTf, sizeof(dfloat));
+#endif
+
   //Build unassembed non-zeros
   dlong cnt =0;
   for (dlong e=0;e<mesh->Nelements;e++) {
@@ -364,6 +371,13 @@ void ellipticBuildContinuousQuad3D(elliptic_t *elliptic, dfloat lambda, nonZero_
               val += JW*lambda;
             }
 
+#if 0
+            const hlong rowid = e*mesh->Np + nx + ny*mesh->Nq; 
+            const hlong colid = e*mesh->Np + mx + my*mesh->Nq; 
+
+            Af[rowid*mesh->Nelements*mesh->Np + colid] = val; 
+#endif
+
             dfloat nonZeroThreshold = 1e-7;
             if (fabs(val)>nonZeroThreshold) {
               // pack non-zero
@@ -378,6 +392,31 @@ void ellipticBuildContinuousQuad3D(elliptic_t *elliptic, dfloat lambda, nonZero_
       }
     }
   }
+
+#if 0
+ // Write matlab dat for postprocess 
+  char fname[BUFSIZ];
+  sprintf(fname, "Ax.dat");
+  FILE *fp; 
+  fp = fopen(fname, "w");
+
+  for(hlong row = 0; row<(mesh->Nelements*mesh->Np); row++){
+    for(hlong col = 0; col<(mesh->Nelements*mesh->Np); col++){
+      dfloat val = Af[row*mesh->Nelements*mesh->Np + col];
+      fprintf(fp,"%.8e ", val);
+    }
+    fprintf(fp,"\n");
+  }
+
+ fclose(fp);
+
+
+#endif
+
+
+
+
+
 
   // Make the MPI_NONZERO_T data type
   MPI_Datatype MPI_NONZERO_T;
@@ -437,6 +476,22 @@ void ellipticBuildContinuousQuad3D(elliptic_t *elliptic, dfloat lambda, nonZero_
   }
   if (*nnz) cnt++;
   *nnz = cnt;
+
+
+
+#if 0
+  // Write matlab dat for postprocess 
+  char fname[BUFSIZ];
+  sprintf(fname, "Ax.dat");
+  FILE *fp; 
+  fp = fopen(fname, "w");
+
+  for(dlong n=1;n<*nnz;++n){
+      fprintf(fp,"%d %d %.8e\n", (*A)[n].row+1, (*A)[n].col+1, (*A)[n].val);
+  }
+
+ fclose(fp);
+#endif
 
   if(mesh->rank==0) printf("done.\n");
 
@@ -625,6 +680,21 @@ void ellipticBuildContinuousQuad2D(elliptic_t *elliptic, dfloat lambda, nonZero_
   }
   if (*nnz) cnt++;
   *nnz = cnt;
+
+
+#if 1
+  // Write matlab dat for postprocess 
+  char fname[BUFSIZ];
+  sprintf(fname, "Ax.dat");
+  FILE *fp; 
+  fp = fopen(fname, "w");
+
+  for(dlong n=1;n<*nnz;++n){
+      fprintf(fp,"%d %d %.8e\n", (*A)[n].row+1, (*A)[n].col+1, (*A)[n].val);
+  }
+
+ fclose(fp);
+#endif
 
   if(mesh->rank==0) printf("done.\n");
 

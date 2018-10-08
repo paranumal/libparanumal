@@ -2,7 +2,7 @@
 1.0
 
 [DATA FILE]
-data/ellipticHomogeneous2D.h
+data/ellipticHomogeneous3D.h
 
 [MESH FILE]
 ../../meshes/sphereQuadH02.msh
@@ -14,7 +14,7 @@ data/ellipticHomogeneous2D.h
 4
 
 [POLYNOMIAL DEGREE]
-4
+5
 
 [SPHERE RADIUS]
 1.0
@@ -29,7 +29,7 @@ CUDA
 0
 
 [LAMBDA]
-0
+1
 
 # can add FLEXIBLE to PCG
 [KRYLOV SOLVER]
@@ -45,7 +45,7 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
-FULLALMOND
+NONE
 
 
 ########## MULTIGRID Options ##############

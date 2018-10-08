@@ -218,6 +218,7 @@
       }
 
       r_Aq += tmp;
+      // r_Aq += 0.f;
     }
 
     // // ts term ---->
@@ -236,8 +237,7 @@
     @barrier("local");
 
     squareThreads{
-      // dfloat tmp = r_G22*r_q;
-      dfloat tmp = 0.f;
+      dfloat tmp = r_G22*r_q;
 
 #pragma unroll p_Nq
       for(int n=0;n<p_Nq;++n){

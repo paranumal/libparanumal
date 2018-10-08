@@ -75,8 +75,12 @@ int main(int argc, char **argv){
 
   if(mesh->Nelements<10)
   meshPrint3D(mesh);
-
-  // parameter for elliptic problem (-laplacian + lambda)*q = f
+#if 0
+  char fname[BUFSIZ];
+  sprintf(fname,"meshQuad3D.vtu");
+  meshVTU3D(mesh, fname);
+#endif
+// parameter for elliptic problem (-laplacian + lambda)*q = f
   dfloat lambda;
   options.getArgs("LAMBDA", lambda);
 
@@ -203,11 +207,11 @@ int main(int argc, char **argv){
     if(mesh->rank==0)
       printf("globalMaxError = %g\n", globalMaxError);
 
-#if 0
+#if 1
     char fname[BUFSIZ];
     string outName;
     options.getArgs("OUTPUT FILE NAME", outName);
-    sprintf(fname, "%s_%04d.vtu",(char*)outName.c_str(), rank);
+    sprintf(fname, "%s_%04d.vtu",(char*)outName.c_str(), mesh->rank);
     if(elliptic->dim==3)
       meshPlotVTU3D(mesh, fname, 0);
     else

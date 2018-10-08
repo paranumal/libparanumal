@@ -242,6 +242,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       elliptic->Nmasked++;
     }
   }
+
+  
   elliptic->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), elliptic->mapB);
 
   elliptic->maskIds = (dlong *) calloc(elliptic->Nmasked, sizeof(dlong));
@@ -279,7 +281,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   if(elliptic->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
   if(elliptic->elementType==QUADRILATERALS){
-     if(elliptic->dim==2)
+    if(elliptic->dim==2)
       suffix = strdup("Quad2D");
     else
       suffix = strdup("Quad3D");
