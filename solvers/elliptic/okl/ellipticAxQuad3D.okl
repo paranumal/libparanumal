@@ -237,7 +237,8 @@
     @barrier("local");
 
     squareThreads{
-      dfloat tmp = r_G22*r_q;
+      // dfloat tmp = r_G22*r_q;
+      dfloat tmp = 0.f;
 
 #pragma unroll p_Nq
       for(int n=0;n<p_Nq;++n){
