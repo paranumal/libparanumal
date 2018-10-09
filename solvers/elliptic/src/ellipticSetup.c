@@ -128,7 +128,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       else{
         if(elliptic->elementType==QUADRILATERALS){
           dfloat alpha = 1.0;
-          dfloat beta  = 1.0;
+          dfloat beta  = 3.0;
 
           // dfloat rad = sqrt(xn*xn + yn*yn + zn*zn); // has to be one !!!
 
