@@ -118,7 +118,10 @@ void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, int fld){
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNelements;++n){
-      fprintf(fp, "10\n"); // TET code ?
+      if(mesh->NfaceVertices==2)
+	fprintf(fp, "5\n");
+      else
+	fprintf(fp, "10\n");
     }
   }
   fprintf(fp, "        </DataArray>\n");
