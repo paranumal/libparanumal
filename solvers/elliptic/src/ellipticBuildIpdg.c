@@ -694,16 +694,16 @@ void ellipticBuildIpdgQuad3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
           
           int idn = n*mesh->Np+i;
           int idm = m*mesh->Np+i;
-          dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn] + dtdx;
-          dfloat dlndy = drdy*Br[idn] + dsdy*Bs[idn] + dtdy;
-          dfloat dlndz = drdz*Br[idn] + dsdz*Bs[idn] + dtdz;
-          
-          dfloat dlmdx = drdx*Br[idm] + dsdx*Bs[idm] + dtdx;
-          dfloat dlmdy = drdy*Br[idm] + dsdy*Bs[idm] + dtdy;
-          dfloat dlmdz = drdy*Br[idm] + dsdy*Bs[idm] + dtdz;
+          dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn]; + dtdx;
+          dfloat dlndy = drdy*Br[idn] + dsdy*Bs[idn]; + dtdy;
+          dfloat dlndz = drdz*Br[idn] + dsdz*Bs[idn]; + dtdz;
+          					     	    
+          dfloat dlmdx = drdx*Br[idm] + dsdx*Bs[idm]; + dtdx;
+          dfloat dlmdy = drdy*Br[idm] + dsdy*Bs[idm]; + dtdy;
+          dfloat dlmdz = drdz*Br[idm] + dsdz*Bs[idm]; + dtdz;
 
-          Anm += JW*(dlndx*dlmdx+dlndy*dlmdy + dlndz*dlmdz);
-          Anm += lambda*JW*B[idn]*B[idm];
+	  Anm += JW*(dlndx*dlmdx+dlndy*dlmdy + dlndz*dlmdz);
+	  Anm += lambda*JW*B[idn]*B[idm];
         }
 
         // loop over all faces in this element
@@ -758,22 +758,22 @@ void ellipticBuildIpdgQuad3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
             int idmM = m*mesh->Np+vidM;
             int idmP = m*mesh->Np+vidP;
 
-            dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM] + dtdxM;
-            dfloat dlndyM = drdyM*Br[idnM] + dsdyM*Bs[idnM] + dtdyM;
-            dfloat dlndzM = drdzM*Br[idnM] + dsdzM*Bs[idnM] + dtdzM;
+            dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM]; + dtdxM;
+            dfloat dlndyM = drdyM*Br[idnM] + dsdyM*Bs[idnM]; + dtdyM;
+            dfloat dlndzM = drdzM*Br[idnM] + dsdzM*Bs[idnM]; + dtdzM;
 
             dfloat ndotgradlnM = nx*dlndxM+ny*dlndyM + nz*dlndzM;
             dfloat lnM = B[idnM];
 
-            dfloat dlmdxM = drdxM*Br[idmM] + dsdxM*Bs[idmM] + dtdxM;
-            dfloat dlmdyM = drdyM*Br[idmM] + dsdyM*Bs[idmM] + dtdyM;
-            dfloat dlmdzM = drdzM*Br[idmM] + dsdzM*Bs[idmM] + dtdzM;
+            dfloat dlmdxM = drdxM*Br[idmM] + dsdxM*Bs[idmM]; + dtdxM;
+            dfloat dlmdyM = drdyM*Br[idmM] + dsdyM*Bs[idmM]; + dtdyM;
+            dfloat dlmdzM = drdzM*Br[idmM] + dsdzM*Bs[idmM]; + dtdzM;
             dfloat ndotgradlmM = nx*dlmdxM+ny*dlmdyM + nz*dlmdzM;
             dfloat lmM = B[idmM];
             
-            dfloat dlmdxP = drdxP*Br[idmP] + dsdxP*Bs[idmP] + dtdxP;
-            dfloat dlmdyP = drdyP*Br[idmP] + dsdyP*Bs[idmP] + dtdyP;
-            dfloat dlmdzP = drdzP*Br[idmP] + dsdzP*Bs[idmP] + dtdzP;
+            dfloat dlmdxP = drdxP*Br[idmP] + dsdxP*Bs[idmP]; + dtdxP;
+            dfloat dlmdyP = drdyP*Br[idmP] + dsdyP*Bs[idmP]; + dtdyP;
+            dfloat dlmdzP = drdzP*Br[idmP] + dsdzP*Bs[idmP]; + dtdzP;
             dfloat ndotgradlmP = nx*dlmdxP+ny*dlmdyP+nz*dlmdzP;
             dfloat lmP = B[idmP];
             
@@ -797,6 +797,7 @@ void ellipticBuildIpdgQuad3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
             ++nnz;
           } 
         }
+	
         if(fabs(Anm)>tol){
           // local block
           (*A)[nnz].row = globalIds[eM*mesh->Np+n];
@@ -816,6 +817,19 @@ void ellipticBuildIpdgQuad3D(elliptic_t *elliptic, int basisNp, dfloat *basis,
 
   if(rankM==0) printf("done.\n");
 
+#if 0
+  {
+    FILE *fp = fopen("DGS.dat", "w");
+    for(int n=0;n<nnz;++n){
+      fprintf(fp, "%d %d %17.15lf\n",
+	      (*A)[n].row+1,
+	      (*A)[n].col+1,
+	      (*A)[n].val);
+    }
+    fclose(fp);
+  }
+#endif
+  
   free(globalIds);
   free(B);  free(Br); free(Bs); 
 }
