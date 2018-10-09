@@ -148,8 +148,7 @@ int main(int argc, char **argv){
 
     occa::streamTag startTag = mesh->device.tagStream();
 
-    // int it = ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
-    int it =1;
+    int it = ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
     occa::streamTag stopTag = mesh->device.tagStream();
     mesh->device.finish();
 
@@ -194,25 +193,23 @@ int main(int argc, char **argv){
         dfloat exact;
         if (elliptic->dim==2)
           exact = sin(M_PI*xn)*sin(M_PI*yn);
-        
         else{
-          if(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS){
-          dfloat alpha = 3.0;
-          dfloat beta  = 4.0;
+          if(elliptic->elementType==QUADRILATERALS){
+          dfloat alpha = 1.0;
+          dfloat beta  = 1.0;
 
-          dfloat rad = sqrt(xn*xn + yn*yn + zn*zn); // has to be one !!!
+          // dfloat rad = sqrt(xn*xn + yn*yn + zn*zn); // has to be one !!!
 
-          dfloat theta = acos(zn/rad);
-          dfloat phi   = atan2(yn, xn);
+          dfloat theta = acos(zn);
+          dfloat phi   = atan2(xn, yn);
 
-          exact = sin(alpha*phi)*sin(beta*theta);
-        }else
+          exact   = sin(alpha*phi)*sin(beta*theta);
+         }
+        else
           exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
         }
 
         dfloat error = fabs(exact-mesh->q[id]);
-        mesh->q[id] = exact;
-
         maxError = mymax(maxError, error);
       }
     }
@@ -222,7 +219,7 @@ int main(int argc, char **argv){
     if(mesh->rank==0)
       printf("globalMaxError = %g\n", globalMaxError);
 
-#if 0
+#if 1
     char fname[BUFSIZ];
     string outName;
     options.getArgs("OUTPUT FILE NAME", outName);

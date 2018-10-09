@@ -121,37 +121,38 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];
-
+      
+      dfloat forcing; 
       if(elliptic->dim==2)
         elliptic->r[id] = J*(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
       else{
-        if(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS){
-          dfloat alpha = 3.0;
-          dfloat beta  = 4.0;
+        if(elliptic->elementType==QUADRILATERALS){
+          dfloat alpha = 1.0;
+          dfloat beta  = 1.0;
 
-          dfloat rad = sqrt(xn*xn + yn*yn + zn*zn); // has to be one !!!
+          // dfloat rad = sqrt(xn*xn + yn*yn + zn*zn); // has to be one !!!
 
-          dfloat theta = acos(zn/rad);
-          dfloat phi   = atan2(yn, xn);
+          dfloat theta = acos(zn);
+          dfloat phi   = atan2(xn,yn);
+          forcing = J*sin(alpha*phi)*sin(beta*theta)*(alpha*alpha/(sin(theta)*sin(theta))  
+                                                   +beta*beta-beta*cos(theta)*cos(beta*theta)/(sin(theta)*sin(beta*theta)));
 
-          elliptic->r[id] = J*( sin(alpha*phi)*sin(beta*theta)
-                             *( alpha*alpha/ (sin(theta)*sin(theta))  + beta*beta 
-                             - beta*cos(theta)*cos(beta*theta)/( sin(theta)*sin(beta*theta)))) ;
+          if(isnan(forcing))
+             forcing =J*sin(alpha*phi)*sin(beta*theta); 
 
+           elliptic->r[id] = forcing; 
 
-          mesh->q[id] = elliptic->r[id]/ J ;
         }
         else
         elliptic->r[id] = J*(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
 
       }
-
       elliptic->x[id] = 0;
     }
   }
 
 
-#if 1
+#if 0
     char fname[BUFSIZ];
     string outName;
     options.getArgs("OUTPUT FILE NAME", outName);
@@ -227,15 +228,15 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
        !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS) ) {
     for(int r=0;r<mesh->size;++r){
       if(r==mesh->rank){
-	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
-	sprintf(kernelName, "ellipticRhsBC%s", suffix);
+      sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
+        sprintf(kernelName, "ellipticRhsBC%s", suffix);
 
-	elliptic->rhsBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+        elliptic->rhsBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
-	sprintf(fileName, DELLIPTIC "/okl/ellipticAddBC%s.okl", suffix);
-	sprintf(kernelName, "ellipticAddBC%s", suffix);
+        sprintf(fileName, DELLIPTIC "/okl/ellipticAddBC%s.okl", suffix);
+        sprintf(kernelName, "ellipticAddBC%s", suffix);
 
-	elliptic->addBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+        elliptic->addBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
       }
       MPI_Barrier(mesh->comm);
     }
