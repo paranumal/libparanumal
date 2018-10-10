@@ -141,7 +141,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
           //    forcing =J*sin(alpha*phi)*sin(beta*theta); 
 
           forcing = -(2*(pow(xn,3) - pow(xn,2)*yn - 2*pow(xn,2)*zn - 2*xn*pow(yn,2) + xn*pow(zn,2) - pow(yn,3) + pow(yn,2)*zn + 2*yn*pow(zn,2) + pow(zn,3)))/(pow(xn,2) + pow(yn,2) + pow(zn,2));
-
+          // Added for making well-posed lamda
           forcing += lambda*(xn*pow(yn,2) - yn*pow(zn,2) + pow(xn,2)*zn);
           elliptic->r[id] = J*forcing; 
 
