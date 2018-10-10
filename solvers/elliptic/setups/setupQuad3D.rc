@@ -14,7 +14,7 @@ data/ellipticHomogeneous3D.h
 4
 
 [POLYNOMIAL DEGREE]
-3
+7
 
 [SPHERE RADIUS]
 1.0
@@ -29,7 +29,7 @@ CUDA
 0
 
 [LAMBDA]
-1
+0
 
 # can add FLEXIBLE to PCG
 [KRYLOV SOLVER]
@@ -37,6 +37,7 @@ PCG+FLEXIBLE
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
+#CONTINUOUS
 IPDG
 
 # can be NODAL or BERN
@@ -46,6 +47,7 @@ NODAL
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
 MULTIGRID
+#FULLALMOND
 
 
 ########## MULTIGRID Options ##############

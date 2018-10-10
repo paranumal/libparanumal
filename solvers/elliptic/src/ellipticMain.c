@@ -195,22 +195,20 @@ int main(int argc, char **argv){
           exact = sin(M_PI*xn)*sin(M_PI*yn);
         else{
           if(elliptic->elementType==QUADRILATERALS){
-          // dfloat alpha = 1.0;
-          // dfloat beta  = 3.0;
-
-          // // dfloat rad = sqrt(xn*xn + yn*yn + zn*zn); // has to be one !!!
-
-          // dfloat theta = acos(zn);
-          // dfloat phi   = atan2(xn, yn);
-          // exact   = sin(alpha*phi)*sin(beta*theta);
-
-          exact = xn*pow(yn,2) - yn*pow(zn,2) + pow(xn,2)*zn;
-
-         }
-        else
-          exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+#if 0
+	    exact = xn+yn+zn;
+#endif
+#if 1
+	    exact = xn*yn;
+#endif
+#if 0
+	    exact = xn*xn;
+#endif
+	  }
+	  else
+	    exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
         }
-
+	
         dfloat error = fabs(exact-mesh->q[id]);
 
         mesh->q[id] = fabs(mesh->q[id] - exact);

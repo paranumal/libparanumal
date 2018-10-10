@@ -127,27 +127,28 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
         elliptic->r[id] = J*(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
       else{
         if(elliptic->elementType==QUADRILATERALS){
-          // dfloat alpha = 1.0;
-          // dfloat beta  = 3.0;
 
-          // // dfloat rad = sqrt(xn*xn + yn*yn + zn*zn); // has to be one !!!
+#if 0
+	  dfloat exact = xn + yn + zn;
+	  forcing = -(-2*xn-2*yn-2*zn);
+#endif
 
-          // dfloat theta = acos(zn);
-          // dfloat phi   = atan2(xn,yn);
-          // forcing      = J*sin(alpha*phi)*sin(beta*theta)*(alpha*alpha/(sin(theta)*sin(theta))  
-          //                                          +beta*beta-beta*cos(theta)*cos(beta*theta)/(sin(theta)*sin(beta*theta)));
-
-          // if(isnan(forcing))
-          //    forcing =J*sin(alpha*phi)*sin(beta*theta); 
-
-          // forcing = -(2*(pow(xn,3) - pow(xn,2)*yn - 2*pow(xn,2)*zn - 2*xn*pow(yn,2) + xn*pow(zn,2) - pow(yn,3) + pow(yn,2)*zn + 2*yn*pow(zn,2) + pow(zn,3)))/(pow(xn,2) + pow(yn,2) + pow(zn,2));
-          // // Added for making well-posed lambda
-          // forcing += lambda*(xn*pow(yn,2) - yn*pow(zn,2) + pow(xn,2)*zn);
-          // elliptic->r[id] = J*forcing; 
+	  
+	  dfloat exact = xn*yn;
+	  forcing = 4*xn*yn;
+	  
+#if 0
+	  dfloat exact = pow(xn,2);
+	  
+	  dfloat forcing = -(-2.*pow(xn,4) + 2*pow(yn,4) + 4*pow(yn,2)*pow(zn,2) + 2*pow(zn,4));
+#endif
+	  forcing += lambda*exact;
+	  
+          elliptic->r[id] = J*forcing; 
 
         }
         else
-        elliptic->r[id] = J*(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+	  elliptic->r[id] = J*(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
 
       }
       elliptic->x[id] = 0;
