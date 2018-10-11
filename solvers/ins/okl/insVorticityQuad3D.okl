@@ -71,10 +71,11 @@ SOFTWARE.
             const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
             const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
             const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-            // const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
-            // const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
-            // const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
-
+#if 0
+            const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+            const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+            const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+#endif
             // compute 'r' and 's' derivatives of (q_m) at node n
             dfloat dudr  = 0.f, duds  = 0.f;
             dfloat dvdr  = 0.f, dvds  = 0.f;
@@ -92,16 +93,16 @@ SOFTWARE.
                 dwdr += Dr*s_W[es][j][n];
                 dwds += Ds*s_W[es][n][i];
               }
+#if 0
+            dfloat wy = drdy*dwdr + dsdy*dwds + dtdy*s_W[es][j][i]; 
+            dfloat vz = drdz*dvdr + dsdz*dvds + dtdz*s_V[es][j][i]; 
 
-            // dfloat wy = drdy*dwdr + dsdy*dwds + dtdy*s_W[es][j][i]; 
-            // dfloat vz = drdz*dvdr + dsdz*dvds + dtdz*s_V[es][j][i]; 
+            dfloat uz = drdz*dudr + dsdz*duds + dtdz*s_U[es][j][i]; 
+            dfloat wx = drdx*dwdr + dsdx*dwds + dtdx*s_W[es][j][i]; 
 
-            // dfloat uz = drdz*dudr + dsdz*duds + dtdz*s_U[es][j][i]; 
-            // dfloat wx = drdx*dwdr + dsdx*dwds + dtdx*s_W[es][j][i]; 
-
-            // dfloat vx = drdx*dvdr + dsdx*dvds + dtdx*s_V[es][j][i]; 
-            // dfloat uy = drdy*dudr + dsdy*duds + dtdy*s_U[es][j][i]; 
-            
+            dfloat vx = drdx*dvdr + dsdx*dvds + dtdx*s_V[es][j][i]; 
+            dfloat uy = drdy*dudr + dsdy*duds + dtdy*s_U[es][j][i]; 
+#endif                   
             dfloat wy = drdy*dwdr + dsdy*dwds; 
             dfloat vz = drdz*dvdr + dsdz*dvds; 
 

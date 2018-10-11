@@ -70,10 +70,11 @@
             const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
             const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
             const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-            
-            // const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
-            // const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
-            // const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+#if 0            
+            const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+            const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+            const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+#endif
 
             // compute 'r' and 's' derivatives of (q_m) at node n
             dfloat dpdr  = 0.f, dpds  = 0.f;
@@ -87,9 +88,11 @@
             }
 
             const dlong id = e*p_Np + j*p_Nq + i;
-            // GP[id+0*fieldOffset] = drdx*dpdr + dsdx*dpds + dtdx*s_P[es][j][i];
-            // GP[id+1*fieldOffset] = drdy*dpdr + dsdy*dpds + dtdy*s_P[es][j][i];
-            // GP[id+2*fieldOffset] = drdz*dpdr + dsdz*dpds + dtdz*s_P[es][j][i];
+#if 0            
+            GP[id+0*fieldOffset] = drdx*dpdr + dsdx*dpds + dtdx*s_P[es][j][i];
+            GP[id+1*fieldOffset] = drdy*dpdr + dsdy*dpds + dtdy*s_P[es][j][i];
+            GP[id+2*fieldOffset] = drdz*dpdr + dsdz*dpds + dtdz*s_P[es][j][i];
+#endif
             GP[id+0*fieldOffset] = drdx*dpdr + dsdx*dpds;
             GP[id+1*fieldOffset] = drdy*dpdr + dsdy*dpds;
             GP[id+2*fieldOffset] = drdz*dpdr + dsdz*dpds;

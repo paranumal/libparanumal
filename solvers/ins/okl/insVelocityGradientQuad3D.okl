@@ -66,23 +66,26 @@
           const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
           const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
           const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-
+#if 0
           // const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
           // const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
           // const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+#endif
 
           // compute 1D derivatives
           dfloat qr = 0, qs = 0;
-#pragma unroll p_Nq
-    for(int n=0;n<p_Nq;++n){
-      qr += s_D[i][n]*s_q[j][n];
-      qs += s_D[j][n]*s_q[n][i];
-    }
+          #pragma unroll p_Nq
+          for(int n=0;n<p_Nq;++n){
+            qr += s_D[i][n]*s_q[j][n];
+            qs += s_D[j][n]*s_q[n][i];
+          }
           
           dfloat4 gradqn;
-          // gradqn.x = drdx*qr + dsdx*qs + dtdx*s_q[j][i];
-          // gradqn.y = drdy*qr + dsdy*qs + dtdy*s_q[j][i];
-          // gradqn.z = drdz*qr + dsdz*qs + dtdz*s_q[j][i];
+#if 0
+          gradqn.x = drdx*qr + dsdx*qs + dtdx*s_q[j][i];
+          gradqn.y = drdy*qr + dsdy*qs + dtdy*s_q[j][i];
+          gradqn.z = drdz*qr + dsdz*qs + dtdz*s_q[j][i];
+#endif     
           gradqn.x = drdx*qr + dsdx*qs;
           gradqn.y = drdy*qr + dsdy*qs;
           gradqn.z = drdz*qr + dsdz*qs;

@@ -94,8 +94,8 @@ void insRunEXTBDF(ins_t *ins){
   // Write Initial Data
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
 
-  // for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
-  for(int tstep=0;tstep<1;++tstep){
+  for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+  // for(int tstep=0;tstep<1;++tstep){
 
     // if(ins->restartedFromFile){
       // if(tstep=0 && ins->temporalOrder>=2) 
@@ -123,11 +123,11 @@ void insRunEXTBDF(ins_t *ins){
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
     insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
-    // insPressureRhs  (ins, time+ins->dt, ins->Nstages);
-    // insPressureSolve(ins, time+ins->dt, ins->Nstages); 
+    insPressureRhs  (ins, time+ins->dt, ins->Nstages);
+    insPressureSolve(ins, time+ins->dt, ins->Nstages); 
 
-    // insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
-    // insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
+    insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
+    insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
 
     //cycle history
     for (int s=ins->Nstages;s>1;s--) {
