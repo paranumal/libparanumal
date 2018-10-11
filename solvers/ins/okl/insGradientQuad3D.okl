@@ -78,13 +78,13 @@
             // compute 'r' and 's' derivatives of (q_m) at node n
             dfloat dpdr  = 0.f, dpds  = 0.f;
 
-#pragma unroll p_Nq
-	    for(int n=0;n<p_Nq;++n){
-	      const dfloat Dr = s_D[i][n];
-	      const dfloat Ds = s_D[j][n];
-	      dpdr += Dr*s_P[es][j][n];
-	      dpds += Ds*s_P[es][n][i];
-	    }
+            #pragma unroll p_Nq
+            for(int n=0;n<p_Nq;++n){
+              const dfloat Dr = s_D[i][n];
+              const dfloat Ds = s_D[j][n];
+              dpdr += Dr*s_P[es][j][n];
+              dpds += Ds*s_P[es][n][i];
+            }
 
             const dlong id = e*p_Np + j*p_Nq + i;
             // GP[id+0*fieldOffset] = drdx*dpdr + dsdx*dpds + dtdx*s_P[es][j][i];
