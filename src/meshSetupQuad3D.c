@@ -48,12 +48,17 @@ mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius){
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
 
-#if 0
+#if 1
   for(int e=0;e<mesh->Nelements;++e){
     for(int f=0;f<mesh->Nfaces;++f){
-      printf("%d ", mesh->EToB[e*mesh->Nfaces+f]);
+      if(mesh->EToB[e*mesh->Nfaces+f]!=-1){
+	printf("YIKES %d %d %d ", e, f, mesh->EToB[e*mesh->Nfaces+f]);
+      }
+      if(mesh->EToE[e*mesh->Nfaces+f]==e ||
+	 mesh->EToE[e*mesh->Nfaces+f]==-1){
+	printf("YUCKS %d %d %d ", e, f, mesh->EToB[e*mesh->Nfaces+f]);
+      }
     }
-    printf("\n");
   }
 #endif
   

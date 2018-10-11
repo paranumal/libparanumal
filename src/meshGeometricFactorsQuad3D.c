@@ -86,34 +86,61 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
     zs += Djn*mesh->z[i+n*mesh->Nq+e*mesh->Np];
 
   }
-  
-  dfloat rx = ys*zij - zs*yij; // dXds x X
-  dfloat ry = zs*xij - xs*zij;
-  dfloat rz = xs*yij - ys*xij;
 
-  dfloat sx = zr*yij - yr*zij; // -dXdr x X
-  dfloat sy = xr*zij - zr*xij;
-  dfloat sz = yr*xij - xr*yij;
+  {
+    dfloat rx = ys*zij - zs*yij; // dXds x X
+    dfloat ry = zs*xij - xs*zij;
+    dfloat rz = xs*yij - ys*xij;
+    
+    dfloat sx = zr*yij - yr*zij; // -dXdr x X
+    dfloat sy = xr*zij - zr*xij;
+    dfloat sz = yr*xij - xr*yij;
+    
+    dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
+    dfloat ty = zr*xs - xr*zs;
+    dfloat tz = xr*ys - yr*xs;
+    
+    dfloat Gx = tx, Gy = ty, Gz = tz;
+    
+    dfloat J = xij*tx + yij*ty + zij*tz;
+    
+    if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
+    
+    rx /= J;      sx /= J;      tx /= J;
+    ry /= J;      sy /= J;      ty /= J;
+    rz /= J;      sz /= J;      tz /= J;
+
+    // use this for "volume" Jacobian
+    dfloat Jnew = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);  //(difference between actual Jacobian and sphere Jac)
+    J = Jnew;
+    
+    if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
+    printf("before: grad r = %g,%g,%g\n", rx, ry, rz);
+  }
+
+  dfloat GG00 = xr*xr+yr*yr+zr*zr;
+  dfloat GG11 = xs*xs+ys*ys+zs*zs;
+  dfloat GG01 = xr*xs+yr*ys+zr*zs;
+  dfloat detGG = GG00*GG11 - GG01*GG01;
+
+  // are these tangential
+  dfloat rx = (xr*GG11-xs*GG01)/detGG;
+  dfloat ry = (yr*GG11-ys*GG01)/detGG;
+  dfloat rz = (zr*GG11-zs*GG01)/detGG;
+
+  dfloat sx = (-xr*GG01+xs*GG00)/detGG;
+  dfloat sy = (-yr*GG01+ys*GG00)/detGG;
+  dfloat sz = (-zr*GG01+zs*GG00)/detGG;
 
   dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
   dfloat ty = zr*xs - xr*zs;
   dfloat tz = xr*ys - yr*xs;
 
-  dfloat Gx = tx, Gy = ty, Gz = tz;
-
-  dfloat J = xij*tx + yij*ty + zij*tz;
-
-  if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
-  
-  rx /= J;      sx /= J;      tx /= J;
-  ry /= J;      sy /= J;      ty /= J;
-  rz /= J;      sz /= J;      tz /= J;
-
   // use this for "volume" Jacobian
-  J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
+  dfloat J = sqrt(tx*tx+ty*ty+tz*tz); // (difference between actual Jacobian and sphere Jac)
 
-  if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
-
+  printf("after: grad r = %g,%g,%g\n", rx, ry, rz);
+  
   dfloat JW = J*mesh->gllw[i]*mesh->gllw[j];
   
   /* store geometric factors */
