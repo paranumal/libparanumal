@@ -161,11 +161,13 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
   /* store second order geometric factors (can be computed on the fly, later!!!)*/
   int gbase = mesh->Nggeo*mesh->Np*e + j*mesh->Nq + i;
-  mesh->ggeo[gbase + mesh->Np*G00ID] = JW*(rx*rx + ry*ry + sz*sz);
+  mesh->ggeo[gbase + mesh->Np*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
   mesh->ggeo[gbase + mesh->Np*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
   mesh->ggeo[gbase + mesh->Np*G02ID] = JW*(rx*tx + ry*ty + rz*tz); 
+
   mesh->ggeo[gbase + mesh->Np*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
   mesh->ggeo[gbase + mesh->Np*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
+
   mesh->ggeo[gbase + mesh->Np*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
   mesh->ggeo[gbase + mesh->Np*GWJID] = JW;
 

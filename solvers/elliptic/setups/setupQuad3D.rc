@@ -48,7 +48,8 @@ NODAL
 [PRECONDITIONER]
 MULTIGRID
 #FULLALMOND
-
+#JACOBI
+#NONE
 
 ########## MULTIGRID Options ##############
 
