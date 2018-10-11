@@ -129,20 +129,43 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
         if(elliptic->elementType==QUADRILATERALS){
 
 #if 0
-	  dfloat exact = xn + yn + zn;
-	  forcing = -(-2*xn-2*yn-2*zn);
+	  dfloat exact = pow(xn,2);
+	  dfloat forcing = -2*(- 2*pow(xn,2) + pow(yn,2) + pow(zn,2));
 #endif
 
-	  
-	  dfloat exact = xn*yn;
-	  forcing = 4*xn*yn;
-	  
+	  dfloat a = 1, b = 2, c = 3;
+	  dfloat pi = M_PI;
+
 #if 0
-	  dfloat exact = pow(xn,2);
-	  
-	  dfloat forcing = -(-2.*pow(xn,4) + 2*pow(yn,4) + 4*pow(yn,2)*pow(zn,2) + 2*pow(zn,4));
+	  dfloat exact = sin(pi*xn)*sin(pi*yn)*sin(pi*zn);
+	  dfloat forcing =
+	    - 2*pi*pi*sin(pi*xn)*sin(pi*yn)*sin(pi*zn)
+	    - 2*xn*pi*cos(pi*xn)*sin(pi*yn)*sin(pi*zn)
+	    - 2*yn*pi*cos(pi*yn)*sin(pi*xn)*sin(pi*zn)
+	    - 2*zn*pi*cos(pi*zn)*sin(pi*xn)*sin(pi*yn)
+	    - 2*xn*yn*pi*pi*cos(pi*xn)*cos(pi*yn)*sin(pi*zn)
+	    - 2*xn*zn*pi*pi*cos(pi*xn)*cos(pi*zn)*sin(pi*yn)
+	    - 2*yn*zn*pi*pi*cos(pi*yn)*cos(pi*zn)*sin(pi*xn);
 #endif
-	  forcing += lambda*exact;
+
+	  dfloat exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
+	  
+	  dfloat forcing = 
+	      b*b*yn*yn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+	    - c*c*sin(a*xn)*sin(b*yn)*sin(c*zn)
+	    - a*a*yn*yn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+	    - a*a*zn*zn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+	    - b*b*sin(a*xn)*sin(b*yn)*sin(c*zn)
+	    + c*c*zn*zn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+	    - 2*a*xn*cos(a*xn)*sin(b*yn)*sin(c*zn)
+	    - 2*b*yn*cos(b*yn)*sin(a*xn)*sin(c*zn)
+	    - 2*c*zn*cos(c*zn)*sin(a*xn)*sin(b*yn)
+	    - 2*a*c*xn*zn*cos(a*xn)*cos(c*zn)*sin(b*yn)
+	    - 2*b*c*yn*zn*cos(b*yn)*cos(c*zn)*sin(a*xn)
+	    - 2*a*b*xn*yn*cos(a*xn)*cos(b*yn)*sin(c*zn);
+	  
+	  
+	  forcing = -forcing + lambda*exact;
 	  
           elliptic->r[id] = J*forcing; 
 

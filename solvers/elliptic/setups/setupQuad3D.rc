@@ -5,7 +5,7 @@
 data/ellipticHomogeneous3D.h
 
 [MESH FILE]
-../../meshes/sphereQuadH02.msh
+../../meshes/sphereQuadH01.msh
 
 [MESH DIMENSION]
 3
@@ -14,7 +14,7 @@ data/ellipticHomogeneous3D.h
 4
 
 [POLYNOMIAL DEGREE]
-7
+5
 
 [SPHERE RADIUS]
 1.0
@@ -29,7 +29,7 @@ CUDA
 0
 
 [LAMBDA]
-0
+1
 
 # can add FLEXIBLE to PCG
 [KRYLOV SOLVER]
@@ -37,8 +37,8 @@ PCG+FLEXIBLE
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-#CONTINUOUS
-IPDG
+CONTINUOUS
+#IPDG
 
 # can be NODAL or BERN
 [BASIS]

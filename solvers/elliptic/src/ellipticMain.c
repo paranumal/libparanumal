@@ -196,22 +196,23 @@ int main(int argc, char **argv){
         else{
           if(elliptic->elementType==QUADRILATERALS){
 #if 0
-	    exact = xn+yn+zn;
-#endif
-#if 1
-	    exact = xn*yn;
-#endif
-#if 0
 	    exact = xn*xn;
 #endif
+
+#if 0
+	    exact = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
+#endif
+	    dfloat a = 1, b = 2, c = 3;
+	    exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
 	  }
 	  else
 	    exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
         }
-	
+
         dfloat error = fabs(exact-mesh->q[id]);
 
-        mesh->q[id] = fabs(mesh->q[id] - exact);
+	// store error
+	mesh->q[id] = fabs(mesh->q[id] - exact);
         maxError = mymax(maxError, error);
       }
     }

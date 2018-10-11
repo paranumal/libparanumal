@@ -115,7 +115,7 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
     J = Jnew;
     
     if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
-    printf("before: grad r = %g,%g,%g\n", rx, ry, rz);
+    //    printf("before: grad r = %g,%g,%g\n", rx, ry, rz);
   }
 
   dfloat GG00 = xr*xr+yr*yr+zr*zr;
@@ -139,7 +139,7 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
   // use this for "volume" Jacobian
   dfloat J = sqrt(tx*tx+ty*ty+tz*tz); // (difference between actual Jacobian and sphere Jac)
 
-  printf("after: grad r = %g,%g,%g\n", rx, ry, rz);
+  //  printf("after: grad r = %g,%g,%g\n", rx, ry, rz);
   
   dfloat JW = J*mesh->gllw[i]*mesh->gllw[j];
   
