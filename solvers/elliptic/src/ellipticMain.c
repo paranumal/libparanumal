@@ -211,8 +211,8 @@ int main(int argc, char **argv){
 
         dfloat error = fabs(exact-mesh->q[id]);
 
-	// store error
-	mesh->q[id] = fabs(mesh->q[id] - exact);
+        // store error
+        // mesh->q[id] = fabs(mesh->q[id] - exact);
         maxError = mymax(maxError, error);
       }
     }

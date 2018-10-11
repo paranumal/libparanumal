@@ -73,9 +73,9 @@
             const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
             const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
             const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-            const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
-            const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
-            const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+            // const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+            // const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+            // const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
 
             dfloat dUdr  = 0.f, dUds  = 0.f;
             dfloat dVdr  = 0.f, dVds  = 0.f;
@@ -94,9 +94,12 @@
 	    }
 
             const dlong id = e*p_Np + j*p_Nq + i;
-            const dfloat dUdx = drdx*dUdr + dsdx*dUds + dtdx*s_U[es][j][i];
-            const dfloat dVdy = drdy*dVdr + dsdy*dVds + dtdy*s_V[es][j][i];
-            const dfloat dWdz = drdz*dWdr + dsdz*dWds + dtdz*s_W[es][j][i];
+            // const dfloat dUdx = drdx*dUdr + dsdx*dUds + dtdx*s_U[es][j][i];
+            // const dfloat dVdy = drdy*dVdr + dsdy*dVds + dtdy*s_V[es][j][i];
+            // const dfloat dWdz = drdz*dWdr + dsdz*dWds + dtdz*s_W[es][j][i];
+            const dfloat dUdx = drdx*dUdr + dsdx*dUds;
+            const dfloat dVdy = drdy*dVdr + dsdy*dVds;
+            const dfloat dWdz = drdz*dWdr + dsdz*dWds;
 
             divU[id] = dUdx + dVdy + dWdz;
           }
