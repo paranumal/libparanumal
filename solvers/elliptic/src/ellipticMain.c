@@ -195,7 +195,15 @@ int main(int argc, char **argv){
           exact = sin(M_PI*xn)*sin(M_PI*yn);
         else{
           if(elliptic->elementType==QUADRILATERALS){
+#if 0
 	    exact = xn*xn;
+#endif
+
+#if 0
+	    exact = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
+#endif
+	    dfloat a = 1, b = 2, c = 3;
+	    exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
 	  }
 	  else
 	    exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
