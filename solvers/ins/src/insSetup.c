@@ -875,13 +875,11 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
       sprintf(fileName, DINS "/okl/insAdvection%s.okl", suffix);
 
       // needed to be implemented
-      if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){
-        sprintf(kernelName, "insAdvectionCubatureVolume%s", suffix);
-        ins->advectionCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "insAdvectionCubatureVolume%s", suffix);
+      ins->advectionCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insAdvectionCubatureSurface%s", suffix);
-        ins->advectionCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-      }
+      sprintf(kernelName, "insAdvectionCubatureSurface%s", suffix);
+      ins->advectionCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insAdvectionVolume%s", suffix);
       ins->advectionVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
