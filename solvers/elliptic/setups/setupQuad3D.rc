@@ -14,7 +14,7 @@ data/ellipticHomogeneous3D.h
 4
 
 [POLYNOMIAL DEGREE]
-7
+9
 
 [SPHERE RADIUS]
 1.0
@@ -29,7 +29,7 @@ CUDA
 0
 
 [LAMBDA]
-0
+10
 
 # can add FLEXIBLE to PCG
 [KRYLOV SOLVER]

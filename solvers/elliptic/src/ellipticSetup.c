@@ -128,20 +128,9 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       else{
         if(elliptic->elementType==QUADRILATERALS){
 
-#if 0
-	  dfloat exact = xn + yn + zn;
-	  forcing = -(-2*xn-2*yn-2*zn);
-#endif
-
+	  double exact = pow(xn,2);
+	  dfloat forcing = -2*(- 2*pow(xn,2) + pow(yn,2) + pow(zn,2));
 	  
-	  dfloat exact = xn*yn;
-	  forcing = 4*xn*yn;
-	  
-#if 0
-	  dfloat exact = pow(xn,2);
-	  
-	  dfloat forcing = -(-2.*pow(xn,4) + 2*pow(yn,4) + 4*pow(yn,2)*pow(zn,2) + 2*pow(zn,4));
-#endif
 	  forcing += lambda*exact;
 	  
           elliptic->r[id] = J*forcing; 
