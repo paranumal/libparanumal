@@ -341,6 +341,9 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
     }
     occaTimerToc(mesh->device,"SurfaceKernel");
 
+    if(bns->elementType==QUADRILATERALS && mesh->dim==3){
+      bns->constrainKernel(mesh->Nelements, mesh->o_x, mesh->o_y, mesh->o_z, bns->o_rhsq);
+    } 
     
     //UPDATE
     occaTimerTic(mesh->device,"UpdateKernel");

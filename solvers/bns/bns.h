@@ -211,6 +211,8 @@ typedef struct{
 
   occa::kernel isoSurfaceKernel;
 
+  occa::kernel constrainKernel;
+  
   // Boltzmann Imex Kernels
   occa::kernel implicitUpdateKernel;
   occa::kernel pmlImplicitUpdateKernel;

@@ -788,7 +788,6 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
       // Volume kernels
       sprintf(fileName, DBNS "/okl/bnsVolume%s.okl", suffix);
-
       sprintf(kernelName, "bnsVolume%s", suffix);
       bns->volumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
@@ -916,6 +915,12 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
         bns->dotMultiplyKernel = mesh->device.buildKernel(DBNS "/okl/bnsDotMultiply.okl", "bnsDotMultiply", kernelInfo);
 
+	if(bns->elementType==QUADRILATERALS && mesh->dim==3){
+	  sprintf(fileName, DBNS "/okl/bnsConstrain%s.okl", suffix);
+	  sprintf(kernelName, "bnsConstrain%s", suffix);
+	  bns->constrainKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+	}
+	
         // kernels from volume file
         if(bns->elementType!=QUADRILATERALS){
           // sprintf(fileName, DBNS "/okl/bnsIsoSurface3D.okl");

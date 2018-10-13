@@ -308,6 +308,12 @@ const dlong pmloffset = mesh->Np*mesh->pmlNelements*bns->Nfields;
       occaTimerToc(mesh->device,"SurfaceKernel");
     }
 
+    // Need MRAB version
+    if(bns->elementType==QUADRILATERALS && mesh->dim==3){
+      bns->constrainKernel(mesh->Nelements, mesh->o_x, mesh->o_y, mesh->o_z, bns->o_rhsq);
+    }
+
+    
 
     for (lev=0;lev<mesh->MRABNlevels;lev++)
       if ((Ntick+1) % (1<<lev) !=0) break; //find the max lev to update
