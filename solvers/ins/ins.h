@@ -270,3 +270,12 @@ extern "C"
 }
 
 
+void insRenderQuad3D(ins_t *ins, char *fileBaseName, int fileIndex);
+
+void simpleRayTracer(int     plotNelements,
+		     dfloat *plotx,
+		     dfloat *ploty,
+		     dfloat *plotz,
+		     dfloat *plotq,
+		     const char *fileBaseName,
+		     const int fileIndex);

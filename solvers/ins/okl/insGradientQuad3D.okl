@@ -116,9 +116,9 @@
     dfloat  PP = P[idP];				\
 							\
     const dfloat sc = invWJ * sJ;			\
-    s_fluxPx[es][j][i]  += sc*(.5f*nx*(PP-PM));		\
-    s_fluxPy[es][j][i]  += sc*(.5f*ny*(PP-PM));		\
-    s_fluxPz[es][j][i]  += sc*(.5f*nz*(PP-PM));		\
+    s_fluxPx[es][j][i] += sc*(.5f*nx*(PP-PM));		\
+    s_fluxPy[es][j][i] += sc*(.5f*ny*(PP-PM));		\
+    s_fluxPz[es][j][i] += sc*(.5f*nz*(PP-PM));		\
   }
 
 @kernel void insGradientSurfaceQuad3D(const dlong Nelements,
