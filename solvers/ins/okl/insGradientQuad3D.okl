@@ -45,10 +45,10 @@
             const dlong id = e*p_Np + j*p_Nq+i;
 
             s_P[es][j][i]  = P[id];
-
-            if (es==0)
-              s_D[j][i] = D[j*p_Nq+i];
-          }
+	  }
+	  if (es==0){
+	    s_D[j][i] = D[j*p_Nq+i];
+	  }
         }
       }
     }
@@ -70,11 +70,10 @@
             const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
             const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
             const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-#if 0            
-            const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
-            const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
-            const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
-#endif
+            
+            // const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+            // const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+            // const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
 
             // compute 'r' and 's' derivatives of (q_m) at node n
             dfloat dpdr  = 0.f, dpds  = 0.f;
@@ -88,11 +87,9 @@
             }
 
             const dlong id = e*p_Np + j*p_Nq + i;
-#if 0            
-            GP[id+0*fieldOffset] = drdx*dpdr + dsdx*dpds + dtdx*s_P[es][j][i];
-            GP[id+1*fieldOffset] = drdy*dpdr + dsdy*dpds + dtdy*s_P[es][j][i];
-            GP[id+2*fieldOffset] = drdz*dpdr + dsdz*dpds + dtdz*s_P[es][j][i];
-#endif
+            // GP[id+0*fieldOffset] = drdx*dpdr + dsdx*dpds + dtdx*s_P[es][j][i];
+            // GP[id+1*fieldOffset] = drdy*dpdr + dsdy*dpds + dtdy*s_P[es][j][i];
+            // GP[id+2*fieldOffset] = drdz*dpdr + dsdz*dpds + dtdz*s_P[es][j][i];
             GP[id+0*fieldOffset] = drdx*dpdr + dsdx*dpds;
             GP[id+1*fieldOffset] = drdy*dpdr + dsdy*dpds;
             GP[id+2*fieldOffset] = drdz*dpdr + dsdz*dpds;
@@ -119,9 +116,9 @@
     dfloat  PP = P[idP];				\
 							\
     const dfloat sc = invWJ * sJ;			\
-    s_fluxPx[es][j][i]  = sc*(.5f*nx*(PP-PM));		\
-    s_fluxPy[es][j][i]  = sc*(.5f*ny*(PP-PM));		\
-    s_fluxPz[es][j][i]  = sc*(.5f*nz*(PP-PM));		\
+    s_fluxPx[es][j][i]  += sc*(.5f*nx*(PP-PM));		\
+    s_fluxPy[es][j][i]  += sc*(.5f*ny*(PP-PM));		\
+    s_fluxPz[es][j][i]  += sc*(.5f*nz*(PP-PM));		\
   }
 
 @kernel void insGradientSurfaceQuad3D(const dlong Nelements,

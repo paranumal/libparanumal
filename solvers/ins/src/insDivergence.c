@@ -76,6 +76,7 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
 
     //computes div u^(n+1) surface term
     occaTimerTic(mesh->device,"DivergenceSurface");
+    
     ins->divergenceSurfaceKernel(mesh->Nelements,
                                 mesh->o_sgeo,
                                 mesh->o_LIFTT,

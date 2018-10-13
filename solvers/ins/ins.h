@@ -159,7 +159,8 @@ typedef struct {
   occa::kernel subCycleRKUpdateKernel;
   occa::kernel subCycleExtKernel;
 
-
+  occa::kernel constrainKernel;
+  
   occa::memory o_U, o_P;
   occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP; 
 

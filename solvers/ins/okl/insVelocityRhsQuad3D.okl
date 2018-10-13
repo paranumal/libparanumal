@@ -160,7 +160,7 @@
                 // GP
                 const dfloat GPx  = GP[id+0*fieldOffset+s*p_NVfields*fieldOffset];
                 const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
-                const dfloat GPz  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+                const dfloat GPz  = GP[id+2*fieldOffset+s*p_NVfields*fieldOffset];
 
                 rhsUn += JW*inu*(idt*extbdfB[s]*Um - extbdfA[s]*NUm - extbdfC[s]*GPx);
                 rhsVn += JW*inu*(idt*extbdfB[s]*Vm - extbdfA[s]*NVm - extbdfC[s]*GPy);

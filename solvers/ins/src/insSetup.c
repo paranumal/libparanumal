@@ -849,6 +849,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
 
   for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
+
       sprintf(fileName, DINS "/okl/insHaloExchange.okl");
       sprintf(kernelName, "insVelocityHaloExtract");
       ins->velocityHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
@@ -862,6 +863,13 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
       sprintf(kernelName, "insPressureHaloScatter");
       ins->pressureHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+      // --
+      if(ins->dim==3 && ins->elementType==QUADRILATERALS){
+	sprintf(fileName, DINS "/okl/insConstrainQuad3D.okl");
+	sprintf(kernelName, "insConstrainQuad3D");
+	ins->constrainKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      }
+      
       // ===========================================================================
 
       sprintf(fileName, DINS "/okl/insAdvection%s.okl", suffix);

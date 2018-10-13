@@ -81,7 +81,7 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
   //keep current PI as the initial guess?
 
   // gather-scatter
-  if(ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
+  if(ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ogsGatherScatter(ins->o_rhsP, ogsDfloat, ogsAdd, mesh->ogs);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsP);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_PI);

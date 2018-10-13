@@ -49,10 +49,9 @@
             s_U[es][j][i] = U[id+0*offset];
             s_V[es][j][i] = U[id+1*offset];
             s_W[es][j][i] = U[id+2*offset];
-      
-            if (es==0)
-              s_D[j][i] = D[j*p_Nq+i];
-          }
+	  }
+	  if (es==0)
+	    s_D[j][i] = D[j*p_Nq+i];
         }
       }
     }
@@ -73,37 +72,34 @@
             const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
             const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
             const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-#if 0
-            const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
-            const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
-            const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
-#endif
+            // const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+            // const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+            // const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+
             dfloat dUdr  = 0.f, dUds  = 0.f;
             dfloat dVdr  = 0.f, dVds  = 0.f;
             dfloat dWdr  = 0.f, dWds  = 0.f;
 
-            #pragma unroll p_Nq
-      	    for(int n=0;n<p_Nq;++n){
-      	      const dfloat Dr = s_D[i][n];
-      	      const dfloat Ds = s_D[j][n];
-      	      dUdr += Dr*s_U[es][j][n];
-      	      dUds += Ds*s_U[es][n][i];
-      	      dVdr += Dr*s_V[es][j][n];
-      	      dVds += Ds*s_V[es][n][i];
-      	      dWdr += Dr*s_W[es][j][n];
-      	      dWds += Ds*s_W[es][n][i];
-      	    }
+#pragma unroll p_Nq
+	    for(int n=0;n<p_Nq;++n){
+	      const dfloat Dr = s_D[i][n];
+	      const dfloat Ds = s_D[j][n];
+	      dUdr += Dr*s_U[es][j][n];
+	      dUds += Ds*s_U[es][n][i];
+	      dVdr += Dr*s_V[es][j][n];
+	      dVds += Ds*s_V[es][n][i];
+	      dWdr += Dr*s_W[es][j][n];
+	      dWds += Ds*s_W[es][n][i];
+	    }
 
             const dlong id = e*p_Np + j*p_Nq + i;
-#if 0            
-            const dfloat dUdx = drdx*dUdr + dsdx*dUds + dtdx*s_U[es][j][i];
-            const dfloat dVdy = drdy*dVdr + dsdy*dVds + dtdy*s_V[es][j][i];
-            const dfloat dWdz = drdz*dWdr + dsdz*dWds + dtdz*s_W[es][j][i];
-#else
+            // const dfloat dUdx = drdx*dUdr + dsdx*dUds + dtdx*s_U[es][j][i];
+            // const dfloat dVdy = drdy*dVdr + dsdy*dVds + dtdy*s_V[es][j][i];
+            // const dfloat dWdz = drdz*dWdr + dsdz*dWds + dtdz*s_W[es][j][i];
             const dfloat dUdx = drdx*dUdr + dsdx*dUds;
             const dfloat dVdy = drdy*dVdr + dsdy*dVds;
             const dfloat dWdz = drdz*dWdr + dsdz*dWds;
-#endif
+
             divU[id] = dUdx + dVdy + dWdz;
           }
         }
@@ -128,7 +124,7 @@
     dfloat uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset]; \
     									\
     const dfloat sc = invWJ * sJ;					\
-    s_fluxU[es][j][i] = 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM) + nz*(wP-wM));	\
+    s_fluxU[es][j][i] += 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM) + nz*(wP-wM));	\
   }
 
 @kernel void insDivergenceSurfaceQuad3D(const dlong Nelements,

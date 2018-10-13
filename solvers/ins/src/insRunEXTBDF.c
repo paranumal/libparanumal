@@ -94,8 +94,8 @@ void insRunEXTBDF(ins_t *ins){
   // Write Initial Data
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
 
-  for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
-  // for(int tstep=0;tstep<1;++tstep){
+  // for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<50000;++tstep){
 
     // if(ins->restartedFromFile){
       // if(tstep=0 && ins->temporalOrder>=2) 
@@ -113,6 +113,14 @@ void insRunEXTBDF(ins_t *ins){
 
     dfloat time = ins->startTime + tstep*ins->dt;
 
+    hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+    ins->constrainKernel(mesh->Nelements,
+			 offset,
+			 mesh->o_x,
+			 mesh->o_y,
+			 mesh->o_z,
+			 ins->o_U);
+    
     if(ins->Nsubsteps) {
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
@@ -120,15 +128,39 @@ void insRunEXTBDF(ins_t *ins){
     } 
     insGradient (ins, time, ins->o_P, ins->o_GP);
 
+    ins->constrainKernel(mesh->Nelements,
+			 offset,
+			 mesh->o_x,
+			 mesh->o_y,
+			 mesh->o_z,
+			 ins->o_GP);
+
+    
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
     insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
+    ins->constrainKernel(mesh->Nelements,
+			 offset,
+			 mesh->o_x,
+			 mesh->o_y,
+			 mesh->o_z,
+			 ins->o_rkU);
+
+#if 1
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
     insPressureSolve(ins, time+ins->dt, ins->Nstages); 
 
     insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
     insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
+#endif
 
+    ins->constrainKernel(mesh->Nelements,
+			 offset,
+			 mesh->o_x,
+			 mesh->o_y,
+			 mesh->o_z,
+			 ins->o_rkGP);
+    
     //cycle history
     for (int s=ins->Nstages;s>1;s--) {
       ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
@@ -145,17 +177,27 @@ void insRunEXTBDF(ins_t *ins){
     //update velocity
     insVelocityUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkGP, ins->o_rkU);
 
+    ins->constrainKernel(mesh->Nelements,
+			 offset,
+			 mesh->o_x,
+			 mesh->o_y,
+			 mesh->o_z,
+			 ins->o_rkU);
+
+    
+
+    
     //copy updated pressure
     ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
 
     //cycle rhs history
     for (int s=ins->Nstages;s>1;s--) {
       ins->o_NU.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+			 (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
       ins->o_GP.copyFrom(ins->o_GP, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-                                  (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
-                                  (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+			 (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
 
     occaTimerTic(mesh->device,"Report");
@@ -164,6 +206,7 @@ void insRunEXTBDF(ins_t *ins){
       if(((tstep+1)%(ins->outputStep))==0){
         if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
         if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
+
         insReport(ins, time+ins->dt, tstep+1);
 
         // Write a restart file
