@@ -49,10 +49,9 @@ SOFTWARE.
             s_U[es][j][i]  = U[id+0*offset];
             s_V[es][j][i]  = U[id+1*offset];
             s_W[es][j][i]  = U[id+2*offset];
-
-            if (es==0)
-              s_D[j][i] = D[j*p_Nq+i];
-          }
+	  }
+	  if (es==0)
+	    s_D[j][i] = D[j*p_Nq+i];
         }
       }
     }
@@ -71,9 +70,9 @@ SOFTWARE.
             const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
             const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
             const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-            // const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
-            // const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
-            // const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+            const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+	    const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+            const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
 
             // compute 'r' and 's' derivatives of (q_m) at node n
             dfloat dudr  = 0.f, duds  = 0.f;
@@ -93,24 +92,15 @@ SOFTWARE.
                 dwds += Ds*s_W[es][n][i];
               }
 
-            // dfloat wy = drdy*dwdr + dsdy*dwds + dtdy*s_W[es][j][i]; 
-            // dfloat vz = drdz*dvdr + dsdz*dvds + dtdz*s_V[es][j][i]; 
+            dfloat wy = drdy*dwdr + dsdy*dwds + dtdy*s_W[es][j][i]; 
+            dfloat vz = drdz*dvdr + dsdz*dvds + dtdz*s_V[es][j][i]; 
 
-            // dfloat uz = drdz*dudr + dsdz*duds + dtdz*s_U[es][j][i]; 
-            // dfloat wx = drdx*dwdr + dsdx*dwds + dtdx*s_W[es][j][i]; 
+            dfloat uz = drdz*dudr + dsdz*duds + dtdz*s_U[es][j][i]; 
+            dfloat wx = drdx*dwdr + dsdx*dwds + dtdx*s_W[es][j][i]; 
 
-            // dfloat vx = drdx*dvdr + dsdx*dvds + dtdx*s_V[es][j][i]; 
-            // dfloat uy = drdy*dudr + dsdy*duds + dtdy*s_U[es][j][i]; 
+            dfloat vx = drdx*dvdr + dsdx*dvds + dtdx*s_V[es][j][i]; 
+            dfloat uy = drdy*dudr + dsdy*duds + dtdy*s_U[es][j][i]; 
             
-            dfloat wy = drdy*dwdr + dsdy*dwds; 
-            dfloat vz = drdz*dvdr + dsdz*dvds; 
-
-            dfloat uz = drdz*dudr + dsdz*duds; 
-            dfloat wx = drdx*dwdr + dsdx*dwds; 
-
-            dfloat vx = drdx*dvdr + dsdx*dvds; 
-            dfloat uy = drdy*dudr + dsdy*duds; 
-
             const dlong id = e*p_Np+j*p_Nq +i; 
             Vort[id + 0*offset] = wy - vz;
             Vort[id + 1*offset] = uz - wx;

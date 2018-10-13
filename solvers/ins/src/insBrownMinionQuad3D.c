@@ -67,7 +67,7 @@ void insBrownMinionQuad3D(ins_t *ins){
       dfloat z = mesh->z[n + mesh->Np*e];
       
       // Brown Minion shear layer roll up
-      dfloat bmRho    = 10.0;
+      dfloat bmRho    = 40.0;
       dfloat bmDelta  = 0.05;
       
       dfloat pr = 0.0;
