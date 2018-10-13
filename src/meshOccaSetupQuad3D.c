@@ -319,7 +319,10 @@ void meshOccaSetupQuad3D(mesh_t *mesh, setupAide &newOptions, occa::properties &
 
   kernelInfo["defines/" "p_G00ID"]= G00ID;
   kernelInfo["defines/" "p_G01ID"]= G01ID;
+  kernelInfo["defines/" "p_G02ID"]= G02ID;
   kernelInfo["defines/" "p_G11ID"]= G11ID;
+  kernelInfo["defines/" "p_G12ID"]= G12ID;
+  kernelInfo["defines/" "p_G22ID"]= G22ID;
   kernelInfo["defines/" "p_GWJID"]= GWJID;
 
 
