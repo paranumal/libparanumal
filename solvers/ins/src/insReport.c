@@ -69,6 +69,21 @@ void insReport(ins_t *ins, dfloat time, int tstep){
   // do error stuff on host
   insError(ins, time);
 
+#ifdef RENDER
+  if(ins->options.compareArgs("OUTPUT FILE FORMAT","PPM")){
+
+    // copy data back to host
+    ins->o_P.copyTo(ins->P);
+    ins->o_Vort.copyTo(ins->Vort);
+   
+    //
+    char fname[BUFSIZ];
+    string outName;
+    ins->options.getArgs("OUTPUT FILE NAME", outName);
+    insRenderQuad3D(ins, (char*)outName.c_str(), ins->frame++);
+  }
+#endif
+  
   if(ins->options.compareArgs("OUTPUT TYPE","VTU")){ 
     // output field files
     char fname[BUFSIZ];
