@@ -288,6 +288,10 @@ void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
     }
     occaTimerToc(mesh->device,"SurfaceKernel");
 
+    if(bns->elementType==QUADRILATERALS && mesh->dim==3){
+      bns->constrainKernel(mesh->Nelements, mesh->o_x, mesh->o_y, mesh->o_z, bns->o_rhsq);
+    }
+    
     
     // ramp function for flow at next RK stage
     dfloat tupdate = tstep*bns->dt + bns->dt*mesh->rkc[rk+1];

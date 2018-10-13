@@ -121,6 +121,11 @@ void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
 		       bns->o_q,
 		       bns->o_rhsq);
     occaTimerToc(mesh->device,"NonPmlSurfaceKernel");
+
+
+    if(bns->elementType==QUADRILATERALS && mesh->dim==3){
+      bns->constrainKernel(mesh->Nelements, mesh->o_x, mesh->o_y, mesh->o_z, bns->o_rhsq);
+    }
     
     //UPDATE
     occaTimerTic(mesh->device,"NonPmlUpdateKernel");

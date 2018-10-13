@@ -44,6 +44,7 @@
     
     @shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
     @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DW[p_Nq][p_Nq];
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -58,8 +59,10 @@
 	    }
 	  }
 	  
-	  if(es==0)
+	  if(es==0){
 	    s_D[j][i] = Dmatrices[j*p_Nq+i];
+	    s_DW[j][i] = Dmatrices[p_Nq*p_Nq + j*p_Nq+i];
+	  }
 	}
       }
     }
@@ -179,12 +182,14 @@
 	    rhsq3 -= p_fainv*zij*(zij*q2-xij*q4);
 	    rhsq4 -= p_fainv*zij*(xij*q3-yij*q2);
 
+#if 0
 	    // remove radial component of momentum change
 	    const dfloat xdotrhsq = (rhsq2*xij + rhsq3*yij + rhsq4*zij)*p_invRadiusSq;
 
 	    rhsq2 -= xij*xdotrhsq;
 	    rhsq3 -= yij*xdotrhsq;
 	    rhsq4 -= zij*xdotrhsq;
+#endif
 
 	    int base = e*p_Np*p_Nfields+n;
 
