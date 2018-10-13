@@ -14,7 +14,7 @@ data/cnsUniform2D.h
 4
 
 [POLYNOMIAL DEGREE]
-5
+8
 
 [SPHERE RADIUS]
 1.0
@@ -76,7 +76,7 @@ COLLOCATION
 0
 
 [FINAL TIME]
-100
+60
 
 #set to 0.0 to ignore
 [TIME OUTPUT INTERVAL]
@@ -93,7 +93,7 @@ COLLOCATION
 0
 
 [OUTPUT FILE NAME]
-sphereQuad3D
+sphereCompareQuad3D
 
 [OUTPUT FILE FORMAT]
 PPM
