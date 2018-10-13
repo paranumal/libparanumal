@@ -94,14 +94,14 @@ SOFTWARE.
                 ws += Ds*s_w[es][n][i];
               }
 
-            const dfloat uy = drdy*ur + dsdy*us + dtdy*s_u[es][j][i];
-	    const dfloat uz = drdz*ur + dsdz*us + dtdz*s_u[es][j][i];
+            const dfloat uy = drdy*ur + dsdy*us;// + dtdy*s_u[es][j][i];
+	    const dfloat uz = drdz*ur + dsdz*us;// + dtdz*s_u[es][j][i];
 
-	    const dfloat vx = drdx*vr + dsdx*vs + dtdx*s_v[es][j][i];
-	    const dfloat vz = drdz*vr + dsdz*vs + dtdz*s_v[es][j][i];
+	    const dfloat vx = drdx*vr + dsdx*vs;// + dtdx*s_v[es][j][i];
+	    const dfloat vz = drdz*vr + dsdz*vs;// + dtdz*s_v[es][j][i];
 
-	    const dfloat wx = drdx*wr + dsdx*ws + dtdx*s_w[es][j][i];
-	    const dfloat wy = drdy*wr + dsdy*ws + dtdy*s_w[es][j][i];
+	    const dfloat wx = drdx*wr + dsdx*ws;// + dtdx*s_w[es][j][i];
+	    const dfloat wy = drdy*wr + dsdy*ws;// + dtdy*s_w[es][j][i];
 
             const dlong id = e*p_Np*3+j*p_Nq+i; 
             Vort[id+0*p_Np] = wy-vz;
