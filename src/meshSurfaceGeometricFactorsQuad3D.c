@@ -188,7 +188,7 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	dfloat Gy = czr*cxs - cxr*czs;
 	dfloat Gz = cxr*cys - cyr*cxs;	
 	dfloat cJ = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
-	
+	dfloat volJ = cx*Gx + cy*Gy + cz*Gz; // xij*tx + yij*ty + zij*tz;
 	dfloat nx, ny, nz;
 
 	if(f==0){
@@ -220,7 +220,7 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	nx /= R;
 	ny /= R;
 	nz /= R;
-	
+
 	dfloat sJ = sqrt(nx*nx+ny*ny+nz*nz);
 
 	nx /= sJ;
@@ -235,6 +235,25 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	mesh->cubsgeo[base+NYID] = ny;
 	mesh->cubsgeo[base+NZID] = nz;
 	mesh->cubsgeo[base+SJID] = sJ;
+	mesh->cubsgeo[base+IHID] = sJ/volJ;
+
+#if 0
+	if(n<mesh->Nq){
+	  int snode = mesh->Nsgeo*(e*mesh->Nq*mesh->Nfaces+n+f*mesh->Nq);
+	  int cnode = mesh->Nsgeo*(e*mesh->cubNq*mesh->Nfaces+n+f*mesh->cubNq);
+	  printf("sJ=%g, csJ=%g\n sN=%g,%g,%g to cN=%g,%g,%g\n",
+		 mesh->sgeo[snode+SJID],
+		 mesh->cubsgeo[cnode+SJID],
+		 mesh->sgeo[snode+NXID],
+		 mesh->sgeo[snode+NYID],
+		 mesh->sgeo[snode+NZID],
+		 mesh->cubsgeo[cnode+NXID],
+		 mesh->cubsgeo[cnode+NYID],
+		 mesh->cubsgeo[cnode+NZID]
+		 );
+	}
+#endif
+	       
 	//	mesh->cubsgeo[base+WSJID] = sJ*mesh->cubw[n];
       }
     }
