@@ -39,8 +39,9 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
 
   int quad3D = (ins->dim==3 && ins->elementType==QUADRILATERALS) ? 1 : 0;  
   
-  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
+  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
 
+    if(!quad3D) 
       ins->velocityRhsBCKernel(mesh->Nelements,
                                 mesh->o_ggeo,
                                 mesh->o_sgeo,
@@ -58,17 +59,20 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
                                 ins->o_VmapB,
                                 o_rhsU,
                                 o_rhsV,
-                                o_rhsW);   
+                                o_rhsW);
+
     // gather-scatter
     ogsGatherScatter(o_rhsU, ogsDfloat, ogsAdd, mesh->ogs);
     ogsGatherScatter(o_rhsV, ogsDfloat, ogsAdd, mesh->ogs);
+
     if (ins->dim==3)
       ogsGatherScatter(o_rhsW, ogsDfloat, ogsAdd, mesh->ogs);
+
     if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, o_rhsU);
     if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, o_rhsV);
     if (ins->dim==3)
       if (wsolver->Nmasked) mesh->maskKernel(wsolver->Nmasked, wsolver->o_maskIds, o_rhsW);
-
+    
   } else if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG") && !quad3D) {
 
     occaTimerTic(mesh->device,"velocityRhsIpdg");    
