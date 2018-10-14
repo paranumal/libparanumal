@@ -31,23 +31,23 @@ void insHeatAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_
 
   mesh_t *mesh = ins->mesh;
   
-  if (ins->hOptions.compareArgs("DISCRETIZATION","IPDG")) {
-    if(mesh->totalHaloPairs>0){
-      ins->heatHaloExtractKernel(mesh->Nelements,
-                                mesh->totalHaloPairs,
-                                mesh->o_haloElementList,
-                                o_T,
-                                ins->o_hHaloBuffer);
+  if(mesh->totalHaloPairs>0){
+    ins->heatHaloExtractKernel(mesh->Nelements,
+                              mesh->totalHaloPairs,
+                              mesh->o_haloElementList,
+                              ins->fieldOffset,
+                              o_U,
+                              o_T,
+                              ins->o_hHaloBuffer);
 
-      // copy extracted halo to HOST
-      ins->o_hHaloBuffer.copyTo(ins->hSendBuffer);
+    // copy extracted halo to HOST
+    ins->o_hHaloBuffer.copyTo(ins->hSendBuffer);
 
-      // start halo exchange
-      meshHaloExchangeStart(mesh,
-                           mesh->Np*sizeof(dfloat),
-                           ins->hSendBuffer,
-                           ins->hRecvBuffer);
-    }
+    // start halo exchange
+    meshHaloExchangeStart(mesh,
+                         mesh->Np*(ins->NVfields+1)*sizeof(dfloat),
+                         ins->hSendBuffer,
+                         ins->hRecvBuffer);
   }
 
   // Compute Volume Contribution
@@ -81,9 +81,11 @@ void insHeatAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_
     ins->o_hHaloBuffer.copyFrom(ins->hRecvBuffer); 
 
     ins->heatHaloScatterKernel(mesh->Nelements,
-                                  mesh->totalHaloPairs,
-                                  o_T,
-                                  ins->o_hHaloBuffer);
+                              mesh->totalHaloPairs,
+                              ins->fieldOffset,
+                              o_U,
+                              o_T,
+                              ins->o_hHaloBuffer);
   }
 
   occaTimerTic(mesh->device,"AdvectionSurface");

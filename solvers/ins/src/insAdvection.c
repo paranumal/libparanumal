@@ -32,7 +32,7 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
   mesh_t *mesh = ins->mesh;
   
   //Exctract Halo On Device, all fields
-  if(mesh->totalHaloPairs>0){
+  if(mesh->totalHaloPairs>0 && !ins->solveHeat){
     ins->velocityHaloExtractKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
                                  mesh->o_haloElementList,
@@ -74,7 +74,7 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
   occaTimerToc(mesh->device,"AdvectionVolume");
 
   // COMPLETE HALO EXCHANGE
-  if(mesh->totalHaloPairs>0){
+  if(mesh->totalHaloPairs>0 && !ins->solveHeat){
     meshHaloExchangeFinish(mesh);
 
     ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 

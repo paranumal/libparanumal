@@ -1,6 +1,6 @@
 r = DefineNumber[ 0.1];
 xmin = DefineNumber[ 0.0];
-xmax = DefineNumber[10.0];
+xmax = DefineNumber[50.0];
 ymin = DefineNumber[ 0.0];
 ymax = DefineNumber[ 1.0];
 

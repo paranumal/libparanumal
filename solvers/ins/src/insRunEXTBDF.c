@@ -167,9 +167,9 @@ void insRunEXTBDF(ins_t *ins){
 
       //cycle history
       for (int s=ins->Nstages;s>1;s--) {
-        ins->o_T.copyFrom(ins->o_T,   ins->Ntotal*sizeof(dfloat), 
-                                (s-1)*ins->Ntotal*sizeof(dfloat), 
-                                (s-2)*ins->Ntotal*sizeof(dfloat));
+        ins->o_T.copyFrom(ins->o_T,     ins->Ntotal*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*sizeof(dfloat));
 
         ins->o_NT.copyFrom(ins->o_NT,     ins->Ntotal*sizeof(dfloat), 
                                     (s-1)*ins->Ntotal*sizeof(dfloat), 
@@ -179,12 +179,6 @@ void insRunEXTBDF(ins_t *ins){
        //copy updated pressure
       ins->o_T.copyFrom(ins->o_rkT, ins->Ntotal*sizeof(dfloat)); 
     }
-
-
-
-
-
-
 
     occaTimerTic(mesh->device,"Report");
 
@@ -197,6 +191,7 @@ void insRunEXTBDF(ins_t *ins){
           if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
           if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
         }
+        
         insReport(ins, time+ins->dt, tstep+1);
 
         // Write a restart file
@@ -221,11 +216,11 @@ void insRunEXTBDF(ins_t *ins){
     }
 
    if(ins->solveHeat){
-    if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d T - %3d\n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP,ins->NiterT);fflush(stdout);
-    if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d T - %3d\n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP, ins->NiterT);fflush(stdout);
+    if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d T - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP,ins->NiterT);fflush(stdout);
+    if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d T - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP, ins->NiterT);fflush(stdout);
    }else{
-    if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);fflush(stdout);
-    if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);fflush(stdout);
+    if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d ", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);fflush(stdout);
+    if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d ", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);fflush(stdout);
   }
     occaTimerToc(mesh->device,"Report");
   }

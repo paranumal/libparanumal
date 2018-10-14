@@ -879,7 +879,7 @@ if(ins->solveHeat){
     ins->o_vHaloBuffer = mesh->device.malloc(vHaloBytes);
     ins->o_pHaloBuffer = mesh->device.malloc(pHaloBytes);
     if(ins->solveHeat){
-      dlong hHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
+      dlong hHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields+1)*sizeof(dfloat);
       ins->o_hHaloBuffer = mesh->device.malloc(hHaloBytes);
     }
 
@@ -896,7 +896,10 @@ if(ins->solveHeat){
     ins->pRecvBuffer = (dfloat*) o_precvBuffer.getMappedPointer();
     ins->velocityHaloGatherTmp = (dfloat*) o_gatherTmpPinned.getMappedPointer();
 #endif
-    occa::memory o_vSendBuffer, o_vRecvBuffer, o_pSendBuffer, o_pRecvBuffer, o_gatherTmpPinned;
+    occa::memory o_gatherTmpPinned;
+    occa::memory o_vSendBuffer, o_vRecvBuffer;
+    occa::memory o_pSendBuffer, o_pRecvBuffer; 
+    occa::memory o_hSendBuffer, o_hRecvBuffer; 
 
     ins->vSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, vHaloBytes, NULL, ins->o_vSendBuffer);
     ins->vRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, vHaloBytes, NULL, ins->o_vRecvBuffer);
@@ -905,9 +908,9 @@ if(ins->solveHeat){
     ins->pRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, pHaloBytes, NULL, ins->o_pRecvBuffer);
 
     if(ins->solveHeat){
-      dlong hHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
-      ins->hSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, hHaloBytes, NULL, ins->o_pSendBuffer);
-      ins->hRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, hHaloBytes, NULL, ins->o_pRecvBuffer);
+      dlong hHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields+1)*sizeof(dfloat);
+      ins->hSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, hHaloBytes, NULL, ins->o_hSendBuffer);
+      ins->hRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, hHaloBytes, NULL, ins->o_hRecvBuffer);
     }
 
     ins->velocityHaloGatherTmp = (dfloat*) occaHostMallocPinned(mesh->device, vGatherBytes, NULL, ins->o_gatherTmpPinned);
