@@ -1,0 +1,177 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// // rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
+// @kernel void insVelocityRhsARKTri2D(const dlong Nelements,
+//                                 const int stage,  
+//                                 @restrict const  dfloat *  vgeo,
+//                                 @restrict const  dfloat *  MM,
+//                                 const dfloat idt,
+//                                 const dfloat ialpha,
+//                                 @restrict const  dfloat *  erkA,
+//                                 @restrict const  dfloat *  irkA,
+//                                 @restrict const  dfloat *  prkA,
+//                                 @restrict const  dfloat *  prkB,
+//                                 const dlong fieldOffset,
+//                                 @restrict const  dfloat *  U,
+//                                 @restrict const  dfloat *  NU,
+//                                 @restrict const  dfloat *  LU,
+//                                 @restrict const  dfloat *  GP,
+//                                       @restrict dfloat *  rhsU,
+//                                       @restrict dfloat *  rhsV,
+//                                       @restrict dfloat *  rhsW){
+
+//   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+
+//     @shared dfloat s_rhsT[p_NblockV][p_Np];
+//     @shared dfloat s_rhsV[p_NblockV][p_Np];
+
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+//       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+//         const dlong e = eo+es; // element in block
+//         if(e<Nelements){
+//           const dlong id = n + p_Np*e;
+//           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+
+//           s_rhsT[es][n] = idt*U[id + 0*fieldOffset];
+//           s_rhsV[es][n] = idt*U[id + 1*fieldOffset];
+
+//           dfloat prkAs = prkA[stage*(p_Nstages+1)+stage];
+//           for (int s=0;s<stage;s++) {
+//             // NU
+//             s_rhsT[es][n] -= erkA[stage*(p_Nstages+1)+s]*NU[id+0*fieldOffset + s*p_NVfields*fieldOffset];
+//             s_rhsV[es][n] -= erkA[stage*(p_Nstages+1)+s]*NU[id+1*fieldOffset + s*p_NVfields*fieldOffset];
+
+//             // LU
+//             s_rhsT[es][n] += irkA[stage*(p_Nstages+1)+s]*LU[id+0*fieldOffset + s*p_NVfields*fieldOffset];
+//             s_rhsV[es][n] += irkA[stage*(p_Nstages+1)+s]*LU[id+1*fieldOffset + s*p_NVfields*fieldOffset];
+
+//             // GP
+//             dfloat prkAB = prkA[stage*(p_Nstages+1)+s]+prkAs*prkB[stage*(p_Nstages+1)+s];
+//             s_rhsT[es][n] -= prkAB*GP[id+0*fieldOffset + s*p_NVfields*fieldOffset];
+//             s_rhsV[es][n] -= prkAB*GP[id+1*fieldOffset + s*p_NVfields*fieldOffset];
+//           }
+
+//           s_rhsT[es][n] *= J*ialpha/irkA[stage*(p_Nstages+1)+stage];
+//           s_rhsV[es][n] *= J*ialpha/irkA[stage*(p_Nstages+1)+stage];
+//         }
+//       }
+//     }
+
+//     // make sure all node data is loaded into @shared
+//     @barrier("local");
+
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+//       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+//         const dlong e = eo+es; // element in block
+//         if(e<Nelements){
+//           // Multiplay with Mass Matrix
+//           const dlong id = e*p_Np+n;
+
+//           dfloat rhsu = 0.f, rhsv = 0.f;
+//           #pragma unroll p_Np
+//             for(int i=0;i<p_Np;++i){
+//               const dfloat M = MM[n+i*p_Np];
+//               rhsu  += M*s_rhsT[es][i];
+//               rhsv  += M*s_rhsV[es][i];
+//             }
+//           // Update
+//           rhsU[id] = rhsu;
+//           rhsV[id] = rhsv;
+//         }
+//       }
+//     }
+//   }
+// }
+
+
+// rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
+@kernel void insHeatRhsEXTBDFTri2D(const dlong Nelements,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  MM,
+                                            const dfloat idt,
+                                            const dfloat ialpha,
+                                  @restrict const  dfloat *  extbdfA,
+                                  @restrict const  dfloat *  extbdfB,
+                                  @restrict const  dfloat *  extbdfC,
+                                  const dlong fieldOffset,
+                                  @restrict const  dfloat *  U,
+                                  @restrict const  dfloat *  T,
+                                  @restrict const  dfloat *  NT,
+                                  @restrict dfloat *  rhsT){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+
+    @shared dfloat s_rhsT[p_NblockV][p_Np];
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          const dlong id = n + p_Np*e;
+          const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+
+          if (p_SUBCYCLING) {
+            //NU holds \hat{U} after subcycling
+            const dfloat NTm = NT[id+0*fieldOffset];
+            s_rhsT[es][n] = J*ialpha*idt*NTm;
+          } else {
+            s_rhsT[es][n] = 0.f;
+
+            for (int s=0;s<p_Nstages;s++) {
+              //T, NT
+              const dfloat Tm   =  T[id + s*fieldOffset];
+              const dfloat NTm  = NT[id + s*fieldOffset];
+
+              s_rhsT[es][n] += J*ialpha*(idt*extbdfB[s]*Tm - extbdfA[s]*NTm);
+            }
+          }
+        }
+      }
+    }
+
+    // make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          // Multiplay with Mass Matrix
+          const dlong id = e*p_Np+n;
+          dfloat rhs = 0.f; 
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat M = MM[n+i*p_Np];
+              rhs  += M*s_rhsT[es][i];
+            }
+          // Update
+          rhsT[id] = rhs;
+        }
+      }
+    }
+  }
+}

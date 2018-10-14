@@ -1,7 +1,7 @@
-r = DefineNumber[ 0.5];
+r = DefineNumber[ 0.1];
 xmin = DefineNumber[ 0.0];
-xmax = DefineNumber[ 5.0];
-ymin = DefineNumber[-1.0];
+xmax = DefineNumber[10.0];
+ymin = DefineNumber[ 0.0];
 ymax = DefineNumber[ 1.0];
 
 Point(1) = {xmin, ymin, 0.0, r};

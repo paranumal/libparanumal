@@ -62,6 +62,8 @@ void insReport(ins_t *ins, dfloat time, int tstep){
   // copy data back to host
   ins->o_U.copyTo(ins->U);
   ins->o_P.copyTo(ins->P);
+  if(ins->solveHeat)
+    ins->o_T.copyTo(ins->T);
 
   ins->o_Vort.copyTo(ins->Vort);
   ins->o_Div.copyTo(ins->Div);

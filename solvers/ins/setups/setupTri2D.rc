@@ -2,13 +2,19 @@
 1.0
 
 [DATA FILE]
-data/insUniform2D.h
+data/insHeat2D.h
+#data/insUniform2D.h
 #data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insSquareCylinder2D.msh
+../../meshes/insChannel2D.msh
+#../../meshes/insSquareCylinder2D.msh
 #../../meshes/boltzmannSquareCylinderPML2D.msh
 #../../meshes/insVortex2D.msh
+
+[SOLVER TYPE]
+#FLOW
+COUPLED
 
 [MESH DIMENSION]
 2
@@ -35,14 +41,20 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-4
+0
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
 CUBATURE
 
+# 1/Re in nondimesional form
 [VISCOSITY]
+0.01
+
+# 1/(Re*Pr) number in nondimensinal form
+[THERMAL DIFFUSIVITY]
 0.001
+
 
 [MACH NUMBER]
 .2
@@ -56,9 +68,12 @@ CUBATURE
 [PBAR]
 0.0
 
+[TBAR]
+0.0
+
 #zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+1000
 
 # zero to ignore
 [TSTEPS FOR FORCE OUTPUT]
@@ -72,7 +87,7 @@ CUBATURE
 0
 
 [FINAL TIME]
-75.0
+100.0
 
 [CFL]
 0.5
@@ -200,6 +215,66 @@ CHEBYSHEV
 # can be STRONGNODES, DISTRIBUTED, SATURATE
 [PRESSURE PARALMOND PARTITION]
 STRONGNODES
+
+###########################################
+
+
+#################################################
+########## Heat Solver Options ##############
+#################################################
+
+# can add FLEXIBLE to PCG
+[HEAT KRYLOV SOLVER]
+PCG
+
+# can be IPDG, or CONTINUOUS
+[HEAT DISCRETIZATION]
+IPDG
+
+# can be NODAL or BERN
+[HEAT BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+[HEAT PRECONDITIONER]
+MASSMATRIX
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[HEAT MULTIGRID COARSENING]
+HALFDOFS
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[HEAT MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+# can be any integer >0
+[MULTIGRID CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[HEAT PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[HEAT PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[HEAT PARALMOND PARTITION]
+STRONGNODES
+
+# can be any integer >0
+[PARALMOND CHEBYSHEV DEGREE]
+2
 
 ###########################################
 

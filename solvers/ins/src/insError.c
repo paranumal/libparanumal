@@ -37,6 +37,8 @@ void insError(ins_t *ins, dfloat time){
   dfloat maxV = 0, minV = 1e9;
   dfloat maxW = 0, minW = 1e9;
   dfloat maxP = 0, minP = 1e9; 
+  dfloat maxT = 0, minT = 1e9; 
+
 
   if (ins->options.compareArgs("EXACT", "NONE")) {// just compute maximums
  
@@ -60,6 +62,10 @@ void insError(ins_t *ins, dfloat time){
 
         maxP = mymax(maxP, fabs(ins->P[id]));
         minP = mymin(minP, fabs(ins->P[id]));
+        if(ins->solveHeat){
+          maxT = mymax(maxT, fabs(ins->T[id]));
+          minT = mymin(minT, fabs(ins->T[id]));
+        }
       }
     }
 
@@ -80,12 +86,24 @@ void insError(ins_t *ins, dfloat time){
     MPI_Allreduce(&maxP, &gMaxP, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
     MPI_Allreduce(&minP, &gMinP, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
 
+
+    dfloat gMaxT, gMinT;
+    if(ins->solveHeat){
+      MPI_Allreduce(&maxT, &gMaxT, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
+      MPI_Allreduce(&minT, &gMinT, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
+    }
+
+
     if(mesh->rank==0)
       if (ins->dim==3) {
         printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minW: %g maxW: %g minP: %g maxP: %g\n", 
            (int)((time-ins->startTime)/ins->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinW, gMaxW, gMinP, gMaxP );
       } else {
-        printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minP: %g maxP: %g\n", 
+        if(ins->solveHeat)
+          printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minP: %g maxP: %g minT: %g maxT: %g\n", 
+           (int)((time-ins->startTime)/ins->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinP, gMaxP, gMinT, gMaxT);
+        else
+          printf("Step: %d Time: %g minU: %g maxU: %g minV: %g maxV: %g minP: %g maxP: %g\n", 
            (int)((time-ins->startTime)/ins->dt)+1, time, gMinU, gMaxU, gMinV, gMaxV, gMinP, gMaxP );
       }
 

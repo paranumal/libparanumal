@@ -84,6 +84,26 @@ void insPlotVTU(ins_t *ins, char *fileName){
   }
   fprintf(fp, "       </DataArray>\n");
 
+  if(ins->solveHeat){
+      // write out pressure
+      fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Temperature\" Format=\"ascii\">\n");
+      for(dlong e=0;e<mesh->Nelements;++e){
+        for(int n=0;n<mesh->plotNp;++n){
+          dfloat plotpn = 0;
+          for(int m=0;m<mesh->Np;++m){
+            dlong id = m+e*mesh->Np;
+            dfloat pm = ins->T[id];
+            plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
+          }
+
+          fprintf(fp, "       ");
+          fprintf(fp, "%g\n", plotpn);
+        }
+      }
+      fprintf(fp, "       </DataArray>\n");
+  }
+
+
   // write out divergence
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Divergence\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh->Nelements;++e){

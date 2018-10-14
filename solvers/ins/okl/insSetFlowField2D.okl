@@ -24,15 +24,14 @@ SOFTWARE.
 
 */
 
-
 @kernel void insSetFlowField2D(const dlong Nelements,
-			       const dfloat t,
-			       @restrict const  dfloat *  x,
-			       @restrict const  dfloat *  y,
-			       @restrict const  dfloat *  z,
-			       const dlong offset,
-			       @restrict dfloat *  U,
-			       @restrict dfloat *  P){
+             const dfloat t,
+             @restrict const  dfloat *  x,
+             @restrict const  dfloat *  y,
+             @restrict const  dfloat *  z,
+             const dlong offset,
+             @restrict dfloat *  U,
+             @restrict dfloat *  P){
   
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     for(int n=0;n<p_Np;++n;@inner(0)){
@@ -42,15 +41,50 @@ SOFTWARE.
       dfloat xn = x[id];
       dfloat yn = y[id];
       
-      dfloat u = 0.0;
-      dfloat v = 0.0;
-      dfloat p = 0.0;
+      dfloat u  = 0.f;
+      dfloat v  = 0.f;
+      dfloat p  = 0.f;
       
       insFlowField2D(t, xn, yn, &u, &v, &p);
       
       U[id+0*offset] = u;
       U[id+1*offset] = v;
       P[id] = p;
+    }
+  }
+}
+
+
+@kernel void insSetHeatFlowField2D(const dlong Nelements,
+			       const dfloat t,
+			       @restrict const  dfloat *  x,
+			       @restrict const  dfloat *  y,
+			       @restrict const  dfloat *  z,
+			       const dlong offset,
+             @restrict dfloat *  U,
+             @restrict dfloat *  P,
+			       @restrict dfloat *  T){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      
+      const int id = n + e*p_Np;
+      
+      dfloat xn = x[id];
+      dfloat yn = y[id];
+      
+      dfloat u  = 0.f;
+      dfloat v  = 0.f;
+      dfloat p  = 0.f;
+      dfloat te = 0.f;
+      
+      insHeatFlowField2D(t, xn, yn, &u, &v, &p, &te);
+      
+      
+      U[id+0*offset] = u;
+      U[id+1*offset] = v;
+      P[id] = p;
+      T[id] = te;
     }
   }
 
