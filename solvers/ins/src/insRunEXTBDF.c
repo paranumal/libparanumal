@@ -94,8 +94,7 @@ void insRunEXTBDF(ins_t *ins){
   // Write Initial Data
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
 
-  // for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
-  for(int tstep=0;tstep<50000;++tstep){
+  for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
 
     // if(ins->restartedFromFile){
       // if(tstep=0 && ins->temporalOrder>=2) 
@@ -114,12 +113,15 @@ void insRunEXTBDF(ins_t *ins){
     dfloat time = ins->startTime + tstep*ins->dt;
 
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+
+#if 0
     ins->constrainKernel(mesh->Nelements,
 			 offset,
 			 mesh->o_x,
 			 mesh->o_y,
 			 mesh->o_z,
 			 ins->o_U);
+#endif
     
     if(ins->Nsubsteps) {
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
@@ -128,38 +130,42 @@ void insRunEXTBDF(ins_t *ins){
     } 
     insGradient (ins, time, ins->o_P, ins->o_GP);
 
+#if 0
     ins->constrainKernel(mesh->Nelements,
 			 offset,
 			 mesh->o_x,
 			 mesh->o_y,
 			 mesh->o_z,
 			 ins->o_GP);
-
+#endif
+    
     
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
     insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
+#if 0
     ins->constrainKernel(mesh->Nelements,
 			 offset,
 			 mesh->o_x,
 			 mesh->o_y,
 			 mesh->o_z,
 			 ins->o_rkU);
+#endif
 
-#if 1
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
     insPressureSolve(ins, time+ins->dt, ins->Nstages); 
 
     insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
     insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
-#endif
 
+#if 0
     ins->constrainKernel(mesh->Nelements,
 			 offset,
 			 mesh->o_x,
 			 mesh->o_y,
 			 mesh->o_z,
 			 ins->o_rkGP);
+#endif
     
     //cycle history
     for (int s=ins->Nstages;s>1;s--) {
