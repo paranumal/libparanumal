@@ -133,7 +133,9 @@ typedef struct {
 
   int Nsubsteps;  
   dfloat *Ud, *Ue, *resU, *rhsUd, sdt;
+  dfloat *Td,      *resT, *rhsTd;
   occa::memory o_Ud, o_Ue, o_resU, o_rhsUd;
+  occa::memory o_Td, o_resT, o_rhsTd;
 
   dfloat *cU, *cUd;
   occa::memory o_cU, o_cUd;
@@ -166,6 +168,10 @@ typedef struct {
   occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
   occa::kernel subCycleRKUpdateKernel;
   occa::kernel subCycleExtKernel;
+
+  occa::kernel heatSubCycleVolumeKernel,  heatSubCycleCubatureVolumeKernel ;
+  occa::kernel heatSubCycleSurfaceKernel, heatSubCycleCubatureSurfaceKernel;
+  occa::kernel heatSubCycleRKUpdateKernel;
 
 
   occa::memory o_U, o_P, o_T;
@@ -212,11 +218,11 @@ typedef struct {
   occa::kernel heatAdvectionCubatureVolumeKernel;
   occa::kernel heatAdvectionCubatureSurfaceKernel;
 
-  occa::kernel heatRhsKernel;
-  occa::kernel heatRhsIpdgBCKernel;
-  occa::kernel heatRhsBCKernel;
-  occa::kernel heatAddBCKernel;
-  occa::kernel heatUpdateKernel;  
+  occa::kernel heatVelocityRhsKernel;
+  occa::kernel heatVelocityRhsIpdgBCKernel;
+  occa::kernel heatVelocityRhsBCKernel;
+  occa::kernel heatVelocityAddBCKernel;
+  occa::kernel heatVelocityUpdateKernel;  
 
 
 
@@ -262,15 +268,17 @@ void insForces(ins_t *ins, dfloat time);
 void insComputeDt(ins_t *ins, dfloat time); 
 
 void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU);
+void insHeatAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_T, occa::memory o_NU, occa::memory o_NT);
 
-void insHeatAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_T, occa::memory o_NT);
-void insHeatSolve(ins_t *ins, dfloat time, int stage);
-void insHeatRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsT);
+void insHeatVelocitySolve(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW,occa::memory o_rhsT, occa::memory o_rkU, occa::memory o_rkT);
+void insHeatVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW, occa::memory o_rhsT);
 
 void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);
 void insGradient (ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP);
 void insDivergence(ins_t *ins,dfloat time, occa::memory o_U, occa::memory o_DU);
+
 void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_NU);
+void insHeatSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_T, occa::memory o_NU, occa::memory o_NT);
 
 void insVelocityRhs  (ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW);
 

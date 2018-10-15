@@ -68,6 +68,7 @@ AOBJS    = \
 ./src/insGradient.o \
 ./src/insDivergence.o \
 ./src/insSubCycle.o \
+./src/insHeatSubCycle.o \
 ./src/insVelocityRhs.o \
 ./src/insVelocitySolve.o \
 ./src/insVelocityUpdate.o \
@@ -78,8 +79,8 @@ AOBJS    = \
 ./src/insWeldTriVerts.o \
 ./src/insIsoPlotVTU.o \
 ./src/insHeatAdvection.o \
-./src/insHeatRhs.o \
-./src/insHeatSolve.o 
+./src/insHeatVelocityRhs.o \
+./src/insHeatVelocitySolve.o 
 
 # library objects
 LOBJS = \

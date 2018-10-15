@@ -27,10 +27,12 @@ SOFTWARE.
 #include "ins.h"
 
 // compute NU = N(U)
-void insHeatAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_T, occa::memory o_NT){
+void insHeatAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_T, 
+                                               occa::memory o_NU, occa::memory o_NT){
 
   mesh_t *mesh = ins->mesh;
   
+  // exchange velocity and tempertaure together
   if(mesh->totalHaloPairs>0){
     ins->heatHaloExtractKernel(mesh->Nelements,
                               mesh->totalHaloPairs,
@@ -62,6 +64,8 @@ void insHeatAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_
                                        ins->fieldOffset,
                                        o_U,
                                        o_T,
+                                       ins->o_cU,
+                                       o_NU,
                                        o_NT);
   } else {
     ins->heatAdvectionVolumeKernel(mesh->Nelements,
@@ -70,6 +74,7 @@ void insHeatAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_
                                ins->fieldOffset,
                                o_U,
                                o_T,
+                               o_NU,
                                o_NT);
   }
   occaTimerToc(mesh->device,"AdvectionVolume");
@@ -108,6 +113,7 @@ void insHeatAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_
                                         ins->fieldOffset,
                                         o_U,
                                         o_T,
+                                        o_NU,
                                         o_NT);
   } else {
     ins->heatAdvectionSurfaceKernel(mesh->Nelements,
@@ -123,6 +129,7 @@ void insHeatAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_
                                 ins->fieldOffset,
                                 o_U,
                                 o_T,
+                                o_NU,
                                 o_NT);
   }
   occaTimerToc(mesh->device,"AdvectionSurface");

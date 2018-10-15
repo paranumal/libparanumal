@@ -56,6 +56,49 @@ SOFTWARE.
   }
 }
 
+@kernel void insHeatSubCycleRKUpdate(const dlong Nelements,
+                                const dfloat dt,  
+                                const dfloat rka,
+                                const dfloat rkb,
+                                const dlong offset,
+                                @restrict const  dfloat *  rhsU,
+                                @restrict const  dfloat *  rhsT,
+                                @restrict dfloat  *  resU,
+                                @restrict dfloat  *  resT,
+                                @restrict dfloat  *  U,
+                                @restrict dfloat  *  T){
+
+  // Low storage Runge Kutta time step update
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+
+      const dlong id = n + e*p_Np;
+
+      #pragma unroll p_NVfields
+      for (int i=0;i<p_NVfields;i++) {
+        dfloat resu =  resU[id+i*offset];
+        dfloat rhsu = -rhsU[id+i*offset];// -Nu
+        dfloat u    =     U[id+i*offset];
+        resu = rka*resu + dt*rhsu;
+        u += rkb*resu;
+
+        resU[id+i*offset] = resu;
+        U[id+i*offset] = u;
+      }
+
+      dfloat rest =  resT[id];
+      dfloat rhst = -rhsT[id];// -Nt
+      dfloat t    =     T[id];
+
+      rest = rka*rest + dt*rhst;
+      t += rkb*rest;
+
+      resT[id] = rest;
+      T[id] = t;
+    }
+  }
+}
+
 
 @kernel void insSubCycleExt(const dlong Nelements,
                            const int Nstages,

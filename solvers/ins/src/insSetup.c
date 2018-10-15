@@ -286,6 +286,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->resU  = (dfloat*) calloc(ins->NVfields*Ntotal,sizeof(dfloat));
     ins->rhsUd = (dfloat*) calloc(ins->NVfields*Ntotal,sizeof(dfloat));
 
+    if(ins->solveHeat){
+      ins->Td    = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+      ins->resT  = (dfloat*) calloc(Ntotal,sizeof(dfloat));
+      ins->rhsTd = (dfloat*) calloc(Ntotal,sizeof(dfloat));      
+    }
+
     if(ins->elementType==HEXAHEDRA)
       ins->cUd = (dfloat *) calloc(ins->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
     else 
@@ -935,6 +941,12 @@ if(ins->solveHeat){
   for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
       sprintf(fileName, DINS "/okl/insHaloExchange.okl");
+      sprintf(kernelName, "insHeatHaloExtract");
+      ins->heatHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "insHeatHaloScatter");
+      ins->heatHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
       sprintf(kernelName, "insVelocityHaloExtract");
       ins->velocityHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
@@ -946,25 +958,37 @@ if(ins->solveHeat){
 
       sprintf(kernelName, "insPressureHaloScatter");
       ins->pressureHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-     
-     
 
 
       // ===========================================================================
+      if(ins->solveHeat){
+        sprintf(fileName, DINS "/okl/insHeatAdvection%s.okl", suffix);
+        sprintf(kernelName, "insHeatAdvectionVolume%s",suffix);
+        ins->heatAdvectionVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+        
+        sprintf(kernelName, "insHeatAdvectionSurface%s",suffix);
+        ins->heatAdvectionSurfaceKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+        
+        sprintf(kernelName, "insHeatAdvectionCubatureVolume%s",suffix);
+        ins->heatAdvectionCubatureVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      sprintf(fileName, DINS "/okl/insAdvection%s.okl", suffix);
-      sprintf(kernelName, "insAdvectionCubatureVolume%s", suffix);
-      ins->advectionCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "insHeatAdvectionCubatureSurface%s",suffix);
+        ins->heatAdvectionCubatureSurfaceKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      sprintf(kernelName, "insAdvectionCubatureSurface%s", suffix);
-      ins->advectionCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      }else{
+        sprintf(fileName, DINS "/okl/insAdvection%s.okl", suffix);
+        sprintf(kernelName, "insAdvectionCubatureVolume%s", suffix);
+        ins->advectionCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "insAdvectionVolume%s", suffix);
-      ins->advectionVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "insAdvectionCubatureSurface%s", suffix);
+        ins->advectionCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "insAdvectionSurface%s", suffix);
-      ins->advectionSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "insAdvectionVolume%s", suffix);
+        ins->advectionVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+        sprintf(kernelName, "insAdvectionSurface%s", suffix);
+        ins->advectionSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      }
       // ===========================================================================
       
       sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
@@ -998,12 +1022,32 @@ if(ins->solveHeat){
       ins->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       // ===========================================================================
-      
-      sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
+      if(ins->solveHeat){
+
+       sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
+      if (options.compareArgs("TIME INTEGRATOR", "ARK"))
+        printf("ARK with Heat solver is not implemented yet\n"); 
+        // sprintf(kernelName, "insHeatVelocityRhsARK%s", suffix);
+      else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF"))
+      sprintf(kernelName, "insHeatVelocityRhsEXTBDF%s", suffix);
+      ins->heatVelocityRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(fileName, DINS "/okl/insVelocityBC%s.okl", suffix);
+      sprintf(kernelName, "insHeatVelocityIpdgBC%s", suffix);
+      ins->heatVelocityRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "insVelocityBC%s", suffix);
+      ins->velocityRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      sprintf(kernelName, "insVelocityAddBC%s", suffix);
+      ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      }else{
+        sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
       if (options.compareArgs("TIME INTEGRATOR", "ARK")) 
         sprintf(kernelName, "insVelocityRhsARK%s", suffix);
-      else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) 
-        sprintf(kernelName, "insVelocityRhsEXTBDF%s", suffix);
+      else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF"))
+      sprintf(kernelName, "insVelocityRhsEXTBDF%s", suffix);
       ins->velocityRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(fileName, DINS "/okl/insVelocityBC%s.okl", suffix);
@@ -1015,7 +1059,7 @@ if(ins->solveHeat){
 
       sprintf(kernelName, "insVelocityAddBC%s", suffix);
       ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
+      }
       // ===========================================================================
       
       sprintf(fileName, DINS "/okl/insPressureRhs%s.okl", suffix);
@@ -1063,6 +1107,12 @@ if(ins->solveHeat){
         ins->o_resU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->resU);
         ins->o_rhsUd = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rhsUd);
 
+        if(ins->solveHeat){
+          ins->o_Td    = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->Td);
+          ins->o_resT  = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->resT);
+          ins->o_rhsTd = mesh->device.malloc(Ntotal*sizeof(dfloat), ins->rhsTd);
+        }
+
         if(ins->elementType==HEXAHEDRA)
           ins->o_cUd = mesh->device.malloc(ins->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->cUd);
         else 
@@ -1072,68 +1122,89 @@ if(ins->solveHeat){
         sprintf(kernelName, "scaledAddwOffset");
         ins->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(fileName, DINS "/okl/insSubCycle%s.okl", suffix);
-        sprintf(kernelName, "insSubCycleVolume%s", suffix);
-        ins->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        if(ins->solveHeat){
+          sprintf(fileName, DINS "/okl/insHeatSubCycle%s.okl", suffix);
+          sprintf(kernelName, "insHeatSubCycleVolume%s", suffix);
+          ins->heatSubCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insSubCycleSurface%s", suffix);
-        ins->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+          sprintf(kernelName, "insHeatSubCycleSurface%s", suffix);
+          ins->heatSubCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
-        ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+          sprintf(kernelName, "insHeatSubCycleCubatureVolume%s", suffix);
+          ins->heatSubCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
-        ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+          sprintf(kernelName, "insHeatSubCycleCubatureSurface%s", suffix);
+          ins->heatSubCycleCubatureSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+          
+          sprintf(fileName, DINS "/okl/insSubCycle.okl");
+          sprintf(kernelName, "insHeatSubCycleRKUpdate");
+          ins->heatSubCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(fileName, DINS "/okl/insSubCycle.okl");
-        sprintf(kernelName, "insSubCycleRKUpdate");
-        ins->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        }else{
+          sprintf(fileName, DINS "/okl/insSubCycle%s.okl", suffix);
+          sprintf(kernelName, "insSubCycleVolume%s", suffix);
+          ins->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+          sprintf(kernelName, "insSubCycleSurface%s", suffix);
+          ins->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+          sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
+          ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+          sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
+          ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+          
+          sprintf(fileName, DINS "/okl/insSubCycle.okl");
+          sprintf(kernelName, "insSubCycleRKUpdate");
+          ins->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        }
+
 
         sprintf(kernelName, "insSubCycleExt");
         ins->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
 
        if(ins->solveHeat){
-        sprintf(fileName, DINS "/okl/insHaloExchange.okl");
+        // sprintf(fileName, DINS "/okl/insHaloExchange.okl");
 
-        sprintf(kernelName, "insHeatHaloExtract");
-        ins->heatHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-        sprintf(kernelName, "insHeatHaloScatter");
-        ins->heatHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        // sprintf(kernelName, "insHeatHaloExtract");
+        // ins->heatHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        // sprintf(kernelName, "insHeatHaloScatter");
+        // ins->heatHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(fileName, DINS "/okl/insHeatAdvection%s.okl", suffix);
+        // sprintf(fileName, DINS "/okl/insHeatAdvection%s.okl", suffix);
         
-        sprintf(kernelName, "insHeatAdvectionVolume%s",suffix);
-        ins->heatAdvectionVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+        // sprintf(kernelName, "insHeatAdvectionVolume%s",suffix);
+        // ins->heatAdvectionVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
         
-        sprintf(kernelName, "insHeatAdvectionSurface%s",suffix);
-        ins->heatAdvectionSurfaceKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+        // sprintf(kernelName, "insHeatAdvectionSurface%s",suffix);
+        // ins->heatAdvectionSurfaceKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
         
-        sprintf(kernelName, "insHeatAdvectionCubatureVolume%s",suffix);
-        ins->heatAdvectionCubatureVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+        // sprintf(kernelName, "insHeatAdvectionCubatureVolume%s",suffix);
+        // ins->heatAdvectionCubatureVolumeKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-        sprintf(kernelName, "insHeatAdvectionCubatureSurface%s",suffix);
-        ins->heatAdvectionCubatureSurfaceKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+        // sprintf(kernelName, "insHeatAdvectionCubatureSurface%s",suffix);
+        // ins->heatAdvectionCubatureSurfaceKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
 
-        sprintf(fileName, DINS "/okl/insHeatRhs%s.okl", suffix);
-        if (options.compareArgs("TIME INTEGRATOR", "ARK")){
-          printf("ARK is not implemented for heat yet\n"); 
-          // sprintf(kernelName, "insHeatRhsARK%s", suffix);
-        }else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) 
-          sprintf(kernelName, "insHeatRhsEXTBDF%s", suffix);
-        ins->heatRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        // sprintf(fileName, DINS "/okl/insHeatRhs%s.okl", suffix);
+        // if (options.compareArgs("TIME INTEGRATOR", "ARK")){
+        //   printf("ARK is not implemented for heat yet\n"); 
+        //   // sprintf(kernelName, "insHeatRhsARK%s", suffix);
+        // }else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) 
+        //   sprintf(kernelName, "insHeatRhsEXTBDF%s", suffix);
+        // ins->heatRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(fileName, DINS "/okl/insHeatBC%s.okl", suffix);
+        // sprintf(fileName, DINS "/okl/insHeatBC%s.okl", suffix);
         
-        sprintf(kernelName, "insHeatIpdgBC%s", suffix);
-        ins->heatRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        // sprintf(kernelName, "insHeatIpdgBC%s", suffix);
+        // ins->heatRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insHeatBC%s", suffix);
-        ins->heatRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        // sprintf(kernelName, "insHeatBC%s", suffix);
+        // ins->heatRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insHeatAddBC%s", suffix);
-        ins->heatAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        // sprintf(kernelName, "insHeatAddBC%s", suffix);
+        // ins->heatAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 
 

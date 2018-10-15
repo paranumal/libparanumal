@@ -114,14 +114,28 @@ void insRunEXTBDF(ins_t *ins){
     dfloat time = ins->startTime + tstep*ins->dt;
 
     if(ins->Nsubsteps) {
-      insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
+        if(ins->solveHeat)
+          insHeatSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_T, ins->o_NU, ins->o_NT);
+        else  
+          insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
-      insAdvection(ins, time, ins->o_U, ins->o_NU);
-    } 
+        if(ins->solveHeat)
+          insHeatAdvection(ins, time, ins->o_U, ins->o_T, ins->o_NU, ins->o_NT);
+        else  
+          insAdvection(ins, time, ins->o_U, ins->o_NU);
+    }
+
+
     insGradient (ins, time, ins->o_P, ins->o_GP);
 
-    insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
-    insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
+
+    if(ins->solveHeat){
+      insHeatVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rhsT);
+      insHeatVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rhsT, ins->o_rkU, ins->o_rkT);
+    }else{
+      insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
+      insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
+    }
 
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
     insPressureSolve(ins, time+ins->dt, ins->Nstages); 
@@ -137,6 +151,10 @@ void insRunEXTBDF(ins_t *ins){
       ins->o_P.copyFrom(ins->o_P, ins->Ntotal*sizeof(dfloat), 
                                   (s-1)*ins->Ntotal*sizeof(dfloat), 
                                   (s-2)*ins->Ntotal*sizeof(dfloat));
+      if(ins->solveHeat)
+        ins->o_T.copyFrom(ins->o_T,     ins->Ntotal*sizeof(dfloat), 
+                                  (s-1)*ins->Ntotal*sizeof(dfloat), 
+                                  (s-2)*ins->Ntotal*sizeof(dfloat));
     }
 
     //copy updated pressure
@@ -148,6 +166,8 @@ void insRunEXTBDF(ins_t *ins){
     //copy updated pressure
     ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
 
+    if(ins->solveHeat) ins->o_T.copyFrom(ins->o_rkT, ins->Ntotal*sizeof(dfloat)); 
+
     //cycle rhs history
     for (int s=ins->Nstages;s>1;s--) {
       ins->o_NU.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
@@ -156,29 +176,34 @@ void insRunEXTBDF(ins_t *ins){
       ins->o_GP.copyFrom(ins->o_GP, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
                                   (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
                                   (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+
+      if(ins->solveHeat)
+        ins->o_NT.copyFrom(ins->o_NT,       ins->Ntotal*sizeof(dfloat), 
+                                      (s-1)*ins->Ntotal*sizeof(dfloat), 
+                                      (s-2)*ins->Ntotal*sizeof(dfloat));
     }
 
-    if(ins->solveHeat){
+    // if(ins->solveHeat){
 
-      insHeatAdvection(ins, time, ins->o_U, ins->o_T, ins->o_NT);
+    //   insHeatAdvection(ins, time, ins->o_U, ins->o_T, ins->o_NT);
 
-      insHeatRhs(ins, time+ins->dt, ins->Nstages, ins->o_rhsT);
-      insHeatSolve(ins, time+ins->dt, ins->Nstages);
+    //   insHeatRhs(ins, time+ins->dt, ins->Nstages, ins->o_rhsT);
+    //   insHeatSolve(ins, time+ins->dt, ins->Nstages);
 
-      //cycle history
-      for (int s=ins->Nstages;s>1;s--) {
-        ins->o_T.copyFrom(ins->o_T,     ins->Ntotal*sizeof(dfloat), 
-                                  (s-1)*ins->Ntotal*sizeof(dfloat), 
-                                  (s-2)*ins->Ntotal*sizeof(dfloat));
+    //   //cycle history
+    //   for (int s=ins->Nstages;s>1;s--) {
+    //     ins->o_T.copyFrom(ins->o_T,     ins->Ntotal*sizeof(dfloat), 
+    //                               (s-1)*ins->Ntotal*sizeof(dfloat), 
+    //                               (s-2)*ins->Ntotal*sizeof(dfloat));
 
-        ins->o_NT.copyFrom(ins->o_NT,     ins->Ntotal*sizeof(dfloat), 
-                                    (s-1)*ins->Ntotal*sizeof(dfloat), 
-                                    (s-2)*ins->Ntotal*sizeof(dfloat));
-      }
+    //     ins->o_NT.copyFrom(ins->o_NT,     ins->Ntotal*sizeof(dfloat), 
+    //                                 (s-1)*ins->Ntotal*sizeof(dfloat), 
+    //                                 (s-2)*ins->Ntotal*sizeof(dfloat));
+    //   }
 
-       //copy updated pressure
-      ins->o_T.copyFrom(ins->o_rkT, ins->Ntotal*sizeof(dfloat)); 
-    }
+    //    //copy updated pressure
+    //   ins->o_T.copyFrom(ins->o_rkT, ins->Ntotal*sizeof(dfloat)); 
+    // }
 
     occaTimerTic(mesh->device,"Report");
 
@@ -191,7 +216,7 @@ void insRunEXTBDF(ins_t *ins){
           if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
           if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
         }
-        
+
         insReport(ins, time+ins->dt, tstep+1);
 
         // Write a restart file

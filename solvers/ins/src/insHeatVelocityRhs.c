@@ -26,7 +26,8 @@ SOFTWARE.
 
 #include "ins.h"
 
-void insHeatRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsT){
+void insHeatVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, 
+                                                            occa::memory o_rhsW, occa::memory o_rhsT){
   
   mesh_t *mesh = ins->mesh; 
 
@@ -54,18 +55,24 @@ void insHeatRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsT){
     //                        o_rhsW);
   } else if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
     // rhsU^s = MM*(\sum^s b_i U^n-i - \sum^s-1 a_i N(U^n-i) + \sum^s-1 c_i GP^n-i)/nu dt
-    ins->heatRhsKernel(mesh->Nelements,
-                       mesh->o_vgeo,
-                       mesh->o_MM,
-                       ins->idt,
-                       ins->ialpha,
-                       ins->o_extbdfA,
-                       ins->o_extbdfB,
-                       ins->o_extbdfC,
-                       ins->fieldOffset,
-                       ins->o_U,
-                       ins->o_T,
-                       ins->o_NT,
-                       o_rhsT);
+    ins->heatVelocityRhsKernel(mesh->Nelements,
+                               mesh->o_vgeo,
+                               mesh->o_MM,
+                               ins->idt,
+                               ins->inu,
+                               ins->ialpha,
+                               ins->o_extbdfA,
+                               ins->o_extbdfB,
+                               ins->o_extbdfC,
+                               ins->fieldOffset,
+                               ins->o_U,
+                               ins->o_T,
+                               ins->o_NU,
+                               ins->o_NT,
+                               ins->o_GP,
+                               o_rhsU,
+                               o_rhsV,
+                               o_rhsW,
+                               o_rhsT);
   }
 }

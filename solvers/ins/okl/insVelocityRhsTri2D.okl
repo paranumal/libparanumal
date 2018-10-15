@@ -204,3 +204,114 @@ SOFTWARE.
     }
   }
 }
+
+
+// rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
+@kernel void insHeatVelocityRhsEXTBDFTri2D(const dlong Nelements,
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  MM,
+                                const dfloat idt,
+                                const dfloat inu,
+                                const dfloat ialpha,
+                                @restrict const  dfloat *  extbdfA,
+                                @restrict const  dfloat *  extbdfB,
+                                @restrict const  dfloat *  extbdfC,
+                                const dlong fieldOffset,
+                                @restrict const  dfloat *  U,
+                                @restrict const  dfloat *  T,
+                                @restrict const  dfloat *  NU,
+                                @restrict const  dfloat *  NT,
+                                @restrict const  dfloat *  GP,
+                                      @restrict dfloat *  rhsU,
+                                      @restrict dfloat *  rhsV,
+                                      @restrict dfloat *  rhsW,
+                                      @restrict dfloat *  rhsT){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+
+    @shared dfloat s_rhsU[p_NblockV][p_Np];
+    @shared dfloat s_rhsV[p_NblockV][p_Np];
+    @shared dfloat s_rhsT[p_NblockV][p_Np];
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          const dlong id = n + p_Np*e;
+          const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+
+          if (p_SUBCYCLING) {
+            //NU holds \hat{U} after subcycling
+            const dfloat NUm = NU[id+0*fieldOffset];
+            const dfloat NVm = NU[id+1*fieldOffset];
+            const dfloat NTm = NT[id+0*fieldOffset];
+
+            s_rhsU[es][n] = J*inu*idt*NUm;
+            s_rhsV[es][n] = J*inu*idt*NVm;
+            s_rhsT[es][n] = J*ialpha*idt*NTm;
+
+            for (int s=0;s<p_Nstages;s++) {
+              // GP
+              const dfloat GPx  = GP[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+
+              s_rhsU[es][n] -= J*inu*extbdfC[s]*GPx;
+              s_rhsV[es][n] -= J*inu*extbdfC[s]*GPy;
+            }
+
+          } else {
+            s_rhsU[es][n] = 0.f;
+            s_rhsV[es][n] = 0.f;
+            s_rhsT[es][n] = 0.f;
+
+            for (int s=0;s<p_Nstages;s++) {
+              //U 
+              const dfloat Um  = U[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat Vm  = U[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat Tm  = T[id+0*fieldOffset+s*fieldOffset];
+
+              // NU
+              const dfloat NUm  = NU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat NVm  = NU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat NTm  = NT[id+0*fieldOffset+s*fieldOffset];
+
+              // GP
+              const dfloat GPx  = GP[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+
+              s_rhsU[es][n] += J*inu*(idt*extbdfB[s]*Um - extbdfA[s]*NUm - extbdfC[s]*GPx);
+              s_rhsV[es][n] += J*inu*(idt*extbdfB[s]*Vm - extbdfA[s]*NVm - extbdfC[s]*GPy);
+              s_rhsT[es][n] += J*ialpha*(idt*extbdfB[s]*Tm - extbdfA[s]*NTm);
+            }
+          }
+        }
+      }
+    }
+
+    // make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          // Multiplay with Mass Matrix
+          const dlong id = e*p_Np+n;
+
+          dfloat rhsu = 0.f, rhsv = 0.f, rhst = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat M = MM[n+i*p_Np];
+              rhsu  += M*s_rhsU[es][i];
+              rhsv  += M*s_rhsV[es][i];
+              rhst  += M*s_rhsT[es][i];
+            }
+          // Update
+          rhsU[id] = rhsu;
+          rhsV[id] = rhsv;
+          rhsT[id] = rhst;
+        }
+      }
+    }
+  }
+}

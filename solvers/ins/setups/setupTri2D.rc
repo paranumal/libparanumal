@@ -45,6 +45,7 @@ EXTBDF2
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
+#COLLOCATION
 CUBATURE
 
 # 1/Re in nondimesional form
@@ -73,7 +74,7 @@ CUBATURE
 
 #zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-1000
+250
 
 # zero to ignore
 [TSTEPS FOR FORCE OUTPUT]
@@ -90,7 +91,7 @@ CUBATURE
 100.0
 
 [CFL]
-0.5
+0.3
 
 [OUTPUT TYPE]
 VTU
