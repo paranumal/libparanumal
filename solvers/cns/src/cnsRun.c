@@ -188,8 +188,6 @@ void cnsRun(cns_t *cns, setupAide &options){
     dfloat time = tstep*mesh->dt;
 
     cnsLserkStep(cns, options, time);
-
-    cnsReport(cns, time, options);
       
     if(((tstep+1)%mesh->errorStep)==0){
       time += mesh->dt;
