@@ -41,6 +41,15 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
   mesh->cubsgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
                                 mesh->Nsgeo*mesh->cubNq*mesh->Nfaces, 
                                 sizeof(dfloat));
+
+  dfloat *cubx = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
+				  mesh->cubNq*mesh->Nfaces, sizeof(dfloat));
+
+  dfloat *cuby = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
+				  mesh->cubNq*mesh->Nfaces, sizeof(dfloat));
+
+  dfloat *cubz = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
+				  mesh->cubNq*mesh->Nfaces, sizeof(dfloat));
   
   dfloat *xr = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   dfloat *yr = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
@@ -161,7 +170,7 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	mesh->sgeo[base+WSJID] = sJ*mesh->gllw[n];
       }
     }
-
+  
     // interpolate geofacs to surface quadrature
     for(int f=0;f<mesh->Nfaces;++f){
 
@@ -183,7 +192,11 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	  cy  += cIni*mesh->y[id+e*mesh->Np];
 	  cz  += cIni*mesh->z[id+e*mesh->Np];
 	}
-
+	
+	cubx[e*mesh->cubNq*mesh->Nfaces+f*mesh->cubNq + n] = cx;
+	cuby[e*mesh->cubNq*mesh->Nfaces+f*mesh->cubNq + n] = cy;
+	cubz[e*mesh->cubNq*mesh->Nfaces+f*mesh->cubNq + n] = cz;
+	
 	dfloat Gx = cyr*czs - czr*cys;
 	dfloat Gy = czr*cxs - cxr*czs;
 	dfloat Gz = cxr*cys - cyr*cxs;	
@@ -253,8 +266,8 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 		 );
 	}
 #endif
-	       
-	//	mesh->cubsgeo[base+WSJID] = sJ*mesh->cubw[n];
+	
+	// mesh->cubsgeo[base+WSJID] = sJ*mesh->cubw[n];
       }
     }
   }
@@ -295,12 +308,50 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
       // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
       dfloat hinvM = mesh->sgeo[baseM*mesh->Nsgeo + SJID]*mesh->sgeo[baseM*mesh->Nsgeo + IJID];
       dfloat hinvP = mesh->sgeo[baseP*mesh->Nsgeo + SJID]*mesh->sgeo[baseP*mesh->Nsgeo + IJID];
-
-      //      printf("hinvM/P = %g,%g\n", hinvM, hinvP);
       
       mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
       mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
     }
-  }  
   
+    for(int f=0;f<mesh->Nfaces;++f){
+      for(int n=0;n<mesh->cubNq;++n){
+	dlong eP = mesh->EToE[e*mesh->Nfaces+f];
+	dlong fP = mesh->EToF[e*mesh->Nfaces+f];
+
+	dlong idM = e*mesh->cubNq*mesh->Nfaces+f*mesh->cubNq+n;
+	dfloat cxM = cubx[idM];
+	dfloat cyM = cuby[idM];
+	dfloat czM = cubz[idM];
+	
+	dfloat mindist2;
+	int minidP = 0;
+	// jump through hoops to find neighbor cubature node
+	// [ not needed elsewhere since we interpolate consistently ]
+	dlong idP;
+	for(int m=0;m<mesh->cubNq;++m){
+	  idP = eP*mesh->cubNq*mesh->Nfaces+fP*mesh->cubNq+m;
+
+	  dfloat cxP = cubx[idP];
+	  dfloat cyP = cuby[idP];
+	  dfloat czP = cubz[idP];
+
+	  dfloat dist2 = pow(cxP-cxM,2)+pow(cyP-cyM,2)+pow(czP-czM,2);
+
+	  if(m==0 || dist2<mindist2){
+	    mindist2 = dist2;
+	    minidP = m;
+	  }
+	}
+
+	idM = mesh->Nsgeo*( e*mesh->cubNq*mesh->Nfaces+ f*mesh->cubNq+n)+IHID;
+	idP = mesh->Nsgeo*(eP*mesh->cubNq*mesh->Nfaces+fP*mesh->cubNq+minidP)+IHID;
+	
+	dfloat invh = mymax(mesh->cubsgeo[idM],mesh->cubsgeo[idP]);
+	
+	mesh->cubsgeo[idM] = invh;
+	mesh->cubsgeo[idP] = invh;
+
+      }
+    }  
+  } 
 }
