@@ -114,11 +114,13 @@ void upwindRoeAveraged(const dfloat nx,
   *rvflux -= w4*(dv-ny*dqn);
   *rwflux -= w4*(dw-nz*dqn);
 
+#if 0
   dfloat alpha = -20;
   *rflux += 0;
   *ruflux += alpha*(ruP-ruM);
   *rvflux += alpha*(rvP-rvM);
   *rwflux += alpha*(rwP-rwM);
+#endif
   
   // scale to average
   *rflux *= p_half;
@@ -332,6 +334,7 @@ void quadSurfaceTerms(const int face,
 	const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];
 	const dfloat nz = cubsgeo[sk*p_Nsgeo+p_NZID];
 	const dfloat sJ = cubsgeo[sk*p_Nsgeo+p_SJID];
+	const dfloat hinv = cubsgeo[sk*p_Nsgeo+p_IHID];
 
 	const dfloat rM  = r_qM[0*p_Nfaces+face];
 	const dfloat ruM = r_qM[1*p_Nfaces+face];
@@ -381,7 +384,14 @@ void quadSurfaceTerms(const int face,
 	ruflux -= p_half*(nx*(T11P+T11M) + ny*(T12P+T12M) + nz*(T13P+T13M));
 	rvflux -= p_half*(nx*(T12P+T12M) + ny*(T22P+T22M) + nz*(T23P+T23M));
 	rwflux -= p_half*(nx*(T13P+T13M) + ny*(T23P+T23M) + nz*(T33P+T33M));
-      
+	
+#if 1
+	const dfloat penalty = mu*hinv*(p_Nq)*(p_Nq-1)*p_half; 
+	ruflux -= penalty*(ruP-ruM);
+	rvflux -= penalty*(rvP-rvM);
+	rwflux -= penalty*(rwP-rwM);
+#endif
+	
 	s_rflux [face][i] = sJ*(-rflux);
 	s_ruflux[face][i] = sJ*(-ruflux);
 	s_rvflux[face][i] = sJ*(-rvflux);

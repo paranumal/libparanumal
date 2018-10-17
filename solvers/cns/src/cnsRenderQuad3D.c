@@ -82,10 +82,17 @@ void cnsRenderQuad3D(cns_t *cns, char *fileBaseName, int fileIndex){
       tmpPlotVortz[n] = plotVortzn;
 
       // mag after interp
+#if 0
       tmpPlotVortMag[n] =
 	sqrt(plotVortxn*plotVortxn +
 	     plotVortyn*plotVortyn +
 	     plotVortzn*plotVortzn);
+#else
+      tmpPlotVortMag[n] =
+	(plotxn*plotVortxn +
+	 plotyn*plotVortyn +
+	 plotzn*plotVortzn);
+#endif
     }
 
     for(int n=0;n<mesh->plotNelements;++n){
