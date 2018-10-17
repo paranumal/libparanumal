@@ -386,7 +386,7 @@ void quadSurfaceTerms(const int face,
 	rwflux -= p_half*(nx*(T13P+T13M) + ny*(T23P+T23M) + nz*(T33P+T33M));
 	
 #if 1
-	const dfloat penalty = mu*hinv*(p_Nq)*(p_Nq-1)*p_half; 
+	const dfloat penalty = 1.5f*mu*hinv*(p_Nq)*(p_Nq-1)*p_half; 
 	ruflux -= penalty*(ruP-ruM);
 	rvflux -= penalty*(rvP-rvM);
 	rwflux -= penalty*(rwP-rwM);

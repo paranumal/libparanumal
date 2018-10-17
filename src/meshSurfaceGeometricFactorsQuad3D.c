@@ -314,10 +314,11 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
     }
   
     for(int f=0;f<mesh->Nfaces;++f){
-      for(int n=0;n<mesh->cubNq;++n){
-	dlong eP = mesh->EToE[e*mesh->Nfaces+f];
-	dlong fP = mesh->EToF[e*mesh->Nfaces+f];
+      dlong eP = mesh->EToE[e*mesh->Nfaces+f];
+      dlong fP = mesh->EToF[e*mesh->Nfaces+f];
 
+      dfloat maxhinv  = 0;
+      for(int n=0;n<mesh->cubNq;++n){
 	dlong idM = e*mesh->cubNq*mesh->Nfaces+f*mesh->cubNq+n;
 	dfloat cxM = cubx[idM];
 	dfloat cyM = cuby[idM];
@@ -347,10 +348,15 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	idP = mesh->Nsgeo*(eP*mesh->cubNq*mesh->Nfaces+fP*mesh->cubNq+minidP)+IHID;
 	
 	dfloat invh = mymax(mesh->cubsgeo[idM],mesh->cubsgeo[idP]);
-	
-	mesh->cubsgeo[idM] = invh;
-	mesh->cubsgeo[idP] = invh;
+	maxhinv = mymax(maxhinv, invh);
+      }
 
+      // fixed penalty per face
+      for(int n=0;n<mesh->cubNq;++n){
+	int idM = mesh->Nsgeo*( e*mesh->cubNq*mesh->Nfaces+ f*mesh->cubNq+n)+IHID;
+	int idP = mesh->Nsgeo*(eP*mesh->cubNq*mesh->Nfaces+fP*mesh->cubNq+n)+IHID;
+	mesh->cubsgeo[idM] = maxhinv;
+	mesh->cubsgeo[idP] = maxhinv;
       }
     }  
   } 
