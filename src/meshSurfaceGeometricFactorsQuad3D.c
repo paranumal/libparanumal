@@ -192,6 +192,15 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	  cy  += cIni*mesh->y[id+e*mesh->Np];
 	  cz  += cIni*mesh->z[id+e*mesh->Np];
 	}
+
+#if 0
+	int id = mesh->faceNodes[n+f*mesh->Nq];
+	printf("cX = %g,%g,%g versus X = %g,%g,%g\n",
+	       cx, cy, cz,
+	       mesh->x[id+e*mesh->Np],
+	       mesh->y[id+e*mesh->Np],
+	       mesh->z[id+e*mesh->Np]);
+#endif
 	
 	cubx[e*mesh->cubNq*mesh->Nfaces+f*mesh->cubNq + n] = cx;
 	cuby[e*mesh->cubNq*mesh->Nfaces+f*mesh->cubNq + n] = cy;
@@ -254,7 +263,7 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	if(n<mesh->Nq){
 	  int snode = mesh->Nsgeo*(e*mesh->Nq*mesh->Nfaces+n+f*mesh->Nq);
 	  int cnode = mesh->Nsgeo*(e*mesh->cubNq*mesh->Nfaces+n+f*mesh->cubNq);
-	  printf("sJ=%g, csJ=%g\n sN=%g,%g,%g to cN=%g,%g,%g\n",
+	  printf("sJ=%g, csJ=%g\n sN=%g,%g,%g to cN=%g,%g,%g, cX=%g,%g,%g\n",
 		 mesh->sgeo[snode+SJID],
 		 mesh->cubsgeo[cnode+SJID],
 		 mesh->sgeo[snode+NXID],
@@ -262,7 +271,8 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 		 mesh->sgeo[snode+NZID],
 		 mesh->cubsgeo[cnode+NXID],
 		 mesh->cubsgeo[cnode+NYID],
-		 mesh->cubsgeo[cnode+NZID]
+		 mesh->cubsgeo[cnode+NZID],
+		 cx,cy,cz
 		 );
 	}
 #endif
@@ -297,7 +307,6 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
     }
   }
 #endif  
-  // TW: omit 1/min(h) calculation
 
   for(dlong e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
     for(int n=0;n<mesh->Nfp*mesh->Nfaces;++n){
@@ -312,7 +321,9 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
       mesh->sgeo[baseM*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
       mesh->sgeo[baseP*mesh->Nsgeo+IHID] = mymax(hinvM,hinvP);
     }
-  
+  }
+
+  for(dlong e=0;e<mesh->Nelements;++e){ /* for each non-halo element */
     for(int f=0;f<mesh->Nfaces;++f){
       dlong eP = mesh->EToE[e*mesh->Nfaces+f];
       dlong fP = mesh->EToF[e*mesh->Nfaces+f];
@@ -344,13 +355,37 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	  }
 	}
 
+	if(mindist2>1e-12)
+	printf("mindist2 = %g\n", mindist2);
+	
 	idM = mesh->Nsgeo*( e*mesh->cubNq*mesh->Nfaces+ f*mesh->cubNq+n)+IHID;
 	idP = mesh->Nsgeo*(eP*mesh->cubNq*mesh->Nfaces+fP*mesh->cubNq+minidP)+IHID;
 	
-	dfloat invh = mymax(mesh->cubsgeo[idM],mesh->cubsgeo[idP]);
-	maxhinv = mymax(maxhinv, invh);
-      }
+	dfloat hinv = mymax(mesh->cubsgeo[idM],mesh->cubsgeo[idP]);
+	mesh->cubsgeo[idM] = hinv;
+	mesh->cubsgeo[idP] = hinv;
 
+#if 0
+	int cid = e*mesh->cubNq*mesh->Nfaces+f*mesh->cubNq+n;
+	dfloat cx = cubx[cid], cy = cuby[cid], cz = cubz[cid];
+
+
+	int base = mesh->Nsgeo*( e*mesh->cubNq*mesh->Nfaces+ f*mesh->cubNq+n);
+	printf("cid=%d, |X|=%g, idM/P = %d,%d, Nor = (%g,%g,%g) v. (%g,%g,%g), hinv = %g v. %g\n",
+	       cid,
+	       cx*cx+cy*cy+cz*cz,
+	       idM, idP,
+	       mesh->cubsgeo[base+NXID],
+	       mesh->cubsgeo[base+NYID],
+	       mesh->cubsgeo[base+NZID],
+	       mesh->sgeo[base+NXID],
+	       mesh->sgeo[base+NYID],
+	       mesh->sgeo[base+NZID],
+	       mesh->cubsgeo[base+IHID],
+	       mesh->sgeo[base+IHID]);
+#endif
+      }
+#if 0
       // fixed penalty per face
       for(int n=0;n<mesh->cubNq;++n){
 	int idM = mesh->Nsgeo*( e*mesh->cubNq*mesh->Nfaces+ f*mesh->cubNq+n)+IHID;
@@ -358,6 +393,7 @@ void meshSurfaceGeometricFactorsQuad3D(mesh_t *mesh){
 	mesh->cubsgeo[idM] = maxhinv;
 	mesh->cubsgeo[idP] = maxhinv;
       }
+#endif
     }  
   } 
 }
