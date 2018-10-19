@@ -63,7 +63,7 @@ void interpolateHex3D(dfloat *I, dfloat *x, int N, dfloat *Ix, int M){
       for(int i=0;i<M;++i){
 	dfloat tmp = 0;
 	for(int n=0;n<N;++n){
-	  tmp += I[k*N + n]*Ix2[n*N*M+j*M+i];
+	  tmp += I[k*N + n]*Ix2[n*M*M+j*M+i];
 	}
 	Ix[k*M*M+j*M+i] = tmp;
       }
