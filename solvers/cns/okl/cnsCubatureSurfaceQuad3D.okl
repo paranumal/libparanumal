@@ -134,7 +134,7 @@ void quadSurfaceTerms(const int face,
                       dfloat s_ruflux[p_Nfaces][p_cubNq],
                       dfloat s_rvflux[p_Nfaces][p_cubNq],
 		      dfloat s_rwflux[p_Nfaces][p_cubNq],
-                      volatile dfloat s_rhsq[p_Nfields][p_Nq][p_Nq]){
+                      dfloat s_rhsq[p_Nfields][p_Nq][p_Nq]){
   
   dfloat r = 0.f, ru = 0.f, rv = 0.f, rw = 0.f;           
 
@@ -178,7 +178,7 @@ void quadSurfaceTerms(const int face,
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     
     // @shared storage for flux terms
-    @shared volatile dfloat s_rhsq[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_rhsq[p_Nfields][p_Nq][p_Nq];
     
     @shared dfloat s_qM[p_Nfields][p_Nfaces][p_cubNq];
     @shared dfloat s_qP[p_Nfields][p_Nfaces][p_cubNq];
@@ -467,7 +467,7 @@ void quadSurfaceTerms(const int face,
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     
     // @shared storage for flux terms
-    @shared volatile dfloat s_rhsq[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_rhsq[p_Nfields][p_Nq][p_Nq];
     
     @shared dfloat s_qM[p_Nfields][p_cubNq];
     @shared dfloat s_qP[p_Nfields][p_cubNq];
