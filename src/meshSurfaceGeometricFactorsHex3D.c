@@ -162,11 +162,7 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 	  
           int n = i + j*mesh->Nq + k*mesh->Nq*mesh->Nq;
 
-          /* local node coordinates */
-          dfloat rn = mesh->r[n]; 
-          dfloat sn = mesh->s[n];
-          dfloat tn = mesh->t[n];
-
+	  // compute Jacobian matrix by differentiation
 	  for(int m=0;m<mesh->Nq;++m){
 	    int idr = e*mesh->Np + k*mesh->Nq*mesh->Nq + j*mesh->Nq + m;
 	    int ids = e*mesh->Np + k*mesh->Nq*mesh->Nq + m*mesh->Nq + i;
@@ -192,29 +188,9 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
         /* volume index of face node */
         int n = mesh->faceNodes[f*mesh->Nfp+i];
 
-        /* local node coordinates */
-        dfloat rn = mesh->r[n]; 
-        dfloat sn = mesh->s[n];
-        dfloat tn = mesh->t[n];
-	
-#if 0
-        /* Jacobian matrix */
-        dfloat xr = 0.125*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
-        dfloat xs = 0.125*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
-        dfloat xt = 0.125*( (1-rn)*(1-sn)*(xe[4]-xe[0]) + (1+rn)*(1-sn)*(xe[5]-xe[1]) + (1+rn)*(1+sn)*(xe[6]-xe[2]) + (1-rn)*(1+sn)*(xe[7]-xe[3]) );
-        
-        dfloat yr = 0.125*( (1-tn)*(1-sn)*(ye[1]-ye[0]) + (1-tn)*(1+sn)*(ye[2]-ye[3]) + (1+tn)*(1-sn)*(ye[5]-ye[4]) + (1+tn)*(1+sn)*(ye[6]-ye[7]) );
-        dfloat ys = 0.125*( (1-tn)*(1-rn)*(ye[3]-ye[0]) + (1-tn)*(1+rn)*(ye[2]-ye[1]) + (1+tn)*(1-rn)*(ye[7]-ye[4]) + (1+tn)*(1+rn)*(ye[6]-ye[5]) );
-        dfloat yt = 0.125*( (1-rn)*(1-sn)*(ye[4]-ye[0]) + (1+rn)*(1-sn)*(ye[5]-ye[1]) + (1+rn)*(1+sn)*(ye[6]-ye[2]) + (1-rn)*(1+sn)*(ye[7]-ye[3]) );
-        
-        dfloat zr = 0.125*( (1-tn)*(1-sn)*(ze[1]-ze[0]) + (1-tn)*(1+sn)*(ze[2]-ze[3]) + (1+tn)*(1-sn)*(ze[5]-ze[4]) + (1+tn)*(1+sn)*(ze[6]-ze[7]) );
-        dfloat zs = 0.125*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
-        dfloat zt = 0.125*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
-#else
 	dfloat xr = xre[n], xs = xse[n], xt = xte[n];
 	dfloat yr = yre[n], ys = yse[n], yt = yte[n];
 	dfloat zr = zre[n], zs = zse[n], zt = zte[n];
-#endif
 	
         /* determinant of Jacobian matrix */
         dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
@@ -256,7 +232,7 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 		     mesh->sgeo[base+SBXID], mesh->sgeo[base+SBYID], mesh->sgeo[base+SBZID]);
       }
     
-      // now interpolate geofacs to cubature
+      // now interpolate Jacobian matrix to cubature nodes
       interpolateFaceHex3D(mesh->faceNodes+f*mesh->Nfp, mesh->cubInterp, xre, mesh->Nq, cubxre, mesh->cubNq);
       interpolateFaceHex3D(mesh->faceNodes+f*mesh->Nfp, mesh->cubInterp, xse, mesh->Nq, cubxse, mesh->cubNq);
       interpolateFaceHex3D(mesh->faceNodes+f*mesh->Nfp, mesh->cubInterp, xte, mesh->Nq, cubxte, mesh->cubNq);
@@ -270,34 +246,10 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
       //geometric data for quadrature
       for(int i=0;i<mesh->cubNfp;++i){  // for each quadrature node on face
 
-#if 0
-        dfloat rn, sn, tn;
-        switch(f){
-        case 0: rn = mesh->cubr[i%mesh->cubNq]; sn = mesh->cubr[i/mesh->cubNq]; tn = -1.0;                      break;
-        case 1: rn = mesh->cubr[i%mesh->cubNq]; sn = -1.0;                      tn = mesh->cubr[i/mesh->cubNq]; break;
-        case 2: rn = 1.0;                       sn = mesh->cubr[i%mesh->cubNq]; tn = mesh->cubr[i/mesh->cubNq]; break;
-        case 3: rn = mesh->cubr[i%mesh->cubNq]; sn = 1.0;                       tn = mesh->cubr[i/mesh->cubNq]; break;
-        case 4: rn = -1.0;                      sn = mesh->cubr[i%mesh->cubNq]; tn = mesh->cubr[i/mesh->cubNq]; break;
-        case 5: rn = mesh->cubr[i%mesh->cubNq]; sn = mesh->cubr[i/mesh->cubNq]; tn = 1.0;                       break;
-        }
-
-        /* Jacobian matrix */
-        dfloat xr = 0.125*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
-        dfloat xs = 0.125*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
-        dfloat xt = 0.125*( (1-rn)*(1-sn)*(xe[4]-xe[0]) + (1+rn)*(1-sn)*(xe[5]-xe[1]) + (1+rn)*(1+sn)*(xe[6]-xe[2]) + (1-rn)*(1+sn)*(xe[7]-xe[3]) );
-        
-        dfloat yr = 0.125*( (1-tn)*(1-sn)*(ye[1]-ye[0]) + (1-tn)*(1+sn)*(ye[2]-ye[3]) + (1+tn)*(1-sn)*(ye[5]-ye[4]) + (1+tn)*(1+sn)*(ye[6]-ye[7]) );
-        dfloat ys = 0.125*( (1-tn)*(1-rn)*(ye[3]-ye[0]) + (1-tn)*(1+rn)*(ye[2]-ye[1]) + (1+tn)*(1-rn)*(ye[7]-ye[4]) + (1+tn)*(1+rn)*(ye[6]-ye[5]) );
-        dfloat yt = 0.125*( (1-rn)*(1-sn)*(ye[4]-ye[0]) + (1+rn)*(1-sn)*(ye[5]-ye[1]) + (1+rn)*(1+sn)*(ye[6]-ye[2]) + (1-rn)*(1+sn)*(ye[7]-ye[3]) );
-        
-        dfloat zr = 0.125*( (1-tn)*(1-sn)*(ze[1]-ze[0]) + (1-tn)*(1+sn)*(ze[2]-ze[3]) + (1+tn)*(1-sn)*(ze[5]-ze[4]) + (1+tn)*(1+sn)*(ze[6]-ze[7]) );
-        dfloat zs = 0.125*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
-        dfloat zt = 0.125*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
-#else
 	dfloat xr = cubxre[i], xs = cubxse[i], xt = cubxte[i];
 	dfloat yr = cubyre[i], ys = cubyse[i], yt = cubyte[i];
 	dfloat zr = cubzre[i], zs = cubzse[i], zt = cubzte[i];
-#endif
+
         /* determinant of Jacobian matrix */
         dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
         
@@ -319,7 +271,6 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
         dfloat sJ = sqrt(nx*nx+ny*ny+nz*nz);
         nx /= sJ; ny /= sJ; nz /= sJ;
         sJ *= J;
-        
 
         /* output index */
         dlong base = mesh->Nsgeo*(mesh->Nfaces*mesh->cubNfp*e + mesh->cubNfp*f + i);
@@ -337,8 +288,6 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
 	computeFrame(nx, ny, nz,
 		     mesh->cubsgeo[base+STXID], mesh->cubsgeo[base+STYID], mesh->cubsgeo[base+STZID],
 		     mesh->cubsgeo[base+SBXID], mesh->cubsgeo[base+SBYID], mesh->cubsgeo[base+SBZID]);
-	
-	
       }
     }
   }
@@ -355,7 +304,6 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
     }
   }
 
-
   free(xre); free(xse); free(xte);
   free(yre); free(yse); free(yte);
   free(zre); free(zse); free(zte);
@@ -363,5 +311,4 @@ void meshSurfaceGeometricFactorsHex3D(mesh3D *mesh){
   free(cubxre); free(cubxse); free(cubxte);
   free(cubyre); free(cubyse); free(cubyte);
   free(cubzre); free(cubzse); free(cubzte);
-  
 }
