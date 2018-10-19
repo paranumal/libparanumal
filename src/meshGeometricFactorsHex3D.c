@@ -29,6 +29,52 @@ SOFTWARE.
 #include <stdlib.h>
 #include "mesh3D.h"
 
+void interpolateHex3D(dfloat *I, dfloat *x, int N, dfloat *Ix, int M){
+
+  dfloat *Ix1 = (dfloat*) calloc(N*N*M, sizeof(dfloat));
+  dfloat *Ix2 = (dfloat*) calloc(N*M*M, sizeof(dfloat));
+
+  for(int k=0;k<N;++k){
+    for(int j=0;j<N;++j){
+      for(int i=0;i<M;++i){
+	dfloat tmp = 0;
+	for(int n=0;n<N;++n){
+	  tmp += I[i*N + n]*x[k*N*N+j*N+n];
+	}
+	Ix1[k*N*M+j*M+i] = tmp;
+      }
+    }
+  }
+
+  for(int k=0;k<N;++k){
+    for(int j=0;j<M;++j){
+      for(int i=0;i<M;++i){
+	dfloat tmp = 0;
+	for(int n=0;n<N;++n){
+	  tmp += I[j*N + n]*Ix1[k*N*M+n*M+i];
+	}
+	Ix2[k*M*M+j*M+i] = tmp;
+      }
+    }
+  }
+
+  for(int k=0;k<M;++k){
+    for(int j=0;j<M;++j){
+      for(int i=0;i<M;++i){
+	dfloat tmp = 0;
+	for(int n=0;n<N;++n){
+	  tmp += I[k*N + n]*Ix2[n*N*M+j*M+i];
+	}
+	Ix[k*M*M+j*M+i] = tmp;
+      }
+    }
+  }
+
+  free(Ix1);
+  free(Ix2);
+  
+}
+
 void meshGeometricFactorsHex3D(mesh3D *mesh){
 
   /* unified storage array for geometric factors */
@@ -44,7 +90,27 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
   mesh->ggeo = (dfloat*) calloc(mesh->Nelements*mesh->Nggeo*mesh->Np, sizeof(dfloat));
 
   dfloat minJ = 1e9, maxJ = -1e9, maxSkew = 0;
+
+  dfloat *xre = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *xse = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *xte = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *yre = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *yse = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *yte = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *zre = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *zse = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  dfloat *zte = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   
+  dfloat *cubxre = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubxse = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubxte = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubyre = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubyse = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubyte = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubzre = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubzse = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubzte = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+
   for(dlong e=0;e<mesh->Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
@@ -54,6 +120,12 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
     dfloat *ye = mesh->EY + id;
     dfloat *ze = mesh->EZ + id;
 
+    for(int n=0;n<mesh->Np;++n){
+      xre[n] = 0; xse[n] = 0; xte[n] = 0;
+      yre[n] = 0; yse[n] = 0; yte[n] = 0; 
+      zre[n] = 0; zse[n] = 0; zte[n] = 0; 
+    }
+    
     for(int k=0;k<mesh->Nq;++k){
       for(int j=0;j<mesh->Nq;++j){
         for(int i=0;i<mesh->Nq;++i){
@@ -64,7 +136,8 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
           dfloat rn = mesh->r[n]; 
           dfloat sn = mesh->s[n];
           dfloat tn = mesh->t[n];
-          
+
+#if 0
           /* Jacobian matrix */
           dfloat xr = 0.125*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
           dfloat xs = 0.125*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
@@ -77,7 +150,27 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
           dfloat zr = 0.125*( (1-tn)*(1-sn)*(ze[1]-ze[0]) + (1-tn)*(1+sn)*(ze[2]-ze[3]) + (1+tn)*(1-sn)*(ze[5]-ze[4]) + (1+tn)*(1+sn)*(ze[6]-ze[7]) );
           dfloat zs = 0.125*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
           dfloat zt = 0.125*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
-          
+#else
+	  for(int m=0;m<mesh->Nq;++m){
+	    int idr = e*mesh->Np + k*mesh->Nq*mesh->Nq + j*mesh->Nq + m;
+	    int ids = e*mesh->Np + k*mesh->Nq*mesh->Nq + m*mesh->Nq + i;
+	    int idt = e*mesh->Np + m*mesh->Nq*mesh->Nq + j*mesh->Nq + i;
+	    xre[n] += mesh->D[i*mesh->Nq+m]*mesh->x[idr];
+	    xse[n] += mesh->D[j*mesh->Nq+m]*mesh->x[ids];
+	    xte[n] += mesh->D[k*mesh->Nq+m]*mesh->x[idt];
+	    yre[n] += mesh->D[i*mesh->Nq+m]*mesh->y[idr];
+	    yse[n] += mesh->D[j*mesh->Nq+m]*mesh->y[ids];
+	    yte[n] += mesh->D[k*mesh->Nq+m]*mesh->y[idt];
+	    zre[n] += mesh->D[i*mesh->Nq+m]*mesh->z[idr];
+	    zse[n] += mesh->D[j*mesh->Nq+m]*mesh->z[ids];
+	    zte[n] += mesh->D[k*mesh->Nq+m]*mesh->z[idt];
+	  }
+	  
+	  dfloat xr = xre[n], xs = xse[n], xt = xte[n];
+	  dfloat yr = yre[n], ys = yse[n], yt = yte[n];
+	  dfloat zr = zre[n], zs = zse[n], zt = zte[n];
+#endif
+	  
           /* compute geometric factors for affine coordinate transform*/
           dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
 
@@ -130,6 +223,19 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
       }
     }
 
+    interpolateHex3D(mesh->cubInterp, xre, mesh->Nq, cubxre, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, xse, mesh->Nq, cubxse, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, xte, mesh->Nq, cubxte, mesh->cubNq);
+
+    interpolateHex3D(mesh->cubInterp, yre, mesh->Nq, cubyre, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, yse, mesh->Nq, cubyse, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, yte, mesh->Nq, cubyte, mesh->cubNq);
+
+    interpolateHex3D(mesh->cubInterp, zre, mesh->Nq, cubzre, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, zse, mesh->Nq, cubzse, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, zte, mesh->Nq, cubzte, mesh->cubNq);
+    
+    
     //geometric data for quadrature
     for(int k=0;k<mesh->cubNq;++k){
       for(int j=0;j<mesh->cubNq;++j){
@@ -140,19 +246,26 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
           dfloat tn = mesh->cubr[k];
 
           /* Jacobian matrix */
+#if 0
           dfloat xr = 0.125*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
           dfloat xs = 0.125*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
           dfloat xt = 0.125*( (1-rn)*(1-sn)*(xe[4]-xe[0]) + (1+rn)*(1-sn)*(xe[5]-xe[1]) + (1+rn)*(1+sn)*(xe[6]-xe[2]) + (1-rn)*(1+sn)*(xe[7]-xe[3]) );
           
-          dfloat yr = 0.125*( (1-tn)*(1-sn)*(ye[1]-ye[0]) + (1-tn)*(1+sn)*(ye[2]-ye[3]) + (1+tn)*(1-sn)*(ye[5]-ye[4]) + (1+tn)*(1+sn)*(ye[6]-ye[7]) );
+	  dfloat yr = 0.125*( (1-tn)*(1-sn)*(ye[1]-ye[0]) + (1-tn)*(1+sn)*(ye[2]-ye[3]) + (1+tn)*(1-sn)*(ye[5]-ye[4]) + (1+tn)*(1+sn)*(ye[6]-ye[7]) );
           dfloat ys = 0.125*( (1-tn)*(1-rn)*(ye[3]-ye[0]) + (1-tn)*(1+rn)*(ye[2]-ye[1]) + (1+tn)*(1-rn)*(ye[7]-ye[4]) + (1+tn)*(1+rn)*(ye[6]-ye[5]) );
           dfloat yt = 0.125*( (1-rn)*(1-sn)*(ye[4]-ye[0]) + (1+rn)*(1-sn)*(ye[5]-ye[1]) + (1+rn)*(1+sn)*(ye[6]-ye[2]) + (1-rn)*(1+sn)*(ye[7]-ye[3]) );
           
           dfloat zr = 0.125*( (1-tn)*(1-sn)*(ze[1]-ze[0]) + (1-tn)*(1+sn)*(ze[2]-ze[3]) + (1+tn)*(1-sn)*(ze[5]-ze[4]) + (1+tn)*(1+sn)*(ze[6]-ze[7]) );
           dfloat zs = 0.125*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
           dfloat zt = 0.125*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
-          
-          /* compute geometric factors for affine coordinate transform*/
+#else
+	  int n = k*mesh->cubNq*mesh->cubNq + j*mesh->cubNq + i;
+	  dfloat xr = cubxre[n], xs = cubxse[n], xt = cubxte[n];
+	  dfloat yr = cubyre[n], ys = cubyse[n], yt = cubyte[n];
+	  dfloat zr = cubzre[n], zs = cubzse[n], zt = cubzte[n];
+#endif
+	  
+	  /* compute geometric factors for affine coordinate transform*/
           dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
           
           dfloat rx =  (ys*zt - zs*yt)/J, ry = -(xs*zt - zs*xt)/J, rz =  (xs*yt - ys*xt)/J;
@@ -184,4 +297,13 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
   }
 
   printf("J in range [%g,%g] and max Skew = %g\n", minJ, maxJ, maxSkew);
+
+  free(xre); free(xse); free(xte);
+  free(yre); free(yse); free(yte);
+  free(zre); free(zse); free(zte);
+
+  free(cubxre); free(cubxse); free(cubxte);
+  free(cubyre); free(cubyse); free(cubyte);
+  free(cubzre); free(cubzse); free(cubzte);
+  
 }
