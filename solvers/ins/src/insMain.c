@@ -43,7 +43,7 @@ int main(int argc, char **argv){
   
   if(options.compareArgs("SOLVER_TYPE", "BENCHMARK")){
 
-    int N = atoi(argv[2]);
+    // int N = atoi(argv[2]);
 
     // set up mesh stuff
     string fileName;
@@ -53,7 +53,7 @@ int main(int argc, char **argv){
     options.getArgs("ELEMENT TYPE", elementType);
     options.getArgs("MESH DIMENSION", dim);
 
-    // for(int N=1; N<=10; N++){
+    for(int N=1; N<=10; N++){
 
     // set up mesh
     mesh_t *mesh;
@@ -68,7 +68,8 @@ int main(int argc, char **argv){
       mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
     }
     insBenchmark(mesh, options);
-    // }
+   
+   }
   }
   else{
    

@@ -2,8 +2,8 @@
 1.0
 
 [SOLVER_TYPE]
-#BENCHMARK
-INS
+BENCHMARK
+#INS
 
 [BENCHMARK KERNEL]
 CUBATURE_VOLUME
@@ -15,14 +15,14 @@ CUBATURE_VOLUME
 5
 
 [DATA FILE]
-#data/insUniform2D.h
-data/insVortex2D.h
+data/insUniform2D.h
+#data/insVortex2D.h
 
 [MESH FILE]
-#../../meshes/insKernelOptimizeTri2D.msh
+../../meshes/insKernelOptimizeTri2D.msh
 #../../meshes/insSquareCylinder2D.msh
 #../../meshes/boltzmannSquareCylinderPML2D.msh
-../../meshes/insVortex2D_h2.msh
+#../../meshes/insVortex2D_h2.msh
 
 [MESH DIMENSION]
 2
