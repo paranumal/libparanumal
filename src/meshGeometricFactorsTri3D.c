@@ -33,11 +33,15 @@ SOFTWARE.
 void meshGeometricFactorsTri3D(mesh_t *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nvgeo = 11; // 
+  mesh->Nvgeo = 12; // 
   
   /* note that we have volume geometric factors for each node */
   mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->Np, sizeof(dfloat));
 
+  /* number of second order geometric factors */
+  mesh->Nggeo = 7;
+  mesh->ggeo = (dfloat*) calloc(mesh->Nelements*mesh->Nggeo, sizeof(dfloat));
+  
   for(int e=0;e<mesh->Nelements;++e){ /* for each element */
 
     for(int n=0;n<mesh->Np;++n){
@@ -112,6 +116,11 @@ void meshGeometricFactorsTri3D(mesh_t *mesh){
       mesh->vgeo[base + mesh->Np*TYID] = ty;
       mesh->vgeo[base + mesh->Np*TZID] = tz;
       mesh->vgeo[base + mesh->Np*JID]  = J;
+
+      mesh->ggeo[mesh->Nggeo*e + G00ID] = J*(rx*rx + ry*ry + rz*rz);
+      mesh->ggeo[mesh->Nggeo*e + G01ID] = J*(rx*sx + ry*sy + rz*sz);
+      mesh->ggeo[mesh->Nggeo*e + G11ID] = J*(sx*sx + sy*sy + sz*sz);
+      mesh->ggeo[mesh->Nggeo*e + GWJID]  = J;
       
     }
   }

@@ -47,6 +47,11 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
 
   mesh3D *mesh = (mesh3D*) calloc(1, sizeof(mesh3D));
 
+  mesh->rank = rank;
+  mesh->size = size;
+
+  MPI_Comm_dup(MPI_COMM_WORLD, &mesh->comm);
+  
   mesh->dim = 3;
   mesh->Nverts = 3; // number of vertices per element
   mesh->Nfaces = 3;

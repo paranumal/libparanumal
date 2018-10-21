@@ -139,12 +139,6 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
   // use this for "volume" Jacobian
   dfloat J = sqrt(tx*tx+ty*ty+tz*tz); // (difference between actual Jacobian and sphere Jac)
 
-  dfloat oldJ = xij*tx + yij*ty + zij*tz;
-
-  tx /= oldJ;
-  ty /= oldJ;
-  tz /= oldJ;
-
   //  printf("after: grad r = %g,%g,%g\n", rx, ry, rz);
   
   dfloat JW = J*mesh->gllw[i]*mesh->gllw[j];

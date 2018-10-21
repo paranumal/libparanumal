@@ -58,7 +58,9 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   dlong Nblock2 = mymax(1,(Nblock+blockSize-1)/blockSize);
 
   //tau
-  if (elliptic->elementType==TRIANGLES || elliptic->elementType==QUADRILATERALS)
+  if (elliptic->elementType==TRIANGLES || 
+      elliptic->elementType==QUADRILATERALS || 
+      (elliptic->dim==3 && elliptic->elementType==QUADRILATERALS))
     elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
   else
     elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+3);
@@ -240,6 +242,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       elliptic->Nmasked++;
     }
   }
+
+  
   elliptic->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), elliptic->mapB);
 
   elliptic->maskIds = (dlong *) calloc(elliptic->Nmasked, sizeof(dlong));
@@ -274,10 +278,18 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   // set kernel name suffix
   char *suffix;
 
-  if(elliptic->elementType==TRIANGLES)
-    suffix = strdup("Tri2D");
-  if(elliptic->elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
+  if(elliptic->elementType==TRIANGLES){
+    if(elliptic->dim==2)
+      suffix = strdup("Tri2D");
+    else
+      suffix = strdup("Tri3D");
+  }
+  if(elliptic->elementType==QUADRILATERALS){
+    if(elliptic->dim==2)
+      suffix = strdup("Quad2D");
+    else
+      suffix = strdup("Quad3D");
+  }
   if(elliptic->elementType==TETRAHEDRA)
     suffix = strdup("Tet3D");
   if(elliptic->elementType==HEXAHEDRA)
@@ -403,6 +415,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
         boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
       kernelInfo["includes"] += boundaryHeaderFileName;
 
+
       sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
       sprintf(kernelName, "ellipticAx%s", suffix);
 
@@ -428,6 +441,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
       elliptic->partialFloatAxKernel = mesh->device.buildKernel(fileName,kernelName,floatKernelInfo);
 
+      // Not implemented for Quad3D !!!!!
       if (options.compareArgs("BASIS","BERN")) {
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticGradientBB%s.okl", suffix);
@@ -463,6 +477,14 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
         elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       }
 
+      // Use the same kernel with quads for the following kenels
+      if(elliptic->dim==3){
+	if(elliptic->elementType==QUADRILATERALS)
+	  suffix = strdup("Quad2D");
+	else if(elliptic->elementType==TRIANGLES)
+	  suffix = strdup("Tri2D");
+      }
+	
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
       elliptic->precon->coarsenKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
@@ -470,6 +492,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
       elliptic->precon->prolongateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+
+      
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");
       sprintf(kernelName, "ellipticBlockJacobiPrecon");

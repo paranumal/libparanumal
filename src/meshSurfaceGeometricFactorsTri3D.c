@@ -33,7 +33,7 @@ SOFTWARE.
 void meshSurfaceGeometricFactorsTri3D(mesh_t *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nsgeo = 7;
+  mesh->Nsgeo = 14;
   mesh->sgeo = (dfloat*) calloc((mesh->Nelements+mesh->totalHaloPairs)*
 				mesh->Nsgeo*mesh->Nfp*mesh->Nfaces, 
 				sizeof(dfloat));
