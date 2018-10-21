@@ -76,7 +76,8 @@ AOBJS    = \
 ./src/insPressureUpdate.o \
 ./src/insRestart.o \
 ./src/insWeldTriVerts.o \
-./src/insIsoPlotVTU.o
+./src/insIsoPlotVTU.o \
+./src/insBrownMinionQuad3D.o 
 
 # library objects
 LOBJS = \
@@ -87,7 +88,9 @@ LOBJS = \
 ../../src/meshGeometricFactorsTet3D.o \
 ../../src/meshGeometricFactorsHex3D.o \
 ../../src/meshGeometricFactorsTri2D.o \
+../../src/meshGeometricFactorsTri3D.o \
 ../../src/meshGeometricFactorsQuad2D.o \
+../../src/meshGeometricFactorsQuad3D.o \
 ../../src/meshGeometricPartition2D.o \
 ../../src/meshGeometricPartition3D.o \
 ../../src/meshHaloExchange.o \
@@ -99,29 +102,39 @@ LOBJS = \
 ../../src/meshLoadReferenceNodesHex3D.o \
 ../../src/meshOccaSetup2D.o \
 ../../src/meshOccaSetup3D.o \
+../../src/meshOccaSetupQuad3D.o \
 ../../src/meshParallelConnectNodes.o \
 ../../src/meshParallelConnectOpt.o \
 ../../src/meshParallelConsecutiveGlobalNumbering.o\
 ../../src/meshParallelGatherScatterSetup.o \
 ../../src/meshParallelReaderTri2D.o \
+../../src/meshParallelReaderTri3D.o \
 ../../src/meshParallelReaderQuad2D.o \
+../../src/meshParallelReaderQuad3D.o \
 ../../src/meshParallelReaderTet3D.o \
 ../../src/meshParallelReaderHex3D.o \
 ../../src/meshPartitionStatistics.o \
 ../../src/meshPhysicalNodesTri2D.o \
+../../src/meshPhysicalNodesTri3D.o \
 ../../src/meshPhysicalNodesQuad2D.o \
+../../src/meshPhysicalNodesQuad3D.o \
 ../../src/meshPhysicalNodesTet3D.o \
 ../../src/meshPhysicalNodesHex3D.o \
 ../../src/meshPlotVTU2D.o \
 ../../src/meshPlotVTU3D.o \
 ../../src/meshPrint2D.o \
 ../../src/meshPrint3D.o \
+../../src/meshSetup.o \
 ../../src/meshSetupTri2D.o \
+../../src/meshSetupTri3D.o \
 ../../src/meshSetupQuad2D.o \
+../../src/meshSetupQuad3D.o \
 ../../src/meshSetupTet3D.o \
 ../../src/meshSetupHex3D.o \
 ../../src/meshSurfaceGeometricFactorsTri2D.o \
+../../src/meshSurfaceGeometricFactorsTri3D.o \
 ../../src/meshSurfaceGeometricFactorsQuad2D.o \
+../../src/meshSurfaceGeometricFactorsQuad3D.o \
 ../../src/meshSurfaceGeometricFactorsTet3D.o \
 ../../src/meshSurfaceGeometricFactorsHex3D.o \
 ../../src/meshVTU2D.o \
@@ -136,6 +149,7 @@ LOBJS = \
 ../../src/occaDeviceConfig.o\
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
+
 
 insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparAlmond libelliptic
 	$(LD)  $(LDFLAGS)  -o insMain ./src/insMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)

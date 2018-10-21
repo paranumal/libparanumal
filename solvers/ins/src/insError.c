@@ -54,8 +54,8 @@ void insError(ins_t *ins, dfloat time){
         minV = mymin(minV, fabs(ins->U[id+1*offset]));
         
         if (ins->dim==3) {
-          maxW = mymax(maxW, fabs(ins->U[id+3*offset]));
-          minW = mymin(minW, fabs(ins->U[id+3*offset]));  
+          maxW = mymax(maxW, fabs(ins->U[id+2*offset]));
+          minW = mymin(minW, fabs(ins->U[id+2*offset]));  
         }
 
         maxP = mymax(maxP, fabs(ins->P[id]));

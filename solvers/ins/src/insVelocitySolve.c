@@ -35,39 +35,45 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   mesh_t *mesh = ins->mesh; 
   elliptic_t *usolver = ins->uSolver; 
   elliptic_t *vsolver = ins->vSolver; 
-  elliptic_t *wsolver = ins->wSolver; 
+  elliptic_t *wsolver = ins->wSolver;
+
+  int quad3D = (ins->dim==3 && ins->elementType==QUADRILATERALS) ? 1 : 0;  
   
-  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-    ins->velocityRhsBCKernel(mesh->Nelements,
-                              mesh->o_ggeo,
-                              mesh->o_sgeo,
-                              mesh->o_Dmatrices,
-                              mesh->o_Smatrices,
-                              mesh->o_MM,
-                              mesh->o_vmapM,
-			     mesh->o_EToB,
-                              mesh->o_sMT,
-                              ins->lambda,
-                              time,
-                              mesh->o_x,
-                              mesh->o_y,
-                              mesh->o_z,
-                              ins->o_VmapB,
-                              o_rhsU,
-                              o_rhsV,
-                              o_rhsW);
-    
+  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
+
+    if(!quad3D) 
+      ins->velocityRhsBCKernel(mesh->Nelements,
+                                mesh->o_ggeo,
+                                mesh->o_sgeo,
+                                mesh->o_Dmatrices,
+                                mesh->o_Smatrices,
+                                mesh->o_MM,
+                                mesh->o_vmapM,
+    	                          mesh->o_EToB,
+                                mesh->o_sMT,
+                                ins->lambda,
+                                time,
+                                mesh->o_x,
+                                mesh->o_y,
+                                mesh->o_z,
+                                ins->o_VmapB,
+                                o_rhsU,
+                                o_rhsV,
+                                o_rhsW);
+
     // gather-scatter
     ogsGatherScatter(o_rhsU, ogsDfloat, ogsAdd, mesh->ogs);
     ogsGatherScatter(o_rhsV, ogsDfloat, ogsAdd, mesh->ogs);
+
     if (ins->dim==3)
       ogsGatherScatter(o_rhsW, ogsDfloat, ogsAdd, mesh->ogs);
+
     if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, o_rhsU);
     if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, o_rhsV);
     if (ins->dim==3)
       if (wsolver->Nmasked) mesh->maskKernel(wsolver->Nmasked, wsolver->o_maskIds, o_rhsW);
-
-  } else if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+    
+  } else if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG") && !quad3D) {
 
     occaTimerTic(mesh->device,"velocityRhsIpdg");    
     ins->velocityRhsIpdgBCKernel(mesh->Nelements,
@@ -96,7 +102,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   if (ins->dim==3)
     ins->o_WH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,2*ins->fieldOffset*sizeof(dfloat));
 
-  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
+  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
     if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, ins->o_UH);
     if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, ins->o_VH);
     if (ins->dim==3)
@@ -118,7 +124,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
     occaTimerToc(mesh->device,"Uz-Solve");
   }
 
-  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
+  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
     ins->velocityAddBCKernel(mesh->Nelements,
                             time,
                             mesh->o_sgeo,
