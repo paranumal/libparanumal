@@ -159,7 +159,8 @@ typedef struct {
   occa::kernel subCycleRKUpdateKernel;
   occa::kernel subCycleExtKernel;
 
-
+  occa::kernel constrainKernel;
+  
   occa::memory o_U, o_P;
   occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP; 
 
@@ -260,7 +261,7 @@ void insIsoPlotVTU(ins_t *ins, char *fileName);
 void insRestartWrite(ins_t *ins, setupAide &options, dfloat time); 
 void insRestartRead(ins_t *ins, setupAide &options); 
 
-
+void insBrownMinionQuad3D(ins_t *ins);
 // customized hex writer
 extern "C"
 {
@@ -269,3 +270,12 @@ extern "C"
 }
 
 
+void insRenderQuad3D(ins_t *ins, char *fileBaseName, int fileIndex);
+
+void simpleRayTracer(int     plotNelements,
+		     dfloat *plotx,
+		     dfloat *ploty,
+		     dfloat *plotz,
+		     dfloat *plotq,
+		     const char *fileBaseName,
+		     const int fileIndex);

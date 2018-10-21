@@ -31,7 +31,7 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
 
   mesh_t *mesh = ins->mesh;
 
-  //if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
     if(mesh->totalHaloPairs>0){
       ins->velocityHaloExtractKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
@@ -49,7 +49,7 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
                            ins->vSendBuffer,
                            ins->vRecvBuffer);
     }
-  //}
+  }
 
   // computes div u^(n+1) volume term
   occaTimerTic(mesh->device,"DivergenceVolume");
@@ -61,7 +61,7 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
                              o_DU);
   occaTimerToc(mesh->device,"DivergenceVolume");
 
-  //if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
 
@@ -76,6 +76,7 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
 
     //computes div u^(n+1) surface term
     occaTimerTic(mesh->device,"DivergenceSurface");
+    
     ins->divergenceSurfaceKernel(mesh->Nelements,
                                 mesh->o_sgeo,
                                 mesh->o_LIFTT,
@@ -90,5 +91,5 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
                                 o_U,
                                 o_DU);
     occaTimerToc(mesh->device,"DivergenceSurface");
-  //}
+  }
 }
