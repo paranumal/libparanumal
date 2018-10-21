@@ -45,8 +45,14 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   // compute samples of q at interpolation nodes
   mesh->q = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
-  if(elliptic->dim==3)
-    meshOccaSetup3D(mesh, options, kernelInfo);
+  if(elliptic->dim==3){
+    if(elliptic->elementType == TRIANGLES)
+      meshOccaSetupTri3D(mesh, options, kernelInfo);
+    else if(elliptic->elementType == QUADRILATERALS)
+      meshOccaSetupQuad3D(mesh, options, kernelInfo);
+    else
+      meshOccaSetup3D(mesh, options, kernelInfo);
+  } 
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
@@ -117,14 +123,74 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       dfloat xn = mesh->x[id];
       dfloat yn = mesh->y[id];
       dfloat zn = mesh->z[id];
-
+      
+      dfloat forcing; 
       if(elliptic->dim==2)
         elliptic->r[id] = J*(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
-      else
-        elliptic->r[id] = J*(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+      else{
+        if(elliptic->elementType==QUADRILATERALS){
+
+#if 0
+	  dfloat exact = pow(xn,2);
+	  dfloat forcing = -2*(- 2*pow(xn,2) + pow(yn,2) + pow(zn,2));
+#endif
+
+	  dfloat a = 1, b = 2, c = 3;
+	  dfloat pi = M_PI;
+
+#if 0
+	  dfloat exact = sin(pi*xn)*sin(pi*yn)*sin(pi*zn);
+	  dfloat forcing =
+	    - 2*pi*pi*sin(pi*xn)*sin(pi*yn)*sin(pi*zn)
+	    - 2*xn*pi*cos(pi*xn)*sin(pi*yn)*sin(pi*zn)
+	    - 2*yn*pi*cos(pi*yn)*sin(pi*xn)*sin(pi*zn)
+	    - 2*zn*pi*cos(pi*zn)*sin(pi*xn)*sin(pi*yn)
+	    - 2*xn*yn*pi*pi*cos(pi*xn)*cos(pi*yn)*sin(pi*zn)
+	    - 2*xn*zn*pi*pi*cos(pi*xn)*cos(pi*zn)*sin(pi*yn)
+	    - 2*yn*zn*pi*pi*cos(pi*yn)*cos(pi*zn)*sin(pi*xn);
+#endif
+
+	  dfloat exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
+	  
+	  dfloat forcing = 
+	      b*b*yn*yn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+	    - c*c*sin(a*xn)*sin(b*yn)*sin(c*zn)
+	    - a*a*yn*yn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+	    - a*a*zn*zn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+	    - b*b*sin(a*xn)*sin(b*yn)*sin(c*zn)
+	    + c*c*zn*zn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+	    - 2*a*xn*cos(a*xn)*sin(b*yn)*sin(c*zn)
+	    - 2*b*yn*cos(b*yn)*sin(a*xn)*sin(c*zn)
+	    - 2*c*zn*cos(c*zn)*sin(a*xn)*sin(b*yn)
+	    - 2*a*c*xn*zn*cos(a*xn)*cos(c*zn)*sin(b*yn)
+	    - 2*b*c*yn*zn*cos(b*yn)*cos(c*zn)*sin(a*xn)
+	    - 2*a*b*xn*yn*cos(a*xn)*cos(b*yn)*sin(c*zn);
+	  
+	  
+	  forcing = -forcing + lambda*exact;
+	  
+          elliptic->r[id] = J*forcing; 
+
+        }
+        else
+	  elliptic->r[id] = J*(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+
+      }
       elliptic->x[id] = 0;
     }
   }
+
+
+#if 0
+    char fname[BUFSIZ];
+    string outName;
+    options.getArgs("OUTPUT FILE NAME", outName);
+    sprintf(fname, "AAA%s_%04d.vtu",(char*)outName.c_str(), mesh->rank);
+    if(elliptic->dim==3)
+      meshPlotVTU3D(mesh, fname, 0);
+    else
+      meshPlotVTU2D(mesh, fname, 0);
+#endif
 
   //Apply some element matrix ops to r depending on our solver
   if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->invVB,elliptic->r,elliptic->r);
@@ -145,8 +211,12 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 
   if(elliptic->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
-  if(elliptic->elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
+  if(elliptic->elementType==QUADRILATERALS){
+    if(elliptic->dim==2)
+      suffix = strdup("Quad2D");
+    else
+      suffix = strdup("Quad3D"); 
+  }
   if(elliptic->elementType==TETRAHEDRA)
     suffix = strdup("Tet3D");
   if(elliptic->elementType==HEXAHEDRA)
@@ -155,7 +225,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
   //add boundary condition contribution to rhs
-  if (options.compareArgs("DISCRETIZATION","IPDG")) {
+  if (options.compareArgs("DISCRETIZATION","IPDG") && 
+      !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS) ) {
     for(int r=0;r<mesh->size;++r){
       if(r==mesh->rank){
 	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
@@ -182,18 +253,19 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 			      elliptic->o_r);
   }
 
-  if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
+  if (options.compareArgs("DISCRETIZATION","CONTINUOUS") &&
+       !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS) ) {
     for(int r=0;r<mesh->size;++r){
       if(r==mesh->rank){
-	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
-	sprintf(kernelName, "ellipticRhsBC%s", suffix);
+      sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
+        sprintf(kernelName, "ellipticRhsBC%s", suffix);
 
-	elliptic->rhsBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+        elliptic->rhsBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
 
-	sprintf(fileName, DELLIPTIC "/okl/ellipticAddBC%s.okl", suffix);
-	sprintf(kernelName, "ellipticAddBC%s", suffix);
+        sprintf(fileName, DELLIPTIC "/okl/ellipticAddBC%s.okl", suffix);
+        sprintf(kernelName, "ellipticAddBC%s", suffix);
 
-	elliptic->addBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+        elliptic->addBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
       }
       MPI_Barrier(mesh->comm);
     }
@@ -217,7 +289,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   }
 
   // gather-scatter
-  if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
+ if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
     ogsGatherScatter(elliptic->o_r, ogsDfloat, ogsAdd, mesh->ogs);
     if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, elliptic->o_r);
   }

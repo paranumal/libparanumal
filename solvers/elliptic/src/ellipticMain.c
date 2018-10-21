@@ -51,22 +51,36 @@ int main(int argc, char **argv){
   options.getArgs("MESH DIMENSION", dim);
 
   // set up mesh
+   // set up mesh
   mesh_t *mesh;
   switch(elementType){
-  case TRIANGLES:
-    mesh = meshSetupTri2D((char*)fileName.c_str(), N); break;
-  case QUADRILATERALS:
-    mesh = meshSetupQuad2D((char*)fileName.c_str(), N); break;
+    case TRIANGLES:
+      mesh = meshSetupTri2D((char*)fileName.c_str(), N); break;
+    case QUADRILATERALS:{
+      if(dim==2){
+        mesh = meshSetupQuad2D((char*)fileName.c_str(), N);
+      }
+      else{
+        dfloat radius = 1;
+        options.getArgs("SPHERE RADIUS", radius);
+        mesh = meshSetupQuad3D((char*)fileName.c_str(), N, radius);
+      }
+    break;
+  }
   case TETRAHEDRA:
-    mesh = meshSetupTet3D((char*)fileName.c_str(), N); break;
+  mesh = meshSetupTet3D((char*)fileName.c_str(), N); break;
   case HEXAHEDRA:
-    mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
+  mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
   }
 
   if(mesh->Nelements<10)
-    meshPrint3D(mesh);
-
-  // parameter for elliptic problem (-laplacian + lambda)*q = f
+  meshPrint3D(mesh);
+#if 0
+  char fname[BUFSIZ];
+  sprintf(fname,"meshQuad3D.vtu");
+  meshVTU3D(mesh, fname);
+#endif
+// parameter for elliptic problem (-laplacian + lambda)*q = f
   dfloat lambda;
   options.getArgs("LAMBDA", lambda);
 
@@ -135,7 +149,6 @@ int main(int argc, char **argv){
     occa::streamTag startTag = mesh->device.tagStream();
 
     int it = ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
-
     occa::streamTag stopTag = mesh->device.tagStream();
     mesh->device.finish();
 
@@ -151,7 +164,8 @@ int main(int argc, char **argv){
            mesh->Nelements*(it*mesh->Np/elapsed),
            (char*) options.getArgs("PRECONDITIONER").c_str());
 
-    if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
+    if(options.compareArgs("DISCRETIZATION","CONTINUOUS") && 
+       !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS)){
       dfloat zero = 0.;
       elliptic->addBCKernel(mesh->Nelements,
                             zero,
@@ -179,10 +193,26 @@ int main(int argc, char **argv){
         dfloat exact;
         if (elliptic->dim==2)
           exact = sin(M_PI*xn)*sin(M_PI*yn);
-        else
-          exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+        else{
+          if(elliptic->elementType==QUADRILATERALS){
+#if 0
+	    exact = xn*xn;
+#endif
+
+#if 0
+	    exact = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
+#endif
+	    dfloat a = 1, b = 2, c = 3;
+	    exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
+	  }
+	  else
+	    exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+        }
+
         dfloat error = fabs(exact-mesh->q[id]);
 
+        // store error
+        // mesh->q[id] = fabs(mesh->q[id] - exact);
         maxError = mymax(maxError, error);
       }
     }
@@ -192,11 +222,11 @@ int main(int argc, char **argv){
     if(mesh->rank==0)
       printf("globalMaxError = %g\n", globalMaxError);
 
-#if 0
+#if 1
     char fname[BUFSIZ];
     string outName;
     options.getArgs("OUTPUT FILE NAME", outName);
-    sprintf(fname, "%s_%04d.vtu",(char*)outName.c_str(), rank);
+    sprintf(fname, "%s_%04d.vtu",(char*)outName.c_str(), mesh->rank);
     if(elliptic->dim==3)
       meshPlotVTU3D(mesh, fname, 0);
     else

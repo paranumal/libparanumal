@@ -42,7 +42,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     case TRIANGLES:
       meshLoadReferenceNodesTri2D(meshLevels[n], n); break;
     case QUADRILATERALS:
-      meshLoadReferenceNodesQuad2D(meshLevels[n], n); break;
+      meshLoadReferenceNodesQuad2D(meshLevels[n], n);break;
     case TETRAHEDRA:
       meshLoadReferenceNodesTet3D(meshLevels[n], n); break;
     case HEXAHEDRA:

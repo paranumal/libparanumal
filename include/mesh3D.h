@@ -92,6 +92,7 @@ void meshPartitionStatistics3D(mesh3D *mesh);
 // default occa set up
 void meshOccaSetup3D(mesh3D *mesh, setupAide &newOptions, occa::properties &kernelInfo);
 void meshOccaSetupQuad3D(mesh_t *mesh, setupAide &newOptions, occa::properties &kernelInfo);
+void meshOccaSetupTri3D(mesh_t *mesh, setupAide &newOptions, occa::properties &kernelInfo);
 
 // functions that call OCCA kernels
 void occaTest3D(mesh3D *mesh, dfloat *q, dfloat *dqdx, dfloat *dqdy, dfloat *dqdz);
