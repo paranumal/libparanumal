@@ -655,6 +655,9 @@ void meshParallelGatherScatterSetup(mesh_t *mesh,
                                       MPI_Comm &comm,
                                       int verbose);
 
+// generic mesh setup
+mesh_t *meshSetup(char *filename, int N, setupAide &options);
+
 void occaTimerTic(occa::device device,std::string name);
 void occaTimerToc(occa::device device,std::string name);
 
