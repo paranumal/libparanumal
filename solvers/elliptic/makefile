@@ -111,6 +111,7 @@ LOBJS = \
 ../../src/meshPlotVTU3D.o \
 ../../src/meshPrint2D.o \
 ../../src/meshPrint3D.o \
+../../src/meshSetup.o \
 ../../src/meshSetupTri2D.o \
 ../../src/meshSetupQuad2D.o \
 ../../src/meshSetupQuad3D.o \
