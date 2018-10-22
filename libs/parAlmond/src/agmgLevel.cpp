@@ -177,9 +177,9 @@ void agmgLevel::Report() {
     strcpy(smootherString, "Chebyshev       ");
 
   if (rank==0){
-    printf(     "|  parAlmond |  %12d  | %13d   |   %s|\n", minNrows, (int)minNnzPerRow, smootherString);
-    printf("     |            |  %12d  | %13d   |                   |\n", maxNrows, (int)maxNnzPerRow);
-    printf("     |            |  %12d  | %13d   |                   |\n", (int)avgNrows, (int)avgNnzPerRow);
+    printf(      "|  parAlmond |  %12d  | %13d   |   %s|\n", minNrows, (int)minNnzPerRow, smootherString);
+    printf("      |            |  %12d  | %13d   |                   |\n", maxNrows, (int)maxNnzPerRow);
+    printf("      |            |  %12d  | %13d   |                   |\n", (int)avgNrows, (int)avgNnzPerRow);
   }
 }
 

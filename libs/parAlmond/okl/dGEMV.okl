@@ -1,0 +1,77 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+//computes y = A*x, assumes square A
+@kernel void dGEMV(const dlong   Nrows,
+                   const dlong   Ncols,
+                   @restrict const  dfloat * A,
+                   @restrict const  dfloat * x,
+                   @restrict        dfloat * y){
+
+  // y = A * x
+  for(dlong b_i=0;b_i<(Nrows+p_BLOCKSIZE-1)/p_BLOCKSIZE;++b_i;@outer(0)){
+    
+    @shared dfloat s_x[p_BLOCKSIZE];
+    @exclusive dfloat r_yi;
+
+    for(int t_i=0;t_i<p_BLOCKSIZE;++t_i;@inner(0)){
+      r_yi = 0.0; //set accumulator to zero
+    }
+
+    //loop over blocks of columns
+    for (int b_j=0;b_j<(Ncols+p_BLOCKSIZE-1)/p_BLOCKSIZE;++b_j) {
+
+      //read in block of x into shared
+      for(int t_i=0;t_i<p_BLOCKSIZE;++t_i;@inner(0)){
+        const dlong i = b_j*p_BLOCKSIZE + t_i;
+        s_x[t_i] = (i<Ncols) ? x[i] : 0.0;
+      }
+      
+      @barrier("local");
+
+      //accumulate a block of A*x to register
+      for(int t_i=0;t_i<p_BLOCKSIZE;++t_i;@inner(0)){
+
+        #pragma unroll p_BLOCKSIZE
+        for (int t_j=0; t_j<p_BLOCKSIZE;++t_j) {
+          const dlong id_i = b_i*p_BLOCKSIZE + t_i; //row
+          const dlong id_j = b_j*p_BLOCKSIZE + t_j; //col
+          if (id_i < Nrows && id_j < Ncols) {
+            const dfloat Aij = A[id_j*Nrows + id_i];
+            r_yi += Aij*s_x[t_j];
+          }
+        }
+      }
+    }
+
+    for(int t_i=0;t_i<p_BLOCKSIZE;++t_i;@inner(0)){
+      const dlong id_i = b_i*p_BLOCKSIZE + t_i; //row
+      if (id_i<Nrows)
+        y[id_i] = r_yi; //write out
+    }
+  }
+}
+

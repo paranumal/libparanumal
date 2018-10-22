@@ -28,7 +28,19 @@ LDFLAGS	= $(compilerFlags) $(flags) -g
 LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs \
 						$(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
-INCLUDES = $(includes)
+INCLUDES = $(includes) \
+include/agmg.hpp \
+include/coarse.hpp \
+include/defines.hpp \
+include/exact.hpp \
+include/kernels.hpp \
+include/level.hpp \
+include/matrix.hpp \
+include/oas.hpp \
+include/solver.hpp \
+include/utils.hpp \
+include/vector.hpp
+
 DEPS = $(INCLUDES) \
 $(OGSDIR)/ogs.hpp \
 $(HDRDIR)/include/types.h
@@ -44,11 +56,12 @@ $(HDRDIR)/include/types.h
 OBJS = \
 ./src/agmgLevel.o \
 ./src/agmgSmoother.o \
-./src/coarseSolver.o \
+./src/exactSolver.o \
 ./src/kernels.o \
 ./src/level.o \
 ./src/matrix.o \
 ./src/multigrid.o \
+./src/oasSolver.o \
 ./src/parAlmond.o \
 ./src/pcg.o \
 ./src/pgmres.o \

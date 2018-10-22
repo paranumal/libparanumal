@@ -29,7 +29,7 @@ SOFTWARE.
 namespace parAlmond {
 
 solver_t::solver_t(occa::device device_, MPI_Comm comm_,
-                   setupAide options_) {
+                   setupAide options_, CoarseType coarsetype_) {
 
   device = device_;
 
@@ -65,6 +65,12 @@ solver_t::solver_t(occa::device device_, MPI_Comm comm_,
   } else { //default to DAMPED_JACOBI
     stype = DAMPED_JACOBI;
   }
+
+  coarsetype = coarsetype_;
+  if (coarsetype == EXACTSOLVER)
+    coarseLevel = new exactSolver(options, comm);
+  else if (coarsetype == OASSOLVER)
+    coarseLevel = new oasSolver(options, comm);
 }
 
 solver_t::~solver_t() {
@@ -78,20 +84,23 @@ solver_t::~solver_t() {
 void solver_t::Report() {
 
   if(rank==0) {
-    printf("------------------Multigrid Report----------------------------------------\n");
-    printf("--------------------------------------------------------------------------\n");
-    printf("level|    Type    |    dimension   |   nnz per row   |   Smoother        |\n");
-    printf("     |            |  (min,max,avg) |  (min,max,avg)  |                   |\n");
-    printf("--------------------------------------------------------------------------\n");
+    printf("-------------------Multigrid Report----------------------------------------\n");
+    printf("---------------------------------------------------------------------------\n");
+    printf("Level |    Type    |    Dimension   |   nnz per row   |   Smoother        |\n");
+    printf("      |            |  (min,max,avg) |  (min,max,avg)  |                   |\n");
+    printf("---------------------------------------------------------------------------\n");
   }
 
-  for(int lev=0; lev<numLevels; lev++) {
-    if(rank==0) {printf(" %3d ", lev);fflush(stdout);}
+  for(int lev=0; lev<numLevels-1; lev++) {
+    if(rank==0) {printf(" %3d  ", lev);fflush(stdout);}
     levels[lev]->Report();
   }
 
+  //base level
+  coarseLevel->Report(numLevels-1);
+
   if(rank==0)
-    printf("--------------------------------------------------------------------------\n");
+    printf("---------------------------------------------------------------------------\n");
 }
 
 }

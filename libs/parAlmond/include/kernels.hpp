@@ -43,6 +43,7 @@ namespace parAlmond {
   extern occa::kernel SpMVellKernel2;
   extern occa::kernel SpMVmcsrKernel1;
   extern occa::kernel SpMVmcsrKernel2;
+  extern occa::kernel dGEMVKernel;
 
   extern occa::kernel vectorSetKernel;
   extern occa::kernel vectorScaleKernel;
@@ -52,6 +53,7 @@ namespace parAlmond {
   extern occa::kernel vectorDotStarKernel1;
   extern occa::kernel vectorDotStarKernel2;
   extern occa::kernel vectorInnerProdKernel;
+  extern occa::kernel vectorSumKernel;
   extern occa::kernel vectorAddInnerProdKernel;
   extern occa::kernel vectorAddWeightedInnerProdKernel;
   extern occa::kernel kcycleCombinedOp1Kernel;

@@ -30,7 +30,8 @@ namespace parAlmond {
 
 
 solver_t *Init(occa::device device, MPI_Comm comm, setupAide options) {
-  solver_t *M = new solver_t(device, comm, options);
+  CoarseType ctype = OASSOLVER;
+  solver_t *M = new solver_t(device, comm, options, ctype);
 
   if (Nrefs==0) buildParAlmondKernels(comm, device);
   Nrefs++;

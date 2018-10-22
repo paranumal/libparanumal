@@ -114,7 +114,8 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     int Nf = levelDegree[n-1];
 
     //build elliptic struct for this degree
-    printf("=============BUILDING MULTIGRID LEVEL OF DEGREE %d==================\n", Nc);
+    if (mesh->rank==0)
+      printf("=============BUILDING MULTIGRID LEVEL OF DEGREE %d==================\n", Nc);
     elliptic_t *ellipticC = ellipticBuildMultigridLevel(elliptic,Nc,Nf);
 
     //add the level manually
@@ -141,7 +142,8 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   if (Nmax>Nmin) {
     int Nc = levelDegree[numMGLevels-1];
     int Nf = levelDegree[numMGLevels-2];
-    printf("=============BUILDING MULTIGRID LEVEL OF DEGREE %d==================\n", Nmin);
+    if (mesh->rank==0)
+      printf("=============BUILDING MULTIGRID LEVEL OF DEGREE %d==================\n", Nmin);
     ellipticCoarse = ellipticBuildMultigridLevel(elliptic,Nc,Nf);
   } else {
     ellipticCoarse = elliptic;
@@ -220,34 +222,18 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 
       coarseLevel->gatherLevel = true;
       coarseLevel->ogs = ellipticCoarse->ogs;
-      coarseLevel->Gx = (dfloat*) calloc(coarseLevel->ogs->Ngather,sizeof(dfloat));
-      coarseLevel->Sx = (dfloat*) calloc(ellipticCoarse->mesh->Np*ellipticCoarse->mesh->Nelements,sizeof(dfloat));
-      coarseLevel->o_Gx = ellipticCoarse->mesh->device.malloc(coarseLevel->ogs->Ngather*sizeof(dfloat),coarseLevel->Gx);
-      coarseLevel->o_Sx = ellipticCoarse->mesh->device.malloc(ellipticCoarse->mesh->Np*ellipticCoarse->mesh->Nelements*sizeof(dfloat),coarseLevel->Sx);
+      coarseLevel->Gx   = (dfloat*) calloc(coarseLevel->Ncols,sizeof(dfloat));
+      coarseLevel->Grhs = (dfloat*) calloc(coarseLevel->Ncols,sizeof(dfloat));
+      coarseLevel->o_Gx   = ellipticCoarse->mesh->device.malloc(coarseLevel->Ncols*sizeof(dfloat),coarseLevel->Gx);
+      coarseLevel->o_Grhs = ellipticCoarse->mesh->device.malloc(coarseLevel->Ncols*sizeof(dfloat),coarseLevel->Gx);
     }
   }
 
   for (int n=1;n<mesh->N+1;n++) free(meshLevels[n]);
   free(meshLevels);
 
-  //report top levels
-  if (options.compareArgs("VERBOSE","TRUE")) {
-    if (mesh->rank==0) { //report the upper multigrid levels
-      printf("------------------Multigrid Report----------------------------------------\n");
-      printf("--------------------------------------------------------------------------\n");
-      printf("level|    Type    |    dimension   |   nnz per row   |   Smoother        |\n");
-      printf("     |            |  (min,max,avg) |  (min,max,avg)  |                   |\n");
-      printf("--------------------------------------------------------------------------\n");
-    }
-
-    for(int lev=0; lev<precon->parAlmond->numLevels; lev++) {
-      if(mesh->rank==0) {printf(" %3d ", lev);fflush(stdout);}
-      levels[lev]->Report();
-    }
-
-    if (mesh->rank==0)
-      printf("--------------------------------------------------------------------------\n");
-  }
+  if (options.compareArgs("VERBOSE", "TRUE"))
+    parAlmond::Report(precon->parAlmond);
 }
 
 

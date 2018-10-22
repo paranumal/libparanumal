@@ -22,7 +22,7 @@ data/ellipticHomogeneous2D.h
 6
 
 [THREAD MODEL]
-CUDA
+Serial
 
 [PLATFORM NUMBER]
 0

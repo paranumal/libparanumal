@@ -42,6 +42,7 @@ public:
   CycleType    ctype;
   KrylovType   ktype;
   SmoothType stype;
+  CoarseType coarsetype;
 
   int numLevels;
   int AMGstartLev, baseLevel;
@@ -52,7 +53,7 @@ public:
   int ChebyshevIterations;
 
   solver_t(occa::device otherdevice, MPI_Comm othercomm,
-                         setupAide otheroptions);
+           setupAide otheroptions, CoarseType coarsetype);
 
   ~solver_t();
 

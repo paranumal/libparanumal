@@ -28,23 +28,24 @@ SOFTWARE.
 
 namespace parAlmond {
 
-coarseSolver::coarseSolver(setupAide options_) {
+exactSolver::exactSolver(setupAide options_,
+                         MPI_Comm comm_) {
+
   gatherLevel = false;
   options = options_;
+
+  comm = comm_;
+  MPI_Comm_rank(comm,&rank);
+  MPI_Comm_size(comm,&size);
 }
 
-int coarseSolver::getTargetSize() {
+int exactSolver::getTargetSize() {
   return 1000;
 }
 
-//set up exact solver using xxt
-void coarseSolver::setup(parCSR *A) {
+void exactSolver::setup(parCSR *A) {
 
-  comm = A->comm;
-
-  int rank, size;
-  MPI_Comm_rank(comm,&rank);
-  MPI_Comm_size(comm,&size);
+  device = A->device;
 
   //copy the global coarse partition as ints
   coarseOffsets = (int* ) calloc(size+1,sizeof(int));
@@ -54,6 +55,9 @@ void coarseSolver::setup(parCSR *A) {
   coarseOffset  = coarseOffsets[rank];
 
   N = (int) A->Nrows;
+
+  Nrows = A->Nrows;
+  Ncols = A->Ncols;
 
   int sendNNZ = (int) (A->diag->nnz+A->offd->nnz);
   int *rows;
@@ -174,17 +178,53 @@ void coarseSolver::setup(parCSR *A) {
 
   free(coarseA);
 
+  //convert to transpose and send to device
+  dfloat *invCoarseAT = (dfloat *) calloc(N*coarseTotal,sizeof(dfloat));
+  for (int n=0;n<N;n++) {
+    for (int m=0;m<coarseTotal;m++) {
+      invCoarseAT[n+m*N] = invCoarseA[n*coarseTotal+m];
+    }
+  }
+
+  o_invCoarseAT = device.malloc(N*coarseTotal*sizeof(dfloat), invCoarseAT);
+  o_rhsCoarse = device.malloc(coarseTotal*sizeof(dfloat), rhsCoarse);
+
+  free(invCoarseAT);
+
   // if((rank==0)&&(options.compareArgs("VERBOSE","TRUE"))) printf("done.\n");
 }
 
-void coarseSolver::syncToDevice() {}
+void exactSolver::Report(int lev) {
 
-void coarseSolver::solve(dfloat *rhs, dfloat *x) {
+  hlong hNrows = (hlong) N;
+
+  int active = (N>0) ? 1:0;
+  int totalActive=0;
+  MPI_Allreduce(&active, &totalActive, 1, MPI_INT, MPI_SUM, comm);
+
+  dlong minNrows=0, maxNrows=0;
+  hlong totalNrows=0;
+  dfloat avgNrows;
+  MPI_Allreduce(&N, &maxNrows, 1, MPI_DLONG, MPI_MAX, comm);
+  MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, comm);
+  avgNrows = (dfloat) totalNrows/totalActive;
+
+  if (N==0) N=maxNrows; //set this so it's ignored for the global min
+  MPI_Allreduce(&N, &minNrows, 1, MPI_DLONG, MPI_MIN, comm);
+
+  if (rank==0){
+    printf(" %3d  |   Exact    |  %12d  |-------------------------------------|\n", lev, minNrows);
+    printf("      |   Solve    |  %12d  | Total Size:   %5d  x%5d         |\n", maxNrows, coarseTotal, coarseTotal);
+    printf("      |            |  %12d  |-------------------------------------|\n", (int)avgNrows);
+  }
+}
+
+void exactSolver::solve(dfloat *rhs, dfloat *x) {
 
   if (gatherLevel) {
-    ogsGather(Gx, rhs, ogsDfloat, ogsAdd, ogs);
+    ogsGather(Grhs, rhs, ogsDfloat, ogsAdd, ogs);
     //gather the full vector
-    MPI_Allgatherv(Gx,                  N,                MPI_DFLOAT,
+    MPI_Allgatherv(Grhs,                 N,                MPI_DFLOAT,
                    rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
 
     //multiply by local part of the exact matrix inverse
@@ -215,33 +255,36 @@ void coarseSolver::solve(dfloat *rhs, dfloat *x) {
 
 }
 
-void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
+void exactSolver::solve(occa::memory o_rhs, occa::memory o_x) {
 
-  if (gatherLevel) {
-    ogsGather(o_Gx, o_rhs, ogsDfloat, ogsAdd, ogs);
-    o_Gx.copyTo(rhsLocal, N*sizeof(dfloat), 0);
-  } else {
-    o_rhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
-  }
-
-  //gather the full vector
-  MPI_Allgatherv(rhsLocal,             N,                MPI_DFLOAT,
-                 rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
-
-  //multiply by local part of the exact matrix inverse
-  // #pragma omp parallel for
-  for (int n=0;n<N;n++) {
-    xLocal[n] = 0.;
-    for (int m=0;m<coarseTotal;m++) {
-      xLocal[n] += invCoarseA[n*coarseTotal+m]*rhsCoarse[m];
+  if (size==1) { //no comms required
+    if (gatherLevel) {
+      ogsGather(o_Grhs, o_rhs, ogsDfloat, ogsAdd, ogs);
+      dGEMVKernel(N,N,o_invCoarseAT,o_Grhs, o_Gx);
+      ogsScatter(o_x, o_Gx, ogsDfloat, ogsAdd, ogs);
+    } else {
+      dGEMVKernel(N,N,o_invCoarseAT,o_rhs, o_x);
     }
-  }
-
-  if (gatherLevel) {
-    o_Gx.copyFrom(xLocal, N*sizeof(dfloat), 0);
-    ogsScatter(o_x, o_Gx, ogsDfloat, ogsAdd, ogs);
   } else {
-    o_x.copyFrom(xLocal, N*sizeof(dfloat), 0);
+    if (gatherLevel) {
+      ogsGather(o_Grhs, o_rhs, ogsDfloat, ogsAdd, ogs);
+      o_Grhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
+    } else {
+      o_rhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
+    }
+
+    //gather the full vector
+    MPI_Allgatherv(rhsLocal,             N,                MPI_DFLOAT,
+                   rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
+
+    o_rhsCoarse.copyFrom(rhsCoarse, coarseTotal*sizeof(dfloat), 0);
+
+    if (gatherLevel) {
+      dGEMVKernel(N,coarseTotal,o_invCoarseAT,o_rhsCoarse, o_Gx);
+      ogsScatter(o_x, o_Gx, ogsDfloat, ogsAdd, ogs);
+    } else {
+      dGEMVKernel(N,coarseTotal,o_invCoarseAT,o_rhsCoarse, o_x);
+    }
   }
 }
 

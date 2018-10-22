@@ -218,9 +218,9 @@ void MGLevel::Report() {
     strcpy(smootherString, "Local Patch+Cheb");
 
   if (mesh->rank==0){
-    printf(     "|    pMG     |    %10d  |   Matrix-free   |   %s|\n",minNrows, smootherString);
-    printf("     |            |    %10d  |     Degree %2d   |                   |\n", maxNrows, degree);
-    printf("     |            |    %10d  |                 |                   |\n", (int) avgNrows);
+    printf(      "|    pMG     |    %10d  |   Matrix-free   |   %s|\n",minNrows, smootherString);
+    printf("      |            |    %10d  |     Degree %2d   |                   |\n", maxNrows, degree);
+    printf("      |            |    %10d  |                 |                   |\n", (int) avgNrows);
   }
 }
 

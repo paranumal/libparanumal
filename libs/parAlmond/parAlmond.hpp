@@ -45,6 +45,8 @@ SOFTWARE.
 #include "include/agmg.hpp"
 #include "include/coarse.hpp"
 #include "include/solver.hpp"
+#include "include/exact.hpp"
+#include "include/oas.hpp"
 
 
 namespace parAlmond {

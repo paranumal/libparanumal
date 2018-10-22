@@ -38,6 +38,7 @@ occa::kernel SpMVellKernel1;
 occa::kernel SpMVellKernel2;
 occa::kernel SpMVmcsrKernel1;
 occa::kernel SpMVmcsrKernel2;
+occa::kernel dGEMVKernel;
 
 occa::kernel vectorSetKernel;
 occa::kernel vectorScaleKernel;
@@ -47,6 +48,7 @@ occa::kernel vectorAddKernel2;
 occa::kernel vectorDotStarKernel1;
 occa::kernel vectorDotStarKernel2;
 occa::kernel vectorInnerProdKernel;
+occa::kernel vectorSumKernel;
 occa::kernel kcycleCombinedOp1Kernel;
 occa::kernel kcycleCombinedOp2Kernel;
 occa::kernel kcycleWeightedCombinedOp1Kernel;
@@ -109,6 +111,7 @@ void buildParAlmondKernels(MPI_Comm comm, occa::device device){
       SpMVellKernel2  = device.buildKernel(DPARALMOND"/okl/SpMVell.okl",  "SpMVell2",  kernelInfo);
       SpMVmcsrKernel1 = device.buildKernel(DPARALMOND"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);
       SpMVmcsrKernel2 = device.buildKernel(DPARALMOND"/okl/SpMVmcsr.okl", "SpMVmcsr2", kernelInfo);
+      dGEMVKernel     = device.buildKernel(DPARALMOND"/okl/dGEMV.okl", "dGEMV", kernelInfo);
 
       vectorSetKernel = device.buildKernel(DPARALMOND"/okl/vectorSet.okl", "vectorSet", kernelInfo);
       vectorScaleKernel = device.buildKernel(DPARALMOND"/okl/vectorScale.okl", "vectorScale", kernelInfo);
@@ -118,6 +121,7 @@ void buildParAlmondKernels(MPI_Comm comm, occa::device device){
       vectorDotStarKernel1 = device.buildKernel(DPARALMOND"/okl/vectorDotStar.okl", "vectorDotStar1", kernelInfo);
       vectorDotStarKernel2 = device.buildKernel(DPARALMOND"/okl/vectorDotStar.okl", "vectorDotStar2", kernelInfo);
       vectorInnerProdKernel = device.buildKernel(DPARALMOND"/okl/vectorInnerProd.okl", "vectorInnerProd", kernelInfo);
+      vectorSumKernel = device.buildKernel(DPARALMOND"/okl/vectorSum.okl", "vectorSum", kernelInfo);
 
       vectorAddInnerProdKernel = device.buildKernel(DPARALMOND"/okl/vectorAddInnerProd.okl", "vectorAddInnerProd", kernelInfo);
       vectorAddWeightedInnerProdKernel = device.buildKernel(DPARALMOND"/okl/vectorAddInnerProd.okl", "vectorAddWeightedInnerProd", kernelInfo);

@@ -31,7 +31,6 @@ namespace parAlmond {
 void solver_t::AMGSetup(parCSR *A){
 
   // approximate Nrows at coarsest level
-  coarseLevel = new coarseSolver(options);
   const int gCoarseSize = coarseLevel->getTargetSize();
 
   AMGstartLev = numLevels;
@@ -74,7 +73,6 @@ void solver_t::AMGSetup(parCSR *A){
     allocateAgmgVectors((agmgLevel*)(levels[n]), n, AMGstartLev, ctype);
     syncAgmgToDevice((agmgLevel*)(levels[n]), n, AMGstartLev, ctype);
   }
-  coarseLevel->syncToDevice();
 }
 
 //create coarsened problem
@@ -129,7 +127,7 @@ void setupAgmgSmoother(agmgLevel *level, SmoothType s, int ChebIterations){
 void allocateAgmgVectors(agmgLevel *level, int k, int AMGstartLev, CycleType ctype) {
 
   if (k) level->x    = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
-  if (k) level->rhs  = (dfloat *) calloc(level->Nrows,sizeof(dfloat));
+  if (k) level->rhs  = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
 
   level->res  = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
 
@@ -157,7 +155,7 @@ void syncAgmgToDevice(agmgLevel *level, int k, int AMGstartLev, CycleType ctype)
   }
 
   if (level->x  ) level->o_x   = device.malloc(level->Ncols*sizeof(dfloat),level->x);
-  if (level->rhs) level->o_rhs = device.malloc(level->Nrows*sizeof(dfloat),level->rhs);
+  if (level->rhs) level->o_rhs = device.malloc(level->Ncols*sizeof(dfloat),level->rhs);
   if (level->res) level->o_res = device.malloc(level->Ncols*sizeof(dfloat),level->res);
 
   if (ctype==KCYCLE) {

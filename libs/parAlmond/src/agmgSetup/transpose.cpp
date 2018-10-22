@@ -179,6 +179,7 @@ parCSR *transpose(parCSR *A){
     At->offd->rowStarts[i] += At->offd->rowStarts[i-1];
 
   MPI_Barrier(A->comm);
+  MPI_Type_free(&MPI_NONZERO_T);
   free(recvNonZeros);
   free(colIds);
 

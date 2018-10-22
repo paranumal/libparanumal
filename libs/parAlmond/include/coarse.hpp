@@ -32,41 +32,28 @@ namespace parAlmond {
 class coarseSolver {
 
 public:
-  int coarseTotal;
-  int coarseOffset;
-  int *coarseOffsets=NULL;
-  int *coarseCounts=NULL;
-
-  int N;
-  dfloat *invCoarseA=NULL;
-
-  dfloat *xLocal=NULL;
-  dfloat *rhsLocal=NULL;
-
-  dfloat *xCoarse=NULL;
-  dfloat *rhsCoarse=NULL;
+  int Nrows;
+  int Ncols;
 
   bool gatherLevel;
   ogs_t *ogs;
-  dfloat *Gx, *Sx;
-  occa::memory o_Sx, o_Gx;
+  dfloat *Gx, *Grhs;
+  occa::memory o_Grhs, o_Gx;
 
   MPI_Comm comm;
+  int rank, size;
   occa::device device;
 
   setupAide options;
 
-  coarseSolver(setupAide options);
-  ~coarseSolver();
+  virtual int getTargetSize() = 0;
 
-  int getTargetSize();
+  virtual void setup(parCSR *A) = 0;
 
-  void setup(parCSR *A);
+  virtual void Report(int lev) = 0;
 
-  void syncToDevice();
-
-  void solve(dfloat *rhs, dfloat *x);
-  void solve(occa::memory o_rhs, occa::memory o_x);
+  virtual void solve(dfloat *rhs, dfloat *x) = 0;
+  virtual void solve(occa::memory o_rhs, occa::memory o_x) = 0;
 };
 
 }

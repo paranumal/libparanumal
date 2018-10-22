@@ -24,28 +24,42 @@ SOFTWARE.
 
 */
 
-#ifndef PARALMOND_DEFINES_HPP
-#define PARALMOND_DEFINES_HPP
-
-#define BLOCKSIZE 256
-#define NBLOCKS 128
-
-#define MAX_LEVELS 100
-#define GPU_CPU_SWITCH_SIZE 0 //host-device switch threshold
-
-#define NUMKCYCLES 3
-#define COARSENTHREASHOLD 0.5
-#define KCYCLETOL 0.2
+#ifndef PARALMOND_OASSOLVE_HPP
+#define PARALMOND_OASSOLVE_HPP
 
 namespace parAlmond {
 
-extern int ChebyshevIterations;
+class oasSolver: public coarseSolver {
 
-typedef enum {VCYCLE=0,KCYCLE=1,EXACT=3} CycleType;
-typedef enum {PCG=0,GMRES=1} KrylovType;
-typedef enum {JACOBI=0,DAMPED_JACOBI=1,CHEBYSHEV=2} SmoothType;
-typedef enum {EXACTSOLVER=0,OASSOLVER=1} CoarseType;
+public:
 
-} //namespace parAlmond
+  int N;
+
+  parCSR* A;
+
+  parCSR* coarseA;
+  parCSR* coarseP;
+  parCSR* coarseR;
+
+  dfloat *xCoarse=NULL;
+  dfloat *rhsCoarse=NULL;
+
+  solver_t *patchSolver;
+  coarseSolver *uberCoarseSolver;
+
+  oasSolver(setupAide options, MPI_Comm comm_);
+  ~oasSolver();
+
+  int getTargetSize();
+
+  void setup(parCSR *A);
+
+  void Report(int lev);
+
+  void solve(dfloat *rhs, dfloat *x);
+  void solve(occa::memory o_rhs, occa::memory o_x);
+};
+
+}
 
 #endif
