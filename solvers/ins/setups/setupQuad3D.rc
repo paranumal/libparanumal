@@ -21,7 +21,7 @@ BROWN-MINION
 4
 
 [POLYNOMIAL DEGREE]
-8
+10
 
 [THREAD MODEL]
 CUDA
@@ -40,6 +40,11 @@ EXTBDF2
 
 [SUBCYCLING STEPS]
 8
+
+# currently we have order(Nstages) =  2(2), 3(3), 4(5)
+# make sure >= TIME INTEGRATOR order
+[SUBCYCLING TIME ORDER]
+4
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
@@ -66,20 +71,21 @@ CUBATURE
 0
 
 [FINAL TIME]
-60
+30
 
 [CFL]
-0.4
+0.3
 
 [OUTPUT TYPE]
-#VTU
-PPM
+VTU
+#PPM
 
 [RESTART FROM FILE]
 0
 
 [OUTPUT FILE NAME]
-sphereQuad3D
+/scratch/insQuad3DS4/sphereQuad3DS4
+#sphereQuad3D
 
 #################################################
 ########## Velocity Solver Options ##############

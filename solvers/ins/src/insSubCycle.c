@@ -93,9 +93,9 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
     // Advance SubProblem to t^(n-torder+1) 
     for(int ststep = 0; ststep<ins->Nsubsteps;++ststep){
       const dfloat tstage = tsub + ststep*ins->sdt;     
-      for(int rk=0;rk<mesh->Nrk;++rk){// LSERK4 stages
+      for(int rk=0;rk<ins->SNrk;++rk){// LSERK4 stages
         // Extrapolate velocity to subProblem stage time
-        dfloat t = tstage +  ins->sdt*mesh->rkc[rk]; 
+        dfloat t = tstage +  ins->sdt*ins->Srkc[rk]; 
 
         switch(ins->ExplicitOrder){
           case 1:
@@ -241,8 +241,8 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
         occaTimerTic(mesh->device,"AdvectionUpdate");
         ins->subCycleRKUpdateKernel(mesh->Nelements,
                               ins->sdt,
-                              mesh->rka[rk],
-                              mesh->rkb[rk],
+                              ins->Srka[rk],
+                              ins->Srkb[rk],
                               ins->fieldOffset,
                               ins->o_rhsUd,
                               ins->o_resU, 

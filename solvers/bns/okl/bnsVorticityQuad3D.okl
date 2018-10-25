@@ -49,7 +49,7 @@ SOFTWARE.
             const dfloat q0 = q[qbase + 0*p_Np];
             const dfloat q1 = q[qbase + 1*p_Np];
             const dfloat q2 = q[qbase + 2*p_Np];
-	    const dfloat q3 = q[qbase + 3*p_Np];
+            const dfloat q3 = q[qbase + 3*p_Np];
             
             s_u[es][j][i] = p_sqrtRT*q1/q0;
             s_v[es][j][i] = p_sqrtRT*q2/q0;
@@ -72,14 +72,15 @@ SOFTWARE.
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
             const dfloat drdx = vgeo[gid + p_RXID*p_Np];
             const dfloat drdy = vgeo[gid + p_RYID*p_Np];
-	    const dfloat drdz = vgeo[gid + p_RZID*p_Np];
+            const dfloat drdz = vgeo[gid + p_RZID*p_Np];
             const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
             const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
-	    const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-	    const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+            const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
+#if 0
+            const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
             const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
-	    const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
-
+            const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+#endif
             // compute 1D derivatives
             dfloat ur = 0, vr = 0, wr = 0;
             dfloat us = 0, vs = 0, ws = 0;
@@ -92,7 +93,7 @@ SOFTWARE.
                 us += Ds*s_u[es][n][i];
                 vr += Dr*s_v[es][j][n];
                 vs += Ds*s_v[es][n][i];
-		wr += Dr*s_w[es][j][n];
+                wr += Dr*s_w[es][j][n];
                 ws += Ds*s_w[es][n][i];
               }
 
@@ -100,14 +101,14 @@ SOFTWARE.
 	      const dfloat vt = s_v[es][j][i];
 	      const dfloat wt = s_w[es][j][i];
 	      
-	      const dfloat uy = drdy*ur + dsdy*us + dtdy*ut;
-	      const dfloat uz = drdz*ur + dsdz*us + dtdz*ut;
+	      const dfloat uy = drdy*ur + dsdy*us; //  + dtdy*ut;
+	      const dfloat uz = drdz*ur + dsdz*us; //  + dtdz*ut;
 	      
-	      const dfloat vx = drdx*vr + dsdx*vs + dtdx*vt;
-	      const dfloat vz = drdz*vr + dsdz*vs + dtdz*vt;
+	      const dfloat vx = drdx*vr + dsdx*vs; //  + dtdx*vt;
+	      const dfloat vz = drdz*vr + dsdz*vs; //  + dtdz*vt;
 	      
-	      const dfloat wx = drdx*wr + dsdx*ws + dtdx*wt;
-	      const dfloat wy = drdy*wr + dsdy*ws + dtdy*wt;
+	      const dfloat wx = drdx*wr + dsdx*ws; //  + dtdx*wt;
+	      const dfloat wy = drdy*wr + dsdy*ws; //  + dtdy*wt;
 	      
 	      const dlong id = p_Nvort*e*p_Np + j*p_Nq + i; 
 	      

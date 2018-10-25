@@ -148,7 +148,7 @@ void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
     
 
 
-#if 0
+#if 1
     // TW: TURN OFF RELAXATION FOR TESTING ONLY
     occaTimerTic(mesh->device, "RelaxationKernel");
     if(mesh->pmlNelements){
@@ -287,6 +287,8 @@ void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
       occaTimerToc(mesh->device,"NonPmlSurfaceKernel");
     }
     occaTimerToc(mesh->device,"SurfaceKernel");
+
+
 
     if(bns->elementType==QUADRILATERALS && mesh->dim==3){
       bns->constrainKernel(mesh->Nelements, mesh->o_x, mesh->o_y, mesh->o_z, bns->o_rhsq);

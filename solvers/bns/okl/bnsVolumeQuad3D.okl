@@ -23,7 +23,7 @@
   SOFTWARE.
 
 */
-
+#define TDIR 1
 // Only difference with boltzmannVolume2D is size of rhsq and shifting
 @kernel void bnsVolumeQuad3D(const dlong Nelements,
 			     @restrict const  dlong *  elementIds,
@@ -87,10 +87,12 @@
 	    const dfloat dsdx = vgeo[gbase + p_Np*p_SXID];
 	    const dfloat dsdy = vgeo[gbase + p_Np*p_SYID];
 	    const dfloat dsdz = vgeo[gbase + p_Np*p_SZID];
+#if TDIR
 	    const dfloat dtdx = vgeo[gbase + p_Np*p_TXID];
 	    const dfloat dtdy = vgeo[gbase + p_Np*p_TYID];
 	    const dfloat dtdz = vgeo[gbase + p_Np*p_TZID];
-	    
+#endif
+
 	    // compute 'r' and 's' derivatives of (q_m) at node n
 	    dfloat dqdr[p_Nfields], dqds[p_Nfields];
 	    
@@ -128,7 +130,7 @@
 	    const dfloat q10 = s_q[9][es][j][i];
 
 	    const dfloat invq1 = 1.f/q1;
-
+#if TDIR
 	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
 	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;
 	    const dfloat dq1dz = drdz*dqdr[0] + dsdz*dqds[0] + dtdz*q1;
@@ -157,6 +159,36 @@
 
 	    const dfloat dq10dy = drdy*dqdr[9] + dsdy*dqds[9] + dtdy*q10;
 	    const dfloat dq10dz = drdz*dqdr[9] + dsdz*dqds[9] + dtdz*q10;
+#else
+			const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0];
+			const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0];
+			const dfloat dq1dz = drdz*dqdr[0] + dsdz*dqds[0];
+
+			const dfloat dq2dx = drdx*dqdr[1] + dsdx*dqds[1];
+			const dfloat dq2dy = drdy*dqdr[1] + dsdy*dqds[1];
+			const dfloat dq2dz = drdz*dqdr[1] + dsdz*dqds[1];
+
+			const dfloat dq3dx = drdx*dqdr[2] + dsdx*dqds[2];
+			const dfloat dq3dy = drdy*dqdr[2] + dsdy*dqds[2];
+			const dfloat dq3dz = drdz*dqdr[2] + dsdz*dqds[2];
+
+			const dfloat dq4dx = drdx*dqdr[3] + dsdx*dqds[3];
+			const dfloat dq4dy = drdy*dqdr[3] + dsdy*dqds[3];
+			const dfloat dq4dz = drdz*dqdr[3] + dsdz*dqds[3];
+
+			const dfloat dq5dx = drdx*dqdr[4] + dsdx*dqds[4];
+			const dfloat dq6dy = drdy*dqdr[5] + dsdy*dqds[5];
+			const dfloat dq7dz = drdz*dqdr[6] + dsdz*dqds[6];
+
+			const dfloat dq8dx = drdx*dqdr[7] + dsdx*dqds[7];
+			const dfloat dq8dy = drdy*dqdr[7] + dsdy*dqds[7];
+
+			const dfloat dq9dx = drdx*dqdr[8] + dsdx*dqds[8];
+			const dfloat dq9dz = drdz*dqdr[8] + dsdz*dqds[8];
+
+			const dfloat dq10dy = drdy*dqdr[9] + dsdy*dqds[9];
+			const dfloat dq10dz = drdz*dqdr[9] + dsdz*dqds[9];
+#endif
 
 	    const dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy + dq4dz);
 
@@ -176,6 +208,7 @@
 	    const dfloat xij = x[i+j*p_Nq+e*p_Np];
 	    const dfloat yij = y[i+j*p_Nq+e*p_Np];
 	    const dfloat zij = z[i+j*p_Nq+e*p_Np];
+
 
 	    // add coriolis force to momentum equation
 	    rhsq2 -= p_fainv*zij*(yij*q4-zij*q3);
