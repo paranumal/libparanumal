@@ -12,7 +12,7 @@ BROWN-MINION
 
 [MESH FILE]
 #../../meshes/sphereMR.msh
-../../meshes/sphereQuadH01.msh
+../../meshes/sphereQuadH005.msh
 
 [MESH DIMENSION]
 3
@@ -60,9 +60,9 @@ CUDA
 0
 
 [TIME INTEGRATOR]
-LSERK4
+#LSERK4
 #MRSAAB
-#SARK 
+SARK 
 
 [VISCOSITY]
 0.0002
@@ -95,10 +95,10 @@ LSERK4
 .05
 
 [ABSOLUTE TOLERANCE]
-1E-7
+1E-5
 
 [RELATIVE TOLERANCE]
-1E-6
+1E-4
 
 [MINUMUM TIME STEP SIZE]
 1E-10
@@ -107,7 +107,7 @@ LSERK4
 2
 
 [CFL]
-0.5
+0.3
 
 # Currently SARK and LSERK only
 [RESTART FROM FILE]
