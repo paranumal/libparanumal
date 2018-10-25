@@ -127,7 +127,8 @@ void insRunEXTBDF(ins_t *ins){
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
       insAdvection(ins, time, ins->o_U, ins->o_NU);
-    } 
+    }
+
     insGradient (ins, time, ins->o_P, ins->o_GP);
 
 #if 0
@@ -211,6 +212,19 @@ void insRunEXTBDF(ins_t *ins){
 			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
 
+
+
+#if 1
+    if(((tstep+1)%10)==0){
+      char fname[BUFSIZ];
+      sprintf(fname, "Iterations_Quad3D_%d", ins->SNrk);
+      FILE *fp; 
+      fp = fopen(fname, "a");
+      fprintf(fp, "%d %d %d %d %d\n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
+      fclose(fp);
+    }
+#endif
+
     occaTimerTic(mesh->device,"Report");
 
     if(ins->outputStep){
@@ -219,6 +233,9 @@ void insRunEXTBDF(ins_t *ins){
         if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
 
         insReport(ins, time+ins->dt, tstep+1);
+
+
+
 
         // Write a restart file
         if(ins->writeRestartFile){

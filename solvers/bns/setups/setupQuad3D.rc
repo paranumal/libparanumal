@@ -12,7 +12,7 @@ BROWN-MINION
 
 [MESH FILE]
 #../../meshes/sphereMR.msh
-../../meshes/sphereQuadH01a.msh
+../../meshes/sphereQuadH01.msh
 
 [MESH DIMENSION]
 3
@@ -21,7 +21,7 @@ BROWN-MINION
 4
 
 [POLYNOMIAL DEGREE]
-8
+10
 
 [SPHERE RADIUS]
 1.0
@@ -60,9 +60,9 @@ CUDA
 0
 
 [TIME INTEGRATOR]
-#LSERK4
+LSERK4
 #MRSAAB
-SARK 
+#SARK 
 
 [VISCOSITY]
 0.0002
@@ -83,22 +83,22 @@ SARK
 1000
 
 [TSTEPS FOR SOLUTION OUTPUT]
-0
+12500
 
 [START TIME]
 0
 
 [FINAL TIME]
-5
+30
 
 [OUTPUT INTERVAL]
-.1
+.05
 
 [ABSOLUTE TOLERANCE]
-1E-5
+1E-7
 
 [RELATIVE TOLERANCE]
-1E-4
+1E-6
 
 [MINUMUM TIME STEP SIZE]
 1E-10
@@ -107,7 +107,7 @@ SARK
 2
 
 [CFL]
-0.1
+0.5
 
 # Currently SARK and LSERK only
 [RESTART FROM FILE]
@@ -120,10 +120,12 @@ SARK
 bnsRestart
 
 [OUTPUT FILE FORMAT]
-PPM
+VTU
+#PPM
 
 [OUTPUT FILE NAME]
-squareCylinderQuad
+/scratch/bnsQuad3D/bnsQuad3D
+#squareCylinderQuad
 
 [VERBOSE]
 TRUE

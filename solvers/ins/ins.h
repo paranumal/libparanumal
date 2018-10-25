@@ -92,7 +92,9 @@ typedef struct {
   dfloat *Vort, *Div;
 
   dfloat g[3];      // gravitational Acceleration
-
+  //RK Subcycle Data
+  int SNrk;
+  dfloat *Srka, *Srkb, *Srkc; 
 
   //ARK data
   int Nrk;
@@ -121,7 +123,6 @@ typedef struct {
   occa::memory o_pSendBuffer;
   occa::memory o_pRecvBuffer;
   occa::memory o_gatherTmpPinned;
-
 
   int Nsubsteps;  
   dfloat *Ud, *Ue, *resU, *rhsUd, sdt;

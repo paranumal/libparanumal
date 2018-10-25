@@ -59,9 +59,11 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   //tau
   if (elliptic->elementType==TRIANGLES || 
-      elliptic->elementType==QUADRILATERALS || 
-      (elliptic->dim==3 && elliptic->elementType==QUADRILATERALS))
+      elliptic->elementType==QUADRILATERALS){
     elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
+    if(elliptic->dim==3)
+      elliptic->tau *= 1.5;
+  }
   else
     elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+3);
 

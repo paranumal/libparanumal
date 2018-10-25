@@ -405,8 +405,7 @@ void bnsSARKStep(bns_t *bns, dfloat time, int haloBytes,
       occaTimerToc(mesh->device,"NonPmlUpdateKernel");
     }
 
-    occaTimerToc(mesh->device,"UpdateKernel");
-    
+    occaTimerToc(mesh->device,"UpdateKernel");    
   }
 
 
