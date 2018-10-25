@@ -14,7 +14,7 @@ data/cnsUniform2D.h
 4
 
 [POLYNOMIAL DEGREE]
-5
+10
 
 [SPHERE RADIUS]
 1.0
@@ -80,7 +80,7 @@ CUBATURE
 
 #set to 0.0 to ignore
 [TIME OUTPUT INTERVAL]
-0.1
+0.05
 
 #set to 0 to ignore
 [TSTEP OUTPUT INTERVAL]
@@ -93,11 +93,12 @@ CUBATURE
 0
 
 [OUTPUT FILE NAME]
-sphereQuad3D
+/scratch/cnsQuad3D/cnsQuad3D
+#sphereQuad3D
 
 [OUTPUT FILE FORMAT]
-#VTU
-PPM
+VTU
+#PPM
 
 [VERBOSE]
 TRUE

@@ -308,6 +308,7 @@ const dlong pmloffset = mesh->Np*mesh->pmlNelements*bns->Nfields;
       occaTimerToc(mesh->device,"SurfaceKernel");
     }
 
+    
     // Need MRAB version
     if(bns->elementType==QUADRILATERALS && mesh->dim==3){
       bns->constrainKernel(mesh->Nelements, mesh->o_x, mesh->o_y, mesh->o_z, bns->o_rhsq);
