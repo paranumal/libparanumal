@@ -430,16 +430,32 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   dfloat hmin = 1e9, hmax = 0;
   dfloat umax = 0;
   for(dlong e=0;e<mesh->Nelements;++e){
-    for(int f=0;f<mesh->Nfaces;++f){
-      dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
-      dfloat sJ   = mesh->sgeo[sid + SJID];
-      dfloat invJ = mesh->sgeo[sid + IJID];
 
-      dfloat hest = 2./(sJ*invJ);
+    if(ins->elementType==TRIANGLES || ins->elementType == TETRAHEDRA){
+      for(int f=0;f<mesh->Nfaces;++f){
+        dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+        dfloat sJ   = mesh->sgeo[sid + SJID];
+        dfloat invJ = mesh->sgeo[sid + IJID];
 
-      hmin = mymin(hmin, hest);
-      hmax = mymax(hmax, hest);
+        dfloat hest = 2./(sJ*invJ);
+
+        hmin = mymin(hmin, hest);
+        hmax = mymax(hmax, hest);
+      }
+    }else{
+      for(int f=0;f<mesh->Nfaces;++f){
+        for(int n=0; n<mesh->Nfp; n++){
+        dlong sid = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n);
+        dfloat sJ   = mesh->sgeo[sid + SJID];
+        dfloat invJ = mesh->sgeo[sid + IJID];
+
+        dfloat hest = 2./(sJ*invJ);
+
+        hmin = mymin(hmin, hest);
+        hmax = mymax(hmax, hest);
+      }
     }
+  }
 
      // dfloat maxMagVecLoc = 0;
 
