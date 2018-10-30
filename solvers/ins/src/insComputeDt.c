@@ -36,6 +36,8 @@ void insComputeDt(ins_t *ins, dfloat time){
   for(dlong e=0;e<mesh->Nelements;++e){
     hminL = 1e9; 
     umaxL = 0.0; 
+
+    if(ins->elementType == TRIANGLES || ins->elementType == TETRAHEDRA){
     for(int f=0;f<mesh->Nfaces;++f){
       dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
       dfloat sJ   = mesh->sgeo[sid + SJID];
@@ -44,6 +46,18 @@ void insComputeDt(ins_t *ins, dfloat time){
       dfloat hest = 2./(sJ*invJ);
       hminL = mymin(hminL, hest);
     }
+   }else{
+    for(int f=0; f<mesh->Nfaces; f++){
+      for(int n=0; n<mesh->Nfp; n++){
+        dlong sid = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n);
+        dfloat sJ   = mesh->sgeo[sid + SJID];
+        dfloat invJ = mesh->sgeo[sid + IJID];
+
+        dfloat hest = 2./(sJ*invJ);
+        hminL = mymin(hminL, hest);
+      }
+    }
+  }
 
     for(int n=0;n<mesh->Np;++n){
       const dlong id = n + mesh->Np*e;
