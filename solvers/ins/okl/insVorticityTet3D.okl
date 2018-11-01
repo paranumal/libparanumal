@@ -32,7 +32,7 @@ void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13, const dflo
   const dfloat p1 = a12*a12 + a13*a13 + a23*a23; 
   const dfloat q = (a11 + a22 + a33)/3.f; 
 
-  if (p1 == TOL){
+  if (p1 < TOL){
      // A is diagonal.
      eig1 = min(min(a11, a22), a33); 
      eig3 = max(max(a11, a22), a33);
