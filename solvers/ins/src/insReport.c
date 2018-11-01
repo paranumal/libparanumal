@@ -37,6 +37,8 @@ void insReport(ins_t *ins, dfloat time, int tstep){
                        ins->o_U,
                        ins->o_Vort);
 
+  
+
   ins->divergenceVolumeKernel(mesh->Nelements,
                              mesh->o_vgeo,
                              mesh->o_Dmatrices,

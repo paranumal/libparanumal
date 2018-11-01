@@ -24,8 +24,187 @@ SOFTWARE.
 
 */
 
+// Compute second largest eigenvalue of S^2 + Q^2 manually, ordered
+void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13, 
+                const dfloat a22, const dfloat a23, const dfloat a33, 
+                dfloat &eig1, dfloat &eig2, dfloat &eig3){
+//
+const dfloat TOL = 1.0e-16; 
+const dfloat p1 = a12*a12 + a13*a13 + a23*a23; 
+const dfloat q = (a11 + a22 + a33)/3.f; 
+
+if (p1 == TOL){
+   // A is diagonal.
+   eig1 = min(min(a11, a22), a33); 
+   eig3 = max(max(a11, a22), a33);
+   eig2 = 3.f*q - (eig1 + eig3);
+}else{
+   const dfloat p = sqrt( ( (a11-q)*(a11-q) + (a22-q)*(a22-q) + (a33-q)*(a33 - q) + 2.f*p1)/6.f);
+   // det(1/p*(A-qI))/2.0; 
+   const dfloat ip = 1.f/p; 
+   const dfloat r = 0.5f*ip*ip*ip*( (a11-q)*( (a22-q)*(a33-q) - a23*a23) 
+                                    - a12  *(  a12   *(a33-q) - a23*a13)   
+                                    + a13  *(  a12*a23        - (a22-q)*a13));
+
+   dfloat phi = 0.f;
+   // r<= -1.0  r = pi/3;  r>= 1.0  r = 0; else r = acos(r)/3; 
+   if(r<=-1.0)
+    phi = M_PI/3.f;
+   else if(r>=1.0)
+    phi = 0.f;
+   else 
+    phi = acos(r)/3.f; 
+
+
+   phi = (r<= -1.f) ? M_PI/3.f    : phi; 
+   phi = (r <  1.f) ? acos(r)/3.f : phi; 
+   //
+   eig1 = q + 2.f*p*cos(phi); 
+   eig3 = q + 2.f*p*cos(phi + (2.f*M_PI/3.f)); 
+   eig2 = 3.f*q -eig1-eig3;
+} 
+}
+
 // A very bad implementation for fast testing: AK 
 @kernel void insVorticityHex3D(const dlong Nelements,
+                                     @restrict const  dfloat *  vgeo,
+                                     @restrict const  dfloat *  D,
+                                     const dlong offset,
+                                     @restrict const  dfloat *  U,
+                                           @restrict dfloat *  Vort){
+
+
+  for(dlong e=0;e<Nelements;e++;@outer(0)){  // for all elements
+
+    @shared dfloat s_U[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_V[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_W[p_Nq][p_Nq][p_Nq];
+
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int k=0;k<p_Nq;++k;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){    
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq+i;
+
+          s_U[k][j][i]  = U[id + 0*offset];
+          s_V[k][j][i]  = U[id + 1*offset];
+          s_W[k][j][i]  = U[id + 2*offset];
+
+          if (k==0)
+            s_D[j][i] = D[j*p_Nq+i];
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int k=0;k<p_Nq;++k;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+        for(int i=0;i<p_Nq;++i;@inner(0)){  
+          const dlong gid = e*p_Np*p_Nvgeo +k*p_Nq*p_Nq +j*p_Nq +i;
+          const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+          const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+          const dfloat drdz = vgeo[gid + p_RZID*p_Np];
+          const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+          const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+          const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
+          const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+          const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+          const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          dfloat dudr  = 0.f, duds  = 0.f, dudt  = 0.f;
+          dfloat dvdr  = 0.f, dvds  = 0.f, dvdt  = 0.f;
+          dfloat dwdr  = 0.f, dwds  = 0.f, dwdt  = 0.f;
+
+          #pragma unroll p_Nq
+            for(int n=0;n<p_Nq;++n){
+              const dfloat Dr = s_D[i][n];
+              const dfloat Ds = s_D[j][n];
+              const dfloat Dt = s_D[k][n];
+
+              dudr += Dr*s_U[k][j][n];
+              duds += Ds*s_U[k][n][i];
+              dudt += Dt*s_U[n][j][i];
+
+              dvdr += Dr*s_V[k][j][n];
+              dvds += Ds*s_V[k][n][i];
+              dvdt += Dt*s_V[n][j][i];
+
+              dwdr += Dr*s_W[k][j][n];
+              dwds += Ds*s_W[k][n][i];
+              dwdt += Dt*s_W[n][j][i];
+
+            }
+           // compute A = S^2 + R^2 (strain rate and sirculation part of velocity gradient)
+          const dfloat ux = drdx*dudr + dsdx*duds + dtdx*dudt;
+          const dfloat uy = drdy*dudr + dsdy*duds + dtdy*dudt;
+          const dfloat uz = drdz*dudr + dsdz*duds + dtdz*dudt;
+
+          const dfloat vx = drdx*dvdr + dsdx*dvds + dtdx*dvdt;
+          const dfloat vy = drdy*dvdr + dsdy*dvds + dtdy*dvdt;
+          const dfloat vz = drdz*dvdr + dsdz*dvds + dtdz*dvdt;
+
+          const dfloat wx = drdx*dwdr + dsdx*dwds + dtdx*dwdt;
+          const dfloat wy = drdy*dwdr + dsdy*dwds + dtdy*dwdt;
+          const dfloat wz = drdz*dwdr + dsdz*dwds + dtdz*dwdt;
+
+          // Compute symmetric stress tensor i.e S = 1/2(Ux + UxT)
+          const dfloat s11 = 0.5f*(ux + ux); 
+          const dfloat s12 = 0.5f*(uy + vx); 
+          const dfloat s13 = 0.5f*(uz + wx);
+          const dfloat s22 = 0.5f*(vy + vy); 
+          const dfloat s23 = 0.5f*(vz + wy);
+          const dfloat s33 = 0.5f*(wz + wz); 
+          // Compute skew symmetric stress tensor i.e Q = 1/2(Ux - UxT)
+          const dfloat q12 = 0.5*(uy - vx); 
+          const dfloat q13 = 0.5*(uz - wx); 
+          const dfloat q23 = 0.5*(vz - wy);         
+          // A = S^2 + Q^2
+          const dfloat a11 = - q12*q12 - q13*q13 + s11*s11 + s12*s12 + s13*s13; 
+          const dfloat a12 =   s11*s12 - q13*q23 + s12*s22 + s13*s23;
+          const dfloat a13 =   q12*q23 + s11*s13 + s12*s23 + s13*s33;
+          const dfloat a22 = - q12*q12 - q23*q23 + s12*s12 + s22*s22 + s23*s23; 
+          const dfloat a23 =   s12*s13 - q12*q13 + s22*s23 + s23*s33;
+          const dfloat a33 = - q13*q13 - q23*q23 + s13*s13 + s23*s23 + s33*s33; 
+
+          dfloat eig1 = 0.f; 
+          dfloat eig2 = 0.f; 
+          dfloat eig3 = 0.f;
+          //
+          eigenValue(a11, a12, a13, a22, a23, a33, eig1, eig2, eig3);
+
+          // Use compex eigenvalue definition
+          const dfloat detu = ux*( vy*wz - vz*wy) - uy*( vx*wz - wx*vz) + uz*(vx*wy - wx*vy); 
+          const dfloat qq = (-0.5*(eig1+eig2+eig3))/3.f; 
+          const dfloat rr = 0.5*(detu); 
+
+
+          const dfloat vortx = (drdy*dwdr + dsdy*dwds + dtdy*dwdt) - (drdz*dvdr + dsdz*dvds + dtdz*dvdt);
+          const dfloat vorty = (drdz*dudr + dsdz*duds + dtdz*dudt) - (drdx*dwdr + dsdx*dwds + dtdx*dwdt);
+          const dfloat vortz = (drdx*dvdr + dsdx*dvds + dtdx*dvdt) - (drdy*dudr + dsdy*duds + dtdy*dudt);
+          
+          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+          Vort[id+0*offset] = -eig2; 
+          Vort[id+1*offset] = sqrt( vortx*vortx + vorty*vorty + vortz*vortz); 
+          Vort[id+2*offset] = qq*qq*qq + rr*rr;
+
+
+        }
+      }
+    }
+  }  
+}
+
+
+
+
+
+// Just computes the vorticity Mag 
+@kernel void insVorticityHex3D_V2(const dlong Nelements,
                                      @restrict const  dfloat *  vgeo,
                                      @restrict const  dfloat *  D,
                                      const dlong offset,
