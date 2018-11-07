@@ -52,11 +52,11 @@ int main(int argc, char **argv){
   mesh_t *mesh;
   switch(elementType){
   case TRIANGLES:
-    mesh = meshSetupTri2D((char*)fileName.c_str(), N); break;
+  case TETRAHEDRA:
+    printf("Triangles and tetrahedra are not currently supported for this code, exiting ...\n");
+    exit(-1);
   case QUADRILATERALS:
     mesh = meshSetupQuad2D((char*)fileName.c_str(), N); break;
-  case TETRAHEDRA:
-    mesh = meshSetupTet3D((char*)fileName.c_str(), N); break;
   case HEXAHEDRA:
     mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
   }
