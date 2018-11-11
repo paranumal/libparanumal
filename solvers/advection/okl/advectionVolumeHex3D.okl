@@ -27,32 +27,35 @@ SOFTWARE.
 
 // isotropic advection
 @kernel void advectionVolumeHex3D(const dlong Nelements,
-				  @restrict const  dfloat *  vgeo,
-				  @restrict const  dfloat *  DW,
-				  @restrict const  dfloat *  fluxVector,
-				  @restrict const  dfloat *  q,
-				  @restrict dfloat *  rhsq){
+				  @restrict const dfloat * vgeo,
+				  @restrict const dfloat * D,
+				  @restrict const dfloat * advectionVelocity,
+				  @restrict const dfloat * q,
+				  @restrict dfloat * rhsq){
   
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+  // each thread-block outputs p_NblockAdvVol elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockAdvVol;@outer(0)){
 
-    @shared dfloat s_DW[p_Nq][p_Nq];
-
+    // collocation differentiation
+    @shared dfloat s_D[p_Nq][p_Nq];
+    
     // use 2*Nq^2 shared and 2*Nq*Nq*Nq registers 
     // [ 3D shared would required 3*Nq*Nq*Nq shared ]
+    
+    @shared dfloat s_F[p_NblockAdvVol][p_Nq][p_Nq];
+    @shared dfloat s_G[p_NblockAdvVol][p_Nq][p_Nq];
 
-    @shared dfloat s_F[p_NblockV][p_Nq][p_Nq];
-    @shared dfloat s_G[p_NblockV][p_Nq][p_Nq];
-
-    @exclusive dfloat r_q[p_NblockV][p_Nq];
-    @exclusive dfloat r_Aq[p_NblockV][p_Nq];
-    @exclusive dfloat r_Hk[p_NblockV];
+    @exclusive dfloat r_q[p_NblockAdvVol][p_Nq];
+    @exclusive dfloat r_Aq[p_NblockAdvVol][p_Nq];
+    @exclusive dfloat r_Hk[p_NblockAdvVol];
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
 	
-	for(int es=0;es<p_NblockV;++es){
+#pragma unroll p_NblockAdvVol
+	for(int es=0;es<p_NblockAdvVol;++es){
 	  
-	  const int e = eo+es;
+	  const dlong e = eo+es;
 	  if(e<Nelements){
 
 #pragma unroll p_Nq
@@ -63,12 +66,13 @@ SOFTWARE.
 	    }
 	  }
 
+#pragma unroll p_Nq
 	  for(int k=0;k<p_Nq;++k){
 	    r_Aq[es][k] = 0;
 	  }
 	}
 
-	s_DW[j][i] = DW[j*p_Nq+i];
+	s_D[j][i] = D[j*p_Nq+i];
       }
     }
     
@@ -80,18 +84,18 @@ SOFTWARE.
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
 	  
-	  for(int es=0;es<p_NblockV;++es){
+	  for(int es=0;es<p_NblockAdvVol;++es){
 	    
-	    const int e = eo+es;
+	    const dlong e = eo+es;
 	    if(e<Nelements){
 	      // geometric factors
 	      const dlong gbase = e*p_Np*p_dim + j*p_Nq + i;
-	      const dfloat Fr = fluxVector[gbase+p_Np*0];
-	      const dfloat Fs = fluxVector[gbase+p_Np*1];
-	      const dfloat Ft = fluxVector[gbase+p_Np*2];
+
+	      // J*W*c_x, J*W*c_y, J*W*c_z
+	      const dfloat Fr = advectionVelocity[gbase+p_Np*0];
+	      const dfloat Fs = advectionVelocity[gbase+p_Np*1];
+	      const dfloat Ft = advectionVelocity[gbase+p_Np*2];
 	      
-	      // conseved variables
-	      const dlong  qbase = e*p_Np*p_Nfields + k*p_Nq*p_Nq + j*p_Nq + i;
 	      const dfloat qn = r_q[es][k];
 	      
 	      s_F[es][j][i] = Fr*qn;
@@ -109,15 +113,17 @@ SOFTWARE.
 
 #pragma unroll p_Nq          
           for(int n=0;n<p_Nq;++n){
-            const dfloat Din = s_DW[n][i];
-            const dfloat Djn = s_DW[n][j];
-            const dfloat Dnk = s_DW[k][n];
+            const dfloat Dni = s_D[n][i]; 
+            const dfloat Dnj = s_D[n][j];
+            const dfloat Dkn = s_D[k][n];
 
-	    for(int es=0;es<p_NblockV;++es){	    
-	      // 6 flops for 40 bytes  [ need to use multiple outputs ]
-	      r_Aq[es][k] += Din*s_F[es][j][n];
-	      r_Aq[es][k] += Djn*s_G[es][n][i];
-	      r_Aq[es][n] += Dnk*r_Hk[es]; // can move this up
+	    // 6*p_NblockAdvVol flops for 8*3 + p_NblockAdvVol*2*8 bytes from shared
+
+#pragma unroll p_NblockAdvVol
+	    for(int es=0;es<p_NblockAdvVol;++es){	    
+	      r_Aq[es][k] += Dni*s_F[es][j][n];
+	      r_Aq[es][k] += Dnj*s_G[es][n][i];
+	      r_Aq[es][n] += Dkn*r_Hk[es]; // can move this up
 	    }
           }
 	}
@@ -127,11 +133,13 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){    
 
-	for(int es=0;es<p_NblockV;++es){
+#pragma unroll p_NblockAdvVol
+	for(int es=0;es<p_NblockAdvVol;++es){
 	  
-	  const int e = eo+es;
+	  const dlong e = eo+es;
 	  if(e<Nelements){
-	    
+
+#pragma unroll p_Nq 	    
 	    for(int k=0;k<p_Nq;++k){    
 	      const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
 	      const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
