@@ -68,6 +68,9 @@ typedef struct{
   occa::memory o_rhsq;
   occa::memory o_resq;
   occa::memory o_saveq;
+
+  // [J*W*c_x, J*W*c_y, J*W*c_z]
+  occa::memory o_advectionVelocity;
   
   occa::memory o_rkq, o_rkrhsq, o_rkerr;
   occa::memory o_errtmp;

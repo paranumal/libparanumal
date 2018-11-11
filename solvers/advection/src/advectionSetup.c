@@ -196,6 +196,45 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   advection->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), advection->rhsq);
 
+
+  // non-constant advection velocity
+  dfloat t = 0;
+  dfloat *advectionVelocity = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->dim,sizeof(dfloat));
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      dfloat x = mesh->x[n + mesh->Np*e];
+      dfloat y = mesh->y[n + mesh->Np*e];
+      dfloat z = mesh->z[n + mesh->Np*e];
+      
+      dlong gbase = e*mesh->Np*mesh->Nvgeo + n;
+
+      dfloat JW = mesh->vgeo[gbase + mesh->Np*JWID];
+
+      dfloat rx = mesh->vgeo[gbase+mesh->Np*RXID];
+      dfloat sx = mesh->vgeo[gbase+mesh->Np*SXID];
+      dfloat tx = mesh->vgeo[gbase+mesh->Np*TXID];
+      dfloat ry = mesh->vgeo[gbase+mesh->Np*RYID];
+      dfloat sy = mesh->vgeo[gbase+mesh->Np*SYID];
+      dfloat ty = mesh->vgeo[gbase+mesh->Np*TYID];
+      dfloat rz = mesh->vgeo[gbase+mesh->Np*RZID];
+      dfloat sz = mesh->vgeo[gbase+mesh->Np*SZID];
+      dfloat tz = mesh->vgeo[gbase+mesh->Np*TZID];
+
+      dlong qbase = e*mesh->Np*mesh->dim + n;
+
+      dfloat cx = -y;
+      dfloat cy = +x;
+      
+      advectionVelocity[qbase + 0*mesh->Np] = rx*cx+ry*cy+rz*cz;
+      advectionVelocity[qbase + 1*mesh->Np] = sx*cx+sy*cy+sz*cz;
+      if(mesh->dim==3)
+	advectionVelocity[qbase + 2*mesh->Np] = tx*cx+ty*cy+tz*cz;
+    }
+  }
+  
+  advection->o_advectionVelocity =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->dim*sizeof(dfloat), advectionVelocity);
+  
   cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
   
   if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
@@ -254,6 +293,12 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   int NblockS = 1024/maxNodes; // works for CUDA
   kernelInfo["defines/" "p_NblockS"]= NblockS;
+
+  int NblockAdvVol = 1024/mesh->Np; // works for CUDA
+  kernelInfo["defines/" "p_NblockAdvVol"]= NblockAdvVol;
+
+  int NblockAdvSur = 1024/maxNodes; // works for CUDA
+  kernelInfo["defines/" "p_NblockAdvSur"]= NblockAdvSur;
 
   int cubMaxNodes = mymax(mesh->Np, (mesh->intNfp*mesh->Nfaces));
   kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;

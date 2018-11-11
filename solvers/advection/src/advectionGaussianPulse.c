@@ -30,6 +30,6 @@ SOFTWARE.
 void advectionGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *q){
 
   // fix this
-  *q = 1 + exp(-3*(x*x+y*y+z*z));
+  *q = exp(-20*((x-.5)*(x-.5)+y*y+z*z));
 
 }
