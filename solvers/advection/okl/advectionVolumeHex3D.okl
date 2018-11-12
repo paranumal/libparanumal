@@ -29,7 +29,7 @@ SOFTWARE.
 @kernel void advectionVolumeHex3D(const dlong Nelements,
 				  @restrict const dfloat * vgeo,
 				  @restrict const dfloat * D,
-				  @restrict const dfloat * advectionVelocity,
+				  @restrict const dfloat * advectionVelocityJW,
 				  @restrict const dfloat * q,
 				  @restrict dfloat * rhsq){
   
@@ -84,6 +84,7 @@ SOFTWARE.
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
 	  
+#pragma unroll p_NblockAdvVol
 	  for(int es=0;es<p_NblockAdvVol;++es){
 	    
 	    const dlong e = eo+es;
@@ -92,9 +93,9 @@ SOFTWARE.
 	      const dlong gbase = e*p_Np*p_dim + j*p_Nq + i;
 
 	      // J*W*c_x, J*W*c_y, J*W*c_z
-	      const dfloat Fr = advectionVelocity[gbase+p_Np*0];
-	      const dfloat Fs = advectionVelocity[gbase+p_Np*1];
-	      const dfloat Ft = advectionVelocity[gbase+p_Np*2];
+	      const dfloat Fr = advectionVelocityJW[gbase+p_Np*0];
+	      const dfloat Fs = advectionVelocityJW[gbase+p_Np*1];
+	      const dfloat Ft = advectionVelocityJW[gbase+p_Np*2];
 	      
 	      const dfloat qn = r_q[es][k];
 	      
@@ -113,6 +114,7 @@ SOFTWARE.
 
 #pragma unroll p_Nq          
           for(int n=0;n<p_Nq;++n){
+	    // read D^t
             const dfloat Dni = s_D[n][i]; 
             const dfloat Dnj = s_D[n][j];
             const dfloat Dkn = s_D[k][n];
