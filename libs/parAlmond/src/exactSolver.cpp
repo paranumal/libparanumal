@@ -43,7 +43,11 @@ int exactSolver::getTargetSize() {
   return 1000;
 }
 
-void exactSolver::setup(parCSR *A) {
+void exactSolver::setup(agmgLevel *L) {
+  setup(L->A);
+}
+
+void exactSolver::setup(parCSR* A) {
 
   device = A->device;
 

@@ -36,6 +36,7 @@ public:
   int N;
 
   parCSR* A;
+  parHYB* o_A;
 
   parCSR* coarseA;
   parCSR* coarseP;
@@ -45,19 +46,26 @@ public:
   dfloat *rhsCoarse=NULL;
 
   solver_t *patchSolver;
-  coarseSolver *uberCoarseSolver;
+  exactSolver *uberCoarseSolver;
+
+  dfloat *z;
+  occa::memory o_r, o_z, o_p, o_Ap;
 
   oasSolver(setupAide options, MPI_Comm comm_);
   ~oasSolver();
 
   int getTargetSize();
 
-  void setup(parCSR *A);
+  void setup(agmgLevel *L);
 
   void Report(int lev);
 
   void solve(dfloat *rhs, dfloat *x);
   void solve(occa::memory o_rhs, occa::memory o_x);
+
+  void oasPrecon(occa::memory o_r, occa::memory o_z);
+
+  void oasPCG(occa::memory o_rhs, occa::memory o_x);
 };
 
 }

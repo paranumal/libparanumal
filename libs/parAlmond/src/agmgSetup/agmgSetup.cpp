@@ -39,26 +39,34 @@ void solver_t::AMGSetup(parCSR *A){
   levels[numLevels] = L;
 
   setupAgmgSmoother((agmgLevel*)(levels[numLevels]), stype, ChebyshevIterations);
+  allocateAgmgVectors((agmgLevel*)(levels[numLevels]), numLevels, AMGstartLev, ctype);
+  syncAgmgToDevice((agmgLevel*)(levels[numLevels]), numLevels, AMGstartLev, ctype);
 
   hlong globalSize = L->A->globalRowStarts[size];
 
   //if the system if already small, dont create MG levels
   bool done = false;
   if(globalSize <= gCoarseSize){
-    coarseLevel->setup(A);
+    coarseLevel->setup((agmgLevel*)L);
     baseLevel = numLevels;
     done = true;
   }
   numLevels++;
 
   while(!done){
-    L = coarsenAgmgLevel((agmgLevel*)(levels[numLevels-1]), ktype, options);
-    levels[numLevels] = L;
+    int n = numLevels;
+
+    L = coarsenAgmgLevel((agmgLevel*)(levels[n-1]), ktype, options);
+    levels[n] = L;
     hlong globalCoarseSize = L->A->globalRowStarts[size];
     numLevels++;
 
+    setupAgmgSmoother((agmgLevel*)(levels[n]), stype, ChebyshevIterations);
+    allocateAgmgVectors((agmgLevel*)(levels[n]), n, AMGstartLev, ctype);
+    syncAgmgToDevice((agmgLevel*)(levels[n]), n, AMGstartLev, ctype);
+
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
-      coarseLevel->setup(L->A);
+      coarseLevel->setup((agmgLevel*)L);
       baseLevel = numLevels-1;
       break;
     }
@@ -67,12 +75,6 @@ void solver_t::AMGSetup(parCSR *A){
 
   size_t requiredBytes = 3*levels[AMGstartLev]->Ncols*sizeof(dfloat);
   allocateScratchSpace(requiredBytes, device);
-
-  for (int n=AMGstartLev;n<numLevels;n++) {
-    setupAgmgSmoother((agmgLevel*)(levels[n]), stype, ChebyshevIterations);
-    allocateAgmgVectors((agmgLevel*)(levels[n]), n, AMGstartLev, ctype);
-    syncAgmgToDevice((agmgLevel*)(levels[n]), n, AMGstartLev, ctype);
-  }
 }
 
 //create coarsened problem

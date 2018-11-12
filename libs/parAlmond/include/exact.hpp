@@ -53,6 +53,7 @@ public:
 
   int getTargetSize();
 
+  void setup(agmgLevel *L);
   void setup(parCSR *A);
 
   void Report(int lev);

@@ -43,9 +43,11 @@ int oasSolver::getTargetSize() {
   return 10000*size;
 }
 
-void oasSolver::setup(parCSR *A_) {
+void oasSolver::setup(agmgLevel *L) {
 
-  A = A_;
+  A = L->A;
+  o_A = L->o_A;
+
   device = A->device;
   N = A->Nrows;
 
@@ -290,8 +292,11 @@ void oasSolver::setup(parCSR *A_) {
   xCoarse   = (dfloat*) calloc(1,sizeof(dfloat));
   rhsCoarse = (dfloat*) calloc(1,sizeof(dfloat));
 
-  if (A->Nshared)
-    A->o_haloIds = device.malloc(A->Nshared*sizeof(dlong), A->haloIds);
+  z = (dfloat*) calloc(Ncols,sizeof(dfloat));
+  o_r = device.malloc(Ncols*sizeof(dfloat), z);
+  o_z = device.malloc(Ncols*sizeof(dfloat), z);
+  o_p = device.malloc(Ncols*sizeof(dfloat), z);
+  o_Ap = device.malloc(Ncols*sizeof(dfloat), z);
 }
 
 void oasSolver::Report(int base) {
@@ -391,61 +396,140 @@ void oasSolver::solve(dfloat *rhs, dfloat *x) {
 
 void oasSolver::solve(occa::memory o_rhs, occa::memory o_x) {
 
+  //as a "solver" do a few iterations of PCG with an OAS precon
   if (gatherLevel) {
     //gather to global indexing
     ogsGather(o_Grhs, o_rhs, ogsDfloat, ogsAdd, ogs);
 
-    //agglomerate to one dof (just a scaled sum)
-    A->haloExchangeStart(o_Grhs);
-    dlong numBlocks = (N < NBLOCKS) ? N : NBLOCKS;
-    vectorSumKernel(numBlocks, N, o_Grhs, o_reductionScratch);
-    A->haloExchangeFinish(o_Grhs);
-    o_reductionScratch.copyTo(rhsCoarse, 1*sizeof(dfloat));
-    rhsCoarse[0] *= coarseR->diag->vals[0];
-
-    patchSolver->levels[0]->o_x   = o_Gx;
-    patchSolver->levels[0]->o_rhs = o_Grhs;
-
-    //queue up the vcycle on the device patch
-    patchSolver->device_vcycle(0);
-
-    //while the device is busy, collect and solve the ubercoarse problem
-    uberCoarseSolver->solve(rhsCoarse, xCoarse);
-
-    //add the contributions from the patches together and scale by overlap degree
-    ogsGatherScatter(o_Gx, ogsDfloat, ogsAdd, A->ogs); //this syncs host+device
-    vectorDotStar(N, A->ogs->o_invDegree, o_Gx);
-
-    //augment the patch solution with the ubercoarse solve
-    vectorAddScalar(N, coarseP->diag->vals[0]*xCoarse[0], o_Gx);
+    oasPCG(o_Grhs, o_Gx);
 
     //scatter back to local indexing
     ogsScatter(o_x, o_Gx, ogsDfloat, ogsAdd, ogs);
   } else {
-    //agglomerate to one dof (just a scaled sum)
-    A->haloExchangeStart(o_rhs);
-    dlong numBlocks = (N < NBLOCKS) ? N : NBLOCKS;
-    vectorSumKernel(numBlocks, N, o_rhs, o_reductionScratch);
-    A->haloExchangeFinish(o_rhs);
-    o_reductionScratch.copyTo(rhsCoarse, 1*sizeof(dfloat));
-    rhsCoarse[0] *= coarseR->diag->vals[0];
-
-    patchSolver->levels[0]->o_x   = o_x;
-    patchSolver->levels[0]->o_rhs = o_rhs;
-
-    //queue up the vcycle on the device patch
-    patchSolver->device_vcycle(0);
-
-    //while the device is busy, collect and solve the ubercoarse problem
-    uberCoarseSolver->solve(rhsCoarse, xCoarse);
-
-    //add the contributions from the patches together and scale by overlap degree
-    ogsGatherScatter(o_x, ogsDfloat, ogsAdd, A->ogs); //this syncs host+device
-    vectorDotStar(N, A->ogs->o_invDegree, o_x);
-
-    //augment the patch solution with the ubercoarse solve
-    vectorAddScalar(N, coarseP->diag->vals[0]*xCoarse[0], o_x);
+    oasPCG(o_rhs, o_x);
   }
+}
+
+void oasSolver::oasPrecon(occa::memory o_r, occa::memory o_z) {
+
+  //agglomerate to one dof (just a scaled sum)
+  o_A->haloExchangeStart(o_r);
+  dlong numBlocks = (N < NBLOCKS) ? N : NBLOCKS;
+  vectorSumKernel(numBlocks, N, o_r, o_reductionScratch);
+  o_A->haloExchangeFinish(o_r);
+  o_reductionScratch.copyTo(rhsCoarse, 1*sizeof(dfloat));
+  rhsCoarse[0] *= coarseR->diag->vals[0];
+
+  patchSolver->levels[0]->o_x   = o_z;
+  patchSolver->levels[0]->o_rhs = o_r;
+
+  //queue up the vcycle on the device patch
+  patchSolver->device_vcycle(0);
+
+  //while the device is busy, collect and solve the ubercoarse problem
+  uberCoarseSolver->solve(rhsCoarse, xCoarse);
+
+  //add the contributions from the patches together and scale by overlap degree
+  ogsGatherScatter(o_z, ogsDfloat, ogsAdd, o_A->ogs); //this syncs host+device
+
+  //augment the patch solution with the ubercoarse solve
+  vectorAddScalar(N, coarseP->diag->vals[0]*xCoarse[0], o_z);
+}
+
+void oasSolver::oasPCG(occa::memory o_rhs, occa::memory o_x){
+
+  const dfloat absTOL = 1.e-9;
+  const dfloat relTOL = 0.4;
+
+  const int maxIt = 5000;
+
+  // initial residual
+  dfloat rdotr0 = vectorInnerProd(N, o_rhs, o_rhs, comm);
+
+  o_r.copyFrom(o_rhs, N*sizeof(dfloat));
+
+  // x = 0;
+  vectorSet(N, 0.0, o_x);
+
+  int Niter = 0;
+
+  //sanity check
+  if (rdotr0<=(absTOL*absTOL)) {
+    // if (rank==0) printf("OAS Coarse PCG iter %d, res = %g\n", Niter, sqrt(rdotr0));
+    return;
+  }
+
+  // Precondition, z = M^{-1}*r
+  oasPrecon(o_r, o_z);
+  // o_z.copyFrom(o_r);
+  o_p.copyFrom(o_z);
+
+  dfloat rdotz0 = vectorInnerProd(N, o_r, o_z, comm);
+
+  dfloat rdotr1 = 0;
+  dfloat rdotz1 = 0;
+  dfloat alpha, beta, pAp;
+
+  dfloat rdotr0_init = rdotr0;
+
+  while((rdotr0 > (relTOL*relTOL*rdotr0_init))  //try to reduce the residual by relTOL
+          && (rdotr0>(absTOL*absTOL))){
+
+    //   Ap = A*p;
+    o_A->SpMV(1.0, o_p, 0.0, o_Ap);
+
+    dfloat pAp = vectorInnerProd(N, o_p, o_Ap, comm);
+
+    alpha = rdotz0/pAp;
+
+    // update solution
+    //    x = x + alpha * p;
+    vectorAdd(N, alpha, o_p, 1.0, o_x);
+
+    // update residual
+    // r = r - alpha * Ap;
+    vectorAdd(N, -alpha, o_Ap, 1.0, o_r);
+
+    dfloat rdotr1 = vectorInnerProd(N, o_r, o_r, comm);
+
+    //quick exit
+    if( (rdotr1 < (relTOL*relTOL*rdotr0_init))
+          || (rdotr1<(absTOL*absTOL))) {
+      rdotr0 = rdotr1;
+      break;
+    }
+
+    // Precondition, z = M^{-1}*r
+    oasPrecon(o_r, o_z);
+    // o_z.copyFrom(o_r);
+
+    dfloat rdotz1 = vectorInnerProd(N, o_r, o_z, comm);
+
+    // if(ctype==KCYCLE) {
+    //   // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
+    //   dfloat zdotAp = vectorInnerProd(N, o_z, o_Ap, comm);
+    //   beta = -alpha*zdotAp/rdotz0;
+    // } else if(ctype==VCYCLE) {
+      beta = rdotz1/rdotz0;
+    // }
+
+    // p = z + beta*p
+    vectorAdd(N, 1.0, o_z, beta, o_p);
+
+    // switch rdotz0 <= rdotz1
+    rdotz0 = rdotz1;
+
+    // switch rdotz0,rdotr0 <= rdotz1,rdotr1
+    rdotr0 = rdotr1;
+
+    Niter++;
+
+    if(Niter==maxIt) {
+      // if (rank==0) printf("WARNING: Maximum iterations reached in OAS coarse solver\n");
+      break;
+    }
+  }
+  // if (rank==0) printf("OAS Coarse PCG iter %d, res = %g\n", Niter, sqrt(rdotr0));
 }
 
 } //namespace parAlmond

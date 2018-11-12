@@ -48,7 +48,7 @@ public:
 
   virtual int getTargetSize() = 0;
 
-  virtual void setup(parCSR *A) = 0;
+  virtual void setup(agmgLevel *L) = 0;
 
   virtual void Report(int lev) = 0;
 
