@@ -199,7 +199,7 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   // non-constant advection velocity
   dfloat t = 0;
-  dfloat *advectionVelocity = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->dim,sizeof(dfloat));
+  dfloat *advectionVelocityJW = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->dim,sizeof(dfloat));
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
       dfloat x = mesh->x[n + mesh->Np*e];
@@ -221,19 +221,19 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       dfloat tz = mesh->vgeo[gbase+mesh->Np*TZID];
 
       dlong qbase = e*mesh->Np*mesh->dim + n;
-
+      
       dfloat cx = -y;
       dfloat cy = +x;
       
-      advectionVelocity[qbase + 0*mesh->Np] = rx*cx+ry*cy+rz*cz;
-      advectionVelocity[qbase + 1*mesh->Np] = sx*cx+sy*cy+sz*cz;
+      advectionVelocityJW[qbase + 0*mesh->Np] = JW*(rx*cx+ry*cy+rz*cz);
+      advectionVelocityJW[qbase + 1*mesh->Np] = JW*(sx*cx+sy*cy+sz*cz);
       if(mesh->dim==3)
-	advectionVelocity[qbase + 2*mesh->Np] = tx*cx+ty*cy+tz*cz;
+	advectionVelocityJW[qbase + 2*mesh->Np] = JW*(tx*cx+ty*cy+tz*cz);
     }
   }
   
-  advection->o_advectionVelocity =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->dim*sizeof(dfloat), advectionVelocity);
+  advection->o_advectionVelocityJW =
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->dim*sizeof(dfloat), advectionVelocityJW);
   
   cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
   
