@@ -64,7 +64,7 @@ void advectionDopriStep(advection_t *advection, setupAide &newOptions, const dfl
     advection->volumeKernel(mesh->Nelements, 
 			    mesh->o_vgeo, 
 			    mesh->o_Dmatrices,
-			    advection->o_advectionVelocity,
+			    advection->o_advectionVelocityJW,
 			    advection->o_rkq, 
 			    advection->o_rhsq);
 
@@ -86,7 +86,9 @@ void advectionDopriStep(advection_t *advection, setupAide &newOptions, const dfl
 			     currentTime, 
 			     mesh->o_x, 
 			     mesh->o_y,
-			     mesh->o_z, 
+			     mesh->o_z,
+			     advection->o_advectionVelocityM,
+			     advection->o_advectionVelocityP,
 			     advection->o_rkq, 
 			     advection->o_rhsq);
     
@@ -134,6 +136,7 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
     advection->volumeKernel(mesh->Nelements, 
 			    mesh->o_vgeo, 
 			    mesh->o_Dmatrices,
+			    advection->o_advectionVelocityJW,
 			    advection->o_q, 
 			    advection->o_rhsq);
     
@@ -156,7 +159,9 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 			     currentTime, 
 			     mesh->o_x, 
 			     mesh->o_y,
-			     mesh->o_z, 
+			     mesh->o_z,
+			     advection->o_advectionVelocityM,
+			     advection->o_advectionVelocityP,
 			     advection->o_q, 
 			     advection->o_rhsq);
         

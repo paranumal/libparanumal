@@ -37,11 +37,13 @@ void surfaceTerms(const int e,
                   @global const int *vmapM, 
                   @global const int *vmapP, 
                   @global const int *EToB, 
-                  @global const dfloat *fluxCoefficient,
+                  @global const dfloat *advectionVelocityM,
+                  @global const dfloat *advectionVelocityP,		  
 		  @global const dfloat *q,
                   dfloat *rhsq){
 
-  const dfloat F = fluxCoefficient[sk];
+  const dfloat FM = advectionVelocityM[sk];
+  const dfloat FP = advectionVelocityP[sk];
   
   const dlong idM = vmapM[sk];                                  
   const dlong idP = vmapP[sk];                                  
@@ -64,22 +66,23 @@ void surfaceTerms(const int e,
 
   const dlong base = e*p_Np*p_Nfields+k*p_Nq*p_Nq + j*p_Nq+i;           
 
-  rhsq[base+0*p_Np] += F*(qP-qM);
+  rhsq[base+0*p_Np] += FP*qP+FM*qM;
 }
 
 // batch process elements
 @kernel void advectionSurfaceHex3D(const dlong Nelements,
-				   @global const dfloat *fluxCoefficient,
-				   @restrict const  dfloat *  sgeo,
-				   @restrict const  dfloat *  LIFTT,        
-				   @restrict const  dlong  *  vmapM,
-				   @restrict const  dlong  *  vmapP,
-				   @restrict const  int    *  EToB,
+				   @restrict const dfloat * sgeo,
+				   @restrict const dfloat * LIFTT,        
+				   @restrict const dlong  * vmapM,
+				   @restrict const dlong  * vmapP,
+				   @restrict const int    * EToB,
 				   const dfloat time,
-				   @restrict const  dfloat *  x,
-				   @restrict const  dfloat *  y,
-				   @restrict const  dfloat *  z,
-				   @restrict const  dfloat *  q,
+				   @restrict const dfloat * x,
+				   @restrict const dfloat * y,
+				   @restrict const dfloat * z,
+				   @restrict const dfloat * advectionVelocityM,
+				   @restrict const dfloat * advectionVelocityP,
+				   @restrict const dfloat * q,
 				   @restrict dfloat *  rhsq){
   
   // for all elements
@@ -96,10 +99,10 @@ void surfaceTerms(const int e,
             const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
             
             //      surfaceTerms(sk0,0,i,j,0     );
-            surfaceTerms(e,sk0,0,i,j,0, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+            surfaceTerms(e,sk0,0,i,j,0, sgeo, x, y, z, vmapM, vmapP, EToB, advectionVelocityM, advectionVelocityP, q, rhsq);
 
             //surfaceTerms(sk5,5,i,j,(p_Nq-1));
-            surfaceTerms(e,sk5,5,i,j,(p_Nq-1), sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+            surfaceTerms(e,sk5,5,i,j,(p_Nq-1), sgeo, x, y, z, vmapM, vmapP, EToB, advectionVelocityM, advectionVelocityP, q, rhsq);
           }
         }
       }
@@ -117,10 +120,10 @@ void surfaceTerms(const int e,
             const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
             
             //      surfaceTerms(sk1,1,i,0     ,k);
-            surfaceTerms(e,sk1,1,i,0,k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+            surfaceTerms(e,sk1,1,i,0,k, sgeo, x, y, z, vmapM, vmapP, EToB, advectionVelocityM, advectionVelocityP, q, rhsq);
 
             //      surfaceTerms(sk3,3,i,(p_Nq-1),k);
-            surfaceTerms(e,sk3,3,i,(p_Nq-1),k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+            surfaceTerms(e,sk3,3,i,(p_Nq-1),k, sgeo, x, y, z, vmapM, vmapP, EToB, advectionVelocityM, advectionVelocityP, q, rhsq);
           }
         }
       }
@@ -138,10 +141,10 @@ void surfaceTerms(const int e,
             const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
             
             //      surfaceTerms(sk2,2,(p_Nq-1),j,k);
-            surfaceTerms(e,sk2,2,(p_Nq-1),j,k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+            surfaceTerms(e,sk2,2,(p_Nq-1),j,k, sgeo, x, y, z, vmapM, vmapP, EToB, advectionVelocityM, advectionVelocityP, q, rhsq);
 
             //surfaceTerms(sk4,4,0     ,j,k);
-            surfaceTerms(e,sk4,4,0,j,k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+            surfaceTerms(e,sk4,4,0,j,k, sgeo, x, y, z, vmapM, vmapP, EToB, advectionVelocityM, advectionVelocityP, q, rhsq);
           }
         }
       }

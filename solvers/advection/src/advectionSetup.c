@@ -127,24 +127,43 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   // set time step
   dfloat hmin = 1e9;
-  for(dlong e=0;e<mesh->Nelements;++e){  
 
-    for(int f=0;f<mesh->Nfaces;++f){
-      dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
-      dfloat sJ   = mesh->sgeo[sid + SJID];
-      dfloat invJ = mesh->sgeo[sid + IJID];
+  if(advection->elementType == TRIANGLES || advection->elementType == TETRAHEDRA){
+    
+    for(dlong e=0;e<mesh->Nelements;++e){  
+      for(int f=0;f<mesh->Nfaces;++f){
+	dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+	dfloat sJ   = mesh->sgeo[sid + SJID];
+	dfloat invJ = mesh->sgeo[sid + IJID];
+	
+	if(invJ<0) printf("invJ = %g\n", invJ);
+	
+	// sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
+	// h = 0.5/(sJ/J)
+	
+	dfloat hest = .5/(sJ*invJ);
 
-      if(invJ<0) printf("invJ = %g\n", invJ);
-      
-      // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
-      // h = 0.5/(sJ/J)
-      
-      dfloat hest = .5/(sJ*invJ);
-
-      hmin = mymin(hmin, hest);
+	hmin = mymin(hmin, hest);
+      }
     }
   }
-
+  else{
+    for(dlong e=0;e<mesh->Nelements;++e){  
+      for(int f=0;f<mesh->Nfaces;++f){
+	for(int n=0;n<mesh->Nfp;++n){
+	  dlong sid = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + mesh->Nfp*f + n);
+	  dfloat sJ   = mesh->sgeo[sid + SJID];
+	  dfloat invJ = mesh->sgeo[sid + IJID];
+	  
+	  if(invJ<0) printf("invJ = %g\n", invJ);
+	  dfloat hest = .5/(sJ*invJ);
+	  
+	  hmin = mymin(hmin, hest);
+	}
+      }
+    }
+  }
+  
   // need to change cfl and defn of dt
   dfloat cfl = 0.5; // depends on the stability region size
 
@@ -168,7 +187,10 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   advection->frame = 0;
   // errorStep
   mesh->errorStep = 1000;
-
+  if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
+    newOptions.getArgs("ERROR STEP", mesh->errorStep);
+  }
+  
   if (mesh->rank ==0) printf("dt = %g\n", mesh->dt);
 
   // OCCA build stuff
@@ -199,7 +221,11 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   // non-constant advection velocity
   dfloat t = 0;
-  dfloat *advectionVelocityJW = (dfloat*) calloc(mesh->Np*mesh->Nelements*mesh->dim,sizeof(dfloat));
+  hlong totalNelements = mesh->Nelements+mesh->totalHaloPairs;
+  dfloat *advectionVelocityJW = (dfloat*) calloc(mesh->Np*totalNelements*mesh->dim,sizeof(dfloat));
+  dfloat *advectionVelocityM  = (dfloat*) calloc(mesh->Nfaces*mesh->Nfp*totalNelements,sizeof(dfloat));
+  dfloat *advectionVelocityP  = (dfloat*) calloc(mesh->Nfaces*mesh->Nfp*totalNelements,sizeof(dfloat));
+
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
       dfloat x = mesh->x[n + mesh->Np*e];
@@ -224,16 +250,56 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       
       dfloat cx = -y;
       dfloat cy = +x;
+      dfloat cz = 0;
       
       advectionVelocityJW[qbase + 0*mesh->Np] = JW*(rx*cx+ry*cy+rz*cz);
       advectionVelocityJW[qbase + 1*mesh->Np] = JW*(sx*cx+sy*cy+sz*cz);
       if(mesh->dim==3)
 	advectionVelocityJW[qbase + 2*mesh->Np] = JW*(tx*cx+ty*cy+tz*cz);
     }
+
+
+    for(int f=0;f<mesh->Nfaces;++f){
+      for(int n=0;n<mesh->Nfp;++n){
+	int id = e*mesh->Nfaces*mesh->Nfp + f*mesh->Nfp + n;
+	int vid = mesh->vmapM[id];
+	dfloat x = mesh->x[vid];
+	dfloat y = mesh->y[vid];
+	dfloat z = mesh->z[vid];
+
+	dlong sbase = mesh->Nsgeo*(e*mesh->Nfp*mesh->Nfaces + f*mesh->Nfp + n);
+	
+	dfloat nx = mesh->sgeo[sbase + NXID];
+	dfloat ny = mesh->sgeo[sbase + NYID];
+	dfloat nz = mesh->sgeo[sbase + NZID];
+	
+	dlong gbase = e*mesh->Np*mesh->Nvgeo + (vid%mesh->Np);
+	
+	dfloat JW = mesh->vgeo[gbase + mesh->Np*JWID];
+	
+	dfloat cx = -y;
+	dfloat cy = +x;
+	dfloat cz = 0;
+
+	dfloat cdotn = nx*cx + ny*cy + nz*cz;
+	dfloat LIFT = mesh->sgeo[sbase + WIJID]*mesh->sgeo[sbase+SJID];
+	// fix later
+	advectionVelocityM[id] = LIFT*0.5*(cdotn - fabs(cdotn));
+	advectionVelocityP[id] = LIFT*0.5*(cdotn + fabs(cdotn));
+      }
+    }
   }
   
   advection->o_advectionVelocityJW =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->dim*sizeof(dfloat), advectionVelocityJW);
+    mesh->device.malloc(mesh->Np*totalNelements*mesh->dim*sizeof(dfloat), advectionVelocityJW);
+
+  advection->o_advectionVelocityM =
+    mesh->device.malloc(mesh->Nfaces*mesh->Nfp*totalNelements*sizeof(dfloat), advectionVelocityM);
+
+  advection->o_advectionVelocityP =
+    mesh->device.malloc(mesh->Nfaces*mesh->Nfp*totalNelements*sizeof(dfloat), advectionVelocityP);
+  
+
   
   cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
   
