@@ -90,7 +90,7 @@ SOFTWARE.
 	    const dlong e = eo+es;
 	    if(e<Nelements){
 	      // geometric factors
-	      const dlong gbase = e*p_Np*p_dim + j*p_Nq + i;
+	      const dlong gbase = e*p_Np*p_dim + k*p_Nq*p_Nq + j*p_Nq + i;
 
 	      // J*W*c_x, J*W*c_y, J*W*c_z
 	      const dfloat Fr = advectionVelocityJW[gbase+p_Np*0];
