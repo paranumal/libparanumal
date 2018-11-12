@@ -70,7 +70,14 @@ typedef struct{
   occa::memory o_saveq;
 
   // [J*W*c_x, J*W*c_y, J*W*c_z]
-  occa::memory o_advectionVelocity;
+  occa::memory o_advectionVelocityJW;
+
+  // [Jsurf*Wsurf/(Jvol*Wvol)*(c.n + |c.n|)/2
+  occa::memory o_advectionVelocityM;
+
+  // [Jsurf*Wsurf/(Jvol*Wvol)*(c.n - |c.n|)/2
+  occa::memory o_advectionVelocityP;
+
   
   occa::memory o_rkq, o_rkrhsq, o_rkerr;
   occa::memory o_errtmp;

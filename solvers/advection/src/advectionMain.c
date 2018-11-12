@@ -63,9 +63,9 @@ int main(int argc, char **argv){
 
   char *boundaryHeaderFileName; // could sprintf
   if(dim==2)
-    boundaryHeaderFileName = strdup(DADVECTION "/advectionUniform2D.h"); // default
+    boundaryHeaderFileName = strdup(DADVECTION "/advectionBox2D.h"); // default
   if(dim==3)
-    boundaryHeaderFileName = strdup(DADVECTION "/advectionUniform3D.h"); // default
+    boundaryHeaderFileName = strdup(DADVECTION "/advectionBox3D.h"); // default
 
   // set up advection stuff
   advection_t *advection = advectionSetup(mesh, newOptions, boundaryHeaderFileName);
