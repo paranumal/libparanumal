@@ -21,7 +21,7 @@ CFLAGS = $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR) -g  -D DHOLMES='"${CUR
 
 
 # link flags to be used
-LDFLAGS	= -L$(OCCA_DIR)/lib $(compilerFlags) $(flags) -g -L../../3rdParty/gslib.github  -lgs \
+LDFLAGS	= -L$(OCCA_DIR)/lib $(compilerFlags) $(flags) -g -L../../3rdParty/gslib/lib  -lgs \
 			-L$(ALMONDDIR) -lparALMOND
 
 # libraries to be linked in
