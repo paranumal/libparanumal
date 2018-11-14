@@ -174,13 +174,19 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
   
   //
-  newOptions.getArgs("FINAL TIME", mesh->finalTime);
-
-  mesh->NtimeSteps = mesh->finalTime/mesh->dt;
-  if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
-    mesh->dt = mesh->finalTime/mesh->NtimeSteps;
+  if(newOptions.getArgs("TIME STEPS", mesh->NtimeSteps)){
+    mesh->finalTime = mesh->NtimeSteps*mesh->dt;
   }
-
+  else{
+    newOptions.getArgs("FINAL TIME", mesh->finalTime);
+    
+    mesh->NtimeSteps = mesh->finalTime/mesh->dt;
+    
+    if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
+      mesh->dt = mesh->finalTime/mesh->NtimeSteps;
+    }
+  }
+  
   if (mesh->rank ==0) printf("dtAdv = %lg (before cfl), dt = %lg\n",
    dtAdv, dt);
 
@@ -226,6 +232,14 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   dfloat *advectionVelocityM  = (dfloat*) calloc(mesh->Nfaces*mesh->Nfp*totalNelements,sizeof(dfloat));
   dfloat *advectionVelocityP  = (dfloat*) calloc(mesh->Nfaces*mesh->Nfp*totalNelements,sizeof(dfloat));
 
+  int advectionFormulation = 0;
+  if (newOptions.compareArgs("ADVECTION FORMULATION","WEAK")){
+    advectionFormulation = 0; // DEFAULT
+  }
+  if (newOptions.compareArgs("ADVECTION FORMULATION","SKEW")){
+    advectionFormulation = 1; // DEFAULT
+  }
+  
   for(dlong e=0;e<mesh->Nelements;++e){
 
     for(int n=0;n<mesh->Np;++n){
@@ -284,9 +298,18 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
 	dfloat cdotn = nx*cx + ny*cy + nz*cz;
 	dfloat LIFT = mesh->sgeo[sbase + WIJID]*mesh->sgeo[sbase+SJID];
+	dfloat alpha = 1; // not allowed to use central here
+	
 	// fix later
-	advectionVelocityM[id] = LIFT*0.5*(cdotn - fabs(cdotn));
-	advectionVelocityP[id] = LIFT*0.5*(cdotn + fabs(cdotn));
+	if(advectionFormulation==0){ // weak
+	  advectionVelocityM[id] = LIFT*0.5*(cdotn - alpha*fabs(cdotn));
+	  advectionVelocityP[id] = LIFT*0.5*(cdotn + alpha*fabs(cdotn));
+	}
+	if(advectionFormulation==1){ // skew
+	  advectionVelocityM[id] = LIFT*0.5*(      - alpha*fabs(cdotn));
+	  advectionVelocityP[id] = LIFT*0.5*(cdotn + alpha*fabs(cdotn));
+	}
+	
       }
     }
   }
@@ -355,16 +378,16 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
-  int NblockV = 1024/mesh->Np; // works for CUDA
+  int NblockV = mymax(1,1024/mesh->Np); // works for CUDA
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  int NblockS = 1024/maxNodes; // works for CUDA
+  int NblockS = mymax(1,1024/maxNodes); // works for CUDA
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
-  int NblockAdvVol = 1024/mesh->Np; // works for CUDA
+  int NblockAdvVol = 2; // works for CUDA
   kernelInfo["defines/" "p_NblockAdvVol"]= NblockAdvVol;
 
-  int NblockAdvSur = 1024/maxNodes; // works for CUDA
+  int NblockAdvSur = 2; // works for CUDA
   kernelInfo["defines/" "p_NblockAdvSur"]= NblockAdvSur;
 
   int cubMaxNodes = mymax(mesh->Np, (mesh->intNfp*mesh->Nfaces));
@@ -395,13 +418,24 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   // kernels from volume file
   sprintf(fileName, DADVECTION "/okl/advectionVolume%s.okl", suffix);
-  sprintf(kernelName, "advectionVolume%s", suffix);
 
-  printf("fileName=[ %s ] \n", fileName);
-  printf("kernelName=[ %s ] \n", kernelName);
-  
+  if(advectionFormulation==0) // weak
+    sprintf(kernelName, "advectionVolume%s", suffix);
+  if(advectionFormulation==1) // skew
+    sprintf(kernelName, "advectionSkewVolume%s", suffix);
+
   advection->volumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+  if(advectionFormulation==0) // weak
+    sprintf(kernelName, "advectionCombined%s", suffix);
+  
+  if(advectionFormulation==1) // skew
+    sprintf(kernelName, "advectionCombinedSkew%s", suffix);
+  
+  advection->combinedKernel =
+    mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  
+  
   // kernels from surface file
   sprintf(fileName, DADVECTION "/okl/advectionSurface%s.okl", suffix);
   sprintf(kernelName, "advectionSurface%s", suffix);
