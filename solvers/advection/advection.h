@@ -64,6 +64,8 @@ typedef struct{
   occa::kernel rkUpdateKernel;
   occa::kernel rkErrorEstimateKernel;
 
+  occa::kernel combinedKernel;
+  
   occa::memory o_q;
   occa::memory o_rhsq;
   occa::memory o_resq;

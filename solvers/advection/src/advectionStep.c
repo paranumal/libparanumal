@@ -48,7 +48,6 @@ void advectionDopriStep(advection_t *advection, setupAide &newOptions, const dfl
     
     //compute RHS
     // rhsq = F(currentTIme, rkq)
-
     // extract q halo on DEVICE
     if(mesh->totalHaloPairs>0){
       int Nentries = mesh->Np*advection->Nfields;          
@@ -60,23 +59,23 @@ void advectionDopriStep(advection_t *advection, setupAide &newOptions, const dfl
       // start halo exchange
       meshHaloExchangeStart(mesh, mesh->Np*advection->Nfields*sizeof(dfloat), advection->sendBuffer, advection->recvBuffer);
     }
-
+    
     advection->volumeKernel(mesh->Nelements, 
 			    mesh->o_vgeo, 
 			    mesh->o_Dmatrices,
 			    advection->o_advectionVelocityJW,
 			    advection->o_rkq, 
 			    advection->o_rhsq);
-
+    
     // wait for q halo data to arrive
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
-          
+      
       // copy halo data to DEVICE
       size_t offset = mesh->Np*advection->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
       advection->o_rkq.copyFrom(advection->recvBuffer, advection->haloBytes, offset);
     }
-
+    
     advection->surfaceKernel(mesh->Nelements, 
 			     mesh->o_sgeo, 
 			     mesh->o_LIFTT, 
@@ -90,7 +89,7 @@ void advectionDopriStep(advection_t *advection, setupAide &newOptions, const dfl
 			     advection->o_advectionVelocityM,
 			     advection->o_advectionVelocityP,
 			     advection->o_rkq, 
-			     advection->o_rhsq);
+			       advection->o_rhsq);
     
     // update solution using Runge-Kutta
     // rkrhsq_rk = rhsq
@@ -119,59 +118,86 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
   for(int rk=0;rk<mesh->Nrk;++rk){
       
     dfloat currentTime = time + mesh->rkc[rk]*mesh->dt;
-      
-    // extract q halo on DEVICE
-    if(mesh->totalHaloPairs>0){
-      int Nentries = mesh->Np*advection->Nfields;
-        
-      mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, advection->o_q, advection->o_haloBuffer);
-        
-      // copy extracted halo to HOST 
-      advection->o_haloBuffer.copyTo(advection->sendBuffer);      
-        
-      // start halo exchange
-      meshHaloExchangeStart(mesh, mesh->Np*advection->Nfields*sizeof(dfloat), advection->sendBuffer, advection->recvBuffer);
-    }
 
-    advection->volumeKernel(mesh->Nelements, 
-			    mesh->o_vgeo, 
-			    mesh->o_Dmatrices,
-			    advection->o_advectionVelocityJW,
-			    advection->o_q, 
-			    advection->o_rhsq);
-    
-    
-    // wait for q halo data to arrive
-    if(mesh->totalHaloPairs>0){
-      meshHaloExchangeFinish(mesh);
-      
-      // copy halo data to DEVICE
-      size_t offset = mesh->Np*advection->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-      advection->o_q.copyFrom(advection->recvBuffer, advection->haloBytes, offset);
-    }
+    if(!newOptions.compareArgs("ADVECTION FORMULATION", "COMBINED")){
 
-    advection->surfaceKernel(mesh->Nelements, 
-			     mesh->o_sgeo, 
-			     mesh->o_LIFTT, 
-			     mesh->o_vmapM, 
-			     mesh->o_vmapP, 
-			     mesh->o_EToB,
-			     currentTime, 
-			     mesh->o_x, 
-			     mesh->o_y,
-			     mesh->o_z,
-			     advection->o_advectionVelocityM,
-			     advection->o_advectionVelocityP,
-			     advection->o_q, 
+      // extract q halo on DEVICE
+      if(mesh->totalHaloPairs>0){
+	int Nentries = mesh->Np*advection->Nfields;
+        
+	mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, advection->o_q, advection->o_haloBuffer);
+        
+	// copy extracted halo to HOST 
+	advection->o_haloBuffer.copyTo(advection->sendBuffer);      
+        
+	// start halo exchange
+	meshHaloExchangeStart(mesh, mesh->Np*advection->Nfields*sizeof(dfloat), advection->sendBuffer, advection->recvBuffer);
+      }
+      
+      advection->volumeKernel(mesh->Nelements, 
+			      mesh->o_vgeo, 
+			      mesh->o_Dmatrices,
+			      advection->o_advectionVelocityJW,
+			      advection->o_q, 
+			      advection->o_rhsq);
+      
+      
+      // wait for q halo data to arrive
+      if(mesh->totalHaloPairs>0){
+	meshHaloExchangeFinish(mesh);
+	
+	// copy halo data to DEVICE
+	size_t offset = mesh->Np*advection->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
+	advection->o_q.copyFrom(advection->recvBuffer, advection->haloBytes, offset);
+      }
+      
+      advection->surfaceKernel(mesh->Nelements, 
+			       mesh->o_sgeo, 
+			       mesh->o_LIFTT, 
+			       mesh->o_vmapM, 
+			       mesh->o_vmapP, 
+			       mesh->o_EToB,
+			       currentTime, 
+			       mesh->o_x, 
+			       mesh->o_y,
+			       mesh->o_z,
+			       advection->o_advectionVelocityM,
+			       advection->o_advectionVelocityP,
+			       advection->o_q, 
 			     advection->o_rhsq);
-        
-    // update solution using Runge-Kutta
-    advection->updateKernel(mesh->Nelements, 
-			    mesh->dt, 
-			    mesh->rka[rk], 
-			    mesh->rkb[rk], 
-			    advection->o_rhsq, 
-			    advection->o_resq, 
-			    advection->o_q);
+      
+      // update solution using Runge-Kutta
+      advection->updateKernel(mesh->Nelements, 
+			      mesh->dt, 
+			      mesh->rka[rk], 
+			      mesh->rkb[rk], 
+			      advection->o_rhsq, 
+			      advection->o_resq, 
+			      advection->o_q);
+    }
+    else{
+
+      occa::memory &sourceq = (!(rk%2)) ? advection->o_q: advection->o_rhsq;
+      occa::memory &destq   = (!(rk%2)) ? advection->o_rhsq: advection->o_q;
+      advection->combinedKernel(mesh->Nelements,
+				mesh->dt,
+				mesh->rka[rk], 
+				mesh->rkb[rk], 
+				mesh->o_vgeo, 
+				mesh->o_Dmatrices,
+				advection->o_advectionVelocityJW,
+				mesh->o_vmapM,
+				mesh->o_vmapP,
+				advection->o_advectionVelocityM,
+				advection->o_advectionVelocityP,
+				advection->o_resq,
+				sourceq, 
+				destq);
+      if(rk==4)
+	destq.copyTo(sourceq);
+    }
   }
+
+  
+  
 }

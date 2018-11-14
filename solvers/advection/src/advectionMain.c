@@ -61,6 +61,21 @@ int main(int argc, char **argv){
     mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
   }
 
+  if(elementType==HEXAHEDRA){
+    
+    /* rescale to unit box and transform */
+    hlong allNelements = mesh->Nelements+mesh->totalHaloPairs;
+    for(int n=0;n<allNelements*mesh->Np;++n){
+      mesh->x[n] = 0.5*(mesh->x[n]+1);
+      mesh->y[n] = 0.5*(mesh->y[n]+1);
+      mesh->z[n] = 0.5*(mesh->z[n]+1);
+    }
+    
+    // compute geometric factors
+    meshGeometricFactorsHex3D(mesh);
+    meshSurfaceGeometricFactorsHex3D(mesh);
+  }
+  
   char *boundaryHeaderFileName; // could sprintf
   if(dim==2)
     boundaryHeaderFileName = strdup(DADVECTION "/advectionBox2D.h"); // default

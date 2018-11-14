@@ -30,13 +30,17 @@ void advectionRun(advection_t *advection, setupAide &newOptions){
 
   mesh_t *mesh = advection->mesh;
 
-  advectionReport(advection, 0, newOptions);
+  // advectionReport(advection, 0, newOptions);
 
   occa::timer timer;
   
   timer.initTimer(mesh->device);
 
   timer.tic("Run");
+
+  int tstep=0, allStep = 0;
+
+  occa::streamTag start = mesh->device.tagStream();
   
   if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
     
@@ -49,8 +53,7 @@ void advectionRun(advection_t *advection, setupAide &newOptions){
     
     //initial time
     dfloat time = 0.0;
-    int tstep=0, allStep = 0;
-
+  
     int done =0;
     while (!done) {
 
@@ -125,12 +128,14 @@ void advectionRun(advection_t *advection, setupAide &newOptions){
         time += mesh->dt;
 
         advection->facold = mymax(err,1E-4); // hard coded factor ?
-
-	printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  mesh->dt);
+	if(!(tstep%1000))
+	  printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  mesh->dt);
         tstep++;
       } else {
         dtnew = mesh->dt/(mymax(advection->invfactor1,fac1/advection->safe));
-	printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, mesh->dt, dtnew);
+
+	if(!(tstep%1000))
+	  printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, mesh->dt, dtnew);
 
 	done = 0;
       }
@@ -158,6 +163,22 @@ void advectionRun(advection_t *advection, setupAide &newOptions){
         advectionReport(advection, time, newOptions);
       }
     }
+
+    allStep = mesh->NtimeSteps;
   }
   
+  occa::streamTag end = mesh->device.tagStream();
+  
+  double elapsed = mesh->device.timeBetween(start, end);
+  
+  printf("%d %d %d %lg %lg %lg %lg %lg [ N, Nel, Nodes, elapsed, time/step, nodes/time, gnodes*Nsteps/time, gnodes*Nstages*Nsteps/time ]\n",
+	 mesh->N,
+	 mesh->Nelements,
+	 mesh->Np*mesh->Nelements,
+	 elapsed,
+	 elapsed/allStep,
+	 (1.*mesh->Np*mesh->Nelements)/(elapsed),
+	 (1.*mesh->Np*mesh->Nelements*allStep)/(1.e9*elapsed),
+	 (1.*mesh->Np*mesh->Nelements*allStep*mesh->Nrk)/(1.e9*elapsed)
+	 );
 }
