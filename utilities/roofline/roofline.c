@@ -24,6 +24,14 @@ SOFTWARE.
 
 */
 
+/*
+  example usage: in advection in combination with autoTester:
+
+  rm rooflineResults.m rooflineScript.m
+
+  ../../utilities/autoTester/autoTester "../../utilities/roofline/roofline ./advectionMain" setups/setupTemplateHex3D.rc
+
+*/
 
 #include "roofline.h"
 
@@ -40,13 +48,15 @@ int main(int argc, char **argv){
   char *executable = strdup(argv[1]);
   char *setupFile = strdup(argv[2]);
 
+  setupAide options(setupFile);
+  
   char cmd1[BUFSIZ], cmd2[BUFSIZ];
   
-  sprintf(cmd1, "nvprof --csv --metrics dram_read_throughput,dram_write_throughput,flop_dp_efficiency %s %s 2> out1", executable, setupFile);
+  sprintf(cmd1, "nvprof -u ms --csv --metrics dram_read_throughput,dram_write_throughput,flop_dp_efficiency,flop_count_dp %s %s 2> out1", executable, setupFile);
   printf("cmd1 = `%s`\n", cmd1);
   system(cmd1);
 
-  sprintf(cmd2, "nvprof --csv  %s %s 2> out2 ", executable, setupFile);
+  sprintf(cmd2, "nvprof -u ms --csv  %s %s 2> out2 ", executable, setupFile);
   printf("cmd2 = `%s`\n", cmd2);
   system(cmd2);
 
@@ -60,6 +70,11 @@ int main(int argc, char **argv){
   int maxNkernels = 1000;
   char **kernelNames = (char**) calloc(maxNkernels, sizeof(char*));
   double *kernelTime = (double*) calloc(maxNkernels, sizeof(double));
+  double *kernelFlopCount = (double*) calloc(maxNkernels, sizeof(double));
+  double *kernelFlopEfficiency = (double*) calloc(maxNkernels, sizeof(double));
+  double *kernelReadThroughput = (double*) calloc(maxNkernels, sizeof(double));
+  double *kernelWriteThroughput = (double*) calloc(maxNkernels, sizeof(double));
+  double *kernelMaxEmpiricalBandwidth = (double*) calloc(maxNkernels, sizeof(double));
   char *line;
 
   do{
@@ -86,6 +101,7 @@ int main(int argc, char **argv){
   
   FILE *fp1 = fopen("out1", "r");
 
+  FILE *fpResults = fopen("rooflineResults.m", "a");
   
   do{
     fgets(buf, BUFSIZ, fp1);
@@ -112,13 +128,16 @@ int main(int argc, char **argv){
 	  sscanf(token, "%lf", &val);
 
 	  if(strstr(buf, "flop_dp_efficiency")) 
-	    printf("match on kernel %d, %s consumed %lf %% of peak GFLOPS/s in %g seconds\n", knl, kernelNames[knl], val, kernelTime[knl]);
+	    kernelFlopEfficiency[knl] = val;
 
-	  if(strstr(buf, "dram_read_throughput")) 
-	    printf("match on kernel %d, %s consumed %lf GB/s of read throughput in %g seconds\n", knl, kernelNames[knl], val, kernelTime[knl]);
+	  if(strstr(buf, "dram_read_throughput"))
+	    kernelReadThroughput[knl] = val;
 
-	  if(strstr(buf, "dram_write_throughput")) 
-	    printf("match on kernel %d, %s consumed %lf GB/s of write throughput in %g seconds\n", knl, kernelNames[knl], val, kernelTime[knl]);
+	  if(strstr(buf, "dram_write_throughput"))
+	    kernelWriteThroughput[knl] = val;
+
+	  if(strstr(buf, "flop_count_dp"))
+	    kernelFlopCount[knl] = val;
 
 	  break;
 	}
@@ -129,8 +148,91 @@ int main(int argc, char **argv){
 
   fclose(fp1);
   fclose(fp2);
+
+
+  // now benchmark memory on device
+  occa::device device;
+
+  char deviceConfig[BUFSIZ];
+
+  int device_id = 0;
+
+  options.getArgs("DEVICE NUMBER" ,device_id);
+
+  // read thread model/device/platform from options
+  if(options.compareArgs("THREAD MODEL", "CUDA")){
+    sprintf(deviceConfig, "mode: 'CUDA', device_id: %d",device_id);
+  }
+  else if(options.compareArgs("THREAD MODEL", "HIP")){
+    sprintf(deviceConfig, "mode: 'HIP', device_id: %d",device_id);
+  }
+  else if(options.compareArgs("THREAD MODEL", "OpenCL")){
+    int plat;
+    options.getArgs("PLATFORM NUMBER", plat);
+    sprintf(deviceConfig, "mode: 'OpenCL', device_id: %d, platform_id: %d", device_id, plat);
+  }
+  else if(options.compareArgs("THREAD MODEL", "OpenMP")){
+    sprintf(deviceConfig, "mode: 'OpenMP' ");
+  }
+  else{
+    sprintf(deviceConfig, "mode: 'Serial' ");
+  }
+
+  device.setup(deviceConfig);
+  
+  int knl;
+  for(knl = 0;knl<Nkernels;++knl){
+    long long int bytes = (kernelReadThroughput[knl]+kernelWriteThroughput[knl])*kernelTime[knl]*1.e9;
+    double flops = kernelFlopCount[knl];
+    double arithmeticIntensity = flops/bytes;
+    double perf = (flops/kernelTime[knl])/1.e9; // convert to GFLOPS/s
+
+    occa::memory o_a = device.malloc(bytes/2);
+    occa::memory o_b = device.malloc(bytes/2);
+
+    occa::streamTag start = device.tagStream();
+    
+    o_a.copyFrom(o_b);
+
+    occa::streamTag end = device.tagStream();
+
+    device.finish();
+
+    double elapsed = device.timeBetween(start, end);
+
+    kernelMaxEmpiricalBandwidth[knl] = (bytes/elapsed)/1.e9; // convert max empirical bw for this vector size to GB/s
+
+    fprintf(fpResults, "%s = [%s;[%lg,%lg,%lg]]\n", kernelNames[knl], kernelNames[knl], arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth[knl]);
+
+  }
+
+  fclose(fpResults);
+
+  FILE *fpMatlab = fopen("rooflineScript.m", "w");
+
+  for(knl = 0;knl<Nkernels;++knl){
+    fprintf(fpMatlab, "%s = []\n", kernelNames[knl]);
+  }
+  fprintf(fpMatlab, "\n rooflineResults;\n");
+
+  for(knl = 0;knl<Nkernels;++knl){
+    fprintf(fpMatlab, "figure(%d);\n", knl+1);
+    fprintf(fpMatlab, "scatter(%s(:,1),%s(:,2));\n", kernelNames[knl], kernelNames[knl]);
+    fprintf(fpMatlab, "xlabel('Arithmetic Intensity (FP64 flops)/deviceMemoryBytes', 'FontSize', 20);\n");
+    fprintf(fpMatlab, "ylabel('FP64 GFLOPS/s', 'FontSize', 20);\n");
+
+    // superimpose roofline
+    fprintf(fpMatlab, "hold on; \n");
+    fprintf(fpMatlab, "plot(%s(:,1),%s(:,1).*%s(:,3),'r-', 'LineWidth', 2); \n",
+	    kernelNames[knl], kernelNames[knl], kernelNames[knl]);
+    
+  }
+
+
+  
+  fclose(fpMatlab);
   
   MPI_Finalize();
   
-  return 1;
+  return 0;
 }
