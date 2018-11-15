@@ -52,11 +52,11 @@ int main(int argc, char **argv){
   
   char cmd1[BUFSIZ], cmd2[BUFSIZ];
   
-  sprintf(cmd1, "nvprof -u ns --csv --metrics dram_read_throughput,dram_write_throughput,flop_dp_efficiency,flop_count_dp %s %s 2> out1", executable, setupFile);
+  sprintf(cmd1, "nvprof -u ms --csv --metrics dram_read_throughput,dram_write_throughput,dram_write_transactions,dram_read_transactions,flop_dp_efficiency,flop_count_dp %s %s 2> out1", executable, setupFile);
   printf("cmd1 = `%s`\n", cmd1);
   system(cmd1);
 
-  sprintf(cmd2, "nvprof -u ns --csv  %s %s 2> out2 ", executable, setupFile);
+  sprintf(cmd2, "nvprof -u ms --csv  %s %s 2> out2 ", executable, setupFile);
   printf("cmd2 = `%s`\n", cmd2);
   system(cmd2);
 
@@ -70,10 +70,12 @@ int main(int argc, char **argv){
   int maxNkernels = 1000;
   char **kernelNames = (char**) calloc(maxNkernels, sizeof(char*));
   double *kernelTime = (double*) calloc(maxNkernels, sizeof(double));
-  double *kernelFlopCount = (double*) calloc(maxNkernels, sizeof(double));
+  long long int *kernelFlopCount = (long long int*) calloc(maxNkernels, sizeof(long long int));
   double *kernelFlopEfficiency = (double*) calloc(maxNkernels, sizeof(double));
   double *kernelReadThroughput = (double*) calloc(maxNkernels, sizeof(double));
   double *kernelWriteThroughput = (double*) calloc(maxNkernels, sizeof(double));
+  long long int *kernelBytesRead = (long long int*) calloc(maxNkernels, sizeof(long long int));
+  long long int *kernelBytesWritten = (long long int*) calloc(maxNkernels, sizeof(long long int));
   double *kernelMaxEmpiricalBandwidth = (double*) calloc(maxNkernels, sizeof(double));
   char *line;
 
@@ -85,7 +87,7 @@ int main(int argc, char **argv){
       for(int n=0;n<4;++n){
 	token = strtok(NULL, ",");
       }
-      kernelTime[Nkernels] = atof(token)/1.e9;// convert from ns to s
+      kernelTime[Nkernels] = atof(token)/1.e3;// convert from ns to s
 
       for(int n=0;n<3;++n){
 	token = strtok(NULL, ",");
@@ -125,20 +127,38 @@ int main(int argc, char **argv){
 	  }
 
 	  double val;
-	  sscanf(token, "%lf", &val);
-
-	  if(strstr(buf, "flop_dp_efficiency")) 
+	  long long int cnt;
+	  
+	  if(strstr(buf, "flop_dp_efficiency")){
+	    sscanf(token, "%lf", &val);		  
 	    kernelFlopEfficiency[knl] = val;
+	  }
 
-	  if(strstr(buf, "dram_read_throughput"))
+	  if(strstr(buf, "dram_read_throughput")){
+	    sscanf(token, "%lf", &val);
 	    kernelReadThroughput[knl] = val;
+	  }
 
-	  if(strstr(buf, "dram_write_throughput"))
+	  if(strstr(buf, "dram_write_throughput")){
+	    sscanf(token, "%lf", &val);		  
 	    kernelWriteThroughput[knl] = val;
+	  }
 
-	  if(strstr(buf, "flop_count_dp"))
-	    kernelFlopCount[knl] = val;
+	  if(strstr(buf, "flop_count_dp")){
+	    sscanf(token, "%lld", &cnt);
+	    kernelFlopCount[knl] = cnt;
+	  }
 
+	  if(strstr(buf, "dram_read_transactions")){
+	    sscanf(token, "%lld", &cnt);
+	    kernelBytesRead[knl] = cnt;
+	  }
+
+	  if(strstr(buf, "dram_write_transactions")){
+	    sscanf(token, "%lld", &cnt);
+	    kernelBytesWritten[knl] = cnt;
+	  }
+	  
 	  break;
 	}
       }
@@ -182,9 +202,10 @@ int main(int argc, char **argv){
   
   int knl;
   for(knl = 0;knl<Nkernels;++knl){
-    long long int bytes = (kernelReadThroughput[knl]+kernelWriteThroughput[knl])*kernelTime[knl]*1.e9;
-    double flops = kernelFlopCount[knl];
-    double arithmeticIntensity = flops/bytes;
+    //    long long int bytes = (kernelReadThroughput[knl]+kernelWriteThroughput[knl])*kernelTime[knl]*1.e9;
+    long long int bytes = (kernelBytesRead[knl]+kernelBytesWritten[knl])*32;
+    long long int flops = kernelFlopCount[knl];
+    double arithmeticIntensity = (double)flops/bytes;
     double perf = (flops/kernelTime[knl])/1.e9; // convert to GFLOPS/s
 
     occa::memory o_a = device.malloc(bytes/2);
@@ -224,15 +245,16 @@ int main(int argc, char **argv){
   for(knl = 0;knl<Nkernels;++knl){
     fprintf(fpMatlab, "figure(%d);\n", knl+1);
     fprintf(fpMatlab, "scatter(%s(:,1),%s(:,2));\n", kernelNames[knl], kernelNames[knl]);
+    fprintf(fpMatlab, "set(gca, 'FontSize', 14);\n");
     fprintf(fpMatlab, "xlabel('Arithmetic Intensity (FP64 flops)/deviceMemoryBytes', 'FontSize', 14);\n");
     fprintf(fpMatlab, "ylabel('FP64 GFLOPS/s', 'FontSize', 14);\n");
-    fprintf(fpMatlab, "title(\"%s\", 'FontSize', 16);\n", kernelNames[knl]);
+    fprintf(fpMatlab, "title(\"%s\", 'FontSize', 16, 'Interpreter', 'None');\n", kernelNames[knl]);
 
     // superimpose roofline
     fprintf(fpMatlab, "hold on; \n");
     fprintf(fpMatlab, "plot(%s(:,1),%s(:,1).*%s(:,3),'r*', 'LineWidth', 2); \n",
 	    kernelNames[knl], kernelNames[knl], kernelNames[knl]);
-    fprintf(fpMatlab, "axis([0,max(%s(:,1)),0,max(max(%s(:,1).*%s(:,3),%s(:,2)))]);\n",
+    fprintf(fpMatlab, "axis([0,ceil(max(%s(:,1))),0,max(max(%s(:,1).*%s(:,3),%s(:,2)))]);\n",
 	    kernelNames[knl],kernelNames[knl], kernelNames[knl], kernelNames[knl]);
   }
 

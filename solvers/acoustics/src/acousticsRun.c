@@ -30,7 +30,7 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
 
   mesh_t *mesh = acoustics->mesh;
 
-  acousticsReport(acoustics, 0, newOptions);
+  //  acousticsReport(acoustics, 0, newOptions);
 
   occa::timer timer;
   
@@ -152,11 +152,13 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions){
       dfloat time = tstep*mesh->dt;
 
       acousticsLserkStep(acoustics, newOptions, time);
-      
+
+#if 0
       if(((tstep+1)%mesh->errorStep)==0){
 	time += mesh->dt;
         acousticsReport(acoustics, time, newOptions);
       }
+#endif
     }
   }
   
