@@ -42,7 +42,8 @@ int main(int argc, char **argv){
   char cmd1[BUFSIZ];
   char cmd2[BUFSIZ];
   
-  sprintf(cmd1, "mpiexec -np 1 %s setup.rc", executable);
+  //  sprintf(cmd1, "mpiexec -np 1 %s setup.rc", executable);
+  sprintf(cmd1, "%s setup.rc", executable);
   sprintf(cmd2, "mpiexec -np 2 %s setup.rc", executable);
   
   vector <string> &keyword = setup.getKeyword();
