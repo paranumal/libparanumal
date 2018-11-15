@@ -223,10 +223,10 @@ int main(int argc, char **argv){
 
   for(knl = 0;knl<Nkernels;++knl){
     fprintf(fpMatlab, "figure(%d);\n", knl+1);
-    fprintf(fpMatlab, "title(%s, 'FontSize', 16);\n", kernelNames[knl]);
     fprintf(fpMatlab, "scatter(%s(:,1),%s(:,2));\n", kernelNames[knl], kernelNames[knl]);
     fprintf(fpMatlab, "xlabel('Arithmetic Intensity (FP64 flops)/deviceMemoryBytes', 'FontSize', 14);\n");
     fprintf(fpMatlab, "ylabel('FP64 GFLOPS/s', 'FontSize', 14);\n");
+    fprintf(fpMatlab, "title(%s, 'FontSize', 16);\n", kernelNames[knl]);
 
     // superimpose roofline
     fprintf(fpMatlab, "hold on; \n");
