@@ -52,11 +52,11 @@ int main(int argc, char **argv){
   
   char cmd1[BUFSIZ], cmd2[BUFSIZ];
   
-  sprintf(cmd1, "nvprof -u ms --csv --metrics dram_read_throughput,dram_write_throughput,flop_dp_efficiency,flop_count_dp %s %s 2> out1", executable, setupFile);
+  sprintf(cmd1, "nvprof -u ns --csv --metrics dram_read_throughput,dram_write_throughput,flop_dp_efficiency,flop_count_dp %s %s 2> out1", executable, setupFile);
   printf("cmd1 = `%s`\n", cmd1);
   system(cmd1);
 
-  sprintf(cmd2, "nvprof -u ms --csv  %s %s 2> out2 ", executable, setupFile);
+  sprintf(cmd2, "nvprof -u ns --csv  %s %s 2> out2 ", executable, setupFile);
   printf("cmd2 = `%s`\n", cmd2);
   system(cmd2);
 
@@ -85,7 +85,7 @@ int main(int argc, char **argv){
       for(int n=0;n<4;++n){
 	token = strtok(NULL, ",");
       }
-      kernelTime[Nkernels] = atof(token)/1000.f;// convert from ms to s
+      kernelTime[Nkernels] = atof(token)/1.e9;// convert from ns to s
 
       for(int n=0;n<3;++n){
 	token = strtok(NULL, ",");
@@ -191,19 +191,25 @@ int main(int argc, char **argv){
     occa::memory o_b = device.malloc(bytes/2);
 
     occa::streamTag start = device.tagStream();
-    
-    o_a.copyFrom(o_b);
+
+    int Ntests = 10;
+    for(int n=0;n<Ntests;++n)
+      o_a.copyFrom(o_b);
 
     occa::streamTag end = device.tagStream();
-
+    
     device.finish();
 
     double elapsed = device.timeBetween(start, end);
-
+    elapsed /= Ntests;
+    
     kernelMaxEmpiricalBandwidth[knl] = (bytes/elapsed)/1.e9; // convert max empirical bw for this vector size to GB/s
 
     fprintf(fpResults, "%s = [%s;[%lg,%lg,%lg]]\n", kernelNames[knl], kernelNames[knl], arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth[knl]);
 
+    o_a.free();
+    o_b.free();    
+    
   }
 
   fclose(fpResults);
@@ -217,15 +223,17 @@ int main(int argc, char **argv){
 
   for(knl = 0;knl<Nkernels;++knl){
     fprintf(fpMatlab, "figure(%d);\n", knl+1);
+    fprintf(fpMatlab, "title(%s, 'FontSize', 16);\n", kernelNames[knl]);
     fprintf(fpMatlab, "scatter(%s(:,1),%s(:,2));\n", kernelNames[knl], kernelNames[knl]);
-    fprintf(fpMatlab, "xlabel('Arithmetic Intensity (FP64 flops)/deviceMemoryBytes', 'FontSize', 20);\n");
-    fprintf(fpMatlab, "ylabel('FP64 GFLOPS/s', 'FontSize', 20);\n");
+    fprintf(fpMatlab, "xlabel('Arithmetic Intensity (FP64 flops)/deviceMemoryBytes', 'FontSize', 14);\n");
+    fprintf(fpMatlab, "ylabel('FP64 GFLOPS/s', 'FontSize', 14);\n");
 
     // superimpose roofline
     fprintf(fpMatlab, "hold on; \n");
-    fprintf(fpMatlab, "plot(%s(:,1),%s(:,1).*%s(:,3),'r-', 'LineWidth', 2); \n",
+    fprintf(fpMatlab, "plot(%s(:,1),%s(:,1).*%s(:,3),'r*', 'LineWidth', 2); \n",
 	    kernelNames[knl], kernelNames[knl], kernelNames[knl]);
-    
+    fprintf(fpMatlab, "axis([0,max(%s(:,1)),0,max(max(%s(:,1).*%s(:,3),%s(:,2)))]);\n",
+	    kernelNames[knl],kernelNames[knl], kernelNames[knl], kernelNames[knl]);
   }
 
 
