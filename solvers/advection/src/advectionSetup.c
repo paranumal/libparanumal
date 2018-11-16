@@ -232,13 +232,20 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   dfloat *advectionVelocityM  = (dfloat*) calloc(mesh->Nfaces*mesh->Nfp*totalNelements,sizeof(dfloat));
   dfloat *advectionVelocityP  = (dfloat*) calloc(mesh->Nfaces*mesh->Nfp*totalNelements,sizeof(dfloat));
 
-  int advectionFormulation = 0;
+  dfloat *cubAdvectionVelocityJW = (dfloat*) calloc(mesh->cubNp*totalNelements*mesh->dim,sizeof(dfloat));
+  
+  int advectionFormulation = 0, advectionCubature = 0;
   if (newOptions.compareArgs("ADVECTION FORMULATION","WEAK")){
     advectionFormulation = 0; // DEFAULT
   }
   if (newOptions.compareArgs("ADVECTION FORMULATION","SKEW")){
     advectionFormulation = 1; // DEFAULT
   }
+
+  if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")){
+    advectionCubature = 1; 
+  }
+
   
   for(dlong e=0;e<mesh->Nelements;++e){
 
@@ -313,6 +320,49 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       }
     }
   }
+
+  dfloat *cubx = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cuby = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  dfloat *cubz = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+  
+  for(dlong e=0;e<mesh->Nelements;++e){
+
+    interpolateHex3D(mesh->cubInterp, mesh->x+e*mesh->Np, mesh->Nq, cubx, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, mesh->y+e*mesh->Np, mesh->Nq, cuby, mesh->cubNq);
+    interpolateHex3D(mesh->cubInterp, mesh->z+e*mesh->Np, mesh->Nq, cubz, mesh->cubNq);
+    
+    for(int n=0;n<mesh->cubNp;++n){
+      dfloat x = cubx[n];
+      dfloat y = cuby[n];
+      dfloat z = cubz[n];
+      
+      dlong gbase = e*mesh->cubNp*mesh->Nvgeo + n;
+      
+      dfloat JW = mesh->cubvgeo[gbase + mesh->cubNp*JWID];
+
+      dfloat rx = mesh->cubvgeo[gbase+mesh->cubNp*RXID];
+      dfloat sx = mesh->cubvgeo[gbase+mesh->cubNp*SXID];
+      dfloat tx = mesh->cubvgeo[gbase+mesh->cubNp*TXID];
+      dfloat ry = mesh->cubvgeo[gbase+mesh->cubNp*RYID];
+      dfloat sy = mesh->cubvgeo[gbase+mesh->cubNp*SYID];
+      dfloat ty = mesh->cubvgeo[gbase+mesh->cubNp*TYID];
+      dfloat rz = mesh->cubvgeo[gbase+mesh->cubNp*RZID];
+      dfloat sz = mesh->cubvgeo[gbase+mesh->cubNp*SZID];
+      dfloat tz = mesh->cubvgeo[gbase+mesh->cubNp*TZID];
+
+      dlong qbase = e*mesh->cubNp*mesh->dim + n;
+      
+      dfloat cx = -y;
+      dfloat cy = +x;
+      dfloat cz = 0;
+      
+      cubAdvectionVelocityJW[qbase + 0*mesh->cubNp] = JW*(rx*cx+ry*cy+rz*cz);
+      cubAdvectionVelocityJW[qbase + 1*mesh->cubNp] = JW*(sx*cx+sy*cy+sz*cz);
+      if(mesh->dim==3)
+	cubAdvectionVelocityJW[qbase + 2*mesh->cubNp] = JW*(tx*cx+ty*cy+tz*cz);
+    }
+  }
+    
   
   advection->o_advectionVelocityJW =
     mesh->device.malloc(mesh->Np*totalNelements*mesh->dim*sizeof(dfloat), advectionVelocityJW);
@@ -323,7 +373,8 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   advection->o_advectionVelocityP =
     mesh->device.malloc(mesh->Nfaces*mesh->Nfp*totalNelements*sizeof(dfloat), advectionVelocityP);
   
-
+  advection->o_cubAdvectionVelocityJW =
+    mesh->device.malloc(mesh->cubNp*totalNelements*mesh->dim*sizeof(dfloat), cubAdvectionVelocityJW);
   
   cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
   
@@ -384,10 +435,10 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   int NblockS = mymax(1,1024/maxNodes); // works for CUDA
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
-  int NblockAdvVol = 2; // works for CUDA
+  int NblockAdvVol = 1; // works for CUDA
   kernelInfo["defines/" "p_NblockAdvVol"]= NblockAdvVol;
 
-  int NblockAdvSur = 2; // works for CUDA
+  int NblockAdvSur = 1; // works for CUDA
   kernelInfo["defines/" "p_NblockAdvSur"]= NblockAdvSur;
 
   int cubMaxNodes = mymax(mesh->Np, (mesh->intNfp*mesh->Nfaces));
@@ -419,11 +470,20 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   // kernels from volume file
   sprintf(fileName, DADVECTION "/okl/advectionVolume%s.okl", suffix);
 
-  if(advectionFormulation==0) // weak
-    sprintf(kernelName, "advectionVolume%s", suffix);
-  if(advectionFormulation==1) // skew
-    sprintf(kernelName, "advectionSkewVolume%s", suffix);
-
+  if(advectionCubature==0){
+    if(advectionFormulation==0) // weak
+      sprintf(kernelName, "advectionVolume%s", suffix);
+    if(advectionFormulation==1) // skew
+      sprintf(kernelName, "advectionSkewVolume%s", suffix);
+  }
+  else{
+    if(advectionFormulation==0) // weak
+      sprintf(kernelName, "advectionCubatureVolume%s", suffix);
+    if(advectionFormulation==1) // skew
+      sprintf(kernelName, "advectionCubatureSkewVolume%s", suffix);
+  }
+  
+  
   advection->volumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
   if(advectionFormulation==0) // weak
