@@ -2,7 +2,7 @@
 1.0
 
 [MESH FILE]
-../../meshes/cubeHexH0125.msh
+../../meshes/cubeHexH0125.msh,../../meshes/cubeHexH025.msh
 
 [MESH DIMENSION]
 3
@@ -11,7 +11,7 @@
 12
 
 [POLYNOMIAL DEGREE]
-1,2,3,4,5,6,7,8,9
+9,1,2,3,4,5,6,7,8
 
 [THREAD MODEL]
 CUDA
@@ -32,7 +32,8 @@ NODAL
 [ADVECTION FORMULATION]
 #WEAK
 #WEAK+COMBINED
-SKEW+COMBINED
+#SKEW+COMBINED
+SKEW
 
 [START TIME]
 0

@@ -777,3 +777,253 @@
 }
 
 
+// weak form, with cubature
+@kernel void advectionCubatureVolumeHex3D(const dlong Nelements,
+					  @restrict const dfloat * vgeo,
+					  @restrict const dfloat * cubvgeo,
+					  @restrict const dfloat * cubD,
+					  @restrict const dfloat * cubInterpT,
+					  @restrict const dfloat * cubProjectT,
+					  @restrict const dfloat * cubAdvectionVelocityJW,
+					  @restrict const dfloat * q,
+					  @restrict dfloat * rhsq){
+  
+  //----------------------------@kernel 1 interpolate velocity fields to quadrature points
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+
+    @shared dfloat s_cubD[p_cubNq][p_cubNq];
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+
+    @shared dfloat s_F1[p_cubNq][p_cubNq];
+    @shared dfloat s_F2[p_cubNq][p_cubNq];
+    @shared dfloat s_F3[p_cubNq][p_cubNq];
+
+    @shared dfloat s_q[p_cubNq][p_cubNq];
+    @shared dfloat s_rhsq[p_cubNq][p_cubNq];
+    
+    @exclusive dfloat r_cq[p_cubNq];
+    @exclusive dfloat r_rhsq[p_cubNq];
+
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+        const int id = i+j*p_cubNq;
+        if (id<p_Nq*p_cubNq) {
+          s_cubInterpT[0][id] = cubInterpT[id];
+          s_cubProjectT[0][id] = cubProjectT[id];
+        }
+        s_cubD[0][id] = cubD[id];
+	
+#pragma unroll p_cubNq
+	for(int k=0;k<p_cubNq;++k){         
+	  r_cq[k] = 0.;
+	  r_rhsq[k] = 0.;
+	}
+      }
+    }
+
+    @barrier("local");
+
+    //read in and interpolate in k
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (i<p_Nq && j<p_Nq) {
+#pragma unroll p_Nq
+          for(int k=0;k<p_Nq;++k){
+            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            const dfloat qc = q[id];
+
+#pragma unroll p_cubNq
+            for(int n=0;n<p_cubNq;++n){
+              const dfloat Ik = s_cubInterpT[k][n];
+              r_cq[n] += Ik*qc;
+            }
+          }
+        }
+      }
+    }
+    
+    @barrier("local");
+
+    #pragma unroll p_cubNq
+    for(int k=0;k<p_cubNq;++k){ 
+      //load slice to @shared
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (i<p_Nq && j<p_Nq) {
+            s_q[j][i] = r_cq[k];
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if(j<p_Nq){
+            r_cq[k] = 0; 
+
+#pragma unroll p_Nq
+            for (int n=0;n<p_Nq;n++) {
+              const dfloat Ii = s_cubInterpT[n][i];
+              r_cq[k] += Ii*s_q[j][n];
+            }
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if(j<p_Nq){
+            s_q[j][i] = r_cq[k];
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          r_cq[k] = 0;
+
+          #pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            const dfloat Ij = s_cubInterpT[n][j];
+            r_cq[k] += Ij*s_q[n][i];
+          }
+        }
+      }
+
+      @barrier("local");      
+    }
+
+    //#pragma unroll p_cubNq
+    for(int k=0;k<p_cubNq;++k){ 
+
+      //fetch slice
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          const dlong gid = e*p_cubNp*p_dim+ k*p_cubNq*p_cubNq + j*p_cubNq +i;
+          const dfloat cr = cubAdvectionVelocityJW[gid + 0*p_cubNp];
+	  const dfloat cs = cubAdvectionVelocityJW[gid + 1*p_cubNp];
+	  const dfloat ct = cubAdvectionVelocityJW[gid + 2*p_cubNp];
+          const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
+
+          const dfloat qn = r_cq[k];
+          const dfloat cqrn = (cr*qn);
+          const dfloat cqsn = (cs*qn);
+          const dfloat cqtn = (ct*qn);
+
+          s_F1[j][i] = cqrn;
+          s_F2[j][i] = cqsn;
+          s_F3[j][i] = cqtn;
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          #pragma unroll p_cubNq
+            for (int n=0;n<p_cubNq;n++) {
+              const dfloat Dr = s_cubD[n][i];
+              const dfloat Ds = s_cubD[n][j];
+              const dfloat Dt = s_cubD[k][n];
+              r_rhsq[k] += Dr*s_F1[j][n];
+              r_rhsq[k] += Ds*s_F2[n][i];
+              r_rhsq[n] += Dt*s_F3[j][i];
+            }
+	}
+      }
+
+      @barrier("local");
+    } //k loop
+
+    #pragma unroll p_cubNq
+    for(int k=0;k<p_cubNq;++k){ 
+      //load slice to @shared
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          s_rhsq[j][i] = r_rhsq[k];
+        }
+      }
+      
+      @barrier("local");
+      
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if(j<p_Nq){
+            r_rhsq[k] = 0; 
+	    
+            #pragma unroll p_cubNq
+            for (int n=0;n<p_cubNq;n++) {
+              const dfloat Pj = s_cubProjectT[n][j];
+              r_rhsq[k] += Pj*s_rhsq[n][i];
+            }
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if(j<p_Nq){
+            s_rhsq[j][i] = r_rhsq[k];
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if ((i<p_Nq) && (j<p_Nq)) {
+            r_rhsq[k] = 0; 
+
+            #pragma unroll p_cubNq
+            for (int n=0;n<p_cubNq;n++) {
+              const dfloat Pi = s_cubProjectT[n][i];
+              r_rhsq[k] += Pi*s_rhsq[j][n];
+            }
+          }
+        }
+      }
+      
+      @barrier("local");
+    }
+
+    //project in k and write out
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if ((i<p_Nq) && (j<p_Nq)) {
+#pragma unroll p_Nq
+          for(int k=0;k<p_Nq;++k){    
+            dfloat rhsqk=0.;
+
+            #pragma unroll p_cubNq
+            for(int n=0;n<p_cubNq;++n){
+              const dfloat Pk = s_cubProjectT[n][k];
+              rhsqk += Pk*r_rhsq[n];
+            }
+
+            const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
+            const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+
+            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            rhsq[id] = -invJW*rhsqk;
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+

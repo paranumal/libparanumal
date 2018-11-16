@@ -59,13 +59,28 @@ void advectionDopriStep(advection_t *advection, setupAide &newOptions, const dfl
       // start halo exchange
       meshHaloExchangeStart(mesh, mesh->Np*advection->Nfields*sizeof(dfloat), advection->sendBuffer, advection->recvBuffer);
     }
+
+    if(newOptions.compareArgs("ADVECTION TYPE", "NODAL")){
+      advection->volumeKernel(mesh->Nelements, 
+			      mesh->o_vgeo, 
+			      mesh->o_Dmatrices,
+			      advection->o_advectionVelocityJW,
+			      advection->o_rkq, 
+			      advection->o_rhsq);
+    }
     
-    advection->volumeKernel(mesh->Nelements, 
-			    mesh->o_vgeo, 
-			    mesh->o_Dmatrices,
-			    advection->o_advectionVelocityJW,
-			    advection->o_rkq, 
-			    advection->o_rhsq);
+    if(newOptions.compareArgs("ADVECTION TYPE", "CUBATURE")){
+      advection->volumeKernel(mesh->Nelements, 
+			      mesh->o_vgeo,
+			      mesh->o_cubvgeo, 
+			      mesh->o_cubDWmatrices,
+			      mesh->o_cubInterpT,
+			      mesh->o_cubProjectT,
+			      advection->o_cubAdvectionVelocityJW,
+			      advection->o_rkq, 
+			      advection->o_rhsq);
+    }
+
     
     // wait for q halo data to arrive
     if(mesh->totalHaloPairs>0){
@@ -133,14 +148,27 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 	// start halo exchange
 	meshHaloExchangeStart(mesh, mesh->Np*advection->Nfields*sizeof(dfloat), advection->sendBuffer, advection->recvBuffer);
       }
-      
-      advection->volumeKernel(mesh->Nelements, 
-			      mesh->o_vgeo, 
-			      mesh->o_Dmatrices,
-			      advection->o_advectionVelocityJW,
-			      advection->o_q, 
-			      advection->o_rhsq);
-      
+
+      if(newOptions.compareArgs("ADVECTION TYPE", "NODAL")){
+	advection->volumeKernel(mesh->Nelements, 
+				mesh->o_vgeo, 
+				mesh->o_Dmatrices,
+				advection->o_advectionVelocityJW,
+				advection->o_q, 
+				advection->o_rhsq);
+      }
+      if(newOptions.compareArgs("ADVECTION TYPE", "CUBATURE")){
+
+	advection->volumeKernel(mesh->Nelements, 
+				mesh->o_vgeo,
+				mesh->o_cubvgeo, 
+				mesh->o_cubDWmatrices,
+				mesh->o_cubInterpT,
+				mesh->o_cubProjectT,
+				advection->o_cubAdvectionVelocityJW,
+				advection->o_q, 
+				advection->o_rhsq);
+      }
       
       // wait for q halo data to arrive
       if(mesh->totalHaloPairs>0){
@@ -164,7 +192,7 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 			       advection->o_advectionVelocityM,
 			       advection->o_advectionVelocityP,
 			       advection->o_q, 
-			     advection->o_rhsq);
+			       advection->o_rhsq);
       
       // update solution using Runge-Kutta
       advection->updateKernel(mesh->Nelements, 
