@@ -205,7 +205,17 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   kernelInfo["defines"].asObject();
   kernelInfo["includes"].asArray();
   kernelInfo["header"].asArray();
-  kernelInfo["flags"].asObject();
+  kernelInfo["compiler_flags"] = " ";
+
+  //  if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
+  {
+    kernelInfo["compiler_flags"] += " --ftz=true";
+    kernelInfo["compiler_flags"] += " --prec-div=false";
+    kernelInfo["compiler_flags"] += " --prec-sqrt=false";
+    kernelInfo["compiler_flags"] += " --use_fast_math";
+    kernelInfo["compiler_flags"] += " --fmad=true"; // compiler option for cuda
+    kernelInfo["compiler_flags"] += " -Xptxas -dlcm=ca";
+  }
   
   if(advection->dim==3)
     meshOccaSetup3D(mesh, newOptions, kernelInfo);
@@ -453,6 +463,8 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
+  std::cout << kernelInfo << std::endl;
+  
   // set kernel name suffix
   char *suffix;
   
