@@ -1024,7 +1024,7 @@
 
 
 // weak form, with cubature and blocking
-@kernel void advectionCubatureVolumeHex3D(const dlong Nelements,
+@kernel void advectionCubatureVolumeHex3D_v1(const dlong Nelements,
 					  @restrict const dfloat * vgeo,
 					  @restrict const dfloat * cubvgeo,
 					  @restrict const dfloat * cubD,
@@ -1352,6 +1352,185 @@
 }
 
 
+// 3 way reuse of D,P,I
+
+// skew form, with cubature and blocking
+@kernel void advectionCubatureVolumeHex3D(const dlong Nelements,
+					  @restrict const dfloat * vgeo,
+					  @restrict const dfloat * cubvgeo,
+					  @restrict const dfloat * cubD,
+					  @restrict const dfloat * cubInterpT,
+					  @restrict const dfloat * cubProjectT,
+					  @restrict const dfloat * cubAdvectionVelocityJW,
+					  @restrict const dfloat * q,
+					  @restrict dfloat * rhsq){
+
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+
+#if p_Nq==8 
+#define p_pad 1
+#else
+#define p_pad 0
+#endif
+
+#if p_cubNq==11
+#define p_padI 1
+#else
+#define p_padI 0
+#endif
+
+    
+    @shared    dfloat s_q[p_Nq][p_Nq][p_Nq+p_pad];
+    @exclusive dfloat r_Iqi[p_cubNq], r_Iqj[p_cubNq], r_Iqk[p_cubNq];
+    @exclusive dfloat r_PDIqi[p_Nq], r_PDIqj[p_Nq], r_PDIqk[p_Nq];
+
+    @shared    dfloat s_P[p_Nq][p_cubNq], s_D[p_cubNq][p_cubNq], s_I[p_cubNq][p_Nq+p_padI];
+    
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+
+#pragma unroll p_Nq
+	for(int k=0;k<p_Nq;++k){
+	  dlong base = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+	  s_q[k][j][i] = q[base];
+	}
+
+	int n = j*p_Nq + i;
+	while(n<p_cubNq*p_Nq){
+	  s_P[0][n] = cubProjectT[n];
+	  s_I[0][n] = cubInterpT[n];
+	  n+=p_Nq*p_Nq;
+	}
+
+	n = j*p_Nq + i;
+	while(n<p_cubNq*p_cubNq){
+	  s_D[0][n] = cubD[n];
+	  n+=p_Nq*p_Nq;
+	}
+	
+      }
+    }
+    
+    @barrier("local");
+    
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+
+#pragma unroll p_cubNq
+	for(int c=0;c<p_cubNq;++c){
+	  r_Iqi[c] = 0;
+	  r_Iqj[c] = 0;
+	  r_Iqk[c] = 0;
+	}
+
+#pragma unroll p_Nq
+	for(int c=0;c<p_Nq;++c){
+	  dfloat r_qi = s_q[b][a][c];
+	  dfloat r_qj = s_q[b][c][a];
+	  dfloat r_qk = s_q[c][b][a];
+
+#pragma unroll p_cubNq
+	  for(int n=0;n<p_cubNq;++n){
+	    const dfloat Inc = s_I[n][c];// 6 flops for 8 bytes (note transpose)
+	    r_Iqi[n] += Inc*r_qi;
+	    r_Iqj[n] += Inc*r_qj;
+	    r_Iqk[n] += Inc*r_qk;
+	  }
+	}
+
+#pragma unroll p_cubNq
+	for(int n=0;n<p_cubNq;++n){
+	  const dlong gid = 3*e*p_Nq*p_Nq*p_cubNq + b*p_Nq*p_cubNq+ a*p_cubNq + n;
+	  const dfloat cr = cubAdvectionVelocityJW[gid + 0*p_Nq*p_Nq*p_cubNq];
+	  const dfloat cs = cubAdvectionVelocityJW[gid + 1*p_Nq*p_Nq*p_cubNq];
+	  const dfloat ct = cubAdvectionVelocityJW[gid + 2*p_Nq*p_Nq*p_cubNq];
+
+	  r_Iqi[n] *= cr;
+	  r_Iqj[n] *= cs;
+	  r_Iqk[n] *= ct;
+	}
+
+#pragma unroll p_Nq
+	for(int m=0;m<p_Nq;++m){
+	  r_PDIqi[m] = 0;
+	  r_PDIqj[m] = 0;
+	  r_PDIqk[m] = 0;
+	}
+
+#pragma unroll p_cubNq
+	for(int n=0;n<p_cubNq;++n){
+	  
+	  dfloat r_DIqi = 0, r_DIqj = 0, r_DIqk = 0;
+
+#pragma unroll p_cubNq
+	  for(int m=0;m<p_cubNq;++m){
+	    // all threads read the same
+	    const dfloat Dnm = s_D[n][m]; // 6 flops for 8 bytes
+	    r_DIqi += Dnm*r_Iqi[m];
+	    r_DIqj += Dnm*r_Iqj[m];
+	    r_DIqk += Dnm*r_Iqk[m];
+	  }
+	  
+	  // fix this later - will multiply by 1/J
+	  const dlong base = 3*e*p_Nq*p_Nq*p_cubNq + b*p_Nq*p_cubNq+ a*p_cubNq + n;
+	  
+	  r_DIqi *= cubvgeo[base+0*p_Nq*p_Nq*p_cubNq];
+	  r_DIqj *= cubvgeo[base+1*p_Nq*p_Nq*p_cubNq];
+	  r_DIqk *= cubvgeo[base+2*p_Nq*p_Nq*p_cubNq];
+
+#pragma unroll p_Nq
+	  for(int m=0;m<p_Nq;++m){
+	    // all threads reas the same
+	    const dfloat Pmn = s_P[m][n];  // 6 flops for 8 bytes (12*6/8 TFLOPS/s)
+	    r_PDIqi[m] += Pmn*r_DIqi;
+	    r_PDIqj[m] += Pmn*r_DIqj;
+	    r_PDIqk[m] += Pmn*r_DIqk;
+	  }
+	}
+	
+      } // end a
+    } // end b
+    
+    @barrier("local");
+    
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+#pragma unroll p_Nq
+	for(int c=0;c<p_Nq;++c){
+	  s_q[b][a][c] = r_PDIqi[c];
+	}
+      }
+    }
+    
+    @barrier("local");
+
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+#pragma unroll p_Nq
+	for(int c=0;c<p_Nq;++c){
+	  s_q[b][c][a] += r_PDIqj[c];
+	}
+      }
+    }
+    
+    @barrier("local");
+
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+#pragma unroll p_Nq
+	for(int c=0;c<p_Nq;++c){
+	  
+	  const dfloat qbca = s_q[c][b][a] + r_PDIqk[c];
+	  const dlong id = e*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
+	  
+	  rhsq[id] = qbca;
+	}
+      }
+    }
+  }
+}
+
+
 // skew form, with cubature and blocking
 @kernel void advectionCubatureSkewVolumeHex3D(const dlong Nelements,
 					      @restrict const dfloat * vgeo,
@@ -1412,7 +1591,7 @@
     for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         if (i<p_Nq && j<p_Nq) {
-	  dfloat r_qc[p_NblockAdvVol];
+	  dfloat r_qin[p_NblockAdvVol];
 	  
 	  // do this outer so that fetches are blocked
 #pragma unroll p_Nq
@@ -1422,7 +1601,7 @@
 	    for(int es=0;es<p_NblockAdvVol;++es){
 	      const int e = es+eo;
 	      const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-	      r_qc[es] = (e<Nelements) ? q[id]:0;
+	      r_qin[es] = (e<Nelements) ? q[id]:0;
 	    }
 	    
 #pragma unroll p_cubNq
@@ -1430,7 +1609,7 @@
 	      const dfloat Ik = s_cubInterpT[k][n];
 #pragma unroll p_NblockAdvVol
 	      for(int es=0;es<p_NblockAdvVol;++es){
-		r_cq[es][n] += Ik*r_qc[es];
+		r_cq[es][n] += Ik*r_qin[es];
 	      }
 	    }
 	  }
