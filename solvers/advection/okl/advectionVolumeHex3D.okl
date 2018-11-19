@@ -2114,24 +2114,39 @@
     
     for(int b=0;b<p_Nq;++b;@inner(1)){
       for(int a=0;a<p_Nq;++a;@inner(0)){
+
+	for(int c=0;c<p_cubNq;++c){
+	  r_resqi[c] = s_q[b][a][c]; // this is sloppy (5 reads, 6 flops => 13*6/(5*8) TFLOPS)
+	  r_resqj[c] = s_q[b][c][a];
+	  r_resqk[c] = s_q[c][b][a];
+	}
 	
+	//#pragma unroll p_Nq
 	for(int m=0;m<p_Nq;++m){
 	  r_tmpi[m] = 0; r_tmpj[m] = 0; r_tmpk[m] = 0;
 	}
-	
+
+	//#pragma unroll p_cubNq
 	for(int c=0;c<p_cubNq;++c){
 	  
 	  dfloat r_Iqi = 0, r_Iqj = 0, r_Iqk = 0;
 	  dfloat r_Dqi = 0, r_Dqj = 0, r_Dqk = 0;
-	  
+
+	  //#pragma unroll p_Nq
 	  for(int n=0;n<p_Nq;++n){
 	    const dfloat Icn = s_I[c][n];
 	    const dfloat Dcn = s_D[c][n];
-	    
+
+#if 0
 	    const dfloat r_qi = s_q[b][a][n]; // this is sloppy (5 reads, 6 flops => 13*6/(5*8) TFLOPS)
 	    const dfloat r_qj = s_q[b][n][a];
 	    const dfloat r_qk = s_q[n][b][a];
-
+#else
+	    const dfloat r_qi = r_resqi[n];
+	    const dfloat r_qj = r_resqj[n];
+	    const dfloat r_qk = r_resqk[n];
+#endif
+	    
 	    r_Iqi += Icn*r_qi;
 	    r_Iqj += Icn*r_qj;
 	    r_Iqk += Icn*r_qk;
@@ -2154,7 +2169,8 @@
 	  r_Dqi *= cr;
 	  r_Dqj *= cs;
 	  r_Dqk *= ct;
-	  
+
+	  //#pragma unroll p_Nq
 	  for(int n=0;n<p_Nq;++n){
 	    const dfloat Icn = s_I[c][n];
 	    const dfloat Dcn = s_D[c][n];
@@ -2168,22 +2184,27 @@
 	    r_tmpk[n] += Dcn*r_Iqk;
 	  }
 	} // end c loop
+
       }
     } // end b loop
-
+    
+    // adding this barrier improves performance ??????????????????//
     @barrier("local");
     
     for(int b=0;b<p_Nq;++b;@inner(1)){
       for(int a=0;a<p_Nq;++a;@inner(0)){
-
+	
+	//#pragma unroll p_Nq
 	for(int m=0;m<p_Nq;++m){
 	  r_resqi[m] = 0; r_resqj[m] = 0; r_resqk[m] = 0;
 	}
-	
+
+	//#pragma unroll p_cubNq
 	for(int m=0;m<p_cubNq;++m){
 
 	  dfloat r_Pi = 0, r_Pj = 0, r_Pk = 0;
 	  
+	  //#pragma unroll p_Nq
 	  for(int n=0;n<p_Nq;++n){
 	    const dfloat Pnm = s_P[n][m];
 	    r_Pi += Pnm*r_tmpi[n];
@@ -2198,7 +2219,7 @@
 	  r_Pj *= cubvgeo[base+1*p_Nq*p_Nq*p_cubNq];
 	  r_Pk *= cubvgeo[base+2*p_Nq*p_Nq*p_cubNq];
 	  
-	  //#pragma unroll p_cubNq
+	  //#pragma unroll p_Nq
 	  for(int n=0;n<p_Nq;++n){
 	    
 	    // all threads reas the same
@@ -2208,9 +2229,11 @@
 	    r_resqk[n] += Pmn*r_Pk;
 	  }
 	}
+	
       } // end a
     } // end b
 
+    // THIS BARRIER IS IMPORTANT ???
     @barrier("local");
     
     for(int b=0;b<p_Nq;++b;@inner(1)){
@@ -2227,7 +2250,7 @@
     
     for(int b=0;b<p_Nq;++b;@inner(1)){
       for(int a=0;a<p_Nq;++a;@inner(0)){
-
+	
 	//#pragma unroll p_Nq
 	for(int c=0;c<p_Nq;++c){
 	  s_q[b][c][a] += r_resqj[c];
