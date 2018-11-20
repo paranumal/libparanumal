@@ -199,7 +199,35 @@ int main(int argc, char **argv){
   }
 
   device.setup(deviceConfig);
-  
+
+  // profile big copy
+  double maxBWest = 0;
+  {
+
+    long long int bytes = 2*1024*1024*(long long int)1024;
+    occa::memory o_a = device.malloc(bytes/2);
+    occa::memory o_b = device.malloc(bytes/2);
+
+    occa::streamTag start = device.tagStream();
+
+    int Ntests = 10;
+    for(int n=0;n<Ntests;++n)
+      o_a.copyFrom(o_b);
+
+    occa::streamTag end = device.tagStream();
+    
+    device.finish();
+    
+    double elapsed = device.timeBetween(start, end);
+    elapsed /= Ntests;
+
+    maxBWest = bytes/(elapsed*1.e9);
+    o_a.free();
+    o_b.free();
+  }
+    
+
+  double maxGFLOPSest = 0;
   int knl;
   for(knl = 0;knl<Nkernels;++knl){
     //    long long int bytes = (kernelReadThroughput[knl]+kernelWriteThroughput[knl])*kernelTime[knl]*1.e9;
@@ -208,6 +236,10 @@ int main(int argc, char **argv){
     double arithmeticIntensity = (double)flops/bytes;
     double perf = (flops/kernelTime[knl])/1.e9; // convert to GFLOPS/s
 
+    printf("perf = %lf, eff = %lf\n",perf, kernelFlopEfficiency[knl]);
+    if(flops>10000)
+      maxGFLOPSest = mymax(maxGFLOPSest, 100*perf/kernelFlopEfficiency[knl]); // since efficiency is given in percent
+    
     occa::memory o_a = device.malloc(bytes/2);
     occa::memory o_b = device.malloc(bytes/2);
 
@@ -242,9 +274,16 @@ int main(int argc, char **argv){
   }
   fprintf(fpMatlab, "\n rooflineResults;\n");
 
+  printf("maxGFLOPSest=%g\n", maxGFLOPSest);
+  
   for(knl = 0;knl<Nkernels;++knl){
     fprintf(fpMatlab, "figure(%d);\n", knl+1);
-    fprintf(fpMatlab, "scatter(%s(:,1),%s(:,2));\n", kernelNames[knl], kernelNames[knl]);
+    fprintf(fpMatlab, "scatter(%s(:,1),%s(:,2), 'filled', 'ko');\n", kernelNames[knl], kernelNames[knl]);
+
+    fprintf(fpMatlab, "hold on;\n");
+    fprintf(fpMatlab, "plot([0,20], [0,%lg]);", maxBWest*20);
+    fprintf(fpMatlab, "plot([0,40], [%lg,%lg]);", maxGFLOPSest, maxGFLOPSest);
+    
     fprintf(fpMatlab, "set(gca, 'FontSize', 14);\n");
     fprintf(fpMatlab, "xlabel('Arithmetic Intensity (FP64 flops)/deviceMemoryBytes', 'FontSize', 14);\n");
     fprintf(fpMatlab, "ylabel('FP64 GFLOPS/s', 'FontSize', 14);\n");

@@ -34,6 +34,6 @@ SOFTWARE.
 #include "mpi.h"
 #include "occa.hpp"
 #include "setupAide.hpp"
-
+#define mymax(a,b) ((a>b)?(a):(b))
 
 #endif
