@@ -234,7 +234,35 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   advection->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), advection->rhsq);
 
+  int advectionForm = 0, advectionIntegration = 0, advectionMassType = 0;
+  if (newOptions.compareArgs("ADVECTION FORMULATION","WEAK")){
+    advectionForm = 0; // DEFAULT
+  }
+  if (newOptions.compareArgs("ADVECTION FORMULATION","SKEW")){
+    advectionForm = 1; 
+  }
 
+  if (newOptions.compareArgs("ADVECTION FORMULATION","NODAL")){
+    advectionIntegration = 0; // DEFAULT
+  }
+  
+  if (newOptions.compareArgs("ADVECTION FORMULATION","CUBATURE")){
+    advectionIntegration = 1; 
+  }
+
+
+  if (newOptions.compareArgs("ADVECTION FORMULATION","SEMDG")){
+    advectionMassType = 0;  // DEFAULT
+  }
+  
+  if (newOptions.compareArgs("ADVECTION FORMULATION","WADG")){
+    advectionMassType = 1; 
+  }
+
+  
+
+
+  
   // non-constant advection velocity
   dfloat t = 0;
   hlong totalNelements = mesh->Nelements+mesh->totalHaloPairs;
@@ -243,19 +271,6 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   dfloat *advectionVelocityP  = (dfloat*) calloc(mesh->Nfaces*mesh->Nfp*totalNelements,sizeof(dfloat));
 
   dfloat *cubAdvectionVelocityJW = (dfloat*) calloc(mesh->cubNp*totalNelements*mesh->dim,sizeof(dfloat));
-  
-  int advectionFormulation = 0, advectionCubature = 0;
-  if (newOptions.compareArgs("ADVECTION FORMULATION","WEAK")){
-    advectionFormulation = 0; // DEFAULT
-  }
-  if (newOptions.compareArgs("ADVECTION FORMULATION","SKEW")){
-    advectionFormulation = 1; // DEFAULT
-  }
-
-  if (newOptions.compareArgs("ADVECTION TYPE","CUBATURE")){
-    advectionCubature = 1; 
-  }
-
   
   for(dlong e=0;e<mesh->Nelements;++e){
 
@@ -318,11 +333,11 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 	dfloat alpha = 1; // not allowed to use central here
 	
 	// fix later
-	if(advectionFormulation==0){ // weak
+	if(advectionForm==0){ // weak
 	  advectionVelocityM[id] = LIFT*0.5*(cdotn - alpha*fabs(cdotn));
 	  advectionVelocityP[id] = LIFT*0.5*(cdotn + alpha*fabs(cdotn));
 	}
-	if(advectionFormulation==1){ // skew
+	if(advectionForm==1){ // skew
 	  advectionVelocityM[id] = LIFT*0.5*(      - alpha*fabs(cdotn));
 	  advectionVelocityP[id] = LIFT*0.5*(cdotn + alpha*fabs(cdotn));
 	}
@@ -463,7 +478,7 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
-  std::cout << kernelInfo << std::endl;
+  //  std::cout << kernelInfo << std::endl;
   
   // set kernel name suffix
   char *suffix;
@@ -482,31 +497,29 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   // kernels from volume file
   sprintf(fileName, DADVECTION "/okl/advectionVolume%s.okl", suffix);
 
-  if(advectionCubature==0){
-    if(advectionFormulation==0) // weak
-      sprintf(kernelName, "advectionVolume%s", suffix);
-    if(advectionFormulation==1) // skew
-      sprintf(kernelName, "advectionSkewVolume%s", suffix);
-  }
-  else{
-    if(advectionFormulation==0) // weak
-      sprintf(kernelName, "advectionCubatureVolume%s", suffix);
-    if(advectionFormulation==1) // skew
-      sprintf(kernelName, "advectionCubatureSkewVolume%s", suffix);
-  }
+  string kName = "advection";
+
+  kName += (advectionIntegration==0) ? "Nodal":"Cubature";
+  kName += (advectionForm==0)        ? "Weak":"Skew";
+  kName += (advectionMassType==0)    ? "SEMDG":"WADG";
+  kName += "Volume";
   
+  sprintf(kernelName, "%s%s", kName.c_str(), suffix);
+
+  printf("kernelName = %s\n", kernelName);
   
   advection->volumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-  if(advectionFormulation==0) // weak
+#if 0
+  if(advectionForm==0) // weak
     sprintf(kernelName, "advectionCombined%s", suffix);
   
-  if(advectionFormulation==1) // skew
+  if(advectionForm==1) // skew
     sprintf(kernelName, "advectionCombinedSkew%s", suffix);
   
   advection->combinedKernel =
     mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-  
+#endif
   
   // kernels from surface file
   sprintf(fileName, DADVECTION "/okl/advectionSurface%s.okl", suffix);

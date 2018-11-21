@@ -51,7 +51,11 @@ void advectionDopriStep(advection_t *advection, setupAide &newOptions, const dfl
     // extract q halo on DEVICE
     if(mesh->totalHaloPairs>0){
       int Nentries = mesh->Np*advection->Nfields;          
-      mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, advection->o_rkq, advection->o_haloBuffer);
+      mesh->haloExtractKernel(mesh->totalHaloPairs,
+			      Nentries,
+			      mesh->o_haloElementList,
+			      advection->o_rkq,
+			      advection->o_haloBuffer);
       
       // copy extracted halo to HOST 
       advection->o_haloBuffer.copyTo(advection->sendBuffer);      
@@ -60,7 +64,7 @@ void advectionDopriStep(advection_t *advection, setupAide &newOptions, const dfl
       meshHaloExchangeStart(mesh, mesh->Np*advection->Nfields*sizeof(dfloat), advection->sendBuffer, advection->recvBuffer);
     }
 
-    if(newOptions.compareArgs("ADVECTION TYPE", "NODAL")){
+    if(newOptions.compareArgs("ADVECTION FORMULATION", "NODAL")){
       advection->volumeKernel(mesh->Nelements, 
 			      mesh->o_vgeo, 
 			      mesh->o_Dmatrices,
@@ -69,7 +73,7 @@ void advectionDopriStep(advection_t *advection, setupAide &newOptions, const dfl
 			      advection->o_rhsq);
     }
     
-    if(newOptions.compareArgs("ADVECTION TYPE", "CUBATURE")){
+    if(newOptions.compareArgs("ADVECTION FORMULATION", "CUBATURE")){
       advection->volumeKernel(mesh->Nelements, 
 			      mesh->o_vgeo,
 			      mesh->o_cubvgeo, 
@@ -104,7 +108,7 @@ void advectionDopriStep(advection_t *advection, setupAide &newOptions, const dfl
 			     advection->o_advectionVelocityM,
 			     advection->o_advectionVelocityP,
 			     advection->o_rkq, 
-			       advection->o_rhsq);
+			     advection->o_rhsq);
     
     // update solution using Runge-Kutta
     // rkrhsq_rk = rhsq
@@ -140,7 +144,11 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
       if(mesh->totalHaloPairs>0){
 	int Nentries = mesh->Np*advection->Nfields;
         
-	mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, advection->o_q, advection->o_haloBuffer);
+	mesh->haloExtractKernel(mesh->totalHaloPairs,
+				Nentries,
+				mesh->o_haloElementList,
+				advection->o_q,
+				advection->o_haloBuffer);
         
 	// copy extracted halo to HOST 
 	advection->o_haloBuffer.copyTo(advection->sendBuffer);      
@@ -149,7 +157,7 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 	meshHaloExchangeStart(mesh, mesh->Np*advection->Nfields*sizeof(dfloat), advection->sendBuffer, advection->recvBuffer);
       }
 
-      if(newOptions.compareArgs("ADVECTION TYPE", "NODAL")){
+      if(newOptions.compareArgs("ADVECTION FORMULATION", "NODAL")){
 	advection->volumeKernel(mesh->Nelements, 
 				mesh->o_vgeo, 
 				mesh->o_Dmatrices,
@@ -157,8 +165,8 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 				advection->o_q, 
 				advection->o_rhsq);
       }
-      if(newOptions.compareArgs("ADVECTION TYPE", "CUBATURE")){
 
+      if(newOptions.compareArgs("ADVECTION FORMULATION", "CUBATURE")){
 	advection->volumeKernel(mesh->Nelements, 
 				mesh->o_vgeo,
 				mesh->o_cubvgeo, 
