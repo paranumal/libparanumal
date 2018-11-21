@@ -30,5 +30,6 @@ title(kernelName, 'FontSize', 16, 'Interpreter', 'None');
 %  plot(perf(ids,1),ones(size(ids))*estPerf,'r-', 'LineWidth', 2);
 %%  axis([0,ceil(max(perf(:,1))),0,max(max(perf(:,1).*perf(:,3),perf(:,2)))]);
   hold off;
+  grid minor
   
   pause(1);
