@@ -151,6 +151,7 @@ void ellipticEndHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentri
 
 //Linear solvers
 int pcg      (elliptic_t* elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
+void pcgBP5   (elliptic_t* elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const int MAXIT);
 
 void ellipticScaledAdd(elliptic_t *elliptic, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
 dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b);

@@ -65,7 +65,7 @@ AOBJS    = \
 ./src/ellipticMultiGridSetup.o \
 ./src/ellipticMultiGridLevel.o \
 ./src/ellipticMultiGridLevelSetup.o \
-
+./src/PCGBP5.o  
 # library objects
 LOBJS = \
 ../../src/meshApplyElementMatrix.o \

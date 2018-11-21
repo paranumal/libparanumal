@@ -73,8 +73,7 @@ int main(int argc, char **argv){
 
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
-  if(options.compareArgs("BENCHMARK", "BK5") ||
-     options.compareArgs("BENCHMARK", "BP5")){
+  if(options.compareArgs("BENCHMARK", "BK5")){
 
     // test Ax throughput
     occa::streamTag startAx = mesh->device.tagStream();
@@ -83,22 +82,17 @@ int main(int argc, char **argv){
 
     for(int it=0;it<NAx;++it){
       // include gather-scatter
-      if(options.compareArgs("BENCHMARK", "BP5"))
-        ellipticOperator(elliptic, lambda, elliptic->o_x, elliptic->o_Ax, dfloatString); // standard precision
-
-      if(options.compareArgs("BENCHMARK", "BK5")){
-        if(!options.compareArgs("ELEMENT MAP", "TRILINEAR")){
-          elliptic->partialAxKernel(mesh->NlocalGatherElements,
-                                    mesh->o_localGatherElementList,
-                                    mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM,
-                                    lambda, elliptic->o_x, elliptic->o_Ax);
-        }
-        else{
-          elliptic->partialAxKernel(mesh->NlocalGatherElements,
-                                    mesh->o_localGatherElementList,
-                                    elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM,
-                                    lambda, elliptic->o_x, elliptic->o_Ax);
-        }
+      if(!options.compareArgs("ELEMENT MAP", "TRILINEAR")){
+        elliptic->partialAxKernel(mesh->NlocalGatherElements,
+                                  mesh->o_localGatherElementList,
+                                  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM,
+                                  lambda, elliptic->o_x, elliptic->o_Ax);
+      }
+      else{
+        elliptic->partialAxKernel(mesh->NlocalGatherElements,
+                                  mesh->o_localGatherElementList,
+                                  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM,
+                                  lambda, elliptic->o_x, elliptic->o_Ax);
       }
     }
 
@@ -119,6 +113,60 @@ int main(int argc, char **argv){
            elapsedAx/(mesh->Np*mesh->Nelements),
            mesh->Nelements*mesh->Np/elapsedAx,
            (char*) options.getArgs("DISCRETIZATION").c_str());
+
+  }
+  else if(options.compareArgs("BENCHMARK", "BP5")){
+
+  int maxIter = 1000; 
+
+#if 1
+    double start = 0.0, end =0.0;
+    mesh->device.finish();
+    start = MPI_Wtime();
+#else
+    occa::streamTag startTag = mesh->device.tagStream();
+#endif
+
+    pcgBP5(elliptic, lambda, o_r, o_x, maxIter);
+
+
+#if 1
+    mesh->device.finish();
+    end = MPI_Wtime();
+    double localElapsed = end-start;
+#else
+    occa::streamTag stopTag = mesh->device.tagStream();
+    ddouble localElapsed = mesh->device.timeBetween(startTag, stopTag);
+#endif
+
+int size = mesh->size;
+
+hlong   localDofs     = (hlong) mesh->Np*mesh->Nelements;
+hlong   localElements = (hlong) mesh->Nelements;
+double globalElapsed;
+hlong   globalDofs;
+hlong   globalElements;
+
+MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE,  MPI_MAX, 0, mesh->comm );
+MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_HLONG,   MPI_SUM, 0, mesh->comm );
+MPI_Reduce(&localElements,&globalElements,1, MPI_HLONG,   MPI_SUM, 0, mesh->comm );
+
+if (mesh->rank==0){
+      printf("%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %g %g\t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME] \n",
+             mesh->size, mesh->N, globalElements, globalDofs, maxIter, globalElapsed, globalElapsed/(globalDofs),
+             1.0/(globalElapsed/(globalDofs)));
+}
+
+
+
+
+
+
+
+
+
+
+
 
   }
   else{
