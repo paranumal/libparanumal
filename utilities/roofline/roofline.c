@@ -216,11 +216,15 @@ int main(int argc, char **argv){
     occa::memory o_a = device.malloc(bytes/2);
     occa::memory o_b = device.malloc(bytes/2);
 
+    device.finish();
+    
     occa::streamTag start = device.tagStream();
 
     int Ntests = 10;
-    for(int n=0;n<Ntests;++n)
+    for(int n=0;n<Ntests;++n){
       o_a.copyFrom(o_b);
+      o_b.copyFrom(o_a);
+    }
 
     occa::streamTag end = device.tagStream();
     
@@ -229,13 +233,12 @@ int main(int argc, char **argv){
     double elapsed = device.timeBetween(start, end);
     elapsed /= Ntests;
 
-    maxBWest = bytes/(elapsed*1.e9);
+    maxBWest = 2*bytes/(elapsed*1.e9);
     o_a.free();
     o_b.free();
   }
     
 
-  double maxGFLOPSest = 0;
   int knl;
   for(knl = 0;knl<Nkernels;++knl){
 
@@ -243,7 +246,7 @@ int main(int argc, char **argv){
     sprintf(resultsName, "%s.dat", kernelNames[knl]);
     
     FILE *fpResults = fopen(resultsName, "a");
-    fprintf(fpResults, "\%\%  arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth\n");
+    fprintf(fpResults, "\%\%  arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth, maxEstimatedBandwidth\n");
     
     //    long long int bytes = (kernelReadThroughput[knl]+kernelWriteThroughput[knl])*kernelTime[knl]*1.e9;
     long long int bytes = (kernelBytesRead[knl]+kernelBytesWritten[knl])*32;
@@ -252,8 +255,7 @@ int main(int argc, char **argv){
     double perf = (flops/kernelTime[knl])/1.e9; // convert to GFLOPS/s
 
     printf("perf = %lf, eff = %lf\n",perf, kernelFlopEfficiency[knl]);
-    if(flops>10000)
-      maxGFLOPSest = mymax(maxGFLOPSest, 100*perf/kernelFlopEfficiency[knl]); // since efficiency is given in percent
+    double  maxGFLOPSest = 100*perf/kernelFlopEfficiency[knl]; // since efficiency is given in percent
     
     occa::memory o_a = device.malloc(bytes/2);
     occa::memory o_b = device.malloc(bytes/2);
@@ -273,7 +275,8 @@ int main(int argc, char **argv){
     
     kernelMaxEmpiricalBandwidth[knl] = (bytes/elapsed)/1.e9; // convert max empirical bw for this vector size to GB/s
     
-    fprintf(fpResults, "%lg, %lg, %lg\n", arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth[knl]);
+    fprintf(fpResults, "%lg, %lg, %lg, %lg, %lg\n", arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth[knl],
+	    maxGFLOPSest, maxBWest);
 
     o_a.free();
     o_b.free();
