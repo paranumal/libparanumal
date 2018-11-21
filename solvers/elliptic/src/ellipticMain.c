@@ -127,7 +127,7 @@ int main(int argc, char **argv){
     occa::streamTag startTag = mesh->device.tagStream();
 #endif
 
-    pcgBP5(elliptic, lambda, o_r, o_x, maxIter);
+    pcgBP5(elliptic, lambda, elliptic->o_r, elliptic->o_x, maxIter);
 
 
 #if 1
@@ -151,8 +151,10 @@ MPI_Reduce(&localElapsed, &globalElapsed, 1, MPI_DOUBLE,  MPI_MAX, 0, mesh->comm
 MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_HLONG,   MPI_SUM, 0, mesh->comm );
 MPI_Reduce(&localElements,&globalElements,1, MPI_HLONG,   MPI_SUM, 0, mesh->comm );
 
+ globalElapsed /= maxIter;
+ 
 if (mesh->rank==0){
-      printf("%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %g %g\t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME] \n",
+      printf("%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %g %g\t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME TIME_PER_DOF, DOF_PER_TIME] \n",
              mesh->size, mesh->N, globalElements, globalDofs, maxIter, globalElapsed, globalElapsed/(globalDofs),
              1.0/(globalElapsed/(globalDofs)));
 }

@@ -47,13 +47,13 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
   o_p.copyFrom(o_z); // PCG
 
   // dot(r,z)
-  rdotz0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+  dfloat rdotz0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
-
+  dfloat rdotr0 = 0; 
   dfloat alpha, beta, pAp = 0;
 
-  for(iter=0; iter<MAXIT, iter++) {
+  for(int iter=0; iter<MAXIT; iter++) {
 
     // [
     // A*p

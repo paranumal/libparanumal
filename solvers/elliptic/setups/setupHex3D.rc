@@ -2,18 +2,19 @@
 1.0
 
 [BENCHMARK]
-SOLVE
+#SOLVE
 #NONE
-#BP5
+BP5
 
 [DATA FILE]
-data/ellipticSineTest3D.h
-#data/ellipticHomogeneous3D.h
+#data/ellipticSineTest3D.h
+data/ellipticHomogeneous3D.h
 
 [MESH FILE]
 #../../meshes/cubeHexE8Thilina.msh
 #../../meshes/cavityHexH01.msh
-../../meshes/cavityHexH0075.msh
+#../../meshes/cavityHexH0075.msh
+../../meshes/cubeHexH0125.msh
 
 [MESH DIMENSION]
 3
@@ -22,11 +23,11 @@ data/ellipticSineTest3D.h
 12
 
 [POLYNOMIAL DEGREE]
-8
+7
 
 [ELEMENT MAP]
-ISOPARAMETRIC
-#TRILINEAR
+#ISOPARAMETRIC
+TRILINEAR
 
 [THREAD MODEL]
 CUDA
@@ -55,8 +56,8 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
-#JACOBI
-MULTIGRID
+JACOBI
+#MULTIGRID
 
 
 
