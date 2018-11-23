@@ -271,6 +271,7 @@
   }
 }
 
+
 // reduced use of local
 @kernel void advectionNodalSkewSEMDGVolumeHex3D(const dlong Nelements,
 						@restrict const dfloat * vgeo,
@@ -278,27 +279,32 @@
 						@restrict const dfloat * advectionVelocityJW,
 						@restrict const dfloat * q,
 						@restrict dfloat * rhsq){
-  
+
+  // unrolling was necessary for N=9
   for(dlong e=0; e<Nelements; ++e; @outer(0)) {
     
     @shared    dfloat s_q[p_Nq][p_Nq][p_Nq];
-
     @exclusive dfloat r_tmpi[p_Nq], r_tmpj[p_Nq], r_tmpk[p_Nq];
-    @exclusive dfloat r_Iqi[p_Nq], r_Iqj[p_Nq], r_Iqk[p_Nq];
-    
+
     @shared    dfloat s_D[p_Nq][p_Nq];
     
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	//#pragma unroll p_Nq
+#pragma unroll p_Nq
 	for(int k=0;k<p_Nq;++k){
 	  dlong base = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 	  s_q[k][j][i] = q[base];
 	}
-	
+
 	int n = j*p_Nq + i;
 	s_D[0][n] = D[n];
+
+#pragma unroll p_Nq
+	for(int m=0;m<p_Nq;++m){
+	  r_tmpi[m] = 0; r_tmpj[m] = 0; r_tmpk[m] = 0;
+	}
+
       }
     }
     
@@ -307,55 +313,43 @@
     for(int b=0;b<p_Nq;++b;@inner(1)){
       for(int a=0;a<p_Nq;++a;@inner(0)){
 
-	//#pragma unroll p_Nq
-	for(int m=0;m<p_Nq;++m){
-	  r_Iqi[m] = s_q[b][a][m];
-	  r_Iqj[m] = s_q[b][m][a];
-	  r_Iqk[m] = s_q[m][b][a];
-	  r_tmpi[m] = 0; r_tmpj[m] = 0; r_tmpk[m] = 0;
-	}
-
-	//#pragma unroll p_Nq
-	for(int c=0;c<p_Nq;++c){
-	  
-	  dfloat r_Dqi = 0, r_Dqj = 0, r_Dqk = 0;
-	  
 #pragma unroll p_Nq
-	  for(int n=0;n<p_Nq;++n){
-	    const dfloat Dcn = s_D[c][n];
-	    
-	    r_Dqi += Dcn*r_Iqi[n];
-	    r_Dqj += Dcn*r_Iqj[n];
-	    r_Dqk += Dcn*r_Iqk[n];
-	  }
-	  
+	for(int c=0;c<p_Nq;++c){
+
 	  // Cc*Jc*wc*Ic*q
 	  const dlong gid = 3*e*p_Nq*p_Nq*p_Nq + c*p_Nq*p_Nq + b*p_Nq + a;
 	  const dfloat cr = advectionVelocityJW[gid + 0*p_Nq*p_Nq*p_Nq];
 	  const dfloat cs = advectionVelocityJW[gid + 1*p_Nq*p_Nq*p_Nq];
 	  const dfloat ct = advectionVelocityJW[gid + 2*p_Nq*p_Nq*p_Nq];
 	  
-	  const dfloat r_cIqi = cr*r_Iqi[c];
-	  const dfloat r_cIqj = cs*r_Iqj[c];
-	  const dfloat r_cIqk = cs*r_Iqk[c];
-
-	  r_tmpi[c] += cr*r_Dqi;
-	  r_tmpj[c] += cs*r_Dqj;
-	  r_tmpk[c] += ct*r_Dqk;
+	  //     (1/JW)*(-D_{cn}*(J_c*W_c*C_c)*q_c +  (J_n*W_n*C_n)*D_{nc}*q_c)
 	  
-	  //#pragma unroll p_Nq
+#pragma unroll p_Nq
 	  for(int n=0;n<p_Nq;++n){
+	    const dfloat qi = s_q[b][a][n];
+	    const dfloat qj = s_q[b][n][a];
+	    const dfloat qk = s_q[n][b][a];	    
+
 	    const dfloat Dcn = s_D[c][n];
+
+	    const dfloat tmpi = Dcn*cr*qi;
+	    const dfloat tmpj = Dcn*cs*qj;
+	    const dfloat tmpk = Dcn*ct*qk;
 	    
-	    r_tmpi[n] -= Dcn*r_cIqi;
-	    r_tmpj[n] -= Dcn*r_cIqj;
-	    r_tmpk[n] -= Dcn*r_cIqk;
+	    r_tmpi[c] += tmpi;
+	    r_tmpj[c] += tmpj;
+	    r_tmpk[c] += tmpk;
+
+	    r_tmpi[n] -= tmpi;
+	    r_tmpj[n] -= tmpj;
+	    r_tmpk[n] -= tmpk;
 	  }
+	  
 	} // end c loop
-	
       }
     } // end b loop
     
+    // adding this barrier improves performance ??????????????????//
     @barrier("local");
     
     for(int b=0;b<p_Nq;++b;@inner(1)){
@@ -379,7 +373,7 @@
 	}
       }
     }
-      
+    
     @barrier("local");
 
     for(int b=0;b<p_Nq;++b;@inner(1)){
@@ -387,7 +381,7 @@
 
 	//#pragma unroll p_Nq
 	for(int c=0;c<p_Nq;++c){
-	  
+
 	  const dlong gid = p_Nvgeo*e*p_Np + c*p_Nq*p_Nq + b*p_Nq + a + p_IJWID*p_Np;
 	  const dfloat invJW = vgeo[gid];
 	  
@@ -400,11 +394,6 @@
     }
   }
 }
-
-
-
-
-
 
 
 // reduced use of local
