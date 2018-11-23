@@ -154,7 +154,17 @@ MPI_Reduce(&localElements,&globalElements,1, MPI_HLONG,   MPI_SUM, 0, mesh->comm
  globalElapsed /= maxIter;
  
 if (mesh->rank==0){
-      printf("%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %g %g\t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME TIME_PER_DOF, DOF_PER_TIME] \n",
+  char fname[BUFSIZ];
+  sprintf(fname,"BP5_Scaling.dat");
+  FILE *fp; 
+  fp = fopen(fname, "a"); 
+
+  fprintf(fp, "%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %g %g \n",
+             mesh->size, mesh->N, globalElements, globalDofs, maxIter, globalElapsed, globalElapsed/(globalDofs),1.0/(globalElapsed/(globalDofs)));
+
+
+  fclose(fp);
+  printf("%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %g %g\t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME TIME_PER_DOF, DOF_PER_TIME] \n",
              mesh->size, mesh->N, globalElements, globalDofs, maxIter, globalElapsed, globalElapsed/(globalDofs),
              1.0/(globalElapsed/(globalDofs)));
 }

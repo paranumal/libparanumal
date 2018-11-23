@@ -23,7 +23,7 @@ data/ellipticHomogeneous3D.h
 12
 
 [POLYNOMIAL DEGREE]
-7
+15
 
 [ELEMENT MAP]
 #ISOPARAMETRIC
