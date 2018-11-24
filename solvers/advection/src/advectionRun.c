@@ -171,7 +171,7 @@ void advectionRun(advection_t *advection, setupAide &newOptions){
   
   double elapsed = mesh->device.timeBetween(start, end);
   
-  printf("%d %d %d %lg %lg %lg %lg %lg [ N, Nel, Nodes, elapsed, time/step, nodes/time, gnodes*Nsteps/time, gnodes*Nstages*Nsteps/time ]\n",
+  printf("%d %d %d %lg %lg %lg %lg %lg \%\%[ N, Nel, Nodes, elapsed, time/step, nodes/time, gnodes*Nsteps/time, gnodes*Nstages*Nsteps/time, %s ]\n",
 	 mesh->N,
 	 mesh->Nelements,
 	 mesh->Np*mesh->Nelements,
@@ -179,6 +179,7 @@ void advectionRun(advection_t *advection, setupAide &newOptions){
 	 elapsed/allStep,
 	 (1.*mesh->Np*mesh->Nelements)/(elapsed),
 	 (1.*mesh->Np*mesh->Nelements*allStep)/(1.e9*elapsed),
-	 (1.*mesh->Np*mesh->Nelements*allStep*mesh->Nrk)/(1.e9*elapsed)
+	 (1.*mesh->Np*mesh->Nelements*allStep*mesh->Nrk)/(1.e9*elapsed),
+	 newOptions.getArgs("ADVECTION FORMULATION").c_str()
 	 );
 }

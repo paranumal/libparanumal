@@ -234,7 +234,7 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   advection->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), advection->rhsq);
 
-  int advectionForm = 0, advectionIntegration = 0, advectionMassType = 0;
+  int advectionForm = 0, advectionIntegration = 0, advectionMassType = 0, advectionCombined = 0;
   if (newOptions.compareArgs("ADVECTION FORMULATION","WEAK")){
     advectionForm = 0; // DEFAULT
   }
@@ -259,8 +259,9 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     advectionMassType = 1; 
   }
 
-  
-
+  if (newOptions.compareArgs("ADVECTION FORMULATION","COMBINED")){
+    advectionCombined = 1; 
+  }
 
   
   // non-constant advection velocity
@@ -499,6 +500,8 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   string kName = "advection";
 
+  if(advectionCombined) kName += "Combined";
+  
   kName += (advectionIntegration==0) ? "Nodal":"Cubature";
   kName += (advectionForm==0)        ? "Weak":"Skew";
   kName += (advectionMassType==0)    ? "SEMDG":"WADG";
