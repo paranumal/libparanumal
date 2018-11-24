@@ -138,6 +138,7 @@
 }
 
 @kernel void advectionCombinedNodalWeakSEMDGVolumeHex3D(const dlong Nelements,
+							@restrict const dlong * elementIds,
 							const dfloat dt,
 							const dfloat rka,
 							const dfloat rkb,
@@ -153,7 +154,9 @@
 							@restrict dfloat * qnew){
   
   for(dlong e=0; e<Nelements; ++e; @outer(0)) {
-    
+
+
+    @exclusive dlong  r_e;
     @shared    dfloat s_q[p_Nq][p_Nq][p_Nq];
     @exclusive dfloat r_tmpi[p_Nq], r_tmpj[p_Nq], r_tmpk[p_Nq];
 
@@ -161,10 +164,10 @@
     
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-
+	r_e = elementIds[e];
 	//#pragma unroll p_Nq
 	for(int k=0;k<p_Nq;++k){
-	  dlong base = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+	  dlong base = r_e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 	  s_q[k][j][i] = q[base];
 	}
 
@@ -191,7 +194,7 @@
 	  dfloat r_qk = s_q[c][b][a];
 	  
 	  // Cc*Jc*wc*Ic*q
-	  const dlong gid = 3*e*p_Nq*p_Nq*p_Nq + c*p_Nq*p_Nq + b*p_Nq + a;
+	  const dlong gid = 3*r_e*p_Nq*p_Nq*p_Nq + c*p_Nq*p_Nq + b*p_Nq + a;
 	  const dfloat Cr = advectionVelocityJW[gid + 0*p_Nq*p_Nq*p_Nq];
 	  const dfloat Cs = advectionVelocityJW[gid + 1*p_Nq*p_Nq*p_Nq];
 	  const dfloat Ct = advectionVelocityJW[gid + 2*p_Nq*p_Nq*p_Nq];
@@ -245,7 +248,7 @@
 	
 	//#pragma unroll p_Nq
 	for(int c=0;c<p_Nq;++c){
-	  const dlong gid = p_Nvgeo*e*p_Np + c*p_Nq*p_Nq + b*p_Nq + a + p_IJWID*p_Np;
+	  const dlong gid = p_Nvgeo*r_e*p_Np + c*p_Nq*p_Nq + b*p_Nq + a + p_IJWID*p_Np;
 	  const dfloat invJW = vgeo[gid];
 	  
 	  const dfloat qbca = s_q[c][b][a] + r_tmpk[c];
@@ -259,7 +262,7 @@
     for(int f=0;f<p_Nfaces;++f){
       for(int j=0;j<p_Nq;++j;@inner(1)){
 	for(int i=0;i<p_Nq;++i;@inner(0)){     
-	  const dlong id = e*p_Nfaces*p_Nfp + f*p_Nfp + j*p_Nq + i;
+	  const dlong id = r_e*p_Nfaces*p_Nfp + f*p_Nfp + j*p_Nq + i;
 
 	  const dfloat FM = advectionVelocityM[id]; 
 	  const dfloat FP = advectionVelocityP[id];
@@ -281,7 +284,7 @@
 	
 	//#pragma unroll p_Nq
 	for(int c=0;c<p_Nq;++c){
-	  const dlong base = e*p_Np*p_Nfields + c*p_Nq*p_Nq + b*p_Nq + a;
+	  const dlong base = r_e*p_Np*p_Nfields + c*p_Nq*p_Nq + b*p_Nq + a;
 
 	  dfloat r_qcba = q[base];
 	  dfloat r_resq = resq[base];

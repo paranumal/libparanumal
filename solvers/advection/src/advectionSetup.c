@@ -232,7 +232,7 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
   
   advection->o_rhsq =
-    mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), advection->rhsq);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), advection->rhsq);
 
   int advectionForm = 0, advectionIntegration = 0, advectionMassType = 0, advectionCombined = 0;
   if (newOptions.compareArgs("ADVECTION FORMULATION","WEAK")){
