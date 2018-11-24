@@ -215,7 +215,7 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 
       occa::memory &sourceq = (!(rk%2)) ? advection->o_q: advection->o_rhsq;
       occa::memory &destq   = (!(rk%2)) ? advection->o_rhsq: advection->o_q;
-      advection->combinedKernel(mesh->Nelements,
+      advection->volumeKernel(mesh->Nelements,
 				mesh->dt,
 				mesh->rka[rk], 
 				mesh->rkb[rk], 
