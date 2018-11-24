@@ -216,20 +216,25 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
       occa::memory &o_sourceq = (!(rk%2)) ? advection->o_q: advection->o_rhsq;
       occa::memory &o_destq   = (!(rk%2)) ? advection->o_rhsq: advection->o_q;
 
-#if 0
+      occa::streamTag haloCopyToHostEvent;
+
+      mesh->device.setStream(mesh->computeStream);         
+
       // extract q halo on DEVICE
       if(mesh->totalHaloPairs>0){
+
 	int Nentries = mesh->Np*advection->Nfields;
-        
+
+
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
 				mesh->o_haloElementList,
 				o_sourceq,
 				advection->o_haloBuffer);
       }
-#endif
-      
+
       if(mesh->NinternalElements>0){
+	
 	// NODAL only
 	advection->volumeKernel(mesh->NinternalElements,
 				mesh->o_internalElementIds,
@@ -248,42 +253,49 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 				o_destq);
       }
 
-#if 0
+      
       if(mesh->totalHaloPairs>0){
-	// copy extracted halo to HOST 
-	advection->o_haloBuffer.copyTo(advection->sendBuffer);       // need to use halo extract
-        
-	// start halo exchange
+	// copy extracted halo to HOST using async copy
+	advection->o_haloBuffer.copyTo(advection->sendBuffer, "async: true"); 
+
+	haloCopyToHostEvent = mesh->device.tagStream();
+
+	mesh->device.waitFor(haloCopyToHostEvent);
+
+	mesh->device.setStream(mesh->dataStream);         
+	
+	// start MPI halo exchange
 	meshHaloExchangeStart(mesh, mesh->Np*advection->Nfields*sizeof(dfloat), advection->sendBuffer, advection->recvBuffer);
 
 	meshHaloExchangeFinish(mesh);
-	
+
 	// copy halo data to DEVICE
 	size_t offset = mesh->Np*advection->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-	o_sourceq.copyFrom(advection->recvBuffer, advection->haloBytes, offset);
-      }
-#endif
+	o_sourceq.copyFrom(advection->recvBuffer, advection->haloBytes, offset); // , "async: true");
 
-      if(mesh->NnotInternalElements>0){      
-	advection->volumeKernel(mesh->NnotInternalElements,
-				mesh->o_notInternalElementIds,
-				mesh->dt,
-				mesh->rka[rk], 
-				mesh->rkb[rk], 
-				mesh->o_vgeo, 
-				mesh->o_Dmatrices,
-				advection->o_advectionVelocityJW,
-				mesh->o_vmapM,
-				mesh->o_vmapP,
-				advection->o_advectionVelocityM,
-				advection->o_advectionVelocityP,
-				advection->o_resq,
-				o_sourceq, 
-				o_destq);
+	if(mesh->NnotInternalElements)
+	  advection->volumeKernel(mesh->NnotInternalElements,
+				  mesh->o_notInternalElementIds,
+				  mesh->dt,
+				  mesh->rka[rk], 
+				  mesh->rkb[rk], 
+				  mesh->o_vgeo, 
+				  mesh->o_Dmatrices,
+				  advection->o_advectionVelocityJW,
+				  mesh->o_vmapM,
+				  mesh->o_vmapP,
+				  advection->o_advectionVelocityM,
+				  advection->o_advectionVelocityP,
+				  advection->o_resq,
+				  o_sourceq, 
+				  o_destq);
       }
-    
-      if(rk==4)
+      
+      if(rk==4){
+	//  TW ?
+	mesh->device.finish();
 	o_destq.copyTo(o_sourceq);
+      }
     }
   }
 
