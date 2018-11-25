@@ -50,7 +50,7 @@ void advectionDopriStep(advection_t *advection, setupAide &newOptions, const dfl
     // rhsq = F(currentTIme, rkq)
     // extract q halo on DEVICE
     if(mesh->totalHaloPairs>0){
-      int Nentries = mesh->Np*advection->Nfields;          
+      int Nentries = mesh->Nfp*advection->Nfields;           // NFP !
       mesh->haloExtractKernel(mesh->totalHaloPairs,
 			      Nentries,
 			      mesh->o_haloElementList,
@@ -96,13 +96,14 @@ void advectionDopriStep(advection_t *advection, setupAide &newOptions, const dfl
       mesh->device.finish();
       
       // start halo exchange
-      meshHaloExchangeStart(mesh, mesh->Np*advection->Nfields*sizeof(dfloat), advection->sendBuffer, advection->recvBuffer);
+      meshHaloExchangeStart(mesh, mesh->Nfp*advection->Nfields*sizeof(dfloat), advection->sendBuffer, advection->recvBuffer); // NFP !
 
       meshHaloExchangeFinish(mesh);
       
       // copy halo data to DEVICE
       size_t offset = mesh->Np*advection->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-      advection->o_rkq.copyFrom(advection->recvBuffer, advection->haloBytes, offset, "async: true");
+      size_t haloBytes = mesh->Nfp*advection->Nfields*mesh->totalHaloPairs;
+      advection->o_rkq.copyFrom(advection->recvBuffer, haloBytes, offset, "async: true");
 
       mesh->device.finish(); // finish copy to device
       mesh->device.setStream(mesh->defaultStream);
@@ -165,7 +166,7 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 
       // extract q halo on DEVICE
       if(mesh->totalHaloPairs>0){
-	int Nentries = mesh->Np*advection->Nfields;
+	int Nentries = mesh->Nfp*advection->Nfields; // NFP !
         
 	mesh->haloExtractKernel(mesh->totalHaloPairs,
 				Nentries,
@@ -211,19 +212,19 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 
 #if 0
 	memcpy(hostSendBuffer, advection->sendBuffer,
-	       mesh->totalHaloPairs*mesh->Np*advection->Nfields*sizeof(dfloat));
+	       mesh->totalHaloPairs*mesh->Nfp*advection->Nfields*sizeof(dfloat));
 	
 	// halo exchange
-        meshHaloExchangeStart(mesh, mesh->Np*advection->Nfields*sizeof(dfloat),
+        meshHaloExchangeStart(mesh, mesh->Nfp*advection->Nfields*sizeof(dfloat),
 			      hostSendBuffer,
 			      hostRecvBuffer);
 	meshHaloExchangeFinish(mesh);
 
 	memcpy(advection->recvBuffer, hostRecvBuffer,
-	       mesh->totalHaloPairs*mesh->Np*advection->Nfields*sizeof(dfloat));
+	       mesh->totalHaloPairs*mesh->Nfp*advection->Nfields*sizeof(dfloat));
 #else
 	// halo exchange
-        meshHaloExchangeStart(mesh, mesh->Np*advection->Nfields*sizeof(dfloat),
+        meshHaloExchangeStart(mesh, mesh->Nfp*advection->Nfields*sizeof(dfloat),
 			      advection->sendBuffer,
 			      advection->recvBuffer);
 	meshHaloExchangeFinish(mesh);
@@ -231,7 +232,8 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 	
         // copy halo data to DEVICE
         size_t offset = mesh->Np*advection->Nfields*mesh->Nelements*sizeof(dfloat); // offset for halo data
-	advection->o_q.copyFrom(advection->recvBuffer, advection->haloBytes, offset, "async: true");
+	size_t haloBytes = mesh->Nfp*advection->Nfields*mesh->totalHaloPairs;
+	advection->o_q.copyFrom(advection->recvBuffer, haloBytes, offset, "async: true");
       }
       
       advection->surfaceKernel(mesh->Nelements, 
@@ -260,13 +262,17 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
     }
     else{
 
-      occa::memory &o_sourceq = (!(rk%2)) ? advection->o_q: advection->o_rhsq;
-      occa::memory &o_destq   = (!(rk%2)) ? advection->o_rhsq: advection->o_q;
+      occa::memory o_sourceq;
+      occa::memory o_destq;
 
-      //      occa::streamTag haloCopyToHostEvent;
-
-      //      mesh->device.setStream(mesh->computeStream);         
-
+      switch(rk){
+      case 0: o_sourceq = advection->o_q;     o_destq = advection->o_qtmp0; break;
+      case 1: o_sourceq = advection->o_qtmp0; o_destq = advection->o_qtmp1; break;
+      case 2: o_sourceq = advection->o_qtmp1; o_destq = advection->o_qtmp2; break;
+      case 3: o_sourceq = advection->o_qtmp2; o_destq = advection->o_qtmp1; break;
+      case 4: o_sourceq = advection->o_qtmp1; o_destq = advection->o_q; break;
+      }
+      
       // extract q halo on DEVICE
       if(mesh->totalHaloPairs>0){
         mesh->device.setStream(mesh->dataStream);
@@ -283,10 +289,11 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
         // copy extracted halo to HOST using async copy
         advection->o_haloBuffer.copyTo(advection->sendBuffer, "async: true");
 	
-	mesh->device.setStream(mesh->defaultStream);
       }
 
       if(mesh->NinternalElements>0){
+
+	mesh->device.setStream(mesh->defaultStream);
 	
 	// NODAL only
 	advection->volumeKernel(mesh->NinternalElements,
@@ -336,9 +343,11 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 	hlong faceBytes = mesh->totalHaloPairs*mesh->Nfp*sizeof(dfloat); // NFP !!
         o_sourceq.copyFrom(advection->recvBuffer, faceBytes, offset, "async: true");
 
-        mesh->device.finish(); //finish halo extract
+	mesh->device.finish(); //finish halo extract
+	
         mesh->device.setStream(mesh->defaultStream);
 
+	// leave this on data stream to avoid sync
         if(mesh->NnotInternalElements){
           advection->volumeKernel(mesh->NnotInternalElements,
                                   mesh->o_notInternalElementIds,
@@ -355,16 +364,10 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
                                   advection->o_resq,
                                   o_sourceq,
                                   o_destq);
-	  mesh->device.finish(); //finish halo extract
+
 	}
-      }
 
-
-      
-      if(rk==4){
-	//  TW ?
-	//	mesh->device.finish();
-	o_destq.copyTo(o_sourceq);
+	mesh->device.finish(); //finish halo extract
       }
     }
   }

@@ -67,10 +67,13 @@ typedef struct{
   occa::kernel combinedKernel;
   
   occa::memory o_q;
+  occa::memory o_qtmp0;
+  occa::memory o_qtmp1;
+  occa::memory o_qtmp2;
   occa::memory o_rhsq;
   occa::memory o_resq;
   occa::memory o_saveq;
-
+  
   // [J*W*c_x, J*W*c_y, J*W*c_z]
   occa::memory o_advectionVelocityJW;
 
