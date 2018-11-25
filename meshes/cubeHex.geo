@@ -1,4 +1,5 @@
-cl__1 = 1;
+N1D = DefineNumber[40]; 
+cl__1 = 2.0/N1D;
 Point(1) = {-1, -1, -1, cl__1};
 Point(2) = {1, -1, -1, cl__1};
 Point(3) = {1, 1, -1, cl__1};

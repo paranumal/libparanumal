@@ -14,7 +14,8 @@ data/ellipticHomogeneous3D.h
 #../../meshes/cubeHexE8Thilina.msh
 #../../meshes/cavityHexH01.msh
 #../../meshes/cavityHexH0075.msh
-../../meshes/cubeHexH0125.msh
+#../../meshes/cubeHexH0125.msh
+../../meshes/cubeHex16.msh
 
 [MESH DIMENSION]
 3
