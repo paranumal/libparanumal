@@ -392,6 +392,7 @@ typedef struct {
 
   occa::stream defaultStream;
   occa::stream dataStream;
+  occa::stream computeStream;
 
   occa::memory o_q, o_rhsq, o_resq, o_fQM, o_fQP;
 
