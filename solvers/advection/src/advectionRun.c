@@ -40,6 +40,8 @@ void advectionRun(advection_t *advection, setupAide &newOptions){
 
   int tstep=0, allStep = 0;
 
+  MPI_Barrier(MPI_COMM_WORLD);
+  
   occa::streamTag start = mesh->device.tagStream();
   
   if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
