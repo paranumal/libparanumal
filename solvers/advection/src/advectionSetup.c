@@ -438,17 +438,23 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
 
   if(mesh->totalHaloPairs>0){
-    // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
-    mesh->o_haloBuffer =
-      mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat));
+    // NOTE USE OF NFP NODES PER HALO FACE
 
     // MPI send buffer
-    advection->haloBytes = mesh->totalHaloPairs*mesh->Np*advection->Nfields*sizeof(dfloat);
+    advection->haloBytes = mesh->totalHaloPairs*mesh->Nfp*advection->Nfields*sizeof(dfloat);
+    
+    // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
+    mesh->o_haloBuffer =
+      mesh->device.malloc(advection->haloBytes*sizeof(dfloat));
 
-    advection->o_haloBuffer = mesh->device.malloc(advection->haloBytes);
+    advection->o_haloBuffer =
+      mesh->device.malloc(advection->haloBytes);
 
-    advection->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, advection->haloBytes, NULL, advection->o_sendBuffer);
-    advection->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, advection->haloBytes, NULL, advection->o_recvBuffer);
+    advection->sendBuffer =
+      (dfloat*) occaHostMallocPinned(mesh->device, advection->haloBytes, NULL, advection->o_sendBuffer);
+
+    advection->recvBuffer =
+      (dfloat*) occaHostMallocPinned(mesh->device, advection->haloBytes, NULL, advection->o_recvBuffer);
   }
 
   //  p_RT, p_rbar, p_ubar, p_vbar
@@ -566,6 +572,15 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
 				       kernelInfo);
+  mesh->haloGetKernel =
+    mesh->device.buildKernel(DHOLMES "/okl/meshHaloGet.okl",
+			     "meshHaloGet",
+			     kernelInfo);
+  mesh->haloPutKernel =
+    mesh->device.buildKernel(DHOLMES "/okl/meshHaloPut.okl",
+				       "meshHaloPut",
+				       kernelInfo);
 
+  
   return advection;
 }
