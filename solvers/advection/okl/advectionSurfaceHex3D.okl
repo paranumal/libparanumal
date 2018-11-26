@@ -45,17 +45,18 @@ void surfaceTerms(const int e,
   const dfloat FM = advectionVelocityM[sk];
   const dfloat FP = advectionVelocityP[sk];
   
-  const dlong idM = vmapM[sk];                                  
-  const dlong idP = vmapP[sk];                                  
-                                                                        
-  const dlong eM = e;                                                   
-  const dlong eP = idP/p_Np;                                            
-  const int vidM = idM%p_Np;                                            
-  const int vidP = idP%p_Np;                                            
+  const dlong idM = vmapM[sk];
+  const dlong idP = vmapP[sk];
 
-  const dlong qbaseM = eM*p_Np*p_Nfields + vidM;                        
+  const dlong eM = e;
+  const dlong eP = idP/p_Np;
+
+  const int vidM = idM%p_Np;
+  const int vidP = idP%p_Np;
+  
+  const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
   const dlong qbaseP = eP*p_Np*p_Nfields + vidP;                        
-                                                                        
+  
   const dfloat qM = q[qbaseM + 0*p_Np];                         
   dfloat qP = q[qbaseP + 0*p_Np];                                       
                                                                         

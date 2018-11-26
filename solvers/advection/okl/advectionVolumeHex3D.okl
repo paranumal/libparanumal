@@ -146,7 +146,7 @@
 							@restrict const dfloat * D,
 							@restrict const dfloat *  advectionVelocityJW,
 							@restrict const dlong  * vmapM,
-							@restrict const dlong  * vmapP,
+							@restrict const dlong  * tmapP,
 							@restrict const dfloat * advectionVelocityM,
 							@restrict const dfloat * advectionVelocityP,
 							@restrict dfloat * resq,
@@ -268,7 +268,7 @@
 	  const dfloat FP = advectionVelocityP[id];
 	  
 	  const dlong idM = vmapM[id];
-	  const dlong idP = vmapP[id];
+	  const dlong idP = tmapP[id];
 
 	  const dfloat qM = q[idM];
 	  const dfloat qP = (idM!=idP) ? q[idP]:-qM;
