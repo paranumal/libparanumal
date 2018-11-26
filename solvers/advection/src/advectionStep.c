@@ -357,7 +357,4 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
       }
     }
   }
-
-  
-  
 }
