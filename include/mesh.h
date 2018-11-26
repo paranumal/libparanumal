@@ -78,6 +78,9 @@ typedef struct {
   int *NhaloPairs;      // number of elements worth of data to send/recv
   int  NhaloMessages;     // number of messages to send
 
+  dlong *haloGetNodeIds; // volume node ids of outgoing halo nodes
+  dlong *haloPutNodeIds; // volume node ids of incoming halo nodes
+
   void *haloSendRequests;
   void *haloRecvRequests;
 
@@ -445,7 +448,9 @@ typedef struct {
   // DG halo exchange info
   occa::memory o_haloElementList;
   occa::memory o_haloBuffer;
-
+  occa::memory o_haloGetNodeIds;
+  occa::memory o_haloPutNodeIds;
+  
   occa::memory o_internalElementIds;
   occa::memory o_notInternalElementIds;
 
@@ -525,7 +530,8 @@ typedef struct {
   occa::kernel traceUpdateKernel;
   occa::kernel haloExtractKernel;
   occa::kernel partialSurfaceKernel;
-  
+  occa::kernel haloGetKernel;
+  occa::kernel haloPutKernel;
 
   // Just for test will be deleted after temporal testsAK
   occa::kernel RKupdateKernel;
@@ -643,6 +649,11 @@ void meshHaloExchangeStart(mesh_t *mesh,
 
 
 void meshHaloExchangeFinish(mesh_t *mesh);
+
+void meshHaloExchangeBlocking(mesh_t *mesh,
+			     size_t Nbytes,       // message size per element
+			     void *sendBuffer,    // temporary buffer
+			      void *recvBuffer);
 
 // print out parallel partition i
 void meshPartitionStatistics(mesh_t *mesh);

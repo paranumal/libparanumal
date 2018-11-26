@@ -82,12 +82,12 @@ void meshConnectFaceNodes3D(mesh3D *mesh){
         int nP;
         
         int  idP = findBestMatch(xM, yM, zM,
-                                  mesh->Nfp, 
-                                  mesh->faceNodes+fP*mesh->Nfp,
-                                  mesh->x+eP*mesh->Np,
-                                  mesh->y+eP*mesh->Np,
-                                  mesh->z+eP*mesh->Np, &nP);
-
+				 mesh->Nfp, 
+				 mesh->faceNodes+fP*mesh->Nfp,
+				 mesh->x+eP*mesh->Np,
+				 mesh->y+eP*mesh->Np,
+				 mesh->z+eP*mesh->Np, &nP);
+	
         dlong id = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
         mesh->vmapM[id] = idM;
         mesh->vmapP[id] = idP + eP*mesh->Np;

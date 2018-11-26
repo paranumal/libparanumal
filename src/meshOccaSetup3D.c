@@ -47,6 +47,7 @@ void meshOccaSetup3D(mesh3D *mesh, setupAide &newOptions, occa::properties &kern
   //make seperate stream for halo exchange
   mesh->defaultStream = mesh->device.getStream();
   mesh->dataStream = mesh->device.createStream();
+  mesh->computeStream = mesh->device.createStream();
   mesh->device.setStream(mesh->defaultStream);
 
   // find elements that have all neighbors on this process
@@ -636,6 +637,13 @@ void meshOccaSetup3D(mesh3D *mesh, setupAide &newOptions, occa::properties &kern
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
       mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat));
+
+    // node ids 
+    mesh->o_haloGetNodeIds = 
+      mesh->device.malloc(mesh->Nfp*mesh->totalHaloPairs*sizeof(dlong), mesh->haloGetNodeIds);
+    mesh->o_haloPutNodeIds = 
+      mesh->device.malloc(mesh->Nfp*mesh->totalHaloPairs*sizeof(dlong), mesh->haloPutNodeIds);
+
   }
 
   kernelInfo["defines/" "p_dim"]= 3;
