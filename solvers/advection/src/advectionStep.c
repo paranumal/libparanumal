@@ -321,6 +321,9 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 	advection->o_haloBuffer.copyFrom(advection->recvBuffer, "async: true");
 
 	mesh->device.finish(); // finish copy to device
+
+	// put noninternal volumeKernel on same stream to avoid false sharing
+        mesh->device.setStream(mesh->defaultStream); 
 	
 	mesh->haloPutKernel(mesh->totalHaloPairs,
 			    mesh->Nelements,
@@ -328,10 +331,7 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 			    advection->o_haloBuffer,
 			    o_sourceq);
 	
-	mesh->device.finish(); //finish halo extract on data stream
-
-	// put noninternal volumeKernel on same stream to avoid false sharing
-        mesh->device.setStream(mesh->defaultStream); 
+	//	mesh->device.finish(); //finish halo extract on data stream
 
 	// leave this on data stream to avoid sync
         if(mesh->NnotInternalElements){
