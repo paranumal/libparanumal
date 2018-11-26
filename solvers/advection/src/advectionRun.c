@@ -41,6 +41,8 @@ void advectionRun(advection_t *advection, setupAide &newOptions){
   int tstep=0, allStep = 0;
 
   MPI_Barrier(MPI_COMM_WORLD);
+
+  mesh->device.finish();
   
   occa::streamTag start = mesh->device.tagStream();
   
@@ -170,6 +172,8 @@ void advectionRun(advection_t *advection, setupAide &newOptions){
   }
   
   occa::streamTag end = mesh->device.tagStream();
+
+  mesh->device.finish();
   
   double elapsed = mesh->device.timeBetween(start, end);
   
