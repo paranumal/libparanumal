@@ -3,6 +3,7 @@
 #mpiexec -np 4 ./ellipticMain ./setups/setupHex3D.rc
 #mpiexec -np 8 ./ellipticMain ./setups/setupHex3D.rc
 
+
 maxiter=100;
 mesh_base=../../meshes/box;
 mesh_extension=.msh;
@@ -12,4 +13,6 @@ for size in 1 2 4 8; do
 	    meshfile=${mesh_base}${mesh_id}${mesh_extension}
             echo Running ${meshfile} at order ${N} 
 	    mpiexec -np ${size} ./BP ./setups/setupHex3D.rc ${meshfile} ${N} ${maxiter};
-done;done;done;
+	done;
+    done;
+done;
