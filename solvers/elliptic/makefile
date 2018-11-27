@@ -138,6 +138,10 @@ LOBJS = \
 ellipticMain:$(AOBJS) $(LOBJS) ./src/ellipticMain.o libblas libogs libparAlmond
 	$(LD)  $(LDFLAGS)  -o ellipticMain ./src/ellipticMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
+
+BP:$(AOBJS) $(LOBJS) ./src/BPMain.o libblas libogs libparAlmond
+	$(LD)  $(LDFLAGS)  -o BP ./src/BPMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+
 lib:$(AOBJS)
 	ar -cr libelliptic.a $(AOBJS)
 
