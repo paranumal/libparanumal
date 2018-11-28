@@ -6,7 +6,7 @@ function rooflinePlot(kernelName)
 
   clf
   
-  scatter(perf(:,1),perf(:,2), 'filled', 'ko');
+  ha =   scatter(perf(:,1),perf(:,2), 'filled', 'markeredgecolor', 'r', 'markerfacecolor', 'k');
 
   hold on;
 
@@ -22,7 +22,7 @@ title(kernelName, 'FontSize', 16, 'Interpreter', 'None');
   maxBW = max(perf(:,end))
   
   estPerf = min(perf(ids,4));
-  plot(perf(ids,1),min(perf(ids,1).*perf(ids,3),estPerf),'r*-', 'LineWidth', 2);
+%%TW  plot(perf(ids,1),min(perf(ids,1).*perf(ids,3),estPerf),'r*-', 'LineWidth', 2);
 
   maxAI = max(perf(:,1));
   plot([0,maxAI], [0,maxBW*maxAI], 'b-', 'LineWidth', 2)
