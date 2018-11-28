@@ -141,7 +141,7 @@ dfloat meshMRABSetup3D(mesh3D *mesh, dfloat *EToDT, int maxLevels, dfloat finalT
 void meshMRABWeightedPartition3D(mesh3D *mesh, dfloat *weights,
                                       int numLevels, int *levels);
 
-void interpolateHex3D(dfloat *I, dfloat *x, int N, dfloat *Ix, int M);
+void interpolateHex3D(dfloat *Inter, dfloat *x, int N, dfloat *Ix, int M);
 
 #define norm3(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
 
