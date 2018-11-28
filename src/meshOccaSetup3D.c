@@ -739,7 +739,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
 }
 
 
-void meshOccaSetupDevice3D(mesh3D *mesh, setupAide &newOptions, occa::properties &kernelInfo){
+void meshOccaSetup3D(mesh3D *mesh, setupAide &newOptions, occa::properties &kernelInfo){
 
   // conigure device
   occaDeviceConfig(mesh, newOptions);
