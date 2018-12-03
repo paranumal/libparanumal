@@ -146,7 +146,7 @@ SOFTWARE.
 	}
 	
 	for(int k=0;k<p_NqCoarse;++k){
-	  if(t<p_Nqcoarse*p_Nqcoarse){
+	  if(t<p_NqCoarse*p_NqCoarse){
 	    const int id = t+k*p_NqCoarse*p_NqCoarse + e*p_NpCoarse;
 	    const dfloat tmp = qc[id];
 	    

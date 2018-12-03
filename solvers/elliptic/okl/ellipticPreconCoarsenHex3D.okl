@@ -134,7 +134,7 @@ SOFTWARE.
     @exclusive dfloat r_q[p_NqCoarse];
     
     @shared dfloat s_q[p_NqFine][p_NqFine];
-    @shared dfloat s_Pq[p_NqFine][p_Ncoarse];
+    @shared dfloat s_Pq[p_NqFine][p_NqCoarse];
 
     @shared dfloat s_R[p_NqCoarse][p_NqFine];
 
