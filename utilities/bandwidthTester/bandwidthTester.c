@@ -89,10 +89,13 @@ int main(int argc, char **argv){
   options.getArgs("STEP DATA BYTES",   stepDataBytes);
 
   long long int bytes = maxDataBytes;
-  occa::memory o_a = device.malloc(bytes/2);
-  occa::memory o_b = device.malloc(bytes/2);
+  occa::memory o_a = device.malloc(bytes);
+  occa::memory o_b = device.malloc(bytes);
+  occa::memory o_c = device.malloc(bytes);
 
   printf("\%\% BYTES COPIED, ELAPSED TIME (s), BANDWIDTH (GB/s) \n");
+  printf("memcpyBW = [\n");
+  int Ntests = 10;
   
   for(long long int streamedBytes=minDataBytes;streamedBytes<maxDataBytes;streamedBytes+=stepDataBytes){
 
@@ -100,7 +103,6 @@ int main(int argc, char **argv){
 
     occa::streamTag start = device.tagStream();
     
-    int Ntests = 10;
     for(int n=0;n<Ntests;++n){
       o_a.copyFrom(o_b, streamedBytes/2, 0);
       o_b.copyFrom(o_a, streamedBytes/2, 0);
@@ -117,9 +119,73 @@ int main(int argc, char **argv){
     
     printf("%lld %lg %lg\n", streamedBytes, elapsed, bw);
   }  
+
+  printf("];\n");
+  
+#define dfloat double
+
+  occa::properties props;
+  props["defines/dfloat"] = (sizeof(dfloat)==4) ? "float": "double";
+
+  char fileName[BUFSIZ];
+  sprintf(fileName, "bandwidthTester.okl");
+  
+  // test throughput from kernels
+  int Nkernels = 3;
+  for(int knl=0;knl<Nkernels;++knl){
+
+    char kernelName[BUFSIZ];
+    sprintf(kernelName, "bandwidthTesterK%02d", knl);
+    
+    occa::kernel kernel = device.buildKernel(fileName, kernelName, props);
+
+    printf("memcpyKNL%02d = [\n", knl);
+    
+    for(long long int streamedBytes=minDataBytes;streamedBytes<maxDataBytes;streamedBytes+=stepDataBytes){
+      int Ndfloats = 1;
+      int bytes = 1;
+      
+      switch(knl){
+      case 0: // write
+      case 2: // read
+	Ndfloats = streamedBytes/sizeof(dfloat);
+	bytes = Ndfloats*sizeof(dfloat);
+	break;
+      case 1: // read + write
+	Ndfloats = streamedBytes/(2*sizeof(dfloat));
+	bytes = 2*Ndfloats*sizeof(dfloat);
+	break;
+      }
+      
+      device.finish();
+      
+      occa::streamTag start = device.tagStream();
+      
+      for(int n=0;n<Ntests;++n){
+	kernel(Ndfloats, o_a, o_b, o_c);
+      }
+
+      occa::streamTag end = device.tagStream();
+      
+      device.finish();
+      
+      double elapsed = device.timeBetween(start, end);
+      elapsed /= Ntests;
+      
+      double bw = (bytes/elapsed)/1.e9;
+      
+      printf("%lld %lg %lg\n", bytes, elapsed, bw);
+      
+    }
+
+    printf("];\n");
+    
+  }
+  
   
   o_a.free();
   o_b.free();
+  o_c.free();
     
   MPI_Finalize();
   
