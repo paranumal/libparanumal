@@ -134,10 +134,11 @@ SOFTWARE.
     @exclusive dfloat r_q[p_NqCoarse];
     
     @shared dfloat s_q[p_NqFine][p_NqFine];
-    @shared dfloat s_Pq[p_NqFine][p_NqCoarse];
+    @shared dfloat s_Pq[p_NqCoarse][p_NqFine];
 
     @shared dfloat s_R[p_NqCoarse][p_NqFine];
 
+    // OK:
     for(int j=0;j<p_NqFine;++j;@inner(1)){
       for(int i=0;i<p_NqFine;++i;@inner(0)){
 
@@ -152,7 +153,7 @@ SOFTWARE.
     
     for(int j=0;j<p_NqFine;++j;@inner(1)){
       for(int i=0;i<p_NqFine;++i;@inner(0)){
-
+	
 	for(int k=0;k<p_NqCoarse;++k){
 	  r_q[k] = 0;
 	}
@@ -165,6 +166,7 @@ SOFTWARE.
 	    r_q[m] += s_R[m][k]*tmp;
 	  }
 	}
+	
       }
     }
     
@@ -189,7 +191,7 @@ SOFTWARE.
 	    dfloat res = 0;
 	    
 	    for(int m=0;m<p_NqFine;++m){
-	      res += s_R[m][j]*s_q[m][i];
+	      res += s_R[j][m]*s_q[m][i];
 	    }
 	    
 	    s_Pq[j][i] = res;
@@ -202,18 +204,18 @@ SOFTWARE.
       
       for(int j=0;j<p_NqFine;++j;@inner(1)){
 	for(int i=0;i<p_NqFine;++i;@inner(0)){
-
+	  
 	  int t=i+j*p_NqFine;
 	  
 	  if(t<p_NqCoarse*p_NqCoarse){
-
+	    
 	    int ti = t%p_NqCoarse;
 	    int tj = t/p_NqCoarse;
 	    
 	    dfloat res = 0;
 	    
-	    for(int m=0;m<p_NqCoarse;++m){
-	      res += s_R[m][ti]*s_Pq[tj][m];
+	    for(int m=0;m<p_NqFine;++m){
+	      res += s_R[ti][m]*s_Pq[tj][m];
 	    }
 	    
 	    const int id = ti + tj*p_NqCoarse + k*p_NqCoarse*p_NqCoarse + e*p_NpCoarse;
