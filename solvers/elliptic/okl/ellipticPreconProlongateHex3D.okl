@@ -143,7 +143,7 @@ SOFTWARE.
 	  const int ti = t%p_NqCoarse;
 	  const int tj = t/p_NqCoarse;
 	  
-	  for(int k=0;k<p_NqCoarse;++k){
+	  for(int k=0;k<p_NqFine;++k){
 	    r_q[k] = 0;
 	  }
 	  
@@ -205,13 +205,13 @@ SOFTWARE.
       
       for(int j=0;j<p_NqFine;++j;@inner(1)){
 	for(int i=0;i<p_NqFine;++i;@inner(0)){
-	  
+
 	  dfloat res = 0;
 	  
 	  for(int m=0;m<p_NqCoarse;++m){
 	    res += s_R[m][i]*s_Pq[j][m];
 	  }
-
+	
 	  const int id = i + j*p_NqFine + k*p_NqFine*p_NqFine + e*p_NpFine;
 	  qN[id] = res;
 	}
