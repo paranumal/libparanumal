@@ -138,16 +138,17 @@ SOFTWARE.
       for(int i=0;i<p_NqFine;++i;@inner(0)){
 
 	const int t = i+j*p_NqFine;
-	const int ti = t%p_NqCoarse;
-	const int tj = t/p_NqCoarse;
 	
-	for(int k=0;k<p_NqCoarse;++k){
-	  r_q[k] = 0;
-	}
-	
-	for(int k=0;k<p_NqCoarse;++k){
-	  if(t<p_NqCoarse*p_NqCoarse){
-	    const int id = t+k*p_NqCoarse*p_NqCoarse + e*p_NpCoarse;
+	if(t<p_NqCoarse*p_NqCoarse){
+	  const int ti = t%p_NqCoarse;
+	  const int tj = t/p_NqCoarse;
+	  
+	  for(int k=0;k<p_NqCoarse;++k){
+	    r_q[k] = 0;
+	  }
+	  
+	  for(int k=0;k<p_NqCoarse;++k){
+	    const int id = t + k*p_NqCoarse*p_NqCoarse + e*p_NpCoarse;
 	    const dfloat tmp = qc[id];
 	    
 	    for(int m=0;m<p_NqFine;++m){
@@ -157,7 +158,7 @@ SOFTWARE.
 	}
       }
     }
-
+    
     for(int k=0;k<p_NqFine;++k){
       
       @barrier("local");
@@ -166,10 +167,11 @@ SOFTWARE.
 	for(int i=0;i<p_NqFine;++i;@inner(0)){
 	  
 	  const int t=i+j*p_NqFine;
-	  const int ti = t%p_NqCoarse;
-	  const int tj = t/p_NqCoarse;
-	  
 	  if(t<p_NqCoarse*p_NqCoarse){
+	    
+	    const int ti = t%p_NqCoarse;
+	    const int tj = t/p_NqCoarse;
+	    
 	    s_q[tj][ti] = r_q[k];
 	  }
 	}
@@ -181,11 +183,12 @@ SOFTWARE.
 	for(int i=0;i<p_NqFine;++i;@inner(0)){
 	  
 	  const int t=i+j*p_NqFine;
-	  const int ti = t%p_NqCoarse;
-	  const int tj = t/p_NqCoarse;
 	  
 	  if(t<p_NqCoarse*p_NqFine){
-
+	    
+	    const int ti = t%p_NqCoarse;
+	    const int tj = t/p_NqCoarse;
+	    
 	    dfloat res = 0;
 	    
 	    for(int m=0;m<p_NqCoarse;++m){
