@@ -213,7 +213,7 @@ SOFTWARE.
 	  }
 	
 	  const int id = i + j*p_NqFine + k*p_NqFine*p_NqFine + e*p_NpFine;
-	  qN[id] = res;
+	  qN[id] += res;
 	}
       }
     }
