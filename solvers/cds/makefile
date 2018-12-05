@@ -53,9 +53,9 @@ $(ELLIPTICDIR)/ellipticMultiGrid.h
 
 # list of objects to be compiled
 AOBJS    = \
-# ./src/insPlotWallsVTUHex3D.o \
+./src/cdsSetup.o \
+#./src/insPlotWallsVTUHex3D.o \
 # ./src/insPlotVTUHex3D.o \
-# ./src/insSetup.o \
 # ./src/insPlotVTU.o \
 # ./src/insError.o \
 # ./src/insForces.o \

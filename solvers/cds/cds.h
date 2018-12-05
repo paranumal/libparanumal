@@ -39,12 +39,13 @@ typedef struct {
 
   mesh_t     *mesh;
   elliptic_t *sSolver;
-  int NSfields; // Number of scalar fields
+  int NVfields;            // Number of velocity fields
+  int NSfields;            // Number of scalar fields
   
   setupAide options;
   // INS SOLVER OCCA VARIABLES
-  // dfloat rho, nu, Re;
-  dfloat ubar, vbar, wbar, tbar;
+  dfloat k, cp, rho,  Re, Pr;
+  dfloat ubar, vbar, wbar, sbar;
   dlong fieldOffset;
   dlong Ntotal;
   int Nblock;
@@ -73,10 +74,10 @@ typedef struct {
 
   dfloat idt, inu; // hold some inverses
   
-  dfloat *U, *T;
-  dfloat *NT;
-  dfloat *rhsT;   
-  dfloat *rkT; 
+  dfloat *U, *S;
+  dfloat *NS;
+  dfloat *rhsS;   
+  dfloat *rkS; 
   dfloat g[3];      // gravitational Acceleration
 
   //RK Subcycle Data
@@ -86,24 +87,24 @@ typedef struct {
   dfloat *extbdfA, *extbdfB, *extbdfC;
   dfloat *extC;
 
-  int *TmapB;
-  occa::memory o_TmapB;
+  int *SmapB;
+  occa::memory o_SmapB;
 
   //halo data
-  dfloat *tSendBuffer;
-  dfloat *tRecvBuffer;
-  dfloat *tHaloGatherTmp;
+  dfloat *sSendBuffer;
+  dfloat *sRecvBuffer;
+  dfloat *sHaloGatherTmp;
 
-  occa::memory o_tSendBuffer;
-  occa::memory o_tRecvBuffer;
+  occa::memory o_sSendBuffer;
+  occa::memory o_sRecvBuffer;
   occa::memory o_gatherTmpPinned;
 
-  // int Nsubsteps;  
+  int Nsubsteps;  
   // dfloat *Ud, *Ue, *resU, *rhsUd, sdt;
   // occa::memory o_Ud, o_Ue, o_resU, o_rhsUd;
 
-  // dfloat *cU, *cUd;ß
-  // occa::memory o_cU, o_cUd;
+  dfloat *cU, *cUd, *cS; 
+  occa::memory o_cU, o_cUd, o_cS;
 
   // Some Iso-surfacing variables
   // int isoField, isoColorField, isoNfields, isoNlevels, isoMaxNtris, *isoNtris; 
@@ -189,7 +190,7 @@ typedef struct {
 
 }cds_t;
 
-// ins_t *insSetup(mesh_t *mesh, setupAide options);
+ cds_t *cdsSetup(mesh_t *mesh, setupAide options);
 
 // void insRunARK(ins_t *ins);
 // void insRunEXTBDF(ins_t *ins);
