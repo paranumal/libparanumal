@@ -98,8 +98,9 @@ typedef struct {
   occa::memory o_sRecvBuffer;
   occa::memory o_gatherTmpPinned;
 
-  int Nsubsteps;  
-  // dfloat *Ud, *Ue, *resU, *rhsUd, sdt;
+  int Nsubsteps;
+  dfloat sdt; 
+  //  dfloat *Ud, *Ue, *resU, *rhsUd, sdt;
   // occa::memory o_Ud, o_Ue, o_resU, o_rhsUd;
 
   dfloat *cU, *cUd, *cS; 
