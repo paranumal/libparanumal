@@ -2,15 +2,16 @@
 1.0
 
 [DATA FILE]
-data/insBeltrami3D.h
+data/cdsUniform3D.h
 
 [MESH FILE]
 ../../meshes/insBeltramiHex3D.msh
 
+
 [MESH DIMENSION]
 3
 
-[ELEMENT TYPE] # number of edges
+[ELEMENT TYPE] 
 12
 
 [POLYNOMIAL DEGREE]
@@ -43,6 +44,15 @@ CUBATURE
 [VISCOSITY]
 1
 
+[DENSITY]
+1
+
+[CONDUCTIVITY]
+1
+
+[SPECIFIC HEAT]
+1
+
 [MACH NUMBER]
 .2
 
@@ -55,7 +65,7 @@ CUBATURE
 [WBAR]
 0.0
 
-[PBAR]
+[SBAR]
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
