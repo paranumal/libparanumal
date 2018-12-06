@@ -44,12 +44,11 @@ typedef struct {
   
   setupAide options;
   // INS SOLVER OCCA VARIABLES
-  dfloat k, cp, rho,  Re, Pr;
+  dfloat k, nu, cp, rho, alf,  Re, Pr;
   dfloat ubar, vbar, wbar, sbar;
   dlong fieldOffset;
   dlong Ntotal;
   int Nblock;
-
   dfloat dt, cfl, dti;          // time step
   dfloat dtMIN;         
   dfloat time;
@@ -72,7 +71,7 @@ typedef struct {
   //solver tolerances
   dfloat sTOL;
 
-  dfloat idt, inu; // hold some inverses
+  dfloat icp, irho; // hold some inverses
   
   dfloat *U, *S;
   dfloat *NS;
@@ -130,8 +129,8 @@ typedef struct {
   // occa::kernel constrainKernel;
   
   occa::memory o_U; 
-  occa::memory o_T, o_TH, o_NT, o_rhsT;
-  occa::memory o_rkT; 
+  occa::memory o_S, o_SH, o_NS, o_rhsS;
+  occa::memory o_rkS; 
   
   occa::memory o_Vort, o_Div; // Not sure to keep it
 
@@ -153,7 +152,8 @@ typedef struct {
   // occa::kernel pressureHaloExtractKernel;
   // occa::kernel pressureHaloScatterKernel;
 
-  // occa::kernel setFlowFieldKernel;
+   occa::kernel setFlowFieldKernel;
+   occa::kernel setScalarFieldKernel;
 
   // occa::kernel advectionVolumeKernel;
   // occa::kernel advectionSurfaceKernel;
