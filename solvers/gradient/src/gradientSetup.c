@@ -47,9 +47,6 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
   int check;
 
   // compute samples of q at interpolation nodes
-  mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
-                                sizeof(dfloat));
-
   gradient->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 				    sizeof(dfloat));
   
@@ -73,7 +70,7 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 
   //add boundary data to kernel info  
   gradient->o_q =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), gradient->q);
 
   gradient->o_gradientq =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->dim*sizeof(dfloat));
