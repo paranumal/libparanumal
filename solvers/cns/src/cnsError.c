@@ -28,10 +28,12 @@ SOFTWARE.
 #include <math.h>
 #include <mpi.h>
 
-#include "mesh.h"
+#include "cns.h"
 
 
-void cnsError(mesh_t *mesh, dfloat time){
+void cnsError(cns_t *cns, dfloat time){
+
+  mesh_t *mesh = cns->mesh;
 
   dfloat maxR = 0;
   dfloat minR = 1E9;
@@ -44,8 +46,8 @@ void cnsError(mesh_t *mesh, dfloat time){
       dfloat z = mesh->z[id];
 
       int qbase = n+e*mesh->Np*mesh->Nfields;
-      maxR = mymax(maxR, mesh->q[qbase]);
-      minR = mymin(minR, mesh->q[qbase]);
+      maxR = mymax(maxR, cns->q[qbase]);
+      minR = mymin(minR, cns->q[qbase]);
     }
   }
 

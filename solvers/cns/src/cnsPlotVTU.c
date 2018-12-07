@@ -71,7 +71,7 @@ void cnsPlotVTU(cns_t *cns, char *fileName){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
       for(int m=0;m<mesh->Np;++m){
-        dfloat pm = mesh->q[e*mesh->Np*mesh->Nfields+m];
+        dfloat pm = cns->q[e*mesh->Np*mesh->Nfields+m];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
 
@@ -88,10 +88,10 @@ void cnsPlotVTU(cns_t *cns, char *fileName){
       for(int n=0;n<mesh->plotNp;++n){
         dfloat plotun = 0, plotvn = 0, plotwn = 0;
         for(int m=0;m<mesh->Np;++m){
-          dfloat rm = mesh->q[e*mesh->Np*mesh->Nfields+m           ];
-          dfloat um = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ]/rm;
-          dfloat vm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2]/rm;
-          dfloat wm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*3]/rm;
+          dfloat rm = cns->q[e*mesh->Np*mesh->Nfields+m           ];
+          dfloat um = cns->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ]/rm;
+          dfloat vm = cns->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2]/rm;
+          dfloat wm = cns->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*3]/rm;
           //
           plotun += mesh->plotInterp[n*mesh->Np+m]*um;
           plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
@@ -109,9 +109,9 @@ void cnsPlotVTU(cns_t *cns, char *fileName){
       for(int n=0;n<mesh->plotNp;++n){
         dfloat plotun = 0, plotvn = 0;
         for(int m=0;m<mesh->Np;++m){
-          dfloat rm = mesh->q[e*mesh->Np*mesh->Nfields+m           ];
-          dfloat um = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ]/rm;
-          dfloat vm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2]/rm;
+          dfloat rm = cns->q[e*mesh->Np*mesh->Nfields+m           ];
+          dfloat um = cns->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ]/rm;
+          dfloat vm = cns->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2]/rm;
           //
           plotun += mesh->plotInterp[n*mesh->Np+m]*um;
           plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;

@@ -84,8 +84,8 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   options.getArgs("TSTEPS FOR FORCE OUTPUT",   cns->outputForceStep);
   
   // compute samples of q at interpolation nodes
-  mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
-                                sizeof(dfloat));
+  //  mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
+  //                                sizeof(dfloat));
 
   cns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 			       sizeof(dfloat));
@@ -179,16 +179,16 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 	
 #if 0
 	cnsGaussianPulse(x, y, z, t,
-                       mesh->q+qbase,
-			 mesh->q+qbase+mesh->Np,
-			 mesh->q+qbase+2*mesh->Np,
-			 mesh->q+qbase+3*mesh->Np);
+                       cns->q+qbase,
+			 cns->q+qbase+mesh->Np,
+			 cns->q+qbase+2*mesh->Np,
+			 cns->q+qbase+3*mesh->Np);
 #else
-	mesh->q[qbase+0*mesh->Np] = cns->rbar;
-	mesh->q[qbase+1*mesh->Np] = cns->rbar*intfx;
-	mesh->q[qbase+2*mesh->Np] = cns->rbar*intfy;
+	cns->q[qbase+0*mesh->Np] = cns->rbar;
+	cns->q[qbase+1*mesh->Np] = cns->rbar*intfx;
+	cns->q[qbase+2*mesh->Np] = cns->rbar*intfy;
 	if(cns->dim==3)
-	  mesh->q[qbase+3*mesh->Np] = cns->rbar*intfz;
+	  cns->q[qbase+3*mesh->Np] = cns->rbar*intfz;
 #endif
       }
     }
@@ -273,10 +273,10 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
  
   cns->o_q =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), cns->q);
 
   cns->o_saveq =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), cns->q);
 
   
   cns->o_viscousStresses =

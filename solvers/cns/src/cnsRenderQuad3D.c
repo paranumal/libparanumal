@@ -64,7 +64,7 @@ void cnsRenderQuad3D(cns_t *cns, char *fileBaseName, int fileIndex){
         plotxn += Inm*mesh->x[idm];
         plotyn += Inm*mesh->y[idm];
         plotzn += Inm*mesh->z[idm];
-	plotqn += Inm*mesh->q[m+e*mesh->Np*mesh->Nfields];
+	plotqn += Inm*cns->q[m+e*mesh->Np*mesh->Nfields];
 	plotVortxn += Inm*cns->Vort[m+e*mesh->Np*3 + 0*mesh->Np] ;
 	plotVortyn += Inm*cns->Vort[m+e*mesh->Np*3 + 1*mesh->Np] ;
 	plotVortzn += Inm*cns->Vort[m+e*mesh->Np*3 + 2*mesh->Np] ;
