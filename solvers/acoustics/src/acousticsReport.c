@@ -31,10 +31,10 @@ void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions)
   mesh3D *mesh = acoustics->mesh;
 
   // copy data back to host
-  acoustics->o_q.copyTo(mesh->q);
+  acoustics->o_q.copyTo(acoustics->q);
 
   // do error stuff on host
-  acousticsError(mesh, time);
+  acousticsError(acoustics, time);
 
   // output field files
   char fname[BUFSIZ];

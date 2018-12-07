@@ -71,7 +71,7 @@ void acousticsPlotVTU(acoustics_t *acoustics, char *fileName){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
       for(int m=0;m<mesh->Np;++m){
-        dfloat pm = mesh->q[e*mesh->Np*mesh->Nfields+m];
+        dfloat pm = acoustics->q[e*mesh->Np*mesh->Nfields+m];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
 
@@ -87,15 +87,15 @@ void acousticsPlotVTU(acoustics_t *acoustics, char *fileName){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotun = 0, plotvn = 0, plotwn = 0;
       for(int m=0;m<mesh->Np;++m){
-        dfloat rm = mesh->q[e*mesh->Np*mesh->Nfields+m           ];
-        dfloat um = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ];
-        dfloat vm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2];
+        dfloat rm = acoustics->q[e*mesh->Np*mesh->Nfields+m           ];
+        dfloat um = acoustics->q[e*mesh->Np*mesh->Nfields+m+mesh->Np  ];
+        dfloat vm = acoustics->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*2];
         //
         plotun += mesh->plotInterp[n*mesh->Np+m]*um;
         plotvn += mesh->plotInterp[n*mesh->Np+m]*vm;
 
 	if(acoustics->dim==3){
-	  dfloat wm = mesh->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*3];
+	  dfloat wm = acoustics->q[e*mesh->Np*mesh->Nfields+m+mesh->Np*3];
 	  
 	  plotwn += mesh->plotInterp[n*mesh->Np+m]*wm;
 	}
