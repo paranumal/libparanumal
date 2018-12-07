@@ -96,7 +96,7 @@ void acousticsRun(acoustics_t *acoustics, setupAide &newOptions);
 
 acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileName);
 
-void acousticsError(mesh_t *mesh, dfloat time);
+void acousticsError(acoustics_t *acoustics, dfloat time);
 
 void acousticsCavitySolution(dfloat x, dfloat y, dfloat z, dfloat t,
 		       dfloat *u, dfloat *v, dfloat *w, dfloat *p);
