@@ -78,10 +78,10 @@ void cnsBrownMinionQuad3D(cns_t *cns){
   
       int base = n + e*mesh->Np*mesh->Nfields;
   
-      mesh->q[base+0*mesh->Np] = rho; // uniform density, zero flow
-      mesh->q[base+1*mesh->Np] = rho*umod;
-      mesh->q[base+2*mesh->Np] = rho*vmod;
-      mesh->q[base+3*mesh->Np] = rho*wmod;
+      cns->q[base+0*mesh->Np] = rho; // uniform density, zero flow
+      cns->q[base+1*mesh->Np] = rho*umod;
+      cns->q[base+2*mesh->Np] = rho*vmod;
+      cns->q[base+3*mesh->Np] = rho*wmod;
     }
   }
 }

@@ -94,9 +94,9 @@ void cnsForces(cns_t *cns, dfloat time){
         for(int i=0;i<mesh->Np;++i){
           // load data at node i of element e (note Nfields==4)
           int id = e*mesh->Np*cns->Nfields + i;
-          dfloat r = mesh->q[id+0*mesh->Np];
-          dfloat u = mesh->q[id+1*mesh->Np]/r;
-          dfloat v = mesh->q[id+2*mesh->Np]/r;
+          dfloat r = cns->q[id+0*mesh->Np];
+          dfloat u = cns->q[id+1*mesh->Np]/r;
+          dfloat v = cns->q[id+2*mesh->Np]/r;
           //  
           dfloat Drni = mesh->Dr[n*mesh->Np+i];
           dfloat Dsni = mesh->Ds[n*mesh->Np+i];
@@ -110,7 +110,7 @@ void cnsForces(cns_t *cns, dfloat time){
         dUdy[n] = drdy*dudr + dsdy*duds;
         dVdx[n] = drdx*dvdr + dsdx*dvds;
         dVdy[n] = drdy*dvdr + dsdy*dvds;
-        Pr[n]   = mesh->q[e*mesh->Np*cns->Nfields + n]*cns->RT;
+        Pr[n]   = cns->q[e*mesh->Np*cns->Nfields + n]*cns->RT;
       }
 
    
