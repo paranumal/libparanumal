@@ -1,0 +1,974 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+
+
+// assumes auto-barrier insertion
+
+#if 0
+void massMatrixMultiplyHex3D(const dlong Nelements,
+			     const dlong e,
+			     const dfloat *cubvgeo,
+			     dfloat s_cubIT[p_Nq][p_cubNq],
+			     const  dfloat r_q[p_Nq],
+			     dfloat s_tmpq1[p_cubNq][p_cubNq],
+			     dfloat s_tmpq2[p_cubNq][p_cubNq],
+			     dfloat r_MMq[p_Nq]){
+  
+  @barrier("local");
+
+  for(int j=0;j<p_Nq;++j;@inner(1)){
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      // zero accumulator for result
+      for(int m=0;m<p_Nq;++m){
+	r_MMq[m] = 0;
+      }
+    }
+  }
+
+  // loop over slowest index in cubature grid
+  for(int kc=0;kc<p_cubNq;++kc){
+
+    // prefetch cubI[kc] 
+    
+    @barrier("local");
+    
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+
+	// interpolate to (i,j,kc)
+	dfloat tmp = 0;
+	for(int m=0;m<p_Nq;++m){
+	  tmp += s_cubIT[m][kc]*r_q[m];
+	}
+	
+	s_tmpq1[j][i] = tmp;
+      }
+    }
+    
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	
+	for(int jc=j;jc<p_cubNq;jc+=p_Nq){
+
+	  // interpolate to (i,jc,kc)
+	  dfloat tmp = 0;
+	  for(int m=0;m<p_Nq;++m){
+	    tmp += s_cubIT[m][jc]*s_tmpq1[m][i];
+	  }
+	  s_tmpq2[jc][i] = tmp;
+	}
+      }
+    }
+
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	
+	for(int jc=j;jc<p_cubNq;jc+=p_Nq){
+	  for(int ic=i;ic<p_cubNq;ic+=p_Nq){
+
+	    // interpolate to (ic,jc,kc)
+	    dfloat tmp = 0;
+	    for(int m=0;m<p_Nq;++m){
+	      tmp += s_cubIT[m][ic]*s_tmpq2[jc][m];
+	    }
+
+	    // scale by Jacobian*weight
+	    const dlong gid = ic + jc*p_cubNq + kc*p_cubNq*p_cubNq + e*p_cubNp*p_Nggeo;
+	    const dfloat JW = cubvgeo[gid + p_JWID*p_cubNp];
+
+	    s_tmpq1[jc][ic] = JW*tmp;
+	  }
+	}
+      }
+    }
+
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+    
+	for(int ic=i;ic<p_cubNq;ic+=p_Nq){
+
+	  // integrate against to GLL Lagrange interpolating at (ic,j,kc)
+	  dfloat tmp = 0;
+	  for(int m=0;m<p_cubNq;++m){
+	    tmp += s_cubIT[j][m]*s_tmpq1[m][ic]; // on V100: limits to 13TB/s*2FLOPS/s/16B = 1.62TFLOPS/s
+	  }
+	  
+	  s_tmpq2[j][ic] = tmp;
+	}
+      }
+    }
+    
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+
+	// integrate against to GLL Lagrange interpolating at (i,j,kc)
+	dfloat tmp = 0;
+	for(int m=0;m<p_cubNq;++m){
+	  tmp += s_cubIT[i][m]*s_tmpq2[j][m];
+	}
+
+	// partially integrate against GLL Lagrange interpolating at (i,j,k)
+	for(int m=0;m<p_Nq;++m){
+	  r_MMq[m] += s_cubIT[m][kc]*tmp;
+	}
+      }
+    }
+  }
+}
+
+void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
+
+  @barrier("local");
+  
+  for(int j=0;j<p_Nq;++j;@inner(1)){
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      dfloat res = 0;
+      for(int k=0;k<p_Nq;++k){
+	res += a[k]*b[k];
+      }
+      s_adotb[i+j*p_Nq] = res;
+    }
+  }
+
+  for(int alive=(p_Nq*p_Nq+1)/2;alive>0;alive/=2){
+
+    @barrier("local");
+    
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	
+	const int t = i+j*p_Nq;
+	
+	if(t<alive && t+(alive/2)<alive){
+	  s_adotb[t] += s_adotb[t+(alive)/2];
+	}
+      }
+    }
+  }
+}
+#endif
+
+
+
+#define massMatrixMultiplyHex3D(Nelements, e, cubvgeo, s_cubIT, r_q, s_tmpq1, s_tmpq2, r_MMq) \
+  									\
+  for(int j=0;j<p_Nq;++j;@inner(1))					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+      for(int m=0;m<p_Nq;++m){						\
+	r_MMq[m] = 0;							\
+      }									\
+    }									\
+  									\
+  for(int kc=0;kc<p_cubNq;++kc){					\
+  									\
+    for(int j=0;j<p_Nq;++j;@inner(1)){					\
+      for(int i=0;i<p_Nq;++i;@inner(0)){				\
+	dfloat tmp = 0;							\
+	for(int m=0;m<p_Nq;++m){					\
+	  tmp += s_cubIT[m][kc]*r_q[m];					\
+	}								\
+	s_tmpq1[j][i] = tmp;						\
+      }									\
+    }									\
+									\
+    for(int j=0;j<p_Nq;++j;@inner(1)){					\
+      for(int i=0;i<p_Nq;++i;@inner(0)){				\
+	for(int jc=j;jc<p_cubNq;jc+=p_Nq){				\
+	  dfloat tmp = 0;						\
+	  for(int m=0;m<p_Nq;++m){					\
+	    tmp += s_cubIT[m][jc]*s_tmpq1[m][i];			\
+	  }								\
+	  s_tmpq2[jc][i] = tmp;						\
+	}								\
+      }									\
+    }									\
+									\
+    for(int j=0;j<p_Nq;++j;@inner(1)){					\
+      for(int i=0;i<p_Nq;++i;@inner(0)){				\
+	for(int jc=j;jc<p_cubNq;jc+=p_Nq){				\
+	  for(int ic=i;ic<p_cubNq;ic+=p_Nq){				\
+	    dfloat tmp = 0;						\
+	    for(int m=0;m<p_Nq;++m){					\
+	      tmp += s_cubIT[m][ic]*s_tmpq2[jc][m];			\
+	    }								\
+	    const dlong gid = ic + jc*p_cubNq + kc*p_cubNq*p_cubNq + e*p_cubNp*p_Nvgeo;	\
+	    const dfloat JW = cubvgeo[gid + p_JWID*p_cubNp];		\
+	    s_tmpq1[jc][ic] = JW*tmp;					\
+	  }								\
+	}								\
+      }									\
+    }									\
+    									\
+    for(int j=0;j<p_Nq;++j;@inner(1)){					\
+      for(int i=0;i<p_Nq;++i;@inner(0)){				\
+    	for(int ic=i;ic<p_cubNq;ic+=p_Nq){				\
+	  dfloat tmp = 0;						\
+	  for(int m=0;m<p_cubNq;++m){					\
+	    tmp += s_cubIT[j][m]*s_tmpq1[m][ic];			\
+	  }								\
+	  s_tmpq2[j][ic] = tmp;						\
+	}								\
+      }									\
+    }									\
+									\
+    for(int j=0;j<p_Nq;++j;@inner(1)){					\
+      for(int i=0;i<p_Nq;++i;@inner(0)){				\
+	dfloat tmp = 0;							\
+	for(int m=0;m<p_cubNq;++m){					\
+	  tmp += s_cubIT[i][m]*s_tmpq2[j][m];				\
+	}								\
+	for(int m=0;m<p_Nq;++m){					\
+	  r_MMq[m] += s_cubIT[m][kc]*tmp;				\
+	}								\
+      }									\
+    }									\
+  }
+
+#define dotProduct(a, b, s_adotb)					\
+									\
+  for(int j=0;j<p_Nq;++j;@inner(1)){					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+      dfloat res = 0;							\
+      for(int k=0;k<p_Nq;++k){						\
+	res += a[k]*b[k];						\
+      }									\
+      s_adotb[i+j*p_Nq] = res;						\
+    }									\
+  }									\
+									\
+  for(int j=0;j<p_Nq;++j;@inner(1)){					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+      const int t = i+j*p_Nq;						\
+      if(t<128 && t+128<p_Nq*p_Nq){					\
+	s_adotb[t] += s_adotb[t+128];					\
+      }									\
+    }									\
+  }									\
+  									\
+  for(int j=0;j<p_Nq;++j;@inner(1)){					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+      const int t = i+j*p_Nq;						\
+      if(t<64 && t+64<p_Nq*p_Nq){					\
+	s_adotb[t] += s_adotb[t+64];					\
+      }									\
+    }									\
+  }									\
+									\
+  for(int j=0;j<p_Nq;++j;@inner(1)){					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+      const int t = i+j*p_Nq;						\
+      if(t<32 && t+32<p_Nq*p_Nq)					\
+	s_adotb[t] += s_adotb[t+32];					\
+      if(t<16 && t+16<p_Nq*p_Nq)					\
+	s_adotb[t] += s_adotb[t+16];					\
+      if(t< 8 && t+8<p_Nq*p_Nq)						\
+	s_adotb[t] += s_adotb[t+8];					\
+      if(t< 4 && t+4<p_Nq*p_Nq)						\
+	s_adotb[t] += s_adotb[t+4];					\
+      if(t< 2 && t+2<p_Nq*p_Nq)						\
+	s_adotb[t] += s_adotb[t+2];					\
+      if(t< 1 && t+1<p_Nq*p_Nq)						\
+	s_adotb[t] += s_adotb[t+1];					\
+    }									\
+  }								       
+  
+// sliced shmem version
+@kernel void advectionInvertMassMatrixHex3D_slice(const dlong Nelements,
+						  const dfloat tol,
+						  const int maxIterations,
+						  @restrict const dfloat *cubvgeo,
+						  @restrict const dfloat *cubInterpT,
+						  @restrict const dfloat *P, // precon
+						  @restrict const dfloat *b,
+						  @restrict       dfloat *x,
+						  @restrict       int    *iterations,
+						  @restrict       dfloat *res){
+
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    // r = b    (assume x = 0)
+    // z = P\r  (diagonal precon)
+    // p = z
+    // k = 0
+
+    @exclusive dfloat r_x[p_Nq], r_r[p_Nq], r_z[p_Nq], r_p[p_Nq], r_Ap[p_Nq], r_rdotz, r_tol2;
+    @shared volatile dfloat s_rdotz[p_Nq*p_Nq], s_pAp[p_Nq*p_Nq];
+    @shared dfloat s_cubIT[p_Nq][p_cubNq];
+    @shared dfloat s_tmpq1[p_cubNq][p_cubNq];
+    @shared dfloat s_tmpq2[p_cubNq][p_cubNq];
+    
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	
+	for(int k=0;k<p_Nq;++k){
+	  dlong id = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np;
+	  r_x[k] = 0;
+	  r_r[k] = b[id];	  
+	  r_z[k] = P[id]*r_r[k];
+	  r_p[k] = r_z[k];
+	}
+	
+	int t = i+p_Nq*j;
+	while(t<p_cubNq*p_Nq){
+	  s_cubIT[0][t] = cubInterpT[t]; // may need to transpose
+	  t+=p_Nq*p_Nq;
+	}
+      }
+    }
+
+    // r.z
+    dotProduct(r_r, r_r, s_pAp);
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	r_tol2 = tol*tol;
+	if(s_pAp[0]>1)
+	  r_tol2 *= s_pAp[0];
+      }
+    }
+    
+    for(int it=0;it<maxIterations;++it){
+      
+      // apply mass Ap
+      massMatrixMultiplyHex3D(Nelements, e, cubvgeo, s_cubIT, r_p, s_tmpq1, s_tmpq2, r_Ap);
+
+      // r.z
+      dotProduct(r_r, r_z, s_rdotz);
+      
+      // p.Ap
+      dotProduct(r_p, r_Ap, s_pAp);
+      
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+	  
+	  r_rdotz = s_rdotz[0];
+	  
+	  const dfloat alpha = s_rdotz[0]/s_pAp[0];
+	  
+	  for(int k=0;k<p_Nq;++k){
+	    r_x[k] += alpha*r_p[k];
+	    r_r[k] -= alpha*r_Ap[k];
+	  }
+	}
+      }
+      
+      // r.r
+      dotProduct(r_r, r_r, s_pAp);
+      
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+
+	  if(fabs(s_pAp[0])<r_tol2){
+
+	    if(i==0 && j==0){
+	      // 0,0 node records iteration info
+	      iterations[e] = it;
+	      res[e] = s_pAp[0];
+	    }
+	    
+	    for(int k=0;k<p_Nq;++k){
+	      dlong id = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np;
+	      x[id] = r_x[k];
+	    }
+	    return;
+	  }
+	  
+	  for(int k=0;k<p_Nq;++k){
+	    dlong id = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np;
+	    r_z[k] = P[id]*r_r[k];
+	  }
+	}
+      }
+      
+      // r.z
+      dotProduct(r_r, r_z, s_rdotz);
+      
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+	  dfloat beta = s_rdotz[0]/r_rdotz;
+	  
+	  for(int k=0;k<p_Nq;++k){
+	    r_p[k] = r_z[k] + beta*r_p[k];
+	  }
+	}
+      }
+    }
+  }
+}
+
+#define advectionMassMatrixMultiplication(Nelements, e, cubvgeo, s_cubIT, r_p, s_cubeq1, s_cubeq2, r_tmpq, r_MMp) \
+  for(int j=0;j<p_Nq;++j;@inner(1)){					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+      for(int kc=0;kc<p_cubNq;++kc){					\
+	dfloat res = 0;							\
+	for(int k=0;k<p_Nq;++k){					\
+	  res += s_cubIT[k][kc]*r_p[k];					\
+	}								\
+	s_cubeq1[j][kc][i] = res;					\
+      }									\
+    }									\
+  }									\
+									\
+  for(int k=0;k<p_Nq;++k;@inner(1)){					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+      for(int kc=k;kc<p_cubNq;kc+=p_Nq){				\
+	for(int j=0;j<p_Nq;++j){					\
+	  r_tmpq[j] = s_cubeq1[j][kc][i];				\
+	}								\
+	for(int jc=0;jc<p_cubNq;++jc){					\
+	  dfloat res = 0;						\
+	  for(int j=0;j<p_Nq;++j){					\
+	    res += s_cubIT[j][jc]*r_tmpq[j];				\
+	  }								\
+	  s_cubeq2[i][kc][jc] = res;					\
+	}								\
+      }									\
+    }									\
+  }									\
+									\
+  for(int k=0;k<p_Nq;++k;@inner(1)){					\
+    for(int j=0;j<p_Nq;++j;@inner(0)){					\
+									\
+      for(int kc=k;kc<p_cubNq;kc+=p_Nq){				\
+	for(int jc=j;jc<p_cubNq;jc+=p_Nq){				\
+									\
+	  for(int i=0;i<p_Nq;++i){					\
+	    r_tmpq[i] = s_cubeq2[i][kc][jc];				\
+	  }								\
+									\
+	  for(int ic=0;ic<p_cubNq;++ic){				\
+	    dfloat res = 0;						\
+	    for(int i=0;i<p_Nq;++i){					\
+	      res += s_cubIT[i][ic]*r_tmpq[i];				\
+	    }								\
+									\
+	    const dlong gid = ic + jc*p_cubNq + kc*p_cubNq*p_cubNq + e*p_cubNp*p_Nvgeo; \
+	    const dfloat JW = cubvgeo[gid + p_JWID*p_cubNp];		\
+									\
+	    s_cubeq1[ic][kc][jc] = JW*res;				\
+	  }								\
+	}								\
+      }									\
+    }									\
+  }									\
+									\
+  for(int k=0;k<p_Nq;++k;@inner(1)){					\
+    for(int j=0;j<p_Nq;++j;@inner(0)){					\
+									\
+      for(int kc=k;kc<p_cubNq;kc+=p_Nq){				\
+	for(int jc=j;jc<p_cubNq;jc+=p_Nq){				\
+									\
+	  for(int ic=0;ic<p_cubNq;++ic){				\
+	    r_tmpq[ic] = s_cubeq1[ic][kc][jc];				\
+	  }								\
+									\
+	  for(int i=0;i<p_Nq;++i){					\
+	    dfloat res = 0;						\
+	    for(int ic=0;ic<p_cubNq;++ic){				\
+	      res += s_cubIT[i][ic]*r_tmpq[ic];				\
+	    }								\
+	    s_cubeq2[jc][kc][i] = res;					\
+	  }								\
+	}								\
+      }									\
+    }									\
+  }									\
+									\
+  for(int k=0;k<p_Nq;++k;@inner(1)){					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+									\
+      for(int kc=k;kc<p_cubNq;kc+=p_Nq){				\
+	for(int jc=0;jc<p_cubNq;++jc){					\
+	  r_tmpq[jc] = s_cubeq2[jc][kc][i];				\
+	}								\
+									\
+	for(int j=0;j<p_Nq;++j){					\
+	  dfloat res = 0;						\
+	  for(int jc=0;jc<p_cubNq;++jc){				\
+	    res += s_cubIT[j][jc]*r_tmpq[jc];				\
+	  }								\
+	  s_cubeq1[kc][j][i] = res;					\
+	}								\
+      }									\
+    }									\
+  }									\
+									\
+  for(int j=0;j<p_Nq;++j;@inner(1)){					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+      for(int kc=0;kc<p_cubNq;++kc){					\
+	r_tmpq[kc] = s_cubeq1[kc][j][i];				\
+      }									\
+									\
+      for(int k=0;k<p_Nq;++k){						\
+	dfloat res = 0;							\
+	for(int kc=0;kc<p_cubNq;++kc){					\
+	  res += s_cubIT[k][kc]*r_tmpq[kc];				\
+	}								\
+	r_Ap[k] = res;							\
+      }									\
+    }									\
+  }									\
+  
+
+
+// cube shmem version
+@kernel void advectionInvertMassMatrixHex3D(const dlong Nelements,
+					    const dfloat tol,
+					    const int maxIterations,
+					    @restrict const dfloat *cubvgeo,
+					    @restrict const dfloat *cubInterpT,
+					    @restrict const dfloat *P, // precon
+					    @restrict const dfloat *b,
+					    @restrict       dfloat *x,
+					    @restrict       int    *iterations,
+					    @restrict       dfloat *res){
+  
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    // r = b    (assume x = 0)
+    // z = P\r  (diagonal precon)
+    // p = z
+    // k = 0
+
+    @exclusive dfloat r_x[p_Nq], r_r[p_Nq], r_z[p_Nq], r_p[p_Nq], r_Ap[p_Nq], r_rdotz, r_tol2, r_tmpq[p_cubNq];
+    @exclusive dfloat r_normb2;
+    @shared volatile dfloat s_rdotz[p_Nq*p_Nq], s_pAp[p_Nq*p_Nq];
+    @shared dfloat s_cubIT[p_Nq][p_cubNq];
+    @shared dfloat s_cubeq1[p_cubNq][p_cubNq][p_cubNq];
+    @shared dfloat s_cubeq2[p_cubNq][p_cubNq][p_cubNq];
+    
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	
+	for(int k=0;k<p_Nq;++k){
+	  dlong id = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np;
+	  r_x[k] = 0;
+	  r_r[k] = b[id];	  
+	  r_z[k] = P[id]*r_r[k];
+	  r_p[k] = r_z[k];
+	}
+
+	int t = i+p_Nq*j;
+	while(t<p_cubNq*p_Nq){
+	  s_cubIT[0][t] = cubInterpT[t]; // may need to transpose
+	  t+=p_Nq*p_Nq;
+	}
+      }
+    }
+
+    // compute norm squared, b.b and choose convergence tolerance
+    dotProduct(r_r, r_r, s_pAp);
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	r_normb2 = s_pAp[0];
+	r_tol2 = tol*tol;
+
+	if(r_normb2>(1.0f)){
+	  r_tol2 = r_normb2*r_tol2;
+	}
+	
+      }
+    }
+
+    // compute r.z
+    dotProduct(r_r, r_z, s_rdotz);
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	r_rdotz = s_rdotz[0];
+      }
+    }
+    
+    for(int it=0;it<maxIterations;++it){
+      
+      // apply mass Ap
+      //      massMatrixMultiplyHex3D_cube(Nelements, e, cubvgeo, s_cubIT, r_p, s_cubeq1, s_cubeq2, r_tmpq, r_Ap);
+
+      advectionMassMatrixMultiplication(Nelements, e, cubvgeo, s_cubIT, r_p, s_cubeq1, s_cubeq2, r_tmpq, r_Ap);
+      
+      // p.Ap
+      dotProduct(r_p, r_Ap, s_pAp);
+      
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+	  
+	  const dfloat alpha = r_rdotz/s_pAp[0];
+
+	  //#pragma unroll p_Nq
+	  for(int k=0;k<p_Nq;++k){
+	    r_x[k] += alpha*r_p[k];
+	    r_r[k] -= alpha*r_Ap[k];
+	  }
+	}
+      }
+      
+      // r.r
+      dotProduct(r_r, r_r, s_pAp);
+    
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+
+	  if(s_pAp[0]<r_tol2){
+
+#if 1
+	    // need this if unrolling
+	    if(i==0 && j==0){
+	      // 0,0 node records iteration info
+	      iterations[e] = it + 1;
+	      // why is this important
+	      res[e] = r_tol2; // s_pAp[0];
+	    }
+#endif
+
+	    
+	    //#pragma unroll p_Nq
+	    for(int k=0;k<p_Nq;++k){
+	      dlong id = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np;
+	      x[id] = r_x[k];
+	    }
+
+	    return;
+	  }
+
+	  //#pragma unroll p_Nq
+	  for(int k=0;k<p_Nq;++k){
+	    dlong id = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np;
+	    r_z[k] = P[id]*r_r[k];
+	  }
+	}
+      }
+      
+      // r.z
+      dotProduct(r_r, r_z, s_rdotz);
+      
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+	  dfloat beta = s_rdotz[0]/r_rdotz;
+
+	  r_rdotz = s_rdotz[0];
+	  
+	  //#pragma unroll p_Nq
+	  for(int k=0;k<p_Nq;++k){
+	    r_p[k] = r_z[k] + beta*r_p[k];
+	  }
+	}
+      }
+    }
+    
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	// failed to converge
+	if(i==0 && j==0){
+	  // 0,0 node records iteration info
+	  iterations[e] = -1;
+	  res[e] = r_tol2; // s_pAp[0];
+	}
+      }
+    }
+  }
+}
+
+
+@kernel void advectionCombinedNodalWeakMMDGVolumeHex3D(const dlong Nelements,						       
+						       @restrict const dlong * elementIds,
+						       const dfloat dt,
+						       const dfloat rka,
+						       const dfloat rkb,
+						       @restrict const dfloat * vgeo,
+						       @restrict const dfloat * D,
+						       @restrict const dfloat * advectionVelocityJW,
+						       @restrict const dlong  * vmapM,
+						       @restrict const dlong  * tmapP,
+						       @restrict const dfloat * advectionVelocityM,
+						       @restrict const dfloat * advectionVelocityP,
+						       @restrict const dfloat * cubvgeo,
+						       @restrict const dfloat * cubInterpT,
+						       @restrict const dfloat * P, // inv row sum mass
+						       const dfloat tol,
+						       const int maxIterations,
+						       @restrict dfloat * resq,
+						       @restrict const dfloat * q,
+						       @restrict dfloat * qnew){
+  
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+
+    @exclusive dlong  r_e;
+    @shared    dfloat s_q[p_Nq][p_Nq][p_Nq];
+    @exclusive dfloat r_tmpi[p_Nq], r_tmpj[p_Nq], r_tmpk[p_Nq];
+
+    @shared    dfloat s_D[p_Nq][p_Nq];
+    
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	r_e = elementIds[e];
+
+	for(int k=0;k<p_Nq;++k){
+	  dlong base = r_e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+	  s_q[k][j][i] = q[base];
+	}
+
+	int n = j*p_Nq + i;
+	s_D[0][n] = D[n];
+      }
+    }
+    
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+
+	for(int m=0;m<p_Nq;++m){
+	  r_tmpi[m] = 0; r_tmpj[m] = 0; r_tmpk[m] = 0;
+	}
+
+	for(int c=0;c<p_Nq;++c){
+	  
+	  dfloat r_qi = s_q[b][a][c]; // this is sloppy (5 reads, 6 flops => 13*6/(5*8) TFLOPS)
+	  dfloat r_qj = s_q[b][c][a];
+	  dfloat r_qk = s_q[c][b][a];
+	  
+	  // Cc*Jc*wc*Ic*q
+	  const dlong gid = 3*r_e*p_Nq*p_Nq*p_Nq + c*p_Nq*p_Nq + b*p_Nq + a;
+	  const dfloat Cr = advectionVelocityJW[gid + 0*p_Nq*p_Nq*p_Nq];
+	  const dfloat Cs = advectionVelocityJW[gid + 1*p_Nq*p_Nq*p_Nq];
+	  const dfloat Ct = advectionVelocityJW[gid + 2*p_Nq*p_Nq*p_Nq];
+	  
+	  r_qi *= Cr;
+	  r_qj *= Cs;
+	  r_qk *= Ct;
+
+	  for(int n=0;n<p_Nq;++n){
+	    const dfloat Dcn = s_D[c][n];
+	    
+	    r_tmpi[n] += Dcn*r_qi;
+	    r_tmpj[n] += Dcn*r_qj;
+	    r_tmpk[n] += Dcn*r_qk;
+	  }
+	} // end c loop
+	
+      } // end a
+    } // end b
+    
+    // THIS BARRIER IS IMPORTANT ???
+    @barrier("local");
+    
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+	
+	for(int c=0;c<p_Nq;++c){
+	  s_q[b][a][c] = r_tmpi[c];
+	}
+      }
+    }
+    
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+	
+	for(int c=0;c<p_Nq;++c){
+	  s_q[b][c][a] += r_tmpj[c];
+	}
+      }
+    }
+    
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+	
+	for(int c=0;c<p_Nq;++c){
+	  const dfloat qbca = s_q[c][b][a] + r_tmpk[c];
+	  s_q[c][b][a] = -qbca;
+	}
+      }
+    }
+
+    for(int f=0;f<p_Nfaces;++f){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){     
+	  const dlong id = r_e*p_Nfaces*p_Nfp + f*p_Nfp + j*p_Nq + i;
+
+	  const dfloat FM = advectionVelocityM[id]; 
+	  const dfloat FP = advectionVelocityP[id];
+	  
+	  const dlong idM = vmapM[id];
+	  const dlong idP = tmapP[id];
+
+	  const dfloat qM = q[idM];
+	  const dfloat qP = (idM!=idP) ? q[idP]:-qM;
+	  const int vidM = idM%p_Np;
+	  s_q[0][0][vidM] += FP*qP + FM*qM;
+	}
+      }
+    }
+
+    // invert mass from here ======================================================>
+    // PCG using diagonal Jacobi
+    // (formed from row sums of mass matrix obtained using same cubature)
+
+#define r_x r_tmpi
+#define r_r r_tmpj
+#define r_z r_tmpk
+    
+    @exclusive dfloat r_p[p_Nq], r_Ap[p_Nq], r_rdotz, r_tol2, r_tmpq[p_cubNq];
+    @exclusive dfloat r_normb2;
+    @shared volatile dfloat s_rdotz[p_Nq*p_Nq], s_pAp[p_Nq*p_Nq];
+    @shared dfloat s_cubIT[p_Nq][p_cubNq];
+    @shared dfloat s_cubeq1[p_cubNq][p_cubNq][p_cubNq];
+    @shared dfloat s_cubeq2[p_cubNq][p_cubNq][p_cubNq];
+    
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+
+	for(int k=0;k<p_Nq;++k){
+	  dlong id = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np;
+	  r_x[k] = 0;
+	  r_r[k] = s_q[k][j][i];
+	  r_z[k] = P[id]*r_r[k];
+	  r_p[k] = r_z[k];
+	}
+
+	int t = i+p_Nq*j;
+	while(t<p_cubNq*p_Nq){
+	  s_cubIT[0][t] = cubInterpT[t]; // may need to transpose
+	  t+=p_Nq*p_Nq;
+	}
+      }
+    }
+
+    // compute norm squared, b.b and choose convergence tolerance
+    dotProduct(r_r, r_r, s_pAp);
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	r_normb2 = s_pAp[0];
+	r_tol2 = tol*tol;
+
+	if(r_normb2>(1.0f)){
+	  r_tol2 = r_normb2*r_tol2;
+	}
+	
+      }
+    }
+
+    // compute r.z
+    dotProduct(r_r, r_z, s_rdotz);
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	r_rdotz = s_rdotz[0];
+      }
+    }
+    
+    for(int it=0;it<maxIterations;++it){
+      
+      // apply mass Ap
+      advectionMassMatrixMultiplication(Nelements, r_e, cubvgeo, s_cubIT, r_p, s_cubeq1, s_cubeq2, r_tmpq, r_Ap);
+      
+      // p.Ap
+      dotProduct(r_p, r_Ap, s_pAp);
+      
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+	  
+	  const dfloat alpha = r_rdotz/s_pAp[0];
+
+	  for(int k=0;k<p_Nq;++k){
+	    r_x[k] += alpha*r_p[k];
+	    r_r[k] -= alpha*r_Ap[k];
+	  }
+	}
+      }
+      
+      // r.r
+      dotProduct(r_r, r_r, s_pAp);
+    
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+
+	  if(s_pAp[0]<r_tol2){
+
+	    for(int k=0;k<p_Nq;++k){
+	      dlong id = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np;
+	      s_q[k][j][i] = r_x[k];
+	    }
+
+	    it = maxIterations;
+	  }else
+	    
+	    for(int k=0;k<p_Nq;++k){
+	      dlong id = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np;
+	      r_z[k] = P[id]*r_r[k];
+	    }
+	}
+      }
+      
+      // r.z
+      dotProduct(r_r, r_z, s_rdotz);
+      
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+	  if(it<maxIterations){
+	    dfloat beta = s_rdotz[0]/r_rdotz;
+	    
+	    r_rdotz = s_rdotz[0];
+	    
+	    for(int k=0;k<p_Nq;++k){
+	      r_p[k] = r_z[k] + beta*r_p[k];
+	    }
+	  }
+	}
+      }
+    }
+
+    // invert mass to here <======================================================
+    
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+	
+	for(int c=0;c<p_Nq;++c){
+	  const dlong base = r_e*p_Np*p_Nfields + c*p_Nq*p_Nq + b*p_Nq + a;
+	  
+	  dfloat r_qcba = q[base];
+	  dfloat r_resq = resq[base];
+	  r_resq = rka*r_resq + dt*s_q[c][b][a];
+	  r_qcba += rkb*r_resq;
+	  
+	  resq[base] = r_resq;
+	  qnew[base] = r_qcba;
+	}
+      }
+    }
+  }
+}
+

@@ -157,6 +157,14 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
   const int combineFlag = newOptions.compareArgs("ADVECTION FORMULATION", "COMBINED");
   const int nodalFlag   = newOptions.compareArgs("ADVECTION FORMULATION", "NODAL");
   const int cubatureFlag= newOptions.compareArgs("ADVECTION FORMULATION", "CUBATURE");
+  const int massFlag    = newOptions.compareArgs("ADVECTION FORMULATION", "MASS");
+
+  dfloat tol = 1e-8;
+
+  newOptions.getArgs("MASS MATRIX TOLERANCE", tol);
+
+  int maxIterations = 10;
+  newOptions.getArgs("MASS MATRIX MAXIMUM ITERATIONS", maxIterations);
   
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(int rk=0;rk<mesh->Nrk;++rk){
@@ -287,25 +295,47 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
       if(mesh->NinternalElements>0){
 
 	mesh->device.setStream(mesh->defaultStream);
-	
-	// NODAL only
-	advection->volumeKernel(mesh->NinternalElements,
-				mesh->o_internalElementIds,
-				mesh->dt,
-				mesh->rka[rk], 
-				mesh->rkb[rk], 
-				mesh->o_vgeo, 
-				mesh->o_Dmatrices,
-				advection->o_advectionVelocityJW,
-				mesh->o_vmapM,
-				mesh->o_vmapP,
-				advection->o_advectionVelocityM,
-				advection->o_advectionVelocityP,
-				advection->o_resq,
-				o_sourceq, 
-				o_destq);
-      }
 
+	if(!massFlag)
+	  // NODAL only
+	  advection->volumeKernel(mesh->NinternalElements,
+				  mesh->o_internalElementIds,
+				  mesh->dt,
+				  mesh->rka[rk], 
+				  mesh->rkb[rk], 
+				  mesh->o_vgeo, 
+				  mesh->o_Dmatrices,
+				  advection->o_advectionVelocityJW,
+				  mesh->o_vmapM,
+				  mesh->o_vmapP,
+				  advection->o_advectionVelocityM,
+				  advection->o_advectionVelocityP,
+				  advection->o_resq,
+				  o_sourceq, 
+				  o_destq);
+	else
+	  advection->invertMassMatrixCombinedKernel(mesh->NinternalElements,
+						    mesh->o_internalElementIds,
+						    mesh->dt,
+						    mesh->rka[rk], 
+						    mesh->rkb[rk], 
+						    mesh->o_vgeo, 
+						    mesh->o_Dmatrices,
+						    advection->o_advectionVelocityJW,
+						    mesh->o_vmapM,
+						    mesh->o_vmapP,
+						    advection->o_advectionVelocityM,
+						    advection->o_advectionVelocityP,
+						    mesh->o_cubvgeo,
+						    mesh->o_cubInterpT,
+						    advection->o_diagInvMassMatrix,
+						    tol,
+						    maxIterations,
+						    advection->o_resq,
+						    o_sourceq,
+						    o_destq);
+      }
+      
       
       if(mesh->totalHaloPairs>0){
 
@@ -335,24 +365,45 @@ void advectionLserkStep(advection_t *advection, setupAide &newOptions, const dfl
 
 	// leave this on data stream to avoid sync
         if(mesh->NnotInternalElements){
-          advection->volumeKernel(mesh->NnotInternalElements,
-                                  mesh->o_notInternalElementIds,
-                                  mesh->dt,
-                                  mesh->rka[rk],
-                                  mesh->rkb[rk],
-                                  mesh->o_vgeo,
-                                  mesh->o_Dmatrices,
-                                  advection->o_advectionVelocityJW,
-                                  mesh->o_vmapM,
-                                  mesh->o_vmapP,
-                                  advection->o_advectionVelocityM,
-                                  advection->o_advectionVelocityP,
-                                  advection->o_resq,
-                                  o_sourceq,
-                                  o_destq);
-
+	  if(!massFlag)
+	    advection->volumeKernel(mesh->NnotInternalElements,
+				    mesh->o_notInternalElementIds,
+				    mesh->dt,
+				    mesh->rka[rk],
+				    mesh->rkb[rk],
+				    mesh->o_vgeo,
+				    mesh->o_Dmatrices,
+				    advection->o_advectionVelocityJW,
+				    mesh->o_vmapM,
+				    mesh->o_vmapP,
+				    advection->o_advectionVelocityM,
+				    advection->o_advectionVelocityP,
+				    advection->o_resq,
+				    o_sourceq,
+				    o_destq);
+	  else
+	    advection->invertMassMatrixCombinedKernel(mesh->NnotInternalElements,
+						      mesh->o_notInternalElementIds,
+						      mesh->dt,
+						      mesh->rka[rk], 
+						      mesh->rkb[rk], 
+						      mesh->o_vgeo, 
+						      mesh->o_Dmatrices,
+						      advection->o_advectionVelocityJW,
+						      mesh->o_vmapM,
+						      mesh->o_vmapP,
+						      advection->o_advectionVelocityM,
+						      advection->o_advectionVelocityP,
+						      mesh->o_cubvgeo,
+						      mesh->o_cubInterpT,
+						      advection->o_diagInvMassMatrix,
+						      tol,
+						      maxIterations,
+						      advection->o_resq,
+						      o_sourceq,
+						      o_destq);
 	}
-
+	
 	mesh->device.finish(); //finish halo extract
       }
     }
