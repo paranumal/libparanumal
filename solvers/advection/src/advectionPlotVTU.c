@@ -71,7 +71,7 @@ void advectionPlotVTU(advection_t *advection, char *fileName){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
       for(int m=0;m<mesh->Np;++m){
-        dfloat pm = mesh->q[e*mesh->Np*mesh->Nfields+m];
+        dfloat pm = advection->q[e*mesh->Np*mesh->Nfields+m];
         plotpn += mesh->plotInterp[n*mesh->Np+m]*pm;
       }
 

@@ -50,8 +50,8 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   int check;
 
   // compute samples of q at interpolation nodes
-  mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
-				sizeof(dfloat));
+  advection->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
+				     sizeof(dfloat));
   advection->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
 
@@ -123,7 +123,7 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       dfloat qn = 0;
 
       advectionGaussianPulse(x, y, z, t, &qn);
-      mesh->q[qbase+0*mesh->Np] = qn;
+      advection->q[qbase+0*mesh->Np] = qn;
     }
   }
 
@@ -228,19 +228,19 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   kernelInfo["includes"] += boundaryHeaderFileName;
 
   advection->o_q =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), advection->q);
 
   advection->o_qtmp0 =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), advection->q);
 
   advection->o_qtmp1 =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), advection->q);
 
   advection->o_qtmp2 =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), advection->q);
 
   advection->o_saveq =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), advection->q);
 
   advection->o_rhsq =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), advection->rhsq);
@@ -270,9 +270,15 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     advectionMassType = 1;
   }
 
+  if (newOptions.compareArgs("ADVECTION FORMULATION","MASS")){
+    advectionMassType = 2;
+  }
+
+  
   if (newOptions.compareArgs("ADVECTION FORMULATION","COMBINED")){
     advectionCombined = 1;
   }
+
 
 
   // non-constant advection velocity
@@ -341,7 +347,7 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 	dfloat cz = 0;
 
 	dfloat cdotn = nx*cx + ny*cy + nz*cz;
-	dfloat LIFT = mesh->sgeo[sbase + WIJID]*mesh->sgeo[sbase+SJID];
+	dfloat LIFT = (advectionMassType==2) ? mesh->sgeo[sbase+WSJID]:mesh->sgeo[sbase + WIJID]*mesh->sgeo[sbase+SJID];
 	dfloat alpha = 1; // not allowed to use central here
 
 	// fix later
@@ -521,7 +527,12 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   kName += (advectionIntegration==0) ? "Nodal":"Cubature";
   kName += (advectionForm==0)        ? "Weak":"Skew";
-  kName += (advectionMassType==0)    ? "SEMDG":"WADG";
+  if(advectionMassType==0)
+    kName += "SEMDG";
+  if(advectionMassType==1)
+    kName += "WADG";
+  if(advectionMassType==2)
+    kName += "SEMDG";
   kName += "Volume";
 
   sprintf(kernelName, "%s%s", kName.c_str(), suffix);
@@ -581,6 +592,16 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 				       "meshHaloPut",
 				       kernelInfo);
 
+  sprintf(fileName, DADVECTION "/okl/advectionInvertMassMatrix%s.okl", suffix);
+  sprintf(kernelName, "advectionInvertMassMatrix%s", suffix);
+
+  advection->invertMassMatrixKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+  sprintf(fileName, DADVECTION "/okl/advectionInvertMassMatrix%s.okl", suffix);
+  sprintf(kernelName, "advectionCombinedNodalWeakMMDGVolume%s", suffix);
+
+  advection->invertMassMatrixCombinedKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  
   
   return advection;
 }
