@@ -11,7 +11,7 @@ BROWN-MINION
 1.0
 
 [MESH FILE]
-../../meshes/sphereQuadH01.msh
+../../meshes/sphereQuadH0025.msh
 #../../meshes/insVortexQuad2D.msh
 
 [MESH DIMENSION]
