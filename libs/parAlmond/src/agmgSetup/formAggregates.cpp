@@ -28,9 +28,40 @@ SOFTWARE.
 
 namespace parAlmond {
 
+static void formAggregatesDefault(parCSR *A, parCSR *C,
+                                  hlong* FineToCoarse,
+                                  hlong* globalAggStarts);
+
+static void formAggregatesLPSCN(parCSR *A, parCSR *C,
+                                hlong* FineToCoarse,
+                                hlong* globalAggStarts,
+                                setupAide options);
+
 void formAggregates(parCSR *A, parCSR *C,
-                     hlong* FineToCoarse,
-                     hlong* globalAggStarts){
+                    hlong* FineToCoarse,
+                    hlong* globalAggStarts,
+                    setupAide options) {
+
+  if (options.compareArgs("PARALMOND AGGREGATION STRATEGY", "DEFAULT")) {
+    formAggregatesDefault(A, C, FineToCoarse, globalAggStarts);
+  } else if (options.compareArgs("PARALMOND AGGREGATION STRATEGY", "LPSCN")) {
+    formAggregatesLPSCN(A, C, FineToCoarse, globalAggStarts, options);
+  } else {
+    printf("WARNING:  Missing or bad value for option PARALMOND AGGREGATION STRATEGY.  Using default.\n");
+    formAggregatesDefault(A, C, FineToCoarse, globalAggStarts);
+  }
+}
+
+/*****************************************************************************/
+// Default aggregation algorithm
+//
+// Parallel Distance 2 Maximal Independant Set (MIS-2) graph partitioning
+//
+/*****************************************************************************/
+
+static void formAggregatesDefault(parCSR *A, parCSR *C,
+                                  hlong* FineToCoarse,
+                                  hlong* globalAggStarts){
 
   int rank, size;
   MPI_Comm_rank(A->comm, &rank);
@@ -290,6 +321,208 @@ void formAggregates(parCSR *A, parCSR *C,
   free(Ts);
   free(Ti);
   free(Tc);
+
+  delete C;
+}
+
+/*****************************************************************************/
+// Alan's "locally partial strong connected nodes" (LPSCN) algorithm.
+/*****************************************************************************/
+
+typedef struct{
+  dlong  index;
+  dlong  Nnbs;
+  dlong LNN;
+} nbs_t;
+
+
+int compareNBSmaxLPSCN(const void *a, const void *b)
+{
+  nbs_t *pa = (nbs_t *)a;
+  nbs_t *pb = (nbs_t *)b;
+
+  if (pa->Nnbs + pa->LNN < pb->Nnbs + pb->LNN)  return +1;
+  if (pa->Nnbs + pa->LNN > pb->Nnbs + pb->LNN)  return -1;
+
+  if (pa->index < pa->index ) return +1;
+  if (pa->index > pa->index ) return -1;
+
+  return 0;
+}
+
+
+int compareNBSminLPSCN(const void *a, const void *b)
+{
+  nbs_t *pa = (nbs_t *)a;
+  nbs_t *pb = (nbs_t *)b;
+
+  if (pa->Nnbs + pa->LNN < pb->Nnbs + pb->LNN)  return -1;
+  if (pa->Nnbs + pa->LNN > pb->Nnbs + pb->LNN)  return +1;
+
+  if (pa->index < pa->index ) return +1;
+  if (pa->index > pa->index ) return -1;
+
+  return 0;
+}
+
+static void formAggregatesLPSCN(parCSR *A, parCSR *C,
+                                hlong* FineToCoarse,
+                                hlong* globalAggStarts,
+                                setupAide options) {
+  int rank, size;
+  MPI_Comm_rank(A->comm, &rank);
+  MPI_Comm_size(A->comm, &size);
+
+  const dlong N   = C->Nrows;
+  const dlong M   = C->Ncols;
+  const dlong diagNNZ = C->diag->nnz;
+
+  dlong   *states = (dlong *)    calloc(M, sizeof(dlong));    //  M > N
+  for(dlong i=0; i<N; i++)   // initialize states to -1
+    states[i] = -1;
+
+  hlong *globalRowStarts = A->globalRowStarts;
+
+  // construct the local neigbors
+  nbs_t *V = (nbs_t *) calloc(N,sizeof(nbs_t));
+
+  for(dlong i=0; i<N; i++){
+    V[i].index = i;
+    V[i].Nnbs  = C->diag->rowStarts[i+1] - C->diag->rowStarts[i];
+    dlong dist = C->diag->cols[C->diag->rowStarts[i+1]-1] - C->diag->cols[C->diag->rowStarts[i]];
+
+    if (dist  > 0 )
+      V[i].LNN   =  V[i].Nnbs/dist;
+    else
+      V[i].LNN = 0;
+  }
+
+  // sort the fake nbs
+  if (options.compareArgs("PARALMOND LPSCN ORDERING", "MAX")) {
+    qsort(V,N,sizeof(nbs_t),compareNBSmaxLPSCN);
+  } else if (options.compareArgs("PARALMOND LPSCN ORDERING", "MIN")) {
+    qsort(V,N,sizeof(nbs_t),compareNBSminLPSCN);
+  } else { //default NONE
+   //do nothing, use the native ordering
+  }
+
+  dlong R_num = 0;  // number of non-isolated nodes to be used
+  for (dlong i=0;i<N;i++)
+    if(V[i].Nnbs>1) R_num++;
+
+  dlong *R_nodes = (dlong*) calloc(N,sizeof(dlong));
+  dlong *R_pos   = (dlong*) calloc(N,sizeof(dlong));;
+
+  // get the sorted indices
+  dlong k = 0;
+  for (dlong i=0;i<N;i++){
+    if(V[i].Nnbs>1){
+      R_nodes[k] = V[i].index;  // R_nodes list of nodes to be used
+      k++;
+    }
+  }
+
+  // First aggregates
+  dlong Agg_num = 0;
+  //#pragma omp parallel for
+  for(dlong i=0; i<R_num; i++){
+    if (states[R_nodes[i]] == -1){
+      // verify that all NBS are free
+      for(dlong j=C->diag->rowStarts[R_nodes[i]]; j<C->diag->rowStarts[R_nodes[i]+1];j++){
+        if (states[C->diag->cols[j]]>-1) break;
+      }
+
+      // construct the aggregate
+      dlong start = C->diag->rowStarts[R_nodes[i]];
+      dlong end   = C->diag->rowStarts[R_nodes[i]+1];
+      for(dlong j=start; j<end;j++)
+        states[C->diag->cols[j]] = Agg_num;
+
+      Agg_num++;
+    }
+  }
+
+  R_num=0;   // reset the number of nodes to be used
+  for (dlong i=0;i<N;i++){  // update list of  non-agreggate nodes
+    if (states[V[i].index]==-1){ //unaggregated
+      R_nodes[R_num] = V[i].index;  // update the list of nodes
+      R_num++;
+    }
+  }
+
+  dlong *psudoAgg = (dlong *) calloc(M,sizeof(dlong));
+
+  // count the number of nodes at each aggregate
+  for (dlong i=0;i<N;i++)
+    if (states[V[i].index]>-1)
+      psudoAgg[states[V[i].index]]++;
+
+  // #pragma omp parallel for
+  for(dlong i=0; i<R_num; i++){
+    if (states[R_nodes[i]] == -1){   // sanity check
+      if (C->diag->rowStarts[R_nodes[i]+1] - C->diag->rowStarts[R_nodes[i]] > 1){    // at most one neigbor
+        dlong Agg_max;
+        dlong posIndx = 0;
+        dlong MoreAgg[Agg_num];
+        for (dlong j=0;j<Agg_num;j++)
+          MoreAgg[j]=0;
+        // count the number of strong conections with each aggregate
+        for(dlong j=C->diag->rowStarts[R_nodes[i]] ; j<C->diag->rowStarts[R_nodes[i]+1] ; j++){  // index 0 is itself
+          if (states[C->diag->cols[j]] > -1){
+            MoreAgg[states[ C->diag->cols[j]  ]]++;
+          }
+        }
+        // look for the agregates with more strong connections & less nodes
+        Agg_max = -1;
+        for (dlong j=0;j<Agg_num;j++){
+          if (Agg_max <= MoreAgg[j]){
+            if (j == 0){
+              Agg_max = MoreAgg[j];
+              posIndx = j;
+            }
+            else if (Agg_max < MoreAgg[j]){
+              Agg_max = MoreAgg[j];
+              posIndx = j;
+            }
+            else if (psudoAgg[posIndx] > psudoAgg[j]){
+              Agg_max = MoreAgg[j];
+              posIndx = j;
+            }
+          }
+        }
+        states[R_nodes[i]] = posIndx;
+        psudoAgg[posIndx]++;
+
+      } else {  // no neighbors (isolated node)
+        states[R_nodes[i]] = Agg_num;  // becomes a new aggregate
+        psudoAgg[Agg_num]++;
+        Agg_num++;
+      }
+    }
+  }
+
+  dlong *gNumAggs = (dlong *) calloc(size,sizeof(dlong));
+
+  // count the coarse nodes/aggregates in each rannk
+  MPI_Allgather(&Agg_num,1,MPI_DLONG,gNumAggs,1,MPI_DLONG,A->comm);
+
+  globalAggStarts[0] = 0;
+  for (int r=0;r<size;r++)
+    globalAggStarts[r+1] = globalAggStarts[r] + gNumAggs[r];
+
+  // enumerate the coarse nodes/aggregates
+  for(dlong i=0; i<N; i++)
+    FineToCoarse[i] = globalAggStarts[rank] + states[i];
+
+  // share results
+  for (dlong n=N;n<M;n++) FineToCoarse[n] = 0;
+  ogsGatherScatter(FineToCoarse, ogsHlong,  ogsAdd, A->ogs);
+
+  free(states);
+  free(V);
+  free(psudoAgg);
+  free(R_nodes);
+  free(R_pos);
 
   delete C;
 }
