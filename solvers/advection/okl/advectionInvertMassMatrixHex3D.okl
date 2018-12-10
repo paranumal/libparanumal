@@ -182,7 +182,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 
 
 
-#define massMatrixMultiplyHex3D(Nelements, e, cubvgeo, s_cubIT, r_q, s_tmpq1, s_tmpq2, r_MMq) \
+#define massMatrixMultiplyHex3D_orig(Nelements, e, s_cubJW, s_cubIT, r_q, s_tmpq1, s_tmpq2, r_MMq) \
   									\
   for(int j=0;j<p_Nq;++j;@inner(1))					\
     for(int i=0;i<p_Nq;++i;@inner(0)){					\
@@ -223,8 +223,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	    for(int m=0;m<p_Nq;++m){					\
 	      tmp += s_cubIT[m][ic]*s_tmpq2[jc][m];			\
 	    }								\
-	    dlong gid = e*p_cubNp*p_Nvgeo + ic*p_cubNq*p_cubNq + kc*p_cubNq + jc; \
-	    s_tmpq1[jc][jc] = cubvgeo[gid]*tmp;			\
+	    s_tmpq1[jc][jc] = s_cubJW[kc][jc][ic]*tmp;			\
 	  }								\
 	}								\
       }									\
@@ -254,6 +253,81 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
       }									\
     }									\
   }
+
+#define massMatrixMultiplyHex3D(Nelements, e, s_cubJW, s_cubIT, r_q, s_tmpq1, s_tmpq2, r_MMq) \
+  									\
+  for(int j=0;j<p_Nq;++j;@inner(1))					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+      for(int m=0;m<p_Nq;++m){						\
+	r_MMq[m] = 0;							\
+      }									\
+    }									\
+  									\
+  for(int kc=0;kc<p_cubNq;++kc){					\
+  									\
+    for(int j=0;j<p_Nq;++j;@inner(1)){					\
+      for(int i=0;i<p_Nq;++i;@inner(0)){				\
+	dfloat tmp = 0;							\
+	for(int m=0;m<p_Nq;++m){					\
+	  tmp += s_cubIT[m][kc]*r_q[m];					\
+	}								\
+	s_tmpq1[j][i] = tmp;						\
+      }									\
+    }									\
+									\
+    for(int j=0;j<p_Nq;++j;@inner(1)){					\
+      for(int i=0;i<p_Nq;++i;@inner(0)){				\
+	for(int jc=j;jc<p_cubNq;jc+=p_Nq){				\
+	  dfloat tmp = 0;						\
+	  for(int m=0;m<p_Nq;++m){					\
+	    tmp += s_cubIT[m][jc]*s_tmpq1[m][i];			\
+	  }								\
+	  s_tmpq2[jc][i] = tmp;						\
+	}								\
+      }									\
+    }									\
+									\
+    for(int j=0;j<p_Nq;++j;@inner(1)){					\
+      for(int i=0;i<p_Nq;++i;@inner(0)){				\
+	int t = i + j*p_Nq;						\
+	while(t<p_cubNq*p_cubNq){					\
+	  int ic = t%p_cubNq;						\
+	  int jc = t/p_cubNq;						\
+	  dfloat tmp = 0;						\
+	  for(int m=0;m<p_Nq;++m){					\
+	    tmp += s_cubIT[m][ic]*s_tmpq2[jc][m];			\
+	  }								\
+	  s_tmpq1[jc][jc] = s_cubJW[kc][jc][ic]*tmp;			\
+	  t+= p_Nq*p_Nq;						\
+	}								\
+      }									\
+    }									\
+									\
+    for(int j=0;j<p_Nq;++j;@inner(1)){					\
+      for(int i=0;i<p_Nq;++i;@inner(0)){				\
+    	for(int ic=i;ic<p_cubNq;ic+=p_Nq){				\
+	  dfloat tmp = 0;						\
+	  for(int m=0;m<p_cubNq;++m){					\
+	    tmp += s_cubIT[j][m]*s_tmpq1[m][ic];			\
+	  }								\
+	  s_tmpq2[j][ic] = tmp;						\
+	}								\
+      }									\
+    }									\
+									\
+    for(int j=0;j<p_Nq;++j;@inner(1)){					\
+      for(int i=0;i<p_Nq;++i;@inner(0)){				\
+	dfloat tmp = 0;							\
+	for(int m=0;m<p_cubNq;++m){					\
+	  tmp += s_cubIT[i][m]*s_tmpq2[j][m];				\
+	}								\
+	for(int m=0;m<p_Nq;++m){					\
+	  r_MMq[m] += s_cubIT[m][kc]*tmp;				\
+	}								\
+      }									\
+    }									\
+  }
+
 
 #define dotProduct(a, b, s_adotb)					\
 									\
@@ -302,7 +376,8 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	s_adotb[t] += s_adotb[t+1];					\
     }									\
   }								       
-  
+
+#if 0
 // sliced shmem version
 @kernel void advectionInvertMassMatrixHex3D_slice(const dlong Nelements,
 						  const dfloat tol,
@@ -428,6 +503,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
     }
   }
 }
+#endif
 
 #define advectionMassMatrixMultiplication_orig(Nelements, e, cubvgeo, s_cubIT, r_p, s_cubeq1, s_cubeq2, r_tmpq, r_MMp) \
   for(int j=0;j<p_Nq;++j;@inner(1)){					\
@@ -541,8 +617,35 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
   }									\
   
 
+//	for(int k=0;k<p_Nq;++k){					
+//	  res += s_cubIT[k][kc]*r_p[k];					
+//	}								
 
-#define advectionMassMatrixMultiplication(Nelements, e, cubvgeo, s_cubIT, r_p, s_cubeq1, s_cubeq2, r_MMp) \
+#define matMul(s_cubIT, kc, r_p, res)	     \
+  if(p_Nq>0) res += s_cubIT[0][kc]*r_p[0];   \
+  if(p_Nq>1) res += s_cubIT[1][kc]*r_p[1];   \
+  if(p_Nq>2) res += s_cubIT[2][kc]*r_p[2];   \
+  if(p_Nq>3) res += s_cubIT[3][kc]*r_p[3];   \
+  if(p_Nq>4) res += s_cubIT[4][kc]*r_p[4];   \
+  if(p_Nq>5) res += s_cubIT[5][kc]*r_p[5];   \
+  if(p_Nq>6) res += s_cubIT[6][kc]*r_p[6];   \
+  if(p_Nq>7) res += s_cubIT[7][kc]*r_p[7];   \
+  if(p_Nq>8) res += s_cubIT[8][kc]*r_p[8];
+
+
+#define matMul3(s_cubIT, ic, s_cubeq2, kc, i, res)	\
+  if(p_Nq>0) res += s_cubIT[0][kc]*s_cubeq2[0][kc][jc];   \
+  if(p_Nq>1) res += s_cubIT[1][kc]*s_cubeq2[1][kc][jc];   \
+  if(p_Nq>2) res += s_cubIT[2][kc]*s_cubeq2[2][kc][jc];   \
+  if(p_Nq>3) res += s_cubIT[3][kc]*s_cubeq2[3][kc][jc];   \
+  if(p_Nq>4) res += s_cubIT[4][kc]*s_cubeq2[4][kc][jc];   \
+  if(p_Nq>5) res += s_cubIT[5][kc]*s_cubeq2[5][kc][jc];   \
+  if(p_Nq>6) res += s_cubIT[6][kc]*s_cubeq2[6][kc][jc];   \
+  if(p_Nq>7) res += s_cubIT[7][kc]*s_cubeq2[7][kc][jc];   \
+  if(p_Nq>8) res += s_cubIT[8][kc]*s_cubeq2[8][kc][jc];   
+
+
+#define advectionMassMatrixMultiplication_orig1(Nelements, e, cubvgeo, s_cubIT, r_p, s_cubeq1, s_cubeq2, r_MMp) \
   for(int j=0;j<p_Nq;++j;@inner(1)){					\
     for(int i=0;i<p_Nq;++i;@inner(0)){					\
       for(int kc=0;kc<p_cubNq;++kc){					\
@@ -641,6 +744,102 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
     }									\
   }									\
   
+
+#define advectionMassMatrixMultiplication(Nelements, e, s_cubJW, s_cubIT, r_p, s_cubeq1, s_cubeq2, r_MMp) \
+  for(int j=0;j<p_Nq;++j;@inner(1)){					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+      for(int kc=0;kc<p_cubNq;++kc){					\
+	dfloat res = 0;							\
+	for(int k=0;k<p_Nq;++k){					\
+	  res += s_cubIT[k][kc]*r_p[k];					\
+	}								\
+	s_cubeq1[j][kc][i] = res;					\
+      }									\
+    }									\
+  }									\
+  for(int k=0;k<p_Nq;++k;@inner(1)){					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+      int kc = k;							\
+      while(kc<p_cubNq){						\
+	for(int j=0;j<p_Nq;++j){					\
+	  r_Ap[j] = s_cubeq1[j][kc][i];					\
+	}								\
+	for(int jc=0;jc<p_cubNq;++jc){					\
+	  dfloat res = 0;						\
+	  for(int j=0;j<p_Nq;++j){					\
+	    res += s_cubIT[j][jc]*r_Ap[j];				\
+	  }								\
+	  s_cubeq2[i][kc][jc] = res;					\
+	}								\
+	kc += p_Nq;							\
+      }									\
+    }									\
+  }									\
+  									\
+  for(int k=0;k<p_Nq;++k;@inner(1)){					\
+    for(int j=0;j<p_Nq;++j;@inner(0)){					\
+      int t = j+p_Nq*k;							\
+      while(t<p_cubNq*p_cubNq){						\
+	int jc = t%p_cubNq;						\
+	int kc = t/p_cubNq;						\
+	for(int i=0;i<p_Nq;++i){					\
+	  r_Ap[i] = 0;							\
+	}								\
+	for(int ic=0;ic<p_cubNq;++ic){					\
+	  dfloat res = 0;						\
+	  for(int i=0;i<p_Nq;++i){					\
+	    res += s_cubIT[i][ic]*s_cubeq2[i][kc][jc];			\
+	  }								\
+	  								\
+	  dlong gid = e*p_cubNp*p_Nvgeo + ic*p_cubNq*p_cubNq + kc*p_cubNq + jc; \
+	  res *= s_cubJW[kc][jc][ic];					\
+	  								\
+	  for(int i=0;i<p_Nq;++i){					\
+	    r_Ap[i] += s_cubIT[i][ic]*res;				\
+	  }								\
+	}								\
+	for(int i=0;i<p_Nq;++i){					\
+	  s_cubeq1[jc][kc][i] = r_Ap[i];				\
+	}								\
+	t+=p_Nq*p_Nq;							\
+      }									\
+    }									\
+  }									\
+									\
+  for(int k=0;k<p_Nq;++k;@inner(1)){					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+      int kc = k;							\
+      while(kc<p_cubNq){						\
+									\
+	for(int jc=0;jc<p_cubNq;++jc){					\
+	  r_Ap[jc] = s_cubeq1[jc][kc][i];				\
+	}								\
+	for(int j=0;j<p_Nq;++j){					\
+	  dfloat res = 0;						\
+	  for(int jc=0;jc<p_cubNq;++jc){				\
+	    res += s_cubIT[j][jc]*r_Ap[jc];				\
+	  }								\
+	  s_cubeq2[kc][j][i] = res;					\
+	}								\
+	kc += p_Nq;							\
+      }									\
+    }									\
+  }									\
+  									\
+  for(int j=0;j<p_Nq;++j;@inner(1)){					\
+    for(int i=0;i<p_Nq;++i;@inner(0)){					\
+									\
+      for(int k=0;k<p_Nq;++k){						\
+	dfloat res = 0;							\
+	for(int kc=0;kc<p_cubNq;++kc){					\
+	  res += s_cubIT[k][kc]*s_cubeq2[kc][j][i];			\
+	}								\
+	r_Ap[k] = res;							\
+      }									\
+    }									\
+  }									\
+  
+
 
 
 
@@ -746,12 +945,13 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
     // p = z
     // k = 0
 
-    @exclusive dfloat r_x[p_Nq], r_r[p_Nq], r_z[p_Nq], r_p[p_Nq], r_Ap[p_Nq], r_rdotz, r_tol2;
+    @exclusive dfloat r_x[p_Nq], r_r[p_Nq], r_z[p_Nq], r_p[p_Nq], r_Ap[p_cubNq], r_rdotz, r_tol2;
     @exclusive dfloat r_normb2;
     @shared volatile dfloat s_rdotz[p_Nq*p_Nq], s_pAp[p_Nq*p_Nq];
     @shared dfloat s_cubIT[p_Nq][p_cubNq];
     @shared dfloat s_cubeq1[p_cubNq][p_cubNq][p_cubNq];
     @shared dfloat s_cubeq2[p_cubNq][p_cubNq][p_cubNq];
+    @shared dfloat s_cubJW[p_cubNq][p_cubNq][p_cubNq];
     
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -768,6 +968,11 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	while(t<p_cubNq*p_Nq){
 	  s_cubIT[0][t] = cubInterpT[t]; // may need to transpose
 	  t+=p_Nq*p_Nq;
+	}
+	t = i+p_Nq*j;
+	while(t<p_cubNq*p_cubNq*p_cubNq){
+	  s_cubJW[0][0][t] = cubvgeo[t + e*p_cubNp*p_Nvgeo + p_JWID*p_cubNp];
+	  t += p_Nq*p_Nq;
 	}
       }
     }
@@ -800,7 +1005,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
       
       // apply mass Ap
 #if p_Nq!=p_cubNq
-      advectionMassMatrixMultiplication(Nelements, e, cubvgeo, s_cubIT, r_p, s_cubeq1, s_cubeq2, r_Ap);
+      advectionMassMatrixMultiplication(Nelements, e, s_cubJW, s_cubIT, r_p, s_cubeq1, s_cubeq2, r_Ap);
 #else
       advectionMassMatrixMultiplicationMatched(Nelements, e, cubvgeo, s_cubIT, r_p, s_cubeq1, s_cubeq2, r_Ap);
 #endif
@@ -812,7 +1017,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	  
 	  const dfloat alpha = r_rdotz/s_pAp[0];
 
-	  //#pragma unroll p_Nq
+#pragma unroll p_Nq
 	  for(int k=0;k<p_Nq;++k){
 	    r_x[k] += alpha*r_p[k];
 	    r_r[k] -= alpha*r_Ap[k];
@@ -839,7 +1044,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 #endif
 
 	    
-	    //#pragma unroll p_Nq
+#pragma unroll p_Nq
 	    for(int k=0;k<p_Nq;++k){
 	      dlong id = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np;
 	      x[id] = r_x[k];
@@ -848,7 +1053,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	    return;
 	  }
 
-	  //#pragma unroll p_Nq
+#pragma unroll p_Nq
 	  for(int k=0;k<p_Nq;++k){
 	    dlong id = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np;
 	    r_z[k] = P[id]*r_r[k];
@@ -909,11 +1114,24 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
   
   for(dlong e=0; e<Nelements; ++e; @outer(0)) {
 
+#if (p_Nq%2)
+#define p_padD 0
+#else
+#define p_padD 0
+#endif
+
+#if (p_cubNq%2)
+#define p_padI 0
+#else
+#define p_padI 0
+#endif
+    
+    
     @exclusive dlong  r_e;
-    @shared    dfloat s_q[p_Nq][p_Nq][p_Nq];
+    @shared    dfloat s_q[p_Nq][p_Nq][p_Nq+p_padD];
     @exclusive dfloat r_tmpi[p_Nq], r_tmpj[p_Nq], r_tmpk[p_Nq];
 
-    @shared    dfloat s_D[p_Nq][p_Nq];
+    @shared    dfloat s_D[p_Nq][p_Nq+p_padD];
     
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -925,7 +1143,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	}
 
 	int n = j*p_Nq + i;
-	s_D[0][n] = D[n];
+	s_D[j][i] = D[n];
       }
     }
     
@@ -1022,14 +1240,18 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 #define r_r r_tmpj
 #define r_z r_tmpk
     
-    @exclusive dfloat r_p[p_Nq], r_Ap[p_Nq], r_rdotz, r_tol2, r_P[p_Nq];
-    @exclusive dfloat r_normb2;
+    @exclusive dfloat r_p[p_Nq], r_Ap[p_cubNq], r_rdotz, r_tol2, r_P[p_Nq];
     @shared volatile dfloat s_rdotz[p_Nq*p_Nq], s_pAp[p_Nq*p_Nq];
-    @shared dfloat s_cubIT[p_Nq][p_cubNq];
-
+    @shared dfloat s_cubIT[p_Nq][p_cubNq+p_padI];
+    @shared dfloat s_cubJW[p_cubNq][p_cubNq][p_cubNq];
+#if 1
     @shared dfloat s_cubeq1[p_cubNq][p_cubNq][p_cubNq];
     @shared dfloat s_cubeq2[p_cubNq][p_cubNq][p_cubNq];
-    
+#else
+   // use with 2d slicer
+    @shared dfloat s_tmpq1[p_cubNq][p_cubNq];
+    @shared dfloat s_tmpq2[p_cubNq][p_cubNq];
+#endif
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
 
@@ -1038,14 +1260,22 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	  r_x[k] = 0;
 	  r_r[k] = s_q[k][j][i];
 	  r_P[k] = P[id];
+	  //r_z[k] = P[id]*r_r[k];
 	  r_z[k] = r_P[k]*r_r[k];
 	  r_p[k] = r_z[k];
 	}
 
 	int t = i+p_Nq*j;
 	while(t<p_cubNq*p_Nq){
-	  s_cubIT[0][t] = cubInterpT[t]; // may need to transpose
+	  int ti = t%p_cubNq;
+	  int tj = t/p_cubNq;
+	  s_cubIT[tj][ti] = cubInterpT[t]; // may need to transpose
 	  t+=p_Nq*p_Nq;
+	}
+	t = i+p_Nq*j;
+	while(t<p_cubNq*p_cubNq*p_cubNq){
+	  s_cubJW[0][0][t] = cubvgeo[t + e*p_cubNp*p_Nvgeo + p_JWID*p_cubNp];
+	  t += p_Nq*p_Nq;
 	}
       }
     }
@@ -1055,7 +1285,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-	r_normb2 = s_pAp[0];
+	dfloat r_normb2 = s_pAp[0];
 	r_tol2 = tol*tol;
 
 	if(r_normb2>(1.0)){
@@ -1077,10 +1307,15 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
     for(int it=0;it<maxIterations;++it){
       
       // apply mass Ap
+#if 0
+    // 2d slicing is disappointing
+      massMatrixMultiplyHex3D(Nelements, r_e, s_cubJW, s_cubIT, r_p, s_tmpq1, s_tmpq2, r_Ap);
+#else
 #if p_Nq!=p_cubNq
-      advectionMassMatrixMultiplication(Nelements, r_e, cubvgeo, s_cubIT, r_p, s_cubeq1, s_cubeq2,  r_Ap);
+      advectionMassMatrixMultiplication(Nelements, r_e, s_cubJW, s_cubIT, r_p, s_cubeq1, s_cubeq2,  r_Ap);
 #else
       advectionMassMatrixMultiplicationMatched(Nelements, r_e, cubvgeo, s_cubIT, r_p, s_cubeq1, s_cubeq2, r_Ap);
+#endif
 #endif
       // p.Ap
       dotProduct(r_p, r_Ap, s_pAp);
@@ -1099,7 +1334,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
       
       // r.r
       dotProduct(r_r, r_r, s_pAp);
-    
+        
       for(int j=0;j<p_Nq;++j;@inner(1)){
 	for(int i=0;i<p_Nq;++i;@inner(0)){
 
@@ -1107,16 +1342,25 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	  if(it==(maxIterations-1)){
 	    
 	    for(int k=0;k<p_Nq;++k){
-	      dlong id = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np;
-	      s_q[k][j][i] = r_x[k];
+	      const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np*p_Nfields;
+
+	      dfloat r_qcba = q[base];
+	      dfloat r_resq = resq[base];
+	      r_resq = rka*r_resq + dt*r_x[k];
+	      r_qcba += rkb*r_resq;
+	      
+	      resq[base] = r_resq;
+	      qnew[base] = r_qcba;
 	    }
 	    //	    if(it>3 && i==0&&j==0) printf("elemt %d took %d iterations\n", e, it+1);
 	    it = maxIterations;
+	    return;
 	  }else
-	    
+
 	    for(int k=0;k<p_Nq;++k){
 	      dlong id = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np;
-	      r_z[k] = r_P[k]*r_r[k]; // P[id]*r_r[k];
+	      r_z[k] = r_P[k]*r_r[k];
+	      //	      r_z[k] = P[id]*r_r[k];
 	    }
 	}
       }
@@ -1141,23 +1385,6 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
     } // end iterations
     
     // invert mass to here <======================================================
-    
-    for(int b=0;b<p_Nq;++b;@inner(1)){
-      for(int a=0;a<p_Nq;++a;@inner(0)){
-	
-	for(int c=0;c<p_Nq;++c){
-	  const dlong base = r_e*p_Np*p_Nfields + c*p_Nq*p_Nq + b*p_Nq + a;
-	  
-	  dfloat r_qcba = q[base];
-	  dfloat r_resq = resq[base];
-	  r_resq = rka*r_resq + dt*s_q[c][b][a];
-	  r_qcba += rkb*r_resq;
-	  
-	  resq[base] = r_resq;
-	  qnew[base] = r_qcba;
-	}
-      }
-    }
   }
 }
 
