@@ -89,7 +89,7 @@ agmgLevel *coarsenAgmgLevel(agmgLevel *level, KrylovType ktype, setupAide option
   hlong *FineToCoarse = (hlong *) malloc(level->A->Ncols*sizeof(hlong));
   hlong *globalAggStarts = (hlong *) calloc(size+1,sizeof(hlong));
 
-  formAggregates(level->A, C, FineToCoarse, globalAggStarts);
+  formAggregates(level->A, C, FineToCoarse, globalAggStarts, options);
 
   // adjustPartition(FineToCoarse, options);
 
