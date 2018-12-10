@@ -47,9 +47,8 @@ void formAggregates(parCSR *A, parCSR *C,
   } else if (options.compareArgs("PARALMOND AGGREGATION STRATEGY", "LPSCN")) {
     formAggregatesLPSCN(A, C, FineToCoarse, globalAggStarts, options);
   } else {
-    // TODO:  Calling exit() within a library is not a good way to handle errors...
-    printf("ERROR:  Bad value for option PARALMOND AGGREGATION STRATEGY.\n");
-    exit(-1);
+    printf("WARNING:  Missing or bad value for option PARALMOND AGGREGATION STRATEGY.  Using default.\n");
+    formAggregatesDefault(A, C, FineToCoarse, globalAggStarts);
   }
 }
 
