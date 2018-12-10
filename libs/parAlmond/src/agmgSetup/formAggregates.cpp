@@ -406,35 +406,31 @@ static void formAggregatesLPSCN(parCSR *A, parCSR *C,
    //do nothing, use the native ordering
   }
 
-  dlong R_num = 0;  // number of non-isolated nodes to be used
-  for (dlong i=0;i<N;i++)
-    if(V[i].Nnbs>1) R_num++;
-
-  dlong *R_nodes = (dlong*) calloc(N,sizeof(dlong));
-  dlong *R_pos   = (dlong*) calloc(N,sizeof(dlong));;
-
-  // get the sorted indices
-  dlong k = 0;
-  for (dlong i=0;i<N;i++){
-    if(V[i].Nnbs>1){
-      R_nodes[k] = V[i].index;  // R_nodes list of nodes to be used
-      k++;
-    }
-  }
-
   // First aggregates
   dlong Agg_num = 0;
   //#pragma omp parallel for
-  for(dlong i=0; i<R_num; i++){
-    if (states[R_nodes[i]] == -1){
+  for(dlong i=0; i<N; i++){
+
+    if(V[i].Nnbs<=1) continue; //skip
+
+    dlong id = V[i].index;
+
+    if (states[id] == -1){
+      dlong start = C->diag->rowStarts[id];
+      dlong end   = C->diag->rowStarts[id+1];
+
       // verify that all NBS are free
-      for(dlong j=C->diag->rowStarts[R_nodes[i]]; j<C->diag->rowStarts[R_nodes[i]+1];j++){
-        if (states[C->diag->cols[j]]>-1) break;
+      int flag = 0;
+      for(dlong j=start; j<end;j++) {
+        if (states[C->diag->cols[j]]>-1) {
+          flag=1;
+          break;
+        }
       }
+      if (flag) continue; //skip
 
       // construct the aggregate
-      dlong start = C->diag->rowStarts[R_nodes[i]];
-      dlong end   = C->diag->rowStarts[R_nodes[i]+1];
+      states[id] = Agg_num;
       for(dlong j=start; j<end;j++)
         states[C->diag->cols[j]] = Agg_num;
 
@@ -442,61 +438,86 @@ static void formAggregatesLPSCN(parCSR *A, parCSR *C,
     }
   }
 
-  R_num=0;   // reset the number of nodes to be used
-  for (dlong i=0;i<N;i++){  // update list of  non-agreggate nodes
-    if (states[V[i].index]==-1){ //unaggregated
-      R_nodes[R_num] = V[i].index;  // update the list of nodes
-      R_num++;
-    }
-  }
-
-  dlong *psudoAgg = (dlong *) calloc(M,sizeof(dlong));
+  dlong *aggCnts = (dlong *) calloc(N,sizeof(dlong));
 
   // count the number of nodes at each aggregate
-  for (dlong i=0;i<N;i++)
-    if (states[V[i].index]>-1)
-      psudoAgg[states[V[i].index]]++;
+  int maxNeighbors = 0;
+  for (dlong i=0;i<N;i++) {
+    if (states[i]>-1)
+      aggCnts[states[i]]++;
+
+    int Nneighbors = C->diag->rowStarts[i+1] - C->diag->rowStarts[i];
+    maxNeighbors = (maxNeighbors > Nneighbors) ? maxNeighbors : Nneighbors;
+  }
+
+  dlong *neighborAgg = (dlong *) calloc(maxNeighbors, sizeof(dlong));
 
   // #pragma omp parallel for
-  for(dlong i=0; i<R_num; i++){
-    if (states[R_nodes[i]] == -1){   // sanity check
-      if (C->diag->rowStarts[R_nodes[i]+1] - C->diag->rowStarts[R_nodes[i]] > 1){    // at most one neigbor
-        dlong Agg_max;
-        dlong posIndx = 0;
-        dlong MoreAgg[Agg_num];
-        for (dlong j=0;j<Agg_num;j++)
-          MoreAgg[j]=0;
-        // count the number of strong conections with each aggregate
-        for(dlong j=C->diag->rowStarts[R_nodes[i]] ; j<C->diag->rowStarts[R_nodes[i]+1] ; j++){  // index 0 is itself
-          if (states[C->diag->cols[j]] > -1){
-            MoreAgg[states[ C->diag->cols[j]  ]]++;
-          }
-        }
-        // look for the agregates with more strong connections & less nodes
-        Agg_max = -1;
-        for (dlong j=0;j<Agg_num;j++){
-          if (Agg_max <= MoreAgg[j]){
-            if (j == 0){
-              Agg_max = MoreAgg[j];
-              posIndx = j;
-            }
-            else if (Agg_max < MoreAgg[j]){
-              Agg_max = MoreAgg[j];
-              posIndx = j;
-            }
-            else if (psudoAgg[posIndx] > psudoAgg[j]){
-              Agg_max = MoreAgg[j];
-              posIndx = j;
-            }
-          }
-        }
-        states[R_nodes[i]] = posIndx;
-        psudoAgg[posIndx]++;
+  for(dlong i=0; i<N; i++){
 
-      } else {  // no neighbors (isolated node)
-        states[R_nodes[i]] = Agg_num;  // becomes a new aggregate
-        psudoAgg[Agg_num]++;
+    dlong id = V[i].index;
+
+    //visit unaggregated nodes
+    if (states[id] == -1){
+
+      dlong start = C->diag->rowStarts[id];
+      dlong end   = C->diag->rowStarts[id+1];
+      int Nneighbors = end - start;
+
+      if (Nneighbors > 1){    // at least one neighbor
+        dlong Agg;
+        int maxConnections=0;
+
+        int Nactive = Nneighbors;
+
+        //there must be at least one neighbor that has been aggregated, else this node would have been aggregated already
+        for (int j=start;j<end;j++) {
+          if (states[C->diag->cols[j]]==-1) {
+            neighborAgg[j-start] = -1; //ignore unaggregated neighbors
+            Nactive--;
+          } else {
+            // flag the aggregated neighbors, we'll visit them one at a time.
+            neighborAgg[j-start] = states[C->diag->cols[j]];
+          }
+        }
+
+        int pos = 0;
+        //find the first unflagged aggregated neighbor
+        while (Nactive>0) {
+          //find the next aggregate id to check
+          while (neighborAgg[pos]==-1) pos++;
+
+          dlong curAgg = neighborAgg[pos]; //current aggregate under consideration
+
+          //count the number of neighbours aggregating to this aggregate (unflag them as we go)
+          int cnt = 0;
+          for (int j=pos;j<Nneighbors;j++) {
+            if (neighborAgg[j]==curAgg) {
+              cnt++;
+              Nactive--;
+              neighborAgg[j]=-1;
+            }
+          }
+
+          if (cnt > maxConnections) {
+            //more connections to this aggregate, aggregate here
+            maxConnections = cnt;
+            Agg = curAgg;
+          } else if (cnt == maxConnections) {
+            //tied for connections, pick to the smaller aggregate
+            if (aggCnts[curAgg]<aggCnts[Agg])
+              Agg = curAgg;
+          }
+        }
+        states[id] = Agg;
+        aggCnts[Agg]++;
+
+      } else { //isolated node
+
+        states[id] = Agg_num;  // becomes a new aggregate
+        aggCnts[Agg_num]++;
         Agg_num++;
+
       }
     }
   }
@@ -520,9 +541,7 @@ static void formAggregatesLPSCN(parCSR *A, parCSR *C,
 
   free(states);
   free(V);
-  free(psudoAgg);
-  free(R_nodes);
-  free(R_pos);
+  free(aggCnts);
 
   delete C;
 }
