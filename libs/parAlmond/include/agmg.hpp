@@ -82,7 +82,8 @@ parCSR* strongGraph(parCSR *A);
 
 void formAggregates(parCSR *A, parCSR *C,
                      hlong* FineToCoarse,
-                     hlong* globalAggStarts);
+                     hlong* globalAggStarts,
+                     setupAide options);
 
 parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
                             hlong *globalAggStarts, dfloat **nullCoarseA);
