@@ -38,18 +38,18 @@ typedef struct {
   int dim, elementType;
 
   mesh_t     *mesh;
-  elliptic_t *sSolver;
+  elliptic_t *solver;
   int NVfields;            // Number of velocity fields
   int NSfields;            // Number of scalar fields
   
   setupAide options;
   // INS SOLVER OCCA VARIABLES
-  dfloat k, nu, cp, rho, alf,  Re, Pr;
+  dfloat k, nu, cp, rho, irhocp, alf,  Re, Pr;
   dfloat ubar, vbar, wbar, sbar;
   dlong fieldOffset;
   dlong Ntotal;
   int Nblock;
-  dfloat dt, cfl, dti;          // time step
+  dfloat dt, idt, cfl, dti;          // time step
   dfloat dtMIN;         
   dfloat time;
   int tstep, frame;
@@ -65,16 +65,16 @@ typedef struct {
   int   outputForceStep; 
   int   dtAdaptStep; 
   
-  int NiterS;
+  int Niter;
 
 
   //solver tolerances
-  dfloat sTOL;
+  dfloat TOL;
 
   dfloat icp, irho; // hold some inverses
   
   dfloat *U, *S;
-  dfloat *NS;
+  dfloat *NS, *rkNS;
   dfloat *rhsS;   
   dfloat *rkS; 
   dfloat g[3];      // gravitational Acceleration
@@ -86,16 +86,16 @@ typedef struct {
   dfloat *extbdfA, *extbdfB, *extbdfC;
   dfloat *extC;
 
-  int *SmapB;
-  occa::memory o_SmapB;
+  int *mapB;
+  occa::memory o_mapB;
 
   //halo data
-  dfloat *sSendBuffer;
-  dfloat *sRecvBuffer;
-  dfloat *sHaloGatherTmp;
+  dfloat *sendBuffer;
+  dfloat *recvBuffer;
+  dfloat *haloGatherTmp;
 
-  occa::memory o_sSendBuffer;
-  occa::memory o_sRecvBuffer;
+  occa::memory o_sendBuffer;
+  occa::memory o_recvBuffer;
   occa::memory o_gatherTmpPinned;
 
   int Nsubsteps;
@@ -107,7 +107,7 @@ typedef struct {
   occa::memory o_cU, o_cUd, o_cS;
 
   // Some Iso-surfacing variables
-  // int isoField, isoColorField, isoNfields, isoNlevels, isoMaxNtris, *isoNtris; 
+  // int isoField, isoColorField, isoNfields, isoNlevels, isoMaxBNtris, *isoNtris; 
   // dfloat isoMinVal, isoMaxVal, *isoLevels, *isoq; 
   // size_t isoMax; 
   
@@ -131,12 +131,11 @@ typedef struct {
   
   occa::memory o_U; 
   occa::memory o_S, o_SH, o_NS, o_rhsS;
-  occa::memory o_rkS; 
+  occa::memory o_rkS, o_rkNS; 
   
-  occa::memory o_Vort, o_Div; // Not sure to keep it
-
-  occa::memory o_vHaloBuffer, o_pHaloBuffer; 
-  occa::memory o_velocityHaloGatherTmp;
+  // occa::memory o_Vort, o_Div; // Not sure to keep it
+  occa::memory o_haloBuffer;
+  occa::memory o_haloGatherTmp;
 
   //ARK data
   occa::memory o_rkC;
@@ -148,10 +147,8 @@ typedef struct {
   occa::memory o_extbdfA, o_extbdfB, o_extbdfC;
   occa::memory o_extC;
 
-  // occa::kernel velocityHaloExtractKernel;
-  // occa::kernel velocityHaloScatterKernel;
-  // occa::kernel pressureHaloExtractKernel;
-  // occa::kernel pressureHaloScatterKernel;
+   occa::kernel haloExtractKernel;
+   occa::kernel haloScatterKernel;
 
    occa::kernel setFlowFieldKernel;
    occa::kernel setScalarFieldKernel;
