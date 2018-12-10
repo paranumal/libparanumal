@@ -1,0 +1,147 @@
+[FORMAT]
+1.0
+
+[DATA FILE]
+data/cdsUniform3D.h
+
+[MESH FILE]
+../../meshes/insBeltramiHex3D.msh
+
+
+[MESH DIMENSION]
+3
+
+[ELEMENT TYPE] 
+12
+
+[POLYNOMIAL DEGREE]
+4
+
+[ELEMENT MAP]
+ISOPARAMETRIC
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+# can be EXTBDF1,2, or 3
+# can add SUBCYCLING to EXTBDF
+[TIME INTEGRATOR]
+EXTBDF2
+
+[SUBCYCLING STEPS]
+0
+
+# can be CUBATURE or COLLOCATION
+[ADVECTION TYPE]
+CUBATURE
+
+[VISCOSITY]
+1
+
+[DENSITY]
+1
+
+[CONDUCTIVITY]
+1
+
+[SPECIFIC HEAT]
+1
+
+[MACH NUMBER]
+.2
+
+[UBAR]
+1.0
+
+[VBAR]
+0.0
+
+[WBAR]
+0.0
+
+[SBAR]
+0.0
+
+[TSTEPS FOR SOLUTION OUTPUT]
+100
+
+[START TIME]
+0
+
+[FINAL TIME]
+0.1
+
+[CFL]
+0.1
+
+[OUTPUT TYPE]
+VTU
+
+[RESTART FROM FILE]
+0
+
+[OUTPUT FILE NAME]
+fence
+
+#################################################
+########## Solver Options ##############
+#################################################
+
+# can add FLEXIBLE to PCG
+[KRYLOV SOLVER]
+PCG
+
+# can be IPDG, or CONTINUOUS
+[DISCRETIZATION]
+IPDG
+
+# can be NODAL or BERN
+[BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+[PRECONDITIONER]
+JACOBI
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[MULTIGRID COARSENING]
+HALFDOFS
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[VELOCITY PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[VELOCITY PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[VELOCITY PARALMOND PARTITION]
+STRONGNODES
+
+# compare to a reference solution. Use NONE to skip comparison
+# can be BELTRAMI
+[EXACT]
+BELTRAMI
+
+[VERBOSE]
+TRUE
