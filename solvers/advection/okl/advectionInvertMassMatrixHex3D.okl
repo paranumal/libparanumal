@@ -2428,11 +2428,9 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 #pragma unroll p_halfI	  
 	for(int k=0;k<p_halfI;++k){					
 	  
-	  const int id = p_Nvgeo*e*p_cubNp				
-	    +k*p_cubNq*p_cubNq+j*p_cubNq+i+p_JWID*p_cubNp;		
+	  const int id = p_Nvgeo*e*p_cubNp+k*p_cubNq*p_cubNq+j*p_cubNq+i+p_JWID*p_cubNp;		
 	  
-	  const int id2 = p_Nvgeo*e*p_cubNp				
-	    +(p_cubNq-1-k)*p_cubNq*p_cubNq+j*p_cubNq+i+p_JWID*p_cubNp;	
+	  const int id2 = p_Nvgeo*e*p_cubNp+(p_cubNq-1-k)*p_cubNq*p_cubNq+j*p_cubNq+i+p_JWID*p_cubNp;	
 	  
 	  const dfloat r_GwJ  =cubvgeo[id];  // r_cubvgeo[k];
 	  const dfloat r_GwJ2 = cubvgeo[id2]; // r_cubvgeo[p_cubNq-1-k];  
