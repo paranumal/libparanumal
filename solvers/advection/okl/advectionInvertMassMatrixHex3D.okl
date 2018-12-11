@@ -2137,7 +2137,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 }
 
 // 1d threading
-@kernel void advectionCombinedNodalWeakMMDGVolumeHex3D(const dlong Nelements,						       
+@kernel void advectionCombinedNodalWeakMMDGVolumeHex3D_v02(const dlong Nelements,						       
 						       @restrict const dlong * elementIds,
 						       const dfloat dt,
 						       const dfloat rka,
@@ -2210,7 +2210,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 #pragma unroll p_Nq
 	for(int c=0;c<p_Nq;++c){
 	  
-	  dfloat r_qi = s_q[b][a][c]; // this is sloppy (5 reads, 6 flops => 13*6/(5*8) TFLOPS)
+	  dfloat r_qi = s_q[b][a][c]; // this is sloppy (5 reads, 6 flops => 13*6/(5*8) ~ 2TFLOPS)
 	  dfloat r_qj = s_q[b][c][a];
 	  dfloat r_qk = s_q[c][b][a];
 	  
@@ -2304,7 +2304,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 #define r_r r_tmpj
 #define r_z r_tmpk
     
-    @exclusive dfloat r_p[p_Nq], r_Ap[p_Nq], r_rdotz, r_tol2, r_P[p_Nq], r_q[p_cubNq];
+    @exclusive dfloat r_p[p_Nq], r_Ap[p_Nq], r_rdotz, r_tol2, r_q[p_cubNq]; // r_P[p_Nq]
     //    @exclusive dfloat r_cubvgeo[p_cubNq];
     @shared volatile dfloat s_rdotz[p_Nq*p_Nq], s_pAp[p_Nq*p_Nq];
     @shared dfloat s_cubI[p_cubNq][p_Nq+p_Npad];
@@ -2339,8 +2339,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
     }
     
     // compute norm squared, b.b and choose convergence tolerance
-    dotProductV8t(r_r, r_r, s_pAp);
-
+//    dotProductV8t(r_r, r_r, s_pAp);
     for(int t=0;t<p_cubNq2;++t;@inner(0)){
       dfloat r_normb2 = s_pAp[0];
       r_tol2 = tol*tol;
@@ -2351,7 +2350,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
     }
 
     // compute r.z
-    dotProductV8t(r_r, r_z, s_rdotz);
+//    dotProductV8t(r_r, r_z, s_rdotz);
 
     for(int t=0;t<p_cubNq2;++t;@inner(0)){
       r_rdotz = s_rdotz[0];
@@ -2376,7 +2375,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	    
 #pragma unroll p_Nq
 	    for(int b=0;b<p_Nq;++b){					
-	      dfloat tmpI = s_cubI[j][b];					
+	      dfloat tmpI = s_cubI[j][b]; // 4 flops per 8 bytes shmem => 13*4/8					 
 	      
 	      tmp  += tmpI*r_p[b];					
 	      tmp2 += tmpI*r_p[p_Nq-1-b];					
@@ -2535,7 +2534,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
       // ENDING MASS MATRIX MULTIPLY HERE <==========================
       
       // p.Ap
-      dotProductV8t(r_p, r_Ap, s_pAp);
+//      dotProductV8t(r_p, r_Ap, s_pAp);
       
       for(int t=0;t<p_cubNq2;++t;@inner(0)){
 	if(t<p_Nq*p_Nq){
@@ -2552,7 +2551,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
       }
       
       // r.r
-      dotProductV8t(r_r, r_r, s_pAp);
+//      dotProductV8t(r_r, r_r, s_pAp);
 
       for(int t=0;t<p_cubNq2;++t;@inner(0)){
 	int i = t%p_Nq;
@@ -2586,7 +2585,526 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
       }
       
       // r.z
-      dotProductV8t(r_r, r_z, s_rdotz);
+//      dotProductV8t(r_r, r_z, s_rdotz);
+
+      for(int t=0;t<p_cubNq2;++t;@inner(0)){
+	if(t<p_Nq2){
+	  int i = t%p_Nq;
+	  int j = t/p_Nq;
+	  
+	  if(it<maxIterations){
+	    dfloat beta = s_rdotz[0]/r_rdotz;
+	    
+	    r_rdotz = s_rdotz[0];
+	    
+#pragma unroll p_Nq	      	      
+	    for(int k=0;k<p_Nq;++k){
+	      r_p[k] = r_z[k] + beta*r_p[k];
+	    }
+	  }
+	}
+      }
+    } // end iterations
+    
+    // invert mass to here <======================================================
+  }
+}
+
+
+#define dotProductV8t2D(s_adotb)					\
+   									\
+  for(int t=0;t<p_cubNq2;++t;@inner(0)){				\
+    if(t<p_Nq2 && t<128 && t+128<p_Nq*p_Nq){				\
+      s_adotb[t] += s_adotb[t+128];					\
+    }									\
+  }									\
+  									\
+  for(int t=0;t<p_cubNq2;++t;@inner(0)){				\
+    if(t<p_Nq2 && t<64 && t+64<p_Nq*p_Nq){				\
+      s_adotb[t] += s_adotb[t+64];					\
+    }									\
+  }									\
+									\
+  for(int t=0;t<p_cubNq2;++t;@inner(0)){				\
+    if(t<p_Nq2){							\
+      if(t<32 && t+32<p_Nq*p_Nq)					\
+	s_adotb[t] += s_adotb[t+32];					\
+      if(t<16 && t+16<p_Nq*p_Nq)					\
+	s_adotb[t] += s_adotb[t+16];					\
+      if(t< 8 && t+8<p_Nq*p_Nq)						\
+	s_adotb[t] += s_adotb[t+8];					\
+      if(t< 4 && t+4<p_Nq*p_Nq)						\
+	s_adotb[t] += s_adotb[t+4];					\
+      if(t< 2 && t+2<p_Nq*p_Nq)						\
+	s_adotb[t] += s_adotb[t+2];					\
+      if(t< 1 && t+1<p_Nq*p_Nq)						\
+	s_adotb[t] += s_adotb[t+1];					\
+    }									\
+  }
+
+
+// simplify dotproducts
+@kernel void advectionCombinedNodalWeakMMDGVolumeHex3D(const dlong Nelements,						       
+						       @restrict const dlong * elementIds,
+						       const dfloat dt,
+						       const dfloat rka,
+						       const dfloat rkb,
+						       @restrict const dfloat * vgeo,
+						       @restrict const dfloat * D,
+						       @restrict const dfloat * advectionVelocityJW,
+						       @restrict const dlong  * vmapM,
+						       @restrict const dlong  * tmapP,
+						       @restrict const dfloat * advectionVelocityM,
+						       @restrict const dfloat * advectionVelocityP,
+						       @restrict const dfloat * cubvgeo,
+						       @restrict const dfloat * cubInterpT,
+						       @restrict const dfloat * P, // inv row sum mass
+						       const dfloat tol,
+						       const int maxIterations,
+						       @restrict dfloat * resq,
+						       @restrict const dfloat * q,
+						       @restrict dfloat * qnew){
+
+#if p_cubNq==8 || p_cubNq==16
+#define p_cubNpad 1
+#else
+#define p_cubNpad 0
+#endif
+
+#if p_Nq==8 || p_Nq==16
+#define p_Npad 1
+#else
+#define p_Npad 0
+#endif
+  
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+
+    @exclusive dlong  r_e;
+    @shared    dfloat s_q[p_cubNq][p_cubNq][p_cubNq+p_cubNpad];
+
+    @exclusive dfloat r_tmpi[p_Nq], r_tmpj[p_Nq], r_tmpk[p_Nq];
+    
+    @shared    dfloat s_D[p_Nq][p_Nq];
+
+    for(int t=0;t<p_cubNq2;++t;@inner(0)){
+      
+      r_e = elementIds[e];
+      
+      int n=t;
+      while(n<p_Np){
+	int i = n%p_Nq;
+	int j = (n/p_Nq)%p_Nq;
+	int k = n/(p_Nq*p_Nq);
+	dlong base = r_e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+	s_q[k][j][i] = q[base];
+	n += p_cubNq2;
+      }
+
+      if(t<p_Nq2){
+	s_D[0][t] = D[t];
+      }
+    }
+
+    for(int t=0;t<p_cubNq2;++t;@inner(0)){
+      if(t<p_Nq2){
+	int a = t%p_Nq;
+	int b = t/p_Nq;
+	
+	for(int m=0;m<p_Nq;++m){
+	  r_tmpi[m] = 0; r_tmpj[m] = 0; r_tmpk[m] = 0;
+	}
+	
+#pragma unroll p_Nq
+	for(int c=0;c<p_Nq;++c){
+	  
+	  dfloat r_qi = s_q[b][a][c]; // this is sloppy (5 reads, 6 flops => 13*6/(5*8) ~ 2TFLOPS)
+	  dfloat r_qj = s_q[b][c][a];
+	  dfloat r_qk = s_q[c][b][a];
+	  
+	  // Cc*Jc*wc*Ic*q
+	  const dlong gid = 3*r_e*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
+	  const dfloat Cr = advectionVelocityJW[gid + 0*p_Np];
+	  const dfloat Cs = advectionVelocityJW[gid + 1*p_Np];
+	  const dfloat Ct = advectionVelocityJW[gid + 2*p_Np];
+	  
+	  r_qi *= Cr;
+	  r_qj *= Cs;
+	  r_qk *= Ct;
+	  
+#pragma unroll p_Nq
+	  for(int n=0;n<p_Nq;++n){
+	    const dfloat Dcn = s_D[c][n];
+	    
+	    r_tmpi[n] += Dcn*r_qi;
+	    r_tmpj[n] += Dcn*r_qj;
+	    r_tmpk[n] += Dcn*r_qk;
+	  }
+	} // end c loop
+      } // end t
+    }
+    
+    // THIS BARRIER IS IMPORTANT ???
+    for(int t=0;t<p_cubNq2;++t;@inner(0)){
+      if(t<p_Nq2){
+	int a = t%p_Nq;
+	int b = t/p_Nq;
+	
+	for(int c=0;c<p_Nq;++c){
+	  s_q[b][a][c] = r_tmpi[c];
+	}
+      }
+    }
+
+    for(int t=0;t<p_cubNq2;++t;@inner(0)){
+      if(t<p_Nq2){
+	int a = t%p_Nq;
+	int b = t/p_Nq;
+
+	for(int c=0;c<p_Nq;++c){
+	  s_q[b][c][a] += r_tmpj[c];
+	}
+      }
+    }
+
+    for(int t=0;t<p_cubNq2;++t;@inner(0)){
+      if(t<p_Nq2){
+	int a = t%p_Nq;
+	int b = t/p_Nq;
+	for(int c=0;c<p_Nq;++c){
+	  const dfloat qbca = s_q[c][b][a] + r_tmpk[c];
+	  s_q[c][b][a] = -qbca;
+	}
+      }
+    }
+
+    for(int f=0;f<p_Nfaces;++f){
+      for(int t=0;t<p_cubNq2;++t;@inner(0)){
+	if(t<p_Nq2){
+	  int i = t%p_Nq;
+	  int j = t/p_Nq;
+
+	  const dlong id = r_e*p_Nfaces*p_Nfp + f*p_Nfp + j*p_Nq + i;
+	  
+	  const dfloat FM = advectionVelocityM[id]; 
+	  const dfloat FP = advectionVelocityP[id];
+	  
+	  const dlong idM = vmapM[id];
+	  const dlong idP = tmapP[id];
+	  
+	  const dfloat qM = q[idM];
+	  const dfloat qP = (idM!=idP) ? q[idP]:-qM;
+	  const int vidM = idM%p_Np;
+	  const int aM = vidM%p_Nq;
+	  const int bM = (vidM/p_Nq)%p_Nq;
+	  const int cM = vidM/(p_Nq*p_Nq);
+	  
+	  s_q[cM][bM][aM] += FP*qP + FM*qM;
+	}
+      }
+    }
+
+    // invert mass from here ======================================================>
+    // PCG using diagonal Jacobi
+    // (formed from row sums of mass matrix obtained using same cubature)
+
+#define r_x r_tmpi
+#define r_r r_tmpj
+#define r_z r_tmpk
+    
+    @exclusive dfloat r_p[p_Nq], r_Ap[p_Nq], r_rdotz, r_tol2, r_q[p_cubNq]; // r_P[p_Nq]
+    //    @exclusive dfloat r_cubvgeo[p_cubNq];
+    @shared volatile dfloat s_rdotz[p_Nq*p_Nq], s_pAp[p_Nq*p_Nq], s_normr2[p_Nq*p_Nq];
+    @shared dfloat s_cubI[p_cubNq][p_Nq+p_Npad];
+
+    for(int t=0;t<p_cubNq2;++t;@inner(0)){
+      if(t<p_Nq2){
+	int i = t%p_Nq;
+	int j = t/p_Nq;
+
+#pragma unroll p_Nq	      	
+	for(int k=0;k<p_Nq;++k){
+	  dlong id = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np;
+	  r_x[k] = 0;
+	  r_r[k] = s_q[k][j][i];
+	  //	  r_P[k] = P[id];
+	  //r_z[k] = P[id]*r_r[k];
+	  r_z[k] = P[id]*r_r[k]; // r_P[k]*r_r[k];
+	  r_p[k] = r_z[k];
+	}
+      }
+      
+      if(t<p_cubNq*p_Nq){
+	s_cubI[0][t] = cubInterpT[t]; // may need to transpose
+      }
+
+#if 0
+      for(int k=0;k<p_cubNq;++k){
+	dlong gid = r_e*p_cubNp + k*p_cubNq*p_cubNq + t;
+	r_cubvgeo[k] = cubvgeo[gid];
+      }
+#endif
+    }
+    
+    // compute norm squared, b.b and choose convergence tolerance
+    dotProductV8t(r_r, r_r, s_pAp);
+    for(int t=0;t<p_cubNq2;++t;@inner(0)){
+      dfloat r_normb2 = s_pAp[0];
+      r_tol2 = tol*tol;
+      
+      if(r_normb2>(1.0)){
+	r_tol2 = r_normb2*r_tol2;
+      }
+    }
+
+    // compute r.z
+    dotProductV8t(r_r, r_z, s_rdotz);
+
+    for(int t=0;t<p_cubNq2;++t;@inner(0)){
+      r_rdotz = s_rdotz[0];
+    }
+    
+    for(int it=0;it<maxIterations;++it){
+      
+      // apply mass Ap
+      //      advectionMassMatrixMultiplicationV8(Nelements, r_e, cubvgeo, s_cubI, r_p, s_q, r_Ap);
+
+      // STARTING MASS MATRIX MULTIPLY HERE ===========================>
+      for(int t=0;t<p_cubNq2;++t;@inner(0)){
+	if(t<p_Nq2){
+	  int a = t%p_Nq;
+	  int c = t/p_Nq;
+
+#pragma unroll p_halfI
+	  for(int j=0;j<p_halfI;++j){					
+	    
+	    dfloat tmp = 0;						
+	    dfloat tmp2 = 0;						
+	    
+#pragma unroll p_Nq
+	    for(int b=0;b<p_Nq;++b){					
+	      dfloat tmpI = s_cubI[j][b]; // 4 flops per 8 bytes shmem => 13*4/8					 
+	      
+	      tmp  += tmpI*r_p[b];					
+	      tmp2 += tmpI*r_p[p_Nq-1-b];					
+	    }								
+	    
+	    s_q[c][j][a] = tmp;						
+	    s_q[c][p_cubNq-1-j][a] = tmp2;				
+	  }									
+	}									
+      }									
+
+      for(int t=0;t<p_cubNq2;++t;@inner(0)){
+	if(t<p_Nq*p_cubNq){
+	  int j = t%p_cubNq;
+	  int c = t/p_cubNq;
+
+#pragma unroll p_Nq	      	  
+	  for(int a=0;a<p_Nq;++a)						
+	    r_q[a] = s_q[c][j][a];					
+	  
+#pragma unroll p_halfI	    
+	  for(int i=0;i<p_halfI;++i){					
+	    dfloat tmp = 0;						
+	    dfloat tmp2 = 0;						
+	    
+#pragma unroll p_Nq
+	    for(int a=0;a<p_Nq;++a){					
+	      dfloat tmpI = s_cubI[i][a];					
+	      
+	      tmp += tmpI*r_q[a];						
+	      tmp2+=tmpI*r_q[p_Nq-1-a];					
+	    }								
+	    
+	    s_q[c][j][i] = tmp;						
+	    s_q[c][j][p_cubNq-1-i] = tmp2;				
+	  }								
+	}									
+      }									
+
+
+      for(int t=0;t<p_cubNq2;++t;@inner(0)){
+	int i = t%p_cubNq;
+	int j = t/p_cubNq;
+
+#pragma unroll p_Nq	      
+	for(int c=0;c<p_Nq;++c)						
+	  r_q[c] = s_q[c][j][i];						
+	
+#pragma unroll p_halfI	  
+	for(int k=0;k<p_halfI;++k){					
+	  
+	  const int id = p_Nvgeo*e*p_cubNp+k*p_cubNq*p_cubNq+j*p_cubNq+i+p_JWID*p_cubNp;		
+	  
+	  const int id2 = p_Nvgeo*e*p_cubNp+(p_cubNq-1-k)*p_cubNq*p_cubNq+j*p_cubNq+i+p_JWID*p_cubNp;	
+	  
+	  const dfloat r_GwJ  =cubvgeo[id];  // r_cubvgeo[k];
+	  const dfloat r_GwJ2 = cubvgeo[id2]; // r_cubvgeo[p_cubNq-1-k];  
+	  
+	  dfloat tmp = 0;							
+	  dfloat tmp2 = 0;						
+	  
+#pragma unroll p_Nq
+	  for(int c=0;c<p_Nq;++c){					
+	    dfloat tmpI = s_cubI[k][c];					
+	    
+	    tmp += tmpI*r_q[c];						
+	    tmp2 += tmpI*r_q[p_Nq-1-c];					
+	  }								
+	  
+	  s_q[k][j][i] = r_GwJ*tmp;					
+	  s_q[p_cubNq-k-1][j][i] = r_GwJ2*tmp2;				
+	}									
+      } 									
+
+      for(int t=0;t<p_cubNq2;++t;@inner(0)){
+	int i = t%p_cubNq;
+	int k = t/p_cubNq;
+
+#pragma unroll p_cubNq	      
+	for(int j=0;j<p_cubNq;++j)					
+	  r_q[j] = s_q[k][j][i];					
+	
+#pragma unroll p_halfI
+	for(int b=0;b<p_halfI;++b){					
+	  dfloat tmp = 0;							
+	  dfloat tmp2 = 0;						
+	  
+#pragma unroll p_cubNq
+	  for(int j=0;j<p_cubNq;++j){					
+	    dfloat tmpI = s_cubI[j][b];					
+	    tmp += tmpI*r_q[j] ;						
+	    tmp2 += tmpI*r_q[p_cubNq-1-j];				
+	  }								
+	  
+	  s_q[k][b][i] = tmp;						
+	  s_q[k][p_Nq-1-b][i] = tmp2;					
+	}									
+      }									
+
+      for(int t=0;t<p_cubNq2;++t;@inner(0)){
+	if(t<p_cubNq*p_Nq){
+	  int b = t%p_Nq;
+	  int k = t/p_Nq;
+
+#pragma unroll p_cubNq	      
+	  for(int i=0;i<p_cubNq;++i)					
+	    r_q[i] = s_q[k][b][i];					
+	  
+#pragma unroll p_halfI
+	  for(int a=0;a<p_halfI;++a){					
+	    
+	    dfloat tmp = 0;						
+	    dfloat tmp2 = 0;						
+	    
+#pragma unroll p_cubNq
+	    for(int i=0;i<p_cubNq;++i){					
+	      
+	      dfloat tmpI = s_cubI[i][a];					
+	      tmp += tmpI*r_q[i] ;					
+	      tmp2 += tmpI*r_q[p_cubNq-1-i];				
+	    }								
+	    s_q[k][b][a] = tmp;						
+	    s_q[k][b][p_Nq-1-a] = tmp2;					
+	  }								
+	}
+      }
+
+      for(int t=0;t<p_cubNq2;++t;@inner(0)){
+	if(t<p_Nq2){
+	  int a = t%p_Nq;
+	  int b = t/p_Nq;
+
+	  dfloat res = 0;
+
+#pragma unroll p_cubNq	      	  
+	  for(int k=0;k<p_cubNq;++k)					
+	    r_q[k] = s_q[k][b][a];					
+	  
+#pragma unroll p_halfI
+	  for(int c=0;c<p_halfI;++c){					
+									
+	    dfloat tmp = 0;						
+	    dfloat tmp2 = 0;						
+	    
+#pragma unroll p_cubNq	      
+	    for(int k=0;k<p_cubNq;++k){					
+	      dfloat tmpI = s_cubI[k][c];					
+	      
+	      tmp += tmpI*r_q[k] ;					
+	      tmp2 += tmpI*r_q[p_cubNq-1-k];				
+	    }								
+									
+	    r_Ap[c] = tmp;						
+	    r_Ap[p_Nq-1-c] = tmp2;
+	    
+	    res += tmp*r_p[c];
+	    res += tmp2*r_p[p_Nq-1-c];
+	  }
+
+	  s_pAp[t] = res;
+	}									
+      }									
+      // ENDING MASS MATRIX MULTIPLY HERE <==========================
+      
+      // p.Ap
+      dotProductV8t2D(s_pAp);
+      
+      for(int t=0;t<p_cubNq2;++t;@inner(0)){
+	if(t<p_Nq*p_Nq){
+	  int a = t%p_Nq;
+	  int b = t/p_Nq;
+	  
+	  const dfloat alpha = r_rdotz/s_pAp[0];
+	  dfloat res = 0;
+	  for(int k=0;k<p_Nq;++k){
+	    r_x[k] += alpha*r_p[k];
+	    r_r[k] -= alpha*r_Ap[k];
+	    res += r_r[k]*r_r[k];
+	  }
+	  s_normr2[t] = res;
+	}
+      }
+      
+      // r.r
+      dotProductV8t2D(s_normr2);
+
+      for(int t=0;t<p_cubNq2;++t;@inner(0)){
+	int i = t%p_Nq;
+	int j = t/p_Nq;
+	//	  if(s_normr2[0]<r_tol2){
+	if(it==(maxIterations-1)){
+	  if(t<p_Nq*p_Nq){
+	    for(int k=0;k<p_Nq;++k){
+	      const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np*p_Nfields;
+	      
+	      dfloat r_qcba = q[base];
+	      dfloat r_resq = resq[base];
+	      r_resq = rka*r_resq + dt*r_x[k];
+	      r_qcba += rkb*r_resq;
+	      
+	      resq[base] = r_resq;
+	      qnew[base] = r_qcba;
+	    }
+	  }
+	  it = maxIterations;
+	  return;
+	}else{
+	  if(i<p_Nq && j<p_Nq){
+	    dfloat res = 0;
+	    for(int k=0;k<p_Nq;++k){
+	      dlong id = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np;
+	      //r_z[k] = r_P[k]*r_r[k];
+	      r_z[k] = P[id]*r_r[k];
+	      res += r_r[k]*r_z[k];
+	    }
+	    s_rdotz[t] = res;
+	  }
+	}
+      }
+      
+      // r.z
+      dotProductV8t2D(s_rdotz);
 
       for(int t=0;t<p_cubNq2;++t;@inner(0)){
 	if(t<p_Nq2){
