@@ -2313,7 +2313,8 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
       if(t<p_Nq2){
 	int i = t%p_Nq;
 	int j = t/p_Nq;
-	
+
+#pragma unroll p_Nq	      	
 	for(int k=0;k<p_Nq;++k){
 	  dlong id = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np;
 	  r_x[k] = 0;
@@ -2391,7 +2392,8 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	if(t<p_Nq*p_cubNq){
 	  int j = t%p_cubNq;
 	  int c = t/p_cubNq;
-									
+
+#pragma unroll p_Nq	      	  
 	  for(int a=0;a<p_Nq;++a)						
 	    r_q[a] = s_q[c][j][a];					
 	  
@@ -2418,7 +2420,8 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
       for(int t=0;t<p_cubNq2;++t;@inner(0)){
 	int i = t%p_cubNq;
 	int j = t/p_cubNq;
-	
+
+#pragma unroll p_Nq	      
 	for(int c=0;c<p_Nq;++c)						
 	  r_q[c] = s_q[c][j][i];						
 	
@@ -2453,7 +2456,8 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
       for(int t=0;t<p_cubNq2;++t;@inner(0)){
 	int i = t%p_cubNq;
 	int k = t/p_cubNq;
-									
+
+#pragma unroll p_cubNq	      
 	for(int j=0;j<p_cubNq;++j)					
 	  r_q[j] = s_q[k][j][i];					
 	
@@ -2478,7 +2482,8 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	if(t<p_cubNq*p_Nq){
 	  int b = t%p_Nq;
 	  int k = t/p_Nq;
-	  
+
+#pragma unroll p_cubNq	      
 	  for(int i=0;i<p_cubNq;++i)					
 	    r_q[i] = s_q[k][b][i];					
 	  
@@ -2505,7 +2510,8 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	if(t<p_Nq*p_Nq){
 	  int a = t%p_Nq;
 	  int b = t/p_Nq;
-									
+
+#pragma unroll p_cubNq	      	  
 	  for(int k=0;k<p_cubNq;++k)					
 	    r_q[k] = s_q[k][b][a];					
 	  
