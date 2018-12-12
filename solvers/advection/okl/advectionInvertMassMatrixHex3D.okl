@@ -1489,9 +1489,9 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 
 
 #if (p_cubNq%2)==0
-#define p_halfI (p_cubNq/2)
+#define p_halfI (((int)p_cubNq)/2)
 #else
-#define p_halfI ((p_cubNq-1)/2)
+#define p_halfI ((((int)p_cubNq)+1)/2)
 #endif
 
 //s_I[p_cubNq][p_Nq]
@@ -2642,6 +2642,34 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
     }									\
   }
 
+// ok to 128 
+ #define dotProductV8t2DWarp(s_adotb)					\
+  for(int t=0;t<p_cubNq2;++t;@inner(0)){				\
+    int w = t/32;							\
+    int n = t%32;							\
+    int base = w*64+n;							\
+    if(base<p_Nq2){							\
+      if(base + 32<p_Nq2)						\
+	s_adotb[base] += s_adotb[base+32];				\
+      if(n<16 && base + 16<p_Nq2)					\
+	s_adotb[base] += s_adotb[base+16];				\
+      if(n< 8 && base +  8<p_Nq2)					\
+	s_adotb[base] += s_adotb[base+8];				\
+      if(n< 4 && base +  4<p_Nq2)					\
+	s_adotb[base] += s_adotb[base+4];				\
+      if(n< 2 && base +  2<p_Nq2)					\
+	s_adotb[base] += s_adotb[base+2];				\
+      if(n<1 && base +  1<p_Nq2)					\
+	s_adotb[base] += s_adotb[base+1];				\
+    }									\
+  }									\
+  									\
+  for(int t=0;t<p_cubNq2;++t;@inner(0)){				\
+    if(t==0 && 64<p_Nq2){						\
+      s_adotb[0] += s_adotb[64];					\
+    }									\
+  }
+
 
 // simplify dotproducts
 @kernel void advectionCombinedNodalWeakMMDGVolumeHex3D(const dlong Nelements,						       
@@ -2680,11 +2708,12 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
   for(dlong e=0; e<Nelements; ++e; @outer(0)) {
 
     @exclusive dlong  r_e;
-    @shared    dfloat s_q[p_cubNq][p_cubNq][p_cubNq+p_cubNpad];
+    @shared    dfloat s_q[p_Nq][p_Nq][p_Nq+p_Npad];
 
     @exclusive dfloat r_tmpi[p_Nq], r_tmpj[p_Nq], r_tmpk[p_Nq];
     
     @shared    dfloat s_D[p_Nq][p_Nq];
+    @shared    dfloat s_rhsq[p_cubNq][p_cubNq][p_cubNq+p_cubNpad];
 
     for(int t=0;t<p_cubNq2;++t;@inner(0)){
       
@@ -2740,9 +2769,15 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	    r_tmpk[n] += Dcn*r_qk;
 	  }
 	} // end c loop
+
+	for(int c=0;c<p_Nq;++c){
+	  s_rhsq[b][a][c] = r_tmpi[c];
+	}
+	
       } // end t
     }
-    
+
+#if 0
     // THIS BARRIER IS IMPORTANT ???
     for(int t=0;t<p_cubNq2;++t;@inner(0)){
       if(t<p_Nq2){
@@ -2750,7 +2785,20 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	int b = t/p_Nq;
 	
 	for(int c=0;c<p_Nq;++c){
-	  s_q[b][a][c] = r_tmpi[c];
+	  s_rhsq[b][a][c] = r_tmpi[c];
+	}
+      }
+    }
+#endif
+
+    for(int t=0;t<p_cubNq2;++t;@inner(0)){
+      if(t<p_Nq2){
+	int a = t%p_Nq;
+	int b = t/p_Nq;
+
+#pragma unroll p_Nq
+	for(int c=0;c<p_Nq;++c){
+	  s_rhsq[b][c][a] += r_tmpj[c];
 	}
       }
     }
@@ -2759,20 +2807,10 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
       if(t<p_Nq2){
 	int a = t%p_Nq;
 	int b = t/p_Nq;
-
+#pragma unroll p_Nq
 	for(int c=0;c<p_Nq;++c){
-	  s_q[b][c][a] += r_tmpj[c];
-	}
-      }
-    }
-
-    for(int t=0;t<p_cubNq2;++t;@inner(0)){
-      if(t<p_Nq2){
-	int a = t%p_Nq;
-	int b = t/p_Nq;
-	for(int c=0;c<p_Nq;++c){
-	  const dfloat qbca = s_q[c][b][a] + r_tmpk[c];
-	  s_q[c][b][a] = -qbca;
+	  const dfloat qbca = s_rhsq[c][b][a] + r_tmpk[c];
+	  s_rhsq[c][b][a] = -qbca;
 	}
       }
     }
@@ -2798,7 +2836,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	  const int bM = (vidM/p_Nq)%p_Nq;
 	  const int cM = vidM/(p_Nq*p_Nq);
 	  
-	  s_q[cM][bM][aM] += FP*qP + FM*qM;
+	  s_rhsq[cM][bM][aM] += FP*qP + FM*qM;
 	}
       }
     }
@@ -2811,9 +2849,20 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 #define r_r r_tmpj
 #define r_z r_tmpk
     
-    @exclusive dfloat r_p[p_Nq], r_Ap[p_Nq], r_rdotz, r_tol2, r_q[p_cubNq]; // r_P[p_Nq]
-    //    @exclusive dfloat r_cubvgeo[p_cubNq];
-    @shared volatile dfloat s_rdotz[p_Nq*p_Nq], s_pAp[p_Nq*p_Nq], s_normr2[p_Nq*p_Nq];
+    @exclusive dfloat r_p[p_Nq], r_Ap[p_Nq], r_rdotz, r_tol2, r_q[p_cubNq];
+#if 0
+    @exclusive dfloat r_cubvgeo[p_cubNq];
+#endif
+#if 0
+    @shared dfloat s_cubvgeo[p_cubNq][p_cubNq][p_cubNq];
+#endif
+#if 0
+    @exclusive dfloat r_P[p_Nq];
+#endif
+#if 0
+    @shared dfloat s_P[p_Nq][p_Nq][p_Nq];
+#endif
+    @shared volatile dfloat s_rdotz[p_Nq*p_Nq], s_pAp[p_Nq*p_Nq], s_rdotr[p_Nq*p_Nq];
     @shared dfloat s_cubI[p_cubNq][p_Nq+p_Npad];
 
     for(int t=0;t<p_cubNq2;++t;@inner(0)){
@@ -2823,12 +2872,22 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 
 #pragma unroll p_Nq	      	
 	for(int k=0;k<p_Nq;++k){
-	  dlong id = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np;
 	  r_x[k] = 0;
-	  r_r[k] = s_q[k][j][i];
-	  //	  r_P[k] = P[id];
-	  //r_z[k] = P[id]*r_r[k];
-	  r_z[k] = P[id]*r_r[k]; // r_P[k]*r_r[k];
+	  r_r[k] = s_rhsq[k][j][i];
+
+	  dlong id = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np;
+
+#if 0
+	  r_P[k] = P[id];
+	  r_z[k] = r_P[k]*r_r[k];
+#endif
+#if 0
+	  s_P[k][j][i] = P[id];
+	  r_z[k] = s_P[k][j][i]*r_r[k];
+#endif
+#if 1
+	  r_z[k] = P[id]*r_r[k]; 
+#endif
 	  r_p[k] = r_z[k];
 	}
       }
@@ -2843,12 +2902,19 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	r_cubvgeo[k] = cubvgeo[gid];
       }
 #endif
+#if 0
+      for(int k=0;k<p_cubNq;++k){
+	dlong gid = r_e*p_cubNp + k*p_cubNq*p_cubNq + t;
+	s_cubvgeo[0][0][t+k*p_cubNq2] = cubvgeo[gid];
+      }
+#endif
+       
     }
     
     // compute norm squared, b.b and choose convergence tolerance
-    dotProductV8t(r_r, r_r, s_pAp);
+    dotProductV8t(r_r, r_r, s_rdotr);
     for(int t=0;t<p_cubNq2;++t;@inner(0)){
-      dfloat r_normb2 = s_pAp[0];
+      dfloat r_normb2 = s_rdotr[0];
       r_tol2 = tol*tol;
       
       if(r_normb2>(1.0)){
@@ -2862,7 +2928,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
     for(int t=0;t<p_cubNq2;++t;@inner(0)){
       r_rdotz = s_rdotz[0];
     }
-    
+
     for(int it=0;it<maxIterations;++it){
       
       // apply mass Ap
@@ -2888,8 +2954,8 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	      tmp2 += tmpI*r_p[p_Nq-1-b];					
 	    }								
 	    
-	    s_q[c][j][a] = tmp;						
-	    s_q[c][p_cubNq-1-j][a] = tmp2;				
+	    s_rhsq[c][j][a] = tmp;						
+	    s_rhsq[c][p_cubNq-1-j][a] = tmp2;				
 	  }									
 	}									
       }									
@@ -2901,7 +2967,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 
 #pragma unroll p_Nq	      	  
 	  for(int a=0;a<p_Nq;++a)						
-	    r_q[a] = s_q[c][j][a];					
+	    r_q[a] = s_rhsq[c][j][a];					
 	  
 #pragma unroll p_halfI	    
 	  for(int i=0;i<p_halfI;++i){					
@@ -2916,8 +2982,8 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	      tmp2+=tmpI*r_q[p_Nq-1-a];					
 	    }								
 	    
-	    s_q[c][j][i] = tmp;						
-	    s_q[c][j][p_cubNq-1-i] = tmp2;				
+	    s_rhsq[c][j][i] = tmp;						
+	    s_rhsq[c][j][p_cubNq-1-i] = tmp2;				
 	  }								
 	}									
       }									
@@ -2929,18 +2995,25 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 
 #pragma unroll p_Nq	      
 	for(int c=0;c<p_Nq;++c)						
-	  r_q[c] = s_q[c][j][i];						
+	  r_q[c] = s_rhsq[c][j][i];						
 	
 #pragma unroll p_halfI	  
 	for(int k=0;k<p_halfI;++k){					
-	  
-	  const int id = p_Nvgeo*e*p_cubNp+k*p_cubNq*p_cubNq+j*p_cubNq+i+p_JWID*p_cubNp;		
-	  
+
+#if 1   
+	  const int id = p_Nvgeo*e*p_cubNp+k*p_cubNq*p_cubNq+j*p_cubNq+i+p_JWID*p_cubNp;		  
 	  const int id2 = p_Nvgeo*e*p_cubNp+(p_cubNq-1-k)*p_cubNq*p_cubNq+j*p_cubNq+i+p_JWID*p_cubNp;	
-	  
-	  const dfloat r_GwJ  =cubvgeo[id];  // r_cubvgeo[k];
-	  const dfloat r_GwJ2 = cubvgeo[id2]; // r_cubvgeo[p_cubNq-1-k];  
-	  
+	  const dfloat r_GwJ  =cubvgeo[id];  
+	  const dfloat r_GwJ2 = cubvgeo[id2];
+#endif
+#if 0
+	  const dfloat r_GwJ = r_cubvgeo[k];
+	  const dfloat r_GwJ2 = r_cubvgeo[p_cubNq-1-k];
+#endif
+#if 0
+	  const dfloat r_GwJ = s_cubvgeo[k][j][i];
+	  const dfloat r_GwJ2 = s_cubvgeo[p_cubNq-1-k][j][i];
+#endif	  
 	  dfloat tmp = 0;							
 	  dfloat tmp2 = 0;						
 	  
@@ -2952,8 +3025,8 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	    tmp2 += tmpI*r_q[p_Nq-1-c];					
 	  }								
 	  
-	  s_q[k][j][i] = r_GwJ*tmp;					
-	  s_q[p_cubNq-k-1][j][i] = r_GwJ2*tmp2;				
+	  s_rhsq[k][j][i] = r_GwJ*tmp;					
+	  s_rhsq[p_cubNq-k-1][j][i] = r_GwJ2*tmp2;				
 	}									
       } 									
 
@@ -2963,7 +3036,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 
 #pragma unroll p_cubNq	      
 	for(int j=0;j<p_cubNq;++j)					
-	  r_q[j] = s_q[k][j][i];					
+	  r_q[j] = s_rhsq[k][j][i];					
 	
 #pragma unroll p_halfI
 	for(int b=0;b<p_halfI;++b){					
@@ -2977,8 +3050,8 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	    tmp2 += tmpI*r_q[p_cubNq-1-j];				
 	  }								
 	  
-	  s_q[k][b][i] = tmp;						
-	  s_q[k][p_Nq-1-b][i] = tmp2;					
+	  s_rhsq[k][b][i] = tmp;						
+	  s_rhsq[k][p_Nq-1-b][i] = tmp2;					
 	}									
       }									
 
@@ -2989,7 +3062,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 
 #pragma unroll p_cubNq	      
 	  for(int i=0;i<p_cubNq;++i)					
-	    r_q[i] = s_q[k][b][i];					
+	    r_q[i] = s_rhsq[k][b][i];					
 	  
 #pragma unroll p_halfI
 	  for(int a=0;a<p_halfI;++a){					
@@ -3004,8 +3077,8 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	      tmp += tmpI*r_q[i] ;					
 	      tmp2 += tmpI*r_q[p_cubNq-1-i];				
 	    }								
-	    s_q[k][b][a] = tmp;						
-	    s_q[k][b][p_Nq-1-a] = tmp2;					
+	    s_rhsq[k][b][a] = tmp;						
+	    s_rhsq[k][b][p_Nq-1-a] = tmp2;					
 	  }								
 	}
       }
@@ -3019,7 +3092,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 
 #pragma unroll p_cubNq	      	  
 	  for(int k=0;k<p_cubNq;++k)					
-	    r_q[k] = s_q[k][b][a];					
+	    r_q[k] = s_rhsq[k][b][a];					
 	  
 #pragma unroll p_halfI
 	  for(int c=0;c<p_halfI;++c){					
@@ -3048,7 +3121,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
       // ENDING MASS MATRIX MULTIPLY HERE <==========================
       
       // p.Ap
-      dotProductV8t2D(s_pAp);
+      dotProductV8t2DWarp(s_pAp);
       
       for(int t=0;t<p_cubNq2;++t;@inner(0)){
 	if(t<p_Nq*p_Nq){
@@ -3057,28 +3130,30 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	  
 	  const dfloat alpha = r_rdotz/s_pAp[0];
 	  dfloat res = 0;
+
+#pragma unroll p_Nq
 	  for(int k=0;k<p_Nq;++k){
 	    r_x[k] += alpha*r_p[k];
 	    r_r[k] -= alpha*r_Ap[k];
 	    res += r_r[k]*r_r[k];
 	  }
-	  s_normr2[t] = res;
+	  s_rdotr[t] = res;
 	}
       }
       
       // r.r
-      dotProductV8t2D(s_normr2);
+      dotProductV8t2DWarp(s_rdotr);
 
       for(int t=0;t<p_cubNq2;++t;@inner(0)){
 	int i = t%p_Nq;
 	int j = t/p_Nq;
-	//	  if(s_normr2[0]<r_tol2){
+	//	  if(s_rdotr[0]<r_tol2){
 	if(it==(maxIterations-1)){
 	  if(t<p_Nq*p_Nq){
 	    for(int k=0;k<p_Nq;++k){
 	      const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np*p_Nfields;
 	      
-	      dfloat r_qcba = q[base];
+	      dfloat r_qcba = s_q[k][j][i];
 	      dfloat r_resq = resq[base];
 	      r_resq = rka*r_resq + dt*r_x[k];
 	      r_qcba += rkb*r_resq;
@@ -3093,9 +3168,16 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 	  if(i<p_Nq && j<p_Nq){
 	    dfloat res = 0;
 	    for(int k=0;k<p_Nq;++k){
+#if 0
+	      r_z[k] = r_P[k]*r_r[k];
+#endif
+#if 0
+	      r_z[k] = s_P[k][j][i]*r_r[k];
+#endif
+#if 1
 	      dlong id = i + j*p_Nq + k*p_Nq*p_Nq + r_e*p_Np;
-	      //r_z[k] = r_P[k]*r_r[k];
 	      r_z[k] = P[id]*r_r[k];
+#endif
 	      res += r_r[k]*r_z[k];
 	    }
 	    s_rdotz[t] = res;
@@ -3104,7 +3186,7 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
       }
       
       // r.z
-      dotProductV8t2D(s_rdotz);
+      dotProductV8t2DWarp(s_rdotz);
 
       for(int t=0;t<p_cubNq2;++t;@inner(0)){
 	if(t<p_Nq2){
