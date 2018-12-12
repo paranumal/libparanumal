@@ -190,8 +190,8 @@ typedef struct {
 
  cds_t *cdsSetup(mesh_t *mesh, setupAide options);
 
-// void insRunARK(ins_t *ins);
-// void insRunEXTBDF(ins_t *ins);
+// void insRunARK(cds_t *ins);
+void cdsRunEXTBDF(cds_t *cds);
 
 // void insPlotVTU(ins_t *ins, char *fileNameBase);
 // void insReport(ins_t *ins, dfloat time,  int tstep);
