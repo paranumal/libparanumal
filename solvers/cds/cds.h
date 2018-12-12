@@ -153,10 +153,10 @@ typedef struct {
    occa::kernel setFlowFieldKernel;
    occa::kernel setScalarFieldKernel;
 
-  // occa::kernel advectionVolumeKernel;
-  // occa::kernel advectionSurfaceKernel;
-  // occa::kernel advectionCubatureVolumeKernel;
-  // occa::kernel advectionCubatureSurfaceKernel;
+  occa::kernel advectionVolumeKernel;
+  occa::kernel advectionSurfaceKernel;
+  occa::kernel advectionCubatureVolumeKernel;
+  occa::kernel advectionCubatureSurfaceKernel;
 
   // occa::kernel diffusionKernel;
   // occa::kernel diffusionIpdgKernel;

@@ -40,87 +40,32 @@ SOFTWARE.
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
-#define cdsVelocityDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \
+#define cdsDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, sM, sB) \
 {                                   \
   if(bc==1){                        \
-    *(uB) = 0.f;                    \
-    *(vB) = 0.f;                    \
-    *(wB) = 0.f;                    \
+    *(sB) = 0.f;                    \
   } else if(bc==2){                 \
-    *(uB) = p_ubar;                 \
-    *(vB) = p_vbar;                 \
-    *(wB) = p_wbar;                 \
+    *(sB) = p_sbar;                 \
   } else if(bc==3){                 \
-    *(uB) = uM;                     \
-    *(vB) = vM;                     \
-    *(wB) = wM;                     \
+    *(sB) = sM;                     \
   } else if(bc==4||bc==5||bc==6){   \
-    *(uB) = uM - (nx*uM+ny*vM+nz*wM)*nx;\
-    *(vB) = vM - (nx*uM+ny*vM+nz*wM)*ny;\
-    *(wB) = wM - (nx*uM+ny*vM+nz*wM)*nz;\
+    *(sB) = sM; \
   }                                 \
 }
 
-#define cdsVelocityNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, uxM, uyM, uzM, vxM, vyM, vzM, wxM, wyM, wzM, uxB, uyB, uzB, vxB, vyB, vzB, wxB, wyB, wzB) \
+#define cdsNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, sxM, syM, szM, sxB, syB, szB) \
 {                                          \
   if(bc==1 || bc==2){                      \
-    *(uxB) = uxM;                          \
-    *(uyB) = uyM;                          \
-    *(uzB) = uzM;                          \
-    *(vxB) = vxM;                          \
-    *(vyB) = vyM;                          \
-    *(vzB) = vzM;                          \
-    *(wxB) = wxM;                          \
-    *(wyB) = wyM;                          \
-    *(wzB) = wzM;                          \
+    *(sxB) = sxM;                          \
+    *(syB) = syM;                          \
+    *(szB) = szM;                          \
   } else if(bc==3){                        \
-    *(uxB) = 0.f;                          \
-    *(uyB) = 0.f;                          \
-    *(uzB) = 0.f;                          \
-    *(vxB) = 0.f;                          \
-    *(vyB) = 0.f;                          \
-    *(vzB) = 0.f;                          \
-    *(wxB) = 0.f;                          \
-    *(wyB) = 0.f;                          \
-    *(wzB) = 0.f;                          \
+    *(sxB) = 0.f;                          \
+    *(syB) = 0.f;                          \
+    *(szB) = 0.f;                          \
   } else if(bc==4||bc==5||bc==6){          \
-    *(uxB) = nx*nx*uxM;                    \
-    *(uyB) = nx*nx*uyM;                    \
-    *(uzB) = nx*nx*uzM;                    \
-    *(vxB) = ny*ny*vxM;                    \
-    *(vyB) = ny*ny*vyM;                    \
-    *(vzB) = ny*ny*vzM;                    \
-    *(wxB) = nz*nz*wxM;                    \
-    *(wyB) = nz*nz*wyM;                    \
-    *(wzB) = nz*nz*wzM;                    \
-  }                                        \
-}
-
-
-#define cdsPressureDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, pM, pB) \
-{                                   \
-  if(bc==1 || bc==2){               \
-    *(pB) = pM;                     \
-  } else if(bc==3){                 \
-    *(pB) = p_pbar;                 \
-  } else if(bc==4||bc==5||bc==6){   \
-    *(pB) = pM;                     \
-  }                                 \
-}
-
-#define cdsPressureNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, pxM, pyM, pzM, pxB, pyB, pzB) \
-{                                          \
-  if(bc==1 || bc==2){                      \
-    *(pxB) = 0.f;                          \
-    *(pyB) = 0.f;                          \
-    *(pzB) = 0.f;                          \
-  } else if(bc==3){                        \
-    *(pxB) = pxM;                          \
-    *(pyB) = pyM;                          \
-    *(pzB) = pzM;                          \
-  } else if(bc==4||bc==5||bc==6){          \
-    *(pxB) = 0.f;                          \
-    *(pyB) = 0.f;                          \
-    *(pzB) = 0.f;                          \
+    *(sxB) = nx*nx*sxM;                    \
+    *(syB) = nx*nx*syM;                    \
+    *(szB) = nx*nx*szM;                    \
   }                                        \
 }
