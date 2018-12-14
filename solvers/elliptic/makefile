@@ -135,7 +135,13 @@ LOBJS = \
 ../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
-ellipticMain:$(AOBJS) $(LOBJS) ./src/ellipticMain.o libblas libogs libparAlmond
+ifdef PMPI_WRAP
+	PMPI_WRAP_DIR := ../../libs/PMPIWrap
+	LIBS          += -L$(PMPI_WRAP_DIR) -lPMPIWrap -lnvToolsExt
+	PMPI_WRAP_DEP  = PMPIWrap
+endif
+
+ellipticMain:$(AOBJS) $(LOBJS) ./src/ellipticMain.o libblas libogs libparAlmond $(PMPI_WRAP_DEP)
 	$(LD)  $(LDFLAGS)  -o ellipticMain ./src/ellipticMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
@@ -149,6 +155,9 @@ libblas:
 
 libparAlmond:
 	cd ../../libs/parAlmond; make -j lib; cd ../../solvers/elliptic
+
+PMPIWrap:
+	cd ../../libs/PMPIWrap make
 
 all: lib ellipticMain
 
