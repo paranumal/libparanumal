@@ -2,10 +2,10 @@
 1.0
 
 [DATA FILE]
-data/cdsUniform3D.h
+data/cdsUCD3D.h
 
 [MESH FILE]
-../../meshes/insBeltramiHex3D.msh
+../../meshes/cdsUCDHex3D.msh
 
 
 [MESH DIMENSION]
@@ -15,7 +15,7 @@ data/cdsUniform3D.h
 12
 
 [POLYNOMIAL DEGREE]
-4
+8
 
 [ELEMENT MAP]
 ISOPARAMETRIC
@@ -48,7 +48,7 @@ CUBATURE
 1
 
 [CONDUCTIVITY]
-1
+0.01 
 
 [SPECIFIC HEAT]
 1
@@ -75,7 +75,7 @@ CUBATURE
 0
 
 [FINAL TIME]
-0.1
+1.25
 
 [CFL]
 0.1
@@ -87,7 +87,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-fence
+ucd3D
 
 #################################################
 ########## Solver Options ##############
@@ -141,7 +141,7 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be BELTRAMI
 [EXACT]
-BELTRAMI
+UCD
 
 [VERBOSE]
-TRUE
+FALSE

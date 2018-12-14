@@ -57,27 +57,14 @@ AOBJS    = \
 ./src/cdsRunEXTBDF.o \
 ./src/cdsAdvection.o \
 ./src/cdsHelmholtzRhs.o \
+./src/cdsHelmholtzSolve.o \
+./src/cdsError.o \
+./src/cdsReport.o \
+./src/cdsPlotVTU.o \
 #./src/insPlotWallsVTUHex3D.o \
 # ./src/insPlotVTUHex3D.o \
-# ./src/insPlotVTU.o \
-# ./src/insError.o \
-# ./src/insForces.o \
-# ./src/insComputeDt.o \
-# ./src/insReport.o \
-# ./src/insRunARK.o \
-# ./src/insDiffusion.o \
-# ./src/insGradient.o \
-# ./src/insDivergence.o \
 # ./src/insSubCycle.o \
-# ./src/insVelocitySolve.o \
-# ./src/insVelocityUpdate.o \
-# ./src/insPressureRhs.o \
-# ./src/insPressureSolve.o \
-# ./src/insPressureUpdate.o \
 # ./src/insRestart.o \
-# ./src/insWeldTriVerts.o \
-# ./src/insIsoPlotVTU.o \
-# ./src/insBrownMinionQuad3D.o 
 
 # library objects
 LOBJS = \

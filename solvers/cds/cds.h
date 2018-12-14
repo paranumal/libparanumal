@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -148,11 +148,11 @@ typedef struct {
   occa::memory o_extbdfA, o_extbdfB, o_extbdfC;
   occa::memory o_extC;
 
-   occa::kernel haloExtractKernel;
-   occa::kernel haloScatterKernel;
+  occa::kernel haloExtractKernel;
+  occa::kernel haloScatterKernel;
 
-   occa::kernel setFlowFieldKernel;
-   occa::kernel setScalarFieldKernel;
+  occa::kernel setFlowFieldKernel;
+  occa::kernel setScalarFieldKernel;
 
   occa::kernel advectionVolumeKernel;
   occa::kernel advectionSurfaceKernel;
@@ -188,40 +188,25 @@ typedef struct {
 
 }cds_t;
 
- cds_t *cdsSetup(mesh_t *mesh, setupAide options);
+cds_t *cdsSetup(mesh_t *mesh, setupAide options);
 
-// void insRunARK(cds_t *ins);
 void cdsRunEXTBDF(cds_t *cds);
 
-// void insPlotVTU(ins_t *ins, char *fileNameBase);
-// void insReport(ins_t *ins, dfloat time,  int tstep);
-// void insError(ins_t *ins, dfloat time);
-// void insForces(ins_t *ins, dfloat time);
-// void insComputeDt(ins_t *ins, dfloat time); 
+void cdsPlotVTU(cds_t *cds, char *fileNameBase);
+void cdsReport(cds_t *cds, dfloat time,  int tstep);
+void cdsError(cds_t *cds, dfloat time);
 
 void cdsAdvection(cds_t *ins, dfloat time, occa::memory o_U, occa::memory o_S, occa::memory o_NS);
-// void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);
-// void insGradient (ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP);
-// void insDivergence(ins_t *ins,dfloat time, occa::memory o_U, occa::memory o_DU);
 // void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_NU);
 
-   void cdsHelmholtzRhs(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS);
-// void insVelocitySolve(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW, occa::memory o_rkU);
-// void insVelocityUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkGP, occa::memory o_rkU);
+void cdsHelmholtzRhs(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS);
+void cdsHelmholtzSolve(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS,occa::memory o_rkS);
 
-// void insPressureRhs  (ins_t *ins, dfloat time, int stage);
-// void insPressureSolve(ins_t *ins, dfloat time, int stage);
-// void insPressureUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkP);
-
-// // Welding  to Tris, needs to be moved seperate library
-// int insWeldTriVerts(ins_t *ins, int isoNtris, dfloat *isoq);
-// void insIsoPlotVTU(ins_t *ins, char *fileName);
 
 // // Restarting from file
 // void insRestartWrite(ins_t *ins, setupAide &options, dfloat time); 
 // void insRestartRead(ins_t *ins, setupAide &options); 
 
-// void insBrownMinionQuad3D(ins_t *ins);
 // customized hex writer
 // extern "C"
 // {
