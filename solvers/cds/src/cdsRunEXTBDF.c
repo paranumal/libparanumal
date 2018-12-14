@@ -57,10 +57,9 @@ void cdsRunEXTBDF(cds_t *cds){
     cdsAdvection(cds, time, cds->o_U, cds->o_S, cds->o_NS);
      //  }    
     cdsHelmholtzRhs  (cds, time+cds->dt, cds->Nstages, cds->o_rhsS);
-    /*
-    insHelmholtzSolve(cds, time+cds->dt, cds->Nstages, cds->o_rhsS, cds->o_rkS);
 
-    
+    cdsHelmholtzSolve(cds, time+cds->dt, cds->Nstages, cds->o_rhsS, cds->o_rkS);
+   
     //cycle history
     for (int s=cds->Nstages;s>1;s--) {
       cds->o_S.copyFrom(cds->o_S, cds->Ntotal*cds->NSfields*sizeof(dfloat), 
@@ -74,6 +73,7 @@ void cdsRunEXTBDF(cds_t *cds){
 
     //copy updated scalar
     cds->o_S.copyFrom(cds->o_rkS, cds->NSfields*cds->Ntotal*sizeof(dfloat)); 
+
 #if 0
     if(((tstep+1)%10)==0){
       char fname[BUFSIZ];
@@ -84,45 +84,27 @@ void cdsRunEXTBDF(cds_t *cds){
       fclose(fp);
     }
 #endif
-
+ 
     occaTimerTic(mesh->device,"Report");
-#if 0
+
     if(cds->outputStep){
       if(((tstep+1)%(cds->outputStep))==0){
-        if (cds->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, cds->NiterU, cds->NiterV, cds->NiterP);
-        if (cds->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, cds->NiterU, cds->NiterV, cds->NiterW, cds->NiterP);
-
-        insReport(ins, time+cds->dt, tstep+1);
-
-
-
-
+         printf("\rtstep = %d, solver iteration: S - %3d \n", tstep+1, cds->Niter);
+        cdsReport(cds, time+cds->dt, tstep+1);
+#if 0
         // Write a restart file
         if(cds->writeRestartFile){
           if(mesh->rank==0) printf("\nWriting Binary Restart File....");
-	  insRestartWrite(ins, cds->options, time+cds->dt);
+	  cdsRestartWrite(ins, cds->options, time+cds->dt);
           if(mesh->rank==0) printf("done\n");
         }
-
-        // // Update Time-Step Size
-        // if(cds->dtAdaptStep){
-        //   if(((cds->tstep)%(cds->dtAdaptStep))==0){
-        //     if(rank==0) printf("\n Adapting time Step Size to ");
-        //       insComputeDt(ins, cds->time);
-        //     if(rank==0) printf("%.4e\n", cds->dt);
-        //      // Interpolate history for the new time step size
-        //       insInterpolateHistory(ins, cds->dtold, cds->dt);
-
-        //   }
-        // } 
+#endif
       }
     }
-#endif
     //  if (cds->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, cds->NiterU, cds->NiterV, cds->NiterP); fflush(stdout);
     // if (cds->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, cds->NiterU, cds->NiterV, cds->NiterW, cds->NiterP); fflush(stdout);
     
     occaTimerToc(mesh->device,"Report");
-    */
   }
   occaTimerToc(mesh->device,"CDS");
 
