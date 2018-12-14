@@ -303,7 +303,6 @@ SOFTWARE.
                                              const dlong soffset,
                                              @restrict const  dfloat *  U,
                                              @restrict const  dfloat *  S,
-                                                   @restrict dfloat *  cU, //storage for interpolated fields
                                                    @restrict dfloat *  NS){
 
   //----------------------------@kernel 1 interpolate velocity fields to quadrature points

@@ -24,42 +24,23 @@
 
 */
 
+#include "cds.h"
 
-@kernel void cdsHaloExtract(const dlong Nelements,
-			    const dlong NhaloElements,
-			    @restrict const  dlong   *  haloElements,
-			    const dlong soffset,
-			    @restrict const  dfloat *  S,
-			    @restrict dfloat *  haloq){
+void cdsHelmholtzRhs(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS){
+  
+  mesh_t *mesh = cds->mesh; 
 
-  for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
-    for(int n=0;n<p_Np;++n;@inner(0)){     // for all entries in this element
-      const dlong id   = n + p_Np*haloElements[e];
-      const dlong base = n + p_NSfields*p_Np*e;
-
-#pragma unroll p_NSfields
-      for (int i=0;i<p_NSfields;i++) {
-        haloq[base + i*p_Np] = S[id +i*soffset];
-      }
-    }
-  }
-}
-
-@kernel void cdsHaloScatter(const dlong Nelements,
-			    const dlong NhaloElements,
-			    const dlong soffset,
-			    @restrict dfloat *  S,
-			    @restrict const  dfloat *  haloq){
-
-  for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
-    for(int n=0;n<p_Np;++n;@inner(0)){ 
-      const dlong id   = n + p_Np*(e+Nelements);
-      const dlong base = n + p_NSfields*p_Np*e;
-
-#pragma unroll p_NSfields
-      for (int i=0;i<p_NSfields;i++) {
-        S[id + i*soffset] = haloq[base + i*p_Np];
-      }
-    }
-  }
+  // rhsU^s = MM*(\sum^s b_i U^n-i - \sum^s-1 a_i N(U^n-i) + \sum^s-1 c_i GP^n-i)/nu dt
+  cds->helmholtzRhsKernel(mesh->Nelements,
+			  mesh->o_vgeo,
+			  mesh->o_MM,
+			  cds->idt,
+			  cds->ialf,
+			  cds->o_extbdfA,
+			  cds->o_extbdfB,
+			  cds->o_extbdfC,
+			  cds->sOffset,
+			  cds->o_S,
+			  cds->o_NS,
+			  o_rhsS);
 }
