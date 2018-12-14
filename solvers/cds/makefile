@@ -55,6 +55,8 @@ $(ELLIPTICDIR)/ellipticMultiGrid.h
 AOBJS    = \
 ./src/cdsSetup.o \
 ./src/cdsRunEXTBDF.o \
+./src/cdsAdvection.o \
+./src/cdsHelmholtzRhs.o \
 #./src/insPlotWallsVTUHex3D.o \
 # ./src/insPlotVTUHex3D.o \
 # ./src/insPlotVTU.o \
@@ -63,12 +65,10 @@ AOBJS    = \
 # ./src/insComputeDt.o \
 # ./src/insReport.o \
 # ./src/insRunARK.o \
-# ./src/insAdvection.o \
 # ./src/insDiffusion.o \
 # ./src/insGradient.o \
 # ./src/insDivergence.o \
 # ./src/insSubCycle.o \
-# ./src/insVelocityRhs.o \
 # ./src/insVelocitySolve.o \
 # ./src/insVelocityUpdate.o \
 # ./src/insPressureRhs.o \

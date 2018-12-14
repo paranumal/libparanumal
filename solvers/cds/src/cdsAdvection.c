@@ -1,34 +1,38 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
+#define ADV_DEBUG 0
 
 #include "cds.h"
 
 // compute NS = N(UxS)
 void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, occa::memory o_NS){
 
+#if ADV_DEBUG
+  printf("Starting Advection Step \n "); 
+#endif
   mesh_t *mesh = cds->mesh;
   
   //Exctract Halo On Device, all fields
@@ -36,7 +40,7 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
     cds->haloExtractKernel(mesh->Nelements,
                            mesh->totalHaloPairs,
                            mesh->o_haloElementList,
-                           cds->fieldOffset,
+                           cds->sOffset,
                            cds->o_S,
                            cds->o_haloBuffer);
 
@@ -45,13 +49,16 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
   
     // start halo exchange
     meshHaloExchangeStart(mesh,
-                         mesh->Np*(cds->NSfields)*sizeof(dfloat),
-                         cds->sendBuffer,
-                         cds->recvBuffer);
+			  mesh->Np*(cds->NSfields)*sizeof(dfloat),
+			  cds->sendBuffer,
+			  cds->recvBuffer);
   }
 
+#if ADV_DEBUG
+  printf("\tSolving  Advection Volume ..."); 
+#endif
 
-  /*
+  
   // Compute Volume Contribution
   occaTimerTic(mesh->device,"AdvectionVolume");
   if(cds->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
@@ -61,33 +68,50 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
                                        mesh->o_cubDWmatrices,
                                        mesh->o_cubInterpT,
                                        mesh->o_cubProjectT,
-                                       cds->fieldOffset,
-                                       o_U,
-                                       cds->o_cU,
-                                       o_NU);
+                                       cds->vOffset,
+                                       cds->sOffset,
+				       o_U,
+                                       o_S,
+                                       o_NS);
   } else {
     cds->advectionVolumeKernel(mesh->Nelements,
                                mesh->o_vgeo,
                                mesh->o_Dmatrices,
-                               cds->fieldOffset,
+                               cds->vOffset,
+                               cds->sOffset,
                                o_U,
-                               o_NU);
+                               o_S,
+                               o_NS);
   }
   occaTimerToc(mesh->device,"AdvectionVolume");
 
+#if ADV_DEBUG
+  printf("\tdone \n "); 
+#endif
+
+
+
+  
   // COMPLETE HALO EXCHANGE
   if(mesh->totalHaloPairs>0){
     meshHaloExchangeFinish(mesh);
 
-    cds->o_vHaloBuffer.copyFrom(cds->vRecvBuffer); 
+    cds->o_haloBuffer.copyFrom(cds->recvBuffer); 
 
-    cds->velocityHaloScatterKernel(mesh->Nelements,
-                                  mesh->totalHaloPairs,
-                                  cds->fieldOffset,
-                                  o_U,
-                                  cds->o_vHaloBuffer);
+    cds->haloScatterKernel(mesh->Nelements,
+			   mesh->totalHaloPairs,
+			   cds->sOffset,
+			   o_S,
+			   cds->o_haloBuffer);
   }
 
+
+#if ADV_DEBUG
+  printf("\tSolving  Advection Surface ..."); 
+#endif
+
+
+  
   occaTimerTic(mesh->device,"AdvectionSurface");
   if(cds->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
     cds->advectionCubatureSurfaceKernel(mesh->Nelements,
@@ -105,9 +129,11 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
                                         mesh->o_intx,
                                         mesh->o_inty,
                                         mesh->o_intz,
-                                        cds->fieldOffset,
+                                        cds->vOffset,
+                                        cds->sOffset,
                                         o_U,
-                                        o_NU);
+                                        o_S,
+                                        o_NS);
   } else {
     cds->advectionSurfaceKernel(mesh->Nelements,
                                 mesh->o_sgeo,
@@ -119,11 +145,20 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
                                 mesh->o_x,
                                 mesh->o_y,
                                 mesh->o_z,
-                                cds->fieldOffset,
+                                cds->vOffset,
+				cds->sOffset,
                                 o_U,
-                                o_NU);
+				o_S,
+                                o_NS);
   }
   occaTimerToc(mesh->device,"AdvectionSurface");
 
-  */
+#if ADV_DEBUG
+  printf("\tdone\n"); 
+#endif
+  
+#if ADV_DEBUG
+  printf("Advection Step Completed\n"); 
+#endif
+
 }

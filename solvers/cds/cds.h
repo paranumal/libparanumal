@@ -44,9 +44,10 @@ typedef struct {
   
   setupAide options;
   // INS SOLVER OCCA VARIABLES
-  dfloat k, nu, cp, rho, irhocp, alf,  Re, Pr;
+  dfloat k, nu, cp, rho, ialf, alf,  Re, Pr;
   dfloat ubar, vbar, wbar, sbar;
-  dlong fieldOffset;
+  dlong vOffset;
+  dlong sOffset;
   dlong Ntotal;
   int Nblock;
   dfloat dt, idt, cfl, dti;          // time step
@@ -176,12 +177,11 @@ typedef struct {
   // occa::kernel pressurePenaltyKernel;
   // occa::kernel pressureUpdateKernel;
 
-  // occa::kernel velocityRhsKernel;
-  // occa::kernel velocityRhsIpdgBCKernel;
-  // occa::kernel velocityRhsBCKernel;
-  // occa::kernel velocityAddBCKernel;
-  // occa::kernel velocityUpdateKernel;  
-  
+  occa::kernel helmholtzRhsKernel;
+  occa::kernel helmholtzRhsIpdgBCKernel;
+  occa::kernel helmholtzRhsBCKernel;
+  occa::kernel helmholtzAddBCKernel;
+    
   // occa::kernel vorticityKernel;
   // occa::kernel isoSurfaceKernel;
 
@@ -199,13 +199,13 @@ void cdsRunEXTBDF(cds_t *cds);
 // void insForces(ins_t *ins, dfloat time);
 // void insComputeDt(ins_t *ins, dfloat time); 
 
-// void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU);
+void cdsAdvection(cds_t *ins, dfloat time, occa::memory o_U, occa::memory o_S, occa::memory o_NS);
 // void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);
 // void insGradient (ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP);
 // void insDivergence(ins_t *ins,dfloat time, occa::memory o_U, occa::memory o_DU);
 // void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_NU);
 
-// void insVelocityRhs  (ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW);
+   void cdsHelmholtzRhs(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS);
 // void insVelocitySolve(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW, occa::memory o_rkU);
 // void insVelocityUpdate(ins_t *ins, dfloat time, int stage, occa::memory o_rkGP, occa::memory o_rkU);
 
