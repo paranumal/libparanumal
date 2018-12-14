@@ -1,3 +1,6 @@
+/* This code was generated using the approach from the following article:
+ * https://devblogs.nvidia.com/gpu-pro-tip-track-mpi-calls-nvidia-visual-profiler/
+ */
 
 #include <mpi.h>
 #include <stdio.h>
