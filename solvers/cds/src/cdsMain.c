@@ -81,7 +81,7 @@ int main(int argc, char **argv){
   
   if (cds->options.compareArgs("TIME INTEGRATOR", "ARK")){
     printf("ARK is not implemented yet\n");
-    EXIT_FAILURE;
+    exit(EXIT_FAILURE);
   }else if (cds->options.compareArgs("TIME INTEGRATOR", "EXTBDF")){
     printf("Running EXTBDF Scheme\n");
     cdsRunEXTBDF(cds);

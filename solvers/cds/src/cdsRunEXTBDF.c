@@ -36,9 +36,10 @@ void cdsRunEXTBDF(cds_t *cds){
   occaTimerTic(mesh->device,"CDS");
 
   // Write Initial Data
-  // if(cds->outputStep) insReport(ins, cds->startTime, 0);
+   if(cds->outputStep) cdsReport(cds, cds->startTime, 0);
 
   for(int tstep=0;tstep<cds->NtimeSteps;++tstep){
+  // for(int tstep=0;tstep<10;++tstep){
 
     if(tstep<1) 
       extbdfCoefficents(cds,tstep+1);
@@ -90,7 +91,7 @@ void cdsRunEXTBDF(cds_t *cds){
     if(cds->outputStep){
       if(((tstep+1)%(cds->outputStep))==0){
          printf("\rtstep = %d, solver iteration: S - %3d \n", tstep+1, cds->Niter);
-        cdsReport(cds, time+cds->dt, tstep+1);
+         cdsReport(cds, time+cds->dt, tstep+1);
 #if 0
         // Write a restart file
         if(cds->writeRestartFile){
@@ -109,10 +110,9 @@ void cdsRunEXTBDF(cds_t *cds){
   occaTimerToc(mesh->device,"CDS");
 
 
-  dfloat finalTime = cds->NtimeSteps*cds->dt;
-  printf("\n");
+  dfloat finalTime = cds->NtimeSteps*cds->dt; printf("Writing Final Data...\n");
 
-  //if(cds->outputStep) insReport(ins, finalTime,cds->NtimeSteps);
+  if(cds->outputStep) cdsReport(cds, finalTime,cds->NtimeSteps);
   
   if(mesh->rank==0) occa::printTimer();
 }

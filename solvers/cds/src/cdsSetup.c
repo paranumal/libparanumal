@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -46,8 +46,8 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     cds->extbdfC = (dfloat*) calloc(3, sizeof(dfloat));
     cds->extC    = (dfloat*) calloc(3, sizeof(dfloat));
   }else if(!options.compareArgs("TIME INTEGRATOR", "EXTBDF")){
-      printf("Currently only BDF time stepping is implemented\n");
-      exit(-1);
+    printf("Currently only BDF time stepping is implemented\n");
+    exit(-1);
   }
       
   
@@ -116,9 +116,9 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     cds->Ue    = (dfloat*) calloc(cds->NVfields*Ntotal,sizeof(dfloat));
    
     if(cds->elementType==HEXAHEDRA)
-      cds->cUd = (dfloat *) calloc(cds->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+    cds->cUd = (dfloat *) calloc(cds->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
     else 
-      cds->cUd = cds->U;
+    cds->cUd = cds->U;
 
     // Prepare RK stages for Subcycling Part
     
@@ -126,45 +126,45 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     
     options.getArgs("SUBCYCLING TIME ORDER", Sorder);
     if(Sorder==2){
-      cds->SNrk     = 2; 
-      dfloat rka[2] = {0.0,     1.0 };
-      dfloat rkb[2] = {0.5,     0.5 };
-      dfloat rkc[2] = {0.0,     1.0 };
-      //
-      cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-      cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-      cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-      //
-      memcpy(cds->Srka, rka, cds->SNrk*sizeof(dfloat));
-      memcpy(cds->Srkb, rkb, cds->SNrk*sizeof(dfloat));
-      memcpy(cds->Srkc, rkc, cds->SNrk*sizeof(dfloat));
+    cds->SNrk     = 2; 
+    dfloat rka[2] = {0.0,     1.0 };
+    dfloat rkb[2] = {0.5,     0.5 };
+    dfloat rkc[2] = {0.0,     1.0 };
+    //
+    cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+    cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+    cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+    //
+    memcpy(cds->Srka, rka, cds->SNrk*sizeof(dfloat));
+    memcpy(cds->Srkb, rkb, cds->SNrk*sizeof(dfloat));
+    memcpy(cds->Srkc, rkc, cds->SNrk*sizeof(dfloat));
     }else if(Sorder ==3){
-      // Using Williamson 3rd order scheme converted to low storage since the better truncation 
-      cds->SNrk     = 3; 
-      dfloat rka[3] = {0.0,     -5.0/9.0,  -153.0/128.0};
-      dfloat rkb[3] = {1.0/3.0, 15.0/16.0,    8.0/15.0 };
-      dfloat rkc[3] = {0.0,      1.0/3.0,     3.0/4.0  };
-      //
-      cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-      cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-      cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-      //
-      memcpy(cds->Srka, rka, cds->SNrk*sizeof(dfloat));
-      memcpy(cds->Srkb, rkb, cds->SNrk*sizeof(dfloat));
-      memcpy(cds->Srkc, rkc, cds->SNrk*sizeof(dfloat));
+    // Using Williamson 3rd order scheme converted to low storage since the better truncation 
+    cds->SNrk     = 3; 
+    dfloat rka[3] = {0.0,     -5.0/9.0,  -153.0/128.0};
+    dfloat rkb[3] = {1.0/3.0, 15.0/16.0,    8.0/15.0 };
+    dfloat rkc[3] = {0.0,      1.0/3.0,     3.0/4.0  };
+    //
+    cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+    cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+    cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+    //
+    memcpy(cds->Srka, rka, cds->SNrk*sizeof(dfloat));
+    memcpy(cds->Srkb, rkb, cds->SNrk*sizeof(dfloat));
+    memcpy(cds->Srkc, rkc, cds->SNrk*sizeof(dfloat));
     }else{
-      cds->SNrk     = 5; 
-      cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-      cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-      cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-      // Asumes initialized in mesh, can be moved here
-      for(int rk=0; rk<cds->SNrk; rk++){
-        cds->Srka[rk] = mesh->rka[rk]; 
-        cds->Srkb[rk] = mesh->rkb[rk]; 
-        cds->Srkc[rk] = mesh->rkc[rk]; 
-      }
+    cds->SNrk     = 5; 
+    cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+    cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+    cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+    // Asumes initialized in mesh, can be moved here
+    for(int rk=0; rk<cds->SNrk; rk++){
+    cds->Srka[rk] = mesh->rka[rk]; 
+    cds->Srkb[rk] = mesh->rkb[rk]; 
+    cds->Srkc[rk] = mesh->rkc[rk]; 
     }
-  }
+    }
+    }
 
   */
 
@@ -181,15 +181,14 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   options.getArgs("DENSITY", cds->rho);
   options.getArgs("VISCOSITY", cds->nu);
 
+  cds->alf    = cds->k/(cds->rho*cds->cp); // Thermal diffusivity
+  cds->ialf   = 1.0/cds->alf;              // Inverse diff. 
+
 
   //Reynolds number
   cds->Re     = cds->ubar/cds->nu;         // Reynolds number
   cds->Pr     = cds->nu/cds->alf;          // Prandtl number
-  
-  cds->alf    = cds->k/(cds->rho*cds->cp); // Thermal diffusivity
-  //cds->ialf   = 1.0/cds->alf;              // Inverse diff. 
-
-  
+    
   occa::properties kernelInfo;
   kernelInfo["defines"].asObject();
   kernelInfo["includes"].asArray();
@@ -367,7 +366,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
 
   
   // Hold some inverses for kernels
-  cds->ialf  = 1.0/(cds->rho*cds->cp); 
+  //cds->ialf  = 1.0/(cds->k/cds->rho*cds->cp); 
   cds->idt     = 1.0/cds->dt;
   cds->lambda  = cds->g0 / (cds->dt * cds->alf);
 
@@ -445,7 +444,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   kernelInfo["defines/" "p_blockSize"]= blockSize;
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
-   if(options.compareArgs("TIME INTEGRATOR", "EXTBDF"))
+  if(options.compareArgs("TIME INTEGRATOR", "EXTBDF"))
     kernelInfo["defines/" "p_EXTBDF"]= 1;
   else
     kernelInfo["defines/" "p_EXTBDF"]= 0;
@@ -497,8 +496,8 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     // cds->o_prkA = cds->o_extbdfC;
     // cds->o_prkB = cds->o_extbdfC;
   }else{
-    printf("Onlt BDF is implemented\n");
-    EXIT_FAILURE;
+    printf("Only BDF is implemented\n");
+    exit(EXIT_FAILURE);
   }
 
   // MEMORY ALLOCATION
@@ -625,16 +624,16 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "insPressureRhs%s", suffix);
       cds->pressureRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-       if(!(cds->dim==3 && cds->elementType==QUADRILATERALS) ){
-        sprintf(fileName, DCDS "/okl/insPressureBC%s.okl", suffix);
-        sprintf(kernelName, "insPressureIpdgBC%s", suffix);
-        cds->pressureRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      if(!(cds->dim==3 && cds->elementType==QUADRILATERALS) ){
+      sprintf(fileName, DCDS "/okl/insPressureBC%s.okl", suffix);
+      sprintf(kernelName, "insPressureIpdgBC%s", suffix);
+      cds->pressureRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insPressureBC%s", suffix);
-        cds->pressureRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "insPressureBC%s", suffix);
+      cds->pressureRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insPressureAddBC%s", suffix);
-        cds->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "insPressureAddBC%s", suffix);
+      cds->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
 
       // ===========================================================================
@@ -655,54 +654,66 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     
       // ===========================================================================
       if(cds->dim==3 && cds->options.compareArgs("OUTPUT TYPE","ISO")){
-        sprintf(fileName, DCDS "/okl/insIsoSurface3D.okl");
-        sprintf(kernelName, "insIsoSurface3D");
+      sprintf(fileName, DCDS "/okl/insIsoSurface3D.okl");
+      sprintf(kernelName, "insIsoSurface3D");
 
-        cds->isoSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
+      cds->isoSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
       }
       
 
       // Not implemented for Quad 3D yet !!!!!!!!!!
       if(cds->Nsubsteps){
-        // Note that resU and resV can be replaced with already introduced buffer
-        cds->o_Ue    = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
-        cds->o_Ud    = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ud);
-        cds->o_resU  = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->resU);
-        cds->o_rhsUd = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->rhsUd);
+      // Note that resU and resV can be replaced with already introduced buffer
+      cds->o_Ue    = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
+      cds->o_Ud    = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ud);
+      cds->o_resU  = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->resU);
+      cds->o_rhsUd = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->rhsUd);
 
-        if(cds->elementType==HEXAHEDRA)
-          cds->o_cUd = mesh->device.malloc(cds->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), cds->cUd);
-        else 
-          cds->o_cUd = cds->o_Ud;
+      if(cds->elementType==HEXAHEDRA)
+      cds->o_cUd = mesh->device.malloc(cds->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), cds->cUd);
+      else 
+      cds->o_cUd = cds->o_Ud;
 
-        sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
-        sprintf(kernelName, "scaledAddwOffset");
-        cds->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
+      sprintf(kernelName, "scaledAddwOffset");
+      cds->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(fileName, DCDS "/okl/insSubCycle%s.okl", suffix);
-        sprintf(kernelName, "insSubCycleVolume%s", suffix);
-        cds->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(fileName, DCDS "/okl/insSubCycle%s.okl", suffix);
+      sprintf(kernelName, "insSubCycleVolume%s", suffix);
+      cds->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insSubCycleSurface%s", suffix);
-        cds->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "insSubCycleSurface%s", suffix);
+      cds->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
-        cds->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
+      cds->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
-        cds->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
+      cds->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(fileName, DCDS "/okl/insSubCycle.okl");
-        sprintf(kernelName, "insSubCycleRKUpdate");
-        cds->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(fileName, DCDS "/okl/insSubCycle.okl");
+      sprintf(kernelName, "insSubCycleRKUpdate");
+      cds->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insSubCycleExt");
-        cds->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      sprintf(kernelName, "insSubCycleExt");
+      cds->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
       */
     }
     MPI_Barrier(mesh->comm);
   }
+  
+#if 1
+  printf(" Solver Parameters......\n");
+  printf("alfa\t:\t %.8e \n", cds->alf);
+  printf("invalfa\t:\t %.8e \n", cds->ialf);
+  printf("Re\t:\t %.8e \n", cds->Re);
+  printf("Pr\t:\t %.8e \n", cds->Pr);
+  printf("dt\t:\t %.8e \n", cds->dt);
+  printf("invdt\t:\t %.8e \n", cds->idt);
+
+#endif
+
   return cds;
 }
 
