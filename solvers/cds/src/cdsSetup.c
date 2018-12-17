@@ -108,17 +108,18 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     options.getArgs("SUBCYCLING STEPS",cds->Nsubsteps);
 
 
-
-  /*
-    if(cds->Nsubsteps){
-    cds->Ud    = (dfloat*) calloc(cds->NVfields*Ntotal,sizeof(dfloat));
-    cds->Ud    = (dfloat*) calloc(cds->NVfields*Ntotal,sizeof(dfloat));
+  if(cds->Nsubsteps){
+    cds->Sd    = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
     cds->Ue    = (dfloat*) calloc(cds->NVfields*Ntotal,sizeof(dfloat));
-   
-    if(cds->elementType==HEXAHEDRA)
-    cds->cUd = (dfloat *) calloc(cds->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
-    else 
-    cds->cUd = cds->U;
+
+    // !!!!!!!!!!!!!!!!!Check this !!!!!!!!!!!!!!!!!
+    if(cds->elementType==HEXAHEDRA){
+      cds->cUd = (dfloat *) calloc(cds->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+      cds->cSd = (dfloat *) calloc(cds->NSfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));      
+    }else{ 
+      cds->cUd = cds->U;
+      cds->cSd = cds->S;      
+    }
 
     // Prepare RK stages for Subcycling Part
     
@@ -126,47 +127,45 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     
     options.getArgs("SUBCYCLING TIME ORDER", Sorder);
     if(Sorder==2){
-    cds->SNrk     = 2; 
-    dfloat rka[2] = {0.0,     1.0 };
-    dfloat rkb[2] = {0.5,     0.5 };
-    dfloat rkc[2] = {0.0,     1.0 };
-    //
-    cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-    cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-    cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-    //
-    memcpy(cds->Srka, rka, cds->SNrk*sizeof(dfloat));
-    memcpy(cds->Srkb, rkb, cds->SNrk*sizeof(dfloat));
-    memcpy(cds->Srkc, rkc, cds->SNrk*sizeof(dfloat));
+      cds->SNrk     = 2; 
+      dfloat rka[2] = {0.0,     1.0 };
+      dfloat rkb[2] = {0.5,     0.5 };
+      dfloat rkc[2] = {0.0,     1.0 };
+      //
+      cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+      cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+      cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+      //
+      memcpy(cds->Srka, rka, cds->SNrk*sizeof(dfloat));
+      memcpy(cds->Srkb, rkb, cds->SNrk*sizeof(dfloat));
+      memcpy(cds->Srkc, rkc, cds->SNrk*sizeof(dfloat));
     }else if(Sorder ==3){
-    // Using Williamson 3rd order scheme converted to low storage since the better truncation 
-    cds->SNrk     = 3; 
-    dfloat rka[3] = {0.0,     -5.0/9.0,  -153.0/128.0};
-    dfloat rkb[3] = {1.0/3.0, 15.0/16.0,    8.0/15.0 };
-    dfloat rkc[3] = {0.0,      1.0/3.0,     3.0/4.0  };
-    //
-    cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-    cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-    cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-    //
-    memcpy(cds->Srka, rka, cds->SNrk*sizeof(dfloat));
-    memcpy(cds->Srkb, rkb, cds->SNrk*sizeof(dfloat));
-    memcpy(cds->Srkc, rkc, cds->SNrk*sizeof(dfloat));
+      // Using Williamson 3rd order scheme converted to low storage since the better truncation 
+      cds->SNrk     = 3; 
+      dfloat rka[3] = {0.0,     -5.0/9.0,  -153.0/128.0};
+      dfloat rkb[3] = {1.0/3.0, 15.0/16.0,    8.0/15.0 };
+      dfloat rkc[3] = {0.0,      1.0/3.0,     3.0/4.0  };
+      //
+      cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+      cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+      cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+      //
+      memcpy(cds->Srka, rka, cds->SNrk*sizeof(dfloat));
+      memcpy(cds->Srkb, rkb, cds->SNrk*sizeof(dfloat));
+      memcpy(cds->Srkc, rkc, cds->SNrk*sizeof(dfloat));
     }else{
-    cds->SNrk     = 5; 
-    cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-    cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-    cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-    // Asumes initialized in mesh, can be moved here
-    for(int rk=0; rk<cds->SNrk; rk++){
-    cds->Srka[rk] = mesh->rka[rk]; 
-    cds->Srkb[rk] = mesh->rkb[rk]; 
-    cds->Srkc[rk] = mesh->rkc[rk]; 
+      cds->SNrk     = 5; 
+      cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+      cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+      cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
+      // Asumes initialized in mesh, can be moved here
+      for(int rk=0; rk<cds->SNrk; rk++){
+	cds->Srka[rk] = mesh->rka[rk]; 
+	cds->Srkb[rk] = mesh->rkb[rk]; 
+	cds->Srkc[rk] = mesh->rkc[rk]; 
+      }
     }
-    }
-    }
-
-  */
+  }
 
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;  // No gravitational acceleration
 
