@@ -395,7 +395,8 @@ SOFTWARE.
       for(int j=0;j<p_cubNq;++j;@inner(1)){ 
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if(j<p_Nq){
-            r_cU[k] = 0; r_cV[k] = 0; r_cW[k] = 0;
+            r_cU[k] = 0.f; r_cV[k] = 0.f;
+	    r_cS[k] = 0.f; r_cW[k] = 0.f;
 
             #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {

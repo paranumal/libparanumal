@@ -40,10 +40,10 @@ SOFTWARE.
     dfloat cx = 0.8;			\
     dfloat cy = 0.8;			\
     dfloat cz = 0.8;			\
-    dfloat coef   = 1.0/pow((4.f*t +1.f),1.50);			\
-    dfloat xterm  = pow((x - cx*t - 0.5f),2.0) / ( ax*(4.f*t+1.f) );	\
-    dfloat yterm  = pow((y - cy*t - 0.5f),2.0) / ( ay*(4.f*t+1.f) );	\
-    dfloat zterm  = pow((z - cz*t - 0.5f),2.0) / ( az*(4.f*t+1.f) );	\
+    dfloat coef   = 1.0/pow((4.0*t +1.0),1.50);			\
+    dfloat xterm  = pow((x - cx*t - 0.5),2.0) / ( ax*(4.0*t+1.0) );	\
+    dfloat yterm  = pow((y - cy*t - 0.5),2.0) / ( ay*(4.0*t+1.0) );	\
+    dfloat zterm  = pow((z - cz*t - 0.5),2.0) / ( az*(4.0*t+1.0) );	\
     dfloat sExact = coef*exp( -xterm -yterm -zterm);			\
     *(s) = sExact;				\
   }   
@@ -53,17 +53,19 @@ SOFTWARE.
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
 #define cdsDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, sM, sB) \
 {                                   \
-  dfloat ax = 0.01;			\
+    dfloat ax = 0.01;			\
     dfloat ay = 0.01;			\
     dfloat az = 0.01;			\
+    					\
     dfloat cx = 0.8;			\
     dfloat cy = 0.8;			\
     dfloat cz = 0.8;			\
-    							        \
-    dfloat coef   = 1.0/pow((4.f*t +1.0),3.0/2.0);		\
-    dfloat xterm = pow((x - cx*t - 0.5f),2.0) / ( ax*(4.f*t+1.0) );	\
-    dfloat yterm = pow((y - cy*t - 0.5f),2.0) / ( ay*(4.f*t+1.0) );	\
-    dfloat zterm = pow((z - cz*t - 0.5f),2.0) / ( az*(4.f*t+1.0) );	\
+    						\
+    dfloat coef  = 1.0/pow((4.0*t +1.0),1.50);				\
+    dfloat xterm = pow((x - cx*t - 0.5),2.0) / ( ax*(4.0*t+1.0) );	\
+    dfloat yterm = pow((y - cy*t - 0.5),2.0) / ( ay*(4.0*t+1.0) );	\
+    dfloat zterm = pow((z - cz*t - 0.5),2.0) / ( az*(4.0*t+1.0) );	\
+    									\
     dfloat sExact = coef*exp(-xterm -yterm - zterm);			\
   if(bc==1){                        \
     *(sB) = 0.f;                    \
