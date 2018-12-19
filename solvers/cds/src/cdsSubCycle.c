@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -29,7 +29,6 @@ SOFTWARE.
 // complete a time step using LSERK4
 void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::memory o_S, occa::memory o_Sd){
  
-  //printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
   mesh_t *mesh = cds->mesh;
 
   const dlong NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);  
@@ -37,30 +36,30 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
   //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){
     cds->haloExtractKernel(mesh->Nelements,
-                                 mesh->totalHaloPairs,
-                                 mesh->o_haloElementList,
-                                 cds->sOffset,
-                                 o_S,
-                                 cds->o_haloBuffer);
+			   mesh->totalHaloPairs,
+			   mesh->o_haloElementList,
+			   cds->sOffset,
+			   o_S,
+			   cds->o_haloBuffer);
 
     // copy extracted halo to HOST 
     cds->o_haloBuffer.copyTo(cds->sendBuffer);           
   
     // start halo exchange
     meshHaloExchangeStart(mesh,
-                         mesh->Np*(cds->NSfields)*sizeof(dfloat),
-                         cds->sendBuffer,
-                         cds->recvBuffer);
+			  mesh->Np*(cds->NSfields)*sizeof(dfloat),
+			  cds->sendBuffer,
+			  cds->recvBuffer);
 
     meshHaloExchangeFinish(mesh);
 
     cds->o_haloBuffer.copyFrom(cds->recvBuffer); 
 
     cds->haloScatterKernel(mesh->Nelements,
-                                  mesh->totalHaloPairs,
-                                  cds->sOffset,
-                                  o_S,
-                                  cds->o_haloBuffer);
+			   mesh->totalHaloPairs,
+			   cds->sOffset,
+			   o_S,
+			   cds->o_haloBuffer);
   }
 
   
@@ -98,19 +97,19 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
         dfloat t = tstage +  cds->sdt*cds->Srkc[rk]; 
 
         switch(cds->ExplicitOrder){
-          case 1:
-            cds->extC[0] = 1.f; cds->extC[1] = 0.f; cds->extC[2] = 0.f;
-            break;
-          case 2:
-            cds->extC[0] = (t-tn1)/(tn0-tn1);
-            cds->extC[1] = (t-tn0)/(tn1-tn0);
-            cds->extC[2] = 0.f; 
-            break;
-          case 3:
-            cds->extC[0] = (t-tn1)*(t-tn2)/((tn0-tn1)*(tn0-tn2)); 
-            cds->extC[1] = (t-tn0)*(t-tn2)/((tn1-tn0)*(tn1-tn2));
-            cds->extC[2] = (t-tn0)*(t-tn1)/((tn2-tn0)*(tn2-tn1));
-            break;
+	case 1:
+	  cds->extC[0] = 1.f; cds->extC[1] = 0.f; cds->extC[2] = 0.f;
+	  break;
+	case 2:
+	  cds->extC[0] = (t-tn1)/(tn0-tn1);
+	  cds->extC[1] = (t-tn0)/(tn1-tn0);
+	  cds->extC[2] = 0.f; 
+	  break;
+	case 3:
+	  cds->extC[0] = (t-tn1)*(t-tn2)/((tn0-tn1)*(tn0-tn2)); 
+	  cds->extC[1] = (t-tn0)*(t-tn2)/((tn1-tn0)*(tn1-tn2));
+	  cds->extC[2] = (t-tn0)*(t-tn1)/((tn2-tn0)*(tn2-tn1));
+	  break;
         }
         cds->o_extC.copyFrom(cds->extC);
 
@@ -130,11 +129,11 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
           mesh->device.setStream(mesh->dataStream);
 
           cds->haloExtractKernel(mesh->Nelements,
-                                   mesh->totalHaloPairs,
-                                   mesh->o_haloElementList,
-                                   cds->sOffset, 
-                                   o_Sd,
-                                   cds->o_haloBuffer);
+				 mesh->totalHaloPairs,
+				 mesh->o_haloElementList,
+				 cds->sOffset, 
+				 o_Sd,
+				 cds->o_haloBuffer);
 
           // copy extracted halo to HOST 
           cds->o_haloBuffer.copyTo(cds->sendBuffer,"async: true");            
@@ -145,23 +144,24 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
         occaTimerTic(mesh->device,"AdvectionVolume");        
         if(cds->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
           cds->subCycleCubatureVolumeKernel(mesh->Nelements,
-                     mesh->o_vgeo,
-                     mesh->o_cubvgeo,
-                     mesh->o_cubDWmatrices,
-                     mesh->o_cubInterpT,
-                     mesh->o_cubProjectT,
-                     cds->vOffset,
-                     cds->sOffset,					    
-                     cds->o_Ue,
-                          o_Sd,
-                     cds->o_rhsSd);
+					    mesh->o_vgeo,
+					    mesh->o_cubvgeo,
+					    mesh->o_cubDWmatrices,
+					    mesh->o_cubInterpT,
+					    mesh->o_cubProjectT,
+					    cds->vOffset,
+					    cds->sOffset,					    
+					    cds->o_Ue,
+					    o_Sd,
+					    cds->o_rhsSd);
         } else{
           cds->subCycleVolumeKernel(mesh->Nelements,
                                     mesh->o_vgeo,
                                     mesh->o_Dmatrices,
-                                    cds->sOffset,
+                                    cds->vOffset,
+                                    cds->sOffset,				    
                                     cds->o_Ue,
-                                         o_Sd,
+				         o_Sd,
                                     cds->o_rhsSd);
 
         }
@@ -174,9 +174,9 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
 
           // start halo exchange
           meshHaloExchangeStart(mesh,
-                              mesh->Np*(cds->NSfields)*sizeof(dfloat), 
-                              cds->sendBuffer,
-                              cds->recvBuffer);
+				mesh->Np*(cds->NSfields)*sizeof(dfloat), 
+				cds->sendBuffer,
+				cds->recvBuffer);
         
 
           meshHaloExchangeFinish(mesh);
@@ -184,10 +184,10 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
           cds->o_haloBuffer.copyFrom(cds->recvBuffer,"async: true"); 
 
           cds->haloScatterKernel(mesh->Nelements,
-                                    mesh->totalHaloPairs,
-                                    cds->sOffset,
-                                    o_Sd,
-                                    cds->o_haloBuffer);
+				 mesh->totalHaloPairs,
+				 cds->sOffset,
+				 o_Sd,
+				 cds->o_haloBuffer);
           mesh->device.finish();
           
           mesh->device.setStream(mesh->defaultStream);
@@ -198,56 +198,56 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
         occaTimerTic(mesh->device,"AdvectionSurface");
         if(cds->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
           cds->subCycleCubatureSurfaceKernel(mesh->Nelements,
-                                              mesh->o_vgeo,
-                                              mesh->o_sgeo,
-                                              mesh->o_cubsgeo,
-                                              mesh->o_intInterpT,
-                                              mesh->o_intLIFTT,
-                                              mesh->o_cubInterpT,
-                                              mesh->o_cubProjectT,
-                                              mesh->o_vmapM,
-                                              mesh->o_vmapP,
-                                              mesh->o_EToB,
-                                              bScale,
-                                              t,
-                                              mesh->o_intx,
-                                              mesh->o_inty,
-                                              mesh->o_intz,
-                                              cds->vOffset,
-                                              cds->sOffset,					     
-                                              cds->o_Ue,
-                                                   o_Sd,
-                                              cds->o_rhsSd);
+					     mesh->o_vgeo,
+					     mesh->o_sgeo,
+					     mesh->o_cubsgeo,
+					     mesh->o_intInterpT,
+					     mesh->o_intLIFTT,
+					     mesh->o_cubInterpT,
+					     mesh->o_cubProjectT,
+					     mesh->o_vmapM,
+					     mesh->o_vmapP,
+					     mesh->o_EToB,
+					     bScale,
+					     t,
+					     mesh->o_intx,
+					     mesh->o_inty,
+					     mesh->o_intz,
+					     cds->vOffset,
+					     cds->sOffset,					     
+					     cds->o_Ue,
+					     o_Sd,
+					     cds->o_rhsSd);
         } else{
           cds->subCycleSurfaceKernel(mesh->Nelements,
-                                    mesh->o_sgeo,
-                                    mesh->o_LIFTT,
-                                    mesh->o_vmapM,
-                                    mesh->o_vmapP,
-                                    mesh->o_EToB,
-                                    bScale,
-                                    t,
-                                    mesh->o_x,
-                                    mesh->o_y,
-                                    mesh->o_z,
-                                    cds->vOffset,
-                                    cds->sOffset,				     
-                                    cds->o_Ue,
-                                         o_Sd,
-                                    cds->o_rhsSd);
+				     mesh->o_sgeo,
+				     mesh->o_LIFTT,
+				     mesh->o_vmapM,
+				     mesh->o_vmapP,
+				     mesh->o_EToB,
+				     bScale,
+				     t,
+				     mesh->o_x,
+				     mesh->o_y,
+				     mesh->o_z,
+				     cds->vOffset,
+				     cds->sOffset,				     
+				     cds->o_Ue,
+				     o_Sd,
+				     cds->o_rhsSd);
         }
         occaTimerToc(mesh->device,"AdvectionSurface");
           
         // Update Kernel
         occaTimerTic(mesh->device,"AdvectionUpdate");
         cds->subCycleRKUpdateKernel(mesh->Nelements,
-                              cds->sdt,
-                              cds->Srka[rk],
-                              cds->Srkb[rk],
-                              cds->sOffset,
-                              cds->o_rhsSd,
-                              cds->o_resS, 
-                                   o_Sd);
+				    cds->sdt,
+				    cds->Srka[rk],
+				    cds->Srkb[rk],
+				    cds->sOffset,
+				    cds->o_rhsSd,
+				    cds->o_resS, 
+				    o_Sd);
         occaTimerToc(mesh->device,"AdvectionUpdate");
       }
     }
