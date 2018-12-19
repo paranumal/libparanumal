@@ -38,8 +38,8 @@ void cdsRunEXTBDF(cds_t *cds){
   // Write Initial Data
    if(cds->outputStep) cdsReport(cds, cds->startTime, 0);
 
-  for(int tstep=0;tstep<cds->NtimeSteps;++tstep){
-  // for(int tstep=0;tstep<10;++tstep){
+   // for(int tstep=0;tstep<cds->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<1;++tstep){
 
     if(tstep<1) 
       extbdfCoefficents(cds,tstep+1);
@@ -52,11 +52,11 @@ void cdsRunEXTBDF(cds_t *cds){
 
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
    
-    // if(cds->Nsubsteps) {
-    //  insSubCycle(ins, time, cds->Nstages, cds->o_U, cds->o_NU);
-    // } else {
-    cdsAdvection(cds, time, cds->o_U, cds->o_S, cds->o_NS);
-     //  }    
+    if(cds->Nsubsteps) {
+      cdsSubCycle(cds, time, cds->Nstages, cds->o_U, cds->o_S,  cds->o_NS);
+    } else {
+      cdsAdvection(cds, time, cds->o_U, cds->o_S, cds->o_NS);
+    }    
     cdsHelmholtzRhs  (cds, time+cds->dt, cds->Nstages, cds->o_rhsS);
 
     cdsHelmholtzSolve(cds, time+cds->dt, cds->Nstages, cds->o_rhsS, cds->o_rkS);

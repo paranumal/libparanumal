@@ -76,7 +76,7 @@ typedef struct {
   
   dfloat *U, *S;
   dfloat *NS, *rkNS;
-  dfloat *rhsS;   
+  //  dfloat *rhsS;   
   dfloat *rkS; 
   dfloat g[3];      // gravitational Acceleration
 
@@ -101,11 +101,11 @@ typedef struct {
 
   int Nsubsteps;
   dfloat sdt; 
-  //  dfloat *Ud, *Ue, *resU, *rhsUd, sdt;
-  // occa::memory o_Ud, o_Ue, o_resU, o_rhsUd;
+  dfloat *Sd, *Ue, *resS, *rhsS, *rhsSd;
+  occa::memory o_Sd, o_Ue, o_resS, o_rhsS, o_rhsSd;
 
-  dfloat *cU, *cUd, *cS; 
-  occa::memory o_cU, o_cUd, o_cS;
+  dfloat *cU, *cSd, *cS; 
+  occa::memory o_cU, o_cSd, o_cS;
 
   // Some Iso-surfacing variables
   // int isoField, isoColorField, isoNfields, isoNlevels, isoMaxBNtris, *isoNtris; 
@@ -122,16 +122,16 @@ typedef struct {
   // occa::memory o_isoLevels, o_isoq, o_isoNtris; 
   // occa::memory o_plotInterp, o_plotEToV; 
 
-  // occa::kernel scaledAddKernel;
-  // occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
-  // occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
-  // occa::kernel subCycleRKUpdateKernel;
-  // occa::kernel subCycleExtKernel;
+   occa::kernel scaledAddKernel;
+   occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
+   occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
+   occa::kernel subCycleRKUpdateKernel;
+   occa::kernel subCycleExtKernel;
 
   // occa::kernel constrainKernel;
   
   occa::memory o_U; 
-  occa::memory o_S, o_SH, o_NS, o_rhsS;
+  occa::memory o_S, o_SH, o_NS;
   occa::memory o_rkS, o_rkNS; 
   
   // occa::memory o_Vort, o_Div; // Not sure to keep it
@@ -159,33 +159,11 @@ typedef struct {
   occa::kernel advectionCubatureVolumeKernel;
   occa::kernel advectionCubatureSurfaceKernel;
 
-  // occa::kernel diffusionKernel;
-  // occa::kernel diffusionIpdgKernel;
-  // occa::kernel velocityGradientKernel;
-
-  // occa::kernel gradientVolumeKernel;
-  // occa::kernel gradientSurfaceKernel;
-
-  // occa::kernel divergenceVolumeKernel;
-  // occa::kernel divergenceSurfaceKernel;
-  
-  
-  // occa::kernel pressureRhsKernel;
-  // occa::kernel pressureRhsIpdgBCKernel;
-  // occa::kernel pressureRhsBCKernel;
-  // occa::kernel pressureAddBCKernel;
-  // occa::kernel pressurePenaltyKernel;
-  // occa::kernel pressureUpdateKernel;
-
   occa::kernel helmholtzRhsKernel;
   occa::kernel helmholtzRhsIpdgBCKernel;
   occa::kernel helmholtzRhsBCKernel;
   occa::kernel helmholtzAddBCKernel;
     
-  // occa::kernel vorticityKernel;
-  // occa::kernel isoSurfaceKernel;
-
-
 }cds_t;
 
 cds_t *cdsSetup(mesh_t *mesh, setupAide options);
@@ -196,8 +174,8 @@ void cdsPlotVTU(cds_t *cds, char *fileNameBase);
 void cdsReport(cds_t *cds, dfloat time,  int tstep);
 void cdsError(cds_t *cds, dfloat time);
 
-void cdsAdvection(cds_t *ins, dfloat time, occa::memory o_U, occa::memory o_S, occa::memory o_NS);
-// void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_NU);
+void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, occa::memory o_NS);
+void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::memory o_S, occa::memory o_NU);
 
 void cdsHelmholtzRhs(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS);
 void cdsHelmholtzSolve(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS,occa::memory o_rkS);
