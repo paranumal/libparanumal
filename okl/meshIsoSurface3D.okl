@@ -269,7 +269,7 @@ int marchingTet(const int fld,
           
           if(ntri){ // really should do a scan and collapse new iso tris to a contiguous group
             // increment isoNtris[0] counter by ntri 
-            int offset = occaAtomicAdd(isoNtris, ntri); // get old number of isoNtris and increment stored by ntri
+            int offset = atomicAdd(isoNtris, ntri); // get old number of isoNtris and increment stored by ntri
 
             // since ntri!=0 => ntri>=1
             if(offset+1<isoMaxNtris){  // make sure this triangle is in bound

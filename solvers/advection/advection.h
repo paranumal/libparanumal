@@ -65,12 +65,18 @@ typedef struct{
   occa::kernel rkErrorEstimateKernel;
 
   occa::kernel combinedKernel;
+
+  occa::kernel invertMassMatrixKernel;
+  occa::kernel invertMassMatrixCombinedKernel;
   
   occa::memory o_q;
+  occa::memory o_qtmp0;
+  occa::memory o_qtmp1;
+  occa::memory o_qtmp2;
   occa::memory o_rhsq;
   occa::memory o_resq;
   occa::memory o_saveq;
-
+  
   // [J*W*c_x, J*W*c_y, J*W*c_z]
   occa::memory o_advectionVelocityJW;
 
@@ -82,6 +88,7 @@ typedef struct{
   // [Jsurf*Wsurf/(Jvol*Wvol)*(c.n - |c.n|)/2
   occa::memory o_advectionVelocityP;
 
+  occa::memory o_diagInvMassMatrix;
   
   occa::memory o_rkq, o_rkrhsq, o_rkerr;
   occa::memory o_errtmp;
@@ -110,7 +117,7 @@ void advectionRun(advection_t *advection, setupAide &newOptions);
 
 advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileName);
 
-void advectionError(mesh_t *mesh, dfloat time);
+void advectionError(advection_t *advection, dfloat time);
 
 void advectionCavitySolution(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *q);
 

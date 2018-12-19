@@ -39,15 +39,7 @@ void reportMemoryUsage(occa::device &device, const char *mess){
   printf("%s: bytes allocated = %lu\n", mess, bytes);
 }
 
-void meshOccaSetup3D(mesh3D *mesh, setupAide &newOptions, occa::properties &kernelInfo){
-
-  // conigure device
-  occaDeviceConfig(mesh, newOptions);
-  
-  //make seperate stream for halo exchange
-  mesh->defaultStream = mesh->device.getStream();
-  mesh->dataStream = mesh->device.createStream();
-  mesh->device.setStream(mesh->defaultStream);
+void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::properties &kernelInfo){
 
   // find elements that have all neighbors on this process
   dlong *internalElementIds = (dlong*) calloc(mesh->Nelements, sizeof(dlong));
@@ -636,6 +628,13 @@ void meshOccaSetup3D(mesh3D *mesh, setupAide &newOptions, occa::properties &kern
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
       mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat));
+
+    // node ids 
+    mesh->o_haloGetNodeIds = 
+      mesh->device.malloc(mesh->Nfp*mesh->totalHaloPairs*sizeof(dlong), mesh->haloGetNodeIds);
+    mesh->o_haloPutNodeIds = 
+      mesh->device.malloc(mesh->Nfp*mesh->totalHaloPairs*sizeof(dlong), mesh->haloPutNodeIds);
+
   }
 
   kernelInfo["defines/" "p_dim"]= 3;
@@ -737,4 +736,30 @@ void meshOccaSetup3D(mesh3D *mesh, setupAide &newOptions, occa::properties &kern
   kernelInfo["defines/" "p_JID"]= JID;
   kernelInfo["defines/" "p_JWID"]= JWID;
   kernelInfo["defines/" "p_IJWID"]= IJWID;
+}
+
+
+void meshOccaSetup3D(mesh3D *mesh, setupAide &newOptions, occa::properties &kernelInfo){
+
+  // conigure device
+  occaDeviceConfig(mesh, newOptions);
+  
+  //make seperate stream for halo exchange
+  mesh->defaultStream = mesh->device.getStream();
+  mesh->dataStream = mesh->device.createStream();
+  mesh->computeStream = mesh->device.createStream();
+  mesh->device.setStream(mesh->defaultStream);
+
+  meshOccaPopulateDevice3D(mesh, newOptions, kernelInfo);
+  
+}
+
+void meshOccaCloneDevice(mesh_t *donorMesh, mesh_t *mesh){
+
+  mesh->device = donorMesh->device;
+
+  mesh->defaultStream = donorMesh->defaultStream;
+  mesh->dataStream = donorMesh->dataStream;
+  mesh->computeStream = donorMesh->computeStream;
+  
 }

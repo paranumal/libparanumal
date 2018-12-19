@@ -128,7 +128,7 @@ void cnsRun(cns_t *cns, setupAide &options);
 
 cns_t *cnsSetup(mesh_t *mesh, setupAide &options);
 
-void cnsError(mesh_t *mesh, dfloat time);
+void cnsError(cns_t *cns, dfloat time);
 void cnsForces(cns_t *cns, dfloat time);
 
 void cnsCavitySolution(dfloat x, dfloat y, dfloat z, dfloat t,

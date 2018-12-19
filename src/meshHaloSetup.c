@@ -117,6 +117,20 @@ void meshHaloSetup(mesh_t *mesh){
     mesh->haloElementList[i] = e;
   }
 
+  // record the outgoing node ids for trace nodes
+  mesh->haloGetNodeIds = (dlong*) calloc(mesh->totalHaloPairs*mesh->Nfp, sizeof(dlong));
+  mesh->haloPutNodeIds = (dlong*) calloc(mesh->totalHaloPairs*mesh->Nfp, sizeof(dlong));
+  cnt = 0;
+  for(dlong i=0;i<mesh->totalHaloPairs;++i){
+    dlong e = haloElements[i].element;
+    int fM = haloElements[i].face;
+    int fP = haloElements[i].faceN;
+    for(int n=0;n<mesh->Nfp;++n){
+      mesh->haloGetNodeIds[cnt] = e*mesh->Np + mesh->faceNodes[fM*mesh->Nfp+n];
+      mesh->haloPutNodeIds[cnt] = (mesh->Nelements+i)*mesh->Np + mesh->faceNodes[fP*mesh->Nfp+n];
+      ++cnt;
+    }
+  }
   // reconnect elements to ghost elements
   // (ghost elements appended to end of local element list)
   cnt = mesh->Nelements;

@@ -40,6 +40,10 @@ void advectionRun(advection_t *advection, setupAide &newOptions){
 
   int tstep=0, allStep = 0;
 
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  mesh->device.finish();
+  
   occa::streamTag start = mesh->device.tagStream();
   
   if (newOptions.compareArgs("TIME INTEGRATOR","DOPRI5")) {
@@ -168,10 +172,12 @@ void advectionRun(advection_t *advection, setupAide &newOptions){
   }
   
   occa::streamTag end = mesh->device.tagStream();
+
+  mesh->device.finish();
   
   double elapsed = mesh->device.timeBetween(start, end);
   
-  printf("%d %d %d %lg %lg %lg %lg %lg [ N, Nel, Nodes, elapsed, time/step, nodes/time, gnodes*Nsteps/time, gnodes*Nstages*Nsteps/time ]\n",
+  printf("%d %d %d %lg %lg %lg %lg %lg \%\%[ N, Nel, Nodes, elapsed, time/step, nodes/time, gnodes*Nsteps/time, gnodes*Nstages*Nsteps/time, %s ]\n",
 	 mesh->N,
 	 mesh->Nelements,
 	 mesh->Np*mesh->Nelements,
@@ -179,6 +185,7 @@ void advectionRun(advection_t *advection, setupAide &newOptions){
 	 elapsed/allStep,
 	 (1.*mesh->Np*mesh->Nelements)/(elapsed),
 	 (1.*mesh->Np*mesh->Nelements*allStep)/(1.e9*elapsed),
-	 (1.*mesh->Np*mesh->Nelements*allStep*mesh->Nrk)/(1.e9*elapsed)
+	 (1.*mesh->Np*mesh->Nelements*allStep*mesh->Nrk)/(1.e9*elapsed),
+	 newOptions.getArgs("ADVECTION FORMULATION").c_str()
 	 );
 }

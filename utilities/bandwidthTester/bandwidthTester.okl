@@ -1,0 +1,68 @@
+
+
+#define B 128
+
+// write test
+@kernel void bandwidthTesterK00(const int N,
+				@restrict const dfloat *a,
+				@restrict const dfloat *b,
+				@restrict       dfloat *c){
+  
+
+  for(int b=0;b<(N+B-1)/B;++b;@outer(0)){
+    for(int t=0;t<B;++t;@inner(0)){
+      const int n = t + B*b;
+      if(n<N){
+	c[n] = n;
+      }
+    }
+  }
+  
+  
+}
+			     
+
+// read + write test
+@kernel void bandwidthTesterK01(const int N,
+				@restrict const dfloat *a,
+				@restrict const dfloat *b,
+				@restrict       dfloat *c){
+  
+
+  for(int b=0;b<(N+B-1)/B;++b;@outer(0)){
+    for(int t=0;t<B;++t;@inner(0)){
+      const int n = t + B*b;
+      if(n<N){
+	c[n] = a[n];
+      }
+    }
+  }
+  
+  
+}
+			     
+
+
+
+// read test
+@kernel void bandwidthTesterK02(const int N,
+				@restrict const dfloat *a,
+				@restrict const dfloat *b,
+				@restrict       dfloat *c){
+  
+
+  for(int b=0;b<(N+B-1)/B;++b;@outer(0)){
+    for(int t=0;t<B;++t;@inner(0)){
+      const int n = t + B*b;
+      if(n<N){
+	const dfloat foo = a[n];
+	if(foo==-1)
+	  c[n] = -1;
+      }
+    }
+  }
+  
+  
+}
+			     
+

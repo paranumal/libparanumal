@@ -78,6 +78,9 @@ typedef struct {
   int *NhaloPairs;      // number of elements worth of data to send/recv
   int  NhaloMessages;     // number of messages to send
 
+  dlong *haloGetNodeIds; // volume node ids of outgoing halo nodes
+  dlong *haloPutNodeIds; // volume node ids of incoming halo nodes
+
   void *haloSendRequests;
   void *haloRecvRequests;
 
@@ -138,7 +141,7 @@ typedef struct {
 
   // quad specific quantity
   int Nq, NqP, NpP;
-
+  
   dfloat *D; // 1D differentiation matrix (for tensor-product)
   dfloat *gllz; // 1D GLL quadrature nodes
   dfloat *gllw; // 1D GLL quadrature weights
@@ -285,13 +288,6 @@ typedef struct {
   dfloat dtfactor; //Delete later for script run 
   dfloat maxErrorBoltzmann;
 
-  //LSIMEX-BOLTZMANN coefficients, simplified for efficient implementation
-  dfloat LSIMEX_B[4], LSIMEX_C[4], LSIMEX_ABi[4], LSIMEX_ABe[4], LSIMEX_Ad[4];
-  dfloat *MRSAAB_A, *MRSAAB_B, *MRSAAB_C, *MRAB_A, *MRAB_B, *MRAB_C;
-  dfloat RK_A[5][5], RK_B[5], RK_C[5], SARK_A[5][5], SARK_B[5], SARK_C[5]; 
-  int Nimex, Nrhs; // deprecated
-  
-  dfloat *rkq, *rkrhsq, *rkerr; // deprecated, AK. 
   dfloat *errtmp;
   dfloat rkC[7], rkA[7*7], rkE[7];
 
@@ -330,51 +326,8 @@ typedef struct {
 
   int Ntscale; // Will be removed, for time accuracy test
   
-  dfloat *pmlBetaX, *pmlBetaY; // deprecated
-  dfloat *pmlSigma;
-  dfloat *pmlSigmaX;
-  dfloat *pmlSigmaY;
-  dfloat *pmlSigmaZ;
-
-  dfloat *pmlq;
-  dfloat *pmlqx;
-  dfloat *pmlqy;
-  dfloat *pmlqz;
-
-  dfloat *pmlrhsq;
-  dfloat *pmlrhsqx;
-  dfloat *pmlrhsqy;
-  dfloat *pmlrhsqz;
-
-  dfloat *pmlresq;
-  dfloat *pmlresqx;
-  dfloat *pmlresqy;
-  dfloat *pmlresqz;
-
-
-
   dfloat *invTau; // deprecated in Boltzmann
 
-
-  // AK: Remove the below definition after fixing MRAB, only single rate uses 
-  // dfloat *pmlqx;    // x-pml data array
-  dfloat *rhspmlqx; // right hand side data array
-  dfloat *respmlqx; // residual data array (for LSERK time-stepping)
-  dfloat *sigmax;
-
-  // dfloat *pmlqy;    // y-pml data array
-  dfloat *rhspmlqy; // right hand side data array
-  dfloat *respmlqy; // residual data array (for LSERK time-stepping)
-  dfloat *sigmay;
-
-  // dfloat *pmlqz;    // Z-pml data array
-  dfloat *rhspmlqz; // right hand side data array
-  dfloat *respmlqz; // residual data array (for LSERK time-stepping)
-  dfloat *sigmaz;
-
-  //dfloat *pmlq;    // Z-pml data array
-  dfloat *rhspmlq; // right hand side data array
-  dfloat *respmlq; // residual data array (for LSERK time-stepping)
 
   // Probe Data
   int probeN, probeNTotal; 
@@ -383,15 +336,12 @@ typedef struct {
   dlong *probeElementIds, *probeIds;  
   dfloat *probeI; 
 
-
-
-
-
   // occa stuff
   occa::device device;
 
   occa::stream defaultStream;
   occa::stream dataStream;
+  occa::stream computeStream;
 
   occa::memory o_q, o_rhsq, o_resq, o_fQM, o_fQP;
 
@@ -444,7 +394,9 @@ typedef struct {
   // DG halo exchange info
   occa::memory o_haloElementList;
   occa::memory o_haloBuffer;
-
+  occa::memory o_haloGetNodeIds;
+  occa::memory o_haloPutNodeIds;
+  
   occa::memory o_internalElementIds;
   occa::memory o_notInternalElementIds;
 
@@ -474,47 +426,6 @@ typedef struct {
 
   occa::memory o_pmlElementList;
   
-  // Deprecated in Boltzmann
-  occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
-  occa::memory o_pmlBetaX, o_pmlBetaY; // deprecated
-  occa::memory o_pmlq, o_pmlrhsq, o_pmlresq ; 
-  occa::memory o_pmlqx,o_pmlqy, o_pmlqz; 
-  occa::memory o_pmlrhsqx, o_pmlrhsqy, p_pmlrhsqz;
-  occa::memory o_pmlresqx, o_pmlresqy, p_pmlresqz;
-
-
-  // occa::memory o_rhspmlqx, o_respmlqx; 
-  // occa::memory o_rhspmlqy, o_respmlqy;
-  // occa::memory o_rhspmlqz, o_respmlqz;
-  occa::memory o_pmlNT, o_rhspmlNT, o_respmlNT; // deprecated !
-
-  // Boltzmann SARK extra storage for exponential update
-  // occa::memory o_resqex;
-
-  // Boltzmann SAAB 3th order storage: respmlqx, qy, nt and q not used
-  occa::memory o_expsigmax, o_expsigmay; // deprecated
-  occa::memory o_rhsq2,     o_rhsq3;     // deprecated
-  occa::memory o_rhspmlqx2, o_rhspmlqx3; // deprecated
-  occa::memory o_rhspmlqy2, o_rhspmlqy3; // deprecated
-  occa::memory o_rhspmlNT2, o_rhspmlNT3; // deprecated
-  // Deprecated
-  occa::memory o_qY,   o_qZ,   o_qS;
-  occa::memory o_qYx,  o_qZx,  o_qSx;
-  occa::memory o_qYy,  o_qZy,  o_qSy;
-
-
-
-
-
-
-
-
-  // AK: Remove this stuff, rename single rate files
-  occa::memory o_rhspmlq,   o_respmlq; // 3D LSERK
-  occa::memory o_pmlqold,  o_rhspmlq2,  o_rhspmlq3; // 3D Semianalytic
-  occa::memory o_pmlqY, o_pmlqS; // 3D IMEX
-
-
   occa::memory o_ggeo; // second order geometric factors
   occa::memory o_projectL2; // local weights for projection.
 
@@ -524,7 +435,8 @@ typedef struct {
   occa::kernel traceUpdateKernel;
   occa::kernel haloExtractKernel;
   occa::kernel partialSurfaceKernel;
-  
+  occa::kernel haloGetKernel;
+  occa::kernel haloPutKernel;
 
   // Just for test will be deleted after temporal testsAK
   occa::kernel RKupdateKernel;
@@ -557,46 +469,7 @@ typedef struct {
   // Boltzmann Specific Kernels
   occa::kernel relaxationKernel;
   occa::kernel pmlRelaxationKernel;
-  // //Boltzmann Imex Kernels
   
-
-  //Deprecated
-  occa::kernel implicitUpdateKernel;
-  occa::kernel pmlImplicitUpdateKernel;
-  occa::kernel implicitSolveKernel;
-  occa::kernel pmlImplicitSolveKernel;
-  //
-  occa::kernel residualUpdateKernel;
-  occa::kernel pmlResidualUpdateKernel;
-
-
-
-  occa::kernel pmlKernel;
-  occa::kernel pmlVolumeKernel;
-  occa::kernel pmlSurfaceKernel;
-  occa::kernel pmlUpdateKernel;
-  occa::kernel pmlTraceUpdateKernel;
-
-
-  // Experimental Time Steppings for Boltzmann
-#if 1
-  occa::kernel updateStageKernel;
-  occa::kernel pmlUpdateStageKernel;
-  //occa::kernel updateStageKernel33;
-  //
-  occa::memory o_rhsq4, o_rhsq5, o_invTau;
-  occa::memory o_qold , o_pmlqxold, o_pmlqyold,o_pmlNTold;
-  // SARK extra coefficients for Boltzmann Solver
-  dfloat sarka[5][5], sarkb[5], sarke[6], sarkra[5], sarkrb[5]; // exponential update terms, better to hold
-  dfloat sarkpmla[5][5], sarkpmlb[5], sarkpmle[6];
-  dfloat rk3a[3][3], rk3b[3], rk3c[3];
-  dfloat rk4a[5][5], rk4b[5];
-  dfloat lserk3a[3], lserk3b[3], lserk3c[4];
-
-#endif
-
-
-
 }mesh_t;
 
 // serial sort
@@ -642,6 +515,11 @@ void meshHaloExchangeStart(mesh_t *mesh,
 
 
 void meshHaloExchangeFinish(mesh_t *mesh);
+
+void meshHaloExchangeBlocking(mesh_t *mesh,
+			     size_t Nbytes,       // message size per element
+			     void *sendBuffer,    // temporary buffer
+			      void *recvBuffer);
 
 // print out parallel partition i
 void meshPartitionStatistics(mesh_t *mesh);

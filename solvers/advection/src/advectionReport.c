@@ -31,10 +31,10 @@ void advectionReport(advection_t *advection, dfloat time, setupAide &newOptions)
   mesh3D *mesh = advection->mesh;
 
   // copy data back to host
-  advection->o_q.copyTo(mesh->q);
+  advection->o_q.copyTo(advection->q);
 
   // do error stuff on host
-  advectionError(mesh, time);
+  advectionError(advection, time);
 
   // output field files
   char fname[BUFSIZ];

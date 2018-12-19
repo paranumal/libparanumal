@@ -42,7 +42,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   elliptic->BCType = baseElliptic->BCType;
   elliptic->allNeumann = baseElliptic->allNeumann;
   elliptic->allNeumannPenalty = baseElliptic->allNeumannPenalty;
-    
+
   elliptic->sendBuffer = baseElliptic->sendBuffer;
   elliptic->recvBuffer = baseElliptic->recvBuffer;
   elliptic->gradSendBuffer = baseElliptic->gradSendBuffer;
@@ -51,11 +51,11 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   elliptic->defaultStream = baseElliptic->defaultStream;
   elliptic->dataStream = baseElliptic->dataStream;
 
-  elliptic->o_EToB = baseElliptic->o_EToB;    
-  
+  elliptic->o_EToB = baseElliptic->o_EToB;
+
   elliptic->o_grad = baseElliptic->o_grad;
 
-  elliptic->o_EXYZ = baseElliptic->o_EXYZ;    
+  elliptic->o_EXYZ = baseElliptic->o_EXYZ;
 
   elliptic->weightedInnerProduct1Kernel = baseElliptic->weightedInnerProduct1Kernel;
   elliptic->weightedInnerProduct2Kernel = baseElliptic->weightedInnerProduct2Kernel;
@@ -66,7 +66,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   elliptic->dotMultiplyKernel = baseElliptic->dotMultiplyKernel;
   elliptic->dotDivideKernel = baseElliptic->dotDivideKernel;
 #endif
-    
+
   //populate the mini-mesh using the mesh struct
   mesh_t *mesh = (mesh_t*) calloc(1,sizeof(mesh_t));
 
@@ -77,7 +77,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   mesh->size = baseElliptic->mesh->size;
 
   MPI_Comm_dup(baseElliptic->mesh->comm, &(mesh->comm));
-    
+
   mesh->dim = baseElliptic->mesh->dim;
   mesh->Nverts        = baseElliptic->mesh->Nverts;
   mesh->Nfaces        = baseElliptic->mesh->Nfaces;
@@ -143,7 +143,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   mesh->maskKernel = baseElliptic->mesh->maskKernel;
   mesh->sumKernel = baseElliptic->mesh->sumKernel;
 #endif
-    
+
   elliptic->mesh = mesh;
 
   setupAide options = elliptic->options;
@@ -285,7 +285,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
             mesh->Ssr[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Dr[m+k*mesh->Np];
             mesh->Sss[m+n*mesh->Np] += mesh->Ds[n+l*mesh->Np]*mesh->MM[k+l*mesh->Np]*mesh->Ds[m+k*mesh->Np];
           }
-        } 
+        }
       }
     }
     SrrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
@@ -293,7 +293,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     SsrT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     SssT = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
     for (int n=0;n<mesh->Np;n++) {
-      for (int m=0;m<mesh->Np;m++) {  
+      for (int m=0;m<mesh->Np;m++) {
         SrrT[m+n*mesh->Np] = mesh->Srr[n+m*mesh->Np];
         SrsT[m+n*mesh->Np] = mesh->Srs[n+m*mesh->Np];
         SsrT[m+n*mesh->Np] = mesh->Ssr[n+m*mesh->Np];
@@ -388,7 +388,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
                           LIFTT);
 
-    
+
 
     mesh->o_SrrT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrrT);
     mesh->o_SrsT = mesh->device.malloc(mesh->Np*mesh->Np*sizeof(dfloat), SrsT);
@@ -446,7 +446,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
                           mesh->ggeo);
 
     mesh->o_LIFTT = baseElliptic->mesh->o_LIFTT; //dummy buffer
-    
+
   } else if (elliptic->elementType==TETRAHEDRA) {
 
     // build Dr, Ds, LIFT transposes
@@ -577,7 +577,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->o_Smatrices = mesh->device.malloc(6*mesh->Np*mesh->Np*sizeof(dfloat), ST);
 
     free(DrT); free(DsT); free(DtT); free(LIFTT);
-    free(SrrT); free(SrsT); free(SrtT); 
+    free(SrrT); free(SrsT); free(SrtT);
     free(SsrT); free(SssT); free(SstT);
     free(StrT); free(StsT); free(SttT);
 
@@ -653,7 +653,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(int),
                         mesh->vmapP);
 
-  
+
   //set the normalization constant for the allNeumann Poisson problem on this coarse mesh
   hlong localElements = (hlong) mesh->Nelements;
   hlong totalElements = 0;
@@ -664,11 +664,20 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   elliptic->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), elliptic->tmp);
   elliptic->o_tmp2 = mesh->device.malloc(Nblock2*sizeof(dfloat), elliptic->tmp);
 
+  //tau
+  if (elliptic->elementType==TRIANGLES ||
+      elliptic->elementType==QUADRILATERALS){
+    elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
+    if(elliptic->dim==3)
+      elliptic->tau *= 1.5;
+  }
+  else
+    elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+3);
 
   //setup an unmasked gs handle
   int verbose = options.compareArgs("VERBOSE","TRUE") ? 1:0;
   meshParallelGatherScatterSetup(mesh, Ntotal, mesh->globalIds, mesh->comm, verbose);
-  
+
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   elliptic->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
   for (dlong e=0;e<mesh->Nelements;e++) {
@@ -684,7 +693,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       }
     }
   }
-  ogsGatherScatter(elliptic->mapB, ogsInt, ogsMin, mesh->ogs); 
+  ogsGatherScatter(elliptic->mapB, ogsInt, ogsMin, mesh->ogs);
 
   //use the bc flags to find masked ids
   elliptic->Nmasked = 0;
@@ -696,7 +705,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     }
   }
   elliptic->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), elliptic->mapB);
-  
+
   elliptic->maskIds = (dlong *) calloc(elliptic->Nmasked, sizeof(dlong));
   elliptic->Nmasked =0; //reset
   for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
@@ -707,13 +716,13 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   //make a masked version of the global id numbering
   mesh->maskedGlobalIds = (hlong *) calloc(Ntotal,sizeof(hlong));
   memcpy(mesh->maskedGlobalIds, mesh->globalIds, Ntotal*sizeof(hlong));
-  for (dlong n=0;n<elliptic->Nmasked;n++) 
+  for (dlong n=0;n<elliptic->Nmasked;n++)
     mesh->maskedGlobalIds[elliptic->maskIds[n]] = 0;
 
   //use the masked ids to make another gs handle
   elliptic->ogs = ogsSetup(Ntotal, mesh->maskedGlobalIds, mesh->comm, verbose, mesh->device);
   elliptic->o_invDegree = elliptic->ogs->o_invDegree;
-  
+
 
 
   // info for kernel construction
@@ -809,13 +818,13 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   // set kernel name suffix
   char *suffix;
-  
+
   if(elliptic->elementType==TRIANGLES){
     if(elliptic->dim==2)
       suffix = strdup("Tri2D");
     else
       suffix = strdup("Tri3D");
-  }      
+  }
   if(elliptic->elementType==QUADRILATERALS){
     if(elliptic->dim==2)
       suffix = strdup("Quad2D");
@@ -872,7 +881,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       occa::properties floatKernelInfo = kernelInfo;
       floatKernelInfo["defines/" "pfloat"]= "float";
       dfloatKernelInfo["defines/" "pfloat"]= dfloatString;
-      
+
       sprintf(fileName, DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
       sprintf(kernelName, "ellipticAx%s", suffix);
       elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
@@ -890,11 +899,11 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       }
 
       //sprintf(kernelName, "ellipticPartialAx%s", suffix);
-      
+
       elliptic->partialAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
 
       elliptic->partialFloatAxKernel = mesh->device.buildKernel(fileName,kernelName,floatKernelInfo);
-      
+
       if (options.compareArgs("BASIS", "BERN")) {
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticGradientBB%s.okl", suffix);
@@ -904,14 +913,14 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
         sprintf(kernelName, "ellipticPartialGradientBB%s", suffix);
         elliptic->partialGradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-      
+
         sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdgBB%s.okl", suffix);
         sprintf(kernelName, "ellipticAxIpdgBB%s", suffix);
         elliptic->ipdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
         sprintf(kernelName, "ellipticPartialAxIpdgBB%s", suffix);
         elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-          
+
       } else if (options.compareArgs("BASIS", "NODAL")) {
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticGradient%s.okl", suffix);
@@ -977,8 +986,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       kernelInfo["defines/" "p_NpFine"]= NpFine;
       kernelInfo["defines/" "p_NpCoarse"]= NpCoarse;
 
-      int NblockVFine = maxNthreads/NpFine; 
-      int NblockVCoarse = maxNthreads/NpCoarse; 
+      int NblockVFine = maxNthreads/NpFine;
+      int NblockVCoarse = maxNthreads/NpCoarse;
       kernelInfo["defines/" "p_NblockVFine"]= NblockVFine;
       kernelInfo["defines/" "p_NblockVCoarse"]= NblockVCoarse;
 
@@ -1004,10 +1013,10 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   if(elliptic->elementType==HEXAHEDRA){
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
       if(options.compareArgs("ELEMENT MAP", "TRILINEAR")){
-        
+
         // pack gllz, gllw, and elementwise EXYZ
         dfloat *gllzw = (dfloat*) calloc(2*mesh->Nq, sizeof(dfloat));
-        
+
         int sk = 0;
         for(int n=0;n<mesh->Nq;++n)
           gllzw[sk++] = mesh->gllz[n];
@@ -1020,6 +1029,6 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     }
   }
 
-  
+
   return elliptic;
 }

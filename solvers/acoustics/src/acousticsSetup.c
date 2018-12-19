@@ -48,7 +48,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   int check;
 
   // compute samples of q at interpolation nodes
-  mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
+  acoustics->q = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
   acoustics->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
@@ -121,11 +121,11 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       dfloat u = 0, v = 0, w = 0, r = 0;
       
       acousticsGaussianPulse(x, y, z, t, &r, &u, &v, &w);
-      mesh->q[qbase+0*mesh->Np] = r;
-      mesh->q[qbase+1*mesh->Np] = u;
-      mesh->q[qbase+2*mesh->Np] = v;
+      acoustics->q[qbase+0*mesh->Np] = r;
+      acoustics->q[qbase+1*mesh->Np] = u;
+      acoustics->q[qbase+2*mesh->Np] = v;
       if(acoustics->dim==3)
-	mesh->q[qbase+3*mesh->Np] = w;
+	acoustics->q[qbase+3*mesh->Np] = w;
     }
   }
 
@@ -195,10 +195,10 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   kernelInfo["includes"] += boundaryHeaderFileName;
  
   acoustics->o_q =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), acoustics->q);
 
   acoustics->o_saveq =
-    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), mesh->q);
+    mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), acoustics->q);
   
   acoustics->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), acoustics->rhsq);

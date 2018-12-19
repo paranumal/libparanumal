@@ -37,11 +37,11 @@ void cnsReport(cns_t *cns, dfloat time, setupAide &options){
                        cns->o_Vort);
 
   // copy data back to host
-  cns->o_q.copyTo(mesh->q);
+  cns->o_q.copyTo(cns->q);
   cns->o_Vort.copyTo(cns->Vort);
 
   // do error stuff on host
-  cnsError(mesh, time);
+  cnsError(cns, time);
 
   //  cnsForces(cns, time);
 

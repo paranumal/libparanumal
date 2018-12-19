@@ -11,7 +11,7 @@ BROWN-MINION
 1.0
 
 [MESH FILE]
-../../meshes/sphereQuadH01.msh
+../../meshes/sphereQuadH0025.msh
 #../../meshes/insVortexQuad2D.msh
 
 [MESH DIMENSION]
@@ -141,6 +141,16 @@ CHEBYSHEV
 [VELOCITY PARALMOND PARTITION]
 STRONGNODES
 
+# can be DEFAULT or LPSCN
+[VELOCITY PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[VELOCITY PARALMOND LPSCN ORDERING]
+MAX
+#MIN
+
 ###########################################
 
 #################################################
@@ -196,6 +206,16 @@ CHEBYSHEV
 # can be STRONGNODES, DISTRIBUTED, SATURATE
 [PRESSURE PARALMOND PARTITION]
 STRONGNODES
+
+# can be DEFAULT or LPSCN
+[PRESSURE PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[PRESSURE PARALMOND LPSCN ORDERING]
+MAX
+#MIN
 
 ###########################################
 

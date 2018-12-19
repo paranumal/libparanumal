@@ -33,6 +33,7 @@ SOFTWARE.
 
 */
 
+#include <unistd.h>
 #include "roofline.h"
 
 int main(int argc, char **argv){
@@ -100,11 +101,15 @@ int main(int argc, char **argv){
       
     }
   }while(line!=NULL);
+
+  typedef struct{
+    double dram_read_throughput;
+    double dram_write_throughput;
+    double flop_dp_efficiency;
+  } performance;
   
   FILE *fp1 = fopen("out1", "r");
 
-  FILE *fpResults = fopen("rooflineResults.m", "a");
-  
   do{
     fgets(buf, BUFSIZ, fp1);
   }while(!strstr(buf, "Invocations")); // slight dangerous
@@ -115,10 +120,12 @@ int main(int argc, char **argv){
     line = fgets(buf, BUFSIZ, fp1);
 
     if(line && strstr(buf, "_occa")){
+
       
       int knl;
       for(knl = 0;knl<Nkernels;++knl){
 	if(strstr(buf, kernelNames[knl])){
+	  
 	  rest = strdup(buf);
 	  
 	  token = strtok(rest, ",");
@@ -130,7 +137,8 @@ int main(int argc, char **argv){
 	  long long int cnt;
 	  
 	  if(strstr(buf, "flop_dp_efficiency")){
-	    sscanf(token, "%lf", &val);		  
+	    sscanf(token, "%lf", &val);
+
 	    kernelFlopEfficiency[knl] = val;
 	  }
 
@@ -208,11 +216,15 @@ int main(int argc, char **argv){
     occa::memory o_a = device.malloc(bytes/2);
     occa::memory o_b = device.malloc(bytes/2);
 
+    device.finish();
+    
     occa::streamTag start = device.tagStream();
 
     int Ntests = 10;
-    for(int n=0;n<Ntests;++n)
+    for(int n=0;n<Ntests;++n){
       o_a.copyFrom(o_b);
+      o_b.copyFrom(o_a);
+    }
 
     occa::streamTag end = device.tagStream();
     
@@ -221,15 +233,21 @@ int main(int argc, char **argv){
     double elapsed = device.timeBetween(start, end);
     elapsed /= Ntests;
 
-    maxBWest = bytes/(elapsed*1.e9);
+    maxBWest = 2*bytes/(elapsed*1.e9);
     o_a.free();
     o_b.free();
   }
     
 
-  double maxGFLOPSest = 0;
   int knl;
   for(knl = 0;knl<Nkernels;++knl){
+
+    char resultsName[BUFSIZ];
+    sprintf(resultsName, "%s.dat", kernelNames[knl]);
+    
+    FILE *fpResults = fopen(resultsName, "a");
+    fprintf(fpResults, "\%\%  arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth, maxEstimatedBandwidth\n");
+    
     //    long long int bytes = (kernelReadThroughput[knl]+kernelWriteThroughput[knl])*kernelTime[knl]*1.e9;
     long long int bytes = (kernelBytesRead[knl]+kernelBytesWritten[knl])*32;
     long long int flops = kernelFlopCount[knl];
@@ -237,8 +255,7 @@ int main(int argc, char **argv){
     double perf = (flops/kernelTime[knl])/1.e9; // convert to GFLOPS/s
 
     printf("perf = %lf, eff = %lf\n",perf, kernelFlopEfficiency[knl]);
-    if(flops>10000)
-      maxGFLOPSest = mymax(maxGFLOPSest, 100*perf/kernelFlopEfficiency[knl]); // since efficiency is given in percent
+    double  maxGFLOPSest = 100*perf/kernelFlopEfficiency[knl]; // since efficiency is given in percent
     
     occa::memory o_a = device.malloc(bytes/2);
     occa::memory o_b = device.malloc(bytes/2);
@@ -257,16 +274,17 @@ int main(int argc, char **argv){
     elapsed /= Ntests;
     
     kernelMaxEmpiricalBandwidth[knl] = (bytes/elapsed)/1.e9; // convert max empirical bw for this vector size to GB/s
-
-    fprintf(fpResults, "%s = [%s;[%lg,%lg,%lg]]\n", kernelNames[knl], kernelNames[knl], arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth[knl]);
+    
+    fprintf(fpResults, "%lg, %lg, %lg, %lg, %lg\n", arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth[knl],
+	    maxGFLOPSest, maxBWest);
 
     o_a.free();
-    o_b.free();    
-    
+    o_b.free();
+    fflush(fpResults);
+    fclose(fpResults);
   }
 
-  fclose(fpResults);
-
+#if 0
   FILE *fpMatlab = fopen("rooflineScript.m", "w");
 
   for(knl = 0;knl<Nkernels;++knl){
@@ -300,6 +318,7 @@ int main(int argc, char **argv){
 
   
   fclose(fpMatlab);
+#endif
   
   MPI_Finalize();
   

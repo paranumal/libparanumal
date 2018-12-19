@@ -28,10 +28,12 @@ SOFTWARE.
 #include <math.h>
 #include <mpi.h>
 
-#include "mesh.h"
+#include "acoustics.h"
 
 
-void acousticsError(mesh_t *mesh, dfloat time){
+void acousticsError(acoustics_t *acoustics, dfloat time){
+
+  mesh_t *mesh = acoustics->mesh;
 
   dfloat maxR = 0;
   dfloat minR = 1E9;
@@ -44,8 +46,8 @@ void acousticsError(mesh_t *mesh, dfloat time){
       dfloat z = mesh->z[id];
 
       int qbase = n+e*mesh->Np*mesh->Nfields;
-      maxR = mymax(maxR, mesh->q[qbase]);
-      minR = mymin(minR, mesh->q[qbase]);
+      maxR = mymax(maxR, acoustics->q[qbase]);
+      minR = mymin(minR, acoustics->q[qbase]);
     }
   }
 

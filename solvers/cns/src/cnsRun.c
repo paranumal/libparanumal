@@ -126,12 +126,12 @@ void cnsRun(cns_t *cns, setupAide &options){
 	  }
 	  
 	  dfloat *maxQ = (dfloat*) calloc(mesh->Nfields, sizeof(dfloat));
-	  cns->o_q.copyTo(mesh->q);
+	  cns->o_q.copyTo(cns->q);
 	  for(int e=0;e<mesh->Nelements;++e){
 	    for(int fld=0;fld<mesh->Nfields;++fld){
 	      for(int n=0;n<mesh->Np;++n){
 		maxQ[fld] =
-		  mymax(fabs(mesh->q[e*mesh->Np*mesh->Nfields+fld*mesh->Np+n]), maxQ[fld]);
+		  mymax(fabs(cns->q[e*mesh->Np*mesh->Nfields+fld*mesh->Np+n]), maxQ[fld]);
 	      }
 	    }
 	  }
@@ -143,7 +143,7 @@ void cnsRun(cns_t *cns, setupAide &options){
 	
 	if(cns->outputForceStep){
 	  if(tstep%cns->outputForceStep){
-	    cns->o_q.copyTo(mesh->q);
+	    cns->o_q.copyTo(cns->q);
 	    cns->mesh->device.finish();
 	    cnsForces(cns,time);
 	    
@@ -154,7 +154,7 @@ void cnsRun(cns_t *cns, setupAide &options){
 	
 	// check for time step interval output during this step
 	if(tstepIntervalFlag && (tstep%outputTstepInterval==0)){
-	  cns->o_q.copyTo(mesh->q);//  ?????
+	  cns->o_q.copyTo(cns->q);//  ?????
           
 	// output  (print from rkq)
 	cnsReport(cns, nextOutputTime, options);
