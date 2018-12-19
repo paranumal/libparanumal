@@ -401,7 +401,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   // bc = 1 -> wall bc = 2 -> inflow bc = 3 -> outflow
   // bc = 4 -> x-aligned slip, bc = 5 -> y-aligned slip, bc = 6 -> z-aligned slip
 
-  int sBCType[7] = {0,1,1,2,1,2,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  int sBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
  
   //Solver tolerances 
   cds->TOL = 1E-8;
