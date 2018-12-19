@@ -87,7 +87,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   cds->U     = (dfloat*) calloc(cds->NVfields             *Ntotal,sizeof(dfloat));
   cds->S     = (dfloat*) calloc(cds->NSfields*cds->Nstages*Ntotal,sizeof(dfloat));
   // Rhs storage
-  cds->rhsS  = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
+  //  cds->rhsS  = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
   //additional field storage
   cds->NS    = (dfloat*) calloc(cds->NSfields*(cds->Nstages+1)*Ntotal,sizeof(dfloat));
   cds->rkS   = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
@@ -109,23 +109,26 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
 
 
   if(cds->Nsubsteps){
-    cds->Sd    = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
-    cds->Ue    = (dfloat*) calloc(cds->NVfields*Ntotal,sizeof(dfloat));
+    cds->Sd      = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
+    cds->resS    = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
+    cds->rhsSd   = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));        
+    cds->Ue      = (dfloat*) calloc(cds->NVfields*Ntotal,sizeof(dfloat));
 
     // !!!!!!!!!!!!!!!!!Check this !!!!!!!!!!!!!!!!!
-    if(cds->elementType==HEXAHEDRA){
-      cds->cUd = (dfloat *) calloc(cds->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
-      cds->cSd = (dfloat *) calloc(cds->NSfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));      
-    }else{ 
-      cds->cUd = cds->U;
-      cds->cSd = cds->S;      
-    }
+    // if(cds->elementType==HEXAHEDRA){
+      //cds->cUd = (dfloat *) calloc(cds->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+    //   cds->cSd = (dfloat *) calloc(cds->NSfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));      
+    // }else{ 
+      //cds->cUd = cds->U;
+    //  cds->cSd = cds->S;      
+    // }
 
     // Prepare RK stages for Subcycling Part
     
     int Sorder = 4; // Defaulting to LSERK 4(5) 
     
     options.getArgs("SUBCYCLING TIME ORDER", Sorder);
+
     if(Sorder==2){
       cds->SNrk     = 2; 
       dfloat rka[2] = {0.0,     1.0 };
@@ -615,42 +618,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "cdsHelmholtzAddBC%s", suffix);
       cds->helmholtzAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      /*      
-      // ===========================================================================
-      
-      // Dont forget to modify!!!!!!!!
-      sprintf(fileName, DCDS "/okl/insPressureRhs%s.okl", suffix);
-      sprintf(kernelName, "insPressureRhs%s", suffix);
-      cds->pressureRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
-      if(!(cds->dim==3 && cds->elementType==QUADRILATERALS) ){
-      sprintf(fileName, DCDS "/okl/insPressureBC%s.okl", suffix);
-      sprintf(kernelName, "insPressureIpdgBC%s", suffix);
-      cds->pressureRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
-      sprintf(kernelName, "insPressureBC%s", suffix);
-      cds->pressureRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
-      sprintf(kernelName, "insPressureAddBC%s", suffix);
-      cds->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-      }
-
-      // ===========================================================================
-
-      sprintf(fileName, DCDS "/okl/insPressureUpdate.okl");
-      sprintf(kernelName, "insPressureUpdate");
-      cds->pressureUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
-      sprintf(fileName, DCDS "/okl/insVelocityUpdate.okl");
-      sprintf(kernelName, "insVelocityUpdate");
-      cds->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);      
-
-      // ===========================================================================
-
-      sprintf(fileName, DCDS "/okl/insVorticity%s.okl", suffix);
-      sprintf(kernelName, "insVorticity%s", suffix);
-      cds->vorticityKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-    
+      /*
       // ===========================================================================
       if(cds->dim==3 && cds->options.compareArgs("OUTPUT TYPE","ISO")){
       sprintf(fileName, DCDS "/okl/insIsoSurface3D.okl");
@@ -658,46 +626,46 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
 
       cds->isoSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
       }
-      
+      */
 
       // Not implemented for Quad 3D yet !!!!!!!!!!
       if(cds->Nsubsteps){
       // Note that resU and resV can be replaced with already introduced buffer
-      cds->o_Ue    = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
-      cds->o_Ud    = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ud);
-      cds->o_resU  = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->resU);
-      cds->o_rhsUd = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->rhsUd);
+      cds->o_Ue     = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
+      cds->o_Sd     = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->Sd);
+      cds->o_resS   = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->resS);
+      cds->o_rhsSd  = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->rhsSd);
 
       if(cds->elementType==HEXAHEDRA)
-      cds->o_cUd = mesh->device.malloc(cds->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), cds->cUd);
+       cds->o_cSd = mesh->device.malloc(cds->NSfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), cds->cSd);
       else 
-      cds->o_cUd = cds->o_Ud;
+       cds->o_cSd = cds->o_Sd;
 
       sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
       sprintf(kernelName, "scaledAddwOffset");
       cds->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, DCDS "/okl/insSubCycle%s.okl", suffix);
-      sprintf(kernelName, "insSubCycleVolume%s", suffix);
-      cds->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+       sprintf(fileName, DCDS "/okl/cdsSubCycle%s.okl", suffix);
+       sprintf(kernelName, "cdsSubCycleVolume%s", suffix);
+       cds->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "insSubCycleSurface%s", suffix);
+      sprintf(kernelName, "cdsSubCycleSurface%s", suffix);
       cds->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
-      cds->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+     sprintf(kernelName, "cdsSubCycleCubatureVolume%s", suffix);
+     cds->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
+      sprintf(kernelName, "cdsSubCycleCubatureSurface%s", suffix);
       cds->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, DCDS "/okl/insSubCycle.okl");
-      sprintf(kernelName, "insSubCycleRKUpdate");
+      sprintf(fileName, DCDS "/okl/cdsSubCycle.okl");
+      sprintf(kernelName, "cdsSubCycleRKUpdate");
       cds->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "insSubCycleExt");
+      sprintf(kernelName, "cdsSubCycleExt");
       cds->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
-      */
+   
     }
     MPI_Barrier(mesh->comm);
   }
@@ -710,6 +678,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   printf("Pr\t:\t %.8e \n", cds->Pr);
   printf("dt\t:\t %.8e \n", cds->dt);
   printf("invdt\t:\t %.8e \n", cds->idt);
+  printf("Nsubsteps\t:\t %02d \n", cds->Nsubsteps);  
 
 #endif
 

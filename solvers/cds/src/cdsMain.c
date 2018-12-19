@@ -83,8 +83,8 @@ int main(int argc, char **argv){
     printf("ARK is not implemented yet\n");
     exit(EXIT_FAILURE);
   }else if (cds->options.compareArgs("TIME INTEGRATOR", "EXTBDF")){
-    printf("Running EXTBDF Scheme\n");
-    cdsRunEXTBDF(cds);
+     printf("Running EXTBDF Scheme\n");
+     cdsRunEXTBDF(cds);
   }
   // close down MPI
   MPI_Finalize();

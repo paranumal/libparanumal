@@ -27,7 +27,7 @@ SOFTWARE.
 #include "cds.h"
 
 // complete a time step using LSERK4
-void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::memory o_Ud){
+void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::memory o_S, occa::memory o_Sd){
  
   //printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
   mesh_t *mesh = cds->mesh;
@@ -68,10 +68,10 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
   const dfloat tn1 = time - 1*cds->dt;
   const dfloat tn2 = time - 2*cds->dt;
 
-  dfloat zero = 0.0, one = 1.0;
+  dfloat zero = 0.0f, one = 1.0f;
   int izero = 0;
 
-  dfloat b, bScale=0;
+  dfloat b=0.0f, bScale=0.0f;
 
   // Solve for Each SubProblem
   for (int torder=cds->ExplicitOrder-1; torder>=0; torder--){
@@ -150,20 +150,19 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
                      mesh->o_cubDWmatrices,
                      mesh->o_cubInterpT,
                      mesh->o_cubProjectT,
-                     cds->fieldOffset,
+                     cds->vOffset,
+                     cds->sOffset,					    
                      cds->o_Ue,
-                          o_Ud,
-                     cds->o_cU,     
-                     cds->o_cUd,     
-                     cds->o_rhsUd);
+                          o_Sd,
+                     cds->o_rhsSd);
         } else{
           cds->subCycleVolumeKernel(mesh->Nelements,
                                     mesh->o_vgeo,
                                     mesh->o_Dmatrices,
-                                    cds->fieldOffset,
+                                    cds->sOffset,
                                     cds->o_Ue,
-                                         o_Ud,
-                                    cds->o_rhsUd);
+                                         o_Sd,
+                                    cds->o_rhsSd);
 
         }
         occaTimerToc(mesh->device,"AdvectionVolume");
@@ -175,20 +174,20 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
 
           // start halo exchange
           meshHaloExchangeStart(mesh,
-                              mesh->Np*(cds->NVfields)*sizeof(dfloat), 
-                              cds->vSendBuffer,
-                              cds->vRecvBuffer);
+                              mesh->Np*(cds->NSfields)*sizeof(dfloat), 
+                              cds->sendBuffer,
+                              cds->recvBuffer);
         
 
           meshHaloExchangeFinish(mesh);
 
-          cds->o_vHaloBuffer.copyFrom(cds->vRecvBuffer,"async: true"); 
+          cds->o_haloBuffer.copyFrom(cds->recvBuffer,"async: true"); 
 
-          cds->velocityHaloScatterKernel(mesh->Nelements,
+          cds->haloScatterKernel(mesh->Nelements,
                                     mesh->totalHaloPairs,
-                                    cds->fieldOffset, //0 cds->fieldOffset
-                                    o_Ud,
-                                    cds->o_vHaloBuffer);
+                                    cds->sOffset,
+                                    o_Sd,
+                                    cds->o_haloBuffer);
           mesh->device.finish();
           
           mesh->device.setStream(mesh->defaultStream);
@@ -214,10 +213,11 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
                                               mesh->o_intx,
                                               mesh->o_inty,
                                               mesh->o_intz,
-                                              cds->fieldOffset,
+                                              cds->vOffset,
+                                              cds->sOffset,					     
                                               cds->o_Ue,
-                                                   o_Ud,
-                                              cds->o_rhsUd);
+                                                   o_Sd,
+                                              cds->o_rhsSd);
         } else{
           cds->subCycleSurfaceKernel(mesh->Nelements,
                                     mesh->o_sgeo,
@@ -230,10 +230,11 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
                                     mesh->o_x,
                                     mesh->o_y,
                                     mesh->o_z,
-                                    cds->fieldOffset,
+                                    cds->vOffset,
+                                    cds->sOffset,				     
                                     cds->o_Ue,
-                                         o_Ud,
-                                    cds->o_rhsUd);
+                                         o_Sd,
+                                    cds->o_rhsSd);
         }
         occaTimerToc(mesh->device,"AdvectionSurface");
           
@@ -243,10 +244,10 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
                               cds->sdt,
                               cds->Srka[rk],
                               cds->Srkb[rk],
-                              cds->fieldOffset,
-                              cds->o_rhsUd,
-                              cds->o_resU, 
-                                   o_Ud);
+                              cds->sOffset,
+                              cds->o_rhsSd,
+                              cds->o_resS, 
+                                   o_Sd);
         occaTimerToc(mesh->device,"AdvectionUpdate");
       }
     }

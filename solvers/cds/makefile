@@ -61,9 +61,9 @@ AOBJS    = \
 ./src/cdsError.o \
 ./src/cdsReport.o \
 ./src/cdsPlotVTU.o \
+./src/cdsSubCycle.o \
 #./src/insPlotWallsVTUHex3D.o \
 # ./src/insPlotVTUHex3D.o \
-# ./src/insSubCycle.o \
 # ./src/insRestart.o \
 
 # library objects
