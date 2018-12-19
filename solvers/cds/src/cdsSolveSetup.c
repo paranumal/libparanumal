@@ -29,7 +29,7 @@ SOFTWARE.
 
 void cdsSolveSetup(cds_t *cds, dfloat lambda, occa::properties &kernelInfo){
 
-  mesh_t *mesh = cds->mesh;
+  mesh_t *mesh      = cds->mesh;
   setupAide options = cds->options;
 
   //sanity checking
@@ -44,32 +44,23 @@ void cdsSolveSetup(cds_t *cds, dfloat lambda, occa::properties &kernelInfo){
   dlong Nblock = mymax(1,(Ntotal+blockSize-1)/blockSize);
   dlong Nhalo  = mesh->Np*mesh->totalHaloPairs;
   dlong Nall   = Ntotal + Nhalo;
-    // dlong Nblock2 = mymax(1,(Nblock+blockSize-1)/blockSize);
 
-  cds->rhsS   = (dfloat*) calloc(Nall,   sizeof(dfloat));
-  cds->S      = (dfloat*) calloc(cds->Nstages*Nall,   sizeof(dfloat));
-  cds->Ax     = (dfloat*) calloc(Nall,   sizeof(dfloat));
-  cds->Ap     = (dfloat*) calloc(Nall,   sizeof(dfloat));
-  cds->tmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
+  // Assumes NStages are initiliazed in solver side.... 
+  cds->S     = (dfloat*) calloc(cds->NSfields*cds->Nstages*Ntotal,sizeof(dfloat));
+  // Rhs storage
+  cds->rhsS  = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
+  //additional field storage
+  cds->NS    = (dfloat*) calloc(cds->NSfields*(cds->Nstages+1)*Ntotal,sizeof(dfloat));
+  cds->rkS   = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
+  cds->rkNS  = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
 
-  cds->grad = (dfloat*) calloc(Nall*4, sizeof(dfloat));
 
-  cds->o_p   = mesh->device.malloc(Nall*sizeof(dfloat), cds->p);
-  cds->o_rtmp= mesh->device.malloc(Nall*sizeof(dfloat), cds->p);
-  cds->o_z   = mesh->device.malloc(Nall*sizeof(dfloat), cds->z);
 
-  cds->o_res = mesh->device.malloc(Nall*sizeof(dfloat), cds->z);
-  cds->o_Sres = mesh->device.malloc(Nall*sizeof(dfloat), cds->z);
-  cds->o_Ax  = mesh->device.malloc(Nall*sizeof(dfloat), cds->p);
-  cds->o_Ap  = mesh->device.malloc(Nall*sizeof(dfloat), cds->Ap);
-  cds->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), cds->tmp);
-  cds->o_tmp2 = mesh->device.malloc(Nblock2*sizeof(dfloat), cds->tmp);
-
-  cds->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), cds->grad);
+    
 
   //setup async halo stream
   cds->defaultStream = mesh->defaultStream;
-  cds->dataStream = mesh->dataStream;
+  cds->dataStream    = mesh->dataStream;
 
   dlong Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   if(Nbytes>0){

@@ -94,13 +94,13 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   cds->rkNS  = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
   
   //extra storage for interpolated fields
-  if(cds->elementType==HEXAHEDRA){
-    cds->cU = (dfloat *) calloc(cds->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
-    cds->cS = (dfloat *) calloc(cds->NSfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
-  }else{ 
-    cds->cU = cds->U;
-    cds->cS = cds->S;
-  }
+  //  if(cds->elementType==HEXAHEDRA){
+  //   cds->cU = (dfloat *) calloc(cds->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+  //  cds->cS = (dfloat *) calloc(cds->NSfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
+  // }else{ 
+  //  cds->cU = cds->U;
+  //  cds->cS = cds->S;
+  // }
 
   cds->Nsubsteps = 0;
    
@@ -636,10 +636,10 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       cds->o_resS   = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->resS);
       cds->o_rhsSd  = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->rhsSd);
 
-      if(cds->elementType==HEXAHEDRA)
-       cds->o_cSd = mesh->device.malloc(cds->NSfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), cds->cSd);
-      else 
-       cds->o_cSd = cds->o_Sd;
+      //if(cds->elementType==HEXAHEDRA)
+      // cds->o_cSd = mesh->device.malloc(cds->NSfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), cds->cSd);
+      //else 
+      // cds->o_cSd = cds->o_Sd;
 
       sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
       sprintf(kernelName, "scaledAddwOffset");
