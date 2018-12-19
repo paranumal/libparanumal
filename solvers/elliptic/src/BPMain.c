@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -42,6 +42,7 @@ int main(int argc, char **argv){
   int    N        = atoi(argv[3]);
   int    maxiter  = atoi(argv[4]);
 
+  int NTEST      = 5; // number of test for BP5 
   options.getArgs("ELEMENT TYPE", elementType);
   options.getArgs("MESH DIMENSION", dim);
 
@@ -61,28 +62,33 @@ int main(int argc, char **argv){
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
 
-  int maxIter = 1000;
 
-  #if 1
+#if 1
   double start = 0.0, end =0.0;
   mesh->device.finish();
+  MPI_Barrier(mesh->comm);
   start = MPI_Wtime();
-  #else
+#else
   occa::streamTag startTag = mesh->device.tagStream();
-  #endif
+#endif
 
-  pcgBP5(elliptic, lambda, elliptic->o_r, elliptic->o_x, maxIter);
+  for(int tst=0; tst<NTEST; tst++)
+    pcgBP5(elliptic, lambda, elliptic->o_r, elliptic->o_x, maxiter);
 
 
-  #if 1
+#if 1
   mesh->device.finish();
   end = MPI_Wtime();
   double localElapsed = end-start;
-  #else
+#else
   occa::streamTag stopTag = mesh->device.tagStream();
-  ddouble localElapsed = mesh->device.timeBetween(startTag, stopTag);
-  #endif
+  double localElapsed = mesh->device.timeBetween(startTag, stopTag);
+#endif
 
+
+  localElapsed /= NTEST; // Average time for each PCG solve; 
+
+  
   int size = mesh->size;
 
   hlong   localDofs     = (hlong) mesh->Np*mesh->Nelements;
@@ -95,7 +101,7 @@ int main(int argc, char **argv){
   MPI_Reduce(&localDofs,    &globalDofs,    1, MPI_HLONG,   MPI_SUM, 0, mesh->comm );
   MPI_Reduce(&localElements,&globalElements,1, MPI_HLONG,   MPI_SUM, 0, mesh->comm );
 
-  globalElapsed /= maxIter;
+  globalElapsed /= maxiter;
   int ppn = 1;
   if (mesh->rank==0){
     char fname[BUFSIZ];
@@ -111,7 +117,7 @@ int main(int argc, char **argv){
 
     fclose(fp);
     printf("%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %g %g\t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME TIME_PER_DOF, DOF_PER_TIME] \n",
-	   mesh->size, mesh->N, globalElements, globalDofs, maxIter, globalElapsed, globalElapsed/(globalDofs),
+	   mesh->size, mesh->N, globalElements, globalDofs, maxiter, globalElapsed, globalElapsed/(globalDofs),
 	   1.0/(globalElapsed/(globalDofs)));
   }
 
