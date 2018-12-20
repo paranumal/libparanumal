@@ -24,12 +24,11 @@ SOFTWARE.
 
 */
 
-#define p_halfD ((int)((int)p_gjNq+1)/(int)2)
-
 #define p_cubNp (p_cubNq*p_cubNq*p_cubNq)
 #define p_cubNq2 (p_cubNq*p_cubNq)
 #define p_Nq2 (p_Nq*p_Nq)
 
+#if 0
 #if p_cubNq==8 || p_cubNq==16
 #define p_cubPad 1
 #else
@@ -41,40 +40,56 @@ SOFTWARE.
 #else
 #define p_gllPad 0
 #endif
+#endif
 
+#define p_cubPad 0
+#define p_gllPad 0
 
-@kernel void ellipticCubatureAxHex3D(const int Nelements,
-				    const dfloat * restrict cubggeo,
-				    const dfloat * restrict gllD,
-				    const dfloat * restrict cubInterp,
-				    const dfloat lambda,
-				    const dfloat * restrict q,
-				    dfloat * restrict Aq){
+@kernel void ellipticCubaturePartialAxHex3D(const dlong Nelements,
+					    @restrict const dlong  * elementList,
+					    @restrict const dfloat * cubggeo,
+					    @restrict const dfloat * cubD,
+					    @restrict const dfloat * cubInterpT,
+					              const dfloat lambda,
+					    @restrict const dfloat * q,
+					    @restrict       dfloat * Aq){
 
   for(int e=0; e<Nelements; ++e; @outer(0)) {
 
     @shared dfloat s_q[p_cubNq][p_cubNq][p_cubNq];
-    @shared dfloat s_gllD[p_cubNq][p_cubNq+p_cubPad];
+    @shared dfloat s_cubD[p_cubNq][p_cubNq+p_cubPad];
     @shared dfloat s_qr[p_cubNq][p_cubNq+p_cubPad];
     @shared dfloat s_I[p_cubNq][p_Nq+p_gllPad];
 
     @exclusive dfloat r_q[p_cubNq];
     @exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ, r_qt, r_qs;
 
+    @exclusive dlong r_element;
+    
     for(int b=0;b<p_cubNq;++b;@inner(1)){
       for(int a=0;a<p_cubNq;++a;@inner(0)){
 
-        if(a<p_Nq){
-          s_I[b][a] = cubInterp[a+p_Nq*b];
+	r_element = elementList[e];
+
+	int id = a + b*p_cubNq;
+        if(id<p_cubNq*p_Nq){
+          s_I[a][b] = cubInterpT[id];
         }
 
-        s_gllD[b][a] = gllD[b*p_cubNq+a];
+        s_cubD[b][a] = cubD[id];
+
+	if(e==0 && a==0 && b==0)
+	  printf("cD: ");
+	if(e==0)
+	  printf("s_cubD[%d][%d]=%lf\n ", b, a, s_cubD[b][a]);
+
+	
 
         if(a<p_Nq && b<p_Nq){
 
           #pragma unroll p_Nq
             for(int c=0;c<p_Nq;++c){
-              s_q[c][b][a] = q[e*p_Np + c*p_Nq*p_Nq + b*p_Nq + a];
+              s_q[c][b][a] = q[r_element*p_Np + c*p_Nq*p_Nq + b*p_Nq + a];
             }
         }
       }
@@ -92,16 +107,17 @@ SOFTWARE.
             for(int b=0;b<p_Nq;++b)
               r_q[b] = s_q[c][b][a];
 
-          #pragma unroll p_halfD
-            for(int j=0;j<p_halfD;++j){
+          #pragma unroll p_halfC
+            for(int j=0;j<p_halfC;++j){
 
-              dfloat tmp = 0;
+              dfloat tmp = 0; 
               dfloat tmp2 = 0;
 
               #pragma unroll p_Nq
                 for(int b=0;b<p_Nq;++b){
 
                   const dfloat sIjb= s_I[j][b];
+
                   tmp  += sIjb*r_q[b];
                   tmp2 += sIjb*r_q[p_Nq-1-b];
                 }
@@ -114,19 +130,18 @@ SOFTWARE.
     }//for c
 
 
-    //transform in c    
+    //transform in a
     for(int c=0;c<p_cubNq;++c;@inner(1)){
       for(int j=0;j<p_cubNq;++j;@inner(0)){
 
         if(c<p_Nq){
 
           #pragma unroll p_Nq
-            for(int a=0;a<p_Nq;++a)
-
+	  for(int a=0;a<p_Nq;++a)
               r_q[a] = s_q[c][j][a];
 
-          #pragma unroll p_halfD
-            for(int i=0;i<p_halfD;++i){
+          #pragma unroll p_halfC
+            for(int i=0;i<p_halfC;++i){
 
               dfloat tmp = 0;
               dfloat tmp2 = 0;
@@ -154,8 +169,8 @@ SOFTWARE.
           for(int c=0;c<p_Nq;++c)
             r_q[c] = s_q[c][j][i];
 
-        #pragma unroll p_halfD
-          for(int k=0;k<p_halfD;++k){
+        #pragma unroll p_halfC
+          for(int k=0;k<p_halfC;++k){
 
             dfloat tmp = 0;
             dfloat tmp2= 0;
@@ -175,11 +190,14 @@ SOFTWARE.
     }
     //===============================================now differentiate once interpolated
 
-    #pragma unroll p_cubNq
-      for(int k=0; k<p_cubNq; ++k)
-        for(int j=0;j<p_cubNq;++j;@inner(1))
-          for(int i=0;i<p_cubNq;++i;@inner(0))
-            r_q[k] =0.0f;
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+#pragma unroll p_cubNq
+	for(int k=0; k<p_cubNq; ++k){
+	  r_q[k] =0.0f;
+	}
+      }
+    }
 
     #pragma unroll p_cubNq
       for(int k=0; k<p_cubNq; ++k) {
@@ -187,10 +205,11 @@ SOFTWARE.
         for(int j=0; j<p_cubNq; ++j; @inner(1)) {
           for(int i=0; i<p_cubNq; ++i; @inner(0)) {
 
-            const int base = e*p_Ngeo*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
+            const int base = r_element*p_Nggeo*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
+
             //geofactors for k j i thread
             r_GwJ = cubggeo[base+p_GWJID*p_cubNp];
-
+	    
             r_G00 = cubggeo[base+p_G00ID*p_cubNp];
             r_G01 = cubggeo[base+p_G01ID*p_cubNp];
             r_G02 = cubggeo[base+p_G02ID*p_cubNp];
@@ -206,9 +225,9 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
               for (int n = 0; n<p_cubNq; ++n) {
-                dr += s_gllD[i][n]*s_q[k][j][n];
-                ds += s_gllD[j][n]*s_q[k][n][i];
-                dt += s_gllD[k][n]*s_q[n][j][i];
+                dr += s_cubD[i][n]*s_q[k][j][n];
+                ds += s_cubD[j][n]*s_q[k][n][i];
+                dt += s_cubD[k][n]*s_q[n][j][i];
               }
 
             s_qr[j][i] = r_G00*dr + r_G01*ds + r_G02*dt;
@@ -228,8 +247,8 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
               for(int n=0;n<p_cubNq;++n){
-                lapqr += s_gllD[n][i]*s_qr[j][n];
-                r_q[n] += s_gllD[k][n]*r_qt;
+                lapqr += s_cubD[n][i]*s_qr[j][n];
+                r_q[n] += s_cubD[k][n]*r_qt;
               }
 
             r_q[k] += lapqr;
@@ -249,14 +268,14 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
               for(int n=0;n<p_cubNq;++n){
-                lapqs += s_gllD[n][j]*s_qr[n][i];
+                lapqs += s_cubD[n][j]*s_qr[n][i];
               }
 
             r_q[k] += lapqs;
           }
         }
       }//k
-
+  
     //Loop 7
     for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
@@ -280,8 +299,8 @@ SOFTWARE.
             r_q[j] = s_q[k][j][i];
           }
 
-        #pragma unroll p_halfD
-          for(int b=0;b<p_halfD;++b){
+        #pragma unroll p_halfN
+          for(int b=0;b<p_halfN;++b){
 
             dfloat tmp = 0.0f;
             dfloat tmp2 = 0.0f;
@@ -309,8 +328,8 @@ SOFTWARE.
             for(int i=0;i<p_cubNq;++i)
               r_q[i] = s_q[k][b][i];
 
-          #pragma unroll p_halfD
-            for(int a=0;a<p_halfD;++a){
+          #pragma unroll p_halfN
+            for(int a=0;a<p_halfN;++a){
 
               dfloat tmp  = 0.0f;
               dfloat tmp2 = 0.0f;
@@ -340,8 +359,8 @@ SOFTWARE.
               r_q[k] = s_q[k][b][a];
             }
 
-          #pragma unroll p_halfD
-            for(int c=0;c<p_halfD;++c){
+          #pragma unroll p_halfN
+            for(int c=0;c<p_halfN;++c){
 
               dfloat tmp  = 0.0f;
               dfloat tmp2 = 0.0f;
@@ -354,8 +373,8 @@ SOFTWARE.
                   tmp2 += sIkc*r_q[p_cubNq-1-k];
                 }
 
-              Aq[e*p_Np + c*p_Nq*p_Nq + b*p_Nq + a] = tmp;
-              Aq[e*p_Np+(p_Nq-1-c)*p_Nq*p_Nq+b*p_Nq+a]  = tmp2;
+              Aq[r_element*p_Np + c*p_Nq*p_Nq + b*p_Nq + a] = tmp;
+              Aq[r_element*p_Np+(p_Nq-1-c)*p_Nq*p_Nq+b*p_Nq+a]  = tmp2;
             }//c
         }//if
       }//a

@@ -268,7 +268,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   /*preconditioner setup */
   elliptic->precon = (precon_t*) calloc(1, sizeof(precon_t));
 
-  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
+  //  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
     kernelInfo["compiler_flags"] += "-Xptxas -dlcm=ca";
@@ -409,6 +409,11 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       else NblockG = maxNthreads/mesh->Np;
       kernelInfo["defines/" "p_NblockG"]= NblockG;
 
+      kernelInfo["defines/" "p_halfC"]= (int)((mesh->cubNq+1)/2);
+      kernelInfo["defines/" "p_halfN"]= (int)((mesh->Nq+1)/2);
+
+      cout << kernelInfo ;
+      
       //add standard boundary functions
       char *boundaryHeaderFileName;
       if (elliptic->dim==2)
@@ -425,7 +430,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       occa::properties floatKernelInfo = kernelInfo;
       floatKernelInfo["defines/" "pfloat"]= "float";
       dfloatKernelInfo["defines/" "pfloat"]= dfloatString;
-
+      
       elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
 
       if(elliptic->elementType!=HEXAHEDRA){
@@ -442,7 +447,16 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       elliptic->partialAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
 
       elliptic->partialFloatAxKernel = mesh->device.buildKernel(fileName,kernelName,floatKernelInfo);
+      
+      // only for Hex3D - cubature Ax
+      if(elliptic->elementType==HEXAHEDRA){
+	printf("BUILDING partialCubatureAxKernel\n");
+	sprintf(fileName,  DELLIPTIC "/okl/ellipticCubatureAx%s.okl", suffix);
 
+	sprintf(kernelName, "ellipticCubaturePartialAx%s", suffix);
+	elliptic->partialCubatureAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
+      }
+      
       // Not implemented for Quad3D !!!!!
       if (options.compareArgs("BASIS","BERN")) {
 

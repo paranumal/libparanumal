@@ -247,6 +247,8 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
           dfloat sn = mesh->cubr[j];
           dfloat tn = mesh->cubr[k];
 
+	  int n = k*mesh->cubNq*mesh->cubNq + j*mesh->cubNq + i;
+	  
           /* Jacobian matrix */
 #if 0
           dfloat xr = 0.125*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
@@ -261,7 +263,7 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
           dfloat zs = 0.125*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
           dfloat zt = 0.125*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
 #else
-	  int n = k*mesh->cubNq*mesh->cubNq + j*mesh->cubNq + i;
+
 	  dfloat xr = cubxre[n], xs = cubxse[n], xt = cubxte[n];
 	  dfloat yr = cubyre[n], ys = cubyse[n], yt = cubyte[n];
 	  dfloat zr = cubzre[n], zs = cubzse[n], zt = cubzte[n];
@@ -277,7 +279,7 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
           dfloat JW = J*mesh->cubw[i]*mesh->cubw[j]*mesh->cubw[k];
           
           /* store geometric factors */
-          dlong base = mesh->Nvgeo*mesh->cubNp*e + i + j*mesh->cubNq + k*mesh->cubNq*mesh->cubNq;
+          dlong base = mesh->Nvgeo*mesh->cubNp*e + n;
           mesh->cubvgeo[base + mesh->cubNp*RXID] = rx;
           mesh->cubvgeo[base + mesh->cubNp*RYID] = ry;
           mesh->cubvgeo[base + mesh->cubNp*RZID] = rz;
@@ -296,13 +298,14 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
 
 
           /* store second order geometric factors */
-          mesh->cubggeo[mesh->Nggeo*mesh->cubNp*e + n + mesh->cubNp*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
-          mesh->cubggeo[mesh->Nggeo*mesh->cubNp*e + n + mesh->cubNp*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
-          mesh->cubggeo[mesh->Nggeo*mesh->cubNp*e + n + mesh->cubNp*G02ID] = JW*(rx*tx + ry*ty + rz*tz);
-          mesh->cubggeo[mesh->Nggeo*mesh->cubNp*e + n + mesh->cubNp*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
-          mesh->cubggeo[mesh->Nggeo*mesh->cubNp*e + n + mesh->cubNp*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
-          mesh->cubggeo[mesh->Nggeo*mesh->cubNp*e + n + mesh->cubNp*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
-          mesh->cubggeo[mesh->Nggeo*mesh->cubNp*e + n + mesh->cubNp*GWJID] = JW;
+	  base = mesh->Nggeo*mesh->cubNp*e + n;
+          mesh->cubggeo[base + mesh->cubNp*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
+          mesh->cubggeo[base + mesh->cubNp*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
+          mesh->cubggeo[base + mesh->cubNp*G02ID] = JW*(rx*tx + ry*ty + rz*tz);
+          mesh->cubggeo[base + mesh->cubNp*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
+          mesh->cubggeo[base + mesh->cubNp*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
+          mesh->cubggeo[base + mesh->cubNp*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
+          mesh->cubggeo[base + mesh->cubNp*GWJID] = JW;
 	  
         }
       }
