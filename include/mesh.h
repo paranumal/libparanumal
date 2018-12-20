@@ -205,7 +205,8 @@ typedef struct {
 
   dfloat *cubvgeo;  //volume geometric data at cubature points
   dfloat *cubsgeo;  //surface geometric data at cubature points
-
+  dfloat *cubggeo;  //second type volume geometric data at cubature points
+  
   // c2 at cubature points (for wadg)
   dfloat *c2;
 
@@ -378,7 +379,7 @@ typedef struct {
   occa::memory o_cubInterpT, o_cubProjectT;
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
 
-  occa::memory o_cubvgeo, o_cubsgeo;
+  occa::memory o_cubvgeo, o_cubsgeo, o_cubggeo;
 
   occa::memory o_c2;
 
