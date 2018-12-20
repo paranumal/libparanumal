@@ -219,18 +219,26 @@ writeFloatMatrix(fid, gD2, 'Gauss Legendre to Gauss Legendre differentiation mat
 
 
 %% 1D quadrature
-Nc = ceil(3*N/2)-1;
-[z,w] = JacobiGQ(0,0,Nc+1);
+%%Nc = ceil(3*N/2)-1;
+Nc = N+1;
+%[z,w] = JacobiGQ(0,0,Nc);
+[z] = JacobiGL(0,0,Nc);
+w = sum(inv(Vandermonde1D(Nc, z)*Vandermonde1D(Nc,z)'))'
+
+
+[N, Nc, length(w)]
 cInterp = Vandermonde1D(N, z)/Vandermonde1D(N, r1d);
 cubProject = (cInterp)';
-cubDT = (Dmatrix1D(Nc+1, z, Vandermonde1D(Nc+1,z)))';
-Nqc = length(z);
+cubD = Dmatrix1D(Nc, z, Vandermonde1D(Nc,z));
+cubDT = (Dmatrix1D(Nc, z, Vandermonde1D(Nc,z)))';
+Nqc = length(z)
 
 writeFloatMatrix(fid, z, 'Quadrature r-coordinates');
 writeFloatMatrix(fid, w, 'Quadrature weights');
 
 writeFloatMatrix(fid, cInterp, 'Quadrature Interpolation Matrix');
 writeFloatMatrix(fid, cubDT, 'Quadrature Weak D Differentiation Matrix');
+writeFloatMatrix(fid, cubD, 'Quadrature Differentiation Matrix');
 writeFloatMatrix(fid, cubProject, 'Quadrature Projection Matrix');
 
 

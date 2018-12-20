@@ -12,8 +12,18 @@ data/ellipticSineTest3D.h
 
 [MESH FILE]
 #../../meshes/cubeHexE8Thilina.msh
-#../../meshes/cavityHexH01.msh
-../../meshes/cavityHexH0075.msh
+#../../meshes/cavityHexH025.msh
+#../../meshes/cavityHexH0125.msh
+#../../meshes/cavityHexH0075.msh
+#../../meshes/cubeHexE00008.msh
+#../../meshes/cubeHexE00064.msh
+#../../meshes/cubeHexE00216.msh
+#../../meshes/cubeHexE00512.msh
+../../meshes/cubeHexE01000.msh
+#../../meshes/cubeHexE01728.msh
+#../../meshes/cubeHexE04096.msh
+#../../meshes/cubeHexE05832.msh
+#../../meshes/cubeHexE08000.msh
 
 [MESH DIMENSION]
 3
@@ -22,11 +32,15 @@ data/ellipticSineTest3D.h
 12
 
 [POLYNOMIAL DEGREE]
-8
+7
 
 [ELEMENT MAP]
 ISOPARAMETRIC
 #TRILINEAR
+
+[ELLIPTIC INTEGRATION]
+NODAL
+# CUBATURE - NOT WORKING YET
 
 [THREAD MODEL]
 CUDA
@@ -38,7 +52,7 @@ CUDA
 0
 
 [LAMBDA]
-0
+10000
 
 # can add FLEXIBLE to PCG
 [KRYLOV SOLVER]
@@ -55,8 +69,8 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
-#JACOBI
-MULTIGRID
+JACOBI
+#MULTIGRID
 
 
 
