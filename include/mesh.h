@@ -197,6 +197,7 @@ typedef struct {
   dfloat *cubx, *cuby, *cubz;    // coordinates of physical nodes
   dfloat *cubInterp; // interpolate from W&B to cubature nodes
   dfloat *cubProject; // projection matrix from cubature nodes to W&B nodes
+  dfloat *cubD;       // 1D differentiation matrix
   dfloat *cubDW;     // 1D weak differentiation matrix
   dfloat *cubDrW;    // 'r' weak differentiation matrix
   dfloat *cubDsW;    // 's' weak differentiation matrix
@@ -373,7 +374,7 @@ typedef struct {
 
   // cubature (for wadg)
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty, o_intz;
-  occa::memory o_cubDWT;
+  occa::memory o_cubDWT, o_cubD;
   occa::memory o_cubDrWT, o_cubDsWT, o_cubDtWT;
   occa::memory o_cubDWmatrices;
   occa::memory o_cubInterpT, o_cubProjectT;
