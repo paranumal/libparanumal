@@ -32,13 +32,16 @@
 #include "mesh2D.h"
 #include "mesh3D.h"
 #include "elliptic.h"
+#include "ins.h"
 
 typedef struct {
 
   int dim, elementType;
-
+  
   mesh_t     *mesh;
   elliptic_t *solver;
+  ins_t *fSolver;
+  
   int NVfields;            // Number of velocity fields
   int NSfields;            // Number of scalar fields
   
@@ -60,11 +63,11 @@ typedef struct {
 
   int temporalOrder;
   int ExplicitOrder; 
-  int   NtimeSteps;  // number of time steps 
-  int   Nstages;     
-  int   outputStep;
-  int   outputForceStep; 
-  int   dtAdaptStep; 
+  int NtimeSteps;  // number of time steps 
+  int Nstages;     
+  int outputStep;
+  int outputForceStep; 
+  int dtAdaptStep; 
   
   int Niter;
 
@@ -107,26 +110,11 @@ typedef struct {
   dfloat *cU, *cSd, *cS; 
   occa::memory o_cU, o_cSd, o_cS;
 
-  // Some Iso-surfacing variables
-  // int isoField, isoColorField, isoNfields, isoNlevels, isoMaxBNtris, *isoNtris; 
-  // dfloat isoMinVal, isoMaxVal, *isoLevels, *isoq; 
-  // size_t isoMax; 
-  
-  // int *isoGNlevels, isoGNgroups;
-  // dfloat **isoGLvalues;
-  // NBN: add storage for compacted isosurf data for gmsh write
-  // std::vector<dfloat> iso_nodes;
-  // std::vector<int> iso_tris;
-  // int readRestartFile,writeRestartFile, restartedFromFile;
-  // occa::memory *o_isoGLvalues; 
-  // occa::memory o_isoLevels, o_isoq, o_isoNtris; 
-  // occa::memory o_plotInterp, o_plotEToV; 
-
-   occa::kernel scaledAddKernel;
-   occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
-   occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
-   occa::kernel subCycleRKUpdateKernel;
-   occa::kernel subCycleExtKernel;
+  occa::kernel scaledAddKernel;
+  occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
+  occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
+  occa::kernel subCycleRKUpdateKernel;
+  occa::kernel subCycleExtKernel;
 
   // occa::kernel constrainKernel;
   
@@ -180,6 +168,9 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
 void cdsHelmholtzRhs(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS);
 void cdsHelmholtzSolve(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS,occa::memory o_rkS);
 
+// void cdsSolveSetup(cds_t *cds, dfloat lambda, occa::properties &kernelInfo);
+void cdsSolveStep(cds_t *cds, dfloat time, dfloat dt, occa::memory o_U, occa::memory o_S);
+void cdsSolveSetup(cds_t *cds, setupAide options); 
 
 // // Restarting from file
 // void insRestartWrite(ins_t *ins, setupAide &options, dfloat time); 

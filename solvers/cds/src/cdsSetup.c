@@ -86,22 +86,9 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   // Solution storage at interpolation nodes
   cds->U     = (dfloat*) calloc(cds->NVfields             *Ntotal,sizeof(dfloat));
   cds->S     = (dfloat*) calloc(cds->NSfields*cds->Nstages*Ntotal,sizeof(dfloat));
-  // Rhs storage
-  //  cds->rhsS  = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
-  //additional field storage
   cds->NS    = (dfloat*) calloc(cds->NSfields*(cds->Nstages+1)*Ntotal,sizeof(dfloat));
   cds->rkS   = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
-  cds->rkNS  = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
   
-  //extra storage for interpolated fields
-  //  if(cds->elementType==HEXAHEDRA){
-  //   cds->cU = (dfloat *) calloc(cds->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
-  //  cds->cS = (dfloat *) calloc(cds->NSfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
-  // }else{ 
-  //  cds->cU = cds->U;
-  //  cds->cS = cds->S;
-  // }
-
   cds->Nsubsteps = 0;
    
   if (options.compareArgs("TIME INTEGRATOR", "EXTBDF"))
@@ -114,15 +101,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     cds->rhsSd   = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));        
     cds->Ue      = (dfloat*) calloc(cds->NVfields*Ntotal,sizeof(dfloat));
 
-    // !!!!!!!!!!!!!!!!!Check this !!!!!!!!!!!!!!!!!
-    // if(cds->elementType==HEXAHEDRA){
-      //cds->cUd = (dfloat *) calloc(cds->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
-    //   cds->cSd = (dfloat *) calloc(cds->NSfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));      
-    // }else{ 
-      //cds->cUd = cds->U;
-    //  cds->cSd = cds->S;      
-    // }
-
+ 
     // Prepare RK stages for Subcycling Part
     
     int Sorder = 4; // Defaulting to LSERK 4(5) 
@@ -505,24 +484,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   // MEMORY ALLOCATION
   cds->o_rhsS  = mesh->device.malloc(cds->NSfields*                 Ntotal*sizeof(dfloat), cds->rhsS);
   cds->o_NS    = mesh->device.malloc(cds->NSfields*(cds->Nstages+1)*Ntotal*sizeof(dfloat), cds->NS);
-
   cds->o_rkS   = mesh->device.malloc(              Ntotal*sizeof(dfloat), cds->rkS);  
-  cds->o_rkNS  = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->rkNS);
-
-#if 0
-  //storage for helmholtz solves
-  cds->o_UH = mesh->device.malloc(Ntotal*sizeof(dfloat));
-  cds->o_VH = mesh->device.malloc(Ntotal*sizeof(dfloat));
-  cds->o_WH = mesh->device.malloc(Ntotal*sizeof(dfloat));
-  //plotting fields
-  cds->o_Vort = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Vort);
-  cds->o_Div  = mesh->device.malloc(              Nlocal*sizeof(dfloat), cds->Div);
-#endif
-
-  if(cds->elementType==HEXAHEDRA) // !!!! check that
-    cds->o_cU = mesh->device.malloc(cds->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), cds->cU);
-  else 
-    cds->o_cU = cds->o_U;
 
   if(mesh->totalHaloPairs){//halo setup
     dlong haloBytes = mesh->totalHaloPairs*mesh->Np*(cds->NSfields)*sizeof(dfloat);

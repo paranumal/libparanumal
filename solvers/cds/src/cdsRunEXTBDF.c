@@ -23,7 +23,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 */
-
 #include "cds.h"
 
 void extbdfCoefficents(cds_t *cds, int order);
@@ -49,9 +48,8 @@ void cdsRunEXTBDF(cds_t *cds){
       extbdfCoefficents(cds,tstep+1);
 
     dfloat time = cds->startTime + tstep*cds->dt;
-
+#if 0   
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
-   
     if(cds->Nsubsteps) {
       cdsSubCycle(cds, time, cds->Nstages, cds->o_U, cds->o_S,  cds->o_NS);
     } else {
@@ -74,16 +72,8 @@ void cdsRunEXTBDF(cds_t *cds){
 
     //copy updated scalar
     cds->o_S.copyFrom(cds->o_rkS, cds->NSfields*cds->Ntotal*sizeof(dfloat)); 
-
-#if 0
-    if(((tstep+1)%10)==0){
-      char fname[BUFSIZ];
-      sprintf(fname, "Iterations_Scalar_%d", cds->SNrk);
-      FILE *fp; 
-      fp = fopen(fname, "a");
-      fprintf(fp, "%d %d\n", tstep+1, cds->NiterS);
-      fclose(fp);
-    }
+#else 
+    cdsSolveStep(cds, time, cds->dt, cds->o_U, cds->o_S);
 #endif
  
     occaTimerTic(mesh->device,"Report");
