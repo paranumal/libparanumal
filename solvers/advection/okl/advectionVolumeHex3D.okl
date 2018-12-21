@@ -137,7 +137,7 @@
   }
 }
 
-@kernel void advectionCombinedNodalWeakSEMDGVolumeHex3D(const dlong Nelements,
+@kernel void advectionCombinedNodalWeakSEMDGVolumeHex3D_v0(const dlong Nelements,
 							@restrict const dlong * elementIds,
 							const dfloat dt,
 							const dfloat rka,
@@ -298,6 +298,165 @@
     }
   }
 }
+
+
+
+@kernel void advectionCombinedNodalWeakSEMDGVolumeHex3D(const dlong Nelements,
+							@restrict const dlong * elementIds,
+							const dfloat dt,
+							const dfloat rka,
+							const dfloat rkb,
+							@restrict const dfloat * vgeo,
+							@restrict const dfloat * D,
+							@restrict const dfloat *  advectionVelocityJW,
+							@restrict const dlong  * vmapM,
+							@restrict const dlong  * tmapP,
+							@restrict const dfloat * advectionVelocityM,
+							@restrict const dfloat * advectionVelocityP,
+							@restrict dfloat * resq,
+							@restrict const dfloat * q,
+							@restrict dfloat * qnew){
+  
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+
+
+    @exclusive dlong  r_e;
+    @shared    dfloat s_q[p_Nq][p_Nq][p_Nq];
+    @shared    dfloat s_rhsq[p_Nq][p_Nq][p_Nq];
+    @exclusive dfloat r_tmpi[p_Nq], r_tmpj[p_Nq], r_tmpk[p_Nq];
+
+    @shared    dfloat s_D[p_Nq][p_Nq];
+    
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	r_e = elementIds[e];
+	//#pragma unroll p_Nq
+	for(int k=0;k<p_Nq;++k){
+	  dlong base = r_e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+	  s_q[k][j][i] = q[base];
+	}
+
+	int n = j*p_Nq + i;
+	s_D[0][n] = D[n];
+      }
+    }
+    
+    @barrier("local");
+    
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+
+	//#pragma unroll p_Nq
+	for(int m=0;m<p_Nq;++m){
+	  r_tmpi[m] = 0; r_tmpj[m] = 0; r_tmpk[m] = 0;
+	}
+
+	//#pragma unroll p_Nq
+	for(int c=0;c<p_Nq;++c){
+	  
+	  dfloat r_qi = s_q[b][a][c]; // this is sloppy (5 reads, 6 flops => 13*6/(5*8) TFLOPS)
+	  dfloat r_qj = s_q[b][c][a];
+	  dfloat r_qk = s_q[c][b][a];
+	  
+	  // Cc*Jc*wc*Ic*q
+	  const dlong gid = 3*r_e*p_Nq*p_Nq*p_Nq + c*p_Nq*p_Nq + b*p_Nq + a;
+	  const dfloat Cr = advectionVelocityJW[gid + 0*p_Nq*p_Nq*p_Nq];
+	  const dfloat Cs = advectionVelocityJW[gid + 1*p_Nq*p_Nq*p_Nq];
+	  const dfloat Ct = advectionVelocityJW[gid + 2*p_Nq*p_Nq*p_Nq];
+	  
+	  r_qi *= Cr;
+	  r_qj *= Cs;
+	  r_qk *= Ct;
+
+	  //#pragma unroll p_Nq
+	  for(int n=0;n<p_Nq;++n){
+	    const dfloat Dcn = s_D[c][n];
+	    
+	    r_tmpi[n] += Dcn*r_qi;
+	    r_tmpj[n] += Dcn*r_qj;
+	    r_tmpk[n] += Dcn*r_qk;
+	  }
+	} // end c loop
+
+	for(int c=0;c<p_Nq;++c){
+	  s_rhsq[b][a][c] = r_tmpi[c];
+	}
+	
+      } // end a
+    } // end b
+    
+    @barrier("local");
+    
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+	
+	//#pragma unroll p_Nq
+	for(int c=0;c<p_Nq;++c){
+	  s_rhsq[b][c][a] += r_tmpj[c];
+	}
+      }
+    }
+    
+    @barrier("local");
+
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+	
+	//#pragma unroll p_Nq
+	for(int c=0;c<p_Nq;++c){
+	  const dlong gid = p_Nvgeo*r_e*p_Np + c*p_Nq*p_Nq + b*p_Nq + a + p_IJWID*p_Np;
+	  const dfloat invJW = vgeo[gid];
+	  
+	  s_rhsq[c][b][a] = -invJW*(s_rhsq[c][b][a] + r_tmpk[c]);
+	}
+      }
+    }
+
+    @barrier("local");
+
+    for(int f=0;f<p_Nfaces;++f){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){     
+	  const dlong id = r_e*p_Nfaces*p_Nfp + f*p_Nfp + j*p_Nq + i;
+
+	  const dfloat FM = advectionVelocityM[id]; 
+	  const dfloat FP = advectionVelocityP[id];
+	  
+	  const dlong idM = vmapM[id];
+	  const dlong idP = tmapP[id];
+
+	  const int vidM = idM%p_Np;
+	  const dfloat qM = s_q[0][0][vidM];
+	  const dfloat qP = (idM!=idP) ? q[idP]:-qM;
+
+	  s_rhsq[0][0][vidM] += FP*qP + FM*qM;
+	}
+      }
+      @barrier("local");
+    }
+
+    for(int b=0;b<p_Nq;++b;@inner(1)){
+      for(int a=0;a<p_Nq;++a;@inner(0)){
+	
+	//#pragma unroll p_Nq
+	for(int c=0;c<p_Nq;++c){
+	  const dlong base = r_e*p_Np*p_Nfields + c*p_Nq*p_Nq + b*p_Nq + a;
+	  dfloat r_resq = resq[base];
+	  
+	  dfloat r_qcba = s_q[0][0][base%p_Np];
+
+	  r_resq = rka*r_resq + dt*s_rhsq[c][b][a];
+	  r_qcba += rkb*r_resq;
+	  
+	  resq[base] = r_resq;
+	  qnew[base] = r_qcba;
+	}
+      }
+    }
+  }
+}
+
+
 
 
 
