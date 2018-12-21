@@ -50,6 +50,9 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     int mapType = (elliptic->elementType==HEXAHEDRA &&
                    options.compareArgs("ELEMENT MAP", "TRILINEAR")) ? 1:0;
 
+    int integrationType = (elliptic->elementType==HEXAHEDRA &&
+                   options.compareArgs("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
+    
     occa::kernel &partialAxKernel = (strstr(precision, "float")) ? elliptic->partialFloatAxKernel : elliptic->partialAxKernel;
     
 #if 0
@@ -61,31 +64,48 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     o_Aq.copyTo(Aqb);
 #endif
 
-
-
     if(mesh->NglobalGatherElements) {
-      if(mapType==0)
-        partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
-                        mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
-      else
-        partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
-                        elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+      
+      if(integrationType==0) { // GLL or non-hex
+	if(mapType==0)
+	  partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
+			  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+	else
+	  partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
+			  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+      }
+      else{
+	elliptic->partialCubatureAxKernel(mesh->NglobalGatherElements,
+					  mesh->o_globalGatherElementList,
+					  mesh->o_cubggeo,
+					  mesh->o_cubD,
+					  mesh->o_cubInterpT,
+					  lambda, o_q, o_Aq);
+      }
     }
 
     ogsGatherScatterStart(o_Aq, ogsDfloat, ogsAdd, ogs);
 
 
-
- 
-
-
     if(mesh->NlocalGatherElements){
-      if(mapType==0)
-        partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
-                                  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
-      else
-        partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
-                        elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+      if(integrationType==0) { // GLL or non-hex
+	if(mapType==0)
+	  partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
+			  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+	else
+	  partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
+			  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+      }
+      else{
+	elliptic->partialCubatureAxKernel(mesh->NlocalGatherElements,
+					  mesh->o_localGatherElementList,
+					  mesh->o_cubggeo,
+					  mesh->o_cubD,
+					  mesh->o_cubInterpT,
+					  lambda, o_q, o_Aq);
+
+
+      }
     }
     
     // finalize gather using local and global contributions
