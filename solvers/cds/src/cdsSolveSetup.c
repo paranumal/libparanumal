@@ -35,7 +35,9 @@ void cdsSolveSetup(cds_t *cds, setupAide options){
       exit(EXIT_FAILURE);
    }
 
+  // Force cds to use the smae mesh with flow solver
    mesh_t *mesh      = cds->fSolver->mesh;
+   
    ins_t  *fSolver   = cds->fSolver; 
 
    dlong Ntotal = mesh->Np*mesh->Nelements;

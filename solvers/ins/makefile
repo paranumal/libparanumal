@@ -14,6 +14,7 @@ GSDIR  = ../../3rdParty/gslib
 OGSDIR  = ../../libs/gatherScatter
 ALMONDDIR = ../../libs/parAlmond
 ELLIPTICDIR = ../elliptic
+CDSDIR = ../cds
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
@@ -22,13 +23,13 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(ALMONDDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(CDSDIR) -I$(ALMONDDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"'
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
-LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(ALMONDDIR) -lparAlmond  \
+LIBS	=  -L$(ELLIPTICDIR) -L$(CDSDIR) -lelliptic -L$(ALMONDDIR) -lparAlmond  \
 		   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
 		   -L$(OCCA_DIR)/lib $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
 
@@ -42,7 +43,8 @@ $(OGSDIR)/ogs.hpp \
 $(ALMONDDIR)/parAlmond.hpp \
 $(ELLIPTICDIR)/elliptic.h \
 $(ELLIPTICDIR)/ellipticPrecon.h \
-$(ELLIPTICDIR)/ellipticMultiGrid.h
+$(ELLIPTICDIR)/ellipticMultiGrid.h \
+$(CDSDIR)/cds.h
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c
