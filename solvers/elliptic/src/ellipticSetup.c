@@ -134,7 +134,6 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 	  dfloat exact = pow(xn,2);
 	  dfloat forcing = -2*(- 2*pow(xn,2) + pow(yn,2) + pow(zn,2));
 #endif
-
 	  dfloat a = 1, b = 2, c = 3;
 	  dfloat pi = M_PI;
 
@@ -172,8 +171,12 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
           elliptic->r[id] = J*forcing; 
 
         }
-        else
-	  elliptic->r[id] = J*(3*M_PI*M_PI+lambda)*cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+        else{
+	  int mode = 1;
+	  elliptic->r[id] =
+	    J*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
+	  //	  elliptic->r[id] += 0.1*2*(drand48()-0.5);
+	}
 
       }
       elliptic->x[id] = 0;
@@ -195,7 +198,49 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   //Apply some element matrix ops to r depending on our solver
   if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->invVB,elliptic->r,elliptic->r);
   if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->BBMM,elliptic->r,elliptic->r);
-  if (options.compareArgs("BASIS","NODAL"))  meshApplyElementMatrix(mesh,mesh->MM,elliptic->r,elliptic->r);
+  if (options.compareArgs("BASIS","NODAL")){
+    if(options.compareArgs("ELLIPTIC INTEGRATION", "NODAL")){
+      printf("MASS APPLY NODAL\n");
+      meshApplyElementMatrix(mesh,mesh->MM,elliptic->r,elliptic->r);
+    }
+    else{
+      printf("MASS APPLY CUBATURE\n");
+      dfloat *cubx = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+      dfloat *cuby = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+      dfloat *cubz = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+      dfloat *cubrhs = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+      
+      dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
+      for(int n=0;n<mesh->Nq;++n){
+	for(int m=0;m<mesh->cubNq;++m){        
+	  cubInterpT[m+n*mesh->cubNq] = mesh->cubInterp[m*mesh->Nq+n];
+	  printf("%g ", cubInterpT[m+n*mesh->cubNq]);
+	}
+	printf("\n");
+      }
+      
+      for(hlong e=0;e<mesh->Nelements;++e){
+	
+	interpolateHex3D(mesh->cubInterp, mesh->x+mesh->Np*e, mesh->Nq, cubx, mesh->cubNq);
+	interpolateHex3D(mesh->cubInterp, mesh->y+mesh->Np*e, mesh->Nq, cuby, mesh->cubNq);
+	interpolateHex3D(mesh->cubInterp, mesh->z+mesh->Np*e, mesh->Nq, cubz, mesh->cubNq);
+	
+	for(int n=0;n<mesh->cubNp;++n){
+	  dfloat JW = mesh->cubggeo[e*mesh->cubNp*mesh->Nggeo + n + GWJID*mesh->cubNp];
+	  //	  cubrhs[n] = JW*(3*M_PI*M_PI+lambda)*cos(M_PI*cubx[n])*cos(M_PI*cuby[n])*cos(M_PI*cubz[n]);
+	  int mode = 1;
+	  cubrhs[n] = JW*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*cubx[n])*cos(mode*M_PI*cuby[n])*cos(mode*M_PI*cubz[n]);
+	  //	  cubrhs[n] += 0.1*2*(drand48()-0.5);
+	}
+	
+	interpolateHex3D(cubInterpT, cubrhs, mesh->cubNq, elliptic->r+e*mesh->Np, mesh->Nq);
+
+	//	for(int n=0;n<mesh->Np;++n){
+	//	  printf("elliptic->r[%d]=%g\n", e*mesh->Np+n, elliptic->r[e*mesh->Np+n]);
+	//	}	  
+      }
+    }	
+  }	
 
   //copy to occa buffers
   elliptic->o_r   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->r);
@@ -257,7 +302,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
        !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS) ) {
     for(int r=0;r<mesh->size;++r){
       if(r==mesh->rank){
-      sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
+	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
         sprintf(kernelName, "ellipticRhsBC%s", suffix);
 
         elliptic->rhsBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
@@ -270,22 +315,56 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       MPI_Barrier(mesh->comm);
     }
 
-    dfloat zero = 0.f;
-    elliptic->rhsBCKernel(mesh->Nelements,
-                        mesh->o_ggeo,
-                        mesh->o_sgeo,
-                        mesh->o_Dmatrices,
-                        mesh->o_Smatrices,
-                        mesh->o_MM,
-                        mesh->o_vmapM,
-                        mesh->o_sMT,
-                        lambda,
-                        zero,
-                        mesh->o_x,
-                        mesh->o_y,
-                        mesh->o_z,
-                        elliptic->o_mapB,
-                        elliptic->o_r);
+    dfloat zero = 0.f, mone = -1.0f, one = 1.0f;
+    if(options.compareArgs("ELLIPTIC INTEGRATION", "NODAL")){
+      elliptic->rhsBCKernel(mesh->Nelements,
+			    mesh->o_ggeo,
+			    mesh->o_sgeo,
+			    mesh->o_Dmatrices,
+			    mesh->o_Smatrices,
+			    mesh->o_MM,
+			    mesh->o_vmapM,
+			    mesh->o_sMT,
+			    lambda,
+			    zero,
+			    mesh->o_x,
+			    mesh->o_y,
+			    mesh->o_z,
+			    elliptic->o_mapB,
+			    elliptic->o_r);
+    }else{
+
+      // first set Dirichlet bc in tmp field
+      hlong Etotal = (mesh->Nelements+mesh->totalHaloPairs);
+      dfloat *qbc = (dfloat*) calloc(Etotal*mesh->Np, sizeof(dfloat));
+      // note the zeroing
+      occa::memory o_qbc = mesh->device.malloc(Etotal*mesh->Np*sizeof(dfloat), qbc);
+      occa::memory o_rbc = mesh->device.malloc(Etotal*mesh->Np*sizeof(dfloat), qbc);
+      
+      elliptic->addBCKernel(mesh->Nelements,
+			    zero, // time
+			    mesh->o_x,
+			    mesh->o_y,
+			    mesh->o_z,
+			    elliptic->o_mapB,
+			    o_qbc);
+
+      // A*qbc
+      elliptic->partialCubatureAxKernel(mesh->NlocalGatherElements,
+					mesh->o_localGatherElementList,
+					mesh->o_cubggeo,
+					mesh->o_cubD,
+					mesh->o_cubInterpT,
+					lambda,
+					o_qbc,
+					o_rbc);
+      // r -= A*q_bc
+      elliptic->scaledAddKernel(Etotal*mesh->Np, mone, o_rbc, one, elliptic->o_r);
+
+      // add Neumann fluxes later
+    }
+    
+    
   }
 
   // gather-scatter

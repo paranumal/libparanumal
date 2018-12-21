@@ -97,14 +97,15 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 			  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
       }
       else{
+
 	elliptic->partialCubatureAxKernel(mesh->NlocalGatherElements,
 					  mesh->o_localGatherElementList,
 					  mesh->o_cubggeo,
 					  mesh->o_cubD,
 					  mesh->o_cubInterpT,
-					  lambda, o_q, o_Aq);
-
-
+					  lambda,
+					  o_q,
+					  o_Aq);
       }
     }
     
