@@ -24,6 +24,9 @@ SOFTWARE.
 
 */
 
+#ifndef INS_H
+#define INS_H
+
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -225,9 +228,12 @@ typedef struct {
   
   occa::kernel vorticityKernel;
   occa::kernel isoSurfaceKernel;
-
-
 }ins_t;
+
+
+#include "cds.h"
+
+
 
 ins_t *insSetup(mesh_t *mesh, setupAide options);
 
@@ -280,3 +286,4 @@ void simpleRayTracer(int     plotNelements,
 		     dfloat *plotq,
 		     const char *fileBaseName,
 		     const int fileIndex);
+#endif

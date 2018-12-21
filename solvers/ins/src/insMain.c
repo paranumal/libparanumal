@@ -70,7 +70,11 @@ int main(int argc, char **argv){
   }
 
   ins_t *ins = insSetup(mesh,options);
-
+  
+#if 1
+  cds_t *cds = (cds_t *) calloc(1, sizeof(cds_t));
+  // cds->fSolver = ins; 
+#else 
   insPlotWallsVTUHex3D(ins, "walls");
   
   if(ins->readRestartFile){
@@ -81,7 +85,7 @@ int main(int argc, char **argv){
   
   if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
   if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF"))  insRunEXTBDF(ins);
-
+#endif
   // close down MPI
   MPI_Finalize();
 
