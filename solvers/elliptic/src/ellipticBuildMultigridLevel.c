@@ -598,6 +598,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
     mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
 
+    mesh->o_cubD = mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat), mesh->cubD);
+    
     dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
     for(int n=0;n<mesh->Nq;++n){
       for(int m=0;m<mesh->cubNq;++m){        
@@ -605,8 +607,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       }
     }
 
-    mesh->o_cubD = mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat), mesh->cubD);
     mesh->o_cubInterpT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat), cubInterpT);
+
     free(cubInterpT);
     
     mesh->o_vgeo =

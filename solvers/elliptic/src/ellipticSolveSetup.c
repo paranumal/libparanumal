@@ -445,7 +445,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       }
 
       elliptic->partialAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
-
       elliptic->partialFloatAxKernel = mesh->device.buildKernel(fileName,kernelName,floatKernelInfo);
       
       // only for Hex3D - cubature Ax
@@ -456,6 +455,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 	sprintf(kernelName, "ellipticCubaturePartialAx%s", suffix);
 	elliptic->partialCubatureAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
       }
+
+
       
       // Not implemented for Quad3D !!!!!
       if (options.compareArgs("BASIS","BERN")) {
