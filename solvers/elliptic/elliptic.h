@@ -114,6 +114,8 @@ typedef struct {
   occa::kernel AxKernel;
   occa::kernel partialAxKernel;
   occa::kernel partialFloatAxKernel;
+  occa::kernel partialCubatureAxKernel;
+  
   occa::kernel rhsBCKernel;
   occa::kernel addBCKernel;
   occa::kernel innerProductKernel;

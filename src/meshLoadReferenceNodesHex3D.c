@@ -90,6 +90,7 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
 
   readDfloatArray(fp, "Quadrature Interpolation Matrix", &(mesh->cubInterp),&Nrows,&Ncols);
   readDfloatArray(fp, "Quadrature Weak D Differentiation Matrix", &(mesh->cubDW),&Nrows,&Ncols);
+  readDfloatArray(fp, "Quadrature Differentiation Matrix", &(mesh->cubD),&Nrows,&Ncols);
   readDfloatArray(fp, "Quadrature Projection Matrix", &(mesh->cubProject),&Nrows,&Ncols);
 
 

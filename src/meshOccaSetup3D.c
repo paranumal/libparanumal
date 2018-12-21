@@ -554,9 +554,14 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
     mesh->o_cubvgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->cubNp*sizeof(dfloat),
           mesh->cubvgeo);
+
     mesh->o_cubsgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp*mesh->Nsgeo*sizeof(dfloat),
           mesh->cubsgeo);
+
+    mesh->o_cubggeo =
+      mesh->device.malloc(mesh->Nelements*mesh->Nggeo*mesh->cubNp*sizeof(dfloat),
+          mesh->cubggeo);
 
     mesh->o_cubInterpT =
       mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
@@ -564,11 +569,15 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
 
     mesh->o_cubProjectT =
       mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
-          cubProjectT);
-
+			  cubProjectT);
+    
     mesh->o_cubDWT =
       mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat),
-          cubDWT);
+			  cubDWT);
+    
+    mesh->o_cubD =
+      mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat),
+			  mesh->cubD);
 
     mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat), cubDWT);
 
