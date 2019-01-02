@@ -31,7 +31,7 @@ void extbdfCoefficents(ins_t *ins, int order);
 void insRunEXTBDF(ins_t *ins){
 
   mesh_t *mesh = ins->mesh;
-  
+   
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"INS");
 
@@ -211,8 +211,6 @@ void insRunEXTBDF(ins_t *ins){
 			 (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
 			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
-
-
 
 #if 1
     if(((tstep+1)%10)==0){

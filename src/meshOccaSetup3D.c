@@ -570,14 +570,14 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
     mesh->o_cubProjectT =
       mesh->device.malloc(mesh->Nq*mesh->cubNq*sizeof(dfloat),
 			  cubProjectT);
-    
+   
     mesh->o_cubDWT =
       mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat),
 			  cubDWT);
     
     mesh->o_cubD =
-      mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat),
-			  mesh->cubD);
+     mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat),
+      mesh->cubD);
 
     mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat), cubDWT);
 

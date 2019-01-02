@@ -2,10 +2,15 @@
 1.0
 
 [DATA FILE]
-data/insBeltrami3D.h
+#data/insBeltrami3D.h
+data/insChannel3D.h
 
 [MESH FILE]
-../../meshes/insBeltramiHex3D.msh
+#../../meshes/insBeltramiHex3D.msh
+../../meshes/insChannelHex3D.msh
+
+[SCALAR SOLVER]
+1
 
 [MESH DIMENSION]
 3
@@ -31,17 +36,26 @@ CUDA
 # can be EXTBDF1,2, or 3
 # can add SUBCYCLING to EXTBDF
 [TIME INTEGRATOR]
-ARK2
-#EXTBDF2
+#ARK2
+EXTBDF2
 
 [SUBCYCLING STEPS]
-0
+4
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
 CUBATURE
 
+[DENSITY]
+1
+
 [VISCOSITY]
+1
+
+[CONDUCTIVITY]
+0.01 
+
+[SPECIFIC HEAT]
 1
 
 [MACH NUMBER]
@@ -58,6 +72,10 @@ CUBATURE
 
 [PBAR]
 0.0
+
+[SBAR]
+0.0
+
 
 [TSTEPS FOR SOLUTION OUTPUT]
 100
@@ -202,6 +220,65 @@ DEFAULT
 MAX
 #MIN
 
+###########################################
+
+#################################################
+########## Scalar Solver Options ##############
+#################################################
+
+# can add FLEXIBLE to PCG
+[SCALAR KRYLOV SOLVER]
+PCG
+
+# can be IPDG, or CONTINUOUS
+[SCALAR DISCRETIZATION]
+IPDG
+
+# can be NODAL or BERN
+[SCALAR BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+[SCALAR PRECONDITIONER]
+JACOBI
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[SCALAR MULTIGRID COARSENING]
+HALFDOFS
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[SCALAR MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[SCALAR PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[SCALAR PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[SCALAR PARALMOND PARTITION]
+STRONGNODES
+
+# can be DEFAULT or LPSCN
+[SCALAR PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[SCALAR PARALMOND LPSCN ORDERING]
+MAX
 ###########################################
 
 # compare to a reference solution. Use NONE to skip comparison

@@ -29,7 +29,7 @@ CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
 
 # libraries to be linked in
-LIBS	=  -L$(ELLIPTICDIR) -L$(CDSDIR) -lelliptic -L$(ALMONDDIR) -lparAlmond  \
+LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(CDSDIR) -lcds  -L$(ALMONDDIR) -lparAlmond  \
 		   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
 		   -L$(OCCA_DIR)/lib $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
 
@@ -153,7 +153,7 @@ LOBJS = \
 ../../src/timer.o
 
 
-insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparAlmond libelliptic
+insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparAlmond libelliptic libcds
 	$(LD)  $(LDFLAGS)  -o insMain ./src/insMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
@@ -170,6 +170,9 @@ libparAlmond:
 
 libelliptic:
 	cd ../elliptic; make -j lib; cd ../ins
+
+libcds:
+	cd ../cds; make -j lib; cd ../ins
 
 all: lib insMain
 
