@@ -34,6 +34,12 @@ SOFTWARE.
     *(p) = p_pbar;                    \
   }   
 
+// Initial conditions 
+#define insScalarField3D(t,x,y,z,s) \
+  {                                   \
+    *(p) = p_sbar;                    \
+  }   
+
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
 #define insVelocityDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \

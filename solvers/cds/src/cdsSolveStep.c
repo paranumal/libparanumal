@@ -37,6 +37,7 @@ void cdsSolveStep(cds_t *cds, dfloat time, dfloat dt, occa::memory o_U, occa::me
   } else {
     cdsAdvection(cds, time, o_U, o_S, cds->o_NS);
   }    
+
   cdsHelmholtzRhs  (cds, time+dt, cds->Nstages, cds->o_rhsS);
 
   cdsHelmholtzSolve(cds, time+dt, cds->Nstages, cds->o_rhsS, cds->o_rkS);

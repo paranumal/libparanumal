@@ -111,6 +111,9 @@ typedef struct {
   dfloat *extbdfA, *extbdfB, *extbdfC;
   dfloat *extC;
 
+
+  //  occa::properties kernelInfoBase; 
+
   int *VmapB, *PmapB;
   occa::memory o_VmapB, o_PmapB;
 
@@ -149,13 +152,11 @@ typedef struct {
   int readRestartFile,writeRestartFile, restartedFromFile;
 
 
+  
 
   occa::memory *o_isoGLvalues; 
   occa::memory o_isoLevels, o_isoq, o_isoNtris; 
   occa::memory o_plotInterp, o_plotEToV; 
-
-
-
 
   occa::kernel scaledAddKernel;
   occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
@@ -230,15 +231,13 @@ typedef struct {
   occa::kernel isoSurfaceKernel;
 }ins_t;
 
-
 #include "cds.h"
-
-
 
 ins_t *insSetup(mesh_t *mesh, setupAide options);
 
 void insRunARK(ins_t *ins);
 void insRunEXTBDF(ins_t *ins);
+//void insRunScalarEXTBDF(ins_t *ins, cds_t *cds);
 
 void insPlotVTU(ins_t *ins, char *fileNameBase);
 void insReport(ins_t *ins, dfloat time,  int tstep);
@@ -286,4 +285,5 @@ void simpleRayTracer(int     plotNelements,
 		     dfloat *plotq,
 		     const char *fileBaseName,
 		     const int fileIndex);
+
 #endif

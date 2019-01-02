@@ -23,7 +23,7 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(INSDIR) -I$(ALMONDDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DCDS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(INSDIR) -I$(ALMONDDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DCDS='"${CURDIR}"'  -D DINS='"${INSDIR}"'
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
@@ -65,10 +65,7 @@ AOBJS    = \
 ./src/cdsPlotVTU.o \
 ./src/cdsSubCycle.o \
 ./src/cdsSolveSetup.o \
-./src/cdsSolveStep.o \
-#./src/insPlotWallsVTUHex3D.o \
-# ./src/insPlotVTUHex3D.o \
-# ./src/insRestart.o \
+./src/cdsSolveStep.o
 
 # library objects
 LOBJS = \

@@ -72,8 +72,12 @@ int main(int argc, char **argv){
   ins_t *ins = insSetup(mesh,options);
   
 #if 1
-  cds_t *cds = (cds_t *) calloc(1, sizeof(cds_t));
-  // cds->fSolver = ins; 
+  // Create a passive scalar solver
+  // cds_t *cds = (cds_t *) calloc(1, sizeof(cds_t));
+  // Set scalar solver flow solver to INS
+  // cds->fSolver = ins;
+  // Now Set the Scalar Solver
+  // cdsSolveSetup(cds, options);
 #else 
   insPlotWallsVTUHex3D(ins, "walls");
   

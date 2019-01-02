@@ -23,6 +23,8 @@
   SOFTWARE.
 
 */
+#ifndef CDS_H
+#define CDS_H
 
 #include <math.h>
 #include <stdlib.h>
@@ -170,26 +172,7 @@ void cdsHelmholtzSolve(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS,o
 
 // void cdsSolveSetup(cds_t *cds, dfloat lambda, occa::properties &kernelInfo);
 void cdsSolveStep(cds_t *cds, dfloat time, dfloat dt, occa::memory o_U, occa::memory o_S);
-void cdsSolveSetup(cds_t *cds, setupAide options); 
+void cdsSolveSetup(cds_t *cds, setupAide options, occa::properties &kernelInfo); 
 
-// // Restarting from file
-// void insRestartWrite(ins_t *ins, setupAide &options, dfloat time); 
-// void insRestartRead(ins_t *ins, setupAide &options); 
+#endif
 
-// customized hex writer
-// extern "C"
-// {
-//   void insPlotVTUHex3D(ins_t *ins, char *fileNameBase);
-//   void insPlotWallsVTUHex3D(ins_t *ins, char *fileNameBase);
-// }
-
-
-// void insRenderQuad3D(ins_t *ins, char *fileBaseName, int fileIndex);
-
-// void simpleRayTracer(int     plotNelements,
-// 		     dfloat *plotx,
-// 		     dfloat *ploty,
-// 		     dfloat *plotz,
-// 		     dfloat *plotq,
-// 		     const char *fileBaseName,
-// 		     const int fileIndex);

@@ -320,17 +320,19 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   dfloat rho  = 1.0 ;  // Give density for getting actual pressure in nondimensional solve
   dfloat g[3]; g[0] = 0.0; g[1] = 0.0; g[2] = 0.0;  // No gravitational acceleration
 
+ 
   options.getArgs("UBAR", ins->ubar);
   options.getArgs("VBAR", ins->vbar);
   if (ins->dim==3)
     options.getArgs("WBAR", ins->wbar);
   options.getArgs("PBAR", ins->pbar);
   options.getArgs("VISCOSITY", ins->nu);
-
+  options.getArgs("DENSITY",ins->rho);
+  
   //Reynolds number
   ins->Re = ins->ubar/ins->nu;
 
-  occa::properties kernelInfo;
+ occa::properties kernelInfo;
  kernelInfo["defines"].asObject();
  kernelInfo["includes"].asArray();
  kernelInfo["header"].asArray();
@@ -345,9 +347,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
-  occa::properties kernelInfoV  = kernelInfo;
-  occa::properties kernelInfoP  = kernelInfo;
+  occa::properties kernelInfoV     = kernelInfo;
+  occa::properties kernelInfoP     = kernelInfo;
+  occa::properties kernelInfoS     = kernelInfo; 
 
+  
+  //  ins->kernelInfoBase = kernelInfo; 
   // ADD-DEFINES
   kernelInfo["defines/" "p_pbar"]= ins->pbar;
   kernelInfo["defines/" "p_ubar"]= ins->ubar;
@@ -1088,6 +1093,21 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
     MPI_Barrier(mesh->comm);
   }
 
+  // Temprorarily hold scalar solver here
+#if 1
+  // Create a passive scalar solver
+  cds_t *cds = (cds_t *) calloc(1, sizeof(cds_t));
+
+  // Set scalar solver flow solver to INS
+  cds->fSolver = ins;
+
+  // Now Set the Scalar Solver
+  cdsSolveSetup(cds, options, kernelInfoS);
+  printf("Before Blowing up %d %d \n", ins->mesh->Nelements, ins->mesh->totalHaloPairs);
+  cdsSolveStep(cds, cds->startTime, cds->dt, cds->fSolver->o_U, cds->o_S); 
+  //  insRunScalarEXTBDF(ins, cds);
+#endif
+  
   return ins;
 }
 
