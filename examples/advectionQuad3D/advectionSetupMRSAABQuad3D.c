@@ -1,4 +1,5 @@
 #include "advectionQuad3D.h"
+#include "complex.h"
 
 void rk4_coeffs(solver_t *solver) {
   int Nrk = 5;
@@ -36,7 +37,7 @@ void mrab3_coeffs(solver_t *solver) {
   iint Nlevels = mesh->MRABNlevels;
 
   const iint Nr = 32;
-  dfloat complex R[Nr];
+  complex<dfloat> R[Nr];
 
   for(iint ind =1; ind <= Nr; ++ind){
     const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr;
@@ -62,11 +63,11 @@ void mrab3_coeffs(solver_t *solver) {
       const iint id = order*Nlevels*3 + l*3;
       if(order==0){
 
-	double complex a1 = 0. + 0.* I;
-	double complex b1 = 0. + 0.* I;
+	complex<dfloat> a1 = 0. + 0.* I;
+	complex<dfloat> b1 = 0. + 0.* I;
 
 	for(iint i = 0; i<Nr; ++i ){
-	  double complex lr = alpha  + R[i];
+	  complex<dfloat> lr = alpha  + R[i];
 	  a1 +=  h*(cexp(lr) - 1.)/lr;
 	  b1 +=  h*(cexp(lr/2.) - 1.)/lr;
 	}
@@ -91,13 +92,13 @@ void mrab3_coeffs(solver_t *solver) {
 
       else if(order==1){
 
-	double complex a1 = 0. + 0.* I;
-	double complex b1 = 0. + 0.* I;
-	double complex a2 = 0. + 0.* I;
-	double complex b2 = 0. + 0.* I;
+	complex<dfloat> a1 = 0. + 0.* I;
+	complex<dfloat> b1 = 0. + 0.* I;
+	complex<dfloat> a2 = 0. + 0.* I;
+	complex<dfloat> b2 = 0. + 0.* I;
 
 	for(iint i = 0; i<Nr; ++i ){
-	  double complex lr = alpha  + R[i];
+	  complex<dfloat> lr = alpha  + R[i];
 	  a1 +=  h*(-2.*lr + (1.+lr)*cexp(lr) - 1.)/cpow(lr,2);
 	  a2 +=  h*(lr - cexp(lr) + 1.)/cpow(lr,2);
 	  b1 +=  h*(-1.5*lr + (1.+lr)*cexp(lr/2.) - 1.)/cpow(lr,2);
@@ -124,15 +125,15 @@ void mrab3_coeffs(solver_t *solver) {
       }
 
       else{
-	double complex a1 = 0. + 0.* I;
-	double complex b1 = 0. + 0.* I;
-	double complex a2 = 0. + 0.* I;
-	double complex b2 = 0. + 0.* I;
-	double complex a3 = 0. + 0.* I;
-	double complex b3 = 0. + 0.* I;
+	complex<dfloat> a1 = 0. + 0.* I;
+	complex<dfloat> b1 = 0. + 0.* I;
+	complex<dfloat> a2 = 0. + 0.* I;
+	complex<dfloat> b2 = 0. + 0.* I;
+	complex<dfloat> a3 = 0. + 0.* I;
+	complex<dfloat> b3 = 0. + 0.* I;
 
 	for(iint i = 0; i<Nr; ++i ){
-	  double complex lr = alpha  + R[i];
+	  complex<dfloat> lr = alpha  + R[i];
 	  a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
 	  a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
 	  a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
@@ -177,7 +178,7 @@ void mrab4_coeffs(solver_t *solver) {
   iint Nlevels = mesh->MRABNlevels;
 
   const iint Nr = 32;
-  dfloat complex R[Nr];
+  complex<dfloat> R[Nr];
 
   for(iint ind =1; ind <= Nr; ++ind){
     const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr;
@@ -203,11 +204,11 @@ void mrab4_coeffs(solver_t *solver) {
       const iint id = order*Nlevels*4 + l*4;
       if(order==0){
 
-	double complex a1 = 0. + 0.* I;
-	double complex b1 = 0. + 0.* I;
+	complex<dfloat> a1 = 0. + 0.* I;
+	complex<dfloat> b1 = 0. + 0.* I;
 
 	for(iint i = 0; i<Nr; ++i ){
-	  double complex lr = alpha  + R[i];
+	  complex<dfloat> lr = alpha  + R[i];
 	  a1 +=  h*(cexp(lr) - 1.)/lr;
 	  b1 +=  h*(cexp(lr/2.) - 1.)/lr;
 	}
@@ -236,13 +237,13 @@ void mrab4_coeffs(solver_t *solver) {
 
       else if(order==1){
 
-	double complex a1 = 0. + 0.* I;
-	double complex b1 = 0. + 0.* I;
-	double complex a2 = 0. + 0.* I;
-	double complex b2 = 0. + 0.* I;
+	complex<dfloat> a1 = 0. + 0.* I;
+	complex<dfloat> b1 = 0. + 0.* I;
+	complex<dfloat> a2 = 0. + 0.* I;
+	complex<dfloat> b2 = 0. + 0.* I;
 
 	for(iint i = 0; i<Nr; ++i ){
-	  double complex lr = alpha  + R[i];
+	  complex<dfloat> lr = alpha  + R[i];
 	  a1 +=  h*(-2.*lr + (1.+lr)*cexp(lr) - 1.)/cpow(lr,2);
 	  a2 +=  h*(lr - cexp(lr) + 1.)/cpow(lr,2);
 	  b1 +=  h*(-1.5*lr + (1.+lr)*cexp(lr/2.) - 1.)/cpow(lr,2);
@@ -271,15 +272,15 @@ void mrab4_coeffs(solver_t *solver) {
 	solver->MRAB_B[id + 3]   =  0.f ;
       }
       else if (order == 2) {
-	double complex a1 = 0. + 0.* I;
-	double complex b1 = 0. + 0.* I;
-	double complex a2 = 0. + 0.* I;
-	double complex b2 = 0. + 0.* I;
-	double complex a3 = 0. + 0.* I;
-	double complex b3 = 0. + 0.* I;
+	complex<dfloat> a1 = 0. + 0.* I;
+	complex<dfloat> b1 = 0. + 0.* I;
+	complex<dfloat> a2 = 0. + 0.* I;
+	complex<dfloat> b2 = 0. + 0.* I;
+	complex<dfloat> a3 = 0. + 0.* I;
+	complex<dfloat> b3 = 0. + 0.* I;
 
 	for(iint i = 0; i<Nr; ++i ){
-	  double complex lr = alpha  + R[i];
+	  complex<dfloat> lr = alpha  + R[i];
 	  a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
 	  a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
 	  a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
@@ -312,17 +313,17 @@ void mrab4_coeffs(solver_t *solver) {
 	solver->MRAB_B[id+3]   =   0.f;
       }
       else {
-	double complex a1 = 0. + 0.* I;
-	double complex b1 = 0. + 0.* I;
-	double complex a2 = 0. + 0.* I;
-	double complex b2 = 0. + 0.* I;
-	double complex a3 = 0. + 0.* I;
-	double complex b3 = 0. + 0.* I;
-	double complex a4 = 0. + 0.* I;
-	double complex b4 = 0. + 0.* I;
+	complex<dfloat> a1 = 0. + 0.* I;
+	complex<dfloat> b1 = 0. + 0.* I;
+	complex<dfloat> a2 = 0. + 0.* I;
+	complex<dfloat> b2 = 0. + 0.* I;
+	complex<dfloat> a3 = 0. + 0.* I;
+	complex<dfloat> b3 = 0. + 0.* I;
+	complex<dfloat> a4 = 0. + 0.* I;
+	complex<dfloat> b4 = 0. + 0.* I;
 
 	for(iint i = 0; i<Nr; ++i ){
-	  double complex lr = alpha  + R[i];
+	  complex<dfloat> lr = alpha  + R[i];
 	  a1 += h*(cexp(lr) - 3.*lr - (13.*cpow(lr,2))/3. - 4.*cpow(lr,3) + (11.*cpow(lr,2)*cexp(lr))/6. + cpow(lr,3)*cexp(lr) + 2.*lr*cexp(lr) - 1.)/cpow(lr,4);
 	  a2 += h*(8.*lr - 3.*cexp(lr) + (19.*cpow(lr,2))/2. + 6.*cpow(lr,3) - 3.*cpow(lr,2)*cexp(lr) - 5.*lr*cexp(lr) + 3.)/cpow(lr,4);
 	  a3 +=-h*(7.*lr - 3.*cexp(lr) + 7.*cpow(lr,2) + 4.*cpow(lr,3) - (3.*cpow(lr,2)*cexp(lr))/2. - 4.*lr*cexp(lr) + 3.)/cpow(lr,4);

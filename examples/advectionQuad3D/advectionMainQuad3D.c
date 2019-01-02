@@ -5,18 +5,18 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
-  /*  if(argc!=3){
-    // to run cavity test case with degree N elements
-    printf("usage: ./main meshes/cavityH005.msh N\n");
-    exit(-1);
-    }*/
-
   //changes solver mode.
   //options are: DOPRI MRSAAB
-  char *mode = "RK_SPECTRUM";
+  char *mode = "MRSAAB";
   
   // int specify polynomial degree 
   int N = atoi(argv[2]);
+  dfloat alpha;
+  
+  if (argc > 3) 
+    alpha = atoi(argv[3])/10.;
+  else
+    alpha = 1./N;
 
   // set up mesh stuff
   dfloat sphereRadius = 1;
@@ -30,16 +30,22 @@ int main(int argc, char **argv){
   else if (strstr(mode,"LSERK") || strstr(mode,"RK_SPECTRUM")) {
     advectionSetupLSERKQuad3D(solver);
   }
+  else if (strstr(mode,"MRSAAB")) {
+    advectionSetupMRSAABQuad3D(solver);
+  }
   
   // time step Boltzmann equations
   if (strstr(mode,"DOPRI")) {
     advectionRunDOPRIQuad3D(solver);
   }
   else if (strstr(mode,"LSERK")) {
-    advectionRunLSERKbasicQuad3D(solver,atoi(argv[3])/10.);
+    advectionRunLSERKbasicQuad3D(solver,alpha);
   }
   else if (strstr(mode,"RK_SPECTRUM")) {
-    advectionSpectrumLSERKQuad3D(solver,atoi(argv[3])/10.);
+    advectionSpectrumLSERKQuad3D(solver,alpha);
+  }
+  else if (strstr(mode,"MRSAAB")) {
+    advectionRunMRSAABQuad3D(solver);
   }
   
   solver->o_qpre.copyTo(solver->q);
