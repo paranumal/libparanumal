@@ -1,5 +1,7 @@
+#include <complex.h>
 #include "advectionQuad3D.h"
-#include "complex.h"
+
+using namespace std;
 
 void rk4_coeffs(solver_t *solver) {
   int Nrk = 5;
@@ -40,8 +42,8 @@ void mrab3_coeffs(solver_t *solver) {
   complex<dfloat> R[Nr];
 
   for(iint ind =1; ind <= Nr; ++ind){
-    const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr;
-    R[ind-1] = cexp(I*M_PI* theta);
+    const complex<dfloat> exp_arg = M_PI*I*(dfloat) (ind - 0.5) / (dfloat) Nr;
+    R[ind-1] = exp(exp_arg);
   }
 
   solver->MRSAAB_A = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
@@ -68,26 +70,26 @@ void mrab3_coeffs(solver_t *solver) {
 
 	for(iint i = 0; i<Nr; ++i ){
 	  complex<dfloat> lr = alpha  + R[i];
-	  a1 +=  h*(cexp(lr) - 1.)/lr;
-	  b1 +=  h*(cexp(lr/2.) - 1.)/lr;
+	  a1 +=  h*(exp(lr) - 1.)/lr;
+	  b1 +=  h*(exp(lr/2.) - 1.)/lr;
 	}
 	// Full dt coeeficients
-	solver->MRSAAB_A[id + 0] = creal(a1)/Nr;
-	solver->MRSAAB_A[id + 1] = 0.f;
-	solver->MRSAAB_A[id + 2] = 0.f;
+	solver->MRSAAB_A[id + 0] = real(a1)/Nr;
+	solver->MRSAAB_A[id + 1] = 0.;
+	solver->MRSAAB_A[id + 2] = 0.;
 	// Half coefficients
-	solver->MRSAAB_B[id + 0] = creal(b1)/Nr;
-	solver->MRSAAB_B[id + 1] = 0.f;
-	solver->MRSAAB_B[id + 2] = 0.f;
+	solver->MRSAAB_B[id + 0] = real(b1)/Nr;
+	solver->MRSAAB_B[id + 1] = 0.;
+	solver->MRSAAB_B[id + 2] = 0.;
 
 	// MRAB coefficients
 	solver->MRAB_A[id + 0]   =  h ;
-	solver->MRAB_A[id + 1]   =  0.f ;
-	solver->MRAB_A[id + 2]   =  0.f ;
+	solver->MRAB_A[id + 1]   =  0. ;
+	solver->MRAB_A[id + 2]   =  0. ;
 
 	solver->MRAB_B[id+0]     =  h/2. ;
-	solver->MRAB_B[id+1]     =  0.f ;
-	solver->MRAB_B[id+2]     =  0.f ;
+	solver->MRAB_B[id+1]     =  0. ;
+	solver->MRAB_B[id+2]     =  0. ;
       }
 
       else if(order==1){
@@ -99,29 +101,29 @@ void mrab3_coeffs(solver_t *solver) {
 
 	for(iint i = 0; i<Nr; ++i ){
 	  complex<dfloat> lr = alpha  + R[i];
-	  a1 +=  h*(-2.*lr + (1.+lr)*cexp(lr) - 1.)/cpow(lr,2);
-	  a2 +=  h*(lr - cexp(lr) + 1.)/cpow(lr,2);
-	  b1 +=  h*(-1.5*lr + (1.+lr)*cexp(lr/2.) - 1.)/cpow(lr,2);
-	  b2 +=  h*(0.5*lr - cexp(lr/2.) + 1.)/cpow(lr,2);
+	  a1 +=  h*(-2.*lr + (1.+lr)*exp(lr) - 1.)/pow(lr,2);
+	  a2 +=  h*(lr - exp(lr) + 1.)/pow(lr,2);
+	  b1 +=  h*(-1.5*lr + (1.+lr)*exp(lr/2.) - 1.)/pow(lr,2);
+	  b2 +=  h*(0.5*lr - exp(lr/2.) + 1.)/pow(lr,2);
 	}
 	// Full dt coeeficients
-	solver->MRSAAB_A[id + 0] = creal(a1)/Nr;
-	solver->MRSAAB_A[id + 1] = creal(a2)/Nr;
-	solver->MRSAAB_A[id + 2] = 0.f;
+	solver->MRSAAB_A[id + 0] = real(a1)/Nr;
+	solver->MRSAAB_A[id + 1] = real(a2)/Nr;
+	solver->MRSAAB_A[id + 2] = 0.;
 	// Half coefficients
-	solver->MRSAAB_B[id + 0] = creal(b1)/Nr;
-	solver->MRSAAB_B[id + 1] = creal(b2)/Nr;
-	solver->MRSAAB_B[id + 2] = 0.f;
+	solver->MRSAAB_B[id + 0] = real(b1)/Nr;
+	solver->MRSAAB_B[id + 1] = real(b2)/Nr;
+	solver->MRSAAB_B[id + 2] = 0.;
 
 
 	// MRAB coefficients
 	solver->MRAB_A[id + 0]   =  3.*h/2. ;
 	solver->MRAB_A[id + 1]   = -1.*h/2. ;
-	solver->MRAB_A[id + 2]   =  0.f ;
+	solver->MRAB_A[id + 2]   =  0. ;
 
 	solver->MRAB_B[id + 0]   =  5.*h/8. ;
 	solver->MRAB_B[id + 1]   = -1.*h/8. ;
-	solver->MRAB_B[id + 2]   =   0.f ;
+	solver->MRAB_B[id + 2]   =   0. ;
       }
 
       else{
@@ -134,23 +136,23 @@ void mrab3_coeffs(solver_t *solver) {
 
 	for(iint i = 0; i<Nr; ++i ){
 	  complex<dfloat> lr = alpha  + R[i];
-	  a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
-	  a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
-	  a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
-	  b1 += h*(cexp(lr/2.)- 2.*lr - (15.*cpow(lr,2))/8.f + cpow(lr,2)*cexp(lr/2.) + 3.*lr*cexp(lr/2.)/2. - 1.)/cpow(lr,3);
-	  b2 += h*(3.*lr - 2.*cexp(lr/2.0) + 1.25*cpow(lr,2) - 2.*lr*cexp(lr/2.) + 2.)/cpow(lr,3);
-	  b3 +=-h*(lr - cexp(lr/2.) + 0.375*cpow(lr,2) - 0.5*lr*cexp(lr/2.) + 1.)/cpow(lr,3);
+	  a1 += h*(-2.5*lr - 3.*pow(lr,2) + (1.+pow(lr,2)+1.5*lr)*exp(lr) - 1.)/pow(lr,3);
+	  a2 += h*(4.*lr + 3.*pow(lr,2)- (2.*lr + 2.0)*exp(lr) + 2.)/pow(lr,3);
+	  a3 +=-h*(1.5*lr + pow(lr,2)- (0.5*lr + 1.)*exp(lr) + 1.)/pow(lr,3);
+	  b1 += h*(exp(lr/2.)- 2.*lr - (15.*pow(lr,2))/8. + pow(lr,2)*exp(lr/2.) + 3.*lr*exp(lr/2.)/2. - 1.)/pow(lr,3);
+	  b2 += h*(3.*lr - 2.*exp(lr/2.0) + 1.25*pow(lr,2) - 2.*lr*exp(lr/2.) + 2.)/pow(lr,3);
+	  b3 +=-h*(lr - exp(lr/2.) + 0.375*pow(lr,2) - 0.5*lr*exp(lr/2.) + 1.)/pow(lr,3);
 	}
 
 
 	// Full dt coeeficients
-	solver->MRSAAB_A[id+0] = creal(a1)/Nr;
-	solver->MRSAAB_A[id+1] = creal(a2)/Nr;
-	solver->MRSAAB_A[id+2] = creal(a3)/Nr;
+	solver->MRSAAB_A[id+0] = real(a1)/Nr;
+	solver->MRSAAB_A[id+1] = real(a2)/Nr;
+	solver->MRSAAB_A[id+2] = real(a3)/Nr;
 	// Half coefficients
-	solver->MRSAAB_B[id+0] = creal(b1)/Nr;
-	solver->MRSAAB_B[id+1] = creal(b2)/Nr;
-	solver->MRSAAB_B[id+2] = creal(b3)/Nr;
+	solver->MRSAAB_B[id+0] = real(b1)/Nr;
+	solver->MRSAAB_B[id+1] = real(b2)/Nr;
+	solver->MRSAAB_B[id+2] = real(b3)/Nr;
 
 	// MRAB coefficients
 	solver->MRAB_A[id+0]   =  23.*h/12. ;
@@ -181,8 +183,9 @@ void mrab4_coeffs(solver_t *solver) {
   complex<dfloat> R[Nr];
 
   for(iint ind =1; ind <= Nr; ++ind){
-    const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr;
-    R[ind-1] = cexp(I*M_PI* theta);
+    const complex<dfloat> exp_arg = I*M_PI*(dfloat) (ind - 0.5) / (dfloat) Nr;
+
+    R[ind-1] = exp(exp_arg);
   }
 
   solver->MRSAAB_A = (dfloat *) calloc(4*4*Nlevels,sizeof(dfloat));
@@ -209,30 +212,30 @@ void mrab4_coeffs(solver_t *solver) {
 
 	for(iint i = 0; i<Nr; ++i ){
 	  complex<dfloat> lr = alpha  + R[i];
-	  a1 +=  h*(cexp(lr) - 1.)/lr;
-	  b1 +=  h*(cexp(lr/2.) - 1.)/lr;
+	  a1 +=  h*(exp(lr) - 1.)/lr;
+	  b1 +=  h*(exp(lr/2.) - 1.)/lr;
 	}
 	// Full dt coeeficients
-	solver->MRSAAB_A[id + 0] = creal(a1)/Nr;
-	solver->MRSAAB_A[id + 1] = 0.f;
-	solver->MRSAAB_A[id + 2] = 0.f;
-	solver->MRSAAB_A[id + 3] = 0.f;
+	solver->MRSAAB_A[id + 0] = real(a1)/Nr;
+	solver->MRSAAB_A[id + 1] = 0.;
+	solver->MRSAAB_A[id + 2] = 0.;
+	solver->MRSAAB_A[id + 3] = 0.;
 	// Half coefficients
-	solver->MRSAAB_B[id + 0] = creal(b1)/Nr;
-	solver->MRSAAB_B[id + 1] = 0.f;
-	solver->MRSAAB_B[id + 2] = 0.f;
-	solver->MRSAAB_B[id + 3] = 0.f;
+	solver->MRSAAB_B[id + 0] = real(b1)/Nr;
+	solver->MRSAAB_B[id + 1] = 0.;
+	solver->MRSAAB_B[id + 2] = 0.;
+	solver->MRSAAB_B[id + 3] = 0.;
 
 	// MRAB coefficients
 	solver->MRAB_A[id + 0]   =  h ;
-	solver->MRAB_A[id + 1]   =  0.f ;
-	solver->MRAB_A[id + 2]   =  0.f ;
-	solver->MRAB_A[id + 3]   =  0.f;
+	solver->MRAB_A[id + 1]   =  0. ;
+	solver->MRAB_A[id + 2]   =  0. ;
+	solver->MRAB_A[id + 3]   =  0.;
 
 	solver->MRAB_B[id+0]     =  h/2. ;
-	solver->MRAB_B[id+1]     =  0.f ;
-	solver->MRAB_B[id+2]     =  0.f ;
-	solver->MRAB_B[id+3]     =  0.f ;
+	solver->MRAB_B[id+1]     =  0. ;
+	solver->MRAB_B[id+2]     =  0. ;
+	solver->MRAB_B[id+3]     =  0. ;
       }
 
       else if(order==1){
@@ -244,32 +247,32 @@ void mrab4_coeffs(solver_t *solver) {
 
 	for(iint i = 0; i<Nr; ++i ){
 	  complex<dfloat> lr = alpha  + R[i];
-	  a1 +=  h*(-2.*lr + (1.+lr)*cexp(lr) - 1.)/cpow(lr,2);
-	  a2 +=  h*(lr - cexp(lr) + 1.)/cpow(lr,2);
-	  b1 +=  h*(-1.5*lr + (1.+lr)*cexp(lr/2.) - 1.)/cpow(lr,2);
-	  b2 +=  h*(0.5*lr - cexp(lr/2.) + 1.)/cpow(lr,2);
+	  a1 +=  h*(-2.*lr + (1.+lr)*exp(lr) - 1.)/pow(lr,2);
+	  a2 +=  h*(lr - exp(lr) + 1.)/pow(lr,2);
+	  b1 +=  h*(-1.5*lr + (1.+lr)*exp(lr/2.) - 1.)/pow(lr,2);
+	  b2 +=  h*(0.5*lr - exp(lr/2.) + 1.)/pow(lr,2);
 	}
 	// Full dt coeeficients
-	solver->MRSAAB_A[id + 0] = creal(a1)/Nr;
-	solver->MRSAAB_A[id + 1] = creal(a2)/Nr;
-	solver->MRSAAB_A[id + 2] = 0.f;
-	solver->MRSAAB_A[id + 3] = 0.f;
+	solver->MRSAAB_A[id + 0] = real(a1)/Nr;
+	solver->MRSAAB_A[id + 1] = real(a2)/Nr;
+	solver->MRSAAB_A[id + 2] = 0.;
+	solver->MRSAAB_A[id + 3] = 0.;
 	// Half coefficients
-	solver->MRSAAB_B[id + 0] = creal(b1)/Nr;
-	solver->MRSAAB_B[id + 1] = creal(b2)/Nr;
-	solver->MRSAAB_B[id + 2] = 0.f;
-	solver->MRSAAB_B[id + 3] = 0.f;
+	solver->MRSAAB_B[id + 0] = real(b1)/Nr;
+	solver->MRSAAB_B[id + 1] = real(b2)/Nr;
+	solver->MRSAAB_B[id + 2] = 0.;
+	solver->MRSAAB_B[id + 3] = 0.;
 
 	// MRAB coefficients
 	solver->MRAB_A[id + 0]   =  3.*h/2. ;
 	solver->MRAB_A[id + 1]   = -1.*h/2. ;
-	solver->MRAB_A[id + 2]   =  0.f ;
-	solver->MRAB_B[id + 3]   =  0.f ;
+	solver->MRAB_A[id + 2]   =  0. ;
+	solver->MRAB_B[id + 3]   =  0. ;
 
 	solver->MRAB_B[id + 0]   =  5.*h/8. ;
 	solver->MRAB_B[id + 1]   = -1.*h/8. ;
-	solver->MRAB_B[id + 2]   =  0.f ;
-	solver->MRAB_B[id + 3]   =  0.f ;
+	solver->MRAB_B[id + 2]   =  0. ;
+	solver->MRAB_B[id + 3]   =  0. ;
       }
       else if (order == 2) {
 	complex<dfloat> a1 = 0. + 0.* I;
@@ -281,36 +284,36 @@ void mrab4_coeffs(solver_t *solver) {
 
 	for(iint i = 0; i<Nr; ++i ){
 	  complex<dfloat> lr = alpha  + R[i];
-	  a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
-	  a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
-	  a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
-	  b1 += h*(cexp(lr/2.)- 2.*lr - (15.*cpow(lr,2))/8.f + cpow(lr,2)*cexp(lr/2.) + 3.*lr*cexp(lr/2.)/2. - 1.)/cpow(lr,3);
-	  b2 += h*(3.*lr - 2.*cexp(lr/2.0) + 1.25*cpow(lr,2) - 2.*lr*cexp(lr/2.) + 2.)/cpow(lr,3);
-	  b3 +=-h*(lr - cexp(lr/2.) + 0.375*cpow(lr,2) - 0.5*lr*cexp(lr/2.) + 1.)/cpow(lr,3);
+	  a1 += h*(-2.5*lr - 3.*pow(lr,2) + (1.+pow(lr,2)+1.5*lr)*exp(lr) - 1.)/pow(lr,3);
+	  a2 += h*(4.*lr + 3.*pow(lr,2)- (2.*lr + 2.0)*exp(lr) + 2.)/pow(lr,3);
+	  a3 +=-h*(1.5*lr + pow(lr,2)- (0.5*lr + 1.)*exp(lr) + 1.)/pow(lr,3);
+	  b1 += h*(exp(lr/2.)- 2.*lr - (15.*pow(lr,2))/8. + pow(lr,2)*exp(lr/2.) + 3.*lr*exp(lr/2.)/2. - 1.)/pow(lr,3);
+	  b2 += h*(3.*lr - 2.*exp(lr/2.0) + 1.25*pow(lr,2) - 2.*lr*exp(lr/2.) + 2.)/pow(lr,3);
+	  b3 +=-h*(lr - exp(lr/2.) + 0.375*pow(lr,2) - 0.5*lr*exp(lr/2.) + 1.)/pow(lr,3);
 	}
 
 
 	// Full dt coeeficients
-	solver->MRSAAB_A[id+0] = creal(a1)/Nr;
-	solver->MRSAAB_A[id+1] = creal(a2)/Nr;
-	solver->MRSAAB_A[id+2] = creal(a3)/Nr;
-	solver->MRSAAB_A[id+3] = 0.f;
+	solver->MRSAAB_A[id+0] = real(a1)/Nr;
+	solver->MRSAAB_A[id+1] = real(a2)/Nr;
+	solver->MRSAAB_A[id+2] = real(a3)/Nr;
+	solver->MRSAAB_A[id+3] = 0.;
 	// Half coefficients
-	solver->MRSAAB_B[id+0] = creal(b1)/Nr;
-	solver->MRSAAB_B[id+1] = creal(b2)/Nr;
-	solver->MRSAAB_B[id+2] = creal(b3)/Nr;
-	solver->MRSAAB_B[id+3] = 0.f;
+	solver->MRSAAB_B[id+0] = real(b1)/Nr;
+	solver->MRSAAB_B[id+1] = real(b2)/Nr;
+	solver->MRSAAB_B[id+2] = real(b3)/Nr;
+	solver->MRSAAB_B[id+3] = 0.;
 
 	// MRAB coefficients
 	solver->MRAB_A[id+0]   =  23.*h/12. ;
 	solver->MRAB_A[id+1]   = -16.*h/12. ;
 	solver->MRAB_A[id+2]   =  5. *h/12. ;
-	solver->MRAB_A[id+3]   =  0.f;
+	solver->MRAB_A[id+3]   =  0.;
 
 	solver->MRAB_B[id+0]   =  17.*h/24. ;
 	solver->MRAB_B[id+1]   = - 7.*h/24. ;
 	solver->MRAB_B[id+2]   =   2.*h/24. ;
-	solver->MRAB_B[id+3]   =   0.f;
+	solver->MRAB_B[id+3]   =   0.;
       }
       else {
 	complex<dfloat> a1 = 0. + 0.* I;
@@ -324,28 +327,28 @@ void mrab4_coeffs(solver_t *solver) {
 
 	for(iint i = 0; i<Nr; ++i ){
 	  complex<dfloat> lr = alpha  + R[i];
-	  a1 += h*(cexp(lr) - 3.*lr - (13.*cpow(lr,2))/3. - 4.*cpow(lr,3) + (11.*cpow(lr,2)*cexp(lr))/6. + cpow(lr,3)*cexp(lr) + 2.*lr*cexp(lr) - 1.)/cpow(lr,4);
-	  a2 += h*(8.*lr - 3.*cexp(lr) + (19.*cpow(lr,2))/2. + 6.*cpow(lr,3) - 3.*cpow(lr,2)*cexp(lr) - 5.*lr*cexp(lr) + 3.)/cpow(lr,4);
-	  a3 +=-h*(7.*lr - 3.*cexp(lr) + 7.*cpow(lr,2) + 4.*cpow(lr,3) - (3.*cpow(lr,2)*cexp(lr))/2. - 4.*lr*cexp(lr) + 3.)/cpow(lr,4);
-	  a4 += h*(2.*lr - cexp(lr) + (11.*cpow(lr,2))/6. + cpow(lr,3) - (cpow(lr,2)*cexp(lr))/3. - lr*cexp(lr) + 1.)/cpow(lr,4);
-	  b1 += h*(cexp((lr)/2.) - (5.*lr)/2. - (71.*cpow(lr,2))/24. - (35.*cpow(lr,3))/16. + (11.*cpow(lr,2)*cexp((lr)/2.))/6. + cpow(lr,3)*cexp((lr)/2.) + 2.*lr*cexp((lr)/2.) - 1.)/cpow(lr,4);
-	  b2 += h*((13.*lr)/2. - 3.*cexp((lr)/2.) + (47.*cpow(lr,2))/8. + (35.*cpow(lr,3))/16. - 3.*cpow(lr,2)*cexp((lr)/2.) - 5.*lr*cexp((lr)/2.) + 3.)/cpow(lr,4);
-	  b3 +=-h*((11.*lr)/2. - 3.*cexp((lr)/2.) + (31.*cpow(lr,2))/8. + (21.*cpow(lr,3))/16. - (3.*cpow(lr,2)*cexp((lr)/2.))/2. - 4.*lr*cexp((lr)/2.) + 3.)/cpow(lr,4);
-	  b4 +=h*((3.*lr)/2. - cexp((lr)/2.) + (23.*cpow(lr,2))/24. + (5.*cpow(lr,3))/16. - (cpow(lr,2)*cexp((lr)/2.))/3. - lr*cexp((lr)/2.) + 1)/cpow(lr,4);
+	  a1 += h*(exp(lr) - 3.*lr - (13.*pow(lr,2))/3. - 4.*pow(lr,3) + (11.*pow(lr,2)*exp(lr))/6. + pow(lr,3)*exp(lr) + 2.*lr*exp(lr) - 1.)/pow(lr,4);
+	  a2 += h*(8.*lr - 3.*exp(lr) + (19.*pow(lr,2))/2. + 6.*pow(lr,3) - 3.*pow(lr,2)*exp(lr) - 5.*lr*exp(lr) + 3.)/pow(lr,4);
+	  a3 +=-h*(7.*lr - 3.*exp(lr) + 7.*pow(lr,2) + 4.*pow(lr,3) - (3.*pow(lr,2)*exp(lr))/2. - 4.*lr*exp(lr) + 3.)/pow(lr,4);
+	  a4 += h*(2.*lr - exp(lr) + (11.*pow(lr,2))/6. + pow(lr,3) - (pow(lr,2)*exp(lr))/3. - lr*exp(lr) + 1.)/pow(lr,4);
+	  b1 += h*(exp((lr)/2.) - (5.*lr)/2. - (71.*pow(lr,2))/24. - (35.*pow(lr,3))/16. + (11.*pow(lr,2)*exp((lr)/2.))/6. + pow(lr,3)*exp((lr)/2.) + 2.*lr*exp((lr)/2.) - 1.)/pow(lr,4);
+	  b2 += h*((13.*lr)/2. - 3.*exp((lr)/2.) + (47.*pow(lr,2))/8. + (35.*pow(lr,3))/16. - 3.*pow(lr,2)*exp((lr)/2.) - 5.*lr*exp((lr)/2.) + 3.)/pow(lr,4);
+	  b3 +=-h*((11.*lr)/2. - 3.*exp((lr)/2.) + (31.*pow(lr,2))/8. + (21.*pow(lr,3))/16. - (3.*pow(lr,2)*exp((lr)/2.))/2. - 4.*lr*exp((lr)/2.) + 3.)/pow(lr,4);
+	  b4 +=h*((3.*lr)/2. - exp((lr)/2.) + (23.*pow(lr,2))/24. + (5.*pow(lr,3))/16. - (pow(lr,2)*exp((lr)/2.))/3. - lr*exp((lr)/2.) + 1.)/pow(lr,4);
 	    
 	}
 
 
 	// Full dt coeeficients
-	solver->MRSAAB_A[id+0] = creal(a1)/Nr;
-	solver->MRSAAB_A[id+1] = creal(a2)/Nr;
-	solver->MRSAAB_A[id+2] = creal(a3)/Nr;
-	solver->MRSAAB_A[id+3] = creal(a4)/Nr;
+	solver->MRSAAB_A[id+0] = real(a1)/Nr;
+	solver->MRSAAB_A[id+1] = real(a2)/Nr;
+	solver->MRSAAB_A[id+2] = real(a3)/Nr;
+	solver->MRSAAB_A[id+3] = real(a4)/Nr;
 	// Half coefficients
-	solver->MRSAAB_B[id+0] = creal(b1)/Nr;
-	solver->MRSAAB_B[id+1] = creal(b2)/Nr;
-	solver->MRSAAB_B[id+2] = creal(b3)/Nr;
-	solver->MRSAAB_B[id+3] = creal(a4)/Nr;
+	solver->MRSAAB_B[id+0] = real(b1)/Nr;
+	solver->MRSAAB_B[id+1] = real(b2)/Nr;
+	solver->MRSAAB_B[id+2] = real(b3)/Nr;
+	solver->MRSAAB_B[id+3] = real(a4)/Nr;
 
 	// MRAB coefficients
 	solver->MRAB_A[id+0]   =  55.*h/24. ;
