@@ -115,7 +115,6 @@ void mrab3_coeffs(solver_t *solver) {
 	solver->MRSAAB_B[id + 1] = real(b2)/Nr;
 	solver->MRSAAB_B[id + 2] = 0.;
 
-
 	// MRAB coefficients
 	solver->MRAB_A[id + 0]   =  3.*h/2. ;
 	solver->MRAB_A[id + 1]   = -1.*h/2. ;
@@ -263,6 +262,7 @@ void mrab4_coeffs(solver_t *solver) {
 	solver->MRSAAB_B[id + 2] = 0.;
 	solver->MRSAAB_B[id + 3] = 0.;
 
+
 	// MRAB coefficients
 	solver->MRAB_A[id + 0]   =  3.*h/2. ;
 	solver->MRAB_A[id + 1]   = -1.*h/2. ;
@@ -335,7 +335,6 @@ void mrab4_coeffs(solver_t *solver) {
 	  b2 += h*((13.*lr)/2. - 3.*exp((lr)/2.) + (47.*pow(lr,2))/8. + (35.*pow(lr,3))/16. - 3.*pow(lr,2)*exp((lr)/2.) - 5.*lr*exp((lr)/2.) + 3.)/pow(lr,4);
 	  b3 +=-h*((11.*lr)/2. - 3.*exp((lr)/2.) + (31.*pow(lr,2))/8. + (21.*pow(lr,3))/16. - (3.*pow(lr,2)*exp((lr)/2.))/2. - 4.*lr*exp((lr)/2.) + 3.)/pow(lr,4);
 	  b4 +=h*((3.*lr)/2. - exp((lr)/2.) + (23.*pow(lr,2))/24. + (5.*pow(lr,3))/16. - (pow(lr,2)*exp((lr)/2.))/3. - lr*exp((lr)/2.) + 1.)/pow(lr,4);
-	    
 	}
 
 
