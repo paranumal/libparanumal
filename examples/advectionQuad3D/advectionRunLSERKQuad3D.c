@@ -21,7 +21,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			solver->o_qpre,
 			solver->o_qPreFilter);
   
-  solver->filterKernelq0V(mesh->Nelements,
+    solver->filterKernelq0V(mesh->Nelements,
 			alpha,
 			solver->o_dualProjMatrix,
 			solver->o_cubeFaceNumber,
@@ -29,8 +29,11 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			solver->o_x,
 			solver->o_y,
 			solver->o_z,
-			solver->o_qPreFilter,
-			solver->o_qpre);
+			    solver->o_qpre,
+			    solver->o_qPreFilter,
+			    solver->o_qPreFiltered);
+    
+    solver->o_qPreFiltered.copyTo(solver->o_qpre);
   
   for(iint tstep=0;tstep < solver->Nrhs;++tstep){
     for (iint Ntick=0; Ntick < pow(2,mesh->MRABNlevels-1);Ntick++) {      
@@ -99,7 +102,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			       solver->o_qpre,
 			       solver->o_prerhsq);
 	
-	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
+	/*	for (iint l = 0; l < mesh->MRABNlevels; ++l) {
 	  iint saved = (l < lev)&&(rk == 0);
 	  solver->filterKernelHLSERK(mesh->MRABNelements[l],
 				   solver->o_MRABelementIds[l],
@@ -130,7 +133,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				   solver->o_prerhsq,
 				   solver->o_qFilter);
 				   }
-	
+	*/
 	for (iint l = 0; l < mesh->MRABNlevels; l++) {
 	  iint saved = (l < lev)&&(rk == 0);
 	  solver->volumeCorrPreKernel(mesh->MRABNelements[l],
@@ -154,8 +157,8 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 				  solver->rkb[rk],
 				  solver->MRABshiftIndex[l],
 				  solver->o_prerhsq,
-				  solver->o_qFiltered,
-				  //solver->o_rhsq,
+				    //solver->o_qFiltered,
+				  solver->o_rhsq,
 				  solver->o_qPreCorr,
 				  solver->o_resq,
 				  solver->o_qpre);
@@ -167,23 +170,26 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 	}
       }
       solver->filterKernelq0H(mesh->Nelements,
-			    solver->o_dualProjMatrix,
-			    solver->o_cubeFaceNumber,
-			    solver->o_EToE,
-			    solver->o_qpre,
-			    solver->o_qPreFilter);
+			      solver->o_dualProjMatrix,
+			      solver->o_cubeFaceNumber,
+			      solver->o_EToE,
+			      solver->o_qpre,
+			      solver->o_qPreFilter);
       
       solver->filterKernelq0V(mesh->Nelements,
-			    alpha,
-			    solver->o_dualProjMatrix,
-			    solver->o_cubeFaceNumber,
-			    solver->o_EToE,
-			    solver->o_x,
-			    solver->o_y,
-			    solver->o_z,
-			    solver->o_qPreFilter,
-			    solver->o_qpre);
+			      alpha,
+			      solver->o_dualProjMatrix,
+			      solver->o_cubeFaceNumber,
+			      solver->o_EToE,
+			      solver->o_x,
+			      solver->o_y,
+			      solver->o_z,
+			      solver->o_qpre,
+			      solver->o_qPreFilter,
+			      solver->o_qPreFiltered);
 
+      solver->o_qPreFiltered.copyTo(solver->o_qPreFilter);
+      
     }
   }
   

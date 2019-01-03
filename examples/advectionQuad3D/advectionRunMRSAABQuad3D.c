@@ -85,7 +85,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
       solver->o_shift.copyFrom(solver->MRABshiftIndex);
       solver->o_lev_updates.copyFrom(solver->lev_updates);
 
-      for (iint l = 0; l < lev; l++) {
+      /*      for (iint l = 0; l < lev; l++) {
 		
       	solver->filterKernelH(mesh->MRABNelements[l],
 			    solver->o_MRABelementIds[l],
@@ -118,7 +118,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			    solver->o_qFilter,
 			    solver->o_qFiltered);	
 			    }
-      
+      */
       for (iint l=0;l<lev;l++) {
 	if (mesh->MRABNelements[l]) {
 	  solver->volumeCorrectionKernel(mesh->MRABNelements[l],
@@ -146,8 +146,8 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 			     solver->MRSAAB_A[id+2],
 			     solver->MRSAAB_A[id+3],
 			     solver->MRABshiftIndex[l],
-			     solver->o_qFiltered,
-			       //solver->o_rhsq,
+			       //solver->o_qFiltered,
+			       solver->o_rhsq,
 			     solver->o_fQ,
 			     solver->o_qCorr,
 			     solver->o_q);
@@ -175,8 +175,8 @@ void advectionRunMRSAABQuad3D(solver_t *solver){
 				  solver->MRSAAB_B[id+2],
 				  solver->MRSAAB_B[id+3],
 				  solver->MRABshiftIndex[levS],
-				  solver->o_qFiltered,
-				    //solver->o_rhsq,
+				    //solver->o_qFiltered,
+				    solver->o_rhsq,
 				  solver->o_fQ,
 				  solver->o_qPreFilter,
 				  solver->o_qCorr,

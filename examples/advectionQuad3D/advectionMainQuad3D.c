@@ -5,9 +5,10 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
-  //changes solver mode.
-  //options are: DOPRI MRSAAB
-  char *mode = "MRSAAB";
+  //changes solver mode
+  //main options are: DOPRI MRSAAB LSERK RK_SPECTRUM
+  //grid options are: flat spherical equispherical extended
+  char *mode = "MRSAAB equispherical";
   
   // int specify polynomial degree 
   int N = atoi(argv[2]);
@@ -33,6 +34,9 @@ int main(int argc, char **argv){
   else if (strstr(mode,"MRSAAB")) {
     advectionSetupMRSAABQuad3D(solver);
   }
+  else {
+    printf("ERROR: Solver mode not recognized");
+  }
   
   // time step Boltzmann equations
   if (strstr(mode,"DOPRI")) {
@@ -45,7 +49,11 @@ int main(int argc, char **argv){
     advectionSpectrumLSERKQuad3D(solver,alpha);
   }
   else if (strstr(mode,"MRSAAB")) {
+    advectionRunLSERKQuad3D(solver);
     advectionRunMRSAABQuad3D(solver);
+  }
+  else {
+    printf("ERROR: Solver mode not recognized");
   }
   
   solver->o_qpre.copyTo(solver->q);
