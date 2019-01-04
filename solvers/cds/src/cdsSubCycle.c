@@ -30,13 +30,12 @@
 void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::memory o_S, occa::memory o_Sd){
  
   mesh_t *mesh = cds->mesh;
-  //  printf("Before Blowing up %d %d \n", mesh->Nelements, mesh->totalHaloPairs);
   const dlong NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);  
 
   //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){
-    
-			   mesh->totalHaloPairs,
+    cds->haloExtractKernel(mesh->Nelements,
+                           mesh->totalHaloPairs,
 			   mesh->o_haloElementList,
 			   cds->sOffset,
 			   o_S,

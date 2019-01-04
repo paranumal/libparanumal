@@ -69,15 +69,19 @@ int main(int argc, char **argv){
     mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
   }
 
-  ins_t *ins = insSetup(mesh,options);
+
+  occa::properties kernelInfoBase; 
+  ins_t *ins = insSetup(mesh,options, kernelInfoBase);
   
 #if 1
   // Create a passive scalar solver
-  // cds_t *cds = (cds_t *) calloc(1, sizeof(cds_t));
+  cds_t *cds = (cds_t *) calloc(1, sizeof(cds_t));
   // Set scalar solver flow solver to INS
-  // cds->fSolver = ins;
+  cds->fSolver = ins;
   // Now Set the Scalar Solver
-  // cdsSolveSetup(cds, options);
+  cdsSolveSetup(cds, options, kernelInfoBase);
+
+  if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF")) insRunWcdsEXTBDF(ins, cds);
 #else 
   insPlotWallsVTUHex3D(ins, "walls");
   
