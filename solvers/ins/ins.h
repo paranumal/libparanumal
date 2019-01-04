@@ -39,13 +39,13 @@ SOFTWARE.
 typedef struct {
 
   int dim, elementType;
-
+  
   mesh_t *mesh;
   elliptic_t *uSolver;
   elliptic_t *vSolver;
   elliptic_t *wSolver;
   elliptic_t *pSolver;
-
+  
   setupAide options;
   setupAide vOptions, pOptions; 	
 
@@ -112,7 +112,7 @@ typedef struct {
   dfloat *extC;
 
 
-  //  occa::properties kernelInfoBase; 
+  occa::properties kernelInfoBase; 
 
   int *VmapB, *PmapB;
   occa::memory o_VmapB, o_PmapB;
@@ -233,11 +233,12 @@ typedef struct {
 
 #include "cds.h"
 
-ins_t *insSetup(mesh_t *mesh, setupAide options);
+ins_t *insSetup(mesh_t *mesh, setupAide options, occa::properties &kernelInfo);
 
 void insRunARK(ins_t *ins);
 void insRunEXTBDF(ins_t *ins);
-//void insRunScalarEXTBDF(ins_t *ins, cds_t *cds);
+
+void insRunWcdsEXTBDF(ins_t *ins, cds_t *cds);
 
 void insPlotVTU(ins_t *ins, char *fileNameBase);
 void insReport(ins_t *ins, dfloat time,  int tstep);

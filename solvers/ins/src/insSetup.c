@@ -28,7 +28,7 @@ SOFTWARE.
 #include "omp.h"
 #include <unistd.h>
 
-ins_t *insSetup(mesh_t *mesh, setupAide options){
+ins_t *insSetup(mesh_t *mesh, setupAide options, occa::properties &kernelInfoBase){
 
   ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
   ins->mesh = mesh;
@@ -332,12 +332,15 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   //Reynolds number
   ins->Re = ins->ubar/ins->nu;
 
+ 
+ #if 0
  occa::properties kernelInfo;
  kernelInfo["defines"].asObject();
  kernelInfo["includes"].asArray();
  kernelInfo["header"].asArray();
  kernelInfo["flags"].asObject();
 
+  
   if(ins->dim==3){
     if(ins->elementType != QUADRILATERALS)
       meshOccaSetup3D(mesh, options, kernelInfo);
@@ -351,6 +354,36 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   occa::properties kernelInfoP     = kernelInfo;
   occa::properties kernelInfoS     = kernelInfo; 
 
+#else
+  // ins->kernelInfoBase = occa::properties(); 
+  // printf("BOOL INIT %d \n ",ins->kernelInfoBase.isInitialized());
+  // ins->kernelInfoBase =  new (occa::properties());
+  
+ printf("BOOL INIT %d \n ",ins->kernelInfoBase.isInitialized()); 
+
+ kernelInfoBase["defines"].asObject();
+ kernelInfoBase["includes"].asArray();
+ kernelInfoBase["header"].asArray();
+ kernelInfoBase["flags"].asObject();
+
+ //  printf("BOOL INIT %d \n ",ins->kernelInfoBase.isInitialized());   
+
+ if(ins->dim==3){
+    if(ins->elementType != QUADRILATERALS)
+      meshOccaSetup3D(mesh, options, kernelInfoBase);
+    else
+      meshOccaSetupQuad3D(mesh, options, kernelInfoBase); 
+  } 
+  else
+    meshOccaSetup2D(mesh, options, kernelInfoBase);
+
+  occa::properties kernelInfoV     = kernelInfoBase;
+  occa::properties kernelInfoP     = kernelInfoBase;
+  occa::properties kernelInfoS     = kernelInfoBase;
+
+  occa::properties kernelInfo      = kernelInfoBase; 
+#endif
+  
   
   //  ins->kernelInfoBase = kernelInfo; 
   // ADD-DEFINES
@@ -1094,18 +1127,16 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   }
 
   // Temprorarily hold scalar solver here
-#if 1
+#if 0
+
   // Create a passive scalar solver
   cds_t *cds = (cds_t *) calloc(1, sizeof(cds_t));
-
   // Set scalar solver flow solver to INS
   cds->fSolver = ins;
-
   // Now Set the Scalar Solver
   cdsSolveSetup(cds, options, kernelInfoS);
-  printf("Before Blowing up %d %d \n", ins->mesh->Nelements, ins->mesh->totalHaloPairs);
-  cdsSolveStep(cds, cds->startTime, cds->dt, cds->fSolver->o_U, cds->o_S); 
-  //  insRunScalarEXTBDF(ins, cds);
+
+  insRunWcdsEXTBDF(ins, cds);
 #endif
   
   return ins;

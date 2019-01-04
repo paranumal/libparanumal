@@ -34,7 +34,7 @@ LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(CDSDIR) -lcds  -L$(ALMONDDIR) -lparAlmon
 		   -L$(OCCA_DIR)/lib $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
 
 
-INCLUDES = ins.h
+INCLUDES = ins.h 
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
@@ -65,6 +65,7 @@ AOBJS    = \
 ./src/insReport.o \
 ./src/insRunARK.o \
 ./src/insRunEXTBDF.o \
+./src/insRunWcdsEXTBDF.o \
 ./src/insAdvection.o \
 ./src/insDiffusion.o \
 ./src/insGradient.o \
