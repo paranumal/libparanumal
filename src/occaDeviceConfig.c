@@ -102,8 +102,8 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   Nthreads = mymax(1,Nthreads/2);
   omp_set_num_threads(Nthreads);
 
-  if (rank==0 && options.compareArgs("VERBOSE","TRUE"))
-    printf("Rank %d: Ncores = %d, Nthreads = %d\n", rank, Ncores, Nthreads);
+  if (options.compareArgs("VERBOSE","TRUE"))
+    printf("Rank %d: Ncores = %d, Nthreads = %d, device_id = %d \n", rank, Ncores, Nthreads, device_id);
   
   mesh->device.setup(deviceConfig);
 
