@@ -101,7 +101,6 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     // x <= x + alpha*p
     ellipticScaledAdd(elliptic,  alpha, o_p,  1.f, o_x);
 
-    occaTimerTic(mesh->device,"Residual update");
     // [
     // r <= r - alpha*A*p
     ellipticScaledAdd(elliptic, -alpha, o_Ap, 1.f, o_r);
@@ -113,7 +112,6 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 #endif
     // ]
-    occaTimerToc(mesh->device,"Residual update");
     
     if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
       printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
@@ -122,8 +120,6 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
       rdotr0 = rdotr1;
       break;
     }
-
-    occaTimerTic(mesh->device,"Preconditioner");
 
     // [
     // z = Precon^{-1} r
@@ -147,8 +143,6 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
     // switch rdotz0 <= rdotz1
     rdotz0 = rdotz1;
-
-    occaTimerToc(mesh->device,"Preconditioner");
 
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;

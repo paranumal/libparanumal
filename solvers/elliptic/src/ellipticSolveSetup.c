@@ -541,9 +541,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   long long int pre = mesh->device.memoryAllocated();
 
-  occaTimerTic(mesh->device,"PreconditionerSetup");
   ellipticPreconditionerSetup(elliptic, elliptic->ogs, lambda);
-  occaTimerToc(mesh->device,"PreconditionerSetup");
 
   long long int usedBytes = mesh->device.memoryAllocated()-pre;
 
