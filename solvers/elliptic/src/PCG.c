@@ -115,7 +115,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticScaledAdd(elliptic, -alpha, o_Ap, 1.f, o_r);
 
     // dot(r,r)
-#if 1
+#if 0
     rdotr1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
     rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
