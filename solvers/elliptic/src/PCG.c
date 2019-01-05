@@ -33,20 +33,36 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
+  int DEBUG_ENABLE_REDUCTIONS = 1;
+  options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
+  
+  // register scalars
+  dfloat rdotz0 = 0;
+  dfloat rdotr0 = 0;
+  int Niter = 0;
+  dfloat rdotr1 = 0;
+  dfloat rdotz1 = 0;
+  dfloat zdotAp = 0;
+  
+  dfloat alpha, beta, pAp = 0;
+  dfloat TOL, normB;
+  
   /*aux variables */
   occa::memory &o_p  = elliptic->o_p;
   occa::memory &o_z  = elliptic->o_z;
   occa::memory &o_Ap = elliptic->o_Ap;
   occa::memory &o_Ax = elliptic->o_Ax;
 
+
   /*compute norm b, set the tolerance */
 #if 0
-  dfloat normB = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
+  normB = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
-  dfloat normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+  normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 #endif
 
-  dfloat TOL =  mymax(tol*tol*normB,tol*tol);
+  TOL =  mymax(tol*tol*normB,tol*tol);
+  
   // compute A*x
   ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax, dfloatString);
 
@@ -54,13 +70,10 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);
 
 #if 0
-  dfloat rdotr0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
+  rdotr0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
-  dfloat rdotr0 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+  rdotr0 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 #endif
-
-  dfloat rdotz0 = 0;
-  int Niter = 0;
 
   //sanity check
   if (rdotr0<1E-20) {
@@ -84,24 +97,23 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 #else
   rdotz0 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
 #endif
-  
-  dfloat rdotr1 = 0;
-  dfloat rdotz1 = 0;
-
-  dfloat alpha, beta, pAp = 0;
 
   while((Niter <MAXIT)) {
 
     // [
     // A*p
     ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
-
+    
     // dot(p,A*p)
+    if(DEBUG_ENABLE_REDUCTIONS==1){
 #if 0
-    pAp =  ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
+      pAp =  ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
 #else
-    pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
+      pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
 #endif
+    }
+    else
+      pAp = 1;
     // ]
     
     // alpha = dot(r,z)/dot(p,A*p)
@@ -115,11 +127,16 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticScaledAdd(elliptic, -alpha, o_Ap, 1.f, o_r);
 
     // dot(r,r)
+    if(DEBUG_ENABLE_REDUCTIONS==1){
 #if 0
-    rdotr1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
+      rdotr1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
-    rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+      rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 #endif
+    }
+    else
+      rdotr1 = 1;
+
     // ]
     
     if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
@@ -135,22 +152,32 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticPreconditioner(elliptic, lambda, o_r, o_z);
 
     // dot(r,z)
+    if(DEBUG_ENABLE_REDUCTIONS==1){
 #if 0
-    rdotz1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+      rdotz1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
 #else
-    rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+      rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
 #endif
+    }
+    else
+      rdotz1 = 1;
+    
     // ]
     
     // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
     if(options.compareArgs("KRYLOV SOLVER", "PCG+FLEXIBLE") ||
-       options.compareArgs("KRYLOV SOLVER", "PCG,FLEXIBLE")) {
+      options.compareArgs("KRYLOV SOLVER", "PCG,FLEXIBLE")) {
+    
+      if(DEBUG_ENABLE_REDUCTIONS==1){
 #if 0
-      dfloat zdotAp = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
+	zdotAp = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
 #else
-      dfloat zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
+	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
 #endif
-
+      }
+      else
+	zdotAp = 1;
+      
       beta = -alpha*zdotAp/rdotz0;
     } else {
       beta = rdotz1/rdotz0;
@@ -164,8 +191,9 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;
-
+    
     ++Niter;
   }
+
   return Niter;
 }
