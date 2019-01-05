@@ -40,7 +40,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   occa::memory &o_Ax = elliptic->o_Ax;
 
   /*compute norm b, set the tolerance */
-#if 1
+#if 0
   dfloat normB = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
   dfloat normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
@@ -53,7 +53,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   // subtract r = b - A*x
   ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);
 
-#if 1
+#if 0
   dfloat rdotr0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
   dfloat rdotr0 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
@@ -79,7 +79,12 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   o_p.copyFrom(o_z); // PCG
 
   // dot(r,z)
+#if 0
   rdotz0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+#else
+  rdotz0 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+#endif
+  
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
 
@@ -92,7 +97,11 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
 
     // dot(p,A*p)
+#if 0
     pAp =  ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
+#else
+    pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
+#endif
     // ]
     
     // alpha = dot(r,z)/dot(p,A*p)
@@ -126,13 +135,22 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticPreconditioner(elliptic, lambda, o_r, o_z);
 
     // dot(r,z)
+#if 0
     rdotz1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+#else
+    rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+#endif
     // ]
     
     // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
     if(options.compareArgs("KRYLOV SOLVER", "PCG+FLEXIBLE") ||
        options.compareArgs("KRYLOV SOLVER", "PCG,FLEXIBLE")) {
+#if 0
       dfloat zdotAp = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
+#else
+      dfloat zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
+#endif
+
       beta = -alpha*zdotAp/rdotz0;
     } else {
       beta = rdotz1/rdotz0;
