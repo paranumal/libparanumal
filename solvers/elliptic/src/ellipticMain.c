@@ -144,6 +144,16 @@ int main(int argc, char **argv){
            mesh->Nelements*(it*mesh->Np/elapsed),
            (char*) options.getArgs("PRECONDITIONER").c_str());
 
+    if (options.compareArgs("VERBOSE", "TRUE")){
+      fflush(stdout);
+      MPI_Barrier(MPI_COMM_WORLD);
+      printf("rank %d has %d internal elements and %d non-internal elements\n",
+	     mesh->rank,
+	     mesh->NinternalElements,
+	     mesh->NnotInternalElements);
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+    
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS") && 
        !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS)){
       dfloat zero = 0.;
