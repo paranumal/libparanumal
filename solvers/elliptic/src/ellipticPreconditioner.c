@@ -35,23 +35,18 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
 
   if (options.compareArgs("PRECONDITIONER", "MULTIGRID")) {
 
-    occaTimerTic(mesh->device,"parALMOND");
     parAlmond::Precon(precon->parAlmond, o_z, o_r);
-    occaTimerToc(mesh->device,"parALMOND");
 
   } else if (options.compareArgs("PRECONDITIONER", "FULLALMOND")) {
 
     if (options.compareArgs("DISCRETIZATION", "IPDG")) {
-      occaTimerTic(mesh->device,"parALMOND");
       parAlmond::Precon(precon->parAlmond, o_z, o_r);
-      occaTimerToc(mesh->device,"parALMOND");
     } else if (options.compareArgs("DISCRETIZATION", "CONTINUOUS")) {
       ogsGather(precon->o_rhsG, o_r, ogsDfloat, ogsAdd, elliptic->ogs);
       elliptic->dotMultiplyKernel(elliptic->ogs->Ngather,
                       elliptic->ogs->o_gatherInvDegree, precon->o_rhsG, precon->o_rhsG);
-      occaTimerTic(mesh->device,"parALMOND");
+
       parAlmond::Precon(precon->parAlmond, precon->o_xG, precon->o_rhsG);
-      occaTimerToc(mesh->device,"parALMOND");
       ogsScatter(o_z, precon->o_xG, ogsDfloat, ogsAdd, elliptic->ogs);
     }
 
@@ -60,9 +55,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
     dfloat invLambda = 1./lambda;
 
     if (options.compareArgs("DISCRETIZATION", "IPDG")) {
-      occaTimerTic(mesh->device,"blockJacobiKernel");
       precon->blockJacobiKernel(mesh->Nelements, invLambda, mesh->o_vgeo, precon->o_invMM, o_r, o_z);
-      occaTimerToc(mesh->device,"blockJacobiKernel");
     } else if (options.compareArgs("DISCRETIZATION", "CONTINUOUS")) {
       ogs_t *ogs = elliptic->ogs;
 
@@ -95,9 +88,9 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
       elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_z, o_z);
       precon->SEMFEMInterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,o_z,precon->o_rFEM);
       ogsGather(precon->o_GrFEM, precon->o_rFEM, ogsDfloat, ogsAdd, precon->FEMogs);
-      occaTimerTic(mesh->device,"parALMOND");
+
       parAlmond::Precon(precon->parAlmond, precon->o_GzFEM, precon->o_GrFEM);
-      occaTimerToc(mesh->device,"parALMOND");
+
       ogsScatter(precon->o_zFEM, precon->o_GzFEM, ogsDfloat, ogsAdd, precon->FEMogs);
       precon->SEMFEMAnterpKernel(mesh->Nelements,mesh->o_SEMFEMAnterp,precon->o_zFEM,o_z);
       elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_z, o_z);
@@ -108,9 +101,9 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
       ogsGather(precon->o_rhsG, o_r, ogsDfloat, ogsAdd, precon->FEMogs);
       elliptic->dotMultiplyKernel(precon->FEMogs->Ngather,
                       precon->FEMogs->o_gatherInvDegree, precon->o_rhsG, precon->o_rhsG);
-      occaTimerTic(mesh->device,"parALMOND");
+
       parAlmond::Precon(precon->parAlmond, precon->o_xG, precon->o_rhsG);
-      occaTimerToc(mesh->device,"parALMOND");
+
       ogsScatter(o_z, precon->o_xG, ogsDfloat, ogsAdd, precon->FEMogs);
     }
 
@@ -118,9 +111,9 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
 
     dlong Ntotal = mesh->Np*mesh->Nelements;
     // Jacobi preconditioner
-    occaTimerTic(mesh->device,"dotDivideKernel");
+
     elliptic->dotMultiplyKernel(Ntotal, o_r, precon->o_invDiagA, o_z);
-    occaTimerToc(mesh->device,"dotDivideKernel");
+
 
   } else{ // turn off preconditioner
     o_z.copyFrom(o_r);

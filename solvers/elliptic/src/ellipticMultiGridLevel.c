@@ -148,14 +148,12 @@ void MGLevel::smoothChebyshev (occa::memory &o_r, occa::memory &o_x, bool xIsZer
 
 void MGLevel::smootherLocalPatch(occa::memory &o_r, occa::memory &o_Sr) {
 
-  // occaTimerTic(mesh->device,"approxBlockJacobiSolveKernel");
   elliptic->precon->approxBlockJacobiSolverKernel(mesh->Nelements,
                             elliptic->precon->o_patchesIndex,
                             elliptic->precon->o_invAP,
                             elliptic->precon->o_invDegreeAP,
                             o_r,
                             o_Sr);
-  // occaTimerToc(mesh->device,"approxBlockJacobiSolveKernel");
 }
 
 void MGLevel::smootherJacobi(occa::memory &o_r, occa::memory &o_Sr) {

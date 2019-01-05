@@ -43,16 +43,12 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
     start = MPI_Wtime(); 
   }
 
-  occaTimerTic(mesh->device,"Linear Solve");
   Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter);
-  occaTimerToc(mesh->device,"Linear Solve");
 
   if(options.compareArgs("VERBOSE","TRUE")){
     mesh->device.finish();
     end = MPI_Wtime();
     double localElapsed = end-start;
-
-    //    occa::printTimer();
 
     if(mesh->rank==0) printf("Solver converged in %d iters \n", Niter );
 

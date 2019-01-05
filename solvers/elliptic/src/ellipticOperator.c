@@ -31,8 +31,6 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
-  occaTimerTic(mesh->device,"AxKernel");
-
   dfloat *sendBuffer = elliptic->sendBuffer;
   dfloat *recvBuffer = elliptic->recvBuffer;
   dfloat *gradSendBuffer = elliptic->gradSendBuffer;
@@ -300,5 +298,4 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
   } 
 
-  occaTimerToc(mesh->device,"AxKernel");
 }
