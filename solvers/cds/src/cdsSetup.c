@@ -84,10 +84,10 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   cds->Nblock      = (Nlocal+blockSize-1)/blockSize;
 
   // Solution storage at interpolation nodes
-  cds->U     = (dfloat*) calloc(cds->NVfields             *Ntotal,sizeof(dfloat));
-  cds->S     = (dfloat*) calloc(cds->NSfields*cds->Nstages*Ntotal,sizeof(dfloat));
+  cds->U     = (dfloat*) calloc(cds->NVfields                 *Ntotal,sizeof(dfloat));
+  cds->S     = (dfloat*) calloc(cds->NSfields*(cds->Nstages+0)*Ntotal,sizeof(dfloat));
   cds->NS    = (dfloat*) calloc(cds->NSfields*(cds->Nstages+1)*Ntotal,sizeof(dfloat));
-  cds->rkS   = (dfloat*) calloc(cds->NSfields*Ntotal,sizeof(dfloat));
+  cds->rkS   = (dfloat*) calloc(cds->NSfields                 *Ntotal,sizeof(dfloat));
   
   cds->Nsubsteps = 0;
    
@@ -474,8 +474,8 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
 
     cds->o_extC = mesh->device.malloc(3*sizeof(dfloat)); 
 
-    // cds->o_prkA = cds->o_extbdfC;
-    // cds->o_prkB = cds->o_extbdfC;
+    cds->o_prkA = cds->o_extbdfC;
+    cds->o_prkB = cds->o_extbdfC;
   }else{
     printf("Only BDF is implemented\n");
     exit(EXIT_FAILURE);
@@ -538,15 +538,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "cdsHaloScatter");
       cds->haloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       
-      // Probably we dont need this kernel !!!!!!
-      // if(cds->dim==3 && cds->elementType==QUADRILATERALS){
-      //	sprintf(fileName, DCDS "/okl/insConstrainQuad3D.okl");
-      //	sprintf(kernelName, "insConstrainQuad3D");
-      //	cds->constrainKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-      // }
-      
-      // ===========================================================================
-      
+     
       sprintf(fileName, DCDS "/okl/cdsAdvection%s.okl", suffix);
 
       // needed to be implemented
@@ -580,52 +572,38 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "cdsHelmholtzAddBC%s", suffix);
       cds->helmholtzAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      /*
-      // ===========================================================================
-      if(cds->dim==3 && cds->options.compareArgs("OUTPUT TYPE","ISO")){
-      sprintf(fileName, DCDS "/okl/insIsoSurface3D.okl");
-      sprintf(kernelName, "insIsoSurface3D");
-
-      cds->isoSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
-      }
-      */
-
+    
       // Not implemented for Quad 3D yet !!!!!!!!!!
       if(cds->Nsubsteps){
-      // Note that resU and resV can be replaced with already introduced buffer
-      cds->o_Ue     = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
-      cds->o_Sd     = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->Sd);
-      cds->o_resS   = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->resS);
-      cds->o_rhsSd  = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->rhsSd);
+        // Note that resU and resV can be replaced with already introduced buffer
+        cds->o_Ue     = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
+        cds->o_Sd     = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->Sd);
+        cds->o_resS   = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->resS);
+        cds->o_rhsSd  = mesh->device.malloc(cds->NSfields*Ntotal*sizeof(dfloat), cds->rhsSd);
 
-      //if(cds->elementType==HEXAHEDRA)
-      // cds->o_cSd = mesh->device.malloc(cds->NSfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), cds->cSd);
-      //else 
-      // cds->o_cSd = cds->o_Sd;
+        sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
+        sprintf(kernelName, "scaledAddwOffset");
+        cds->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
-      sprintf(kernelName, "scaledAddwOffset");
-      cds->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(fileName, DCDS "/okl/cdsSubCycle%s.okl", suffix);
+        sprintf(kernelName, "cdsSubCycleVolume%s", suffix);
+        cds->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-       sprintf(fileName, DCDS "/okl/cdsSubCycle%s.okl", suffix);
-       sprintf(kernelName, "cdsSubCycleVolume%s", suffix);
-       cds->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "cdsSubCycleSurface%s", suffix);
+        cds->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "cdsSubCycleSurface%s", suffix);
-      cds->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "cdsSubCycleCubatureVolume%s", suffix);
+        cds->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-     sprintf(kernelName, "cdsSubCycleCubatureVolume%s", suffix);
-     cds->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "cdsSubCycleCubatureSurface%s", suffix);
+        cds->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "cdsSubCycleCubatureSurface%s", suffix);
-      cds->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(fileName, DCDS "/okl/cdsSubCycle.okl");
+        sprintf(kernelName, "cdsSubCycleRKUpdate");
+        cds->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(fileName, DCDS "/okl/cdsSubCycle.okl");
-      sprintf(kernelName, "cdsSubCycleRKUpdate");
-      cds->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
-      sprintf(kernelName, "cdsSubCycleExt");
-      cds->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "cdsSubCycleExt");
+        cds->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
    
     }
@@ -636,13 +614,25 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   printf(" Solver Parameters......\n");
   printf("alfa\t:\t %.8e \n", cds->alf);
   printf("invalfa\t:\t %.8e \n", cds->ialf);
+  printf("k\t:\t %.8e \n", cds->k);
+  printf("cp\t:\t %.8e \n", cds->cp);
+  printf("rho\t:\t %.8e \n", cds->rho);
+  printf("nu\t:\t %.8e \n", cds->nu);
   printf("Re\t:\t %.8e \n", cds->Re);
   printf("Pr\t:\t %.8e \n", cds->Pr);
   printf("dt\t:\t %.8e \n", cds->dt);
+  printf("sdt\t:\t %.8e \n", cds->sdt);
   printf("invdt\t:\t %.8e \n", cds->idt);
-  printf("Nsubsteps\t:\t %02d \n", cds->Nsubsteps);  
+  printf("ialf\t:\t %.8e \n", cds->ialf);
+  printf("Nsubsteps\t:\t %02d \n", cds->Nsubsteps);
+  printf("SNrk\t:\t %02d \n", cds->SNrk); 
+  printf("ExplicitOrder\t:\t %02d \n", cds->ExplicitOrder);       
 
 #endif
+
+
+
+  cout<<kernelInfo;
 
   return cds;
 }

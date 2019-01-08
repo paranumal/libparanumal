@@ -52,7 +52,7 @@ SOFTWARE.
               const dlong gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;
               const dfloat JW = vgeo[gid + p_JWID*p_Np];
 
-              dfloat rhsSn;
+              dfloat rhsSn=0.f;
 
               if (p_SUBCYCLING) {
                 //NU holds \hat{U} after subcycling
