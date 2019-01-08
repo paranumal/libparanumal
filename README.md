@@ -98,49 +98,93 @@ The elliptic solver and flow solvers reside in sub-directories of the solver dir
 The directory structure is relatively flat, annotated here:
 
 libparanumal/  
-├── 3rdParty  
-│   ├── BlasLapack  
-│   └── gslib.github  
-├── meshes  
-├── nodes           `(Node data files for different elements)`  
-├── okl  
-├── solvers  
-│   ├── acoustics   `(DGTD discretization of linearized Euler acoustics)`  
-│   │   ├── okl     `(OCCA Kernel Language DEVICE kernels for acoustics)`  
-│   │   ├── setups  `(Default set up files for acoustics solver)`    
-│   │   └── src     `(HOST code for driving acoustics solver)`  
-│   ├── bns         `(DGTD discretization of Galerkin-Boltzmann gas dynamics solver)`  
-│   │   ├── data  
-│   │   ├── okl  
-│   │   ├── setups  
-│   │   └── src  
-│   ├── cns         `(DGTD discretization based isothermal compressible Navier-Stokes solver)`  
-│   │   ├── data  
-│   │   ├── okl  
-│   │   ├── setups  
-│   │   └── src  
-│   ├── elliptic    `(DG and C0-FEM discretization based Poisson and screened Poisson potential problems)`    
-│   │   ├── data  
-│   │   ├── okl  
-│   │   ├── setups  
-│   │   └── src  
-│   ├── gradient    `(Elemental gradient operations example)`  
-│   │   ├── okl  
-│   │   ├── setups  
-│   │   └── src  
-│   ├── ins         `(DG and C0-FEM discretization based incompressible Navier-Stokes solver)`   
-│   │   ├── data  
-│   │   ├── okl  
-│   │   ├── setups  
-│   │   └── src  
-│   └── parALMOND   `(Hybrid p-type multigrid and algebraic multigrid linear solvers)`  
-│       ├── include  
-│       ├── okl  
-│       └── src  
-├── src             `(Base library for mesh wrangling)`  
-└── utilities       `(Useful utilities)`  
-    ├── autoTester  
-    └── VTU  
+
+├── 3rdParty
+│   ├── BlasLapack
+│   └── gslib
+│       ├── lib
+│       ├── src
+│       └── tests
+│           └── fortran
+├── benchmarks
+│   ├── CEED
+│   │   ├── BP0
+│   │   ├── BP1
+│   │   ├── BP2
+│   │   ├── BP3
+│   │   └── occa
+│ 
+├── include
+├── libs
+│   ├── gatherScatter
+│   │   ├── include
+│   │   ├── okl
+│   │   └── src
+│   └── parAlmond
+│       ├── include
+│       ├── okl
+│       └── src
+│           └── agmgSetup
+├── matlab
+│   ├── bern
+│   ├── newNodes
+│   └── sparseBasis
+├── meshes
+├── nodes
+├── okl
+├── scripts
+│   └── conversion
+├── solvers
+│   ├── acoustics
+│   │   ├── okl
+│   │   ├── setups
+│   │   └── src
+│   ├── advection
+│   │   ├── okl
+│   │   ├── scripts
+│   │   ├── setups
+│   │   └── src
+│   ├── bns
+│   │   ├── data
+│   │   ├── okl
+│   │   ├── setups
+│   │   └── src
+│   ├── cns
+│   │   ├── data
+│   │   ├── okl
+│   │   ├── setups
+│   │   └── src
+│   ├── elliptic
+│   │   ├── data
+│   │   ├── okl
+│   │   ├── results
+│   │   ├── setups
+│   │   └── src
+│   ├── gradient
+│   │   ├── okl
+│   │   ├── setups
+│   │   └── src
+│   └── ins
+│       ├── data
+│       ├── okl
+│       ├── setups
+│       └── src
+├── src
+├── tests
+│   └── ogs
+│       ├── bns
+│       │   └── data
+│       └── ins
+│           └── data
+└── utilities
+    ├── autoTester
+    ├── bandwidthTester
+    ├── partitionTester
+    │   ├── setups
+    │   └── src
+    ├── roofline
+    └── VTU
+
 
 ### 7. License
 
