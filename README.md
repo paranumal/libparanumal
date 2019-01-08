@@ -56,7 +56,7 @@ E. Dependencies:
 
 ---
 ### 2. Code block diagram 
-<img src="http://www.math.vt.edu/people/tcew/libParanumalNekDiagramFA18-crop.png" width="600" >
+<img src="http://www.math.vt.edu/people/tcew/libParanumalNekDiagramFA18-crop.png" width="1024" >
 
 ---
 ### 3. Clone: libParanumal
