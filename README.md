@@ -93,100 +93,7 @@ The elliptic solver and flow solvers reside in sub-directories of the solver dir
  
 ---
 
-### 6. Directory structure:
-
-The directory structure is relatively flat, annotated here:
-
-libparanumal/  
-
-├── 3rdParty
-│   ├── BlasLapack
-│   └── gslib
-│       ├── lib
-│       ├── src
-│       └── tests
-│           └── fortran
-├── benchmarks
-│   ├── CEED
-│   │   ├── BP0
-│   │   ├── BP1
-│   │   ├── BP2
-│   │   ├── BP3
-│   │   └── occa
-│ 
-├── include
-├── libs
-│   ├── gatherScatter
-│   │   ├── include
-│   │   ├── okl
-│   │   └── src
-│   └── parAlmond
-│       ├── include
-│       ├── okl
-│       └── src
-│           └── agmgSetup
-├── matlab
-│   ├── bern
-│   ├── newNodes
-│   └── sparseBasis
-├── meshes
-├── nodes
-├── okl
-├── scripts
-│   └── conversion
-├── solvers
-│   ├── acoustics
-│   │   ├── okl
-│   │   ├── setups
-│   │   └── src
-│   ├── advection
-│   │   ├── okl
-│   │   ├── scripts
-│   │   ├── setups
-│   │   └── src
-│   ├── bns
-│   │   ├── data
-│   │   ├── okl
-│   │   ├── setups
-│   │   └── src
-│   ├── cns
-│   │   ├── data
-│   │   ├── okl
-│   │   ├── setups
-│   │   └── src
-│   ├── elliptic
-│   │   ├── data
-│   │   ├── okl
-│   │   ├── results
-│   │   ├── setups
-│   │   └── src
-│   ├── gradient
-│   │   ├── okl
-│   │   ├── setups
-│   │   └── src
-│   └── ins
-│       ├── data
-│       ├── okl
-│       ├── setups
-│       └── src
-├── src
-├── tests
-│   └── ogs
-│       ├── bns
-│       │   └── data
-│       └── ins
-│           └── data
-└── utilities
-    ├── autoTester
-    ├── bandwidthTester
-    ├── partitionTester
-    │   ├── setups
-    │   └── src
-    ├── roofline
-    └── VTU
-
-
-### 7. License
+### 6. License
 
 The MIT License (MIT)
 
@@ -210,7 +117,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-### 8. References
+### 7. References
 
 Discontinuous Galerkin Boltzmann (bns) solver [arXiv version](https://arxiv.org/abs/1805.02082): `Karakus, A., Chalmers, N., Hesthaven, J.S. and Warburton, T., 2018. Discontinuous Galerkin Discretizations of the Boltzmann Equations in 2D: semi-analytic time stepping and absorbing boundary layers. arXiv preprint arXiv:1805.02082.`
 
