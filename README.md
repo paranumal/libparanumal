@@ -3,7 +3,7 @@ An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) s
 
 libParanumal is funded in part by the US Department of Energy as part of the activities of the [Center for Efficient Exscale Discretizations](http://ceed.exascaleproject.org). 
 
-Why libParanumal ?: the high-order finite-element implementations in libParanumal are __spectrally__ accurate and rely heavily on __ghost__ elements for MPI communications.
+Why is it called libParanumal ?: the high-order finite-element implementations in libParanumal are __spectrally__ accurate and rely heavily on __ghost__ elements for MPI communications.
 
 If you use libParanumal as part of a research project see Section 8 below for papers to reference.
 
@@ -56,7 +56,7 @@ E. Dependencies:
 
 ---
 ### 2. Code block diagram 
-<img src="http://www.math.vt.edu/people/tcew/libParanumalDiagramLocal-crop-V2.png" width="600" >
+<img src="http://www.math.vt.edu/people/tcew/libParanumalNekDiagramFA18-crop.png" width="600" >
 
 ---
 ### 3. Clone: libParanumal
