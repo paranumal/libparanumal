@@ -88,8 +88,8 @@ void cdsError(cds_t *cds, dfloat time){
 	  dfloat cy = 0.8;
 	  dfloat cz = 0.8; 
 
-          dfloat alf   = 1.0/pow((4.0*time +1.0),3.0/2.0);
-          dfloat xterm = pow((x - cx*time - 0.5),2.0) / ( ax*(4.0*time+1.0) );
+    dfloat alf   = 1.0/pow((4.0*time +1.0),3.0/2.0);
+    dfloat xterm = pow((x - cx*time - 0.5),2.0) / ( ax*(4.0*time+1.0) );
 	  dfloat yterm = pow((y - cy*time - 0.5),2.0) / ( ay*(4.0*time+1.0) );
 	  dfloat zterm = pow((z - cz*time - 0.5),2.0) / ( az*(4.0*time+1.0) );
 
@@ -105,7 +105,7 @@ void cdsError(cds_t *cds, dfloat time){
 	  cds->S[id+0*cds->sOffset] -= sExact;
 #endif
 
-
+ 
         }
       }
      printf("Step: %d Time: %g maxS: %g minS: %g maxE: %g minE: %g\n", (int)(time/cds->dt), time, maxS, minS, maxE, minE);

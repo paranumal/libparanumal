@@ -35,10 +35,10 @@ void cdsRunEXTBDF(cds_t *cds){
   occaTimerTic(mesh->device,"CDS");
 
   // Write Initial Data
-   if(cds->outputStep) cdsReport(cds, cds->startTime, 0);
+   if(cds->outputStep) cdsReport(cds, cds->startTime, 0.0);
 
-   for(int tstep=0;tstep<cds->NtimeSteps;++tstep){
-   // for(int tstep=0;tstep<1;++tstep){
+  // for(int tstep=0;tstep<cds->NtimeSteps;++tstep){
+   for(int tstep=0;tstep<5;++tstep){
 
     if(tstep<1) 
       extbdfCoefficents(cds,tstep+1);
@@ -48,13 +48,14 @@ void cdsRunEXTBDF(cds_t *cds){
       extbdfCoefficents(cds,tstep+1);
 
     dfloat time = cds->startTime + tstep*cds->dt;
-#if 0   
+#if 1  
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
     if(cds->Nsubsteps) {
       cdsSubCycle(cds, time, cds->Nstages, cds->o_U, cds->o_S,  cds->o_NS);
     } else {
       cdsAdvection(cds, time, cds->o_U, cds->o_S, cds->o_NS);
     }    
+
     cdsHelmholtzRhs  (cds, time+cds->dt, cds->Nstages, cds->o_rhsS);
 
     cdsHelmholtzSolve(cds, time+cds->dt, cds->Nstages, cds->o_rhsS, cds->o_rkS);
@@ -62,12 +63,12 @@ void cdsRunEXTBDF(cds_t *cds){
     //cycle history
     for (int s=cds->Nstages;s>1;s--) {
       cds->o_S.copyFrom(cds->o_S, cds->Ntotal*cds->NSfields*sizeof(dfloat), 
-			(s-1)*cds->Ntotal*cds->NSfields*sizeof(dfloat), 
-			(s-2)*cds->Ntotal*cds->NSfields*sizeof(dfloat));
+                            			(s-1)*cds->Ntotal*cds->NSfields*sizeof(dfloat), 
+                            			(s-2)*cds->Ntotal*cds->NSfields*sizeof(dfloat));
 
       cds->o_NS.copyFrom(cds->o_NS, cds->Ntotal*cds->NSfields*sizeof(dfloat), 
-			 (s-1)*cds->Ntotal*cds->NSfields*sizeof(dfloat), 
-			 (s-2)*cds->Ntotal*cds->NSfields*sizeof(dfloat));
+                            			 (s-1)*cds->Ntotal*cds->NSfields*sizeof(dfloat), 
+                            			 (s-2)*cds->Ntotal*cds->NSfields*sizeof(dfloat));
     }
 
     //copy updated scalar

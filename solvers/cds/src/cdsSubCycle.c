@@ -36,10 +36,10 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
   if(mesh->totalHaloPairs>0){
     cds->haloExtractKernel(mesh->Nelements,
                            mesh->totalHaloPairs,
-			   mesh->o_haloElementList,
-			   cds->sOffset,
-			   o_S,
-			   cds->o_haloBuffer);
+                           mesh->o_haloElementList,
+                           cds->sOffset,
+                           o_S,
+                           cds->o_haloBuffer);
 
     // copy extracted halo to HOST 
     cds->o_haloBuffer.copyTo(cds->sendBuffer);           
@@ -66,10 +66,10 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
   const dfloat tn1 = time - 1*cds->dt;
   const dfloat tn2 = time - 2*cds->dt;
 
-  dfloat zero = 0.0f, one = 1.0f;
+  dfloat zero = 0.0, one = 1.0;
   int izero = 0;
 
-  dfloat b=0.0f, bScale=0.0f;
+  dfloat b, bScale=0;
 
   // Solve for Each SubProblem
   for (int torder=cds->ExplicitOrder-1; torder>=0; torder--){
@@ -77,13 +77,14 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
     b=cds->extbdfB[torder];
     bScale += b;
 
+   
     // Initialize SubProblem Velocity i.e. Ud = U^(t-torder*dt)
     dlong toffset = torder*cds->NSfields*cds->Ntotal;
 
     if (torder==cds->ExplicitOrder-1) { //first substep
-      cds->scaledAddKernel(cds->NSfields*cds->Ntotal, b, toffset, o_S, zero, izero, o_Sd);
+      cds->scaledAddKernel(cds->NSfields*cds->Ntotal, b, toffset, o_S,  zero, izero, o_Sd);
     } else { //add the next field
-      cds->scaledAddKernel(cds->NSfields*cds->Ntotal, b, toffset, o_S,  one, izero, o_Sd);
+      cds->scaledAddKernel(cds->NSfields*cds->Ntotal, b, toffset, o_S,  one, izero,  o_Sd);
     }     
 
     // SubProblem  starts from here from t^(n-torder)
@@ -95,20 +96,21 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
         // Extrapolate velocity to subProblem stage time
         dfloat t = tstage +  cds->sdt*cds->Srkc[rk]; 
 
+        printf(" Writing torder: %d and Rks = %d \n", torder, rk);
         switch(cds->ExplicitOrder){
-	case 1:
-	  cds->extC[0] = 1.f; cds->extC[1] = 0.f; cds->extC[2] = 0.f;
-	  break;
-	case 2:
-	  cds->extC[0] = (t-tn1)/(tn0-tn1);
-	  cds->extC[1] = (t-tn0)/(tn1-tn0);
-	  cds->extC[2] = 0.f; 
-	  break;
-	case 3:
-	  cds->extC[0] = (t-tn1)*(t-tn2)/((tn0-tn1)*(tn0-tn2)); 
-	  cds->extC[1] = (t-tn0)*(t-tn2)/((tn1-tn0)*(tn1-tn2));
-	  cds->extC[2] = (t-tn0)*(t-tn1)/((tn2-tn0)*(tn2-tn1));
-	  break;
+        	case 1:
+        	  cds->extC[0] = 1.f; cds->extC[1] = 0.f; cds->extC[2] = 0.f;
+        	  break;
+        	case 2:
+        	  cds->extC[0] = (t-tn1)/(tn0-tn1);
+        	  cds->extC[1] = (t-tn0)/(tn1-tn0);
+        	  cds->extC[2] = 0.f; 
+        	  break;
+        	case 3:
+        	  cds->extC[0] = (t-tn1)*(t-tn2)/((tn0-tn1)*(tn0-tn2)); 
+        	  cds->extC[1] = (t-tn0)*(t-tn2)/((tn1-tn0)*(tn1-tn2));
+        	  cds->extC[2] = (t-tn0)*(t-tn1)/((tn2-tn0)*(tn2-tn1));
+        	  break;
         }
         cds->o_extC.copyFrom(cds->extC);
 
@@ -128,11 +130,11 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
           mesh->device.setStream(mesh->dataStream);
 
           cds->haloExtractKernel(mesh->Nelements,
-				 mesh->totalHaloPairs,
-				 mesh->o_haloElementList,
-				 cds->sOffset, 
-				 o_Sd,
-				 cds->o_haloBuffer);
+                        				 mesh->totalHaloPairs,
+                        				 mesh->o_haloElementList,
+                        				 cds->sOffset, 
+                        				 o_Sd,
+                        				 cds->o_haloBuffer);
 
           // copy extracted halo to HOST 
           cds->o_haloBuffer.copyTo(cds->sendBuffer,"async: true");            
@@ -160,7 +162,7 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
                                     cds->vOffset,
                                     cds->sOffset,				    
                                     cds->o_Ue,
-				         o_Sd,
+				                            o_Sd,
                                     cds->o_rhsSd);
 
         }
@@ -173,9 +175,9 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
 
           // start halo exchange
           meshHaloExchangeStart(mesh,
-				mesh->Np*(cds->NSfields)*sizeof(dfloat), 
-				cds->sendBuffer,
-				cds->recvBuffer);
+                        				mesh->Np*(cds->NSfields)*sizeof(dfloat), 
+                        				cds->sendBuffer,
+                        				cds->recvBuffer);
         
 
           meshHaloExchangeFinish(mesh);
@@ -183,10 +185,10 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
           cds->o_haloBuffer.copyFrom(cds->recvBuffer,"async: true"); 
 
           cds->haloScatterKernel(mesh->Nelements,
-				 mesh->totalHaloPairs,
-				 cds->sOffset,
-				 o_Sd,
-				 cds->o_haloBuffer);
+                        				 mesh->totalHaloPairs,
+                        				 cds->sOffset,
+                        				 o_Sd,
+                        				 cds->o_haloBuffer);
           mesh->device.finish();
           
           mesh->device.setStream(mesh->defaultStream);
@@ -215,7 +217,7 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
 					     cds->vOffset,
 					     cds->sOffset,					     
 					     cds->o_Ue,
-					     o_Sd,
+					          o_Sd,
 					     cds->o_rhsSd);
         } else{
           cds->subCycleSurfaceKernel(mesh->Nelements,
@@ -232,7 +234,7 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
 				     cds->vOffset,
 				     cds->sOffset,				     
 				     cds->o_Ue,
-				     o_Sd,
+				          o_Sd,
 				     cds->o_rhsSd);
         }
         occaTimerToc(mesh->device,"AdvectionSurface");
@@ -246,7 +248,7 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
 				    cds->sOffset,
 				    cds->o_rhsSd,
 				    cds->o_resS, 
-				    o_Sd);
+				         o_Sd);
         occaTimerToc(mesh->device,"AdvectionUpdate");
       }
     }

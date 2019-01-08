@@ -231,14 +231,14 @@ typedef struct {
   occa::kernel isoSurfaceKernel;
 }ins_t;
 
-#include "cds.h"
+ // #include "cds.h"
 
 ins_t *insSetup(mesh_t *mesh, setupAide options, occa::properties &kernelInfo);
 
 void insRunARK(ins_t *ins);
 void insRunEXTBDF(ins_t *ins);
 
-void insRunWcdsEXTBDF(ins_t *ins, cds_t *cds);
+// void insRunWcdsEXTBDF(ins_t *ins, cds_t *cds);
 
 void insPlotVTU(ins_t *ins, char *fileNameBase);
 void insReport(ins_t *ins, dfloat time,  int tstep);
