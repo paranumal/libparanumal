@@ -48,6 +48,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
     ogs_t *ogs = elliptic->ogs;
 
+#if 1
     int mapType = (elliptic->elementType==HEXAHEDRA &&
                    options.compareArgs("ELEMENT MAP", "TRILINEAR")) ? 1:0;
 
@@ -75,10 +76,14 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 					  lambda, o_q, o_Aq);
       }
     }
+#else
 
+    elliptic->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+#endif
     if(DEBUG_ENABLE_OGS==1)
       ogsGatherScatterStart(o_Aq, ogsDfloat, ogsAdd, ogs);
 
+#if 1
     if(mesh->NlocalGatherElements){
       if(integrationType==0) { // GLL or non-hex
 	if(mapType==0)
@@ -100,7 +105,8 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 					  o_Aq);
       }
     }
-    
+#endif
+
     // finalize gather using local and global contributions
     if(DEBUG_ENABLE_OGS==1)
       ogsGatherScatterFinish(o_Aq, ogsDfloat, ogsAdd, ogs);

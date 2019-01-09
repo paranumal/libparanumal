@@ -53,7 +53,7 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
     elliptic->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
 
   /* add a second sweep if Nblock>Ncutoff */
-  dlong Ncutoff = 10;
+  dlong Ncutoff = 100;
   dlong Nfinal;
   if(Nblock>Ncutoff){
 
@@ -96,7 +96,7 @@ dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory 
 
   double *accumulators   = (double*) calloc(Naccumulators, sizeof(double));
   double *g_accumulators = (double*) calloc(Naccumulators, sizeof(double));
-  
+
   mesh_t *mesh = elliptic->mesh;
   dfloat *tmp = elliptic->tmp;
 
@@ -154,8 +154,9 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
     elliptic->norm2Kernel(Ntotal, o_a, o_tmp);
 
   /* add a second sweep if Nblock>Ncutoff */
-  dlong Ncutoff = 10;
+  dlong Ncutoff = 100;
   dlong Nfinal;
+
   if(Nblock>Ncutoff){
     
     mesh->sumKernel(Nblock, o_tmp, o_tmp2);
@@ -169,7 +170,6 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
     o_tmp.copyTo(tmp);
     
     Nfinal = Nblock;
-
   }    
 
   dfloat wab = 0;
