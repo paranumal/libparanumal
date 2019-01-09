@@ -31,8 +31,6 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
-  occaTimerTic(mesh->device,"AxKernel");
-
   dfloat *sendBuffer = elliptic->sendBuffer;
   dfloat *recvBuffer = elliptic->recvBuffer;
   dfloat *gradSendBuffer = elliptic->gradSendBuffer;
@@ -42,73 +40,76 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   dlong Nblock = elliptic->Nblock;
   dfloat *tmp = elliptic->tmp;
   occa::memory &o_tmp = elliptic->o_tmp;
-  
+
+  int DEBUG_ENABLE_OGS = 1;
+  options.getArgs("DEBUG ENABLE OGS", DEBUG_ENABLE_OGS);
+
 
   if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
     ogs_t *ogs = elliptic->ogs;
 
+#if 1
     int mapType = (elliptic->elementType==HEXAHEDRA &&
                    options.compareArgs("ELEMENT MAP", "TRILINEAR")) ? 1:0;
 
+    int integrationType = (elliptic->elementType==HEXAHEDRA &&
+                   options.compareArgs("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
+    
     occa::kernel &partialAxKernel = (strstr(precision, "float")) ? elliptic->partialFloatAxKernel : elliptic->partialAxKernel;
     
-#if 0
-    dfloat *invDeg = (dfloat *) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
-    dfloat *qb  = (dfloat *) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
-    dfloat *Aqb = (dfloat *) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
-    elliptic->o_invDegree.copyTo(invDeg);
-    o_q.copyTo(qb);
-    o_Aq.copyTo(Aqb);
-#endif
-
-
-
     if(mesh->NglobalGatherElements) {
-      if(mapType==0)
-        partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
-                        mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
-      else
-        partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
-                        elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+      
+      if(integrationType==0) { // GLL or non-hex
+	if(mapType==0)
+	  partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
+			  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+	else
+	  partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
+			  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+      }
+      else{
+	elliptic->partialCubatureAxKernel(mesh->NglobalGatherElements,
+					  mesh->o_globalGatherElementList,
+					  mesh->o_cubggeo,
+					  mesh->o_cubD,
+					  mesh->o_cubInterpT,
+					  lambda, o_q, o_Aq);
+      }
     }
+#else
 
-    ogsGatherScatterStart(o_Aq, ogsDfloat, ogsAdd, ogs);
+    elliptic->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+#endif
+    if(DEBUG_ENABLE_OGS==1)
+      ogsGatherScatterStart(o_Aq, ogsDfloat, ogsAdd, ogs);
 
-
-
- 
-
-
+#if 1
     if(mesh->NlocalGatherElements){
-      if(mapType==0)
-        partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
-                                  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
-      else
-        partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
-                        elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+      if(integrationType==0) { // GLL or non-hex
+	if(mapType==0)
+	  partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
+			  mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+	else
+	  partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
+			  elliptic->o_EXYZ, elliptic->o_gllzw, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+      }
+      else{
+
+	elliptic->partialCubatureAxKernel(mesh->NlocalGatherElements,
+					  mesh->o_localGatherElementList,
+					  mesh->o_cubggeo,
+					  mesh->o_cubD,
+					  mesh->o_cubInterpT,
+					  lambda,
+					  o_q,
+					  o_Aq);
+      }
     }
-    
-    // finalize gather using local and global contributions
-    ogsGatherScatterFinish(o_Aq, ogsDfloat, ogsAdd, ogs);
-
-
-
-#if 0
-    dfloat *qa  = (dfloat *) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
-    dfloat *Aqa = (dfloat *) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
-    o_q.copyTo(qa);
-    o_Aq.copyTo(Aqa);
-    for(hlong n=0; n<mesh->Nelements*mesh->Np; n++){
-      // printf("qB[%d] = %g, AqB[%d] = %g qA[%d] = %g, AqA[%d] = %g invDeg[%d] = %g Unassembled: %g\n", 
-      //         n, qb[n], n, Aqb[n], n, qa[n], n, Aqa[n], n, invDeg[n], Aqa[n]*invDeg[n]);
-      printf("q[%d] = %g, Aq[%d] = %g invDeg[%d] = %g (invDeg*Aq -q): %g\n", 
-              n, qa[n], n, Aqa[n], n, invDeg[n], Aqa[n]*invDeg[n]-qa[n]);
-    }
-
-    printf("Ng Global: %d and Ng Local: %d allNeumann %d\n", mesh->NglobalGatherElements, mesh->NlocalGatherElements,elliptic->allNeumann);
 #endif
 
-
+    // finalize gather using local and global contributions
+    if(DEBUG_ENABLE_OGS==1)
+      ogsGatherScatterFinish(o_Aq, ogsDfloat, ogsAdd, ogs);
 
     if(elliptic->allNeumann) {
       // mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
@@ -279,5 +280,4 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
   } 
 
-  occaTimerToc(mesh->device,"AxKernel");
 }

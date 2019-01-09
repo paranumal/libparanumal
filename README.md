@@ -3,7 +3,7 @@ An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) s
 
 libParanumal is funded in part by the US Department of Energy as part of the activities of the [Center for Efficient Exscale Discretizations](http://ceed.exascaleproject.org). 
 
-Why libParanumal ?: the high-order finite-element implementations in libParanumal are __spectrally__ accurate and rely heavily on __ghost__ elements for MPI communications.
+Why is it called libParanumal ?: the high-order finite-element implementations in libParanumal are __spectrally__ accurate and rely heavily on __ghost__ elements for MPI communications.
 
 If you use libParanumal as part of a research project see Section 8 below for papers to reference.
 
@@ -56,7 +56,7 @@ E. Dependencies:
 
 ---
 ### 2. Code block diagram 
-<img src="http://www.math.vt.edu/people/tcew/libParanumalDiagramLocal-crop-V2.png" width="600" >
+<img src="http://www.math.vt.edu/people/tcew/libParanumalNekDiagramFA18-crop.png" width="1024" >
 
 ---
 ### 3. Clone: libParanumal
@@ -93,56 +93,7 @@ The elliptic solver and flow solvers reside in sub-directories of the solver dir
  
 ---
 
-### 6. Directory structure:
-
-The directory structure is relatively flat, annotated here:
-
-libparanumal/  
-├── 3rdParty  
-│   ├── BlasLapack  
-│   └── gslib.github  
-├── meshes  
-├── nodes           `(Node data files for different elements)`  
-├── okl  
-├── solvers  
-│   ├── acoustics   `(DGTD discretization of linearized Euler acoustics)`  
-│   │   ├── okl     `(OCCA Kernel Language DEVICE kernels for acoustics)`  
-│   │   ├── setups  `(Default set up files for acoustics solver)`    
-│   │   └── src     `(HOST code for driving acoustics solver)`  
-│   ├── bns         `(DGTD discretization of Galerkin-Boltzmann gas dynamics solver)`  
-│   │   ├── data  
-│   │   ├── okl  
-│   │   ├── setups  
-│   │   └── src  
-│   ├── cns         `(DGTD discretization based isothermal compressible Navier-Stokes solver)`  
-│   │   ├── data  
-│   │   ├── okl  
-│   │   ├── setups  
-│   │   └── src  
-│   ├── elliptic    `(DG and C0-FEM discretization based Poisson and screened Poisson potential problems)`    
-│   │   ├── data  
-│   │   ├── okl  
-│   │   ├── setups  
-│   │   └── src  
-│   ├── gradient    `(Elemental gradient operations example)`  
-│   │   ├── okl  
-│   │   ├── setups  
-│   │   └── src  
-│   ├── ins         `(DG and C0-FEM discretization based incompressible Navier-Stokes solver)`   
-│   │   ├── data  
-│   │   ├── okl  
-│   │   ├── setups  
-│   │   └── src  
-│   └── parALMOND   `(Hybrid p-type multigrid and algebraic multigrid linear solvers)`  
-│       ├── include  
-│       ├── okl  
-│       └── src  
-├── src             `(Base library for mesh wrangling)`  
-└── utilities       `(Useful utilities)`  
-    ├── autoTester  
-    └── VTU  
-
-### 7. License
+### 6. License
 
 The MIT License (MIT)
 
@@ -166,7 +117,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-### 8. References
+### 7. References
 
 Discontinuous Galerkin Boltzmann (bns) solver [arXiv version](https://arxiv.org/abs/1805.02082): `Karakus, A., Chalmers, N., Hesthaven, J.S. and Warburton, T., 2018. Discontinuous Galerkin Discretizations of the Boltzmann Equations in 2D: semi-analytic time stepping and absorbing boundary layers. arXiv preprint arXiv:1805.02082.`
 

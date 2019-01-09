@@ -598,15 +598,35 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
     mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
 
+    mesh->o_cubD = mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat), mesh->cubD);
+    
+    dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
+    for(int n=0;n<mesh->Nq;++n){
+      for(int m=0;m<mesh->cubNq;++m){        
+        cubInterpT[m+n*mesh->cubNq] = mesh->cubInterp[m*mesh->Nq+n];
+      }
+    }
+
+    mesh->o_cubInterpT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat), cubInterpT);
+
+    free(cubInterpT);
+    
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
                           mesh->vgeo);
+
     mesh->o_sgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
                           mesh->sgeo);
+
     mesh->o_ggeo =
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
                           mesh->ggeo);
+
+    mesh->o_cubggeo =
+      mesh->device.malloc(mesh->Nelements*mesh->cubNp*mesh->Nggeo*sizeof(dfloat),
+                          mesh->cubggeo);
+    
 
     mesh->o_vmapM =
       mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
@@ -745,6 +765,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   kernelInfo["defines/" "p_Nsgeo"]= mesh->Nsgeo;
   kernelInfo["defines/" "p_Nggeo"]= mesh->Nggeo;
 
+  kernelInfo["defines/" "p_halfC"]= (int)((mesh->cubNq+1)/2);
+  kernelInfo["defines/" "p_halfN"]= (int)((mesh->Nq+1)/2);
+ 
   kernelInfo["defines/" "p_NXID"]= NXID;
   kernelInfo["defines/" "p_NYID"]= NYID;
   kernelInfo["defines/" "p_NZID"]= NZID;
@@ -755,6 +778,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   kernelInfo["defines/" "p_max_EL_nnz"]= mesh->max_EL_nnz; // for Bernstein Bezier lift
 
+  kernelInfo["defines/" "p_cubNq"]= mesh->cubNq;
   kernelInfo["defines/" "p_cubNp"]= mesh->cubNp;
   kernelInfo["defines/" "p_intNfp"]= mesh->intNfp;
   kernelInfo["defines/" "p_intNfpNfaces"]= mesh->intNfp*mesh->Nfaces;
@@ -814,7 +838,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   kernelInfo["defines/" "p_JWID"]= JWID;
 
 
-  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
+  //  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
   // set kernel name suffix
   char *suffix;
@@ -904,6 +928,16 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
       elliptic->partialFloatAxKernel = mesh->device.buildKernel(fileName,kernelName,floatKernelInfo);
 
+      // only for Hex3D - cubature Ax
+      if(elliptic->elementType==HEXAHEDRA){
+	printf("BUILDING partialCubatureAxKernel\n");
+	sprintf(fileName,  DELLIPTIC "/okl/ellipticCubatureAx%s.okl", suffix);
+	
+	sprintf(kernelName, "ellipticCubaturePartialAx%s", suffix);
+	elliptic->partialCubatureAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
+      }
+
+      
       if (options.compareArgs("BASIS", "BERN")) {
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticGradientBB%s.okl", suffix);

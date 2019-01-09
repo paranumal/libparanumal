@@ -114,6 +114,8 @@ typedef struct {
   occa::kernel AxKernel;
   occa::kernel partialAxKernel;
   occa::kernel partialFloatAxKernel;
+  occa::kernel partialCubatureAxKernel;
+  
   occa::kernel rhsBCKernel;
   occa::kernel addBCKernel;
   occa::kernel innerProductKernel;
@@ -132,6 +134,13 @@ typedef struct {
   occa::kernel partialIpdgKernel;
   occa::kernel rhsBCIpdgKernel;
 
+  // combined PCG update step
+  int             NthreadsUpdatePCG;
+  hlong           NblocksUpdatePCG;
+  dfloat         *tmpNormr;
+  occa::memory  o_tmpNormr;
+  occa::kernel  updatePCGKernel;
+  
 }elliptic_t;
 
 #include "ellipticMultiGrid.h"
@@ -181,6 +190,9 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf);
 
 void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda);
+
+dfloat ellipticUpdatePCG(elliptic_t *elliptic, occa::memory &o_p, occa::memory &o_Ap, dfloat alpha,
+			 occa::memory &o_x, occa::memory &o_r);
 
 // dfloat maxEigSmoothAx(elliptic_t* elliptic, agmgLevel *level);
 

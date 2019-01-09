@@ -204,6 +204,16 @@ if (mesh->rank==0){
            mesh->Nelements*(it*mesh->Np/elapsed),
            (char*) options.getArgs("PRECONDITIONER").c_str());
 
+    if (options.compareArgs("VERBOSE", "TRUE")){
+      fflush(stdout);
+      MPI_Barrier(MPI_COMM_WORLD);
+      printf("rank %d has %d internal elements and %d non-internal elements\n",
+	     mesh->rank,
+	     mesh->NinternalElements,
+	     mesh->NnotInternalElements);
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
+    
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS") && 
        !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS)){
       dfloat zero = 0.;
@@ -245,11 +255,15 @@ if (mesh->rank==0){
 	    dfloat a = 1, b = 2, c = 3;
 	    exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
 	  }
-	  else
-	    exact = cos(M_PI*xn)*cos(M_PI*yn)*cos(M_PI*zn);
+	  else{
+	    int mode = 1;
+	    exact = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
+	  }
         }
 
         dfloat error = fabs(exact-mesh->q[id]);
+
+	mesh->q[id] -= exact;
 
         // store error
         // mesh->q[id] = fabs(mesh->q[id] - exact);

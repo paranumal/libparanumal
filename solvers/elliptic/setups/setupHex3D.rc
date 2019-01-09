@@ -7,15 +7,23 @@
 BP5
 
 [DATA FILE]
-#data/ellipticSineTest3D.h
-data/ellipticHomogeneous3D.h
+data/ellipticSineTest3D.h
+#data/ellipticHomogeneous3D.h
 
 [MESH FILE]
 #../../meshes/cubeHexE8Thilina.msh
-#../../meshes/cavityHexH01.msh
+#../../meshes/cavityHexH025.msh
+#../../meshes/cavityHexH0125.msh
 #../../meshes/cavityHexH0075.msh
-#../../meshes/cubeHexH0125.msh
-../../meshes/cubeHex16.msh
+#../../meshes/cubeHexE00008.msh
+#../../meshes/cubeHexE00064.msh
+#../../meshes/cubeHexE00216.msh
+#../../meshes/cubeHexE00512.msh
+#../../meshes/cubeHexE01000.msh
+#../../meshes/cubeHexE01728.msh
+#../../meshes/cubeHexE04096.msh
+#../../meshes/cubeHexE05832.msh
+../../meshes/cubeHexE08000.msh
 
 [MESH DIMENSION]
 3
@@ -24,11 +32,16 @@ data/ellipticHomogeneous3D.h
 12
 
 [POLYNOMIAL DEGREE]
-15
+8
 
 [ELEMENT MAP]
 ISOPARAMETRIC
 #TRILINEAR
+
+[ELLIPTIC INTEGRATION]
+NODAL
+#CUBATURE
+# CUBATURE - WORKING FOR INHOMOGENEOUS DIRICHLET BCS - NOT WORKING FOR NEUMANN YET
 
 [THREAD MODEL]
 CUDA
@@ -40,7 +53,7 @@ CUDA
 0
 
 [LAMBDA]
-0
+10
 
 # can add FLEXIBLE to PCG
 [KRYLOV SOLVER]
@@ -59,6 +72,8 @@ NODAL
 [PRECONDITIONER]
 JACOBI
 #MULTIGRID
+#SEMFEM
+#FULLALMOND
 
 
 
@@ -66,13 +81,15 @@ JACOBI
 
 # can be ALLDEGREES, HALFDEGREES, HALFDOFS
 [MULTIGRID COARSENING]
+#ALLDEGREES
 HALFDEGREES
+#HALFDOFS
 
 # can be LOCALPATCH, or DAMPEDJACOBI
 # LOCALPATCH smoother can include EXACT
 # can include CHEBYSHEV for smoother acceleration
 [MULTIGRID SMOOTHER]
-DAMPEDJACOBI,CHEBYSHEV
+DAMPEDJACOBI+CHEBYSHEV
 
 # can be any integer >0
 [MULTIGRID CHEBYSHEV DEGREE]
@@ -89,7 +106,7 @@ KCYCLE
 
 # can be DAMPEDJACOBI or CHEBYSHEV
 [PARALMOND SMOOTHER]
-CHEBYSHEV
+CHEBYSHEV+DAMPEDJACOBI
 
 # can be any integer >0
 [PARALMOND CHEBYSHEV DEGREE]
@@ -118,4 +135,12 @@ MAX
 cavity
 
 [VERBOSE]
-FALSE
+TRUE
+
+# set to 0 (zero) to disable reductions
+[DEBUG ENABLE REDUCTIONS]
+1
+
+# set to 0 (zero) to disable gather-scatter
+[DEBUG ENABLE OGS]
+1
