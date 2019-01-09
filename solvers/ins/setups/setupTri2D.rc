@@ -2,13 +2,13 @@
 1.0
 
 [DATA FILE]
-data/insUniform2D.h
-#data/insVortex2D.h
+#data/insUniform2D.h
+data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insSquareCylinder2D.msh
+#../../meshes/insSquareCylinder2D.msh
 #../../meshes/boltzmannSquareCylinderPML2D.msh
-#../../meshes/insVortex2D.msh
+../../meshes/insVortex2D.msh
 
 [MESH DIMENSION]
 2
@@ -19,7 +19,7 @@ data/insUniform2D.h
 [POLYNOMIAL DEGREE]
 4
 
-[THREAD MODEL]
+[THREAD MODEL] #CUDA - OPENCL - OPENMP - SERIAL 
 CUDA
 
 [PLATFORM NUMBER]
@@ -35,14 +35,14 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-4
+0
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
 CUBATURE
 
 [VISCOSITY]
-0.001
+1
 
 [MACH NUMBER]
 .2
@@ -226,8 +226,8 @@ MAX
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-NONE
-#VORTEX
+#NONE
+VORTEX
 
 [VERBOSE]
 FALSE

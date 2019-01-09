@@ -42,7 +42,7 @@ int main(int argc, char **argv){
   int    N        = atoi(argv[3]);
   int    maxiter  = atoi(argv[4]);
 
-  int NTEST      = 5; // number of test for BP5 
+  int NTEST      = 1; // number of test for BP5 
   options.getArgs("ELEMENT TYPE", elementType);
   options.getArgs("MESH DIMENSION", dim);
 
@@ -72,8 +72,11 @@ int main(int argc, char **argv){
   occa::streamTag startTag = mesh->device.tagStream();
 #endif
 
-  for(int tst=0; tst<NTEST; tst++)
-    pcgBP5(elliptic, lambda, elliptic->o_r, elliptic->o_x, maxiter);
+  // for(int tst=0; tst<NTEST; tst++){
+  cuProfilerStart();
+  pcgBP5(elliptic, lambda, elliptic->o_r, elliptic->o_x, maxiter);
+  cuProfilerStop();
+    // }
 
 
 #if 1
