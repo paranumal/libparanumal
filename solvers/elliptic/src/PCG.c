@@ -119,25 +119,12 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     // alpha = dot(r,z)/dot(p,A*p)
     alpha = rdotz0/pAp;
 
-    // x <= x + alpha*p
-    ellipticScaledAdd(elliptic,  alpha, o_p,  1.f, o_x);
-
-    // [
-    // r <= r - alpha*A*p
-    ellipticScaledAdd(elliptic, -alpha, o_Ap, 1.f, o_r);
-
-    // dot(r,r)
-    if(DEBUG_ENABLE_REDUCTIONS==1){
-#if 0
-      rdotr1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
-#else
-      rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
-#endif
-    }
-    else
-      rdotr1 = 1;
-
-    // ]
+    // TO DO:
+    //  x <= x + alpha*p
+    //  r <= r - alpha*A*p
+    //  dot(r,r)
+    //
+    rdotr1 = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
     
     if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
       printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
@@ -197,3 +184,62 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   return Niter;
 }
+
+dfloat ellipticUpdatePCG(elliptic_t *elliptic,
+			 occa::memory &o_p, occa::memory &o_Ap, dfloat alpha,
+			 occa::memory &o_x, occa::memory &o_r){
+
+  mesh_t *mesh = elliptic->mesh;
+  setupAide options = elliptic->options;
+
+  int DEBUG_ENABLE_REDUCTIONS = 1;
+  options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
+  
+  dfloat rdotr1 = 0;
+  
+  if(!options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
+    
+    // x <= x + alpha*p
+    ellipticScaledAdd(elliptic,  alpha, o_p,  1.f, o_x);
+    
+    // [
+    // r <= r - alpha*A*p
+    ellipticScaledAdd(elliptic, -alpha, o_Ap, 1.f, o_r);
+    
+    // dot(r,r)
+    if(DEBUG_ENABLE_REDUCTIONS==1){
+#if 0
+      rdotr1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
+#else
+      rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+#endif
+    }
+    else
+      rdotr1 = 1;
+  }else{
+    
+    // x <= x + alpha*p
+    // r <= r - alpha*A*p
+    // dot(r,r)
+    elliptic->updatePCGKernel(mesh->Nelements*mesh->Np, elliptic->NblocksUpdatePCG,
+			      elliptic->o_invDegree, o_p, o_Ap, alpha, o_x, o_r, elliptic->o_tmpNormr);
+
+    elliptic->o_tmpNormr.copyTo(elliptic->tmpNormr);
+
+    rdotr1 = 0;
+    for(int n=0;n<elliptic->NblocksUpdatePCG;++n){
+      rdotr1 += elliptic->tmpNormr[n];
+    }
+
+    
+    dfloat globalrdotr1 = 0;
+    MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+
+
+    rdotr1 = globalrdotr1;
+    
+  }
+
+  return rdotr1;
+}
+
