@@ -24,6 +24,8 @@
 
 */
 
+#include "cuda.h"
+#include "cudaProfiler.h"
 #include "elliptic.h"
 
 int main(int argc, char **argv){
@@ -76,7 +78,7 @@ int main(int argc, char **argv){
   cuProfilerStart();
   pcgBP5(elliptic, lambda, elliptic->o_r, elliptic->o_x, maxiter);
   cuProfilerStop();
-    // }
+  // }
 
 
 #if 1
@@ -107,25 +109,24 @@ int main(int argc, char **argv){
   globalElapsed /= maxiter;
   int ppn = 1;
   if (mesh->rank==0){
+#if 0
     char fname[BUFSIZ];
     sprintf(fname,"BP5_Scaling_M%02d.dat", mesh->size);
     FILE *fp;
     fp = fopen(fname, "a");
 
-    // fprintf(fp, "%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %g %g \n",
-    // mesh->size, mesh->N, globalElements, globalDofs, maxIter, globalElapsed, globalElapsed/(globalDofs),1.0/(globalElapsed/(globalDofs)));
+    fprintf(fp, "%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %g %g \n",
+	    mesh->size, mesh->N, globalElements, globalDofs, maxIter, globalElapsed, globalElapsed/(globalDofs),1.0/(globalElapsed/(globalDofs)));
 
     fprintf(fp, "lipP,CUDA,BP5,%02d,%02d,%d,"hlongFormat",%17.15lg\n",mesh->N, mesh->size, ppn, globalElements,globalElapsed);
-
-
     fclose(fp);
+#else
     printf("%02d %02d "hlongFormat" "hlongFormat" %d %17.15lg %g %g\t [ RANKS N NELEMENTS DOFS ITERATIONS ELAPSEDTIME TIME_PER_DOF, DOF_PER_TIME] \n",
 	   mesh->size, mesh->N, globalElements, globalDofs, maxiter, globalElapsed, globalElapsed/(globalDofs),
 	   1.0/(globalElapsed/(globalDofs)));
+#endif
   }
-
-
-
+  
   // close down MPI
   MPI_Finalize();
 
