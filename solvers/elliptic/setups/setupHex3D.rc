@@ -7,7 +7,7 @@
 BP5
 
 [DATA FILE]
-data/ellipticSineTest3D.h
+/ccs/home/karakus/libparanumal/solvers/elliptic/data/ellipticSineTest3D.h
 #data/ellipticHomogeneous3D.h
 
 [MESH FILE]
@@ -57,7 +57,8 @@ CUDA
 
 # can add FLEXIBLE to PCG
 [KRYLOV SOLVER]
-PCG+FLEXIBLE
+PCG
+#PCG+FLEXIBLE
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]

@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#include <stdio.h>
 #include "ogs.hpp"
 #include "ogsKernels.hpp"
 
