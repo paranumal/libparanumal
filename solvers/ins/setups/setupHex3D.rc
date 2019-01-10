@@ -3,6 +3,7 @@
 
 [DATA FILE]
 data/insBeltrami3D.h
+#/ccs/home/karakus/libparanumal/solvers/elliptic/data/insBeltrami3D.h
 
 [MESH FILE]
 ../../meshes/insBeltramiHex3D.msh
@@ -19,6 +20,18 @@ data/insBeltrami3D.h
 [ELEMENT MAP]
 ISOPARAMETRIC
 
+[ELLIPTIC INTEGRATION]
+NODAL
+
+# set to 0 (zero) to disable reductions
+[DEBUG ENABLE REDUCTIONS]
+1
+
+# set to 0 (zero) to disable gather-scatter
+[DEBUG ENABLE OGS]
+1
+
+
 [THREAD MODEL]
 CUDA
 
@@ -31,8 +44,8 @@ CUDA
 # can be EXTBDF1,2, or 3
 # can add SUBCYCLING to EXTBDF
 [TIME INTEGRATOR]
-ARK2
-#EXTBDF2
+#ARK2
+EXTBDF2
 
 [SUBCYCLING STEPS]
 0
@@ -69,7 +82,10 @@ CUBATURE
 0.1
 
 [CFL]
-0.1
+-0.1
+
+[TIME STEP SIZE]
+1.0E-6
 
 [OUTPUT TYPE]
 VTU
@@ -80,6 +96,13 @@ VTU
 [OUTPUT FILE NAME]
 fence
 
+# can be any integer >0
+[MULTIGRID CHEBYSHEV DEGREE]
+2
+
+# can be any integer >0
+[PARALMOND CHEBYSHEV DEGREE]
+2
 #################################################
 ########## Velocity Solver Options ##############
 #################################################

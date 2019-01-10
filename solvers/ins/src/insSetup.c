@@ -484,13 +484,21 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
 
   options.getArgs("CFL", ins->cfl);
-  dfloat dt     = ins->cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
+
+
+  dfloat dt = 0.0;  
+  if(ins->cfl<0)
+    options.getArgs("TIME STEP SIZE", dt);
+  else
+    dt     = ins->cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
   
   ins->dtAdaptStep = 0; 
   options.getArgs("TSTEPS FOR TIME STEP ADAPT", ins->dtAdaptStep);
 
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(ins->dti), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
+
+  
 
   // save initial time-step estimate 
   ins->dt = ins->dti; 

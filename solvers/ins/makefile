@@ -63,6 +63,7 @@ AOBJS    = \
 ./src/insReport.o \
 ./src/insRunARK.o \
 ./src/insRunEXTBDF.o \
+./src/insRunEXTBDFTest.o \
 ./src/insAdvection.o \
 ./src/insDiffusion.o \
 ./src/insGradient.o \
@@ -156,6 +157,10 @@ insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparAlmond libellipti
 
 lib:$(AOBJS)
 	ar -cr libins.a $(AOBJS)
+
+insTest:$(AOBJS) $(LOBJS) ./src/insTest.o libblas libogs libparAlmond libelliptic
+	$(LD)  $(LDFLAGS)  -o insTest ./src/insTest.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+
 
 libogs:
 	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/ins
