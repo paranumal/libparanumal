@@ -678,9 +678,9 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   int wBCType[7] = {0,1,1,2,2,2,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
   int pBCType[7] = {0,2,2,1,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
 
-  //Solver tolerances 
-  ins->presTOL = 1E-8;
-  ins->velTOL  = 1E-8;
+  //Solver tolerances !!!!!!!!!!!!!!!!!! 
+  ins->presTOL = 1E-32;
+  ins->velTOL  = 1E-32;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
   if (mesh->rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");

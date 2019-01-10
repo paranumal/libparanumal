@@ -87,9 +87,16 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_PI);
   }
 
+#if 0
   occaTimerTic(mesh->device,"Pr Solve");
   ins->NiterP = ellipticSolve(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI); 
   occaTimerToc(mesh->device,"Pr Solve"); 
+#else
+  int iter = 25; 
+ occaTimerTic(mesh->device,"Pr Solve");
+  ins->NiterP = ellipticSolveTest(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI, iter); 
+  occaTimerToc(mesh->device,"Pr Solve"); 
+#endif
 
  if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
     ins->pressureAddBCKernel(mesh->Nelements,

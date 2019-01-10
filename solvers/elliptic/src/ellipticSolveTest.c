@@ -26,15 +26,15 @@ SOFTWARE.
 
 #include "elliptic.h"
 
-int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
-                  occa::memory &o_r, occa::memory &o_x){
+int ellipticSolveTest(elliptic_t *elliptic, dfloat lambda, dfloat tol,
+                  occa::memory &o_r, occa::memory &o_x,  int Iter){
 
 
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
   int Niter = 0;
-  int maxIter = 1000; 
+  int maxIter = Iter; 
 
   double start = 0.0, end =0.0;
 
@@ -77,5 +77,3 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
   return Niter;
 
 }
-
-

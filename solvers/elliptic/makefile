@@ -59,6 +59,7 @@ AOBJS    = \
 ./src/ellipticPreconditionerSetup.o\
 ./src/ellipticSetup.o \
 ./src/ellipticSolve.o\
+./src/ellipticSolveTest.o\
 ./src/ellipticSolveSetup.o\
 ./src/ellipticVectors.o \
 ./src/ellipticSEMFEMSetup.o\
