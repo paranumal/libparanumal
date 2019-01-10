@@ -180,7 +180,7 @@ all: lib insMain
 clean:
 	cd ../elliptic; make clean; cd ../ins
 	cd ../../src; rm *.o; cd ../solvers/ins
-	rm ./src/*.o insMain libins.a
+	rm ./src/*.o insMain insTest libins.a
 
 realclean:
 	cd ../elliptic; make realclean; cd ../ins
