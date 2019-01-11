@@ -25,332 +25,14 @@ static const int p_cubNq = 8;
 
 __constant__ dfloat const_I[p_cubNq][p_Nq];
 
-//__device__ void advectionMassMatrixMultiply(const dlong element, const dfloat * __restrict__  cubvgeo, dfloat s_Ap[p_cubNq][p_cubNq][p_cubNq]){
-__device__ void advectionMassMatrixMultiply_v00(const dlong element, const dfloat * __restrict__  r_WJ, dfloat s_Ap[p_cubNq][p_cubNq][p_cubNq]){
-
-  dfloat r_tmp[p_Nq];
-  
-  const int t = threadIdx.x;
-
-  __syncthreads();
-
-  // transform in 'a'
-  {
-    const int b = t%p_cubNq;
-    const int c = t/p_cubNq;
-    
-    if(b<p_Nq && c<p_Nq){
-      for(int a=0;a<p_Nq;++a){
-	r_tmp[a] = s_Ap[c][b][a];
-      }
-
-#pragma unroll p_cubNq
-      for(int i=0;i<p_cubNq;++i){
-	dfloat res = 0;
-
-#pragma unroll p_Nq
-	for(int a=0;a<p_Nq;++a){
-	  res += const_I[i][a]*r_tmp[a];
-	}
-	s_Ap[c][b][i] = res;
-      }
-    }
-
-  }
-  
-  __syncthreads();
-
-  // transform in 'b'
-  {
-    const int i = t%p_cubNq;
-    const int c = t/p_cubNq;
-    
-    if(c<p_Nq){
-      for(int b=0;b<p_Nq;++b){
-	r_tmp[b] = s_Ap[c][b][i];
-      }
-
-#pragma unroll p_cubNq
-      for(int j=0;j<p_cubNq;++j){
-	dfloat res = 0;
-
-#pragma unroll p_Nq
-	for(int b=0;b<p_Nq;++b){
-	  res += const_I[j][b]*r_tmp[b];
-	}
-	s_Ap[c][j][i] = res;
-      }
-    }
-  }
-
-
-  __syncthreads();
-
-  // transform in 'c'
-  {
-    const int i = t%p_cubNq;
-    const int j = t/p_cubNq;
-
-    for(int c=0;c<p_Nq;++c){
-      r_tmp[c] = s_Ap[c][j][i];
-    }
-
-#pragma unroll p_cubNq
-    for(int k=0;k<p_cubNq;++k){
-      dfloat res = 0;
-#pragma unroll p_Nq
-      for(int c=0;c<p_Nq;++c){
-	res += const_I[k][c]*r_tmp[c];
-      }
-
-      //      const dlong gid = element*p_cubNp*p_Nvgeo + t + k*p_cubNq*p_cubNq + p_JWID*p_cubNp;
-      //      const dfloat WJ = cubvgeo[gid];
-      const dfloat WJ = r_WJ[k];
-      
-      s_Ap[k][j][i] = WJ*res;
-    }
-  }
-
-  __syncthreads();
-
-  // test in 'c'
-  {
-    const int i = t%p_cubNq;
-    const int j = t/p_cubNq;
-    
-    for(int k=0;k<p_cubNq;++k){
-      r_tmp[k] = s_Ap[k][j][i];
-    }
-
-#pragma unroll p_Nq
-    for(int c=0;c<p_Nq;++c){
-      dfloat res = 0;
-#pragma unroll p_cubNq
-      for(int k=0;k<p_cubNq;++k){
-	res += const_I[k][c]*r_tmp[k];
-      }
-      
-      s_Ap[c][j][i] = res;
-    }
-  }
-
-  __syncthreads();
-
-  // test in 'b'
-  {
-    const int i = t%p_cubNq;
-    const int c = t/p_cubNq;
-    
-    if(c<p_Nq){
-      for(int j=0;j<p_cubNq;++j){
-	r_tmp[j] = s_Ap[c][j][i];
-      }
-
-#pragma unroll p_Nq
-      for(int b=0;b<p_Nq;++b){
-	dfloat res = 0;
-#pragma unroll  9
-	for(int j=0;j<p_cubNq;++j){
-	  res += const_I[j][b]*r_tmp[j];
-	}
-	s_Ap[c][b][i] = res;
-      }
-    }
-  }
-  
-  __syncthreads();
-
-  // test in 'a'
-  {
-    const int b = t%p_cubNq;
-    const int c = t/p_cubNq;
-    
-    if(b<p_Nq && c<p_Nq){
-      for(int i=0;i<p_cubNq;++i){
-	r_tmp[i] = s_Ap[c][b][i];
-      }
-
-#pragma unroll p_Nq
-      for(int a=0;a<p_Nq;++a){
-	dfloat res = 0;
-#pragma unroll p_cubNq
-	for(int i=0;i<p_cubNq;++i){
-	  res += const_I[i][a]*r_tmp[i];
-	}
-	s_Ap[c][b][a] = res;
-      }
-    }
-  }
-}
-
-// use L1 for I matrix
-__device__ void advectionMassMatrixMultiply_v01(const dlong element, const dfloat * __restrict__ c_I, const dfloat * __restrict__  r_WJ, dfloat s_Ap[p_cubNq][p_cubNq][p_cubNq]){
-
-  dfloat r_tmp[p_Nq];
-  
-  const int t = threadIdx.x;
-
-  __syncthreads();
-
-  // transform in 'a'
-  {
-    const int b = t%p_cubNq;
-    const int c = t/p_cubNq;
-    
-    if(b<p_Nq && c<p_Nq){
-#pragma unroll p_Nq
-      for(int a=0;a<p_Nq;++a){
-	r_tmp[a] = s_Ap[c][b][a];
-      }
-
-#pragma unroll p_cubNq
-      for(int i=0;i<p_cubNq;++i){
-	dfloat res = 0;
-
-#pragma unroll p_Nq
-	for(int a=0;a<p_Nq;++a){
-	  res += c_I[i*p_Nq+a]*r_tmp[a];
-	}
-	s_Ap[c][b][i] = res;
-      }
-    }
-
-  }
-  
-  __syncthreads();
-
-  // transform in 'b'
-  {
-    const int i = t%p_cubNq;
-    const int c = t/p_cubNq;
-    
-    if(c<p_Nq){
-      for(int b=0;b<p_Nq;++b){
-	r_tmp[b] = s_Ap[c][b][i];
-      }
-
-#pragma unroll p_cubNq
-      for(int j=0;j<p_cubNq;++j){
-	dfloat res = 0;
-
-#pragma unroll p_Nq
-	for(int b=0;b<p_Nq;++b){
-	  res += c_I[j*p_Nq+b]*r_tmp[b];
-	}
-	s_Ap[c][j][i] = res;
-      }
-    }
-  }
-
-
-  __syncthreads();
-
-  // transform in 'c'
-  {
-    const int i = t%p_cubNq;
-    const int j = t/p_cubNq;
-    
-    for(int c=0;c<p_Nq;++c){
-      r_tmp[c] = s_Ap[c][j][i];
-    }
-
-#pragma unroll p_cubNq
-    for(int k=0;k<p_cubNq;++k){
-      dfloat res = 0;
-#pragma unroll p_Nq
-      for(int c=0;c<p_Nq;++c){
-	res += c_I[k*p_Nq+c]*r_tmp[c];
-      }
-
-      //      const dlong gid = element*p_cubNp*p_Nvgeo + t + k*p_cubNq*p_cubNq + p_JWID*p_cubNp;
-      //      const dfloat WJ = cubvgeo[gid];
-      const dfloat WJ = r_WJ[k];
-      
-      s_Ap[k][j][i] = WJ*res;
-    }
-  }
-
-  __syncthreads();
-
-  // test in 'c'
-  {
-    const int i = t%p_cubNq;
-    const int j = t/p_cubNq;
-    
-    for(int k=0;k<p_cubNq;++k){
-      r_tmp[k] = s_Ap[k][j][i];
-    }
-
-#pragma unroll p_Nq
-    for(int c=0;c<p_Nq;++c){
-      dfloat res = 0;
-#pragma unroll p_cubNq
-      for(int k=0;k<p_cubNq;++k){
-	res += c_I[k*p_Nq+c]*r_tmp[k];
-      }
-      
-      s_Ap[c][j][i] = res;
-    }
-  }
-
-  __syncthreads();
-
-  // test in 'b'
-  {
-    const int i = t%p_cubNq;
-    const int c = t/p_cubNq;
-    
-    if(c<p_Nq){
-      for(int j=0;j<p_cubNq;++j){
-	r_tmp[j] = s_Ap[c][j][i];
-      }
-
-#pragma unroll p_Nq
-      for(int b=0;b<p_Nq;++b){
-	dfloat res = 0;
-#pragma unroll p_cubNq
-	for(int j=0;j<p_cubNq;++j){
-	  res += c_I[j*p_Nq+b]*r_tmp[j];
-	}
-	s_Ap[c][b][i] = res;
-      }
-    }
-  }
-  
-  __syncthreads();
-
-  // test in 'a'
-  {
-    const int b = t%p_cubNq;
-    const int c = t/p_cubNq;
-    
-    if(b<p_Nq && c<p_Nq){
-      for(int i=0;i<p_cubNq;++i){
-	r_tmp[i] = s_Ap[c][b][i];
-      }
-
-#pragma unroll p_Nq
-      for(int a=0;a<p_Nq;++a){
-	dfloat res = 0;
-#pragma unroll p_cubNq
-	for(int i=0;i<p_cubNq;++i){
-	  res += c_I[i*p_Nq+a]*r_tmp[i];
-	}
-	s_Ap[c][b][a] = res;
-      }
-    }
-  }
-}
-
-
 // do C op first
-__device__ void advectionMassMatrixMultiply(const dlong element, const dfloat * __restrict__  r_WJ, dfloat * __restrict__ r_p, dfloat s_Ap[p_cubNq][p_cubNq][p_cubNq]){
+__forceinline__ __device__ void advectionMassMatrixMultiply(const dlong element, const dfloat * __restrict__  r_WJ, dfloat * __restrict__ r_p, dfloat s_Ap[p_cubNq][p_cubNq][p_cubNq]){
 
   dfloat r_tmp[p_Nq];
   
   const int t = threadIdx.x;
 
-  //  __syncthreads();
+  __syncthreads();
 
   // transform in 'c'
   {
@@ -493,6 +175,8 @@ __device__ void advectionMassMatrixMultiply(const dlong element, const dfloat * 
       }
     }
   }
+
+  __syncthreads();
 }
 
 
@@ -500,11 +184,11 @@ __device__ void advectionMassMatrixMultiply(const dlong element, const dfloat * 
 
 
 
-__device__ dfloat dotProduct(dfloat a, volatile dfloat *s_a, volatile dfloat *s_warpa){
+__forceinline__ __device__ dfloat dotProduct(dfloat a, volatile dfloat *s_a, volatile dfloat *s_warpa){
   
   const int t = threadIdx.x;
-  int w = t/32;
-  int n = t%32;
+  const int w = t>>5; // divide by 32
+  const int n = t%32;
   
   __syncthreads();
 
@@ -534,8 +218,11 @@ __device__ dfloat dotProduct(dfloat a, volatile dfloat *s_a, volatile dfloat *s_
   }
 
   __syncthreads();
+
   dfloat res = s_warpa[0];
 
+  __syncthreads();
+  
   return res;
 }
 
@@ -586,9 +273,9 @@ __global__ void advectionInvertMassMatrix(const dlong Nelements,
   dfloat rdotz_ab = 0;
   dfloat rdotr_ab = 0;
 
-  for(int k=0;k<p_cubNq;++k){
-    const dlong gid = element*p_cubNp*p_Nvgeo + t + k*p_cubNq*p_cubNq + p_JWID*p_cubNp;
-    r_WJ[k] = cubvgeo[gid];
+  for(int i=0;i<p_cubNq;++i){
+    const dlong gid = element*p_cubNp*p_Nvgeo + t + i*p_cubNq*p_cubNq + p_JWID*p_cubNp; //  (i slowest, k middle, j fastest)
+    r_WJ[i] = cubvgeo[gid];
   }
   
   if(t<p_Nq2){    
@@ -599,7 +286,6 @@ __global__ void advectionInvertMassMatrix(const dlong Nelements,
       r_precon[c] = precon[id];
       
       r_r[c] = rhsq[id];
-      //      r_z[c] = precon[id]*r_r[c];
       r_z[c] = r_precon[c]*r_r[c];
       r_p[c] = r_z[c];
 
@@ -611,19 +297,7 @@ __global__ void advectionInvertMassMatrix(const dlong Nelements,
 
   for(int it=0;it<p_MAX_ITERATIONS;++it){
 
-#if 0
-    // Ap
-    if(t<p_Nq2){
-#pragma unroll p_Nq
-      for(int c=0;c<p_Nq;++c){
-	s_tmp1[c][b][a] = r_p[c];
-      }
-    }
-#endif
-    
-    //    advectionMassMatrixMultiply(element, cubvgeo, s_tmp1);
     advectionMassMatrixMultiply(element, r_p, r_WJ, s_tmp1);
-    //    advectionMassMatrixMultiply(element, cubI, r_WJ, s_tmp1);
 
     dfloat pAp_ab = 0;
     if(t<p_Nq2){
@@ -746,19 +420,40 @@ int main(int argc, char **argv){
 
   // LSERK fake constants
   dfloat rka = 1.3, rkb = 3.2, dt = 0.01;
-  
+
+  cudaEvent_t start, end;
+
+  cudaEventCreate(&start);
+  cudaEventCreate(&end);	
+
   // call matrix inverse
   dim3 G(Nelements, 1, 1);
   dim3 B(p_cubNq*p_cubNq, 1, 1);
 
+  cudaEventRecord(start);
+  
   int Ntests = 10;
   for(int test=0;test<Ntests;++test)
     advectionInvertMassMatrix <<< G, B >>>
       (Nelements, c_elementIds, dt, rka, rkb, tol, c_cubvgeo, c_I, c_precon, c_resq, c_rhsq, c_q, c_qnew);
       //      (Nelements, c_elementIds, c_cubvgeo, c_precon, c_rhsq, c_q);
 
+  cudaEventRecord(end);
+
+  cudaEventSynchronize(end);
+
+  float elapsed;
+  cudaEventElapsedTime(&elapsed, start, end);
+  elapsed /= 1000.;
+  elapsed /= (double) Ntests;
+
+  printf("%d %d %d %lg %lg %%%% [ N, Nelements, Ndofs, elapsed, dofsPerSecond]\n", p_Nq-1, Nelements, p_Np*Nelements, elapsed, Nelements*(p_Np/elapsed));
+  
   cudaDeviceSynchronize();
 
+  cudaEventDestroy(start);
+  cudaEventDestroy(end);	
+  
   return 0;
 
 }
