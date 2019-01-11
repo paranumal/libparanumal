@@ -5,5 +5,9 @@ cudaFlags = -arch=sm_70   --use_fast_math -Xptxas -v,-dlcm=ca,-O3 -Xcompiler -O3
 advectionInvertMassMatrix: advectionInvertMassMatrix.cu
 	nvcc -o advectionInvertMassMatrix $(cudaFlags) advectionInvertMassMatrix.cu
 
+roofline: roofline.cu
+	nvcc -o roofline $(cudaFlags) roofline.cu
+
+
 clean:
-	rm -f advectionInvertMassMatrix
+	rm -f advectionInvertMassMatrix roofline
