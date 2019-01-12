@@ -26,6 +26,9 @@ SOFTWARE.
 
 #include "elliptic.h"
 
+#define CASCADE 1
+
+
 int pcg(elliptic_t* elliptic, dfloat lambda, 
         occa::memory &o_r, occa::memory &o_x, 
         const dfloat tol, const int MAXIT) {
@@ -53,23 +56,22 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   occa::memory &o_Ap = elliptic->o_Ap;
   occa::memory &o_Ax = elliptic->o_Ax;
 
-
   /*compute norm b, set the tolerance */
-#if 0
+#if CASCADE
   normB = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
   normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 #endif
 
   TOL =  mymax(tol*tol*normB,tol*tol);
-  
+
   // compute A*x
   ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax, dfloatString);
 
   // subtract r = b - A*x
   ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);
 
-#if 0
+#if CASCADE
   rdotr0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
   rdotr0 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
@@ -85,18 +87,22 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
     printf("CG: initial res norm %12.12f WE NEED TO GET TO %12.12f \n", sqrt(rdotr0), sqrt(TOL));
 
+
   // Precon^{-1} (b-A*x)
   ellipticPreconditioner(elliptic, lambda, o_r, o_z);
 
   // p = z
   o_p.copyFrom(o_z); // PCG
 
+
   // dot(r,z)
-#if 0
+#if CASCADE
   rdotz0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
 #else
   rdotz0 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
 #endif
+
+
 
   while((Niter <MAXIT)) {
 
@@ -106,7 +112,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     
     // dot(p,A*p)
     if(DEBUG_ENABLE_REDUCTIONS==1){
-#if 0
+#if CASCADE
       pAp =  ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
 #else
       pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
@@ -140,7 +146,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
     // dot(r,z)
     if(DEBUG_ENABLE_REDUCTIONS==1){
-#if 0
+#if CASCADE
       rdotz1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
 #else
       rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
@@ -156,7 +162,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
       options.compareArgs("KRYLOV SOLVER", "PCG,FLEXIBLE")) {
     
       if(DEBUG_ENABLE_REDUCTIONS==1){
-#if 0
+#if CASCADE
 	zdotAp = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
 #else
 	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
@@ -208,7 +214,7 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
     
     // dot(r,r)
     if(DEBUG_ENABLE_REDUCTIONS==1){
-#if 0
+#if CASCADE
       rdotr1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
       rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);

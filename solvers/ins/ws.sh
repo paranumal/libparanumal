@@ -16,21 +16,23 @@ function log2() {
 #  echo "log of $i is $a"                                                                                                                                                       
 #done                                                                                                                                                                           
 
-maxiter=1000;
+maxiter=100;
 mesh_base=../../meshes/box;
 mesh_extension=.msh;
 starting_elements=10
 
+
 #for nodes in 1 2 4 8 16 32; do                                                                                                                                                 
-#for nodes in 1; do                                                                                                                                                             
+#for nodes in 1 2 4 8 16 32; do                                                                                                                                                 
+for mesh_inc in 0; do                                                                                                                                                             
 for nodes in 1; do
 for N in 7; do
-  log_nodes=$(log2 $nodes)
-  ((mesh_id=starting_elements+log_nodes))
+  ((mesh_id=starting_elements+mesh_inc))
   meshfile=${mesh_base}${mesh_id}${mesh_extension}
   echo "Running ${meshfile} on ${nodes} node(s) at order ${N}"
-  bsub -nnodes ${nodes} -W 1:00 -P CSC262 -J NekGPU -o bp5.o%J \
+  bsub -nnodes ${nodes} -W 1:00 -P CSC262 -J paranumal -o ins.o%J \
         ./submit.sh ${meshfile} ${N} ${maxiter} ${nodes}
   sleep 3;
+done;
 done;
 done;

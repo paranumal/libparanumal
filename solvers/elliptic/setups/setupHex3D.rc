@@ -2,13 +2,13 @@
 1.0
 
 [BENCHMARK]
-#SOLVE
+SOLVE
 #NONE
-BP5
+#BP5
 
 [DATA FILE]
-#/ccs/home/karakus/libparanumal/solvers/elliptic/data/ellipticSineTest3D.h
-data/ellipticHomogeneous3D.h
+/ccs/home/karakus/libparanumal/solvers/elliptic/data/ellipticSineTest3D.h
+#data/ellipticHomogeneous3D.h
 
 [MESH FILE]
 #../../meshes/cubeHexE8Thilina.msh
@@ -23,7 +23,8 @@ data/ellipticHomogeneous3D.h
 #../../meshes/cubeHexE01728.msh
 #../../meshes/cubeHexE04096.msh
 #../../meshes/cubeHexE05832.msh
-../../meshes/cubeHexE08000.msh
+#../../meshes/cubeHexE08000.msh
+../../meshes/box10.msh
 
 [MESH DIMENSION]
 3
@@ -32,7 +33,7 @@ data/ellipticHomogeneous3D.h
 12
 
 [POLYNOMIAL DEGREE]
-8
+7
 
 [ELEMENT MAP]
 ISOPARAMETRIC

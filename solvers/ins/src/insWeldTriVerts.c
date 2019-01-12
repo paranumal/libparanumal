@@ -34,6 +34,7 @@ SOFTWARE.
 
 //---------------------------------------------------------
 int insWeldTriVerts(ins_t *ins, int Ntris, dfloat *isoq){
+#if 0
   int Max_N = Ntris*12;                   // upper bound for node data
   int Max_T = Ntris*3;    // upper bound for connectivity ids
 
@@ -143,6 +144,10 @@ int insWeldTriVerts(ins_t *ins, int Ntris, dfloat *isoq){
 #endif
 
   delete VL;            // clean up helper object
+
   return Ntris_Final;   // return num good triangles
+
+#endif
+  return 0;
 }
 

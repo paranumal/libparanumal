@@ -110,7 +110,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
 
   }
 
-#if 0 
+#if 1
   occaTimerTic(mesh->device,"Ux-Solve");
   ins->NiterU = ellipticSolve(usolver, ins->lambda, ins->velTOL, o_rhsU, ins->o_UH);
   occaTimerToc(mesh->device,"Ux-Solve"); 
@@ -139,9 +139,6 @@ occaTimerTic(mesh->device,"Ux-Solve");
     ins->NiterW = ellipticSolveTest(wsolver, ins->lambda, ins->velTOL, o_rhsW, ins->o_WH,iter);
     occaTimerToc(mesh->device,"Uz-Solve");
   }
-
-
-
 #endif
 
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {

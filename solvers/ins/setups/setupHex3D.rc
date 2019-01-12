@@ -2,11 +2,11 @@
 1.0
 
 [DATA FILE]
-data/insBeltrami3D.h
-#/ccs/home/karakus/libparanumal/solvers/elliptic/data/insBeltrami3D.h
+#data/insBeltrami3D.h
+/ccs/home/karakus/libparanumal/solvers/ins/data/insBeltrami3D.h
 
 [MESH FILE]
-../../meshes/insBeltramiHex3D.msh
+../../meshes/box10.msh
 
 [MESH DIMENSION]
 3
@@ -15,7 +15,7 @@ data/insBeltrami3D.h
 12
 
 [POLYNOMIAL DEGREE]
-4
+7
 
 [ELEMENT MAP]
 ISOPARAMETRIC
@@ -184,8 +184,8 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRESSURE PRECONDITIONER]
-#JACOBI
-MULTIGRID
+JACOBI
+#MULTIGRID
 
 ########## MULTIGRID Options ##############
 

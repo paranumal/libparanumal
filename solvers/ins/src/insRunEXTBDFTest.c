@@ -29,7 +29,7 @@ SOFTWARE.
 void extbdfCoefficents(ins_t *ins, int order);
 
 void insRunEXTBDFTest(ins_t *ins, int maxiter){
-
+   printf("RUNNING.........\n");   
   mesh_t *mesh = ins->mesh;
   
   for(int tstep=0; tstep<maxiter;  ++tstep){
@@ -45,22 +45,24 @@ void insRunEXTBDFTest(ins_t *ins, int maxiter){
 
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 
-    
+    printf("ADVECTION STEP.........");   
     if(ins->Nsubsteps) {
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
       insAdvection(ins, time, ins->o_U, ins->o_NU);
     }
 
+    printf("done\n");   
+
     insGradient (ins, time, ins->o_P, ins->o_GP);
     
     
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
-    //insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
+    insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
 
 
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
-    //insPressureSolve(ins, time+ins->dt, ins->Nstages); 
+    // insPressureSolve(ins, time+ins->dt, ins->Nstages); 
 
     insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
     insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
