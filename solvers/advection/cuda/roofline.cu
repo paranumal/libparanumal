@@ -41,6 +41,15 @@ SOFTWARE.
 #include "cuda.h"
 #define mymax(a,b) ((a>b)?(a):(b))
 
+__global__ void copyKernel(const int N, const float * __restrict__ a, float * __restrict__ b){
+
+  int n= threadIdx.x + blockIdx.x*blockDim.x;
+
+  if(n<N)
+    b[n] = a[n];
+
+}
+
 int main(int argc, char **argv){
 
   if(argc!=2){
@@ -197,20 +206,33 @@ int main(int argc, char **argv){
     cudaMalloc(&o_a, bytes/2);
     cudaMalloc(&o_b, bytes/2);
 
+    cudaDeviceSynchronize();
+
     cudaEvent_t start, end;
     cudaEventCreate(&start);
     cudaEventCreate(&end);
 
     cudaEventRecord(start);    
 
-    int Ntests = 10;
+    dim3 B(256,1,1);
+    dim3 G( ((bytes/8) + 255)/256, 1, 1);
+    
+    int Ntests = 1;
     for(int n=0;n<Ntests;++n){
+#if 0
       cudaMemcpy(o_a, o_b, (bytes/2), cudaMemcpyDeviceToDevice);
       cudaMemcpy(o_b, o_a, (bytes/2), cudaMemcpyDeviceToDevice);
+#endif
+
+      copyKernel <<< G, B >>> (bytes/8, (float*) o_a, (float*) o_b);
+      copyKernel <<< G, B >>> (bytes/8, (float*) o_b, (float*) o_a);
+      
     }
 
     cudaEventRecord(end);
     cudaEventSynchronize(end);
+
+    cudaDeviceSynchronize();
 
     float elapsed;
     cudaEventElapsedTime(&elapsed, start, end);
@@ -245,30 +267,43 @@ int main(int argc, char **argv){
     cudaMalloc(&o_a, bytes/2);
     cudaMalloc(&o_b, bytes/2);
 
+    cudaDeviceSynchronize();
+
     cudaEvent_t start, end;
     cudaEventCreate(&start);
     cudaEventCreate(&end);
 
     cudaEventRecord(start);    
 
-    int Ntests = 10;
+
+    dim3 B(256,1,1);
+    dim3 G( ((bytes/8) + 255)/256, 1, 1);
+    
+    int Ntests = 1;
     for(int n=0;n<Ntests;++n){
+#if 0
       cudaMemcpy(o_a, o_b, (bytes/2), cudaMemcpyDeviceToDevice);
       cudaMemcpy(o_b, o_a, (bytes/2), cudaMemcpyDeviceToDevice);
+#endif
+      
+      copyKernel <<< G, B >>> (bytes/8, (float*) o_a, (float*) o_b);
+      copyKernel <<< G, B >>> (bytes/8, (float*) o_b, (float*) o_a);
     }
 
     cudaEventRecord(end);
     cudaEventSynchronize(end);
 
+    cudaDeviceSynchronize();
+
     float elapsed;
     cudaEventElapsedTime(&elapsed, start, end);
     elapsed /= (Ntests*1000.);
 
-    maxBWest = 2*bytes/(elapsed*1.e9);
+//    maxBWest = 2*bytes/(elapsed*1.e9);
     cudaFree(&o_a);
     cudaFree(&o_b);
     
-    kernelMaxEmpiricalBandwidth[knl] = (bytes/elapsed)/1.e9; // convert max empirical bw for this vector size to GB/s
+    kernelMaxEmpiricalBandwidth[knl] = (2.*bytes/elapsed)/1.e9; // convert max empirical bw for this vector size to GB/s
     
     fprintf(fpResults, "%lg, %lg, %lg, %lg, %lg\n", arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth[knl],
 	    maxGFLOPSest, maxBWest);
