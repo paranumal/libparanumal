@@ -545,7 +545,8 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
   volatile __shared__ dfloat s_tmp2[p_Nq2];
   volatile __shared__ dfloat s_tmpWarp[p_Nwarps];
 
-  __shared__ dfloat s_precon[p_Nq][p_Nq][p_Nq];
+  //  __shared__ dfloat s_precon[p_Nq][p_Nq][p_Nq];
+  dfloat r_precon[p_Nq];
   __shared__ dfloat s_WJ[p_cubNq][p_cubNq][p_cubNq];
   
   dfloat r_r[p_Nq], r_z[p_Nq], r_x[p_Nq];
@@ -573,9 +574,9 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
 
       dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
 
-      //      r_precon[c] = precon[id];
       dfloat prec = precon[id];
-      s_precon[c][b][a] = prec;
+      r_precon[c] = prec;
+      //      s_precon[c][b][a] = prec;
       
       r_r[c] = rhsq[id];
       r_z[c] = prec*r_r[c];
@@ -590,7 +591,7 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
   //  #pragma unroll p_MAX_ITERATIONS
   for(int it=0;it<p_MAX_ITERATIONS;++it){
 
-#ifndef USE_ODD_EVEN
+#if USE_ODD_EVEN==0
     advectionMassMatrixMultiply(element, r_p, s_WJ, s_tmp1, r_Ap);
 #else
     advectionMassMatrixMultiplyOddEven(element, r_p, s_WJ, s_tmp1, r_Ap);
@@ -620,8 +621,8 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
 	
 	//const dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
 	//	r_z[c] = precon[id]*r_r[c];
-	//	r_z[c] = r_precon[c]*r_r[c];
-	r_z[c] = s_precon[c][b][a]*r_r[c];
+	r_z[c] = r_precon[c]*r_r[c];
+	//	r_z[c] = s_precon[c][b][a]*r_r[c];
 	
 	rdotz_ab += r_r[c]*r_z[c];
 	rdotr_ab += r_r[c]*r_r[c];
@@ -652,11 +653,13 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
       dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
 
       dfloat r_qcba = q[id];
+      #if 1
       dfloat r_resq = resq[id];
       r_resq = rka*r_resq + dt*r_x[c];
       r_qcba += rkb*r_resq;
       
       resq[id] = r_resq;
+      #endif
       qnew[id] = r_qcba;
     }
   }
@@ -702,7 +705,7 @@ __global__ void advectionMassMatrixMultiplyKernel(const dlong Nelements,
     }
   }
 
-#ifndef USE_ODD_EVEN
+#if USE_ODD_EVEN==0
   advectionMassMatrixMultiply(element, r_q, s_WJ, s_tmp1, r_Aq);
 #else
   advectionMassMatrixMultiplyOddEven(element, r_q, s_WJ, s_tmp1, r_Aq);
