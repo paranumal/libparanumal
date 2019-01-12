@@ -30,15 +30,15 @@ SOFTWARE.
 
 #define USE_ODD_EVEN 1
 
-static const int p_Nq = 8;
-static const int p_cubNq = 8;
+static const int p_Nq = comp_Nq;
+static const int p_cubNq = comp_cubNq;
 
-static const int p_halfNq = 4;
-static const int p_halfCubNq = 4;
+static const int p_halfNq = ((comp_Nq+1)/2);
+static const int p_halfCubNq = ((comp_cubNq+1)/2);
 
 static const int p_padCubNq = (p_cubNq%8) ? 0:1;
 
-static const int p_MAX_ITERATIONS=4;
+static const int p_MAX_ITERATIONS= comp_MAX_ITERATIONS;
 
 #define p_Nq2 (p_Nq*p_Nq)
 #define p_Np  (p_Nq*p_Nq*p_Nq)
@@ -588,7 +588,6 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
 
   dfloat rdotz = dotProduct(rdotz_ab, s_tmp2, s_tmpWarp);
 
-  //  #pragma unroll p_MAX_ITERATIONS
   for(int it=0;it<p_MAX_ITERATIONS;++it){
 
 #if USE_ODD_EVEN==0
@@ -631,7 +630,7 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
     
     // r.z
     const dfloat rdotz_new = dotProduct(rdotz_ab, s_tmp2, s_tmpWarp);
-    const dfloat rdotr     = dotProduct(rdotr_ab, s_tmp2, s_tmpWarp);
+    //    const dfloat rdotr     = dotProduct(rdotr_ab, s_tmp2, s_tmpWarp);
 
     //    if(rdotr<tol) break;
     
@@ -815,7 +814,10 @@ int main(int argc, char **argv){
     elapsed /= 1000.;
     elapsed /= (double) Ntests;
     
-    printf("%d %d %d %lg %lg %%%% [InvertMassMatrix: N, Nelements, Ndofs, elapsed, dofsPerSecond]\n", p_Nq-1, Nelements, p_Np*Nelements, elapsed, Nelements*(p_Np/elapsed));
+    printf("%d %d %d %d %lg %lg %lg %%%% "
+	   "[InvertMassMatrix: N, Nelements, Ndofs, MAX_ITERATIONS, elapsed, dofsPerSecond, nodeIterationsPerSecond]\n",
+	   p_Nq-1, Nelements, p_Np*Nelements, p_MAX_ITERATIONS, elapsed, Nelements*(p_Np/elapsed),
+	   Nelements*(p_Np*p_MAX_ITERATIONS/elapsed));
   }
   
   cudaDeviceSynchronize();

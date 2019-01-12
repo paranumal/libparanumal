@@ -1,5 +1,5 @@
 # -cg 42%
-cudaFlags = -arch=sm_70   --use_fast_math -Xptxas -v,-dlcm=ca,-O3 -Xcompiler -O3
+cudaFlags = -Dcomp_Nq=$(comp_Nq) -Dcomp_cubNq=$(comp_cubNq) -Dcomp_MAX_ITERATIONS=$(comp_MAX_ITERATIONS) -arch=sm_70   --use_fast_math -Xptxas -v,-dlcm=ca,-O3 -Xcompiler -O3
 #-g -G
 
 advectionInvertMassMatrix: advectionInvertMassMatrix.cu
