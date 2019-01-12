@@ -7,9 +7,9 @@ for MAX_ITERATIONS in `seq 1 6`
 do
     for Nq in `seq 2 11`
     do
-	make clean; make roofline; make comp_Nq=$Nq comp_cubNq=$Nq comp_MAX_ITERATIONS=${MAX_ITERATIONS}
+	make clean; make roofline; make comp_Nq=$Nq comp_cubNq=$((Nq+1)) comp_MAX_ITERATIONS=${MAX_ITERATIONS}
 
-	echo ${Nel[$Nq]}
+	echo ${Nel[$Nq]}, $Nq, $((Nq+1))
 	
 	./advectionInvertMassMatrix ${Nel[${Nq}]}
 	
