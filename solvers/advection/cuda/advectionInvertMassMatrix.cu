@@ -36,6 +36,7 @@ static const int p_cubNq = comp_cubNq;
 static const int p_halfNq = ((comp_Nq+1)/2);
 static const int p_halfCubNq = ((comp_cubNq+1)/2);
 
+static const int p_padNq = (p_Nq%4) ? 0:1;
 static const int p_padCubNq = (p_cubNq%4) ? 0:1;
 
 static const int p_MAX_ITERATIONS= comp_MAX_ITERATIONS;
@@ -261,12 +262,12 @@ __device__ void advectionMassMatrixMultiply(const dlong element,
 }
 
 
-__device__ void advectionMassMatrixMultiplyOddEven(const dlong element,
-						   dfloat * __restrict__ r_p,
-						   dfloat s_WJ[p_cubNq][p_cubNq][p_cubNq],
-						   dfloat s_Ap[p_cubNq][p_cubNq][p_cubNq+p_padCubNq],
-						   dfloat * __restrict__ r_Ap){
-
+__forceinline__ __device__ dfloat advectionMassMatrixMultiplyOddEven(const dlong element,
+								     dfloat * __restrict__ r_p,
+								     dfloat s_WJ[p_cubNq][p_cubNq][p_cubNq],
+								     dfloat s_Ap[p_cubNq][p_cubNq][p_cubNq+p_padCubNq],
+								     dfloat * __restrict__ r_Ap){
+  
   dfloat r_tmpOdd[p_halfCubNq];
   dfloat r_tmpEven[p_halfCubNq];
   
@@ -280,11 +281,11 @@ __device__ void advectionMassMatrixMultiplyOddEven(const dlong element,
     const int b = t/p_Nq;
     
     if(b<p_Nq){
-
+      
 #if USE_2D_CONSTANT_MEMORY==0
-    const dfloat * __restrict__ cI = const_I;
+      const dfloat * __restrict__ cI = const_I;
 #endif
-
+      
 #pragma unroll p_halfNq
       for(int c=0;c<p_halfNq;++c){
 	r_tmpOdd[c]  = r_p[c] + r_p[p_Nq-1-c];
@@ -294,7 +295,7 @@ __device__ void advectionMassMatrixMultiplyOddEven(const dlong element,
 #pragma unroll p_halfCubNq
       for(int k=0;k<p_halfCubNq;++k){
 	dfloat resOdd = 0, resEven = 0;
-
+      
 #pragma unroll p_halfNq
 	for(int c=0;c<p_halfNq;++c){
 	  resOdd += *(cI++)*r_tmpOdd[c];
@@ -441,6 +442,8 @@ __device__ void advectionMassMatrixMultiplyOddEven(const dlong element,
   
   __syncthreads();
 
+  dfloat pAp_ab = 0;
+  
   // test in 'c'
   {
     const int a = t%p_Nq;
@@ -469,20 +472,23 @@ __device__ void advectionMassMatrixMultiplyOddEven(const dlong element,
 
 	r_Ap[c]        = resOdd + resEven;
 	r_Ap[p_Nq-1-c] = resOdd - resEven;
+
+	pAp_ab += r_Ap[c]*r_p[c];
+	pAp_ab += r_Ap[p_Nq-1-c]*r_p[p_Nq-1-c];
       }
     }
   }
+
+  return pAp_ab;
 }
 
 
-__forceinline__ __device__ dfloat dotProduct(dfloat a, volatile dfloat *s_a, volatile dfloat *s_warpa){
+__forceinline__ __device__ dfloat dotProduct(const dfloat a, volatile dfloat *s_a, volatile dfloat *s_warpa){
   
   const int t = threadIdx.x;
   const int w = t>>5; // divide by 32
   const int n = t%32;
   
-  __syncthreads();
-
   if(t<p_Nq2){
     s_a[t] = a;
     if(n<16 && t+16<p_Nq2) s_a[t] += s_a[t+16];
@@ -512,8 +518,6 @@ __forceinline__ __device__ dfloat dotProduct(dfloat a, volatile dfloat *s_a, vol
 
   dfloat res = s_warpa[0];
 
-  __syncthreads();
-  
   return res;
 }
 
@@ -535,12 +539,14 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
 					        dfloat * __restrict__ qnew){
 
   __shared__ dfloat s_tmp1[p_cubNq][p_cubNq][p_cubNq+p_padCubNq];
+
   volatile __shared__ dfloat s_tmp2[p_Nq2];
   volatile __shared__ dfloat s_tmpWarp[p_Nwarps];
 
+  __shared__ dfloat s_WJ[p_cubNq][p_cubNq][p_cubNq];
+  
   //  __shared__ dfloat s_precon[p_Nq][p_Nq][p_Nq];
   dfloat r_precon[p_Nq];
-  __shared__ dfloat s_WJ[p_cubNq][p_cubNq][p_cubNq];
   
   dfloat r_r[p_Nq], r_z[p_Nq], r_x[p_Nq];
   dfloat r_p[p_Nq], r_Ap[p_cubNq];
@@ -555,23 +561,36 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
   const int b = t/p_Nq;
 
   dfloat rdotz_ab = 0;
-  dfloat rdotr_ab = 0;
 
   for(int i=0;i<p_cubNq;++i){
     const dlong gid = element*p_cubNp*p_Nvgeo + t + i*p_cubNq*p_cubNq + p_JWID*p_cubNp; //  (i slowest, k middle, j fastest)
     s_WJ[i][0][t] = cubvgeo[gid];
   }
+
+  int n = t;
+  while(n<p_Np){
+    const int ta = n%p_Nq;
+    const int tb = (n/p_Nq)%p_Nq;
+    const int tc = (n/p_Nq2);
+
+    const dlong id = n + element*p_Np;
+    
+    s_tmp1[tc][tb][ta]  = rhsq[id];
+    n+= p_cubNq2;
+  }
+
+  __syncthreads();
   
   if(t<p_Nq2){    
     for(int c=0;c<p_Nq;++c){
 
-      dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
+      const dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
 
-      dfloat prec = precon[id];
+      const dfloat prec = precon[id];
       r_precon[c] = prec;
-      //      s_precon[c][b][a] = prec;
       
-      r_r[c] = rhsq[id];
+      //      r_r[c] = rhsq[id]; // not great when cubNq>Nq
+      r_r[c] = s_tmp1[c][b][a];
       r_z[c] = prec*r_r[c];
       r_p[c] = r_z[c];
 
@@ -583,25 +602,19 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
 
   for(int it=0;it<p_MAX_ITERATIONS;++it){
 
+    __syncthreads();
+    
 #if USE_ODD_EVEN==0
     advectionMassMatrixMultiply(element, r_p, s_WJ, s_tmp1, r_Ap);
 #else
-    advectionMassMatrixMultiplyOddEven(element, r_p, s_WJ, s_tmp1, r_Ap);
+    dfloat pAp_ab = advectionMassMatrixMultiplyOddEven(element, r_p, s_WJ, s_tmp1, r_Ap);
 #endif
     
-    dfloat pAp_ab = 0;
-    if(t<p_Nq2){
-#pragma unroll p_Nq
-      for(int c=0;c<p_Nq;++c)
-	pAp_ab += r_Ap[c]*r_p[c];
-    }
-
-    dfloat pAp = dotProduct(pAp_ab, s_tmp2, s_tmpWarp);
-  
-    dfloat alpha = rdotz/pAp;
+    const dfloat pAp = dotProduct(pAp_ab, s_tmp2, s_tmpWarp);
+    
+    const dfloat alpha = rdotz/pAp;
 
     rdotz_ab = 0;
-    //    rdotr_ab = 0;
     
     if(t<p_Nq2){
 #pragma unroll p_Nq
@@ -612,15 +625,13 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
 	r_z[c] = r_precon[c]*r_r[c];
 	
 	rdotz_ab += r_r[c]*r_z[c];
-	//	rdotr_ab += r_r[c]*r_r[c];
       }
     }
+
+    __syncthreads();
     
     // r.z
     const dfloat rdotz_new = dotProduct(rdotz_ab, s_tmp2, s_tmpWarp);
-    //    const dfloat rdotr     = dotProduct(rdotr_ab, s_tmp2, s_tmpWarp);
-
-    //    if(rdotr<tol) break;
     
     const dfloat beta = rdotz_new/rdotz;
 
@@ -633,23 +644,64 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
       }
     }
   } // end iterations
-  
+
+#if 0
   if(t<p_Nq2){
 #pragma unroll p_Nq
     for(int c=0;c<p_Nq;++c){
       dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
-
+#if 1
       dfloat r_qcba = q[id];
-
+      
       dfloat r_resq = resq[id];
       r_resq = rka*r_resq + dt*r_x[c];
       r_qcba += rkb*r_resq;
       
       resq[id] = r_resq;
-
+      
       qnew[id] = r_qcba;
+#else
+      qnew[id] = r_x[c];
+#endif
+      
     }
   }
+#else
+  
+  if(t<p_Nq2){
+#pragma unroll p_Nq
+    for(int c=0;c<p_Nq;++c){      
+      s_tmp1[c][b][a] = r_x[c];
+    }
+  }
+
+  __syncthreads();
+
+  n = t;
+  while(n<p_Np){
+    const int ta = n%p_Nq;
+    const int tb = (n/p_Nq)%p_Nq;
+    const int tc = (n/p_Nq2);
+    
+    const dlong id = n + element*p_Np;
+    
+    dfloat r_qcba = q[id];
+    
+    dfloat r_resq = resq[id];
+    r_resq = rka*r_resq + dt*s_tmp1[tc][tb][ta];
+    r_qcba += rkb*r_resq;
+    
+    resq[id] = r_resq;
+    
+    qnew[id] = r_qcba;
+
+    n+= p_cubNq2;
+  }
+
+  
+#endif
+
+  
 }
 	
 
