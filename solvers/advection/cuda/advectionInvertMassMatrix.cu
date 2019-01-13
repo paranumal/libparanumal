@@ -36,7 +36,7 @@ static const int p_cubNq = comp_cubNq;
 static const int p_halfNq = ((comp_Nq+1)/2);
 static const int p_halfCubNq = ((comp_cubNq+1)/2);
 
-static const int p_padCubNq = (p_cubNq%8) ? 0:1;
+static const int p_padCubNq = (p_cubNq%4) ? 0:1;
 
 static const int p_MAX_ITERATIONS= comp_MAX_ITERATIONS;
 
@@ -324,13 +324,6 @@ __device__ void advectionMassMatrixMultiplyOddEven(const dlong element,
 	r_tmpEven[b] = ApOdd - ApEven;
       }      
 
-#pragma unroll p_halfNq
-      for(int b=0;b<p_halfNq;++b){
-	
-	r_tmpOdd[b]  = s_Ap[k][b][a] + s_Ap[k][p_Nq-1-b][a];
-	r_tmpEven[b] = s_Ap[k][b][a] - s_Ap[k][p_Nq-1-b][a];
-      }
-
       const dfloat * __restrict__ cI = const_I;
       
 #pragma unroll p_halfCubNq
@@ -376,8 +369,8 @@ __device__ void advectionMassMatrixMultiplyOddEven(const dlong element,
 	resEven += *(cI++)*r_tmpEven[a];
       }
       
-      s_Ap[k][j][i]           =           s_WJ[k][j][i]*(resOdd + resEven);
-      s_Ap[k][j][p_cubNq-1-i] = s_WJ[k][j][p_cubNq-1-i]*(resOdd - resEven);
+      r_Ap[i]           =           s_WJ[k][j][i]*(resOdd + resEven);
+      r_Ap[p_cubNq-1-i] = s_WJ[k][j][p_cubNq-1-i]*(resOdd - resEven);
     }
   }
 
@@ -389,8 +382,8 @@ __device__ void advectionMassMatrixMultiplyOddEven(const dlong element,
     const int k = t/p_cubNq;
 
     for(int i=0;i<p_halfCubNq;++i){
-      dfloat ApOdd  = s_Ap[k][j][i];
-      dfloat ApEven = s_Ap[k][j][p_cubNq-1-i];
+      dfloat ApOdd  = r_Ap[i];
+      dfloat ApEven = r_Ap[p_cubNq-1-i];
       r_tmpOdd[i]  = ApOdd + ApEven;
       r_tmpEven[i] = ApOdd - ApEven;
     }
@@ -550,7 +543,7 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
   __shared__ dfloat s_WJ[p_cubNq][p_cubNq][p_cubNq];
   
   dfloat r_r[p_Nq], r_z[p_Nq], r_x[p_Nq];
-  dfloat r_p[p_Nq], r_Ap[p_Nq];
+  dfloat r_p[p_Nq], r_Ap[p_cubNq];
   
   const dlong e = blockIdx.x;
 
@@ -600,7 +593,6 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
     if(t<p_Nq2){
 #pragma unroll p_Nq
       for(int c=0;c<p_Nq;++c)
-	//	pAp_ab += s_tmp1[c][b][a]*r_p[c];
 	pAp_ab += r_Ap[c]*r_p[c];
     }
 
@@ -609,22 +601,18 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
     dfloat alpha = rdotz/pAp;
 
     rdotz_ab = 0;
-    rdotr_ab = 0;
+    //    rdotr_ab = 0;
     
     if(t<p_Nq2){
 #pragma unroll p_Nq
       for(int c=0;c<p_Nq;++c){
 	r_x[c] += alpha*r_p[c];
-	//	r_r[c] -= alpha*s_tmp1[c][b][a];
 	r_r[c] -= alpha*r_Ap[c];
-	
-	//const dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
-	//	r_z[c] = precon[id]*r_r[c];
+
 	r_z[c] = r_precon[c]*r_r[c];
-	//	r_z[c] = s_precon[c][b][a]*r_r[c];
 	
 	rdotz_ab += r_r[c]*r_z[c];
-	rdotr_ab += r_r[c]*r_r[c];
+	//	rdotr_ab += r_r[c]*r_r[c];
       }
     }
     
@@ -652,13 +640,13 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
       dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
 
       dfloat r_qcba = q[id];
-      #if 1
+
       dfloat r_resq = resq[id];
       r_resq = rka*r_resq + dt*r_x[c];
       r_qcba += rkb*r_resq;
       
       resq[id] = r_resq;
-      #endif
+
       qnew[id] = r_qcba;
     }
   }
