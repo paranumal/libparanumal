@@ -299,7 +299,6 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 
 	}
 	else{
-	  
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
 	      Fqij[fld] = s_q[fld][1][j][i];

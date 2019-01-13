@@ -381,6 +381,7 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
   }
 }
 
+
 kernel void boltzmannFilterVglobalQuad3D(const iint Nelements,
 					 const iint NgridElements,
 					 const dfloat alpha,

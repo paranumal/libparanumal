@@ -125,6 +125,9 @@ void advectionSetupDOPRIQuad3D (solver_t *solver) {
 
   solver->o_qFilter =
     solver->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*solver->Nfields*sizeof(dfloat), solver->q);
+
+  solver->o_qFiltered =
+    solver->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*solver->Nfields*sizeof(dfloat), solver->q);
   
   solver->o_rhsq =
     solver->device.malloc(mesh->Np*mesh->Nelements*solver->Nfields*sizeof(dfloat), solver->rhsq);

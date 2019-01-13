@@ -15,20 +15,20 @@ void advectionRunLSERKQuad3D(solver_t *solver){
   dfloat alpha = 1./mesh->N;
 
   solver->filterKernelq0H(mesh->Nelements,
-			solver->o_dualProjMatrix,
-			solver->o_cubeFaceNumber,
-			solver->o_EToE,
-			solver->o_qpre,
-			solver->o_qPreFilter);
+			  solver->o_dualProjMatrix,
+			  solver->o_cubeFaceNumber,
+			  solver->o_EToE,
+			  solver->o_qpre,
+			  solver->o_qPreFilter);
   
     solver->filterKernelq0V(mesh->Nelements,
-			alpha,
-			solver->o_dualProjMatrix,
-			solver->o_cubeFaceNumber,
-			solver->o_EToE,
-			solver->o_x,
-			solver->o_y,
-			solver->o_z,
+			    alpha,
+			    solver->o_dualProjMatrix,
+			    solver->o_cubeFaceNumber,
+			    solver->o_EToE,
+			    solver->o_x,
+			    solver->o_y,
+			    solver->o_z,
 			    solver->o_qpre,
 			    solver->o_qPreFilter,
 			    solver->o_qPreFiltered);
@@ -188,7 +188,7 @@ void advectionRunLSERKQuad3D(solver_t *solver){
 			      solver->o_qPreFilter,
 			      solver->o_qPreFiltered);
 
-      solver->o_qPreFiltered.copyTo(solver->o_qPreFilter);
+      solver->o_qPreFiltered.copyTo(solver->o_qpre);
       
     }
   }

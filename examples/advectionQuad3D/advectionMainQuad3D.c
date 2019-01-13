@@ -8,7 +8,7 @@ int main(int argc, char **argv){
   //changes solver mode
   //main options are: DOPRI MRSAAB LSERK RK_SPECTRUM
   //grid options are: flat spherical equispherical extended
-  char *mode = "MRSAAB equispherical";
+  char *mode = "DOPRI equispherical";
   
   // int specify polynomial degree 
   int N = atoi(argv[2]);
@@ -41,9 +41,11 @@ int main(int argc, char **argv){
   // time step Boltzmann equations
   if (strstr(mode,"DOPRI")) {
     advectionRunDOPRIQuad3D(solver);
+    solver->o_q.copyTo(solver->q);
   }
   else if (strstr(mode,"LSERK")) {
     advectionRunLSERKbasicQuad3D(solver,alpha);
+    solver->o_qpre.copyTo(solver->q);
   }
   else if (strstr(mode,"RK_SPECTRUM")) {
     advectionSpectrumLSERKQuad3D(solver,alpha);
@@ -51,12 +53,12 @@ int main(int argc, char **argv){
   else if (strstr(mode,"MRSAAB")) {
     advectionRunLSERKQuad3D(solver);
     advectionRunMRSAABQuad3D(solver);
+    solver->o_q.copyTo(solver->q);
   }
   else {
     printf("ERROR: Solver mode not recognized");
   }
   
-  solver->o_qpre.copyTo(solver->q);
   advectionErrorNormQuad3D(solver,solver->finalTime,"end",0);
   
   /*    mesh->o_q.copyTo(mesh->q);

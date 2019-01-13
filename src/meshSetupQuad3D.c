@@ -16,9 +16,6 @@ mesh_t *meshSetupQuad3D(int mesh_size, int N, dfloat sphereRadius,char *mode){
 
   // connect elements using parallel sort
   meshParallelConnect(mesh);
-
-  meshExtendGridQuad3D(mesh);
-  //meshPreserveGridQuad3D(mesh);
   
   // print out connectivity statistics
   meshPartitionStatistics(mesh);
@@ -38,13 +35,28 @@ mesh_t *meshSetupQuad3D(int mesh_size, int N, dfloat sphereRadius,char *mode){
   // load reference (r,s) element nodes
   void meshLoadReferenceNodesQuad3D(mesh_t *mesh, int N);
   meshLoadReferenceNodesQuad3D(mesh, N);
-
+  
   // compute physical (x,y,z) locations of the element nodes
-  //meshPhysicalNodesQuad3D(mesh);
-  //meshSphericalNodesQuad3D(mesh);
-  meshEquiSphericalNodesQuad3D(mesh);
-
-  meshEquiSphericalExtensionQuad3D(mesh);
+  if (strstr(mode,"flat")) {
+    meshPreserveGridQuad3D(mesh);
+    meshPhysicalNodesQuad3D(mesh);
+  }
+  else if (strstr(mode,"spherical")) {
+    meshPreserveGridQuad3D(mesh);
+    meshSphericalNodesQuad3D(mesh);
+  }
+  else if (strstr(mode,"equispherical")) {
+    meshPreserveGridQuad3D(mesh);
+    meshEquiSphericalNodesQuad3D(mesh);
+  }
+  else if (strstr(mode,"extended")) {
+    meshExtendGridQuad3D(mesh);
+    meshEquiSphericalNodesQuad3D(mesh);
+    meshEquiSphericalExtensionQuad3D(mesh);
+  }
+  else {
+    printf("ERROR: Grid mode not recognized");
+  }
   
   // set up halo exchange info for MPI (do before connect face nodes)
   meshHaloSetup(mesh);

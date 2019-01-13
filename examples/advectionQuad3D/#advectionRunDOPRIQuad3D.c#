@@ -99,7 +99,7 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
 			  solver->o_z,
 			  solver->o_rkq,
 			  solver->o_rhsq);
-      
+      /*
       solver->filterKernelH(mesh->Nelements,
 			    solver->o_dualProjMatrix,
 			    solver->o_cubeFaceNumber,
@@ -119,7 +119,7 @@ void advectionRunDOPRIQuad3D(solver_t *solver){
 			    solver->o_qFilter,
 			    solver->o_qFiltered);
       solver->o_qFiltered.copyTo(solver->o_rhsq);
-      
+      */
       solver->volumeCorrectionKernel(mesh->Nelements,
 				     solver->o_rkq,
 				     solver->o_qCorr);
