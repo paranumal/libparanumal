@@ -400,7 +400,7 @@ __global__ void advectionInvertMassMatrixKernel(const dlong Nelements,
 #pragma unroll p_Nq
   for(int c=0;c<p_Nq;++c){
     dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
-#if 1
+#if 0
     dfloat r_qcba = q[id];
     
     dfloat r_resq = resq[id];
