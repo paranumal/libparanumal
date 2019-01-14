@@ -41,7 +41,7 @@
     @shared volatile dfloat s_sum[p_NthreadsUpdatePCG];
     @shared volatile dfloat s_warpSum[p_NwarpsUpdatePCG]; // good  to 256
 
-    @exclusive int r_n;
+    @exclusive int r_n; // limited to 256 in Serial mode
 
     for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0)){
 
