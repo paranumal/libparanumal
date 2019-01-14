@@ -33,9 +33,7 @@ void ellipticScaledAdd(elliptic_t *elliptic, dfloat alpha, occa::memory &o_a, df
   dlong Ntotal = mesh->Nelements*mesh->Np;
 
   // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
-  occaTimerTic(mesh->device,"scaledAddKernel");
   elliptic->scaledAddKernel(Ntotal, alpha, o_a, beta, o_b);
-  occaTimerToc(mesh->device,"scaledAddKernel");
 }
 
 dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b){
@@ -49,16 +47,13 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
   occa::memory &o_tmp = elliptic->o_tmp;
   occa::memory &o_tmp2 = elliptic->o_tmp2;
 
-  occaTimerTic(mesh->device,"weighted inner product2");
   if(elliptic->options.compareArgs("DISCRETIZATION","CONTINUOUS"))
     elliptic->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
   else
     elliptic->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
 
-  occaTimerToc(mesh->device,"weighted inner product2");
-
   /* add a second sweep if Nblock>Ncutoff */
-  dlong Ncutoff = 10;
+  dlong Ncutoff = 100;
   dlong Nfinal;
   if(Nblock>Ncutoff){
 
@@ -101,7 +96,7 @@ dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory 
 
   double *accumulators   = (double*) calloc(Naccumulators, sizeof(double));
   double *g_accumulators = (double*) calloc(Naccumulators, sizeof(double));
-  
+
   mesh_t *mesh = elliptic->mesh;
   dfloat *tmp = elliptic->tmp;
 
@@ -110,14 +105,10 @@ dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory 
   
   occa::memory &o_tmp = elliptic->o_tmp;
   
-  occaTimerTic(mesh->device,"weighted inner product2");
-
   if(elliptic->options.compareArgs("DISCRETIZATION","CONTINUOUS"))
     elliptic->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
   else
     elliptic->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
-  
-  occaTimerToc(mesh->device,"weighted inner product2");
   
   o_tmp.copyTo(tmp);
   
@@ -157,17 +148,15 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   occa::memory &o_tmp = elliptic->o_tmp;
   occa::memory &o_tmp2 = elliptic->o_tmp2;
 
-  occaTimerTic(mesh->device,"weighted inner product2");
   if(elliptic->options.compareArgs("DISCRETIZATION","CONTINUOUS"))
     elliptic->weightedNorm2Kernel(Ntotal, o_w, o_a, o_tmp);
   else
     elliptic->norm2Kernel(Ntotal, o_a, o_tmp);
 
-  occaTimerToc(mesh->device,"weighted norm2");
-
   /* add a second sweep if Nblock>Ncutoff */
-  dlong Ncutoff = 10;
+  dlong Ncutoff = 100;
   dlong Nfinal;
+
   if(Nblock>Ncutoff){
     
     mesh->sumKernel(Nblock, o_tmp, o_tmp2);
@@ -181,7 +170,6 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
     o_tmp.copyTo(tmp);
     
     Nfinal = Nblock;
-
   }    
 
   dfloat wab = 0;
@@ -205,9 +193,7 @@ dfloat ellipticInnerProduct(elliptic_t *elliptic, occa::memory &o_a, occa::memor
 
   occa::memory &o_tmp = elliptic->o_tmp;
 
-  occaTimerTic(mesh->device,"inner product");
   elliptic->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
-  occaTimerToc(mesh->device,"inner product");
 
   o_tmp.copyTo(tmp);
 

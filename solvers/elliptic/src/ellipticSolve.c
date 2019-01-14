@@ -33,26 +33,24 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
   setupAide options = elliptic->options;
 
   int Niter = 0;
-  // int maxIter = 5000; 
   int maxIter = 1000; 
 
   double start = 0.0, end =0.0;
 
+#if 0
   if(options.compareArgs("VERBOSE","TRUE")){
     mesh->device.finish();
     start = MPI_Wtime(); 
   }
-
-  occaTimerTic(mesh->device,"Linear Solve");
+#endif
+  
   Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter);
-  occaTimerToc(mesh->device,"Linear Solve");
 
+#if 0
   if(options.compareArgs("VERBOSE","TRUE")){
     mesh->device.finish();
     end = MPI_Wtime();
     double localElapsed = end-start;
-
-    //    occa::printTimer();
 
     if(mesh->rank==0) printf("Solver converged in %d iters \n", Niter );
 
@@ -73,6 +71,8 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
              mesh->size, mesh->N, globalElements, globalDofs, Niter, globalElapsed, elliptic->precon->preconBytes/(1E9));
     }
   }
+#endif
+  
   return Niter;
 
 }
