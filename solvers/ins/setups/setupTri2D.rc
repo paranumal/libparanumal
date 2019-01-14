@@ -2,13 +2,13 @@
 1.0
 
 [DATA FILE]
-data/insUniform2D.h
-#data/insVortex2D.h
+#data/insUniform2D.h
+data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insSquareCylinder2D.msh
+#../../meshes/insSquareCylinder2D.msh
 #../../meshes/boltzmannSquareCylinderPML2D.msh
-#../../meshes/insVortex2D.msh
+../../meshes/insVortex2D.msh
 
 [MESH DIMENSION]
 2
@@ -42,7 +42,8 @@ EXTBDF2
 CUBATURE
 
 [VISCOSITY]
-0.001
+#0.001
+1.0
 
 [MACH NUMBER]
 .2
@@ -72,7 +73,7 @@ CUBATURE
 0
 
 [FINAL TIME]
-75.0
+1.0
 
 [CFL]
 0.5
@@ -181,7 +182,6 @@ NODAL
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRESSURE PRECONDITIONER]
 MULTIGRID
-
 ########## MULTIGRID Options ##############
 
 # can be ALLDEGREES, HALFDEGREES, HALFDOFS
