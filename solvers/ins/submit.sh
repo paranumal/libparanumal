@@ -3,7 +3,7 @@
 #BSUB -P CSC262                                                                                                                                                                                                                                                                                                                                           
 #BSUB -J paranumal                                                                                                                                                                                                                                                                                                                                               
 #BSUB -o ins.o%J                                                                                                                                                                                                                                                                                                                                              
-#BSUB -W 1:00
+#BSUB -W 00:10
 
 mesh_file=$1
 N=$2
