@@ -51,12 +51,19 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   }
 
   dlong Ntotal = mesh->Np*mesh->Nelements;
-  dlong Nblock = mymax(1,(Ntotal+blockSize-1)/blockSize);
+
   dlong Nhalo = mesh->Np*mesh->totalHaloPairs;
   dlong Nall   = Ntotal + Nhalo;
 
+  dlong Nblock  = mymax(1,(Ntotal+blockSize-1)/blockSize);
   dlong Nblock2 = mymax(1,(Nblock+blockSize-1)/blockSize);
 
+  dlong NthreadsUpdatePCG = 1024;
+  dlong NblocksUpdatePCG = mymin((Ntotal+NthreadsUpdatePCG-1)/NthreadsUpdatePCG, 160);
+
+  elliptic->NthreadsUpdatePCG = NthreadsUpdatePCG;
+  elliptic->NblocksUpdatePCG = NblocksUpdatePCG;
+  
   //tau
   if (elliptic->elementType==TRIANGLES || 
       elliptic->elementType==QUADRILATERALS){
@@ -86,6 +93,10 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   elliptic->o_tmp = mesh->device.malloc(Nblock*sizeof(dfloat), elliptic->tmp);
   elliptic->o_tmp2 = mesh->device.malloc(Nblock2*sizeof(dfloat), elliptic->tmp);
 
+  elliptic->tmpNormr = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+  elliptic->o_tmpNormr = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpNormr);
+
+  
   elliptic->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), elliptic->grad);
 
   //setup async halo stream
@@ -412,6 +423,9 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       kernelInfo["defines/" "p_halfC"]= (int)((mesh->cubNq+1)/2);
       kernelInfo["defines/" "p_halfN"]= (int)((mesh->Nq+1)/2);
 
+      kernelInfo["defines/" "p_NthreadsUpdatePCG"] = (int) NthreadsUpdatePCG; // WARNING SHOULD BE MULTIPLE OF 32
+      kernelInfo["defines/" "p_NwarpsUpdatePCG"] = (int) (NthreadsUpdatePCG/32); // WARNING: CUDA SPECIFIC
+      
       cout << kernelInfo ;
       
       //add standard boundary functions
@@ -445,7 +459,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       }
 
       elliptic->partialAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
-
       elliptic->partialFloatAxKernel = mesh->device.buildKernel(fileName,kernelName,floatKernelInfo);
       
       // only for Hex3D - cubature Ax
@@ -456,6 +469,13 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 	sprintf(kernelName, "ellipticCubaturePartialAx%s", suffix);
 	elliptic->partialCubatureAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
       }
+
+      // combined PCG update and r.r kernel
+      
+      elliptic->updatePCGKernel =
+	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticUpdatePCG.okl",
+				 "ellipticUpdatePCG", dfloatKernelInfo);
+
       
       // Not implemented for Quad3D !!!!!
       if (options.compareArgs("BASIS","BERN")) {
@@ -540,9 +560,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   long long int pre = mesh->device.memoryAllocated();
 
-  occaTimerTic(mesh->device,"PreconditionerSetup");
   ellipticPreconditionerSetup(elliptic, elliptic->ogs, lambda);
-  occaTimerToc(mesh->device,"PreconditionerSetup");
 
   long long int usedBytes = mesh->device.memoryAllocated()-pre;
 

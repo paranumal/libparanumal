@@ -188,7 +188,10 @@ void interpolateHex3D(dfloat *Inter, dfloat *x, int N, dfloat *Ix, int M);
 #define STZID 10 
 #define SBXID 11 
 #define SBYID 12 
-#define SBZID 13 
+#define SBZID 13
+#define SURXID 14
+#define SURYID 15
+#define SURZID 16
 //
 //offsets for boltzmann PML variables
 #define QXID1 0  
