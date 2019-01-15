@@ -32,31 +32,32 @@ void cdsReport(cds_t *cds, dfloat time, int tstep){
   
   // copy data back to host
   cds->o_S.copyTo(cds->S);
+  cds->o_NS.copyTo(cds->NS);
   // do error stuff on host
   cdsError(cds, time);
 
-#ifdef RENDER
-  if(cds->options.compareArgs("OUTPUT FILE FORMAT","PPM")){
+// #ifdef RENDER
+//   if(cds->options.compareArgs("OUTPUT FILE FORMAT","PPM")){
 
-    // copy data back to host
-    cds->o_P.copyTo(cds->P);
-    cds->o_Vort.copyTo(cds->Vort);
+//     // copy data back to host
+//     cds->o_P.copyTo(cds->P);
+//     cds->o_Vort.copyTo(cds->Vort);
    
-    //
-    char fname[BUFSIZ];
-    string outName;
-    cds->options.getArgs("OUTPUT FILE NAME", outName);
-    cdsRenderQuad3D(cds, (char*)outName.c_str(), cds->frame++);
-  }
-#endif
+//     //
+//     char fname[BUFSIZ];
+//     string outName;
+//     cds->options.getArgs("OUTPUT FILE NAME", outName);
+//     cdsRenderQuad3D(cds, (char*)outName.c_str(), cds->frame++);
+//   }
+// #endif
   
-  if(cds->options.compareArgs("OUTPUT TYPE","VTU")){ 
-    // output field files
-    char fname[BUFSIZ];
-    string outName;
-    cds->options.getArgs("OUTPUT FILE NAME", outName);
-    sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, cds->frame++);
-    cdsPlotVTU(cds, fname);
-  }
+//   if(cds->options.compareArgs("OUTPUT TYPE","VTU")){ 
+//     // output field files
+//     char fname[BUFSIZ];
+//     string outName;
+//     cds->options.getArgs("OUTPUT FILE NAME", outName);
+//     sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, cds->frame++);
+//     cdsPlotVTU(cds, fname);
+//   }
 }
 

@@ -66,15 +66,6 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   }
 
 
-
-  // cds->readRestartFile = 0; 
-  // options.getArgs("RESTART FROM FILE", cds->readRestartFile);
-  
-  // cds->writeRestartFile = 0; 
-  // options.getArgs("WRITE RESTART FILE", cds->writeRestartFile);
-
-
-
   dlong Nlocal = mesh->Np*mesh->Nelements;
   dlong Ntotal = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   
@@ -140,11 +131,11 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       cds->Srka = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
       cds->Srkb = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
       cds->Srkc = (dfloat*) calloc(cds->SNrk, sizeof(dfloat));
-      // Asumes initialized in mesh, can be moved here
+      // Assumes initialized in mesh, can be moved here
       for(int rk=0; rk<cds->SNrk; rk++){
-	cds->Srka[rk] = mesh->rka[rk]; 
-	cds->Srkb[rk] = mesh->rkb[rk]; 
-	cds->Srkc[rk] = mesh->rkc[rk]; 
+      	cds->Srka[rk] = mesh->rka[rk]; 
+      	cds->Srkb[rk] = mesh->rkb[rk]; 
+      	cds->Srkc[rk] = mesh->rkc[rk]; 
       }
     }
   }
@@ -308,6 +299,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
 
   options.getArgs("CFL", cds->cfl);
   dfloat dt     = cds->cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
+  
   cds->dtAdaptStep = 0; 
   options.getArgs("TSTEPS FOR TIME STEP ADAPT", cds->dtAdaptStep);
 
@@ -484,7 +476,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   // MEMORY ALLOCATION
   cds->o_rhsS  = mesh->device.malloc(cds->NSfields*                 Ntotal*sizeof(dfloat), cds->rhsS);
   cds->o_NS    = mesh->device.malloc(cds->NSfields*(cds->Nstages+1)*Ntotal*sizeof(dfloat), cds->NS);
-  cds->o_rkS   = mesh->device.malloc(              Ntotal*sizeof(dfloat), cds->rkS);  
+  cds->o_rkS   = mesh->device.malloc(                               Ntotal*sizeof(dfloat), cds->rkS);  
 
   if(mesh->totalHaloPairs){//halo setup
     dlong haloBytes = mesh->totalHaloPairs*mesh->Np*(cds->NSfields)*sizeof(dfloat);
@@ -625,6 +617,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   printf("invdt\t:\t %.8e \n", cds->idt);
   printf("ialf\t:\t %.8e \n", cds->ialf);
   printf("Nsubsteps\t:\t %02d \n", cds->Nsubsteps);
+  printf("Nstages\t:\t %02d \n", cds->Nstages);
   printf("SNrk\t:\t %02d \n", cds->SNrk); 
   printf("ExplicitOrder\t:\t %02d \n", cds->ExplicitOrder);       
 
@@ -632,7 +625,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
 
 
 
-  cout<<kernelInfo;
+  //cout<<kernelInfo;
 
   return cds;
 }

@@ -114,6 +114,9 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
         }
         ins->o_extC.copyFrom(ins->extC);
 
+        // printf(" Explicit Order: %d Writing torder: %d and Rks = %d , c0 = %.4e, c1 = %.4e, c2 = %.4e,\n", ins->ExplicitOrder, torder, rk, ins->extC[0],ins->extC[1],ins->extC[2]);
+        // printf(" RK-a: %.4e and Rk-b = %.4e , RK-c = %.4e,\n", ins->Srka[rk], ins->Srkb[rk], ins->Srkc[rk]);
+
         //compute advective velocity fields at time t
         ins->subCycleExtKernel(NtotalElements,
                                Nstages,
