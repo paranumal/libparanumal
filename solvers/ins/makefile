@@ -65,6 +65,7 @@ AOBJS    = \
 ./src/insReport.o \
 ./src/insRunARK.o \
 ./src/insRunEXTBDF.o \
+./src/insRunWcdsEXTBDF.o \
 ./src/insAdvection.o \
 ./src/insDiffusion.o \
 ./src/insGradient.o \
@@ -81,7 +82,6 @@ AOBJS    = \
 ./src/insIsoPlotVTU.o \
 ./src/insBrownMinionQuad3D.o 
 
-# ./src/insRunWcdsEXTBDF.o \
 
 # library objects
 LOBJS = \

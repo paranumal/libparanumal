@@ -77,7 +77,7 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
   for (int torder=cds->ExplicitOrder-1; torder>=0; torder--){
     
     b=cds->extbdfB[torder];
-    bScale += b;
+    bScale += b; 
 
     // Initialize SubProblem Velocity i.e. Ud = U^(t-torder*dt)
     dlong toffset = torder*cds->NSfields*cds->Ntotal;
@@ -114,8 +114,8 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
         }
         cds->o_extC.copyFrom(cds->extC);
 
-        // printf(" Explicit Order: %d Writing torder: %d and Rks = %d , c0 = %.4e, c1 = %.4e, c2 = %.4e,\n", cds->ExplicitOrder, torder, rk, cds->extC[0],cds->extC[1],cds->extC[2]);
-        // printf(" RK-a: %.4e and Rk-b = %.4e , RK-c = %.4e,\n", cds->Srka[rk], cds->Srkb[rk], cds->Srkc[rk]);
+        printf(" Explicit Order: %d Writing torder: %d and Rks = %d , c0 = %.4e, c1 = %.4e, c2 = %.4e,\n", cds->ExplicitOrder, torder, rk, cds->extC[0],cds->extC[1],cds->extC[2]);
+        printf(" bScale : %.4e RK-a: %.4e and Rk-b = %.4e , RK-c = %.4e,\n", bScale, cds->Srka[rk], cds->Srkb[rk], cds->Srkc[rk]);
 
 
 

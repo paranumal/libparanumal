@@ -1,4 +1,4 @@
-
+/*
 The MIT License (MIT)
 
 Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
@@ -43,6 +43,7 @@ void insRunWcdsEXTBDF(ins_t *ins, cds_t *cds){
 
   if (mesh->rank==0) printf("Number of Timesteps: %d\n", ins->NtimeSteps);
   for(int tstep=0;tstep<NstokesSteps;++tstep){
+  // for(int tstep=0;tstep<3;++tstep){
     if(tstep<1) 
       extbdfCoefficents(ins,tstep+1);
     else if(tstep<2 && ins->temporalOrder>=2) 
@@ -97,6 +98,7 @@ void insRunWcdsEXTBDF(ins_t *ins, cds_t *cds){
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
 
   for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+    // for(int tstep=0;tstep<3;++tstep){
 
     // if(ins->restartedFromFile){
       // if(tstep=0 && ins->temporalOrder>=2) 
@@ -215,7 +217,7 @@ void insRunWcdsEXTBDF(ins_t *ins, cds_t *cds){
     }
 
     
-    //   
+    // //   
     cdsSolveStep(cds, time, ins->dt, ins->o_U, cds->o_S); 
     
 

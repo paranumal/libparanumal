@@ -63,8 +63,6 @@ void cdsSolveSetup(cds_t *cds, setupAide options, occa::properties &kernelInfo){
   cds->Nstages   = fSolver->Nstages; 
   cds->Nsubsteps = fSolver->Nsubsteps;
 
-
-
   //  printf("ins Nsubsteps: %d \n", fSolver->Nsubsteps);
   // Flow density and viscosity
   cds->rho      = fSolver->rho;
@@ -252,9 +250,9 @@ void cdsSolveSetup(cds_t *cds, setupAide options, occa::properties &kernelInfo){
   for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
       if (cds->dim==2){ 
-	cds->setScalarFieldKernel =  mesh->device.buildKernel(DINS "/okl/insSetScalarField2D.okl", "insSetScalarField2D", kernelInfo);
+	cds->setScalarFieldKernel =  mesh->device.buildKernel(DCDS "/okl/cdsSetScalarField2D.okl", "cdsSetScalarField2D", kernelInfo);
       }else{
-	cds->setScalarFieldKernel =  mesh->device.buildKernel(DINS "/okl/insSetScalarField3D.okl", "insSetScalarField3D", kernelInfo);  
+	cds->setScalarFieldKernel =  mesh->device.buildKernel(DCDS "/okl/cdsSetScalarField3D.okl", "cdsSetScalarField3D", kernelInfo);  
       }
     }
     MPI_Barrier(mesh->comm);
