@@ -48,11 +48,11 @@ SOFTWARE.
           if(e<Nelements){
             #pragma unroll p_Nq
             for(int k=0;k<p_Nq;++k){
-              const dlong id = i + j*p_Nq + k*p_Nq*p_Nq + p_Np*e;
+              const dlong id  = i + j*p_Nq + k*p_Nq*p_Nq + p_Np*e;
               const dlong gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;
               const dfloat JW = vgeo[gid + p_JWID*p_Np];
 
-              dfloat rhsSn=0.f;
+              dfloat rhsSn;
 
               if (p_SUBCYCLING) {
                 //NU holds \hat{U} after subcycling

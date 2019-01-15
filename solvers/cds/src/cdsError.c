@@ -68,10 +68,12 @@ void cdsError(cds_t *cds, dfloat time){
       dfloat maxErr = 0.f;
 
       dfloat maxS   = -1e9;
+      dfloat maxNS  = -1e9;
       dfloat minS   =  1e9;
+      dfloat minNS  =  1e9;
       
-      dfloat maxE  = -1e9;
-      dfloat minE  =  1e9;
+      dfloat maxE   = -1e9;
+      dfloat minE   =  1e9;
       
      for(dlong e=0;e<mesh->Nelements;++e){
         for(int n=0;n<mesh->Np;++n){
@@ -97,18 +99,19 @@ void cdsError(cds_t *cds, dfloat time){
           dfloat sExact = alf*exp( -xterm -yterm -zterm);
           maxErr = mymax(maxErr, fabs(cds->S[id+0*cds->sOffset]-sExact));
 
-
+    maxNS = mymax(maxNS, cds->NS[id +0*cds->sOffset]);   minNS = mymin(minNS, cds->NS[id +0*cds->sOffset]);
 	  maxS = mymax(maxS, cds->S[id +0*cds->sOffset]);	  minS = mymin(minS, cds->S[id +0*cds->sOffset]);
 	  maxE =mymax(maxE, sExact);	  minE = mymin(minE, sExact);
 
-#if 1
+#if 0
 	  cds->S[id+0*cds->sOffset] -= sExact;
 #endif
 
  
         }
       }
-     printf("Step: %d Time: %g maxS: %g minS: %g maxE: %g minE: %g\n", (int)(time/cds->dt), time, maxS, minS, maxE, minE);
+     // printf("Step: %d Time: %g maxS: %g minS: %g maxE: %g minE: %g\n", (int)(time/cds->dt), time, maxS, minS, maxE, minE);
+     printf("Step: %d Time: %g maxNs: %g MinNs : %g maxS: %g minS: %g maxE: %g minE: %g\n", (int)(time/cds->dt), time, maxNS, minNS, maxS, minS, maxE, minE);
       // compute maximum over all processes
       dfloat gMaxErr;
       MPI_Allreduce(&maxErr, &gMaxErr, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);

@@ -37,8 +37,8 @@ void cdsRunEXTBDF(cds_t *cds){
   // Write Initial Data
    if(cds->outputStep) cdsReport(cds, cds->startTime, 0.0);
 
-  // for(int tstep=0;tstep<cds->NtimeSteps;++tstep){
-   for(int tstep=0;tstep<5;++tstep){
+   // for(int tstep=0;tstep<cds->NtimeSteps;++tstep){
+     for(int tstep=0;tstep<5;++tstep){
 
     if(tstep<1) 
       extbdfCoefficents(cds,tstep+1);
@@ -48,6 +48,7 @@ void cdsRunEXTBDF(cds_t *cds){
       extbdfCoefficents(cds,tstep+1);
 
     dfloat time = cds->startTime + tstep*cds->dt;
+
 #if 1  
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
     if(cds->Nsubsteps) {
@@ -60,7 +61,7 @@ void cdsRunEXTBDF(cds_t *cds){
 
     cdsHelmholtzSolve(cds, time+cds->dt, cds->Nstages, cds->o_rhsS, cds->o_rkS);
    
-    //cycle history
+    // cycle history
     for (int s=cds->Nstages;s>1;s--) {
       cds->o_S.copyFrom(cds->o_S, cds->Ntotal*cds->NSfields*sizeof(dfloat), 
                             			(s-1)*cds->Ntotal*cds->NSfields*sizeof(dfloat), 
@@ -83,16 +84,9 @@ void cdsRunEXTBDF(cds_t *cds){
       if(((tstep+1)%(cds->outputStep))==0){
          printf("\rtstep = %d, solver iteration: S - %3d \n", tstep+1, cds->Niter);
          cdsReport(cds, time+cds->dt, tstep+1);
-#if 0
-        // Write a restart file
-        if(cds->writeRestartFile){
-          if(mesh->rank==0) printf("\nWriting Binary Restart File....");
-	  cdsRestartWrite(ins, cds->options, time+cds->dt);
-          if(mesh->rank==0) printf("done\n");
-        }
-#endif
       }
     }
+    
     //  if (cds->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, cds->NiterU, cds->NiterV, cds->NiterP); fflush(stdout);
     // if (cds->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, cds->NiterU, cds->NiterV, cds->NiterW, cds->NiterP); fflush(stdout);
     

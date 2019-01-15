@@ -203,7 +203,7 @@ typedef struct {
   dfloat *cubDsW;    // 's' weak differentiation matrix
   dfloat *cubDtW;    // 't' weak differentiation matrix
   dfloat *cubDWmatrices;
-  dfloat *cubD; // 
+  
   
   dfloat *cubvgeo;  //volume geometric data at cubature points
   dfloat *cubsgeo;  //surface geometric data at cubature points
@@ -374,7 +374,6 @@ typedef struct {
   occa::memory o_EToFPairs, o_FPairsToE, o_FPairsToF;
 
 
-  occa::memory o_cubD; 
   // cubature (for wadg)
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty, o_intz;
   occa::memory o_cubDWT, o_cubD;
