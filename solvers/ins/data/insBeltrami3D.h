@@ -23,7 +23,41 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 */
+// Initial conditions 
+#define cdsScalarField3D(t,x,y,z,s) \
+  {                                   \
+    *(s) = 0.0;                    \
+  }   
 
+#define cdsDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, sM, sB) \
+{                                   \
+  if(bc==1){                        \
+    *(sB) = 0.0f;                    \
+  } else if(bc==2){                 \
+    *(sB) = 1.0;        \
+  } else if(bc==3){                 \
+    *(sB) = sM;                     \
+  } else if(bc==4||bc==5||bc==6){   \
+    *(sB) = sM; \
+  }                                 \
+}
+
+#define cdsNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, sxM, syM, szM, sxB, syB, szB) \
+{                                          \
+  if(bc==1 || bc==2){                      \
+    *(sxB) = sxM;                          \
+    *(syB) = syM;                          \
+    *(szB) = szM;                          \
+  } else if(bc==3){                        \
+    *(sxB) = 0.f;                          \
+    *(syB) = 0.f;                          \
+    *(szB) = 0.f;                          \
+  } else if(bc==4||bc==5||bc==6){          \
+    *(sxB) = nx*nx*sxM;                    \
+    *(syB) = nx*nx*syM;                    \
+    *(szB) = nx*nx*szM;                    \
+  }                                        \
+}
 
 // Initial conditions 
 #define insFlowField3D(t,x,y,z, u,v,w,p) \

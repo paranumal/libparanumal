@@ -2,12 +2,12 @@
 1.0
 
 [DATA FILE]
-#data/insBeltrami3D.h
-data/insChannel3D.h
+data/insBeltrami3D.h
+#data/insChannel3D.h
 
 [MESH FILE]
-#../../meshes/insBeltramiHex3D.msh
-../../meshes/insChannelHex3D.msh
+../../meshes/insBeltramiHex3D.msh
+#../../meshes/insChannelHex3D.msh
 
 [SCALAR SOLVER]
 1
@@ -39,8 +39,17 @@ CUDA
 #ARK2
 EXTBDF2
 
+[ELLIPTIC INTEGRATION]
+NODAL
+#CUBATURE
+# CUBATURE - WORKING FOR INHOMOGENEOUS DIRICHLET BCS - NOT WORKING FOR NEUMANN YET
+
+
 [SUBCYCLING STEPS]
-4
+0
+
+[SUBCYCLING TIME ORDER]
+3
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
@@ -288,3 +297,11 @@ BELTRAMI
 
 [VERBOSE]
 FALSE
+
+# set to 0 (zero) to disable reductions
+[DEBUG ENABLE REDUCTIONS]
+1
+
+# set to 0 (zero) to disable gather-scatter
+[DEBUG ENABLE OGS]
+1

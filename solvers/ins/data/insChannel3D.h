@@ -26,7 +26,7 @@ SOFTWARE.
 
 
 // Initial conditions 
-#define insScalarField3D(t,x,y,z,s) \
+#define cdsScalarField3D(t,x,y,z,s) \
   {                                   \
     *(s) = p_sbar;                    \
   }   
