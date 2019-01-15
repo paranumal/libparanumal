@@ -153,7 +153,7 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			     solver->o_resq,
 			     solver->o_qpre);
 
-	solver->filterKernelH(mesh->Nelements,
+	/*	solver->filterKernelH(mesh->Nelements,
 			      solver->o_dualProjMatrix,
 			      solver->o_cubeFaceNumber,
 			      solver->o_EToE,
@@ -171,7 +171,7 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_qpre,
 			      solver->o_qFilter,
 			      solver->o_q);
-	solver->o_q.copyTo(solver->o_qpre);
+			      solver->o_q.copyTo(solver->o_qpre);*/
       }
 	
       if (tstep == 250) {

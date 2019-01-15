@@ -26,8 +26,8 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 	
 	for(int n=0;n<mesh->Nq;++n){
 
-	  dfloat Din = mesh->D[i*mesh->Nq+n];
-	  dfloat Djn = mesh->D[j*mesh->Nq+n];
+	  dfloat Din = mesh->weakD[i*mesh->Nq+n];
+	  dfloat Djn = mesh->weakD[j*mesh->Nq+n];
 
 	  xr += Din*mesh->x[n+j*mesh->Nq+e*mesh->Np];
 	  yr += Din*mesh->y[n+j*mesh->Nq+e*mesh->Np];

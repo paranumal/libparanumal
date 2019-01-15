@@ -346,6 +346,5 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
     printf("\n");
   }
   fgets(buf, BUFSIZ, fp); // read comment
-  
   fclose(fp);
 }
