@@ -119,11 +119,10 @@ plotInterp = VandermondeQuad2D(N, plotR,plotS)/V;
 fprintf(fid, '%% number of plot nodes\n');
 fprintf(fid, '%d\n', plotNp);
 fprintf(fid, '%% plot node coordinates\n');
-for i=1:N+1
-  for j=1:N+2-i 
-  fprintf(fid, '%17.15E %17.15E\n', r1d(i), r1d(j));
+for i=1:plotNp
+    fprintf(fid, '%17.15E %17.15E\n', plotR(i), plotS(i));
 end
-
+	  
 %% output plot interpolation matrix
 fprintf(fid, '%% plot node interpolation matrix\n');
 for n=1:plotNp
@@ -455,6 +454,18 @@ for n=1:Nq
         fprintf(fid, '%17.15E ', F2(n,m));
     end
     fprintf(fid, '\n');
+end
+
+inv(diag(w1d))
+D1d
+diag(w1d)
+D1d_weak = inv(diag(w1d)) * D1d' * diag(w1d)
+fprintf(fid, '%% weak D (1D) matrix\n');
+for n=1:N+1
+  for m=1:N+1
+    fprintf(fid, '%17.15E ', D1d_weak(n,m));
+  end
+  fprintf(fid, '\n');
 end
 
 fclose(fid);

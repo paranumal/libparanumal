@@ -323,6 +323,7 @@ typedef struct {
   iint *gridToE;
   iint *perp_index;
   dfloat *par_loc;
+  dfloat *weakD;
   
   // occa stuff
   occa::device device;

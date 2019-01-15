@@ -86,6 +86,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   }
   fgets(buf, BUFSIZ, fp);
 
+  //read strong differentiation matrix but don't save
   /* 1D collocation differentiation matrix on GLL nodes */
   fgets(buf, BUFSIZ, fp); // read comment
   printf("got D message: %s\n", buf);
@@ -126,9 +127,11 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   mesh->plotS = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
   fgets(buf, BUFSIZ, fp); // read comment
   printf("got message: %s\n", buf);
+  printf("plotnp = %d\n",mesh->plotNp);
   for(int n=0;n<mesh->plotNp;++n){
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, dfloatFormat dfloatFormat, mesh->plotR+n, mesh->plotS+n);
+    printf("%s\n",buf);
   }
   
   // read plot interpolation matrix
@@ -331,6 +334,18 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
     printf("\n");
     fgets(buf,BUFSIZ,fp); // rest of line
   }
+  /* 1D weak differentiation matrix on GLL nodes */
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("got D message: %s\n", buf);
+  mesh->weakD = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  for(int n=0;n<mesh->N+1;++n){
+    for(int m=0;m<mesh->N+1;++m){
+      fscanf(fp, dfloatFormat, mesh->weakD+m+n*(mesh->N+1));
+      printf("%lg ",mesh->weakD[m+n*mesh->N+1]);
+    }
+    printf("\n");
+  }
+  fgets(buf, BUFSIZ, fp); // read comment
   
   fclose(fp);
 }
