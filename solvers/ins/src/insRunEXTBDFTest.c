@@ -29,7 +29,7 @@ SOFTWARE.
 void extbdfCoefficents(ins_t *ins, int order);
 
 void insRunEXTBDFTest(ins_t *ins, int maxiter){
-   printf("RUNNING.........\n");   
+
   mesh_t *mesh = ins->mesh;
   
   for(int tstep=0; tstep<maxiter;  ++tstep){
@@ -45,14 +45,14 @@ void insRunEXTBDFTest(ins_t *ins, int maxiter){
 
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 
-    printf("ADVECTION STEP.........");   
+
     if(ins->Nsubsteps) {
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
       insAdvection(ins, time, ins->o_U, ins->o_NU);
     }
 
-    printf("done\n");   
+
 
     insGradient (ins, time, ins->o_P, ins->o_GP);
     
@@ -62,7 +62,7 @@ void insRunEXTBDFTest(ins_t *ins, int maxiter){
 
 
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
-    // insPressureSolve(ins, time+ins->dt, ins->Nstages); 
+    insPressureSolve(ins, time+ins->dt, ins->Nstages); 
 
     insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
     insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
@@ -83,23 +83,6 @@ void insRunEXTBDFTest(ins_t *ins, int maxiter){
 
     //update velocity
     insVelocityUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkGP, ins->o_rkU);
-
-#if 0
-    if(mesh->dim==3){
-      if(ins->elementType == QUADRILATERALS ||
-	 ins->elementType == TRIANGLES){
-	ins->constrainKernel(mesh->Nelements,
-			     offset,
-			     mesh->o_x,
-			     mesh->o_y,
-			     mesh->o_z,
-			     ins->o_rkU);
-      }
-    }
-#endif
-      
-    
-
     
     //copy updated pressure
     ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
@@ -113,19 +96,6 @@ void insRunEXTBDFTest(ins_t *ins, int maxiter){
 			 (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
 			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
-
-
-
-#if 0
-    if(((tstep+1)%10)==0){
-      char fname[BUFSIZ];
-      sprintf(fname, "Iterations_Quad3D_%d", ins->SNrk);
-      FILE *fp; 
-      fp = fopen(fname, "a");
-      fprintf(fp, "%d %d %d %d %d\n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
-      fclose(fp);
-    }
-#endif
 
     // if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
     // if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);

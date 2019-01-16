@@ -139,13 +139,11 @@ namespace occa {
       keyStack.pop();
       timeStack.pop();
     }
-
     return elapsedTime;
   }
 
 
   double timer::toc(std::string key, double flops){
-
     double elapsedTime = 0.;
 
     if(profileApplication){
@@ -162,7 +160,6 @@ namespace occa {
       keyStack.pop();
       timeStack.pop();
     }
-
     return elapsedTime;
   }
 
@@ -522,12 +519,15 @@ namespace occa {
 
 
 void occaTimerTic(occa::device device,std::string name) {
+#if 0
   device.finish(); 
-  occa::tic(name); 
+  occa::tic(name);
+#endif 
 };
 
 void occaTimerToc(occa::device device,std::string name) {
-
+#if 0
   device.finish(); 
-  occa::toc(name); 
+  occa::toc(name);
+#endif 
 };

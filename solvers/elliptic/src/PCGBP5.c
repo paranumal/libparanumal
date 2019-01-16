@@ -28,7 +28,7 @@ SOFTWARE.
 
 #include "elliptic.h"
 
-#if 0
+#if 1
 void pcgBP5(elliptic_t* elliptic, dfloat lambda, 
         occa::memory &o_r, occa::memory &o_x, const int MAXIT) {
 

@@ -77,6 +77,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   rdotr0 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 #endif
 
+#if 0
   //sanity check
   if (rdotr0<1E-20) {
     if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)){
@@ -86,7 +87,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
     printf("CG: initial res norm %12.12f WE NEED TO GET TO %12.12f \n", sqrt(rdotr0), sqrt(TOL));
-
+#endif
 
   // Precon^{-1} (b-A*x)
   ellipticPreconditioner(elliptic, lambda, o_r, o_z);
@@ -103,8 +104,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 #endif
 
 
-
-  while((Niter <MAXIT)) {
+  for(int Niter =0; Niter<MAXIT; Niter++){
+  //  while((Niter <MAXIT)) {
 
     // [
     // A*p
@@ -131,7 +132,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     //  dot(r,r)
     //
     rdotr1 = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
-    
+ 
+#if 0   
     if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
       printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
 
@@ -139,7 +141,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
       rdotr0 = rdotr1;
       break;
     }
-
+#endif
     // [
     // z = Precon^{-1} r
     ellipticPreconditioner(elliptic, lambda, o_r, o_z);
@@ -185,7 +187,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;
     
-    ++Niter;
+    // ++Niter;
   }
 
   return Niter;

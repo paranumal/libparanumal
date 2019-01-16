@@ -110,7 +110,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
 
   }
 
-#if 1
+#if 0
   occaTimerTic(mesh->device,"Ux-Solve");
   ins->NiterU = ellipticSolve(usolver, ins->lambda, ins->velTOL, o_rhsU, ins->o_UH);
   occaTimerToc(mesh->device,"Ux-Solve"); 
@@ -126,7 +126,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   }
 #else
  int iter =5;
-occaTimerTic(mesh->device,"Ux-Solve");
+  occaTimerTic(mesh->device,"Ux-Solve");
   ins->NiterU = ellipticSolveTest(usolver, ins->lambda, ins->velTOL, o_rhsU, ins->o_UH,iter);
   occaTimerToc(mesh->device,"Ux-Solve"); 
 

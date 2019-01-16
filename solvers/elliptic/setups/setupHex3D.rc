@@ -2,9 +2,9 @@
 1.0
 
 [BENCHMARK]
-SOLVE
+#SOLVE
 #NONE
-#BP5
+BP5
 
 [DATA FILE]
 /ccs/home/karakus/libparanumal/solvers/elliptic/data/ellipticSineTest3D.h

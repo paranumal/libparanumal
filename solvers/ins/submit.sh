@@ -11,7 +11,7 @@ maxiter=$3
 nodes=$4
 
 # End LSF directives and begin shell commands                                                                                                                                                                                                                                                                                                                 
-cd  /ccs/home/karakus/libparanumal/solvers/ins
+#cd  /ccs/home/karakus/libparanumal/solvers/ins
 #jsrun -n${nodes} -r1 -a2 -c2 -g2 ./BPMain ./setups/setupHex3D.rc $mesh_file $N $maxiter                                                                                       
                                                                                                                                                                                
 #jsrun -n${nodes} -r1 -a1 -c1 -g1 ./BPMain ./setups/setupHex3D.rc $mesh_file $N $maxiter                                                                                     

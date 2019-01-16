@@ -52,7 +52,8 @@ EXTBDF2
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
-CUBATURE
+COLLOCATION
+#CUDA
 
 [VISCOSITY]
 1
@@ -98,11 +99,11 @@ fence
 
 # can be any integer >0
 [MULTIGRID CHEBYSHEV DEGREE]
-2
+1
 
 # can be any integer >0
 [PARALMOND CHEBYSHEV DEGREE]
-2
+1
 #################################################
 ########## Velocity Solver Options ##############
 #################################################

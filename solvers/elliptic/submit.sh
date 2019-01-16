@@ -14,10 +14,10 @@ nodes=$4
 cd  /ccs/home/karakus/libparanumal/solvers/elliptic
 
 # 1 First run this script to generate  OCCA kernels for only once
-./BP  ./setups/setupHex3D.rc ${mesh_file} ${N} ${maxiter}
+#./BP  ./setups/setupHex3D.rc ${mesh_file} ${N} ${maxiter}
 
 # 2.After OCCA kernels are built, following script can be  uses
-#jsrun -n${nodes} -r1 -a4 -c4 -g4 ./BP  ./setups/setupHex3D.rc ${mesh_file} ${N} ${maxiter}
+jsrun -n${nodes} -r1 -a4 -c4 -g4 ./BP  ./setups/setupHex3D.rc ${mesh_file} ${N} ${maxiter}
 
 
 #jsrun -n${nodes} -r1 -a2 -c2 -g2 ./BPMain ./setups/setupHex3D.rc $mesh_file $N $maxiter                                                                                       

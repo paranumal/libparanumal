@@ -83,9 +83,9 @@ int main(int argc, char **argv){
   
   start = MPI_Wtime();
   
-  cuProfilerStart();
+  //  cuProfilerStart();
   insRunEXTBDFTest(ins, maxiter);
-  cuProfilerStop();
+  // cuProfilerStop();
 
 
   mesh->device.finish();
