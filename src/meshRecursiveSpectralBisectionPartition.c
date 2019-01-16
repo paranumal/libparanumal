@@ -133,8 +133,9 @@ void meshRecursiveSpectralBisectionPartition(mesh_t *mesh){
  
  /* create array for outgoing data */
  int *outEToV = (int*) calloc(Nelements*Nverts, sizeof(int));
+ int *outElementInfo = (int*) calloc(Nelements*Nverts, sizeof(int));
+ 
  int *outCnt  = (int*) calloc(size, sizeof(int));
-
  dfloat *outEX = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
  dfloat *outEY = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
  dfloat *outEZ = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
@@ -148,6 +149,7 @@ void meshRecursiveSpectralBisectionPartition(mesh_t *mesh){
      outEX[outCnt[part[e]]] = mesh->EX[e*Nverts+n];
      outEY[outCnt[part[e]]] = mesh->EY[e*Nverts+n];
      outEZ[outCnt[part[e]]] = mesh->EZ[e*Nverts+n];
+     outElementInfo[outCnt[part[e]]] = mesh->elementInfo[e]; // yes this is lazy
      ++outCnt[part[e]];
    }
  }
@@ -161,12 +163,17 @@ void meshRecursiveSpectralBisectionPartition(mesh_t *mesh){
 
  /* send elements to their new rank */
  hlong *inEToV = (hlong*) calloc(Nelements*Nverts, sizeof(hlong));
+ int *inElementInfo = (int*) calloc(Nelements*Nverts, sizeof(int));
  dfloat *inEX = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
  dfloat *inEY = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
  dfloat *inEZ = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
  
  MPI_Alltoallv(outEToV, outNdata, outStarts, MPI_HLONG,
 	       inEToV,   inNdata,  inStarts, MPI_HLONG, 
+	       mesh->comm);
+
+ MPI_Alltoallv(outElementInfo, outNdata, outStarts, MPI_INT,
+	       inElementInfo,   inNdata,  inStarts, MPI_INT,
 	       mesh->comm);
 
  MPI_Alltoallv(outEX, outNdata, outStarts, MPI_DFLOAT,
@@ -186,11 +193,11 @@ void meshRecursiveSpectralBisectionPartition(mesh_t *mesh){
  free(mesh->EX);
  free(mesh->EY);
  free(mesh->EZ);
+ free(mesh->elementInfo);
  
  // scrape EToV from inEToV (may be different type hlong to EToV)
- int eInfo = mesh->elementInfo[0];
- 
  mesh->EToV = (hlong*) calloc(Nelements*Nverts, sizeof(hlong));
+ mesh->elementInfo = (int*) calloc(Nelements, sizeof(int));
  mesh->EX   = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
  mesh->EY   = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
  mesh->EZ   = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
@@ -198,10 +205,11 @@ void meshRecursiveSpectralBisectionPartition(mesh_t *mesh){
  for(e=0;e<Nelements;++e)
    for(n=0;n<Nverts;++n){
      mesh->EToV[e*Nverts+n] = inEToV[e*Nverts+n];
+     mesh->elementInfo[e] = inElementInfo[e*Nverts]; // lazy
      mesh->EX[e*Nverts+n] = inEX[e*Nverts+n];
      mesh->EY[e*Nverts+n] = inEY[e*Nverts+n];
      mesh->EZ[e*Nverts+n] = inEZ[e*Nverts+n];
-     mesh->elementInfo[e] = eInfo;
+
    }
  
  // reset element count
