@@ -128,9 +128,11 @@ int main(int argc, char **argv){
     
     // convergence tolerance
     dfloat tol = 1e-8;
+
+    MPI_Barrier(mesh->comm);
     
     occa::streamTag startTag = mesh->device.tagStream();
-    int Ntests = 10;
+    int Ntests = 100;
     int it = 0;
     for(int test=0;test<Ntests;++test){
       o_r.copyTo(elliptic->o_r);

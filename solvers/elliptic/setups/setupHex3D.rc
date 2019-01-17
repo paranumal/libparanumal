@@ -137,6 +137,7 @@ MAX
 cavity
 
 [VERBOSE]
+#TRUE
 FALSE
 
 # set to 0 (zero) to disable reductions
