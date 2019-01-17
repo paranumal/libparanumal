@@ -84,7 +84,7 @@ void surfaceTerms(int sk,
     @exclusive dfloat r_q[p_Nq]; // register array to hold u(i,j,0:N) private to thread
     @exclusive dfloat r_rhs[p_Nq];// array for results Au(i,j,0:N)
 
-    dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
+    @exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 
     // for all face nodes of all elements
     // face 0 & 5
