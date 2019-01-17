@@ -117,33 +117,47 @@ int main(int argc, char **argv){
            elapsedAx,
            0,
            elapsedAx/(mesh->Np*mesh->Nelements),
-           mesh->Nelements*mesh->Np/elapsedAx,
+           mesh->Nelements*mesh->Np/elapsedAx,	     
            (char*) options.getArgs("DISCRETIZATION").c_str());
 
   }
   else{
-
+    
+    occa::memory o_r = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_r);
+    occa::memory o_x = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_x);    
+    
     // convergence tolerance
     dfloat tol = 1e-8;
-
+    
     occa::streamTag startTag = mesh->device.tagStream();
-
-    int it = ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
+    int Ntests = 100;
+    int it = 0;
+    for(int test=0;test<Ntests;++test){
+      o_r.copyTo(elliptic->o_r);
+      o_x.copyTo(elliptic->o_x);
+      it += ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
+    }
     occa::streamTag stopTag = mesh->device.tagStream();
     mesh->device.finish();
-
+    
     double elapsed = mesh->device.timeBetween(startTag, stopTag);
 
+    double globalElapsed;
+    hlong globalNelements;
+
+    MPI_Reduce(&elapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, mesh->comm);
+    MPI_Reduce(&(mesh->Nelements), &globalNelements, 1, MPI_HLONG, MPI_SUM, 0, mesh->comm);
+    
     if (mesh->rank==0)
       printf("%d, %d, %g, %d, %g, %g; \%\%global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
-           mesh->N,
-           mesh->Nelements*mesh->Np,
-           elapsed,
-           it,
-           elapsed/(mesh->Np*mesh->Nelements),
-           mesh->Nelements*(it*mesh->Np/elapsed),
-           (char*) options.getArgs("PRECONDITIONER").c_str());
-
+	     mesh->N,
+	     globalNelements*mesh->Np,
+	     globalElapsed,
+	     it,
+	     globalElapsed/(mesh->Np*globalNelements),
+	     globalNelements*(it*mesh->Np/globalElapsed),
+	     (char*) options.getArgs("PRECONDITIONER").c_str());
+    
     if (options.compareArgs("VERBOSE", "TRUE")){
       fflush(stdout);
       MPI_Barrier(MPI_COMM_WORLD);

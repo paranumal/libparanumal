@@ -157,5 +157,10 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
     if( (mesh->r[n]+1)*(mesh->r[n]+1)+(mesh->s[n]-1)*(mesh->s[n]-1)+(mesh->t[n]-1)*(mesh->t[n]-1)<NODETOL)
       mesh->vertexNodes[7] = n;
   }
+
+  if(mesh->rank==0){
+    printf("POLYOMIAL DEGREE: %d\n", mesh->N);
+    printf("QUADRATURE NODES: %d\n", mesh->cubNq);
+  }
 }
 

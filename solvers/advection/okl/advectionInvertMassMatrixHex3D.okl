@@ -928,16 +928,16 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
 
 
 // cube shmem version
-@kernel void advectionInvertMassMatrixHex3D(const dlong Nelements,
-					    const dfloat tol,
-					    const int maxIterations,
-					    @restrict const dfloat *cubvgeo,
-					    @restrict const dfloat *cubInterpT,
-					    @restrict const dfloat *P, // precon
-					    @restrict const dfloat *b,
-					    @restrict       dfloat *x,
-					    @restrict       int    *iterations,
-					    @restrict       dfloat *res){
+@kernel void advectionInvertMassMatrixHex3D(const dlong Nelements,		 
+					    const dfloat tol,			 
+					    const int maxIterations,		 
+					    @restrict const dfloat *cubvgeo,	 
+					    @restrict const dfloat *cubInterpT,	 
+					    @restrict const dfloat *P, // precon 
+					    @restrict const dfloat *b,		 
+					    @restrict       dfloat *x,		 
+					    @restrict       int    *iterations,	 
+					    @restrict       dfloat *res){        
   
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
@@ -3210,3 +3210,260 @@ void dotProduct(const dfloat *a, const dfloat *b, const dfloat *s_adotb){
     // invert mass to here <======================================================
   }
 }
+
+#undef r_x
+#undef r_r
+#undef r_z
+
+#define cubeThreads				\
+  for(int k=0;k<p_cubNq;++k;@inner(2))		\
+    for(int j=0;j<p_cubNq;++j;@inner(1))	\
+      for(int i=0;i<p_cubNq;++i;@inner(0))
+
+
+#define dotProduct3D(r_a, r_b, s_adotb, s_tmp)				\
+  cubeThreads{								\
+    s_adotb[0][0][r_t] = (r_t<p_Np) ? r_a*r_b:0;			\
+  }									\
+  cubeThreads{								\
+    if(r_t<p_Np){							\
+      int w = r_t/32;							\
+      int t32 = r_t%32;							\
+      if(t32<16 && r_t+16<p_Np) s_adotb[0][0][r_t] += s_adotb[0][0][r_t+16]; \
+      if(t32< 8 && r_t+ 8<p_Np) s_adotb[0][0][r_t] += s_adotb[0][0][r_t+ 8]; \
+      if(t32< 4 && r_t+ 4<p_Np) s_adotb[0][0][r_t] += s_adotb[0][0][r_t+ 4]; \
+      if(t32< 2 && r_t+ 2<p_Np) s_adotb[0][0][r_t] += s_adotb[0][0][r_t+ 2]; \
+      if(t32< 1 && r_t+ 1<p_Np) s_tmp[w] = s_adotb[0][0][r_t] + s_adotb[0][0][r_t+ 1]; \
+    }									\
+  }									\
+  cubeThreads{								\
+    if(r_t<32 && r_t<p_Np){						\
+      if(r_t<16 && r_t+16<p_Np) s_tmp[r_t] += s_tmp[r_t+16];		\
+      if(r_t< 8 && r_t+ 8<p_Np) s_tmp[r_t] += s_tmp[r_t+ 8];		\
+      if(r_t< 4 && r_t+ 4<p_Np) s_tmp[r_t] += s_tmp[r_t+ 4];		\
+      if(r_t< 2 && r_t+ 2<p_Np) s_tmp[r_t] += s_tmp[r_t+ 2];		\
+      if(r_t< 1 && r_t+ 1<p_Np) s_tmp[r_t] += s_tmp[r_t+ 1];		\
+    }									\
+  }									\
+
+
+  
+@kernel void advectionMassInvertUpdateHex3D(const dlong Nelements,
+					     const dlong *elementList,
+					     const dfloat dt,
+					     const dfloat rka,
+					     const dfloat rkb,
+					     const dfloat tol,
+					     const int maxIterations,
+					     @restrict const dfloat *cubvgeo,
+					     @restrict const dfloat *cubInterpT,
+					     @restrict const dfloat *P, // precon
+					     @restrict const dfloat *rhsq,
+					     @restrict       dfloat *resq,
+					     @restrict const dfloat *q,
+					     @restrict       dfloat *qnew,
+					     @restrict       int    *iterations){
+  
+
+  for(dlong e=0; e<Nelements; ++e; @outer(0)){
+    
+    @shared volatile dfloat s_q1[p_cubNq][p_cubNq][p_cubNq];
+    @shared volatile dfloat s_q2[p_cubNq][p_cubNq][p_cubNq];
+    @shared volatile dfloat s_I[p_cubNq][p_Nq];
+    @shared volatile dfloat s_tmp[32];
+    
+    @exclusive dlong r_element;
+    
+    @exclusive dfloat r_p, r_Ap, r_rdotz, r_tol2, r_q, r_P, r_z, r_r, r_x;
+
+    @exclusive int r_t;
+    
+    cubeThreads{
+
+      r_element = elementList[e];
+      
+      r_t = i + j*p_cubNq + k*p_cubNq*p_cubNq;
+
+      if(r_t<p_cubNq*p_Nq)
+	s_I[0][r_t] = cubInterpT[r_t]; 
+      
+      if(r_t<p_Np){
+	const dlong id = r_t + r_element*p_Np;
+	r_x = 0;
+	r_r = rhsq[id];
+	r_r = 0;
+	r_P = P[id];
+	r_z = r_P*r_r;
+	r_p = r_z;
+      }
+    }
+
+    dotProduct3D(r_r, r_r, s_q1, s_tmp);
+    
+    cubeThreads{
+      r_tol2 = tol*tol;
+      if(s_tmp[0]>1)
+	r_tol2 *= s_tmp[0];
+    }
+    
+    
+    for(int it=0;it<maxIterations;++it){  
+      
+      // [1] Ap: mass matrix multiplication starts here =====>
+      cubeThreads{
+	if(r_t<p_Np){
+	  const int ti = r_t%p_Nq;
+	  const int tj = (r_t/p_Nq)%p_Nq;
+	  const int tk = r_t/(p_Nq*p_Nq);
+	  
+	  s_q1[tk][tj][ti] = r_p;
+	}
+      }
+
+      // [2] interpolate in i
+      cubeThreads{
+	if(j<p_Nq && k<p_Nq){
+	  dfloat r_res = 0;
+
+#pragma unroll p_Nq
+	  for(int n=0;n<p_Nq;++n)
+	    r_res += s_I[i][n]*s_q1[k][j][n];
+	  
+	  s_q2[k][j][i] = r_res;
+	}
+      }
+
+      // [3] interpolate in j
+      cubeThreads{
+	if(k<p_Nq){
+	  dfloat r_res = 0;
+
+#pragma unroll p_Nq
+	  for(int n=0;n<p_Nq;++n)
+	    r_res += s_I[j][n]*s_q2[k][n][i];
+	  
+	  s_q1[k][j][i] = r_res;
+	}
+      }
+
+      // [4] interpolate in k and weight 
+      cubeThreads{
+	const dlong gbase = r_element*p_Nvgeo*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
+	const dfloat r_GwJ = cubvgeo[gbase+p_JWID*p_cubNp];
+	
+	dfloat r_res = 0;
+
+#pragma unroll p_Nq
+	for(int n=0;n<p_Nq;++n)
+	  r_res += s_I[k][n]*s_q1[n][j][i];
+	
+	s_q2[k][j][i] = r_GwJ*r_res;
+      }
+
+      // [5] test in k
+      cubeThreads{
+	if(k<p_Nq){
+	  dfloat r_res = 0;
+
+#pragma unroll p_cubNq
+	  for(int n=0;n<p_cubNq;++n)
+	    r_res += s_I[n][k]*s_q2[n][j][i];
+	  
+	  s_q1[k][j][i] = r_res;
+	}
+      }
+      
+
+      // [6] test in j
+      cubeThreads{
+	if(j<p_Nq && k<p_Nq){
+	  dfloat r_res = 0;
+
+#pragma unroll p_cubNq
+	  for(int n=0;n<p_cubNq;++n)
+	    r_res += s_I[n][j]*s_q1[k][n][i];
+	  
+	  s_q2[k][j][i] = r_res;
+	}
+      }
+      
+
+      // [7] test in i
+      cubeThreads{
+	const int ti = r_t%p_Nq;
+	const int tj = (r_t/p_Nq)%p_Nq;
+	const int tk = r_t/(p_Nq*p_Nq);
+	if(r_t<p_Np){
+	  r_Ap = 0;
+
+#pragma unroll p_cubNq
+	  for(int n=0;n<p_cubNq;++n)
+	    r_Ap += s_I[n][ti]*s_q2[tk][tj][n];
+	}
+      }
+      // <======= mass matrix multiplication ends here
+      
+      // p.Ap
+      dotProduct3D(r_p, r_Ap, s_q1, s_tmp);
+
+      // x += alpha*p
+      // r -= alpha*Ap
+      cubeThreads{
+	const dfloat alpha = r_rdotz/s_tmp[0]; // r.z/p.Ap
+	r_x += alpha*r_p;
+	r_r -= alpha*r_Ap;
+      }
+      
+      // r.r for convergence test
+      dotProduct3D(r_r, r_r, s_q2, s_tmp);
+
+      cubeThreads{
+	if(it==(maxIterations-1)){
+	//	if(s_tmp[0]<r_tol2){
+
+	  if(r_t<p_Np){
+	    
+	    // terminate and update
+	    const dlong base = r_t + r_element*p_Np*p_Nfields;
+	    
+	    dfloat r_resq = resq[base];
+	    
+	    r_resq = rka*r_resq + dt*r_x;
+	    r_q += rkb*r_resq;
+	    
+	    resq[base] = r_resq;
+	    qnew[base] = r_q;
+	  }
+	  
+	  if(r_t==0) iterations[r_element] = it;
+	  
+	  it = maxIterations;
+	  
+	  return;
+	}
+	else{
+	  // z += P*r
+	  r_z += r_P*r_r;
+	}
+      }
+      
+      // r.z
+      dotProduct3D(r_r, r_z, s_q1, s_tmp);
+
+      // p = z + beta*p
+      cubeThreads{
+	if(r_t<p_Np){
+	  if(it<maxIterations){
+	    dfloat rdotz = s_tmp[0];
+	    dfloat beta = rdotz/r_rdotz;
+	    
+	    r_rdotz = rdotz;
+	    
+	    r_p = r_z + beta*r_p;
+	  }
+	}
+      }
+    }
+  }
+}
+

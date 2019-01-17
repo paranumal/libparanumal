@@ -140,7 +140,8 @@ int main(int argc, char **argv){
   advection->o_diagInvMassMatrix = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), diagInvMassMatrix);
 
 #if 0
-  
+
+  occa::memory o_qnew = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), iterations);
   occa::memory o_iterations = mesh->device.malloc(mesh->Nelements*sizeof(int), iterations);
   occa::memory o_residuals  = mesh->device.malloc(mesh->Nelements*sizeof(dfloat), residuals);
   for(int n=0;n<mesh->Np*mesh->Nelements;++n){
@@ -148,10 +149,11 @@ int main(int argc, char **argv){
   }
   advection->o_rhsq.copyFrom(advection->rhsq);
 
-  int maxIterations = 8;
+  int maxIterations = 3;
 
   mesh->device.finish();
 
+#if 0
   for(int test=0;test<10;++test)
   advection->invertMassMatrixKernel(mesh->Nelements,
 				    tol,
@@ -161,8 +163,25 @@ int main(int argc, char **argv){
 				    advection->o_diagInvMassMatrix,
 				    advection->o_rhsq,
 				    advection->o_q,
-				    o_iterations,
-				    o_residuals);
+				    o_iterations);
+#else
+  for(int test=0;test<10;++test)
+    advection->invertMassMatrixKernel(mesh->NinternalElements,
+				      mesh->o_internalElementIds,
+				      mesh->dt,
+				      mesh->rka[0],
+				      mesh->rkb[0],
+				      tol,
+				      maxIterations,
+				      mesh->o_cubvgeo,
+				      mesh->o_cubInterpT,
+				      advection->o_diagInvMassMatrix,
+				      advection->o_rhsq,
+				      advection->o_resq,
+				      advection->o_q,
+				      o_qnew,
+				      o_iterations);
+#endif
 				    
   mesh->device.finish();
   
@@ -173,6 +192,9 @@ int main(int argc, char **argv){
     printf("element %d took %d iterations to reach residual^2 of %17.15lg\n",
 	   e, iterations[e], residuals[e]);
   }
+  mesh->device.finish();
+  MPI_Finalize();
+  exit(-1);
 #endif
   
   mesh->device.finish();

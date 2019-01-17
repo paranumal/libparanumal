@@ -593,7 +593,8 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 				       kernelInfo);
 
   sprintf(fileName, DADVECTION "/okl/advectionInvertMassMatrix%s.okl", suffix);
-  sprintf(kernelName, "advectionInvertMassMatrix%s", suffix);
+  //  sprintf(kernelName, "advectionInvertMassMatrix%s", suffix);
+  sprintf(kernelName, "advectionMassInvertUpdate%s", suffix);
 
   advection->invertMassMatrixKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 

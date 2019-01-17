@@ -522,12 +522,15 @@ namespace occa {
 
 
 void occaTimerTic(occa::device device,std::string name) {
+  #if 0
   device.finish(); 
-  occa::tic(name); 
+  occa::tic(name);
+  #endif
 };
 
 void occaTimerToc(occa::device device,std::string name) {
-
+#if 0
   device.finish(); 
-  occa::toc(name); 
+  occa::toc(name);
+  #endif
 };

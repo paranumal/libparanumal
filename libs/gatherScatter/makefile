@@ -19,11 +19,11 @@ CXX	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR)/src -g  -D DHOLMES='"${CURDIR}/../.."' -D DOGS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR)/src   -D DHOLMES='"${CURDIR}/../.."' -D DOGS='"${CURDIR}"' -ftree-loop-distribution -floop-nest-optimize -floop-block -floop-interchange -fstrict-aliasing -ftree-vectorize
 
 
 # link flags to be used
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g 
+LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) 
 
 # libraries to be linked in
 LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L$(GSDIR)/lib  -lgs 
