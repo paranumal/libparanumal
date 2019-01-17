@@ -1351,7 +1351,7 @@ SOFTWARE.
 }
 
 
-
+#if 0
 @kernel void ellipticPartialAxHex3D_v4(const dlong Nelements,
 				       @restrict const  dlong  *  elementList,
 				       @restrict const  dfloat *  ggeo,
@@ -1815,7 +1815,7 @@ SOFTWARE.
 
 
 
-
+#endif
 
 
 
@@ -1944,14 +1944,6 @@ SOFTWARE.
           const dlong base = i + j*p_Nq + element*p_Np;
           const dfloat qbase = q[base + k*p_Nq*p_Nq];
           s_q[k][j][i] = qbase;
-#if 0
-	  if(element==0 && k==0){
-	    printf("[%g] ", S[j*p_Nq+i]-D[i*p_Nq+j]);
-	    if(i==p_Nq-1)
-	      printf("\n");
-
-	  }
-#endif
         }
       }
     }
@@ -1996,12 +1988,12 @@ SOFTWARE.
     for(int k = 0;k < p_Nq; k++){
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
-	  
+#if 0
 	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 	  const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
 
 	  dfloat r_Aq = r_GwJ*lambda*s_q[k][j][i];
-
+#endif
           dfloat r_Aqr = 0, r_Aqs = 0, r_Aqt = 0;
 	  
           for(int m = 0; m < p_Nq; m++){
@@ -2011,7 +2003,7 @@ SOFTWARE.
           }
 
           const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-          Aq[id] = r_Aqr + r_Aqs + r_Aqt +r_Aq;
+          Aq[id] = r_Aqr + r_Aqs + r_Aqt; // +r_Aq;
         }
       }
     }
