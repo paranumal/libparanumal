@@ -186,12 +186,39 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 }
 
 dfloat ellipticUpdatePCG(elliptic_t *elliptic,
-			 occa::memory &o_p, occa::memory &o_Ap, dfloat alpha,
+			 occa::memory &o_p, occa::memory &o_Ap, const dfloat alpha,
 			 occa::memory &o_x, occa::memory &o_r){
 
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
+  if(options.compareArgs("THREAD MODEL", "Serial")){
+    
+    const dfloat *cpu_p = (dfloat*) o_p.ptr();
+    const dfloat *cpu_Ap = (dfloat*) o_Ap.ptr();
+    const dfloat *cpu_invDegree = (dfloat*) elliptic->o_invDegree.ptr();
+    
+    dfloat *cpu_x = (dfloat*) o_x.ptr();
+    dfloat *cpu_r = (dfloat*) o_r.ptr();
+    // x <= x + alpha*p
+    // r <= r - alpha*A*p
+    // dot(r,r)
+    dfloat rdotr1 = 0;
+    dfloat globalrdotr1 = 0;
+
+    const hlong M = mesh->Nelements*mesh->Np;
+    for(hlong i=0;i<M;++i){
+      cpu_x[i] += alpha*cpu_p[i];
+      const dfloat ri = cpu_r[i] - alpha*cpu_Ap[i];
+      rdotr1 += ri*ri*cpu_invDegree[i];
+      cpu_r[i] = ri;
+    }
+
+    MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+    
+    return globalrdotr1;
+  }
+  
   int DEBUG_ENABLE_REDUCTIONS = 1;
   options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
   

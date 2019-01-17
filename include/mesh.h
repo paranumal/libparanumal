@@ -586,6 +586,8 @@ void readIntArray   (FILE *fp, const char *label, int **A   , int *Nrows, int* N
 
 void meshApplyElementMatrix(mesh_t *mesh, dfloat *A, dfloat *q, dfloat *Aq);
 
+void meshRecursiveSpectralBisectionPartition(mesh_t *mesh);
+
 void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 

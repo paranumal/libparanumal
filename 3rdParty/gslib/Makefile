@@ -4,7 +4,7 @@ ADDUS ?= 1
 USREXIT ?= 0
 LIBNAME ?= gs
 BLAS ?= 0
-CFLAGS ?= -O2
+CFLAGS ?= -ftree-loop-distribution -floop-nest-optimize -floop-block -floop-interchange -fstrict-aliasing -ftree-vectorize -O3
 FFLAGS ?= -O2
 
 SRCROOT=.

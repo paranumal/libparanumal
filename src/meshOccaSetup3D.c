@@ -533,7 +533,15 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
     mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
 
     mesh->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-    mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
+
+    dfloat *DT = (dfloat*) calloc(mesh->Nq*mesh->Nq,sizeof(dfloat));
+    for(int j=0;j<mesh->Nq;++j){
+      for(int i=0;i<mesh->Nq;++i){
+	DT[i*mesh->Nq+j] = mesh->D[j*mesh->Nq+i];
+      }
+    }
+    
+    mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), DT); //dummy
 
     reportMemoryUsage(mesh->device, "meshOccaSetup3D: before geofactors ");
     
