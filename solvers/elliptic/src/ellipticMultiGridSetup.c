@@ -59,10 +59,17 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     levelDegree= (int *) calloc(numMGLevels,sizeof(int));
     for (int n=0;n<numMGLevels;n++) levelDegree[n] = mesh->N - n; //all degrees
   } else if (options.compareArgs("MULTIGRID COARSENING","HALFDEGREES")) {
+#if 0
     numMGLevels = floor(mesh->N/2.)+1;
     levelDegree= (int *) calloc(numMGLevels,sizeof(int));
     for (int n=0;n<numMGLevels;n++) levelDegree[n] = mesh->N - 2*n; //decrease by two
     levelDegree[numMGLevels-1] = 1; //ensure the last level is degree 1
+#else
+  numMGLevels = floor(mesh->N/2.);
+    levelDegree= (int *) calloc(numMGLevels,sizeof(int));
+    for (int n=0;n<numMGLevels;n++) levelDegree[n] = mesh->N - 2*(n+1); //decrease by two
+    levelDegree[numMGLevels-1] = 1; //ensure the last level is degree 1
+#endif
   } else { //default "HALFDOFS"
     // pick the degrees so the dofs of each level halfs (roughly)
     //start by counting the number of levels neccessary

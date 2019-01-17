@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "elliptic.h"
 
-#define CASCADE 1
+#define CASCADE 0
 
 
 int pcg(elliptic_t* elliptic, dfloat lambda, 
@@ -60,7 +60,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 #if CASCADE
   normB = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
-  normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+  normB = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #endif
 
   TOL =  mymax(tol*tol*normB,tol*tol);
@@ -74,7 +74,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 #if CASCADE
   rdotr0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
-  rdotr0 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+  rdotr0 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #endif
 
 #if 0
@@ -219,7 +219,7 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
 #if CASCADE
       rdotr1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
-      rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+      rdotr1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #endif
     }
     else

@@ -19,13 +19,13 @@ function log2() {
 maxiter=100;
 mesh_base=../../meshes/box;
 mesh_extension=.msh;
-starting_elements=13
+starting_elements=15
 
 
 #for nodes in 1 2 4 8 16 32; do                                                                                                                                                 
 #for nodes in 1 2 4 8 16 32; do                                                                                                                                                 
 #for mesh_inc in 0; do                                                                
-for nodes in 1; do
+for nodes in 2; do
 for N in 7; do
  # ((mesh_id=starting_elements+mesh_inc))
  # meshfile=${mesh_base}${mesh_id}${mesh_extension}
@@ -34,7 +34,7 @@ for N in 7; do
   ((mesh_id=starting_elements+log_nodes))
   meshfile=${mesh_base}${mesh_id}${mesh_extension}
   echo "Running ${meshfile} on ${nodes} node(s) at order ${N}"
-  bsub -nnodes ${nodes} -W 1:00 -P CSC262 -J paranumal -o insWeakV4.o%J \
+  bsub -nnodes ${nodes} -W 1:00 -P CSC262 -J paranumal -o insWeak.o%J \
         ./submit.sh ${meshfile} ${N} ${maxiter} ${nodes}
   sleep 3;
 done;
