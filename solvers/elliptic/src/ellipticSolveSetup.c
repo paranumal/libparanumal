@@ -58,7 +58,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   dlong Nblock  = mymax(1,(Ntotal+blockSize-1)/blockSize);
   dlong Nblock2 = mymax(1,(Nblock+blockSize-1)/blockSize);
 
-  dlong NthreadsUpdatePCG = 1024;
+  dlong NthreadsUpdatePCG = 256;
   dlong NblocksUpdatePCG = mymin((Ntotal+NthreadsUpdatePCG-1)/NthreadsUpdatePCG, 160);
 
   elliptic->NthreadsUpdatePCG = NthreadsUpdatePCG;

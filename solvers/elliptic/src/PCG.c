@@ -25,6 +25,8 @@ SOFTWARE.
 */
 
 #include "elliptic.h"
+#define CASCADE 1 
+
 
 #define CASCADE 0
 
