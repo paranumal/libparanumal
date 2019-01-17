@@ -426,7 +426,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       kernelInfo["defines/" "p_NthreadsUpdatePCG"] = (int) NthreadsUpdatePCG; // WARNING SHOULD BE MULTIPLE OF 32
       kernelInfo["defines/" "p_NwarpsUpdatePCG"] = (int) (NthreadsUpdatePCG/32); // WARNING: CUDA SPECIFIC
       
-      cout << kernelInfo ;
+      //      cout << kernelInfo ;
       
       //add standard boundary functions
       char *boundaryHeaderFileName;
@@ -463,7 +463,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       
       // only for Hex3D - cubature Ax
       if(elliptic->elementType==HEXAHEDRA){
-	printf("BUILDING partialCubatureAxKernel\n");
+	//	printf("BUILDING partialCubatureAxKernel\n");
 	sprintf(fileName,  DELLIPTIC "/okl/ellipticCubatureAx%s.okl", suffix);
 
 	sprintf(kernelName, "ellipticCubaturePartialAx%s", suffix);

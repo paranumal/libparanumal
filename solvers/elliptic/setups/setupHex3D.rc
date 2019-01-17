@@ -19,11 +19,11 @@ data/ellipticSineTest3D.h
 #../../meshes/cubeHexE00064.msh
 #../../meshes/cubeHexE00216.msh
 #../../meshes/cubeHexE00512.msh
-#../../meshes/cubeHexE01000.msh
+../../meshes/cubeHexE01000.msh
 #../../meshes/cubeHexE01728.msh
 #../../meshes/cubeHexE04096.msh
 #../../meshes/cubeHexE05832.msh
-../../meshes/cubeHexE08000.msh
+#../../meshes/cubeHexE08000.msh
 
 [MESH DIMENSION]
 3
@@ -32,7 +32,7 @@ data/ellipticSineTest3D.h
 12
 
 [POLYNOMIAL DEGREE]
-8
+7
 
 [ELEMENT MAP]
 ISOPARAMETRIC
@@ -44,7 +44,8 @@ NODAL
 # CUBATURE - WORKING FOR INHOMOGENEOUS DIRICHLET BCS - NOT WORKING FOR NEUMANN YET
 
 [THREAD MODEL]
-CUDA
+Serial
+#CUDA
 
 [PLATFORM NUMBER]
 0
@@ -57,7 +58,8 @@ CUDA
 
 # can add FLEXIBLE to PCG
 [KRYLOV SOLVER]
-PCG+FLEXIBLE
+PCG
+#+FLEXIBLE
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
@@ -135,7 +137,7 @@ MAX
 cavity
 
 [VERBOSE]
-TRUE
+FALSE
 
 # set to 0 (zero) to disable reductions
 [DEBUG ENABLE REDUCTIONS]

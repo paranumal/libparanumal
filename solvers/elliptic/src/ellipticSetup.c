@@ -200,11 +200,11 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->BBMM,elliptic->r,elliptic->r);
   if (options.compareArgs("BASIS","NODAL")){
     if(options.compareArgs("ELLIPTIC INTEGRATION", "NODAL")){
-      printf("MASS APPLY NODAL\n");
+      //      printf("MASS APPLY NODAL\n");
       meshApplyElementMatrix(mesh,mesh->MM,elliptic->r,elliptic->r);
     }
     else{
-      printf("MASS APPLY CUBATURE\n");
+      //      printf("MASS APPLY CUBATURE\n");
       dfloat *cubx = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
       dfloat *cuby = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
       dfloat *cubz = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
