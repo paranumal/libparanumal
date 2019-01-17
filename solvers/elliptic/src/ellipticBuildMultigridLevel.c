@@ -585,6 +585,14 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
     //lumped mass matrix
     mesh->MM = (dfloat *) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+    dfloat *DT = (dfloat*) calloc(mesh->Nq*mesh->Nq, sizeof(dfloat));
+
+    for (int j=0;j<mesh->Nq;j++) {
+      for (int i=0;i<mesh->Nq;i++) {
+	DT[j*mesh->Nq+i] = mesh->D[i*mesh->Nq+j];
+      }
+    }
+    
     for (int k=0;k<mesh->Nq;k++) {
       for (int j=0;j<mesh->Nq;j++) {
         for (int i=0;i<mesh->Nq;i++) {
@@ -596,7 +604,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
     mesh->o_D = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
     mesh->o_Dmatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-    mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D); //dummy
+    mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), DT); // transpose(D)
 
     mesh->o_cubD = mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat), mesh->cubD);
     

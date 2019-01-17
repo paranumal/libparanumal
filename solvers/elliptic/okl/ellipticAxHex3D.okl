@@ -1944,6 +1944,14 @@ SOFTWARE.
           const dlong base = i + j*p_Nq + element*p_Np;
           const dfloat qbase = q[base + k*p_Nq*p_Nq];
           s_q[k][j][i] = qbase;
+#if 0
+	  if(element==0 && k==0){
+	    printf("[%g] ", S[j*p_Nq+i]-D[i*p_Nq+j]);
+	    if(i==p_Nq-1)
+	      printf("\n");
+
+	  }
+#endif
         }
       }
     }
@@ -1952,7 +1960,7 @@ SOFTWARE.
     for(int k = 0;k < p_Nq; k++){
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
-#if 1
+
           const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
           const dfloat r_G00 = ggeo[gbase+p_G00ID*p_Np];
@@ -1961,26 +1969,21 @@ SOFTWARE.
           const dfloat r_G02 = ggeo[gbase+p_G02ID*p_Np];
           const dfloat r_G12 = ggeo[gbase+p_G12ID*p_Np];
           const dfloat r_G22 = ggeo[gbase+p_G22ID*p_Np];
-#else
-	  // why is this slow ?
-	  const dfloat *ggeo_e = ggeo + p_Nggeo*(element*p_Np + k*p_Nq*p_Nq + j*p_Nq + i);
-
-	  const dfloat r_G00 = ggeo_e[p_G00ID];
-          const dfloat r_G01 = ggeo_e[p_G01ID];
-          const dfloat r_G11 = ggeo_e[p_G11ID];
-          const dfloat r_G02 = ggeo_e[p_G02ID];
-          const dfloat r_G12 = ggeo_e[p_G12ID];
-          const dfloat r_G22 = ggeo_e[p_G22ID];
-#endif
 
           dfloat qr = 0.f;
           dfloat qs = 0.f;
           dfloat qt = 0.f;
 
           for(int m = 0; m < p_Nq; m++) {
-            qr += S[i+p_Nq*m]*s_q[k][j][m];
-            qs += S[j+p_Nq*m]*s_q[k][m][i];
-            qt += S[k+p_Nq*m]*s_q[m][j][i];
+#if 1
+            qr += S[m*p_Nq+i]*s_q[k][j][m];
+            qs += S[m*p_Nq+j]*s_q[k][m][i];	    
+            qt += S[m*p_Nq+k]*s_q[m][j][i];
+#else
+            qr += D[p_Nq*i+m]*s_q[k][j][m];
+            qs += D[p_Nq*j+m]*s_q[k][m][i];	    
+            qt += D[p_Nq*k+m]*s_q[m][j][i];	    
+#endif
           }
 
           s_Gqr[k][j][i] = (r_G00*qr + r_G01*qs + r_G02*qt);
@@ -1994,11 +1997,12 @@ SOFTWARE.
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
 	  
+	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+	  const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+
+	  dfloat r_Aq = r_GwJ*lambda*s_q[k][j][i];
+
           dfloat r_Aqr = 0, r_Aqs = 0, r_Aqt = 0;
-	  
-	  //	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-	  //	  const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
-	  //	  dfloat r_Aq = r_GwJ*lambda*s_q[k][j][i];
 	  
           for(int m = 0; m < p_Nq; m++){
             r_Aqr += D[m*p_Nq+i]*s_Gqr[k][j][m];
@@ -2007,7 +2011,7 @@ SOFTWARE.
           }
 
           const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-          Aq[id] = r_Aqr + r_Aqs + r_Aqt; // +r_Aq;
+          Aq[id] = r_Aqr + r_Aqs + r_Aqt +r_Aq;
         }
       }
     }
