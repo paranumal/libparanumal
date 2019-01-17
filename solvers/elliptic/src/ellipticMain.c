@@ -130,7 +130,7 @@ int main(int argc, char **argv){
     dfloat tol = 1e-8;
     
     occa::streamTag startTag = mesh->device.tagStream();
-    int Ntests = 100;
+    int Ntests = 10;
     int it = 0;
     for(int test=0;test<Ntests;++test){
       o_r.copyTo(elliptic->o_r);
