@@ -19,7 +19,7 @@ CXX	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -I./include/ $(compilerFlags) $(flags) -I$(HDRDIR)/include/ -I$(OGSDIR) -D DPARALMOND='"${CURDIR}"' -O3 -funroll-all-loops -mavx2 -ftree-loop-distribution -floop-nest-optimize -floop-block -floop-interchange -fstrict-aliasing -ftree-vectorize -march=native
+CFLAGS = -I. -I./include/ $(compilerFlags) $(flags) -I$(HDRDIR)/include/ -I$(OGSDIR) -D DPARALMOND='"${CURDIR}"' -O3 -funroll-all-loops -mavx2  -fstrict-aliasing -ftree-vectorize -march=native
 
 # link flags to be used
 LDFLAGS	= $(compilerFlags) $(flags) 

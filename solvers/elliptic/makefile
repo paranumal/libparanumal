@@ -3,7 +3,8 @@ ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
-CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-loop-distribution -floop-nest-optimize -floop-block -floop-interchange -fstrict-aliasing -ftree-vectorize -march=native
+#CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-loop-distribution -floop-nest-optimize -floop-block -floop-interchange -fstrict-aliasing -ftree-vectorize -march=native
+CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-vectorize -march=native
 
 include ${OCCA_DIR}/scripts/Makefile
 
@@ -30,7 +31,7 @@ METISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libmetis
 
 # libraries to be linked in
 LIBS	=  -L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis  -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs \
-			-L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran 
+			-L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran  
 
 INCLUDES = elliptic.h ellipticPrecon.h
 DEPS = $(INCLUDES) \
@@ -50,6 +51,7 @@ $(ALMONDDIR)/parAlmond.hpp \
 # list of objects to be compiled
 AOBJS    = \
 ./src/PCG.o \
+./src/ellipticSerialPartialAxHex3D.o \
 ./src/ellipticPlotVTUHex3D.o \
 ./src/ellipticBuildContinuous.o \
 ./src/ellipticBuildIpdg.o \

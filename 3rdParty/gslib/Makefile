@@ -4,8 +4,8 @@ ADDUS ?= 1
 USREXIT ?= 0
 LIBNAME ?= gs
 BLAS ?= 0
-CFLAGS ?= -ftree-loop-distribution -floop-nest-optimize -floop-block -floop-interchange -fstrict-aliasing -ftree-vectorize -O3
-FFLAGS ?= -O2
+CFLAGS ?= -ftree-vectorize -O3 -mavx2 -funroll-all-loops
+FFLAGS ?= -ftree-vectorize -O3 -mavx2 -funroll-all-loops
 
 SRCROOT=.
 TESTDIR=$(SRCROOT)/tests
