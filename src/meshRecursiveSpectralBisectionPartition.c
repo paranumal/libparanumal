@@ -66,10 +66,10 @@ void meshRecursiveSpectralBisectionPartition(mesh_t *mesh){
  int nparts = size;
  
  /* tpwgts */
- float *tpwgts = (float*) calloc(Nelements, sizeof(float));
+ float *tpwgts = (float*) calloc(nparts, sizeof(float));
  
- for(e=0;e<Nelements;++e)
-   tpwgts[e] = 1./(float)size;
+ for(e=0;e<nparts;++e)
+   tpwgts[e] = 1./(float)nparts;
  
  #define MAXNCON 32
  float ubvec[MAXNCON];
