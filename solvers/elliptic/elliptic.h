@@ -202,5 +202,16 @@ extern "C"
   void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld);
 }
 
+void ellipticSerialPartialAxHexKernel3D(const int Nq,
+					const hlong Nelements,
+					const occa::memory &o_elementList,
+					const occa::memory &o_ggeo,
+					const occa::memory &o_Dmatrices,
+					const occa::memory &o_Smatrices,
+					const occa::memory &o_MM,
+					const dfloat lambda,
+					const occa::memory &o_q,
+					occa::memory &o_Aq);
+
 #endif
 
