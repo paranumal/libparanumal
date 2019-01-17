@@ -139,6 +139,9 @@ int main(int argc, char **argv){
       o_x.copyTo(elliptic->o_x);
       it += ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
     }
+
+    MPI_Barrier(mesh->comm);
+    
     occa::streamTag stopTag = mesh->device.tagStream();
     mesh->device.finish();
     
