@@ -26,86 +26,7 @@ SOFTWARE.
 
 #include "elliptic.h"
 
-void ellipticScaledAdd(elliptic_t *elliptic, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
 
-  mesh_t *mesh = elliptic->mesh;
-
-  dlong Ntotal = mesh->Nelements*mesh->Np;
-
-  // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
-  elliptic->scaledAddKernel(Ntotal, alpha, o_a, beta, o_b);
-}
-
-dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b){
-
-  mesh_t *mesh = elliptic->mesh;
-  dfloat *tmp = elliptic->tmp;
-  dlong Nblock = elliptic->Nblock;
-  dlong Nblock2 = elliptic->Nblock2;
-  dlong Ntotal = mesh->Nelements*mesh->Np;
-
-  if(elliptic->options.compareArgs("THREAD MODEL", "Serial")){
-    
-    const dfloat *cpu_w = (dfloat*) o_w.ptr();
-    const dfloat *cpu_a = (dfloat*) o_a.ptr();
-    const dfloat *cpu_b = (dfloat*) o_b.ptr();
-    const dfloat *cpu_invDegree = (dfloat*) elliptic->o_invDegree.ptr();
-    
-    // w'*(a.b)
-    dfloat wab = 0;
-
-    const hlong M = mesh->Nelements*mesh->Np;
-    for(hlong i=0;i<M;++i){
-      const dfloat ai = cpu_a[i];
-      const dfloat bi = cpu_b[i];
-      wab += ai*bi*cpu_invDegree[i];
-    }
-
-    dfloat globalwab = 0;
-    MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
-    
-    return globalwab;
-  }
-
-
-  
-  occa::memory &o_tmp = elliptic->o_tmp;
-  occa::memory &o_tmp2 = elliptic->o_tmp2;
-
-  if(elliptic->options.compareArgs("DISCRETIZATION","CONTINUOUS"))
-    elliptic->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
-  else
-    elliptic->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
-
-  /* add a second sweep if Nblock>Ncutoff */
-  dlong Ncutoff = 100;
-  dlong Nfinal;
-  if(Nblock>Ncutoff){
-
-    mesh->sumKernel(Nblock, o_tmp, o_tmp2);
-
-    o_tmp2.copyTo(tmp);
-
-    Nfinal = Nblock2;
-	
-  }
-  else{
-    o_tmp.copyTo(tmp);
-    
-    Nfinal = Nblock;
-
-  }    
-
-  dfloat wab = 0;
-  for(dlong n=0;n<Nfinal;++n){
-    wab += tmp[n];
-  }
-
-  dfloat globalwab = 0;
-  MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
-
-  return globalwab;
-}
 
 typedef union intorfloat {
   int ier;
@@ -160,7 +81,7 @@ dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory 
   return wab;
 }
 
-
+#if 0
 
 dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a){
 
@@ -171,18 +92,18 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   dlong Ntotal = mesh->Nelements*mesh->Np;
 
   if(elliptic->options.compareArgs("THREAD MODEL", "Serial")){
-    
-    const dfloat *cpu_w = (dfloat*) o_w.ptr();
-    const dfloat *cpu_a = (dfloat*) o_a.ptr();
-    const dfloat *cpu_invDegree = (dfloat*) elliptic->o_invDegree.ptr();
-    
+
+    const dfloat * __restrict__ cpu_w = (dfloat*)__builtin_assume_aligned(o_w.ptr(), 64);
+    const dfloat * __restrict__ cpu_a = (dfloat*)__builtin_assume_aligned(o_a.ptr(), 64) ;
+
     // w'*(a.a)
     dfloat wa2 = 0;
 
     const hlong M = mesh->Nelements*mesh->Np;
+
     for(hlong i=0;i<M;++i){
       const dfloat ai = cpu_a[i];
-      wa2 += ai*ai*cpu_invDegree[i];
+      wa2 += ai*ai*cpu_w[i];
     }
 
     dfloat globalwa2 = 0;
@@ -229,6 +150,7 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   return globalwab;
 }
 
+#endif
 
 dfloat ellipticInnerProduct(elliptic_t *elliptic, occa::memory &o_a, occa::memory &o_b){
 
