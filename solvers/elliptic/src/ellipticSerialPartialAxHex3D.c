@@ -30,35 +30,35 @@ SOFTWARE.
 // hack
 #define p_Nggeo 7 
 
-template < int p_Nq >
+template < const int p_Nq >
 void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
-					 const occa::memory &o_elementList,
-					 const occa::memory &o_ggeo,
-					 const occa::memory &o_Dmatrices,
-					 const occa::memory &o_Smatrices,
-					 const occa::memory &o_MM,
+					 const dlong  * __restrict__ elementList , // type ?
+					 const dfloat * __restrict__ ggeo ,
+					 const dfloat * __restrict__ D ,
+					 const dfloat * __restrict__ S ,
+					 const dfloat * __restrict__ MM ,
 					 const dfloat lambda,
-					 const occa::memory &o_q,
-					 occa::memory &o_Aq){
-  
-#define p_Np (p_Nq*p_Nq*p_Nq)
-  
-  const dlong  *elementList = (dlong*) o_elementList.ptr();
-  const dfloat *D     = (dfloat*) o_Dmatrices.ptr();
-  const dfloat *S     = (dfloat*) o_Smatrices.ptr();
+					 const dfloat * __restrict__ q ,
+					 dfloat * __restrict__ Aq ){
 
-  const dfloat * __restrict__ q = (dfloat*)__builtin_assume_aligned(o_q.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
-  const dfloat * __restrict__ ggeo = (dfloat*)__builtin_assume_aligned(o_ggeo.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
-  dfloat * __restrict__ Aq = (dfloat*)__builtin_assume_aligned(o_Aq.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
-  
+  D    = (dfloat*)__builtin_assume_aligned(D, USE_OCCA_MEM_BYTE_ALIGN) ;
+  S    = (dfloat*)__builtin_assume_aligned(S, USE_OCCA_MEM_BYTE_ALIGN) ;
+  MM   = (dfloat*)__builtin_assume_aligned(MM, USE_OCCA_MEM_BYTE_ALIGN) ;
+  q    = (dfloat*)__builtin_assume_aligned(q, USE_OCCA_MEM_BYTE_ALIGN) ;
+  Aq   = (dfloat*)__builtin_assume_aligned(Aq, USE_OCCA_MEM_BYTE_ALIGN) ;
+  ggeo = (dfloat*)__builtin_assume_aligned(ggeo, USE_OCCA_MEM_BYTE_ALIGN) ;
+  elementList = (dlong*)__builtin_assume_aligned(elementList, USE_OCCA_MEM_BYTE_ALIGN) ; // type ?
+
+#define p_Np (p_Nq*p_Nq*p_Nq)
   
   dfloat s_q  [p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_Gqr[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_Gqs[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_Gqt[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
 
+  dfloat s_tmp[p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   
-#if 1
+  // ok 
   dfloat s_D[p_Nq][p_Nq]  __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_S[p_Nq][p_Nq]  __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
 
@@ -69,6 +69,8 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
     }
   }
 
+  const int c_Np = p_Np;
+
   for(dlong e=0; e<Nelements; ++e){
     
     const dlong element = elementList[e];
@@ -76,20 +78,19 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
     for(int k = 0; k < p_Nq; k++) {
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){
-          const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + element*p_Np;
+          const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + element*c_Np;
           const dfloat qbase = q[base];
           s_q[k][j][i] = qbase;
         }
       }
     }
 
-    // Layer by layer                                                                                                                                                                          
-    for(int k = 0;k < p_Nq; k++){
+#if 0
+    for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){
 
-          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-
+          const dlong gbase = element*p_Nggeo*c_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           const dfloat r_G00 = ggeo[gbase+G00ID*p_Np];
           const dfloat r_G01 = ggeo[gbase+G01ID*p_Np];
           const dfloat r_G11 = ggeo[gbase+G11ID*p_Np];
@@ -102,63 +103,68 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
           dfloat qt = 0.f;
 
           for(int m = 0; m < p_Nq; m++) {
-            qr += s_D[i][m]*s_q[k][j][m];
-            qs += s_D[j][m]*s_q[k][m][i];	    
-            qt += s_D[k][m]*s_q[m][j][i];
+	    qr += s_S[m][i]*s_q[k][j][m];  
+	    qs += s_S[m][j]*s_q[k][m][i]; 	    
+	    qt += s_S[m][k]*s_q[m][j][i]; 
           }
 
-          s_Gqr[k][j][i] = (r_G00*qr + r_G01*qs + r_G02*qt);
-          s_Gqs[k][j][i] = (r_G01*qr + r_G11*qs + r_G12*qt);
-          s_Gqt[k][j][i] = (r_G02*qr + r_G12*qs + r_G22*qt);
+	  dfloat Gqr = r_G00*qr;
+	  Gqr += r_G01*qs;
+	  Gqr += r_G02*qt;
+	  
+	  dfloat Gqs = r_G01*qr;
+	  Gqs += r_G11*qs;
+	  Gqs += r_G12*qt;
+
+	  dfloat Gqt = r_G02*qr;
+	  Gqt += r_G12*qs;
+	  Gqt += r_G22*qt;
+	  
+          s_Gqr[k][j][i] = Gqr;
+          s_Gqs[k][i][j] = Gqs;
+          s_Gqt[j][i][k] = Gqt;
         }
       }
     }
 
     for(int k = 0;k < p_Nq; k++){
       for(int j=0;j<p_Nq;++j){
-        for(int i=0;i<p_Nq;++i){
-#if 0
-	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-	  const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
 
-	  dfloat r_Aq = r_GwJ*lambda*s_q[k][j][i];
-#endif
+	const dfloat * __restrict__ r_Gqr = s_Gqr[k][j];
+	
+	for(int i=0;i<p_Nq;++i){
           dfloat r_Aqr = 0, r_Aqs = 0, r_Aqt = 0;
+
+	  const dfloat * __restrict__ r_Gqs = s_Gqs[k][i];
+	  const dfloat * __restrict__ r_Gqt = s_Gqt[j][i];
+
+	  r_Gqr = (dfloat*)__builtin_assume_aligned(r_Gqr, USE_OCCA_MEM_BYTE_ALIGN) ;
+	  r_Gqs = (dfloat*)__builtin_assume_aligned(r_Gqs, USE_OCCA_MEM_BYTE_ALIGN) ;
+	  r_Gqt = (dfloat*)__builtin_assume_aligned(r_Gqt, USE_OCCA_MEM_BYTE_ALIGN) ;
 	  
-          for(int m = 0; m < p_Nq; m++){
-            r_Aqr += s_D[m][i]*s_Gqr[k][j][m];
-            r_Aqs += s_D[m][j]*s_Gqs[k][m][i];
-            r_Aqt += s_D[m][k]*s_Gqt[m][j][i];
-          }
+          for(int m = 0; m < p_Nq; m++)
+            r_Aqr += s_D[m][i]*r_Gqr[m];
+	  for(int m = 0; m < p_Nq; m++)
+            r_Aqs += s_D[m][j]*r_Gqs[m];
+	  for(int m = 0; m < p_Nq; m++)
+            r_Aqt += s_D[m][k]*r_Gqt[m];
 
           const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
           Aq[id] = r_Aqr + r_Aqs + r_Aqt; // +r_Aq;
         }
       }
     }
-  }
-#else
-  for(dlong e=0; e<Nelements; ++e){
+#endif
     
-    const dlong element = elementList[e];
-
-    for(int k = 0; k < p_Nq; k++) {
-      for(int j=0;j<p_Nq;++j){
-        for(int i=0;i<p_Nq;++i){
-          const dlong base = i + j*p_Nq + element*p_Np;
-          const dfloat qbase = q[base + k*p_Nq*p_Nq];
-          s_q[k][j][i] = qbase;
-        }
-      }
-    }
-
-    // Layer by layer                                                                                                                                                                          
-    for(int k = 0;k < p_Nq; k++){
+    
+#if 1
+    // ok
+    
+    for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){
 
-          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-
+          const dlong gbase = element*p_Nggeo*c_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           const dfloat r_G00 = ggeo[gbase+G00ID*p_Np];
           const dfloat r_G01 = ggeo[gbase+G01ID*p_Np];
           const dfloat r_G11 = ggeo[gbase+G11ID*p_Np];
@@ -171,14 +177,26 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
           dfloat qt = 0.f;
 
           for(int m = 0; m < p_Nq; m++) {
-            qr += S[m*p_Nq+i]*s_q[k][j][m];
-            qs += S[m*p_Nq+j]*s_q[k][m][i];	    
-            qt += S[m*p_Nq+k]*s_q[m][j][i];
+	    qr += s_S[m][i]*s_q[k][j][m];  
+	    qs += s_S[m][j]*s_q[k][m][i]; 	    
+	    qt += s_S[m][k]*s_q[m][j][i]; 
           }
 
-          s_Gqr[k][j][i] = (r_G00*qr + r_G01*qs + r_G02*qt);
-          s_Gqs[k][j][i] = (r_G01*qr + r_G11*qs + r_G12*qt);
-          s_Gqt[k][j][i] = (r_G02*qr + r_G12*qs + r_G22*qt);
+	  dfloat Gqr = r_G00*qr;
+	  Gqr += r_G01*qs;
+	  Gqr += r_G02*qt;
+	  
+	  dfloat Gqs = r_G01*qr;
+	  Gqs += r_G11*qs;
+	  Gqs += r_G12*qt;
+
+	  dfloat Gqt = r_G02*qr;
+	  Gqt += r_G12*qs;
+	  Gqt += r_G22*qt;
+	  
+          s_Gqr[k][j][i] = Gqr;
+          s_Gqs[k][j][i] = Gqs;
+          s_Gqt[k][j][i] = Gqt;
         }
       }
     }
@@ -193,22 +211,24 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
 	  dfloat r_Aq = r_GwJ*lambda*s_q[k][j][i];
 #endif
           dfloat r_Aqr = 0, r_Aqs = 0, r_Aqt = 0;
-	  
-          for(int m = 0; m < p_Nq; m++){
-            r_Aqr += D[m*p_Nq+i]*s_Gqr[k][j][m];
-            r_Aqs += D[m*p_Nq+j]*s_Gqs[k][m][i];
-            r_Aqt += D[m*p_Nq+k]*s_Gqt[m][j][i];
-          }
+
+
+          for(int m = 0; m < p_Nq; m++)
+            r_Aqr += s_D[m][i]*s_Gqr[k][j][m];
+	  for(int m = 0; m < p_Nq; m++)
+            r_Aqs += s_D[m][j]*s_Gqs[k][m][i];
+	  for(int m = 0; m < p_Nq; m++)
+            r_Aqt += s_D[m][k]*s_Gqt[m][j][i];
 
           const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
           Aq[id] = r_Aqr + r_Aqs + r_Aqt; // +r_Aq;
         }
       }
     }
-  }
 
 #endif
-
+    
+  }
 }
 
 #undef p_Np
@@ -226,18 +246,28 @@ void ellipticSerialPartialAxHexKernel3D(const int Nq,
 					occa::memory &o_Aq){
 
 
+  const dlong  *elementList = (dlong*) o_elementList.ptr();
+  const dfloat *D    = (dfloat*) o_Dmatrices.ptr();
+  const dfloat *S    = (dfloat*) o_Smatrices.ptr();
+  const dfloat *MM   = (dfloat*) o_MM.ptr();
+
+  const dfloat *q    = (dfloat*)o_q.ptr();
+  const dfloat *ggeo = (dfloat*)o_ggeo.ptr();
+  dfloat *Aq  = (dfloat*)o_Aq.ptr();
+  
   switch(Nq){
-  case  2: ellipticSerialPartialAxHexKernel3D <  2 > (Nelements, o_elementList, o_ggeo, o_Dmatrices, o_Smatrices, o_MM, lambda, o_q, o_Aq); break;
-  case  3: ellipticSerialPartialAxHexKernel3D <  3 > (Nelements, o_elementList, o_ggeo, o_Dmatrices, o_Smatrices, o_MM, lambda, o_q, o_Aq); break;
-  case  4: ellipticSerialPartialAxHexKernel3D <  4 > (Nelements, o_elementList, o_ggeo, o_Dmatrices, o_Smatrices, o_MM, lambda, o_q, o_Aq); break;
-  case  5: ellipticSerialPartialAxHexKernel3D <  5 > (Nelements, o_elementList, o_ggeo, o_Dmatrices, o_Smatrices, o_MM, lambda, o_q, o_Aq); break;
-  case  6: ellipticSerialPartialAxHexKernel3D <  6 > (Nelements, o_elementList, o_ggeo, o_Dmatrices, o_Smatrices, o_MM, lambda, o_q, o_Aq); break;
-  case  7: ellipticSerialPartialAxHexKernel3D <  7 > (Nelements, o_elementList, o_ggeo, o_Dmatrices, o_Smatrices, o_MM, lambda, o_q, o_Aq); break;
-  case  8: ellipticSerialPartialAxHexKernel3D <  8 > (Nelements, o_elementList, o_ggeo, o_Dmatrices, o_Smatrices, o_MM, lambda, o_q, o_Aq); break;
-  case  9: ellipticSerialPartialAxHexKernel3D <  9 > (Nelements, o_elementList, o_ggeo, o_Dmatrices, o_Smatrices, o_MM, lambda, o_q, o_Aq); break;
-  case 10: ellipticSerialPartialAxHexKernel3D < 10 > (Nelements, o_elementList, o_ggeo, o_Dmatrices, o_Smatrices, o_MM, lambda, o_q, o_Aq); break;
-  case 11: ellipticSerialPartialAxHexKernel3D < 11 > (Nelements, o_elementList, o_ggeo, o_Dmatrices, o_Smatrices, o_MM, lambda, o_q, o_Aq); break;
-  case 12: ellipticSerialPartialAxHexKernel3D < 12 > (Nelements, o_elementList, o_ggeo, o_Dmatrices, o_Smatrices, o_MM, lambda, o_q, o_Aq); break;
+  case  2: ellipticSerialPartialAxHexKernel3D <  2 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
+  case  3: ellipticSerialPartialAxHexKernel3D <  3 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
+  case  4: ellipticSerialPartialAxHexKernel3D <  4 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
+  case  5: ellipticSerialPartialAxHexKernel3D <  5 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
+  case  6: ellipticSerialPartialAxHexKernel3D <  6 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
+  case  7: ellipticSerialPartialAxHexKernel3D <  7 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
+  case  8: ellipticSerialPartialAxHexKernel3D <  8 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
+  case  9: ellipticSerialPartialAxHexKernel3D <  9 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
+  case 10: ellipticSerialPartialAxHexKernel3D < 10 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
+  case 11: ellipticSerialPartialAxHexKernel3D < 11 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
+  case 12: ellipticSerialPartialAxHexKernel3D < 12 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
+
   }
       
 }
