@@ -4,7 +4,7 @@ ERROR:
 endif
 
 #CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-loop-distribution -floop-nest-optimize -floop-block -floop-interchange -fstrict-aliasing -ftree-vectorize -march=native
-CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-vectorize -march=native
+CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-vectorize -march=native  -fopt-info
 
 include ${OCCA_DIR}/scripts/Makefile
 
@@ -65,6 +65,10 @@ AOBJS    = \
 ./src/ellipticSetup.o \
 ./src/ellipticSolve.o\
 ./src/ellipticSolveSetup.o\
+./src/ellipticScaledAdd.o \
+./src/ellipticUpdatePCG.o \
+./src/ellipticWeightedInnerProduct.o \
+./src/ellipticWeightedNorm2.o \
 ./src/ellipticVectors.o \
 ./src/ellipticSEMFEMSetup.o\
 ./src/ellipticMultiGridSetup.o \
