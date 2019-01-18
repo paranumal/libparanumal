@@ -107,5 +107,11 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   
   mesh->device.setup(deviceConfig);
 
+#ifdef USE_OCCA_MEM_BYTE_ALIGN 
+  // change OCCA MEM BYTE ALIGNMENT
+  occa::env::OCCA_MEM_BYTE_ALIGN = USE_OCCA_MEM_BYTE_ALIGN;
+#endif
+  
   occa::initTimer(mesh->device);
+
 }
