@@ -25,11 +25,9 @@ SOFTWARE.
 */
 
 #include "elliptic.h"
-#define CASCADE 1 
-
 
 #define CASCADE 0
-
+#define INSTEST 1
 
 int pcg(elliptic_t* elliptic, dfloat lambda, 
         occa::memory &o_r, occa::memory &o_x, 
@@ -79,7 +77,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   rdotr0 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #endif
 
-#if 0
+#if INSTEST==0
+
   //sanity check
   if (rdotr0<1E-20) {
     if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)){
@@ -89,6 +88,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
     printf("CG: initial res norm %12.12f WE NEED TO GET TO %12.12f \n", sqrt(rdotr0), sqrt(TOL));
+
 #endif
 
   // Precon^{-1} (b-A*x)
@@ -106,8 +106,11 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 #endif
 
 
+#if INSTEST==1
   for(int Niter =0; Niter<MAXIT; Niter++){
-  //  while((Niter <MAXIT)) {
+#else
+  while((Niter <MAXIT)) {
+#endif
 
     // [
     // A*p
@@ -135,7 +138,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     //
     rdotr1 = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
  
-#if 0   
+#if INSTEST == 0   
     if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
       printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
 
@@ -188,9 +191,14 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;
-    
-    // ++Niter;
+
+#if INSTEST==0    
+    ++Niter;
   }
+#else
+     // NADA 
+  }  
+#endif
 
   return Niter;
 }

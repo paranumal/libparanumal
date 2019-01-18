@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#if 1
 #ifndef OCCA_TIMER_HEADER
 #define OCCA_TIMER_HEADER
 
@@ -132,9 +133,11 @@ namespace occa {
   void printTimer();
 }
 
-void occaTimerTic(occa::device device,std::string name);
-void occaTimerToc(occa::device device,std::string name);
+// void occaTimerTic(occa::device device,std::string name);
+// void occaTimerToc(occa::device device,std::string name);
 
+
+#endif
 
 #endif
 

@@ -435,8 +435,10 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
         boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary2D.h");
       else if (elliptic->dim==3)
         boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
+#else
+        boundaryHeaderFileName = strdup("/ccs/home/karakus/libparanumal/solvers/elliptic/data/ellipticBoundary3D.h");
 #endif  
-      boundaryHeaderFileName = strdup("/ccs/home/karakus/libparanumal/solvers/elliptic/data/ellipticBoundary3D.h");
+
 
       kernelInfo["includes"] += boundaryHeaderFileName;
 
