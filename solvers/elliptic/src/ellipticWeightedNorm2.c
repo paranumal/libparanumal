@@ -32,8 +32,8 @@ dfloat ellipticSerialWeightedNorm2Kernel(const hlong Nelements,
 					 const dfloat * __restrict__ cpu_a){
   
   
-  cpu_a = (dfloat*)__builtin_assume_aligned(cpu_a, 64) ;
-  cpu_w = (dfloat*)__builtin_assume_aligned(cpu_w, 64) ;
+  cpu_a = (dfloat*)__builtin_assume_aligned(cpu_a, USE_OCCA_MEM_BYTE_ALIGN) ;
+  cpu_w = (dfloat*)__builtin_assume_aligned(cpu_w, USE_OCCA_MEM_BYTE_ALIGN) ;
 
 #define p_Np (p_Nq*p_Nq*p_Nq)
 
@@ -55,8 +55,8 @@ dfloat ellipticSerialWeightedNorm2Kernel(const hlong Nelements,
 
 dfloat ellipticSerialWeightedNorm2(const int Nq, const hlong Nelements, occa::memory &o_w, occa::memory &o_a){
 
-  const dfloat * __restrict__ cpu_a = (dfloat*)__builtin_assume_aligned(o_a.ptr(), 64) ;
-  const dfloat * __restrict__ cpu_w = (dfloat*)__builtin_assume_aligned(o_w.ptr(), 64) ;
+  const dfloat * __restrict__ cpu_a = (dfloat*)__builtin_assume_aligned(o_a.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
+  const dfloat * __restrict__ cpu_w = (dfloat*)__builtin_assume_aligned(o_w.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
 
   switch(Nq){
   case  2: return ellipticSerialWeightedNorm2Kernel <  2 > (Nelements, cpu_w, cpu_a);

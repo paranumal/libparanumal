@@ -29,8 +29,8 @@ SOFTWARE.
 template < int p_Nq >
 void ellipticSerialScaledAddKernel(const hlong Nelements, const dfloat alpha, const dfloat * __restrict__ cpu_a, const dfloat beta, dfloat * __restrict__ cpu_b){
 
-  cpu_a = (dfloat*)__builtin_assume_aligned(cpu_a, 64) ;
-  cpu_b = (dfloat*)__builtin_assume_aligned(cpu_b, 64) ;
+  cpu_a = (dfloat*)__builtin_assume_aligned(cpu_a, USE_OCCA_MEM_BYTE_ALIGN) ;
+  cpu_b = (dfloat*)__builtin_assume_aligned(cpu_b, USE_OCCA_MEM_BYTE_ALIGN) ;
   
 #define p_Np (p_Nq*p_Nq*p_Nq)
 
@@ -47,8 +47,8 @@ void ellipticSerialScaledAddKernel(const hlong Nelements, const dfloat alpha, co
 
 void ellipticSerialScaledAdd(const int Nq, const hlong Nelements, const dfloat alpha, occa::memory &o_a, const dfloat beta, occa::memory &o_b){
 
-  const dfloat * __restrict__ cpu_a = (dfloat*)__builtin_assume_aligned(o_a.ptr(), 64) ;
-  dfloat * __restrict__ cpu_b = (dfloat*)__builtin_assume_aligned(o_b.ptr(), 64) ;
+  const dfloat * __restrict__ cpu_a = (dfloat*)__builtin_assume_aligned(o_a.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
+  dfloat * __restrict__ cpu_b = (dfloat*)__builtin_assume_aligned(o_b.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
   
   switch(Nq){
   case  2: ellipticSerialScaledAddKernel <  2 > (Nelements, alpha, cpu_a, beta, cpu_b); break;

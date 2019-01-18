@@ -37,16 +37,16 @@ dfloat ellipticSerialUpdatePCGKernel(const hlong Nelements,
 
 #define p_Np (p_Nq*p_Nq*p_Nq)
 
-  cpu_p  = (dfloat*)__builtin_assume_aligned(cpu_p,  64) ;
-  cpu_Ap = (dfloat*)__builtin_assume_aligned(cpu_Ap, 64) ;
-  cpu_x  = (dfloat*)__builtin_assume_aligned(cpu_x,  64) ;
-  cpu_r  = (dfloat*)__builtin_assume_aligned(cpu_r,  64) ;
+  cpu_p  = (dfloat*)__builtin_assume_aligned(cpu_p,  USE_OCCA_MEM_BYTE_ALIGN) ;
+  cpu_Ap = (dfloat*)__builtin_assume_aligned(cpu_Ap, USE_OCCA_MEM_BYTE_ALIGN) ;
+  cpu_x  = (dfloat*)__builtin_assume_aligned(cpu_x,  USE_OCCA_MEM_BYTE_ALIGN) ;
+  cpu_r  = (dfloat*)__builtin_assume_aligned(cpu_r,  USE_OCCA_MEM_BYTE_ALIGN) ;
 
-  cpu_invDegree = (dfloat*)__builtin_assume_aligned(cpu_invDegree,  64) ;
+  cpu_invDegree = (dfloat*)__builtin_assume_aligned(cpu_invDegree,  USE_OCCA_MEM_BYTE_ALIGN) ;
   
   dfloat rdotr = 0;
   
-  cpu_p = (dfloat*)__builtin_assume_aligned(cpu_p, 64) ;
+  cpu_p = (dfloat*)__builtin_assume_aligned(cpu_p, USE_OCCA_MEM_BYTE_ALIGN) ;
 
   for(hlong e=0;e<Nelements;++e){
     for(int i=0;i<p_Np;++i){
@@ -68,12 +68,12 @@ dfloat ellipticSerialUpdatePCG(const int Nq, const hlong Nelements,
 			       occa::memory &o_invDegree, occa::memory &o_p, occa::memory &o_Ap, const dfloat alpha,
 			       occa::memory &o_x, occa::memory &o_r){
 
-  const dfloat * __restrict__ cpu_p  = (dfloat*)__builtin_assume_aligned(o_p.ptr(), 64) ;
-  const dfloat * __restrict__ cpu_Ap = (dfloat*)__builtin_assume_aligned(o_Ap.ptr(), 64) ;
-  const dfloat * __restrict__ cpu_invDegree = (dfloat*)__builtin_assume_aligned(o_invDegree.ptr(), 64) ;
+  const dfloat * __restrict__ cpu_p  = (dfloat*)__builtin_assume_aligned(o_p.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
+  const dfloat * __restrict__ cpu_Ap = (dfloat*)__builtin_assume_aligned(o_Ap.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
+  const dfloat * __restrict__ cpu_invDegree = (dfloat*)__builtin_assume_aligned(o_invDegree.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
 
-  dfloat * __restrict__ cpu_x  = (dfloat*)__builtin_assume_aligned(o_x.ptr(), 64) ;
-  dfloat * __restrict__ cpu_r  = (dfloat*)__builtin_assume_aligned(o_r.ptr(), 64) ;
+  dfloat * __restrict__ cpu_x  = (dfloat*)__builtin_assume_aligned(o_x.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
+  dfloat * __restrict__ cpu_r  = (dfloat*)__builtin_assume_aligned(o_r.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
 
   dfloat rdotr = 0;
   
