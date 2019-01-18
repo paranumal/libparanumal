@@ -4,7 +4,7 @@ ERROR:
 endif
 
 #CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-loop-distribution -floop-nest-optimize -floop-block -floop-interchange -fstrict-aliasing -ftree-vectorize -march=native
-CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-vectorize -march=native  -fopt-info
+CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-vectorize -march=native  -fopt-info -DUSE_OCCA_MEM_BYTE_ALIGN=32
 
 include ${OCCA_DIR}/scripts/Makefile
 

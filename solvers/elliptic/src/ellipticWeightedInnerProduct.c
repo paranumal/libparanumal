@@ -33,9 +33,9 @@ dfloat ellipticSerialWeightedInnerProductKernel(const hlong Nelements,
 						const dfloat * __restrict__ cpu_b){
 
 
-  cpu_a = (dfloat*)__builtin_assume_aligned(cpu_a, 64) ;
-  cpu_b = (dfloat*)__builtin_assume_aligned(cpu_b, 64) ;
-  cpu_w = (dfloat*)__builtin_assume_aligned(cpu_w, 64) ;
+  cpu_a = (dfloat*)__builtin_assume_aligned(cpu_a, USE_OCCA_MEM_BYTE_ALIGN);
+  cpu_b = (dfloat*)__builtin_assume_aligned(cpu_b, USE_OCCA_MEM_BYTE_ALIGN);
+  cpu_w = (dfloat*)__builtin_assume_aligned(cpu_w, USE_OCCA_MEM_BYTE_ALIGN);
 
 #define p_Np (p_Nq*p_Nq*p_Nq)
 
@@ -58,9 +58,9 @@ dfloat ellipticSerialWeightedInnerProductKernel(const hlong Nelements,
 
 dfloat ellipticSerialWeightedInnerProduct(const int Nq, const hlong Nelements, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b){
 
-  const dfloat * __restrict__ cpu_a = (dfloat*)__builtin_assume_aligned(o_a.ptr(), 64) ;
-  const dfloat * __restrict__ cpu_b = (dfloat*)__builtin_assume_aligned(o_b.ptr(), 64) ;
-  const dfloat * __restrict__ cpu_w = (dfloat*)__builtin_assume_aligned(o_w.ptr(), 64) ;
+  const dfloat * __restrict__ cpu_a = (dfloat*)__builtin_assume_aligned(o_a.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
+  const dfloat * __restrict__ cpu_b = (dfloat*)__builtin_assume_aligned(o_b.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
+  const dfloat * __restrict__ cpu_w = (dfloat*)__builtin_assume_aligned(o_w.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
 
   switch(Nq){
   case  2: return ellipticSerialWeightedInnerProductKernel <  2 > (Nelements, cpu_w, cpu_a, cpu_b); break;

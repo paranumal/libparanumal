@@ -56,6 +56,10 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
+
+  // change OCCA MEM BYTE ALIGNMENT
+  occa::env::OCCA_MEM_BYTE_ALIGN = USE_OCCA_MEM_BYTE_ALIGN;
+  
   if (mesh->rank==0)
     reportMemoryUsage(mesh->device, "after occa setup");
 

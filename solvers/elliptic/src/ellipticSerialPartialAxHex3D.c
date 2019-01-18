@@ -47,20 +47,20 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
   const dfloat *D     = (dfloat*) o_Dmatrices.ptr();
   const dfloat *S     = (dfloat*) o_Smatrices.ptr();
 
-  const dfloat * __restrict__ q = (dfloat*)__builtin_assume_aligned(o_q.ptr(), 64) ;
-  const dfloat * __restrict__ ggeo = (dfloat*)__builtin_assume_aligned(o_ggeo.ptr(), 64) ;
-  dfloat * __restrict__ Aq = (dfloat*)__builtin_assume_aligned(o_Aq.ptr(), 64) ;
+  const dfloat * __restrict__ q = (dfloat*)__builtin_assume_aligned(o_q.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
+  const dfloat * __restrict__ ggeo = (dfloat*)__builtin_assume_aligned(o_ggeo.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
+  dfloat * __restrict__ Aq = (dfloat*)__builtin_assume_aligned(o_Aq.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
   
   
-  dfloat s_q  [p_Nq][p_Nq][p_Nq] __attribute__((aligned(64)));
-  dfloat s_Gqr[p_Nq][p_Nq][p_Nq] __attribute__((aligned(64)));
-  dfloat s_Gqs[p_Nq][p_Nq][p_Nq] __attribute__((aligned(64)));
-  dfloat s_Gqt[p_Nq][p_Nq][p_Nq] __attribute__((aligned(64)));
+  dfloat s_q  [p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
+  dfloat s_Gqr[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
+  dfloat s_Gqs[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
+  dfloat s_Gqt[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
 
   
 #if 1
-  dfloat s_D[p_Nq][p_Nq]  __attribute__((aligned(64)));
-  dfloat s_S[p_Nq][p_Nq]  __attribute__((aligned(64)));
+  dfloat s_D[p_Nq][p_Nq]  __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
+  dfloat s_S[p_Nq][p_Nq]  __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
 
   for(int j=0;j<p_Nq;++j){
     for(int i=0;i<p_Nq;++i){
