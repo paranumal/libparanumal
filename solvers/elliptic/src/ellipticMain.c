@@ -129,11 +129,14 @@ int main(int argc, char **argv){
     // convergence tolerance
     dfloat tol = 1e-8;
 
+    // warm up
+    int it = ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
+
     MPI_Barrier(mesh->comm);
     
     occa::streamTag startTag = mesh->device.tagStream();
     int Ntests = 100;
-    int it = 0;
+    it = 0;
     for(int test=0;test<Ntests;++test){
       o_r.copyTo(elliptic->o_r);
       o_x.copyTo(elliptic->o_x);

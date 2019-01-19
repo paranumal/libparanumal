@@ -26,6 +26,62 @@ SOFTWARE.
 
 #include "elliptic.h"
 
+#if 0
+void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision){
+
+  mesh_t *mesh = elliptic->mesh;
+  setupAide options = elliptic->options;
+
+  dfloat *sendBuffer = elliptic->sendBuffer;
+  dfloat *recvBuffer = elliptic->recvBuffer;
+  dfloat *gradSendBuffer = elliptic->gradSendBuffer;
+  dfloat *gradRecvBuffer = elliptic->gradRecvBuffer;
+
+  dfloat alpha = 0., alphaG = 0.;
+  dlong Nblock = elliptic->Nblock;
+  dfloat *tmp = elliptic->tmp;
+  occa::memory &o_tmp = elliptic->o_tmp;
+
+  int DEBUG_ENABLE_OGS = 1;
+  options.getArgs("DEBUG ENABLE OGS", DEBUG_ENABLE_OGS);
+
+
+  if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
+    ogs_t *ogs = elliptic->ogs;
+
+    ellipticSerialAxHexKernel3D(mesh->Nq,  mesh->Nelements, mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+
+    if(DEBUG_ENABLE_OGS==1)
+      ogsGatherScatter(o_Aq, ogsDfloat, ogsAdd, ogs);
+
+    if(elliptic->allNeumann) {
+      // mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
+      elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
+      o_tmp.copyTo(tmp);
+      
+      for(dlong n=0;n<Nblock;++n)
+        alpha += tmp[n];
+
+      MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+      alphaG *= elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
+
+      mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
+    }
+
+    //post-mask
+    if (elliptic->Nmasked) 
+      mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Aq);
+
+  } else if(options.compareArgs("DISCRETIZATION", "IPDG")) {
+    printf("WARNING: DEBUGGING C0\n");
+    MPI_Finalize();
+    exit(-1);
+  } 
+
+}
+
+
+#else
 void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision){
 
   mesh_t *mesh = elliptic->mesh;
@@ -291,3 +347,4 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   } 
 
 }
+#endif
