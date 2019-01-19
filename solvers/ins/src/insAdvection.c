@@ -30,7 +30,10 @@ SOFTWARE.
 void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
 
   mesh_t *mesh = ins->mesh;
-  
+  timer *profiler = ins->profiler; 
+
+
+  profiler->tic("Advection Halo Exchange : 1");  
   //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,
@@ -50,8 +53,12 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
                          ins->vRecvBuffer);
   }
 
+  profiler->toc("Advection Halo Exchange : 1");  
+
+
+
+  profiler->tic("Advection Volume");  
   // Compute Volume Contribution
-  occaTimerTic(mesh->device,"AdvectionVolume");
   if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
     ins->advectionCubatureVolumeKernel(mesh->Nelements,
                                        mesh->o_vgeo,
@@ -71,8 +78,11 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
                                o_U,
                                o_NU);
   }
-  occaTimerToc(mesh->device,"AdvectionVolume");
 
+  profiler->toc("Advection Volume");  
+
+
+profiler->tic("Advection Halo Exchange : 2"); 
   // COMPLETE HALO EXCHANGE
   if(mesh->totalHaloPairs>0){
     meshHaloExchangeFinish(mesh);
@@ -85,8 +95,11 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
                                   o_U,
                                   ins->o_vHaloBuffer);
   }
+profiler->toc("Advection Halo Exchange : 2"); 
 
-  occaTimerTic(mesh->device,"AdvectionSurface");
+
+
+  profiler->tic("Advection Surface");
   if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
     ins->advectionCubatureSurfaceKernel(mesh->Nelements,
                                         mesh->o_vgeo,
@@ -121,5 +134,5 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
                                 o_U,
                                 o_NU);
   }
-  occaTimerToc(mesh->device,"AdvectionSurface");
+  profiler->toc("Advection Surface");
 }

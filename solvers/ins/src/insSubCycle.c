@@ -31,9 +31,11 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
  
   //printf("SUBSTEP METHOD : SEMI-LAGRAGIAN OIFS METHOD\n");
   mesh_t *mesh = ins->mesh;
+  timer *profiler = ins->profiler; 
 
   const dlong NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);  
-
+  
+  profiler->tic("Advection Halo:1");  
   //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,
@@ -63,7 +65,8 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                                   ins->o_vHaloBuffer);
   }
 
-  
+  profiler->toc("Advection Halo:1");  
+
   const dfloat tn0 = time - 0*ins->dt;
   const dfloat tn1 = time - 1*ins->dt;
   const dfloat tn2 = time - 2*ins->dt;
@@ -81,12 +84,15 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 
     // Initialize SubProblem Velocity i.e. Ud = U^(t-torder*dt)
     dlong toffset = torder*ins->NVfields*ins->Ntotal;
-
+    
+    profiler->tic("Advection ScaleAdd");  
     if (torder==ins->ExplicitOrder-1) { //first substep
       ins->scaledAddKernel(ins->NVfields*ins->Ntotal, b, toffset, o_U, zero, izero, o_Ud);
     } else { //add the next field
       ins->scaledAddKernel(ins->NVfields*ins->Ntotal, b, toffset, o_U,  one, izero, o_Ud);
     }     
+    profiler->toc("Advection ScaleAdd"); 
+
 
     // SubProblem  starts from here from t^(n-torder)
     const dfloat tsub = time - torder*ins->dt;
@@ -96,7 +102,8 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
       for(int rk=0;rk<ins->SNrk;++rk){// LSERK4 stages
         // Extrapolate velocity to subProblem stage time
         dfloat t = tstage +  ins->sdt*ins->Srkc[rk]; 
-
+        
+        profiler->tic("Advection Extrapolate"); 
         switch(ins->ExplicitOrder){
           case 1:
             ins->extC[0] = 1.f; ins->extC[1] = 0.f; ins->extC[2] = 0.f;
@@ -113,7 +120,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
             break;
         }
         ins->o_extC.copyFrom(ins->extC);
-
+       
         //compute advective velocity fields at time t
         ins->subCycleExtKernel(NtotalElements,
                                Nstages,
@@ -122,6 +129,10 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                                o_U,
                                ins->o_Ue);
 
+        profiler->toc("Advection Extrapolate"); 
+      
+
+        profiler->tic("Advection Halo:1"); 
         if(mesh->totalHaloPairs>0){
           // make sure compute device is ready to perform halo extract
           mesh->device.finish();
@@ -140,9 +151,10 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
           ins->o_vHaloBuffer.copyTo(ins->vSendBuffer,"async: true");            
           mesh->device.setStream(mesh->defaultStream);
         }
+         profiler->toc("Advection Halo:1"); 
 
         // Compute Volume Contribution
-        occaTimerTic(mesh->device,"AdvectionVolume");        
+     profiler->tic("Advection Volume");        
         if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
           ins->subCycleCubatureVolumeKernel(mesh->Nelements,
                      mesh->o_vgeo,
@@ -166,8 +178,10 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                                     ins->o_rhsUd);
 
         }
-        occaTimerToc(mesh->device,"AdvectionVolume");
+     profiler->toc("Advection Volume");
 
+
+        profiler->tic("Advection Halo:2"); 
         if(mesh->totalHaloPairs>0){
           // make sure compute device is ready to perform halo extract
           mesh->device.setStream(mesh->dataStream);
@@ -194,9 +208,10 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
           mesh->device.setStream(mesh->defaultStream);
           mesh->device.finish();
         }
+        profiler->toc("Advection Halo:2"); 
 
         //Surface Kernel
-        occaTimerTic(mesh->device,"AdvectionSurface");
+         profiler->tic("Advection Surface");
         if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
           ins->subCycleCubatureSurfaceKernel(mesh->Nelements,
                                               mesh->o_vgeo,
@@ -235,10 +250,10 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                                          o_Ud,
                                     ins->o_rhsUd);
         }
-        occaTimerToc(mesh->device,"AdvectionSurface");
+         profiler->toc("Advection Surface");
           
         // Update Kernel
-        occaTimerTic(mesh->device,"AdvectionUpdate");
+        profiler->tic("Advection Update");
         ins->subCycleRKUpdateKernel(mesh->Nelements,
                               ins->sdt,
                               ins->Srka[rk],
@@ -247,7 +262,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                               ins->o_rhsUd,
                               ins->o_resU, 
                                    o_Ud);
-        occaTimerToc(mesh->device,"AdvectionUpdate");
+        profiler->toc("Advection Update");
       }
     }
   }
