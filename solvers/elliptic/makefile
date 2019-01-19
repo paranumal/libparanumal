@@ -16,7 +16,8 @@ ALMONDDIR = ../../libs/parAlmond
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
 cc	= mpicc
-FC	= mpif77  -std=legacy -fdefault-real-8 -fdefault-double-8 
+FC	= mpif77  
+#-std=legacy -fdefault-real-8 -fdefault-double-8 
 CC	= mpic++
 LD	= mpic++
 
