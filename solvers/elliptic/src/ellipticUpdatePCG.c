@@ -101,6 +101,9 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
 
+  int DEBUG_ENABLE_REDUCTIONS = 1;
+  options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
+
   if(options.compareArgs("THREAD MODEL", "Serial") &&
      options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
     
@@ -109,13 +112,13 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
 					    o_p, o_Ap, alpha, o_x, o_r);
 
     dfloat globalrdotr1 = 0;
-    MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+    if(DEBUG_ENABLE_REDUCTIONS==1)      
+      MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+    else
+      globalrdotr1 = 1;
     
     return globalrdotr1;
   }
-  
-  int DEBUG_ENABLE_REDUCTIONS = 1;
-  options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
   
   dfloat rdotr1 = 0;
   
