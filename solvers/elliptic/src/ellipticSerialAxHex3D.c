@@ -232,13 +232,14 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
     const dlong element = e;
 
 #if 0
+    // MIXED STEFAN + TW VERSION
     ellipticSerialElementAxHexKernel3D<p_Nq>(ggeo+element*p_Np*p_Nggeo,
 					     D, S, MM, lambda, q + element*p_Np,
 					     s_qr, s_qs, s_qt, Aq+element*p_Np, s_wk);
 #endif
     
-    //USE_STEFAN_MXM==1
 #if 0
+    // STEFAN version
     ax_e_(Aq+element*p_Np, 
 	  q+element*p_Np,
 	  ggeo + element*p_Nggeo*p_Np, // note layout is wrong
@@ -251,6 +252,7 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
 #endif
     
 #if 1
+    // TW version
     for(int k = 0; k < p_Nq; k++) {
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){
@@ -269,8 +271,8 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
           const dfloat r_G00 = ggeo[gbase+G00ID*p_Np];
           const dfloat r_G01 = ggeo[gbase+G01ID*p_Np];
           const dfloat r_G11 = ggeo[gbase+G11ID*p_Np];
-          const dfloat r_G02 = ggeo[gbase+G02ID*p_Np];
           const dfloat r_G12 = ggeo[gbase+G12ID*p_Np];
+          const dfloat r_G02 = ggeo[gbase+G02ID*p_Np];
           const dfloat r_G22 = ggeo[gbase+G22ID*p_Np];
 
           dfloat qr = 0.f;
