@@ -505,40 +505,42 @@ double timer::allReduceTime(double ltime, int size, MPI_Comm comm){
 
 
 void timer::printTimer(int rank, int size, MPI_Comm comm){
+  
+  MPI_Barrier(comm);
 
   if(profileApplication){
     std::map<std::stack<std::string>, timerTraits>::iterator iter;
 
     // compute overall time
-    double overallTime = 0.;
+    double loverallTime = 0.;
     for(iter = times.begin(); iter != times.end(); iter++){
       iter->second.selfTime = iter->second.timeTaken;
       if(iter->second.treeDepth == 0){
-        overallTime += iter->second.timeTaken;
+        loverallTime += iter->second.timeTaken;
       }
     }
 
     
     if(rank == 0){
       std::cout<<"********************************************************"
-	       <<"**********************************"<<std::endl;
+         <<"**********************************"<<std::endl;
       std::cout << "Profiling info: " << std::endl;
       std::cout << std::left<<std::setw(30)<<"Name"
-		<< std::right<<std::setw(10)<<"time spent"
-		<< std::right<<std::setw(10)<<"# calls"
-		<< std::right<<std::setw(10)<<"% time"
-		<< std::right<<std::setw(10)<<"% total"
-		<< std::right<<std::setw(10)<<"gflops "
-		<< std::right<<std::setw(10)<<"bwidth"
-		<< std::endl;
+    << std::right<<std::setw(10)<<"time spent"
+    << std::right<<std::setw(10)<<"# calls"
+    << std::right<<std::setw(10)<<"% time"
+    << std::right<<std::setw(10)<<"% total"
+    << std::right<<std::setw(10)<<"gflops "
+    << std::right<<std::setw(10)<<"bwidth"
+    << std::endl;
 
       std::cout<<"--------------------------------------------------------"
-	       <<"----------------------------------"<<std::endl;
+         <<"----------------------------------"<<std::endl;
     }
 
 
     // get overall time
-    double goverallTime = allReduceTime(overallTime, size, comm); 
+    double goverallTime = allReduceTime(loverallTime, size, comm); 
      
 
     for(iter = times.begin(); iter != times.end(); iter++){
@@ -558,7 +560,7 @@ void timer::printTimer(int rank, int size, MPI_Comm comm){
         double ginvTimeTaken = (gtimeTaken > 1e-10) ? 1.0/gtimeTaken : 0.;
 
         if(rank==0){
-	  std::cout << std::left << std::setw(30) << stringName
+	      std::cout << std::left << std::setw(30) << stringName
 		    << std::right << std::setw(10) << std::setprecision(3)<<gtimeTaken
 		    << std::right<<std::setw(10)<<traits->numCalls
 		    << std::right<<std::setw(10)<<std::setprecision(3)<<100.0
@@ -566,15 +568,11 @@ void timer::printTimer(int rank, int size, MPI_Comm comm){
 		    << std::right<<std::setw(10)<<std::setprecision(3)<<traits->flopCount*ginvTimeTaken/1e9
 		    << std::right<<std::setw(10)<<std::setprecision(3)<<traits->bandWidthCount*ginvTimeTaken/1e9
 		    << std::endl;
-
-	  traits->selfTime -= print_recursively(iter->second.childs, gtimeTaken, goverallTime);
         }
+       traits->selfTime -= print_recursively(iter->second.childs, ltimeTaken, loverallTime);
 
       }
     }
-
-
-
 
 
     std::map<std::string, timerTraits> flat;
@@ -648,22 +646,21 @@ void timer::printTimer(int rank, int size, MPI_Comm comm){
      
       double gtimeTaken = allReduceTime(ltimeTaken, size, comm); 
       double gselfTime  = allReduceTime(lselfTime, size, comm); 
-
-
       double ginvTimeTaken = (gtimeTaken > 1e-10) ? 1.0/gtimeTaken : 0.;
     
 
-      if(rank==0){
-	std::cout << std::left<<std::setw(30) << iter1->first
+    if(rank==0){
+	     std::cout << std::left<<std::setw(30) << iter1->first
 		  << std::right<<std::setw(10) << std::setprecision(3)<<gtimeTaken
 		  << std::right<<std::setw(10) << std::setprecision(3)<<gselfTime
 		  << std::right<<std::setw(10)<<traits->numCalls
-		  << std::right<<std::setw(10)<<std::setprecision(3)<<100*gselfTime/overallTime
+		  << std::right<<std::setw(10)<<std::setprecision(3)<<100*gselfTime/goverallTime
 		  << std::right<<std::setw(10)<<std::setprecision(3)<<traits->flopCount*ginvTimeTaken/1e9
 		  << std::right<<std::setw(10)<<std::setprecision(3)<<traits->bandWidthCount*ginvTimeTaken/1e9
 		  << std::endl;
       }
     }
+
     std::cout<<"********************************************************"
 	     <<"**********************************"<<std::endl;
 
