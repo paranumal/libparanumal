@@ -30,7 +30,7 @@ SOFTWARE.
 
 extern "C"
 {
-  void ax_e_(dfloat *w, const dfloat *u, const dfloat *g, dfloat *ur, dfloat *us, dfloat *ut,dfloat *wk);
+  void ax_e_(dfloat *w, const dfloat *u, const dfloat *g, dfloat *ur, dfloat *us, dfloat *ut,dfloat *wk, const dfloat *DT, const dfloat *D);
 
   void local_grad3_ (dfloat * __restrict__ qr,dfloat * __restrict__ qs, dfloat * __restrict__ qt, 
 		     const dfloat * __restrict__ q, const int *N, const dfloat * __restrict__ DT, const dfloat * __restrict__ D);
@@ -222,21 +222,23 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
     
     const dlong element = e;
 
-#if 1
+#if 0
     ellipticSerialElementAxHexKernel3D<p_Nq>(ggeo+element*p_Np*p_Nggeo,
 					     D, S, MM, lambda, q + element*p_Np,
 					     s_qr, s_qs, s_qt, Aq+element*p_Np, s_wk);
 #endif
     
     //USE_STEFAN_MXM==1
-#if 0
+#if 1
     ax_e_(Aq+element*p_Np, 
-      q+element*p_Np,
-      ggeo + element*p_Nggeo*p_Np, // note layout is wrong
-      s_Gqr[0][0],
-      s_Gqs[0][0],
-      s_Gqt[0][0],
-      s_tmp[0][0]);
+	  q+element*p_Np,
+	  ggeo + element*p_Nggeo*p_Np, // note layout is wrong
+	  s_qr,
+	  s_qs,
+	  s_qt,
+	  s_wk,
+	  S, 
+	  D);
 #endif
     
 #if 0
