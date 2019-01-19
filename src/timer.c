@@ -36,11 +36,11 @@ timerTraits::timerTraits(){
   treeDepth = 0;
 }
  
-// Defaulting No profiling 
+// Defaulting No profiling on globalTimer 
 timer::timer(){
 }
 
-
+// Default consructors
 timer::timer(int profiler_true){
   profileApplication = false;
   profileKernels     = false;
@@ -51,12 +51,11 @@ timer::timer(int profiler_true){
   }
 }
   
-
+// Default consructors
 timer::timer(setupAide setup){
-
   profileApplication = false;
-  profileKernels = false;
-  deviceInitialized = false;
+  profileKernels     = false;
+  deviceInitialized  = false;
 
   int applicationProfiler; 
   setup.getArgs("APPLICATION PROFILER", applicationProfiler);
@@ -67,12 +66,12 @@ timer::timer(setupAide setup){
 }
 
 
-
+// Initializer 
 void timer::setTimer(setupAide setup){
   
   profileApplication = false;
-  profileKernels = false;
-  deviceInitialized = false;
+  profileKernels     = false;
+  deviceInitialized  = false;
 
   int applicationProfiler; 
   setup.getArgs("APPLICATION PROFILER", applicationProfiler);
@@ -83,8 +82,7 @@ void timer::setTimer(setupAide setup){
 }
 
 
-
-
+// Initialize Device Profiler
 void timer::initTimer(const occa::device &deviceHandle){
   deviceInitialized = true;
   occaHandle = deviceHandle;
@@ -98,10 +96,55 @@ void timer::checkKey(std::string key){
 }
 
 double timer::currentTime(){
-
+  #if 1 // very simple......
   // time_t curtime; time(&curtime);
   double ltime = MPI_Wtime(); 
-  return ltime; 
+  return ltime;
+  #else
+
+    #if (OCCA_OS & LINUX_OS)
+
+        timespec ct;
+        clock_gettime(CLOCK_MONOTONIC, &ct);
+
+        return (double) (ct.tv_sec + (1.0e-9 * ct.tv_nsec));
+
+    #elif (OCCA_OS == OSX_OS)
+    #  ifdef __clang__
+        uint64_t ct;
+        ct = mach_absolute_time();
+
+        const Nanoseconds ct2 = AbsoluteToNanoseconds(*(AbsoluteTime *) &ct);
+
+        return ((double) 1.0e-9) * ((double) ( *((uint64_t*) &ct2) ));
+    #  else
+        clock_serv_t cclock;
+        host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+
+        mach_timespec_t ct;
+        clock_get_time(cclock, &ct);
+
+        mach_port_deallocate(mach_task_self(), cclock);
+
+        return (double) (ct.tv_sec + (1.0e-9 * ct.tv_nsec));
+    #  endif
+    #elif (OCCA_OS == WINDOWS_OS)
+        static LARGE_INTEGER freq;
+        static bool haveFreq = false;
+
+        if (!haveFreq) {
+          QueryPerformanceFrequency(&freq);
+          haveFreq=true;
+        }
+
+        LARGE_INTEGER ct;
+
+        QueryPerformanceCounter(&ct);
+
+        return ((double) (ct.QuadPart)) / ((double) (freq.QuadPart));
+    #endif
+
+  #endif 
 }
 
 void timer::tic(std::string key){
