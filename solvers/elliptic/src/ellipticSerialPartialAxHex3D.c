@@ -46,11 +46,17 @@ extern "C"
 	       const dfloat *, dfloat * __restrict, int *);
 }
 
-void mxm(const dfloat * __restrict__ A, const int rowsA,
-	 const dfloat * __restrict__ B, const int rowsB,
+template < const int rowsA, const int rowsB, const int colsC >
+void mxm(const dfloat * __restrict__ A,
+	 const dfloat * __restrict__ B,
 	 const dfloat BETA, 
-	 dfloat * __restrict__ C, const int colsC){
+	 dfloat * __restrict__ C){
 
+  A    = (dfloat*)__builtin_assume_aligned(A, USE_OCCA_MEM_BYTE_ALIGN) ;
+  B    = (dfloat*)__builtin_assume_aligned(B, USE_OCCA_MEM_BYTE_ALIGN) ;
+  C   = (dfloat*)__builtin_assume_aligned(C, USE_OCCA_MEM_BYTE_ALIGN) ;
+  
+#if 0
   // dgemm (TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC)
   // C = beta*C + A*B
   char TRANSA = 'N';
@@ -64,6 +70,28 @@ void mxm(const dfloat * __restrict__ A, const int rowsA,
   int LDC = rowsA;
 
   dgemm_ (&TRANSA, &TRANSB, &M, &N, &K, &ALPHA, A, &LDA, B, &LDB, &BETA, C, &LDC);
+#else
+  if(BETA)
+    for(int j=0;j<colsC;++j){
+      for(int i=0;i<rowsA;++i){
+	dfloat res = BETA*C[i+j*rowsA];
+	for(int k=0;k<rowsB;++k){
+	  res += A[i+k*rowsA]*B[k+j*rowsB];
+	}
+	C[i+j*rowsA] = res;
+      }
+    }
+  else
+    for(int j=0;j<colsC;++j){
+      for(int i=0;i<rowsA;++i){
+	dfloat res = 0;
+	for(int k=0;k<rowsB;++k){
+	  res += A[i+k*rowsA]*B[k+j*rowsB];
+	}
+	C[i+j*rowsA] = res;
+      }
+    }
+#endif
 
 }
 
@@ -79,14 +107,24 @@ void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
 					dfloat * __restrict__ qt,
 					dfloat * __restrict__ Aq){
 
+  D    = (dfloat*)__builtin_assume_aligned(D, USE_OCCA_MEM_BYTE_ALIGN) ;
+  S    = (dfloat*)__builtin_assume_aligned(S, USE_OCCA_MEM_BYTE_ALIGN) ;
+  MM   = (dfloat*)__builtin_assume_aligned(MM, USE_OCCA_MEM_BYTE_ALIGN) ;
+  q    = (dfloat*)__builtin_assume_aligned(q, USE_OCCA_MEM_BYTE_ALIGN) ;
+  qr    = (dfloat*)__builtin_assume_aligned(qr, USE_OCCA_MEM_BYTE_ALIGN) ;
+  qs    = (dfloat*)__builtin_assume_aligned(qs, USE_OCCA_MEM_BYTE_ALIGN) ;
+  qt    = (dfloat*)__builtin_assume_aligned(qt, USE_OCCA_MEM_BYTE_ALIGN) ;
+  Aq   = (dfloat*)__builtin_assume_aligned(Aq, USE_OCCA_MEM_BYTE_ALIGN) ;
+  ggeo = (dfloat*)__builtin_assume_aligned(ggeo, USE_OCCA_MEM_BYTE_ALIGN) ;
+  
   dfloat zero = 0, one = 1.0;
 
   // grad
-  mxm(S, p_Nq, q, p_Nq, zero, qr, p_Nq*p_Nq); // D(:,:)*q(:,:+::)
+  mxm<p_Nq,p_Nq,p_Nq*p_Nq>(S, q, zero, qr); // D(:,:)*q(:,:+::)
   for(int k=0;k<p_Nq;++k){
-    mxm(q+k*p_Nq*p_Nq, p_Nq, D, p_Nq, zero, qs+k*p_Nq*p_Nq, p_Nq);
+    mxm<p_Nq,p_Nq,p_Nq>(q+k*p_Nq*p_Nq, D, zero, qs+k*p_Nq*p_Nq);
   }
-  mxm(q, p_Nq*p_Nq, D, p_Nq, zero, qt, p_Nq);
+  mxm<p_Nq*p_Nq,p_Nq,p_Nq>(q, D, zero, qt);
   
   for(int n=0;n<p_Np;++n){
     dfloat qrn = ggeo[n+G00ID*p_Np]*qr[n] + ggeo[n+G01ID*p_Np]*qs[n] + ggeo[n+G02ID*p_Np]*qt[n];
@@ -98,11 +136,11 @@ void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
   }
 
   // gradT
-  mxm(D, p_Nq, qr, p_Nq, zero, Aq, p_Nq*p_Nq); // D(:,:)*q(:,:+::)
+  mxm<p_Nq,p_Nq,p_Nq*p_Nq>(D, qr, zero, Aq); // D(:,:)*q(:,:+::)
   for(int k=0;k<p_Nq;++k){
-    mxm(qs+k*p_Nq*p_Nq, p_Nq, S, p_Nq, one, Aq+k*p_Nq*p_Nq, p_Nq);
+    mxm<p_Nq,p_Nq,p_Nq>(qs+k*p_Nq*p_Nq, S, one, Aq+k*p_Nq*p_Nq);
   }
-  mxm(qt, p_Nq*p_Nq, S, p_Nq, one, Aq, p_Nq);
+  mxm<p_Nq*p_Nq,p_Nq,p_Nq>(qt, S, one, Aq);
 }
 
 
@@ -153,11 +191,12 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
     
     const dlong element = elementList[e];
 
-
+#if 0
     ellipticSerialElementAxHexKernel3D<p_Nq>(ggeo+element*p_Np*p_Nggeo,
 					     D, S, MM, lambda, q + element*p_Np,
 					     s_qr, s_qs, s_qt, Aq+element*p_Np);
-
+#endif
+    
 #if USE_STEFAN_MXM==1
     ax_e_(Aq+element*p_Np, 
       q+element*p_Np,
@@ -168,7 +207,7 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
       s_tmp[0][0]);
 #endif
     
-#if 0
+#if 1
     for(int k = 0; k < p_Nq; k++) {
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){

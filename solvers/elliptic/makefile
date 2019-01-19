@@ -33,8 +33,8 @@ PARMETISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libparmetis/
 METISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libmetis
 
 # libraries to be linked in
-LIBS	=  -L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis  -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs \
-			-L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -L/opt/apps/gcc5_2/atlas/3.10.2/lib/  -llapack -latlas  -lf77blas -lcblas -lptcblas -lptf77blas -lsatlas  -lgfortran
+#LIBS	=  -L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis  -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -L/opt/apps/gcc5_2/atlas/3.10.2/lib/  -llapack -latlas  -lf77blas -lcblas -lptcblas -lptf77blas -lsatlas  -lgfortran
+LIBS	=  -L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis  -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -L$(OCCA_DIR)/lib  $(links) -L../../3rdParty/BlasLapack -llapack -latlas  -lf77blas -lcblas  -lgfortran
 #-lBlasLapack  -lgfortran  
 
 INCLUDES = elliptic.h ellipticPrecon.h
