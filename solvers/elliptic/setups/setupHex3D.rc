@@ -18,8 +18,8 @@ data/ellipticSineTest3D.h
 #../../meshes/cubeHexE00008.msh
 #../../meshes/cubeHexE00064.msh
 #../../meshes/cubeHexE00216.msh
-#../../meshes/cubeHexE00512.msh
-../../meshes/cubeHexE01000.msh
+../../meshes/cubeHexE00512.msh
+#../../meshes/cubeHexE01000.msh
 #../../meshes/cubeHexE01728.msh
 #../../meshes/cubeHexE04096.msh
 #../../meshes/cubeHexE05832.msh

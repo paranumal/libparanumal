@@ -213,5 +213,15 @@ void ellipticSerialPartialAxHexKernel3D(const int Nq,
 					const occa::memory &o_q,
 					occa::memory &o_Aq);
 
+void ellipticSerialAxHexKernel3D(const int Nq,
+				 const hlong Nelements,
+				 const occa::memory &o_ggeo,
+				 const occa::memory &o_Dmatrices,
+				 const occa::memory &o_Smatrices,
+				 const occa::memory &o_MM,
+				 const dfloat lambda,
+				 const occa::memory &o_q,
+				 occa::memory &o_Aq);
+
 #endif
 
