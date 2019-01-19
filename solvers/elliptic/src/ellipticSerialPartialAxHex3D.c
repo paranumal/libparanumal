@@ -27,6 +27,13 @@ SOFTWARE.
 
 #include "elliptic.h"
 
+#if USE_STEFAN_MXM==1
+extern "C"
+{
+  void ax_e_(dfloat *w, const dfloat *u, const dfloat *g, dfloat *ur, dfloat *us, dfloat *ut,dfloat *wk);
+}
+#endif
+   
 // hack
 #define p_Nggeo 7 
 
@@ -56,7 +63,7 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
   dfloat s_Gqs[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_Gqt[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
 
-  dfloat s_tmp[p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
+  dfloat s_tmp[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   
   // ok 
   dfloat s_D[p_Nq][p_Nq]  __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
@@ -75,6 +82,16 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
     
     const dlong element = elementList[e];
 
+#if USE_STEFAN_MXM==1
+    ax_e_(Aq+element*p_Np, 
+      q+element*p_Np,
+      ggeo + element*p_Nggeo*p_Np, // note layout is wrong
+      s_Gqr[0][0],
+      s_Gqs[0][0],
+      s_Gqt[0][0],
+      s_tmp[0][0]);
+#endif
+    
 #if 1
     for(int k = 0; k < p_Nq; k++) {
       for(int j=0;j<p_Nq;++j){
