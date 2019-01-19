@@ -1,4 +1,3 @@
-
 /*
 
 The MIT License (MIT)
@@ -25,6 +24,8 @@ SOFTWARE.
 
 */
 
+#define p_Np (p_Nq*p_Nq*p_Nq)
+
 #include "elliptic.h"
 
 #if USE_STEFAN_MXM==1
@@ -33,9 +34,77 @@ extern "C"
   void ax_e_(dfloat *w, const dfloat *u, const dfloat *g, dfloat *ur, dfloat *us, dfloat *ut,dfloat *wk);
 }
 #endif
-   
+
 // hack
 #define p_Nggeo 7 
+
+extern "C"
+{
+  void dgemm_ (char *, char *, int *, int *, int *,
+	       const dfloat *, const dfloat * __restrict, int *,
+	       const dfloat * __restrict, int *,
+	       const dfloat *, dfloat * __restrict, int *);
+}
+
+void mxm(const dfloat * __restrict__ A, const int rowsA,
+	 const dfloat * __restrict__ B, const int rowsB,
+	 const dfloat BETA, 
+	 dfloat * __restrict__ C, const int colsC){
+
+  // dgemm (TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC)
+  // C = beta*C + A*B
+  char TRANSA = 'N';
+  char TRANSB = 'N';
+  int M = rowsA;
+  int N = colsC;
+  int K = rowsB;
+  dfloat ALPHA = 1;
+  int LDA = rowsA;
+  int LDB = rowsB;
+  int LDC = rowsA;
+
+  dgemm_ (&TRANSA, &TRANSB, &M, &N, &K, &ALPHA, A, &LDA, B, &LDB, &BETA, C, &LDC);
+
+}
+
+template < const int p_Nq >
+void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
+					const dfloat * __restrict__ D,
+					const dfloat * __restrict__ S,
+					const dfloat * __restrict__ MM,
+					const dfloat lambda,
+					const dfloat * __restrict__ q,
+					dfloat * __restrict__ qr,
+					dfloat * __restrict__ qs,
+					dfloat * __restrict__ qt,
+					dfloat * __restrict__ Aq){
+
+  dfloat zero = 0, one = 1.0;
+
+  // grad
+  mxm(S, p_Nq, q, p_Nq, zero, qr, p_Nq*p_Nq); // D(:,:)*q(:,:+::)
+  for(int k=0;k<p_Nq;++k){
+    mxm(q+k*p_Nq*p_Nq, p_Nq, D, p_Nq, zero, qs+k*p_Nq*p_Nq, p_Nq);
+  }
+  mxm(q, p_Nq*p_Nq, D, p_Nq, zero, qt, p_Nq);
+  
+  for(int n=0;n<p_Np;++n){
+    dfloat qrn = ggeo[n+G00ID*p_Np]*qr[n] + ggeo[n+G01ID*p_Np]*qs[n] + ggeo[n+G02ID*p_Np]*qt[n];
+    dfloat qsn = ggeo[n+G01ID*p_Np]*qr[n] + ggeo[n+G11ID*p_Np]*qs[n] + ggeo[n+G12ID*p_Np]*qt[n];
+    dfloat qtn = ggeo[n+G02ID*p_Np]*qr[n] + ggeo[n+G12ID*p_Np]*qs[n] + ggeo[n+G22ID*p_Np]*qt[n];
+    qr[n] = qrn;
+    qs[n] = qsn;
+    qt[n] = qtn;
+  }
+
+  // gradT
+  mxm(D, p_Nq, qr, p_Nq, zero, Aq, p_Nq*p_Nq); // D(:,:)*q(:,:+::)
+  for(int k=0;k<p_Nq;++k){
+    mxm(qs+k*p_Nq*p_Nq, p_Nq, S, p_Nq, one, Aq+k*p_Nq*p_Nq, p_Nq);
+  }
+  mxm(qt, p_Nq*p_Nq, S, p_Nq, one, Aq, p_Nq);
+}
+
 
 template < const int p_Nq >
 void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
@@ -55,8 +124,6 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
   Aq   = (dfloat*)__builtin_assume_aligned(Aq, USE_OCCA_MEM_BYTE_ALIGN) ;
   ggeo = (dfloat*)__builtin_assume_aligned(ggeo, USE_OCCA_MEM_BYTE_ALIGN) ;
   elementList = (dlong*)__builtin_assume_aligned(elementList, USE_OCCA_MEM_BYTE_ALIGN) ; // type ?
-
-#define p_Np (p_Nq*p_Nq*p_Nq)
   
   dfloat s_q  [p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_Gqr[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
@@ -65,6 +132,10 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
 
   dfloat s_tmp[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   
+  dfloat s_qr[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
+  dfloat s_qs[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
+  dfloat s_qt[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
+
   // ok 
   dfloat s_D[p_Nq][p_Nq]  __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_S[p_Nq][p_Nq]  __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
@@ -82,6 +153,11 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
     
     const dlong element = elementList[e];
 
+
+    ellipticSerialElementAxHexKernel3D<p_Nq>(ggeo+element*p_Np*p_Nggeo,
+					     D, S, MM, lambda, q + element*p_Np,
+					     s_qr, s_qs, s_qt, Aq+element*p_Np);
+
 #if USE_STEFAN_MXM==1
     ax_e_(Aq+element*p_Np, 
       q+element*p_Np,
@@ -92,7 +168,7 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
       s_tmp[0][0]);
 #endif
     
-#if 1
+#if 0
     for(int k = 0; k < p_Nq; k++) {
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){
@@ -349,9 +425,6 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
 
   }
 }
-
-#undef p_Np
-
 
 void ellipticSerialPartialAxHexKernel3D(const int Nq,
 					const hlong Nelements,
