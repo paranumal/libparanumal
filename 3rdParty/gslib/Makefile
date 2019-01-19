@@ -1,11 +1,13 @@
+include ../../make.inp
+
 MPI ?= 1
 MPIIO ?= 1
 ADDUS ?= 1
 USREXIT ?= 0
 LIBNAME ?= gs
 BLAS ?= 0
-CFLAGS ?= -ftree-vectorize -O3 -mavx2 -funroll-all-loops
-FFLAGS ?= -ftree-vectorize -O3 -mavx2 -funroll-all-loops
+CFLAGS ?= $(LIBP_OPT_FLAGS)
+FFLAGS ?= $(LIBP_OPT_FLAGS)
 
 SRCROOT=.
 TESTDIR=$(SRCROOT)/tests
