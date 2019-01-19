@@ -148,11 +148,20 @@ void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
 #endif
   
   for(int n=0;n<p_Np;++n){
-#if 1
+    const dfloat G00 = ggeo[n+G00ID*p_Np], G01 = ggeo[n+G01ID*p_Np], G11 = ggeo[n+G11ID*p_Np];
+    //    const dfloat GWJ = ggeo[n+G00ID*p_Np];
+    const dfloat G12 = ggeo[n+G12ID*p_Np], G02 = ggeo[n+G02ID*p_Np], G22 = ggeo[n+G22ID*p_Np];
+
+    dfloat qrn = G00*qr[n] + G01*qs[n] + G02*qt[n];
+    dfloat qsn = G01*qr[n] + G11*qs[n] + G12*qt[n];
+    dfloat qtn = G02*qr[n] + G12*qs[n] + G22*qt[n];
+
+#if 0
     dfloat qrn = ggeo[n+G00ID*p_Np]*qr[n] + ggeo[n+G01ID*p_Np]*qs[n] + ggeo[n+G02ID*p_Np]*qt[n];
     dfloat qsn = ggeo[n+G01ID*p_Np]*qr[n] + ggeo[n+G11ID*p_Np]*qs[n] + ggeo[n+G12ID*p_Np]*qt[n];
     dfloat qtn = ggeo[n+G02ID*p_Np]*qr[n] + ggeo[n+G12ID*p_Np]*qs[n] + ggeo[n+G22ID*p_Np]*qt[n];
-#else
+#endif
+#if 0
     dfloat qrn = ggeo[n*p_Nggeo+G00ID]*qr[n] + ggeo[n*p_Nggeo+G01ID]*qs[n] + ggeo[n*p_Nggeo+G02ID]*qt[n];
     dfloat qsn = ggeo[n*p_Nggeo+G01ID]*qr[n] + ggeo[n*p_Nggeo+G11ID]*qs[n] + ggeo[n*p_Nggeo+G12ID]*qt[n];
     dfloat qtn = ggeo[n*p_Nggeo+G02ID]*qr[n] + ggeo[n*p_Nggeo+G12ID]*qs[n] + ggeo[n*p_Nggeo+G22ID]*qt[n];
@@ -229,7 +238,7 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
 #endif
     
     //USE_STEFAN_MXM==1
-#if 1
+#if 0
     ax_e_(Aq+element*p_Np, 
 	  q+element*p_Np,
 	  ggeo + element*p_Nggeo*p_Np, // note layout is wrong
@@ -241,7 +250,7 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
 	  D);
 #endif
     
-#if 0
+#if 1
     for(int k = 0; k < p_Nq; k++) {
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){
