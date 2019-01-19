@@ -28,23 +28,25 @@ SOFTWARE.
 
 #include "elliptic.h"
 
-#if USE_STEFAN_MXM==1
 extern "C"
 {
   void ax_e_(dfloat *w, const dfloat *u, const dfloat *g, dfloat *ur, dfloat *us, dfloat *ut,dfloat *wk);
-}
-#endif
+  void libxsmm_dgemm_ (char *, char *, int *, int *, int *,
+		       const dfloat *, const dfloat * __restrict, int *,
+		       const dfloat * __restrict, int *,
+		       const dfloat *, dfloat * __restrict, int *);
 
-// hack
-#define p_Nggeo 7 
-
-extern "C"
-{
   void dgemm_ (char *, char *, int *, int *, int *,
 	       const dfloat *, const dfloat * __restrict, int *,
 	       const dfloat * __restrict, int *,
 	       const dfloat *, dfloat * __restrict, int *);
 }
+
+#define USE_BLAS 0
+#define USE_XSMM 0
+
+// hack
+#define p_Nggeo 7 
 
 template < const int rowsA, const int rowsB, const int colsC >
 void mxm(const dfloat * __restrict__ A,
@@ -56,7 +58,7 @@ void mxm(const dfloat * __restrict__ A,
   B    = (dfloat*)__builtin_assume_aligned(B, USE_OCCA_MEM_BYTE_ALIGN) ;
   C   = (dfloat*)__builtin_assume_aligned(C, USE_OCCA_MEM_BYTE_ALIGN) ;
   
-#if 0
+#if USE_XSMM || USE_BLAS
   // dgemm (TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC)
   // C = beta*C + A*B
   char TRANSA = 'N';
@@ -69,7 +71,14 @@ void mxm(const dfloat * __restrict__ A,
   int LDB = rowsB;
   int LDC = rowsA;
 
-  dgemm_ (&TRANSA, &TRANSB, &M, &N, &K, &ALPHA, A, &LDA, B, &LDB, &BETA, C, &LDC);
+#if USE_XSMM
+  libxsmm_dgemm_
+#else
+    dgemm_
+#endif
+    (&TRANSA, &TRANSB, &M, &N, &K, &ALPHA, A, &LDA, B, &LDB, &BETA, C, &LDC);
+
+
 #else
   if(BETA)
     for(int j=0;j<colsC;++j){
@@ -191,7 +200,7 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
     
     const dlong element = elementList[e];
 
-#if 0
+#if 1
     ellipticSerialElementAxHexKernel3D<p_Nq>(ggeo+element*p_Np*p_Nggeo,
 					     D, S, MM, lambda, q + element*p_Np,
 					     s_qr, s_qs, s_qt, Aq+element*p_Np);
@@ -207,7 +216,7 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
       s_tmp[0][0]);
 #endif
     
-#if 1
+#if 0
     for(int k = 0; k < p_Nq; k++) {
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){
