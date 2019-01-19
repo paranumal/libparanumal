@@ -16,7 +16,7 @@ ALMONDDIR = ../../libs/parAlmond
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
 cc	= mpicc
-FC	= mpif77
+FC	= mpif77  -std=legacy -fdefault-real-8 -fdefault-double-8 
 CC	= mpic++
 LD	= mpic++
 
@@ -55,6 +55,7 @@ $(ALMONDDIR)/parAlmond.hpp \
 
 # list of objects to be compiled
 AOBJS    = \
+./src/ellipticSerialLocalAxHex3D.o\
 ./src/PCG.o \
 ./src/ellipticSerialAxHex3D.o \
 ./src/ellipticSerialPartialAxHex3D.o \
