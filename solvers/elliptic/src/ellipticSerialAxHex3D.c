@@ -134,6 +134,7 @@ void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
   ggeo = (dfloat*)__builtin_assume_aligned(ggeo, USE_OCCA_MEM_BYTE_ALIGN) ;
   
   dfloat zero = 0, one = 1.0;
+  const int N = p_Nq-1;
 
   // grad
 #if 0
@@ -143,7 +144,6 @@ void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
   }
   mxm<p_Nq*p_Nq,p_Nq,p_Nq>(q, D, zero, qt);
 #else
-  const int N = p_Nq-1;
   local_grad3_ (qr, qs, qt, q, &N, S, D);
 #endif
   
