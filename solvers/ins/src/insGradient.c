@@ -30,8 +30,11 @@ SOFTWARE.
 void insGradient(ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP){
 
   mesh_t *mesh = ins->mesh;
+  timer *profiler = ins->profiler; 
+
   
   if (ins->pOptions.compareArgs("DISCRETIZATION","IPDG")) {
+   profiler->tic("Gradient Halo:1");
     if(mesh->totalHaloPairs>0){
       ins->pressureHaloExtractKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
@@ -48,9 +51,11 @@ void insGradient(ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP){
                            ins->pSendBuffer,
                            ins->pRecvBuffer);
     }
+     profiler->toc("Gradient Halo:1");
   }
 
-  occaTimerTic(mesh->device,"GradientVolume");
+  
+  profiler->tic("Gradient Volume");
   // Compute Volume Contribution
   ins->gradientVolumeKernel(mesh->Nelements,
                             mesh->o_vgeo,
@@ -58,10 +63,13 @@ void insGradient(ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP){
                             ins->fieldOffset,
                             o_P,
                             o_GP);
-  occaTimerToc(mesh->device,"GradientVolume");
+  profiler->toc("Gradient Volume");
+  
 
+  
   // COMPLETE HALO EXCHANGE
   if (ins->pOptions.compareArgs("DISCRETIZATION","IPDG")) {
+    profiler->tic("Gradient Halo:2");
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
 
@@ -72,8 +80,9 @@ void insGradient(ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP){
                                       o_P,
                                       ins->o_pHaloBuffer);
     }
+    profiler->toc("Gradient Halo:2");
 
-    occaTimerTic(mesh->device,"GradientSurface");
+    profiler->tic("Gradient Surface");
     // Compute Surface Conribution
     ins->gradientSurfaceKernel(mesh->Nelements,
                                mesh->o_sgeo,
@@ -88,6 +97,7 @@ void insGradient(ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP){
                                ins->fieldOffset,
                                o_P,
                                o_GP);
-    occaTimerToc(mesh->device,"GradientSurface");
+    profiler->toc("Gradient Surface");
   }
+
 }

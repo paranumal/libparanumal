@@ -31,12 +31,16 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
                                                            occa::memory o_rhsV, 
                                                            occa::memory o_rhsW, 
                                                            occa::memory o_Uhat){
-  
+   
   mesh_t *mesh = ins->mesh; 
   elliptic_t *usolver = ins->uSolver; 
   elliptic_t *vsolver = ins->vSolver; 
   elliptic_t *wsolver = ins->wSolver;
 
+  timer *profiler = ins->profiler; 
+
+ 
+  profiler->tic("Velocity BC"); 
   int quad3D = (ins->dim==3 && ins->elementType==QUADRILATERALS) ? 1 : 0;  
   
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
@@ -75,7 +79,6 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
     
   } else if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG") && !quad3D) {
 
-    occaTimerTic(mesh->device,"velocityRhsIpdg");    
     ins->velocityRhsIpdgBCKernel(mesh->Nelements,
                                   mesh->o_vmapM,
                                   usolver->tau,
@@ -92,9 +95,12 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
                                   o_rhsU,
                                   o_rhsV,
                                   o_rhsW);
-    occaTimerToc(mesh->device,"velocityRhsIpdg");   
+    // occaTimerToc(mesh->device,"velocityRhsIpdg");   
   }
+ profiler->toc("Velocity BC"); 
 
+  
+ profiler->tic("Velocity Copy"); 
   //copy current velocity fields as initial guess? (could use Uhat or beter guess)
   dlong Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
   ins->o_UH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,0*ins->fieldOffset*sizeof(dfloat));
@@ -110,6 +116,10 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
 
   }
   
+  profiler->toc("Velocity Copy");
+
+
+  profiler->tic("Velocity ellipticSolve");
   occaTimerTic(mesh->device,"Ux-Solve");
   ins->NiterU = ellipticSolve(usolver, ins->lambda, ins->velTOL, o_rhsU, ins->o_UH);
   occaTimerToc(mesh->device,"Ux-Solve"); 
@@ -123,8 +133,11 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
     ins->NiterW = ellipticSolve(wsolver, ins->lambda, ins->velTOL, o_rhsW, ins->o_WH);
     occaTimerToc(mesh->device,"Uz-Solve");
   }
+  profiler->toc("Velocity ellipticSolve");
 
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
+
+    profiler->tic("Velocity AddBc");
     ins->velocityAddBCKernel(mesh->Nelements,
                             time,
                             mesh->o_sgeo,
@@ -136,11 +149,15 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
                             ins->o_UH,
                             ins->o_VH,
                             ins->o_WH);
+    profiler->toc("Velocity AddBc");
   }
-
+  
+  profiler->tic("Velocity Copy");
   //copy into intermediate stage storage
   ins->o_UH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),0*ins->fieldOffset*sizeof(dfloat),0);
   ins->o_VH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),1*ins->fieldOffset*sizeof(dfloat),0);    
   if (ins->dim==3)
-    ins->o_WH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),2*ins->fieldOffset*sizeof(dfloat),0);    
+    ins->o_WH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),2*ins->fieldOffset*sizeof(dfloat),0); 
+  profiler->toc("Velocity Copy");  
+
 }
