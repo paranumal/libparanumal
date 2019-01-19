@@ -289,7 +289,7 @@ void insRunEXTBDF(ins_t *ins){
 
   if(ins->outputStep) insReport(ins, finalTime,ins->NtimeSteps);
   
-  // if(mesh->rank==0) profiler->printTimer();
+   if(mesh->rank==0) profiler->printTimer();
 
    profiler->printTimer(mesh->rank, mesh->size, mesh->comm);
 }
