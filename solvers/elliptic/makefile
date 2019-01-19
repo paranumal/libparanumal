@@ -4,7 +4,8 @@ ERROR:
 endif
 
 #CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-loop-distribution -floop-nest-optimize -floop-block -floop-interchange -fstrict-aliasing -ftree-vectorize -march=native
-CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-vectorize -march=native  -fopt-info-vec-missed  -DUSE_OCCA_MEM_BYTE_ALIGN=32 -fopt-info
+CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-vectorize -march=native -DUSE_OCCA_MEM_BYTE_ALIGN=32 
+#  -fopt-info-vec-missed  -fopt-info
 #-fopt-info
 
 include ${OCCA_DIR}/scripts/Makefile
@@ -18,6 +19,7 @@ ALMONDDIR = ../../libs/parAlmond
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
 cc	= mpicc
+FC	= mpif77
 CC	= mpic++
 LD	= mpic++
 
@@ -43,11 +45,17 @@ $(OGSDIR)/ogs.hpp \
 $(ALMONDDIR)/parAlmond.hpp \
 
 # types of files we are going to construct rules for
-.SUFFIXES: .c
+.SUFFIXES: .c .f
 
 # rule for .c files
 .c.o: $(DEPS)
 	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths)
+
+.f.o: $(DEPS)
+	$(FC) $(CFLAGS) -o $*.o -c $*.f $(paths)
+
+# add this object for USE_STEFAN_MXM ./src/ellipticSerialLocalAxHex3D.o\
+
 
 # list of objects to be compiled
 AOBJS    = \
