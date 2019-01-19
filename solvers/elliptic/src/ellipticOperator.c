@@ -26,7 +26,8 @@ SOFTWARE.
 
 #include "elliptic.h"
 
-#if 0
+#if 1
+// simplified version
 void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision){
 
   mesh_t *mesh = elliptic->mesh;

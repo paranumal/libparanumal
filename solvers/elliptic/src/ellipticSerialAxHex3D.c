@@ -31,6 +31,16 @@ SOFTWARE.
 extern "C"
 {
   void ax_e_(dfloat *w, const dfloat *u, const dfloat *g, dfloat *ur, dfloat *us, dfloat *ut,dfloat *wk);
+
+  void local_grad3_ (dfloat * __restrict__ qr,dfloat * __restrict__ qs, dfloat * __restrict__ qt, 
+		     const dfloat * __restrict__ q, const int *N, const dfloat * __restrict__ DT, const dfloat * __restrict__ D);
+
+  void local_grad3_t_ (dfloat * __restrict__ q,
+		       const dfloat * __restrict__ qr, 
+		       const dfloat * __restrict__ qs, 
+		       const dfloat * __restrict__ qt,
+		       const int *N, const dfloat * __restrict__ DT, const dfloat * __restrict__ D, dfloat * __restrict__ wk);
+
   void libxsmm_dgemm_ (char *, char *, int *, int *, int *,
 		       const dfloat *, const dfloat * __restrict, int *,
 		       const dfloat * __restrict, int *,
@@ -99,6 +109,7 @@ template < const int rowsA, const int rowsB, const int colsC >
 #endif
 }
 
+
 template < const int p_Nq >
 void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
 					const dfloat * __restrict__ D,
@@ -109,7 +120,8 @@ void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
 					dfloat * __restrict__ qr,
 					dfloat * __restrict__ qs,
 					dfloat * __restrict__ qt,
-					dfloat * __restrict__ Aq){
+					dfloat * __restrict__ Aq,
+					dfloat * __restrict__ wk){
 
   D    = (dfloat*)__builtin_assume_aligned(D, USE_OCCA_MEM_BYTE_ALIGN) ;
   S    = (dfloat*)__builtin_assume_aligned(S, USE_OCCA_MEM_BYTE_ALIGN) ;
@@ -124,11 +136,16 @@ void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
   dfloat zero = 0, one = 1.0;
 
   // grad
+#if 0
   mxm<p_Nq,p_Nq,p_Nq*p_Nq>(S, q, zero, qr); // D(:,:)*q(:,:+::)
   for(int k=0;k<p_Nq;++k){
     mxm<p_Nq,p_Nq,p_Nq>(q+k*p_Nq*p_Nq, D, zero, qs+k*p_Nq*p_Nq);
   }
   mxm<p_Nq*p_Nq,p_Nq,p_Nq>(q, D, zero, qt);
+#else
+  const int N = p_Nq-1;
+  local_grad3_ (qr, qs, qt, q, &N, S, D);
+#endif
   
   for(int n=0;n<p_Np;++n){
 #if 1
@@ -146,11 +163,16 @@ void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
   }
 
   // gradT
+#if 0
   mxm<p_Nq,p_Nq,p_Nq*p_Nq>(D, qr, zero, Aq); // D(:,:)*q(:,:+::)
   for(int k=0;k<p_Nq;++k){
     mxm<p_Nq,p_Nq,p_Nq>(qs+k*p_Nq*p_Nq, S, one, Aq+k*p_Nq*p_Nq);
   }
   mxm<p_Nq*p_Nq,p_Nq,p_Nq>(qt, S, one, Aq);
+#else
+  //  const int N = p_Nq-1;
+  local_grad3_t_ (Aq, qr, qs, qt, &N, S, D, wk);
+#endif
 }
 
 
@@ -181,6 +203,7 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
   dfloat s_qr[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_qs[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_qt[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
+  dfloat s_wk[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
 
   // ok 
   dfloat s_D[p_Nq][p_Nq]  __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
@@ -202,10 +225,11 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
 #if 1
     ellipticSerialElementAxHexKernel3D<p_Nq>(ggeo+element*p_Np*p_Nggeo,
 					     D, S, MM, lambda, q + element*p_Np,
-					     s_qr, s_qs, s_qt, Aq+element*p_Np);
+					     s_qr, s_qs, s_qt, Aq+element*p_Np, s_wk);
 #endif
     
-#if USE_STEFAN_MXM==1
+    //USE_STEFAN_MXM==1
+#if 0
     ax_e_(Aq+element*p_Np, 
       q+element*p_Np,
       ggeo + element*p_Nggeo*p_Np, // note layout is wrong
