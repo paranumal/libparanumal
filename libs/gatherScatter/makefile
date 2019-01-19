@@ -3,7 +3,8 @@ ERROR:
 	@echo "Error, environment variable [OCCA_DIR] is not set"
 endif
 
-CXXFLAGS =
+# define LIBP_OPT_FLAGS
+include ../../make.inp
 
 include ${OCCA_DIR}/scripts/Makefile
 
@@ -19,7 +20,7 @@ CXX	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR)/src   -D DHOLMES='"${CURDIR}/../.."' -D DOGS='"${CURDIR}"' -O3 -funroll-all-loops -mavx2 -ftree-vectorize -march=native  -fstrict-aliasing
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR)/src   -D DHOLMES='"${CURDIR}/../.."' -D DOGS='"${CURDIR}"'  $(LIBP_OPT_FLAGS)
 
 
 # link flags to be used

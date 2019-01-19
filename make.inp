@@ -1,0 +1,13 @@
+#CXXFLAGS = -O3 -funroll-all-loops -mavx2 -ftree-loop-distribution -floop-nest-optimize -floop-block -floop-interchange -fstrict-aliasing -ftree-vectorize -march=native
+
+# GNU
+#LIBP_OPT_FLAGS = -O3 -funroll-all-loops -mavx2 -ftree-vectorize -march=native -DUSE_OCCA_MEM_BYTE_ALIGN=32 
+#LIBP_EXT_LIBS = -L/opt/apps/gcc5_2/atlas/3.10.2/lib/ -llapack -latlas  -lf77blas -lcblas -lptcblas -lptf77blas -lsatlas  -lgfortran  -L../../../libxsmm/lib -lxsmm -ldl
+
+# INTEL
+LIBP_OPT_FLAGS = -O3 -funroll-loops -xHost -DUSE_OCCA_MEM_BYTE_ALIGN=32
+LIBP_EXT_LIBS = -L/opt/apps/intel15_3/mkl/11.2.3/lib/intel64  -lmkl_rt
+
+#  -fopt-info-vec-missed  -fopt-info
+#-fopt-info
+
