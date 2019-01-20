@@ -32,11 +32,9 @@ void insRunEXTBDF(ins_t *ins){
 
   mesh_t *mesh = ins->mesh;
   
+  occa::initTimer(mesh->device);
+  occaTimerTic(mesh->device,"INS");
 
-  // occa::initTimer(mesh->device);
-  // //occaTimerTic(mesh->device,"INS");
-
-   
   int NstokesSteps = 0;
   dfloat oldDt = ins->dt;
   ins->dt *= 100;
@@ -227,7 +225,7 @@ void insRunEXTBDF(ins_t *ins){
     }
 #endif
 
-    //occaTimerTic(mesh->device,"Report");
+    occaTimerTic(mesh->device,"Report");
 
     if(ins->outputStep){
       if(((tstep+1)%(ins->outputStep))==0){
@@ -263,9 +261,9 @@ void insRunEXTBDF(ins_t *ins){
     if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
     if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
     
-    //occaTimerToc(mesh->device,"Report");
+    occaTimerToc(mesh->device,"Report");
   }
-  //occaTimerToc(mesh->device,"INS");
+  occaTimerToc(mesh->device,"INS");
 
 
   dfloat finalTime = ins->NtimeSteps*ins->dt;
@@ -273,7 +271,7 @@ void insRunEXTBDF(ins_t *ins){
 
   if(ins->outputStep) insReport(ins, finalTime,ins->NtimeSteps);
   
-  //if(mesh->rank==0) occa::printTimer();
+  if(mesh->rank==0) occa::printTimer();
 }
 
 

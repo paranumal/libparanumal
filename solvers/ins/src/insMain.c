@@ -24,8 +24,6 @@ SOFTWARE.
 */
 
 #include "ins.h"
-#include <unistd.h>  
-// remove it later!!!!!!!
 
 int main(int argc, char **argv){
 
@@ -80,30 +78,9 @@ int main(int argc, char **argv){
     insRestartRead(ins, ins->options); 
     printf("done\n");   
    }  
-
-
-  int profile_application = 1; 
-  timer profiler(profile_application);
-
-  profiler.initTimer(mesh->device);
-
-for(int n=0; n<20; n++){
-  profiler.tic("TEST1");
-   sleep(0.0122);
-      profiler.tic("TEST2");
-        sleep(0.0122);
-      for (int j=0; j<2; j++){
-       profiler.tic("TEST3");
-    sleep(0.0122);
-     profiler.toc("TEST3", ins->gradientSurfaceKernel);
-   }
-     profiler.toc("TEST2", ins->gradientSurfaceKernel);
-  profiler.toc("TEST1", ins->gradientSurfaceKernel);
-}
-
-profiler.printTimer(); 
-  //if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
-  //if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF"))  insRunEXTBDF(ins);
+  
+  if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
+  if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF"))  insRunEXTBDF(ins);
 
   // close down MPI
   MPI_Finalize();

@@ -32,9 +32,6 @@ void insRunEXTBDFTest(ins_t *ins, int maxiter){
 
   mesh_t *mesh = ins->mesh;
   
-  // int profile_application = 1; 
-  // timer profiler(profile_application);
-    
   for(int tstep=0; tstep<maxiter;  ++tstep){
 
     if(tstep<1) 

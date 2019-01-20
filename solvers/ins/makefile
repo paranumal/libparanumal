@@ -149,8 +149,7 @@ LOBJS = \
 ../../src/readArray.o\
 ../../src/occaDeviceConfig.o\
 ../../src/occaHostMallocPinned.o \
-../../src/timer.o \
-../../src/stimer.o
+../../src/timer.o
 
 
 insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparAlmond libelliptic

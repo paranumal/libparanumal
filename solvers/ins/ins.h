@@ -32,7 +32,6 @@ SOFTWARE.
 #include "mesh2D.h"
 #include "mesh3D.h"
 #include "elliptic.h"
-#include "stimer.h"
 
 typedef struct {
 
