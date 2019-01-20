@@ -42,10 +42,26 @@ SOFTWARE.
 
 typedef struct {
 
+  int continuous;
+  int ipdg;
+  int flexible;
+  int enableReductions;
+  int enableGatherScatters;
+  int verbose;
+  int serial;;
+
+}cgOptions_t;
+
+
+
+typedef struct {
+
   int dim;
   int elementType; // number of edges (3=tri, 4=quad, 6=tet, 12=hex)
 
   mesh_t *mesh;
+
+  cgOptions_t cgOptions;
 
   precon_t *precon;
 
@@ -169,6 +185,7 @@ dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory 
 void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision);
 
 dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a);
+
 void ellipticBuildIpdg(elliptic_t* elliptic, int basisNp, dfloat *basis, dfloat lambda,
                         nonZero_t **A, dlong *nnzA, hlong *globalStarts);
 
@@ -222,6 +239,7 @@ void ellipticSerialAxHexKernel3D(const int Nq,
 				 const dfloat lambda,
 				 const occa::memory &o_q,
 				 occa::memory &o_Aq);
+
 
 #endif
 

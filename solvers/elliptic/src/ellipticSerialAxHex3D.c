@@ -251,7 +251,7 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
 	  D);
 #endif
     
-#if 1
+#if 1 
     // TW version
     for(int k = 0; k < p_Nq; k++) {
       for(int j=0;j<p_Nq;++j){

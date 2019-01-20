@@ -32,9 +32,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
-
-  int DEBUG_ENABLE_REDUCTIONS = 1;
-  options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
+  
+  const cgOptions_t &cgOptions = elliptic->cgOptions;
   
   // register scalars
   dfloat rdotz0 = 0;
@@ -65,19 +64,19 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   // subtract r = b - A*x
   ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);
 
-  if(DEBUG_ENABLE_REDUCTIONS==1)
+  if(cgOptions.enableReductions)
     rdotr0 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
   else
     rdotr0 = 1;
 
   //sanity check
   if (rdotr0<1E-20) {
-    if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)){
+    if (cgOptions.verbose&&(mesh->rank==0)){
       printf("converged in ZERO iterations. Stopping.\n");}
     return 0;
   } 
 
-  if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
+  if (cgOptions.verbose&&(mesh->rank==0)) 
     printf("CG: initial res norm %12.12f WE NEED TO GET TO %12.12f \n", sqrt(rdotr0), sqrt(TOL));
 
   // Precon^{-1} (b-A*x)
@@ -87,7 +86,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   o_p.copyFrom(o_z); // PCG
 
   // dot(r,z)
-  if(DEBUG_ENABLE_REDUCTIONS==1)
+  if(cgOptions.enableReductions)
     rdotz0 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
   else
     rdotz0 = 1;
@@ -99,9 +98,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
     
     // dot(p,A*p)
-    if(DEBUG_ENABLE_REDUCTIONS==1){
+    if(cgOptions.enableReductions)
       pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
-    }
     else
       pAp = 1;
     // ]
@@ -116,7 +114,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     //
     rdotr1 = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
     
-    if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
+    if (cgOptions.verbose&&(mesh->rank==0)) 
       printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
 
     if(rdotr1 < TOL) {
@@ -129,21 +127,18 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticPreconditioner(elliptic, lambda, o_r, o_z);
 
     // dot(r,z)
-    if(DEBUG_ENABLE_REDUCTIONS==1){
+    if(cgOptions.enableReductions)
       rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
-    }
     else
       rdotz1 = 1;
     
     // ]
     
     // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
-    if(options.compareArgs("KRYLOV SOLVER", "PCG+FLEXIBLE") ||
-      options.compareArgs("KRYLOV SOLVER", "PCG,FLEXIBLE")) {
+    if(cgOptions.flexible){
     
-      if(DEBUG_ENABLE_REDUCTIONS==1){
+      if(cgOptions.enableReductions)
 	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
-      }
       else
 	zdotAp = 1;
       
