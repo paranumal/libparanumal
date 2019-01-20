@@ -48,7 +48,7 @@ typedef struct {
   int enableReductions;
   int enableGatherScatters;
   int verbose;
-  int serial;;
+  int serial;
 
 }cgOptions_t;
 
@@ -127,6 +127,8 @@ typedef struct {
   occa::memory o_EXYZ; // element vertices for reconstructing geofacs (trilinear hexes only)
   occa::memory o_gllzw; // GLL nodes and weights
 
+  occa::memory o_ggeoNoJW; // 
+
   occa::kernel AxKernel;
   occa::kernel partialAxKernel;
   occa::kernel partialFloatAxKernel;
@@ -150,6 +152,8 @@ typedef struct {
   occa::kernel partialIpdgKernel;
   occa::kernel rhsBCIpdgKernel;
 
+  
+
   // combined PCG update step
   int             NthreadsUpdatePCG;
   hlong           NblocksUpdatePCG;
@@ -167,6 +171,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda, occa::memory &o
 void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda);
 
 int  ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x);
+
 void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &kernelInfo);
 
 
@@ -176,6 +181,8 @@ void ellipticEndHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentri
 
 //Linear solvers
 int pcg      (elliptic_t* elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
+
+
 
 void ellipticScaledAdd(elliptic_t *elliptic, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
 dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b);
@@ -238,7 +245,9 @@ void ellipticSerialAxHexKernel3D(const int Nq,
 				 const occa::memory &o_MM,
 				 const dfloat lambda,
 				 const occa::memory &o_q,
-				 occa::memory &o_Aq);
+				 occa::memory &o_Aq,
+				 const occa::memory &o_ggeoNoJW);
+
 
 
 #endif
