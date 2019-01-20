@@ -26,6 +26,116 @@ SOFTWARE.
 
 #include "elliptic.h"
 
+#if 1
+int pcg(elliptic_t* elliptic, dfloat lambda, 
+        occa::memory &o_r, occa::memory &o_x, 
+        const dfloat tol, const int MAXIT) {
+
+  mesh_t *mesh = elliptic->mesh;
+  setupAide options = elliptic->options;
+  
+  const cgOptions_t &cgOptions = elliptic->cgOptions;
+  
+  // register scalars
+  dfloat rdotz1 = 0;
+  dfloat rdotz2 = 0;
+  dfloat zdotAp = 0;
+  
+  dfloat alpha, beta, pAp = 0;
+  dfloat TOL, normB, one = 1;
+  
+  /*aux variables */
+  occa::memory &o_p  = elliptic->o_p;
+  occa::memory &o_z  = elliptic->o_z;
+  occa::memory &o_Ap = elliptic->o_Ap;
+  occa::memory &o_Ax = elliptic->o_Ax;
+
+  pAp = 0;
+  dfloat eps = 1.e-20;
+  if(one+eps == one) eps = 1.e-14;
+  if(one+eps == one) eps = 1.e-7;
+
+  eps = tol; // over ride tolerance
+  
+  rdotz1 = 1;
+
+  // o_x[:] = zero already 
+  // o_r[:] = f[:] already
+  // mask
+  if (elliptic->Nmasked) 
+    mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
+
+  dfloat rnorm;
+  if(cgOptions.enableReductions)
+    rnorm = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+  else
+    rnorm = 1;
+
+  rnorm = sqrt(rnorm);
+
+  dfloat rlim2, iter;
+  for(iter=1;iter<=MAXIT;++iter){
+
+    // z = Precon^{-1} r
+    ellipticPreconditioner(elliptic, lambda, o_r, o_z);
+
+    rdotz2 = rdotz1;
+
+    // r.z
+    if(cgOptions.enableReductions)
+      rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+    else
+      rdotz1 = 1;
+    
+    if(cgOptions.flexible){
+      dfloat zdotAp;
+      if(cgOptions.enableReductions)
+	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
+      else
+	zdotAp = 1;
+      
+      beta = -alpha*zdotAp/rdotz2;
+    }
+    else{
+      beta = (iter==1) ? 0:rdotz1/rdotz2;
+    }
+    
+    // p = z + beta*p
+    ellipticScaledAdd(elliptic, 1.f, o_z, beta, o_p);
+    
+    // A*p
+    ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
+
+    // dot(p,A*p)
+    if(cgOptions.enableReductions)
+      pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
+    else
+      pAp = 1;
+
+    alpha = rdotz1/pAp;
+
+    //  x <= x + alpha*p
+    //  r <= r - alpha*A*p
+    //  dot(r,r)
+    dfloat rdotr = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
+    
+    if (cgOptions.verbose&&(mesh->rank==0)) 
+      printf("CG: it %d r norm %12.12f alpha = %f \n", iter, sqrt(rdotr), alpha);    
+
+    if(iter==1) rlim2 = rdotr*eps*eps;
+    rnorm = sqrt(rdotr);
+    
+    if(rdotr<=rlim2) break;
+    
+  }
+
+  return iter;
+}
+
+
+#else
+
+// original pcg
 int pcg(elliptic_t* elliptic, dfloat lambda, 
         occa::memory &o_r, occa::memory &o_x, 
         const dfloat tol, const int MAXIT) {
@@ -93,7 +203,6 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   while((Niter <MAXIT)) {
 
-    // [
     // A*p
     ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
     
@@ -102,16 +211,13 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
       pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
     else
       pAp = 1;
-    // ]
     
     // alpha = dot(r,z)/dot(p,A*p)
     alpha = rdotz0/pAp;
 
-    // TO DO:
     //  x <= x + alpha*p
     //  r <= r - alpha*A*p
     //  dot(r,r)
-    //
     rdotr1 = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
     
     if (cgOptions.verbose&&(mesh->rank==0)) 
@@ -122,7 +228,6 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
       break;
     }
 
-    // [
     // z = Precon^{-1} r
     ellipticPreconditioner(elliptic, lambda, o_r, o_z);
 
@@ -132,8 +237,6 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     else
       rdotz1 = 1;
     
-    // ]
-    
     // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
     if(cgOptions.flexible){
     
@@ -142,7 +245,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
       else
 	zdotAp = 1;
       
-      beta = -alpha*zdotAp/rdotz0;
+      beta = -alpha*zdotAp/rdotz0; 
     } else {
       beta = rdotz1/rdotz0;
     }
@@ -162,3 +265,4 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   return Niter;
 }
 
+#endif

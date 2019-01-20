@@ -66,13 +66,13 @@ void ellipticSerialScaledAdd(const int Nq, const hlong Nelements, const dfloat a
 void ellipticScaledAdd(elliptic_t *elliptic, dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b){
 
   mesh_t *mesh = elliptic->mesh;
+  const cgOptions_t &cgOptions = elliptic->cgOptions;
 
   dlong Ntotal = mesh->Nelements*mesh->Np;
 
   // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
-
-  if(elliptic->options.compareArgs("THREAD MODEL", "Serial") &&
-     elliptic->options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
+  
+  if(cgOptions.serial == 1 && cgOptions.continuous==1){
     ellipticSerialScaledAdd(mesh->Nq, mesh->Nelements, alpha, o_a, beta, o_b);
     return;
   }
