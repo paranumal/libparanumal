@@ -31,11 +31,6 @@ void extbdfCoefficents(ins_t *ins, int order);
 void insRunEXTBDF(ins_t *ins){
 
   mesh_t *mesh = ins->mesh;
-  // Initialize INS profiler
-  ins->profiler = new timer; 
-  ins->profiler->setTimer(ins->options);
-  ins->profiler->initTimer(mesh->device);
-  
   timer *profiler = ins->profiler; 
 
   profiler->tic("INS");
@@ -289,7 +284,7 @@ void insRunEXTBDF(ins_t *ins){
 
   if(ins->outputStep) insReport(ins, finalTime,ins->NtimeSteps);
   
-   if(mesh->rank==0) profiler->printTimer();
+  //if(mesh->rank==0) profiler->printTimer();
 
    profiler->printTimer(mesh->rank, mesh->size, mesh->comm);
 }

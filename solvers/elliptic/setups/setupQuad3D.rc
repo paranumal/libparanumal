@@ -1,6 +1,9 @@
 [FORMAT]
 1.0
 
+[APPLICATION PROFILER]
+1
+
 [DATA FILE]
 data/ellipticHomogeneous3D.h
 
