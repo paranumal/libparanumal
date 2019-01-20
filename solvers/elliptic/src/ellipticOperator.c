@@ -42,17 +42,16 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   dfloat alpha = 0., alphaG = 0.;
 
   if(cgOptions.continuous){
-    ogs_t *ogs = elliptic->ogs;
-
     if(cgOptions.serial)
       ellipticSerialAxHexKernel3D(mesh->Nq,  mesh->Nelements, mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq, elliptic->o_ggeoNoJW);
     else
       elliptic->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
 
-    if(cgOptions.enableGatherScatters)
-      ogsGatherScatter(o_Aq, ogsDfloat, ogsAdd, ogs);
+    //    if(cgOptions.enableGatherScatters)
+    //      ogsGatherScatter(o_Aq, ogsDfloat, ogsAdd, ogs);
 
     if(elliptic->allNeumann) { // inspect this later
+      ogs_t *ogs = elliptic->ogs;
       
       dlong Nblock = elliptic->Nblock;
       dfloat *tmp = elliptic->tmp;
@@ -72,8 +71,8 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     }
 
     //post-mask
-    if (elliptic->Nmasked) 
-      mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Aq);
+    //    if (elliptic->Nmasked) 
+    //      mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Aq);
 
   } else if(options.compareArgs("DISCRETIZATION", "IPDG")) {
     printf("WARNING: DEBUGGING C0\n");
