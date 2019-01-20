@@ -131,10 +131,12 @@ double toc(std::string key, double fp, double bw);
 double toc(std::string key, occa::kernel &kernel, double fp, double bw);
 
 void printTimer();
-
 void printTimer(int rank, int size, MPI_Comm comm);
+
+// 
 double allReduceTime(double local, int size, MPI_Comm comm);
 
+// will be deprecated after removing from all solvers
 void occaTimerTic(occa::device device,std::string name);
 void occaTimerToc(occa::device device,std::string name);
 

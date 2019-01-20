@@ -96,55 +96,55 @@ void timer::checkKey(std::string key){
 }
 
 double timer::currentTime(){
-  #if 1 // very simple......
+#if 1 // very simple......
   // time_t curtime; time(&curtime);
   double ltime = MPI_Wtime(); 
   return ltime;
-  #else
+#else
 
-    #if (OCCA_OS & LINUX_OS)
+#if (OCCA_OS & LINUX_OS)
 
-        timespec ct;
-        clock_gettime(CLOCK_MONOTONIC, &ct);
+  timespec ct;
+  clock_gettime(CLOCK_MONOTONIC, &ct);
 
-        return (double) (ct.tv_sec + (1.0e-9 * ct.tv_nsec));
+  return (double) (ct.tv_sec + (1.0e-9 * ct.tv_nsec));
 
-    #elif (OCCA_OS == OSX_OS)
-    #  ifdef __clang__
-        uint64_t ct;
-        ct = mach_absolute_time();
+#elif (OCCA_OS == OSX_OS)
+#  ifdef __clang__
+  uint64_t ct;
+  ct = mach_absolute_time();
 
-        const Nanoseconds ct2 = AbsoluteToNanoseconds(*(AbsoluteTime *) &ct);
+  const Nanoseconds ct2 = AbsoluteToNanoseconds(*(AbsoluteTime *) &ct);
 
-        return ((double) 1.0e-9) * ((double) ( *((uint64_t*) &ct2) ));
-    #  else
-        clock_serv_t cclock;
-        host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+  return ((double) 1.0e-9) * ((double) ( *((uint64_t*) &ct2) ));
+#  else
+  clock_serv_t cclock;
+  host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
 
-        mach_timespec_t ct;
-        clock_get_time(cclock, &ct);
+  mach_timespec_t ct;
+  clock_get_time(cclock, &ct);
 
-        mach_port_deallocate(mach_task_self(), cclock);
+  mach_port_deallocate(mach_task_self(), cclock);
 
-        return (double) (ct.tv_sec + (1.0e-9 * ct.tv_nsec));
-    #  endif
-    #elif (OCCA_OS == WINDOWS_OS)
-        static LARGE_INTEGER freq;
-        static bool haveFreq = false;
+  return (double) (ct.tv_sec + (1.0e-9 * ct.tv_nsec));
+#  endif
+#elif (OCCA_OS == WINDOWS_OS)
+  static LARGE_INTEGER freq;
+  static bool haveFreq = false;
 
-        if (!haveFreq) {
-          QueryPerformanceFrequency(&freq);
-          haveFreq=true;
-        }
+  if (!haveFreq) {
+    QueryPerformanceFrequency(&freq);
+    haveFreq=true;
+  }
 
-        LARGE_INTEGER ct;
+  LARGE_INTEGER ct;
 
-        QueryPerformanceCounter(&ct);
+  QueryPerformanceCounter(&ct);
 
-        return ((double) (ct.QuadPart)) / ((double) (freq.QuadPart));
-    #endif
+  return ((double) (ct.QuadPart)) / ((double) (freq.QuadPart));
+#endif
 
-  #endif 
+#endif 
 }
 
 void timer::tic(std::string key){
@@ -566,19 +566,19 @@ void timer::printTimer(int rank, int size, MPI_Comm comm){
     
     if(rank == 0){
       std::cout<<"********************************************************"
-         <<"**********************************"<<std::endl;
+	       <<"**********************************"<<std::endl;
       std::cout << "Profiling info: " << std::endl;
       std::cout << std::left<<std::setw(30)<<"Name"
-    << std::right<<std::setw(10)<<"time spent"
-    << std::right<<std::setw(10)<<"# calls"
-    << std::right<<std::setw(10)<<"% time"
-    << std::right<<std::setw(10)<<"% total"
-    << std::right<<std::setw(10)<<"gflops "
-    << std::right<<std::setw(10)<<"bwidth"
-    << std::endl;
+		<< std::right<<std::setw(10)<<"time spent"
+		<< std::right<<std::setw(10)<<"# calls"
+		<< std::right<<std::setw(10)<<"% time"
+		<< std::right<<std::setw(10)<<"% total"
+		<< std::right<<std::setw(10)<<"gflops "
+		<< std::right<<std::setw(10)<<"bwidth"
+		<< std::endl;
 
       std::cout<<"--------------------------------------------------------"
-         <<"----------------------------------"<<std::endl;
+	       <<"----------------------------------"<<std::endl;
     }
 
 
@@ -603,7 +603,7 @@ void timer::printTimer(int rank, int size, MPI_Comm comm){
         double ginvTimeTaken = (gtimeTaken > 1e-10) ? 1.0/gtimeTaken : 0.;
 
         if(rank==0){
-	      std::cout << std::left << std::setw(30) << stringName
+	  std::cout << std::left << std::setw(30) << stringName
 		    << std::right << std::setw(10) << std::setprecision(3)<<gtimeTaken
 		    << std::right<<std::setw(10)<<traits->numCalls
 		    << std::right<<std::setw(10)<<std::setprecision(3)<<100.0
@@ -612,7 +612,7 @@ void timer::printTimer(int rank, int size, MPI_Comm comm){
 		    << std::right<<std::setw(10)<<std::setprecision(3)<<traits->bandWidthCount*ginvTimeTaken/1e9
 		    << std::endl;
         }
-       traits->selfTime -= print_recursively(iter->second.childs, ltimeTaken, loverallTime);
+	traits->selfTime -= print_recursively(iter->second.childs, ltimeTaken, loverallTime);
 
       }
     }
@@ -692,8 +692,8 @@ void timer::printTimer(int rank, int size, MPI_Comm comm){
       double ginvTimeTaken = (gtimeTaken > 1e-10) ? 1.0/gtimeTaken : 0.;
     
 
-    if(rank==0){
-	     std::cout << std::left<<std::setw(30) << iter1->first
+      if(rank==0){
+	std::cout << std::left<<std::setw(30) << iter1->first
 		  << std::right<<std::setw(10) << std::setprecision(3)<<gtimeTaken
 		  << std::right<<std::setw(10) << std::setprecision(3)<<gselfTime
 		  << std::right<<std::setw(10)<<traits->numCalls

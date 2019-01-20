@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -75,27 +75,27 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   TOL =  mymax(tol*tol*normB,tol*tol);
 
 #if (TIMER)    
-profiler->tic("Ax Operator");
+  profiler->tic("Ax Operator");
 #endif
   // compute A*x
   ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax, dfloatString);
 
 #if (TIMER)  
-profiler->toc("Ax Operator");
+  profiler->toc("Ax Operator");
 #endif
 
 #if (TIMER)    
-profiler->tic("Scale Add");
+  profiler->tic("Scale Add");
 #endif
   // subtract r = b - A*x
   ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);
 
 #if (TIMER)  
-profiler->toc("Scale Add");
+  profiler->toc("Scale Add");
 #endif
 
 #if (TIMER)  
-profiler->tic("Inner Product");
+  profiler->tic("Inner Product");
 #endif
 
 #if CASCADE
@@ -105,7 +105,7 @@ profiler->tic("Inner Product");
 #endif
 
 #if (TIMER)  
-profiler->toc("Inner Product");
+  profiler->toc("Inner Product");
 #endif
   //sanity check
   if (rdotr0<1E-20) {
@@ -118,20 +118,20 @@ profiler->toc("Inner Product");
     printf("CG: initial res norm %12.12f WE NEED TO GET TO %12.12f \n", sqrt(rdotr0), sqrt(TOL));
 
 #if (TIMER)  
-profiler->tic("Preconditioner");
+  profiler->tic("Preconditioner");
 #endif
   // Precon^{-1} (b-A*x)
   ellipticPreconditioner(elliptic, lambda, o_r, o_z);
 
 #if (TIMER)  
-profiler->toc("Preconditioner");
+  profiler->toc("Preconditioner");
 #endif
   
   // p = z
   o_p.copyFrom(o_z); // PCG
 
 #if (TIMER)  
-profiler->tic("Inner Product");
+  profiler->tic("Inner Product");
 #endif
   // dot(r,z)
 #if CASCADE
@@ -141,24 +141,24 @@ profiler->tic("Inner Product");
 #endif
 
 #if (TIMER)    
-profiler->toc("Inner Product");
+  profiler->toc("Inner Product");
 #endif
 
   while((Niter <MAXIT)) {
 
 #if (TIMER)  
-profiler->tic("Ax Operator");
+    profiler->tic("Ax Operator");
 #endif
     // [
     // A*p
     ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
  
- #if (TIMER)  
- profiler->toc("Ax Operator");   
+#if (TIMER)  
+    profiler->toc("Ax Operator");   
 #endif
  
 #if (TIMER)  
-profiler->tic("Inner Product");
+    profiler->tic("Inner Product");
 #endif
     // dot(p,A*p)
     if(DEBUG_ENABLE_REDUCTIONS==1){
@@ -171,10 +171,10 @@ profiler->tic("Inner Product");
     else
       pAp = 1;
     // ]
-  #if (TIMER)  
-   profiler->toc("Inner Product");   
-  #endif
-// alpha = dot(r,z)/dot(p,A*p)
+#if (TIMER)  
+    profiler->toc("Inner Product");   
+#endif
+    // alpha = dot(r,z)/dot(p,A*p)
     alpha = rdotz0/pAp;
 
     // TO DO:
@@ -182,13 +182,13 @@ profiler->tic("Inner Product");
     //  r <= r - alpha*A*p
     //  dot(r,r)
     //
-    #if (TIMER)  
+#if (TIMER)  
     profiler->tic("Combined Update");
-    #endif
+#endif
     rdotr1 = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
-    #if (TIMER)  
+#if (TIMER)  
     profiler->toc("Combined Update");
-    #endif
+#endif
  
     if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
       printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
@@ -200,16 +200,16 @@ profiler->tic("Inner Product");
 
     // [
     // z = Precon^{-1} r
-    #if (TIMER)  
+#if (TIMER)  
     profiler->tic("Preconditioner");
-    #endif
-     ellipticPreconditioner(elliptic, lambda, o_r, o_z);
-    #if (TIMER)  
+#endif
+    ellipticPreconditioner(elliptic, lambda, o_r, o_z);
+#if (TIMER)  
     profiler->toc("Preconditioner");
-    #endif
+#endif
 
 #if (TIMER)  
-profiler->tic("Inner Product");
+    profiler->tic("Inner Product");
 #endif
     // dot(r,z)
     if(DEBUG_ENABLE_REDUCTIONS==1){
@@ -222,26 +222,26 @@ profiler->tic("Inner Product");
     else
       rdotz1 = 1;
  
- #if (TIMER)  
-profiler->toc("Inner Product");   
+#if (TIMER)  
+    profiler->toc("Inner Product");   
 #endif
     // ]
     
     // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
     if(options.compareArgs("KRYLOV SOLVER", "PCG+FLEXIBLE") ||
-      options.compareArgs("KRYLOV SOLVER", "PCG,FLEXIBLE")) {
+       options.compareArgs("KRYLOV SOLVER", "PCG,FLEXIBLE")) {
     
       if(DEBUG_ENABLE_REDUCTIONS==1){
 #if (TIMER)  
-profiler->tic("Inner Product");
+	profiler->tic("Inner Product");
 #endif
 #if CASCADE
 	zdotAp = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
 #else
 	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
 #endif
-  #if (TIMER)  
-profiler->toc("Inner Product");
+#if (TIMER)  
+	profiler->toc("Inner Product");
 #endif
       }
       else
@@ -252,12 +252,12 @@ profiler->toc("Inner Product");
       beta = rdotz1/rdotz0;
     }
 #if (TIMER)  
-profiler->tic("Scale Add");
+    profiler->tic("Scale Add");
 #endif
     // p = z + beta*p
     ellipticScaledAdd(elliptic, 1.f, o_z, beta, o_p);
 #if (TIMER)  
-profiler->toc("Scale Add");
+    profiler->toc("Scale Add");
 #endif
     // switch rdotz0 <= rdotz1
     rdotz0 = rdotz1;
@@ -285,27 +285,27 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
   dfloat rdotr1 = 0;
   
   if(!options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
- #if (TIMER)  
- profiler->tic("Scale Add");   
+#if (TIMER)  
+    profiler->tic("Scale Add");   
 #endif
     // x <= x + alpha*p
     ellipticScaledAdd(elliptic,  alpha, o_p,  1.f, o_x);
- #if (TIMER)  
- profiler->toc("Scale Add");   
+#if (TIMER)  
+    profiler->toc("Scale Add");   
 #endif
     // [
     // r <= r - alpha*A*p
- #if (TIMER)  
-profiler->tic("Scale Add");
+#if (TIMER)  
+    profiler->tic("Scale Add");
 #endif
     ellipticScaledAdd(elliptic, -alpha, o_Ap, 1.f, o_r);
 #if (TIMER)  
-profiler->toc("Scale Add");
+    profiler->toc("Scale Add");
 #endif
     // dot(r,r)
     if(DEBUG_ENABLE_REDUCTIONS==1){
 #if (TIMER)  
-profiler->tic("Inner Product");      
+      profiler->tic("Inner Product");      
 #endif
 #if CASCADE
       rdotr1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
@@ -313,7 +313,7 @@ profiler->tic("Inner Product");
       rdotr1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #endif
 #if (TIMER)  
-profiler->toc("Inner Product");
+      profiler->toc("Inner Product");
 #endif
     }
     else
@@ -324,7 +324,7 @@ profiler->toc("Inner Product");
     // r <= r - alpha*A*p
     // dot(r,r)
 #if (TIMER)  
-profiler->tic("Update");
+    profiler->tic("Update");
 #endif
 
     elliptic->updatePCGKernel(mesh->Nelements*mesh->Np, elliptic->NblocksUpdatePCG,
@@ -341,7 +341,7 @@ profiler->tic("Update");
     dfloat globalrdotr1 = 0;
     MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 #if (TIMER)  
-profiler->toc("Update");
+    profiler->toc("Update");
 #endif
     
     rdotr1 = globalrdotr1;
