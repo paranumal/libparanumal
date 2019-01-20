@@ -32,6 +32,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
+  const cgOptions_t &cgOptions = elliptic->cgOptions;
 
   dfloat *sendBuffer = elliptic->sendBuffer;
   dfloat *recvBuffer = elliptic->recvBuffer;
@@ -39,23 +40,24 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   dfloat *gradRecvBuffer = elliptic->gradRecvBuffer;
 
   dfloat alpha = 0., alphaG = 0.;
-  dlong Nblock = elliptic->Nblock;
-  dfloat *tmp = elliptic->tmp;
-  occa::memory &o_tmp = elliptic->o_tmp;
 
-  int DEBUG_ENABLE_OGS = 1;
-  options.getArgs("DEBUG ENABLE OGS", DEBUG_ENABLE_OGS);
-
-
-  if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
+  if(cgOptions.continuous){
     ogs_t *ogs = elliptic->ogs;
 
-    ellipticSerialAxHexKernel3D(mesh->Nq,  mesh->Nelements, mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+    if(cgOptions.serial)
+      ellipticSerialAxHexKernel3D(mesh->Nq,  mesh->Nelements, mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
+    else
+      elliptic->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
 
-    if(DEBUG_ENABLE_OGS==1)
+    if(cgOptions.enableGatherScatters)
       ogsGatherScatter(o_Aq, ogsDfloat, ogsAdd, ogs);
 
-    if(elliptic->allNeumann) {
+    if(elliptic->allNeumann) { // inspect this later
+      
+      dlong Nblock = elliptic->Nblock;
+      dfloat *tmp = elliptic->tmp;
+      occa::memory &o_tmp = elliptic->o_tmp;
+      
       // mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
       elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
       o_tmp.copyTo(tmp);

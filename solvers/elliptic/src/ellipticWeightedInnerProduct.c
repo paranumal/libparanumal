@@ -81,14 +81,15 @@ dfloat ellipticSerialWeightedInnerProduct(const int Nq, const hlong Nelements, o
 
 dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a, occa::memory &o_b){
 
+  const cgOptions_t cgOptions = elliptic->cgOptions;
+
   mesh_t *mesh = elliptic->mesh;
   dfloat *tmp = elliptic->tmp;
   dlong Nblock = elliptic->Nblock;
   dlong Nblock2 = elliptic->Nblock2;
   dlong Ntotal = mesh->Nelements*mesh->Np;
 
-  if(elliptic->options.compareArgs("THREAD MODEL", "Serial") &&
-     elliptic->options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
+  if(cgOptions.serial==1 && cgOptions.continuous==1){
     
     dfloat wab = ellipticSerialWeightedInnerProduct(mesh->Nq, mesh->Nelements, o_w, o_a, o_b);
     dfloat globalwab = 0;
@@ -101,7 +102,7 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
   occa::memory &o_tmp = elliptic->o_tmp;
   occa::memory &o_tmp2 = elliptic->o_tmp2;
 
-  if(elliptic->options.compareArgs("DISCRETIZATION","CONTINUOUS"))
+  if(cgOptions.continuous==1)
     elliptic->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
   else
     elliptic->innerProductKernel(Ntotal, o_a, o_b, o_tmp);

@@ -98,21 +98,18 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
 			 occa::memory &o_p, occa::memory &o_Ap, const dfloat alpha,
 			 occa::memory &o_x, occa::memory &o_r){
 
+  const cgOptions_t cgOptions = elliptic->cgOptions;
+  
   mesh_t *mesh = elliptic->mesh;
-  setupAide options = elliptic->options;
 
-  int DEBUG_ENABLE_REDUCTIONS = 1;
-  options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
-
-  if(options.compareArgs("THREAD MODEL", "Serial") &&
-     options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
+  if(cgOptions.serial==1 && cgOptions.continuous==1){
     
     dfloat rdotr1 = ellipticSerialUpdatePCG(mesh->Nq, mesh->Nelements, 
 					    elliptic->o_invDegree,
 					    o_p, o_Ap, alpha, o_x, o_r);
 
     dfloat globalrdotr1 = 0;
-    if(DEBUG_ENABLE_REDUCTIONS==1)      
+    if(cgOptions.enableReductions)      
       MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
     else
       globalrdotr1 = 1;
@@ -122,7 +119,7 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
   
   dfloat rdotr1 = 0;
   
-  if(!options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
+  if(!cgOptions.continuous){
     
     // x <= x + alpha*p
     ellipticScaledAdd(elliptic,  alpha, o_p,  1.f, o_x);
@@ -132,13 +129,8 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
     ellipticScaledAdd(elliptic, -alpha, o_Ap, 1.f, o_r);
     
     // dot(r,r)
-    if(DEBUG_ENABLE_REDUCTIONS==1){
-#if 0
-      rdotr1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
-#else
+    if(cgOptions.enableReductions)
       rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
-#endif
-    }
     else
       rdotr1 = 1;
   }else{

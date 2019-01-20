@@ -34,11 +34,42 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 
   elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
 
+  cgOptions_t cgOptions;
+
   options.getArgs("MESH DIMENSION", elliptic->dim);
   options.getArgs("ELEMENT TYPE", elliptic->elementType);
-
   elliptic->mesh = mesh;
   elliptic->options = options;
+
+  // defaults for conjugate gradient
+  cgOptions.enableGatherScatters = 1;
+  cgOptions.enableReductions = 1; 
+  cgOptions.flexible = 1; 
+  cgOptions.verbose = 0;
+  
+  cgOptions.serial = options.compareArgs("THREAD MODEL", "Serial");
+
+  cgOptions.continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
+  cgOptions.ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
+
+  options.getArgs("DEBUG ENABLE REDUCTIONS", cgOptions.enableReductions);
+  options.getArgs("DEBUG ENABLE OGS", cgOptions.enableGatherScatters);
+  
+  cgOptions.flexible = options.compareArgs("KRYLOV SOLVER", "FLEXIBLE");
+  cgOptions.verbose  = options.compareArgs("VERBOSE", "TRUE");
+
+  elliptic->cgOptions = cgOptions;
+
+  if(mesh->rank==0 && cgOptions.verbose==1){
+    printf("CG OPTIONS: enableReductions=%d, enableGatherScatters=%d, flexible=%d, verbose=%d, ipdg=%d, continuous=%d, serial=%d\n",
+	   cgOptions.enableGatherScatters, 
+	   cgOptions.enableReductions,
+	   cgOptions.flexible,
+	   cgOptions.verbose,
+	   cgOptions.ipdg,
+	   cgOptions.continuous,
+	   cgOptions.serial);
+  }
 
   mesh->Nfields = 1;
 

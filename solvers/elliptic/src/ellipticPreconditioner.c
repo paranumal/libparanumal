@@ -33,7 +33,14 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
   precon_t *precon = elliptic->precon;
   setupAide options = elliptic->options;
 
-  if (options.compareArgs("PRECONDITIONER", "MULTIGRID")) {
+  if(options.compareArgs("PRECONDITIONER", "JACOBI")){
+    
+    dlong Ntotal = mesh->Np*mesh->Nelements;
+    // Jacobi preconditioner
+    
+    elliptic->dotMultiplyKernel(Ntotal, o_r, precon->o_invDiagA, o_z);
+  }
+  else if (options.compareArgs("PRECONDITIONER", "MULTIGRID")) {
 
     parAlmond::Precon(precon->parAlmond, o_z, o_r);
 
@@ -107,15 +114,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
       ogsScatter(o_z, precon->o_xG, ogsDfloat, ogsAdd, precon->FEMogs);
     }
 
-  } else if(options.compareArgs("PRECONDITIONER", "JACOBI")){
-
-    dlong Ntotal = mesh->Np*mesh->Nelements;
-    // Jacobi preconditioner
-
-    elliptic->dotMultiplyKernel(Ntotal, o_r, precon->o_invDiagA, o_z);
-
-
-  } else{ // turn off preconditioner
+  }else{ // turn off preconditioner
     o_z.copyFrom(o_r);
   }
 }

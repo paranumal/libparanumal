@@ -77,14 +77,15 @@ dfloat ellipticSerialWeightedNorm2(const int Nq, const hlong Nelements, occa::me
 
 dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memory &o_a){
 
+  const cgOptions_t cgOptions = elliptic->cgOptions;
+
   mesh_t *mesh = elliptic->mesh;
   dfloat *tmp = elliptic->tmp;
   dlong Nblock = elliptic->Nblock;
   dlong Nblock2 = elliptic->Nblock2;
   dlong Ntotal = mesh->Nelements*mesh->Np;
 
-  if(elliptic->options.compareArgs("THREAD MODEL", "Serial") &&
-     elliptic->options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
+  if(cgOptions.serial==1 && cgOptions.continuous==1){
     
     dfloat wa2 = ellipticSerialWeightedNorm2(mesh->Nq, mesh->Nelements, o_w, o_a);
 
@@ -98,7 +99,7 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   occa::memory &o_tmp = elliptic->o_tmp;
   occa::memory &o_tmp2 = elliptic->o_tmp2;
 
-  if(elliptic->options.compareArgs("DISCRETIZATION","CONTINUOUS"))
+  if(cgOptions.continuous==1)
     elliptic->weightedNorm2Kernel(Ntotal, o_w, o_a, o_tmp);
   else
     elliptic->innerProductKernel(Ntotal, o_a, o_tmp);
