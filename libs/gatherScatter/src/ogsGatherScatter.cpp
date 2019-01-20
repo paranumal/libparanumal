@@ -48,10 +48,11 @@ void ogsGatherScatterStart(occa::memory o_v,
                           const char *op, 
                           ogs_t *ogs){
   size_t Nbytes;
-  if (!strcmp(type, "float")) 
-    Nbytes = sizeof(float);
-  else if (!strcmp(type, "double")) 
+  
+  if (!strcmp(type, "double")) 
     Nbytes = sizeof(double);
+  else if (!strcmp(type, "float")) 
+    Nbytes = sizeof(float);
   else if (!strcmp(type, "int")) 
     Nbytes = sizeof(int);
   else if (!strcmp(type, "long long int")) 
@@ -82,10 +83,11 @@ void ogsGatherScatterFinish(occa::memory o_v,
                           const char *op, 
                           ogs_t *ogs){
   size_t Nbytes;
-  if (!strcmp(type, "float")) 
-    Nbytes = sizeof(float);
-  else if (!strcmp(type, "double")) 
+
+  if (!strcmp(type, "double")) 
     Nbytes = sizeof(double);
+  else if (!strcmp(type, "float")) 
+    Nbytes = sizeof(float);
   else if (!strcmp(type, "int")) 
     Nbytes = sizeof(int);
   else if (!strcmp(type, "long long int")) 
@@ -118,37 +120,45 @@ void occaGatherScatter(const  dlong Ngather,
                 const char* type,
                 const char* op,
                 occa::memory  o_v) {
-  
-  if      ((!strcmp(type, "float"))&&(!strcmp(op, "add"))) 
-    ogs::gatherScatterKernel_floatAdd(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "float"))&&(!strcmp(op, "mul"))) 
-    ogs::gatherScatterKernel_floatMul(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "float"))&&(!strcmp(op, "min"))) 
-    ogs::gatherScatterKernel_floatMin(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "float"))&&(!strcmp(op, "max"))) 
-    ogs::gatherScatterKernel_floatMax(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "double"))&&(!strcmp(op, "add"))) 
-    ogs::gatherScatterKernel_doubleAdd(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "double"))&&(!strcmp(op, "mul"))) 
-    ogs::gatherScatterKernel_doubleMul(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "double"))&&(!strcmp(op, "min"))) 
-    ogs::gatherScatterKernel_doubleMin(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "double"))&&(!strcmp(op, "max"))) 
-    ogs::gatherScatterKernel_doubleMax(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "int"))&&(!strcmp(op, "add"))) 
-    ogs::gatherScatterKernel_intAdd(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "int"))&&(!strcmp(op, "mul"))) 
-    ogs::gatherScatterKernel_intMul(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "int"))&&(!strcmp(op, "min"))) 
-    ogs::gatherScatterKernel_intMin(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "int"))&&(!strcmp(op, "max"))) 
-    ogs::gatherScatterKernel_intMax(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "add"))) 
-    ogs::gatherScatterKernel_longAdd(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "mul"))) 
-    ogs::gatherScatterKernel_longMul(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "min"))) 
-    ogs::gatherScatterKernel_longMin(Ngather, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "max"))) 
-    ogs::gatherScatterKernel_longMax(Ngather, o_gatherStarts, o_gatherIds, o_v);
+
+  if((!strcmp(type, "float"))){
+    if      (!strcmp(op, "add")) 
+      ogs::gatherScatterKernel_floatAdd(Ngather, o_gatherStarts, o_gatherIds, o_v);
+    else if (!strcmp(op, "mul"))
+      ogs::gatherScatterKernel_floatMul(Ngather, o_gatherStarts, o_gatherIds, o_v);
+    else if (!strcmp(op, "min")) 
+      ogs::gatherScatterKernel_floatMin(Ngather, o_gatherStarts, o_gatherIds, o_v);
+    else if (!strcmp(op, "max")) 
+      ogs::gatherScatterKernel_floatMax(Ngather, o_gatherStarts, o_gatherIds, o_v);
+  }
+  else if((!strcmp(type, "double"))){
+    if      (!strcmp(op, "add")) 
+      ogs::gatherScatterKernel_doubleAdd(Ngather, o_gatherStarts, o_gatherIds, o_v);
+    else if (!strcmp(op, "mul"))
+      ogs::gatherScatterKernel_doubleMul(Ngather, o_gatherStarts, o_gatherIds, o_v);
+    else if (!strcmp(op, "min")) 
+      ogs::gatherScatterKernel_doubleMin(Ngather, o_gatherStarts, o_gatherIds, o_v);
+    else if (!strcmp(op, "max")) 
+      ogs::gatherScatterKernel_doubleMax(Ngather, o_gatherStarts, o_gatherIds, o_v);
+  }
+  else if((!strcmp(type, "int"))){
+    if      (!strcmp(op, "add")) 
+      ogs::gatherScatterKernel_intAdd(Ngather, o_gatherStarts, o_gatherIds, o_v);
+    else if (!strcmp(op, "mul"))
+      ogs::gatherScatterKernel_intMul(Ngather, o_gatherStarts, o_gatherIds, o_v);
+    else if (!strcmp(op, "min")) 
+      ogs::gatherScatterKernel_intMin(Ngather, o_gatherStarts, o_gatherIds, o_v);
+    else if (!strcmp(op, "max")) 
+      ogs::gatherScatterKernel_intMax(Ngather, o_gatherStarts, o_gatherIds, o_v);
+  }
+  else if((!strcmp(type, "long lont int"))){
+    if      (!strcmp(op, "add")) 
+      ogs::gatherScatterKernel_longAdd(Ngather, o_gatherStarts, o_gatherIds, o_v);
+    else if (!strcmp(op, "mul"))
+      ogs::gatherScatterKernel_longMul(Ngather, o_gatherStarts, o_gatherIds, o_v);
+    else if (!strcmp(op, "min")) 
+      ogs::gatherScatterKernel_longMin(Ngather, o_gatherStarts, o_gatherIds, o_v);
+    else if (!strcmp(op, "max")) 
+      ogs::gatherScatterKernel_longMax(Ngather, o_gatherStarts, o_gatherIds, o_v);
+  }
 }

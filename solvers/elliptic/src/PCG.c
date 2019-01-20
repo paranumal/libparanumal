@@ -54,7 +54,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   dfloat alpha, beta, pAp = 0;
   dfloat TOL, normB, one = 1;
   
-  double serialElapsedReduction = 0, serialElapsedAx = 0;
+  double serialElapsedReduction = 0, serialElapsedAx = 0, serialElapsedGatherScatter = 0;
 
   double pcgStart = MPI_Wtime();
   
@@ -131,6 +131,17 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
     serialElapsedAx += serialElapsed();
 
+    if(cgOptions.enableGatherScatters){
+      serialTic();
+      ogs_t *ogs = elliptic->ogs;
+      ogsGatherScatter(o_Ap, ogsDfloat, ogsAdd, ogs);
+      serialElapsedGatherScatter += serialElapsed();
+    }
+
+    //post-mask
+    if (elliptic->Nmasked) 
+      mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Ap);
+
     // dot(p,A*p)
     if(cgOptions.enableReductions){
       serialTic();
@@ -164,10 +175,11 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   serialElapsedReduction /= elapsed;
   serialElapsedAx /= elapsed;
+  serialElapsedGatherScatter /= elapsed;
 
-  double aveElapsedReduction = 0, aveElapsedAx = 0;
-  double minElapsedReduction = 0, minElapsedAx = 0;
-  double maxElapsedReduction = 0, maxElapsedAx = 0;
+  double aveElapsedReduction = 0, aveElapsedAx = 0, aveElapsedGatherScatter = 0;
+  double minElapsedReduction = 0, minElapsedAx = 0, minElapsedGatherScatter = 0;
+  double maxElapsedReduction = 0, maxElapsedAx = 0, maxElapsedGatherScatter = 0;
   
   MPI_Reduce(&serialElapsedReduction, &minElapsedReduction, 1, MPI_DOUBLE, MPI_MIN, 0, mesh->comm); 
   MPI_Reduce(&serialElapsedReduction, &maxElapsedReduction, 1, MPI_DOUBLE, MPI_MAX, 0, mesh->comm);
@@ -177,10 +189,15 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   MPI_Reduce(&serialElapsedAx, &maxElapsedAx, 1, MPI_DOUBLE, MPI_MAX, 0, mesh->comm);
   MPI_Reduce(&serialElapsedAx, &aveElapsedAx, 1, MPI_DOUBLE, MPI_SUM, 0, mesh->comm);
 
+  MPI_Reduce(&serialElapsedGatherScatter, &minElapsedGatherScatter, 1, MPI_DOUBLE, MPI_MIN, 0, mesh->comm); 
+  MPI_Reduce(&serialElapsedGatherScatter, &maxElapsedGatherScatter, 1, MPI_DOUBLE, MPI_MAX, 0, mesh->comm);
+  MPI_Reduce(&serialElapsedGatherScatter, &aveElapsedGatherScatter, 1, MPI_DOUBLE, MPI_SUM, 0, mesh->comm);
+
   if(mesh->rank==0) {
 
     aveElapsedAx /= mesh->size;
     aveElapsedReduction /= mesh->size;
+    aveElapsedGatherScatter /= mesh->size;
 
 #if 0
     minElapsedReduction /= iter;
@@ -194,6 +211,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
     printf("Reductions took %lg, %lg, %lg [min, ave, max] \n", minElapsedReduction, aveElapsedReduction, maxElapsedReduction);
     printf("Matrix-vec took %lg, %lg, %lg [min, ave, max] \n", minElapsedAx, aveElapsedAx, maxElapsedAx);
+    printf("GatherScat took %lg, %lg, %lg [min, ave, max] \n", minElapsedGatherScatter, aveElapsedGatherScatter, maxElapsedGatherScatter);
   }
 
   return iter;

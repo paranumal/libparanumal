@@ -31,6 +31,7 @@
 extern "C"
 {
   void ax_e_(dfloat *w, const dfloat *u, const dfloat *g, dfloat *ur, dfloat *us, dfloat *ut,dfloat *wk, const dfloat *DT, const dfloat *D);
+  void ax_(const int *Nel, dfloat *w, const dfloat *u, const dfloat *g, dfloat *ur, dfloat *us, dfloat *ut,dfloat *wk, const int *, const dfloat *DT, const dfloat *D);
   
   void local_grad3_ (dfloat * __restrict__ qr,dfloat * __restrict__ qs, dfloat * __restrict__ qt, 
 		     const dfloat * __restrict__ q, const int *N, const dfloat * __restrict__ DT, const dfloat * __restrict__ D);
@@ -231,7 +232,11 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
   }
 
   const int c_Np = p_Np;
+  const int p_N = p_Nq-1;
 
+  //  ax_ (&Nelements, Aq, q, ggeo, s_qr, s_qs, s_qt, s_wk, &p_N, S, D);
+
+  if(1)
   for(dlong e=0; e<Nelements; ++e){
     
     const dlong element = e;
@@ -364,6 +369,7 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){
 
+#if 0
           const dlong gbase = element*p_Nggeo*c_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           const dfloat r_G00 = ggeo[gbase+G00ID*p_Np];
           const dfloat r_G01 = ggeo[gbase+G01ID*p_Np];
@@ -371,6 +377,18 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
           const dfloat r_G02 = ggeo[gbase+G02ID*p_Np];
           const dfloat r_G12 = ggeo[gbase+G12ID*p_Np];
           const dfloat r_G22 = ggeo[gbase+G22ID*p_Np];
+#endif
+
+#if 1
+          const dlong gbase = element*p_Nggeo*c_Np + (k*p_Nq*p_Nq + j*p_Nq + i);
+	  const dfloat * __restrict__ ggeobase = ggeo+gbase;
+          const dfloat r_G00 = ggeobase[0*p_Np];
+          const dfloat r_G01 = ggeobase[1*p_Np];
+          const dfloat r_G02 = ggeobase[2*p_Np];
+          const dfloat r_G11 = ggeobase[3*p_Np];
+          const dfloat r_G12 = ggeobase[4*p_Np];
+          const dfloat r_G22 = ggeobase[5*p_Np];
+#endif
 
           dfloat qr = 0.f;
           dfloat qs = 0.f;
