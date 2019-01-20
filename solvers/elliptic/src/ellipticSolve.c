@@ -28,17 +28,17 @@ SOFTWARE.
 
 int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
                   occa::memory &o_r, occa::memory &o_x){
-
+  
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
-
+  
   int Niter = 0;
   int maxIter = 1000; 
-
+  
   double start = 0.0, end =0.0;
   
   Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter);
-  
+ 
   return Niter;
 
 }

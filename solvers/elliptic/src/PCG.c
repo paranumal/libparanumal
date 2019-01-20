@@ -26,10 +26,20 @@ SOFTWARE.
 
 #include "elliptic.h"
 
+static double serialTicTime = 0;
+
+void serialTic(){
+  serialTicTime = MPI_Wtime();
+}
+
+double serialElapsed(){
+  return MPI_Wtime()-serialTicTime;
+}
+
 #if 1
 int pcg(elliptic_t* elliptic, dfloat lambda, 
         occa::memory &o_r, occa::memory &o_x, 
-        const dfloat tol, const int MAXIT) {
+        const dfloat tol, const int MAXIT){
 
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
@@ -43,6 +53,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   
   dfloat alpha, beta, pAp = 0;
   dfloat TOL, normB, one = 1;
+  
+  double serialElapsedReduction = 0, serialElapsedAx = 0;
   
   /*aux variables */
   occa::memory &o_p  = elliptic->o_p;
@@ -66,8 +78,11 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
 
   dfloat rnorm;
-  if(cgOptions.enableReductions)
+  if(cgOptions.enableReductions){
+    serialTic();
     rnorm = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+    serialElapsedReduction += serialElapsed();
+  }
   else
     rnorm = 1;
 
@@ -82,15 +97,21 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     rdotz2 = rdotz1;
 
     // r.z
-    if(cgOptions.enableReductions)
+    if(cgOptions.enableReductions){
+      serialTic();
       rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+      serialElapsedReduction += serialElapsed();
+    }
     else
       rdotz1 = 1;
     
     if(cgOptions.flexible){
       dfloat zdotAp;
-      if(cgOptions.enableReductions)
+      if(cgOptions.enableReductions){
+	serialTic();
 	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
+	serialElapsedReduction += serialElapsed();
+      }
       else
 	zdotAp = 1;
       
@@ -104,11 +125,16 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticScaledAdd(elliptic, 1.f, o_z, beta, o_p);
     
     // A*p
+    serialTic();
     ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
+    serialElapsedAx += serialElapsed();
 
     // dot(p,A*p)
-    if(cgOptions.enableReductions)
+    if(cgOptions.enableReductions){
+      serialTic();
       pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
+      serialElapsedReduction += serialElapsed();
+    }
     else
       pAp = 1;
 
@@ -117,8 +143,11 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     //  x <= x + alpha*p
     //  r <= r - alpha*A*p
     //  dot(r,r)
-    dfloat rdotr = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
     
+    serialTic();
+    dfloat rdotr = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
+    serialElapsedReduction += serialElapsed(); // also includes two streaming ops
+	
     if (cgOptions.verbose&&(mesh->rank==0)) 
       printf("CG: it %d r norm %12.12f alpha = %f \n", iter, sqrt(rdotr), alpha);    
 
@@ -127,6 +156,27 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     
     if(rdotr<=rlim2) break;
     
+  }
+
+  double aveElapsedReduction = 0, aveElapsedAx = 0;
+  double minElapsedReduction = 0, minElapsedAx = 0;
+  double maxElapsedReduction = 0, maxElapsedAx = 0;
+  
+  MPI_Reduce(&serialElapsedReduction, &minElapsedReduction, 1, MPI_DOUBLE, MPI_MIN, 0, mesh->comm); 
+  MPI_Reduce(&serialElapsedReduction, &maxElapsedReduction, 1, MPI_DOUBLE, MPI_MAX, 0, mesh->comm);
+  MPI_Reduce(&serialElapsedReduction, &aveElapsedReduction, 1, MPI_DOUBLE, MPI_SUM, 0, mesh->comm);
+
+  MPI_Reduce(&serialElapsedAx, &minElapsedAx, 1, MPI_DOUBLE, MPI_MIN, 0, mesh->comm); 
+  MPI_Reduce(&serialElapsedAx, &maxElapsedAx, 1, MPI_DOUBLE, MPI_MAX, 0, mesh->comm);
+  MPI_Reduce(&serialElapsedAx, &aveElapsedAx, 1, MPI_DOUBLE, MPI_SUM, 0, mesh->comm);
+
+  if(mesh->rank==0) {
+
+    aveElapsedAx /= mesh->size;
+    aveElapsedReduction /= mesh->size;
+
+    printf("Reductions took %lg, %lg, %lg [min, ave, max] \n", minElapsedReduction, aveElapsedReduction, maxElapsedReduction);
+    printf("Matrix-vec took %lg, %lg, %lg [min, ave, max] \n", minElapsedAx, aveElapsedAx, maxElapsedAx);
   }
 
   return iter;
@@ -162,14 +212,13 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   occa::memory &o_Ap = elliptic->o_Ap;
   occa::memory &o_Ax = elliptic->o_Ax;
 
-
   /*compute norm b, set the tolerance */
   normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 
   TOL =  mymax(tol*tol*normB,tol*tol);
   
   // compute A*x
-  ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax, dfloatString);
+  ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax, dfloatString, elliptic->o_ggeoNoJW);
 
   // subtract r = b - A*x
   ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);

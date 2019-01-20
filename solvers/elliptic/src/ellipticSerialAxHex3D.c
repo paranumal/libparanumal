@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -31,10 +31,10 @@ SOFTWARE.
 extern "C"
 {
   void ax_e_(dfloat *w, const dfloat *u, const dfloat *g, dfloat *ur, dfloat *us, dfloat *ut,dfloat *wk, const dfloat *DT, const dfloat *D);
-
+  
   void local_grad3_ (dfloat * __restrict__ qr,dfloat * __restrict__ qs, dfloat * __restrict__ qt, 
 		     const dfloat * __restrict__ q, const int *N, const dfloat * __restrict__ DT, const dfloat * __restrict__ D);
-
+  
   void local_grad3_t_ (dfloat * __restrict__ q,
 		       const dfloat * __restrict__ qr, 
 		       const dfloat * __restrict__ qs, 
@@ -56,13 +56,14 @@ extern "C"
 #define USE_XSMM 0
 
 // hack
-#define p_Nggeo 7 
+// #define p_Nggeo 7
+#define p_Nggeo 6
 
 template < const int rowsA, const int rowsB, const int colsC >
   static void mxm(const dfloat * __restrict__ A,
-	 const dfloat * __restrict__ B,
-	 const dfloat BETA, 
-	 dfloat * __restrict__ C){
+		    const dfloat * __restrict__ B,
+		    const dfloat BETA, 
+		    dfloat * __restrict__ C){
 
 #if USE_XSMM || USE_BLAS
   // dgemm (TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC)
@@ -132,9 +133,9 @@ void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
   qt    = (dfloat*)__builtin_assume_aligned(qt, USE_OCCA_MEM_BYTE_ALIGN) ;
   Aq   = (dfloat*)__builtin_assume_aligned(Aq, USE_OCCA_MEM_BYTE_ALIGN) ;
   ggeo = (dfloat*)__builtin_assume_aligned(ggeo, USE_OCCA_MEM_BYTE_ALIGN) ;
-  
-  dfloat zero = 0, one = 1.0;
-  const int N = p_Nq-1;
+
+dfloat zero = 0, one = 1.0;
+const int N = p_Nq-1;
 
   // grad
 #if 0
@@ -148,10 +149,14 @@ void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
 #endif
   
   for(int n=0;n<p_Np;++n){
+#if 0
     const dfloat G00 = ggeo[n+G00ID*p_Np], G01 = ggeo[n+G01ID*p_Np], G11 = ggeo[n+G11ID*p_Np];
     //    const dfloat GWJ = ggeo[n+G00ID*p_Np];
     const dfloat G12 = ggeo[n+G12ID*p_Np], G02 = ggeo[n+G02ID*p_Np], G22 = ggeo[n+G22ID*p_Np];
-
+#else
+    const dfloat G00 = ggeo[0+n*6], G01 = ggeo[1+n*6], G02 = ggeo[2+n*6];
+    const dfloat G11 = ggeo[3+n*6], G12 = ggeo[4+n*6], G22 = ggeo[5+n*6];
+#endif
     dfloat qrn = G00*qr[n] + G01*qs[n] + G02*qt[n];
     dfloat qsn = G01*qr[n] + G11*qs[n] + G12*qt[n];
     dfloat qtn = G02*qr[n] + G12*qs[n] + G22*qt[n];
@@ -266,7 +271,7 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
     for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){
-
+#if 0
           const dlong gbase = element*p_Nggeo*c_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           const dfloat r_G00 = ggeo[gbase+G00ID*p_Np];
           const dfloat r_G01 = ggeo[gbase+G01ID*p_Np];
@@ -274,6 +279,29 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
           const dfloat r_G12 = ggeo[gbase+G12ID*p_Np];
           const dfloat r_G02 = ggeo[gbase+G02ID*p_Np];
           const dfloat r_G22 = ggeo[gbase+G22ID*p_Np];
+#endif
+
+#if 0
+          const dlong gbase = element*p_Nggeo*c_Np + (k*p_Nq*p_Nq + j*p_Nq + i)*p_Nggeo;
+	  const dfloat * __restrict__ ggeobase = ggeo+gbase;
+          const dfloat r_G00 = ggeobase[0];
+          const dfloat r_G01 = ggeobase[1];
+          const dfloat r_G02 = ggeobase[2];
+          const dfloat r_G11 = ggeobase[3];
+          const dfloat r_G12 = ggeobase[4];
+          const dfloat r_G22 = ggeobase[5];
+#endif
+
+#if 1
+          const dlong gbase = element*p_Nggeo*c_Np + (k*p_Nq*p_Nq + j*p_Nq + i);
+	  const dfloat * __restrict__ ggeobase = ggeo+gbase;
+          const dfloat r_G00 = ggeobase[0*p_Np];
+          const dfloat r_G01 = ggeobase[1*p_Np];
+          const dfloat r_G02 = ggeobase[2*p_Np];
+          const dfloat r_G11 = ggeobase[3*p_Np];
+          const dfloat r_G12 = ggeobase[4*p_Np];
+          const dfloat r_G22 = ggeobase[5*p_Np];
+#endif
 
           dfloat qr = 0.f;
           dfloat qs = 0.f;
@@ -518,7 +546,9 @@ void ellipticSerialAxHexKernel3D(const int Nq,
 				 const occa::memory &o_MM,
 				 const dfloat lambda,
 				 const occa::memory &o_q,
-				 occa::memory &o_Aq){
+				 occa::memory &o_Aq,
+				 const occa::memory &o_ggeoNoJW
+				 ){
   
 
   const dfloat *D    = (dfloat*) o_Dmatrices.ptr();
@@ -526,7 +556,8 @@ void ellipticSerialAxHexKernel3D(const int Nq,
   const dfloat *MM   = (dfloat*) o_MM.ptr();
 
   const dfloat *q    = (dfloat*)o_q.ptr();
-  const dfloat *ggeo = (dfloat*)o_ggeo.ptr();
+  //  const dfloat *ggeo = (dfloat*)o_ggeo.ptr();
+  const dfloat *ggeo = (dfloat*)o_ggeoNoJW.ptr();
   dfloat *Aq  = (dfloat*)o_Aq.ptr();
   
   switch(Nq){
