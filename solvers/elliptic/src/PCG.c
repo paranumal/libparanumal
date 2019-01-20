@@ -55,6 +55,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   dfloat TOL, normB, one = 1;
   
   double serialElapsedReduction = 0, serialElapsedAx = 0;
+
+  double pcgStart = MPI_Wtime();
   
   /*aux variables */
   occa::memory &o_p  = elliptic->o_p;
@@ -158,6 +160,11 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     
   }
 
+  double elapsed = MPI_Wtime()-pcgStart;
+
+  serialElapsedReduction /= elapsed;
+  serialElapsedAx /= elapsed;
+
   double aveElapsedReduction = 0, aveElapsedAx = 0;
   double minElapsedReduction = 0, minElapsedAx = 0;
   double maxElapsedReduction = 0, maxElapsedAx = 0;
@@ -174,6 +181,16 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
     aveElapsedAx /= mesh->size;
     aveElapsedReduction /= mesh->size;
+
+#if 0
+    minElapsedReduction /= iter;
+    maxElapsedReduction /= iter;
+    aveElapsedReduction /= iter;
+
+    minElapsedAx /= iter;
+    maxElapsedAx /= iter;
+    aveElapsedAx /= iter;
+#endif
 
     printf("Reductions took %lg, %lg, %lg [min, ave, max] \n", minElapsedReduction, aveElapsedReduction, maxElapsedReduction);
     printf("Matrix-vec took %lg, %lg, %lg [min, ave, max] \n", minElapsedAx, aveElapsedAx, maxElapsedAx);
