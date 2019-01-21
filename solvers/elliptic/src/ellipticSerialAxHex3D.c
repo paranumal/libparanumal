@@ -247,7 +247,7 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
 					     D, S, MM, lambda, q + element*p_Np,
 					     s_qr, s_qs, s_qt, Aq+element*p_Np, s_wk);
 #endif
-    
+   
 #if 0
     // STEFAN version
     ax_e_(Aq+element*p_Np, 
