@@ -290,7 +290,7 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
           const dlong gbase = element*p_Nggeo*c_Np + (k*p_Nq*p_Nq + j*p_Nq + i)*p_Nggeo;
 	  const dfloat * __restrict__ ggeobase = ggeo+gbase;
           const dfloat r_G00 = ggeobase[0];
-          const dfloat r_G01 = ggeobase[1];
+	  const dfloat r_G01 = ggeobase[1];
           const dfloat r_G02 = ggeobase[2];
           const dfloat r_G11 = ggeobase[3];
           const dfloat r_G12 = ggeobase[4];

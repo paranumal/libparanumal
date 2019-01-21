@@ -202,7 +202,7 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
     
     const dlong element = elementList[e];
 
-#if 1
+#if 0
     ellipticSerialElementAxHexKernel3D<p_Nq>(ggeo+element*p_Np*p_Nggeo,
 					     D, S, MM, lambda, q + element*p_Np,
 					     s_qr, s_qs, s_qt, Aq+element*p_Np);
@@ -210,15 +210,15 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
     
 #if USE_STEFAN_MXM==1
     ax_e_(Aq+element*p_Np, 
-      q+element*p_Np,
-      ggeo + element*p_Nggeo*p_Np, // note layout is wrong
-      s_Gqr[0][0],
-      s_Gqs[0][0],
-      s_Gqt[0][0],
+	  q+element*p_Np,
+	  ggeo + element*p_Nggeo*p_Np, // note layout is wrong
+	  s_Gqr[0][0],
+	  s_Gqs[0][0],
+	  s_Gqt[0][0],
       s_tmp[0][0]);
 #endif
     
-#if 0
+#if 1
     for(int k = 0; k < p_Nq; k++) {
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){

@@ -131,6 +131,7 @@ typedef struct {
 
   occa::kernel AxKernel;
   occa::kernel partialAxKernel;
+  occa::kernel partialAxKernel2;
   occa::kernel partialFloatAxKernel;
   occa::kernel partialCubatureAxKernel;
   

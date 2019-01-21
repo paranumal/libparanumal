@@ -76,7 +76,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
   // mesh->o_resq =
   //   mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), mesh->resq);
 
-  reportMemoryUsage(mesh->device, "meshOccaSetup3D: before operators ");
+  //  reportMemoryUsage(mesh->device, "meshOccaSetup3D: before operators ");
   
   if(mesh->Nfaces==4){
 
@@ -257,7 +257,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
       
     }
 
-    reportMemoryUsage(mesh->device, "meshOccaSetup3D: after operators and integration grids ");
+    //    reportMemoryUsage(mesh->device, "meshOccaSetup3D: after operators and integration grids ");
     
     // =============== Bernstein-Bezier allocations [added by NC] ============
 
@@ -466,7 +466,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
     mesh->o_LIFTT =
       mesh->device.malloc(1*sizeof(dfloat)); // dummy
 
-    reportMemoryUsage(mesh->device, "meshOccaSetup3D: before intX ");
+    //    reportMemoryUsage(mesh->device, "meshOccaSetup3D: before intX ");
     
     mesh->intx = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp, sizeof(dfloat));
     mesh->inty = (dfloat*) calloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp, sizeof(dfloat));
@@ -543,7 +543,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
     
     mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), DT); //dummy
 
-    reportMemoryUsage(mesh->device, "meshOccaSetup3D: before geofactors ");
+    //    reportMemoryUsage(mesh->device, "meshOccaSetup3D: before geofactors ");
     
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nvgeo*sizeof(dfloat),
@@ -553,7 +553,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*mesh->Nsgeo*sizeof(dfloat),
                           mesh->sgeo);
 
-    reportMemoryUsage(mesh->device, "meshOccaSetup3D: before vgeo,sgeo ");
+    //    reportMemoryUsage(mesh->device, "meshOccaSetup3D: before vgeo,sgeo ");
     
     mesh->o_ggeo =
       mesh->device.malloc(mesh->Nelements*mesh->Np*mesh->Nggeo*sizeof(dfloat),
@@ -589,7 +589,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
 
     mesh->o_cubDWmatrices = mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat), cubDWT);
 
-    reportMemoryUsage(mesh->device, "meshOccaSetup3D: after geofactors ");
+    //    reportMemoryUsage(mesh->device, "meshOccaSetup3D: after geofactors ");
     
     mesh->o_intx =
       mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->cubNfp*sizeof(dfloat),
@@ -609,7 +609,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
     mesh->o_intLIFTT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat));
     mesh->o_intLIFTT.copyFrom(mesh->o_cubProjectT);
 
-    reportMemoryUsage(mesh->device, "meshOccaSetup3D: after intX ");
+    //    reportMemoryUsage(mesh->device, "meshOccaSetup3D: after intX ");
     
   } else {
     printf("Nverts = %d: unknown element type!\n",mesh->Nverts);

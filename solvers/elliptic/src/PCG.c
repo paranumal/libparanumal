@@ -90,7 +90,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   rnorm = sqrt(rnorm);
 
-  dfloat rlim2, iter;
+  dfloat rlim2;
+  int iter;
   for(iter=1;iter<=MAXIT;++iter){
 
     // z = Precon^{-1} r
@@ -131,16 +132,20 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
     serialElapsedAx += serialElapsed();
 
+#if 0
     if(cgOptions.enableGatherScatters){
       serialTic();
       ogs_t *ogs = elliptic->ogs;
       ogsGatherScatter(o_Ap, ogsDfloat, ogsAdd, ogs);
+
       serialElapsedGatherScatter += serialElapsed();
+
     }
 
     //post-mask
     if (elliptic->Nmasked) 
       mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Ap);
+#endif
 
     // dot(p,A*p)
     if(cgOptions.enableReductions){
@@ -171,6 +176,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     
   }
 
+#if 0
   double elapsed = MPI_Wtime()-pcgStart;
 
   serialElapsedReduction /= elapsed;
@@ -213,6 +219,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     printf("Matrix-vec took %lg, %lg, %lg [min, ave, max] \n", minElapsedAx, aveElapsedAx, maxElapsedAx);
     printf("GatherScat took %lg, %lg, %lg [min, ave, max] \n", minElapsedGatherScatter, aveElapsedGatherScatter, maxElapsedGatherScatter);
   }
+#endif
 
   return iter;
 }
