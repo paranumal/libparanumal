@@ -59,12 +59,14 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
 
     mesh->sumKernel(Nblock, o_tmp, o_tmp2);
 
+  if(elliptic->DEBUG_ENABLE_MEMCOPY==1)
     o_tmp2.copyTo(tmp);
 
     Nfinal = Nblock2;
 	
   }
   else{
+   if(elliptic->DEBUG_ENABLE_MEMCOPY==1)
     o_tmp.copyTo(tmp);
     
     Nfinal = Nblock;
@@ -77,6 +79,8 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
   }
 
   dfloat globalwab = 0;
+
+  if(elliptic->DEBUG_ENABLE_MPIREDUCE==1)
   MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
   return globalwab;
@@ -110,6 +114,7 @@ dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory 
   else
     elliptic->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
   
+  if(elliptic->DEBUG_ENABLE_MEMCOPY==1)
   o_tmp.copyTo(tmp);
   
   for(int n=0;n<Nblock;++n){
@@ -122,6 +127,7 @@ dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory 
     accumulators[iexp] += (double)ftmpn;
   }
   
+  if(elliptic->DEBUG_ENABLE_MPIREDUCE==1)
   MPI_Allreduce(accumulators, g_accumulators, Naccumulators, MPI_DOUBLE, MPI_SUM, mesh->comm);
   
   double wab = 0.0;
@@ -161,6 +167,7 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
     
     mesh->sumKernel(Nblock, o_tmp, o_tmp2);
     
+    if(elliptic->DEBUG_ENABLE_MEMCOPY==1)
     o_tmp2.copyTo(tmp);
     
     Nfinal = Nblock2;
@@ -178,6 +185,7 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   }
 
   dfloat globalwab = 0;
+  if(elliptic->DEBUG_ENABLE_MPIREDUCE==1)
   MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
   return globalwab;
@@ -194,7 +202,8 @@ dfloat ellipticInnerProduct(elliptic_t *elliptic, occa::memory &o_a, occa::memor
   occa::memory &o_tmp = elliptic->o_tmp;
 
   elliptic->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
-
+  
+  if(elliptic->DEBUG_ENABLE_MEMCOPY==1)
   o_tmp.copyTo(tmp);
 
   dfloat ab = 0;
@@ -203,6 +212,7 @@ dfloat ellipticInnerProduct(elliptic_t *elliptic, occa::memory &o_a, occa::memor
   }
 
   dfloat globalab = 0;
+  if(elliptic->DEBUG_ENABLE_MPIREDUCE==1)
   MPI_Allreduce(&ab, &globalab, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
   return globalab;

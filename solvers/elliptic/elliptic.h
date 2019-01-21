@@ -43,6 +43,11 @@ SOFTWARE.
 
 typedef struct {
 
+  int DEBUG_ENABLE_REDUCTIONS; 
+  int DEBUG_ENABLE_MEMCOPY; 
+  int DEBUG_ENABLE_OGS; 
+  int DEBUG_ENABLE_MPIREDUCE; 
+
   int dim;
   int elementType; // number of edges (3=tri, 4=quad, 6=tet, 12=hex)
 

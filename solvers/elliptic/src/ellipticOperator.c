@@ -41,8 +41,8 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   dfloat *tmp = elliptic->tmp;
   occa::memory &o_tmp = elliptic->o_tmp;
 
-  int DEBUG_ENABLE_OGS = 1;
-  options.getArgs("DEBUG ENABLE OGS", DEBUG_ENABLE_OGS);
+  // int DEBUG_ENABLE_OGS = 1;
+  // options.getArgs("DEBUG ENABLE OGS", DEBUG_ENABLE_OGS);
 
 
   if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
@@ -80,7 +80,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 
     elliptic->AxKernel(mesh->Nelements, mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
 #endif
-    if(DEBUG_ENABLE_OGS==1)
+    if(elliptic->DEBUG_ENABLE_OGS==1)
       ogsGatherScatterStart(o_Aq, ogsDfloat, ogsAdd, ogs);
 
 #if 1
@@ -108,17 +108,19 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 #endif
 
     // finalize gather using local and global contributions
-    if(DEBUG_ENABLE_OGS==1)
+    if(elliptic->DEBUG_ENABLE_OGS==1)
       ogsGatherScatterFinish(o_Aq, ogsDfloat, ogsAdd, ogs);
 
     if(elliptic->allNeumann) {
       // mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
       elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
+
+      if(elliptic->DEBUG_ENABLE_MEMCOPY==1)
       o_tmp.copyTo(tmp);
 
       for(dlong n=0;n<Nblock;++n)
         alpha += tmp[n];
-
+      if(elliptic->DEBUG_ENABLE_MPIREDUCE==1)
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
       alphaG *= elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
 

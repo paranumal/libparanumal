@@ -5,7 +5,7 @@
 1
 
 [SUMMIT]
-1
+0
 
 [BENCHMARK]
 #SOLVE
@@ -13,8 +13,8 @@
 BP5
 
 [DATA FILE]
-/ccs/home/karakus/libparanumal/solvers/elliptic/data/ellipticSineTest3D.h
-#data/ellipticSineTest3D.h
+#/ccs/home/karakus/libparanumal/solvers/elliptic/data/ellipticSineTest3D.h
+data/ellipticSineTest3D.h
 #data/ellipticHomogeneous3D.h
 
 [MESH FILE]
@@ -152,4 +152,10 @@ TRUE
 
 # set to 0 (zero) to disable gather-scatter
 [DEBUG ENABLE OGS]
+1
+
+[DEBUG ENABLE MPIREDUCE]
+1
+
+[DEBUG ENABLE MEMCOPY]
 1

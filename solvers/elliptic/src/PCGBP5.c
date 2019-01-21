@@ -142,8 +142,15 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
   setupAide options = elliptic->options;
   timer *profiler = elliptic->profiler; 
 
-  int DEBUG_ENABLE_REDUCTIONS = 1;
-  options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
+  elliptic->DEBUG_ENABLE_REDUCTIONS = 1;
+  elliptic->DEBUG_ENABLE_OGS        = 1;
+  elliptic->DEBUG_ENABLE_MPIREDUCE  = 1;
+  elliptic->DEBUG_ENABLE_MEMCOPY    = 1;
+
+  options.getArgs("DEBUG ENABLE REDUCTIONS", elliptic->DEBUG_ENABLE_REDUCTIONS);
+  options.getArgs("DEBUG ENABLE OGS",        elliptic->DEBUG_ENABLE_OGS);
+  options.getArgs("DEBUG ENABLE MPIREDUCE",  elliptic->DEBUG_ENABLE_MPIREDUCE);
+  options.getArgs("DEBUG ENABLE MEMCOPY",    elliptic->DEBUG_ENABLE_MEMCOPY);
   
   // register scalars
   dfloat rdotz0 = 0;
@@ -175,12 +182,16 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
 #if (TIMER)  
   profiler->tic("Inner Product");
 #endif
+ 
+  // dot(p,A*p)
+if(elliptic->DEBUG_ENABLE_REDUCTIONS==1){
   // dot(r,z)
 #if CASCADE
   rdotz0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
 #else
   rdotz0 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
 #endif
+}
 
 #if (TIMER)  
   profiler->toc("Inner Product");
@@ -203,7 +214,7 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
     profiler->tic("Inner Product");
 #endif    
     // dot(p,A*p)
-    if(DEBUG_ENABLE_REDUCTIONS==1){
+    if(elliptic->DEBUG_ENABLE_REDUCTIONS==1){
 #if CASCADE
       pAp =  ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
 #else
@@ -254,7 +265,7 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
 #endif
 
     // dot(r,z)
-    if(DEBUG_ENABLE_REDUCTIONS==1){
+    if(elliptic->DEBUG_ENABLE_REDUCTIONS==1){
 #if (TIMER)  
     profiler->tic("Inner Product");
 #endif
@@ -275,7 +286,7 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
     //if(options.compareArgs("KRYLOV SOLVER", "PCG+FLEXIBLE") ||
     //  options.compareArgs("KRYLOV SOLVER", "PCG,FLEXIBLE")) {
     
-    //      if(DEBUG_ENABLE_REDUCTIONS==1){
+    //      if(elliptic->DEBUG_ENABLE_REDUCTIONS==1){
     // #if 0
     //	zdotAp = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
     // #else
@@ -315,8 +326,8 @@ dfloat ellipticUpdatePCG_2(elliptic_t *elliptic,
   setupAide options = elliptic->options;
   timer *profiler = elliptic->profiler; 
 
-  int DEBUG_ENABLE_REDUCTIONS = 1;
-  options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
+  // int elliptic->DEBUG_ENABLE_REDUCTIONS = 1;
+  // options.getArgs("DEBUG ENABLE REDUCTIONS", elliptic->DEBUG_ENABLE_REDUCTIONS);
   
   dfloat rdotr1 = 0;
   
@@ -339,7 +350,7 @@ dfloat ellipticUpdatePCG_2(elliptic_t *elliptic,
     profiler->toc("Scale Add");
 #endif
     // dot(r,r)
-    if(DEBUG_ENABLE_REDUCTIONS==1){
+    if(elliptic->DEBUG_ENABLE_REDUCTIONS==1){
 #if (TIMER)  
       profiler->tic("Inner Product");      
 #endif
@@ -354,7 +365,7 @@ dfloat ellipticUpdatePCG_2(elliptic_t *elliptic,
     }
     else
       rdotr1 = 1;
-  }else{
+  }else{ // This is for DG, modify later
     
     // x <= x + alpha*p
     // r <= r - alpha*A*p
@@ -376,6 +387,8 @@ dfloat ellipticUpdatePCG_2(elliptic_t *elliptic,
     
     dfloat globalrdotr1 = 0;
     MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+
+
 #if (TIMER)  
     profiler->toc("Update");
 #endif

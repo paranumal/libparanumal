@@ -6,6 +6,7 @@ endif
 CXXFLAGS = -ftree-loop-distribution -floop-nest-optimize -floop-block -floop-interchange -fstrict-aliasing -ftree-vectorize -funroll-loops -O3 
 
 include ${OCCA_DIR}/scripts/Makefile
+MEMCOPY_ON = 0
 
 # define variables
 HDRDIR = ../../include
@@ -21,7 +22,7 @@ LD	= mpic++
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR)/src -g  -D DHOLMES='"${CURDIR}/../.."' -D DOGS='"${CURDIR}"'
 
-
+CFLAGS+= -DMEMCOPY=$(MEMCOPY_ON) 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g 
 
