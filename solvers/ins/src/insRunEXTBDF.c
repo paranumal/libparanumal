@@ -31,9 +31,9 @@ void extbdfCoefficents(ins_t *ins, int order);
 void insRunEXTBDF(ins_t *ins){
 
   mesh_t *mesh = ins->mesh;
-  
-  occa::initTimer(mesh->device);
-  occaTimerTic(mesh->device,"INS");
+  timer *profiler = ins->profiler; 
+
+  profiler->tic("INS");
 
   int NstokesSteps = 0;
   dfloat oldDt = ins->dt;
@@ -95,6 +95,7 @@ void insRunEXTBDF(ins_t *ins){
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
 
   for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+  // for(int tstep=0;tstep<0;++tstep){
 
     // if(ins->restartedFromFile){
       // if(tstep=0 && ins->temporalOrder>=2) 
@@ -113,7 +114,7 @@ void insRunEXTBDF(ins_t *ins){
     dfloat time = ins->startTime + tstep*ins->dt;
 
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
-
+  
 #if 0
     ins->constrainKernel(mesh->Nelements,
 			 offset,
@@ -122,14 +123,21 @@ void insRunEXTBDF(ins_t *ins){
 			 mesh->o_z,
 			 ins->o_U);
 #endif
-    
+
+   profiler->tic("Advection");
     if(ins->Nsubsteps) {
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
       insAdvection(ins, time, ins->o_U, ins->o_NU);
     }
 
+    profiler->toc("Advection");
+
+
+    profiler->tic("Gradient");
     insGradient (ins, time, ins->o_P, ins->o_GP);
+    profiler->toc("Gradient");
+
 
 #if 0
     ins->constrainKernel(mesh->Nelements,
@@ -140,10 +148,10 @@ void insRunEXTBDF(ins_t *ins){
 			 ins->o_GP);
 #endif
     
-    
+    profiler->tic("Velocity");
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
     insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
-
+    profiler->toc("Velocity");
 #if 0
     ins->constrainKernel(mesh->Nelements,
 			 offset,
@@ -152,12 +160,16 @@ void insRunEXTBDF(ins_t *ins){
 			 mesh->o_z,
 			 ins->o_rkU);
 #endif
-
+    profiler->tic("Pressure");
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
     insPressureSolve(ins, time+ins->dt, ins->Nstages); 
 
     insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
+     profiler->toc("Pressure");
+
+    profiler->tic("Gradient");
     insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
+    profiler->toc("Gradient");
 
 #if 0
     ins->constrainKernel(mesh->Nelements,
@@ -167,7 +179,7 @@ void insRunEXTBDF(ins_t *ins){
 			 mesh->o_z,
 			 ins->o_rkGP);
 #endif
-    
+    profiler->tic("Update"); 
     //cycle history
     for (int s=ins->Nstages;s>1;s--) {
       ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
@@ -212,7 +224,7 @@ void insRunEXTBDF(ins_t *ins){
 			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
 
-
+    profiler->toc("Update");
 
 #if 1
     if(((tstep+1)%10)==0){
@@ -225,7 +237,8 @@ void insRunEXTBDF(ins_t *ins){
     }
 #endif
 
-    occaTimerTic(mesh->device,"Report");
+
+    profiler->tic("Report");
 
     if(ins->outputStep){
       if(((tstep+1)%(ins->outputStep))==0){
@@ -261,17 +274,19 @@ void insRunEXTBDF(ins_t *ins){
     if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
     if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
     
-    occaTimerToc(mesh->device,"Report");
+      // occaTimerToc(mesh->device,"Report");
+     profiler->toc("Report");
   }
-  occaTimerToc(mesh->device,"INS");
 
+  profiler->toc("INS");
 
-  dfloat finalTime = ins->NtimeSteps*ins->dt;
-  printf("\n");
+  dfloat finalTime = ins->NtimeSteps*ins->dt; printf("mesh size = %d\n", mesh->size);
 
   if(ins->outputStep) insReport(ins, finalTime,ins->NtimeSteps);
   
-  if(mesh->rank==0) occa::printTimer();
+  //if(mesh->rank==0) profiler->printTimer();
+
+   profiler->printTimer(mesh->rank, mesh->size, mesh->comm);
 }
 
 

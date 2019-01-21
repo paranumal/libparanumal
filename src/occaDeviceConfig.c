@@ -107,5 +107,5 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   
   mesh->device.setup(deviceConfig);
 
-  occa::initTimer(mesh->device);
+  // occa::initTimer(mesh->device);
 }

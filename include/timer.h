@@ -1,30 +1,151 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
-#if 1
+#ifndef PARANUMAL_TIMER
+#define PARANUMAL_TIMER
+
+#include "occa.hpp"
+#include "setupAide.hpp"
+#include "mpi.h"
+
+
+#include <iostream>
+#include <fstream>
+#include <assert.h>
+#include <vector>
+#include <stack>
+#include <map>
+#include <iomanip>
+#include <utility>
+#include <algorithm>
+#include <time.h>
+
+class timerTraits
+{
+ public:
+  double timeTaken;
+  double selfTime;
+  int    numCalls;
+  double flopCount;
+  double bandWidthCount;
+  int    treeDepth;
+  std::vector<std::string> childs;
+
+  timerTraits();
+};
+
+class timer {
+
+  bool profileKernels;
+  bool profileApplication;
+  bool deviceInitialized;
+
+  occa::device occaHandle;
+
+ public:
+
+  timer();
+
+  timer(int profiler_true);
+        
+  timer(setupAide setup);
+
+  void setTimer(setupAide setup);
+
+  double currentTime();
+
+  void checkKey(std::string key);
+
+  void initTimer(const occa::device &deviceHandle);
+
+  std::stack<std::string> keyStack;
+  std::stack<double> timeStack;
+
+  std::map<std::stack<std::string>, timerTraits> times;
+
+  void tic(std::string key);
+
+  double toc(std::string key);
+
+  double toc(std::string key, double flops);
+
+  double toc(std::string key, occa::kernel &kernel);
+
+  double toc(std::string key, occa::kernel &kernel, double flops);
+
+  double toc(std::string key, double flops, double bw);
+
+  double toc(std::string key, occa::kernel &kernel, double flops, double bw);
+
+  double print_recursively(std::vector<std::string> &childs,
+			   double parentTime,
+			   double overallTime);
+  void printTimer();
+
+  void printTimer(int rank, int size, MPI_Comm comm);
+  double allReduceTime(double local, int size, MPI_Comm comm);
+};
+
+
+extern timer globalTimer;
+
+extern double dataTransferred;
+
+void initTimer(const occa::device &deviceHandle);
+
+void tic(std::string key);
+
+double toc(std::string key);
+
+double toc(std::string key, occa::kernel &kernel);
+
+double toc(std::string key, double fp);
+
+double toc(std::string key, occa::kernel &kernel, double fp);
+
+double toc(std::string key, double fp, double bw);
+
+double toc(std::string key, occa::kernel &kernel, double fp, double bw);
+
+void printTimer();
+void printTimer(int rank, int size, MPI_Comm comm);
+
+// 
+double allReduceTime(double local, int size, MPI_Comm comm);
+
+// will be deprecated after removing from all solvers
+void occaTimerTic(occa::device device,std::string name);
+void occaTimerToc(occa::device device,std::string name);
+
+#endif
+
+
+
+#if 0
+
 #ifndef OCCA_TIMER_HEADER
 #define OCCA_TIMER_HEADER
 
@@ -133,11 +254,12 @@ namespace occa {
   void printTimer();
 }
 
-// void occaTimerTic(occa::device device,std::string name);
-// void occaTimerToc(occa::device device,std::string name);
+void occaTimerTic(occa::device device,std::string name);
+void occaTimerToc(occa::device device,std::string name);
 
 
 #endif
 
-#endif
 
+
+#endif

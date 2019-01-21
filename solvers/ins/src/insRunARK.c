@@ -43,8 +43,12 @@ void insRunARK(ins_t *ins){
   dfloat facold     = 1E-4;
 
 
-  occa::initTimer(mesh->device);
+  int profile_application = 1; 
+  timer profiler(profile_application); profiler.initTimer(mesh->device);
   occaTimerTic(mesh->device,"INS");
+
+  // occa::initTimer(mesh->device);
+  // occaTimerTic(mesh->device,"INS");
 #if 0
   // 
   int NstokesSteps = 100;
@@ -264,5 +268,5 @@ void insRunARK(ins_t *ins){
   printf("\n");
   insReport(ins, finalTime, ins->NtimeSteps);
   
-  if(mesh->rank==0) occa::printTimer();
+  if(mesh->rank==0) profiler.printTimer();
 }

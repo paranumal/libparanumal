@@ -1,6 +1,9 @@
 [FORMAT]
 1.0
 
+[APPLICATION PROFILER]
+1
+
 [DATA FILE]
 #data/insBeltrami3D.h
 /ccs/home/karakus/libparanumal/solvers/ins/data/insBeltrami3D.h

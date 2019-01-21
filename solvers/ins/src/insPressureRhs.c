@@ -28,20 +28,26 @@ SOFTWARE.
 
 void insPressureRhs(ins_t *ins, dfloat time, int stage){
 
-  mesh_t *mesh = ins->mesh;
+  mesh_t *mesh    = ins->mesh;
+  timer *profiler = ins->profiler; 
+
+  profiler->tic("Pressure Divergence");
 
   // rhsP = Div Uhat
   insDivergence(ins, time, ins->o_rkU, ins->o_rhsP);
+
+  profiler->toc("Pressure Divergence");
+
   
   // rhsP = -MM*Div Uhat/pa_ss dt
   //dfloat g0 = 1.0/ins->prkA[stage->ins->Nstages+stage];
-  occaTimerTic(mesh->device,"PoissonRhsForcing");
+  profiler->tic("Pressure Rhs");
   ins->pressureRhsKernel(mesh->Nelements,
                               mesh->o_vgeo,
                               mesh->o_MM,
                               ins->idt,  
                               ins->o_rhsP);
-  occaTimerToc(mesh->device,"PoissonRhsForcing");
+  profiler->toc("Pressure Rhs");
 
 #if 0
   //add penalty from jumps in previous pressure

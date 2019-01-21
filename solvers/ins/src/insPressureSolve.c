@@ -31,6 +31,9 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
 
   mesh_t *mesh = ins->mesh;
   elliptic_t *solver = ins->pSolver;
+  timer *profiler = ins->profiler; 
+
+   profiler->tic("Pressure BC"); 
 
   int quad3D = (ins->dim==3 && ins->elementType==QUADRILATERALS) ? 1 : 0;  
 
@@ -55,7 +58,6 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
                             ins->o_PmapB,
                             ins->o_rhsP);
   } else if(ins->pOptions.compareArgs("DISCRETIZATION","IPDG") && !quad3D) {
-    occaTimerTic(mesh->device,"PoissonRhsIpdg"); 
     ins->pressureRhsIpdgBCKernel(mesh->Nelements,
                                   mesh->o_vmapM,
                                   solver->tau,
@@ -75,30 +77,28 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
                                   mesh->o_LIFTT,
                                   mesh->o_MM,
                                   ins->o_rhsP);
-    occaTimerToc(mesh->device,"PoissonRhsIpdg");
   }
-
+  
+   profiler->toc("Pressure BC"); 
   //keep current PI as the initial guess?
-
+  
+  profiler->tic("Pressure Copy"); 
   // gather-scatter
   if(ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ogsGatherScatter(ins->o_rhsP, ogsDfloat, ogsAdd, mesh->ogs);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsP);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_PI);
   }
+  profiler->toc("Pressure Copy"); 
 
-#if 0
-  occaTimerTic(mesh->device,"Pr Solve");
+
+  profiler->tic("Pressure ellipticSolve");
   ins->NiterP = ellipticSolve(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI); 
-  occaTimerToc(mesh->device,"Pr Solve"); 
-#else
-  int iter = 25; 
- occaTimerTic(mesh->device,"Pr Solve");
-  ins->NiterP = ellipticSolveTest(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI, iter); 
-  occaTimerToc(mesh->device,"Pr Solve"); 
-#endif
+  profiler->toc("Pressure ellipticSolve");
+
 
  if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
+   profiler->tic("Pressure AddBc");
     ins->pressureAddBCKernel(mesh->Nelements,
                             time,
                             ins->dt,
@@ -112,5 +112,6 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
                             mesh->o_vmapM,
                             ins->o_PmapB,
                             ins->o_PI);
+     profiler->toc("Pressure AddBc");
   }
 }

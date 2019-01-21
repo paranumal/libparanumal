@@ -36,6 +36,7 @@ SOFTWARE.
 #include "mesh3D.h"
 #include "parAlmond.hpp"
 #include "ellipticPrecon.h"
+#include "timer.h"
 
 // block size for reduction (hard coded)
 #define blockSize 256
@@ -46,6 +47,7 @@ typedef struct {
   int elementType; // number of edges (3=tri, 4=quad, 6=tet, 12=hex)
 
   mesh_t *mesh;
+  timer *profiler; 
 
   precon_t *precon;
 
