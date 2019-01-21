@@ -47,38 +47,53 @@ void insRunEXTBDFTest(ins_t *ins, int maxiter){
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 
 
-     profiler->tic("Advection");
+#if(TIMER) 
+      profiler->tic("Advection");
+#endif
     if(ins->Nsubsteps) {
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
       insAdvection(ins, time, ins->o_U, ins->o_NU);
     }
-
+#if(TIMER) 
     profiler->toc("Advection");
+#endif
 
-
-
+#if(TIMER) 
     profiler->tic("Gradient");
+#endif
     insGradient (ins, time, ins->o_P, ins->o_GP);
+
+#if(TIMER) 
     profiler->toc("Gradient");
-    
+#endif
+   
+#if(TIMER) 
     profiler->tic("Velocity");
+#endif
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
     insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
+#if(TIMER) 
     profiler->toc("Velocity");
+#endif
 
+#if(TIMER) 
     profiler->tic("Pressure");
+#endif
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
     insPressureSolve(ins, time+ins->dt, ins->Nstages); 
 
     insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
-     profiler->toc("Pressure");
-
+#if(TIMER) 
+profiler->toc("Pressure");
+#endif
     profiler->tic("Gradient");
     insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
     profiler->toc("Gradient");
 
+#if(TIMER) 
   profiler->tic("Update");    
+#endif
     //cycle history
     for (int s=ins->Nstages;s>1;s--) {
       ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
@@ -108,8 +123,9 @@ void insRunEXTBDFTest(ins_t *ins, int maxiter){
 			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
 
+#if(TIMER) 
       profiler->toc("Update");
-
+#endif
     // if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
     // if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
     

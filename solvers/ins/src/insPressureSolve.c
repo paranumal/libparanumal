@@ -33,7 +33,9 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
   elliptic_t *solver = ins->pSolver;
   timer *profiler = ins->profiler; 
 
+#if(TIMER) 
    profiler->tic("Pressure BC"); 
+#endif
 
   int quad3D = (ins->dim==3 && ins->elementType==QUADRILATERALS) ? 1 : 0;  
 
@@ -78,18 +80,22 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
                                   mesh->o_MM,
                                   ins->o_rhsP);
   }
-  
+#if(TIMER)   
    profiler->toc("Pressure BC"); 
+#endif
   //keep current PI as the initial guess?
-  
+#if(TIMER) 
   profiler->tic("Pressure Copy"); 
+#endif
   // gather-scatter
   if(ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ogsGatherScatter(ins->o_rhsP, ogsDfloat, ogsAdd, mesh->ogs);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_rhsP);
     if (solver->Nmasked) mesh->maskKernel(solver->Nmasked, solver->o_maskIds, ins->o_PI);
   }
+#if(TIMER) 
   profiler->toc("Pressure Copy"); 
+#endif
 
 #if 0
   profiler->tic("Pressure ellipticSolve");
@@ -97,14 +103,20 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
   profiler->toc("Pressure ellipticSolve");
 #else
   int Niter = 25; 
+#if(TIMER) 
   profiler->tic("Pressure ellipticSolve");
+#endif
   ins->NiterP = ellipticSolveTest(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI, Niter); 
+#if(TIMER) 
   profiler->toc("Pressure ellipticSolve");
+#endif
 
 #endif
 
  if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
+#if(TIMER) 
    profiler->tic("Pressure AddBc");
+#endif
     ins->pressureAddBCKernel(mesh->Nelements,
                             time,
                             ins->dt,
@@ -118,6 +130,8 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
                             mesh->o_vmapM,
                             ins->o_PmapB,
                             ins->o_PI);
+  #if(TIMER) 
      profiler->toc("Pressure AddBc");
+  #endif
   }
 }

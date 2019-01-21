@@ -7,6 +7,14 @@ CXXFLAGS =
 
 include ${OCCA_DIR}/scripts/Makefile
 
+PROFILE = 0
+
+ifeq ($(PROFILE),1)
+	PROFILE_ON=1
+else
+	PROFILE_ON=0
+endif
+
 # define variables
 HDRDIR = ../../include
 GSDIR  = ../../3rdParty/gslib
@@ -22,6 +30,7 @@ LD	= mpic++
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ALMONDDIR) -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"'
 
+CFLAGS+=-DTIMER=$(PROFILE_ON)
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags)
 

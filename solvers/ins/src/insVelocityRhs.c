@@ -31,9 +31,9 @@ void insVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occ
   mesh_t *mesh = ins->mesh; 
   timer *profiler = ins->profiler; 
 
-
+#if(TIMER)
   profiler->tic("Velocity Rhs");  
-
+#endif
   if (ins->options.compareArgs("TIME INTEGRATOR", "ARK")) { 
     // rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
     ins->velocityRhsKernel(mesh->Nelements,
@@ -72,5 +72,7 @@ void insVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occ
                            o_rhsV,
                            o_rhsW);
   }
+#if(TIMER)
    profiler->toc("Velocity Rhs",  ins->velocityRhsKernel);  
+#endif
 }

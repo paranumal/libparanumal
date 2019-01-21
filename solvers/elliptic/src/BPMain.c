@@ -64,9 +64,10 @@ int main(int argc, char **argv){
 
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
+#if(TIMER) 
   timer *profiler = elliptic->profiler; 
-
   profiler->tic("PCG");
+#endif
 
 #if 1
   double start = 0.0, end =0.0;
@@ -92,7 +93,11 @@ int main(int argc, char **argv){
   occa::streamTag stopTag = mesh->device.tagStream();
   double localElapsed = mesh->device.timeBetween(startTag, stopTag);
 #endif
+
+
+#if(TIMER) 
   profiler->toc("PCG");
+#endif
 
   localElapsed /= NTEST; // Average time for each PCG solve; 
 
@@ -130,8 +135,9 @@ int main(int argc, char **argv){
 #endif
   }
 
-
+#if(TIMER) 
   profiler->printTimer(elliptic->mesh->rank, elliptic->mesh->size, elliptic->mesh->comm);
+#endif
   
   // close down MPI
   MPI_Finalize();

@@ -35,7 +35,9 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 
   const dlong NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);  
   
+#if(TIMER)
   profiler->tic("Advection Halo:1");  
+#endif
   //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,
@@ -64,8 +66,9 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                                   o_U,
                                   ins->o_vHaloBuffer);
   }
-
+#if(TIMER)
   profiler->toc("Advection Halo:1");  
+#endif
 
   const dfloat tn0 = time - 0*ins->dt;
   const dfloat tn1 = time - 1*ins->dt;
@@ -85,13 +88,17 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
     // Initialize SubProblem Velocity i.e. Ud = U^(t-torder*dt)
     dlong toffset = torder*ins->NVfields*ins->Ntotal;
     
+#if(TIMER)
     profiler->tic("Advection ScaleAdd");  
+#endif
     if (torder==ins->ExplicitOrder-1) { //first substep
       ins->scaledAddKernel(ins->NVfields*ins->Ntotal, b, toffset, o_U, zero, izero, o_Ud);
     } else { //add the next field
       ins->scaledAddKernel(ins->NVfields*ins->Ntotal, b, toffset, o_U,  one, izero, o_Ud);
     }     
+#if(TIMER)
     profiler->toc("Advection ScaleAdd"); 
+#endif
 
 
     // SubProblem  starts from here from t^(n-torder)
@@ -103,7 +110,9 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
         // Extrapolate velocity to subProblem stage time
         dfloat t = tstage +  ins->sdt*ins->Srkc[rk]; 
         
+#if(TIMER)
         profiler->tic("Advection Extrapolate"); 
+#endif
         switch(ins->ExplicitOrder){
           case 1:
             ins->extC[0] = 1.f; ins->extC[1] = 0.f; ins->extC[2] = 0.f;
@@ -129,10 +138,14 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                                o_U,
                                ins->o_Ue);
 
+#if(TIMER)
         profiler->toc("Advection Extrapolate"); 
+#endif
       
 
+#if(TIMER)
         profiler->tic("Advection Halo:1"); 
+#endif
         if(mesh->totalHaloPairs>0){
           // make sure compute device is ready to perform halo extract
           mesh->device.finish();
@@ -151,10 +164,14 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
           ins->o_vHaloBuffer.copyTo(ins->vSendBuffer,"async: true");            
           mesh->device.setStream(mesh->defaultStream);
         }
+#if(TIMER)
          profiler->toc("Advection Halo:1"); 
+#endif
 
         // Compute Volume Contribution
+#if(TIMER)
      profiler->tic("Advection Volume");        
+#endif
         if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
           ins->subCycleCubatureVolumeKernel(mesh->Nelements,
                      mesh->o_vgeo,
@@ -178,10 +195,14 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                                     ins->o_rhsUd);
 
         }
+#if(TIMER)
      profiler->toc("Advection Volume");
+#endif
 
 
+#if(TIMER)
         profiler->tic("Advection Halo:2"); 
+#endif
         if(mesh->totalHaloPairs>0){
           // make sure compute device is ready to perform halo extract
           mesh->device.setStream(mesh->dataStream);
@@ -208,10 +229,13 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
           mesh->device.setStream(mesh->defaultStream);
           mesh->device.finish();
         }
+#if(TIMER)
         profiler->toc("Advection Halo:2"); 
-
+#endif
         //Surface Kernel
+#if(TIMER)
          profiler->tic("Advection Surface");
+#endif
         if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
           ins->subCycleCubatureSurfaceKernel(mesh->Nelements,
                                               mesh->o_vgeo,
@@ -250,10 +274,14 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                                          o_Ud,
                                     ins->o_rhsUd);
         }
+#if(TIMER)
          profiler->toc("Advection Surface");
+#endif
           
         // Update Kernel
+#if(TIMER)
         profiler->tic("Advection Update");
+#endif
         ins->subCycleRKUpdateKernel(mesh->Nelements,
                               ins->sdt,
                               ins->Srka[rk],
@@ -262,7 +290,9 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                               ins->o_rhsUd,
                               ins->o_resU, 
                                    o_Ud);
+#if(TIMER)
         profiler->toc("Advection Update");
+#endif
       }
     }
   }

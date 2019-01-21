@@ -32,8 +32,9 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
   mesh_t *mesh = ins->mesh;
   timer *profiler = ins->profiler; 
 
-
+#if(TIMER) 
   profiler->tic("Advection Halo Exchange : 1");  
+#endif
   //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){
     ins->velocityHaloExtractKernel(mesh->Nelements,
@@ -53,11 +54,14 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
                          ins->vRecvBuffer);
   }
 
+#if(TIMER) 
   profiler->toc("Advection Halo Exchange : 1");  
+#endif
 
 
-
+#if(TIMER) 
   profiler->tic("Advection Volume");  
+#endif
   // Compute Volume Contribution
   if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
     ins->advectionCubatureVolumeKernel(mesh->Nelements,
@@ -78,11 +82,13 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
                                o_U,
                                o_NU);
   }
-
+#if(TIMER) 
   profiler->toc("Advection Volume");  
+#endif
 
-
+#if(TIMER) 
 profiler->tic("Advection Halo Exchange : 2"); 
+#endif
   // COMPLETE HALO EXCHANGE
   if(mesh->totalHaloPairs>0){
     meshHaloExchangeFinish(mesh);
@@ -95,11 +101,14 @@ profiler->tic("Advection Halo Exchange : 2");
                                   o_U,
                                   ins->o_vHaloBuffer);
   }
+#if(TIMER) 
 profiler->toc("Advection Halo Exchange : 2"); 
+#endif
 
 
-
+#if(TIMER) 
   profiler->tic("Advection Surface");
+#endif
   if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
     ins->advectionCubatureSurfaceKernel(mesh->Nelements,
                                         mesh->o_vgeo,
@@ -134,5 +143,7 @@ profiler->toc("Advection Halo Exchange : 2");
                                 o_U,
                                 o_NU);
   }
+  #if(TIMER) 
   profiler->toc("Advection Surface");
+#endif
 }

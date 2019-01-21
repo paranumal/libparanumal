@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "elliptic.h"
 #define CASCADE 0 
-#define TIMER 1 
+// #define TIMER 1 
 
 dfloat ellipticUpdatePCG_2(elliptic_t *elliptic,
        occa::memory &o_p, occa::memory &o_Ap, dfloat alpha,

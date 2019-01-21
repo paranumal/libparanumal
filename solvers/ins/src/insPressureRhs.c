@@ -30,24 +30,31 @@ void insPressureRhs(ins_t *ins, dfloat time, int stage){
 
   mesh_t *mesh    = ins->mesh;
   timer *profiler = ins->profiler; 
-
+#if(TIMER) 
   profiler->tic("Pressure Divergence");
+#endif
 
   // rhsP = Div Uhat
   insDivergence(ins, time, ins->o_rkU, ins->o_rhsP);
 
+#if(TIMER) 
   profiler->toc("Pressure Divergence");
+#endif
 
   
   // rhsP = -MM*Div Uhat/pa_ss dt
   //dfloat g0 = 1.0/ins->prkA[stage->ins->Nstages+stage];
+#if(TIMER) 
   profiler->tic("Pressure Rhs");
+  #endif
   ins->pressureRhsKernel(mesh->Nelements,
                               mesh->o_vgeo,
                               mesh->o_MM,
                               ins->idt,  
                               ins->o_rhsP);
+#if(TIMER) 
   profiler->toc("Pressure Rhs");
+#endif
 
 #if 0
   //add penalty from jumps in previous pressure

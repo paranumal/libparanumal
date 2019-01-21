@@ -25,7 +25,7 @@
 
 #include "elliptic.h"
 #define CASCADE 0 
-#define TIMER 1 
+// #define TIMER 1 
 
 
 int pcg(elliptic_t* elliptic, dfloat lambda, 
