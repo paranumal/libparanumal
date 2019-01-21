@@ -27,6 +27,7 @@
 #include "cuda.h"
 #include "cudaProfiler.h"
 #include "elliptic.h"
+#include "timer.h"
 
 int main(int argc, char **argv){
 
@@ -63,7 +64,9 @@ int main(int argc, char **argv){
 
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
+  timer *profiler = elliptic->profiler; 
 
+  profiler->tic("PCG");
 
 #if 1
   double start = 0.0, end =0.0;
@@ -75,9 +78,9 @@ int main(int argc, char **argv){
 #endif
 
   // for(int tst=0; tst<NTEST; tst++){
-  cuProfilerStart();
+  //cuProfilerStart();
   pcgBP5(elliptic, lambda, elliptic->o_r, elliptic->o_x, maxiter);
-  cuProfilerStop();
+  //cuProfilerStop();
   // }
 
 
@@ -89,7 +92,7 @@ int main(int argc, char **argv){
   occa::streamTag stopTag = mesh->device.tagStream();
   double localElapsed = mesh->device.timeBetween(startTag, stopTag);
 #endif
-
+  profiler->toc("PCG");
 
   localElapsed /= NTEST; // Average time for each PCG solve; 
 
@@ -126,6 +129,9 @@ int main(int argc, char **argv){
 	   1.0/(globalElapsed/(globalDofs)));
 #endif
   }
+
+
+  profiler->printTimer(elliptic->mesh->rank, elliptic->mesh->size, elliptic->mesh->comm);
   
   // close down MPI
   MPI_Finalize();

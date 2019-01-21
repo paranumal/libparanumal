@@ -45,9 +45,9 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
   }
 #endif
   
-  printf("running PCG........");
+  // printf("running PCG........");
   Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter);
-  printf("done\n");
+  // printf("done\n");
 #if 0
   if(options.compareArgs("VERBOSE","TRUE")){
     mesh->device.finish();

@@ -31,6 +31,7 @@ void extbdfCoefficents(ins_t *ins, int order);
 void insRunEXTBDFTest(ins_t *ins, int maxiter){
 
   mesh_t *mesh = ins->mesh;
+  timer *profiler = ins->profiler; 
   
   for(int tstep=0; tstep<maxiter;  ++tstep){
 
@@ -46,28 +47,38 @@ void insRunEXTBDFTest(ins_t *ins, int maxiter){
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 
 
+     profiler->tic("Advection");
     if(ins->Nsubsteps) {
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
       insAdvection(ins, time, ins->o_U, ins->o_NU);
     }
 
+    profiler->toc("Advection");
 
 
+
+    profiler->tic("Gradient");
     insGradient (ins, time, ins->o_P, ins->o_GP);
+    profiler->toc("Gradient");
     
-    
+    profiler->tic("Velocity");
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
     insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
+    profiler->toc("Velocity");
 
-
+    profiler->tic("Pressure");
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
     insPressureSolve(ins, time+ins->dt, ins->Nstages); 
 
     insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
-    insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
+     profiler->toc("Pressure");
 
-    
+    profiler->tic("Gradient");
+    insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
+    profiler->toc("Gradient");
+
+  profiler->tic("Update");    
     //cycle history
     for (int s=ins->Nstages;s>1;s--) {
       ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
@@ -96,6 +107,8 @@ void insRunEXTBDFTest(ins_t *ins, int maxiter){
 			 (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
 			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
+
+      profiler->toc("Update");
 
     // if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP); fflush(stdout);
     // if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);

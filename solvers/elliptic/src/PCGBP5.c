@@ -24,16 +24,20 @@ SOFTWARE.
 
 */
 
-#define TIMER 0
-
 #include "elliptic.h"
+#define CASCADE 0 
+#define TIMER 1 
 
-#if 1
+dfloat ellipticUpdatePCG_2(elliptic_t *elliptic,
+       occa::memory &o_p, occa::memory &o_Ap, dfloat alpha,
+       occa::memory &o_x, occa::memory &o_r);
+#if 0
 void pcgBP5(elliptic_t* elliptic, dfloat lambda, 
         occa::memory &o_r, occa::memory &o_x, const int MAXIT) {
 
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
+  timer *profiler = elliptic->profiler; 
 
   /*aux variables */
   occa::memory &o_p  = elliptic->o_p;
@@ -136,6 +140,7 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
 
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
+  timer *profiler = elliptic->profiler; 
 
   int DEBUG_ENABLE_REDUCTIONS = 1;
   options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
@@ -154,29 +159,52 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
   occa::memory &o_z  = elliptic->o_z;
   occa::memory &o_Ap = elliptic->o_Ap;
   occa::memory &o_Ax = elliptic->o_Ax;
-
+#if (TIMER)  
+  profiler->tic("Preconditioner");
+#endif
   // Precon^{-1} (b-A*x)
   ellipticPreconditioner(elliptic, lambda, o_r, o_z);
 
+#if (TIMER)  
+  profiler->toc("Preconditioner");
+#endif
   // p = z
   o_p.copyFrom(o_z); // PCG
 
+
+#if (TIMER)  
+  profiler->tic("Inner Product");
+#endif
   // dot(r,z)
-#if 0
+#if CASCADE
   rdotz0 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
 #else
   rdotz0 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+#endif
+
+#if (TIMER)  
+  profiler->toc("Inner Product");
 #endif
 
   for(int iter=0; iter<MAXIT; iter++) {
 
     // [
     // A*p
+#if (TIMER)  
+    profiler->tic("Ax Operator");
+#endif
     ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
-    
+
+#if (TIMER)  
+    profiler->toc("Ax Operator");   
+#endif
+ 
+#if (TIMER)  
+    profiler->tic("Inner Product");
+#endif    
     // dot(p,A*p)
     if(DEBUG_ENABLE_REDUCTIONS==1){
-#if 0
+#if CASCADE
       pAp =  ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
 #else
       pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
@@ -185,7 +213,11 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
     else
       pAp = 1;
     // ]
-    
+
+#if (TIMER)  
+    profiler->toc("Inner Product");   
+#endif
+
     // alpha = dot(r,z)/dot(p,A*p)
     alpha = rdotz0/pAp;
 
@@ -194,8 +226,15 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
     //  r <= r - alpha*A*p
     //  dot(r,r)
     //
-    rdotr1 = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
+#if (TIMER)  
+    profiler->tic("Combined Update");
+#endif
+    rdotr1 = ellipticUpdatePCG_2(elliptic, o_p, o_Ap, alpha, o_x, o_r);
     
+#if (TIMER)  
+    profiler->toc("Combined Update");
+#endif
+
     //    if (options.compareArgs("VERBOSE", "TRUE")&&(mesh->rank==0)) 
     //  printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
 
@@ -206,11 +245,20 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
 
     // [
     // z = Precon^{-1} r
+#if (TIMER)  
+    profiler->tic("Preconditioner");
+#endif
     ellipticPreconditioner(elliptic, lambda, o_r, o_z);
+#if (TIMER)  
+    profiler->toc("Preconditioner");
+#endif
 
     // dot(r,z)
     if(DEBUG_ENABLE_REDUCTIONS==1){
-#if 0
+#if (TIMER)  
+    profiler->tic("Inner Product");
+#endif
+#if CASCADE
       rdotz1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
 #else
       rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
@@ -218,9 +266,11 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
     }
     else
       rdotz1 = 1;
+#if (TIMER)  
+    profiler->toc("Inner Product");   
+#endif    
     
     // ]
-    
     // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
     //if(options.compareArgs("KRYLOV SOLVER", "PCG+FLEXIBLE") ||
     //  options.compareArgs("KRYLOV SOLVER", "PCG,FLEXIBLE")) {
@@ -239,10 +289,15 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
     // } else {
       beta = rdotz1/rdotz0;
       // }
-
+#if (TIMER)  
+    profiler->tic("Scale Add");
+#endif
     // p = z + beta*p
     ellipticScaledAdd(elliptic, 1.f, o_z, beta, o_p);
 
+#if (TIMER)  
+    profiler->toc("Scale Add");
+#endif
     // switch rdotz0 <= rdotz1
     rdotz0 = rdotz1;
 
@@ -251,13 +306,14 @@ void pcgBP5(elliptic_t* elliptic, dfloat lambda,
   }
 }
 
-#if 0
-dfloat ellipticUpdatePCG(elliptic_t *elliptic,
+
+dfloat ellipticUpdatePCG_2(elliptic_t *elliptic,
 			 occa::memory &o_p, occa::memory &o_Ap, dfloat alpha,
 			 occa::memory &o_x, occa::memory &o_r){
 
-  mesh_t *mesh = elliptic->mesh;
+ mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
+  timer *profiler = elliptic->profiler; 
 
   int DEBUG_ENABLE_REDUCTIONS = 1;
   options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
@@ -265,20 +321,35 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
   dfloat rdotr1 = 0;
   
   if(!options.compareArgs("DISCRETIZATION", "CONTINUOUS")){
-    
+#if (TIMER)  
+    profiler->tic("Scale Add");   
+#endif
     // x <= x + alpha*p
     ellipticScaledAdd(elliptic,  alpha, o_p,  1.f, o_x);
-    
+#if (TIMER)  
+    profiler->toc("Scale Add");   
+#endif
     // [
     // r <= r - alpha*A*p
+#if (TIMER)  
+    profiler->tic("Scale Add");
+#endif
     ellipticScaledAdd(elliptic, -alpha, o_Ap, 1.f, o_r);
-    
+#if (TIMER)  
+    profiler->toc("Scale Add");
+#endif
     // dot(r,r)
     if(DEBUG_ENABLE_REDUCTIONS==1){
-#if 0
+#if (TIMER)  
+      profiler->tic("Inner Product");      
+#endif
+#if CASCADE
       rdotr1 = ellipticCascadingWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
 #else
-      rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+      rdotr1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_r);
+#endif
+#if (TIMER)  
+      profiler->toc("Inner Product");
 #endif
     }
     else
@@ -288,8 +359,12 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
     // x <= x + alpha*p
     // r <= r - alpha*A*p
     // dot(r,r)
+#if (TIMER)  
+    profiler->tic("Update");
+#endif
+
     elliptic->updatePCGKernel(mesh->Nelements*mesh->Np, elliptic->NblocksUpdatePCG,
-			      elliptic->o_invDegree, o_p, o_Ap, alpha, o_x, o_r, elliptic->o_tmpNormr);
+            elliptic->o_invDegree, o_p, o_Ap, alpha, o_x, o_r, elliptic->o_tmpNormr);
 
     elliptic->o_tmpNormr.copyTo(elliptic->tmpNormr);
 
@@ -301,15 +376,15 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
     
     dfloat globalrdotr1 = 0;
     MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
-
-
+#if (TIMER)  
+    profiler->toc("Update");
+#endif
+    
     rdotr1 = globalrdotr1;
     
   }
 
   return rdotr1;
 }
-
-#endif
 
 #endif

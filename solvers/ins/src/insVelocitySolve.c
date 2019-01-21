@@ -118,7 +118,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   
   profiler->toc("Velocity Copy");
 
-
+#if 0
   profiler->tic("Velocity ellipticSolve");
   occaTimerTic(mesh->device,"Ux-Solve");
   ins->NiterU = ellipticSolve(usolver, ins->lambda, ins->velTOL, o_rhsU, ins->o_UH);
@@ -134,6 +134,25 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
     occaTimerToc(mesh->device,"Uz-Solve");
   }
   profiler->toc("Velocity ellipticSolve");
+#else
+  int Niter = 5; 
+  profiler->tic("Velocity ellipticSolve");
+  occaTimerTic(mesh->device,"Ux-Solve");
+  ins->NiterU = ellipticSolveTest(usolver, ins->lambda, ins->velTOL, o_rhsU, ins->o_UH, Niter);
+  occaTimerToc(mesh->device,"Ux-Solve"); 
+
+  occaTimerTic(mesh->device,"Uy-Solve");
+  ins->NiterV = ellipticSolveTest(vsolver, ins->lambda, ins->velTOL, o_rhsV, ins->o_VH, Niter);
+  occaTimerToc(mesh->device,"Uy-Solve");
+
+  if (ins->dim==3) {
+    occaTimerTic(mesh->device,"Uz-Solve");
+    ins->NiterW = ellipticSolveTest(wsolver, ins->lambda, ins->velTOL, o_rhsW, ins->o_WH, Niter);
+    occaTimerToc(mesh->device,"Uz-Solve");
+  }
+  profiler->toc("Velocity ellipticSolve");
+
+#endif
 
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
 

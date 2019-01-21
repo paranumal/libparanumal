@@ -4,6 +4,8 @@
 [APPLICATION PROFILER]
 1
 
+[SUMMIT]
+1
 
 [BENCHMARK]
 #SOLVE
@@ -12,6 +14,7 @@ BP5
 
 [DATA FILE]
 /ccs/home/karakus/libparanumal/solvers/elliptic/data/ellipticSineTest3D.h
+#data/ellipticSineTest3D.h
 #data/ellipticHomogeneous3D.h
 
 [MESH FILE]

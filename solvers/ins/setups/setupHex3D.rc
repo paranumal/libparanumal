@@ -4,9 +4,12 @@
 [APPLICATION PROFILER]
 1
 
+[SUMMIT]
+0
+
 [DATA FILE]
-#data/insBeltrami3D.h
-/ccs/home/karakus/libparanumal/solvers/ins/data/insBeltrami3D.h
+data/insBeltrami3D.h
+#/ccs/home/karakus/libparanumal/solvers/ins/data/insBeltrami3D.h
 
 [MESH FILE]
 ../../meshes/box10.msh

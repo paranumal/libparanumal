@@ -430,14 +430,15 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       
       //add standard boundary functions
       char *boundaryHeaderFileName;
-#if 1
+    int is_summit = 0;  options.getArgs("SUMMIT", is_summit);
+if(!is_summit){
       if (elliptic->dim==2)
         boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary2D.h");
       else if (elliptic->dim==3)
         boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
-#else
+}else
         boundaryHeaderFileName = strdup("/ccs/home/karakus/libparanumal/solvers/elliptic/data/ellipticBoundary3D.h");
-#endif  
+
 
 
       kernelInfo["includes"] += boundaryHeaderFileName;

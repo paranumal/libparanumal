@@ -26,6 +26,7 @@ SOFTWARE.
 #include "cudaProfiler.h"
 #include "ins.h"
 
+
 int main(int argc, char **argv){
 
   // start up MPI
@@ -75,7 +76,10 @@ int main(int argc, char **argv){
   }
     
   // if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
+  
+  timer *profiler = ins->profiler; 
 
+  profiler->tic("INS");
 
   double start = 0.0, end =0.0;
   mesh->device.finish();
@@ -91,6 +95,8 @@ int main(int argc, char **argv){
   mesh->device.finish();
   end = MPI_Wtime();
   double localElapsed = end-start;
+
+  profiler->toc("INS");
 
 
   int size = mesh->size;
@@ -126,13 +132,8 @@ int main(int argc, char **argv){
 #endif
   }
 
+  profiler->printTimer(ins->mesh->rank, ins->mesh->size, ins->mesh->comm);
 
-
-
-
-
-
-  
   // close down MPI
   MPI_Finalize();
 

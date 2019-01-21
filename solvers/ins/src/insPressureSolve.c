@@ -91,11 +91,17 @@ void insPressureSolve(ins_t *ins, dfloat time, int stage){
   }
   profiler->toc("Pressure Copy"); 
 
-
+#if 0
   profiler->tic("Pressure ellipticSolve");
   ins->NiterP = ellipticSolve(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI); 
   profiler->toc("Pressure ellipticSolve");
+#else
+  int Niter = 25; 
+  profiler->tic("Pressure ellipticSolve");
+  ins->NiterP = ellipticSolveTest(solver, 0.0, ins->presTOL, ins->o_rhsP, ins->o_PI, Niter); 
+  profiler->toc("Pressure ellipticSolve");
 
+#endif
 
  if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
    profiler->tic("Pressure AddBc");
