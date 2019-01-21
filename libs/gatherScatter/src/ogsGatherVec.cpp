@@ -72,11 +72,12 @@ void ogsGatherVecStart(occa::memory o_gv,
   // gather halo nodes on device
   if (ogs->NhaloGather) {
     occaGatherVec(ogs->NhaloGather, k, ogs->o_haloGatherOffsets, ogs->o_haloGatherIds, type, op, o_v, ogs::o_haloBuf);
-    
+   if(MEMCOPY){ 
     ogs->device.finish();
     ogs->device.setStream(ogs::dataStream);
     ogs::o_haloBuf.copyTo(ogs::haloBuf, ogs->NhaloGather*Nbytes*k, 0, "async: true");
     ogs->device.setStream(ogs::defaultStream);
+  }
   }
 }
 
@@ -108,10 +109,12 @@ void ogsGatherVecFinish(occa::memory o_gv,
     // MPI based gather using libgs
     ogsHostGatherVec(ogs::haloBuf, k, type, op, ogs->haloGshNonSym);
 
+if(MEMCOPY){
     // copy totally gather halo data back from HOST to DEVICE
     if (ogs->NownedHalo)
       o_gv.copyFrom(ogs::haloBuf, ogs->NownedHalo*Nbytes*k, 
                               ogs->NlocalGather*Nbytes*k, "async: true");
+  }
 
     ogs->device.finish();
     ogs->device.setStream(ogs::defaultStream);

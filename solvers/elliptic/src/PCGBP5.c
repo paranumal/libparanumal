@@ -377,6 +377,8 @@ dfloat ellipticUpdatePCG_2(elliptic_t *elliptic,
     elliptic->updatePCGKernel(mesh->Nelements*mesh->Np, elliptic->NblocksUpdatePCG,
             elliptic->o_invDegree, o_p, o_Ap, alpha, o_x, o_r, elliptic->o_tmpNormr);
 
+
+    if(elliptic->DEBUG_ENABLE_MEMCOPY==1)
     elliptic->o_tmpNormr.copyTo(elliptic->tmpNormr);
 
     rdotr1 = 0;
@@ -386,6 +388,8 @@ dfloat ellipticUpdatePCG_2(elliptic_t *elliptic,
 
     
     dfloat globalrdotr1 = 0;
+
+    if(elliptic->DEBUG_ENABLE_MPIREDUCE==1)
     MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
 

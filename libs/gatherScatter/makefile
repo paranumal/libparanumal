@@ -6,7 +6,8 @@ endif
 CXXFLAGS = -ftree-loop-distribution -floop-nest-optimize -floop-block -floop-interchange -fstrict-aliasing -ftree-vectorize -funroll-loops -O3 
 
 include ${OCCA_DIR}/scripts/Makefile
-MEMCOPY_ON = 0
+
+MEMCOPY_ON = 1
 
 # define variables
 HDRDIR = ../../include

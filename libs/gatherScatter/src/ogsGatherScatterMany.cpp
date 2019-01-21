@@ -88,11 +88,12 @@ void ogsGatherScatterManyStart(occa::memory o_v,
   // gather halo nodes on device
   if (ogs->NhaloGather) {
     occaGatherMany(ogs->NhaloGather, k, stride, ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherIds, type, op, o_v, ogs::o_haloBuf);
-    
+  if(MEMCOPY){  
     ogs->device.finish();
     ogs->device.setStream(ogs::dataStream);
     ogs::o_haloBuf.copyTo(ogs::haloBuf, ogs->NhaloGather*Nbytes*k, 0, "async: true");
     ogs->device.setStream(ogs::defaultStream);
+  }
   }
 }
 
@@ -128,8 +129,10 @@ void ogsGatherScatterManyFinish(occa::memory o_v,
     // MPI based gather scatter using libgs
     ogsHostGatherScatterMany(H, k, type, op, ogs->haloGshSym);
 
+if(MEMCOPY){
     // copy totally gather halo data back from HOST to DEVICE
     ogs::o_haloBuf.copyFrom(ogs::haloBuf, ogs->NhaloGather*Nbytes*k, 0, "async: true");
+  }
 
     // do scatter back to local nodes
     occaScatterMany(ogs->NhaloGather, k, ogs->NhaloGather, stride, ogs->o_haloGatherOffsets, ogs->o_haloGatherIds, type, op, ogs::o_haloBuf, o_v);

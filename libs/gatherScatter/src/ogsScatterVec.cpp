@@ -70,15 +70,19 @@ void ogsScatterVecStart(occa::memory o_sv,
     occaScatterVec(ogs->NlocalGather, k, ogs->o_localGatherOffsets, ogs->o_localGatherIds, type, op, o_v, o_sv);
   }
 
+if(MEMCOPY){
   if (ogs->NhaloGather) {
     ogs->device.setStream(ogs::dataStream);
 
-    if (ogs->NownedHalo)
+    if (ogs->NownedHalo){
       o_v.copyTo(ogs::haloBuf, ogs->NownedHalo*Nbytes*k, 
                               ogs->NlocalGather*Nbytes*k, "async: true");
-
+    }
     ogs->device.setStream(ogs::defaultStream);
   }
+}
+
+
 }
 
 
@@ -105,8 +109,10 @@ void ogsScatterVecFinish(occa::memory o_sv,
     // MPI based scatter using gslib
     ogsHostScatterVec(ogs::haloBuf, k, type, op, ogs->haloGshNonSym);
 
+    if(MEMCOPY){
     // copy totally scattered halo data back from HOST to DEVICE
     ogs::o_haloBuf.copyFrom(ogs::haloBuf, ogs->NhaloGather*Nbytes*k, 0, "async: true");
+    }
 
     ogs->device.finish();
     ogs->device.setStream(ogs::defaultStream);
