@@ -39,8 +39,9 @@ typedef struct{
   hlong vertex;
   hlong element;
   hlong sourceRank;
-  hlong sortRank;
   hlong otherRank;
+  hlong sortRank;
+
 }vertex_t;
 
 
@@ -189,100 +190,151 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   vertexUniqueRecvOffsets[cnt] = NvertexRecv; // cap at end
   
   // now count how many vertices to send to each rank
-  hlong *vertexHaloSendCounts = (hlong*) calloc(mesh->size, sizeof(hlong));
+  hlong *vertexOneRingSendCounts = (hlong*) calloc(mesh->size, sizeof(hlong));
   hlong Ntotal = 0;
   for(hlong n=0;n<NvertexUniqueRecv;++n){
-    int NuniqueRecvMultiplicity = vertexUniqueRecvOffsets[n+1] - vertexUniqueRecvOffsets[n];
-    for(hlong m=vertexUniqueRecvOffsets[n];m<vertexUniqueRecvOffsets[n+1];++m){
-      vertexHaloSendCounts[vertexRecvList[m].sourceRank] += NuniqueRecvMultiplicity; // watch out for this
+    hlong start = vertexUniqueRecvOffsets[n];
+    hlong end   = vertexUniqueRecvOffsets[n+1];
+
+    int NuniqueRecvMultiplicity = end - start;
+    for(hlong m=start;m<end;++m){
+      vertexOneRingSendCounts[vertexRecvList[m].sourceRank] += NuniqueRecvMultiplicity; // watch out for this
       Ntotal += NuniqueRecvMultiplicity;
     }
   }
 
-  vertex_t *vertexHaloSendList = (vertex_t*) calloc(Ntotal, sizeof(vertex_t));
+  vertex_t *vertexOneRingSendList = (vertex_t*) calloc(Ntotal, sizeof(vertex_t));
   cnt = 0;
   for(hlong n=0;n<NvertexUniqueRecv;++n){
-    int NuniqueRecvMultiplicity = vertexUniqueRecvOffsets[n+1] - vertexUniqueRecvOffsets[n];
-    hlong start = vertexUniqueRecvOffsets[n];
+    hlong start = vertexUniqueRecvOffsets[n];    
     hlong end   = vertexUniqueRecvOffsets[n+1];
+    int NuniqueRecvMultiplicity = end - start;
+
     for(hlong v1=start;v1<end;++v1){ // vertex v1 to be sent back with list of conns
+      hlong dest = vertexRecvList[v1].sourceRank;
       for(hlong v2=start;v2<end;++v2){
-	vertexHaloSendList[cnt] = vertexRecvList[v2];
-	vertexHaloSendList[cnt].otherRank = vertexRecvList[v1].sourceRank;
+	vertexOneRingSendList[cnt] = vertexRecvList[v2];
+	vertexOneRingSendList[cnt].sortRank = dest;
 	++cnt;
       }
     }
   }
   printf("!!!!!!!!!!!! cnt = %d and Ntotal = %d\n", cnt, Ntotal);
-  hlong NvertexHaloSend = cnt;
+  hlong NvertexOneRingSend = cnt;
 
+  // sort OneRing send list based on sort rank (borrowed source rank from join)
+  qsort(vertexOneRingSendList, NvertexOneRingSend, sizeof(vertex_t), compareSortRank);   // check qsort counts
 
-  // sort Halo send list based on source rank
-  qsort(vertexHaloSendList, NvertexHaloSend, sizeof(vertex_t), compareSourceRank);   // check qsort counts
-
-
-  // now figure out how many halo vertices to expect
-  hlong *vertexHaloRecvCounts = (hlong*) calloc(mesh->size, sizeof(hlong));
-  MPI_Alltoall(vertexHaloSendCounts, 1, MPI_HLONG,
-	       vertexHaloRecvCounts, 1, MPI_HLONG,
+  // now figure out how many oneRing vertices to expect
+  hlong *vertexOneRingRecvCounts = (hlong*) calloc(mesh->size, sizeof(hlong));
+  MPI_Alltoall(vertexOneRingSendCounts, 1, MPI_HLONG,
+	       vertexOneRingRecvCounts, 1, MPI_HLONG,
 	       mesh->comm);
 
   // find displacements for
-  hlong *vertexHaloSendDispls = (hlong*) calloc(mesh->size+1, sizeof(hlong));
-  hlong *vertexHaloRecvDispls = (hlong*) calloc(mesh->size+1, sizeof(hlong));
-  hlong NvertexHaloRecv = 0;
+  hlong *vertexOneRingSendDispls = (hlong*) calloc(mesh->size+1, sizeof(hlong));
+  hlong *vertexOneRingRecvDispls = (hlong*) calloc(mesh->size+1, sizeof(hlong));
+  hlong NvertexOneRingRecv = 0;
+
   for(int r=0;r<mesh->size;++r){
-    NvertexHaloRecv += vertexHaloRecvCounts[r];
-    vertexHaloSendCounts[r] *= sizeof(vertex_t);
-    vertexHaloRecvCounts[r] *= sizeof(vertex_t);
-    vertexHaloSendDispls[r+1] = vertexHaloSendDispls[r] + vertexHaloSendCounts[r];
-    vertexHaloRecvDispls[r+1] = vertexHaloRecvDispls[r] + vertexHaloRecvCounts[r];
+    NvertexOneRingRecv += vertexOneRingRecvCounts[r];
+    vertexOneRingSendCounts[r] *= sizeof(vertex_t);
+    vertexOneRingRecvCounts[r] *= sizeof(vertex_t);
+    vertexOneRingSendDispls[r+1] = vertexOneRingSendDispls[r] + vertexOneRingSendCounts[r];
+    vertexOneRingRecvDispls[r+1] = vertexOneRingRecvDispls[r] + vertexOneRingRecvCounts[r];
   }
   
-  vertex_t *vertexHaloRecvList = (vertex_t*) calloc(NvertexHaloRecv, sizeof(vertex_t)); // hack-hack-hack
+  vertex_t *vertexOneRingRecvList = (vertex_t*) calloc(NvertexOneRingRecv, sizeof(vertex_t)); // hack-hack-hack
   
-  MPI_Alltoallv(vertexHaloSendList, vertexHaloSendCounts, vertexHaloSendDispls, MPI_CHAR,
-		vertexHaloRecvList, vertexHaloRecvCounts, vertexHaloRecvDispls, MPI_CHAR,
+  MPI_Alltoallv(vertexOneRingSendList, vertexOneRingSendCounts, vertexOneRingSendDispls, MPI_CHAR,
+		vertexOneRingRecvList, vertexOneRingRecvCounts, vertexOneRingRecvDispls, MPI_CHAR,
 		mesh->comm);
+
+#if 0
+  for(int v=0;v<NvertexOneRingRecv;++v){
+    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortRank: %d\n",
+	   mesh->rank,
+	   vertexOneRingRecvList[v].vertex,
+	   vertexOneRingRecvList[v].element,
+	   vertexOneRingRecvList[v].sourceRank,
+	   vertexOneRingRecvList[v].sortRank);
+  }
+
+  MPI_Finalize();
+  exit(0);
+#endif
 
   
   // finally we now have a list of all elements that are needed to form the 1-ring (to rule them all)
 
   // sort the list by "other rank then element"
-  qsort(vertexHaloRecvList, NvertexHaloRecv, sizeof(vertex_t), compareOtherRankElement);   // check qsort counts
+  qsort(vertexOneRingRecvList, NvertexOneRingRecv, sizeof(vertex_t), compareOtherRankElement);   // check qsort counts
 
-  cnt = 0;
-  // remove local elements from halo list 
-  for(hlong v=0;v<NvertexHaloRecv;++v){
-    if(vertexHaloRecvList[v].otherRank != mesh->rank){ // rule out local elements
-      vertexHaloRecvList[cnt] = vertexHaloRecvList[v];
-      ++cnt;
-    }
+#if 0
+    for(int v=0;v<NvertexOneRingRecv;++v){
+    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortRank: %d\n",
+	   mesh->rank,
+	   vertexOneRingRecvList[v].vertex,
+	   vertexOneRingRecvList[v].element,
+	   vertexOneRingRecvList[v].sourceRank,
+	   vertexOneRingRecvList[v].sortRank);
   }
-  NvertexHaloRecv = cnt;
 
-  // remove duplicate elements from halo list
-  cnt = 1; // assumes at least one halo element
-  for(hlong v=1;v<NvertexHaloRecv;++v){
-    if(! (vertexHaloRecvList[v].element == vertexHaloRecvList[cnt-1].element
-	  && vertexHaloRecvList[v].otherRank == vertexHaloRecvList[cnt-1].otherRank)){
-      vertexHaloRecvList[cnt] = vertexHaloRecvList[v];
-      ++cnt;
-    }
-  }
+  MPI_Finalize();
+  exit(0);
+#endif
+
   
-  hlong NnonLocalHaloElements = cnt;
-  vertex_t *nonLocalHaloElements = (vertex_t*) calloc(NnonLocalHaloElements, sizeof(vertex_t));
+  cnt = 0;
+  // remove local elements from oneRing list 
+  for(hlong v=0;v<NvertexOneRingRecv;++v){
+    if(vertexOneRingRecvList[v].sourceRank != mesh->rank){ // rule out local elements
+      vertexOneRingRecvList[cnt] = vertexOneRingRecvList[v];
+      ++cnt;
+    }
+  }
+  NvertexOneRingRecv = cnt;
+
+  // remove duplicate elements from oneRing list
+  cnt = 1; // assumes at least one oneRing element
+  for(hlong v=1;v<NvertexOneRingRecv;++v){
+    if(! (vertexOneRingRecvList[v].element == vertexOneRingRecvList[cnt-1].element
+	  && vertexOneRingRecvList[v].otherRank == vertexOneRingRecvList[cnt-1].otherRank)){
+      vertexOneRingRecvList[cnt] = vertexOneRingRecvList[v];
+      ++cnt;
+    }
+  }
+
+  NvertexOneRingRecv = cnt;
+  
+#if 1
+    for(int v=0;v<NvertexOneRingRecv;++v){
+    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortRank: %d\n",
+	   mesh->rank,
+	   vertexOneRingRecvList[v].vertex,
+	   vertexOneRingRecvList[v].element,
+	   vertexOneRingRecvList[v].sourceRank,
+	   vertexOneRingRecvList[v].sortRank);
+  }
+
+  MPI_Finalize();
+  exit(0);
+#endif
+
+
+  
+  hlong NnonLocalOneRingElements = cnt;
+  vertex_t *nonLocalOneRingElements = (vertex_t*) calloc(NnonLocalOneRingElements, sizeof(vertex_t));
 
   // next
   // 1. populate this list
-  // 2. set up a meshOneRing that has an attached halo for the one ring
-  // 3. set up the gs info [ need to understand how to populate from the local elements on each rank to the halo ]
+  // 2. set up a meshOneRing that has an attached oneRing for the one ring
+  // 3. set up the gs info [ need to understand how to populate from the local elements on each rank to the oneRing ]
   
 #if 1
-  for(hlong v=0;v<NnonLocalHaloElements;++v){
+  for(hlong v=0;v<NnonLocalOneRingElements;++v){
     printf("%d %d %d ([rank] receives [element] from [other rank])\n",
-	   mesh->rank, vertexHaloRecvList[v].element, vertexHaloRecvList[v].otherRank);
+	   mesh->rank, vertexOneRingRecvList[v].element, vertexOneRingRecvList[v].otherRank);
   }
 #endif
 
@@ -293,11 +345,11 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   free(vertexRecvDispls);
   free(vertexRecvList);   
   free(vertexUniqueRecvOffsets);
-  free(vertexHaloSendCounts);    
-  free(vertexHaloSendList);   
-  free(vertexHaloRecvCounts);    
-  free(vertexHaloSendDispls);   
-  free(vertexHaloRecvDispls);    
-  free(vertexHaloRecvList);
+  free(vertexOneRingSendCounts);    
+  free(vertexOneRingSendList);   
+  free(vertexOneRingRecvCounts);    
+  free(vertexOneRingSendDispls);   
+  free(vertexOneRingRecvDispls);    
+  free(vertexOneRingRecvList);
   
 }
