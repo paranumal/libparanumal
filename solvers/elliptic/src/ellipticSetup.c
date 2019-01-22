@@ -133,6 +133,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     }
   }
 
+  // build one-ring ( to rule them all )
+  ellipticBuildOneRing(elliptic);
   //
   ellipticSolveSetup(elliptic, lambda, kernelInfo);
 
