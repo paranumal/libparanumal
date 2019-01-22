@@ -157,7 +157,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
 	   vertexSendCounts[r], vertexSendDispls[r],
 	   vertexRecvCounts[r], vertexRecvDispls[r]);
   }
-
+  
   vertex_t *vertexRecvList = (vertex_t*) calloc(NvertexRecv, sizeof(vertex_t)); // hack-hack-hack
   
   MPI_Alltoallv(vertexSendList, vertexSendCounts, vertexSendDispls, MPI_CHAR,
@@ -176,24 +176,24 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   }
 
   // find offset of the start of each new unique vertex  in sorted list
-  hlong *vertexUniqueRecvDispls = (hlong*) calloc(NvertexUniqueRecv+1, sizeof(hlong));
+  hlong *vertexUniqueRecvOffsets = (hlong*) calloc(NvertexUniqueRecv+1, sizeof(hlong));
 
   cnt = 1;
-  vertexUniqueRecvDispls[0] = 0;
+  vertexUniqueRecvOffsets[0] = 0;
   for(hlong n=1;n<NvertexRecv;++n){
     if(compareVertex(vertexRecvList+n, vertexRecvList+n-1)!=0) { // new vertex
-      vertexUniqueRecvDispls[cnt] = n;
+      vertexUniqueRecvOffsets[cnt] = n;
       ++cnt;
     }
   }
-  vertexUniqueRecvDispls[cnt] = NvertexRecv; // cap at end
+  vertexUniqueRecvOffsets[cnt] = NvertexRecv; // cap at end
   
   // now count how many vertices to send to each rank
   hlong *vertexHaloSendCounts = (hlong*) calloc(mesh->size, sizeof(hlong));
   hlong Ntotal = 0;
   for(hlong n=0;n<NvertexUniqueRecv;++n){
-    int NuniqueRecvMultiplicity = vertexUniqueRecvDispls[n+1] - vertexUniqueRecvDispls[n];
-    for(hlong m=vertexUniqueRecvDispls[n];m<vertexUniqueRecvDispls[n+1];++m){
+    int NuniqueRecvMultiplicity = vertexUniqueRecvOffsets[n+1] - vertexUniqueRecvOffsets[n];
+    for(hlong m=vertexUniqueRecvOffsets[n];m<vertexUniqueRecvOffsets[n+1];++m){
       vertexHaloSendCounts[vertexRecvList[m].sourceRank] += NuniqueRecvMultiplicity; // watch out for this
       Ntotal += NuniqueRecvMultiplicity;
     }
@@ -202,9 +202,9 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   vertex_t *vertexHaloSendList = (vertex_t*) calloc(Ntotal, sizeof(vertex_t));
   cnt = 0;
   for(hlong n=0;n<NvertexUniqueRecv;++n){
-    int NuniqueRecvMultiplicity = vertexUniqueRecvDispls[n+1] - vertexUniqueRecvDispls[n];
-    hlong start = vertexUniqueRecvDispls[n];
-    hlong end   = vertexUniqueRecvDispls[n+1];
+    int NuniqueRecvMultiplicity = vertexUniqueRecvOffsets[n+1] - vertexUniqueRecvOffsets[n];
+    hlong start = vertexUniqueRecvOffsets[n];
+    hlong end   = vertexUniqueRecvOffsets[n+1];
     for(hlong v1=start;v1<end;++v1){ // vertex v1 to be sent back with list of conns
       for(hlong v2=start;v2<end;++v2){
 	vertexHaloSendList[cnt] = vertexRecvList[v2];
@@ -213,11 +213,13 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
       }
     }
   }
-
+  printf("!!!!!!!!!!!! cnt = %d and Ntotal = %d\n", cnt, Ntotal);
   hlong NvertexHaloSend = cnt;
-  
+
+
   // sort Halo send list based on source rank
-  qsort(vertexRecvList, NvertexHaloSend, sizeof(vertex_t), compareSourceRank);   // check qsort counts
+  qsort(vertexHaloSendList, NvertexHaloSend, sizeof(vertex_t), compareSourceRank);   // check qsort counts
+
 
   // now figure out how many halo vertices to expect
   hlong *vertexHaloRecvCounts = (hlong*) calloc(mesh->size, sizeof(hlong));
@@ -228,13 +230,14 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   // find displacements for
   hlong *vertexHaloSendDispls = (hlong*) calloc(mesh->size+1, sizeof(hlong));
   hlong *vertexHaloRecvDispls = (hlong*) calloc(mesh->size+1, sizeof(hlong));
+  hlong NvertexHaloRecv = 0;
   for(int r=0;r<mesh->size;++r){
+    NvertexHaloRecv += vertexHaloRecvCounts[r];
     vertexHaloSendCounts[r] *= sizeof(vertex_t);
     vertexHaloRecvCounts[r] *= sizeof(vertex_t);
     vertexHaloSendDispls[r+1] = vertexHaloSendDispls[r] + vertexHaloSendCounts[r];
     vertexHaloRecvDispls[r+1] = vertexHaloRecvDispls[r] + vertexHaloRecvCounts[r];
   }
-  hlong NvertexHaloRecv = vertexHaloRecvDispls[mesh->size];
   
   vertex_t *vertexHaloRecvList = (vertex_t*) calloc(NvertexHaloRecv, sizeof(vertex_t)); // hack-hack-hack
   
@@ -242,47 +245,40 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
 		vertexHaloRecvList, vertexHaloRecvCounts, vertexHaloRecvDispls, MPI_CHAR,
 		mesh->comm);
 
+  
   // finally we now have a list of all elements that are needed to form the 1-ring (to rule them all)
 
   // sort the list by "other rank then element"
   qsort(vertexHaloRecvList, NvertexHaloRecv, sizeof(vertex_t), compareOtherRankElement);   // check qsort counts
 
-  // remove duplicates and local elements from halo list in place
-  hlong NnonLocalHaloElements = 0;
-  for(hlong v=0;v<NvertexHaloRecv;++v){
-    if(vertexHaloRecvList[v].sourceRank != mesh->rank){
-      printf("%d %d %d ([rank] receives [element] from [other rank])\n",
-	     mesh->rank, vertexHaloRecvList[v].element, vertexHaloRecvList[v].otherRank);
-      ++NnonLocalHaloElements;
-    }
-  }
-
-  MPI_Finalize();
-  exit(0);
-  
-  vertex_t *nonLocalHaloElements = (vertex_t*) calloc(NnonLocalHaloElements, sizeof(vertex_t));
+ 
+  vertex_t *nonLocalHaloElements = (vertex_t*) calloc(NvertexHaloRecv, sizeof(vertex_t));
   cnt = 0;
-
+  // remove local elements from halo list 
   for(hlong v=0;v<NvertexHaloRecv;++v){
     if(vertexHaloRecvList[v].otherRank != mesh->rank){ // rule out local elements
-      if(vertexHaloRecvList[v].otherRank == nonLocalHaloElements[cnt].otherRank){ // in same rank as last added
-	if(vertexHaloRecvList[v].element != nonLocalHaloElements[cnt].element){ // but not the same element (not dupe)
-	  nonLocalHaloElements[cnt] = vertexHaloRecvList[v];
-	  ++cnt;
-	}
-      }else{
-	nonLocalHaloElements[cnt] = vertexHaloRecvList[v]; 
-	++cnt;
-      }
+      vertexHaloRecvList[cnt] = vertexHaloRecvList[v];
+      ++cnt;
     }
   }
+  NvertexHaloRecv = cnt;
 
-  NnonLocalHaloElements = cnt;
-
-#if 0
+  // remove duplicate elements from halo list
+  cnt = 0;
+  for(hlong v=1;v<NvertexHaloRecv;++v){
+    if(! (vertexHaloRecvList[v].element == vertexHaloRecvList[cnt].element
+	  && vertexHaloRecvList[v].otherRank == vertexHaloRecvList[cnt].otherRank)){
+      ++cnt;
+      vertexHaloRecvList[cnt] = vertexHaloRecvList[v];
+    }
+  }
+  
+  hlong NnonLocalHaloElements = cnt+1;
+ 
+#if 1
   for(hlong v=0;v<NnonLocalHaloElements;++v){
     printf("%d %d %d ([rank] receives [element] from [other rank])\n",
-	   mesh->rank, nonLocalHaloElements[v].element, nonLocalHaloElements[v].otherRank);
+	   mesh->rank, vertexHaloRecvList[v].element, vertexHaloRecvList[v].otherRank);
   }
 #endif
 }
