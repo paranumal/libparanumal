@@ -264,16 +264,16 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   NvertexHaloRecv = cnt;
 
   // remove duplicate elements from halo list
-  cnt = 0;
+  cnt = 1; // assumes at least one halo element
   for(hlong v=1;v<NvertexHaloRecv;++v){
-    if(! (vertexHaloRecvList[v].element == vertexHaloRecvList[cnt].element
-	  && vertexHaloRecvList[v].otherRank == vertexHaloRecvList[cnt].otherRank)){
-      ++cnt;
+    if(! (vertexHaloRecvList[v].element == vertexHaloRecvList[cnt-1].element
+	  && vertexHaloRecvList[v].otherRank == vertexHaloRecvList[cnt-1].otherRank)){
       vertexHaloRecvList[cnt] = vertexHaloRecvList[v];
+      ++cnt;
     }
   }
   
-  hlong NnonLocalHaloElements = cnt+1;
+  hlong NnonLocalHaloElements = cnt;
  
 #if 1
   for(hlong v=0;v<NnonLocalHaloElements;++v){
