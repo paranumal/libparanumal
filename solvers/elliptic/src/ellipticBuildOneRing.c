@@ -39,56 +39,31 @@ typedef struct{
   hlong vertex;
   hlong element;
   hlong sourceRank;
-  hlong otherRank;
-  hlong sortRank;
+  hlong sortTag;
 
 }vertex_t;
 
 
-int compareSortRank(const void *a, 
+int compareSortTag(const void *a, 
 		    const void *b){
 
   vertex_t *va = (vertex_t*) a;
   vertex_t *vb = (vertex_t*) b;
 
-  if(va->sortRank < vb->sortRank) return -1;
-  if(va->sortRank > vb->sortRank) return +1;
+  if(va->sortTag < vb->sortTag) return -1;
+  if(va->sortTag > vb->sortTag) return +1;
 
   return 0;
 }
 
-int compareVertex(const void *a, 
-		  const void *b){
-  
-  vertex_t *va = (vertex_t*) a;
-  vertex_t *vb = (vertex_t*) b;
-  
-  if(va->vertex < vb->vertex) return -1;
-  if(va->vertex > vb->vertex) return +1;
-
-  return 0;
-}
-
-int compareSourceRank(const void *a, 
-		      const void *b){
-
-  vertex_t *va = (vertex_t*) a;
-  vertex_t *vb = (vertex_t*) b;
-
-  if(va->sourceRank < vb->sourceRank) return -1;
-  if(va->sourceRank > vb->sourceRank) return +1;
-
-  return 0;
-}
-
-int compareOtherRankElement(const void *a, 
+int compareSourceRankElement(const void *a, 
 			    const void *b){
   
   vertex_t *va = (vertex_t*) a;
   vertex_t *vb = (vertex_t*) b;
 
-  if(va->otherRank < vb->otherRank) return -1;
-  if(va->otherRank > vb->otherRank) return +1;
+  if(va->sourceRank < vb->sourceRank) return -1;
+  if(va->sourceRank > vb->sourceRank) return +1;
 
   if(va->element < vb->element) return -1;
   if(va->element > vb->element) return +1;
@@ -112,27 +87,27 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
       vertexSendList[cnt].vertex = mesh->EToV[e*mesh->Nverts+v];
       vertexSendList[cnt].element = e;
       vertexSendList[cnt].sourceRank = mesh->rank;
-      vertexSendList[cnt].sortRank = vertexSendList[cnt].vertex%mesh->size;
-      ++vertexSendCounts[vertexSendList[cnt].sortRank];
+      vertexSendList[cnt].sortTag = vertexSendList[cnt].vertex%mesh->size;
+      ++vertexSendCounts[vertexSendList[cnt].sortTag];
       ++cnt;
     }
   }
   
-  // sort based on sortRank
-  qsort(vertexSendList, cnt, sizeof(vertex_t), compareSortRank);
+  // sort based on sortTag (=vertex%size)
+  qsort(vertexSendList, cnt, sizeof(vertex_t), compareSortTag);
 
 #if 0
   for(int v=0;v<cnt;++v){
-    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortRank: %d\n",
+    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortTag: %d\n",
 	   mesh->rank,
 	   vertexSendList[v].vertex,
 	   vertexSendList[v].element,
 	   vertexSendList[v].sourceRank,
-	   vertexSendList[v].sortRank);
+	   vertexSendList[v].sortTag);
   }
 #endif
   
-  // send sortRankCounts (hackety)
+  // send sortTagCounts (hackety)
   MPI_Alltoall(vertexSendCounts, 1, MPI_HLONG,
 	       vertexRecvCounts, 1, MPI_HLONG,
 	       mesh->comm);
@@ -158,31 +133,36 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
 	   vertexSendCounts[r], vertexSendDispls[r],
 	   vertexRecvCounts[r], vertexRecvDispls[r]);
   }
-  
-  vertex_t *vertexRecvList = (vertex_t*) calloc(NvertexRecv, sizeof(vertex_t)); // hack-hack-hack
+
+  // hack-hack-hack
+  vertex_t *vertexRecvList = (vertex_t*) calloc(NvertexRecv, sizeof(vertex_t)); 
   
   MPI_Alltoallv(vertexSendList, vertexSendCounts, vertexSendDispls, MPI_CHAR,
 		vertexRecvList, vertexRecvCounts, vertexRecvDispls, MPI_CHAR,
 		mesh->comm);
 
-  // sort received vertex based on vertex number
-  qsort(vertexRecvList, NvertexRecv, sizeof(vertex_t), compareVertex);  
+  for(int v=0;v<NvertexRecv;++v){
+    vertexRecvList[v].sortTag = vertexRecvList[v].vertex;
+  }
+  
+  // sort received vertex based on sortTag (=vertex number)
+  qsort(vertexRecvList, NvertexRecv, sizeof(vertex_t), compareSortTag);  
 
   // count number of unique received vertices
   hlong NvertexUniqueRecv = (NvertexRecv>0) ? 1:0;
   for(hlong n=1;n<NvertexRecv;++n){
-    if(compareVertex(vertexRecvList+n, vertexRecvList+n-1)!=0) { // new vertex
+    if(compareSortTag(vertexRecvList+n, vertexRecvList+n-1)!=0) { // new vertex
       ++NvertexUniqueRecv;
     }
   }
 
   // find offset of the start of each new unique vertex  in sorted list
   hlong *vertexUniqueRecvOffsets = (hlong*) calloc(NvertexUniqueRecv+1, sizeof(hlong));
-
+  
   cnt = 1;
   vertexUniqueRecvOffsets[0] = 0;
   for(hlong n=1;n<NvertexRecv;++n){
-    if(compareVertex(vertexRecvList+n, vertexRecvList+n-1)!=0) { // new vertex
+    if(compareSortTag(vertexRecvList+n, vertexRecvList+n-1)!=0) { // new vertex
       vertexUniqueRecvOffsets[cnt] = n;
       ++cnt;
     }
@@ -214,7 +194,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
       hlong dest = vertexRecvList[v1].sourceRank;
       for(hlong v2=start;v2<end;++v2){
 	vertexOneRingSendList[cnt] = vertexRecvList[v2];
-	vertexOneRingSendList[cnt].sortRank = dest;
+	vertexOneRingSendList[cnt].sortTag = dest;
 	++cnt;
       }
     }
@@ -222,8 +202,8 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   printf("!!!!!!!!!!!! cnt = %d and Ntotal = %d\n", cnt, Ntotal);
   hlong NvertexOneRingSend = cnt;
 
-  // sort OneRing send list based on sort rank (borrowed source rank from join)
-  qsort(vertexOneRingSendList, NvertexOneRingSend, sizeof(vertex_t), compareSortRank);   // check qsort counts
+  // sort OneRing send list based on sort rank (=destination tag)
+  qsort(vertexOneRingSendList, NvertexOneRingSend, sizeof(vertex_t), compareSortTag);   // check qsort counts
 
   // now figure out how many oneRing vertices to expect
   hlong *vertexOneRingRecvCounts = (hlong*) calloc(mesh->size, sizeof(hlong));
@@ -252,12 +232,12 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
 
 #if 0
   for(int v=0;v<NvertexOneRingRecv;++v){
-    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortRank: %d\n",
+    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortTag: %d\n",
 	   mesh->rank,
 	   vertexOneRingRecvList[v].vertex,
 	   vertexOneRingRecvList[v].element,
 	   vertexOneRingRecvList[v].sourceRank,
-	   vertexOneRingRecvList[v].sortRank);
+	   vertexOneRingRecvList[v].sortTag);
   }
 
   MPI_Finalize();
@@ -267,17 +247,17 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   
   // finally we now have a list of all elements that are needed to form the 1-ring (to rule them all)
 
-  // sort the list by "other rank then element"
-  qsort(vertexOneRingRecvList, NvertexOneRingRecv, sizeof(vertex_t), compareOtherRankElement);   // check qsort counts
+  // sort the list by "source rank then element"
+  qsort(vertexOneRingRecvList, NvertexOneRingRecv, sizeof(vertex_t), compareSourceRankElement);   // check qsort counts
 
 #if 0
     for(int v=0;v<NvertexOneRingRecv;++v){
-    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortRank: %d\n",
+    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortTag: %d\n",
 	   mesh->rank,
 	   vertexOneRingRecvList[v].vertex,
 	   vertexOneRingRecvList[v].element,
 	   vertexOneRingRecvList[v].sourceRank,
-	   vertexOneRingRecvList[v].sortRank);
+	   vertexOneRingRecvList[v].sortTag);
   }
 
   MPI_Finalize();
@@ -299,7 +279,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   cnt = 1; // assumes at least one oneRing element
   for(hlong v=1;v<NvertexOneRingRecv;++v){
     if(! (vertexOneRingRecvList[v].element == vertexOneRingRecvList[cnt-1].element
-	  && vertexOneRingRecvList[v].otherRank == vertexOneRingRecvList[cnt-1].otherRank)){
+	  && vertexOneRingRecvList[v].sourceRank == vertexOneRingRecvList[cnt-1].sourceRank)){
       vertexOneRingRecvList[cnt] = vertexOneRingRecvList[v];
       ++cnt;
     }
@@ -309,12 +289,12 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   
 #if 1
     for(int v=0;v<NvertexOneRingRecv;++v){
-    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortRank: %d\n",
+    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortTag: %d\n",
 	   mesh->rank,
 	   vertexOneRingRecvList[v].vertex,
 	   vertexOneRingRecvList[v].element,
 	   vertexOneRingRecvList[v].sourceRank,
-	   vertexOneRingRecvList[v].sortRank);
+	   vertexOneRingRecvList[v].sortTag);
   }
 
   MPI_Finalize();
@@ -333,8 +313,8 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   
 #if 1
   for(hlong v=0;v<NnonLocalOneRingElements;++v){
-    printf("%d %d %d ([rank] receives [element] from [other rank])\n",
-	   mesh->rank, vertexOneRingRecvList[v].element, vertexOneRingRecvList[v].otherRank);
+    printf("%d %d %d ([rank] receives [element] from [source rank])\n",
+	   mesh->rank, vertexOneRingRecvList[v].element, vertexOneRingRecvList[v].sourceRank);
   }
 #endif
 
