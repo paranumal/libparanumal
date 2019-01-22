@@ -251,8 +251,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   // sort the list by "other rank then element"
   qsort(vertexHaloRecvList, NvertexHaloRecv, sizeof(vertex_t), compareOtherRankElement);   // check qsort counts
 
- 
-  vertex_t *nonLocalHaloElements = (vertex_t*) calloc(NvertexHaloRecv, sizeof(vertex_t));
   cnt = 0;
   // remove local elements from halo list 
   for(hlong v=0;v<NvertexHaloRecv;++v){
@@ -274,11 +272,32 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   }
   
   hlong NnonLocalHaloElements = cnt;
- 
+  vertex_t *nonLocalHaloElements = (vertex_t*) calloc(NnonLocalHaloElements, sizeof(vertex_t));
+
+  // next
+  // 1. populate this list
+  // 2. set up a meshOneRing that has an attached halo for the one ring
+  // 3. set up the gs info [ need to understand how to populate from the local elements on each rank to the halo ]
+  
 #if 1
   for(hlong v=0;v<NnonLocalHaloElements;++v){
     printf("%d %d %d ([rank] receives [element] from [other rank])\n",
 	   mesh->rank, vertexHaloRecvList[v].element, vertexHaloRecvList[v].otherRank);
   }
 #endif
+
+  free(vertexSendList);
+  free(vertexSendCounts);
+  free(vertexRecvCounts);
+  free(vertexSendDispls);
+  free(vertexRecvDispls);
+  free(vertexRecvList);   
+  free(vertexUniqueRecvOffsets);
+  free(vertexHaloSendCounts);    
+  free(vertexHaloSendList);   
+  free(vertexHaloRecvCounts);    
+  free(vertexHaloSendDispls);   
+  free(vertexHaloRecvDispls);    
+  free(vertexHaloRecvList);
+  
 }
