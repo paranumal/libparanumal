@@ -26,14 +26,6 @@
 
 #include "elliptic.h"
 
-// 1. create: vertex, element, rank triples
-// 2. send to process vertex%size
-
-// 3. on each process sort by vertex, then rank, then element
-
-// 4. for each vertex, send the list back to ranks in the list
-// 5. then each rank sorts the list by source-rank and eliminates duplicates and self connections
-
 typedef struct{
 
   hlong vertex;
@@ -72,6 +64,8 @@ int compareSourceRankElement(const void *a,
   return 0;
 }
 
+// build one ring including MPI exchange information
+
 void ellipticBuildOneRing(elliptic_t *elliptic){
 
   mesh_t *mesh = elliptic->mesh;
@@ -96,17 +90,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   // sort based on sortTag (=vertex%size)
   qsort(vertexSendList, cnt, sizeof(vertex_t), compareSortTag);
 
-#if 0
-  for(int v=0;v<cnt;++v){
-    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortTag: %d\n",
-	   mesh->rank,
-	   vertexSendList[v].vertex,
-	   vertexSendList[v].element,
-	   vertexSendList[v].sourceRank,
-	   vertexSendList[v].sortTag);
-  }
-#endif
-  
   // send sortTagCounts (hackety)
   MPI_Alltoall(vertexSendCounts, 1, MPI_HLONG,
 	       vertexRecvCounts, 1, MPI_HLONG,
@@ -128,10 +111,12 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
     vertexSendDispls[r+1] = vertexSendDispls[r] + vertexSendCounts[r];
     vertexRecvDispls[r+1] = vertexRecvDispls[r] + vertexRecvCounts[r];
 
+#if 0
     printf("rank %d: send %d, %d  recv %d, %d\n",
 	   mesh->rank,
 	   vertexSendCounts[r], vertexSendDispls[r],
 	   vertexRecvCounts[r], vertexRecvDispls[r]);
+#endif
   }
 
   // hack-hack-hack
@@ -199,7 +184,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
       }
     }
   }
-  printf("!!!!!!!!!!!! cnt = %d and Ntotal = %d\n", cnt, Ntotal);
+
   hlong NvertexOneRingSend = cnt;
 
   // sort OneRing send list based on sort rank (=destination tag)
@@ -225,48 +210,19 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   }
   
   vertex_t *vertexOneRingRecvList = (vertex_t*) calloc(NvertexOneRingRecv, sizeof(vertex_t)); // hack-hack-hack
-  
+
+  // sned element lists to the relevant ranks
   MPI_Alltoallv(vertexOneRingSendList, vertexOneRingSendCounts, vertexOneRingSendDispls, MPI_CHAR,
 		vertexOneRingRecvList, vertexOneRingRecvCounts, vertexOneRingRecvDispls, MPI_CHAR,
 		mesh->comm);
 
-#if 0
-  for(int v=0;v<NvertexOneRingRecv;++v){
-    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortTag: %d\n",
-	   mesh->rank,
-	   vertexOneRingRecvList[v].vertex,
-	   vertexOneRingRecvList[v].element,
-	   vertexOneRingRecvList[v].sourceRank,
-	   vertexOneRingRecvList[v].sortTag);
-  }
-
-  MPI_Finalize();
-  exit(0);
-#endif
-
-  
   // finally we now have a list of all elements that are needed to form the 1-ring (to rule them all)
 
   // sort the list by "source rank then element"
-  qsort(vertexOneRingRecvList, NvertexOneRingRecv, sizeof(vertex_t), compareSourceRankElement);   // check qsort counts
+  qsort(vertexOneRingRecvList, NvertexOneRingRecv, sizeof(vertex_t), compareSourceRankElement); 
 
-#if 0
-    for(int v=0;v<NvertexOneRingRecv;++v){
-    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortTag: %d\n",
-	   mesh->rank,
-	   vertexOneRingRecvList[v].vertex,
-	   vertexOneRingRecvList[v].element,
-	   vertexOneRingRecvList[v].sourceRank,
-	   vertexOneRingRecvList[v].sortTag);
-  }
-
-  MPI_Finalize();
-  exit(0);
-#endif
-
-  
+  // remove local elements from oneRing list
   cnt = 0;
-  // remove local elements from oneRing list 
   for(hlong v=0;v<NvertexOneRingRecv;++v){
     if(vertexOneRingRecvList[v].sourceRank != mesh->rank){ // rule out local elements
       vertexOneRingRecvList[cnt] = vertexOneRingRecvList[v];
@@ -286,22 +242,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   }
 
   NvertexOneRingRecv = cnt;
-  
-#if 1
-    for(int v=0;v<NvertexOneRingRecv;++v){
-    printf("rank: %d, vertex: %d, element: %d, sourceRank: %d, sortTag: %d\n",
-	   mesh->rank,
-	   vertexOneRingRecvList[v].vertex,
-	   vertexOneRingRecvList[v].element,
-	   vertexOneRingRecvList[v].sourceRank,
-	   vertexOneRingRecvList[v].sortTag);
-  }
-
-  MPI_Finalize();
-  exit(0);
-#endif
-
-
   
   hlong NnonLocalOneRingElements = cnt;
   vertex_t *nonLocalOneRingElements = (vertex_t*) calloc(NnonLocalOneRingElements, sizeof(vertex_t));
