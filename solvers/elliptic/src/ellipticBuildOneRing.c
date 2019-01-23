@@ -180,11 +180,10 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
     int NuniqueRecvMultiplicity = end - start;
 
     for(hlong v1=start;v1<end;++v1){ // vertex v1 to be sent back with list of conns
-      hlong dest = vertexRecvList[v1].rank;
       for(hlong v2=start;v2<end;++v2){
 	vertexOneRingSendList[cnt] = vertexRecvList[v1];
 	vertexOneRingSendList[cnt].rankN    = vertexRecvList[v2].rank;
-
+	
 	vertexOneRingSendList[cnt].sortTag  = vertexRecvList[v1].rank;
 	++cnt;
       }
@@ -227,7 +226,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   vertex_t *vertexOneRingOut  = (vertex_t*) calloc(NvertexOneRingRecv, sizeof(vertex_t));
   memcpy(vertexOneRingOut,  vertexOneRingRecvList, NvertexOneRingRecv*sizeof(vertex_t));
 
-  // sort the list by "local source rank then element"
+  // sort the list by "neighbor rank then element"
   qsort(vertexOneRingOut,  NvertexOneRingRecv, sizeof(vertex_t), compareRankNElement);
   
   // remove elements connected to this rank from oneRing list
@@ -250,17 +249,17 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   }
   NvertexOneRingOut = cnt;
 
-  // next
-  //-1. count how many elements sent to each rankN
-  // 0. send count and then list to each rankN
+  // next: put new stuff in elliptic
+  //-1. count how many elements send to each rankN
+  // 0. send count to each rankN
   // 1. populate NoneRingExchanges[0:size), 
-  // 2. set up a meshOneRing that has an attached oneRing for the oneRing
-  // 3. set up the gs info [ need to understand how to populate from the local elements on each rank to the oneRing ]
   // 4. adapt halo exchange to oneRingExchange
-  // 5. oneRingExchange: EToV
+  // 5. oneRingExchange: globalNumbers for gs stuff
+  // 3. set up the gs info  using exchange globalNumbers [ need to understand how to populate from the local elements on each rank to the oneRing ]
   // 6. oneRingExchange: geofacs (ggeo)
-  // 7. build local continuous numbering and global continuous numbering (see meshParallelConnectNodes)
-  
+  // 7. build local continuous numbering and local global continuous numbering (see meshParallelConnectNodes)
+  // 8. o_qOneRing
+  // 9. how to precondition patch problem ? 
 #if 1
   for(int r=0;r<mesh->size;++r){
     fflush(stdout);
