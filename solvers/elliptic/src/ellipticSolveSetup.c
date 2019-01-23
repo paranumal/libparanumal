@@ -164,6 +164,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
     free(vgeoSendBuffer);
   }
 
+  MPI_Barrier(mesh->comm);
+  printf("DEBUG solve setup # %d\n", 01);
 
   //build inverse of mass matrix
   mesh->invMM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
@@ -310,6 +312,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
+  MPI_Barrier(mesh->comm);
+  printf("DEBUG solve setup # %d\n", 2);
 
   for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
@@ -380,6 +384,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
                                          "dotDivide",
                                          kernelInfo);
 
+      printf("DEBUG solve setup # %d\n", 6);
+      
       // add custom defines
       kernelInfo["defines/" "p_NpP"]= (mesh->Np+mesh->Nfp*mesh->Nfaces);
       kernelInfo["defines/" "p_Nverts"]= mesh->Nverts;
@@ -471,6 +477,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 	elliptic->partialCubatureAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
       }
 
+      printf("DEBUG solve setup # %d\n", 7);
+      
       // combined PCG update and r.r kernel
       
       elliptic->updatePCGKernel =
@@ -559,6 +567,9 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
     MPI_Barrier(mesh->comm);
   }
 
+  MPI_Barrier(mesh->comm);
+  printf("DEBUG solve setup # %d\n", 9);
+  
   long long int pre = mesh->device.memoryAllocated();
 
   ellipticPreconditionerSetup(elliptic, elliptic->ogs, lambda);

@@ -89,8 +89,14 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
 
   } else if(options.compareArgs("PRECONDITIONER", "MULTIGRID")){
 
+    MPI_Barrier(mesh->comm);
+    printf("DEBUG precon setup # %d\n", 0);
+
     ellipticMultiGridSetup(elliptic,precon,lambda);
 
+    MPI_Barrier(mesh->comm);
+    printf("DEBUG precon setup # %d\n", 1);
+    
   } else if(options.compareArgs("PRECONDITIONER", "SEMFEM")) {
 
     ellipticSEMFEMSetup(elliptic,precon,lambda);
