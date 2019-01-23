@@ -57,8 +57,8 @@ extern "C"
 #define USE_XSMM 0
 
 // hack
-// #define p_Nggeo 7
-#define p_Nggeo 6
+#define p_Nggeo 7
+//#define p_Nggeo 6
 
 template < const int rowsA, const int rowsB, const int colsC >
   static void mxm(const dfloat * __restrict__ A,
@@ -150,9 +150,9 @@ const int N = p_Nq-1;
 #endif
   
   for(int n=0;n<p_Np;++n){
-#if 0
+#if 1
     const dfloat G00 = ggeo[n+G00ID*p_Np], G01 = ggeo[n+G01ID*p_Np], G11 = ggeo[n+G11ID*p_Np];
-    //    const dfloat GWJ = ggeo[n+G00ID*p_Np];
+    const dfloat GWJ = ggeo[n+GWJID*p_Np];
     const dfloat G12 = ggeo[n+G12ID*p_Np], G02 = ggeo[n+G02ID*p_Np], G22 = ggeo[n+G22ID*p_Np];
 #else
     const dfloat G00 = ggeo[0+n*6], G01 = ggeo[1+n*6], G02 = ggeo[2+n*6];
@@ -276,7 +276,7 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
     for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){
-#if 0
+#if 1
           const dlong gbase = element*p_Nggeo*c_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           const dfloat r_G00 = ggeo[gbase+G00ID*p_Np];
           const dfloat r_G01 = ggeo[gbase+G01ID*p_Np];
@@ -297,7 +297,7 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
           const dfloat r_G22 = ggeobase[5];
 #endif
 
-#if 1
+#if 0
           const dlong gbase = element*p_Nggeo*c_Np + (k*p_Nq*p_Nq + j*p_Nq + i);
 	  const dfloat * __restrict__ ggeobase = ggeo+gbase;
           const dfloat r_G00 = ggeobase[0*p_Np];
@@ -340,9 +340,9 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
     for(int k = 0;k < p_Nq; k++){
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){
-#if 0
+#if 1
           const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+          const dfloat r_GwJ = ggeo[gbase+GWJID*p_Np];
 
           dfloat r_Aq = r_GwJ*lambda*s_q[k][j][i];
 #endif
@@ -357,7 +357,7 @@ void ellipticSerialAxHexKernel3D (const hlong Nelements,
             r_Aqt += s_D[m][k]*s_Gqt[m][j][i];
 
           const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-          Aq[id] = r_Aqr + r_Aqs + r_Aqt; // +r_Aq;
+          Aq[id] = r_Aqr + r_Aqs + r_Aqt +r_Aq;
         }
       }
     }
@@ -574,8 +574,8 @@ void ellipticSerialAxHexKernel3D(const int Nq,
   const dfloat *MM   = (dfloat*) o_MM.ptr();
 
   const dfloat *q    = (dfloat*)o_q.ptr();
-  //  const dfloat *ggeo = (dfloat*)o_ggeo.ptr();
-  const dfloat *ggeo = (dfloat*)o_ggeoNoJW.ptr();
+  const dfloat *ggeo = (dfloat*)o_ggeo.ptr();
+  //  const dfloat *ggeo = (dfloat*)o_ggeoNoJW.ptr();
   dfloat *Aq  = (dfloat*)o_Aq.ptr();
   
   switch(Nq){

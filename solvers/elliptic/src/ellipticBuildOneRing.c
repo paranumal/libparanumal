@@ -524,8 +524,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
 
   elliptic_t *elliptic1 = ellipticSetup(mesh1, lambda, kernelInfo1, options1);
 
-  printf("DEBUG #\%d\n", 200);
-  
   dfloat *ggeoNoJW = (dfloat*) calloc(mesh1->Np*mesh1->Nelements*6,sizeof(dfloat));
   for(int e=0;e<mesh1->Nelements;++e){
     for(int n=0;n<mesh1->Np;++n){
@@ -538,8 +536,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
     }
   }
 
-  printf("DEBUG #\%d\n", 201);
-  
   elliptic1->o_ggeoNoJW = mesh1->device.malloc(mesh1->Np*mesh1->Nelements*6*sizeof(dfloat), ggeoNoJW);    
   
   dfloat tol = 1e-8;
@@ -598,8 +594,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
     else
       meshPlotVTU2D(mesh, fname, 0);
 #endif
-  
-  printf("DEBUG #\%d\n", 300);
   
   char fname[BUFSIZ];
   sprintf(fname, "diagnostics%04d.dat", mesh->rank);
