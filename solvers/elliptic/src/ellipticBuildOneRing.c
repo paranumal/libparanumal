@@ -30,7 +30,9 @@ typedef struct{
 
   hlong vertex;
   hlong element;
-  hlong sourceRank;
+  hlong rank;
+  hlong elementN; // element on neighbor rank
+  hlong rankN;    // neighbor rank
   hlong sortTag;
 
 }vertex_t;
@@ -48,14 +50,14 @@ int compareSortTag(const void *a,
   return 0;
 }
 
-int compareSourceRankElement(const void *a, 
-			    const void *b){
+int compareRankElement(const void *a, 
+		       const void *b){
   
   vertex_t *va = (vertex_t*) a;
   vertex_t *vb = (vertex_t*) b;
 
-  if(va->sourceRank < vb->sourceRank) return -1;
-  if(va->sourceRank > vb->sourceRank) return +1;
+  if(va->rank < vb->rank) return -1;
+  if(va->rank > vb->rank) return +1;
 
   if(va->element < vb->element) return -1;
   if(va->element > vb->element) return +1;
@@ -63,6 +65,23 @@ int compareSourceRankElement(const void *a,
   
   return 0;
 }
+
+int compareRankNElement(const void *a, 
+		       const void *b){
+  
+  vertex_t *va = (vertex_t*) a;
+  vertex_t *vb = (vertex_t*) b;
+
+  if(va->rankN < vb->rankN) return -1;
+  if(va->rankN > vb->rankN) return +1;
+
+  if(va->element < vb->element) return -1;
+  if(va->element > vb->element) return +1;
+  
+  return 0;
+}
+
+
 
 // build one ring including MPI exchange information
 
@@ -80,7 +99,10 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
     for(int v=0;v<mesh->Nverts;++v){
       vertexSendList[cnt].vertex = mesh->EToV[e*mesh->Nverts+v];
       vertexSendList[cnt].element = e;
-      vertexSendList[cnt].sourceRank = mesh->rank;
+      vertexSendList[cnt].rank = mesh->rank;
+      vertexSendList[cnt].elementN = -1; // currently self connect
+      vertexSendList[cnt].rankN = -1;
+      
       vertexSendList[cnt].sortTag = vertexSendList[cnt].vertex%mesh->size;
       ++vertexSendCounts[vertexSendList[cnt].sortTag];
       ++cnt;
@@ -163,7 +185,8 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
 
     int NuniqueRecvMultiplicity = end - start;
     for(hlong m=start;m<end;++m){
-      vertexOneRingSendCounts[vertexRecvList[m].sourceRank] += NuniqueRecvMultiplicity; // watch out for this
+      vertexOneRingSendCounts[vertexRecvList[m].rank]
+	+= NuniqueRecvMultiplicity; // watch out for this
       Ntotal += NuniqueRecvMultiplicity;
     }
   }
@@ -176,10 +199,13 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
     int NuniqueRecvMultiplicity = end - start;
 
     for(hlong v1=start;v1<end;++v1){ // vertex v1 to be sent back with list of conns
-      hlong dest = vertexRecvList[v1].sourceRank;
+      hlong dest = vertexRecvList[v1].rank;
       for(hlong v2=start;v2<end;++v2){
-	vertexOneRingSendList[cnt] = vertexRecvList[v2];
-	vertexOneRingSendList[cnt].sortTag = dest;
+	vertexOneRingSendList[cnt] = vertexRecvList[v1];
+	vertexOneRingSendList[cnt].elementN = vertexRecvList[v2].element;
+	vertexOneRingSendList[cnt].rankN    = vertexRecvList[v2].rank;
+
+	vertexOneRingSendList[cnt].sortTag  = vertexRecvList[v1].rank;
 	++cnt;
       }
     }
@@ -209,55 +235,78 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
     vertexOneRingRecvDispls[r+1] = vertexOneRingRecvDispls[r] + vertexOneRingRecvCounts[r];
   }
   
-  vertex_t *vertexOneRingRecvList = (vertex_t*) calloc(NvertexOneRingRecv, sizeof(vertex_t)); // hack-hack-hack
-
-  // sned element lists to the relevant ranks
+  vertex_t *vertexOneRingRecvList =
+    (vertex_t*) calloc(NvertexOneRingRecv, sizeof(vertex_t)); // hack-hack-hack
+  
+  // send element lists to the relevant ranks
   MPI_Alltoallv(vertexOneRingSendList, vertexOneRingSendCounts, vertexOneRingSendDispls, MPI_CHAR,
 		vertexOneRingRecvList, vertexOneRingRecvCounts, vertexOneRingRecvDispls, MPI_CHAR,
 		mesh->comm);
 
-  // finally we now have a list of all elements that are needed to form the 1-ring (to rule them all)
+  // finally we now have a list of all elements that we need to send to form the 1-ring (to rule them all)
+  vertex_t *vertexOneRingOut  = (vertex_t*) calloc(NvertexOneRingRecv, sizeof(vertex_t));
+  memcpy(vertexOneRingOut,  vertexOneRingRecvList, NvertexOneRingRecv*sizeof(vertex_t));
 
-  // sort the list by "source rank then element"
-  qsort(vertexOneRingRecvList, NvertexOneRingRecv, sizeof(vertex_t), compareSourceRankElement); 
-
+  // sort the list by "local source rank then element"
+  qsort(vertexOneRingOut,  NvertexOneRingRecv, sizeof(vertex_t), compareRankElement);
+  
   // remove local elements from oneRing list
   cnt = 0;
-  for(hlong v=0;v<NvertexOneRingRecv;++v){
-    if(vertexOneRingRecvList[v].sourceRank != mesh->rank){ // rule out local elements
-      vertexOneRingRecvList[cnt] = vertexOneRingRecvList[v];
-      ++cnt;
-    }
-  }
-  NvertexOneRingRecv = cnt;
+  for(hlong v=0;v<NvertexOneRingRecv;++v)
+    if(vertexOneRingOut[v].rankN != mesh->rank) // only connect connections with off rank elements
+      vertexOneRingOut[cnt++] = vertexOneRingOut[v];
 
-  // remove duplicate elements from oneRing list
+  hlong NvertexOneRingOut = cnt;
+
+  // remove duplicate connections from oneRingInOut list
   cnt = 1; // assumes at least one oneRing element
-  for(hlong v=1;v<NvertexOneRingRecv;++v){
-    if(! (vertexOneRingRecvList[v].element == vertexOneRingRecvList[cnt-1].element
-	  && vertexOneRingRecvList[v].sourceRank == vertexOneRingRecvList[cnt-1].sourceRank)){
-      vertexOneRingRecvList[cnt] = vertexOneRingRecvList[v];
+  for(hlong v=1;v<NvertexOneRingOut;++v){
+    if(! (vertexOneRingOut[v].element == vertexOneRingOut[cnt-1].element
+	  && vertexOneRingOut[v].rank == vertexOneRingOut[cnt-1].rank
+	  && vertexOneRingOut[v].rankN == vertexOneRingOut[cnt-1].rankN
+	  )){
+      vertexOneRingOut[cnt] = vertexOneRingOut[v];
       ++cnt;
     }
   }
+  NvertexOneRingOut = cnt;
 
-  NvertexOneRingRecv = cnt;
+  // sort in rankN order, then subsort in element order
+  qsort(vertexOneRingOut,  NvertexOneRingOut, sizeof(vertex_t), compareRankNElement);
   
-  hlong NnonLocalOneRingElements = cnt;
-  vertex_t *nonLocalOneRingElements = (vertex_t*) calloc(NnonLocalOneRingElements, sizeof(vertex_t));
-
   // next
-  // 1. populate this list
-  // 2. set up a meshOneRing that has an attached oneRing for the one ring
+  // 0. this thing is symmetric so if rank X and Y share a vertex they 
+  // 1. populate NoneRingExchanges[0:size), 
+  // 2. set up a meshOneRing that has an attached oneRing for the oneRing
   // 3. set up the gs info [ need to understand how to populate from the local elements on each rank to the oneRing ]
+  // 4. adapt halo exchange to oneRingExchange
+  // 5. oneRingExchange: EToV
+  // 6. oneRingExchange: geofacs (ggeo)
+  // 7. build local continuous numbering and global continuous numbering (see meshParallelConnectNodes)
   
 #if 1
-  for(hlong v=0;v<NnonLocalOneRingElements;++v){
-    printf("%d %d %d ([rank] receives [element] from [source rank])\n",
-	   mesh->rank, vertexOneRingRecvList[v].element, vertexOneRingRecvList[v].sourceRank);
+  for(int r=0;r<mesh->size;++r){
+    if(mesh->rank==r){
+      for(hlong v=0;v<NvertexOneRingOut;++v){
+	printf("OUT: rank: %d (rank: %d, elmt: %d) => (rankN: %d, elmtN: %d) \n",
+	       mesh->rank,
+	       vertexOneRingOut[v].rank, vertexOneRingOut[v].element,
+	       vertexOneRingOut[v].rankN, vertexOneRingOut[v].elementN);
+      }
+    }    
+    fflush(stdout);
+    MPI_Barrier(mesh->comm);
   }
+  
+  printf("rank = %d, NvertexOneRingOut = %d\n",
+	 mesh->rank, NvertexOneRingOut);
+
+  
 #endif
 
+  MPI_Finalize();
+  exit(0);
+  
   free(vertexSendList);
   free(vertexSendCounts);
   free(vertexRecvCounts);
