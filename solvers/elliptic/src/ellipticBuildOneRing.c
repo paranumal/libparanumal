@@ -181,7 +181,7 @@ void ellipticOneRingExchange(MPI_Comm &comm,
 
 // build one ring including MPI exchange information
 
-void ellipticBuildOneRing(elliptic_t *elliptic){
+void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
 
   mesh_t *mesh = elliptic->mesh;
 
@@ -408,15 +408,23 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   printf("NoneRingRecvTotal = %d, NoneRingSendTotal =%d\n", NoneRingRecvTotal, NoneRingSendTotal);
 
   mesh_t *mesh1 = (mesh_t*) calloc(1, sizeof(mesh_t)); // check
-  mesh1->rank = 0;
-  mesh1->size = 1;
 
+  // single process communicator for mesh1
+  MPI_Comm_split(mesh->comm, mesh->rank, mesh->rank, &mesh1->comm);
+
+  MPI_Comm_rank(mesh1->comm, &mesh1->rank);
+  MPI_Comm_size(mesh1->comm, &mesh1->size);
+
+  printf("rank: %d, mesh1: rank=%d, size=%d\n", mesh->rank, mesh1->rank, mesh1->size);
+  
   //  meshOneRing->comm = ?; fix later
   mesh1->dim = mesh->dim;
   mesh1->Nverts = mesh->Nverts;
   mesh1->Nfaces = mesh->Nfaces;
   mesh1->NfaceVertices = mesh->NfaceVertices;
 
+  mesh1->N   = mesh->N;
+  
   mesh1->faceVertices =
     (int*) calloc(mesh1->NfaceVertices*mesh1->Nfaces, sizeof(int));
 
@@ -424,6 +432,32 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
 
   mesh1->Nelements = mesh->Nelements + NoneRingRecvTotal;
 
+
+  mesh1->EX = (dfloat*) calloc(mesh1->Nelements*mesh1->Nverts, sizeof(dfloat));
+  mesh1->EY = (dfloat*) calloc(mesh1->Nelements*mesh1->Nverts, sizeof(dfloat));
+  mesh1->EZ = (dfloat*) calloc(mesh1->Nelements*mesh1->Nverts, sizeof(dfloat));
+  ellipticOneRingExchange(mesh->comm,
+			  mesh->Nelements, mesh->Nverts*sizeof(dfloat), mesh->EX,
+			  NoneRingSendTotal, oneRingSendList, NoneRingSend, sendBuffer,
+			  sendRequests,
+			  NoneRingRecvTotal, NoneRingRecv, recvRequests, mesh1->EX);
+
+
+  ellipticOneRingExchange(mesh->comm,
+			  mesh->Nelements, mesh->Nverts*sizeof(dfloat), mesh->EY,
+			  NoneRingSendTotal, oneRingSendList, NoneRingSend, sendBuffer,
+			  sendRequests,
+			  NoneRingRecvTotal, NoneRingRecv, recvRequests, mesh1->EY);
+
+
+  ellipticOneRingExchange(mesh->comm,
+			  mesh->Nelements, mesh->Nverts*sizeof(dfloat), mesh->EZ,
+			  NoneRingSendTotal, oneRingSendList, NoneRingSend, sendBuffer,
+			  sendRequests,
+			  NoneRingRecvTotal, NoneRingRecv, recvRequests, mesh1->EZ);
+
+
+  
   mesh1->NboundaryFaces = mesh->NboundaryFaces;
   mesh1->boundaryInfo = (hlong*) calloc(mesh1->NboundaryFaces*(mesh1->NfaceVertices+1), sizeof(hlong));
   memcpy(mesh1->boundaryInfo, mesh->boundaryInfo, mesh1->NboundaryFaces*(mesh1->NfaceVertices+1)*sizeof(hlong));
@@ -435,10 +469,85 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
 			  sendRequests,
 			  NoneRingRecvTotal, NoneRingRecv, recvRequests, mesh1->EToV);
 
-  meshConnect(mesh1);
+  meshParallelConnect(mesh1);
   
   meshConnectBoundary(mesh1);
 
+  meshLoadReferenceNodesHex3D(mesh1, mesh1->N);
+
+  mesh1->x = (dfloat*) calloc(mesh1->Nelements*mesh1->Np, sizeof(dfloat));
+  mesh1->y = (dfloat*) calloc(mesh1->Nelements*mesh1->Np, sizeof(dfloat));
+  mesh1->z = (dfloat*) calloc(mesh1->Nelements*mesh1->Np, sizeof(dfloat));
+  ellipticOneRingExchange(mesh->comm,
+			  mesh->Nelements, mesh->Np*sizeof(dfloat), mesh->x,
+			  NoneRingSendTotal, oneRingSendList, NoneRingSend, sendBuffer,
+			  sendRequests,
+			  NoneRingRecvTotal, NoneRingRecv, recvRequests, mesh1->x);
+
+  ellipticOneRingExchange(mesh->comm,
+			  mesh->Nelements, mesh->Np*sizeof(dfloat), mesh->y,
+			  NoneRingSendTotal, oneRingSendList, NoneRingSend, sendBuffer,
+			  sendRequests,
+			  NoneRingRecvTotal, NoneRingRecv, recvRequests, mesh1->y);
+
+  ellipticOneRingExchange(mesh->comm,
+			  mesh->Nelements, mesh->Np*sizeof(dfloat), mesh->z,
+			  NoneRingSendTotal, oneRingSendList, NoneRingSend, sendBuffer,
+			  sendRequests,
+			  NoneRingRecvTotal, NoneRingRecv, recvRequests, mesh1->z);
+
+  // this is all vanilla HEX --->
+  meshGeometricFactorsHex3D(mesh1);
+
+  meshHaloSetup(mesh1); // nada
+  
+  meshConnectFaceNodes3D(mesh1);
+  
+  meshSurfaceGeometricFactorsHex3D(mesh1);
+  
+  meshParallelConnectNodes(mesh1); // data
+  
+  meshParallelConnectNodes(mesh1);
+  
+  // <------
+
+  setupAide options1 = elliptic->options; // check this
+
+  meshOccaSetup3D(mesh1, options1, kernelInfo);
+  
+  dfloat lambda;
+  options1.getArgs("LAMBDA", lambda);
+  printf("lambda = %lf\n", lambda);
+  
+  // set up
+  occa::properties kernelInfo1 = kernelInfo;
+
+  elliptic_t *elliptic1 = ellipticSetup(mesh1, lambda, kernelInfo1, options1);
+
+  printf("DEBUG #\%d\n", 200);
+  
+  dfloat *ggeoNoJW = (dfloat*) calloc(mesh1->Np*mesh1->Nelements*6,sizeof(dfloat));
+  for(int e=0;e<mesh1->Nelements;++e){
+    for(int n=0;n<mesh1->Np;++n){
+      ggeoNoJW[e*mesh1->Np*6 + n + 0*mesh1->Np] = mesh1->ggeo[e*mesh1->Np*mesh1->Nggeo + n + G00ID*mesh1->Np];
+      ggeoNoJW[e*mesh1->Np*6 + n + 1*mesh1->Np] = mesh1->ggeo[e*mesh1->Np*mesh1->Nggeo + n + G01ID*mesh1->Np];
+      ggeoNoJW[e*mesh1->Np*6 + n + 2*mesh1->Np] = mesh1->ggeo[e*mesh1->Np*mesh1->Nggeo + n + G02ID*mesh1->Np];
+      ggeoNoJW[e*mesh1->Np*6 + n + 3*mesh1->Np] = mesh1->ggeo[e*mesh1->Np*mesh1->Nggeo + n + G11ID*mesh1->Np];
+      ggeoNoJW[e*mesh1->Np*6 + n + 4*mesh1->Np] = mesh1->ggeo[e*mesh1->Np*mesh1->Nggeo + n + G12ID*mesh1->Np];
+      ggeoNoJW[e*mesh1->Np*6 + n + 5*mesh1->Np] = mesh1->ggeo[e*mesh1->Np*mesh1->Nggeo + n + G22ID*mesh1->Np];
+    }
+  }
+
+  printf("DEBUG #\%d\n", 201);
+  
+  elliptic1->o_ggeoNoJW = mesh1->device.malloc(mesh1->Np*mesh1->Nelements*6*sizeof(dfloat), ggeoNoJW);    
+  
+  dfloat tol = 1e-8;
+  printf("entering ellipticsolve\n");
+  int it = ellipticSolve(elliptic1, lambda, tol, elliptic1->o_r, elliptic1->o_x);
+
+  printf("DEBUG #\%d\n", 300);
+  
   char fname[BUFSIZ];
   sprintf(fname, "diagnostics%04d.dat", mesh->rank);
   FILE *fp = fopen(fname, "w");
@@ -470,31 +579,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   fprintf(fp, "];\n");
   
   fclose(fp);
-  
-#if 0
-  for(int r=0;r<mesh->size;++r){
-    fflush(stdout);
-    MPI_Barrier(mesh->comm);
-    if(mesh->rank==r){
-      for(hlong v=0;v<NvertexOneRingOut;++v){
-	printf("OUT: rank: %d (rank: %d, elmt: %d) => (rankN: %d) \n",
-	       mesh->rank,
-	       vertexOneRingOut[v].rank,  vertexOneRingOut[v].element,
-	       vertexOneRingOut[v].rankN);
-      }
-    }    
-    fflush(stdout);
-    MPI_Barrier(mesh->comm);
-  }
-
-  fflush(stdout);
-  MPI_Barrier(mesh->comm);
-  
-  printf("rank = %d, NvertexOneRingOut = %d\n",
-	 mesh->rank, NvertexOneRingOut);
-
-  
-#endif
 
   MPI_Finalize();
   exit(0);

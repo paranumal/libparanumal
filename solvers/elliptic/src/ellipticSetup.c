@@ -76,18 +76,6 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   // compute samples of q at interpolation nodes
   mesh->q = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
 
-  if(elliptic->dim==3){
-    if(elliptic->elementType == TRIANGLES)
-      meshOccaSetupTri3D(mesh, options, kernelInfo);
-    else if(elliptic->elementType == QUADRILATERALS)
-      meshOccaSetupQuad3D(mesh, options, kernelInfo);
-    else
-      meshOccaSetup3D(mesh, options, kernelInfo);
-  } 
-  else
-    meshOccaSetup2D(mesh, options, kernelInfo);
-
-
   if (mesh->rank==0)
     reportMemoryUsage(mesh->device, "after occa setup");
 
@@ -133,11 +121,9 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     }
   }
 
-  // build one-ring ( to rule them all )
-  ellipticBuildOneRing(elliptic);
-  //
+  printf("DEBUG #\%d\n", 01);
   ellipticSolveSetup(elliptic, lambda, kernelInfo);
-
+  printf("DEBUG #\%d\n", 10);
 
   dlong Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   elliptic->r   = (dfloat*) calloc(Nall,   sizeof(dfloat));
@@ -217,6 +203,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     }
   }
 
+  printf("DEBUG #\%d\n", 11);
 
 #if 0
     char fname[BUFSIZ];
@@ -276,6 +263,9 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     }	
   }	
 
+  MPI_Barrier(mesh->comm);
+  printf("DEBUG #\%d\n", 100);
+  
   //copy to occa buffers
   elliptic->o_r   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->r);
   elliptic->o_x   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->x);
@@ -303,6 +293,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
+  printf("DEBUG #\%d\n", 101);
+  
   //add boundary condition contribution to rhs
   if (options.compareArgs("DISCRETIZATION","IPDG") && 
       !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS) ) {
@@ -332,6 +324,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 			      elliptic->o_r);
   }
 
+  printf("DEBUG #\%d\n", 102);
+  
   if (options.compareArgs("DISCRETIZATION","CONTINUOUS") &&
        !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS) ) {
     for(int r=0;r<mesh->size;++r){
@@ -349,6 +343,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       MPI_Barrier(mesh->comm);
     }
 
+    printf("DEBUG #\%d\n", 103);
+    
     dfloat zero = 0.f, mone = -1.0f, one = 1.0f;
     if(options.compareArgs("ELLIPTIC INTEGRATION", "NODAL")){
       elliptic->rhsBCKernel(mesh->Nelements,
@@ -400,12 +396,14 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     
     
   }
-
+    printf("DEBUG #\%d\n", 104);
   // gather-scatter
  if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
     ogsGatherScatter(elliptic->o_r, ogsDfloat, ogsAdd, mesh->ogs);
     if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, elliptic->o_r);
   }
 
+ printf("DEBUG #\%d\n", 105);
+ 
   return elliptic;
 }
