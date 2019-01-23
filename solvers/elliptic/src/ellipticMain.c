@@ -217,7 +217,7 @@ int main(int argc, char **argv){
   }
 #endif
 
-  cout << kernelInfo;
+  //  cout << kernelInfo;
   
   // build one-ring ( to rule them all )
   ellipticBuildOneRing(elliptic, kernelInfo);

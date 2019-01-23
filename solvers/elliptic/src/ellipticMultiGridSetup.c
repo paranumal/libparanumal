@@ -99,9 +99,6 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   precon->parAlmond = parAlmond::Init(mesh->device, mesh->comm, options);
   parAlmond::multigridLevel **levels = precon->parAlmond->levels;
 
-  MPI_Barrier(mesh->comm);
-  printf("DEBUG multigrid setup # %d\n", 0);
-  
   //set up the finest level
   if (Nmax>Nmin) {
     levels[0] = new MGLevel(elliptic, lambda, Nmax, options,
@@ -111,10 +108,6 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     precon->parAlmond->numLevels++;
   }
 
-  MPI_Barrier(mesh->comm);
-  printf("DEBUG multigrid setup # %d\n", 1);
-
-  
   //build a MGLevel for every degree (except degree 1)
   for (int n=1;n<numMGLevels-1;n++) {
     int Nc = levelDegree[n];
@@ -158,10 +151,6 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 
   if (options.compareArgs("BASIS","BERN")) basis = ellipticCoarse->mesh->VB;
 
-  MPI_Barrier(mesh->comm);
-  printf("DEBUG multigrid setup # %d\n", 5);
-
-  
   hlong *coarseGlobalStarts = (hlong*) calloc(mesh->size+1, sizeof(hlong));
 
   if (options.compareArgs("DISCRETIZATION","IPDG")) {
@@ -213,10 +202,6 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   MGLevelAllocateStorage((MGLevel*) levels[numMGLevels-1], numMGLevels-1,
                             precon->parAlmond->ctype);
 
-  MPI_Barrier(mesh->comm);
-  printf("DEBUG multigrid setup # %d\n", 10);
-
-  
   //tell parAlmond to gather when going to the next level
   if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     if (precon->parAlmond->numLevels > numMGLevels) {
