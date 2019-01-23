@@ -424,13 +424,52 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
 
   mesh1->Nelements = mesh->Nelements + NoneRingRecvTotal;
 
+  mesh1->NboundaryFaces = mesh->NboundaryFaces;
+  mesh1->boundaryInfo = (hlong*) calloc(mesh1->NboundaryFaces*(mesh1->NfaceVertices+1), sizeof(hlong));
+  memcpy(mesh1->boundaryInfo, mesh->boundaryInfo, mesh1->NboundaryFaces*(mesh1->NfaceVertices+1)*sizeof(hlong));
+  
   mesh1->EToV = (hlong*) calloc(mesh1->Nelements*mesh1->Nverts, sizeof(hlong));
-
   ellipticOneRingExchange(mesh->comm,
 			  mesh->Nelements, mesh->Nverts*sizeof(hlong), mesh->EToV,
 			  NoneRingSendTotal, oneRingSendList, NoneRingSend, sendBuffer,
 			  sendRequests,
 			  NoneRingRecvTotal, NoneRingRecv, recvRequests, mesh1->EToV);
+
+  meshConnect(mesh1);
+  
+  meshConnectBoundary(mesh1);
+
+  char fname[BUFSIZ];
+  sprintf(fname, "diagnostics%04d.dat", mesh->rank);
+  FILE *fp = fopen(fname, "w");
+  fprintf(fp, "EToV=[\n");
+  for(int e=0;e<mesh1->Nelements;++e){
+    for(int v=0;v<mesh1->Nverts;++v)
+      fprintf(fp, "%d ", mesh1->EToV[e*mesh1->Nverts+v]);
+    if(e<mesh->Nelements) fprintf(fp, "%% original \n");
+    else      fprintf(fp, "%% overlap \n");
+  }
+  fprintf(fp, "];\n");
+
+  fprintf(fp, "EToE=[\n");
+  for(int e=0;e<mesh1->Nelements;++e){
+    for(int f=0;f<mesh1->Nfaces;++f)
+      fprintf(fp, "%d ", mesh1->EToE[e*mesh1->Nfaces+f]);
+    if(e<mesh->Nelements) fprintf(fp, "%% original \n");
+    else      fprintf(fp, "%% overlap \n");
+  }
+  fprintf(fp, "];\n");
+
+  fprintf(fp, "EToB=[\n");
+  for(int e=0;e<mesh1->Nelements;++e){
+    for(int f=0;f<mesh1->Nfaces;++f)
+      fprintf(fp, "%d ", mesh1->EToB[e*mesh1->Nfaces+f]);
+    if(e<mesh->Nelements) fprintf(fp, "%% original \n");
+    else      fprintf(fp, "%% overlap \n");
+  }
+  fprintf(fp, "];\n");
+  
+  fclose(fp);
   
 #if 0
   for(int r=0;r<mesh->size;++r){
