@@ -364,6 +364,8 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
     }
     NvertexOneRingOut = cnt;
   }
+
+  printf("NvertexOneRingOut = %d, Nelements = %d\n", NvertexOneRingOut, mesh->Nelements);
   
   // next: put new stuff in elliptic
   //-1. count how many elements send to each rankN
