@@ -41,6 +41,20 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   elliptic->mesh = mesh;
   elliptic->options = options;
 
+  // do occa set up  outside of ellipticSetup
+  if(elliptic->dim==3){
+    if(elliptic->elementType == TRIANGLES)
+      meshOccaSetupTri3D(mesh, options, kernelInfo);
+    else if(elliptic->elementType == QUADRILATERALS)
+      meshOccaSetupQuad3D(mesh, options, kernelInfo);
+    else
+      meshOccaSetup3D(mesh, options, kernelInfo);
+  } 
+  else
+    meshOccaSetup2D(mesh, options, kernelInfo);
+  
+
+  
   // defaults for conjugate gradient
   cgOptions.enableGatherScatters = 1;
   cgOptions.enableReductions = 1; 
@@ -120,7 +134,31 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       }
     }
   }
+  
+  dfloat *ggeoNoJW = (dfloat*) calloc(mesh->Np*mesh->Nelements*6,sizeof(dfloat));
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+#if 1
+      ggeoNoJW[e*mesh->Np*6 + n + 0*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G00ID*mesh->Np];
+      ggeoNoJW[e*mesh->Np*6 + n + 1*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G01ID*mesh->Np];
+      ggeoNoJW[e*mesh->Np*6 + n + 2*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G02ID*mesh->Np];
+      ggeoNoJW[e*mesh->Np*6 + n + 3*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G11ID*mesh->Np];
+      ggeoNoJW[e*mesh->Np*6 + n + 4*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G12ID*mesh->Np];
+      ggeoNoJW[e*mesh->Np*6 + n + 5*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G22ID*mesh->Np];
+#else
+      ggeoNoJW[e*mesh->Np*6 + 6*n + 0] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G00ID*mesh->Np];
+      ggeoNoJW[e*mesh->Np*6 + 6*n + 1] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G01ID*mesh->Np];
+      ggeoNoJW[e*mesh->Np*6 + 6*n + 2] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G02ID*mesh->Np];
+      ggeoNoJW[e*mesh->Np*6 + 6*n + 3] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G11ID*mesh->Np];
+      ggeoNoJW[e*mesh->Np*6 + 6*n + 4] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G12ID*mesh->Np];
+      ggeoNoJW[e*mesh->Np*6 + 6*n + 5] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G22ID*mesh->Np];
+#endif
+      
+    }
+  }
 
+  elliptic->o_ggeoNoJW = mesh->device.malloc(mesh->Np*mesh->Nelements*6*sizeof(dfloat), ggeoNoJW);    
+  
   printf("DEBUG #\%d\n", 01);
   ellipticSolveSetup(elliptic, lambda, kernelInfo);
   printf("DEBUG #\%d\n", 10);

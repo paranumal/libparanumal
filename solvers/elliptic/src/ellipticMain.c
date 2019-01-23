@@ -71,48 +71,12 @@ int main(int argc, char **argv){
   kernelInfo["header"].asArray();
   kernelInfo["flags"].asObject();
 
-  // do occa set up  outside of ellipticSetup
-  if(dim==3){
-    if(elementType == TRIANGLES)
-      meshOccaSetupTri3D(mesh, options, kernelInfo);
-    else if(elementType == QUADRILATERALS)
-      meshOccaSetupQuad3D(mesh, options, kernelInfo);
-    else
-      meshOccaSetup3D(mesh, options, kernelInfo);
-  } 
-  else
-    meshOccaSetup2D(mesh, options, kernelInfo);
-  
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
   {    
     occa::memory o_r = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_r);
     occa::memory o_x = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_x);    
 
-    dfloat *ggeoNoJW = (dfloat*) calloc(mesh->Np*mesh->Nelements*6,sizeof(dfloat));
-    for(int e=0;e<mesh->Nelements;++e){
-      for(int n=0;n<mesh->Np;++n){
-#if 1
-	ggeoNoJW[e*mesh->Np*6 + n + 0*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G00ID*mesh->Np];
-	ggeoNoJW[e*mesh->Np*6 + n + 1*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G01ID*mesh->Np];
-	ggeoNoJW[e*mesh->Np*6 + n + 2*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G02ID*mesh->Np];
-	ggeoNoJW[e*mesh->Np*6 + n + 3*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G11ID*mesh->Np];
-	ggeoNoJW[e*mesh->Np*6 + n + 4*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G12ID*mesh->Np];
-	ggeoNoJW[e*mesh->Np*6 + n + 5*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G22ID*mesh->Np];
-#else
-	ggeoNoJW[e*mesh->Np*6 + 6*n + 0] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G00ID*mesh->Np];
-	ggeoNoJW[e*mesh->Np*6 + 6*n + 1] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G01ID*mesh->Np];
-	ggeoNoJW[e*mesh->Np*6 + 6*n + 2] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G02ID*mesh->Np];
-	ggeoNoJW[e*mesh->Np*6 + 6*n + 3] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G11ID*mesh->Np];
-	ggeoNoJW[e*mesh->Np*6 + 6*n + 4] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G12ID*mesh->Np];
-	ggeoNoJW[e*mesh->Np*6 + 6*n + 5] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G22ID*mesh->Np];
-#endif
-
-      }
-    }
-
-    elliptic->o_ggeoNoJW = mesh->device.malloc(mesh->Np*mesh->Nelements*6*sizeof(dfloat), ggeoNoJW);    
-    
     // convergence tolerance
     dfloat tol = 1e-8;
 

@@ -157,8 +157,8 @@ SOFTWARE.
 }
 
 // default to element-per-threadblock
-#define ellipticPartialAxHex3D_vSerial ellipticPartialAxHex3D
-//#define ellipticPartialAxHex3D_v0 ellipticPartialAxHex3D
+//#define ellipticPartialAxHex3D_vSerial ellipticPartialAxHex3D
+#define ellipticPartialAxHex3D_v0 ellipticPartialAxHex3D
 
 @kernel void ellipticPartialAxHex3D_v0(const dlong Nelements,
                                     @restrict const  dlong  *  elementList,

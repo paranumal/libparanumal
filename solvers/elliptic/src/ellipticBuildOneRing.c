@@ -352,17 +352,19 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   hlong NvertexOneRingOut = cnt;
 
   // remove duplicate connections from oneRingInOut list
-  cnt = 1; // assumes at least one oneRing element
-  for(hlong v=1;v<NvertexOneRingOut;++v){
-    if(! (vertexOneRingOut[v].element == vertexOneRingOut[cnt-1].element
-	  && vertexOneRingOut[v].rank == vertexOneRingOut[cnt-1].rank
-	  && vertexOneRingOut[v].rankN == vertexOneRingOut[cnt-1].rankN
-	  )){
-      vertexOneRingOut[cnt++] = vertexOneRingOut[v];
+  if(NvertexOneRingOut){
+    cnt = 1; // assumes at least one oneRing element
+    for(hlong v=1;v<NvertexOneRingOut;++v){
+      if(! (vertexOneRingOut[v].element == vertexOneRingOut[cnt-1].element
+	    && vertexOneRingOut[v].rank == vertexOneRingOut[cnt-1].rank
+	    && vertexOneRingOut[v].rankN == vertexOneRingOut[cnt-1].rankN
+	    )){
+	vertexOneRingOut[cnt++] = vertexOneRingOut[v];
+      }
     }
+    NvertexOneRingOut = cnt;
   }
-  NvertexOneRingOut = cnt;
-
+  
   // next: put new stuff in elliptic
   //-1. count how many elements send to each rankN
   // 0. send count to each rankN
@@ -376,7 +378,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   // 9. how to precondition patch problem ?
 
   hlong NoneRingSendTotal = NvertexOneRingOut; // should rename things above
-  hlong *oneRingSendList = (hlong*) calloc(NoneRingSendTotal, sizeof(hlong));
+  hlong *oneRingSendList = (hlong*) calloc(NoneRingSendTotal+1, sizeof(hlong));
   hlong *NoneRingSend = (hlong*) calloc(mesh->size, sizeof(hlong));
   hlong *NoneRingRecv = (hlong*) calloc(mesh->size, sizeof(hlong));
   
@@ -478,20 +480,18 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   mesh1->x = (dfloat*) calloc(mesh1->Nelements*mesh1->Np, sizeof(dfloat));
   mesh1->y = (dfloat*) calloc(mesh1->Nelements*mesh1->Np, sizeof(dfloat));
   mesh1->z = (dfloat*) calloc(mesh1->Nelements*mesh1->Np, sizeof(dfloat));
-  ellipticOneRingExchange(mesh->comm,
-			  mesh->Nelements, mesh->Np*sizeof(dfloat), mesh->x,
+
+  ellipticOneRingExchange(mesh->comm, mesh->Nelements, mesh->Np*sizeof(dfloat), mesh->x,
 			  NoneRingSendTotal, oneRingSendList, NoneRingSend, sendBuffer,
 			  sendRequests,
 			  NoneRingRecvTotal, NoneRingRecv, recvRequests, mesh1->x);
 
-  ellipticOneRingExchange(mesh->comm,
-			  mesh->Nelements, mesh->Np*sizeof(dfloat), mesh->y,
+  ellipticOneRingExchange(mesh->comm, mesh->Nelements, mesh->Np*sizeof(dfloat), mesh->y,
 			  NoneRingSendTotal, oneRingSendList, NoneRingSend, sendBuffer,
 			  sendRequests,
 			  NoneRingRecvTotal, NoneRingRecv, recvRequests, mesh1->y);
 
-  ellipticOneRingExchange(mesh->comm,
-			  mesh->Nelements, mesh->Np*sizeof(dfloat), mesh->z,
+  ellipticOneRingExchange(mesh->comm,  mesh->Nelements, mesh->Np*sizeof(dfloat), mesh->z,
 			  NoneRingSendTotal, oneRingSendList, NoneRingSend, sendBuffer,
 			  sendRequests,
 			  NoneRingRecvTotal, NoneRingRecv, recvRequests, mesh1->z);
@@ -546,6 +546,59 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   printf("entering ellipticsolve\n");
   int it = ellipticSolve(elliptic1, lambda, tol, elliptic1->o_r, elliptic1->o_x);
 
+
+  if(elliptic1->options.compareArgs("DISCRETIZATION","CONTINUOUS")){
+    dfloat zero = 0.;
+    elliptic1->addBCKernel(mesh1->Nelements,
+			   zero,
+			   mesh1->o_x,
+			   mesh1->o_y,
+			   mesh1->o_z,
+			   elliptic1->o_mapB,
+			   elliptic1->o_x);
+  }
+  
+  // copy solution from DEVICE to HOST
+  elliptic1->o_x.copyTo(mesh1->q);
+  
+  dfloat maxError = 0;
+  for(dlong e=0;e<mesh1->Nelements;++e){
+    for(int n=0;n<mesh1->Np;++n){
+      dlong   id = e*mesh1->Np+n;
+      dfloat xn = mesh1->x[id];
+      dfloat yn = mesh1->y[id];
+      dfloat zn = mesh1->z[id];
+
+      dfloat exact;
+      int mode = 1;
+      exact = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
+      
+      dfloat error = fabs(exact-mesh1->q[id]);
+      
+      mesh1->q[id] -= exact;
+      
+      // store error
+      // mesh->q[id] = fabs(mesh->q[id] - exact);
+      maxError = mymax(maxError, error);
+    }
+  }
+  
+  dfloat globalMaxError = 0;
+  MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, mesh1->comm);
+  if(mesh1->rank==0)
+    printf("globalMaxError = %g\n", globalMaxError);
+  
+#if 0
+    char fname[BUFSIZ];
+    string outName;
+    options.getArgs("OUTPUT FILE NAME", outName);
+    sprintf(fname, "%s_%04d.vtu",(char*)outName.c_str(), mesh->rank);
+    if(elliptic->dim==3)
+      meshPlotVTU3D(mesh, fname, 0);
+    else
+      meshPlotVTU2D(mesh, fname, 0);
+#endif
+  
   printf("DEBUG #\%d\n", 300);
   
   char fname[BUFSIZ];

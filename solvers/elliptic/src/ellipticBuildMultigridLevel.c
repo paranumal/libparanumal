@@ -38,6 +38,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   elliptic->dim = baseElliptic->dim;
   elliptic->elementType = baseElliptic->elementType;
   elliptic->options = baseElliptic->options;
+
+  elliptic->cgOptions = baseElliptic->cgOptions;
+  
   elliptic->tau = baseElliptic->tau;
   elliptic->BCType = baseElliptic->BCType;
   elliptic->allNeumann = baseElliptic->allNeumann;
@@ -57,6 +60,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   elliptic->o_EXYZ = baseElliptic->o_EXYZ;
 
+  elliptic->o_ggeoNoJW = baseElliptic->o_ggeoNoJW; // ?
+  
   elliptic->weightedInnerProduct1Kernel = baseElliptic->weightedInnerProduct1Kernel;
   elliptic->weightedInnerProduct2Kernel = baseElliptic->weightedInnerProduct2Kernel;
   elliptic->innerProductKernel = baseElliptic->innerProductKernel;
