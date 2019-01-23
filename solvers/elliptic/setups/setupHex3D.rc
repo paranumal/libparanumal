@@ -137,8 +137,8 @@ MAX
 cavity
 
 [VERBOSE]
-#TRUE
-FALSE
+TRUE
+#FALSE
 
 # set to 0 (zero) to disable reductions
 [DEBUG ENABLE REDUCTIONS]
