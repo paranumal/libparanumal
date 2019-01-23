@@ -71,7 +71,20 @@ int main(int argc, char **argv){
   kernelInfo["header"].asArray();
   kernelInfo["flags"].asObject();
 
+  // do occa set up  outside of ellipticSetup
+  if(dim==3){
+    if(elementType == TRIANGLES)
+      meshOccaSetupTri3D(mesh, options, kernelInfo);
+    else if(elementType == QUADRILATERALS)
+      meshOccaSetupQuad3D(mesh, options, kernelInfo);
+    else
+      meshOccaSetup3D(mesh, options, kernelInfo);
+  } 
+  else
+    meshOccaSetup2D(mesh, options, kernelInfo);
+  
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
+
   {    
     occa::memory o_r = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_r);
     occa::memory o_x = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_x);    
@@ -142,12 +155,12 @@ int main(int argc, char **argv){
     
     if (options.compareArgs("VERBOSE", "TRUE")){
       fflush(stdout);
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(mesh->comm);
       printf("rank %d has %d internal elements and %d non-internal elements\n",
 	     mesh->rank,
 	     mesh->NinternalElements,
 	     mesh->NnotInternalElements);
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(mesh->comm);
     }
     
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS") && 
@@ -212,7 +225,7 @@ int main(int argc, char **argv){
     if(mesh->rank==0)
       printf("globalMaxError = %g\n", globalMaxError);
 
-#if 1
+#if 0
     char fname[BUFSIZ];
     string outName;
     options.getArgs("OUTPUT FILE NAME", outName);
@@ -240,6 +253,11 @@ int main(int argc, char **argv){
   }
 #endif
 
+  cout << kernelInfo;
+  
+  // build one-ring ( to rule them all )
+  ellipticBuildOneRing(elliptic, kernelInfo);
+  
   // close down MPI
   MPI_Finalize();
 
