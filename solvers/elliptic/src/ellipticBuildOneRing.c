@@ -65,6 +65,120 @@ int compareRankNElement(const void *a,
   return 0;
 }
 
+
+// start one ring exchange (for q)
+void ellipticOneRingExchangeStart(MPI_Comm &comm,
+				  size_t Nbytes,       // message size per element
+				  hlong NoneRingSendTotal,
+				  int *NoneRingSend,
+				  void *sendBuffer,    // temporary buffer
+				  MPI_Request *sendRequests,
+				  int *NsendMessages,
+				  hlong NoneRingRecvTotal,
+				  int *NoneRingRecv,
+				  void *recvBuffer,
+				  MPI_Request *recvRequests,
+				  int *NrecvMessages){
+
+  // WATCH OUT - LOOPING OVER ALL RANKS BAD
+  if(NoneRingRecvTotal + NoneRingSendTotal>0){
+    // MPI info
+    int rank, size;
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &size);
+
+    // count outgoing and incoming meshes
+    int tag = 999;
+    
+    // initiate immediate send  and receives to each other process as needed
+    int sendOffset = 0, recvOffset = 0, sendMessage = 0, recvMessage = 0;
+    for(int r=0;r<size;++r){
+      if(r!=rank){
+	size_t recvCount = NoneRingRecv[r]*Nbytes;
+	if(recvCount){
+	  MPI_Irecv(((char*)recvBuffer)+recvOffset, recvCount, MPI_CHAR, r, tag,
+		    comm, recvRequests+recvMessage);
+	  recvOffset += recvCount;
+	  ++recvMessage;
+	}
+
+	size_t sendCount = NoneRingSend[r]*Nbytes;
+	if(sendCount){
+	  MPI_Isend(((char*)sendBuffer)+sendOffset, sendCount, MPI_CHAR, r, tag,
+		    comm, sendRequests+sendMessage);
+	  
+	  sendOffset += sendCount;
+	  ++sendMessage;
+	}
+      }
+    }
+  
+    *NsendMessages = sendMessage;
+    *NrecvMessages = recvMessage;
+  }
+}
+
+void ellipticOneRingExchangeFinish(MPI_Comm &comm,
+				   int NsendMessages,
+				   MPI_Request *sendRequests,
+				   int NrecvMessages,
+				   MPI_Request *recvRequests){
+
+  if(NrecvMessages){
+    // Wait for all sent messages to have left and received messages to have arrived
+    MPI_Status *recvStatus = (MPI_Status*) calloc(NrecvMessages, sizeof(MPI_Status));
+  
+    MPI_Waitall(NrecvMessages, recvRequests, recvStatus);
+
+    free(recvStatus);
+  }
+
+  if(NsendMessages){
+    
+    MPI_Status *sendStatus = (MPI_Status*) calloc(NsendMessages, sizeof(MPI_Status));
+
+    MPI_Waitall(NsendMessages, sendRequests, sendStatus);
+
+    free(sendStatus);
+  }
+}      
+
+void ellipticOneRingExchange(MPI_Comm &comm,
+			     hlong  Nelements,
+			     size_t Nbytes,       // message size per element
+			     void *q,
+			     hlong NoneRingSendTotal,
+			     hlong *oneRingSendList,
+			     hlong *NoneRingSend,
+			     void *sendBuffer,    // temporary buffer
+			     MPI_Request *sendRequests,
+			     hlong NoneRingRecvTotal,
+			     hlong  *NoneRingRecv,
+			     MPI_Request *recvRequests,
+			     void *qOneRing){
+
+  int NsendMessages = 0, NrecvMessages = 0;
+
+  // do oneRing extract
+  for(hlong n=0;n<NoneRingSendTotal;++n){
+    hlong e = oneRingSendList[n];
+    memcpy((char*)sendBuffer+n*Nbytes, (char*)q+e*Nbytes, Nbytes);
+  }
+
+  void *recvBuffer = (char*)qOneRing + Nelements*Nbytes; // fix later
+  
+  ellipticOneRingExchangeStart(comm, Nbytes,
+			       NoneRingSendTotal, NoneRingSend, sendBuffer, sendRequests, &NsendMessages,
+			       NoneRingRecvTotal, NoneRingRecv, recvBuffer, recvRequests, &NrecvMessages);
+  
+  // copy from q to qOneRing while data in transit
+  memcpy(qOneRing, q, Nbytes*Nelements);
+  
+  ellipticOneRingExchangeFinish(comm,
+				NsendMessages, sendRequests,
+				NrecvMessages, recvRequests);
+}
+
 // build one ring including MPI exchange information
 
 void ellipticBuildOneRing(elliptic_t *elliptic){
@@ -259,8 +373,66 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   // 6. oneRingExchange: geofacs (ggeo)
   // 7. build local continuous numbering and local global continuous numbering (see meshParallelConnectNodes)
   // 8. o_qOneRing
-  // 9. how to precondition patch problem ? 
-#if 1
+  // 9. how to precondition patch problem ?
+
+  hlong NoneRingSendTotal = NvertexOneRingOut; // should rename things above
+  hlong *oneRingSendList = (hlong*) calloc(NoneRingSendTotal, sizeof(hlong));
+  hlong *NoneRingSend = (hlong*) calloc(mesh->size, sizeof(hlong));
+  hlong *NoneRingRecv = (hlong*) calloc(mesh->size, sizeof(hlong));
+  
+  for(hlong e=0;e<NoneRingSendTotal;++e){
+    vertex_t v = vertexOneRingOut[e];
+    oneRingSendList[e] = v.element;
+    ++NoneRingSend[v.rankN];
+  }
+
+  printf("RingSend rank %d; ", mesh->rank);
+  for(int r=0;r<mesh->size;++r)
+    printf("%d ", NoneRingSend[r]);
+  printf("\n");
+
+  MPI_Alltoall(NoneRingSend, 1, MPI_HLONG,
+	       NoneRingRecv, 1, MPI_HLONG, mesh->comm);
+
+  hlong NoneRingRecvTotal = 0;
+  for(int r=0;r<mesh->size;++r)
+    NoneRingRecvTotal += NoneRingRecv[r];
+  
+  int   maxNbytes = mesh->Np*sizeof(dfloat); // fingers crossed.
+  char *sendBuffer = (char*) calloc(maxNbytes*NoneRingSendTotal, sizeof(char));
+  char *recvBuffer = (char*) calloc(maxNbytes*NoneRingRecvTotal, sizeof(char));
+
+  MPI_Request *sendRequests = (MPI_Request*) calloc(mesh->size, sizeof(MPI_Request));
+  MPI_Request *recvRequests = (MPI_Request*) calloc(mesh->size, sizeof(MPI_Request));
+  
+  printf("NoneRingRecvTotal = %d, NoneRingSendTotal =%d\n", NoneRingRecvTotal, NoneRingSendTotal);
+
+  mesh_t *mesh1 = (mesh_t*) calloc(1, sizeof(mesh_t)); // check
+  mesh1->rank = 0;
+  mesh1->size = 1;
+
+  //  meshOneRing->comm = ?; fix later
+  mesh1->dim = mesh->dim;
+  mesh1->Nverts = mesh->Nverts;
+  mesh1->Nfaces = mesh->Nfaces;
+  mesh1->NfaceVertices = mesh->NfaceVertices;
+
+  mesh1->faceVertices =
+    (int*) calloc(mesh1->NfaceVertices*mesh1->Nfaces, sizeof(int));
+
+  memcpy(mesh1->faceVertices, mesh->faceVertices, mesh->NfaceVertices*mesh->Nfaces*sizeof(int));
+
+  mesh1->Nelements = mesh->Nelements + NoneRingRecvTotal;
+
+  mesh1->EToV = (hlong*) calloc(mesh1->Nelements*mesh1->Nverts, sizeof(hlong));
+
+  ellipticOneRingExchange(mesh->comm,
+			  mesh->Nelements, mesh->Nverts*sizeof(hlong), mesh->EToV,
+			  NoneRingSendTotal, oneRingSendList, NoneRingSend, sendBuffer,
+			  sendRequests,
+			  NoneRingRecvTotal, NoneRingRecv, recvRequests, mesh1->EToV);
+  
+#if 0
   for(int r=0;r<mesh->size;++r){
     fflush(stdout);
     MPI_Barrier(mesh->comm);
