@@ -31,13 +31,12 @@ typedef struct{
   hlong vertex;
   hlong element;
   hlong rank;
-  hlong elementN; // element on neighbor rank
   hlong rankN;    // neighbor rank
   hlong sortTag;
 
 }vertex_t;
 
-
+// generic comparator
 int compareSortTag(const void *a, 
 		    const void *b){
 
@@ -50,22 +49,7 @@ int compareSortTag(const void *a,
   return 0;
 }
 
-int compareRankElement(const void *a, 
-		       const void *b){
-  
-  vertex_t *va = (vertex_t*) a;
-  vertex_t *vb = (vertex_t*) b;
-
-  if(va->rank < vb->rank) return -1;
-  if(va->rank > vb->rank) return +1;
-
-  if(va->element < vb->element) return -1;
-  if(va->element > vb->element) return +1;
-
-  
-  return 0;
-}
-
+// use this to sort list of elements to send to each neighbor rank
 int compareRankNElement(const void *a, 
 		       const void *b){
   
@@ -80,8 +64,6 @@ int compareRankNElement(const void *a,
   
   return 0;
 }
-
-
 
 // build one ring including MPI exchange information
 
@@ -100,8 +82,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
       vertexSendList[cnt].vertex = mesh->EToV[e*mesh->Nverts+v];
       vertexSendList[cnt].element = e;
       vertexSendList[cnt].rank = mesh->rank;
-      vertexSendList[cnt].elementN = -1; // currently self connect
-      vertexSendList[cnt].rankN = -1;
+      vertexSendList[cnt].rankN = mesh->rank;
       
       vertexSendList[cnt].sortTag = vertexSendList[cnt].vertex%mesh->size;
       ++vertexSendCounts[vertexSendList[cnt].sortTag];
@@ -202,7 +183,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
       hlong dest = vertexRecvList[v1].rank;
       for(hlong v2=start;v2<end;++v2){
 	vertexOneRingSendList[cnt] = vertexRecvList[v1];
-	vertexOneRingSendList[cnt].elementN = vertexRecvList[v2].element;
 	vertexOneRingSendList[cnt].rankN    = vertexRecvList[v2].rank;
 
 	vertexOneRingSendList[cnt].sortTag  = vertexRecvList[v1].rank;
@@ -248,9 +228,9 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   memcpy(vertexOneRingOut,  vertexOneRingRecvList, NvertexOneRingRecv*sizeof(vertex_t));
 
   // sort the list by "local source rank then element"
-  qsort(vertexOneRingOut,  NvertexOneRingRecv, sizeof(vertex_t), compareRankElement);
+  qsort(vertexOneRingOut,  NvertexOneRingRecv, sizeof(vertex_t), compareRankNElement);
   
-  // remove local elements from oneRing list
+  // remove elements connected to this rank from oneRing list
   cnt = 0;
   for(hlong v=0;v<NvertexOneRingRecv;++v)
     if(vertexOneRingOut[v].rankN != mesh->rank) // only connect connections with off rank elements
@@ -265,17 +245,14 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
 	  && vertexOneRingOut[v].rank == vertexOneRingOut[cnt-1].rank
 	  && vertexOneRingOut[v].rankN == vertexOneRingOut[cnt-1].rankN
 	  )){
-      vertexOneRingOut[cnt] = vertexOneRingOut[v];
-      ++cnt;
+      vertexOneRingOut[cnt++] = vertexOneRingOut[v];
     }
   }
   NvertexOneRingOut = cnt;
 
-  // sort in rankN order, then subsort in element order
-  qsort(vertexOneRingOut,  NvertexOneRingOut, sizeof(vertex_t), compareRankNElement);
-  
   // next
-  // 0. this thing is symmetric so if rank X and Y share a vertex they 
+  //-1. count how many elements sent to each rankN
+  // 0. send count and then list to each rankN
   // 1. populate NoneRingExchanges[0:size), 
   // 2. set up a meshOneRing that has an attached oneRing for the oneRing
   // 3. set up the gs info [ need to understand how to populate from the local elements on each rank to the oneRing ]
@@ -286,17 +263,22 @@ void ellipticBuildOneRing(elliptic_t *elliptic){
   
 #if 1
   for(int r=0;r<mesh->size;++r){
+    fflush(stdout);
+    MPI_Barrier(mesh->comm);
     if(mesh->rank==r){
       for(hlong v=0;v<NvertexOneRingOut;++v){
-	printf("OUT: rank: %d (rank: %d, elmt: %d) => (rankN: %d, elmtN: %d) \n",
+	printf("OUT: rank: %d (rank: %d, elmt: %d) => (rankN: %d) \n",
 	       mesh->rank,
-	       vertexOneRingOut[v].rank, vertexOneRingOut[v].element,
-	       vertexOneRingOut[v].rankN, vertexOneRingOut[v].elementN);
+	       vertexOneRingOut[v].rank,  vertexOneRingOut[v].element,
+	       vertexOneRingOut[v].rankN);
       }
     }    
     fflush(stdout);
     MPI_Barrier(mesh->comm);
   }
+
+  fflush(stdout);
+  MPI_Barrier(mesh->comm);
   
   printf("rank = %d, NvertexOneRingOut = %d\n",
 	 mesh->rank, NvertexOneRingOut);
