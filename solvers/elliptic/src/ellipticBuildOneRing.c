@@ -517,9 +517,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   meshSurfaceGeometricFactorsHex3D(mesh1);
   
   meshParallelConnectNodes(mesh1); // data
-  
-  meshParallelConnectNodes(mesh1);
-  
   // <------
 
   setupAide options1 = elliptic->options; // check this
@@ -559,7 +556,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   printf("entering ellipticsolve\n");
   int it = ellipticSolve(elliptic1, lambda, tol, elliptic1->o_r, elliptic1->o_x);
 
-
+#if 0
   if(elliptic1->options.compareArgs("DISCRETIZATION","CONTINUOUS")){
     dfloat zero = 0.;
     elliptic1->addBCKernel(mesh1->Nelements,
@@ -570,10 +567,12 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
 			   elliptic1->o_mapB,
 			   elliptic1->o_x);
   }
+#endif
   
   // copy solution from DEVICE to HOST
   elliptic1->o_x.copyTo(mesh1->q);
-  
+
+#if 0
   dfloat maxError = 0;
   for(dlong e=0;e<mesh1->Nelements;++e){
     for(int n=0;n<mesh1->Np;++n){
@@ -600,7 +599,9 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, mesh1->comm);
   if(mesh1->rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
+#endif
 
+  
   ellipticOneRingDiagnostics(elliptic, elliptic1);
   
 #if 1
