@@ -62,4 +62,10 @@ void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1){
   fprintf(fp, "];\n");
   
   fclose(fp);
+
+  string outName;
+  elliptic1->options.getArgs("OUTPUT FILE NAME", outName);
+  sprintf(fname, "%s_oneRing_%04d",(char*)outName.c_str(), mesh->rank);
+  ellipticPlotVTUHex3D(mesh1, fname, 0);
+  
 }
