@@ -85,6 +85,9 @@ int main(int argc, char **argv){
   
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
+  // build one-ring ( to rule them all )
+  ellipticBuildOneRing(elliptic, kernelInfo);
+  
   {    
     occa::memory o_r = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_r);
     occa::memory o_x = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_x);    
@@ -201,6 +204,16 @@ int main(int argc, char **argv){
     if(mesh->rank==0)
       printf("globalMaxError = %g\n", globalMaxError);
 
+#if 1
+    char fname[BUFSIZ];
+    string outName;
+    options.getArgs("OUTPUT FILE NAME", outName);
+    // original
+    elliptic->options.getArgs("OUTPUT FILE NAME", outName);
+    sprintf(fname, "%s_%04d",(char*)outName.c_str(), mesh->rank);
+    ellipticPlotVTUHex3D(mesh, fname, 0);
+#endif
+
 #if 0
     char fname[BUFSIZ];
     string outName;
@@ -232,7 +245,7 @@ int main(int argc, char **argv){
   //  cout << kernelInfo;
   
   // build one-ring ( to rule them all )
-  ellipticBuildOneRing(elliptic, kernelInfo);
+  //  ellipticBuildOneRing(elliptic, kernelInfo);
   
   // close down MPI
   MPI_Finalize();
