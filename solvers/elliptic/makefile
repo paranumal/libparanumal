@@ -57,6 +57,7 @@ $(ALMONDDIR)/parAlmond.hpp \
 # list of objects to be compiled
 AOBJS    = \
 ./src/ellipticBuildOneRing.o\
+./src/ellipticOneRingDiagnostics.o\
 ./src/PCG.o \
 ./src/ellipticSerialAxHex3D.o \
 ./src/ellipticSerialPartialAxHex3D.o \
