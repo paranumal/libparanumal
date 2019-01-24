@@ -476,6 +476,16 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   
   meshConnectBoundary(mesh1);
 
+  for(hlong e=0;e<mesh1->Nelements;++e){
+    for(int f=0;f<mesh1->Nfaces;++f){
+      hlong id = e*mesh1->Nfaces+f;
+      if(mesh1->EToE[id]==-1 &&
+	 mesh1->EToB[id]==-1){
+	mesh1->EToB[id] = 1; // hack to 1 assume Dirichlet
+      }
+    }
+  }
+  
   meshLoadReferenceNodesHex3D(mesh1, mesh1->N);
 
   mesh1->x = (dfloat*) calloc(mesh1->Nelements*mesh1->Np, sizeof(dfloat));
@@ -590,53 +600,21 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, mesh1->comm);
   if(mesh1->rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
+
+  ellipticOneRingDiagnostics(elliptic, elliptic1);
   
-#if 0
+#if 1
     char fname[BUFSIZ];
     string outName;
-    options.getArgs("OUTPUT FILE NAME", outName);
-    sprintf(fname, "%s_%04d.vtu",(char*)outName.c_str(), mesh->rank);
-    if(elliptic->dim==3)
-      meshPlotVTU3D(mesh, fname, 0);
-    else
-      meshPlotVTU2D(mesh, fname, 0);
+    elliptic1->options.getArgs("OUTPUT FILE NAME", outName);
+    sprintf(fname, "%s_oneRing_%04d",(char*)outName.c_str(), mesh->rank);
+    ellipticPlotVTUHex3D(mesh1, fname, 0);
+
+    elliptic->options.getArgs("OUTPUT FILE NAME", outName);
+    sprintf(fname, "%s_%04d",(char*)outName.c_str(), mesh->rank);
+    ellipticPlotVTUHex3D(mesh, fname, 0);
 #endif
-  
-  char fname[BUFSIZ];
-  sprintf(fname, "diagnostics%04d.dat", mesh->rank);
-  FILE *fp = fopen(fname, "w");
-  fprintf(fp, "EToV=[\n");
-  for(int e=0;e<mesh1->Nelements;++e){
-    for(int v=0;v<mesh1->Nverts;++v)
-      fprintf(fp, "%d ", mesh1->EToV[e*mesh1->Nverts+v]);
-    if(e<mesh->Nelements) fprintf(fp, "%% original \n");
-    else      fprintf(fp, "%% overlap \n");
-  }
-  fprintf(fp, "];\n");
 
-  fprintf(fp, "EToE=[\n");
-  for(int e=0;e<mesh1->Nelements;++e){
-    for(int f=0;f<mesh1->Nfaces;++f)
-      fprintf(fp, "%d ", mesh1->EToE[e*mesh1->Nfaces+f]);
-    if(e<mesh->Nelements) fprintf(fp, "%% original \n");
-    else      fprintf(fp, "%% overlap \n");
-  }
-  fprintf(fp, "];\n");
-
-  fprintf(fp, "EToB=[\n");
-  for(int e=0;e<mesh1->Nelements;++e){
-    for(int f=0;f<mesh1->Nfaces;++f)
-      fprintf(fp, "%d ", mesh1->EToB[e*mesh1->Nfaces+f]);
-    if(e<mesh->Nelements) fprintf(fp, "%% original \n");
-    else      fprintf(fp, "%% overlap \n");
-  }
-  fprintf(fp, "];\n");
-  
-  fclose(fp);
-
-  MPI_Finalize();
-  exit(0);
-  
   free(vertexSendList);
   free(vertexSendCounts);
   free(vertexRecvCounts);
