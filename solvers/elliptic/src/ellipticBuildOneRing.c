@@ -421,7 +421,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
 
   printf("rank: %d, mesh1: rank=%d, size=%d\n", mesh->rank, mesh1->rank, mesh1->size);
   
-  //  meshOneRing->comm = ?; fix later
   mesh1->dim = mesh->dim;
   mesh1->Nverts = mesh->Nverts;
   mesh1->Nfaces = mesh->Nfaces;
@@ -514,16 +513,22 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   // <------
 
   setupAide options1 = elliptic->options; // check this
+  occa::properties kernelInfo1 = kernelInfo;
 
-  meshOccaSetup3D(mesh1, options1, kernelInfo);
+  mesh1->device = mesh->device; // check this
+  mesh1->defaultStream = mesh->defaultStream;
+  mesh1->dataStream = mesh->dataStream;
+  mesh1->computeStream = mesh->computeStream;
+  mesh1->device.setStream(mesh->defaultStream);
+
+  meshOccaPopulateDevice3D(mesh1, options1, kernelInfo);
   
   dfloat lambda;
   options1.getArgs("LAMBDA", lambda);
   printf("lambda = %lf\n", lambda);
   
   // set up
-  occa::properties kernelInfo1 = kernelInfo;
-
+  
   elliptic_t *elliptic1 = ellipticSetup(mesh1, lambda, kernelInfo1, options1);
 
   dfloat *ggeoNoJW = (dfloat*) calloc(mesh1->Np*mesh1->Nelements*6,sizeof(dfloat));

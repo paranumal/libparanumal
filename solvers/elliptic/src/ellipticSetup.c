@@ -41,7 +41,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   elliptic->mesh = mesh;
   elliptic->options = options;
 
-  // do occa set up  outside of ellipticSetup
+#if 0
   if(elliptic->dim==3){
     if(elliptic->elementType == TRIANGLES)
       meshOccaSetupTri3D(mesh, options, kernelInfo);
@@ -52,7 +52,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   } 
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
-  
+#endif
 
   
   // defaults for conjugate gradient
