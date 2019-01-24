@@ -227,13 +227,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
     
     vertexSendDispls[r+1] = vertexSendDispls[r] + vertexSendCounts[r];
     vertexRecvDispls[r+1] = vertexRecvDispls[r] + vertexRecvCounts[r];
-
-#if 0
-    printf("rank %d: send %d, %d  recv %d, %d\n",
-	   mesh->rank,
-	   vertexSendCounts[r], vertexSendDispls[r],
-	   vertexRecvCounts[r], vertexRecvDispls[r]);
-#endif
   }
 
   // hack-hack-hack
@@ -390,11 +383,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
     ++NoneRingSend[v.rankN];
   }
 
-  printf("RingSend rank %d; ", mesh->rank);
-  for(int r=0;r<mesh->size;++r)
-    printf("%d ", NoneRingSend[r]);
-  printf("\n");
-
   MPI_Alltoall(NoneRingSend, 1, MPI_HLONG,
 	       NoneRingRecv, 1, MPI_HLONG, mesh->comm);
 
@@ -409,8 +397,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   MPI_Request *sendRequests = (MPI_Request*) calloc(mesh->size, sizeof(MPI_Request));
   MPI_Request *recvRequests = (MPI_Request*) calloc(mesh->size, sizeof(MPI_Request));
   
-  printf("NoneRingRecvTotal = %d, NoneRingSendTotal =%d\n", NoneRingRecvTotal, NoneRingSendTotal);
-
   mesh_t *mesh1 = (mesh_t*) calloc(1, sizeof(mesh_t)); // check
 
   // single process communicator for mesh1
@@ -419,8 +405,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   MPI_Comm_rank(mesh1->comm, &mesh1->rank);
   MPI_Comm_size(mesh1->comm, &mesh1->size);
 
-  printf("rank: %d, mesh1: rank=%d, size=%d\n", mesh->rank, mesh1->rank, mesh1->size);
-  
   mesh1->dim = mesh->dim;
   mesh1->Nverts = mesh->Nverts;
   mesh1->Nfaces = mesh->Nfaces;
@@ -537,10 +521,8 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   
   dfloat lambda;
   options1.getArgs("LAMBDA", lambda);
-  printf("lambda = %lf\n", lambda);
-  
+
   // set up
-  
   elliptic_t *elliptic1 = ellipticSetup(mesh1, lambda, kernelInfo1, options1);
 
   dfloat *ggeoNoJW = (dfloat*) calloc(mesh1->Np*mesh1->Nelements*6,sizeof(dfloat));
@@ -558,11 +540,10 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   elliptic1->o_ggeoNoJW = mesh1->device.malloc(mesh1->Np*mesh1->Nelements*6*sizeof(dfloat), ggeoNoJW);    
   
   dfloat tol = 1e-8;
-  printf("entering ellipticsolve\n");
+
   int it = ellipticSolve(elliptic1, lambda, tol, elliptic1->o_r, elliptic1->o_x);
 
 #if 1
-  // something maybe not right here
   if(elliptic1->options.compareArgs("DISCRETIZATION","CONTINUOUS")){
     dfloat zero = 0.;
     elliptic1->addBCKernel(mesh1->Nelements,
@@ -606,16 +587,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, mesh1->comm);
   if(mesh1->rank==0)
     printf("globalMaxError = %g\n", globalMaxError);
-#endif
-
-  
-#if 1
-    char fname[BUFSIZ];
-    string outName;
-    elliptic1->options.getArgs("OUTPUT FILE NAME", outName);
-    sprintf(fname, "%s_oneRing_%04d",(char*)outName.c_str(), mesh->rank);
-    ellipticPlotVTUHex3D(mesh1, fname, 0);
-
 #endif
 
   ellipticOneRingDiagnostics(elliptic, elliptic1);
