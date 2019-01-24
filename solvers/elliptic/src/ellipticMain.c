@@ -71,6 +71,18 @@ int main(int argc, char **argv){
   kernelInfo["header"].asArray();
   kernelInfo["flags"].asObject();
 
+  if(dim==3){
+    if(elementType == TRIANGLES)
+      meshOccaSetupTri3D(mesh, options, kernelInfo);
+    else if(elementType == QUADRILATERALS)
+      meshOccaSetupQuad3D(mesh, options, kernelInfo);
+    else
+      meshOccaSetup3D(mesh, options, kernelInfo);
+  } 
+  else
+    meshOccaSetup2D(mesh, options, kernelInfo);
+
+  
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
   {    
