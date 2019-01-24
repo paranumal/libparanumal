@@ -434,14 +434,15 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     
     
   }
-    printf("DEBUG #\%d\n", 104);
+  printf("DEBUG #\%d\n", 104);
   // gather-scatter
- if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
+  if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
     ogsGatherScatter(elliptic->o_r, ogsDfloat, ogsAdd, mesh->ogs);
     if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, elliptic->o_r);
   }
-
- printf("DEBUG #\%d\n", 105);
- 
+  
+  printf("DEBUG #\%d\n", 105);
+  printf("elliptic->Nmasked = %d\n", elliptic->Nmasked);
+  
   return elliptic;
 }

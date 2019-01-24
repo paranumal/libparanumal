@@ -46,6 +46,8 @@ void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld){
   sprintf(fileName, "%s_%04d.vtu", fileNameBase, rank);
   // strcpy(fileName,fileNameBase);
 
+  printf("printing %d elements\n", mesh->Nelements);
+  
   fp = fopen(fileName, "w");
 
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
@@ -76,6 +78,8 @@ void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld){
   }
   fprintf(fp, "        </DataArray>\n");
   fprintf(fp, "      </Points>\n");
+
+  printf("Nelements = %d, Np = %d\n", mesh->Nelements, mesh->Np);
   
   // write out pressure
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
@@ -85,7 +89,7 @@ void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld){
     for(int n=0;n<mesh->Np;++n){
       dfloat qn = mesh->q[n+fld*mesh->Np + e*mesh->Nfields*mesh->Np];
       fprintf(fp, "       ");
-      fprintf(fp, "%g\n", qn);
+      fprintf(fp, "%17.15lf\n", qn);
     }
   }
 

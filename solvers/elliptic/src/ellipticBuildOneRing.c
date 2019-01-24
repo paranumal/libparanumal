@@ -425,7 +425,8 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   mesh1->Nverts = mesh->Nverts;
   mesh1->Nfaces = mesh->Nfaces;
   mesh1->NfaceVertices = mesh->NfaceVertices;
-
+  mesh1->Nnodes = mesh->Nnodes;
+  
   mesh1->N   = mesh->N;
   
   mesh1->faceVertices =
@@ -476,15 +477,19 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   
   meshConnectBoundary(mesh1);
 
+  // correct bcs (replaces unconnected faces with Dirichlet)
+#if 1
   for(hlong e=0;e<mesh1->Nelements;++e){
     for(int f=0;f<mesh1->Nfaces;++f){
       hlong id = e*mesh1->Nfaces+f;
       if(mesh1->EToE[id]==-1 &&
 	 mesh1->EToB[id]==-1){
 	mesh1->EToB[id] = 1; // hack to 1 assume Dirichlet
+	mesh1->EToE[id] = e; // hack to 1 assume Dirichlet
       }
     }
   }
+#endif
   
   meshLoadReferenceNodesHex3D(mesh1, mesh1->N);
 
@@ -556,7 +561,8 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   printf("entering ellipticsolve\n");
   int it = ellipticSolve(elliptic1, lambda, tol, elliptic1->o_r, elliptic1->o_x);
 
-#if 0
+#if 1
+  // something maybe not right here
   if(elliptic1->options.compareArgs("DISCRETIZATION","CONTINUOUS")){
     dfloat zero = 0.;
     elliptic1->addBCKernel(mesh1->Nelements,
@@ -572,7 +578,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   // copy solution from DEVICE to HOST
   elliptic1->o_x.copyTo(mesh1->q);
 
-#if 0
+#if 1
   dfloat maxError = 0;
   for(dlong e=0;e<mesh1->Nelements;++e){
     for(int n=0;n<mesh1->Np;++n){
@@ -588,6 +594,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
       dfloat error = fabs(exact-mesh1->q[id]);
       
       mesh1->q[id] -= exact;
+      //      mesh1->q[id] = exact;
       
       // store error
       // mesh->q[id] = fabs(mesh->q[id] - exact);
@@ -602,8 +609,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
 #endif
 
   
-  ellipticOneRingDiagnostics(elliptic, elliptic1);
-  
 #if 1
     char fname[BUFSIZ];
     string outName;
@@ -611,11 +616,10 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
     sprintf(fname, "%s_oneRing_%04d",(char*)outName.c_str(), mesh->rank);
     ellipticPlotVTUHex3D(mesh1, fname, 0);
 
-    elliptic->options.getArgs("OUTPUT FILE NAME", outName);
-    sprintf(fname, "%s_%04d",(char*)outName.c_str(), mesh->rank);
-    ellipticPlotVTUHex3D(mesh, fname, 0);
 #endif
 
+  ellipticOneRingDiagnostics(elliptic, elliptic1);
+    
   free(vertexSendList);
   free(vertexSendCounts);
   free(vertexRecvCounts);
