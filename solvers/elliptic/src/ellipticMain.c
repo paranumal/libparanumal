@@ -86,7 +86,7 @@ int main(int argc, char **argv){
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
   // build one-ring ( to rule them all )
-  ellipticBuildOneRing(elliptic, lambda, kernelInfo);
+  //  ellipticBuildOneRing(elliptic, lambda, kernelInfo);
   
   {    
     occa::memory o_r = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_r);
@@ -96,7 +96,8 @@ int main(int argc, char **argv){
     dfloat tol = 1e-8;
 
     // warm up
-    int it = ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
+    //    int it = ellipticSolve(elliptic, lambda, tol, elliptic->o_r, elliptic->o_x);
+    int it;
 
     MPI_Barrier(mesh->comm);
     
