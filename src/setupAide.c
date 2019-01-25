@@ -242,3 +242,22 @@ int setupAide::compareArgs(string key, string token){
   return 0;
   
 }
+
+std::ostream & operator << (std::ostream &os, const setupAide &aide){
+  int maxLength = 0;
+  for(int i=0; i<aide.keyword.size(); i++){
+    int L = aide.keyword[i].length();
+    if(L>maxLength)
+      maxLength = L;
+  }
+  for(int i=0; i<aide.keyword.size(); i++){
+    os << "key: " << aide.keyword[i] << ",";
+    
+    for(int j=aide.keyword[i].length();j<maxLength;++j)
+      os << " ";
+    
+    os << "value: " << aide.data[i] << std::endl;
+  }
+  
+  return os;
+}

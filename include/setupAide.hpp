@@ -77,6 +77,8 @@ public:
 
   vector<string> &getData(){ return data; }
   vector<string> &getKeyword() { return keyword; }
+
+  friend std::ostream & operator << (std::ostream &out, const setupAide &aide);  
 };
 
 #include<setupAide.tpp>
