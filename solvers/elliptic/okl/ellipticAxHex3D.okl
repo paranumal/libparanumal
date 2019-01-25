@@ -210,7 +210,7 @@ SOFTWARE.
       }
   
     // Layer by layer
-//    #pragma unroll p_Nq
+    #pragma unroll p_Nq
       for(int k = 0;k < p_Nq; k++){
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -240,7 +240,7 @@ SOFTWARE.
 
             r_qt = 0;
 
-//            #pragma unroll p_Nq
+            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
                 r_qt += s_D[k][m]*r_q[m];
               }

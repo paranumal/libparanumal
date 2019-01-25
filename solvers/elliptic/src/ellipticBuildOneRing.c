@@ -464,7 +464,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   meshConnectBoundary(mesh1);
 
   // correct bcs (replaces unconnected faces with Dirichlet)
-#if 1
   for(hlong e=0;e<mesh1->Nelements;++e){
     for(int f=0;f<mesh1->Nfaces;++f){
       hlong id = e*mesh1->Nfaces+f;
@@ -475,7 +474,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
       }
     }
   }
-#endif
   
   meshLoadReferenceNodesHex3D(mesh1, mesh1->N);
 
