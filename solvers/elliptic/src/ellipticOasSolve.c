@@ -35,24 +35,33 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   precon_t *precon = elliptic->precon;
   mesh_t *mesh = elliptic->mesh;
 
+  elliptic_t *elliptic1 = (elliptic_t*) precon->ellipticOneRing; // should rename
+  mesh_t *mesh1 = elliptic1->mesh;
+
+  
   //  precon->oasRestrictionKernel(mesh->Nelements, precon->o_oasRestrictionMatrix, o_r, precon->o_oasCoarseTmp);
 
   // 2. solve coarse problem
 
 
   // 3. collect patch rhs  
-  elliptic_t *elliptic1 = (elliptic_t*) precon->ellipticOneRing; // should rename
-  mesh_t *mesh1 = elliptic1->mesh;
-
   if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
-  
-  ellipticOneRingExchange(elliptic, elliptic1, mesh1->Np*sizeof(dfloat), o_r, elliptic1->o_r);
-
-  dfloat tol = 1e-2;
 
   // hack to zero initial guess
   dfloat *h_x = (dfloat*) calloc(mesh1->Np*mesh1->Nelements, sizeof(dfloat));
   elliptic1->o_x.copyFrom(h_x);
+  elliptic1->o_r.copyFrom(h_x);
+
+  mesh1->device.finish();
+  mesh->device.finish();
+  
+  ellipticOneRingExchange(elliptic, elliptic1, mesh1->Np*sizeof(dfloat), o_r, elliptic1->o_r);
+
+  mesh1->device.finish();
+  mesh->device.finish();
+
+  
+  dfloat tol = 1e-2;
 
   // patch solve
   if(mesh->rank==0) printf("Starting extended partition iterations:\n");
