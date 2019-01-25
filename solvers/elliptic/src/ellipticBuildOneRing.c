@@ -193,13 +193,18 @@ void ellipticOneRingExchange(elliptic_t *elliptic,
 
   // extract from original mesh
   mesh_t *mesh = elliptic->mesh;
+  mesh_t *mesh1 = elliptic1->mesh;
+    
   precon_t *precon = elliptic->precon;
-
+  
   hlong NelementSend = precon->NoneRingSendTotal;
   hlong NelementRecv = precon->NoneRingRecvTotal;
 
   if(NelementSend + NelementRecv>0){
-    mesh->haloExtractKernel(NelementSend, mesh->Np, precon->o_oneRingSendList,
+    mesh->device.finish();
+    mesh1->device.finish();
+    mesh->haloExtractKernel(NelementSend, mesh->Np,
+			    precon->o_oneRingSendList,
 			    o_q, precon->o_oneRingSendBuffer);
     
     precon->o_oneRingSendBuffer.copyTo(precon->oneRingSendBuffer, Nbytes*NelementSend, 0);
@@ -221,14 +226,18 @@ void ellipticOneRingExchange(elliptic_t *elliptic,
       if(r!=mesh->rank){
 	size_t recvCount = precon->NoneRingRecv[r]*Nbytes;
 	if(recvCount){
-	  MPI_Irecv(((char*)recvBuffer)+recvOffset, recvCount, MPI_CHAR, r, tag, mesh->comm, recvRequests+recvMessage);
+
+	  MPI_Irecv(((char*)recvBuffer)+recvOffset,
+		    recvCount, MPI_CHAR, r, tag, mesh->comm, recvRequests+recvMessage);
+	  
 	  recvOffset += recvCount;
 	  ++recvMessage;
 	}
 	
 	size_t sendCount = precon->NoneRingSend[r]*Nbytes;
 	if(sendCount){
-	  MPI_Isend(((char*)sendBuffer)+sendOffset, sendCount, MPI_CHAR, r, tag, mesh->comm, sendRequests+sendMessage);
+	  MPI_Isend(((char*)sendBuffer)+sendOffset,
+		    sendCount, MPI_CHAR, r, tag, mesh->comm, sendRequests+sendMessage);
 	  
 	  sendOffset += sendCount;
 	  ++sendMessage;
@@ -245,11 +254,15 @@ void ellipticOneRingExchange(elliptic_t *elliptic,
     free(recvStatus);
     free(sendStatus);
 
+    mesh1->device.finish();
+    
     // copy incoming to end of o_qOneRing
     o_qOneRing.copyFrom(recvBuffer, Nbytes*NelementRecv, Nbytes*mesh->Nelements); // offset into end of oneRing
     
   }
 
+  mesh1->device.finish();
+  
   // copy core
   o_qOneRing.copyFrom(o_q, Nbytes*mesh->Nelements, 0);
 
@@ -589,15 +602,17 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
 
   // manually specify preconditioner for oneRing grid
   options1.setArgs("PRECONDITIONER", "MULTIGRID");
+  //  options1.setArgs("PRECONDITIONER", "JACOBI");
   
   occa::properties kernelInfo1 = kernelInfo;
 
   mesh1->device = mesh->device; // check this
+#if 1
   mesh1->defaultStream = mesh->defaultStream;
   mesh1->dataStream = mesh->dataStream;
   mesh1->computeStream = mesh->computeStream;
   mesh1->device.setStream(mesh->defaultStream);
-
+#endif
   meshOccaPopulateDevice3D(mesh1, options1, kernelInfo);
   
   // set up
@@ -644,8 +659,10 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
 
 #endif
 
+  printf("DEBUG #10000\n");
+  
   // build gs op to gather all contributions
-  hlong *globalNums = (hlong*) calloc(mesh1->Nelements*mesh1->Np, sizeof(hlong));
+  hlong*globalNums = (hlong*) calloc(mesh1->Nelements*mesh1->Np, sizeof(hlong));
 
   ellipticOneRingExchange(mesh->comm,
 			  mesh->Nelements, mesh->Np*sizeof(hlong), mesh->globalIds,
@@ -653,11 +670,35 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
 			  sendRequests,
 			  NoneRingRecvTotal, NoneRingRecv, recvRequests, globalNums);
 
-  elliptic->precon->oasOgs = ogsSetup(mesh1->Nelements*mesh1->Np, globalNums, mesh->comm, 1, mesh->device);
-    
+  printf("DEBUG #10001\n");
   
+#if 0
+  for(hlong e=0;e<mesh1->Nelements;++e){
+    for(int n=0;n<mesh1->Np;++n){
+      printf("%d ", globalNums[e*mesh1->Np+n]);
+    }
+    if(e>=mesh->Nelements) printf("*");
+    printf("\n");
+  }
+#endif
+  
+  elliptic->precon->oasOgs = ogsSetup(mesh1->Nelements*mesh1->Np, globalNums, mesh->comm, 1, mesh->device);
 
-    free(vertexSendList);
+  printf("DEBUG #10002\n");
+  
+  elliptic->precon->o_oneRingSendList =
+    mesh->device.malloc(elliptic->precon->NoneRingSendTotal*sizeof(hlong),
+			elliptic->precon->oneRingSendList);
+
+  elliptic->precon->o_oneRingSendBuffer =
+    mesh->device.malloc(elliptic->precon->NoneRingSendTotal*mesh->Np*sizeof(dfloat));
+
+  elliptic->precon->o_oneRingRecvBuffer =
+    mesh->device.malloc(elliptic->precon->NoneRingRecvTotal*mesh->Np*sizeof(dfloat));
+
+  printf("DEBUG #10003\n");
+  
+  free(vertexSendList);
   free(vertexSendCounts);
   free(vertexRecvCounts);
   free(vertexSendDispls);
