@@ -251,7 +251,7 @@ void ellipticSerialAxHexKernel3D(const int Nq,
 				 const occa::memory &o_ggeoNoJW);
 
 void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties &kernelInfo);
-void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1);
+void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1, dfloat lambda);
 
 occa::properties ellipticKernelInfo(mesh_t *mesh);
 

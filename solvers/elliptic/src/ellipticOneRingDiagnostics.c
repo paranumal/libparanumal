@@ -26,7 +26,7 @@
 
 #include "elliptic.h"
 
-void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1){
+void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1, dfloat lambda){
 
   mesh_t *mesh  = elliptic->mesh;
   mesh_t *mesh1 = elliptic1->mesh;
@@ -63,9 +63,58 @@ void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1){
   
   fclose(fp);
 
+  // TEST FOR ONE RING
+  dfloat tol = 1e-8;
+
+  int it = ellipticSolve(elliptic1, lambda, tol, elliptic1->o_r, elliptic1->o_x);
+
+  if(elliptic1->options.compareArgs("DISCRETIZATION","CONTINUOUS")){
+    dfloat zero = 0.;
+    elliptic1->addBCKernel(mesh1->Nelements,
+			   zero,
+			   mesh1->o_x,
+			   mesh1->o_y,
+			   mesh1->o_z,
+			   elliptic1->o_mapB,
+			   elliptic1->o_x);
+  }
+  
+  // copy solution from DEVICE to HOST
+  elliptic1->o_x.copyTo(mesh1->q);
+
+  dfloat maxError = 0;
+  for(dlong e=0;e<mesh1->Nelements;++e){
+    for(int n=0;n<mesh1->Np;++n){
+      dlong   id = e*mesh1->Np+n;
+      dfloat xn = mesh1->x[id];
+      dfloat yn = mesh1->y[id];
+      dfloat zn = mesh1->z[id];
+
+      dfloat exact;
+      int mode = 1;
+      exact = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
+      
+      dfloat error = fabs(exact-mesh1->q[id]);
+      
+      mesh1->q[id] -= exact;
+      //      mesh1->q[id] = exact;
+      
+      // store error
+      // mesh->q[id] = fabs(mesh->q[id] - exact);
+      maxError = mymax(maxError, error);
+    }
+  }
+  
+  dfloat globalMaxError = 0;
+  MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, mesh1->comm);
+  if(mesh1->rank==0)
+    printf("globalMaxError = %g\n", globalMaxError);
+
+
   string outName;
   elliptic1->options.getArgs("OUTPUT FILE NAME", outName);
   sprintf(fname, "%s_oneRing_%04d",(char*)outName.c_str(), mesh->rank);
   ellipticPlotVTUHex3D(mesh1, fname, 0);
+
   
 }
