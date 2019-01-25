@@ -35,7 +35,7 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   precon_t *precon = elliptic->precon;
   mesh_t *mesh = elliptic->mesh;
 
-  precon->oasRestrictionKernel(mesh->Nelements, precon->o_oasRestrictionMatrix, o_r, precon->o_oasCoarseTmp);
+  //  precon->oasRestrictionKernel(mesh->Nelements, precon->o_oasRestrictionMatrix, o_r, precon->o_oasCoarseTmp);
 
   // 2. solve coarse problem
 
@@ -43,6 +43,8 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   // 3. collect patch rhs  
   elliptic_t *elliptic1 = (elliptic_t*) precon->ellipticOneRing; // should rename
   mesh_t *mesh1 = elliptic1->mesh;
+
+  //  if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
   
   ellipticOneRingExchange(elliptic, elliptic1, mesh1->Np*sizeof(dfloat), o_r, elliptic1->o_r);
 
@@ -53,6 +55,8 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   elliptic1->o_x.copyFrom(h_x);
 
   // patch solve
+  if(mesh->rank==0) printf("Starting extended partition iterations:\n");
+
   ellipticSolve(elliptic1, lambda, tol, elliptic1->o_r, elliptic1->o_x); // may need to zero o_x
 
   // sum up patches
@@ -60,8 +64,10 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
 
   // do we need to scale by 1/overlapDegree ?
   
-  // just retain core [ actually need to gs all the element contributions ]
-  o_z.copyFrom(elliptic1->o_x, mesh->Np*mesh->Nelements*sizeof(dfloat), 0);
+  // just retain core [ actually need to gs all the element contributions] 
+  elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, elliptic->precon->oasOgs->o_invDegree, elliptic1->o_x, o_z);
+
+  if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_z);
   
   free(h_x);
 }
