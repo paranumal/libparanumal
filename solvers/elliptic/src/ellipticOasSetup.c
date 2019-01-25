@@ -39,17 +39,14 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   ellipticBuildOneRing(elliptic, lambda, kernelInfo);
 
   elliptic->precon->o_oneRingSendList =
-    mesh->device.malloc(elliptic->precon->NoneRingSendTotal*mesh->Np*sizeof(hlong), elliptic->precon->o_oneRingSendList);
+    mesh->device.malloc(elliptic->precon->NoneRingSendTotal*sizeof(hlong),
+			elliptic->precon->oneRingSendList);
 
   elliptic->precon->o_oneRingSendBuffer =
     mesh->device.malloc(elliptic->precon->NoneRingSendTotal*mesh->Np*sizeof(dfloat));
 
   elliptic->precon->o_oneRingRecvBuffer =
     mesh->device.malloc(elliptic->precon->NoneRingRecvTotal*mesh->Np*sizeof(dfloat));
-  
-  
-
-
   
   /* STAGE 2: build coarse problem */
   nonZero_t *coarseA;

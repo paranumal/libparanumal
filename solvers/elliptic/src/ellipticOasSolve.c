@@ -44,7 +44,7 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   elliptic_t *elliptic1 = (elliptic_t*) precon->ellipticOneRing; // should rename
   mesh_t *mesh1 = elliptic1->mesh;
 
-  //  if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
+  if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
   
   ellipticOneRingExchange(elliptic, elliptic1, mesh1->Np*sizeof(dfloat), o_r, elliptic1->o_r);
 
