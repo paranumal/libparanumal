@@ -199,7 +199,8 @@ void ellipticOneRingExchange(elliptic_t *elliptic,
   hlong NelementRecv = precon->NoneRingRecvTotal;
 
   if(NelementSend + NelementRecv>0){
-    mesh->haloExtractKernel(NelementSend, mesh->Np, precon->o_oneRingSendList, o_q, precon->o_oneRingSendBuffer);
+    mesh->haloExtractKernel(NelementSend, mesh->Np, precon->o_oneRingSendList,
+			    o_q, precon->o_oneRingSendBuffer);
     
     precon->o_oneRingSendBuffer.copyTo(precon->oneRingSendBuffer, Nbytes*NelementSend, 0);
     

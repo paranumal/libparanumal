@@ -102,10 +102,10 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   if(cgOptions.continuous){
 
     // TW: turned off for debugging
-    if(cgOptions.serial && elliptic->elementType==HEXAHEDRA){
-      ellipticSerialOperator(elliptic, lambda, o_q, o_Aq, precision);
-      return;
-    }
+    //    if(cgOptions.serial && elliptic->elementType==HEXAHEDRA){
+    //      ellipticSerialOperator(elliptic, lambda, o_q, o_Aq, precision);
+    //      return;
+    //    }
 
     ogs_t *ogs = elliptic->ogs;
 
