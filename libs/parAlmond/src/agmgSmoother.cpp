@@ -37,7 +37,7 @@ void agmgLevel::smoothJacobi(dfloat *r, dfloat *x,
     return;
   }
 
-  static dfloat *res = (dfloat *) scratch;
+  dfloat *res = (dfloat *) scratch;
 
   A->SpMV(-1.0, x, 1.0, r, res);
   vectorDotStar(Nrows, 1.0, A->diagInv, res, 1.0, x);
@@ -53,7 +53,7 @@ void agmgLevel::smoothDampedJacobi(dfloat *r, dfloat *x,
     return;
   }
 
-  static dfloat *res = (dfloat *) scratch;
+  dfloat *res = (dfloat *) scratch;
 
   A->SpMV(-1.0, x, 1.0, r, res);
   vectorDotStar(Nrows, lambda, A->diagInv, res, 1.0, x);
@@ -69,9 +69,9 @@ void agmgLevel::smoothChebyshev(dfloat *r, dfloat *x,
   dfloat rho_n = 1./sigma;
   dfloat rho_np1;
 
-  static dfloat *res = ((dfloat*) scratch) + 0*Ncols;
-  static dfloat *Ad  = ((dfloat*) scratch) + 1*Ncols;
-  static dfloat *d   = ((dfloat*) scratch) + 2*Ncols;
+  dfloat *res = ((dfloat*) scratch) + 0*Ncols;
+  dfloat *Ad  = ((dfloat*) scratch) + 1*Ncols;
+  dfloat *d   = ((dfloat*) scratch) + 2*Ncols;
 
   if(x_is_zero){ //skip the Ax if x is zero
     //res = D^{-1}r
@@ -116,7 +116,7 @@ void agmgLevel::smoothJacobi(occa::memory o_r, occa::memory o_x,
     return;
   }
 
-  static occa::memory o_res = o_scratch;
+  occa::memory o_res = o_scratch;
 
   // res = r-A*x
   o_A->SpMV(-1.0, o_x, 1.0, o_r, o_res);
@@ -136,7 +136,7 @@ void agmgLevel::smoothDampedJacobi(occa::memory o_r, occa::memory o_x,
     return;
   }
 
-  static occa::memory o_res = o_scratch;
+  occa::memory o_res = o_scratch;
 
   // res = r-A*x
   o_A->SpMV(-1.0, o_x, 1.0, o_r, o_res);
@@ -156,9 +156,9 @@ void agmgLevel::smoothChebyshev(occa::memory o_r, occa::memory o_x,
   dfloat rho_n = 1./sigma;
   dfloat rho_np1;
 
-  static occa::memory o_res = o_scratch + 0*Ncols*sizeof(dfloat);
-  static occa::memory o_Ad  = o_scratch + 1*Ncols*sizeof(dfloat);
-  static occa::memory o_d   = o_scratch + 2*Ncols*sizeof(dfloat);
+  occa::memory o_res = o_scratch + 0*Ncols*sizeof(dfloat);
+  occa::memory o_Ad  = o_scratch + 1*Ncols*sizeof(dfloat);
+  occa::memory o_d   = o_scratch + 2*Ncols*sizeof(dfloat);
 
   // occaTimerTic(parAlmond->device,"device smoothChebyshev");
 
