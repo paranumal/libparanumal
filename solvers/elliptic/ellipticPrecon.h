@@ -126,4 +126,19 @@ typedef struct {
   //SEMFEM variables
   mesh_t *femMesh;
 
+  // Overlapping Additive Schwarz variables
+  void *ellipticOneRing;
+
+  hlong NoneRingSendTotal;
+  hlong *oneRingSendList;
+  hlong *NoneRingSend;
+  void *oneRingSendBuffer;
+  MPI_Request *oneRingSendRequests;
+
+  hlong NoneRingRecvTotal;
+  hlong *NoneRingRecv;
+  void *oneRingRecvBuffer;
+  MPI_Request *oneRingRecvRequests;
+
+  
 } precon_t;

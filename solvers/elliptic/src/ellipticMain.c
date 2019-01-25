@@ -86,7 +86,7 @@ int main(int argc, char **argv){
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
   // build one-ring ( to rule them all )
-  ellipticBuildOneRing(elliptic, kernelInfo);
+  ellipticBuildOneRing(elliptic, lambda, kernelInfo);
   
   {    
     occa::memory o_r = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_r);

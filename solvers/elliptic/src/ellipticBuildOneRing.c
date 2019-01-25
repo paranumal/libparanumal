@@ -181,9 +181,11 @@ void ellipticOneRingExchange(MPI_Comm &comm,
 
 // build one ring including MPI exchange information
 
-void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
+void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties &kernelInfo){
 
   mesh_t *mesh = elliptic->mesh;
+
+  //  occa::properties kernelInfo = ellipticKernelInfo(mesh);
 
   vertex_t *vertexSendList = (vertex_t*) calloc(mesh->Nelements*mesh->Nverts, sizeof(vertex_t));
 
@@ -519,12 +521,12 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
 
   meshOccaPopulateDevice3D(mesh1, options1, kernelInfo);
   
-  dfloat lambda;
-  options1.getArgs("LAMBDA", lambda);
-
   // set up
+  options1.setArgs("PRECONDITIONER", "MULTIGRID");
   elliptic_t *elliptic1 = ellipticSetup(mesh1, lambda, kernelInfo1, options1);
 
+  cout << elliptic->options << endl;
+  
   dfloat *ggeoNoJW = (dfloat*) calloc(mesh1->Np*mesh1->Nelements*6,sizeof(dfloat));
   for(int e=0;e<mesh1->Nelements;++e){
     for(int n=0;n<mesh1->Np;++n){
@@ -538,6 +540,23 @@ void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &kernelInfo){
   }
 
   elliptic1->o_ggeoNoJW = mesh1->device.malloc(mesh1->Np*mesh1->Nelements*6*sizeof(dfloat), ggeoNoJW);    
+
+  // store the extended patch ring
+  elliptic->precon->ellipticOneRing = (void*) elliptic1;
+
+  elliptic->precon->NoneRingSendTotal = NoneRingSendTotal;
+  elliptic->precon->NoneRingRecvTotal = NoneRingRecvTotal;
+
+  elliptic->precon->oneRingSendList = oneRingSendList;
+
+  elliptic->precon->NoneRingSend = NoneRingSend;
+  elliptic->precon->NoneRingRecv = NoneRingRecv;
+
+  elliptic->precon->oneRingSendBuffer = sendBuffer;
+  elliptic->precon->oneRingRecvBuffer = recvBuffer;
+
+  elliptic->precon->oneRingSendRequests = sendRequests;
+  elliptic->precon->oneRingRecvRequests = recvRequests;
   
   dfloat tol = 1e-8;
 

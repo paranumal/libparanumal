@@ -114,7 +114,12 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
       ogsScatter(o_z, precon->o_xG, ogsDfloat, ogsAdd, precon->FEMogs);
     }
 
-  }else{ // turn off preconditioner
+  }else if (options.compareArgs("PRECONDITIONER", "OAS")) {
+
+    printf("IN OAS PRECONDITIONER\n");
+    o_z.copyFrom(o_r);
+  }
+  else{ // turn off preconditioner
     o_z.copyFrom(o_r);
   }
 }
