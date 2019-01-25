@@ -197,19 +197,20 @@ void ellipticOneRingExchange(elliptic_t *elliptic,
 
   hlong NelementSend = precon->NoneRingSendTotal;
   hlong NelementRecv = precon->NoneRingRecvTotal;
-  
-  mesh->haloExtractKernel(NelementSend, mesh->Np, precon->o_oneRingSendList, o_q, precon->o_oneRingSendBuffer);
-  
-  precon->o_oneRingSendBuffer.copyTo(precon->oneRingSendBuffer, sizeof(dfloat)*mesh->Np*NelementSend, 0);
 
-  dfloat *sendBuffer = (dfloat*) precon->oneRingSendBuffer;
-  dfloat *recvBuffer = (dfloat*) precon->oneRingRecvBuffer;
-
-  MPI_Request *sendRequests = precon->oneRingSendRequests;
-  MPI_Request *recvRequests = precon->oneRingRecvRequests;
-  
-  // do exchange via MPI
   if(NelementSend + NelementRecv>0){
+    mesh->haloExtractKernel(NelementSend, mesh->Np, precon->o_oneRingSendList, o_q, precon->o_oneRingSendBuffer);
+    
+    precon->o_oneRingSendBuffer.copyTo(precon->oneRingSendBuffer, Nbytes*NelementSend, 0);
+    
+    dfloat *sendBuffer = (dfloat*) precon->oneRingSendBuffer;
+    dfloat *recvBuffer = (dfloat*) precon->oneRingRecvBuffer;
+    
+    MPI_Request *sendRequests = precon->oneRingSendRequests;
+    MPI_Request *recvRequests = precon->oneRingRecvRequests;
+    
+    // do exchange via MPI
+    
     // count outgoing and incoming meshes
     int tag = 999;
     
@@ -243,11 +244,13 @@ void ellipticOneRingExchange(elliptic_t *elliptic,
     free(recvStatus);
     free(sendStatus);
 
-    o_qOneRing.copyFrom(recvBuffer, Nbytes*NelementRecv*sizeof(dfloat), Nbytes*mesh->Nelements*sizeof(dfloat));
+    // copy incoming to end of o_qOneRing
+    o_qOneRing.copyFrom(recvBuffer, Nbytes*NelementRecv, Nbytes*mesh->Nelements); // offset into end of oneRing
     
   }
-  
-  o_qOneRing.copyFrom(o_q, Nbytes*mesh->Nelements*sizeof(dfloat));
+
+  // copy core
+  o_qOneRing.copyFrom(o_q, Nbytes*mesh->Nelements, 0);
 
 }
 
@@ -464,7 +467,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   hlong NoneRingRecvTotal = 0;
   for(int r=0;r<mesh->size;++r)
     NoneRingRecvTotal += NoneRingRecv[r];
-  
+
   int   maxNbytes = mesh->Np*sizeof(dfloat); // fingers crossed.
   char *sendBuffer = (char*) calloc(maxNbytes*NoneRingSendTotal, sizeof(char));
   char *recvBuffer = (char*) calloc(maxNbytes*NoneRingRecvTotal, sizeof(char));

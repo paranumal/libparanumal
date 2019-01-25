@@ -119,8 +119,7 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
     //    printf("IN OAS PRECONDITIONER\n");
 
     ellipticOasSolve(elliptic, lambda, o_r, o_z);
-    
-    o_z.copyFrom(o_r);
+
   }
   else{ // turn off preconditioner
     o_z.copyFrom(o_r);

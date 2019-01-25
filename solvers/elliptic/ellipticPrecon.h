@@ -143,16 +143,16 @@ typedef struct {
   MPI_Request *oneRingRecvRequests;
 
   void *ellipticOasCoarse;
-  occa::memory o_oasRestrictionMatrix;
-  occa::memory o_oasProlongationMatrix;
+  occa::memory o_oasRestrictionMatrix; // Y
+  occa::memory o_oasProlongationMatrix;// Y 
 
-  occa::memory o_oasCoarseTmp;
-  occa::memory o_oasFineTmp;
-  
-  occa::memory o_oneRingSendList;
-  occa::memory o_oneRingSendBuffer;
+  occa::memory o_oasCoarseTmp; // Y
+  occa::memory o_oasFineTmp;   // Y
+   
+  occa::memory o_oneRingSendList;  // Y
+  occa::memory o_oneRingSendBuffer;  //Y
 
-  occa::memory o_oneRingRecvBuffer;
+  occa::memory o_oneRingRecvBuffer; // Y
   
   occa::kernel oasRestrictionKernel;
   occa::kernel oasProlongationKernel;
