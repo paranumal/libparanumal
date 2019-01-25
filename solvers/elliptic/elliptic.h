@@ -257,6 +257,7 @@ occa::properties ellipticKernelInfo(mesh_t *mesh);
 
 void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
 		      occa::properties &kernelInfo);
-
+void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
+		      occa::memory &o_r, occa::memory &o_x);
 #endif
 

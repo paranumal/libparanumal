@@ -56,6 +56,7 @@ $(ALMONDDIR)/parAlmond.hpp \
 
 # list of objects to be compiled
 AOBJS    = \
+./src/ellipticOasSolve.o \
 ./src/ellipticKernelInfo.o \
 ./src/ellipticOasSetup.o \
 ./src/ellipticBuildOneRing.o\
