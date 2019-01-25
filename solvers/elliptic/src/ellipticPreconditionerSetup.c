@@ -26,7 +26,8 @@ SOFTWARE.
 
 #include "elliptic.h"
 
-void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda){
+void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda,
+				 occa::properties &kernelInfo){
 
   mesh2D *mesh = elliptic->mesh;
   precon_t *precon = elliptic->precon;
@@ -101,5 +102,10 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
     ellipticBuildJacobi(elliptic,lambda,&invDiagA);
     precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
     free(invDiagA);
+  } else if(options.compareArgs("PRECONDITIONER", "OAS")){
+
+    if(mesh->N>1)
+      ellipticOasSetup(elliptic, lambda, kernelInfo);
+
   }
 }

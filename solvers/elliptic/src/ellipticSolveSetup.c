@@ -559,7 +559,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   long long int pre = mesh->device.memoryAllocated();
 
-  ellipticPreconditionerSetup(elliptic, elliptic->ogs, lambda);
+  ellipticPreconditionerSetup(elliptic, elliptic->ogs, lambda, kernelInfo);
 
   long long int usedBytes = mesh->device.memoryAllocated()-pre;
 

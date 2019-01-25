@@ -169,7 +169,8 @@ typedef struct {
 elliptic_t *ellipticSetup(mesh2D *mesh, dfloat lambda, occa::properties &kernelInfo, setupAide options);
 
 void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_z);
-void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda);
+void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda,
+				 occa::properties &kernelInfo);
 
 int  ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x);
 
@@ -249,7 +250,13 @@ void ellipticSerialAxHexKernel3D(const int Nq,
 				 occa::memory &o_Aq,
 				 const occa::memory &o_ggeoNoJW);
 
-void ellipticBuildOneRing(elliptic_t *elliptic, occa::properties &propo);
+void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties &kernelInfo);
 void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1);
+
+occa::properties ellipticKernelInfo(mesh_t *mesh);
+
+void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
+		      occa::properties &kernelInfo);
+
 #endif
 
