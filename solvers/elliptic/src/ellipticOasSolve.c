@@ -51,9 +51,15 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   // hack to zero initial guess
   dfloat *h_x = (dfloat*) calloc(mesh1->Np*mesh1->Nelements, sizeof(dfloat));
   elliptic1->o_x.copyFrom(h_x);
-  
+
+  // patch solve
   ellipticSolve(elliptic1, lambda, tol, elliptic1->o_r, elliptic1->o_x); // may need to zero o_x
 
+  // sum up patches
+  ogsGatherScatter(elliptic1->o_x, ogsDfloat, ogsAdd, elliptic->precon->oasOgs);
+
+  // do we need to scale by 1/overlapDegree ?
+  
   // just retain core [ actually need to gs all the element contributions ]
   o_z.copyFrom(elliptic1->o_x, mesh->Np*mesh->Nelements*sizeof(dfloat), 0);
   
