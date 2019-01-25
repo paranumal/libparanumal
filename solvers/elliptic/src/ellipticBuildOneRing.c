@@ -642,8 +642,21 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
 
 
 #endif
+
+  // build gs op to gather all contributions
+  hlong *globalNums = (hlong*) calloc(mesh1->Nelements*mesh1->Np, sizeof(hlong));
+
+  ellipticOneRingExchange(mesh->comm,
+			  mesh->Nelements, mesh->Np*sizeof(hlong), mesh->globalIds,
+			  NoneRingSendTotal, oneRingSendList, NoneRingSend, sendBuffer,
+			  sendRequests,
+			  NoneRingRecvTotal, NoneRingRecv, recvRequests, globalNums);
+
+  elliptic->precon->oasOgs = ogsSetup(mesh1->Nelements*mesh1->Np, globalNums, mesh->comm, 1, mesh->device);
+    
   
-  free(vertexSendList);
+
+    free(vertexSendList);
   free(vertexSendCounts);
   free(vertexRecvCounts);
   free(vertexSendDispls);

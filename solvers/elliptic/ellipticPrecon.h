@@ -156,5 +156,7 @@ typedef struct {
   
   occa::kernel oasRestrictionKernel;
   occa::kernel oasProlongationKernel;
+
+  ogs_t *oasOgs;
   
 } precon_t;
