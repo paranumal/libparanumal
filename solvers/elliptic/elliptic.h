@@ -259,5 +259,12 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
 		      occa::properties &kernelInfo);
 void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
 		      occa::memory &o_r, occa::memory &o_x);
+
+void ellipticOneRingExchange(elliptic_t *elliptic,
+			     elliptic_t *elliptic1,
+			     size_t Nbytes,       // message size per element
+			     occa::memory &o_q,
+			     occa::memory &o_qOneRing);
+
 #endif
 

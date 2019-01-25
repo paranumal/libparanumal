@@ -40,7 +40,22 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   // 2. solve coarse problem
 
 
-  // 3. collect patch rhs
+  // 3. collect patch rhs  
+  elliptic_t *elliptic1 = (elliptic_t*) precon->ellipticOneRing; // should rename
+  mesh_t *mesh1 = elliptic1->mesh;
   
+  ellipticOneRingExchange(elliptic, elliptic1, mesh1->Np*sizeof(dfloat), o_r, elliptic1->o_r);
+
+  dfloat tol = 1e-2;
+
+  // hack to zero initial guess
+  dfloat *h_x = (dfloat*) calloc(mesh1->Np*mesh1->Nelements, sizeof(dfloat));
+  elliptic1->o_x.copyFrom(h_x);
   
+  ellipticSolve(elliptic1, lambda, tol, elliptic1->o_r, elliptic1->o_x); // may need to zero o_x
+
+  // just retain core [ actually need to gs all the element contributions ]
+  o_z.copyFrom(elliptic1->o_x, mesh->Np*mesh->Nelements*sizeof(dfloat), 0);
+  
+  free(h_x);
 }
