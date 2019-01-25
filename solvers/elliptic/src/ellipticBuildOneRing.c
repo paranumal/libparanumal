@@ -156,15 +156,15 @@ void ellipticOneRingExchange(MPI_Comm &comm,
 			     hlong  *NoneRingRecv,
 			     MPI_Request *recvRequests,
 			     void *qOneRing){
-
+  
   int NsendMessages = 0, NrecvMessages = 0;
-
+  
   // do oneRing extract
   for(hlong n=0;n<NoneRingSendTotal;++n){
     hlong e = oneRingSendList[n];
     memcpy((char*)sendBuffer+n*Nbytes, (char*)q+e*Nbytes, Nbytes);
   }
-
+  
   void *recvBuffer = (char*)qOneRing + Nelements*Nbytes; // fix later
   
   ellipticOneRingExchangeStart(comm, Nbytes,
@@ -177,7 +177,80 @@ void ellipticOneRingExchange(MPI_Comm &comm,
   ellipticOneRingExchangeFinish(comm,
 				NsendMessages, sendRequests,
 				NrecvMessages, recvRequests);
+  
 }
+
+
+
+// occa memory version
+void ellipticOneRingExchange(elliptic_t *elliptic,
+			     elliptic_t *elliptic1,
+			     size_t Nbytes,       // message size per element
+			     occa::memory &o_q,
+			     occa::memory &o_qOneRing){
+
+  int NsendMessages = 0, NrecvMessages = 0;
+
+  // extract from original mesh
+  mesh_t *mesh = elliptic->mesh;
+  precon_t *precon = elliptic->precon;
+
+  hlong NelementSend = precon->NoneRingSendTotal;
+  hlong NelementRecv = precon->NoneRingRecvTotal;
+  
+  mesh->haloExtractKernel(NelementSend, mesh->Np, precon->o_oneRingSendList, o_q, precon->o_oneRingSendBuffer);
+  
+  precon->o_oneRingSendBuffer.copyTo(precon->oneRingSendBuffer, sizeof(dfloat)*mesh->Np*NelementSend, 0);
+
+  dfloat *sendBuffer = (dfloat*) precon->oneRingSendBuffer;
+  dfloat *recvBuffer = (dfloat*) precon->oneRingRecvBuffer;
+
+  MPI_Request *sendRequests = precon->oneRingSendRequests;
+  MPI_Request *recvRequests = precon->oneRingRecvRequests;
+  
+  // do exchange via MPI
+  if(NelementSend + NelementRecv>0){
+    // count outgoing and incoming meshes
+    int tag = 999;
+    
+    // initiate immediate send  and receives to each other process as needed
+    int sendOffset = 0, recvOffset = 0, sendMessage = 0, recvMessage = 0;
+    for(int r=0;r<mesh->size;++r){
+      if(r!=mesh->rank){
+	size_t recvCount = precon->NoneRingRecv[r]*Nbytes;
+	if(recvCount){
+	  MPI_Irecv(((char*)recvBuffer)+recvOffset, recvCount, MPI_CHAR, r, tag, mesh->comm, recvRequests+recvMessage);
+	  recvOffset += recvCount;
+	  ++recvMessage;
+	}
+	
+	size_t sendCount = precon->NoneRingSend[r]*Nbytes;
+	if(sendCount){
+	  MPI_Isend(((char*)sendBuffer)+sendOffset, sendCount, MPI_CHAR, r, tag, mesh->comm, sendRequests+sendMessage);
+	  
+	  sendOffset += sendCount;
+	  ++sendMessage;
+	}
+      }
+    }
+
+    MPI_Status *sendStatus = (MPI_Status*) calloc(sendMessage, sizeof(MPI_Status));
+    MPI_Status *recvStatus = (MPI_Status*) calloc(recvMessage, sizeof(MPI_Status));
+    
+    MPI_Waitall(recvMessage, recvRequests, recvStatus);
+    MPI_Waitall(sendMessage, sendRequests, sendStatus);
+    
+    free(recvStatus);
+    free(sendStatus);
+
+    o_qOneRing.copyFrom(recvBuffer, Nbytes*NelementRecv*sizeof(dfloat), Nbytes*mesh->Nelements*sizeof(dfloat));
+    
+  }
+  
+  o_qOneRing.copyFrom(o_q, Nbytes*mesh->Nelements*sizeof(dfloat));
+
+}
+
 
 // build one ring including MPI exchange information
 

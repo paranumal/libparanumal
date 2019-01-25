@@ -130,9 +130,11 @@ typedef struct {
   void *ellipticOneRing;
 
   hlong NoneRingSendTotal;
-  hlong *oneRingSendList;
+  hlong *oneRingSendList; 
   hlong *NoneRingSend;
+
   void *oneRingSendBuffer;
+
   MPI_Request *oneRingSendRequests;
 
   hlong NoneRingRecvTotal;
@@ -140,5 +142,19 @@ typedef struct {
   void *oneRingRecvBuffer;
   MPI_Request *oneRingRecvRequests;
 
+  void *ellipticOasCoarse;
+  occa::memory o_oasRestrictionMatrix;
+  occa::memory o_oasProlongationMatrix;
+
+  occa::memory o_oasCoarseTmp;
+  occa::memory o_oasFineTmp;
+  
+  occa::memory o_oneRingSendList;
+  occa::memory o_oneRingSendBuffer;
+
+  occa::memory o_oneRingRecvBuffer;
+  
+  occa::kernel oasRestrictionKernel;
+  occa::kernel oasProlongationKernel;
   
 } precon_t;
