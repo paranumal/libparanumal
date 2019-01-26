@@ -603,8 +603,9 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   setupAide options1 = elliptic->options; // check this
 
   // manually specify preconditioner for oneRing grid
+  //options1.setArgs(string("PRECONDITIONER"), string("SEMFEM"));
   options1.setArgs(string("PRECONDITIONER"), string("MULTIGRID"));
-  //  options1.setArgs("PRECONDITIONER", "JACOBI");
+  //options1.setArgs("PRECONDITIONER", "JACOBI");
   
   //  occa::properties kernelInfo1 = kernelInfo;
   
@@ -662,8 +663,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
 
 #endif
 
-  printf("DEBUG #10000\n");
-  
   // build gs op to gather all contributions
   hlong*globalNums = (hlong*) calloc(mesh1->Nelements*mesh1->Np, sizeof(hlong));
 
@@ -673,22 +672,8 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
 			  sendRequests,
 			  NoneRingRecvTotal, NoneRingRecv, recvRequests, globalNums);
 
-  printf("DEBUG #10001\n");
-  
-#if 0
-  for(hlong e=0;e<mesh1->Nelements;++e){
-    for(int n=0;n<mesh1->Np;++n){
-      printf("%d ", globalNums[e*mesh1->Np+n]);
-    }
-    if(e>=mesh->Nelements) printf("*");
-    printf("\n");
-  }
-#endif
-  
   elliptic->precon->oasOgs = ogsSetup(mesh1->Nelements*mesh1->Np, globalNums, mesh->comm, 1, mesh->device);
 
-  printf("DEBUG #10002\n");
-  
   elliptic->precon->o_oneRingSendList =
     mesh->device.malloc(elliptic->precon->NoneRingSendTotal*sizeof(hlong),
 			elliptic->precon->oneRingSendList);
@@ -699,8 +684,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   elliptic->precon->o_oneRingRecvBuffer =
     mesh->device.malloc(elliptic->precon->NoneRingRecvTotal*mesh->Np*sizeof(dfloat));
 
-  printf("DEBUG #10003\n");
-  
   free(vertexSendList);
   free(vertexSendCounts);
   free(vertexRecvCounts);

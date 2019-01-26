@@ -83,7 +83,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   dfloat rnorm;
   if(cgOptions.enableReductions){
     serialTic();
-    rnorm = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+    rnorm = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r); // WRONG FOR IPDG
     serialElapsedReduction += serialElapsed();
   }
   else
@@ -103,7 +103,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     // r.z
     if(cgOptions.enableReductions){
       serialTic();
-      rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
+      rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z); // WRONG FOR IPDG
       serialElapsedReduction += serialElapsed();
     }
     else
@@ -113,7 +113,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
       dfloat zdotAp;
       if(cgOptions.enableReductions){
 	serialTic();
-	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
+	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);  // WRONG FOR IPDG
 	serialElapsedReduction += serialElapsed();
       }
       else
@@ -130,7 +130,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     
     // A*p
     serialTic();
-    ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
+    ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString); // WRONG FOR IPDG
     serialElapsedAx += serialElapsed();
 
 #if 0

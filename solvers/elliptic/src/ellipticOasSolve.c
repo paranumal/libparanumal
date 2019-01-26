@@ -41,10 +41,11 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   //  precon->oasRestrictionKernel(mesh->Nelements, precon->o_oasRestrictionMatrix, o_r, precon->o_oasCoarseTmp);
 
   // 2. solve coarse problem
-
+  //   a. call solver
+  //   b. prolongate (watch out for +=)
 
   // 3. collect patch rhs  
-  if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
+  //  if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
 
   // hack to zero initial guess
   dfloat *h_x = (dfloat*) calloc(mesh1->Np*mesh1->Nelements, sizeof(dfloat));
@@ -59,7 +60,7 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   mesh1->device.finish();
   mesh->device.finish();
   
-  dfloat tol = 1e-4;
+  dfloat tol = 1.e-2;
 
   // patch solve
   if(mesh->rank==0) printf("Starting extended partition iterations:\n");
@@ -72,10 +73,13 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
 
   // do we need to scale by 1/overlapDegree ?
   
-  // just retain core [ actually need to gs all the element contributions] 
+  // just retain core [ actually need to gs all the element contributions]
+  //  o_z.copyFrom(elliptic1->o_x, mesh->Nelements*mesh->Np*sizeof(dfloat), 0);
+  
   elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, elliptic->precon->oasOgs->o_invDegree, elliptic1->o_x, o_z);
 
-  if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_z);
+  // TW: 
+  //  if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_z);
   
   free(h_x);
 }
