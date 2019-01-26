@@ -365,7 +365,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
                                            "norm2",
                                            kernelInfo);
 
-
       elliptic->scaledAddKernel =
           mesh->device.buildKernel(DHOLMES "/okl/scaledAdd.okl",
                                          "scaledAdd",
@@ -374,6 +373,11 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       elliptic->dotMultiplyKernel =
           mesh->device.buildKernel(DHOLMES "/okl/dotMultiply.okl",
                                          "dotMultiply",
+                                         kernelInfo);
+
+      elliptic->dotMultiplyAddKernel =
+          mesh->device.buildKernel(DHOLMES "/okl/dotMultiplyAdd.okl",
+                                         "dotMultiplyAdd",
                                          kernelInfo);
 
       elliptic->dotDivideKernel =

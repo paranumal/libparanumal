@@ -142,6 +142,7 @@ typedef struct {
   occa::kernel weightedInnerProduct2Kernel;
   occa::kernel scaledAddKernel;
   occa::kernel dotMultiplyKernel;
+  occa::kernel dotMultiplyAddKernel;
   occa::kernel dotDivideKernel;
 
   occa::kernel weightedNorm2Kernel;

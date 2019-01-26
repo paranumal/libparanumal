@@ -37,15 +37,6 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
 
   elliptic_t *elliptic1 = (elliptic_t*) precon->ellipticOneRing; // should rename
   mesh_t *mesh1 = elliptic1->mesh;
-  
-  //  precon->oasRestrictionKernel(mesh->Nelements, precon->o_oasRestrictionMatrix, o_r, precon->o_oasCoarseTmp);
-
-  // 2. solve coarse problem
-  //   a. call solver
-  //   b. prolongate (watch out for +=)
-
-  // 3. collect patch rhs  
-  //  if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
 
   // hack to zero initial guess
   dfloat *h_x = (dfloat*) calloc(mesh1->Np*mesh1->Nelements, sizeof(dfloat));
@@ -54,7 +45,47 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
 
   mesh1->device.finish();
   mesh->device.finish();
+
+  o_z.copyFrom(h_x);
+
+  // TW: do I need to mask here
+  if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
   
+  // 2. solve coarse problem
+  //   a. call solver
+  //   b. prolongate (watch out for +=)
+
+  // TW - QUESTIONABLE FROM HERE ---->
+#if 1
+  elliptic_t *ellipticOasCoarse = (elliptic_t*) (precon->ellipticOasCoarse);
+  mesh_t   *meshCoarse   = ellipticOasCoarse->mesh;
+  precon_t *preconCoarse = ellipticOasCoarse->precon;
+  ogs_t    *ogsCoarse    = ellipticOasCoarse->ogs; 
+
+  // restrict to Q1
+  precon->oasRestrictionKernel(meshCoarse->Nelements, precon->o_oasRestrictionMatrix, o_r, precon->o_oasCoarseTmp);
+
+  // gather  Q1
+  ogsGather(precon->o_rhsG, precon->o_oasCoarseTmp, ogsDfloat, ogsAdd, ogsCoarse); 
+
+  // weight
+  elliptic->dotMultiplyKernel(ogsCoarse->Ngather,
+			      ogsCoarse->o_gatherInvDegree,
+			      precon->o_rhsG, precon->o_rhsG);
+
+  // solve coarse grid
+  parAlmond::Precon(precon->parAlmond, precon->o_xG, precon->o_rhsG);
+
+  // scatter Q1
+  ogsScatter(precon->o_oasCoarseTmp, precon->o_xG, ogsDfloat, ogsAdd, ogsCoarse);
+
+  // prolongate to QN
+  precon->oasProlongationKernel(mesh->Nelements, precon->o_oasProlongationMatrix, precon->o_oasCoarseTmp, o_z);
+
+  // TW - QUESTIONABLE TO HERE <----
+#endif
+
+  // 3. collect patch rhs    
   ellipticOneRingExchange(elliptic, elliptic1, mesh1->Np*sizeof(dfloat), o_r, elliptic1->o_r);
 
   mesh1->device.finish();
@@ -76,10 +107,10 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   // just retain core [ actually need to gs all the element contributions]
   //  o_z.copyFrom(elliptic1->o_x, mesh->Nelements*mesh->Np*sizeof(dfloat), 0);
   
-  elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, elliptic->precon->oasOgs->o_invDegree, elliptic1->o_x, o_z);
+  elliptic->dotMultiplyAddKernel(mesh->Nelements*mesh->Np, elliptic->precon->oasOgs->o_invDegree, elliptic1->o_x, o_z);
 
   // TW: 
-  //  if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_z);
+  if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_z);
   
   free(h_x);
 }
