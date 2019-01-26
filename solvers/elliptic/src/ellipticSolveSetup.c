@@ -61,6 +61,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   dlong NthreadsUpdatePCG = 256;
   dlong NblocksUpdatePCG = mymin((Ntotal+NthreadsUpdatePCG-1)/NthreadsUpdatePCG, 160);
 
+  printf("NblocksUpdatePCG = %d\n", NblocksUpdatePCG);
+  
   elliptic->NthreadsUpdatePCG = NthreadsUpdatePCG;
   elliptic->NblocksUpdatePCG = NblocksUpdatePCG;
   
@@ -276,6 +278,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   elliptic->o_invDegree = elliptic->ogs->o_invDegree;
 
   /*preconditioner setup */
+  //  elliptic->precon = new precon_t[1];
   elliptic->precon = (precon_t*) calloc(1, sizeof(precon_t));
 
   //  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";

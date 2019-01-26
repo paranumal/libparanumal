@@ -50,9 +50,10 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   dfloat rdotz1 = 0;
   dfloat rdotz2 = 0;
   dfloat zdotAp = 0;
-  
-  dfloat alpha, beta, pAp = 0;
-  dfloat TOL, normB, one = 1;
+
+  // now initialized
+  dfloat alpha = 0, beta = 0, pAp = 0;
+  dfloat TOL, normB = 0, one = 1;
   
   double serialElapsedReduction = 0, serialElapsedAx = 0, serialElapsedGatherScatter = 0;
 
@@ -166,9 +167,16 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     dfloat rdotr = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
     serialElapsedReduction += serialElapsed(); // also includes two streaming ops
 	
-    if (cgOptions.verbose&&(mesh->rank==0)) 
-      printf("CG: it %d r norm %12.12f alpha = %f \n", iter, sqrt(rdotr), alpha);    
+    if (cgOptions.verbose&&(mesh->rank==0)) {
 
+      //      printf("TESTING: rdotr = %17.15lf, alpha = %17.15lf, pAp = %17.15lf, rdotz1 = %17.15lf\n",
+      //	     rdotr, alpha, pAp, rdotz1);
+      
+      if(rdotr<0)
+	printf("WARNING CG: rdotr = %17.15lf\n", rdotr);
+      
+      printf("CG: it %d r norm %12.12lf alpha = %lf \n", iter, sqrt(rdotr), alpha);    
+    }
     if(iter==1) rlim2 = rdotr*eps*eps;
     rnorm = sqrt(rdotr);
     
@@ -260,7 +268,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   TOL =  mymax(tol*tol*normB,tol*tol);
   
   // compute A*x
-  ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax, dfloatString, elliptic->o_ggeoNoJW);
+  ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax, dfloatString);
 
   // subtract r = b - A*x
   ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);

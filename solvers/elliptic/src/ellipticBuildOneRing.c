@@ -489,6 +489,8 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   MPI_Request *sendRequests = (MPI_Request*) calloc(mesh->size, sizeof(MPI_Request));
   MPI_Request *recvRequests = (MPI_Request*) calloc(mesh->size, sizeof(MPI_Request));
   
+  //  mesh_t *mesh1 = new mesh_t[1];
+
   mesh_t *mesh1 = (mesh_t*) calloc(1, sizeof(mesh_t)); // check
 
   // single process communicator for mesh1
@@ -601,11 +603,11 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   setupAide options1 = elliptic->options; // check this
 
   // manually specify preconditioner for oneRing grid
-  options1.setArgs("PRECONDITIONER", "MULTIGRID");
+  options1.setArgs(string("PRECONDITIONER"), string("MULTIGRID"));
   //  options1.setArgs("PRECONDITIONER", "JACOBI");
   
-  occa::properties kernelInfo1 = kernelInfo;
-
+  //  occa::properties kernelInfo1 = kernelInfo;
+  
   mesh1->device = mesh->device; // check this
 #if 1
   mesh1->defaultStream = mesh->defaultStream;
@@ -613,10 +615,11 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   mesh1->computeStream = mesh->computeStream;
   mesh1->device.setStream(mesh->defaultStream);
 #endif
+
   meshOccaPopulateDevice3D(mesh1, options1, kernelInfo);
   
   // set up
-  elliptic_t *elliptic1 = ellipticSetup(mesh1, lambda, kernelInfo1, options1);
+  elliptic_t *elliptic1 = ellipticSetup(mesh1, lambda, kernelInfo, options1);
 
   cout << "options1: " << elliptic1->options << endl;
   cout << "options: " << elliptic->options << endl;

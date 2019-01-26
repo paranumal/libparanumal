@@ -106,6 +106,11 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
 
     if(mesh->N>1)
       ellipticOasSetup(elliptic, lambda, kernelInfo);
-
+    else{
+      dfloat *invDiagA;
+      ellipticBuildJacobi(elliptic,lambda,&invDiagA);
+      precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
+      free(invDiagA);
+    }
   }
 }
