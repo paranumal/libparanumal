@@ -42,7 +42,6 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   /* STAGE 2: build coarse problem */
   nonZero_t *coarseA;
   dlong nnzCoarseA;
-  ogs_t *coarseogs;
 
   //set up the base level
   int Nc = 1;
@@ -89,9 +88,11 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   hlong *coarseGlobalStarts = (hlong*) calloc(mesh->size+1, sizeof(hlong));
   
   if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-    ellipticBuildContinuous(ellipticOasCoarse,lambda,&coarseA,&nnzCoarseA,&coarseogs,coarseGlobalStarts);
+    ellipticBuildContinuous(ellipticOasCoarse,lambda,&coarseA,&nnzCoarseA,NULL,coarseGlobalStarts);
   }
 
+  
+  
   hlong *Rows = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
   hlong *Cols = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
   dfloat *Vals = (dfloat*) calloc(nnzCoarseA,sizeof(dfloat));
@@ -138,6 +139,29 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
   sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
   elliptic->precon->oasProlongationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-  
+
+  // build parAlmond as place holder
+  elliptic->precon->parAlmond = parAlmond::Init(mesh->device, mesh->comm, options);
+  parAlmond::AMGSetup(elliptic->precon->parAlmond,
+		      coarseGlobalStarts,
+		      nnzCoarseA,
+		      Rows,
+		      Cols,
+		      Vals,
+		      elliptic->allNeumann,
+		      elliptic->allNeumannPenalty);
+  free(Rows); free(Cols); free(Vals);
+
+  if (options.compareArgs("VERBOSE", "TRUE"))
+    parAlmond::Report(elliptic->precon->parAlmond);
+
+  if (options.compareArgs("DISCRETIZATION", "CONTINUOUS")) {//tell parAlmond to gather this level
+    parAlmond::multigridLevel *baseLevel = elliptic->precon->parAlmond->levels[0];
+    
+    elliptic->precon->rhsG = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
+    elliptic->precon->xG   = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
+    elliptic->precon->o_rhsG = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat));
+    elliptic->precon->o_xG   = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat));
+  }
   
 }
