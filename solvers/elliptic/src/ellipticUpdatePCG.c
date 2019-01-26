@@ -97,7 +97,7 @@ dfloat ellipticSerialUpdatePCG(const int Nq, const hlong Nelements,
 dfloat ellipticUpdatePCG(elliptic_t *elliptic,
 			 occa::memory &o_p, occa::memory &o_Ap, const dfloat alpha,
 			 occa::memory &o_x, occa::memory &o_r){
-
+  
   const cgOptions_t cgOptions = elliptic->cgOptions;
   
   mesh_t *mesh = elliptic->mesh;

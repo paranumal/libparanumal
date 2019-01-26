@@ -30,6 +30,7 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
 		      occa::properties &kernelInfo) {
 
   mesh_t *mesh = elliptic->mesh;
+
   setupAide options = elliptic->options;
 
   /* STAGE 1: build overlapping extended partition problem */
@@ -37,7 +38,6 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   /* build one ring patch extension using a single process MPI sub-communicator
      and store in elliptic->precon->ellipticOneRing */
   ellipticBuildOneRing(elliptic, lambda, kernelInfo);
-
   
   /* STAGE 2: build coarse problem */
   nonZero_t *coarseA;
@@ -132,7 +132,8 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   
   sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
   sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
-  elliptic->precon->oasRestrictionKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+  elliptic->precon->oasRestrictionKernel =
+    mesh->device.buildKernel(fileName,kernelName,kernelInfo);
   
   sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
   sprintf(kernelName, "ellipticPreconProlongate%s", suffix);

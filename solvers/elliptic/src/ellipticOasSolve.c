@@ -37,7 +37,6 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
 
   elliptic_t *elliptic1 = (elliptic_t*) precon->ellipticOneRing; // should rename
   mesh_t *mesh1 = elliptic1->mesh;
-
   
   //  precon->oasRestrictionKernel(mesh->Nelements, precon->o_oasRestrictionMatrix, o_r, precon->o_oasCoarseTmp);
 
@@ -59,13 +58,13 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
 
   mesh1->device.finish();
   mesh->device.finish();
-
   
-  dfloat tol = 1e-2;
+  dfloat tol = 1e-4;
 
   // patch solve
   if(mesh->rank==0) printf("Starting extended partition iterations:\n");
 
+  // TW turned off
   ellipticSolve(elliptic1, lambda, tol, elliptic1->o_r, elliptic1->o_x); // may need to zero o_x
 
   // sum up patches

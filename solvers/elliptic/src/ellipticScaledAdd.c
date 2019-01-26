@@ -71,7 +71,6 @@ void ellipticScaledAdd(elliptic_t *elliptic, dfloat alpha, occa::memory &o_a, df
   dlong Ntotal = mesh->Nelements*mesh->Np;
 
   // b[n] = alpha*a[n] + beta*b[n] n\in [0,Ntotal)
-  
   if(cgOptions.serial == 1 && cgOptions.continuous==1){
     ellipticSerialScaledAdd(mesh->Nq, mesh->Nelements, alpha, o_a, beta, o_b);
     return;
