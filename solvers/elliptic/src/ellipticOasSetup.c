@@ -62,7 +62,7 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   mesh_t *meshN1 = new mesh_t[1];
   
   if (mesh->N>1) { // assume 
-
+    // TW: should create   meshCloneHex3D(mesh_t *mesh)
     printf("=============BUILDING OAS COARSE LEVEL OF DEGREE %d==================\n", Nc);
     //    ellipticOasCoarse = ellipticBuildMultigridLevel(elliptic,Nc,%m    mesh_t *mesh1 = (mesh_t*) calloc(1, sizeof(mesh_t)); // check
     meshN1->N   = 1;
@@ -149,40 +149,11 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   occa::memory o_P = elliptic->mesh->device.malloc(NqFine*NqCoarse*sizeof(dfloat), P);
 
   free(P); free(R);
-
-#if 0
-  int basisNp = ellipticOasCoarse->mesh->Np;
-
-  hlong *coarseGlobalStarts = (hlong*) calloc(mesh->size+1, sizeof(hlong));
-  
-  if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
-    ellipticBuildContinuous(ellipticOasCoarse,lambda,&coarseA,&nnzCoarseA,NULL,coarseGlobalStarts);
-  }
-  
-  hlong *Rows = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
-  hlong *Cols = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
-  dfloat *Vals = (dfloat*) calloc(nnzCoarseA,sizeof(dfloat));
-  
-  for (dlong i=0;i<nnzCoarseA;i++) {
-    Rows[i] = coarseA[i].row;
-    Cols[i] = coarseA[i].col;
-    Vals[i] = coarseA[i].val;
-  }
-
-  printf("nnzCoarseA = %d\n", nnzCoarseA);
-  
-  free(coarseA);
-#endif
-  
+    
   elliptic->precon->ellipticOasCoarse = ellipticOasCoarse;  
   elliptic->precon->o_oasRestrictionMatrix = o_R;
   elliptic->precon->o_oasProlongationMatrix = o_P;
 
-#if 0
-  elliptic->precon->o_oasCoarseTmp = mesh->device.malloc(NpCoarse*mesh->Nelements*sizeof(dfloat));
-  elliptic->precon->o_oasFineTmp   = mesh->device.malloc(NpFine*mesh->Nelements*sizeof(dfloat));
-#endif
-  
   // build degree 1 coarsening and prolongation matrices and kernels
   
   kernelInfo["defines/" "p_NqFine"]= Nf+1;
@@ -210,30 +181,4 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
   elliptic->precon->oasProlongationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-#if 0
-  // build parAlmond as place holder
-  elliptic->precon->parAlmond = parAlmond::Init(mesh->device, mesh->comm, options);
-  parAlmond::AMGSetup(elliptic->precon->parAlmond,
-		      coarseGlobalStarts,
-		      nnzCoarseA,
-		      Rows,
-		      Cols,
-		      Vals,
-		      elliptic->allNeumann,
-		      elliptic->allNeumannPenalty);
-  free(Rows); free(Cols); free(Vals);
-
-  if (options.compareArgs("VERBOSE", "TRUE"))
-    parAlmond::Report(elliptic->precon->parAlmond);
-
-  if (options.compareArgs("DISCRETIZATION", "CONTINUOUS")) {//tell parAlmond to gather this level
-    parAlmond::multigridLevel *baseLevel = elliptic->precon->parAlmond->levels[0];
-    
-    elliptic->precon->rhsG = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    elliptic->precon->xG   = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    elliptic->precon->o_rhsG = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat));
-    elliptic->precon->o_xG   = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat));
-  }
-#endif
-  
 }
