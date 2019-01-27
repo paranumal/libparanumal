@@ -177,7 +177,10 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
       
       printf("CG: it %d r norm %12.12lf alpha = %lf \n", iter, sqrt(rdotr), alpha);    
     }
-    if(iter==1) rlim2 = rdotr*eps*eps;
+    if(iter==1){
+      rlim2 = rdotr*eps*eps;
+    }
+    
     rnorm = sqrt(rdotr);
     
     if(rdotr<=rlim2) break;
