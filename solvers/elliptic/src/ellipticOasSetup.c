@@ -58,14 +58,71 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   int NblockVCoarse = maxNthreads/NpCoarse;
   
   elliptic_t* ellipticOasCoarse;
+
+  mesh_t *meshN1 = new mesh_t[1];
+  
   if (mesh->N>1) { // assume 
+
     printf("=============BUILDING OAS COARSE LEVEL OF DEGREE %d==================\n", Nc);
-    ellipticOasCoarse = ellipticBuildMultigridLevel(elliptic,Nc,Nf);
+    //    ellipticOasCoarse = ellipticBuildMultigridLevel(elliptic,Nc,%m    mesh_t *mesh1 = (mesh_t*) calloc(1, sizeof(mesh_t)); // check
+
+    meshN1->comm = mesh->comm;
+    meshN1->rank = mesh->rank;
+    meshN1->size = mesh->size;
+    
+    meshN1->dim = mesh->dim;
+    meshN1->Nverts = mesh->Nverts;
+    meshN1->Nfaces = mesh->Nfaces;
+    meshN1->NfaceVertices = mesh->NfaceVertices;
+    meshN1->Nnodes = mesh->Nnodes;
+    
+    meshN1->N   = mesh->N;
+    meshN1->faceVertices = mesh->faceVertices;
+    meshN1->Nelements = mesh->Nelements;
+    meshN1->EX = mesh->EX;
+    meshN1->EY = mesh->EY;
+    meshN1->EZ = mesh->EZ;
+  
+    meshN1->NboundaryFaces = mesh->NboundaryFaces;
+    meshN1->boundaryInfo = mesh->boundaryInfo;
+    meshN1->EToV = mesh->EToV;
+
+    meshParallelConnect(meshN1);
+
+    meshConnectBoundary(meshN1);
+    
+    meshLoadReferenceNodesHex3D(meshN1, 1); // degree 1
+
+    meshPhysicalNodesHex3D(meshN1); // rely on trilinear map for hexes
+    
+    meshGeometricFactorsHex3D(meshN1);
+    
+    meshHaloSetup(meshN1); // nada
+    
+    meshConnectFaceNodes3D(meshN1);
+  
+    meshSurfaceGeometricFactorsHex3D(meshN1);
+    
+    meshParallelConnectNodes(meshN1); // data
+
+    setupAide optionsN1 = elliptic->options; // check this
+    optionsN1.setArgs(string("PRECONDITIONER"), string("MULTIGRID"));
+  
+    meshN1->device = mesh->device; // check this
+    meshN1->defaultStream = mesh->defaultStream;
+    meshN1->dataStream = mesh->dataStream;
+    meshN1->computeStream = mesh->computeStream;
+    meshN1->device.setStream(mesh->defaultStream);
+
+    occa::properties kernelInfoN1 = kernelInfo;
+    meshOccaPopulateDevice3D(meshN1, optionsN1, kernelInfoN1);
+  
+    // set up
+    ellipticOasCoarse = ellipticSetup(meshN1, lambda, kernelInfoN1, optionsN1);
     
   }else{
     ellipticOasCoarse = elliptic;
   }
-
   
   dfloat *P    = (dfloat *) calloc(NqFine*NqCoarse,sizeof(dfloat));
   dfloat *R    = (dfloat *) calloc(NqFine*NqCoarse,sizeof(dfloat));
@@ -83,6 +140,7 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
 
   free(P); free(R);
 
+#if 0
   int basisNp = ellipticOasCoarse->mesh->Np;
 
   hlong *coarseGlobalStarts = (hlong*) calloc(mesh->size+1, sizeof(hlong));
@@ -90,8 +148,6 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     ellipticBuildContinuous(ellipticOasCoarse,lambda,&coarseA,&nnzCoarseA,NULL,coarseGlobalStarts);
   }
-
-  
   
   hlong *Rows = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
   hlong *Cols = (hlong *) calloc(nnzCoarseA, sizeof(hlong));
@@ -106,12 +162,16 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   printf("nnzCoarseA = %d\n", nnzCoarseA);
   
   free(coarseA);
-
-  elliptic->precon->ellipticOasCoarse = ellipticOasCoarse;
+#endif
+  
+  elliptic->precon->ellipticOasCoarse = ellipticOasCoarse;  
   elliptic->precon->o_oasRestrictionMatrix = o_R;
   elliptic->precon->o_oasProlongationMatrix = o_P;
+
+#if 0
   elliptic->precon->o_oasCoarseTmp = mesh->device.malloc(NpCoarse*mesh->Nelements*sizeof(dfloat));
   elliptic->precon->o_oasFineTmp   = mesh->device.malloc(NpFine*mesh->Nelements*sizeof(dfloat));
+#endif
   
   // build degree 1 coarsening and prolongation matrices and kernels
   
@@ -140,6 +200,7 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
   elliptic->precon->oasProlongationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
+#if 0
   // build parAlmond as place holder
   elliptic->precon->parAlmond = parAlmond::Init(mesh->device, mesh->comm, options);
   parAlmond::AMGSetup(elliptic->precon->parAlmond,
@@ -163,5 +224,6 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
     elliptic->precon->o_rhsG = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat));
     elliptic->precon->o_xG   = mesh->device.malloc(baseLevel->Ncols*sizeof(dfloat));
   }
+#endif
   
 }

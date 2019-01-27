@@ -41,62 +41,28 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   // hack to zero initial guess
   dfloat *h_x = (dfloat*) calloc(mesh1->Np*mesh1->Nelements, sizeof(dfloat));
   elliptic1->o_x.copyFrom(h_x);
-  elliptic1->o_r.copyFrom(h_x);
+  //  elliptic1->o_r.copyFrom(h_x);
 
+  // TW: possibility these device have difference queues
   mesh1->device.finish();
   mesh->device.finish();
-
-  o_z.copyFrom(h_x);
 
   // TW: do I need to mask here
   if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
   
-  // 2. solve coarse problem
-  //   a. call solver
-  //   b. prolongate (watch out for +=)
-
-  // TW - QUESTIONABLE FROM HERE ---->
-#if 1
-  elliptic_t *ellipticOasCoarse = (elliptic_t*) (precon->ellipticOasCoarse);
-  mesh_t   *meshCoarse   = ellipticOasCoarse->mesh;
-  precon_t *preconCoarse = ellipticOasCoarse->precon;
-  ogs_t    *ogsCoarse    = ellipticOasCoarse->ogs; 
-
-  // restrict to Q1
-  precon->oasRestrictionKernel(meshCoarse->Nelements, precon->o_oasRestrictionMatrix, o_r, precon->o_oasCoarseTmp);
-
-  // gather  Q1
-  ogsGather(precon->o_rhsG, precon->o_oasCoarseTmp, ogsDfloat, ogsAdd, ogsCoarse); 
-
-  // weight
-  elliptic->dotMultiplyKernel(ogsCoarse->Ngather,
-			      ogsCoarse->o_gatherInvDegree,
-			      precon->o_rhsG, precon->o_rhsG);
-
-  // solve coarse grid
-  parAlmond::Precon(precon->parAlmond, precon->o_xG, precon->o_rhsG);
-
-  // scatter Q1
-  ogsScatter(precon->o_oasCoarseTmp, precon->o_xG, ogsDfloat, ogsAdd, ogsCoarse);
-
-  // prolongate to QN
-  precon->oasProlongationKernel(mesh->Nelements, precon->o_oasProlongationMatrix, precon->o_oasCoarseTmp, o_z);
-
-  // TW - QUESTIONABLE TO HERE <----
-#endif
-
   // 3. collect patch rhs    
   ellipticOneRingExchange(elliptic, elliptic1, mesh1->Np*sizeof(dfloat), o_r, elliptic1->o_r);
 
+  // TW: possibility these device have difference queues
   mesh1->device.finish();
   mesh->device.finish();
-  
-  dfloat tol = 1.e-2;
 
+  // TW: what tolerance to use ?
+  dfloat tol = 1.e-8;
+  
   // patch solve
   if(mesh->rank==0) printf("Starting extended partition iterations:\n");
 
-  // TW turned off
   ellipticSolve(elliptic1, lambda, tol, elliptic1->o_r, elliptic1->o_x); // may need to zero o_x
 
   // sum up patches
@@ -105,11 +71,58 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   // do we need to scale by 1/overlapDegree ?
   
   // just retain core [ actually need to gs all the element contributions]
-  //  o_z.copyFrom(elliptic1->o_x, mesh->Nelements*mesh->Np*sizeof(dfloat), 0);
-  
-  elliptic->dotMultiplyAddKernel(mesh->Nelements*mesh->Np, elliptic->precon->oasOgs->o_invDegree, elliptic1->o_x, o_z);
+  elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, elliptic->precon->oasOgs->o_invDegree, elliptic1->o_x, o_z);
 
-  // TW: 
+  // 2. solve coarse problem
+  //   a. call solver
+  //   b. prolongate (watch out for +=)
+
+  mesh1->device.finish();
+  mesh->device.finish();
+
+#if 1
+  // TW: QUESTIONABLE FROM HERE ---->
+  
+
+  if(mesh->rank==0) printf("Starting coarse grid iterations:\n");
+  
+  elliptic_t *ellipticOasCoarse = (elliptic_t*) (precon->ellipticOasCoarse);
+  mesh_t   *meshCoarse   = ellipticOasCoarse->mesh;
+
+  meshCoarse->device.finish();
+  
+  precon->oasRestrictionKernel(meshCoarse->Nelements,
+			       precon->o_oasRestrictionMatrix,
+			       o_r, ellipticOasCoarse->o_r);
+
+  mesh1->device.finish();
+  mesh->device.finish();
+  meshCoarse->device.finish();
+  
+  ogsGatherScatter(ellipticOasCoarse->o_r, ogsDfloat, ogsAdd, ellipticOasCoarse->ogs);
+
+  ellipticOasCoarse->dotMultiplyKernel(meshCoarse->Nelements*meshCoarse->Np,
+				       meshCoarse->ogs->o_invDegree,
+				       ellipticOasCoarse->o_r,
+				       ellipticOasCoarse->o_r);
+  
+  ellipticSolve(ellipticOasCoarse, lambda, tol, ellipticOasCoarse->o_r, ellipticOasCoarse->o_x);
+
+  mesh1->device.finish();
+  mesh->device.finish();
+  meshCoarse->device.finish();
+  
+  // prolongate to QN (note kernel expects restriction matrix)
+  // do we need to weight the sum against patches?
+  precon->oasProlongationKernel(mesh->Nelements, precon->o_oasRestrictionMatrix,
+				ellipticOasCoarse->o_x, o_z);
+
+  meshCoarse->device.finish();
+  if(mesh->rank==0) printf("Ending coarse grid iterations:\n");  
+  // TW: QUESTIONABLE TO HERE <----
+#endif
+  
+  // TW: is this needed ?
   if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_z);
   
   free(h_x);
