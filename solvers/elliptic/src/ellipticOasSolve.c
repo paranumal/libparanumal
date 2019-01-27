@@ -58,7 +58,7 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   mesh->device.finish();
 
   // TW: what tolerance to use ?
-  dfloat tol = 1.e-8;
+  dfloat tol = 1.e-3;
   
   // patch solve
   if(mesh->rank==0) printf("Starting extended partition iterations:\n");
@@ -73,22 +73,20 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   // just retain core [ actually need to gs all the element contributions]
   elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, elliptic->precon->oasOgs->o_invDegree, elliptic1->o_x, o_z);
 
+#if 1
   // 2. solve coarse problem
   //   a. call solver
   //   b. prolongate (watch out for +=)
 
-  mesh1->device.finish();
-  mesh->device.finish();
-
-#if 1
   // TW: QUESTIONABLE FROM HERE ---->
-  
-
+  MPI_Barrier(mesh->comm);
   if(mesh->rank==0) printf("Starting coarse grid iterations:\n");
   
   elliptic_t *ellipticOasCoarse = (elliptic_t*) (precon->ellipticOasCoarse);
   mesh_t   *meshCoarse   = ellipticOasCoarse->mesh;
 
+  mesh1->device.finish();
+  mesh->device.finish();
   meshCoarse->device.finish();
   
   precon->oasRestrictionKernel(meshCoarse->Nelements,
@@ -98,16 +96,23 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   mesh1->device.finish();
   mesh->device.finish();
   meshCoarse->device.finish();
+
+  if (ellipticOasCoarse->Nmasked) meshCoarse->maskKernel(ellipticOasCoarse->Nmasked, ellipticOasCoarse->o_maskIds,
+							 ellipticOasCoarse->o_r);
   
   ogsGatherScatter(ellipticOasCoarse->o_r, ogsDfloat, ogsAdd, ellipticOasCoarse->ogs);
-
+  
   ellipticOasCoarse->dotMultiplyKernel(meshCoarse->Nelements*meshCoarse->Np,
 				       meshCoarse->ogs->o_invDegree,
 				       ellipticOasCoarse->o_r,
 				       ellipticOasCoarse->o_r);
+
+  dfloat *h_xCoarse = (dfloat*) calloc(meshCoarse->Np*meshCoarse->Nelements, sizeof(dfloat));
+  ellipticOasCoarse->o_x.copyFrom(h_xCoarse);
+  free(h_xCoarse);
   
   ellipticSolve(ellipticOasCoarse, lambda, tol, ellipticOasCoarse->o_r, ellipticOasCoarse->o_x);
-
+  
   mesh1->device.finish();
   mesh->device.finish();
   meshCoarse->device.finish();
@@ -117,8 +122,12 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   precon->oasProlongationKernel(mesh->Nelements, precon->o_oasRestrictionMatrix,
 				ellipticOasCoarse->o_x, o_z);
 
+  mesh1->device.finish();
+  mesh->device.finish();
   meshCoarse->device.finish();
-  if(mesh->rank==0) printf("Ending coarse grid iterations:\n");  
+
+  MPI_Barrier(mesh->comm);
+  if(mesh->rank==0) printf("Ending coarse grid iterations:\n Outer ");  
   // TW: QUESTIONABLE TO HERE <----
 #endif
   

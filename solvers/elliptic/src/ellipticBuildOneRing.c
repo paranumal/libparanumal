@@ -504,6 +504,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   mesh1->Nfaces = mesh->Nfaces;
   mesh1->NfaceVertices = mesh->NfaceVertices;
   mesh1->Nnodes = mesh->Nnodes;
+  mesh1->Nfields = mesh->Nfields;
   
   mesh1->N   = mesh->N;
   
