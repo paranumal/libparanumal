@@ -58,7 +58,7 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   mesh->device.finish();
 
   // TW: what tolerance to use ?
-  dfloat tol = 1.e-3;
+  dfloat tol = 1e-1;
   
   // patch solve
   if(mesh->rank==0) printf("Starting extended partition iterations:\n");
@@ -73,7 +73,7 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   // just retain core [ actually need to gs all the element contributions]
   elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, elliptic->precon->oasOgs->o_invDegree, elliptic1->o_x, o_z);
 
-#if 1
+#if 0
   // 2. solve coarse problem
   //   a. call solver
   //   b. prolongate (watch out for +=)
