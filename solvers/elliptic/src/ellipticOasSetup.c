@@ -65,6 +65,7 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
 
     printf("=============BUILDING OAS COARSE LEVEL OF DEGREE %d==================\n", Nc);
     //    ellipticOasCoarse = ellipticBuildMultigridLevel(elliptic,Nc,%m    mesh_t *mesh1 = (mesh_t*) calloc(1, sizeof(mesh_t)); // check
+    meshN1->N   = 1;
 
     meshN1->comm = mesh->comm;
     meshN1->rank = mesh->rank;
@@ -75,8 +76,8 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
     meshN1->Nfaces = mesh->Nfaces;
     meshN1->NfaceVertices = mesh->NfaceVertices;
     meshN1->Nnodes = mesh->Nnodes;
+    meshN1->Nfields = mesh->Nfields;
     
-    meshN1->N   = mesh->N;
     meshN1->faceVertices = mesh->faceVertices;
     meshN1->Nelements = mesh->Nelements;
     meshN1->EX = mesh->EX;
@@ -91,7 +92,7 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
 
     meshConnectBoundary(meshN1);
     
-    meshLoadReferenceNodesHex3D(meshN1, 1); // degree 1
+    meshLoadReferenceNodesHex3D(meshN1, meshN1->N); // degree 1
 
     meshPhysicalNodesHex3D(meshN1); // rely on trilinear map for hexes
     
@@ -114,9 +115,18 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
     meshN1->computeStream = mesh->computeStream;
     meshN1->device.setStream(mesh->defaultStream);
 
-    occa::properties kernelInfoN1 = kernelInfo;
+    occa::properties kernelInfoN1;
+
+    kernelInfoN1["defines"].asObject();
+    kernelInfoN1["includes"].asArray();
+    kernelInfoN1["header"].asArray();
+    kernelInfoN1["flags"].asObject();
+    
     meshOccaPopulateDevice3D(meshN1, optionsN1, kernelInfoN1);
-  
+
+    std::cout << "KINFO LOOK AT THIS: " << kernelInfoN1 << std::endl;
+    std::cout << "OPTIO LOOK AT THIS: " << optionsN1 << std::endl;
+    
     // set up
     ellipticOasCoarse = ellipticSetup(meshN1, lambda, kernelInfoN1, optionsN1);
     

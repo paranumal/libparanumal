@@ -169,13 +169,10 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 	
     if (cgOptions.verbose&&(mesh->rank==0)) {
 
-      //      printf("TESTING: rdotr = %17.15lf, alpha = %17.15lf, pAp = %17.15lf, rdotz1 = %17.15lf\n",
-      //	     rdotr, alpha, pAp, rdotz1);
-      
       if(rdotr<0)
 	printf("WARNING CG: rdotr = %17.15lf\n", rdotr);
       
-      printf("CG: it %d r norm %12.12lf alpha = %lf \n", iter, sqrt(rdotr), alpha);    
+      printf("CG: it %d r norm %12.12le alpha = %le \n", iter, sqrt(rdotr), alpha);    
     }
     if(iter==1){
       rlim2 = rdotr*eps*eps;
@@ -323,7 +320,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     rdotr1 = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
     
     if (cgOptions.verbose&&(mesh->rank==0)) 
-      printf("CG: it %d r norm %12.12f alpha = %f \n",Niter, sqrt(rdotr1), alpha);
+      printf("CG: it %d r norm %12.12le alpha = %le \n",Niter, sqrt(rdotr1), alpha);
 
     if(rdotr1 < TOL) {
       rdotr0 = rdotr1;
