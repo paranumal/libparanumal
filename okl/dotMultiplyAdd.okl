@@ -24,23 +24,16 @@ SOFTWARE.
 
 */
 
-#include "elliptic.h"
 
-int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
-                  occa::memory &o_r, occa::memory &o_x){
-  
-  mesh_t *mesh = elliptic->mesh;
-  setupAide options = elliptic->options;
+@kernel void dotMultiplyAdd(const dlong N,
+			    @restrict const  dfloat *  w,
+			    @restrict const  dfloat *  v,
+			    @restrict dfloat *  z){
 
-  int Niter = 0;
-  int maxIter = 1000; 
-
-  options.getArgs("MAXIMUM ITERATIONS", maxIter);
-  
-  double start = 0.0, end =0.0;
-  
-  Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter);
- 
-  return Niter;
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
+    if(n<N){
+      z[n] += w[n]*v[n];
+    }
+  }
 
 }

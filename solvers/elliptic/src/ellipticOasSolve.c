@@ -58,22 +58,21 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   mesh->device.finish();
 
   // TW: what tolerance to use ?
-  dfloat tol = 1e-1;
+  dfloat tol1 = 1e-2;
   
   // patch solve
   if(mesh->rank==0) printf("Starting extended partition iterations:\n");
 
-  ellipticSolve(elliptic1, lambda, tol, elliptic1->o_r, elliptic1->o_x); // may need to zero o_x
+  ellipticSolve(elliptic1, lambda, tol1, elliptic1->o_r, elliptic1->o_x); // may need to zero o_x
 
-  // sum up patches
-  ogsGatherScatter(elliptic1->o_x, ogsDfloat, ogsAdd, elliptic->precon->oasOgs);
-
-  // do we need to scale by 1/overlapDegree ?
+  // will gather over all patches - so have to remove local multiplicity
+  elliptic1->dotMultiplyKernel(mesh1->Nelements*mesh1->Np, elliptic1->ogs->o_invDegree, elliptic1->o_x, elliptic1->o_z);
   
-  // just retain core [ actually need to gs all the element contributions]
-  elliptic->dotMultiplyKernel(mesh->Nelements*mesh->Np, elliptic->precon->oasOgs->o_invDegree, elliptic1->o_x, o_z);
+  // sum up patches
+  ogsGatherScatter(elliptic1->o_z, ogsDfloat, ogsAdd, elliptic->precon->oasOgs);
 
-#if 0
+  o_z.copyFrom(elliptic1->o_z, mesh->Nelements*mesh->Np*sizeof(dfloat), 0);
+  
   // 2. solve coarse problem
   //   a. call solver
   //   b. prolongate (watch out for +=)
@@ -110,8 +109,10 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   dfloat *h_xCoarse = (dfloat*) calloc(meshCoarse->Np*meshCoarse->Nelements, sizeof(dfloat));
   ellipticOasCoarse->o_x.copyFrom(h_xCoarse);
   free(h_xCoarse);
+
+  dfloat tolCoarse = 1e-2;
   
-  ellipticSolve(ellipticOasCoarse, lambda, tol, ellipticOasCoarse->o_r, ellipticOasCoarse->o_x);
+  ellipticSolve(ellipticOasCoarse, lambda, tolCoarse, ellipticOasCoarse->o_r, ellipticOasCoarse->o_x);
   
   mesh1->device.finish();
   mesh->device.finish();
@@ -128,9 +129,7 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
 
   MPI_Barrier(mesh->comm);
   if(mesh->rank==0) printf("Ending coarse grid iterations:\n Outer ");  
-  // TW: QUESTIONABLE TO HERE <----
-#endif
-  
+
   // TW: is this needed ?
   if (elliptic->Nmasked) mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_z);
   
