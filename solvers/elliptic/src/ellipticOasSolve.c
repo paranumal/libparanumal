@@ -83,14 +83,26 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   mesh->device.finish();
   meshCoarse->device.finish();
   
+  occa::memory o_tmpCoarse = mesh->device.malloc(meshCoarse->Np*meshCoarse->Nelements*sizeof(dfloat));
+  
+#if 1
   precon->oasRestrictionKernel(meshCoarse->Nelements,
 			       precon->o_oasRestrictionMatrix,
 			       o_r, ellipticOasCoarse->o_r);
+#else
+  // do this on mesh device
+  precon->oasRestrictionKernel(meshCoarse->Nelements,
+			       precon->o_oasRestrictionMatrix,
+			       o_r, o_tmpCoarse);
 
+  // copy from mesh device to coarse device
+  o_tmpCoarse.copyTo(ellipticOasCoarse->o_r.ptr());
+#endif
+  
   mesh1->device.finish();
   mesh->device.finish();
   meshCoarse->device.finish();
-
+  
   // why do I Have to do (1/deg)*S*G*o_rCoarse here ? ---------->
   ogsGatherScatter(ellipticOasCoarse->o_r, ogsDfloat, ogsAdd, ellipticOasCoarse->ogs);
 
@@ -111,16 +123,27 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   mesh1->device.finish();
   mesh->device.finish();
   meshCoarse->device.finish();
-  
+
   // prolongate to QN (note kernel expects restriction matrix)
   // do we need to weight the sum against patches?
+#if 1
   precon->oasProlongationKernel(mesh->Nelements, precon->o_oasRestrictionMatrix,
 				ellipticOasCoarse->o_x, o_z);
+#else
+  // copy from coarse device to mesh device
+  o_tmpCoarse.copyFrom(ellipticOasCoarse->o_x.ptr());
+
+  // this happens on the mesh device
+  precon->oasProlongationKernel(mesh->Nelements, precon->o_oasRestrictionMatrix,
+				o_tmpCoarse, o_z);
+#endif
 
   mesh1->device.finish();
   mesh->device.finish();
   meshCoarse->device.finish();
 
+  o_tmpCoarse.free();
+  
   if(mesh->rank==0) printf("Ending coarse grid iterations:\n Outer ");  
   
 }

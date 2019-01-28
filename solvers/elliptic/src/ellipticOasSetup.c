@@ -113,12 +113,6 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
     optionsN1.setArgs(string("POLYNOMIAL DEGREE"), string("1"));
     optionsN1.setArgs(string("MAXIMUM ITERATIONS"), string("4"));
     //    optionsN1.setArgs(string("PARALMOND CYCLE"),   string("VCYCLE"));
-    
-    meshN1->device = mesh->device; // check this
-    meshN1->defaultStream = mesh->defaultStream;
-    meshN1->dataStream = mesh->dataStream;
-    meshN1->computeStream = mesh->computeStream;
-    meshN1->device.setStream(mesh->defaultStream);
 
     occa::properties kernelInfoN1;
 
@@ -126,8 +120,18 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
     kernelInfoN1["includes"].asArray();
     kernelInfoN1["header"].asArray();
     kernelInfoN1["flags"].asObject();
-    
+
+#if 0
+    optionsN1.setArgs(string("THREAD MODEL"),    string("Serial"));
+    meshOccaSetup3D(meshN1, optionsN1, kernelInfoN1);
+#else
+    meshN1->device = mesh->device; // check this
+    meshN1->defaultStream = mesh->defaultStream;
+    meshN1->dataStream = mesh->dataStream;
+    meshN1->computeStream = mesh->computeStream;
+    meshN1->device.setStream(mesh->defaultStream);
     meshOccaPopulateDevice3D(meshN1, optionsN1, kernelInfoN1);
+#endif
 
     //    std::cout << "KINFO LOOK AT THIS: " << kernelInfoN1 << std::endl;
     //    std::cout << "OPTIO LOOK AT THIS: " << optionsN1 << std::endl;
