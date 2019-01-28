@@ -605,7 +605,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
 
   // manually specify preconditioner for oneRing grid
   options1.setArgs(string("PRECONDITIONER"),     string("MULTIGRID"));
-  options1.setArgs(string("MAXIMUM ITERATIONS"), string("2"));
+  options1.setArgs(string("MAXIMUM ITERATIONS"), string("1"));
 
   //options1.setArgs(string("PRECONDITIONER"), string("SEMFEM"));
   //  options1.setArgs(string("POLYNOMIAL DEGREE"),  string("1"));

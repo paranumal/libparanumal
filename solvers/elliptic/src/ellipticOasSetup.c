@@ -111,7 +111,7 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
     // optionsN1.setArgs(string("PRECONDITIONER"),    string("FULLALLMOND"));
     optionsN1.setArgs(string("PRECONDITIONER"),    string("MULTIGRID"));
     optionsN1.setArgs(string("POLYNOMIAL DEGREE"), string("1"));
-    optionsN1.setArgs(string("MAXIMUM ITERATIONS"), string("2"));
+    optionsN1.setArgs(string("MAXIMUM ITERATIONS"), string("4"));
     //    optionsN1.setArgs(string("PARALMOND CYCLE"),   string("VCYCLE"));
     
     meshN1->device = mesh->device; // check this
