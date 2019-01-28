@@ -604,15 +604,22 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   setupAide options1 = elliptic->options; // check this
 
   // manually specify preconditioner for oneRing grid
-  options1.setArgs(string("PRECONDITIONER"),     string("MULTIGRID"));
-  // options1.setArgs(string("PRECONDITIONER"),     string("JACOBI"));
-  options1.setArgs(string("MAXIMUM ITERATIONS"), string("1"));
+  //  options1.setArgs(string("PRECONDITIONER"),     string("MULTIGRID"));
+  // options1.setArgs(string("PRECONDITIONER"),     string("JACOBI"));/
+  //  options1.setArgs(string("MAXIMUM ITERATIONS"), string("1"));
+  //  options1.setArgs(string("FIXED ITERATION COUNT"), string("1"));
 
   //options1.setArgs(string("PRECONDITIONER"), string("SEMFEM"));
   //  options1.setArgs(string("POLYNOMIAL DEGREE"),  string("1"));
   //options1.setArgs("PRECONDITIONER", "JACOBI");
   
   //  occa::properties kernelInfo1 = kernelInfo;
+
+  options1.setArgs(string("KRYLOV SOLVER"),        string("PCG"));
+  options1.setArgs(string("PRECONDITIONER"),       string("MULTIGRID"));
+  options1.setArgs(string("MAXIMUM ITERATIONS"),   string("1"));
+  options1.setArgs(string("FIXED ITERATION COUNT"),string("TRUE"));
+  options1.setArgs(string("PARALMOND CYCLE"),string("VCYCLE"));
   
   mesh1->device = mesh->device; // check this
 #if 1

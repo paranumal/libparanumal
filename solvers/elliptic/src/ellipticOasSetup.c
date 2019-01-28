@@ -109,11 +109,14 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
     setupAide optionsN1 = elliptic->options; // check this
     // optionsN1.setArgs(string("PRECONDITIONER"),    string("MULTIGRID"));
     // optionsN1.setArgs(string("PRECONDITIONER"),    string("FULLALLMOND"));
-    optionsN1.setArgs(string("PRECONDITIONER"),    string("MULTIGRID"));
-    //optionsN1.setArgs(string("PRECONDITIONER"),    string("JACOBI"));
-    optionsN1.setArgs(string("POLYNOMIAL DEGREE"), string("1"));
-    optionsN1.setArgs(string("MAXIMUM ITERATIONS"), string("2"));
-    //    optionsN1.setArgs(string("PARALMOND CYCLE"),   string("VCYCLE"));
+    optionsN1.setArgs(string("KRYLOV SOLVER"),        string("PCG"));
+    optionsN1.setArgs(string("PRECONDITIONER"),       string("MULTIGRID"));
+    optionsN1.setArgs(string("MAXIMUM ITERATIONS"),   string("1"));
+    optionsN1.setArgs(string("FIXED ITERATION COUNT"),string("TRUE"));
+    optionsN1.setArgs(string("PARALMOND CYCLE"),string("VCYCLE"));
+    
+    //optionsN1.setArgs(string("PRECONDITIONER"),     string("JACOBI"));
+    optionsN1.setArgs(string("POLYNOMIAL DEGREE"),    string("1"));
 
     occa::properties kernelInfoN1;
 

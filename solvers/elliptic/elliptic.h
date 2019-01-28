@@ -154,14 +154,25 @@ typedef struct {
   occa::kernel partialIpdgKernel;
   occa::kernel rhsBCIpdgKernel;
 
-  
-
   // combined PCG update step
   int             NthreadsUpdatePCG;
   hlong           NblocksUpdatePCG;
   dfloat         *tmpNormr;
   occa::memory  o_tmpNormr;
   occa::kernel  updatePCGKernel;
+
+  // combined NBPCG update steps
+  dfloat *tmppdots;
+  dfloat *tmprdotz;
+  dfloat *tmpzdotz;
+  occa::kernel update1NBPCGKernel;
+  occa::kernel update2NBPCGKernel;
+  occa::memory  o_tmppdots;
+  occa::memory  o_tmprdotz;
+  occa::memory  o_tmpzdotz;
+  occa::memory  o_s;
+  occa::memory  o_S;
+  occa::memory  o_Z;
   
 }elliptic_t;
 
@@ -266,6 +277,21 @@ void ellipticOneRingExchange(elliptic_t *elliptic,
 			     size_t Nbytes,       // message size per element
 			     occa::memory &o_q,
 			     occa::memory &o_qOneRing);
+
+
+void ellipticNonBlockingUpdate1NBPCG(elliptic_t *elliptic,
+				     occa::memory &o_z, occa::memory &o_Z, const dfloat beta,
+				     occa::memory &o_p, occa::memory &o_s,
+				     dfloat *localpdots, dfloat *globalpdots, MPI_Request *request);
+
+void ellipticNonBlockingUpdate2NBPCG(elliptic_t *elliptic,
+				     occa::memory &o_s, occa::memory &o_S, const dfloat alpha,
+				     occa::memory &o_r, occa::memory &o_z,
+				     dfloat *localdots, dfloat *globaldots, MPI_Request *request);
+
+int nbpcg(elliptic_t* elliptic, dfloat lambda, 
+	  occa::memory &o_r, occa::memory &o_x, 
+	  const dfloat tol, const int MAXIT);
 
 #endif
 

@@ -110,6 +110,7 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
 				       meshCoarse->ogs->o_invDegree,
 				       ellipticOasCoarse->o_r,
 				       ellipticOasCoarse->o_r);
+
   // <----------
   
   dfloat *h_xCoarse = (dfloat*) calloc(meshCoarse->Np*meshCoarse->Nelements, sizeof(dfloat));
