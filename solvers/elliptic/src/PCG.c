@@ -45,6 +45,11 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   setupAide options = elliptic->options;
   
   const cgOptions_t &cgOptions = elliptic->cgOptions;
+
+  int fixedIterationCountFlag = 0;
+  if(options.compareArgs("FIXED ITERATION COUNT", "TRUE")){
+    fixedIterationCountFlag = 1;
+  }
   
   // register scalars
   dfloat rdotz1 = 0;
@@ -180,7 +185,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     
     rnorm = sqrt(rdotr);
     
-    if(rdotr<=rlim2) break;
+    if(rdotr<=rlim2 && !fixedIterationCountFlag) break;
     
   }
 

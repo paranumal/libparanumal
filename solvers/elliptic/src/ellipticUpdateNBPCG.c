@@ -117,10 +117,10 @@ void ellipticNonBlockingUpdate1NBPCG(elliptic_t *elliptic,
   
   if(cgOptions.serial==1 && cgOptions.continuous==1){
     
-    pdots = ellipticSerialUpdate1NBPCG(mesh->Nq, mesh->Nelements, 
-				       elliptic->o_invDegree,
-				       o_z, o_Z, beta, o_p, o_s);
-
+    localpdots[0] = ellipticSerialUpdate1NBPCG(mesh->Nq, mesh->Nelements, 
+					       elliptic->o_invDegree,
+					       o_z, o_Z, beta, o_p, o_s);
+    
   }
   else{
     if(!cgOptions.continuous){ // e.g. IPDG
@@ -135,7 +135,7 @@ void ellipticNonBlockingUpdate1NBPCG(elliptic_t *elliptic,
       elliptic->update1NBPCGKernel(mesh->Nelements*mesh->Np, elliptic->NblocksUpdatePCG,
 				   elliptic->o_invDegree, o_z, o_Z, beta, o_p, o_s, elliptic->o_tmppdots);
       
-      elliptic->o_tmpNormr.copyTo(elliptic->tmppdots);
+      elliptic->o_tmppdots.copyTo(elliptic->tmppdots);
       
       *localpdots = 0;
       for(int n=0;n<elliptic->NblocksUpdatePCG;++n){

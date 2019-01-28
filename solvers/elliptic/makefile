@@ -56,6 +56,8 @@ $(ALMONDDIR)/parAlmond.hpp \
 
 # list of objects to be compiled
 AOBJS    = \
+./src/NBPCG.o \
+./src/ellipticUpdateNBPCG.o \
 ./src/ellipticOasSolve.o \
 ./src/ellipticKernelInfo.o \
 ./src/ellipticOasSetup.o \
