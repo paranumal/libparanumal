@@ -107,8 +107,13 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
     meshParallelConnectNodes(meshN1); // data
 
     setupAide optionsN1 = elliptic->options; // check this
-    optionsN1.setArgs(string("PRECONDITIONER"), string("MULTIGRID"));
-  
+    // optionsN1.setArgs(string("PRECONDITIONER"),    string("MULTIGRID"));
+    // optionsN1.setArgs(string("PRECONDITIONER"),    string("FULLALLMOND"));
+    optionsN1.setArgs(string("PRECONDITIONER"),    string("MULTIGRID"));
+    optionsN1.setArgs(string("POLYNOMIAL DEGREE"), string("1"));
+    optionsN1.setArgs(string("MAXIMUM ITERATIONS"), string("2"));
+    //    optionsN1.setArgs(string("PARALMOND CYCLE"),   string("VCYCLE"));
+    
     meshN1->device = mesh->device; // check this
     meshN1->defaultStream = mesh->defaultStream;
     meshN1->dataStream = mesh->dataStream;
@@ -124,8 +129,8 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
     
     meshOccaPopulateDevice3D(meshN1, optionsN1, kernelInfoN1);
 
-    std::cout << "KINFO LOOK AT THIS: " << kernelInfoN1 << std::endl;
-    std::cout << "OPTIO LOOK AT THIS: " << optionsN1 << std::endl;
+    //    std::cout << "KINFO LOOK AT THIS: " << kernelInfoN1 << std::endl;
+    //    std::cout << "OPTIO LOOK AT THIS: " << optionsN1 << std::endl;
     
     // set up
     ellipticOasCoarse = ellipticSetup(meshN1, lambda, kernelInfoN1, optionsN1);

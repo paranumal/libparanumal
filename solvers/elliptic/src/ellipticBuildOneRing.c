@@ -604,8 +604,11 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   setupAide options1 = elliptic->options; // check this
 
   // manually specify preconditioner for oneRing grid
+  options1.setArgs(string("PRECONDITIONER"),     string("MULTIGRID"));
+  options1.setArgs(string("MAXIMUM ITERATIONS"), string("2"));
+
   //options1.setArgs(string("PRECONDITIONER"), string("SEMFEM"));
-  options1.setArgs(string("PRECONDITIONER"), string("MULTIGRID"));
+  //  options1.setArgs(string("POLYNOMIAL DEGREE"),  string("1"));
   //options1.setArgs("PRECONDITIONER", "JACOBI");
   
   //  occa::properties kernelInfo1 = kernelInfo;
@@ -623,8 +626,8 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   // set up
   elliptic_t *elliptic1 = ellipticSetup(mesh1, lambda, kernelInfo, options1);
 
-  cout << "options1: " << elliptic1->options << endl;
-  cout << "options: " << elliptic->options << endl;
+  //  cout << "options1: " << elliptic1->options << endl;
+  //  cout << "options: " << elliptic->options << endl;
   
   dfloat *ggeoNoJW = (dfloat*) calloc(mesh1->Np*mesh1->Nelements*6,sizeof(dfloat));
   for(int e=0;e<mesh1->Nelements;++e){
