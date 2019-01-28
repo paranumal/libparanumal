@@ -69,7 +69,7 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   occa::memory &o_S  = elliptic->o_S;
   occa::memory &o_z  = elliptic->o_z;
   occa::memory &o_Z  = elliptic->o_Z;
-  occa::memory &o_Ap = elliptic->o_Ap;
+  occa::memory &o_Ax = elliptic->o_Ax;
 
   MPI_Request request;
   MPI_Status  status;
@@ -77,11 +77,11 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   dfloat *localdots = (dfloat*) calloc(2, sizeof(dfloat));
   dfloat *globaldots = (dfloat*) calloc(2, sizeof(dfloat));
   
-  // Ap = A*x
-  ellipticOperator(elliptic, lambda, o_x, o_Ap, dfloatString); // WRONG FOR IPDG
+  // Ax = A*x
+  ellipticOperator(elliptic, lambda, o_x, o_Ax, dfloatString); // WRONG FOR IPDG
   
   // subtract r = b - A*x
-  ellipticScaledAdd(elliptic, -one, o_Ap, one, o_r);
+  ellipticScaledAdd(elliptic, -one, o_Ax, one, o_r);
 
   // mask ?
   if (elliptic->Nmasked) 
@@ -104,13 +104,12 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   normz0 = sqrt(zdotz0);
   // ]
 
-  dfloat zlim2 = zdotz0*tol*tol;
+  dfloat zlim2 = gamma0*tol*tol;
 
   int iter;
-  for(iter=1;iter<=MAXIT;++iter){
 
-    if(iter>1) beta0 = gamma0/gamma1;
-    else       beta0 = 0;
+  beta0 = 0;
+  for(iter=1;iter<=MAXIT;++iter){
 
     // p <= z + beta*p
     // s <= Z + beta*s
@@ -127,17 +126,15 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
     // alpha = gamma/delta
     alpha0 = gamma0/delta0;
 
-    // x <= x + alpha*p
-    ellipticScaledAdd(elliptic, alpha0, o_p, one, o_x);
-
-    // FIX FLEXIBLE LATER
-    
     // r <= r - alpha*s    
     // z <= z - alpha*S
     // r.z
     // z.z
     ellipticNonBlockingUpdate2NBPCG(elliptic, o_s, o_S, alpha0, o_r, o_z, localdots, globaldots, &request);
 
+    // x <= x + alpha*p (delayed)
+    ellipticScaledAdd(elliptic, alpha0, o_p, one, o_x);
+    
     // Z = A*z
     ellipticOperator(elliptic, lambda, o_z, o_Z, dfloatString); // WRONG FOR IPDG        
     
@@ -147,17 +144,19 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
     gamma0 = globaldots[0]; // gamma = r.z
     zdotz0 = globaldots[1]; // 
     normz0 = sqrt(zdotz0);
+
+    beta0 = gamma0/gamma1;
     
     if (cgOptions.verbose&&(mesh->rank==0)) {
 
       if(zdotz0<0)
 	printf("WARNING CG: zdotz = %17.15lf\n", zdotz0);
       
-      printf("CG: it %d z norm %12.12le alpha = %le zdotz = %le\n",
-	     iter, normz0, alpha0, zdotz0);
+      printf("CG: it %d z norm %12.12le gamma = %le zdotz = %le\n",
+	     iter, normz0, gamma0, zdotz0);
     }
 
-    if(zdotz0<=zlim2 && !fixedIterationCountFlag) break;
+    if(gamma0<=zlim2 && !fixedIterationCountFlag) break;
     
   }
 
