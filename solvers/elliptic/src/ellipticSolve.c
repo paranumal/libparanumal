@@ -36,10 +36,13 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
   int maxIter = 1000; 
 
   options.getArgs("MAXIMUM ITERATIONS", maxIter);
-  
+
   double start = 0.0, end =0.0;
-  
-  Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter);
+
+  if(!options.compareArgs("KRYLOV SOLVER", "NONBLOCKING"))
+    Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter);
+  else
+    Niter = nbpcg (elliptic, lambda, o_r, o_x, tol, maxIter);
  
   return Niter;
 

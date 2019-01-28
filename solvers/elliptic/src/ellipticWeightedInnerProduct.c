@@ -136,3 +136,5 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
 
   return globalwab;
 }
+
+

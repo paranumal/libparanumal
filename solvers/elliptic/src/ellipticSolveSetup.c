@@ -100,7 +100,23 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   
   elliptic->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), elliptic->grad);
+  
+  if(options.compareArgs("KRYLOV SOLVER", "NONBLOCKING")){
+    elliptic->o_s   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->z);
+    elliptic->o_S   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->z);
+    elliptic->o_Z   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->z);
 
+    elliptic->tmppdots = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+    elliptic->o_tmppdots = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmppdots);
+
+    elliptic->tmprdotz = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+    elliptic->o_tmprdotz = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmprdotz);
+
+    elliptic->tmpzdotz = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+    elliptic->o_tmpzdotz = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpzdotz);
+    
+  }
+  
   //setup async halo stream
   elliptic->defaultStream = mesh->defaultStream;
   elliptic->dataStream = mesh->dataStream;
@@ -482,6 +498,17 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticUpdatePCG.okl",
 				 "ellipticUpdatePCG", dfloatKernelInfo);
 
+
+      // combined update for Non-blocking PCG
+      elliptic->update1NBPCGKernel =
+	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticNonBlockingUpdateNBPCG.okl",
+				 "ellipticNonBlockingUpdate1NBPCG", dfloatKernelInfo);
+
+      elliptic->update2NBPCGKernel =
+	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticNonBlockingUpdateNBPCG.okl",
+				 "ellipticNonBlockingUpdate2NBPCG", dfloatKernelInfo);
+
+      
       
       // Not implemented for Quad3D !!!!!
       if (options.compareArgs("BASIS","BERN")) {
