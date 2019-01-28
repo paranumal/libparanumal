@@ -133,3 +133,4 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
 
   return globalwa2;
 }
+
