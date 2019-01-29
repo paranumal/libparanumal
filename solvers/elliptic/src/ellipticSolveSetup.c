@@ -517,22 +517,22 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
       // combined update for Non-blocking PCG
       elliptic->update1NBPCGKernel =
-	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticNonBlockingUpdateNBPCG.okl",
-				 "ellipticNonBlockingUpdate1NBPCG", dfloatKernelInfo);
+	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticUpdateNBPCG.okl",
+				 "ellipticUpdate1NBPCG", dfloatKernelInfo);
 
       elliptic->update2NBPCGKernel =
-	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticNonBlockingUpdateNBPCG.okl",
-				 "ellipticNonBlockingUpdate2NBPCG", dfloatKernelInfo);
+	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticUpdateNBPCG.okl",
+				 "ellipticUpdate2NBPCG", dfloatKernelInfo);
 
 
       // combined update for Non-blocking flexible PCG
       elliptic->update0NBFPCGKernel =
-	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticNonBlockingUpdateNBFPCG.okl",
-				 "ellipticNonBlockingUpdate0NBFPCG", dfloatKernelInfo);
+	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticUpdateNBFPCG.okl",
+				 "ellipticUpdate0NBFPCG", dfloatKernelInfo);
 
       elliptic->update1NBFPCGKernel =
-	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticNonBlockingUpdateNBFPCG.okl",
-				 "ellipticNonBlockingUpdate1NBFPCG", dfloatKernelInfo);
+	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticUpdateNBFPCG.okl",
+				 "ellipticUpdate1NBFPCG", dfloatKernelInfo);
       
       
       // Not implemented for Quad3D !!!!!
