@@ -199,8 +199,9 @@ void ogs::initKernels(MPI_Comm comm, occa::device device) {
 
   if (rank==0) printf("Compiling GatherScatter Kernels...");fflush(stdout);
 
-  for (int r=0;r<size;r++) {
-    if (r==rank) {
+  for (int r=0;r<2;r++){
+    if ((r==0 && rank==0) || (r==1 && rank>0)) {      
+
       ogs::gatherScatterKernel_floatAdd = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_floatAdd", kernelInfo);
       ogs::gatherScatterKernel_floatMul = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_floatMul", kernelInfo);
       ogs::gatherScatterKernel_floatMin = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_floatMin", kernelInfo);
