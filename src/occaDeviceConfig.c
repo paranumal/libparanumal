@@ -57,6 +57,8 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
 
   if (size==1) options.getArgs("DEVICE NUMBER" ,device_id);
 
+  device_id = device_id%2;
+  
 #ifdef OCCA_VERSION_1_0
   // read thread model/device/platform from options
   if(options.compareArgs("THREAD MODEL", "CUDA")){
@@ -111,6 +113,8 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   // change OCCA MEM BYTE ALIGNMENT
   occa::env::OCCA_MEM_BYTE_ALIGN = USE_OCCA_MEM_BYTE_ALIGN;
 #endif
+
+  mesh->device.UsePreCompiledKernels(mesh->rank!=0); 
   
   occa::initTimer(mesh->device);
 

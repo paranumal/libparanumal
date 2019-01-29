@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -84,8 +84,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     dfloat rkC[3]    ={  0.0,   gamma,   1.0};
 
     dfloat erkA[3*3] ={  0.0,     0.0,   0.0,\
-                       gamma,     0.0,   0.0,\
-                       delta, 1-delta,   0.0};
+			 gamma,     0.0,   0.0,\
+			 delta, 1-delta,   0.0};
     dfloat irkA[3*3] ={  0.0,     0.0,   0.0,\
                          0.0,   gamma,   0.0,\
                          0.0, 1-gamma, gamma};
@@ -119,9 +119,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     int Nrk = 4;
 
     dfloat erkA[4*4] ={                              0.0,                              0.0,                               0.0, 0.0,\
-                         1767732205903.0/2027836641118.0,                              0.0,                               0.0, 0.0,\
-                        5535828885825.0/10492691773637.0,  788022342437.0/10882634858940.0,                               0.0, 0.0,\
-                        6485989280629.0/16251701735622.0, -4246266847089.0/9704473918619.0, 10755448449292.0/10357097424841.0, 0.0};
+						     1767732205903.0/2027836641118.0,                              0.0,                               0.0, 0.0,\
+						     5535828885825.0/10492691773637.0,  788022342437.0/10882634858940.0,                               0.0, 0.0,\
+						     6485989280629.0/16251701735622.0, -4246266847089.0/9704473918619.0, 10755448449292.0/10357097424841.0, 0.0};
     dfloat erkB[4] = {1471266399579.0/7840856788654.0, \
                       -4482444167858.0/7529755066697.0, \
                       11266239266428.0/11593286722821.0, \
@@ -132,9 +132,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
                       1767732205903.0/4055673282236.0 - 2193209047091.0/5459859503100.0};
 
     dfloat irkA[4*4] ={                              0.0,                              0.0,                               0.0,                             0.0,\
-                         1767732205903.0/4055673282236.0,  1767732205903.0/4055673282236.0,                               0.0,                             0.0,\
-                        2746238789719.0/10658868560708.0,  -640167445237.0/6845629431997.0,   1767732205903.0/4055673282236.0,                             0.0,\
-                         1471266399579.0/7840856788654.0, -4482444167858.0/7529755066697.0, 11266239266428.0/11593286722821.0, 1767732205903.0/4055673282236.0};
+						     1767732205903.0/4055673282236.0,  1767732205903.0/4055673282236.0,                               0.0,                             0.0,\
+						     2746238789719.0/10658868560708.0,  -640167445237.0/6845629431997.0,   1767732205903.0/4055673282236.0,                             0.0,\
+						     1471266399579.0/7840856788654.0, -4482444167858.0/7529755066697.0, 11266239266428.0/11593286722821.0, 1767732205903.0/4055673282236.0};
     dfloat irkB[4] = {1471266399579.0/7840856788654.0,\
                       -4482444167858.0/7529755066697.0,\
                       11266239266428.0/11593286722821.0,\
@@ -145,9 +145,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
                       1767732205903.0/4055673282236.0 - 2193209047091.0/5459859503100.0};
 
     dfloat rkC[4] = {0.0, \
-                    1767732205903.0/2027836641118.0, \
-                    3.0/5.0, \
-                    1.0};
+		     1767732205903.0/2027836641118.0, \
+		     3.0/5.0, \
+		     1.0};
 
     dfloat prkA[4*4] ={  0.0,                             0.0,       0.0,   0.0,\
                          0.0, 1767732205903.0/2027836641118.0,       0.0,   0.0,\
@@ -331,10 +331,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->Re = ins->ubar/ins->nu;
 
   occa::properties kernelInfo;
- kernelInfo["defines"].asObject();
- kernelInfo["includes"].asArray();
- kernelInfo["header"].asArray();
- kernelInfo["flags"].asObject();
+  kernelInfo["defines"].asObject();
+  kernelInfo["includes"].asArray();
+  kernelInfo["header"].asArray();
+  kernelInfo["flags"].asObject();
 
   if(ins->dim==3){
     if(ins->elementType != QUADRILATERALS)
@@ -387,45 +387,45 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 #endif
   
 
-if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
-  (ins->elementType == QUADRILATERALS && ins->dim==3)){
-  printf("Setting up initial condition for BROWN-MINION test case...");
-  insBrownMinionQuad3D(ins);
-  ins->o_U.copyFrom(ins->U);
-  ins->o_P.copyFrom(ins->P);
-  printf("done\n");
+  if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
+     (ins->elementType == QUADRILATERALS && ins->dim==3)){
+    printf("Setting up initial condition for BROWN-MINION test case...");
+    insBrownMinionQuad3D(ins);
+    ins->o_U.copyFrom(ins->U);
+    ins->o_P.copyFrom(ins->P);
+    printf("done\n");
 
-  char fname[BUFSIZ];
-  string outName;
-  ins->options.getArgs("OUTPUT FILE NAME", outName);
-  sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, ins->frame++);
-  insPlotVTU(ins, fname);
-}else{
+    char fname[BUFSIZ];
+    string outName;
+    ins->options.getArgs("OUTPUT FILE NAME", outName);
+    sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, ins->frame++);
+    insPlotVTU(ins, fname);
+  }else{
 
-  for (int r=0;r<mesh->size;r++) {
-    if (r==mesh->rank) {
-      if (ins->dim==2) 
-        ins->setFlowFieldKernel =  mesh->device.buildKernel(DINS "/okl/insSetFlowField2D.okl", "insSetFlowField2D", kernelInfo);  
-      else
-        ins->setFlowFieldKernel =  mesh->device.buildKernel(DINS "/okl/insSetFlowField3D.okl", "insSetFlowField3D", kernelInfo);  
+    for (int r=0;r<2;r++){
+      if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
+	if (ins->dim==2) 
+	  ins->setFlowFieldKernel =  mesh->device.buildKernel(DINS "/okl/insSetFlowField2D.okl", "insSetFlowField2D", kernelInfo);  
+	else
+	  ins->setFlowFieldKernel =  mesh->device.buildKernel(DINS "/okl/insSetFlowField3D.okl", "insSetFlowField3D", kernelInfo);  
+      }
+      MPI_Barrier(mesh->comm);
     }
-    MPI_Barrier(mesh->comm);
+
+    ins->startTime =0.0;
+    options.getArgs("START TIME", ins->startTime);
+    ins->setFlowFieldKernel(mesh->Nelements,
+			    ins->startTime,
+			    mesh->o_x,
+			    mesh->o_y,
+			    mesh->o_z,
+			    ins->fieldOffset,
+			    ins->o_U,
+			    ins->o_P);
+    ins->o_U.copyTo(ins->U);
+    
   }
-
-  ins->startTime =0.0;
-  options.getArgs("START TIME", ins->startTime);
-  ins->setFlowFieldKernel(mesh->Nelements,
-                          ins->startTime,
-                          mesh->o_x,
-                          mesh->o_y,
-                          mesh->o_z,
-                          ins->fieldOffset,
-                          ins->o_U,
-                          ins->o_P);
-  ins->o_U.copyTo(ins->U);
-
-}
-
+  
   // set time step
   dfloat hmin = 1e9, hmax = 0;
   dfloat umax = 0;
@@ -433,31 +433,31 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
 
     if(ins->elementType==TRIANGLES || ins->elementType == TETRAHEDRA){
       for(int f=0;f<mesh->Nfaces;++f){
-        dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
-        dfloat sJ   = mesh->sgeo[sid + SJID];
-        dfloat invJ = mesh->sgeo[sid + IJID];
+	dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
+	dfloat sJ   = mesh->sgeo[sid + SJID];
+	dfloat invJ = mesh->sgeo[sid + IJID];
 
-        dfloat hest = 2./(sJ*invJ);
+	dfloat hest = 2./(sJ*invJ);
 
-        hmin = mymin(hmin, hest);
-        hmax = mymax(hmax, hest);
+	hmin = mymin(hmin, hest);
+	hmax = mymax(hmax, hest);
       }
     }else{
       for(int f=0;f<mesh->Nfaces;++f){
-        for(int n=0; n<mesh->Nfp; n++){
-        dlong sid = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n);
-        dfloat sJ   = mesh->sgeo[sid + SJID];
-        dfloat invJ = mesh->sgeo[sid + IJID];
+	for(int n=0; n<mesh->Nfp; n++){
+	  dlong sid = mesh->Nsgeo*(mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n);
+	  dfloat sJ   = mesh->sgeo[sid + SJID];
+	  dfloat invJ = mesh->sgeo[sid + IJID];
 
-        dfloat hest = 2./(sJ*invJ);
+	  dfloat hest = 2./(sJ*invJ);
 
-        hmin = mymin(hmin, hest);
-        hmax = mymax(hmax, hest);
+	  hmin = mymin(hmin, hest);
+	  hmax = mymax(hmax, hest);
+	}
       }
     }
-  }
 
-     // dfloat maxMagVecLoc = 0;
+    // dfloat maxMagVecLoc = 0;
 
     for(int n=0;n<mesh->Np;++n){
       const dlong id = n + mesh->Np*e;
@@ -471,9 +471,9 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
       //Squared maximum velocity
       dfloat numax;
       if (ins->dim==2)
-        numax = uxn*uxn + uyn*uyn;
+	numax = uxn*uxn + uyn*uyn;
       else 
-        numax = uxn*uxn + uyn*uyn + uzn*uzn;
+	numax = uxn*uxn + uyn*uyn + uzn*uzn;
 
       umax = mymax(umax, numax);
     }
@@ -538,97 +538,97 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
 
   //!!!!! Isosurface Setup !! remove those to seoperate library later !!!!
   if(ins->dim==3 && options.compareArgs("OUTPUT TYPE", "ISO"))
-  {
+    {
     
-    // Only one field is exported for iso-surface to reduce the file size
-    ins->isoNfields  = 1;   //1 + (ins->dim) + (1 + ins->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
-    ins->isoMaxNtris = 1.E7; 
-    //
-    options.getArgs("ISOSURFACE FIELD ID", ins->isoField); 
-    options.getArgs("ISOSURFACE COLOR ID", ins->isoColorField); 
-    options.getArgs("ISOSURFACE LEVEL NUMBER", ins->isoNlevels);
-    options.getArgs("ISOSURFACE CONTOUR MAX", ins->isoMaxVal); 
-    options.getArgs("ISOSURFACE CONTOUR MIN", ins->isoMinVal);
+      // Only one field is exported for iso-surface to reduce the file size
+      ins->isoNfields  = 1;   //1 + (ins->dim) + (1 + ins->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
+      ins->isoMaxNtris = 1.E7; 
+      //
+      options.getArgs("ISOSURFACE FIELD ID", ins->isoField); 
+      options.getArgs("ISOSURFACE COLOR ID", ins->isoColorField); 
+      options.getArgs("ISOSURFACE LEVEL NUMBER", ins->isoNlevels);
+      options.getArgs("ISOSURFACE CONTOUR MAX", ins->isoMaxVal); 
+      options.getArgs("ISOSURFACE CONTOUR MIN", ins->isoMinVal);
 
-    ins->isoMax    = (ins->dim + ins->isoNfields)*3*ins->isoMaxNtris;
-    ins->isoNtris  = (int*) calloc(1, sizeof(int));
-    ins->isoq      = (dfloat*) calloc(ins->isoMax, sizeof(dfloat)); 
+      ins->isoMax    = (ins->dim + ins->isoNfields)*3*ins->isoMaxNtris;
+      ins->isoNtris  = (int*) calloc(1, sizeof(int));
+      ins->isoq      = (dfloat*) calloc(ins->isoMax, sizeof(dfloat)); 
 
-    ins->o_isoq      = mesh->device.malloc(ins->isoMax*sizeof(dfloat), ins->isoq);
-    ins->o_isoNtris  = mesh->device.malloc(1*sizeof(int), ins->isoNtris);
+      ins->o_isoq      = mesh->device.malloc(ins->isoMax*sizeof(dfloat), ins->isoq);
+      ins->o_isoNtris  = mesh->device.malloc(1*sizeof(int), ins->isoNtris);
 
-    // Create all contour levels
-    dfloat *isoLevels = (dfloat*) calloc(ins->isoNlevels, sizeof(dfloat));
-    for(int l=0;l<ins->isoNlevels;++l)
-      isoLevels[l] = ins->isoMinVal + (ins->isoMaxVal-ins->isoMinVal)*l/(dfloat)(ins->isoNlevels-1);
+      // Create all contour levels
+      dfloat *isoLevels = (dfloat*) calloc(ins->isoNlevels, sizeof(dfloat));
+      for(int l=0;l<ins->isoNlevels;++l)
+	isoLevels[l] = ins->isoMinVal + (ins->isoMaxVal-ins->isoMinVal)*l/(dfloat)(ins->isoNlevels-1);
 
 
 
-    // GROUP LEVELS of ISOCONTOURS
+      // GROUP LEVELS of ISOCONTOURS
 
-    int levelsInGroup = 0; 
-    options.getArgs("ISOSURFACE GROUP NUMBER", levelsInGroup);
+      int levelsInGroup = 0; 
+      options.getArgs("ISOSURFACE GROUP NUMBER", levelsInGroup);
 
-    if(levelsInGroup==0) {printf("Number of levels in each group can not be zero!!!\n");  exit(EXIT_FAILURE);} 
-    if(levelsInGroup){
+      if(levelsInGroup==0) {printf("Number of levels in each group can not be zero!!!\n");  exit(EXIT_FAILURE);} 
+      if(levelsInGroup){
 
-      // Number of groups for isosurfaces
-      ins->isoGNgroups        = ins->isoNlevels/(levelsInGroup);  
-      if(ins->isoNlevels%(levelsInGroup))
-        ins->isoGNgroups++; 
+	// Number of groups for isosurfaces
+	ins->isoGNgroups        = ins->isoNlevels/(levelsInGroup);  
+	if(ins->isoNlevels%(levelsInGroup))
+	  ins->isoGNgroups++; 
 
-      ins->isoGNlevels        = (int *) calloc(ins->isoGNgroups,sizeof(int));
-      ins->isoGLvalues        = (dfloat **) calloc(ins->isoGNgroups,sizeof(dfloat*));
+	ins->isoGNlevels        = (int *) calloc(ins->isoGNgroups,sizeof(int));
+	ins->isoGLvalues        = (dfloat **) calloc(ins->isoGNgroups,sizeof(dfloat*));
 
-      for(int gr =0; gr<ins->isoGNgroups; gr++)
-      {
-        int nlevels = (gr+1)*levelsInGroup > ins->isoNlevels ? (ins->isoNlevels%levelsInGroup) : levelsInGroup;  
-        ins->isoGNlevels[gr] = nlevels;  
-        printf("Isosurface Group %d has %d levels\n", gr, ins->isoGNlevels[gr]);
-      }
+	for(int gr =0; gr<ins->isoGNgroups; gr++)
+	  {
+	    int nlevels = (gr+1)*levelsInGroup > ins->isoNlevels ? (ins->isoNlevels%levelsInGroup) : levelsInGroup;  
+	    ins->isoGNlevels[gr] = nlevels;  
+	    printf("Isosurface Group %d has %d levels\n", gr, ins->isoGNlevels[gr]);
+	  }
 
-      // Allocate memory for levels in each group
-      for (int gr =0;gr<ins->isoGNgroups;gr++)
-        ins->isoGLvalues[gr] = (dfloat *) calloc(ins->isoGNlevels[gr],sizeof(dfloat));
+	// Allocate memory for levels in each group
+	for (int gr =0;gr<ins->isoGNgroups;gr++)
+	  ins->isoGLvalues[gr] = (dfloat *) calloc(ins->isoGNlevels[gr],sizeof(dfloat));
 
-      int sk = 0; 
-      for (int gr =0;gr<ins->isoGNgroups;gr++){
-        printf("Isosurface Group %d Values\n", gr);        
-        for (int l=0;l<ins->isoGNlevels[gr];l++){
-          ins->isoGLvalues[gr][l] = isoLevels[sk + l];
-          printf("%.4f\t", ins->isoGLvalues[gr][l]);
-        }
-        printf("\n");
-      sk += ins->isoGNlevels[gr]; 
-      }
+	int sk = 0; 
+	for (int gr =0;gr<ins->isoGNgroups;gr++){
+	  printf("Isosurface Group %d Values\n", gr);        
+	  for (int l=0;l<ins->isoGNlevels[gr];l++){
+	    ins->isoGLvalues[gr][l] = isoLevels[sk + l];
+	    printf("%.4f\t", ins->isoGLvalues[gr][l]);
+	  }
+	  printf("\n");
+	  sk += ins->isoGNlevels[gr]; 
+	}
 
-      // Create levels for each group
-      ins->o_isoGLvalues     = (occa::memory *) malloc(ins->isoGNgroups*sizeof(occa::memory));
-      for (int gr =0;gr<ins->isoGNgroups;gr++)
-        ins->o_isoGLvalues[gr] = mesh->device.malloc(ins->isoGNlevels[gr]*sizeof(dfloat),ins->isoGLvalues[gr]);
+	// Create levels for each group
+	ins->o_isoGLvalues     = (occa::memory *) malloc(ins->isoGNgroups*sizeof(occa::memory));
+	for (int gr =0;gr<ins->isoGNgroups;gr++)
+	  ins->o_isoGLvalues[gr] = mesh->device.malloc(ins->isoGNlevels[gr]*sizeof(dfloat),ins->isoGLvalues[gr]);
     
-    }
-
-    // Interpolation operators form Np to PlotNp (equisapaced nodes of order >N generally)
-    dfloat *plotInterp = (dfloat*) calloc(mesh->plotNp*mesh->Np, sizeof(dfloat));
-    for(int n=0;n<mesh->plotNp;++n){
-      for(int m=0;m<mesh->Np;++m){
-        plotInterp[n+m*mesh->plotNp] = mesh->plotInterp[n*mesh->Np+m];
       }
-    }
-    ins->o_plotInterp = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(dfloat), plotInterp);
 
-    // EToV for local triangulation
-    int *plotEToV = (int*) calloc(mesh->plotNp*mesh->Np, sizeof(int));
-    for(int n=0;n<mesh->plotNelements;++n){
-      for(int m=0;m<mesh->plotNverts;++m){
-        plotEToV[n+m*mesh->plotNelements] = mesh->plotEToV[n*mesh->plotNverts+m];
+      // Interpolation operators form Np to PlotNp (equisapaced nodes of order >N generally)
+      dfloat *plotInterp = (dfloat*) calloc(mesh->plotNp*mesh->Np, sizeof(dfloat));
+      for(int n=0;n<mesh->plotNp;++n){
+	for(int m=0;m<mesh->Np;++m){
+	  plotInterp[n+m*mesh->plotNp] = mesh->plotInterp[n*mesh->Np+m];
+	}
       }
+      ins->o_plotInterp = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(dfloat), plotInterp);
+
+      // EToV for local triangulation
+      int *plotEToV = (int*) calloc(mesh->plotNp*mesh->Np, sizeof(int));
+      for(int n=0;n<mesh->plotNelements;++n){
+	for(int m=0;m<mesh->plotNverts;++m){
+	  plotEToV[n+m*mesh->plotNelements] = mesh->plotEToV[n*mesh->plotNverts+m];
+	}
+      }
+      ins->o_plotEToV = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(int), plotEToV);
+
+
     }
-    ins->o_plotEToV = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(int), plotEToV);
-
-
-  }
 
   
   
@@ -725,11 +725,11 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
       if (bc>0) {
-        for (int n=0;n<mesh->Nfp;n++) {
-          int fid = mesh->faceNodes[n+f*mesh->Nfp];
-          ins->VmapB[fid+e*mesh->Np] = mymin(bc,ins->VmapB[fid+e*mesh->Np]);
-          ins->PmapB[fid+e*mesh->Np] = mymax(bc,ins->PmapB[fid+e*mesh->Np]);
-        }
+	for (int n=0;n<mesh->Nfp;n++) {
+	  int fid = mesh->faceNodes[n+f*mesh->Nfp];
+	  ins->VmapB[fid+e*mesh->Np] = mymin(bc,ins->VmapB[fid+e*mesh->Np]);
+	  ins->PmapB[fid+e*mesh->Np] = mymax(bc,ins->PmapB[fid+e*mesh->Np]);
+	}
       }
     }
   }
@@ -749,7 +749,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   kernelInfo["defines/" "p_blockSize"]= blockSize;
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
-   if(options.compareArgs("TIME INTEGRATOR", "EXTBDF"))
+  if(options.compareArgs("TIME INTEGRATOR", "EXTBDF"))
     kernelInfo["defines/" "p_EXTBDF"]= 1;
   else
     kernelInfo["defines/" "p_EXTBDF"]= 0;
@@ -788,7 +788,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
     
     int plotNthreads = mymax(mesh->Np, mymax(mesh->plotNp, mesh->plotNelements));
     kernelInfo["defines/" "p_plotNthreads"]= plotNthreads;
- } 
+  } 
 
 
 
@@ -907,10 +907,10 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
     suffix = strdup("Hex3D");
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
-
-  for (int r=0;r<mesh->size;r++) {
-    if (r==mesh->rank) {
-
+  
+  for (int r=0;r<2;r++){
+    if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
+      
       sprintf(fileName, DINS "/okl/insHaloExchange.okl");
       sprintf(kernelName, "insVelocityHaloExtract");
       ins->velocityHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
@@ -984,23 +984,23 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
       
       sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
       if (options.compareArgs("TIME INTEGRATOR", "ARK")) 
-        sprintf(kernelName, "insVelocityRhsARK%s", suffix); 
+	sprintf(kernelName, "insVelocityRhsARK%s", suffix); 
       else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) 
-        sprintf(kernelName, "insVelocityRhsEXTBDF%s", suffix);
+	sprintf(kernelName, "insVelocityRhsEXTBDF%s", suffix);
       ins->velocityRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 
 
       if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){
-        sprintf(fileName, DINS "/okl/insVelocityBC%s.okl", suffix);
-        sprintf(kernelName, "insVelocityIpdgBC%s", suffix);
-        ins->velocityRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(fileName, DINS "/okl/insVelocityBC%s.okl", suffix);
+	sprintf(kernelName, "insVelocityIpdgBC%s", suffix);
+	ins->velocityRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insVelocityBC%s", suffix);
-        ins->velocityRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insVelocityBC%s", suffix);
+	ins->velocityRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insVelocityAddBC%s", suffix);
-        ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insVelocityAddBC%s", suffix);
+	ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
 
       // ===========================================================================
@@ -1009,17 +1009,17 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
       sprintf(fileName, DINS "/okl/insPressureRhs%s.okl", suffix);
       sprintf(kernelName, "insPressureRhs%s", suffix);
       ins->pressureRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      
+      if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){
+	sprintf(fileName, DINS "/okl/insPressureBC%s.okl", suffix);
+	sprintf(kernelName, "insPressureIpdgBC%s", suffix);
+	ins->pressureRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-       if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){
-        sprintf(fileName, DINS "/okl/insPressureBC%s.okl", suffix);
-        sprintf(kernelName, "insPressureIpdgBC%s", suffix);
-        ins->pressureRhsIpdgBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insPressureBC%s", suffix);
+	ins->pressureRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insPressureBC%s", suffix);
-        ins->pressureRhsBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
-        sprintf(kernelName, "insPressureAddBC%s", suffix);
-        ins->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insPressureAddBC%s", suffix);
+	ins->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
 
       // ===========================================================================
@@ -1040,49 +1040,49 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
     
       // ===========================================================================
       if(ins->dim==3 && ins->options.compareArgs("OUTPUT TYPE","ISO")){
-        sprintf(fileName, DINS "/okl/insIsoSurface3D.okl");
-        sprintf(kernelName, "insIsoSurface3D");
+	sprintf(fileName, DINS "/okl/insIsoSurface3D.okl");
+	sprintf(kernelName, "insIsoSurface3D");
 
-        ins->isoSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
+	ins->isoSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
       }
       
 
       // Not implemented for Quad 3D yet !!!!!!!!!!
       if(ins->Nsubsteps){
-        // Note that resU and resV can be replaced with already introduced buffer
-        ins->o_Ue    = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->Ue);
-        ins->o_Ud    = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->Ud);
-        ins->o_resU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->resU);
-        ins->o_rhsUd = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rhsUd);
+	// Note that resU and resV can be replaced with already introduced buffer
+	ins->o_Ue    = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->Ue);
+	ins->o_Ud    = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->Ud);
+	ins->o_resU  = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->resU);
+	ins->o_rhsUd = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->rhsUd);
 
-        if(ins->elementType==HEXAHEDRA)
-          ins->o_cUd = mesh->device.malloc(ins->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->cUd);
-        else 
-          ins->o_cUd = ins->o_Ud;
+	if(ins->elementType==HEXAHEDRA)
+	  ins->o_cUd = mesh->device.malloc(ins->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->cUd);
+	else 
+	  ins->o_cUd = ins->o_Ud;
 
-        sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
-        sprintf(kernelName, "scaledAddwOffset");
-        ins->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
+	sprintf(kernelName, "scaledAddwOffset");
+	ins->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(fileName, DINS "/okl/insSubCycle%s.okl", suffix);
-        sprintf(kernelName, "insSubCycleVolume%s", suffix);
-        ins->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(fileName, DINS "/okl/insSubCycle%s.okl", suffix);
+	sprintf(kernelName, "insSubCycleVolume%s", suffix);
+	ins->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insSubCycleSurface%s", suffix);
-        ins->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insSubCycleSurface%s", suffix);
+	ins->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
-        ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
+	ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
-        ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
+	ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(fileName, DINS "/okl/insSubCycle.okl");
-        sprintf(kernelName, "insSubCycleRKUpdate");
-        ins->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(fileName, DINS "/okl/insSubCycle.okl");
+	sprintf(kernelName, "insSubCycleRKUpdate");
+	ins->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insSubCycleExt");
-        ins->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+	sprintf(kernelName, "insSubCycleExt");
+	ins->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
     }
     MPI_Barrier(mesh->comm);
