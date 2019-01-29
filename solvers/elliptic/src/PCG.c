@@ -36,7 +36,8 @@ double serialElapsed(){
   return MPI_Wtime()-serialTicTime;
 }
 
-#if 1
+#if 0
+// FROM NEKBONE: not appropriate since it assumes zero initial data
 int pcg(elliptic_t* elliptic, dfloat lambda, 
         occa::memory &o_r, occa::memory &o_x, 
         const dfloat tol, const int MAXIT){
@@ -79,6 +80,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   
   rdotz1 = 1;
 
+  
   // o_x[:] = zero already 
   // o_r[:] = f[:] already
   // mask
@@ -88,7 +90,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   dfloat rnorm;
   if(cgOptions.enableReductions){
     serialTic();
-    rnorm = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r); // WRONG FOR IPDG
+    rnorm = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r); 
     serialElapsedReduction += serialElapsed();
   }
   else
@@ -108,7 +110,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     // r.z
     if(cgOptions.enableReductions){
       serialTic();
-      rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z); // WRONG FOR IPDG
+      rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z); 
       serialElapsedReduction += serialElapsed();
     }
     else
@@ -118,7 +120,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
       dfloat zdotAp;
       if(cgOptions.enableReductions){
 	serialTic();
-	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);  // WRONG FOR IPDG
+	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);  
 	serialElapsedReduction += serialElapsed();
       }
       else
@@ -135,23 +137,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     
     // A*p
     serialTic();
-    ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString); // WRONG FOR IPDG
+    ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString); 
     serialElapsedAx += serialElapsed();
-
-#if 0
-    if(cgOptions.enableGatherScatters){
-      serialTic();
-      ogs_t *ogs = elliptic->ogs;
-      ogsGatherScatter(o_Ap, ogsDfloat, ogsAdd, ogs);
-
-      serialElapsedGatherScatter += serialElapsed();
-
-    }
-
-    //post-mask
-    if (elliptic->Nmasked) 
-      mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Ap);
-#endif
 
     // dot(p,A*p)
     if(cgOptions.enableReductions){

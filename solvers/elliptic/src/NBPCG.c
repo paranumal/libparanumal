@@ -84,8 +84,9 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   ellipticScaledAdd(elliptic, -one, o_Ax, one, o_r);
 
   // mask ?
-  if (elliptic->Nmasked) 
-    mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
+  if(cgOptions.continuous)
+    if (elliptic->Nmasked) 
+      mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
   
   // z = M*r [ Gropp notation ]
   ellipticPreconditioner(elliptic, lambda, o_r, o_z);
@@ -149,7 +150,7 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
     
     if (cgOptions.verbose&&(mesh->rank==0)) {
 
-      if(gammaa0<0)
+      if(gamma0<0)
 	printf("WARNING CG: zdotz = %17.15lf\n", zdotz0);
       
       printf("CG: it %d z norm %12.12le gamma = %le zdotz = %le\n",

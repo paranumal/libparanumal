@@ -88,8 +88,9 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
   ellipticScaledAdd(elliptic, -one, o_Ax, one, o_r);
 
   // mask ?
-  if (elliptic->Nmasked) 
-    mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
+  if(cgOptions.continuous)
+    if (elliptic->Nmasked) 
+      mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
   
   // u = M*r [ Sanan notation ]
   ellipticPreconditioner(elliptic, lambda, o_r, o_u);
