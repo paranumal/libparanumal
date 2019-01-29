@@ -618,7 +618,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   options1.setArgs(string("KRYLOV SOLVER"),        string("PCG+FLEXIBLE"));
   options1.setArgs(string("PRECONDITIONER"),       string("MULTIGRID"));
   //  options1.setArgs(string("PRECONDITIONER"),       string("JACOBI"));
-  options1.setArgs(string("MAXIMUM ITERATIONS"),   string("1"));
+  options1.setArgs(string("MAXIMUM ITERATIONS"),   string("2"));
   options1.setArgs(string("FIXED ITERATION COUNT"),string("TRUE"));
   options1.setArgs(string("PARALMOND CYCLE"),string("KCYCLE"));
   
