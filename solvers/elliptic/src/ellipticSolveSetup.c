@@ -60,9 +60,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   dlong NthreadsUpdatePCG = 256;
   dlong NblocksUpdatePCG = mymin((Ntotal+NthreadsUpdatePCG-1)/NthreadsUpdatePCG, 160);
-
-  printf("NblocksUpdatePCG = %d\n", NblocksUpdatePCG);
-  
+ 
   elliptic->NthreadsUpdatePCG = NthreadsUpdatePCG;
   elliptic->NblocksUpdatePCG = NblocksUpdatePCG;
   
