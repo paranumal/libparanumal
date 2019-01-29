@@ -96,7 +96,7 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   alpha0 = 0;
   ellipticNonBlockingUpdate2NBPCG(elliptic, o_s, o_S, alpha0, o_r, o_z, localdots, globaldots, &request);
 
-  ellipticOperator(elliptic, lambda, o_z, o_Z, dfloatString); // WRONG FOR IPDG
+  ellipticOperator(elliptic, lambda, o_z, o_Z, dfloatString);
 
   MPI_Wait(&request, &status);
   gamma0 = globaldots[0]; // rdotz
@@ -104,7 +104,7 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   normz0 = sqrt(zdotz0);
   // ]
 
-  dfloat zlim2 = gamma0*tol*tol;
+  dfloat TOL = mymax(gamma0*tol*tol, tol*tol);
 
   int iter;
 
@@ -149,14 +149,14 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
     
     if (cgOptions.verbose&&(mesh->rank==0)) {
 
-      if(zdotz0<0)
+      if(gammaa0<0)
 	printf("WARNING CG: zdotz = %17.15lf\n", zdotz0);
       
       printf("CG: it %d z norm %12.12le gamma = %le zdotz = %le\n",
 	     iter, normz0, gamma0, zdotz0);
     }
 
-    if(gamma0<=zlim2 && !fixedIterationCountFlag) break;
+    if(gamma0<=TOL && !fixedIterationCountFlag) break;
     
   }
 

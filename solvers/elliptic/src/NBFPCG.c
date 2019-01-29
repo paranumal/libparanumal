@@ -82,7 +82,7 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
   dfloat *globaldots = (dfloat*) calloc(3, sizeof(dfloat));
   
   // Ax = A*x
-  ellipticOperator(elliptic, lambda, o_x, o_Ax, dfloatString); // WRONG FOR IPDG
+  ellipticOperator(elliptic, lambda, o_x, o_Ax, dfloatString); 
   
   // subtract r = b - A*x
   ellipticScaledAdd(elliptic, -one, o_Ax, one, o_r);
@@ -121,7 +121,7 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
   alpha0 = gamma0/eta0;
   // ]
 
-  dfloat zlim2 = gamma0*tol*tol; // ?
+  dfloat TOL = mymax(gamma0*tol*tol, tol*tol); // ?
 
   int iter;
 
@@ -185,7 +185,7 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
 	     iter, alpha0, beta0, gamma0, delta0, eta0);
     }
 
-    if(gamma0<=zlim2 && !fixedIterationCountFlag) break;
+    if(gamma0<=TOL && !fixedIterationCountFlag) break;
     
   }
 

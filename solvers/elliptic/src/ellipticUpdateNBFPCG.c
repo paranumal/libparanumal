@@ -292,5 +292,6 @@ void ellipticNonBlockingUpdate1NBFPCG(elliptic_t *elliptic,
   else{
     globaldots[0] = 1;
     globaldots[1] = 1;
+    globaldots[2] = 1;
   }
 }
