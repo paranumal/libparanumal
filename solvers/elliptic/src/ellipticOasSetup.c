@@ -182,14 +182,19 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
     suffix = strdup("Hex3D");
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
-  
-  sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
-  sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
-  elliptic->precon->oasRestrictionKernel =
-    mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-  
-  sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
-  sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
-  elliptic->precon->oasProlongationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
+  for (int r=0;r<2;r++){
+    if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {      
+      
+      sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
+      sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
+      elliptic->precon->oasRestrictionKernel =
+	mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+      
+      sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
+      sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
+      elliptic->precon->oasProlongationKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
+    }
+    MPI_Barrier(mesh->comm);
+  }
 }

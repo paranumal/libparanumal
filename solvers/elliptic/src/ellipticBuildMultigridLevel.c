@@ -783,10 +783,11 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
-  for (int r=0;r<mesh->size;r++) {
-    if (r==mesh->rank) {
+  for (int r=0;r<2;r++){
+    if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
+      
       kernelInfo["defines/" "p_blockSize"]= blockSize;
-
+      
       // add custom defines
       kernelInfo["defines/" "p_NpP"]= (mesh->Np+mesh->Nfp*mesh->Nfaces);
       kernelInfo["defines/" "p_Nverts"]= mesh->Nverts;
@@ -900,8 +901,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   //new precon struct
   elliptic->precon = (precon_t *) calloc(1,sizeof(precon_t));
 
-  for (int r=0;r<mesh->size;r++) {
-    if (r==mesh->rank) {
+  for (int r=0;r<2;r++){
+    if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
+
       sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");
       sprintf(kernelName, "ellipticBlockJacobiPrecon");
       elliptic->precon->blockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
@@ -964,7 +966,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     }
     MPI_Barrier(mesh->comm);
   }
-
+  
   if(elliptic->elementType==HEXAHEDRA){
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
       if(options.compareArgs("ELEMENT MAP", "TRILINEAR")){
