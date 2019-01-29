@@ -170,9 +170,22 @@ typedef struct {
   occa::memory  o_tmppdots;
   occa::memory  o_tmprdotz;
   occa::memory  o_tmpzdotz;
-  occa::memory  o_s;
-  occa::memory  o_S;
-  occa::memory  o_Z;
+  //  occa::memory  o_s;
+  //  occa::memory  o_S;
+  //  occa::memory  o_Z;
+
+  occa::memory *o_pcgWork;
+
+  // combined NBFPCG update steps
+  dfloat *tmpudotr;
+  dfloat *tmpudots;
+  dfloat *tmpudotw;
+  occa::kernel update0NBFPCGKernel;
+  occa::kernel update1NBFPCGKernel;
+  occa::memory  o_tmpudotr;
+  occa::memory  o_tmpudots;
+  occa::memory  o_tmpudotw;
+  
   
 }elliptic_t;
 
@@ -292,6 +305,20 @@ void ellipticNonBlockingUpdate2NBPCG(elliptic_t *elliptic,
 int nbpcg(elliptic_t* elliptic, dfloat lambda, 
 	  occa::memory &o_r, occa::memory &o_x, 
 	  const dfloat tol, const int MAXIT);
+
+void ellipticNonBlockingUpdate0NBFPCG(elliptic_t *elliptic,
+				      occa::memory &o_u, occa::memory &o_r, occa::memory &o_w,
+				      dfloat *localdots, dfloat *globaldots, MPI_Request *request);
+
+void ellipticNonBlockingUpdate1NBFPCG(elliptic_t *elliptic,
+				      occa::memory &o_p, occa::memory &o_s, occa::memory &o_q, occa::memory &o_z,
+				      const dfloat alpha,
+				      occa::memory &o_x, occa::memory &o_r, occa::memory &o_u, occa::memory &o_w,
+				      dfloat *localpdots, dfloat *globalpdots, MPI_Request *request);
+
+int nbfpcg(elliptic_t* elliptic, dfloat lambda, 
+	   occa::memory &o_r, occa::memory &o_x, 
+	   const dfloat tol, const int MAXIT);
 
 #endif
 

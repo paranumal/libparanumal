@@ -615,7 +615,7 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   
   //  occa::properties kernelInfo1 = kernelInfo;
 
-  options1.setArgs(string("KRYLOV SOLVER"),        string("PCG+NONBLOCKING"));
+  options1.setArgs(string("KRYLOV SOLVER"),        string("PCG+FLEXIBLE"));
   options1.setArgs(string("PRECONDITIONER"),       string("MULTIGRID"));
   //  options1.setArgs(string("PRECONDITIONER"),       string("JACOBI"));
   options1.setArgs(string("MAXIMUM ITERATIONS"),   string("1"));

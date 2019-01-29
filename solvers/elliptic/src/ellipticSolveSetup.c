@@ -100,21 +100,37 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   
   elliptic->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), elliptic->grad);
+
+  int useFlexible = options.compareArgs("KRYLOV SOLVER", "FLEXIBLE");
   
   if(options.compareArgs("KRYLOV SOLVER", "NONBLOCKING")){
-    elliptic->o_s   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->z);
-    elliptic->o_S   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->z);
-    elliptic->o_Z   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->z);
-
-    elliptic->tmppdots = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
-    elliptic->o_tmppdots = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmppdots);
-
-    elliptic->tmprdotz = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
-    elliptic->o_tmprdotz = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmprdotz);
-
-    elliptic->tmpzdotz = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
-    elliptic->o_tmpzdotz = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpzdotz);
     
+    int Nwork = (useFlexible) ? 9: 6; 
+
+    elliptic->o_pcgWork = new occa::memory[Nwork];
+    for(int n=0;n<Nwork;++n){
+      elliptic->o_pcgWork[n]  = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->z);
+    }
+
+    if(!useFlexible){
+      elliptic->tmppdots = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+      elliptic->o_tmppdots = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmppdots);
+      
+      elliptic->tmprdotz = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+      elliptic->o_tmprdotz = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmprdotz);
+      
+      elliptic->tmpzdotz = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+      elliptic->o_tmpzdotz = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpzdotz);
+    }else{
+      elliptic->tmpudotr = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+      elliptic->o_tmpudotr = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpudotr);
+
+      elliptic->tmpudots = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+      elliptic->o_tmpudots = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpudots);
+
+      elliptic->tmpudotw = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+      elliptic->o_tmpudotw = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpudotw);
+    }
   }
   
   //setup async halo stream
@@ -508,6 +524,15 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticNonBlockingUpdateNBPCG.okl",
 				 "ellipticNonBlockingUpdate2NBPCG", dfloatKernelInfo);
 
+
+      // combined update for Non-blocking flexible PCG
+      elliptic->update0NBFPCGKernel =
+	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticNonBlockingUpdateNBFPCG.okl",
+				 "ellipticNonBlockingUpdate0NBFPCG", dfloatKernelInfo);
+
+      elliptic->update1NBFPCGKernel =
+	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticNonBlockingUpdateNBFPCG.okl",
+				 "ellipticNonBlockingUpdate1NBFPCG", dfloatKernelInfo);
       
       
       // Not implemented for Quad3D !!!!!

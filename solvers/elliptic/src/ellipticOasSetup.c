@@ -109,7 +109,7 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
     setupAide optionsN1 = elliptic->options; // check this
     // optionsN1.setArgs(string("PRECONDITIONER"),    string("MULTIGRID"));
     // optionsN1.setArgs(string("PRECONDITIONER"),    string("FULLALLMOND"));
-    optionsN1.setArgs(string("KRYLOV SOLVER"),        string("PCG+NONBLOCKING"));
+    optionsN1.setArgs(string("KRYLOV SOLVER"),        string("PCG+NONBLOCKING+FLEXIBLE"));
     optionsN1.setArgs(string("PRECONDITIONER"),       string("MULTIGRID"));
     optionsN1.setArgs(string("MAXIMUM ITERATIONS"),   string("1"));
     optionsN1.setArgs(string("FIXED ITERATION COUNT"),string("TRUE"));
