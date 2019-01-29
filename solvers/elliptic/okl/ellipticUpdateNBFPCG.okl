@@ -28,6 +28,7 @@
 
 @kernel void ellipticUpdate0NBFPCG(const dlong N,
 				   const dlong Nblocks,
+				   const int   useWeight,
 				   @restrict const dfloat *invDegree,
 				   @restrict const dfloat *u,
 				   @restrict const dfloat *r,
@@ -52,7 +53,7 @@
 	dfloat un = u[n];
 	dfloat rn = r[n];
 	dfloat wn = w[n];
-	dfloat invDegreen = invDegree[n];
+	dfloat invDegreen = (useWeight) ? invDegree[n]: 1.0;
 	sumudotr += invDegreen*un*rn;
 	sumudotw += invDegreen*un*wn;
       }
@@ -128,6 +129,7 @@
 
 @kernel void ellipticUpdate1NBFPCG(const dlong N,
 				   const dlong Nblocks,
+				   const int   useWeight,
 				   @restrict const dfloat *invDegree,
 				   @restrict const dfloat *p,
 				   @restrict const dfloat *s,
@@ -173,7 +175,7 @@
 	un = un - alpha*qn;
 	wn = wn - alpha*zn;	
 
-	dfloat invDegreen = invDegree[n];
+	dfloat invDegreen = (useWeight) ? invDegree[n]: 1.0;
 	
 	sumudotr += invDegreen*un*rn;
 	sumudots += invDegreen*un*sn;
