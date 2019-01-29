@@ -14,12 +14,13 @@ data/insBeltrami3D.h
 12
 
 [POLYNOMIAL DEGREE]
-4
+7
 
 [ELEMENT MAP]
 ISOPARAMETRIC
 
 [THREAD MODEL]
+#Serial
 CUDA
 
 [PLATFORM NUMBER]
@@ -91,6 +92,7 @@ PCG
 # can be IPDG, or CONTINUOUS
 [VELOCITY DISCRETIZATION]
 IPDG
+#CONTINUOUS
 
 # can be NODAL or BERN
 [VELOCITY BASIS]
@@ -111,6 +113,9 @@ HALFDOFS
 # can include CHEBYSHEV for smoother acceleration
 [VELOCITY MULTIGRID SMOOTHER]
 DAMPEDJACOBI,CHEBYSHEV
+
+[VELOCITY MULTIGRID CHEBYSHEV DEGREE]
+2
 
 ###########################################
 
@@ -138,6 +143,9 @@ DEFAULT
 [VELOCITY PARALMOND LPSCN ORDERING]
 MAX
 #MIN
+
+[VELOCITY PARALMOND CHEBYSHEV DEGREE]
+2
 
 ###########################################
 
@@ -175,6 +183,9 @@ HALFDOFS
 [PRESSURE MULTIGRID SMOOTHER]
 DAMPEDJACOBI,CHEBYSHEV
 
+[PRESSURE MULTIGRID CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 ########## ParAlmond Options ##############
@@ -202,6 +213,9 @@ DEFAULT
 MAX
 #MIN
 
+[PRESSURE PARALMOND CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 # compare to a reference solution. Use NONE to skip comparison
@@ -210,4 +224,20 @@ MAX
 BELTRAMI
 
 [VERBOSE]
+TRUE
+
+[DEBUG ENABLE OGS]
+1
+
+[DEBUG ENABLE REDUCTIONS]
+1
+
+[ELLIPTIC INTEGRATION]
+NODAL
+
+
+[MAXIMUM ITERATIONS]
+1000
+
+[FIXED ITERATION COUNT]
 FALSE
