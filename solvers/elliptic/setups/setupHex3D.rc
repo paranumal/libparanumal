@@ -3,8 +3,6 @@
 
 [BENCHMARK]
 SOLVE
-#NONE
-#BP5
 
 [DATA FILE]
 data/ellipticSineTest3D.h
@@ -19,9 +17,9 @@ data/ellipticSineTest3D.h
 #../../meshes/cubeHexE00064.msh
 #../../meshes/cubeHexE00216.msh
 #../../meshes/cubeHexE00512.msh
-../../meshes/cubeHexE01000.msh
+#../../meshes/cubeHexE01000.msh
 #../../meshes/cubeHexE01728.msh
-#../../meshes/cubeHexE04096.msh
+../../meshes/cubeHexE04096.msh
 #../../meshes/cubeHexE05832.msh
 #../../meshes/cubeHexE08000.msh
 
@@ -54,11 +52,14 @@ CUDA
 0
 
 [LAMBDA]
-10
+1.e-2
 
 # can add FLEXIBLE to PCG
+# can add NONBLOCKING (disable FLEXIBLE for the moment)
 [KRYLOV SOLVER]
-PCG+FLEXIBLE
+PCG+FLEXIBLE+NONBLOCKING
+#+NONBLOCKING+FLEXIBLE
+#+FLEXIBLE+NONBLOCKING
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
@@ -70,10 +71,11 @@ CONTINUOUS
 NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, MULTIGRID, or OAS
+# OAS does not currently work with NONBLOCKING PCG
 [PRECONDITIONER]
-OAS
+#OAS
 #JACOBI
-#MULTIGRID
+MULTIGRID
 #SEMFEM
 #FULLALMOND
 
@@ -95,7 +97,7 @@ DAMPEDJACOBI+CHEBYSHEV
 
 # can be any integer >0
 [MULTIGRID CHEBYSHEV DEGREE]
-2
+1
 
 ###########################################
 
@@ -105,6 +107,7 @@ DAMPEDJACOBI+CHEBYSHEV
 # can add the EXACT and NONSYM option
 [PARALMOND CYCLE]
 KCYCLE
+#EXACT
 
 # can be DAMPEDJACOBI or CHEBYSHEV
 [PARALMOND SMOOTHER]
@@ -112,7 +115,7 @@ CHEBYSHEV+DAMPEDJACOBI
 
 # can be any integer >0
 [PARALMOND CHEBYSHEV DEGREE]
-2
+1
 
 # can be STRONGNODES, DISTRIBUTED, SATURATE
 [PARALMOND PARTITION]
@@ -147,3 +150,9 @@ TRUE
 # set to 0 (zero) to disable gather-scatter
 [DEBUG ENABLE OGS]
 1
+
+[MAXIMUM ITERATIONS]
+1000
+
+[FIXED ITERATION COUNT]
+FALSE
