@@ -14,7 +14,7 @@ data/insBeltrami3D.h
 12
 
 [POLYNOMIAL DEGREE]
-7
+4
 
 [ELEMENT MAP]
 ISOPARAMETRIC
@@ -44,9 +44,6 @@ CUBATURE
 
 [VISCOSITY]
 1
-
-[MACH NUMBER]
-.2
 
 [UBAR]
 1.0
@@ -85,11 +82,13 @@ fence
 ########## Velocity Solver Options ##############
 #################################################
 
-# can add FLEXIBLE to PCG
+# can add FLEXIBLE and/or NONBLOCKING to PCG
 [VELOCITY KRYLOV SOLVER]
 PCG
+#+FLEXIBLE
+#+NONBLOCKING
 
-# can be IPDG, or CONTINUOUS
+# can be IPDG, [ currently CONTINUOUS seems to be broken ]
 [VELOCITY DISCRETIZATION]
 IPDG
 #CONTINUOUS
@@ -101,6 +100,7 @@ NODAL
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [VELOCITY PRECONDITIONER]
 JACOBI
+#MULTIGRID
 
 ########## MULTIGRID Options ##############
 
@@ -155,7 +155,9 @@ MAX
 
 # can add FLEXIBLE to PCG
 [PRESSURE KRYLOV SOLVER]
-PCG,FLEXIBLE
+PCG+FLEXIBLE+NONBLOCKING
+#+NONBLOCKING
+#+NONBLOCKING
 
 # can be IPDG, or CONTINUOUS
 [PRESSURE DISCRETIZATION]
@@ -224,7 +226,8 @@ MAX
 BELTRAMI
 
 [VERBOSE]
-TRUE
+FALSE
+#TRUE
 
 [DEBUG ENABLE OGS]
 1

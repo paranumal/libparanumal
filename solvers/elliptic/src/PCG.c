@@ -36,7 +36,7 @@ double serialElapsed(){
   return MPI_Wtime()-serialTicTime;
 }
 
-#if 0
+#if 1
 // FROM NEKBONE: not appropriate since it assumes zero initial data
 int pcg(elliptic_t* elliptic, dfloat lambda, 
         occa::memory &o_r, occa::memory &o_x, 
@@ -51,6 +51,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   if(options.compareArgs("FIXED ITERATION COUNT", "TRUE")){
     fixedIterationCountFlag = 1;
   }
+
   
   // register scalars
   dfloat rdotz1 = 0;
@@ -59,7 +60,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   // now initialized
   dfloat alpha = 0, beta = 0, pAp = 0;
-  dfloat TOL, normB = 0, one = 1;
+  dfloat one = 1;
   
   double serialElapsedReduction = 0, serialElapsedAx = 0, serialElapsedGatherScatter = 0;
 
@@ -71,34 +72,28 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   occa::memory &o_Ap = elliptic->o_Ap;
   occa::memory &o_Ax = elliptic->o_Ax;
 
-  pAp = 0;
-  dfloat eps = 1.e-20;
-  if(one+eps == one) eps = 1.e-14;
-  if(one+eps == one) eps = 1.e-7;
+  dfloat normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 
-  eps = tol; // over ride tolerance
+  dfloat TOL =  mymax(tol*tol*normB,tol*tol);
   
+  pAp = 0;
   rdotz1 = 1;
 
+  dfloat rdotr0;
+
+  // compute A*x
+  ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax, dfloatString);
   
-  // o_x[:] = zero already 
-  // o_r[:] = f[:] already
-  // mask
-  if (elliptic->Nmasked) 
-    mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
+  // subtract r = b - A*x
+  ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);
 
-  dfloat rnorm;
-  if(cgOptions.enableReductions){
-    serialTic();
-    rnorm = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r); 
-    serialElapsedReduction += serialElapsed();
-  }
+  serialTic();
+  if(cgOptions.enableReductions)
+    rdotr0 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
   else
-    rnorm = 1;
-
-  rnorm = sqrt(rnorm);
-
-  dfloat rlim2;
+    rdotr0 = 1;
+  serialElapsedReduction += serialElapsed();
+  
   int iter;
   for(iter=1;iter<=MAXIT;++iter){
 
@@ -166,13 +161,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
       
       printf("CG: it %d r norm %12.12le alpha = %le \n", iter, sqrt(rdotr), alpha);    
     }
-    if(iter==1){
-      rlim2 = rdotr*eps*eps;
-    }
     
-    rnorm = sqrt(rdotr);
-    
-    if(rdotr<=rlim2 && !fixedIterationCountFlag) break;
+    if(rdotr<=TOL && !fixedIterationCountFlag) break;
     
   }
 

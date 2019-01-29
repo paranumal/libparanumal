@@ -83,11 +83,6 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   // subtract r = b - A*x
   ellipticScaledAdd(elliptic, -one, o_Ax, one, o_r);
 
-  // mask ?
-  if(cgOptions.continuous)
-    if (elliptic->Nmasked) 
-      mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_r);
-  
   // z = M*r [ Gropp notation ]
   ellipticPreconditioner(elliptic, lambda, o_r, o_z);
   
