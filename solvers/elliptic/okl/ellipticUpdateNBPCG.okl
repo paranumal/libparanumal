@@ -28,6 +28,7 @@
 
 @kernel void ellipticUpdate1NBPCG(const dlong N,
 				  const dlong Nblocks,
+				  const int   useWeight,
 				  @restrict const dfloat *invDegree,
 				  @restrict const dfloat *z,
 				  @restrict const dfloat *Z,
@@ -59,7 +60,9 @@
 	pn = zn + beta*pn;
 	sn = Zn + beta*sn;
 
-	sum += invDegree[n]*pn*sn;
+	dfloat invDegreen = (useWeight) ? invDegree[n]: 1.0;
+	
+	sum += invDegreen*pn*sn;
 	
 	p[n] = pn;
 	s[n] = sn;
@@ -114,6 +117,7 @@
 
 @kernel void ellipticUpdate2NBPCG(const dlong N,
 				  const dlong Nblocks,
+				  const int   useWeight,
 				  @restrict const dfloat *invDegree,
 				  @restrict const dfloat *s,
 				  @restrict const dfloat *S,
@@ -147,8 +151,10 @@
 	rn = rn - alpha*sn;
 	zn = zn - alpha*Sn;
 
-	sumrdotz += invDegree[n]*rn*zn;
-	sumzdotz += invDegree[n]*zn*zn;
+	dfloat invDegreen = (useWeight) ? invDegree[n]: 1.0;
+	
+	sumrdotz += invDegreen*rn*zn;
+	sumzdotz += invDegreen*zn*zn;
 	
 	r[n] = rn;
 	z[n] = zn;

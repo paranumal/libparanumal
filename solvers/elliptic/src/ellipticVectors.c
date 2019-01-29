@@ -118,7 +118,7 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   if(elliptic->options.compareArgs("DISCRETIZATION","CONTINUOUS"))
     elliptic->weightedNorm2Kernel(Ntotal, o_w, o_a, o_tmp);
   else
-    elliptic->norm2Kernel(Ntotal, o_a, o_tmp);
+    elliptic->innerProductKernel(Ntotal, o_a, o_a, o_tmp);
 
   /* add a second sweep if Nblock>Ncutoff */
   dlong Ncutoff = 100;
