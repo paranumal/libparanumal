@@ -298,7 +298,16 @@ void meshGeometricFactorsHex3D(mesh3D *mesh){
     }
   }
 
-  printf("J in range [%g,%g] and max Skew = %g\n", minJ, maxJ, maxSkew);
+  {
+    dfloat globalMinJ, globalMaxJ, globalMaxSkew;
+
+    MPI_Reduce(&minJ, &globalMinJ, 1, MPI_DFLOAT, MPI_MIN, 0, mesh->comm);
+    MPI_Reduce(&maxJ, &globalMaxJ, 1, MPI_DFLOAT, MPI_MAX, 0, mesh->comm);
+    MPI_Reduce(&maxSkew, &globalMaxSkew, 1, MPI_DFLOAT, MPI_MAX, 0, mesh->comm);
+
+    if(mesh->rank==0)
+      printf("J in range [%g,%g] and max Skew = %g\n", globalMinJ, globalMaxJ, globalMaxSkew);
+  }
 
   free(xre); free(xse); free(xte);
   free(yre); free(yse); free(yte);

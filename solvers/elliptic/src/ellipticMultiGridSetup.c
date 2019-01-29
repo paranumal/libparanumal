@@ -114,7 +114,9 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     int Nf = levelDegree[n-1];
 
     //build elliptic struct for this degree
-    printf("=============BUILDING MULTIGRID LEVEL OF DEGREE %d==================\n", Nc);
+    if(mesh->rank==0)
+      printf("=============BUILDING MULTIGRID LEVEL OF DEGREE %d==================\n", Nc);
+    
     elliptic_t *ellipticC = ellipticBuildMultigridLevel(elliptic,Nc,Nf);
 
     //add the level manually
@@ -141,7 +143,10 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   if (Nmax>Nmin) {
     int Nc = levelDegree[numMGLevels-1];
     int Nf = levelDegree[numMGLevels-2];
-    printf("=============BUILDING MULTIGRID LEVEL OF DEGREE %d==================\n", Nmin);
+
+    if(mesh->rank==0)
+      printf("=============BUILDING MULTIGRID LEVEL OF DEGREE %d==================\n", Nmin);
+    
     ellipticCoarse = ellipticBuildMultigridLevel(elliptic,Nc,Nf);
   } else {
     ellipticCoarse = elliptic;
