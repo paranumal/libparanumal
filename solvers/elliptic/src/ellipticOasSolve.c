@@ -50,6 +50,9 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   // 3. collect patch rhs    
   ellipticOneRingExchange(elliptic, elliptic1, mesh1->Np*sizeof(dfloat), o_r, elliptic1->o_r);
 
+  if (elliptic1->Nmasked) 
+    mesh1->maskKernel(elliptic1->Nmasked, elliptic1->o_maskIds, elliptic1->o_r);
+  
   // TW: possibility these device have difference queues
   mesh1->device.finish();
   mesh->device.finish();
@@ -59,7 +62,10 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   
   // patch solve
   if(mesh->rank==0) printf("Starting extended partition iterations:\n");
-  ellipticSolve(elliptic1, lambda, tol1, elliptic1->o_r, elliptic1->o_x); // may need to zero o_x
+
+  //  ellipticSolve(elliptic1, lambda, tol1, elliptic1->o_r, elliptic1->o_x); // may need to zero o_x
+
+  ellipticPreconditioner(elliptic1, lambda, elliptic1->o_r, elliptic1->o_x); // may need to zero o_x
 
   // will gather over all patches - so have to remove local multiplicity
   elliptic1->dotMultiplyKernel(mesh1->Nelements*mesh1->Np, elliptic1->ogs->o_invDegree, elliptic1->o_x, elliptic1->o_z);
@@ -102,7 +108,7 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   mesh1->device.finish();
   mesh->device.finish();
   meshCoarse->device.finish();
-  
+
   // why do I Have to do (1/deg)*S*G*o_rCoarse here ? ---------->
   ogsGatherScatter(ellipticOasCoarse->o_r, ogsDfloat, ogsAdd, ellipticOasCoarse->ogs);
 
@@ -111,6 +117,9 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
 				       ellipticOasCoarse->o_r,
 				       ellipticOasCoarse->o_r);
 
+  if (ellipticOasCoarse->Nmasked) 
+    meshCoarse->maskKernel(ellipticOasCoarse->Nmasked, ellipticOasCoarse->o_maskIds, ellipticOasCoarse->o_r);
+  
   // <----------
   
   dfloat *h_xCoarse = (dfloat*) calloc(meshCoarse->Np*meshCoarse->Nelements, sizeof(dfloat));
@@ -119,7 +128,8 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
 
   dfloat tolCoarse = 1e-2;
   
-  ellipticSolve(ellipticOasCoarse, lambda, tolCoarse, ellipticOasCoarse->o_r, ellipticOasCoarse->o_x);
+  //  ellipticSolve(ellipticOasCoarse, lambda, tolCoarse, ellipticOasCoarse->o_r, ellipticOasCoarse->o_x);
+  ellipticPreconditioner(ellipticOasCoarse, lambda, ellipticOasCoarse->o_r, ellipticOasCoarse->o_x);
   
   mesh1->device.finish();
   mesh->device.finish();
@@ -143,6 +153,10 @@ void ellipticOasSolve(elliptic_t *elliptic, dfloat lambda,
   mesh->device.finish();
   meshCoarse->device.finish();
 
+
+  if (elliptic->Nmasked) 
+    mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_z);
+  
   o_tmpCoarse.free();
   
   if(mesh->rank==0) printf("Ending coarse grid iterations:\n Outer ");  
