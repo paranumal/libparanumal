@@ -23,13 +23,16 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(ALMONDDIR) -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"' $(LIBP_OPT_FLAGS)
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(ALMONDDIR) -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"' $(LIBP_OPT_FLAGS)  -I../../3rdParty/parmetis-4.0.3/metis/GKlib -I../../3rdParty/parmetis-4.0.3/include -I../../3rdParty/parmetis-4.0.3/metis/include -I../../3rdParty/parmetis-4.0.3/libparmetis
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(LIBP_OPT_FLAGS)
 
+PARMETISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libparmetis/
+METISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libmetis
+
 # libraries to be linked in
-LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(ALMONDDIR) -lparAlmond  \
+LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis -L$(ALMONDDIR) -lparAlmond  \
 		   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
 		   -L$(OCCA_DIR)/lib $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
 
@@ -82,6 +85,8 @@ AOBJS    = \
 
 # library objects
 LOBJS = \
+../../src/meshRecursiveSpectralBisectionPartition.o \
+../../src/meshApplyElementMatrix.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \
 ../../src/meshConnectFaceNodes2D.o \

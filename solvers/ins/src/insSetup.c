@@ -630,8 +630,19 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
     }
 
+  // set up elliptic base options
+  cgOptions_t cgOptions;
   
+  // defaults for conjugate gradient
+  cgOptions.enableGatherScatters = 1;
+  cgOptions.enableReductions = 1;
+  cgOptions.flexible = 1;
+  cgOptions.verbose  = 0;
+  cgOptions.serial   = options.compareArgs("THREAD MODEL", "Serial");
+  cgOptions.verbose  = options.compareArgs("VERBOSE", "TRUE");
   
+  options.getArgs("DEBUG ENABLE REDUCTIONS", cgOptions.enableReductions);
+  options.getArgs("DEBUG ENABLE OGS", cgOptions.enableGatherScatters);
 
   //make option objects for elliptc solvers
   ins->vOptions = options;
@@ -641,10 +652,32 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->vOptions.setArgs("PRECONDITIONER",       options.getArgs("VELOCITY PRECONDITIONER"));
   ins->vOptions.setArgs("MULTIGRID COARSENING", options.getArgs("VELOCITY MULTIGRID COARSENING"));
   ins->vOptions.setArgs("MULTIGRID SMOOTHER",   options.getArgs("VELOCITY MULTIGRID SMOOTHER"));
+  ins->vOptions.setArgs("MULTIGRID CHEBYSHEV DEGREE",  options.getArgs("VELOCITY MULTIGRID CHEBYSHEV DEGREE"));
+
   ins->vOptions.setArgs("PARALMOND CYCLE",      options.getArgs("VELOCITY PARALMOND CYCLE"));
   ins->vOptions.setArgs("PARALMOND SMOOTHER",   options.getArgs("VELOCITY PARALMOND SMOOTHER"));
   ins->vOptions.setArgs("PARALMOND PARTITION",  options.getArgs("VELOCITY PARALMOND PARTITION"));
+  ins->vOptions.setArgs("PARALMOND CHEBYSHEV DEGREE",  options.getArgs("VELOCITY PARALMOND CHEBYSHEV DEGREE"));
 
+  ins->vOptions.setArgs("DEBUG ENABLE OGS", "1");
+  ins->vOptions.setArgs("DEBUG ENABLE REDUCTIONS", "1");
+  
+  cgOptions_t vcgOptions = cgOptions;
+  vcgOptions.continuous = options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS");
+  vcgOptions.ipdg       = options.compareArgs("VELOCITY DISCRETIZATION", "IPDG");
+  vcgOptions.flexible   = options.compareArgs("VELOCITY KRYLOV SOLVER", "FLEXIBLE"); 
+
+  if(mesh->rank==0 && vcgOptions.verbose==1){
+    printf("VELOCITY CG OPTIONS: enableReductions=%d, enableGatherScatters=%d, flexible=%d, verbose=%d, ipdg=%d, continuous=%d, serial=%d\n",
+	   vcgOptions.enableGatherScatters, 
+	   vcgOptions.enableReductions,
+	   vcgOptions.flexible,
+	   vcgOptions.verbose,
+	   vcgOptions.ipdg,
+	   vcgOptions.continuous,
+	   vcgOptions.serial);
+  }
+  
   ins->pOptions = options;
   ins->pOptions.setArgs("KRYLOV SOLVER",        options.getArgs("PRESSURE KRYLOV SOLVER"));
   ins->pOptions.setArgs("DISCRETIZATION",       options.getArgs("PRESSURE DISCRETIZATION"));
@@ -652,10 +685,33 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->pOptions.setArgs("PRECONDITIONER",       options.getArgs("PRESSURE PRECONDITIONER"));
   ins->pOptions.setArgs("MULTIGRID COARSENING", options.getArgs("PRESSURE MULTIGRID COARSENING"));
   ins->pOptions.setArgs("MULTIGRID SMOOTHER",   options.getArgs("PRESSURE MULTIGRID SMOOTHER"));
+  ins->pOptions.setArgs("MULTIGRID CHEBYSHEV DEGREE",  options.getArgs("PRESSURE MULTIGRID CHEBYSHEV DEGREE"));
+
   ins->pOptions.setArgs("PARALMOND CYCLE",      options.getArgs("PRESSURE PARALMOND CYCLE"));
   ins->pOptions.setArgs("PARALMOND SMOOTHER",   options.getArgs("PRESSURE PARALMOND SMOOTHER"));
   ins->pOptions.setArgs("PARALMOND PARTITION",  options.getArgs("PRESSURE PARALMOND PARTITION"));
+  ins->pOptions.setArgs("PARALMOND CHEBYSHEV DEGREE",  options.getArgs("PRESSURE PARALMOND CHEBYSHEV DEGREE"));
 
+  ins->pOptions.setArgs("DEBUG ENABLE OGS", "1");
+  ins->pOptions.setArgs("DEBUG ENABLE REDUCTIONS", "1");
+  
+  cgOptions_t pcgOptions = cgOptions;
+  pcgOptions.continuous = options.compareArgs("PRESSURE DISCRETIZATION", "CONTINUOUS");
+  pcgOptions.ipdg       = options.compareArgs("PRESSURE DISCRETIZATION", "IPDG");
+  pcgOptions.flexible   = options.compareArgs("PRESSURE KRYLOV SOLVER", "FLEXIBLE");
+
+
+  if(mesh->rank==0 && pcgOptions.verbose==1){
+    printf("PRESSURE CG OPTIONS: enableReductions=%d, enableGatherScatters=%d, flexible=%d, verbose=%d, ipdg=%d, continuous=%d, serial=%d\n",
+	   pcgOptions.enableGatherScatters, 
+	   pcgOptions.enableReductions,
+	   pcgOptions.flexible,
+	   pcgOptions.verbose,
+	   pcgOptions.ipdg,
+	   pcgOptions.continuous,
+	   pcgOptions.serial);
+  }
+  
   if (mesh->rank==0) printf("==================ELLIPTIC SOLVE SETUP=========================\n");
 
   // SetUp Boundary Flags types for Elliptic Solve
@@ -674,6 +730,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->presTOL = 1E-8;
   ins->velTOL  = 1E-8;
 
+
   // Use third Order Velocity Solve: full rank should converge for low orders
   if (mesh->rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");
 
@@ -684,6 +741,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->uSolver->elementType = ins->elementType;
   ins->uSolver->BCType = (int*) calloc(7,sizeof(int));
   memcpy(ins->uSolver->BCType,uBCType,7*sizeof(int));
+  ins->uSolver->cgOptions = vcgOptions;
+
   ellipticSolveSetup(ins->uSolver, ins->lambda, kernelInfoV); 
 
   ins->vSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
@@ -693,8 +752,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->vSolver->elementType = ins->elementType;
   ins->vSolver->BCType = (int*) calloc(7,sizeof(int));
   memcpy(ins->vSolver->BCType,vBCType,7*sizeof(int));
+  ins->vSolver->cgOptions = vcgOptions;
+  
   ellipticSolveSetup(ins->vSolver, ins->lambda, kernelInfoV); //!!!!!
 
+  
   if (ins->dim==3) {
     ins->wSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
     ins->wSolver->mesh = mesh;
@@ -703,7 +765,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->wSolver->elementType = ins->elementType;
     ins->wSolver->BCType = (int*) calloc(7,sizeof(int));
     memcpy(ins->wSolver->BCType,wBCType,7*sizeof(int));
-    ellipticSolveSetup(ins->wSolver, ins->lambda, kernelInfoV);  //!!!!! 
+    ins->wSolver->cgOptions = vcgOptions;
+    
+    ellipticSolveSetup(ins->wSolver, ins->lambda, kernelInfoV);  //!!!!!
   }
   
   if (mesh->rank==0) printf("==================PRESSURE SOLVE SETUP=========================\n");
@@ -714,6 +778,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->pSolver->elementType = ins->elementType;
   ins->pSolver->BCType = (int*) calloc(7,sizeof(int));
   memcpy(ins->pSolver->BCType,pBCType,7*sizeof(int));
+  ins->pSolver->cgOptions = pcgOptions;
+  
   ellipticSolveSetup(ins->pSolver, 0.0, kernelInfoP); //!!!!
 
 
