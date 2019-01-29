@@ -111,7 +111,7 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
     // optionsN1.setArgs(string("PRECONDITIONER"),    string("FULLALLMOND"));
     optionsN1.setArgs(string("KRYLOV SOLVER"),        string("PCG+NONBLOCKING+FLEXIBLE"));
     optionsN1.setArgs(string("PRECONDITIONER"),       string("MULTIGRID"));
-    optionsN1.setArgs(string("MAXIMUM ITERATIONS"),   string("1"));
+    optionsN1.setArgs(string("MAXIMUM ITERATIONS"),   string("2"));
     optionsN1.setArgs(string("FIXED ITERATION COUNT"),string("TRUE"));
     optionsN1.setArgs(string("PARALMOND CYCLE"),      string("KCYCLE"));
     optionsN1.setArgs(string("POLYNOMIAL DEGREE"),    string("1"));

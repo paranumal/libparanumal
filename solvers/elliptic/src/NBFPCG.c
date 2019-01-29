@@ -49,7 +49,6 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
   
   // register scalars
   dfloat norm0 = 0;
-  dfloat zdotz0 = 0;
 
   dfloat alpha0 = 0;
   dfloat beta0  = 0;
@@ -178,12 +177,12 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
 
     if (cgOptions.verbose&&(mesh->rank==0)) {
 
-      if(zdotz0<0)
-	printf("WARNING CG: zdotz = %17.15lf\n", zdotz0);
+      if(gamma0<0)
+	printf("WARNING CG: gamma = %17.15lf\n", gamma0);
       
       printf("CG: it %d z alpha = %12.12le beta = %le "
-	     "gamma = %le delta = %le, eta = %le zdotz = %le\n",
-	     iter, alpha0, beta0, gamma0, delta0, eta0, zdotz0);
+	     "gamma = %le delta = %le, eta = %le\n",
+	     iter, alpha0, beta0, gamma0, delta0, eta0);
     }
 
     if(gamma0<=zlim2 && !fixedIterationCountFlag) break;
