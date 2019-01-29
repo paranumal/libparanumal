@@ -64,12 +64,12 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   double pcgStart = MPI_Wtime();
   
   /*aux variables */
-  occa::memory &o_p  = elliptic->o_p;
-  occa::memory &o_s  = elliptic->o_s;
-  occa::memory &o_S  = elliptic->o_S;
-  occa::memory &o_z  = elliptic->o_z;
-  occa::memory &o_Z  = elliptic->o_Z;
-  occa::memory &o_Ax = elliptic->o_Ax;
+  occa::memory &o_p  = elliptic->o_pcgWork[0];
+  occa::memory &o_s  = elliptic->o_pcgWork[1];
+  occa::memory &o_S  = elliptic->o_pcgWork[2];
+  occa::memory &o_z  = elliptic->o_pcgWork[3];
+  occa::memory &o_Z  = elliptic->o_pcgWork[4];
+  occa::memory &o_Ax  = elliptic->o_pcgWork[5];
 
   MPI_Request request;
   MPI_Status  status;
