@@ -344,8 +344,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
-  for (int r=0;r<mesh->size;r++) {
-    if (r==mesh->rank) {
+  for (int r=0;r<2;r++){
+    if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {      
 
       //mesh kernels
       mesh->haloExtractKernel =
