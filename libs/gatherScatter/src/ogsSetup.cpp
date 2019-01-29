@@ -332,7 +332,7 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
 
 
 void ogsFree(ogs_t *ogs) {
-
+  printf("DEBUG #20000\n");
   if (ogs->Nlocal) {
     free(ogs->localGatherOffsets);
     free(ogs->localGatherIds);
@@ -364,4 +364,6 @@ void ogsFree(ogs_t *ogs) {
 
   ogs::Nrefs--;
   if (!ogs::Nrefs) ogs::freeKernels();
+
+  printf("DEBUG #20010\n");
 }
