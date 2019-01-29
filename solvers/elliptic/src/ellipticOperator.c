@@ -102,10 +102,10 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   if(cgOptions.continuous){
 
     // TW: turned off for debugging
-    if(cgOptions.serial && elliptic->elementType==HEXAHEDRA){
-      ellipticSerialOperator(elliptic, lambda, o_q, o_Aq, precision);
-      return;
-    }
+    //    if(cgOptions.serial && elliptic->elementType==HEXAHEDRA){
+    //      ellipticSerialOperator(elliptic, lambda, o_q, o_Aq, precision);
+    //      return;
+    //    }
 
     ogs_t *ogs = elliptic->ogs;
 
@@ -166,7 +166,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     // finalize gather using local and global contributions
     if(cgOptions.enableGatherScatters==1)
       ogsGatherScatterFinish(o_Aq, ogsDfloat, ogsAdd, ogs);
-    
+  
     if(elliptic->allNeumann) {
 
       elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
