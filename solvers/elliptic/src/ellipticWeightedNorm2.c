@@ -88,7 +88,7 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   if(cgOptions.serial==1 && cgOptions.continuous==1){
     
     dfloat wa2 = ellipticSerialWeightedNorm2(mesh->Nq, mesh->Nelements, o_w, o_a);
-
+    
     dfloat globalwa2 = 0;
     
     MPI_Allreduce(&wa2, &globalwa2, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
@@ -98,11 +98,11 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   
   occa::memory &o_tmp = elliptic->o_tmp;
   occa::memory &o_tmp2 = elliptic->o_tmp2;
-
+  
   if(cgOptions.continuous==1)
     elliptic->weightedNorm2Kernel(Ntotal, o_w, o_a, o_tmp);
   else
-    elliptic->innerProductKernel(Ntotal, o_a, o_tmp);
+    elliptic->norm2Kernel(Ntotal, o_a, o_tmp);
 
   /* add a second sweep if Nblock>Ncutoff */
   dlong Ncutoff = 100;
