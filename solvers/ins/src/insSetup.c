@@ -633,6 +633,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   //make option objects for elliptc solvers
   ins->vOptions = options;
   ins->vOptions.setArgs("KRYLOV SOLVER",        options.getArgs("VELOCITY KRYLOV SOLVER"));
+  ins->vOptions.setArgs("SOLVER TOLERANCE",     options.getArgs("VELOCITY SOLVER TOLERANCE"));
   ins->vOptions.setArgs("DISCRETIZATION",       options.getArgs("VELOCITY DISCRETIZATION"));
   ins->vOptions.setArgs("BASIS",                options.getArgs("VELOCITY BASIS"));
   ins->vOptions.setArgs("PRECONDITIONER",       options.getArgs("VELOCITY PRECONDITIONER"));
@@ -652,6 +653,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   
   ins->pOptions = options;
   ins->pOptions.setArgs("KRYLOV SOLVER",        options.getArgs("PRESSURE KRYLOV SOLVER"));
+  ins->pOptions.setArgs("SOLVER TOLERANCE",     options.getArgs("PRESSURE SOLVER TOLERANCE"));
   ins->pOptions.setArgs("DISCRETIZATION",       options.getArgs("PRESSURE DISCRETIZATION"));
   ins->pOptions.setArgs("BASIS",                options.getArgs("PRESSURE BASIS"));
   ins->pOptions.setArgs("PRECONDITIONER",       options.getArgs("PRESSURE PRECONDITIONER"));
