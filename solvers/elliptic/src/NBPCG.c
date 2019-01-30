@@ -47,8 +47,8 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   }
   
   // register scalars
-  dfloat normz0 = 0;
   dfloat zdotz0 = 0;
+  dfloat rdotr0 = 0;
 
   dfloat alpha0 = 0;
   dfloat beta0  = 0;
@@ -74,8 +74,12 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   MPI_Request request;
   MPI_Status  status;
 
-  dfloat *localdots = (dfloat*) calloc(2, sizeof(dfloat));
+  dfloat *localdots  = (dfloat*) calloc(2, sizeof(dfloat));
   dfloat *globaldots = (dfloat*) calloc(2, sizeof(dfloat));
+
+  // blocks
+  dfloat normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+  dfloat TOL = mymax(normB*tol*tol, tol*tol);
   
   // Ax = A*x
   ellipticOperator(elliptic, lambda, o_x, o_Ax, dfloatString); // WRONG FOR IPDG
@@ -97,10 +101,8 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   MPI_Wait(&request, &status);
   gamma0 = globaldots[0]; // rdotz
   zdotz0 = globaldots[1];
-  normz0 = sqrt(zdotz0);
+  rdotr0 = globaldots[2]; 
   // ]
-
-  dfloat TOL = mymax(gamma0*tol*tol, tol*tol);
 
   int iter;
 
@@ -126,33 +128,34 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
     // z <= z - alpha*S
     // r.z
     // z.z
+    // r.r
     ellipticNonBlockingUpdate2NBPCG(elliptic, o_s, o_S, alpha0, o_r, o_z, localdots, globaldots, &request);
 
     // x <= x + alpha*p (delayed)
     ellipticScaledAdd(elliptic, alpha0, o_p, one, o_x);
     
     // Z = A*z
-    ellipticOperator(elliptic, lambda, o_z, o_Z, dfloatString); // WRONG FOR IPDG        
+    ellipticOperator(elliptic, lambda, o_z, o_Z, dfloatString); 
     
     // block for delta
     MPI_Wait(&request, &status);
     gamma1 = gamma0;
     gamma0 = globaldots[0]; // gamma = r.z
-    zdotz0 = globaldots[1]; // 
-    normz0 = sqrt(zdotz0);
+    zdotz0 = globaldots[1]; //
+    rdotr0 = globaldots[2]; // 
 
     beta0 = gamma0/gamma1;
     
     if (cgOptions.verbose&&(mesh->rank==0)) {
 
-      if(gamma0<0)
+      if(zdotz0<0)
 	printf("WARNING CG: zdotz = %17.15lf\n", zdotz0);
       
-      printf("CG: it %d z norm %12.12le gamma = %le zdotz = %le\n",
-	     iter, normz0, gamma0, zdotz0);
+      printf("CG: it %d rdotr %12.12le gamma = %le zdotz = %le\n",
+	     iter, rdotr0, gamma0, zdotz0);
     }
 
-    if(gamma0<=TOL && !fixedIterationCountFlag) break;
+    if(rdotr0<=TOL && !fixedIterationCountFlag) break;
     
   }
 

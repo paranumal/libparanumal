@@ -165,11 +165,13 @@ typedef struct {
   dfloat *tmppdots;
   dfloat *tmprdotz;
   dfloat *tmpzdotz;
+  dfloat *tmprdotr;
   occa::kernel update1NBPCGKernel;
   occa::kernel update2NBPCGKernel;
   occa::memory  o_tmppdots;
   occa::memory  o_tmprdotz;
   occa::memory  o_tmpzdotz;
+  occa::memory  o_tmprdotr;
   //  occa::memory  o_s;
   //  occa::memory  o_S;
   //  occa::memory  o_Z;

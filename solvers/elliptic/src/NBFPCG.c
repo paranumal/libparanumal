@@ -48,14 +48,13 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
   }
   
   // register scalars
-  dfloat norm0 = 0;
-
   dfloat alpha0 = 0;
   dfloat beta0  = 0;
   dfloat gamma0 = 0;
   dfloat delta0 = 0;
   dfloat eta0   = 0;
-  
+  dfloat rdotr0 = 0;
+
   dfloat gamma1 = 0; // history gamma
   
   dfloat one = 1, zero = 0;
@@ -78,8 +77,12 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
   MPI_Request request;
   MPI_Status  status;
 
-  dfloat *localdots = (dfloat*) calloc(3, sizeof(dfloat));
-  dfloat *globaldots = (dfloat*) calloc(3, sizeof(dfloat));
+  dfloat *localdots = (dfloat*) calloc(4, sizeof(dfloat));
+  dfloat *globaldots = (dfloat*) calloc(4, sizeof(dfloat));
+
+  // blocks
+  dfloat normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
+  dfloat TOL = mymax(normB*tol*tol, tol*tol);
   
   // Ax = A*x
   ellipticOperator(elliptic, lambda, o_x, o_Ax, dfloatString); 
@@ -112,12 +115,9 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
   MPI_Wait(&request, &status);
   gamma0 = globaldots[0]; // udotr
   delta0 = globaldots[1]; // udotw
-  norm0 = gamma0; // what to terminate on ?
   eta0   = delta0;
   alpha0 = gamma0/eta0;
   // ]
-
-  dfloat TOL = mymax(gamma0*tol*tol, tol*tol); // ?
 
   int iter;
 
@@ -152,7 +152,8 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
     gamma0 = globaldots[0];       //  u.r
     beta0  = -globaldots[1]/eta0; // -u.s/eta
     delta0 = globaldots[2];       //  u.w
-
+    rdotr0 = globaldots[3];       // r.r
+    
     //  p <= u + beta*p
     ellipticScaledAdd(elliptic, one, o_u, beta0, o_p);
 
@@ -181,7 +182,7 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
 	     iter, alpha0, beta0, gamma0, delta0, eta0);
     }
 
-    if(gamma0<=TOL && !fixedIterationCountFlag) break;
+    if(rdotr0<=TOL && !fixedIterationCountFlag) break;
     
   }
 

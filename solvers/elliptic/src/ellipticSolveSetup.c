@@ -119,6 +119,9 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       
       elliptic->tmpzdotz = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
       elliptic->o_tmpzdotz = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpzdotz);
+
+      elliptic->tmprdotr = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+      elliptic->o_tmprdotr = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmprdotr);
     }else{
       elliptic->tmpudotr = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
       elliptic->o_tmpudotr = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpudotr);
