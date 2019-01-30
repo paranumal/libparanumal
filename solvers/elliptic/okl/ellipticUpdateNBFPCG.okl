@@ -142,12 +142,13 @@
 				   @restrict dfloat *w,
 				   @restrict dfloat *udotr,
 				   @restrict dfloat *udots,
-				   @restrict dfloat *udotw){
+				   @restrict dfloat *udotw,
+				   @restrict dfloat *rdotr){	
 
   for(dlong b=0;b<Nblocks;++b;@outer(0)){
 
-    @shared volatile dfloat s_sum[3][p_NthreadsUpdatePCG];
-    @shared volatile dfloat s_warpSum[3][p_NwarpsUpdatePCG]; // good  to 256
+    @shared volatile dfloat s_sum[4][p_NthreadsUpdatePCG];
+    @shared volatile dfloat s_warpSum[4][p_NwarpsUpdatePCG]; // good  to 256
 
     @exclusive int r_n; // limited to 256 in Serial mode
 
@@ -158,6 +159,7 @@
       dfloat sumudotr = 0;
       dfloat sumudots = 0;
       dfloat sumudotw = 0;
+      dfloat sumrdotr = 0;
 
       for(int n=t+b*p_NthreadsUpdatePCG;n<N;n+=Nblocks*p_NthreadsUpdatePCG){
 	dfloat xn = x[n];
@@ -180,6 +182,7 @@
 	sumudotr += invDegreen*un*rn;
 	sumudots += invDegreen*un*sn;
 	sumudotw += invDegreen*un*wn;
+	sumrdotr += invDegreen*rn*rn;
 
 	x[n] = xn;
 	r[n] = rn;
@@ -191,17 +194,18 @@
       s_sum[0][t] = sumudotr;
       s_sum[1][t] = sumudots;
       s_sum[2][t] = sumudotw;
+      s_sum[3][t] = sumrdotr;
     }
 
     // reduce by factor of 32
     for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0))
-      if(r_n<16){ s_sum[0][t] += s_sum[0][t+16];  s_sum[1][t] += s_sum[1][t+16];s_sum[2][t] += s_sum[2][t+16]; }
-    for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0))
-      if(r_n< 8){ s_sum[0][t] += s_sum[0][t+8];   s_sum[1][t] += s_sum[1][t+8]; s_sum[2][t] += s_sum[2][t+8];  }
-    for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0))
-      if(r_n< 4){ s_sum[0][t] += s_sum[0][t+4];   s_sum[1][t] += s_sum[1][t+4]; s_sum[2][t] += s_sum[2][t+4];  }
-    for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0))
-      if(r_n< 2){ s_sum[0][t] += s_sum[0][t+2];   s_sum[1][t] += s_sum[1][t+2]; s_sum[2][t] += s_sum[2][t+2];  }
+      if(r_n<16){ s_sum[0][t] += s_sum[0][t+16];  s_sum[1][t] += s_sum[1][t+16]; s_sum[2][t] += s_sum[2][t+16]; s_sum[3][t] += s_sum[3][t+16];}
+    for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0))				                              	                             
+      if(r_n< 8){ s_sum[0][t] += s_sum[0][t+8];   s_sum[1][t] += s_sum[1][t+8];  s_sum[2][t] += s_sum[2][t+8];  s_sum[3][t] += s_sum[3][t+8];}
+    for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0))				                              	                             
+      if(r_n< 4){ s_sum[0][t] += s_sum[0][t+4];   s_sum[1][t] += s_sum[1][t+4];  s_sum[2][t] += s_sum[2][t+4];  s_sum[3][t] += s_sum[3][t+4];}
+    for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0))				                              	                            
+      if(r_n< 2){ s_sum[0][t] += s_sum[0][t+2];   s_sum[1][t] += s_sum[1][t+2];  s_sum[2][t] += s_sum[2][t+2];  s_sum[3][t] += s_sum[3][t+2];} 
 
     for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0)){
       const int w = t/32;							
@@ -209,6 +213,7 @@
 	s_warpSum[0][w] = s_sum[0][t] + s_sum[0][t+1];
 	s_warpSum[1][w] = s_sum[1][t] + s_sum[1][t+1];
 	s_warpSum[2][w] = s_sum[2][t] + s_sum[2][t+1];
+	s_warpSum[3][w] = s_sum[3][t] + s_sum[3][t+1];
       }
     }
 
@@ -221,6 +226,7 @@
 	s_warpSum[0][t] += s_warpSum[0][t+16];
 	s_warpSum[1][t] += s_warpSum[1][t+16];
 	s_warpSum[2][t] += s_warpSum[2][t+16];
+	s_warpSum[3][t] += s_warpSum[3][t+16];
       }
 #endif
 #if (p_NwarpsUpdatePCG>=16)
@@ -229,6 +235,7 @@
 	s_warpSum[0][t] += s_warpSum[0][t+8];
 	s_warpSum[1][t] += s_warpSum[1][t+8];
 	s_warpSum[2][t] += s_warpSum[2][t+8];
+	s_warpSum[3][t] += s_warpSum[3][t+8];
       }
 #endif
     
@@ -238,6 +245,7 @@
 	s_warpSum[0][t] += s_warpSum[0][t+4];
 	s_warpSum[1][t] += s_warpSum[1][t+4];
 	s_warpSum[2][t] += s_warpSum[2][t+4];
+	s_warpSum[3][t] += s_warpSum[3][t+4];
       }
 #endif
 
@@ -247,6 +255,7 @@
 	s_warpSum[0][t] += s_warpSum[0][t+2];
 	s_warpSum[1][t] += s_warpSum[1][t+2];
 	s_warpSum[2][t] += s_warpSum[2][t+2];
+	s_warpSum[3][t] += s_warpSum[3][t+2];
       }
 #endif
     
@@ -256,12 +265,14 @@
 	udotr[b] = s_warpSum[0][0] + s_warpSum[0][1];
 	udots[b] = s_warpSum[1][0] + s_warpSum[1][1];
 	udotw[b] = s_warpSum[2][0] + s_warpSum[2][1];
+	rdotr[b] = s_warpSum[3][0] + s_warpSum[3][1];
       }
 #else
       if(t<1){
 	udotr[b] = s_warpSum[0][0];
 	udots[b] = s_warpSum[1][0];
 	udotw[b] = s_warpSum[2][0];
+	rdotr[b] = s_warpSum[3][0];
       }
 #endif
     }

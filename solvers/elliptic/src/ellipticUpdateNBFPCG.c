@@ -168,7 +168,7 @@ void ellipticSerialUpdate1NBFPCGKernel(const hlong Nelements,
 
   cpu_invDegree = (dfloat*)__builtin_assume_aligned(cpu_invDegree,  USE_OCCA_MEM_BYTE_ALIGN) ;
   
-  dfloat udotr = 0, udots = 0, udotw = 0;
+  dfloat udotr = 0, udots = 0, udotw = 0, rdotr = 0;
   
   for(hlong e=0;e<Nelements;++e){
     for(int i=0;i<p_Np;++i){
@@ -194,6 +194,7 @@ void ellipticSerialUpdate1NBFPCGKernel(const hlong Nelements,
       udotr += un*rn*invDeg;
       udots += un*sn*invDeg;
       udotw += un*wn*invDeg;
+      rdotr += rn*rn*invDeg;
 
       cpu_x[n] = xn;
       cpu_r[n] = rn;
@@ -205,6 +206,7 @@ void ellipticSerialUpdate1NBFPCGKernel(const hlong Nelements,
   localdots[0] = udotr;
   localdots[1] = udots;
   localdots[2] = udotw;
+  localdots[3] = rdotr;
 
 #undef p_Np
 }
@@ -271,27 +273,31 @@ void ellipticNonBlockingUpdate1NBFPCG(elliptic_t *elliptic,
       // dot(p,s)
     elliptic->update1NBFPCGKernel(mesh->Nelements*mesh->Np, elliptic->NblocksUpdatePCG, useWeight,
 				  elliptic->o_invDegree, o_p, o_s, o_q, o_z, alpha, o_x, o_r, o_u, o_w,
-				  elliptic->o_tmpudotr, elliptic->o_tmpudots, elliptic->o_tmpudotw);
+				  elliptic->o_tmpudotr, elliptic->o_tmpudots, elliptic->o_tmpudotw, elliptic->o_tmprdotr);
     
     elliptic->o_tmpudotr.copyTo(elliptic->tmpudotr);
     elliptic->o_tmpudots.copyTo(elliptic->tmpudots);
     elliptic->o_tmpudotw.copyTo(elliptic->tmpudotw);
+    elliptic->o_tmprdotr.copyTo(elliptic->tmprdotr);
     
     localdots[0] = 0;
     localdots[1] = 0;
     localdots[2] = 0;
+    localdots[3] = 0;
     for(int n=0;n<elliptic->NblocksUpdatePCG;++n){
       localdots[0] += elliptic->tmpudotr[n];
       localdots[1] += elliptic->tmpudots[n];
       localdots[2] += elliptic->tmpudotw[n];
+      localdots[3] += elliptic->tmprdotr[n];
     }
   }
   
   if(cgOptions.enableReductions)      
-    MPI_Iallreduce(localdots, globaldots, 3, MPI_DFLOAT, MPI_SUM, mesh->comm, request);
+    MPI_Iallreduce(localdots, globaldots, 4, MPI_DFLOAT, MPI_SUM, mesh->comm, request);
   else{
     globaldots[0] = 1;
     globaldots[1] = 1;
     globaldots[2] = 1;
+    globaldots[3] = 1;
   }
 }
