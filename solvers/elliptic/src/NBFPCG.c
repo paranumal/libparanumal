@@ -46,7 +46,7 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
   if(options.compareArgs("FIXED ITERATION COUNT", "TRUE")){
     fixedIterationCountFlag = 1;
   }
-  
+
   // register scalars
   dfloat alpha0 = 0;
   dfloat beta0  = 0;

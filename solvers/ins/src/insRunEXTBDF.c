@@ -122,15 +122,16 @@ void insRunEXTBDF(ins_t *ins){
 			 mesh->o_z,
 			 ins->o_U);
 #endif
-    
+
     if(ins->Nsubsteps) {
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
       insAdvection(ins, time, ins->o_U, ins->o_NU);
     }
-
+    
     insGradient (ins, time, ins->o_P, ins->o_GP);
 
+    
 #if 0
     ins->constrainKernel(mesh->Nelements,
 			 offset,
