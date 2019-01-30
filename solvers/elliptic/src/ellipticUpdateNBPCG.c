@@ -108,16 +108,29 @@ void ellipticNonBlockingUpdate1NBPCG(elliptic_t *elliptic,
 				     occa::memory &o_z, occa::memory &o_Z, const dfloat beta,
 				     occa::memory &o_p, occa::memory &o_s,
 				     dfloat *localpdots, dfloat *globalpdots, MPI_Request *request){
+
+  setupAide &options = elliptic->options;
+
+  int fixedIterationCountFlag = 0;
+  int enableGatherScatters = 1;
+  int enableReductions = 1;
+  int serial = options.compareArgs("THREAD MODEL", "Serial");
+  int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
   
-  const cgOptions_t cgOptions = elliptic->cgOptions;
+  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
+  options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
+  if(options.compareArgs("FIXED ITERATION COUNT", "TRUE")){
+    fixedIterationCountFlag = 1;
+  }
+  
+  // register scalars
+
   
   mesh_t *mesh = elliptic->mesh;
 
-  dfloat pdots = 0;
-
-  int useWeight = (cgOptions.continuous==1);
+  int useWeight = (continuous==1);
   
-  if(cgOptions.serial==1){
+  if(serial==1){
     
     localpdots[0] = ellipticSerialUpdate1NBPCG(mesh->Nq, mesh->Nelements, useWeight,
 					       elliptic->o_invDegree,
@@ -140,7 +153,7 @@ void ellipticNonBlockingUpdate1NBPCG(elliptic_t *elliptic,
   }
   
   *globalpdots = 0;
-  if(cgOptions.enableReductions)      
+  if(enableReductions)      
     MPI_Iallreduce(localpdots, globalpdots, 1, MPI_DFLOAT, MPI_SUM, mesh->comm, request);
   else
     *globalpdots = 1;
@@ -235,7 +248,21 @@ void ellipticNonBlockingUpdate2NBPCG(elliptic_t *elliptic,
 				     occa::memory &o_r, occa::memory &o_z,
 				     dfloat *localdots, dfloat *globaldots, MPI_Request *request){
   
-  const cgOptions_t cgOptions = elliptic->cgOptions;
+  setupAide &options = elliptic->options;
+
+  int fixedIterationCountFlag = 0;
+  int enableGatherScatters = 1;
+  int enableReductions = 1;
+  int verbose = verbose  = options.compareArgs("VERBOSE", "TRUE");
+  int serial = options.compareArgs("THREAD MODEL", "Serial");
+  int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
+  
+  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
+  options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
+  if(options.compareArgs("FIXED ITERATION COUNT", "TRUE")){
+    fixedIterationCountFlag = 1;
+  }
+
   
   mesh_t *mesh = elliptic->mesh;
 
@@ -243,9 +270,9 @@ void ellipticNonBlockingUpdate2NBPCG(elliptic_t *elliptic,
   localdots[1] = 0; // zdotz
   localdots[2] = 0; // rdotr
 
-  int useWeight = (cgOptions.continuous!=0);
+  int useWeight = (continuous!=0);
   
-  if(cgOptions.serial==1){
+  if(serial==1){
     
     ellipticSerialUpdate2NBPCG(mesh->Nq, mesh->Nelements, useWeight,  
 			       elliptic->o_invDegree,
@@ -277,7 +304,7 @@ void ellipticNonBlockingUpdate2NBPCG(elliptic_t *elliptic,
   globaldots[0] = 1;
   globaldots[1] = 1;
   globaldots[2] = 1;
-  if(cgOptions.enableReductions)      
+  if(enableReductions)      
     MPI_Iallreduce(localdots, globaldots, 3, MPI_DFLOAT, MPI_SUM, mesh->comm, request);
   
 }

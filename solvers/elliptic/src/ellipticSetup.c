@@ -35,8 +35,6 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
   //elliptic_t *elliptic = new elliptic_t[1];
 
-  cgOptions_t cgOptions;
-
   mesh->Nfields = 1;
   
   options.getArgs("MESH DIMENSION", elliptic->dim);
@@ -59,33 +57,31 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 
   
   // defaults for conjugate gradient
-  cgOptions.enableGatherScatters = 1;
-  cgOptions.enableReductions = 1; 
-  cgOptions.flexible = 1; 
-  cgOptions.verbose = 0;
+  int enableGatherScatters = 1;
+  int enableReductions = 1; 
+  int flexible = 1; 
+  int verbose = 0;
   
-  cgOptions.serial = options.compareArgs("THREAD MODEL", "Serial");
+  int serial = options.compareArgs("THREAD MODEL", "Serial");
 
-  cgOptions.continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
-  cgOptions.ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
+  int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
+  int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
 
-  options.getArgs("DEBUG ENABLE REDUCTIONS", cgOptions.enableReductions);
-  options.getArgs("DEBUG ENABLE OGS", cgOptions.enableGatherScatters);
+  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
+  options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
   
-  cgOptions.flexible = options.compareArgs("KRYLOV SOLVER", "FLEXIBLE");
-  cgOptions.verbose  = options.compareArgs("VERBOSE", "TRUE");
+  flexible = options.compareArgs("KRYLOV SOLVER", "FLEXIBLE");
+  verbose  = options.compareArgs("VERBOSE", "TRUE");
 
-  elliptic->cgOptions = cgOptions;
-
-  if(mesh->rank==0 && cgOptions.verbose==1){
+  if(mesh->rank==0 && verbose==1){
     printf("CG OPTIONS: enableReductions=%d, enableGatherScatters=%d, flexible=%d, verbose=%d, ipdg=%d, continuous=%d, serial=%d\n",
-	   cgOptions.enableGatherScatters, 
-	   cgOptions.enableReductions,
-	   cgOptions.flexible,
-	   cgOptions.verbose,
-	   cgOptions.ipdg,
-	   cgOptions.continuous,
-	   cgOptions.serial);
+	   enableGatherScatters, 
+	   enableReductions,
+	   flexible,
+	   verbose,
+	   ipdg,
+	   continuous,
+	   serial);
   }
 
   // compute samples of q at interpolation nodes

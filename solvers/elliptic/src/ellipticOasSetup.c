@@ -40,9 +40,6 @@ void ellipticOasSetup(elliptic_t *elliptic, dfloat lambda,
   ellipticBuildOneRing(elliptic, lambda, kernelInfo);
   
   /* STAGE 2: build coarse problem */
-  nonZero_t *coarseA;
-  dlong nnzCoarseA;
-
   //set up the base level
   int Nc = 1;
   int Nf = mesh->N;

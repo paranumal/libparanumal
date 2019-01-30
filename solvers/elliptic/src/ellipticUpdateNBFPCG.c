@@ -102,7 +102,14 @@ void ellipticNonBlockingUpdate0NBFPCG(elliptic_t *elliptic,
 				      occa::memory &o_u, occa::memory &o_r, occa::memory &o_w,
 				      dfloat *localdots, dfloat *globaldots, MPI_Request *request){
   
-  const cgOptions_t cgOptions = elliptic->cgOptions;
+
+  setupAide &options = elliptic->options;
+
+  int enableReductions = 1;
+  int serial = options.compareArgs("THREAD MODEL", "Serial");
+  int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
+  
+  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
   
   mesh_t *mesh = elliptic->mesh;
 
@@ -110,9 +117,9 @@ void ellipticNonBlockingUpdate0NBFPCG(elliptic_t *elliptic,
   localdots[1] = 0;
   localdots[2] = 0;
 
-  int useWeight = cgOptions.continuous!=0;
+  int useWeight = continuous!=0;
   
-  if(cgOptions.serial==1){
+  if(serial==1){
 
     ellipticSerialUpdate0NBFPCG(mesh->Nq, mesh->Nelements, useWeight, elliptic->o_invDegree, o_u, o_r, o_w, localdots);
   }
@@ -138,7 +145,7 @@ void ellipticNonBlockingUpdate0NBFPCG(elliptic_t *elliptic,
   globaldots[0] = 1;
   globaldots[1] = 1;
   globaldots[2] = 1;
-  if(cgOptions.enableReductions)      
+  if(enableReductions)      
     MPI_Iallreduce(localdots, globaldots, 3, MPI_DFLOAT, MPI_SUM, mesh->comm, request);
 
 }
@@ -257,14 +264,20 @@ void ellipticNonBlockingUpdate1NBFPCG(elliptic_t *elliptic,
 				      const dfloat alpha,
 				      occa::memory &o_x, occa::memory &o_r, occa::memory &o_u, occa::memory &o_w,
 				      dfloat *localdots, dfloat *globaldots, MPI_Request *request){
-  
-  const cgOptions_t cgOptions = elliptic->cgOptions;
-  
+
+  setupAide &options = elliptic->options;
+
+  int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
+  int serial = options.compareArgs("THREAD MODEL", "Serial");
+  int enableReductions = 1;
+  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
+
+    
   mesh_t *mesh = elliptic->mesh;
 
-  int useWeight = cgOptions.continuous!=0;
+  int useWeight = continuous!=0;
   
-  if(cgOptions.serial==1){
+  if(serial==1){
     
     ellipticSerialUpdate1NBFPCG(mesh->Nq, mesh->Nelements, useWeight,
 				elliptic->o_invDegree,
@@ -299,7 +312,7 @@ void ellipticNonBlockingUpdate1NBFPCG(elliptic_t *elliptic,
     }
   }
   
-  if(cgOptions.enableReductions)      
+  if(enableReductions)      
     MPI_Iallreduce(localdots, globaldots, 4, MPI_DFLOAT, MPI_SUM, mesh->comm, request);
   else{
     globaldots[0] = 1;

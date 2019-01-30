@@ -37,10 +37,10 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
 	  const dfloat tol, const int MAXIT){
   
   mesh_t *mesh = elliptic->mesh;
-  setupAide options = elliptic->options;
-  
-  const cgOptions_t &cgOptions = elliptic->cgOptions;
 
+  setupAide &options = elliptic->options;
+  int verbose = options.compareArgs("VERBOSE", "TRUE");
+  
   int fixedIterationCountFlag = 0;
   if(options.compareArgs("FIXED ITERATION COUNT", "TRUE")){
     fixedIterationCountFlag = 1;
@@ -58,10 +58,6 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   dfloat gamma1 = 0; // history gamma
   
   dfloat one = 1;
-  
-  double serialElapsedReduction = 0, serialElapsedAx = 0, serialElapsedGatherScatter = 0;
-
-  double pcgStart = MPI_Wtime();
   
   /*aux variables */
   occa::memory &o_p  = elliptic->o_pcgWork[0];
@@ -150,7 +146,7 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
 
     beta0 = gamma0/gamma1;
     
-    if (cgOptions.verbose&&(mesh->rank==0)) {
+    if (verbose&&(mesh->rank==0)) {
 
       if(zdotz0<0)
 	printf("WARNING CG: zdotz = %17.15lf\n", zdotz0);

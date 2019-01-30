@@ -42,26 +42,10 @@ SOFTWARE.
 
 typedef struct {
 
-  int continuous;
-  int ipdg;
-  int flexible;
-  int enableReductions;
-  int enableGatherScatters;
-  int verbose;
-  int serial;
-
-}cgOptions_t;
-
-
-
-typedef struct {
-
   int dim;
   int elementType; // number of edges (3=tri, 4=quad, 6=tet, 12=hex)
 
   mesh_t *mesh;
-
-  cgOptions_t cgOptions;
 
   precon_t *precon;
 
