@@ -39,8 +39,6 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   elliptic->elementType = baseElliptic->elementType;
   elliptic->options = baseElliptic->options;
 
-  elliptic->cgOptions = baseElliptic->cgOptions;
-  
   elliptic->tau = baseElliptic->tau;
   elliptic->BCType = baseElliptic->BCType;
   elliptic->allNeumann = baseElliptic->allNeumann;

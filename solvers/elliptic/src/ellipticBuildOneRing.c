@@ -157,8 +157,6 @@ void ellipticOneRingExchange(MPI_Comm &comm,
 			     MPI_Request *recvRequests,
 			     void *qOneRing){
   
-  int NsendMessages = 0, NrecvMessages = 0;
-  
   // do oneRing extract
   for(hlong n=0;n<NoneRingSendTotal;++n){
     hlong e = oneRingSendList[n];
@@ -166,6 +164,8 @@ void ellipticOneRingExchange(MPI_Comm &comm,
   }
   
   void *recvBuffer = (char*)qOneRing + Nelements*Nbytes; // fix later
+
+  int NsendMessages, NrecvMessages;
   
   ellipticOneRingExchangeStart(comm, Nbytes,
 			       NoneRingSendTotal, NoneRingSend, sendBuffer, sendRequests, &NsendMessages,
@@ -188,8 +188,6 @@ void ellipticOneRingExchange(elliptic_t *elliptic,
 			     size_t Nbytes,       // message size per element
 			     occa::memory &o_q,
 			     occa::memory &o_qOneRing){
-
-  int NsendMessages = 0, NrecvMessages = 0;
 
   // extract from original mesh
   mesh_t *mesh = elliptic->mesh;
@@ -376,7 +374,6 @@ void ellipticBuildOneRing(elliptic_t *elliptic, dfloat lambda, occa::properties 
   for(hlong n=0;n<NvertexUniqueRecv;++n){
     hlong start = vertexUniqueRecvOffsets[n];    
     hlong end   = vertexUniqueRecvOffsets[n+1];
-    int NuniqueRecvMultiplicity = end - start;
 
     for(hlong v1=start;v1<end;++v1){ // vertex v1 to be sent back with list of conns
       for(hlong v2=start;v2<end;++v2){

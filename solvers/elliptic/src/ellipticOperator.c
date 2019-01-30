@@ -34,9 +34,20 @@
 void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision){
   
   mesh_t *mesh = elliptic->mesh;
-  setupAide options = elliptic->options;
-  const cgOptions_t &cgOptions = elliptic->cgOptions;
+  setupAide &options = elliptic->options;
 
+  int fixedIterationCountFlag = 0;
+  int enableGatherScatters = 1;
+  int enableReductions = 1;
+  int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
+  int serial = options.compareArgs("THREAD MODEL", "Serial");
+  int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
+  
+  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
+  options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
+  if(options.compareArgs("FIXED ITERATION COUNT", "TRUE"))
+    fixedIterationCountFlag = 1;
+  
   dfloat *sendBuffer = elliptic->sendBuffer;
   dfloat *recvBuffer = elliptic->recvBuffer;
   dfloat *gradSendBuffer = elliptic->gradSendBuffer;
@@ -44,7 +55,7 @@ void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o
 
   dfloat alpha = 0., alphaG = 0.;
 
-  if(cgOptions.continuous && cgOptions.serial){
+  if(continuous && serial){
 
     ellipticSerialAxHexKernel3D(mesh->Nq,  mesh->Nelements, mesh->o_ggeo, 
 				mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq, elliptic->o_ggeoNoJW);
@@ -75,7 +86,7 @@ void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o
     if (elliptic->Nmasked) 
       mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Aq);
 
-  } else if(options.compareArgs("DISCRETIZATION", "IPDG")) {
+  } else if(ipdg){
     printf("WARNING: DEBUGGING C0\n");
     MPI_Finalize();
     exit(-1);
@@ -86,8 +97,19 @@ void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o
 void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision){
 
   mesh_t *mesh = elliptic->mesh;
-  setupAide options = elliptic->options;
-  const cgOptions_t &cgOptions = elliptic->cgOptions;
+  setupAide &options = elliptic->options;
+
+  int fixedIterationCountFlag = 0;
+  int enableGatherScatters = 1;
+  int enableReductions = 1;
+  int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
+  int serial = options.compareArgs("THREAD MODEL", "Serial");
+  int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
+  
+  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
+  options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
+  if(options.compareArgs("FIXED ITERATION COUNT", "TRUE"))
+    fixedIterationCountFlag = 1;
 
   dfloat *sendBuffer = elliptic->sendBuffer;
   dfloat *recvBuffer = elliptic->recvBuffer;
@@ -99,10 +121,10 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   dfloat *tmp = elliptic->tmp;
   occa::memory &o_tmp = elliptic->o_tmp;
 
-  if(cgOptions.continuous){
+  if(continuous){
 
     // TW: turned off for debugging
-    if(cgOptions.serial && elliptic->elementType==HEXAHEDRA){
+    if(serial && elliptic->elementType==HEXAHEDRA){
       ellipticSerialOperator(elliptic, lambda, o_q, o_Aq, precision);
       return;
     }
@@ -138,7 +160,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       }
     }
     
-    if(cgOptions.enableGatherScatters)
+    if(enableGatherScatters)
       ogsGatherScatterStart(o_Aq, ogsDfloat, ogsAdd, ogs);
     
     if(mesh->NlocalGatherElements){
@@ -164,7 +186,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     }
 
     // finalize gather using local and global contributions
-    if(cgOptions.enableGatherScatters==1)
+    if(enableGatherScatters==1)
       ogsGatherScatterFinish(o_Aq, ogsDfloat, ogsAdd, ogs);
   
     if(elliptic->allNeumann) {
@@ -185,7 +207,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     if (elliptic->Nmasked) 
       mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Aq);
 
-  } else if(options.compareArgs("DISCRETIZATION", "IPDG")) {
+  } else if(ipdg){
     dlong offset = 0;
     dfloat alpha = 0., alphaG =0.;
     dlong Nblock = elliptic->Nblock;

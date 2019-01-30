@@ -97,19 +97,28 @@ dfloat ellipticSerialUpdatePCG(const int Nq, const hlong Nelements,
 dfloat ellipticUpdatePCG(elliptic_t *elliptic,
 			 occa::memory &o_p, occa::memory &o_Ap, const dfloat alpha,
 			 occa::memory &o_x, occa::memory &o_r){
+
+  setupAide &options = elliptic->options;
   
-  const cgOptions_t cgOptions = elliptic->cgOptions;
+  int fixedIterationCountFlag = 0;
+  int enableGatherScatters = 1;
+  int enableReductions = 1;
+  int flexible = options.compareArgs("KRYLOV SOLVER", "FLEXIBLE");
+  int verbose = options.compareArgs("VERBOSE", "TRUE");
+  int serial = options.compareArgs("THREAD MODEL", "Serial");
+  int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
+  int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
   
   mesh_t *mesh = elliptic->mesh;
 
-  if(cgOptions.serial==1 && cgOptions.continuous==1){
+  if(serial==1 && continuous==1){
     
     dfloat rdotr1 = ellipticSerialUpdatePCG(mesh->Nq, mesh->Nelements, 
 					    elliptic->o_invDegree,
 					    o_p, o_Ap, alpha, o_x, o_r);
 
     dfloat globalrdotr1 = 0;
-    if(cgOptions.enableReductions)      
+    if(enableReductions)      
       MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
     else
       globalrdotr1 = 1;
@@ -119,7 +128,7 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
   
   dfloat rdotr1 = 0;
   
-  if(!cgOptions.continuous){
+  if(!continuous){
     
     // x <= x + alpha*p
     ellipticScaledAdd(elliptic,  alpha, o_p,  1.f, o_x);
@@ -129,7 +138,7 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
     ellipticScaledAdd(elliptic, -alpha, o_Ap, 1.f, o_r);
     
     // dot(r,r)
-    if(cgOptions.enableReductions)
+    if(enableReductions)
       rdotr1 = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
     else
       rdotr1 = 1;

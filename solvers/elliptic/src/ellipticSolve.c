@@ -37,8 +37,6 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
 
   options.getArgs("MAXIMUM ITERATIONS", maxIter);
 
-  double start = 0.0, end =0.0;
-
   if(!options.compareArgs("KRYLOV SOLVER", "NONBLOCKING"))
     Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter);
   else{
