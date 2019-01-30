@@ -183,8 +183,8 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
 	printf("WARNING CG: gamma = %17.15lf\n", gamma0);
       
       printf("CG: it %d z alpha = %12.12le beta = %le "
-	     "gamma = %le delta = %le, eta = %le\n",
-	     iter, alpha0, beta0, gamma0, delta0, eta0);
+	     "rdotr = %le gamma = %le delta = %le, eta = %le\n",
+	     iter, alpha0, beta0, rdotr0, gamma0, delta0, eta0);
     }
 
     if(rdotr0<=TOL && !fixedIterationCountFlag) break;
