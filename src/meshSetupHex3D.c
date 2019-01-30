@@ -31,6 +31,8 @@ mesh3D *meshSetupHex3D(char *filename, int N){
   // read chunk of elements
   mesh3D *mesh = meshParallelReaderHex3D(filename);
 
+  mesh->Nfields = 1; // TW: note this is a temporary patch (halo exchange depends on nfields)
+  
   // partition elements using Morton ordering & parallel sort
   //  meshGeometricPartition3D(mesh);
   meshRecursiveSpectralBisectionPartition(mesh);

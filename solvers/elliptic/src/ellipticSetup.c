@@ -37,6 +37,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 
   cgOptions_t cgOptions;
 
+  mesh->Nfields = 1;
+  
   options.getArgs("MESH DIMENSION", elliptic->dim);
   options.getArgs("ELEMENT TYPE", elliptic->elementType);
   elliptic->mesh = mesh;
@@ -85,8 +87,6 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 	   cgOptions.continuous,
 	   cgOptions.serial);
   }
-
-  mesh->Nfields = 1;
 
   // compute samples of q at interpolation nodes
   mesh->q = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));

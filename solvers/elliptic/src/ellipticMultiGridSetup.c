@@ -37,7 +37,8 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     meshLevels[n] = (mesh_t *) calloc(1,sizeof(mesh_t));
     meshLevels[n]->Nverts = mesh->Nverts;
     meshLevels[n]->Nfaces = mesh->Nfaces;
-
+    meshLevels[n]->Nfields = mesh->Nfields; // TW: ahem
+    
     switch(elliptic->elementType){
     case TRIANGLES:
       meshLoadReferenceNodesTri2D(meshLevels[n], n); break;
