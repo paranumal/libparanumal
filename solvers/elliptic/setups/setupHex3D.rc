@@ -14,12 +14,12 @@ data/ellipticSineTest3D.h
 #../../meshes/cavityHexH0125.msh
 #../../meshes/cavityHexH0075.msh
 #../../meshes/cubeHexE00008.msh
-#../../meshes/cubeHexE00064.msh
+#../../meshes/cubeHexE00064N.msh
 #../../meshes/cubeHexE00216.msh
 #../../meshes/cubeHexE00512.msh
-#../../meshes/cubeHexE01000.msh
+../../meshes/cubeHexE01000.msh
 #../../meshes/cubeHexE01728.msh
-../../meshes/cubeHexE04096.msh
+#../../meshes/cubeHexE04096.msh
 #../../meshes/cubeHexE05832.msh
 #../../meshes/cubeHexE08000.msh
 
@@ -52,14 +52,17 @@ CUDA
 0
 
 [LAMBDA]
-1.e-2
+0
 
 # can add FLEXIBLE to PCG
 # can add NONBLOCKING (disable FLEXIBLE for the moment)
 [KRYLOV SOLVER]
-PCG+FLEXIBLE+NONBLOCKING
-#+NONBLOCKING+FLEXIBLE
+PCG+NONBLOCKING+FLEXIBLE
+#+FLEXIBLE
 #+FLEXIBLE+NONBLOCKING
+
+[SOLVER TOLERANCE]
+1.e-7
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
@@ -156,3 +159,4 @@ TRUE
 
 [FIXED ITERATION COUNT]
 FALSE
+
