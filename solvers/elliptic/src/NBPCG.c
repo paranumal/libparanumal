@@ -77,9 +77,11 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   dfloat *localdots  = (dfloat*) calloc(2, sizeof(dfloat));
   dfloat *globaldots = (dfloat*) calloc(2, sizeof(dfloat));
 
+#if 0
   // blocks
   dfloat normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
   dfloat TOL = mymax(normB*tol*tol, tol*tol);
+#endif
   
   // Ax = A*x
   ellipticOperator(elliptic, lambda, o_x, o_Ax, dfloatString); // WRONG FOR IPDG
@@ -104,6 +106,8 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   rdotr0 = globaldots[2]; 
   // ]
 
+  dfloat TOL = mymax(rdotr0*tol*tol, tol*tol);
+  
   int iter;
 
   beta0 = 0;

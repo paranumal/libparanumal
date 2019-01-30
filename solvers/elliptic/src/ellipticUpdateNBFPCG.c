@@ -48,7 +48,7 @@ void ellipticSerialUpdate0NBFPCGKernel(const hlong Nelements,
 
   dfloat udotr = 0;
   dfloat udotw = 0;
-  
+  dfloat rdotr = 0;
   for(hlong e=0;e<Nelements;++e){
     for(int i=0;i<p_Np;++i){
       const hlong n = e*p_Np+i;
@@ -61,12 +61,14 @@ void ellipticSerialUpdate0NBFPCGKernel(const hlong Nelements,
       
       udotr += un*rn*invDeg;
       udotw += un*wn*invDeg;
+      rdotr += rn*rn*invDeg;
     }
   }
 
   localdots[0] = udotr;
   localdots[1] = udotw;
-
+  localdots[2] = rdotr;
+  
 #undef p_Np
 }
 				     
@@ -106,6 +108,7 @@ void ellipticNonBlockingUpdate0NBFPCG(elliptic_t *elliptic,
 
   localdots[0] = 0;
   localdots[1] = 0;
+  localdots[2] = 0;
 
   int useWeight = cgOptions.continuous!=0;
   
@@ -116,23 +119,27 @@ void ellipticNonBlockingUpdate0NBFPCG(elliptic_t *elliptic,
   else{
     // (u.r)
     // (u.w)
+    // (r.r)
     elliptic->update0NBFPCGKernel(mesh->Nelements*mesh->Np, elliptic->NblocksUpdatePCG, useWeight,
 				  elliptic->o_invDegree, o_u, o_r, o_w,
-				  elliptic->o_tmpudotr, elliptic->o_tmpudotw);
+				  elliptic->o_tmpudotr, elliptic->o_tmpudotw, elliptic->o_tmprdotr);
     
     elliptic->o_tmpudotr.copyTo(elliptic->tmpudotr);
     elliptic->o_tmpudotw.copyTo(elliptic->tmpudotw);
+    elliptic->o_tmprdotr.copyTo(elliptic->tmprdotr);
     
     for(int n=0;n<elliptic->NblocksUpdatePCG;++n){
       localdots[0] += elliptic->tmpudotr[n];
       localdots[1] += elliptic->tmpudotw[n];
+      localdots[2] += elliptic->tmprdotr[n];      
     }
   }
   
   globaldots[0] = 1;
   globaldots[1] = 1;
+  globaldots[2] = 1;
   if(cgOptions.enableReductions)      
-    MPI_Iallreduce(localdots, globaldots, 2, MPI_DFLOAT, MPI_SUM, mesh->comm, request);
+    MPI_Iallreduce(localdots, globaldots, 3, MPI_DFLOAT, MPI_SUM, mesh->comm, request);
 
 }
 
