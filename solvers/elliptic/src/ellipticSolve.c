@@ -40,10 +40,12 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
   if(!options.compareArgs("KRYLOV SOLVER", "NONBLOCKING"))
     Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter);
   else{
-    if(!options.compareArgs("KRYLOV SOLVER", "FLEXIBLE"))
+    if(!options.compareArgs("KRYLOV SOLVER", "FLEXIBLE")){
       Niter = nbpcg (elliptic, lambda, o_r, o_x, tol, maxIter);
-    else
+    }
+    else{      
       Niter = nbfpcg (elliptic, lambda, o_r, o_x, tol, maxIter);
+    }
   }
  
   return Niter;

@@ -38,7 +38,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   elliptic_t *wsolver = ins->wSolver;
 
   int quad3D = (ins->dim==3 && ins->elementType==QUADRILATERALS) ? 1 : 0;  
-  
+
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
 
     if(!quad3D) 

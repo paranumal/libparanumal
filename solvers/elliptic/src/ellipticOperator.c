@@ -36,7 +36,6 @@ void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o
   mesh_t *mesh = elliptic->mesh;
   setupAide &options = elliptic->options;
 
-  int fixedIterationCountFlag = 0;
   int enableGatherScatters = 1;
   int enableReductions = 1;
   int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
@@ -45,8 +44,9 @@ void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o
   
   options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
   options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
-  if(options.compareArgs("FIXED ITERATION COUNT", "TRUE"))
-    fixedIterationCountFlag = 1;
+  
+  //  printf("serialOperator: gathers = %d, reductions = %d, cts = %d, serial = %d, ipdg = %d\n",
+  //	 enableGatherScatters, enableReductions, continuous, serial, ipdg);
   
   dfloat *sendBuffer = elliptic->sendBuffer;
   dfloat *recvBuffer = elliptic->recvBuffer;
@@ -99,7 +99,6 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   mesh_t *mesh = elliptic->mesh;
   setupAide &options = elliptic->options;
 
-  int fixedIterationCountFlag = 0;
   int enableGatherScatters = 1;
   int enableReductions = 1;
   int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
@@ -108,9 +107,10 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   
   options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
   options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
-  if(options.compareArgs("FIXED ITERATION COUNT", "TRUE"))
-    fixedIterationCountFlag = 1;
 
+  //  printf("generalOperator: gathers = %d, reductions = %d, cts = %d, serial = %d, ipdg = %d\n",
+  //	 enableGatherScatters, enableReductions, continuous, serial, ipdg);
+  
   dfloat *sendBuffer = elliptic->sendBuffer;
   dfloat *recvBuffer = elliptic->recvBuffer;
   dfloat *gradSendBuffer = elliptic->gradSendBuffer;

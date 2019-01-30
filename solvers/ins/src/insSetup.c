@@ -647,6 +647,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   ins->vOptions.setArgs("DEBUG ENABLE OGS", "1");
   ins->vOptions.setArgs("DEBUG ENABLE REDUCTIONS", "1");
+
+  ///  std::cout << "vOptions: " << ins->vOptions << std::endl;
   
   ins->pOptions = options;
   ins->pOptions.setArgs("KRYLOV SOLVER",        options.getArgs("PRESSURE KRYLOV SOLVER"));
@@ -664,6 +666,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   ins->pOptions.setArgs("DEBUG ENABLE OGS", "1");
   ins->pOptions.setArgs("DEBUG ENABLE REDUCTIONS", "1");
+
+  ///  std::cout << "pOptions: " << ins->pOptions << std::endl;  
   
   if (mesh->rank==0) printf("==================ELLIPTIC SOLVE SETUP=========================\n");
 
