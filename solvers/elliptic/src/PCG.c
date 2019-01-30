@@ -72,10 +72,10 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   occa::memory &o_Ap = elliptic->o_Ap;
   occa::memory &o_Ax = elliptic->o_Ax;
 
+#if 0
   dfloat normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
-
-  dfloat TOL =  mymax(tol*tol*normB,tol*tol);
-  
+#endif
+ 
   pAp = 0;
   rdotz1 = 1;
 
@@ -93,6 +93,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   else
     rdotr0 = 1;
   serialElapsedReduction += serialElapsed();
+
+  dfloat TOL =  mymax(tol*tol*rdotr0,tol*tol);
   
   int iter;
   for(iter=1;iter<=MAXIT;++iter){
