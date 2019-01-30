@@ -110,28 +110,26 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       elliptic->o_pcgWork[n]  = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->z);
     }
 
-    if(!useFlexible){
-      elliptic->tmppdots = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
-      elliptic->o_tmppdots = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmppdots);
-      
-      elliptic->tmprdotz = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
-      elliptic->o_tmprdotz = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmprdotz);
-      
-      elliptic->tmpzdotz = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
-      elliptic->o_tmpzdotz = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpzdotz);
+    elliptic->tmppdots = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+    elliptic->o_tmppdots = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmppdots);
+    
+    elliptic->tmprdotz = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+    elliptic->o_tmprdotz = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmprdotz);
+    
+    elliptic->tmpzdotz = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+    elliptic->o_tmpzdotz = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpzdotz);
+    
+    elliptic->tmprdotr = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+    elliptic->o_tmprdotr = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmprdotr);
 
-      elliptic->tmprdotr = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
-      elliptic->o_tmprdotr = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmprdotr);
-    }else{
-      elliptic->tmpudotr = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
-      elliptic->o_tmpudotr = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpudotr);
-
-      elliptic->tmpudots = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
-      elliptic->o_tmpudots = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpudots);
-
-      elliptic->tmpudotw = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
-      elliptic->o_tmpudotw = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpudotw);
-    }
+    elliptic->tmpudotr = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+    elliptic->o_tmpudotr = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpudotr);
+    
+    elliptic->tmpudots = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+    elliptic->o_tmpudots = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpudots);
+    
+    elliptic->tmpudotw = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
+    elliptic->o_tmpudotw = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpudotw);
   }
   
   //setup async halo stream
