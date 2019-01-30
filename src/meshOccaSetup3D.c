@@ -643,6 +643,7 @@ void meshOccaPopulateDevice3D(mesh3D *mesh, setupAide &newOptions, occa::propert
       mesh->device.malloc(mesh->totalHaloPairs*sizeof(dlong), mesh->haloElementList);
 
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
+    printf("mesh->Nfields = %d\n", mesh->Nfields);
     mesh->o_haloBuffer =
       mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat));
 

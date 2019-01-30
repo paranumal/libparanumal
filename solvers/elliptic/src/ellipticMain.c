@@ -53,8 +53,8 @@ int main(int argc, char **argv){
   // set up mesh
   mesh_t *mesh = meshSetup((char*) fileName.c_str(), N, options);
 
-  if(mesh->Nelements<10)
-  meshPrint3D(mesh);
+  //  if(mesh->Nelements<10)
+  //    meshPrint3D(mesh);
 #if 0
   char fname[BUFSIZ];
   sprintf(fname,"meshQuad3D.vtu");

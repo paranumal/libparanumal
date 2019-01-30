@@ -43,8 +43,9 @@ void ellipticStartHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nent
     mesh->device.setStream(elliptic->dataStream);
 
     // extract halo on data stream
-    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList,
-          o_q, mesh->o_haloBuffer);
+    //    printf("CRASH DATA: %d, %d, %p, %p, %p\n", mesh->totalHaloPairs, Nentries, mesh->o_haloElementList.ptr(), o_q.ptr(), mesh->o_haloBuffer.ptr());
+    
+    mesh->haloExtractKernel(mesh->totalHaloPairs, Nentries, mesh->o_haloElementList, o_q, mesh->o_haloBuffer);
 
     // queue up async copy of halo on data stream
     mesh->o_haloBuffer.copyTo(sendBuffer,"async: true");
