@@ -78,6 +78,10 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   dfloat normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
   dfloat TOL = mymax(normB*tol*tol, tol*tol);
 #endif
+
+
+    int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
+    printf("NBPCG: continuous=%d\n", continuous);
   
   // Ax = A*x
   ellipticOperator(elliptic, lambda, o_x, o_Ax, dfloatString); // WRONG FOR IPDG

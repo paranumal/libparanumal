@@ -57,12 +57,17 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
 
   if (size==1) options.getArgs("DEVICE NUMBER" ,device_id);
 
-  //  device_id = device_id%2;
+  printf("device_id = %d\n", device_id);
   
-#ifdef OCCA_VERSION_1_0
+  //  device_id = device_id%2;
+
+  occa::properties deviceProps;
+  
   // read thread model/device/platform from options
   if(options.compareArgs("THREAD MODEL", "CUDA")){
-    sprintf(deviceConfig, "mode: 'CUDA', device_id: %d",device_id);
+    //    deviceProps["mode"] = "CUDA";
+    //    deviceProps["device_id"] = 0; string(device_id);
+    sprintf(deviceConfig, "mode: 'CUDA', device_id: %d", device_id);
   }
   else if(options.compareArgs("THREAD MODEL", "HIP")){
     sprintf(deviceConfig, "mode: 'HIP', device_id: %d",device_id);
@@ -78,23 +83,6 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   else{
     sprintf(deviceConfig, "mode: 'Serial' ");
   }
-#else
-  // read thread model/device/platform from options
-  if(options.compareArgs("THREAD MODEL", "CUDA")){
-    sprintf(deviceConfig, "mode=CUDA, deviceID=%d",device_id);
-  }
-  else if(options.compareArgs("THREAD MODEL", "OpenCL")){
-    int plat;
-    options.getArgs("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode=OpenCL, deviceID=%d, platformID=%d", device_id, plat);
-  }
-  else if(options.compareArgs("THREAD MODEL", "OpenMP")){
-    sprintf(deviceConfig, "mode=OpenMP ");
-  }
-  else{
-    sprintf(deviceConfig, "mode=Serial");
-  }
-#endif
 
   //set number of omp threads to use
   int Ncores = sysconf(_SC_NPROCESSORS_ONLN);
@@ -106,15 +94,17 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
 
   if (options.compareArgs("VERBOSE","TRUE"))
     printf("Rank %d: Ncores = %d, Nthreads = %d, device_id = %d \n", rank, Ncores, Nthreads, device_id);
+
+  std::cout << deviceConfig << std::endl;
   
-  mesh->device.setup(deviceConfig);
+  mesh->device.setup( (std::string) deviceConfig); // deviceProps);
 
 #ifdef USE_OCCA_MEM_BYTE_ALIGN 
   // change OCCA MEM BYTE ALIGNMENT
   occa::env::OCCA_MEM_BYTE_ALIGN = USE_OCCA_MEM_BYTE_ALIGN;
 #endif
 
-  mesh->device.UsePreCompiledKernels(mesh->rank!=0); 
+  //  mesh->device.UsePreCompiledKernels(mesh->rank!=0); 
   
   occa::initTimer(mesh->device);
 

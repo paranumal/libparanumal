@@ -138,21 +138,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   dlong Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   if(Nbytes>0){
-#if 0
-    occa::memory o_sendBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
-    occa::memory o_recvBuffer = mesh->device.mappedAlloc(Nbytes, NULL);
-
-    elliptic->sendBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
-    elliptic->recvBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
-
-
-    occa::memory o_gradSendBuffer = mesh->device.mappedAlloc(2*Nbytes, NULL);
-    occa::memory o_gradRecvBuffer = mesh->device.mappedAlloc(2*Nbytes, NULL);
-
-    elliptic->gradSendBuffer = (dfloat*) o_gradSendBuffer.getMappedPointer();
-    elliptic->gradRecvBuffer = (dfloat*) o_gradRecvBuffer.getMappedPointer();
-#endif
-
     elliptic->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, Nbytes, NULL, elliptic->o_sendBuffer);
     elliptic->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, Nbytes, NULL, elliptic->o_recvBuffer);
     elliptic->gradSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, 2*Nbytes, NULL, elliptic->o_gradSendBuffer);
@@ -232,7 +217,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   elliptic->allNeumann = (gallNeumann>0) ? false: true;
 
   // MPI_Allreduce(&allNeumann, &(elliptic->allNeumann), 1, MPI::BOOL, MPI_LAND, mesh->comm);
-  if (mesh->rank==0&& options.compareArgs("VERBOSE","TRUE")) printf("allNeumann = %d \n", elliptic->allNeumann);
+  //  if (mesh->rank==0&& options.compareArgs("VERBOSE","TRUE"))
+    printf("allNeumann = %d \n", elliptic->allNeumann);
 
   //set surface mass matrix for continuous boundary conditions
   mesh->sMT = (dfloat *) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));
