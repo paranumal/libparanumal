@@ -41,13 +41,6 @@ void bnsRun(bns_t *bns, setupAide &options){
     haloBytes = mesh->totalHaloPairs*mesh->Np*bns->Nfields*sizeof(dfloat);
 
   if (haloBytes) {
-#if 0
-    occa::memory o_sendBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
-    occa::memory o_recvBufferPinned = mesh->device.mappedAlloc(haloBytes, NULL);
-    sendBuffer = (dfloat*) o_sendBufferPinned.getMappedPointer();
-    recvBuffer = (dfloat*) o_recvBufferPinned.getMappedPointer();
-#endif
-    
     sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, haloBytes, NULL, bns->o_sendBufferPinned);
     recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, haloBytes, NULL, bns->o_recvBufferPinned);
   }

@@ -68,8 +68,30 @@ int compareLocalId(const void *a, const void *b){
 ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
                 int verbose, occa::device device){
 
-  ogs_t *ogs = (ogs_t*) calloc(1, sizeof(ogs_t));
+  //  ogs_t *ogs = (ogs_t*) calloc(1, sizeof(ogs_t));
+  ogs_t *ogs = new ogs_t[1];
 
+  ogs->NhaloGather = 0;
+  ogs->Ngather = 0;
+  ogs->Nlocal = 0;
+  ogs->NlocalGather = 0;
+  ogs->Nhalo = 0;
+  ogs->NhaloGather = 0;
+  ogs->NownedHalo = 0;
+
+  ogs->localGatherOffsets = NULL;
+  ogs->localGatherIds = NULL;
+
+  ogs->haloGatherOffsets = NULL;
+  ogs->haloGatherIds = NULL;
+
+  ogs->hostGsh = NULL;
+  ogs->haloGshSym = NULL;
+  ogs->haloGshNonSym = NULL;
+
+  ogs->invDegree = NULL;
+  ogs->gatherInvDegree = NULL;
+  
   //Keep track of how many gs handles we've created, and
   // build kernels if this is the first
   if (!ogs::Nrefs) ogs::initKernels(comm, device);
@@ -77,7 +99,7 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
 
   ogs->N = N;
   ogs->comm = comm;
-
+  
   int rank, size;
   MPI_Comm_rank(ogs->comm, &rank);
   MPI_Comm_size(ogs->comm, &size);
