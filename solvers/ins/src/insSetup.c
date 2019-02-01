@@ -765,6 +765,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     }
   }
 
+  // this is potentially not good for Neumann (since it will )
   ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs); // !!!!!!!!!!!!!!!!!
   ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs); // !!!!!!!!!!!!!!!!!
 #if 1
@@ -967,8 +968,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       ins->advectionCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       //sprintf(kernelName, "insAdvectionVolume%s", suffix);
-      //      if (options.compareArgs("VELOCITY DISCRETIZATION", "IPDG")) {
-      if(1){
+      if (options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
 	sprintf(kernelName, "insAdvectionVolume%s", suffix);
       }else{
 	sprintf(kernelName, "insStrongAdvectionVolume%s", suffix);

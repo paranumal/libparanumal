@@ -47,10 +47,6 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
     fixedIterationCountFlag = 1;
   }
 
-  int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
-  printf("NBFPCG: continuous=%d\n", continuous);
-
-  
   // register scalars
   dfloat alpha0 = 0;
   dfloat beta0  = 0;
