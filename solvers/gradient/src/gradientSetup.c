@@ -101,14 +101,6 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
     gradient->haloBytes = mesh->totalHaloPairs*mesh->Np*gradient->Nfields*sizeof(dfloat);
     gradient->o_haloBuffer = mesh->device.malloc(gradient->haloBytes);
 
-#if 0
-    occa::memory o_sendBuffer = mesh->device.mappedAlloc(gradient->haloBytes, NULL);
-    occa::memory o_recvBuffer = mesh->device.mappedAlloc(gradient->haloBytes, NULL);
-
-    gradient->sendBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
-    gradient->recvBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
-#endif
-
     gradient->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, gradient->haloBytes, NULL, gradient->o_sendBuffer);
     gradient->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, gradient->haloBytes, NULL, gradient->o_recvBuffer);
 
