@@ -593,7 +593,7 @@ dfloat matrixConditionNumber(int N, dfloat *A);
 
 void occaDeviceConfig(mesh_t *mesh, setupAide &newOptions);
 
-void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem);
+void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem);
 
 #endif
 

@@ -36,6 +36,7 @@ namespace ogs {
 
   void* haloBuf;
   occa::memory o_haloBuf;
+  occa::memory h_haloBuf;
 
   occa::stream defaultStream;
   occa::stream dataStream;

@@ -222,6 +222,6 @@ void ogsScatterVecFinish (occa::memory  o_Sv, occa::memory  o_v, const int k, co
 void ogsScatterManyStart (occa::memory  o_Sv, occa::memory  o_v, const int k, const dlong sstride, const dlong stride, const char *type, const char *op, ogs_t *ogs);
 void ogsScatterManyFinish(occa::memory  o_Sv, occa::memory  o_v, const int k, const dlong sstride, const dlong stride, const char *type, const char *op, ogs_t *ogs);
 
-void *ogsHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem);
+void *ogsHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem);
 
 #endif

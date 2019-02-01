@@ -118,11 +118,11 @@ typedef struct {
   dfloat *pRecvBuffer;
   dfloat * velocityHaloGatherTmp;
 
-  occa::memory o_vSendBuffer;
-  occa::memory o_vRecvBuffer;
-  occa::memory o_pSendBuffer;
-  occa::memory o_pRecvBuffer;
-  occa::memory o_gatherTmpPinned;
+  occa::memory o_vSendBuffer,h_vSendBuffer;
+  occa::memory o_vRecvBuffer,h_vRecvBuffer;
+  occa::memory o_pSendBuffer,h_pSendBuffer;
+  occa::memory o_pRecvBuffer,h_pRecvBuffer;
+  occa::memory o_gatherTmpPinned, h_gatherTmpPinned;
 
   int Nsubsteps;  
   dfloat *Ud, *Ue, *resU, *rhsUd, sdt;

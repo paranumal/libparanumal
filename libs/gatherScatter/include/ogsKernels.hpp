@@ -38,6 +38,7 @@ namespace ogs {
 
   extern void* haloBuf;
   extern occa::memory o_haloBuf;
+  extern occa::memory h_haloBuf;
 
   extern occa::kernel gatherScatterKernel_floatAdd;
   extern occa::kernel gatherScatterKernel_floatMul;

@@ -138,10 +138,10 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   dlong Nbytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
   if(Nbytes>0){
-    elliptic->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, Nbytes, NULL, elliptic->o_sendBuffer);
-    elliptic->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, Nbytes, NULL, elliptic->o_recvBuffer);
-    elliptic->gradSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, 2*Nbytes, NULL, elliptic->o_gradSendBuffer);
-    elliptic->gradRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, 2*Nbytes, NULL, elliptic->o_gradRecvBuffer);
+    elliptic->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, Nbytes, NULL, elliptic->o_sendBuffer, elliptic->h_sendBuffer);
+    elliptic->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, Nbytes, NULL, elliptic->o_recvBuffer, elliptic->h_recvBuffer);
+    elliptic->gradSendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, 2*Nbytes, NULL, elliptic->o_gradSendBuffer, elliptic->h_gradSendBuffer);
+    elliptic->gradRecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, 2*Nbytes, NULL, elliptic->o_gradRecvBuffer, elliptic->h_gradRecvBuffer);
 
   }else{
     elliptic->sendBuffer = NULL;
