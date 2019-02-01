@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#define mode 1
+#define mode 0.5
 
 /* Homogeneous Dirichlet boundary condition   */
 #define ellipticDirichletCondition3D(t,x,y,z,nx,ny,nz,uM,uxM,uyM,uzM,uB,uxB,uyB,uzB)  \
@@ -39,8 +39,8 @@ SOFTWARE.
 #define ellipticNeumannCondition3D(t,x,y,z,nx,ny,nz,uM,uxM,uyM,uzM,uB,uxB,uyB,uzB)  \
   {              \
     uB  = uM;    \
-    uxB = mode*M_PI*sin(mode*M_PI*x)*cos(mode*M_PI*y)*cos(mode*M_PI*z);	\
-    uyB = mode*M_PI*cos(mode*M_PI*x)*sin(mode*M_PI*y)*cos(mode*M_PI*z);		\
-    uzB = mode*M_PI*cos(mode*M_PI*x)*cos(mode*M_PI*y)*sin(mode*M_PI*z);		\
+    uxB = -mode*M_PI*sin(mode*M_PI*x)*cos(mode*M_PI*y)*cos(mode*M_PI*z);	\
+    uyB = -mode*M_PI*cos(mode*M_PI*x)*sin(mode*M_PI*y)*cos(mode*M_PI*z);		\
+    uzB = -mode*M_PI*cos(mode*M_PI*x)*cos(mode*M_PI*y)*sin(mode*M_PI*z);		\
   }
 
