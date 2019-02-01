@@ -1382,3 +1382,105 @@ SOFTWARE.
   }
 }
 #undef quadSurfaceTerms
+
+// Compute Divergence in weak Form
+@kernel void insStrongAdvectionVolumeHex3D(const dlong Nelements,
+				     @restrict const  dfloat *  vgeo,
+				     @restrict const  dfloat *  D,
+				     const dlong offset,
+				     @restrict const  dfloat *  U,
+				     @restrict dfloat *  NU){
+
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+    @shared dfloat s_U[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_V[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_W[p_Nq][p_Nq][p_Nq];
+
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+	  dlong id = i+j*p_Nq;
+	  if(k==0)
+	    s_D[0][id] = D[id];
+
+	  id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+	  const dfloat Un = U[id+0*offset];
+	  const dfloat Vn = U[id+1*offset];
+	  const dfloat Wn = U[id+2*offset];
+
+	  s_U[k][j][i] = Un;
+	  s_V[k][j][i] = Vn;
+	  s_W[k][j][i] = Wn;
+	}
+      }
+    }
+
+    @barrier("local");
+
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+
+	  const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
+	  const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+	  const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+	  const dfloat drdz = vgeo[gid + p_RZID*p_Np];
+	  const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+	  const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+	  const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
+	  const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+	  const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+	  const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+
+	  dfloat dudr = 0, duds = 0, dudt = 0;
+	  dfloat dvdr = 0, dvds = 0, dvdt = 0;
+	  dfloat dwdr = 0, dwds = 0, dwdt = 0;
+
+	  #pragma unroll p_Nq
+	  for (int n=0;n<p_Nq;n++) {
+	    const dfloat Dr = s_D[i][n];
+	    const dfloat Ds = s_D[j][n];
+	    const dfloat Dt = s_D[k][n];
+	    dudr += Dr*s_U[k][j][n];
+	    duds += Ds*s_U[k][n][i];
+	    dudt += Dt*s_U[n][j][i];
+
+	    dvdr += Dr*s_V[k][j][n];
+	    dvds += Ds*s_V[k][n][i];
+	    dvdt += Dt*s_V[n][j][i];
+
+	    dwdr += Dr*s_W[k][j][n];
+	    dwds += Ds*s_W[k][n][i];
+	    dwdt += Dt*s_W[n][j][i];
+	  }
+
+	  dfloat dudx = drdx*dudr + dsdx*duds + dtdx*dudt;
+	  dfloat dudy = drdy*dudr + dsdy*duds + dtdy*dudt;
+	  dfloat dudz = drdz*dudr + dsdz*duds + dtdz*dudt;
+
+	  dfloat dvdx = drdx*dvdr + dsdx*dvds + dtdx*dvdt;
+	  dfloat dvdy = drdy*dvdr + dsdy*dvds + dtdy*dvdt;
+	  dfloat dvdz = drdz*dvdr + dsdz*dvds + dtdz*dvdt;
+
+	  dfloat dwdx = drdx*dwdr + dsdx*dwds + dtdx*dwdt;
+	  dfloat dwdy = drdy*dwdr + dsdy*dwds + dtdy*dwdt;
+	  dfloat dwdz = drdz*dwdr + dsdz*dwds + dtdz*dwdt;
+	  
+	  dfloat u = s_U[k][j][i];
+	  dfloat v = s_V[k][j][i];
+	  dfloat w = s_W[k][j][i];
+
+	  const dlong id =e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+	  NU[id+0*offset] =  -(u*dudx + v*dudy + w*dudz);
+	  NU[id+1*offset] =  -(u*dvdx + v*dvdy + w*dvdz);
+	  NU[id+2*offset] =  -(u*dwdx + v*dwdy + w*dwdz);
+	}
+      }
+    }
+  }
+}
+

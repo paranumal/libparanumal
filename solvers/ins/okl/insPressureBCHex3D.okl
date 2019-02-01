@@ -34,34 +34,34 @@ SOFTWARE.
   const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           \
                                                                         \
   dfloat dpdxP=0.f, dpdyP=0.f, dpdzP=0.f, pP=0.f;                       \
-                                                                        \
+  									\
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc==3) {                                                           \
     const dlong idM = vmapM[sk];                                        \
-    insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP);\
-    insPressureNeumannConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP);\
-    for (int s=0;s<stage;s++) {\
-      dfloat prkBn, ctime;\
-      if (ARKswitch) {\
-        prkBn = prkB[stage*(p_Nstages+1)+s];\
-        ctime = time-(c[stage]-c[s])*dt;\
-      } else {\
-        prkBn = prkB[s];\
-        ctime = time-(s+1)*dt;\
-      }\
-      \
-      dfloat pPm, dpdxPm, dpdyPm, dpdzPm;\
-      insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPm);\
-      insPressureNeumannConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxPm, &dpdyPm, &dpdzPm);\
-      \
-\
-      pP    -= prkBn*pPm;\
-      dpdxP -= prkBn*dpdxPm;\
-      dpdyP -= prkBn*dpdyPm;\
-      dpdzP -= prkBn*dpdzPm;\
-    } \
+    insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP); \
+    insPressureNeumannConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP); \
+    for (int s=0;s<stage;s++) {						\
+      dfloat prkBn, ctime;						\
+      if (ARKswitch) {							\
+        prkBn = prkB[stage*(p_Nstages+1)+s];				\
+        ctime = time-(c[stage]-c[s])*dt;				\
+      } else {								\
+        prkBn = prkB[s];						\
+        ctime = time-(s+1)*dt;						\
+      }									\
+									\
+      dfloat pPm, dpdxPm, dpdyPm, dpdzPm;				\
+      insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPm); \
+      insPressureNeumannConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxPm, &dpdyPm, &dpdzPm); \
+									\
+									\
+      pP    -= prkBn*pPm;						\
+      dpdxP -= prkBn*dpdxPm;						\
+      dpdyP -= prkBn*dpdyPm;						\
+      dpdzP -= prkBn*dpdzPm;						\
+    }									\
   }                                                                     \
-                                                                        \
+									\
   const dfloat dp = pP;                                                 \
                                                                         \
   s_dpdx[m][j][i] = WsJ*nx*dp;                                          \

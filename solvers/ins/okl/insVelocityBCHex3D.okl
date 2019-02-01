@@ -434,10 +434,10 @@ SOFTWARE.
                                                                         \
   const int bc = mapB[idM];                                             \
   if(bc>0) {                                                            \
-    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);\
-    insVelocityNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP);\
-  }                                                                     \
-                                                                        \
+    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP); \
+    insVelocityNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP); \
+  }									\
+  									\
   s_U  [j][i] =  uP;                                                    \
   s_V  [j][i] =  vP;                                                    \
   s_W  [j][i] =  wP;                                                    \
@@ -521,10 +521,12 @@ SOFTWARE.
     // face 0
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
+
+	r_U[0] = s_U  [j][i];
+	r_V[0] = s_V  [j][i];
+	r_W[0]  = s_W  [j][i];
+
 	//face 0
-	r_U   [0]  = s_U  [j][i];
-	r_V   [0]  = s_V  [j][i];
-	r_W   [0]  = s_W  [j][i];
 	if(EToB[e*p_Nfaces+0]>0){
 	  r_rhsU[0] += s_ndU[j][i];
 	  r_rhsV[0] += s_ndV[j][i];
@@ -548,10 +550,12 @@ SOFTWARE.
     // face 5
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-	//face 5
+	
 	r_U   [p_Nq-1]  = s_U  [j][i];
 	r_V   [p_Nq-1]  = s_V  [j][i];
 	r_W   [p_Nq-1]  = s_W  [j][i];
+	
+	//face 5
 	if(EToB[e*p_Nfaces+5]>0){
 	  r_rhsU[p_Nq-1] += s_ndU[j][i];
 	  r_rhsV[p_Nq-1] += s_ndV[j][i];
@@ -576,11 +580,14 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==0) {//face 1
+	  
 #pragma unroll p_Nq
 	  for (int k=0;k<p_Nq;k++) {
-	    r_U   [k]  = s_U  [k][i];
-	    r_V   [k]  = s_V  [k][i];
-	    r_W   [k]  = s_W  [k][i];
+
+	    r_U[k]  = s_U  [k][i];
+	    r_V[k]  = s_V  [k][i];
+	    r_W[k]  = s_W  [k][i];
+	    
 	    if(EToB[e*p_Nfaces+1]>0){
 	      r_rhsU[k] += s_ndU[k][i];
 	      r_rhsV[k] += s_ndV[k][i];
@@ -609,9 +616,11 @@ SOFTWARE.
         if (j==p_Nq-1) {//face 3
 #pragma unroll p_Nq
 	    for (int k=0;k<p_Nq;k++) {
+	      
 	      r_U[k]  = s_U[k][i];
 	      r_V[k]  = s_V[k][i];
 	      r_W[k]  = s_W[k][i];
+	      
 	      if(EToB[e*p_Nfaces+3]>0){
 		r_rhsU[k] += s_ndU[k][i];
 		r_rhsV[k] += s_ndV[k][i];
@@ -643,6 +652,7 @@ SOFTWARE.
 	    r_U[k] = s_U[k][j];
 	    r_V[k] = s_V[k][j];
 	    r_W[k] = s_W[k][j];
+	    
 	    if(EToB[e*p_Nfaces+2]>0){
 	      r_rhsU[k] += s_ndU[k][j];
 	      r_rhsV[k] += s_ndV[k][j];
@@ -671,9 +681,11 @@ SOFTWARE.
         if (i==0) {//face 4
           #pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
-            r_U[k]  = s_U[k][j];
-            r_V[k]  = s_V[k][j];
-            r_W[k]  = s_W[k][j];
+	    
+	    r_U[k]  = s_U[k][j];
+	    r_V[k]  = s_V[k][j];
+	    r_W[k]  = s_W[k][j];
+	    
 	    if(EToB[e*p_Nfaces+4]>0){
 	      r_rhsU[k] += s_ndU[k][j];
 	      r_rhsV[k] += s_ndV[k][j];
