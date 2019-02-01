@@ -34,12 +34,12 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
   if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
 
     // just do GLL at the moment (fix this later)
-    ins->advectionVolumeKernel(mesh->Nelements,
-                               mesh->o_vgeo,
-                               mesh->o_Dmatrices,
-                               ins->fieldOffset,
-                               o_U,
-                               o_NU);
+    ins->advectionStrongVolumeKernel(mesh->Nelements,
+				     mesh->o_vgeo,
+				     mesh->o_Dmatrices,
+				     ins->fieldOffset,
+				     o_U,
+				     o_NU);
 
     return;
   }

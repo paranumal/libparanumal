@@ -5,7 +5,7 @@
 data/insBeltrami3D.h
 
 [MESH FILE]
-../../meshes/insBeltramiHex3D.msh
+../../meshes/insBeltramiHex3D_dir.msh
 
 [MESH DIMENSION]
 3
@@ -14,7 +14,7 @@ data/insBeltrami3D.h
 12
 
 [POLYNOMIAL DEGREE]
-4
+7
 
 [ELEMENT MAP]
 ISOPARAMETRIC
@@ -40,6 +40,7 @@ EXTBDF2
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
+#NODAL
 CUBATURE
 
 [VISCOSITY]
@@ -96,8 +97,8 @@ PCG+NONBLOCKING
 
 # can be IPDG, [ currently CONTINUOUS seems to be broken ]
 [VELOCITY DISCRETIZATION]
-IPDG
-#CONTINUOUS
+#IPDG
+CONTINUOUS
 #[ not currently working ]
 
 
@@ -175,7 +176,8 @@ PCG+FLEXIBLE+NONBLOCKING
 # can be IPDG, or CONTINUOUS
 [PRESSURE DISCRETIZATION]
 CONTINUOUS
-#IPDG (we don't typically use this)
+#IPDG
+#(we don't typically use this)
 
 # can be NODAL or BERN
 [PRESSURE BASIS]
