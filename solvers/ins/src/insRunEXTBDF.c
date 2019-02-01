@@ -45,7 +45,7 @@ void insRunEXTBDF(ins_t *ins){
       extbdfCoefficents(ins,tstep+1);
     else if(tstep<2 && ins->temporalOrder>=2) 
       extbdfCoefficents(ins,tstep+1);
-    else if(tstep<3 && ins->temporalOrder>=3) 
+    else if(tstep<3 && ins->temporalOrder>=3)
       extbdfCoefficents(ins,tstep+1);
 
     insGradient (ins, 0, ins->o_P, ins->o_GP);
@@ -114,15 +114,6 @@ void insRunEXTBDF(ins_t *ins){
 
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 
-#if 0
-    ins->constrainKernel(mesh->Nelements,
-			 offset,
-			 mesh->o_x,
-			 mesh->o_y,
-			 mesh->o_z,
-			 ins->o_U);
-#endif
-
     if(ins->Nsubsteps) {
       insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
@@ -132,27 +123,8 @@ void insRunEXTBDF(ins_t *ins){
     insGradient (ins, time, ins->o_P, ins->o_GP);
 
     
-#if 0
-    ins->constrainKernel(mesh->Nelements,
-			 offset,
-			 mesh->o_x,
-			 mesh->o_y,
-			 mesh->o_z,
-			 ins->o_GP);
-#endif
-    
-    
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
     insVelocitySolve(ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW, ins->o_rkU);
-
-#if 0
-    ins->constrainKernel(mesh->Nelements,
-			 offset,
-			 mesh->o_x,
-			 mesh->o_y,
-			 mesh->o_z,
-			 ins->o_rkU);
-#endif
 
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
     insPressureSolve(ins, time+ins->dt, ins->Nstages); 
@@ -160,15 +132,6 @@ void insRunEXTBDF(ins_t *ins){
     insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
     insGradient(ins, time+ins->dt, ins->o_rkP, ins->o_rkGP);
 
-#if 0
-    ins->constrainKernel(mesh->Nelements,
-			 offset,
-			 mesh->o_x,
-			 mesh->o_y,
-			 mesh->o_z,
-			 ins->o_rkGP);
-#endif
-    
     //cycle history
     for (int s=ins->Nstages;s>1;s--) {
       ins->o_U.copyFrom(ins->o_U, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
@@ -233,10 +196,7 @@ void insRunEXTBDF(ins_t *ins){
         if (ins->dim==2 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterP);
         if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d \n", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP);
 
-        insReport(ins, time+ins->dt, tstep+1);
-
-
-
+	insReport(ins, time+ins->dt, tstep+1);
 
         // Write a restart file
         if(ins->writeRestartFile){

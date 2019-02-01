@@ -185,7 +185,7 @@ int main(int argc, char **argv){
 	    exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
 	  }
 	  else{
-	    int mode = 1;
+	    double mode = 0.5;
 	    exact = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
 	  }
         }

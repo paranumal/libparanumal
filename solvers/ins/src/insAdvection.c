@@ -30,6 +30,17 @@ SOFTWARE.
 void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
 
   mesh_t *mesh = ins->mesh;
+
+
+#if 0
+  ins->advectionVolumeKernel(mesh->Nelements,
+                               mesh->o_vgeo,
+                               mesh->o_Dmatrices,
+                               ins->fieldOffset,
+                               o_U,
+                               o_NU);
+
+#else
   
   //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){
@@ -122,4 +133,5 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
                                 o_NU);
   }
   occaTimerToc(mesh->device,"AdvectionSurface");
+#endif
 }

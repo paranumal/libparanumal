@@ -31,7 +31,8 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
 
   mesh_t *mesh = ins->mesh;
 
-  if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  //  if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  {
     if(mesh->totalHaloPairs>0){
       ins->velocityHaloExtractKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
@@ -61,7 +62,8 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
                              o_DU);
   occaTimerToc(mesh->device,"DivergenceVolume");
 
-  if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  //  if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  {
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
 

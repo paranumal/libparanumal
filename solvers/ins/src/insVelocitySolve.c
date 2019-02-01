@@ -39,6 +39,8 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
 
   int quad3D = (ins->dim==3 && ins->elementType==QUADRILATERALS) ? 1 : 0;  
 
+  printf("\nStarting velocity solve: uNmasked = %d, pNmasked = %d\n", usolver->Nmasked, ins->pSolver->Nmasked);
+  
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
 
     if(!quad3D) 
@@ -56,7 +58,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
                                 mesh->o_x,
                                 mesh->o_y,
                                 mesh->o_z,
-                                ins->o_VmapB,
+			       ins->o_VmapB,//   usolver->o_mapB, 
                                 o_rhsU,
                                 o_rhsV,
                                 o_rhsW);
@@ -103,10 +105,19 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
     ins->o_WH.copyFrom(ins->o_U,Ntotal*sizeof(dfloat),0,2*ins->fieldOffset*sizeof(dfloat));
 
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
+
+
     if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, ins->o_UH);
     if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, ins->o_VH);
     if (ins->dim==3)
       if (wsolver->Nmasked) mesh->maskKernel(wsolver->Nmasked, wsolver->o_maskIds, ins->o_WH);
+
+#if 0
+    if (usolver->Nmasked) mesh->maskKernel(usolver->Nmasked, usolver->o_maskIds, ins->o_rhsU);
+    if (vsolver->Nmasked) mesh->maskKernel(vsolver->Nmasked, vsolver->o_maskIds, ins->o_rhsV);
+    if (ins->dim==3)
+      if (wsolver->Nmasked) mesh->maskKernel(wsolver->Nmasked, wsolver->o_maskIds, ins->o_rhsW);
+#endif
 
   }
   
@@ -131,8 +142,8 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
                             mesh->o_x,
                             mesh->o_y,
                             mesh->o_z,
-                            mesh->o_vmapM,
-                            ins->o_VmapB,
+			     mesh->o_vmapM,
+			     ins->o_VmapB,   //			     usolver->o_mapB,
                             ins->o_UH,
                             ins->o_VH,
                             ins->o_WH);

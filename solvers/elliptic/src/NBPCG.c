@@ -70,8 +70,8 @@ int nbpcg(elliptic_t* elliptic, dfloat lambda,
   MPI_Request request;
   MPI_Status  status;
 
-  dfloat *localdots  = (dfloat*) calloc(2, sizeof(dfloat));
-  dfloat *globaldots = (dfloat*) calloc(2, sizeof(dfloat));
+  dfloat *localdots  = (dfloat*) calloc(4, sizeof(dfloat));
+  dfloat *globaldots = (dfloat*) calloc(4, sizeof(dfloat));
 
 #if 0
   // blocks

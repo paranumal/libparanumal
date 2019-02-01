@@ -737,12 +737,16 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   
   ellipticSolveSetup(ins->pSolver, 0.0, kernelInfoP); //!!!!
 
-
+  // TW: this code needs to be re-evaluated from here ====>
   //make node-wise boundary flags
+  dfloat largeNumber = 1<<20;
   ins->VmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
   ins->PmapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
   for (int e=0;e<mesh->Nelements;e++) {
-    for (int n=0;n<mesh->Np;n++) ins->VmapB[n+e*mesh->Np] = 1E9;
+    for (int n=0;n<mesh->Np;n++) ins->VmapB[n+e*mesh->Np] = largeNumber;
+  }
+
+  for (int e=0;e<mesh->Nelements;e++) {
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
       if (bc>0) {
@@ -755,17 +759,23 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     }
   }
 
-  // ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs); !!!!!!!!!!!!!!!!!
-  // ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs); !!!!!!!!!!!!!!!!!
-
+  ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs); // !!!!!!!!!!!!!!!!!
+  ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs); // !!!!!!!!!!!!!!!!!
+#if 1
   for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
-    if (ins->VmapB[n] == 1E9) {
+
+    if (ins->VmapB[n] == largeNumber) {
       ins->VmapB[n] = 0.;
     }
   }
+#endif
+ 
   ins->o_VmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), ins->VmapB);
   ins->o_PmapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), ins->PmapB);
 
+  // TW: this code needs to be re-evaluated to here <======
+  // and the kernels that use VmapB, PmapB
+  
 
   kernelInfo["defines/" "p_blockSize"]= blockSize;
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
@@ -963,7 +973,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "insAdvectionCubatureSurface%s", suffix);
       ins->advectionCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      sprintf(kernelName, "insAdvectionVolume%s", suffix);
+      //sprintf(kernelName, "insAdvectionVolume%s", suffix);
+      //      if (options.compareArgs("VELOCITY DISCRETIZATION", "IPDG")) {
+      if(1){
+	sprintf(kernelName, "insAdvectionVolume%s", suffix);
+      }else{
+	sprintf(kernelName, "insStrongAdvectionVolume%s", suffix);
+      }
+      
       ins->advectionVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insAdvectionSurface%s", suffix);
@@ -995,7 +1012,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       // ===========================================================================
       
       sprintf(fileName, DINS "/okl/insDivergence%s.okl", suffix);
-      sprintf(kernelName, "insDivergenceVolume%s", suffix);
+
+      if(1){
+	//if (options.compareArgs("VELOCITY DISCRETIZATION", "IPDG")) {
+	sprintf(kernelName, "insDivergenceVolume%s", suffix);
+      }else{
+	sprintf(kernelName, "insStrongDivergenceVolume%s", suffix);
+      }
+
       ins->divergenceVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insDivergenceSurface%s", suffix);
