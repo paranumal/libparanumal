@@ -26,19 +26,26 @@ SOFTWARE.
 
 #include "ogs.hpp"
 
-void *ogsHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem){
+void *ogsHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem){
 
 #if 0
   mem = device.mappedAlloc(size, source);
   
   void *ptr = mem.getMappedPointer();
 #else
-  if(source != NULL)
+
+  occa::properties props;
+  props["mapped"] = true;
+  
+  if(source!=NULL)
     mem =  device.malloc(size, source);
   else
     mem =  device.malloc(size);
+
+  h_mem =  device.malloc(size, props);
   
-  void *ptr = device.malloc(size, "mapped: true").ptr();
+  void *ptr = h_mem.ptr();
+  
   
 #endif
   return ptr;

@@ -64,7 +64,7 @@ void ogsGatherStart(occa::memory o_gv,
       if (ogs::o_haloBuf.size()) ogs::o_haloBuf.free();
       //      ogs::o_haloBuf = ogs->device.mappedAlloc(ogs->NhaloGather*Nbytes);
       //      ogs::haloBuf = ogs::o_haloBuf.getMappedPointer();
-      ogs::haloBuf = ogsHostMallocPinned(ogs->device, ogs->NhaloGather*Nbytes, NULL, ogs::o_haloBuf);
+      ogs::haloBuf = ogsHostMallocPinned(ogs->device, ogs->NhaloGather*Nbytes, NULL, ogs::o_haloBuf, ogs::h_haloBuf);
     }
   }
 

@@ -63,7 +63,7 @@ void ogsScatterVecStart(occa::memory o_sv,
       if (ogs::o_haloBuf.size()) ogs::o_haloBuf.free();
       //      ogs::o_haloBuf = ogs->device.mappedAlloc(ogs->NhaloGather*Nbytes*k);
       //      ogs::haloBuf = ogs::o_haloBuf.getMappedPointer();
-      ogs::haloBuf = ogsHostMallocPinned(ogs->device, ogs->NhaloGather*Nbytes*k, NULL, ogs::o_haloBuf);
+      ogs::haloBuf = ogsHostMallocPinned(ogs->device, ogs->NhaloGather*Nbytes*k, NULL, ogs::o_haloBuf, ogs::h_haloBuf);
     }
   }
 
