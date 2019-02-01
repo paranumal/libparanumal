@@ -34,7 +34,7 @@ METISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libmetis
 # libraries to be linked in
 LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis -L$(ALMONDDIR) -lparAlmond  \
 		   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
-		   -L$(OCCA_DIR)/lib $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
+		   -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
 
 
 INCLUDES = ins.h

@@ -281,7 +281,8 @@ SOFTWARE.
 #undef surfaceTerms  
 
 
-// Compute Divergence in weak Form
+// Compute Divergence in strong Form
+
 @kernel void insStrongDivergenceVolumeHex3D(const dlong Nelements,
 					    @restrict const  dfloat *  vgeo,
 					    @restrict const  dfloat *  D,
@@ -298,6 +299,7 @@ SOFTWARE.
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
+
 	for(int i=0;i<p_Nq;++i;@inner(0)){
 	  dlong id = i+j*p_Nq;
 	  if(k==0)
@@ -315,29 +317,29 @@ SOFTWARE.
 	}
       }
     }
-
+    
     @barrier("local");
 
-    for(int k=0;k<p_Nq;++k;@inner(2)){
-      for(int j=0;j<p_Nq;++j;@inner(1)){
+    for(int k=0;k<p_Nq;++k;@inner(2)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
 	for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
-	  const dfloat drdx = vgeo[gid + p_RXID*p_Np];
-	  const dfloat drdy = vgeo[gid + p_RYID*p_Np];
-	  const dfloat drdz = vgeo[gid + p_RZID*p_Np];
-	  const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
-	  const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
-	  const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-	  const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
-	  const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
-	  const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
-
+          const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
+          const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+          const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+          const dfloat drdz = vgeo[gid + p_RZID*p_Np];
+          const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+          const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+          const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
+          const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+          const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+          const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+	  
 	  dfloat dudr = 0, duds = 0, dudt = 0;
 	  dfloat dvdr = 0, dvds = 0, dvdt = 0;
 	  dfloat dwdr = 0, dwds = 0, dwdt = 0;
 
-	  #pragma unroll p_Nq
+#pragma unroll p_Nq
 	  for (int n=0;n<p_Nq;n++) {
 	    const dfloat Dr = s_D[i][n];
 	    const dfloat Ds = s_D[j][n];

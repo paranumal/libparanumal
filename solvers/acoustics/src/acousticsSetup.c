@@ -237,14 +237,6 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
     acoustics->o_haloBuffer = mesh->device.malloc(acoustics->haloBytes);
 
-#if 0
-    occa::memory o_sendBuffer = mesh->device.mappedAlloc(acoustics->haloBytes, NULL);
-    occa::memory o_recvBuffer = mesh->device.mappedAlloc(acoustics->haloBytes, NULL);
-
-    acoustics->sendBuffer = (dfloat*) o_sendBuffer.getMappedPointer();
-    acoustics->recvBuffer = (dfloat*) o_recvBuffer.getMappedPointer();
-#endif
-
     acoustics->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, acoustics->haloBytes, NULL, acoustics->o_sendBuffer);
     acoustics->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, acoustics->haloBytes, NULL, acoustics->o_recvBuffer);    
   }
