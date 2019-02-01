@@ -29,7 +29,8 @@ SOFTWARE.
 // create elliptic and mesh structs for multigrid levels
 elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf){
 
-  elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  //  elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  elliptic_t *elliptic = new elliptic_t[1];
 
 #ifndef OCCA_VERSION_1_0
   memcpy(elliptic,baseElliptic,sizeof(elliptic_t));
@@ -71,7 +72,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 #endif
 
   //populate the mini-mesh using the mesh struct
-  mesh_t *mesh = (mesh_t*) calloc(1,sizeof(mesh_t));
+  //  mesh_t *mesh = (mesh_t*) calloc(1,sizeof(mesh_t));
+  mesh_t *mesh = new mesh_t[1];
 
 #ifndef OCCA_VERSION_1_0
   memcpy(mesh,baseElliptic->mesh,sizeof(mesh_t));
@@ -897,7 +899,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   }
 
   //new precon struct
-  elliptic->precon = (precon_t *) calloc(1,sizeof(precon_t));
+  //  elliptic->precon = (precon_t *) calloc(1,sizeof(precon_t));
+  elliptic->precon = new precon_t[1];
 
   for (int r=0;r<2;r++){
     if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {

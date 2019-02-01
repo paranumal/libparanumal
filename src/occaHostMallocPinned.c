@@ -80,13 +80,13 @@ void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa
 
 void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem){
 
-#if 1
+#if 0
   mem = device.mappedAlloc(size, source);
 
   void *ptr = mem.getMappedPointer();
 #else
-  mem =  device.malloc(size, source, "mapped: true");
-  void *ptr = mem.ptr();
+  mem =  device.malloc(size, source);
+  void *ptr = device.malloc(size, "mapped: true").ptr();
 #endif
   
   return ptr;

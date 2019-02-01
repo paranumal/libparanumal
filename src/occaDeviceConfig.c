@@ -97,7 +97,8 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
 
   std::cout << deviceConfig << std::endl;
   
-  mesh->device.setup( (std::string) deviceConfig); // deviceProps);
+  //  mesh->device.setup( (std::string) deviceConfig); // deviceProps);
+  mesh->device.setup(deviceConfig);
 
 #ifdef USE_OCCA_MEM_BYTE_ALIGN 
   // change OCCA MEM BYTE ALIGNMENT

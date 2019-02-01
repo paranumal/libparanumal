@@ -28,17 +28,17 @@ SOFTWARE.
 
 void *ogsHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem){
 
-#if 1
+#if 0
   mem = device.mappedAlloc(size, source);
   
   void *ptr = mem.getMappedPointer();
 #else
   if(source != NULL)
-    mem =  device.malloc(size, source, "mapped: true");
+    mem =  device.malloc(size, source);
   else
-    mem =  device.malloc(size, "mapped: true");
+    mem =  device.malloc(size);
   
-  void *ptr = mem.ptr();
+  void *ptr = device.malloc(size, "mapped: true").ptr();
   
 #endif
   return ptr;
