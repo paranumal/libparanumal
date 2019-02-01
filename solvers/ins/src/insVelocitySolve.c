@@ -39,7 +39,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
 
   int quad3D = (ins->dim==3 && ins->elementType==QUADRILATERALS) ? 1 : 0;  
 
-  printf("\nStarting velocity solve: uNmasked = %d, pNmasked = %d\n", usolver->Nmasked, ins->pSolver->Nmasked);
+  //  printf("\nStarting velocity solve: uNmasked = %d, pNmasked = %d\n", usolver->Nmasked, ins->pSolver->Nmasked);
   
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
 
