@@ -45,7 +45,8 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
   FILE *fp = fopen(fileName, "r");
   int n;
 
-  mesh3D *mesh = (mesh3D*) calloc(1, sizeof(mesh3D));
+  //  mesh3D *mesh = (mesh3D*) calloc(1, sizeof(mesh3D));
+  mesh_t *mesh = new mesh_t[1];
 
   mesh->rank = rank;
   mesh->size = size;

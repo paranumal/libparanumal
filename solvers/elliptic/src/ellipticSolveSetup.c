@@ -295,8 +295,8 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   elliptic->o_invDegree = elliptic->ogs->o_invDegree;
 
   /*preconditioner setup */
-  //  elliptic->precon = new precon_t[1];
-  elliptic->precon = (precon_t*) calloc(1, sizeof(precon_t));
+  elliptic->precon = new precon_t[1];
+  //  elliptic->precon = (precon_t*) calloc(1, sizeof(precon_t));
 
   //  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 

@@ -371,7 +371,8 @@ dfloat MGLevel::maxEigSmoothAx(){
 
   // allocate memory for basis
   dfloat *Vx = (dfloat*) calloc(M, sizeof(dfloat));
-  occa::memory *o_V = (occa::memory *) calloc(k+1, sizeof(occa::memory));
+  //  occa::memory *o_V = (occa::memory *) calloc(k+1, sizeof(occa::memory));
+  occa::memory *o_V = new occa::memory[k+1];
 
   occa::memory o_Vx  = mesh->device.malloc(M*sizeof(dfloat),Vx);
   occa::memory o_AVx = mesh->device.malloc(M*sizeof(dfloat),Vx);
@@ -445,7 +446,8 @@ dfloat MGLevel::maxEigSmoothAx(){
   o_Vx.free();
   o_AVx.free();
   for(int i=0; i<=k; i++) o_V[i].free();
-  free((void*)o_V);
+  //free((void*)o_V);
+  delete[] o_V;
 
   // if((mesh->rank==0)&&(options.compareArgs("VERBOSE","TRUE"))) printf("weight = %g \n", rho);
 

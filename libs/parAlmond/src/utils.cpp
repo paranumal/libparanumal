@@ -35,29 +35,35 @@ occa::memory o_scratch;
 
 size_t pinnedScratchSpaceBytes=0;
 void *pinnedScratch=NULL;
+
+occa::memory h_pinnedScratch;
 occa::memory o_pinnedScratch;
 
 size_t reductionScratchBytes=0;
 void *reductionScratch=NULL;
+
+occa::memory h_reductionScratch;
 occa::memory o_reductionScratch;
 
-void *parAlmondHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem){
+  void *parAlmondHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem){
 
-#if 1
+#if 0
   mem = device.mappedAlloc(size, source);
 
   void *ptr = mem.getMappedPointer();
 #else
   
   occa::properties props;
-  props["mapped"] = "true";
+  props["mapped"] = true;
   
   if(source!=NULL)
-    mem =  device.malloc(size, source, props);
+    mem =  device.malloc(size, source);
   else
-    mem =  device.malloc(size, props);
-    
-  void *ptr = mem.ptr();
+    mem =  device.malloc(size);
+
+  h_mem =  device.malloc(size, props);
+  
+  void *ptr = h_mem.ptr();
 #endif
 
   return ptr;
@@ -80,7 +86,7 @@ void allocateScratchSpace(size_t requiredBytes, occa::device device) {
     reductionScratchBytes = 3*NBLOCKS*sizeof(dfloat);
     //    o_reductionScratch = device.mappedAlloc(reductionScratchBytes);
     //    reductionScratch = o_reductionScratch.getMappedPointer();
-    reductionScratch = parAlmondHostMallocPinned(device, reductionScratchBytes, NULL, o_reductionScratch);
+    reductionScratch = parAlmondHostMallocPinned(device, reductionScratchBytes, NULL, o_reductionScratch, h_reductionScratch);
   }
 }
 
@@ -105,7 +111,7 @@ void allocatePinnedScratchSpace(size_t requiredBytes, occa::device device) {
     }
     //    o_pinnedScratch = device.mappedAlloc(requiredBytes);
     //    pinnedScratch = o_pinnedScratch.getMappedPointer();
-    pinnedScratch = parAlmondHostMallocPinned(device, requiredBytes, NULL, o_pinnedScratch);
+    pinnedScratch = parAlmondHostMallocPinned(device, requiredBytes, NULL, o_pinnedScratch, h_pinnedScratch);
     pinnedScratchSpaceBytes = requiredBytes;
   }
 }
