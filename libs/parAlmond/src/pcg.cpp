@@ -143,6 +143,8 @@ void solver_t::device_pcg(const int maxIt, const dfloat tol){
   // initial residual
   dfloat rdotr0 = vectorInnerProd(m, o_r, o_r, levels[0]->comm);
 
+  //  dfloat TOL =  mymax(tol*tol*normB,tol*tol);
+  
   occa::memory o_x  = device.malloc(n*sizeof(dfloat),levels[0]->x);
   occa::memory o_Ap = device.malloc(n*sizeof(dfloat),levels[0]->x);
   occa::memory o_p  = device.malloc(n*sizeof(dfloat),levels[0]->x);

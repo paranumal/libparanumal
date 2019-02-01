@@ -47,6 +47,7 @@ $(HDRDIR)/types.h
 
 # list of objects to be compiled
 OBJS    = \
+./src/ogsMappedAlloc.o \
 ./src/ogsGatherScatter.o \
 ./src/ogsGatherScatterVec.o \
 ./src/ogsGatherScatterMany.o \

@@ -967,18 +967,16 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "insAdvectionCubatureSurface%s", suffix);
       ins->advectionCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      //sprintf(kernelName, "insAdvectionVolume%s", suffix);
-      if (options.compareArgs("VELOCITY DISCRETIZATION", "CONTINUOUS")) {
-	sprintf(kernelName, "insAdvectionVolume%s", suffix);
-      }else{
-	sprintf(kernelName, "insStrongAdvectionVolume%s", suffix);
-      }
-      
+      sprintf(kernelName, "insAdvectionVolume%s", suffix);
       ins->advectionVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "insAdvectionSurface%s", suffix);
       ins->advectionSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
+      sprintf(kernelName, "insStrongAdvectionVolume%s", suffix);
+      ins->advectionStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      
       // // ===========================================================================
       
       // sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
