@@ -85,9 +85,6 @@ int main(int argc, char **argv){
   
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
-  // build one-ring ( to rule them all )
-  //  ellipticBuildOneRing(elliptic, lambda, kernelInfo);
-  
   {    
     occa::memory o_r = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_r);
     occa::memory o_x = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_x);    
@@ -185,14 +182,14 @@ int main(int argc, char **argv){
 	    exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
 	  }
 	  else{
-	    double mode = 0.5;
+	    double mode = 0.16;
 	    exact = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
 	  }
         }
 
         dfloat error = fabs(exact-mesh->q[id]);
 
-	mesh->q[id] -= exact;
+	//	mesh->q[id] -= exact;
 
         // store error
         // mesh->q[id] = fabs(mesh->q[id] - exact);

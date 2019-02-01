@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#define mode 0.5
+#define mode 0.16
 
 /* Homogeneous Dirichlet boundary condition   */
 #define ellipticDirichletCondition3D(t,x,y,z,nx,ny,nz,uM,uxM,uyM,uzM,uB,uxB,uyB,uzB)  \

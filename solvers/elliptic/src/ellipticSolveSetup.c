@@ -249,8 +249,9 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
   elliptic->mapB = (int *) calloc(mesh->Nelements*mesh->Np,sizeof(int));
+  int largeNumber = 1<<20;
   for (dlong e=0;e<mesh->Nelements;e++) {
-    for (int n=0;n<mesh->Np;n++) elliptic->mapB[n+e*mesh->Np] = 1E9;
+    for (int n=0;n<mesh->Np;n++) elliptic->mapB[n+e*mesh->Np] = largeNumber;
     for (int f=0;f<mesh->Nfaces;f++) {
       int bc = mesh->EToB[f+e*mesh->Nfaces];
       if (bc>0) {
@@ -267,7 +268,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   //use the bc flags to find masked ids
   elliptic->Nmasked = 0;
   for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
-    if (elliptic->mapB[n] == 1E9) {
+    if (elliptic->mapB[n] == largeNumber) {
       elliptic->mapB[n] = 0.;
     } else if (elliptic->mapB[n] == 1) { //Dirichlet boundary
       elliptic->Nmasked++;
