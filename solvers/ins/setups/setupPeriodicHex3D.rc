@@ -8,13 +8,13 @@ data/insBeltrami3D.h
 TRUE
 
 [BOX NX]
-5
+3
 
 [BOX NY]
-5
+3
 
 [BOX NZ]
-5
+3
 
 [BOX XMIN]
 -1.0
