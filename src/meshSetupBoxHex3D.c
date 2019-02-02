@@ -156,9 +156,6 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
   // print out connectivity statistics
   meshPartitionStatistics(mesh);
 
-  // connect elements to boundary faces
-  //  meshConnectBoundary(mesh);
-
   // load reference (r,s,t) element nodes
   meshLoadReferenceNodesHex3D(mesh, N);
 
@@ -173,6 +170,25 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
 
   // connect face nodes (find trace indices)
   meshConnectPeriodicFaceNodes3D(mesh,XMAX-XMIN,YMAX-YMIN,ZMAX-ZMIN); // needs to fix this !
+
+  // connect elements to boundary faces
+  //  meshConnectBoundary(mesh);
+#if 0
+  // diagnostic
+  for(hlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Nfaces*mesh->Nfp;++n){
+      hlong idM = mesh->vmapM[e*mesh->Nfaces*mesh->Nfp+n];
+      hlong idP = mesh->vmapP[e*mesh->Nfaces*mesh->Nfp+n];
+
+      dfloat dx = mesh->x[idP]-mesh->x[idM];
+      dfloat dy = mesh->y[idP]-mesh->y[idM];
+      dfloat dz = mesh->z[idP]-mesh->z[idM];
+
+      dfloat d = sqrt(dx*dx+dy*dy+dz*dz);
+      printf("%d,%d |d|=|%lf,%lf,%lf|=%lf\n", idM, idP, dx, dy, dz, d);
+    }
+  }
+#endif
   
   // compute surface geofacs (including halo)
   meshSurfaceGeometricFactorsHex3D(mesh);

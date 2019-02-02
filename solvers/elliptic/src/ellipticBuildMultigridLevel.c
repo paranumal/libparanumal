@@ -234,7 +234,6 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     if(!options.compareArgs("BOX DOMAIN", "TRUE"))
       meshConnectFaceNodes3D(mesh);
     else{
-      printf("HIHIH\n");
       dfloat XMIN = -1, XMAX = +1; // default bi-unit cube
       dfloat YMIN = -1, YMAX = +1;
       dfloat ZMIN = -1, ZMAX = +1;

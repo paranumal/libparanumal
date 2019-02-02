@@ -42,6 +42,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->NVfields = (ins->dim==3) ? 3:2; //  Total Number of Velocity Fields
   ins->NTfields = (ins->dim==3) ? 4:3; // Total Velocity + Pressure
 
+  ins->frame = 0;
+  ins->SNrk = 0;
+  
   mesh->Nfields = 1; 
 
   ins->g0 =  1.0;

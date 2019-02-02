@@ -44,19 +44,22 @@ int findBestPeriodicMatch(dfloat xper, dfloat yper, dfloat zper,
     for(int zp=0;zp<2;++zp){
       for(int yp=0;yp<2;++yp){
 	for(int xp=0;xp<2;++xp){
-	  
-	  /* distance between target and next node */
-	  const dfloat dist2 =
-	    pow(fabs(x1-x2[i2])-xp*xper,2) +
-	    pow(fabs(y1-y2[i2])-yp*yper,2) +
-	    pow(fabs(z1-z2[i2])-zp*zper,2);
-	  
-	  /* if next node is closer to target update match */
-	  if(isFirst==1 || dist2<mindist2){
-	    mindist2 = dist2;
-	    matchIndex = i2;
-	    *nP = n;
-	    isFirst=0;
+
+	  if(xp+yp+zp<=1){
+	    
+	    /* distance between target and next node */
+	    const dfloat dist2 =
+	      pow(fabs(x1-x2[i2])-xp*xper,2) +
+	      pow(fabs(y1-y2[i2])-yp*yper,2) +
+	      pow(fabs(z1-z2[i2])-zp*zper,2);
+	    
+	    /* if next node is closer to target update match */
+	    if(isFirst==1 || dist2<mindist2){
+	      mindist2 = dist2;
+	      matchIndex = i2;
+	      *nP = n;
+	      isFirst=0;
+	    }
 	  }
 	}
       }

@@ -252,7 +252,7 @@ void meshParallelConnect(mesh_t *mesh){
       mesh->EToP[e*mesh->Nfaces+f] = rN;
     }
   }
-
+  
   MPI_Barrier(mesh->comm);
   MPI_Type_free(&MPI_PARALLELFACE_T);
   free(sendFaces);
