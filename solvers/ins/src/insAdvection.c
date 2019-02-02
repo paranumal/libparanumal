@@ -31,7 +31,8 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
 
   mesh_t *mesh = ins->mesh;
 
-  if (ins->pOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
+  if(0) // turn this off
+  if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
 
     // just do GLL at the moment (fix this later)
     ins->advectionStrongVolumeKernel(mesh->Nelements,

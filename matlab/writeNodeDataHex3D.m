@@ -66,7 +66,7 @@ writeFloatMatrix(fid, w1d', 'Nodal 1D GLL Weights');
 writeFloatMatrix(fid, D1d, 'Nodal 1D differentiation matrix');
 
 %% compute equispaced nodes on equilateral triangle
-[plotR,plotS,plotT] = meshgrid(linspace(-1,1,2)); %% hacked
+[plotR,plotS,plotT] = meshgrid(linspace(-1,1,N+1)); %% hacked
 plotR = plotR(:); plotS = plotS(:); plotT = plotT(:);
 
 %% count plot nodes
@@ -219,8 +219,8 @@ writeFloatMatrix(fid, gD2, 'Gauss Legendre to Gauss Legendre differentiation mat
 
 
 %% 1D quadrature
-%%Nc = ceil(3*N/2)-1;
-Nc = N+1;
+Nc = ceil(3*N/2);
+
 %[z,w] = JacobiGQ(0,0,Nc);
 [z] = JacobiGL(0,0,Nc);
 w = sum(inv(Vandermonde1D(Nc, z)*Vandermonde1D(Nc,z)'))'
