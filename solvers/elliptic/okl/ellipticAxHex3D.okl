@@ -301,7 +301,7 @@ SOFTWARE.
 
 
 
-
+#if 0
 
 
 @kernel void ellipticPartialAxHex3D_v1(const dlong Nelements,
@@ -442,6 +442,7 @@ SOFTWARE.
   }
 }
 
+#endif
 
 
 #define ellipticPartialAxTrilinearHex3D_v1 ellipticPartialAxTrilinearHex3D
@@ -629,6 +630,7 @@ SOFTWARE.
   }
 }
 
+#if 0
 
 // prefetch D to reg
 @kernel void ellipticPartialAxTrilinearHex3D_v1(const dlong Nelements,
@@ -1347,6 +1349,7 @@ SOFTWARE.
   }
 
 }
+#endif
 
 
 #if 0
@@ -1817,8 +1820,8 @@ SOFTWARE.
 
 
 
-#pragma GCC optimize ("unroll-loops")
-
+// #pragma GCC optimize ("unroll-loops")
+#if 0
 @kernel void ellipticPartialAxHex3D_vSerial_slow(const dlong Nelements,
 						 const dlong  *  elementList,
 						 const dfloat *  ggeo,
@@ -1916,6 +1919,7 @@ SOFTWARE.
     }
   }
 }
+#endif
 
 @kernel void ellipticPartialAxHex3D_vSerial(const dlong Nelements,
                                             const dlong  *  elementList,
@@ -2009,7 +2013,7 @@ SOFTWARE.
 }
 
 
-
+#if 0
 
 @kernel void ellipticPartialAxHex3D_vSerial_slowish(const dlong Nelements,
                                             const dlong  *  elementList,
@@ -2205,3 +2209,4 @@ SOFTWARE.
 
 
 
+#endif

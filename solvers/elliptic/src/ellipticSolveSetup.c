@@ -599,6 +599,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
                      kernelInfo);
       }
     }
+
     MPI_Barrier(mesh->comm);
   }
 

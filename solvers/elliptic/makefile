@@ -93,6 +93,8 @@ AOBJS    = \
 
 # library objects
 LOBJS = \
+../../src/meshConnectPeriodicFaceNodes3D.o \
+../../src/meshSetupBoxHex3D.o \
 ../../src/meshApplyElementMatrix.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \

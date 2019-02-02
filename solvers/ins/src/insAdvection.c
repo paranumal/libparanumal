@@ -43,7 +43,6 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
 
     return;
   }
-
   
   //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){

@@ -47,10 +47,14 @@ occa::memory o_reductionScratch;
 
   void *parAlmondHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem){
 
-#if 0
-  mem = device.mappedAlloc(size, source);
+#if USE_MASTER_NOEL==1
+    
+  mem = device.malloc(size, source);
+  
+  h_mem = device.mappedAlloc(size, source);
+  
+  void *ptr = h_mem.getMappedPointer();
 
-  void *ptr = mem.getMappedPointer();
 #else
   
   occa::properties props;

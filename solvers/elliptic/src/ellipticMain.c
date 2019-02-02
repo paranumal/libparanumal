@@ -45,13 +45,19 @@ int main(int argc, char **argv){
   string fileName;
   int N, dim, elementType;
 
-  options.getArgs("MESH FILE", fileName);
   options.getArgs("POLYNOMIAL DEGREE", N);
   options.getArgs("ELEMENT TYPE", elementType);
   options.getArgs("MESH DIMENSION", dim);
 
+  mesh_t *mesh;
+
   // set up mesh
-  mesh_t *mesh = meshSetup((char*) fileName.c_str(), N, options);
+  if(options.getArgs("MESH FILE", fileName)){
+    mesh = meshSetup((char*) fileName.c_str(), N, options);
+  }
+  else if(options.compareArgs("BOX DOMAIN", "TRUE")){
+    mesh = meshSetupBoxHex3D(N, options);
+  }
 
   //  if(mesh->Nelements<10)
   //    meshPrint3D(mesh);
