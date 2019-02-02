@@ -199,7 +199,7 @@ int main(int argc, char **argv){
 	    exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
 	  }
 	  else{
-	    double mode = 0.16;
+	    double mode = 1.0;
 	    exact = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
 	  }
         }

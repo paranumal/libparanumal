@@ -225,7 +225,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 
         }
         else{
-	  dfloat mode = 0.16;
+	  dfloat mode = 1;
 	  elliptic->r[id] =
 	    J*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
 	  //	  elliptic->r[id] += 0.1*2*(drand48()-0.5);
@@ -280,7 +280,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 	for(int n=0;n<mesh->cubNp;++n){
 	  dfloat JW = mesh->cubggeo[e*mesh->cubNp*mesh->Nggeo + n + GWJID*mesh->cubNp];
 	  //	  cubrhs[n] = JW*(3*M_PI*M_PI+lambda)*cos(M_PI*cubx[n])*cos(M_PI*cuby[n])*cos(M_PI*cubz[n]);
-	  dfloat  mode = 0.16;
+	  dfloat  mode = 1;
 	  cubrhs[n] = JW*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*cubx[n])*cos(mode*M_PI*cuby[n])*cos(mode*M_PI*cubz[n]);
 	  //	  cubrhs[n] += 0.1*2*(drand48()-0.5);
 	}
