@@ -123,7 +123,9 @@ void meshHaloExchangeFinish(mesh_t *mesh){
     // Wait for all sent messages to have left and received messages to have arrived
     MPI_Status *sendStatus = (MPI_Status*) calloc(mesh->NhaloMessages, sizeof(MPI_Status));
     MPI_Status *recvStatus = (MPI_Status*) calloc(mesh->NhaloMessages, sizeof(MPI_Status));
-  
+
+    //    printf("mesh->NhaloMessages= %d\n", mesh->NhaloMessages);
+    
     MPI_Waitall(mesh->NhaloMessages, (MPI_Request*)mesh->haloRecvRequests, recvStatus);
     MPI_Waitall(mesh->NhaloMessages, (MPI_Request*)mesh->haloSendRequests, sendStatus);
 

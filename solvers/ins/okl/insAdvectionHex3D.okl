@@ -1018,6 +1018,7 @@ SOFTWARE.
 }
 #endif
 
+
 #define quadSurfaceTerms(face)						\
   {									\
     for(int j=0;j<p_cubNq;++j;@inner(1)){				\
@@ -1029,6 +1030,7 @@ SOFTWARE.
 	  s_UM[j][i] = U[idM+0*offset];					\
 	  s_VM[j][i] = U[idM+1*offset];					\
 	  s_WM[j][i] = U[idM+2*offset];					\
+									\
 	  s_UP[j][i] = U[idP+0*offset];					\
 	  s_VP[j][i] = U[idP+1*offset];					\
 	  s_WP[j][i] = U[idP+2*offset];					\

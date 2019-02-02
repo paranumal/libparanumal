@@ -75,23 +75,23 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
                                     o_U,
                                     ins->o_vHaloBuffer);
     }
-
-    //computes div u^(n+1) surface term
-    occaTimerTic(mesh->device,"DivergenceSurface");
-    
-    ins->divergenceSurfaceKernel(mesh->Nelements,
-                                mesh->o_sgeo,
-                                mesh->o_LIFTT,
-                                mesh->o_vmapM,
-                                mesh->o_vmapP,
-                                mesh->o_EToB,
-                                time,
-                                mesh->o_x,
-                                mesh->o_y,
-                                mesh->o_z,
-                                ins->fieldOffset,
-                                o_U,
-                                o_DU);
-    occaTimerToc(mesh->device,"DivergenceSurface");
   }
+  
+  //computes div u^(n+1) surface term
+  occaTimerTic(mesh->device,"DivergenceSurface");
+  
+  ins->divergenceSurfaceKernel(mesh->Nelements,
+			       mesh->o_sgeo,
+			       mesh->o_LIFTT,
+			       mesh->o_vmapM,
+			       mesh->o_vmapP,
+			       mesh->o_EToB,
+			       time,
+                                mesh->o_x,
+			       mesh->o_y,
+			       mesh->o_z,
+			       ins->fieldOffset,
+			       o_U,
+			       o_DU);
+  occaTimerToc(mesh->device,"DivergenceSurface");
 }

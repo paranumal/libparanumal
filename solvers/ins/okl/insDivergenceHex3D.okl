@@ -120,32 +120,29 @@ SOFTWARE.
   }
 }
 
-
 #define surfaceTerms(sk,face,m, i, j)                                   \
-{                                                                       \
-  const dlong idM = vmapM[sk];                                          \
-  const dlong idP = vmapP[sk];                                          \
-                                                                        \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
-  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
-                                                                        \
-  const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset];\
-        dfloat uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset];\
-                                                                        \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc>0) {                                                            \
-    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);\
-    uP = 2.f*uP-uM;                                                     \
-    vP = 2.f*vP-vM;                                                     \
-    wP = 2.f*wP-wM;                                                     \
-  }                                                                     \
-                                                                        \
-  const dfloat sc = invWJ * sJ;                                         \
-  s_fluxDiv[m][j][i] = 0.5f*sc*(nx*(uP+uM) + ny*(vP+vM) + nz*(wP+wM));  \
-}
+  {									\
+    const dlong idM = vmapM[sk];					\
+    const dlong idP = vmapP[sk];					\
+    									\
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
+    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
+    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				\
+    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			\
+    const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset];\
+    dfloat uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset]; \
+    const int bc = EToB[face+p_Nfaces*e];				\
+    if(bc>0) {								\
+      insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
+      uP = 2.f*uP-uM;							\
+      vP = 2.f*vP-vM;							\
+      wP = 2.f*wP-wM;							\
+    }									\
+    									\
+    const dfloat sc = invWJ * sJ;					\
+    s_fluxDiv[m][j][i] = 0.5f*sc*(nx*(uP+uM) + ny*(vP+vM) + nz*(wP+wM)); \
+  }
 
 @kernel void insDivergenceSurfaceHex3D(const dlong Nelements,
                                        @restrict const  dfloat *  sgeo,
