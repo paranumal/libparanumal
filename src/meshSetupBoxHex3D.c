@@ -28,20 +28,20 @@ SOFTWARE.
 
 mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
 
+  mesh_t *mesh = new mesh_t[1];
+  
   int rank, size;
-
+  
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-  mesh_t *mesh = new mesh_t[1];
-
+  
   MPI_Comm_dup(MPI_COMM_WORLD, &mesh->comm);
-
+  
   mesh->rank = rank;
   mesh->size = size;
-
+  
   mesh->Nfields = 1;
-    mesh->dim = 3;
+  mesh->dim = 3;
   mesh->Nverts = 8; // number of vertices per element
   mesh->Nfaces = 6;
   mesh->NfaceVertices = 4;
@@ -98,14 +98,14 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
   mesh->boundaryInfo = NULL; // no boundaries
   
   // [0,NX]
-  dfloat dx = (XMAX-XMIN)/NX;
+  dfloat dx = (XMAX-XMIN)/NX; // xmin+0*dx, xmin + NX*(XMAX-XMIN)/NX
   dfloat dy = (YMAX-YMIN)/NY;
   dfloat dz = (ZMAX-ZMIN)/NZ;
   for(hlong n=start;n<end;++n){
 
-    int i = n%NX;
-    int j = (n/NY)%NZ;
-    int k = n/(NX*NY);
+    int i = n%NX;      // [0, NX)
+    int j = (n/NY)%NZ; // [0, NY)
+    int k = n/(NX*NY); // [0, NZ)
 
     hlong e = n-start;
 
@@ -178,7 +178,7 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
   meshSurfaceGeometricFactorsHex3D(mesh);
   
   // global nodes
-  meshParallelConnectNodes(mesh); // needs to fix this
+  meshParallelConnectNodes(mesh); 
 
   // initialize LSERK4 time stepping coefficients
   int Nrk = 5;

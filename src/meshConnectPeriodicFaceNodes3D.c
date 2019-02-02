@@ -35,14 +35,15 @@ int findBestPeriodicMatch(dfloat xper, dfloat yper, dfloat zper,
   
   int matchIndex;
   dfloat mindist2=1e9;
-
+  int isFirst = 1;
+  
   for(int n=0;n<Np2;++n){
     
     /* next node */
     const int i2 = nodeList[n];
-    for(int zp=0;zp<1;++zp){
-      for(int yp=0;yp<1;++yp){
-	for(int xp=0;xp<1;++xp){
+    for(int zp=0;zp<2;++zp){
+      for(int yp=0;yp<2;++yp){
+	for(int xp=0;xp<2;++xp){
 	  
 	  /* distance between target and next node */
 	  const dfloat dist2 =
@@ -51,16 +52,18 @@ int findBestPeriodicMatch(dfloat xper, dfloat yper, dfloat zper,
 	    pow(fabs(z1-z2[i2])-zp*zper,2);
 	  
 	  /* if next node is closer to target update match */
-	  if(n==0 || dist2<mindist2){
+	  if(isFirst==1 || dist2<mindist2){
 	    mindist2 = dist2;
 	    matchIndex = i2;
 	    *nP = n;
+	    isFirst=0;
 	  }
 	}
       }
     }
   }
-  if(mindist2>1e-3) printf("arggh - bad match: x,y,z=%g,%g,%g\n", x1,y1,z1);
+  if(mindist2>1e-3) printf("arggh - bad match: x,y,z= %g,%g,%g => %g,%g,%g with mindist=%lg\n",
+			   x1,y1,z1,  x2[matchIndex], y2[matchIndex],  z2[matchIndex], mindist2);
 
   return matchIndex;
 }
