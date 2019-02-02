@@ -91,6 +91,17 @@ int main(int argc, char **argv){
   
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
+#if 0
+  {
+    char fname[BUFSIZ];
+    string outName;
+    options.getArgs("OUTPUT FILE NAME", outName);
+    sprintf(fname, "%s_%04d",(char*)outName.c_str(), mesh->rank);
+    
+    ellipticPlotVTUHex3D(mesh, fname, 0);
+  }
+#endif
+  
   {    
     occa::memory o_r = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_r);
     occa::memory o_x = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_x);    
