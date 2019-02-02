@@ -487,7 +487,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   // Maximum Velocity
   umax = sqrt(umax);
   dfloat magVel = mymax(umax,1.0); // Correction for initial zero velocity
-
+  printf("magVel = %lf\n", magVel);
+  
   options.getArgs("CFL", ins->cfl);
   dfloat dt     = ins->cfl* hmin/( (mesh->N+1.)*(mesh->N+1.) * magVel) ;
   
@@ -901,10 +902,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   if(mesh->totalHaloPairs){//halo setup
     //    dlong vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
-    int maxHaloFields = 20;
-    dlong vHaloBytes = mesh->totalHaloPairs*mesh->Np*maxHaloFields*sizeof(dfloat);
+    dlong vHaloBytes = mesh->totalHaloPairs*mesh->Np*ins->NVfields*sizeof(dfloat);
     dlong pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
     dlong vGatherBytes = ins->NVfields*mesh->ogs->NhaloGather*sizeof(dfloat);
+
     ins->o_vHaloBuffer = mesh->device.malloc(vHaloBytes);
     ins->o_pHaloBuffer = mesh->device.malloc(pHaloBytes);
 
