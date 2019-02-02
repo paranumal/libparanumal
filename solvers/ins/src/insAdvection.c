@@ -44,26 +44,29 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
 
     return;
   }
-  
-  //Exctract Halo On Device, all fields
-  if(mesh->totalHaloPairs>0){
-    ins->velocityHaloExtractKernel(mesh->Nelements,
-                                 mesh->totalHaloPairs,
-                                 mesh->o_haloElementList,
-                                 ins->fieldOffset,
-                                 o_U,
-                                 ins->o_vHaloBuffer);
 
-    // copy extracted halo to HOST 
-    ins->o_vHaloBuffer.copyTo(ins->vSendBuffer);           
-  
-    // start halo exchange
-    meshHaloExchangeStart(mesh,
-                         mesh->Np*(ins->NVfields)*sizeof(dfloat),
-                         ins->vSendBuffer,
-                         ins->vRecvBuffer);
+  //if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  {
+    //Exctract Halo On Device, all fields
+    if(mesh->totalHaloPairs>0){
+      ins->velocityHaloExtractKernel(mesh->Nelements,
+				     mesh->totalHaloPairs,
+				     mesh->o_haloElementList,
+				     ins->fieldOffset,
+				     o_U,
+				     ins->o_vHaloBuffer);
+      
+      // copy extracted halo to HOST 
+      ins->o_vHaloBuffer.copyTo(ins->vSendBuffer);           
+      
+      // start halo exchange
+      meshHaloExchangeStart(mesh,
+			    mesh->Np*(ins->NVfields)*sizeof(dfloat),
+			    ins->vSendBuffer,
+			    ins->vRecvBuffer);
+    }
   }
-
+  
   // Compute Volume Contribution
   occaTimerTic(mesh->device,"AdvectionVolume");
   if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
@@ -87,19 +90,22 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
   }
   occaTimerToc(mesh->device,"AdvectionVolume");
 
-  // COMPLETE HALO EXCHANGE
-  if(mesh->totalHaloPairs>0){
-    meshHaloExchangeFinish(mesh);
-
-    ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
-
-    ins->velocityHaloScatterKernel(mesh->Nelements,
-                                  mesh->totalHaloPairs,
-                                  ins->fieldOffset,
-                                  o_U,
-                                  ins->o_vHaloBuffer);
+  //  if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
+  {
+    // COMPLETE HALO EXCHANGE
+    if(mesh->totalHaloPairs>0){
+      meshHaloExchangeFinish(mesh);
+      
+      ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
+      
+      ins->velocityHaloScatterKernel(mesh->Nelements,
+				     mesh->totalHaloPairs,
+				     ins->fieldOffset,
+				     o_U,
+				     ins->o_vHaloBuffer);
+    }
   }
-
+  
   occaTimerTic(mesh->device,"AdvectionSurface");
   if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
     ins->advectionCubatureSurfaceKernel(mesh->Nelements,

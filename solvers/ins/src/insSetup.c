@@ -900,7 +900,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     ins->o_cU = ins->o_U;
 
   if(mesh->totalHaloPairs){//halo setup
-    dlong vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
+    //    dlong vHaloBytes = mesh->totalHaloPairs*mesh->Np*(ins->NVfields)*sizeof(dfloat);
+    int maxHaloFields = 20;
+    dlong vHaloBytes = mesh->totalHaloPairs*mesh->Np*maxHaloFields*sizeof(dfloat);
     dlong pHaloBytes = mesh->totalHaloPairs*mesh->Np*sizeof(dfloat);
     dlong vGatherBytes = ins->NVfields*mesh->ogs->NhaloGather*sizeof(dfloat);
     ins->o_vHaloBuffer = mesh->device.malloc(vHaloBytes);
