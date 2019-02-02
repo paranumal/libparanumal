@@ -77,14 +77,20 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
 
   hlong allNelements = NX*NY*NZ;
 
-  hlong chunkNelements = (allNelements+size-1)/size;
+  hlong chunkNelements = allNelements/size;
 
   hlong start = chunkNelements*rank;
-  hlong end   = mymin(allNelements, chunkNelements*(rank+1));
+  hlong end   = chunkNelements*(rank+1);
+  
+  if(mesh->rank==(size-1))
+    end = allNelements;
+    
 
   mesh->Nnodes = NX*NY*NZ; // assume periodic and global number of nodes
   mesh->Nelements = end-start;
   mesh->NboundaryFaces = 0;
+
+  printf("Rank %d initially has %d elements\n", mesh->rank, mesh->Nelements);
   
   mesh->EToV = (hlong*) calloc(mesh->Nelements*mesh->Nverts, sizeof(hlong));
   mesh->EToB = (hlong*) calloc(mesh->Nelements*mesh->Nverts, sizeof(hlong));
