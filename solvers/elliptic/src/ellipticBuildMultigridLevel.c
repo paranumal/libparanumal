@@ -32,7 +32,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   //  elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
   elliptic_t *elliptic = new elliptic_t[1];
 
-#ifndef OCCA_VERSION_1_0
+#if 0
   memcpy(elliptic,baseElliptic,sizeof(elliptic_t));
 #else
 
@@ -78,6 +78,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 #ifndef OCCA_VERSION_1_0
   memcpy(mesh,baseElliptic->mesh,sizeof(mesh_t));
 #else
+
   mesh->rank = baseElliptic->mesh->rank;
   mesh->size = baseElliptic->mesh->size;
 
@@ -88,6 +89,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   mesh->Nfaces        = baseElliptic->mesh->Nfaces;
   mesh->NfaceVertices = baseElliptic->mesh->NfaceVertices;
 
+  mesh->Nfields = baseElliptic->mesh->Nfields;
+  
   mesh->Nnodes = baseElliptic->mesh->Nnodes;
   mesh->EX = baseElliptic->mesh->EX; // coordinates of vertices for each element
   mesh->EY = baseElliptic->mesh->EY;
@@ -140,6 +143,10 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   // occa stuff
   mesh->device = baseElliptic->mesh->device;
 
+#if USE_MASTER_NOEL==1
+  mesh->device.UsePreCompiledKernels(mesh->rank!=0);
+#endif
+  
   mesh->defaultStream = baseElliptic->mesh->defaultStream;
   mesh->dataStream = baseElliptic->mesh->dataStream;
 
@@ -224,7 +231,23 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     meshConnectFaceNodes3D(mesh);
     break;
   case HEXAHEDRA:
-    meshConnectFaceNodes3D(mesh);
+    if(!options.compareArgs("BOX DOMAIN", "TRUE"))
+      meshConnectFaceNodes3D(mesh);
+    else{
+      dfloat XMIN = -1, XMAX = +1; // default bi-unit cube
+      dfloat YMIN = -1, YMAX = +1;
+      dfloat ZMIN = -1, ZMAX = +1;
+      
+      options.getArgs("BOX XMIN", XMIN);
+      options.getArgs("BOX YMIN", YMIN);
+      options.getArgs("BOX ZMIN", ZMIN);
+      
+      options.getArgs("BOX XMAX", XMAX);
+      options.getArgs("BOX YMAX", YMAX);
+      options.getArgs("BOX ZMAX", ZMAX);
+      
+      meshConnectPeriodicFaceNodes3D(mesh, XMAX-XMIN, YMAX-YMIN, ZMAX-ZMIN);
+    }
     meshSurfaceGeometricFactorsHex3D(mesh);
     break;
   }
@@ -784,6 +807,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
   for (int r=0;r<2;r++){
+
+    MPI_Barrier(mesh->comm);
+
     if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
       
       kernelInfo["defines/" "p_blockSize"]= blockSize;
@@ -828,9 +854,12 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       floatKernelInfo["defines/" "pfloat"]= "float";
       dfloatKernelInfo["defines/" "pfloat"]= dfloatString;
 
+      printf("rank = %d, size = %d\n", mesh->rank, mesh->size);
+      //      std::cout << dfloatKernelInfo << std::endl;
+      
       sprintf(fileName, DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
       sprintf(kernelName, "ellipticAx%s", suffix);
-      elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
+      elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo); 
 
       // check for trilinear
       if(elliptic->elementType!=HEXAHEDRA){
@@ -895,6 +924,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
         elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
       }
     }
+
     MPI_Barrier(mesh->comm);
   }
 
@@ -903,6 +933,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   elliptic->precon = new precon_t[1];
 
   for (int r=0;r<2;r++){
+
+    MPI_Barrier(mesh->comm);
+    
     if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");

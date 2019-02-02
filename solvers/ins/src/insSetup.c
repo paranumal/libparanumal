@@ -537,14 +537,15 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->outputForceStep = 0;
   options.getArgs("TSTEPS FOR FORCE OUTPUT", ins->outputForceStep);
 
-
+  ins->isoNfields  = 1;   //1 + (ins->dim) + (1 + ins->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
+  ins->isoMaxNtris = 1.E7; 
+  
   //!!!!! Isosurface Setup !! remove those to seoperate library later !!!!
   if(ins->dim==3 && options.compareArgs("OUTPUT TYPE", "ISO"))
     {
     
       // Only one field is exported for iso-surface to reduce the file size
-      ins->isoNfields  = 1;   //1 + (ins->dim) + (1 + ins->dim) ; // p, u.v,w, vort_x, vort_y, vort_z, wort_mag 
-      ins->isoMaxNtris = 1.E7; 
+
       //
       options.getArgs("ISOSURFACE FIELD ID", ins->isoField); 
       options.getArgs("ISOSURFACE COLOR ID", ins->isoColorField); 
@@ -935,6 +936,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   
   for (int r=0;r<2;r++){
     if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
+
+      
+      //      std::cout << "NEW " << " " <<  kernelInfo << std::endl;
       
       sprintf(fileName, DINS "/okl/insHaloExchange.okl");
       sprintf(kernelName, "insVelocityHaloExtract");

@@ -113,6 +113,8 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
 
     readDfloatArray(fp, "Cubature Surface Lift Matrix", &(mesh->intLIFT),&Nrows,&Ncols);
   }
+  mesh->intNfp = 0;
+  mesh->intLIFT = NULL;
 
   /* C0 patch data */ 
   readDfloatArray(fp, "C0 overlapping patch forward matrix", &(mesh->oasForward), &Nrows, &Ncols);   
@@ -158,5 +160,6 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
       mesh->vertexNodes[7] = n;
   }
 
+  mesh->max_EL_nnz = 0;
 }
 

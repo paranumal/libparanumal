@@ -14,7 +14,7 @@ data/ellipticSineTest3D.h
 #../../meshes/cavityHexH0125.msh
 #../../meshes/cavityHexH0075.msh
 #../../meshes/cubeHexE00008.msh
-#../../meshes/cubeHexE00064N.msh
+#../../meshes/cubeHexE00064.msh
 #../../meshes/cubeHexE00216.msh
 #../../meshes/cubeHexE00512.msh
 ../../meshes/cubeHexE01000.msh
@@ -52,12 +52,13 @@ CUDA
 0
 
 [LAMBDA]
-0
+10
 
 # can add FLEXIBLE to PCG
 # can add NONBLOCKING (disable FLEXIBLE for the moment)
 [KRYLOV SOLVER]
-PCG+NONBLOCKING+FLEXIBLE
+PCG+FLEXIBLE+NONBLOCKING
+#+NONBLOCKING+FLEXIBLE
 #+FLEXIBLE
 #+FLEXIBLE+NONBLOCKING
 

@@ -218,5 +218,8 @@ void interpolateHex3D(dfloat *Inter, dfloat *x, int N, dfloat *Ix, int M);
 #define QZID7 19  
 #define QZID10  20   
 
+mesh3D *meshSetupBoxHex3D(int N, setupAide &options);
+void meshConnectPeriodicFaceNodes3D(mesh3D *mesh, dfloat xper, dfloat yper, dfloat zper);
+
 #endif
 

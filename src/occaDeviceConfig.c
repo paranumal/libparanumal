@@ -98,14 +98,16 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   std::cout << deviceConfig << std::endl;
   
   //  mesh->device.setup( (std::string) deviceConfig); // deviceProps);
-  mesh->device.setup(deviceConfig);
+  mesh->device.setup( (std::string)deviceConfig);
 
 #ifdef USE_OCCA_MEM_BYTE_ALIGN 
   // change OCCA MEM BYTE ALIGNMENT
   occa::env::OCCA_MEM_BYTE_ALIGN = USE_OCCA_MEM_BYTE_ALIGN;
 #endif
 
-  //  mesh->device.UsePreCompiledKernels(mesh->rank!=0); 
+#if USE_MASTER_NOEL==1
+  mesh->device.UsePreCompiledKernels(mesh->rank!=0);
+#endif
   
   occa::initTimer(mesh->device);
 
