@@ -67,7 +67,13 @@ int main(int argc, char **argv){
   case TETRAHEDRA:
     mesh = meshSetupTet3D((char*)fileName.c_str(), N); break;
   case HEXAHEDRA:
-    mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
+    if(options.getArgs("MESH FILE", fileName)){
+      mesh = meshSetupHex3D((char*)fileName.c_str(), N);
+    }
+    else if(options.compareArgs("BOX DOMAIN", "TRUE")){
+      mesh = meshSetupBoxHex3D(N, options);
+    }
+    break;
   }
 
   ins_t *ins = insSetup(mesh,options);
