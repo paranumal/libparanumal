@@ -46,6 +46,56 @@ void insReport(ins_t *ins, dfloat time, int tstep){
                              ins->o_U,
                              ins->o_Div);
 
+
+
+  // copy data back to host
+  ins->o_U.copyTo(ins->U);
+  ins->o_P.copyTo(ins->P);
+
+  ins->o_Vort.copyTo(ins->Vort);
+  ins->o_Div.copyTo(ins->Div);
+  
+  dfloat velocityL2 = 0;
+  dfloat vorticityL2 = 0;
+  dfloat volume = 0;
+  hlong Ntotal = mesh->Nelements*mesh->Np;
+  hlong Nall = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
+  for(hlong e=0;e<mesh->Nelements;++e){
+    for(hlong n=0;n<mesh->Np;++n){
+      
+      dfloat JW = mesh->vgeo[mesh->Nvgeo*mesh->Np*e + n + mesh->Np*JWID];
+      hlong id = mesh->Np*e + n;
+
+      dfloat u = ins->U[id + 0*ins->fieldOffset];
+      dfloat v = ins->U[id + 1*ins->fieldOffset];
+      dfloat w = ins->U[id + 2*ins->fieldOffset];
+      velocityL2 += JW*(u*u+v*v+w*w);
+
+
+      dfloat vortx = ins->Vort[id + 0*ins->fieldOffset];
+      dfloat vorty = ins->Vort[id + 1*ins->fieldOffset];
+      dfloat vortz = ins->Vort[id + 2*ins->fieldOffset];
+      vorticityL2 += JW*(vortx*vortx+vorty*vorty+vortz*vortz);
+
+      volume += JW;
+      
+    }
+  }
+  dfloat globalVelocityL2 = 0;
+  dfloat globalVorticityL2 = 0;
+  dfloat globalVolume = 0;
+
+  MPI_Reduce(&velocityL2,  &globalVelocityL2,  1, MPI_DFLOAT, MPI_SUM, 0, mesh->comm);
+  MPI_Reduce(&vorticityL2, &globalVorticityL2, 1, MPI_DFLOAT, MPI_SUM, 0, mesh->comm);
+  MPI_Reduce(&volume,      &globalVolume,      1, MPI_DFLOAT, MPI_SUM, 0, mesh->comm);
+
+
+  if(mesh->rank==0){
+    printf("Time %lf, total kinetic energy %lg, total vorticity %lg\n",
+	   time, 0.5*globalVelocityL2/globalVolume, 0.5*globalVorticityL2/globalVolume);
+  }
+  
+#if 0  
   // gatherscatter vorticity field
   dlong Ntotal = (mesh->Nelements+mesh->totalHaloPairs)*mesh->Np;
   for(int s=0; s<ins->dim; s++){
@@ -60,17 +110,13 @@ void insReport(ins_t *ins, dfloat time, int tstep){
   // gather-scatter divergence 
   ogsGatherScatter(ins->o_Div, ogsDfloat, ogsAdd, mesh->ogs);  
   ins->pSolver->dotMultiplyKernel(mesh->Nelements*mesh->Np, mesh->ogs->o_invDegree, ins->o_Div, ins->o_Div);
-
-  // copy data back to host
-  ins->o_U.copyTo(ins->U);
-  ins->o_P.copyTo(ins->P);
-
-  ins->o_Vort.copyTo(ins->Vort);
-  ins->o_Div.copyTo(ins->Div);
-
+#endif
+      
   // do error stuff on host
   insError(ins, time);
 
+
+  
 #ifdef RENDER
   if(ins->options.compareArgs("OUTPUT FILE FORMAT","PPM")){
 

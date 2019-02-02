@@ -151,6 +151,8 @@ if (p1 < TOL){
           const dfloat wy = drdy*dwdr + dsdy*dwds + dtdy*dwdt;
           const dfloat wz = drdz*dwdr + dsdz*dwds + dtdz*dwdt;
 
+#if 0
+
           // Compute symmetric stress tensor i.e S = 1/2(Ux + UxT)
           const dfloat s11 = 0.5f*(ux + ux); 
           const dfloat s12 = 0.5f*(uy + vx); 
@@ -181,16 +183,22 @@ if (p1 < TOL){
           const dfloat qq = (-0.5*(eig1+eig2+eig3))/3.f; 
           const dfloat rr = 0.5*(detu); 
 
-
+#endif
           const dfloat vortx = (drdy*dwdr + dsdy*dwds + dtdy*dwdt) - (drdz*dvdr + dsdz*dvds + dtdz*dvdt);
           const dfloat vorty = (drdz*dudr + dsdz*duds + dtdz*dudt) - (drdx*dwdr + dsdx*dwds + dtdx*dwdt);
           const dfloat vortz = (drdx*dvdr + dsdx*dvds + dtdx*dvdt) - (drdy*dudr + dsdy*duds + dtdy*dudt);
           
           const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
+#if 0
           Vort[id+0*offset] = -eig2; 
           Vort[id+1*offset] = sqrt( vortx*vortx + vorty*vorty + vortz*vortz); 
           Vort[id+2*offset] = qq*qq*qq + rr*rr;
+#else
+	  Vort[id+0*offset] = vortx;
+          Vort[id+1*offset] = vorty;
+          Vort[id+2*offset] = vortz;
+#endif
 
 
         }
