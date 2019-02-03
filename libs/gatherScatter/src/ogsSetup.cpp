@@ -92,11 +92,15 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
     flagIds[i] = abs(ids[i]);
   }
 
-  //make a host gs handle (calls gslib)
-  ogs->hostGsh = ogsHostSetup(comm, N, ids, 0, 0);
+  //make a symmetric host gs handle (calls gslib)
+  ogs->hostGsh = ogsHostSetup(comm, N, flagIds, 0, 0);
 
   ogsHostGatherScatter(minRank, ogsInt, ogsMin, ogs->hostGsh); //minRank[n] contains the smallest rank taking part in the gather of node n
   ogsHostGatherScatter(maxRank, ogsInt, ogsMax, ogs->hostGsh); //maxRank[n] contains the largest rank taking part in the gather of node n
+
+  //remake the host gs handle respecting the nonsymmetric behavior if present
+  ogsHostFree(ogs->hostGsh);
+  ogs->hostGsh = ogsHostSetup(comm, N, ids, 0, 0);
 
   //count local and halo nodes
   ogs->Nlocal=0; ogs->Nhalo=0;
