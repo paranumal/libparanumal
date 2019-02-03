@@ -28,7 +28,8 @@ SOFTWARE.
 
 mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
 
-  mesh_t *mesh = new mesh_t[1];
+  //  mesh_t *mesh = new mesh_t[1];
+  mesh_t *mesh = (mesh_t*) calloc(1, sizeof(mesh_t));
   
   int rank, size;
   
@@ -153,8 +154,8 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
   }
   
   // partition elements using Morton ordering & parallel sort
-  //  meshGeometricPartition3D(mesh);
-  meshRecursiveSpectralBisectionPartition(mesh);
+  meshGeometricPartition3D(mesh);
+  //  meshRecursiveSpectralBisectionPartition(mesh);
 
   // connect elements using parallel sort
   meshParallelConnect(mesh);
