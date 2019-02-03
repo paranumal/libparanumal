@@ -219,9 +219,11 @@ void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
 
   if (gatherLevel) {
     ogsGather(o_Gx, o_rhs, ogsDfloat, ogsAdd, ogs);
-    o_Gx.copyTo(rhsLocal, N*sizeof(dfloat), 0);
+    if(N)
+      o_Gx.copyTo(rhsLocal, N*sizeof(dfloat), 0);
   } else {
-    o_rhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
+    if(N)
+      o_rhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
   }
 
   //gather the full vector
@@ -238,10 +240,12 @@ void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
   }
 
   if (gatherLevel) {
-    o_Gx.copyFrom(xLocal, N*sizeof(dfloat), 0);
+    if(N)
+      o_Gx.copyFrom(xLocal, N*sizeof(dfloat), 0);
     ogsScatter(o_x, o_Gx, ogsDfloat, ogsAdd, ogs);
   } else {
-    o_x.copyFrom(xLocal, N*sizeof(dfloat), 0);
+    if(N)
+      o_x.copyFrom(xLocal, N*sizeof(dfloat), 0);
   }
 }
 

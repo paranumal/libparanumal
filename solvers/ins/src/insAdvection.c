@@ -94,6 +94,7 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
   {
     // COMPLETE HALO EXCHANGE
     if(mesh->totalHaloPairs>0){
+
       meshHaloExchangeFinish(mesh);
       
       ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 

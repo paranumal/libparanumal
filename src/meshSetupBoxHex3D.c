@@ -152,6 +152,27 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
     ex[7] = xo;    ey[7] = yo+dy; ez[7] = zo+dz;
     
   }
+
+
+#if 0
+  char fileName[BUFSIZ];
+  sprintf(fileName, "box%04d.dat", mesh->rank);
+
+  FILE *fp = fopen(fileName, "w");
+
+  fprintf(fp, "EToV = [\n");
+  for(hlong e=0;e<mesh->Nelements;++e){
+    for(int v=0;v<mesh->Nverts;++v){
+      fprintf(fp, "%d ", mesh->EToV[e*mesh->Nverts+v]);
+    }
+    fprintf(fp, "\n");
+  }
+  
+  fclose(fp);
+
+  MPI_Finalize();
+  exit(0);
+#endif
   
   // partition elements using Morton ordering & parallel sort
   meshGeometricPartition3D(mesh);
@@ -227,6 +248,6 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
   memcpy(mesh->rka, rka, Nrk*sizeof(dfloat));
   memcpy(mesh->rkb, rkb, Nrk*sizeof(dfloat));
   memcpy(mesh->rkc, rkc, (Nrk+1)*sizeof(dfloat));
-  
+ 
   return mesh;
 }
