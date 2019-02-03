@@ -34,8 +34,8 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   //read all the nodes files and load them in a dummy mesh array
   mesh_t **meshLevels = (mesh_t**) calloc(mesh->N+1,sizeof(mesh_t*));
   for (int n=1;n<mesh->N+1;n++) {
-    //    meshLevels[n] = (mesh_t *) calloc(1,sizeof(mesh_t));
-    meshLevels[n] = new mesh_t[1];
+    meshLevels[n] = (mesh_t *) calloc(1,sizeof(mesh_t));
+    //    meshLevels[n] = new mesh_t[1];
     meshLevels[n]->Nverts = mesh->Nverts;
     meshLevels[n]->Nfaces = mesh->Nfaces;
     meshLevels[n]->Nfields = mesh->Nfields; // TW: ahem
@@ -234,8 +234,8 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     }
   }
 
-  //  for (int n=1;n<mesh->N+1;n++) free(meshLevels[n]);
-  for (int n=1;n<mesh->N+1;n++) delete[] meshLevels[n];
+  for (int n=1;n<mesh->N+1;n++) free(meshLevels[n]);
+  //  for (int n=1;n<mesh->N+1;n++) delete[] meshLevels[n];
   free(meshLevels);
 
   //report top levels
