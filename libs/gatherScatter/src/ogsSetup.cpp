@@ -66,7 +66,7 @@ int compareLocalId(const void *a, const void *b){
 }
 
 ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
-                int verbose, occa::device device){
+                int ogsUnique, int verbose, occa::device device){
 
   ogs_t *ogs = (ogs_t*) calloc(1, sizeof(ogs_t));
 
@@ -98,14 +98,16 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
   ogsHostGatherScatter(minRank, ogsInt, ogsMin, ogs->hostGsh); //minRank[n] contains the smallest rank taking part in the gather of node n
   ogsHostGatherScatter(maxRank, ogsInt, ogsMax, ogs->hostGsh); //maxRank[n] contains the largest rank taking part in the gather of node n
 
-  //remake the host gs handle respecting the nonsymmetric behavior if present
-  ogsHostFree(ogs->hostGsh);
-  ogs->hostGsh = ogsHostSetup(comm, N, ids, 0, 0);
+  if (ogsUnique) {
+    //remake the host gs handle respecting the nonsymmetric behavior
+    ogsHostFree(ogs->hostGsh);
+    ogs->hostGsh = ogsHostSetup(comm, N, ids, 0, 0);
+  }
 
   //count local and halo nodes
   ogs->Nlocal=0; ogs->Nhalo=0;
   for (dlong i=0;i<N;i++) {
-    if (flagIds[i]==0) continue;
+    if (ids[i]==0) continue;
 
     if ((minRank[i]!=rank)||(maxRank[i]!=rank))
       ogs->Nhalo++;
@@ -121,11 +123,11 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
   ogs->NlocalGather = 0;
   dlong cnt=0;
   for (dlong i=0;i<N;i++) {
-    if (flagIds[i]==0) continue;
+    if (ids[i]==0) continue;
 
     if ((minRank[i]==rank)&&(maxRank[i]==rank)) {
       localNodes[cnt].localId = i;
-      localNodes[cnt].baseId  = flagIds[i];
+      localNodes[cnt].baseId  = ids[i];
       localNodes[cnt].owned   = 0;
       cnt++;
     }
@@ -140,7 +142,7 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
   }
   for (dlong i=1;i<ogs->Nlocal;i++) {
     int s = 0;
-    if (localNodes[i].baseId!=localNodes[i-1].baseId) {
+    if (abs(localNodes[i].baseId)!=abs(localNodes[i-1].baseId)) {
       ogs->NlocalGather++;
       s = 1;
     }
@@ -202,7 +204,7 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
     //find and record shared nodes
     if ((minRank[i]!=rank)||(maxRank[i]!=rank)) {
       haloNodes[cnt].localId = i;          //original id
-      haloNodes[cnt].baseId  = flagIds[i]; //global id
+      haloNodes[cnt].baseId  = ids[i]; //global id
       haloNodes[cnt].owned   = 0;
       cnt++;
     }
@@ -218,7 +220,7 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
   }
   for (dlong i=1;i<ogs->Nhalo;i++) {
     int s = 0;
-    if (haloNodes[i].baseId!=haloNodes[i-1].baseId) { //new gather node
+    if (abs(haloNodes[i].baseId)!=abs(haloNodes[i-1].baseId)) { //new gather node
       ogs->NhaloGather++;
       s = 1;
     }
@@ -239,10 +241,12 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
       haloFlagIds[cnt++] = haloNodes[i].baseId;
   }
 
-  //use gslib to uniquely flag a single id one node in each group
-  //i.e. one unique node in each group is 'flagged' (kept positive),
-  // while others are turned negative.
-  ogsGsUnique(haloFlagIds, ogs->NhaloGather, comm);
+  if (!ogsUnique) {
+    //use gslib to uniquely flag a single id one node in each group
+    //i.e. one unique node in each group is 'flagged' (kept positive),
+    // while others are turned negative.
+    ogsGsUnique(haloFlagIds, ogs->NhaloGather, comm);
+  }
 
   //count how many node this rank will actually 'own'
   ogs->NownedHalo=0;
