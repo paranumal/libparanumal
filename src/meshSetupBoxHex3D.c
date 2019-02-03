@@ -94,15 +94,12 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
   printf("Rank %d initially has %d elements\n", mesh->rank, mesh->Nelements);
   
   mesh->EToV = (hlong*) calloc(mesh->Nelements*mesh->Nverts, sizeof(hlong));
-  mesh->EToB = (hlong*) calloc(mesh->Nelements*mesh->Nverts, sizeof(hlong));
 
   mesh->EX = (dfloat*) calloc(mesh->Nelements*mesh->Nverts, sizeof(dfloat));
   mesh->EY = (dfloat*) calloc(mesh->Nelements*mesh->Nverts, sizeof(dfloat));
   mesh->EZ = (dfloat*) calloc(mesh->Nelements*mesh->Nverts, sizeof(dfloat));
 
   mesh->elementInfo = (hlong*) calloc(mesh->Nelements, sizeof(hlong));
-
-  mesh->boundaryInfo = NULL; // no boundaries
   
   // [0,NX]
   dfloat dx = (XMAX-XMIN)/NX; // xmin+0*dx, xmin + NX*(XMAX-XMIN)/NX
@@ -116,8 +113,6 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
 
     hlong e = n-start;
 
-    mesh->elementInfo[e] = 1; // ?
-    
     int ip = (i+1)%NX;
     int jp = (j+1)%NY;
     int kp = (k+1)%NZ;
@@ -150,6 +145,8 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
     ex[5] = xo+dx; ey[5] = yo;    ez[5] = zo+dz;
     ex[6] = xo+dx; ey[6] = yo+dy; ez[6] = zo+dz;
     ex[7] = xo;    ey[7] = yo+dy; ez[7] = zo+dz;
+
+    mesh->elementInfo[e] = 1; // ?
     
   }
 
@@ -178,6 +175,11 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
   meshGeometricPartition3D(mesh);
   //  meshRecursiveSpectralBisectionPartition(mesh);
 
+  mesh->EToB = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int)); 
+
+
+  mesh->boundaryInfo = NULL; // no boundaries
+  
   // connect elements using parallel sort
   meshParallelConnect(mesh);
   
