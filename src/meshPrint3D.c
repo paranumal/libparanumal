@@ -52,4 +52,12 @@ void meshPrint3D(mesh3D *mesh){
     }
     printf("\n");
   }
+
+  printf("EToP:\n");
+  for(dlong e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
+      printf("%d ",  mesh->EToP[e*mesh->Nfaces+f]);
+    }
+    printf("\n");
+  }
 }

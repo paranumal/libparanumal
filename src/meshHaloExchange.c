@@ -91,10 +91,13 @@ void meshHaloExchangeStart(mesh_t *mesh,
 
   if(mesh->totalHaloPairs>0){
     // MPI info
-    int rank, size;
-    MPI_Comm_rank(mesh->comm, &rank);
-    MPI_Comm_size(mesh->comm, &size);
+    //    int rank, size;
+    //    MPI_Comm_rank(mesh->comm, &rank);
+    //    MPI_Comm_size(mesh->comm, &size);
 
+    int rank = mesh->rank;
+    int size = mesh->size;
+    
     // count outgoing and incoming meshes
     int tag = 999;
     
@@ -105,10 +108,10 @@ void meshHaloExchangeStart(mesh_t *mesh,
 	size_t count = mesh->NhaloPairs[r]*Nbytes;
 	if(count){
 	  MPI_Irecv(((char*)recvBuffer)+offset, count, MPI_CHAR, r, tag,
-		    mesh->comm, (MPI_Request*)mesh->haloRecvRequests+message);
+		    mesh->comm, ((MPI_Request*)mesh->haloRecvRequests)+message);
 	
 	  MPI_Isend(((char*)sendBuffer)+offset, count, MPI_CHAR, r, tag,
-		    mesh->comm, (MPI_Request*)mesh->haloSendRequests+message);
+		    mesh->comm, ((MPI_Request*)mesh->haloSendRequests)+message);
 	  offset += count;
 	  ++message;
 	}
@@ -124,8 +127,6 @@ void meshHaloExchangeFinish(mesh_t *mesh){
     MPI_Status *sendStatus = (MPI_Status*) calloc(mesh->NhaloMessages, sizeof(MPI_Status));
     MPI_Status *recvStatus = (MPI_Status*) calloc(mesh->NhaloMessages, sizeof(MPI_Status));
 
-    //    printf("mesh->NhaloMessages= %d\n", mesh->NhaloMessages);
-    
     MPI_Waitall(mesh->NhaloMessages, (MPI_Request*)mesh->haloRecvRequests, recvStatus);
     MPI_Waitall(mesh->NhaloMessages, (MPI_Request*)mesh->haloSendRequests, sendStatus);
 

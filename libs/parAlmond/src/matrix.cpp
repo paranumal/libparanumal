@@ -333,6 +333,7 @@ void parCSR::haloSetup(hlong *colIds) {
   ogsHalo = ogsSetup(Nhalo, ghaloIds, comm, verbose, device);
 
   MPI_Barrier(comm);
+
   free(ghaloIds);
   free(offdcols);
   free(minRank);
