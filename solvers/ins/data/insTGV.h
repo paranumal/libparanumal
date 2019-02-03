@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+// Contributed by Stefen Kerkemmeier
 
 // Initial conditions 
 #define insFlowField3D(t,x,y,z, u,v,w,p) \
