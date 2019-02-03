@@ -31,7 +31,6 @@ SOFTWARE.
   
   	dlong N;
     hlong id[N];    // the hlong and dlong types are defined in "types.h"
-    int   haloFlag[N];    
     ...
     struct ogs_t *ogs = ogsSetup(N, id, &comm, verbose);
     
