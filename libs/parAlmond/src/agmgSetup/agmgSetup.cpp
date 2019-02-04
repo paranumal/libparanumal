@@ -30,7 +30,7 @@ namespace parAlmond {
 
 void solver_t::AMGSetup(parCSR *A){
 
-  // approximate Nrows at coarsest level
+  // approximate Nrows at coarsest level  
   coarseLevel = new coarseSolver(options);
   const int gCoarseSize = coarseLevel->getTargetSize();
 
@@ -70,7 +70,16 @@ void solver_t::AMGSetup(parCSR *A){
   allocateScratchSpace(requiredBytes, device);
 
   for (int n=AMGstartLev;n<numLevels;n++) {
-    setupAgmgSmoother((agmgLevel*)(levels[n]), stype, ChebyshevIterations);
+
+    int chebyIts = ChebyshevIterations;
+
+    if(n==numLevels-1){
+      chebyIts =ChebyshevIterations;
+      printf("setting: chebyshev iterations\n");
+      if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE"))
+	options.getArgs("PARALMOND SMOOTH COARSEST DEGREE", chebyIts);
+    }
+    setupAgmgSmoother((agmgLevel*)(levels[n]), stype, chebyIts);
     allocateAgmgVectors((agmgLevel*)(levels[n]), n, AMGstartLev, ctype);
     syncAgmgToDevice((agmgLevel*)(levels[n]), n, AMGstartLev, ctype);
   }
@@ -109,7 +118,7 @@ agmgLevel *coarsenAgmgLevel(agmgLevel *level, KrylovType ktype, setupAide option
 }
 
 void setupAgmgSmoother(agmgLevel *level, SmoothType s, int ChebIterations){
-
+  
   level->stype = s;
   level->ChebyshevIterations = ChebIterations;
 
