@@ -39,13 +39,18 @@ int coarseSolver::getTargetSize() {
 
 //set up exact solver using xxt
 void coarseSolver::setup(parCSR *A) {
-
+  
   comm = A->comm;
 
   int rank, size;
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
+  if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE")){
+    if(rank==0) printf("WARNING !!!!!: not building coarsest level matrix\n");
+    return; // bail early as this will not get used
+  }
+  
   //copy the global coarse partition as ints
   coarseOffsets = (int* ) calloc(size+1,sizeof(int));
   for (int r=0;r<size+1;r++) coarseOffsets[r] = (int) A->globalRowStarts[r];
@@ -174,7 +179,7 @@ void coarseSolver::setup(parCSR *A) {
 
   free(coarseA);
 
-  // if((rank==0)&&(options.compareArgs("VERBOSE","TRUE"))) printf("done.\n");
+   // if((rank==0)&&(options.compareArgs("VERBOSE","TRUE"))) printf("done.\n");
 }
 
 void coarseSolver::syncToDevice() {}
@@ -189,11 +194,18 @@ void coarseSolver::solve(dfloat *rhs, dfloat *x) {
 
     //multiply by local part of the exact matrix inverse
     // #pragma omp parallel for
+
     for (int n=0;n<N;n++) {
+#if 1
       xLocal[n] = 0.;
       for (int m=0;m<coarseTotal;m++) {
         xLocal[n] += invCoarseA[n*coarseTotal+m]*rhsCoarse[m];
       }
+      
+#else
+      xLocal[n] = rhsCoarse[n];
+#endif
+
     }
     ogsScatter(x, xLocal, ogsDfloat, ogsAdd, ogs);
 
@@ -202,13 +214,21 @@ void coarseSolver::solve(dfloat *rhs, dfloat *x) {
     MPI_Allgatherv(rhs,                  N,                MPI_DFLOAT,
                    rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
 
+    printf("HACKING COARSE GRID\n");
+    
     //multiply by local part of the exact matrix inverse
-    // #pragma omp parallel for
+   // #pragma omp parallel for
+
     for (int n=0;n<N;n++) {
+#if 1
       x[n] = 0.;
       for (int m=0;m<coarseTotal;m++) {
         x[n] += invCoarseA[n*coarseTotal+m]*rhsCoarse[m];
       }
+#else
+      x[n] = rhsCoarse[n];
+#endif
+
     }
   }
 

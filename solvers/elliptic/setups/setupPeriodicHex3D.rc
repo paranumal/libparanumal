@@ -12,13 +12,13 @@ data/ellipticSineTest3D.h
 TRUE
 
 [BOX NX]
-5
+24
 
 [BOX NY]
-5
+24
 
 [BOX NZ]
-5
+24
 
 [BOX XMIN]
 -1.0
@@ -66,12 +66,13 @@ CUDA
 0
 
 [LAMBDA]
-10
+0
 
 # can add FLEXIBLE to PCG
 # can add NONBLOCKING (disable FLEXIBLE for the moment)
 [KRYLOV SOLVER]
-PCG+FLEXIBLE+NONBLOCKING
+PCG+FLEXIBLE
+#+NONBLOCKING
 #+NONBLOCKING+FLEXIBLE
 #+FLEXIBLE
 #+FLEXIBLE+NONBLOCKING
@@ -148,6 +149,13 @@ DEFAULT
 [PARALMOND LPSCN ORDERING]
 MAX
 #MIN
+
+# only smooth at bottom of cycle
+[PARALMOND SMOOTH COARSEST]
+TRUE
+
+[PARALMOND SMOOTH COARSEST DEGREE]
+20
 
 ###########################################
 
