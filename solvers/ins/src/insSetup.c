@@ -495,6 +495,13 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->dtAdaptStep = 0; 
   options.getArgs("TSTEPS FOR TIME STEP ADAPT", ins->dtAdaptStep);
 
+  // over ride if DT is in the file
+  if(options.getArgs("DT", dt)){
+    if(mesh->rank==0){
+      printf("NOTE: USING DT %lg FROM OPTIONS FILE\n", dt);
+    }
+  }
+  
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(ins->dti), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
 
