@@ -132,7 +132,7 @@ mesh2D* meshParallelReaderQuad2D(char *fileName){
                      sizeof(hlong));
 
   mesh->elementInfo
-    = (int*) calloc(NquadrilateralsLocal,sizeof(int));
+    = (hlong*) calloc(NquadrilateralsLocal,sizeof(hlong));
 
   /* scan through file looking for quadrilateral elements */
   hlong cnt=0, bcnt=0;
@@ -155,7 +155,7 @@ mesh2D* meshParallelReaderQuad2D(char *fileName){
     
     if(elementType==3){  // quadrilateral
       if(start<=Nquadrilaterals && Nquadrilaterals<=end){
-        sscanf(buf, "%*d%*d%*d %d %*d" hlongFormat hlongFormat hlongFormat hlongFormat, 
+        sscanf(buf, "%*d%*d%*d " hlongFormat " %*d" hlongFormat hlongFormat hlongFormat hlongFormat,
                mesh->elementInfo+cnt, &v1, &v2, &v3, &v4);
 
         // check orientation

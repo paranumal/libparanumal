@@ -143,7 +143,7 @@ typedef struct {
 
   // combined PCG update step
   int             NthreadsUpdatePCG;
-  hlong           NblocksUpdatePCG;
+  dlong           NblocksUpdatePCG;
   dfloat         *tmpNormr;
   occa::memory  o_tmpNormr;
   occa::kernel  updatePCGKernel;

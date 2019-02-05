@@ -129,7 +129,7 @@ typedef struct {
   // Overlapping Additive Schwarz variables
   void *ellipticOneRing;
 
-  hlong NoneRingSendTotal;
+  dlong NoneRingSendTotal;
   hlong *oneRingSendList; 
   hlong *NoneRingSend;
 

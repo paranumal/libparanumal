@@ -392,7 +392,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     }else{
 
       // first set Dirichlet bc in tmp field
-      hlong Etotal = (mesh->Nelements+mesh->totalHaloPairs);
+      dlong Etotal = (mesh->Nelements+mesh->totalHaloPairs);
       dfloat *qbc = (dfloat*) calloc(Etotal*mesh->Np, sizeof(dfloat));
       // note the zeroing
       occa::memory o_qbc = mesh->device.malloc(Etotal*mesh->Np*sizeof(dfloat), qbc);

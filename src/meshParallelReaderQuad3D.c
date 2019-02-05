@@ -77,7 +77,7 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
 
   /* read number of nodes in mesh */
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, "%d", &(mesh->Nnodes));
+  sscanf(buf, hlongFormat, &(mesh->Nnodes));
 
   /* allocate space for node coordinates */
   dfloat *VX = (dfloat*) calloc(mesh->Nnodes, sizeof(dfloat));
@@ -128,24 +128,25 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
   /* allocate space for Element node index data */
 
   mesh->EToV 
-    = (int*) calloc(NquadrilateralsLocal*mesh->Nverts, 
-		     sizeof(int));
+    = (hlong*) calloc(NquadrilateralsLocal*mesh->Nverts, 
+		     sizeof(hlong));
 
   mesh->elementInfo
-    = (int*) calloc(NquadrilateralsLocal,sizeof(int));
+    = (hlong*) calloc(NquadrilateralsLocal,sizeof(hlong));
   
   /* scan through file looking for quadrilateral elements */
   int cnt=0, bcnt=0;
   Nquadrilaterals = 0;
 
-  mesh->boundaryInfo = (int*) calloc(NboundaryFaces*3, sizeof(int));
+  mesh->boundaryInfo = (hlong*) calloc(NboundaryFaces*3, sizeof(hlong));
   for(n=0;n<mesh->Nelements;++n){
-    int elementType, v1, v2, v3, v4;
+    int elementType;
+    hlong v1, v2, v3, v4;
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
 
     if(elementType==1){ // boundary face
-      sscanf(buf, "%*d%*d %*d%d%*d %d%d", 
+      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d " hlongFormat hlongFormat, 
 	     mesh->boundaryInfo+bcnt*3, &v1, &v2);
       mesh->boundaryInfo[bcnt*3+1] = v1-1;
       mesh->boundaryInfo[bcnt*3+2] = v2-1;
@@ -154,7 +155,7 @@ mesh_t* meshParallelReaderQuad3D(char *fileName){
     
     if(elementType==3){  // quadrilateral
       if(start<=Nquadrilaterals && Nquadrilaterals<=end){
-        sscanf(buf, "%*d%*d%*d %d %*d" hlongFormat hlongFormat hlongFormat hlongFormat, 
+        sscanf(buf, "%*d%*d%*d " hlongFormat " %*d" hlongFormat hlongFormat hlongFormat hlongFormat,
                mesh->elementInfo+cnt, &v1, &v2, &v3, &v4);
 	
 #if 0

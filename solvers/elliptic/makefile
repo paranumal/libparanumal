@@ -60,11 +60,7 @@ AOBJS    = \
 ./src/ellipticUpdateNBFPCG.o \
 ./src/NBPCG.o \
 ./src/ellipticUpdateNBPCG.o \
-./src/ellipticOasSolve.o \
 ./src/ellipticKernelInfo.o \
-./src/ellipticOasSetup.o \
-./src/ellipticBuildOneRing.o\
-./src/ellipticOneRingDiagnostics.o\
 ./src/PCG.o \
 ./src/ellipticSerialAxHex3D.o \
 ./src/ellipticSerialPartialAxHex3D.o \

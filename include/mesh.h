@@ -66,7 +66,7 @@ typedef struct {
   int   *EToP; // element-to-partition/process connectivity
   int   *EToB; // element-to-boundary condition type
 
-  int *elementInfo; //type of element
+  hlong *elementInfo; //type of element
 
   // boundary faces
   hlong NboundaryFaces; // number of boundary faces
@@ -531,7 +531,7 @@ void meshConnectBoundary(mesh_t *mesh);
 
 void meshParallelGatherScatterSetup(mesh_t *mesh,
                                       dlong N,
-                                      dlong *globalIds,
+                                      hlong *globalIds,
                                       MPI_Comm &comm,
                                       int verbose);
 

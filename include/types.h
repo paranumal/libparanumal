@@ -39,7 +39,7 @@ SOFTWARE.
 #endif
 
 //host index data type
-#if 1
+#if 0
 #define hlong int
 #define MPI_HLONG MPI_INT
 #define hlongFormat "%d"

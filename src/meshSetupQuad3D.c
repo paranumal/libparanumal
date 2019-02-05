@@ -80,7 +80,7 @@ mesh_t *meshSetupQuad3D(char *filename, int N, dfloat sphereRadius){
 
   for(int n=0;n<mesh->Nfp*mesh->Nelements*mesh->Nfaces;++n){
     if(mesh->vmapM[n]==mesh->vmapP[n]){
-      printf("node %d matches self \n");
+      printf("node %d matches self \n", n);
     }
   }
       
