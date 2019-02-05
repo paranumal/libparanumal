@@ -76,6 +76,9 @@ int main(int argc, char **argv){
     break;
   }
 
+  if (mesh->rank == 0)
+    printf("sizeof(hlong) = %d, sizeof(dlong) = %d\n", sizeof(hlong), sizeof(dlong));
+
   ins_t *ins = insSetup(mesh,options);
 
   //  insPlotWallsVTUHex3D(ins, "walls");
