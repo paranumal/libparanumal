@@ -116,7 +116,7 @@ void insRunEXTBDF(ins_t *ins){
 
     dfloat time = ins->startTime + tstep*ins->dt;
 
-    hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
+    dlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 
     if(ins->Nsubsteps) {
       if(!NekSubCycle)

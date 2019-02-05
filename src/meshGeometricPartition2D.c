@@ -388,7 +388,7 @@ void meshGeometricPartition2D(mesh2D *mesh){
   mesh->EToV = (hlong*) calloc(newNelements*mesh->Nverts, sizeof(hlong));
   mesh->EX = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
   mesh->EY = (dfloat*) calloc(newNelements*mesh->Nverts, sizeof(dfloat));
-  mesh->elementInfo = (int*) calloc(newNelements, sizeof(int));
+  mesh->elementInfo = (hlong*) calloc(newNelements, sizeof(hlong));
 
   for(dlong e=0;e<newNelements;++e){
     for(int n=0;n<mesh->Nverts;++n){

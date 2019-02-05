@@ -32,7 +32,7 @@ SOFTWARE.
 
 void meshParallelGatherScatterSetup(mesh_t *mesh,
                                       dlong N,
-                                      dlong *globalIds,
+                                      hlong *globalIds,
                                       MPI_Comm &comm,
                                       int verbose) { 
 

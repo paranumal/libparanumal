@@ -690,7 +690,7 @@ void ellipticBuildContinuousQuad2D(elliptic_t *elliptic, dfloat lambda, nonZero_
   fp = fopen(fname, "w");
 
   for(dlong n=1;n<*nnz;++n){
-      fprintf(fp,"%d %d %.8e\n", (*A)[n].row+1, (*A)[n].col+1, (*A)[n].val);
+      fprintf(fp, hlongFormat " " hlongFormat " %.8e\n", (*A)[n].row+1, (*A)[n].col+1, (*A)[n].val);
   }
 
  fclose(fp);

@@ -81,7 +81,7 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
 
   /* read number of nodes in mesh */
   fgets(buf, BUFSIZ, fp);
-  sscanf(buf, "%d", &(mesh->Nnodes));
+  sscanf(buf, hlongFormat, &(mesh->Nnodes));
 
   /* allocate space for node coordinates */
   dfloat *VX = (dfloat*) calloc(mesh->Nnodes, sizeof(dfloat));
@@ -131,22 +131,22 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
   /* allocate space for Element node index data */
 
   mesh->EToV
-    = (int*) calloc(NtrianglesLocal*mesh->Nverts,
-		     sizeof(int));
+    = (hlong*) calloc(NtrianglesLocal*mesh->Nverts,
+		     sizeof(hlong));
   mesh->elementInfo
-    = (int*) calloc(NtrianglesLocal,sizeof(int));
+    = (hlong*) calloc(NtrianglesLocal,sizeof(hlong));
 
   /* scan through file looking for triangle elements */
   int cnt=0, bcnt=0;
   Ntriangles = 0;
 
-  mesh->boundaryInfo = (int*) calloc(NboundaryFaces*3, sizeof(int));
+  mesh->boundaryInfo = (hlong*) calloc(NboundaryFaces*3, sizeof(hlong));
   for(n=0;n<mesh->Nelements;++n){
     int elementType, v1, v2, v3;
     fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==1){ // boundary face
-      sscanf(buf, "%*d%*d %*d%d%*d %d%d",
+      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d %d%d",
 	     mesh->boundaryInfo+bcnt*3, &v1, &v2);
       mesh->boundaryInfo[bcnt*3+1] = v1-1;
       mesh->boundaryInfo[bcnt*3+2] = v2-1;
@@ -154,7 +154,7 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
     }
     if(elementType==2){  // triangle
       if(start<=Ntriangles && Ntriangles<=end){
-	sscanf(buf, "%*d%*d%*d %d %*d %d%d%d",
+	sscanf(buf, "%*d%*d%*d " hlongFormat " %*d %d%d%d",
 	      mesh->elementInfo+cnt, &v1, &v2, &v3);
 
 	// check orientation

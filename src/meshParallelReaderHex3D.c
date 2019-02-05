@@ -132,7 +132,7 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
     = (hlong*) calloc(NhexesLocal*mesh->Nverts, sizeof(hlong));
 
   mesh->elementInfo
-    = (int*) calloc(NhexesLocal,sizeof(int));
+    = (hlong*) calloc(NhexesLocal,sizeof(hlong));
 
   /* scan through file looking for hexrahedra elements */
   hlong cnt=0, bcnt=0;
@@ -159,7 +159,7 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
     if(elementType==5){  // hex code is 5
       if(start<=Nhexes && Nhexes<=end){
         sscanf(buf,
-               "%*d%*d%*d %d %*d"
+               "%*d%*d%*d " hlongFormat " %*d"
                hlongFormat hlongFormat hlongFormat hlongFormat hlongFormat hlongFormat hlongFormat hlongFormat,
                mesh->elementInfo+cnt,
                &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8);

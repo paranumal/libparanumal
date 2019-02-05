@@ -197,11 +197,11 @@ void meshRecursiveSpectralBisectionPartition(mesh_t *mesh){
  
  // scrape EToV from inEToV (may be different type hlong to EToV)
  mesh->EToV = (hlong*) calloc(Nelements*Nverts, sizeof(hlong));
- mesh->elementInfo = (int*) calloc(Nelements, sizeof(int));
+ mesh->elementInfo = (hlong*) calloc(Nelements, sizeof(hlong));
  mesh->EX   = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
  mesh->EY   = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
  mesh->EZ   = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
- mesh->elementInfo = (int*) calloc(Nelements, sizeof(int));
+ mesh->elementInfo = (hlong*) calloc(Nelements, sizeof(hlong));
  for(e=0;e<Nelements;++e)
    for(n=0;n<Nverts;++n){
      mesh->EToV[e*Nverts+n] = inEToV[e*Nverts+n];

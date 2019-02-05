@@ -59,7 +59,7 @@ void insPlotVTUHex3D(ins_t *ins, char *fileNameBase){
   printf("N = %d, Eloc = %d, Nel = %d\n",
 	 mesh->Nq-1, Eloc, mesh->Nelements);
 
-  fprintf(fp, "    <Piece NumberOfPoints=\""hlongFormat"\" NumberOfCells=\""hlongFormat"\">\n", 
+  fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n",
           mesh->Nelements*mesh->Np, 
           mesh->Nelements*Eloc);
   

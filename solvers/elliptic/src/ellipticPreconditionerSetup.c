@@ -104,13 +104,16 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
     free(invDiagA);
   } else if(options.compareArgs("PRECONDITIONER", "OAS")){
 
-    if(mesh->N>1)
-      ellipticOasSetup(elliptic, lambda, kernelInfo);
-    else{
-      dfloat *invDiagA;
-      ellipticBuildJacobi(elliptic,lambda,&invDiagA);
-      precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
-      free(invDiagA);
-    }
+    printf("ERROR:  OAS does not work right now.\n");
+    exit(-1);
+
+    //if(mesh->N>1)
+    //  ellipticOasSetup(elliptic, lambda, kernelInfo);
+    //else{
+    //  dfloat *invDiagA;
+    //  ellipticBuildJacobi(elliptic,lambda,&invDiagA);
+    //  precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
+    //  free(invDiagA);
+    //}
   }
 }

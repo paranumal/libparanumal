@@ -57,10 +57,10 @@ void insPlotWallsVTUHex3D(ins_t *ins, char *fileNameBase){
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
   fprintf(fp, "  <UnstructuredGrid>\n");
 
-  printf("N = %d, Nwalls = %d, Nel = %d\n",
+  printf("N = %d, Nwalls = " hlongFormat ", Nel = %d\n",
 	 mesh->Nq-1, Nwalls, mesh->Nelements);
 
-  fprintf(fp, "    <Piece NumberOfPoints=\""hlongFormat"\" NumberOfCells=\""hlongFormat"\">\n", 
+  fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\""hlongFormat"\">\n",
           mesh->Nelements*mesh->Np, 
           Nwalls*(mesh->Nq-1)*(mesh->Nq-1));
   
@@ -97,10 +97,10 @@ void insPlotWallsVTUHex3D(ins_t *ins, char *fileNameBase){
 	    int v4 = mesh->faceNodes[f*mesh->Nfp + (j+1)*mesh->Nq + i];
 
 	    fprintf(fp, 
-		    dlongFormat" "
-		    dlongFormat" "
-		    dlongFormat" "
-		    dlongFormat"\n ",
+		    hlongFormat" "
+		    hlongFormat" "
+		    hlongFormat" "
+		    hlongFormat"\n ",
 		    b + v1, b + v2, b + v3, b + v4);
 	  }
 	}

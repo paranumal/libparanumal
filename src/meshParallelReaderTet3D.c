@@ -128,7 +128,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   mesh->EToV 
     = (hlong*) calloc(NtetsLocal*mesh->Nverts, sizeof(hlong));
   mesh->elementInfo
-    = (int*) calloc(NtetsLocal,sizeof(int));
+    = (hlong*) calloc(NtetsLocal,sizeof(hlong));
 
   /* scan through file looking for tetrahedra elements */
   hlong cnt=0, bcnt = 0;
@@ -152,7 +152,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
     if(elementType==4){  // tet code is 4
       if(start<=Ntets && Ntets<=end){
         sscanf(buf,
-               "%*d%*d%*d %d %*d"
+               "%*d%*d%*d " hlongFormat " %*d"
                hlongFormat hlongFormat hlongFormat hlongFormat,
                mesh->elementInfo+cnt,&v1, &v2, &v3, &v4);
         /* read vertex triplet for trianngle */

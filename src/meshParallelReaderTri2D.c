@@ -133,7 +133,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
     = (hlong*) calloc(NtrianglesLocal*mesh->Nverts,
                      sizeof(hlong));
   mesh->elementInfo
-    = (int*) calloc(NtrianglesLocal,sizeof(int));
+    = (hlong*) calloc(NtrianglesLocal,sizeof(hlong));
 
   /* scan through file looking for triangle elements */
   hlong cnt=0, bcnt=0;
@@ -154,7 +154,7 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
     }
     if(elementType==2){  // triangle
       if(start<=Ntriangles && Ntriangles<=end){
-        sscanf(buf, "%*d%*d%*d %d %*d" hlongFormat hlongFormat hlongFormat,
+        sscanf(buf, "%*d%*d%*d " hlongFormat " %*d" hlongFormat hlongFormat hlongFormat,
                mesh->elementInfo+cnt, &v1, &v2, &v3);
 
         // check orientation
