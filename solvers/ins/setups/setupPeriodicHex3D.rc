@@ -8,13 +8,13 @@ data/insBeltrami3D.h
 TRUE
 
 [BOX NX]
-3
+4
 
 [BOX NY]
-3
+4
 
 [BOX NZ]
-3
+4
 
 [BOX XMIN]
 -1.0
@@ -47,8 +47,8 @@ TRUE
 ISOPARAMETRIC
 
 [THREAD MODEL]
-#Serial
-CUDA
+Serial
+#CUDA
 
 [PLATFORM NUMBER]
 0
@@ -86,7 +86,7 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+10
 
 [START TIME]
 0
@@ -121,7 +121,7 @@ PCG
 # PCG+NONBLOCKING+FLEXIBLE
 
 [VELOCITY SOLVER TOLERANCE]
-1.e-6
+1.e-7
 
 # can be IPDG, [ currently CONTINUOUS seems to be broken ]
 [VELOCITY DISCRETIZATION]

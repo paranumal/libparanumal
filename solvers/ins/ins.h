@@ -151,15 +151,15 @@ typedef struct {
   occa::memory o_isoLevels, o_isoq, o_isoNtris; 
   occa::memory o_plotInterp, o_plotEToV; 
 
-
-
-
   occa::kernel scaledAddKernel;
   occa::kernel subCycleVolumeKernel,  subCycleCubatureVolumeKernel ;
   occa::kernel subCycleSurfaceKernel, subCycleCubatureSurfaceKernel;;
   occa::kernel subCycleRKUpdateKernel;
   occa::kernel subCycleExtKernel;
 
+  occa::kernel subCycleNekCubatureVolumeKernel;
+  occa::memory o_invLumpedMassMatrix;
+  
   occa::kernel constrainKernel;
   
   occa::memory o_U, o_P;
@@ -282,3 +282,5 @@ void simpleRayTracer(int     plotNelements,
 		     dfloat *plotq,
 		     const char *fileBaseName,
 		     const int fileIndex);
+
+void insNekSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_Ud);

@@ -31,6 +31,8 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
 
   mesh_t *mesh = ins->mesh;
 
+  int ipdg = ins->vOptions.compareArgs("DISCRETIZATION","IPDG");
+  
   if(0) // turn this off
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")) {
 
@@ -45,8 +47,8 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
     return;
   }
 
-  //if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
-  {
+  if(ipdg){
+    
     //Exctract Halo On Device, all fields
     if(mesh->totalHaloPairs>0){
       ins->velocityHaloExtractKernel(mesh->Nelements,
@@ -90,8 +92,8 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
   }
   occaTimerToc(mesh->device,"AdvectionVolume");
 
-  //  if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
-  {
+  if (ipdg){
+
     // COMPLETE HALO EXCHANGE
     if(mesh->totalHaloPairs>0){
 
@@ -106,6 +108,8 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
 				     ins->o_vHaloBuffer);
     }
   }
+
+  occa::memory o_vmapP = (ipdg) ? mesh->o_vmapP: mesh->o_vmapM; // need to decide what to do about bcs
   
   occaTimerTic(mesh->device,"AdvectionSurface");
   if(ins->options.compareArgs("ADVECTION TYPE", "CUBATURE")){
@@ -118,7 +122,7 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
                                         mesh->o_cubInterpT,
                                         mesh->o_cubProjectT,
                                         mesh->o_vmapM,
-                                        mesh->o_vmapP,
+                                        o_vmapP,
                                         mesh->o_EToB,
                                         time,
                                         mesh->o_intx,
@@ -132,7 +136,7 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
                                 mesh->o_sgeo,
                                 mesh->o_LIFTT,
                                 mesh->o_vmapM,
-                                mesh->o_vmapP,
+                                o_vmapP,
                                 mesh->o_EToB,
                                 time,
                                 mesh->o_x,
