@@ -8,13 +8,13 @@ data/insTGV.h
 TRUE
 
 [BOX NX]
-16
+14
 
 [BOX NY]
-16
+14
 
 [BOX NZ]
-16
+14
 
 [BOX XMIN]
 -3.141592653589793
@@ -36,7 +36,7 @@ TRUE
 12
 
 [POLYNOMIAL DEGREE]
-6
+7
 
 [ELEMENT MAP]
 ISOPARAMETRIC
@@ -61,8 +61,8 @@ EXTBDF2+SUBCYCLING
 1
 
 [SUBCYCLING TYPE]
-#LIBP
-NEK
+LIBP
+#NEK BROKEN ATM
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
@@ -91,7 +91,7 @@ CUBATURE
 0
 
 [FINAL TIME]
-20
+0.2
 
 [CFL]
 0.05
@@ -296,3 +296,10 @@ NODAL
 # force PCG to go to MAXIMUM ITERATIONS
 [FIXED ITERATION COUNT]
 FALSE
+
+# TRUE: all ranks assume precompiled binaries
+# NONROOT: root rank compiles, other ranks load
+# FALSE: all ranks compile
+[USE PRECOMPILED BINARIES]
+TRUE
+
