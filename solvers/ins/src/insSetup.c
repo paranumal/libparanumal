@@ -1118,7 +1118,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 	  ins->o_cUd = mesh->device.malloc(ins->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->cUd);
 	else 
 	  ins->o_cUd = ins->o_Ud;
-
+      
 	sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
 	sprintf(kernelName, "scaledAddwOffset");
 	ins->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
@@ -1132,6 +1132,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
 	sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
 	ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+	sprintf(kernelName, "insSubCycleNekCubatureVolume%s", suffix);
+	ins->subCycleNekCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 	sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
 	ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
@@ -1147,6 +1150,31 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
     MPI_Barrier(mesh->comm);
   }
 
+  // build lumped mass matrix for NEK
+  dfloat *lumpedMassMatrix =
+    (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+  dfloat *copyLumpedMassMatrix =
+    (dfloat*) calloc(mesh->Nelements*mesh->Np, sizeof(dfloat));
+
+  for(hlong e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      lumpedMassMatrix[e*mesh->Np+n] =
+	mesh->vgeo[e*mesh->Np*mesh->Nvgeo+JWID*mesh->Np+n];
+      copyLumpedMassMatrix[e*mesh->Np+n] =
+	mesh->vgeo[e*mesh->Np*mesh->Nvgeo+JWID*mesh->Np+n];
+    }
+  }
+  
+  ogsGatherScatter(lumpedMassMatrix, ogsDfloat, ogsAdd, ins->vSolver->ogs); // !!!!!!!!!!!!!!!!!
+
+  for(int n=0;n<mesh->Np*mesh->Nelements;++n){
+    //    lumpedMassMatrix[n] = copyLumpedMassMatrix[n]/lumpedMassMatrix[n];
+    lumpedMassMatrix[n] = 1./lumpedMassMatrix[n];
+  }
+
+  ins->o_invLumpedMassMatrix = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
+						   lumpedMassMatrix);
+  
   return ins;
 }
 

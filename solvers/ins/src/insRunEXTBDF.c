@@ -35,6 +35,10 @@ void insRunEXTBDF(ins_t *ins){
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"INS");
 
+  int NekSubCycle = 0;
+  if(ins->options.compareArgs("SUBCYCLING TYPE", "NEK"))
+    NekSubCycle = 1;
+  
   int NstokesSteps = 0;
   dfloat oldDt = ins->dt;
   ins->dt *= 100;
@@ -115,7 +119,10 @@ void insRunEXTBDF(ins_t *ins){
     hlong offset = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
 
     if(ins->Nsubsteps) {
-      insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
+      if(!NekSubCycle)
+	insSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
+      else
+	insNekSubCycle(ins, time, ins->Nstages, ins->o_U, ins->o_NU);
     } else {
       insAdvection(ins, time, ins->o_U, ins->o_NU);
     }
