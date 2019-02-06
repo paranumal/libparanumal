@@ -12,13 +12,13 @@ data/ellipticSineTest3D.h
 TRUE
 
 [BOX NX]
-24
+20
 
 [BOX NY]
-24
+20
 
 [BOX NZ]
-24
+20
 
 [BOX XMIN]
 -1.0
@@ -183,3 +183,8 @@ TRUE
 [FIXED ITERATION COUNT]
 FALSE
 
+# TRUE: assume binaries are precompiled
+# FALSE: rely on occa caching
+# NONROOT: rank>0 assume rank==0 compiles binaries or occa binaries are already in cache
+[USE PRECOMPILED BINARIES]
+FALSE

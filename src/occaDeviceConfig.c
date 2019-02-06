@@ -111,11 +111,14 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   // check to see if the options specify to use precompiled binaries
   if(options.compareArgs("USE PRECOMPILED BINARIES", "TRUE")){
     mesh->device.UsePreCompiledKernels(1);
+    occa::host().UsePreCompiledKernels(1);
   }
   else if(options.compareArgs("USE PRECOMPILED BINARIES", "NONROOT")){
     mesh->device.UsePreCompiledKernels(mesh->rank!=0);
+    occa::host().UsePreCompiledKernels(mesh->rank!=0);
   }else{
     mesh->device.UsePreCompiledKernels(0);
+    occa::host().UsePreCompiledKernels(0);
   }
     
 #endif
