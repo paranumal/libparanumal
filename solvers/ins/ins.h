@@ -177,6 +177,9 @@ typedef struct {
   occa::memory o_vHaloBuffer, o_pHaloBuffer; 
   occa::memory o_velocityHaloGatherTmp;
 
+  occa::kernel haloGetKernel;
+  occa::kernel haloPutKernel;
+  
   //ARK data
   occa::memory o_rkC;
   occa::memory o_erkA, o_irkA, o_prkA;
