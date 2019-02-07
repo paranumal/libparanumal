@@ -39,8 +39,14 @@ void ellipticZeroMean(elliptic_t *elliptic, occa::memory &o_q){
   occa::memory &o_tmp = elliptic->o_tmp;
 
   // this is a C0 thing [ assume GS previously applied to o_q ]
-  //  elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
+#define USE_WEIGHTED 1
+  
+#if USE_WEIGHTED==1
+  elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
+#else
   mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
+#endif
+  
   o_tmp.copyTo(tmp);
 
   // finish reduction
@@ -52,8 +58,11 @@ void ellipticZeroMean(elliptic_t *elliptic, occa::memory &o_q){
   MPI_Allreduce(&qmeanLocal, &qmeanGlobal, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
   // normalize
-  //  qmeanGlobal /= ((dfloat) elliptic->NelementsGlobal*(dfloat)mesh->Np);
+#if USE_WEIGHTED==1
   qmeanGlobal *= elliptic->nullProjectWeightGlobal;
+#else
+  qmeanGlobal /= ((dfloat) elliptic->NelementsGlobal*(dfloat)mesh->Np);
+#endif
   
   // q[n] = q[n] - qmeanGlobal
   mesh->addScalarKernel(mesh->Nelements*mesh->Np, -qmeanGlobal, o_q);
