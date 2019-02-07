@@ -64,6 +64,7 @@ void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o
     
     ogsHostGatherScatter(o_Aq.ptr(), dfloatString, "add", ellipticOgs->hostGsh);
 
+#if USE_NULL_BOOST==1
     if(elliptic->allNeumann) { // inspect this later
       
       dlong Nblock = elliptic->Nblock;
@@ -81,7 +82,8 @@ void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o
 
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
     }
-
+#endif
+    
     //post-mask
     if (elliptic->Nmasked) 
       mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Aq);
@@ -188,7 +190,8 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     // finalize gather using local and global contributions
     if(enableGatherScatters==1)
       ogsGatherScatterFinish(o_Aq, ogsDfloat, ogsAdd, ogs);
-  
+
+#if USE_NULL_BOOST==1
     if(elliptic->allNeumann) {
 
       elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
@@ -202,7 +205,8 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
     }
-
+#endif
+    
     //post-mask
     if (elliptic->Nmasked) 
       mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Aq);
@@ -239,9 +243,11 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 
     //Start the rank 1 augmentation if all BCs are Neumann
     //TODO this could probably be moved inside the Ax kernel for better performance
+#if USE_NULL_BOOST==1
     if(elliptic->allNeumann)
       mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
-
+#endif
+    
     if(mesh->NinternalElements) {
       if(options.compareArgs("BASIS", "NODAL")) {
         elliptic->partialIpdgKernel(mesh->NinternalElements,
@@ -281,6 +287,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       }
     }
 
+#if USE_NULL_BOOST==1
     if(elliptic->allNeumann) {
       o_tmp.copyTo(tmp);
 
@@ -290,7 +297,8 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
       alphaG *= elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
     }
-
+#endif
+    
     ellipticEndHaloExchange(elliptic, o_q, mesh->Np, recvBuffer);
 
     if(mesh->totalHaloPairs){
@@ -354,8 +362,10 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       }
     }
 
+#if USE_NULL_BOOST==1
     if(elliptic->allNeumann)
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
+#endif
   } 
 
 }

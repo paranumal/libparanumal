@@ -188,6 +188,13 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
     mesh->invMM[n] = mesh->MM[n];
   matrixInverse(mesh->Np,mesh->invMM);
 
+  // count total number of elements
+  hlong NelementsLocal = mesh->Nelements;
+  hlong NelementsGlobal = 0;
+
+  MPI_Allreduce(&NelementsLocal, &NelementsGlobal, 1, MPI_HLONG, MPI_SUM, mesh->comm);
+
+  elliptic->NelementsGlobal = NelementsGlobal;
 
   //check all the bounaries for a Dirichlet
   bool allNeumann = (lambda==0) ? true :false;
@@ -294,6 +301,9 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   //use the masked ids to make another gs handle
   elliptic->ogs = ogsSetup(Ntotal, mesh->maskedGlobalIds, mesh->comm, verbose, mesh->device);
   elliptic->o_invDegree = elliptic->ogs->o_invDegree;
+
+  // count number of actual DOFS
+  // TW: HERE
 
   /*preconditioner setup */
   //  elliptic->precon = new precon_t[1];
@@ -603,6 +613,21 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
     MPI_Barrier(mesh->comm);
   }
 
+  // TW: WARNING C0 appropriate only
+  mesh->sumKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, elliptic->o_tmp);
+  elliptic->o_tmp.copyTo(elliptic->tmp);
+
+  dfloat nullProjectWeightLocal = 0;
+  dfloat nullProjectWeightGlobal = 0;
+  for(dlong n=0;n<elliptic->Nblock;++n)
+    nullProjectWeightLocal += elliptic->tmp[n];
+
+  MPI_Allreduce(&nullProjectWeightLocal, &nullProjectWeightGlobal, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+  
+  elliptic->nullProjectWeightGlobal = 1./nullProjectWeightGlobal;
+  
+
+  
   long long int pre = mesh->device.memoryAllocated();
 
   ellipticPreconditionerSetup(elliptic, elliptic->ogs, lambda, kernelInfo);
@@ -610,4 +635,5 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   long long int usedBytes = mesh->device.memoryAllocated()-pre;
 
   elliptic->precon->preconBytes = usedBytes;
+
 }

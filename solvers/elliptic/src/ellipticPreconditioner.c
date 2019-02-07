@@ -124,4 +124,11 @@ void ellipticPreconditioner(elliptic_t *elliptic, dfloat lambda,
   else{ // turn off preconditioner
     o_z.copyFrom(o_r);
   }
+
+#if USE_NULL_PROJECTION==1
+  if(elliptic->allNeumann) // zero mean of RHS
+    ellipticZeroMean(elliptic, o_z);
+#endif
 }
+
+

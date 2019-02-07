@@ -174,7 +174,9 @@ typedef struct {
   occa::memory  o_tmpudotr;
   occa::memory  o_tmpudots;
   occa::memory  o_tmpudotw;
-  
+
+  hlong NelementsGlobal;
+  dfloat nullProjectWeightGlobal;
   
 }elliptic_t;
 
@@ -308,6 +310,8 @@ void ellipticNonBlockingUpdate1NBFPCG(elliptic_t *elliptic,
 int nbfpcg(elliptic_t* elliptic, dfloat lambda, 
 	   occa::memory &o_r, occa::memory &o_x, 
 	   const dfloat tol, const int MAXIT);
+
+void ellipticZeroMean(elliptic_t *elliptic, occa::memory &o_q);
 
 #endif
 

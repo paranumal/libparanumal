@@ -35,6 +35,11 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
   int Niter = 0;
   int maxIter = 1000; 
 
+#if USE_NULL_PROJECTION==1
+  if(elliptic->allNeumann) // zero mean of RHS
+    ellipticZeroMean(elliptic, o_r);
+#endif
+  
   options.getArgs("MAXIMUM ITERATIONS", maxIter);
 
   options.getArgs("SOLVER TOLERANCE", tol);
@@ -49,7 +54,12 @@ int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
       Niter = nbfpcg (elliptic, lambda, o_r, o_x, tol, maxIter);
     }
   }
- 
+
+#if USE_NULL_PROJECTION==1
+  if(elliptic->allNeumann) // zero mean of RHS
+    ellipticZeroMean(elliptic, o_x);
+#endif
+  
   return Niter;
 
 }
