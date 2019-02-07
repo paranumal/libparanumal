@@ -22,7 +22,7 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ALMONDDIR) -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"' -I../../3rdParty/parmetis-4.0.3/metis/GKlib -I../../3rdParty/parmetis-4.0.3/include -I../../3rdParty/parmetis-4.0.3/metis/include -I../../3rdParty/parmetis-4.0.3/libparmetis $(LIBP_OPT_FLAGS) -I$(OGSDIR)/include
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ALMONDDIR) -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"' -I../../3rdParty/parmetis-4.0.3/metis/GKlib -I../../3rdParty/parmetis-4.0.3/include -I../../3rdParty/parmetis-4.0.3/metis/include -I../../3rdParty/parmetis-4.0.3/libparmetis $(LIBP_OPT_FLAGS) -I$(OGSDIR)/include 
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(LIBP_OPT_FLAGS)
@@ -56,6 +56,7 @@ $(ALMONDDIR)/parAlmond.hpp \
 
 # list of objects to be compiled
 AOBJS    = \
+./src/ellipticZeroMean.o \
 ./src/NBFPCG.o \
 ./src/ellipticUpdateNBFPCG.o \
 ./src/NBPCG.o \

@@ -144,7 +144,22 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   mesh->device = baseElliptic->mesh->device;
 
 #if USE_MASTER_NOEL==1
-  mesh->device.UsePreCompiledKernels(mesh->rank!=0);
+  //  mesh->device.UsePreCompiledKernels(mesh->rank!=0);
+
+  int foo;
+  // check to see if the options specify to use precompiled binaries
+  if(elliptic->options.compareArgs("USE PRECOMPILED BINARIES", "TRUE")){
+    mesh->device.UsePreCompiledKernels(1);
+    occa::host().UsePreCompiledKernels(1);
+  }
+  else if(elliptic->options.compareArgs("USE PRECOMPILED BINARIES", "NONROOT")){
+    mesh->device.UsePreCompiledKernels(mesh->rank!=0);
+    occa::host().UsePreCompiledKernels(mesh->rank!=0);
+  }else{
+    mesh->device.UsePreCompiledKernels(0);
+    occa::host().UsePreCompiledKernels(0);
+  }
+  
 #endif
   
   mesh->defaultStream = baseElliptic->mesh->defaultStream;

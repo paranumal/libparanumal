@@ -46,11 +46,6 @@ void coarseSolver::setup(parCSR *A) {
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
 
-  if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE")){
-    if(rank==0) printf("WARNING !!!!!: not building coarsest level matrix\n");
-    return; // bail early as this will not get used
-  }
-  
   //copy the global coarse partition as ints
   coarseOffsets = (int* ) calloc(size+1,sizeof(int));
   for (int r=0;r<size+1;r++) coarseOffsets[r] = (int) A->globalRowStarts[r];
@@ -141,6 +136,11 @@ void coarseSolver::setup(parCSR *A) {
   free(NNZoffsets);
   free(recvNNZ);
 
+  // had to move this later
+  if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE")){
+    if(rank==0) printf("WARNING !!!!!: not building coarsest level matrix\n");
+    return; // bail early as this will not get used
+  }
 
   //assemble the full matrix
   dfloat *coarseA = (dfloat *) calloc(coarseTotal*coarseTotal,sizeof(dfloat));

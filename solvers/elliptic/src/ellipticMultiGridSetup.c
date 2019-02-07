@@ -178,6 +178,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   free(coarseA);
 
   // build amg starting at level N=1
+#if USE_NULL_BOOST==1
   parAlmond::AMGSetup(precon->parAlmond,
                        coarseGlobalStarts,
                        nnzCoarseA,
@@ -186,6 +187,20 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
                        Vals,
                        elliptic->allNeumann,
                        elliptic->allNeumannPenalty);
+#endif
+
+#if USE_NULL_PROJECTION==1
+  parAlmond::AMGSetup(precon->parAlmond,
+		      coarseGlobalStarts,
+		      nnzCoarseA,
+		      Rows,
+		      Cols,
+		      Vals,
+		      0,
+		      0.0);
+#endif
+
+  
   free(Rows); free(Cols); free(Vals);
 
   //overwrite the finest AMG level with the degree 1 matrix free level
