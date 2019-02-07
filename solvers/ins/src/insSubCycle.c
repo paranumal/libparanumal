@@ -419,11 +419,21 @@ void insNekSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa
         occaTimerToc(mesh->device,"AdvectionVolume");
 
 	// gather-scatter, scale by inverse mass matrix
+#if 0
 	ogsGatherScatterManyStart(ins->o_rhsUd, ins->dim, ins->fieldOffset,
 				  ogsDfloat, ogsAdd, ins->vSolver->ogs);
-
+	
 	ogsGatherScatterManyFinish(ins->o_rhsUd, ins->dim, ins->fieldOffset,
-				   ogsDfloat, ogsAdd, ins->vSolver->ogs);    
+				   ogsDfloat, ogsAdd, ins->vSolver->ogs);
+#else
+	for(int k=0;k<ins->dim;++k){
+	  ogsGatherScatterStart (ins->o_rhsUd+k*ins->fieldOffset*sizeof(dfloat),
+				ogsDfloat, ogsAdd, ins->vSolver->ogs);
+	  
+	  ogsGatherScatterFinish(ins->o_rhsUd+k*ins->fieldOffset*sizeof(dfloat),
+				 ogsDfloat, ogsAdd, ins->vSolver->ogs);
+	}
+#endif
 
         // Update Kernel
         occaTimerTic(mesh->device,"AdvectionUpdate");
