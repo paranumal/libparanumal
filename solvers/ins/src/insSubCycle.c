@@ -26,6 +26,8 @@ SOFTWARE.
 
 #include "ins.h"
 
+#define USE_THIN_HALO 1
+
 // complete a time step using LSERK4
 void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::memory o_Ud){
  
@@ -36,6 +38,8 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 
   //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){
+ 
+#if USE_THIN_HALO==0
     ins->velocityHaloExtractKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
                                  mesh->o_haloElementList,
@@ -55,12 +59,45 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
     meshHaloExchangeFinish(mesh);
 
     ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
-
+    
     ins->velocityHaloScatterKernel(mesh->Nelements,
-                                  mesh->totalHaloPairs,
-                                  ins->fieldOffset,
-                                  o_U,
-                                  ins->o_vHaloBuffer);
+				   mesh->totalHaloPairs,
+				   ins->fieldOffset,
+				   o_U,
+				   ins->o_vHaloBuffer);
+#else
+    
+    ins->haloGetKernel(mesh->totalHaloPairs,
+		       ins->NVfields,
+		       ins->fieldOffset,
+		       mesh->o_haloElementList,
+		       mesh->o_haloGetNodeIds,
+		       o_U,
+		       ins->o_vHaloBuffer);
+
+    hlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
+
+    // copy extracted halo to HOST 
+    ins->o_vHaloBuffer.copyTo(ins->vSendBuffer, Ndata*sizeof(dfloat), 0);// zero offset             
+    // start halo exchange
+    meshHaloExchangeStart(mesh,
+			  mesh->Nfp*(ins->NVfields)*sizeof(dfloat),
+			  ins->vSendBuffer,
+			  ins->vRecvBuffer);
+    
+    meshHaloExchangeFinish(mesh);
+
+    ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer, Ndata*sizeof(dfloat), 0);  // zero offset
+    
+    ins->haloPutKernel(mesh->totalHaloPairs,
+		       ins->NVfields,
+		       ins->fieldOffset,
+		       mesh->o_haloElementList,
+		       mesh->o_haloPutNodeIds,
+		       ins->o_vHaloBuffer,
+		       o_U);
+    
+#endif
   }
 
   
@@ -92,7 +129,9 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
     const dfloat tsub = time - torder*ins->dt;
     // Advance SubProblem to t^(n-torder+1) 
     for(int ststep = 0; ststep<ins->Nsubsteps;++ststep){
+
       const dfloat tstage = tsub + ststep*ins->sdt;     
+
       for(int rk=0;rk<ins->SNrk;++rk){// LSERK4 stages
         // Extrapolate velocity to subProblem stage time
         dfloat t = tstage +  ins->sdt*ins->Srkc[rk]; 
@@ -126,8 +165,10 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
           // make sure compute device is ready to perform halo extract
           mesh->device.finish();
 
-          // switch to data stream
+	  // switch to data stream
           mesh->device.setStream(mesh->dataStream);
+	  
+#if USE_THIN_HALO==0
 
           ins->velocityHaloExtractKernel(mesh->Nelements,
                                    mesh->totalHaloPairs,
@@ -138,7 +179,22 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 
           // copy extracted halo to HOST 
           ins->o_vHaloBuffer.copyTo(ins->vSendBuffer,"async: true");            
-          mesh->device.setStream(mesh->defaultStream);
+#else
+
+	  ins->haloGetKernel(mesh->totalHaloPairs,
+			     ins->NVfields,
+			     ins->fieldOffset,
+			     mesh->o_haloElementList,
+			     mesh->o_haloGetNodeIds,
+			     o_Ud,
+			     ins->o_vHaloBuffer);
+	  
+	  hlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
+	  // copy extracted halo to HOST 
+	  ins->o_vHaloBuffer.copyTo(ins->vSendBuffer, Ndata*sizeof(dfloat), 0, "async: true");// zero offset
+#endif
+	  mesh->device.setStream(mesh->defaultStream);
+
         }
 
         // Compute Volume Contribution
@@ -173,6 +229,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
           mesh->device.setStream(mesh->dataStream);
           mesh->device.finish();
 
+#if USE_THIN_HALO==0
           // start halo exchange
           meshHaloExchangeStart(mesh,
                               mesh->Np*(ins->NVfields)*sizeof(dfloat), 
@@ -189,8 +246,29 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
                                     ins->fieldOffset, //0 ins->fieldOffset
                                     o_Ud,
                                     ins->o_vHaloBuffer);
-          mesh->device.finish();
-          
+#else
+
+	  // start halo exchange
+	  meshHaloExchangeStart(mesh,
+				mesh->Nfp*(ins->NVfields)*sizeof(dfloat),
+				ins->vSendBuffer,
+				ins->vRecvBuffer);
+	  
+	  meshHaloExchangeFinish(mesh);
+	  
+	  hlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
+	  ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer, Ndata*sizeof(dfloat), 0, "async: true");  // zero offset
+	  
+	  ins->haloPutKernel(mesh->totalHaloPairs,
+			     ins->NVfields,
+			     ins->fieldOffset,
+			     mesh->o_haloElementList,
+			     mesh->o_haloPutNodeIds,
+			     ins->o_vHaloBuffer,
+			     o_Ud);
+#endif
+	  mesh->device.finish();
+	  
           mesh->device.setStream(mesh->defaultStream);
           mesh->device.finish();
         }

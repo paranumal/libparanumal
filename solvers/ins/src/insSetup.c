@@ -1146,6 +1146,17 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 	sprintf(kernelName, "insSubCycleExt");
 	ins->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
+
+      ins->haloGetKernel =
+	mesh->device.buildKernel(DINS "/okl/insHalo.okl",
+				 "insHaloGet",
+				 kernelInfo);
+      ins->haloPutKernel =
+	mesh->device.buildKernel(DINS "/okl/insHalo.okl",
+				 "insHaloPut",
+				 kernelInfo);
+
+      
     }
     MPI_Barrier(mesh->comm);
   }
