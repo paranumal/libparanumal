@@ -213,7 +213,8 @@ typedef struct {
 
   occa::kernel divergenceVolumeKernel;
   occa::kernel divergenceSurfaceKernel;
-  
+
+  occa::kernel divergenceStrongVolumeKernel;
   
   occa::kernel pressureRhsKernel;
   occa::kernel pressureRhsIpdgBCKernel;

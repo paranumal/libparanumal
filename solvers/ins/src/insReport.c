@@ -39,7 +39,7 @@ void insReport(ins_t *ins, dfloat time, int tstep){
 
   
 
-  ins->divergenceVolumeKernel(mesh->Nelements,
+  ins->divergenceStrongVolumeKernel(mesh->Nelements,
                              mesh->o_vgeo,
                              mesh->o_Dmatrices,
                              ins->fieldOffset,

@@ -1026,18 +1026,15 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       
       sprintf(fileName, DINS "/okl/insDivergence%s.okl", suffix);
 
-      if(1){
-	//if (options.compareArgs("VELOCITY DISCRETIZATION", "IPDG")) {
-	sprintf(kernelName, "insDivergenceVolume%s", suffix);
-      }else{
-	sprintf(kernelName, "insStrongDivergenceVolume%s", suffix);
-      }
-
+      sprintf(kernelName, "insDivergenceVolume%s", suffix);
       ins->divergenceVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
       
       sprintf(kernelName, "insDivergenceSurface%s", suffix);
       ins->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      
+      sprintf(kernelName, "insStrongDivergenceVolume%s", suffix);
+      ins->divergenceStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
       
       // ===========================================================================
       
