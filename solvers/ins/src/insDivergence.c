@@ -26,30 +26,55 @@ SOFTWARE.
 
 #include "ins.h"
 
+#define USE_THIN_HALO 1
+
 // Compute divergence of the velocity field using physical boundary data at t = time. 
 void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU){
 
   mesh_t *mesh = ins->mesh;
 
   //  if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
-  {
-    if(mesh->totalHaloPairs>0){
-      ins->velocityHaloExtractKernel(mesh->Nelements,
-                                 mesh->totalHaloPairs,
-                                 mesh->o_haloElementList,
-                                 ins->fieldOffset,
-                                 o_U,
-                                 ins->o_vHaloBuffer);
+  if(mesh->totalHaloPairs>0){
 
-      // copy extracted halo to HOST 
-      ins->o_vHaloBuffer.copyTo(ins->vSendBuffer);           
+#if USE_THIN_HALO==0
     
-      // start halo exchange
-      meshHaloExchangeStart(mesh,
-                           mesh->Np*(ins->NVfields)*sizeof(dfloat),
-                           ins->vSendBuffer,
-                           ins->vRecvBuffer);
-    }
+    ins->velocityHaloExtractKernel(mesh->Nelements,
+				   mesh->totalHaloPairs,
+				   mesh->o_haloElementList,
+				   ins->fieldOffset,
+				   o_U,
+				   ins->o_vHaloBuffer);
+    
+    // copy extracted halo to HOST 
+    ins->o_vHaloBuffer.copyTo(ins->vSendBuffer);           
+    
+    // start halo exchange
+    meshHaloExchangeStart(mesh,
+			  mesh->Np*(ins->NVfields)*sizeof(dfloat),
+			  ins->vSendBuffer,
+			  ins->vRecvBuffer);
+#else
+
+    
+    ins->haloGetKernel(mesh->totalHaloPairs,
+		       ins->NVfields,
+		       ins->fieldOffset,
+		       mesh->o_haloElementList,
+		       mesh->o_haloGetNodeIds,
+		       o_U,
+		       ins->o_vHaloBuffer);
+    
+    hlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
+    
+    // copy extracted halo to HOST 
+    ins->o_vHaloBuffer.copyTo(ins->vSendBuffer, Ndata*sizeof(dfloat), 0);// zero offset             
+    // start halo exchange
+    meshHaloExchangeStart(mesh,
+			  mesh->Nfp*(ins->NVfields)*sizeof(dfloat),
+			  ins->vSendBuffer,
+			  ins->vRecvBuffer);
+        
+#endif
   }
 
   // computes div u^(n+1) volume term
@@ -61,20 +86,35 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
                              o_U,
                              o_DU);
   occaTimerToc(mesh->device,"DivergenceVolume");
-
+  
   //  if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
-  {
-    if(mesh->totalHaloPairs>0){
-      meshHaloExchangeFinish(mesh);
+  
+  if(mesh->totalHaloPairs>0){
 
-      ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
-
-      ins->velocityHaloScatterKernel(mesh->Nelements,
-                                    mesh->totalHaloPairs,
-                                    ins->fieldOffset,
-                                    o_U,
-                                    ins->o_vHaloBuffer);
-    }
+    meshHaloExchangeFinish(mesh);
+    
+#if USE_THIN_HALO==0
+    
+    ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
+    
+    ins->velocityHaloScatterKernel(mesh->Nelements,
+				   mesh->totalHaloPairs,
+				   ins->fieldOffset,
+				   o_U,
+				   ins->o_vHaloBuffer);
+#else
+    hlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
+    
+    ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer, Ndata*sizeof(dfloat), 0);  // zero offset
+    
+    ins->haloPutKernel(mesh->totalHaloPairs,
+		       ins->NVfields,
+		       ins->fieldOffset,
+		       mesh->o_haloElementList,
+		       mesh->o_haloPutNodeIds,
+		       ins->o_vHaloBuffer,
+		       o_U);
+#endif
   }
   
   //computes div u^(n+1) surface term
