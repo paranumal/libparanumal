@@ -75,7 +75,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 		       o_U,
 		       ins->o_vHaloBuffer);
 
-    hlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
+    dlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
 
     // copy extracted halo to HOST 
     ins->o_vHaloBuffer.copyTo(ins->vSendBuffer, Ndata*sizeof(dfloat), 0);// zero offset             
@@ -189,7 +189,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 			     o_Ud,
 			     ins->o_vHaloBuffer);
 	  
-	  hlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
+	  dlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
 	  // copy extracted halo to HOST 
 	  ins->o_vHaloBuffer.copyTo(ins->vSendBuffer, Ndata*sizeof(dfloat), 0, "async: true");// zero offset
 #endif
@@ -256,7 +256,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
 	  
 	  meshHaloExchangeFinish(mesh);
 	  
-	  hlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
+	  dlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
 	  ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer, Ndata*sizeof(dfloat), 0, "async: true");  // zero offset
 	  
 	  ins->haloPutKernel(mesh->totalHaloPairs,

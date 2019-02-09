@@ -36,6 +36,12 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
   //  if (ins->vOptions.compareArgs("DISCRETIZATION","IPDG")) {
   if(mesh->totalHaloPairs>0){
 
+    // make sure compute device is ready to perform halo extract
+    mesh->device.finish();
+    
+    // switch to data stream
+    mesh->device.setStream(mesh->dataStream);
+    
 #if USE_THIN_HALO==0
     
     ins->velocityHaloExtractKernel(mesh->Nelements,
@@ -46,15 +52,9 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
 				   ins->o_vHaloBuffer);
     
     // copy extracted halo to HOST 
-    ins->o_vHaloBuffer.copyTo(ins->vSendBuffer);           
+    ins->o_vHaloBuffer.copyTo(ins->vSendBuffer, "async: true");           
     
-    // start halo exchange
-    meshHaloExchangeStart(mesh,
-			  mesh->Np*(ins->NVfields)*sizeof(dfloat),
-			  ins->vSendBuffer,
-			  ins->vRecvBuffer);
 #else
-
     
     ins->haloGetKernel(mesh->totalHaloPairs,
 		       ins->NVfields,
@@ -64,17 +64,14 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
 		       o_U,
 		       ins->o_vHaloBuffer);
     
-    hlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
+    dlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
     
     // copy extracted halo to HOST 
-    ins->o_vHaloBuffer.copyTo(ins->vSendBuffer, Ndata*sizeof(dfloat), 0);// zero offset             
-    // start halo exchange
-    meshHaloExchangeStart(mesh,
-			  mesh->Nfp*(ins->NVfields)*sizeof(dfloat),
-			  ins->vSendBuffer,
-			  ins->vRecvBuffer);
-        
+    ins->o_vHaloBuffer.copyTo(ins->vSendBuffer, Ndata*sizeof(dfloat), 0, "async: true");// zero offset             
+
 #endif
+
+    mesh->device.setStream(mesh->defaultStream);
   }
 
   // computes div u^(n+1) volume term
@@ -91,10 +88,20 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
   
   if(mesh->totalHaloPairs>0){
 
-    meshHaloExchangeFinish(mesh);
+    // make sure compute device is ready to perform halo extract
+    mesh->device.setStream(mesh->dataStream);
+    mesh->device.finish();
     
 #if USE_THIN_HALO==0
+
+    // start halo exchange
+    meshHaloExchangeStart(mesh,
+			  mesh->Np*(ins->NVfields)*sizeof(dfloat),
+			  ins->vSendBuffer,
+			  ins->vRecvBuffer);
     
+    meshHaloExchangeFinish(mesh);
+        
     ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer); 
     
     ins->velocityHaloScatterKernel(mesh->Nelements,
@@ -103,7 +110,16 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
 				   o_U,
 				   ins->o_vHaloBuffer);
 #else
-    hlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
+
+    // start halo exchange
+    meshHaloExchangeStart(mesh,
+			  mesh->Nfp*(ins->NVfields)*sizeof(dfloat),
+			  ins->vSendBuffer,
+			  ins->vRecvBuffer);
+        
+    meshHaloExchangeFinish(mesh);
+    
+    dlong Ndata = ins->NVfields*mesh->Nfp*mesh->totalHaloPairs;
     
     ins->o_vHaloBuffer.copyFrom(ins->vRecvBuffer, Ndata*sizeof(dfloat), 0);  // zero offset
     
@@ -115,6 +131,8 @@ void insDivergence(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_DU)
 		       ins->o_vHaloBuffer,
 		       o_U);
 #endif
+
+    mesh->device.setStream(mesh->defaultStream);
   }
   
   //computes div u^(n+1) surface term
