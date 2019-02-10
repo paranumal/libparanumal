@@ -55,6 +55,16 @@ void coarseSolver::setup(parCSR *A) {
 
   N = (int) A->Nrows;
 
+  coarseCounts = (int*) calloc(size,sizeof(int));
+
+  // had to move this later
+  if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE")){
+    if(rank==0) printf("WARNING !!!!!: not building coarsest level matrix\n");
+    return; // bail early as this will not get used
+  }
+
+
+  
   int sendNNZ = (int) (A->diag->nnz+A->offd->nnz);
   int *rows;
   int *cols;
@@ -121,7 +131,6 @@ void coarseSolver::setup(parCSR *A) {
   //gather null vector
   dfloat *nullTotal = (dfloat*) calloc(coarseTotal,sizeof(dfloat));
 
-  coarseCounts = (int*) calloc(size,sizeof(int));
   for (int r=0;r<size;r++)
     coarseCounts[r] = coarseOffsets[r+1]-coarseOffsets[r];
 
@@ -135,12 +144,6 @@ void coarseSolver::setup(parCSR *A) {
   free(sendNonZeros);
   free(NNZoffsets);
   free(recvNNZ);
-
-  // had to move this later
-  if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE")){
-    if(rank==0) printf("WARNING !!!!!: not building coarsest level matrix\n");
-    return; // bail early as this will not get used
-  }
 
   //assemble the full matrix
   dfloat *coarseA = (dfloat *) calloc(coarseTotal*coarseTotal,sizeof(dfloat));
