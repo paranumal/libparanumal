@@ -7,7 +7,7 @@ int main(int argc, char **argv){
 
   //changes solver mode
   //main options are: DOPRI MRSAAB LSERK RK_SPECTRUM
-  //grid options are: flat spherical equispherical extended
+  //grid options are: flat sphere equispherical extended
   char *mode = "LSERK equispherical";
   
   // int specify polynomial degree 

@@ -456,10 +456,7 @@ for n=1:Nq
     fprintf(fid, '\n');
 end
 
-inv(diag(w1d))
-D1d
-diag(w1d)
-D1d_weak = inv(diag(w1d)) * D1d' * diag(w1d)
+D1d_weak = 0.5*(D1d - inv(diag(w1d)) * D1d' * diag(w1d));
 fprintf(fid, '%% weak D (1D) matrix\n');
 for n=1:N+1
   for m=1:N+1

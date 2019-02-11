@@ -41,7 +41,7 @@ mesh_t *meshSetupQuad3D(int mesh_size, int N, dfloat sphereRadius,char *mode){
     meshPreserveGridQuad3D(mesh);
     meshPhysicalNodesQuad3D(mesh);
   }
-  else if (strstr(mode,"spherical")) {
+  else if (strstr(mode,"sphere")) {
     meshPreserveGridQuad3D(mesh);
     meshSphericalNodesQuad3D(mesh);
   }

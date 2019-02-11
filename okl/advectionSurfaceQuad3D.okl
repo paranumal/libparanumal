@@ -1,13 +1,13 @@
 void upwindFlux(const dfloat nx, const dfloat ny, const dfloat nz,
 		const dfloat u, const dfloat v, const dfloat w,
-		const dfloat * restrict dq,
+		const dfloat * restrict qp, const dfloat * restrict qm,
 		dfloat * restrict fluxq){
 
   const dfloat udotn = u*nx+v*ny+w*nz;
 
   // TW: need to double check the sign in front of occaFabs (might need to switch to - occaFabs(udotn)
-  fluxq[0] = 0.5f*(udotn*dq[1] + occaFabs(udotn)*dq[0]);
-  fluxq[1] = 0.5f*(udotn*dq[0] + occaFabs(udotn)*dq[1]);
+  fluxq[0] = 0.5f*(udotn*qp[1] + 0.f*occaFabs(udotn)*(qp[0] - qm[0]));
+  fluxq[1] = 0.5f*(udotn*qp[0] + 0.f*occaFabs(udotn)*(qp[1] - qm[1]));
 
   for(int n=2;n<p_Nfields;++n)
     fluxq[n] = 0;
@@ -69,17 +69,18 @@ kernel void advectionSurfaceLSERKQuad3D(const iint Nelements,
 	    const iint vidM = eM*p_Np*p_Nfields + (idM%p_Np);
 	    const iint vidP = eP*p_Np*p_Nfields + (idP%p_Np);
 
-	    dfloat dq[p_Nfields], fluxq[p_Nfields];
+	    dfloat qp[p_Nfields], qm[p_Nfields], fluxq[p_Nfields];
 	    
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
 		const dfloat qM = q[vidM+fld*p_Np];
 		dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
 
-		dq[fld] = qP-qM;
+		qp[fld] = qP;
+		qm[fld] = qM;
 	      }
 
-	    upwindFlux(nx, ny, nz, un, vn, wn, dq, fluxq);
+	    upwindFlux(nx, ny, nz, un, vn, wn, qp,qm, fluxq);
 	    
 	    const dfloat sc = invJ*sJ*p_LIFT;
 
@@ -159,18 +160,19 @@ kernel void advectionSurfaceMRSAABQuad3D(const iint Nelements,
 	    const iint vidM = eM*p_Np*p_Nfields + vM;
 	    const iint vidP = eP*p_Np*p_Nfields + vP;
 
-	    dfloat dq[p_Nfields], fluxq[p_Nfields];
+	    dfloat qp[p_Nfields], qm[p_Nfields], fluxq[p_Nfields];
 	    
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
 		const dfloat qM = fQM[vidM+fld*p_Np];
 		dfloat qP = fQM[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
 
-		dq[fld] = qP-qM;
+		qp[fld] = qP;
+		qm[fld] = qM;
 	      }
 
 	    // upwind flux
-	    upwindFlux(nx, ny, nz, un, vn, wn, dq, fluxq);
+	    upwindFlux(nx, ny, nz, un, vn, wn, qp,qm, fluxq);
 	    
 	    // evaluate "flux" terms: (sJ/J)*(D+sigma*D*D)*(q^* - q^-)
 	    const dfloat sc = invJ*sJ*p_LIFT;

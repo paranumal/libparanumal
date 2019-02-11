@@ -341,7 +341,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   for(int n=0;n<mesh->N+1;++n){
     for(int m=0;m<mesh->N+1;++m){
       fscanf(fp, dfloatFormat, mesh->weakD+m+n*(mesh->N+1));
-      printf("%lg ",mesh->weakD[m+n*mesh->N+1]);
+      printf("%lg ",mesh->weakD[m+n*(mesh->N+1)]);
     }
     printf("\n");
   }
