@@ -65,10 +65,12 @@ mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
   // build an NX x NY x NZ periodic box grid
   
   hlong NX = 10, NY = 10, NZ = 10; // defaults
+  hlong level = 0;
 
   options.getArgs("BOX NX", NX);
   options.getArgs("BOX NY", NY);
   options.getArgs("BOX NZ", NZ);
+  options.getArgs("BOX REFINE LEVEL", level);
 
   dfloat XMIN = -1, XMAX = +1; // default bi-unit cube
   dfloat YMIN = -1, YMAX = +1;
