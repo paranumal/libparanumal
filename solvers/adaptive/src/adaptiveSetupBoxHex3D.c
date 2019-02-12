@@ -82,6 +82,8 @@ mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
   options.getArgs("BOX YMAX", YMAX);
   options.getArgs("BOX ZMAX", ZMAX);
 
+
+  
   hlong allNelements = NX*NY*NZ;
 
   hlong chunkNelements = allNelements/size;
@@ -91,7 +93,6 @@ mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
   
   if(mesh->rank==(size-1))
     end = allNelements;
-    
 
   mesh->Nnodes = NX*NY*NZ; // assume periodic and global number of nodes
   mesh->Nelements = end-start;
@@ -124,6 +125,7 @@ mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
     int kp = (k+1)%NZ;
 
     // do not use for coordinates
+    // ADAPT HERE:
     mesh->EToV[e*mesh->Nverts+0] = i  +  j*NX + k*NX*NY;
     mesh->EToV[e*mesh->Nverts+1] = ip +  j*NX + k*NX*NY;
     mesh->EToV[e*mesh->Nverts+2] = ip + jp*NX + k*NX*NY;
@@ -141,7 +143,8 @@ mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
     dfloat *ex = mesh->EX+e*mesh->Nverts;
     dfloat *ey = mesh->EY+e*mesh->Nverts;
     dfloat *ez = mesh->EZ+e*mesh->Nverts;
-    
+
+    // ADAPT HERE:
     ex[0] = xo;    ey[0] = yo;    ez[0] = zo;
     ex[1] = xo+dx; ey[1] = yo;    ez[1] = zo;
     ex[2] = xo+dx; ey[2] = yo+dy; ez[2] = zo;
@@ -152,42 +155,20 @@ mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
     ex[6] = xo+dx; ey[6] = yo+dy; ez[6] = zo+dz;
     ex[7] = xo;    ey[7] = yo+dy; ez[7] = zo+dz;
 
+    // ADAPT HERE: hard coded
     mesh->elementInfo[e] = 1; // ?
     
   }
-
-
-#if 0
-  char fileName[BUFSIZ];
-  sprintf(fileName, "box%04d.dat", mesh->rank);
-
-  FILE *fp = fopen(fileName, "w");
-
-  fprintf(fp, "EToV = [\n");
-  for(hlong e=0;e<mesh->Nelements;++e){
-    for(int v=0;v<mesh->Nverts;++v){
-      fprintf(fp, "%d ", mesh->EToV[e*mesh->Nverts+v]);
-    }
-    fprintf(fp, "\n");
-  }
-  
-  fclose(fp);
-
-  MPI_Finalize();
-  exit(0);
-#endif
   
   // partition elements using Morton ordering & parallel sort
-  meshGeometricPartition3D(mesh);
-  //  meshRecursiveSpectralBisectionPartition(mesh);
+  //  meshGeometricPartition3D(mesh);
 
   mesh->EToB = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int)); 
-
 
   mesh->boundaryInfo = NULL; // no boundaries
   
   // connect elements using parallel sort
-  meshParallelConnect(mesh);
+  //  meshParallelConnect(mesh); => mesh->EToE, mesh->EToF, mesh->EToP
   
   // print out connectivity statistics
   meshPartitionStatistics(mesh);
@@ -202,34 +183,22 @@ mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
   meshGeometricFactorsHex3D(mesh);
 
   // set up halo exchange info for MPI (do before connect face nodes)
+  // ADAPT: noncon will break
   meshHaloSetup(mesh);
 
   // connect face nodes (find trace indices)
+  // ADAPT: noncon will break
   meshConnectPeriodicFaceNodes3D(mesh,XMAX-XMIN,YMAX-YMIN,ZMAX-ZMIN); // needs to fix this !
 
   // connect elements to boundary faces
   //  meshConnectBoundary(mesh);
-#if 0
-  // diagnostic
-  for(hlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Nfaces*mesh->Nfp;++n){
-      hlong idM = mesh->vmapM[e*mesh->Nfaces*mesh->Nfp+n];
-      hlong idP = mesh->vmapP[e*mesh->Nfaces*mesh->Nfp+n];
-
-      dfloat dx = mesh->x[idP]-mesh->x[idM];
-      dfloat dy = mesh->y[idP]-mesh->y[idM];
-      dfloat dz = mesh->z[idP]-mesh->z[idM];
-
-      dfloat d = sqrt(dx*dx+dy*dy+dz*dz);
-      printf("%d,%d |d|=|%lf,%lf,%lf|=%lf\n", idM, idP, dx, dy, dz, d);
-    }
-  }
-#endif
   
   // compute surface geofacs (including halo)
+  // ADAPT: noncon will break
   meshSurfaceGeometricFactorsHex3D(mesh);
   
   // global nodes
+  // ADAPT: noncon will break
   meshParallelConnectNodes(mesh); 
 
   // initialize LSERK4 time stepping coefficients
