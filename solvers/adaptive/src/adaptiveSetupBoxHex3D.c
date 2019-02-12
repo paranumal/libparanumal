@@ -26,6 +26,9 @@ SOFTWARE.
 
 #include "mesh3D.h"
 
+#include <p4est_to_p8est.h>
+#include <p8est.h>
+
 mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
 
   //  mesh_t *mesh = new mesh_t[1];
@@ -37,7 +40,10 @@ mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   
   MPI_Comm_dup(MPI_COMM_WORLD, &mesh->comm);
-  
+
+  sc_init(mesh->comm, 0, 0, NULL, SC_LP_STATISTICS);
+  p4est_init(NULL, SC_LP_STATISTICS);
+
   mesh->rank = rank;
   mesh->size = size;
   

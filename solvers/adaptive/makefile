@@ -13,6 +13,14 @@ GSDIR  = ../../3rdParty/gslib
 OGSDIR  = ../../libs/gatherScatter
 ALMONDDIR = ../../libs/parAlmond
 
+# Building p4est:
+# $ tar xzvf p4est-2.0.tar.gz
+# $ cd p4est-2.0
+# $ ./configure CC=mpicc CXX=mpicxx FC=mpif90 F77=mpif77 --enable-mpi --without-blas
+# $ make -j install
+P4ESTDIR = ../../3rdParty/p4est-2.0
+include $(P4ESTDIR)/local/etc/Makefile.p4est.mk
+
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
 cc	= mpicc
@@ -22,7 +30,7 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ALMONDDIR) -D DHOLMES='"${CURDIR}/../.."' -D DADAPTIVE='"${CURDIR}"' -I../../3rdParty/parmetis-4.0.3/metis/GKlib -I../../3rdParty/parmetis-4.0.3/include -I../../3rdParty/parmetis-4.0.3/metis/include -I../../3rdParty/parmetis-4.0.3/libparmetis $(LIBP_OPT_FLAGS) -I$(OGSDIR)/include 
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ALMONDDIR) $(P4EST_CPPFLAGS) -D DHOLMES='"${CURDIR}/../.."' -D DADAPTIVE='"${CURDIR}"' -I../../3rdParty/parmetis-4.0.3/metis/GKlib -I../../3rdParty/parmetis-4.0.3/include -I../../3rdParty/parmetis-4.0.3/metis/include -I../../3rdParty/parmetis-4.0.3/libparmetis $(LIBP_OPT_FLAGS) -I$(OGSDIR)/include 
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(LIBP_OPT_FLAGS)
@@ -31,7 +39,7 @@ PARMETISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libparmetis/
 METISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libmetis
 
 # libraries to be linked in
-LIBS	=  -L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis  -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack  $(LIBP_EXT_LIBS) -lgfortran
+LIBS	= -Wl,-rpath=$(P4EST_DIR)/local/lib,--enable-new-dtags $(P4EST_LDFLAGS) $(P4EST_LIBS) -L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis  -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -Wl,-rpath=$(OCCA_DIR)/lib,--enable-new-dtags -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack  $(LIBP_EXT_LIBS) -lgfortran
 
 INCLUDES = adaptive.h adaptivePrecon.h
 DEPS = $(INCLUDES) \
