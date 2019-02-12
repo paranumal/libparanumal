@@ -161,14 +161,14 @@ mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
   }
   
   // partition elements using Morton ordering & parallel sort
-  //  meshGeometricPartition3D(mesh);
+  meshGeometricPartition3D(mesh);
 
   mesh->EToB = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int)); 
 
   mesh->boundaryInfo = NULL; // no boundaries
   
   // connect elements using parallel sort
-  //  meshParallelConnect(mesh); => mesh->EToE, mesh->EToF, mesh->EToP
+  meshParallelConnect(mesh); // => mesh->EToE, mesh->EToF, mesh->EToP
   
   // print out connectivity statistics
   meshPartitionStatistics(mesh);
