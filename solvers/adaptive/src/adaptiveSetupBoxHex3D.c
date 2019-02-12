@@ -24,20 +24,7 @@ SOFTWARE.
 
 */
 
-#include "mesh3D.h"
-
-#include <p4est_to_p8est.h>
-#include <p8est.h>
-#include <p8est_bits.h>
-#include <p8est_connectivity.h>
-#include <p8est_extended.h>
-#include <p8est_ghost.h>
-#include <p8est_iterate.h>
-#include <p8est_lnodes.h>
-#include <p8est_mesh.h>
-#include <p8est_nodes.h>
-#include <p8est_tets_hexes.h>
-#include <p8est_vtk.h>
+#include "adaptive.h"
 
 mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
 

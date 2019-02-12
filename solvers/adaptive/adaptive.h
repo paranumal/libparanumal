@@ -34,6 +34,22 @@ SOFTWARE.
 #include "mpi.h"
 #include "mesh2D.h"
 #include "mesh3D.h"
+
+
+#include <p4est_to_p8est.h>
+#include <p8est.h>
+#include <p8est_bits.h>
+#include <p8est_connectivity.h>
+#include <p8est_extended.h>
+#include <p8est_ghost.h>
+#include <p8est_iterate.h>
+#include <p8est_lnodes.h>
+#include <p8est_mesh.h>
+#include <p8est_nodes.h>
+#include <p8est_tets_hexes.h>
+#include <p8est_vtk.h>
+
+
 #include "parAlmond.hpp"
 #include "adaptivePrecon.h"
 
@@ -314,6 +330,8 @@ int nbfpcg(adaptive_t* adaptive, dfloat lambda,
 void adaptiveZeroMean(adaptive_t *adaptive, occa::memory &o_q);
 
 mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options);
+
+
 
 #endif
 
