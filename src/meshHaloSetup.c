@@ -55,6 +55,7 @@ int compareHaloFaces(const void *a,
   return 0;
 }
 
+
 // set up halo infomation for inter-processor MPI 
 // exchange of trace nodes
 void meshHaloSetup(mesh_t *mesh){
@@ -101,7 +102,6 @@ void meshHaloSetup(mesh_t *mesh){
         haloElements[cnt].elementN = mesh->EToE[ef];
         haloElements[cnt].faceN    = mesh->EToF[ef];
         haloElements[cnt].rankN    = mesh->EToP[ef];
-
         ++cnt;
       }
     }
@@ -120,30 +120,38 @@ void meshHaloSetup(mesh_t *mesh){
   // record the outgoing node ids for trace nodes
   mesh->haloGetNodeIds = (dlong*) calloc(mesh->totalHaloPairs*mesh->Nfp, sizeof(dlong));
   mesh->haloPutNodeIds = (dlong*) calloc(mesh->totalHaloPairs*mesh->Nfp, sizeof(dlong));
+  
   cnt = 0;
   for(dlong i=0;i<mesh->totalHaloPairs;++i){
-    dlong e = haloElements[i].element;
+    dlong eM = haloElements[i].element;
     int fM = haloElements[i].face;
     int fP = haloElements[i].faceN;
     for(int n=0;n<mesh->Nfp;++n){
-      mesh->haloGetNodeIds[cnt] = e*mesh->Np + mesh->faceNodes[fM*mesh->Nfp+n];
-      mesh->haloPutNodeIds[cnt] = (mesh->Nelements+i)*mesh->Np + mesh->faceNodes[fP*mesh->Nfp+n];
+      mesh->haloGetNodeIds[cnt] = eM*mesh->Np + mesh->faceNodes[fM*mesh->Nfp+n];
       ++cnt;
     }
   }
-  // reconnect elements to ghost elements
-  // (ghost elements appended to end of local element list)
+
+  // now arrange for incoming nodes
   cnt = mesh->Nelements;
+  dlong ncnt = 0;
   for(int r=0;r<size;++r){
     for(dlong e=0;e<mesh->Nelements;++e){
       for(int f=0;f<mesh->Nfaces;++f){
-        dlong ef = e*mesh->Nfaces+f;
-        if(mesh->EToP[ef]==r)
-          mesh->EToE[ef] = cnt++;
+	dlong ef = e*mesh->Nfaces+f;
+	if(mesh->EToP[ef]==r){
+	  mesh->EToE[ef] = cnt;
+	  int fP = mesh->EToF[ef];
+	  for(int n=0;n<mesh->Nfp;++n){
+	    mesh->haloPutNodeIds[ncnt] = cnt*mesh->Np + mesh->faceNodes[fP*mesh->Nfp+n];
+	    ++ncnt;
+	  }
+	  ++cnt; // next halo element
+	}
       }
     }
   }
-
+  
   // create halo extension for x,y arrays
   dlong totalHaloNodes = mesh->totalHaloPairs*mesh->Np;
   dlong localNodes     = mesh->Nelements*mesh->Np;
