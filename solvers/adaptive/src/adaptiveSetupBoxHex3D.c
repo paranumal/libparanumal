@@ -28,6 +28,16 @@ SOFTWARE.
 
 #include <p4est_to_p8est.h>
 #include <p8est.h>
+#include <p8est_bits.h>
+#include <p8est_connectivity.h>
+#include <p8est_extended.h>
+#include <p8est_ghost.h>
+#include <p8est_iterate.h>
+#include <p8est_lnodes.h>
+#include <p8est_mesh.h>
+#include <p8est_nodes.h>
+#include <p8est_tets_hexes.h>
+#include <p8est_vtk.h>
 
 mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
 
@@ -160,6 +170,23 @@ mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
     // ADAPT HERE: hard coded
     mesh->elementInfo[e] = 1; // ?
     
+  }
+  {
+    p8est_connectivity_t *conn = p8est_connectivity_new_brick(NX, NY, NZ, 1, 1, 1);
+    p8est_t *pxest = p8est_new_ext(mesh->comm, conn, 0, level, 1, 0,
+        NULL, NULL);
+    p8est_balance_ext(pxest, P4EST_CONNECT_FULL, NULL, NULL);
+    p8est_partition(pxest, 1, NULL);
+    p8est_ghost_t *ghost = p8est_ghost_new(pxest, P4EST_CONNECT_FULL);
+
+    p8est_lnodes_t *lnodes = p8est_lnodes_new(pxest, ghost, 1);
+    p8est_ghost_support_lnodes(pxest, lnodes, ghost);
+    p8est_ghost_expand_by_lnodes(pxest, lnodes, ghost);
+
+    p8est_lnodes_destroy(lnodes);
+    p8est_ghost_destroy(ghost);
+    p8est_destroy(pxest);
+    p8est_connectivity_destroy(conn);
   }
   
   // partition elements using Morton ordering & parallel sort
