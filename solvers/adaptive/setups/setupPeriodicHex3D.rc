@@ -5,20 +5,19 @@
 SOLVE
 
 [DATA FILE]
-data/ellipticSineTest3D.h
-#data/ellipticHomogeneous3D.h
+data/adaptiveSineTest3D.h
 
 [BOX DOMAIN]
 TRUE
 
 [BOX NX]
-20
+10
 
 [BOX NY]
-20
+10
 
 [BOX NZ]
-20
+10
 
 [BOX XMIN]
 -1.0

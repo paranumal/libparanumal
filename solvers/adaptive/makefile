@@ -56,6 +56,7 @@ $(ALMONDDIR)/parAlmond.hpp \
 
 # list of objects to be compiled
 AOBJS    = \
+./src/adaptiveSetupBoxHex3D.o \
 ./src/adaptiveZeroMean.o \
 ./src/NBFPCG.o \
 ./src/adaptiveUpdateNBFPCG.o \
@@ -90,7 +91,6 @@ AOBJS    = \
 # library objects
 LOBJS = \
 ../../src/meshConnectPeriodicFaceNodes3D.o \
-../../src/meshSetupBoxHex3D.o \
 ../../src/meshApplyElementMatrix.o \
 ../../src/meshConnect.o \
 ../../src/meshConnectBoundary.o \

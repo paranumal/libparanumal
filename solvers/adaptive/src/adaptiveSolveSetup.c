@@ -556,10 +556,6 @@ void adaptiveSolveSetup(adaptive_t *adaptive, dfloat lambda, occa::properties &k
       sprintf(kernelName, "adaptivePartialBlockJacobiPrecon");
       adaptive->precon->partialblockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      sprintf(fileName, DADAPTIVE "/okl/adaptivePatchSolver.okl");
-      sprintf(kernelName, "adaptiveApproxBlockJacobiSolver");
-      adaptive->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-
     }
 
     MPI_Barrier(mesh->comm);

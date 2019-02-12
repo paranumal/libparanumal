@@ -57,7 +57,7 @@ int main(int argc, char **argv){
     mesh = meshSetup((char*) fileName.c_str(), N, options);
   }
   else if(options.compareArgs("BOX DOMAIN", "TRUE")){
-    mesh = meshSetupBoxHex3D(N, options);
+    mesh = adaptiveSetupBoxHex3D(N, options);
   }
 
 

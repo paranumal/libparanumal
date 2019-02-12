@@ -313,5 +313,7 @@ int nbfpcg(adaptive_t* adaptive, dfloat lambda,
 
 void adaptiveZeroMean(adaptive_t *adaptive, occa::memory &o_q);
 
+mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options);
+
 #endif
 

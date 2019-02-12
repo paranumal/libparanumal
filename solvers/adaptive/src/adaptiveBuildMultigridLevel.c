@@ -537,10 +537,6 @@ adaptive_t *adaptiveBuildMultigridLevel(adaptive_t *baseAdaptive, int Nc, int Nf
       sprintf(kernelName, "adaptivePartialBlockJacobiPrecon");
       adaptive->precon->partialblockJacobiKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      sprintf(fileName, DADAPTIVE "/okl/adaptivePatchSolver.okl");
-      sprintf(kernelName, "adaptiveApproxBlockJacobiSolver");
-      adaptive->precon->approxBlockJacobiSolverKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-
       //sizes for the coarsen and prolongation kernels. degree NFine to degree N
       int NqFine   = (Nf+1);
       int NqCoarse = (Nc+1);

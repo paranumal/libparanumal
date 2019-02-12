@@ -268,8 +268,8 @@ void adaptiveSEMFEMSetup(adaptive_t *adaptive, precon_t* precon, dfloat lambda) 
   int *ArecvOffsets = (int*) calloc(mesh->size+1, sizeof(int));
 
   //Build unassembed non-zeros
-  BuildFEMMatrixHex3D(femMesh,pmesh,lambda, localIds, globalNumbering, globalOwners,&cnt,sendNonZeros); 
-
+  BuildFEMMatrixHex3D(femMesh,pmesh,lambda, localIds, globalNumbering, globalOwners,&cnt,sendNonZeros);
+  
   // Make the MPI_NONZERO_T data type
   MPI_Datatype MPI_NONZERO_T;
   MPI_Datatype dtype[4] = {MPI_HLONG, MPI_HLONG, MPI_INT, MPI_DFLOAT};
