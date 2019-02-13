@@ -237,7 +237,6 @@ static void level_get_mesh(level_t *lvl, mesh_t *mesh, p4est_t *pxest,
 
 #if 0
 
-  
   if (prefs->mesh_continuous)
   {
     if (prefs->brick &&
@@ -274,10 +273,11 @@ static void level_get_mesh(level_t *lvl, mesh_t *mesh, p4est_t *pxest,
                 "communication of geometry.");
   }
 
-  occaKernelRun(lvl->compute_geo, occaIint(mesh->Ktotal), lvl->o_D, lvl->o_vgeo,
-                lvl->o_sgeo);
-  // }}}
 #endif
+  
+  lvl->compute_geo(mesh->Ktotal, lvl->o_D, lvl->o_w, lvl->o_vgeo, lvl->o_sgeo, lvl->o_ggeo);
+  // }}}
+
 }
 
 void occa_p4est_topidx_to_iint(occa::device &device, size_t N,
@@ -446,8 +446,10 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
       device.malloc(NVGEO * sizeof(dfloat_t) * Kmax * Np, NULL);
   lvl->o_sgeo = device.malloc(
       NSGEO * sizeof(dfloat_t) * Kmax * Nfaces * Nfp, NULL);
+  lvl->o_ggeo =
+      device.malloc(NGGEO * sizeof(dfloat_t) * Kmax * Np, NULL);
   // }}}
-
+  
   // {{{ reduction buffers
   {
     const int LDIM = KERNEL_REDUCE_LDIM;

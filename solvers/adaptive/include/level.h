@@ -99,6 +99,7 @@ typedef struct level
   // geometry information
   occa::memory o_vgeo;
   occa::memory o_sgeo;
+  occa::memory o_ggeo;
 
   // reduction buffers
   occa::memory o_red_buf[2];
