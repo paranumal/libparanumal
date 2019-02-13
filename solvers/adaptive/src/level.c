@@ -143,11 +143,10 @@ static void level_get_mesh_constants(level_t *lvl, mesh_t *mesh)
   lvl->Kintra = mesh->Kintra;
 }
 
-#if 0
 
-static void level_get_mesh(level_t *lvl, mesh_t *mesh, prefs_t *prefs,
-                            p4est_t *pxest, p4est_ghost_t *ghost,
-                            occaDevice device)
+static void level_get_mesh(level_t *lvl, mesh_t *mesh, p4est_t *pxest,
+                           p4est_ghost_t *ghost, occa::device &device,
+                           int brick)
 {
   // paranoid checks
   ASD_ABORT_IF(mesh->Kintra > lvl->Kmax, "Kmax not big enough (Kintra)");
@@ -160,62 +159,60 @@ static void level_get_mesh(level_t *lvl, mesh_t *mesh, prefs_t *prefs,
   ASD_ABORT_IF(mesh->Nmortar > lvl->Kmax * lvl->Nfaces,
                "Kmax not big enough (Nmortar)");
 
-  device_async_ptr_to_mem(lvl->o_IToE, mesh->IToE,
-                          sizeof(iint_t) * mesh->Kintra, occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_MToE, mesh->MToE,
-                          sizeof(iint_t) * mesh->Kmirror, occaNoOffset);
+  lvl->o_IToE.copyTo(mesh->IToE, sizeof(iint_t) * mesh->Kintra, 0,
+                     "async: true");
 
-  device_async_ptr_to_mem(lvl->o_UMToE, mesh->UMToE,
-                          sizeof(iint_t) * mesh->Kuniqmirror, occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_GToE, mesh->GToE,
-                          sizeof(iint_t) * mesh->Kghost, occaNoOffset);
+  lvl->o_MToE.copyTo(mesh->MToE, sizeof(iint_t) * mesh->Kmirror, 0,
+                     "async: true");
 
-  device_async_ptr_to_mem(lvl->o_EToL, mesh->EToL,
-                          sizeof(iint_t) * mesh->Ktotal, occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_EToT, mesh->EToT,
-                          sizeof(iint_t) * mesh->Ktotal, occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_EToX, mesh->EToX,
-                          sizeof(iint_t) * mesh->Ktotal, occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_EToY, mesh->EToY,
-                          sizeof(iint_t) * mesh->Ktotal, occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_EToZ, mesh->EToZ,
-                          sizeof(iint_t) * mesh->Ktotal, occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_EToB, mesh->EToB,
-                          sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,
-                          occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_EToE, mesh->EToE,
-                          sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,
-                          occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_EToF, mesh->EToF,
-                          sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,
-                          occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_EToO, mesh->EToO,
-                          sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,
-                          occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_EToC, mesh->EToC,
-                          sizeof(iint_t) * mesh->Ktotal, occaNoOffset);
+  lvl->o_UMToE.copyTo(mesh->UMToE, sizeof(iint_t) * mesh->Kuniqmirror, 0,
+                      "async: true");
+  lvl->o_GToE.copyTo(mesh->GToE, sizeof(iint_t) * mesh->Kghost, 0,
+                     "async: true");
 
-  if (prefs->brick)
-    device_async_ptr_to_mem(lvl->o_EToP, mesh->EToP,
-                            sizeof(iint_t) * mesh->Ktotal, occaNoOffset);
+  lvl->o_EToL.copyTo(mesh->EToL, sizeof(iint_t) * mesh->Ktotal, 0,
+                     "async: true");
+  lvl->o_EToT.copyTo(mesh->EToT, sizeof(iint_t) * mesh->Ktotal, 0,
+                     "async: true");
+  lvl->o_EToX.copyTo(mesh->EToX, sizeof(iint_t) * mesh->Ktotal, 0,
+                     "async: true");
+  lvl->o_EToY.copyTo(mesh->EToY, sizeof(iint_t) * mesh->Ktotal, 0,
+                     "async: true");
+  lvl->o_EToZ.copyTo(mesh->EToZ, sizeof(iint_t) * mesh->Ktotal, 0,
+                     "async: true");
+  lvl->o_EToB.copyTo(mesh->EToB, sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,
+                     0, "async: true");
+  lvl->o_EToE.copyTo(mesh->EToE, sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,
+                     0, "async: true");
+  lvl->o_EToF.copyTo(mesh->EToF, sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,
+                     0, "async: true");
+  lvl->o_EToO.copyTo(mesh->EToO, sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,
+                     0, "async: true");
+  lvl->o_EToC.copyTo(mesh->EToC, sizeof(iint_t) * mesh->Ktotal, 0,
+                     "async: true");
 
-  device_async_ptr_to_mem(lvl->o_CToD_starts, mesh->CToD_starts,
-                          sizeof(iint_t) * (mesh->Ncontinuous + 1),
-                          occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_CToD_indices, mesh->CToD_indices,
-                          sizeof(iint_t) * mesh->Ncindices, occaNoOffset);
+  if (brick) {
+    lvl->o_EToP.copyTo(mesh->EToP, sizeof(iint_t) * mesh->Ktotal, 0,
+                       "async: true");
+  }
 
-  device_async_ptr_to_mem(lvl->o_MFToEM, mesh->MFToEM,
-                          sizeof(iint_t) * mesh->Nmortar, occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_MFToFM, mesh->MFToFM,
-                          sizeof(iint_t) * mesh->Nmortar, occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_MFToEP, mesh->MFToEP,
-                          sizeof(iint_t) * mesh->Nmortar * P4EST_HALF,
-                          occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_MFToFP, mesh->MFToFP,
-                          sizeof(iint_t) * mesh->Nmortar, occaNoOffset);
-  device_async_ptr_to_mem(lvl->o_MFToOP, mesh->MFToOP,
-                          sizeof(iint_t) * mesh->Nmortar, occaNoOffset);
+  lvl->o_CToD_starts.copyTo(mesh->CToD_starts,
+                            sizeof(iint_t) * (mesh->Ncontinuous + 1),
+                            0, "async: true");
+  lvl->o_CToD_indices.copyTo(mesh->CToD_indices,
+                             sizeof(iint_t) * mesh->Ncindices, 0,
+                             "async: true");
+
+  lvl->o_MFToEM.copyTo(mesh->MFToEM, sizeof(iint_t) * mesh->Nmortar, 0,
+                       "async: true");
+  lvl->o_MFToFM.copyTo(mesh->MFToFM, sizeof(iint_t) * mesh->Nmortar, 0,
+                       "async: true");
+  lvl->o_MFToEP.copyTo(mesh->MFToEP, sizeof(iint_t) * mesh->Nmortar * P4EST_HALF,
+                       0, "async: true");
+  lvl->o_MFToFP.copyTo(mesh->MFToFP, sizeof(iint_t) * mesh->Nmortar, 0,
+                       "async: true");
+  lvl->o_MFToOP.copyTo(mesh->MFToOP, sizeof(iint_t) * mesh->Nmortar, 0,
+                       "async: true");
 
   // {{{ mirror and ghost communication information
   lvl->Nn = 0;
@@ -225,6 +222,7 @@ static void level_get_mesh(level_t *lvl, mesh_t *mesh, prefs_t *prefs,
       lvl->NToR[lvl->Nn++] = r;
   // }}}
 
+#if 0
   // {{{
   /* Fill metric terms */
   occaKernelRun(lvl->compute_X, occaIint(mesh->Ktotal), lvl->o_EToL,
@@ -271,8 +269,8 @@ static void level_get_mesh(level_t *lvl, mesh_t *mesh, prefs_t *prefs,
   occaKernelRun(lvl->compute_geo, occaIint(mesh->Ktotal), lvl->o_D, lvl->o_vgeo,
                 lvl->o_sgeo);
   // }}}
-}
 #endif
+}
 
 void occa_p4est_topidx_to_iint(occa::device &device, size_t N,
                                p4est_topidx_t *a, occa::memory &o_ia)
@@ -333,8 +331,7 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
                 lvl->o_Ib, lvl->o_It, lvl->o_Pb, lvl->o_Pt);
   // }}}
 
-  mesh_t *mesh = mesh_new(pxest, ghost, brick_n,
-      brick_p, brick_TToC, N);
+  mesh_t *mesh = mesh_new(pxest, ghost, brick_n, brick_p, brick_TToC, N);
 
   // {{{ Mesh Constants
   level_get_mesh_constants(lvl, mesh);
@@ -518,10 +515,9 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 
   occaKernelInfoFree(info);
   // }}}
-
-  level_set_working_dims(lvl, prefs);
-  level_get_mesh(lvl, mesh, prefs, pxest, ghost, device);
 #endif
+
+  level_get_mesh(lvl, mesh, pxest, ghost, device, brick);
 
   mesh_free(mesh);
 
