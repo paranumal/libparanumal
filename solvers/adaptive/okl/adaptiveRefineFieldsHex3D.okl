@@ -60,7 +60,9 @@
     }									\
     @barrier("local");							\
     cubeThreads{							\
-      outq[idoutq + fld * p_Np + c * p_Np * p_NFIELDS] = r_tmp;		\
+      if (ine < Nelements && refine){					\
+	outq[idoutq + fld * p_Np + c * p_Np * p_NFIELDS] = r_tmp;	\
+      }
     }									\
   }
 
