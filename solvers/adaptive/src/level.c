@@ -104,6 +104,7 @@ static void level_kernelinfo(occa::properties &info, occa::device &device, int N
   info["defines/p_Nfp"] = Nfp;
 
   info["defines/p_NelementsblkV"] = 1;
+  info["defines/p_NelementsblkS"] = 1;
   
   info["includes"] = (char*)strdup(DADAPTIVE "/okl/adaptiveOcca.h");
 
@@ -459,10 +460,12 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   lvl->compute_X = device.buildKernel(DADAPTIVE "/okl/adaptiveComputeX.okl",
 				      "adaptiveComputeX",
 				      info);
-#if 0
-  lvl->interp_X = occaDeviceBuildKernelFromString(device, prefs->kernels,
-                                                  "interp_X", info, OKL_LANG);
 
+  lvl->interp_X = device.buildKernel(DADAPTIVE "/okl/adaptiveInterpX.okl",
+				     "adaptiveInterpX",
+				     info);
+
+#if 0
   lvl->coarse_X = occaDeviceBuildKernelFromString(device, prefs->kernels,
                                                   "coarse_X", info, OKL_LANG);
 
