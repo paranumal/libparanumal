@@ -165,7 +165,19 @@ app_t *app_new(setupAide &options, MPI_Comm comm)
 				kernelInfo);
     }
     MPI_Barrier(comm);
-  }  
+  }
+
+  dfloat_t lambda = 1.0;
+  app->lvl->compute_Ax(app->lvl->Kintra,
+		       app->lvl->o_ggeo,
+		       app->lvl->o_D,
+		       lambda,
+		       app->lvl->o_q,
+		       app->lvl->o_rhsq);
+		       
+		       
+		       
+  
   return app;
 }
 

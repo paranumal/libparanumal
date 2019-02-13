@@ -105,6 +105,8 @@ typedef struct level
   occa::memory o_red_buf[2];
 
   // kernels
+  occa::kernel compute_Ax;
+  
   occa::kernel compute_X;
   occa::kernel interp_X;
   occa::kernel coarse_X;

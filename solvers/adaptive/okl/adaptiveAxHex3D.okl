@@ -29,7 +29,6 @@ SOFTWARE.
 			     @restrict const  dfloat *  ggeo,
 			     @restrict const  dfloat *  D,
 			     @restrict const  dfloat *  S,
-			     @restrict const  dfloat *  MM,
 			     const dfloat lambda,
 			     @restrict const  dfloat *  q,
 			     @restrict dfloat *  Aq){
@@ -161,15 +160,14 @@ SOFTWARE.
 #define adaptivePartialAxHex3D_v0 adaptivePartialAxHex3D
 
 @kernel void adaptivePartialAxHex3D_v0(const dlong Nelements,
-                                    @restrict const  dlong  *  elementList,
-                                    @restrict const  dfloat *  ggeo,
-                                    @restrict const  dfloat *  D,
-                                    @restrict const  dfloat *  S,
-                                    @restrict const  dfloat *  MM,
-                                    const dfloat lambda,
-                                    @restrict const  dfloat *  q,
-                                          @restrict dfloat *  Aq){
-
+				       @restrict const  dlong  *  elementList,
+				       @restrict const  dfloat *  ggeo,
+				       @restrict const  dfloat *  D,
+				       @restrict const  dfloat *  S,
+				       const dfloat lambda,
+				       @restrict const  dfloat *  q,
+				       @restrict dfloat *  Aq){
+  
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
     @shared dfloat s_D[p_Nq][p_Nq];

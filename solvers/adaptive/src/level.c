@@ -406,6 +406,7 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   // {{{ Allocate Volume Fields
   lvl->o_q =
       device.malloc(NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
+
   lvl->o_rhsq =
       device.malloc(NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
 
@@ -472,9 +473,9 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 		   N,
 		   (brick_p[0] || brick_p[1] || brick_p[2]));
 
-  lvl->partial_Ax = device.buildKernel(DADAPTIVE "/okl/adaptiveAxHex3D.okl",
-				       "adaptiveAxHex3D",
-				       info);
+  lvl->compute_Ax = device.buildKernel(DADAPTIVE "/okl/adaptiveAxHex3D.okl",
+			       "adaptiveAxHex3D",
+			       info);
 
   
   lvl->compute_X = device.buildKernel(DADAPTIVE "/okl/adaptiveComputeX.okl",
@@ -532,7 +533,7 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 #endif
 
   level_get_mesh(lvl, mesh, pxest, ghost, device, brick);
-
+  
   mesh_free(mesh);
 
   return lvl;
