@@ -718,4 +718,6 @@ void mesh_free(mesh_t *mesh)
   asd_free_aligned(mesh->EToP);
   asd_free_aligned(mesh->CToD_starts);
   asd_free_aligned(mesh->CToD_indices);
+
+  asd_free(mesh);
 }
