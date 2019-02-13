@@ -207,6 +207,34 @@ static void level_get_mesh(level_t *lvl, mesh_t *mesh, prefs_t *prefs,
 }
 #endif
 
+void occa_p4est_topidx_to_iint(occa::device &device, size_t N,
+                               p4est_topidx_t *a, occa::memory &o_ia)
+{
+
+  iint_t *ia = (iint_t *)asd_malloc_aligned(N * sizeof(iint_t));
+  for (size_t n = 0; n < N; ++n)
+    ia[n] = (iint_t)a[n];
+
+  o_ia = device.malloc(N * sizeof(iint_t), ia);
+  asd_free_aligned(ia);
+
+  return;
+}
+
+void occa_double_to_dfloat(occa::device &device, size_t N, double *a,
+                           occa::memory &o_ia)
+{
+
+  dfloat_t *ia = (dfloat_t *)asd_malloc_aligned(N * sizeof(dfloat_t));
+  for (size_t n = 0; n < N; ++n)
+    ia[n] = (dfloat_t)a[n];
+
+  o_ia = device.malloc(N * sizeof(dfloat_t), ia);
+  asd_free_aligned(ia);
+
+  return;
+}
+
 level_t *level_new(setupAide &options, p4est_t *pxest,
                    p4est_ghost_t *ghost, occa::device &device)
 {
@@ -218,14 +246,19 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   ASD_ABORT_IF(sizeof(p4est_topidx_t) > sizeof(iint_t),
                "p4est_topidx_t not compatible with iint_t");
 
-#if 0
   // {{{ send connectivity to the device
-  p4est_connectivity_t *conn = pxest->connectivity;
-  lvl->o_tree_vertices =
-      occa_double_to_dfloat(device, NX * conn->num_vertices, conn->vertices);
-  lvl->o_tree_to_vertex = occa_p4est_topidx_to_iint(
-      device, P4EST_CHILDREN * conn->num_trees, conn->tree_to_vertex);
+  {
+    p4est_connectivity_t *conn = pxest->connectivity;
+
+    occa_double_to_dfloat(device, NX * conn->num_vertices, conn->vertices,
+                          lvl->o_tree_vertices);
+
+    occa_p4est_topidx_to_iint(device, P4EST_CHILDREN * conn->num_trees,
+                              conn->tree_to_vertex, lvl->o_tree_to_vertex);
+  }
   // }}}
+
+#if 0
 
   // {{{ Build Operators
   get_operators(prefs->mesh_N, device, &lvl->o_r, &lvl->o_w, &lvl->o_D,
@@ -427,10 +460,10 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 
 void level_free(level_t *lvl)
 {
-#if 0
-  occaMemoryFree(lvl->o_tree_to_vertex);
-  occaMemoryFree(lvl->o_tree_vertices);
+  lvl->o_tree_to_vertex.free();
+  lvl->o_tree_vertices.free();
 
+#if 0
   asd_free_aligned(lvl->NToR);
   asd_free_aligned(lvl->EToA);
 
