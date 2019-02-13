@@ -2,6 +2,109 @@
 
 // {{{ Level
 
+// {{{ Kernel Info
+static void level_kernelinfo(occa::properties &info, occa::device &device, int N,
+    int periodic_brick)
+{
+  const int Nq = N + 1;
+#if DIM == 3
+  const int Nqk = Nq;
+  const int Np = Nq * Nq * Nq;
+  const int Nfp = Nq * Nq;
+#else
+  const int Nqk = 1;
+  const int Np = Nq * Nq;
+  const int Nfp = Nq;
+#endif
+  const int Nfaces = 2 * DIM;
+
+ // FIXME
+  // occaKernelInfoAddParserFlag(info, "automate-add-barriers", "disabled");
+
+  info["defines"].asObject();
+  info["defines/iint", occa_iint_name];
+  const char *const dfloat =
+      (sizeof(double) == sizeof(dfloat_t)) ? "double" : "float";
+  info["defines/dfloat", dfloat];
+  if (sizeof(double) == sizeof(dfloat_t))
+    info["defines/p_DFLOAT_DOUBLE", 1];
+  else
+    info["defines/p_DFLOAT_FLOAT", 1];
+
+  info["defines/p_DFLOAT_MAX", DFLOAT_MAX];
+
+  info["defines/p_KblkV", KERNEL_KBLKV];
+  info["defines/p_KblkS", KERNEL_KBLKS];
+  info["defines/p_Nt", KERNEL_NT];
+
+  info["defines/p_REDUCE_LDIM", KERNEL_REDUCE_LDIM];
+
+  info["defines/p_DIM", DIM];
+
+  ASD_ASSERT(sizeof(p4est_qcoord_t) <= sizeof(iint_t));
+  info["defines/p_P4EST_ROOT_LEN", P4EST_ROOT_LEN];
+  info["defines/p_P4EST_HALF", P4EST_HALF];
+  info["defines/p_P4EST_FACES", P4EST_FACES];
+  info["defines/p_P4EST_EDGES", P4EST_EDGES];
+
+  info["defines/p_NX", NX];
+
+  if (periodic_brick)
+    info["defines/p_PERIODIC_BRICK", 1];
+
+  info["defines/p_FIELD_UX", FIELD_UX];
+  info["defines/p_FIELD_UY", FIELD_UY];
+  info["defines/p_FIELD_UZ", FIELD_UZ];
+  info["defines/p_NFIELDS", NFIELDS];
+
+  info["defines/p_VGEO_X", VGEO_X];
+  info["defines/p_VGEO_Y", VGEO_Y];
+  info["defines/p_VGEO_RX", VGEO_RX];
+  info["defines/p_VGEO_SX", VGEO_SX];
+  info["defines/p_VGEO_RY", VGEO_RY];
+  info["defines/p_VGEO_SY", VGEO_SY];
+  info["defines/p_VGEO_J", VGEO_J];
+  info["defines/p_NVGEO", NVGEO];
+
+#if DIM == 3
+  info["defines/p_VGEO_Z", VGEO_Z];
+  info["defines/p_VGEO_TX", VGEO_TX];
+  info["defines/p_VGEO_TY", VGEO_TY];
+  info["defines/p_VGEO_RZ", VGEO_RZ];
+  info["defines/p_VGEO_SZ", VGEO_SZ];
+  info["defines/p_VGEO_TZ", VGEO_TZ];
+#endif
+
+  info["defines/p_SGEO_NX", SGEO_NX];
+  info["defines/p_SGEO_NY", SGEO_NY];
+#if DIM == 3
+  info["defines/p_SGEO_NZ", SGEO_NZ];
+#endif
+  info["defines/p_SGEO_SJ", SGEO_SJ];
+  info["defines/p_NSGEO", NSGEO];
+
+  info["defines/p_BC_SKIP", BC_SKIP];
+  info["defines/p_BC_NONE", BC_NONE];
+  info["defines/p_BC_DEFAULT", BC_DEFAULT];
+
+  info["defines/p_M_PI", M_PI];
+  info["defines/p_M_PI_4", M_PI_4];
+
+  info["defines/conn_mapping", "conn_mapping_identity"];
+
+  info["defines/p_NCORNERS", P4EST_CHILDREN];
+  info["defines/p_NHANG", P4EST_HALF];
+
+  info["defines/p_N", N];
+  info["defines/p_Nq", Nq];
+  info["defines/p_Nqk", Nqk];
+  info["defines/p_Nq2", Nq * Nq];
+  info["defines/p_Nq3", Nq * Nq * Nq];
+  info["defines/p_Np", Np];
+  info["defines/p_Nfaces", Nfaces];
+  info["defines/p_Nfp", Nfp];
+}
+// }}}
 #if 0
 static void level_set_working_dims(level_t *lvl, prefs_t *prefs)
 {
@@ -394,10 +497,13 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   }
   // }}}
 
-#if 0
   // {{{ Build Kernels
-  occaKernelInfo info = common_kernelinfo_new(prefs, device);
+  occa::properties info;
 
+  level_kernelinfo(info, device, N, (brick_p[0] || brick_p[1] ||
+        brick_p[2]));
+
+#if 0
   lvl->compute_X = occaDeviceBuildKernelFromString(device, prefs->kernels,
                                                    "compute_X", info, OKL_LANG);
 
