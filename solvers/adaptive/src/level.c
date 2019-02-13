@@ -235,45 +235,36 @@ static void level_get_mesh(level_t *lvl, mesh_t *mesh, p4est_t *pxest,
 		 lvl->o_r,
 		 lvl->o_vgeo);
 
-#if 0
-
-  if (prefs->mesh_continuous)
-  {
-    if (prefs->brick &&
-        (strcmp(prefs->conn_mapping, "conn_mapping_identity") != 0) &&
-        (prefs->brick_p[0] || prefs->brick_p[1] || prefs->brick_p[2]))
-      ASD_WARNING("Continuous node numbering for periodic levels assumes "
-                  "conn_mapping does not change the periodic vertices.");
-
+  if (1) { // prefs->mesh_continuous){
+    
     // Compute the periodic shifts for the brick case (which is the only case we
     // support periodicity
     const dfloat_t px =
-        pxest->connectivity
-            ->vertices[3 * (pxest->connectivity->num_vertices - 1) + 0] -
-        pxest->connectivity->vertices[0];
+      pxest->connectivity->vertices[3 * (pxest->connectivity->num_vertices - 1) + 0] -
+      pxest->connectivity->vertices[0];
     const dfloat_t py =
-        pxest->connectivity
-            ->vertices[3 * (pxest->connectivity->num_vertices - 1) + 1] -
-        pxest->connectivity->vertices[1];
+      pxest->connectivity->vertices[3 * (pxest->connectivity->num_vertices - 1) + 1] -
+      pxest->connectivity->vertices[1];
     const dfloat_t pz =
-        pxest->connectivity
-            ->vertices[3 * (pxest->connectivity->num_vertices - 1) + 2] -
-        pxest->connectivity->vertices[2];
+      pxest->connectivity->vertices[3 * (pxest->connectivity->num_vertices - 1) + 2] -
+      pxest->connectivity->vertices[2];
 
-    occaKernelRun(lvl->coarse_X, occaIint(mesh->Ncontinuous),
-                  lvl->o_CToD_starts, lvl->o_CToD_indices, lvl->o_EToP,
-                  occaDfloat(px), occaDfloat(py), occaDfloat(pz), lvl->o_vgeo);
+    lvl->coarse_X(mesh->Ncontinuous,
+                  lvl->o_CToD_starts,
+		  lvl->o_CToD_indices,
+		  lvl->o_EToP,
+                  px,
+		  py,
+		  pz,
+		  lvl->o_vgeo);
 
-    occaKernelRun(lvl->interp_X, occaIint(mesh->Ktotal), lvl->o_EToC, lvl->o_Ib,
-                  lvl->o_It, lvl->o_vgeo);
+    lvl->interp_X(mesh->Ktotal,
+		  lvl->o_EToC,
+		  lvl->o_Ib,
+                  lvl->o_It,
+		  lvl->o_vgeo);
 
-    if (prefs->size > 1 && prefs->brick &&
-        (prefs->brick_p[0] || prefs->brick_p[1] || prefs->brick_p[2]))
-      ASD_ABORT("FIXME Continuous geometry for periodic levels requires "
-                "communication of geometry.");
   }
-
-#endif
   
   lvl->compute_geo(mesh->Ktotal, lvl->o_D, lvl->o_w, lvl->o_vgeo, lvl->o_sgeo, lvl->o_ggeo);
   // }}}
@@ -473,9 +464,9 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 		   N,
 		   (brick_p[0] || brick_p[1] || brick_p[2]));
 
-  lvl->compute_Ax = device.buildKernel(DADAPTIVE "/okl/adaptiveAxHex3D.okl",
-			       "adaptiveAxHex3D",
-			       info);
+  lvl->compute_partial_Ax = device.buildKernel(DADAPTIVE "/okl/adaptiveAxHex3D.okl",
+					       "adaptivePartialAxHex3D",
+					       info);
 
   
   lvl->compute_X = device.buildKernel(DADAPTIVE "/okl/adaptiveComputeX.okl",

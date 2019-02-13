@@ -13,10 +13,14 @@ app_t *app_new(setupAide &options, MPI_Comm comm)
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
-  
+
   //  app_t *app = (app_t *)asd_malloc(sizeof(app_t));
   app_t *app = new app_t[1];
 
+  app->comm = comm;
+  app->rank = rank;
+  app->size = size;
+  
   occaDeviceConfig(app->device, options, comm);
 
   app->brick_n[0] = 10;
@@ -168,12 +172,13 @@ app_t *app_new(setupAide &options, MPI_Comm comm)
   }
 
   dfloat_t lambda = 1.0;
-  app->lvl->compute_Ax(app->lvl->Kintra,
-		       app->lvl->o_ggeo,
-		       app->lvl->o_D,
-		       lambda,
-		       app->lvl->o_q,
-		       app->lvl->o_rhsq);
+  app->lvl->compute_partial_Ax(app->lvl->Kintra,
+			       app->lvl->o_IToE,
+			       app->lvl->o_ggeo,
+			       app->lvl->o_D,
+			       lambda,
+			       app->lvl->o_q,
+			       app->lvl->o_rhsq);
 		       
 		       
 		       

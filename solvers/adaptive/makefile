@@ -65,6 +65,7 @@ DEPS = $(INCLUDES)
 
 # list of objects to be compiled
 AOBJS    = \
+./src/adaptiveOutputVTUHex3D.o \
 ./src/asd.o \
 ./src/app.o \
 ./src/connectivity.o \

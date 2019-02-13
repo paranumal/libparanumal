@@ -5,6 +5,11 @@
 
 typedef struct app
 {
+
+  MPI_Comm comm;
+  int rank;
+  int size;
+  
   occa::device device;
 
   p4est_connectivity_t *conn;
