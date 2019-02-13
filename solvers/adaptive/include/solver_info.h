@@ -38,6 +38,17 @@ const int FIELD_OUT_COMPONENTS_OFF[] = {FIELD_UX, FIELD_UY, FIELD_UZ};
 #define NVGEO 13
 const char *const VGEO_NAMES[] = {"rx", "sx", "tx", "ry", "sy", "ty", "rz",
                                   "sz", "tz", "J",  "x",  "y",  "z",  NULL};
+
+
+#define GGEO_RR 0
+#define GGEO_RS 1
+#define GGEO_RT 2
+#define GGEO_SS 3
+#define GGEO_ST 4
+#define GGEO_TT 5
+#define GGEO_JW 6
+#define NGGEO 7
+
 #else
 #define VGEO_RX 0
 #define VGEO_SX 1

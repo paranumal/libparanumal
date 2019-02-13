@@ -486,11 +486,10 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 					      "adaptiveGetMirrorFields",
 					      info);
 
-#if 0
   lvl->set_ghost_fields = device.buildKernel(DADAPTIVE "/okl/adaptiveSetGhostFields.okl",
 					      "adaptiveSetGhostFields",
 					      info);
-
+#if 0
 
   lvl->reduce_min = occaDeviceBuildKernelFromString(
       device, prefs->kernels, "reduce_min", info, OKL_LANG);
