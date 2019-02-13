@@ -33,8 +33,8 @@ SOFTWARE.
 #include  "mpi.h"
 #include "adaptive.h"
 
-void occaDeviceConfig(occa::device &device, setupAide
-    &options, MPI_Comm comm){
+void occaDeviceConfig(occa::device &device, setupAide &options, MPI_Comm comm){
+
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
   int rank, size;
@@ -58,8 +58,6 @@ void occaDeviceConfig(occa::device &device, setupAide
   if (size==1) options.getArgs("DEVICE NUMBER" ,device_id);
 
   printf("device_id = %d\n", device_id);
-
-  //  device_id = device_id%2;
 
   occa::properties deviceProps;
 

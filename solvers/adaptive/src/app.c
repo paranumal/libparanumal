@@ -9,7 +9,8 @@
  */
 app_t *app_new(setupAide &options, MPI_Comm comm)
 {
-  app_t *app = (app_t *)asd_malloc(sizeof(app_t));
+  //  app_t *app = (app_t *)asd_malloc(sizeof(app_t));
+  app_t *app = new app_t[1];
 
   occaDeviceConfig(app->device, options, comm);
 
@@ -34,8 +35,10 @@ app_t *app_new(setupAide &options, MPI_Comm comm)
 void app_free(app_t *app)
 {
   // TODO delete app->device
-
   // p4est_ghost_destroy(app->ghost);
   // p4est_destroy(app->pxest);
   p4est_connectivity_destroy(app->conn);
+
+  delete [] app;
+
 }
