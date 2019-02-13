@@ -35,19 +35,16 @@ CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(LIBP_OPT_FLAGS)
 
-PARMETISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libparmetis/
-METISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libmetis
-
 # libraries to be linked in
-LIBS	= -Wl,-rpath=$(P4EST_DIR)/local/lib,--enable-new-dtags $(P4EST_LDFLAGS) $(P4EST_LIBS) -L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis  -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -Wl,-rpath=$(OCCA_DIR)/lib,--enable-new-dtags -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack  $(LIBP_EXT_LIBS) -lgfortran
+LIBS	= -Wl,-rpath=$(P4EST_DIR)/local/lib,--enable-new-dtags $(P4EST_LDFLAGS) $(P4EST_LIBS) -Wl,-rpath=$(OCCA_DIR)/lib,--enable-new-dtags -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack  $(LIBP_EXT_LIBS) -lgfortran
 
-INCLUDES = adaptive.h adaptivePrecon.h asd.h
-DEPS = $(INCLUDES) \
-$(HDRDIR)/mesh.h \
-$(HDRDIR)/mesh2D.h \
-$(HDRDIR)/mesh3D.h \
-$(OGSDIR)/ogs.hpp \
-$(ALMONDDIR)/parAlmond.hpp \
+INCLUDES = adaptive.h \
+           app.h \
+           asd.h \
+           myoccautil.h \
+           number_types.h \
+           solver_info.h
+DEPS = $(INCLUDES)
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c .f
@@ -64,111 +61,16 @@ $(ALMONDDIR)/parAlmond.hpp \
 
 # list of objects to be compiled
 AOBJS    = \
-./src/adaptiveSetupBoxHex3D.o \
 ./src/asd.o \
-./src/adaptiveZeroMean.o \
-./src/NBFPCG.o \
-./src/adaptiveUpdateNBFPCG.o \
-./src/NBPCG.o \
-./src/adaptiveUpdateNBPCG.o \
-./src/adaptiveKernelInfo.o \
-./src/PCG.o \
-./src/adaptiveSerialAxHex3D.o \
-./src/adaptiveSerialPartialAxHex3D.o \
-./src/adaptivePlotVTUHex3D.o \
-./src/adaptiveBuildContinuous.o \
-./src/adaptiveBuildIpdg.o \
-./src/adaptiveBuildJacobi.o \
-./src/adaptiveBuildMultigridLevel.o \
-./src/adaptiveHaloExchange.o\
-./src/adaptiveOperator.o \
-./src/adaptivePreconditioner.o\
-./src/adaptivePreconditionerSetup.o\
-./src/adaptiveSetup.o \
-./src/adaptiveSolve.o\
-./src/adaptiveSolveSetup.o\
-./src/adaptiveScaledAdd.o \
-./src/adaptiveUpdatePCG.o \
-./src/adaptiveWeightedInnerProduct.o \
-./src/adaptiveWeightedNorm2.o \
-./src/adaptiveVectors.o \
-./src/adaptiveSEMFEMSetup.o\
-./src/adaptiveMultiGridSetup.o \
-./src/adaptiveMultiGridLevel.o \
-./src/adaptiveMultiGridLevelSetup.o \
+./src/app.o \
+./src/occaDeviceConfig.o\
 
 # library objects
 LOBJS = \
-../../src/meshConnectPeriodicFaceNodes3D.o \
-../../src/meshApplyElementMatrix.o \
-../../src/meshConnect.o \
-../../src/meshConnectBoundary.o \
-../../src/meshConnectFaceNodes2D.o \
-../../src/meshConnectFaceNodes3D.o \
-../../src/meshGeometricFactorsTet3D.o \
-../../src/meshGeometricFactorsHex3D.o \
-../../src/meshGeometricFactorsTri2D.o \
-../../src/meshGeometricFactorsTri3D.o \
-../../src/meshGeometricFactorsQuad2D.o \
-../../src/meshGeometricFactorsQuad3D.o \
-../../src/meshRecursiveSpectralBisectionPartition.o\
-../../src/meshGeometricPartition2D.o \
-../../src/meshGeometricPartition3D.o \
-../../src/meshHaloExchange.o \
-../../src/meshHaloExtract.o \
-../../src/meshHaloSetup.o \
-../../src/meshLoadReferenceNodesTri2D.o \
-../../src/meshLoadReferenceNodesQuad2D.o \
-../../src/meshLoadReferenceNodesTet3D.o \
-../../src/meshLoadReferenceNodesHex3D.o \
-../../src/meshOccaSetup2D.o \
-../../src/meshOccaSetup3D.o \
-../../src/meshOccaSetupQuad3D.o \
-../../src/meshOccaSetupTri3D.o \
-../../src/meshParallelConnectNodes.o \
-../../src/meshParallelConnectOpt.o \
-../../src/meshParallelGatherScatterSetup.o \
-../../src/meshParallelReaderTri2D.o \
-../../src/meshParallelReaderQuad2D.o \
-../../src/meshParallelReaderQuad3D.o \
-../../src/meshParallelReaderTet3D.o \
-../../src/meshParallelReaderHex3D.o \
-../../src/meshPartitionStatistics.o \
-../../src/meshPhysicalNodesTri2D.o \
-../../src/meshPhysicalNodesTri3D.o \
-../../src/meshPhysicalNodesQuad2D.o \
-../../src/meshPhysicalNodesQuad3D.o \
-../../src/meshPhysicalNodesTet3D.o \
-../../src/meshPhysicalNodesHex3D.o \
-../../src/meshPlotVTU2D.o \
-../../src/meshPlotVTU3D.o \
-../../src/meshPrint2D.o \
-../../src/meshPrint3D.o \
-../../src/meshSetup.o \
-../../src/meshSetupTri2D.o \
-../../src/meshSetupQuad2D.o \
-../../src/meshSetupQuad3D.o \
-../../src/meshSetupTet3D.o \
-../../src/meshSetupHex3D.o \
-../../src/meshSurfaceGeometricFactorsTri2D.o \
-../../src/meshSurfaceGeometricFactorsTri3D.o \
-../../src/meshSurfaceGeometricFactorsQuad2D.o \
-../../src/meshSurfaceGeometricFactorsQuad3D.o \
-../../src/meshSurfaceGeometricFactorsTet3D.o \
-../../src/meshSurfaceGeometricFactorsHex3D.o \
-../../src/meshVTU2D.o \
-../../src/meshVTU3D.o \
-../../src/matrixInverse.o \
-../../src/matrixConditionNumber.o \
-../../src/mysort.o \
-../../src/parallelSort.o \
 ../../src/setupAide.o \
-../../src/readArray.o\
-../../src/occaDeviceConfig.o\
-../../src/occaHostMallocPinned.o \
 ../../src/timer.o
 
-adaptiveMain:$(AOBJS) $(LOBJS) ./src/adaptiveMain.o libblas libogs libparAlmond
+adaptiveMain:$(AOBJS) $(LOBJS) ./src/adaptiveMain.o libblas
 	$(LD)  $(LDFLAGS)  -o adaptiveMain ./src/adaptiveMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)

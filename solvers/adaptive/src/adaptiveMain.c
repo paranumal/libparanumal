@@ -26,8 +26,37 @@ SOFTWARE.
 
 #include "adaptive.h"
 
-int main(int argc, char **argv){
+/** Initialize the libraries that we are using
+ *
+ */
+static int init_libs(MPI_Comm comm, int verbosity)
+{
+  int rank;
+  ASD_MPI_CHECK(MPI_Comm_rank(comm, &rank));
 
+  int logpriority = ASD_MAX(SC_LP_STATISTICS - verbosity, SC_LP_ALWAYS);
+  sc_init(comm, 0, 0, NULL, logpriority);
+  p4est_init(NULL, logpriority);
+
+  int loglevel = ASD_MAX(ASD_LL_INFO - verbosity, ASD_LL_ALWAYS);
+  asd_log_init(rank, stdout, loglevel);
+
+  // add signal handler to get backtrace on abort
+  asd_signal_handler_set();
+
+  return loglevel;
+}
+
+static void print_precision()
+{
+  const char *comp = (sizeof(double) == sizeof(dfloat_t)) ? "double" : "single";
+  ASD_ROOT_INFO("");
+  ASD_ROOT_INFO("----- Precision ------------------------------------------");
+  ASD_ROOT_INFO("compute precision = %s", comp);
+  ASD_ROOT_INFO("----------------------------------------------------------");
+}
+
+int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
@@ -41,6 +70,17 @@ int main(int argc, char **argv){
   // if argv > 2 then should load input data from argv
   setupAide options(argv[1]);
 
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int verbosity;
+  options.getArgs("VERBOSITY", verbosity);
+  init_libs(comm, verbosity);
+  print_precision();
+
+  app_t *app = app_new(options, comm);
+
+  app_free(app);
+
+#if 0
   // set up mesh stuff
   string fileName;
   int N, dim, elementType;
@@ -179,6 +219,7 @@ int main(int argc, char **argv){
     sprintf(fname, "%s_%04d",(char*)outName.c_str(), mesh->rank);
     adaptivePlotVTUHex3D(mesh, fname, 0);
   }
+#endif
 
   // close down MPI
   MPI_Finalize();
