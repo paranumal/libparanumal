@@ -24,3 +24,12 @@
 **/*.c~
 *.m~
 *.nvprof
+
+*.[oa]
+*~
+*.dSYM
+.nfs*
+.*.sw?
+.DS_Store
+/3rdParty/p4est-2.0/
+/3rdParty/parmetis-4.0.3/
