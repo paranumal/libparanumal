@@ -482,21 +482,15 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 					"adaptiveGeometricFactorsHex3D",
 					info);
 
+  lvl->get_mirror_fields = device.buildKernel(DADAPTIVE "/okl/adaptiveGetMirrorFields.okl",
+					      "adaptiveGetMirrorFields",
+					      info);
+
 #if 0
-  lvl->compute_geo = occaDeviceBuildKernelFromString(
-      device, prefs->kernels, "compute_geo", info, OKL_LANG);
+  lvl->set_ghost_fields = device.buildKernel(DADAPTIVE "/okl/adaptiveSetGhostFields.okl",
+					      "adaptiveSetGhostFields",
+					      info);
 
-  lvl->compute_ics = occaDeviceBuildKernelFromString(
-      device, prefs->kernels, "compute_ics", info, OKL_LANG);
-
-  lvl->compute_dt = occaDeviceBuildKernelFromString(
-      device, prefs->kernels, "compute_dt", info, OKL_LANG);
-
-  lvl->compute_energy = occaDeviceBuildKernelFromString(
-      device, prefs->kernels, "compute_energy", info, OKL_LANG);
-
-  lvl->compute_error = occaDeviceBuildKernelFromString(
-      device, prefs->kernels, "compute_error", info, OKL_LANG);
 
   lvl->reduce_min = occaDeviceBuildKernelFromString(
       device, prefs->kernels, "reduce_min", info, OKL_LANG);
@@ -510,9 +504,6 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   lvl->refine_and_fill_fields = occaDeviceBuildKernelFromString(
       device, prefs->kernels, "refine_and_fill_fields", info, OKL_LANG);
 
-  lvl->volume_advection = occaDeviceBuildKernelFromString(
-      device, prefs->kernels, "volume_advection", info, OKL_LANG);
-
   lvl->mortar_advection = occaDeviceBuildKernelFromString(
       device, prefs->kernels, "mortar_advection", info, OKL_LANG);
 
@@ -522,8 +513,6 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   lvl->zero_fields = occaDeviceBuildKernelFromString(
       device, prefs->kernels, "zero_fields", info, OKL_LANG);
 
-  lvl->get_mirror_fields = occaDeviceBuildKernelFromString(
-      device, prefs->kernels, "get_mirror_fields", info, OKL_LANG);
 
   lvl->set_ghost_fields = occaDeviceBuildKernelFromString(
       device, prefs->kernels, "set_ghost_fields", info, OKL_LANG);

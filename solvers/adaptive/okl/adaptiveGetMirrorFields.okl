@@ -1,10 +1,11 @@
-// {{{ Parallel Communication
+
 @kernel void adaptiveGetMirrorFields(const dlong NelementsMirror,
-				     @restrict const dlong MToE,
+				     @restrict const dlong * MToE,
 				     @restrict const dfloat * q,
 				     @restrict dfloat * q_mirror){
   
   for (dlong eo = 0; eo < NelementsMirror; eo += p_NelementsblkV; @outer(0)){
+
     for (dlong ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2)){
       for (dlong j = 0; j < p_Nq; ++j; @inner(1)){
         for (dlong i = 0; i < p_Nq; ++i; @inner(0)){
