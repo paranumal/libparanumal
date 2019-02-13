@@ -412,9 +412,8 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   lvl->o_q_buf =
       device.malloc(NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
 
-  lvl->pin_q_send = device.mappedAlloc(NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
-  lvl->pin_q_recv = device.mappedAlloc(NFIELDS * sizeof(dfloat_t) * Kmax * Np,
-      NULL);
+  lvl->pin_q_send = device.mappedAlloc(NFIELDS * sizeof(dfloat_t) * Kmax * Np);
+  lvl->pin_q_recv = device.mappedAlloc(NFIELDS * sizeof(dfloat_t) * Kmax * Np);
 
   lvl->q_send = (dfloat_t*)lvl->pin_q_send.getMappedPointer();
   lvl->q_recv = (dfloat_t*)lvl->pin_q_recv.getMappedPointer();
@@ -545,6 +544,7 @@ void level_free(level_t *lvl)
   lvl->o_UMToE.free();
   lvl->o_GToE.free();
 
+  
   lvl->o_EToL.free();
   lvl->o_EToT.free();
   lvl->o_EToX.free();
@@ -567,6 +567,7 @@ void level_free(level_t *lvl)
   lvl->o_MFToFP.free();
   lvl->o_MFToOP.free();
 
+
   lvl->o_r.free();
   lvl->o_w.free();
   lvl->o_D.free();
@@ -582,13 +583,18 @@ void level_free(level_t *lvl)
   lvl->o_q.free();
   lvl->o_rhsq.free();
 
-  lvl->o_q_buf.free();
+#if 0
+  // leak for the moment
   lvl->pin_q_send.free();
   lvl->pin_q_recv.free();
-
+#endif
+  
+  lvl->o_q_buf.free();
+    
   lvl->o_red_buf[0].free();
   lvl->o_red_buf[1].free();
 
+  
   asd_free_aligned(lvl->q_send_buf);
   asd_free_aligned(lvl->q_recv_buf);
   asd_free_aligned(lvl->q_send_requests);
