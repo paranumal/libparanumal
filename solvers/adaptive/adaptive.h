@@ -89,6 +89,7 @@ SOFTWARE.
 #include "app.h"
 #include "myoccautil.h"
 #include "connectivity.h"
+#include "mesh.h"
 // }}}
 
 #endif

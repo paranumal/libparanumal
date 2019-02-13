@@ -43,6 +43,7 @@ INCLUDES = adaptive.h \
            asd.h \
            connectivity.h \
            myoccautil.h \
+           mesh.h \
            number_types.h \
            solver_info.h
 DEPS = $(INCLUDES)
@@ -65,7 +66,8 @@ AOBJS    = \
 ./src/asd.o \
 ./src/app.o \
 ./src/connectivity.o \
-./src/occaDeviceConfig.o\
+./src/mesh.o\
+./src/occaDeviceConfig.o
 
 # library objects
 LOBJS = \
