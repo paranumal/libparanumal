@@ -1,0 +1,111 @@
+@kernel void adaptiveCoarseX(const dlong Ncontinuous,
+			     @restrict const dlong * starts,
+			     @restrict const dlong * indices,
+			     @restrict const dlong * EToP,
+			     const dfloat px,
+			     const dfloat py,
+			     const dfloat pz,
+			     @restrict dfloat * vgeo)
+{
+  for (dlong co = 0; co < Ncontinuous; co += p_Nt; @outer(0)){
+    for (dlong ci = 0; ci < p_Nt; ++ci; @inner(0)){
+
+      const dlong n = co + ci;
+      
+      if (n < Ncontinuous){
+        const dlong start = starts[n];
+        const dlong end = starts[n + 1];
+	
+        dfloat gx[3] = {ZERO, ZERO, ZERO};
+	
+#ifdef p_PERIODIC_BRICK
+        dlong p = 0;
+
+        for (dlong m = start; m < end; ++m)
+        {
+          const dlong ind = indices[m];
+          const dlong e = ind / p_Np;
+          const dlong l = ind % p_Np;
+          const dlong i = l % p_Nq;
+          const dlong j = (l / p_Nq) % p_Nq;
+          const dlong k = (l / (p_Nq * p_Nq));
+          const dlong ep = EToP[e];
+
+          if ((ep & 1) && (i + 1 == p_Nq))
+            p |= 1;
+          if ((ep & 2) && (j + 1 == p_Nq))
+            p |= 2;
+          if ((ep & 4) && (k + 1 == p_Nq))
+            p |= 4;
+        }
+#endif
+
+        {
+          const dlong m = start;
+          const dlong ind = indices[m];
+
+          const dlong e = ind / p_Np;
+          const dlong l = ind % p_Np;
+          const dlong id = l + e * p_Np * p_NVGEO;
+
+          dfloat x = vgeo[id + p_VGEO_X * p_Np];
+          dfloat y = vgeo[id + p_VGEO_Y * p_Np];
+          dfloat z = vgeo[id + p_VGEO_Z * p_Np];
+
+#ifdef p_PERIODIC_BRICK
+          if (p)
+          {
+            const dlong i = l % p_Nq;
+            const dlong j = (l / p_Nq) % p_Nq;
+            const dlong k = (l / (p_Nq * p_Nq));
+
+            if ((p & 1) && (i + 1 == p_Nq))
+              x -= px;
+            if ((p & 2) && (j + 1 == p_Nq))
+              y -= py;
+            if ((p & 4) && (k + 1 == p_Nq))
+              z -= pz;
+          }
+#endif
+
+          gx[0] = x;
+          gx[1] = y;
+          gx[2] = z;
+        }
+
+        for (dlong m = start + 1; m < end; ++m)
+        {
+          const dlong ind = indices[m];
+
+          const dlong e = ind / p_Np;
+          const dlong l = ind % p_Np;
+          const dlong id = l + e * p_Np * p_NVGEO;
+
+          dfloat x = gx[0];
+          dfloat y = gx[1];
+          dfloat z = gx[2];
+
+#ifdef p_PERIODIC_BRICK
+          if (p)
+          {
+            const dlong i = l % p_Nq;
+            const dlong j = (l / p_Nq) % p_Nq;
+            const dlong k = (l / (p_Nq * p_Nq));
+
+            if ((p & 1) && (i + 1 == p_Nq))
+              x += px;
+            if ((p & 2) && (j + 1 == p_Nq))
+              y += py;
+            if ((p & 4) && (k + 1 == p_Nq))
+              z += pz;
+          }
+#endif
+
+          vgeo[id + p_VGEO_X * p_Np] = x;
+          vgeo[id + p_VGEO_Y * p_Np] = y;
+          vgeo[id + p_VGEO_Z * p_Np] = z;
+        }
+      }
+    }
+  }
+}
