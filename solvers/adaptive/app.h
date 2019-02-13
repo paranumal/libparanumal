@@ -11,6 +11,8 @@ typedef struct app
   p4est_t *pxest;
   p4est_ghost_t *ghost;
 
+  int brick_n[DIM];
+  int brick_p[DIM];
   p4est_topidx_t *brick_TToC; // tree id to cartesian coordinates needed for
                               // periodic bricks
 

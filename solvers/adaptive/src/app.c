@@ -14,20 +14,22 @@ app_t *app_new(setupAide &options, MPI_Comm comm)
 
   occaDeviceConfig(app->device, options, comm);
 
-  int n[DIM], p[DIM];
+  app->brick_n[0] = 10;
+  app->brick_n[1] = 10;
+  app->brick_n[2] = 10;
+  app->brick_p[0] = 1;
+  app->brick_p[1] = 1;
+  app->brick_p[2] = 1;
 
-  n[0] = 10; n[1] = 10; n[2] = 10;
-  p[0] = 1; p[1] = 1; p[2] = 1;
+  options.getArgs("BOX NX", app->brick_n[0]);
+  options.getArgs("BOX NY", app->brick_n[1]);
+  options.getArgs("BOX NZ", app->brick_n[2]);
 
-  options.getArgs("BOX NX", n[0]);
-  options.getArgs("BOX NY", n[1]);
-  options.getArgs("BOX NZ", n[2]);
+  options.getArgs("BOX PERIODIC X", app->brick_p[0]);
+  options.getArgs("BOX PERIODIC Y", app->brick_p[1]);
+  options.getArgs("BOX PERIODIC Z", app->brick_p[2]);
 
-  options.getArgs("BOX PERIODIC X", p[0]);
-  options.getArgs("BOX PERIODIC Y", p[1]);
-  options.getArgs("BOX PERIODIC Z", p[2]);
-
-  app->conn = get_connectivity(NULL, n, p);
+  app->conn = get_connectivity(NULL, app->brick_n, app->brick_p);
 
   // This is needed for periodicity in the brick
   {
