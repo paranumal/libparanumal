@@ -1,0 +1,2702 @@
+//
+// general kernels and kernels for the volume subdomains
+//
+
+// {{{ Defines
+#define mfloat dfloat
+
+#define APPEND(x, y) x##y
+#define APPEND_EXPAND(x, y) BFAM_APPEND(x, y)
+
+#ifdef p_DFLOAT_FLOAT
+#define DFLOAT(x) APPEND(x, f)
+#else
+#define DFLOAT(x) x
+#endif
+
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define ABS(a) (((a) > 0) ? (a) : -(a))
+
+#define ZERO DFLOAT(0.0)
+#define ONE DFLOAT(1.0)
+#define TWO DFLOAT(2.0)
+#define HALF DFLOAT(0.5)
+// }}}
+
+// {{{ Reduction
+/*
+ * This is an implementation of the reduction kernel described my Mark Harris in
+ *
+ *     http://developer.download.nvidia.com/assets/cuda/files/reduction.pdf
+ */
+
+kernel void reduce_min(const iint N, const dfloat *restrict a,
+                       dfloat *restrict a_reduced)
+{
+  for (iint o = 0; o < N / 8; o += p_REDUCE_LDIM; outer0)
+  {
+    shared dfloat a_local[p_REDUCE_LDIM];
+
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+    {
+      dfloat min[8];
+
+      iint idx = o + i;
+      occaUnroll(8) for (iint n = 0; n < 8; ++n)
+      {
+        if (idx < N)
+          min[n] = a[idx];
+        else
+          min[n] = p_DFLOAT_MAX;
+        idx += occaGlobalDim0;
+      }
+
+      a_local[i] = p_DFLOAT_MAX;
+      occaUnroll(8) for (iint n = 0; n < 8; ++n)
+      {
+        a_local[i] = MIN(a_local[i], min[n]);
+      }
+    }
+
+    barrier(localMemFence);
+
+/*
+ * Assume p_REDUCE_LDIM is a power of 2 such that p_REDUCE_LDIM <= 2048
+ */
+#if p_REDUCE_LDIM >= 2048
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 1024)
+        a_local[i] = MIN(a_local[i], a_local[i + 1024]);
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 1024
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 512)
+        a_local[i] = MIN(a_local[i], a_local[i + 512]);
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 512
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 256)
+        a_local[i] = MIN(a_local[i], a_local[i + 256]);
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 256
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 128)
+        a_local[i] = MIN(a_local[i], a_local[i + 128]);
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 128
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 64)
+        a_local[i] = MIN(a_local[i], a_local[i + 64]);
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 64
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 32)
+        a_local[i] = MIN(a_local[i], a_local[i + 32]);
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 32
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 16)
+        a_local[i] = MIN(a_local[i], a_local[i + 16]);
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 16
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 8)
+        a_local[i] = MIN(a_local[i], a_local[i + 8]);
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 8
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 4)
+        a_local[i] = MIN(a_local[i], a_local[i + 4]);
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 4
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 2)
+        a_local[i] = MIN(a_local[i], a_local[i + 2]);
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 2
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 1)
+        a_local[i] = MIN(a_local[i], a_local[i + 1]);
+
+    barrier(localMemFence);
+#endif
+
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i == 0)
+        a_reduced[occaOuterId0] = a_local[0];
+  }
+}
+
+kernel void reduce_sum(const iint N, const dfloat *restrict a,
+                       dfloat *restrict a_reduced)
+{
+  for (iint o = 0; o < N / 8; o += p_REDUCE_LDIM; outer0)
+  {
+    shared dfloat a_local[p_REDUCE_LDIM];
+
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+    {
+      dfloat sum[8];
+
+      iint idx = o + i;
+      occaUnroll(8) for (iint n = 0; n < 8; ++n)
+      {
+        if (idx < N)
+          sum[n] = a[idx];
+        else
+          sum[n] = ZERO;
+        idx += occaGlobalDim0;
+      }
+
+      a_local[i] = ZERO;
+      occaUnroll(8) for (iint n = 0; n < 8; ++n) { a_local[i] += sum[n]; }
+    }
+
+    barrier(localMemFence);
+
+/*
+ * Assume p_REDUCE_LDIM is a power of 2 such that p_REDUCE_LDIM <= 2048
+ */
+#if p_REDUCE_LDIM >= 2048
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 1024)
+        a_local[i] += a_local[i + 1024];
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 1024
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 512)
+        a_local[i] += a_local[i + 512];
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 512
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 256)
+        a_local[i] += a_local[i + 256];
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 256
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 128)
+        a_local[i] += a_local[i + 128];
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 128
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 64)
+        a_local[i] += a_local[i + 64];
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 64
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 32)
+        a_local[i] += a_local[i + 32];
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 32
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 16)
+        a_local[i] += a_local[i + 16];
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 16
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 8)
+        a_local[i] += a_local[i + 8];
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 8
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 4)
+        a_local[i] += a_local[i + 4];
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 4
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 2)
+        a_local[i] += a_local[i + 2];
+
+    barrier(localMemFence);
+#endif
+
+#if p_REDUCE_LDIM >= 2
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i < 1)
+        a_local[i] += a_local[i + 1];
+
+    barrier(localMemFence);
+#endif
+
+    for (iint i = 0; i < p_REDUCE_LDIM; ++i; inner0)
+      if (i == 0)
+        a_reduced[occaOuterId0] = a_local[0];
+  }
+}
+// }}}
+
+// {{{ Setup
+iint fmask(iint n, iint m, iint f)
+{
+  iint a, b, c;
+
+  switch (f)
+  {
+  case 0:
+    a = 0, b = n, c = m;
+    break;
+  case 1:
+    a = p_N, b = n, c = m;
+    break;
+  case 2:
+    a = n, b = 0, c = m;
+    break;
+  case 3:
+    a = n, b = p_N, c = m;
+    break;
+  case 4:
+    a = n, b = m, c = 0;
+    break;
+  case 5:
+    a = n, b = m, c = p_N;
+    break;
+  default:
+    a = 0, b = 0, c = 0;
+  }
+
+#if p_DIM == 2
+  c = 0;
+#endif
+
+  return a + b * p_Nq + c * p_Nq * p_Nq;
+}
+
+iint gmask(iint n, iint g)
+{
+#if p_DIM == 2
+  return -1;
+#endif
+
+  iint a, b, c;
+
+  switch (g)
+  {
+  case 0:
+    a = n, b = 0, c = 0;
+    break;
+  case 1:
+    a = n, b = p_N, c = 0;
+    break;
+  case 2:
+    a = n, b = 0, c = p_N;
+    break;
+  case 3:
+    a = n, b = p_N, c = p_N;
+    break;
+  case 4:
+    a = 0, b = n, c = 0;
+    break;
+  case 5:
+    a = p_N, b = n, c = 0;
+    break;
+  case 6:
+    a = 0, b = n, c = p_N;
+    break;
+  case 7:
+    a = p_N, b = n, c = p_N;
+    break;
+  case 8:
+    a = 0, b = 0, c = n;
+    break;
+  case 9:
+    a = p_N, b = 0, c = n;
+    break;
+  case 10:
+    a = 0, b = p_N, c = n;
+    break;
+  case 11:
+    a = p_N, b = p_N, c = n;
+    break;
+  default:
+    a = 0, b = 0, c = 0;
+  }
+
+  return a + b * p_Nq + c * p_Nq * p_Nq;
+}
+
+void mapO(iint ii, iint jj, iint o, iint *oi, iint *oj)
+{
+  const iint ir = p_Nq - (ii + 1);
+  const iint jr = p_Nq - (jj + 1);
+
+  if (o == 0)
+    *oi = ii, *oj = jj;
+  if (o == 1)
+    *oi = jj, *oj = ii;
+  if (o == 2)
+    *oi = ir, *oj = jj;
+  if (o == 3)
+    *oi = jr, *oj = ii;
+  if (o == 4)
+    *oi = jj, *oj = ir;
+  if (o == 5)
+    *oi = ii, *oj = jr;
+  if (o == 6)
+    *oi = jr, *oj = ir;
+  if (o == 7)
+    *oi = ir, *oj = jr;
+}
+
+void conn_mapping_identity(const iint tree, const dfloat a, const dfloat b,
+                           const dfloat c, dfloat *restrict x,
+                           dfloat *restrict y, dfloat *restrict z)
+{
+  *x = a;
+  *y = b;
+  *z = c;
+}
+
+void conn_mapping_shell(const iint tree, const dfloat a, const dfloat b,
+                        const dfloat c, dfloat *restrict x, dfloat *restrict y,
+                        dfloat *restrict z)
+{
+  const dfloat r = occaTan(a * DFLOAT(p_M_PI_4));
+  const dfloat s = occaTan(b * DFLOAT(p_M_PI_4));
+
+  const dfloat R = p_shell_R1 + (p_shell_R2 - p_shell_R1) * (c - ONE);
+  const dfloat q = R / occaSqrt(r * r + s * s + ONE);
+
+  switch (tree / 4)
+  {
+  case 3: /* top */
+    *x = +q * s;
+    *y = -q * r;
+    *z = +q;
+    break;
+  case 2: /* left */
+    *x = -q;
+    *y = -q * r;
+    *z = +q * s;
+    break;
+  case 1: /* bottom */
+    *x = -q * s;
+    *y = -q * r;
+    *z = -q;
+    break;
+  case 0: /* right */
+    *x = +q;
+    *y = -q * r;
+    *z = -q * s;
+    break;
+  case 4: /* back */
+    *x = -q * r;
+    *y = +q;
+    *z = +q * s;
+    break;
+  case 5: /* front */
+    *x = +q * r;
+    *y = -q;
+    *z = +q * s;
+    break;
+  }
+}
+
+kernel void compute_X(const iint K, const iint *restrict EToL,
+                      const iint *restrict EToT, const iint *restrict EToX,
+                      const iint *restrict EToY, const iint *restrict EToZ,
+                      const iint *restrict TToV,
+                      const mfloat *restrict tree_vertices,
+                      const mfloat *restrict lglr, dfloat *restrict vgeo)
+{
+  for (iint eo = 0; eo < K; eo += p_KblkV; outer0)
+  {
+    //
+    // Load reference gauss-lobatto points s_r and the tree vertices
+    // s_tX into shared memory
+    //
+    shared mfloat s_r[p_Nq];
+    shared mfloat s_tX[p_KblkV][3][p_NCORNERS];
+
+#ifdef OCCA_MAX_THREADS
+    // occca allows one to launch kernels with more threads than there is
+    // exclusive memory.  So we put a check here when that happens.
+    if (occaInnerDim0 * occaInnerDim1 * occaInnerDim2 > OCCA_MAX_THREADS)
+    {
+      printf("Error OCCA_MAX_THREADS=%d exceeded (%d)\n", OCCA_MAX_THREADS,
+             occaInnerDim0 * occaInnerDim1 * occaInnerDim2);
+      exit(EXIT_FAILURE);
+    }
+#endif
+
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+    {
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+      {
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          const iint es = ke / p_Nqk;
+          const iint k = ke % p_Nqk;
+          const iint e = es + eo;
+
+          if (e < K)
+          {
+            const iint tree = EToT[e];
+
+            if (ke == 0 && j == 0)
+              s_r[i] = lglr[i];
+
+            if (i < 2 && j < 2 && k == 0)
+            {
+              iint id = i + j * 2;
+              iint vid = TToV[tree * p_NCORNERS + id];
+
+              s_tX[es][0][id] = tree_vertices[vid * p_NX + 0];
+              s_tX[es][1][id] = tree_vertices[vid * p_NX + 1];
+              s_tX[es][2][id] = tree_vertices[vid * p_NX + 2];
+
+              id += 4;
+#if p_DIM == 3
+              vid = TToV[tree * p_NCORNERS + id];
+              s_tX[es][0][id] = tree_vertices[vid * p_NX + 0];
+              s_tX[es][1][id] = tree_vertices[vid * p_NX + 1];
+              s_tX[es][2][id] = tree_vertices[vid * p_NX + 2];
+#endif
+            }
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    //
+    // Compute x,y,z using the coordinates of the trees
+    //
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+    {
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+      {
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          const iint es = ke / p_Nqk;
+          const iint k = ke % p_Nqk;
+          const iint e = es + eo;
+
+          if (e < K)
+          {
+            const iint tree = EToT[e];
+            const iint level = EToL[e];
+
+            /* Corner of the element we are updating */
+            const mfloat cr = (mfloat)EToX[e] / p_P4EST_ROOT_LEN;
+            const mfloat cs = (mfloat)EToY[e] / p_P4EST_ROOT_LEN;
+            const mfloat ct = (mfloat)EToZ[e] / p_P4EST_ROOT_LEN;
+
+            /*
+             * size of the element (in the tree reference space).
+             * plus one in denominator is because we need to scale r by 0.5
+             */
+            const mfloat h = ONE / (dfloat)(1 << (level + 1));
+
+            const mfloat r = cr + h * (s_r[i] + 1);
+            const mfloat s = cs + h * (s_r[j] + 1);
+            const mfloat t = ct + h * (s_r[k] + 1);
+
+#define p_tf_w0 ((1 - r) * (1 - s) * (1 - t))
+#define p_tf_w1 (r * (1 - s) * (1 - t))
+#define p_tf_w2 ((1 - r) * s * (1 - t))
+#define p_tf_w3 (r * s * (1 - t))
+#define p_tf_w4 ((1 - r) * (1 - s) * t)
+#define p_tf_w5 (r * (1 - s) * t)
+#define p_tf_w6 ((1 - r) * s * t)
+#define p_tf_w7 (r * s * t)
+
+            mfloat x = p_tf_w0 * s_tX[es][0][0] + p_tf_w1 * s_tX[es][0][1] +
+                       p_tf_w2 * s_tX[es][0][2] + p_tf_w3 * s_tX[es][0][3];
+            mfloat y = p_tf_w0 * s_tX[es][1][0] + p_tf_w1 * s_tX[es][1][1] +
+                       p_tf_w2 * s_tX[es][1][2] + p_tf_w3 * s_tX[es][1][3];
+            mfloat z = p_tf_w0 * s_tX[es][2][0] + p_tf_w1 * s_tX[es][2][1] +
+                       p_tf_w2 * s_tX[es][2][2] + p_tf_w3 * s_tX[es][2][3];
+
+#if p_DIM == 3
+            x += p_tf_w4 * s_tX[es][0][4] + p_tf_w5 * s_tX[es][0][5] +
+                 p_tf_w6 * s_tX[es][0][6] + p_tf_w7 * s_tX[es][0][7];
+            y += p_tf_w4 * s_tX[es][1][4] + p_tf_w5 * s_tX[es][1][5] +
+                 p_tf_w6 * s_tX[es][1][6] + p_tf_w7 * s_tX[es][1][7];
+            z += p_tf_w4 * s_tX[es][2][4] + p_tf_w5 * s_tX[es][2][5] +
+                 p_tf_w6 * s_tX[es][2][6] + p_tf_w7 * s_tX[es][2][7];
+#endif
+            conn_mapping(tree, x, y, z, &x, &y, &z);
+
+            const iint id = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NVGEO;
+
+            vgeo[id + p_VGEO_X * p_Np] = x;
+            vgeo[id + p_VGEO_Y * p_Np] = y;
+#if p_DIM == 3
+            vgeo[id + p_VGEO_Z * p_Np] = z;
+#endif
+          }
+        }
+      }
+    }
+  }
+}
+
+#if p_DIM == 2
+constant int p4est_corner_faces[4][2] = {{0, 2}, {1, 2}, {0, 3}, {1, 3}};
+
+constant int p4est_corner_face_corners[4][4] = {
+    {0, -1, 0, -1}, {-1, 0, 1, -1}, {1, -1, -1, 0}, {-1, 1, -1, 1}};
+#else
+constant int p8est_face_edges[6][4] = {{4, 6, 8, 10}, {5, 7, 9, 11},
+                                       {0, 2, 8, 9},  {1, 3, 10, 11},
+                                       {0, 1, 4, 5},  {2, 3, 6, 7}};
+constant int p8est_corner_faces[8][3] = {{0, 2, 4}, {1, 2, 4}, {0, 3, 4},
+                                         {1, 3, 4}, {0, 2, 5}, {1, 2, 5},
+                                         {0, 3, 5}, {1, 3, 5}};
+constant int p8est_corner_edges[8][3] = {{0, 4, 8},  {0, 5, 9}, {1, 4, 10},
+                                         {1, 5, 11}, {2, 6, 8}, {2, 7, 9},
+                                         {3, 6, 10}, {3, 7, 11}};
+constant int p8est_corner_face_corners[8][6] = {
+    {0, -1, 0, -1, 0, -1}, {-1, 0, 1, -1, 1, -1}, {1, -1, -1, 0, 2, -1},
+    {-1, 1, -1, 1, 3, -1}, {2, -1, 2, -1, -1, 0}, {-1, 2, 3, -1, -1, 1},
+    {3, -1, -1, 2, -1, 2}, {-1, 3, -1, 3, -1, 3}};
+#endif
+
+kernel void interp_X(const iint K, const iint *restrict EToC,
+                     const dfloat *restrict Pb, const dfloat *restrict Pt,
+                     dfloat *restrict vgeo)
+{
+  for (iint eo = 0; eo < K; eo += p_KblkS; outer0)
+  {
+    shared dfloat s_x[p_DIM][p_KblkS][p_Nqk][p_Nq];
+    shared dfloat s_y[p_DIM][p_KblkS][p_Nqk][p_Nq];
+#if p_DIM == 3
+    shared dfloat s_z[p_DIM][p_KblkS][p_Nqk][p_Nq];
+#endif
+    shared dfloat s_Pb[p_Nq][p_Nq];
+    shared dfloat s_Pt[p_Nq][p_Nq];
+
+    exclusive iint e;
+    exclusive int hi;
+
+    exclusive int hf[p_P4EST_FACES];
+#if p_DIM == 3
+    exclusive int hg[p_P4EST_EDGES];
+#endif
+
+    // Load shared memory
+    for (iint ei = 0; ei < p_KblkS; ++ei; inner2)
+    {
+      for (iint n = 0; n < p_Nqk; ++n; inner1)
+      {
+        for (iint m = 0; m < p_Nq; ++m; inner0)
+        {
+          e = eo + ei;
+
+          if (ei == 0)
+            for (iint j = n; j < p_Nq; j += p_Nqk)
+              for (iint i = m; i < p_Nq; i += p_Nq)
+              {
+                const iint id = j * p_Nq + i;
+                s_Pb[j][i] = Pb[id];
+                s_Pt[j][i] = Pt[id];
+              }
+
+          for (int f = 0; f < p_P4EST_FACES; ++f)
+            hf[f] = -1;
+
+#if p_DIM == 3
+          for (int g = 0; g < p_P4EST_EDGES; ++g)
+            hg[g] = -1;
+#endif
+
+          const iint fc = (e < K) ? EToC[e] : 0;
+
+          if (fc)
+          {
+
+// Decode the p4est face_code.  The code below is taken from
+// p{4,8}est_lnodes_decode.
+#if p_DIM == 2
+            const iint c = fc & 0x03;
+            iint work = fc >> 2;
+
+            for (int o = 0; o < 2; ++o)
+            {
+              const int f = p4est_corner_faces[c][o];
+
+              if (work & 0x01)
+                hf[f] = p4est_corner_face_corners[c][f];
+              else
+                hf[f] = -1;
+
+              work >>= 1;
+            }
+#else
+            const iint c = fc & 0x0007;
+            iint work = fc >> 3;
+            iint cwork = c;
+
+            for (int o = 0; o < 3; ++o)
+            {
+              if (work & 0x0001)
+              {
+                const int f = p8est_corner_faces[c][o];
+                hf[f] = p8est_corner_face_corners[c][f];
+                for (int p = 0; p < 4; ++p)
+                {
+                  const int g = p8est_face_edges[f][p];
+                  hg[g] = 4;
+                }
+              }
+              work >>= 1;
+            }
+
+            for (int o = 0; o < 3; ++o)
+            {
+              if (work & 0x0001)
+              {
+                const int g = p8est_corner_edges[c][o];
+                hg[g] = (hg[g] == -1) ? 0 : 2;
+                hg[g] += (int)(cwork & 0x0001);
+              }
+              cwork >>= 1;
+              work >>= 1;
+            }
+#endif
+          }
+        }
+      }
+    }
+
+    for (iint ei = 0; ei < p_KblkS; ++ei; inner2)
+      for (iint n = 0; n < p_Nqk; ++n; inner1)
+        for (iint m = 0; m < p_Nq; ++m; inner0)
+          hi = 0;
+
+    for (int f = 0; f < p_P4EST_FACES; ++f)
+      for (iint ei = 0; ei < p_KblkS; ++ei; inner2)
+        for (iint n = 0; n < p_Nqk; ++n; inner1)
+          for (iint m = 0; m < p_Nq; ++m; inner0)
+            if (hf[f] >= 0)
+            {
+              const iint l = fmask(m, n, f);
+              const iint id = l + e * p_Np * p_NVGEO;
+
+              s_x[hi][ei][n][m] = vgeo[id + p_VGEO_X * p_Np];
+              s_y[hi][ei][n][m] = vgeo[id + p_VGEO_Y * p_Np];
+#if p_DIM == 3
+              s_z[hi][ei][n][m] = vgeo[id + p_VGEO_Z * p_Np];
+#endif
+              ++hi;
+            }
+
+    barrier(localMemFence);
+
+    for (iint ei = 0; ei < p_KblkS; ++ei; inner2)
+      for (iint n = 0; n < p_Nqk; ++n; inner1)
+        for (iint m = 0; m < p_Nq; ++m; inner0)
+          hi = 0;
+
+    for (int f = 0; f < p_P4EST_FACES; ++f)
+      for (iint ei = 0; ei < p_KblkS; ++ei; inner2)
+        for (iint n = 0; n < p_Nqk; ++n; inner1)
+          for (iint m = 0; m < p_Nq; ++m; inner0)
+            if (hf[f] >= 0)
+            {
+              dfloat x = ZERO, y = ZERO, z = ZERO;
+
+#if p_DIM == 2
+              if (hf[f] == 0)
+              {
+                occaUnroll(p_Nq) for (iint p = 0; p < p_Nq; ++p)
+                {
+                  x += s_Pb[m][p] * s_x[hi][ei][0][p];
+                  y += s_Pb[m][p] * s_y[hi][ei][0][p];
+                }
+              }
+
+              if (hf[f] == 1)
+              {
+                occaUnroll(p_Nq) for (iint p = 0; p < p_Nq; ++p)
+                {
+                  x += s_Pt[m][p] * s_x[hi][ei][0][p];
+                  y += s_Pt[m][p] * s_y[hi][ei][0][p];
+                }
+              }
+#else
+              if (hf[f] == 0)
+                for (iint p = 0; p < p_Nq; ++p)
+                {
+                  occaUnroll(p_Nq) for (iint o = 0; o < p_Nq; ++o)
+                  {
+                    x += s_Pb[m][o] * s_Pb[n][p] * s_x[hi][ei][p][o];
+                    y += s_Pb[m][o] * s_Pb[n][p] * s_y[hi][ei][p][o];
+                    z += s_Pb[m][o] * s_Pb[n][p] * s_z[hi][ei][p][o];
+                  }
+                }
+
+              if (hf[f] == 1)
+                for (iint p = 0; p < p_Nq; ++p)
+                {
+                  occaUnroll(p_Nq) for (iint o = 0; o < p_Nq; ++o)
+                  {
+                    x += s_Pt[m][o] * s_Pb[n][p] * s_x[hi][ei][p][o];
+                    y += s_Pt[m][o] * s_Pb[n][p] * s_y[hi][ei][p][o];
+                    z += s_Pt[m][o] * s_Pb[n][p] * s_z[hi][ei][p][o];
+                  }
+                }
+
+              if (hf[f] == 2)
+                for (iint p = 0; p < p_Nq; ++p)
+                {
+                  occaUnroll(p_Nq) for (iint o = 0; o < p_Nq; ++o)
+                  {
+                    x += s_Pb[m][o] * s_Pt[n][p] * s_x[hi][ei][p][o];
+                    y += s_Pb[m][o] * s_Pt[n][p] * s_y[hi][ei][p][o];
+                    z += s_Pb[m][o] * s_Pt[n][p] * s_z[hi][ei][p][o];
+                  }
+                }
+
+              if (hf[f] == 3)
+                for (iint p = 0; p < p_Nq; ++p)
+                {
+                  occaUnroll(p_Nq) for (iint o = 0; o < p_Nq; ++o)
+                  {
+                    x += s_Pt[m][o] * s_Pt[n][p] * s_x[hi][ei][p][o];
+                    y += s_Pt[m][o] * s_Pt[n][p] * s_y[hi][ei][p][o];
+                    z += s_Pt[m][o] * s_Pt[n][p] * s_z[hi][ei][p][o];
+                  }
+                }
+#endif
+
+              const iint l = fmask(m, n, f);
+              const iint id = l + e * p_Np * p_NVGEO;
+
+              vgeo[id + p_VGEO_X * p_Np] = x;
+              vgeo[id + p_VGEO_Y * p_Np] = y;
+#if p_DIM == 3
+              vgeo[id + p_VGEO_Z * p_Np] = z;
+#endif
+
+              ++hi;
+            }
+
+#if p_DIM == 3
+    barrier(localMemFence);
+
+    for (iint ei = 0; ei < p_KblkS; ++ei; inner2)
+      for (iint n = 0; n < p_Nqk; ++n; inner1)
+        for (iint m = 0; m < p_Nq; ++m; inner0)
+          hi = 0;
+
+    for (int g = 0; g < p_P4EST_EDGES; ++g)
+      for (iint ei = 0; ei < p_KblkS; ++ei; inner2)
+        for (iint n = 0; n < p_Nqk; ++n; inner1)
+          for (iint m = 0; m < p_Nq; ++m; inner0)
+            if (n == 0 && (hg[g] == 0 || hg[g] == 1))
+            {
+              const iint l = gmask(m, g);
+              const iint id = l + e * p_Np * p_NVGEO;
+
+              s_x[hi][ei][n][m] = vgeo[id + p_VGEO_X * p_Np];
+              s_y[hi][ei][n][m] = vgeo[id + p_VGEO_Y * p_Np];
+              s_z[hi][ei][n][m] = vgeo[id + p_VGEO_Z * p_Np];
+
+              ++hi;
+            }
+
+    barrier(localMemFence);
+
+    for (iint ei = 0; ei < p_KblkS; ++ei; inner2)
+      for (iint n = 0; n < p_Nqk; ++n; inner1)
+        for (iint m = 0; m < p_Nq; ++m; inner0)
+          hi = 0;
+
+    for (int g = 0; g < p_P4EST_EDGES; ++g)
+      for (iint ei = 0; ei < p_KblkS; ++ei; inner2)
+        for (iint n = 0; n < p_Nqk; ++n; inner1)
+          for (iint m = 0; m < p_Nq; ++m; inner0)
+            if (n == 0 && (hg[g] == 0 || hg[g] == 1))
+            {
+              dfloat x = ZERO, y = ZERO, z = ZERO;
+
+              if (hg[g] == 0)
+              {
+                occaUnroll(p_Nq) for (iint p = 0; p < p_Nq; ++p)
+                {
+                  x += s_Pb[m][p] * s_x[hi][ei][n][p];
+                  y += s_Pb[m][p] * s_y[hi][ei][n][p];
+                  z += s_Pb[m][p] * s_z[hi][ei][n][p];
+                }
+              }
+
+              if (hg[g] == 1)
+              {
+                occaUnroll(p_Nq) for (iint p = 0; p < p_Nq; ++p)
+                {
+                  x += s_Pt[m][p] * s_x[hi][ei][n][p];
+                  y += s_Pt[m][p] * s_y[hi][ei][n][p];
+                  z += s_Pt[m][p] * s_z[hi][ei][n][p];
+                }
+              }
+
+              const iint l = gmask(m, g);
+              const iint id = l + e * p_Np * p_NVGEO;
+
+              vgeo[id + p_VGEO_X * p_Np] = x;
+              vgeo[id + p_VGEO_Y * p_Np] = y;
+              vgeo[id + p_VGEO_Z * p_Np] = z;
+
+              ++hi;
+            }
+#endif
+  }
+}
+
+kernel void coarse_X(const iint Ncontinuous, const iint *restrict starts,
+                     const iint *restrict indices, const iint *restrict EToP,
+                     const dfloat px, const dfloat py, const dfloat pz,
+                     dfloat *restrict vgeo)
+{
+  for (iint co = 0; co < Ncontinuous; co += p_Nt; outer0)
+  {
+    for (iint ci = 0; ci < p_Nt; ++ci; inner0)
+    {
+      const iint n = co + ci;
+      if (n < Ncontinuous)
+      {
+        const iint start = starts[n];
+        const iint end = starts[n + 1];
+
+        dfloat gx[3] = {ZERO, ZERO, ZERO};
+
+#ifdef p_PERIODIC_BRICK
+        iint p = 0;
+
+        for (iint m = start; m < end; ++m)
+        {
+          const iint ind = indices[m];
+          const iint e = ind / p_Np;
+          const iint l = ind % p_Np;
+          const iint i = l % p_Nq;
+          const iint j = (l / p_Nq) % p_Nq;
+          const iint k = (l / (p_Nq * p_Nq));
+          const iint ep = EToP[e];
+
+          if ((ep & 1) && (i + 1 == p_Nq))
+            p |= 1;
+          if ((ep & 2) && (j + 1 == p_Nq))
+            p |= 2;
+          if ((ep & 4) && (k + 1 == p_Nq))
+            p |= 4;
+        }
+#endif
+
+        {
+          const iint m = start;
+          const iint ind = indices[m];
+
+          const iint e = ind / p_Np;
+          const iint l = ind % p_Np;
+          const iint id = l + e * p_Np * p_NVGEO;
+
+          dfloat x = vgeo[id + p_VGEO_X * p_Np];
+          dfloat y = vgeo[id + p_VGEO_Y * p_Np];
+#if p_DIM == 3
+          dfloat z = vgeo[id + p_VGEO_Z * p_Np];
+#else
+          dfloat z = ZERO;
+#endif
+
+#ifdef p_PERIODIC_BRICK
+          if (p)
+          {
+            const iint i = l % p_Nq;
+            const iint j = (l / p_Nq) % p_Nq;
+            const iint k = (l / (p_Nq * p_Nq));
+
+            if ((p & 1) && (i + 1 == p_Nq))
+              x -= px;
+            if ((p & 2) && (j + 1 == p_Nq))
+              y -= py;
+            if ((p & 4) && (k + 1 == p_Nq))
+              z -= pz;
+          }
+#endif
+
+          gx[0] = x;
+          gx[1] = y;
+          gx[2] = z;
+        }
+
+        for (iint m = start + 1; m < end; ++m)
+        {
+          const iint ind = indices[m];
+
+          const iint e = ind / p_Np;
+          const iint l = ind % p_Np;
+          const iint id = l + e * p_Np * p_NVGEO;
+
+          dfloat x = gx[0];
+          dfloat y = gx[1];
+          dfloat z = gx[2];
+
+#ifdef p_PERIODIC_BRICK
+          if (p)
+          {
+            const iint i = l % p_Nq;
+            const iint j = (l / p_Nq) % p_Nq;
+            const iint k = (l / (p_Nq * p_Nq));
+
+            if ((p & 1) && (i + 1 == p_Nq))
+              x += px;
+            if ((p & 2) && (j + 1 == p_Nq))
+              y += py;
+            if ((p & 4) && (k + 1 == p_Nq))
+              z += pz;
+          }
+#endif
+
+          vgeo[id + p_VGEO_X * p_Np] = x;
+          vgeo[id + p_VGEO_Y * p_Np] = y;
+#if p_DIM == 3
+          vgeo[id + p_VGEO_Z * p_Np] = z;
+#endif
+        }
+      }
+    }
+  }
+}
+
+#define cubeThreads                                                            \
+  for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)                        \
+    for (iint j = 0; j < p_Nq; ++j; inner1)                                    \
+      for (iint i = 0; i < p_Nq; ++i; inner0)
+
+#define computeGradientR(q, qr, qs, qt)                                        \
+  barrier(localMemFence);                                                      \
+  cubeThreads { s_q[es][k][j][i] = q; }                                        \
+  barrier(localMemFence);                                                      \
+  cubeThreads                                                                  \
+  {                                                                            \
+    if (e < K)                                                                 \
+    {                                                                          \
+      qr = 0, qs = 0, qt = 0;                                                  \
+      occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n) qr +=                   \
+          s_D[i][n] * s_q[es][k][j][n];                                        \
+      occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n) qs +=                   \
+          s_D[j][n] * s_q[es][k][n][i];                                        \
+      occaUnroll(p_Nqk) for (iint n = 0; n < p_Nqk; ++n) qt +=                 \
+          s_D[k][n] * s_q[es][n][j][i];                                        \
+    }                                                                          \
+  }
+
+#define computeCurlR(v1, v2, v3, curlr, curls, curlt)                          \
+  cubeThreads                                                                  \
+  {                                                                            \
+    if (e < K)                                                                 \
+    {                                                                          \
+      curlr = 0, curls = 0, curlt = 0;                                         \
+    }                                                                          \
+  }                                                                            \
+  barrier(localMemFence);                                                      \
+  cubeThreads { s_q[es][k][j][i] = (v1); }                                     \
+  barrier(localMemFence);                                                      \
+  cubeThreads                                                                  \
+  {                                                                            \
+    if (e < K)                                                                 \
+    {                                                                          \
+      occaUnroll(p_Nqk) for (iint n = 0; n < p_Nqk; ++n) curls +=              \
+          s_D[k][n] * s_q[es][n][j][i];                                        \
+      occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n) curlt -=                \
+          s_D[j][n] * s_q[es][k][n][i];                                        \
+    }                                                                          \
+  }                                                                            \
+  barrier(localMemFence);                                                      \
+  cubeThreads { s_q[es][k][j][i] = (v2); }                                     \
+  barrier(localMemFence);                                                      \
+  cubeThreads                                                                  \
+  {                                                                            \
+    if (e < K)                                                                 \
+    {                                                                          \
+      occaUnroll(p_Nqk) for (iint n = 0; n < p_Nqk; ++n) curlr -=              \
+          s_D[k][n] * s_q[es][n][j][i];                                        \
+      occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n) curlt +=                \
+          s_D[i][n] * s_q[es][k][j][n];                                        \
+    }                                                                          \
+  }                                                                            \
+  barrier(localMemFence);                                                      \
+  cubeThreads { s_q[es][k][j][i] = (v3); }                                     \
+  barrier(localMemFence);                                                      \
+  cubeThreads                                                                  \
+  {                                                                            \
+    if (e < K)                                                                 \
+    {                                                                          \
+      occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n) curlr +=                \
+          s_D[j][n] * s_q[es][k][n][i];                                        \
+      occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n) curls -=                \
+          s_D[i][n] * s_q[es][k][j][n];                                        \
+    }                                                                          \
+  }
+
+kernel void compute_geo(const iint K, const dfloat *restrict D,
+                        dfloat *restrict vgeo, dfloat *restrict sgeo)
+{
+
+  for (iint eo = 0; eo < K; eo += p_KblkV; outer0)
+  {
+    shared dfloat s_q[p_KblkV][p_Nqk][p_Nq][p_Nq];
+    shared dfloat s_D[p_Nq][p_Nq];
+
+    exclusive dfloat x, y, z;
+    exclusive dfloat xr, xs, xt, yr, ys, yt, zr, zs, zt;
+    exclusive dfloat rx, sx, tx, ry, sy, ty, rz, sz, tz;
+    exclusive dfloat J;
+    exclusive iint e, es, k;
+
+    cubeThreads
+    {
+      es = ke / p_Nqk;
+      k = ke % p_Nqk;
+      e = es + eo;
+      if (e < K)
+      {
+        const iint id = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NVGEO;
+
+        x = vgeo[id + p_VGEO_X * p_Np];
+        y = vgeo[id + p_VGEO_Y * p_Np];
+#if p_DIM == 3
+        z = vgeo[id + p_VGEO_Z * p_Np];
+#else
+        z = 0;
+#endif
+
+        if (ke == 0)
+          s_D[j][i] = D[j * p_Nq + i];
+      }
+    }
+
+    computeGradientR(x, xr, xs, xt);
+    computeGradientR(y, yr, ys, yt);
+
+#if p_DIM == 3
+    computeGradientR(z, zr, zs, zt);
+#else
+    cubeThreads
+    {
+      if (e < K)
+      {
+        xt = ZERO;
+        yt = ZERO;
+        zr = ZERO;
+        zs = ZERO;
+        zt = ONE;
+      }
+    }
+#endif
+
+    cubeThreads
+    {
+      if (e < K)
+      {
+        J = xr * (ys * zt - zs * yt) - yr * (xs * zt - zs * xt) +
+            zr * (xs * yt - ys * xt);
+      }
+    }
+
+#if p_DIM == 2
+    cubeThreads
+    {
+      if (e < K)
+      {
+        rx = ys / J;
+        sx = -yr / J;
+        ry = -xs / J;
+        sy = xr / J;
+
+        rz = ZERO;
+        sz = ZERO;
+        tx = ZERO;
+        ty = ZERO;
+        tz = ONE;
+      }
+    }
+#else
+    // Here we are using the Invariant Curl Form of
+    // Kopriva found in equation (37) of
+    // DOI: 10.1007/s10915-005-9070-8
+
+    // Jr_x = 1/2 ((yz_t - zy_t)_s - (yz_s-zy_s)_t)
+    // Js_x = 1/2 ((yz_r - zy_r)_t - (yz_t-zy_t)_r)
+    // Jt_x = 1/2 ((yz_s - zy_s)_r - (yz_r-zy_r)_s)
+    computeCurlR(y * zr - z * yr, y * zs - z * ys, y * zt - z * yt, rx, sx, tx);
+
+    // Jr_y = 1/2 ((zx_t - xz_t)_s - (zx_s-xz_s)_t)
+    // Js_y = 1/2 ((zx_r - xz_r)_t - (zx_t-xz_t)_r)
+    // Jt_y = 1/2 ((zx_s - xz_s)_r - (zx_r-xz_r)_s)
+    computeCurlR(z * xr - x * zr, z * xs - x * zs, z * xt - x * zt, ry, sy, ty);
+
+    // Jr_z = 1/2 ((xy_t - yx_t)_s - (xy_s-yx_s)_t)
+    // Js_z = 1/2 ((xy_r - yx_r)_t - (xy_t-yx_t)_r)
+    // Jt_z = 1/2 ((xy_s - yx_s)_r - (xy_r-yx_r)_s)
+    computeCurlR(x * yr - y * xr, x * ys - y * xs, x * yt - y * xt, rz, sz, tz);
+
+    cubeThreads
+    {
+      if (e < K)
+      {
+        rx /= TWO * J, sx /= TWO * J, tx /= TWO * J;
+        ry /= TWO * J, sy /= TWO * J, ty /= TWO * J;
+        rz /= TWO * J, sz /= TWO * J, tz /= TWO * J;
+      }
+    }
+#endif
+
+    /*
+     * compute surface geometric factors
+     */
+    cubeThreads
+    {
+      if (e < K)
+      {
+        /*
+         * TODO: Check that flipping J sign here (if necessary) works for 3-D
+         *       as it does for 2-D
+         */
+        J = ABS(J);
+
+        dfloat nx, ny, nz, sJ;
+        iint f;
+        /* mapping Tim's face numbers to bfam
+         * tim bfam
+         * 4   0
+         * 2   1
+         * 1   2
+         * 3   3
+         * 0   4
+         * 5   5
+         */
+        if (i == 0)
+        {
+          f = 0;
+          nx = -rx;
+          ny = -ry;
+          nz = -rz;
+        }
+        if (i == p_Nq - 1)
+        {
+          f = 1;
+          nx = rx;
+          ny = ry;
+          nz = rz;
+        }
+        if (i == 0 || i == p_Nq - 1)
+        {
+#if p_DIM == 2
+          sJ = occaHypot(nx, ny);
+#else
+          sJ = occaSqrt(nx * nx + ny * ny + nz * nz);
+#endif
+          nx = nx / sJ;
+          ny = ny / sJ;
+          nz = nz / sJ;
+          sJ *= J;
+
+          const iint id =
+              j + k * p_Nq + f * p_Nfp + e * p_Nfaces * p_Nfp * p_NSGEO;
+
+          sgeo[id + p_SGEO_NX * p_Nfaces * p_Nfp] = nx;
+          sgeo[id + p_SGEO_NY * p_Nfaces * p_Nfp] = ny;
+#if p_DIM == 3
+          sgeo[id + p_SGEO_NZ * p_Nfaces * p_Nfp] = nz;
+#endif
+          sgeo[id + p_SGEO_SJ * p_Nfaces * p_Nfp] = sJ;
+        }
+
+        if (j == 0)
+        {
+          f = 2;
+          nx = -sx;
+          ny = -sy;
+          nz = -sz;
+        }
+        if (j == p_Nq - 1)
+        {
+          f = 3;
+          nx = sx;
+          ny = sy;
+          nz = sz;
+        }
+        if (j == 0 || j == p_Nq - 1)
+        {
+#if p_DIM == 2
+          sJ = occaHypot(nx, ny);
+#else
+          sJ = occaSqrt(nx * nx + ny * ny + nz * nz);
+#endif
+          nx = nx / sJ;
+          ny = ny / sJ;
+          nz = nz / sJ;
+          sJ *= J;
+
+          const iint id =
+              i + k * p_Nq + f * p_Nfp + e * p_Nfaces * p_Nfp * p_NSGEO;
+
+          sgeo[id + p_SGEO_NX * p_Nfaces * p_Nfp] = nx;
+          sgeo[id + p_SGEO_NY * p_Nfaces * p_Nfp] = ny;
+#if p_DIM == 3
+          sgeo[id + p_SGEO_NZ * p_Nfaces * p_Nfp] = nz;
+#endif
+          sgeo[id + p_SGEO_SJ * p_Nfaces * p_Nfp] = sJ;
+        }
+
+#if p_DIM == 3
+        if (k == 0)
+        {
+          f = 4;
+          nx = -tx;
+          ny = -ty;
+          nz = -tz;
+        }
+        if (k == p_Nq - 1)
+        {
+          f = 5;
+          nx = tx;
+          ny = ty;
+          nz = tz;
+        }
+        if (k == 0 || k == p_Nq - 1)
+        {
+          sJ = occaSqrt(nx * nx + ny * ny + nz * nz);
+          nx = nx / sJ;
+          ny = ny / sJ;
+          nz = nz / sJ;
+          sJ *= J;
+
+          const iint id =
+              i + j * p_Nq + f * p_Nfp + e * p_Nfaces * p_Nfp * p_NSGEO;
+
+          sgeo[id + p_SGEO_NX * p_Nfaces * p_Nfp] = nx;
+          sgeo[id + p_SGEO_NY * p_Nfaces * p_Nfp] = ny;
+          sgeo[id + p_SGEO_NZ * p_Nfaces * p_Nfp] = nz;
+          sgeo[id + p_SGEO_SJ * p_Nfaces * p_Nfp] = sJ;
+        }
+#endif
+      }
+    }
+
+    cubeThreads
+    {
+      if (e < K)
+      {
+        const iint id = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NVGEO;
+
+        vgeo[id + p_VGEO_RX * p_Np] = rx;
+        vgeo[id + p_VGEO_SX * p_Np] = sx;
+        vgeo[id + p_VGEO_RY * p_Np] = ry;
+        vgeo[id + p_VGEO_SY * p_Np] = sy;
+        vgeo[id + p_VGEO_J * p_Np] = J;
+#if p_DIM == 3
+        vgeo[id + p_VGEO_TX * p_Np] = tx;
+        vgeo[id + p_VGEO_TY * p_Np] = ty;
+        vgeo[id + p_VGEO_RZ * p_Np] = rz;
+        vgeo[id + p_VGEO_SZ * p_Np] = sz;
+        vgeo[id + p_VGEO_TZ * p_Np] = tz;
+#endif
+      }
+    }
+  }
+}
+// }}}
+
+// {{{ Initialization
+void ics_zero(const iint tree, const iint e, const iint n, const dfloat t,
+              const dfloat x, const dfloat y, const dfloat z,
+              dfloat q[p_NFIELDS])
+{
+  occaUnroll(p_NFIELDS) for (iint fld = 0; fld < p_NFIELDS; ++fld) q[fld] = 0;
+}
+
+kernel void compute_ics(const iint K, const iint *restrict EToT,
+                        const dfloat *restrict vgeo, const dfloat t,
+                        dfloat *restrict q)
+{
+  for (iint eo = 0; eo < K; eo += p_KblkV; outer0)
+  {
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+    {
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+      {
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          const iint es = ke / p_Nqk;
+          const iint k = ke % p_Nqk;
+          const iint e = es + eo;
+
+          if (e < K)
+          {
+            const iint tree = EToT[e];
+
+            const iint idgeo = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NVGEO;
+            const iint idq = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NFIELDS;
+
+            const dfloat x = vgeo[idgeo + p_VGEO_X * p_Np];
+            const dfloat y = vgeo[idgeo + p_VGEO_Y * p_Np];
+#if p_DIM == 3
+            const dfloat z = vgeo[idgeo + p_VGEO_Z * p_Np];
+#else
+            const dfloat z = 0;
+#endif
+            dfloat qics[p_NFIELDS];
+
+            const iint n = i + p_Nq * j + p_Nq2 * k;
+            app_ics(tree, e, n, t, x, y, z, qics);
+
+            occaUnroll(p_NFIELDS) for (iint fld = 0; fld < p_NFIELDS; ++fld)
+                q[idq + fld * p_Np] = qics[fld];
+          }
+        }
+      }
+    }
+  }
+}
+
+kernel void compute_dt(const iint K, const dfloat *restrict vgeo,
+                       const dfloat *restrict q, dfloat *restrict dt)
+{
+  for (iint eo = 0; eo < K; eo += p_KblkV; outer0)
+  {
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+    {
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+      {
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          const iint es = ke / p_Nqk;
+          const iint k = ke % p_Nqk;
+          const iint e = es + eo;
+
+          if (e < K)
+          {
+            const iint idgeo = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NVGEO;
+            const iint idq = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NFIELDS;
+            const iint iddt = i + p_Nq * j + p_Nq2 * k + e * p_Np;
+
+            const dfloat rx = vgeo[idgeo + p_VGEO_RX * p_Np];
+            const dfloat ry = vgeo[idgeo + p_VGEO_RY * p_Np];
+            const dfloat sx = vgeo[idgeo + p_VGEO_SX * p_Np];
+            const dfloat sy = vgeo[idgeo + p_VGEO_SY * p_Np];
+#if p_DIM == 3
+            const dfloat rz = vgeo[idgeo + p_VGEO_RZ * p_Np];
+            const dfloat sz = vgeo[idgeo + p_VGEO_SZ * p_Np];
+
+            const dfloat tx = vgeo[idgeo + p_VGEO_TX * p_Np];
+            const dfloat ty = vgeo[idgeo + p_VGEO_TY * p_Np];
+            const dfloat tz = vgeo[idgeo + p_VGEO_TZ * p_Np];
+#endif
+
+            const dfloat ux = q[idq + p_FIELD_UX * p_Np];
+            const dfloat uy = q[idq + p_FIELD_UY * p_Np];
+            const dfloat uz = q[idq + p_FIELD_UZ * p_Np];
+
+#if p_DIM == 2
+            const dfloat dtr = ONE / occaHypot(ux * rx, uy * ry);
+            const dfloat dts = ONE / occaHypot(ux * sx, uy * sy);
+            const dfloat ldt = MIN(dtr, dts);
+#else
+            const dfloat urur =
+                ux * rx * ux * rx + uy * ry * uy * ry + uz * rz * uz * rz;
+            const dfloat usus =
+                ux * sx * ux * sx + uy * sy * uy * sy + uz * sz * uz * sz;
+            const dfloat utut =
+                ux * tx * ux * tx + uy * ty * uy * ty + uz * tz * uz * tz;
+            const dfloat dtr = ONE / occaSqrt(urur);
+            const dfloat dts = ONE / occaSqrt(usus);
+            const dfloat dtt = ONE / occaSqrt(utut);
+            const dfloat ldt = MIN(dtr, MIN(dts, dtt));
+#endif
+            dt[iddt] = ldt / ((p_Nq - 1) * (p_Nq - 1));
+          }
+        }
+      }
+    }
+  }
+}
+
+kernel void zero_fields(const iint K, dfloat *restrict q)
+{
+  for (iint eo = 0; eo < K; eo += p_KblkV; outer0)
+  {
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+    {
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+      {
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          const iint es = ke / p_Nqk;
+          const iint k = ke % p_Nqk;
+          const iint e = es + eo;
+
+          if (e < K)
+          {
+            const iint idq = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NFIELDS;
+
+            occaUnroll(p_NFIELDS) for (iint fld = 0; fld < p_NFIELDS; ++fld)
+                q[idq + fld * p_Np] = ZERO;
+          }
+        }
+      }
+    }
+  }
+}
+
+void bcs_zero(const iint bc, const iint tree, const iint e, const iint n,
+              const dfloat t, const dfloat x, const dfloat y, const dfloat z,
+              const dfloat qM[p_NFIELDS], dfloat qP[p_NFIELDS])
+{
+  occaUnroll(p_NFIELDS) for (iint fld = 0; fld < p_NFIELDS; ++fld) qP[fld] =
+      ZERO;
+}
+
+// }}}
+
+// {{{ Energy and Error
+kernel void compute_energy(const iint K, const dfloat *restrict w,
+                           const dfloat *restrict vgeo,
+                           const dfloat *restrict q, dfloat *restrict energy)
+{
+  for (iint eo = 0; eo < K; eo += p_KblkV; outer0)
+  {
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+    {
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+      {
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          const iint es = ke / p_Nqk;
+          const iint k = ke % p_Nqk;
+          const iint e = es + eo;
+
+          if (e < K)
+          {
+            const iint idgeo = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NVGEO;
+            const iint idq = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NFIELDS;
+            const iint iden = i + p_Nq * j + p_Nq2 * k + e * p_Np;
+
+            const dfloat J = vgeo[idgeo + p_VGEO_J * p_Np];
+
+#if p_DIM == 3
+            const dfloat wijk = w[i] * w[j] * w[k];
+#else
+            const dfloat wijk = w[i] * w[j];
+#endif
+
+            const dfloat th = q[idq + p_FIELD_THETA * p_Np];
+
+            energy[iden] = wijk * J * th * th;
+          }
+        }
+      }
+    }
+  }
+}
+
+kernel void compute_error(const iint K, const iint *restrict EToT,
+                          const dfloat *restrict w, const dfloat *restrict vgeo,
+                          const dfloat t, const dfloat *restrict q,
+                          dfloat *restrict error)
+{
+  for (iint eo = 0; eo < K; eo += p_KblkV; outer0)
+  {
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+    {
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+      {
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          const iint es = ke / p_Nqk;
+          const iint k = ke % p_Nqk;
+          const iint e = es + eo;
+
+          if (e < K)
+          {
+            const iint tree = EToT[e];
+
+            const iint idgeo = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NVGEO;
+            const iint idq = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NFIELDS;
+            const iint iderr = i + p_Nq * j + p_Nq2 * k + e * p_Np;
+
+            const dfloat x = vgeo[idgeo + p_VGEO_X * p_Np];
+            const dfloat y = vgeo[idgeo + p_VGEO_Y * p_Np];
+#if p_DIM == 3
+            const dfloat z = vgeo[idgeo + p_VGEO_Z * p_Np];
+#else
+            const dfloat z = 0;
+#endif
+            const dfloat J = vgeo[idgeo + p_VGEO_J * p_Np];
+
+#if p_DIM == 3
+            const dfloat wijk = w[i] * w[j] * w[k];
+#else
+            const dfloat wijk = w[i] * w[j];
+#endif
+
+            dfloat qa[p_NFIELDS];
+            dfloat qe[p_NFIELDS];
+
+            occaUnroll(p_NFIELDS) for (iint fld = 0; fld < p_NFIELDS; ++fld)
+                qa[fld] = q[idq + fld * p_Np];
+
+            const iint n = i + p_Nq * j + p_Nq2 * k;
+            app_exact(tree, e, n, t, x, y, z, qe);
+
+            const dfloat thdiff = qe[p_FIELD_THETA] - qa[p_FIELD_THETA];
+            error[iderr] = wijk * J * thdiff * thdiff;
+          }
+        }
+      }
+    }
+  }
+}
+// }}}
+
+// {{{ Parallel Communication
+kernel void get_mirror_fields(const iint Kmirror, const iint *MToE,
+                              const dfloat *restrict q,
+                              dfloat *restrict q_mirror)
+{
+  for (iint eo = 0; eo < Kmirror; eo += p_KblkV; outer0)
+  {
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+    {
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+      {
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          const iint es = ke / p_Nqk;
+          const iint k = ke % p_Nqk;
+          const iint em = es + eo;
+
+          if (em < Kmirror)
+          {
+            const iint e = MToE[em];
+            const iint idq = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NFIELDS;
+            const iint idqm = i + p_Nq * j + p_Nq2 * k + em * p_Np * p_NFIELDS;
+
+            occaUnroll(p_NFIELDS) for (iint fld = 0; fld < p_NFIELDS; ++fld)
+                q_mirror[idqm + fld * p_Np] = q[idq + fld * p_Np];
+          }
+        }
+      }
+    }
+  }
+}
+
+kernel void set_ghost_fields(const iint Kghost, const iint *GToE,
+                             const dfloat *restrict q_ghost, dfloat *restrict q)
+{
+  for (iint eo = 0; eo < Kghost; eo += p_KblkV; outer0)
+  {
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+    {
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+      {
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          const iint es = ke / p_Nqk;
+          const iint k = ke % p_Nqk;
+          const iint eg = es + eo;
+
+          if (eg < Kghost)
+          {
+            const iint e = GToE[eg];
+            const iint idq = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NFIELDS;
+            const iint idqg = i + p_Nq * j + p_Nq2 * k + eg * p_Np * p_NFIELDS;
+
+            occaUnroll(p_NFIELDS) for (iint fld = 0; fld < p_NFIELDS; ++fld)
+                q[idq + fld * p_Np] = q_ghost[idqg + fld * p_Np];
+          }
+        }
+      }
+    }
+  }
+}
+// }}}
+
+// {{{ Adaptivity
+
+#if p_DIM == 2
+#define computeCoarsenPiece(FIELD, s_field, fieldc, c, s_P0, s_P1)             \
+  {                                                                            \
+    barrier(localMemFence);                                                    \
+    cubeThreads                                                                \
+    {                                                                          \
+      if (oute < K && coarsen)                                                 \
+        s_inq[es][k][j][i] = inq[idinq + fld * p_Np + c * p_Np * p_NFIELDS];   \
+    }                                                                          \
+    barrier(localMemFence);                                                    \
+    cubeThreads                                                                \
+    {                                                                          \
+      if (oute < K && coarsen)                                                 \
+        for (iint p = 0; p < p_Nq; ++p)                                        \
+        {                                                                      \
+          occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)                     \
+          {                                                                    \
+            fieldc += s_P0[i][n] * s_P1[j][p] * s_field[es][0][p][n];          \
+          }                                                                    \
+        }                                                                      \
+    }                                                                          \
+  }
+
+#else
+
+#define computeCoarsenPiece(FIELD, s_field, fieldc, c, s_P0, s_P1, s_P2)       \
+  {                                                                            \
+    barrier(localMemFence);                                                    \
+    cubeThreads                                                                \
+    {                                                                          \
+      if (oute < K && coarsen)                                                 \
+        s_inq[es][k][j][i] = inq[idinq + fld * p_Np + c * p_Np * p_NFIELDS];   \
+    }                                                                          \
+    barrier(localMemFence);                                                    \
+    cubeThreads                                                                \
+    {                                                                          \
+      if (oute < K && coarsen)                                                 \
+        for (iint r = 0; r < p_Nq; ++r)                                        \
+          for (iint p = 0; p < p_Nq; ++p)                                      \
+          {                                                                    \
+            occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)                   \
+            {                                                                  \
+              fieldc +=                                                        \
+                  s_P0[i][n] * s_P1[j][p] * s_P2[k][r] * s_field[es][r][p][n]; \
+            }                                                                  \
+          }                                                                    \
+    }                                                                          \
+  }
+
+#endif
+
+kernel void coarsen_fields(const iint K, const iint keep_start,
+                           const iint keep_end, const iint *restrict EToOff,
+                           const dfloat *restrict Pb, const dfloat *restrict Pt,
+                           const dfloat *restrict inq,
+                           dfloat *restrict outq_remote,
+                           dfloat *restrict outq_local)
+{
+  for (iint eo = 0; eo < K; eo += p_KblkV; outer0)
+  {
+    shared dfloat s_inq[p_KblkV][p_Nqk][p_Nq][p_Nq];
+    shared dfloat s_Pb[p_Nq][p_Nq];
+    shared dfloat s_Pt[p_Nq][p_Nq];
+
+    exclusive dfloat outfld[p_NFIELDS];
+    exclusive iint oute, es, k, ine0, ine1, keep, coarsen, idoutq, idinq;
+
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          es = ke / p_Nqk;
+          k = ke % p_Nqk;
+          oute = es + eo;
+
+          if (oute < K)
+          {
+            ine0 = EToOff[oute];
+            ine1 = EToOff[oute + 1];
+
+            coarsen = (ine1 - ine0 > 1) ? 1 : 0;
+            keep = (oute >= keep_start && oute <= keep_end) ? 1 : 0;
+            if (keep)
+              oute -= keep_start;
+            else if (ine0 > keep_end)
+              oute -= keep_end - keep_start + 1;
+
+            idinq = i + j * p_Nq + k * p_Nq2 + ine0 * p_Np * p_NFIELDS;
+            idoutq = i + j * p_Nq + k * p_Nq2 + oute * p_Np * p_NFIELDS;
+
+            if (ke == 0)
+            {
+              s_Pb[j][i] = Pb[j * p_Nq + i];
+              s_Pt[j][i] = Pt[j * p_Nq + i];
+            }
+          }
+        }
+
+    // Coarsen
+    for (iint fld = 0; fld < p_NFIELDS; ++fld)
+    {
+      cubeThreads { outfld[fld] = ZERO; }
+
+#if p_DIM == 2
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 0, s_Pb, s_Pb);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 1, s_Pt, s_Pb);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 2, s_Pb, s_Pt);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 3, s_Pt, s_Pt);
+#else
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 0, s_Pb, s_Pb, s_Pb);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 1, s_Pt, s_Pb, s_Pb);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 2, s_Pb, s_Pt, s_Pb);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 3, s_Pt, s_Pt, s_Pb);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 4, s_Pb, s_Pb, s_Pt);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 5, s_Pt, s_Pb, s_Pt);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 6, s_Pb, s_Pt, s_Pt);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 7, s_Pt, s_Pt, s_Pt);
+#endif
+    }
+
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          if (oute < K)
+          {
+            occaPointer dfloat *outq = (keep) ? outq_local : outq_remote;
+            if (coarsen)
+            {
+              occaUnroll(p_NFIELDS) for (iint fld = 0; fld < p_NFIELDS; ++fld)
+              {
+                outq[idoutq + fld * p_Np] = outfld[fld];
+              }
+            }
+            else
+            {
+              occaUnroll(p_NFIELDS) for (iint fld = 0; fld < p_NFIELDS; ++fld)
+              {
+                outq[idoutq + fld * p_Np] = inq[idinq + fld * p_Np];
+              }
+            }
+          }
+        }
+  }
+}
+
+#if p_DIM == 2
+#define computeRefinePiece(FIELD, s_field, fieldo, c, s_P0, s_P1)              \
+  {                                                                            \
+    barrier(localMemFence);                                                    \
+    cubeThreads                                                                \
+    {                                                                          \
+      if (ine < K && refine)                                                   \
+      {                                                                        \
+        dfloat fc = ZERO;                                                      \
+        for (iint p = 0; p < p_Nq; ++p)                                        \
+        {                                                                      \
+          occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)                     \
+          {                                                                    \
+            fc += s_P0[i][n] * s_P1[j][p] * s_field[es][0][p][n];              \
+          }                                                                    \
+        }                                                                      \
+                                                                               \
+        outq[idoutq + fld * p_Np + c * p_Np * p_NFIELDS] = fc;                 \
+      }                                                                        \
+    }                                                                          \
+  }
+
+#else
+
+#define computeRefinePiece(FIELD, s_field, fieldo, c, s_P0, s_P1, s_P2)        \
+  {                                                                            \
+    barrier(localMemFence);                                                    \
+    cubeThreads                                                                \
+    {                                                                          \
+      if (ine < K && refine)                                                   \
+      {                                                                        \
+        dfloat fc = ZERO;                                                      \
+        for (iint r = 0; r < p_Nq; ++r)                                        \
+          for (iint p = 0; p < p_Nq; ++p)                                      \
+          {                                                                    \
+            occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)                   \
+            {                                                                  \
+              fc +=                                                            \
+                  s_P0[i][n] * s_P1[j][p] * s_P2[k][r] * s_field[es][r][p][n]; \
+            }                                                                  \
+          }                                                                    \
+                                                                               \
+        outq[idoutq + fld * p_Np + c * p_Np * p_NFIELDS] = fc;                 \
+      }                                                                        \
+    }                                                                          \
+  }
+#endif
+
+kernel void
+refine_and_fill_fields(const iint K, const iint keep_start, const iint keep_end,
+                       const iint *restrict EToOff, const dfloat *restrict Ib,
+                       const dfloat *restrict It,
+                       const dfloat *restrict inq_remote,
+                       const dfloat *restrict inq_local, dfloat *restrict outq)
+{
+  for (iint eo = 0; eo < K; eo += p_KblkV; outer0)
+  {
+    shared dfloat s_inq[p_KblkV][p_Nqk][p_Nq][p_Nq];
+    shared dfloat s_Ib[p_Nq][p_Nq];
+    shared dfloat s_It[p_Nq][p_Nq];
+
+    exclusive dfloat outfld[p_NFIELDS];
+    exclusive iint ine, es, k, oute0, oute1, keep, refine, idoutq, idinq;
+
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          es = ke / p_Nqk;
+          k = ke % p_Nqk;
+          ine = es + eo;
+
+          if (ine < K)
+          {
+            oute0 = EToOff[ine];
+            oute1 = EToOff[ine + 1];
+
+            refine = (oute1 - oute0 > 1) ? 1 : 0;
+
+            keep = (ine >= keep_start && ine <= keep_end) ? 1 : 0;
+            if (keep)
+              ine -= keep_start;
+            else if (ine > keep_end)
+              ine -= keep_end - keep_start + 1;
+
+            idinq = i + j * p_Nq + k * p_Nq2 + ine * p_Np * p_NFIELDS;
+            idoutq = i + j * p_Nq + k * p_Nq2 + oute0 * p_Np * p_NFIELDS;
+
+            if (ke == 0)
+            {
+              s_Ib[j][i] = Ib[j * p_Nq + i];
+              s_It[j][i] = It[j * p_Nq + i];
+            }
+          }
+        }
+
+    // Refine
+    for (iint fld = 0; fld < p_NFIELDS; ++fld)
+    {
+      barrier(localMemFence);
+      for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+        for (iint j = 0; j < p_Nq; ++j; inner1)
+          for (iint i = 0; i < p_Nq; ++i; inner0)
+          {
+            if (ine < K && refine)
+            {
+              const occaPointer dfloat *inq = (keep) ? inq_local : inq_remote;
+              s_inq[es][k][j][i] = inq[idinq + fld * p_Np];
+            }
+          }
+
+#if p_DIM == 2
+      computeRefinePiece(fld, s_inq, outq, 0, s_Ib, s_Ib);
+      computeRefinePiece(fld, s_inq, outq, 1, s_It, s_Ib);
+      computeRefinePiece(fld, s_inq, outq, 2, s_Ib, s_It);
+      computeRefinePiece(fld, s_inq, outq, 3, s_It, s_It);
+#else
+      computeRefinePiece(fld, s_inq, outq, 0, s_Ib, s_Ib, s_Ib);
+      computeRefinePiece(fld, s_inq, outq, 1, s_It, s_Ib, s_Ib);
+      computeRefinePiece(fld, s_inq, outq, 2, s_Ib, s_It, s_Ib);
+      computeRefinePiece(fld, s_inq, outq, 3, s_It, s_It, s_Ib);
+      computeRefinePiece(fld, s_inq, outq, 4, s_Ib, s_Ib, s_It);
+      computeRefinePiece(fld, s_inq, outq, 5, s_It, s_Ib, s_It);
+      computeRefinePiece(fld, s_inq, outq, 6, s_Ib, s_It, s_It);
+      computeRefinePiece(fld, s_inq, outq, 7, s_It, s_It, s_It);
+#endif
+    }
+
+    // Copy
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          if (ine < K && !refine)
+          {
+            const occaPointer dfloat *inq = (keep) ? inq_local : inq_remote;
+            occaUnroll(p_NFIELDS) for (iint fld = 0; fld < p_NFIELDS; ++fld)
+            {
+              outq[idoutq + fld * p_Np] = inq[idinq + fld * p_Np];
+            }
+          }
+        }
+  }
+}
+// }}}
+
+// {{{ Advection
+kernel void
+volume_advection(const iint K, const iint *restrict KToE, const dfloat time,
+                 const dfloat *restrict D, const dfloat *restrict w,
+                 const iint *restrict EToT, const dfloat *restrict vgeo,
+                 const dfloat *restrict sgeo, const iint *restrict EToB,
+                 const iint *restrict EToE, const iint *restrict EToF,
+                 const iint *restrict EToO, const dfloat *restrict q,
+                 dfloat *restrict rhsq)
+{
+
+  for (iint eo = 0; eo < K; eo += p_KblkV; outer0)
+  {
+    shared dfloat s_Jur[p_KblkV][p_Nqk][p_Nq][p_Nq];
+    shared dfloat s_Jus[p_KblkV][p_Nqk][p_Nq][p_Nq];
+#if p_DIM == 3
+    shared dfloat s_Jut[p_KblkV][p_Nqk][p_Nq][p_Nq];
+#endif
+
+    shared dfloat s_th[p_KblkV][p_Nqk][p_Nq][p_Nq];
+
+    shared dfloat s_dth[p_KblkV][p_Nfaces][p_Nqk][p_Nq];
+    shared dfloat s_sD[p_Nq][p_Nq];
+    shared dfloat s_wD[p_Nq][p_Nq];
+    shared dfloat s_w[p_Nq];
+
+    exclusive dfloat J;
+    exclusive iint e, ek, es, k;
+
+    // fetch geofacs
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+    {
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+      {
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          es = ke / p_Nqk;
+          k = ke % p_Nqk;
+          ek = es + eo;
+          if (ek < K)
+          {
+            e = KToE[ek];
+
+            const iint idgeo = i + j * p_Nq + k * p_Nq2 + e * p_Np * p_NVGEO;
+            const dfloat drdx = vgeo[idgeo + p_VGEO_RX * p_Np];
+            const dfloat dsdx = vgeo[idgeo + p_VGEO_SX * p_Np];
+
+            const dfloat drdy = vgeo[idgeo + p_VGEO_RY * p_Np];
+            const dfloat dsdy = vgeo[idgeo + p_VGEO_SY * p_Np];
+#if p_DIM == 3
+            const dfloat dtdx = vgeo[idgeo + p_VGEO_TX * p_Np];
+            const dfloat dtdy = vgeo[idgeo + p_VGEO_TY * p_Np];
+            const dfloat drdz = vgeo[idgeo + p_VGEO_RZ * p_Np];
+            const dfloat dsdz = vgeo[idgeo + p_VGEO_SZ * p_Np];
+            const dfloat dtdz = vgeo[idgeo + p_VGEO_TZ * p_Np];
+#else
+            const dfloat dtdx = ZERO;
+            const dfloat dtdy = ZERO;
+            const dfloat drdz = ZERO;
+            const dfloat dsdz = ZERO;
+            const dfloat dtdz = ZERO;
+#endif
+            J = vgeo[idgeo + p_VGEO_J * p_Np];
+
+            if (ke == 0)
+            {
+              /* wD[i][n] = -0.5*D[n][i]*w[n] */
+              s_wD[j][i] = -HALF * D[i * p_Nq + j] * w[i];
+              /* sD[i][n] = +0.5*D[i][n] */
+              s_sD[j][i] = +HALF * D[j * p_Nq + i];
+            }
+            if (ke == 0 && j == 0)
+            {
+              s_w[i] = w[i];
+            }
+
+            // may need to change stride here
+            const iint idq = i + j * p_Nq + k * p_Nq2 + e * p_Np * p_NFIELDS;
+
+            const dfloat ux = q[idq + p_FIELD_UX * p_Np];
+            const dfloat uy = q[idq + p_FIELD_UY * p_Np];
+            const dfloat uz = q[idq + p_FIELD_UZ * p_Np];
+            const dfloat th = q[idq + p_FIELD_THETA * p_Np];
+
+            s_Jur[es][k][j][i] = J * (ux * drdx + uy * drdy + uz * drdz);
+            s_Jus[es][k][j][i] = J * (ux * dsdx + uy * dsdy + uz * dsdz);
+#if p_DIM == 3
+            s_Jut[es][k][j][i] = J * (ux * dtdx + uy * dtdy + uz * dtdz);
+#endif
+
+            s_th[es][k][j][i] = th;
+
+#if p_DIM == 3
+            iint f = k;
+#else
+            iint f = j;
+#endif
+            while (f < p_Nfaces)
+            {
+// face node storage index
+#if p_DIM == 3
+              const iint id = i + j * p_Nq + f * p_Nfp + e * p_Nfaces * p_Nfp;
+#else
+              const iint id = i + f * p_Nfp + e * p_Nfaces * p_Nfp;
+#endif
+              const iint bc = EToB[f + e * p_Nfaces];
+
+              dfloat thflux = ZERO;
+              if (bc != p_BC_SKIP)
+              {
+                const iint eM = e;
+                const iint eP = EToE[f + e * p_Nfaces];
+                const iint fP = EToF[f + e * p_Nfaces];
+                const iint oP = EToO[f + e * p_Nfaces];
+
+                iint iP, jP;
+                mapO(i, j, oP, &iP, &jP);
+
+                const iint nM = fmask(i, j, f);
+                const iint nP = fmask(iP, jP, fP);
+
+                const iint idqM = nM + eM * p_Np * p_NFIELDS;
+                const iint idqP = nP + eP * p_Np * p_NFIELDS;
+
+                const dfloat thM = q[idqM + p_FIELD_THETA * p_Np];
+                const dfloat uxM = q[idqM + p_FIELD_UX * p_Np];
+                const dfloat uyM = q[idqM + p_FIELD_UY * p_Np];
+#if p_DIM == 3
+                const dfloat uzM = q[idqM + p_FIELD_UZ * p_Np];
+#endif
+
+                dfloat thP, uxP, uyP;
+#if p_DIM == 3
+                dfloat uzP;
+#endif
+                if (bc == p_BC_NONE)
+                {
+                  thP = q[idqP + p_FIELD_THETA * p_Np];
+                  uxP = q[idqP + p_FIELD_UX * p_Np];
+                  uyP = q[idqP + p_FIELD_UY * p_Np];
+#if p_DIM == 3
+                  uzP = q[idqP + p_FIELD_UZ * p_Np];
+#endif
+                }
+                else
+                {
+                  const iint tree = EToT[e];
+
+                  const iint idgeoM = nM + eM * p_Np * p_NVGEO;
+
+                  const dfloat xM = vgeo[idgeoM + p_VGEO_X * p_Np];
+                  const dfloat yM = vgeo[idgeoM + p_VGEO_Y * p_Np];
+#if p_DIM == 3
+                  const dfloat zM = vgeo[idgeoM + p_VGEO_Z * p_Np];
+#else
+                  const dfloat zM = 0;
+#endif
+                  dfloat qM[p_NFIELDS];
+                  occaUnroll(p_NFIELDS) for (iint fld = 0; fld < p_NFIELDS;
+                                             ++fld) qM[fld] =
+                      q[idqM + fld * p_Np];
+
+                  dfloat qP[p_NFIELDS];
+
+                  app_bcs_advection(bc, tree, e, nM, time, xM, yM, zM, qM, qP);
+
+                  thP = qP[p_FIELD_THETA];
+                  uxP = qP[p_FIELD_UX];
+                  uyP = qP[p_FIELD_UY];
+#if p_DIM == 3
+                  uzP = qP[p_FIELD_UZ];
+#endif
+                }
+
+                // TODO Support jumps in velocity
+                const dfloat uxMP = HALF * (uxM + uxP);
+                const dfloat uyMP = HALF * (uyM + uyP);
+#if p_DIM == 3
+                const dfloat uzMP = HALF * (uzM + uzP);
+#else
+                const dfloat uzMP = ZERO;
+#endif
+
+#if p_DIM == 3
+                const iint idsgeo =
+                    i + j * p_Nq + f * p_Nfp + e * p_Nfaces * p_Nfp * p_NSGEO;
+#else
+                const iint idsgeo =
+                    i + f * p_Nfp + e * p_Nfaces * p_Nfp * p_NSGEO;
+#endif
+
+                const dfloat nx = sgeo[idsgeo + p_SGEO_NX * p_Nfaces * p_Nfp];
+                const dfloat ny = sgeo[idsgeo + p_SGEO_NY * p_Nfaces * p_Nfp];
+#if p_DIM == 3
+                const dfloat nz = sgeo[idsgeo + p_SGEO_NZ * p_Nfaces * p_Nfp];
+#else
+                const dfloat nz = ZERO;
+#endif
+                const dfloat sJ = sgeo[idsgeo + p_SGEO_SJ * p_Nfaces * p_Nfp];
+
+                const dfloat d = sJ * (nx * uxMP + ny * uyMP + nz * uzMP);
+
+                // TODO Double check this is upwinding
+                thflux = HALF * d * thP + HALF * occaFabs(d) * (thM - thP);
+              }
+
+#if p_DIM == 3
+              s_dth[es][f][j][i] = thflux;
+#else
+              s_dth[es][f][0][i] = thflux;
+#endif
+
+              f += p_Nq;
+            }
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    /* compute skew symmetric advection term */
+    cubeThreads
+    {
+      if (ek < K)
+      {
+        dfloat wthr = ZERO, wths = ZERO, wtht = ZERO;
+        dfloat sthr = ZERO, sths = ZERO, stht = ZERO;
+
+        dfloat vdotgradth = ZERO;
+        const dfloat Jinv = ONE / J;
+
+        const iint idq = i + j * p_Nq + k * p_Nq2 + e * p_Np * p_NFIELDS;
+        dfloat rhsth = rhsq[idq + p_FIELD_THETA * p_Np];
+
+        if (i == 0)
+          vdotgradth += s_dth[es][0][k][j] / s_w[i];
+        if (i == p_Nq - 1)
+          vdotgradth += s_dth[es][1][k][j] / s_w[i];
+        if (j == 0)
+          vdotgradth += s_dth[es][2][k][i] / s_w[j];
+        if (j == p_Nq - 1)
+          vdotgradth += s_dth[es][3][k][i] / s_w[j];
+#if p_DIM == 3
+        if (k == 0)
+          vdotgradth += s_dth[es][4][j][i] / s_w[k];
+        if (k == p_Nq - 1)
+          vdotgradth += s_dth[es][5][j][i] / s_w[k];
+#endif
+
+        occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)
+        {
+          wthr += s_wD[i][n] * s_th[es][k][j][n] * s_Jur[es][k][j][n];
+        }
+        occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)
+        {
+          wths += s_wD[j][n] * s_th[es][k][n][i] * s_Jus[es][k][n][i];
+        }
+#if p_DIM == 3
+        occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)
+        {
+          wtht += s_wD[k][n] * s_th[es][n][j][i] * s_Jut[es][n][j][i];
+        }
+#endif
+
+        occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)
+        {
+          sthr += s_sD[i][n] * s_th[es][k][j][n];
+        }
+        occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)
+        {
+          sths += s_sD[j][n] * s_th[es][k][n][i];
+        }
+#if p_DIM == 3
+        occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)
+        {
+          stht += s_sD[k][n] * s_th[es][n][j][i];
+        }
+#endif
+
+        vdotgradth += wthr / s_w[i];
+        vdotgradth += wths / s_w[j];
+#if p_DIM == 3
+        vdotgradth += wtht / s_w[k];
+#endif
+
+        vdotgradth += s_Jur[es][k][j][i] * sthr;
+        vdotgradth += s_Jus[es][k][j][i] * sths;
+#if p_DIM == 3
+        vdotgradth += s_Jut[es][k][j][i] * stht;
+#endif
+
+        rhsth -= Jinv * vdotgradth;
+
+        rhsq[idq + p_FIELD_THETA * p_Np] = rhsth;
+      }
+    }
+  }
+}
+
+#define mortarThreads                                                          \
+  for (iint mb = 0; mb < p_KblkS; ++mb; inner2)                                \
+    for (iint jM = 0; jM < p_Nqk; ++jM; inner1)                                \
+      for (iint iM = 0; iM < p_Nq; ++iM; inner0)                               \
+        if (m < Nmortar && (fM / 2 == facegroup || fP / 2 == facegroup))
+
+#if p_DIM == 2
+#define computeProjection(FIELD, s_field, fieldP)                              \
+  {                                                                            \
+    iint h;                                                                    \
+                                                                               \
+    mortarThreads { fieldP = ZERO; }                                           \
+                                                                               \
+    barrier(localMemFence);                                                    \
+    h = 0;                                                                     \
+    mortarThreads                                                              \
+    {                                                                          \
+      const iint eP = MFToEP[p_P4EST_HALF * m + h];                            \
+      const iint idqP = nP + eP * p_Np * p_NFIELDS;                            \
+      s_field[mb][jM][iM] = q[idqP + FIELD * p_Np];                            \
+    }                                                                          \
+    barrier(localMemFence);                                                    \
+    mortarThreads                                                              \
+    {                                                                          \
+      occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)                         \
+      {                                                                        \
+        fieldP += s_Pb[iM][n] * s_field[mb][0][n];                             \
+      }                                                                        \
+    }                                                                          \
+                                                                               \
+    barrier(localMemFence);                                                    \
+    h = 1;                                                                     \
+    mortarThreads                                                              \
+    {                                                                          \
+      const iint eP = MFToEP[p_P4EST_HALF * m + h];                            \
+      const iint idqP = nP + eP * p_Np * p_NFIELDS;                            \
+      s_field[mb][jM][iM] = q[idqP + FIELD * p_Np];                            \
+    }                                                                          \
+    barrier(localMemFence);                                                    \
+    mortarThreads                                                              \
+    {                                                                          \
+      occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)                         \
+      {                                                                        \
+        fieldP += s_Pt[iM][n] * s_field[mb][0][n];                             \
+      }                                                                        \
+    }                                                                          \
+  }
+#else
+#define computeProjection(FIELD, s_field, fieldP)                              \
+  {                                                                            \
+    iint h;                                                                    \
+                                                                               \
+    mortarThreads { fieldP = ZERO; }                                           \
+                                                                               \
+    barrier(localMemFence);                                                    \
+    h = 0;                                                                     \
+    mortarThreads                                                              \
+    {                                                                          \
+      const iint eP = MFToEP[p_P4EST_HALF * m + h];                            \
+      const iint idqP = nP + eP * p_Np * p_NFIELDS;                            \
+      s_field[mb][jM][iM] = q[idqP + FIELD * p_Np];                            \
+    }                                                                          \
+    barrier(localMemFence);                                                    \
+    mortarThreads                                                              \
+    {                                                                          \
+      for (iint p = 0; p < p_Nq; ++p)                                          \
+      {                                                                        \
+        occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)                       \
+        {                                                                      \
+          fieldP += s_Pb[iM][n] * s_Pb[jM][p] * s_field[mb][p][n];             \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+                                                                               \
+    barrier(localMemFence);                                                    \
+    h = 1;                                                                     \
+    mortarThreads                                                              \
+    {                                                                          \
+      const iint eP = MFToEP[p_P4EST_HALF * m + h];                            \
+      const iint idqP = nP + eP * p_Np * p_NFIELDS;                            \
+      s_field[mb][jM][iM] = q[idqP + FIELD * p_Np];                            \
+    }                                                                          \
+    barrier(localMemFence);                                                    \
+    mortarThreads                                                              \
+    {                                                                          \
+      for (iint p = 0; p < p_Nq; ++p)                                          \
+      {                                                                        \
+        occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)                       \
+        {                                                                      \
+          fieldP += s_Pt[iM][n] * s_Pb[jM][p] * s_field[mb][p][n];             \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+                                                                               \
+    barrier(localMemFence);                                                    \
+    h = 2;                                                                     \
+    mortarThreads                                                              \
+    {                                                                          \
+      const iint eP = MFToEP[p_P4EST_HALF * m + h];                            \
+      const iint idqP = nP + eP * p_Np * p_NFIELDS;                            \
+      s_field[mb][jM][iM] = q[idqP + FIELD * p_Np];                            \
+    }                                                                          \
+    barrier(localMemFence);                                                    \
+    mortarThreads                                                              \
+    {                                                                          \
+      for (iint p = 0; p < p_Nq; ++p)                                          \
+      {                                                                        \
+        occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)                       \
+        {                                                                      \
+          fieldP += s_Pb[iM][n] * s_Pt[jM][p] * s_field[mb][p][n];             \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+                                                                               \
+    barrier(localMemFence);                                                    \
+    h = 3;                                                                     \
+    mortarThreads                                                              \
+    {                                                                          \
+      const iint eP = MFToEP[p_P4EST_HALF * m + h];                            \
+      const iint idqP = nP + eP * p_Np * p_NFIELDS;                            \
+      s_field[mb][jM][iM] = q[idqP + FIELD * p_Np];                            \
+    }                                                                          \
+    barrier(localMemFence);                                                    \
+    mortarThreads                                                              \
+    {                                                                          \
+      for (iint p = 0; p < p_Nq; ++p)                                          \
+      {                                                                        \
+        occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)                       \
+        {                                                                      \
+          fieldP += s_Pt[iM][n] * s_Pt[jM][p] * s_field[mb][p][n];             \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+  }
+#endif
+
+kernel void
+mortar_advection(const iint facegroup, const iint Nmortar,
+                 const dfloat *restrict w, const dfloat *restrict Pb,
+                 const dfloat *restrict Pt, const iint *restrict MFToEM,
+                 const iint *restrict MFToFM, const iint *restrict MFToEP,
+                 const iint *restrict MFToFP, const iint *restrict MFToOP,
+                 const dfloat *restrict vgeo, const dfloat *restrict sgeo,
+                 const dfloat *restrict q, dfloat *restrict rhsq)
+{
+  for (iint mo = 0; mo < Nmortar; mo += p_KblkS; outer0)
+  {
+    exclusive iint m, eM, fM, eP, fP, oP, iP, jP, nM, nP, idqM;
+    exclusive dfloat thM, uxM, uyM, uzM, nxM, nyM, nzM, sJM;
+    exclusive dfloat thP, uxP, uyP, uzP;
+    exclusive dfloat thfluxM, fscaleM, swM;
+
+    shared dfloat s_fld[p_KblkS][p_Nqk][p_Nq];
+
+    shared dfloat s_Pb[p_Nq][p_Nq];
+    shared dfloat s_Pt[p_Nq][p_Nq];
+
+    barrier(localMemFence);
+
+    for (iint mb = 0; mb < p_KblkS; ++mb; inner2)
+    {
+      for (iint jM = 0; jM < p_Nqk; ++jM; inner1)
+      {
+        for (iint iM = 0; iM < p_Nq; ++iM; inner0)
+        {
+          m = mo + mb;
+
+          if (mb == 0)
+            for (iint j = jM; j < p_Nq; j += p_Nqk)
+              for (iint i = iM; i < p_Nq; i += p_Nq)
+              {
+                const iint id = j * p_Nq + i;
+                s_Pb[j][i] = Pb[id];
+                s_Pt[j][i] = Pt[id];
+              }
+
+          if (m < Nmortar)
+          {
+            fM = MFToFM[m];
+            fP = MFToFP[m];
+
+            if (fM / 2 == facegroup || fP / 2 == facegroup)
+            {
+              eM = MFToEM[m];
+              oP = MFToOP[m];
+
+              // OCCA private workaround
+              iint tmpiP, tmpjP;
+              mapO(iM, jM, oP, &tmpiP, &tmpjP);
+              iP = tmpiP;
+              jP = tmpjP;
+
+              nM = fmask(iM, jM, fM);
+              nP = fmask(iP, jP, fP);
+
+              idqM = nM + eM * p_Np * p_NFIELDS;
+
+              thM = q[idqM + p_FIELD_THETA * p_Np];
+              uxM = q[idqM + p_FIELD_UX * p_Np];
+              uyM = q[idqM + p_FIELD_UY * p_Np];
+#if p_DIM == 3
+              uzM = q[idqM + p_FIELD_UZ * p_Np];
+#else
+              uzM = ZERO;
+#endif
+
+              const iint idvgeoM = nM + eM * p_Np * p_NVGEO;
+              const dfloat JM = vgeo[idvgeoM + p_VGEO_J * p_Np];
+#if p_DIM == 3
+              fscaleM = ONE / (JM * w[iM] * w[jM] * w[0]);
+#else
+              fscaleM = ONE / (JM * w[iM] * w[0]);
+#endif
+
+#if p_DIM == 3
+              swM = w[iM] * w[jM];
+#else
+              swM = w[iM];
+#endif
+
+              const iint idsgeoM =
+                  iM + jM * p_Nq + fM * p_Nfp + eM * p_Nfaces * p_Nfp * p_NSGEO;
+
+              nxM = sgeo[idsgeoM + p_SGEO_NX * p_Nfaces * p_Nfp];
+              nyM = sgeo[idsgeoM + p_SGEO_NY * p_Nfaces * p_Nfp];
+#if p_DIM == 3
+              nzM = sgeo[idsgeoM + p_SGEO_NZ * p_Nfaces * p_Nfp];
+#else
+              nzM = ZERO;
+#endif
+              sJM = sgeo[idsgeoM + p_SGEO_SJ * p_Nfaces * p_Nfp];
+            }
+          }
+        }
+      }
+    }
+
+    computeProjection(p_FIELD_THETA, s_fld, thP);
+    computeProjection(p_FIELD_UX, s_fld, uxP);
+    computeProjection(p_FIELD_UY, s_fld, uyP);
+    computeProjection(p_FIELD_UZ, s_fld, uzP);
+
+    barrier(localMemFence);
+
+    for (iint mb = 0; mb < p_KblkS; ++mb; inner2)
+    {
+      for (iint jM = 0; jM < p_Nqk; ++jM; inner1)
+      {
+        for (iint iM = 0; iM < p_Nq; ++iM; inner0)
+        {
+          if (m < Nmortar && (fM / 2 == facegroup || fP / 2 == facegroup))
+          {
+            // TODO Support jumps in velocity
+            const dfloat uxMP = HALF * (uxM + uxP);
+            const dfloat uyMP = HALF * (uyM + uyP);
+            const dfloat uzMP = HALF * (uzM + uzP);
+
+            const dfloat dM =
+                swM * sJM * (nxM * uxMP + nyM * uyMP + nzM * uzMP);
+            const dfloat dP = -dM;
+
+            // TODO Double check this is upwinding
+            thfluxM = HALF * dM * thP + HALF * occaFabs(dM) * (thM - thP);
+            s_fld[mb][jM][iM] =
+                HALF * dP * thM + HALF * occaFabs(dP) * (thP - thM);
+          }
+        }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for (iint mb = 0; mb < p_KblkS; ++mb; inner2)
+    {
+      for (iint jM = 0; jM < p_Nqk; ++jM; inner1)
+      {
+        for (iint iM = 0; iM < p_Nq; ++iM; inner0)
+        {
+          if (m < Nmortar)
+          {
+
+            if (fM / 2 == facegroup)
+              rhsq[idqM + p_FIELD_THETA * p_Np] -= fscaleM * thfluxM;
+
+            // add flux to plus faces via L2 projection transpose
+            if (fP / 2 == facegroup)
+            {
+              iint h, eP, idqP, idvgeoP;
+              dfloat JP, fscaleP, vw;
+
+#if p_DIM == 2
+              vw = w[iP] * w[0];
+
+              h = 0;
+              eP = MFToEP[p_P4EST_HALF * m + h];
+              idqP = nP + eP * p_Np * p_NFIELDS;
+              idvgeoP = nP + eP * p_Np * p_NVGEO;
+              JP = vgeo[idvgeoP + p_VGEO_J * p_Np];
+              fscaleP = ONE / (JP * vw);
+
+              dfloat thfluxP = ZERO;
+              occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)
+              {
+                thfluxP += s_Pb[n][iM] * s_fld[mb][0][n];
+              }
+              rhsq[idqP + p_FIELD_THETA * p_Np] -= fscaleP * thfluxP;
+
+              h = 1;
+              eP = MFToEP[p_P4EST_HALF * m + h];
+              idqP = nP + eP * p_Np * p_NFIELDS;
+              idvgeoP = nP + eP * p_Np * p_NVGEO;
+              JP = vgeo[idvgeoP + p_VGEO_J * p_Np];
+              fscaleP = ONE / (JP * vw);
+
+              thfluxP = ZERO;
+              occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)
+              {
+                thfluxP += s_Pt[n][iM] * s_fld[mb][0][n];
+              }
+              rhsq[idqP + p_FIELD_THETA * p_Np] -= fscaleP * thfluxP;
+#else
+              vw = w[iP] * w[jP] * w[0];
+
+              h = 0;
+              eP = MFToEP[p_P4EST_HALF * m + h];
+              idqP = nP + eP * p_Np * p_NFIELDS;
+              idvgeoP = nP + eP * p_Np * p_NVGEO;
+              JP = vgeo[idvgeoP + p_VGEO_J * p_Np];
+              fscaleP = ONE / (JP * vw);
+
+              dfloat thfluxP = ZERO;
+              for (iint p = 0; p < p_Nq; ++p)
+              {
+                occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)
+                {
+                  thfluxP += s_Pb[n][iM] * s_Pb[p][jM] * s_fld[mb][p][n];
+                }
+              }
+              rhsq[idqP + p_FIELD_THETA * p_Np] -= fscaleP * thfluxP;
+
+              h = 1;
+              eP = MFToEP[p_P4EST_HALF * m + h];
+              idqP = nP + eP * p_Np * p_NFIELDS;
+              idvgeoP = nP + eP * p_Np * p_NVGEO;
+              JP = vgeo[idvgeoP + p_VGEO_J * p_Np];
+              fscaleP = ONE / (JP * vw);
+
+              thfluxP = ZERO;
+              for (iint p = 0; p < p_Nq; ++p)
+              {
+                occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)
+                {
+                  thfluxP += s_Pt[n][iM] * s_Pb[p][jM] * s_fld[mb][p][n];
+                }
+              }
+              rhsq[idqP + p_FIELD_THETA * p_Np] -= fscaleP * thfluxP;
+
+              h = 2;
+              eP = MFToEP[p_P4EST_HALF * m + h];
+              idqP = nP + eP * p_Np * p_NFIELDS;
+              idvgeoP = nP + eP * p_Np * p_NVGEO;
+              JP = vgeo[idvgeoP + p_VGEO_J * p_Np];
+              fscaleP = ONE / (JP * vw);
+
+              thfluxP = ZERO;
+              for (iint p = 0; p < p_Nq; ++p)
+              {
+                occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)
+                {
+                  thfluxP += s_Pb[n][iM] * s_Pt[p][jM] * s_fld[mb][p][n];
+                }
+              }
+              rhsq[idqP + p_FIELD_THETA * p_Np] -= fscaleP * thfluxP;
+
+              h = 3;
+              eP = MFToEP[p_P4EST_HALF * m + h];
+              idqP = nP + eP * p_Np * p_NFIELDS;
+              idvgeoP = nP + eP * p_Np * p_NVGEO;
+              JP = vgeo[idvgeoP + p_VGEO_J * p_Np];
+              fscaleP = ONE / (JP * vw);
+
+              thfluxP = ZERO;
+              for (iint p = 0; p < p_Nq; ++p)
+              {
+                occaUnroll(p_Nq) for (iint n = 0; n < p_Nq; ++n)
+                {
+                  thfluxP += s_Pt[n][iM] * s_Pt[p][jM] * s_fld[mb][p][n];
+                }
+              }
+              rhsq[idqP + p_FIELD_THETA * p_Np] -= fscaleP * thfluxP;
+#endif
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+kernel void update_advection(const iint K, const dfloat dt, const dfloat rka,
+                             const dfloat rkb, dfloat *restrict q,
+                             dfloat *restrict rhsq)
+{
+
+  for (iint eo = 0; eo < K; eo += p_KblkV; outer0)
+  {
+    for (iint ke = 0; ke < p_Nqk * p_KblkV; ++ke; inner2)
+    {
+      for (iint j = 0; j < p_Nq; ++j; inner1)
+      {
+        for (iint i = 0; i < p_Nq; ++i; inner0)
+        {
+          const iint es = ke / p_Nqk;
+          const iint k = ke % p_Nqk;
+          const iint e = es + eo;
+
+          if (e < K)
+          {
+            const iint idth = i + j * p_Nq + k * p_Nq2 + +p_FIELD_THETA * p_Np +
+                              e * p_Np * p_NFIELDS;
+
+            dfloat rhsth = rhsq[idth];
+            dfloat th = q[idth];
+
+            q[idth] = th + rkb * dt * rhsth;
+            rhsq[idth] = rka * rhsth;
+          }
+        }
+      }
+    }
+  }
+}
+// }}}
