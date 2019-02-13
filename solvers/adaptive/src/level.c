@@ -16,6 +16,12 @@ static void level_kernelinfo(occa::properties &info, occa::device &device, int N
   // occaKernelInfoAddParserFlag(info, "automate-add-barriers", "disabled");
 
   info["defines"].asObject();
+  
+  info["defines/ONE"] = (dfloat_t) 1.0;
+  info["defines/TWO"] = (dfloat_t) 2.0;
+  info["defines/HALF"] = (dfloat_t) 0.5;
+  info["defines/ZERO"] = (dfloat_t) 0.0;
+
   info["defines/dlong"] = occa_iint_name;
 
   const char *const dfloat =
@@ -97,7 +103,9 @@ static void level_kernelinfo(occa::properties &info, occa::device &device, int N
   info["defines/p_Nfaces"] = Nfaces;
   info["defines/p_Nfp"] = Nfp;
 
-  info["includes"] += (char*)strdup(DADAPTIVE "/okl/adaptiveOcca.h");
+  info["defines/p_NelementsblkV"] = 1;
+  
+  info["includes"] = (char*)strdup(DADAPTIVE "/okl/adaptiveOcca.h");
 
   std::cout << info << std::endl;
   

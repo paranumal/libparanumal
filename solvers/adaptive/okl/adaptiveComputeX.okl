@@ -1,3 +1,15 @@
+void conn_mapping_identity(const dlong tree,
+			   const dfloat a,
+			   const dfloat b,
+                           const dfloat c,
+			   dfloat *x,
+                           dfloat *y,
+			   dfloat *z)
+{
+  *x = a;
+  *y = b;
+  *z = c;
+}
 
 @kernel void adaptiveComputeX(const dlong Nelements,
 			      @restrict const dlong  *EToL,
@@ -84,8 +96,8 @@
              * size of the element (in the tree reference space).
              * plus one in denominator is because we need to scale r by 0.5
              */
-	    
-            const dfloat h = ONE / (dfloat)(1 << (level + 1));
+	    const dfloat P2level = (dfloat)(1 << (level + 1));
+            const dfloat h = ONE / P2level;
 
             const dfloat r = cr + h * (s_r[i] + 1);
             const dfloat s = cs + h * (s_r[j] + 1);
