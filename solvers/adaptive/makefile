@@ -41,7 +41,7 @@ METISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libmetis
 # libraries to be linked in
 LIBS	= -Wl,-rpath=$(P4EST_DIR)/local/lib,--enable-new-dtags $(P4EST_LDFLAGS) $(P4EST_LIBS) -L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis  -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -Wl,-rpath=$(OCCA_DIR)/lib,--enable-new-dtags -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack  $(LIBP_EXT_LIBS) -lgfortran
 
-INCLUDES = adaptive.h adaptivePrecon.h
+INCLUDES = adaptive.h adaptivePrecon.h asd.h
 DEPS = $(INCLUDES) \
 $(HDRDIR)/mesh.h \
 $(HDRDIR)/mesh2D.h \
@@ -65,6 +65,7 @@ $(ALMONDDIR)/parAlmond.hpp \
 # list of objects to be compiled
 AOBJS    = \
 ./src/adaptiveSetupBoxHex3D.o \
+./src/asd.o \
 ./src/adaptiveZeroMean.o \
 ./src/NBFPCG.o \
 ./src/adaptiveUpdateNBFPCG.o \
