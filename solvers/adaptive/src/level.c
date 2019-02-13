@@ -82,6 +82,15 @@ static void level_kernelinfo(occa::properties &info, occa::device &device, int N
   info["defines/p_SGEO_SJ"] = SGEO_SJ;
   info["defines/p_NSGEO"] = NSGEO;
 
+  info["defines/p_GGEO_RR"] = GGEO_RR;
+  info["defines/p_GGEO_RS"] = GGEO_RS;
+  info["defines/p_GGEO_RT"] = GGEO_RT;
+  info["defines/p_GGEO_SS"] = GGEO_SS;
+  info["defines/p_GGEO_ST"] = GGEO_ST;
+  info["defines/p_GGEO_TT"] = GGEO_TT;
+  info["defines/p_GGEO_JW"] = GGEO_JW;
+  info["defines/p_NGGEO"] = NGGEO;
+  
   info["defines/p_BC_SKIP"] = BC_SKIP;
   info["defines/p_BC_NONE"] = BC_NONE;
   info["defines/p_BC_DEFAULT"] = BC_DEFAULT;
@@ -465,10 +474,15 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 				     "adaptiveInterpX",
 				     info);
 
-#if 0
-  lvl->coarse_X = occaDeviceBuildKernelFromString(device, prefs->kernels,
-                                                  "coarse_X", info, OKL_LANG);
+  lvl->coarse_X = device.buildKernel(DADAPTIVE "/okl/adaptiveCoarseX.okl",
+				     "adaptiveCoarseX",
+				     info);
+  
+  lvl->compute_geo = device.buildKernel(DADAPTIVE "/okl/adaptiveGeometricFactorsHex3D.okl",
+					"adaptiveGeometricFactorsHex3D",
+					info);
 
+#if 0
   lvl->compute_geo = occaDeviceBuildKernelFromString(
       device, prefs->kernels, "compute_geo", info, OKL_LANG);
 

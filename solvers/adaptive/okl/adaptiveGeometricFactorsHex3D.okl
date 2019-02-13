@@ -1,7 +1,7 @@
 #define cubeThreads							\
-  for (dlong ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2))		\
-    for (iint j = 0; j < p_Nq; ++j; @inner(1))				\
-      for (iint i = 0; i < p_Nq; ++i; @inner(0))
+  for (dlong ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2))	\
+    for (dlong j = 0; j < p_Nq; ++j; @inner(1))				\
+      for (dlong i = 0; i < p_Nq; ++i; @inner(0))
 
 #define computeGradientR(q, qr, qs, qt)					\
   @barrier("local");							\
@@ -9,18 +9,15 @@
   @barrier("local");							\
   cubeThreads								\
   {									\
-    if (e < Nelements)								\
+    if (e < Nelements)							\
       {									\
 	qr = 0, qs = 0, qt = 0;						\
-	occaUnroll(p_Nq)						\
-	  for (iint n = 0; n < p_Nq; ++n)				\
-	    qr +=  s_D[i][n] * s_q[es][k][j][n];			\
-	occaUnroll(p_Nq)						\
-	  for (iint n = 0; n < p_Nq; ++n)				\
-	    qs += s_D[j][n] * s_q[es][k][n][i];				\
-	occaUnroll(p_Nqk)						\
-	  for (iint n = 0; n < p_Nqk; ++n)				\
-	    qt += s_D[k][n] * s_q[es][n][j][i];				\
+	for (dlong n = 0; n < p_Nq; ++n)				\
+	  qr +=  s_D[i][n] * s_q[es][k][j][n];				\
+	for (dlong n = 0; n < p_Nq; ++n)				\
+	  qs += s_D[j][n] * s_q[es][k][n][i];				\
+	for (dlong n = 0; n < p_Nqk; ++n)				\
+	  qt += s_D[k][n] * s_q[es][n][j][i];				\
       }									\
   }
 
@@ -77,7 +74,7 @@
 					   @restrict dfloat * sgeo,
 					   @restrict dfloat * ggeo){
   
-  for (dlong eo = 0; eo < Nelements; eo += p_NelementsblkV; outer0){
+  for (dlong eo = 0; eo < Nelements; eo += p_NelementsblkV; @outer(0)){
     
     @shared dfloat s_q[p_NelementsblkV][p_Nqk][p_Nq][p_Nq];
     @shared dfloat s_D[p_Nq][p_Nq];
@@ -153,7 +150,7 @@
          * TODO: Check that flipping J sign here (if necessary) works for 3-D
          *       as it does for 2-D
          */
-        J = ABS(J);
+        J = abs(J);
 
         dfloat nx, ny, nz, sJ;
         dlong f;
@@ -179,7 +176,7 @@
           nz = rz;
         }
         if (i == 0 || i == p_Nq - 1){
-          sJ = occaSqrt(nx * nx + ny * ny + nz * nz);
+          sJ = sqrt(nx * nx + ny * ny + nz * nz);
 
           nx = nx / sJ;
           ny = ny / sJ;
@@ -208,7 +205,7 @@
           nz = sz;
         }
         if (j == 0 || j == p_Nq - 1){
-          sJ = occaSqrt(nx * nx + ny * ny + nz * nz);
+          sJ = sqrt(nx * nx + ny * ny + nz * nz);
           nx = nx / sJ;
           ny = ny / sJ;
           nz = nz / sJ;
@@ -236,7 +233,7 @@
           nz = tz;
         }
         if (k == 0 || k == p_Nq - 1){
-          sJ = occaSqrt(nx * nx + ny * ny + nz * nz);
+          sJ = sqrt(nx * nx + ny * ny + nz * nz);
           nx = nx / sJ;
           ny = ny / sJ;
           nz = nz / sJ;
@@ -269,17 +266,17 @@
         vgeo[id + p_VGEO_SZ * p_Np] = sz;
         vgeo[id + p_VGEO_TZ * p_Np] = tz;
 
-        const dlong id = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NGGEO;
+        const dlong gid = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NGGEO;
 
 	dfloat JW = gllw[i]*gllw[j]*gllw[k]*J;
 	
-        ggeo[id + p_GGEO_RR * p_Np] = JW*(rx*rx+ry*ry+rz*rz);
-        ggeo[id + p_GGEO_RS * p_Np] = JW*(rx*sx+ry*sy+rz*sz);
-	ggeo[id + p_GGEO_RT * p_Np] = JW*(rx*tx+ry*ty+rz*tz);
-	ggeo[id + p_GGEO_SS * p_Np] = JW*(sx*sx+sy*sy+sz*tz);
-        ggeo[id + p_GGEO_ST * p_Np] = JW*(sx*tx+sy*ty+sz*tz);
-	ggeo[id + p_GGEO_TT * p_Np] = JW*(rx*tx+ty*ty+tz*tz);
-	ggeo[id + p_GGEO_JW * p_Np] = JW;
+        ggeo[gid + p_GGEO_RR * p_Np] = JW*(rx*rx+ry*ry+rz*rz);
+        ggeo[gid + p_GGEO_RS * p_Np] = JW*(rx*sx+ry*sy+rz*sz);
+	ggeo[gid + p_GGEO_RT * p_Np] = JW*(rx*tx+ry*ty+rz*tz);
+	ggeo[gid + p_GGEO_SS * p_Np] = JW*(sx*sx+sy*sy+sz*tz);
+        ggeo[gid + p_GGEO_ST * p_Np] = JW*(sx*tx+sy*ty+sz*tz);
+	ggeo[gid + p_GGEO_TT * p_Np] = JW*(rx*tx+ty*ty+tz*tz);
+	ggeo[gid + p_GGEO_JW * p_Np] = JW;
       }
     }
   }
