@@ -222,14 +222,22 @@ static void level_get_mesh(level_t *lvl, mesh_t *mesh, p4est_t *pxest,
       lvl->NToR[lvl->Nn++] = r;
   // }}}
 
-#if 0
   // {{{
   /* Fill metric terms */
-  occaKernelRun(lvl->compute_X, occaIint(mesh->Ktotal), lvl->o_EToL,
-                lvl->o_EToT, lvl->o_EToX, lvl->o_EToY, lvl->o_EToZ,
-                lvl->o_tree_to_vertex, lvl->o_tree_vertices, lvl->o_r,
-                lvl->o_vgeo);
+  lvl->compute_X(mesh->Ktotal,
+		 lvl->o_EToL,
+		 lvl->o_EToT,
+		 lvl->o_EToX,
+		 lvl->o_EToY,
+		 lvl->o_EToZ,
+		 lvl->o_tree_to_vertex,
+		 lvl->o_tree_vertices,
+		 lvl->o_r,
+		 lvl->o_vgeo);
 
+#if 0
+
+  
   if (prefs->mesh_continuous)
   {
     if (prefs->brick &&
