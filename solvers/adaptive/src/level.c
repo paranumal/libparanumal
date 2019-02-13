@@ -56,6 +56,7 @@ static void level_set_working_dims(level_t *lvl, prefs_t *prefs)
   local = (occaDim){Nt, 1, 1};
   occaKernelSetWorkingDims(lvl->coarse_X, dim, local, global);
 }
+#endif
 
 static void level_get_mesh_constants(level_t *lvl, mesh_t *mesh)
 {
@@ -77,6 +78,8 @@ static void level_get_mesh_constants(level_t *lvl, mesh_t *mesh)
   lvl->Ktotal = mesh->Ktotal;
   lvl->Kintra = mesh->Kintra;
 }
+
+#if 0
 
 static void level_get_mesh(level_t *lvl, mesh_t *mesh, prefs_t *prefs,
                             p4est_t *pxest, p4est_ghost_t *ghost,
@@ -238,7 +241,7 @@ void occa_double_to_dfloat(occa::device &device, size_t N, double *a,
 level_t *level_new(setupAide &options, p4est_t *pxest,
                    p4est_ghost_t *ghost, occa::device &device,
                    int *brick_n, int *brick_p, int *brick_TToC,
-                   int N)
+                   int N, double occa_kmax_mem_frac)
 {
   level_t *lvl = new level_t[1];
 
@@ -269,7 +272,6 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   mesh_t *mesh = mesh_new(pxest, ghost, brick_n,
       brick_p, brick_TToC, N);
 
-#if 0
   // {{{ Mesh Constants
   level_get_mesh_constants(lvl, mesh);
   // }}}
@@ -279,17 +281,19 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   // There are some that may get allocated too big.  We may want to move to
   // some sort of dynamic resizing in the future.
   size_t available_bytes =
-      (size_t)(prefs->occa_kmax_mem_frac *
-               (long double)(occaDeviceMemorySize(device) -
-                             occaDeviceBytesAllocated(device)));
+      (size_t)(occa_kmax_mem_frac *
+               (long double)(device.memorySize() - device.memoryAllocated()));
 
   const int Nfaces = lvl->Nfaces;
   const int Nfp = lvl->Nfp;
   const int Np = lvl->Np;
 
+  // We are assuming brick for storage
+  const int brick = 1;
+
   const size_t to_allocate_bytes_per_element =
       (sizeof(iint_t) *
-           (11 + (8 + P4EST_HALF) * Nfaces + prefs->brick + 2 * Np) +
+           (11 + (8 + P4EST_HALF) * Nfaces + brick + 2 * Np) +
        sizeof(dfloat_t) *
            ((3 * NFIELDS + NVGEO + 2) * Np + (NSGEO * Nfaces * Nfp)));
   const size_t uKmax = available_bytes / to_allocate_bytes_per_element;
@@ -297,66 +301,65 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   // }}}
 
   // {{{ Allocate Mesh Indices
-  lvl->o_IToE = device_malloc(device, sizeof(iint_t) * Kmax, NULL);
-  lvl->o_MToE = device_malloc(device, sizeof(iint_t) * Kmax, NULL);
-  lvl->o_UMToE = device_malloc(device, sizeof(iint_t) * Kmax, NULL);
-  lvl->o_GToE = device_malloc(device, sizeof(iint_t) * Kmax, NULL);
+  lvl->o_IToE = device.malloc(sizeof(iint_t) * Kmax, NULL);
+  lvl->o_MToE = device.malloc(sizeof(iint_t) * Kmax, NULL);
+  lvl->o_UMToE = device.malloc(sizeof(iint_t) * Kmax, NULL);
+  lvl->o_GToE = device.malloc(sizeof(iint_t) * Kmax, NULL);
 
-  lvl->o_EToL = device_malloc(device, sizeof(iint_t) * Kmax, NULL);
-  lvl->o_EToT = device_malloc(device, sizeof(iint_t) * Kmax, NULL);
-  lvl->o_EToX = device_malloc(device, sizeof(iint_t) * Kmax, NULL);
-  lvl->o_EToY = device_malloc(device, sizeof(iint_t) * Kmax, NULL);
-  lvl->o_EToZ = device_malloc(device, sizeof(iint_t) * Kmax, NULL);
+  lvl->o_EToL = device.malloc(sizeof(iint_t) * Kmax, NULL);
+  lvl->o_EToT = device.malloc(sizeof(iint_t) * Kmax, NULL);
+  lvl->o_EToX = device.malloc(sizeof(iint_t) * Kmax, NULL);
+  lvl->o_EToY = device.malloc(sizeof(iint_t) * Kmax, NULL);
+  lvl->o_EToZ = device.malloc(sizeof(iint_t) * Kmax, NULL);
 
-  lvl->o_EToB = device_malloc(device, sizeof(iint_t) * Kmax * Nfaces, NULL);
-  lvl->o_EToE = device_malloc(device, sizeof(iint_t) * Kmax * Nfaces, NULL);
-  lvl->o_EToF = device_malloc(device, sizeof(iint_t) * Kmax * Nfaces, NULL);
-  lvl->o_EToO = device_malloc(device, sizeof(iint_t) * Kmax * Nfaces, NULL);
+  lvl->o_EToB = device.malloc(sizeof(iint_t) * Kmax * Nfaces, NULL);
+  lvl->o_EToE = device.malloc(sizeof(iint_t) * Kmax * Nfaces, NULL);
+  lvl->o_EToF = device.malloc(sizeof(iint_t) * Kmax * Nfaces, NULL);
+  lvl->o_EToO = device.malloc(sizeof(iint_t) * Kmax * Nfaces, NULL);
 
-  lvl->o_EToC = device_malloc(device, sizeof(iint_t) * Kmax, NULL);
+  lvl->o_EToC = device.malloc(sizeof(iint_t) * Kmax, NULL);
   lvl->o_EToP =
-      device_malloc(device, sizeof(iint_t) * (prefs->brick ? Kmax : 1), NULL);
-  lvl->o_EToOff = device_malloc(device, sizeof(iint_t) * (Kmax + 1), NULL);
+      device.malloc(sizeof(iint_t) * (brick ? Kmax : 1), NULL);
+  lvl->o_EToOff = device.malloc(sizeof(iint_t) * (Kmax + 1), NULL);
 
   lvl->o_CToD_starts =
-      device_malloc(device, sizeof(iint_t) * (Kmax * Np + 1), NULL);
-  lvl->o_CToD_indices = device_malloc(device, sizeof(iint_t) * Kmax * Np, NULL);
+      device.malloc(sizeof(iint_t) * (Kmax * Np + 1), NULL);
+  lvl->o_CToD_indices = device.malloc(sizeof(iint_t) * Kmax * Np, NULL);
 
-  lvl->o_MFToEM = device_malloc(device, sizeof(iint_t) * Kmax * Nfaces, NULL);
-  lvl->o_MFToFM = device_malloc(device, sizeof(iint_t) * Kmax * Nfaces, NULL);
+  lvl->o_MFToEM = device.malloc(sizeof(iint_t) * Kmax * Nfaces, NULL);
+  lvl->o_MFToFM = device.malloc(sizeof(iint_t) * Kmax * Nfaces, NULL);
   lvl->o_MFToEP =
-      device_malloc(device, sizeof(iint_t) * Kmax * Nfaces * P4EST_HALF, NULL);
-  lvl->o_MFToFP = device_malloc(device, sizeof(iint_t) * Kmax * Nfaces, NULL);
-  lvl->o_MFToOP = device_malloc(device, sizeof(iint_t) * Kmax * Nfaces, NULL);
+      device.malloc(sizeof(iint_t) * Kmax * Nfaces * P4EST_HALF, NULL);
+  lvl->o_MFToFP = device.malloc(sizeof(iint_t) * Kmax * Nfaces, NULL);
+  lvl->o_MFToOP = device.malloc(sizeof(iint_t) * Kmax * Nfaces, NULL);
   // }}}
 
   // {{{ Allocate Volume Fields
   lvl->o_q =
-      device_malloc(device, NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
+      device.malloc(NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
   lvl->o_rhsq =
-      device_malloc(device, NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
+      device.malloc(NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
 
   lvl->o_q_buf =
-      device_malloc(device, NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
+      device.malloc(NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
 
-  lvl->pin_q_send = occaDeviceMappedAlloc(
-      device, NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
-  lvl->pin_q_recv = occaDeviceMappedAlloc(
-      device, NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
+  lvl->pin_q_send = device.mappedAlloc(NFIELDS * sizeof(dfloat_t) * Kmax * Np, NULL);
+  lvl->pin_q_recv = device.mappedAlloc(NFIELDS * sizeof(dfloat_t) * Kmax * Np,
+      NULL);
 
-  lvl->q_send = occaMemoryGetMappedPointer(lvl->pin_q_send);
-  lvl->q_recv = occaMemoryGetMappedPointer(lvl->pin_q_recv);
+  lvl->q_send = (dfloat_t*)lvl->pin_q_send.getMappedPointer();
+  lvl->q_recv = (dfloat_t*)lvl->pin_q_recv.getMappedPointer();
 
-  lvl->q_send_buf = asd_malloc_aligned(NFIELDS * sizeof(dfloat_t) * Kmax * Np);
-  lvl->q_recv_buf = asd_malloc_aligned(NFIELDS * sizeof(dfloat_t) * Kmax * Np);
+  lvl->q_send_buf = (dfloat_t *)asd_malloc_aligned(NFIELDS * sizeof(dfloat_t) * Kmax * Np);
+  lvl->q_recv_buf = (dfloat_t *)asd_malloc_aligned(NFIELDS * sizeof(dfloat_t) * Kmax * Np);
 
-  lvl->NToR = asd_malloc_aligned(sizeof(int) * pxest->mpisize);
-  lvl->EToA = asd_malloc_aligned(sizeof(int8_t) * Kmax);
+  lvl->NToR = (int *)asd_malloc_aligned(sizeof(int) * pxest->mpisize);
+  lvl->EToA = (int8_t *)asd_malloc_aligned(sizeof(int8_t) * Kmax);
 
   lvl->q_send_requests =
-      asd_malloc_aligned(sizeof(MPI_Request) * pxest->mpisize);
+      (MPI_Request *)asd_malloc_aligned(sizeof(MPI_Request) * pxest->mpisize);
   lvl->q_recv_requests =
-      asd_malloc_aligned(sizeof(MPI_Request) * pxest->mpisize);
+      (MPI_Request *)asd_malloc_aligned(sizeof(MPI_Request) * pxest->mpisize);
 
   for (int r = 0; r < pxest->mpisize; ++r)
   {
@@ -365,32 +368,33 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   }
 
   lvl->q_send_statuses =
-      asd_malloc_aligned(sizeof(MPI_Status) * pxest->mpisize);
+      (MPI_Status *)asd_malloc_aligned(sizeof(MPI_Status) * pxest->mpisize);
   lvl->q_recv_statuses =
-      asd_malloc_aligned(sizeof(MPI_Status) * pxest->mpisize);
+      (MPI_Status *)asd_malloc_aligned(sizeof(MPI_Status) * pxest->mpisize);
   // }}}
 
   // {{{ Allocate Metric Terms
   lvl->o_vgeo =
-      device_malloc(device, NVGEO * sizeof(dfloat_t) * Kmax * Np, NULL);
-  lvl->o_sgeo = device_malloc(
-      device, NSGEO * sizeof(dfloat_t) * Kmax * Nfaces * Nfp, NULL);
+      device.malloc(NVGEO * sizeof(dfloat_t) * Kmax * Np, NULL);
+  lvl->o_sgeo = device.malloc(
+      NSGEO * sizeof(dfloat_t) * Kmax * Nfaces * Nfp, NULL);
   // }}}
 
   // {{{ reduction buffers
   {
-    const int LDIM = prefs->kernel_reduce_ldim;
+    const int LDIM = KERNEL_REDUCE_LDIM;
     const iint_t n_reduce = Kmax * Np;
     iint_t n_groups = (n_reduce + LDIM - 1) / LDIM;
     n_groups = (n_groups + 8 - 1) / 8;
 
     lvl->o_red_buf[0] =
-        device_malloc(device, sizeof(dfloat_t) * n_reduce, NULL);
+        device.malloc(sizeof(dfloat_t) * n_reduce, NULL);
     lvl->o_red_buf[1] =
-        device_malloc(device, sizeof(dfloat_t) * n_groups, NULL);
+        device.malloc(sizeof(dfloat_t) * n_groups, NULL);
   }
   // }}}
 
+#if 0
   // {{{ Build Kernels
   occaKernelInfo info = common_kernelinfo_new(prefs, device);
 
@@ -465,10 +469,8 @@ void level_free(level_t *lvl)
   lvl->o_tree_to_vertex.free();
   lvl->o_tree_vertices.free();
 
-#if 0
   asd_free_aligned(lvl->NToR);
   asd_free_aligned(lvl->EToA);
-#endif
 
   lvl->o_IToE.free();
   lvl->o_MToE.free();
@@ -519,14 +521,12 @@ void level_free(level_t *lvl)
   lvl->o_red_buf[0].free();
   lvl->o_red_buf[1].free();
 
-#if 0
   asd_free_aligned(lvl->q_send_buf);
   asd_free_aligned(lvl->q_recv_buf);
   asd_free_aligned(lvl->q_send_requests);
   asd_free_aligned(lvl->q_recv_requests);
   asd_free_aligned(lvl->q_send_statuses);
   asd_free_aligned(lvl->q_recv_statuses);
-#endif
 
   lvl->compute_X.free();
   lvl->interp_X.free();

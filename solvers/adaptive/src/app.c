@@ -85,7 +85,7 @@ app_t *app_new(setupAide &options, MPI_Comm comm)
   options.getArgs("POLYNOMIAL DEGREE", N);
   // TODO build more than one level
   app->lvl = level_new(options, app->pxest, app->ghost, app->device,
-      app->brick_n, app->brick_p, app->brick_TToC, N);
+      app->brick_n, app->brick_p, app->brick_TToC, N, 0.5);
 
   int blockSize = 256;
   occa::properties kernelInfo;

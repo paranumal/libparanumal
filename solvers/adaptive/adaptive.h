@@ -94,4 +94,10 @@ SOFTWARE.
 #include "app.h"
 // }}}
 
+#define KERNEL_KBLKV  2
+#define KERNEL_KBLKS 8
+#define KERNEL_NT 256
+#define KERNEL_REDUCE_LDIM 256
+#define KERNEL_REDUCE_MAX_COPY 1024
+
 #endif
