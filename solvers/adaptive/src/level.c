@@ -237,6 +237,7 @@ void occa_double_to_dfloat(occa::device &device, size_t N, double *a,
 
 level_t *level_new(setupAide &options, p4est_t *pxest,
                    p4est_ghost_t *ghost, occa::device &device,
+                   int *brick_n, int *brick_p, int *brick_TToC,
                    int N)
 {
   level_t *lvl = new level_t[1];
@@ -265,9 +266,10 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
                 lvl->o_Ib, lvl->o_It, lvl->o_Pb, lvl->o_Pt);
   // }}}
 
-#if 0
-  mesh_t *mesh = mesh_new(prefs, pxest, ghost);
+  mesh_t *mesh = mesh_new(pxest, ghost, brick_n,
+      brick_p, brick_TToC, N);
 
+#if 0
   // {{{ Mesh Constants
   level_get_mesh_constants(lvl, mesh);
   // }}}
@@ -451,10 +453,9 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 
   level_set_working_dims(lvl, prefs);
   level_get_mesh(lvl, mesh, prefs, pxest, ghost, device);
+#endif
 
   mesh_free(mesh);
-  asd_free(mesh);
-#endif
 
   return lvl;
 }
@@ -467,82 +468,84 @@ void level_free(level_t *lvl)
 #if 0
   asd_free_aligned(lvl->NToR);
   asd_free_aligned(lvl->EToA);
+#endif
 
-  occaMemoryFree(lvl->o_IToE);
-  occaMemoryFree(lvl->o_MToE);
-  occaMemoryFree(lvl->o_UMToE);
-  occaMemoryFree(lvl->o_GToE);
+  lvl->o_IToE.free();
+  lvl->o_MToE.free();
+  lvl->o_UMToE.free();
+  lvl->o_GToE.free();
 
-  occaMemoryFree(lvl->o_EToL);
-  occaMemoryFree(lvl->o_EToT);
-  occaMemoryFree(lvl->o_EToX);
-  occaMemoryFree(lvl->o_EToY);
-  occaMemoryFree(lvl->o_EToZ);
-  occaMemoryFree(lvl->o_EToB);
-  occaMemoryFree(lvl->o_EToE);
-  occaMemoryFree(lvl->o_EToF);
-  occaMemoryFree(lvl->o_EToO);
-  occaMemoryFree(lvl->o_EToC);
-  occaMemoryFree(lvl->o_EToP);
-  occaMemoryFree(lvl->o_EToOff);
+  lvl->o_EToL.free();
+  lvl->o_EToT.free();
+  lvl->o_EToX.free();
+  lvl->o_EToY.free();
+  lvl->o_EToZ.free();
+  lvl->o_EToB.free();
+  lvl->o_EToE.free();
+  lvl->o_EToF.free();
+  lvl->o_EToO.free();
+  lvl->o_EToC.free();
+  lvl->o_EToP.free();
+  lvl->o_EToOff.free();
 
-  occaMemoryFree(lvl->o_CToD_starts);
-  occaMemoryFree(lvl->o_CToD_indices);
+  lvl->o_CToD_starts.free();
+  lvl->o_CToD_indices.free();
 
-  occaMemoryFree(lvl->o_MFToEM);
-  occaMemoryFree(lvl->o_MFToFM);
-  occaMemoryFree(lvl->o_MFToEP);
-  occaMemoryFree(lvl->o_MFToFP);
-  occaMemoryFree(lvl->o_MFToOP);
+  lvl->o_MFToEM.free();
+  lvl->o_MFToFM.free();
+  lvl->o_MFToEP.free();
+  lvl->o_MFToFP.free();
+  lvl->o_MFToOP.free();
 
-  occaMemoryFree(lvl->o_r);
-  occaMemoryFree(lvl->o_w);
-  occaMemoryFree(lvl->o_D);
+  lvl->o_r.free();
+  lvl->o_w.free();
+  lvl->o_D.free();
 
-  occaMemoryFree(lvl->o_Ib);
-  occaMemoryFree(lvl->o_It);
+  lvl->o_Ib.free();
+  lvl->o_It.free();
 
-  occaMemoryFree(lvl->o_Pb);
-  occaMemoryFree(lvl->o_Pt);
+  lvl->o_Pb.free();
+  lvl->o_Pt.free();
 
-  occaMemoryFree(lvl->o_vgeo);
-  occaMemoryFree(lvl->o_sgeo);
-  occaMemoryFree(lvl->o_q);
-  occaMemoryFree(lvl->o_rhsq);
+  lvl->o_vgeo.free();
+  lvl->o_sgeo.free();
+  lvl->o_q.free();
+  lvl->o_rhsq.free();
 
-  occaMemoryFree(lvl->o_q_buf);
-  occaMemoryFree(lvl->pin_q_send);
-  occaMemoryFree(lvl->pin_q_recv);
+  lvl->o_q_buf.free();
+  lvl->pin_q_send.free();
+  lvl->pin_q_recv.free();
 
-  occaMemoryFree(lvl->o_red_buf[0]);
-  occaMemoryFree(lvl->o_red_buf[1]);
+  lvl->o_red_buf[0].free();
+  lvl->o_red_buf[1].free();
 
+#if 0
   asd_free_aligned(lvl->q_send_buf);
   asd_free_aligned(lvl->q_recv_buf);
   asd_free_aligned(lvl->q_send_requests);
   asd_free_aligned(lvl->q_recv_requests);
   asd_free_aligned(lvl->q_send_statuses);
   asd_free_aligned(lvl->q_recv_statuses);
-
-  occaKernelFree(lvl->compute_X);
-  occaKernelFree(lvl->interp_X);
-  occaKernelFree(lvl->coarse_X);
-  occaKernelFree(lvl->compute_geo);
-  occaKernelFree(lvl->compute_ics);
-  occaKernelFree(lvl->compute_dt);
-  occaKernelFree(lvl->compute_energy);
-  occaKernelFree(lvl->compute_error);
-  occaKernelFree(lvl->coarsen_fields);
-  occaKernelFree(lvl->refine_and_fill_fields);
-  occaKernelFree(lvl->volume_advection);
-  occaKernelFree(lvl->mortar_advection);
-  occaKernelFree(lvl->update_advection);
-  occaKernelFree(lvl->zero_fields);
-  occaKernelFree(lvl->get_mirror_fields);
-  occaKernelFree(lvl->set_ghost_fields);
-  occaKernelFree(lvl->reduce_min);
-  occaKernelFree(lvl->reduce_sum);
 #endif
+
+  lvl->compute_X.free();
+  lvl->interp_X.free();
+  lvl->coarse_X.free();
+  lvl->compute_geo.free();
+  lvl->compute_ics.free();
+  lvl->compute_dt.free();
+  lvl->compute_energy.free();
+  lvl->compute_error.free();
+  lvl->coarsen_fields.free();
+  lvl->refine_and_fill_fields.free();
+  lvl->volume_advection.free();
+  lvl->mortar_advection.free();
+  lvl->update_advection.free();
+  lvl->zero_fields.free();
+  lvl->get_mirror_fields.free();
+  lvl->set_ghost_fields.free();
+  lvl->reduce_min.free();
+  lvl->reduce_sum.free();
 
   delete [] lvl;
 }
