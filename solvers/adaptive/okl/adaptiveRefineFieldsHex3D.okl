@@ -1,8 +1,9 @@
+
 #define computeRefinePiece(FIELD, s_field, fieldo, c, s_P0, s_P1, s_P2)	\
   {									\
-    barrier(localMemFence);						\
+    @barrier("local");							\
     cubeThreads{							\
-      if (ine < Nelements && refine){						\
+      if (ine < Nelements && refine){					\
 									\
         dfloat fc = ZERO;						\
         for (dlong r = 0; r < p_Nq; ++r){				\
@@ -14,6 +15,52 @@
 	}								\
 	outq[idoutq + fld * p_Np + c * p_Np * p_NFIELDS] = fc;		\
       }									\
+    }									\
+  }
+
+
+#define computeRefinePieceSplit(FIELD, s_field, fieldo, c, s_P0, s_P1, s_P2)\
+  {									\
+    @exclusive dfloat r_tmp;						\
+									\
+    @barrier("local");							\
+    cubeThreads{							\
+      if (ine < Nelements && refine){					\
+	r_tmp = ZERO;							\
+	for(dlong n=0;n<p_Nq;++n){					\
+	  r_tmp += s_P0[i][n]*s_field[es][k][j][n];			\
+	}								\
+      }									\
+    }									\
+    @barrier("local");							\
+    cubeThreads{							\
+      s_field[es][k][j][i] = r_tmp;					\
+    }									\
+    @barrier("local");							\
+    cubeThreads{							\
+      if (ine < Nelements && refine){					\
+	r_tmp = ZERO;							\
+	for(dlong p=0;p<p_Nq;++p){					\
+	  r_tmp += s_P1[j][p]*s_field[es][k][p][i];			\
+	}								\
+      }									\
+    }									\
+    @barrier("local");							\
+    cubeThreads{							\
+      s_field[es][k][j][i] = r_tmp;					\
+    }									\
+    @barrier("local");							\
+    cubeThreads{							\
+      if (ine < Nelements && refine){					\
+	r_tmp = ZERO;							\
+	for(dlong r=0;r<p_Nq;++r){					\
+	  r_tmp += s_P2[k][r]*s_field[es][r][j][i];			\
+	}								\
+      }									\
+    }									\
+    @barrier("local");							\
+    cubeThreads{							\
+      outq[idoutq + fld * p_Np + c * p_Np * p_NFIELDS] = r_tmp;		\
     }									\
   }
 
@@ -86,15 +133,15 @@
           }
 	}
       }
-
-      computeRefinePiece(fld, s_inq, outq, 0, s_Ib, s_Ib, s_Ib);
-      computeRefinePiece(fld, s_inq, outq, 1, s_It, s_Ib, s_Ib);
-      computeRefinePiece(fld, s_inq, outq, 2, s_Ib, s_It, s_Ib);
-      computeRefinePiece(fld, s_inq, outq, 3, s_It, s_It, s_Ib);
-      computeRefinePiece(fld, s_inq, outq, 4, s_Ib, s_Ib, s_It);
-      computeRefinePiece(fld, s_inq, outq, 5, s_It, s_Ib, s_It);
-      computeRefinePiece(fld, s_inq, outq, 6, s_Ib, s_It, s_It);
-      computeRefinePiece(fld, s_inq, outq, 7, s_It, s_It, s_It);
+    
+      computeRefinePieceSplit(fld, s_inq, outq, 0, s_Ib, s_Ib, s_Ib);
+      computeRefinePieceSplit(fld, s_inq, outq, 1, s_It, s_Ib, s_Ib);
+      computeRefinePieceSplit(fld, s_inq, outq, 2, s_Ib, s_It, s_Ib);
+      computeRefinePieceSplit(fld, s_inq, outq, 3, s_It, s_It, s_Ib);
+      computeRefinePieceSplit(fld, s_inq, outq, 4, s_Ib, s_Ib, s_It);
+      computeRefinePieceSplit(fld, s_inq, outq, 5, s_It, s_Ib, s_It);
+      computeRefinePieceSplit(fld, s_inq, outq, 6, s_Ib, s_It, s_It);
+      computeRefinePieceSplit(fld, s_inq, outq, 7, s_It, s_It, s_It);
       
     }
 

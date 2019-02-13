@@ -1,13 +1,13 @@
 
 #define computeCoarsenPiece(FIELD, s_field, fieldc, c, s_P0, s_P1, s_P2) \
   {									\
-    barrier("local");							\
+    @barrier("local");							\
     cubeThreads{							\
       if (oute < Nelements && coarsen){					\
 	s_inq[es][k][j][i] = inq[idinq + fld * p_Np + c * p_Np * p_NFIELDS]; \
       }									\
     }									\
-    barrier("local");							\
+    @barrier("local");							\
     cubeThreads{							\
       if (oute < Nelements && coarsen){					\
 	for (dlong r = 0; r < p_Nq; ++r){				\
@@ -21,6 +21,63 @@
       }									\
     }									\
   }
+
+#define computeCoarsenPieceSplit(FIELD, s_field, fieldc, c, s_P0, s_P1, s_P2) \
+  {									\
+    @exclusive dfloat r_tmp = 0;					\
+    @barrier("local");							\
+    cubeThreads{							\
+      if (oute < Nelements && coarsen){					\
+	s_inq[es][k][j][i] = inq[idinq + fld * p_Np + c * p_Np * p_NFIELDS]; \
+      }									\
+    }									\
+    @barrier("local");							\
+    cubeThreads{							\
+      if (oute < Nelements && coarsen){					\
+	r_tmp = 0;							\
+	for (dlong n = 0; n < p_Nq; ++n){				\
+	  r_tmp += s_P0[i][n]*s_inq[es][k][j][n];			\
+	}								\
+      }									\
+    }									\
+    @barrier("local");							\
+    cubeThreads{							\
+      if (oute < Nelements && coarsen){					\
+	s_inq[es][k][j][i] = r_tmp;					\
+      }									\
+    }									\
+    @barrier("local");							\
+    cubeThreads{							\
+      if (oute < Nelements && coarsen){					\
+	r_tmp = 0;							\
+	for (dlong p = 0; p < p_Nq; ++p){				\
+	  r_tmp += s_P1[j][p]*s_inq[es][k][p][i];			\
+	}								\
+      }									\
+    }									\
+    @barrier("local");							\
+    cubeThreads{							\
+      if (oute < Nelements && coarsen){					\
+	s_inq[es][k][j][i] = r_tmp;					\
+      }									\
+    }									\
+    @barrier("local");							\
+    cubeThreads{							\
+      if (oute < Nelements && coarsen){					\
+	r_tmp = 0;							\
+	for (dlong r = 0; r < p_Nq; ++r){				\
+	  r_tmp += s_P2[k][r]*s_inq[es][r][j][i];			\
+	}								\
+      }									\
+    }									\
+    @barrier("local");							\
+    cubeThreads{							\
+      if (oute < Nelements && coarsen){					\
+	fieldc += r_tmp;						\
+      }									\
+    }									\
+  }									
+
 
 @kernel void adaptiveCoarsenFieldsHex3D(const dlong Nelements,
 					const dlong keep_start,
@@ -81,14 +138,14 @@
 	outfld[fld] = ZERO;
       }
       
-      computeCoarsenPiece(fld, s_inq, outfld[fld], 0, s_Pb, s_Pb, s_Pb);
-      computeCoarsenPiece(fld, s_inq, outfld[fld], 1, s_Pt, s_Pb, s_Pb);
-      computeCoarsenPiece(fld, s_inq, outfld[fld], 2, s_Pb, s_Pt, s_Pb);
-      computeCoarsenPiece(fld, s_inq, outfld[fld], 3, s_Pt, s_Pt, s_Pb);
-      computeCoarsenPiece(fld, s_inq, outfld[fld], 4, s_Pb, s_Pb, s_Pt);
-      computeCoarsenPiece(fld, s_inq, outfld[fld], 5, s_Pt, s_Pb, s_Pt);
-      computeCoarsenPiece(fld, s_inq, outfld[fld], 6, s_Pb, s_Pt, s_Pt);
-      computeCoarsenPiece(fld, s_inq, outfld[fld], 7, s_Pt, s_Pt, s_Pt);
+      computeCoarsenPieceSplit(fld, s_inq, outfld[fld], 0, s_Pb, s_Pb, s_Pb);
+      computeCoarsenPieceSplit(fld, s_inq, outfld[fld], 1, s_Pt, s_Pb, s_Pb);
+      computeCoarsenPieceSplit(fld, s_inq, outfld[fld], 2, s_Pb, s_Pt, s_Pb);
+      computeCoarsenPieceSplit(fld, s_inq, outfld[fld], 3, s_Pt, s_Pt, s_Pb);
+      computeCoarsenPieceSplit(fld, s_inq, outfld[fld], 4, s_Pb, s_Pb, s_Pt);
+      computeCoarsenPieceSplit(fld, s_inq, outfld[fld], 5, s_Pt, s_Pb, s_Pt);
+      computeCoarsenPieceSplit(fld, s_inq, outfld[fld], 6, s_Pb, s_Pt, s_Pt);
+      computeCoarsenPieceSplit(fld, s_inq, outfld[fld], 7, s_Pt, s_Pt, s_Pt);
     }
     
     for (dlong ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2)){
