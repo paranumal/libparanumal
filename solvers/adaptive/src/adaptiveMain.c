@@ -70,8 +70,9 @@ int main(int argc, char **argv){
   // if argv > 2 then should load input data from argv
   setupAide options(argv[1]);
 
-  MPI_Comm comm = MPI_COMM_WORLD;
-  int verbosity;
+  MPI_Comm comm;
+  MPI_Comm_dup(MPI_COMM_WORLD, &comm);
+  int verbosity = 0;
   options.getArgs("VERBOSITY", verbosity);
   init_libs(comm, verbosity);
   print_precision();

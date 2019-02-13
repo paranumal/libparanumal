@@ -88,6 +88,7 @@ SOFTWARE.
 #include "solver_info.h"
 #include "app.h"
 #include "myoccautil.h"
+#include "connectivity.h"
 // }}}
 
 #endif

@@ -30,17 +30,18 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ALMONDDIR) $(P4EST_CPPFLAGS) -D DHOLMES='"${CURDIR}/../.."' -D DADAPTIVE='"${CURDIR}"' -I../../3rdParty/parmetis-4.0.3/metis/GKlib -I../../3rdParty/parmetis-4.0.3/include -I../../3rdParty/parmetis-4.0.3/metis/include -I../../3rdParty/parmetis-4.0.3/libparmetis $(LIBP_OPT_FLAGS) -I$(OGSDIR)/include 
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(P4EST_CPPFLAGS) -I../../include -D DHOLMES='"${CURDIR}/../.."' -D DADAPTIVE='"${CURDIR}"' $(LIBP_OPT_FLAGS)
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(LIBP_OPT_FLAGS)
 
 # libraries to be linked in
-LIBS	= -Wl,-rpath=$(P4EST_DIR)/local/lib,--enable-new-dtags $(P4EST_LDFLAGS) $(P4EST_LIBS) -Wl,-rpath=$(OCCA_DIR)/lib,--enable-new-dtags -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack  $(LIBP_EXT_LIBS) -lgfortran
+LIBS	= -Wl,-rpath=$(P4ESTDIR)/local/lib,--enable-new-dtags $(P4EST_LDFLAGS) $(P4EST_LIBS) -Wl,-rpath=$(OCCA_DIR)/lib,--enable-new-dtags -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack  $(LIBP_EXT_LIBS) -lgfortran
 
 INCLUDES = adaptive.h \
            app.h \
            asd.h \
+           connectivity.h \
            myoccautil.h \
            number_types.h \
            solver_info.h
@@ -63,6 +64,7 @@ DEPS = $(INCLUDES)
 AOBJS    = \
 ./src/asd.o \
 ./src/app.o \
+./src/connectivity.o \
 ./src/occaDeviceConfig.o\
 
 # library objects
