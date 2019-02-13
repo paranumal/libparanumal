@@ -86,11 +86,12 @@ SOFTWARE.
 #include "asd.h"
 #include "number_types.h"
 #include "solver_info.h"
-#include "app.h"
 #include "myoccautil.h"
 #include "connectivity.h"
+#include "operators.h"
 #include "mesh.h"
 #include "level.h"
+#include "app.h"
 // }}}
 
 #endif

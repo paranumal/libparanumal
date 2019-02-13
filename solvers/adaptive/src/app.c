@@ -81,7 +81,10 @@ app_t *app_new(setupAide &options, MPI_Comm comm)
   p4est_partition(app->pxest, 1, NULL);
   app->ghost = p4est_ghost_new(app->pxest, P4EST_CONNECT_FULL);
 
-  // app->lvl = level_new(app->prefs, app->pxest, app->ghost, app->device);
+  int N;
+  options.getArgs("POLYNOMIAL DEGREE", N);
+  // TODO build more than one level
+  app->lvl = level_new(options, app->pxest, app->ghost, app->device, N);
 
   int blockSize = 256;
   occa::properties kernelInfo;

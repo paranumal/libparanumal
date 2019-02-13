@@ -236,7 +236,8 @@ void occa_double_to_dfloat(occa::device &device, size_t N, double *a,
 }
 
 level_t *level_new(setupAide &options, p4est_t *pxest,
-                   p4est_ghost_t *ghost, occa::device &device)
+                   p4est_ghost_t *ghost, occa::device &device,
+                   int N)
 {
   level_t *lvl = new level_t[1];
 
@@ -258,13 +259,13 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   }
   // }}}
 
-#if 0
-
   // {{{ Build Operators
-  get_operators(prefs->mesh_N, device, &lvl->o_r, &lvl->o_w, &lvl->o_D,
-                &lvl->o_Ib, &lvl->o_It, &lvl->o_Pb, &lvl->o_Pt);
+
+  get_operators(N, device, lvl->o_r, lvl->o_w, lvl->o_D,
+                lvl->o_Ib, lvl->o_It, lvl->o_Pb, lvl->o_Pt);
   // }}}
 
+#if 0
   mesh_t *mesh = mesh_new(prefs, pxest, ghost);
 
   // {{{ Mesh Constants

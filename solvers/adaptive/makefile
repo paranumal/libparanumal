@@ -46,6 +46,7 @@ INCLUDES = adaptive.h \
            level.h \
            mesh.h \
            number_types.h \
+           operators.h \
            solver_info.h
 DEPS = $(INCLUDES)
 
@@ -69,6 +70,7 @@ AOBJS    = \
 ./src/connectivity.o \
 ./src/level.o\
 ./src/mesh.o\
+./src/operators.o\
 ./src/occaDeviceConfig.o
 
 # library objects

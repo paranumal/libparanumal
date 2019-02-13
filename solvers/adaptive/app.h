@@ -15,7 +15,9 @@ typedef struct app
   int brick_p[DIM];
   p4est_topidx_t *brick_TToC; // tree id to cartesian coordinates needed for
                               // periodic bricks
-  
+
+  level_t *lvl;
+
   // generic kernels [ e.g. PCG ]
   occa::kernel sumKernel;
   occa::kernel addScalarKernel;
@@ -36,9 +38,6 @@ typedef struct app
   occa::kernel update2NBPCGKernel;
   occa::kernel update0NBFPCGKernel;
   occa::kernel update1NBFPCGKernel;
-
-  
-  // level_t *levels;
 } app_t;
 
 app_t *app_new(setupAide &options, MPI_Comm comm);
