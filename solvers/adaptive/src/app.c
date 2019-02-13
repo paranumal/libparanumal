@@ -23,9 +23,9 @@ app_t *app_new(setupAide &options, MPI_Comm comm)
   options.getArgs("BOX NY", n[1]);
   options.getArgs("BOX NZ", n[2]);
 
-  options.getArgs("BOX PERIODIC X", n[0]);
-  options.getArgs("BOX PERIODIC Y", n[1]);
-  options.getArgs("BOX PERIODIC Z", n[2]);
+  options.getArgs("BOX PERIODIC X", p[0]);
+  options.getArgs("BOX PERIODIC Y", p[1]);
+  options.getArgs("BOX PERIODIC Z", p[2]);
 
   app->conn = get_connectivity(NULL, n, p);
 
