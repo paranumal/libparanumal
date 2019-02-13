@@ -1,3 +1,23 @@
+#define mfloat dfloat
+
+#define APPEND(x, y) x##y
+#define APPEND_EXPAND(x, y) BFAM_APPEND(x, y)
+
+#ifdef p_DFLOAT_FLOAT
+#define DFLOAT(x) APPEND(x, f)
+#else
+#define DFLOAT(x) x
+#endif
+
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define ABS(a) (((a) > 0) ? (a) : -(a))
+
+#define ZERO DFLOAT(0.0)
+#define ONE DFLOAT(1.0)
+#define TWO DFLOAT(2.0)
+#define HALF DFLOAT(0.5)
+
 constant int p8est_face_edges[6][4] = {{4, 6, 8, 10}, {5, 7, 9, 11},
                                        {0, 2, 8, 9},  {1, 3, 10, 11},
                                        {0, 1, 4, 5},  {2, 3, 6, 7}};

@@ -1,0 +1,129 @@
+
+@kernel void adaptiveComputeX(const dlong Nelements,
+			      @restrict const dlong  *EToL,
+			      @restrict const dlong  *EToT,
+			      @restrict const dlong  *EToX,
+			      @restrict const dlong  *EToY,
+			      @restrict const dlong  *EToZ,
+			      @restrict const dlong  *TToV,
+			      @restrict const dfloat *tree_vertices,
+			      @restrict const dfloat *lglr,
+			      @restrict dfloat *vgeo){
+  
+  for (dlong eo = 0; eo < Nelements; eo += p_NelementsblkV; @outer(0)){
+
+    //
+    // Load reference gauss-lobatto points s_r and the tree vertices
+    // s_tX into shared memory
+    //
+    @shared dfloat s_r[p_Nq];
+    @shared dfloat s_tX[p_NelementsblkV][3][p_NCORNERS];
+
+    for (dlong ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2)){
+      for (dlong j = 0; j < p_Nq; ++j; @inner(1)){
+        for (dlong i = 0; i < p_Nq; ++i; @inner(0)){
+	  
+          const dlong es = ke / p_Nqk;
+          const dlong k = ke % p_Nqk;
+          const dlong e = es + eo;
+
+          if (e < Nelements){
+	    
+            const dlong tree = EToT[e];
+
+            if (ke == 0 && j == 0){
+              s_r[i] = lglr[i];
+	    }
+
+            if (i < 2 && j < 2 && k == 0){
+	      
+              dlong id = i + j * 2;
+              dlong vid = TToV[tree * p_NCORNERS + id];
+
+              s_tX[es][0][id] = tree_vertices[vid * p_NX + 0];
+              s_tX[es][1][id] = tree_vertices[vid * p_NX + 1];
+              s_tX[es][2][id] = tree_vertices[vid * p_NX + 2];
+
+              id += 4;
+
+              vid = TToV[tree * p_NCORNERS + id];
+              s_tX[es][0][id] = tree_vertices[vid * p_NX + 0];
+              s_tX[es][1][id] = tree_vertices[vid * p_NX + 1];
+              s_tX[es][2][id] = tree_vertices[vid * p_NX + 2];
+	      
+            }
+          }
+        }
+      }
+    }
+    
+    @barrier("local");
+
+    //
+    // Compute x,y,z using the coordinates of the trees
+    //
+    for (dlong ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2)){
+      for (dlong j = 0; j < p_Nq; ++j; @inner(1)){
+        for (dlong i = 0; i < p_Nq; ++i; @inner(0)){
+
+          const dlong es = ke / p_Nqk;
+          const dlong k = ke % p_Nqk;
+          const dlong e = es + eo;
+
+          if (e < Nelements){
+	    
+            const dlong tree = EToT[e];
+            const dlong level = EToL[e];
+
+            /* Corner of the element we are updating */
+            const dfloat cr = (dfloat)EToX[e] / p_P4EST_ROOT_LEN;
+            const dfloat cs = (dfloat)EToY[e] / p_P4EST_ROOT_LEN;
+            const dfloat ct = (dfloat)EToZ[e] / p_P4EST_ROOT_LEN;
+
+            /*
+             * size of the element (in the tree reference space).
+             * plus one in denominator is because we need to scale r by 0.5
+             */
+	    
+            const dfloat h = ONE / (dfloat)(1 << (level + 1));
+
+            const dfloat r = cr + h * (s_r[i] + 1);
+            const dfloat s = cs + h * (s_r[j] + 1);
+            const dfloat t = ct + h * (s_r[k] + 1);
+
+#define p_tf_w0 ((1 - r) * (1 - s) * (1 - t))
+#define p_tf_w1 (r * (1 - s) * (1 - t))
+#define p_tf_w2 ((1 - r) * s * (1 - t))
+#define p_tf_w3 (r * s * (1 - t))
+#define p_tf_w4 ((1 - r) * (1 - s) * t)
+#define p_tf_w5 (r * (1 - s) * t)
+#define p_tf_w6 ((1 - r) * s * t)
+#define p_tf_w7 (r * s * t)
+
+            dfloat x = p_tf_w0 * s_tX[es][0][0] + p_tf_w1 * s_tX[es][0][1] +
+                       p_tf_w2 * s_tX[es][0][2] + p_tf_w3 * s_tX[es][0][3];
+            dfloat y = p_tf_w0 * s_tX[es][1][0] + p_tf_w1 * s_tX[es][1][1] +
+                       p_tf_w2 * s_tX[es][1][2] + p_tf_w3 * s_tX[es][1][3];
+            dfloat z = p_tf_w0 * s_tX[es][2][0] + p_tf_w1 * s_tX[es][2][1] +
+                       p_tf_w2 * s_tX[es][2][2] + p_tf_w3 * s_tX[es][2][3];
+
+            x += p_tf_w4 * s_tX[es][0][4] + p_tf_w5 * s_tX[es][0][5] +
+                 p_tf_w6 * s_tX[es][0][6] + p_tf_w7 * s_tX[es][0][7];
+            y += p_tf_w4 * s_tX[es][1][4] + p_tf_w5 * s_tX[es][1][5] +
+                 p_tf_w6 * s_tX[es][1][6] + p_tf_w7 * s_tX[es][1][7];
+            z += p_tf_w4 * s_tX[es][2][4] + p_tf_w5 * s_tX[es][2][5] +
+                 p_tf_w6 * s_tX[es][2][6] + p_tf_w7 * s_tX[es][2][7];
+
+            conn_mapping(tree, x, y, z, &x, &y, &z);
+
+            const dlong id = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NVGEO;
+
+            vgeo[id + p_VGEO_X * p_Np] = x;
+            vgeo[id + p_VGEO_Y * p_Np] = y;
+            vgeo[id + p_VGEO_Z * p_Np] = z;
+          }
+        }
+      }
+    }
+  }
+}

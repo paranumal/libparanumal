@@ -16,7 +16,7 @@ static void level_kernelinfo(occa::properties &info, occa::device &device, int N
   // occaKernelInfoAddParserFlag(info, "automate-add-barriers", "disabled");
 
   info["defines"].asObject();
-  info["defines/iint"] = occa_iint_name;
+  info["defines/dlong"] = occa_iint_name;
 
   const char *const dfloat =
       (sizeof(double) == sizeof(dfloat_t)) ? "double" : "float";
@@ -96,63 +96,13 @@ static void level_kernelinfo(occa::properties &info, occa::device &device, int N
   info["defines/p_Np"] = Np;
   info["defines/p_Nfaces"] = Nfaces;
   info["defines/p_Nfp"] = Nfp;
+
+  info["includes"] += (char*)strdup(DADAPTIVE "/okl/adaptiveOcca.h");
+
+  std::cout << info << std::endl;
+  
 }
 // }}}
-#if 0
-static void level_set_working_dims(level_t *lvl, prefs_t *prefs)
-{
-  const int Nq = lvl->Nq;
-  const int Nqk = lvl->Nqk;
-
-  const iint_t Nmortar = lvl->Nmortar;
-  const iint_t Ncontinuous = lvl->Ncontinuous;
-
-  const iint_t Klocal = lvl->Klocal;
-  const iint_t Kghost = lvl->Kghost;
-  const iint_t Kmirror = lvl->Kmirror;
-  const iint_t Ktotal = lvl->Ktotal;
-
-  const int KblkV = prefs->kernel_KblkV;
-  int dim = 1;
-  occaDim global = {1, 1, 1}, local = {1, 1, 1};
-  dim = 3;
-  local = (occaDim){Nq, Nq, Nqk * KblkV};
-
-  global = (occaDim){(Ktotal + KblkV - 1) / KblkV, 1, 1};
-  occaKernelSetWorkingDims(lvl->compute_X, dim, local, global);
-  occaKernelSetWorkingDims(lvl->compute_geo, dim, local, global);
-  occaKernelSetWorkingDims(lvl->compute_ics, dim, local, global);
-  occaKernelSetWorkingDims(lvl->zero_fields, dim, local, global);
-
-  global = (occaDim){(Klocal + KblkV - 1) / KblkV, 1, 1};
-  occaKernelSetWorkingDims(lvl->compute_dt, dim, local, global);
-  occaKernelSetWorkingDims(lvl->compute_energy, dim, local, global);
-  occaKernelSetWorkingDims(lvl->compute_error, dim, local, global);
-  occaKernelSetWorkingDims(lvl->update_advection, dim, local, global);
-
-  global = (occaDim){(Kmirror + KblkV - 1) / KblkV, 1, 1};
-  occaKernelSetWorkingDims(lvl->get_mirror_fields, dim, local, global);
-
-  global = (occaDim){(Kghost + KblkV - 1) / KblkV, 1, 1};
-  occaKernelSetWorkingDims(lvl->set_ghost_fields, dim, local, global);
-
-  const int KblkS = prefs->kernel_KblkS;
-  local = (occaDim){Nq, Nqk, KblkS};
-
-  global = (occaDim){(Ktotal + KblkS - 1) / KblkS, 1, 1};
-  occaKernelSetWorkingDims(lvl->interp_X, dim, local, global);
-
-  global = (occaDim){(Nmortar + KblkS - 1) / KblkS, 1, 1};
-  occaKernelSetWorkingDims(lvl->mortar_advection, dim, local, global);
-
-  dim = 1;
-
-  const int Nt = prefs->kernel_Nt;
-  global = (occaDim){(Ncontinuous + Nt - 1) / Nt, 1, 1};
-  local = (occaDim){Nt, 1, 1};
-  occaKernelSetWorkingDims(lvl->coarse_X, dim, local, global);
-}
-#endif
 
 static void level_get_mesh_constants(level_t *lvl, mesh_t *mesh)
 {
@@ -493,13 +443,15 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   // {{{ Build Kernels
   occa::properties info;
 
-  level_kernelinfo(info, device, N, (brick_p[0] || brick_p[1] ||
-        brick_p[2]));
+  level_kernelinfo(info,
+		   device,
+		   N,
+		   (brick_p[0] || brick_p[1] || brick_p[2]));
 
+  lvl->compute_X = device.buildKernel(DADAPTIVE "/okl/adaptiveComputeX.okl",
+				      "adaptiveComputeX",
+				      info);
 #if 0
-  lvl->compute_X = occaDeviceBuildKernelFromString(device, prefs->kernels,
-                                                   "compute_X", info, OKL_LANG);
-
   lvl->interp_X = occaDeviceBuildKernelFromString(device, prefs->kernels,
                                                   "interp_X", info, OKL_LANG);
 
