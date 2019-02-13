@@ -181,11 +181,17 @@ app_t *app_new(setupAide &options, MPI_Comm comm)
 			  lambda,
 			  lvl->o_q,
 			  lvl->o_rhsq);
-  
+
+  // BUILD occa Gather Scatter
+  lvl->ogs = ogsSetup(lvl->Kintra*lvl->Np, localDToC, app->comm, 1, app->device);
+
+  // gather over noncon faces to coarse side dofs
   lvl->gather_noncon(lvl->Nelements, lvl->o_EToC, lvl->o_Pb, lvl->o_Pt, lvl->o_rhsq);
-  
+
+  // gather scatter over ranks
   ogsGatherScatter(lvl->o_rhsq, ogsDfloat, ogsSum, lvl->ogs);
 
+  // scatter from coarse to fine noncon
   lvl->scatter_noncon(lvl->Nelements, lvl->o_EToC, lvl->o_Pb, lvl->o_Pt, lvl->o_rhsq);
   
   return app;
