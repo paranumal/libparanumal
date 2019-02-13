@@ -11,6 +11,9 @@ typedef struct app
   p4est_t *pxest;
   p4est_ghost_t *ghost;
 
+  p4est_topidx_t *brick_TToC; // tree id to cartesian coordinates needed for
+                              // periodic bricks
+
   // level_t *levels;
 } app_t;
 
