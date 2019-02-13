@@ -171,17 +171,22 @@ app_t *app_new(setupAide &options, MPI_Comm comm)
     MPI_Barrier(comm);
   }
 
+  level_t *lvl = app->lvl;
+  
   dfloat_t lambda = 1.0;
-  app->lvl->compute_partial_Ax(app->lvl->Kintra,
-			       app->lvl->o_IToE,
-			       app->lvl->o_ggeo,
-			       app->lvl->o_D,
-			       lambda,
-			       app->lvl->o_q,
-			       app->lvl->o_rhsq);
-		       
-		       
-		       
+  lvl->compute_partial_Ax(lvl->Kintra,
+			  lvl->o_IToE,
+			  lvl->o_ggeo,
+			  lvl->o_D,
+			  lambda,
+			  lvl->o_q,
+			  lvl->o_rhsq);
+  
+  lvl->gather_noncon(lvl->Nelements, lvl->o_EToC, lvl->o_Pb, lvl->o_Pt, lvl->o_rhsq);
+  
+  ogsGatherScatter(lvl->o_rhsq, ogsDfloat, ogsSum, lvl->ogs);
+
+  lvl->scatter_noncon(lvl->Nelements, lvl->o_EToC, lvl->o_Pb, lvl->o_Pt, lvl->o_rhsq);
   
   return app;
 }
