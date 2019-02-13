@@ -43,6 +43,7 @@ INCLUDES = adaptive.h \
            asd.h \
            connectivity.h \
            myoccautil.h \
+           level.h \
            mesh.h \
            number_types.h \
            solver_info.h
@@ -66,6 +67,7 @@ AOBJS    = \
 ./src/asd.o \
 ./src/app.o \
 ./src/connectivity.o \
+./src/level.o\
 ./src/mesh.o\
 ./src/occaDeviceConfig.o
 
