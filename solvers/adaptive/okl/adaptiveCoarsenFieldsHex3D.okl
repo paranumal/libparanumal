@@ -1,0 +1,116 @@
+
+#define computeCoarsenPiece(FIELD, s_field, fieldc, c, s_P0, s_P1, s_P2) \
+  {									\
+    barrier("local");							\
+    cubeThreads{							\
+      if (oute < Nelements && coarsen){					\
+	s_inq[es][k][j][i] = inq[idinq + fld * p_Np + c * p_Np * p_NFIELDS]; \
+      }									\
+    }									\
+    barrier("local");							\
+    cubeThreads{							\
+      if (oute < Nelements && coarsen){					\
+	for (dlong r = 0; r < p_Nq; ++r){				\
+	  for (dlong p = 0; p < p_Nq; ++p){				\
+	    for (dlong n = 0; n < p_Nq; ++n){				\
+	      fieldc +=							\
+		s_P0[i][n] * s_P1[j][p] * s_P2[k][r] * s_field[es][r][p][n]; \
+	    }								\
+	  }								\
+	}								\
+      }									\
+    }									\
+  }
+
+@kernel void adaptiveCoarsenFieldsHex3D(const dlong Nelements,
+					const dlong keep_start,
+					const dlong keep_end,
+					@restrict const dlong  *EToOff,
+					@restrict const dfloat *Pb,
+					@restrict const dfloat *Pt,
+					@restrict const dfloat *inq,
+					@restrict dfloat *outq_remote,
+					@restrict dfloat *outq_local){
+  
+  for (dlong eo = 0; eo < Nelements; eo += p_NelementsblkV; @outer(0)){
+
+    @shared dfloat s_inq[p_NelementsblkV][p_Nqk][p_Nq][p_Nq];
+    @shared dfloat s_Pb[p_Nq][p_Nq];
+    @shared dfloat s_Pt[p_Nq][p_Nq];
+    
+    @exclusive dfloat outfld[p_NFIELDS];
+    @exclusive dlong oute, es, k, ine0, ine1, keep, coarsen, idoutq, idinq;
+    
+    for (int ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2)){
+      for (dlong j = 0; j < p_Nq; ++j; @inner(1)){
+	for (dlong i = 0; i < p_Nq; ++i; @inner(0)){
+          es = ke / p_Nqk;
+          k = ke % p_Nqk;
+          oute = es + eo;
+	  
+          if (oute < Nelements){
+	    ine0 = EToOff[oute];
+	    ine1 = EToOff[oute + 1];
+	    
+            coarsen = (ine1 - ine0 > 1) ? 1 : 0;
+            keep = (oute >= keep_start && oute <= keep_end) ? 1 : 0;
+
+            if (keep){
+              oute -= keep_start;
+	    }
+            else if (ine0 > keep_end){
+              oute -= keep_end - keep_start + 1;
+	    }
+	    
+            idinq  = i + j * p_Nq + k * p_Nq2 + ine0 * p_Np * p_NFIELDS;
+            idoutq = i + j * p_Nq + k * p_Nq2 + oute * p_Np * p_NFIELDS;
+	    
+            if (ke == 0){
+              s_Pb[j][i] = Pb[j * p_Nq + i];
+              s_Pt[j][i] = Pt[j * p_Nq + i];
+            }
+          }
+        }
+      }
+    }
+    
+    // Coarsen
+    for (dlong fld = 0; fld < p_NFIELDS; ++fld){
+
+      cubeThreads {
+	outfld[fld] = ZERO;
+      }
+      
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 0, s_Pb, s_Pb, s_Pb);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 1, s_Pt, s_Pb, s_Pb);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 2, s_Pb, s_Pt, s_Pb);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 3, s_Pt, s_Pt, s_Pb);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 4, s_Pb, s_Pb, s_Pt);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 5, s_Pt, s_Pb, s_Pt);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 6, s_Pb, s_Pt, s_Pt);
+      computeCoarsenPiece(fld, s_inq, outfld[fld], 7, s_Pt, s_Pt, s_Pt);
+    }
+    
+    for (dlong ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2)){
+      for (dlong j = 0; j < p_Nq; ++j; @inner(1)){
+        for (dlong i = 0; i < p_Nq; ++i; @inner(0)){
+          if (oute < Nelements){
+            dfloat *outq = (keep) ? outq_local : outq_remote;
+            if (coarsen){
+#pragma unroll p_NFIELDS
+	      for (dlong fld = 0; fld < p_NFIELDS; ++fld){
+		outq[idoutq + fld * p_Np] = outfld[fld];
+	      }
+            }
+            else{
+#pragma unroll p_NFIELDS
+	      for (dlong fld = 0; fld < p_NFIELDS; ++fld){
+		outq[idoutq + fld * p_Np] = inq[idinq + fld * p_Np];
+	      }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+
+@kernel void adaptiveSetGhostFields(const dlong NelementsGhost,
+				    @restrict const dlong *GToE,
+				    @restrict const dfloat *q_ghost,
+				    @restrict dfloat *q){
+  
+  for (dlong eo = 0; eo < NelementsGhost; eo += p_NelementsblkV; @outer(0)){
+    for (dlong ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2)){
+      for (dlong j = 0; j < p_Nq; ++j; @inner(1)){
+        for (dlong i = 0; i < p_Nq; ++i; @inner(0)){
+	  
+          const dlong es = ke / p_Nqk;
+          const dlong k = ke % p_Nqk;
+          const dlong eg = es + eo;
+	  
+          if (eg < NelementsGhost){
+            const dlong e = GToE[eg];
+            const dlong idq = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NFIELDS;
+            const dlong idqg = i + p_Nq * j + p_Nq2 * k + eg * p_Np * p_NFIELDS;
+	    
+#pragma unroll p_NFIELDS
+	      for (dlong fld = 0; fld < p_NFIELDS; ++fld)
+                q[idq + fld * p_Np] = q_ghost[idqg + fld * p_Np];
+          }
+        }
+      }
+    }
+  }
+}

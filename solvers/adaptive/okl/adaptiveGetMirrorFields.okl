@@ -1,0 +1,30 @@
+// {{{ Parallel Communication
+@kernel void adaptiveGetMirrorFields(const dlong NelementsMirror,
+				     @restrict const dlong MToE,
+				     @restrict const dfloat * q,
+				     @restrict dfloat * q_mirror){
+  
+  for (dlong eo = 0; eo < NelementsMirror; eo += p_NelementsblkV; @outer(0)){
+    for (dlong ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2)){
+      for (dlong j = 0; j < p_Nq; ++j; @inner(1)){
+        for (dlong i = 0; i < p_Nq; ++i; @inner(0)){
+	  
+          const dlong es = ke / p_Nqk;
+          const dlong k = ke % p_Nqk;
+          const dlong em = es + eo;
+	  
+          if (em < NelementsMirror){
+            const dlong e = MToE[em];
+            const dlong idq = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NFIELDS;
+            const dlong idqm = i + p_Nq * j + p_Nq2 * k + em * p_Np * p_NFIELDS;
+	    
+#pragma unroll p_NFIELDS
+	    for (dlong fld = 0; fld < p_NFIELDS; ++fld){
+	      q_mirror[idqm + fld * p_Np] = q[idq + fld * p_Np];
+	    }
+          }
+        }
+      }
+    }
+  }
+}

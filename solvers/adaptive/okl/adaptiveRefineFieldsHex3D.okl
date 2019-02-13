@@ -1,0 +1,118 @@
+#define computeRefinePiece(FIELD, s_field, fieldo, c, s_P0, s_P1, s_P2)	\
+  {									\
+    barrier(localMemFence);						\
+    cubeThreads{							\
+      if (ine < Nelements && refine){						\
+									\
+        dfloat fc = ZERO;						\
+        for (dlong r = 0; r < p_Nq; ++r){				\
+          for (dlong p = 0; p < p_Nq; ++p){				\
+	    for (dlong n = 0; n < p_Nq; ++n){				\
+              fc += s_P0[i][n] * s_P1[j][p] * s_P2[k][r] * s_field[es][r][p][n]; \
+            }								\
+          }								\
+	}								\
+	outq[idoutq + fld * p_Np + c * p_Np * p_NFIELDS] = fc;		\
+      }									\
+    }									\
+  }
+
+@kernel void adaptiveRefineFieldsHex3D(const dlong Nelements,
+				       const dlong keep_start,
+				       const dlong keep_end,
+				       @restrict const dlong  *EToOff,
+				       @restrict const dfloat *Ib,
+				       @restrict const dfloat *It,
+				       @restrict const dfloat *inq_remote,
+				       @restrict const dfloat *inq_local,
+				       @restrict dfloat * outq){
+
+  for (dlong eo = 0; eo < Nelements; eo += p_NelementsblkV; @outer(0)){
+    
+    @shared dfloat s_inq[p_NelementsblkV][p_Nqk][p_Nq][p_Nq];
+    @shared dfloat s_Ib[p_Nq][p_Nq];
+    @shared dfloat s_It[p_Nq][p_Nq];
+
+    @exclusive dfloat outfld[p_NFIELDS];
+    @exclusive dlong ine, es, k, oute0, oute1, keep, refine, idoutq, idinq;
+
+    for (dlong ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2)){
+      for (dlong j = 0; j < p_Nq; ++j; @inner(1)){
+        for (dlong i = 0; i < p_Nq; ++i; @inner(0)){
+	  
+          es = ke / p_Nqk;
+          k = ke % p_Nqk;
+          ine = es + eo;
+
+          if (ine < Nelements){
+            oute0 = EToOff[ine];
+            oute1 = EToOff[ine + 1];
+	    
+            refine = (oute1 - oute0 > 1) ? 1 : 0;
+
+            keep = (ine >= keep_start && ine <= keep_end) ? 1 : 0;
+            if (keep){
+              ine -= keep_start;
+	    }
+            else if (ine > keep_end){
+              ine -= keep_end - keep_start + 1;
+	    }
+
+            idinq = i + j * p_Nq + k * p_Nq2 + ine * p_Np * p_NFIELDS;
+            idoutq = i + j * p_Nq + k * p_Nq2 + oute0 * p_Np * p_NFIELDS;
+
+            if (ke == 0){
+              s_Ib[j][i] = Ib[j * p_Nq + i];
+              s_It[j][i] = It[j * p_Nq + i];
+            }
+          }
+        }
+      }
+    }
+    
+    // Refine
+    for (dlong fld = 0; fld < p_NFIELDS; ++fld){
+
+      @barrier("local");
+      
+      for (dlong ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2)){
+        for (dlong j = 0; j < p_Nq; ++j; @inner(1)){
+          for (dlong i = 0; i < p_Nq; ++i; @inner(0)){
+            if (ine < Nelements && refine){
+
+              const dfloat *inq = (keep) ? inq_local : inq_remote;
+              s_inq[es][k][j][i] = inq[idinq + fld * p_Np];
+            }
+          }
+	}
+      }
+
+      computeRefinePiece(fld, s_inq, outq, 0, s_Ib, s_Ib, s_Ib);
+      computeRefinePiece(fld, s_inq, outq, 1, s_It, s_Ib, s_Ib);
+      computeRefinePiece(fld, s_inq, outq, 2, s_Ib, s_It, s_Ib);
+      computeRefinePiece(fld, s_inq, outq, 3, s_It, s_It, s_Ib);
+      computeRefinePiece(fld, s_inq, outq, 4, s_Ib, s_Ib, s_It);
+      computeRefinePiece(fld, s_inq, outq, 5, s_It, s_Ib, s_It);
+      computeRefinePiece(fld, s_inq, outq, 6, s_Ib, s_It, s_It);
+      computeRefinePiece(fld, s_inq, outq, 7, s_It, s_It, s_It);
+      
+    }
+
+    // Copy
+    for (dlong ke = 0; ke < p_Nqk * p_NelementsblkV; ++ke; @inner(2)){
+      for (dlong j = 0; j < p_Nq; ++j; @inner(1)){
+        for (dlong i = 0; i < p_Nq; ++i; @inner(0)){
+          if (ine < Nelements && !refine){
+            const dfloat *inq = (keep) ? inq_local : inq_remote;
+	    
+#pragma unroll p_NFIELDS
+	    for (dlong fld = 0; fld < p_NFIELDS; ++fld){
+	      outq[idoutq + fld * p_Np] = inq[idinq + fld * p_Np];
+	    }
+          }
+        }
+      }
+    }
+  }
+}
+// }}}
