@@ -27,24 +27,23 @@
 #include "adaptive.h"
 #include "ogsInterface.h"
 
-void adaptiveZeroMean(adaptive_t *adaptive, occa::memory &o_q){
+void adaptiveZeroMean(adaptive_t *adaptive, level_t *level, occa::memory &o_q){
 
   dfloat qmeanLocal;
   dfloat qmeanGlobal;
   
-  dlong Nblock = adaptive->Nblock;
-  dfloat *tmp = adaptive->tmp;
-  mesh_t *mesh = adaptive->mesh;
+  dlong Nblock = level->Nblock;
+  dfloat *tmp = level->tmp;
 
-  occa::memory &o_tmp = adaptive->o_tmp;
+  occa::memory &o_tmp = level->o_tmp;
 
   // this is a C0 thing [ assume GS previously applied to o_q ]
-#define USE_WEIGHTED 1
+#define USE_WEIGHTED 0
   
 #if USE_WEIGHTED==1
-  adaptive->innerProductKernel(mesh->Nelements*mesh->Np, adaptive->o_invDegree, o_q, o_tmp);
+  adaptive->innerProductKernel(level->Klocal*level->Np, level->o_invDegree, o_q, o_tmp);
 #else
-  mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
+  adaptive->sumKernel(level->Klocal*level->Np, o_q, o_tmp);
 #endif
   
   o_tmp.copyTo(tmp);
@@ -55,15 +54,15 @@ void adaptiveZeroMean(adaptive_t *adaptive, occa::memory &o_q){
     qmeanLocal += tmp[n];
 
   // globalize reduction
-  MPI_Allreduce(&qmeanLocal, &qmeanGlobal, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+  MPI_Allreduce(&qmeanLocal, &qmeanGlobal, 1, MPI_DFLOAT, MPI_SUM, adaptive->comm);
 
   // normalize
 #if USE_WEIGHTED==1
-  qmeanGlobal *= adaptive->nullProjectWeightGlobal;
+  qmeanGlobal *= level->nullProjectWeightGlobal;
 #else
-  qmeanGlobal /= ((dfloat) adaptive->NelementsGlobal*(dfloat)mesh->Np);
+  qmeanGlobal /= ((dfloat) level->Kglobal*(dfloat)level->Np);
 #endif
   
   // q[n] = q[n] - qmeanGlobal
-  mesh->addScalarKernel(mesh->Nelements*mesh->Np, -qmeanGlobal, o_q);
+  adaptive->addScalarKernel(level->Klocal*level->Np, -qmeanGlobal, o_q);
 }

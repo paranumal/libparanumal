@@ -74,6 +74,7 @@ AOBJS    = \
 ./src/adaptiveWeightedNorm2.o \
 ./src/adaptivePreconditioner.o \
 ./src/adaptiveWeightedInnerProduct.o \
+./src/adaptiveZeroMean.o \
 ./src/connectivity.o \
 ./src/level.o\
 ./src/mesh.o\

@@ -39,20 +39,9 @@ dfloat adaptiveWeightedNorm2(adaptive_t *adaptive, level_t *level,
 
   dfloat *tmp = level->tmp;
   dlong Nblock = level->Nblock;
-  dlong Nblock2 = adaptive->Nblock2;
+  dlong Nblock2 = level->Nblock2;
   dlong Ntotal = level->Klocal*level->Np;
 
-  if(serial==1 && continuous==1){
-    
-    dfloat wa2 = adaptiveSerialWeightedNorm2(level->Nq, level->Klocal, o_w, o_a);
-    
-    dfloat globalwa2 = 0;
-    
-    MPI_Allreduce(&wa2, &globalwa2, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
-    
-    return globalwa2;
-  }
-  
   occa::memory &o_tmp = level->o_tmp;
   occa::memory &o_tmp2 = level->o_tmp2;
   

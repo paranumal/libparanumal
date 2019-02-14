@@ -114,6 +114,10 @@ static void level_kernelinfo(occa::properties &info, occa::device &device, int N
 
   info["defines/p_NelementsblkV"] = 1;
   info["defines/p_NelementsblkS"] = 1;
+
+  int blockSize = KERNEL_REDUCE_LDIM;
+  
+  info["defines/p_blockSize"] = blockSize;
   
   info["includes"] = (char*)strdup(DADAPTIVE "/okl/adaptiveOcca.h");
 
@@ -454,8 +458,28 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
     lvl->o_red_buf[1] =
         device.malloc(sizeof(dfloat_t) * n_groups, NULL);
   }
-  // }}}
 
+  iint_t Ntotal = lvl->Klocal*lvl->Np;
+
+  int blockSize = KERNEL_REDUCE_LDIM;
+  
+  int Nblock  = ASD_MAX(1,(Ntotal+blockSize-1)/blockSize);
+  int Nblock2 = ASD_MAX(1,(Nblock+blockSize-1)/blockSize);
+
+  lvl->Nblock = Nblock;
+  lvl->Nblock2 = Nblock2;
+
+  // WARNING: USES NFIELDS
+  lvl->o_tmp =
+    device.malloc(NFIELDS * sizeof(dfloat_t) * Nblock, NULL);
+  lvl->o_tmp2 =
+    device.malloc(NFIELDS * sizeof(dfloat_t) * Nblock, NULL);
+  
+  // }}}
+  
+  
+
+  
   // {{{ Build Kernels
   occa::properties info;
 

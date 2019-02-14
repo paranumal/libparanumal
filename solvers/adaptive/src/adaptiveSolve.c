@@ -37,7 +37,7 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
 
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
-    adaptiveZeroMean(adaptive, o_r);
+    adaptiveZeroMean(adaptive, adaptive->o_r);
 #endif
   
   options.getArgs("MAXIMUM ITERATIONS", maxIter);
@@ -57,7 +57,7 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
 
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
-    adaptiveZeroMean(adaptive, o_x);
+    adaptiveZeroMean(adaptive, adaptive->lvl,o_x);
 #endif
   
   return Niter;

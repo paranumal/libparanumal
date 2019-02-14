@@ -93,11 +93,10 @@ adaptive_t *adaptive_new(setupAide &options, MPI_Comm comm)
   adaptive->lvl = level_new(options, adaptive->pxest, adaptive->ghost, adaptive->device,
       adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.5);
 
-  int blockSize = 256;
   occa::properties kernelInfo;
   
   kernelInfo["defines"].asObject();
-  kernelInfo["defines/p_blockSize"]= blockSize;
+  kernelInfo["defines/p_blockSize"]= KERNEL_REDUCE_LDIM;
 
   if(sizeof(iint_t)==4)
     kernelInfo["defines/dlong"]= "int";

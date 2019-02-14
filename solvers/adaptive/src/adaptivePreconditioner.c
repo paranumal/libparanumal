@@ -29,12 +29,12 @@ SOFTWARE.
 void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
                             occa::memory &o_r, occa::memory &o_z){
 
-  level_t *level0 = adaptive->level;
+  level_t *level0 = adaptive->lvl;
   setupAide options = adaptive->options;
 
   if(options.compareArgs("PRECONDITIONER", "JACOBI")){
     
-    dlong Ntotal = level0->Np*level0->Nelements;
+    dlong Ntotal = level0->Np*level0->Klocal;
     // Jacobi preconditioner
     
     adaptive->dotMultiplyKernel(Ntotal, o_r, level0->o_invDiagA, o_z);
@@ -48,7 +48,7 @@ void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
 
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
-    adaptiveZeroMean(adaptive, o_z);
+    adaptiveZeroMean(adaptive, level0, o_z);
 #endif
 }
 

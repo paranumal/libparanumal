@@ -16,6 +16,10 @@ typedef struct level
   iint_t Ncontinuous; // number of continuous nodes
   iint_t Ncindices;   // number of continuous indices
 
+  int blockSize; // number of threads for reductions
+  int Nblock; // number of blocks for reduction of Klocal*Np
+  int Nblock2; // number of blocks for second reduction of Klocl*Np
+  
   iint_t Kmax;        // number of elements used for the allocations
   iint_t Ktotal;      // number of total elements (these may not all be valid)
   iint_t Klocal;      // number of local elements
@@ -78,6 +82,17 @@ typedef struct level
   occa::memory o_q;
   occa::memory o_rhsq;
 
+  iint_t Kglobal;
+  
+  // temporary storage for reductions
+  dfloat *tmp;
+  dfloat *tmp2;
+  occa::memory o_tmp;
+  occa::memory o_tmp2;
+
+  // diagonal of stiffness matrix
+  occa::memory o_invDiagA;
+  
   // arrays for sending & receiving q
   occa::memory o_q_buf;
 
