@@ -1,6 +1,8 @@
 #ifndef NUMBER_TYPES_H
 #define NUMBER_TYPES_H 1
 
+#include "types.h"
+
 // {{{ Number Types
 
 #define INT8_MAX_DIGITS "3"
@@ -41,6 +43,7 @@ typedef unsigned int iint_t;
 #define P4EST_GLOIDX_PRI PRId64
 
 #ifdef USE_DFLOAT_DOUBLE
+
 typedef double dfloat_t;
 #define occaDfloat occaDouble
 #define DFLOAT_MAX DBL_MAX
@@ -48,6 +51,8 @@ typedef double dfloat_t;
 #define DFLOAT_MPI MPI_DOUBLE
 #define DFLOAT_VTK "Float64"
 #define DFLOAT_SQRT sqrt
+
+
 #else
 typedef float dfloat_t;
 #define occaDfloat occaFloat

@@ -10,6 +10,8 @@
 adaptive_t *adaptive_new(setupAide &options, MPI_Comm comm)
 {
 
+  printf("!!!!!!!!!!!!!   sizeof(dfloat_t) = %zu\n", sizeof(dfloat_t));
+  
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
@@ -91,7 +93,7 @@ adaptive_t *adaptive_new(setupAide &options, MPI_Comm comm)
   options.getArgs("POLYNOMIAL DEGREE", N);
   // TODO build more than one level
   adaptive->lvl = level_new(options, adaptive->pxest, adaptive->ghost, adaptive->device,
-      adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.5);
+      adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.01);
 
   occa::properties kernelInfo;
   

@@ -36,6 +36,7 @@ SOFTWARE.
 #define MPI_DFLOAT MPI_DOUBLE
 #define dfloatFormat "%lf"
 #define dfloatString "double"
+#define USE_DFLOAT_DOUBLE 1
 #endif
 
 //host index data type
