@@ -1,0 +1,311 @@
+const int p8est_face_edges[6][4] = {{4, 6, 8, 10}, {5, 7, 9, 11},
+                                       {0, 2, 8, 9},  {1, 3, 10, 11},
+                                       {0, 1, 4, 5},  {2, 3, 6, 7}};
+const int p8est_corner_faces[8][3] = {{0, 2, 4}, {1, 2, 4}, {0, 3, 4},
+                                         {1, 3, 4}, {0, 2, 5}, {1, 2, 5},
+                                         {0, 3, 5}, {1, 3, 5}};
+const int p8est_corner_edges[8][3] = {{0, 4, 8},  {0, 5, 9}, {1, 4, 10},
+                                         {1, 5, 11}, {2, 6, 8}, {2, 7, 9},
+                                         {3, 6, 10}, {3, 7, 11}};
+const int p8est_corner_face_corners[8][6] = {
+    {0, -1, 0, -1, 0, -1}, {-1, 0, 1, -1, 1, -1}, {1, -1, -1, 0, 2, -1},
+    {-1, 1, -1, 1, 3, -1}, {2, -1, 2, -1, -1, 0}, {-1, 2, 3, -1, -1, 1},
+    {3, -1, -1, 2, -1, 2}, {-1, 3, -1, 3, -1, 3}};
+
+
+dlong fmask(dlong n, dlong m, dlong f)
+{
+  dlong a, b, c;
+
+  switch (f)
+  {
+  case 0:
+    a = 0, b = n, c = m;
+    break;
+  case 1:
+    a = p_N, b = n, c = m;
+    break;
+  case 2:
+    a = n, b = 0, c = m;
+    break;
+  case 3:
+    a = n, b = p_N, c = m;
+    break;
+  case 4:
+    a = n, b = m, c = 0;
+    break;
+  case 5:
+    a = n, b = m, c = p_N;
+    break;
+  default:
+    a = 0, b = 0, c = 0;
+  }
+
+  return a + b * p_Nq + c * p_Nq * p_Nq;
+}
+
+dlong gmask(dlong n, dlong g)
+{
+
+  dlong a, b, c;
+
+  switch (g)
+  {
+  case 0:
+    a = n, b = 0, c = 0;
+    break;
+  case 1:
+    a = n, b = p_N, c = 0;
+    break;
+  case 2:
+    a = n, b = 0, c = p_N;
+    break;
+  case 3:
+    a = n, b = p_N, c = p_N;
+    break;
+  case 4:
+    a = 0, b = n, c = 0;
+    break;
+  case 5:
+    a = p_N, b = n, c = 0;
+    break;
+  case 6:
+    a = 0, b = n, c = p_N;
+    break;
+  case 7:
+    a = p_N, b = n, c = p_N;
+    break;
+  case 8:
+    a = 0, b = 0, c = n;
+    break;
+  case 9:
+    a = p_N, b = 0, c = n;
+    break;
+  case 10:
+    a = 0, b = p_N, c = n;
+    break;
+  case 11:
+    a = p_N, b = p_N, c = n;
+    break;
+  default:
+    a = 0, b = 0, c = 0;
+  }
+
+  return a + b * p_Nq + c * p_Nq * p_Nq;
+}
+
+@kernel void adaptiveScatterNoncon(const dlong Nelements,
+				   @restrict const dlong  *EToC,
+				   @restrict const dfloat *Pb,
+				   @restrict const dfloat *Pt,
+				   @restrict dfloat *q){
+
+  for (dlong eo = 0; eo < Nelements; eo += p_NelementsblkS; @outer(0)){
+
+    @shared dfloat s_fld[p_DIM][p_NelementsblkS][p_Nqk][p_Nq];
+    @shared dfloat s_Pb[p_Nq][p_Nq];
+    @shared dfloat s_Pt[p_Nq][p_Nq];
+    
+    @exclusive dlong e;
+    
+    @exclusive int hf[p_P4EST_FACES];
+    @exclusive int hg[p_P4EST_EDGES];
+    
+    // Load shared memory
+    for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2)){
+      for (dlong n = 0; n < p_Nqk; ++n; @inner(1)){
+	for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
+
+	  e = eo + ei;
+
+	  if (ei == 0){
+	    for (dlong j = n; j < p_Nq; j += p_Nqk){
+	      for (dlong i = m; i < p_Nq; i += p_Nq){
+		const dlong id = j * p_Nq + i;
+		s_Pb[j][i] = Pb[id];
+		s_Pt[j][i] = Pt[id];
+	      }
+	    }
+	  }
+
+	  for (int f = 0; f < p_P4EST_FACES; ++f){
+	    hf[f] = -1;
+	  }
+	  for (int g = 0; g < p_P4EST_EDGES; ++g){
+	    hg[g] = -1;
+	  }
+
+	  const dlong fc = (e < Nelements) ? EToC[e] : 0;
+
+	  if (fc){
+	    // Decode the p4est face_code.  The code below is taken from
+	    // p{4,8}est_lnodes_decode.
+	    const dlong c = fc & 7; // 0x0007;
+	    dlong work = fc >> 3;
+	    dlong cwork = c;
+	    
+	    for (int o = 0; o < 3; ++o){
+	      if (work & 1){ // 0x0001)
+		const int f = p8est_corner_faces[c][o];
+		hf[f] = p8est_corner_face_corners[c][f];
+		for (int p = 0; p < 4; ++p){
+		  const int g = p8est_face_edges[f][p];
+		  hg[g] = 4;
+		}
+	      }
+	      work >>= 1;
+	    }
+
+	    for (int o = 0; o < 3; ++o){
+	      if (work & 1){ // 0x0001)
+		const int g = p8est_corner_edges[c][o];
+		hg[g] = (hg[g] == -1) ? 0 : 2;
+		int bit = (int)(cwork & 0x0001);
+		hg[g] += bit;
+	      }
+	      cwork >>= 1;
+	      work >>= 1;
+	    }
+	  }
+	}
+      }
+    }
+
+    for (dlong idfld = 0; idfld < p_NFIELDS; ++idfld){
+
+      @barrier("local");
+      
+      for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2)){
+	for (dlong n = 0; n < p_Nqk; ++n; @inner(1)){
+	  for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
+	    int hi = 0;
+
+	    for (int f = 0; f < p_P4EST_FACES; ++f){
+	      
+	      if (hf[f] >= 0){
+		const dlong l = fmask(m, n, f);
+		const dlong idq = l + e * p_Np * p_NFIELDS;
+		
+		s_fld[hi][ei][n][m] = q[idq + idfld * p_Np];
+		++hi;
+	      }
+	    }
+	  }
+	}
+      }
+      
+      @barrier("local");
+      
+      for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2)){
+	for (dlong n = 0; n < p_Nqk; ++n; @inner(1)){
+	  for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
+	    int hi = 0;
+	    for (int f = 0; f < p_P4EST_FACES; ++f){
+	      if (hf[f] >= 0){
+		dfloat fld = ZERO;
+
+		if (hf[f] == 0){
+		  for (dlong p = 0; p < p_Nq; ++p){
+#pragma unroll p_Nq
+		    for (dlong o = 0; o < p_Nq; ++o){
+		      fld += s_Pb[m][o] * s_Pb[n][p] * s_fld[hi][ei][p][o];
+		    }
+		  }
+		}
+		if (hf[f] == 1){
+		  for (dlong p = 0; p < p_Nq; ++p){
+#pragma unroll p_Nq
+		    for (dlong o = 0; o < p_Nq; ++o){
+		      fld += s_Pt[m][o] * s_Pb[n][p] * s_fld[hi][ei][p][o];
+		    }
+		  }
+		}
+		if (hf[f] == 2){
+		  for (dlong p = 0; p < p_Nq; ++p){
+#pragma unroll p_Nq
+		    for (dlong o = 0; o < p_Nq; ++o){
+		      fld += s_Pb[m][o] * s_Pt[n][p] * s_fld[hi][ei][p][o];
+		    }
+		  }
+		}
+		if (hf[f] == 3){
+		  for (dlong p = 0; p < p_Nq; ++p){
+#pragma unroll p_Nq
+		    for (dlong o = 0; o < p_Nq; ++o){
+		      fld += s_Pt[m][o] * s_Pt[n][p] * s_fld[hi][ei][p][o];
+		    }
+		  }
+		}
+		const dlong l = fmask(m, n, f);
+		const dlong idq = l + e * p_Np * p_NFIELDS;
+		
+		q[idq + idfld * p_Np] = fld;
+		
+		++hi;
+	      }
+	    }
+	  }
+	}
+      }
+
+      @barrier("local");
+
+      for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2)){
+	for (dlong n = 0; n < p_Nqk; ++n; @inner(1)){
+	  for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
+	    int hi = 0;
+	    for (int g = 0; g < p_P4EST_EDGES; ++g){
+	      
+	      if (n == 0 && (hg[g] == 0 || hg[g] == 1)){
+		const dlong l = gmask(m, g);
+		const dlong idq = l + e * p_Np * p_NFIELDS;
+		
+		s_fld[hi][ei][n][m] = q[idq + idfld * p_Np];
+		
+		++hi;
+	      }
+	    }
+	  }
+	}
+      }
+      
+      @barrier("local");
+      
+      for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2)){
+	for (dlong n = 0; n < p_Nqk; ++n; @inner(1)){
+	  for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
+	    int hi = 0;
+	    for (int g = 0; g < p_P4EST_EDGES; ++g){
+	      
+	      if (n == 0 && (hg[g] == 0 || hg[g] == 1)){
+		dfloat fld = ZERO;
+		
+		if (hg[g] == 0){
+#pragma unroll p_Nq
+		  for (dlong p = 0; p < p_Nq; ++p){
+		    fld += s_Pb[m][p] * s_fld[hi][ei][n][p];
+		  }
+		}
+		
+		if (hg[g] == 1){
+#pragma unroll p_Nq
+		  for (dlong p = 0; p < p_Nq; ++p){
+		    fld += s_Pt[m][p] * s_fld[hi][ei][n][p];
+		  }
+		}
+
+		const dlong l = gmask(m, g);
+		const dlong idq = l + e * p_Np * p_NFIELDS;
+		
+		q[idq + idfld * p_Np] = fld;
+		
+		++hi;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+}
+				    

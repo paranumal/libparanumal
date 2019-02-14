@@ -498,6 +498,11 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 					  "adaptiveGatherNoncon",
 					  info);
 
+
+  lvl->scatter_noncon = device.buildKernel(DADAPTIVE "/okl/adaptiveScatterNoncon.okl",
+					  "adaptiveScatterNoncon",
+					  info);
+
   
 #if 0
 
@@ -535,9 +540,8 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   // BUILD occa Gather Scatter
   // TW: what is actual order ?
   // TW: what is comm ?
-  lvl->ogs = ogsSetup(lvl->Klocal*lvl->Np, mesh->DToC, MPI_COMM_WORLD, 1, device); 
-
-
+  // TW: need proper conversion between (p4est_gloidx_t) and (hlong)
+  //  lvl->ogs = ogsSetup(lvl->Klocal*lvl->Np, (hlong*) mesh->DToC, MPI_COMM_WORLD, 1, device);
   
   mesh_free(mesh);
 
