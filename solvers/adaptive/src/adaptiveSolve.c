@@ -29,7 +29,6 @@ SOFTWARE.
 int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
                   occa::memory &o_r, occa::memory &o_x){
   
-  mesh_t *mesh = adaptive->mesh;
   setupAide options = adaptive->options;
 
   int Niter = 0;
@@ -37,27 +36,18 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
 
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
-    adaptiveZeroMean(adaptive, adaptive->o_r);
+    adaptiveZeroMean(adaptive, adaptive->lvl, o_r);
 #endif
   
   options.getArgs("MAXIMUM ITERATIONS", maxIter);
 
   options.getArgs("SOLVER TOLERANCE", tol);
   
-  if(!options.compareArgs("KRYLOV SOLVER", "NONBLOCKING"))
-    Niter = pcg (adaptive, lambda, o_r, o_x, tol, maxIter);
-  else{
-    if(!options.compareArgs("KRYLOV SOLVER", "FLEXIBLE")){
-      Niter = nbpcg (adaptive, lambda, o_r, o_x, tol, maxIter);
-    }
-    else{      
-      Niter = nbfpcg (adaptive, lambda, o_r, o_x, tol, maxIter);
-    }
-  }
+  Niter = pcg (adaptive, lambda, o_r, o_x, tol, maxIter);
 
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
-    adaptiveZeroMean(adaptive, adaptive->lvl,o_x);
+    adaptiveZeroMean(adaptive, adaptive->lvl, o_x);
 #endif
   
   return Niter;

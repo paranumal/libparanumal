@@ -348,6 +348,9 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
       (size_t)(occa_kmax_mem_frac *
                (long double)(device.memorySize() - device.memoryAllocated()));
 
+  const int NpcgWork = 10;
+  lvl->NpcgWork = NpcgWork;
+
   const int Nfaces = lvl->Nfaces;
   const int Nfp = lvl->Nfp;
   const int Np = lvl->Np;
@@ -357,9 +360,9 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 
   const size_t to_allocate_bytes_per_element =
       (sizeof(iint_t) *
-           (11 + (8 + P4EST_HALF) * Nfaces + brick + 2 * Np) +
+           (11 + (8 + P4EST_HALF) * Nfaces + brick + 2 * Np ) +
        sizeof(dfloat_t) *
-           ((3 * NFIELDS + NVGEO + 2) * Np + (NSGEO * Nfaces * Nfp)));
+           ((3 * NFIELDS + NVGEO + 2 + NpcgWork) * Np + (NSGEO * Nfaces * Nfp)));
 
   const size_t uKmax = available_bytes / to_allocate_bytes_per_element;
   const iint_t Kmax = lvl->Kmax = (iint_t)ASD_MIN(uKmax, IINT_MAX);
@@ -482,9 +485,12 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
     device.malloc(NFIELDS * sizeof(dfloat_t) * Nblock, NULL);
   
   // }}}
-  
-  
 
+  lvl->o_pcgWork = (occa::memory*) malloc(lvl->NpcgWork*sizeof(occa::memory*));
+
+  for(int n=0;n<lvl->NpcgWork;++n){
+    lvl->o_pcgWork[n] = device.malloc(lvl->Kmax*lvl->Np*sizeof(dfloat_t));
+  }
   
   // {{{ Build Kernels
   occa::properties info;
@@ -532,6 +538,7 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   lvl->scatter_noncon = device.buildKernel(DADAPTIVE "/okl/adaptiveScatterNoncon.okl",
 					  "adaptiveScatterNoncon",
 					  info);
+
 
   
 #if 0

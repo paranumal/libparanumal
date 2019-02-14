@@ -119,6 +119,10 @@ typedef struct level
   // reduction buffers
   occa::memory o_red_buf[2];
 
+  // pcg buffers
+  int NpcgWork;
+  occa::memory* o_pcgWork;
+  
   // kernels
   occa::kernel compute_Ax;// not populated yet
   occa::kernel compute_partial_Ax;

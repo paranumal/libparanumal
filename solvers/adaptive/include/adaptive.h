@@ -64,4 +64,30 @@ void adaptiveScaledAdd(adaptive_t *adaptive, level_t *level,
 
 void adaptiveZeroMean(adaptive_t *adaptive, level_t *level, occa::memory &o_q);
 
+int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
+                  occa::memory &o_r, occa::memory &o_x);
+
+int pcg(adaptive_t* adaptive,
+	dfloat lambda, 
+        occa::memory &o_r,
+	occa::memory &o_x, 
+        const dfloat tol, const int MAXIT);
+
+void adaptiveOperator(adaptive_t *adaptive,
+		      level_t *level,
+		      dfloat lambda,
+		      occa::memory &o_q,
+		      occa::memory &o_Aq);
+
+dfloat adaptiveWeightedInnerProduct(adaptive_t *adaptive, level_t *level,
+				    occa::memory &o_w, occa::memory &o_a, occa::memory &o_b);
+
+dfloat adaptiveUpdatePCG(adaptive_t *adaptive,
+			 level_t *level,
+			 occa::memory &o_p,
+			 occa::memory &o_Ap,
+			 const dfloat alpha,
+			 occa::memory &o_x,
+			 occa::memory &o_r);
+
 #endif

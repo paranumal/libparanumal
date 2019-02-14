@@ -28,6 +28,7 @@ SOFTWARE.
 
 
 dfloat adaptiveUpdatePCG(adaptive_t *adaptive,
+			 level_t *level,
 			 occa::memory &o_p,
 			 occa::memory &o_Ap,
 			 const dfloat alpha,
@@ -67,7 +68,7 @@ dfloat adaptiveUpdatePCG(adaptive_t *adaptive,
     }
     
     dfloat globalrdotr1 = 0;
-    MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+    MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, adaptive->comm);
 
     rdotr1 = globalrdotr1;
     

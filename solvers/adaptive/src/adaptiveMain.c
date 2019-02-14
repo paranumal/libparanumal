@@ -78,7 +78,14 @@ int main(int argc, char **argv){
   print_precision();
 
   adaptive_t *adaptive = adaptive_new(options, comm);
+  level_t *level = adaptive->lvl;
+  
+  occa::memory o_b = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat));
+  occa::memory o_x = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat));
 
+  dfloat lambda = 10, tol = 1.e-6;
+  adaptiveSolve(adaptive, lambda, tol, o_b, o_x);
+  
   adaptive_free(adaptive);
 
 #if 0

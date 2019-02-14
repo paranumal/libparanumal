@@ -67,12 +67,15 @@ DEPS = $(INCLUDES)
 
 # list of objects to be compiled
 AOBJS    = \
+./src/PCG.o \
 ./src/asd.o \
+./src/adaptiveSolve.o \
 ./src/adaptiveSetup.o \
 ./src/adaptiveOperator.o \
 ./src/adaptiveScaledAdd.o \
 ./src/adaptiveWeightedNorm2.o \
 ./src/adaptivePreconditioner.o \
+./src/adaptiveUpdatePCG.o \
 ./src/adaptiveWeightedInnerProduct.o \
 ./src/adaptiveZeroMean.o \
 ./src/connectivity.o \
