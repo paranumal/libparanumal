@@ -81,6 +81,10 @@ SOFTWARE.
 #pragma clang diagnostic pop
 #endif
 
+#include "ogs.hpp"
+#include "ogsInterface.h"
+
+
 #include "occa.hpp"
 #include "setupAide.hpp"
 #include "asd.h"

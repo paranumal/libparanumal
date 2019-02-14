@@ -28,7 +28,6 @@ SOFTWARE.
 @kernel void adaptiveAxHex3D(const dlong Nelements,
 			     @restrict const  dfloat *  ggeo,
 			     @restrict const  dfloat *  D,
-			     @restrict const  dfloat *  S,
 			     const dfloat lambda,
 			     @restrict const  dfloat *  q,
 			     @restrict dfloat *  Aq){
@@ -163,7 +162,6 @@ SOFTWARE.
 				       @restrict const  dlong  *  elementList,
 				       @restrict const  dfloat *  ggeo,
 				       @restrict const  dfloat *  D,
-				       @restrict const  dfloat *  S,
 				       const dfloat lambda,
 				       @restrict const  dfloat *  q,
 				       @restrict dfloat *  Aq){
@@ -287,6 +285,7 @@ SOFTWARE.
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
+	
         #pragma unroll p_Nq
           for(int k = 0; k < p_Nq; k++){
             const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;

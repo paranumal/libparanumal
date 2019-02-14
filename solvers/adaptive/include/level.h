@@ -131,6 +131,12 @@ typedef struct level
 
   occa::kernel reduce_min;
   occa::kernel reduce_sum;
+
+  occa::kernel gather_noncon;
+  occa::kernel scatter_noncon;
+
+  ogs_t *ogs;
+  
 } level_t;
 
 level_t *level_new(setupAide &options, p4est_t *pxest,

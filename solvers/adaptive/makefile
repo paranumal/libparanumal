@@ -30,13 +30,13 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I./include -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(P4EST_CPPFLAGS) -I../../include -D DHOLMES='"${CURDIR}/../.."' -D DADAPTIVE='"${CURDIR}"' $(LIBP_OPT_FLAGS)
+CFLAGS = -I./include -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(P4EST_CPPFLAGS) -I../../include -D DHOLMES='"${CURDIR}/../.."' -D DADAPTIVE='"${CURDIR}"' $(LIBP_OPT_FLAGS) -I$(OGSDIR) -I$(OGSDIR)/include
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(LIBP_OPT_FLAGS)
 
 # libraries to be linked in
-LIBS	= -Wl,-rpath=$(P4ESTDIR)/local/lib,--enable-new-dtags $(P4EST_LDFLAGS) $(P4EST_LIBS) -Wl,-rpath=$(OCCA_DIR)/lib,--enable-new-dtags -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack  $(LIBP_EXT_LIBS) -lgfortran
+LIBS	= -Wl,-rpath=$(P4ESTDIR)/local/lib,--enable-new-dtags $(P4EST_LDFLAGS) $(P4EST_LIBS) -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -Wl,-rpath=$(OCCA_DIR)/lib,--enable-new-dtags -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack  $(LIBP_EXT_LIBS) -lgfortran
 
 INCLUDES = adaptive.h \
            app.h \
@@ -62,10 +62,11 @@ DEPS = $(INCLUDES)
 
 # add this object for USE_STEFAN_MXM ./src/adaptiveSerialLocalAxHex3D.o\
 
+# ./src/adaptiveOutputVTUHex3D.o \
+
 
 # list of objects to be compiled
 AOBJS    = \
-./src/adaptiveOutputVTUHex3D.o \
 ./src/asd.o \
 ./src/app.o \
 ./src/connectivity.o \
@@ -79,7 +80,7 @@ LOBJS = \
 ../../src/setupAide.o \
 ../../src/timer.o
 
-adaptiveMain:$(AOBJS) $(LOBJS) ./src/adaptiveMain.o libblas
+adaptiveMain:$(AOBJS) $(LOBJS) ./src/adaptiveMain.o libblas libogs
 	$(LD)  $(LDFLAGS)  -o adaptiveMain ./src/adaptiveMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
 
 lib:$(AOBJS)
@@ -93,6 +94,9 @@ libblas:
 
 libparAlmond:
 	cd ../../libs/parAlmond; make -j lib; cd ../../solvers/adaptive
+
+libogs:
+	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/elliptic
 
 all: lib adaptiveMain
 

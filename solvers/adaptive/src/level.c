@@ -24,10 +24,10 @@ static void level_kernelinfo(occa::properties &info, occa::device &device, int N
 
   info["defines/dlong"] = occa_iint_name;
 
-  const char *const dfloat =
-      (sizeof(double) == sizeof(dfloat_t)) ? "double" : "float";
+  //  const char *const dfloatString =
+  //    (sizeof(double) == sizeof(dfloat_t)) ? "double" : "float";
 
-  info["defines/dfloat"] = dfloat;
+  info["defines/dfloat"] = dfloatString;
   if (sizeof(double) == sizeof(dfloat_t))
     info["defines/p_DFLOAT_DOUBLE"] = 1;
   else
@@ -492,6 +492,13 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   lvl->set_ghost_fields = device.buildKernel(DADAPTIVE "/okl/adaptiveSetGhostFields.okl",
 					      "adaptiveSetGhostFields",
 					      info);
+
+
+  lvl->gather_noncon = device.buildKernel(DADAPTIVE "/okl/adaptiveGatherNoncon.okl",
+					  "adaptiveGatherNoncon",
+					  info);
+
+  
 #if 0
 
   lvl->reduce_min = occaDeviceBuildKernelFromString(
@@ -524,6 +531,13 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 #endif
 
   level_get_mesh(lvl, mesh, pxest, ghost, device, brick);
+
+  // BUILD occa Gather Scatter
+  // TW: what is actual order ?
+  // TW: what is comm ?
+  lvl->ogs = ogsSetup(lvl->Klocal*lvl->Np, mesh->DToC, MPI_COMM_WORLD, 1, device); 
+
+
   
   mesh_free(mesh);
 
