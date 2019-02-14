@@ -26,11 +26,13 @@ SOFTWARE.
 
 #include "adaptive.h"
 
-int pcg(adaptive_t* adaptive, dfloat lambda, 
-        occa::memory &o_r, occa::memory &o_x, 
+int pcg(adaptive_t* adaptive,
+	dfloat lambda, 
+        occa::memory &o_r,
+	occa::memory &o_x, 
         const dfloat tol, const int MAXIT){
 
-  mesh_t *mesh = adaptive->mesh;
+  
   setupAide options = adaptive->options;
 
   int fixedIterationCountFlag = 0;
@@ -58,23 +60,19 @@ int pcg(adaptive_t* adaptive, dfloat lambda,
   occa::memory &o_Ap = adaptive->o_Ap;
   occa::memory &o_Ax = adaptive->o_Ax;
 
-#if 0
-  dfloat normB = adaptiveWeightedNorm2(adaptive, adaptive->o_invDegree, o_r);
-#endif
- 
   pAp = 0;
   rdotz1 = 1;
 
   dfloat rdotr0;
 
   // compute A*x
-  adaptiveOperator(adaptive, lambda, o_x, adaptive->o_Ax, dfloatString);
+  adaptiveOperator(adaptive, adaptive->level, lambda, o_x, adaptive->o_Ax, dfloatString);
   
   // subtract r = b - A*x
-  adaptiveScaledAdd(adaptive, -1.f, o_Ax, 1.f, o_r);
+  adaptiveScaledAdd(adaptive, adaptive->level, -1.f, o_Ax, 1.f, o_r);
 
   if(enableReductions)
-    rdotr0 = adaptiveWeightedNorm2(adaptive, adaptive->o_invDegree, o_r);
+    rdotr0 = adaptiveWeightedNorm2(adaptive, adaptive->level, adaptive->level->ogs->o_invDegree, o_r);
   else
     rdotr0 = 1;
 
@@ -113,7 +111,7 @@ int pcg(adaptive_t* adaptive, dfloat lambda,
     adaptiveScaledAdd(adaptive, 1.f, o_z, beta, o_p);
     
     // A*p
-    adaptiveOperator(adaptive, lambda, o_p, o_Ap, dfloatString); 
+    adaptiveOperator(adaptive, adaptive->level, lambda, o_p, o_Ap, dfloatString); 
 
     // dot(p,A*p)
     if(enableReductions){

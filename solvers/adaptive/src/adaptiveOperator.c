@@ -25,15 +25,13 @@
 */
 
 #include "adaptive.h"
-#include "ogsInterface.h"
 
-#include "omp.h"
+void adaptiveOperator(adaptive_t *adaptive,
+		      level_t *level,
+		      dfloat lambda,
+		      occa::memory &o_q,
+		      occa::memory &o_Aq){
 
-
-//host gs
-void adaptiveSerialOperator(adaptive_t *adaptive, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision){
-  
-  mesh_t *mesh = adaptive->mesh;
   setupAide &options = adaptive->options;
 
   int enableGatherScatters = 1;
@@ -42,225 +40,60 @@ void adaptiveSerialOperator(adaptive_t *adaptive, dfloat lambda, occa::memory &o
   int serial = options.compareArgs("THREAD MODEL", "Serial");
   int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
   
-  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
-  options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
-  
-  //  printf("serialOperator: gathers = %d, reductions = %d, cts = %d, serial = %d, ipdg = %d\n",
-  //	 enableGatherScatters, enableReductions, continuous, serial, ipdg);
-  
-  dfloat *sendBuffer = adaptive->sendBuffer;
-  dfloat *recvBuffer = adaptive->recvBuffer;
-  dfloat *gradSendBuffer = adaptive->gradSendBuffer;
-  dfloat *gradRecvBuffer = adaptive->gradRecvBuffer;
-
-  dfloat alpha = 0., alphaG = 0.;
-
-  if(continuous && serial){
-
-    adaptiveSerialAxHexKernel3D(mesh->Nq,  mesh->Nelements, mesh->o_ggeo, 
-				mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq, adaptive->o_ggeoNoJW);
-    
-    ogs_t *adaptiveOgs = adaptive->ogs;
-    
-    ogsHostGatherScatter(o_Aq.ptr(), dfloatString, "add", adaptiveOgs->hostGsh);
-
-#if USE_NULL_BOOST==1
-    if(adaptive->allNeumann) { // inspect this later
-      
-      dlong Nblock = adaptive->Nblock;
-      dfloat *tmp = adaptive->tmp;
-      occa::memory &o_tmp = adaptive->o_tmp;
-
-      adaptive->innerProductKernel(mesh->Nelements*mesh->Np, adaptive->o_invDegree, o_q, o_tmp);
-      o_tmp.copyTo(tmp);
-      
-      for(dlong n=0;n<Nblock;++n)
-        alpha += tmp[n];
-
-      MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
-      alphaG *= adaptive->allNeumannPenalty*adaptive->allNeumannScale*adaptive->allNeumannScale;
-
-      mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
-    }
-#endif
-    
-    //post-mask
-    if (adaptive->Nmasked) 
-      mesh->maskKernel(adaptive->Nmasked, adaptive->o_maskIds, o_Aq);
-
-  } else if(ipdg){
-    printf("WARNING: DEBUGGING C0\n");
-    MPI_Finalize();
-    exit(-1);
-  } 
-  
-}
-
-void adaptiveOperator(adaptive_t *adaptive, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision){
-
-  mesh_t *mesh = adaptive->mesh;
-  setupAide &options = adaptive->options;
-
-  int enableGatherScatters = 1;
-  int enableReductions = 1;
-  int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
-  int serial = options.compareArgs("THREAD MODEL", "Serial");
-  int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
-  
-  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
-  options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
-
-  //  printf("generalOperator: gathers = %d, reductions = %d, cts = %d, serial = %d, ipdg = %d\n",
-  //	 enableGatherScatters, enableReductions, continuous, serial, ipdg);
-  
-  dfloat *sendBuffer = adaptive->sendBuffer;
-  dfloat *recvBuffer = adaptive->recvBuffer;
-  dfloat *gradSendBuffer = adaptive->gradSendBuffer;
-  dfloat *gradRecvBuffer = adaptive->gradRecvBuffer;
-
-  dfloat alpha = 0., alphaG = 0.;
-  dlong Nblock = adaptive->Nblock;
-  dfloat *tmp = adaptive->tmp;
-  occa::memory &o_tmp = adaptive->o_tmp;
-
   if(continuous){
 
-    // if in serial mode bypass occa
-    if(serial && adaptive->elementType==HEXAHEDRA){
-      adaptiveSerialOperator(adaptive, lambda, o_q, o_Aq, precision);
-      return;
-    }
-
-    ogs_t *ogs = adaptive->ogs;
-
-    if(mesh->NglobalGatherElements) {
-      // do elements that touch partition boundary
-      adaptive->partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
-				mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
-
-    }
+    ogs_t *ogs = level->ogs;
     
-    if(enableGatherScatters)
-      ogsGatherScatterStart(o_Aq, ogsDfloat, ogsAdd, ogs);
+    dfloat_t lambda = 1.0;
+    level->compute_partial_Ax(level->Klocal, // locally owned elements
+			      level->o_IToE,
+			      level->o_ggeo,
+			      level->o_D,
+			      lambda,
+			      o_q,
+			      o_Aq);
     
+    // gather over noncon faces to coarse side dofs
+    level->gather_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_Aq);
+    
+    // gather scatter over ranks
+    ogsGatherScatter(o_Aq, ogsDfloat, ogsAdd, level->ogs);
 
-    if(mesh->NlocalGatherElements){
-      // do elements that do not touch partition boundary
-      adaptive->partialAxKernel(mesh->NlocalGatherElements, mesh->o_localGatherElementList,
-				mesh->o_ggeo, mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq);
-    }
+    // scatter from coarse to fine noncon
+    level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_Aq);
 
-    // finalize gather using local and global contributions
-    if(enableGatherScatters==1)
-      ogsGatherScatterFinish(o_Aq, ogsDfloat, ogsAdd, ogs);
-
+    // boost null space option
 #if USE_NULL_BOOST==1
-    if(adaptive->allNeumann) {
+    if(level->allNeumann) {
 
-      adaptive->innerProductKernel(mesh->Nelements*mesh->Np, adaptive->o_invDegree, o_q, o_tmp);
+      dfloat alpha = 0., alphaG = 0.;
+      dlong Nblock = level->Nblock;
+      dfloat *tmp = level->tmp;
+      occa::memory &o_tmp = level->o_tmp;
+      
+      adaptive->innerProductKernel(level->Nelements*level->Np, level->o_invDegree, o_q, o_tmp);
       o_tmp.copyTo(tmp);
       
       for(dlong n=0;n<Nblock;++n)
         alpha += tmp[n];
 
-      MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
-      alphaG *= adaptive->allNeumannPenalty*adaptive->allNeumannScale*adaptive->allNeumannScale;
+      MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, level->comm);
+      alphaG *= level->allNeumannPenalty*level->allNeumannScale*level->allNeumannScale;
 
-      mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
+      adaptive->addScalarKernel(level->Nelements*level->Np, alphaG, o_Aq);
     }
 #endif
-    
+
+#if 0
     //post-mask
-    if (adaptive->Nmasked) 
-      mesh->maskKernel(adaptive->Nmasked, adaptive->o_maskIds, o_Aq);
+    if (level->Nmasked) 
+      adaptive->maskKernel(level->Nmasked, level->o_maskIds, o_Aq);
+#endif
 
   } else if(ipdg){
-    dlong offset = 0;
-    dfloat alpha = 0., alphaG =0.;
-    dlong Nblock = adaptive->Nblock;
-    dfloat *tmp = adaptive->tmp;
-    occa::memory &o_tmp = adaptive->o_tmp;
-
-    adaptiveStartHaloExchange(adaptive, o_q, mesh->Np, sendBuffer, recvBuffer);
-
-    adaptive->partialGradientKernel(mesh->Nelements,
-				    offset,
-				    mesh->o_vgeo,
-				    mesh->o_Dmatrices,
-				    o_q,
-				    adaptive->o_grad);
-
-    adaptiveInterimHaloExchange(adaptive, o_q, mesh->Np, sendBuffer, recvBuffer);
-
-    //Start the rank 1 augmentation if all BCs are Neumann
-    //TODO this could probably be moved inside the Ax kernel for better performance
-#if USE_NULL_BOOST==1
-    if(adaptive->allNeumann)
-      mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
-#endif
-    
-    if(mesh->NinternalElements) {
-      adaptive->partialIpdgKernel(mesh->NinternalElements,
-				  mesh->o_internalElementIds,
-				  mesh->o_vmapM,
-				  mesh->o_vmapP,
-				  lambda,
-				  adaptive->tau,
-				  mesh->o_vgeo,
-				  mesh->o_sgeo,
-				  adaptive->o_EToB,
-				  mesh->o_Dmatrices,
-				  mesh->o_LIFTT,
-				  mesh->o_MM,
-				  adaptive->o_grad,
-				  o_Aq);
-    }
-
-#if USE_NULL_BOOST==1
-    if(adaptive->allNeumann) {
-      o_tmp.copyTo(tmp);
-
-      for(dlong n=0;n<Nblock;++n)
-        alpha += tmp[n];
-
-      MPI_Allreduce(&alpha, &alphaG, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
-      alphaG *= adaptive->allNeumannPenalty*adaptive->allNeumannScale*adaptive->allNeumannScale;
-    }
-#endif
-    
-    adaptiveEndHaloExchange(adaptive, o_q, mesh->Np, recvBuffer);
-
-    if(mesh->totalHaloPairs){
-      offset = mesh->Nelements;
-      adaptive->partialGradientKernel(mesh->totalHaloPairs,
-				      offset,
-				      mesh->o_vgeo,
-				      mesh->o_Dmatrices,
-				      o_q,
-				      adaptive->o_grad);
-    }
-
-    if(mesh->NnotInternalElements) {
-      adaptive->partialIpdgKernel(mesh->NnotInternalElements,
-				  mesh->o_notInternalElementIds,
-				  mesh->o_vmapM,
-				  mesh->o_vmapP,
-				  lambda,
-				  adaptive->tau,
-				  mesh->o_vgeo,
-				  mesh->o_sgeo,
-				  adaptive->o_EToB,
-				  mesh->o_Dmatrices,
-				  mesh->o_LIFTT,
-				  mesh->o_MM,
-				  adaptive->o_grad,
-				  o_Aq);
-    }
-
-#if USE_NULL_BOOST==1
-    if(adaptive->allNeumann)
-      mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
-#endif
+    printf("WARNING: bailing since ipdg is not yet supported\n");
+    MPI_Finalize();
+    exit(0);
   } 
 
 }

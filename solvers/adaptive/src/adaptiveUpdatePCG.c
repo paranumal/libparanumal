@@ -26,77 +26,13 @@ SOFTWARE.
 
 #include "adaptive.h"
 
-template < int p_Nq >
-dfloat adaptiveSerialUpdatePCGKernel(const hlong Nelements,
-				     const dfloat * __restrict__ cpu_invDegree,
-				     const dfloat * __restrict__ cpu_p,
-				     const dfloat * __restrict__ cpu_Ap,
-				     const dfloat alpha,
-				     dfloat * __restrict__ cpu_x,
-				     dfloat * __restrict__ cpu_r){
-
-#define p_Np (p_Nq*p_Nq*p_Nq)
-
-  cpu_p  = (dfloat*)__builtin_assume_aligned(cpu_p,  USE_OCCA_MEM_BYTE_ALIGN) ;
-  cpu_Ap = (dfloat*)__builtin_assume_aligned(cpu_Ap, USE_OCCA_MEM_BYTE_ALIGN) ;
-  cpu_x  = (dfloat*)__builtin_assume_aligned(cpu_x,  USE_OCCA_MEM_BYTE_ALIGN) ;
-  cpu_r  = (dfloat*)__builtin_assume_aligned(cpu_r,  USE_OCCA_MEM_BYTE_ALIGN) ;
-
-  cpu_invDegree = (dfloat*)__builtin_assume_aligned(cpu_invDegree,  USE_OCCA_MEM_BYTE_ALIGN) ;
-  
-  dfloat rdotr = 0;
-  
-  cpu_p = (dfloat*)__builtin_assume_aligned(cpu_p, USE_OCCA_MEM_BYTE_ALIGN) ;
-
-  for(hlong e=0;e<Nelements;++e){
-    for(int i=0;i<p_Np;++i){
-      const hlong n = e*p_Np+i;
-      cpu_x[n] += alpha*cpu_p[n];
-
-      const dfloat rn = cpu_r[n] - alpha*cpu_Ap[n];
-      rdotr += rn*rn*cpu_invDegree[n];
-      cpu_r[n] = rn;
-    }
-  }
-
-#undef p_Np
-  
-  return rdotr;
-}
-				     
-dfloat adaptiveSerialUpdatePCG(const int Nq, const hlong Nelements,
-			       occa::memory &o_invDegree, occa::memory &o_p, occa::memory &o_Ap, const dfloat alpha,
-			       occa::memory &o_x, occa::memory &o_r){
-
-  const dfloat * __restrict__ cpu_p  = (dfloat*)__builtin_assume_aligned(o_p.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
-  const dfloat * __restrict__ cpu_Ap = (dfloat*)__builtin_assume_aligned(o_Ap.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
-  const dfloat * __restrict__ cpu_invDegree = (dfloat*)__builtin_assume_aligned(o_invDegree.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
-
-  dfloat * __restrict__ cpu_x  = (dfloat*)__builtin_assume_aligned(o_x.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
-  dfloat * __restrict__ cpu_r  = (dfloat*)__builtin_assume_aligned(o_r.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
-
-  dfloat rdotr = 0;
-  
-  switch(Nq){
-  case  2: rdotr = adaptiveSerialUpdatePCGKernel <  2 > (Nelements, cpu_invDegree, cpu_p, cpu_Ap, alpha, cpu_x, cpu_r); break; 
-  case  3: rdotr = adaptiveSerialUpdatePCGKernel <  3 > (Nelements, cpu_invDegree, cpu_p, cpu_Ap, alpha, cpu_x, cpu_r); break;
-  case  4: rdotr = adaptiveSerialUpdatePCGKernel <  4 > (Nelements, cpu_invDegree, cpu_p, cpu_Ap, alpha, cpu_x, cpu_r); break;
-  case  5: rdotr = adaptiveSerialUpdatePCGKernel <  5 > (Nelements, cpu_invDegree, cpu_p, cpu_Ap, alpha, cpu_x, cpu_r); break;
-  case  6: rdotr = adaptiveSerialUpdatePCGKernel <  6 > (Nelements, cpu_invDegree, cpu_p, cpu_Ap, alpha, cpu_x, cpu_r); break;
-  case  7: rdotr = adaptiveSerialUpdatePCGKernel <  7 > (Nelements, cpu_invDegree, cpu_p, cpu_Ap, alpha, cpu_x, cpu_r); break;
-  case  8: rdotr = adaptiveSerialUpdatePCGKernel <  8 > (Nelements, cpu_invDegree, cpu_p, cpu_Ap, alpha, cpu_x, cpu_r); break;
-  case  9: rdotr = adaptiveSerialUpdatePCGKernel <  9 > (Nelements, cpu_invDegree, cpu_p, cpu_Ap, alpha, cpu_x, cpu_r); break;
-  case 10: rdotr = adaptiveSerialUpdatePCGKernel < 10 > (Nelements, cpu_invDegree, cpu_p, cpu_Ap, alpha, cpu_x, cpu_r); break;
-  case 11: rdotr = adaptiveSerialUpdatePCGKernel < 11 > (Nelements, cpu_invDegree, cpu_p, cpu_Ap, alpha, cpu_x, cpu_r); break;
-  case 12: rdotr = adaptiveSerialUpdatePCGKernel < 12 > (Nelements, cpu_invDegree, cpu_p, cpu_Ap, alpha, cpu_x, cpu_r); break;
-  }
-
-  return rdotr;
-}
 
 dfloat adaptiveUpdatePCG(adaptive_t *adaptive,
-			 occa::memory &o_p, occa::memory &o_Ap, const dfloat alpha,
-			 occa::memory &o_x, occa::memory &o_r){
+			 occa::memory &o_p,
+			 occa::memory &o_Ap,
+			 const dfloat alpha,
+			 occa::memory &o_x,
+			 occa::memory &o_r){
 
   setupAide &options = adaptive->options;
   
@@ -109,52 +45,25 @@ dfloat adaptiveUpdatePCG(adaptive_t *adaptive,
   int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
   int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
   
-  mesh_t *mesh = adaptive->mesh;
 
-  if(serial==1 && continuous==1){
-    
-    dfloat rdotr1 = adaptiveSerialUpdatePCG(mesh->Nq, mesh->Nelements, 
-					    adaptive->o_invDegree,
-					    o_p, o_Ap, alpha, o_x, o_r);
-
-    dfloat globalrdotr1 = 0;
-    if(enableReductions)      
-      MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
-    else
-      globalrdotr1 = 1;
-    
-    return globalrdotr1;
-  }
+  int Ntotal = level->Klocal*level->Np;
   
   dfloat rdotr1 = 0;
   
-  if(!continuous){
-    
-    // x <= x + alpha*p
-    adaptiveScaledAdd(adaptive,  alpha, o_p,  1.f, o_x);
-    
-    // [
-    // r <= r - alpha*A*p
-    adaptiveScaledAdd(adaptive, -alpha, o_Ap, 1.f, o_r);
-    
-    // dot(r,r)
-    if(enableReductions)
-      rdotr1 = adaptiveWeightedNorm2(adaptive, adaptive->o_invDegree, o_r);
-    else
-      rdotr1 = 1;
-  }else{
+  if(continuous){
     
     // x <= x + alpha*p
     // r <= r - alpha*A*p
     // dot(r,r)
-    adaptive->updatePCGKernel(mesh->Nelements*mesh->Np, adaptive->NblocksUpdatePCG,
-			      adaptive->o_invDegree, o_p, o_Ap, alpha, o_x, o_r, adaptive->o_tmpNormr);
+    adaptive->updatePCGKernel(Ntotal,
+			      level->NblocksUpdatePCG,
+			      level->o_invDegree, o_p, o_Ap, alpha, o_x, o_r, level->o_tmpNormr);
 
-    adaptive->o_tmpNormr.copyTo(adaptive->tmpNormr);
-
+    level->o_tmpNormr.copyTo(level->tmpNormr);
+    
     rdotr1 = 0;
-    for(int n=0;n<adaptive->NblocksUpdatePCG;++n){
-      rdotr1 += adaptive->tmpNormr[n];
+    for(int n=0;n<level->NblocksUpdatePCG;++n){
+      rdotr1 += level->tmpNormr[n];
     }
     
     dfloat globalrdotr1 = 0;

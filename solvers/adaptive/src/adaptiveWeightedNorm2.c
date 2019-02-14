@@ -26,56 +26,9 @@ SOFTWARE.
 
 #include "adaptive.h"
 
-template < int p_Nq > 
-dfloat adaptiveSerialWeightedNorm2Kernel(const hlong Nelements,
-					 const dfloat * __restrict__ cpu_w,
-					 const dfloat * __restrict__ cpu_a){
-  
-  
-  cpu_a = (dfloat*)__builtin_assume_aligned(cpu_a, USE_OCCA_MEM_BYTE_ALIGN) ;
-  cpu_w = (dfloat*)__builtin_assume_aligned(cpu_w, USE_OCCA_MEM_BYTE_ALIGN) ;
 
-#define p_Np (p_Nq*p_Nq*p_Nq)
-
-  dfloat wa2 = 0;
-
-  for(hlong e=0;e<Nelements;++e){
-    for(int i=0;i<p_Np;++i){
-      const hlong id = e*p_Np+i;
-      const dfloat ai = cpu_a[id];
-      const dfloat wi = cpu_w[id];
-      wa2 += ai*ai*wi;
-    }
-  }
-
-  return wa2;
-
-#undef p_Np
-}
-
-dfloat adaptiveSerialWeightedNorm2(const int Nq, const hlong Nelements, occa::memory &o_w, occa::memory &o_a){
-
-  const dfloat * __restrict__ cpu_a = (dfloat*)__builtin_assume_aligned(o_a.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
-  const dfloat * __restrict__ cpu_w = (dfloat*)__builtin_assume_aligned(o_w.ptr(), USE_OCCA_MEM_BYTE_ALIGN) ;
-
-  switch(Nq){
-  case  2: return adaptiveSerialWeightedNorm2Kernel <  2 > (Nelements, cpu_w, cpu_a);
-  case  3: return adaptiveSerialWeightedNorm2Kernel <  3 > (Nelements, cpu_w, cpu_a);
-  case  4: return adaptiveSerialWeightedNorm2Kernel <  4 > (Nelements, cpu_w, cpu_a);
-  case  5: return adaptiveSerialWeightedNorm2Kernel <  5 > (Nelements, cpu_w, cpu_a);
-  case  6: return adaptiveSerialWeightedNorm2Kernel <  6 > (Nelements, cpu_w, cpu_a);
-  case  7: return adaptiveSerialWeightedNorm2Kernel <  7 > (Nelements, cpu_w, cpu_a);
-  case  8: return adaptiveSerialWeightedNorm2Kernel <  8 > (Nelements, cpu_w, cpu_a);
-  case  9: return adaptiveSerialWeightedNorm2Kernel <  9 > (Nelements, cpu_w, cpu_a);
-  case 10: return adaptiveSerialWeightedNorm2Kernel < 10 > (Nelements, cpu_w, cpu_a);
-  case 11: return adaptiveSerialWeightedNorm2Kernel < 11 > (Nelements, cpu_w, cpu_a);
-  case 12: return adaptiveSerialWeightedNorm2Kernel < 12 > (Nelements, cpu_w, cpu_a);
-  }
-
-  return -99;
-}
-
-dfloat adaptiveWeightedNorm2(adaptive_t *adaptive, occa::memory &o_w, occa::memory &o_a){
+dfloat adaptiveWeightedNorm2(adaptive_t *adaptive, level_t *level,
+			     occa::memory &o_w, occa::memory &o_a){
 
   setupAide &options = adaptive->options;
 
@@ -84,15 +37,14 @@ dfloat adaptiveWeightedNorm2(adaptive_t *adaptive, occa::memory &o_w, occa::memo
   int enableReductions = 1;
   options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
 
-  mesh_t *mesh = adaptive->mesh;
-  dfloat *tmp = adaptive->tmp;
-  dlong Nblock = adaptive->Nblock;
+  dfloat *tmp = level->tmp;
+  dlong Nblock = level->Nblock;
   dlong Nblock2 = adaptive->Nblock2;
-  dlong Ntotal = mesh->Nelements*mesh->Np;
+  dlong Ntotal = level->Klocal*level->Np;
 
   if(serial==1 && continuous==1){
     
-    dfloat wa2 = adaptiveSerialWeightedNorm2(mesh->Nq, mesh->Nelements, o_w, o_a);
+    dfloat wa2 = adaptiveSerialWeightedNorm2(level->Nq, level->Klocal, o_w, o_a);
     
     dfloat globalwa2 = 0;
     
@@ -101,8 +53,8 @@ dfloat adaptiveWeightedNorm2(adaptive_t *adaptive, occa::memory &o_w, occa::memo
     return globalwa2;
   }
   
-  occa::memory &o_tmp = adaptive->o_tmp;
-  occa::memory &o_tmp2 = adaptive->o_tmp2;
+  occa::memory &o_tmp = level->o_tmp;
+  occa::memory &o_tmp2 = level->o_tmp2;
   
   if(continuous==1)
     adaptive->weightedNorm2Kernel(Ntotal, o_w, o_a, o_tmp);
@@ -114,7 +66,7 @@ dfloat adaptiveWeightedNorm2(adaptive_t *adaptive, occa::memory &o_w, occa::memo
   dlong Nfinal;
   if(Nblock>Ncutoff){
 
-    mesh->sumKernel(Nblock, o_tmp, o_tmp2);
+    adaptive->sumKernel(Nblock, o_tmp, o_tmp2);
 
     o_tmp2.copyTo(tmp);
 
@@ -134,7 +86,7 @@ dfloat adaptiveWeightedNorm2(adaptive_t *adaptive, occa::memory &o_w, occa::memo
   }
 
   dfloat globalwa2 = 0;
-  MPI_Allreduce(&wa2, &globalwa2, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+  MPI_Allreduce(&wa2, &globalwa2, 1, MPI_DFLOAT, MPI_SUM, adaptive->comm);
 
   return globalwa2;
 }

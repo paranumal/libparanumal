@@ -1,107 +1,64 @@
-/*
-
-The MIT License (MIT)
-
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-*/
-
 #ifndef ADAPTIVE_H
 #define ADAPTIVE_H 1
 
-// {{{ Dimension
-#ifdef APP_DIMENSION
-#define DIM APP_DIMENSION
-#else
-#define DIM 3
-#endif
-// }}}
+#include "headers.h"
 
-// {{{ Headers
-#include <errno.h>
-#include <inttypes.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
+typedef struct adaptive
+{
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-align"
-#endif
-#if DIM == 2
-#include <p4est.h>
-#include <p4est_bits.h>
-#include <p4est_connectivity.h>
-#include <p4est_extended.h>
-#include <p4est_ghost.h>
-#include <p4est_iterate.h>
-#include <p4est_lnodes.h>
-#include <p4est_mesh.h>
-#include <p4est_nodes.h>
-#include <p4est_vtk.h>
-#define P4EST_EDGES 0
-#elif DIM == 3
-#include <p4est_to_p8est.h>
-#include <p8est.h>
-#include <p8est_bits.h>
-#include <p8est_connectivity.h>
-#include <p8est_extended.h>
-#include <p8est_ghost.h>
-#include <p8est_iterate.h>
-#include <p8est_lnodes.h>
-#include <p8est_mesh.h>
-#include <p8est_nodes.h>
-#include <p8est_tets_hexes.h>
-#include <p8est_vtk.h>
-#define P4EST_EDGES 12
-#else
-#error "bad dimension"
-#endif
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
+  MPI_Comm comm;
+  int rank;
+  int size;
+  
+  occa::device device;
 
-#include "ogs.hpp"
-#include "ogsInterface.h"
+  p4est_connectivity_t *conn;
+  p4est_t *pxest;
+  p4est_ghost_t *ghost;
 
+  int brick_n[DIM];
+  int brick_p[DIM];
+  p4est_topidx_t *brick_TToC; // tree id to cartesian coordinates needed for
+                              // periodic bricks
 
-#include "occa.hpp"
-#include "setupAide.hpp"
-#include "asd.h"
-#include "number_types.h"
-#include "solver_info.h"
-#include "myoccautil.h"
-#include "connectivity.h"
-#include "operators.h"
-#include "mesh.h"
-#include "level.h"
-#include "app.h"
-// }}}
+  level_t *lvl;
 
-#define KERNEL_KBLKV  2
-#define KERNEL_KBLKS 8
-#define KERNEL_NT 256
-#define KERNEL_REDUCE_LDIM 256
-#define KERNEL_REDUCE_MAX_COPY 1024
+  // generic kernels [ e.g. PCG ]
+  occa::kernel sumKernel;
+  occa::kernel addScalarKernel;
+  occa::kernel scaledAddKernel;
+  occa::kernel dotMultiplyKernel;
+  occa::kernel dotMultiplyAddKernel;
+  occa::kernel dotDivideKernel;
+
+  occa::kernel innerProductKernel;
+  occa::kernel weightedInnerProduct1Kernel;
+  occa::kernel weightedInnerProduct2Kernel;
+
+  occa::kernel weightedNorm2Kernel;
+  occa::kernel norm2Kernel;
+  
+  occa::kernel updatePCGKernel;
+  occa::kernel update1NBPCGKernel;
+  occa::kernel update2NBPCGKernel;
+  occa::kernel update0NBFPCGKernel;
+  occa::kernel update1NBFPCGKernel;
+
+  setupAide options;
+  
+} adaptive_t;
+
+adaptive_t *adaptive_new(setupAide &options, MPI_Comm comm);
+void adaptive_free(adaptive_t *adaptive);
+
+void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
+                            occa::memory &o_r, occa::memory &o_z);
+
+dfloat adaptiveWeightedNorm2(adaptive_t *adaptive, level_t *level,
+			     occa::memory &o_w, occa::memory &o_a);
+
+void adaptiveScaledAdd(adaptive_t *adaptive, level_t *level,
+		       dfloat alpha, occa::memory &o_a, dfloat beta, occa::memory &o_b);
+
 
 #endif

@@ -30,57 +30,58 @@ occa::properties adaptiveKernelInfo(mesh_t *mesh){
 
   // info for kernel construction
   occa::properties kernelInfo;
+
   kernelInfo["defines"].asObject();
   kernelInfo["includes"].asArray();
   kernelInfo["header"].asArray();
   kernelInfo["flags"].asObject();
 
-  kernelInfo["defines/" "p_dim"]= mesh->dim;
-  kernelInfo["defines/" "p_Nfields"]= mesh->Nfields;
-  kernelInfo["defines/" "p_N"]= mesh->N;
-  kernelInfo["defines/" "p_Nq"]= mesh->N+1;
-  kernelInfo["defines/" "p_Np"]= mesh->Np;
-  kernelInfo["defines/" "p_Nfp"]= mesh->Nfp;
-  kernelInfo["defines/" "p_Nfaces"]= mesh->Nfaces;
-  kernelInfo["defines/" "p_NfacesNfp"]= mesh->Nfp*mesh->Nfaces;
-  kernelInfo["defines/" "p_Nvgeo"]= mesh->Nvgeo;
-  kernelInfo["defines/" "p_Nsgeo"]= mesh->Nsgeo;
-  kernelInfo["defines/" "p_Nggeo"]= mesh->Nggeo;
+  kernelInfo["defines/p_dim"]= mesh->dim;
+  kernelInfo["defines/p_Nfields"]= mesh->Nfields;
+  kernelInfo["defines/p_N"]= mesh->N;
+  kernelInfo["defines/p_Nq"]= mesh->N+1;
+  kernelInfo["defines/p_Np"]= mesh->Np;
+  kernelInfo["defines/p_Nfp"]= mesh->Nfp;
+  kernelInfo["defines/p_Nfaces"]= mesh->Nfaces;
+  kernelInfo["defines/p_NfacesNfp"]= mesh->Nfp*mesh->Nfaces;
+  kernelInfo["defines/p_Nvgeo"]= mesh->Nvgeo;
+  kernelInfo["defines/p_Nsgeo"]= mesh->Nsgeo;
+  kernelInfo["defines/p_Nggeo"]= mesh->Nggeo;
 
-  kernelInfo["defines/" "p_halfC"]= (int)((mesh->cubNq+1)/2);
-  kernelInfo["defines/" "p_halfN"]= (int)((mesh->Nq+1)/2);
+  kernelInfo["defines/p_halfC"]= (int)((mesh->cubNq+1)/2);
+  kernelInfo["defines/p_halfN"]= (int)((mesh->Nq+1)/2);
  
-  kernelInfo["defines/" "p_NXID"]= NXID;
-  kernelInfo["defines/" "p_NYID"]= NYID;
-  kernelInfo["defines/" "p_NZID"]= NZID;
-  kernelInfo["defines/" "p_SJID"]= SJID;
-  kernelInfo["defines/" "p_IJID"]= IJID;
-  kernelInfo["defines/" "p_WSJID"]= WSJID;
-  kernelInfo["defines/" "p_IHID"]= IHID;
+  kernelInfo["defines/p_NXID"]= NXID;
+  kernelInfo["defines/p_NYID"]= NYID;
+  kernelInfo["defines/p_NZID"]= NZID;
+  kernelInfo["defines/p_SJID"]= SJID;
+  kernelInfo["defines/p_IJID"]= IJID;
+  kernelInfo["defines/p_WSJID"]= WSJID;
+  kernelInfo["defines/p_IHID"]= IHID;
 
-  kernelInfo["defines/" "p_max_EL_nnz"]= mesh->max_EL_nnz; // for Bernstein Bezier lift
+  kernelInfo["defines/p_max_EL_nnz"]= mesh->max_EL_nnz; // for Bernstein Bezier lift
 
-  kernelInfo["defines/" "p_cubNq"]= mesh->cubNq;
-  kernelInfo["defines/" "p_cubNp"]= mesh->cubNp;
-  kernelInfo["defines/" "p_intNfp"]= mesh->intNfp;
-  kernelInfo["defines/" "p_intNfpNfaces"]= mesh->intNfp*mesh->Nfaces;
+  kernelInfo["defines/p_cubNq"]= mesh->cubNq;
+  kernelInfo["defines/p_cubNp"]= mesh->cubNp;
+  kernelInfo["defines/p_intNfp"]= mesh->intNfp;
+  kernelInfo["defines/p_intNfpNfaces"]= mesh->intNfp*mesh->Nfaces;
 
   if(sizeof(dfloat)==4){
-    kernelInfo["defines/" "dfloat"]="float";
-    kernelInfo["defines/" "dfloat4"]="float4";
-    kernelInfo["defines/" "dfloat8"]="float8";
+    kernelInfo["defines/dfloat"]="float";
+    kernelInfo["defines/dfloat4"]="float4";
+    kernelInfo["defines/dfloat8"]="float8";
   }
   if(sizeof(dfloat)==8){
-    kernelInfo["defines/" "dfloat"]="double";
-    kernelInfo["defines/" "dfloat4"]="double4";
-    kernelInfo["defines/" "dfloat8"]="double8";
+    kernelInfo["defines/dfloat"]="double";
+    kernelInfo["defines/dfloat4"]="double4";
+    kernelInfo["defines/dfloat8"]="double8";
   }
 
   if(sizeof(dlong)==4){
-    kernelInfo["defines/" "dlong"]="int";
+    kernelInfo["defines/dlong"]="int";
   }
   if(sizeof(dlong)==8){
-    kernelInfo["defines/" "dlong"]="long long int";
+    kernelInfo["defines/dlong"]="long long int";
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
@@ -95,29 +96,29 @@ occa::properties adaptiveKernelInfo(mesh_t *mesh){
   if(mesh->device.mode()=="Serial")
     kernelInfo["compiler_flags"] += "-g";
 
-  kernelInfo["defines/" "p_G00ID"]= G00ID;
-  kernelInfo["defines/" "p_G01ID"]= G01ID;
-  kernelInfo["defines/" "p_G02ID"]= G02ID;
-  kernelInfo["defines/" "p_G11ID"]= G11ID;
-  kernelInfo["defines/" "p_G12ID"]= G12ID;
-  kernelInfo["defines/" "p_G22ID"]= G22ID;
-  kernelInfo["defines/" "p_GWJID"]= GWJID;
+  kernelInfo["defines/p_G00ID"]= G00ID;
+  kernelInfo["defines/p_G01ID"]= G01ID;
+  kernelInfo["defines/p_G02ID"]= G02ID;
+  kernelInfo["defines/p_G11ID"]= G11ID;
+  kernelInfo["defines/p_G12ID"]= G12ID;
+  kernelInfo["defines/p_G22ID"]= G22ID;
+  kernelInfo["defines/p_GWJID"]= GWJID;
 
 
-  kernelInfo["defines/" "p_RXID"]= RXID;
-  kernelInfo["defines/" "p_SXID"]= SXID;
-  kernelInfo["defines/" "p_TXID"]= TXID;
+  kernelInfo["defines/p_RXID"]= RXID;
+  kernelInfo["defines/p_SXID"]= SXID;
+  kernelInfo["defines/p_TXID"]= TXID;
 
-  kernelInfo["defines/" "p_RYID"]= RYID;
-  kernelInfo["defines/" "p_SYID"]= SYID;
-  kernelInfo["defines/" "p_TYID"]= TYID;
+  kernelInfo["defines/p_RYID"]= RYID;
+  kernelInfo["defines/p_SYID"]= SYID;
+  kernelInfo["defines/p_TYID"]= TYID;
 
-  kernelInfo["defines/" "p_RZID"]= RZID;
-  kernelInfo["defines/" "p_SZID"]= SZID;
-  kernelInfo["defines/" "p_TZID"]= TZID;
+  kernelInfo["defines/p_RZID"]= RZID;
+  kernelInfo["defines/p_SZID"]= SZID;
+  kernelInfo["defines/p_TZID"]= TZID;
 
-  kernelInfo["defines/" "p_JID"]= JID;
-  kernelInfo["defines/" "p_JWID"]= JWID;
+  kernelInfo["defines/p_JID"]= JID;
+  kernelInfo["defines/p_JWID"]= JWID;
 
   return kernelInfo;
 }

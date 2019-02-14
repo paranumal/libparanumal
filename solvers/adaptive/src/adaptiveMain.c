@@ -77,9 +77,9 @@ int main(int argc, char **argv){
   init_libs(comm, verbosity);
   print_precision();
 
-  app_t *app = app_new(options, comm);
+  adaptive_t *adaptive = adaptive_new(options, comm);
 
-  app_free(app);
+  adaptive_free(adaptive);
 
 #if 0
   // set up mesh stuff
