@@ -58,14 +58,14 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   dlong Nblock  = mymax(1,(Ntotal+blockSize-1)/blockSize);
   dlong Nblock2 = mymax(1,(Nblock+blockSize-1)/blockSize);
 
-  dlong NthreadsUpdatePCG = 1024;
+  dlong NthreadsUpdatePCG = 256;
   dlong NblocksUpdatePCG = mymin((Ntotal+NthreadsUpdatePCG-1)/NthreadsUpdatePCG, 160);
 
   elliptic->NthreadsUpdatePCG = NthreadsUpdatePCG;
   elliptic->NblocksUpdatePCG = NblocksUpdatePCG;
-  
+
   //tau
-  if (elliptic->elementType==TRIANGLES || 
+  if (elliptic->elementType==TRIANGLES ||
       elliptic->elementType==QUADRILATERALS){
     elliptic->tau = 2.0*(mesh->N+1)*(mesh->N+2)/2.0;
     if(elliptic->dim==3)
@@ -96,7 +96,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   elliptic->tmpNormr = (dfloat*) calloc(elliptic->NblocksUpdatePCG,sizeof(dfloat));
   elliptic->o_tmpNormr = mesh->device.malloc(elliptic->NblocksUpdatePCG*sizeof(dfloat), elliptic->tmpNormr);
 
-  
+
   elliptic->o_grad  = mesh->device.malloc(Nall*4*sizeof(dfloat), elliptic->grad);
 
   //setup async halo stream
@@ -256,7 +256,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
     }
   }
 
-  
+
   elliptic->o_mapB = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(int), elliptic->mapB);
 
   elliptic->maskIds = (dlong *) calloc(elliptic->Nmasked, sizeof(dlong));
@@ -273,7 +273,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
     mesh->maskedGlobalIds[elliptic->maskIds[n]] = 0;
 
   //use the masked ids to make another gs handle
-  elliptic->ogs = ogsSetup(Ntotal, mesh->maskedGlobalIds, mesh->comm, verbose, mesh->device);
+  elliptic->ogs = ogsSetup(Ntotal, mesh->maskedGlobalIds, mesh->comm, 0, verbose, mesh->device);
   elliptic->o_invDegree = elliptic->ogs->o_invDegree;
 
   /*preconditioner setup */
@@ -425,9 +425,9 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
       kernelInfo["defines/" "p_NthreadsUpdatePCG"] = (int) NthreadsUpdatePCG; // WARNING SHOULD BE MULTIPLE OF 32
       kernelInfo["defines/" "p_NwarpsUpdatePCG"] = (int) (NthreadsUpdatePCG/32); // WARNING: CUDA SPECIFIC
-      
+
       cout << kernelInfo ;
-      
+
       //add standard boundary functions
       char *boundaryHeaderFileName;
       if (elliptic->dim==2)
@@ -444,7 +444,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       occa::properties floatKernelInfo = kernelInfo;
       floatKernelInfo["defines/" "pfloat"]= "float";
       dfloatKernelInfo["defines/" "pfloat"]= dfloatString;
-      
+
       elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
 
       if(elliptic->elementType!=HEXAHEDRA){
@@ -460,7 +460,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
       elliptic->partialAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
       elliptic->partialFloatAxKernel = mesh->device.buildKernel(fileName,kernelName,floatKernelInfo);
-      
+
       // only for Hex3D - cubature Ax
       if(elliptic->elementType==HEXAHEDRA){
 	printf("BUILDING partialCubatureAxKernel\n");
@@ -471,12 +471,12 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       }
 
       // combined PCG update and r.r kernel
-      
+
       elliptic->updatePCGKernel =
 	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticUpdatePCG.okl",
 				 "ellipticUpdatePCG", dfloatKernelInfo);
 
-      
+
       // Not implemented for Quad3D !!!!!
       if (options.compareArgs("BASIS","BERN")) {
 
@@ -520,7 +520,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 	else if(elliptic->elementType==TRIANGLES)
 	  suffix = strdup("Tri2D");
       }
-	
+
       sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
       sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
       elliptic->precon->coarsenKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
@@ -529,7 +529,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
       sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
       elliptic->precon->prolongateKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
 
-      
+
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");
       sprintf(kernelName, "ellipticBlockJacobiPrecon");
