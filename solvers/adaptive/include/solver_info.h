@@ -11,16 +11,14 @@ typedef struct quad_data
   int8_t adapt_flag;
 } quad_data_t;
 
-#define FIELD_UX 0
-#define FIELD_UY 1
-#define FIELD_UZ 2
+#define FIELD_U 0
 #define NFIELDS 1
 
-const char *const FIELD_OUT_SCALARS[] = {NULL};
-const int FIELD_OUT_SCALARS_OFF[] = {};
-const char *const FIELD_OUT_VECTORS[] = {"u", NULL};
-const char *const FIELD_OUT_COMPONENTS[] = {"ux", "uy", "uz", NULL};
-const int FIELD_OUT_COMPONENTS_OFF[] = {FIELD_UX, FIELD_UY, FIELD_UZ};
+const char *const FIELD_OUT_SCALARS[] = {"u", NULL};
+const int FIELD_OUT_SCALARS_OFF[] = {FIELD_U};
+const char *const FIELD_OUT_VECTORS[] = {NULL};
+const char *const FIELD_OUT_COMPONENTS[] = {NULL};
+const int FIELD_OUT_COMPONENTS_OFF[] = {};
 
 #if DIM == 3
 #define VGEO_RX 0

@@ -129,7 +129,9 @@ int main(int argc, char **argv){
     maxError = ASD_MAX(maxError, fabs(exact[n]-x[n]));
   }
   printf("maxError = %lf\n", maxError);
-  
+
+  adaptivePlotVTUHex3D(adaptive, adaptive->lvl, 0, 0.0, "out", o_x);
+
   adaptive_free(adaptive);
 
   // close down MPI

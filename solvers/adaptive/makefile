@@ -75,6 +75,7 @@ AOBJS    = \
 ./src/adaptiveOperator.o \
 ./src/adaptiveScaledAdd.o \
 ./src/adaptiveWeightedNorm2.o \
+./src/adaptivePlotVTUHex3D.o \
 ./src/adaptivePreconditioner.o \
 ./src/adaptiveUpdatePCG.o \
 ./src/adaptiveWeightedInnerProduct.o \
