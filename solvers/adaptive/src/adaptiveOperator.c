@@ -44,7 +44,6 @@ void adaptiveOperator(adaptive_t *adaptive,
 
     ogs_t *ogs = level->ogs;
     
-    dfloat_t lambda = 1.0;
     level->compute_partial_Ax(level->Klocal, // locally owned elements
 			      level->o_IToE,
 			      level->o_ggeo,

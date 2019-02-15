@@ -11,13 +11,13 @@ data/adaptiveSineTest3D.h
 TRUE
 
 [BOX NX]
-10
+4
 
 [BOX NY]
-10
+4
 
 [BOX NZ]
-10
+4
 
 [BOX XMIN]
 -1.0
@@ -72,7 +72,7 @@ CUDA
 0
 
 [LAMBDA]
-10
+2
 
 # can add FLEXIBLE to PCG
 # can add NONBLOCKING (disable FLEXIBLE for the moment)

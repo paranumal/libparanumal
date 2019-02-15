@@ -80,33 +80,42 @@ int main(int argc, char **argv){
   adaptive_t *adaptive = adaptive_new(options, comm);
   level_t *level = adaptive->lvl;
 
-  dfloat lambda = 10;
+  dfloat lambda = 1;
+
+  options.getArgs("LAMBDA", lambda);
+
+  printf("lambda = %lf\n", lambda);
   
   dfloat *b = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
   dfloat *x = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
   dfloat *exact = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
   
   dfloat *vgeo = (dfloat*) calloc(NVGEO*level->Np*level->Klocal, sizeof(dfloat));
+  dfloat *ggeo = (dfloat*) calloc(NGGEO*level->Np*level->Klocal, sizeof(dfloat));
+  
   dfloat *gllw = (dfloat*) calloc(level->Nq, sizeof(dfloat));
+
   level->o_w.copyTo(gllw);
-  level->o_vgeo.copyTo(vgeo, NVGEO*level->Np*level->Klocal*sizeof(dfloat));
+
+  level->o_vgeo.copyTo(vgeo, NVGEO*level->Np*level->Klocal*sizeof(dfloat), 0);
+  level->o_ggeo.copyTo(ggeo, NGGEO*level->Np*level->Klocal*sizeof(dfloat), 0);
+  
   for(iint_t e=0;e<level->Klocal;++e){
     for(int k=0;k<level->Nq;++k){
       for(int j=0;j<level->Nq;++j){
 	for(int i=0;i<level->Nq;++i){
 	  int n = i + j*level->Nq + k*level->Nq*level->Nq;
 	  
-	  dfloat Jn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_J];
+	  dfloat JWn = ggeo[e*NGGEO*level->Np+n+level->Np*GGEO_JW];
 	  dfloat xn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_X];
 	  dfloat yn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_Y];
 	  dfloat zn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_Z];
-	  
-	  dfloat wn = gllw[i]*gllw[j]*gllw[k];
-	  dfloat mode = 1;
 
+	  dfloat mode = .5;
+	  
 	  iint_t id = n + e*level->Np;
 	  b[id] =
-	    wn*Jn*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
+	    JWn*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
 
 	  exact[id] = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
 	}
@@ -128,7 +137,7 @@ int main(int argc, char **argv){
   for(iint_t n=0;n<level->Klocal*level->Np;++n){
     maxError = ASD_MAX(maxError, fabs(exact[n]-x[n]));
   }
-  printf("maxError = %lf\n", maxError);
+  printf("maxError = %le\n", maxError);
 
   adaptivePlotVTUHex3D(adaptive, adaptive->lvl, 0, 0.0, "out", o_x);
 
