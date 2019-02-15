@@ -274,9 +274,9 @@
         ggeo[gid + p_GGEO_RR * p_Np] = JW*(rx*rx+ry*ry+rz*rz);
         ggeo[gid + p_GGEO_RS * p_Np] = JW*(rx*sx+ry*sy+rz*sz);
 	ggeo[gid + p_GGEO_RT * p_Np] = JW*(rx*tx+ry*ty+rz*tz);
-	ggeo[gid + p_GGEO_SS * p_Np] = JW*(sx*sx+sy*sy+sz*tz);
+	ggeo[gid + p_GGEO_SS * p_Np] = JW*(sx*sx+sy*sy+sz*sz);
         ggeo[gid + p_GGEO_ST * p_Np] = JW*(sx*tx+sy*ty+sz*tz);
-	ggeo[gid + p_GGEO_TT * p_Np] = JW*(rx*tx+ty*ty+tz*tz);
+	ggeo[gid + p_GGEO_TT * p_Np] = JW*(tx*tx+ty*ty+tz*tz);
 	ggeo[gid + p_GGEO_JW * p_Np] = JW;
       }
     }

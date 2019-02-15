@@ -64,9 +64,10 @@ int pcg(adaptive_t* adaptive,
   // compute A*x
   adaptiveOperator(adaptive, level, lambda, o_x, o_Ax);
 
+  // r <= b
   o_b.copyTo(o_r, level->Klocal*level->Np*sizeof(dfloat));
   
-  // subtract r = b - A*x
+  // subtract r <= b - A*x
   adaptiveScaledAdd(adaptive, level, -1.f, o_Ax, 1.f, o_r);
 
   rdotr0 = adaptiveWeightedNorm2(adaptive, level, level->ogs->o_invDegree, o_r);

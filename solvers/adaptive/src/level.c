@@ -53,10 +53,11 @@ static void level_kernelinfo(occa::properties &info, occa::device &device, int N
 
   if (periodic_brick)
     info["defines/p_PERIODIC_BRICK"] = 1;
-
+#if 0
   info["defines/p_FIELD_UX"] = FIELD_UX;
   info["defines/p_FIELD_UY"] = FIELD_UY;
   info["defines/p_FIELD_UZ"] = FIELD_UZ;
+#endif
   info["defines/p_NFIELDS"] = NFIELDS;
 
   info["defines/p_VGEO_X"] = VGEO_X;

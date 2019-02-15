@@ -697,15 +697,15 @@ void adaptivePlotVTUHex3D(adaptive_t *adaptive, level_t *level,
    * to ensure that Q will be finished computing before we copy the data
    * to the host.
    */
-  occaDeviceSetStream(app->device, app->cmdx);
+  //  occaDeviceSetStream(app->device, app->cmdx);
 
   size_t local_vgeo_sz = NVGEO * K * Np * sizeof(dfloat_t);
   dfloat_t *vgeo = (dfloat_t*)asd_malloc_aligned(local_vgeo_sz);
-  occaCopyMemToPtr(vgeo, level->o_vgeo, local_vgeo_sz, occaNoOffset);
+  level->o_vgeo.copyTo(vgeo, local_vgeo_sz, 0); // 0 no offset
 
   size_t local_q_sz = NFIELDS * K * Np * sizeof(dfloat_t);
   dfloat_t *fields = (dfloat_t*)asd_malloc_aligned(local_q_sz);
-  occaCopyMemToPtr(fields, o_fields, local_q_sz, occaNoOffset);
+  o_fields.copyTo(fields, local_q_sz, 0); // 0 no offset
 
   vtk_write_file(adaptive->rank, adaptive->size,
                  ".", // output dir
