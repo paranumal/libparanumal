@@ -20,6 +20,7 @@ adaptive_t *adaptive_new(setupAide &options, MPI_Comm comm)
   adaptive_t *adaptive = new adaptive_t[1];
 
   adaptive->options = options;
+  adaptive->allNeumann = 0; // hack for the moment (assume lambda>0)
   
   adaptive->comm = comm;
   adaptive->rank = rank;

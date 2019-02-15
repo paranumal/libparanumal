@@ -118,6 +118,7 @@ static void level_kernelinfo(occa::properties &info, occa::device &device, int N
   int blockSize = KERNEL_REDUCE_LDIM;
   
   info["defines/p_blockSize"] = blockSize;
+  info["defines/p_NthreadsUpdatePCG"] = blockSize;
   
   info["includes"] = (char*)strdup(DADAPTIVE "/okl/adaptiveOcca.h");
 
@@ -471,14 +472,26 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   iint_t Ntotal = lvl->Klocal*lvl->Np;
 
   int blockSize = KERNEL_REDUCE_LDIM;
+  int NthreadsUpdatePCG = KERNEL_REDUCE_LDIM;
+
+  iint_t NblocksUpdatePCG = ASD_MIN((Ntotal+NthreadsUpdatePCG-1)/NthreadsUpdatePCG, 160);
+  lvl->NblocksUpdatePCG = NblocksUpdatePCG;
+  lvl->tmpNormr = (dfloat_t*) calloc(NblocksUpdatePCG, sizeof(dfloat_t));
+  lvl->o_tmpNormr = device.malloc(NblocksUpdatePCG*sizeof(dfloat_t),
+				  lvl->tmpNormr);
   
   int Nblock  = ASD_MAX(1,(Ntotal+blockSize-1)/blockSize);
   int Nblock2 = ASD_MAX(1,(Nblock+blockSize-1)/blockSize);
 
+
+  
   lvl->Nblock = Nblock;
   lvl->Nblock2 = Nblock2;
 
   // WARNING: USES NFIELDS
+  lvl->tmp =(dfloat_t*)
+    calloc(NFIELDS * Nblock, sizeof(dfloat_t));
+
   lvl->o_tmp =
     device.malloc(NFIELDS * sizeof(dfloat_t) * Nblock, NULL);
   lvl->o_tmp2 =
@@ -486,7 +499,7 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   
   // }}}
 
-  lvl->o_pcgWork = (occa::memory*) malloc(lvl->NpcgWork*sizeof(occa::memory*));
+  lvl->o_pcgWork = new occa::memory[lvl->NpcgWork];
 
   for(int n=0;n<lvl->NpcgWork;++n){
     lvl->o_pcgWork[n] = device.malloc(lvl->Kmax*lvl->Np*sizeof(dfloat_t));

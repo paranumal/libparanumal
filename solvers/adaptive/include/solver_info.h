@@ -14,7 +14,8 @@ typedef struct quad_data
 #define FIELD_UX 0
 #define FIELD_UY 1
 #define FIELD_UZ 2
-#define NFIELDS 3
+#define NFIELDS 1
+
 const char *const FIELD_OUT_SCALARS[] = {NULL};
 const int FIELD_OUT_SCALARS_OFF[] = {};
 const char *const FIELD_OUT_VECTORS[] = {"u", NULL};

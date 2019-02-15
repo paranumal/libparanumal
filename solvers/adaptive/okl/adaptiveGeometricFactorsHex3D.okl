@@ -5,13 +5,13 @@
 
 #define computeGradientR(q, qr, qs, qt)					\
   @barrier("local");							\
-  cubeThreads { s_q[es][k][j][i] = q; }					\
+  cubeThreads { if (e < Nelements){ s_q[es][k][j][i] = q; }}					\
   @barrier("local");							\
   cubeThreads								\
   {									\
     if (e < Nelements)							\
       {									\
-	qr = 0, qs = 0, qt = 0;						\
+	qr = 0; qs = 0; qt = 0;						\
 	for (dlong n = 0; n < p_Nq; ++n)				\
 	  qr +=  s_D[i][n] * s_q[es][k][j][n];				\
 	for (dlong n = 0; n < p_Nq; ++n)				\
@@ -25,11 +25,11 @@
   cubeThreads								\
   {									\
     if (e < Nelements) {							\
-      curlr = 0, curls = 0, curlt = 0;					\
+      curlr = 0; curls = 0; curlt = 0;					\
     }									\
   }									\
   @barrier("local");							\
-  cubeThreads { s_q[es][k][j][i] = (v1); }				\
+  cubeThreads { if(e<Nelements){ s_q[es][k][j][i] = (v1);} }				\
   @barrier("local");							\
   cubeThreads{								\
     if (e < Nelements){								\
@@ -40,7 +40,7 @@
     }									\
   }									\
   @barrier("local");							\
-  cubeThreads { s_q[es][k][j][i] = (v2); }				\
+  cubeThreads { if(e<Nelements){ s_q[es][k][j][i] = (v2); }}		\
   @barrier("local");							\
   cubeThreads								\
   {									\
@@ -52,7 +52,7 @@
     }									\
   }									\
   @barrier("local");							\
-  cubeThreads { s_q[es][k][j][i] = (v3); }				\
+  cubeThreads { if(e<Nelements) { s_q[es][k][j][i] = (v3); }}		\
   @barrier("local");							\
   cubeThreads								\
   {									\
@@ -109,7 +109,8 @@
 
     cubeThreads{
       if (e < Nelements){
-        J = xr * (ys * zt - zs * yt) - yr * (xs * zt - zs * xt) +
+        J = xr * (ys * zt - zs * yt) -
+	  yr * (xs * zt - zs * xt) +
 	  zr * (xs * yt - ys * xt);
       }
     }
@@ -150,7 +151,7 @@
          * TODO: Check that flipping J sign here (if necessary) works for 3-D
          *       as it does for 2-D
          */
-        J = abs(J);
+        J = fabs(J);
 
         dfloat nx, ny, nz, sJ;
         dlong f;
