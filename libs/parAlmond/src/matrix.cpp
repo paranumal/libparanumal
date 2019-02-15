@@ -289,7 +289,7 @@ void parCSR::haloSetup(hlong *colIds) {
 
   //make a gatherScatter to determine local ids which are shared
   int verbose = 0;
-  ogs = ogsSetup(Ncols, colMap, comm, verbose, device);
+  ogs = ogsSetup(Ncols, colMap, comm, 0, verbose, device);
 
   //shift back to 0-indexed
   for (dlong n=0; n<Ncols; n++) colMap[n]--;
@@ -330,7 +330,7 @@ void parCSR::haloSetup(hlong *colIds) {
   }
 
   //construct the parCSR ogs object for comms
-  ogsHalo = ogsSetup(Nhalo, ghaloIds, comm, verbose, device);
+  ogsHalo = ogsSetup(Nhalo, ghaloIds, comm, 1, verbose, device);
 
   MPI_Barrier(comm);
   free(ghaloIds);

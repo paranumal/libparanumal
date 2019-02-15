@@ -34,13 +34,13 @@ void meshParallelGatherScatterSetup(mesh_t *mesh,
                                       dlong N,
                                       dlong *globalIds,
                                       MPI_Comm &comm,
-                                      int verbose) { 
+                                      int verbose) {
 
   int rank, size;
-  MPI_Comm_rank(comm, &rank); 
-  MPI_Comm_size(comm, &size); 
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
 
-  mesh->ogs = ogsSetup(N, globalIds, comm, verbose, mesh->device);
+  mesh->ogs = ogsSetup(N, globalIds, comm, 0, verbose, mesh->device);
 
   //use the gs to find what nodes are local to this rank
   int *minRank = (int *) calloc(N,sizeof(int));

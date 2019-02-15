@@ -384,7 +384,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
     //build a new mask for NpFEM>Np node sets
 
     // gather-scatter
-    pmesh->ogs = ogsSetup(Ntotal, pmesh->globalIds, mesh->comm, verbose, mesh->device);
+    pmesh->ogs = ogsSetup(Ntotal, pmesh->globalIds, mesh->comm, 0, verbose, mesh->device);
 
     //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
     int *mapB = (int *) calloc(Ntotal,sizeof(int));
@@ -419,7 +419,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
   }
 
   //build masked gs handle
-  precon->FEMogs = ogsSetup(Ntotal, pmesh->maskedGlobalIds, mesh->comm, verbose, mesh->device);
+  precon->FEMogs = ogsSetup(Ntotal, pmesh->maskedGlobalIds, mesh->comm, 0, verbose, mesh->device);
 
   // number of degrees of freedom on this rank (after gathering)
   hlong Ngather = precon->FEMogs->Ngather;

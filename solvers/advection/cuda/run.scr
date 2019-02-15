@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Nel=(0 0 250000 74080 31280 16000 9280 5840 3920 2800 2000 1520)
+Nel=(0 0 375040   111120    46880    24000    13920     8800     5920     4160     3040     2320  )
+
+for MAX_ITERATIONS in `seq 1 6`
+do
+    for Nq in `seq 2 11`
+    do
+	make clean; make roofline; make comp_Nq=$Nq comp_cubNq=$((Nq+1)) comp_MAX_ITERATIONS=${MAX_ITERATIONS}
+
+	echo ${Nel[$Nq]}, $Nq, $((Nq+1))
+	
+	./advectionInvertMassMatrix ${Nel[${Nq}]}
+	
+    done
+done
