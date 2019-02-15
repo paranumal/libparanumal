@@ -167,7 +167,7 @@ typedef struct level
 level_t *level_new(setupAide &options, p4est_t *pxest,
                    p4est_ghost_t *ghost, occa::device &device,
                    int *brick_n, int *brick_p, int *brick_TToC,
-                   int N, double occa_kmax_mem_frac);
+                   int N, double occa_kmax_mem_frac, MPI_Comm &comm);
 
 void level_free(level_t *lvl);
 

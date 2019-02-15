@@ -45,7 +45,6 @@ dfloat adaptiveUpdatePCG(adaptive_t *adaptive,
   int serial = options.compareArgs("THREAD MODEL", "Serial");
   int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
   int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
-  
 
   int Ntotal = level->Klocal*level->Np;
   
@@ -56,11 +55,13 @@ dfloat adaptiveUpdatePCG(adaptive_t *adaptive,
     // x <= x + alpha*p
     // r <= r - alpha*A*p
     // dot(r,r)
+#if 0
     adaptive->updatePCGKernel(Ntotal,
 			      level->NblocksUpdatePCG,
 			      level->ogs->o_invDegree,
 			      o_p, o_Ap, alpha, o_x, o_r, level->o_tmpNormr);
-
+#endif
+    
     level->o_tmpNormr.copyTo(level->tmpNormr);
     
     rdotr1 = 0;

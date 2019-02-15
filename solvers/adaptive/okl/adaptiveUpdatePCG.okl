@@ -50,18 +50,26 @@
       dfloat sum = 0;
 
       for(int n=t+b*p_NthreadsUpdatePCG;n<N;n+=Nblocks*p_NthreadsUpdatePCG){
-	dfloat xn = x[n];
-	dfloat rn = r[n];
-	
-	const dfloat pn = p[n];
-	const dfloat Apn = Ap[n];
 
-	xn += alpha*pn;
-	rn -= alpha*Apn;
-	sum += invDegree[n]*rn*rn;
-	
-	x[n] = xn;
-	r[n] = rn;
+	dfloat xn = 0, rn = 0, pn = 0, Apn = 0, invDegn = 0;
+	if(n<N){
+
+	  xn = x[n];
+	  rn = r[n];
+	  pn = p[n];	  
+	  Apn = Ap[n];
+
+	  //	  invDegn = 1.;
+	  invDegree[n];
+
+	  xn += alpha*pn;
+	  rn -= alpha*Apn;
+	  sum += invDegn*rn*rn;
+	  
+	  x[n] = xn;
+	  r[n] = rn;
+	}
+
       }
 
       s_sum[t] = sum;
@@ -99,7 +107,7 @@
     for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0))
       if(t<2) s_warpSum[t] += s_warpSum[t+2];
 #endif
-    
+	    
     for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0)){
 #if (p_NwarpsUpdatePCG>=2)
       if(t<1) redr[b] = s_warpSum[0] + s_warpSum[1];

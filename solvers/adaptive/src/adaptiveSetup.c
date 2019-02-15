@@ -94,7 +94,7 @@ adaptive_t *adaptive_new(setupAide &options, MPI_Comm comm)
   options.getArgs("POLYNOMIAL DEGREE", N);
   // TODO build more than one level
   adaptive->lvl = level_new(options, adaptive->pxest, adaptive->ghost, adaptive->device,
-      adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.01);
+			    adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.01, adaptive->comm);
 
   occa::properties kernelInfo;
   

@@ -50,7 +50,6 @@ int pcg(adaptive_t* adaptive,
   dfloat rdotz1 = 0;
   dfloat rdotz2 = 0;
 
-
   // now initialized
   dfloat alpha = 0, beta = 0, pAp = 0;
   

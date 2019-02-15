@@ -32,9 +32,11 @@ void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
   level_t *level0 = adaptive->lvl;
   setupAide options = adaptive->options;
 
+  dlong Ntotal = level0->Np*level0->Klocal;
+
+  
   if(options.compareArgs("PRECONDITIONER", "JACOBI")){
     
-    dlong Ntotal = level0->Np*level0->Klocal;
     // Jacobi preconditioner
     
     adaptive->dotMultiplyKernel(Ntotal, o_r, level0->o_invDiagA, o_z);
@@ -43,7 +45,7 @@ void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
 
   }
   else{ // turn off preconditioner
-    o_z.copyFrom(o_r);
+    o_z.copyFrom(o_r, level0->Np*level0->Klocal*sizeof(dfloat_t));
   }
 
 #if USE_NULL_PROJECTION==1
