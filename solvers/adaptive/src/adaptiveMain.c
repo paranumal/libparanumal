@@ -80,19 +80,44 @@ int main(int argc, char **argv){
   adaptive_t *adaptive = adaptive_new(options, comm);
   level_t *level = adaptive->lvl;
 
+  dfloat lambda = 10;
+  
   dfloat *b = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
   dfloat *x = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
-
+  dfloat *vgeo = (dfloat*) calloc(NVGEO*level->Np*level->Klocal, sizeof(dfloat));
+  dfloat *gllw = (dfloat*) calloc(level->Nq, sizeof(dfloat));
+  level->o_w.copyTo(gllw);
+  level->o_vgeo.copyTo(vgeo, NVGEO*level->Np*level->Klocal*sizeof(dfloat));
   for(iint_t e=0;e<level->Klocal;++e){
-    for(int n=0;n<level->Np;++n){
-      b[e*level->Np+n] = drand48();
+    for(int k=0;k<level->Nq;++k){
+      for(int j=0;j<level->Nq;++j){
+	for(int i=0;i<level->Nq;++i){
+	  int n = i + j*level->Nq + k*level->Nq*level->Nq;
+	  
+	  dfloat Jn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_J];
+	  dfloat xn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_X];
+	  dfloat yn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_Y];
+	  dfloat zn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_Z];
+	  
+	  dfloat wn = gllw[i]*gllw[j]*gllw[k];
+	  dfloat mode = 1;
+
+	  iint_t id = n + e*level->Np;
+	  b[id] =
+	    Jn*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
+	  
+	}
+      }
     }
   }
-  
+
   occa::memory o_b = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat), b);
   occa::memory o_x = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat), x);
 
-  dfloat lambda = 10, tol = 1.e-6;
+  // add noncon gs around this
+  ogsGatherScatter(o_b, ogsDfloat, ogsAdd, level->ogs);
+  
+  dfloat tol = 1.e-6;
   adaptiveSolve(adaptive, lambda, tol, o_b, o_x);
   
   adaptive_free(adaptive);

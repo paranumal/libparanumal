@@ -119,6 +119,7 @@ static void level_kernelinfo(occa::properties &info, occa::device &device, int N
   
   info["defines/p_blockSize"] = blockSize;
   info["defines/p_NthreadsUpdatePCG"] = blockSize;
+  info["defines/p_NwarpsUpdatePCG"] = (int) (blockSize/32); // WARNING: CUDA SPECIFIC
   
   info["includes"] = (char*)strdup(DADAPTIVE "/okl/adaptiveOcca.h");
 
@@ -517,6 +518,9 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
 					       "adaptivePartialAxHex3D",
 					       info);
 
+  lvl->updatePCGKernel = device.buildKernel(DADAPTIVE "/okl/adaptiveUpdatePCG.okl",
+					       "adaptiveUpdatePCG",
+					       info);
   
   lvl->compute_X = device.buildKernel(DADAPTIVE "/okl/adaptiveComputeX.okl",
 				      "adaptiveComputeX",

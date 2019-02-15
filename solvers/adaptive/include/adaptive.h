@@ -40,12 +40,6 @@ typedef struct adaptive
   occa::kernel weightedNorm2Kernel;
   occa::kernel norm2Kernel;
   
-  occa::kernel updatePCGKernel;
-  occa::kernel update1NBPCGKernel;
-  occa::kernel update2NBPCGKernel;
-  occa::kernel update0NBFPCGKernel;
-  occa::kernel update1NBFPCGKernel;
-
   setupAide options;
   
 } adaptive_t;

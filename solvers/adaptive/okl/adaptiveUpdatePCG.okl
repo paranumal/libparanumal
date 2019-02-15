@@ -59,8 +59,7 @@
 	  pn = p[n];	  
 	  Apn = Ap[n];
 
-	  //	  invDegn = 1.;
-	  invDegree[n];
+	  invDegn = invDegree[n];
 
 	  xn += alpha*pn;
 	  rn -= alpha*Apn;
@@ -87,7 +86,7 @@
     }
 
     @barrier("local");
-    
+
     // 4 => 1
 #if (p_NwarpsUpdatePCG>=32)
     for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0))
@@ -107,7 +106,8 @@
     for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0))
       if(t<2) s_warpSum[t] += s_warpSum[t+2];
 #endif
-	    
+
+    
     for(int t=0;t<p_NthreadsUpdatePCG;++t;@inner(0)){
 #if (p_NwarpsUpdatePCG>=2)
       if(t<1) redr[b] = s_warpSum[0] + s_warpSum[1];

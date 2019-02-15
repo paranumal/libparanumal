@@ -55,12 +55,15 @@ dfloat adaptiveUpdatePCG(adaptive_t *adaptive,
     // x <= x + alpha*p
     // r <= r - alpha*A*p
     // dot(r,r)
-#if 0
-    adaptive->updatePCGKernel(Ntotal,
+    level->updatePCGKernel(Ntotal,
 			      level->NblocksUpdatePCG,
 			      level->ogs->o_invDegree,
-			      o_p, o_Ap, alpha, o_x, o_r, level->o_tmpNormr);
-#endif
+			      o_p,
+			      o_Ap,
+			      alpha,
+			      o_x,
+			      o_r,
+			      level->o_tmpNormr);
     
     level->o_tmpNormr.copyTo(level->tmpNormr);
     

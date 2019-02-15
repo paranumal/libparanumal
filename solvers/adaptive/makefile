@@ -30,7 +30,7 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I./include -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(P4EST_CPPFLAGS) -I../../include -D DHOLMES='"${CURDIR}/../.."' -D DADAPTIVE='"${CURDIR}"' $(LIBP_OPT_FLAGS) -I$(OGSDIR) -I$(OGSDIR)/include
+CFLAGS = -I./include -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(P4EST_CPPFLAGS) -I../../include -D DHOLMES='"${CURDIR}/../.."' -D DADAPTIVE='"${CURDIR}"' $(LIBP_OPT_FLAGS) -I$(OGSDIR) -I$(OGSDIR)/include 
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(LIBP_OPT_FLAGS)
