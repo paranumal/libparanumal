@@ -84,6 +84,8 @@ int main(int argc, char **argv){
   
   dfloat *b = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
   dfloat *x = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
+  dfloat *exact = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
+  
   dfloat *vgeo = (dfloat*) calloc(NVGEO*level->Np*level->Klocal, sizeof(dfloat));
   dfloat *gllw = (dfloat*) calloc(level->Nq, sizeof(dfloat));
   level->o_w.copyTo(gllw);
@@ -105,7 +107,8 @@ int main(int argc, char **argv){
 	  iint_t id = n + e*level->Np;
 	  b[id] =
 	    Jn*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
-	  
+
+	  exact[id] = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
 	}
       }
     }
@@ -119,6 +122,14 @@ int main(int argc, char **argv){
   
   dfloat tol = 1.e-6;
   adaptiveSolve(adaptive, lambda, tol, o_b, o_x);
+
+  o_x.copyTo(x);
+
+  dfloat_t maxError = 0;
+  for(iint_t n=0;n<level->Klocal*level->Np;++n){
+    maxError = ASD_MAX(maxError, fabs(exact[n]-x[n]));
+  }
+  printf("maxError = %lf\n", maxError);
   
   adaptive_free(adaptive);
 
