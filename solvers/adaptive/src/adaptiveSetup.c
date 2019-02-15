@@ -1,5 +1,30 @@
 #include "adaptive.h"
 
+static int          refine_level;
+static int          level_shift;
+
+static int
+refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t * q)
+{
+  int                 qid;
+
+  if ((int) q->level >= refine_level) {
+    return 0;
+  }
+  if ((int) q->level < refine_level - level_shift) {
+    return 1;
+  }
+
+  qid = ((int) q->level == 0 ?
+         (which_tree % P4EST_CHILDREN) : p4est_quadrant_child_id (q));
+
+  return (qid == 0 || qid == 3
+          || qid == 5 || qid == 6
+    );
+}
+
+
 /** create adaptive structure
  *
  * \param [in]  options    the options
@@ -82,9 +107,20 @@ adaptive_t *adaptiveSetup(setupAide &options, MPI_Comm comm)
 
   int start_level = 0;
   options.getArgs("STARTING REFINEMENT LEVEL", start_level);
+  int fractal_level = start_level;
+  options.getArgs("FRACTAL REFINEMENT LEVEL", fractal_level);
 
-  adaptive->pxest = p4est_new_ext(comm, adaptive->conn, 0, start_level, 1,
+
+  if(options.compareArgs("BOX FRACTAL", "TRUE")){
+    adaptive->pxest = p4est_new_ext(comm, adaptive->conn, 0, start_level - fractal_level, 1,
 			     sizeof(quad_data_t), NULL, NULL);
+    level_shift = 4;
+    refine_level = start_level - fractal_level + level_shift;
+    p4est_refine(adaptive->pxest, fractal_level, refine_fractal, NULL);
+  } else {
+    adaptive->pxest = p4est_new_ext(comm, adaptive->conn, 0, start_level, 1,
+			     sizeof(quad_data_t), NULL, NULL);
+  }
 
   p4est_balance_ext(adaptive->pxest, P4EST_CONNECT_FULL, NULL, NULL);
   p4est_partition(adaptive->pxest, 1, NULL);
@@ -94,7 +130,7 @@ adaptive_t *adaptiveSetup(setupAide &options, MPI_Comm comm)
   options.getArgs("POLYNOMIAL DEGREE", N);
   // TODO build more than one level
   adaptive->lvl = adaptiveLevelSetup(options, adaptive->pxest, adaptive->ghost, adaptive->device,
-				     adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.2, adaptive->comm);
+				     adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.8, adaptive->comm);
 
 
 #if 0
