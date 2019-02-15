@@ -24,6 +24,31 @@ SOFTWARE.
 
 */
 
+static int          refine_level;
+static int          level_shift;
+
+static int
+refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t * q)
+{
+  int                 qid;
+
+  if ((int) q->level >= refine_level) {
+    return 0;
+  }
+  if ((int) q->level < refine_level - level_shift) {
+    return 1;
+  }
+
+  qid = ((int) q->level == 0 ?
+         (which_tree % P4EST_CHILDREN) : p4est_quadrant_child_id (q));
+
+  return (qid == 0 || qid == 3
+          || qid == 5 || qid == 6
+    );
+}
+
+
 #include "adaptive.h"
 
 mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
@@ -160,8 +185,16 @@ mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
   }
   {
     p8est_connectivity_t *conn = p8est_connectivity_new_brick(NX, NY, NZ, 1, 1, 1);
-    p8est_t *pxest = p8est_new_ext(mesh->comm, conn, 0, level, 1, 0,
+    iint_t l = level;
+    p8est_t *pxest = p8est_new_ext(mesh->comm, conn, 0, level - l, 1, 0,
         NULL, NULL);
+
+    if(options.compareArgs("BOX FRACTAL", "TRUE")){
+      level_shift = 4;
+      refine_level = level - l + level_shift;
+      p4est_refine (p4est, l, refine_fractal, NULL);
+    }
+
     p8est_balance_ext(pxest, P4EST_CONNECT_FULL, NULL, NULL);
     p8est_partition(pxest, 1, NULL);
     p8est_ghost_t *ghost = p8est_ghost_new(pxest, P4EST_CONNECT_FULL);
