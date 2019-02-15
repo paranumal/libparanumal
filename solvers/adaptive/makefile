@@ -81,7 +81,7 @@ AOBJS    = \
 ./src/adaptiveWeightedInnerProduct.o \
 ./src/adaptiveZeroMean.o \
 ./src/connectivity.o \
-./src/level.o\
+./src/adaptiveLevelSetup.o\
 ./src/mesh.o\
 ./src/operators.o\
 ./src/occaDeviceConfig.o
