@@ -77,7 +77,7 @@ int main(int argc, char **argv){
   init_libs(comm, verbosity);
   print_precision();
 
-  adaptive_t *adaptive = adaptive_new(options, comm);
+  adaptive_t *adaptive = adaptiveSetup(options, comm);
   level_t *level = adaptive->lvl;
 
   dfloat lambda = 1;
@@ -111,7 +111,7 @@ int main(int argc, char **argv){
 	  dfloat yn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_Y];
 	  dfloat zn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_Z];
 
-	  dfloat mode = .5;
+	  dfloat mode = 2;
 	  
 	  iint_t id = n + e*level->Np;
 	  b[id] =

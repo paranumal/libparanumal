@@ -43,9 +43,6 @@ void conn_mapping_identity(const dlong tree,
 	    
             const dlong tree = EToT[e];
 
-//    	  if(i==0 && j==0)	
-//	    printf("tree = %d\n", tree);
-
             if (ke == 0 && j == 0){
               s_r[i] = lglr[i];
 	    }

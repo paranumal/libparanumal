@@ -7,7 +7,7 @@
  *
  * \return Initialized adaptive structure
  */
-adaptive_t *adaptive_new(setupAide &options, MPI_Comm comm)
+adaptive_t *adaptiveSetup(setupAide &options, MPI_Comm comm)
 {
 
   printf("!!!!!!!!!!!!!   sizeof(dfloat_t) = %zu\n", sizeof(dfloat_t));
@@ -96,6 +96,23 @@ adaptive_t *adaptive_new(setupAide &options, MPI_Comm comm)
   adaptive->lvl = adaptiveLevelSetup(options, adaptive->pxest, adaptive->ghost, adaptive->device,
 				     adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.2, adaptive->comm);
 
+
+#if 0
+  // need to count levels
+  int levelId = 0;
+  int M = N;
+
+  do{
+
+    adaptive->lvl = adaptiveLevelSetup(options, adaptive->pxest, adaptive->ghost, adaptive->device,
+				       adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.2, adaptive->comm);
+    
+    adaptive->levels 
+
+      }while();
+#endif
+
+  
   occa::properties kernelInfo;
   
   kernelInfo["defines"].asObject();

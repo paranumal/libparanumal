@@ -73,6 +73,7 @@ AOBJS    = \
 ./src/adaptiveSolve.o \
 ./src/adaptiveSetup.o \
 ./src/adaptiveOperator.o \
+./src/adaptiveOperatorSetup.o \
 ./src/adaptiveScaledAdd.o \
 ./src/adaptiveWeightedNorm2.o \
 ./src/adaptivePlotVTUHex3D.o \
@@ -83,7 +84,6 @@ AOBJS    = \
 ./src/connectivity.o \
 ./src/adaptiveLevelSetup.o\
 ./src/adaptiveMeshSetup.o\
-./src/operators.o\
 ./src/occaDeviceConfig.o
 
 # library objects

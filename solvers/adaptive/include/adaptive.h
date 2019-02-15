@@ -24,7 +24,8 @@ typedef struct adaptive
                               // periodic bricks
 
   level_t *lvl;
-
+  level_t *levels;
+  
   // generic kernels [ e.g. PCG ]
   occa::kernel sumKernel;
   occa::kernel addScalarKernel;
@@ -44,7 +45,7 @@ typedef struct adaptive
   
 } adaptive_t;
 
-adaptive_t *adaptive_new(setupAide &options, MPI_Comm comm);
+adaptive_t *adaptiveSetup(setupAide &options, MPI_Comm comm);
 void adaptive_free(adaptive_t *adaptive);
 
 void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,

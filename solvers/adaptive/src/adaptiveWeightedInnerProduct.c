@@ -53,13 +53,13 @@ dfloat adaptiveWeightedInnerProduct(adaptive_t *adaptive, level_t *level,
 
     adaptive->sumKernel(Nblock, o_tmp, o_tmp2);
 
-    o_tmp2.copyTo(tmp);
+    o_tmp2.copyTo(tmp, Nblock*sizeof(dfloat_t), 0);
 
     Nfinal = Nblock2;
 	
   }
   else{
-    o_tmp.copyTo(tmp);
+    o_tmp.copyTo(tmp, Nblock*sizeof(dfloat_t), 0);
     
     Nfinal = Nblock;
   }    
