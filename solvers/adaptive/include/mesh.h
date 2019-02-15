@@ -157,7 +157,7 @@ typedef struct mesh
   // }}}
 } mesh_t;
 
-mesh_t *mesh_new(p4est_t *pxest, p4est_ghost_t *ghost, int *brick_n, int *brick_p, int *brick_TToC, int N);
+mesh_t *adaptiveMeshSetup(p4est_t *pxest, p4est_ghost_t *ghost, int *brick_n, int *brick_p, int *brick_TToC, int N);
 
 void mesh_free(mesh_t *mesh);
 

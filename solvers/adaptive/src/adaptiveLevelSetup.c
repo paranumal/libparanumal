@@ -337,7 +337,7 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
                 lvl->o_Ib, lvl->o_It, lvl->o_Pb, lvl->o_Pt);
   // }}}
 
-  mesh_t *mesh = mesh_new(pxest, ghost, brick_n, brick_p, brick_TToC, N);
+  mesh_t *mesh = adaptiveMeshSetup(pxest, ghost, brick_n, brick_p, brick_TToC, N);
 
   // {{{ Mesh Constants
   level_get_mesh_constants(lvl, mesh);

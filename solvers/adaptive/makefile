@@ -82,7 +82,7 @@ AOBJS    = \
 ./src/adaptiveZeroMean.o \
 ./src/connectivity.o \
 ./src/adaptiveLevelSetup.o\
-./src/mesh.o\
+./src/adaptiveMeshSetup.o\
 ./src/operators.o\
 ./src/occaDeviceConfig.o
 
