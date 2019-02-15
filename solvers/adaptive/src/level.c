@@ -307,7 +307,7 @@ void occa_double_to_dfloat(occa::device &device, size_t N, double *a,
 level_t *level_new(setupAide &options, p4est_t *pxest,
                    p4est_ghost_t *ghost, occa::device &device,
                    int *brick_n, int *brick_p, int *brick_TToC,
-                   int N, double occa_kmax_mem_frac)
+                   int N, double occa_kmax_mem_frac, MPI_Comm &comm)
 {
   level_t *lvl = new level_t[1];
 
@@ -591,7 +591,7 @@ level_t *level_new(setupAide &options, p4est_t *pxest,
   // TW: what is actual order ?
   // TW: what is comm ?
   // TW: need proper conversion between (p4est_gloidx_t) and (hlong)
-  //  lvl->ogs = ogsSetup(lvl->Klocal*lvl->Np, (hlong*) mesh->DToC, MPI_COMM_WORLD, 1, device);
+  lvl->ogs = ogsSetup(lvl->Klocal*lvl->Np, (hlong*) mesh->DToC, comm, 1, device); // 1 verbose
   
   mesh_free(mesh);
 
