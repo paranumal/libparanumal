@@ -28,7 +28,7 @@ SOFTWARE.
 
 int pcg(adaptive_t* adaptive,
 	dfloat lambda, 
-        occa::memory &o_r,
+        occa::memory &o_b,
 	occa::memory &o_x, 
         const dfloat tol, const int MAXIT){
 
@@ -36,13 +36,9 @@ int pcg(adaptive_t* adaptive,
   setupAide options = adaptive->options;
 
   int fixedIterationCountFlag = 0;
-  int enableGatherScatters = 1;
-  int enableReductions = 1;
   int flexible = options.compareArgs("KRYLOV SOLVER", "FLEXIBLE");
   int verbose = options.compareArgs("VERBOSE", "TRUE");
   
-  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
-  options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
   if(options.compareArgs("FIXED ITERATION COUNT", "TRUE"))
     fixedIterationCountFlag = 1;
   
@@ -58,6 +54,7 @@ int pcg(adaptive_t* adaptive,
   occa::memory &o_z  = level->o_pcgWork[1];
   occa::memory &o_Ap = level->o_pcgWork[2];
   occa::memory &o_Ax = level->o_pcgWork[3];
+  occa::memory &o_r  = level->o_pcgWork[4];
 
   pAp = 0;
   rdotz1 = 1;
@@ -66,14 +63,13 @@ int pcg(adaptive_t* adaptive,
 
   // compute A*x
   adaptiveOperator(adaptive, level, lambda, o_x, o_Ax);
+
+  o_b.copyTo(o_r, level->Klocal*level->Np*sizeof(dfloat));
   
   // subtract r = b - A*x
   adaptiveScaledAdd(adaptive, level, -1.f, o_Ax, 1.f, o_r);
 
-  if(enableReductions)
-    rdotr0 = adaptiveWeightedNorm2(adaptive, level, level->ogs->o_invDegree, o_r);
-  else
-    rdotr0 = 1;
+  rdotr0 = adaptiveWeightedNorm2(adaptive, level, level->ogs->o_invDegree, o_r);
 
   dfloat TOL =  ASD_MAX(tol*tol*rdotr0,tol*tol);
   
@@ -82,30 +78,22 @@ int pcg(adaptive_t* adaptive,
 
     // z = Precon^{-1} r
     adaptivePreconditioner(adaptive, lambda, o_r, o_z);
-
+    
     rdotz2 = rdotz1;
 
     // r.z
-    if(enableReductions){
-      rdotz1 = adaptiveWeightedInnerProduct(adaptive, level, level->ogs->o_invDegree, o_r, o_z); 
-    }
-    else
-      rdotz1 = 1;
-    
+    rdotz1 = adaptiveWeightedInnerProduct(adaptive, level, level->ogs->o_invDegree, o_r, o_z); 
+
     if(flexible){
       dfloat zdotAp;
-      if(enableReductions){
-	zdotAp = adaptiveWeightedInnerProduct(adaptive, level, level->ogs->o_invDegree, o_z, o_Ap);  
-      }
-      else
-	zdotAp = 1;
-      
+      zdotAp = adaptiveWeightedInnerProduct(adaptive, level, level->ogs->o_invDegree, o_z, o_Ap);  
+
       beta = -alpha*zdotAp/rdotz2;
     }
     else{
       beta = (iter==1) ? 0:rdotz1/rdotz2;
     }
-    
+
     // p = z + beta*p
     adaptiveScaledAdd(adaptive, level, 1.f, o_z, beta, o_p);
     
@@ -113,11 +101,7 @@ int pcg(adaptive_t* adaptive,
     adaptiveOperator(adaptive, level, lambda, o_p, o_Ap); 
 
     // dot(p,A*p)
-    if(enableReductions){
-      pAp =  adaptiveWeightedInnerProduct(adaptive, level, level->ogs->o_invDegree, o_p, o_Ap);
-    }
-    else
-      pAp = 1;
+    pAp =  adaptiveWeightedInnerProduct(adaptive, level, level->ogs->o_invDegree, o_p, o_Ap);
 
     alpha = rdotz1/pAp;
 

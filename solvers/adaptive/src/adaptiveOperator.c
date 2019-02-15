@@ -52,15 +52,8 @@ void adaptiveOperator(adaptive_t *adaptive,
 			      lambda,
 			      o_q,
 			      o_Aq);
-    
-    // gather over noncon faces to coarse side dofs
-    level->gather_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_Aq);
-    
-    // gather scatter over ranks
-    ogsGatherScatter(o_Aq, ogsDfloat, ogsAdd, level->ogs);
 
-    // scatter from coarse to fine noncon
-    level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_Aq);
+    adaptiveGatherScatter(adaptive, level, o_Aq);
 
     // boost null space option
 #if USE_NULL_BOOST==1

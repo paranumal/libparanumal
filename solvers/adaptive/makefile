@@ -69,6 +69,7 @@ DEPS = $(INCLUDES)
 AOBJS    = \
 ./src/PCG.o \
 ./src/asd.o \
+./src/adaptiveGatherScatter.o \
 ./src/adaptiveSolve.o \
 ./src/adaptiveSetup.o \
 ./src/adaptiveOperator.o \
