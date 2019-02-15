@@ -1,0 +1,43 @@
+kernel void adaptiveGatherScatter(const dlong Ncontinuous,
+                                  const dlong *restrict starts,
+                                  const dlong *restrict indices,
+                                  @restrict dfloat *q){
+  for (dlong co = 0; co < Ncontinuous; co += p_Nt; outer0) {
+    for (dlong ci = 0; ci < p_Nt; ++ci; inner0) {
+      const dlong n = co + ci;
+      if (n < Ncontinuous) {
+        const dlong start = starts[n];
+        const dlong end = starts[n + 1];
+
+        dfloat lq;
+        dfloat gq = ZERO;
+
+        // add everything from all the points
+        for (dlong m = start; m < end; ++m) {
+          const dlong ind = indices[m];
+
+          const dlong e = ind / p_Np;
+          const dlong l = ind % p_Np;
+          const dlong idq = l + e * p_Np * p_NVGEO;
+
+          // Get local value
+          lq = q[idq];
+
+          // add local value to global value
+          gq += lq;
+        }
+
+        // send gathered values back out
+        for (dlong m = start; m < end; ++m) {
+          const dlong ind = indices[m];
+
+          const dlong e = ind / p_Np;
+          const dlong l = ind % p_Np;
+          const dlong idq = l + e * p_Np * p_NVGEO;
+
+          vgeo[idq] = gq;
+        }
+      }
+    }
+  }
+}
