@@ -282,11 +282,11 @@ dlong gmask(dlong n, dlong g)
 		    for (dlong p = 0; p < p_Nq; ++p){
 		      fld += s_PtT[m][p] * s_fld[hi][ei][n][p];
 		    }
-		  const dlong l = gmask(m, g);
-		  const dlong idq = l + e * p_Np * p_NFIELDS;
-		  q[idq + idfld * p_Np] = fld;
-		  ++hi;
 		}
+		const dlong l = gmask(m, g);
+		const dlong idq = l + e * p_Np * p_NFIELDS;
+		q[idq + idfld * p_Np] = fld;
+		++hi;
 	      }
 	    }
 	  }
