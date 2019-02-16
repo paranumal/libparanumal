@@ -160,7 +160,7 @@ dlong gmask(dlong n, dlong g)
 	      if (work & 1){ // 0x0001)
 		const int g = p8est_corner_edges[c][o];
 		hg[g] = (hg[g] == -1) ? 0 : 2;
-		int bit = (int)(cwork & 0x0001);
+		int bit = (int)(cwork & 1); // 0x0001);
 		hg[g] += bit;
 	      }
 	      cwork >>= 1;
@@ -293,7 +293,7 @@ dlong gmask(dlong n, dlong g)
 		    fld += s_Pt[m][p] * s_fld[hi][ei][n][p];
 		  }
 		}
-
+	      
 		const dlong l = gmask(m, g);
 		const dlong idq = l + e * p_Np * p_NFIELDS;
 		

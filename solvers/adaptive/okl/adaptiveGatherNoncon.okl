@@ -232,7 +232,7 @@ dlong gmask(dlong n, dlong g)
 		      }
 		  }
 		}
-	      
+	      	      
 		const dlong l = fmask(m, n, f);
 		const dlong idq = l + e * p_Np * p_NFIELDS;
 		q[idq + idfld * p_Np] = fld;

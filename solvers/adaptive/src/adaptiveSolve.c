@@ -45,7 +45,7 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
   // gather over noncon faces to coarse side dofs
   level->gather_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_r);
 
-  // global GS
+  // global GS coarse dofs
   ogsGatherScatter(o_r, ogsDfloat, ogsAdd, level->ogs);
   
 #if USE_NULL_PROJECTION==1
