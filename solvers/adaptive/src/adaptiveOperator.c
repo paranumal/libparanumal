@@ -30,7 +30,8 @@ void adaptiveOperator(adaptive_t *adaptive,
 		      level_t *level,
 		      dfloat lambda,
 		      occa::memory &o_q,
-		      occa::memory &o_Aq){
+		      occa::memory &o_Aq,
+		      occa::memory &o_qL){
 
   setupAide &options = adaptive->options;
 
@@ -43,16 +44,26 @@ void adaptiveOperator(adaptive_t *adaptive,
   if(continuous){
 
     ogs_t *ogs = level->ogs;
+
+    o_q.copyTo(o_qL, level->Klocal*level->Np*sizeof(dfloat), 0);
     
+    // scatter from coarse to fine noncon
+    level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_qL);
+
+    // operate on fine
     level->compute_partial_Ax(level->Klocal, // locally owned elements
 			      level->o_IToE,
 			      level->o_ggeo,
 			      level->o_D,
 			      lambda,
-			      o_q,
+			      o_qL,
 			      o_Aq);
 
-    adaptiveGatherScatter(adaptive, level, o_Aq);
+    // gather over noncon faces to coarse side dofs
+    level->gather_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_Aq);
+
+    // add noncon gs around this
+    ogsGatherScatter(o_Aq, ogsDfloat, ogsAdd, level->ogs);
 
     // boost null space option
 #if USE_NULL_BOOST==1

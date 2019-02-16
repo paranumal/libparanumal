@@ -117,7 +117,7 @@ dlong gmask(dlong n, dlong g)
 	for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
 
 	  e = eo + ei;
-
+	  
 	  if (ei == 0){
 	    for (dlong j = n; j < p_Nq; j += p_Nqk){
 	      for (dlong i = m; i < p_Nq; i += p_Nq){
@@ -173,7 +173,7 @@ dlong gmask(dlong n, dlong g)
 
     for (dlong idfld = 0; idfld < p_NFIELDS; ++idfld){
 
-      @barrier("local");
+      @barrier("global");
       
       for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2)){
 	for (dlong n = 0; n < p_Nqk; ++n; @inner(1)){
@@ -248,7 +248,7 @@ dlong gmask(dlong n, dlong g)
 	}
       }
 
-      @barrier("local");
+      @barrier("global");
 
       for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2)){
 	for (dlong n = 0; n < p_Nqk; ++n; @inner(1)){

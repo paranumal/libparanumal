@@ -190,6 +190,7 @@ mesh3D *adaptiveSetupBoxHex3D(int N, setupAide &options){
         NULL, NULL);
 
     if(options.compareArgs("BOX FRACTAL", "TRUE")){
+      printf("REFINING......\n");
       level_shift = 4;
       refine_level = level - l + level_shift;
       p4est_refine (p4est, l, refine_fractal, NULL);

@@ -126,8 +126,6 @@ int main(int argc, char **argv){
   occa::memory o_b = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat), b);
   occa::memory o_x = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat), x);
 
-  adaptiveGatherScatter(adaptive, level, o_b);
-  
   dfloat tol = 1.e-6;
   adaptiveSolve(adaptive, lambda, tol, o_b, o_x);
 

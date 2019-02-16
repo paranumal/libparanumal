@@ -34,21 +34,34 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
   int Niter = 0;
   int maxIter = 1000; 
 
+  level_t *level = adaptive->lvl;
+
+  options.getArgs("MAXIMUM ITERATIONS", maxIter);
+  options.getArgs("SOLVER TOLERANCE", tol);
+
+  // G*Gnc*A*Snc*S*xg = G*Gnc*fL
+  // S*G*(Gnc*A*Snc)*xL = S*G*Gnx*fL
+  
+  // gather over noncon faces to coarse side dofs
+  level->gather_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_r);
+
+  // global GS
+  ogsGatherScatter(o_r, ogsDfloat, ogsAdd, level->ogs);
+  
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
     adaptiveZeroMean(adaptive, adaptive->lvl, o_r);
 #endif
   
-  options.getArgs("MAXIMUM ITERATIONS", maxIter);
-
-  options.getArgs("SOLVER TOLERANCE", tol);
-  
   Niter = pcg (adaptive, lambda, o_r, o_x, tol, maxIter);
-
+  
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
     adaptiveZeroMean(adaptive, adaptive->lvl, o_x);
 #endif
+
+  // scatter from coarse to fine noncon
+  level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);
   
   return Niter;
 

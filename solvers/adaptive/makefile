@@ -63,6 +63,7 @@ DEPS = $(INCLUDES)
 # add this object for USE_STEFAN_MXM ./src/adaptiveSerialLocalAxHex3D.o\
 
 # ./src/adaptiveOutputVTUHex3D.o \
+#./src/adaptiveBuildJacobi.o \
 
 
 # list of objects to be compiled
