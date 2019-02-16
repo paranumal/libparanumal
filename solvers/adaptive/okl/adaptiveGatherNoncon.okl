@@ -248,8 +248,8 @@ dlong gmask(dlong n, dlong g)
       for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2)){
 	for (dlong n = 0; n < p_Nqk; ++n; @inner(1)){
 	  for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
+	    int hi = 0;
 	    for (int g = 0; g < p_P4EST_EDGES; ++g){
-	      int hi = 0;
 	      if (n == 0 && (hg[g] == 0 || hg[g] == 1)){
 		const dlong l = gmask(m, g);
 		const dlong idq = l + e * p_Np * p_NFIELDS;
@@ -272,15 +272,15 @@ dlong gmask(dlong n, dlong g)
 	      if (n == 0 && (hg[g] == 0 || hg[g] == 1)){
 		dfloat fld = ZERO;
 		if (hg[g] == 0){
-		  #pragma unroll p_Nq
+#pragma unroll p_Nq
 		  for (dlong p = 0; p < p_Nq; ++p){
-		      fld += s_PbT[m][p] * s_fld[hi][ei][n][p];
-		    }
+		    fld += s_PbT[m][p] * s_fld[hi][ei][n][p];
+		  }
 		}
 		if (hg[g] == 1){
-		  #pragma unroll p_Nq
-		    for (dlong p = 0; p < p_Nq; ++p){
-		      fld += s_PtT[m][p] * s_fld[hi][ei][n][p];
+#pragma unroll p_Nq
+		  for (dlong p = 0; p < p_Nq; ++p){
+		    fld += s_PtT[m][p] * s_fld[hi][ei][n][p];
 		    }
 		}
 		const dlong l = gmask(m, g);
