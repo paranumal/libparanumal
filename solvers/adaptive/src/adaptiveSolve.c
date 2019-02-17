@@ -27,7 +27,7 @@ SOFTWARE.
 #include "adaptive.h"
 
 int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
-                  occa::memory &o_r, occa::memory &o_x){
+                  occa::memory &o_b, occa::memory &o_x){
   
   setupAide options = adaptive->options;
 
@@ -40,20 +40,20 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
   options.getArgs("SOLVER TOLERANCE", tol);
 
   // G*Gnc*A*Snc*S*xg = G*Gnc*fL
-  // S*G*(Gnc*A*Snc)*xL = S*G*Gnx*fL
+  // S*G*(Gnc*A*Snc)*xC = S*G*Gnc*fL
   
   // gather over noncon faces to coarse side dofs
-  level->gather_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_r);
+  level->gather_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_b);
 
   // global GS coarse dofs
-  ogsGatherScatter(o_r, ogsDfloat, ogsAdd, level->ogs);
+  ogsGatherScatter(o_b, ogsDfloat, ogsAdd, level->ogs);
   
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
-    adaptiveZeroMean(adaptive, adaptive->lvl, o_r);
+    adaptiveZeroMean(adaptive, adaptive->lvl, o_b);
 #endif
   
-  Niter = pcg (adaptive, lambda, o_r, o_x, tol, maxIter);
+  Niter = pcg (adaptive, lambda, o_b, o_x, tol, maxIter);
   
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
@@ -64,5 +64,4 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
   level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);
   
   return Niter;
-
 }

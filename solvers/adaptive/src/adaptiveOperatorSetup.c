@@ -91,6 +91,22 @@ void get_operators(int N, occa::device &device, occa::memory &o_r,
     }
   }
 
+  printf("Pb = [\n");
+  for (int i = 0; i < Nq; ++i){
+    for (int j = 0; j < Nq; ++j){
+      printf("%lf ", Pb[j*Nq+i]);
+    }
+    printf("\n");
+  }
+
+  printf("Pt = [\n");
+  for (int i = 0; i < Nq; ++i){
+    for (int j = 0; j < Nq; ++j){
+      printf("%lf ", Pt[j*Nq+i]);
+    }
+    printf("\n");
+  }
+
   o_Pb = device.malloc(Nq * Nq * sizeof(dfloat_t), Pb);
   o_Pt = device.malloc(Nq * Nq * sizeof(dfloat_t), Pt);
 

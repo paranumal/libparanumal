@@ -94,11 +94,11 @@ dlong gmask(dlong n, dlong g)
   return a + b * p_Nq + c * p_Nq * p_Nq;
 }
 
-@kernel void adaptiveScatterNoncon(const dlong Nelements,
-				   @restrict const dlong  *EToC,
-				   @restrict const dfloat *Pb,
-				   @restrict const dfloat *Pt,
-				   @restrict dfloat *q){
+@kernel void adaptiveScatterNoncon_v00(const dlong Nelements,
+				       @restrict const dlong  *EToC,
+				       @restrict const dfloat *Pb,
+				       @restrict const dfloat *Pt,
+				       @restrict dfloat *q){
 
   for (dlong eo = 0; eo < Nelements; eo += p_NelementsblkS; @outer(0)){
 
@@ -309,3 +309,282 @@ dlong gmask(dlong n, dlong g)
   }
 }
 				    
+@kernel void adaptiveScatterNoncon(const dlong K,
+				   @restrict const dlong   *EToC,
+				   @restrict const dfloat *Pb,
+				   @restrict const dfloat *Pt,
+				   @restrict dfloat *q)
+{
+  for (dlong eo = 0; eo < K; eo += p_NelementsblkS; @outer(0))
+  {
+    @shared dfloat s_fld[p_DIM][p_NelementsblkS][p_Nqk][p_Nq];
+    @shared dfloat s_Pb[p_Nq][p_Nq];
+    @shared dfloat s_Pt[p_Nq][p_Nq];
+
+    @exclusive dlong e;
+    @exclusive int hi;
+
+    @exclusive int hf[p_P4EST_FACES];
+#if p_DIM == 3
+    @exclusive int hg[p_P4EST_EDGES];
+#endif
+
+    // Load shared memory
+    for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
+    {
+      for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
+      {
+        for (dlong m = 0; m < p_Nq; ++m; @inner(0))
+        {
+          e = eo + ei;
+
+          if (ei == 0)
+            for (dlong j = n; j < p_Nq; j += p_Nqk)
+              for (dlong i = m; i < p_Nq; i += p_Nq)
+              {
+                const dlong id = j * p_Nq + i;
+                s_Pb[j][i] = Pb[id];
+                s_Pt[j][i] = Pt[id];
+              }
+
+          for (int f = 0; f < p_P4EST_FACES; ++f)
+            hf[f] = -1;
+
+#if p_DIM == 3
+          for (int g = 0; g < p_P4EST_EDGES; ++g)
+            hg[g] = -1;
+#endif
+
+          const dlong fc = (e < K) ? EToC[e] : 0;
+
+          if (fc)
+          {
+
+// Decode the p4est face_code.  The code below is taken from
+// p{4,8}est_lnodes_decode.
+#if p_DIM == 2
+            const dlong c = fc & 0x03;
+            dlong work = fc >> 2;
+
+            for (int o = 0; o < 2; ++o)
+            {
+              const int f = p4est_corner_faces[c][o];
+
+              if (work & 0x01)
+                hf[f] = p4est_corner_face_corners[c][f];
+              else
+                hf[f] = -1;
+
+              work >>= 1;
+            }
+#else
+            const dlong c = fc & 0x0007;
+            dlong work = fc >> 3;
+            dlong cwork = c;
+
+            for (int o = 0; o < 3; ++o)
+            {
+              if (work & 0x0001)
+              {
+                const int f = p8est_corner_faces[c][o];
+                hf[f] = p8est_corner_face_corners[c][f];
+                for (int p = 0; p < 4; ++p)
+                {
+                  const int g = p8est_face_edges[f][p];
+                  hg[g] = 4;
+                }
+              }
+              work >>= 1;
+            }
+
+            for (int o = 0; o < 3; ++o)
+            {
+              if (work & 0x0001)
+              {
+                const int g = p8est_corner_edges[c][o];
+                hg[g] = (hg[g] == -1) ? 0 : 2;
+		int tmp = (int)(cwork & 0x0001);
+                hg[g] = hg[g] + tmp;
+              }
+              cwork >>= 1;
+              work >>= 1;
+            }
+#endif
+          }
+        }
+      }
+    }
+
+    for (dlong idfld = 0; idfld < p_NFIELDS; ++idfld)
+    {
+      for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
+        for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
+          for (dlong m = 0; m < p_Nq; ++m; @inner(0))
+            hi = 0;
+
+      @barrier("local");
+
+      for (int f = 0; f < p_P4EST_FACES; ++f)
+        for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
+          for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
+            for (dlong m = 0; m < p_Nq; ++m; @inner(0))
+              if (hf[f] >= 0)
+              {
+                const dlong l = fmask(m, n, f);
+                const dlong idq = l + e * p_Np * p_NFIELDS;
+
+                s_fld[hi][ei][n][m] = q[idq + idfld * p_Np];
+                ++hi;
+              }
+
+      @barrier("local");
+
+      for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
+        for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
+          for (dlong m = 0; m < p_Nq; ++m; @inner(0))
+            hi = 0;
+
+      for (int f = 0; f < p_P4EST_FACES; ++f)
+        for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
+          for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
+            for (dlong m = 0; m < p_Nq; ++m; @inner(0))
+              if (hf[f] >= 0)
+              {
+                dfloat fld = ZERO;
+
+#if p_DIM == 2
+                if (hf[f] == 0)
+                {
+#pragma unroll p_Nq
+		    for (dlong p = 0; p < p_Nq; ++p)
+                  {
+                    fld += s_Pb[m][p] * s_fld[hi][ei][0][p];
+                  }
+                }
+
+                if (hf[f] == 1)
+                {
+#pragma unroll p_Nq
+		  for (dlong p = 0; p < p_Nq; ++p)
+                  {
+                    fld += s_Pt[m][p] * s_fld[hi][ei][0][p];
+                  }
+                }
+#else
+                if (hf[f] == 0)
+                  for (dlong p = 0; p < p_Nq; ++p)
+                  {
+#pragma unroll p_Nq
+		      for (dlong o = 0; o < p_Nq; ++o)
+                    {
+                      fld += s_Pb[m][o] * s_Pb[n][p] * s_fld[hi][ei][p][o];
+                    }
+                  }
+
+                if (hf[f] == 1)
+                  for (dlong p = 0; p < p_Nq; ++p)
+                  {
+#pragma unroll p_Nq
+		      for (dlong o = 0; o < p_Nq; ++o)
+                    {
+                      fld += s_Pt[m][o] * s_Pb[n][p] * s_fld[hi][ei][p][o];
+                    }
+                  }
+
+                if (hf[f] == 2)
+                  for (dlong p = 0; p < p_Nq; ++p)
+                  {
+#pragma unroll p_Nq
+                    for (dlong o = 0; o < p_Nq; ++o)
+                    {
+                      fld += s_Pb[m][o] * s_Pt[n][p] * s_fld[hi][ei][p][o];
+                    }
+                  }
+
+                if (hf[f] == 3)
+                  for (dlong p = 0; p < p_Nq; ++p)
+                  {
+#pragma unroll p_Nq
+                    for (dlong o = 0; o < p_Nq; ++o)
+                    {
+                      fld += s_Pt[m][o] * s_Pt[n][p] * s_fld[hi][ei][p][o];
+                    }
+                  }
+#endif
+
+                const dlong l = fmask(m, n, f);
+                const dlong idq = l + e * p_Np * p_NFIELDS;
+
+                q[idq + idfld * p_Np] = fld;
+
+                ++hi;
+              }
+
+#if p_DIM == 3
+      @barrier("local");
+
+      for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
+        for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
+          for (dlong m = 0; m < p_Nq; ++m; @inner(0))
+            hi = 0;
+
+      for (int g = 0; g < p_P4EST_EDGES; ++g)
+        for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
+          for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
+            for (dlong m = 0; m < p_Nq; ++m; @inner(0))
+              if (n == 0 && (hg[g] == 0 || hg[g] == 1))
+              {
+                const dlong l = gmask(m, g);
+                const dlong idq = l + e * p_Np * p_NFIELDS;
+
+                s_fld[hi][ei][n][m] = q[idq + idfld * p_Np];
+
+                ++hi;
+              }
+
+      @barrier("local");
+
+      for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
+        for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
+          for (dlong m = 0; m < p_Nq; ++m; @inner(0))
+            hi = 0;
+
+      for (int g = 0; g < p_P4EST_EDGES; ++g)
+        for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
+          for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
+            for (dlong m = 0; m < p_Nq; ++m; @inner(0))
+              if (n == 0 && (hg[g] == 0 || hg[g] == 1))
+              {
+                dfloat fld = ZERO;
+
+                if (hg[g] == 0)
+                {
+#pragma unroll p_Nq
+		    for (dlong p = 0; p < p_Nq; ++p)
+                  {
+                    fld += s_Pb[m][p] * s_fld[hi][ei][n][p];
+                  }
+                }
+
+                if (hg[g] == 1)
+                {
+#pragma unroll p_Nq
+                  for (dlong p = 0; p < p_Nq; ++p)
+                  {
+                    fld += s_Pt[m][p] * s_fld[hi][ei][n][p];
+                  }
+                }
+
+                const dlong l = gmask(m, g);
+                const dlong idq = l + e * p_Np * p_NFIELDS;
+
+                q[idq + idfld * p_Np] = fld;
+
+                ++hi;
+              }
+#endif
+    }
+  }
+}
+
+

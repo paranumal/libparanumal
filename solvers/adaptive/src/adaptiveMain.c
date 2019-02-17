@@ -129,7 +129,7 @@ int main(int argc, char **argv){
   dfloat tol = 1.e-6;
   adaptiveSolve(adaptive, lambda, tol, o_b, o_x);
 
-  o_x.copyTo(x);
+  o_x.copyTo(x, level->Np*level->Klocal*sizeof(dfloat), 0);
 
   dfloat_t maxError = 0;
   for(iint_t n=0;n<level->Klocal*level->Np;++n){
@@ -137,6 +137,27 @@ int main(int argc, char **argv){
   }
   printf("maxError = %le\n", maxError);
 
+  // TESTING HERE ======>
+  for(iint_t e=0;e<level->Klocal;++e){
+    for(int k=0;k<level->Nq;++k){
+      for(int j=0;j<level->Nq;++j){
+	for(int i=0;i<level->Nq;++i){
+	  int n = i + j*level->Nq + k*level->Nq*level->Nq;
+	  dfloat JWn = ggeo[e*NGGEO*level->Np+n+level->Np*GGEO_JW];
+	  dfloat J = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_J];
+	  x[e*level->Np + n] = 1;
+	}
+      }
+    }
+  }
+
+  o_x.copyFrom(x);
+
+  level->gather_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);
+  level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);  
+
+  // TESTING TO HERE <======
+  
   adaptivePlotVTUHex3D(adaptive, adaptive->lvl, 0, 0.0, "out", o_x);
 
   adaptive_free(adaptive);
