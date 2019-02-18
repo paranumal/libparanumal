@@ -55,6 +55,15 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
   if(adaptive->allNeumann) // zero mean of RHS
     adaptiveZeroMean(adaptive, adaptive->lvl, o_x);
 #endif
+  
+  adaptive->dotMultiplyKernel(level->Klocal*level->Np, o_x, level->o_invDegree, o_x);
+  
+  ogsGatherScatter(o_x, ogsDfloat, ogsAdd, level->ogs);
 
+  level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);
+
+
+
+  
   return Niter;
 }
