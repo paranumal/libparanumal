@@ -57,7 +57,7 @@ dfloat adaptiveUpdatePCG(adaptive_t *adaptive,
     // dot(r,r)
     level->updatePCGKernel(Ntotal,
 			      level->NblocksUpdatePCG,
-			      level->ogs->o_invDegree,
+			      level->o_invDegree,
 			      o_p,
 			      o_Ap,
 			      alpha,

@@ -40,13 +40,8 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
   options.getArgs("SOLVER TOLERANCE", tol);
 
   // G*Gnc*A*Snc*S*xg = G*Gnc*fL
-  // S*G*(Gnc*A*Snc)*xC = S*G*Gnc*fL
-  
-  // gather over noncon faces to coarse side dofs
-  level->gather_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_b);
-
-  // global GS coarse dofs
-  ogsGatherScatter(o_b, ogsDfloat, ogsAdd, level->ogs);
+  // (Snc*S*G*Gnc)*A*xL = Snc*S*G*Gnc*fL
+  adaptiveGatherScatter(adaptive, level, o_b);
   
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
@@ -60,8 +55,5 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
     adaptiveZeroMean(adaptive, adaptive->lvl, o_x);
 #endif
 
-  // scatter from coarse to fine noncon
-  level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);
-  
   return Niter;
 }

@@ -195,12 +195,14 @@ dlong gmask(dlong n, dlong g)
       }
       
       @barrier("local");
-      
+    
       for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2)){
 	for (dlong n = 0; n < p_Nqk; ++n; @inner(1)){
 	  for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
 	    int hi = 0;
+
 	    for (int f = 0; f < p_P4EST_FACES; ++f){
+
 	      if (hf[f] >= 0){
 		dfloat fld = ZERO;
 
@@ -238,7 +240,7 @@ dlong gmask(dlong n, dlong g)
 		}
 		const dlong l = fmask(m, n, f);
 		const dlong idq = l + e * p_Np * p_NFIELDS;
-		
+		// TW: never gets here
 		q[idq + idfld * p_Np] = fld;
 		
 		++hi;
@@ -325,9 +327,7 @@ dlong gmask(dlong n, dlong g)
     @exclusive int hi;
 
     @exclusive int hf[p_P4EST_FACES];
-#if p_DIM == 3
     @exclusive int hg[p_P4EST_EDGES];
-#endif
 
     // Load shared memory
     for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
@@ -350,10 +350,8 @@ dlong gmask(dlong n, dlong g)
           for (int f = 0; f < p_P4EST_FACES; ++f)
             hf[f] = -1;
 
-#if p_DIM == 3
           for (int g = 0; g < p_P4EST_EDGES; ++g)
             hg[g] = -1;
-#endif
 
           const dlong fc = (e < K) ? EToC[e] : 0;
 
@@ -362,22 +360,7 @@ dlong gmask(dlong n, dlong g)
 
 // Decode the p4est face_code.  The code below is taken from
 // p{4,8}est_lnodes_decode.
-#if p_DIM == 2
-            const dlong c = fc & 0x03;
-            dlong work = fc >> 2;
 
-            for (int o = 0; o < 2; ++o)
-            {
-              const int f = p4est_corner_faces[c][o];
-
-              if (work & 0x01)
-                hf[f] = p4est_corner_face_corners[c][f];
-              else
-                hf[f] = -1;
-
-              work >>= 1;
-            }
-#else
             const dlong c = fc & 0x0007;
             dlong work = fc >> 3;
             dlong cwork = c;
@@ -409,7 +392,6 @@ dlong gmask(dlong n, dlong g)
               cwork >>= 1;
               work >>= 1;
             }
-#endif
           }
         }
       }
@@ -434,6 +416,7 @@ dlong gmask(dlong n, dlong g)
                 const dlong idq = l + e * p_Np * p_NFIELDS;
 
                 s_fld[hi][ei][n][m] = q[idq + idfld * p_Np];
+
                 ++hi;
               }
 
@@ -444,7 +427,8 @@ dlong gmask(dlong n, dlong g)
           for (dlong m = 0; m < p_Nq; ++m; @inner(0))
             hi = 0;
 
-      for (int f = 0; f < p_P4EST_FACES; ++f)
+      for (int f = 0; f < p_P4EST_FACES; ++f){
+
         for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
           for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
             for (dlong m = 0; m < p_Nq; ++m; @inner(0))
@@ -452,25 +436,6 @@ dlong gmask(dlong n, dlong g)
               {
                 dfloat fld = ZERO;
 
-#if p_DIM == 2
-                if (hf[f] == 0)
-                {
-#pragma unroll p_Nq
-		    for (dlong p = 0; p < p_Nq; ++p)
-                  {
-                    fld += s_Pb[m][p] * s_fld[hi][ei][0][p];
-                  }
-                }
-
-                if (hf[f] == 1)
-                {
-#pragma unroll p_Nq
-		  for (dlong p = 0; p < p_Nq; ++p)
-                  {
-                    fld += s_Pt[m][p] * s_fld[hi][ei][0][p];
-                  }
-                }
-#else
                 if (hf[f] == 0)
                   for (dlong p = 0; p < p_Nq; ++p)
                   {
@@ -510,37 +475,38 @@ dlong gmask(dlong n, dlong g)
                       fld += s_Pt[m][o] * s_Pt[n][p] * s_fld[hi][ei][p][o];
                     }
                   }
-#endif
 
                 const dlong l = fmask(m, n, f);
-                const dlong idq = l + e * p_Np * p_NFIELDS;
+		const dlong idq = l + e * p_Np * p_NFIELDS;
 
                 q[idq + idfld * p_Np] = fld;
-
                 ++hi;
               }
+      }
 
-#if p_DIM == 3
       @barrier("local");
 
       for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
         for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
-          for (dlong m = 0; m < p_Nq; ++m; @inner(0))
+          for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
             hi = 0;
+	  }
 
       for (int g = 0; g < p_P4EST_EDGES; ++g)
         for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
           for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
-            for (dlong m = 0; m < p_Nq; ++m; @inner(0))
+            for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
+
               if (n == 0 && (hg[g] == 0 || hg[g] == 1))
               {
                 const dlong l = gmask(m, g);
                 const dlong idq = l + e * p_Np * p_NFIELDS;
 
                 s_fld[hi][ei][n][m] = q[idq + idfld * p_Np];
-
+		
                 ++hi;
               }
+	    }
 
       @barrier("local");
 
@@ -552,11 +518,13 @@ dlong gmask(dlong n, dlong g)
       for (int g = 0; g < p_P4EST_EDGES; ++g)
         for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
           for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
-            for (dlong m = 0; m < p_Nq; ++m; @inner(0))
+            for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
+
               if (n == 0 && (hg[g] == 0 || hg[g] == 1))
               {
                 dfloat fld = ZERO;
 
+		
                 if (hg[g] == 0)
                 {
 #pragma unroll p_Nq
@@ -582,7 +550,7 @@ dlong gmask(dlong n, dlong g)
 
                 ++hi;
               }
-#endif
+	    }
     }
   }
 }

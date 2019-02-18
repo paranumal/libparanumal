@@ -166,60 +166,36 @@ static void level_get_mesh(level_t *lvl, mesh_t *mesh, p4est_t *pxest,
   ASD_ABORT_IF(mesh->Nmortar > lvl->Kmax * lvl->Nfaces,
                "Kmax not big enough (Nmortar)");
 
-  lvl->o_IToE.copyFrom(mesh->IToE, sizeof(iint_t) * mesh->Kintra, 0,
-                     "async: true");
+  lvl->o_IToE.copyFrom(mesh->IToE, sizeof(iint_t) * mesh->Kintra, 0);
 
-  lvl->o_MToE.copyFrom(mesh->MToE, sizeof(iint_t) * mesh->Kmirror, 0,
-                     "async: true");
+  lvl->o_MToE.copyFrom(mesh->MToE, sizeof(iint_t) * mesh->Kmirror, 0);
 
-  lvl->o_UMToE.copyFrom(mesh->UMToE, sizeof(iint_t) * mesh->Kuniqmirror, 0,
-                      "async: true");
-  lvl->o_GToE.copyFrom(mesh->GToE, sizeof(iint_t) * mesh->Kghost, 0,
-                     "async: true");
+  lvl->o_UMToE.copyFrom(mesh->UMToE, sizeof(iint_t) * mesh->Kuniqmirror, 0);
+  lvl->o_GToE.copyFrom(mesh->GToE, sizeof(iint_t) * mesh->Kghost, 0);
 
-  lvl->o_EToL.copyFrom(mesh->EToL, sizeof(iint_t) * mesh->Ktotal, 0,
-                     "async: true");
-  lvl->o_EToT.copyFrom(mesh->EToT, sizeof(iint_t) * mesh->Ktotal, 0,
-                     "async: true");
-  lvl->o_EToX.copyFrom(mesh->EToX, sizeof(iint_t) * mesh->Ktotal, 0,
-                     "async: true");
-  lvl->o_EToY.copyFrom(mesh->EToY, sizeof(iint_t) * mesh->Ktotal, 0,
-                     "async: true");
-  lvl->o_EToZ.copyFrom(mesh->EToZ, sizeof(iint_t) * mesh->Ktotal, 0,
-                     "async: true");
-  lvl->o_EToB.copyFrom(mesh->EToB, sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,
-                     0, "async: true");
-  lvl->o_EToE.copyFrom(mesh->EToE, sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,
-                     0, "async: true");
-  lvl->o_EToF.copyFrom(mesh->EToF, sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,
-                     0, "async: true");
-  lvl->o_EToO.copyFrom(mesh->EToO, sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,
-                     0, "async: true");
-  lvl->o_EToC.copyFrom(mesh->EToC, sizeof(iint_t) * mesh->Ktotal, 0,
-                     "async: true");
+  lvl->o_EToL.copyFrom(mesh->EToL, sizeof(iint_t) * mesh->Ktotal, 0);
+  lvl->o_EToT.copyFrom(mesh->EToT, sizeof(iint_t) * mesh->Ktotal, 0);
+  lvl->o_EToX.copyFrom(mesh->EToX, sizeof(iint_t) * mesh->Ktotal, 0);
+  lvl->o_EToY.copyFrom(mesh->EToY, sizeof(iint_t) * mesh->Ktotal, 0);
+  lvl->o_EToZ.copyFrom(mesh->EToZ, sizeof(iint_t) * mesh->Ktotal, 0);
+  lvl->o_EToB.copyFrom(mesh->EToB, sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,0);
+  lvl->o_EToE.copyFrom(mesh->EToE, sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,0);
+  lvl->o_EToF.copyFrom(mesh->EToF, sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,0);
+  lvl->o_EToO.copyFrom(mesh->EToO, sizeof(iint_t) * mesh->Ktotal * mesh->Nfaces,0);
+  lvl->o_EToC.copyFrom(mesh->EToC, sizeof(iint_t) * mesh->Ktotal, 0);
 
   if (brick) {
-    lvl->o_EToP.copyFrom(mesh->EToP, sizeof(iint_t) * mesh->Ktotal, 0,
-                       "async: true");
+    lvl->o_EToP.copyFrom(mesh->EToP, sizeof(iint_t) * mesh->Ktotal, 0);
   }
 
-  lvl->o_CToD_starts.copyFrom(mesh->CToD_starts,
-                            sizeof(iint_t) * (mesh->Ncontinuous + 1),
-                            0, "async: true");
-  lvl->o_CToD_indices.copyFrom(mesh->CToD_indices,
-                             sizeof(iint_t) * mesh->Ncindices, 0,
-                             "async: true");
+  lvl->o_CToD_starts.copyFrom(mesh->CToD_starts,   sizeof(iint_t) * (mesh->Ncontinuous + 1),0);
+  lvl->o_CToD_indices.copyFrom(mesh->CToD_indices, sizeof(iint_t) * mesh->Ncindices, 0);
 
-  lvl->o_MFToEM.copyFrom(mesh->MFToEM, sizeof(iint_t) * mesh->Nmortar, 0,
-                       "async: true");
-  lvl->o_MFToFM.copyFrom(mesh->MFToFM, sizeof(iint_t) * mesh->Nmortar, 0,
-                       "async: true");
-  lvl->o_MFToEP.copyFrom(mesh->MFToEP, sizeof(iint_t) * mesh->Nmortar * P4EST_HALF,
-                       0, "async: true");
-  lvl->o_MFToFP.copyFrom(mesh->MFToFP, sizeof(iint_t) * mesh->Nmortar, 0,
-                       "async: true");
-  lvl->o_MFToOP.copyFrom(mesh->MFToOP, sizeof(iint_t) * mesh->Nmortar, 0,
-                       "async: true");
+  lvl->o_MFToEM.copyFrom(mesh->MFToEM, sizeof(iint_t) * mesh->Nmortar, 0);
+  lvl->o_MFToFM.copyFrom(mesh->MFToFM, sizeof(iint_t) * mesh->Nmortar, 0);
+  lvl->o_MFToEP.copyFrom(mesh->MFToEP, sizeof(iint_t) * mesh->Nmortar * P4EST_HALF,  0);
+  lvl->o_MFToFP.copyFrom(mesh->MFToFP, sizeof(iint_t) * mesh->Nmortar, 0);
+  lvl->o_MFToOP.copyFrom(mesh->MFToOP, sizeof(iint_t) * mesh->Nmortar, 0);
 
   // {{{ mirror and ghost communication information
   lvl->Nn = 0;
@@ -451,11 +427,11 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
 
   // {{{ Allocate Metric Terms
   lvl->o_vgeo =
-      device.malloc(NVGEO * sizeof(dfloat_t) * Kmax * Np, NULL);
-  lvl->o_sgeo = device.malloc(
-      NSGEO * sizeof(dfloat_t) * Kmax * Nfaces * Nfp, NULL);
+    device.malloc(NVGEO * sizeof(dfloat_t) * Kmax * Np, NULL);
+  lvl->o_sgeo =
+    device.malloc(NSGEO * sizeof(dfloat_t) * Kmax * Nfaces * Nfp, NULL);
   lvl->o_ggeo =
-      device.malloc(NGGEO * sizeof(dfloat_t) * Kmax * Np, NULL);
+    device.malloc(NGGEO * sizeof(dfloat_t) * Kmax * Np, NULL);
   // }}}
   
   // {{{ reduction buffers
@@ -597,6 +573,22 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   // TW: what is comm ?
   // TW: need proper conversion between (p4est_gloidx_t) and (hlong)
   lvl->ogs = ogsSetup(lvl->Klocal*lvl->Np, (hlong*) mesh->DToC, comm, 1, device); // 1 verbose
+
+  // TW: generate diagonal weighting
+  dfloat *ones = (dfloat*) calloc(lvl->Klocal*lvl->Np, sizeof(dfloat));
+  for(int n=0;n<lvl->Klocal*lvl->Np;++n)
+    ones[n] = 1;
+
+  lvl->o_invDegree = device.malloc(lvl->Klocal*lvl->Np*sizeof(dfloat), ones);
+  
+  adaptiveGatherScatter(NULL, lvl, lvl->o_invDegree);
+
+  lvl->o_invDegree.copyTo(ones);
+
+  for(int n=0;n<lvl->Klocal*lvl->Np;++n)
+    ones[n] = 1./ones[n];
+
+  lvl->o_invDegree.copyFrom(ones);
   
   mesh_free(mesh);
 

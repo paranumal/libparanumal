@@ -71,7 +71,7 @@ int pcg(adaptive_t* adaptive,
   // subtract r <= b - A*x
   adaptiveScaledAdd(adaptive, level, -1.f, o_Ax, 1.f, o_r);
 
-  rdotr0 = adaptiveWeightedNorm2(adaptive, level, level->ogs->o_invDegree, o_r);
+  rdotr0 = adaptiveWeightedNorm2(adaptive, level, level->o_invDegree, o_r);
 
   dfloat TOL =  ASD_MAX(tol*tol*rdotr0,tol*tol);
   
@@ -84,11 +84,11 @@ int pcg(adaptive_t* adaptive,
     rdotz2 = rdotz1;
 
     // r.z
-    rdotz1 = adaptiveWeightedInnerProduct(adaptive, level, level->ogs->o_invDegree, o_r, o_z); 
+    rdotz1 = adaptiveWeightedInnerProduct(adaptive, level, level->o_invDegree, o_r, o_z); 
 
     if(flexible){
       dfloat zdotAp;
-      zdotAp = adaptiveWeightedInnerProduct(adaptive, level, level->ogs->o_invDegree, o_z, o_Ap);  
+      zdotAp = adaptiveWeightedInnerProduct(adaptive, level, level->o_invDegree, o_z, o_Ap);  
 
       beta = -alpha*zdotAp/rdotz2;
     }
@@ -103,7 +103,7 @@ int pcg(adaptive_t* adaptive,
     adaptiveOperator(adaptive, level, lambda, o_p, o_Ap, o_xL); 
 
     // dot(p,A*p)
-    pAp =  adaptiveWeightedInnerProduct(adaptive, level, level->ogs->o_invDegree, o_p, o_Ap);
+    pAp =  adaptiveWeightedInnerProduct(adaptive, level, level->o_invDegree, o_p, o_Ap);
 
     alpha = rdotz1/pAp;
 

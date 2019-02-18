@@ -95,6 +95,8 @@ typedef struct level
   // diagonal of stiffness matrix
   occa::memory o_invDiagA;
 
+  // multiplicity after S*G*Gnc*Snc
+  
   // storage for PCG update
   occa::memory o_tmpNormr;
   dfloat_t *tmpNormr;
@@ -166,7 +168,7 @@ typedef struct level
   occa::kernel update0NBFPCGKernel;
   occa::kernel update1NBFPCGKernel;
 
-
+  occa::memory o_invDegree;
   
   ogs_t *ogs;
   

@@ -126,6 +126,7 @@ int main(int argc, char **argv){
   occa::memory o_b = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat), b);
   occa::memory o_x = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat), x);
 
+#if 1
   dfloat tol = 1.e-6;
   adaptiveSolve(adaptive, lambda, tol, o_b, o_x);
 
@@ -136,7 +137,9 @@ int main(int argc, char **argv){
     maxError = ASD_MAX(maxError, fabs(exact[n]-x[n]));
   }
   printf("maxError = %le\n", maxError);
+#endif
 
+#if 0
   // TESTING HERE ======>
   for(iint_t e=0;e<level->Klocal;++e){
     for(int k=0;k<level->Nq;++k){
@@ -151,12 +154,20 @@ int main(int argc, char **argv){
     }
   }
 
-  o_x.copyFrom(x);
+  o_x.copyFrom(x, level->Klocal*level->Np*sizeof(dfloat));
 
   level->gather_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);
-  level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);  
+  
+  ogsGatherScatter(o_x, ogsDfloat, ogsAdd, level->ogs);
 
+  level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);
+  
+  adaptive->dotMultiplyKernel(level->Np*level->Klocal,level->ogs->o_invDegree,o_x,o_x);
+  
+  adaptive->device.finish();
+  
   // TESTING TO HERE <======
+#endif
   
   adaptivePlotVTUHex3D(adaptive, adaptive->lvl, 0, 0.0, "out", o_x);
 
