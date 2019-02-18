@@ -162,6 +162,8 @@ typedef struct level
   occa::kernel gather_noncon;
   occa::kernel scatter_noncon;
 
+  occa::kernel zero_children;
+
   occa::kernel updatePCGKernel;
   occa::kernel update1NBPCGKernel;
   occa::kernel update2NBPCGKernel;

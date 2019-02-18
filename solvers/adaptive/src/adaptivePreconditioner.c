@@ -46,7 +46,7 @@ void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
   }
   else{ // turn off preconditioner
 
-    adaptive->dotMultiplyKernel(Ntotal, o_r, level0->o_invDegree, o_z);
+    adaptive->dotMultiplyKernel(Ntotal, level0->o_invDegree, o_r, o_z);
 
     ogsGatherScatter(o_z, ogsDfloat, ogsAdd, level0->ogs);
 
