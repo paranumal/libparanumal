@@ -86,7 +86,7 @@ dfloat adaptiveUpdatePCG(adaptive_t *adaptive,
 			 occa::memory &o_x,
 			 occa::memory &o_r);
 
-void adaptiveGatherScatter(adaptive_t *adaptive, level_t *level, occa::memory &o_x);
+void adaptiveGatherScatter(level_t *level, occa::memory &o_x);
 
 void adaptivePlotVTUHex3D(adaptive_t *adaptive,
                           level_t *level,
