@@ -52,7 +52,6 @@ void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
     
     level0->scatter_noncon(level0->Klocal, level0->o_EToC, level0->o_Pb, level0->o_Pt, o_z);
 
-
   }
 
 #if USE_NULL_PROJECTION==1

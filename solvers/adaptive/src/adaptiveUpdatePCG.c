@@ -41,8 +41,6 @@ dfloat adaptiveUpdatePCG(adaptive_t *adaptive,
   int enableGatherScatters = 1;
   int enableReductions = 1;
   int flexible = options.compareArgs("KRYLOV SOLVER", "FLEXIBLE");
-  int verbose = options.compareArgs("VERBOSE", "TRUE");
-  int serial = options.compareArgs("THREAD MODEL", "Serial");
   int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
   int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
 
@@ -56,14 +54,14 @@ dfloat adaptiveUpdatePCG(adaptive_t *adaptive,
     // r <= r - alpha*A*p
     // dot(r,r)
     level->updatePCGKernel(Ntotal,
-			      level->NblocksUpdatePCG,
-			      level->o_invDegree,
-			      o_p,
-			      o_Ap,
-			      alpha,
-			      o_x,
-			      o_r,
-			      level->o_tmpNormr);
+			   level->NblocksUpdatePCG,
+			   level->o_invDegree,
+			   o_p,
+			   o_Ap,
+			   alpha,
+			   o_x,
+			   o_r,
+			   level->o_tmpNormr);
     
     level->o_tmpNormr.copyTo(level->tmpNormr);
     

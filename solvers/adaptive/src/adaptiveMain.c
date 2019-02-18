@@ -121,7 +121,6 @@ int main(int argc, char **argv){
 	}
       }
     }
-    printf("\n");
   }
 
   occa::memory o_b = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat), b);

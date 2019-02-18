@@ -32,6 +32,8 @@ int pcg(adaptive_t* adaptive,
 	occa::memory &o_x, 
         const dfloat tol, const int MAXIT){
 
+  // Table 1:  https://www.sciencedirect.com/science/article/pii/S0021999105004791?via%3Dihub
+  
   level_t *level = adaptive->lvl;
   setupAide options = adaptive->options;
 
@@ -42,10 +44,90 @@ int pcg(adaptive_t* adaptive,
   if(options.compareArgs("FIXED ITERATION COUNT", "TRUE"))
     fixedIterationCountFlag = 1;
   
-  // register scalars
-  dfloat rdotz1 = 0;
-  dfloat rdotz2 = 0;
+  // now initialized
+  dfloat alpha = 0;
+  
+  /*aux variables */
+  occa::memory &o_r  = level->o_pcgWork[0];
+  occa::memory &o_w  = level->o_pcgWork[1];
+  occa::memory &o_Aw = level->o_pcgWork[2];
+  occa::memory &o_e  = level->o_pcgWork[3];
+  occa::memory &o_rp  = level->o_pcgWork[4];
 
+  dfloat rho1 = 1, rho0 = 0;
+
+  // r <= b
+  o_b.copyTo(o_r, level->Klocal*level->Np*sizeof(dfloat));
+  
+  dfloat rdotr = adaptiveWeightedNorm2(adaptive, level, level->o_invDegree, o_r);
+
+  dfloat TOL =  ASD_MAX(tol*tol*rdotr,tol*tol);
+  
+  int iter;
+  for(iter=1;iter<=MAXIT;++iter){
+
+    // z = Precon^{-1} r
+    adaptivePreconditioner(adaptive, lambda, o_r, o_e);
+
+    rho0 = rho1;
+
+    // r.e
+    rho1 = adaptiveWeightedInnerProduct(adaptive, level, level->o_invDegree, o_r, o_e); 
+
+    // w = e + w*rho1/rho0
+    adaptiveScaledAdd(adaptive, level, 1.f, o_e, rho1/rho0, o_w);
+    
+    // rp = (Snc*S*G*Gnc)*A*w
+    adaptiveOperator(adaptive, level, lambda, o_w, o_Aw);
+
+    // wdotAw
+    dfloat wdotAw =  adaptiveWeightedInnerProduct(adaptive, level, level->o_invDegree, o_w, o_Aw);
+
+    alpha = rho1/wdotAw;
+
+    //  x <= x + alpha*w
+    //  r <= r - alpha*A*w
+    //  dot(r,r)
+    
+    rdotr = adaptiveUpdatePCG(adaptive, level, o_w, o_Aw, alpha, o_x, o_r);
+	
+    if (verbose&&(adaptive->rank==0)) {
+
+      if(rdotr<0)
+	printf("WARNING CG: rdotr = %17.15lf\n", rdotr);
+      
+      printf("CG: it %d r norm %12.12le alpha = %le \n", iter, sqrt(rdotr), alpha);    
+    }
+    
+    if(rdotr<=TOL && !fixedIterationCountFlag) break;
+    
+  }
+
+  return iter;
+}
+
+
+
+
+
+
+#if 0
+int pcg(adaptive_t* adaptive,
+	dfloat lambda, 
+        occa::memory &o_b,
+	occa::memory &o_x, 
+        const dfloat tol, const int MAXIT){
+
+  level_t *level = adaptive->lvl;
+  setupAide options = adaptive->options;
+
+  int fixedIterationCountFlag = 0;
+  int flexible = options.compareArgs("KRYLOV SOLVER", "FLEXIBLE");
+  int verbose = options.compareArgs("VERBOSE", "TRUE");
+  
+  if(options.compareArgs("FIXED ITERATION COUNT", "TRUE"))
+    fixedIterationCountFlag = 1;
+  
   // now initialized
   dfloat alpha = 0, beta = 0, pAp = 0;
   
@@ -56,6 +138,10 @@ int pcg(adaptive_t* adaptive,
   occa::memory &o_Ax = level->o_pcgWork[3];
   occa::memory &o_r  = level->o_pcgWork[4];
 
+  dfloat rdotz1 = 0;
+  dfloat rdotz2 = 0;
+
+  
   pAp = 0;
   rdotz1 = 1;
 
@@ -128,3 +214,4 @@ int pcg(adaptive_t* adaptive,
 }
 
 
+#endif
