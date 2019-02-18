@@ -30,8 +30,7 @@ void adaptiveOperator(adaptive_t *adaptive,
 		      level_t *level,
 		      dfloat lambda,
 		      occa::memory &o_q,
-		      occa::memory &o_Aq,
-		      occa::memory &o_qL){
+		      occa::memory &o_Aq){
 
   setupAide &options = adaptive->options;
 
@@ -54,6 +53,7 @@ void adaptiveOperator(adaptive_t *adaptive,
 			      o_q,
 			      o_Aq);
 
+    // Aq <= Snc*S*G*Gnc*Aloc*q
     adaptiveGatherScatter(level, o_Aq);
     
     // boost null space option

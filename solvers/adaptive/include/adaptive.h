@@ -72,8 +72,7 @@ void adaptiveOperator(adaptive_t *adaptive,
 		      level_t *level,
 		      dfloat lambda,
 		      occa::memory &o_q,
-		      occa::memory &o_Aq,
-		      occa::memory &o_qL);
+		      occa::memory &o_Aq);
 
 dfloat adaptiveWeightedInnerProduct(adaptive_t *adaptive, level_t *level,
 				    occa::memory &o_w, occa::memory &o_a, occa::memory &o_b);

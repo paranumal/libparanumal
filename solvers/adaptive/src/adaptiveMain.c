@@ -105,12 +105,12 @@ int main(int argc, char **argv){
       for(int j=0;j<level->Nq;++j){
 	for(int i=0;i<level->Nq;++i){
 	  int n = i + j*level->Nq + k*level->Nq*level->Nq;
-	  
+	  dfloat J = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_J];
 	  dfloat JWn = ggeo[e*NGGEO*level->Np+n+level->Np*GGEO_JW];
 	  dfloat xn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_X];
 	  dfloat yn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_Y];
 	  dfloat zn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_Z];
-
+	  
 	  dfloat mode = 2;
 	  
 	  iint_t id = n + e*level->Np;
@@ -121,6 +121,7 @@ int main(int argc, char **argv){
 	}
       }
     }
+    printf("\n");
   }
 
   occa::memory o_b = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat), b);

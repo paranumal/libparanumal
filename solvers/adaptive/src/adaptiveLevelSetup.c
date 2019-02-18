@@ -583,20 +583,6 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   for(int n=0;n<lvl->Klocal*lvl->Np;++n)
     ones[n] = 1;
 
-#if 0
-  for(int eM=0;eM<lvl->Klocal;++eM){
-    int lM = lvl->EToL[eM];
-    for(int fM=0;fM<lvl->Nfaces;++fM){
-      int eP = lvl->EToE[eM*lvl->Nfaces+f];
-      int lP = lvl->EToL[eP];
-      if(lM<lP){
-	for(int n=0;n<lvl->Nfp;++n){
-	  ones[eM*lvl->Np + lvl->faceNodes[fM*lvl->Nfp+n]] = 0;
-	}
-      }
-    }
-  }
-#endif
   lvl->o_invDegree = device.malloc(lvl->Klocal*lvl->Np*sizeof(dfloat), ones);
 
   lvl->zero_children(lvl->Klocal, lvl->o_EToC, lvl->o_invDegree);
@@ -606,18 +592,21 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   lvl->o_invDegree.copyTo(ones);
   
   for(int n=0;n<lvl->Klocal*lvl->Np;++n){
-    ones[n] = 1./ones[n];
+    if(ones[n])
+      ones[n] = 1./ones[n];
   }
 
   lvl->o_invDegree.copyFrom(ones);
   
   lvl->zero_children(lvl->Klocal, lvl->o_EToC, lvl->o_invDegree);
 
+#if 0
   lvl->o_invDegree.copyTo(ones);
   
   for(int n=0;n<lvl->Klocal*lvl->Np;++n){
     printf("invDegree[%d] = %lf\n", n, ones[n]);
   }
+#endif
   
   mesh_free(mesh);
 

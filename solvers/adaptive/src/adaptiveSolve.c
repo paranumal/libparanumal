@@ -43,7 +43,7 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
   // (Snc*S*G*Gnc)*A*xL = Snc*S*G*Gnc*fL
   // xL = Snc*S*xg
   adaptiveGatherScatter(level, o_b);
-  
+
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
     adaptiveZeroMean(adaptive, adaptive->lvl, o_b);
@@ -57,11 +57,9 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
 #endif
 
 #if 0
-  adaptive->dotMultiplyKernel(level->Klocal*level->Np, o_x, level->o_invDegree, o_x);
-  
   ogsGatherScatter(o_x, ogsDfloat, ogsAdd, level->ogs);
 
-  level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);
+  adaptive->dotMultiplyKernel(level->Klocal*level->Np, o_x, level->o_invDegree, o_x);
 #endif
 
 

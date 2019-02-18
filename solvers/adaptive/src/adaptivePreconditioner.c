@@ -47,15 +47,12 @@ void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
   else{ // turn off preconditioner
 
     adaptive->dotMultiplyKernel(Ntotal, level0->o_invDegree, o_r, o_z);
-
+    
     ogsGatherScatter(o_z, ogsDfloat, ogsAdd, level0->ogs);
-
+    
     level0->scatter_noncon(level0->Klocal, level0->o_EToC, level0->o_Pb, level0->o_Pt, o_z);
-    
-    //    o_z.copyFrom(o_r, level0->Np*level0->Klocal*sizeof(dfloat_t));
 
-    
-    
+
   }
 
 #if USE_NULL_PROJECTION==1
