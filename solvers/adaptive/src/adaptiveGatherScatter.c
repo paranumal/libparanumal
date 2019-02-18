@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "adaptive.h"
 
-void adaptiveGatherScatter(adaptive_t *adaptive, level_t *level, occa::memory &o_x){
+void adaptiveGatherScatter(level_t *level, occa::memory &o_x){
 
   // gather over noncon faces to coarse side dofs
   level->gather_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);

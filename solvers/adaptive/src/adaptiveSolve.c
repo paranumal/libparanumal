@@ -41,7 +41,8 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
 
   // G*Gnc*A*Snc*S*xg = G*Gnc*fL
   // (Snc*S*G*Gnc)*A*xL = Snc*S*G*Gnc*fL
-  adaptiveGatherScatter(adaptive, level, o_b);
+  // xL = Snc*S*xg
+  adaptiveGatherScatter(level, o_b);
   
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS

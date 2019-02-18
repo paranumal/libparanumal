@@ -581,7 +581,7 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
 
   lvl->o_invDegree = device.malloc(lvl->Klocal*lvl->Np*sizeof(dfloat), ones);
   
-  adaptiveGatherScatter(NULL, lvl, lvl->o_invDegree);
+  adaptiveGatherScatter(lvl, lvl->o_invDegree);
 
   lvl->o_invDegree.copyTo(ones);
 

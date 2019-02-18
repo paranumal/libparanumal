@@ -54,7 +54,7 @@ void adaptiveOperator(adaptive_t *adaptive,
 			      o_q,
 			      o_Aq);
 
-    adaptiveGatherScatter(adaptive, level, o_Aq);
+    adaptiveGatherScatter(level, o_Aq);
     
     // boost null space option
 #if USE_NULL_BOOST==1
