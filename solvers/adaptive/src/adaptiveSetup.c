@@ -130,24 +130,21 @@ adaptive_t *adaptiveSetup(setupAide &options, MPI_Comm comm)
   options.getArgs("POLYNOMIAL DEGREE", N);
   // TODO build more than one level
   adaptive->lvl = adaptiveLevelSetup(options, adaptive->pxest, adaptive->ghost, adaptive->device,
-				     adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.1, adaptive->comm);
+				     adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.025,
+				     adaptive->comm);
 
 
-#if 0
-  // need to count levels
-  int levelId = 0;
-  int M = N;
-
-  do{
-
-    adaptive->lvl = adaptiveLevelSetup(options, adaptive->pxest, adaptive->ghost, adaptive->device,
-				       adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.2, adaptive->comm);
-    
-    adaptive->levels 
-
-      }while();
-#endif
-
+  // currently use all polynomial degrees as levels
+  adaptive->Nlevels = N;
+  adaptive->levels = (level_t**) calloc(adaptive->Nlevels, sizeof(level_t*));
+  dfloat frac = 0.02;
+  
+  adaptive->levels[0] = adaptive->lvl;
+  for(int Nc=1;Nc<=N-1;++Nc){
+    adaptive->levels[N-Nc] =
+      adaptiveLevelSetup(options, adaptive->pxest, adaptive->ghost, adaptive->device,
+			 adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, Nc, frac, adaptive->comm);
+  }
   
   occa::properties kernelInfo;
   

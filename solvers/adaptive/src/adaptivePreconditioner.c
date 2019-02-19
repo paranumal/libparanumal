@@ -43,6 +43,23 @@ void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
   }
   else if (options.compareArgs("PRECONDITIONER", "MULTIGRID")) {
 
+    for(int L=0;L<adaptive->Nlevels;++L){
+
+      // smooth at level L
+      
+      // restrict from level L to coarser grid (L+1)
+
+    }
+
+    // smooth at level L = adaptive->Nlevels-1
+    
+    for(int L=adaptive->Nlevels;L>=0;--L){
+
+      // prolongate from level L to finer grid (L-1)
+      
+      // smooth at level (L-1)
+    }
+    
   }
   else{ // turn off preconditioner
 
