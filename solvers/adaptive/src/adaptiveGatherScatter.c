@@ -29,12 +29,12 @@ SOFTWARE.
 void adaptiveGatherScatter(level_t *level, occa::memory &o_x){
 
   // gather over noncon faces to coarse side dofs
-  level->gather_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);
+  level->gather_noncon(level->Klocal, level->o_EToC, level->o_Ib, level->o_It, o_x);
   
   // add noncon gs around this
   ogsGatherScatter(o_x, ogsDfloat, ogsAdd, level->ogs);
 
   // scatter from coarse to fine noncon
-  level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);
+  level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Ib, level->o_It, o_x);
 
 }

@@ -61,7 +61,7 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
   
   ogsGatherScatter(o_x, ogsDfloat, ogsAdd, level->ogs);
 
-  level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Pb, level->o_Pt, o_x);
+  level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Ib, level->o_It, o_x);
 #endif
 
 

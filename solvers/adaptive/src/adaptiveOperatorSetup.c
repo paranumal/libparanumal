@@ -91,25 +91,27 @@ void get_operators(int N, occa::device &device, occa::memory &o_r,
     }
   }
 
-  printf("Pb = [\n");
+  printf("Ib = [\n");
   for (int i = 0; i < Nq; ++i){
     for (int j = 0; j < Nq; ++j){
-      printf("%lf ", Pb[j*Nq+i]);
+      printf("%17.15lf ", Ib[j*Nq+i]);
     }
     printf("\n");
   }
+  printf("];\n");
 
-  printf("Pt = [\n");
+  printf("It = [\n");
   for (int i = 0; i < Nq; ++i){
     for (int j = 0; j < Nq; ++j){
-      printf("%lf ", Pt[j*Nq+i]);
+      printf("%17.15lf ", It[j*Nq+i]);
     }
     printf("\n");
   }
+  printf("];\n");
 
   o_Pb = device.malloc(Nq * Nq * sizeof(dfloat_t), Pb);
   o_Pt = device.malloc(Nq * Nq * sizeof(dfloat_t), Pt);
-
+  
   asd_free_aligned(lr);
   asd_free_aligned(lw);
   asd_free_aligned(lV);

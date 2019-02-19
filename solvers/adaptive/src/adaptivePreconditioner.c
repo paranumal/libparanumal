@@ -50,7 +50,7 @@ void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
     
     ogsGatherScatter(o_z, ogsDfloat, ogsAdd, level0->ogs);
     
-    level0->scatter_noncon(level0->Klocal, level0->o_EToC, level0->o_Pb, level0->o_Pt, o_z);
+    level0->scatter_noncon(level0->Klocal, level0->o_EToC, level0->o_Ib, level0->o_It, o_z);
 
   }
 
