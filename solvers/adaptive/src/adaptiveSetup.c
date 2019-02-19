@@ -1,7 +1,6 @@
 #include "adaptive.h"
 
 static int          refine_level;
-static int          level_shift;
 
 static int
 refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
@@ -9,19 +8,16 @@ refine_fractal (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   int                 qid;
 
-  if ((int) q->level >= refine_level) {
-    return 0;
-  }
-  if ((int) q->level < refine_level - level_shift) {
-    return 1;
-  }
-
   qid = ((int) q->level == 0 ?
          (which_tree % P4EST_CHILDREN) : p4est_quadrant_child_id (q));
 
-  return (qid == 0 || qid == 3
-          || qid == 5 || qid == 6
-    );
+  int add = (qid == 0 || qid == 3 || qid == 5 || qid == 6);
+
+  if ((int) q->level < refine_level + add) {
+    return 1;
+  }  else {
+    return 0;
+  }
 }
 
 
@@ -107,16 +103,12 @@ adaptive_t *adaptiveSetup(setupAide &options, MPI_Comm comm)
 
   int start_level = 0;
   options.getArgs("STARTING REFINEMENT LEVEL", start_level);
-  int fractal_level = start_level;
-  options.getArgs("FRACTAL REFINEMENT LEVEL", fractal_level);
-
 
   if(options.compareArgs("BOX FRACTAL", "TRUE")){
-    adaptive->pxest = p4est_new_ext(comm, adaptive->conn, 0, start_level - fractal_level, 1,
+    adaptive->pxest = p4est_new_ext(comm, adaptive->conn, 0, start_level, 1,
 			     sizeof(quad_data_t), NULL, NULL);
-    level_shift = 4;
-    refine_level = start_level - fractal_level + level_shift;
-    p4est_refine(adaptive->pxest, fractal_level, refine_fractal, NULL);
+    refine_level = start_level;
+    p4est_refine(adaptive->pxest, 1, refine_fractal, NULL);
   } else {
     adaptive->pxest = p4est_new_ext(comm, adaptive->conn, 0, start_level, 1,
 			     sizeof(quad_data_t), NULL, NULL);
