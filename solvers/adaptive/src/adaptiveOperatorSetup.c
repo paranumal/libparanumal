@@ -94,7 +94,7 @@ void get_operators(int N, occa::device &device, occa::memory &o_r,
   printf("Ib = [\n");
   for (int i = 0; i < Nq; ++i){
     for (int j = 0; j < Nq; ++j){
-      printf("%17.15lf ", Ib[j*Nq+i]);
+      printf("%17.15lf ", Ib[i*Nq+j]);
     }
     printf("\n");
   }
@@ -103,7 +103,7 @@ void get_operators(int N, occa::device &device, occa::memory &o_r,
   printf("It = [\n");
   for (int i = 0; i < Nq; ++i){
     for (int j = 0; j < Nq; ++j){
-      printf("%17.15lf ", It[j*Nq+i]);
+      printf("%17.15lf ", It[i*Nq+j]);
     }
     printf("\n");
   }

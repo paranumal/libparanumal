@@ -56,7 +56,7 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
     adaptiveZeroMean(adaptive, adaptive->lvl, o_x);
 #endif
 
-#if 1
+#if 0
   adaptive->dotMultiplyKernel(level->Klocal*level->Np, o_x, level->o_invDegree, o_x);
   
   ogsGatherScatter(o_x, ogsDfloat, ogsAdd, level->ogs);
