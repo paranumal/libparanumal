@@ -134,9 +134,12 @@ int main(int argc, char **argv){
   dfloat_t maxError = 0;
   for(iint_t n=0;n<level->Klocal*level->Np;++n){
     maxError = ASD_MAX(maxError, fabs(exact[n]-x[n]));
+    x[n] -= exact[n];
   }
   printf("maxError = %le\n", maxError);
 
+  o_x.copyFrom(x, level->Np*level->Klocal*sizeof(dfloat), 0);
+  
   adaptivePlotVTUHex3D(adaptive, adaptive->lvl, 0, 0.0, "out", o_x);
 
   adaptive_free(adaptive);

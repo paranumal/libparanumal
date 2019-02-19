@@ -576,7 +576,13 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   // TW: what is actual order ?
   // TW: what is comm ?
   // TW: need proper conversion between (p4est_gloidx_t) and (hlong)
-  lvl->ogs = ogsSetup(lvl->Klocal*lvl->Np, (hlong*) mesh->DToC, comm, 1, device); // 1 verbose
+  hlong *shiftDToC = (hlong*) calloc(lvl->Klocal*lvl->Np, sizeof(hlong));
+  for(int n=0;n<lvl->Klocal*lvl->Np;++n){
+    shiftDToC[n] = mesh->DToC[n]+1;
+  }
+  lvl->ogs = ogsSetup(lvl->Klocal*lvl->Np, (hlong*) shiftDToC, comm, 1, device); // 1 verbose
+
+  free(shiftDToC);
 
   // TW: generate diagonal weighting
   dfloat *ones = (dfloat*) calloc(lvl->Klocal*lvl->Np, sizeof(dfloat));
