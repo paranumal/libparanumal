@@ -1,41 +1,52 @@
-kernel void adaptiveGatherScatter(const dlong Ncontinuous,
-                                  const dlong *restrict starts,
-                                  const dlong *restrict indices,
-                                  @restrict dfloat *q){
-  for (dlong co = 0; co < Ncontinuous; co += p_Nt; outer0) {
-    for (dlong ci = 0; ci < p_Nt; ++ci; inner0) {
+@kernel void adaptiveGatherScatter(const dlong Ncontinuous,
+                                   @restrict const dlong *starts,
+                                   @restrict const dlong *indices,
+                                   @restrict dfloat *q)
+{
+  for (dlong co = 0; co < Ncontinuous; co += p_Nt; @outer(0)){
+    for (dlong ci = 0; ci < p_Nt; ++ci; @inner(0)){
+
       const dlong n = co + ci;
-      if (n < Ncontinuous) {
+
+      if (n < Ncontinuous)
+      {
         const dlong start = starts[n];
         const dlong end = starts[n + 1];
 
-        dfloat lq;
-        dfloat gq = ZERO;
+        dfloat lf[p_NFIELDS];
+        dfloat gf[p_NFIELDS];
+        for (dlong f = 0; f < p_NFIELDS; ++f)
+          gf[f] = ZERO;
 
         // add everything from all the points
-        for (dlong m = start; m < end; ++m) {
+        for (dlong m = start; m < end; ++m)
+        {
           const dlong ind = indices[m];
 
           const dlong e = ind / p_Np;
           const dlong l = ind % p_Np;
-          const dlong idq = l + e * p_Np * p_NVGEO;
+          const dlong idq = l + e * p_Np * p_NFIELDS;
 
           // Get local value
-          lq = q[idq];
+          for (dlong f = 0; f < p_NFIELDS; ++f)
+            lf[f] = q[idq + f * p_Np];
 
           // add local value to global value
-          gq += lq;
+          for (dlong f = 0; f < p_NFIELDS; ++f)
+            gf[f] += lf[f];
         }
 
         // send gathered values back out
-        for (dlong m = start; m < end; ++m) {
+        for (dlong m = start; m < end; ++m)
+        {
           const dlong ind = indices[m];
 
           const dlong e = ind / p_Np;
           const dlong l = ind % p_Np;
-          const dlong idq = l + e * p_Np * p_NVGEO;
+          const dlong idq = l + e * p_Np * p_NFIELDS;
 
-          vgeo[idq] = gq;
+          for (dlong f = 0; f < p_NFIELDS; ++f)
+            q[idq + f * p_Np] = gf[f];
         }
       }
     }

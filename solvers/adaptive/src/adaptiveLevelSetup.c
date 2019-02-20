@@ -528,6 +528,9 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
 					      "adaptiveSetGhostFields",
 					      info);
 
+  lvl->gather_scatter = device.buildKernel(DADAPTIVE "/okl/adaptiveGatherScatter.okl",
+					  "adaptiveGatherScatter",
+					  info);
 
   lvl->gather_noncon = device.buildKernel(DADAPTIVE "/okl/adaptiveGatherNoncon.okl",
 					  "adaptiveGatherNoncon",
@@ -633,7 +636,12 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
 
   lvl->gather_noncon(lvl->Klocal, lvl->o_EToC, lvl->o_Ib, lvl->o_It, lvl->o_invDiagA);
 
+#ifdef PLUMADG_GATHER_SCATTER
+  // FIXME for MPI
+  lvl->gather_scatter(lvl->Ncontinuous, lvl->o_CToD_starts, lvl->o_CToD_indices, lvl->o_invDiagA);
+#else
   ogsGatherScatter(lvl->o_invDiagA, ogsDfloat, ogsAdd, lvl->ogs);
+#endif
 
 #if USE_GASPAR==1
   lvl->scatter_noncon(lvl->Klocal, lvl->o_EToC, lvl->o_Ib, lvl->o_It, lvl->o_invDiagA);
@@ -742,6 +750,10 @@ void level_free(level_t *lvl)
   lvl->set_ghost_fields.free();
   lvl->reduce_min.free();
   lvl->reduce_sum.free();
+
+  lvl->gather_noncon.free();
+  lvl->scatter_noncon.free();
+  lvl->gather_scatter.free();
 
   delete [] lvl;
 }

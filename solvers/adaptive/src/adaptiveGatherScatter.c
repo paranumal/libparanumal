@@ -31,8 +31,12 @@ void adaptiveGatherScatter(level_t *level, occa::memory &o_x){
   // gather over noncon faces to coarse side dofs
   level->gather_noncon(level->Klocal, level->o_EToC, level->o_Ib, level->o_It, o_x);
   
-  // add noncon gs around this
+#ifdef PLUMADG_GATHER_SCATTER
+  // FIXME for MPI
+  level->gather_scatter(level->Ncontinuous, level->o_CToD_starts, level->o_CToD_indices, o_x);
+#else
   ogsGatherScatter(o_x, ogsDfloat, ogsAdd, level->ogs);
+#endif
 
   // scatter from coarse to fine noncon
   level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Ib, level->o_It, o_x);

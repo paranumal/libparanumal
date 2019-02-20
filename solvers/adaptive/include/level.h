@@ -161,6 +161,7 @@ typedef struct level
   occa::kernel reduce_min;
   occa::kernel reduce_sum;
 
+  occa::kernel gather_scatter;
   occa::kernel gather_noncon;
   occa::kernel scatter_noncon;
 
