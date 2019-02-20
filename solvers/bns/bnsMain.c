@@ -24,23 +24,23 @@ SOFTWARE.
 
 */
 
-#include "ins.h"
+#include "bns.h"
 
 int main(int argc, char **argv){
 
   // start up MPI
   MPI_Init(&argc, &argv);
 
+  // Check input
   if(argc!=2){
-    printf("usage: ./insMain setupfile\n");
-    MPI_Finalize();
+    printf("usage2: ./bnsMain setupfile\n");
     exit(-1);
   }
 
-  // if argv > 2 then should load input data from argv
+  // load input data
   setupAide options(argv[1]);
-  
-  // set up mesh stuff
+
+  // setup mesh structure
   string fileName;
   int N, dim, elementType;
 
@@ -48,53 +48,43 @@ int main(int argc, char **argv){
   options.getArgs("POLYNOMIAL DEGREE", N);
   options.getArgs("ELEMENT TYPE", elementType);
   options.getArgs("MESH DIMENSION", dim);
-  
+
   // set up mesh
-  mesh_t *mesh;
-  switch(elementType){
-  case TRIANGLES:
-    mesh = meshSetupTri2D((char*)fileName.c_str(), N); break;
-  case QUADRILATERALS:{
-    if(dim==2)
-      mesh = meshSetupQuad2D((char*)fileName.c_str(), N);
-  else{
-    dfloat radius = 1;
-    options.getArgs("SPHERE RADIUS", radius);
-    mesh = meshSetupQuad3D((char*)fileName.c_str(), N, radius);
-  }
-  break;
-  }
-  case TETRAHEDRA:
-    mesh = meshSetupTet3D((char*)fileName.c_str(), N); break;
-  case HEXAHEDRA:
-    if(options.getArgs("MESH FILE", fileName)){
-      mesh = meshSetupHex3D((char*)fileName.c_str(), N);
-    }
-    else if(options.compareArgs("BOX DOMAIN", "TRUE")){
-      mesh = meshSetupBoxHex3D(N, options);
-    }
-    break;
-  }
+   mesh_t *mesh;
+   switch(elementType){
+   case TRIANGLES:
+     mesh = meshSetupTri2D((char*)fileName.c_str(), N); break;
+   case QUADRILATERALS:{
+     if(dim==2)
+       mesh = meshSetupQuad2D((char*)fileName.c_str(), N);
+     else{
+       dfloat radius = 1;
+       options.getArgs("SPHERE RADIUS", radius);
+       mesh = meshSetupQuad3D((char*)fileName.c_str(), N, radius);
+     }
+     break;
+   }
+   case TETRAHEDRA:
+     mesh = meshSetupTet3D((char*)fileName.c_str(), N); break;
+   case HEXAHEDRA:
+     mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
+   }
 
-  if (mesh->rank == 0)
-    printf("sizeof(hlong) = %d, sizeof(dlong) = %d\n", sizeof(hlong), sizeof(dlong));
 
-  ins_t *ins = insSetup(mesh,options);
 
-  //  insPlotWallsVTUHex3D(ins, "walls");
-  
-  if(ins->readRestartFile){
-    printf("Reading restart file..."); 
-    insRestartRead(ins, ins->options); 
-    printf("done\n");   
-   }  
-  
-  if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
-  if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF"))  insRunEXTBDF(ins);
+   bns_t *bns = bnsSetup(mesh,options);
+   if(bns->readRestartFile){
+    printf("Reading restart file...");
+    bnsRestartRead(bns, options);
+    printf("done\n");
+   }
+
+
+   bnsPlotVTU(bns, (char *)"foo.vtu");
+   bnsRun(bns,options);
 
   // close down MPI
   MPI_Finalize();
-
   exit(0);
   return 0;
 }

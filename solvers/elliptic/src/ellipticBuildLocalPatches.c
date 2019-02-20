@@ -137,7 +137,7 @@ void ellipticBuildLocalPatchesTri2D(elliptic_t* elliptic, dfloat lambda, dfloat 
 
   int basisNp = mesh->Np;
   dfloat *basis;
-  if(options.compareArgs("BASIS","BERN")) { 
+  if(options.compareArgs("BASIS","BERN")) {
     basis = mesh->VB;
   } else {// default to degree N Lagrange basis
     basis = (dfloat*) calloc(basisNp*basisNp, sizeof(dfloat));
@@ -211,8 +211,8 @@ void ellipticBuildLocalPatchesTri2D(elliptic_t* elliptic, dfloat lambda, dfloat 
     (*patchesIndex)[eM] = (*Npatches)-1;
   }
 
-  printf("saving "dlongFormat" full patches\n",*Npatches);
-  printf("using "dlongFormat" reference patches\n", refPatches);
+  printf("saving " dlongFormat " full patches\n",*Npatches);
+  printf("using " dlongFormat " reference patches\n", refPatches);
 
   free(refMesh);
   free(patchA); free(invRefAA);
@@ -242,10 +242,10 @@ void ellipticBuildLocalPatchesQuad2D(elliptic_t* elliptic, dfloat lambda, dfloat
           if(nj==j && ni==i)
             B[mode*mesh->Np+node] = 1;
           if(nj==j)
-            Br[mode*mesh->Np+node] = mesh->D[ni+mesh->Nq*i]; 
+            Br[mode*mesh->Np+node] = mesh->D[ni+mesh->Nq*i];
           if(ni==i)
-            Bs[mode*mesh->Np+node] = mesh->D[nj+mesh->Nq*j]; 
-          
+            Bs[mode*mesh->Np+node] = mesh->D[nj+mesh->Nq*j];
+
           ++node;
         }
       }
@@ -371,8 +371,8 @@ void ellipticBuildLocalPatchesQuad2D(elliptic_t* elliptic, dfloat lambda, dfloat
     (*patchesIndex)[eM] = (*Npatches)-1;
   }
 
-  printf("saving "dlongFormat" full patches\n",*Npatches);
-  printf("using "dlongFormat" reference patches\n", refPatches);
+  printf("saving " dlongFormat " full patches\n",*Npatches);
+  printf("using " dlongFormat " reference patches\n", refPatches);
 
   free(refMesh);
   free(patchA); free(invRefAA);
@@ -527,8 +527,8 @@ void ellipticBuildLocalPatchesTet3D(elliptic_t* elliptic, dfloat lambda, dfloat 
     (*patchesIndex)[eM] = (*Npatches)-1;
   }
 
-  printf("saving "dlongFormat" full patches\n",*Npatches);
-  printf("using "dlongFormat" reference patches\n", refPatches);
+  printf("saving " dlongFormat " full patches\n",*Npatches);
+  printf("using " dlongFormat " reference patches\n", refPatches);
   printf("Max condition number = %g, and slowest CG convergence rate = %g\n", maxCond, maxRate);
 
 
@@ -563,17 +563,17 @@ void ellipticBuildLocalPatchesHex3D(elliptic_t* elliptic, dfloat lambda, dfloat 
               if(nk==k && nj==j && ni==i)
                 B[mode*mesh->Np+node] = 1;
               if(nj==j && nk==k)
-                Br[mode*mesh->Np+node] = mesh->D[ni+mesh->Nq*i]; 
+                Br[mode*mesh->Np+node] = mesh->D[ni+mesh->Nq*i];
               if(ni==i && nk==k)
-                Bs[mode*mesh->Np+node] = mesh->D[nj+mesh->Nq*j]; 
+                Bs[mode*mesh->Np+node] = mesh->D[nj+mesh->Nq*j];
               if(ni==i && nj==j)
-                Bt[mode*mesh->Np+node] = mesh->D[nk+mesh->Nq*k]; 
-              
+                Bt[mode*mesh->Np+node] = mesh->D[nk+mesh->Nq*k];
+
               ++node;
             }
           }
         }
-        
+
         ++mode;
       }
     }
@@ -710,8 +710,8 @@ void ellipticBuildLocalPatchesHex3D(elliptic_t* elliptic, dfloat lambda, dfloat 
     (*patchesIndex)[eM] = (*Npatches)-1;
   }
 
-  printf("saving "dlongFormat" full patches\n",*Npatches);
-  printf("using "dlongFormat" reference patches\n", refPatches);
+  printf("saving " dlongFormat " full patches\n",*Npatches);
+  printf("using " dlongFormat " reference patches\n", refPatches);
 
   free(refMesh);
   free(patchA); free(invRefAA);
@@ -892,13 +892,13 @@ void BuildLocalContinuousPatchAxTri2D(elliptic_t* elliptic, mesh_t* mesh, dfloat
           if (elliptic->mapB[m+eM*mesh->Np]==1) continue; //skip masked nodes
           A[n*mesh->Np+m] += elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
         }
-      } 
+      }
     }
   }
 }
 
 //returns the patch A matrix for element eM
-void BuildLocalIpdgPatchAxQuad2D(elliptic_t *elliptic, mesh_t *mesh, dfloat lambda, 
+void BuildLocalIpdgPatchAxQuad2D(elliptic_t *elliptic, mesh_t *mesh, dfloat lambda,
                                 dfloat *B, dfloat *Br, dfloat *Bs, dlong eM, dfloat *A) {
 
   /* start with stiffness matrix  */
@@ -914,7 +914,7 @@ void BuildLocalIpdgPatchAxQuad2D(elliptic_t *elliptic, mesh_t *mesh, dfloat lamb
         dfloat dsdx = mesh->vgeo[base+mesh->Np*SXID];
         dfloat dsdy = mesh->vgeo[base+mesh->Np*SYID];
         dfloat JW   = mesh->vgeo[base+mesh->Np*JWID];
-        
+
         int idn = n*mesh->Np+i;
         int idm = m*mesh->Np+i;
         dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn];
@@ -943,9 +943,9 @@ void BuildLocalIpdgPatchAxQuad2D(elliptic_t *elliptic, mesh_t *mesh, dfloat lamb
           dfloat ny = mesh->sgeo[base+NYID];
           dfloat wsJ = mesh->sgeo[base+WSJID];
           dfloat hinv = mesh->sgeo[base+IHID];
-          
+
           // form negative trace terms in IPDG
-          int idnM = n*mesh->Np+vidM; 
+          int idnM = n*mesh->Np+vidM;
           int idmM = m*mesh->Np+vidM;
 
           dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM];
@@ -957,8 +957,8 @@ void BuildLocalIpdgPatchAxQuad2D(elliptic_t *elliptic, mesh_t *mesh, dfloat lamb
           dfloat dlmdyM = drdyM*Br[idmM] + dsdyM*Bs[idmM];
           dfloat ndotgradlmM = nx*dlmdxM+ny*dlmdyM;
           dfloat lmM = B[idmM];
-          
-          dfloat penalty = elliptic->tau*hinv;     
+
+          dfloat penalty = elliptic->tau*hinv;
           int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
 
           int bcD = 0, bcN =0;
@@ -973,7 +973,7 @@ void BuildLocalIpdgPatchAxQuad2D(elliptic_t *elliptic, mesh_t *mesh, dfloat lamb
           } else if(bcType==2){ // Neumann
             bcD = 0;
             bcN = 1;
-          }   
+          }
 
           A[n*mesh->Np+m] += -0.5*(1+bcD)*(1-bcN)*wsJ*lnM*ndotgradlmM;  // -(ln^-, N.grad lm^-)
           A[n*mesh->Np+m] += -0.5*(1+bcD)*(1-bcN)*wsJ*ndotgradlnM*lmM;  // -(N.grad ln^-, lm^-)
@@ -993,7 +993,7 @@ void BuildLocalContinuousPatchAxQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloa
         for (int my=0;my<mesh->Nq;my++) {
           for (int mx=0;mx<mesh->Nq;mx++) {
             if (elliptic->mapB[mx+my*mesh->Nq+eM*mesh->Np]==1) continue;
-            
+
             int id;
             int iid = (nx+ny*mesh->Nq)*mesh->Np + mx+my*mesh->Nq;
             A[iid] = 0;
@@ -1046,7 +1046,7 @@ void BuildLocalContinuousPatchAxQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloa
           if (elliptic->mapB[m+eM*mesh->Np]==1) continue; //skip masked nodes
           A[n*mesh->Np+m] += elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
         }
-      } 
+      }
     }
   }
 }
@@ -1099,7 +1099,7 @@ void BuildLocalIpdgPatchAxTet3D(elliptic_t *elliptic, mesh_t *mesh, dfloat lambd
   //add the rank boost for the allNeumann Poisson problem
   if (elliptic->allNeumann) {
     for(int n=0;n<mesh->Np;++n){
-      for(int m=0;m<mesh->Np;++m){ 
+      for(int m=0;m<mesh->Np;++m){
         A[n*mesh->Np+m] += elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
       }
     }
@@ -1236,13 +1236,13 @@ void BuildLocalContinuousPatchAxTet3D(elliptic_t* elliptic, mesh_t* mesh, dfloat
           if (elliptic->mapB[m+eM*mesh->Np]==1) continue; //skip masked nodes
           A[n*mesh->Np+m] += elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
         }
-      } 
+      }
     }
   }
 }
 
 //returns the patch A matrix for element eM
-void BuildLocalIpdgPatchAxHex3D(elliptic_t *elliptic, mesh_t *mesh, dfloat lambda, 
+void BuildLocalIpdgPatchAxHex3D(elliptic_t *elliptic, mesh_t *mesh, dfloat lambda,
                         dfloat *B, dfloat *Br, dfloat *Bs, dfloat *Bt, dlong eM, dfloat *A) {
 
   /* start with stiffness matrix  */
@@ -1263,12 +1263,12 @@ void BuildLocalIpdgPatchAxHex3D(elliptic_t *elliptic, mesh_t *mesh, dfloat lambd
         dfloat dtdy = mesh->vgeo[base+mesh->Np*TYID];
         dfloat dtdz = mesh->vgeo[base+mesh->Np*TZID];
         dfloat JW   = mesh->vgeo[base+mesh->Np*JWID];
-        
+
         int idn = n*mesh->Np+i;
         int idm = m*mesh->Np+i;
         dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn] + dtdx*Bt[idn];
         dfloat dlndy = drdy*Br[idn] + dsdy*Bs[idn] + dtdy*Bt[idn];
-        dfloat dlndz = drdz*Br[idn] + dsdz*Bs[idn] + dtdz*Bt[idn];    
+        dfloat dlndz = drdz*Br[idn] + dsdz*Bs[idn] + dtdz*Bt[idn];
         dfloat dlmdx = drdx*Br[idm] + dsdx*Bs[idm] + dtdx*Bt[idm];
         dfloat dlmdy = drdy*Br[idm] + dsdy*Bs[idm] + dtdy*Bt[idm];
         dfloat dlmdz = drdz*Br[idm] + dsdz*Bs[idm] + dtdz*Bt[idm];
@@ -1300,9 +1300,9 @@ void BuildLocalIpdgPatchAxHex3D(elliptic_t *elliptic, mesh_t *mesh, dfloat lambd
           dfloat nz = mesh->sgeo[base+NZID];
           dfloat wsJ = mesh->sgeo[base+WSJID];
           dfloat hinv = mesh->sgeo[base+IHID];
-          
+
           // form negative trace terms in IPDG
-          int idnM = n*mesh->Np+vidM; 
+          int idnM = n*mesh->Np+vidM;
           int idmM = m*mesh->Np+vidM;
 
           dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM] + dtdxM*Bt[idnM];
@@ -1316,8 +1316,8 @@ void BuildLocalIpdgPatchAxHex3D(elliptic_t *elliptic, mesh_t *mesh, dfloat lambd
           dfloat dlmdzM = drdzM*Br[idmM] + dsdzM*Bs[idmM] + dtdzM*Bt[idmM];
           dfloat ndotgradlmM = nx*dlmdxM+ny*dlmdyM+nz*dlmdzM;
           dfloat lmM = B[idmM];
-          
-          dfloat penalty = elliptic->tau*hinv;     
+
+          dfloat penalty = elliptic->tau*hinv;
           int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
 
           int bcD = 0, bcN =0;
@@ -1332,7 +1332,7 @@ void BuildLocalIpdgPatchAxHex3D(elliptic_t *elliptic, mesh_t *mesh, dfloat lambd
           } else if(bcType==2){ // Neumann
             bcD = 0;
             bcN = 1;
-          }   
+          }
 
           A[n*mesh->Np+m] += -0.5*(1+bcD)*(1-bcN)*wsJ*lnM*ndotgradlmM;  // -(ln^-, N.grad lm^-)
           A[n*mesh->Np+m] += -0.5*(1+bcD)*(1-bcN)*wsJ*ndotgradlnM*lmM;  // -(N.grad ln^-, lm^-)
@@ -1353,11 +1353,11 @@ void BuildLocalContinuousPatchAxHex3D(elliptic_t* elliptic, mesh_t* mesh, dfloat
     if (elliptic->mapB[idn+eM*mesh->Np]!=1) {
       for (int mz=0;mz<mesh->Nq;mz++) {
       for (int my=0;my<mesh->Nq;my++) {
-      for (int mx=0;mx<mesh->Nq;mx++) {  
+      for (int mx=0;mx<mesh->Nq;mx++) {
         int idm = mx+my*mesh->Nq+mz*mesh->Nq*mesh->Nq;
         int iid = idn*mesh->Np + idm;
         if (elliptic->mapB[idm+eM*mesh->Np]==1) continue;
-            
+
         int id;
         A[iid] = 0;
 
@@ -1398,7 +1398,7 @@ void BuildLocalContinuousPatchAxHex3D(elliptic_t* elliptic, mesh_t* mesh, dfloat
             A[iid] += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[my+k*mesh->Nq];
           }
         }
-        
+
         if (nx==mx) {
           id = nx+my*mesh->Nq+nz*mesh->Nq*mesh->Nq;
           dfloat Gst = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
@@ -1417,7 +1417,7 @@ void BuildLocalContinuousPatchAxHex3D(elliptic_t* elliptic, mesh_t* mesh, dfloat
             A[iid] += Gtt*mesh->D[nz+k*mesh->Nq]*mesh->D[mz+k*mesh->Nq];
           }
         }
-        
+
         if ((nx==mx)&&(ny==my)&&(nz==mz)) {
           id = nx + ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
           dfloat JW = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
@@ -1442,7 +1442,7 @@ void BuildLocalContinuousPatchAxHex3D(elliptic_t* elliptic, mesh_t* mesh, dfloat
           if (elliptic->mapB[m+eM*mesh->Np]==1) continue; //skip masked nodes
           A[n*mesh->Np+m] += elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
         }
-      } 
+      }
     }
   }
 }

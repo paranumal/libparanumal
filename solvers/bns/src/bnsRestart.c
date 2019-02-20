@@ -27,7 +27,7 @@ SOFTWARE.
 #include "bns.h"
 void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
 
-  mesh_t *mesh = bns->mesh; 
+  mesh_t *mesh = bns->mesh;
   // Copy Field To Host
   bns->o_q.copyTo(bns->q);
 
@@ -37,12 +37,12 @@ void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
   options.getArgs("RESTART FILE NAME", outName);
   sprintf(fname, "%s_%04d.dat",(char*)outName.c_str(), mesh->rank);
   FILE *fp;
-  
+
   // Overwrite  Binary File
   fp = fopen(fname,"wb");
 
   // Write q1....qN and all pml variables
-  dfloat *elmField  = (dfloat *) calloc(bns->Nfields, sizeof(dfloat)); 
+  dfloat *elmField  = (dfloat *) calloc(bns->Nfields, sizeof(dfloat));
   dfloat *pmlField  = (dfloat *) calloc(bns->Nfields*bns->dim, sizeof(dfloat));
 
   // First Write the Solution Time
@@ -50,13 +50,13 @@ void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
   // Write output frame to prevent overwriting vtu files
   fwrite(&bns->frame, sizeof(int), 1, fp);
 
-  // 
- if(options.compareArgs("TIME INTEGRATOR", "LSERK") || 
+  //
+ if(options.compareArgs("TIME INTEGRATOR", "LSERK") ||
     options.compareArgs("TIME INTEGRATOR", "SARK")){
   // Write only q works check for MRAB, write history
   for(dlong e = 0; e<mesh->Nelements; e++){
     for(int n=0; n<mesh->Np; n++ ){
-      const dlong id = e*bns->Nfields*mesh->Np + n; 
+      const dlong id = e*bns->Nfields*mesh->Np + n;
       for(int fld=0; fld<bns->Nfields; fld++){
         elmField[fld] =  bns->q[id + fld*mesh->Np];
       }
@@ -74,8 +74,8 @@ void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
     // Write node data
     for(dlong es = 0; es<mesh->pmlNelements; es++)
     {
-      dlong e      = mesh->pmlElementIds[es]; 
-      dlong pmlId  = mesh->pmlIds[es]; 
+      dlong e      = mesh->pmlElementIds[es];
+      dlong pmlId  = mesh->pmlIds[es];
       for(int n=0; n<mesh->Np; n++ ){
         const dlong id = pmlId*bns->Nfields*mesh->Np + n;
         for(int fld=0; fld<bns->Nfields; fld++){
@@ -92,7 +92,7 @@ void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
 
 #if 0
   // Assumes the same dt, there is no interpolation of history
-  // will be mofied later if the time step size changes 
+  // will be mofied later if the time step size changes
    if(options.compareArgs("TIME INTEGRATOR", "MRSAAB")){
    // Keep the same index to prvent order loss at restart
     for(int l = 0; l<mesh->MRABNlevels; l++)
@@ -101,14 +101,14 @@ void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
       // Copy right hand side history
       bns->o_rhsq.copyTo(bns->rhsq);
 
-      const dlong offset   = mesh->Nelements*mesh->Np*bns->Nfields; 
+      const dlong offset   = mesh->Nelements*mesh->Np*bns->Nfields;
 
-      // Write all history, order is not important 
+      // Write all history, order is not important
       // as long as reading with the same order
       for(int nrhs = 0; nrhs<bns->Nrhs; nrhs++){
         for(dlong e = 0; e<mesh->Nelements; e++){
           for(int n=0; n<mesh->Np; n++ ){
-            const dlong id = e*bns->Nfields*mesh->Np + n + nrhs*offset; 
+            const dlong id = e*bns->Nfields*mesh->Np + n + nrhs*offset;
             for(int fld=0; fld<bns->Nfields; fld++){
               elmField[fld] =  bns->q[id + fld*mesh->Np];
             }
@@ -124,13 +124,13 @@ void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
       if(bns->dim==3)
         bns->o_pmlrhsqz.copyTo(bns->pmlrhsqz);
 
-      const dlong pmloffset = mesh->pmlNelements*mesh->Np*bns->Nfields; 
+      const dlong pmloffset = mesh->pmlNelements*mesh->Np*bns->Nfields;
 
       // Write node data
       for(int nrhs = 0; nrhs<bns->Nrhs; nrhs++){
         for(dlong es = 0; es<mesh->pmlNelements; es++){
-          dlong e      = mesh->pmlElementIds[es]; 
-          dlong pmlId  = mesh->pmlIds[es]; 
+          dlong e      = mesh->pmlElementIds[es];
+          dlong pmlId  = mesh->pmlIds[es];
           for(int n=0; n<mesh->Np; n++ ){
             const dlong id = pmlId*bns->Nfields*mesh->Np + n + nrhs*pmloffset;
             for(int fld=0; fld<bns->Nfields; fld++){
@@ -147,7 +147,7 @@ void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
    }
 #endif
 
-  fclose(fp); 
+  fclose(fp);
 }
 
 
@@ -155,28 +155,30 @@ void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time){
 
 void bnsRestartRead(bns_t *bns, setupAide &options){
 
-  mesh_t *mesh = bns->mesh; 
+  mesh_t *mesh = bns->mesh;
   // Create Binary File Name
   char fname[BUFSIZ];
   string outName;
   options.getArgs("RESTART FILE NAME", outName);
   sprintf(fname, "%s_%04d.dat",(char*)outName.c_str(), mesh->rank);
-  FILE *fp; 
+  FILE *fp;
+
+  size_t nentries;
 
   // Overwrite  Binary File
   fp = fopen(fname,"rb");
 
   if(fp != NULL){
-  
+
     // Write q1....qN and all pml variables
-    dfloat *elmField  = (dfloat *) calloc(bns->Nfields, sizeof(dfloat)); 
+    dfloat *elmField  = (dfloat *) calloc(bns->Nfields, sizeof(dfloat));
     dfloat *pmlField  = (dfloat *) calloc(bns->Nfields*bns->dim, sizeof(dfloat));
 
-    dfloat startTime = 0.0; 
+    dfloat startTime = 0.0;
     // Update Start Time
-    fread(&startTime, sizeof(dfloat),1, fp);
+    nentries = fread(&startTime, sizeof(dfloat),1, fp);
     // Update frame number to contioune outputs
-    fread(&bns->frame, sizeof(int), 1, fp);
+    nentries = fread(&bns->frame, sizeof(int), 1, fp);
 
 
     if(mesh->rank==0) printf("Restart time: %.4e ...", startTime);
@@ -184,10 +186,10 @@ void bnsRestartRead(bns_t *bns, setupAide &options){
     // Write only q works check for MRAB, write history
     for(dlong e = 0; e<mesh->Nelements; e++){
       for(int n=0; n<mesh->Np; n++ ){
-        
+
         const dlong id = e*bns->Nfields*mesh->Np + n;
-        fread(elmField, sizeof(dfloat), bns->Nfields, fp);
-        
+        nentries = fread(elmField, sizeof(dfloat), bns->Nfields, fp);
+
         for(int fld=0; fld<bns->Nfields; fld++){
           bns->q[id + fld*mesh->Np] = elmField[fld];
         }
@@ -196,25 +198,25 @@ void bnsRestartRead(bns_t *bns, setupAide &options){
     }
 
     if(bns->pmlFlag){
-      
+
       // Write node data
       for(dlong es = 0; es<mesh->pmlNelements; es++)
       {
-        dlong e      = mesh->pmlElementIds[es]; 
-        dlong pmlId  = mesh->pmlIds[es]; 
+        dlong e      = mesh->pmlElementIds[es];
+        dlong pmlId  = mesh->pmlIds[es];
         for(int n=0; n<mesh->Np; n++ ){
           const dlong id = pmlId*bns->Nfields*mesh->Np + n;
 
-          fread(pmlField, sizeof(dfloat), bns->Nfields*bns->dim, fp);
-          
-          for(int fld=0; fld<bns->Nfields; fld++){          
+          nentries = fread(pmlField, sizeof(dfloat), bns->Nfields*bns->dim, fp);
+
+          for(int fld=0; fld<bns->Nfields; fld++){
             bns->pmlqx[id + fld*mesh->Np] = pmlField[fld + 0*bns->Nfields];
             bns->pmlqy[id + fld*mesh->Np] = pmlField[fld + 1*bns->Nfields];
             if(bns->dim==3)
               bns->pmlqz[id + fld*mesh->Np] = pmlField[fld + 2*bns->Nfields];
           }
         }
-      } 
+      }
     }
 
   fclose(fp);
@@ -226,14 +228,14 @@ void bnsRestartRead(bns_t *bns, setupAide &options){
       bns->o_pmlqx.copyFrom(bns->pmlqx);
       bns->o_pmlqy.copyFrom(bns->pmlqy);
       if(bns->dim==3)
-        bns->o_pmlqz.copyFrom(bns->pmlqz);    
+        bns->o_pmlqz.copyFrom(bns->pmlqz);
     }
 
   // Just Update Time Step Size
-  bns->startTime = startTime; 
+  bns->startTime = startTime;
   // Update NtimeSteps and dt
    bns->NtimeSteps = (bns->finalTime-bns->startTime)/bns->dt;
-   bns->dt         = (bns->finalTime-bns->startTime)/bns->NtimeSteps; 
+   bns->dt         = (bns->finalTime-bns->startTime)/bns->NtimeSteps;
 }else{
   printf("No restart file...");
 

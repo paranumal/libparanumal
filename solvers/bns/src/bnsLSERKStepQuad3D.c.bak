@@ -33,9 +33,9 @@ void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
 
   const dlong offset    = 0.0;
   const dlong pmloffset = 0.0;
-  const int shift       = 0; 
-  // bns->shiftIndex = 0; 
-  mesh_t *mesh = bns->mesh;   
+  const int shift       = 0;
+  // bns->shiftIndex = 0;
+  mesh_t *mesh = bns->mesh;
 
   // LSERK4 stages
   for(int rk=0;rk<mesh->Nrk;++rk){
@@ -58,7 +58,7 @@ void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
 
     }
 
-    // COMPUTE RAMP FUNCTION 
+    // COMPUTE RAMP FUNCTION
     dfloat fx=0, fy=0, fz=0, intfx=0, intfy=0, intfz=0;
     //    bnsBodyForce(t, &fx, &fy, &fz, &intfx, &intfy, &intfz);
 
@@ -66,7 +66,7 @@ void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
     occaTimerTic(mesh->device,"NonPmlVolumeKernel");
     bns->volumeKernel(mesh->nonPmlNelements,
 		      mesh->o_nonPmlElementIds,
-		      offset, 
+		      offset,
 		      shift,
 		      fx, fy, fz,
 		      mesh->o_vgeo,
@@ -90,11 +90,11 @@ void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
 			  mesh->o_cubInterpT,
 			  mesh->o_cubProjectT,
 			  bns->o_q,
-			  bns->o_rhsq);  
+			  bns->o_rhsq);
 
     occaTimerToc(mesh->device, "NonPmlRelaxationKernel");
 #endif
-    
+
     if(mesh->totalHaloPairs>0){
       meshHaloExchangeFinish(mesh);
       // copy halo data to DEVICE
@@ -126,7 +126,7 @@ void bnsLSERKStep(bns_t *bns, int tstep, int haloBytes,
     if(bns->elementType==QUADRILATERALS && mesh->dim==3){
       bns->constrainKernel(mesh->Nelements, mesh->o_x, mesh->o_y, mesh->o_z, bns->o_rhsq);
     }
-    
+
     //UPDATE
     occaTimerTic(mesh->device,"NonPmlUpdateKernel");
     bns->updateKernel(mesh->nonPmlNelements,

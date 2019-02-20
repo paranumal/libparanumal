@@ -46,12 +46,12 @@ extern "C"
 #define USE_XSMM 0
 
 // hack
-#define p_Nggeo 7 
+#define p_Nggeo 7
 
 template < const int rowsA, const int rowsB, const int colsC >
 static void mxm(const dfloat * __restrict__ A,
 	 const dfloat * __restrict__ B,
-	 const dfloat BETA, 
+	 const dfloat BETA,
 	 dfloat * __restrict__ C){
 
 #if USE_XSMM || USE_BLAS
@@ -121,7 +121,7 @@ void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
   qt    = (dfloat*)__builtin_assume_aligned(qt, USE_OCCA_MEM_BYTE_ALIGN) ;
   Aq   = (dfloat*)__builtin_assume_aligned(Aq, USE_OCCA_MEM_BYTE_ALIGN) ;
   ggeo = (dfloat*)__builtin_assume_aligned(ggeo, USE_OCCA_MEM_BYTE_ALIGN) ;
-  
+
   dfloat zero = 0, one = 1.0;
 
   // grad
@@ -130,7 +130,7 @@ void ellipticSerialElementAxHexKernel3D(const dfloat * __restrict__ ggeo,
     mxm<p_Nq,p_Nq,p_Nq>(q+k*p_Nq*p_Nq, D, zero, qs+k*p_Nq*p_Nq);
   }
   mxm<p_Nq*p_Nq,p_Nq,p_Nq>(q, D, zero, qt);
-  
+
   for(int n=0;n<p_Np;++n){
 #if 1
     dfloat qrn = ggeo[n+G00ID*p_Np]*qr[n] + ggeo[n+G01ID*p_Np]*qs[n] + ggeo[n+G02ID*p_Np]*qt[n];
@@ -173,19 +173,19 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
   Aq   = (dfloat*)__builtin_assume_aligned(Aq, USE_OCCA_MEM_BYTE_ALIGN) ;
   ggeo = (dfloat*)__builtin_assume_aligned(ggeo, USE_OCCA_MEM_BYTE_ALIGN) ;
   elementList = (dlong*)__builtin_assume_aligned(elementList, USE_OCCA_MEM_BYTE_ALIGN) ; // type ?
-  
+
   dfloat s_q  [p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_Gqr[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_Gqs[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_Gqt[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
 
   dfloat s_tmp[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-  
+
   dfloat s_qr[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_qs[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_qt[p_Np] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
 
-  // ok 
+  // ok
   dfloat s_D[p_Nq][p_Nq]  __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
   dfloat s_S[p_Nq][p_Nq]  __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
 
@@ -199,7 +199,7 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
   const int c_Np = p_Np;
 
   for(dlong e=0; e<Nelements; ++e){
-    
+
     const dlong element = elementList[e];
 
 #if 0
@@ -207,9 +207,9 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
 					     D, S, MM, lambda, q + element*p_Np,
 					     s_qr, s_qs, s_qt, Aq+element*p_Np);
 #endif
-    
+
 #if USE_STEFAN_MXM==1
-    ax_e_(Aq+element*p_Np, 
+    ax_e_(Aq+element*p_Np,
 	  q+element*p_Np,
 	  ggeo + element*p_Nggeo*p_Np, // note layout is wrong
 	  s_Gqr[0][0],
@@ -217,7 +217,7 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
 	  s_Gqt[0][0],
       s_tmp[0][0]);
 #endif
-    
+
 #if 1
     for(int k = 0; k < p_Nq; k++) {
       for(int j=0;j<p_Nq;++j){
@@ -246,15 +246,15 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
           dfloat qt = 0.f;
 
           for(int m = 0; m < p_Nq; m++) {
-            qr += s_S[m][i]*s_q[k][j][m];  
-            qs += s_S[m][j]*s_q[k][m][i];           
-            qt += s_S[m][k]*s_q[m][j][i]; 
+            qr += s_S[m][i]*s_q[k][j][m];
+            qs += s_S[m][j]*s_q[k][m][i];
+            qt += s_S[m][k]*s_q[m][j][i];
           }
 
           dfloat Gqr = r_G00*qr;
           Gqr += r_G01*qs;
           Gqr += r_G02*qt;
-          
+
           dfloat Gqs = r_G01*qr;
           Gqs += r_G11*qs;
           Gqs += r_G12*qt;
@@ -262,7 +262,7 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
           dfloat Gqt = r_G02*qr;
           Gqt += r_G12*qs;
           Gqt += r_G22*qt;
-          
+
           s_Gqr[k][j][i] = Gqr;
           s_Gqs[k][j][i] = Gqs;
           s_Gqt[k][j][i] = Gqt;
@@ -319,18 +319,18 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
 	  const dfloat * __restrict__ qek = q + element*p_Np + j*p_Nq + i;
 
           for(int m = 0; m < p_Nq; m++)
-	    qr += s_S[m][i]*qei[m]; 
-	  for(int m = 0; m < p_Nq; m++) 
-	    //	    qs += s_S[m][j]*s_q[k][m][i]; 	    
+	    qr += s_S[m][i]*qei[m];
+	  for(int m = 0; m < p_Nq; m++)
+	    //	    qs += s_S[m][j]*s_q[k][m][i];
 	    qs += s_S[m][j]*qej[m*p_Nq];
           for(int m = 0; m < p_Nq; m++) {
-	    //	    qt += s_S[m][k]*s_q[m][j][i]; 
+	    //	    qt += s_S[m][k]*s_q[m][j][i];
 	    qt += s_S[m][k]*qek[m*p_Nq*p_Nq];
 	  }
 	  dfloat Gqr = r_G00*qr;
 	  Gqr += r_G01*qs;
 	  Gqr += r_G02*qt;
-	  
+
 	  dfloat Gqs = r_G01*qr;
 	  Gqs += r_G11*qs;
 	  Gqs += r_G12*qt;
@@ -338,7 +338,7 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
 	  dfloat Gqt = r_G02*qr;
 	  Gqt += r_G12*qs;
 	  Gqt += r_G22*qt;
-	  
+
           s_Gqr[k][j][i] = Gqr;
           s_Gqs[k][j][i] = Gqs;
           s_Gqt[k][j][i] = Gqt;
@@ -377,48 +377,48 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
     dfloat s_qr[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
     dfloat s_qs[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
     dfloat s_qt[p_Nq][p_Nq][p_Nq] __attribute__((aligned(USE_OCCA_MEM_BYTE_ALIGN)));
-    
-    // loop over slices 
+
+    // loop over slices
     for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j){
 	const dfloat * __restrict__ qei = q + element*p_Np + k*p_Nq*p_Nq + j*p_Nq;
-	
+
         for(int i=0;i<p_Nq;++i){
           dfloat qr = 0.f;
           for(int m = 0; m < p_Nq; m++)
-	    qr += s_S[m][i]*qei[m]; 
+	    qr += s_S[m][i]*qei[m];
 	  s_qr[k][j][i] = qr;
 	}
       }
-     
+
       for(int i=0;i<p_Nq;++i){
 	const dfloat * __restrict__ qej = q + element*p_Np + k*p_Nq*p_Nq + i;
-	  
+
 	for(int j=0;j<p_Nq;++j){
-	  
+
 	  dfloat qs = 0.f;
 	  for(int m = 0; m < p_Nq; m++)
-	    qs += s_S[m][j]*qej[m*p_Nq]; 
-	  
+	    qs += s_S[m][j]*qej[m*p_Nq];
+
 	  s_qs[k][j][i] = qs;
 	}
       }
     }
-    
+
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i){
 	const dfloat * __restrict__ qek = q + element*p_Np + j*p_Nq + i;
-	
+
 	for(int k=0;k<p_Nq;++k){
 	  dfloat qt = 0;
-          for(int m = 0; m < p_Nq; m++) 
+          for(int m = 0; m < p_Nq; m++)
 	    qt += s_S[m][k]*qek[m*p_Nq*p_Nq];
-	  
+
 	  s_qt[k][j][i] = qt;
 	}
       }
     }
-    
+
     for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j){
 	for(int i=0;i<p_Nq;++i){
@@ -429,30 +429,30 @@ void ellipticSerialPartialAxHexKernel3D (const hlong Nelements,
 	  const dfloat r_G02 = ggeo[gbase+G02ID*p_Np];
 	  const dfloat r_G12 = ggeo[gbase+G12ID*p_Np];
 	  const dfloat r_G22 = ggeo[gbase+G22ID*p_Np];
-	  
+
 	  const dfloat qr = s_qr[k][j][i];
 	  const dfloat qs = s_qs[k][j][i];
 	  const dfloat qt = s_qt[k][j][i];
-	  
+
 	  dfloat Gqr = r_G00*qr;
 	  Gqr += r_G01*qs;
 	  Gqr += r_G02*qt;
-	
+
 	  dfloat Gqs = r_G01*qr;
 	  Gqs += r_G11*qs;
 	  Gqs += r_G12*qt;
-	  
+
 	  dfloat Gqt = r_G02*qr;
 	  Gqt += r_G12*qs;
 	  Gqt += r_G22*qt;
-	  
+
 	  s_Gqr[k][j][i] = Gqr;
 	  s_Gqs[k][j][i] = Gqs;
 	  s_Gqt[k][j][i] = Gqt;
 	}
       }
     }
-    
+
     for(int k = 0;k < p_Nq; k++){
       for(int j=0;j<p_Nq;++j){
         for(int i=0;i<p_Nq;++i){
@@ -496,7 +496,7 @@ void ellipticSerialPartialAxHexKernel3D(const int Nq,
   const dfloat *q    = (dfloat*)o_q.ptr();
   const dfloat *ggeo = (dfloat*)o_ggeo.ptr();
   dfloat *Aq  = (dfloat*)o_Aq.ptr();
-  
+
   switch(Nq){
   case  2: ellipticSerialPartialAxHexKernel3D <  2 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
   case  3: ellipticSerialPartialAxHexKernel3D <  3 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
@@ -511,5 +511,5 @@ void ellipticSerialPartialAxHexKernel3D(const int Nq,
   case 12: ellipticSerialPartialAxHexKernel3D < 12 > (Nelements, elementList, ggeo, D, S, MM, lambda, q, Aq); break;
 
   }
-      
+
 }

@@ -107,3 +107,17 @@ cavity
 
 [VERBOSE]
 TRUE
+
+# set to 0 (zero) to disable reductions
+[DEBUG ENABLE REDUCTIONS]
+1
+
+# set to 0 (zero) to disable gather-scatter
+[DEBUG ENABLE OGS]
+1
+
+[MAXIMUM ITERATIONS]
+1000
+
+[FIXED ITERATION COUNT]
+FALSE

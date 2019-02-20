@@ -32,7 +32,7 @@ void bnsRenderQuad3D(bns_t *bns, char *fileBaseName, int fileIndex){
   mesh_t *mesh = bns->mesh;
 
   int plotNelements = mesh->Nelements*mesh->plotNelements;
-  
+
   dfloat *plotx = (dfloat*) calloc(plotNelements*mesh->Nverts, sizeof(dfloat));
   dfloat *ploty = (dfloat*) calloc(plotNelements*mesh->Nverts, sizeof(dfloat));
   dfloat *plotz = (dfloat*) calloc(plotNelements*mesh->Nverts, sizeof(dfloat));
@@ -48,7 +48,7 @@ void bnsRenderQuad3D(bns_t *bns, char *fileBaseName, int fileIndex){
   dfloat *tmpPlotVortz = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
   dfloat *tmpPlotVortMag = (dfloat*) calloc(mesh->plotNp, sizeof(dfloat));
 
- 
+
   // compute plot node coordinates on the fly
   int cnt = 0;
   dfloat maxPlotq = -1e9;
@@ -115,11 +115,11 @@ void bnsRenderQuad3D(bns_t *bns, char *fileBaseName, int fileIndex){
       plotq[cnt] = tmpPlotq[v3];
       plotVortMag[cnt] = tmpPlotVortMag[v3];
       ++cnt;
-      
+
     }
   }
 
-#if 0  
+#if 0
   simpleRayTracer(plotNelements,
 		  plotx,
 		  ploty,
@@ -136,22 +136,22 @@ void bnsRenderQuad3D(bns_t *bns, char *fileBaseName, int fileIndex){
   if(mesh->rank==0){
     allNelements = (int*) calloc(mesh->size, sizeof(int));
   }
-  
+
   MPI_Gather(&plotNelements, 1, MPI_INT,
 	     allNelements,  1, MPI_INT,
 	     0, mesh->comm);
-  
+
   dfloat *allPlotx = NULL;
   dfloat *allPloty = NULL;
   dfloat *allPlotz = NULL;
   dfloat *allPlotq = NULL;
   dfloat *allPlotVortMag = NULL;
   int    *allDispls = NULL;
-  
+
   if(mesh->rank==0){
-    
+
     allDispls = (int*) calloc(mesh->size+1, sizeof(int));
-    
+
     for(int r=0;r<mesh->size;++r){
       allNelements[r] *= 3;
     }
@@ -165,7 +165,7 @@ void bnsRenderQuad3D(bns_t *bns, char *fileBaseName, int fileIndex){
     allPlotq  = (dfloat*) calloc(allDispls[mesh->size], sizeof(dfloat));
     allPlotVortMag  = (dfloat*) calloc(allDispls[mesh->size], sizeof(dfloat));
   }
-  
+
   MPI_Gatherv(plotx, plotNelements*3, MPI_DFLOAT,
 	      allPlotx, allNelements, allDispls, MPI_DFLOAT, 0, mesh->comm);
 
@@ -189,7 +189,7 @@ void bnsRenderQuad3D(bns_t *bns, char *fileBaseName, int fileIndex){
 		    allPlotVortMag,
 		    fileBaseName,
 		    fileIndex);
-    
+
     printf("plotq in [%g,%g]\n", minPlotq, maxPlotq);
     free(allPlotx);
     free(allPloty);
@@ -199,7 +199,7 @@ void bnsRenderQuad3D(bns_t *bns, char *fileBaseName, int fileIndex){
     free(allDispls);
   }
 
-  
+
 
 
 

@@ -84,11 +84,11 @@ int main(int argc, char **argv){
       meshOccaSetupQuad3D(mesh, options, kernelInfo);
     else
       meshOccaSetup3D(mesh, options, kernelInfo);
-  } 
+  }
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
-  
+
   elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
 
 #if 0
@@ -97,14 +97,14 @@ int main(int argc, char **argv){
     string outName;
     options.getArgs("OUTPUT FILE NAME", outName);
     sprintf(fname, "%s_%04d",(char*)outName.c_str(), mesh->rank);
-    
+
     ellipticPlotVTUHex3D(mesh, fname, 0);
   }
 #endif
-  
-  {    
+
+  {
     occa::memory o_r = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_r);
-    occa::memory o_x = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_x);    
+    occa::memory o_x = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_x);
 
     // convergence tolerance
     dfloat tol = 1e-8;
@@ -114,7 +114,7 @@ int main(int argc, char **argv){
     int it;
 
     MPI_Barrier(mesh->comm);
-    
+
     occa::streamTag startTag = mesh->device.tagStream();
     int Ntests = 1;
     it = 0;
@@ -125,10 +125,10 @@ int main(int argc, char **argv){
     }
 
     MPI_Barrier(mesh->comm);
-    
+
     occa::streamTag stopTag = mesh->device.tagStream();
     mesh->device.finish();
-    
+
     double elapsed = mesh->device.timeBetween(startTag, stopTag);
 
     double globalElapsed;
@@ -136,17 +136,17 @@ int main(int argc, char **argv){
 
     MPI_Reduce(&elapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, mesh->comm);
     MPI_Reduce(&(mesh->Nelements), &globalNelements, 1, MPI_HLONG, MPI_SUM, 0, mesh->comm);
-    
+
     if (mesh->rank==0)
-      printf("%d, %d, %g, %d, %g, %g; \%\%global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
+      printf("%d, " hlongFormat ", %g, %d, %g, %g; \%\%global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
 	     mesh->N,
 	     globalNelements*mesh->Np,
 	     globalElapsed,
 	     it,
 	     globalElapsed/(mesh->Np*globalNelements),
-	     globalNelements*(it*mesh->Np/globalElapsed),
+	     globalNelements*((dfloat)it*mesh->Np/globalElapsed),
 	     (char*) options.getArgs("PRECONDITIONER").c_str());
-    
+
     if (options.compareArgs("VERBOSE", "TRUE")){
       fflush(stdout);
       MPI_Barrier(mesh->comm);
@@ -156,8 +156,8 @@ int main(int argc, char **argv){
 	     mesh->NnotInternalElements);
       MPI_Barrier(mesh->comm);
     }
-    
-    if(options.compareArgs("DISCRETIZATION","CONTINUOUS") && 
+
+    if(options.compareArgs("DISCRETIZATION","CONTINUOUS") &&
        !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS)){
       dfloat zero = 0.;
       elliptic->addBCKernel(mesh->Nelements,
@@ -258,10 +258,10 @@ int main(int argc, char **argv){
 #endif
 
   //  cout << kernelInfo;
-  
+
   // build one-ring ( to rule them all )
   //  ellipticBuildOneRing(elliptic, kernelInfo);
-  
+
   // close down MPI
   MPI_Finalize();
 

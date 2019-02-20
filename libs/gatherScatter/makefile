@@ -1,101 +1,105 @@
-ifndef OCCA_DIR
-ERROR:
-	@echo "Error, environment variable [OCCA_DIR] is not set"
+#####################################################################################
+#
+#The MIT License (MIT)
+#
+#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all
+#copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#SOFTWARE.
+#
+#####################################################################################
+
+ifndef LIBP_MAKETOP_LOADED
+ifeq (,$(wildcard ../../make.top))
+  $(error cannot locate ${PWD}/../../make.top)
+else
+  include ../../make.top
+endif
 endif
 
-# define LIBP_OPT_FLAGS
-include ../../make.inp
+#libraries
+GS_DIR=${LIBP_TPL_DIR}/gslib
 
-include ${OCCA_DIR}/scripts/Makefile
+#includes
+INCLUDES=-I. -I./include \
+				 ${LIBP_INCLUDES} \
+				 -I${GS_DIR}/src
 
-# define variables
-HDRDIR = ../../include
-OGSDIR  = ./include
-GSDIR  = ../../3rdParty/gslib
+#defines
+DEFINES=-D DOGS='"${CURDIR}"'\
+				${LIBP_DEFINES}
 
-# set options for this machine
-# specify which compilers to use for c, fortran and linking
-CC	= mpicc
-CXX	= mpic++
-LD	= mpic++
+#.cpp compilation flags
+OGS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
-# compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(GSDIR)/src   -D DHOLMES='"${CURDIR}/../.."' -D DOGS='"${CURDIR}"'  $(LIBP_OPT_FLAGS)
+#object dependancies
+DEPS=$(wildcard *.hpp) \
+		 $(wildcard ./include/*.h) \
+		 $(wildcard ./include/*.hpp) \
+		 $(wildcard ./include/*.tpp)
 
+SRC=$(wildcard src/*.cpp)
+OBJS=$(SRC:.cpp=.o)
 
-# link flags to be used
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) 
-
-# libraries to be linked in
-LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L$(GSDIR)/lib  -lgs 
-
-#-llapack -lblas
-
-INCLUDES = ogs.hpp ogsKernels.hpp ogsInterface.h
-DEPS = $(INCLUDES) \
-$(HDRDIR)/types.h 
+CSRC=$(wildcard src/*.c)
+COBJS=$(CSRC:.c=.o)
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c .cpp
 
-# rule for .c files
-.c.o: $(DEPS)
-	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths)
-
-.cpp.o: $(DEPS)
-	$(CXX) $(CFLAGS) -o $*.o -c $*.cpp $(paths)
-
-# list of objects to be compiled
-OBJS    = \
-./src/ogsMappedAlloc.o \
-./src/ogsGatherScatter.o \
-./src/ogsGatherScatterVec.o \
-./src/ogsGatherScatterMany.o \
-./src/ogsGather.o \
-./src/ogsGatherVec.o \
-./src/ogsGatherMany.o \
-./src/ogsScatter.o \
-./src/ogsScatterVec.o \
-./src/ogsScatterMany.o \
-./src/ogsSetup.o \
-./src/ogsKernels.o 
-
-COBJS = \
-./src/ogsHostGatherScatter.o \
-./src/ogsHostGatherScatterVec.o \
-./src/ogsHostGatherScatterMany.o \
-./src/ogsHostGather.o \
-./src/ogsHostGatherVec.o \
-./src/ogsHostGatherMany.o \
-./src/ogsHostScatter.o \
-./src/ogsHostScatterVec.o \
-./src/ogsHostScatterMany.o \
-./src/ogsHostSetup.o
-
-
-lib:$(OBJS) gslibInterface
-	ar -cr libogs.a $(OBJS) $(COBJS)
-
-gslibInterface:
-	cd ../../3rdParty/gslib; CC=$(CC) make -j install; cd ../../libs/gatherScatter
-	$(CC) $(CFLAGS) -c -o ./src/ogsHostGatherScatter.o     ./src/ogsHostGatherScatter.c     $(paths)
-	$(CC) $(CFLAGS) -c -o ./src/ogsHostGatherScatterVec.o  ./src/ogsHostGatherScatterVec.c  $(paths)
-	$(CC) $(CFLAGS) -c -o ./src/ogsHostGatherScatterMany.o ./src/ogsHostGatherScatterMany.c $(paths)
-	$(CC) $(CFLAGS) -c -o ./src/ogsHostGather.o        ./src/ogsHostGather.c        $(paths)
-	$(CC) $(CFLAGS) -c -o ./src/ogsHostGatherVec.o     ./src/ogsHostGatherVec.c     $(paths)
-	$(CC) $(CFLAGS) -c -o ./src/ogsHostGatherMany.o    ./src/ogsHostGatherMany.c    $(paths)
-	$(CC) $(CFLAGS) -c -o ./src/ogsHostScatter.o       ./src/ogsHostScatter.c       $(paths)
-	$(CC) $(CFLAGS) -c -o ./src/ogsHostScatterVec.o    ./src/ogsHostScatterVec.c    $(paths)
-	$(CC) $(CFLAGS) -c -o ./src/ogsHostScatterMany.o   ./src/ogsHostScatterMany.c   $(paths)
-	$(CC) $(CFLAGS) -c -o ./src/ogsHostSetup.o         ./src/ogsHostSetup.c         $(paths)
+.PHONY: all lib clean realclean silentUpdate
 
 all: lib
 
-# what to do if user types "make clean"
+lib: libogs.a silentUpdate
+
+libogs.a:$(OBJS) ${COBJS}
+ifneq (,${verbose})
+	ar -cr libogs.a $(OBJS) $(COBJS)
+else
+	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
+	@ar -cr libogs.a $(OBJS) $(COBJS)
+endif
+
+silentUpdate:
+	@true
+
+# rule for .c files
+%.o: %.c $(DEPS)
+ifneq (,${verbose})
+	$(CC) -o $*.o -c $*.c $(OGS_CXXFLAGS)
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(CC) -o $*.o -c $*.c $(OGS_CXXFLAGS)
+endif
+
+# rule for .cpp files
+%.o: %.cpp $(DEPS)
+ifneq (,${verbose})
+	$(CXX) -o $*.o -c $*.cpp $(OGS_CXXFLAGS)
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(CXX) -o $*.o -c $*.cpp $(OGS_CXXFLAGS)
+endif
+
+#cleanup
 clean:
-	rm src/*.o libogs.a
+	rm -f src/*.o libogs.a
 
-realclean:
-	cd ../../3rdParty/gslib; make clean; cd ../../libs/gatherScatter
-	rm src/*.o libogs.a
-
+realclean: clean
+	${MAKE} -C $(GS_DIR) clean

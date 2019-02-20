@@ -25,52 +25,62 @@
 #####################################################################################
 
 ifndef LIBP_MAKETOP_LOADED
-ifeq (,$(wildcard ../../make.top))
-  $(error cannot locate ${PWD}/../../make.top)
+ifeq (,$(wildcard ../make.top))
+$(error cannot locate ${PWD}/../make.top)
 else
-  include ../../make.top
+include ../make.top
 endif
 endif
 
-FC = gfortran
-AR = ar
+#libraries
+OGS_DIR      =${LIBP_LIBS_DIR}/gatherScatter
 
-SDIR = ./
-INCLUDES = -I.
-OPTFLAGS = -O3
-ARFLAGS  = -cr
+#includes
+INCLUDES=-I. \
+				 -I$(OGS_DIR) \
+				 ${LIBP_INCLUDES}
 
-SRC = $(wildcard $(SDIR)/*.f)
-OBJS = $(subst $(SDIR)/,$(SDIR),$(SRC:.f=.o))
+#defines
+DEFINES =${LIBP_DEFINES} \
+         -DDHOLMES='"${LIBP_DIR}"' \
 
-FCFLAGS = $(FCOPTIONS) $(OPTFLAGS)
+#.cpp compilation flags
+MESH_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
-.PHONY: all lib clean
+#object dependancies
+DEPS=$(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
+		 $(OGS_DIR)/ogs.hpp
 
-.SUFFIXES: .f
+SRC =$(wildcard *.c)
+
+OBJS=$(SRC:.c=.o)
+
+.PHONY: all lib clean realclean silentUpdate
 
 all: lib
 
-lib: libBlasLapack.a silentUpdate
+lib: libmesh.a silentUpdate
 
-libBlasLapack.a: $(OBJS)
+libmesh.a: $(OBJS)
 ifneq (,${verbose})
-	$(AR) $(ARFLAGS) libBlasLapack.a *.o
+	ar -cr libmesh.a $(OBJS)
 else
-	@printf "%b" "$(LIB_COLOR)Building $(@F)$(NO_COLOR)\n";
-	@$(AR) $(ARFLAGS) libBlasLapack.a *.o
+	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
+	@ar -cr libmesh.a $(OBJS)
 endif
 
 silentUpdate:
 	@true
 
-.f.o:
+# rule for .c files
+%.o: %.c $(DEPS)
 ifneq (,${verbose})
-	$(FC) $(FCFLAGS) -c $*.f
+	$(CXX) -o $*.o -c $*.c $(MESH_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(FC) $(FCFLAGS) -c $*.f
+	@$(CXX) -o $*.o -c $*.c $(MESH_CXXFLAGS)
 endif
 
+#cleanup
 clean:
-	rm -f libBlasLapack *.o
+	rm -f *.o libmesh.a

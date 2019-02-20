@@ -50,18 +50,18 @@ void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V){
         eP = e;
         fP = f;
       }
-      
+
       /* for each mode on this face find the neighbor mode */
       for(int n=0;n<mesh->Nfp;++n){
         int m = faceModes[n+f*mesh->Nfp]; //get face mode number
 
         for (int i=0;i<mesh->Nfp;i++) {
           int k = mesh->faceNodes[i+f*mesh->Nfp];
-          VM[i] = V[m+k*mesh->Np]; //evaluate mode at WB nodes on face  
+          VM[i] = V[m+k*mesh->Np]; //evaluate mode at WB nodes on face
         }
-        
+
         dfloat mindist = 1E9;
-        int s; 
+        int s;
         int mMatch;
         for (int nP=0;nP<mesh->Nfp;nP++) {
           //test the modes on face fP
@@ -72,7 +72,7 @@ void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V){
             dlong id = i+f*mesh->Nfp+e*mesh->Nfp*mesh->Nfaces;
             int k = mesh->vmapP[id]%mesh->Np;
 
-            VP[i] = V[mP+k*mesh->Np]; //evaluate mode at WB nodes on face     
+            VP[i] = V[mP+k*mesh->Np]; //evaluate mode at WB nodes on face
           }
 
           dfloat dist1=0, dist2=0;
@@ -80,7 +80,7 @@ void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V){
             dist1 += pow(VM[i]-VP[i],2);
             dist2 += pow(VM[i]+VP[i],2);
           }
-          dist1 = sqrt(dist1); 
+          dist1 = sqrt(dist1);
           dist2 = sqrt(dist2);
 
           /* if next node is closer to target update match */
@@ -95,7 +95,7 @@ void meshConnectFaceModes2D(mesh2D *mesh, int *faceModes, dfloat *V){
             s = -1;
           }
         }
-        if(mindist>1e-3) printf("arggh - bad match: e="dlongFormat",f=%d, mode=%d\n", e,f, m);
+        if(mindist>1e-3) printf("arggh - bad match: e=" dlongFormat ",f=%d, mode=%d\n", e,f, m);
 
         dlong id  = mesh->Nfaces*mesh->Nfp*e + f*mesh->Nfp + n;
         dlong idM = faceModes[f*mesh->Nfp+n] + e*mesh->Np;

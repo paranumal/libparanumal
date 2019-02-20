@@ -27,20 +27,20 @@ SOFTWARE.
 #include "acoustics.h"
 
 acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileName){
-	
+
   acoustics_t *acoustics = (acoustics_t*) calloc(1, sizeof(acoustics_t));
 
   newOptions.getArgs("MESH DIMENSION", acoustics->dim);
   newOptions.getArgs("ELEMENT TYPE", acoustics->elementType);
-  
+
   mesh->Nfields = (acoustics->dim==3) ? 4:3;
   acoustics->Nfields = mesh->Nfields;
-  
+
   acoustics->mesh = mesh;
 
   dlong Ntotal = mesh->Nelements*mesh->Np*mesh->Nfields;
   acoustics->Nblock = (Ntotal+blockSize-1)/blockSize;
-  
+
   hlong localElements = (hlong) mesh->Nelements;
   MPI_Allreduce(&localElements, &(acoustics->totalElements), 1, MPI_HLONG, MPI_SUM, mesh->comm);
 
@@ -52,7 +52,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 				sizeof(dfloat));
   acoustics->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 				sizeof(dfloat));
-  
+
   if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     acoustics->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
 		  		sizeof(dfloat));
@@ -77,9 +77,9 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
                               3.0/40.0,        9.0/40.0,            0.0,          0.0,             0.0,       0.0, 0.0,
                              44.0/45.0,      -56.0/15.0,       32.0/9.0,          0.0,             0.0,       0.0, 0.0,
                         19372.0/6561.0, -25360.0/2187.0, 64448.0/6561.0, -212.0/729.0,             0.0,       0.0, 0.0,
-                         9017.0/3168.0,     -355.0/33.0, 46732.0/5247.0,   49.0/176.0, -5103.0/18656.0,       0.0, 0.0, 
+                         9017.0/3168.0,     -355.0/33.0, 46732.0/5247.0,   49.0/176.0, -5103.0/18656.0,       0.0, 0.0,
                             35.0/384.0,             0.0,   500.0/1113.0,  125.0/192.0,  -2187.0/6784.0, 11.0/84.0, 0.0 };
-    dfloat rkE[7] = {71.0/57600.0,  0.0, -71.0/16695.0, 71.0/1920.0, -17253.0/339200.0, 22.0/525.0, -1.0/40.0 }; 
+    dfloat rkE[7] = {71.0/57600.0,  0.0, -71.0/16695.0, 71.0/1920.0, -17253.0/339200.0, 22.0/525.0, -1.0/40.0 };
 
     acoustics->Nrk = Nrk;
     acoustics->rkC = (dfloat*) calloc(acoustics->Nrk, sizeof(dfloat));
@@ -89,7 +89,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     memcpy(acoustics->rkC, rkC, acoustics->Nrk*sizeof(dfloat));
     memcpy(acoustics->rkE, rkE, acoustics->Nrk*sizeof(dfloat));
     memcpy(acoustics->rkA, rkA, acoustics->Nrk*acoustics->Nrk*sizeof(dfloat));
-    
+
     acoustics->dtMIN = 1E-9; //minumum allowed timestep
     acoustics->ATOL = 1E-6;  //absolute error tolerance
     acoustics->RTOL = 1E-6;  //relative error tolerance
@@ -105,7 +105,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     acoustics->invfactor1 = 1.0/acoustics->factor1;
     acoustics->invfactor2 = 1.0/acoustics->factor2;
     acoustics->facold = 1E-4;
-    
+
   }
 
   // fix this later (initial conditions)
@@ -119,7 +119,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       dlong qbase = e*mesh->Np*mesh->Nfields + n;
 
       dfloat u = 0, v = 0, w = 0, r = 0;
-      
+
       acousticsGaussianPulse(x, y, z, t, &r, &u, &v, &w);
       acoustics->q[qbase+0*mesh->Np] = r;
       acoustics->q[qbase+1*mesh->Np] = u;
@@ -131,10 +131,10 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   // set penalty parameter
   mesh->Lambda2 = 0.5;
-  
+
   // set time step
   dfloat hmin = 1e9;
-  for(dlong e=0;e<mesh->Nelements;++e){  
+  for(dlong e=0;e<mesh->Nelements;++e){
 
     for(int f=0;f<mesh->Nfaces;++f){
       dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
@@ -142,10 +142,10 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       dfloat invJ = mesh->sgeo[sid + IJID];
 
       if(invJ<0) printf("invJ = %g\n", invJ);
-      
+
       // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
       // h = 0.5/(sJ/J)
-      
+
       dfloat hest = .5/(sJ*invJ);
 
       hmin = mymin(hmin, hest);
@@ -157,10 +157,10 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   dfloat dtAdv  = hmin/((mesh->N+1.)*(mesh->N+1.));
   dfloat dt = cfl*dtAdv;
-  
+
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
-  
+
   //
   newOptions.getArgs("FINAL TIME", mesh->finalTime);
 
@@ -179,7 +179,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   if (mesh->rank ==0) printf("dt = %g\n", mesh->dt);
 
   // OCCA build stuff
-  
+
   occa::properties kernelInfo;
  kernelInfo["defines"].asObject();
  kernelInfo["includes"].asArray();
@@ -193,18 +193,18 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   //add boundary data to kernel info
   kernelInfo["includes"] += boundaryHeaderFileName;
- 
+
   acoustics->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), acoustics->q);
 
   acoustics->o_saveq =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), acoustics->q);
-  
+
   acoustics->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), acoustics->rhsq);
 
   cout << "TIME INTEGRATOR (" << newOptions.getArgs("TIME INTEGRATOR") << ")" << endl;
-  
+
   if (newOptions.compareArgs("TIME INTEGRATOR","LSERK4")){
     acoustics->o_resq =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), acoustics->resq);
@@ -219,14 +219,14 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       mesh->device.malloc(NrkStages*mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), acoustics->rkrhsq);
     acoustics->o_rkerr =
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), acoustics->rkerr);
-  
+
     acoustics->o_errtmp = mesh->device.malloc(acoustics->Nblock*sizeof(dfloat), acoustics->errtmp);
 
     acoustics->o_rkA = mesh->device.malloc(acoustics->Nrk*acoustics->Nrk*sizeof(dfloat), acoustics->rkA);
     acoustics->o_rkE = mesh->device.malloc(  acoustics->Nrk*sizeof(dfloat), acoustics->rkE);
   }
 
-  
+
   if(mesh->totalHaloPairs>0){
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
@@ -237,13 +237,13 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
     acoustics->o_haloBuffer = mesh->device.malloc(acoustics->haloBytes);
 
-    acoustics->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, acoustics->haloBytes, NULL, acoustics->o_sendBuffer);
-    acoustics->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, acoustics->haloBytes, NULL, acoustics->o_recvBuffer);    
+    acoustics->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, acoustics->haloBytes, NULL, acoustics->o_sendBuffer, acoustics->h_sendBuffer);
+    acoustics->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, acoustics->haloBytes, NULL, acoustics->o_recvBuffer, acoustics->h_recvBuffer);
   }
 
   //  p_RT, p_rbar, p_ubar, p_vbar
   // p_half, p_two, p_third, p_Nstresses
-  
+
   kernelInfo["defines/" "p_Nfields"]= mesh->Nfields;
   const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3., p_zero = 0;
 
@@ -252,7 +252,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   kernelInfo["defines/" "p_half"]= p_half;
   kernelInfo["defines/" "p_third"]= p_third;
   kernelInfo["defines/" "p_zero"]= p_zero;
-  
+
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
@@ -276,7 +276,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   // set kernel name suffix
   char *suffix;
-  
+
   if(acoustics->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
   if(acoustics->elementType==QUADRILATERALS)
@@ -294,13 +294,13 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   printf("fileName=[ %s ] \n", fileName);
   printf("kernelName=[ %s ] \n", kernelName);
-  
+
   acoustics->volumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
   // kernels from surface file
   sprintf(fileName, DACOUSTICS "/okl/acousticsSurface%s.okl", suffix);
   sprintf(kernelName, "acousticsSurface%s", suffix);
-  
+
   acoustics->surfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
   // kernels from update file

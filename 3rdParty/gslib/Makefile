@@ -1,4 +1,36 @@
-include ../../make.inp
+#####################################################################################
+#
+#The MIT License (MIT)
+#
+#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all
+#copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#SOFTWARE.
+#
+#####################################################################################
+
+ifndef LIBP_MAKETOP_LOADED
+ifeq (,$(wildcard ../../make.top))
+  $(error cannot locate ${PWD}/../../make.top)
+else
+  include ../../make.top
+endif
+endif
 
 MPI ?= 1
 MPIIO ?= 1
@@ -6,8 +38,8 @@ ADDUS ?= 1
 USREXIT ?= 0
 LIBNAME ?= gs
 BLAS ?= 0
-CFLAGS ?= $(LIBP_OPT_FLAGS)
-FFLAGS ?= $(LIBP_OPT_FLAGS)
+CFLAGS ?= $(CXXFLAGS)
+FFLAGS ?= $(CXXFLAGS)
 
 SRCROOT=.
 TESTDIR=$(SRCROOT)/tests
@@ -87,17 +119,22 @@ FWRAPPER=$(SRCDIR)/fcrystal.o $(SRCDIR)/findpts.o
 INTP=$(SRCDIR)/findpts_local.o $(SRCDIR)/obbox.o $(SRCDIR)/poly.o \
      $(SRCDIR)/lob_bnd.o $(SRCDIR)/findpts_el_3.o $(SRCDIR)/findpts_el_2.o
 
-.PHONY: all lib install deps tests clean objects odepinfo
+.PHONY: all install deps tests clean objects odepinfo
 
-all : lib tests
+all : $(SRCDIR)/lib$(LIBNAME).a tests
 
-lib: $(GS) $(FWRAPPER) $(INTP) $(SRCDIR)/rand_elt_test.o
+$(SRCDIR)/lib$(LIBNAME).a: $(GS) $(FWRAPPER) $(INTP) $(SRCDIR)/rand_elt_test.o
+ifneq (,${verbose})
+	$(AR) cr $(SRCDIR)/lib$(LIBNAME).a $?
+else
+	@printf "%b" "$(LIB_COLOR)Building library lib$(LIBNAME).a $(NO_COLOR)\n";
 	@$(AR) cr $(SRCDIR)/lib$(LIBNAME).a $?
+endif
 	@ranlib $(SRCDIR)/lib$(LIBNAME).a
 
-install: lib
+install: $(SRCDIR)/lib$(LIBNAME).a
 	@mkdir -p $(INSTALL_ROOT) 2>/dev/null
-	@cp -v $(SRCDIR)/lib$(LIBNAME).a $(INSTALL_ROOT) 2>/dev/null
+	@cp $(SRCDIR)/lib$(LIBNAME).a $(INSTALL_ROOT) 2>/dev/null
 
 tests: $(TESTS) $(FTESTS)
 
@@ -117,10 +154,31 @@ $(FTESTS): % : %.o | lib
 
 -include makefile.cdep
 
-%.o: %.c ; $(CCCMD) -c $< -o $@
-%.o: %.f ; $(FCCMD) -c $< -o $@
-%.s: %.c ; $(CCCMD) -S $< -o $@
-objects: $(OBJECTS) ;
+%.o: %.c
+ifneq (,${verbose})
+	$(CCCMD) -c $< -o $@
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(CCCMD) -c $< -o $@
+endif
+
+%.o: %.f
+ifneq (,${verbose})
+	$(FCCMD) -c $< -o $@
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(FCCMD) -c $< -o $@
+endif
+
+%.s: %.c
+ifneq (,${verbose})
+	$(CCCMD) -S $< -o $@
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(CCCMD) -S $< -o $@
+endif
+
+objects: $(OBJECTS)
 
 #poly_imp.h: gen_poly_imp.c
 #	$(RM) poly_imp.h;

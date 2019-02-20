@@ -31,7 +31,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <complex.h> 
+#include <complex>
 
 #include "mpi.h"
 
@@ -39,81 +39,81 @@ SOFTWARE.
 #include "mesh2D.h"
 #include "mesh3D.h"
 
-// Block size of reduction 
+// Block size of reduction
 #define blockSize 256
 
 typedef struct{
-  int dim; 
+  int dim;
   int elementType;
 
   int Nfields; // Number of fields
 
-  hlong totalElements; 
+  hlong totalElements;
   dlong Nblock;
-	
-  int NrkStages; 
-  int frame; 
+
+  int NrkStages;
+  int frame;
   int fixed_dt;
-	
 
 
-  int Nrhs;   // Number of RHS 
+
+  int Nrhs;   // Number of RHS
   int Nimex;  // IMEX order
-	
+
   int Ntscale; // Dummy remove later!!!
-  dfloat maxError; 
+  dfloat maxError;
 
 
   dfloat dt, cdt, dtMIN;    // time step
   dfloat startTime ; // Start Time
-  dfloat finalTime;  // final time 
+  dfloat finalTime;  // final time
   dfloat Lambda2;    // Penalty flux
-  dfloat cfl; 
+  dfloat cfl;
 
   int NtimeSteps;  // number of time steps
   int Nrk;
   int shiftIndex;    // Rhs index shifting for time steppers
-  int fexplicit; 	//Set time stepper type, fully explicit or semi-analytic / imex 
-  int pmlcubature;  // Set the cunature integration rule for sigma terms in pml 
+  int fexplicit; 	//Set time stepper type, fully explicit or semi-analytic / imex
+  int pmlcubature;  // Set the cunature integration rule for sigma terms in pml
 
-  int probeFlag; 
+  int probeFlag;
   int errorFlag;
   int reportFlag;
-  int writeRestartFile, readRestartFile; 
+  int writeRestartFile, readRestartFile;
 
   int pmlFlag;
   int errorStep;   // number of steps between error calculations
   int reportStep;  // number of steps between error calculations
 
-  int procid; 
+  int procid;
 
   dfloat RT, sqrtRT, tauInv, Ma, Re, nu; // Flow parameters
 
 
-  mesh_t *mesh; 
+  mesh_t *mesh;
 
   dfloat *q, *rhsq, *resq;
-   
-  int tmethod; 
+
+  int tmethod;
 
   // IMEXRK - Kennedy-Carpanter
-  dfloat *rhsqim, *rhsqex, *rkrhsqim, *rkrhsqex; 
+  dfloat *rhsqim, *rhsqex, *rkrhsqim, *rkrhsqex;
 
   // Pml
-  int pmlOrder ; 
-  dfloat  sigmaXmax, sigmaYmax, sigmaZmax; 
-  dfloat *pmlSigmaX, *pmlSigmaY, *pmlSigmaZ; 
+  int pmlOrder ;
+  dfloat  sigmaXmax, sigmaYmax, sigmaZmax;
+  dfloat *pmlSigmaX, *pmlSigmaY, *pmlSigmaZ;
   dfloat *pmlqx, *pmlqy, *pmlqz;
   dfloat *pmlrhsqx, *pmlrhsqy, *pmlrhsqz;
   dfloat *pmlresqx, *pmlresqy, *pmlresqz;
 
   // Some Iso-surfacing variables
-  int isoField, isoColorField, isoNfields, isoNlevels, isoMaxNtris, *isoNtris; 
-  dfloat isoMinVal, isoMaxVal, *isoLevels, *isoq; 
-  size_t isoMax; 
+  int isoField, isoColorField, isoNfields, isoNlevels, isoMaxNtris, *isoNtris;
+  dfloat isoMinVal, isoMaxVal, *isoLevels, *isoq;
+  size_t isoMax;
 
-  occa::memory o_isoLevels, o_isoq, o_isoNtris; 
-  occa::memory o_plotInterp, o_plotEToV; 
+  occa::memory o_isoLevels, o_isoq, o_isoNtris;
+  occa::memory o_plotInterp, o_plotEToV;
 
 
   // IMEX Coefficients
@@ -121,14 +121,14 @@ typedef struct{
   // MRSAAB Coefficients
   dfloat *MRSAAB_A, *MRSAAB_B, *MRSAAB_C, *MRAB_A, *MRAB_B, *MRAB_C;
   // SARK and RK3 Coefficients
-  dfloat RK_A[5][5], RK_B[5], RK_C[5], SARK_A[5][5], SARK_B[5], SARK_C[5]; 
+  dfloat RK_A[5][5], RK_B[5], RK_C[5], SARK_A[5][5], SARK_B[5], SARK_C[5];
   // DOPRI45
   // Change this later this shouldnt be hard-coded
   // dfloat rkC[7], rkA[7*7], rkE[7];
   // dfloat rkC[5], rkA[5*5], rkE[5];
 
-  dfloat *rkC, *rkA, *rkE; 
-    
+  dfloat *rkC, *rkA, *rkE;
+
   // IMEXRK
   dfloat *rkCex, *rkAex, *rkBex, *rkEex;
   dfloat *rkCim, *rkAim, *rkBim, *rkEim;
@@ -138,7 +138,7 @@ typedef struct{
   int *isoGNlevels, isoGNgroups;
   dfloat **isoGLvalues;
 
-  occa::memory *o_isoGLvalues; 
+  occa::memory *o_isoGLvalues;
 
 
 
@@ -147,16 +147,16 @@ typedef struct{
   std::vector<dfloat> iso_nodes;
   std::vector<int> iso_tris;
 
-  int emethod; 
+  int emethod;
   int tstep, atstep, rtstep, tstepAccepted, rkp;
-  dfloat ATOL, RTOL, time; 
-  dfloat *ehist, *dthist; 
+  dfloat ATOL, RTOL, time;
+  dfloat *ehist, *dthist;
 
   dfloat outputInterval, nextOutputTime;
   int outputForceStep;
-  
-  int Nvort;     // Number of vorticity fields i.e. 3 or 4 
-  dfloat *Vort, *VortMag; 
+
+  int Nvort;     // Number of vorticity fields i.e. 3 or 4
+  dfloat *Vort, *VortMag;
   occa::memory o_Vort, o_VortMag;
 
 
@@ -168,22 +168,24 @@ typedef struct{
   occa::memory o_rkq, o_rkrhsq, o_rkerr;
   occa::memory o_errtmp;
 
-  // IMEXRK 
+  // IMEXRK
   occa::memory o_rhsqim, o_rhsqex, o_rkrhsqim, o_rkrhsqex;
-  occa::memory o_rkAex, o_rkEex, o_rkBex;  
-  occa::memory o_rkAim, o_rkEim, o_rkBim; 
+  occa::memory o_rkAex, o_rkEex, o_rkBex;
+  occa::memory o_rkAim, o_rkEim, o_rkBim;
 
 
   occa::memory o_sendBufferPinned;
   occa::memory o_recvBufferPinned;
+  occa::memory h_sendBufferPinned;
+  occa::memory h_recvBufferPinned;
 
 
 
-  dfloat *fQM; 
+  dfloat *fQM;
   occa::memory o_q,o_rhsq, o_resq, o_fQM;
-  occa::memory o_rkA, o_rkE, o_sarkC, o_sarkA, o_sarkE; 
-  occa::memory o_rkqx, o_rkqy, o_rkqz, o_rkrhsqx, o_rkrhsqy, o_rkrhsqz; 
-  occa::memory o_saveq, o_saveqx, o_saveqy, o_saveqz; // for output minor step of addaptive RK 
+  occa::memory o_rkA, o_rkE, o_sarkC, o_sarkA, o_sarkE;
+  occa::memory o_rkqx, o_rkqy, o_rkqz, o_rkrhsqx, o_rkrhsqy, o_rkrhsqz;
+  occa::memory o_saveq, o_saveqx, o_saveqy, o_saveqz; // for output minor step of addaptive RK
 
   // LS Imex vars
   occa::memory o_qY,   o_qZ,   o_qS;
@@ -191,7 +193,7 @@ typedef struct{
   occa::memory o_qYy,  o_qZy,  o_qSy;
 
   occa::memory o_pmlSigmaX, o_pmlSigmaY, o_pmlSigmaZ;
-  occa::memory o_pmlqx, o_pmlqy, o_pmlqz; 
+  occa::memory o_pmlqx, o_pmlqy, o_pmlqz;
   occa::memory o_pmlrhsqx, o_pmlrhsqy, o_pmlrhsqz;
   occa::memory o_pmlresqx, o_pmlresqy, o_pmlresqz;
 
@@ -212,7 +214,7 @@ typedef struct{
   occa::kernel isoSurfaceKernel;
 
   occa::kernel constrainKernel;
-  
+
   // Boltzmann Imex Kernels
   occa::kernel implicitUpdateKernel;
   occa::kernel pmlImplicitUpdateKernel;
@@ -227,11 +229,11 @@ typedef struct{
 
   occa::kernel errorEstimateKernel;
 
-  occa::kernel dotMultiplyKernel; 
-        
+  occa::kernel dotMultiplyKernel;
+
 
   // IMEXRK Damping Terms
-  occa::kernel pmlDampingKernel; 
+  occa::kernel pmlDampingKernel;
 
 
 }bns_t;
@@ -254,15 +256,15 @@ void bnsIsoPlotVTU(bns_t *bns, int isoNtris, dfloat *isoq, char *fileName);
 void bnsIsoWeldPlotVTU(bns_t *bns, char *fileName);
 
 //
-void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time); 
-void bnsRestartRead(bns_t *bns, setupAide &options); 
+void bnsRestartWrite(bns_t *bns, setupAide &options, dfloat time);
+void bnsRestartRead(bns_t *bns, setupAide &options);
 // void bnsRestartSetup(bns_t *bns);
 
 
 // Function for ramp start
 void bnsRampFunction(dfloat t, dfloat *ramp, dfloat *drampdt);
 
-// function for body forcing 
+// function for body forcing
 void bnsBodyForce(dfloat t, dfloat *fx, dfloat *fy, dfloat *fz,
 		  dfloat *intfx, dfloat *intfy, dfloat *intfz);
 
@@ -287,7 +289,7 @@ void bnsRunEmbedded(bns_t *bns, int haloBytes, dfloat * sendBuffer,
 
 int bnsWeldTriVerts(bns_t *bns, int isoNtris, dfloat *isoq);
 
-void bnsIsoPlotGmsh(bns_t *bns, int isoNtris, char *fname, int tstep, int N_offset,     
+void bnsIsoPlotGmsh(bns_t *bns, int isoNtris, char *fname, int tstep, int N_offset,
   					int E_offset, int plotnum, dfloat plottime,    bool bBinary, int procid);
 
 

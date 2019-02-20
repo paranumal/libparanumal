@@ -43,7 +43,8 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   FILE *fp = fopen(fileName, "r");
-  int n;
+
+  char *status;
 
   //  mesh3D *mesh = (mesh3D*) calloc(1, sizeof(mesh3D));
   mesh_t *mesh = new mesh_t[1];
@@ -52,7 +53,7 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
   mesh->size = size;
 
   MPI_Comm_dup(MPI_COMM_WORLD, &mesh->comm);
-  
+
   mesh->dim = 3;
   mesh->Nverts = 3; // number of vertices per element
   mesh->Nfaces = 3;
@@ -76,11 +77,11 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
 
   // look for Nodes section
   do{
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
   }while(!strstr(buf, "$Nodes"));
 
   /* read number of nodes in mesh */
-  fgets(buf, BUFSIZ, fp);
+  status = fgets(buf, BUFSIZ, fp);
   sscanf(buf, hlongFormat, &(mesh->Nnodes));
 
   /* allocate space for node coordinates */
@@ -89,19 +90,19 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
   dfloat *VZ = (dfloat*) calloc(mesh->Nnodes, sizeof(dfloat));
 
   /* load nodes */
-  for(n=0;n<mesh->Nnodes;++n){
-    fgets(buf, BUFSIZ, fp);
+  for(int n=0;n<mesh->Nnodes;++n){
+    status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
 	   VX+n, VY+n, VZ+n);
   }
 
   /* look for section with Element node data */
   do{
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
   }while(!strstr(buf, "$Elements"));
 
   /* read number of nodes in mesh */
-  fgets(buf, BUFSIZ, fp);
+  status = fgets(buf, BUFSIZ, fp);
   sscanf(buf, "%d", &(mesh->Nelements));
 
   /* find # of triangles */
@@ -109,9 +110,9 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
   fgetpos(fp, &fpos);
   int Ntriangles = 0;
   int NboundaryFaces = 0;
-  for(n=0;n<mesh->Nelements;++n){
+  for(int n=0;n<mesh->Nelements;++n){
     int elementType;
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==1) ++NboundaryFaces;
     if(elementType==2) ++Ntriangles;
@@ -141,9 +142,9 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
   Ntriangles = 0;
 
   mesh->boundaryInfo = (hlong*) calloc(NboundaryFaces*3, sizeof(hlong));
-  for(n=0;n<mesh->Nelements;++n){
+  for(int n=0;n<mesh->Nelements;++n){
     int elementType, v1, v2, v3;
-    fgets(buf, BUFSIZ, fp);
+    status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==1){ // boundary face
       sscanf(buf, "%*d%*d %*d" hlongFormat "%*d %d%d",
@@ -163,7 +164,7 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
 	dfloat ze1 = VZ[v1-1], ze2 = VZ[v2-1], ze3 = VZ[v3-1];
 
 #if 0
-	// TW: no idea 
+	// TW: no idea
 	dfloat J = 0.25*((xe2-xe1)*(ye3-ye1) - (xe3-xe1)*(ye2-ye1));
 	if(J<0){
 	  int v3tmp = v3;
@@ -196,7 +197,7 @@ mesh3D* meshParallelReaderTri3D(char *fileName){
   mesh->EY = (dfloat*) calloc(mesh->Nverts*mesh->Nelements, sizeof(dfloat));
   mesh->EZ = (dfloat*) calloc(mesh->Nverts*mesh->Nelements, sizeof(dfloat));
   for(int e=0;e<mesh->Nelements;++e){
-    for(n=0;n<mesh->Nverts;++n){
+    for(int n=0;n<mesh->Nverts;++n){
       mesh->EX[e*mesh->Nverts+n] = VX[mesh->EToV[e*mesh->Nverts+n]];
       mesh->EY[e*mesh->Nverts+n] = VY[mesh->EToV[e*mesh->Nverts+n]];
       mesh->EZ[e*mesh->Nverts+n] = VZ[mesh->EToV[e*mesh->Nverts+n]];

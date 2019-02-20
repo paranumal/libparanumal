@@ -30,8 +30,8 @@ SOFTWARE.
 
 #include "mesh3D.h"
 
-/* 
-   purpose: read gmsh hexrahedra mesh 
+/*
+   purpose: read gmsh hexrahedra mesh
 */
 mesh3D* meshParallelReaderHex3D(char *fileName){
 
@@ -41,7 +41,7 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   FILE *fp = fopen(fileName, "r");
-  
+
   char *status;
 
   //  mesh3D *mesh = (mesh3D*) calloc(1, sizeof(mesh3D));
@@ -51,12 +51,12 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
   mesh->size = size;
 
   MPI_Comm_dup(MPI_COMM_WORLD, &mesh->comm);
-  
+
   mesh->dim = 3;
   mesh->Nverts = 8; // number of vertices per element
   mesh->Nfaces = 6;
   mesh->NfaceVertices = 4;
-  
+
   // vertices on each face
   int faceVertices[6][4] = {{0,1,2,3},{0,1,5,4},{1,2,6,5},{2,3,7,6},{3,0,4,7},{4,5,6,7}};
 
@@ -64,7 +64,7 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
     (int*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(int));
 
   memcpy(mesh->faceVertices, faceVertices[0], mesh->NfaceVertices*mesh->Nfaces*sizeof(int));
-    
+
   if(fp==NULL){
     printf("meshReaderHex3D: could not load file %s\n", fileName);
     exit(0);
@@ -91,7 +91,7 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
            VX+n, VY+n, VZ+n);
 
   }
-  
+
   /* look for section with Element node data */
   do{
     status = fgets(buf, BUFSIZ, fp);
@@ -123,12 +123,12 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
   hlong NhexesLocal = chunk + (rank<remainder);
 
   /* where do these elements start ? */
-  hlong start = rank*chunk + mymin(rank, remainder); 
+  hlong start = rank*chunk + mymin(rank, remainder);
   hlong end = start + NhexesLocal-1;
-  
+
   /* allocate space for Element node index data */
 
-  mesh->EToV 
+  mesh->EToV
     = (hlong*) calloc(NhexesLocal*mesh->Nverts, sizeof(hlong));
 
   mesh->elementInfo
@@ -140,13 +140,13 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
 
   mesh->boundaryInfo = (hlong*) calloc(NboundaryFaces*(mesh->NfaceVertices+1), sizeof(hlong));
   for(hlong n=0;n<Nelements;++n){
-    int elementType; 
+    int elementType;
     hlong v1, v2, v3, v4, v5, v6, v7, v8;
     status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
 
     if(elementType==3){ // quad boundary face
-      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d "hlongFormat hlongFormat hlongFormat hlongFormat, 
+      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d " hlongFormat hlongFormat hlongFormat hlongFormat,
              mesh->boundaryInfo+bcnt*5, &v1, &v2, &v3, &v4);
 
       mesh->boundaryInfo[bcnt*5+1] = v1-1;
@@ -174,7 +174,7 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
         mesh->EToV[cnt*mesh->Nverts+7] = v8-1;
 
         //      printf("%d: %d,%d,%d,%d %d,%d,%d,%d", cnt, v1-1, v2-1,v3-1,v4-1,v5-1,v6-1,v7-1,v8-1);
-        
+
         ++cnt;
       }
       ++Nhexes;
@@ -184,7 +184,7 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
 
   /* record number of boundary faces found */
   mesh->NboundaryFaces = bcnt;
-  
+
   /* record number of found hexes */
   mesh->Nelements = (dlong) NhexesLocal;
 
@@ -200,7 +200,7 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
       mesh->EZ[e*mesh->Nverts+n] = VZ[vid];
     }
   }
-  
+
   /* release VX and VY (these are too big to keep) */
   free(VX);
   free(VY);
@@ -209,4 +209,4 @@ mesh3D* meshParallelReaderHex3D(char *fileName){
   return mesh;
 
 }
-  
+

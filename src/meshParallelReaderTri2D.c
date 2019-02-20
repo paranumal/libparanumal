@@ -46,13 +46,14 @@ mesh2D* meshParallelReaderTri2D(char *fileName){
 
   char *status;
 
-  mesh2D *mesh = (mesh2D*) calloc(1, sizeof(mesh2D));
+  // mesh2D *mesh = (mesh2D*) calloc(1, sizeof(mesh2D));
+  mesh_t *mesh = new mesh_t[1];
 
   mesh->rank = rank;
   mesh->size = size;
 
   MPI_Comm_dup(MPI_COMM_WORLD, &mesh->comm);
-  
+
   mesh->dim = 2;
   mesh->Nverts = 3; // number of vertices per element
   mesh->Nfaces = 3;

@@ -32,14 +32,14 @@ mesh3D *meshSetupHex3D(char *filename, int N){
   mesh3D *mesh = meshParallelReaderHex3D(filename);
 
   mesh->Nfields = 1; // TW: note this is a temporary patch (halo exchange depends on nfields)
-  
+
   // partition elements using Morton ordering & parallel sort
-  //  meshGeometricPartition3D(mesh);
-  meshRecursiveSpectralBisectionPartition(mesh);
+   meshGeometricPartition3D(mesh);
+  // meshRecursiveSpectralBisectionPartition(mesh);
 
   // connect elements using parallel sort
   meshParallelConnect(mesh);
-  
+
   // print out connectivity statistics
   meshPartitionStatistics(mesh);
 
@@ -60,10 +60,10 @@ mesh3D *meshSetupHex3D(char *filename, int N){
 
   // connect face nodes (find trace indices)
   meshConnectFaceNodes3D(mesh);
-  
+
   // compute surface geofacs (including halo)
   meshSurfaceGeometricFactorsHex3D(mesh);
-  
+
   // global nodes
   meshParallelConnectNodes(mesh);
 
@@ -85,12 +85,12 @@ mesh3D *meshSetupHex3D(char *filename, int N){
 		   2526269341429.0/6820363962896.0 ,
 		   2006345519317.0/3224310063776.0 ,
 		   2802321613138.0/2924317926251.0,
-		   1.}; 
+		   1.};
 
   mesh->Nrk = Nrk;
   memcpy(mesh->rka, rka, Nrk*sizeof(dfloat));
   memcpy(mesh->rkb, rkb, Nrk*sizeof(dfloat));
   memcpy(mesh->rkc, rkc, (Nrk+1)*sizeof(dfloat));
-    
+
   return mesh;
 }

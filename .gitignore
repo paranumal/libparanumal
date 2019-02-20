@@ -1,9 +1,10 @@
 *
 !/**/
 !*.*
+!makefile
 !*/*/makefile
 !*/*/Makefile
-!*/*/LICENSE
+!LICENSE
 
 *.o
 *.a

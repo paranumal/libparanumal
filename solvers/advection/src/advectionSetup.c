@@ -274,7 +274,7 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
     advectionMassType = 2;
   }
 
-  
+
   if (newOptions.compareArgs("ADVECTION FORMULATION","COMBINED")){
     advectionCombined = 1;
   }
@@ -448,7 +448,7 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
     // MPI send buffer
     advection->haloBytes = mesh->totalHaloPairs*mesh->Nfp*advection->Nfields*sizeof(dfloat);
-    
+
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
       mesh->device.malloc(advection->haloBytes*sizeof(dfloat));
@@ -457,10 +457,10 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
       mesh->device.malloc(advection->haloBytes);
 
     advection->sendBuffer =
-      (dfloat*) occaHostMallocPinned(mesh->device, advection->haloBytes, NULL, advection->o_sendBuffer);
+      (dfloat*) occaHostMallocPinned(mesh->device, advection->haloBytes, NULL, advection->o_sendBuffer, advection->h_sendBuffer);
 
     advection->recvBuffer =
-      (dfloat*) occaHostMallocPinned(mesh->device, advection->haloBytes, NULL, advection->o_recvBuffer);
+      (dfloat*) occaHostMallocPinned(mesh->device, advection->haloBytes, NULL, advection->o_recvBuffer, advection->h_recvBuffer);
   }
 
   //  p_RT, p_rbar, p_ubar, p_vbar
@@ -602,7 +602,7 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
   sprintf(kernelName, "advectionCombinedNodalWeakMMDGVolume%s", suffix);
 
   advection->invertMassMatrixCombinedKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-  
-  
+
+
   return advection;
 }

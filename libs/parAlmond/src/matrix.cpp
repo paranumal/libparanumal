@@ -294,8 +294,8 @@ void parCSR::haloSetup(hlong *colIds) {
   //shift back to 0-indexed
   for (dlong n=0; n<Ncols; n++) colMap[n]--;
 
-  int *minRank = (int *) calloc(Ncols,sizeof(int));
-  int *maxRank = (int *) calloc(Ncols,sizeof(int));
+  int *minRank = (int *) calloc((unsigned dlong) Ncols,sizeof(int));
+  int *maxRank = (int *) calloc((unsigned dlong) Ncols,sizeof(int));
   for (dlong i=0;i<Ncols;i++) {
     minRank[i] = rank;
     maxRank[i] = rank;

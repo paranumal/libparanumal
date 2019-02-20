@@ -53,14 +53,14 @@ void meshBuildMRABClusters2D(mesh2D *mesh, int lev, dfloat *weights, int *levels
             int *Nclusters, cluster_t **clusters, int *Nelements, cElement_t **newElements);
 
 // geometric partition of clusters of elements in 2D mesh using Morton ordering + parallelSort
-dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, int Nclusters, cluster_t *clusters, 
+dfloat meshClusteredGeometricPartition2D(mesh2D *mesh, int Nclusters, cluster_t *clusters,
                               int *Nelements, cElement_t **elements);
 
 /* ---------------------------------------------------------
 
-This function is a bit spaghetti, but the general idea is 
-we cluster low-MRAB-level elements together along with a 
-halo and partition the mesh of clusters. This reduces the MPI 
+This function is a bit spaghetti, but the general idea is
+we cluster low-MRAB-level elements together along with a
+halo and partition the mesh of clusters. This reduces the MPI
 costs of communicating on the low levels.
 
 The algorithm performs the following steps
@@ -71,8 +71,8 @@ The algorithm performs the following steps
     elements along the processor boundaries to improve the
     partitioning.
   - If the resulting partition is acceptable, save it.
-  - If not, return to the last acceptable partition, and rerun 
-    the mesh setup. 
+  - If not, return to the last acceptable partition, and rerun
+    the mesh setup.
 
 ------------------------------------------------------------ */
 
@@ -115,17 +115,17 @@ void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
     } else {
       if (rank ==0) printf("Regecting level %d clustered partition...(quality = %g)\n", lev, partQuality);
       free(elements); //discard this partition
-      break;  
+      break;
     }
   }
 
-  //save this partition, and perform the mesh setup again. 
+  //save this partition, and perform the mesh setup again.
   mesh->Nelements = acceptedNelements;
 
   mesh->EToV = (hlong*) realloc(mesh->EToV, mesh->Nelements*mesh->Nverts*sizeof(hlong));
   mesh->EX = (dfloat*) realloc(mesh->EX, mesh->Nelements*mesh->Nverts*sizeof(dfloat));
   mesh->EY = (dfloat*) realloc(mesh->EY, mesh->Nelements*mesh->Nverts*sizeof(dfloat));
-  mesh->elementInfo = (int *) realloc(mesh->elementInfo,mesh->Nelements*sizeof(int));
+  mesh->elementInfo = (hlong *) realloc(mesh->elementInfo,mesh->Nelements*sizeof(hlong));
   mesh->MRABlevel = (int *) realloc(mesh->MRABlevel,mesh->Nelements*sizeof(int));
 
   for(dlong e=0;e<mesh->Nelements;++e){
@@ -143,13 +143,13 @@ void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
 
   // print out connectivity statistics
   meshPartitionStatistics(mesh);
-  
+
   // connect elements to boundary faces
   meshConnectBoundary(mesh);
 
   if(mesh->dim==2 && mesh->Nverts==3){ // Triangle
   // compute physical (x,y) locations of the element nodes
-    meshPhysicalNodesTri2D(mesh); 
+    meshPhysicalNodesTri2D(mesh);
     // compute geometric factors
     meshGeometricFactorsTri2D(mesh);
   }
@@ -172,13 +172,13 @@ void meshMRABWeightedPartition2D(mesh2D *mesh, dfloat *weights,
 
   // global nodes
   meshParallelConnectNodes(mesh);
-  
+
   if (mesh->totalHaloPairs) {
     mesh->MRABlevel = (int *) realloc(mesh->MRABlevel,(mesh->Nelements+mesh->totalHaloPairs)*sizeof(int));
     int *MRABsendBuffer = (int *) calloc(mesh->totalHaloPairs,sizeof(int));
     meshHaloExchange(mesh, sizeof(int), mesh->MRABlevel, MRABsendBuffer, mesh->MRABlevel+mesh->Nelements);
     free(MRABsendBuffer);
   }
-  
+
   free(acceptedPartition);
 }

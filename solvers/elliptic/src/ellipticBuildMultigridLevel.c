@@ -29,8 +29,8 @@ SOFTWARE.
 // create elliptic and mesh structs for multigrid levels
 elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf){
 
-  elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
-  //elliptic_t *elliptic = new elliptic_t[1];
+  // elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  elliptic_t *elliptic = new elliptic_t[1];
 
 #if 0
   memcpy(elliptic,baseElliptic,sizeof(elliptic_t));
@@ -60,7 +60,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   elliptic->o_EXYZ = baseElliptic->o_EXYZ;
 
   elliptic->o_ggeoNoJW = baseElliptic->o_ggeoNoJW; // ?
-  
+
   elliptic->weightedInnerProduct1Kernel = baseElliptic->weightedInnerProduct1Kernel;
   elliptic->weightedInnerProduct2Kernel = baseElliptic->weightedInnerProduct2Kernel;
   elliptic->innerProductKernel = baseElliptic->innerProductKernel;
@@ -72,8 +72,8 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 #endif
 
   //populate the mini-mesh using the mesh struct
-  mesh_t *mesh = (mesh_t*) calloc(1,sizeof(mesh_t));
-  //  mesh_t *mesh = new mesh_t[1];
+  // mesh_t *mesh = (mesh_t*) calloc(1,sizeof(mesh_t));
+   mesh_t *mesh = new mesh_t[1];
 
 #ifndef OCCA_VERSION_1_0
   memcpy(mesh,baseElliptic->mesh,sizeof(mesh_t));
@@ -90,7 +90,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   mesh->NfaceVertices = baseElliptic->mesh->NfaceVertices;
 
   mesh->Nfields = baseElliptic->mesh->Nfields;
-  
+
   mesh->Nnodes = baseElliptic->mesh->Nnodes;
   mesh->EX = baseElliptic->mesh->EX; // coordinates of vertices for each element
   mesh->EY = baseElliptic->mesh->EY;
@@ -159,9 +159,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->device.UsePreCompiledKernels(0);
     occa::host().UsePreCompiledKernels(0);
   }
-  
+
 #endif
-  
+
   mesh->defaultStream = baseElliptic->mesh->defaultStream;
   mesh->dataStream = baseElliptic->mesh->dataStream;
 
@@ -252,15 +252,15 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       dfloat XMIN = -1, XMAX = +1; // default bi-unit cube
       dfloat YMIN = -1, YMAX = +1;
       dfloat ZMIN = -1, ZMAX = +1;
-      
+
       options.getArgs("BOX XMIN", XMIN);
       options.getArgs("BOX YMIN", YMIN);
       options.getArgs("BOX ZMIN", ZMIN);
-      
+
       options.getArgs("BOX XMAX", XMAX);
       options.getArgs("BOX YMAX", YMAX);
       options.getArgs("BOX ZMAX", ZMAX);
-      
+
       meshConnectPeriodicFaceNodes3D(mesh, XMAX-XMIN, YMAX-YMIN, ZMAX-ZMIN);
     }
     meshSurfaceGeometricFactorsHex3D(mesh);
@@ -635,7 +635,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 	DT[j*mesh->Nq+i] = mesh->D[i*mesh->Nq+j];
       }
     }
-    
+
     for (int k=0;k<mesh->Nq;k++) {
       for (int j=0;j<mesh->Nq;j++) {
         for (int i=0;i<mesh->Nq;i++) {
@@ -650,10 +650,10 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->o_Smatrices = mesh->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), DT); // transpose(D)
 
     mesh->o_cubD = mesh->device.malloc(mesh->cubNq*mesh->cubNq*sizeof(dfloat), mesh->cubD);
-    
+
     dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
     for(int n=0;n<mesh->Nq;++n){
-      for(int m=0;m<mesh->cubNq;++m){        
+      for(int m=0;m<mesh->cubNq;++m){
         cubInterpT[m+n*mesh->cubNq] = mesh->cubInterp[m*mesh->Nq+n];
       }
     }
@@ -661,7 +661,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->o_cubInterpT = mesh->device.malloc(mesh->cubNq*mesh->Nq*sizeof(dfloat), cubInterpT);
 
     free(cubInterpT);
-    
+
     mesh->o_vgeo =
       mesh->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
                           mesh->vgeo);
@@ -677,7 +677,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     mesh->o_cubggeo =
       mesh->device.malloc(mesh->Nelements*mesh->cubNp*mesh->Nggeo*sizeof(dfloat),
                           mesh->cubggeo);
-    
+
 
     mesh->o_vmapM =
       mesh->device.malloc(mesh->Nelements*mesh->Nfp*mesh->Nfaces*sizeof(dlong),
@@ -796,7 +796,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
   // HERE
   occa::properties kernelInfo = ellipticKernelInfo(mesh);
-  
+
   //  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
   // set kernel name suffix
@@ -826,9 +826,9 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     MPI_Barrier(mesh->comm);
 
     if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
-      
+
       kernelInfo["defines/" "p_blockSize"]= blockSize;
-      
+
       // add custom defines
       kernelInfo["defines/" "p_NpP"]= (mesh->Np+mesh->Nfp*mesh->Nfaces);
       kernelInfo["defines/" "p_Nverts"]= mesh->Nverts;
@@ -871,10 +871,10 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
 
       printf("rank = %d, size = %d\n", mesh->rank, mesh->size);
       //      std::cout << dfloatKernelInfo << std::endl;
-      
+
       sprintf(fileName, DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
       sprintf(kernelName, "ellipticAx%s", suffix);
-      elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo); 
+      elliptic->AxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
 
       // check for trilinear
       if(elliptic->elementType!=HEXAHEDRA){
@@ -898,12 +898,12 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
       if(elliptic->elementType==HEXAHEDRA){
 	//	printf("BUILDING partialCubatureAxKernel\n");
 	sprintf(fileName,  DELLIPTIC "/okl/ellipticCubatureAx%s.okl", suffix);
-	
+
 	sprintf(kernelName, "ellipticCubaturePartialAx%s", suffix);
 	elliptic->partialCubatureAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
       }
 
-      
+
       if (options.compareArgs("BASIS", "BERN")) {
 
         sprintf(fileName, DELLIPTIC "/okl/ellipticGradientBB%s.okl", suffix);
@@ -944,13 +944,13 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
   }
 
   //new precon struct
-  elliptic->precon = (precon_t *) calloc(1,sizeof(precon_t));
-  //  elliptic->precon = new precon_t[1];
+  // elliptic->precon = (precon_t *) calloc(1,sizeof(precon_t));
+   elliptic->precon = new precon_t[1];
 
   for (int r=0;r<2;r++){
 
     MPI_Barrier(mesh->comm);
-    
+
     if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
 
       sprintf(fileName, DELLIPTIC "/okl/ellipticBlockJacobiPrecon.okl");
@@ -1015,7 +1015,7 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     }
     MPI_Barrier(mesh->comm);
   }
-  
+
   if(elliptic->elementType==HEXAHEDRA){
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
       if(options.compareArgs("ELEMENT MAP", "TRILINEAR")){

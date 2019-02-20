@@ -34,7 +34,7 @@ SOFTWARE.
 void insPlotWallsVTUHex3D(ins_t *ins, char *fileNameBase){
 
   mesh_t *mesh = ins->mesh;
-  
+
   int rank;
   rank = mesh->rank;
 
@@ -47,7 +47,7 @@ void insPlotWallsVTUHex3D(ins_t *ins, char *fileNameBase){
       }
     }
   }
-  
+
   FILE *fp;
   char fileName[BUFSIZ];
   sprintf(fileName, "%s_%04d.vtu", fileNameBase, rank);
@@ -60,14 +60,14 @@ void insPlotWallsVTUHex3D(ins_t *ins, char *fileNameBase){
   printf("N = %d, Nwalls = " hlongFormat ", Nel = %d\n",
 	 mesh->Nq-1, Nwalls, mesh->Nelements);
 
-  fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\""hlongFormat"\">\n",
-          mesh->Nelements*mesh->Np, 
+  fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"" hlongFormat "\">\n",
+          mesh->Nelements*mesh->Np,
           Nwalls*(mesh->Nq-1)*(mesh->Nq-1));
-  
+
   // write out nodes
   fprintf(fp, "      <Points>\n");
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  
+
   // compute plot node coordinates on the fly
   for(hlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
@@ -81,7 +81,7 @@ void insPlotWallsVTUHex3D(ins_t *ins, char *fileNameBase){
   }
   fprintf(fp, "        </DataArray>\n");
   fprintf(fp, "      </Points>\n");
-  
+
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
 
@@ -96,7 +96,7 @@ void insPlotWallsVTUHex3D(ins_t *ins, char *fileNameBase){
 	    int v3 = mesh->faceNodes[f*mesh->Nfp + (j+1)*mesh->Nq + i+1];
 	    int v4 = mesh->faceNodes[f*mesh->Nfp + (j+1)*mesh->Nq + i];
 
-	    fprintf(fp, 
+	    fprintf(fp,
 		    hlongFormat" "
 		    hlongFormat" "
 		    hlongFormat" "
@@ -107,9 +107,9 @@ void insPlotWallsVTUHex3D(ins_t *ins, char *fileNameBase){
       }
     }
   }
-  
+
   fprintf(fp, "        </DataArray>\n");
-  
+
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
   dlong cnt = 0;
   for(dlong w=0;w<Nwalls*(mesh->Nq-1)*(mesh->Nq-1);++w){
@@ -118,7 +118,7 @@ void insPlotWallsVTUHex3D(ins_t *ins, char *fileNameBase){
     fprintf(fp, dlongFormat"\n", cnt);
   }
   fprintf(fp, "       </DataArray>\n");
-  
+
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
   for(dlong w=0;w<Nwalls*(mesh->Nq-1)*(mesh->Nq-1);++w){
     fprintf(fp, "9\n"); // quad code ?

@@ -1,0 +1,84 @@
+#####################################################################################
+#
+#The MIT License (MIT)
+#
+#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all
+#copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#SOFTWARE.
+#
+#####################################################################################
+
+#can be GNU or INTEL
+LIBP_ARCH=GNU
+
+#absolute path to libparanumal
+export LIBP_DIR:=$(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+
+export LIBP_INCLUDE_DIR=${LIBP_DIR}/include
+export LIBP_TPL_DIR=${LIBP_DIR}/3rdParty
+export LIBP_LIBS_DIR=${LIBP_DIR}/libs
+
+#include OCCA
+ifndef OCCA_DIR
+  $(error environment variable [OCCA_DIR] is not set)
+endif
+ifeq (,$(wildcard ${OCCA_DIR}/scripts/Makefile))
+  $(error cannot locate {OCCA_DIR}/scripts/Makefile)
+else
+  include ${OCCA_DIR}/scripts/Makefile
+endif
+
+#compilers to use for C/C++
+export CC = mpicc
+export CXX= mpic++
+export LD	= mpic++
+
+export CXXFLAGS=-fopenmp -g
+
+export LIBP_LIBS=-L$(OCCA_DIR)/lib -locca $(links)
+
+export LIBP_DEFINES=-DUSE_OCCA_MEM_BYTE_ALIGN=32 \
+						  		  -DOCCA_VERSION_1_0=1 \
+						  		  -DUSE_NULL_PROJECTION=1 \
+						  		  # -DUSE_MASTER_NOEL=1
+						  		  # -DUSE_NULL_PROJECT=1
+						  		  # -DUSE_NULL_BOOST=1
+
+export LIBP_INCLUDES=-I${LIBP_INCLUDE_DIR} -I${OCCA_DIR}/include
+
+ifeq (GNU,${LIBP_ARCH})
+  CXXFLAGS+=-DUSE_OCCA_MEM_BYTE_ALIGN=32 -O2 -mavx2 -ftree-vectorize -march=native
+  #-funroll-all-loops
+  #LIBP_LIBS+=-L/opt/apps/gcc5_2/atlas/3.10.2/lib/ -llapack -latlas  -lf77blas -lcblas -lptcblas -lptf77blas -lsatlas  -lgfortran  -L../../../libxsmm/lib -lxsmm -ldl
+else ifeq (INTEL,${LIBP_ARCH})
+  CXXFLAGS+=-funroll-loops -xHost
+  LIBP_LIBS+=-L/opt/apps/intel15_3/mkl/11.2.3/lib/intel64  -lmkl_rt
+  #  -fopt-info-vec-missed  -fopt-info
+  #-fopt-info
+else
+  $(error unknown arch for [LIBP_ARCH] specified)
+endif
+
+export OBJ_COLOR = \033[0;36m
+export LIB_COLOR = \033[0;34m
+export EXE_COLOR = \033[0;32m
+export SOL_COLOR = \033[0;33m
+export NO_COLOR  = \033[m
+
+export LIBP_MAKETOP_LOADED=true

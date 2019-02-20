@@ -82,10 +82,10 @@ void ellipticBuildJacobi(elliptic_t* elliptic, dfloat lambda, dfloat **invDiagA)
             if(nj==j && ni==i)
               B[mode*mesh->Np+node] = 1;
             if(nj==j)
-              Br[mode*mesh->Np+node] = mesh->D[ni+mesh->Nq*i]; 
+              Br[mode*mesh->Np+node] = mesh->D[ni+mesh->Nq*i];
             if(ni==i)
-              Bs[mode*mesh->Np+node] = mesh->D[nj+mesh->Nq*j]; 
-            
+              Bs[mode*mesh->Np+node] = mesh->D[nj+mesh->Nq*j];
+
             ++node;
           }
         }
@@ -109,17 +109,17 @@ void ellipticBuildJacobi(elliptic_t* elliptic, dfloat lambda, dfloat **invDiagA)
                 if(nk==k && nj==j && ni==i)
                   B[mode*mesh->Np+node] = 1;
                 if(nj==j && nk==k)
-                  Br[mode*mesh->Np+node] = mesh->D[ni+mesh->Nq*i]; 
+                  Br[mode*mesh->Np+node] = mesh->D[ni+mesh->Nq*i];
                 if(ni==i && nk==k)
-                  Bs[mode*mesh->Np+node] = mesh->D[nj+mesh->Nq*j]; 
+                  Bs[mode*mesh->Np+node] = mesh->D[nj+mesh->Nq*j];
                 if(ni==i && nj==j)
-                  Bt[mode*mesh->Np+node] = mesh->D[nk+mesh->Nq*k]; 
-                
+                  Bt[mode*mesh->Np+node] = mesh->D[nk+mesh->Nq*k];
+
                 ++node;
               }
             }
           }
-          
+
           ++mode;
         }
       }
@@ -136,52 +136,52 @@ void ellipticBuildJacobi(elliptic_t* elliptic, dfloat lambda, dfloat **invDiagA)
 
   if (options.compareArgs("DISCRETIZATION","IPDG")) {
     switch(elliptic->elementType){
-      case TRIANGLES: 
+      case TRIANGLES:
         if (options.compareArgs("BASIS","BERN")) {
-          #pragma omp parallel for 
+          #pragma omp parallel for
           for(dlong eM=0;eM<mesh->Nelements;++eM)
-            BuildLocalIpdgBBDiagTri2D(elliptic, mesh, lambda, MS, eM, diagA + eM*mesh->Np);   
+            BuildLocalIpdgBBDiagTri2D(elliptic, mesh, lambda, MS, eM, diagA + eM*mesh->Np);
         } else {
 	  if(mesh->dim==2){
-#pragma omp parallel for 
+#pragma omp parallel for
 	    for(dlong eM=0;eM<mesh->Nelements;++eM){
 	      BuildLocalIpdgDiagTri2D(elliptic, mesh, lambda, MS, eM, diagA + eM*mesh->Np);
 	    }
 	  }
 	  else{
-#pragma omp parallel for 
-	    for(dlong eM=0;eM<mesh->Nelements;++eM){	      
+#pragma omp parallel for
+	    for(dlong eM=0;eM<mesh->Nelements;++eM){
 	      BuildLocalIpdgDiagTri3D(elliptic, mesh, lambda, MS, eM, diagA + eM*mesh->Np);
 	    }
 	  }
-        } 
+        }
         break;
       case QUADRILATERALS:
-        #pragma omp parallel for 
+        #pragma omp parallel for
         for(dlong eM=0;eM<mesh->Nelements;++eM)
           BuildLocalIpdgDiagQuad2D(elliptic, mesh, lambda, MS, B, Br, Bs, eM, diagA + eM*mesh->Np);
 	// TW: MISSING
         break;
       case TETRAHEDRA:
-        #pragma omp parallel for 
+        #pragma omp parallel for
         for(dlong eM=0;eM<mesh->Nelements;++eM)
-          BuildLocalIpdgDiagTet3D(elliptic, mesh, lambda, MS, eM, diagA + eM*mesh->Np); 
+          BuildLocalIpdgDiagTet3D(elliptic, mesh, lambda, MS, eM, diagA + eM*mesh->Np);
         break;
       case HEXAHEDRA:
-        #pragma omp parallel for 
+        #pragma omp parallel for
         for(dlong eM=0;eM<mesh->Nelements;++eM)
-          BuildLocalIpdgDiagHex3D(elliptic, mesh, lambda, MS, B, Br, Bs, Bt, eM, diagA + eM*mesh->Np); 
+          BuildLocalIpdgDiagHex3D(elliptic, mesh, lambda, MS, B, Br, Bs, Bt, eM, diagA + eM*mesh->Np);
         break;
     }
   } else if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) {
     switch(elliptic->elementType){
-      case TRIANGLES: 
-        #pragma omp parallel for 
+      case TRIANGLES:
+        #pragma omp parallel for
         for(dlong eM=0;eM<mesh->Nelements;++eM)
           BuildLocalContinuousDiagTri2D(elliptic, mesh, lambda, eM, diagA + eM*mesh->Np);
         break;
       case QUADRILATERALS:{
-        #pragma omp parallel for 
+        #pragma omp parallel for
         for(dlong eM=0;eM<mesh->Nelements;++eM){
           if(elliptic->dim==2)
             BuildLocalContinuousDiagQuad2D(elliptic, mesh, lambda, eM, B, Br, Bs, diagA + eM*mesh->Np);
@@ -190,21 +190,21 @@ void ellipticBuildJacobi(elliptic_t* elliptic, dfloat lambda, dfloat **invDiagA)
           }
         }break;
       case TETRAHEDRA:
-        #pragma omp parallel for 
+        #pragma omp parallel for
         for(dlong eM=0;eM<mesh->Nelements;++eM)
           BuildLocalContinuousDiagTet3D(elliptic, mesh, lambda, eM, diagA + eM*mesh->Np);
         break;
       case HEXAHEDRA:
-        #pragma omp parallel for 
+        #pragma omp parallel for
         for(dlong eM=0;eM<mesh->Nelements;++eM)
           BuildLocalContinuousDiagHex3D(elliptic, mesh, lambda, eM, B, Br, Bs, Bt, diagA + eM*mesh->Np);
         break;
     }
   }
 
-  if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) 
+  if (options.compareArgs("DISCRETIZATION","CONTINUOUS"))
     ogsGatherScatter(diagA, ogsDfloat, ogsAdd, elliptic->ogs);
-    
+
   *invDiagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
   for (dlong n=0;n<mesh->Nelements*mesh->Np;n++) {
     (*invDiagA)[n] = 1/diagA[n];
@@ -278,7 +278,7 @@ void BuildLocalIpdgDiagTri2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, 
     // penalty term just involves face nodes
     for(int n=0;n<mesh->Nfp;++n){
       int nM = mesh->faceNodes[fM*mesh->Nfp+n];
-      
+
       for(int m=0;m<mesh->Nfp;++m){
         int mM = mesh->faceNodes[fM*mesh->Nfp+m];
         if (mM == nM) {
@@ -398,7 +398,7 @@ void BuildLocalIpdgDiagTri3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, 
     // penalty term just involves face nodes
     for(int n=0;n<mesh->Nfp;++n){
       int nM = mesh->faceNodes[fM*mesh->Nfp+n];
-      
+
       for(int m=0;m<mesh->Nfp;++m){
         int mM = mesh->faceNodes[fM*mesh->Nfp+m];
         if (mM == nM) {
@@ -502,7 +502,7 @@ void BuildLocalContinuousDiagTri2D(elliptic_t* elliptic, mesh_t *mesh, dfloat la
     for(int n=0;n<mesh->Np;++n){
       if (elliptic->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
         A[n] += elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
-      } 
+      }
     }
   }
 }
@@ -520,7 +520,7 @@ void BuildLocalIpdgDiagQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda,
       dfloat dsdx = mesh->vgeo[base+mesh->Np*SXID];
       dfloat dsdy = mesh->vgeo[base+mesh->Np*SYID];
       dfloat JW   = mesh->vgeo[base+mesh->Np*JWID];
-      
+
       int idn = n*mesh->Np+i;
       dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn];
       dfloat dlndy = drdy*Br[idn] + dsdy*Bs[idn];
@@ -546,16 +546,16 @@ void BuildLocalIpdgDiagQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda,
         dfloat ny = mesh->sgeo[base+NYID];
         dfloat wsJ = mesh->sgeo[base+WSJID];
         dfloat hinv = mesh->sgeo[base+IHID];
-        
+
         // form negative trace terms in IPDG
-        int idnM = n*mesh->Np+vidM; 
+        int idnM = n*mesh->Np+vidM;
 
         dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM];
         dfloat dlndyM = drdyM*Br[idnM] + dsdyM*Bs[idnM];
         dfloat ndotgradlnM = nx*dlndxM+ny*dlndyM;
         dfloat lnM = B[idnM];
-        
-        dfloat penalty = elliptic->tau*hinv;     
+
+        dfloat penalty = elliptic->tau*hinv;
         int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
 
         int bcD = 0, bcN =0;
@@ -570,7 +570,7 @@ void BuildLocalIpdgDiagQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda,
         } else if(bcType==2){ // Neumann
           bcD = 0;
           bcN = 1;
-        }   
+        }
 
         A[n] += -0.5*(1+bcD)*(1-bcN)*wsJ*lnM*ndotgradlnM;  // -(ln^-, N.grad lm^-)
         A[n] += -0.5*(1+bcD)*(1-bcN)*wsJ*ndotgradlnM*lnM;  // -(N.grad ln^-, lm^-)
@@ -580,13 +580,13 @@ void BuildLocalIpdgDiagQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda,
   }
 }
 
-void BuildLocalContinuousDiagQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dlong eM, 
+void BuildLocalContinuousDiagQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dlong eM,
                                     dfloat *B, dfloat *Br, dfloat* Bs, dfloat *A) {
 
   for (int ny=0;ny<mesh->Nq;ny++) {
     for (int nx=0;nx<mesh->Nq;nx++) {
       int iid = nx+ny*mesh->Nq;
-      if (elliptic->mapB[nx+ny*mesh->Nq+eM*mesh->Np]!=1) {    
+      if (elliptic->mapB[nx+ny*mesh->Nq+eM*mesh->Np]!=1) {
         A[iid] = 0;
 
         for (int k=0;k<mesh->Nq;k++) {
@@ -619,7 +619,7 @@ void BuildLocalContinuousDiagQuad2D(elliptic_t* elliptic, mesh_t *mesh, dfloat l
     for(int n=0;n<mesh->Np;++n){
       if (elliptic->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
         A[n] += elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
-      } 
+      }
     }
   }
 }
@@ -643,7 +643,7 @@ void BuildLocalIpdgDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda,
       dfloat dtdy = mesh->vgeo[base+mesh->Np*TYID];
       dfloat dtdz = mesh->vgeo[base+mesh->Np*TZID];
       dfloat JW   = mesh->vgeo[base+mesh->Np*JWID];
-      
+
       int idn = n*mesh->Np+i;
       dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn] + dtdx;
       dfloat dlndy = drdy*Br[idn] + dsdy*Bs[idn] + dtdy;
@@ -662,11 +662,11 @@ void BuildLocalIpdgDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda,
         dfloat drdxM = mesh->vgeo[baseM+mesh->Np*RXID];
         dfloat drdyM = mesh->vgeo[baseM+mesh->Np*RYID];
         dfloat drdzM = mesh->vgeo[baseM+mesh->Np*RZID];
-        
+
         dfloat dsdxM = mesh->vgeo[baseM+mesh->Np*SXID];
         dfloat dsdyM = mesh->vgeo[baseM+mesh->Np*SYID];
         dfloat dsdzM = mesh->vgeo[baseM+mesh->Np*SZID];
-        
+
         dfloat dtdxM = mesh->vgeo[baseM+mesh->Np*TXID];
         dfloat dtdyM = mesh->vgeo[baseM+mesh->Np*TYID];
         dfloat dtdzM = mesh->vgeo[baseM+mesh->Np*TZID];
@@ -678,18 +678,18 @@ void BuildLocalIpdgDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda,
         dfloat nz = mesh->sgeo[base+NZID];
         dfloat wsJ = mesh->sgeo[base+WSJID];
         dfloat hinv = mesh->sgeo[base+IHID];
-        
+
         // form negative trace terms in IPDG
-        int idnM = n*mesh->Np+vidM; 
+        int idnM = n*mesh->Np+vidM;
 
         dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM] + dtdxM;
         dfloat dlndyM = drdyM*Br[idnM] + dsdyM*Bs[idnM] + dtdyM;
         dfloat dlndzM = drdzM*Br[idnM] + dsdzM*Bs[idnM] + dtdzM;
         dfloat ndotgradlnM = nx*dlndxM+ny*dlndyM+nz*dlndzM ;
         dfloat lnM = B[idnM];
-        
-        dfloat penalty = elliptic->tau*hinv;     
-       
+
+        dfloat penalty = elliptic->tau*hinv;
+
         A[n] += -0.5*wsJ*lnM*ndotgradlnM;  // -(ln^-, N.grad lm^-)
         A[n] += -0.5*wsJ*ndotgradlnM*lnM;  // -(N.grad ln^-, lm^-)
         A[n] += +0.5*wsJ*penalty*lnM*lnM; // +((tau/h)*ln^-,lm^-)
@@ -698,7 +698,7 @@ void BuildLocalIpdgDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda,
   }
 }
 
-void BuildLocalContinuousDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dlong eM, 
+void BuildLocalContinuousDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, dlong eM,
                                     dfloat *B, dfloat *Br, dfloat* Bs, dfloat *A) {
 
   for (int ny=0;ny<mesh->Nq;ny++) {
@@ -729,10 +729,10 @@ void BuildLocalContinuousDiagQuad3D(elliptic_t* elliptic, mesh_t *mesh, dfloat l
       // id = nx+ny*mesh->Nq;
       // dfloat Gst = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G12ID*mesh->Np];
       // A[iid] += 2*Gst*mesh->D[ny+ny*mesh->Nq];
-      
+
       // dfloat Gtt = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + G22ID*mesh->Np];
       // A[iid] += Gtt;
-      
+
 
 
       dfloat JW  = mesh->ggeo[eM*mesh->Np*mesh->Nggeo + id + GWJID*mesh->Np];
@@ -912,7 +912,7 @@ void BuildLocalContinuousDiagTet3D(elliptic_t* elliptic, mesh_t *mesh, dfloat la
     for(int n=0;n<mesh->Np;++n){
       if (elliptic->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
         A[n] += elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
-      } 
+      }
     }
   }
 }
@@ -935,11 +935,11 @@ void BuildLocalIpdgDiagHex3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, 
       dfloat dtdy = mesh->vgeo[base+mesh->Np*TYID];
       dfloat dtdz = mesh->vgeo[base+mesh->Np*TZID];
       dfloat JW   = mesh->vgeo[base+mesh->Np*JWID];
-      
+
       int idn = n*mesh->Np+i;
       dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn] + dtdx*Bt[idn];
       dfloat dlndy = drdy*Br[idn] + dsdy*Bs[idn] + dtdy*Bt[idn];
-      dfloat dlndz = drdz*Br[idn] + dsdz*Bs[idn] + dtdz*Bt[idn];    
+      dfloat dlndz = drdz*Br[idn] + dsdz*Bs[idn] + dtdz*Bt[idn];
       A[n] += JW*(dlndx*dlndx+dlndy*dlndy+dlndz*dlndz);
       A[n] += lambda*JW*B[idn]*B[idn];
     }
@@ -968,16 +968,16 @@ void BuildLocalIpdgDiagHex3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, 
         dfloat nz = mesh->sgeo[base+NZID];
         dfloat wsJ = mesh->sgeo[base+WSJID];
         dfloat hinv = mesh->sgeo[base+IHID];
-        
+
         // form negative trace terms in IPDG
-        int idnM = n*mesh->Np+vidM; 
+        int idnM = n*mesh->Np+vidM;
         dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM] + dtdxM*Bt[idnM];
         dfloat dlndyM = drdyM*Br[idnM] + dsdyM*Bs[idnM] + dtdyM*Bt[idnM];
         dfloat dlndzM = drdzM*Br[idnM] + dsdzM*Bs[idnM] + dtdzM*Bt[idnM];
         dfloat ndotgradlnM = nx*dlndxM+ny*dlndyM+nz*dlndzM;
         dfloat lnM = B[idnM];
-        
-        dfloat penalty = elliptic->tau*hinv;     
+
+        dfloat penalty = elliptic->tau*hinv;
         int bc = mesh->EToB[fM+mesh->Nfaces*eM]; //raw boundary flag
 
         int bcD = 0, bcN =0;
@@ -992,7 +992,7 @@ void BuildLocalIpdgDiagHex3D(elliptic_t* elliptic, mesh_t *mesh, dfloat lambda, 
         } else if(bcType==2){ // Neumann
           bcD = 0;
           bcN = 1;
-        }   
+        }
 
         A[n] += -0.5*(1+bcD)*(1-bcN)*wsJ*lnM*ndotgradlnM;  // -(ln^-, N.grad lm^-)
         A[n] += -0.5*(1+bcD)*(1-bcN)*wsJ*ndotgradlnM*lnM;  // -(N.grad ln^-, lm^-)
@@ -1007,19 +1007,19 @@ void BuildLocalContinuousDiagHex3D(elliptic_t* elliptic, mesh_t *mesh, dfloat la
   for (int ny=0;ny<mesh->Nq;ny++) {
   for (int nx=0;nx<mesh->Nq;nx++) {
     int idn = nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
-    if (elliptic->mapB[idn+eM*mesh->Np]!=1) {            
+    if (elliptic->mapB[idn+eM*mesh->Np]!=1) {
       A[idn] = 0;
 
       int id = nx+ny*mesh->Nq+nz*mesh->Nq*mesh->Nq;
       dlong base = eM*mesh->Np*mesh->Nggeo;
 
-    
+
       dfloat Grs = mesh->ggeo[base + id + G01ID*mesh->Np];
       A[idn] += 2*Grs*mesh->D[nx+nx*mesh->Nq]*mesh->D[ny+ny*mesh->Nq];
 
       dfloat Grt = mesh->ggeo[base + id + G02ID*mesh->Np];
       A[idn] += 2*Grt*mesh->D[nx+nx*mesh->Nq]*mesh->D[nz+nz*mesh->Nq];
-    
+
       dfloat Gst = mesh->ggeo[base + id + G12ID*mesh->Np];
       A[idn] += 2*Gst*mesh->D[ny+ny*mesh->Nq]*mesh->D[nz+nz*mesh->Nq];
 
@@ -1034,13 +1034,13 @@ void BuildLocalContinuousDiagHex3D(elliptic_t* elliptic, mesh_t *mesh, dfloat la
         dfloat Gss = mesh->ggeo[base + iid + G11ID*mesh->Np];
         A[idn] += Gss*mesh->D[ny+k*mesh->Nq]*mesh->D[ny+k*mesh->Nq];
       }
-    
+
       for (int k=0;k<mesh->Nq;k++) {
         int iid = nx+ny*mesh->Nq+k*mesh->Nq*mesh->Nq;
         dfloat Gtt = mesh->ggeo[base + iid + G22ID*mesh->Np];
         A[idn] += Gtt*mesh->D[nz+k*mesh->Nq]*mesh->D[nz+k*mesh->Nq];
       }
-      
+
       dfloat JW = mesh->ggeo[base + id + GWJID*mesh->Np];
       A[idn] += JW*lambda;
     } else {
@@ -1055,7 +1055,7 @@ void BuildLocalContinuousDiagHex3D(elliptic_t* elliptic, mesh_t *mesh, dfloat la
     for(int n=0;n<mesh->Np;++n){
       if (elliptic->mapB[n+eM*mesh->Np]!=1) { //dont fill rows for masked nodes
         A[n] += elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
-      } 
+      }
     }
   }
 }

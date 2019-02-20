@@ -1,129 +1,194 @@
-ifndef OCCA_DIR
-ERROR:
-	@echo "Error, environment variable [OCCA_DIR] is not set"
+#####################################################################################
+#
+#The MIT License (MIT)
+#
+#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all
+#copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#SOFTWARE.
+#
+#####################################################################################
+
+define CNS_HELP_MSG
+
+Compressible Navier-Stokes flow solver makefile targets:
+
+   make cnsMain (default)
+   make lib
+   make clean
+   make clean-libs
+   make realclean
+   make info
+   make help
+
+Usage:
+
+make cnsMain
+   Build cnsMain executable.
+make lib
+   Build libcns.a solver library.
+make clean
+   Clean the cnsMain executable, library, and object files.
+make clean-libs
+   In addition to "make clean", also clean the mesh and ogs libraries.
+make realclean
+   In addition to "make clean-libs", also clean 3rd party libraries.
+make info
+   List directories and compiler flags in use.
+make help
+   Display this help message.
+
+Can use "make verbose=true" for verbose output.
+
+endef
+
+ifeq (,$(filter cnsMain lib clean clean-libs \
+                realclean info help,$(MAKECMDGOALS)))
+ifneq (,$(MAKECMDGOALS))
+$(error ${CNS_HELP_MSG})
+endif
 endif
 
-CXXFLAGS = -g
+ifndef LIBP_MAKETOP_LOADED
+ifeq (,$(wildcard ../../make.top))
+$(error cannot locate ${PWD}/../../make.top)
+else
+include ../../make.top
+endif
+endif
 
-include ${OCCA_DIR}/scripts/Makefile
+#libraries
+GS_DIR       =${LIBP_TPL_DIR}/gslib
+BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
+OGS_DIR      =${LIBP_LIBS_DIR}/gatherScatter
+MESH_DIR     =${LIBP_DIR}/src
 
-# define variables
-HDRDIR  = ../../include
-GSDIR  = ../../3rdParty/gslib
-OGSDIR  = ../../libs/gatherScatter
+#includes
+INCLUDES=-I. \
+         -I$(OGS_DIR) \
+         ${LIBP_INCLUDES}
 
-# set options for this machine
-# specify which compilers to use for c, fortran and linking
-CC	= mpic++
-LD	= mpic++
+#defines
+DEFINES =${LIBP_DEFINES} \
+         -DDHOLMES='"${LIBP_DIR}"' \
+         -DDCNS='"${CURDIR}"'
 
-# compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DCNS='"${CURDIR}"'   
+#.cpp compilation flags
+CNS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
-# link flags to be used 
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
+#link libraries
+LIBS=-L$(MESH_DIR) -lmesh \
+     -L$(OGS_DIR) -logs \
+     -L$(GS_DIR)/lib -lgs \
+     -L${BLAS_DIR} -lBlasLapack \
+     -lgfortran \
+     ${LIBP_LIBS}
 
-# libraries to be linked in
-LIBS	=   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
-			-L$(OCCA_DIR)/lib $(links)
+#link flags
+LFLAGS=${CNS_CXXFLAGS} ${LIBS}
 
-INCLUDES = cns.h
+#object dependancies
+DEPS=$(wildcard *.h) \
+     $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
+     $(OGS_DIR)/ogs.hpp
 
-DEPS = $(INCLUDES) \
-$(HDRDIR)/mesh.h \
-$(HDRDIR)/mesh3D.h \
-$(OGSDIR)/ogs.hpp 
+SRC =$(wildcard src/*.c)
+OBJS=$(SRC:.c=.o)
 
-# types of files we are going to construct rules for
-.SUFFIXES: .c 
+.PHONY: all lib libmesh libogs libblas clean clean-libs realclean help info
+
+all: cnsMain
+
+lib: libcns.a
+
+cnsMain:$(OBJS) cnsMain.o | libmesh
+ifneq (,${verbose})
+	$(LD) -o cnsMain cnsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+else
+	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
+	@$(LD) -o cnsMain cnsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+endif
+
+libcns.a: $(OBJS)
+ifneq (,${verbose})
+	ar -cr libcns.a $(OBJS)
+else
+	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
+	@ar -cr libcns.a $(OBJS)
+endif
+
+libmesh: libogs libgs libblas
+ifneq (,${verbose})
+	${MAKE} -C ${MESH_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${MESH_DIR} lib --no-print-directory
+endif
+
+libogs: libgs
+ifneq (,${verbose})
+	${MAKE} -C ${OGS_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${OGS_DIR} lib --no-print-directory
+endif
+
+libgs:
+ifneq (,${verbose})
+	${MAKE} -C $(GS_DIR) install verbose=${verbose}
+else
+	@${MAKE} -C $(GS_DIR) install --no-print-directory
+endif
+
+libblas:
+ifneq (,${verbose})
+	${MAKE} -C ${BLAS_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${BLAS_DIR} lib --no-print-directory
+endif
 
 # rule for .c files
-.c.o: $(DEPS)
-	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths) 
+%.o: %.c $(DEPS) | libmesh
+ifneq (,${verbose})
+	$(CXX) -o $*.o -c $*.c $(CNS_CXXFLAGS)
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(CXX) -o $*.o -c $*.c $(CNS_CXXFLAGS)
+endif
 
-# list of objects to be compiled
-OBJS    = \
-./src/cnsEstimate.o \
-./src/cnsBodyForce.o \
-./src/cnsStep.o \
-./src/cnsMain.o \
-./src/cnsError.o \
-./src/cnsForces.o \
-./src/cnsRun.o \
-./src/cnsSetup.o \
-./src/cnsGaussianPulse.o \
-./src/cnsPlotVTU.o \
-./src/cnsReport.o \
-./src/cnsBrownMinionQuad3D.o \
-../../src/meshConnect.o \
-../../src/meshConnectBoundary.o \
-../../src/meshConnectFaceNodes2D.o \
-../../src/meshConnectFaceNodes3D.o \
-../../src/meshGeometricFactorsTet3D.o \
-../../src/meshGeometricFactorsHex3D.o \
-../../src/meshGeometricFactorsTri2D.o \
-../../src/meshGeometricFactorsQuad2D.o \
-../../src/meshGeometricFactorsQuad3D.o \
-../../src/meshGeometricPartition2D.o \
-../../src/meshGeometricPartition3D.o \
-../../src/meshHaloExchange.o \
-../../src/meshHaloExtract.o \
-../../src/meshHaloSetup.o \
-../../src/meshLoadReferenceNodesTri2D.o \
-../../src/meshLoadReferenceNodesQuad2D.o \
-../../src/meshLoadReferenceNodesTet3D.o \
-../../src/meshLoadReferenceNodesHex3D.o \
-../../src/meshOccaSetup2D.o \
-../../src/meshOccaSetup3D.o \
-../../src/meshOccaSetupQuad3D.o \
-../../src/meshParallelConnectNodes.o \
-../../src/meshParallelConnectOpt.o \
-../../src/meshParallelPrint2D.o \
-../../src/meshParallelReaderTri2D.o \
-../../src/meshParallelReaderQuad2D.o \
-../../src/meshParallelReaderQuad3D.o \
-../../src/meshParallelReaderTet3D.o \
-../../src/meshParallelReaderHex3D.o \
-../../src/meshPartitionStatistics.o \
-../../src/meshPhysicalNodesTri2D.o \
-../../src/meshPhysicalNodesQuad2D.o \
-../../src/meshPhysicalNodesQuad3D.o \
-../../src/meshPhysicalNodesTet3D.o \
-../../src/meshPhysicalNodesHex3D.o \
-../../src/meshPlotVTU2D.o \
-../../src/meshPlotVTU3D.o \
-../../src/meshPrint2D.o \
-../../src/meshPrint3D.o \
-../../src/meshSetupTri2D.o \
-../../src/meshSetupQuad2D.o \
-../../src/meshSetupQuad3D.o \
-../../src/meshSetupTet3D.o \
-../../src/meshSetupHex3D.o \
-../../src/meshSurfaceGeometricFactorsTri2D.o \
-../../src/meshSurfaceGeometricFactorsQuad2D.o \
-../../src/meshSurfaceGeometricFactorsQuad3D.o \
-../../src/meshSurfaceGeometricFactorsTet3D.o \
-../../src/meshSurfaceGeometricFactorsHex3D.o \
-../../src/meshVTU2D.o \
-../../src/meshVTU3D.o \
-../../src/mysort.o \
-../../src/parallelSort.o \
-../../src/setupAide.o \
-../../src/trace.o \
-../../src/readArray.o \
-../../src/occaDeviceConfig.o \
-../../src/occaHostMallocPinned.o \
-../../src/timer.o
+#cleanup
+clean:
+	rm -f src/*.o cnsMain libcns.a
 
+clean-libs: clean
+	${MAKE} -C ${OGS_DIR} clean
+	${MAKE} -C ${MESH_DIR} clean
 
-cnsMain:$(OBJS) libogs
-	$(LD)  $(LDFLAGS)  -o cnsMain $(OBJS) $(paths) $(LIBS) 
+realclean: clean-libs
+	${MAKE} -C ${GS_DIR} clean
+	${MAKE} -C ${BLAS_DIR} clean
 
-libogs:
-	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/cns
+help:
+	$(info $(value CNS_HELP_MSG))
+	@true
 
-# what to do if user types "make clean"
-clean :
-	rm -r $(OBJS) cnsMain
-
-
+info:
+	$(info OCCA_DIR  = $(OCCA_DIR))
+	$(info LIBP_DIR  = $(LIBP_DIR))
+	$(info LIBP_ARCH = $(LIBP_ARCH))
+	$(info CXXFLAGS  = $(CNS_CXXFLAGS))
+	$(info LIBS      = $(LIBS))
+	@true

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,20 +24,49 @@ SOFTWARE.
 
 */
 
-#include "parAlmond.hpp"
+/* compile with C compiler (not C++) */
 
-void occaTimerTic(occa::device device,std::string name) {
-  std::string profilerOn = occa::env::var("OCCA_PROFILE");
-  if (profilerOn == "1") {
-    device.finish();
-    occa::tic(name);
+#include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
+
+#include "gslib.h"
+
+#include "types.h"
+
+void *gsParallelGatherScatterSetup(MPI_Comm meshComm,
+				   dlong NuniqueBases,
+				   hlong *gatherGlobalNodes,
+                                   int verbose){
+
+  /* gslib stuff */
+  comm_ext world;
+  struct comm com;
+
+  /*  MPI_Comm_dup(MPI_COMM_WORLD, (MPI_Comm*) &world); */
+  world = (comm_ext)meshComm; // MPI_COMM_WORLD;
+
+  comm_init(&com, world);
+
+  /* for the moment borrow gslib array */
+  slong *id = tmalloc(slong, NuniqueBases);
+
+  dlong n;
+  for(n=0;n<NuniqueBases;++n){ /* at some point need to choose int */
+    id[n] = (slong) gatherGlobalNodes[n];
   }
+
+  struct gs_data *gsh = gs_setup(id, NuniqueBases, &com, 0, gs_auto, verbose);
+
+  free(id);
+
+  return gsh;
 }
 
-void occaTimerToc(occa::device device,std::string name) {
-  std::string profilerOn = occa::env::var("OCCA_PROFILE");
-  if (profilerOn == "1") {
-    device.finish();
-    occa::toc(name);
-  }
+
+void gsParallelGatherScatterDestroy(void *gsh){
+
+  gs_free(gsh);
+
 }

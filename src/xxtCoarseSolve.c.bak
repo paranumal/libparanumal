@@ -51,14 +51,14 @@ typedef struct {
 
 } crs_t;
 
-void * xxtSetup(uint  numLocalRows, 
+void * xxtSetup(uint  numLocalRows,
                 void* rowIds,
-                uint  nnz, 
+                uint  nnz,
                 void* Ai,
                 void* Aj,
                 void* Avals,
                 int   nullSpace,
-                const char* intType, 
+                const char* intType,
                 const char* dfloatType) {
 
   int n;
@@ -82,26 +82,26 @@ void * xxtSetup(uint  numLocalRows,
 
   if (!strcmp(intType,"int")) { //int
     crsA->Ai = (uint*) calloc(nnz, sizeof(uint));
-    crsA->Aj = (uint*) calloc(nnz, sizeof(uint));      
-    
+    crsA->Aj = (uint*) calloc(nnz, sizeof(uint));
+
     crsA->rowIds = (ulong*) malloc(numLocalRows*sizeof(ulong));
     int *rowIdsInt = (int*) rowIds;
     for (n=0;n<numLocalRows;n++) crsA->rowIds[n] = (ulong) rowIdsInt[n];
-    
+
     for(n=0;n<nnz;++n){
       crsA->Ai[n] = ((int*)Ai)[n];
       crsA->Aj[n] = ((int*)Aj)[n];
     }
-    
+
   } else { //long
     printf("Exiting due to use of ulong in intType %s\n", intType);
     exit(-1);
 #if 0
     crsA->Ai = (ulong*) calloc(nnz, sizeof(ulong));
-    crsA->Aj = (ulong*) calloc(nnz, sizeof(ulong));  
+    crsA->Aj = (ulong*) calloc(nnz, sizeof(ulong));
 
     crsA->rowIds = (ulong *) rowIds;
-    
+
     for(n=0;n<nnz;++n){
       crsA->Ai[n] = ((ulong*)Ai)[n];
       crsA->Aj[n] = ((ulong*)Aj)[n];
@@ -133,10 +133,10 @@ void xxtSolve(void* x,
   int n;
   float *xFloat;
   float *rhsFloat;
-  
+
   crs_t *crsA = (crs_t *) A;
 
-  if (!strcmp(crsA->dfloatType,"float")) {  
+  if (!strcmp(crsA->dfloatType,"float")) {
     xFloat   = (float *) x;
     rhsFloat = (float *) rhs;
     for (n=0;n<crsA->numLocalRows;n++) {
@@ -149,9 +149,9 @@ void xxtSolve(void* x,
   }
 
   crs_solve(crsA->x,crsA->A,crsA->rhs);
-  
+
   if (!strcmp(crsA->dfloatType,"float")) {
-    
+
     float *xFloat   = (float *) x;
     float *rhsFloat = (float *) rhs;
     for (n=0;n<crsA->numLocalRows;n++) {
@@ -165,13 +165,13 @@ void xxtFree(void* A) {
 
   crs_free(crsA->A);
 
-  if (!strcmp(crsA->dfloatType,"float")) { 
+  if (!strcmp(crsA->dfloatType,"float")) {
     free(crsA->Avals);
-    free(crsA->x);  
+    free(crsA->x);
     free(crsA->rhs);
   }
 
-  if (!strcmp(crsA->intType,"int")) { 
+  if (!strcmp(crsA->intType,"int")) {
     free(crsA->rowIds);
   }
 }

@@ -27,21 +27,21 @@ SOFTWARE.
 #include "cns.h"
 
 cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
-        
+
   cns_t *cns = (cns_t*) calloc(1, sizeof(cns_t));
 
   options.getArgs("MESH DIMENSION", cns->dim);
   options.getArgs("ELEMENT TYPE", cns->elementType);
-  
+
   mesh->Nfields = (cns->dim==3) ? 4:3;
   cns->Nfields = mesh->Nfields;
-  
+
   cns->Nstresses = (cns->dim==3) ? 6:3;
   cns->mesh = mesh;
 
   dlong Ntotal = mesh->Nelements*mesh->Np*mesh->Nfields;
   cns->Nblock = (Ntotal+blockSize-1)/blockSize;
-  
+
   hlong localElements = (hlong) mesh->Nelements;
   MPI_Allreduce(&localElements, &(cns->totalElements), 1, MPI_HLONG, MPI_SUM, mesh->comm);
 
@@ -59,7 +59,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
   check = options.getArgs("RBAR", cns->rbar);
   if(!check) printf("WARNING setup file does not include RBAR\n");
-  
+
   check = options.getArgs("UBAR", cns->ubar);
   if(!check) printf("WARNING setup file does not include UBAR\n");
 
@@ -68,7 +68,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
   check = options.getArgs("WBAR", cns->wbar);
   if(!check) printf("WARNING setup file does not include WBAR\n");
-  
+
   check = options.getArgs("VISCOSITY", cns->mu);
   if(!check) printf("WARNING setup file does not include VISCOSITY\n");
 
@@ -80,19 +80,19 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   cns->RT = soundSpeed*soundSpeed;
 
   cns->outputForceStep = 0;
-  
+
   options.getArgs("TSTEPS FOR FORCE OUTPUT",   cns->outputForceStep);
-  
+
   // compute samples of q at interpolation nodes
   //  mesh->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
   //                                sizeof(dfloat));
 
   cns->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 			       sizeof(dfloat));
-  
+
   cns->rhsq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
                                 sizeof(dfloat));
-  
+
   if (options.compareArgs("TIME INTEGRATOR","LSERK4")){
     cns->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*mesh->Nfields,
                                 sizeof(dfloat));
@@ -117,9 +117,9 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
                               3.0/40.0,        9.0/40.0,            0.0,          0.0,             0.0,       0.0, 0.0,
                              44.0/45.0,      -56.0/15.0,       32.0/9.0,          0.0,             0.0,       0.0, 0.0,
                         19372.0/6561.0, -25360.0/2187.0, 64448.0/6561.0, -212.0/729.0,             0.0,       0.0, 0.0,
-                         9017.0/3168.0,     -355.0/33.0, 46732.0/5247.0,   49.0/176.0, -5103.0/18656.0,       0.0, 0.0, 
+                         9017.0/3168.0,     -355.0/33.0, 46732.0/5247.0,   49.0/176.0, -5103.0/18656.0,       0.0, 0.0,
                             35.0/384.0,             0.0,   500.0/1113.0,  125.0/192.0,  -2187.0/6784.0, 11.0/84.0, 0.0 };
-    dfloat rkE[7] = {71.0/57600.0,  0.0, -71.0/16695.0, 71.0/1920.0, -17253.0/339200.0, 22.0/525.0, -1.0/40.0 }; 
+    dfloat rkE[7] = {71.0/57600.0,  0.0, -71.0/16695.0, 71.0/1920.0, -17253.0/339200.0, 22.0/525.0, -1.0/40.0 };
 
     cns->Nrk = Nrk;
     cns->rkC = (dfloat*) calloc(cns->Nrk, sizeof(dfloat));
@@ -132,10 +132,10 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     memcpy(cns->rkE, rkE, cns->Nrk*sizeof(dfloat));
     memcpy(cns->rkA, rkA, cns->Nrk*cns->Nrk*sizeof(dfloat));
 
-    cns->ATOL    = 1.0; options.getArgs("ABSOLUTE TOLERANCE",   cns->ATOL); 
+    cns->ATOL    = 1.0; options.getArgs("ABSOLUTE TOLERANCE",   cns->ATOL);
     cns->RTOL    = 1.0; options.getArgs("RELATIVE TOLERANCE",   cns->RTOL);
     cns->dtMIN   = 1.0; options.getArgs("MINUMUM TIME STEP SIZE",   cns->dtMIN);
-    cns->dtMAX   = 1.0; options.getArgs("MAXIMUM TIME STEP SIZE",   cns->dtMAX); 
+    cns->dtMAX   = 1.0; options.getArgs("MAXIMUM TIME STEP SIZE",   cns->dtMAX);
 
     cns->safe = 0.9;   //safety factor
 
@@ -149,7 +149,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     cns->invfactor1 = 1.0/cns->factor1;
     cns->invfactor2 = 1.0/cns->factor2;
     cns->facold = 1E-4;
-    
+
   }
 
   cns->viscousStresses = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*cns->Nstresses,
@@ -161,12 +161,12 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   cnsBodyForce(0.0, &fx, &fy, &fz, &intfx, &intfy, &intfz);
 
   printf("setting up initial condition\n");
-  
+
   if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION")){
     cnsBrownMinionQuad3D(cns);
   }
   else{
-    
+
     // fix this later (initial conditions)
     for(dlong e=0;e<mesh->Nelements;++e){
       for(int n=0;n<mesh->Np;++n){
@@ -176,7 +176,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 	dfloat z = mesh->z[n + mesh->Np*e];
 
 	dlong qbase = e*mesh->Np*mesh->Nfields + n;
-	
+
 #if 0
 	cnsGaussianPulse(x, y, z, t,
                        cns->q+qbase,
@@ -196,10 +196,10 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
   // set penalty parameter
   mesh->Lambda2 = 0.5;
-  
+
   // set time step
   dfloat hmin = 1e9;
-  for(dlong e=0;e<mesh->Nelements;++e){  
+  for(dlong e=0;e<mesh->Nelements;++e){
 
     for(int f=0;f<mesh->Nfaces;++f){
       dlong sid = mesh->Nsgeo*(mesh->Nfaces*e + f);
@@ -207,10 +207,10 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
       dfloat invJ = mesh->sgeo[sid + IJID];
 
       if(invJ<0) printf("invJ = %g\n", invJ);
-      
+
       // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
       // h = 0.5/(sJ/J)
-      
+
       dfloat hest = .5/(sJ*invJ);
 
       hmin = mymin(hmin, hest);
@@ -225,10 +225,10 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
   dfloat dt = cfl*mymin(dtAdv, dtVisc);
   dt = cfl*dtAdv;
-  
+
   // MPI_Allreduce to get global minimum dt
   MPI_Allreduce(&dt, &(mesh->dt), 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
-  
+
   //
   options.getArgs("FINAL TIME", mesh->finalTime);
 
@@ -247,7 +247,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   if (mesh->rank ==0) printf("dt = %g\n", mesh->dt);
 
   // OCCA build stuff
-  
+
   occa::properties kernelInfo;
   kernelInfo["defines"].asObject();
   kernelInfo["includes"].asArray();
@@ -255,7 +255,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   kernelInfo["flags"].asObject();
 
   printf("occa setup\n");
-  
+
   if(cns->dim==3){
     if(cns->elementType != QUADRILATERALS)
       meshOccaSetup3D(mesh, options, kernelInfo);
@@ -266,29 +266,29 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     meshOccaSetup2D(mesh, options, kernelInfo);
 
   printf("occa array setup\n");
-  
-  //add boundary data to kernel info  
-  string boundaryHeaderFileName; 
+
+  //add boundary data to kernel info
+  string boundaryHeaderFileName;
   options.getArgs("DATA FILE", boundaryHeaderFileName);
   kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
- 
+
   cns->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), cns->q);
 
   cns->o_saveq =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), cns->q);
 
-  
+
   cns->o_viscousStresses =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*cns->Nstresses*sizeof(dfloat),
                         cns->viscousStresses);
-  
+
   cns->o_rhsq =
     mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->rhsq);
 
   if (mesh->rank==0)
     cout << "TIME INTEGRATOR (" << options.getArgs("TIME INTEGRATOR") << ")" << endl;
-  
+
   if (options.compareArgs("TIME INTEGRATOR","LSERK4")){
     cns->o_resq =
       mesh->device.malloc(mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->resq);
@@ -302,7 +302,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
       mesh->device.malloc(NrkStages*mesh->Np*mesh->Nelements*mesh->Nfields*sizeof(dfloat), cns->rkrhsq);
     cns->o_rkerr =
       mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), cns->rkerr);
-  
+
     cns->o_errtmp = mesh->device.malloc(cns->Nblock*sizeof(dfloat), cns->errtmp);
 
     cns->o_rkA = mesh->device.malloc(cns->Nrk*cns->Nrk*sizeof(dfloat), cns->rkA);
@@ -311,9 +311,9 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     cns->o_rkoutB = mesh->device.malloc(cns->Nrk*sizeof(dfloat), cns->rkoutB);
   }
 
-  
+
   cns->o_Vort = mesh->device.malloc(3*mesh->Np*mesh->Nelements*sizeof(dfloat), cns->Vort); // 3 components
-  
+
 
   if(mesh->totalHaloPairs>0){
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
@@ -322,20 +322,20 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
     cns->o_haloStressesBuffer =
       mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*cns->Nstresses*sizeof(dfloat));
-  
+
     // MPI send buffer
     cns->haloBytes = mesh->totalHaloPairs*mesh->Np*cns->Nfields*sizeof(dfloat);
     cns->haloStressesBytes = mesh->totalHaloPairs*mesh->Np*cns->Nstresses*sizeof(dfloat);
-    
+
     cns->o_haloBuffer = mesh->device.malloc(cns->haloBytes);
     cns->o_haloStressesBuffer = mesh->device.malloc(cns->haloStressesBytes);
-    
-    cns->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloBytes, NULL, cns->o_sendBuffer);
-    cns->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloBytes, NULL, cns->o_recvBuffer);
-    cns->sendStressesBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloStressesBytes, NULL, cns->o_sendStressesBuffer);
-    cns->recvStressesBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloStressesBytes, NULL, cns->o_recvStressesBuffer);
+
+    cns->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloBytes, NULL, cns->o_sendBuffer, cns->h_sendBuffer);
+    cns->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloBytes, NULL, cns->o_recvBuffer, cns->h_recvBuffer);
+    cns->sendStressesBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloStressesBytes, NULL, cns->o_sendStressesBuffer, cns->h_sendStressesBuffer);
+    cns->recvStressesBuffer = (dfloat*) occaHostMallocPinned(mesh->device, cns->haloStressesBytes, NULL, cns->o_recvStressesBuffer, cns->h_recvStressesBuffer);
   }
-  
+
   kernelInfo["defines/" "p_Nfields"]= mesh->Nfields;
   kernelInfo["defines/" "p_Nstresses"]= cns->Nstresses;
 
@@ -343,12 +343,12 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
   dfloat sqrtRT = sqrt(cns->RT);
   kernelInfo["defines/" "p_sqrtRT"]= sqrtRT;
-  
+
   kernelInfo["defines/" "p_rbar"]= cns->rbar;
   kernelInfo["defines/" "p_ubar"]= cns->ubar;
   kernelInfo["defines/" "p_vbar"]= cns->vbar;
   kernelInfo["defines/" "p_wbar"]= cns->wbar;
-  
+
 
   const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3., p_zero = 0;
 
@@ -357,7 +357,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   kernelInfo["defines/" "p_half"]= p_half;
   kernelInfo["defines/" "p_third"]= p_third;
   kernelInfo["defines/" "p_zero"]= p_zero;
-  
+
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
@@ -377,7 +377,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
     kernelInfo["defines/" "p_fainv"] = (dfloat) 0.0;
     kernelInfo["defines/" "p_invRadiusSq"] = (dfloat) 1./(mesh->sphereRadius*mesh->sphereRadius);
   }
-  
+
   kernelInfo["defines/" "p_blockSize"]= blockSize;
 
 
@@ -385,7 +385,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
   // set kernel name suffix
   char *suffix;
-  
+
   if(cns->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
   if(cns->elementType==QUADRILATERALS){
@@ -402,14 +402,14 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
   printf("Building kernels\n");
-  
+
   for (int r=0;r<mesh->size;r++) {
     if (r==mesh->rank) {
 
       // kernels from volume file
       sprintf(fileName, DCNS "/okl/cnsVolume%s.okl", suffix);
       sprintf(kernelName, "cnsVolume%s", suffix);
-      
+
       cns->volumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "cnsStressesVolume%s", suffix);
@@ -418,7 +418,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
       // kernels from surface file
       sprintf(fileName, DCNS "/okl/cnsSurface%s.okl", suffix);
       sprintf(kernelName, "cnsSurface%s", suffix);
-      
+
       cns->surfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       sprintf(kernelName, "cnsStressesSurface%s", suffix);
@@ -428,20 +428,20 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 	// kernels from cubature volume file
 	sprintf(fileName, DCNS "/okl/cnsCubatureVolume%s.okl", suffix);
 	sprintf(kernelName, "cnsCubatureVolume%s", suffix);
-	
+
 	cns->cubatureVolumeKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-	
+
 	// kernels from cubature surface file
 	sprintf(fileName, DCNS "/okl/cnsCubatureSurface%s.okl", suffix);
 	sprintf(kernelName, "cnsCubatureSurface%s", suffix);
-	
+
 	cns->cubatureSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
-      
+
       // kernels from vorticity file
       sprintf(fileName, DCNS "/okl/cnsVorticity%s.okl", suffix);
       sprintf(kernelName, "cnsVorticity%s", suffix);
-      
+
       cns->vorticityKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 
@@ -486,6 +486,6 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
   }
 
   printf("done building kernels\n");
-  
+
   return cns;
 }

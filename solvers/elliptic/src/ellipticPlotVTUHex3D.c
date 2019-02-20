@@ -37,7 +37,7 @@ void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld);
 }
 
 void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld){
-  
+
   int rank;
   rank = mesh->rank;
 
@@ -55,14 +55,14 @@ void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld){
   //  printf("N = %d, Eloc = %d, Nel = %d\n",
   //	 mesh->Nq-1, Eloc, mesh->Nelements);
 
-  fprintf(fp, "    <Piece NumberOfPoints=\""dlongFormat"\" NumberOfCells=\""dlongFormat"\">\n", 
-          mesh->Nelements*mesh->Np, 
+  fprintf(fp, "    <Piece NumberOfPoints=\"" dlongFormat "\" NumberOfCells=\"" dlongFormat "\">\n",
+          mesh->Nelements*mesh->Np,
           mesh->Nelements*Eloc);
-  
+
   // write out nodes
   fprintf(fp, "      <Points>\n");
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  
+
   // compute plot node coordinates on the fly
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
@@ -78,11 +78,11 @@ void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld){
   fprintf(fp, "      </Points>\n");
 
   //  printf("Nelements = %d, Np = %d\n", mesh->Nelements, mesh->Np);
-  
+
   // write out pressure
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"pressure\" Format=\"ascii\">\n");
-  
+
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
       dfloat qn = mesh->q[n+fld*mesh->Np + e*mesh->Nfields*mesh->Np];
@@ -93,16 +93,16 @@ void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld){
 
   fprintf(fp, "       </DataArray>\n");
   fprintf(fp, "     </PointData>\n");
-  
+
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
-  
+
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int k=0;k<mesh->Nq-1;++k){
       for(int j=0;j<mesh->Nq-1;++j){
 	for(int i=0;i<mesh->Nq-1;++i){
 	  int b = e*mesh->Np + i + j*mesh->Nq + k*mesh->Nq*mesh->Nq;
-	  fprintf(fp, 
+	  fprintf(fp,
 		  dlongFormat" "
 		  dlongFormat" "
 		  dlongFormat" "
@@ -123,9 +123,9 @@ void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld){
       }
     }
   }
-  
+
   fprintf(fp, "        </DataArray>\n");
-  
+
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
   dlong cnt = 0;
   for(dlong e=0;e<mesh->Nelements;++e){
@@ -136,7 +136,7 @@ void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld){
     }
   }
   fprintf(fp, "       </DataArray>\n");
-  
+
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<Eloc;++n){

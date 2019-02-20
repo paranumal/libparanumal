@@ -28,7 +28,7 @@ SOFTWARE.
 
 void bnsTimeStepperCoefficients(bns_t *bns, setupAide &options){
 
-  mesh_t *mesh = bns->mesh; 
+  mesh_t *mesh = bns->mesh;
 
   if(options.compareArgs("TIME INTEGRATOR","MRSAAB")){
 
@@ -40,11 +40,12 @@ void bnsTimeStepperCoefficients(bns_t *bns, setupAide &options){
       Nlevels = mesh->MRABNlevels;
 
     // Create circle on complex plane
-    const int Nr = 32; 
-    dfloat complex R[Nr]; 
+    const int Nr = 32;
+    std::complex<dfloat> R[Nr];
     for(int ind =1; ind <= Nr; ++ind){
-      const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr; 
-      R[ind-1] = cexp(I*M_PI* theta);
+      const dfloat theta = (dfloat) (ind - 0.5) / (dfloat) Nr;
+      std::complex<dfloat> z = 0. + M_PI* theta *1i;
+      R[ind-1] = exp(z);
     }
 
 
@@ -55,33 +56,33 @@ void bnsTimeStepperCoefficients(bns_t *bns, setupAide &options){
     bns->MRAB_B   = (dfloat *) calloc(3*3*Nlevels,sizeof(dfloat));
     bns->MRAB_C   = (dfloat *) calloc(    Nlevels,sizeof(dfloat));
 
-    int MRABorder = 3; 
+    int MRABorder = 3;
 
     for(int l = 0; l<Nlevels; ++l){
       // MRSAAB coefficients
       dfloat alpha = -bns->tauInv*bns->dt*pow(2,l);
       //dfloat alpha=0.0;
-      dfloat h  = bns->dt * pow(2,l); 
+      dfloat h  = bns->dt * pow(2,l);
       //
       for (int order=0; order<3; ++order){
         // computation of coefficients based on magnitude
         const int id = order*Nlevels*3 + l*3;
         if(order==0){
 
-          double complex a1 = 0. + 0.* I; 
-          double complex b1 = 0. + 0.* I; 
+          std::complex<double> a1 = 0. + 0.* 1i;
+          std::complex<double> b1 = 0. + 0.* 1i;
 
           for(int i = 0; i<Nr; ++i ){
-            double complex lr = alpha  + R[i];
-            a1 +=  h*(cexp(lr) - 1.)/lr;
-            b1 +=  h*(cexp(lr/2.) - 1.)/lr;
+            std::complex<double> lr = alpha  + R[i];
+            a1 +=  h*(exp(lr) - 1.)/lr;
+            b1 +=  h*(exp(lr/2.) - 1.)/lr;
           }
           // Full dt coeeficients
-          bns->MRSAAB_A[id + 0] = creal(a1)/Nr;
+          bns->MRSAAB_A[id + 0] = real(a1)/Nr;
           bns->MRSAAB_A[id + 1] = 0.f;
           bns->MRSAAB_A[id + 2] = 0.f;
           // Half coefficients
-          bns->MRSAAB_B[id + 0] = creal(b1)/Nr;
+          bns->MRSAAB_B[id + 0] = real(b1)/Nr;
           bns->MRSAAB_B[id + 1] = 0.f;
           bns->MRSAAB_B[id + 2] = 0.f;
 
@@ -96,25 +97,25 @@ void bnsTimeStepperCoefficients(bns_t *bns, setupAide &options){
 
         }else if(order==1){
 
-          double complex a1 = 0. + 0.* I; 
-          double complex b1 = 0. + 0.* I; 
-          double complex a2 = 0. + 0.* I; 
-          double complex b2 = 0. + 0.* I; 
+          std::complex<double> a1 = 0. + 0.* 1i;
+          std::complex<double> b1 = 0. + 0.* 1i;
+          std::complex<double> a2 = 0. + 0.* 1i;
+          std::complex<double> b2 = 0. + 0.* 1i;
 
           for(int i = 0; i<Nr; ++i ){
-            double complex lr = alpha  + R[i];
-            a1 +=  h*(-2.*lr + (1.+lr)*cexp(lr) - 1.)/cpow(lr,2);
-            a2 +=  h*(lr - cexp(lr) + 1.)/cpow(lr,2);
-            b1 +=  h*(-1.5*lr + (1.+lr)*cexp(lr/2.) - 1.)/cpow(lr,2);
-            b2 +=  h*(0.5*lr - cexp(lr/2.) + 1.)/cpow(lr,2);
+            std::complex<double> lr = alpha  + R[i];
+            a1 +=  h*(-2.*lr + (1.+lr)*exp(lr) - 1.)/pow(lr,2);
+            a2 +=  h*(lr - exp(lr) + 1.)/pow(lr,2);
+            b1 +=  h*(-1.5*lr + (1.+lr)*exp(lr/2.) - 1.)/pow(lr,2);
+            b2 +=  h*(0.5*lr - exp(lr/2.) + 1.)/pow(lr,2);
           }
         // Full dt coeeficients
-          bns->MRSAAB_A[id + 0] = creal(a1)/Nr;
-          bns->MRSAAB_A[id + 1] = creal(a2)/Nr;
+          bns->MRSAAB_A[id + 0] = real(a1)/Nr;
+          bns->MRSAAB_A[id + 1] = real(a2)/Nr;
           bns->MRSAAB_A[id + 2] = 0.f;
           // Half coefficients
-          bns->MRSAAB_B[id + 0] = creal(b1)/Nr;
-          bns->MRSAAB_B[id + 1] = creal(b2)/Nr;
+          bns->MRSAAB_B[id + 0] = real(b1)/Nr;
+          bns->MRSAAB_B[id + 1] = real(b2)/Nr;
           bns->MRSAAB_B[id + 2] = 0.f;
 
 
@@ -127,31 +128,31 @@ void bnsTimeStepperCoefficients(bns_t *bns, setupAide &options){
           bns->MRAB_B[id + 1]   = -1.*h/8. ;
           bns->MRAB_B[id + 2]   =   0.f ;
         }else{
-          double complex a1 = 0. + 0.* I; 
-          double complex b1 = 0. + 0.* I; 
-          double complex a2 = 0. + 0.* I; 
-          double complex b2 = 0. + 0.* I; 
-          double complex a3 = 0. + 0.* I; 
-          double complex b3 = 0. + 0.* I; 
+          std::complex<double> a1 = 0. + 0.* 1i;
+          std::complex<double> b1 = 0. + 0.* 1i;
+          std::complex<double> a2 = 0. + 0.* 1i;
+          std::complex<double> b2 = 0. + 0.* 1i;
+          std::complex<double> a3 = 0. + 0.* 1i;
+          std::complex<double> b3 = 0. + 0.* 1i;
 
           for(int i = 0; i<Nr; ++i ){
-            double complex lr = alpha  + R[i];
-            a1 += h*(-2.5*lr - 3.*cpow(lr,2) + (1.+cpow(lr,2)+1.5*lr)*cexp(lr) - 1.)/cpow(lr,3);
-            a2 += h*(4.*lr + 3.*cpow(lr,2)- (2.*lr + 2.0)*cexp(lr) + 2.)/cpow(lr,3);
-            a3 +=-h*(1.5*lr + cpow(lr,2)- (0.5*lr + 1.)*cexp(lr) + 1.)/cpow(lr,3);
-            b1 += h*(cexp(lr/2.)- 2.*lr - (15.*cpow(lr,2))/8. + (cpow(lr,2) + 1.5*lr)*cexp(lr/2.) - 1.)/cpow(lr,3);
-            b2 += h*(3.*lr - 2.*cexp(lr/2.0) + 1.25*cpow(lr,2) - 2.*lr*cexp(lr/2.) + 2.)/cpow(lr,3);
-            b3 +=-h*(lr - cexp(lr/2.) + 0.375*cpow(lr,2) - 0.5*lr*cexp(lr/2.) + 1.)/cpow(lr,3);
+            std::complex<double> lr = alpha  + R[i];
+            a1 += h*(-2.5*lr - 3.*pow(lr,2) + (1.+pow(lr,2)+1.5*lr)*exp(lr) - 1.)/pow(lr,3);
+            a2 += h*(4.*lr + 3.*pow(lr,2)- (2.*lr + 2.0)*exp(lr) + 2.)/pow(lr,3);
+            a3 +=-h*(1.5*lr + pow(lr,2)- (0.5*lr + 1.)*exp(lr) + 1.)/pow(lr,3);
+            b1 += h*(exp(lr/2.)- 2.*lr - (15.*pow(lr,2))/8. + (pow(lr,2) + 1.5*lr)*exp(lr/2.) - 1.)/pow(lr,3);
+            b2 += h*(3.*lr - 2.*exp(lr/2.0) + 1.25*pow(lr,2) - 2.*lr*exp(lr/2.) + 2.)/pow(lr,3);
+            b3 +=-h*(lr - exp(lr/2.) + 0.375*pow(lr,2) - 0.5*lr*exp(lr/2.) + 1.)/pow(lr,3);
           }
 
           // Full dt coeeficients
-          bns->MRSAAB_A[id+0] = creal(a1)/Nr;
-          bns->MRSAAB_A[id+1] = creal(a2)/Nr;
-          bns->MRSAAB_A[id+2] = creal(a3)/Nr;
+          bns->MRSAAB_A[id+0] = real(a1)/Nr;
+          bns->MRSAAB_A[id+1] = real(a2)/Nr;
+          bns->MRSAAB_A[id+2] = real(a3)/Nr;
           // Half coefficients
-          bns->MRSAAB_B[id+0] = creal(b1)/Nr;
-          bns->MRSAAB_B[id+1] = creal(b2)/Nr;
-          bns->MRSAAB_B[id+2] = creal(b3)/Nr;
+          bns->MRSAAB_B[id+0] = real(b1)/Nr;
+          bns->MRSAAB_B[id+1] = real(b2)/Nr;
+          bns->MRSAAB_B[id+2] = real(b3)/Nr;
 
           // MRAB coefficients
           bns->MRAB_A[id+0]   =  23.*h/12. ;
@@ -160,7 +161,7 @@ void bnsTimeStepperCoefficients(bns_t *bns, setupAide &options){
 
           bns->MRAB_B[id+0]   =  17.*h/24. ;
           bns->MRAB_B[id+1]   = - 7.*h/24. ;
-          bns->MRAB_B[id+2]   =   2.*h/24. ;  
+          bns->MRAB_B[id+2]   =   2.*h/24. ;
         }
       }
 
@@ -179,53 +180,53 @@ void bnsTimeStepperCoefficients(bns_t *bns, setupAide &options){
 
   if(options.compareArgs("TIME INTEGRATOR","SARK")){
 
-    // dfloat rkC[bns->NrkStages], rkA[bns->NrkStages*bns->NrkStages], rkE[bns->NrkStages]; 
+    // dfloat rkC[bns->NrkStages], rkA[bns->NrkStages*bns->NrkStages], rkE[bns->NrkStages];
     if(bns->NrkStages==5){ // SAARK43
 
-      // first set non-semianalytic part of the integrator 
+      // first set non-semianalytic part of the integrator
       dfloat rkC[bns->NrkStages]  = {0.0, 0.5, 0.5, 1.0, 1.0};
-      dfloat rkA[bns->NrkStages*bns->NrkStages]  
+      dfloat rkA[bns->NrkStages*bns->NrkStages]
          = {             0.0,             0.0,            0.0,          0.0,             0.0,
                      0.5,             0.0,            0.0,          0.0,             0.0,
                      0.0,             0.5,            0.0,          0.0,             0.0,
                      0.0,             0.0,            1.0,          0.0,             0.0,
-                   1.0/6.0,         1.0/3.0,        1.0/3.0,       1.0/6.0,          0.0}; 
-      dfloat rkE[bns->NrkStages]= {  0.0,             0.0,            0.0,        -1.0/6.0,        1.0/6.0}; 
+                   1.0/6.0,         1.0/3.0,        1.0/3.0,       1.0/6.0,          0.0};
+      dfloat rkE[bns->NrkStages]= {  0.0,             0.0,            0.0,        -1.0/6.0,        1.0/6.0};
 
       bns->rkC    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
       bns->rkA    = (dfloat*) calloc(bns->NrkStages*bns->NrkStages, sizeof(dfloat));
       bns->rkE    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
 
 
-      memcpy(bns->rkC, rkC, bns->NrkStages*sizeof(dfloat)); 
+      memcpy(bns->rkC, rkC, bns->NrkStages*sizeof(dfloat));
       memcpy(bns->rkA, rkA, bns->NrkStages*bns->NrkStages*sizeof(dfloat));
       memcpy(bns->rkE, rkE, bns->NrkStages*sizeof(dfloat));
       // Compute semi-analytic part of the integrator
 
-    }else if(bns->NrkStages==7){     
+    }else if(bns->NrkStages==7){
 
     // printf("Numbe of stages in SAADRK is 7\n");
 
       dfloat rkC[bns->NrkStages]   = {0.0, 0.25, 0.25, 0.5, 0.75, 1.0, 1.0};
-      dfloat rkA[bns->NrkStages*bns->NrkStages]  
+      dfloat rkA[bns->NrkStages*bns->NrkStages]
       =  {  0,    0,        0,     0,     0,    0,   0,
          1/4,   0,        0,     0,     0,    0,   0,
       1/8,  1/8,       0,     0,     0,    0,   0,
       0,    0,        1/2,     0,     0,    0,   0,
       3./16., -3./8.,   3./8.,  9./16.,     0,    0, 0,
       -3./7.,  8./7.,   6./7., -12./7.,   8./7.,    0, 0,
-      7./90.,    0.,    16./45.,  2./15., 16./45., 7./90., 0}; 
+      7./90.,    0.,    16./45.,  2./15., 16./45., 7./90., 0};
 
-      dfloat rkE[bns->NrkStages]=  {-4./45., 0, 16./45., -8./15., 16./45., -4./45., 0.}; 
+      dfloat rkE[bns->NrkStages]=  {-4./45., 0, 16./45., -8./15., 16./45., -4./45., 0.};
 
       bns->rkC    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
       bns->rkA    = (dfloat*) calloc(bns->NrkStages*bns->NrkStages, sizeof(dfloat));
       bns->rkE    = (dfloat*) calloc(bns->NrkStages, sizeof(dfloat));
 
 
-      memcpy(bns->rkC, rkC, bns->NrkStages*sizeof(dfloat)); 
+      memcpy(bns->rkC, rkC, bns->NrkStages*sizeof(dfloat));
       memcpy(bns->rkA, rkA, bns->NrkStages*bns->NrkStages*sizeof(dfloat));
-      memcpy(bns->rkE, rkE, bns->NrkStages*sizeof(dfloat));        
+      memcpy(bns->rkE, rkE, bns->NrkStages*sizeof(dfloat));
     }
   bnsSAADRKCoefficients(bns, options);
   }

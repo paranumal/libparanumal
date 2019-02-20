@@ -41,7 +41,7 @@ typedef struct{
 
   int dim;
   int elementType; // number of edges (3=tri, 4=quad, 6=tet, 12=hex)
-  
+
   int Nfields;
 
   hlong totalElements;
@@ -68,7 +68,7 @@ typedef struct{
 
   occa::kernel invertMassMatrixKernel;
   occa::kernel invertMassMatrixCombinedKernel;
-  
+
   occa::memory o_q;
   occa::memory o_qtmp0;
   occa::memory o_qtmp1;
@@ -76,7 +76,7 @@ typedef struct{
   occa::memory o_rhsq;
   occa::memory o_resq;
   occa::memory o_saveq;
-  
+
   // [J*W*c_x, J*W*c_y, J*W*c_z]
   occa::memory o_advectionVelocityJW;
 
@@ -89,16 +89,18 @@ typedef struct{
   occa::memory o_advectionVelocityP;
 
   occa::memory o_diagInvMassMatrix;
-  
+
   occa::memory o_rkq, o_rkrhsq, o_rkerr;
   occa::memory o_errtmp;
-  
+
   //halo data
   dlong haloBytes;
   dfloat *sendBuffer;
   dfloat *recvBuffer;
   occa::memory o_sendBuffer;
   occa::memory o_recvBuffer;
+  occa::memory h_sendBuffer;
+  occa::memory h_recvBuffer;
   occa::memory o_haloBuffer;
 
   // DOPRI5 RK data
@@ -110,7 +112,7 @@ typedef struct{
   dfloat exp1, facold,  dtMIN, safe, beta;
   dfloat *rkA, *rkC, *rkE;
   occa::memory o_rkA, o_rkC, o_rkE;
-  
+
 }advection_t;
 
 void advectionRun(advection_t *advection, setupAide &newOptions);

@@ -32,7 +32,7 @@ SOFTWARE.
 
 // ok to use o_v = o_gsv
 void meshParallelGatherScatter(mesh_t *mesh,
-                               ogs_t *ogs, 
+                               ogs_t *ogs,
                                occa::memory &o_v){
   int one = 1;
   dlong dOne = 1;
@@ -66,7 +66,7 @@ void meshParallelGatherScatter(mesh_t *mesh,
 }
 
 void meshParallelGather(mesh_t *mesh,
-                        ogs_t *ogs, 
+                        ogs_t *ogs,
                         occa::memory &o_v,
                         occa::memory &o_gv){
 
@@ -88,15 +88,15 @@ void meshParallelGather(mesh_t *mesh,
     gsParallelGatherScatter(ogs->haloGsh, ogs->haloGatherTmp, dfloatString, "add");
 
     mesh->device.setStream(mesh->dataStream);
-    
+
     // copy gathered halo data back from HOST to DEVICE
     ogs->o_haloGatherTmp.copyFrom(ogs->haloGatherTmp,"async: true");
-    
+
     // wait for async copy
     mesh->device.finish();
 
-    // insert totally gathered halo node data - need this kernel 
-    mesh->putKernel(ogs->NhaloGather, ogs->o_haloGatherTmp, ogs->o_ownedHaloGatherIds, o_gv); 
+    // insert totally gathered halo node data - need this kernel
+    mesh->putKernel(ogs->NhaloGather, ogs->o_haloGatherTmp, ogs->o_ownedHaloGatherIds, o_gv);
 
     mesh->device.finish();
     mesh->device.setStream(mesh->defaultStream);
@@ -104,7 +104,7 @@ void meshParallelGather(mesh_t *mesh,
 }
 
 void meshParallelScatter(mesh_t *mesh,
-                        ogs_t *ogs, 
+                        ogs_t *ogs,
                         occa::memory &o_v,
                         occa::memory &o_sv){
 
@@ -127,14 +127,14 @@ void meshParallelScatter(mesh_t *mesh,
 
     // copy totally gather halo data back from HOST to DEVICE
     mesh->device.setStream(mesh->dataStream);
-    
+
     // copy owned and gathered halo data back from HOST to DEVICE
     ogs->o_haloGatherTmp.copyFrom(ogs->haloGatherTmp,"async: true");
-    
+
     // wait for async copy
     mesh->device.finish();
 
-    // insert totally gathered halo node data - need this kernel 
+    // insert totally gathered halo node data - need this kernel
     mesh->scatterKernel(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherLocalIds, one, dOne, ogs->o_haloGatherTmp, o_sv);
 
     mesh->device.finish();

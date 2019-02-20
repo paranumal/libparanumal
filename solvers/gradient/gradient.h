@@ -41,7 +41,7 @@ typedef struct{
 
   int dim;
   int elementType; // number of edges (3=tri, 4=quad, 6=tet, 12=hex)
-  
+
   int Nfields;
 
   hlong totalElements;
@@ -51,7 +51,7 @@ typedef struct{
 
   dfloat *plotInterp;
   int *plotEToV;
-  
+
   int frame;
 
   mesh_t *mesh;
@@ -63,13 +63,15 @@ typedef struct{
 
   occa::memory o_plotEToV;
   occa::memory o_plotInterp;
-  
+
   //halo data
   dlong haloBytes;
   dfloat *sendBuffer;
   dfloat *recvBuffer;
   occa::memory o_sendBuffer;
   occa::memory o_recvBuffer;
+  occa::memory h_sendBuffer;
+  occa::memory h_recvBuffer;
   occa::memory o_haloBuffer;
 
   dlong haloStressesBytes;

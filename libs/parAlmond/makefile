@@ -1,75 +1,91 @@
-ifndef OCCA_DIR
-ERROR:
-	@echo "Error, environment variable [OCCA_DIR] is not set"
+#####################################################################################
+#
+#The MIT License (MIT)
+#
+#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all
+#copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#SOFTWARE.
+#
+#####################################################################################
+
+ifndef LIBP_MAKETOP_LOADED
+ifeq (,$(wildcard ../../make.top))
+  $(error cannot locate ${PWD}/../../make.top)
+else
+  include ../../make.top
+endif
 endif
 
-include ../../make.inp
+#libraries
+OGS_DIR      =${LIBP_LIBS_DIR}/gatherScatter
 
-include ${OCCA_DIR}/scripts/Makefile
+#includes
+INCLUDES=-I. \
+				 -I$(OGS_DIR) \
+				 ${LIBP_INCLUDES}
 
-# define variables
-HDRDIR = ../../
-OGSDIR  = ../gatherScatter
-GSDIR  = ../../3rdParty/gslib
+#defines
+DEFINES =${LIBP_DEFINES} \
+				 -DDPARALMOND='"${CURDIR}"'
 
-# set options for this machine
-# specify which compilers to use for c, fortran and linking
-CC	= mpicc
-CXX	= mpic++
-LD	= mpic++
+#.cpp compilation flags
+PARALMOND_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
-# compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -I./include/ $(compilerFlags) $(flags) -I$(HDRDIR)/include/ -I$(OGSDIR) -D DPARALMOND='"${CURDIR}"' $(LIBP_OPT_FLAGS)
+#object dependancies
+DEPS=$(wildcard *.hpp) \
+		 $(wildcard include/*.hpp) \
+     $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
+     $(OGS_DIR)/ogs.hpp
 
-# link flags to be used
-LDFLAGS	= $(compilerFlags) $(flags) 
-
-# libraries to be linked in
-LIBS	=   -L$(OCCA_DIR)/lib  $(links) -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs \
-						$(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
-
-INCLUDES = $(includes)
-DEPS = $(INCLUDES) \
-$(OGSDIR)/ogs.hpp \
-$(HDRDIR)/include/types.h
+SRC =$(wildcard src/*.cpp) \
+		 $(wildcard src/agmgSetup/*.cpp)
+OBJS=$(SRC:.cpp=.o)
 
 # types of files we are going to construct rules for
-.SUFFIXES: .c .cpp
+.SUFFIXES: .cpp
 
-# rule for .c files
-.cpp.o: $(DEPS)
-	$(CXX) $(CFLAGS) -o $*.o -c $*.cpp $(paths)
-
-# list of objects to be compiled
-OBJS = \
-./src/agmgLevel.o \
-./src/agmgSmoother.o \
-./src/coarseSolver.o \
-./src/kernels.o \
-./src/level.o \
-./src/matrix.o \
-./src/multigrid.o \
-./src/parAlmond.o \
-./src/pcg.o \
-./src/pgmres.o \
-./src/solver.o \
-./src/SpMV.o \
-./src/utils.o \
-./src/vector.o \
-./src/agmgSetup/agmgSetup.o \
-./src/agmgSetup/constructProlongation.o \
-./src/agmgSetup/formAggregates.o \
-./src/agmgSetup/galerkinProd.o \
-./src/agmgSetup/strongGraph.o \
-./src/agmgSetup/transpose.o \
-
+.PHONY: all lib clean realclean silentUpdate
 
 all: lib
 
-lib: $(OBJS) $(DEPS)
-	ar -cr libparAlmond.a $(OBJS)
+lib: libparAlmond.a silentUpdate
 
+libparAlmond.a: $(OBJS)
+ifneq (,${verbose})
+	ar -cr libparAlmond.a $(OBJS)
+else
+	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
+	@ar -cr libparAlmond.a $(OBJS)
+endif
+
+silentUpdate:
+	@true
+
+# rule for .c files
+%.o: %.cpp $(DEPS)
+ifneq (,${verbose})
+	$(CXX) -o $*.o -c $*.cpp $(PARALMOND_CXXFLAGS)
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(CXX) -o $*.o -c $*.cpp $(PARALMOND_CXXFLAGS)
+endif
+
+#cleanup
 clean:
-	rm -f libparAlmond.a
-	rm -f ./src/*.o
-	rm -f ./src/agmgSetup/*.o
+	rm -f src/*.o src/agmgSetup/*.o libparAlmond.a

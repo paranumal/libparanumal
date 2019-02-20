@@ -91,7 +91,7 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
 
   ogs->invDegree = NULL;
   ogs->gatherInvDegree = NULL;
-  
+
   //Keep track of how many gs handles we've created, and
   // build kernels if this is the first
   if (!ogs::Nrefs) ogs::initKernels(comm, device);
@@ -99,7 +99,7 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
 
   ogs->N = N;
   ogs->comm = comm;
-  
+
   int rank, size;
   MPI_Comm_rank(ogs->comm, &rank);
   MPI_Comm_size(ogs->comm, &size);
@@ -136,7 +136,7 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
 
   //set up the local gatherScatter
   parallelNode_t *localNodes;
-  
+
   if (ogs->Nlocal) {
     localNodes = (parallelNode_t*) calloc(ogs->Nlocal,sizeof(parallelNode_t));
 
@@ -194,7 +194,7 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
       localGatherCounts[i] = 0;
     }
 
-    ogs->localGatherIds = (dlong*) calloc(ogs->Nlocal,sizeof(dlong));
+    ogs->localGatherIds = (dlong*) calloc((unsigned dlong) ogs->Nlocal,sizeof(dlong));
     for (dlong i=0;i<ogs->Nlocal;i++) {
       dlong gatherId = localNodes[i].newId;
       dlong offset = ogs->localGatherOffsets[gatherId];
@@ -231,13 +231,13 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
     // sort based on base ids then local id
     if(ogs->Nhalo){
       qsort(haloNodes, ogs->Nhalo, sizeof(parallelNode_t), compareBaseId);
-      
+
       //move the flagged node to the lowest local index if present
       cnt = 0;
       ogs->NhaloGather=0;
       haloNodes[0].newId = 0;
       haloNodes[0].owned = 1;
-      
+
       for (dlong i=1;i<ogs->Nhalo;i++) {
 	int s = 0;
 	if (abs(haloNodes[i].baseId)!=abs(haloNodes[i-1].baseId)) { //new gather node
@@ -245,7 +245,7 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
 	  cnt = i;
 	  ogs->NhaloGather++;
 	}
-	
+
 	haloNodes[i].owned = s;
 	haloNodes[i].newId = ogs->NhaloGather;
 	if (haloNodes[i].baseId>0) {
@@ -254,11 +254,11 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
 	}
     }
       ogs->NhaloGather++;
-      
+
       // sort based on local ids
       qsort(haloNodes, ogs->Nhalo, sizeof(parallelNode_t), compareLocalId);
     }
-    
+
     //tally up how many nodes are being gathered to each gatherNode and
     //  map to a local ordering
     dlong *haloGatherCounts = (dlong*) calloc(ogs->NhaloGather+1,sizeof(dlong));

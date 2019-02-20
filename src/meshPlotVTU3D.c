@@ -32,7 +32,7 @@ SOFTWARE.
 
 // interpolate data to plot nodes and save to file (one per process
 void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, int fld){
-  
+
   int rank;
   rank = mesh->rank;
 
@@ -45,14 +45,14 @@ void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, int fld){
 
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
   fprintf(fp, "  <UnstructuredGrid>\n");
-  fprintf(fp, "    <Piece NumberOfPoints=\""dlongFormat"\" NumberOfCells=\""dlongFormat"\">\n", 
-          mesh->Nelements*mesh->plotNp, 
+  fprintf(fp, "    <Piece NumberOfPoints=\"" dlongFormat "\" NumberOfCells=\"" dlongFormat "\">\n",
+          mesh->Nelements*mesh->plotNp,
           mesh->Nelements*mesh->plotNelements);
-  
+
   // write out nodes
   fprintf(fp, "      <Points>\n");
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
-  
+
   // compute plot node coordinates on the fly
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
@@ -69,11 +69,11 @@ void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, int fld){
   }
   fprintf(fp, "        </DataArray>\n");
   fprintf(fp, "      </Points>\n");
-  
+
   // write out pressure
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"pressure\" Format=\"ascii\">\n");
-  
+
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotpn = 0;
@@ -88,10 +88,10 @@ void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, int fld){
 
   fprintf(fp, "       </DataArray>\n");
   fprintf(fp, "     </PointData>\n");
-  
+
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
-  
+
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNelements;++n){
       fprintf(fp, "       ");
@@ -101,9 +101,9 @@ void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, int fld){
       fprintf(fp, "\n");
     }
   }
-  
+
   fprintf(fp, "        </DataArray>\n");
-  
+
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
   dlong cnt = 0;
   for(dlong e=0;e<mesh->Nelements;++e){
@@ -114,7 +114,7 @@ void meshPlotVTU3D(mesh3D *mesh, char *fileNameBase, int fld){
     }
   }
   fprintf(fp, "       </DataArray>\n");
-  
+
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->plotNelements;++n){

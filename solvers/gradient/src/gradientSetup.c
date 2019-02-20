@@ -31,16 +31,16 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
   gradient_t *gradient = (gradient_t*) calloc(1, sizeof(gradient_t));
 
   gradient->mesh = mesh;
-  
+
   options.getArgs("MESH DIMENSION", gradient->dim);
   options.getArgs("ELEMENT TYPE", gradient->elementType);
-  
+
   mesh->Nfields = 1;
   gradient->Nfields = mesh->Nfields;
-  
+
   dlong Ntotal = mesh->Nelements*mesh->Np*mesh->Nfields;
   gradient->Nblock = (Ntotal+blockSize-1)/blockSize;
-  
+
   hlong localElements = (hlong) mesh->Nelements;
   MPI_Allreduce(&localElements, &(gradient->totalElements), 1, MPI_HLONG, MPI_SUM, mesh->comm);
 
@@ -49,10 +49,10 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
   // compute samples of q at interpolation nodes
   gradient->q    = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields,
 				    sizeof(dfloat));
-  
+
   gradient->gradientq = (dfloat*) calloc(mesh->Nelements*mesh->Np*gradient->dim,
 					 sizeof(dfloat));
-  
+
   gradient->frame = 0;
 
 
@@ -68,7 +68,7 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
   else
     meshOccaSetup2D(mesh, options, kernelInfo);
 
-  //add boundary data to kernel info  
+  //add boundary data to kernel info
   gradient->o_q =
     mesh->device.malloc(mesh->Np*(mesh->totalHaloPairs+mesh->Nelements)*mesh->Nfields*sizeof(dfloat), gradient->q);
 
@@ -90,8 +90,8 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
     }
   }
   gradient->o_plotEToV = mesh->device.malloc(mesh->plotNp*mesh->Np*sizeof(int), plotEToV);
-  
-  
+
+
   if(mesh->totalHaloPairs>0){
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
@@ -101,16 +101,16 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
     gradient->haloBytes = mesh->totalHaloPairs*mesh->Np*gradient->Nfields*sizeof(dfloat);
     gradient->o_haloBuffer = mesh->device.malloc(gradient->haloBytes);
 
-    gradient->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, gradient->haloBytes, NULL, gradient->o_sendBuffer);
-    gradient->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, gradient->haloBytes, NULL, gradient->o_recvBuffer);
+    gradient->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, gradient->haloBytes, NULL, gradient->o_sendBuffer, gradient->h_sendBuffer);
+    gradient->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, gradient->haloBytes, NULL, gradient->o_recvBuffer, gradient->h_recvBuffer);
 
-    
+
   }
 
 #if 0
   occa::setVerboseCompilation(false);
 #endif
-  
+
   kernelInfo["defines/" "p_Nfields"]= mesh->Nfields;
   kernelInfo["defines/" "p_dim"]= mesh->dim;
   kernelInfo["defines/" "p_plotNp"]= mesh->plotNp;
@@ -118,7 +118,7 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 
   int plotNthreads = mymax(mesh->Np, mymax(mesh->plotNp, mesh->plotNelements));
   kernelInfo["defines/" "p_plotNthreads"]= plotNthreads;
-  
+
   const dfloat p_one = 1.0, p_two = 2.0, p_half = 1./2., p_third = 1./3., p_zero = 0;
 
   kernelInfo["defines/" "p_two"]= p_two;
@@ -126,7 +126,7 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
   kernelInfo["defines/" "p_half"]= p_half;
   kernelInfo["defines/" "p_third"]= p_third;
   kernelInfo["defines/" "p_zero"]= p_zero;
-  
+
   int maxNodes = mymax(mesh->Np, (mesh->Nfp*mesh->Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
@@ -149,7 +149,7 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 
   // set kernel name suffix
   char *suffix;
-  
+
   if(gradient->elementType==TRIANGLES)
     suffix = strdup("Tri2D");
   if(gradient->elementType==QUADRILATERALS)
@@ -170,11 +170,11 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
       if(mesh->dim==3){
 	sprintf(fileName, DHOLMES "/okl/meshIsoSurface3D.okl");
 	sprintf(kernelName, "meshIsoSurface3D");
-	
+
 	gradient->isoSurfaceKernel =
 	  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
-      
+
       // kernels from volume file
       sprintf(fileName, DGRADIENT "/okl/gradientVolume%s.okl",
 	      suffix);

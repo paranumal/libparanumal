@@ -25,14 +25,14 @@
 */
 
 #include "elliptic.h"
-#include "ogsInterface.h"
+#include "include/ogsInterface.h"
 
 #include "omp.h"
 
 
 //host gs
 void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision){
-  
+
   mesh_t *mesh = elliptic->mesh;
   setupAide &options = elliptic->options;
 
@@ -41,13 +41,13 @@ void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o
   int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
   int serial = options.compareArgs("THREAD MODEL", "Serial");
   int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
-  
+
   options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
   options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
-  
+
   //  printf("serialOperator: gathers = %d, reductions = %d, cts = %d, serial = %d, ipdg = %d\n",
   //	 enableGatherScatters, enableReductions, continuous, serial, ipdg);
-  
+
   dfloat *sendBuffer = elliptic->sendBuffer;
   dfloat *recvBuffer = elliptic->recvBuffer;
   dfloat *gradSendBuffer = elliptic->gradSendBuffer;
@@ -57,23 +57,23 @@ void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o
 
   if(continuous && serial){
 
-    ellipticSerialAxHexKernel3D(mesh->Nq,  mesh->Nelements, mesh->o_ggeo, 
+    ellipticSerialAxHexKernel3D(mesh->Nq,  mesh->Nelements, mesh->o_ggeo,
 				mesh->o_Dmatrices, mesh->o_Smatrices, mesh->o_MM, lambda, o_q, o_Aq, elliptic->o_ggeoNoJW);
-    
+
     ogs_t *ellipticOgs = elliptic->ogs;
-    
+
     ogsHostGatherScatter(o_Aq.ptr(), dfloatString, "add", ellipticOgs->hostGsh);
 
 #if USE_NULL_BOOST==1
     if(elliptic->allNeumann) { // inspect this later
-      
+
       dlong Nblock = elliptic->Nblock;
       dfloat *tmp = elliptic->tmp;
       occa::memory &o_tmp = elliptic->o_tmp;
 
       elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
       o_tmp.copyTo(tmp);
-      
+
       for(dlong n=0;n<Nblock;++n)
         alpha += tmp[n];
 
@@ -83,17 +83,17 @@ void ellipticSerialOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
     }
 #endif
-    
+
     //post-mask
-    if (elliptic->Nmasked) 
+    if (elliptic->Nmasked)
       mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Aq);
 
   } else if(ipdg){
     printf("WARNING: DEBUGGING C0\n");
     MPI_Finalize();
     exit(-1);
-  } 
-  
+  }
+
 }
 
 void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, occa::memory &o_Aq, const char *precision){
@@ -106,13 +106,13 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
   int serial = options.compareArgs("THREAD MODEL", "Serial");
   int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
-  
+
   options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
   options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
 
   //  printf("generalOperator: gathers = %d, reductions = %d, cts = %d, serial = %d, ipdg = %d\n",
   //	 enableGatherScatters, enableReductions, continuous, serial, ipdg);
-  
+
   dfloat *sendBuffer = elliptic->sendBuffer;
   dfloat *recvBuffer = elliptic->recvBuffer;
   dfloat *gradSendBuffer = elliptic->gradSendBuffer;
@@ -135,14 +135,14 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 
     int mapType = (elliptic->elementType==HEXAHEDRA &&
                    options.compareArgs("ELEMENT MAP", "TRILINEAR")) ? 1:0;
-    
+
     int integrationType = (elliptic->elementType==HEXAHEDRA &&
 			   options.compareArgs("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
-    
+
     occa::kernel &partialAxKernel = (strstr(precision, "float")) ? elliptic->partialFloatAxKernel : elliptic->partialAxKernel;
-    
+
     if(mesh->NglobalGatherElements) {
-      
+
       if(integrationType==0) { // GLL or non-hex
 	if(mapType==0){
 	  partialAxKernel(mesh->NglobalGatherElements, mesh->o_globalGatherElementList,
@@ -161,10 +161,10 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 					  lambda, o_q, o_Aq);
       }
     }
-    
+
     if(enableGatherScatters)
       ogsGatherScatterStart(o_Aq, ogsDfloat, ogsAdd, ogs);
-    
+
     if(mesh->NlocalGatherElements){
       if(integrationType==0) { // GLL or non-hex
 	if(mapType==0){
@@ -196,7 +196,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
 
       elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
       o_tmp.copyTo(tmp);
-      
+
       for(dlong n=0;n<Nblock;++n)
         alpha += tmp[n];
 
@@ -206,9 +206,9 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
     }
 #endif
-    
+
     //post-mask
-    if (elliptic->Nmasked) 
+    if (elliptic->Nmasked)
       mesh->maskKernel(elliptic->Nmasked, elliptic->o_maskIds, o_Aq);
 
   } else if(ipdg){
@@ -247,7 +247,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     if(elliptic->allNeumann)
       mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
 #endif
-    
+
     if(mesh->NinternalElements) {
       if(options.compareArgs("BASIS", "NODAL")) {
         elliptic->partialIpdgKernel(mesh->NinternalElements,
@@ -298,7 +298,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
       alphaG *= elliptic->allNeumannPenalty*elliptic->allNeumannScale*elliptic->allNeumannScale;
     }
 #endif
-    
+
     ellipticEndHaloExchange(elliptic, o_q, mesh->Np, recvBuffer);
 
     if(mesh->totalHaloPairs){
@@ -366,7 +366,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
     if(elliptic->allNeumann)
       mesh->addScalarKernel(mesh->Nelements*mesh->Np, alphaG, o_Aq);
 #endif
-  } 
+  }
 
 }
 

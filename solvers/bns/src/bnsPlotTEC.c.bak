@@ -34,10 +34,10 @@ SOFTWARE.
 // interpolate data to plot nodes and save to file (one per process
 void boltzmannPlotTEC2D(bns_t *bns, char *fileName, dfloat time){
 
-  mesh2D *mesh = bns->mesh; 
+  mesh2D *mesh = bns->mesh;
 
   FILE *fp;
-  
+
   fp = fopen(fileName, "a");
 
   fprintf(fp,"#ELEMENT NUMBER        =%d\n",mesh->Nelements);
@@ -53,7 +53,7 @@ void boltzmannPlotTEC2D(bns_t *bns, char *fileName, dfloat time){
 
   fprintf(fp, "ZONE  N = %d  E = %d  F=FEPOINT , ET=TRIANGLE , STRANDID=1, SOLUTIONTIME = %.8f \n", TotalPoints,TotalCells,time);
 
-  
+
 
 
   dfloat *curlU   = (dfloat *) calloc(mesh->Np, sizeof(dfloat));
@@ -87,7 +87,7 @@ void boltzmannPlotTEC2D(bns_t *bns, char *fileName, dfloat time){
 
       curlU[n] = dVdx-dUdy;
       divU[n]  = dUdx+dVdy;
-    }   
+    }
 
     for(int n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0, plotun=0;
@@ -100,7 +100,7 @@ void boltzmannPlotTEC2D(bns_t *bns, char *fileName, dfloat time){
         //
         int base = bns->Nfields*(m + e*mesh->Np);
         dfloat rho = bns->q[base];
-        dfloat pm = bns->sqrtRT*bns->sqrtRT*rho; 
+        dfloat pm = bns->sqrtRT*bns->sqrtRT*rho;
         dfloat um = bns->q[1 + base]*bns->sqrtRT/rho;
         dfloat vm = bns->q[2 + base]*bns->sqrtRT/rho;
         //

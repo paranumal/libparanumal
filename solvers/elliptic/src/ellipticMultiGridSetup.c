@@ -34,12 +34,12 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
   //read all the nodes files and load them in a dummy mesh array
   mesh_t **meshLevels = (mesh_t**) calloc(mesh->N+1,sizeof(mesh_t*));
   for (int n=1;n<mesh->N+1;n++) {
-    meshLevels[n] = (mesh_t *) calloc(1,sizeof(mesh_t));
-    //    meshLevels[n] = new mesh_t[1];
+    // meshLevels[n] = (mesh_t *) calloc(1,sizeof(mesh_t));
+       meshLevels[n] = new mesh_t[1];
     meshLevels[n]->Nverts = mesh->Nverts;
     meshLevels[n]->Nfaces = mesh->Nfaces;
     meshLevels[n]->Nfields = mesh->Nfields; // TW: ahem
-    
+
     switch(elliptic->elementType){
     case TRIANGLES:
       meshLoadReferenceNodesTri2D(meshLevels[n], n); break;
@@ -118,7 +118,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     //build elliptic struct for this degree
     if(mesh->rank==0)
       printf("=============BUILDING MULTIGRID LEVEL OF DEGREE %d==================\n", Nc);
-    
+
     elliptic_t *ellipticC = ellipticBuildMultigridLevel(elliptic,Nc,Nf);
 
     //add the level manually
@@ -148,7 +148,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 
     if(mesh->rank==0)
       printf("=============BUILDING MULTIGRID LEVEL OF DEGREE %d==================\n", Nmin);
-    
+
     ellipticCoarse = ellipticBuildMultigridLevel(elliptic,Nc,Nf);
   } else {
     ellipticCoarse = elliptic;
@@ -200,7 +200,7 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
 		      0.0);
 #endif
 
-  
+
   free(Rows); free(Cols); free(Vals);
 
   //overwrite the finest AMG level with the degree 1 matrix free level
@@ -249,8 +249,8 @@ void ellipticMultiGridSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambd
     }
   }
 
-  for (int n=1;n<mesh->N+1;n++) free(meshLevels[n]);
-  //  for (int n=1;n<mesh->N+1;n++) delete[] meshLevels[n];
+  // for (int n=1;n<mesh->N+1;n++) free(meshLevels[n]);
+   for (int n=1;n<mesh->N+1;n++) delete[] meshLevels[n];
   free(meshLevels);
 
   //report top levels

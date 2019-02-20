@@ -31,8 +31,8 @@ SOFTWARE.
 
 #include "mesh3D.h"
 
-/* 
-   purpose: read gmsh tetrahedra mesh 
+/*
+   purpose: read gmsh tetrahedra mesh
 */
 mesh3D* meshParallelReaderTet3D(char *fileName){
 
@@ -52,18 +52,18 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   mesh->size = size;
 
   MPI_Comm_dup(MPI_COMM_WORLD, &mesh->comm);
-  
+
   mesh->dim = 3;
   mesh->Nverts = 4; // number of vertices per element
   mesh->Nfaces = 4;
-  
+
   // vertices on each face
   int faceVertices[4][3] = {{0,1,2},{0,1,3},{1,2,3},{2,0,3}};
   mesh->NfaceVertices = 3;
   mesh->faceVertices =
     (int*) calloc(mesh->NfaceVertices*mesh->Nfaces, sizeof(int));
   memcpy(mesh->faceVertices, faceVertices[0], 12*sizeof(int));
-    
+
   if(fp==NULL){
     printf("meshReaderTet3D: could not load file %s\n", fileName);
     exit(0);
@@ -89,7 +89,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
     sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
            VX+n, VY+n, VZ+n);
   }
-  
+
   /* look for section with Element node data */
   do{
     status = fgets(buf, BUFSIZ, fp);
@@ -120,12 +120,12 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   hlong NtetsLocal = chunk + (rank<remainder);
 
   /* where do these elements start ? */
-  hlong start = rank*chunk + mymin(rank, remainder); 
+  hlong start = rank*chunk + mymin(rank, remainder);
   hlong end = start + NtetsLocal-1;
-  
+
   /* allocate space for Element node index data */
 
-  mesh->EToV 
+  mesh->EToV
     = (hlong*) calloc(NtetsLocal*mesh->Nverts, sizeof(hlong));
   mesh->elementInfo
     = (hlong*) calloc(NtetsLocal,sizeof(hlong));
@@ -136,12 +136,12 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
 
   mesh->boundaryInfo = (hlong*) calloc(NboundaryFaces*4, sizeof(hlong));
   for(hlong n=0;n<Nelements;++n){
-    int elementType; 
+    int elementType;
     hlong v1, v2, v3, v4;
     status = fgets(buf, BUFSIZ, fp);
     sscanf(buf, "%*d%d", &elementType);
     if(elementType==2){ // boundary face
-      sscanf(buf, "%*d%*d %*d"hlongFormat"%*d" hlongFormat hlongFormat hlongFormat, 
+      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d" hlongFormat hlongFormat hlongFormat,
              mesh->boundaryInfo+bcnt*4, &v1, &v2, &v3);
       mesh->boundaryInfo[bcnt*4+1] = v1-1;
       mesh->boundaryInfo[bcnt*4+2] = v2-1;
@@ -169,7 +169,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
 
   /* record number of boundary faces found */
   mesh->NboundaryFaces = bcnt;
-  
+
   /* record number of found tets */
   mesh->Nelements = (dlong) NtetsLocal;
 
@@ -185,7 +185,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
       mesh->EZ[e*mesh->Nverts+n] = VZ[vid];
     }
   }
-  
+
   /* release VX and VY (these are too big to keep) */
   free(VX);
   free(VY);
@@ -194,4 +194,4 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
   return mesh;
 
 }
-  
+

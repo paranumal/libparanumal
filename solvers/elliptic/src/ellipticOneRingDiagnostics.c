@@ -37,7 +37,7 @@ void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1, dfl
   fprintf(fp, "EToV=[\n");
   for(int e=0;e<mesh1->Nelements;++e){
     for(int v=0;v<mesh1->Nverts;++v)
-      fprintf(fp, "%d ", mesh1->EToV[e*mesh1->Nverts+v]);
+      fprintf(fp, hlongFormat " ", mesh1->EToV[e*mesh1->Nverts+v]);
     if(e<mesh->Nelements) fprintf(fp, "%% original \n");
     else      fprintf(fp, "%% overlap \n");
   }
@@ -60,7 +60,7 @@ void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1, dfl
     else      fprintf(fp, "%% overlap \n");
   }
   fprintf(fp, "];\n");
-  
+
   fclose(fp);
 
   // TEST FOR ONE RING
@@ -78,7 +78,7 @@ void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1, dfl
 			   elliptic1->o_mapB,
 			   elliptic1->o_x);
   }
-  
+
   // copy solution from DEVICE to HOST
   elliptic1->o_x.copyTo(mesh1->q);
 
@@ -93,18 +93,18 @@ void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1, dfl
       dfloat exact;
       int mode = 1;
       exact = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
-      
+
       dfloat error = fabs(exact-mesh1->q[id]);
-      
+
       mesh1->q[id] -= exact;
       //      mesh1->q[id] = exact;
-      
+
       // store error
       // mesh->q[id] = fabs(mesh->q[id] - exact);
       maxError = mymax(maxError, error);
     }
   }
-  
+
   dfloat globalMaxError = 0;
   MPI_Allreduce(&maxError, &globalMaxError, 1, MPI_DFLOAT, MPI_MAX, mesh1->comm);
   if(mesh1->rank==0)
@@ -116,5 +116,5 @@ void ellipticOneRingDiagnostics(elliptic_t *elliptic, elliptic_t *elliptic1, dfl
   sprintf(fname, "%s_oneRing_%04d",(char*)outName.c_str(), mesh->rank);
   ellipticPlotVTUHex3D(mesh1, fname, 0);
 
-  
+
 }

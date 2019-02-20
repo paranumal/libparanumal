@@ -1,115 +1,193 @@
-ifndef OCCA_DIR
-ERROR:
-	@echo "Error, environment variable [OCCA_DIR] is not set"
+#####################################################################################
+#
+#The MIT License (MIT)
+#
+#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all
+#copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#SOFTWARE.
+#
+#####################################################################################
+
+define ACOUSTICS_HELP_MSG
+
+Acoustics solver makefile targets:
+
+   make acousticsMain (default)
+   make lib
+   make clean
+   make clean-libs
+   make realclean
+   make info
+   make help
+
+Usage:
+
+make acousticsMain
+   Build acousticsMain executable.
+make lib
+   Build libacoustics.a solver library.
+make clean
+   Clean the acousticsMain executable, library, and object files.
+make clean-libs
+   In addition to "make clean", also clean the mesh and ogs libraries.
+make realclean
+   In addition to "make clean-libs", also clean 3rd party libraries.
+make info
+   List directories and compiler flags in use.
+make help
+   Display this help message.
+
+Can use "make verbose=true" for verbose output.
+
+endef
+
+ifeq (,$(filter acousticsMain lib clean clean-libs \
+                realclean info help,$(MAKECMDGOALS)))
+ifneq (,$(MAKECMDGOALS))
+$(error ${ACOUSTICS_HELP_MSG})
+endif
 endif
 
-CXXFLAGS = -O3
+ifndef LIBP_MAKETOP_LOADED
+ifeq (,$(wildcard ../../make.top))
+$(error cannot locate ${PWD}/../../make.top)
+else
+include ../../make.top
+endif
+endif
 
-include ${OCCA_DIR}/scripts/Makefile
+#libraries
+GS_DIR       =${LIBP_TPL_DIR}/gslib
+BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
+OGS_DIR      =${LIBP_LIBS_DIR}/gatherScatter
+MESH_DIR     =${LIBP_DIR}/src
 
-# define variables
-HDRDIR  = ../../include
-OGSDIR  = ../../libs/gatherScatter
+#includes
+INCLUDES=-I. \
+         -I$(OGS_DIR) \
+         ${LIBP_INCLUDES}
 
-# set options for this machine
-# specify which compilers to use for c, fortran and linking
-CC	= mpic++
-LD	= mpic++
+#defines
+DEFINES =${LIBP_DEFINES} \
+         -DDHOLMES='"${LIBP_DIR}"' \
+         -DDACOUSTICS='"${CURDIR}"'
 
-# compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DACOUSTICS='"${CURDIR}"'
+#.cpp compilation flags
+ACOUSTICS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
-# link flags to be used 
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
+#link libraries
+LIBS=-L$(MESH_DIR) -lmesh \
+     -L$(OGS_DIR) -logs \
+     -L$(GS_DIR)/lib -lgs \
+     -L${BLAS_DIR} -lBlasLapack \
+     -lgfortran \
+     ${LIBP_LIBS}
 
-# libraries to be linked in
-LIBS	=   -L$(OCCA_DIR)/lib $(links)
+#link flags
+LFLAGS=${ACOUSTICS_CXXFLAGS} ${LIBS}
 
-INCLUDES = acoustics.h
+#object dependancies
+DEPS=$(wildcard *.h) \
+     $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
+     $(OGS_DIR)/ogs.hpp
 
-DEPS = $(INCLUDES) \
-$(HDRDIR)/mesh.h \
-$(HDRDIR)/mesh3D.h
+SRC =$(wildcard src/*.c)
+OBJS=$(SRC:.c=.o)
 
-# types of files we are going to construct rules for
-.SUFFIXES: .c 
+.PHONY: all lib libmesh libogs libblas clean clean-libs realclean help info
+
+all: acousticsMain
+
+lib: libacoustics.a
+
+acousticsMain:$(OBJS) acousticsMain.o | libmesh
+ifneq (,${verbose})
+	$(LD) -o acousticsMain acousticsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+else
+	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
+	@$(LD) -o acousticsMain acousticsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+endif
+
+libacoustics.a: $(OBJS)
+ifneq (,${verbose})
+	ar -cr libacoustics.a $(OBJS)
+else
+	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
+	@ar -cr libacoustics.a $(OBJS)
+endif
+
+libmesh: libogs libgs libblas
+ifneq (,${verbose})
+	${MAKE} -C ${MESH_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${MESH_DIR} lib --no-print-directory
+endif
+
+libogs: libgs
+ifneq (,${verbose})
+	${MAKE} -C ${OGS_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${OGS_DIR} lib --no-print-directory
+endif
+
+libgs:
+ifneq (,${verbose})
+	${MAKE} -C $(GS_DIR) install verbose=${verbose}
+else
+	@${MAKE} -C $(GS_DIR) install --no-print-directory
+endif
+
+libblas:
+ifneq (,${verbose})
+	${MAKE} -C ${BLAS_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${BLAS_DIR} lib --no-print-directory
+endif
 
 # rule for .c files
-.c.o: $(DEPS)
-	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths) 
+%.o: %.c $(DEPS) | libmesh
+ifneq (,${verbose})
+	$(CXX) -o $*.o -c $*.c $(ACOUSTICS_CXXFLAGS)
+else
+	@$(CXX) -o $*.o -c $*.c $(ACOUSTICS_CXXFLAGS)
+endif
 
-# list of objects to be compiled
-OBJS    = \
-./src/acousticsEstimate.o \
-./src/acousticsStep.o \
-./src/acousticsMain.o \
-./src/acousticsError.o \
-./src/acousticsRun.o \
-./src/acousticsSetup.o \
-./src/acousticsGaussianPulse.o \
-./src/acousticsPlotVTU.o \
-./src/acousticsReport.o \
-../../src/meshConnect.o \
-../../src/meshConnectBoundary.o \
-../../src/meshConnectFaceNodes2D.o \
-../../src/meshConnectFaceNodes3D.o \
-../../src/meshGeometricFactorsTet3D.o \
-../../src/meshGeometricFactorsHex3D.o \
-../../src/meshGeometricFactorsTri2D.o \
-../../src/meshGeometricFactorsQuad2D.o \
-../../src/meshGeometricPartition2D.o \
-../../src/meshGeometricPartition3D.o \
-../../src/meshHaloExchange.o \
-../../src/meshHaloExtract.o \
-../../src/meshHaloSetup.o \
-../../src/meshLoadReferenceNodesTri2D.o \
-../../src/meshLoadReferenceNodesQuad2D.o \
-../../src/meshLoadReferenceNodesTet3D.o \
-../../src/meshLoadReferenceNodesHex3D.o \
-../../src/meshOccaSetup2D.o \
-../../src/meshOccaSetup3D.o \
-../../src/meshParallelConnectNodes.o \
-../../src/meshParallelConnectOpt.o \
-../../src/meshParallelPrint2D.o \
-../../src/meshParallelReaderTri2D.o \
-../../src/meshParallelReaderQuad2D.o \
-../../src/meshParallelReaderTet3D.o \
-../../src/meshParallelReaderHex3D.o \
-../../src/meshPartitionStatistics.o \
-../../src/meshPhysicalNodesTri2D.o \
-../../src/meshPhysicalNodesQuad2D.o \
-../../src/meshPhysicalNodesTet3D.o \
-../../src/meshPhysicalNodesHex3D.o \
-../../src/meshPlotVTU2D.o \
-../../src/meshPlotVTU3D.o \
-../../src/meshPrint2D.o \
-../../src/meshPrint3D.o \
-../../src/meshSetupTri2D.o \
-../../src/meshSetupQuad2D.o \
-../../src/meshSetupTet3D.o \
-../../src/meshSetupHex3D.o \
-../../src/meshSurfaceGeometricFactorsTri2D.o \
-../../src/meshSurfaceGeometricFactorsQuad2D.o \
-../../src/meshSurfaceGeometricFactorsTet3D.o \
-../../src/meshSurfaceGeometricFactorsHex3D.o \
-../../src/meshVTU2D.o \
-../../src/meshVTU3D.o \
-../../src/mysort.o \
-../../src/parallelSort.o \
-../../src/matrix.o \
-../../src/setupAide.o \
-../../src/trace.o \
-../../src/readArray.o \
-../../src/occaDeviceConfig.o\
-../../src/occaHostMallocPinned.o \
-../../src/timer.o
+#cleanup
+clean:
+	rm -f src/*.o acousticsMain libacoustics.a
 
+clean-libs: clean
+	${MAKE} -C ${OGS_DIR} clean
+	${MAKE} -C ${MESH_DIR} clean
 
-acousticsMain:$(OBJS) 
-	$(LD)  $(LDFLAGS)  -o acousticsMain $(OBJS) $(paths) $(LIBS) 
+realclean: clean-libs
+	${MAKE} -C ${GS_DIR} clean
+	${MAKE} -C ${BLAS_DIR} clean
 
-# what to do if user types "make clean"
-clean :
-	rm -r $(OBJS) acousticsMain
+help:
+	$(info $(value ACOUSTICS_HELP_MSG))
+	@true
 
-
+info:
+	$(info OCCA_DIR  = $(OCCA_DIR))
+	$(info LIBP_DIR  = $(LIBP_DIR))
+	$(info LIBP_ARCH = $(LIBP_ARCH))
+	$(info CXXFLAGS  = $(ACOUSTICS_CXXFLAGS))
+	$(info LIBS      = $(LIBS))
+	@true

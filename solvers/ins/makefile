@@ -1,191 +1,218 @@
+#####################################################################################
+#
+#The MIT License (MIT)
+#
+#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all
+#copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#SOFTWARE.
+#
+#####################################################################################
 
-ifndef OCCA_DIR
-ERROR:
-	@echo "Error, environment variable [OCCA_DIR] is not set"
+define INS_HELP_MSG
+
+Incompressible Navier-Stokes flow solver makefile targets:
+
+   make insMain (default)
+   make lib
+   make clean
+   make clean-libs
+   make realclean
+   make info
+   make help
+
+Usage:
+
+make insMain
+   Build insMain executable.
+make lib
+   Build libins.a solver library.
+make clean
+   Clean the insMain executable, library, and object files.
+make clean-libs
+   In addition to "make clean", also clean the mesh, ogs, parAlmond,
+   and elliptic libraries.
+make realclean
+   In addition to "make clean-libs", also clean 3rd party libraries.
+make info
+   List directories and compiler flags in use.
+make help
+   Display this help message.
+
+Can use "make verbose=true" for verbose output.
+
+endef
+
+ifeq (,$(filter insMain lib clean clean-libs \
+                realclean info help,$(MAKECMDGOALS)))
+ifneq (,$(MAKECMDGOALS))
+$(error ${INS_HELP_MSG})
+endif
 endif
 
-# define LIBP_OPT_FLAGS
-include ../../make.inp
+ifndef LIBP_MAKETOP_LOADED
+ifeq (,$(wildcard ../../make.top))
+$(error cannot locate ${PWD}/../../make.top)
+else
+include ../../make.top
+endif
+endif
 
-include ${OCCA_DIR}/scripts/Makefile
+#libraries
+GS_DIR       =${LIBP_TPL_DIR}/gslib
+BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
+OGS_DIR      =${LIBP_LIBS_DIR}/gatherScatter
+PARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
+ELLIPTIC_DIR =${LIBP_DIR}/solvers/elliptic
+MESH_DIR     =${LIBP_DIR}/src
 
-# define variables
-HDRDIR  = ../../include
-GSDIR  = ../../3rdParty/gslib
-OGSDIR  = ../../libs/gatherScatter
-ALMONDDIR = ../../libs/parAlmond
-ELLIPTICDIR = ../elliptic
+#includes
+INS_INCLUDES=-I. \
+         -I$(OGS_DIR) \
+         -I$(PARALMOND_DIR) \
+         -I$(ELLIPTIC_DIR) \
+         ${LIBP_INCLUDES}
 
-# set options for this machine
-# specify which compilers to use for c, fortran and linking
-cc	= mpicc
-CC	= mpic++
-LD	= mpic++
+#defines
+INS_DEFINES =${LIBP_DEFINES} \
+         -DDHOLMES='"${LIBP_DIR}"' \
+         -DDINS='"${CURDIR}"'
 
-# compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(ALMONDDIR) -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"' $(LIBP_OPT_FLAGS)  -I../../3rdParty/parmetis-4.0.3/metis/GKlib -I../../3rdParty/parmetis-4.0.3/include -I../../3rdParty/parmetis-4.0.3/metis/include -I../../3rdParty/parmetis-4.0.3/libparmetis
+#.cpp compilation flags
+INS_CXXFLAGS+=${CXXFLAGS} ${INS_DEFINES} ${INS_INCLUDES}
 
-# link flags to be used
-LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(LIBP_OPT_FLAGS)
+#link libraries
+LIBS=-L$(ELLIPTIC_DIR) -lelliptic  \
+     -L$(MESH_DIR) -lmesh \
+     -L$(PARALMOND_DIR) -lparAlmond  \
+     -L$(OGS_DIR) -logs \
+     -L$(GS_DIR)/lib -lgs \
+     -L${BLAS_DIR} -lBlasLapack \
+     -lgfortran \
+     ${LIBP_LIBS}
 
-PARMETISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libparmetis/
-METISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libmetis
+#link flags
+LFLAGS=${INS_CXXFLAGS} ${LIBS}
 
-# libraries to be linked in
-LIBS	=  -L$(ELLIPTICDIR) -lelliptic -L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis -L$(ALMONDDIR) -lparAlmond  \
-		   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
-		   -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran \
+#object dependancies
+DEPS=$(wildcard *.h) \
+     $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
+     $(OGS_DIR)/ogs.hpp \
+     $(PARALMOND_DIR)/parAlmond.hpp \
+     $(wildcard $(ELLIPTIC_DIR)/*.h)
 
+SRC =$(wildcard src/*.c)
+OBJS=$(SRC:.c=.o)
 
-INCLUDES = ins.h
-DEPS = $(INCLUDES) \
-$(HDRDIR)/mesh.h \
-$(HDRDIR)/mesh2D.h \
-$(HDRDIR)/mesh3D.h \
-$(OGSDIR)/ogs.hpp \
-$(ALMONDDIR)/parAlmond.hpp \
-$(ELLIPTICDIR)/elliptic.h \
-$(ELLIPTICDIR)/ellipticPrecon.h \
-$(ELLIPTICDIR)/ellipticMultiGrid.h
+.PHONY: all lib libmesh libogs libblas libparAlmond libelliptic clean clean-libs realclean help info
 
-# types of files we are going to construct rules for
-.SUFFIXES: .c
+all: insMain
 
-# rule for .c files
-.c.o: $(DEPS)
-	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths)
+lib: libins.a
 
-# list of objects to be compiled
-AOBJS    = \
-./src/insPlotWallsVTUHex3D.o \
-./src/insPlotVTUHex3D.o \
-./src/insSetup.o \
-./src/insPlotVTU.o \
-./src/insError.o \
-./src/insForces.o \
-./src/insComputeDt.o \
-./src/insReport.o \
-./src/insRunARK.o \
-./src/insRunEXTBDF.o \
-./src/insAdvection.o \
-./src/insDiffusion.o \
-./src/insGradient.o \
-./src/insDivergence.o \
-./src/insSubCycle.o \
-./src/insVelocityRhs.o \
-./src/insVelocitySolve.o \
-./src/insVelocityUpdate.o \
-./src/insPressureRhs.o \
-./src/insPressureSolve.o \
-./src/insPressureUpdate.o \
-./src/insRestart.o \
-./src/insWeldTriVerts.o \
-./src/insIsoPlotVTU.o \
-./src/insBrownMinionQuad3D.o 
+insMain:$(OBJS) $(MESH_OBJS) insMain.o | libelliptic
+ifneq (,${verbose})
+	$(LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+else
+	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
+	@$(LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+endif
 
-# library objects
-LOBJS = \
-../../src/meshConnectPeriodicFaceNodes3D.o \
-../../src/meshSetupBoxHex3D.o \
-../../src/meshRecursiveSpectralBisectionPartition.o \
-../../src/meshApplyElementMatrix.o \
-../../src/meshConnect.o \
-../../src/meshConnectBoundary.o \
-../../src/meshConnectFaceNodes2D.o \
-../../src/meshConnectFaceNodes3D.o \
-../../src/meshGeometricFactorsTet3D.o \
-../../src/meshGeometricFactorsHex3D.o \
-../../src/meshGeometricFactorsTri2D.o \
-../../src/meshGeometricFactorsTri3D.o \
-../../src/meshGeometricFactorsQuad2D.o \
-../../src/meshGeometricFactorsQuad3D.o \
-../../src/meshGeometricPartition2D.o \
-../../src/meshGeometricPartition3D.o \
-../../src/meshHaloExchange.o \
-../../src/meshHaloExtract.o \
-../../src/meshHaloSetup.o \
-../../src/meshLoadReferenceNodesTri2D.o \
-../../src/meshLoadReferenceNodesQuad2D.o \
-../../src/meshLoadReferenceNodesTet3D.o \
-../../src/meshLoadReferenceNodesHex3D.o \
-../../src/meshOccaSetup2D.o \
-../../src/meshOccaSetup3D.o \
-../../src/meshOccaSetupQuad3D.o \
-../../src/meshParallelConnectNodes.o \
-../../src/meshParallelConnectOpt.o \
-../../src/meshParallelConsecutiveGlobalNumbering.o\
-../../src/meshParallelGatherScatterSetup.o \
-../../src/meshParallelReaderTri2D.o \
-../../src/meshParallelReaderTri3D.o \
-../../src/meshParallelReaderQuad2D.o \
-../../src/meshParallelReaderQuad3D.o \
-../../src/meshParallelReaderTet3D.o \
-../../src/meshParallelReaderHex3D.o \
-../../src/meshPartitionStatistics.o \
-../../src/meshPhysicalNodesTri2D.o \
-../../src/meshPhysicalNodesTri3D.o \
-../../src/meshPhysicalNodesQuad2D.o \
-../../src/meshPhysicalNodesQuad3D.o \
-../../src/meshPhysicalNodesTet3D.o \
-../../src/meshPhysicalNodesHex3D.o \
-../../src/meshPlotVTU2D.o \
-../../src/meshPlotVTU3D.o \
-../../src/meshPrint2D.o \
-../../src/meshPrint3D.o \
-../../src/meshSetup.o \
-../../src/meshSetupTri2D.o \
-../../src/meshSetupTri3D.o \
-../../src/meshSetupQuad2D.o \
-../../src/meshSetupQuad3D.o \
-../../src/meshSetupTet3D.o \
-../../src/meshSetupHex3D.o \
-../../src/meshSurfaceGeometricFactorsTri2D.o \
-../../src/meshSurfaceGeometricFactorsTri3D.o \
-../../src/meshSurfaceGeometricFactorsQuad2D.o \
-../../src/meshSurfaceGeometricFactorsQuad3D.o \
-../../src/meshSurfaceGeometricFactorsTet3D.o \
-../../src/meshSurfaceGeometricFactorsHex3D.o \
-../../src/meshVTU2D.o \
-../../src/meshVTU3D.o \
-../../src/matrixInverse.o \
-../../src/matrixConditionNumber.o \
-../../src/mysort.o \
-../../src/parallelSort.o\
-../../src/hash.o\
-../../src/setupAide.o \
-../../src/readArray.o\
-../../src/occaDeviceConfig.o\
-../../src/occaHostMallocPinned.o \
-../../src/timer.o
+libins.a: $(OBJS)
+ifneq (,${verbose})
+	ar -cr libins.a $(OBJS)
+else
+	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
+	@ar -cr libins.a $(OBJS)
+endif
 
+libelliptic: | libparAlmond
+ifneq (,${verbose})
+	${MAKE} -C ${ELLIPTIC_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${ELLIPTIC_DIR} lib --no-print-directory
+endif
 
-insMain:$(AOBJS) $(LOBJS) ./src/insMain.o libblas libogs libparAlmond libelliptic
-	$(LD)  $(LDFLAGS)  -o insMain ./src/insMain.o $(COBJS) $(AOBJS) $(LOBJS) $(paths) $(LIBS)
+libparAlmond: | libmesh
+ifneq (,${verbose})
+	${MAKE} -C ${PARALMOND_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${PARALMOND_DIR} lib --no-print-directory
+endif
 
-lib:$(AOBJS)
-	ar -cr libins.a $(AOBJS)
+libmesh: libogs libgs libblas
+ifneq (,${verbose})
+	${MAKE} -C ${MESH_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${MESH_DIR} lib --no-print-directory
+endif
 
-libogs:
-	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/ins
+libogs: libgs
+ifneq (,${verbose})
+	${MAKE} -C ${OGS_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${OGS_DIR} lib --no-print-directory
+endif
+
+libgs:
+ifneq (,${verbose})
+	${MAKE} -C $(GS_DIR) install verbose=${verbose}
+else
+	@${MAKE} -C $(GS_DIR) install --no-print-directory
+endif
 
 libblas:
-	cd ../../3rdParty/BlasLapack; make -j lib; cd ../../solvers/ins
+ifneq (,${verbose})
+	${MAKE} -C ${BLAS_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${BLAS_DIR} lib --no-print-directory
+endif
 
-libparAlmond:
-	cd ../../libs/parAlmond; make -j lib; cd ../../solvers/ins
+# rule for .c files
+%.o: %.c $(DEPS) | libelliptic
+ifneq (,${verbose})
+	$(CXX) -o $*.o -c $*.c $(INS_CXXFLAGS)
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(CXX) -o $*.o -c $*.c $(INS_CXXFLAGS)
+endif
 
-libelliptic:
-	cd ../elliptic; make -j lib; cd ../ins
-
-all: lib insMain
-
-# what to do if user types "make clean"
+#cleanup
 clean:
-	cd ../elliptic; make clean; cd ../ins
-	cd ../../src; rm *.o; cd ../solvers/ins
-	rm ./src/*.o insMain libins.a
+	rm -f src/*.o insMain libins.a
 
-realclean:
-	cd ../elliptic; make realclean; cd ../ins
-	cd ../../src; rm *.o; cd ../solvers/ins
-	rm ./src/*.o insMain libins.a
+clean-libs: clean
+	${MAKE} -C ${OGS_DIR} clean
+	${MAKE} -C ${PARALMOND_DIR} clean
+	${MAKE} -C ${MESH_DIR} clean
+
+realclean: clean-libs
+	${MAKE} -C ${GS_DIR} clean
+	${MAKE} -C ${BLAS_DIR} clean
+
+help:
+	$(info $(value INS_HELP_MSG))
+	@true
+
+info:
+	$(info OCCA_DIR  = $(OCCA_DIR))
+	$(info LIBP_DIR  = $(LIBP_DIR))
+	$(info LIBP_ARCH = $(LIBP_ARCH))
+	$(info CXXFLAGS  = $(INS_CXXFLAGS))
+	$(info LIBS      = $(LIBS))
+	@true

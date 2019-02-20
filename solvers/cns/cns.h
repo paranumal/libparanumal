@@ -41,7 +41,7 @@ typedef struct{
 
   int dim;
   int elementType; // number of edges (3=tri, 4=quad, 6=tet, 12=hex)
-  
+
   int Nstresses;
   int Nfields;
 
@@ -65,8 +65,8 @@ typedef struct{
   dfloat wbar;
 
   int outputForceStep;
-  
-  
+
+
   mesh_t *mesh;
 
   occa::kernel volumeKernel;
@@ -81,28 +81,30 @@ typedef struct{
 
   occa::kernel stressesVolumeKernel;
   occa::kernel stressesSurfaceKernel;
-  
+
   occa::kernel vorticityKernel;
 
   occa::kernel constrainKernel;
-  
+
   occa::memory o_q;
   occa::memory o_rhsq;
   occa::memory o_resq;
   occa::memory o_Vort;
   occa::memory o_viscousStresses;
   occa::memory o_saveq;
-  
+
   occa::memory o_rkq, o_rkrhsq, o_rkerr;
   occa::memory o_errtmp;
 
-  
+
   //halo data
   dlong haloBytes;
   dfloat *sendBuffer;
   dfloat *recvBuffer;
   occa::memory o_sendBuffer;
   occa::memory o_recvBuffer;
+  occa::memory h_sendBuffer;
+  occa::memory h_recvBuffer;
   occa::memory o_haloBuffer;
 
   dlong haloStressesBytes;
@@ -110,6 +112,8 @@ typedef struct{
   dfloat *recvStressesBuffer;
   occa::memory o_sendStressesBuffer;
   occa::memory o_recvStressesBuffer;
+  occa::memory h_sendStressesBuffer;
+  occa::memory h_recvStressesBuffer;
   occa::memory o_haloStressesBuffer;
 
   // DOPRI5 RK data
@@ -121,7 +125,7 @@ typedef struct{
   dfloat exp1, facold,  dtMIN, dtMAX, safe, beta;
   dfloat *rkA, *rkC, *rkE, *rkoutB;
   occa::memory o_rkA, o_rkC, o_rkE, o_rkoutB;
-  
+
 }cns_t;
 
 void cnsRun(cns_t *cns, setupAide &options);

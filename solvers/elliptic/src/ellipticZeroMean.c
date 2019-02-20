@@ -25,13 +25,12 @@
 */
 
 #include "elliptic.h"
-#include "ogsInterface.h"
 
 void ellipticZeroMean(elliptic_t *elliptic, occa::memory &o_q){
 
   dfloat qmeanLocal;
   dfloat qmeanGlobal;
-  
+
   dlong Nblock = elliptic->Nblock;
   dfloat *tmp = elliptic->tmp;
   mesh_t *mesh = elliptic->mesh;
@@ -40,13 +39,13 @@ void ellipticZeroMean(elliptic_t *elliptic, occa::memory &o_q){
 
   // this is a C0 thing [ assume GS previously applied to o_q ]
 #define USE_WEIGHTED 1
-  
+
 #if USE_WEIGHTED==1
   elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
 #else
   mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
 #endif
-  
+
   o_tmp.copyTo(tmp);
 
   // finish reduction
@@ -63,7 +62,7 @@ void ellipticZeroMean(elliptic_t *elliptic, occa::memory &o_q){
 #else
   qmeanGlobal /= ((dfloat) elliptic->NelementsGlobal*(dfloat)mesh->Np);
 #endif
-  
+
   // q[n] = q[n] - qmeanGlobal
   mesh->addScalarKernel(mesh->Nelements*mesh->Np, -qmeanGlobal, o_q);
 }
