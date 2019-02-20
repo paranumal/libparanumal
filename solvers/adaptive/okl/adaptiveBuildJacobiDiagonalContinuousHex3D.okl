@@ -1,0 +1,57 @@
+
+
+@kernel void adaptiveBuildJacobiDiagonalContinuousHex3D(const dlong Nelements,
+							@restrict const dfloat *ggeo,
+							@restrict const dfloat *D,
+							const dfloat lambda,
+							@restrict dfloat *diagA){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)) {
+    
+    for (int k=0; k<p_Nq; ++k; @inner(2)) {
+      for (int j=0; j<p_Nq; ++j; @inner(1)) {
+	for (int i=0; i<p_Nq; ++i; @inner(0)) {
+	  
+	  // 
+	  int n = i+j*p_Nq+k*p_Nq*p_Nq;
+	  dlong base = e*p_Np*p_NGGEO;
+	  
+	  dfloat Grs = ggeo[base + n + p_GGEO_RS*p_Np];
+	  dfloat Grt = ggeo[base + n + p_GGEO_RT*p_Np];
+	  dfloat Gst = ggeo[base + n + p_GGEO_ST*p_Np];
+	  dfloat JW  = ggeo[base + n + p_GGEO_JW*p_Np];
+
+	  dfloat An = 0;
+	  
+	  // 2 from (dphidr, dphids) + (dphids,dphidr)
+	  An += 2.*Grs*D[i+i*p_Nq]*D[j+j*p_Nq];
+	  An += 2.*Grt*D[i+i*p_Nq]*D[k+k*p_Nq];
+	  An += 2.*Gst*D[j+j*p_Nq]*D[k+k*p_Nq];
+	  
+	  for (int m=0;m<p_Nq;m++) {
+	    int id = m+j*p_Nq+k*p_Nq*p_Nq;
+	    dfloat Grr = ggeo[base + id + p_GGEO_RR*p_Np];
+	    An += Grr*D[i+m*p_Nq]*D[i+m*p_Nq];
+	  }
+	  
+	  for (int m=0;m<p_Nq;m++) {
+	    int id = i+m*p_Nq+k*p_Nq*p_Nq;
+	    dfloat Gss = ggeo[base + id + p_GGEO_SS*p_Np];
+	    An += Gss*D[j+m*p_Nq]*D[j+m*p_Nq];
+	  }
+	  
+	  for (int m=0;m<p_Nq;m++) {
+	    int id = i+j*p_Nq+m*p_Nq*p_Nq;
+	    dfloat Gtt = ggeo[base + id + p_GGEO_TT*p_Np];
+	    An += Gtt*D[k+m*p_Nq]*D[k+m*p_Nq];
+	  }
+	  
+	  diagA[e*p_Np+n] = An + JW*lambda;
+
+	}
+      }
+    }
+  }
+}  
+   
+      

@@ -37,9 +37,16 @@ void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
   
   if(options.compareArgs("PRECONDITIONER", "JACOBI")){
     
-    // Jacobi preconditioner
+    // Jacobi preconditioner    
+    adaptive->dotMultiplyKernel(Ntotal, level0->o_invDiagA,  o_r, o_z);
+
+    adaptive->dotMultiplyKernel(Ntotal, level0->o_invDegree, o_z, o_z);
     
-    adaptive->dotMultiplyKernel(Ntotal, o_r, level0->o_invDiagA, o_z);
+    ogsGatherScatter(o_z, ogsDfloat, ogsAdd, level0->ogs);
+
+#if USE_GASPAR==1
+    level0->scatter_noncon(level0->Klocal, level0->o_EToC, level0->o_Ib, level0->o_It, o_z);
+#endif
   }
   else if (options.compareArgs("PRECONDITIONER", "MULTIGRID")) {
 
@@ -63,14 +70,18 @@ void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
   }
   else{ // turn off preconditioner
 
-#if 0
+#if USE_GASPAR==1
     adaptive->dotMultiplyKernel(Ntotal, level0->o_invDegree, o_r, o_z);
     
     ogsGatherScatter(o_z, ogsDfloat, ogsAdd, level0->ogs);
     
     level0->scatter_noncon(level0->Klocal, level0->o_EToC, level0->o_Ib, level0->o_It, o_z);
 #else
-    o_z.copyFrom(o_r);
+    adaptive->dotMultiplyKernel(Ntotal, level0->o_invDegree, o_r, o_z);
+    
+    ogsGatherScatter(o_z, ogsDfloat, ogsAdd, level0->ogs);
+
+    //    o_z.copyFrom(o_r);
 #endif
   }
 

@@ -42,8 +42,16 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
   // G*Gnc*A*Snc*S*xg = G*Gnc*fL
   // (Snc*S*G*Gnc)*A*xL = Snc*S*G*Gnc*fL
   // xL = Snc*S*xg
+#if USE_GASPAR==1
   adaptiveGatherScatter(level, o_b);
-
+#else
+  // gather over noncon faces to coarse side dofs
+  level->gather_noncon(level->Klocal, level->o_EToC, level->o_Ib, level->o_It, o_b);
+  
+  // add noncon gs around this
+  ogsGatherScatter(o_b, ogsDfloat, ogsAdd, level->ogs);
+#endif
+  
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
     adaptiveZeroMean(adaptive, adaptive->lvl, o_b);
@@ -56,15 +64,9 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
     adaptiveZeroMean(adaptive, adaptive->lvl, o_x);
 #endif
 
-#if 0
-  adaptive->dotMultiplyKernel(level->Klocal*level->Np, o_x, level->o_invDegree, o_x);
-  
-  ogsGatherScatter(o_x, ogsDfloat, ogsAdd, level->ogs);
-
+#if USE_GASPAR==0
   level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Ib, level->o_It, o_x);
 #endif
-
-
   
   return Niter;
 }

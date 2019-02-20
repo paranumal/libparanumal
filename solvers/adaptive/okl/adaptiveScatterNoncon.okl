@@ -94,7 +94,7 @@ dlong gmask(dlong n, dlong g)
   return a + b * p_Nq + c * p_Nq * p_Nq;
 }
 
-@kernel void adaptiveScatterNoncon_v00(const dlong Nelements,
+@kernel void adaptiveScatterNoncon(const dlong Nelements,
 				       @restrict const dlong  *EToC,
 				       @restrict const dfloat *Pb,
 				       @restrict const dfloat *Pt,
@@ -278,8 +278,11 @@ dlong gmask(dlong n, dlong g)
 	  for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
 	    int hi = 0;
 	    for (int g = 0; g < p_P4EST_EDGES; ++g){
-	      
+
 	      if (n == 0 && (hg[g] == 0 || hg[g] == 1)){
+
+//		printf("interpolating edge %d (hg[%d]=%d) \n", g, g, hg[g]);
+		
 		dfloat fld = ZERO;
 		
 		if (hg[g] == 0){
@@ -311,7 +314,7 @@ dlong gmask(dlong n, dlong g)
   }
 }
 				    
-@kernel void adaptiveScatterNoncon(const dlong K,
+@kernel void adaptiveScatterNoncon_v00(const dlong K,
 				   @restrict const dlong   *EToC,
 				   @restrict const dfloat *Pb,
 				   @restrict const dfloat *Pt,

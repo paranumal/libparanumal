@@ -495,6 +495,11 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
 					       "adaptivePartialAxHex3D",
 					       info);
 
+  lvl->compute_diagonal_Jacobi = device.buildKernel(DADAPTIVE "/okl/adaptiveBuildJacobiDiagonalContinuousHex3D.okl",
+					       "adaptiveBuildJacobiDiagonalContinuousHex3D",
+					       info);
+
+  
   lvl->updatePCGKernel = device.buildKernel(DADAPTIVE "/okl/adaptiveUpdatePCG.okl",
 					       "adaptiveUpdatePCG",
 					       info);
@@ -607,12 +612,41 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   lvl->zero_children(lvl->Klocal, lvl->o_EToC, lvl->o_invDegree);
 
 #if 0
+  lvl->o_invDegree.copyFrom(lvl->ogs->o_invDegree);
+#endif
+  
+#if 0
   lvl->o_invDegree.copyTo(ones);
   
   for(int n=0;n<lvl->Klocal*lvl->Np;++n){
     printf("invDegree[%d] = %lf\n", n, ones[n]);
   }
 #endif
+
+  // build diagonal
+  dfloat lambda= 1;
+  options.getArgs("LAMBDA", lambda);
+  
+  lvl->o_invDiagA = device.malloc(lvl->Klocal*lvl->Np*sizeof(dfloat));
+
+  lvl->compute_diagonal_Jacobi(lvl->Klocal, lvl->o_ggeo, lvl->o_D, lambda, lvl->o_invDiagA);
+
+  lvl->gather_noncon(lvl->Klocal, lvl->o_EToC, lvl->o_Ib, lvl->o_It, lvl->o_invDiagA);
+
+  ogsGatherScatter(lvl->o_invDiagA, ogsDfloat, ogsAdd, lvl->ogs);
+
+#if USE_GASPAR==1
+  lvl->scatter_noncon(lvl->Klocal, lvl->o_EToC, lvl->o_Ib, lvl->o_It, lvl->o_invDiagA);
+#endif
+  
+  dfloat *tmp = (dfloat*) calloc(lvl->Np*lvl->Klocal, sizeof(dfloat));
+  lvl->o_invDiagA.copyTo(tmp, lvl->Np*lvl->Klocal*sizeof(dfloat), 0);
+
+  for(dlong n=0;n<lvl->Np*lvl->Klocal;++n){
+    tmp[n] = 1./tmp[n];
+  }
+
+  lvl->o_invDiagA.copyFrom(tmp, lvl->Np*lvl->Klocal*sizeof(dfloat), 0);
   
   mesh_free(mesh);
 

@@ -97,7 +97,7 @@ dlong gmask(dlong n, dlong g)
 
 
 
-@kernel void adaptiveGatherNoncon_v00(const dlong Nelements,
+@kernel void adaptiveGatherNoncon(const dlong Nelements,
 				  @restrict const dlong  *EToC,
 				  @restrict const dfloat *Pb,
 				  @restrict const dfloat *Pt,
@@ -297,7 +297,7 @@ dlong gmask(dlong n, dlong g)
 }
 
 
-@kernel void adaptiveGatherNoncon(const dlong K,
+@kernel void adaptiveGatherNoncon_v00(const dlong K,
 				  @restrict const dlong  * EToC,
 				  @restrict const dfloat * Pb,
 				  @restrict const dfloat * Pt,

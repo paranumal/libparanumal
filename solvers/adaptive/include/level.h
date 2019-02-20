@@ -134,6 +134,8 @@ typedef struct level
   // kernels
   occa::kernel compute_Ax;// not populated yet
   occa::kernel compute_partial_Ax;
+
+  occa::kernel compute_diagonal_Jacobi;
   
   occa::kernel compute_X;
   occa::kernel interp_X;

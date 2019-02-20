@@ -39,76 +39,39 @@ void adaptiveBuildJacobi(adaptive_t* adaptive, level_t *level, dfloat lambda, df
   dfloat *D = (dfloat*) calloc(level->Nq*level->Nq, sizeof(dfloat));
   level->o_D.copyTo(D, level->Nq*level->Nq*sizeof(dfloat));
   
-  // build some monolithic basis arrays (for quads and hexes)
-  dfloat *B  = (dfloat*) calloc(level->Np*level->Np, sizeof(dfloat));
-  dfloat *Br = (dfloat*) calloc(level->Np*level->Np, sizeof(dfloat));
-  dfloat *Bs = (dfloat*) calloc(level->Np*level->Np, sizeof(dfloat));
-  dfloat *Bt = (dfloat*) calloc(level->Np*level->Np, sizeof(dfloat));
-
-  int mode = 0;
-  for(int nk=0;nk<level->Nq;++nk){
-    for(int nj=0;nj<level->Nq;++nj){
-      for(int ni=0;ni<level->Nq;++ni){
-	
-	int node = 0;
-	
-	for(int k=0;k<level->Nq;++k){
-	  for(int j=0;j<level->Nq;++j){
-	    for(int i=0;i<level->Nq;++i){
-	      
-	      if(nk==k && nj==j && ni==i)
-		B[mode*level->Np+node] = 1;
-	      if(nj==j && nk==k)
-		Br[mode*level->Np+node] = D[ni+level->Nq*i]; 
-	      if(ni==i && nk==k)
-		Bs[mode*level->Np+node] = D[nj+level->Nq*j]; 
-	      if(ni==i && nj==j)
-		Bt[mode*level->Np+node] = D[nk+level->Nq*k]; 
-                
-	      ++node;
-	    }
-	  }
-	}
-        
-	++mode;
-      }
-    }
-  }
-
   dlong diagNnum = level->Np*level->Klocal;
   
   dfloat *diagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
   
-  if(mesh->rank==0) printf("Building diagonal...");fflush(stdout);
-
+  if(adaptive->rank==0) printf("Building diagonal...");fflush(stdout);
+  
 #pragma omp parallel for 
   for(dlong eM=0;eM<level->Klocal;++eM)
     BuildLocalContinuousDiagHex3D(adaptive, level, ggeo, D, lambda, eM, B, Br, Bs, Bt, diagA + eM*level->Np);
 
   if (options.compareArgs("DISCRETIZATION","CONTINUOUS")) 
-    ogsGatherScatter(diagA, ogsDfloat, ogsAdd, adaptive->ogs);
-    
+    ogsGatherScatter(diagA, ogsDfloat, ogsAdd, level->ogs);
+  
   *invDiagA = (dfloat*) calloc(diagNnum, sizeof(dfloat));
   for (dlong n=0;n<level->Klocal*level->Np;n++) {
     (*invDiagA)[n] = 1/diagA[n];
   }
 
-  if(mesh->rank==0) printf("done.\n");
+  if(adaptive->rank==0) printf("done.\n");
 
   free(diagA);
   free(B); free(Br); free(Bs); free(Bt);
 }
 
 void BuildLocalContinuousDiagHex3D(adaptive_t* adaptive, level_t *level, dfloat *ggeo, dfloat *D,
-				   dfloat lambda, dlong eM, dfloat *B, dfloat *Br, dfloat *Bs, dfloat *Bt, dfloat *A) {
+				   dfloat lambda, dlong eM, dfloat *A) {
 
-    for (int nz=0;nz<level->Nq;nz++) {
+  for (int nz=0;nz<level->Nq;nz++) {
     for (int ny=0;ny<level->Nq;ny++) {
       for (int nx=0;nx<level->Nq;nx++) {
 
 	int idn = nx+ny*level->Nq+nz*level->Nq*level->Nq;
 
-	//	if (adaptive->mapB[idn+eM*level->Np]!=1) {
 	if(1){ // TW: fix later
 	  A[idn] = 0;
 
@@ -151,12 +114,14 @@ void BuildLocalContinuousDiagHex3D(adaptive_t* adaptive, level_t *level, dfloat 
     }
   }
 
+#if 0
   //add the rank boost for the allNeumann Poisson problem
-  if (adaptive->allNeumann) {
+  if (level->allNeumann) {
     for(int n=0;n<level->Np;++n){
       if (adaptive->mapB[n+eM*level->Np]!=1) { //dont fill rows for masked nodes
         A[n] += adaptive->allNeumannPenalty*adaptive->allNeumannScale*adaptive->allNeumannScale;
       } 
     }
   }
+#endif
 }

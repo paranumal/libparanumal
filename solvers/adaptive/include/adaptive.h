@@ -24,7 +24,10 @@ typedef struct adaptive
                               // periodic bricks
 
   level_t *lvl;
-  level_t *levels;
+
+  // MULTIGRID storage
+  int Nlevels;
+  level_t **levels;
   
   // generic kernels [ e.g. PCG ]
   occa::kernel sumKernel;
@@ -72,7 +75,9 @@ void adaptiveOperator(adaptive_t *adaptive,
 		      level_t *level,
 		      dfloat lambda,
 		      occa::memory &o_q,
-		      occa::memory &o_Aq);
+		      occa::memory &o_Aq,
+		      occa::memory &o_L
+		      );
 
 dfloat adaptiveWeightedInnerProduct(adaptive_t *adaptive, level_t *level,
 				    occa::memory &o_w, occa::memory &o_a, occa::memory &o_b);
