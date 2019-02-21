@@ -114,10 +114,10 @@ void ellipticThinOasSetup(elliptic_t *elliptic){
   // 2. construct Nelements*(N+3)^3 array 
   // --------------------------------------------------------------------------------------------------------------
   
-  int NqOas = mesh->Nq+2;
-  int NpOas = NqOas*NqOas*NqOas;
+  int oasNq = mesh->Nq+2;
+  int oasNp = oasNq*oasNq*oasNq;
 
-  hlong NtotalOgs = NpOas*mesh->Nelements;
+  hlong NtotalOgs = oasNp*mesh->Nelements;
   hlong *nodeIds = (hlong*) calloc(NtotalOgs, sizeof(hlong));
 
   int *offsets = (int*) calloc(mesh->Nfaces, sizeof(int));
@@ -133,16 +133,16 @@ void ellipticThinOasSetup(elliptic_t *elliptic){
   elliptic->oasMapP = (dlong*) calloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
   
   for(hlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<NpOas;++n){
-      nodeIds[e*NpOas + n] = -1; // gs will ignore this ?
+    for(int n=0;n<oasNp;++n){
+      nodeIds[e*oasNp + n] = -1; // gs will ignore this ?
     }
     for(int k=0;k<mesh->Nq;++k){
       for(int j=0;j<mesh->Nq;++j){
 	for(int i=0;i<mesh->Nq;++i){
 	  hlong id    = i + j*mesh->Nq + k*mesh->Nq*mesh->Nq;
-	  hlong idOas = i+1 + (j+1)*NqOas + (k+1)*NqOas*NqOas;
+	  hlong idOas = i+1 + (j+1)*oasNq + (k+1)*oasNq*oasNq;
 	  
-	  nodeIds[e*NpOas + idOas] = globalIds[e*mesh->Np + id];
+	  nodeIds[e*oasNp + idOas] = globalIds[e*mesh->Np + id];
 	}
       }
     }
@@ -242,10 +242,12 @@ void ellipticThinOasSetup(elliptic_t *elliptic){
   elliptic->o_oasHaloPutNodeIds = mesh->device.malloc(mesh->totalHaloPairs*mesh->Nfp*sizeof(dlong), elliptic->oasHaloPutNodeIds);
 
   // operators
-  elliptic->o_oasForward  = mesh->device.malloc(NqOas*NqOas*sizeof(dfloat), mesh->oasForward);
-  elliptic->o_oasBack     = mesh->device.malloc(NqOas*NqOas*sizeof(dfloat), mesh->oasBack);
-  elliptic->o_oasDiagOp   = mesh->device.malloc(NqOas*NqOas*sizeof(dfloat), mesh->oasDiagOp);
+  elliptic->o_oasForward  = mesh->device.malloc(oasNq*oasNq*sizeof(dfloat), mesh->oasForward);
+  elliptic->o_oasBack     = mesh->device.malloc(oasNq*oasNq*sizeof(dfloat), mesh->oasBack);
+  elliptic->o_oasDiagOp   = mesh->device.malloc(oasNq*oasNq*sizeof(dfloat), mesh->oasDiagOp);
 
+  elliptic->oasNq = oasNq;
+  elliptic->oasNp = oasNp;
   
   // --------------------------------------------------------------------------------------------------------------
   // 6. free local stuff
