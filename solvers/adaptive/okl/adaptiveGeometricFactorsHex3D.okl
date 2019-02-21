@@ -139,6 +139,7 @@
         rx /= TWO * J, sx /= TWO * J, tx /= TWO * J;
         ry /= TWO * J, sy /= TWO * J, ty /= TWO * J;
         rz /= TWO * J, sz /= TWO * J, tz /= TWO * J;
+	//	printf("G=[%f; %f,%f,%f; %f,%f,%f; %f,%f,%f]\n", J, rx, sx, tx, ry, sy, ty, rz, sz, tz);
       }
     }
 

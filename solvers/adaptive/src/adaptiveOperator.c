@@ -48,14 +48,13 @@ void adaptiveOperator(adaptive_t *adaptive,
 
 #if USE_GASPAR==1
     // operate on fine
-    level->compute_partial_Ax(level->Klocal, // locally owned elements
-			      level->o_IToE,
-			      level->o_ggeo,
-			      level->o_D,
-			      lambda,
-			      o_q,
-			      o_Aq);
-
+    level->compute_Ax(level->Klocal, // locally owned elements
+		      level->o_ggeo,
+		      level->o_D,
+		      lambda,
+		      o_q,
+		      o_Aq);
+    
     // Aq <= Snc*S*G*Gnc*Aloc*q
     adaptiveGatherScatter(level, o_Aq);
 #else
@@ -65,13 +64,12 @@ void adaptiveOperator(adaptive_t *adaptive,
     level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Ib, level->o_It, o_qL);
     
     // operate on fine
-    level->compute_partial_Ax(level->Klocal, // locally owned elements
-			      level->o_IToE,
-			      level->o_ggeo,
-			      level->o_D,
-			      lambda,
-			      o_qL,
-			      o_Aq);
+    level->compute_Ax(level->Klocal, // locally owned elements
+		      level->o_ggeo,
+		      level->o_D,
+		      lambda,
+		      o_qL,
+		      o_Aq);
 
 
     // gather over noncon faces to coarse side dofs

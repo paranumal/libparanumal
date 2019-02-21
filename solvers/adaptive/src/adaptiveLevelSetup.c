@@ -491,6 +491,11 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
 		   N,
 		   (brick_p[0] || brick_p[1] || brick_p[2]));
 
+
+  lvl->compute_Ax = device.buildKernel(DADAPTIVE "/okl/adaptiveAxHex3D.okl",
+				       "adaptiveAxHex3D",
+				       info);
+  
   lvl->compute_partial_Ax = device.buildKernel(DADAPTIVE "/okl/adaptiveAxHex3D.okl",
 					       "adaptivePartialAxHex3D",
 					       info);
