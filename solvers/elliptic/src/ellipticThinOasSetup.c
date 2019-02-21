@@ -244,7 +244,10 @@ void ellipticThinOasSetup(elliptic_t *elliptic){
   // operators
   elliptic->o_oasForward  = mesh->device.malloc(oasNq*oasNq*sizeof(dfloat), mesh->oasForward);
   elliptic->o_oasBack     = mesh->device.malloc(oasNq*oasNq*sizeof(dfloat), mesh->oasBack);
+
+ TW: need to repopulate this with modewise diagonal weights
   elliptic->o_oasDiagOp   = mesh->device.malloc(oasNq*oasNq*sizeof(dfloat), mesh->oasDiagOp);
+  
 
   elliptic->oasNq = oasNq;
   elliptic->oasNp = oasNp;

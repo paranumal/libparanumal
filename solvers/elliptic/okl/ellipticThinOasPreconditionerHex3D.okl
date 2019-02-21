@@ -81,7 +81,7 @@ SOFTWARE.
 	  
 	  // face 1
 	  idP = oasMapP[base+1*p_Nfp];    	
-	  s_q[0][j+1][i+1] = q[idP];
+	  s_q[j+1][0][i+1] = q[idP];
 	  
 	  // face 2
 	  idP = oasMapP[base+2*p_Nfp];    	
