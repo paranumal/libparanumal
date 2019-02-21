@@ -177,7 +177,21 @@ typedef struct {
 
   hlong NelementsGlobal;
   dfloat nullProjectWeightGlobal;
-  
+
+  ogs_t *oasOgs;
+  dlong *oasMapP;
+  dlong *oasHaloElementList;
+  dlong *oasHaloGetNodeIds;
+  dlong *oasHaloPutNodeIds;
+
+  occa::memory o_oasMapP;
+  occa::memory o_oasHaloElementList;
+  occa::memory o_oasHaloGetNodeIds;
+  occa::memory o_oasHaloPutNodeIds;
+
+  occa::memory o_oasForward;
+  occa::memory o_oasBack;
+  occa::memory o_oasDiagOp;
 }elliptic_t;
 
 #include "ellipticMultiGrid.h"
