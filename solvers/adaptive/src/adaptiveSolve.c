@@ -39,8 +39,7 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
   options.getArgs("MAXIMUM ITERATIONS", maxIter);
   options.getArgs("SOLVER TOLERANCE", tol);
 
-  // G*Gnc*A*Snc*S*xg = G*Gnc*fL
-  // (Snc*S*G*Gnc)*A*xL = Snc*S*G*Gnc*fL
+  // (Snc*S*G*Gnc)*AL*xL = Snc*S*G*Gnc*ML*fL
   // xL = Snc*S*xg
 #if USE_GASPAR==1
   adaptiveGatherScatter(level, o_b);

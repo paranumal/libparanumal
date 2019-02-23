@@ -478,10 +478,11 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   // }}}
 
   lvl->o_pcgWork = new occa::memory[lvl->NpcgWork];
-
+  dfloat *zeros = (dfloat*) calloc(lvl->Kmax*lvl->Np, sizeof(dfloat_t));
   for(int n=0;n<lvl->NpcgWork;++n){
-    lvl->o_pcgWork[n] = device.malloc(lvl->Kmax*lvl->Np*sizeof(dfloat_t));
+    lvl->o_pcgWork[n] = device.malloc(lvl->Kmax*lvl->Np*sizeof(dfloat_t), zeros);
   }
+  free(zeros);
   
   // {{{ Build Kernels
   occa::properties info;
@@ -604,9 +605,12 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
 
   lvl->o_invDegree = device.malloc(lvl->Klocal*lvl->Np*sizeof(dfloat), ones);
 
+#if USE_GASPAR==1
   lvl->zero_children(lvl->Klocal, lvl->o_EToC, lvl->o_invDegree);
+#endif
   
-  adaptiveGatherScatter(lvl, lvl->o_invDegree);  
+  adaptiveGatherScatter(lvl, lvl->o_invDegree);
+  //  ogsGatherScatter(lvl->o_invDegree, ogsDfloat, ogsAdd, lvl->ogs);
 
   lvl->o_invDegree.copyTo(ones);
   
@@ -616,10 +620,12 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   }
 
   lvl->o_invDegree.copyFrom(ones);
-  
-  lvl->zero_children(lvl->Klocal, lvl->o_EToC, lvl->o_invDegree);
 
-#if 0
+#if USE_GASPAR==1
+  lvl->zero_children(lvl->Klocal, lvl->o_EToC, lvl->o_invDegree);
+#endif
+  
+#if USE_GASPAR==0
   lvl->o_invDegree.copyFrom(lvl->ogs->o_invDegree);
 #endif
   
@@ -651,7 +657,7 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
 #if USE_GASPAR==1
   lvl->scatter_noncon(lvl->Klocal, lvl->o_EToC, lvl->o_Ib, lvl->o_It, lvl->o_invDiagA);
 #endif
-  
+
   dfloat *tmp = (dfloat*) calloc(lvl->Np*lvl->Klocal, sizeof(dfloat));
   lvl->o_invDiagA.copyTo(tmp, lvl->Np*lvl->Klocal*sizeof(dfloat), 0);
 
