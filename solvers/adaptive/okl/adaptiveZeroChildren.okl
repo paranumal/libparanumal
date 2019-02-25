@@ -161,21 +161,22 @@ dlong gmask(dlong n, dlong g)
 
     for (dlong idfld = 0; idfld < p_NFIELDS; ++idfld){
 
-      @barrier("local");
-    
-      for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2)){
-	for (dlong n = 0; n < p_Nqk; ++n; @inner(1)){
-	  for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
-	    int hi = 0;
-
-	    for (int f = 0; f < p_P4EST_FACES; ++f){
-
-	      if (hf[f] >= 0){
+      for (int f = 0; f < p_P4EST_FACES; ++f){
+	
+	@barrier("local");
+	
+	for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2)){
+	  for (dlong n = 0; n < p_Nqk; ++n; @inner(1)){
+	    for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
+	      int hi = 0;
+	      
+	      
+	      if (hf[f] >= 0  && hf[f]<=3){
 		dfloat fld = ZERO;
-
+		
 		const dlong l = fmask(m, n, f);
 		const dlong idq = l + e * p_Np * p_NFIELDS;
-
+		
 		q[idq + idfld * p_Np] = fld;
 		
 		++hi;
@@ -184,7 +185,7 @@ dlong gmask(dlong n, dlong g)
 	  }
 	}
       }
-
+      
       @barrier("global");
 
       for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2)){

@@ -26,6 +26,10 @@ SOFTWARE.
 
 #include "adaptive.h"
 
+
+
+
+#if 0
 int pcg(adaptive_t* adaptive,
 	dfloat lambda, 
         occa::memory &o_b,
@@ -108,11 +112,8 @@ int pcg(adaptive_t* adaptive,
 }
 
 
+#else
 
-
-
-
-#if 0
 int pcg(adaptive_t* adaptive,
 	dfloat lambda, 
         occa::memory &o_b,
@@ -138,7 +139,8 @@ int pcg(adaptive_t* adaptive,
   occa::memory &o_Ap = level->o_pcgWork[2];
   occa::memory &o_Ax = level->o_pcgWork[3];
   occa::memory &o_r  = level->o_pcgWork[4];
-
+  occa::memory &o_xL  = level->o_pcgWork[5];
+  
   dfloat rdotz1 = 0;
   dfloat rdotz2 = 0;
 
@@ -186,7 +188,7 @@ int pcg(adaptive_t* adaptive,
     adaptiveScaledAdd(adaptive, level, 1.f, o_z, beta, o_p);
     
     // A*p
-    adaptiveOperator(adaptive, level, lambda, o_p, o_Ap);
+    adaptiveOperator(adaptive, level, lambda, o_p, o_Ap, o_xL);
 
     // dot(p,A*p)
     pAp =  adaptiveWeightedInnerProduct(adaptive, level, level->o_invDegree, o_p, o_Ap);

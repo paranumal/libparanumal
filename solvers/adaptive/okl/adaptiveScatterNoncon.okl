@@ -94,7 +94,7 @@ dlong gmask(dlong n, dlong g)
   return a + b * p_Nq + c * p_Nq * p_Nq;
 }
 
-@kernel void adaptiveScatterNoncon(const dlong Nelements,
+@kernel void adaptiveScatterNoncon_v00(const dlong Nelements,
 				       @restrict const dlong  *EToC,
 				       @restrict const dfloat *Pb,
 				       @restrict const dfloat *Pt,
@@ -182,7 +182,7 @@ dlong gmask(dlong n, dlong g)
 
 	    for (int f = 0; f < p_P4EST_FACES; ++f){
 	      
-	      if (hf[f] >= 0){
+	      if (hf[f] >= 0){ // && hf[f]<=3){
 		const dlong l = fmask(m, n, f);
 		const dlong idq = l + e * p_Np * p_NFIELDS;
 		
@@ -238,12 +238,15 @@ dlong gmask(dlong n, dlong g)
 		    }
 		  }
 		}
+		//		if(hf[f]<=3){
+		{
 		const dlong l = fmask(m, n, f);
 		const dlong idq = l + e * p_Np * p_NFIELDS;
 		// TW: never gets here
 		q[idq + idfld * p_Np] = fld;
 		
 		++hi;
+		}
 	      }
 	    }
 	  }
@@ -298,13 +301,15 @@ dlong gmask(dlong n, dlong g)
 		    fld += s_Pt[m][p] * s_fld[hi][ei][n][p];
 		  }
 		}
-	      
-		const dlong l = gmask(m, g);
-		const dlong idq = l + e * p_Np * p_NFIELDS;
-		
-		q[idq + idfld * p_Np] = fld;
-		
-		++hi;
+
+		if(hg[g]==1 || hg[g]==0){
+		  const dlong l = gmask(m, g);
+		  const dlong idq = l + e * p_Np * p_NFIELDS;
+		  
+		  q[idq + idfld * p_Np] = fld;
+		  
+		  ++hi;
+		}
 	      }
 	    }
 	  }
@@ -314,7 +319,7 @@ dlong gmask(dlong n, dlong g)
   }
 }
 				    
-@kernel void adaptiveScatterNoncon_v00(const dlong K,
+@kernel void adaptiveScatterNoncon(const dlong K,
 				   @restrict const dlong   *EToC,
 				   @restrict const dfloat *Pb,
 				   @restrict const dfloat *Pt,
@@ -375,10 +380,10 @@ dlong gmask(dlong n, dlong g)
                 const int f = p8est_corner_faces[c][o];
                 hf[f] = p8est_corner_face_corners[c][f];
                 for (int p = 0; p < 4; ++p)
-                {
-                  const int g = p8est_face_edges[f][p];
-                  hg[g] = 4;
-                }
+		  {
+		    const int g = p8est_face_edges[f][p];
+		    hg[g] = 4;
+		  }
               }
               work >>= 1;
             }
@@ -407,9 +412,10 @@ dlong gmask(dlong n, dlong g)
           for (dlong m = 0; m < p_Nq; ++m; @inner(0))
             hi = 0;
 
-      @barrier("local");
+      for (int f = 0; f < p_P4EST_FACES; ++f){
+	@barrier("local");
 
-      for (int f = 0; f < p_P4EST_FACES; ++f)
+	
         for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
           for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
             for (dlong m = 0; m < p_Nq; ++m; @inner(0))
@@ -422,7 +428,7 @@ dlong gmask(dlong n, dlong g)
 
                 ++hi;
               }
-
+      }
       @barrier("local");
 
       for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
@@ -431,6 +437,8 @@ dlong gmask(dlong n, dlong g)
             hi = 0;
 
       for (int f = 0; f < p_P4EST_FACES; ++f){
+	@barrier("local");
+
 
         for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
           for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
@@ -479,23 +487,28 @@ dlong gmask(dlong n, dlong g)
                     }
                   }
 
-                const dlong l = fmask(m, n, f);
-		const dlong idq = l + e * p_Np * p_NFIELDS;
-
-                q[idq + idfld * p_Np] = fld;
-                ++hi;
+		//		if(hf[f]<=3){
+		{
+		  const dlong l = fmask(m, n, f);
+		  const dlong idq = l + e * p_Np * p_NFIELDS;
+		  
+		  q[idq + idfld * p_Np] = fld;
+		  ++hi;
+		}
               }
       }
-
+      
       @barrier("local");
-
+      
       for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
         for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
           for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
             hi = 0;
 	  }
 
-      for (int g = 0; g < p_P4EST_EDGES; ++g)
+      for (int g = 0; g < p_P4EST_EDGES; ++g){
+	@barrier("local");
+	      
         for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
           for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
             for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
@@ -510,7 +523,7 @@ dlong gmask(dlong n, dlong g)
                 ++hi;
               }
 	    }
-
+      }
       @barrier("local");
 
       for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
@@ -518,7 +531,8 @@ dlong gmask(dlong n, dlong g)
           for (dlong m = 0; m < p_Nq; ++m; @inner(0))
             hi = 0;
 
-      for (int g = 0; g < p_P4EST_EDGES; ++g)
+      for (int g = 0; g < p_P4EST_EDGES; ++g){
+	@barrier("local");	      
         for (dlong ei = 0; ei < p_NelementsblkS; ++ei; @inner(2))
           for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
             for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
@@ -554,6 +568,7 @@ dlong gmask(dlong n, dlong g)
                 ++hi;
               }
 	    }
+      }
     }
   }
 }

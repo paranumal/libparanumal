@@ -97,7 +97,7 @@ dlong gmask(dlong n, dlong g)
 
 
 
-@kernel void adaptiveGatherNoncon(const dlong Nelements,
+@kernel void adaptiveGatherNoncon_v00(const dlong Nelements,
 				  @restrict const dlong  *EToC,
 				  @restrict const dfloat *Pb,
 				  @restrict const dfloat *Pt,
@@ -178,7 +178,7 @@ dlong gmask(dlong n, dlong g)
 	  for (dlong m = 0; m < p_Nq; ++m; @inner(0)){
 	    int hi = 0;
 	    for (int f = 0; f < p_P4EST_FACES; ++f){
-	      if (hf[f] >= 0){
+	      if (hf[f] >= 0){ // && hf[f]<=3){
 		const dlong l = fmask(m, n, f);
 		const dlong idq = l + e * p_Np * p_NFIELDS;
 		s_fld[hi][ei][n][m] = q[idq + idfld * p_Np];
@@ -197,7 +197,7 @@ dlong gmask(dlong n, dlong g)
 	    int hi = 0;
 	    for (int f = 0; f < p_P4EST_FACES; ++f){
 	      
-	      if (hf[f] >= 0){
+	      if (hf[f] >= 0){ // && hf[f]<=3){
 		dfloat fld = ZERO;
 		
 		if (hf[f] == 0){
@@ -232,7 +232,7 @@ dlong gmask(dlong n, dlong g)
 		      }
 		  }
 		}
-	      	      
+
 		const dlong l = fmask(m, n, f);
 		const dlong idq = l + e * p_Np * p_NFIELDS;
 		q[idq + idfld * p_Np] = fld;
@@ -281,7 +281,7 @@ dlong gmask(dlong n, dlong g)
 #pragma unroll p_Nq
 		  for (dlong p = 0; p < p_Nq; ++p){
 		    fld += s_PtT[m][p] * s_fld[hi][ei][n][p];
-		    }
+		  }
 		}
 		const dlong l = gmask(m, g);
 		const dlong idq = l + e * p_Np * p_NFIELDS;
@@ -297,7 +297,7 @@ dlong gmask(dlong n, dlong g)
 }
 
 
-@kernel void adaptiveGatherNoncon_v00(const dlong K,
+@kernel void adaptiveGatherNoncon(const dlong K,
 				  @restrict const dlong  * EToC,
 				  @restrict const dfloat * Pb,
 				  @restrict const dfloat * Pt,
@@ -410,9 +410,10 @@ dlong gmask(dlong n, dlong g)
           for (dlong m = 0; m < p_Nq; ++m; @inner(0))
             hi = 0;
 
-      @barrier("local");
+      for (int f = 0; f < p_P4EST_FACES; ++f){
 
-      for (int f = 0; f < p_P4EST_FACES; ++f)
+	@barrier("local");
+
         for (dlong ei = 0; ei < p_KblkS; ++ei; @inner(2))
           for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
             for (dlong m = 0; m < p_Nq; ++m; @inner(0))
@@ -424,7 +425,7 @@ dlong gmask(dlong n, dlong g)
                 s_fld[hi][ei][n][m] = q[idq + idfld * p_Np];
                 ++hi;
               }
-
+      }
       @barrier("local");
 
       for (dlong ei = 0; ei < p_KblkS; ++ei; @inner(2))
@@ -432,7 +433,9 @@ dlong gmask(dlong n, dlong g)
           for (dlong m = 0; m < p_Nq; ++m; @inner(0))
             hi = 0;
 
-      for (int f = 0; f < p_P4EST_FACES; ++f)
+      for (int f = 0; f < p_P4EST_FACES; ++f){
+	@barrier("local");
+      
         for (dlong ei = 0; ei < p_KblkS; ++ei; @inner(2))
           for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
             for (dlong m = 0; m < p_Nq; ++m; @inner(0))
@@ -500,14 +503,18 @@ dlong gmask(dlong n, dlong g)
                   }
 #endif
 
-                const dlong l = fmask(m, n, f);
-                const dlong idq = l + e * p_Np * p_NFIELDS;
-
-                q[idq + idfld * p_Np] = fld;
-
-                ++hi;
+		//		if(hf[f] <= 3){
+		{
+		  const dlong l = fmask(m, n, f);
+		  const dlong idq = l + e * p_Np * p_NFIELDS;
+		  
+		  q[idq + idfld * p_Np] = fld;
+		  
+		  ++hi;
+		}
               }
-
+      }
+      
 #if p_DIM == 3
       @barrier("local");
 
@@ -516,7 +523,10 @@ dlong gmask(dlong n, dlong g)
           for (dlong m = 0; m < p_Nq; ++m; @inner(0))
             hi = 0;
 
-      for (int g = 0; g < p_P4EST_EDGES; ++g)
+      for (int g = 0; g < p_P4EST_EDGES; ++g){
+
+	@barrier("local");
+
         for (dlong ei = 0; ei < p_KblkS; ++ei; @inner(2))
           for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
             for (dlong m = 0; m < p_Nq; ++m; @inner(0))
@@ -529,7 +539,8 @@ dlong gmask(dlong n, dlong g)
 
                 ++hi;
               }
-
+      }
+      
       @barrier("local");
 
       for (dlong ei = 0; ei < p_KblkS; ++ei; @inner(2))
@@ -537,7 +548,9 @@ dlong gmask(dlong n, dlong g)
           for (dlong m = 0; m < p_Nq; ++m; @inner(0))
             hi = 0;
 
-      for (int g = 0; g < p_P4EST_EDGES; ++g)
+      for (int g = 0; g < p_P4EST_EDGES; ++g){
+	@barrier("local");
+	
         for (dlong ei = 0; ei < p_KblkS; ++ei; @inner(2))
           for (dlong n = 0; n < p_Nqk; ++n; @inner(1))
             for (dlong m = 0; m < p_Nq; ++m; @inner(0))
@@ -563,14 +576,17 @@ dlong gmask(dlong n, dlong g)
                   }
                 }
 
+		if(hg[g]==1 || hg[g]==0){
                 const dlong l = gmask(m, g);
                 const dlong idq = l + e * p_Np * p_NFIELDS;
-
+		
                 q[idq + idfld * p_Np] = fld;
-
+		
                 ++hi;
+		}
               }
+      }
 #endif
-    }
+      }
   }
 }
