@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "elliptic.h"
 
-template < int p_Nq > 
+template < int p_Nq >
 dfloat ellipticSerialWeightedInnerProductKernel(const hlong Nelements,
 						const dfloat * __restrict__ cpu_w,
 						const dfloat * __restrict__ cpu_a,
@@ -86,9 +86,9 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
   int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
   int serial = options.compareArgs("THREAD MODEL", "Serial");
   int enableReductions = 1;
-  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
+  // options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
 
-  
+
   mesh_t *mesh = elliptic->mesh;
   dfloat *tmp = elliptic->tmp;
   dlong Nblock = elliptic->Nblock;
@@ -96,15 +96,15 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
   dlong Ntotal = mesh->Nelements*mesh->Np;
 
   if(serial==1 && continuous==1){
-    
+
     dfloat wab = ellipticSerialWeightedInnerProduct(mesh->Nq, mesh->Nelements, o_w, o_a, o_b);
     dfloat globalwab = 0;
-    
+
     MPI_Allreduce(&wab, &globalwab, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
-    
+
     return globalwab;
   }
-  
+
   occa::memory &o_tmp = elliptic->o_tmp;
   occa::memory &o_tmp2 = elliptic->o_tmp2;
 
@@ -123,14 +123,14 @@ dfloat ellipticWeightedInnerProduct(elliptic_t *elliptic, occa::memory &o_w, occ
     o_tmp2.copyTo(tmp);
 
     Nfinal = Nblock2;
-	
+
   }
   else{
     o_tmp.copyTo(tmp);
-    
+
     Nfinal = Nblock;
 
-  }    
+  }
 
   dfloat wab = 0;
   for(dlong n=0;n<Nfinal;++n){

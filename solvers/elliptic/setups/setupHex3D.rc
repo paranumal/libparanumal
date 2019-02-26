@@ -5,8 +5,8 @@
 SOLVE
 
 [DATA FILE]
-data/ellipticSineTest3D.h
-#data/ellipticHomogeneous3D.h
+#data/ellipticSineTest3D.h
+data/ellipticHomogeneous3D.h
 
 [MESH FILE]
 #../../meshes/cubeHexE8Thilina.msh

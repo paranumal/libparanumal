@@ -181,55 +181,56 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       if(elliptic->dim==2)
         elliptic->r[id] = J*(2*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn);
       else{
-        if(elliptic->elementType==QUADRILATERALS){
+        elliptic->r[id] = J*(3*M_PI*M_PI+lambda)*sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
+//         if(elliptic->elementType==QUADRILATERALS){
 
-#if 0
-	  dfloat exact = pow(xn,2);
-	  dfloat forcing = -2*(- 2*pow(xn,2) + pow(yn,2) + pow(zn,2));
-#endif
-	  dfloat a = 1, b = 2, c = 3;
-	  dfloat pi = M_PI;
+// #if 0
+// 	  dfloat exact = pow(xn,2);
+// 	  dfloat forcing = -2*(- 2*pow(xn,2) + pow(yn,2) + pow(zn,2));
+// #endif
+// 	  dfloat a = 1, b = 2, c = 3;
+// 	  dfloat pi = M_PI;
 
-#if 0
-	  dfloat exact = sin(pi*xn)*sin(pi*yn)*sin(pi*zn);
-	  dfloat forcing =
-	    - 2*pi*pi*sin(pi*xn)*sin(pi*yn)*sin(pi*zn)
-	    - 2*xn*pi*cos(pi*xn)*sin(pi*yn)*sin(pi*zn)
-	    - 2*yn*pi*cos(pi*yn)*sin(pi*xn)*sin(pi*zn)
-	    - 2*zn*pi*cos(pi*zn)*sin(pi*xn)*sin(pi*yn)
-	    - 2*xn*yn*pi*pi*cos(pi*xn)*cos(pi*yn)*sin(pi*zn)
-	    - 2*xn*zn*pi*pi*cos(pi*xn)*cos(pi*zn)*sin(pi*yn)
-	    - 2*yn*zn*pi*pi*cos(pi*yn)*cos(pi*zn)*sin(pi*xn);
-#endif
+// #if 0
+// 	  dfloat exact = sin(pi*xn)*sin(pi*yn)*sin(pi*zn);
+// 	  dfloat forcing =
+// 	    - 2*pi*pi*sin(pi*xn)*sin(pi*yn)*sin(pi*zn)
+// 	    - 2*xn*pi*cos(pi*xn)*sin(pi*yn)*sin(pi*zn)
+// 	    - 2*yn*pi*cos(pi*yn)*sin(pi*xn)*sin(pi*zn)
+// 	    - 2*zn*pi*cos(pi*zn)*sin(pi*xn)*sin(pi*yn)
+// 	    - 2*xn*yn*pi*pi*cos(pi*xn)*cos(pi*yn)*sin(pi*zn)
+// 	    - 2*xn*zn*pi*pi*cos(pi*xn)*cos(pi*zn)*sin(pi*yn)
+// 	    - 2*yn*zn*pi*pi*cos(pi*yn)*cos(pi*zn)*sin(pi*xn);
+// #endif
 
-	  dfloat exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
+// 	  dfloat exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
 
-	  dfloat forcing =
-	      b*b*yn*yn*sin(a*xn)*sin(b*yn)*sin(c*zn)
-	    - c*c*sin(a*xn)*sin(b*yn)*sin(c*zn)
-	    - a*a*yn*yn*sin(a*xn)*sin(b*yn)*sin(c*zn)
-	    - a*a*zn*zn*sin(a*xn)*sin(b*yn)*sin(c*zn)
-	    - b*b*sin(a*xn)*sin(b*yn)*sin(c*zn)
-	    + c*c*zn*zn*sin(a*xn)*sin(b*yn)*sin(c*zn)
-	    - 2*a*xn*cos(a*xn)*sin(b*yn)*sin(c*zn)
-	    - 2*b*yn*cos(b*yn)*sin(a*xn)*sin(c*zn)
-	    - 2*c*zn*cos(c*zn)*sin(a*xn)*sin(b*yn)
-	    - 2*a*c*xn*zn*cos(a*xn)*cos(c*zn)*sin(b*yn)
-	    - 2*b*c*yn*zn*cos(b*yn)*cos(c*zn)*sin(a*xn)
-	    - 2*a*b*xn*yn*cos(a*xn)*cos(b*yn)*sin(c*zn);
+// 	  dfloat forcing =
+// 	      b*b*yn*yn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+// 	    - c*c*sin(a*xn)*sin(b*yn)*sin(c*zn)
+// 	    - a*a*yn*yn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+// 	    - a*a*zn*zn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+// 	    - b*b*sin(a*xn)*sin(b*yn)*sin(c*zn)
+// 	    + c*c*zn*zn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+// 	    - 2*a*xn*cos(a*xn)*sin(b*yn)*sin(c*zn)
+// 	    - 2*b*yn*cos(b*yn)*sin(a*xn)*sin(c*zn)
+// 	    - 2*c*zn*cos(c*zn)*sin(a*xn)*sin(b*yn)
+// 	    - 2*a*c*xn*zn*cos(a*xn)*cos(c*zn)*sin(b*yn)
+// 	    - 2*b*c*yn*zn*cos(b*yn)*cos(c*zn)*sin(a*xn)
+// 	    - 2*a*b*xn*yn*cos(a*xn)*cos(b*yn)*sin(c*zn);
 
 
-	  forcing = -forcing + lambda*exact;
+// 	  forcing = -forcing + lambda*exact;
 
-          elliptic->r[id] = J*forcing;
+//           elliptic->r[id] = J*forcing;
 
-        }
-        else{
-	  dfloat mode = 1;
-	  elliptic->r[id] =
-	    J*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
+//         }
+//         else{
+	  // dfloat mode = 1;
+	  // elliptic->r[id] =
+	  //   J*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
 	  //	  elliptic->r[id] += 0.1*2*(drand48()-0.5);
-	}
+	// }
 
       }
       elliptic->x[id] = 0;
@@ -251,49 +252,49 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->invVB,elliptic->r,elliptic->r);
   if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->BBMM,elliptic->r,elliptic->r);
   if (options.compareArgs("BASIS","NODAL")){
-    if(options.compareArgs("ELLIPTIC INTEGRATION", "NODAL")){
+    // if(options.compareArgs("ELLIPTIC INTEGRATION", "NODAL")){
       //      printf("MASS APPLY NODAL\n");
       meshApplyElementMatrix(mesh,mesh->MM,elliptic->r,elliptic->r);
-    }
-    else{
-      //      printf("MASS APPLY CUBATURE\n");
-      dfloat *cubx = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-      dfloat *cuby = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-      dfloat *cubz = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-      dfloat *cubrhs = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+    // }
+ //    else{
+ //      //      printf("MASS APPLY CUBATURE\n");
+ //      dfloat *cubx = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+ //      dfloat *cuby = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+ //      dfloat *cubz = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
+ //      dfloat *cubrhs = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
 
-      dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
-      for(int n=0;n<mesh->Nq;++n){
-	for(int m=0;m<mesh->cubNq;++m){
-	  cubInterpT[m+n*mesh->cubNq] = mesh->cubInterp[m*mesh->Nq+n];
-	  printf("%g ", cubInterpT[m+n*mesh->cubNq]);
-	}
-	printf("\n");
-      }
+ //      dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
+ //      for(int n=0;n<mesh->Nq;++n){
+	// for(int m=0;m<mesh->cubNq;++m){
+	//   cubInterpT[m+n*mesh->cubNq] = mesh->cubInterp[m*mesh->Nq+n];
+	//   printf("%g ", cubInterpT[m+n*mesh->cubNq]);
+	// }
+	// printf("\n");
+ //      }
 
-      for(hlong e=0;e<mesh->Nelements;++e){
-/*
-	interpolateHex3D(mesh->cubInterp, mesh->x+mesh->Np*e, mesh->Nq, cubx, mesh->cubNq);
-	interpolateHex3D(mesh->cubInterp, mesh->y+mesh->Np*e, mesh->Nq, cuby, mesh->cubNq);
-	interpolateHex3D(mesh->cubInterp, mesh->z+mesh->Np*e, mesh->Nq, cubz, mesh->cubNq);
+ //      for(hlong e=0;e<mesh->Nelements;++e){
 
-	for(int n=0;n<mesh->cubNp;++n){
-	  dfloat JW = mesh->cubggeo[e*mesh->cubNp*mesh->Nggeo + n + GWJID*mesh->cubNp];
-	  //	  cubrhs[n] = JW*(3*M_PI*M_PI+lambda)*cos(M_PI*cubx[n])*cos(M_PI*cuby[n])*cos(M_PI*cubz[n]);
-	  dfloat  mode = 1;
-	  cubrhs[n] = JW*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*cubx[n])*cos(mode*M_PI*cuby[n])*cos(mode*M_PI*cubz[n]);
-	  //	  cubrhs[n] += 0.1*2*(drand48()-0.5);
-	}
+	// interpolateHex3D(mesh->cubInterp, mesh->x+mesh->Np*e, mesh->Nq, cubx, mesh->cubNq);
+	// interpolateHex3D(mesh->cubInterp, mesh->y+mesh->Np*e, mesh->Nq, cuby, mesh->cubNq);
+	// interpolateHex3D(mesh->cubInterp, mesh->z+mesh->Np*e, mesh->Nq, cubz, mesh->cubNq);
 
-	interpolateHex3D(cubInterpT, cubrhs, mesh->cubNq, elliptic->r+e*mesh->Np, mesh->Nq);
+	// for(int n=0;n<mesh->cubNp;++n){
+	//   dfloat JW = mesh->cubggeo[e*mesh->cubNp*mesh->Nggeo + n + GWJID*mesh->cubNp];
+	//   //	  cubrhs[n] = JW*(3*M_PI*M_PI+lambda)*cos(M_PI*cubx[n])*cos(M_PI*cuby[n])*cos(M_PI*cubz[n]);
+	//   dfloat  mode = 1;
+	//   cubrhs[n] = JW*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*cubx[n])*cos(mode*M_PI*cuby[n])*cos(mode*M_PI*cubz[n]);
+	//   //	  cubrhs[n] += 0.1*2*(drand48()-0.5);
+	// }
 
-	//	for(int n=0;n<mesh->Np;++n){
-	//	  printf("elliptic->r[%d]=%g\n", e*mesh->Np+n, elliptic->r[e*mesh->Np+n]);
-	//	}
+	// interpolateHex3D(cubInterpT, cubrhs, mesh->cubNq, elliptic->r+e*mesh->Np, mesh->Nq);
 
-  */
-      }
-    }
+	// //	for(int n=0;n<mesh->Np;++n){
+	// //	  printf("elliptic->r[%d]=%g\n", e*mesh->Np+n, elliptic->r[e*mesh->Np+n]);
+	// //	}
+
+
+ //      }
+ //    }
   }
 
   //copy to occa buffers

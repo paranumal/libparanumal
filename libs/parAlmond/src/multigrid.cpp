@@ -40,12 +40,12 @@ void solver_t::kcycle(int k){
 
   //check for base level
   if(k==baseLevel) {
-    //       coarseLevel->solve(rhs, x);
-    
-    if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE"))
-      level->smooth(rhs,x,true);
-    else
-      coarseLevel->solve(rhs, x);
+    coarseLevel->solve(rhs, x);
+
+    // if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE"))
+    //   level->smooth(rhs,x,true);
+    // else
+    //   coarseLevel->solve(rhs, x);
 
     return;
   }
@@ -117,13 +117,13 @@ void solver_t::device_kcycle(int k){
 
   //check for base level
   if(k==baseLevel) {
-    //    coarseLevel->solve(o_rhs, o_x);
+    coarseLevel->solve(o_rhs, o_x);
 
-    if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE"))
-      level->smooth(o_rhs,o_x,true);
-    else
-      coarseLevel->solve(o_rhs, o_x);
-    
+    // if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE"))
+    //   level->smooth(o_rhs,o_x,true);
+    // else
+    //   coarseLevel->solve(o_rhs, o_x);
+
     return;
   }
 
@@ -185,13 +185,13 @@ void solver_t::vcycle(int k) {
 
   //check for base level
   if(k==baseLevel) {
-    //    coarseLevel->solve(rhs, x);
+    coarseLevel->solve(rhs, x);
 
-    if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE"))
-      level->smooth(rhs,x,true);
-    else
-      coarseLevel->solve(rhs, x);
-    
+    // if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE"))
+    //   level->smooth(rhs,x,true);
+    // else
+    //   coarseLevel->solve(rhs, x);
+
     return;
   }
 
@@ -236,14 +236,14 @@ void solver_t::device_vcycle(int k){
 
   //check for base level
   if(k==baseLevel) {
-    //    coarseLevel->solve(o_rhs, o_x);
+    coarseLevel->solve(o_rhs, o_x);
 
-    if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE")){
-      level->smooth(o_rhs,o_x,true);
-    }
-    else
-      coarseLevel->solve(o_rhs, o_x);
-    
+    // if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE")){
+    //   level->smooth(o_rhs,o_x,true);
+    // }
+    // else
+    //   coarseLevel->solve(o_rhs, o_x);
+
     return;
   }
 
@@ -267,4 +267,4 @@ void solver_t::device_vcycle(int k){
   level->smooth(o_rhs, o_x, false);
 }
 
-} //hamespace parAlmond
+} //namespace parAlmond

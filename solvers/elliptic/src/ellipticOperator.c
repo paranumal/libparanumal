@@ -107,8 +107,8 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   int serial = options.compareArgs("THREAD MODEL", "Serial");
   int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
 
-  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
-  options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
+  // options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
+  // options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
 
   //  printf("generalOperator: gathers = %d, reductions = %d, cts = %d, serial = %d, ipdg = %d\n",
   //	 enableGatherScatters, enableReductions, continuous, serial, ipdg);

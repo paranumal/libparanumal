@@ -26,12 +26,12 @@ SOFTWARE.
 
 #include "elliptic.h"
 
-template < int p_Nq > 
+template < int p_Nq >
 dfloat ellipticSerialWeightedNorm2Kernel(const hlong Nelements,
 					 const dfloat * __restrict__ cpu_w,
 					 const dfloat * __restrict__ cpu_a){
-  
-  
+
+
   cpu_a = (dfloat*)__builtin_assume_aligned(cpu_a, USE_OCCA_MEM_BYTE_ALIGN) ;
   cpu_w = (dfloat*)__builtin_assume_aligned(cpu_w, USE_OCCA_MEM_BYTE_ALIGN) ;
 
@@ -82,7 +82,7 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
   int serial = options.compareArgs("THREAD MODEL", "Serial");
   int enableReductions = 1;
-  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
+  // options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
 
   mesh_t *mesh = elliptic->mesh;
   dfloat *tmp = elliptic->tmp;
@@ -91,19 +91,19 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   dlong Ntotal = mesh->Nelements*mesh->Np;
 
   if(serial==1 && continuous==1){
-    
+
     dfloat wa2 = ellipticSerialWeightedNorm2(mesh->Nq, mesh->Nelements, o_w, o_a);
-    
+
     dfloat globalwa2 = 0;
-    
+
     MPI_Allreduce(&wa2, &globalwa2, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
-    
+
     return globalwa2;
   }
-  
+
   occa::memory &o_tmp = elliptic->o_tmp;
   occa::memory &o_tmp2 = elliptic->o_tmp2;
-  
+
   if(continuous==1)
     elliptic->weightedNorm2Kernel(Ntotal, o_w, o_a, o_tmp);
   else
@@ -119,14 +119,14 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
     o_tmp2.copyTo(tmp);
 
     Nfinal = Nblock2;
-	
+
   }
   else{
     o_tmp.copyTo(tmp);
-    
+
     Nfinal = Nblock;
 
-  }    
+  }
 
   dfloat wa2 = 0;
   for(dlong n=0;n<Nfinal;++n){

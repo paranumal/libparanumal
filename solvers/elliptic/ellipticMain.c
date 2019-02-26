@@ -187,21 +187,22 @@ int main(int argc, char **argv){
         if (elliptic->dim==2)
           exact = sin(M_PI*xn)*sin(M_PI*yn);
         else{
-          if(elliptic->elementType==QUADRILATERALS){
-#if 0
-	    exact = xn*xn;
-#endif
+          exact = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
+//           if(elliptic->elementType==QUADRILATERALS){
+// #if 0
+// 	    exact = xn*xn;
+// #endif
 
-#if 0
-	    exact = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
-#endif
-	    dfloat a = 1, b = 2, c = 3;
-	    exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
-	  }
-	  else{
-	    double mode = 1.0;
-	    exact = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
-	  }
+// #if 0
+// 	    exact = sin(M_PI*xn)*sin(M_PI*yn)*sin(M_PI*zn);
+// #endif
+// 	    dfloat a = 1, b = 2, c = 3;
+// 	    exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
+// 	  }
+// 	  else{
+// 	    double mode = 1.0;
+// 	    exact = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
+// 	  }
         }
 
         dfloat error = fabs(exact-mesh->q[id]);
@@ -219,7 +220,7 @@ int main(int argc, char **argv){
     if(mesh->rank==0)
       printf("globalMaxError = %g\n", globalMaxError);
 
-#if 1
+#if 0
     char fname[BUFSIZ];
     string outName;
     options.getArgs("OUTPUT FILE NAME", outName);
@@ -229,7 +230,7 @@ int main(int argc, char **argv){
     ellipticPlotVTUHex3D(mesh, fname, 0);
 #endif
 
-#if 0
+#if 1
     char fname[BUFSIZ];
     string outName;
     options.getArgs("OUTPUT FILE NAME", outName);

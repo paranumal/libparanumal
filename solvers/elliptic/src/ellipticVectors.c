@@ -48,36 +48,36 @@ dfloat ellipticCascadingWeightedInnerProduct(elliptic_t *elliptic, occa::memory 
 
   dlong Nblock = elliptic->Nblock;
   dlong Ntotal = mesh->Nelements*mesh->Np;
-  
+
   occa::memory &o_tmp = elliptic->o_tmp;
-  
+
   if(elliptic->options.compareArgs("DISCRETIZATION","CONTINUOUS"))
     elliptic->weightedInnerProduct2Kernel(Ntotal, o_w, o_a, o_b, o_tmp);
   else
     elliptic->innerProductKernel(Ntotal, o_a, o_b, o_tmp);
-  
+
   o_tmp.copyTo(tmp);
-  
+
   for(int n=0;n<Nblock;++n){
     const dfloat ftmpn = tmp[n];
 
     ierw_t ierw;
     ierw.w = fabs(ftmpn);
-    
+
     int iexp = ierw.ier>>Nmantissa; // strip mantissa
     accumulators[iexp] += (double)ftmpn;
   }
-  
+
   MPI_Allreduce(accumulators, g_accumulators, Naccumulators, MPI_DOUBLE, MPI_SUM, mesh->comm);
-  
+
   double wab = 0.0;
-  for(int n=0;n<Naccumulators;++n){ 
+  for(int n=0;n<Naccumulators;++n){
     wab += g_accumulators[Naccumulators-1-n]; // reverse order is important here (dominant first)
   }
-  
+
   free(accumulators);
   free(g_accumulators);
-  
+
   return wab;
 }
 
@@ -108,7 +108,7 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
 
     dfloat globalwa2 = 0;
     MPI_Allreduce(&wa2, &globalwa2, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
-    
+
     return globalwa2;
   }
 
@@ -125,19 +125,19 @@ dfloat ellipticWeightedNorm2(elliptic_t *elliptic, occa::memory &o_w, occa::memo
   dlong Nfinal;
 
   if(Nblock>Ncutoff){
-    
+
     mesh->sumKernel(Nblock, o_tmp, o_tmp2);
-    
+
     o_tmp2.copyTo(tmp);
-    
+
     Nfinal = Nblock2;
-	
+
   }
   else{
     o_tmp.copyTo(tmp);
-    
+
     Nfinal = Nblock;
-  }    
+  }
 
   dfloat wab = 0;
   for(dlong n=0;n<Nfinal;++n){

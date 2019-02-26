@@ -28,8 +28,8 @@ SOFTWARE.
 
 #if 1
 // FROM NEKBONE: not appropriate since it assumes zero initial data
-int pcg(elliptic_t* elliptic, dfloat lambda, 
-        occa::memory &o_r, occa::memory &o_x, 
+int pcg(elliptic_t* elliptic, dfloat lambda,
+        occa::memory &o_r, occa::memory &o_x,
         const dfloat tol, const int MAXIT){
 
   mesh_t *mesh = elliptic->mesh;
@@ -40,12 +40,12 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   int enableReductions = 1;
   int flexible = options.compareArgs("KRYLOV SOLVER", "FLEXIBLE");
   int verbose = options.compareArgs("VERBOSE", "TRUE");
-  
-  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
-  options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
-  if(options.compareArgs("FIXED ITERATION COUNT", "TRUE"))
-    fixedIterationCountFlag = 1;
-  
+
+  // options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
+  // options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
+  // if(options.compareArgs("FIXED ITERATION COUNT", "TRUE"))
+  //   fixedIterationCountFlag = 1;
+
   // register scalars
   dfloat rdotz1 = 0;
   dfloat rdotz2 = 0;
@@ -53,7 +53,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   // now initialized
   dfloat alpha = 0, beta = 0, pAp = 0;
-  
+
   /*aux variables */
   occa::memory &o_p  = elliptic->o_p;
   occa::memory &o_z  = elliptic->o_z;
@@ -63,7 +63,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 #if 0
   dfloat normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 #endif
- 
+
   pAp = 0;
   rdotz1 = 1;
 
@@ -71,7 +71,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
   // compute A*x
   ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax, dfloatString);
-  
+
   // subtract r = b - A*x
   ellipticScaledAdd(elliptic, -1.f, o_Ax, 1.f, o_r);
 
@@ -81,7 +81,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     rdotr0 = 1;
 
   dfloat TOL =  mymax(tol*tol*rdotr0,tol*tol);
-  
+
   int iter;
   for(iter=1;iter<=MAXIT;++iter){
 
@@ -92,30 +92,30 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
     // r.z
     if(enableReductions){
-      rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z); 
+      rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
     }
     else
       rdotz1 = 1;
-    
+
     if(flexible){
       dfloat zdotAp;
       if(enableReductions){
-	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);  
+	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
       }
       else
 	zdotAp = 1;
-      
+
       beta = -alpha*zdotAp/rdotz2;
     }
     else{
       beta = (iter==1) ? 0:rdotz1/rdotz2;
     }
-    
+
     // p = z + beta*p
     ellipticScaledAdd(elliptic, 1.f, o_z, beta, o_p);
-    
+
     // A*p
-    ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString); 
+    ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
 
     // dot(p,A*p)
     if(enableReductions){
@@ -129,19 +129,19 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     //  x <= x + alpha*p
     //  r <= r - alpha*A*p
     //  dot(r,r)
-    
+
     dfloat rdotr = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
-	
+
     if (verbose&&(mesh->rank==0)) {
 
       if(rdotr<0)
 	printf("WARNING CG: rdotr = %17.15lf\n", rdotr);
-      
-      printf("CG: it %d r norm %12.12le alpha = %le \n", iter, sqrt(rdotr), alpha);    
+
+      printf("CG: it %d r norm %12.12le alpha = %le \n", iter, sqrt(rdotr), alpha);
     }
-    
+
     if(rdotr<=TOL && !fixedIterationCountFlag) break;
-    
+
   }
 
   return iter;
@@ -151,13 +151,13 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 #else
 
 // original pcg
-int pcg(elliptic_t* elliptic, dfloat lambda, 
-        occa::memory &o_r, occa::memory &o_x, 
+int pcg(elliptic_t* elliptic, dfloat lambda,
+        occa::memory &o_r, occa::memory &o_x,
         const dfloat tol, const int MAXIT) {
 
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
-  
+
   int fixedIterationCountFlag = 0;
   int enableGatherScatters = 1;
   int enableReductions = 1;
@@ -166,14 +166,14 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   int verbose = options.compareArgs("VERBOSE", "TRUE");
   int serial = options.compareArgs("THREAD MODEL", "Serial");
   int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
-  
+
   options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
   options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
   if(options.compareArgs("FIXED ITERATION COUNT", "TRUE")){
     fixedIterationCountFlag = 1;
   }
 
-  
+
   // register scalars
   dfloat rdotz0 = 0;
   dfloat rdotr0 = 0;
@@ -181,10 +181,10 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   dfloat rdotr1 = 0;
   dfloat rdotz1 = 0;
   dfloat zdotAp = 0;
-  
+
   dfloat alpha, beta, pAp = 0;
   dfloat TOL, normB;
-  
+
   /*aux variables */
   occa::memory &o_p  = elliptic->o_p;
   occa::memory &o_z  = elliptic->o_z;
@@ -195,7 +195,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   normB = ellipticWeightedNorm2(elliptic, elliptic->o_invDegree, o_r);
 
   TOL =  mymax(tol*tol*normB,tol*tol);
-  
+
   // compute A*x
   ellipticOperator(elliptic, lambda, o_x, elliptic->o_Ax, dfloatString);
 
@@ -212,9 +212,9 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     if (verbose&&(mesh->rank==0)){
       printf("converged in ZERO iterations. Stopping.\n");}
     return 0;
-  } 
+  }
 
-  if (verbose&&(mesh->rank==0)) 
+  if (verbose&&(mesh->rank==0))
     printf("CG: initial res norm %12.12f WE NEED TO GET TO %12.12f \n", sqrt(rdotr0), sqrt(TOL));
 
   // Precon^{-1} (b-A*x)
@@ -233,13 +233,13 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
     // A*p
     ellipticOperator(elliptic, lambda, o_p, o_Ap, dfloatString);
-    
+
     // dot(p,A*p)
     if(enableReductions)
       pAp =  ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_p, o_Ap);
     else
       pAp = 1;
-    
+
     // alpha = dot(r,z)/dot(p,A*p)
     alpha = rdotz0/pAp;
 
@@ -247,8 +247,8 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
     //  r <= r - alpha*A*p
     //  dot(r,r)
     rdotr1 = ellipticUpdatePCG(elliptic, o_p, o_Ap, alpha, o_x, o_r);
-    
-    if (verbose&&(mesh->rank==0)) 
+
+    if (verbose&&(mesh->rank==0))
       printf("CG: it %d r norm %12.12le alpha = %le \n",Niter, sqrt(rdotr1), alpha);
 
     if(rdotr1 < TOL) {
@@ -264,16 +264,16 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
       rdotz1 = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_r, o_z);
     else
       rdotz1 = 1;
-    
+
     // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
     if(flexible){
-    
+
       if(enableReductions)
 	zdotAp = ellipticWeightedInnerProduct(elliptic, elliptic->o_invDegree, o_z, o_Ap);
       else
 	zdotAp = 1;
-      
-      beta = -alpha*zdotAp/rdotz0; 
+
+      beta = -alpha*zdotAp/rdotz0;
     } else {
       beta = rdotz1/rdotz0;
     }
@@ -286,7 +286,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
 
     // switch rdotz0,rdotr0 <= rdotz1,rdotr1
     rdotr0 = rdotr1;
-    
+
     ++Niter;
   }
 

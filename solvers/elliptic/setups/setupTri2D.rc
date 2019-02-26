@@ -10,7 +10,7 @@ SOLVE
 data/ellipticHomogeneous2D.h
 
 [MESH FILE]
-../../meshes/cavityH00125.msh
+../../meshes/cavityH0025.msh
 
 [MESH DIMENSION]
 2
@@ -35,7 +35,7 @@ CUDA
 
 # can add FLEXIBLE to PCG
 [KRYLOV SOLVER]
-PCG+FLEXIBLE
+PCG
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
