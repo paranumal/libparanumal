@@ -44,6 +44,11 @@ let
   p8est.lnodes!(pxest, N)
   mesh = p8est.Mesh(pxest)
 
+  # WARNING assume single MPI Rank
+  S = sparse(1:length(mesh.DToC), mesh.DToC[:], ones(Int, length(mesh.DToC)))
+  G = S'
+
+
   dump_vtk(pxest)
 end
 
