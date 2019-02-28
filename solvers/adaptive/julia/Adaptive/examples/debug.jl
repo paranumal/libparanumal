@@ -1,6 +1,7 @@
 using MPI
 using Pxest
 using Pxest.p8est
+using SparseArrays
 
 function dump_vtk(pxest;
                   mpicomm = MPI.COMM_WORLD,
