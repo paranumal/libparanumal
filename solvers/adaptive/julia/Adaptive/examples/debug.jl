@@ -1,13 +1,12 @@
 using MPI
 using Pxest.p8est
 
-if !MPI.Initialized()
-  MPI.Init()
-  const mpicomm = MPI.COMM_WORLD
-  const mpirank = MPI.Comm_rank(mpicomm)
-end
+!MPI.Initialized() && MPI.Init()
 
 let
+  mpicomm = MPI.COMM_WORLD
+  mpirank = MPI.Comm_rank(mpicomm)
+
   N = 3 # polynomial degree
 
   conn = p8est.Connectivity(1,1,2)
