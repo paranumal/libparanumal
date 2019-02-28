@@ -1,0 +1,9 @@
+name = "Adaptive"
+uuid = "fa211d4c-3b8b-11e9-2d8a-4d4dbf9881a3"
+authors = ["Lucas C Wilcox <lucas@swirlee.com>",
+           "Tim Warburton <tim.warburton@vt.edu>"]
+version = "0.1.0"
+
+[deps]
+MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+Pxest = "3ef6e24c-6358-11e8-0b31-bd1e13d6239c"
