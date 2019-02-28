@@ -11,12 +11,18 @@ let
 
   conn = p8est.Connectivity(1,1,2)
   pxest = p8est.PXEST(conn; min_lvl=0)
-  p8est.refine!(pxest; maxlevel=3) do which_tree, quadrant
-    if rand() > 0.9
-      return Cint(1)
-    else
-      return Cint(0)
-    end
+
+
+  refine_level = 1
+  p8est.refine!(pxest) do which_tree, quadrant
+    qid = ccall(:p8est_quadrant_child_id, Cint,
+                (Ref{Pxest.p8est.pxest_quadrant_t},),
+                quadrant)
+    add = (qid == 0 || qid == 3 || qid == 5 || qid == 6) ? 1 : 0
+
+    refine =  quadrant.level < refine_level + add
+
+    refine ? Cint(1) : Cint(0)
   end
   p8est.balance!(pxest)
   p8est.partition!(pxest)
