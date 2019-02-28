@@ -51,7 +51,7 @@ SOFTWARE.
       for(int i=0;i<p_Nq;++i;@inner(0)){
         //load D into local memory
         // s_D[i][j] = d \phi_i at node j
-        s_D[j][i] = D[p_Nq*j+i]; // D is column major
+	s_D[j][i] = D[p_Nq*j+i]; // D is column major
 
         // load pencil of u into register
         const dlong base = i + j*p_Nq + e*p_Np;
@@ -70,7 +70,6 @@ SOFTWARE.
 
             // prefetch geometric factors
             const dlong gbase = e*p_NGGEO*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-
             r_G00 = ggeo[gbase+p_GGEO_RR*p_Np];
             r_G01 = ggeo[gbase+p_GGEO_RS*p_Np];
             r_G02 = ggeo[gbase+p_GGEO_RT*p_Np];
@@ -303,3 +302,324 @@ SOFTWARE.
     }
   }
 }
+
+@kernel void adaptiveCubatureAxHex3D(const dlong Nelements,
+				     @restrict const dfloat * ggeoGJ, 
+				     @restrict const dfloat * DGJ,
+				     @restrict const dfloat * IGJ,
+				     const dfloat lambda,
+				     @restrict const dfloat * q,
+				     @restrict       dfloat * Aq){
+  
+  
+  for(int e=0; e<Nelements; ++e; @outer(0)) {
+    
+    @shared volatile dfloat s_q[p_NqGJ][p_NqGJ][p_NqGJ];
+
+    @shared dfloat s_DGJ[p_NqGJ][p_NqGJ];
+    
+    @shared dfloat s_qr[p_NqGJ][p_NqGJ];
+    @shared dfloat s_qs[p_NqGJ][p_NqGJ];
+    
+    @shared dfloat s_I[p_NqGJ][p_Nq];
+
+    @exclusive dfloat r_q[p_NqGJ];
+    
+    for(int b=0;b<p_NqGJ;++b;@inner(1)){
+      for(int a=0;a<p_NqGJ;++a;@inner(0)){
+	
+        if(b<p_Nq){
+          s_I[a][b] = IGJ[a*p_Nq+b]; // IGJ[a*p_Nq+b]; 
+        }
+
+	s_DGJ[a][b] = DGJ[a*p_NqGJ+b];
+	//s_DGJ[a][b] = DGJ[b*p_NqGJ+a]; 
+	
+        if(a<p_Nq && b<p_Nq){
+	  
+	  for(int c=0;c<p_Nq;++c){
+	    dlong id = e*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
+	    s_q[c][b][a] = q[id];
+	  }
+        }
+      }
+    }
+    
+    // ============== interpolate in 3 dir ========================
+    // 2. interpolate in b (should do c first)
+    for(int c=0;c<p_NqGJ;++c;@inner(1)){
+      for(int a=0;a<p_NqGJ;++a;@inner(0)){
+
+        if(a<p_Nq && c<p_Nq){
+
+	  // fetch to registers
+	  for(int b=0;b<p_Nq;++b)
+	    r_q[b] = s_q[c][b][a];
+
+	  // mat-vec Ijb*r_q[b]
+	  for(int j=0;j<p_NqGJ;++j){
+
+	    dfloat tmp = 0; 
+	    for(int b=0;b<p_Nq;++b){
+		
+	      const dfloat sIjb= s_I[j][b];
+	      
+	      tmp  += sIjb*r_q[b];
+	    }
+
+	    // store to s_q[c][j][a], ok since only this thread walks [c][:][a]
+	    s_q[c][j][a] = tmp;
+	  }
+        }
+      }
+    }//for c
+
+    @barrier("local");
+
+    // 3. transform in a
+    for(int c=0;c<p_NqGJ;++c;@inner(1)){
+      for(int j=0;j<p_NqGJ;++j;@inner(0)){
+
+        if(c<p_Nq){
+
+	  for(int a=0;a<p_Nq;++a)
+	    r_q[a] = s_q[c][j][a];
+
+	  for(int i=0;i<p_NqGJ;++i){
+	    
+	    dfloat tmp = 0;
+	    
+	    for(int a=0;a<p_Nq;++a){
+	      
+	      const dfloat sIia = s_I[i][a];
+	      tmp  += sIia*r_q[a];
+	    }
+	    
+	    s_q[c][j][i] = tmp; 
+	  }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // 4. transform in c
+    for(int j=0;j<p_NqGJ;++j;@inner(1)){
+      for(int i=0;i<p_NqGJ;++i;@inner(0)){
+
+	for(int c=0;c<p_Nq;++c)
+	  r_q[c] = s_q[c][j][i];
+
+	for(int k=0;k<p_NqGJ;++k){
+
+	  dfloat tmp = 0;
+	    
+	  for(int c=0;c<p_Nq;++c){
+	      
+	    const dfloat sIkc = s_I[k][c];
+	    tmp  += sIkc*r_q[c];
+	  }
+	    
+	  s_q[k][j][i] = tmp; // ok since only this thread
+	}
+      }
+    }
+
+    //===============================================
+    // 5. differentiate once interpolated
+
+    for(int j=0;j<p_NqGJ;++j;@inner(1)){
+      for(int i=0;i<p_NqGJ;++i;@inner(0)){
+	// use r_q to accumulate Aq
+	for(int k=0; k<p_NqGJ; ++k){
+	  r_q[k] =0.0f;
+	}
+      }
+    }
+  
+#pragma unroll p_NqGJ
+    for(int k=0; k<p_NqGJ; ++k) {
+
+      @barrier("local");
+      
+      for(int j=0; j<p_NqGJ; ++j; @inner(1)) {
+	for(int i=0; i<p_NqGJ; ++i; @inner(0)) {
+	  
+	  //geofactors for k j i thread
+#if 0
+	  const int base = e*p_NVGEO*p_Np + 0; // HACKITY
+	  const dfloat rx = vgeo[base+p_VGEO_RX*p_Np];
+	  const dfloat sx = vgeo[base+p_VGEO_SX*p_Np];
+	  const dfloat tx = vgeo[base+p_VGEO_TX*p_Np];
+	  const dfloat ry = vgeo[base+p_VGEO_RY*p_Np];
+	  const dfloat sy = vgeo[base+p_VGEO_SY*p_Np];
+	  const dfloat ty = vgeo[base+p_VGEO_TY*p_Np];
+	  const dfloat rz = vgeo[base+p_VGEO_RZ*p_Np];
+	  const dfloat sz = vgeo[base+p_VGEO_SZ*p_Np];
+	  const dfloat tz = vgeo[base+p_VGEO_TZ*p_Np];
+	  const dfloat J  = vgeo[base+p_VGEO_J*p_Np];
+
+	  const dfloat wi = wGJ[i], wj = wGJ[j], wk = wGJ[k];
+	  const dfloat weight = J*wi*wj*wk;
+
+	  const dfloat r_G00 = weight*(rx*rx+ry*ry+rz*rz);
+	  const dfloat r_G01 = weight*(rx*sx+ry*sy+rz*sz);
+	  const dfloat r_G02 = weight*(rx*tx+ry*ty+rz*tz);
+
+	  const dfloat r_G11 = weight*(sx*sx+sy*sy+sz*sz);
+	  const dfloat r_G12 = weight*(sx*tx+sy*ty+sz*tz);
+	  const dfloat r_G22 = weight*(tx*tx+ty*ty+tz*tz);
+
+	  const dfloat r_GwJ = weight;
+#else
+
+	  int n = k*p_NqGJ*p_NqGJ + j*p_NqGJ + i;
+	  const dlong gbase = e*p_NGGEO*p_NpGJ + n; // HACKITY
+	  
+	  const dfloat r_G00 = ggeoGJ[gbase+p_GGEO_RR*p_NpGJ];
+	  const dfloat r_G01 = ggeoGJ[gbase+p_GGEO_RS*p_NpGJ];
+	  const dfloat r_G02 = ggeoGJ[gbase+p_GGEO_RT*p_NpGJ];
+	  
+	  const dfloat r_G11 = ggeoGJ[gbase+p_GGEO_SS*p_NpGJ];
+	  const dfloat r_G12 = ggeoGJ[gbase+p_GGEO_ST*p_NpGJ];
+	  const dfloat r_G22 = ggeoGJ[gbase+p_GGEO_TT*p_NpGJ];
+	  
+	  const dfloat r_GwJ = ggeoGJ[gbase+p_GGEO_JW*p_NpGJ];
+//	  printf("G=[%f,%f,%f;%f,%f;%f;%f\n", r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ);
+#endif
+	  
+	  // 'r', 's', 't' derivatives
+	  dfloat dr = 0.0f;
+	  dfloat ds = 0.0f;
+	  dfloat dt = 0.0f;
+
+#pragma unroll p_NqGJ
+	  for (int n = 0; n<p_NqGJ; ++n) {
+	    dr += s_DGJ[i][n]*s_q[k][j][n];
+	    ds += s_DGJ[j][n]*s_q[k][n][i];
+	    dt += s_DGJ[k][n]*s_q[n][j][i];
+	  }
+
+	  s_qr[j][i] = r_G00*dr + r_G01*ds + r_G02*dt;
+	  s_qs[j][i] = r_G01*dr + r_G11*ds + r_G12*dt;
+
+	  const dfloat r_qt = r_G02*dr + r_G12*ds + r_G22*dt;
+
+	  for(int n=0;n<p_NqGJ;++n){
+	    r_q[n] += s_DGJ[k][n]*r_qt;
+	  }
+
+	  r_q[k] += lambda*r_GwJ*s_q[k][j][i];
+
+	}
+      }
+      
+      @barrier("local");
+      
+      // weak diff
+      for(int j=0;j<p_NqGJ;++j;@inner(1)){
+	for(int i=0;i<p_NqGJ;++i;@inner(0)){
+	    
+	  dfloat lapqr = 0.0f, lapqs = 0.0f;
+	    
+#pragma unroll p_NqGJ
+	  for(int n=0;n<p_NqGJ;++n){
+	    lapqr += s_DGJ[n][i]*s_qr[j][n];
+	    lapqs += s_DGJ[n][j]*s_qs[n][i];
+	  }
+
+	  r_q[k] += lapqr+lapqs;
+	}
+      }
+    }//k
+  
+    @barrier("local");
+
+    // test in c
+    for(int j=0;j<p_NqGJ;++j;@inner(1)){
+      for(int i=0;i<p_NqGJ;++i;@inner(0)){
+
+	// r_q already filled
+	
+	for(int c=0;c<p_Nq;++c){
+	  
+	  dfloat tmp = 0.0f;
+	    
+#pragma unroll p_NqGJ
+	  for(int k=0;k<p_NqGJ;++k){
+
+	    const dfloat sIkc = s_I[k][c];
+	    tmp  += sIkc*r_q[k];
+	  }
+	    
+	  s_q[c][j][i] = tmp; 
+	}
+      }
+    }
+    
+    // transform back in b
+      
+    for(int c=0;c<p_NqGJ;++c;@inner(1)){
+      for(int i=0;i<p_NqGJ;++i;@inner(0)){
+	if(c<p_Nq){
+#pragma unroll p_NqGJ
+	  for(int j=0;j<p_NqGJ;++j)
+	    r_q[j] = s_q[c][j][i];
+	    
+	  for(int b=0;b<p_Nq;++b){
+	      
+	    dfloat tmp  = 0.0f;
+	      
+#pragma unroll p_NqGJ
+	    for(int j=0;j<p_NqGJ;++j){
+	      
+	      const dfloat sIjb= s_I[j][b];
+	      tmp  += sIjb*r_q[j];
+	    }
+	    
+	    s_q[c][b][i] =tmp;
+	  }
+	}
+      }
+    }
+      
+    // transform back in a
+    for(int c=0;c<p_NqGJ;++c;@inner(1)){
+      for(int b=0;b<p_NqGJ;++b;@inner(0)){
+	if(b<p_Nq && c<p_Nq){
+	    
+#pragma unroll p_NqGJ
+	  for(int i=0;i<p_NqGJ;++i){
+	    r_q[i] = s_q[c][b][i];
+	  }
+
+	  for(int a=0;a<p_Nq;++a){
+
+	    dfloat tmp  = 0.0f;
+
+#pragma unroll p_NqGJ
+	    for(int i=0;i<p_NqGJ;++i){
+
+	      const dfloat sIia = s_I[i][a];
+	      tmp  += sIia*r_q[i];
+	    }
+	    
+	    s_q[c][b][a] = tmp;
+	  }
+	}
+      }
+    }
+   
+    for(int b=0;b<p_NqGJ;++b;@inner(1)){
+      for(int a=0;a<p_NqGJ;++a;@inner(0)){
+	if(a<p_Nq && b<p_Nq){
+	  for(int c=0;c<p_Nq;++c){
+	    dlong id = e*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
+	    Aq[id] = s_q[c][b][a];
+	  }//c
+        }//if
+      }//a
+    }//b
+  }//e
+}//kernel
+

@@ -86,49 +86,166 @@ int main(int argc, char **argv){
 
   printf("lambda = %lf\n", lambda);
   
-  dfloat *b = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
-  dfloat *x = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
+  dfloat *rhs   = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
+  dfloat *x     = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
   dfloat *exact = (dfloat*) calloc(level->Np*level->Klocal, sizeof(dfloat));
   
   dfloat *vgeo = (dfloat*) calloc(NVGEO*level->Np*level->Klocal, sizeof(dfloat));
   dfloat *ggeo = (dfloat*) calloc(NGGEO*level->Np*level->Klocal, sizeof(dfloat));
-  
+
+  dfloat *vgeoGJ = (dfloat*) calloc(NVGEO*level->NqGJ*level->NqGJ*level->NqGJ*level->Klocal, sizeof(dfloat));
+  dfloat *ggeoGJ = (dfloat*) calloc(NGGEO*level->NqGJ*level->NqGJ*level->NqGJ*level->Klocal, sizeof(dfloat));
   dfloat *gllw = (dfloat*) calloc(level->Nq, sizeof(dfloat));
 
   level->o_w.copyTo(gllw);
 
   level->o_vgeo.copyTo(vgeo, NVGEO*level->Np*level->Klocal*sizeof(dfloat), 0);
   level->o_ggeo.copyTo(ggeo, NGGEO*level->Np*level->Klocal*sizeof(dfloat), 0);
-  
+
+  level->o_vgeoGJ.copyTo(vgeoGJ, NVGEO*level->NqGJ*level->NqGJ*level->NqGJ*level->Klocal*sizeof(dfloat), 0);
+  level->o_ggeoGJ.copyTo(ggeoGJ, NGGEO*level->NqGJ*level->NqGJ*level->NqGJ*level->Klocal*sizeof(dfloat), 0);
+
+#if 0
   for(iint_t e=0;e<level->Klocal;++e){
     for(int k=0;k<level->Nq;++k){
       for(int j=0;j<level->Nq;++j){
 	for(int i=0;i<level->Nq;++i){
 	  int n = i + j*level->Nq + k*level->Nq*level->Nq;
 	  dfloat J = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_J];
-	  dfloat JWn = ggeo[e*NGGEO*level->Np+n+level->Np*GGEO_JW];
 	  dfloat xn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_X];
 	  dfloat yn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_Y];
 	  dfloat zn = vgeo[e*NVGEO*level->Np+n+level->Np*VGEO_Z];
+	  dfloat JWn = ggeo[e*NGGEO*level->Np+n+level->Np*GGEO_JW];
 	  
 	  dfloat mode = 2;
 	  
 	  iint_t id = n + e*level->Np;
-	  b[id] =
+	  rhs[id] =
 	    JWn*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
 
 	  exact[id] = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
+
 	}
       }
     }
   }
 
-  occa::memory o_b = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat), b);
-  occa::memory o_x = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat), x);
+  
+#else
 
+  
+  int Nq = level->Nq;
+  int Np = level->Np;
+  int NqGJ = level->NqGJ;
+  int NpGJ = NqGJ*NqGJ*NqGJ;
+  dfloat bQQQ[NqGJ][NqGJ][NqGJ]; //  = (dfloat*) calloc(NpGJ, sizeof(dfloat));
+  dfloat bQQN[NqGJ][NqGJ][NqGJ]; //  = (dfloat*) calloc(NpGJ, sizeof(dfloat));
+  dfloat bQNN[NqGJ][NqGJ][NqGJ]; //  = (dfloat*) calloc(NpGJ, sizeof(dfloat));
+
+  dfloat *IGJ = (dfloat*) calloc(NqGJ*Nq, sizeof(dfloat));
+
+  level->o_IGJ.copyTo(IGJ);
+  
+  printf("IGJ=[\n");
+  for(int i=0;i<NqGJ;++i){
+    for(int a=0;a<Nq;++a){
+      printf("%f ", IGJ[i*Nq+a]);
+    }
+    printf("\n");
+  }
+  printf("];\n");
+  
+  dfloat mode = 2;
+  
+  for(iint_t e=0;e<level->Klocal;++e){
+
+    for(int k=0;k<NqGJ;++k){
+      for(int j=0;j<NqGJ;++j){
+	for(int i=0;i<NqGJ;++i){
+	  int n = i + j*NqGJ + k*NqGJ*NqGJ;
+	  dfloat JW = ggeoGJ[e*NGGEO*NpGJ+n+NpGJ*GGEO_JW];
+	  dfloat xn = vgeoGJ[e*NVGEO*NpGJ+n+NpGJ*VGEO_X];
+	  dfloat yn = vgeoGJ[e*NVGEO*NpGJ+n+NpGJ*VGEO_Y];
+	  dfloat zn = vgeoGJ[e*NVGEO*NpGJ+n+NpGJ*VGEO_Z];
+
+	  // dfloat JWn = ggeoGJ[e*NGGEO*NpGJ+n+NpGJ*GGEO_JW];
+	  bQQQ[k][j][i] =
+	    JW*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
+	  //	  printf("JW = %lf, X=%lf,%lf,%lf bQQQ=%lf\n", JW, xn,yn,zn, bQQQ[k][j][i]);
+	}
+      }
+    }
+    
+    for(int k=0;k<NqGJ;++k){
+      for(int j=0;j<NqGJ;++j){
+	for(int a=0;a<Nq;++a){
+	  dfloat res = 0;
+	  for(int i=0;i<NqGJ;++i){
+	    res += IGJ[i*Nq+a]*bQQQ[k][j][i];
+	  }
+	  bQQN[k][j][a] = res;
+	}
+      }
+    }
+
+    for(int k=0;k<NqGJ;++k){
+      for(int b=0;b<Nq;++b){
+	for(int a=0;a<Nq;++a){
+	  dfloat res = 0;
+	  for(int j=0;j<NqGJ;++j){
+	    res += IGJ[j*Nq+b]*bQQN[k][j][a];
+	  }
+	  bQNN[k][b][a] = res;
+	}
+      }
+    }
+  
+    for(int c=0;c<Nq;++c){
+      for(int b=0;b<Nq;++b){
+	for(int a=0;a<Nq;++a){
+	  dfloat res = 0;
+	  for(int k=0;k<NqGJ;++k){
+	    res += IGJ[k*Nq+c]*bQNN[k][b][a];
+	  }
+
+	  int id = a + b*Nq + c*Nq*Nq + e*level->Np;
+	  rhs[id] = res;
+  
+	  int n = a + b*Nq + c*Nq*Nq;
+	  
+	  dfloat xn = vgeo[e*NVGEO*Np+n+Np*VGEO_X];
+	  dfloat yn = vgeo[e*NVGEO*Np+n+Np*VGEO_Y];
+	  dfloat zn = vgeo[e*NVGEO*Np+n+Np*VGEO_Z];
+	  
+	  exact[id] = cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
+	}
+      }
+    }
+  }
+#endif
+  
+  occa::memory o_rhs = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat), rhs);
+  occa::memory o_x   = adaptive->device.malloc(level->Np*level->Klocal*sizeof(dfloat), x);
+
+#if 0
+  adaptive->dotMultiplyKernel(level->Np*level->Klocal, level->o_invDegree, o_rhs, o_rhs);
+
+  adaptiveGatherScatter(level, o_rhs);
+
+  o_rhs.copyTo(rhsb);
+  
+  for(int n=0;n<level->Np*level->Klocal;++n){
+    if(fabs(rhs[n]-exact[n])>1e-12)
+      printf("mismatch from %lf to %lf of %lf\n",
+	     rhs[n], exact[n], fabs(rhs[n]-exact[n]));
+  }
+  MPI_Finalize();
+  exit(0);
+#endif
+  
   dfloat tol = 1.e-6;
-  adaptiveSolve(adaptive, lambda, tol, o_b, o_x);
-
+  adaptiveSolve(adaptive, lambda, tol, o_rhs, o_x);
+  
   o_x.copyTo(x, level->Np*level->Klocal*sizeof(dfloat), 0);
 
   dfloat_t maxError = 0;
@@ -137,7 +254,7 @@ int main(int argc, char **argv){
     x[n] -= exact[n];
   }
   printf("maxError = %le\n", maxError);
-
+  
   o_x.copyFrom(x, level->Np*level->Klocal*sizeof(dfloat), 0);
   
   adaptivePlotVTUHex3D(adaptive, adaptive->lvl, 0, 0.0, "out", o_x);

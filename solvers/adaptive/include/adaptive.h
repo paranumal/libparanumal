@@ -52,7 +52,7 @@ adaptive_t *adaptiveSetup(setupAide &options, MPI_Comm comm);
 void adaptive_free(adaptive_t *adaptive);
 
 void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
-                            occa::memory &o_r, occa::memory &o_z);
+                            occa::memory &o_r, occa::memory &o_tmp, occa::memory &o_z);
 
 dfloat adaptiveWeightedNorm2(adaptive_t *adaptive, level_t *level,
 			     occa::memory &o_w, occa::memory &o_a);
@@ -98,5 +98,11 @@ void adaptivePlotVTUHex3D(adaptive_t *adaptive,
                           dfloat_t time,
                           const char *prefix,
                           occa::memory &o_fields);
+
+void adaptiveRankOneProjection(level_t *level,
+			       occa::memory &o_filtU,
+			       occa::memory &o_filtV,
+			       occa::memory &o_q,
+			       occa::memory &o_Fq);
 
 #endif

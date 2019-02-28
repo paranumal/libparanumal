@@ -124,6 +124,10 @@ typedef struct level
   occa::memory o_sgeo;
   occa::memory o_ggeo;
 
+  occa::memory o_vgeoGJ;
+  occa::memory o_sgeoGJ;
+  occa::memory o_ggeoGJ;
+
   // reduction buffers
   occa::memory o_red_buf[2];
 
@@ -132,9 +136,11 @@ typedef struct level
   occa::memory* o_pcgWork;
   
   // kernels
-  occa::kernel compute_Ax;// not populated yet
+  occa::kernel dotMultiplyKernel;
+  occa::kernel compute_Ax;
   occa::kernel compute_partial_Ax;
-
+  occa::kernel compute_cubature_Ax;
+  occa::kernel compute_cubature_X;
   occa::kernel compute_diagonal_Jacobi;
   
   occa::kernel compute_X;
@@ -147,6 +153,8 @@ typedef struct level
   occa::kernel compute_energy;
   occa::kernel compute_error;
 
+  occa::kernel compute_cubature_geo;
+  
   occa::kernel coarsen_fields;
   occa::kernel refine_and_fill_fields;
 
@@ -176,6 +184,21 @@ typedef struct level
   occa::memory o_invDegree;
   
   ogs_t *ogs;
+
+  // C0 conforming rank one filter to zero top mode
+  // F*x = (1-filtU*filtV')*x
+  occa::memory o_filtU;
+  occa::memory o_filtV;
+  occa::kernel filterKernel;
+
+  // Gauss-Jacobi grid info
+  int NqGJ;
+  occa::memory o_rGJ; // 1d GJ coordinates
+  occa::memory o_wGJ; // 1d GJ weights
+  occa::memory o_DGJ; // 1d GJ collocation differentiation matrix (NqGJ => NqGJ)
+  occa::memory o_VGJ; // 1d GJ generalized Vandermonde matrix (NqGJ x NqGJ)
+  occa::memory o_IGJ; // 1d GLL to GJ interpolation matrix (Nq => NqGJ)
+  
   
 } level_t;
 

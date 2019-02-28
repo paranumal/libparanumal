@@ -271,7 +271,7 @@
         const dlong gid = i + p_Nq * j + p_Nq2 * k + e * p_Np * p_NGGEO;
 
 	dfloat JW = gllw[i]*gllw[j]*gllw[k]*J;
-	
+
         ggeo[gid + p_GGEO_RR * p_Np] = JW*(rx*rx+ry*ry+rz*rz);
         ggeo[gid + p_GGEO_RS * p_Np] = JW*(rx*sx+ry*sy+rz*sz);
 	ggeo[gid + p_GGEO_RT * p_Np] = JW*(rx*tx+ry*ty+rz*tz);
@@ -279,6 +279,304 @@
         ggeo[gid + p_GGEO_ST * p_Np] = JW*(sx*tx+sy*ty+sz*tz);
 	ggeo[gid + p_GGEO_TT * p_Np] = JW*(tx*tx+ty*ty+tz*tz);
 	ggeo[gid + p_GGEO_JW * p_Np] = JW;
+      }
+    }
+  }
+}
+
+#undef cubeThreads
+#undef computeGradientR
+#undef computeCurlR
+
+#define cubeThreads							\
+  for (dlong ke = 0; ke < p_NqGJ * p_NelementsblkV; ++ke; @inner(2))	\
+    for (dlong j = 0; j < p_NqGJ; ++j; @inner(1))				\
+      for (dlong i = 0; i < p_NqGJ; ++i; @inner(0))
+
+#define computeGradientR(q, qr, qs, qt)					\
+  @barrier("local");							\
+  cubeThreads { if (e < Nelements){ s_q[es][k][j][i] = q; }}					\
+  @barrier("local");							\
+  cubeThreads								\
+  {									\
+    if (e < Nelements)							\
+      {									\
+	qr = 0; qs = 0; qt = 0;						\
+	for (dlong n = 0; n < p_NqGJ; ++n)				\
+	  qr +=  s_D[i][n] * s_q[es][k][j][n];				\
+	for (dlong n = 0; n < p_NqGJ; ++n)				\
+	  qs += s_D[j][n] * s_q[es][k][n][i];				\
+	for (dlong n = 0; n < p_NqGJ; ++n)				\
+	  qt += s_D[k][n] * s_q[es][n][j][i];				\
+      }									\
+  }
+
+#define computeCurlR(v1, v2, v3, curlr, curls, curlt)			\
+  cubeThreads								\
+  {									\
+    if (e < Nelements) {							\
+      curlr = 0; curls = 0; curlt = 0;					\
+    }									\
+  }									\
+  @barrier("local");							\
+  cubeThreads { if(e<Nelements){ s_q[es][k][j][i] = (v1);} }				\
+  @barrier("local");							\
+  cubeThreads{								\
+    if (e < Nelements){								\
+      for (dlong n = 0; n < p_NqGJ; ++n)					\
+	curls +=  s_D[k][n] * s_q[es][n][j][i];				\
+      for (dlong n = 0; n < p_NqGJ; ++n)					\
+	curlt -=  s_D[j][n] * s_q[es][k][n][i];				\
+    }									\
+  }									\
+  @barrier("local");							\
+  cubeThreads { if(e<Nelements){ s_q[es][k][j][i] = (v2); }}		\
+  @barrier("local");							\
+  cubeThreads								\
+  {									\
+    if (e < Nelements){								\
+      for (dlong n = 0; n < p_NqGJ; ++n)					\
+	curlr -= s_D[k][n] * s_q[es][n][j][i];				\
+      for (dlong n = 0; n < p_NqGJ; ++n)					\
+	curlt += s_D[i][n] * s_q[es][k][j][n];				\
+    }									\
+  }									\
+  @barrier("local");							\
+  cubeThreads { if(e<Nelements) { s_q[es][k][j][i] = (v3); }}		\
+  @barrier("local");							\
+  cubeThreads								\
+  {									\
+    if (e < Nelements)								\
+      {									\
+	for (dlong n = 0; n < p_NqGJ; ++n){				\
+	  curlr += s_D[j][n] * s_q[es][k][n][i];			\
+	}								\
+	for (dlong n = 0; n < p_NqGJ; ++n){				\
+	  curls -= s_D[i][n] * s_q[es][k][j][n];			\
+	}								\
+      }									\
+  }
+
+
+
+@kernel void adaptiveCubatureGeometricFactorsHex3D(const dlong Nelements,
+						   @restrict const dfloat * D,
+						   @restrict const dfloat * wGJ,
+						   @restrict dfloat * vgeo,
+						   @restrict dfloat * sgeo,
+						   @restrict dfloat * ggeo){
+  
+  for (dlong eo = 0; eo < Nelements; eo += p_NelementsblkV; @outer(0)){
+    
+    @shared dfloat s_q[p_NelementsblkV][p_NqGJ][p_NqGJ][p_NqGJ];
+    @shared dfloat s_D[p_NqGJ][p_NqGJ];
+
+    @exclusive dfloat x, y, z;
+    @exclusive dfloat xr, xs, xt, yr, ys, yt, zr, zs, zt;
+    @exclusive dfloat rx, sx, tx, ry, sy, ty, rz, sz, tz;
+    @exclusive dfloat J;
+    @exclusive dlong e, es, k;
+
+    cubeThreads{
+
+      es = ke / p_NqGJ;
+      k = ke % p_NqGJ;
+      e = es + eo;
+      if (e < Nelements){
+	const dlong id = i + p_NqGJ * j + p_NqGJ2 * k + e * p_NpGJ * p_NVGEO;
+	
+	x = vgeo[id + p_VGEO_X * p_NpGJ];
+        y = vgeo[id + p_VGEO_Y * p_NpGJ];
+        z = vgeo[id + p_VGEO_Z * p_NpGJ];
+
+        if (ke == 0){
+	  s_D[j][i] = D[j * p_NqGJ + i]; // double check this
+	  //	  printf("x,y,z=%lf,%lf,%lf s_D[%d][%d]=%lf\n", x,y,z, j,i,s_D[j][i]);
+	}
+      }
+    }
+    
+    computeGradientR(x, xr, xs, xt);
+    computeGradientR(y, yr, ys, yt);
+    computeGradientR(z, zr, zs, zt);
+
+    cubeThreads{
+      if (e < Nelements){
+        J = xr * (ys * zt - zs * yt) -
+	  yr * (xs * zt - zs * xt) +
+	  zr * (xs * yt - ys * xt);
+      }
+    }
+    
+    // Here we are using the Invariant Curl Form of
+    // Nelementsopriva found in equation (37) of
+    // DOI: 10.1007/s10915-005-9070-8
+
+    // Jr_x = 1/2 ((yz_t - zy_t)_s - (yz_s-zy_s)_t)
+    // Js_x = 1/2 ((yz_r - zy_r)_t - (yz_t-zy_t)_r)
+    // Jt_x = 1/2 ((yz_s - zy_s)_r - (yz_r-zy_r)_s)
+    computeCurlR(y * zr - z * yr, y * zs - z * ys, y * zt - z * yt, rx, sx, tx);
+
+    // Jr_y = 1/2 ((zx_t - xz_t)_s - (zx_s-xz_s)_t)
+    // Js_y = 1/2 ((zx_r - xz_r)_t - (zx_t-xz_t)_r)
+    // Jt_y = 1/2 ((zx_s - xz_s)_r - (zx_r-xz_r)_s)
+    computeCurlR(z * xr - x * zr, z * xs - x * zs, z * xt - x * zt, ry, sy, ty);
+
+    // Jr_z = 1/2 ((xy_t - yx_t)_s - (xy_s-yx_s)_t)
+    // Js_z = 1/2 ((xy_r - yx_r)_t - (xy_t-yx_t)_r)
+    // Jt_z = 1/2 ((xy_s - yx_s)_r - (xy_r-yx_r)_s)
+    computeCurlR(x * yr - y * xr, x * ys - y * xs, x * yt - y * xt, rz, sz, tz);
+
+    cubeThreads{
+      if (e < Nelements){
+        rx /= TWO * J, sx /= TWO * J, tx /= TWO * J;
+        ry /= TWO * J, sy /= TWO * J, ty /= TWO * J;
+        rz /= TWO * J, sz /= TWO * J, tz /= TWO * J;
+	//	printf("G=[%f; %f,%f,%f; %f,%f,%f; %f,%f,%f]\n", J, rx, sx, tx, ry, sy, ty, rz, sz, tz);
+      }
+    }
+
+    /*
+     * compute surface geometric factors
+     */
+    cubeThreads{
+      if (e < Nelements){
+        /*
+         * TODO: Check that flipping J sign here (if necessary) works for 3-D
+         *       as it does for 2-D
+         */
+        J = fabs(J);
+
+        dfloat nx, ny, nz, sJ;
+        dlong f;
+        /* mapping Tim's face numbers to bfam
+         * tim bfam
+         * 4   0
+         * 2   1
+         * 1   2
+         * 3   3
+         * 0   4
+         * 5   5
+         */
+        if (i == 0){
+          f = 0;
+          nx = -rx;
+          ny = -ry;
+          nz = -rz;
+        }
+        if (i == p_NqGJ - 1){
+          f = 1;
+          nx = rx;
+          ny = ry;
+          nz = rz;
+        }
+        if (i == 0 || i == p_NqGJ - 1){
+          sJ = sqrt(nx * nx + ny * ny + nz * nz);
+
+          nx = nx / sJ;
+          ny = ny / sJ;
+          nz = nz / sJ;
+          sJ *= J;
+
+          const dlong id =
+              j + k * p_NqGJ + f * p_Nfp + e * p_Nfaces * p_Nfp * p_NSGEO;
+
+          sgeo[id + p_SGEO_NX * p_Nfaces * p_Nfp] = nx;
+          sgeo[id + p_SGEO_NY * p_Nfaces * p_Nfp] = ny;
+          sgeo[id + p_SGEO_NZ * p_Nfaces * p_Nfp] = nz;
+          sgeo[id + p_SGEO_SJ * p_Nfaces * p_Nfp] = sJ;
+        }
+
+        if (j == 0){
+	  f = 2;
+	  nx = -sx;
+	  ny = -sy;
+	  nz = -sz;
+	}
+        if (j == p_NqGJ - 1){
+	  f = 3;
+          nx = sx;
+          ny = sy;
+          nz = sz;
+        }
+        if (j == 0 || j == p_NqGJ - 1){
+          sJ = sqrt(nx * nx + ny * ny + nz * nz);
+          nx = nx / sJ;
+          ny = ny / sJ;
+          nz = nz / sJ;
+          sJ *= J;
+
+          const dlong id =
+              i + k * p_NqGJ + f * p_Nfp + e * p_Nfaces * p_Nfp * p_NSGEO;
+
+          sgeo[id + p_SGEO_NX * p_Nfaces * p_Nfp] = nx;
+          sgeo[id + p_SGEO_NY * p_Nfaces * p_Nfp] = ny;
+          sgeo[id + p_SGEO_NZ * p_Nfaces * p_Nfp] = nz;
+          sgeo[id + p_SGEO_SJ * p_Nfaces * p_Nfp] = sJ;
+        }
+	
+        if (k == 0){
+          f = 4;
+          nx = -tx;
+          ny = -ty;
+          nz = -tz;
+        }
+        if (k == p_NqGJ - 1){
+          f = 5;
+          nx = tx;
+          ny = ty;
+          nz = tz;
+        }
+        if (k == 0 || k == p_NqGJ - 1){
+          sJ = sqrt(nx * nx + ny * ny + nz * nz);
+          nx = nx / sJ;
+          ny = ny / sJ;
+          nz = nz / sJ;
+          sJ *= J;
+
+          const dlong id =
+              i + j * p_NqGJ + f * p_Nfp + e * p_Nfaces * p_Nfp * p_NSGEO;
+
+          sgeo[id + p_SGEO_NX * p_Nfaces * p_Nfp] = nx;
+          sgeo[id + p_SGEO_NY * p_Nfaces * p_Nfp] = ny;
+          sgeo[id + p_SGEO_NZ * p_Nfaces * p_Nfp] = nz;
+          sgeo[id + p_SGEO_SJ * p_Nfaces * p_Nfp] = sJ;
+        }
+      }
+    }
+
+    cubeThreads{
+      if (e < Nelements){
+
+        const dlong id = i + p_NqGJ * j + p_NqGJ2 * k + e * p_NpGJ * p_NVGEO;
+	
+        vgeo[id + p_VGEO_RX * p_NpGJ] = rx;
+        vgeo[id + p_VGEO_SX * p_NpGJ] = sx;
+        vgeo[id + p_VGEO_RY * p_NpGJ] = ry;
+        vgeo[id + p_VGEO_SY * p_NpGJ] = sy;
+        vgeo[id + p_VGEO_J  * p_NpGJ] = J;
+        vgeo[id + p_VGEO_TX * p_NpGJ] = tx;
+        vgeo[id + p_VGEO_TY * p_NpGJ] = ty;
+        vgeo[id + p_VGEO_RZ * p_NpGJ] = rz;
+        vgeo[id + p_VGEO_SZ * p_NpGJ] = sz;
+        vgeo[id + p_VGEO_TZ * p_NpGJ] = tz;
+
+        const dlong gid = i + p_NqGJ * j + p_NqGJ2 * k + e * p_NpGJ * p_NGGEO;
+
+	dfloat JW = wGJ[i]*wGJ[j]*wGJ[k]*J;
+
+        ggeo[gid + p_GGEO_RR * p_NpGJ] = JW*(rx*rx+ry*ry+rz*rz);
+	
+        ggeo[gid + p_GGEO_RS * p_NpGJ] = JW*(rx*sx+ry*sy+rz*sz);
+	
+	ggeo[gid + p_GGEO_RT * p_NpGJ] = JW*(rx*tx+ry*ty+rz*tz);
+	
+	ggeo[gid + p_GGEO_SS * p_NpGJ] = JW*(sx*sx+sy*sy+sz*sz);
+	
+        ggeo[gid + p_GGEO_ST * p_NpGJ] = JW*(sx*tx+sy*ty+sz*tz);
+	
+	ggeo[gid + p_GGEO_TT * p_NpGJ] = JW*(tx*tx+ty*ty+tz*tz);
+	ggeo[gid + p_GGEO_JW * p_NpGJ] = JW;
       }
     }
   }

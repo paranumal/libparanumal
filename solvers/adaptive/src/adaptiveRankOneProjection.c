@@ -27,44 +27,13 @@
 #include "adaptive.h"
 #include "ogsInterface.h"
 
-void adaptiveZeroMean(adaptive_t *adaptive, level_t *level, occa::memory &o_q){
-
-  dfloat qmeanLocal;
-  dfloat qmeanGlobal;
+void adaptiveRankOneProjection(level_t *level,
+			       occa::memory &o_filtU,
+			       occa::memory &o_filtV,
+			       occa::memory &o_q,
+			       occa::memory &o_Fq){
+			       
+  level->filterKernel(level->Klocal, o_filtU, o_filtV, o_q, o_Fq);
+  //  o_q.copyFrom(o_tmp);
   
-  dlong Nblock = level->Nblock;
-  dfloat *tmp = level->tmp;
-
-  occa::memory &o_tmp = level->o_tmp;
-
-  printf("Zeroing mean\n");
-  
-  // this is a C0 thing [ assume GS previously applied to o_q ]
-#define USE_WEIGHTED 0
-  
-#if USE_WEIGHTED==1
-  adaptive->innerProductKernel(level->Klocal*level->Np, level->o_invDegree, o_q, o_tmp);
-#else
-  adaptive->sumKernel(level->Klocal*level->Np, o_q, o_tmp);
-#endif
-  
-  o_tmp.copyTo(tmp);
-
-  // finish reduction
-  qmeanLocal = 0;
-  for(dlong n=0;n<Nblock;++n)
-    qmeanLocal += tmp[n];
-
-  // globalize reduction
-  MPI_Allreduce(&qmeanLocal, &qmeanGlobal, 1, MPI_DFLOAT, MPI_SUM, adaptive->comm);
-
-  // normalize
-#if USE_WEIGHTED==1
-  qmeanGlobal *= level->nullProjectWeightGlobal;
-#else
-  qmeanGlobal /= ((dfloat) level->Klocal*(dfloat)level->Np);
-#endif
-  
-  // q[n] = q[n] - qmeanGlobal
-  adaptive->addScalarKernel(level->Klocal*level->Np, -qmeanGlobal, o_q);
 }

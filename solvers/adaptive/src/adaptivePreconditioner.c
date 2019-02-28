@@ -27,26 +27,32 @@ SOFTWARE.
 #include "adaptive.h"
 
 void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
-                            occa::memory &o_r, occa::memory &o_z){
+                            occa::memory &o_r, occa::memory &o_tmp, occa::memory &o_z){
 
   level_t *level0 = adaptive->lvl;
   setupAide options = adaptive->options;
 
   dlong Ntotal = level0->Np*level0->Klocal;
 
-  
   if(options.compareArgs("PRECONDITIONER", "JACOBI")){
-    
-    // Jacobi preconditioner    
+
+    // Jacobi preconditioner     (builds in W)
     adaptive->dotMultiplyKernel(Ntotal, level0->o_invDiagA,  o_r, o_z);
+
     adaptive->dotMultiplyKernel(Ntotal, level0->o_invDegree, o_z, o_z);
-    
+
     ogsGatherScatter(o_z, ogsDfloat, ogsAdd, level0->ogs);
+    //    adaptiveGatherScatter(level0, o_z);
     
+#if 1    
 #if USE_GASPAR==1
     level0->scatter_noncon(level0->Klocal, level0->o_EToC,
 			   level0->o_Ib, level0->o_It, o_z);
+#endif 
 #endif
+    
+    //    adaptiveRankOneProjection(level0, level0->o_filtU, level0->o_filtV, o_z, o_z);
+    
   }
   else if (options.compareArgs("PRECONDITIONER", "MULTIGRID")) {
 
@@ -84,14 +90,15 @@ void adaptivePreconditioner(adaptive_t *adaptive, dfloat lambda,
 
 #endif
 
-    //    o_z.copyFrom(o_r);
-
+    o_z.copyFrom(o_r);
+    
   }
-
+  
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
     adaptiveZeroMean(adaptive, level0, o_z);
 #endif
+
 }
 
 

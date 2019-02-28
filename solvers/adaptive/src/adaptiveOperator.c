@@ -47,16 +47,34 @@ void adaptiveOperator(adaptive_t *adaptive,
     ogs_t *ogs = level->ogs;
 
 #if USE_GASPAR==1
+
     // operate on fine
+#if 0
     level->compute_Ax(level->Klocal, // locally owned elements
 		      level->o_ggeo,
 		      level->o_D,
 		      lambda,
 		      o_q,
 		      o_Aq);
-    
+#else
+    level->compute_cubature_Ax(level->Klocal, // locally owned elements
+			       level->o_ggeoGJ,
+			       level->o_DGJ,
+			       level->o_IGJ,
+			       lambda,
+			       o_q,
+			       o_Aq);
+
+#endif
+
     // Aq <= Snc*S*G*Gnc*Aloc*q
     adaptiveGatherScatter(level, o_Aq);
+
+#if USE_NULL_PROJECTION==1
+    if(adaptive->allNeumann) // zero mean of RHS
+      adaptiveZeroMean(adaptive, level, o_Aq);
+#endif
+    
 #else
     o_q.copyTo(o_qL);
 

@@ -1,9 +1,14 @@
 #include "adaptive.h"
 
+
+void asd_jacobi_gauss_quadrature(ldouble alpha, ldouble beta,
+                                        int N, ldouble *x,
+				 ldouble *w);
+
 // {{{ Level
 
 // {{{ Kernel Info
-static void level_kernelinfo(occa::properties &info, occa::device &device, int N,
+static void level_kernelinfo(occa::properties &info, occa::device &device, int N, int NqGJ,
     int periodic_brick)
 {
   const int Nq = N + 1;
@@ -113,6 +118,10 @@ static void level_kernelinfo(occa::properties &info, occa::device &device, int N
   info["defines/p_Nfaces"] = Nfaces;
   info["defines/p_Nfp"] = Nfp;
 
+  info["defines/p_NqGJ"] = NqGJ;
+  info["defines/p_NqGJ2"] = NqGJ*NqGJ;
+  info["defines/p_NpGJ"] = NqGJ*NqGJ*NqGJ;
+  
   info["defines/p_NelementsblkV"] = 1;
   info["defines/p_NelementsblkS"] = 1;
 
@@ -218,6 +227,18 @@ static void level_get_mesh(level_t *lvl, mesh_t *mesh, p4est_t *pxest,
 		 lvl->o_r,
 		 lvl->o_vgeo);
 
+  lvl->compute_cubature_X(mesh->Ktotal,
+			  lvl->o_EToL,
+			  lvl->o_EToT,
+			  lvl->o_EToX,
+			  lvl->o_EToY,
+			  lvl->o_EToZ,
+			  lvl->o_tree_to_vertex,
+			  lvl->o_tree_vertices,
+			  lvl->o_rGJ,
+			  lvl->o_vgeoGJ);
+
+  
   if (1) { // prefs->mesh_continuous){
     
     // Compute the periodic shifts for the brick case (which is the only case we
@@ -251,7 +272,8 @@ static void level_get_mesh(level_t *lvl, mesh_t *mesh, p4est_t *pxest,
   
   lvl->compute_geo(mesh->Ktotal, lvl->o_D, lvl->o_w, lvl->o_vgeo, lvl->o_sgeo, lvl->o_ggeo);
   // }}}
-
+  printf("calling compute_cubature_geo\n");
+  lvl->compute_cubature_geo(mesh->Ktotal, lvl->o_DGJ, lvl->o_wGJ, lvl->o_vgeoGJ, lvl->o_sgeoGJ, lvl->o_ggeoGJ);
 }
 
 void occa_p4est_topidx_to_iint(occa::device &device, size_t N,
@@ -319,13 +341,15 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   level_get_mesh_constants(lvl, mesh);
   // }}}
 
+  printf("Klocal=%d\n", lvl->Klocal);
+  
   // {{{ Compute Kmax
   // FIXME?  Right now we just use a fixed Kmax for all of the mesh arrays.
   // There are some that may get allocated too big.  We may want to move to
   // some sort of dynamic resizing in the future.
   size_t available_bytes =
       (size_t)(occa_kmax_mem_frac *
-               (long double)(device.memorySize() - device.memoryAllocated()));
+               (ldouble)(device.memorySize() - device.memoryAllocated()));
 
   const int NpcgWork = 10;
   lvl->NpcgWork = NpcgWork;
@@ -426,14 +450,15 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   // }}}
 
   // {{{ Allocate Metric Terms
-  lvl->o_vgeo =
+  lvl->o_vgeo =						      
     device.malloc(NVGEO * sizeof(dfloat_t) * Kmax * Np, NULL);
-  lvl->o_sgeo =
+							      
+  lvl->o_sgeo =						      
     device.malloc(NSGEO * sizeof(dfloat_t) * Kmax * Nfaces * Nfp, NULL);
-  lvl->o_ggeo =
-    device.malloc(NGGEO * sizeof(dfloat_t) * Kmax * Np, NULL);
-  // }}}
-  
+							      
+  lvl->o_ggeo =						      
+    device.malloc(NGGEO * sizeof(dfloat_t) * Kmax * Np, NULL);  // }}}
+
   // {{{ reduction buffers
   {
     const int LDIM = KERNEL_REDUCE_LDIM;
@@ -460,8 +485,6 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   
   int Nblock  = ASD_MAX(1,(Ntotal+blockSize-1)/blockSize);
   int Nblock2 = ASD_MAX(1,(Nblock+blockSize-1)/blockSize);
-
-
   
   lvl->Nblock = Nblock;
   lvl->Nblock2 = Nblock2;
@@ -483,6 +506,102 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
     lvl->o_pcgWork[n] = device.malloc(lvl->Kmax*lvl->Np*sizeof(dfloat_t), zeros);
   }
   free(zeros);
+
+  // cubature info
+  int NGJ = (lvl->Nq)-1;
+  int NqGJ = lvl->Nq; 2*((NGJ+1)/2);
+  ldouble *lr = (ldouble *)asd_malloc_aligned(lvl->Nq * sizeof(ldouble));
+  ldouble *lw = (ldouble *)asd_malloc_aligned(lvl->Nq * sizeof(ldouble));
+  ldouble *lV = (ldouble *)asd_malloc_aligned(lvl->Nq * lvl->Nq * sizeof(ldouble));
+  
+  ldouble *lrGJ = (ldouble *)asd_malloc_aligned(NqGJ * sizeof(ldouble));
+  ldouble *lwGJ = (ldouble *)asd_malloc_aligned(NqGJ * sizeof(ldouble));
+  ldouble *lVGJ = (ldouble *)asd_malloc_aligned(NqGJ * NqGJ * sizeof(ldouble));
+  ldouble *lDGJ = (ldouble *)asd_malloc_aligned(NqGJ * NqGJ * sizeof(ldouble));
+  ldouble *lIGJ = (ldouble *)asd_malloc_aligned(NqGJ * lvl->Nq * sizeof(ldouble));
+
+
+  asd_jacobi_gauss_lobatto_quadrature(0, 0, lvl->Nq-1, lr, lw);
+  asd_jacobi_p_vandermonde(0, 0, lvl->Nq-1, lvl->Nq, lr, lV);
+  
+  asd_jacobi_gauss_quadrature(0, 0, NGJ, lrGJ, lwGJ); // TWTWTWTWTW
+
+  for(int n=0;n<NqGJ;++n){
+    printf("rGJ[%d] = %Lf\n", n, lrGJ[n]);
+  }
+
+  for(int n=0;n<NqGJ;++n){
+    printf("wGJ[%d] = %Lf\n", n, lwGJ[n]);
+  }
+
+  
+  asd_jacobi_p_vandermonde    (0, 0, NqGJ-1, NqGJ, lrGJ, lVGJ);
+  asd_jacobi_p_differentiation(0, 0, NqGJ-1, NqGJ, lrGJ, lVGJ, lDGJ);
+  asd_jacobi_p_interpolation(0, 0, lvl->N, NqGJ, lrGJ, lV, lIGJ); // interpolate from GLL to GJ
+
+  printf("lDGJ=[\n");
+  for(int n=0;n<NqGJ;++n){
+    for(int m=0;m<NqGJ;++m){
+      printf("%LF ", lDGJ[n*NqGJ+m]);
+    }
+    printf(";\n");
+  }
+  printf("];\n");
+
+  printf("lIGJ=[\n");
+  for(int n=0;n<NqGJ;++n){
+    for(int m=0;m<lvl->Nq;++m){
+      printf("%LF ", lIGJ[n*lvl->Nq+m]);
+    }
+    printf(";\n");
+  }
+  printf("];\n");
+
+
+  
+  dfloat *r = (dfloat *)asd_malloc_aligned(lvl->Nq * sizeof(dfloat));
+  dfloat *w = (dfloat *)asd_malloc_aligned(lvl->Nq * sizeof(dfloat));
+  dfloat *V = (dfloat *)asd_malloc_aligned(lvl->Nq * lvl->Nq * sizeof(dfloat));
+  
+  dfloat *rGJ = (dfloat *)asd_malloc_aligned(NqGJ * sizeof(dfloat));
+  dfloat *wGJ = (dfloat *)asd_malloc_aligned(NqGJ * sizeof(dfloat));
+  dfloat *VGJ = (dfloat *)asd_malloc_aligned(NqGJ * NqGJ * sizeof(dfloat));
+  dfloat *DGJ = (dfloat *)asd_malloc_aligned(NqGJ * NqGJ * sizeof(dfloat));
+  dfloat *IGJ = (dfloat *)asd_malloc_aligned(NqGJ * lvl->Nq * sizeof(dfloat));
+
+  for(int n=0;n<NqGJ;++n){
+    rGJ[n] = lrGJ[n];
+    wGJ[n] = lwGJ[n];
+  }
+  for(int n=0;n<NqGJ;++n){
+    for(int m=0;m<NqGJ;++m){
+      DGJ[n+m*NqGJ] = lDGJ[n*NqGJ+m];// switch to row major
+      VGJ[n+m*NqGJ] = lVGJ[n*NqGJ+m];
+    }
+  }
+  for(int n=0;n<lvl->Nq;++n){
+    for(int m=0;m<NqGJ;++m){
+      IGJ[m*lvl->Nq+n] = lIGJ[n*NqGJ+m]; // WHY ?
+    }
+  }
+
+  lvl->NqGJ = NqGJ;
+  lvl->o_rGJ = device.malloc(NqGJ*sizeof(dfloat), rGJ);
+  lvl->o_wGJ = device.malloc(NqGJ*sizeof(dfloat), wGJ);
+  lvl->o_DGJ = device.malloc(NqGJ*NqGJ*sizeof(dfloat), DGJ);
+  lvl->o_VGJ = device.malloc(NqGJ*NqGJ*sizeof(dfloat), VGJ);
+  lvl->o_IGJ = device.malloc(NqGJ*lvl->Nq*sizeof(dfloat), IGJ);
+
+  lvl->o_vgeoGJ =						      
+    device.malloc(NVGEO * sizeof(dfloat_t) * Kmax * NqGJ * NqGJ * NqGJ, NULL);
+							      
+  lvl->o_sgeoGJ =						      
+    device.malloc(NSGEO * sizeof(dfloat_t) * Kmax * Nfaces * NqGJ * NqGJ, NULL);
+
+  printf("populating ggeoGJ\n");
+  lvl->o_ggeoGJ =						      
+    device.malloc(NGGEO * sizeof(dfloat_t) * Kmax * NqGJ * NqGJ * NqGJ, NULL);  // }}}
+
   
   // {{{ Build Kernels
   occa::properties info;
@@ -490,8 +609,14 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   level_kernelinfo(info,
 		   device,
 		   N,
+		   NqGJ,
 		   (brick_p[0] || brick_p[1] || brick_p[2]));
 
+
+  lvl->dotMultiplyKernel = device.buildKernel(DHOLMES "/okl/dotMultiply.okl",
+					      "dotMultiply",					      
+					      info);
+  
 
   lvl->compute_Ax = device.buildKernel(DADAPTIVE "/okl/adaptiveAxHex3D.okl",
 				       "adaptiveAxHex3D",
@@ -501,6 +626,10 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
 					       "adaptivePartialAxHex3D",
 					       info);
 
+  lvl->compute_cubature_Ax = device.buildKernel(DADAPTIVE "/okl/adaptiveAxHex3D.okl",
+						"adaptiveCubatureAxHex3D",
+						info);
+  
   lvl->compute_diagonal_Jacobi = device.buildKernel(DADAPTIVE "/okl/adaptiveBuildJacobiDiagonalContinuousHex3D.okl",
 					       "adaptiveBuildJacobiDiagonalContinuousHex3D",
 					       info);
@@ -518,6 +647,10 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
 				     "adaptiveInterpX",
 				     info);
 
+  lvl->compute_cubature_X = device.buildKernel(DADAPTIVE "/okl/adaptiveComputeX.okl",
+				      "adaptiveCubatureComputeX",
+				      info);
+  
   lvl->coarse_X = device.buildKernel(DADAPTIVE "/okl/adaptiveCoarseX.okl",
 				     "adaptiveCoarseX",
 				     info);
@@ -526,6 +659,10 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
 					"adaptiveGeometricFactorsHex3D",
 					info);
 
+  lvl->compute_cubature_geo = device.buildKernel(DADAPTIVE "/okl/adaptiveGeometricFactorsHex3D.okl",
+						 "adaptiveCubatureGeometricFactorsHex3D",
+						 info);
+  
   lvl->get_mirror_fields = device.buildKernel(DADAPTIVE "/okl/adaptiveGetMirrorFields.okl",
 					      "adaptiveGetMirrorFields",
 					      info);
@@ -550,6 +687,10 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   lvl->zero_children = device.buildKernel(DADAPTIVE "/okl/adaptiveZeroChildren.okl",
 					  "adaptiveZeroChildren",
 					  info);
+
+  lvl->filterKernel = device.buildKernel(DADAPTIVE "/okl/adaptiveRankOneProjectionHex3D.okl",
+				       "adaptiveRankOneProjectionHex3D",
+				       info);
 
 
   
@@ -590,9 +731,34 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   // TW: what is actual order ?
   // TW: what is comm ?
   // TW: need proper conversion between (p4est_gloidx_t) and (hlong)
+  hlong *mult = (hlong*) calloc(lvl->Klocal*lvl->Np, sizeof(hlong));
+  for(int n=0;n<lvl->Klocal*lvl->Np;++n){
+    ++(mult[mesh->DToC[n]]);
+  }
+
+  printf("DToC = [\n");
+  for(int e=0;e<lvl->Klocal;++e){
+    printf("e=%d: ", e);
+    for(int n=0;n<lvl->Np;++n){
+      printf("%d ", mesh->DToC[e*lvl->Np+n]);
+    }
+    printf("\n");
+  }
+  printf("];\n");
+  
+
+  int maxMult= 0;
+  for(int n=0;n<lvl->Klocal*lvl->Np;++n){
+    if(maxMult<mult[n]){
+      maxMult = mult[n];
+    }
+  }
+  printf("MAXIMUM MULTIPLICITY = %d\n", maxMult);
+  
   hlong *shiftDToC = (hlong*) calloc(lvl->Klocal*lvl->Np, sizeof(hlong));
   for(int n=0;n<lvl->Klocal*lvl->Np;++n){
     shiftDToC[n] = mesh->DToC[n]+1;
+    if(mesh->DToC[n]<=0) printf("mesh->DToC[%d]  = %llu\n", n, mesh->DToC[n]);
   }
   lvl->ogs = ogsSetup(lvl->Klocal*lvl->Np, (hlong*) shiftDToC, comm, 1, device); // 1 verbose
 
@@ -610,7 +776,7 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
 #endif
   
   adaptiveGatherScatter(lvl, lvl->o_invDegree);
-  //  ogsGatherScatter(lvl->o_invDegree, ogsDfloat, ogsAdd, lvl->ogs);
+  //ogsGatherScatter(lvl->o_invDegree, ogsDfloat, ogsAdd, lvl->ogs);
 
   lvl->o_invDegree.copyTo(ones);
   
@@ -666,6 +832,55 @@ level_t *adaptiveLevelSetup(setupAide &options, p4est_t *pxest,
   }
 
   lvl->o_invDiagA.copyFrom(tmp, lvl->Np*lvl->Klocal*sizeof(dfloat), 0);
+
+  //  lvl->dotMultiplyKernel(lvl->Np*lvl->Klocal, lvl->o_invDegree, lvl->o_invDiagA, lvl->o_invDiagA);
+
+#if 0
+  // quick build bubble filter (N to N-1 leaving boundary invariant)
+#if 0 
+  dfloat filtU[6] = { -0.000000000000000e+00,
+		     -2.547057573459081e-01,
+		     2.103615014726592e-01,
+		      -2.103615014726592e-01,
+		      2.547057573459079e-01,
+		      0.000000000000000e+00};
+
+  dfloat filtV[6] = {
+    4.119429204355501e-01,
+    -9.815247311448987e-01,
+    1.188430384123744e+00,
+    -1.188430384123744e+00,
+    9.815247311448986e-01,
+    -4.119429204355499e-01,
+  };
+#else
+
+  dfloat filtU[8] = {
+    -0.000000000000000e+00,
+    -2.870464195082011e-01,
+    2.255970689586477e-01,
+    -2.051627322522581e-01,
+    2.051627322522581e-01,
+    -2.255970689586476e-01,
+    2.870464195082011e-01,
+  0.000000000000000e+00};
+
+  dfloat filtV[8] = {
+    2.390457218668787e-01,
+    -5.806261821771470e-01,
+    7.387802839637823e-01,
+    -8.123632632350666e-01,
+    8.123632632350675e-01,
+    -7.387802839637828e-01,
+    5.806261821771467e-01,
+    -2.390457218668786e-01};
+#endif
+  
+
+  lvl->o_filtU = device.malloc(lvl->Nq*sizeof(dfloat), filtU);
+  lvl->o_filtV = device.malloc(lvl->Nq*sizeof(dfloat), filtV);
+#endif
+
   
   mesh_free(mesh);
 

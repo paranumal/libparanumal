@@ -6,20 +6,20 @@ void get_operators(int N, occa::device &device, occa::memory &o_r,
 {
   const int Nq = N + 1;
 
-  long double *lr = (long double *)asd_malloc_aligned(Nq * sizeof(long double));
-  long double *lw = (long double *)asd_malloc_aligned(Nq * sizeof(long double));
-  long double *lV = (long double *)asd_malloc_aligned(Nq * Nq * sizeof(long double));
-  long double *lD = (long double *)asd_malloc_aligned(Nq * Nq * sizeof(long double));
-  long double *lM = (long double *)asd_malloc_aligned(Nq * Nq * sizeof(long double));
+  ldouble *lr = (ldouble *)asd_malloc_aligned(Nq * sizeof(ldouble));
+  ldouble *lw = (ldouble *)asd_malloc_aligned(Nq * sizeof(ldouble));
+  ldouble *lV = (ldouble *)asd_malloc_aligned(Nq * Nq * sizeof(ldouble));
+  ldouble *lD = (ldouble *)asd_malloc_aligned(Nq * Nq * sizeof(ldouble));
+  ldouble *lM = (ldouble *)asd_malloc_aligned(Nq * Nq * sizeof(ldouble));
 
-  long double *lrb = (long double *)asd_malloc_aligned(Nq * sizeof(long double));
-  long double *lrt = (long double *)asd_malloc_aligned(Nq * sizeof(long double));
+  ldouble *lrb = (ldouble *)asd_malloc_aligned(Nq * sizeof(ldouble));
+  ldouble *lrt = (ldouble *)asd_malloc_aligned(Nq * sizeof(ldouble));
 
-  long double *lIb = (long double *)asd_malloc_aligned(Nq * Nq * sizeof(long double));
-  long double *lIt = (long double *)asd_malloc_aligned(Nq * Nq * sizeof(long double));
+  ldouble *lIb = (ldouble *)asd_malloc_aligned(Nq * Nq * sizeof(ldouble));
+  ldouble *lIt = (ldouble *)asd_malloc_aligned(Nq * Nq * sizeof(ldouble));
 
-  long double *lPb = (long double *)asd_malloc_aligned(Nq * Nq * sizeof(long double));
-  long double *lPt = (long double *)asd_malloc_aligned(Nq * Nq * sizeof(long double));
+  ldouble *lPb = (ldouble *)asd_malloc_aligned(Nq * Nq * sizeof(ldouble));
+  ldouble *lPt = (ldouble *)asd_malloc_aligned(Nq * Nq * sizeof(ldouble));
 
   dfloat_t *I = (dfloat_t*)asd_malloc_aligned(Nq * Nq * sizeof(dfloat_t));
   for (int n = 0; n < Nq * Nq; ++n)

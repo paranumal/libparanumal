@@ -351,8 +351,14 @@ dlong gmask(dlong n, dlong g)
               for (dlong i = m; i < p_Nq; i += p_Nq)
               {
                 const dlong id = j * p_Nq + i;
+#if 1
+		// TW orig
                 s_Pb[j][i] = Pb[id];
                 s_Pt[j][i] = Pt[id];
+#else
+		s_Pb[i][j] = Pb[id];
+                s_Pt[i][j] = Pt[id];
+#endif
               }
 
           for (int f = 0; f < p_P4EST_FACES; ++f)

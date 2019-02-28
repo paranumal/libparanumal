@@ -122,7 +122,7 @@ adaptive_t *adaptiveSetup(setupAide &options, MPI_Comm comm)
   options.getArgs("POLYNOMIAL DEGREE", N);
   // TODO build more than one level
   adaptive->lvl = adaptiveLevelSetup(options, adaptive->pxest, adaptive->ghost, adaptive->device,
-				     adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.05,
+				     adaptive->brick_n, adaptive->brick_p, adaptive->brick_TToC, N, 0.2,
 				     adaptive->comm);
 
 #if 0

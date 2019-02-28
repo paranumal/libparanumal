@@ -1,0 +1,116 @@
+
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// Px(:,n) = (I - u*v')*x(:,:,e)*(I-v*u')
+
+@kernel void adaptiveRankOneProjectionHex3D(const dlong Nelements,
+                                          @restrict const dfloat *u,
+                                          @restrict const dfloat *v,
+                                          const dfloat *x,
+                                          dfloat *Px){
+
+  for (int e = 0; e < Nelements; e++; @outer(0)) {
+
+    @shared volatile dfloat s_x[p_Nq][p_Nq][p_Nq];
+
+    @exclusive dfloat r_x[p_Nq];
+
+    for (int j = 0; j < p_Nq; j++; @inner(1)) {    
+      for (int i = 0; i < p_Nq; i++; @inner(0)) {
+
+        dfloat res = 0;
+
+        #pragma unroll p_Nq
+        for (int k = 0; k < p_Nq; k++) {
+          const dlong ind = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          r_x[k] = x[ind];
+          res += v[k]*r_x[k];
+        }
+
+        #pragma unroll p_Nq
+        for (int k = 0; k < p_Nq; k++) {
+          s_x[k][j][i] = r_x[k] - res*u[k];
+        }
+      }
+    }
+
+    @barrier("local");
+
+    for (int k = 0; k < p_Nq; k++; @inner(1)) {    
+      for (int i = 0; i < p_Nq; i++; @inner(0)) {
+
+        dfloat res = 0;
+
+        #pragma unroll p_Nq
+        for (int j = 0; j < p_Nq; j++) {
+          r_x[j] = s_x[k][j][i];
+          res += v[j]*r_x[j];
+        }
+
+        #pragma unroll p_Nq
+        for (int j = 0; j < p_Nq; j++) {
+          s_x[k][j][i] = r_x[j] - res*u[j];
+        }
+      }
+    }
+
+    @barrier("local");
+
+
+    for (int k = 0; k < p_Nq; k++; @inner(1)) {    
+      for (int j = 0; j < p_Nq; j++; @inner(0)) {
+
+        dfloat res = 0;
+
+        #pragma unroll p_Nq
+        for (int i = 0; i < p_Nq; i++) {
+          r_x[i] = s_x[k][j][i];
+          res += v[i]*r_x[i];
+        }
+
+        #pragma unroll p_Nq
+        for (int i = 0; i < p_Nq; i++) {
+          s_x[k][j][i] = r_x[i] - res*u[i];
+        }
+      }
+    }
+
+    @barrier("local");
+
+    for (int j = 0; j < p_Nq; j++; @inner(1)) {    
+      for (int i = 0; i < p_Nq; i++; @inner(0)) {
+
+        #pragma unroll p_Nq
+        for (int k = 0; k < p_Nq; k++) {	
+          const dlong ind = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          Px[ind] = s_x[k][j][i];
+        }
+      }
+    }
+  }
+}
+

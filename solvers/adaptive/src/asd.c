@@ -1300,7 +1300,7 @@ int asd_lua_global_function_call(lua_State *L, const char *name,
       lua_pushnumber(L, va_arg(vl, double));
       break;
     case 'l':
-      lua_pushnumber(L, (double)va_arg(vl, long double));
+      lua_pushnumber(L, (double)va_arg(vl, ldouble));
       break;
     case 'i':
       lua_pushinteger(L, va_arg(vl, int));
@@ -1339,7 +1339,7 @@ int asd_lua_global_function_call(lua_State *L, const char *name,
       ASD_ABORT_IF_NOT(lua_isnumber(L, n - num_res),
                        "for '%s' return %d expected number got '%s'", name, n,
                        lua_tostring(L, n - num_res));
-      *va_arg(vl, long double *) = (long double)lua_tonumber(L, n - num_res);
+      *va_arg(vl, ldouble *) = (ldouble)lua_tonumber(L, n - num_res);
       break;
     case 'i':
       ASD_ABORT_IF_NOT(lua_isnumber(L, n - num_res),
@@ -1447,8 +1447,8 @@ char *asd_lua_expr_string(lua_State *L, const char *expr, const char *def)
 // }}}
 
 // {{{ linear algebra
-static void asd_la_mtranspose(size_t m, size_t n, long double *A,
-                              size_t lda, long double *B, size_t ldb)
+static void asd_la_mtranspose(size_t m, size_t n, ldouble *A,
+                              size_t lda, ldouble *B, size_t ldb)
 {
   for (size_t i = 0; i < m; ++i)
     for (size_t j = 0; j < n; ++j)
@@ -1456,9 +1456,9 @@ static void asd_la_mtranspose(size_t m, size_t n, long double *A,
 }
 
 static void asd_la_mTmmult(size_t m, size_t n, size_t k,
-                           long double *A, size_t lda,
-                           long double *B, size_t ldb,
-                           long double *C, size_t ldc)
+                           ldouble *A, size_t lda,
+                           ldouble *B, size_t ldb,
+                           ldouble *C, size_t ldc)
 {
   for (size_t i = 0; i < m; ++i)
     for (size_t j = 0; j < n; ++j)
@@ -1466,9 +1466,9 @@ static void asd_la_mTmmult(size_t m, size_t n, size_t k,
         C[j * ldc + i] += A[i * lda + p] * B[j * ldb + p];
 }
 
-static void asd_la_mmmult(size_t m, size_t n, size_t k, long double *A,
-                          size_t lda, long double *B, size_t ldb,
-                          long double *C, size_t ldc)
+static void asd_la_mmmult(size_t m, size_t n, size_t k, ldouble *A,
+                          size_t lda, ldouble *B, size_t ldb,
+                          ldouble *C, size_t ldc)
 {
   for (size_t i = 0; i < m; ++i)
     for (size_t j = 0; j < n; ++j)
@@ -1476,7 +1476,7 @@ static void asd_la_mmmult(size_t m, size_t n, size_t k, long double *A,
         C[j * ldc + i] += A[p * lda + i] * B[j * ldb + p];
 }
 
-static void asd_la_lu_factor(size_t n, long double *A,
+static void asd_la_lu_factor(size_t n, ldouble *A,
                              size_t *p, size_t *q)
 {
   /*
@@ -1495,13 +1495,13 @@ static void asd_la_lu_factor(size_t n, long double *A,
   for (size_t k = 0; k < n - 1; ++k)
   {
     size_t mu = k, lambda = k;
-    long double a_max = 0.0;
+    ldouble a_max = 0.0;
 
     for (size_t j = k; j < n; ++j)
     {
       for (size_t i = k; i < n; ++i)
       {
-        const long double a_abs = fabsl(A[i + n * j]);
+        const ldouble a_abs = fabsl(A[i + n * j]);
         if (a_abs > a_max)
         {
           a_max = a_abs;
@@ -1519,7 +1519,7 @@ static void asd_la_lu_factor(size_t n, long double *A,
     p[mu] = ptmp;
     for (size_t j = 0; j < n; ++j)
     {
-      const long double rtmp = A[k + n * j];
+      const ldouble rtmp = A[k + n * j];
       A[k + n * j] = A[mu + n * j];
       A[mu + n * j] = rtmp;
     }
@@ -1532,7 +1532,7 @@ static void asd_la_lu_factor(size_t n, long double *A,
     q[lambda] = qtmp;
     for (size_t i = 0; i < n; ++i)
     {
-      const long double rtmp = A[i + n * k];
+      const ldouble rtmp = A[i + n * k];
       A[i + n * k] = A[i + n * lambda];
       A[i + n * lambda] = rtmp;
     }
@@ -1555,9 +1555,9 @@ static void asd_la_lu_factor(size_t n, long double *A,
   }
 }
 
-static void asd_la_lu_solve(size_t n, long double *LU,
-                            long double *x, size_t *p,
-                            size_t *q, long double *work)
+static void asd_la_lu_solve(size_t n, ldouble *LU,
+                            ldouble *x, size_t *p,
+                            size_t *q, ldouble *work)
 {
   /*
    * Compute $Pb$
@@ -1614,17 +1614,17 @@ static void asd_la_lu_solve(size_t n, long double *LU,
   }
 }
 
-static void asd_la_backslash(size_t m, size_t n, long double *A,
-                             long double *B, long double *C)
+static void asd_la_backslash(size_t m, size_t n, ldouble *A,
+                             ldouble *B, ldouble *C)
 {
-  long double *LU = (long double *)asd_malloc_aligned(m * m * sizeof(long double));
-  long double *work = (long double *)asd_malloc_aligned(m * sizeof(long double));
+  ldouble *LU = (ldouble *)asd_malloc_aligned(m * m * sizeof(ldouble));
+  ldouble *work = (ldouble *)asd_malloc_aligned(m * sizeof(ldouble));
 
   size_t *p = (size_t *)asd_malloc_aligned(m * sizeof(size_t));
   size_t *q = (size_t *)asd_malloc_aligned(m * sizeof(size_t));
 
-  memcpy(LU, A, m * m * sizeof(long double));
-  memcpy(C, B, m * n * sizeof(long double));
+  memcpy(LU, A, m * m * sizeof(ldouble));
+  memcpy(C, B, m * n * sizeof(ldouble));
 
   asd_la_lu_factor(m, LU, p, q);
 
@@ -1637,13 +1637,13 @@ static void asd_la_backslash(size_t m, size_t n, long double *A,
   asd_free_aligned(LU);
 }
 
-static void asd_la_forwardslash(size_t m, size_t n, long double *A,
-                                long double *B,
-                                long double *C)
+static void asd_la_forwardslash(size_t m, size_t n, ldouble *A,
+                                ldouble *B,
+                                ldouble *C)
 {
-  long double *AT = (long double *)asd_malloc_aligned(n * m * sizeof(long double));
-  long double *BT = (long double *)asd_malloc_aligned(n * n * sizeof(long double));
-  long double *CT = (long double *)asd_malloc_aligned(n * m * sizeof(long double));
+  ldouble *AT = (ldouble *)asd_malloc_aligned(n * m * sizeof(ldouble));
+  ldouble *BT = (ldouble *)asd_malloc_aligned(n * n * sizeof(ldouble));
+  ldouble *CT = (ldouble *)asd_malloc_aligned(n * m * sizeof(ldouble));
 
   asd_la_mtranspose(m, n, A, m, AT, n);
   asd_la_mtranspose(n, n, B, n, BT, n);
@@ -1682,7 +1682,7 @@ static void asd_la_forwardslash(size_t m, size_t n, long double *A,
  *  \end{aligned}
  * $$
  */
-static long double asd_jacobi_h_inv_sqrt(long double alpha, long double beta,
+static ldouble asd_jacobi_h_inv_sqrt(ldouble alpha, ldouble beta,
                                          int N)
 {
   ASD_ASSERT(N >= 0);
@@ -1691,7 +1691,7 @@ static long double asd_jacobi_h_inv_sqrt(long double alpha, long double beta,
   ASD_ASSERT(!(ASD_LONG_DOUBLE_APPROX_EQ(alpha, -0.5L, 10) &&
                ASD_LONG_DOUBLE_APPROX_EQ(beta, -0.5L, 10)));
 
-  long double lgn = -(alpha + beta + 1) * logl(2) - lgammal(N + alpha + 1) -
+  ldouble lgn = -(alpha + beta + 1) * logl(2) - lgammal(N + alpha + 1) -
                     lgammal(N + beta + 1) + logl(2 * N + alpha + beta + 1) +
                     lgammal(N + 1) + lgammal(N + alpha + beta + 1);
   return sqrtl(expl(lgn));
@@ -1733,8 +1733,8 @@ static long double asd_jacobi_h_inv_sqrt(long double alpha, long double beta,
  * $P_1^{(\alpha,\beta)}(x) =  \frac12(\alpha + \beta + 2)x
  *                           + \frac12(\alpha - \beta)$.
  */
-static void asd_jacobi_p(long double alpha, long double beta, int N, size_t nx,
-                         long double *x, long double *P)
+static void asd_jacobi_p(ldouble alpha, ldouble beta, int N, size_t nx,
+                         ldouble *x, ldouble *P)
 {
   ASD_ASSERT(N >= 0);
   ASD_ASSERT(alpha >= -1.0L);
@@ -1744,9 +1744,9 @@ static void asd_jacobi_p(long double alpha, long double beta, int N, size_t nx,
 
   for (size_t i = 0; i < nx; ++i)
   {
-    long double P_n_2;
-    long double P_n_1 = 1;
-    long double P_n_0 = ((alpha + beta + 2) / 2) * x[i] + (alpha - beta) / 2;
+    ldouble P_n_2;
+    ldouble P_n_1 = 1;
+    ldouble P_n_0 = ((alpha + beta + 2) / 2) * x[i] + (alpha - beta) / 2;
     if (N == 0)
     {
       P[i] = P_n_1;
@@ -1759,12 +1759,12 @@ static void asd_jacobi_p(long double alpha, long double beta, int N, size_t nx,
     {
       for (int n = 2; n < N + 1; ++n)
       {
-        long double a = (2 * n + alpha + beta - 1) * (2 * n + alpha + beta) /
+        ldouble a = (2 * n + alpha + beta - 1) * (2 * n + alpha + beta) /
                         (2 * n * (n + alpha + beta));
-        long double b =
+        ldouble b =
             (beta * beta - alpha * alpha) * (2 * n + alpha + beta - 1) /
             (2 * n * (n + alpha + beta) * (2 * n + alpha + beta - 2));
-        long double c = (n + alpha - 1) * (n + beta - 1) *
+        ldouble c = (n + alpha - 1) * (n + beta - 1) *
                         (2 * n + alpha + beta) /
                         (n * (n + alpha + beta) * (2 * n + alpha + beta - 2));
 
@@ -1779,7 +1779,7 @@ static void asd_jacobi_p(long double alpha, long double beta, int N, size_t nx,
   /*
    * Normalize the Jacobi polynomials
    */
-  long double h_inv_sqrt = asd_jacobi_h_inv_sqrt(alpha, beta, N);
+  ldouble h_inv_sqrt = asd_jacobi_h_inv_sqrt(alpha, beta, N);
   for (size_t i = 0; i < nx; ++i)
     P[i] *= h_inv_sqrt;
 
@@ -1820,8 +1820,8 @@ static void asd_jacobi_p(long double alpha, long double beta, int N, size_t nx,
  * \end{aligned}
  * $$
  */
-static void asd_grad_jacobi_p(long double alpha, long double beta, int N,
-                              size_t nx, long double *x, long double *dP)
+static void asd_grad_jacobi_p(ldouble alpha, ldouble beta, int N,
+                              size_t nx, ldouble *x, ldouble *dP)
 {
   ASD_ASSERT(N >= 0);
   ASD_ASSERT(alpha >= -1.0L);
@@ -1837,7 +1837,7 @@ static void asd_grad_jacobi_p(long double alpha, long double beta, int N,
   else
   {
     asd_jacobi_p(alpha + 1, beta + 1, N - 1, nx, x, dP);
-    long double scale = sqrtl(N * (N + alpha + beta + 1));
+    ldouble scale = sqrtl(N * (N + alpha + beta + 1));
     for (size_t i = 0; i < nx; ++i)
     {
       dP[i] *= scale;
@@ -1847,10 +1847,10 @@ static void asd_grad_jacobi_p(long double alpha, long double beta, int N,
   return;
 }
 
-static void asd_jacobi_gauss_quadrature_half(long double alpha,
-                                             long double beta, int N, int half,
-                                             long double *x,
-                                             long double *w)
+static void asd_jacobi_gauss_quadrature_half(ldouble alpha,
+                                             ldouble beta, int N, int half,
+                                             ldouble *x,
+                                             ldouble *w)
 {
   ASD_ASSERT(N >= 0);
   ASD_ASSERT(alpha >= -1.0L);
@@ -1867,13 +1867,13 @@ static void asd_jacobi_gauss_quadrature_half(long double alpha,
   if (nk == 0)
     return;
 
-  long double tworho = 2 * (N + 1) + alpha + beta + 1;
-  long double *tmp;
+  ldouble tworho = 2 * (N + 1) + alpha + beta + 1;
+  ldouble *tmp;
 
-  long double *theta0 = (long double *)asd_malloc_aligned(nk * sizeof(long double));
-  long double *theta1 = (long double *)asd_malloc_aligned(nk * sizeof(long double));
-  long double *p0 = (long double *)asd_malloc_aligned(nk * sizeof(long double));
-  long double *dp0 = (long double *)asd_malloc_aligned(nk * sizeof(long double));
+  ldouble *theta0 = (ldouble *)asd_malloc_aligned(nk * sizeof(ldouble));
+  ldouble *theta1 = (ldouble *)asd_malloc_aligned(nk * sizeof(ldouble));
+  ldouble *p0 = (ldouble *)asd_malloc_aligned(nk * sizeof(ldouble));
+  ldouble *dp0 = (ldouble *)asd_malloc_aligned(nk * sizeof(ldouble));
 
   /*
    * Use Gatteschi and Pittaluga's approximation for the roots of the Jacobi
@@ -1886,9 +1886,9 @@ static void asd_jacobi_gauss_quadrature_half(long double alpha,
   {
     int khat = (half) ? nk - k : k - 1;
 
-    long double pi = 4 * atanl(1);
+    ldouble pi = 4 * atanl(1);
 
-    long double phik = (2 * k + alpha - 0.5L) * pi / tworho;
+    ldouble phik = (2 * k + alpha - 0.5L) * pi / tworho;
 
     theta1[khat] = phik +
                    1 / (tworho * tworho) *
@@ -1949,7 +1949,7 @@ static void asd_jacobi_gauss_quadrature_half(long double alpha,
 
   for (int k = 0; k < nk; ++k)
   {
-    long double sint = sinl(theta1[k]);
+    ldouble sint = sinl(theta1[k]);
     w[k] = tworho / (sint * sint * dp0[k] * dp0[k]);
   }
 
@@ -1961,9 +1961,9 @@ static void asd_jacobi_gauss_quadrature_half(long double alpha,
   return;
 }
 
-static void asd_jacobi_gauss_quadrature(long double alpha, long double beta,
-                                        int N, long double *x,
-                                        long double *w)
+void asd_jacobi_gauss_quadrature(ldouble alpha, ldouble beta,
+                                        int N, ldouble *x,
+                                        ldouble *w)
 {
   int nk_floor = (N + 1) / 2; /* floor((N + 1)/2) */
 
@@ -1971,15 +1971,17 @@ static void asd_jacobi_gauss_quadrature(long double alpha, long double beta,
                                    w + nk_floor);
   asd_jacobi_gauss_quadrature_half(beta, alpha, N, 0, x, w);
 
-  for (int k = 0; k < nk_floor; ++k)
+  for (int k = 0; k < nk_floor; ++k){
     x[k] *= -1;
+  }
+	
 
   return;
 }
 
-void asd_jacobi_gauss_lobatto_quadrature(long double alpha, long double beta,
-                                         int N, long double *x,
-                                         long double *w)
+void asd_jacobi_gauss_lobatto_quadrature(ldouble alpha, ldouble beta,
+                                         int N, ldouble *x,
+                                         ldouble *w)
 {
   ASD_ASSERT(N >= 1);
 
@@ -1992,10 +1994,12 @@ void asd_jacobi_gauss_lobatto_quadrature(long double alpha, long double beta,
   }
 
   asd_jacobi_p(alpha, beta, N, N + 1, x, w);
-  long double fac = (2 * N + alpha + beta + 1) / (N * (N + alpha + beta + 1));
+  ldouble fac = (2 * N + alpha + beta + 1) / (N * (N + alpha + beta + 1));
   for (int k = 0; k < N + 1; ++k)
   {
     w[k] = fac / (w[k] * w[k]);
+    printf("x[%d] = %Lf\n", k, x[k]);
+
   }
 
   w[0] *= (1 + beta);
@@ -2004,8 +2008,8 @@ void asd_jacobi_gauss_lobatto_quadrature(long double alpha, long double beta,
   return;
 }
 
-void asd_jacobi_p_vandermonde(long double alpha, long double beta, int N,
-                              size_t nx, long double *x, long double *V)
+void asd_jacobi_p_vandermonde(ldouble alpha, ldouble beta, int N,
+                              size_t nx, ldouble *x, ldouble *V)
 {
   for (int j = 0; j <= N; ++j)
     asd_jacobi_p(alpha, beta, j, nx, x, V + j * nx);
@@ -2013,9 +2017,9 @@ void asd_jacobi_p_vandermonde(long double alpha, long double beta, int N,
   return;
 }
 
-static void asd_grad_jacobi_p_vandermonde(long double alpha, long double beta,
-                                          int N, size_t nx, long double *x,
-                                          long double *V)
+static void asd_grad_jacobi_p_vandermonde(ldouble alpha, ldouble beta,
+                                          int N, size_t nx, ldouble *x,
+                                          ldouble *V)
 {
   for (int j = 0; j <= N; ++j)
     asd_grad_jacobi_p(alpha, beta, j, nx, x, V + j * nx);
@@ -2023,12 +2027,12 @@ static void asd_grad_jacobi_p_vandermonde(long double alpha, long double beta,
   return;
 }
 
-void asd_jacobi_p_interpolation(long double alpha, long double beta, int N,
-                                size_t nx, long double *x, long double *V,
-                                long double *I)
+void asd_jacobi_p_interpolation(ldouble alpha, ldouble beta, int N,
+                                size_t nx, ldouble *x, ldouble *V,
+                                ldouble *I)
 {
 
-  long double *Vx = (long double *)asd_malloc_aligned((N + 1) * nx * sizeof(long double));
+  ldouble *Vx = (ldouble *)asd_malloc_aligned((N + 1) * nx * sizeof(ldouble));
 
   asd_jacobi_p_vandermonde(alpha, beta, N, nx, x, Vx);
 
@@ -2039,12 +2043,12 @@ void asd_jacobi_p_interpolation(long double alpha, long double beta, int N,
   return;
 }
 
-void asd_jacobi_p_differentiation(long double alpha, long double beta, int N,
-                                  size_t nx, long double *x, long double *V,
-                                  long double *D)
+void asd_jacobi_p_differentiation(ldouble alpha, ldouble beta, int N,
+                                  size_t nx, ldouble *x, ldouble *V,
+                                  ldouble *D)
 {
 
-  long double *Vx = (long double *)asd_malloc_aligned((N + 1) * nx * sizeof(long double));
+  ldouble *Vx = (ldouble *)asd_malloc_aligned((N + 1) * nx * sizeof(ldouble));
 
   asd_grad_jacobi_p_vandermonde(alpha, beta, N, nx, x, Vx);
 
@@ -2055,12 +2059,12 @@ void asd_jacobi_p_differentiation(long double alpha, long double beta, int N,
   return;
 }
 
-void asd_jacobi_p_mass(int N, long double *V, long double *M)
+void asd_jacobi_p_mass(int N, ldouble *V, ldouble *M)
 {
-  long double *I = (long double *)asd_malloc_aligned((N + 1) * (N + 1) * sizeof(long double));
+  ldouble *I = (ldouble *)asd_malloc_aligned((N + 1) * (N + 1) * sizeof(ldouble));
 
-  long double *invV =
-      (long double *)asd_malloc_aligned((N + 1) * (N + 1) * sizeof(long double));
+  ldouble *invV =
+      (ldouble *)asd_malloc_aligned((N + 1) * (N + 1) * sizeof(ldouble));
 
   for (int i = 0; i < (N + 1) * (N + 1); ++i)
     I[i] = 0;
@@ -2081,14 +2085,14 @@ void asd_jacobi_p_mass(int N, long double *V, long double *M)
   return;
 }
 
-void asd_jacobi_p_h_project(int N, long double h, long double *V,
-                            long double *I, long double *M, long double *P)
+void asd_jacobi_p_h_project(int N, ldouble h, ldouble *V,
+                            ldouble *I, ldouble *M, ldouble *P)
 {
 
-  long double *ITM =
-      (long double *)asd_malloc_aligned((N + 1) * (N + 1) * sizeof(long double));
-  long double *VTITM =
-      (long double *)asd_malloc_aligned((N + 1) * (N + 1) * sizeof(long double));
+  ldouble *ITM =
+      (ldouble *)asd_malloc_aligned((N + 1) * (N + 1) * sizeof(ldouble));
+  ldouble *VTITM =
+      (ldouble *)asd_malloc_aligned((N + 1) * (N + 1) * sizeof(ldouble));
 
   for (int i = 0; i < (N + 1) * (N + 1); ++i)
     P[i] = 0;

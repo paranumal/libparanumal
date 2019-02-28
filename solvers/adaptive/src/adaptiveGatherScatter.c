@@ -28,6 +28,8 @@ SOFTWARE.
 
 void adaptiveGatherScatter(level_t *level, occa::memory &o_x){
 
+  //  adaptiveRankOneProjection(level, level->o_filtU, level->o_filtV, o_x, o_x);
+  
   // gather over noncon faces to coarse side dofs
   level->gather_noncon(level->Klocal, level->o_EToC, level->o_Ib, level->o_It, o_x);
   
@@ -41,4 +43,6 @@ void adaptiveGatherScatter(level_t *level, occa::memory &o_x){
   // scatter from coarse to fine noncon
   level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Ib, level->o_It, o_x);
 
+  //  adaptiveRankOneProjection(level, level->o_filtV, level->o_filtU, o_x, o_x);
+  
 }

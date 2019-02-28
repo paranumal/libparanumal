@@ -26,10 +26,7 @@ SOFTWARE.
 
 #include "adaptive.h"
 
-
-
-
-#if 0
+#if 1
 int pcg(adaptive_t* adaptive,
 	dfloat lambda, 
         occa::memory &o_b,
@@ -56,35 +53,34 @@ int pcg(adaptive_t* adaptive,
   occa::memory &o_w  = level->o_pcgWork[1];
   occa::memory &o_Aw = level->o_pcgWork[2];
   occa::memory &o_e  = level->o_pcgWork[3];
-  occa::memory &o_rp  = level->o_pcgWork[4];
-  occa::memory &o_xL  = level->o_pcgWork[5];
+  occa::memory &o_tmp  = level->o_pcgWork[4];
 
   dfloat rho1 = 1, rho0 = 0;
 
   // r <= b
   o_b.copyTo(o_r, level->Klocal*level->Np*sizeof(dfloat));
-  
-  dfloat rdotr = adaptiveWeightedNorm2(adaptive, level, level->o_invDegree, o_r);
 
+  dfloat rdotr = adaptiveWeightedNorm2(adaptive, level, level->o_invDegree, o_r);
+    
   dfloat TOL =  ASD_MAX(tol*tol*rdotr,tol*tol);
   
   int iter;
   for(iter=1;iter<=MAXIT;++iter){
-
-    // z = Precon^{-1} r
-    adaptivePreconditioner(adaptive, lambda, o_r, o_e);
+    
+    // e = Precon^{-1} r
+    adaptivePreconditioner(adaptive, lambda, o_r, o_tmp, o_e);
 
     rho0 = rho1;
 
     // r.e
     rho1 = adaptiveWeightedInnerProduct(adaptive, level, level->o_invDegree, o_r, o_e); 
-
+    
     // w = e + w*rho1/rho0
     adaptiveScaledAdd(adaptive, level, 1.f, o_e, rho1/rho0, o_w);
-    
-    // rp = (Snc*S*G*Gnc)*A*w
-    adaptiveOperator(adaptive, level, lambda, o_w, o_Aw, o_xL);
 
+    // Aw = (Snc*S*G*Gnc)*A*w [ output is C0 ]
+    adaptiveOperator(adaptive, level, lambda, o_w, o_Aw, o_tmp);
+    
     // wdotAw
     dfloat wdotAw =  adaptiveWeightedInnerProduct(adaptive, level, level->o_invDegree, o_w, o_Aw);
 
@@ -140,6 +136,7 @@ int pcg(adaptive_t* adaptive,
   occa::memory &o_Ax = level->o_pcgWork[3];
   occa::memory &o_r  = level->o_pcgWork[4];
   occa::memory &o_xL  = level->o_pcgWork[5];
+  occa::memory &o_tmp  = level->o_pcgWork[6];
   
   dfloat rdotz1 = 0;
   dfloat rdotz2 = 0;
@@ -167,7 +164,7 @@ int pcg(adaptive_t* adaptive,
   for(iter=1;iter<=MAXIT;++iter){
 
     // z = Precon^{-1} r
-    adaptivePreconditioner(adaptive, lambda, o_r, o_z);
+    adaptivePreconditioner(adaptive, lambda, o_r, o_tmp, o_z);
     
     rdotz2 = rdotz1;
 

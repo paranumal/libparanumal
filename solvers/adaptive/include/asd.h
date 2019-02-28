@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#define ldouble long double
+
 // {{{ compiler helper macros
 // Define gcc version macro  __GNUC_PREREQ if not defined
 #if defined __GNUC__ && !defined __GNUC_PREREQ
@@ -762,9 +764,9 @@ char *asd_lua_expr_string(lua_State *L, const char *expr, const char *def);
  * \param[out] w         quadrature weights
  *
  */
-void asd_jacobi_gauss_lobatto_quadrature(long double alpha, long double beta,
-                                         int N, long double *x,
-                                         long double *w);
+void asd_jacobi_gauss_lobatto_quadrature(ldouble alpha, ldouble beta,
+                                         int N, ldouble *x,
+                                         ldouble *w);
 
 /** Compute the (\c N + 1) column Jacobi Vandermonde matrix.
  *
@@ -779,8 +781,8 @@ void asd_jacobi_gauss_lobatto_quadrature(long double alpha, long double beta,
  * \param[out] V         the Jacobi Vandermonde matrix
  *
  */
-void asd_jacobi_p_vandermonde(long double alpha, long double beta, int N,
-                              size_t nx, long double *x, long double *V);
+void asd_jacobi_p_vandermonde(ldouble alpha, ldouble beta, int N,
+                              size_t nx, ldouble *x, ldouble *V);
 
 /** Compute the $N$th order interpolation matrix.
  *
@@ -798,9 +800,9 @@ void asd_jacobi_p_vandermonde(long double alpha, long double beta, int N,
  * \param[out] I         the nodal interpolation matrix
  *
  */
-void asd_jacobi_p_interpolation(long double alpha, long double beta, int N,
-                                size_t nx, long double *x, long double *V,
-                                long double *I);
+void asd_jacobi_p_interpolation(ldouble alpha, ldouble beta, int N,
+                                size_t nx, ldouble *x, ldouble *V,
+                                ldouble *I);
 
 /** Compute the $N$th order differentiation matrix.
  *
@@ -818,9 +820,9 @@ void asd_jacobi_p_interpolation(long double alpha, long double beta, int N,
  * \param[out] D         the nodal differentiation matrix
  *
  */
-void asd_jacobi_p_differentiation(long double alpha, long double beta, int N,
-                                  size_t nx, long double *x, long double *V,
-                                  long double *D);
+void asd_jacobi_p_differentiation(ldouble alpha, ldouble beta, int N,
+                                  size_t nx, ldouble *x, ldouble *V,
+                                  ldouble *D);
 
 /** Compute the $N$th order mass matrix.
  *
@@ -834,7 +836,7 @@ void asd_jacobi_p_differentiation(long double alpha, long double beta, int N,
  * \param[out] M         the nodal mass matrix
  *
  */
-void asd_jacobi_p_mass(int N, long double *V, long double *M);
+void asd_jacobi_p_mass(int N, ldouble *V, ldouble *M);
 
 /** Compute the $N$th order h L2 projection matrix.
  *
@@ -850,7 +852,9 @@ void asd_jacobi_p_mass(int N, long double *V, long double *M);
  * \param[out] P         the nodal L2 projection matrix
  *
  */
-void asd_jacobi_p_h_project(int N, long double h, long double *V,
-                            long double *I, long double *M, long double *P);
+void asd_jacobi_p_h_project(int N, ldouble h, ldouble *V,
+                            ldouble *I, ldouble *M, ldouble *P);
 // }}}
+
+
 #endif

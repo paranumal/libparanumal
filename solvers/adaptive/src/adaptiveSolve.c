@@ -50,12 +50,12 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
   // add noncon gs around this
   ogsGatherScatter(o_b, ogsDfloat, ogsAdd, level->ogs);
 #endif
-  
+
 #if USE_NULL_PROJECTION==1
   if(adaptive->allNeumann) // zero mean of RHS
     adaptiveZeroMean(adaptive, adaptive->lvl, o_b);
 #endif
-  
+
   Niter = pcg (adaptive, lambda, o_b, o_x, tol, maxIter);
   
 #if USE_NULL_PROJECTION==1
@@ -65,6 +65,14 @@ int adaptiveSolve(adaptive_t *adaptive, dfloat lambda, dfloat tol,
 
 #if USE_GASPAR==0
   level->scatter_noncon(level->Klocal, level->o_EToC, level->o_Ib, level->o_It, o_x);
+#endif
+  
+  //  adaptiveRankOneProjection(level, level->o_filtU, level->o_filtV, o_x, o_x);
+
+#if 0
+  adaptive->dotMultiplyKernel(level->Np*level->Klocal, level->o_invDegree, o_x, o_x);
+
+  adaptiveGatherScatter(level, o_x);
 #endif
   
   return Niter;
