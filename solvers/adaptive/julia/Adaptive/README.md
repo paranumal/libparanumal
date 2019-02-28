@@ -28,3 +28,10 @@ MPI in your path.
 mpirun -n 4 julia --project=. examples/debug.jl
 ```
 
+## Acknowledgements
+
+The operators and geometry code is from [Canary][2].
+
+[0]: https://github.com/JuliaParallel/MPI.jl
+[1]: https://cmake.org
+[2]: https://github.com/climate-machine/Canary.jl
