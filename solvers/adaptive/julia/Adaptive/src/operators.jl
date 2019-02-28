@@ -1,5 +1,3 @@
-include("quadrature.jl")
-
 """
     lglpoints(::Type{T}, N::Integer) where T <: AbstractFloat
 
