@@ -124,8 +124,8 @@ let
   #                       +-------+
   #
   for fc in mesh.EToFC
-    hf = zeros(Int, 6)
-    he = zeros(Int, 12)
+    hf = -ones(Int, 6)
+    he = -ones(Int, 12)
     c = fc & 0x0007
     work = fc >> 3
     cwork = c
