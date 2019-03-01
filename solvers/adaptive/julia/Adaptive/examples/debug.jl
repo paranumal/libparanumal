@@ -110,8 +110,32 @@ function get_element_interpolation_operator(T, N, fc)
     work >>= 1
   end
 
-  # TODO Fill the interpolation matrix
-  I
+  @show hf, he
+
+  Iq = zeros(T, (N+1)^3, (N+1)^3)
+
+  # Build up the interpolation matrix by applying the interpolations
+  # to the identity matrix
+  for i = 1:(N+1)^3
+    q = zeros(T, N+1, N+1, N+1)
+    q[i] = one(T)
+
+    for f = 0:5
+      if hf[f+1] > -1
+        # TODO Apply face interpolations to q
+      end
+    end
+
+    for e = 0:11
+      if he[e+1] > -1
+        # TODO Apply edge interpolations to q
+      end
+    end
+
+    Iq[:,i] = @view q[:]
+  end
+
+  Iq
 end
 
 
