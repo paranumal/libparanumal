@@ -232,10 +232,10 @@ let
 
   Snc = spzeros(size(S,1),size(S,1))
 
-  for i in 1:length(mesh.Klocal)
+  for i in 1:mesh.Klocal
     Ie = get_element_interpolation_operator(Float64, N, mesh.EToFC[i])
 
-    idx = (i-1)*(N+1)^3 .+ 1:(N+1)^3
+    idx = (i-1)*(N+1)^3 .+ (1:(N+1)^3)
     Snc[idx, idx] .= Ie
   end
 
