@@ -67,7 +67,7 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [[Pxest]]
 deps = ["Libdl", "MPI"]
-git-tree-sha1 = "9bd73ccc948990c8c1139658ea15eaaab6e8194a"
+git-tree-sha1 = "85ba76b87b3babea1a2cba27601aa5df88d4efbd"
 repo-rev = "master"
 repo-url = "https://gitlab.nps.edu/bfam/Pxest.jl"
 uuid = "3ef6e24c-6358-11e8-0b31-bd1e13d6239c"
