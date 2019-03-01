@@ -9,6 +9,7 @@
 *.a
 .DS_STORE
 *.vtu
+*.visit
 *.pvtu
 *.dat
 *.txt
