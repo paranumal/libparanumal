@@ -230,15 +230,19 @@ let
   S = sparse(1:length(mesh.DToC), mesh.DToC[:], ones(Int, length(mesh.DToC)))
   G = S'
 
-  r, w = lglpoints(Float64, N)
-  D = spectralderivative(r)
+  Snc = spzeros(size(S,1),size(S,1))
 
-  for fc in mesh.EToFC
-    Ie = get_element_interpolation_operator(Float64, N, fc)
+  for i in 1:length(mesh.Klocal)
+    Ie = get_element_interpolation_operator(Float64, N, mesh.EToFC[i])
 
-    # @show Ie
+    idx = (i-1)*(N+1)^3 .+ 1:(N+1)^3
+    Snc[idx, idx] .= Ie
   end
 
+  Gnc = Snc'
+
+  r, w = lglpoints(Float64, N)
+  D = spectralderivative(r)
 
   dump_vtk(pxest)
 end
