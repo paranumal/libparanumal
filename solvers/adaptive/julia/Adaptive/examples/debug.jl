@@ -35,6 +35,18 @@ p8est_corner_face_corners = [ 0 -1  0 -1  0 -1
                              -1  2  3 -1 -1  1
                               3 -1 -1  2 -1  2
                              -1  3 -1  3 -1  3]
+p8est_edge_corners = [0  1
+                      2  3
+                      4  5
+                      6  7
+                      0  2
+                      1  3
+                      4  6
+                      5  7
+                      0  4
+                      1  5
+                      2  6
+                      3  7]
 
 function get_element_interpolation_operator(T, N, fc)
   r, w = lglpoints(T, N)
@@ -110,9 +122,26 @@ function get_element_interpolation_operator(T, N, fc)
     work >>= 1
   end
 
-  @show hf, he
+  II = zeros(T, (N+1)^3, (N+1)^3)
 
-  Iq = zeros(T, (N+1)^3, (N+1)^3)
+  l = LinearIndices((1:N+1, 1:N+1, 1:N+1))
+
+  fmask = [l[1, :, :], l[N+1, :, :],
+           l[:, 1, :], l[:, N+1, :],
+           l[:, :, 1], l[:, :, N+1]]
+
+  gmask = [l[  :,   1,   1],
+           l[  :, N+1,   1],
+           l[  :,   1, N+1],
+           l[  :, N+1, N+1],
+           l[  1,   :,   1],
+           l[N+1,   :,   1],
+           l[  1,   :, N+1],
+           l[N+1,   :, N+1],
+           l[  1,   1,   :],
+           l[N+1,   1,   :],
+           l[  1, N+1,   :],
+           l[N+1, N+1,   :]]
 
   # Build up the interpolation matrix by applying the interpolations
   # to the identity matrix
@@ -120,22 +149,38 @@ function get_element_interpolation_operator(T, N, fc)
     q = zeros(T, N+1, N+1, N+1)
     q[i] = one(T)
 
+    Iq = copy(q)
     for f = 0:5
-      if hf[f+1] > -1
-        # TODO Apply face interpolations to q
+      c = hf[f+1]
+
+      if c > -1
+        Ir1 = ((c & 1) == 0) ? Irb : Irt
+        Ir2 = ((c & 2) == 0) ? Irb : Irt
+
+        fm = reshape(fmask[f+1], :)
+        fq = @view q[fm]
+
+        Iq[fm] .= kron(Ir1, Ir2) * fq
       end
     end
 
-    for e = 0:11
-      if he[e+1] > -1
-        # TODO Apply edge interpolations to q
+    for g = 0:11
+      c = he[g+1]
+
+      if c > -1
+        Ir1 = ((c & 1) == 0) ? Irb : Irt
+
+        gm = reshape(gmask[g+1], :)
+        gq = @view q[gm]
+
+        Iq[gm] .= Ir1 * gq
       end
     end
 
-    Iq[:,i] = @view q[:]
+    II[:,i] .= reshape(Iq,:)
   end
 
-  Iq
+  II
 end
 
 
