@@ -160,11 +160,11 @@ end
 
 let
   N = 3 # polynomial degree
+  refine_level = 1
 
   conn = p8est.Connectivity(1,1,2)
   pxest = p8est.PXEST(conn; min_lvl=0)
 
-  refine_level = 1
   p8est.refine!(pxest) do which_tree, quadrant
     qid = ccall(:p8est_quadrant_child_id, Cint,
                 (Ref{Pxest.p8est.pxest_quadrant_t},),
