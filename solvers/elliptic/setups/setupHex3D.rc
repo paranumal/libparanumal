@@ -8,6 +8,9 @@ SOLVE
 data/ellipticSineTest3D.h
 #data/ellipticHomogeneous3D.h
 
+[BOX DOMAIN]
+FALSE
+
 [MESH FILE]
 #../../meshes/cubeHexE8Thilina.msh
 #../../meshes/cavityHexH025.msh
@@ -161,3 +164,8 @@ TRUE
 [FIXED ITERATION COUNT]
 FALSE
 
+[USE PRECOMPILED BINARIES]
+FALSE
+
+[PARALMOND SMOOTH COARSEST]
+FALSE

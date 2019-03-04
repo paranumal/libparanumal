@@ -194,7 +194,7 @@ typedef struct {
 
   occa::memory o_oasForward;
   occa::memory o_oasBack;
-  occa::memory o_oasDiagOp;
+  occa::memory o_oasDiagInvOp;
 
 }elliptic_t;
 
@@ -330,6 +330,8 @@ int nbfpcg(elliptic_t* elliptic, dfloat lambda,
 	   const dfloat tol, const int MAXIT);
 
 void ellipticZeroMean(elliptic_t *elliptic, occa::memory &o_q);
+
+void ellipticThinOasSetup(elliptic_t *elliptic, dfloat lambda);
 
 #endif
 
