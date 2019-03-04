@@ -130,31 +130,32 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 	free(gllzw);
       }
     }
-  }
-  
-  dfloat *ggeoNoJW = (dfloat*) calloc(mesh->Np*mesh->Nelements*6,sizeof(dfloat));
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-#if 1
-      ggeoNoJW[e*mesh->Np*6 + n + 0*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G00ID*mesh->Np];
-      ggeoNoJW[e*mesh->Np*6 + n + 1*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G01ID*mesh->Np];
-      ggeoNoJW[e*mesh->Np*6 + n + 2*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G02ID*mesh->Np];
-      ggeoNoJW[e*mesh->Np*6 + n + 3*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G11ID*mesh->Np];
-      ggeoNoJW[e*mesh->Np*6 + n + 4*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G12ID*mesh->Np];
-      ggeoNoJW[e*mesh->Np*6 + n + 5*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G22ID*mesh->Np];
-#else
-      ggeoNoJW[e*mesh->Np*6 + 6*n + 0] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G00ID*mesh->Np];
-      ggeoNoJW[e*mesh->Np*6 + 6*n + 1] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G01ID*mesh->Np];
-      ggeoNoJW[e*mesh->Np*6 + 6*n + 2] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G02ID*mesh->Np];
-      ggeoNoJW[e*mesh->Np*6 + 6*n + 3] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G11ID*mesh->Np];
-      ggeoNoJW[e*mesh->Np*6 + 6*n + 4] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G12ID*mesh->Np];
-      ggeoNoJW[e*mesh->Np*6 + 6*n + 5] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G22ID*mesh->Np];
-#endif
-      
-    }
-  }
 
-  elliptic->o_ggeoNoJW = mesh->device.malloc(mesh->Np*mesh->Nelements*6*sizeof(dfloat), ggeoNoJW);    
+  
+    dfloat *ggeoNoJW = (dfloat*) calloc(mesh->Np*mesh->Nelements*6,sizeof(dfloat));
+    for(int e=0;e<mesh->Nelements;++e){
+      for(int n=0;n<mesh->Np;++n){
+#if 1
+	ggeoNoJW[e*mesh->Np*6 + n + 0*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G00ID*mesh->Np];
+	ggeoNoJW[e*mesh->Np*6 + n + 1*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G01ID*mesh->Np];
+	ggeoNoJW[e*mesh->Np*6 + n + 2*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G02ID*mesh->Np];
+	ggeoNoJW[e*mesh->Np*6 + n + 3*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G11ID*mesh->Np];
+	ggeoNoJW[e*mesh->Np*6 + n + 4*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G12ID*mesh->Np];
+	ggeoNoJW[e*mesh->Np*6 + n + 5*mesh->Np] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G22ID*mesh->Np];
+#else
+	ggeoNoJW[e*mesh->Np*6 + 6*n + 0] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G00ID*mesh->Np];
+	ggeoNoJW[e*mesh->Np*6 + 6*n + 1] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G01ID*mesh->Np];
+	ggeoNoJW[e*mesh->Np*6 + 6*n + 2] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G02ID*mesh->Np];
+	ggeoNoJW[e*mesh->Np*6 + 6*n + 3] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G11ID*mesh->Np];
+	ggeoNoJW[e*mesh->Np*6 + 6*n + 4] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G12ID*mesh->Np];
+	ggeoNoJW[e*mesh->Np*6 + 6*n + 5] = mesh->ggeo[e*mesh->Np*mesh->Nggeo + n + G22ID*mesh->Np];
+#endif
+	
+      }
+    }
+    
+    elliptic->o_ggeoNoJW = mesh->device.malloc(mesh->Np*mesh->Nelements*6*sizeof(dfloat), ggeoNoJW);    
+  }
   
   ellipticSolveSetup(elliptic, lambda, kernelInfo);
 

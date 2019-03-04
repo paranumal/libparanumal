@@ -2,10 +2,11 @@
 1.0
 
 [DATA FILE]
-data/ellipticHomogeneous3D.h
+data/ellipticSineTest3D.h
+#data/ellipticHomogeneous3D.h
 
 [MESH FILE]
-../../meshes/cavityTetH05.msh
+../../meshes/cavityTetH01.msh
 
 [MESH DIMENSION]
 3
