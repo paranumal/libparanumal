@@ -34,8 +34,8 @@ mesh3D *meshSetupHex3D(char *filename, int N){
   mesh->Nfields = 1; // TW: note this is a temporary patch (halo exchange depends on nfields)
   
   // partition elements using Morton ordering & parallel sort
-  //  meshGeometricPartition3D(mesh);
-  meshRecursiveSpectralBisectionPartition(mesh);
+  meshGeometricPartition3D(mesh);
+  //meshRecursiveSpectralBisectionPartition(mesh);
 
   // connect elements using parallel sort
   meshParallelConnect(mesh);

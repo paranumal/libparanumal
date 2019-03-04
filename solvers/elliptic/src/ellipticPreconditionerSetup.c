@@ -104,6 +104,8 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
     free(invDiagA);
   } else if(options.compareArgs("PRECONDITIONER", "OAS")){
 
+    ellipticThinOasSetup(elliptic, lambda);
+    
     printf("ERROR:  OAS does not work right now.\n");
     exit(-1);
 

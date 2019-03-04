@@ -55,7 +55,7 @@ int compareOasHaloFaces(const void *a,
 }
 
 
-void ellipticThinOasSetup(elliptic_t *elliptic){
+void ellipticThinOasSetup(elliptic_t *elliptic, dfloat lambda){
 
   mesh_t *mesh = elliptic->mesh;
   setupAide options = elliptic->options;
@@ -116,7 +116,7 @@ void ellipticThinOasSetup(elliptic_t *elliptic){
   
   int oasNq = mesh->Nq+2;
   int oasNp = oasNq*oasNq*oasNq;
-
+  
   hlong NtotalOgs = oasNp*mesh->Nelements;
   hlong *nodeIds = (hlong*) calloc(NtotalOgs, sizeof(hlong));
 
@@ -226,14 +226,76 @@ void ellipticThinOasSetup(elliptic_t *elliptic){
       }
     }
   }
+
+
+  // --------------------------------------------------------------------------------------------------------------
+  // 4. construct diagonal scaling for fast diagonal inverse
+  // --------------------------------------------------------------------------------------------------------------
+  
+  // hack estimate for Jacobian scaling
+  dfloat *diagInvOp = (dfloat*) calloc(oasNp*mesh->Nelements, sizeof(dfloat));
+            
+  for(dlong e=0;e<mesh->Nelements;++e){
+
+    // S = Jabc*(wa*wb*wc*lambda + wb*wc*Da'*wa*Da + wa*wc*Db'*wb*Db + wa*wb*Dc'*wc*Dc)
+    // S = Jabc*wa*wb*wc*(lambda*I+1/wa*Da'*wa*Da + 1/wb*Db'*wb*Db + 1/wc*Dc'*wc*Dc)
+    
+    dfloat Jhrinv2 = 0, Jhsinv2 = 0, Jhtinv2 = 0, J = 0;
+
+    for(int n=0;n<mesh->Np;++n){
+
+      dlong base = mesh->Nvgeo*mesh->Np*e + n;
+
+      dfloat Jn  = mesh->vgeo[base + JID*mesh->Np];
+
+      dfloat rx = mesh->vgeo[base + RXID*mesh->Np];
+      dfloat ry = mesh->vgeo[base + RYID*mesh->Np];
+      dfloat rz = mesh->vgeo[base + RZID*mesh->Np];
+
+      dfloat sx = mesh->vgeo[base + SXID*mesh->Np];
+      dfloat sy = mesh->vgeo[base + SYID*mesh->Np];
+      dfloat sz = mesh->vgeo[base + SZID*mesh->Np];
+      
+      dfloat tx = mesh->vgeo[base + TXID*mesh->Np];
+      dfloat ty = mesh->vgeo[base + TYID*mesh->Np];
+      dfloat tz = mesh->vgeo[base + TZID*mesh->Np];
+
+      dfloat gradr2 = rx*rx + ry*ry + rz*rz;
+      dfloat grads2 = sx*sx + sy*sy + sz*sz;
+      dfloat gradt2 = tx*tx + ty*ty + tz*tz;
+
+      J = mymax(J, Jn);
+      
+      Jhrinv2 = mymax(Jhrinv2, gradr2);
+      Jhsinv2 = mymax(Jhsinv2, grads2);
+      Jhtinv2 = mymax(Jhtinv2, gradt2);
+      
+    }
+    
+    for(int k=0;k<oasNq;++k){
+      for(int j=0;j<oasNq;++j){
+        for(int i=0;i<oasNq;++i){
+          dlong pid = i + j*oasNq + k*oasNq*oasNq + e*oasNp;
+          
+          diagInvOp[pid] =
+            1./(J*lambda +
+		Jhrinv2*mesh->oasDiagOp[i] +
+		Jhsinv2*mesh->oasDiagOp[j] +
+		Jhtinv2*mesh->oasDiagOp[k]);
+
+        }
+      }
+    }
+  }
+  
   
   // --------------------------------------------------------------------------------------------------------------
-  // 4. construct ogs for the Oas patches end game gather-scatter
+  // 5. construct ogs for the Oas patches end game gather-scatter
   // --------------------------------------------------------------------------------------------------------------
   elliptic->oasOgs = ogsSetup(NtotalOgs, nodeIds, mesh->comm, verbose, mesh->device);
 
   // --------------------------------------------------------------------------------------------------------------
-  // 5. populate device arrays
+  // 6. populate device arrays
   // --------------------------------------------------------------------------------------------------------------
 
   elliptic->o_oasMapP = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*mesh->Nfp*sizeof(dfloat), elliptic->oasMapP);
@@ -245,15 +307,13 @@ void ellipticThinOasSetup(elliptic_t *elliptic){
   elliptic->o_oasForward  = mesh->device.malloc(oasNq*oasNq*sizeof(dfloat), mesh->oasForward);
   elliptic->o_oasBack     = mesh->device.malloc(oasNq*oasNq*sizeof(dfloat), mesh->oasBack);
 
- TW: need to repopulate this with modewise diagonal weights
-  elliptic->o_oasDiagOp   = mesh->device.malloc(oasNq*oasNq*sizeof(dfloat), mesh->oasDiagOp);
-  
+  elliptic->o_oasDiagInvOp = mesh->device.malloc(oasNp*mesh->Nelements*sizeof(dfloat), diagInvOp);  
 
   elliptic->oasNq = oasNq;
   elliptic->oasNp = oasNp;
   
   // --------------------------------------------------------------------------------------------------------------
-  // 6. free local stuff
+  // 7. free local stuff
   // --------------------------------------------------------------------------------------------------------------
   free(globalStarts);
   free(globalIds);
@@ -262,5 +322,6 @@ void ellipticThinOasSetup(elliptic_t *elliptic){
   free(nodeIds);
   free(offsets);
   free(haloElements);
+  free(diagInvOp);
   
 }
