@@ -230,8 +230,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 	    J*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
 	  //	  elliptic->r[id] += 0.1*2*(drand48()-0.5);
 	}
-
       }
+      
       elliptic->x[id] = 0;
     }
   }
@@ -251,7 +251,8 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->invVB,elliptic->r,elliptic->r);
   if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->BBMM,elliptic->r,elliptic->r);
   if (options.compareArgs("BASIS","NODAL")){
-    if(options.compareArgs("ELLIPTIC INTEGRATION", "NODAL")){
+    if(options.compareArgs("ELLIPTIC INTEGRATION", "NODAL") ||
+       elliptic->elementType!=HEXAHEDRA){
       //      printf("MASS APPLY NODAL\n");
       meshApplyElementMatrix(mesh,mesh->MM,elliptic->r,elliptic->r);
     }
@@ -293,11 +294,11 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       }
     }	
   }	
-
+  
   //copy to occa buffers
   elliptic->o_r   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->r);
   elliptic->o_x   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->x);
-
+  
 
   string boundaryHeaderFileName;
   options.getArgs("DATA FILE", boundaryHeaderFileName);
@@ -354,11 +355,11 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   }
 
   if (options.compareArgs("DISCRETIZATION","CONTINUOUS") &&
-       !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS) ) {
-
+      !(elliptic->dim==3 && elliptic->elementType==QUADRILATERALS) ) {
+    
     for (int r=0;r<2;r++){
       if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
-
+	
 	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
         sprintf(kernelName, "ellipticRhsBC%s", suffix);
 
@@ -373,7 +374,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     }
 
     dfloat zero = 0.f, mone = -1.0f, one = 1.0f;
-    if(options.compareArgs("ELLIPTIC INTEGRATION", "NODAL")){
+    if(!options.compareArgs("ELLIPTIC INTEGRATION", "CUBATURE")){
       elliptic->rhsBCKernel(mesh->Nelements,
 			    mesh->o_ggeo,
 			    mesh->o_sgeo,

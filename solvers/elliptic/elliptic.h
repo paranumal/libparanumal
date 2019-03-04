@@ -196,6 +196,17 @@ typedef struct {
   occa::memory o_oasBack;
   occa::memory o_oasDiagInvOp;
 
+  // TO DO: FROM HERE ==>
+  occa::memory o_oasHaloBuffer;
+  occa::memory o_oasTmp;
+  
+  dfloat *oasSendBuffer;
+  dfloat *oasRecvBuffer;
+  
+  occa::kernel oasPreconditionerKernel;
+  occa::kernel oasHaloGetKernel;
+  occa::kernel oasHaloPutKernel;
+  // TO DO: TO HERE <==
 }elliptic_t;
 
 #include "ellipticMultiGrid.h"
