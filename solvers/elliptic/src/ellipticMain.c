@@ -132,10 +132,12 @@ int main(int argc, char **argv){
     double elapsed = mesh->device.timeBetween(startTag, stopTag);
 
     double globalElapsed;
-    hlong globalNelements;
+    hlong globalNelements, localNelements=mesh->Nelements;
 
     MPI_Reduce(&elapsed, &globalElapsed, 1, MPI_DOUBLE, MPI_MAX, 0, mesh->comm);
-    MPI_Reduce(&(mesh->Nelements), &globalNelements, 1, MPI_HLONG, MPI_SUM, 0, mesh->comm);
+    MPI_Reduce(&localNelements, &globalNelements, 1, MPI_HLONG, MPI_SUM, 0, mesh->comm);
+
+    printf("elapsed = %lf, globalElapsed = %lf, globalNelements = %lld\n", elapsed, globalElapsed, globalNelements);
     
     if (mesh->rank==0)
       printf("%d, %d, %g, %d, %g, %g; \%\%global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
