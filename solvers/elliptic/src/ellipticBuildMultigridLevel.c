@@ -246,9 +246,14 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     meshConnectFaceNodes3D(mesh);
     break;
   case HEXAHEDRA:
+
     if(!options.compareArgs("BOX DOMAIN", "TRUE"))
       meshConnectFaceNodes3D(mesh);
     else{
+
+      if(mesh->rank==0)
+	printf("WARNING: connecting periodic box\n");
+      
       dfloat XMIN = -1, XMAX = +1; // default bi-unit cube
       dfloat YMIN = -1, YMAX = +1;
       dfloat ZMIN = -1, ZMAX = +1;

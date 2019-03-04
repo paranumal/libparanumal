@@ -69,6 +69,7 @@ void meshHaloExchange(mesh_t *mesh,
       }
     }
   }
+
   //  printf("mesh->NhaloMessages = %d\n", mesh->NhaloMessages);
 
   // Wait for all sent messages to have left and received messages to have arrived
@@ -132,6 +133,64 @@ void meshHaloExchangeFinish(mesh_t *mesh){
 
     free(recvStatus);
     free(sendStatus);
+  }
+}      
+
+
+// start halo exchange (for q)
+void meshHaloExchange(mesh_t *mesh,
+		      size_t Nbytes,       // message size per element
+		      void *sendBuffer,    // temporary buffer
+		      void *recvBuffer){
+
+  if(mesh->totalHaloPairs>0){
+
+    int rank = mesh->rank;
+    int size = mesh->size;
+    
+    // count outgoing and incoming meshes
+    int tag = 999;
+
+    int Nmessages = 0;
+    
+    for(int r=0;r<size;++r){
+      if(r!=rank){
+	size_t count = mesh->NhaloPairs[r]*Nbytes;
+	if(count)
+	  ++Nmessages;
+      }
+    }
+
+    MPI_Request *sendRequests = (MPI_Request*) calloc(Nmessages, sizeof(MPI_Request));
+    MPI_Request *recvRequests = (MPI_Request*) calloc(Nmessages, sizeof(MPI_Request));
+  
+    // initiate immediate send  and receives to each other process as needed
+    int offset = 0;
+    Nmessages = 0;
+    for(int r=0;r<size;++r){
+      if(r!=rank){
+	size_t count = mesh->NhaloPairs[r]*Nbytes;
+	if(count){
+	  MPI_Irecv(((char*)recvBuffer)+offset, count, MPI_CHAR, r, tag, mesh->comm, (recvRequests)+Nmessages);	
+	  MPI_Isend(((char*)sendBuffer)+offset, count, MPI_CHAR, r, tag, mesh->comm, (sendRequests)+Nmessages);
+	  offset += count;
+	  ++Nmessages;
+	}
+      }
+    }
+    
+    // Wait for all sent messages to have left and received messages to have arrived
+    MPI_Status *sendStatus = (MPI_Status*) calloc(Nmessages, sizeof(MPI_Status));
+    MPI_Status *recvStatus = (MPI_Status*) calloc(Nmessages, sizeof(MPI_Status));
+    
+    MPI_Waitall(Nmessages, recvRequests, recvStatus);
+    MPI_Waitall(Nmessages, sendRequests, sendStatus);
+    
+    free(recvStatus);
+    free(sendStatus);
+
+    free(recvRequests);
+    free(sendRequests);
   }
 }      
 
