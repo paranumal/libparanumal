@@ -149,6 +149,7 @@ void ellipticThinOasSetup(elliptic_t *elliptic, dfloat lambda){
 
     for(int fM=0;fM<mesh->Nfaces;++fM){
       int fP = mesh->EToF[e*mesh->Nfaces+fM];
+      if(fP<0) fP = fM;
       for(int n=0;n<mesh->Nfp;++n){
 
 	// usual trace node locations
@@ -283,6 +284,8 @@ void ellipticThinOasSetup(elliptic_t *elliptic, dfloat lambda){
 		Jhsinv2*mesh->oasDiagOp[j] +
 		Jhtinv2*mesh->oasDiagOp[k]);
 
+	  //	  printf("diagInvOp[%d] = %lf\n", pid, diagInvOp[pid]);
+	  
         }
       }
     }
