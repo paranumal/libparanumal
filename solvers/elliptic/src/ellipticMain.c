@@ -221,7 +221,7 @@ int main(int argc, char **argv){
     if(mesh->rank==0)
       printf("globalMaxError = %g\n", globalMaxError);
 
-#if 1
+#if 0
     char fname[BUFSIZ];
     string outName;
     options.getArgs("OUTPUT FILE NAME", outName);
@@ -231,7 +231,7 @@ int main(int argc, char **argv){
     ellipticPlotVTUHex3D(mesh, fname, 0);
 #endif
 
-#if 0
+#if 1
     char fname[BUFSIZ];
     string outName;
     options.getArgs("OUTPUT FILE NAME", outName);
