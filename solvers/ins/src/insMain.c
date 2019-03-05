@@ -81,7 +81,7 @@ int main(int argc, char **argv){
   // Now Set the Scalar Solver
   cdsSolveSetup(cds, options, kernelInfoBase);
 
-  if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF")) insRunWcdsEXTBDF(ins, cds);
+  // if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF")) insRunWcdsEXTBDF(ins, cds);
 #else 
   insPlotWallsVTUHex3D(ins, "walls");
   

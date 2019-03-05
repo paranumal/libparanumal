@@ -2,16 +2,16 @@
 1.0
 
 [DATA FILE]
-data/cdsUCD3D.h
+data/cdsUCD2D.h
 
 [MESH FILE]
-../../meshes/cdsUCDHex3D.msh
+../../meshes/cdsUCDQuad2D.msh
 
 [MESH DIMENSION]
-3
+2
 
 [ELEMENT TYPE] 
-12
+4
 
 [POLYNOMIAL DEGREE]
 5
@@ -73,7 +73,7 @@ COLLOCATION
 0
 
 [FINAL TIME]
-0.25
+1.0
 
 [CFL]
 0.1
@@ -85,7 +85,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-ucd3D
+ucdTri2D
 
 #################################################
 ########## Solver Options ##############
@@ -97,6 +97,7 @@ PCG
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
+#CONTINUOUS
 IPDG
 
 # can be NODAL or BERN

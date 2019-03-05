@@ -219,6 +219,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
 
   cds->startTime =0.0;
   options.getArgs("START TIME", cds->startTime);
+
   cds->setFlowFieldKernel(mesh->Nelements,
                           cds->startTime,
                           mesh->o_x,
@@ -235,9 +236,21 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
 			    cds->sOffset,
 			    cds->o_S);
 
-
   cds->o_U.copyTo(cds->U);
   cds->o_S.copyTo(cds->S);
+
+
+#if 0
+  printf("AK: Writing initial condition file and exitiong ....\n")
+  char fname[BUFSIZ];
+    string outName;
+    cds->options.getArgs("OUTPUT FILE NAME", outName);
+    sprintf(fname, "%s_%04d_%04d.vtu",(char*)outName.c_str(), mesh->rank, cds->frame++);
+    cdsPlotVTU(cds, fname);
+    return cds; 
+#endif
+
+
 
 
   // set time step
@@ -537,7 +550,6 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "cdsAdvectionCubatureVolume%s", suffix);
       cds->advectionCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-     
       sprintf(kernelName, "cdsAdvectionCubatureSurface%s", suffix);
       cds->advectionCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       
@@ -584,11 +596,11 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
         sprintf(kernelName, "cdsSubCycleSurface%s", suffix);
         cds->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "cdsSubCycleCubatureVolume%s", suffix);
-        cds->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        // sprintf(kernelName, "cdsSubCycleCubatureVolume%s", suffix);
+        // cds->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "cdsSubCycleCubatureSurface%s", suffix);
-        cds->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        // sprintf(kernelName, "cdsSubCycleCubatureSurface%s", suffix);
+        // cds->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
         sprintf(fileName, DCDS "/okl/cdsSubCycle.okl");
         sprintf(kernelName, "cdsSubCycleRKUpdate");
