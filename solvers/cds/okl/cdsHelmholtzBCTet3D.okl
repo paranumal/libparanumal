@@ -1,0 +1,352 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+@kernel void cdsHelmholtzIpdgBCTet3D(const dlong Nelements,
+                                   @restrict const  dlong *  vmapM,
+                                   const dfloat tau,
+                                   const dfloat time,
+                                   @restrict const  dfloat *  x,
+                                   @restrict const  dfloat *  y,
+                                   @restrict const  dfloat *  z,
+                                   @restrict const  dfloat *  vgeo,
+                                   @restrict const  dfloat *  sgeo,
+                                   @restrict const  int    *  EToB,
+                                   @restrict const  dfloat *  Dmatrices,
+                                   @restrict const  dfloat *  LIFTT,
+                                   @restrict const  dfloat *  MM,
+                                         @restrict dfloat *  rhsS){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared  dfloat s_dsdx[p_Np];
+    @shared  dfloat s_dsdy[p_Np];
+    @shared  dfloat s_dsdz[p_Np];
+    //
+    @shared  dfloat s_laps[p_Np];
+    //
+    @shared  dfloat s_nxds[p_NfacesNfp];
+    @shared  dfloat s_nyds[p_NfacesNfp];
+    @shared  dfloat s_nzds[p_NfacesNfp];
+    //
+    @shared  dfloat s_lapsflux[p_NfacesNfp];
+    //
+    @shared  dfloat s_Lnxds[p_Np];
+    @shared  dfloat s_Lnyds[p_Np];
+    @shared  dfloat s_Lnzds[p_Np];
+
+
+    @exclusive dlong idM;
+    @exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp){
+        const dlong id  = n + e*p_Nfaces*p_Nfp;
+        idM = vmapM[id];
+
+        const int face = n/p_Nfp;
+        dfloat dsdxP=0.f, dsdyP=0.f, dsdzP=0.f, sP=0.f;
+
+        // load surface geofactors for this face
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+        nx    = sgeo[sid+p_NXID];
+        ny    = sgeo[sid+p_NYID];
+        nz    = sgeo[sid+p_NZID];
+        sJ    = sgeo[sid+p_SJID];
+        invJ  = sgeo[sid+p_IJID];
+        hinv  = sgeo[sid+p_IHID];
+
+        const int bc = EToB[face+p_Nfaces*e];
+        if(bc>0) {
+          cdsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &sP);
+          cdsNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &dsdxP,&dsdyP,&dsdzP);
+        }
+
+        const dfloat ds = sP;
+
+        s_nxds[n] = sJ*invJ*nx*ds;
+        s_nyds[n] = sJ*invJ*ny*ds;
+        s_nzds[n] = sJ*invJ*nz*ds;
+
+        s_lapsflux[n] = sJ*invJ*(-nx*(dsdxP)-ny*(dsdyP)-nz*(dsdzP)-tau*hinv*ds);
+      }
+    }
+
+    @barrier("local");
+
+    // dqdx += LIFT*(sJ/J)*nx*dq
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        const dlong gid = e*p_Nvgeo;
+        const dfloat gdrdx = vgeo[gid + p_RXID];
+        const dfloat gdrdy = vgeo[gid + p_RYID];
+        const dfloat gdrdz = vgeo[gid + p_RZID];
+
+        const dfloat gdsdx = vgeo[gid + p_SXID];
+        const dfloat gdsdy = vgeo[gid + p_SYID];
+        const dfloat gdsdz = vgeo[gid + p_SZID];
+
+        const dfloat gdtdx = vgeo[gid + p_TXID];
+        const dfloat gdtdy = vgeo[gid + p_TYID];
+        const dfloat gdtdz = vgeo[gid + p_TZID];
+
+        dfloat Lnxds = 0.f;
+        dfloat Lnyds = 0.f;
+        dfloat Lnzds = 0.f;
+
+        #pragma unroll p_NfacesNfp
+          for(int i=0;i<p_NfacesNfp;++i){
+            dfloat liftt = LIFTT[n+i*p_Np];
+            Lnxds += liftt*s_nxds[i];
+            Lnyds += liftt*s_nyds[i];
+            Lnzds += liftt*s_nzds[i];           
+          }
+
+        const dfloat dsdx = Lnxds;
+        const dfloat dsdy = Lnyds;
+        const dfloat dsdz = Lnzds;
+
+        s_dsdx[n] = gdrdx*dsdx + gdrdy*dsdy + gdrdz*dsdz; // abuse of notation
+        s_dsdy[n] = gdsdx*dsdx + gdsdy*dsdy + gdsdz*dsdz;
+        s_dsdz[n] = gdtdx*dsdx + gdtdy*dsdy + gdtdz*dsdz;
+        
+
+        s_Lnxds[n] = Lnxds;
+        s_Lnyds[n] = Lnyds;
+        s_Lnzds[n] = Lnzds;
+
+      }
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp){
+        const int id = idM%p_Np;
+        s_lapsflux[n] += sJ*invJ*(nx*s_Lnxds[id]+ny*s_Lnyds[id]+nz*s_Lnzds[id]);
+      }
+
+      if(n<p_Np){
+        dfloat lasr = 0.f, lass = 0.f, last=0.f;
+        #pragma unroll p_Np
+          for(int i=0;i<p_Np;++i) {
+            const dfloat Drn = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsn = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+            const dfloat Dtn = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+            lasr += Drn*s_dsdx[i];
+            lass += Dsn*s_dsdy[i];
+            last += Dtn*s_dsdz[i];
+          }
+
+        s_laps[n] = -(lasr+lass+last);
+      }
+
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        dfloat las = 0.f;
+
+        // lift remaining surface terms
+        #pragma unroll p_NfacesNfp
+          for(int i=0;i<p_NfacesNfp;++i){
+            las += LIFTT[n+i*p_Np]*s_lapsflux[i];
+          }
+
+        s_laps[n] += las;
+      }
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        const dlong id = e*p_Np+n;
+        const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+
+        dfloat Mlaps = 0.f;
+
+        // multiply by mass matrix
+        #pragma unroll p_Np
+          for(int i=0;i<p_Np;++i){
+            Mlaps += MM[n+i*p_Np]*s_laps[i];
+          }
+
+        rhsS[id] -=  J*Mlaps;
+      }
+    }
+  }
+}
+
+//RHS contributions for continuous solver
+@kernel void cdsHelmholtzBCTet3D(const dlong Nelements,
+				@restrict const  dfloat *  ggeo,
+				@restrict const  dfloat *  sgeo,
+				@restrict const  dfloat *  Dmatrices,
+				@restrict const  dfloat *  Smatrices,
+				@restrict const  dfloat *  MM,
+				@restrict const  dlong  *  vmapM,
+				@restrict const  int    *  EToB,
+				@restrict const  dfloat *  sMT,
+				const dfloat lambda,
+				const dfloat time,
+				@restrict const  dfloat *  x,
+				@restrict const  dfloat *  y,
+				@restrict const  dfloat *  z,
+				@restrict const  int    *  mapB,
+				@restrict dfloat *  rhsS){
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_s[p_Np];
+    @shared dfloat s_nds[p_Nfp*p_Nfaces];
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        s_s[n] = 0.f;
+      }
+      if(n<p_NfacesNfp){
+        s_nds[n] = 0.f;
+      }
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp){
+        const dlong id  = n + e*p_Nfaces*p_Nfp;
+        const dlong idM = vmapM[id];          
+        const int nid = idM%p_Np; 
+
+        const int face = n/p_Nfp;
+
+        dfloat dsdxP=0, dsdyP=0, dsdzP=0, sP=0;
+        
+        // load surface geofactors for this face
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx = sgeo[sid+p_NXID];
+        const dfloat ny = sgeo[sid+p_NYID];
+        const dfloat nz = sgeo[sid+p_NZID];
+        const dfloat sJ = sgeo[sid+p_SJID];
+
+        const int bc = mapB[idM];
+        if(bc>0) {
+          cdsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &sP);
+          cdsNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &dsdxP,&dsdyP,&dsdzP);
+        }
+
+        s_s[nid] = sP;
+        s_nds[n] = sJ*(nx*dsdxP + ny*dsdyP + nz*dsdzP);
+      }
+    }
+
+    @barrier("local");
+    
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ 
+      if(n<p_Np){
+        //volume Dirichlet data
+        const dlong id = n + e*p_Np;
+        const dlong gid = e*p_Nggeo;
+        const dfloat Grr = ggeo[gid + p_G00ID];
+        const dfloat Grs = ggeo[gid + p_G01ID];
+        const dfloat Grt = ggeo[gid + p_G02ID];
+        const dfloat Gss = ggeo[gid + p_G11ID];
+        const dfloat Gst = ggeo[gid + p_G12ID];
+        const dfloat Gtt = ggeo[gid + p_G22ID];
+        const dfloat J   = ggeo[gid + p_GWJID];
+
+        dfloat MMs = 0.f; 
+        dfloat srr = 0.f; 
+        dfloat srs = 0.f; 
+        dfloat srt = 0.f; 
+        dfloat sss = 0.f; 
+        dfloat sst = 0.f; 
+        dfloat stt = 0.f; 
+
+        #pragma unroll p_Np
+          for (int k=0;k<p_Np;k++) {
+            const dfloat MMn = MM[n+k*p_Np];
+            const dfloat Srr = Smatrices[n+k*p_Np+0*p_Np*p_Np];
+            const dfloat Srs = Smatrices[n+k*p_Np+1*p_Np*p_Np];
+            const dfloat Srt = Smatrices[n+k*p_Np+2*p_Np*p_Np];
+            const dfloat Sss = Smatrices[n+k*p_Np+3*p_Np*p_Np];
+            const dfloat Sst = Smatrices[n+k*p_Np+4*p_Np*p_Np];
+            const dfloat Stt = Smatrices[n+k*p_Np+5*p_Np*p_Np];
+
+            MMs += MMn*s_s[k];
+            srr += Srr*s_s[k];
+            srs += Srs*s_s[k];
+            srt += Srt*s_s[k];
+            sss += Sss*s_s[k];
+            sst += Sst*s_s[k];
+            stt += Stt*s_s[k];
+          }
+
+        dfloat Lnds = 0.f;            
+        // surface mass * surface terms
+        #pragma unroll p_NfacesNfp
+          for(int i=0;i<p_NfacesNfp;++i){
+            const dfloat sMTn = sMT[n+i*p_Np];
+            Lnds += sMTn*s_nds[i];
+          }
+
+        rhsS[id] -= Grr*srr+Grs*srs+Grt*srt
+                   +Gss*sss+Gst*sst+Gtt*stt + J*lambda*MMs - Lnds;
+
+      }
+    }
+  }
+}
+
+@kernel void cdsHelmholtzAddBCTet3D(const dlong Nelements,
+                                   const dfloat time,
+                                   @restrict const  dfloat *  sgeo,
+                                   @restrict const  dfloat *  x,
+                                   @restrict const  dfloat *  y,
+                                   @restrict const  dfloat *  z,
+                                   @restrict const  dlong  *  vmapM,
+                                   @restrict const  int    *  mapB,
+                                         @restrict dfloat *  S){  
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
+      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+      const int bc = mapB[idM];
+
+      if(bc>0) {
+        const dfloat sM = S[idM];
+
+        const int face = n/p_Nfp;
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx = sgeo[sid+p_NXID];
+        const dfloat ny = sgeo[sid+p_NYID];
+        const dfloat nz = sgeo[sid+p_NZID];
+
+        dfloat sP = 0.f;
+        cdsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, sM, &sP);
+        S[idM] = sP;
+      }    
+    }
+  }
+}
