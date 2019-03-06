@@ -32,7 +32,7 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-0
+4
 
 [SUBCYCLING TIME ORDER]
 3
@@ -85,7 +85,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-ucdTri2D
+ucdQuad2D
 
 #################################################
 ########## Solver Options ##############
@@ -97,8 +97,8 @@ PCG
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-#CONTINUOUS
-IPDG
+CONTINUOUS
+#IPDG
 
 # can be NODAL or BERN
 [BASIS]

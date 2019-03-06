@@ -34,12 +34,12 @@ SOFTWARE.
 #define cdsScalarField2D(t,x,y,s)	\
   {					\
     dfloat ax = 0.01;			\
-    dfloat ay = 0.01;			\
+    dfloat ay = 0.01;     \
     dfloat cx = 0.8;			\
-    dfloat cy = 0.8;			\
+    dfloat cy = 0.8;      \
     dfloat coef   = 1.0/pow((4.0*t +1.0),1.50);			\
     dfloat xterm  = pow((x - cx*t - 0.5),2.0) / ( ax*(4.0*t+1.0) );	\
-    dfloat yterm  = pow((y - cy*t - 0.5),2.0) / ( ay*(4.0*t+1.0) );	\
+    dfloat yterm  = pow((y - cy*t - 0.5),2.0) / ( ay*(4.0*t+1.0) ); \
     dfloat sExact = coef*exp( -xterm -yterm);			\
     *(s) = sExact;				\
   }   
@@ -49,17 +49,15 @@ SOFTWARE.
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
 #define cdsDirichletConditions2D(bc, t, x, y, nx, ny, sM, sB) \
 {                                   \
-    dfloat ax = 0.01;			\
-    dfloat ay = 0.01;			\
-    					\
-    dfloat cx = 0.8;			\
-    dfloat cy = 0.8;			\
-    						\
-    dfloat coef  = 1.0/pow((4.0*t +1.0),1.50);				\
-    dfloat xterm = pow((x - cx*t - 0.5),2.0) / ( ax*(4.0*t+1.0) );	\
-    dfloat yterm = pow((y - cy*t - 0.5),2.0) / ( ay*(4.0*t+1.0) );	\
-   									\
-    dfloat sExact = coef*exp(-xterm -yterm );			\
+    dfloat ax = 0.01;     \
+    dfloat ay = 0.01;     \
+    dfloat cx = 0.8;      \
+    dfloat cy = 0.8;      \
+    dfloat cz = 0.8;      \
+    dfloat coef   = 1.0/pow((4.0*t +1.0),1.50);     \
+    dfloat xterm  = pow((x - cx*t - 0.5),2.0) / ( ax*(4.0*t+1.0) ); \
+    dfloat yterm  = pow((y - cy*t - 0.5),2.0) / ( ay*(4.0*t+1.0) ); \
+    dfloat sExact = coef*exp( -xterm -yterm);      \
   if(bc==1){                        \
     *(sB) = 0.f;                    \
   } else if(bc==2){                 \

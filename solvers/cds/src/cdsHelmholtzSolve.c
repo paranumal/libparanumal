@@ -44,7 +44,7 @@ void cdsHelmholtzSolve(cds_t *cds, dfloat time, int stage,occa::memory o_rhsS,oc
                                 mesh->o_Smatrices,
                                 mesh->o_MM,
                                 mesh->o_vmapM,
-    	                        mesh->o_EToB,
+    	                          mesh->o_EToB,
                                 mesh->o_sMT,
                                 cds->lambda,
                                 time,

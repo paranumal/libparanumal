@@ -1,3 +1,4 @@
+
 // rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
 @kernel void cdsHelmholtzRhsEXTBDFTri2D(const dlong Nelements,
                                         @restrict const  dfloat *  vgeo,
@@ -25,8 +26,17 @@
 
           if (p_SUBCYCLING) {
             //NS holds \hat{S} after subcycling
+            #if 1
             const dfloat NSm = NS[id+0*sOffset];
             s_rhsS[es][n] = J*ialf*idt*NSm;
+            #else
+
+            s_rhsS[es][n] = 0.f;
+
+             for (int s=0;s<p_Nstages;s++) {
+              s_rhsS[es][n] += J*ialf*idt*extbdfB[s]*NS[id+0*sOffset+s*p_NSfields*sOffset];
+             } 
+            #endif
           
           } else {
             s_rhsS[es][n] = 0.f;

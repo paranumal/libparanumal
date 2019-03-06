@@ -345,7 +345,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     printf("hmin = %g\n", hmin);
     printf("hmax = %g\n", hmax);
     printf("cfl = %g\n",  cds->cfl);
-    printf("dt = %g\n",   dt);
+    printf("dt = %g\n",   cds->dt);
   }
  
   if (cds->Nsubsteps && mesh->rank==0) printf("dt: %.8f and sdt: %.8f ratio: %.8f \n", cds->dt, cds->sdt, cds->dt/cds->sdt);
@@ -577,7 +577,6 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       cds->helmholtzAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
     
-      // Not implemented for Quad 3D yet !!!!!!!!!!
       if(cds->Nsubsteps){
         // Note that resU and resV can be replaced with already introduced buffer
         cds->o_Ue     = mesh->device.malloc(cds->NVfields*Ntotal*sizeof(dfloat), cds->Ue);
@@ -596,11 +595,11 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
         sprintf(kernelName, "cdsSubCycleSurface%s", suffix);
         cds->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        // sprintf(kernelName, "cdsSubCycleCubatureVolume%s", suffix);
-        // cds->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "cdsSubCycleCubatureVolume%s", suffix);
+        cds->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        // sprintf(kernelName, "cdsSubCycleCubatureSurface%s", suffix);
-        // cds->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "cdsSubCycleCubatureSurface%s", suffix);
+        cds->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
         sprintf(fileName, DCDS "/okl/cdsSubCycle.okl");
         sprintf(kernelName, "cdsSubCycleRKUpdate");
