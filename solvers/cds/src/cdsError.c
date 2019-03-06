@@ -78,19 +78,21 @@ void cdsError(cds_t *cds, dfloat time){
           dlong id = n+e*mesh->Np;
           dfloat x = mesh->x[id];
           dfloat y = mesh->y[id];
-
+          dfloat z = 0.0; 
           dfloat ax = 0.01;
           dfloat ay = 0.01;
           dfloat az = 0.01; 
 
           dfloat cx = 0.8;
           dfloat cy = 0.8;
+          dfloat cz = 0.8;
 
           dfloat alf   = 1.0/pow((4.0*time +1.0),3.0/2.0);
           dfloat xterm = pow((x - cx*time - 0.5),2.0) / ( ax*(4.0*time+1.0) );
           dfloat yterm = pow((y - cy*time - 0.5),2.0) / ( ay*(4.0*time+1.0) );
+          dfloat zterm = pow((z - cz*time - 0.5),2.0) / ( az*(4.0*time+1.0) );
 
-          dfloat sExact = alf*exp( -xterm -yterm );
+          dfloat sExact = alf*exp( -xterm -yterm -zterm );
           maxErr = mymax(maxErr, fabs(cds->S[id+0*cds->sOffset]-sExact));
 
           maxNS = mymax(maxNS, cds->NS[id +0*cds->sOffset]);   minNS = mymin(minNS, cds->NS[id +0*cds->sOffset]);

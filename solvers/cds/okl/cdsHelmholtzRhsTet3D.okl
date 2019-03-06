@@ -49,9 +49,20 @@ SOFTWARE.
           const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 
           if (p_SUBCYCLING) {
+            #if 0
             //NU holds \hat{U} after subcycling
             const dfloat NSm = NS[id+0*sOffset];
             s_rhsS[es][n] = J*ialf*idt*NSm;
+             #else
+
+            s_rhsS[es][n] = 0.f;
+
+             for (int s=0;s<p_Nstages;s++) {
+              s_rhsS[es][n] += J*ialf*idt*extbdfB[s]*NS[id+0*sOffset+s*p_NSfields*sOffset];
+             } 
+
+             #endif
+
           } else {
             s_rhsS[es][n] = 0.f;
 

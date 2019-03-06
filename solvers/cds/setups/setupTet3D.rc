@@ -32,15 +32,15 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-0
+2
 
 [SUBCYCLING TIME ORDER]
 3
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
-#COLLOCATION
-CUBATURE
+COLLOCATION
+#CUBATURE
 
 [VISCOSITY]
 1
@@ -85,7 +85,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-ucdTri2D
+ucdTet2D
 
 #################################################
 ########## Solver Options ##############

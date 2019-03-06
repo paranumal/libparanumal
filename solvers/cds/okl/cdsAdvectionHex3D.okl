@@ -79,7 +79,7 @@ SOFTWARE.
 
           const dlong id  = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  const dfloat Un = U[id+0*voffset];
+	        const dfloat Un = U[id+0*voffset];
           const dfloat Vn = U[id+1*voffset];
           const dfloat Wn = U[id+2*voffset];
           const dfloat Sn = S[id+0*soffset];
