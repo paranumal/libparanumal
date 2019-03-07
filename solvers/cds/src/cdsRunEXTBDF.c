@@ -100,7 +100,8 @@ void cdsRunEXTBDF(cds_t *cds){
                                   (s-1)*cds->Ntotal*cds->NVfields*sizeof(dfloat), 
                                   (s-2)*cds->Ntotal*cds->NVfields*sizeof(dfloat));
     }
-
+    
+    dfloat nextTime = time + cds->dt; 
      // Update velocity !!!!!
     cds->setFlowFieldKernel(mesh->Nelements,
                           nextTime,

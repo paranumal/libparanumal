@@ -26,18 +26,8 @@
 
           if (p_SUBCYCLING) {
             //NS holds \hat{S} after subcycling
-            #if 1
             const dfloat NSm = NS[id+0*sOffset];
-            s_rhsS[es][n] = J*ialf*idt*NSm;
-            #else
-
-            s_rhsS[es][n] = 0.f;
-
-             for (int s=0;s<p_Nstages;s++) {
-              s_rhsS[es][n] += J*ialf*idt*extbdfB[s]*NS[id+0*sOffset+s*p_NSfields*sOffset];
-             } 
-            #endif
-          
+            s_rhsS[es][n] = J*ialf*idt*NSm;          
           } else {
             s_rhsS[es][n] = 0.f;
             for (int s=0;s<p_Nstages;s++) {
