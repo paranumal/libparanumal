@@ -75,7 +75,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   cds->Nblock      = (Nlocal+blockSize-1)/blockSize;
 
   // Solution storage at interpolation nodes
-  cds->U     = (dfloat*) calloc(cds->NVfields                 *Ntotal,sizeof(dfloat));
+  cds->U     = (dfloat*) calloc(cds->NVfields*(cds->Nstages+0)*Ntotal,sizeof(dfloat));
   cds->S     = (dfloat*) calloc(cds->NSfields*(cds->Nstages+0)*Ntotal,sizeof(dfloat));
   cds->NS    = (dfloat*) calloc(cds->NSfields*(cds->Nstages+1)*Ntotal,sizeof(dfloat));
   cds->rkS   = (dfloat*) calloc(cds->NSfields                 *Ntotal,sizeof(dfloat));
@@ -194,8 +194,8 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   options.getArgs("DATA FILE", boundaryHeaderFileName);
   kernelInfo["includes"] += (char*)boundaryHeaderFileName.c_str();
  
-  cds->o_U = mesh->device.malloc(cds->NVfields             *Ntotal*sizeof(dfloat), cds->U);
-  cds->o_S = mesh->device.malloc(cds->NSfields*cds->Nstages*Ntotal*sizeof(dfloat), cds->S);
+  cds->o_U = mesh->device.malloc(cds->NVfields*(cds->Nstages+0)*Ntotal*sizeof(dfloat), cds->U);
+  cds->o_S = mesh->device.malloc(cds->NSfields*(cds->Nstages+0)*Ntotal*sizeof(dfloat), cds->S);
 
 #if 0
   if (mesh->rank==0 && options.compareArgs("VERBOSE","TRUE")) 
@@ -388,7 +388,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   int sBCType[7] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
  
   //Solver tolerances 
-  cds->TOL = 1E-8;
+  cds->TOL = 1E-12;
 
   // Use third Order Velocity Solve: full rank should converge for low orders
   if (mesh->rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");

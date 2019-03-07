@@ -38,12 +38,9 @@ SOFTWARE.
     if(n<p_Np*Nelements){
       dfloat xn = x[n];
       dfloat yn = y[n];
-      
-      dfloat u = 0.0;
-      dfloat v = 0.0;
-      
+      dfloat u = 0.f;
+      dfloat v = 0.f;
       cdsFlowField2D(t, xn, yn, &u, &v);
-      
       U[n+0*offset] = u;
       U[n+1*offset] = v;
     }

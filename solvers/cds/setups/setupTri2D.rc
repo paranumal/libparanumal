@@ -2,7 +2,8 @@
 1.0
 
 [DATA FILE]
-data/cdsUCD2D.h
+data/cdsGauss2D.h
+#data/cdsUCD2D.h
 
 [MESH FILE]
 ../../meshes/cdsUCDTri2D.msh
@@ -14,7 +15,7 @@ data/cdsUCD2D.h
 3
 
 [POLYNOMIAL DEGREE]
-5
+4
 
 [ELEMENT MAP]
 ISOPARAMETRIC
@@ -32,7 +33,7 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-0
+4
 
 [SUBCYCLING TIME ORDER]
 3
@@ -49,7 +50,7 @@ CUBATURE
 1
 
 [CONDUCTIVITY]
-0.01 
+0.001
 
 [SPECIFIC HEAT]
 1
@@ -67,13 +68,13 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+200
 
 [START TIME]
 0
 
 [FINAL TIME]
-1.0
+6.283185307179586
 
 [CFL]
 0.1
@@ -106,7 +107,7 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
-JACOBI
+MASSMATRIX
 
 ########## MULTIGRID Options ##############
 
@@ -140,7 +141,7 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be BELTRAMI
 [EXACT]
-UCD
+GAUSS
 
 [VERBOSE]
 FALSE

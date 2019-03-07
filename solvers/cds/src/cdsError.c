@@ -62,7 +62,7 @@ void cdsError(cds_t *cds, dfloat time){
     if( isnan(gMinS) || isnan(gMaxS) )  exit(EXIT_FAILURE);
   } else { //compare to an exact solution
 
-    if (cds->options.compareArgs("EXACT","UCD") && cds->dim==2) { 
+    if (cds->options.compareArgs("EXACT","GAUSS") && cds->dim==2) { 
       dfloat maxErr = 0.f;
 
       dfloat maxS   = -1e9;
@@ -72,7 +72,7 @@ void cdsError(cds_t *cds, dfloat time){
       
       dfloat maxE   = -1e9;
       dfloat minE   =  1e9;
-      
+  #if 0    
      for(dlong e=0;e<mesh->Nelements;++e){
         for(int n=0;n<mesh->Np;++n){
           dlong id = n+e*mesh->Np;
@@ -106,6 +106,37 @@ void cdsError(cds_t *cds, dfloat time){
  
         }
       }
+#else
+
+for(dlong e=0;e<mesh->Nelements;++e){
+        for(int n=0;n<mesh->Np;++n){
+          dlong id = n+e*mesh->Np;
+          dfloat x = mesh->x[id];
+          dfloat y = mesh->y[id];
+          
+          dfloat mtime = time + M_PI; 
+          dfloat cond  = 0.001; 
+          dfloat xc = 0.00f;    
+          dfloat yc = 0.50f;     
+          dfloat xt = xc*cos(mtime) - yc*sin(mtime);      
+          dfloat yt = -xc*sin(mtime) + yc*cos(mtime);     
+          dfloat r2 = (x-xt)*(x-xt) + (y-yt)*(y-yt);      
+          dfloat sExact =  1.f / (4.f*M_PI*cond*mtime) * exp(-r2/ (4.f*cond*mtime));  
+                
+          maxErr = mymax(maxErr, fabs(cds->S[id+0*cds->sOffset]-sExact));
+
+          maxNS = mymax(maxNS, cds->NS[id +0*cds->sOffset]);   minNS = mymin(minNS, cds->NS[id +0*cds->sOffset]);
+          maxS = mymax(maxS, cds->S[id +0*cds->sOffset]);   minS = mymin(minS, cds->S[id +0*cds->sOffset]);
+          maxE =mymax(maxE, sExact);    minE = mymin(minE, sExact);
+
+          #if 0
+           cds->S[id+0*cds->sOffset] = sExact;
+          #endif
+        }
+      }
+
+
+#endif
      // printf("Step: %d Time: %g maxS: %g minS: %g maxE: %g minE: %g\n", (int)(time/cds->dt), time, maxS, minS, maxE, minE);
      printf("Step: %d Time: %g maxNs: %g MinNs : %g maxS: %g minS: %g maxE: %g minE: %g\n", (int)(time/cds->dt), time, maxNS, minNS, maxS, minS, maxE, minE);
       // compute maximum over all processes

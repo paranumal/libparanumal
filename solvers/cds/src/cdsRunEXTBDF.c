@@ -63,6 +63,11 @@ void cdsRunEXTBDF(cds_t *cds){
    
     // cycle history
     for (int s=cds->Nstages;s>1;s--) {
+      // Assuming flow field is changing with time
+      cds->o_U.copyFrom(cds->o_U, cds->Ntotal*cds->NVfields*sizeof(dfloat), 
+                                  (s-1)*cds->Ntotal*cds->NVfields*sizeof(dfloat), 
+                                  (s-2)*cds->Ntotal*cds->NVfields*sizeof(dfloat));
+
       cds->o_S.copyFrom(cds->o_S, cds->Ntotal*cds->NSfields*sizeof(dfloat), 
                             			(s-1)*cds->Ntotal*cds->NSfields*sizeof(dfloat), 
                             			(s-2)*cds->Ntotal*cds->NSfields*sizeof(dfloat));
@@ -74,8 +79,36 @@ void cdsRunEXTBDF(cds_t *cds){
 
     //copy updated scalar
     cds->o_S.copyFrom(cds->o_rkS, cds->NSfields*cds->Ntotal*sizeof(dfloat)); 
+
+    dfloat nextTime = time + cds->dt; 
+    
+    // Update velocity !!!!!
+    cds->setFlowFieldKernel(mesh->Nelements,
+                          nextTime,
+                          mesh->o_x,
+                          mesh->o_y,
+                          mesh->o_z,
+                          cds->vOffset,
+                          cds->o_U);
 #else 
     cdsSolveStep(cds, time, cds->dt, cds->o_U, cds->o_S);
+    
+    // cycle history
+    for (int s=cds->Nstages;s>1;s--) {
+      // Assuming flow field is changing with time
+      cds->o_U.copyFrom(cds->o_U, cds->Ntotal*cds->NVfields*sizeof(dfloat), 
+                                  (s-1)*cds->Ntotal*cds->NVfields*sizeof(dfloat), 
+                                  (s-2)*cds->Ntotal*cds->NVfields*sizeof(dfloat));
+    }
+
+     // Update velocity !!!!!
+    cds->setFlowFieldKernel(mesh->Nelements,
+                          nextTime,
+                          mesh->o_x,
+                          mesh->o_y,
+                          mesh->o_z,
+                          cds->vOffset,
+                          cds->o_U);
 #endif
  
     occaTimerTic(mesh->device,"Report");
