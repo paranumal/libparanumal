@@ -95,13 +95,16 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
     advectionSetupOccaQuad3D(solver,&kernelInfo);
        
     solver->o_q =
-      solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat), solver->rhsq);
+	solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));
 
     solver->o_qpre =
       solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat), solver->q);
 
-    solver->o_rhsq =
-      solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat), solver->rhsq);
+    solver->o_rhsqs =
+	solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));
+
+    solver->o_rhsqw =
+	solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));
 
     solver->o_eInterp =
       solver->device.malloc(mesh->Np*(mesh->NgridElements-mesh->Nelements)*sizeof(iint),mesh->eInterp);
@@ -124,10 +127,10 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
     solver->o_perp_index = solver->device.malloc((mesh->NgridElements - mesh->Nelements)*mesh->Np*sizeof(iint),mesh->perp_index);
     
     solver->o_qFilter =
-      solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat),solver->rhsq);
+	solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat));
       
     solver->o_qCorr =
-      solver->device.malloc(mesh->Nelements*solver->Nfields*mesh->Np*sizeof(dfloat),solver->rhsq);
+	solver->device.malloc(mesh->Nelements*solver->Nfields*mesh->Np*sizeof(dfloat));
     solver->o_resq =
       solver->device.malloc(mesh->Np*mesh->Nelements*solver->Nfields*sizeof(dfloat), solver->resq);
     

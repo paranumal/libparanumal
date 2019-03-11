@@ -80,7 +80,7 @@ v3 operator/(v3 lhs, double rhs)
 
 v3 normalize(v3 rhs)
 {
-  return rhs/std::sqrt(rhs.squared());
+    return rhs;///std::sqrt(rhs.squared());
 }
 
 struct Quad
@@ -139,7 +139,7 @@ void  make_grid(int subdivisions, VertexList &vertices, QuadList& quads) {
       quads.push_back({{map1.first->second,map2.first->second,map3.first->second,map4.first->second},faceNumber,min_dist});
 
       //face 2
-      e1 = {axis[subdivisions-xi],face_offset,axis[yi]};
+      /*      e1 = {axis[subdivisions-xi],face_offset,axis[yi]};
       e2 = {axis[subdivisions-xi-1],face_offset,axis[yi]};
       e3 = {axis[subdivisions-xi-1],face_offset,axis[yi+1]};
       e4 = {axis[subdivisions-xi],face_offset,axis[yi+1]};
@@ -271,7 +271,7 @@ void  make_grid(int subdivisions, VertexList &vertices, QuadList& quads) {
       int dists6[] = {xi,yi,subdivisions - 1 - xi,subdivisions - 1 - yi};
       min_dist = *min_element(dists6,dists6+4);
 
-      quads.push_back({{map1.first->second,map2.first->second,map3.first->second,map4.first->second},faceNumber,min_dist});
+      quads.push_back({{map1.first->second,map2.first->second,map3.first->second,map4.first->second},faceNumber,min_dist});*/
     }
   }
 }
@@ -300,9 +300,9 @@ int main(int argc, char **argv){
   // output coordinates of vertices
   for(int i = 0; i < vertices.size(); i++) {
     cout << i+1 << " " 
-	 <<  vertices[i].data[0] << " "
-	 <<  vertices[i].data[1] << " "
-	 <<  vertices[i].data[2] << " "
+	 <<  normalize(vertices[i]).data[0] << " "
+	 <<  normalize(vertices[i]).data[1] << " "
+	 <<  normalize(vertices[i]).data[2] << " "
 	 <<  endl;
   }
 

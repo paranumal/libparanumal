@@ -86,7 +86,6 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   }
   fgets(buf, BUFSIZ, fp);
 
-  //read strong differentiation matrix but don't save
   /* 1D collocation differentiation matrix on GLL nodes */
   fgets(buf, BUFSIZ, fp); // read comment
   printf("got D message: %s\n", buf);
@@ -345,6 +344,17 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
     }
     printf("\n");
   }
+  /* 1D mass matrix on GLL nodes */
   fgets(buf, BUFSIZ, fp); // read comment
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("got mass matrix message: %s\n", buf);
+  mesh->mass = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  for(int n=0;n<mesh->N+1;++n){
+    for(int m=0;m<mesh->N+1;++m){
+      fscanf(fp, dfloatFormat, mesh->mass+m+n*(mesh->N+1));
+      printf("%lg ",mesh->mass[m+n*(mesh->N+1)]);
+    }
+    printf("\n");
+  }
   fclose(fp);
 }

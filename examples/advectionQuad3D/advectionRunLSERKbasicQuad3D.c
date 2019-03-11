@@ -8,7 +8,7 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
   dfloat * test_q = (dfloat *) calloc(mesh->NgridElements*solver->Nfields*mesh->Np,sizeof(dfloat));
     
   //kernel arguments
-  dfloat alpha = alpha_scale;
+  dfloat alpha = 1; //alpha_scale;
 
   iint Nboundary = mesh->NgridElements - mesh->Nelements;
 
@@ -87,11 +87,14 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 	solver->volumeKernel(mesh->Nelements,
 			     solver->o_vgeo,
 			     solver->o_D,
+			     solver->o_weakD,
 			     solver->o_x,
 			     solver->o_y,
 			     solver->o_z,
+			     solver->o_mass,
 			     solver->o_qpre,
-			     solver->o_rhsq);
+			     solver->o_rhsqs,
+			     solver->o_rhsqw);
 	
 	solver->surfaceKernel(mesh->Nelements,
 			       solver->o_sgeo,
@@ -103,7 +106,8 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			       solver->o_y,
 			       solver->o_z,
 			       solver->o_qpre,
-			       solver->o_rhsq);
+			      solver->o_rhsqs,
+			      solver->o_rhsqw);
 
 	/*if (Nboundary > 0) {
 	  solver->loadFilterGridKernel(Nboundary,
@@ -116,17 +120,16 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 				       solver->o_overlapDirection,
 				       solver->o_rhsq);
 	}
-				     
+	*/				     
 	solver->filterKernelH(mesh->Nelements,
-			      mesh->NgridElements,
 			      solver->o_dualProjMatrix,
 			      solver->o_cubeFaceNumber,
 			      solver->o_gridToE,
-			      solver->o_rhsq,
+			      solver->o_rhsqs,
+			      solver->o_rhsqw,
 			      solver->o_qFilter);
-	
+		
 	solver->filterKernelV(mesh->Nelements,
-			      mesh->NgridElements,
 			      alpha,
 			      solver->o_dualProjMatrix,
 			      solver->o_cubeFaceNumber,
@@ -134,10 +137,11 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_x,
 			      solver->o_y,
 			      solver->o_z,
-			      solver->o_rhsq,
+			      solver->o_vgeo,
+			      solver->o_rhsqs,
+			      solver->o_rhsqw,
 			      solver->o_qFilter,
-			      solver->o_q);
-	*/
+			      solver->o_q);	
 	
 	solver->volumeCorrectionKernel(mesh->Nelements,
 				       solver->o_q,
@@ -147,8 +151,8 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			     solver->dt,
 			     solver->rka[rk],
 			     solver->rkb[rk],
-			     solver->o_rhsq,
-			     //solver->o_q,
+			     //solver->o_rhsq,
+			     solver->o_q,
 			     solver->o_qCorr,
 			     solver->o_resq,
 			     solver->o_qpre);

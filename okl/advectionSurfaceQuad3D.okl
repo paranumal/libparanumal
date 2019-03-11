@@ -1,4 +1,4 @@
-void upwindFlux(const dfloat nx, const dfloat ny, const dfloat nz,
+void upwindFluxS(const dfloat nx, const dfloat ny, const dfloat nz,
 		const dfloat u, const dfloat v, const dfloat w,
 		const dfloat * restrict qp, const dfloat * restrict qm,
 		dfloat * restrict fluxq){
@@ -6,8 +6,24 @@ void upwindFlux(const dfloat nx, const dfloat ny, const dfloat nz,
   const dfloat udotn = u*nx+v*ny+w*nz;
 
   // TW: need to double check the sign in front of occaFabs (might need to switch to - occaFabs(udotn)
-  fluxq[0] = 0.5f*(udotn*qp[1] + 0.f*occaFabs(udotn)*(qp[0] - qm[0]));
-  fluxq[1] = 0.5f*(udotn*qp[0] + 0.f*occaFabs(udotn)*(qp[1] - qm[1]));
+  fluxq[0] = 0.5f*(udotn*(qp[1]-qm[1]) + 0.f*occaFabs(udotn)*(qp[0] - qm[0]));
+  fluxq[1] = 0.5f*(udotn*(qp[0]-qm[0]) + 0.f*occaFabs(udotn)*(qp[1] - qm[1]));
+
+  for(int n=2;n<p_Nfields;++n)
+    fluxq[n] = 0;
+
+}
+
+void upwindFluxW(const dfloat nx, const dfloat ny, const dfloat nz,
+		const dfloat u, const dfloat v, const dfloat w,
+		const dfloat * restrict qp, const dfloat * restrict qm,
+		dfloat * restrict fluxq){
+
+  const dfloat udotn = u*nx+v*ny+w*nz;
+
+  // TW: need to double check the sign in front of occaFabs (might need to switch to - occaFabs(udotn)
+  fluxq[0] = 0.5f*(udotn*(qp[1]+qm[1]) + 0.f*occaFabs(udotn)*(qp[0] - qm[0]));
+  fluxq[1] = 0.5f*(udotn*(qp[0]+qm[0]) + 0.f*occaFabs(udotn)*(qp[1] - qm[1]));
 
   for(int n=2;n<p_Nfields;++n)
     fluxq[n] = 0;
@@ -25,7 +41,8 @@ kernel void advectionSurfaceLSERKQuad3D(const iint Nelements,
 				   const dfloat * restrict y,
 				   const dfloat * restrict z,
 				   const dfloat * restrict q,
-				   dfloat * restrict rhsq){
+					dfloat * restrict rhsqs,
+					dfloat * restrict rhsqw){
   
   
 #define p_LIFT (0.5f*(p_Nq-1)*p_Nq)
@@ -69,7 +86,7 @@ kernel void advectionSurfaceLSERKQuad3D(const iint Nelements,
 	    const iint vidM = eM*p_Np*p_Nfields + (idM%p_Np);
 	    const iint vidP = eP*p_Np*p_Nfields + (idP%p_Np);
 
-	    dfloat qp[p_Nfields], qm[p_Nfields], fluxq[p_Nfields];
+	    dfloat qp[p_Nfields], qm[p_Nfields], fluxqs[p_Nfields], fluxqw[p_Nfields];
 	    
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
@@ -80,13 +97,15 @@ kernel void advectionSurfaceLSERKQuad3D(const iint Nelements,
 		qm[fld] = qM;
 	      }
 
-	    upwindFlux(nx, ny, nz, un, vn, wn, qp,qm, fluxq);
+	    upwindFluxS(nx, ny, nz, un, vn, wn, qp,qm, fluxqs);
+	    upwindFluxW(nx, ny, nz, un, vn, wn, qp,qm, fluxqw);
 	    
-	    const dfloat sc = invJ*sJ*p_LIFT;
+	    const dfloat sc = 0.5*sJ*p_LIFT;
 
 	    occaUnroll(p_Nfields)
 	      for(int fld=0;fld<p_Nfields;++fld){
-		rhsq[vidM+fld*p_Np] += sc*fluxq[fld]; // TW dq[fld];
+		rhsqs[vidM+fld*p_Np] += sc*fluxqs[fld]; // TW dq[fld];
+		rhsqw[vidM+fld*p_Np] += sc*fluxqw[fld]; // TW dq[fld];
 	      }
 	  }
 	}
@@ -172,7 +191,7 @@ kernel void advectionSurfaceMRSAABQuad3D(const iint Nelements,
 	      }
 
 	    // upwind flux
-	    upwindFlux(nx, ny, nz, un, vn, wn, qp,qm, fluxq);
+	    upwindFluxS(nx, ny, nz, un, vn, wn, qp,qm, fluxq);
 	    
 	    // evaluate "flux" terms: (sJ/J)*(D+sigma*D*D)*(q^* - q^-)
 	    const dfloat sc = invJ*sJ*p_LIFT;

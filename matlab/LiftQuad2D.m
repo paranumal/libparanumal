@@ -13,25 +13,25 @@ Emat = zeros(Np, Nfaces*Nfp);
 faceR = r(faceNodes(:,1));
 V1D = Vandermonde1D(N, faceR); 
 massEdge1 = inv(V1D*V1D');
-Emat(faceNodes(:,1),1:Nfp) = massEdge1;
+Emat(faceNodes(:,1),1:Nfp) = ones(length(massEdge1));
 
 % face 2
 faceR = s(faceNodes(:,2));
 V1D = Vandermonde1D(N, faceR);
 massEdge2 = inv(V1D*V1D');
-Emat(faceNodes(:,2),Nfp+1:2*Nfp) = massEdge2;
+Emat(faceNodes(:,2),Nfp+1:2*Nfp) = ones(length(massEdge2));
 
 % face 3
 faceR = r(faceNodes(:,3));
 V1D = Vandermonde1D(N, faceR); 
 massEdge3 = inv(V1D*V1D');
-Emat(faceNodes(:,3),2*Nfp+1:3*Nfp) = massEdge3;
+Emat(faceNodes(:,3),2*Nfp+1:3*Nfp) = ones(length(massEdge3));
 
 % face 4
 faceS = s(faceNodes(:,4));
 V1D = Vandermonde1D(N, faceS); 
 massEdge4 = inv(V1D*V1D');
-Emat(faceNodes(:,4),3*Nfp+1:4*Nfp) = massEdge4;
+Emat(faceNodes(:,4),3*Nfp+1:4*Nfp) = ones(length(massEdge4));
 
 % inv(mass matrix)*\I_n (L_i,L_j)_{edge_n}
 V = VandermondeQuad2D(N, r, s);

@@ -4,8 +4,7 @@ mesh_t *meshSetupQuad3D(int mesh_size, int N, dfloat sphereRadius,char *mode){
 
   // read chunk of elements
   char filename[40];
-  sprintf(filename,"../../meshes/cubed_grid_%d.msh",mesh_size);
-  //sprintf(filename,"./meshing/test_mesh2.msh");
+  sprintf(filename,"../../meshes/cubed_grid_");
   mesh_t *mesh = meshParallelReaderQuad3D(filename);
   mesh->edgeLength = mesh_size;
 

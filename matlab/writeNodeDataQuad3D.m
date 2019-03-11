@@ -6,6 +6,7 @@ V1d = Vandermonde1D(N, r1d);
 D1d = Dmatrix1D(N, r1d, V1d);
 M1d = inv(V1d')/V1d;
 w1d = sum(M1d);
+D1d_sym = inv(diag(w1d))*M1d*D1d;
 cnt = 1;
 for i=1:N+1
   for j=1:N+1
@@ -34,7 +35,7 @@ V = VandermondeQuad2D(N, r, s);
 Dr = full(Dr);
 Ds = full(Ds);
 LIFT = LiftQuad2D(N, faceNodes, r, s);
-LIFT = full(LIFT);
+	  LIFT = full(LIFT);
 
 fname = sprintf('quad3dN%02d.dat', N);
 
@@ -456,13 +457,23 @@ for n=1:Nq
     fprintf(fid, '\n');
 end
 
-D1d_weak = 0.5*(D1d - inv(diag(w1d)) * D1d' * diag(w1d));
+			       #D1d_weak = 0.5*(M1d*D1d-1*D1d'*M1d);
+D1d_weak = 0.5*M1d*D1d;
 fprintf(fid, '%% weak D (1D) matrix\n');
 for n=1:N+1
   for m=1:N+1
     fprintf(fid, '%17.15E ', D1d_weak(n,m));
   end
   fprintf(fid, '\n');
+end
+
+fprintf(fid,"%% mass matrix 1D\n");
+D1d_weak2 = -0.5*D1d'*M1d;
+for n=1:N+1
+  for m=1:N+1
+    fprintf(fid, '%17.15E ', D1d_weak2(n,m));
+  end
+  fprintf(fid,'\n');
 end
 
 fclose(fid);

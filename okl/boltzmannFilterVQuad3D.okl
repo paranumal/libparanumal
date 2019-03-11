@@ -280,7 +280,9 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 				     const dfloat * restrict x,
 				     const dfloat * restrict y,
 				     const dfloat * restrict z,
-				     const dfloat * restrict qOrig,
+				     const dfloat * restrict vgeo,
+				     const dfloat * restrict qOrigs,
+				     const dfloat * restrict qOrigw,
 				     const dfloat * restrict qIn,
 				     dfloat * restrict Fq) {
   
@@ -292,9 +294,9 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
     
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
-	s_F[0][j][i] = F[i+0*p_Nq+j*3*p_Nq];
-	s_F[1][j][i] = F[i+1*p_Nq+j*3*p_Nq];
-	s_F[2][j][i] = F[i+2*p_Nq+j*3*p_Nq];
+	s_F[0][j][i] = F[i+0*p_Nq+j*3*p_Np];
+	s_F[1][j][i] = F[i+1*p_Nq+j*3*p_Np];
+	s_F[2][j][i] = F[i+2*p_Nq+j*3*p_Np];
 	
 	const iint eL = EToE[eo*p_Nfaces+0];
 	const iint eR = EToE[eo*p_Nfaces+2];
@@ -329,7 +331,9 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 	    for(iint fld=0;fld<p_Nfields;++fld){
 	      Fqij[fld] = 0;
 	    }
-	  
+
+	  const dfloat invJW = 2/vgeo[eo*p_Np*p_Nvgeo + j*p_Nq + i + p_Np*10];
+
 	  occaUnroll(p_Nq)
 	    for(int n=0;n<p_Nq;++n){
 	      // fetch once, use p_Nfields times
@@ -349,7 +353,7 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 	  // use saved data for blend
     	  for (iint fld=0; fld<p_Nfields;++fld) {
 	    int id = eo*p_Nfields*p_Np+fld*p_Np + j*p_Nq + i;
-	    Fqij[fld] = Fqij[fld]*(1. - alpha) + alpha*qOrig[id];
+	    Fqij[fld] = invJW*(Fqij[fld]*(1. - alpha) + alpha*(qOrigs[id]/*+qOrigw[id]*/));
 	  }
 
 	  // constrain momentum changes to lie on sphere
@@ -365,9 +369,11 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 	  Fqij[3] -= zij*xdotrhsq;
 	}
 	else { //copy boundary elements directly
+	    const dfloat invJW = 2/vgeo[eo*p_Np*p_Nvgeo + j*p_Nq + i + p_Np*10];
+
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
-	      Fqij[fld] = s_q[fld][1][j][i];
+	      Fqij[fld] = invJW*s_q[fld][1][j][i];
 	    }
 	}
 	
