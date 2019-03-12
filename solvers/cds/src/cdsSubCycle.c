@@ -38,7 +38,9 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
     cds->haloExtractKernel(mesh->Nelements,
                            mesh->totalHaloPairs,
                            mesh->o_haloElementList,
+                           cds->vOffset,
                            cds->sOffset,
+                           o_U,
                            o_S,
                            cds->o_haloBuffer);
 
@@ -47,7 +49,7 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
   
     // start halo exchange
     meshHaloExchangeStart(mesh,
-        mesh->Np*(cds->NSfields)*sizeof(dfloat),
+        mesh->Np*(cds->NSfields+cds->NVfields)*sizeof(dfloat),
         cds->sendBuffer,
         cds->recvBuffer);
 
@@ -57,7 +59,9 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
 
     cds->haloScatterKernel(mesh->Nelements,
          mesh->totalHaloPairs,
+         cds->vOffset,
          cds->sOffset,
+         o_U,
          o_S,
          cds->o_haloBuffer);
   }
@@ -132,15 +136,15 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
           // switch to data stream
           mesh->device.setStream(mesh->dataStream);
 
-          cds->haloExtractKernel(mesh->Nelements,
+          cds->scalarHaloExtractKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
                                  mesh->o_haloElementList,
                                  cds->sOffset, 
                                  o_Sd,
-                                 cds->o_haloBuffer);
+                                 cds->o_shaloBuffer);
 
           // copy extracted halo to HOST 
-          cds->o_haloBuffer.copyTo(cds->sendBuffer,"async: true");            
+          cds->o_shaloBuffer.copyTo(cds->ssendBuffer,"async: true");            
           mesh->device.setStream(mesh->defaultStream);
         }
 
@@ -179,19 +183,19 @@ void cdsSubCycle(cds_t *cds, dfloat time, int Nstages, occa::memory o_U, occa::m
           // start halo exchange
           meshHaloExchangeStart(mesh,
                                 mesh->Np*(cds->NSfields)*sizeof(dfloat), 
-                                cds->sendBuffer,
-                                cds->recvBuffer);
+                                cds->ssendBuffer,
+                                cds->srecvBuffer);
         
 
           meshHaloExchangeFinish(mesh);
 
-          cds->o_haloBuffer.copyFrom(cds->recvBuffer,"async: true"); 
+          cds->o_shaloBuffer.copyFrom(cds->srecvBuffer,"async: true"); 
 
-          cds->haloScatterKernel(mesh->Nelements,
+          cds->scalarHaloScatterKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
                                  cds->sOffset,
                                  o_Sd,
-                                 cds->o_haloBuffer);
+                                 cds->o_shaloBuffer);
           mesh->device.finish();
           
           mesh->device.setStream(mesh->defaultStream);

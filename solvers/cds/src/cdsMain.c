@@ -80,10 +80,10 @@ int main(int argc, char **argv){
   // }  
   
   if (cds->options.compareArgs("TIME INTEGRATOR", "ARK")){
-    printf("ARK is not implemented yet\n");
+   printf("ARK is not implemented yet\n");
     exit(EXIT_FAILURE);
   }else if (cds->options.compareArgs("TIME INTEGRATOR", "EXTBDF")){
-     printf("Running EXTBDF Scheme\n");
+     if(mesh->rank==0) printf("Running EXTBDF Scheme\n");
      cdsRunEXTBDF(cds);
   }
   // close down MPI

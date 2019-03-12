@@ -34,14 +34,16 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
   printf("Starting Advection Step \n "); 
 #endif
   mesh_t *mesh = cds->mesh;
-  
-  //Exctract Halo On Device, all fields
+
+   //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){
     cds->haloExtractKernel(mesh->Nelements,
                            mesh->totalHaloPairs,
                            mesh->o_haloElementList,
+                           cds->vOffset,
                            cds->sOffset,
-                           cds->o_S,
+                           o_U,
+                           o_S,
                            cds->o_haloBuffer);
 
     // copy extracted halo to HOST 
@@ -49,9 +51,9 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
   
     // start halo exchange
     meshHaloExchangeStart(mesh,
-			  mesh->Np*(cds->NSfields)*sizeof(dfloat),
-			  cds->sendBuffer,
-			  cds->recvBuffer);
+        mesh->Np*(cds->NSfields+cds->NVfields)*sizeof(dfloat),
+        cds->sendBuffer,
+        cds->recvBuffer);
   }
 
 #if ADV_DEBUG
@@ -89,9 +91,6 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
   printf("\tdone \n "); 
 #endif
 
-
-
-  
   // COMPLETE HALO EXCHANGE
   if(mesh->totalHaloPairs>0){
     meshHaloExchangeFinish(mesh);
@@ -100,9 +99,17 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
 
     cds->haloScatterKernel(mesh->Nelements,
 			   mesh->totalHaloPairs,
-			   cds->sOffset,
-			   o_S,
+         cds->vOffset,
+         cds->sOffset,
+         o_U,
+         o_S,
 			   cds->o_haloBuffer);
+
+     // cds->haloScatterKernel(mesh->Nelements,
+     //     mesh->totalHaloPairs,
+     //     cds->sOffset,
+     //     o_S,
+     //     cds->o_haloBuffer);
   }
 
 
@@ -146,9 +153,9 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
                                 mesh->o_y,
                                 mesh->o_z,
                                 cds->vOffset,
-				cds->sOffset,
+				                        cds->sOffset,
                                 o_U,
-				o_S,
+				                        o_S,
                                 o_NS);
   }
   occaTimerToc(mesh->device,"AdvectionSurface");

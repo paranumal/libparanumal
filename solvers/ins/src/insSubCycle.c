@@ -35,7 +35,7 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
   const dlong NtotalElements = (mesh->Nelements+mesh->totalHaloPairs);  
 
   //Exctract Halo On Device, all fields
-  if(mesh->totalHaloPairs>0){
+  if(mesh->totalHaloPairs>0 && !ins->scalarSolver){
     ins->velocityHaloExtractKernel(mesh->Nelements,
                                  mesh->totalHaloPairs,
                                  mesh->o_haloElementList,

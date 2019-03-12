@@ -200,7 +200,7 @@ void insRunEXTBDF(ins_t *ins){
     
 
     
-    //copy updated pressure
+    //copy updated velocity
     ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
 
 

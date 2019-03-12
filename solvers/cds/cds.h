@@ -100,10 +100,19 @@ typedef struct {
   dfloat *sendBuffer;
   dfloat *recvBuffer;
   dfloat *haloGatherTmp;
+  // //
+  dfloat *ssendBuffer;
+  dfloat *srecvBuffer;
+  dfloat *shaloGatherTmp;
 
   occa::memory o_sendBuffer;
   occa::memory o_recvBuffer;
   occa::memory o_gatherTmpPinned;
+
+   //
+  occa::memory o_ssendBuffer;
+  occa::memory o_srecvBuffer;
+  occa::memory o_sgatherTmpPinned;
 
   int Nsubsteps;
   dfloat sdt; 
@@ -129,6 +138,9 @@ typedef struct {
   occa::memory o_haloBuffer;
   occa::memory o_haloGatherTmp;
 
+  occa::memory o_shaloBuffer;
+  occa::memory o_shaloGatherTmp;
+
   //ARK data
   occa::memory o_rkC;
   occa::memory o_erkA, o_irkA, o_prkA;
@@ -141,6 +153,9 @@ typedef struct {
 
   occa::kernel haloExtractKernel;
   occa::kernel haloScatterKernel;
+
+  occa::kernel scalarHaloExtractKernel;
+  occa::kernel scalarHaloScatterKernel;
 
   occa::kernel setFlowFieldKernel;
   occa::kernel setScalarFieldKernel;
