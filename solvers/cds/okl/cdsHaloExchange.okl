@@ -28,9 +28,63 @@
 @kernel void cdsHaloExtract(const dlong Nelements,
 			    const dlong NhaloElements,
 			    @restrict const  dlong   *  haloElements,
-			    const dlong soffset,
-			    @restrict const  dfloat *  S,
+          const dlong voffset,
+          const dlong soffset,
+          @restrict const  dfloat *  U,
+          @restrict const  dfloat *  S,
 			    @restrict dfloat *  haloq){
+
+  for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all entries in this element
+      const dlong id   = n + p_Np*haloElements[e];
+      const dlong base = n + p_NTfields*p_Np*e;
+
+      #pragma unroll p_NVfields
+      for (int i=0;i<p_NVfields;i++) {
+         haloq[base + i*p_Np] = U[id +i*voffset];
+      }
+
+      #pragma unroll p_NSfields
+      for (int i=p_NVfields;i<p_NTfields;i++) {
+        haloq[base + i*p_Np]    = S[id +(i-p_NVfields)*soffset];
+      }
+
+    }
+  }
+}
+
+@kernel void cdsHaloScatter(const dlong Nelements,
+			    const dlong NhaloElements,
+          const dlong voffset,
+          const dlong soffset,
+          @restrict dfloat *  U,
+          @restrict dfloat *  S,
+			    @restrict const  dfloat *  haloq){
+
+  for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
+    for(int n=0;n<p_Np;++n;@inner(0)){ 
+      const dlong id   = n + p_Np*(e+Nelements);
+      const dlong base = n + p_NTfields*p_Np*e;
+
+      #pragma unroll p_NVfields
+      for (int i=0;i<p_NVfields;i++) {
+        U[id +i*voffset] =  haloq[base + i*p_Np];
+      }
+
+      #pragma unroll p_NSfields
+      for (int i=p_NVfields;i<p_NTfields;i++) {
+        S[id +(i-p_NVfields)*soffset] = haloq[base + i*p_Np];
+      }
+    }
+  }
+}
+
+@kernel void cdsScalarHaloExtract(const dlong Nelements,
+          const dlong NhaloElements,
+          @restrict const  dlong   *  haloElements,
+          const dlong soffset,
+          @restrict const  dfloat *  S,
+          @restrict dfloat *  haloq){
 
   for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
     for(int n=0;n<p_Np;++n;@inner(0)){     // for all entries in this element
@@ -45,11 +99,11 @@
   }
 }
 
-@kernel void cdsHaloScatter(const dlong Nelements,
-			    const dlong NhaloElements,
-			    const dlong soffset,
-			    @restrict dfloat *  S,
-			    @restrict const  dfloat *  haloq){
+@kernel void cdsScalarHaloScatter(const dlong Nelements,
+          const dlong NhaloElements,
+          const dlong soffset,
+          @restrict dfloat *  S,
+          @restrict const  dfloat *  haloq){
 
   for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
     for(int n=0;n<p_Np;++n;@inner(0)){ 

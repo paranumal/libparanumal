@@ -185,6 +185,7 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
 
   kernelInfo["defines/" "p_NSfields"]= cds->NSfields;
   kernelInfo["defines/" "p_NVfields"]= cds->NVfields;
+  kernelInfo["defines/" "p_NTfields"]= (cds->NVfields+cds->NSfields);
   kernelInfo["defines/" "p_NfacesNfp"]=  mesh->Nfaces*mesh->Nfp;
   kernelInfo["defines/" "p_Nstages"]=  cds->Nstages;
   kernelInfo["defines/" "p_SUBCYCLING"]=  cds->Nsubsteps;
@@ -493,9 +494,15 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   cds->o_rkS   = mesh->device.malloc(                               Ntotal*sizeof(dfloat), cds->rkS);  
 
   if(mesh->totalHaloPairs){//halo setup
-    dlong haloBytes = mesh->totalHaloPairs*mesh->Np*(cds->NSfields)*sizeof(dfloat);
-    dlong gatherBytes = cds->NVfields*mesh->ogs->NhaloGather*sizeof(dfloat);
+    dlong haloBytes   = mesh->totalHaloPairs*mesh->Np*(cds->NSfields + cds->NVfields)*sizeof(dfloat);
+    dlong gatherBytes = (cds->NSfields+cds->NVfields)*mesh->ogs->NhaloGather*sizeof(dfloat);
     cds->o_haloBuffer = mesh->device.malloc(haloBytes);
+
+   
+
+    // dlong vhaloBytes   = mesh->totalHaloPairs*mesh->Np*(cds->NSfields)*sizeof(dfloat);
+    // dlong vgatherBytes = cds->NSfields*mesh->ogs->NhaloGather*sizeof(dfloat);
+    // cds->o_vhaloBuffer = mesh->device.malloc(vhaloBytes);
 
 #if 0
     occa::memory o_sendBuffer = mesh->device.mappedAlloc(haloBytes, NULL);
@@ -510,10 +517,22 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
 
     cds->sendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, haloBytes, NULL, cds->o_sendBuffer);
     cds->recvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, haloBytes, NULL, cds->o_recvBuffer);
-
-    cds->haloGatherTmp = (dfloat*) occaHostMallocPinned(mesh->device, gatherBytes, NULL, cds->o_gatherTmpPinned);
-    
+    cds->haloGatherTmp = (dfloat*) occaHostMallocPinned(mesh->device, gatherBytes, NULL, cds->o_gatherTmpPinned); 
     cds->o_haloGatherTmp = mesh->device.malloc(gatherBytes,  cds->haloGatherTmp);
+
+    // Halo exchange for more efficient subcycling 
+    if(cds->Nsubsteps){
+      dlong shaloBytes   = mesh->totalHaloPairs*mesh->Np*(cds->NSfields)*sizeof(dfloat);
+      dlong sgatherBytes = (cds->NSfields)*mesh->ogs->NhaloGather*sizeof(dfloat);
+      cds->o_shaloBuffer = mesh->device.malloc(shaloBytes);
+
+      occa::memory o_ssendBuffer, o_srecvBuffer,o_sgatherTmpPinned;
+
+      cds->ssendBuffer = (dfloat*) occaHostMallocPinned(mesh->device, shaloBytes, NULL, cds->o_ssendBuffer);
+      cds->srecvBuffer = (dfloat*) occaHostMallocPinned(mesh->device, shaloBytes, NULL, cds->o_srecvBuffer);
+      cds->shaloGatherTmp = (dfloat*) occaHostMallocPinned(mesh->device, sgatherBytes, NULL, cds->o_sgatherTmpPinned);
+      cds->o_shaloGatherTmp = mesh->device.malloc(sgatherBytes,  cds->shaloGatherTmp);
+   }
   }
 
   // set kernel name suffix
@@ -539,11 +558,18 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       
       sprintf(fileName, DCDS "/okl/cdsHaloExchange.okl");
       sprintf(kernelName, "cdsHaloExtract");
-      cds->haloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      cds->haloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
       
       sprintf(kernelName, "cdsHaloScatter");
       cds->haloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-      
+
+      if(cds->Nsubsteps){
+        sprintf(kernelName, "cdsScalarHaloExtract");
+        cds->scalarHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
+        
+        sprintf(kernelName, "cdsScalarHaloScatter");
+        cds->scalarHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);    
+      } 
      
       sprintf(fileName, DCDS "/okl/cdsAdvection%s.okl", suffix);
 
@@ -613,8 +639,11 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
     }
     MPI_Barrier(mesh->comm);
   }
+
+
+
   
-#if 1
+#if 0
   printf(" Solver Parameters......\n");
   printf("alfa\t:\t %.8e \n", cds->alf);
   printf("invalfa\t:\t %.8e \n", cds->ialf);
@@ -632,12 +661,13 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
   printf("Nstages\t:\t %02d \n", cds->Nstages);
   printf("SNrk\t:\t %02d \n", cds->SNrk); 
   printf("ExplicitOrder\t:\t %02d \n", cds->ExplicitOrder);       
+  
+  cout<<kernelInfo;
 
 #endif
 
 
 
-  //cout<<kernelInfo;
 
   return cds;
 }

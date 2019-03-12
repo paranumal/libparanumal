@@ -91,7 +91,7 @@ int main(int argc, char **argv){
     printf("done\n");   
    }  
   
-  printf("running CDS ......\n");
+  if(mesh->rank==0) printf("running CDS ......\n");
   if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
   if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF"))  insRunEXTBDF(ins);
 #endif
