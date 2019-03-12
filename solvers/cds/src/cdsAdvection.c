@@ -70,7 +70,7 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
                                        mesh->o_cubProjectT,
                                        cds->vOffset,
                                        cds->sOffset,
-				       o_U,
+				                               o_U,
                                        o_S,
                                        o_NS);
   } else {

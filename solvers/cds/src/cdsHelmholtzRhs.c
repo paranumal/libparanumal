@@ -32,15 +32,15 @@ void cdsHelmholtzRhs(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS){
 
   // rhsU^s = MM*(\sum^s b_i U^n-i - \sum^s-1 a_i N(U^n-i) + \sum^s-1 c_i GP^n-i)/nu dt
   cds->helmholtzRhsKernel(mesh->Nelements,
-			  mesh->o_vgeo,
-			  mesh->o_MM,
-			  cds->idt,
-			  cds->ialf,
-			  cds->o_extbdfA,
-			  cds->o_extbdfB,
-			  cds->o_extbdfC,
-			  cds->sOffset,
-			  cds->o_S,
-			  cds->o_NS,
-			  o_rhsS);
+                          mesh->o_vgeo,
+                          mesh->o_MM,
+                          cds->idt,
+                          cds->ialf,
+                          cds->o_extbdfA,
+                          cds->o_extbdfB,
+                          cds->o_extbdfC,
+                          cds->sOffset,
+                          cds->o_S,
+                          cds->o_NS,
+                          o_rhsS);
 }

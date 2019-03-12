@@ -28,19 +28,19 @@ SOFTWARE.
 // Initial conditions 
 #define cdsFlowField2D(t,x,y,u,v) \
   {				       \
-    *(u) = 0.8f;		       \
-    *(v) = 0.8f;		       \
+    *(u) = -y;		       \
+    *(v) =  x;		       \
   }   
 #define cdsScalarField2D(t,x,y,s)	\
   {					\
-    dfloat ax = 0.01;			\
-    dfloat ay = 0.01;     \
-    dfloat cx = 0.8;			\
-    dfloat cy = 0.8;      \
-    dfloat coef   = 1.0/pow((4.0*t +1.0),1.50);			\
-    dfloat xterm  = pow((x - cx*t - 0.5),2.0) / ( ax*(4.0*t+1.0) );	\
-    dfloat yterm  = pow((y - cy*t - 0.5),2.0) / ( ay*(4.0*t+1.0) ); \
-    dfloat sExact = coef*exp( -xterm -yterm);			\
+    dfloat mtime = t + M_PI; \
+    dfloat cond  = 0.001; \
+    dfloat xc = 0.00f;			\
+    dfloat yc = 0.50f;     \
+    dfloat xt = xc*cos(mtime)  - yc*sin(mtime);      \
+    dfloat yt = -xc*sin(mtime) + yc*cos(mtime);     \
+    dfloat r2 = (x-xt)*(x-xt) + (y-yt)*(y-yt);      \
+    dfloat sExact =  1.f / (4.f*M_PI*cond*mtime) * exp(-r2/ (4.f*cond*mtime));	\
     *(s) = sExact;				\
   }   
 
@@ -49,15 +49,14 @@ SOFTWARE.
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
 #define cdsDirichletConditions2D(bc, t, x, y, nx, ny, sM, sB) \
 {                                   \
-    dfloat ax = 0.01;     \
-    dfloat ay = 0.01;     \
-    dfloat cx = 0.8;      \
-    dfloat cy = 0.8;      \
-    dfloat cz = 0.8;      \
-    dfloat coef   = 1.0/pow((4.0*t +1.0),1.50);     \
-    dfloat xterm  = pow((x - cx*t - 0.5),2.0) / ( ax*(4.0*t+1.0) ); \
-    dfloat yterm  = pow((y - cy*t - 0.5),2.0) / ( ay*(4.0*t+1.0) ); \
-    dfloat sExact = coef*exp( -xterm -yterm);      \
+    dfloat mtime = t + M_PI/2; \
+    dfloat cond  = 0.001; \
+    dfloat xc = 0.00f;      \
+    dfloat yc = 0.50f;     \
+    dfloat xt = xc*cos(mtime) - yc*sin(mtime);      \
+    dfloat yt = -xc*sin(mtime) + yc*cos(mtime);     \
+    dfloat r2 = (x-xt)*(x-xt) + (y-yt)*(y-yt);      \
+    dfloat sExact =  1.f / (4.f*M_PI*cond*mtime) * exp(-r2/ (4.f*cond*mtime));  \
   if(bc==1){                        \
     *(sB) = 0.f;                    \
   } else if(bc==2){                 \

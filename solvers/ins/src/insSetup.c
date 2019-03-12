@@ -333,7 +333,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options, occa::properties &kernelInfoBas
   ins->Re = ins->ubar/ins->nu;
 
  
- #if 0
+ #if 1
  occa::properties kernelInfo;
  kernelInfo["defines"].asObject();
  kernelInfo["includes"].asArray();
@@ -772,6 +772,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
     }
   }
 
+
   // ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs); !!!!!!!!!!!!!!!!!
   // ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs); !!!!!!!!!!!!!!!!!
 
@@ -829,6 +830,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
  } 
 
 
+ 
 
 
 
@@ -927,6 +929,17 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
     
     ins->o_velocityHaloGatherTmp = mesh->device.malloc(vGatherBytes,  ins->velocityHaloGatherTmp);
   }
+
+
+
+  ins->scalarSolver = 0; 
+  if(options.compareArgs("SOLVER TYPE", "INS+SCALAR"))
+    ins->scalarSolver = 1; 
+
+  // Now set the scalar Solver, make sure time step size etc are set before.... 
+  if(ins->scalarSolver)
+    insSetScalarSolver(ins, options, kernelInfoS); 
+
 
   // set kernel name suffix
   char *suffix;

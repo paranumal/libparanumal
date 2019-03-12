@@ -2,11 +2,10 @@
 1.0
 
 [DATA FILE]
-data/cdsGauss2D.h
-#data/cdsUCD2D.h
+data/cdsGaussHill2D.h
 
 [MESH FILE]
-../../meshes/cdsUCDTri2D.msh
+../../meshes/cdsGaussHillTri2D.msh
 
 [MESH DIMENSION]
 2
@@ -86,7 +85,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-ucdTri2D
+gaussHillTri2D
 
 #################################################
 ########## Solver Options ##############

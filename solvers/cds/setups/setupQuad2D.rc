@@ -2,10 +2,10 @@
 1.0
 
 [DATA FILE]
-data/cdsUCD2D.h
+data/cdsGaussHill2D.h
 
 [MESH FILE]
-../../meshes/cdsUCDQuad2D.msh
+../../meshes/cdsGaussHillQuad2D.msh
 
 [MESH DIMENSION]
 2
@@ -14,7 +14,7 @@ data/cdsUCD2D.h
 4
 
 [POLYNOMIAL DEGREE]
-5
+4
 
 [ELEMENT MAP]
 ISOPARAMETRIC
@@ -39,8 +39,8 @@ EXTBDF2
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
-COLLOCATION
-#CUBATURE
+#COLLOCATION
+CUBATURE
 
 [VISCOSITY]
 1
@@ -49,7 +49,7 @@ COLLOCATION
 1
 
 [CONDUCTIVITY]
-0.01 
+0.001
 
 [SPECIFIC HEAT]
 1
@@ -67,13 +67,13 @@ COLLOCATION
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+200
 
 [START TIME]
 0
 
 [FINAL TIME]
-1.0
+6.283185307179586
 
 [CFL]
 0.1
@@ -85,7 +85,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-ucdQuad2D
+gaussHillQuad2D
 
 #################################################
 ########## Solver Options ##############
@@ -97,8 +97,8 @@ PCG
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-CONTINUOUS
-#IPDG
+#CONTINUOUS
+IPDG
 
 # can be NODAL or BERN
 [BASIS]
@@ -140,7 +140,7 @@ STRONGNODES
 # compare to a reference solution. Use NONE to skip comparison
 # can be BELTRAMI
 [EXACT]
-UCD
+GAUSS
 
 [VERBOSE]
 FALSE

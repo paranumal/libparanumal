@@ -28,6 +28,8 @@
 
 
 void cdsSolveSetup(cds_t *cds, setupAide options, occa::properties &kernelInfo){
+
+  #if 0
   // sanity checking
   if (options.compareArgs("ELEMENT TYPE","HEXAHEDRA")){
     printf("ERROR: Only HEXAHEDRAL element is available currently\n");
@@ -408,6 +410,8 @@ void cdsSolveSetup(cds_t *cds, setupAide options, occa::properties &kernelInfo){
   printf("invdt\t:\t %.8e \n", cds->idt);
   printf("Nsubsteps\t:\t %02d \n", cds->Nsubsteps);
   printf("SNrk\t:\t %02d \n", cds->SNrk);    
+
+#endif
 
 #endif
 
