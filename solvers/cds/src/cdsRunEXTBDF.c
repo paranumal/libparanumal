@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 #include "cds.h"
@@ -35,9 +35,9 @@ void cdsRunEXTBDF(cds_t *cds){
   occaTimerTic(mesh->device,"CDS");
 
   // Write Initial Data
-   if(cds->outputStep) cdsReport(cds, cds->startTime, 0.0);
+  if(cds->outputStep) cdsReport(cds, cds->startTime, 0.0);
 
-   for(int tstep=0;tstep<cds->NtimeSteps;++tstep){
+  for(int tstep=0;tstep<cds->NtimeSteps;++tstep){
     // for(int tstep=0;tstep<2;++tstep){
 
     if(tstep<1) 
@@ -65,16 +65,16 @@ void cdsRunEXTBDF(cds_t *cds){
     for (int s=cds->Nstages;s>1;s--) {
       // Assuming flow field is changing with time
       cds->o_U.copyFrom(cds->o_U, cds->Ntotal*cds->NVfields*sizeof(dfloat), 
-                                  (s-1)*cds->Ntotal*cds->NVfields*sizeof(dfloat), 
-                                  (s-2)*cds->Ntotal*cds->NVfields*sizeof(dfloat));
+			(s-1)*cds->Ntotal*cds->NVfields*sizeof(dfloat), 
+			(s-2)*cds->Ntotal*cds->NVfields*sizeof(dfloat));
 
       cds->o_S.copyFrom(cds->o_S, cds->Ntotal*cds->NSfields*sizeof(dfloat), 
-                            			(s-1)*cds->Ntotal*cds->NSfields*sizeof(dfloat), 
-                            			(s-2)*cds->Ntotal*cds->NSfields*sizeof(dfloat));
+			(s-1)*cds->Ntotal*cds->NSfields*sizeof(dfloat), 
+			(s-2)*cds->Ntotal*cds->NSfields*sizeof(dfloat));
 
       cds->o_NS.copyFrom(cds->o_NS, cds->Ntotal*cds->NSfields*sizeof(dfloat), 
-                            			 (s-1)*cds->Ntotal*cds->NSfields*sizeof(dfloat), 
-                            			 (s-2)*cds->Ntotal*cds->NSfields*sizeof(dfloat));
+			 (s-1)*cds->Ntotal*cds->NSfields*sizeof(dfloat), 
+			 (s-2)*cds->Ntotal*cds->NSfields*sizeof(dfloat));
     }
 
     //copy updated scalar
@@ -84,12 +84,12 @@ void cdsRunEXTBDF(cds_t *cds){
     
     // Update velocity !!!!!
     cds->setFlowFieldKernel(mesh->Nelements,
-                          nextTime,
-                          mesh->o_x,
-                          mesh->o_y,
-                          mesh->o_z,
-                          cds->vOffset,
-                          cds->o_U);
+			    nextTime,
+			    mesh->o_x,
+			    mesh->o_y,
+			    mesh->o_z,
+			    cds->vOffset,
+			    cds->o_U);
 #else 
     cdsSolveStep(cds, time, cds->dt, cds->o_U, cds->o_S);
     
@@ -97,27 +97,27 @@ void cdsRunEXTBDF(cds_t *cds){
     for (int s=cds->Nstages;s>1;s--) {
       // Assuming flow field is changing with time
       cds->o_U.copyFrom(cds->o_U, cds->Ntotal*cds->NVfields*sizeof(dfloat), 
-                                  (s-1)*cds->Ntotal*cds->NVfields*sizeof(dfloat), 
-                                  (s-2)*cds->Ntotal*cds->NVfields*sizeof(dfloat));
+			(s-1)*cds->Ntotal*cds->NVfields*sizeof(dfloat), 
+			(s-2)*cds->Ntotal*cds->NVfields*sizeof(dfloat));
     }
     
     dfloat nextTime = time + cds->dt; 
-     // Update velocity !!!!!
+    // Update velocity !!!!!
     cds->setFlowFieldKernel(mesh->Nelements,
-                          nextTime,
-                          mesh->o_x,
-                          mesh->o_y,
-                          mesh->o_z,
-                          cds->vOffset,
-                          cds->o_U);
+			    nextTime,
+			    mesh->o_x,
+			    mesh->o_y,
+			    mesh->o_z,
+			    cds->vOffset,
+			    cds->o_U);
 #endif
  
     occaTimerTic(mesh->device,"Report");
 
     if(cds->outputStep){
       if(((tstep+1)%(cds->outputStep))==0){
-         printf("\rtstep = %d, solver iteration: S - %3d \n", tstep+1, cds->Niter);
-         cdsReport(cds, time+cds->dt, tstep+1);
+	printf("\rtstep = %d, solver iteration: S - %3d \n", tstep+1, cds->Niter);
+	cdsReport(cds, time+cds->dt, tstep+1);
       }
     }
     
@@ -140,7 +140,7 @@ void cdsRunEXTBDF(cds_t *cds){
 void extbdfCoefficents(cds_t *cds, int order) {
 
   if(order==1) {
-     //advection, first order in time, increment
+    //advection, first order in time, increment
     cds->g0 =  1.0f; 
     dfloat extbdfB[3] = {1.0f, 0.0f, 0.0f};
     dfloat extbdfA[3] = {1.0f, 0.0f, 0.0f};

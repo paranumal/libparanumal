@@ -456,7 +456,6 @@ SOFTWARE.
 {                                                                       \
   dfloat nu = 0.f, nv = 0.f;                                            \
                                                                         \
-  #pragma unroll p_cubNq                                                   \
     for(int n=0;n<p_cubNq;++n){                                         \
       const dfloat Pni = s_cubProjectT[n][m];                           \
       nu  += Pni*s_fluxNU[es][face][n];                                 \
@@ -466,6 +465,10 @@ SOFTWARE.
   s_NU[es][j][i] += nu;                                                 \
   s_NV[es][j][i] += nv;                                                 \
 }
+
+
+//  #pragma unroll p_cubNq			\
+
 
 @kernel void insSubCycleCubatureSurfaceQuad2D(const dlong Nelements,
                                             @restrict const  dfloat *  vgeo,

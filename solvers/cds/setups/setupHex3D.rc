@@ -32,15 +32,15 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-2
+4
 
 [SUBCYCLING TIME ORDER]
 3
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
-#COLLOCATION
-CUBATURE
+COLLOCATION
+#CUBATURE
 
 [VISCOSITY]
 1
@@ -85,7 +85,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-ucd3D
+ucdHex3D
 
 #################################################
 ########## Solver Options ##############
@@ -98,6 +98,7 @@ PCG
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
 IPDG
+#CONTINUOUS
 
 # can be NODAL or BERN
 [BASIS]

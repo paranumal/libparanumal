@@ -1,4 +1,4 @@
-r = DefineNumber[ 0.1];
+r = DefineNumber[ 0.25];
 xmin = DefineNumber[ 0.0];
 xmax = DefineNumber[ 5.0];
 ymin = DefineNumber[-1.0];
@@ -17,7 +17,6 @@ Line(4) = {4, 1};
 Line Loop(5) = {1, 2, 3, 4};
 //+
 Plane Surface(6) = {5};
-
 Physical Surface("Domain", 9) = {6};
 //+
 Physical Line("Wall", 1) = {1,3};

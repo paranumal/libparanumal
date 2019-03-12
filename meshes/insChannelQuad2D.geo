@@ -17,7 +17,7 @@ Line(4) = {4, 1};
 Line Loop(5) = {1, 2, 3, 4};
 //+
 Plane Surface(6) = {5};
-
+Recombine Surface {6};
 Physical Surface("Domain", 9) = {6};
 //+
 Physical Line("Wall", 1) = {1,3};

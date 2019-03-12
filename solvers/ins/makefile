@@ -23,7 +23,7 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(CDSDIR) -I$(ALMONDDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"'
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ELLIPTICDIR) -I$(CDSDIR) -I$(ALMONDDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DINS='"${CURDIR}"' -D DCDS='"${CURDIR}/../cds"'
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g
@@ -79,9 +79,8 @@ AOBJS    = \
 ./src/insRestart.o \
 ./src/insWeldTriVerts.o \
 ./src/insIsoPlotVTU.o \
-./src/insBrownMinionQuad3D.o 
-
-#./src/insRunWcdsEXTBDF.o \
+./src/insBrownMinionQuad3D.o \
+./src/insSetScalarSolver.o 
 
 # library objects
 LOBJS = \

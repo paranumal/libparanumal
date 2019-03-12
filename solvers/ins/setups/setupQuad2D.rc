@@ -2,10 +2,20 @@
 1.0
 
 [DATA FILE]
-data/insVortex2D.h
+data/insChannel2D.h
+#data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insVortexQuad2D.msh
+../../meshes/insChannelQuad2D.msh
+#../../meshes/insVortexQuad2D.msh
+
+#Activates Scalar Solver
+[SOLVER TYPE]
+INS+SCALAR
+
+#Currently one passive scalar only
+[NUMBER of SCALAR FIELD]
+1
 
 [MESH DIMENSION]
 2
@@ -32,14 +42,23 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-0
+4
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
 CUBATURE
 
 [VISCOSITY]
-0.025
+0.01
+
+[DENSITY]
+1.0
+
+[CONDUCTIVITY]
+0.001
+
+[SPECIFIC HEAT]
+1
 
 [MACH NUMBER]
 .2
@@ -72,7 +91,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-fence
+insChannelQuad
 
 #################################################
 ########## Velocity Solver Options ##############
@@ -195,11 +214,90 @@ MAX
 #MIN
 
 ###########################################
+###########################################
+#################################################
+########## Scalar Solver Options ##############
+#################################################
+
+# can add FLEXIBLE to PCG
+[SCALAR KRYLOV SOLVER]
+PCG
+
+# can be IPDG, or CONTINUOUS
+[SCALAR DISCRETIZATION]
+IPDG
+
+# can be NODAL or BERN
+[SCALAR BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+[SCALAR PRECONDITIONER]
+JACOBI
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[SCALAR MULTIGRID COARSENING]
+HALFDOFS
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[SCALAR MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+# can be any integer >0
+[SCALAR MULTIGRID CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[SCALAR PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[SCALAR PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[SCALAR PARALMOND PARTITION]
+STRONGNODES
+
+# can be DEFAULT or LPSCN
+[SCALAR PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[SCALAR PARALMOND LPSCN ORDERING]
+MAX
+#MIN
+
+# can be any integer >0
+[SCALAR PARALMOND CHEBYSHEV DEGREE]
+2
+
+###########################################
+
 
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-VORTEX
+NONE
+#VORTEX
 
 [VERBOSE]
 FALSE
+
+# set to 0 (zero) to disable reductions
+[DEBUG ENABLE REDUCTIONS]
+1
+
+# set to 0 (zero) to disable gather-scatter
+[DEBUG ENABLE OGS]
+1

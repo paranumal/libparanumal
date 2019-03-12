@@ -34,7 +34,7 @@
 #include "mesh2D.h"
 #include "mesh3D.h"
 #include "elliptic.h"
-#include "ins.h"
+// #include "ins.h"
 
 
 typedef struct {
@@ -43,7 +43,7 @@ typedef struct {
   
   mesh_t     *mesh;
   elliptic_t *solver;
-  ins_t *fSolver;
+  // ins_t *fSolver;
   
   int NVfields;            // Number of velocity fields
   int NSfields;            // Number of scalar fields
@@ -173,6 +173,7 @@ void cdsHelmholtzSolve(cds_t *cds, dfloat time, int stage, occa::memory o_rhsS,o
 
 // void cdsSolveSetup(cds_t *cds, dfloat lambda, occa::properties &kernelInfo);
 void cdsSolveStep(cds_t *cds, dfloat time, dfloat dt, occa::memory o_U, occa::memory o_S);
+
 void cdsSolveSetup(cds_t *cds, setupAide options, occa::properties &kernelInfo); 
 
 #endif

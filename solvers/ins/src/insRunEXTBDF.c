@@ -31,6 +31,7 @@ void extbdfCoefficents(ins_t *ins, int order);
 void insRunEXTBDF(ins_t *ins){
 
   mesh_t *mesh = ins->mesh;
+  cds_t  *cds  = ins->sSolver; 
    
   occa::initTimer(mesh->device);
   occaTimerTic(mesh->device,"INS");
@@ -202,6 +203,10 @@ void insRunEXTBDF(ins_t *ins){
     //copy updated pressure
     ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
 
+
+    if(ins->scalarSolver)
+      cdsSolveStep(cds, time, ins->dt, cds->o_U, cds->o_S);
+
     //cycle rhs history
     for (int s=ins->Nstages;s>1;s--) {
       ins->o_NU.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
@@ -274,6 +279,7 @@ void insRunEXTBDF(ins_t *ins){
 
 
 void extbdfCoefficents(ins_t *ins, int order) {
+  cds_t  *cds  = ins->sSolver;
 
   if(order==1) {
      //advection, first order in time, increment
@@ -294,6 +300,15 @@ void extbdfCoefficents(ins_t *ins, int order) {
     
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
     ins->ig0 = 1.0/ins->g0; 
+
+    if(ins->scalarSolver){
+      cds->ExplicitOrder = 1;  
+      cds->g0 = ins->g0;    
+      cds->lambda = cds->g0 / (ins->dt * cds->alf);
+      cds->ig0 = 1.0/cds->g0; 
+    }
+
+
   } else if(order==2) {
     //advection, second order in time, increment
     ins->g0 =  1.5f;
@@ -313,6 +328,15 @@ void extbdfCoefficents(ins_t *ins, int order) {
 
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
     ins->ig0 = 1.0/ins->g0; 
+
+     if(ins->scalarSolver){
+      cds->ExplicitOrder = 2;  
+      cds->g0 = ins->g0;  
+      cds->lambda = cds->g0 / (cds->dt * cds->alf);
+      cds->ig0 = 1.0/cds->g0; 
+    }
+
+
   } else if(order==3) {
     //advection, third order in time, increment
     ins->g0 =  11.f/6.f;
@@ -332,5 +356,12 @@ void extbdfCoefficents(ins_t *ins, int order) {
 
     ins->lambda = ins->g0 / (ins->dt * ins->nu);
     ins->ig0 = 1.0/ins->g0; 
+
+    if(ins->scalarSolver){
+      cds->ExplicitOrder = 3;  
+      cds->g0 = ins->g0;  
+      cds->lambda = cds->g0 / (cds->dt * cds->alf);
+      cds->ig0 = 1.0/cds->g0; 
+    }
   }
 }

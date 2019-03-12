@@ -73,13 +73,13 @@ int main(int argc, char **argv){
   occa::properties kernelInfoBase; 
   ins_t *ins = insSetup(mesh,options, kernelInfoBase);
   
-#if 1
-  // Create a passive scalar solver
-  cds_t *cds = (cds_t *) calloc(1, sizeof(cds_t));
-  // Set scalar solver flow solver to INS
-  cds->fSolver = ins;
-  // Now Set the Scalar Solver
-  cdsSolveSetup(cds, options, kernelInfoBase);
+#if 0
+  // // Create a passive scalar solver
+  // cds_t *cds = (cds_t *) calloc(1, sizeof(cds_t));
+  // // Set scalar solver flow solver to INS
+  // cds->fSolver = ins;
+  // // Now Set the Scalar Solver
+  // cdsSolveSetup(cds, options, kernelInfoBase);
 
   // if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF")) insRunWcdsEXTBDF(ins, cds);
 #else 
@@ -91,6 +91,7 @@ int main(int argc, char **argv){
     printf("done\n");   
    }  
   
+  printf("running CDS ......\n");
   if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
   if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF"))  insRunEXTBDF(ins);
 #endif

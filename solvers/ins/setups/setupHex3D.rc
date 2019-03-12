@@ -2,14 +2,19 @@
 1.0
 
 [DATA FILE]
-data/insBeltrami3D.h
-#data/insChannel3D.h
+#data/insBeltrami3D.h
+data/insChannel3D.h
 
 [MESH FILE]
-../../meshes/insBeltramiHex3D.msh
-#../../meshes/insChannelHex3D.msh
+#../../meshes/insBeltramiHex3D.msh
+../../meshes/insChannelHex3D.msh
 
-[SCALAR SOLVER]
+#Activates Scalar Solver
+[SOLVER TYPE]
+INS+SCALAR
+
+#Currently one passive scalar only
+[NUMBER of SCALAR FIELD]
 1
 
 [MESH DIMENSION]
@@ -46,23 +51,24 @@ NODAL
 
 
 [SUBCYCLING STEPS]
-0
+4
 
 [SUBCYCLING TIME ORDER]
-3
+4
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
 CUBATURE
 
-[DENSITY]
-1
-
 [VISCOSITY]
-1
+#1.0
+0.01
+
+[DENSITY]
+1.0
 
 [CONDUCTIVITY]
-0.01 
+0.001 
 
 [SPECIFIC HEAT]
 1
@@ -93,10 +99,10 @@ CUBATURE
 0
 
 [FINAL TIME]
-0.1
+20.0
 
 [CFL]
-0.1
+0.5
 
 [OUTPUT TYPE]
 VTU
@@ -105,7 +111,7 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-fence
+insChannelHex3D
 
 #################################################
 ########## Velocity Solver Options ##############
@@ -293,7 +299,8 @@ MAX
 # compare to a reference solution. Use NONE to skip comparison
 # can be BELTRAMI
 [EXACT]
-BELTRAMI
+#BELTRAMI
+NONE
 
 [VERBOSE]
 FALSE

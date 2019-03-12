@@ -35,7 +35,7 @@ SOFTWARE.
 #include "mesh2D.h"
 #include "mesh3D.h"
 #include "elliptic.h"
-// #include "cds.h"
+#include "cds.h"
 
 typedef struct {
 
@@ -46,9 +46,10 @@ typedef struct {
   elliptic_t *vSolver;
   elliptic_t *wSolver;
   elliptic_t *pSolver;
+  cds_t      *sSolver; 
   
   setupAide options;
-  setupAide vOptions, pOptions; 	
+  setupAide vOptions, pOptions, sOptions; 	
 
   // INS SOLVER OCCA VARIABLES
   dfloat rho, nu, Re;
@@ -111,9 +112,10 @@ typedef struct {
   //EXTBDF data
   dfloat *extbdfA, *extbdfB, *extbdfC;
   dfloat *extC;
+  
+  int scalarSolver; 
 
-
-  occa::properties kernelInfoBase; 
+  // occa::properties kernelInfoBase; 
 
   int *VmapB, *PmapB;
   occa::memory o_VmapB, o_PmapB;
@@ -232,12 +234,12 @@ typedef struct {
   occa::kernel isoSurfaceKernel;
 }ins_t;
 
-#include "cds.h"
- 
 ins_t *insSetup(mesh_t *mesh, setupAide options, occa::properties &kernelInfo);
 
 void insRunARK(ins_t *ins);
 void insRunEXTBDF(ins_t *ins);
+
+void insSetScalarSolver(ins_t *ins, setupAide options, occa::properties &kernelInfo); 
 
 // void insRunWcdsEXTBDF(ins_t *ins, cds_t *cds);
 

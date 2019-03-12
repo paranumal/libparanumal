@@ -156,3 +156,41 @@ SOFTWARE.
     *(pzB) = 0.f;                          \
   }                                        \
 }
+
+
+#define cdsScalarField3D(t,x,y,z,s) \
+  {                                   \
+    *(s) = 0.f;                    \
+  }   
+
+// Boundary conditions
+/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
+#define cdsDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, sM, sB) \
+{                                   \
+  if(bc==1){                        \
+    *(sB) = 1.f;                    \
+  } else if(bc==2){                 \
+    *(sB) = 0.f;                 \
+  } else if(bc==3){                 \
+    *(sB) = sM;                     \
+  } else if(bc==4||bc==5||bc==6){   \
+    *(sB) = sM; \
+  }                                 \
+}
+
+#define cdsNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, sxM, syM, szM, sxB, syB, szB) \
+{                                          \
+  if(bc==1 || bc==2){                      \
+    *(sxB) = sxM;                          \
+    *(syB) = syM;                          \
+    *(szB) = szM;                          \
+  } else if(bc==3){                        \
+    *(sxB) = 0.f;                          \
+    *(syB) = 0.f;                          \
+    *(szB) = 0.f;                          \
+  } else if(bc==4||bc==5||bc==6){          \
+    *(sxB) = nx*nx*sxM;                    \
+    *(syB) = nx*nx*syM;                    \
+    *(szB) = nx*nx*szM;                    \
+  }                                        \
+}
