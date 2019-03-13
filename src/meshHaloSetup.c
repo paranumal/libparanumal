@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+
 #include <stdio.h>
 
 #include "mesh.h"
@@ -131,18 +132,27 @@ void meshHaloSetup(mesh_t *mesh){
       ++cnt;
     }
   }
-  // reconnect elements to ghost elements
-  // (ghost elements appended to end of local element list)
+  
+
+  // now arrange for incoming nodes
   cnt = mesh->Nelements;
+  dlong ncnt = 0;
   for(int r=0;r<size;++r){
     for(dlong e=0;e<mesh->Nelements;++e){
       for(int f=0;f<mesh->Nfaces;++f){
         dlong ef = e*mesh->Nfaces+f;
-        if(mesh->EToP[ef]==r)
-          mesh->EToE[ef] = cnt++;
+        if(mesh->EToP[ef]==r){
+          mesh->EToE[ef] = cnt;
+          int fP = mesh->EToF[ef];
+          for(int n=0;n<mesh->Nfp;++n){
+             mesh->haloPutNodeIds[ncnt] = cnt*mesh->Np + mesh->faceNodes[fP*mesh->Nfp+n];
+             ++ncnt;
+           }
+        ++cnt; // next halo element
+       }
       }
     }
-  }
+}
 
   // create halo extension for x,y arrays
   dlong totalHaloNodes = mesh->totalHaloPairs*mesh->Np;

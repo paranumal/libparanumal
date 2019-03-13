@@ -514,6 +514,12 @@ void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::properties &kern
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
       mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat));
+
+    // node ids 
+    mesh->o_haloGetNodeIds = 
+      mesh->device.malloc(mesh->Nfp*mesh->totalHaloPairs*sizeof(dlong), mesh->haloGetNodeIds);
+    mesh->o_haloPutNodeIds = 
+      mesh->device.malloc(mesh->Nfp*mesh->totalHaloPairs*sizeof(dlong), mesh->haloPutNodeIds);  
   }
 
 

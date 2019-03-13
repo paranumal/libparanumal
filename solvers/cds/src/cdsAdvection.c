@@ -37,6 +37,7 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
 
    //Exctract Halo On Device, all fields
   if(mesh->totalHaloPairs>0){
+#if 0
     cds->haloExtractKernel(mesh->Nelements,
                            mesh->totalHaloPairs,
                            mesh->o_haloElementList,
@@ -54,6 +55,28 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
         mesh->Np*(cds->NSfields+cds->NVfields)*sizeof(dfloat),
         cds->sendBuffer,
         cds->recvBuffer);
+
+#else
+      mesh->device.finish();
+      // switch to data stream
+      mesh->device.setStream(mesh->dataStream);
+
+      cds->haloGetKernel(mesh->totalHaloPairs,
+                         cds->vOffset,
+                         cds->sOffset,
+                         mesh->o_haloElementList,
+                         mesh->o_haloGetNodeIds,
+                         o_U,
+                         o_S,
+                         cds->o_haloBuffer);
+          
+      dlong Ndata = (cds->NVfields+cds->NSfields)*mesh->Nfp*mesh->totalHaloPairs;
+          // copy extracted halo to HOST 
+      cds->o_haloBuffer.copyTo(cds->sendBuffer, Ndata*sizeof(dfloat), 0, "async: true");// zero offset
+
+      mesh->device.setStream(mesh->defaultStream);
+
+#endif
   }
 
 #if ADV_DEBUG
@@ -93,6 +116,8 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
 
   // COMPLETE HALO EXCHANGE
   if(mesh->totalHaloPairs>0){
+
+#if 0
     meshHaloExchangeFinish(mesh);
 
     cds->o_haloBuffer.copyFrom(cds->recvBuffer); 
@@ -110,6 +135,37 @@ void cdsAdvection(cds_t *cds, dfloat time, occa::memory o_U, occa::memory o_S, o
      //     cds->sOffset,
      //     o_S,
      //     cds->o_haloBuffer);
+
+#else
+      // make sure compute device is ready to perform halo extract
+      mesh->device.setStream(mesh->dataStream);
+      mesh->device.finish();
+
+      // start halo exchange
+      meshHaloExchangeStart(mesh,
+                            mesh->Nfp*(cds->NVfields+ cds->NSfields)*sizeof(dfloat),
+                            cds->sendBuffer,
+                            cds->recvBuffer);
+
+      meshHaloExchangeFinish(mesh);
+
+      dlong Ndata = (cds->NVfields + cds->NSfields)*mesh->Nfp*mesh->totalHaloPairs;
+      cds->o_haloBuffer.copyFrom(cds->recvBuffer, Ndata*sizeof(dfloat), 0, "async: true");  
+
+      cds->haloPutKernel(mesh->totalHaloPairs,
+                          cds->vOffset,
+                          cds->sOffset,
+                          mesh->o_haloElementList,
+                          mesh->o_haloPutNodeIds,
+                          o_U,
+                          o_S,
+                          cds->o_haloBuffer);
+
+      mesh->device.finish();
+
+      mesh->device.setStream(mesh->defaultStream);
+      mesh->device.finish();
+#endif
   }
 
 
