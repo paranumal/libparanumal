@@ -151,11 +151,16 @@ typedef struct {
   occa::memory o_extbdfA, o_extbdfB, o_extbdfC;
   occa::memory o_extC;
 
+// Will be depreceated.....AK
   occa::kernel haloExtractKernel;
   occa::kernel haloScatterKernel;
-
   occa::kernel scalarHaloExtractKernel;
   occa::kernel scalarHaloScatterKernel;
+
+  occa::kernel haloGetKernel;
+  occa::kernel haloPutKernel;
+  occa::kernel scalarHaloGetKernel;
+  occa::kernel scalarHaloPutKernel;
 
   occa::kernel setFlowFieldKernel;
   occa::kernel setScalarFieldKernel;

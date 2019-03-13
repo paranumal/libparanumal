@@ -295,16 +295,12 @@ if(cds->Nsubsteps){
 
 
    if(mesh->totalHaloPairs){//halo setup
-    dlong haloBytes   = mesh->totalHaloPairs*mesh->Np*(cds->NSfields + cds->NVfields)*sizeof(dfloat);
+     // Define new variable nodes per element (npe) to test thin halo; 
+//    int npe = mesh->Np; // will be changed 
+    int npe = mesh->Nfp; 
+    dlong haloBytes   = mesh->totalHaloPairs*npe*(cds->NSfields + cds->NVfields)*sizeof(dfloat);
     dlong gatherBytes = (cds->NSfields+cds->NVfields)*mesh->ogs->NhaloGather*sizeof(dfloat);
     cds->o_haloBuffer = mesh->device.malloc(haloBytes);
-
-   
-
-    // dlong vhaloBytes   = mesh->totalHaloPairs*mesh->Np*(cds->NSfields)*sizeof(dfloat);
-    // dlong vgatherBytes = cds->NSfields*mesh->ogs->NhaloGather*sizeof(dfloat);
-    // cds->o_vhaloBuffer = mesh->device.malloc(vhaloBytes);
-
 #if 0
     occa::memory o_sendBuffer = mesh->device.mappedAlloc(haloBytes, NULL);
     occa::memory o_recvBuffer = mesh->device.mappedAlloc(haloBytes, NULL);
@@ -323,7 +319,7 @@ if(cds->Nsubsteps){
 
     // Halo exchange for more efficient subcycling 
     if(cds->Nsubsteps){
-      dlong shaloBytes   = mesh->totalHaloPairs*mesh->Np*(cds->NSfields)*sizeof(dfloat);
+      dlong shaloBytes   = mesh->totalHaloPairs*npe*(cds->NSfields)*sizeof(dfloat);
       dlong sgatherBytes = (cds->NSfields)*mesh->ogs->NhaloGather*sizeof(dfloat);
       cds->o_shaloBuffer = mesh->device.malloc(shaloBytes);
 
@@ -358,20 +354,36 @@ if(cds->Nsubsteps){
     if (r==mesh->rank) {
       
       sprintf(fileName, DCDS "/okl/cdsHaloExchange.okl");
-      sprintf(kernelName, "cdsHaloExtract");
-      cds->haloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      // sprintf(kernelName, "cdsHaloExtract");
+      // cds->haloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       
-      sprintf(kernelName, "cdsHaloScatter");
-      cds->haloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      // sprintf(kernelName, "cdsHaloScatter");
+      // cds->haloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       
-      if(cds->Nsubsteps){
-        sprintf(kernelName, "cdsScalarHaloExtract");
-        cds->scalarHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
+      // if(cds->Nsubsteps){
+      //   sprintf(kernelName, "cdsScalarHaloExtract");
+      //   cds->scalarHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
         
-        sprintf(kernelName, "cdsScalarHaloScatter");
-        cds->scalarHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);    
-      } 
+      //   sprintf(kernelName, "cdsScalarHaloScatter");
+      //   cds->scalarHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);    
+      // } 
+
+      sprintf(kernelName, "cdsHaloGet");
+      cds->haloGetKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
       
+      sprintf(kernelName, "cdsHaloPut");
+      cds->haloPutKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+      if(cds->Nsubsteps){
+        sprintf(kernelName, "cdsScalarHaloGet");
+        cds->scalarHaloGetKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
+        
+        sprintf(kernelName, "cdsScalarHaloPut");
+        cds->scalarHaloPutKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);    
+      } 
+
+
       sprintf(fileName, DCDS "/okl/cdsAdvection%s.okl", suffix);
 
       // needed to be implemented

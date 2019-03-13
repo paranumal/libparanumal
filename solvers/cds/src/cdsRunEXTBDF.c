@@ -116,8 +116,8 @@ void cdsRunEXTBDF(cds_t *cds){
 
     if(cds->outputStep){
       if(((tstep+1)%(cds->outputStep))==0){
-	printf("\rtstep = %d, solver iteration: S - %3d \n", tstep+1, cds->Niter);
-	cdsReport(cds, time+cds->dt, tstep+1);
+       if(mesh->rank==0)	printf("\rtstep = %d, solver iteration: S - %3d \n", tstep+1, cds->Niter);
+	     cdsReport(cds, time+cds->dt, tstep+1);
       }
     }
     

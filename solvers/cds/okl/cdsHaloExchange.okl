@@ -54,12 +54,12 @@
 }
 
 @kernel void cdsHaloScatter(const dlong Nelements,
-			    const dlong NhaloElements,
+          const dlong NhaloElements,
           const dlong voffset,
           const dlong soffset,
           @restrict dfloat *  U,
           @restrict dfloat *  S,
-			    @restrict const  dfloat *  haloq){
+          @restrict const  dfloat *  haloq){
 
   for(dlong e=0;e<NhaloElements;++e;@outer(0)){ // for all elements
     for(int n=0;n<p_Np;++n;@inner(0)){ 
@@ -114,6 +114,113 @@
       for (int i=0;i<p_NSfields;i++) {
         S[id + i*soffset] = haloq[base + i*p_Np];
       }
+    }
+  }
+}
+
+
+
+// CDS Thin Halo Exchange for U and S fields together
+@kernel void cdsHaloGet(const dlong NhaloElements,
+                        const dlong voffset,
+                        const dlong soffset,
+                        @restrict const  dlong  * haloElements,
+                        @restrict const  dlong  * haloGetNodeIds,
+                        @restrict const  dfloat *  U,
+                        @restrict const  dfloat *  S,
+                        @restrict dfloat *  haloq){
+  
+  for(dlong e=0;e<NhaloElements;++e;@outer(0)){  // for all elements
+    for(int n=0;n<p_Nfp;++n;@inner(0)){     // for all entries in this trace face
+      //const dlong elmt  = haloElements[e];
+      const dlong  id   = haloGetNodeIds[e*p_Nfp+n];
+      const dlong base  = p_Nfp*p_NTfields*e + n;
+
+      #pragma unroll p_NVfields
+      for (int i=0;i<p_NVfields;i++) {
+         haloq[base + i*p_Nfp] = U[id +i*voffset];
+      }
+
+      #pragma unroll p_NSfields
+      for (int i=p_NVfields;i<p_NTfields;i++) {
+        haloq[base + i*p_Nfp]    = S[id +(i-p_NVfields)*soffset];
+      }
+    }
+  }
+}
+
+
+@kernel void cdsHaloPut(const dlong NhaloElements,
+                        const dlong voffset,
+                        const dlong soffset,
+                        @restrict const  dlong  * haloElements,
+                        @restrict const  dlong  * haloPutNodeIds,
+                        @restrict        dfloat * U, 
+                        @restrict        dfloat * S, 
+                        @restrict const  dfloat * haloq){
+  
+
+  for(dlong e=0;e<NhaloElements;++e;@outer(0)){  // for all elements
+    for(int n=0;n<p_Nfp;++n;@inner(0)){     // for all entries in this trace face
+      const dlong  id  = haloPutNodeIds[e*p_Nfp+n];
+      const dlong base = p_Nfp*p_NTfields*e + n; 
+
+      #pragma unroll p_NVfields
+      for (int i=0;i<p_NVfields;i++) {
+        U[id +i*voffset] =  haloq[base + i*p_Nfp];
+      }
+
+      #pragma unroll p_NSfields
+      for (int i=p_NVfields;i<p_NTfields;i++) {
+        S[id +(i-p_NVfields)*soffset] = haloq[base + i*p_Nfp];
+      }   
+
+    }
+  }
+}
+
+
+
+// CDS Thin Halo Exchange for S fields only in Subcycle
+@kernel void cdsScalarHaloGet(const dlong NhaloElements,
+                        const dlong soffset,
+                        @restrict const  dlong  * haloElements,
+                        @restrict const  dlong  * haloGetNodeIds,
+                        @restrict const  dfloat *  S,
+                        @restrict dfloat *  haloq){
+  
+  for(dlong e=0;e<NhaloElements;++e;@outer(0)){  // for all elements
+    for(int n=0;n<p_Nfp;++n;@inner(0)){     // for all entries in this trace face
+      //const dlong elmt  = haloElements[e];
+      const dlong  id   = haloGetNodeIds[e*p_Nfp+n];
+      const dlong base  = p_Nfp*p_NSfields*e + n;
+
+      #pragma unroll p_NSfields
+      for (int i=0;i<p_NSfields;i++) {
+        haloq[base + i*p_Nfp]    = S[id +i*soffset];
+      }
+    }
+  }
+}
+
+
+@kernel void cdsScalarHaloPut(const dlong NhaloElements,
+                        const dlong soffset,
+                        @restrict const  dlong  * haloElements,
+                        @restrict const  dlong  * haloPutNodeIds,
+                        @restrict        dfloat * S, 
+                        @restrict const  dfloat * haloq){
+
+  for(dlong e=0;e<NhaloElements;++e;@outer(0)){  // for all elements
+    for(int n=0;n<p_Nfp;++n;@inner(0)){     // for all entries in this trace face
+      const dlong  id  = haloPutNodeIds[e*p_Nfp+n];
+      const dlong base = p_Nfp*p_NSfields*e + n; 
+
+      #pragma unroll p_NSfields
+      for (int i=0;i<p_NSfields;i++) {
+        S[id +i*soffset] = haloq[base + i*p_Nfp];
+      }   
+
     }
   }
 }
