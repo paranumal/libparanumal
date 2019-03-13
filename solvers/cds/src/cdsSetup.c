@@ -555,19 +555,19 @@ cds_t *cdsSetup(mesh_t *mesh, setupAide options){
       sprintf(fileName, DCDS "/okl/cdsHaloExchange.okl");
 
       
-      sprintf(kernelName, "cdsHaloExtract");
-      cds->haloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
+      // sprintf(kernelName, "cdsHaloExtract");
+      // cds->haloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
       
-      sprintf(kernelName, "cdsHaloScatter");
-      cds->haloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      // sprintf(kernelName, "cdsHaloScatter");
+      // cds->haloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-      if(cds->Nsubsteps){
-        sprintf(kernelName, "cdsScalarHaloExtract");
-        cds->scalarHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
+      // if(cds->Nsubsteps){
+      //   sprintf(kernelName, "cdsScalarHaloExtract");
+      //   cds->scalarHaloExtractKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
         
-        sprintf(kernelName, "cdsScalarHaloScatter");
-        cds->scalarHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);    
-      } 
+      //   sprintf(kernelName, "cdsScalarHaloScatter");
+      //   cds->scalarHaloScatterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);    
+      // } 
 
 
       sprintf(kernelName, "cdsHaloGet");

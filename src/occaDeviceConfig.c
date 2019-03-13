@@ -55,8 +55,8 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
     if (hostIds[r]==hostId) totalDevices++;
   }
 
-  // if (size==1) 
-    options.getArgs("DEVICE NUMBER" ,device_id);
+  if (size==1) 
+   options.getArgs("DEVICE NUMBER" ,device_id);
 
 #ifdef OCCA_VERSION_1_0
   // read thread model/device/platform from options
