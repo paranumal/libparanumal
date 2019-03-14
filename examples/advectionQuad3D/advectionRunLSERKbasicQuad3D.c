@@ -8,7 +8,7 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
   dfloat * test_q = (dfloat *) calloc(mesh->NgridElements*solver->Nfields*mesh->Np,sizeof(dfloat));
     
   //kernel arguments
-  dfloat alpha = 1; //alpha_scale;
+  dfloat alpha = alpha_scale;
 
   iint Nboundary = mesh->NgridElements - mesh->Nelements;
 
@@ -94,20 +94,23 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			     solver->o_mass,
 			     solver->o_qpre,
 			     solver->o_rhsqs,
-			     solver->o_rhsqw);
+			     solver->o_rhsqw
+			     );
 	
 	solver->surfaceKernel(mesh->Nelements,
-			       solver->o_sgeo,
-			       solver->o_LIFTT,
-			       solver->o_vmapM,
-			       solver->o_vmapP,
-			       t,
-			       solver->o_x,
-			       solver->o_y,
-			       solver->o_z,
-			       solver->o_qpre,
+			      solver->o_sgeo,
+			      //solver->o_vgeo,
+			      solver->o_LIFTT,
+			      solver->o_vmapM,
+			      solver->o_vmapP,
+			      t,
+			      solver->o_x,
+			      solver->o_y,
+			      solver->o_z,
+			      solver->o_qpre,
 			      solver->o_rhsqs,
-			      solver->o_rhsqw);
+			      solver->o_rhsqw
+			      );
 
 	/*if (Nboundary > 0) {
 	  solver->loadFilterGridKernel(Nboundary,
@@ -125,8 +128,9 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_dualProjMatrix,
 			      solver->o_cubeFaceNumber,
 			      solver->o_gridToE,
+			      solver->o_vgeo,
 			      solver->o_rhsqs,
-			      solver->o_rhsqw,
+			      //solver->o_rhsqw,
 			      solver->o_qFilter);
 		
 	solver->filterKernelV(mesh->Nelements,
@@ -139,20 +143,25 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_z,
 			      solver->o_vgeo,
 			      solver->o_rhsqs,
-			      solver->o_rhsqw,
+			      //solver->o_rhsqw,
 			      solver->o_qFilter,
 			      solver->o_q);	
 	
 	solver->volumeCorrectionKernel(mesh->Nelements,
 				       solver->o_q,
 				       solver->o_qCorr);
-	
+
+	/*solver->massMatrixKernel(mesh->Nelements,
+				 solver->o_invmass,
+				 solver->o_vgeo,
+				 solver->o_rhsqs);
+	*/
 	solver->updateKernel(mesh->Nelements,
 			     solver->dt,
 			     solver->rka[rk],
 			     solver->rkb[rk],
-			     //solver->o_rhsq,
-			     solver->o_q,
+			     solver->o_rhsqs,
+			     //solver->o_q,
 			     solver->o_qCorr,
 			     solver->o_resq,
 			     solver->o_qpre);
@@ -178,9 +187,9 @@ void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_q.copyTo(solver->o_qpre);*/
       }
 	
-      if (tstep == 250) {
+      if (tstep == 0) {
 	solver->o_qpre.copyTo(solver->q);
-	advectionErrorNormQuad3D(solver,251*solver->dt,"start",0);
+	advectionErrorNormQuad3D(solver,1*solver->dt,"start",0);
       }
   }
 }

@@ -83,6 +83,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   mesh->LIFT = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->Nfaces*mesh->Nfp*mesh->Np;++n){
     fscanf(fp, dfloatFormat, mesh->LIFT+n);
+    printf("%lg ",mesh->LIFT[n]);
   }
   fgets(buf, BUFSIZ, fp);
 
@@ -335,7 +336,7 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
   }
   /* 1D weak differentiation matrix on GLL nodes */
   fgets(buf, BUFSIZ, fp); // read comment
-  printf("got D message: %s\n", buf);
+  printf("got weak D message: %s\n", buf);
   mesh->weakD = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->N+1;++n){
     for(int m=0;m<mesh->N+1;++m){
@@ -343,18 +344,56 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
       printf("%lg ",mesh->weakD[m+n*(mesh->N+1)]);
     }
     printf("\n");
+    fgets(buf,BUFSIZ,fp); // rest of line
   }
-  /* 1D mass matrix on GLL nodes */
+
+  /* 1D massless strong differentiation matrix on GLL nodes */
   fgets(buf, BUFSIZ, fp); // read comment
-  fgets(buf, BUFSIZ, fp); // read comment
-  printf("got mass matrix message: %s\n", buf);
-  mesh->mass = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  printf("got strong MD message: %s\n", buf);
+  mesh->MD = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
   for(int n=0;n<mesh->N+1;++n){
     for(int m=0;m<mesh->N+1;++m){
-      fscanf(fp, dfloatFormat, mesh->mass+m+n*(mesh->N+1));
-      printf("%lg ",mesh->mass[m+n*(mesh->N+1)]);
+      fscanf(fp, dfloatFormat, mesh->MD+m+n*(mesh->N+1));
+      printf("%lg ",mesh->MD[m+n*(mesh->N+1)]);
     }
     printf("\n");
+    fgets(buf,BUFSIZ,fp); // rest of line
   }
+
+  /* 1D massless weak differentiation matrix */
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("got weak MD message: %s\n", buf);
+  mesh->weakMD = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  for(int n=0;n<mesh->N+1;++n){
+    for(int m=0;m<mesh->N+1;++m){
+      fscanf(fp, dfloatFormat, mesh->weakMD+m+n*(mesh->N+1));
+      printf("%lg ",mesh->weakMD[m+n*(mesh->N+1)]);
+    }
+    printf("\n");
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+  /* 1D inverse mass matrix on GLL nodes */
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("got inverse mass matrix message: %s\n", buf);
+  mesh->inv_mass = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  for(int n=0;n<mesh->N+1;++n){
+    for(int m=0;m<mesh->N+1;++m){
+      fscanf(fp, dfloatFormat, mesh->inv_mass+m+n*(mesh->N+1));
+      printf("%lg ",mesh->inv_mass[m+n*(mesh->N+1)]);
+    }
+    printf("\n");
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("got MLIFT message: %s\n", buf);
+  mesh->MLIFT = (dfloat*) calloc(mesh->Nfp*mesh->Nfaces*mesh->Np, sizeof(dfloat));
+  for(int n=0;n<mesh->Nfaces*mesh->Nfp*mesh->Np;++n){
+    fscanf(fp, dfloatFormat, mesh->MLIFT+n);
+    printf("%lg ", mesh->MLIFT[n]);
+  }
+  fgets(buf, BUFSIZ, fp);  
+  
   fclose(fp);
 }

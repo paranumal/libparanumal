@@ -324,6 +324,10 @@ typedef struct {
   iint *perp_index;
   dfloat *par_loc;
   dfloat *weakD;
+    dfloat *MD;
+    dfloat *weakMD;
+    dfloat *inv_mass;
+    dfloat *MLIFT;
     dfloat *mass;
   
   // occa stuff

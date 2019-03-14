@@ -54,10 +54,12 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			     solver->o_mass,
 			     solver->o_qpre,
 			     solver->o_rhsqs,
-			     solver->o_rhsqw);
+			     solver->o_rhsqw
+			     );
 	
 	solver->surfaceKernel(mesh->Nelements,
 			      solver->o_sgeo,
+			      // solver->o_vgeo,
 			      solver->o_LIFTT,
 			      solver->o_vmapM,
 			      solver->o_vmapP,
@@ -67,7 +69,8 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_z,
 			      solver->o_qpre,
 			      solver->o_rhsqs,
-			      solver->o_rhsqw);
+			      solver->o_rhsqw
+			      );
 	/*solver->loadFilterGridKernel(Nboundary,
 				     mesh->Nelements,
 				     solver->o_rlocal,
@@ -82,8 +85,9 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_dualProjMatrix,
 			      solver->o_cubeFaceNumber,
 			      solver->o_gridToE,
+			      solver->o_vgeo,
 			      solver->o_rhsqs,
-			      solver->o_rhsqw,
+			      //solver->o_rhsqw,
 			      solver->o_qFilter);
 		
 	solver->filterKernelV(mesh->Nelements,
@@ -96,23 +100,29 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_z,
 			      solver->o_vgeo,
 			      solver->o_rhsqs,
-			      solver->o_rhsqw,
+			      //solver->o_rhsqw,
 			      solver->o_qFilter,
 			      solver->o_q);
 	
-	
+
+	/*	solver->massMatrixKernel(mesh->Nelements,
+				 solver->o_invmass,
+				 solver->o_vgeo,
+				 solver->o_rhsqs);
+	*/
 	solver->q[curr_pos] = 0.;
 	
 	/*	solver->o_rhsqs.copyTo(test_qs);
 		solver->o_rhsqw.copyTo(test_qw);*/
 
 	solver->o_q.copyTo(test_qs);
+	//solver->o_rhsqw.copyTo(test_qw);
 	
 	for (iint es = 0; es < mesh->Nelements; ++es) {
 	  for (iint fs = 0; fs < 2; ++fs) {
 	    for (iint ns = 0; ns < mesh->Np; ++ns) {
 		//fprintf(matrix,"%17.15g ",test_qs[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns] + test_qw[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]);
-		fprintf(matrix,"%17.15g ",test_qs[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]);
+		fprintf(matrix,"%17.15g ",(test_qs[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]/*+test_qw[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]*/)*mesh->vgeo[es*mesh->Np*mesh->Nvgeo + 10*mesh->Np + ns]);
 	    }
 	  }
 	}

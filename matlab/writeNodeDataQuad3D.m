@@ -457,23 +457,49 @@ for n=1:Nq
     fprintf(fid, '\n');
 end
 
-			       #D1d_weak = 0.5*(M1d*D1d-1*D1d'*M1d);
-D1d_weak = 0.5*M1d*D1d;
-fprintf(fid, '%% weak D (1D) matrix\n');
+fprintf(fid,"%% Weak D matrix 1D\n");
+	  D1d_weak = -1*inv(diag(w1d))*D1d'*M1d;
 for n=1:N+1
   for m=1:N+1
     fprintf(fid, '%17.15E ', D1d_weak(n,m));
   end
+  fprintf(fid,'\n');
+end
+
+D1d_strong = M1d*D1d;
+fprintf(fid, '%% Strong D (1D) massless matrix\n');
+for n=1:N+1
+  for m=1:N+1
+    fprintf(fid, '%17.15E ', D1d_sym(n,m));
+  end
   fprintf(fid, '\n');
 end
 
-fprintf(fid,"%% mass matrix 1D\n");
-D1d_weak2 = -0.5*D1d'*M1d;
+fprintf(fid,"%% Weak D massless matrix 1D\n");
+D1d_weak2 = -1*D1d'*M1d;
 for n=1:N+1
   for m=1:N+1
     fprintf(fid, '%17.15E ', D1d_weak2(n,m));
   end
   fprintf(fid,'\n');
+end
+
+fprintf(fid,"%% Inverse Mass matrix 1D\n");
+mass_inv = inv(M1d);
+for n=1:N+1
+  for m=1:N+1
+    fprintf(fid, '%17.15E ', mass_inv(n,m));
+  end
+  fprintf(fid,'\n');
+end
+
+LIFT = LiftQuad3D(N, faceNodes, r, s);
+fprintf(fid, '%% massless LIFT matrix\n');
+for n=1:Np
+  for m=1:Nfp*Nfaces
+    fprintf(fid, '%17.15E ', LIFT(n,m));
+  end
+  fprintf(fid, '\n');
 end
 
 fclose(fid);

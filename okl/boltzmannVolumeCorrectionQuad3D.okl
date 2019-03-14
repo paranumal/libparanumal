@@ -2,44 +2,44 @@ kernel void boltzmannVolumeCorrectionDOPRIQuad3D(const iint Nelements,
 						 const dfloat * restrict q,
 						 dfloat * restrict rhsq){
   
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+    for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
     
-    for(iint es=0;es<p_NblockV;++es;inner2){
-      for(iint j=0;j<p_Nq;++j;inner1){    
-	for(iint i=0;i<p_Nq;++i;inner0){
+	for(iint es=0;es<p_NblockV;++es;inner2){
+	    for(iint j=0;j<p_Nq;++j;inner1){    
+		for(iint i=0;i<p_Nq;++i;inner0){
 	  
-	  const iint e = eo+es; // element in block
+		    const iint e = eo+es; // element in block
 	  
-	  const iint n=j*p_Nq+i;
+		    const iint n=j*p_Nq+i;
 	  
-	  if(e<Nelements){
-	    iint base = n + p_Nfields*p_Np*e;
+		    if(e<Nelements){
+			iint base = n + p_Nfields*p_Np*e;
 	    
-	    const dfloat q1  = q[base+0*p_Np];
-	    const dfloat q2  = q[base+1*p_Np];
-	    const dfloat q3  = q[base+2*p_Np];
-	    const dfloat q4  = q[base+3*p_Np];
-	    const dfloat q5  = q[base+4*p_Np];
-	    const dfloat q6  = q[base+5*p_Np];
-	    const dfloat q7  = q[base+6*p_Np];
-	    const dfloat q8  = q[base+7*p_Np];
-	    const dfloat q9  = q[base+8*p_Np];
-	    const dfloat q10 = q[base+9*p_Np];
+			const dfloat q1  = q[base+0*p_Np];
+			const dfloat q2  = q[base+1*p_Np];
+			const dfloat q3  = q[base+2*p_Np];
+			const dfloat q4  = q[base+3*p_Np];
+			const dfloat q5  = q[base+4*p_Np];
+			const dfloat q6  = q[base+5*p_Np];
+			const dfloat q7  = q[base+6*p_Np];
+			const dfloat q8  = q[base+7*p_Np];
+			const dfloat q9  = q[base+8*p_Np];
+			const dfloat q10 = q[base+9*p_Np];
 	    
-	    dfloat sw = 1;
-	    const dfloat invq1 = 1.f/q1;
+			dfloat sw = 1;
+			const dfloat invq1 = 1.f/q1;
 
-	    rhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
-	    rhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
-	    rhsq[base+6*p_Np] = -1*p_tauInv*(sw*q7 - q4*q4*p_invsqrt2*invq1);
-	    rhsq[base+7*p_Np] = -1*p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
-	    rhsq[base+8*p_Np] = -1*p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
-	    rhsq[base+9*p_Np] = -1*p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
-	  }
+			rhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
+			rhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
+			rhsq[base+6*p_Np] = -1*p_tauInv*(sw*q7 - q4*q4*p_invsqrt2*invq1);
+			rhsq[base+7*p_Np] = -1*p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
+			rhsq[base+8*p_Np] = -1*p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
+			rhsq[base+9*p_Np] = -1*p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
+		    }
+		}
+	    }
 	}
-      }
     }
-  }
 }
 
 kernel void boltzmannVolumeCorrectionLSERKQuad3D(const iint Nelements,
@@ -50,57 +50,57 @@ kernel void boltzmannVolumeCorrectionLSERKQuad3D(const iint Nelements,
 						 dfloat * restrict prerhsq,
 						 dfloat * restrict rhsq){
   
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+    for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
     
-    for(iint es=0;es<p_NblockV;++es;inner2){
-      for(iint j=0;j<p_Nq;++j;inner1){    
-	for(iint i=0;i<p_Nq;++i;inner0){
+	for(iint es=0;es<p_NblockV;++es;inner2){
+	    for(iint j=0;j<p_Nq;++j;inner1){    
+		for(iint i=0;i<p_Nq;++i;inner0){
 	  
-	  const iint eT = eo+es; // element in block
-	  const iint e = elementIDs[eT];
+		    const iint eT = eo+es; // element in block
+		    const iint e = elementIDs[eT];
 	  
-	  const iint n=j*p_Nq+i;
+		    const iint n=j*p_Nq+i;
 	  
-	  if(eT<Nelements){
-	    iint base = n + p_Nfields*p_Np*e;
+		    if(eT<Nelements){
+			iint base = n + p_Nfields*p_Np*e;
 	    
-	    const dfloat q1  = q[base+0*p_Np];
-	    const dfloat q2  = q[base+1*p_Np];
-	    const dfloat q3  = q[base+2*p_Np];
-	    const dfloat q4  = q[base+3*p_Np];
-	    const dfloat q5  = q[base+4*p_Np];
-	    const dfloat q6  = q[base+5*p_Np];
-	    const dfloat q7  = q[base+6*p_Np];
-	    const dfloat q8  = q[base+7*p_Np];
-	    const dfloat q9  = q[base+8*p_Np];
-	    const dfloat q10 = q[base+9*p_Np];
+			const dfloat q1  = q[base+0*p_Np];
+			const dfloat q2  = q[base+1*p_Np];
+			const dfloat q3  = q[base+2*p_Np];
+			const dfloat q4  = q[base+3*p_Np];
+			const dfloat q5  = q[base+4*p_Np];
+			const dfloat q6  = q[base+5*p_Np];
+			const dfloat q7  = q[base+6*p_Np];
+			const dfloat q8  = q[base+7*p_Np];
+			const dfloat q9  = q[base+8*p_Np];
+			const dfloat q10 = q[base+9*p_Np];
 	    
-	    dfloat sw = 1;
-	    const dfloat invq1 = 1.f/q1;
+			dfloat sw = 1;
+			const dfloat invq1 = 1.f/q1;
 
-	    prerhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
-	    prerhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
-	    prerhsq[base+6*p_Np] = -1*p_tauInv*(sw*q7 - q4*q4*p_invsqrt2*invq1);
-	    prerhsq[base+7*p_Np] = -1*p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
-	    prerhsq[base+8*p_Np] = -1*p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
-	    prerhsq[base+9*p_Np] = -1*p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
+			prerhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
+			prerhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
+			prerhsq[base+6*p_Np] = -1*p_tauInv*(sw*q7 - q4*q4*p_invsqrt2*invq1);
+			prerhsq[base+7*p_Np] = -1*p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
+			prerhsq[base+8*p_Np] = -1*p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
+			prerhsq[base+9*p_Np] = -1*p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
 
-	    if (saved) {
-	      base = e*p_Np*p_Nfields*p_nrhs+shift*p_Np*p_Nfields+n;
-	      sw = 0;
+			if (saved) {
+			    base = e*p_Np*p_Nfields*p_nrhs+shift*p_Np*p_Nfields+n;
+			    sw = 0;
 	      
-	      rhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
-	      rhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
-	      rhsq[base+6*p_Np] = -1*p_tauInv*(sw*q7 - q4*q4*p_invsqrt2*invq1);
-	      rhsq[base+7*p_Np] = -1*p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
-	      rhsq[base+8*p_Np] = -1*p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
-	      rhsq[base+9*p_Np] = -1*p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
+			    rhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
+			    rhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
+			    rhsq[base+6*p_Np] = -1*p_tauInv*(sw*q7 - q4*q4*p_invsqrt2*invq1);
+			    rhsq[base+7*p_Np] = -1*p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
+			    rhsq[base+8*p_Np] = -1*p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
+			    rhsq[base+9*p_Np] = -1*p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
+			}
+		    }
+		}
 	    }
-	  }
 	}
-      }
     }
-  }
 }
 
 
@@ -110,46 +110,128 @@ kernel void boltzmannVolumeCorrectionMRSAABQuad3D(const iint Nelements,
 						  const dfloat * restrict q,
 						  dfloat * restrict rhsq){
   
-  for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+    for(iint eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
     
-    for(iint es=0;es<p_NblockV;++es;inner2){
-      for(iint j=0;j<p_Nq;++j;inner1){    
-	for(iint i=0;i<p_Nq;++i;inner0){
+	for(iint es=0;es<p_NblockV;++es;inner2){
+	    for(iint j=0;j<p_Nq;++j;inner1){    
+		for(iint i=0;i<p_Nq;++i;inner0){
 	  
-	  iint eT = eo+es; // element in block
+		    iint eT = eo+es; // element in block
 	  
-	  const iint n=j*p_Nq+i;
+		    const iint n=j*p_Nq+i;
 	  
-	  if(eT<Nelements){
-	    const iint e = elementIds[eo+es];
+		    if(eT<Nelements){
+			const iint e = elementIds[eo+es];
 	    
-	    iint base = i + j*p_Nq + p_Nfields*p_Np*e;
+			iint base = i + j*p_Nq + p_Nfields*p_Np*e;
 	    
-	    const dfloat q1  = q[base+0*p_Np];
-	    const dfloat q2  = q[base+1*p_Np];
-	    const dfloat q3  = q[base+2*p_Np];
-	    const dfloat q4  = q[base+3*p_Np];
-	    const dfloat q5  = q[base+4*p_Np];
-	    const dfloat q6  = q[base+5*p_Np];
-	    const dfloat q7  = q[base+6*p_Np];
-	    const dfloat q8  = q[base+7*p_Np];
-	    const dfloat q9  = q[base+8*p_Np];
-	    const dfloat q10 = q[base+9*p_Np];
+			const dfloat q1  = q[base+0*p_Np];
+			const dfloat q2  = q[base+1*p_Np];
+			const dfloat q3  = q[base+2*p_Np];
+			const dfloat q4  = q[base+3*p_Np];
+			const dfloat q5  = q[base+4*p_Np];
+			const dfloat q6  = q[base+5*p_Np];
+			const dfloat q7  = q[base+6*p_Np];
+			const dfloat q8  = q[base+7*p_Np];
+			const dfloat q9  = q[base+8*p_Np];
+			const dfloat q10 = q[base+9*p_Np];
 	    
-	    const dfloat sw = 0;
-	    const dfloat invq1 = 1.f/q1;
+			const dfloat sw = 0;
+			const dfloat invq1 = 1.f/q1;
 
-	    base = e*p_Np*p_Nfields*p_nrhs+shift*p_Np*p_Nfields+n;
+			base = e*p_Np*p_Nfields*p_nrhs+shift*p_Np*p_Nfields+n;
 
-	    rhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
-	    rhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
-	    rhsq[base+6*p_Np] = -1*p_tauInv*(sw*q7 - q4*q4*p_invsqrt2*invq1);
-	    rhsq[base+7*p_Np] = -1*p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
-	    rhsq[base+8*p_Np] = -1*p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
-	    rhsq[base+9*p_Np] = -1*p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
+			rhsq[base+4*p_Np] = -1*p_tauInv*(sw*q5 - q2*q2*p_invsqrt2*invq1);
+			rhsq[base+5*p_Np] = -1*p_tauInv*(sw*q6 - q3*q3*p_invsqrt2*invq1);
+			rhsq[base+6*p_Np] = -1*p_tauInv*(sw*q7 - q4*q4*p_invsqrt2*invq1);
+			rhsq[base+7*p_Np] = -1*p_tauInv*(sw*q8  - q2*q3*p_invsqrt2*invq1);
+			rhsq[base+8*p_Np] = -1*p_tauInv*(sw*q9  - q2*q4*p_invsqrt2*invq1);
+			rhsq[base+9*p_Np] = -1*p_tauInv*(sw*q10 - q3*q4*p_invsqrt2*invq1);
+		    }
+		}
+	    }
+	}
+    }
+}
+
+
+kernel void boltzmannMassMatrixQuad3D(const int Nelements,
+				      const dfloat * restrict M,
+				      const dfloat * restrict vgeo,
+				      dfloat * restrict rhsq){
+
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+    shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_M[p_Nq][p_Nq];
+    shared dfloat s_qtemp[p_Nfields][p_NblockV][p_Nq][p_Nq];
+    
+    for(int es=0;es<p_NblockV;++es;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+
+	  int e = eo+es; // element in block
+	  if(e<Nelements){
+	    const int base = i + j*p_Nq + p_Nfields*p_Np*e;
+	    for(int fld=0;fld<p_Nfields;++fld){
+	      s_q[fld][es][j][i] = rhsq[base+fld*p_Np];
+	      s_qtemp[fld][es][j][i] = 0;
+	    }
 	  }
+
+	  if(es==0)
+	    s_M[j][i] = M[j*p_Nq+i];
 	}
       }
     }
-  }
-}
+
+    barrier(localMemFence);
+
+    for(int es=0;es<p_NblockV;++es;inner2){
+	for(int j=0;j<p_Nq;++j;inner1){
+	    for(int i=0;i<p_Nq;++i;inner0){
+		int e = eo+es; // element in block
+		
+		if(e<Nelements){
+		    occaUnroll(p_Nfields)
+			for(int m=0;m<p_Nq;++m){
+			    const dfloat Mim = s_M[i][m]; // could L1
+			    
+			    // differentiate q components with respect to 'r'
+			    occaUnroll(p_Nfields)
+				for(int fld=0;fld<p_Nfields;++fld) {
+				    s_qtemp[fld][es][i][j] += Mim*s_q[fld][es][j][m];
+				}
+			}
+		}
+	    }
+	}
+    }
+
+    barrier(localMemFence);
+
+    for(int es=0;es<p_NblockV;++es;inner2){
+	for(int j=0;j<p_Nq;++j;inner1){
+	    for(int i=0;i<p_Nq;++i;inner0){
+		int e = eo+es; // element in block
+		
+		if(e<Nelements){
+		    occaUnroll(p_Nq)
+			for(int m=0;m<p_Nq;++m){
+			    const dfloat Mjm = s_M[j][m]; // could L1
+			    
+			    // differentiate q components with respect to 'r'
+			    occaUnroll(p_Nfields)
+				for(int fld=0;fld<p_Nfields;++fld) {
+				    s_q[fld][es][i][j] += Mjm*s_qtemp[fld][es][m][i];
+				}
+			}
+		    const int base = i + j*p_Nq + p_Nfields*p_Np*e;
+		    occaUnroll(p_Nq)
+			for(int fld=0;fld<p_Nfields;++fld){
+			    rhsq[base+fld*p_Np] *= vgeo[eo*p_Np*p_Nvgeo + j*p_Nq + i + p_Np*9]/vgeo[eo*p_Np*p_Nvgeo + j*p_Nq + i + p_Np*10];// = s_q[fld][es][j][i];
+			}
+		}
+	    }
+	}
+    }

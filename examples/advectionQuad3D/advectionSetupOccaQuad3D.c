@@ -25,18 +25,25 @@ void advectionSetupOccaQuad3D(solver_t *solver,occa::kernelInfo *kernelInfo) {
     }
   }
 
-  solver->o_D = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-  solver->o_weakD = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->weakD);
+  dfloat *MLIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
+  for(iint n=0;n<mesh->Np;++n){
+    for(iint m=0;m<mesh->Nfaces*mesh->Nfp;++m){
+      MLIFTT[n+m*mesh->Np] = mesh->MLIFT[n*mesh->Nfp*mesh->Nfaces+m];
+    }
+  }
 
-  solver->o_mass = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->mass);
+  solver->o_D = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+  solver->o_weakD = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->MD);
+
+  solver->o_mass = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->weakD);
 
   solver->o_LIFT =
     solver->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			  mesh->LIFT);
+			  mesh->MLIFT);
   
   solver->o_LIFTT =
     solver->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			  LIFTT);
+			  MLIFTT);
 
   solver->o_vgeo =
     solver->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),
@@ -112,7 +119,7 @@ void advectionSetupOccaQuad3D(solver_t *solver,occa::kernelInfo *kernelInfo) {
   kernelInfo->addDefine("p_Nvgeo", mesh->Nvgeo);
   kernelInfo->addDefine("p_Nsgeo", mesh->Nsgeo);
   
-  int maxNodes = mesh->Nfp;
+  int maxNodes = mymax(mesh->Nfp*mesh->Nfaces,mesh->Np);
   kernelInfo->addDefine("p_maxNodes", maxNodes);
 
   int NblockV = 256/mesh->Np; // works for CUDA

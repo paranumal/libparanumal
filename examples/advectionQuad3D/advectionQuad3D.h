@@ -48,6 +48,7 @@ typedef struct {
     occa::memory o_perp_index;
     occa::memory o_gridToE;
     occa::memory o_mass;
+    occa::memory o_invmass;
     occa::kernel haloExtractKernel;
     occa::kernel haloScatterKernel;
     occa::kernel volumeKernel;
@@ -57,7 +58,8 @@ typedef struct {
     occa::kernel updateKernel;
     occa::kernel filterKernelH;
     occa::kernel filterKernelV;
-  
+    occa::kernel massMatrixKernel;
+    
     //occa mrsaab
     occa::memory o_qpre;
     occa::memory o_qPreCorr;
