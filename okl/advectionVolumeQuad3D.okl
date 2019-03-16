@@ -115,10 +115,10 @@ kernel void advectionVolumeLSERKQuad3D(const int Nelements,
 
 	    const int base = e*p_Np*p_Nfields+n;
 
-	    const dfloat w = vgeo[gbase + p_Np*10]/vgeo[gbase + p_Np*9];
+	    const dfloat w = vgeo[gbase + p_Np*10];
 	    
-	    rhsq[base+0*p_Np] = rhsq1;
-	    rhsq[base+1*p_Np] = rhsq2;
+	    rhsq[base+0*p_Np] = w*rhsq1;
+	    rhsq[base+1*p_Np] = w*rhsq2;
 	  }
 	}
       }
@@ -291,10 +291,12 @@ kernel void advectionVolumeLSERKexpMixedQuad3D(const int Nelements,
 
 	    const int base = e*p_Np*p_Nfields+n;
 
-	    rhsqs[base+0*p_Np] = 0.5*(rhsqs1 + rhsqw1);
-	    rhsqs[base+1*p_Np] = 0.5*(rhsqs2 + rhsqw2);
-	    rhsqw[base+0*p_Np] = rhsqw1;
-	    rhsqw[base+1*p_Np] = rhsqw2;
+	    const dfloat w = vgeo[gbase + p_Np*10];
+	    
+	    rhsqs[base+0*p_Np] = 0.5*w*(rhsqs1 + rhsqw1);
+	    rhsqs[base+1*p_Np] = 0.5*w*(rhsqs2 + rhsqw2);
+	    rhsqw[base+0*p_Np] = w*rhsqw1;
+	    rhsqw[base+1*p_Np] = w*rhsqw2;
 	  }
 	}
       }

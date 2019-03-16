@@ -76,6 +76,8 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
   mesh->x = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->y = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   mesh->z = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
+
+  mesh->JR = (dfloat*) calloc(mesh->Nelements*mesh->Np,sizeof(dfloat));
   
   iint cnt = 0;
   for(iint e=0;e<mesh->Nelements;++e){ /* for each element */
@@ -131,6 +133,8 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
       ysph = R/cubRad * ylin;
       zsph = R/cubRad * zlin;
 
+      //mesh->JR[cnt] = cubRad/R;
+      
       if (fabs(xsph*xsph + ysph*ysph + zsph*zsph - 1) > 1e-12) printf("error\n");
 	  
       // project to sphere

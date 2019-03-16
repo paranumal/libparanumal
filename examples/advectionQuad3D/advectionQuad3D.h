@@ -42,6 +42,7 @@ typedef struct {
     occa::memory o_resq;
     occa::memory o_eInterp;
     occa::memory o_overlapDirection;
+    occa::memory o_cubeDistance;
     occa::memory o_rlocal;
     occa::memory o_slocal;
     occa::memory o_par_loc;

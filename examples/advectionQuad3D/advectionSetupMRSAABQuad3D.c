@@ -1,4 +1,4 @@
-//#define laptop
+#define laptop
 
 #ifdef laptop
 #include <complex.h>

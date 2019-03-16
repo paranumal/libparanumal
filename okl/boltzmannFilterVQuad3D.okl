@@ -281,6 +281,7 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 				     const dfloat * restrict y,
 				     const dfloat * restrict z,
 				     const dfloat * restrict vgeo,
+				     const dfloat * restrict cubeDistance,
 				     const dfloat * restrict qOrig,
 				     const dfloat * restrict qIn,
 				     dfloat * restrict Fq) {
@@ -304,17 +305,21 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 
 	const iint faceC = cubeFaceNumber[eo];
 
+	//mark_edge = ((cubeDistance[eo] > 1)&&
+	//				(cubeDistance[eL] > 0)&&
+	//			(cubeDistance[eR] > 0));
+	
 	mark_edge = ((faceC==cubeFaceNumber[eL]) &&
-		     (faceC==cubeFaceNumber[eR]) &&
-		     (faceC==cubeFaceNumber[eU]) &&
-		     (faceC==cubeFaceNumber[eD]));
-
+		     (faceC==cubeFaceNumber[eR]));// &&
+	//		     (faceC==cubeFaceNumber[eU]) &&
+	//	     (faceC==cubeFaceNumber[eD]));
+	
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
-	    s_q[fld][1][j][i] = qIn[eo*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]*vgeo[eo*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+	      s_q[fld][1][j][i] = qIn[eo*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];//*vgeo[eo*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
 	    if(mark_edge) {
-	      s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]*vgeo[eL*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
-	      s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]*vgeo[eR*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+		s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];//*vgeo[eL*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+		s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];//*vgeo[eR*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
 	    }
 	  }
       }
@@ -325,6 +330,7 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
 	dfloat Fqij[p_Nfields];
+	
 	if(mark_edge){
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
@@ -351,7 +357,7 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
     	  for (iint fld=0; fld<p_Nfields;++fld) {
 	    int id = eo*p_Nfields*p_Np+fld*p_Np + j*p_Nq + i;
 	    const dfloat wj = vgeo[eo*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
-	    Fqij[fld] = Fqij[fld]*(1. - alpha)/wj + alpha*qOrig[id];
+	    Fqij[fld] = Fqij[fld]*(1. - alpha) + alpha*qOrig[id];
 	  }
 
 	  // constrain momentum changes to lie on sphere
@@ -370,7 +376,7 @@ kernel void boltzmannFilterVq0Quad3D(const iint Nelements,
 	    const dfloat wj = vgeo[eo*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
 	  occaUnroll(p_Nfields)
 	    for(iint fld=0;fld<p_Nfields;++fld){
-		Fqij[fld] = s_q[fld][1][j][i]/wj;
+		Fqij[fld] = s_q[fld][1][j][i];
 	    }
 	}
 	

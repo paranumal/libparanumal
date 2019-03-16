@@ -230,6 +230,7 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 				     const iint * restrict cubeFaceNumber,
 				     const iint * restrict EToE,
 				     const dfloat * restrict vgeo,
+				     const iint * restrict cubeDistance,
 				     const dfloat * restrict qIn,
 				     dfloat * restrict Fq) {
   
@@ -252,19 +253,23 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 	
 	const iint faceC = cubeFaceNumber[eo];
 
+	//mark_edge = ((cubeDistance[eo] > 1)&&
+	//    (cubeDistance[eL] > 0)&&
+	//    (cubeDistance[eR] > 0));
+	
 	mark_edge = ((faceC==cubeFaceNumber[eL])&&
-		     (faceC==cubeFaceNumber[eR])&&
-		     (faceC==cubeFaceNumber[eD])&&
-		     (faceC==cubeFaceNumber[eU]));
-
+		     (faceC==cubeFaceNumber[eR]));//&&
+	//		     (faceC==cubeFaceNumber[eD])&&
+	//	     (faceC==cubeFaceNumber[eU]));
+	
 	occaUnroll(p_Nfields)
   	  for(iint fld=0;fld<p_Nfields;++fld){
 	    int id = eo*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i;
-	    dfloat qin = qIn[id]*vgeo[eo*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+	    dfloat qin = qIn[id];//*vgeo[eo*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
 	    s_q[fld][1][j][i] = qin;
 	    if(mark_edge) {
-		s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]*vgeo[eL*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
-		s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]*vgeo[eR*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+		s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];//*vgeo[eL*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+		s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];//*vgeo[eR*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
 	    }
 	  }
       }
@@ -275,6 +280,7 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
     for (iint j=0;j<p_Nq; ++j; inner1) {
       for (iint i=0; i<p_Nq; ++i; inner0) {
 	dfloat Fqij[p_Nfields];
+	
 	if (mark_edge) {
 	  
 	  occaUnroll(p_Nfields)
@@ -310,7 +316,7 @@ kernel void boltzmannFilterHq0Quad3D(const iint Nelements,
 	
 	occaUnroll(p_Nfields)
 	  for(iint fld=0;fld<p_Nfields;++fld){
-	    Fq[eo*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = Fqij[fld]/wj;
+	    Fq[eo*p_Nfields*p_Np + fld*p_Np + j*p_Nq + i] = Fqij[fld];
 	  }
       }
     }

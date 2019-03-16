@@ -81,6 +81,9 @@ void advectionSetupOccaQuad3D(solver_t *solver,occa::kernelInfo *kernelInfo) {
   
   solver->o_cubeFaceNumber =
     solver->device.malloc(mesh->Nelements*sizeof(iint),mesh->cubeFaceNumber);
+
+  solver->o_cubeDistance =
+    solver->device.malloc(mesh->Nelements*sizeof(iint),mesh->cubeDistance);
   
   solver->o_EToE =
     solver->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(iint),mesh->EToE);

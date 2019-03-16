@@ -128,7 +128,7 @@ void advectionSetupLSERKQuad3D (solver_t *solver) {
     
     solver->o_qFilter =
 	solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat));
-      
+    
     solver->o_qCorr =
 	solver->device.malloc(mesh->Nelements*solver->Nfields*mesh->Np*sizeof(dfloat));
     solver->o_resq =

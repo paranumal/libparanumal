@@ -7,7 +7,7 @@
 void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nvgeo = 11; // 
+  mesh->Nvgeo = 11;
   
   /* note that we have volume geometric factors for each node */
   mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->Np, sizeof(dfloat));
@@ -97,7 +97,7 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
 	if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
 
-	dfloat JW = J*mesh->gllw[i]*mesh->gllw[j];
+	dfloat JW = mesh->gllw[i]*mesh->gllw[j]*J;
 	
 	/* store geometric factors */
 	int base = mesh->Nvgeo*mesh->Np*e + j*mesh->Nq + i;
@@ -113,6 +113,7 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 	mesh->vgeo[base + mesh->Np*TZID] = tz;
 	mesh->vgeo[base + mesh->Np*JID]  = J;
 	mesh->vgeo[base + mesh->Np*JWID] = JW;
+	//mesh->vgeo[base + mesh->Np*11] = mesh->JR[e*mesh->Np + j*mesh->Nq + i]*mesh->gllw[i]*mesh->gllw[j];
       
       }
     }

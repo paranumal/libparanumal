@@ -329,6 +329,7 @@ typedef struct {
     dfloat *inv_mass;
     dfloat *MLIFT;
     dfloat *mass;
+    dfloat *JR;
   
   // occa stuff
   occa::device device;
