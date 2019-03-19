@@ -40,9 +40,11 @@ advectionPlotVTUQuad3D.o \
 advectionPlotVTUQuad3DV2.o \
 advectionSetupOccaQuad3D.o \
 advectionSetupLSERKQuad3D.o \
+advectionSetupLSERKsymQuad3D.o \
 advectionSetupDOPRIQuad3D.o \
 advectionSetupMRSAABQuad3D.o \
 advectionRunLSERKQuad3D.o \
+advectionRunLSERKsymQuad3D.o \
 advectionErrorNormQuad3D.o \
 advectionSpectrumLSERKQuad3D.o \
 ../../src/meshExtendGridQuad3D.o \

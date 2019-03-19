@@ -154,6 +154,7 @@ void advectionRunMRSAABQuad3D(solver_t *solver);
 void advectionRunLSERKQuad3D(solver_t *solver);
 void advectionRunDOPRIQuad3D(solver_t *solver);
 void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale);
+void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale);
 
 void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale);
 
@@ -165,6 +166,7 @@ solver_t *advectionSetupPhysicsQuad3D(mesh_t *mesh);
 void advectionSetupMRSAABQuad3D(solver_t *solver);
 void advectionSetupDOPRIQuad3D(solver_t *solver);
 void advectionSetupLSERKQuad3D(solver_t *solver);
+void advectionSetupLSERKsymQuad3D(solver_t *solver);
 
 void meshMRABSetupQuad3D(mesh3D *mesh, dfloat *EToDT, int maxLevels);
 

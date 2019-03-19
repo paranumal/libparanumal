@@ -114,11 +114,9 @@ kernel void advectionVolumeLSERKQuad3D(const int Nelements,
 	    const dfloat rhsq2 = un*dq1dx + vn*dq1dy + wn*dq1dz;
 
 	    const int base = e*p_Np*p_Nfields+n;
-
-	    const dfloat w = vgeo[gbase + p_Np*10];
 	    
-	    rhsq[base+0*p_Np] = w*rhsq1;
-	    rhsq[base+1*p_Np] = w*rhsq2;
+	    rhsq[base+0*p_Np] = rhsq1;
+	    rhsq[base+1*p_Np] = rhsq2;
 	  }
 	}
       }
