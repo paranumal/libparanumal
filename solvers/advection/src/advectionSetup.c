@@ -580,15 +580,15 @@ advection_t *advectionSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   // fix this later
   mesh->haloExtractKernel =
-    mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl",
+    mesh->device.buildKernel(LIBP_DIR "/okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
 				       kernelInfo);
   mesh->haloGetKernel =
-    mesh->device.buildKernel(DHOLMES "/okl/meshHaloGet.okl",
+    mesh->device.buildKernel(LIBP_DIR "/okl/meshHaloGet.okl",
 			     "meshHaloGet",
 			     kernelInfo);
   mesh->haloPutKernel =
-    mesh->device.buildKernel(DHOLMES "/okl/meshHaloPut.okl",
+    mesh->device.buildKernel(LIBP_DIR "/okl/meshHaloPut.okl",
 				       "meshHaloPut",
 				       kernelInfo);
 

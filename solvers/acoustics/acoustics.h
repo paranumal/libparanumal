@@ -37,6 +37,8 @@ SOFTWARE.
 // block size for reduction (hard coded)
 #define blockSize 256
 
+#define DACOUSTICS LIBP_DIR"/solvers/acoustics/"
+
 typedef struct{
 
   int dim;
@@ -93,6 +95,21 @@ typedef struct{
   occa::memory o_rkA, o_rkC, o_rkE;
 
 }acoustics_t;
+
+class acousticsSettings_t: public settings_t {
+public:
+  acousticsSettings_t();  
+
+  // void newSetting(const string name, const string val,
+  //                         const string description="",
+  //                         const vector<string> options={});
+
+  // void changeSetting(const string name, const string newVal);
+
+  // //read settings file and update settings
+  // void readSettingsFromFile(const string filename);
+
+};
 
 void acousticsRun(acoustics_t *acoustics, setupAide &newOptions);
 

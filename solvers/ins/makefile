@@ -90,7 +90,7 @@ INS_INCLUDES=-I. \
 
 #defines
 INS_DEFINES =${LIBP_DEFINES} \
-         -DDHOLMES='"${LIBP_DIR}"' \
+         -DLIBP_DIR='"${LIBP_DIR}"' \
          -DDINS='"${CURDIR}"'
 
 #.cpp compilation flags

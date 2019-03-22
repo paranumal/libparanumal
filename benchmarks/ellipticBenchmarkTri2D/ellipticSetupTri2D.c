@@ -149,7 +149,7 @@ solver_t *ellipticSetupTri2D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
 
   //add standard boundary functions
   char *boundaryHeaderFileName;
-  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTri2D/ellipticBoundary2D.h");
+  boundaryHeaderFileName = strdup(LIBP_DIR "/examples/ellipticTri2D/ellipticBoundary2D.h");
   kernelInfo.addInclude(boundaryHeaderFileName);
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");

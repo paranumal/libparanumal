@@ -77,7 +77,7 @@ int main(int argc, char **argv){
   
   /* KERNEL BUILD */
   occa::kernel innerProductKernel
-    = device.buildKernelFromSource(DHOLMES "/okl/innerProduct.okl",
+    = device.buildKernelFromSource(LIBP_DIR "/okl/innerProduct.okl",
 				   "innerProductAtomic",
 				   kernelInfo);
 

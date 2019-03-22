@@ -38,16 +38,21 @@ int main(int argc, char **argv){
 
   // if argv > 2 then should load input data from argv
   setupAide newOptions(argv[1]);
-  
+
+  acousticsSettings_t settings;
+  settings.readSettingsFromFile(argv[1]);
+
+  settings.report();
+
   // set up mesh stuff
   string fileName;
   int N, dim, elementType;
 
-  newOptions.getArgs("MESH FILE", fileName);
-  newOptions.getArgs("POLYNOMIAL DEGREE", N);
-  newOptions.getArgs("ELEMENT TYPE", elementType);
-  newOptions.getArgs("MESH DIMENSION", dim);
-  
+  settings.getSetting("MESH FILE", fileName);
+  settings.getSetting("POLYNOMIAL DEGREE", N);
+  settings.getSetting("ELEMENT TYPE", elementType);
+  settings.getSetting("MESH DIMENSION", dim);
+
   // set up mesh
   mesh_t *mesh;
   switch(elementType){

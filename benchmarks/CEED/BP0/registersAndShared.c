@@ -91,7 +91,7 @@ kernelInfo.addDefine("elPerBlock", Np*2+7*gjNp);
   kernelInfo.addCompilerFlag("  --compiler-options -O3");
   
   occa::kernel testSharedKernel
-    = device.buildKernelFromSource(DHOLMES "/okl/testRegistersAndShared.okl",
+    = device.buildKernelFromSource(LIBP_DIR "/okl/testRegistersAndShared.okl",
 				   "testSharedRegisters_v0",
 				   kernelInfo);
 	

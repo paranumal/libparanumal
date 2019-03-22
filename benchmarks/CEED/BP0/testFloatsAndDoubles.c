@@ -112,7 +112,7 @@ int main(int argc, char **argv){
   
   
   occa::kernel floatAndDoubleKernel
-    = device.buildKernelFromSource(DHOLMES "/okl/testFloats.okl",
+    = device.buildKernelFromSource(LIBP_DIR "/okl/testFloats.okl",
 				   "testFloats_v0",
 				   kernelInfo);
 	

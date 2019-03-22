@@ -76,7 +76,7 @@ int main(int argc, char **argv){
   
   /* KERNEL BUILD */
   occa::kernel scaledAddKernel
-    = device.buildKernelFromSource(DHOLMES "/okl/scaledAdd.okl",
+    = device.buildKernelFromSource(LIBP_DIR "/okl/scaledAdd.okl",
 				   "scaledAdd",
 				   kernelInfo);
 

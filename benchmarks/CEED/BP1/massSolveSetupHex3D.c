@@ -270,79 +270,79 @@ solver_t *massSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo &ker
 			fflush(stdout);
 			mesh->haloExtractKernel =
 			  saferBuildKernelFromSource(mesh->device,
-			                             DHOLMES "/okl/meshHaloExtract3D.okl",
+			                             LIBP_DIR "/okl/meshHaloExtract3D.okl",
 			                             "meshHaloExtract3D",
 			                             kernelInfo);
 			                             
 			mesh->gatherKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gather.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/gather.okl",
 			                             "gather",
 			                             kernelInfo);
 			                             
 			mesh->scatterKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scatter.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/scatter.okl",
 			                             "scatter",
 			                             kernelInfo);
 			                             
 			mesh->gatherScatterKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gatherScatter.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/gatherScatter.okl",
 			                             "gatherScatter",
 			                             kernelInfo);
 			                             
 			                             
 			mesh->getKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/get.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/get.okl",
 			                             "get",
 			                             kernelInfo);
 			                             
 			mesh->putKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/put.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/put.okl",
 			                             "put",
 			                             kernelInfo);
 			                             
 			solver->partialAxKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/massAxHex3D.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/massAxHex3D.okl",
 			                             "massPartialAxHex3D_v2",
 			                             kernelInfo);
 			                             
 			                             
 			mesh->weightedInnerProduct1Kernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/weightedInnerProduct1.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/weightedInnerProduct1.okl",
 			                             "weightedInnerProduct1",
 			                             kernelInfo);
 			                             
 			mesh->weightedInnerProduct2Kernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/weightedInnerProduct2.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/weightedInnerProduct2.okl",
 			                             "weightedInnerProduct2",
 			                             kernelInfo);
 			                             
 			mesh->innerProductKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/innerProduct.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/innerProduct.okl",
 			                             "innerProduct",
 			                             kernelInfo);
 			                             
 			mesh->scaledAddKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scaledAdd.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/scaledAdd.okl",
 			                             "scaledAdd",
 			                             kernelInfo);
 			                             
 			mesh->dotMultiplyKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/dotMultiply.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/dotMultiply.okl",
 			                             "dotMultiply",
 			                             kernelInfo);
 			                             
 			mesh->dotDivideKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/dotDivide.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/dotDivide.okl",
 			                             "dotDivide",
 			                             kernelInfo);
 			                             
 			solver->combinedInnerProductKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticCombinedInnerProduct.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/ellipticCombinedInnerProduct.okl",
 			                             "ellipticCombinedInnerProduct",
 			                             kernelInfo);
 			                             
 			solver->combinedUpdateKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticCombinedUpdate.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/ellipticCombinedUpdate.okl",
 			                             "ellipticCombinedUpdate",
 			                             kernelInfo);
 			usleep(8000);

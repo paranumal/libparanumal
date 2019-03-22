@@ -28,7 +28,7 @@ SOFTWARE.
 
 acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileName){
 
-  acoustics_t *acoustics = (acoustics_t*) calloc(1, sizeof(acoustics_t));
+  acoustics_t *acoustics = new acoustics_t();
 
   newOptions.getArgs("MESH DIMENSION", acoustics->dim);
   newOptions.getArgs("ELEMENT TYPE", acoustics->elementType);
@@ -325,7 +325,7 @@ acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryH
 
   // fix this later
   mesh->haloExtractKernel =
-    mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl",
+    mesh->device.buildKernel(LIBP_DIR "/okl/meshHaloExtract3D.okl",
 				       "meshHaloExtract3D",
 				       kernelInfo);
 

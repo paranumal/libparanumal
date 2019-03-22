@@ -20,7 +20,7 @@ LD	= mpic++
 NCC	= nvcc
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D DHOLMES='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"' -DRENDER=1
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -g  -D LIBP_DIR='"${CURDIR}/../.."' -D DBNS='"${CURDIR}"' -DRENDER=1
 
 NCFLAGS = -arch=sm_61 -I. -DOCCA_VERSION_1_0 -I$(HDRDIR) -I$(OGSDIR) -g   -DRENDER=1
 

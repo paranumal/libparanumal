@@ -52,7 +52,7 @@ int main(int argc, char **argv){
   mesh2D *mesh = meshSetupTri2D(argv[2], N);
 
   // capture header file
-  char *boundaryHeaderFileName = strdup(DHOLMES "/examples/insTri2D/insUniform2D.h"); // default
+  char *boundaryHeaderFileName = strdup(LIBP_DIR "/examples/insTri2D/insUniform2D.h"); // default
   char *options = strdup("method = ALGEBRAIC, grad-div= BROKEN, out=REPORT+VTU, adv=CUBATURE, disc = DISCONT_GALERKIN"); // SUBCYCLING
 
   // SET OPTIONS

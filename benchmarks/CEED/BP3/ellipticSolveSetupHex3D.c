@@ -353,33 +353,33 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 			fflush(stdout);
 			mesh->haloExtractKernel =
 			  saferBuildKernelFromSource(mesh->device,
-			                             DHOLMES "/okl/meshHaloExtract3D.okl",
+			                             LIBP_DIR "/okl/meshHaloExtract3D.okl",
 			                             "meshHaloExtract3D",
 			                             kernelInfo);
 			                             
 			mesh->gatherKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gather.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/gather.okl",
 			                             "gather",
 			                             kernelInfo);
 			                             
 			mesh->scatterKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scatter.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/scatter.okl",
 			                             "scatter",
 			                             kernelInfo);
 			                             
 			mesh->gatherScatterKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/gatherScatter.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/gatherScatter.okl",
 			                             "gatherScatter",
 			                             kernelInfo);
 			                             
 			                             
 			mesh->getKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/get.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/get.okl",
 			                             "get",
 			                             kernelInfo);
 			                             
 			mesh->putKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/put.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/put.okl",
 			                             "put",
 			                             kernelInfo);
 			                             
@@ -387,7 +387,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 			// WARNING
 			if(mesh->Nq<12) {
 				solver->AxKernel =
-				  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3D.okl",
+				  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/ellipticAxHex3D.okl",
 				                             "ellipticAxHex3D_e3",
 				                             kernelInfo);
 			}
@@ -398,7 +398,7 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 			
 			printf("building e9 kernel, halfD = %d \n", (mesh->Nq+mesh->Nq%2)/2);
 			solver->partialAxKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxHex3DNOCOLLOCATIONEx.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/ellipticAxHex3DNOCOLLOCATIONEx.okl",
 			                             "ellipticAxHex3D_Ref10",
 			                             //"ellipticAxHex3D_cuboid0",
 			                             //						     "ellipticAxHex3D_cube1",
@@ -406,63 +406,63 @@ solver_t *ellipticSolveSetupHex3D(mesh_t *mesh, dfloat lambda, occa::kernelInfo 
 			                             
 			                             
 			mesh->weightedInnerProduct1Kernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/weightedInnerProduct1.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/weightedInnerProduct1.okl",
 			                             "weightedInnerProduct1",
 			                             kernelInfo);
 			                             
-			saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/weightedInnerProduct2.okl",
+			saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/weightedInnerProduct2.okl",
 			                           "weightedInnerProduct2",
 			                           kernelInfo);
 			                           
 			mesh->innerProductKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/innerProduct.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/innerProduct.okl",
 			                             "innerProduct",
 			                             kernelInfo);
 			                             
 			mesh->scaledAddKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/scaledAdd.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/scaledAdd.okl",
 			                             "scaledAdd",
 			                             kernelInfo);
 			                             
 			mesh->dotMultiplyKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/dotMultiply.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/dotMultiply.okl",
 			                             "dotMultiply",
 			                             kernelInfo);
 			                             
 			mesh->dotDivideKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/dotDivide.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/dotDivide.okl",
 			                             "dotDivide",
 			                             kernelInfo);
 			                             
 			solver->gradientKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticGradientHex3D.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/ellipticGradientHex3D.okl",
 			                             "ellipticGradientHex3D",
 			                             kernelInfo);
 			                             
 			solver->partialGradientKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticGradientHex3D.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/ellipticGradientHex3D.okl",
 			                             "ellipticPartialGradientHex3D",
 			                             kernelInfo);
 			                             
 			if(mesh->Nq<12) {
 				solver->ipdgKernel =
-				  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
+				  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/ellipticAxIpdgHex3D.okl",
 				                             "ellipticAxIpdgHex3D",
 				                             kernelInfo);
 				                             
 				solver->partialIpdgKernel =
-				  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticAxIpdgHex3D.okl",
+				  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/ellipticAxIpdgHex3D.okl",
 				                             "ellipticPartialAxIpdgHex3D",
 				                             kernelInfo);
 			}
 			
 			solver->combinedInnerProductKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticCombinedInnerProduct.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/ellipticCombinedInnerProduct.okl",
 			                             "ellipticCombinedInnerProduct",
 			                             kernelInfo);
 			                             
 			solver->combinedUpdateKernel =
-			  saferBuildKernelFromSource(mesh->device, DHOLMES "/okl/ellipticCombinedUpdate.okl",
+			  saferBuildKernelFromSource(mesh->device, LIBP_DIR "/okl/ellipticCombinedUpdate.okl",
 			                             "ellipticCombinedUpdate",
 			                             kernelInfo);
 			usleep(8000);

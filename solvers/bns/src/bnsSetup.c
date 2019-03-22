@@ -893,25 +893,25 @@ bns_t *bnsSetup(mesh_t *mesh, setupAide &options){
 
       // This needs to be unified
       mesh->haloExtractKernel =
-      mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl","meshHaloExtract3D",kernelInfo);
+      mesh->device.buildKernel(LIBP_DIR "/okl/meshHaloExtract3D.okl","meshHaloExtract3D",kernelInfo);
 
 
       if(bns->dim==3){
 
         mesh->gatherKernel = 
-          mesh->device.buildKernel(DHOLMES "/okl/gather.okl","gather", kernelInfo);
+          mesh->device.buildKernel(LIBP_DIR "/okl/gather.okl","gather", kernelInfo);
 
         mesh->scatterKernel =
-          mesh->device.buildKernel(DHOLMES "/okl/scatter.okl","scatter",kernelInfo);
+          mesh->device.buildKernel(LIBP_DIR "/okl/scatter.okl","scatter",kernelInfo);
 
         mesh->gatherScatterKernel =
-          mesh->device.buildKernel(DHOLMES "/okl/gatherScatter.okl", "gatherScatter", kernelInfo);
+          mesh->device.buildKernel(LIBP_DIR "/okl/gatherScatter.okl", "gatherScatter", kernelInfo);
 
         mesh->getKernel = 
-          mesh->device.buildKernel(DHOLMES "/okl/get.okl", "get", kernelInfo);
+          mesh->device.buildKernel(LIBP_DIR "/okl/get.okl", "get", kernelInfo);
 
         mesh->putKernel =
-          mesh->device.buildKernel(DHOLMES "/okl/put.okl", "put",kernelInfo);
+          mesh->device.buildKernel(LIBP_DIR "/okl/put.okl", "put",kernelInfo);
 
         bns->dotMultiplyKernel = mesh->device.buildKernel(DBNS "/okl/bnsDotMultiply.okl", "bnsDotMultiply", kernelInfo);
 

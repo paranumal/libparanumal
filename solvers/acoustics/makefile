@@ -85,8 +85,7 @@ INCLUDES=-I. \
 
 #defines
 DEFINES =${LIBP_DEFINES} \
-         -DDHOLMES='"${LIBP_DIR}"' \
-         -DDACOUSTICS='"${CURDIR}"'
+         -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
 ACOUSTICS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
@@ -105,12 +104,16 @@ LFLAGS=${ACOUSTICS_CXXFLAGS} ${LIBS}
 #object dependancies
 DEPS=$(wildcard *.h) \
      $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
+     $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp) \
      $(OGS_DIR)/ogs.hpp
 
-SRC =$(wildcard src/*.c)
-OBJS=$(SRC:.c=.o)
+CSRC   =$(wildcard src/*.c) 
+CPPSRC =$(wildcard src/*.cpp)
 
-.PHONY: all lib libmesh libogs libblas clean clean-libs realclean help info
+OBJS=$(CSRC:.c=.o) \
+     $(CPPSRC:.cpp=.o)
+
+.PHONY: all lib libmesh libogs libblas clean clean-libs realclean help info acousticsMain
 
 all: acousticsMain
 
@@ -165,7 +168,16 @@ endif
 ifneq (,${verbose})
 	$(CXX) -o $*.o -c $*.c $(ACOUSTICS_CXXFLAGS)
 else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
 	@$(CXX) -o $*.o -c $*.c $(ACOUSTICS_CXXFLAGS)
+endif
+# rule for .cpp files
+%.o: %.cpp $(DEPS) | libmesh
+ifneq (,${verbose})
+	$(CXX) -o $*.o -c $*.cpp $(ACOUSTICS_CXXFLAGS)
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(CXX) -o $*.o -c $*.cpp $(ACOUSTICS_CXXFLAGS)
 endif
 
 #cleanup

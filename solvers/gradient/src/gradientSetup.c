@@ -28,7 +28,7 @@ SOFTWARE.
 
 gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 
-  gradient_t *gradient = (gradient_t*) calloc(1, sizeof(gradient_t));
+  gradient_t *gradient = new gradient_t();
 
   gradient->mesh = mesh;
 
@@ -168,7 +168,7 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 
       // kernels from volume file
       if(mesh->dim==3){
-	sprintf(fileName, DHOLMES "/okl/meshIsoSurface3D.okl");
+	sprintf(fileName, LIBP_DIR "/okl/meshIsoSurface3D.okl");
 	sprintf(kernelName, "meshIsoSurface3D");
 
 	gradient->isoSurfaceKernel =
@@ -188,7 +188,7 @@ gradient_t *gradientSetup(mesh_t *mesh, setupAide &options){
 #if 0
       // fix this later
       mesh->haloExtractKernel =
-        mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl",
+        mesh->device.buildKernel(LIBP_DIR "/okl/meshHaloExtract3D.okl",
                                            "meshHaloExtract3D",
 					   kernelInfo);
 #endif

@@ -89,7 +89,7 @@ int main(int argc, char **argv){
   kernelInfo.addCompilerFlag("-O0");
   
   occa::kernel testSharedKernel
-    = device.buildKernelFromSource(DHOLMES "/okl/testSharedRegisters.okl",
+    = device.buildKernelFromSource(LIBP_DIR "/okl/testSharedRegisters.okl",
 				   "testSharedRegisters_v0",
 				   kernelInfo);
 	

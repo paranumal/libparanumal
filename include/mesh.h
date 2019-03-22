@@ -40,6 +40,7 @@ SOFTWARE.
 #include "timer.h"
 
 #include "setupAide.hpp"
+#include "settings.hpp"
 
 #define TRIANGLES 3
 #define QUADRILATERALS 4
@@ -50,7 +51,7 @@ typedef struct {
 
   MPI_Comm comm;
   int rank, size; // MPI rank and size (process count)
-  
+
   int dim;
   int Nverts, Nfaces, NfaceVertices;
 
@@ -132,16 +133,16 @@ typedef struct {
   dfloat *Smatrices;
   int maxNnzPerRow;
   dfloat *x, *y, *z;    // coordinates of physical nodes
-  
-  dfloat sphereRadius;  // for Quad3D 
-  
+
+  dfloat sphereRadius;  // for Quad3D
+
 
   // indices of vertex nodes
   int *vertexNodes;
 
   // quad specific quantity
   int Nq, NqP, NpP;
-  
+
   dfloat *D; // 1D differentiation matrix (for tensor-product)
   dfloat *gllz; // 1D GLL quadrature nodes
   dfloat *gllw; // 1D GLL quadrature weights
@@ -207,7 +208,7 @@ typedef struct {
   dfloat *cubvgeo;  //volume geometric data at cubature points
   dfloat *cubsgeo;  //surface geometric data at cubature points
   dfloat *cubggeo;  //second type volume geometric data at cubature points
-  
+
   // c2 at cubature points (for wadg)
   dfloat *c2;
 
@@ -258,7 +259,7 @@ typedef struct {
   dfloat *sparseSssT;
   int *Ind;
 
-  dlong *mmapM, *mmapP; 
+  dlong *mmapM, *mmapP;
   int   *mmapS;
   dfloat *mapSgn;
 
@@ -272,7 +273,7 @@ typedef struct {
   dfloat rka[5], rkb[5], rkc[6]; // AK: deprecated
 
   // MRAB,SAAB coefficients
-  dfloat mrab[3], mrabb[3], saab[3], saabexp; // AK: deprecated 
+  dfloat mrab[3], mrabb[3], saab[3], saabexp; // AK: deprecated
   int MRABNlevels;
   int *MRABlevel;
   dlong *MRABNelements, *MRABNhaloElements;
@@ -284,10 +285,10 @@ typedef struct {
   dlong **MRABpmlHaloElementIds, **MRABpmlHaloIds;
 
   dlong pmlNelements, nonPmlNelements;
-  dlong *nonPmlElementIds, *pmlElementIds, *pmlIds;  
+  dlong *nonPmlElementIds, *pmlElementIds, *pmlIds;
   int shiftIndex;
 
-  dfloat dtfactor; //Delete later for script run 
+  dfloat dtfactor; //Delete later for script run
   dfloat maxErrorBoltzmann;
 
   dfloat *errtmp;
@@ -307,7 +308,7 @@ typedef struct {
 
   int *contourEToV;
   dfloat *contourVX, *contourVY, *contourVZ;
-  dfloat *contourInterp, *contourInterp1, *contourFilter; 
+  dfloat *contourInterp, *contourInterp1, *contourFilter;
 
   //SEMFEM data
   int NpFEM, NelFEM;
@@ -327,16 +328,16 @@ typedef struct {
   dlong   *pmlElementList; // deprecated
 
   int Ntscale; // Will be removed, for time accuracy test
-  
+
   dfloat *invTau; // deprecated in Boltzmann
 
 
   // Probe Data
-  int probeN, probeNTotal; 
+  int probeN, probeNTotal;
   dfloat *probeR, *probeS, *probeT;
-  // dfloat *probeX, *probeY, *probeZ;  
-  dlong *probeElementIds, *probeIds;  
-  dfloat *probeI; 
+  // dfloat *probeX, *probeY, *probeZ;
+  dlong *probeElementIds, *probeIds;
+  dfloat *probeI;
 
   // occa stuff
   occa::device device;
@@ -398,7 +399,7 @@ typedef struct {
   occa::memory o_haloBuffer;
   occa::memory o_haloGetNodeIds;
   occa::memory o_haloPutNodeIds;
-  
+
   occa::memory o_internalElementIds;
   occa::memory o_notInternalElementIds;
 
@@ -427,7 +428,7 @@ typedef struct {
   occa::memory o_pmlIds;
 
   occa::memory o_pmlElementList;
-  
+
   occa::memory o_ggeo; // second order geometric factors
   occa::memory o_projectL2; // local weights for projection.
 
@@ -471,7 +472,7 @@ typedef struct {
   // Boltzmann Specific Kernels
   occa::kernel relaxationKernel;
   occa::kernel pmlRelaxationKernel;
-  
+
 }mesh_t;
 
 // serial sort
@@ -538,6 +539,9 @@ void meshParallelGatherScatterSetup(mesh_t *mesh,
 // generic mesh setup
 mesh_t *meshSetup(char *filename, int N, setupAide &options);
 
+void occaAddSettings(settings_t& settings);
+void meshAddSettings(settings_t& settings);
+
 void occaTimerTic(occa::device device,std::string name);
 void occaTimerToc(occa::device device,std::string name);
 
@@ -564,7 +568,7 @@ extern "C"
 {
   void dgesv_ ( int     *N, int     *NRHS, double  *A,
                 int     *LDA,
-                int     *IPIV, 
+                int     *IPIV,
                 double  *B,
                 int     *LDB,
                 int     *INFO );
@@ -575,7 +579,7 @@ extern "C"
   void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
   void dgeev_(char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI,
               double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
-  
+
   double dlange_(char *NORM, int *M, int *N, double *A, int *LDA, double *WORK);
   void dgecon_(char *NORM, int *N, double *A, int *LDA, double *ANORM,
                 double *RCOND, double *WORK, int *IWORK, int *INFO );

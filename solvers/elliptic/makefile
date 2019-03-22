@@ -87,7 +87,7 @@ ELLIPTIC_INCLUDES=-I. \
 
 #defines
 ELLIPTIC_DEFINES =${LIBP_DEFINES} \
-         -DDHOLMES='"${LIBP_DIR}"' \
+         -DLIBP_DIR='"${LIBP_DIR}"' \
          -DDELLIPTIC='"${CURDIR}"'
 
 #.cpp compilation flags

@@ -472,7 +472,7 @@ cns_t *cnsSetup(mesh_t *mesh, setupAide &options){
 
       // fix this later
       mesh->haloExtractKernel =
-        mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract3D.okl",
+        mesh->device.buildKernel(LIBP_DIR "/okl/meshHaloExtract3D.okl",
                                            "meshHaloExtract3D",
 				 kernelInfo);
 

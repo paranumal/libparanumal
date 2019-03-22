@@ -33,27 +33,31 @@ endif
 endif
 
 #libraries
-OGS_DIR      =${LIBP_LIBS_DIR}/gatherScatter
+OGS_DIR =${LIBP_LIBS_DIR}/gatherScatter
 
 #includes
 INCLUDES=-I. \
-				 -I$(OGS_DIR) \
-				 ${LIBP_INCLUDES}
+         -I$(OGS_DIR) \
+         ${LIBP_INCLUDES}
 
 #defines
 DEFINES =${LIBP_DEFINES} \
-         -DDHOLMES='"${LIBP_DIR}"' \
+         -DLIBP_DIR='"${LIBP_DIR}"' \
 
 #.cpp compilation flags
 MESH_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #object dependancies
 DEPS=$(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
-		 $(OGS_DIR)/ogs.hpp
+	 	 $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp) \
+	 	 $(wildcard *.hpp) \
+	 	 $(OGS_DIR)/ogs.hpp
 
-SRC =$(wildcard *.c)
+CSRC   =$(wildcard *.c) 
+CPPSRC =$(wildcard *.cpp)
 
-OBJS=$(SRC:.c=.o)
+OBJS=$(CSRC:.c=.o) \
+     $(CPPSRC:.cpp=.o)
 
 .PHONY: all lib clean realclean silentUpdate
 
@@ -79,6 +83,15 @@ ifneq (,${verbose})
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
 	@$(CXX) -o $*.o -c $*.c $(MESH_CXXFLAGS)
+endif
+
+# rule for .cpp files
+%.o: %.cpp $(DEPS)
+ifneq (,${verbose})
+	$(CXX) -o $*.o -c $*.cpp $(MESH_CXXFLAGS)
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(CXX) -o $*.o -c $*.cpp $(MESH_CXXFLAGS)
 endif
 
 #cleanup

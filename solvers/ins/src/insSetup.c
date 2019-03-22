@@ -1116,7 +1116,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 	else 
 	  ins->o_cUd = ins->o_Ud;
       
-	sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
+	sprintf(fileName, LIBP_DIR "/okl/scaledAdd.okl");
 	sprintf(kernelName, "scaledAddwOffset");
 	ins->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 

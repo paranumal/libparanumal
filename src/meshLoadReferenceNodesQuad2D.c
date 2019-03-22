@@ -31,7 +31,7 @@ SOFTWARE.
 void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
 
   char fname[BUFSIZ];
-  sprintf(fname, DHOLMES "/nodes/quadrilateralN%02d.dat", N);
+  sprintf(fname, LIBP_DIR "/nodes/quadrilateralN%02d.dat", N);
 
   FILE *fp = fopen(fname, "r");
 

@@ -85,7 +85,7 @@ INCLUDES=-I. \
 
 #defines
 DEFINES =${LIBP_DEFINES} \
-         -DDHOLMES='"${LIBP_DIR}"' \
+         -DLIBP_DIR='"${LIBP_DIR}"' \
          -DDBNS='"${CURDIR}"'
 
 #.cpp compilation flags

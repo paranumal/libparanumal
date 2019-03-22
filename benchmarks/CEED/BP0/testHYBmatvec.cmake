@@ -174,7 +174,7 @@ int main(int argc, char **argv){
 	kernelInfo.addCompilerFlag("  --compiler-options -O3");
 	printf("chujemuje \n");
 	occa::kernel testMatvec
-	= device.buildKernelFromSource(DHOLMES "/okl/testHYBmatvec.okl",
+	= device.buildKernelFromSource(LIBP_DIR "/okl/testHYBmatvec.okl",
 "testHYBmatvec_v0",
 	                               kernelInfo);
 	                               

@@ -345,17 +345,17 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
       //mesh kernels
       mesh->haloExtractKernel =
-        mesh->device.buildKernel(DHOLMES "/okl/meshHaloExtract2D.okl",
+        mesh->device.buildKernel(LIBP_DIR "/okl/meshHaloExtract2D.okl",
                                        "meshHaloExtract2D",
                                        kernelInfo);
 
       mesh->addScalarKernel =
-        mesh->device.buildKernel(DHOLMES "/okl/addScalar.okl",
+        mesh->device.buildKernel(LIBP_DIR "/okl/addScalar.okl",
                    "addScalar",
                    kernelInfo);
 
       mesh->maskKernel =
-        mesh->device.buildKernel(DHOLMES "/okl/mask.okl",
+        mesh->device.buildKernel(LIBP_DIR "/okl/mask.okl",
                    "mask",
                    kernelInfo);
 
@@ -364,52 +364,52 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
 
       mesh->sumKernel =
-        mesh->device.buildKernel(DHOLMES "/okl/sum.okl",
+        mesh->device.buildKernel(LIBP_DIR "/okl/sum.okl",
                    "sum",
                    kernelInfo);
 
       elliptic->weightedInnerProduct1Kernel =
-        mesh->device.buildKernel(DHOLMES "/okl/weightedInnerProduct1.okl",
+        mesh->device.buildKernel(LIBP_DIR "/okl/weightedInnerProduct1.okl",
                                        "weightedInnerProduct1",
                                        kernelInfo);
 
       elliptic->weightedInnerProduct2Kernel =
-        mesh->device.buildKernel(DHOLMES "/okl/weightedInnerProduct2.okl",
+        mesh->device.buildKernel(LIBP_DIR "/okl/weightedInnerProduct2.okl",
                                        "weightedInnerProduct2",
                                        kernelInfo);
 
       elliptic->innerProductKernel =
-        mesh->device.buildKernel(DHOLMES "/okl/innerProduct.okl",
+        mesh->device.buildKernel(LIBP_DIR "/okl/innerProduct.okl",
                                        "innerProduct",
                                        kernelInfo);
 
       elliptic->weightedNorm2Kernel =
-        mesh->device.buildKernel(DHOLMES "/okl/weightedNorm2.okl",
+        mesh->device.buildKernel(LIBP_DIR "/okl/weightedNorm2.okl",
                                            "weightedNorm2",
                                            kernelInfo);
 
       elliptic->norm2Kernel =
-        mesh->device.buildKernel(DHOLMES "/okl/norm2.okl",
+        mesh->device.buildKernel(LIBP_DIR "/okl/norm2.okl",
                                            "norm2",
                                            kernelInfo);
 
       elliptic->scaledAddKernel =
-          mesh->device.buildKernel(DHOLMES "/okl/scaledAdd.okl",
+          mesh->device.buildKernel(LIBP_DIR "/okl/scaledAdd.okl",
                                          "scaledAdd",
                                          kernelInfo);
 
       elliptic->dotMultiplyKernel =
-          mesh->device.buildKernel(DHOLMES "/okl/dotMultiply.okl",
+          mesh->device.buildKernel(LIBP_DIR "/okl/dotMultiply.okl",
                                          "dotMultiply",
                                          kernelInfo);
 
       elliptic->dotMultiplyAddKernel =
-          mesh->device.buildKernel(DHOLMES "/okl/dotMultiplyAdd.okl",
+          mesh->device.buildKernel(LIBP_DIR "/okl/dotMultiplyAdd.okl",
                                          "dotMultiplyAdd",
                                          kernelInfo);
 
       elliptic->dotDivideKernel =
-          mesh->device.buildKernel(DHOLMES "/okl/dotDivide.okl",
+          mesh->device.buildKernel(LIBP_DIR "/okl/dotDivide.okl",
                                          "dotDivide",
                                          kernelInfo);
 

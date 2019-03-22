@@ -148,7 +148,7 @@ solver_t *ellipticSetupTet3D(mesh_t *mesh, dfloat tau, dfloat lambda, int*BCType
 
   //add standard boundary functions
   char *boundaryHeaderFileName;
-  boundaryHeaderFileName = strdup(DHOLMES "/examples/ellipticTet3D/ellipticBoundary3D.h");
+  boundaryHeaderFileName = strdup(LIBP_DIR "/examples/ellipticTet3D/ellipticBoundary3D.h");
   kernelInfo.addInclude(boundaryHeaderFileName);
 
   kernelInfo.addParserFlag("automate-add-barriers", "disabled");
