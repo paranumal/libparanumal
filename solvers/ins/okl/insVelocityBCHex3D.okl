@@ -491,7 +491,7 @@ SOFTWARE.
     @exclusive dfloat r_U[p_Nq], r_V[p_Nq], r_W[p_Nq]; // register array to hold u(i,j,0:N) private to thread
     @exclusive dfloat r_rhsU[p_Nq], r_rhsV[p_Nq], r_rhsW[p_Nq];// array for results Au(i,j,0:N)
 
-    dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
+    @exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 
     // for all face nodes of all elements
     // face 0
