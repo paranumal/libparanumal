@@ -23,7 +23,7 @@ CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR
 
 NCFLAGS = -arch=sm_61 -I. -DOCCA_VERSION_1_0 -I$(HDRDIR) -I$(OGSDIR) -g --use_fast_math   -DRENDER=1
 
-# link flags to be used 
+# link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -g  -fopenmp -lcuda -lcudart
 
 # libraries to be linked in
@@ -33,18 +33,18 @@ LIBS	=   -L$(OGSDIR) -logs -L$(GSDIR)/lib  -lgs \
 INCLUDES = cns.h
 
 DEPS = $(INCLUDES) \
-$(HDRDIR)/mesh.h \
+$(HDRDIR)/mesh.hpp \
 $(HDRDIR)/mesh3D.h \
-$(OGSDIR)/ogs.hpp 
+$(OGSDIR)/ogs.hpp
 
 # types of files we are going to construct rules for
 .SUFFIXES: .c  .cu
 
 # rule for .c files
 .c.o: $(DEPS)
-	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths) 
+	$(CC) $(CFLAGS) -o $*.o -c $*.c $(paths)
 .cu.o: $(DEPS)
-	$(NCC) $(NCFLAGS) -o $*.o -c $*.cu $(paths) 
+	$(NCC) $(NCFLAGS) -o $*.o -c $*.cu $(paths)
 
 # list of objects to be compiled
 OBJS    = \
@@ -124,7 +124,7 @@ OBJS    = \
 
 
 cnsMain:$(OBJS) libogs
-	$(LD)  $(LDFLAGS)  -o cnsMain $(OBJS) $(paths) $(LIBS) 
+	$(LD)  $(LDFLAGS)  -o cnsMain $(OBJS) $(paths) $(LIBS)
 
 libogs:
 	cd ../../libs/gatherScatter; make -j lib; cd ../../solvers/cns

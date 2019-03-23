@@ -32,7 +32,7 @@ LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 INCLUDES = ins2D.h
 DEPS = $(INCLUDES) \
-$(HDRDIR)/mesh.h \
+$(HDRDIR)/mesh.hpp \
 $(HDRDIR)/mesh2D.h \
 $(HDRDIR)/ogs_t.h \
 $(HDRDIR)/hgs_t.h \

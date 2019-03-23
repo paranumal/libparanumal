@@ -75,13 +75,14 @@ endif
 #libraries
 GS_DIR       =${LIBP_TPL_DIR}/gslib
 BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
-OGS_DIR      =${LIBP_LIBS_DIR}/gatherScatter
+OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 MESH_DIR     =${LIBP_DIR}/src
 
 #includes
-INCLUDES=-I. \
-         -I$(OGS_DIR) \
-         ${LIBP_INCLUDES}
+INCLUDES=${LIBP_INCLUDES} \
+		 -I${LIBP_LIBS_DIR}/include \
+         -I.
+         
 
 #defines
 DEFINES =${LIBP_DEFINES} \
@@ -92,7 +93,7 @@ ACOUSTICS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L$(MESH_DIR) -lmesh \
-     -L$(OGS_DIR) -logs \
+     -L${LIBP_LIBS_DIR}/lib -logs \
      -L$(GS_DIR)/lib -lgs \
      -L${BLAS_DIR} -lBlasLapack \
      -lgfortran \
@@ -102,16 +103,14 @@ LIBS=-L$(MESH_DIR) -lmesh \
 LFLAGS=${ACOUSTICS_CXXFLAGS} ${LIBS}
 
 #object dependancies
-DEPS=$(wildcard *.h) \
+DEPS=$(wildcard *.hpp) \
      $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
      $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp) \
-     $(OGS_DIR)/ogs.hpp
+     $(wildcard ${LIBP_LIBS_DIR}/include/*.hpp) 
 
-CSRC   =$(wildcard src/*.c) 
-CPPSRC =$(wildcard src/*.cpp)
+SRC =$(wildcard src/*.cpp)
 
-OBJS=$(CSRC:.c=.o) \
-     $(CPPSRC:.cpp=.o)
+OBJS=$(SRC:.cpp=.o)
 
 .PHONY: all lib libmesh libogs libblas clean clean-libs realclean help info acousticsMain
 
@@ -163,14 +162,6 @@ else
 	@${MAKE} -C ${BLAS_DIR} lib --no-print-directory
 endif
 
-# rule for .c files
-%.o: %.c $(DEPS) | libmesh
-ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.c $(ACOUSTICS_CXXFLAGS)
-else
-	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.c $(ACOUSTICS_CXXFLAGS)
-endif
 # rule for .cpp files
 %.o: %.cpp $(DEPS) | libmesh
 ifneq (,${verbose})

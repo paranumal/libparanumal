@@ -31,9 +31,9 @@ SOFTWARE.
 #include "omp.h"
 #include <unistd.h>
 #include  "mpi.h"
-#include "mesh.h"
+#include "mesh.hpp"
 
-void occaDeviceConfig(mesh_t *mesh, setupAide &options){
+void occaDeviceConfig(mesh_t *mesh, setupAide &options, occa::properties &kernelInfo){
 
   // OCCA build stuff
   char deviceConfig[BUFSIZ];
@@ -58,11 +58,11 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   if (size==1) options.getArgs("DEVICE NUMBER" ,device_id);
 
   printf("device_id = %d\n", device_id);
-  
+
   //  device_id = device_id%2;
 
   occa::properties deviceProps;
-  
+
   // read thread model/device/platform from options
   if(options.compareArgs("THREAD MODEL", "CUDA")){
     //    deviceProps["mode"] = "CUDA";
@@ -96,11 +96,11 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
     printf("Rank %d: Ncores = %d, Nthreads = %d, device_id = %d \n", rank, Ncores, Nthreads, device_id);
 
   std::cout << deviceConfig << std::endl;
-  
+
   //  mesh->device.setup( (std::string) deviceConfig); // deviceProps);
   mesh->device.setup( (std::string)deviceConfig);
 
-#ifdef USE_OCCA_MEM_BYTE_ALIGN 
+#ifdef USE_OCCA_MEM_BYTE_ALIGN
   // change OCCA MEM BYTE ALIGNMENT
   occa::env::OCCA_MEM_BYTE_ALIGN = USE_OCCA_MEM_BYTE_ALIGN;
 #endif
@@ -120,9 +120,37 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
     mesh->device.UsePreCompiledKernels(0);
     occa::host().UsePreCompiledKernels(0);
   }
-    
+
 #endif
-  
+
+  if(sizeof(dfloat)==4){
+    kernelInfo["defines/" "dfloat"]="float";
+    kernelInfo["defines/" "dfloat2"]="float2";
+    kernelInfo["defines/" "dfloat4"]="float4";
+    kernelInfo["defines/" "dfloat8"]="float8";
+  }
+  if(sizeof(dfloat)==8){
+    kernelInfo["defines/" "dfloat"]="double";
+    kernelInfo["defines/" "dfloat2"]="double2";
+    kernelInfo["defines/" "dfloat4"]="double4";
+    kernelInfo["defines/" "dfloat8"]="double8";
+  }
+
+  if(sizeof(dlong)==4){
+    kernelInfo["defines/" "dlong"]="int";
+  }
+  if(sizeof(dlong)==8){
+    kernelInfo["defines/" "dlong"]="long long int";
+  }
+
+  if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
+    kernelInfo["compiler_flags"] += "--ftz=true";
+    kernelInfo["compiler_flags"] += "--prec-div=false";
+    kernelInfo["compiler_flags"] += "--prec-sqrt=false";
+    kernelInfo["compiler_flags"] += "--use_fast_math";
+    kernelInfo["compiler_flags"] += "--fmad=true"; // compiler option for cuda
+  }
+
   occa::initTimer(mesh->device);
 
 }

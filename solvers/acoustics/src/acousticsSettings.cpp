@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "acoustics.h"
+#include "acoustics.hpp"
 
 //settings for acoustics solver
 acousticsSettings_t::acousticsSettings_t(): settings_t() {

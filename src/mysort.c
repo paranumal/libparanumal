@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "mesh.h"
+#include "mesh.hpp"
 #include <stdlib.h>
 
 int isHigher(const void *a, const void *b){

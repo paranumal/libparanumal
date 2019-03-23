@@ -28,7 +28,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include <stddef.h>
 
-#include "mesh.h"
+#include "mesh.hpp"
 
 // ok to use o_v = o_gsv
 void meshParallelGatherScatter(mesh_t *mesh,

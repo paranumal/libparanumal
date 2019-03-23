@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "mesh.h"
+#include "mesh.hpp"
 
 void matrixInverse(int N, dfloat *A){
   int lwork = N*N;

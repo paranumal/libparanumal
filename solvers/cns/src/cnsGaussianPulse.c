@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 #include <math.h>
-#include "mesh.h"
+#include "mesh.hpp"
 
 void cnsGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t,
 		      dfloat *r, dfloat *u, dfloat *v, dfloat *w){

@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "mesh.h"
+#include "mesh.hpp"
 
 dfloat matrixConditionNumber(int N, dfloat *A) {
 

@@ -33,7 +33,7 @@ LIBS	=  $(links) -L../../3rdParty/BlasLapack -lBlasLapack -lgfortran
 
 INCLUDES = ellipticBenchmarkTet3D.h
 DEPS = $(INCLUDES) \
-$(HDRDIR)/mesh.h \
+$(HDRDIR)/mesh.hpp \
 $(HDRDIR)/mesh3D.h \
 $(HDRDIR)/ogs_t.h \
 $(HDRDIR)/hgs_t.h \

@@ -49,5 +49,10 @@ SOFTWARE.
   }
 #define LIBP_ABORT(message) LIBP_ABORT2(__FILE__, __PRETTY_FUNCTION__, __LINE__, message)
 
+#define mymax(a,b) (((a)>(b))?(a):(b))
+#define mymin(a,b) (((a)<(b))?(a):(b))
+
+#define norm2(a,b) ( sqrt((a)*(a)+(b)*(b)) )
+#define norm3(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
 
 #endif

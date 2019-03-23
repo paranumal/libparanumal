@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 #include <math.h>
-#include "mesh.h"
+#include "mesh.hpp"
 
 void advectionGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *q){
 

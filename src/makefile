@@ -32,12 +32,9 @@ include ../make.top
 endif
 endif
 
-#libraries
-OGS_DIR =${LIBP_LIBS_DIR}/gatherScatter
-
 #includes
 INCLUDES=-I. \
-         -I$(OGS_DIR) \
+         -I${LIBP_LIBS_DIR}/include \
          ${LIBP_INCLUDES}
 
 #defines
@@ -49,9 +46,9 @@ MESH_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #object dependancies
 DEPS=$(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
-	 	 $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp) \
-	 	 $(wildcard *.hpp) \
-	 	 $(OGS_DIR)/ogs.hpp
+     $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp) \
+     $(wildcard ${LIBP_LIBS_DIR}/include/*.hpp) \
+     $(wildcard *.hpp)
 
 CSRC   =$(wildcard *.c) 
 CPPSRC =$(wildcard *.cpp)
