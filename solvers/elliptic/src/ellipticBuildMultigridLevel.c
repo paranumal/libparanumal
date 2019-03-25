@@ -235,8 +235,20 @@ elliptic_t *ellipticBuildMultigridLevel(elliptic_t *baseElliptic, int Nc, int Nf
     break;
   case QUADRILATERALS:{
     if(elliptic->dim==2){
+       if(!options.compareArgs("BOX DOMAIN", "TRUE")){
       meshConnectFaceNodes2D(mesh);
       meshSurfaceGeometricFactorsQuad2D(mesh);
+    }else{
+        if(mesh->rank==0) printf("WARNING: connecting periodic box\n");
+        dfloat XMIN = -1, XMAX = +1; // default bi-unit cube
+        dfloat YMIN = -1, YMAX = +1;
+      options.getArgs("BOX XMIN", XMIN);
+      options.getArgs("BOX YMIN", YMIN);
+      options.getArgs("BOX XMAX", XMAX);
+      options.getArgs("BOX YMAX", YMAX);      
+      meshConnectPeriodicFaceNodes2D(mesh, XMAX-XMIN, YMAX-YMIN);
+      meshSurfaceGeometricFactorsQuad2D(mesh);
+      }
     }else{
       meshConnectFaceNodes3D(mesh);
       meshSurfaceGeometricFactorsQuad3D(mesh);

@@ -55,9 +55,13 @@ int main(int argc, char **argv){
   case TRIANGLES:
     mesh = meshSetupTri2D((char*)fileName.c_str(), N); break;
   case QUADRILATERALS:{
-    if(dim==2)
-      mesh = meshSetupQuad2D((char*)fileName.c_str(), N);
-  else{
+    if(dim==2){
+      if(options.getArgs("MESH FILE", fileName)){
+       mesh = meshSetupQuad2D((char*)fileName.c_str(), N);
+      }else if(options.compareArgs("BOX DOMAIN", "TRUE")){
+        mesh = meshSetupBoxQuad2D(N, options);
+      }
+     }else{
     dfloat radius = 1;
     options.getArgs("SPHERE RADIUS", radius);
     mesh = meshSetupQuad3D((char*)fileName.c_str(), N, radius);
@@ -76,10 +80,17 @@ int main(int argc, char **argv){
     break;
   }
 
+#if 0
+   char fname[BUFSIZ]; 
+
+   sprintf(fname, "testMesh.vtu");
+   meshPlotVTU2D(mesh, fname,1); 
+#endif
+
   if (mesh->rank == 0)
     printf("sizeof(hlong) = %d, sizeof(dlong) = %d\n", sizeof(hlong), sizeof(dlong));
 
-  ins_t *ins = insSetup(mesh,options);
+ins_t *ins = insSetup(mesh,options);
 
   //  insPlotWallsVTUHex3D(ins, "walls");
   

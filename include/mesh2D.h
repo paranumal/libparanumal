@@ -179,5 +179,9 @@ dfloat meshFactorial(int n);
 #define WSJID 5
 #define WIJID 6
 
+
+mesh2D *meshSetupBoxQuad2D(int N, setupAide &options);
+void meshConnectPeriodicFaceNodes2D(mesh2D *mesh, dfloat xper, dfloat yper);
+
 #endif
 
