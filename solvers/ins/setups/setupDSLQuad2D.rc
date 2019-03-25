@@ -1,0 +1,298 @@
+[FORMAT]
+1.0
+
+[DATA FILE]
+data/insDSL2D.h
+
+[BOX DOMAIN]
+TRUE
+
+[BOX NX]
+8
+
+[BOX NY]
+8
+
+[BOX XMIN]
+0.0
+[BOX XMAX]
+1.0
+[BOX YMIN]
+0.0
+[BOX YMAX]
+1.0
+
+[MESH DIMENSION]
+2
+
+[ELEMENT TYPE] # number of edges
+4
+
+[POLYNOMIAL DEGREE]
+5
+
+[ELEMENT MAP]
+ISOPARAMETRIC
+
+[THREAD MODEL]
+#Serial
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+# can be EXTBDF1,2, or 3
+# can add SUBCYCLING to EXTBDF
+[TIME INTEGRATOR]
+#ARK2
+EXTBDF2+SUBCYCLING
+
+[SUBCYCLING STEPS]
+0
+
+[SUBCYCLING TYPE]
+LIBP
+#NEK BROKEN ATM
+
+# can be CUBATURE or COLLOCATION
+[ADVECTION TYPE]
+#NODAL
+CUBATURE
+
+[VISCOSITY]
+0.00001
+
+[UBAR]
+1.0
+
+[VBAR]
+0.0
+
+[WBAR]
+0.0
+
+[PBAR]
+0.0
+
+[TSTEPS FOR SOLUTION OUTPUT]
+100
+
+[START TIME]
+0
+
+[FINAL TIME]
+2.0
+
+[CFL]
+0.05
+
+[DT]
+1.0e-3
+
+[OUTPUT TYPE]
+#NONE
+VTU
+
+[RESTART FROM FILE]
+0
+
+[OUTPUT FILE NAME]
+doubleShearLayerQuad2D
+
+#################################################
+########## Velocity Solver Options ##############
+#################################################
+
+# can add FLEXIBLE and/or NONBLOCKING to PCG
+[VELOCITY KRYLOV SOLVER]
+#PCG
+#+NONBLOCKING+FLEXIBLE
+#+NONBLOCKING
+PCG+FLEXIBLE
+# PCG+NONBLOCKING
+
+[VELOCITY SOLVER TOLERANCE]
+1.e-8
+
+# can be IPDG, [ currently CONTINUOUS seems to be broken ]
+[VELOCITY DISCRETIZATION]
+#IPDG
+CONTINUOUS
+
+# can be NODAL or BERN
+[VELOCITY BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+[VELOCITY PRECONDITIONER]
+JACOBI
+#MULTIGRID
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[VELOCITY MULTIGRID COARSENING]
+HALFDEGREES
+#HALFDOFS
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[VELOCITY MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+[VELOCITY MULTIGRID CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[VELOCITY PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[VELOCITY PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[VELOCITY PARALMOND PARTITION]
+STRONGNODES
+
+# can be DEFAULT or LPSCN
+[VELOCITY PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[VELOCITY PARALMOND LPSCN ORDERING]
+MAX
+#MIN
+
+[VELOCITY PARALMOND CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+#################################################
+########## Pressure Solver Options ##############
+#################################################
+
+# can add FLEXIBLE to PCG
+[PRESSURE KRYLOV SOLVER]
+#PCG
+#PCG+FLEXIBLE+NONBLOCKING
+#PCG+NONBLOCKING (if fixed preconditioner)
+PCG+FLEXIBLE
+#PCG+FLEXIBLE+NONBLOCKING
+
+[PRESSURE SOLVER TOLERANCE]
+1.e-8
+
+# can be IPDG, or CONTINUOUS
+[PRESSURE DISCRETIZATION]
+CONTINUOUS
+#IPDG
+#(we don't typically use this)
+
+# can be NODAL or BERN
+[PRESSURE BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+[PRESSURE PRECONDITIONER]
+#JACOBI
+MULTIGRID
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[PRESSURE MULTIGRID COARSENING]
+HALFDEGREES
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[PRESSURE MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+[PRESSURE MULTIGRID CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[PRESSURE PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[PRESSURE PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[PRESSURE PARALMOND PARTITION]
+STRONGNODES
+
+# can be DEFAULT or LPSCN
+[PRESSURE PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[PRESSURE PARALMOND LPSCN ORDERING]
+MAX
+#MIN
+
+[PRESSURE PARALMOND CHEBYSHEV DEGREE]
+2
+
+# only smooth at bottom of cycle
+[PARALMOND SMOOTH COARSEST]
+TRUE
+
+[PARALMOND SMOOTH COARSEST DEGREE]
+20
+
+###########################################
+
+# compare to a reference solution. Use NONE to skip comparison
+# can be BELTRAMI
+[EXACT]
+#BELTRAMI
+NONE
+
+[VERBOSE]
+FALSE
+#TRUE
+
+[DEBUG ENABLE OGS]
+1
+
+[DEBUG ENABLE REDUCTIONS]
+1
+
+[ELLIPTIC INTEGRATION]
+NODAL
+
+# bail out iteration count for PCG
+[MAXIMUM ITERATIONS]
+1000
+
+# force PCG to go to MAXIMUM ITERATIONS
+[FIXED ITERATION COUNT]
+FALSE
+
+# TRUE: all ranks assume precompiled binaries
+# NONROOT: root rank compiles, other ranks load
+# FALSE: all ranks compile
+[USE PRECOMPILED BINARIES]
+FALSE
+

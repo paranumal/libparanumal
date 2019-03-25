@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -668,3 +668,85 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
     }
   }
 }
+
+
+
+// Compute Divergence in weak Form
+@kernel void insStrongAdvectionVolumeQuad2D(const dlong Nelements,
+					    @restrict const  dfloat *  vgeo,
+					    @restrict const  dfloat *  D,
+					    const dlong offset,
+					    @restrict const  dfloat *  U,
+					    @restrict dfloat *  NU){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+
+    @shared dfloat s_U[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_V[p_NblockV][p_Nq][p_Nq];
+
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+	for(int i=0;i<p_Nq;++i;@inner(0)){    
+	  const dlong e = eo+es; // element in block
+	  if(e<Nelements){ 
+	    const dlong id = e*p_Np + j*p_Nq+i;
+	    s_U[es][j][i] = U[id+0*offset];
+	    s_V[es][j][i] = U[id+1*offset];
+	    if (es==0)
+	      s_D[j][i] = D[j*p_Nq+i];
+	  }
+	}
+      }
+    }
+
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+	for(int i=0;i<p_Nq;++i;@inner(0)){    
+	  const dlong e = eo+es; // element in block
+	  if(e<Nelements){ 
+	    const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+
+	    const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+	    const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+	    const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+	    const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+
+	    dfloat dudr = 0, duds = 0;
+	    dfloat dvdr = 0, dvds = 0;
+
+#pragma unroll p_Nq
+	    for(int n=0;n<p_Nq;++n){
+	      const dfloat Dr = s_D[n][i];
+	      const dfloat Ds = s_D[n][j];
+	      dudr = Dr*s_U[es][j][n];
+	      duds = Ds*s_U[es][n][i];
+
+	      dvdr = Dr*s_V[es][j][n];
+	      dvds = Ds*s_V[es][n][i];
+	    }
+
+
+	    dfloat dudx = drdx*dudr + dsdx*duds;
+	    dfloat dudy = drdy*dudr + dsdy*duds;
+
+	    dfloat dvdx = drdx*dvdr + dsdx*dvds;
+	    dfloat dvdy = drdy*dvdr + dsdy*dvds;
+    
+	    dfloat u = s_U[es][j][i];
+	    dfloat v = s_V[es][j][i];
+
+	    const dlong id =e*p_Np + j*p_Nq + i;
+
+	    NU[id+0*offset] =  -(u*dudx + v*dudy);
+	    NU[id+1*offset] =  -(u*dvdx + v*dvdy);
+	  }
+	}
+      }
+    }
+  }
+}
+
