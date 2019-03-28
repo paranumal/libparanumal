@@ -145,6 +145,11 @@ typedef struct {
 
   int readRestartFile,writeRestartFile, restartedFromFile;
 
+  // Filter Stabilization Matrix
+  int filterNc; // filter cut modes i.e. below is not touched
+  dfloat *filterM, filterS; 
+  occa::memory o_filterMT; // transpose of filter matrix 
+  occa::kernel filterKernel; // Relaxation-Term based filtering
 
 
   occa::memory *o_isoGLvalues; 
@@ -245,6 +250,9 @@ void insReport(ins_t *ins, dfloat time,  int tstep);
 void insError(ins_t *ins, dfloat time);
 void insForces(ins_t *ins, dfloat time);
 void insComputeDt(ins_t *ins, dfloat time); 
+
+// Currently implemented Relexation-Type filtering
+void insFilterSetup(ins_t *ins);
 
 void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU);
 void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);

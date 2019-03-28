@@ -98,7 +98,8 @@ void insRunEXTBDF(ins_t *ins){
   // Write Initial Data
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
 
-  for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+   for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+  //for(int tstep=0;tstep<5;++tstep){
 
     // if(ins->restartedFromFile){
       // if(tstep=0 && ins->temporalOrder>=2) 
@@ -166,10 +167,7 @@ void insRunEXTBDF(ins_t *ins){
 			     ins->o_rkU);
       }
     }
-      
-    
-
-    
+          
     //copy updated pressure
     ins->o_U.copyFrom(ins->o_rkU, ins->NVfields*ins->Ntotal*sizeof(dfloat)); 
 
@@ -185,7 +183,7 @@ void insRunEXTBDF(ins_t *ins){
 
 
 
-#if 1
+#if 0
     if(((tstep+1)%10)==0){
       char fname[BUFSIZ];
       sprintf(fname, "Iterations_Quad3D_%d", ins->SNrk);

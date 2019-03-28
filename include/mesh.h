@@ -569,6 +569,15 @@ extern "C"
                 int     *LDB,
                 int     *INFO );
 
+  // void dgemm_(const char *TRANSA, const char *TRANSB, const int *M, 
+  //             const int *N, const int *K, double *ALPHA, double *A, const int *LDA, double *B, 
+  //             const int *LDB, double *BETA, double *C, const int *LDC);
+
+   void dgemm_ (char *, char *, int *, int *, int *,
+         const dfloat *, const dfloat * __restrict, int *,
+         const dfloat * __restrict, int *,
+         const dfloat *, dfloat * __restrict, int *);
+
   void sgesv_(int *N, int *NRHS,float  *A, int *LDA, int *IPIV, float  *B, int *LDB,int *INFO);
 
   void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
