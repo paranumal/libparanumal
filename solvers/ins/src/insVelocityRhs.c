@@ -51,6 +51,21 @@ void insVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occ
                            o_rhsV,
                            o_rhsW);
   } else if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF")) {
+
+
+  #if 0
+    if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION")){
+    ins->filterKernel(mesh->Nelements,
+                      ins->o_filterMT,
+                      ins->filterS, 
+                      ins->fieldOffset,
+                      ins->o_U,
+                      ins->o_NU);
+  }
+  #endif
+
+
+
     // rhsU^s = MM*(\sum^s b_i U^n-i - \sum^s-1 a_i N(U^n-i) + \sum^s-1 c_i GP^n-i)/nu dt
     ins->velocityRhsKernel(mesh->Nelements,
                            mesh->o_vgeo,

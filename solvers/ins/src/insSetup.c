@@ -973,9 +973,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       // --
       if(ins->dim==3 && ins->elementType==QUADRILATERALS){
-	sprintf(fileName, DINS "/okl/insConstrainQuad3D.okl");
-	sprintf(kernelName, "insConstrainQuad3D");
-	ins->constrainKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      	sprintf(fileName, DINS "/okl/insConstrainQuad3D.okl");
+      	sprintf(kernelName, "insConstrainQuad3D");
+      	ins->constrainKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
       
       // ===========================================================================
@@ -997,8 +997,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       sprintf(kernelName, "insStrongAdvectionVolume%s", suffix);
       ins->advectionStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
       
+      // ===========================================================================
+      if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION")){
+        sprintf(fileName, DINS "/okl/insFilter.okl");
+
+        sprintf(kernelName, "insFilterRT%s", suffix);
+        ins->filterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      }
       // // ===========================================================================
       
       // sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
@@ -1182,6 +1188,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   ins->o_invLumpedMassMatrix = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat),
 						   lumpedMassMatrix);
+
+ 
+  if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION"))
+  insFilterSetup(ins); 
   
   return ins;
 }
