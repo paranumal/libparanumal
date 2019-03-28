@@ -1,26 +1,25 @@
 /*
+  The MIT License (MIT)
 
-The MIT License (MIT)
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the SoftwarfilterV is
+  furnished to do so, subject to the following conditions:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the SoftwarfilterV is
-furnished to do so, subject to the following conditions:
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -30,7 +29,7 @@ SOFTWARE.
 #include "mesh3D.h"
 #include "ins.h"
 
-// Keep them here to make filterSetup self contained
+// AK. Keep them here to make filterSetup self contained
 void filterFunctionRelaxation(int Nmodes, int Nc, dfloat *A); 
 void filterVandermonde1D(int N, int Np, dfloat *r, dfloat *V);
 void filterVandermondeTri2D(int N, int Np, dfloat *r, dfloat *s, dfloat *V);
@@ -43,38 +42,38 @@ dfloat filterFactorial(int n);
 void insFilterSetup(ins_t* ins){
 
   // Setting Filter Here.....
- mesh_t *mesh = ins->mesh; 
+  mesh_t *mesh = ins->mesh; 
 
-// First construct filter function
-ins->filterS = 10.0; // filter Weight...  
-dfloat filterC = 0.90; // Nc/N i.e. percentage of modes that is not touched 
-ins->options.getArgs("FILTER STRENGTH", ins->filterS); 
-ins->options.getArgs("FILTER CUTOFF RATIO", filterC); 
+  // First construct filter function
+  ins->filterS = 10.0; // filter Weight...  
+  dfloat filterC = 0.90; // Nc/N i.e. percentage of modes that is not touched 
+  ins->options.getArgs("FILTER STRENGTH", ins->filterS); 
+  ins->options.getArgs("FILTER CUTOFF RATIO", filterC); 
 
-// Construc Filter Function
-int Nmodes = 1; 
-// Constructing Dense Operators
-if(ins->elementType==TRIANGLES || ins->elementType==TETRAHEDRA)
-Nmodes = mesh->Np; 
-else if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA)
-Nmodes = mesh->Nfp; // N+1, constructing 1D operations 
+  // Construc Filter Function
+  int Nmodes = 1; 
+  // Constructing Dense Operators
+  if(ins->elementType==TRIANGLES || ins->elementType==TETRAHEDRA)
+    Nmodes = mesh->Np; 
+  else if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA)
+    Nmodes = mesh->Nfp; // N+1, constructing 1D operations 
 
-// Approximate cutoff order from percentage 
-ins->filterNc = (Nmodes - mymax( (int)round(Nmodes*(1.0-filterC)) -1, 0)) -1;
+  // Approximate cutoff order from percentage 
+  ins->filterNc = (Nmodes - mymax( (int)round(Nmodes*(1.0-filterC)) -1, 0)) -1;
 
-dfloat *V = (dfloat *) calloc(Nmodes*Nmodes, sizeof(dfloat));
-dfloat *A = (dfloat *) calloc(Nmodes*Nmodes, sizeof(dfloat));
+  dfloat *V = (dfloat *) calloc(Nmodes*Nmodes, sizeof(dfloat));
+  dfloat *A = (dfloat *) calloc(Nmodes*Nmodes, sizeof(dfloat));
 
-// Construct Filter Function
-filterFunctionRelaxation(Nmodes, ins->filterNc, A); 
+  // Construct Filter Function
+  filterFunctionRelaxation(Nmodes, ins->filterNc, A); 
 
-// Construct Vandermonde Matrix
-if(ins->elementType==TRIANGLES)
-  filterVandermondeTri2D(mesh->N, Nmodes, mesh->r, mesh->s, V); 
-else if(ins->elementType==TETRAHEDRA)
-  filterVandermondeTet3D(mesh->N, Nmodes, mesh->r, mesh->s, mesh->t, V); 
-else if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA)
-  filterVandermonde1D(mesh->N, Nmodes, mesh->r, V); 
+  // Construct Vandermonde Matrix
+  if(ins->elementType==TRIANGLES)
+    filterVandermondeTri2D(mesh->N, Nmodes, mesh->r, mesh->s, V); 
+  else if(ins->elementType==TETRAHEDRA)
+    filterVandermondeTet3D(mesh->N, Nmodes, mesh->r, mesh->s, mesh->t, V); 
+  else if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA)
+    filterVandermonde1D(mesh->N, Nmodes, mesh->r, V); 
 
   // Invert the Vandermonde 
   int INFO;
@@ -84,7 +83,7 @@ else if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA)
   int   *IPIV  = (int *)   calloc(Nmodes+1,sizeof(int)); 
   double *iV   = (double*) calloc(Nmodes*Nmodes, sizeof(double));
 
-   for(int n=0; n<(Nmodes+1);n++)
+  for(int n=0; n<(Nmodes+1);n++)
     IPIV[n] = 1; 
   for(int n=0;n<Nmodes*Nmodes;++n)
     iV[n] = V[n];
@@ -93,12 +92,12 @@ else if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA)
   dgetri_(&N,(double*)iV,&N,IPIV,(double*)WORK,&LWORK,&INFO);
 
   if(INFO){
-  printf("DGE_TRI/TRF error: %d \n", INFO);
-  exit(EXIT_FAILURE);
+    printf("DGE_TRI/TRF error: %d \n", INFO);
+    exit(EXIT_FAILURE);
   }
  
 
-  // Perform V*A*V^-1 in row major, watchout the transposes AK. !!!
+  // Some ugly operations to perform V*A*V^-1 in row major, watchout the transposes AK. !!!
   char TRANSA = 'T'; 
   char TRANSB = 'T'; 
   double ALPHA= 1.0, BETA= 0.0;
@@ -119,32 +118,32 @@ else if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA)
   // store filter matrix, row major again !!!
   ins->filterM = (dfloat *) calloc(Nmodes*Nmodes, sizeof(dfloat)); 
   for(int c=0; c<Nmodes; c++){
-   for(int r=0; r<Nmodes; r++){
-    ins->filterM[c+ r*Nmodes] = A[r + c*Nmodes];
+    for(int r=0; r<Nmodes; r++){
+      ins->filterM[c+ r*Nmodes] = A[r + c*Nmodes];
+    }
   }
-}
 
 
-// Copy To host
-ins->o_filterMT =  mesh->device.malloc(Nmodes*Nmodes*sizeof(dfloat), A); // copy Tranpose
+  // Copy To Device
+  ins->o_filterMT =  mesh->device.malloc(Nmodes*Nmodes*sizeof(dfloat), A); // copy Tranpose
 
-printf("filterS: %.4f and filterNc=%d \n", ins->filterS, ins->filterNc);
+  printf("filterS: %.4f and filterNc=%d \n", ins->filterS, ins->filterNc);
 
 #if 1
-for(int c=0; c<Nmodes; c++){
-  for(int r=0; r<Nmodes; r++){
-    printf("%.4f ", ins->filterM[r + c*Nmodes]);
+  for(int c=0; c<Nmodes; c++){
+    for(int r=0; r<Nmodes; r++){
+      printf("%.4f ", ins->filterM[r + c*Nmodes]);
+    }
+    printf("\n");
   }
-  printf("\n");
-}
 #endif
 
-free(A); 
-free(C); 
-free(V); 
-free(iV); 
-free(IPIV);
-free(WORK);
+  free(A); 
+  free(C); 
+  free(V); 
+  free(iV); 
+  free(IPIV);
+  free(WORK);
 }
 
 
@@ -155,15 +154,15 @@ void filterFunctionRelaxation(int Nmodes, int Nc, dfloat *A){
   for(int n=0; n<Nmodes; n++)
     A[n*Nmodes + n] = 1.0; 
 
-// use quadratic damping as Nek currently, exponential could be better...
-for (int k=Nc; k<Nmodes; k++){
-  dfloat amp = ((k-Nc+1.0)*(k-Nc+1.0))/((Nmodes-Nc)*(Nmodes-Nc));
-  A[k + Nmodes*k] = 1.0 - amp; 
-}
+  // use quadratic damping as Nek currently, exponential could be better...
+  for (int k=Nc; k<Nmodes; k++){
+    dfloat amp = ((k-Nc+1.0)*(k-Nc+1.0))/((Nmodes-Nc)*(Nmodes-Nc));
+    A[k + Nmodes*k] = 1.0 - amp; 
+  }
  
 #if 0  
-for(int k=0; k<Nmodes; k++)
-  printf("Nc = %d, A(%d,%d) = %.4f\n",Nc, k, k, A[k + Nmodes*k]);
+  for(int k=0; k<Nmodes; k++)
+    printf("Nc = %d, A(%d,%d) = %.4f\n",Nc, k, k, A[k + Nmodes*k]);
 #endif
 }
 
@@ -195,12 +194,12 @@ void filterVandermondeTet3D(int N, int Np, dfloat *r, dfloat *s, dfloat *t, dflo
   int sk=0;
   for(int i=0; i<=N; i++){
     for(int j=0; j<=N-i; j++){
-     for(int k=0; k<=(N-i-j); k++){
-       for(int n=0; n<Np; n++){
-        V[n*Np + sk] = filterSimplex3D(a[n], b[n], c[n], i, j, k);
+      for(int k=0; k<=(N-i-j); k++){
+	for(int n=0; n<Np; n++){
+	  V[n*Np + sk] = filterSimplex3D(a[n], b[n], c[n], i, j, k);
+	}
+	sk++;
       }
-      sk++;
-    }
     }
   }
 
@@ -245,10 +244,10 @@ void filterVandermondeTri2D(int N, int Np, dfloat *r, dfloat *s, dfloat *V){
 void filterVandermonde1D(int N, int Np, dfloat *r, dfloat *V){
   int sk=0;
   for(int i=0; i<=N; i++){
-      for(int n=0; n<Np; n++){
-        V[n*Np + sk] = filterJacobiP(r[n],0,0,i);
-      }
-      sk++;
+    for(int n=0; n<Np; n++){
+      V[n*Np + sk] = filterJacobiP(r[n],0,0,i);
+    }
+    sk++;
   }
 }
 
