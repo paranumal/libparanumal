@@ -8,13 +8,13 @@ data/insTGV.h
 TRUE
 
 [BOX NX]
-14
+10
 
 [BOX NY]
-14
+10
 
 [BOX NZ]
-14
+10
 
 [BOX XMIN]
 -3.141592653589793
@@ -28,6 +28,18 @@ TRUE
 -3.141592653589793
 [BOX ZMAX]
  3.141592653589793
+
+#currently RELAXATION, 
+[FILTER STABILIZATION]
+NONE
+#RELAXATION
+
+#in explicit Strength will be set to Strength*dt
+[FILTER STRENGTH]
+50.0
+
+[FILTER CUTOFF RATIO]
+0.9
 
 [MESH DIMENSION]
 3
@@ -301,5 +313,5 @@ FALSE
 # NONROOT: root rank compiles, other ranks load
 # FALSE: all ranks compile
 [USE PRECOMPILED BINARIES]
-TRUE
+FALSE
 
