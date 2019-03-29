@@ -143,16 +143,7 @@ void insFilterSetup(ins_t* ins){
   ins->o_filterMT =  mesh->device.malloc(Nmodes*Nmodes*sizeof(dfloat), A); // copy Tranpose
 
   if(mesh->rank==0)
-  printf("filterS: %.4f and filterNc=%d \n", ins->filterS, ins->filterNc);
-
-#if 1
-  for(int c=0; c<Nmodes; c++){
-    for(int r=0; r<Nmodes; r++){
-      printf("%.4f ", ins->filterM[r + c*Nmodes]);
-    }
-    printf("\n");
-  }
-#endif
+  printf("Filter is Activated: filter Strength: %.4f and cutoff Order=%d \n", ins->filterS, ins->filterNc);
 
   free(A); 
   free(C); 
@@ -175,11 +166,6 @@ void filterFunctionRelaxation1D(int Nmodes, int Nc, dfloat *A){
     dfloat amp = ((k-Nc+1.0)*(k-Nc+1.0))/((Nmodes-Nc)*(Nmodes-Nc));
     A[k + Nmodes*k] = 1.0 - amp; 
   }
- 
-#if 0  
-  for(int k=0; k<Nmodes; k++)
-    printf("Nc = %d, A(%d,%d) = %.4f\n",Nc, k, k, A[k + Nmodes*k]);
-#endif
 }
 
 // low Pass
@@ -219,16 +205,6 @@ void filterFunctionRelaxationTri2D(int N, int Nc, dfloat *A){
       }
       sk++; 
     } 
-  }
-#endif
- 
-#if 0  
-  for(int i=0; i<Np; i++){
-    for(int j=0; j<Np; j++){
-      if(i==j)
-      printf("%.8e ", A[i*Np + j]);
-    } 
-    printf("\n");
   }
 #endif
 }
@@ -272,17 +248,6 @@ void filterFunctionRelaxationTet3D(int N, int Nc, dfloat *A){
       sk++; 
     } 
   }
-  }
-#endif
-
-
-#if 0
-  for(int i=0; i<Np; i++){
-    for(int j=0; j<Np; j++){
-      if(i==j)
-      printf("%.8e ", A[i*Np + j]);
-    } 
-    printf("\n");
   }
 #endif
 }
