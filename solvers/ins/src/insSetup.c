@@ -1005,7 +1005,9 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         sprintf(kernelName, "insFilterRT%s", suffix);
         ins->filterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
-      // // ===========================================================================
+
+      
+      // ===========================================================================
       
       // sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
       // sprintf(kernelName, "insDiffusion%s", suffix);

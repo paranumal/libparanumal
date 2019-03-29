@@ -30,7 +30,9 @@
 #include "ins.h"
 
 // AK. Keep them here to make filterSetup self contained
-void filterFunctionRelaxation(int Nmodes, int Nc, dfloat *A); 
+void filterFunctionRelaxation1D(int Nmodes, int Nc, dfloat *A); 
+void filterFunctionRelaxationTri2D(int N, int Nc, dfloat *A); 
+void filterFunctionRelaxationTet3D(int N, int Nc, dfloat *A); 
 void filterVandermonde1D(int N, int Np, dfloat *r, dfloat *V);
 void filterVandermondeTri2D(int N, int Np, dfloat *r, dfloat *s, dfloat *V);
 void filterVandermondeTet3D(int N, int Np, dfloat *r, dfloat *s, dfloat *t, dfloat *V);
@@ -53,19 +55,28 @@ void insFilterSetup(ins_t* ins){
   // Construc Filter Function
   int Nmodes = 1; 
   // Constructing Dense Operators
-  if(ins->elementType==TRIANGLES || ins->elementType==TETRAHEDRA)
+  if(ins->elementType==TRIANGLES || ins->elementType==TETRAHEDRA){
     Nmodes = mesh->Np; 
-  else if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA)
-    Nmodes = mesh->Nfp; // N+1, constructing 1D operations 
+    ins->filterNc = (mesh->N - mymax( (int)round(mesh->N*(1.0-filterC)) -1, 0)) -1;
+  }
+  else if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA){
+    Nmodes = mesh->N+1; // N+1, 1D GLL points 
+    // Approximate cutoff order from percentage 
+    ins->filterNc = (Nmodes - mymax( (int)round(Nmodes*(1.0-filterC)) -1, 0)) -1;
+  }
 
-  // Approximate cutoff order from percentage 
-  ins->filterNc = (Nmodes - mymax( (int)round(Nmodes*(1.0-filterC)) -1, 0)) -1;
+  
 
   dfloat *V = (dfloat *) calloc(Nmodes*Nmodes, sizeof(dfloat));
   dfloat *A = (dfloat *) calloc(Nmodes*Nmodes, sizeof(dfloat));
 
   // Construct Filter Function
-  filterFunctionRelaxation(Nmodes, ins->filterNc, A); 
+  if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA)
+  filterFunctionRelaxation1D(Nmodes, ins->filterNc, A); 
+  else if(ins->elementType==TRIANGLES)
+  filterFunctionRelaxationTri2D(mesh->N, ins->filterNc, A); 
+  else if(ins->elementType==TETRAHEDRA)
+  filterFunctionRelaxationTet3D(mesh->N, ins->filterNc, A); 
 
   // Construct Vandermonde Matrix
   if(ins->elementType==TRIANGLES)
@@ -74,6 +85,7 @@ void insFilterSetup(ins_t* ins){
     filterVandermondeTet3D(mesh->N, Nmodes, mesh->r, mesh->s, mesh->t, V); 
   else if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA)
     filterVandermonde1D(mesh->N, Nmodes, mesh->r, V); 
+
 
   // Invert the Vandermonde 
   int INFO;
@@ -127,6 +139,7 @@ void insFilterSetup(ins_t* ins){
   // Copy To Device
   ins->o_filterMT =  mesh->device.malloc(Nmodes*Nmodes*sizeof(dfloat), A); // copy Tranpose
 
+  if(mesh->rank==0)
   printf("filterS: %.4f and filterNc=%d \n", ins->filterS, ins->filterNc);
 
 #if 1
@@ -148,7 +161,7 @@ void insFilterSetup(ins_t* ins){
 
 
 // low Pass
-void filterFunctionRelaxation(int Nmodes, int Nc, dfloat *A){
+void filterFunctionRelaxation1D(int Nmodes, int Nc, dfloat *A){
   
   // Set all diagonal to 1 
   for(int n=0; n<Nmodes; n++)
@@ -166,6 +179,100 @@ void filterFunctionRelaxation(int Nmodes, int Nc, dfloat *A){
 #endif
 }
 
+// low Pass
+void filterFunctionRelaxationTri2D(int N, int Nc, dfloat *A){
+  
+  int Np = (N+1)*(N+2)/2; 
+  // Set all diagonal to 1 
+  for(int n=0; n<Np; n++)
+    A[n*Np + n] = 1.0; 
+  
+#if 0
+  // Quadratic, could be too agressive, need to be tested
+  int sk = 0; 
+  for(int i=0; i<=N; i++){
+    for(int j=0; j<=(N-i); j++){
+      if((i+j)>=Nc){
+        int k = i+j; 
+        A[sk*Np + sk] = 1.0- ((k-Nc+0.0)*(k-Nc+0.0))/( (N-Nc)*(N-Nc) ); 
+      }
+      sk++; 
+      printf("sk:%d\n", sk);
+    } 
+  }
+#else
+ // exponential
+  dfloat eps = 1.e-16; // hard coded now, AK.
+  // dfloat eps = 2.220446049250313e-16;
+  dfloat sp = 32.0; // hard coded now, AK.
+  dfloat alpha = -log(eps); 
+
+  int sk = 0; 
+  for(int i=0; i<=N; i++){
+    for(int j=0; j<=(N-i); j++){
+      if((i+j)>=Nc){
+        int k = i+j; 
+        A[sk*Np + sk] = exp(-alpha*pow( (double)(k - Nc)/(N-Nc),sp));
+      }
+      sk++; 
+    } 
+  }
+#endif
+ 
+#if 0  
+  for(int i=0; i<Np; i++){
+    for(int j=0; j<Np; j++){
+      if(i==j)
+      printf("%.8e ", A[i*Np + j]);
+    } 
+    printf("\n");
+  }
+#endif
+}
+
+// low Pass
+void filterFunctionRelaxationTet3D(int N, int Nc, dfloat *A){
+  
+  int Np = (N+1)*(N+2)*(N+3)/6; 
+  // Set all diagonal to 1 
+  for(int n=0; n<Np; n++)
+    A[n*Np + n] = 1.0; 
+  
+#if 1
+  // Quadratic, could be too agressive, need to be tested
+  int sk = 0; 
+  for(int i=0; i<=N; i++){
+    for(int j=0; j<=(N-i); j++){
+      for(int k=0; k<=(N-i-j); k++){
+      if((i+j+k)>=Nc){
+        int k = i+j+k; 
+        A[sk*Np + sk] = 1.0- ((k-Nc+0.0)*(k-Nc+0.0))/( (N-Nc)*(N-Nc) ); 
+      }
+      sk++; 
+      } 
+    }
+  }
+#else
+ // exponential
+  dfloat eps = 1.e-16; // hard coded now, AK.
+  // dfloat eps = 2.220446049250313e-16;
+  dfloat sp = 32.0; // hard coded now, AK.
+  dfloat alpha = -log(eps); 
+
+  int sk = 0; 
+  for(int i=0; i<=N; i++){
+    for(int j=0; j<=(N-i); j++){
+      for(int k=0; k<=(N-i-j); k++){
+      if((i+j+k)>=Nc){
+        int k = i+j+k; 
+        A[sk*Np + sk] = exp(-alpha*pow( (double)(k - Nc)/(N-Nc),sp));
+      }
+      sk++; 
+    } 
+  }
+  }
+#endif
+}
 
 void filterVandermondeTet3D(int N, int Np, dfloat *r, dfloat *s, dfloat *t, dfloat *V){
 
@@ -195,10 +302,10 @@ void filterVandermondeTet3D(int N, int Np, dfloat *r, dfloat *s, dfloat *t, dflo
   for(int i=0; i<=N; i++){
     for(int j=0; j<=N-i; j++){
       for(int k=0; k<=(N-i-j); k++){
-	for(int n=0; n<Np; n++){
-	  V[n*Np + sk] = filterSimplex3D(a[n], b[n], c[n], i, j, k);
-	}
-	sk++;
+      	for(int n=0; n<Np; n++){
+      	  V[n*Np + sk] = filterSimplex3D(a[n], b[n], c[n], i, j, k);
+      	}
+	     sk++;
       }
     }
   }

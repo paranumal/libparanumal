@@ -2,13 +2,13 @@
 1.0
 
 [DATA FILE]
-data/insUniform2D.h
-#data/insVortex2D.h
+#data/insUniform2D.h
+data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insSquareCylinder2D.msh
+#../../meshes/insSquareCylinder2D.msh
 #../../meshes/boltzmannSquareCylinderPML2D.msh
-#../../meshes/insVortex2D.msh
+../../meshes/insVortex2D.msh
 
 [MESH DIMENSION]
 2
@@ -17,7 +17,7 @@ data/insUniform2D.h
 3
 
 [POLYNOMIAL DEGREE]
-4
+5
 
 [THREAD MODEL]
 CUDA
@@ -35,11 +35,24 @@ CUDA
 EXTBDF2
 
 [SUBCYCLING STEPS]
-4
+0
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
-CUBATURE
+COLLOCATION
+#CUBATURE
+
+#currently RELAXATION, 
+[FILTER STABILIZATION]
+#NONE
+RELAXATION
+
+#in explicit Strength will be set to Strength*dt
+[FILTER STRENGTH]
+50.0
+
+[FILTER CUTOFF RATIO]
+0.9
 
 [VISCOSITY]
 0.001
@@ -66,7 +79,7 @@ CUBATURE
 
 # zero to ignore, only ARK stepper
 [TSTEPS FOR TIME STEP ADAPT]
-100
+1000
 
 [START TIME]
 0
@@ -85,7 +98,7 @@ VTU
 0
 
 [WRITE RESTART FILE]
-1
+0
 
 [RESTART FILE NAME]
 insRestartTri2D
@@ -101,9 +114,12 @@ Tins
 [VELOCITY KRYLOV SOLVER]
 PCG
 
+[VELOCITY SOLVER TOLERANCE]
+1.e-8
+
 # can be IPDG, or CONTINUOUS
 [VELOCITY DISCRETIZATION]
-IPDG
+CONTINUOUS
 
 # can be NODAL or BERN
 [VELOCITY BASIS]
@@ -170,6 +186,9 @@ MAX
 [PRESSURE KRYLOV SOLVER]
 PCG,FLEXIBLE
 
+[PRESSURE SOLVER TOLERANCE]
+1.e-8
+
 # can be IPDG, or CONTINUOUS
 [PRESSURE DISCRETIZATION]
 CONTINUOUS
@@ -221,13 +240,33 @@ DEFAULT
 MAX
 #MIN
 
+# only smooth at bottom of cycle
+[PARALMOND SMOOTH COARSEST]
+TRUE
+
+[PARALMOND SMOOTH COARSEST DEGREE]
+20
+
 ###########################################
 
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-NONE
-#VORTEX
+#NONE
+VORTEX
 
 [VERBOSE]
+FALSE
+
+[MAXIMUM ITERATIONS]
+1000
+
+# force PCG to go to MAXIMUM ITERATIONS
+[FIXED ITERATION COUNT]
+FALSE
+
+# TRUE: all ranks assume precompiled binaries
+# NONROOT: root rank compiles, other ranks load
+# FALSE: all ranks compile
+[USE PRECOMPILED BINARIES]
 FALSE
