@@ -33,12 +33,15 @@
 void filterFunctionRelaxation1D(int Nmodes, int Nc, dfloat *A); 
 void filterFunctionRelaxationTri2D(int N, int Nc, dfloat *A); 
 void filterFunctionRelaxationTet3D(int N, int Nc, dfloat *A); 
+
 void filterVandermonde1D(int N, int Np, dfloat *r, dfloat *V);
 void filterVandermondeTri2D(int N, int Np, dfloat *r, dfloat *s, dfloat *V);
 void filterVandermondeTet3D(int N, int Np, dfloat *r, dfloat *s, dfloat *t, dfloat *V);
+
 dfloat filterSimplex2D(dfloat a, dfloat b, int i, int j);
 dfloat filterSimplex3D(dfloat a, dfloat b, dfloat c, int i, int j, int k);
 dfloat filterJacobiP(dfloat a, dfloat alpha, dfloat beta, int N);
+
 dfloat filterFactorial(int n); 
 
 void insFilterSetup(ins_t* ins){
@@ -66,8 +69,9 @@ void insFilterSetup(ins_t* ins){
   }
 
   
-
+  // Vandermonde matrix
   dfloat *V = (dfloat *) calloc(Nmodes*Nmodes, sizeof(dfloat));
+  // Filter matrix, diagonal
   dfloat *A = (dfloat *) calloc(Nmodes*Nmodes, sizeof(dfloat));
 
   // Construct Filter Function
@@ -135,7 +139,6 @@ void insFilterSetup(ins_t* ins){
     }
   }
 
-
   // Copy To Device
   ins->o_filterMT =  mesh->device.malloc(Nmodes*Nmodes*sizeof(dfloat), A); // copy Tranpose
 
@@ -167,7 +170,7 @@ void filterFunctionRelaxation1D(int Nmodes, int Nc, dfloat *A){
   for(int n=0; n<Nmodes; n++)
     A[n*Nmodes + n] = 1.0; 
 
-  // use quadratic damping as Nek currently, exponential could be better...
+  // use quadratic damping as Nek, exponential could be better...
   for (int k=Nc; k<Nmodes; k++){
     dfloat amp = ((k-Nc+1.0)*(k-Nc+1.0))/((Nmodes-Nc)*(Nmodes-Nc));
     A[k + Nmodes*k] = 1.0 - amp; 
@@ -238,7 +241,7 @@ void filterFunctionRelaxationTet3D(int N, int Nc, dfloat *A){
   for(int n=0; n<Np; n++)
     A[n*Np + n] = 1.0; 
   
-#if 1
+#if 0
   // Quadratic, could be too agressive, need to be tested
   int sk = 0; 
   for(int i=0; i<=N; i++){
@@ -253,23 +256,33 @@ void filterFunctionRelaxationTet3D(int N, int Nc, dfloat *A){
     }
   }
 #else
- // exponential
+  // exponential
   dfloat eps = 1.e-16; // hard coded now, AK.
   // dfloat eps = 2.220446049250313e-16;
-  dfloat sp = 32.0; // hard coded now, AK.
+  dfloat sp = 16.0; // hard coded now, AK.
   dfloat alpha = -log(eps); 
 
   int sk = 0; 
-  for(int i=0; i<=N; i++){
-    for(int j=0; j<=(N-i); j++){
+   for(int i=0; i<=N; i++){
+    for(int j=0; j<=N-i; j++){
       for(int k=0; k<=(N-i-j); k++){
       if((i+j+k)>=Nc){
-        int k = i+j+k; 
-        A[sk*Np + sk] = exp(-alpha*pow( (double)(k - Nc)/(N-Nc),sp));
+        A[sk*Np + sk] = exp(-alpha*pow( (double)((i+j+k) - Nc)/(N-Nc),sp));
       }
       sk++; 
     } 
   }
+  }
+#endif
+
+
+#if 0
+  for(int i=0; i<Np; i++){
+    for(int j=0; j<Np; j++){
+      if(i==j)
+      printf("%.8e ", A[i*Np + j]);
+    } 
+    printf("\n");
   }
 #endif
 }
@@ -284,12 +297,12 @@ void filterVandermondeTet3D(int N, int Np, dfloat *r, dfloat *s, dfloat *t, dflo
   dfloat TOL = 1e-8; 
   // Duffy Transform
   for(int n=0; n<Np; n++){
-    if(!(fabs(s[n]+t[n])<=TOL)){
+    if((fabs(s[n]+t[n])>TOL)){
       a[n] = 2*(1+r[n])/(-s[n]-t[n])-1.0;
     }else{
       a[n] = -1.0; 
     }
-    if(!(fabs(t[n]-1.0)<=TOL)){
+    if((fabs(t[n]-1.0)>TOL)){
       b[n] = 2.0*(1.0+s[n])/(1.0-t[n])-1.0;
     }else{
       b[n] = -1.0; 

@@ -224,6 +224,17 @@ void insSubCycle(ins_t *ins, dfloat time, int Nstages, occa::memory o_U, occa::m
         }
         occaTimerToc(mesh->device,"AdvectionVolume");
 
+
+  if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION")){
+    ins->filterKernel(mesh->Nelements,
+                      ins->o_filterMT,
+                      ins->filterS, 
+                      ins->fieldOffset,
+                      o_Ud,
+                       ins->o_rhsUd);
+
+  }
+
         if(mesh->totalHaloPairs>0){
           // make sure compute device is ready to perform halo extract
           mesh->device.setStream(mesh->dataStream);

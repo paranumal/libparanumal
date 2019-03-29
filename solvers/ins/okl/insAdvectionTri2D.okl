@@ -431,7 +431,7 @@ SOFTWARE.
 }
 
 
-// compute div(NU)  = div(uxu) in collocation way
+//
 @kernel void insStrongAdvectionVolumeTri2D(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  Dmatrices,
@@ -487,7 +487,7 @@ SOFTWARE.
 
             dfloat dudx = drdx*dudr + dsdx*duds;
             dfloat dudy = drdy*dudr + dsdy*duds;
-            
+
             dfloat dvdx = drdx*dvdr + dsdx*dvds;
             dfloat dvdy = drdy*dvdr + dsdy*dvds;
 
