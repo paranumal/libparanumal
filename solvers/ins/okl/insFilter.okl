@@ -326,6 +326,60 @@
   }
 }
 
+
+
+@kernel void insFilterRTTet3D(const dlong Nelements,
+             @restrict const  dfloat * fMT,
+             const dfloat filterS,
+             const dlong offset,
+             @restrict const  dfloat * U,
+             @restrict        dfloat * NU){
+
+ for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+
+    // Hold Flux Vector on Shared, use symmetry f21 = f12
+    @shared dfloat s_U[p_NblockV][p_Np];
+    @shared dfloat s_V[p_NblockV][p_Np];
+    @shared dfloat s_W[p_NblockV][p_Np];
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){      
+        const dlong e = eo+es; 
+        if(e<Nelements){
+          const dlong id = e*p_Np+n;
+          s_U[es][n] = U[id+0*offset];
+          s_V[es][n] = U[id+1*offset];
+          s_W[es][n] = U[id+2*offset];
+        } 
+      }
+    }
+
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){     
+        const dlong e = eo+es; 
+        if(e<Nelements){
+          dfloat un = 0.f, vn = 0.f, wn = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat Ini = fMT[n+i*p_Np];
+              un += Ini*s_U[es][i];
+              vn += Ini*s_V[es][i];
+              wn += Ini*s_W[es][i];
+            }
+
+         // Update
+          const dlong id = e*p_Np+n;
+         NU[id+0*offset] += filterS*(s_U[es][n] - un);
+         NU[id+1*offset] += filterS*(s_V[es][n] - vn);
+         NU[id+1*offset] += filterS*(s_W[es][n] - wn);
+        }
+      }
+    }
+  }
+}
+
     
 
 

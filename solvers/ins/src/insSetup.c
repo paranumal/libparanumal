@@ -1006,7 +1006,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
         ins->filterKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
 
-      
+
       // ===========================================================================
       
       // sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
@@ -1039,9 +1039,16 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       
       sprintf(kernelName, "insDivergenceSurface%s", suffix);
       ins->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
       
-      sprintf(kernelName, "insStrongDivergenceVolume%s", suffix);
-      ins->divergenceStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      // AK. Note that currently only HEX is implemented in weak form !!!!!!!
+      if(ins->elementType==HEXAHEDRA){
+        sprintf(kernelName, "insStrongDivergenceVolume%s", suffix);
+        ins->divergenceStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      }else{ // implement other divergence operators in weak form also!!!!
+        sprintf(kernelName, "insDivergenceVolume%s", suffix);
+        ins->divergenceStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo); 
+      }
 
       
       // ===========================================================================
@@ -1137,12 +1144,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
 	sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
 	ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
+  
+  if(ins->elementType==HEXAHEDRA){
 	sprintf(kernelName, "insSubCycleNekCubatureVolume%s", suffix);
 	ins->subCycleNekCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 	sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
 	ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  }
 
 	sprintf(fileName, DINS "/okl/insSubCycle.okl");
 	sprintf(kernelName, "insSubCycleRKUpdate");

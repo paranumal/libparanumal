@@ -516,6 +516,110 @@ SOFTWARE.
 
 
 
+//
+@kernel void insStrongAdvectionVolumeTet3D(const dlong Nelements,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  Dmatrices,
+                                    const dlong offset,
+                                    @restrict const  dfloat *  U,
+                                          @restrict dfloat *  NU){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+    // Hold Flux Vector on Shared, use symmetry f21 = f12
+    @shared dfloat s_U[p_NblockV][p_Np];
+    @shared dfloat s_V[p_NblockV][p_Np];
+    @shared dfloat s_W[p_NblockV][p_Np];
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){ 
+          const dlong id = e*p_Np+n;
+          const dfloat u = U[id+0*offset];
+          const dfloat v = U[id+1*offset];
+          const dfloat w = U[id+2*offset];
+
+          s_U[es][n] = u;
+          s_V[es][n] = v;
+          s_W[es][n] = w;
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){           
+        const dlong e = eo+es; 
+        if(e<Nelements){          
+          
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+          const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+
+          const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+          const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+          const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+          
+          // 
+          dfloat dudr = 0.f, duds = 0.f, dudt = 0.f; 
+          dfloat dvdr = 0.f, dvds = 0.f, dvdt = 0.f; 
+          dfloat dwdr = 0.f, dwds = 0.f, dwdt = 0.f; 
+
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+              const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+              
+              dudr += Drni*s_U[es][i];
+              duds += Dsni*s_U[es][i];
+              dudt += Dtni*s_U[es][i];
+
+              dvdr += Drni*s_V[es][i];
+              dvds += Dsni*s_V[es][i];
+              dvdt += Dtni*s_V[es][i];
+
+              dwdr += Drni*s_W[es][i];
+              dwds += Dsni*s_W[es][i];
+              dwdt += Dtni*s_W[es][i];
+            }
+
+            dfloat dudx = drdx*dudr + dsdx*duds + dtdx*dudt;
+            dfloat dudy = drdy*dudr + dsdy*duds + dtdy*dudt;
+            dfloat dudz = drdz*dudr + dsdz*duds + dtdz*dudt;
+
+            dfloat dvdx = drdx*dvdr + dsdx*dvds + dtdx*dvdt;
+            dfloat dvdy = drdy*dvdr + dsdy*dvds + dtdy*dvdt;
+            dfloat dvdz = drdz*dvdr + dsdz*dvds + dtdz*dvdt;
+
+            dfloat dwdx = drdx*dwdr + dsdx*dwds + dtdx*dwdt;
+            dfloat dwdy = drdy*dwdr + dsdy*dwds + dtdy*dwdt;
+            dfloat dwdz = drdz*dwdr + dsdz*dwds + dtdz*dwdt;
+
+
+            dfloat u = s_U[es][n];
+            dfloat v = s_V[es][n];
+            dfloat w = s_W[es][n];
+
+            const dlong id =e*p_Np + n; 
+
+            NU[id+0*offset] =  -(u*dudx + v*dudy + w*dudz);
+            NU[id+1*offset] =  -(u*dvdx + v*dvdy + w*dvdz);
+            NU[id+2*offset] =  -(u*dwdx + v*dwdy + w*dwdz);
+         }
+      }
+    }
+  }
+}
+
+
+
 
 
 

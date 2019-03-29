@@ -94,10 +94,6 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
 
 
 
-#if 1
-  // o_NU.copyTo(ins->NU);
-  // insErrorNorm(ins, ins->NU, 2, "NU_before");
-  
   if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION")){
     ins->filterKernel(mesh->Nelements,
                       ins->o_filterMT,
@@ -106,13 +102,8 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
                       o_U,
                       o_NU);
 
-  //o_NU.copyTo(ins->NU);
-  //insErrorNorm(ins, ins->NU, 2, "NU_after");
   }
-
-#endif
                     
-
 
   if (ipdg){
 
