@@ -750,3 +750,73 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
   }
 }
 
+// Compute Divergence in weak Form
+@kernel void insStrongAdvectionVolumeQuad2D(const dlong Nelements,
+					    @restrict const  dfloat *  vgeo,
+					    @restrict const  dfloat *  D,
+					    const dlong offset,
+					    @restrict const  dfloat *  U,
+					    @restrict dfloat *  NU){
+  
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+
+    @shared dfloat s_U[p_Nq][p_Nq];
+    @shared dfloat s_V[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	dlong id = i+j*p_Nq;
+	
+	s_D[0][id] = D[id];
+	
+	id = e*p_Np + j*p_Nq + i;
+	
+	s_U[j][i] = U[id+0*offset];
+	s_V[j][i] = U[id+1*offset];
+      }
+    }
+
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	
+	const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+
+	const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+	const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+	const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+	const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+
+	dfloat dudr = 0, duds = 0;
+	dfloat dvdr = 0, dvds = 0;
+	
+#pragma unroll p_Nq
+	for (int n=0;n<p_Nq;n++) {
+	  const dfloat Dr = s_D[i][n];
+	  const dfloat Ds = s_D[j][n];
+	  dudr += Dr*s_U[j][n];
+	  duds += Ds*s_U[n][i];
+	  
+	  dvdr += Dr*s_V[j][n];
+	  dvds += Ds*s_V[n][i];
+	}
+	
+	dfloat dudx = drdx*dudr + dsdx*duds;
+	dfloat dudy = drdy*dudr + dsdy*duds;
+	
+	dfloat dvdx = drdx*dvdr + dsdx*dvds;
+	dfloat dvdy = drdy*dvdr + dsdy*dvds;
+	
+	dfloat u = s_U[j][i];
+	dfloat v = s_V[j][i];
+	
+	const dlong id =e*p_Np + j*p_Nq + i;
+	
+	NU[id+0*offset] =  -(u*dudx + v*dudy);
+	NU[id+1*offset] =  -(u*dvdx + v*dvdy);
+      }
+    }
+  }
+}
