@@ -373,7 +373,7 @@
           const dlong id = e*p_Np+n;
          NU[id+0*offset] += filterS*(s_U[es][n] - un);
          NU[id+1*offset] += filterS*(s_V[es][n] - vn);
-         NU[id+1*offset] += filterS*(s_W[es][n] - wn);
+         NU[id+2*offset] += filterS*(s_W[es][n] - wn);
         }
       }
     }
